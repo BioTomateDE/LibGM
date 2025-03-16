@@ -1,7 +1,7 @@
 ﻿use crate::structs::*;
 
 pub fn print_general_info(general_info: &UTGeneralInfo) {
-    println!("\nGeneral Info:");
+    println!("General Info:");
     println!(
         "  GMS Debugger Disabled: {}",
         general_info.is_debugger_disabled
@@ -25,7 +25,7 @@ pub fn print_general_info(general_info: &UTGeneralInfo) {
         "  Default Window Size: {}x{}",
         general_info.default_window_width, general_info.default_window_height
     );
-    println!("  Flags: {}", format_flags(&general_info.flags));
+    println!("  Flags: {}", format_general_info_flags(&general_info.flags));
     println!("  License: {}", format_license_md5(&general_info.license));
     println!("  Timestamp: {}", general_info.timestamp_created);
     println!("  Display Name: {}", general_info.display_name);
@@ -34,10 +34,24 @@ pub fn print_general_info(general_info: &UTGeneralInfo) {
     println!("  Steam AppID: {}", general_info.steam_appid);
     println!("  Debugger Port: {}", general_info.debugger_port);
     // println!("  Room Order: {:?}", general_info.room_order);
-    println!();
 }
 
-fn format_flags(flags: &UTGeneralInfoFlags) -> String {
+
+pub fn print_options(options: &UTOptions) {
+    println!("Options:");
+    println!("  Flags: {}", format_options_flags(&options.flags));
+    println!("  Scale: {}", options.scale);
+    println!("  Window Color: #{:02X}{:02X}{:02X}{:02X}", options.window_color_a, options.window_color_b, options.window_color_g, options.window_color_r);
+    println!("  Color Depth: {}", options.color_depth);
+    println!("  Resolution: {}", options.resolution);
+    println!("  Frequency: {}", options.frequency);
+    println!("  Vertex Sync: {}", options.vertex_sync);
+    println!("  Priority: {}", options.priority);
+    println!("  Load Alpha: {}", options.load_alpha);
+}
+
+
+fn format_general_info_flags(flags: &UTGeneralInfoFlags) -> String {
     let mut flag_strings: Vec<&str> = vec![];
     if flags.borderless_window {
         flag_strings.push("Borderless Window");
@@ -293,3 +307,100 @@ fn format_license_md5(license: &[u8; 16]) -> String {
     hex_bytes.join(" ")
 }
 
+
+fn format_options_flags(flags: &UTOptionsFlags) -> String {
+    let mut flag_strings: Vec<&str> = vec![];
+
+    if flags.fullscreen {
+        flag_strings.push("Fullscreen");
+    }
+    if flags.interpolate_pixels {
+        flag_strings.push("Interpolate Pixels");
+    }
+    if flags.use_new_audio {
+        flag_strings.push("Use New Audio");
+    }
+    if flags.no_border {
+        flag_strings.push("No Border");
+    }
+    if flags.show_cursor {
+        flag_strings.push("Show Cursor");
+    }
+    if flags.sizeable {
+        flag_strings.push("Sizeable");
+    }
+    if flags.stay_on_top {
+        flag_strings.push("Stay on Top");
+    }
+    if flags.change_resolution {
+        flag_strings.push("Change Resolution");
+    }
+    if flags.no_buttons {
+        flag_strings.push("No Buttons");
+    }
+    if flags.screen_key {
+        flag_strings.push("Screen Key");
+    }
+    if flags.help_key {
+        flag_strings.push("Help Key");
+    }
+    if flags.quit_key {
+        flag_strings.push("Quit Key");
+    }
+    if flags.save_key {
+        flag_strings.push("Save Key");
+    }
+    if flags.screen_shot_key {
+        flag_strings.push("Screenshot Key");
+    }
+    if flags.close_sec {
+        flag_strings.push("Close Sec");
+    }
+    if flags.freeze {
+        flag_strings.push("Freeze");
+    }
+    if flags.show_progress {
+        flag_strings.push("Show Progress");
+    }
+    if flags.load_transparent {
+        flag_strings.push("Load Transparent");
+    }
+    if flags.scale_progress {
+        flag_strings.push("Scale Progress");
+    }
+    if flags.display_errors {
+        flag_strings.push("Display Errors");
+    }
+    if flags.write_errors {
+        flag_strings.push("Write Errors");
+    }
+    if flags.abort_errors {
+        flag_strings.push("Abort Errors");
+    }
+    if flags.variable_errors {
+        flag_strings.push("Variable Errors");
+    }
+    if flags.creation_event_order {
+        flag_strings.push("Creation Event Order");
+    }
+    if flags.use_front_touch {
+        flag_strings.push("Use Front Touch");
+    }
+    if flags.use_rear_touch {
+        flag_strings.push("Use Rear Touch");
+    }
+    if flags.use_fast_collision {
+        flag_strings.push("Use Fast Collision");
+    }
+    if flags.fast_collision_compatibility {
+        flag_strings.push("Fast Collision Compatibility");
+    }
+    if flags.disable_sandbox {
+        flag_strings.push("Disable Sandbox");
+    }
+    if flags.enable_copy_on_write {
+        flag_strings.push("Enable Copy on Write");
+    }
+
+    flag_strings.join(", ")
+}
