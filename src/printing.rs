@@ -26,7 +26,7 @@ pub fn print_general_info(general_info: &UTGeneralInfo) {
         general_info.default_window_width, general_info.default_window_height
     );
     println!("  Flags: {}", format_flags(&general_info.flags));
-    println!("  Flags: {}", format_license_md5(&general_info.license));
+    println!("  License: {}", format_license_md5(&general_info.license));
     println!("  Timestamp: {}", general_info.timestamp_created);
     println!("  Display Name: {}", general_info.display_name);
     println!("  Active Targets: {}", general_info.active_targets);
