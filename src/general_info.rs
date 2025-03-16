@@ -1,6 +1,6 @@
 ﻿use std::collections::HashMap;
 use chrono::{DateTime, Utc};
-use crate::structs::{UTGeneralInfo, UTGeneralInfoFlags, UTFunctionClassifications, UTOptions};
+use crate::structs::{UTGeneralInfo, UTGeneralInfoFlags, UTFunctionClassifications, UTOptions, UTOptionsFlags};
 use crate::chunk_reading::UTChunk;
 
 pub fn parse_chunk_GEN8(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> UTGeneralInfo {
@@ -176,7 +176,83 @@ fn parse_function_classifications(chunk: &mut UTChunk) -> UTFunctionClassificati
     }
 }
 
+fn parse_options_flags(chunk: &mut UTChunk) -> UTOptionsFlags {
+    let raw: u64 = chunk.read_u64();
+    UTOptionsFlags {
+        fullscreen: 0 != raw & 0x1,
+        interpolate_pixels: 0 != raw & 0x2,
+        use_new_audio: 0 != raw & 0x4,
+        no_border: 0 != raw & 0x8,
+        show_cursor: 0 != raw & 0x10,
+        sizeable: 0 != raw & 0x20,
+        stay_on_top: 0 != raw & 0x40,
+        change_resolution: 0 != raw & 0x80,
+        no_buttons: 0 != raw & 0x100,
+        screen_key: 0 != raw & 0x200,
+        help_key: 0 != raw & 0x400,
+        quit_key: 0 != raw & 0x800,
+        save_key: 0 != raw & 0x1000,
+        screen_shot_key: 0 != raw & 0x2000,
+        close_sec: 0 != raw & 0x4000,
+        freeze: 0 != raw & 0x8000,
+        show_progress: 0 != raw & 0x10000,
+        load_transparent: 0 != raw & 0x20000,
+        scale_progress: 0 != raw & 0x40000,
+        display_errors: 0 != raw & 0x80000,
+        write_errors: 0 != raw & 0x100000,
+        abort_errors: 0 != raw & 0x200000,
+        variable_errors: 0 != raw & 0x400000,
+        creation_event_order: 0 != raw & 0x800000,
+        use_front_touch: 0 != raw & 0x1000000,
+        use_rear_touch: 0 != raw & 0x2000000,
+        use_fast_collision: 0 != raw & 0x4000000,
+        fast_collision_compatibility: 0 != raw & 0x8000000,
+        disable_sandbox: 0 != raw & 0x10000000,
+        enable_copy_on_write: 0 != raw & 0x20000000,
+    }
+}
 
-pub fn parse_chunk_OPTN(chunk: &UTChunk, strings: &HashMap<u32, String>) -> UTOptions {
-    UTOptions {}
+
+pub fn parse_chunk_OPTN(mut chunk: UTChunk) -> UTOptions {
+    let _unused1: u32 = chunk.read_u32();
+    let _unused2: u32 = chunk.read_u32();
+    let flags: UTOptionsFlags = parse_options_flags(&mut chunk);
+    let scale: i32 = chunk.read_i32();
+    let window_color_r: u8 = chunk.read_u8();
+    let window_color_g: u8 = chunk.read_u8();
+    let window_color_b: u8 = chunk.read_u8();
+    let window_color_a: u8 = chunk.read_u8();
+    let color_depth: u32 = chunk.read_u32();
+    let resolution: u32 = chunk.read_u32();
+    let frequency: u32 = chunk.read_u32();
+    let vertex_sync: u32 = chunk.read_u32();
+    let priority: u32 = chunk.read_u32();
+    // CHANGE TYPES TO `texture page item` WHEN SUPPORTED
+    let back_image: u32 = chunk.read_u32();
+    let front_image: u32 = chunk.read_u32();
+    let load_image: u32 = chunk.read_u32();
+    // ^
+    let load_alpha: u32 = chunk.read_u32();
+
+    // constants missing
+
+    UTOptions {
+        _unused1,
+        _unused2,
+        flags,
+        scale,
+        window_color_r,
+        window_color_g,
+        window_color_b,
+        window_color_a,
+        color_depth,
+        resolution,
+        frequency,
+        vertex_sync,
+        priority,
+        back_image,
+        front_image,
+        load_image,
+        load_alpha,
+    }
 }

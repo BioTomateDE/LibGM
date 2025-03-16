@@ -2,7 +2,23 @@
 use chrono::{DateTime, Utc};
 
 pub struct UTOptions {
-
+    pub _unused1: u32,
+    pub _unused2: u32,
+    pub flags: UTOptionsFlags,
+    pub scale: i32,
+    pub window_color_r: u8,
+    pub window_color_g: u8,
+    pub window_color_b: u8,
+    pub window_color_a: u8,
+    pub color_depth: u32,
+    pub resolution: u32,
+    pub frequency: u32,
+    pub vertex_sync: u32,
+    pub priority: u32,
+    pub back_image: u32,         // CHANGE TYPE TO `texture page item` WHEN SUPPORTED
+    pub front_image: u32,        // CHANGE TYPE TO `texture page item` WHEN SUPPORTED
+    pub load_image: u32,         // CHANGE TYPE TO `texture page item` WHEN SUPPORTED
+    pub load_alpha: u32,
 }
 
 #[derive(Clone)]
@@ -126,10 +142,46 @@ pub struct UTFunctionClassifications {
     pub vertex_buffers: bool,
 }
 
+
+#[derive(Clone)]
+pub struct UTOptionsFlags {
+    pub fullscreen: bool,
+    pub interpolate_pixels: bool,
+    pub use_new_audio: bool,
+    pub no_border: bool,
+    pub show_cursor: bool,
+    pub sizeable: bool,
+    pub stay_on_top: bool,
+    pub change_resolution: bool,
+    pub no_buttons: bool,
+    pub screen_key: bool,
+    pub help_key: bool,
+    pub quit_key: bool,
+    pub save_key: bool,
+    pub screen_shot_key: bool,
+    pub close_sec: bool,
+    pub freeze: bool,
+    pub show_progress: bool,
+    pub load_transparent: bool,
+    pub scale_progress: bool,
+    pub display_errors: bool,
+    pub write_errors: bool,
+    pub abort_errors: bool,
+    pub variable_errors: bool,
+    pub creation_event_order: bool,
+    pub use_front_touch: bool,
+    pub use_rear_touch: bool,
+    pub use_fast_collision: bool,
+    pub fast_collision_compatibility: bool,
+    pub disable_sandbox: bool,
+    pub enable_copy_on_write: bool,
+}
+
 pub struct UTData {
     // pub chunks: HashMap<String, UTChunk>, // remove when all chunks parsed properly
-    pub strings: HashMap<u32, String>,    // STRG
-    pub general_info: UTGeneralInfo,      // GEN8
+    pub strings: HashMap<u32, String>,      // STRG
+    pub general_info: UTGeneralInfo,        // GEN8
+    pub options: UTOptions,                 // OPTN
 }
 
 pub struct DataChange {
