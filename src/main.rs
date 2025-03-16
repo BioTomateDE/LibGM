@@ -12,16 +12,16 @@ use chunk_reading::*;
 
 use std::collections::HashMap;
 use std::{fs, process};
+use crate::general_info::parse_chunk_OPTN;
+use crate::printing::print_options;
 
-
-fn read_data_file(data_file_path: &str) -> Vec<u8> {
-    let data_file = match fs::read(data_file_path) {
-        Ok(file) => file,
+fn read_data_file(data_file_path: &str) -> Result<Vec<u8>, String> {
+    return match fs::read(data_file_path) {
+        Ok(file) => Ok(file),
         Err(error) => {
-            panic!("Could not read file: {error:?}");
+            Err(format!("Could not read data file: {error:?}"))
         }
     };
-    data_file
 }
 
 
@@ -62,18 +62,24 @@ fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
         None => return Err(String::from("Invalid or corrupted data.win file: 'STRG' chunk missing!")),
         Some(chunk) => chunk.clone(),
     };
-    let chunk_GEN8:UTChunk = match chunks.get("GEN8") {
+    let chunk_GEN8: UTChunk = match chunks.get("GEN8") {
         None => return Err(String::from("Invalid or corrupted data.win file: 'GEN8' chunk missing!")),
+        Some(chunk) => chunk.clone(),
+    };
+    let chunk_OPTN: UTChunk = match chunks.get("OPTN") {
+        None => return Err(String::from("Invalid or corrupted data.win file: 'OPTN' chunk missing!")),
         Some(chunk) => chunk.clone(),
     };
 
     let strings: HashMap<u32, String> = parse_chunk_STRG(chunk_STRG);
     let general_info: UTGeneralInfo = parse_chunk_GEN8(chunk_GEN8, &strings);
+    let options: UTOptions = parse_chunk_OPTN(chunk_OPTN);
 
     let data = UTData {
         // chunks,
         strings,
         general_info,
+        options,
     };
 
     // println!("Total data length: {total_length} bytes");
@@ -83,7 +89,7 @@ fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     // }
 
     // testong
-    // for (chunk_name, chunk) in &data.chunks {
+    // for (chunk_name, chunk) in &chunks {
     //     let path = format!("./_expdat/{chunk_name}.bin");
     //     match fs::write(path, chunk.data.clone()) {
     //         Ok(_) => (),
@@ -125,9 +131,17 @@ fn main() {
     // }
 
     // let data_file_path: &str = args[1].as_str();
-    let data_file_path = "C:/Users/BioTomateDE/Documents/RustProjects/UndertaleModManager/data.win";
+    let data_file_path = "C:/Users/BioTomateDE/Documents/RustProjects/UndertaleModManager/dataExper.win";
     println!("Loading data file {}", data_file_path);
-    let data_file = read_data_file(data_file_path);
+
+    let data_file = match read_data_file(data_file_path) {
+        Ok(data_file) => data_file,
+        Err(error) => {
+            eprintln!("{error}");
+            process::exit(1);
+        }
+    };
+
     let data = match parse_data_file(data_file) {
         Ok(data) => data,
         Err(error) => {
@@ -136,7 +150,11 @@ fn main() {
         }
     };
 
+    println!();
     print_general_info(&data.general_info);
+    println!();
+    print_options(&data.options);
+
 
     // let changes: Vec<DataChange> = vec![
     //     DataChange {
