@@ -1,33 +1,28 @@
 #![allow(non_snake_case)]
-
 mod printing;
-use printing::print_general_info;
-mod general_info;
-use general_info::parse_chunk_GEN8;
+use printing::{print_general_info, print_options};
+
+mod deserialize;
+use deserialize::general_info::{parse_chunk_OPTN, parse_chunk_GEN8};
+use deserialize::variables::{parse_chunk_VARI};
+
 mod structs;
 use structs::*;
+
 mod chunk_reading;
-mod variables;
-
 use chunk_reading::*;
-
 
 use std::collections::HashMap;
 use std::{fs, process};
-use crate::general_info::parse_chunk_OPTN;
-use crate::printing::print_options;
-use crate::variables::parse_chunk_VARI;
 
 fn read_data_file(data_file_path: &str) -> Result<Vec<u8>, String> {
-    return match fs::read(data_file_path) {
+    match fs::read(data_file_path) {
         Ok(file) => Ok(file),
         Err(error) => {
             Err(format!("Could not read data file: {error:?}"))
         }
-    };
+    }
 }
-
-
 
 fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let mut raw_all_chunk = UTChunk {

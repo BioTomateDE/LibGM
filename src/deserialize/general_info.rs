@@ -1,7 +1,8 @@
-﻿use std::collections::HashMap;
-use chrono::{DateTime, Utc};
-use crate::structs::{UTGeneralInfo, UTGeneralInfoFlags, UTFunctionClassifications, UTOptions, UTOptionsFlags};
+﻿use crate::structs::{UTGeneralInfo, UTGeneralInfoFlags, UTFunctionClassifications, UTOptions, UTOptionsFlags};
 use crate::chunk_reading::UTChunk;
+
+use std::collections::HashMap;
+use chrono::{DateTime, Utc};
 
 pub fn parse_chunk_GEN8(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> UTGeneralInfo {
     let is_debugger_disabled: bool = chunk.read_bool();

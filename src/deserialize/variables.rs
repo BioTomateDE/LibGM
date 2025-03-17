@@ -26,12 +26,5 @@ pub fn parse_chunk_VARI(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> V
         })
     }
 
-    for var in &variables {
-        if var.name == "arguments" {continue;}
-        println!(
-            "{:<20} {:<4} {:<4} {:<4} {}",
-            var.name, var.instance_type, var.variable_id, var.occurrences_count, var.first_occurrence_address
-        );
-    }
     variables
 }
