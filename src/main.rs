@@ -7,6 +7,8 @@ use general_info::parse_chunk_GEN8;
 mod structs;
 use structs::*;
 mod chunk_reading;
+mod variables;
+
 use chunk_reading::*;
 
 
@@ -14,6 +16,7 @@ use std::collections::HashMap;
 use std::{fs, process};
 use crate::general_info::parse_chunk_OPTN;
 use crate::printing::print_options;
+use crate::variables::parse_chunk_VARI;
 
 fn read_data_file(data_file_path: &str) -> Result<Vec<u8>, String> {
     return match fs::read(data_file_path) {
@@ -47,6 +50,7 @@ fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
         let chunk_name: String = raw_all_chunk.read_chunk_name();
         let chunk_length: usize = raw_all_chunk.read_u32() as usize;
         let chunk_data: Vec<u8> = raw_all_chunk.data[raw_all_chunk.file_index .. raw_all_chunk.file_index + chunk_length].to_owned();
+        println!("{} @ {}", chunk_name, raw_all_chunk.file_index);
         chunks.insert(
             chunk_name.clone(),
             UTChunk {
@@ -70,10 +74,15 @@ fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
         None => return Err(String::from("Invalid or corrupted data.win file: 'OPTN' chunk missing!")),
         Some(chunk) => chunk.clone(),
     };
+    let chunk_VARI: UTChunk = match chunks.get("VARI") {
+        None => return Err(String::from("Invalid or corrupted data.win file: 'VARI' chunk missing!")),
+        Some(chunk) => chunk.clone(),
+    };
 
     let strings: HashMap<u32, String> = parse_chunk_STRG(chunk_STRG);
     let general_info: UTGeneralInfo = parse_chunk_GEN8(chunk_GEN8, &strings);
     let options: UTOptions = parse_chunk_OPTN(chunk_OPTN);
+    parse_chunk_VARI(chunk_VARI, &strings);
 
     let data = UTData {
         // chunks,
@@ -154,6 +163,8 @@ fn main() {
     print_general_info(&data.general_info);
     println!();
     print_options(&data.options);
+    println!();
+    println!("{}", data.strings[&11246101]);
 
 
     // let changes: Vec<DataChange> = vec![
