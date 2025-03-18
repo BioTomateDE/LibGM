@@ -35,7 +35,7 @@ fn read_data_file(data_file_path: &str) -> Result<Vec<u8>, String> {
     match fs::read(data_file_path) {
         Ok(file) => Ok(file),
         Err(error) => {
-            Err(format!("Could not read data file: {error:?}"))
+            Err(format!("Could not read data file: {error}"))
         }
     }
 }
@@ -140,15 +140,15 @@ fn parse_chunk_STRG(mut chunk: UTChunk) -> Result<HashMap<u32, String>, String> 
 fn main() {
     // let args: Vec<String> = env::args().collect();
     // if (args.len() != 2) {
-    //     println!("Usage: ./main <dataWinFile>");
+    //     eprintln!("Usage: ./UndertaleModManager <dataWinFile>");
     //     process::exit(1);
     // }
 
     // let data_file_path: &str = args[1].as_str();
-    let data_file_path = "C:/Users/BioTomateDE/Documents/RustProjects/UndertaleModManager/dataExper.win";
+    let data_file_path: &str = "C:/Users/BioTomateDE/Documents/RustProjects/UndertaleModManager/dataExper.win";
     println!("Loading data file {}", data_file_path);
 
-    let data_file = match read_data_file(data_file_path) {
+    let data_file: Vec<u8> = match read_data_file(data_file_path) {
         Ok(data_file) => data_file,
         Err(error) => {
             eprintln!("{error}");
@@ -156,7 +156,7 @@ fn main() {
         }
     };
 
-    let data = match parse_data_file(data_file) {
+    let data: UTData = match parse_data_file(data_file) {
         Ok(data) => data,
         Err(error) => {
             eprintln!("{error}");
@@ -170,3 +170,4 @@ fn main() {
     print_options(&data.options);
     // println!("{}", data.strings[&11246072]);
 }
+
