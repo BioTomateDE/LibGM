@@ -237,7 +237,8 @@ impl UTChunk {
         // Read chunk name (4 ascii characters)
         if self.file_index + 4 > self.data_len {
             return Err(format!(
-                "Trying to read chunk name out of bounds: {} > {}.",
+                "Trying to read chunk name out of bounds at position {}: {} > {}.",
+                self.file_index,
                 self.file_index + 4,
                 self.data_len
             ));
