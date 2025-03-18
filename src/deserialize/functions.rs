@@ -17,14 +17,14 @@ pub struct UTCodeLocal {
     pub variables: Vec<UTCodeLocalVariable>,
 }
 
-pub fn parse_chunk_FUNC(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> (Vec<UTFunction>, Vec<UTCodeLocal>) {
-    let functions_length: usize = chunk.read_u32() as usize;
+pub fn parse_chunk_FUNC(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> Result<(Vec<UTFunction>, Vec<UTCodeLocal>), String> {
+    let functions_length: usize = chunk.read_usize()?;
     let mut functions: Vec<UTFunction> = Vec::with_capacity(functions_length);
 
     for _ in 0..functions_length {
-        let function_name: String = chunk.read_ut_string(strings);
-        let occurrences: u32 = chunk.read_u32(); // idk what this values actually represents
-        let first_occurrence: u32 = chunk.read_u32();
+        let function_name: String = chunk.read_ut_string(strings)?;
+        let occurrences: u32 = chunk.read_u32()?;   // idk what this values actually represents
+        let first_occurrence: u32 = chunk.read_u32()?;
         let function: UTFunction = UTFunction {
             name: function_name,
             occurrences,
@@ -33,17 +33,17 @@ pub fn parse_chunk_FUNC(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> (
         functions.push(function);
     }
 
-    let code_locals_length: usize = chunk.read_u32() as usize;
+    let code_locals_length: usize = chunk.read_usize()?;
     let mut code_locals: Vec<UTCodeLocal> = Vec::with_capacity(code_locals_length);
 
     for _ in 0..code_locals_length {
-        let local_variables_count: usize = chunk.read_u32() as usize;
-        let name: String = chunk.read_ut_string(&strings);
+        let local_variables_count: usize = chunk.read_usize()?;
+        let name: String = chunk.read_ut_string(&strings)?;
         let mut variables: Vec<UTCodeLocalVariable> = Vec::with_capacity(local_variables_count);
 
         for _ in 0..local_variables_count {
-            let variable_index: usize = chunk.read_u32() as usize;
-            let variable_name: String = chunk.read_ut_string(&strings);
+            let variable_index: usize = chunk.read_usize()?;
+            let variable_name: String = chunk.read_ut_string(&strings)?;
             let variable: UTCodeLocalVariable = UTCodeLocalVariable {
                 index: variable_index,
                 name: variable_name,
@@ -66,6 +66,6 @@ pub fn parse_chunk_FUNC(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> (
     //     println!("[Code Local]    {:<48} | {:?}", i.name, i.variables);
     // }
 
-    (functions, code_locals)
+    Ok((functions, code_locals))
 }
 
