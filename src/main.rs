@@ -19,6 +19,18 @@ use chunk_reading::*;
 use std::collections::HashMap;
 use std::{fs, process};
 
+
+fn get_chunk(chunks: &HashMap<String, UTChunk>, chunk_name: &str) -> Result<UTChunk, String> {
+    match chunks.get(chunk_name) {
+        None => Err(format!(
+            "Chunk '{}' is missing in data file (chunk hashmap length: {}).",
+            chunk_name,
+            chunks.len()
+        )),
+        Some(chunk) => Ok(chunk.clone())
+    }
+}
+
 fn read_data_file(data_file_path: &str) -> Result<Vec<u8>, String> {
     match fs::read(data_file_path) {
         Ok(file) => Ok(file),
@@ -29,28 +41,25 @@ fn read_data_file(data_file_path: &str) -> Result<Vec<u8>, String> {
 }
 
 fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
-    let mut raw_all_chunk = UTChunk {
+    let mut all = UTChunk {
         name: "".to_string(),
         data: raw_data.clone(),
         data_len: raw_data.len(),
         file_index: 0
     };
 
-    if raw_all_chunk.read_chunk_name()? != "FORM" {
-        return Err(String::from(
-            "Invalid or corrupted data.win file: 'FORM' chunk missing!",
-        ));
+    if all.read_chunk_name()? != "FORM" {
+        return Err("Invalid or corrupted data.win file: 'FORM' chunk missing!".to_string());
     }
 
     // get chunks
-    let raw_data_len: usize = raw_all_chunk.read_usize()? + raw_all_chunk.file_index;
+    let raw_data_len: usize = all.read_usize()? + all.file_index;
     let mut chunks: HashMap<String, UTChunk> = HashMap::new();
 
-    while raw_all_chunk.file_index + 8 < raw_data_len {
-        let chunk_name: String = raw_all_chunk.read_chunk_name()?;
-        let chunk_length: usize = raw_all_chunk.read_usize()?;
-        let chunk_data: Vec<u8> = raw_all_chunk.data[raw_all_chunk.file_index .. raw_all_chunk.file_index + chunk_length].to_owned();
-        // println!("{} @ {}", chunk_name, raw_all_chunk.file_index);
+    while all.file_index + 8 < raw_data_len {
+        let chunk_name: String = all.read_chunk_name()?;
+        let chunk_length: usize = all.read_usize()?;
+        let chunk_data: Vec<u8> = all.data[all.file_index .. all.file_index + chunk_length].to_owned();
         chunks.insert(
             chunk_name.clone(),
             UTChunk {
@@ -60,33 +69,15 @@ fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
                 file_index: 0,
             },
         );
-        raw_all_chunk.file_index += chunk_length;
+        all.file_index += chunk_length;
     }
 
-    let chunk_STRG: UTChunk = match chunks.get("STRG") {
-        None => return Err(String::from("Invalid or corrupted data.win file: 'STRG' chunk missing!")),
-        Some(chunk) => chunk.clone(),
-    };
-    let chunk_GEN8: UTChunk = match chunks.get("GEN8") {
-        None => return Err(String::from("Invalid or corrupted data.win file: 'GEN8' chunk missing!")),
-        Some(chunk) => chunk.clone(),
-    };
-    let chunk_OPTN: UTChunk = match chunks.get("OPTN") {
-        None => return Err(String::from("Invalid or corrupted data.win file: 'OPTN' chunk missing!")),
-        Some(chunk) => chunk.clone(),
-    };
-    let chunk_VARI: UTChunk = match chunks.get("VARI") {
-        None => return Err(String::from("Invalid or corrupted data.win file: 'VARI' chunk missing!")),
-        Some(chunk) => chunk.clone(),
-    };
-    let chunk_SCPT: UTChunk = match chunks.get("SCPT") {
-        None => return Err(String::from("Invalid or corrupted data.win file: 'SCPT' chunk missing!")),
-        Some(chunk) => chunk.clone(),
-    };
-    let chunk_FUNC: UTChunk = match chunks.get("FUNC") {
-        None => return Err(String::from("Invalid or corrupted data.win file: 'FUNC' chunk missing!")),
-        Some(chunk) => chunk.clone(),
-    };
+    let chunk_STRG: UTChunk = get_chunk(&chunks, "STRG")?;
+    let chunk_GEN8: UTChunk = get_chunk(&chunks, "GEN8")?;
+    let chunk_OPTN: UTChunk = get_chunk(&chunks, "OPTN")?;
+    let chunk_SCPT: UTChunk = get_chunk(&chunks, "SCPT")?;
+    let chunk_FUNC: UTChunk = get_chunk(&chunks, "FUNC")?;
+    let chunk_VARI: UTChunk = get_chunk(&chunks, "VARI")?;
 
     let strings: HashMap<u32, String> = parse_chunk_STRG(chunk_STRG)?;
     let general_info: UTGeneralInfo = parse_chunk_GEN8(chunk_GEN8, &strings)?;
@@ -111,7 +102,7 @@ fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     //     println!("  {}: {} bytes", chunk_name, chunk.data.len());
     // }
 
-    // testong
+    // ----- Testing -----
     // for (chunk_name, chunk) in &chunks {
     //     let path = format!("./_expdat/{chunk_name}.bin");
     //     match fs::write(path, chunk.data.clone()) {
@@ -119,7 +110,7 @@ fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     //         Err(err) => eprintln!("Failed to write to file for {chunk_name}: {}", err),
     //     }
     // }
-    // ^
+    // ----- ^^^^^^^^ -----
 
     Ok(data)
 }
