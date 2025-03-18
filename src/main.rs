@@ -1,4 +1,6 @@
 #![allow(non_snake_case)]
+#![allow(dead_code)]
+
 mod printing;
 use printing::{print_general_info, print_options};
 
@@ -28,31 +30,33 @@ fn read_data_file(data_file_path: &str) -> Result<Vec<u8>, String> {
 
 fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let mut raw_all_chunk = UTChunk {
-        name: String::from(""),
-        data: raw_data.to_owned(),
+        name: "".to_string(),
+        data: raw_data.clone(),
+        data_len: raw_data.len(),
         file_index: 0
     };
 
-    if raw_all_chunk.read_chunk_name() != "FORM" {
+    if raw_all_chunk.read_chunk_name()? != "FORM" {
         return Err(String::from(
             "Invalid or corrupted data.win file: 'FORM' chunk missing!",
         ));
     }
 
     // get chunks
-    let raw_data_len: usize = raw_all_chunk.read_u32() as usize + raw_all_chunk.file_index;
+    let raw_data_len: usize = raw_all_chunk.read_usize()? + raw_all_chunk.file_index;
     let mut chunks: HashMap<String, UTChunk> = HashMap::new();
 
     while raw_all_chunk.file_index + 8 < raw_data_len {
-        let chunk_name: String = raw_all_chunk.read_chunk_name();
-        let chunk_length: usize = raw_all_chunk.read_u32() as usize;
+        let chunk_name: String = raw_all_chunk.read_chunk_name()?;
+        let chunk_length: usize = raw_all_chunk.read_usize()?;
         let chunk_data: Vec<u8> = raw_all_chunk.data[raw_all_chunk.file_index .. raw_all_chunk.file_index + chunk_length].to_owned();
         // println!("{} @ {}", chunk_name, raw_all_chunk.file_index);
         chunks.insert(
             chunk_name.clone(),
             UTChunk {
-                data: chunk_data,
                 name: chunk_name,
+                data: chunk_data.clone(),
+                data_len: chunk_data.len(),
                 file_index: 0,
             },
         );
@@ -84,12 +88,12 @@ fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
         Some(chunk) => chunk.clone(),
     };
 
-    let strings: HashMap<u32, String> = parse_chunk_STRG(chunk_STRG);
-    let general_info: UTGeneralInfo = parse_chunk_GEN8(chunk_GEN8, &strings);
-    let options: UTOptions = parse_chunk_OPTN(chunk_OPTN);
-    let scripts: Vec<UTScript> = parse_chunk_SCPT(chunk_SCPT, &strings);
-    let variables: Vec<UTVariable> = parse_chunk_VARI(chunk_VARI, &strings);
-    let (functions, code_locals): (Vec<UTFunction>, Vec<UTCodeLocal>) = parse_chunk_FUNC(chunk_FUNC, &strings);
+    let strings: HashMap<u32, String> = parse_chunk_STRG(chunk_STRG)?;
+    let general_info: UTGeneralInfo = parse_chunk_GEN8(chunk_GEN8, &strings)?;
+    let options: UTOptions = parse_chunk_OPTN(chunk_OPTN)?;
+    let scripts: Vec<UTScript> = parse_chunk_SCPT(chunk_SCPT, &strings)?;
+    let variables: Vec<UTVariable> = parse_chunk_VARI(chunk_VARI, &strings)?;
+    let (functions, code_locals): (Vec<UTFunction>, Vec<UTCodeLocal>) = parse_chunk_FUNC(chunk_FUNC, &strings)?;
 
     let data = UTData {
         strings,
@@ -120,24 +124,24 @@ fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     Ok(data)
 }
 
-fn parse_chunk_STRG(mut chunk: UTChunk) -> HashMap<u32, String> {
-    let string_count: usize = chunk.read_u32() as usize;
+fn parse_chunk_STRG(mut chunk: UTChunk) -> Result<HashMap<u32, String>, String> {
+    let string_count: usize = chunk.read_usize()?;
     let mut string_ids: Vec<u32> = Vec::with_capacity(string_count);
     let mut strings: HashMap<u32, String> = HashMap::new();
 
     for _ in 0..string_count {
         // you have to add 4 to the string id for some unknown reason
-        let string_id = 4 + chunk.read_u32();
+        let string_id = 4 + chunk.read_u32()?;
         string_ids.push(string_id);
     }
 
     for string_id in string_ids {
-        let string_length: usize = chunk.read_u32() as usize;
-        let string: String = chunk.read_literal_string(string_length);
+        let string_length: usize = chunk.read_usize()?;
+        let string: String = chunk.read_literal_string(string_length)?;
         chunk.file_index += 1;  // skip one byte for the null byte after the string
         strings.insert(string_id, string);
     }
-    strings
+    Ok(strings)
 }
 
 
@@ -169,9 +173,9 @@ fn main() {
         }
     };
 
-    // println!();
-    // print_general_info(&data.general_info);
-    // println!();
-    // print_options(&data.options);
+    println!();
+    print_general_info(&data.general_info);
+    println!();
+    print_options(&data.options);
     // println!("{}", data.strings[&11246072]);
 }
