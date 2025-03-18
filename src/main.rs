@@ -4,8 +4,9 @@ use printing::{print_general_info, print_options};
 
 mod deserialize;
 use deserialize::general_info::{parse_chunk_OPTN, parse_chunk_GEN8};
-use deserialize::variables::{parse_chunk_VARI};
+use deserialize::variables::{UTVariable, parse_chunk_VARI};
 use deserialize::scripts::{UTScript, parse_chunk_SCPT};
+use deserialize::functions::{UTFunction, UTCodeLocal, parse_chunk_FUNC};
 
 mod structs;
 use structs::*;
@@ -78,18 +79,26 @@ fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
         None => return Err(String::from("Invalid or corrupted data.win file: 'SCPT' chunk missing!")),
         Some(chunk) => chunk.clone(),
     };
+    let chunk_FUNC: UTChunk = match chunks.get("FUNC") {
+        None => return Err(String::from("Invalid or corrupted data.win file: 'FUNC' chunk missing!")),
+        Some(chunk) => chunk.clone(),
+    };
 
     let strings: HashMap<u32, String> = parse_chunk_STRG(chunk_STRG);
     let general_info: UTGeneralInfo = parse_chunk_GEN8(chunk_GEN8, &strings);
     let options: UTOptions = parse_chunk_OPTN(chunk_OPTN);
     let scripts: Vec<UTScript> = parse_chunk_SCPT(chunk_SCPT, &strings);
-    parse_chunk_VARI(chunk_VARI, &strings);
+    let variables: Vec<UTVariable> = parse_chunk_VARI(chunk_VARI, &strings);
+    let (functions, code_locals): (Vec<UTFunction>, Vec<UTCodeLocal>) = parse_chunk_FUNC(chunk_FUNC, &strings);
 
     let data = UTData {
         strings,
         general_info,
         options,
         scripts,
+        variables,
+        functions,
+        code_locals
     };
 
     // println!("Total data length: {total_length} bytes");
@@ -160,8 +169,9 @@ fn main() {
         }
     };
 
-    println!();
-    print_general_info(&data.general_info);
-    println!();
-    print_options(&data.options);
+    // println!();
+    // print_general_info(&data.general_info);
+    // println!();
+    // print_options(&data.options);
+    // println!("{}", data.strings[&11246072]);
 }
