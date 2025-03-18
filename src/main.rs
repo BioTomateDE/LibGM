@@ -5,6 +5,7 @@ use printing::{print_general_info, print_options};
 mod deserialize;
 use deserialize::general_info::{parse_chunk_OPTN, parse_chunk_GEN8};
 use deserialize::variables::{parse_chunk_VARI};
+use deserialize::scripts::{UTScript, parse_chunk_SCPT};
 
 mod structs;
 use structs::*;
@@ -45,7 +46,7 @@ fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
         let chunk_name: String = raw_all_chunk.read_chunk_name();
         let chunk_length: usize = raw_all_chunk.read_u32() as usize;
         let chunk_data: Vec<u8> = raw_all_chunk.data[raw_all_chunk.file_index .. raw_all_chunk.file_index + chunk_length].to_owned();
-        println!("{} @ {}", chunk_name, raw_all_chunk.file_index);
+        // println!("{} @ {}", chunk_name, raw_all_chunk.file_index);
         chunks.insert(
             chunk_name.clone(),
             UTChunk {
@@ -73,17 +74,22 @@ fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
         None => return Err(String::from("Invalid or corrupted data.win file: 'VARI' chunk missing!")),
         Some(chunk) => chunk.clone(),
     };
+    let chunk_SCPT: UTChunk = match chunks.get("SCPT") {
+        None => return Err(String::from("Invalid or corrupted data.win file: 'SCPT' chunk missing!")),
+        Some(chunk) => chunk.clone(),
+    };
 
     let strings: HashMap<u32, String> = parse_chunk_STRG(chunk_STRG);
     let general_info: UTGeneralInfo = parse_chunk_GEN8(chunk_GEN8, &strings);
     let options: UTOptions = parse_chunk_OPTN(chunk_OPTN);
+    let scripts: Vec<UTScript> = parse_chunk_SCPT(chunk_SCPT, &strings);
     parse_chunk_VARI(chunk_VARI, &strings);
 
     let data = UTData {
-        // chunks,
         strings,
         general_info,
         options,
+        scripts,
     };
 
     // println!("Total data length: {total_length} bytes");
@@ -108,7 +114,7 @@ fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
 fn parse_chunk_STRG(mut chunk: UTChunk) -> HashMap<u32, String> {
     let string_count: usize = chunk.read_u32() as usize;
     let mut string_ids: Vec<u32> = Vec::with_capacity(string_count);
-    let mut strings: HashMap<u32, String> = HashMap::with_capacity(string_count);
+    let mut strings: HashMap<u32, String> = HashMap::new();
 
     for _ in 0..string_count {
         // you have to add 4 to the string id for some unknown reason
@@ -158,27 +164,4 @@ fn main() {
     print_general_info(&data.general_info);
     println!();
     print_options(&data.options);
-    println!();
-    println!("{}", data.strings[&11246101]);
-
-
-    // let changes: Vec<DataChange> = vec![
-    //     DataChange {
-    //         index: 2346,
-    //         content: vec![69, 42, 0],
-    //         delete: false,
-    //     },
-    //     DataChange {
-    //         index: 2345,
-    //         content: vec![32, 32, 0, 24, 124, 32, 95],
-    //         delete: false,
-    //     },
-    //     DataChange {
-    //         index: 421,
-    //         content: vec![0, 0, 0, 0, 0, 0],
-    //         delete: true,
-    //     },
-    // ];
-    //
-    // data.chunks["TXTR"].apply_changes(changes);
 }
