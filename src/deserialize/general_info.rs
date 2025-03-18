@@ -36,14 +36,25 @@ pub fn parse_chunk_GEN8(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> R
     let default_window_height: u32 = chunk.read_u32()?;
     let flags: UTGeneralInfoFlags = parse_flags(&mut chunk)?;
 
-    // TODO actually check file length (to prevent panics with invalid files)
-    let license: [u8; 16] = chunk.data[chunk.file_index..chunk.file_index+16].try_into().unwrap();
+    let license: [u8; 16] = match chunk.data[chunk.file_index..chunk.file_index+16].try_into() {
+        Ok(data) => data,
+        Err(_) => return Err(format!(
+            "Trying to read license out of bounds in chunk 'GEN8' at position {}: {} > {}.",
+            chunk.file_index,
+            chunk.file_index + 16,
+            chunk.data_len,
+        )),
+    };
     chunk.file_index += 16;
 
     let timestamp_created: i64 = chunk.read_i64()?;
     let timestamp_created: DateTime<Utc> = match DateTime::from_timestamp(timestamp_created, 0) {
         Some(timestamp) => timestamp,
-        None => return Err(format!("Invalid Timestamp {:016X} in chunk 'GEN8' at position {}.", timestamp_created, chunk.file_index)),
+        None => return Err(format!(
+            "Invalid Timestamp {:016X} in chunk 'GEN8' at position {}.",
+            timestamp_created,
+            chunk.file_index
+        )),
     };
 
     let display_name: String = chunk.read_ut_string(strings)?;
