@@ -14,10 +14,18 @@ pub fn parse_chunk_GEN8(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> R
     let last_tile_id: u32 = chunk.read_u32()?;
     let game_id: u32 = chunk.read_u32()?;
 
-    // horrible slice type thingy  (https://users.rust-lang.org/t/convert-slice-u8-to-u8-4/63836)
-    let directplay_guid: [u8; 16] = chunk.data[chunk.file_index..chunk.file_index + 16].try_into().unwrap();
+    let directplay_guid: [u8; 16] = match chunk.data[chunk.file_index..chunk.file_index + 16].try_into() {
+        Ok(data) => data,
+        Err(_) => return Err(format!(
+            "Trying to read GUID out of bounds in chunk 'GEN8' at position {}: {} > {}.",
+            chunk.file_index,
+            chunk.file_index + 16,
+            chunk.data_len,
+        )),
+    };
     chunk.file_index += 16;
-    let directplay_guid: uuid::Uuid = uuid::Builder::from_bytes_le(directplay_guid).into_uuid(); // perhaps not _le but idk
+    let directplay_guid: uuid::Uuid = uuid::Builder::from_bytes_le(directplay_guid).into_uuid();
+    // ^ perhaps not `_le` but idk bc it's usually just null
 
     let game_name: String = chunk.read_ut_string(strings)?;
     let major_version: u32 = chunk.read_u32()?;
@@ -32,11 +40,10 @@ pub fn parse_chunk_GEN8(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> R
     let license: [u8; 16] = chunk.data[chunk.file_index..chunk.file_index+16].try_into().unwrap();
     chunk.file_index += 16;
 
-    // skip 8 bytes (Timestamp created)
     let timestamp_created: i64 = chunk.read_i64()?;
     let timestamp_created: DateTime<Utc> = match DateTime::from_timestamp(timestamp_created, 0) {
-        None => DateTime::from_timestamp(0, 0).unwrap(),
         Some(timestamp) => timestamp,
+        None => return Err(format!("Invalid Timestamp {:016X} in chunk 'GEN8' at position {}.", timestamp_created, chunk.file_index)),
     };
 
     let display_name: String = chunk.read_ut_string(strings)?;
@@ -106,7 +113,7 @@ fn parse_flags(chunk: &mut UTChunk) -> Result<UTGeneralInfoFlags, String> {
 }
 
 fn parse_function_classifications(chunk: &mut UTChunk) -> Result<UTFunctionClassifications, String> {
-    let raw = chunk.read_u64()?;
+    let raw: u64 = chunk.read_u64()?;
     Ok(UTFunctionClassifications {
         none: 0 != raw & 0x0,
         internet: 0 != raw & 0x1,
