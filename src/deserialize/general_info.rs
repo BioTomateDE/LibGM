@@ -4,57 +4,57 @@ use crate::chunk_reading::UTChunk;
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 
-pub fn parse_chunk_GEN8(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> UTGeneralInfo {
-    let is_debugger_disabled: bool = chunk.read_bool();
-    let bytecode_version: u8 = chunk.read_u8();
-    let unknown_value: u16 = chunk.read_u16();
-    let game_file_name: String = chunk.read_ut_string(strings);
-    let config: String = chunk.read_ut_string(strings);
-    let last_object_id: u32 = chunk.read_u32();
-    let last_tile_id: u32 = chunk.read_u32();
-    let game_id: u32 = chunk.read_u32();
+pub fn parse_chunk_GEN8(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> Result<UTGeneralInfo, String> {
+    let is_debugger_disabled: bool = chunk.read_bool()?;
+    let bytecode_version: u8 = chunk.read_u8()?;
+    let unknown_value: u16 = chunk.read_u16()?;
+    let game_file_name: String = chunk.read_ut_string(strings)?;
+    let config: String = chunk.read_ut_string(strings)?;
+    let last_object_id: u32 = chunk.read_u32()?;
+    let last_tile_id: u32 = chunk.read_u32()?;
+    let game_id: u32 = chunk.read_u32()?;
 
     // horrible slice type thingy  (https://users.rust-lang.org/t/convert-slice-u8-to-u8-4/63836)
     let directplay_guid: [u8; 16] = chunk.data[chunk.file_index..chunk.file_index + 16].try_into().unwrap();
     chunk.file_index += 16;
     let directplay_guid: uuid::Uuid = uuid::Builder::from_bytes_le(directplay_guid).into_uuid(); // perhaps not _le but idk
 
-    let game_name: String = chunk.read_ut_string(strings);
-    let major_version: u32 = chunk.read_u32();
-    let minor_version: u32 = chunk.read_u32();
-    let release_version: u32 = chunk.read_u32();
-    let stable_version: u32 = chunk.read_u32();
-    let default_window_width: u32 = chunk.read_u32();
-    let default_window_height: u32 = chunk.read_u32();
-    let flags: UTGeneralInfoFlags = parse_flags(&mut chunk);
+    let game_name: String = chunk.read_ut_string(strings)?;
+    let major_version: u32 = chunk.read_u32()?;
+    let minor_version: u32 = chunk.read_u32()?;
+    let release_version: u32 = chunk.read_u32()?;
+    let stable_version: u32 = chunk.read_u32()?;
+    let default_window_width: u32 = chunk.read_u32()?;
+    let default_window_height: u32 = chunk.read_u32()?;
+    let flags: UTGeneralInfoFlags = parse_flags(&mut chunk)?;
 
     // TODO actually check file length (to prevent panics with invalid files)
     let license: [u8; 16] = chunk.data[chunk.file_index..chunk.file_index+16].try_into().unwrap();
     chunk.file_index += 16;
 
     // skip 8 bytes (Timestamp created)
-    let timestamp_created: i64 = chunk.read_i64();
+    let timestamp_created: i64 = chunk.read_i64()?;
     let timestamp_created: DateTime<Utc> = match DateTime::from_timestamp(timestamp_created, 0) {
         None => DateTime::from_timestamp(0, 0).unwrap(),
         Some(timestamp) => timestamp,
     };
 
-    let display_name: String = chunk.read_ut_string(strings);
+    let display_name: String = chunk.read_ut_string(strings)?;
     // probably not actually u64 (rather u32) but it's zero and there's null bytes surrounding it so idk
-    let active_targets: u64 = chunk.read_u64();
-    let function_classifications: UTFunctionClassifications = parse_function_classifications(&mut chunk);
-    let steam_appid: u32 = (-chunk.read_i32()) as u32;
-    let debugger_port: u16 = chunk.read_u32() as u16;
+    let active_targets: u64 = chunk.read_u64()?;
+    let function_classifications: UTFunctionClassifications = parse_function_classifications(&mut chunk)?;
+    let steam_appid: u32 = (-chunk.read_i32()?) as u32;
+    let debugger_port: u16 = chunk.read_u32()? as u16;
 
-    let end: usize = chunk.read_u32() as usize * 4 + 4;
+    let end: usize = chunk.read_usize()? * 4 + 4;
     let mut room_order: Vec<u32> = vec![];
 
     while chunk.file_index < end {
-        let room_id: u32 = chunk.read_u32();
+        let room_id: u32 = chunk.read_u32()?;
         room_order.push(room_id);
     }
 
-    UTGeneralInfo {
+    Ok(UTGeneralInfo {
         is_debugger_disabled,
         bytecode_version,
         unknown_value,
@@ -80,12 +80,12 @@ pub fn parse_chunk_GEN8(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> U
         steam_appid,
         debugger_port,
         room_order,
-    }
+    })
 }
 
-fn parse_flags(chunk: &mut UTChunk) -> UTGeneralInfoFlags {
-    let raw: u64 = chunk.read_u64();
-    UTGeneralInfoFlags {
+fn parse_flags(chunk: &mut UTChunk) -> Result<UTGeneralInfoFlags, String> {
+    let raw: u64 = chunk.read_u64()?;
+    Ok(UTGeneralInfoFlags {
         fullscreen: 0 != raw & 0x0001,
         sync_vertex1: 0 != raw & 0x0002,
         sync_vertex2: 0 != raw & 0x0004,
@@ -102,12 +102,12 @@ fn parse_flags(chunk: &mut UTChunk) -> UTGeneralInfoFlags {
         local_data_enabled: 0 != raw & 0x2000,
         borderless_window: 0 != raw & 0x4000,
         javascript_mode: 0 != raw & 0x8000,
-    }
+    })
 }
 
-fn parse_function_classifications(chunk: &mut UTChunk) -> UTFunctionClassifications {
-    let raw = chunk.read_u64();
-    UTFunctionClassifications {
+fn parse_function_classifications(chunk: &mut UTChunk) -> Result<UTFunctionClassifications, String> {
+    let raw = chunk.read_u64()?;
+    Ok(UTFunctionClassifications {
         none: 0 != raw & 0x0,
         internet: 0 != raw & 0x1,
         joystick: 0 != raw & 0x2,
@@ -174,12 +174,12 @@ fn parse_function_classifications(chunk: &mut UTChunk) -> UTFunctionClassificati
         _unused3: 0 != raw & 2310346608841064448,
         shaders: 0 != raw & 0x4000000000000000,
         vertex_buffers: 0 != raw & 9223372036854775808,
-    }
+    })
 }
 
-fn parse_options_flags(chunk: &mut UTChunk) -> UTOptionsFlags {
-    let raw: u64 = chunk.read_u64();
-    UTOptionsFlags {
+fn parse_options_flags(chunk: &mut UTChunk) -> Result<UTOptionsFlags, String> {
+    let raw: u64 = chunk.read_u64()?;
+    Ok(UTOptionsFlags {
         fullscreen: 0 != raw & 0x1,
         interpolate_pixels: 0 != raw & 0x2,
         use_new_audio: 0 != raw & 0x4,
@@ -210,34 +210,34 @@ fn parse_options_flags(chunk: &mut UTChunk) -> UTOptionsFlags {
         fast_collision_compatibility: 0 != raw & 0x8000000,
         disable_sandbox: 0 != raw & 0x10000000,
         enable_copy_on_write: 0 != raw & 0x20000000,
-    }
+    })
 }
 
 
-pub fn parse_chunk_OPTN(mut chunk: UTChunk) -> UTOptions {
-    let _unused1: u32 = chunk.read_u32();
-    let _unused2: u32 = chunk.read_u32();
-    let flags: UTOptionsFlags = parse_options_flags(&mut chunk);
-    let scale: i32 = chunk.read_i32();
-    let window_color_r: u8 = chunk.read_u8();
-    let window_color_g: u8 = chunk.read_u8();
-    let window_color_b: u8 = chunk.read_u8();
-    let window_color_a: u8 = chunk.read_u8();
-    let color_depth: u32 = chunk.read_u32();
-    let resolution: u32 = chunk.read_u32();
-    let frequency: u32 = chunk.read_u32();
-    let vertex_sync: u32 = chunk.read_u32();
-    let priority: u32 = chunk.read_u32();
+pub fn parse_chunk_OPTN(mut chunk: UTChunk) -> Result<UTOptions, String> {
+    let _unused1: u32 = chunk.read_u32()?;
+    let _unused2: u32 = chunk.read_u32()?;
+    let flags: UTOptionsFlags = parse_options_flags(&mut chunk)?;
+    let scale: i32 = chunk.read_i32()?;
+    let window_color_r: u8 = chunk.read_u8()?;
+    let window_color_g: u8 = chunk.read_u8()?;
+    let window_color_b: u8 = chunk.read_u8()?;
+    let window_color_a: u8 = chunk.read_u8()?;
+    let color_depth: u32 = chunk.read_u32()?;
+    let resolution: u32 = chunk.read_u32()?;
+    let frequency: u32 = chunk.read_u32()?;
+    let vertex_sync: u32 = chunk.read_u32()?;
+    let priority: u32 = chunk.read_u32()?;
     // CHANGE TYPES TO `texture page item` WHEN SUPPORTED
-    let back_image: u32 = chunk.read_u32();
-    let front_image: u32 = chunk.read_u32();
-    let load_image: u32 = chunk.read_u32();
+    let back_image: u32 = chunk.read_u32()?;
+    let front_image: u32 = chunk.read_u32()?;
+    let load_image: u32 = chunk.read_u32()?;
     // ^
-    let load_alpha: u32 = chunk.read_u32();
+    let load_alpha: u32 = chunk.read_u32()?;
 
     // constants missing
 
-    UTOptions {
+    Ok(UTOptions {
         _unused1,
         _unused2,
         flags,
@@ -255,5 +255,6 @@ pub fn parse_chunk_OPTN(mut chunk: UTChunk) -> UTOptions {
         front_image,
         load_image,
         load_alpha,
-    }
+    })
 }
+
