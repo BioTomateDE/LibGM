@@ -1,6 +1,8 @@
 ﻿use std::collections::HashMap;
 use chrono::{DateTime, Utc};
+use crate::deserialize::functions::{UTCodeLocal, UTFunction};
 use crate::deserialize::scripts::UTScript;
+use crate::deserialize::variables::UTVariable;
 
 pub struct UTOptions {
     pub _unused1: u32,
@@ -179,11 +181,13 @@ pub struct UTOptionsFlags {
 }
 
 pub struct UTData {
-    // pub chunks: HashMap<String, UTChunk>, // remove when all chunks parsed properly
     pub strings: HashMap<u32, String>,      // STRG
     pub general_info: UTGeneralInfo,        // GEN8
     pub options: UTOptions,                 // OPTN
     pub scripts: Vec<UTScript>,             // SCPT
+    pub variables: Vec<UTVariable>,         // VARI
+    pub functions: Vec<UTFunction>,         // FUNC
+    pub code_locals: Vec<UTCodeLocal>,      // FUNC
 }
 
 pub struct DataChange {
