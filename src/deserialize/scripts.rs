@@ -6,20 +6,20 @@ pub struct UTScript {
     pub name: String,
 }
 
-pub fn parse_chunk_SCPT(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> Vec<UTScript> {
-    let scripts_length: usize = chunk.read_u32() as usize;
+pub fn parse_chunk_SCPT(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> Result<Vec<UTScript>, String> {
+    let scripts_length: usize = chunk.read_usize()?;
 
     let mut script_ids: Vec<u32> = Vec::with_capacity(scripts_length);
     for _ in 0..scripts_length {
-        let script_id: u32 = chunk.read_u32();
+        let script_id: u32 = chunk.read_u32()?;
         script_ids.push(script_id);
     }
 
     let mut script_names: Vec<String> = Vec::with_capacity(scripts_length);
     for _ in 0..scripts_length {
-        let script_name: String = chunk.read_ut_string(&strings);
+        let script_name: String = chunk.read_ut_string(&strings)?;
         script_names.push(script_name);
-        chunk.read_u32();   // skip counter going up from zero (redundant)
+        chunk.read_u32()?;   // skip counter going up from zero (redundant)
     }
 
     let mut scripts: Vec<UTScript> = Vec::with_capacity(scripts_length);
@@ -30,6 +30,6 @@ pub fn parse_chunk_SCPT(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> V
         scripts.push(script);
     }
 
-    scripts
+    Ok(scripts)
 }
 
