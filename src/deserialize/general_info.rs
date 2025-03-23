@@ -1,10 +1,9 @@
 ﻿use crate::structs::{UTGeneralInfo, UTGeneralInfoFlags, UTFunctionClassifications, UTOptions, UTOptionsFlags};
 use crate::chunk_reading::UTChunk;
-
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
+use crate::deserialize::strings::UTStrings;
 
-pub fn parse_chunk_GEN8(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> Result<UTGeneralInfo, String> {
+pub fn parse_chunk_GEN8(mut chunk: UTChunk, strings: &UTStrings) -> Result<UTGeneralInfo, String> {
     let is_debugger_disabled: bool = chunk.read_bool()?;
     let bytecode_version: u8 = chunk.read_u8()?;
     let unknown_value: u16 = chunk.read_u16()?;

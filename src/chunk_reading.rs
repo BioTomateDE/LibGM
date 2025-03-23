@@ -1,12 +1,12 @@
-﻿use std::collections::HashMap;
-// use crate::structs::DataChange;
+﻿use crate::deserialize::strings::UTStrings;
 
 #[derive(Clone)]
 pub struct UTChunk {
-    pub name: String,
-    pub data: Vec<u8>,
-    pub data_len: usize,
-    pub file_index: usize,
+    pub name: String,       // 4 letter name of chunk
+    pub abs_pos: usize,     // absolute position/index in data.win file
+    pub data: Vec<u8>,      // raw data
+    pub data_len: usize,    // length of data for performance
+    pub file_index: usize,  // gets incremented by .read_{} methods when parsing chunk
 }
 
 impl UTChunk {
@@ -250,10 +250,10 @@ impl UTChunk {
         }
     }
 
-    pub fn read_ut_string(&mut self, ut_strings: &HashMap<u32, String>) -> Result<String, String> {
+    pub fn read_ut_string(&mut self, ut_strings: &UTStrings) -> Result<String, String> {
         let string_id: u32 = self.read_u32()?;
 
-        match ut_strings.get(&string_id) {
+        match ut_strings.get_string_by_id(string_id) {
             Some(string) => Ok(string.clone()),
             None => Err(format!(
                 "Could not read reference string with ID {} in chunk '{}' at \
@@ -261,7 +261,7 @@ impl UTChunk {
                 string_id,
                 self.name,
                 self.file_index - 4,
-                ut_strings.len()
+                ut_strings.len(),
             ))
         }
     }
