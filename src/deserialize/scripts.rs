@@ -1,12 +1,12 @@
-﻿use std::collections::HashMap;
-use crate::chunk_reading::UTChunk;
+﻿use crate::chunk_reading::UTChunk;
+use crate::deserialize::strings::UTStrings;
 
 pub struct UTScript {
     pub script_id: u32,
     pub name: String,
 }
 
-pub fn parse_chunk_SCPT(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> Result<Vec<UTScript>, String> {
+pub fn parse_chunk_SCPT(mut chunk: UTChunk, strings: &UTStrings) -> Result<Vec<UTScript>, String> {
     let scripts_length: usize = chunk.read_usize()?;
 
     let mut script_ids: Vec<u32> = Vec::with_capacity(scripts_length);
@@ -24,6 +24,7 @@ pub fn parse_chunk_SCPT(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> R
 
     let mut scripts: Vec<UTScript> = Vec::with_capacity(scripts_length);
     for i in 0..scripts_length {
+        // println!("{} {}", script_ids[i], script_names[i]);
         let script_id: u32 = script_ids[i];
         let name: String = script_names[i].clone();
         let script: UTScript = UTScript { script_id, name };

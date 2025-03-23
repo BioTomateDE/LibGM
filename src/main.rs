@@ -5,10 +5,12 @@ mod printing;
 use printing::{print_general_info, print_options};
 
 mod deserialize;
+use deserialize::strings::{UTStrings, parse_chunk_STRG};
 use deserialize::general_info::{parse_chunk_OPTN, parse_chunk_GEN8};
 use deserialize::variables::{UTVariable, parse_chunk_VARI};
 use deserialize::scripts::{UTScript, parse_chunk_SCPT};
 use deserialize::functions::{UTFunction, UTCodeLocal, parse_chunk_FUNC};
+use deserialize::code::{UTCode, parse_chunk_CODE};
 
 mod structs;
 use structs::*;
@@ -43,6 +45,7 @@ fn read_data_file(data_file_path: &str) -> Result<Vec<u8>, String> {
 fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let mut all = UTChunk {
         name: "".to_string(),
+        abs_pos: 0,
         data: raw_data.clone(),
         data_len: raw_data.len(),
         file_index: 0
@@ -64,6 +67,7 @@ fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
             chunk_name.clone(),
             UTChunk {
                 name: chunk_name,
+                abs_pos: all.file_index,
                 data: chunk_data.clone(),
                 data_len: chunk_data.len(),
                 file_index: 0,
@@ -78,13 +82,21 @@ fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let chunk_SCPT: UTChunk = get_chunk(&chunks, "SCPT")?;
     let chunk_FUNC: UTChunk = get_chunk(&chunks, "FUNC")?;
     let chunk_VARI: UTChunk = get_chunk(&chunks, "VARI")?;
+    let chunk_CODE: UTChunk = get_chunk(&chunks, "CODE")?;
 
-    let strings: HashMap<u32, String> = parse_chunk_STRG(chunk_STRG)?;
+    let strings: UTStrings = parse_chunk_STRG(chunk_STRG)?;
+    // for (id,st) in &strings {
+    //     if st == "Greetings." {
+    //         println!("id: {id}");
+    //     }
+    // }
     let general_info: UTGeneralInfo = parse_chunk_GEN8(chunk_GEN8, &strings)?;
+    let bytecode14: bool = general_info.bytecode_version >= 14;
     let options: UTOptions = parse_chunk_OPTN(chunk_OPTN)?;
     let scripts: Vec<UTScript> = parse_chunk_SCPT(chunk_SCPT, &strings)?;
     let variables: Vec<UTVariable> = parse_chunk_VARI(chunk_VARI, &strings)?;
     let (functions, code_locals): (Vec<UTFunction>, Vec<UTCodeLocal>) = parse_chunk_FUNC(chunk_FUNC, &strings)?;
+    let code: Vec<UTCode> = parse_chunk_CODE(chunk_CODE, bytecode14, &strings, &variables, &functions)?;
 
     let data = UTData {
         strings,
@@ -93,7 +105,8 @@ fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
         scripts,
         variables,
         functions,
-        code_locals
+        code_locals,
+        code,
     };
 
     // println!("Total data length: {total_length} bytes");
@@ -114,27 +127,6 @@ fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
 
     Ok(data)
 }
-
-fn parse_chunk_STRG(mut chunk: UTChunk) -> Result<HashMap<u32, String>, String> {
-    let string_count: usize = chunk.read_usize()?;
-    let mut string_ids: Vec<u32> = Vec::with_capacity(string_count);
-    let mut strings: HashMap<u32, String> = HashMap::new();
-
-    for _ in 0..string_count {
-        // you have to add 4 to the string id for some unknown reason
-        let string_id = 4 + chunk.read_u32()?;
-        string_ids.push(string_id);
-    }
-
-    for string_id in string_ids {
-        let string_length: usize = chunk.read_usize()?;
-        let string: String = chunk.read_literal_string(string_length)?;
-        chunk.file_index += 1;  // skip one byte for the null byte after the string
-        strings.insert(string_id, string);
-    }
-    Ok(strings)
-}
-
 
 
 fn main() {
@@ -164,10 +156,10 @@ fn main() {
         }
     };
 
-    println!();
-    print_general_info(&data.general_info);
-    println!();
-    print_options(&data.options);
-    // println!("{}", data.strings[&11246072]);
+    // println!();
+    // print_general_info(&data.general_info);
+    // println!();
+    // print_options(&data.options);
+    println!("{}", data.strings.get_string_by_id(12176127).unwrap());
 }
 
