@@ -404,3 +404,14 @@ fn format_options_flags(flags: &UTOptionsFlags) -> String {
 
     flag_strings.join(", ")
 }
+
+
+pub fn hexdump(raw_data: &[u8]) -> String {
+    let len: usize = raw_data.len();
+    let mut string: String = String::with_capacity(len * 3);
+    for byte in raw_data {
+        string.push_str(&format!("{byte:02X} "));
+    }
+    string
+}
+

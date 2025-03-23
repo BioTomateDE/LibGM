@@ -1,11 +1,16 @@
 ﻿use crate::chunk_reading::UTChunk;
-use std::collections::HashMap;
+use crate::deserialize::strings::UTStrings;
 
+#[derive(Debug, Clone)]
 pub struct UTFunction {
     pub name: String,
     pub occurrences: u32,
     pub first_occurrence: u32,      // pointer to some location in code (position relative/absolute to data.win)
 }
+
+// pub struct UTFunctions {
+//     functions: Vec<UTFunction>,
+// }
 
 #[derive(Debug)]
 pub struct UTCodeLocalVariable {
@@ -17,7 +22,7 @@ pub struct UTCodeLocal {
     pub variables: Vec<UTCodeLocalVariable>,
 }
 
-pub fn parse_chunk_FUNC(mut chunk: UTChunk, strings: &HashMap<u32, String>) -> Result<(Vec<UTFunction>, Vec<UTCodeLocal>), String> {
+pub fn parse_chunk_FUNC(mut chunk: UTChunk, strings: &UTStrings) -> Result<(Vec<UTFunction>, Vec<UTCodeLocal>), String> {
     let functions_length: usize = chunk.read_usize()?;
     let mut functions: Vec<UTFunction> = Vec::with_capacity(functions_length);
 

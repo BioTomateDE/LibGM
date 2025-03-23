@@ -1,4 +1,6 @@
 ﻿pub mod general_info;
 pub mod variables;
 pub mod scripts;
-pub(crate) mod functions;
+pub mod functions;
+pub mod code;
+pub mod strings;
