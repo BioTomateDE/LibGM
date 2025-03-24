@@ -64,9 +64,9 @@ pub fn parse_chunk_FUNC(mut chunk: UTChunk, strings: &UTStrings) -> Result<(Vec<
 
     }
 
-    // for i in &functions {
-    //     println!("[Function]    {:<32} | {:<4} | {}", i.name, i.occurrences, i.first_occurrence);
-    // }
+    for i in &functions {
+        println!("[Function]    {:<32} | {:<4} | {}", i.name, i.occurrences, i.first_occurrence);
+    }
     // for i in &code_locals {
     //     println!("[Code Local]    {:<48} | {:?}", i.name, i.variables);
     // }

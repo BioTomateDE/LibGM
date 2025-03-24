@@ -1,12 +1,14 @@
 ﻿use crate::chunk_reading::UTChunk;
 use crate::deserialize::variables::UTVariable;
 
+use colored::Colorize;
 use std::cmp::PartialEq;
 use num_enum::TryFromPrimitive;
 use crate::deserialize::functions::UTFunction;
 use crate::deserialize::strings::UTStrings;
-// Taken from UndertaleModTool/UndertaleModLib/UndertaleCode.cs/UndertaleInstruction/
+use crate::printing::hexdump;
 
+// Taken from UndertaleModTool/UndertaleModLib/UndertaleCode.cs/UndertaleInstruction/
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]
 #[repr(u8)]
 enum UTOpcode {
@@ -101,6 +103,7 @@ enum UTVariableType {
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]
 #[repr(u8)]
 enum UTComparisonType {
+    DUP = 0,    // custom
     LT = 1,
     LTE = 2,
     EQ = 3,
@@ -205,18 +208,26 @@ struct UTPushInstruction {
     value: UTValue,
 }
 #[derive(Debug, Clone)]
+struct UTCallInstruction {
+    arguments_count: usize,
+    data_type: UTDataType,
+    function: UTFunction,
+}
+#[derive(Debug, Clone)]
 enum UTInstruction {
     Cmp(UTComparisonInstruction),
     Goto(UTGotoInstruction),
     Pop(UTPopInstruction),
     Push(UTPushInstruction),
+    Call(UTCallInstruction)
 }
 
 #[derive(Debug, Clone)]
-struct UTCodeVariable {
-    variable: UTVariable,
-    variable_type: UTVariableType
+enum UTCodeVariable {
+    Var(UTVariable, UTVariableType),
+    Unknown(usize, UTVariableType)
 }
+
 
 
 #[derive(Debug, Clone)]
@@ -339,19 +350,24 @@ impl UTCodeBlob {
                     ))
                 };
 
-                let variable: UTVariable = match variables.get(index) {
-                    Some(var) => var.clone(),
-                    None => return panic!("{}", format!(  // TODO remove ts
-                        "UTVariable index is out of bounds while reading values in code: {} >= {}.",
-                        index,
-                        variables.len()
-                    ))
-                };
-                let code_variable: UTCodeVariable = UTCodeVariable {
-                    variable,
-                    variable_type,
-                };
-                Ok(UTValue::Variable(code_variable))
+                // TODO deal with variable ids and scopes asfbjhiafshasf (var index is wrong)
+
+                return Ok(UTValue::Variable(UTCodeVariable::Unknown{ 0: index, 1: variable_type }));
+
+                // let variable: UTVariable = match variables.get(index) {
+                //     Some(var) => var.clone(),
+                //     // None => return Err(format!(
+                //     //     "UTVariable index is out of bounds while reading values in code: {} >= {}.",
+                //     //     index,
+                //     //     variables.len()
+                //     // ))
+                //     None => {
+                //         eprintln!("WARNING: Could not find variable with index {} (length: {}).", index, variables.len());
+                //         return Ok(UTValue::Variable(UTCodeVariable::Unknown{ 0: index, 1: variable_type }));
+                //     }
+                // };
+                // let code_variable: UTCodeVariable = UTCodeVariable::Var{ 0: variable, 1: variable_type };
+                // Ok(UTValue::Variable(code_variable))
             },
 
             UTDataType::String => {
@@ -369,11 +385,11 @@ impl UTCodeBlob {
             },
 
             UTDataType::Int16 => {
-                let raw: [u8; 2] = match self.raw_data[self.file_index..self.file_index+2].try_into() {
+                // i think it's within the instruction itself so backtrack
+                let raw: [u8; 2] = match self.raw_data[self.file_index-2 .. self.file_index].try_into() {
                     Ok(ok) => ok,
                     Err(_) => return Err("Trying to read i16 out of bounds while reading values in code.".to_string()),
                 };
-                self.file_index += 2;
                 Ok(UTValue::Int16(i16::from_le_bytes(raw)))
             },
 
@@ -446,7 +462,16 @@ pub fn parse_chunk_CODE(
 
         while code_blob.file_index < code_blob.len {
             let instruction: UTInstruction = parse_code(&mut code_blob, bytecode14, &strings, variables, functions)?;
-            println!("{:>4} | {:?}", code_blob.file_index, &instruction);
+            let dump: String = match hexdump(&*code_blob.raw_data, code_blob.file_index, Some(code_blob.file_index + 4)) {
+                Ok(ok) => ok,
+                Err(_) => "()".to_string(),
+            };
+            println!("{}/{} | {} | {:?}",
+                 code_blob.len,
+                 code_blob.file_index,
+                 dump,
+                 instruction,
+            );
             instructions.push(instruction);
         }
 
@@ -459,39 +484,19 @@ pub fn parse_chunk_CODE(
     }
 
     Ok(codes)
-
-    // // just testing; for loop later
-    // let mut code_blob: UTCodeBlob = UTCodeBlob {
-    //     raw_data: codes[0].raw_data.clone(),
-    //     len: codes[0].raw_data.len(),
-    //     file_index: 0,
-    // };
-    // while code_blob.file_index < code_blob.len {
-    //     let instruction: UTInstruction = parse_code(&mut code_blob, &strings, variables, functions)?;
-    //     println!("{:>4} | {:?}", code_blob.file_index, instruction);
-    // }
-    // 1221
-
-    // for (i,code) in codes.iter().enumerate() {
-    //     if i != 1 {
-    //         println!("{:<50} {:<2} {:<2} {:02X?}", code.name, code.locals_count, code.arguments_count, code.raw_data);
-    //     }
-    //     if i > 5 {break}
-    // }
 }
 
 fn parse_code(
-    raw_data: &mut UTCodeBlob,
+    blob: &mut UTCodeBlob,
     bytecode14: bool,
     strings: &UTStrings,
     variables: &[UTVariable],
     functions: &[UTFunction],
 ) -> Result<UTInstruction, String> {
-    let b0: u8 = raw_data.read_byte()?;
-    let b1: u8 = raw_data.read_byte()?;
-    let b2: u8 = raw_data.read_byte()?;
-    let opcode_raw: u8 = raw_data.read_byte()?;
-    println!("{}/{} | {:02X} {:02X} {:02X} {:02X}", raw_data.file_index, raw_data.len, b0, b1, b2, opcode_raw);
+    let b0: u8 = blob.read_byte()?;
+    let b1: u8 = blob.read_byte()?;
+    let b2: u8 = blob.read_byte()?;
+    let opcode_raw: u8 = blob.read_byte()?;
 
     let mut opcode: UTOpcode = match opcode_raw.try_into() {
         Ok(opcode) => opcode,
@@ -507,7 +512,6 @@ fn parse_code(
         UTInstructionType::DoubleTypeInstruction |
         UTInstructionType::ComparisonInstruction => {
             // Parse instruction components from bytes
-            let extra: u8 = b0;
             let mut comparison_type: UTComparisonType = match b1.try_into() {
                 Ok(comparison_type) => comparison_type,
                 Err(_) => {
@@ -519,31 +523,29 @@ fn parse_code(
             let type1: u8 = b2 & 0xf;
             let type1: UTDataType = match type1.try_into() {
                 Ok(data_type) => data_type,
-                Err(_) => {
-                    return Err(format!(
-                        "Invalid Data Type {type1:02X} while parsing Comparison Instruction."
-                    ));
-                }
+                Err(_) => return Err(format!(
+                    "Invalid Data Type {type1:02X} while parsing Comparison Instruction."
+                )),
+
             };
             let type2: u8 = b2 >> 4;
             let type2: UTDataType = match type2.try_into() {
                 Ok(data_type) => data_type,
-                Err(_) => {
-                    return Err(format!(
-                        "Invalid Data Type {type2:02X} while parsing Comparison Instruction."
-                    ));
-                }
+                Err(_) => return Err(format!(
+                    "Invalid Data Type {type2:02X} while parsing Comparison Instruction."
+                )),
             };
-
             // Ensure basic conditions hold
-            if extra != 0 && opcode != UTOpcode::Dup && opcode != UTOpcode::CallV {
-                return Err("Invalid padding while parsing Comparison Instruction.".to_string());
+            if b0 != 0 && opcode != UTOpcode::Dup && opcode != UTOpcode::CallV {
+                return Err(format!("Invalid padding {:02X} while parsing Comparison Instruction.", b0));
             }
 
-            if instruction_type == UTInstructionType::SingleTypeInstruction && (type2 as i32) != 0 {
-                return Err(
-                    "Second type should be 0 while parsing Comparison Instruction".to_string(),
-                );
+            if instruction_type == UTInstructionType::SingleTypeInstruction && (type2 as u8) != 0 {
+                return Err(format!(
+                    "Second type should be 0 but is {:02X} in \
+                    SingleTypeInstruction while parsing Comparison Instruction",
+                    type2 as u8
+                ));
             }
 
             if bytecode14 && opcode == UTOpcode::Cmp {
@@ -554,7 +556,7 @@ fn parse_code(
                     {comparison_type_raw:02X} (Opcode: {opcode_raw:02X}) while parsing Comparison Instruction.")),
                 };
             }
-            // short circuit stuff
+            // short circuit stuff {}
 
             return Ok(UTInstruction::Cmp(UTComparisonInstruction {
                 comparison_type,
@@ -622,7 +624,7 @@ fn parse_code(
             //     let destination = readvaruiable();
             // }
 
-            let destination: UTCodeVariable = match raw_data.read_value(UTDataType::Variable, strings, variables)? {
+            let destination: UTCodeVariable = match blob.read_value(UTDataType::Variable, strings, variables)? {
                 UTValue::Variable(var) => var,
                 _ => return Err("[INTERNAL ERROR] UTCodeBlob.read_value(UTDataType::Variable, ...)\
                  did not return a UTVariable while parsing Pop Instruction".to_string()),
@@ -646,6 +648,7 @@ fn parse_code(
             let val: i16 = (b0 as i8) as i16;
 
             if bytecode14 {
+                // println!("############# {:?} {:?}", data_type, val);
                 match data_type {
                     UTDataType::Int16 => opcode = UTOpcode::PushI,
                     UTDataType::Variable => {
@@ -662,7 +665,8 @@ fn parse_code(
 
             // todo fix bullshit variable id
 
-            let mut value: UTValue = raw_data.read_value(data_type, strings, variables)?;
+            let mut value: UTValue = blob.read_value(data_type, strings, variables)?;
+            // println!("$$$$$ {:?}", value);
 
             return Ok(UTInstruction::Push(UTPushInstruction {
                 data_type,
@@ -670,22 +674,37 @@ fn parse_code(
             }));
         }
 
-        // UTInstructionType::CallInstruction => {
-        //     let arguments_count: usize = b0 as usize;
-        //     let data_type: u8 = b2;
-        //     let data_type: UTDataType = match data_type.try_into() {
-        //         Ok(ok) => ok,
-        //         Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Call Instruction.")),
-        //     };
-        //
-        //     let function = functions.get()
-        //
-        // }
+        UTInstructionType::CallInstruction => {
+            let arguments_count: usize = b0 as usize;
+            let data_type: u8 = b2;
+            let data_type: UTDataType = match data_type.try_into() {
+                Ok(ok) => ok,
+                Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Call Instruction.")),
+            };
+
+            let long: i32 = i32::from_le_bytes(blob.raw_data[blob.file_index..blob.file_index+4].try_into().unwrap());
+            let function: i16 = i16::from_le_bytes(blob.raw_data[blob.file_index..blob.file_index+2].try_into().unwrap());
+            let othershit: i16 = i16::from_le_bytes(blob.raw_data[blob.file_index+2..blob.file_index+4].try_into().unwrap());
+            blob.file_index += 4;
+            println!("{}", format!("##### Func | args: {arguments_count} | type: {b2} | [u32: {long}] | [id: {function} | idk: {othershit}] | {} #####", functions.len()).red());
+            let function = UTFunction {name: "[[STUB]]".to_string(), occurrences: 0, first_occurrence: 0};
+
+            return Ok(UTInstruction::Call(UTCallInstruction {
+                arguments_count,
+                data_type,
+                function,
+            }));
+
+        }
 
         _ => (),   // DO PROPER ERROR HANDLING
     }
 
-    panic!("gusdbhgbsduigdsugdsubsdgjigsd");
+    panic!("[INTERNAL ERROR] Unhandled opcode {opcode_raw:02X}. (This should NOT happen in Release)");
 }
 
 
+// TODO:
+// variables bullshit (scopes, ids)
+// functions bullshit (look in npp; nothing makes fucking sense)
+// weird error (didnt investigate yet) "Invalid Instance Type A5 while parsing Pop Instruction."
