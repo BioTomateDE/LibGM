@@ -406,12 +406,26 @@ fn format_options_flags(flags: &UTOptionsFlags) -> String {
 }
 
 
-pub fn hexdump(raw_data: &[u8]) -> String {
+pub fn hexdump(raw_data: &[u8], start: usize, end: Option<usize>) -> Result<String, ()> {
     let len: usize = raw_data.len();
+    let end: usize = match end {
+        Some(end) => end,
+        None => len
+    };
+    if end > len || start > end {
+        return Err(());
+    }
+    let len: usize = end - start;
+    if len < 1 {
+        return Ok("".to_string());
+    }
+
     let mut string: String = String::with_capacity(len * 3);
-    for byte in raw_data {
+    for i in start..end {
+        let byte: u8 = raw_data[i];
         string.push_str(&format!("{byte:02X} "));
     }
-    string
+    string.pop();  // remove trailing space
+    Ok(string)
 }
 
