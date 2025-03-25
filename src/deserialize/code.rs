@@ -214,12 +214,19 @@ struct UTCallInstruction {
     function: UTFunction,
 }
 #[derive(Debug, Clone)]
+struct UTBreakInstruction {
+    value: i16,
+    data_type: UTDataType,
+    int_argument: Option<i32>,
+}
+#[derive(Debug, Clone)]
 enum UTInstruction {
     Cmp(UTComparisonInstruction),
     Goto(UTGotoInstruction),
     Pop(UTPopInstruction),
     Push(UTPushInstruction),
-    Call(UTCallInstruction)
+    Call(UTCallInstruction),
+    Break(UTBreakInstruction),
 }
 
 #[derive(Debug, Clone)]
@@ -466,11 +473,12 @@ pub fn parse_chunk_CODE(
                 Ok(ok) => ok,
                 Err(_) => "()".to_string(),
             };
-            println!("{}/{} | {} | {:?}",
-                 code_blob.len,
-                 code_blob.file_index,
-                 dump,
-                 instruction,
+            println!("{} | {}/{} | {} | {:?}",
+                code_meta.name,
+                code_blob.len,
+                code_blob.file_index,
+                dump,
+                instruction,
             );
             instructions.push(instruction);
         }
@@ -558,11 +566,11 @@ fn parse_code(
             }
             // short circuit stuff {}
 
-            return Ok(UTInstruction::Cmp(UTComparisonInstruction {
+            Ok(UTInstruction::Cmp(UTComparisonInstruction {
                 comparison_type,
                 type1,
                 type2,
-            }));
+            }))
         }
 
         UTInstructionType::GotoInstruction => {
@@ -587,20 +595,14 @@ fn parse_code(
             }
             let jump_offset: i32 = jump_offset as i32;
 
-            return Ok(UTInstruction::Goto(UTGotoInstruction {
+            Ok(UTInstruction::Goto(UTGotoInstruction {
                 jump_offset,
                 popenv_exit_magic,
-            }));
+            }))
         }
 
         UTInstructionType::PopInstruction => {
             // bug/redundancy in UndertaleModTool i think (bitshifting by 8 in a u8 will always be 0)
-            let instance_type: i8 = b0 as i8;
-            let mut instance_type: UTInstanceType = match instance_type.try_into() {
-                Ok(ok) => ok,
-                Err(_) => return Err(format!("Invalid Instance Type {instance_type:02X} while parsing Pop Instruction.")),
-            };
-
             let type1: u8 = b2 & 0xf;
             let type1: UTDataType = match type1.try_into() {
                 Ok(ok) => ok,
@@ -612,6 +614,20 @@ fn parse_code(
                 Ok(ok) => ok,
                 Err(_) => return Err(format!("Invalid Data Type {type2:02X} while parsing Pop Instruction.")),
             };
+
+            let instance_type: i8 = b0 as i8;
+            let mut instance_type: UTInstanceType = match instance_type.try_into() {
+                Ok(ok) => ok,
+                // Err(_) => return Err(format!("Invalid Instance Type {instance_type:02X} while parsing Pop Instruction.")),
+                Err(_) => {
+                    println!("{}", format!("[WARNING] Invalid Instance Type {instance_type:02X} while parsing Pop Instruction. Value: {b0:02X} {b1:02X}").yellow());
+                    UTInstanceType::Undefined
+                }
+            };
+
+            // if type1 == UTDataType::Variable && type2 == UTDataType::Int32 {
+            //     panic!("{} {b0:02X} {b1:02X} {b2:02X} {opcode_raw:02X} | {:02X} {:02X} {:02X} {:02X}", blob.file_index, blob.raw_data[blob.file_index+1],blob.raw_data[blob.file_index+2],blob.raw_data[blob.file_index+3],blob.raw_data[blob.file_index+4])
+            // }
 
             // if type1 == UTDataType::Int16 {
             //     // Special scenario - the swap instruction (see UndertaleModTool/Issues/#129)
@@ -630,12 +646,12 @@ fn parse_code(
                  did not return a UTVariable while parsing Pop Instruction".to_string()),
             };
 
-            return Ok(UTInstruction::Pop(UTPopInstruction {
+            Ok(UTInstruction::Pop(UTPopInstruction {
                 instance_type,
                 type1,
                 type2,
                 destination,
-            }));
+            }))
         }
 
         UTInstructionType::PushInstruction => {
@@ -668,10 +684,10 @@ fn parse_code(
             let mut value: UTValue = blob.read_value(data_type, strings, variables)?;
             // println!("$$$$$ {:?}", value);
 
-            return Ok(UTInstruction::Push(UTPushInstruction {
+            Ok(UTInstruction::Push(UTPushInstruction {
                 data_type,
                 value,
-            }));
+            }))
         }
 
         UTInstructionType::CallInstruction => {
@@ -689,18 +705,45 @@ fn parse_code(
             println!("{}", format!("##### Func | args: {arguments_count} | type: {b2} | [u32: {long}] | [id: {function} | idk: {othershit}] | {} #####", functions.len()).red());
             let function = UTFunction {name: "[[STUB]]".to_string(), occurrences: 0, first_occurrence: 0};
 
-            return Ok(UTInstruction::Call(UTCallInstruction {
+            Ok(UTInstruction::Call(UTCallInstruction {
                 arguments_count,
                 data_type,
                 function,
-            }));
-
+            }))
         }
 
-        _ => (),   // DO PROPER ERROR HANDLING
-    }
+        UTInstructionType::BreakInstruction => {
+            let value: i16 = b0 as i16;
+            let data_type: u8 = b2;
+            let data_type: UTDataType = match data_type.try_into() {
+                Ok(ok) => ok,
+                Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Break Instruction.")),
+            };
+            let mut int_argument: Option<i32> = None;
 
-    panic!("[INTERNAL ERROR] Unhandled opcode {opcode_raw:02X}. (This should NOT happen in Release)");
+            if data_type == UTDataType::Int32 {
+                int_argument = Some(match blob.read_value(UTDataType::Int32, &strings, &variables)? {
+                    UTValue::Int32(val) => val,
+                    _ => return Err("[INTERNAL ERROR] UTCodeBlob.read_value(UTDataType::Int32, ...)\
+                    did not return an i32 while parsing Break Instruction".to_string()),
+                });
+                // gms version stuff {}
+            }
+
+            // other gms version stuff {}
+
+            Ok(UTInstruction::Break(UTBreakInstruction {
+                value,
+                data_type,
+                int_argument,
+            }))
+        }
+
+        _ => {
+            // DO PROPER ERROR HANDLING
+            panic!("[INTERNAL ERROR] Unhandled opcode {opcode_raw:02X}. (This should NOT happen in Release)");
+        },
+    }
 }
 
 
