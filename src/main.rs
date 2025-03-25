@@ -4,18 +4,15 @@
 mod printing;
 
 mod deserialize;
-use deserialize::data::{read_data_file, parse_data_file};
+use deserialize::all::{parse_data_file, read_data_file};
 
 mod serialize;
 
-mod structs;
-use structs::UTData;
-
-mod chunk_reading;
-mod chunk_writing;
+mod structs;   // TODO remove this
 
 use std::process;
-use crate::serialize::data::{build_data_file, write_data_file};
+use crate::deserialize::all::UTData;
+use crate::serialize::all::{build_data_file, write_data_file};
 
 fn main() {
     // let args: Vec<String> = env::args().collect();
@@ -65,5 +62,6 @@ fn main() {
         }
     };
 
+    // println!("{}", data.strings.get_string_by_id(1945716).unwrap());
 }
 

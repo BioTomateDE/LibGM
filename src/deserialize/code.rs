@@ -1,4 +1,4 @@
-﻿use crate::chunk_reading::UTChunk;
+﻿use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::variables::UTVariable;
 
 use colored::Colorize;
@@ -625,8 +625,8 @@ fn parse_code(
 
             let instance_type: i8 = b0 as i8;
             let instance_type: UTInstanceType = instance_type.try_into().unwrap_or_else(|_| {
-                let dump = hexdump(&blob.raw_data, (if blob.file_index < 16 {16} else {blob.file_index}) - 16, Some(if blob.file_index + 8 < blob.len {blob.file_index + 8} else {blob.len})).unwrap();
-                println!("{}", format!("[WARNING] {instance_type:02X} Dump: {dump}").yellow());
+                // let dump = hexdump(&blob.raw_data, (if blob.file_index < 16 {16} else {blob.file_index}) - 16, Some(if blob.file_index + 8 < blob.len {blob.file_index + 8} else {blob.len})).unwrap();
+                // println!("{}", format!("[WARNING] {instance_type:02X} Dump: {dump}").yellow());
                 UTInstanceType::Undefined
             });
 
