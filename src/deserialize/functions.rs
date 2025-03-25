@@ -1,7 +1,6 @@
 ﻿use std::collections::HashSet;
 use crate::chunk_reading::UTChunk;
 use crate::deserialize::strings::UTStrings;
-use crate::printing::hexdump;
 
 #[derive(Debug, Clone)]
 pub struct UTFunction {
@@ -9,9 +8,6 @@ pub struct UTFunction {
     pub occurrences: HashSet<usize>,                // set of occurrences (call instructions) positions relative to chunk CODE
 }
 
-// pub struct UTFunctions {
-//     functions: HashMap<usize, UTFunction>,      // maps occurrence positions (relative to chunk CODE) to a function
-// }
 
 #[derive(Debug)]
 pub struct UTCodeLocalVariable {
@@ -80,7 +76,7 @@ fn get_occurrences(count: usize, first_occurrence: i32, chunk_CODE: &UTChunk) ->
     let mut occurrences: HashSet<usize> = HashSet::new();
     let mut occurrence: i32 = first_occurrence + 4;
 
-    let mut i = 0;
+    // let mut i = 0;
 
     for _ in 0..count {
         // println!("occ {occurrence} | {}", chunk_CODE.abs_pos);
@@ -93,7 +89,7 @@ fn get_occurrences(count: usize, first_occurrence: i32, chunk_CODE: &UTChunk) ->
             break;
         }
         occurrence += i32::from_le_bytes(raw);
-        i += 1;
+        // i += 1;
     }
 
     // println!("FUNCITONSBDF | expected: {count:<10},  actual: {i:<10}   {}", count==i);

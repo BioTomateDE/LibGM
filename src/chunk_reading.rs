@@ -24,6 +24,8 @@ impl UTChunk {
     //     }
     // }
 
+    // can be refactored (i didn't know about <num>::from_le_bytes)
+
     pub fn read_u64(&mut self) -> Result<u64, String> {
         // Read unsigned 64-bit integer (little endian)
         if self.file_index + 8 > self.data_len {
