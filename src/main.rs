@@ -15,7 +15,7 @@ mod chunk_reading;
 mod chunk_writing;
 
 use std::process;
-use crate::serialize::data::build_data_file;
+use crate::serialize::data::{build_data_file, write_data_file};
 
 fn main() {
     // let args: Vec<String> = env::args().collect();
@@ -57,7 +57,13 @@ fn main() {
         }
     };
 
-    println!("{:?}", raw_data2);
+    match write_data_file("./data_out.win", &raw_data2) {
+        Ok(data) => data,
+        Err(error) => {
+            eprintln!("Error while writing data file: {error}");
+            process::exit(1);
+        }
+    };
 
 }
 
