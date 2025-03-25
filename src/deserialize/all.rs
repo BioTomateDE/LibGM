@@ -1,13 +1,26 @@
 use std::collections::HashMap;
 use std::fs;
-use crate::chunk_reading::UTChunk;
+use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::code::{parse_chunk_CODE, UTCode};
+use crate::deserialize::fonts::{parse_chunk_FONT, UTFont};
 use crate::deserialize::functions::{parse_chunk_FUNC, UTCodeLocal, UTFunction};
 use crate::deserialize::general_info::{parse_chunk_GEN8, parse_chunk_OPTN};
 use crate::deserialize::scripts::{parse_chunk_SCPT, UTScript};
 use crate::deserialize::strings::{parse_chunk_STRG, UTStrings};
 use crate::deserialize::variables::{parse_chunk_VARI, UTVariable};
-use crate::structs::{UTData, UTGeneralInfo, UTOptions};
+use crate::deserialize::general_info::{UTGeneralInfo, UTOptions};
+
+
+pub struct UTData {
+    pub strings: UTStrings,                 // STRG
+    pub general_info: UTGeneralInfo,        // GEN8
+    pub options: UTOptions,                 // OPTN
+    pub scripts: Vec<UTScript>,             // SCPT
+    pub variables: Vec<UTVariable>,         // VARI
+    pub functions: Vec<UTFunction>,         // FUNC
+    pub code_locals: Vec<UTCodeLocal>,      // FUNC
+    pub code: Vec<UTCode>,                  // CODE
+}
 
 pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let mut all = UTChunk {
@@ -30,6 +43,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
         let chunk_name: String = all.read_chunk_name()?;
         let chunk_length: usize = all.read_usize()?;
         let chunk_data: Vec<u8> = all.data[all.file_index .. all.file_index + chunk_length].to_owned();
+        // println!("{} {}", chunk_name, all.file_index);
         chunks.insert(
             chunk_name.clone(),
             UTChunk {
@@ -50,6 +64,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let chunk_FUNC: UTChunk = get_chunk(&chunks, "FUNC")?;
     let chunk_VARI: UTChunk = get_chunk(&chunks, "VARI")?;
     let chunk_CODE: UTChunk = get_chunk(&chunks, "CODE")?;
+    let chunk_FONT: UTChunk = get_chunk(&chunks, "FONT")?;
 
     let strings: UTStrings = parse_chunk_STRG(chunk_STRG)?;
     // for (id,st) in &strings {
@@ -64,6 +79,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let variables: Vec<UTVariable> = parse_chunk_VARI(chunk_VARI, &strings)?;
     let (functions, code_locals): (Vec<UTFunction>, Vec<UTCodeLocal>) = parse_chunk_FUNC(chunk_FUNC, &strings, &chunk_CODE)?;
     let code: Vec<UTCode> = parse_chunk_CODE(chunk_CODE, bytecode14, &strings, &variables, &functions)?;
+    let fonts: Vec<UTFont> = parse_chunk_FONT(chunk_FONT, &general_info, &strings)?;
 
     let data = UTData {
         strings,

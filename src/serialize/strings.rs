@@ -1,6 +1,6 @@
-use crate::chunk_reading::UTChunk;
-use crate::chunk_writing::DataBuilder;
-use crate::structs::UTData;
+use crate::deserialize::all::UTData;
+use crate::deserialize::chunk_reading::UTChunk;
+use crate::serialize::data_writing::DataBuilder;
 
 pub fn build_chunk_STRG(ut_data: &UTData) -> Result<UTChunk, String> {
     let mut builder: DataBuilder = DataBuilder { raw_data: Vec::new() };
