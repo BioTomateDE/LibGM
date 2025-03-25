@@ -3,8 +3,9 @@ use crate::deserialize::variables::UTVariable;
 
 use colored::Colorize;
 use std::cmp::PartialEq;
+use std::collections::HashSet;
 use num_enum::TryFromPrimitive;
-use crate::deserialize::functions::UTFunction;
+use crate::deserialize::functions::{get_function, UTFunction};
 use crate::deserialize::strings::UTStrings;
 use crate::printing::hexdump;
 
@@ -468,18 +469,18 @@ pub fn parse_chunk_CODE(
         let mut instructions: Vec<UTInstruction> = vec![];
 
         while code_blob.file_index < code_blob.len {
-            let instruction: UTInstruction = parse_code(&mut code_blob, bytecode14, &strings, variables, functions)?;
+            let instruction: UTInstruction = parse_code(&mut code_blob, bytecode14, &strings, variables, functions, code_meta.start_position-8)?;
             let dump: String = match hexdump(&*code_blob.raw_data, code_blob.file_index-4, Some(code_blob.file_index)) {
                 Ok(ok) => ok,
                 Err(_) => "()".to_string(),
             };
-            println!("{} | {}/{} | {} | {:?}",
-                code_meta.name,
-                code_blob.len,
-                code_blob.file_index,
-                dump,
-                instruction,
-            );
+            // println!("{} | {}/{} | {} | {:?}",
+            //     code_meta.name,
+            //     code_blob.len,
+            //     code_blob.file_index,
+            //     dump,
+            //     instruction,
+            // );
             instructions.push(instruction);
         }
 
@@ -500,6 +501,7 @@ fn parse_code(
     strings: &UTStrings,
     variables: &[UTVariable],
     functions: &[UTFunction],
+    code_start_pos: usize
 ) -> Result<UTInstruction, String> {
     let b0: u8 = blob.read_byte()?;
     let b1: u8 = blob.read_byte()?;
@@ -698,12 +700,8 @@ fn parse_code(
                 Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Call Instruction.")),
             };
 
-            let long: i32 = i32::from_le_bytes(blob.raw_data[blob.file_index..blob.file_index+4].try_into().unwrap());
-            let function: i16 = i16::from_le_bytes(blob.raw_data[blob.file_index..blob.file_index+2].try_into().unwrap());
-            let othershit: i16 = i16::from_le_bytes(blob.raw_data[blob.file_index+2..blob.file_index+4].try_into().unwrap());
             blob.file_index += 4;
-            println!("{}", format!("##### Func | args: {arguments_count} | type: {b2} | [u32: {long}] | [id: {function} | idk: {othershit}] | {} #####", functions.len()).red());
-            let function = UTFunction {name: "[[STUB]]".to_string(), occurrences: 0, first_occurrence: 0};
+            let function: UTFunction = get_function(functions, code_start_pos + blob.file_index)?;
 
             Ok(UTInstruction::Call(UTCallInstruction {
                 arguments_count,

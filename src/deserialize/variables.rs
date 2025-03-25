@@ -30,14 +30,14 @@ pub fn parse_chunk_VARI(mut chunk: UTChunk, strings: &UTStrings) -> Result<Vec<U
             first_occurrence_address: chunk.read_u32()?,
             abs_pos,
         };
-        println!(
-            "[Variable]   {:<22} {:<10} {:<4} {:<6} {:<12}",
-             variable.name,
-             variable.variable_id,
-             variable.instance_type,
-             variable.occurrences_count,
-             variable.first_occurrence_address as i32
-        );
+        // println!(
+        //     "[Variable]   {:<22} {:<10} {:<4} {:<6} {:<12}",
+        //      variable.name,
+        //      variable.variable_id,
+        //      variable.instance_type,
+        //      variable.occurrences_count,
+        //      variable.first_occurrence_address as i32
+        // );
         variables.push(variable);
     }
 
