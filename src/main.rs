@@ -95,7 +95,7 @@ fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let options: UTOptions = parse_chunk_OPTN(chunk_OPTN)?;
     let scripts: Vec<UTScript> = parse_chunk_SCPT(chunk_SCPT, &strings)?;
     let variables: Vec<UTVariable> = parse_chunk_VARI(chunk_VARI, &strings)?;
-    let (functions, code_locals): (Vec<UTFunction>, Vec<UTCodeLocal>) = parse_chunk_FUNC(chunk_FUNC, &strings)?;
+    let (functions, code_locals): (Vec<UTFunction>, Vec<UTCodeLocal>) = parse_chunk_FUNC(chunk_FUNC, &strings, &chunk_CODE)?;
     let code: Vec<UTCode> = parse_chunk_CODE(chunk_CODE, bytecode14, &strings, &variables, &functions)?;
 
     let data = UTData {
