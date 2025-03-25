@@ -8,12 +8,22 @@ use crate::serialize::strings::build_chunk_STRG;
 
 pub fn build_data_file(ut_data: &UTData) -> Result<Vec<u8>, String> {
     let mut builder: DataBuilder = DataBuilder { raw_data: Vec::new() };
+    let mut chunks: Vec<UTChunk> = vec![
+        build_chunk_STRG(&ut_data)?,
+    ];
 
-    let chunk_STRG: UTChunk = build_chunk_STRG(&ut_data)?;
-
-
+    let mut total_len: usize = 0;
+    for chunk in &chunks {
+        total_len += chunk.data_len;
+    }
     builder.write_string("FORM")?;
+    builder.write_usize(total_len)?;
 
+    for chunk in &mut chunks {
+        builder.write_string(&chunk.name)?;
+        builder.write_usize(chunk.data_len)?;
+        builder.raw_data.append(&mut chunk.data);
+    }
 
 
     Ok(builder.raw_data)
