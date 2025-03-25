@@ -20,14 +20,16 @@ pub fn parse_chunk_VARI(mut chunk: UTChunk, strings: &UTStrings) -> Result<Vec<U
 
     while chunk.file_index < file_len {
         let abs_pos: usize = chunk.file_index;
-        variables.push(UTVariable {
+        let variable: UTVariable = UTVariable {
             name: chunk.read_ut_string(strings)?,
             instance_type: chunk.read_i32()?,
             variable_id: chunk.read_i32()?,
             occurrences_count: chunk.read_u32()?,
             first_occurrence_address: chunk.read_u32()?,
             abs_pos,
-        })
+        };
+        println!("Variable {:?}", variable);
+        variables.push(variable);
     }
 
     Ok(variables)
