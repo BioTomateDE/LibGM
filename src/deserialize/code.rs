@@ -386,7 +386,7 @@ impl UTCodeBlob {
 
             UTDataType::Int16 => {
                 // i think it's within the instruction itself so backtrack
-                let raw: [u8; 2] = match self.raw_data[self.file_index-2 .. self.file_index].try_into() {
+                let raw: [u8; 2] = match self.raw_data[self.file_index-4 .. self.file_index-2].try_into() {
                     Ok(ok) => ok,
                     Err(_) => return Err("Trying to read i16 out of bounds while reading values in code.".to_string()),
                 };
@@ -462,7 +462,7 @@ pub fn parse_chunk_CODE(
 
         while code_blob.file_index < code_blob.len {
             let instruction: UTInstruction = parse_code(&mut code_blob, bytecode14, &strings, variables, functions)?;
-            let dump: String = match hexdump(&*code_blob.raw_data, code_blob.file_index, Some(code_blob.file_index + 4)) {
+            let dump: String = match hexdump(&*code_blob.raw_data, code_blob.file_index-4, Some(code_blob.file_index)) {
                 Ok(ok) => ok,
                 Err(_) => "()".to_string(),
             };

@@ -18,6 +18,8 @@ pub fn parse_chunk_VARI(mut chunk: UTChunk, strings: &UTStrings) -> Result<Vec<U
     let file_len: usize = chunk.data.len();
     let mut variables: Vec<UTVariable> = vec![];
 
+    // println!("{} {} {}", _unknown1, _unknown2, _unknown3);
+
     while chunk.file_index < file_len {
         let abs_pos: usize = chunk.file_index;
         let variable: UTVariable = UTVariable {
@@ -28,7 +30,14 @@ pub fn parse_chunk_VARI(mut chunk: UTChunk, strings: &UTStrings) -> Result<Vec<U
             first_occurrence_address: chunk.read_u32()?,
             abs_pos,
         };
-        println!("Variable {:?}", variable);
+        println!(
+            "[Variable]   {:<22} {:<10} {:<4} {:<6} {:<12}",
+             variable.name,
+             variable.variable_id,
+             variable.instance_type,
+             variable.occurrences_count,
+             variable.first_occurrence_address as i32
+        );
         variables.push(variable);
     }
 
