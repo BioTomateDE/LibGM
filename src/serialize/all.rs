@@ -1,14 +1,19 @@
 use std::fs;
-use crate::chunk_reading::UTChunk;
-use crate::chunk_writing::DataBuilder;
-use crate::structs::UTData;
+use crate::deserialize::all::UTData;
+use crate::deserialize::chunk_reading::UTChunk;
+use crate::serialize::data_writing::DataBuilder;
 
 use crate::serialize::strings::build_chunk_STRG;
+use crate::serialize::general_info::{build_chunk_OPTN, build_chunk_GEN8};
 
 
 pub fn build_data_file(ut_data: &UTData) -> Result<Vec<u8>, String> {
     let mut builder: DataBuilder = DataBuilder { raw_data: Vec::new() };
-    let mut chunks: Vec<UTChunk> = vec![
+    let chunks: Vec<UTChunk> = vec![
+        build_chunk_GEN8(&ut_data)?,
+        build_chunk_OPTN(&ut_data)?,
+        // build_chunk_EXTN(&ut_data)?,
+        // build_chunk_SOND(&ut_data)?,
         build_chunk_STRG(&ut_data)?,
     ];
 
@@ -19,10 +24,10 @@ pub fn build_data_file(ut_data: &UTData) -> Result<Vec<u8>, String> {
     builder.write_string("FORM")?;
     builder.write_usize(total_len)?;
 
-    for chunk in &mut chunks {
+    for chunk in &chunks {
         builder.write_string(&chunk.name)?;
         builder.write_usize(chunk.data_len)?;
-        builder.raw_data.append(&mut chunk.data);
+        builder.raw_data.extend(&chunk.data);
     }
 
 

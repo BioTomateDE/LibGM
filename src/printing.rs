@@ -1,299 +1,427 @@
-﻿use crate::structs::*;
+﻿use crate::deserialize::fonts::{UTFont, UTGlyph};
+use crate::deserialize::general_info::{UTFunctionClassifications, UTGeneralInfo, UTGeneralInfoFlags, UTOptions, UTOptionsFlags};
 
-pub fn print_general_info(general_info: &UTGeneralInfo) {
-    println!("General Info:");
-    println!(
-        "  GMS Debugger Disabled: {}",
-        general_info.is_debugger_disabled
-    );
-    println!("  Bytecode Version: {}", general_info.bytecode_version);
-    println!("  File Name: {}", general_info.game_file_name);
-    println!("  Config: {}", general_info.config);
-    println!("  Last object ID: {}", general_info.last_object_id);
-    println!("  Last tile ID: {}", general_info.last_tile_id);
-    println!("  Game ID: {}", general_info.game_id);
-    println!("  Directplay GUID: {}", general_info.directplay_guid);
-    println!("  Game Name: {}", general_info.game_name);
-    println!(
-        "  Version: {}.{}.{}.{}",
-        general_info.major_version,
-        general_info.minor_version,
-        general_info.release_version,
-        general_info.stable_version
-    );
-    println!(
-        "  Default Window Size: {}x{}",
-        general_info.default_window_width, general_info.default_window_height
-    );
-    println!("  Flags: {}", format_general_info_flags(&general_info.flags));
-    println!("  License: {}", format_license_md5(&general_info.license));
-    println!("  Timestamp: {}", general_info.timestamp_created);
-    println!("  Display Name: {}", general_info.display_name);
-    println!("  Active Targets: {}", general_info.active_targets);
-    println!("  Function Classifications: {}", format_function_classifications(&general_info.function_classifications));
-    println!("  Steam AppID: {}", general_info.steam_appid);
-    println!("  Debugger Port: {}", general_info.debugger_port);
-    // println!("  Room Order: {:?}", general_info.room_order);
+impl UTGeneralInfo {
+    pub fn print(&self) {
+        println!("General Info:");
+        println!("  GMS Debugger Disabled: {}", self.is_debugger_disabled);
+        println!("  Bytecode Version: {}", self.bytecode_version);
+        println!("  File Name: {}", self.game_file_name);
+        println!("  Config: {}", self.config);
+        println!("  Last object ID: {}", self.last_object_id);
+        println!("  Last tile ID: {}", self.last_tile_id);
+        println!("  Game ID: {}", self.game_id);
+        println!("  Directplay GUID: {}", self.directplay_guid);
+        println!("  Game Name: {}", self.game_name);
+        println!("  Version: {}.{}.{}.{}", self.major_version, self.minor_version, self.release_version, self.stable_version);
+        println!("  Default Window Size: {}x{}", self.default_window_width, self.default_window_height);
+        println!("  Flags: {}", self.flags.to_string());
+        println!("  License: {}", format_license_md5(&self.license));
+        println!("  Timestamp: {}", self.timestamp_created);
+        println!("  Display Name: {}", self.display_name);
+        println!("  Active Targets: {}", self.active_targets);
+        println!("  Function Classifications: {}", &self.function_classifications.to_string());
+        println!("  Steam AppID: {}", self.steam_appid);
+        println!("  Debugger Port: {}", self.debugger_port);
+    }
+}
+
+impl UTOptions {
+    pub fn print(&self) {
+        println!("Options:");
+        println!("  Flags: {}", &self.flags.to_string());
+        println!("  Scale: {}", self.scale);
+        println!("  Window Color: #{:02X}{:02X}{:02X}{:02X}", self.window_color_a, self.window_color_b, self.window_color_g, self.window_color_r);
+        println!("  Color Depth: {}", self.color_depth);
+        println!("  Resolution: {}", self.resolution);
+        println!("  Frequency: {}", self.frequency);
+        println!("  Vertex Sync: {}", self.vertex_sync);
+        println!("  Priority: {}", self.priority);
+        println!("  Load Alpha: {}", self.load_alpha);
+    }
 }
 
 
-pub fn print_options(options: &UTOptions) {
-    println!("Options:");
-    println!("  Flags: {}", format_options_flags(&options.flags));
-    println!("  Scale: {}", options.scale);
-    println!("  Window Color: #{:02X}{:02X}{:02X}{:02X}", options.window_color_a, options.window_color_b, options.window_color_g, options.window_color_r);
-    println!("  Color Depth: {}", options.color_depth);
-    println!("  Resolution: {}", options.resolution);
-    println!("  Frequency: {}", options.frequency);
-    println!("  Vertex Sync: {}", options.vertex_sync);
-    println!("  Priority: {}", options.priority);
-    println!("  Load Alpha: {}", options.load_alpha);
+impl UTGeneralInfoFlags {
+    pub fn to_string(&self) -> String {
+        let mut flag_strings: Vec<&str> = vec![];
+        if self.borderless_window {
+            flag_strings.push("Borderless Window");
+        }
+        if self.sync_vertex1 {
+            flag_strings.push("Sync Vertex 1");
+        }
+        if self.sync_vertex2 {
+            flag_strings.push("Sync Vertex 2");
+        }
+        if self.sync_vertex3 {
+            flag_strings.push("Sync Vertex 3");
+        }
+        if self.fullscreen {
+            flag_strings.push("Fullscreen");
+        }
+        if self.interpolate {
+            flag_strings.push("Interpolate");
+        }
+        if self.scale {
+            flag_strings.push("Scale");
+        }
+        if self.show_cursor {
+            flag_strings.push("Show Cursor");
+        }
+        if self.sizeable {
+            flag_strings.push("Sizeable");
+        }
+        if self.screen_key {
+            flag_strings.push("Screen Key");
+        }
+        if self.studio_version_b1 {
+            flag_strings.push("Studio Version B1");
+        }
+        if self.studio_version_b2 {
+            flag_strings.push("Studio Version B2");
+        }
+        if self.studio_version_b3 {
+            flag_strings.push("Studio Version B3");
+        }
+        if self.steam_enabled {
+            flag_strings.push("Steam Enabled");
+        }
+        if self.local_data_enabled {
+            flag_strings.push("Local Data Enabled");
+        }
+        if self.javascript_mode {
+            flag_strings.push("JavaScript Mode");
+        }
+        flag_strings.join(", ")
+    }
 }
 
 
-fn format_general_info_flags(flags: &UTGeneralInfoFlags) -> String {
-    let mut flag_strings: Vec<&str> = vec![];
-    if flags.borderless_window {
-        flag_strings.push("Borderless Window");
+
+impl UTFunctionClassifications {
+    fn to_string(&self) -> String {
+        let mut function_classification_strings: Vec<&str> = vec![];
+
+        if self.none {
+            function_classification_strings.push("None");
+        }
+        if self.internet {
+            function_classification_strings.push("Internet");
+        }
+        if self.joystick {
+            function_classification_strings.push("Joystick");
+        }
+        if self.gamepad {
+            function_classification_strings.push("Gamepad");
+        }
+        if self.immersion {
+            function_classification_strings.push("Immersion");
+        }
+        if self.screengrab {
+            function_classification_strings.push("Screen Grab");
+        }
+        if self.math {
+            function_classification_strings.push("Math");
+        }
+        if self.action {
+            function_classification_strings.push("Action");
+        }
+        if self.matrix_d3d {
+            function_classification_strings.push("Matrix D3D");
+        }
+        if self.d3dmodel {
+            function_classification_strings.push("D3D Model");
+        }
+        if self.data_structures {
+            function_classification_strings.push("Data Structures");
+        }
+        if self.file {
+            function_classification_strings.push("File");
+        }
+        if self.ini {
+            function_classification_strings.push("INI");
+        }
+        if self.filename {
+            function_classification_strings.push("Filename");
+        }
+        if self.directory {
+            function_classification_strings.push("Directory");
+        }
+        if self.environment {
+            function_classification_strings.push("Environment");
+        }
+        if self.http {
+            function_classification_strings.push("HTTP");
+        }
+        if self.encoding {
+            function_classification_strings.push("Encoding");
+        }
+        if self.uidialog {
+            function_classification_strings.push("UI Dialog");
+        }
+        if self.motion_planning {
+            function_classification_strings.push("Motion Planning");
+        }
+        if self.shape_collision {
+            function_classification_strings.push("Shape Collision");
+        }
+        if self.instance {
+            function_classification_strings.push("Instance");
+        }
+        if self.room {
+            function_classification_strings.push("Room");
+        }
+        if self.game {
+            function_classification_strings.push("Game");
+        }
+        if self.display {
+            function_classification_strings.push("Display");
+        }
+        if self.device {
+            function_classification_strings.push("Device");
+        }
+        if self.window {
+            function_classification_strings.push("Window");
+        }
+        if self.draw_color {
+            function_classification_strings.push("Draw Color");
+        }
+        if self.texture {
+            function_classification_strings.push("Texture");
+        }
+        if self.layer {
+            function_classification_strings.push("Layer");
+        }
+        if self.string {
+            function_classification_strings.push("String");
+        }
+        if self.tiles {
+            function_classification_strings.push("Tiles");
+        }
+        if self.surface {
+            function_classification_strings.push("Surface");
+        }
+        if self.skeleton {
+            function_classification_strings.push("Skeleton");
+        }
+        if self.io {
+            function_classification_strings.push("IO");
+        }
+        if self.variables {
+            function_classification_strings.push("Variables");
+        }
+        if self.array {
+            function_classification_strings.push("Array");
+        }
+        if self.external_call {
+            function_classification_strings.push("External Call");
+        }
+        if self.notification {
+            function_classification_strings.push("Notification");
+        }
+        if self.date {
+            function_classification_strings.push("Date");
+        }
+        if self.particle {
+            function_classification_strings.push("Particle");
+        }
+        if self.sprite {
+            function_classification_strings.push("Sprite");
+        }
+        if self.clickable {
+            function_classification_strings.push("Clickable");
+        }
+        if self.legacy_sound {
+            function_classification_strings.push("Legacy Sound");
+        }
+        if self.audio {
+            function_classification_strings.push("Audio");
+        }
+        if self.event {
+            function_classification_strings.push("Event");
+        }
+        if self.free_type {
+            function_classification_strings.push("FreeType");
+        }
+        if self.analytics {
+            function_classification_strings.push("Analytics");
+        }
+        if self.achievement {
+            function_classification_strings.push("Achievement");
+        }
+        if self.cloud_saving {
+            function_classification_strings.push("Cloud Saving");
+        }
+        if self.ads {
+            function_classification_strings.push("Ads");
+        }
+        if self.os {
+            function_classification_strings.push("OS");
+        }
+        if self.iap {
+            function_classification_strings.push("IAP");
+        }
+        if self.facebook {
+            function_classification_strings.push("Facebook");
+        }
+        if self.physics {
+            function_classification_strings.push("Physics");
+        }
+        if self.flash_aa {
+            function_classification_strings.push("Flash AA");
+        }
+        if self.console {
+            function_classification_strings.push("Console");
+        }
+        if self.buffer {
+            function_classification_strings.push("Buffer");
+        }
+        if self.steam {
+            function_classification_strings.push("Steam");
+        }
+        if self.shaders {
+            function_classification_strings.push("Shaders");
+        }
+        if self.vertex_buffers {
+            function_classification_strings.push("Vertex Buffers");
+        }
+
+        function_classification_strings.join(", ")
     }
-    if flags.sync_vertex1 {
-        flag_strings.push("Sync Vertex 1");
-    }
-    if flags.sync_vertex2 {
-        flag_strings.push("Sync Vertex 2");
-    }
-    if flags.sync_vertex3 {
-        flag_strings.push("Sync Vertex 3");
-    }
-    if flags.fullscreen {
-        flag_strings.push("Fullscreen");
-    }
-    if flags.interpolate {
-        flag_strings.push("Interpolate");
-    }
-    if flags.scale {
-        flag_strings.push("Scale");
-    }
-    if flags.show_cursor {
-        flag_strings.push("Show Cursor");
-    }
-    if flags.sizeable {
-        flag_strings.push("Sizeable");
-    }
-    if flags.screen_key {
-        flag_strings.push("Screen Key");
-    }
-    if flags.studio_version_b1 {
-        flag_strings.push("Studio Version B1");
-    }
-    if flags.studio_version_b2 {
-        flag_strings.push("Studio Version B2");
-    }
-    if flags.studio_version_b3 {
-        flag_strings.push("Studio Version B3");
-    }
-    if flags.steam_enabled {
-        flag_strings.push("Steam Enabled");
-    }
-    if flags.local_data_enabled {
-        flag_strings.push("Local Data Enabled");
-    }
-    if flags.javascript_mode {
-        flag_strings.push("JavaScript Mode");
-    }
-    flag_strings.join(", ")
 }
 
-fn format_function_classifications(
-    function_classifications: &UTFunctionClassifications,
-) -> String {
-    let mut function_classification_strings: Vec<&str> = vec![];
 
-    if function_classifications.none {
-        function_classification_strings.push("None");
-    }
-    if function_classifications.internet {
-        function_classification_strings.push("Internet");
-    }
-    if function_classifications.joystick {
-        function_classification_strings.push("Joystick");
-    }
-    if function_classifications.gamepad {
-        function_classification_strings.push("Gamepad");
-    }
-    if function_classifications.immersion {
-        function_classification_strings.push("Immersion");
-    }
-    if function_classifications.screengrab {
-        function_classification_strings.push("Screen Grab");
-    }
-    if function_classifications.math {
-        function_classification_strings.push("Math");
-    }
-    if function_classifications.action {
-        function_classification_strings.push("Action");
-    }
-    if function_classifications.matrix_d3d {
-        function_classification_strings.push("Matrix D3D");
-    }
-    if function_classifications.d3dmodel {
-        function_classification_strings.push("D3D Model");
-    }
-    if function_classifications.data_structures {
-        function_classification_strings.push("Data Structures");
-    }
-    if function_classifications.file {
-        function_classification_strings.push("File");
-    }
-    if function_classifications.ini {
-        function_classification_strings.push("INI");
-    }
-    if function_classifications.filename {
-        function_classification_strings.push("Filename");
-    }
-    if function_classifications.directory {
-        function_classification_strings.push("Directory");
-    }
-    if function_classifications.environment {
-        function_classification_strings.push("Environment");
-    }
-    if function_classifications.http {
-        function_classification_strings.push("HTTP");
-    }
-    if function_classifications.encoding {
-        function_classification_strings.push("Encoding");
-    }
-    if function_classifications.uidialog {
-        function_classification_strings.push("UI Dialog");
-    }
-    if function_classifications.motion_planning {
-        function_classification_strings.push("Motion Planning");
-    }
-    if function_classifications.shape_collision {
-        function_classification_strings.push("Shape Collision");
-    }
-    if function_classifications.instance {
-        function_classification_strings.push("Instance");
-    }
-    if function_classifications.room {
-        function_classification_strings.push("Room");
-    }
-    if function_classifications.game {
-        function_classification_strings.push("Game");
-    }
-    if function_classifications.display {
-        function_classification_strings.push("Display");
-    }
-    if function_classifications.device {
-        function_classification_strings.push("Device");
-    }
-    if function_classifications.window {
-        function_classification_strings.push("Window");
-    }
-    if function_classifications.draw_color {
-        function_classification_strings.push("Draw Color");
-    }
-    if function_classifications.texture {
-        function_classification_strings.push("Texture");
-    }
-    if function_classifications.layer {
-        function_classification_strings.push("Layer");
-    }
-    if function_classifications.string {
-        function_classification_strings.push("String");
-    }
-    if function_classifications.tiles {
-        function_classification_strings.push("Tiles");
-    }
-    if function_classifications.surface {
-        function_classification_strings.push("Surface");
-    }
-    if function_classifications.skeleton {
-        function_classification_strings.push("Skeleton");
-    }
-    if function_classifications.io {
-        function_classification_strings.push("IO");
-    }
-    if function_classifications.variables {
-        function_classification_strings.push("Variables");
-    }
-    if function_classifications.array {
-        function_classification_strings.push("Array");
-    }
-    if function_classifications.external_call {
-        function_classification_strings.push("External Call");
-    }
-    if function_classifications.notification {
-        function_classification_strings.push("Notification");
-    }
-    if function_classifications.date {
-        function_classification_strings.push("Date");
-    }
-    if function_classifications.particle {
-        function_classification_strings.push("Particle");
-    }
-    if function_classifications.sprite {
-        function_classification_strings.push("Sprite");
-    }
-    if function_classifications.clickable {
-        function_classification_strings.push("Clickable");
-    }
-    if function_classifications.legacy_sound {
-        function_classification_strings.push("Legacy Sound");
-    }
-    if function_classifications.audio {
-        function_classification_strings.push("Audio");
-    }
-    if function_classifications.event {
-        function_classification_strings.push("Event");
-    }
-    if function_classifications.free_type {
-        function_classification_strings.push("FreeType");
-    }
-    if function_classifications.analytics {
-        function_classification_strings.push("Analytics");
-    }
-    if function_classifications.achievement {
-        function_classification_strings.push("Achievement");
-    }
-    if function_classifications.cloud_saving {
-        function_classification_strings.push("Cloud Saving");
-    }
-    if function_classifications.ads {
-        function_classification_strings.push("Ads");
-    }
-    if function_classifications.os {
-        function_classification_strings.push("OS");
-    }
-    if function_classifications.iap {
-        function_classification_strings.push("IAP");
-    }
-    if function_classifications.facebook {
-        function_classification_strings.push("Facebook");
-    }
-    if function_classifications.physics {
-        function_classification_strings.push("Physics");
-    }
-    if function_classifications.flash_aa {
-        function_classification_strings.push("Flash AA");
-    }
-    if function_classifications.console {
-        function_classification_strings.push("Console");
-    }
-    if function_classifications.buffer {
-        function_classification_strings.push("Buffer");
-    }
-    if function_classifications.steam {
-        function_classification_strings.push("Steam");
-    }
-    if function_classifications.shaders {
-        function_classification_strings.push("Shaders");
-    }
-    if function_classifications.vertex_buffers {
-        function_classification_strings.push("Vertex Buffers");
-    }
+impl UTOptionsFlags {
+    fn to_string(&self) -> String {
+        let mut flag_strings: Vec<&str> = vec![];
 
-    function_classification_strings.join(", ")
+        if self.fullscreen {
+            flag_strings.push("Fullscreen");
+        }
+        if self.interpolate_pixels {
+            flag_strings.push("Interpolate Pixels");
+        }
+        if self.use_new_audio {
+            flag_strings.push("Use New Audio");
+        }
+        if self.no_border {
+            flag_strings.push("No Border");
+        }
+        if self.show_cursor {
+            flag_strings.push("Show Cursor");
+        }
+        if self.sizeable {
+            flag_strings.push("Sizeable");
+        }
+        if self.stay_on_top {
+            flag_strings.push("Stay on Top");
+        }
+        if self.change_resolution {
+            flag_strings.push("Change Resolution");
+        }
+        if self.no_buttons {
+            flag_strings.push("No Buttons");
+        }
+        if self.screen_key {
+            flag_strings.push("Screen Key");
+        }
+        if self.help_key {
+            flag_strings.push("Help Key");
+        }
+        if self.quit_key {
+            flag_strings.push("Quit Key");
+        }
+        if self.save_key {
+            flag_strings.push("Save Key");
+        }
+        if self.screen_shot_key {
+            flag_strings.push("Screenshot Key");
+        }
+        if self.close_sec {
+            flag_strings.push("Close Sec");
+        }
+        if self.freeze {
+            flag_strings.push("Freeze");
+        }
+        if self.show_progress {
+            flag_strings.push("Show Progress");
+        }
+        if self.load_transparent {
+            flag_strings.push("Load Transparent");
+        }
+        if self.scale_progress {
+            flag_strings.push("Scale Progress");
+        }
+        if self.display_errors {
+            flag_strings.push("Display Errors");
+        }
+        if self.write_errors {
+            flag_strings.push("Write Errors");
+        }
+        if self.abort_errors {
+            flag_strings.push("Abort Errors");
+        }
+        if self.variable_errors {
+            flag_strings.push("Variable Errors");
+        }
+        if self.creation_event_order {
+            flag_strings.push("Creation Event Order");
+        }
+        if self.use_front_touch {
+            flag_strings.push("Use Front Touch");
+        }
+        if self.use_rear_touch {
+            flag_strings.push("Use Rear Touch");
+        }
+        if self.use_fast_collision {
+            flag_strings.push("Use Fast Collision");
+        }
+        if self.fast_collision_compatibility {
+            flag_strings.push("Fast Collision Compatibility");
+        }
+        if self.disable_sandbox {
+            flag_strings.push("Disable Sandbox");
+        }
+        if self.enable_copy_on_write {
+            flag_strings.push("Enable Copy on Write");
+        }
+
+        flag_strings.join(", ")
+    }
+}
+
+
+impl UTFont {
+    pub fn print(&self) {
+        println!("Name: {}", self.name);
+        println!("Display Name: {}", self.display_name);
+        println!("EM Size: {}", self.em_size);
+        println!("Bold: {}", self.bold);
+        println!("Italic: {}", self.italic);
+        println!("Range Start: {}", self.range_start);
+        println!("Charset: {}", self.charset);
+        println!("Anti-Alias: {}", self.anti_alias);
+        println!("Range End: {}", self.range_end);
+        println!("Texture: {}", self.texture);
+        println!("Scale X: {}", self.scale_x);
+        println!("Scale Y: {}", self.scale_y);
+        println!("Ascender Offset: {:?}", self.ascender_offset);
+        println!("Ascender: {:?}", self.ascender);
+        println!("SDF Spread: {:?}", self.sdf_spread);
+        println!("Line Height: {:?}", self.line_height);
+    }
+}
+
+
+impl UTGlyph {
+    pub fn print(&self) {
+        println!("Character: '{}'", self.character);
+        println!("Position: ({}; {})", self.x, self.y);
+        println!("Size: {} x {}", self.width, self.height);
+        println!("Shift Modifier: {}", self.shift_modifier);
+        println!("Offset: {}", self.offset);
+    }
 }
 
 
@@ -307,111 +435,9 @@ fn format_license_md5(license: &[u8; 16]) -> String {
     hex_bytes.join(" ")
 }
 
-
-fn format_options_flags(flags: &UTOptionsFlags) -> String {
-    let mut flag_strings: Vec<&str> = vec![];
-
-    if flags.fullscreen {
-        flag_strings.push("Fullscreen");
-    }
-    if flags.interpolate_pixels {
-        flag_strings.push("Interpolate Pixels");
-    }
-    if flags.use_new_audio {
-        flag_strings.push("Use New Audio");
-    }
-    if flags.no_border {
-        flag_strings.push("No Border");
-    }
-    if flags.show_cursor {
-        flag_strings.push("Show Cursor");
-    }
-    if flags.sizeable {
-        flag_strings.push("Sizeable");
-    }
-    if flags.stay_on_top {
-        flag_strings.push("Stay on Top");
-    }
-    if flags.change_resolution {
-        flag_strings.push("Change Resolution");
-    }
-    if flags.no_buttons {
-        flag_strings.push("No Buttons");
-    }
-    if flags.screen_key {
-        flag_strings.push("Screen Key");
-    }
-    if flags.help_key {
-        flag_strings.push("Help Key");
-    }
-    if flags.quit_key {
-        flag_strings.push("Quit Key");
-    }
-    if flags.save_key {
-        flag_strings.push("Save Key");
-    }
-    if flags.screen_shot_key {
-        flag_strings.push("Screenshot Key");
-    }
-    if flags.close_sec {
-        flag_strings.push("Close Sec");
-    }
-    if flags.freeze {
-        flag_strings.push("Freeze");
-    }
-    if flags.show_progress {
-        flag_strings.push("Show Progress");
-    }
-    if flags.load_transparent {
-        flag_strings.push("Load Transparent");
-    }
-    if flags.scale_progress {
-        flag_strings.push("Scale Progress");
-    }
-    if flags.display_errors {
-        flag_strings.push("Display Errors");
-    }
-    if flags.write_errors {
-        flag_strings.push("Write Errors");
-    }
-    if flags.abort_errors {
-        flag_strings.push("Abort Errors");
-    }
-    if flags.variable_errors {
-        flag_strings.push("Variable Errors");
-    }
-    if flags.creation_event_order {
-        flag_strings.push("Creation Event Order");
-    }
-    if flags.use_front_touch {
-        flag_strings.push("Use Front Touch");
-    }
-    if flags.use_rear_touch {
-        flag_strings.push("Use Rear Touch");
-    }
-    if flags.use_fast_collision {
-        flag_strings.push("Use Fast Collision");
-    }
-    if flags.fast_collision_compatibility {
-        flag_strings.push("Fast Collision Compatibility");
-    }
-    if flags.disable_sandbox {
-        flag_strings.push("Disable Sandbox");
-    }
-    if flags.enable_copy_on_write {
-        flag_strings.push("Enable Copy on Write");
-    }
-
-    flag_strings.join(", ")
-}
-
-
 pub fn hexdump(raw_data: &[u8], start: usize, end: Option<usize>) -> Result<String, ()> {
     let len: usize = raw_data.len();
-    let end: usize = match end {
-        Some(end) => end,
-        None => len
-    };
+    let end: usize = end.unwrap_or_else(|| len);
     if end > len || start > end {
         return Err(());
     }

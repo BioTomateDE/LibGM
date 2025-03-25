@@ -1,4 +1,4 @@
-﻿use crate::chunk_reading::UTChunk;
+﻿use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::strings::UTStrings;
 
 #[derive(Debug, Clone)]
