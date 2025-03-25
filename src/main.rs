@@ -137,7 +137,7 @@ fn main() {
     // }
 
     // let data_file_path: &str = args[1].as_str();
-    let data_file_path: &str = "C:/Users/BioTomateDE/Documents/RustProjects/UndertaleModManager/dataExper.win";
+    let data_file_path: &str = "./data.win";
     println!("Loading data file {}", data_file_path);
 
     let data_file: Vec<u8> = match read_data_file(data_file_path) {
