@@ -3,14 +3,14 @@ use crate::chunk_reading::UTChunk;
 
 
 #[derive(Debug, Clone)]
-struct UTString {
+pub struct UTString {
     pub index: usize,
     pub id: u32,
     pub value: String,
 }
 
 pub struct UTStrings {
-    strings_by_id: HashMap<u32, UTString>,
+    pub strings_by_id: HashMap<u32, UTString>,
     pub strings_by_index: Vec<UTString>,
 }
 
