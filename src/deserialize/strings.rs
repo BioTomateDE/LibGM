@@ -1,5 +1,5 @@
 ﻿use std::collections::HashMap;
-use crate::chunk_reading::UTChunk;
+use crate::deserialize::chunk_reading::UTChunk;
 
 
 #[derive(Debug, Clone)]

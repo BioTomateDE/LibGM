@@ -198,10 +198,24 @@ impl UTChunk {
         }
     }
 
-    pub fn read_bool(&mut self) -> Result<bool, String> {
-        // Read 8-bit boolean value
-        Ok(self.read_u8()? != 0)
+    pub fn read_f32(&mut self) -> Result<f32, String> {
+        // Read a single-precision floating point number (little endian)
+        if self.file_index + 4 > self.data_len {
+            return Err(format!(
+                "Trying to read f32 out of bounds in chunk '{}' at position {}: {} > {}.",
+                self.name,
+                self.file_index,
+                self.file_index + 4,
+                self.data_len
+            ));
+        }
+
+        let raw: [u8; 4] = self.data[self.file_index .. self.file_index + 4].try_into().unwrap();
+        let number: f32 = f32::from_le_bytes(raw);
+        self.file_index += 4;
+        Ok(number)
     }
+
 
     pub fn read_literal_string(&mut self, length: usize) -> Result<String, String> {
         // Read literal ascii/utf8 string with specified length
