@@ -3,7 +3,6 @@ use crate::deserialize::variables::UTVariable;
 
 use colored::Colorize;
 use std::cmp::PartialEq;
-use std::collections::HashSet;
 use num_enum::TryFromPrimitive;
 use crate::deserialize::functions::{get_function, UTFunction};
 use crate::deserialize::strings::UTStrings;
@@ -360,7 +359,7 @@ impl UTCodeBlob {
 
                 // TODO deal with variable ids and scopes asfbjhiafshasf (var index is wrong)
 
-                return Ok(UTValue::Variable(UTCodeVariable::Unknown{ 0: index, 1: variable_type }));
+                Ok(UTValue::Variable(UTCodeVariable::Unknown{ 0: index, 1: variable_type }))
 
                 // let variable: UTVariable = match variables.get(index) {
                 //     Some(var) => var.clone(),
@@ -470,10 +469,10 @@ pub fn parse_chunk_CODE(
 
         while code_blob.file_index < code_blob.len {
             let instruction: UTInstruction = parse_code(&mut code_blob, bytecode14, &strings, variables, functions, code_meta.start_position-8)?;
-            let dump: String = match hexdump(&*code_blob.raw_data, code_blob.file_index-4, Some(code_blob.file_index)) {
-                Ok(ok) => ok,
-                Err(_) => "()".to_string(),
-            };
+            // let dump: String = match hexdump(&*code_blob.raw_data, code_blob.file_index-4, Some(code_blob.file_index)) {
+            //     Ok(ok) => ok,
+            //     Err(_) => "()".to_string(),
+            // };
             // println!("{} | {}/{} | {} | {:?}",
             //     code_meta.name,
             //     code_blob.len,
@@ -618,14 +617,10 @@ fn parse_code(
             };
 
             let instance_type: i8 = b0 as i8;
-            let mut instance_type: UTInstanceType = match instance_type.try_into() {
-                Ok(ok) => ok,
-                // Err(_) => return Err(format!("Invalid Instance Type {instance_type:02X} while parsing Pop Instruction.")),
-                Err(_) => {
-                    println!("{}", format!("[WARNING] Invalid Instance Type {instance_type:02X} while parsing Pop Instruction. Value: {b0:02X} {b1:02X}").yellow());
-                    UTInstanceType::Undefined
-                }
-            };
+            let mut instance_type: UTInstanceType = instance_type.try_into().unwrap_or_else(|_| {
+                println!("{}", format!("[WARNING] Invalid Instance Type {instance_type:02X} while parsing Pop Instruction. Value: {b0:02X} {b1:02X}").yellow());
+                UTInstanceType::Undefined
+            });
 
             // if type1 == UTDataType::Variable && type2 == UTDataType::Int32 {
             //     panic!("{} {b0:02X} {b1:02X} {b2:02X} {opcode_raw:02X} | {:02X} {:02X} {:02X} {:02X}", blob.file_index, blob.raw_data[blob.file_index+1],blob.raw_data[blob.file_index+2],blob.raw_data[blob.file_index+3],blob.raw_data[blob.file_index+4])
@@ -737,15 +732,15 @@ fn parse_code(
             }))
         }
 
-        _ => {
-            // DO PROPER ERROR HANDLING
-            panic!("[INTERNAL ERROR] Unhandled opcode {opcode_raw:02X}. (This should NOT happen in Release)");
-        },
+        // _ => Err(format!(
+        //     "Unhandled opcode {:02X} at position {}/{} (abs: {}) while parsing code. \
+        //     Please report this error to github.com/BioTomateDE/UndertaleModManager/issues.",
+        //     opcode_raw, blob.file_index, blob.len, code_start_pos + blob.len,
+        // )),
     }
 }
 
 
 // TODO:
-// variables bullshit (scopes, ids)
-// functions bullshit (look in npp; nothing makes fucking sense)
-// weird error (didnt investigate yet) "Invalid Instance Type A5 while parsing Pop Instruction."
+// variables bullshit (scopes, ids) (this is gonna be fucking pain)
+// a lot of Invalid Instance Types while parsing Pop Instruction.
