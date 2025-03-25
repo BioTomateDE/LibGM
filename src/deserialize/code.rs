@@ -192,11 +192,13 @@ struct UTComparisonInstruction {
 }
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 struct UTGotoInstruction {
+    opcode: UTOpcode,
     jump_offset: i32,
     popenv_exit_magic: bool,
 }
 #[derive(Debug, Clone)]
 struct UTPopInstruction {
+    opcode: UTOpcode,
     instance_type: UTInstanceType,
     type1: UTDataType,
     type2: UTDataType,
@@ -204,17 +206,20 @@ struct UTPopInstruction {
 }
 #[derive(Debug, Clone)]
 struct UTPushInstruction {
+    opcode: UTOpcode,
     data_type: UTDataType,
     value: UTValue,
 }
 #[derive(Debug, Clone)]
 struct UTCallInstruction {
+    opcode: UTOpcode,
     arguments_count: usize,
     data_type: UTDataType,
     function: UTFunction,
 }
 #[derive(Debug, Clone)]
 struct UTBreakInstruction {
+    opcode: UTOpcode,
     value: i16,
     data_type: UTDataType,
     int_argument: Option<i32>,
@@ -579,6 +584,7 @@ fn parse_code(
                 let jump_offset: i32 = b0 as i32;
                 let popenv_exit_magic: bool = jump_offset == -1048576;
                 return Ok(UTInstruction::Goto(UTGotoInstruction {
+                    opcode,
                     jump_offset,
                     popenv_exit_magic,
                 }));
@@ -597,6 +603,7 @@ fn parse_code(
             let jump_offset: i32 = jump_offset as i32;
 
             Ok(UTInstruction::Goto(UTGotoInstruction {
+                opcode,
                 jump_offset,
                 popenv_exit_magic,
             }))
@@ -617,14 +624,25 @@ fn parse_code(
             };
 
             let instance_type: i8 = b0 as i8;
-            let mut instance_type: UTInstanceType = instance_type.try_into().unwrap_or_else(|_| {
-                println!("{}", format!("[WARNING] Invalid Instance Type {instance_type:02X} while parsing Pop Instruction. Value: {b0:02X} {b1:02X}").yellow());
+            let instance_type: UTInstanceType = instance_type.try_into().unwrap_or_else(|_| {
+                let dump = hexdump(&blob.raw_data, (if blob.file_index < 16 {16} else {blob.file_index}) - 16, Some(if blob.file_index + 8 < blob.len {blob.file_index + 8} else {blob.len})).unwrap();
+                println!("{}", format!("[WARNING] {instance_type:02X} Dump: {dump}").yellow());
                 UTInstanceType::Undefined
             });
 
             // if type1 == UTDataType::Variable && type2 == UTDataType::Int32 {
             //     panic!("{} {b0:02X} {b1:02X} {b2:02X} {opcode_raw:02X} | {:02X} {:02X} {:02X} {:02X}", blob.file_index, blob.raw_data[blob.file_index+1],blob.raw_data[blob.file_index+2],blob.raw_data[blob.file_index+3],blob.raw_data[blob.file_index+4])
             // }
+
+            if type1 == UTDataType::Int16 {
+                return Err(format!(
+                    "[Internal Error] Unhandled \"Special swap instruction\" (UndertaleModTool/Issues/#129) \
+                    occurred at position {} while parsing Pop Instruction.\
+                    Please report this error to github.com/BioTomateDE/UndertaleModManager/Issues \
+                    along with your data.win file.",
+                    blob.file_index + code_start_pos
+                ));
+            }
 
             // if type1 == UTDataType::Int16 {
             //     // Special scenario - the swap instruction (see UndertaleModTool/Issues/#129)
@@ -644,6 +662,7 @@ fn parse_code(
             };
 
             Ok(UTInstruction::Pop(UTPopInstruction {
+                opcode,
                 instance_type,
                 type1,
                 type2,
@@ -682,6 +701,7 @@ fn parse_code(
             // println!("$$$$$ {:?}", value);
 
             Ok(UTInstruction::Push(UTPushInstruction {
+                opcode,
                 data_type,
                 value,
             }))
@@ -699,6 +719,7 @@ fn parse_code(
             let function: UTFunction = get_function(functions, code_start_pos + blob.file_index)?;
 
             Ok(UTInstruction::Call(UTCallInstruction {
+                opcode,
                 arguments_count,
                 data_type,
                 function,
@@ -726,6 +747,7 @@ fn parse_code(
             // other gms version stuff {}
 
             Ok(UTInstruction::Break(UTBreakInstruction {
+                opcode,
                 value,
                 data_type,
                 int_argument,
