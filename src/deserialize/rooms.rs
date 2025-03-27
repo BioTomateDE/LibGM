@@ -1,4 +1,5 @@
 use crate::deserialize::chunk_reading::UTChunk;
+use crate::deserialize::game_objects::UTGameObject;
 use crate::deserialize::general_info::{parse_chunk_GEN8, UTGeneralInfo};
 use crate::deserialize::sequence::{parse_sequence, UTSequence};
 use crate::deserialize::strings::UTStrings;
@@ -17,9 +18,9 @@ pub struct UTRoom {
     pub creation_code_id: u32,
     pub flags: UTRoomFlags,
     pub backgrounds: Vec<UTRoomBackground>,
-    pub views: Vec<UTRoomView>,                  // change type
-    pub game_objects: Vec<usize>,           // change type
-    pub tiles: Vec<usize>,                  // change type
+    pub views: Vec<UTRoomView>,
+    pub game_objects: Vec<UTGameObject>,
+    pub tiles: Vec<UTRoomTile>,
     pub world: bool,
     pub top: u32,
     pub left: u32,
@@ -72,6 +73,30 @@ pub struct UTRoomBackground {
     pub stretch: bool,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct UTRoomTile {
+    pub x: i32,
+    pub y: i32,
+    pub texture: UTRoomTileTexture,
+    pub source_x: u32,
+    pub source_y: u32,
+    pub width: u32,
+    pub height: u32,
+    pub tile_depth: i32,
+    pub instance_id: u32,
+    pub scale_x: f32,
+    pub scale_y: f32,
+    pub color: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum UTRoomTileTexture {
+    Stub(),
+    // Sprite(UTSprite),
+    // Background(UTBackground),
+}
+
+
 
 pub fn parse_chunk_ROOM(mut chunk: UTChunk, general_info: &UTGeneralInfo, strings: &UTStrings) -> Result<Vec<UTRoom>, String> {
     let room_count: usize = chunk.read_usize()?;
@@ -97,8 +122,8 @@ pub fn parse_chunk_ROOM(mut chunk: UTChunk, general_info: &UTGeneralInfo, string
         let flags: UTRoomFlags = parse_room_flags(chunk.read_u32()?);
         let backgrounds: Vec<UTRoomBackground> = parse_room_backgrounds(&mut chunk)?;        // change type later
         let views: Vec<UTRoomView> = parse_room_views(&mut chunk)?;
-        let game_objects: Vec<usize> = parse_room_objects(&mut chunk)?;     // change to UTObject
-        let tiles: Vec<usize> = parse_room_tiles(&mut chunk)?;     // change to UTTile
+        let game_objects: Vec<UTGameObject> = parse_room_objects(&mut chunk)?;     // change to UTObject
+        let tiles: Vec<UTRoomTile> = parse_room_tiles(&mut chunk, general_info)?;     // change to UTTile
         let world: bool = chunk.read_u32()? != 0;
         let top: u32 = chunk.read_u32()?;
         let left: u32 = chunk.read_u32()?;
@@ -161,74 +186,97 @@ fn parse_room_flags(raw: u32) -> UTRoomFlags {
 }
 
 fn parse_room_views(chunk: &mut UTChunk) -> Result<Vec<UTRoomView>, String> {
-    let pointer_position: usize = chunk.read_usize()? - chunk.abs_pos;
+    let view_pointers: Vec<usize> = chunk.read_pointer_list()?;
     let old_position: usize = chunk.file_index;
-    chunk.file_index = pointer_position;
+    let mut views: Vec<UTRoomView> = Vec::with_capacity(view_pointers.len());
 
-    let room_view_count: usize = chunk.read_usize()?;
-    let mut room_views: Vec<UTRoomView> = Vec::with_capacity(room_view_count);
-    for _ in 0..room_view_count {
-        let room_view_pointer = chunk.read_usize()? - chunk.abs_pos;
-        let old_position2: usize = chunk.file_index;
-        chunk.file_index = room_view_pointer;
-        let room_view: UTRoomView = parse_room_view(chunk)?;
-        chunk.file_index = old_position2;
-        room_views.push(room_view);
+    for pointer in view_pointers {
+        chunk.file_index = pointer;
+
+        let enabled: bool = chunk.read_u32()? != 0;
+        let view_x: i32 = chunk.read_i32()?;
+        let view_y: i32 = chunk.read_i32()?;
+        let view_width: i32 = chunk.read_i32()?;
+        let view_height: i32 = chunk.read_i32()?;
+        let port_x: i32 = chunk.read_i32()?;
+        let port_y: i32 = chunk.read_i32()?;
+        let port_width: i32 = chunk.read_i32()?;
+        let port_height: i32 = chunk.read_i32()?;
+        let border_x: u32 = chunk.read_u32()?;
+        let border_y: u32 = chunk.read_u32()?;
+        let speed_x: i32 = chunk.read_i32()?;
+        let speed_y: i32 = chunk.read_i32()?;
+        let object_id: i32 = chunk.read_i32()?;           // change to UTObject later
+
+        let view: UTRoomView = UTRoomView {
+            enabled,
+            view_x,
+            view_y,
+            view_width,
+            view_height,
+            port_x,
+            port_y,
+            port_width,
+            port_height,
+            border_x,
+            border_y,
+            speed_x,
+            speed_y,
+            object_id,
+        };
+        views.push(view);
     }
 
     chunk.file_index = old_position;
-    Ok(room_views)
+    Ok(views)
 }
 
-fn parse_room_view(chunk: &mut UTChunk) -> Result<UTRoomView, String> {
-    let enabled: bool = chunk.read_u32()? != 0;
-    let view_x: i32 = chunk.read_i32()?;
-    let view_y: i32 = chunk.read_i32()?;
-    let view_width: i32 = chunk.read_i32()?;
-    let view_height: i32 = chunk.read_i32()?;
-    let port_x: i32 = chunk.read_i32()?;
-    let port_y: i32 = chunk.read_i32()?;
-    let port_width: i32 = chunk.read_i32()?;
-    let port_height: i32 = chunk.read_i32()?;
-    let border_x: u32 = chunk.read_u32()?;
-    let border_y: u32 = chunk.read_u32()?;
-    let speed_x: i32 = chunk.read_i32()?;
-    let speed_y: i32 = chunk.read_i32()?;
-    let object_id: i32 = chunk.read_i32()?;           // change to UTObject later
+fn parse_room_objects(chunk: &mut UTChunk) -> Result<Vec<UTGameObject>, String> {
+    let game_object_pointers: Vec<usize> = chunk.read_pointer_list()?;
+    let old_position: usize = chunk.file_index;
+    let mut game_objects: Vec<UTGameObject> = Vec::with_capacity(game_object_pointers.len());
 
-    Ok(UTRoomView {
-        enabled,
-        view_x,
-        view_y,
-        view_width,
-        view_height,
-        port_x,
-        port_y,
-        port_width,
-        port_height,
-        border_x,
-        border_y,
-        speed_x,
-        speed_y,
-        object_id,
-    })
+    for pointer in game_object_pointers {
+        chunk.file_index = pointer;
 
+        let game_object: UTGameObject = UTGameObject { };
+        game_objects.push(game_object);
+    }
+
+    chunk.file_index = old_position;
+    Ok(game_objects)
 }
-
 
 fn parse_room_backgrounds(chunk: &mut UTChunk) -> Result<Vec<UTRoomBackground>, String> {
-    let pointer_position: usize = chunk.read_usize()? - chunk.abs_pos;
+    let background_pointers: Vec<usize> = chunk.read_pointer_list()?;
     let old_position: usize = chunk.file_index;
-    chunk.file_index = pointer_position;
+    let mut backgrounds: Vec<UTRoomBackground> = Vec::with_capacity(background_pointers.len());
 
-    let background_count: usize = chunk.read_usize()?;
-    let mut backgrounds: Vec<UTRoomBackground> = Vec::with_capacity(background_count);
-    for _ in 0..background_count {
-        let background_pointer = chunk.read_usize()? - chunk.abs_pos;
-        let old_position2: usize = chunk.file_index;
-        chunk.file_index = background_pointer;
-        let background: UTRoomBackground = parse_room_background(chunk)?;
-        chunk.file_index = old_position2;
+    for pointer in background_pointers {
+        chunk.file_index = pointer;
+        let enabled: bool = chunk.read_i32()? != 0;
+        let foreground: bool = chunk.read_i32()? != 0;
+        let background_definition: u32 = chunk.read_u32()?;     // change to UTBackground later
+        let x: i32 = chunk.read_i32()?;
+        let y: i32 = chunk.read_i32()?;
+        let tile_x: i32 = chunk.read_i32()?;    // idk if this should be an int instead of a bool
+        let tile_y: i32 = chunk.read_i32()?;    // ^
+        let speed_x: i32 = chunk.read_i32()?;
+        let speed_y: i32 = chunk.read_i32()?;
+        let stretch: bool = chunk.read_i32()? != 0;
+
+        let background: UTRoomBackground = UTRoomBackground {
+            enabled,
+            foreground,
+            background_definition,
+            x,
+            y,
+            tile_x,
+            tile_y,
+            speed_x,
+            speed_y,
+            stretch,
+        };
         backgrounds.push(background);
     }
 
@@ -236,44 +284,49 @@ fn parse_room_backgrounds(chunk: &mut UTChunk) -> Result<Vec<UTRoomBackground>, 
     Ok(backgrounds)
 }
 
+fn parse_room_tiles(chunk: &mut UTChunk, general_info: &UTGeneralInfo) -> Result<Vec<UTRoomTile>, String> {  // TODO
+    let tile_pointers: Vec<usize> = chunk.read_pointer_list()?;
+    let old_position: usize = chunk.file_index;
+    let mut tiles: Vec<UTRoomTile> = Vec::with_capacity(tile_pointers.len());
 
-fn parse_room_background(chunk: &mut UTChunk) -> Result<UTRoomBackground, String> {
-    let enabled: bool = chunk.read_i32()? != 0;
-    let foreground: bool = chunk.read_i32()? != 0;
-    let background_definition: u32 = chunk.read_u32()?;     // change to UTBackground later
-    let x: i32 = chunk.read_i32()?;
-    let y: i32 = chunk.read_i32()?;
-    let tile_x: i32 = chunk.read_i32()?;    // idk if this should be an int instead of a bool
-    let tile_y: i32 = chunk.read_i32()?;    // ^
-    let speed_x: i32 = chunk.read_i32()?;
-    let speed_y: i32 = chunk.read_i32()?;
-    let stretch: bool = chunk.read_i32()? != 0;
+    for pointer in tile_pointers {
+        chunk.file_index = pointer;
 
-    Ok(UTRoomBackground {
-        enabled,
-        foreground,
-        background_definition,
-        x,
-        y,
-        tile_x,
-        tile_y,
-        speed_x,
-        speed_y,
-        stretch,
-    })
-}
+        let x: i32 = chunk.read_i32()?;
+        let y: i32 = chunk.read_i32()?;
+        let sprite_mode: bool = general_info.is_version_at_least(2, 0, 0, 0);
+        // if sprite_mode {}
+        let _ = chunk.read_u32()?;  // sprite shit
+        let texture: UTRoomTileTexture = UTRoomTileTexture::Stub();
+        let source_x: u32 = chunk.read_u32()?;
+        let source_y: u32 = chunk.read_u32()?;
+        let width: u32 = chunk.read_u32()?;
+        let height: u32 = chunk.read_u32()?;
+        let tile_depth: i32 = chunk.read_i32()?;
+        let instance_id: u32 = chunk.read_u32()?;
+        let scale_x: f32 = chunk.read_f32()?;
+        let scale_y: f32 = chunk.read_f32()?;
+        let color: u32 = chunk.read_u32()?;
 
-fn parse_room_objects(chunk: &mut UTChunk) -> Result<Vec<usize>, String> {  // TODO
-    // pointer list bhudsfgbdgs
+        let tile: UTRoomTile = UTRoomTile {
+            x,
+            y,
+            texture,
+            source_x,
+            source_y,
+            width,
+            height,
+            tile_depth,
+            instance_id,
+            scale_x,
+            scale_y,
+            color,
+        };
+        tiles.push(tile);
+    }
 
-    Ok(vec![])
-}
-
-
-fn parse_room_tiles(chunk: &mut UTChunk) -> Result<Vec<usize>, String> {  // TODO
-    // pointer list bhudsfgbdgs
-
-    Ok(vec![])
+    chunk.file_index = old_position;
+    Ok(tiles)
 }
 
 fn parse_room_layers(chunk: &mut UTChunk) -> Result<Vec<usize>, String> {  // TODO
