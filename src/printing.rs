@@ -1,6 +1,6 @@
 ﻿use crate::deserialize::fonts::{UTFont, UTGlyph};
 use crate::deserialize::general_info::{UTFunctionClassifications, UTGeneralInfo, UTGeneralInfoFlags, UTOptions, UTOptionsFlags};
-use crate::deserialize::rooms::{UTRoom, UTRoomBackground, UTRoomFlags, UTRoomView};
+use crate::deserialize::rooms::{UTRoom, UTRoomBackground, UTRoomFlags, UTRoomTile, UTRoomView};
 use crate::deserialize::sequence::{UTKeyframe, UTKeyframeMoment, UTSequence, UTTrack};
 
 impl UTGeneralInfo {
@@ -450,17 +450,35 @@ impl UTRoom {
         //     background.print();
         // }
         println!("  Views Length: {}", self.views.len());
-        for view in self.views.clone() {
-            view.print();
-        }
-        println!("  Game Objects: {}", self.game_objects.len());
-        println!("  Tiles: {}", self.tiles.len());
+        // for view in self.views.clone() {
+        //     view.print();
+        // }
+        println!("  Game Objects Length: {}", self.game_objects.len());
+        println!("  Tiles Length: {}", self.tiles.len());
+        // for tile in self.tiles.clone() {
+        //     tile.print();
+        // }
         println!("  World: {}", self.world);
         println!("  Bounds: ({}, {}) - ({}, {})", self.left, self.top, self.right, self.bottom);
         println!("  Gravity: ({}, {})", self.gravity_x, self.gravity_y);
         println!("  Meters Per Pixel: {}", self.meters_per_pixel);
         println!("  Layers: {}", self.layers.as_ref().map_or(0, |l| l.len()));
         println!("  Sequences: {}", self.sequences.as_ref().map_or(0, |s| s.len()));
+        println!();
+    }
+}
+
+impl UTRoomTile {
+    pub fn print(&self) {
+        println!("UTRoomTile:");
+        println!("  Position: ({}, {})", self.x, self.y);
+        println!("  Texture: {:?}", self.texture);
+        println!("  Source: ({}, {})", self.source_x, self.source_y);
+        println!("  Size: {}x{}", self.width, self.height);
+        println!("  Depth: {}", self.tile_depth);
+        println!("  Instance ID: {}", self.instance_id);
+        println!("  Scale: ({}, {})", self.scale_x, self.scale_y);
+        println!("  Color: {:X}", self.color);
         println!();
     }
 }
