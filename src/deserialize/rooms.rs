@@ -55,7 +55,7 @@ pub struct UTRoomView {
     pub border_y: u32,
     pub speed_x: i32,
     pub speed_y: i32,
-    pub object_id: usize,           // change to UTObject later
+    pub object_id: i32,           // change to UTObject later
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -160,25 +160,59 @@ fn parse_room_flags(raw: u32) -> UTRoomFlags {
     }
 }
 
-fn parse_room_views(chunk: &mut UTChunk) -> Result<Vec<UTRoomView>, String> {  // TODO
-    // pointer list bhudsfgbdgs
+fn parse_room_views(chunk: &mut UTChunk) -> Result<Vec<UTRoomView>, String> {
+    let pointer_position: usize = chunk.read_usize()? - chunk.abs_pos;
+    let old_position: usize = chunk.file_index;
+    chunk.file_index = pointer_position;
 
-    // Enabled = reader.ReadBoolean();
-    // ViewX = reader.ReadInt32();
-    // ViewY = reader.ReadInt32();
-    // ViewWidth = reader.ReadInt32();
-    // ViewHeight = reader.ReadInt32();
-    // PortX = reader.ReadInt32();
-    // PortY = reader.ReadInt32();
-    // PortWidth = reader.ReadInt32();
-    // PortHeight = reader.ReadInt32();
-    // BorderX = reader.ReadUInt32();
-    // BorderY = reader.ReadUInt32();
-    // SpeedX = reader.ReadInt32();
-    // SpeedY = reader.ReadInt32();
-    // _objectId = reader.ReadUndertaleObject<UndertaleResourceById<UndertaleGameObject, UndertaleChunkOBJT>>();
+    let room_view_count: usize = chunk.read_usize()?;
+    let mut room_views: Vec<UTRoomView> = Vec::with_capacity(room_view_count);
+    for _ in 0..room_view_count {
+        let room_view_pointer = chunk.read_usize()? - chunk.abs_pos;
+        let old_position2: usize = chunk.file_index;
+        chunk.file_index = room_view_pointer;
+        let room_view: UTRoomView = parse_room_view(chunk)?;
+        chunk.file_index = old_position2;
+        room_views.push(room_view);
+    }
 
-    Ok(vec![])
+    chunk.file_index = old_position;
+    Ok(room_views)
+}
+
+fn parse_room_view(chunk: &mut UTChunk) -> Result<UTRoomView, String> {
+    let enabled: bool = chunk.read_u32()? != 0;
+    let view_x: i32 = chunk.read_i32()?;
+    let view_y: i32 = chunk.read_i32()?;
+    let view_width: i32 = chunk.read_i32()?;
+    let view_height: i32 = chunk.read_i32()?;
+    let port_x: i32 = chunk.read_i32()?;
+    let port_y: i32 = chunk.read_i32()?;
+    let port_width: i32 = chunk.read_i32()?;
+    let port_height: i32 = chunk.read_i32()?;
+    let border_x: u32 = chunk.read_u32()?;
+    let border_y: u32 = chunk.read_u32()?;
+    let speed_x: i32 = chunk.read_i32()?;
+    let speed_y: i32 = chunk.read_i32()?;
+    let object_id: i32 = chunk.read_i32()?;           // change to UTObject later
+
+    Ok(UTRoomView {
+        enabled,
+        view_x,
+        view_y,
+        view_width,
+        view_height,
+        port_x,
+        port_y,
+        port_width,
+        port_height,
+        border_x,
+        border_y,
+        speed_x,
+        speed_y,
+        object_id,
+    })
+
 }
 
 
