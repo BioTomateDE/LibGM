@@ -20,8 +20,10 @@ pub struct UTFont {
     pub ascender: Option<u32>,
     pub sdf_spread: Option<u32>,
     pub line_height: Option<u32>,
+    pub glyphs: Vec<UTGlyph>,
 }
 
+#[derive(Debug, Clone)]
 pub struct UTGlyph {
     pub character: char,
     pub x: u16,
@@ -34,15 +36,6 @@ pub struct UTGlyph {
 
 
 pub fn parse_chunk_FONT(mut chunk: UTChunk, general_info: &UTGeneralInfo, strings: &UTStrings) -> Result<Vec<UTFont>, String> {
-    // loop {
-    //     let a = chunk.read_u32()?;
-    //     match strings.get_string_by_id(a) {
-    //         Some(b) => println!("{} {a} {b}", chunk.file_index),
-    //         None => {}
-    //     }
-    //
-    // }
-
     let font_count: usize = chunk.read_usize()?;
     let mut font_starting_positions: Vec<usize> = Vec::with_capacity(font_count);
     for _ in 0..font_count {
@@ -51,12 +44,8 @@ pub fn parse_chunk_FONT(mut chunk: UTChunk, general_info: &UTGeneralInfo, string
     }
 
     let mut fonts: Vec<UTFont> = Vec::with_capacity(font_count);
-    for (i, start_position) in font_starting_positions.iter().enumerate() {
-        chunk.file_index = *start_position;
-        let end_position: usize = match font_starting_positions.get(i + 1) {
-            Some(pos) => *pos,
-            None => chunk.data_len,
-        };
+    for start_position in font_starting_positions {
+        chunk.file_index = start_position;
 
         let name: String = chunk.read_ut_string(&strings)?;
         let display_name: String = chunk.read_ut_string(&strings)?;
@@ -89,7 +78,7 @@ pub fn parse_chunk_FONT(mut chunk: UTChunk, general_info: &UTGeneralInfo, string
             line_height = Some(chunk.read_u32()?);
         }
 
-        let ts = parse_glyphs(&mut chunk, &name);
+        let glyphs = parse_glyphs(&mut chunk, &name)?;
 
         let font: UTFont = UTFont {
             name,
@@ -108,29 +97,17 @@ pub fn parse_chunk_FONT(mut chunk: UTChunk, general_info: &UTGeneralInfo, string
             ascender,
             sdf_spread,
             line_height,
+            glyphs,
         };
         // println!("\n\n");
         // font.print();
         fonts.push(font);
     }
-
-
-    // for _ in 0..font_count {
-    //     let character: u16 = chunk.read_u16()?;
-    //     let source_x: u16 = chunk.read_u16()?;
-    //     let source_y: u16 = chunk.read_u16()?;
-    //     let source_width: u16 = chunk.read_u16()?;
-    //     let source_height: u16 = chunk.read_u16()?;
-    //     let shift: i16 = chunk.read_i16()?;
-    //     let offset: i16  = chunk.read_i16()?; // Potential assumption, see the conversation at https://github.com/UnderminersTeam/UndertaleModTool/issues/40#issuecomment-440208912
-    //     // let kerning: bool = chunk.ReadUndertaleObject<UndertaleSimpleListShort<GlyphKerning>>();
-    // }
-
     Ok(fonts)
 }
 
 
-fn parse_glyphs(chunk: &mut UTChunk, font_name: &str) -> Result<(), String> {
+fn parse_glyphs(chunk: &mut UTChunk, font_name: &str) -> Result<Vec<UTGlyph>, String> {
     let glyph_count: usize = chunk.read_usize()?;
     let mut glyph_starting_positions: Vec<usize> = Vec::with_capacity(glyph_count);
 
@@ -140,8 +117,8 @@ fn parse_glyphs(chunk: &mut UTChunk, font_name: &str) -> Result<(), String> {
     }
 
     let mut glyphs: Vec<UTGlyph> = Vec::with_capacity(glyph_count);
-    for (i, start_position) in glyph_starting_positions.iter().enumerate() {
-        chunk.file_index = *start_position;
+    for start_position in glyph_starting_positions {
+        chunk.file_index = start_position;
 
         let character: i16 = chunk.read_i16()?;
         let character: char = match char::from_u32(character as u32) {
@@ -175,6 +152,6 @@ fn parse_glyphs(chunk: &mut UTChunk, font_name: &str) -> Result<(), String> {
         glyphs.push(glyph);
     }
 
-    Ok(())
+    Ok(glyphs)
 }
 

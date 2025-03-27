@@ -1,10 +1,11 @@
 use crate::deserialize::all::UTData;
 use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::general_info::{UTFunctionClassifications, UTGeneralInfoFlags, UTOptionsFlags};
-use crate::serialize::data_writing::DataBuilder;
+use crate::serialize::all::{build_chunk, DataBuilder};
+use crate::serialize::chunk_writing::ChunkBuilder;
 
-pub fn build_chunk_GEN8(ut_data: &UTData) -> Result<UTChunk, String> {
-    let mut builder: DataBuilder = DataBuilder { raw_data: Vec::new() };
+pub fn build_chunk_GEN8(data_builder: &mut DataBuilder, ut_data: &UTData) -> Result<(), String> {
+    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "GEN8" };
 
     builder.write_bool(ut_data.general_info.is_debugger_disabled)?;
     builder.write_u8(ut_data.general_info.bytecode_version)?;
@@ -35,14 +36,8 @@ pub fn build_chunk_GEN8(ut_data: &UTData) -> Result<UTChunk, String> {
         builder.write_u32(*room_id)?;
     }
 
-    let chunk: UTChunk = UTChunk {
-        name: "GEN8".to_string(),
-        abs_pos: 0,     // stub
-        data_len: builder.raw_data.len(),
-        data: builder.raw_data,
-        file_index: 0
-    };
-    Ok(chunk)
+    build_chunk(data_builder, builder)?;
+    Ok(())
 }
 
 
@@ -143,8 +138,8 @@ fn build_function_classifications(function_classifications: &UTFunctionClassific
 }
 
 
-pub fn build_chunk_OPTN(ut_data: &UTData) -> Result<UTChunk, String> {
-    let mut builder: DataBuilder = DataBuilder { raw_data: Vec::new() };
+pub fn build_chunk_OPTN(data_builder: &mut DataBuilder, ut_data: &UTData) -> Result<(), String> {
+    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "OPTN" };
 
     builder.write_u32(ut_data.options._unused1)?;
     builder.write_u32(ut_data.options._unused2)?;
@@ -166,14 +161,8 @@ pub fn build_chunk_OPTN(ut_data: &UTData) -> Result<UTChunk, String> {
     // ^
     builder.write_u32(ut_data.options.load_alpha)?;
 
-    let chunk: UTChunk = UTChunk {
-        name: "GEN8".to_string(),
-        abs_pos: 0,     // stub
-        data_len: builder.raw_data.len(),
-        data: builder.raw_data,
-        file_index: 0
-    };
-    Ok(chunk)
+    build_chunk(data_builder, builder)?;
+    Ok(())
 }
 
 
