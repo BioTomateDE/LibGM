@@ -190,13 +190,46 @@ impl UTChunk {
         } else {
             Err(format!(
                 "Failsafe triggered in chunk '{}' at position {} trying \
-                to read usize integer: Number {} is larger than failsafe amount {}",
+                to read usize integer: Number {} is larger than failsafe amount {}.",
                 self.name,
                 self.file_index - 4,
                 number,
                 FAILSAFE_AMOUNT
             ))
         }
+    }
+
+    pub fn read_usize_big_endian(&mut self) -> Result<usize, String> {
+        // Read unsigned 32-bit integer and convert to usize (big endian)
+        static FAILSAFE_AMOUNT: usize = 200_000_000;
+
+        let bytes: [u8; 4] = match self.data.get(self.file_index .. self.file_index + 4) {
+            Some(bytes) => bytes.try_into().unwrap(),
+            None => return Err(format!(
+                "Trying to read big endian usize integer (u32) \
+                out of bounds in chunk '{}' at position {}: {} > {}.",
+                self.name,
+                self.file_index,
+                self.file_index + 4,
+                self.data_len
+            )),
+        };
+        self.file_index += 4;
+
+        let number: u32 = u32::from_be_bytes(bytes);
+        let number: usize = number as usize;
+
+        if number < FAILSAFE_AMOUNT {
+            return Ok(number);
+        }
+        Err(format!(
+            "Failsafe triggered in chunk '{}' at position {} trying \
+            to read usize integer: Number {} is larger than failsafe amount {}.",
+            self.name,
+            self.file_index - 4,
+            number,
+            FAILSAFE_AMOUNT
+        ))
     }
 
     pub fn read_f32(&mut self) -> Result<f32, String> {

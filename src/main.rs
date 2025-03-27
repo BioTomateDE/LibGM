@@ -62,6 +62,9 @@ fn main() {
         }
     };
 
-    println!("{}", data.strings.get_string_by_pos(12122776).unwrap());
+    // println!("{}", data.strings.get_string_by_pos(12122776).unwrap());
 }
 
+// TODO:    - Apparently C# implicitly converts numbers to int/long before applying bitwise operations on them.
+//          This means that i have to change the thingies in ./deserialize/code.rs because they were actually NOT
+//          redundant in the original C# UndertaleModTool code
