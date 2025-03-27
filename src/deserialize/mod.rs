@@ -10,3 +10,4 @@ pub mod chunk_reading;
 pub mod rooms;
 pub mod sequence;
 pub mod game_objects;
+pub mod embedded_textures;
