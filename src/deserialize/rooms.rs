@@ -1,3 +1,4 @@
+use num_enum::TryFromPrimitive;
 use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::game_objects::UTGameObject;
 use crate::deserialize::general_info::{parse_chunk_GEN8, UTGeneralInfo};
@@ -29,7 +30,7 @@ pub struct UTRoom {
     pub gravity_x: f32,
     pub gravity_y: f32,
     pub meters_per_pixel: f32,
-    pub layers: Option<Vec<usize>>,         // change type
+    pub layers: Option<Vec<UTRoomLayer>>,
     pub sequences: Option<Vec<UTSequence>>,
 }
 #[derive(Debug, Clone)]
@@ -96,6 +97,29 @@ pub enum UTRoomTileTexture {
     // Background(UTBackground),
 }
 
+#[derive(Debug, Clone)]
+pub struct UTRoomLayer {
+    pub layer_name: String,
+    pub layer_id: u32,
+    pub layer_type: UTRoomLayerType,
+    pub layer_depth: i32,
+    pub x_offset: f32,
+    pub y_offset: f32,
+    pub horizontal_speed: f32,
+    pub vertical_speed: f32,
+    pub is_visible: bool,
+}
+
+#[derive(Debug, Clone, TryFromPrimitive)]
+#[repr(u32)]
+pub enum UTRoomLayerType {
+    Path = 0,
+    Background = 1,
+    Instances = 2,
+    Assets = 3,
+    Tiles = 4,
+    Effect = 6,
+}
 
 
 pub fn parse_chunk_ROOM(mut chunk: UTChunk, general_info: &UTGeneralInfo, strings: &UTStrings) -> Result<Vec<UTRoom>, String> {
@@ -132,10 +156,10 @@ pub fn parse_chunk_ROOM(mut chunk: UTChunk, general_info: &UTGeneralInfo, string
         let gravity_x: f32 = chunk.read_f32()?;
         let gravity_y: f32 = chunk.read_f32()?;
         let meters_per_pixel: f32 = chunk.read_f32()?;
-        let mut layers: Option<Vec<usize>> = None;      // change to UTRoomLayer
+        let mut layers: Option<Vec<UTRoomLayer>> = None;      // change to UTRoomLayer
         let mut sequences: Option<Vec<UTSequence>> = None;      // change to UTSequence
         if general_info.is_version_at_least(2, 0, 0, 0) {
-            layers = Some(parse_room_layers(&mut chunk)?);
+            layers = Some(parse_room_layers(&mut chunk, strings)?);
             if general_info.is_version_at_least(2, 3, 0, 0) {
                 sequences = Some(parse_room_sequences(&mut chunk, strings)?);
             }
@@ -329,10 +353,49 @@ fn parse_room_tiles(chunk: &mut UTChunk, general_info: &UTGeneralInfo) -> Result
     Ok(tiles)
 }
 
-fn parse_room_layers(chunk: &mut UTChunk) -> Result<Vec<usize>, String> {  // TODO
-    // pointer list bhudsfgbdgs
+fn parse_room_layers(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<UTRoomLayer>, String> {
+    let layer_pointers: Vec<usize> = chunk.read_pointer_list()?;
+    let old_position: usize = chunk.file_index;
+    let mut layers: Vec<UTRoomLayer> = Vec::with_capacity(layer_pointers.len());
 
-    Ok(vec![])
+    for pointer in layer_pointers {
+        chunk.file_index = pointer;
+
+        let layer_name: String = chunk.read_ut_string(strings)?;
+        let layer_id: u32 = chunk.read_u32()?;
+        let layer_type: u32 = chunk.read_u32()?;
+        let layer_type: UTRoomLayerType = match layer_type.try_into() {
+            Ok(layer_type) => layer_type,
+            Err(_) => return Err(format!(
+                "Invalid Room Layer Type 0x{:04X} while parsing room at position {} in chunk '{}'.",
+                layer_type,
+                chunk.file_index,
+                chunk.name,
+            )),
+        };
+        let layer_depth: i32 = chunk.read_i32()?;
+        let x_offset: f32 = chunk.read_f32()?;
+        let y_offset: f32 = chunk.read_f32()?;
+        let horizontal_speed: f32 = chunk.read_f32()?;
+        let vertical_speed: f32 = chunk.read_f32()?;
+        let is_visible: bool = chunk.read_u32()? != 0;
+
+        let layer: UTRoomLayer = UTRoomLayer {
+            layer_name,
+            layer_id,
+            layer_type,
+            layer_depth,
+            x_offset,
+            y_offset,
+            horizontal_speed,
+            vertical_speed,
+            is_visible,
+        };
+        layers.push(layer);
+    }
+
+    chunk.file_index = old_position;
+    Ok(layers)
 }
 
 fn parse_room_sequences(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<UTSequence>, String> {
