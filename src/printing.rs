@@ -1,6 +1,6 @@
 ﻿use crate::deserialize::fonts::{UTFont, UTGlyph};
 use crate::deserialize::general_info::{UTFunctionClassifications, UTGeneralInfo, UTGeneralInfoFlags, UTOptions, UTOptionsFlags};
-use crate::deserialize::rooms::{UTRoom, UTRoomFlags, UTRoomView};
+use crate::deserialize::rooms::{UTRoom, UTRoomBackground, UTRoomFlags, UTRoomView};
 use crate::deserialize::sequence::{UTKeyframe, UTKeyframeMoment, UTSequence, UTTrack};
 
 impl UTGeneralInfo {
@@ -25,6 +25,7 @@ impl UTGeneralInfo {
         println!("  Function Classifications: {}", &self.function_classifications.to_string());
         println!("  Steam AppID: {}", self.steam_appid);
         println!("  Debugger Port: {}", self.debugger_port);
+        println!();
     }
 }
 
@@ -40,6 +41,7 @@ impl UTOptions {
         println!("  Vertex Sync: {}", self.vertex_sync);
         println!("  Priority: {}", self.priority);
         println!("  Load Alpha: {}", self.load_alpha);
+        println!();
     }
 }
 
@@ -413,6 +415,7 @@ impl UTFont {
         println!("  Ascender: {:?}", self.ascender);
         println!("  SDF Spread: {:?}", self.sdf_spread);
         println!("  Line Height: {:?}", self.line_height);
+        println!();
     }
 }
 
@@ -425,6 +428,7 @@ impl UTGlyph {
         println!("  Size: {} x {}", self.width, self.height);
         println!("  Shift Modifier: {}", self.shift_modifier);
         println!("  Offset: {}", self.offset);
+        println!();
     }
 }
 
@@ -441,7 +445,10 @@ impl UTRoom {
         println!("  Draw Background Color: {}", self.draw_background_color);
         println!("  Creation Code ID: {}", self.creation_code_id);
         println!("  Flags: {}", self.flags.to_string());
-        println!("  Backgrounds: {}", self.backgrounds);
+        println!("  Backgrounds Length: {}", self.backgrounds.len());
+        for background in self.backgrounds.clone() {
+            background.print();
+        }
         println!("  Views: {}", self.views.len());
         println!("  Game Objects: {}", self.game_objects.len());
         println!("  Tiles: {}", self.tiles.len());
@@ -451,6 +458,7 @@ impl UTRoom {
         println!("  Meters Per Pixel: {}", self.meters_per_pixel);
         println!("  Layers: {}", self.layers.as_ref().map_or(0, |l| l.len()));
         println!("  Sequences: {}", self.sequences.as_ref().map_or(0, |s| s.len()));
+        println!();
     }
 }
 
@@ -476,6 +484,21 @@ impl UTRoomView {
         println!("  Border: ({}, {})", self.border_x, self.border_y);
         println!("  Speed: ({}, {})", self.speed_x, self.speed_y);
         println!("  Object ID: {}", self.object_id);
+        println!();
+    }
+}
+
+
+impl UTRoomBackground {
+    pub fn print(&self) {
+        println!("UTRoomBackground:");
+        println!("  Enabled: {}", self.enabled);
+        println!("  Foreground: {}", self.foreground);
+        println!("  Position: ({}, {})", self.x, self.y);
+        println!("  Tile: ({}, {})", self.tile_x, self.tile_y);
+        println!("  Speed: ({}, {})", self.speed_x, self.speed_y);
+        println!("  Stretch: {}", self.stretch);
+        println!();
     }
 }
 
@@ -493,6 +516,7 @@ impl UTSequence {
         println!("  Tracks: [{} items]", self.tracks.len());
         println!("  Function IDs: [{} items]", self.function_ids.len());
         println!("  Moments: [{} items]", self.moments.len());
+        println!();
     }
 }
 
@@ -504,6 +528,7 @@ impl UTKeyframe {
         println!("  Stretch: {}", self.stretch);
         println!("  Disabled: {}", self.disabled);
         println!("  Channels: {:?}", self.channels);
+        println!();
     }
 }
 
@@ -519,6 +544,7 @@ impl UTTrack {
         println!("  Sub-Tracks: [{} items]", self.sub_tracks.len());
         println!("  Keyframes: [{} items]", self.keyframes.len());
         println!("  GM Anim Curve String: {}", self.gm_anim_curve_string);
+        println!();
     }
 }
 
@@ -531,6 +557,7 @@ impl UTKeyframeMoment {
         } else {
             println!("  Event: None");
         }
+        println!();
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::deserialize::chunk_reading::UTChunk;
-use crate::deserialize::general_info::UTGeneralInfo;
+use crate::deserialize::general_info::{parse_chunk_GEN8, UTGeneralInfo};
 use crate::deserialize::sequence::{parse_sequence, UTSequence};
 use crate::deserialize::strings::UTStrings;
 
@@ -16,7 +16,7 @@ pub struct UTRoom {
     pub draw_background_color: bool,
     pub creation_code_id: u32,
     pub flags: UTRoomFlags,
-    pub backgrounds: usize,
+    pub backgrounds: Vec<UTRoomBackground>,
     pub views: Vec<UTRoomView>,                  // change type
     pub game_objects: Vec<usize>,           // change type
     pub tiles: Vec<usize>,                  // change type
@@ -58,6 +58,20 @@ pub struct UTRoomView {
     pub object_id: usize,           // change to UTObject later
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct UTRoomBackground {
+    pub enabled: bool,
+    pub foreground: bool,
+    pub background_definition: u32,     // pointer to background; change type later
+    pub x: i32,
+    pub y: i32,
+    pub tile_x: i32,
+    pub tile_y: i32,
+    pub speed_x: i32,
+    pub speed_y: i32,
+    pub stretch: bool,
+}
+
 
 pub fn parse_chunk_ROOM(mut chunk: UTChunk, general_info: &UTGeneralInfo, strings: &UTStrings) -> Result<Vec<UTRoom>, String> {
     let room_count: usize = chunk.read_usize()?;
@@ -81,7 +95,7 @@ pub fn parse_chunk_ROOM(mut chunk: UTChunk, general_info: &UTGeneralInfo, string
         let draw_background_color: bool = chunk.read_u32()? != 0;
         let creation_code_id: u32 = chunk.read_u32()?;      // (can be -1) reference to code; change type later
         let flags: UTRoomFlags = parse_room_flags(chunk.read_u32()?);
-        let backgrounds: usize = chunk.read_usize()?;           // reference to pointer list of backgrounds; change type later
+        let backgrounds: Vec<UTRoomBackground> = parse_room_backgrounds(&mut chunk)?;        // change type later
         let views: Vec<UTRoomView> = parse_room_views(&mut chunk)?;
         let game_objects: Vec<usize> = parse_room_objects(&mut chunk)?;     // change to UTObject
         let tiles: Vec<usize> = parse_room_tiles(&mut chunk)?;     // change to UTTile
@@ -165,6 +179,54 @@ fn parse_room_views(chunk: &mut UTChunk) -> Result<Vec<UTRoomView>, String> {  /
     // _objectId = reader.ReadUndertaleObject<UndertaleResourceById<UndertaleGameObject, UndertaleChunkOBJT>>();
 
     Ok(vec![])
+}
+
+
+fn parse_room_backgrounds(chunk: &mut UTChunk) -> Result<Vec<UTRoomBackground>, String> {
+    let pointer_position: usize = chunk.read_usize()? - chunk.abs_pos;
+    let old_position: usize = chunk.file_index;
+    chunk.file_index = pointer_position;
+
+    let background_count: usize = chunk.read_usize()?;
+    let mut backgrounds: Vec<UTRoomBackground> = Vec::with_capacity(background_count);
+    for _ in 0..background_count {
+        let background_pointer = chunk.read_usize()? - chunk.abs_pos;
+        let old_position2: usize = chunk.file_index;
+        chunk.file_index = background_pointer;
+        let background: UTRoomBackground = parse_room_background(chunk)?;
+        chunk.file_index = old_position2;
+        backgrounds.push(background);
+    }
+
+    chunk.file_index = old_position;
+    Ok(backgrounds)
+}
+
+
+fn parse_room_background(chunk: &mut UTChunk) -> Result<UTRoomBackground, String> {
+    let enabled: bool = chunk.read_i32()? != 0;
+    let foreground: bool = chunk.read_i32()? != 0;
+    let background_definition: u32 = chunk.read_u32()?;     // change to UTBackground later
+    let x: i32 = chunk.read_i32()?;
+    let y: i32 = chunk.read_i32()?;
+    let tile_x: i32 = chunk.read_i32()?;    // idk if this should be an int instead of a bool
+    let tile_y: i32 = chunk.read_i32()?;    // ^
+    let speed_x: i32 = chunk.read_i32()?;
+    let speed_y: i32 = chunk.read_i32()?;
+    let stretch: bool = chunk.read_i32()? != 0;
+
+    Ok(UTRoomBackground {
+        enabled,
+        foreground,
+        background_definition,
+        x,
+        y,
+        tile_x,
+        tile_y,
+        speed_x,
+        speed_y,
+        stretch,
+    })
 }
 
 fn parse_room_objects(chunk: &mut UTChunk) -> Result<Vec<usize>, String> {  // TODO
