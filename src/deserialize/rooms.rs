@@ -1,7 +1,7 @@
 use num_enum::TryFromPrimitive;
 use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::game_objects::UTGameObject;
-use crate::deserialize::general_info::{parse_chunk_GEN8, UTGeneralInfo};
+use crate::deserialize::general_info::UTGeneralInfo;
 use crate::deserialize::sequence::{parse_sequence, UTSequence};
 use crate::deserialize::strings::UTStrings;
 
@@ -191,7 +191,7 @@ pub fn parse_chunk_ROOM(mut chunk: UTChunk, general_info: &UTGeneralInfo, string
             layers,
             sequences,
         };
-        room.print();
+        // room.print();
         rooms.push(room);
     }
 
