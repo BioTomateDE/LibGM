@@ -1,4 +1,5 @@
-﻿use crate::deserialize::strings::UTStrings;
+﻿use crate::deserialize::rooms::UTRoomBackground;
+use crate::deserialize::strings::UTStrings;
 
 #[derive(Clone)]
 pub struct UTChunk {
@@ -280,5 +281,21 @@ impl UTChunk {
                 ut_strings.len(),
             ))
         }
+    }
+
+    pub fn read_pointer_list(&mut self) -> Result<Vec<usize>, String> {
+        let pointer_position: usize = self.read_usize()? - self.abs_pos;
+        let old_position: usize = self.file_index;
+        self.file_index = pointer_position;
+
+        let pointer_count: usize = self.read_usize()?;
+        let mut pointers: Vec<usize> = Vec::with_capacity(pointer_count);
+        for _ in 0..pointer_count {
+            let pointer: usize = self.read_usize()? - self.abs_pos;
+            pointers.push(pointer);
+        }
+
+        self.file_index = old_position;
+        Ok(pointers)
     }
 }
