@@ -20,6 +20,7 @@ pub struct UTData {
     pub functions: Vec<UTFunction>,         // FUNC
     pub code_locals: Vec<UTCodeLocal>,      // FUNC
     pub code: Vec<UTCode>,                  // CODE
+    pub fonts: Vec<UTFont>,                 // FONT
 }
 
 pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
@@ -90,6 +91,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
         functions,
         code_locals,
         code,
+        fonts
     };
 
     // println!("Total data length: {total_length} bytes");
