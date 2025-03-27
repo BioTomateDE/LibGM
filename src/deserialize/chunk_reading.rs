@@ -267,14 +267,14 @@ impl UTChunk {
     }
 
     pub fn read_ut_string(&mut self, ut_strings: &UTStrings) -> Result<String, String> {
-        let string_id: u32 = self.read_u32()?;
+        let string_abs_pos: usize = self.read_usize()?;
 
-        match ut_strings.get_string_by_id(string_id) {
+        match ut_strings.get_string_by_pos(string_abs_pos) {
             Some(string) => Ok(string.clone()),
             None => Err(format!(
-                "Could not read reference string with ID {} in chunk '{}' at \
+                "Could not read reference string with absolute position {} in chunk '{}' at \
                 position {} because it doesn't exist in the string map (length {})",
-                string_id,
+                string_abs_pos,
                 self.name,
                 self.file_index - 4,
                 ut_strings.len(),
