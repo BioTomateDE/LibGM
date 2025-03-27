@@ -1,6 +1,6 @@
 ﻿use crate::deserialize::fonts::{UTFont, UTGlyph};
 use crate::deserialize::general_info::{UTFunctionClassifications, UTGeneralInfo, UTGeneralInfoFlags, UTOptions, UTOptionsFlags};
-use crate::deserialize::rooms::{UTRoom, UTRoomBackground, UTRoomFlags, UTRoomTile, UTRoomView};
+use crate::deserialize::rooms::{UTRoom, UTRoomBackground, UTRoomFlags, UTRoomLayer, UTRoomTile, UTRoomView};
 use crate::deserialize::sequence::{UTKeyframe, UTKeyframeMoment, UTSequence, UTTrack};
 
 impl UTGeneralInfo {
@@ -462,9 +462,39 @@ impl UTRoom {
         println!("  Bounds: ({}, {}) - ({}, {})", self.left, self.top, self.right, self.bottom);
         println!("  Gravity: ({}, {})", self.gravity_x, self.gravity_y);
         println!("  Meters Per Pixel: {}", self.meters_per_pixel);
-        println!("  Layers: {}", self.layers.as_ref().map_or(0, |l| l.len()));
-        println!("  Sequences: {}", self.sequences.as_ref().map_or(0, |s| s.len()));
+        match &self.layers {
+            Some(layers) => {
+                println!("  Layers Length: {}", layers.len());
+                for layer in layers {
+                    layer.print();
+                }
+            },
+            None => println!("  Layers: None"),
+        }
+
+        match &self.sequences {
+            Some(sequences) => {
+                println!("  Sequences Length: {}", sequences.len());
+                // for sequences in sequences {
+                //     sequences.print();
+                // }
+            },
+            None => println!("  Sequences: None"),
+        }
         println!();
+    }
+}
+
+impl UTRoomLayer {
+    pub fn print(&self) {
+        println!("UTRoomLayer:");
+        println!("  Layer Name: {}", self.layer_name);
+        println!("  Layer ID: {}", self.layer_id);
+        println!("  Layer Type: {:?}", self.layer_type);
+        println!("  Layer Depth: {}", self.layer_depth);
+        println!("  Offset: ({}, {})", self.x_offset, self.y_offset);
+        println!("  Speed: ({}, {})", self.horizontal_speed, self.vertical_speed);
+        println!("  Visible: {}", self.is_visible);
     }
 }
 
