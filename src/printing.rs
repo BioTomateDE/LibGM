@@ -1,5 +1,7 @@
 ﻿use crate::deserialize::fonts::{UTFont, UTGlyph};
 use crate::deserialize::general_info::{UTFunctionClassifications, UTGeneralInfo, UTGeneralInfoFlags, UTOptions, UTOptionsFlags};
+use crate::deserialize::rooms::{UTRoom, UTRoomFlags, UTRoomView};
+use crate::deserialize::sequence::{UTKeyframe, UTKeyframeMoment, UTSequence, UTTrack};
 
 impl UTGeneralInfo {
     pub fn print(&self) {
@@ -394,35 +396,144 @@ impl UTOptionsFlags {
 
 impl UTFont {
     pub fn print(&self) {
-        println!("Name: {}", self.name);
-        println!("Display Name: {}", self.display_name);
-        println!("EM Size: {}", self.em_size);
-        println!("Bold: {}", self.bold);
-        println!("Italic: {}", self.italic);
-        println!("Range Start: {}", self.range_start);
-        println!("Charset: {}", self.charset);
-        println!("Anti-Alias: {}", self.anti_alias);
-        println!("Range End: {}", self.range_end);
-        println!("Texture: {}", self.texture);
-        println!("Scale X: {}", self.scale_x);
-        println!("Scale Y: {}", self.scale_y);
-        println!("Ascender Offset: {:?}", self.ascender_offset);
-        println!("Ascender: {:?}", self.ascender);
-        println!("SDF Spread: {:?}", self.sdf_spread);
-        println!("Line Height: {:?}", self.line_height);
+        println!("UTFont:");
+        println!("  Name: {}", self.name);
+        println!("  Display Name: {}", self.display_name);
+        println!("  EM Size: {}", self.em_size);
+        println!("  Bold: {}", self.bold);
+        println!("  Italic: {}", self.italic);
+        println!("  Range Start: {}", self.range_start);
+        println!("  Charset: {}", self.charset);
+        println!("  Anti-Alias: {}", self.anti_alias);
+        println!("  Range End: {}", self.range_end);
+        println!("  Texture: {}", self.texture);
+        println!("  Scale X: {}", self.scale_x);
+        println!("  Scale Y: {}", self.scale_y);
+        println!("  Ascender Offset: {:?}", self.ascender_offset);
+        println!("  Ascender: {:?}", self.ascender);
+        println!("  SDF Spread: {:?}", self.sdf_spread);
+        println!("  Line Height: {:?}", self.line_height);
     }
 }
 
 
 impl UTGlyph {
     pub fn print(&self) {
-        println!("Character: '{}'", self.character);
-        println!("Position: ({}; {})", self.x, self.y);
-        println!("Size: {} x {}", self.width, self.height);
-        println!("Shift Modifier: {}", self.shift_modifier);
-        println!("Offset: {}", self.offset);
+        println!("UTGlyph:");
+        println!("  Character: '{}'", self.character);
+        println!("  Position: ({}; {})", self.x, self.y);
+        println!("  Size: {} x {}", self.width, self.height);
+        println!("  Shift Modifier: {}", self.shift_modifier);
+        println!("  Offset: {}", self.offset);
     }
 }
+
+
+impl UTRoom {
+    pub fn print(&self) {
+        println!("UTRoom:");
+        println!("  Name: \"{}\"", self.name);
+        println!("  Caption: \"{}\"", self.caption);
+        println!("  Dimensions: {}x{}", self.width, self.height);
+        println!("  Speed: {}", self.speed);
+        println!("  Persistent: {}", self.persistent);
+        println!("  Background Color: #{:06X}", self.background_color & 0xFFFFFF);
+        println!("  Draw Background Color: {}", self.draw_background_color);
+        println!("  Creation Code ID: {}", self.creation_code_id);
+        println!("  Flags: {}", self.flags.to_string());
+        println!("  Backgrounds: {}", self.backgrounds);
+        println!("  Views: {}", self.views.len());
+        println!("  Game Objects: {}", self.game_objects.len());
+        println!("  Tiles: {}", self.tiles.len());
+        println!("  World: {}", self.world);
+        println!("  Bounds: ({}, {}) - ({}, {})", self.left, self.top, self.right, self.bottom);
+        println!("  Gravity: ({}, {})", self.gravity_x, self.gravity_y);
+        println!("  Meters Per Pixel: {}", self.meters_per_pixel);
+        println!("  Layers: {}", self.layers.as_ref().map_or(0, |l| l.len()));
+        println!("  Sequences: {}", self.sequences.as_ref().map_or(0, |s| s.len()));
+    }
+}
+
+impl UTRoomFlags {
+    pub fn to_string(&self) -> String {
+        let mut flags: Vec<&'static str> = vec![];
+        if self.enable_views { flags.push("Enable Views"); }
+        if self.show_color { flags.push("Show Color"); }
+        if self.dont_clear_display_buffer { flags.push("Don't Clear Display Buffer"); }
+        if self.is_gms2 { flags.push("Is GMS2"); }
+        if self.is_gms2_3 { flags.push("Is GMS2.3"); }
+        flags.join(", ")
+    }
+}
+
+
+impl UTRoomView {
+    pub fn print(&self) {
+        println!("UTRoomView:");
+        println!("  Enabled: {}", self.enabled);
+        println!("  View: ({}, {}) - {}x{}", self.view_x, self.view_y, self.view_width, self.view_height);
+        println!("  Port: ({}, {}) - {}x{}", self.port_x, self.port_y, self.port_width, self.port_height);
+        println!("  Border: ({}, {})", self.border_x, self.border_y);
+        println!("  Speed: ({}, {})", self.speed_x, self.speed_y);
+        println!("  Object ID: {}", self.object_id);
+    }
+}
+
+
+impl UTSequence {
+    pub fn print(&self) {
+        println!("UTSequence:");
+        println!("  Name: {}", self.name);
+        println!("  Playback: {:?}", self.playback);
+        println!("  Playback Speed: {} ({:?})", self.playback_speed, self.playback_speed_type);
+        println!("  Length: {}", self.length);
+        println!("  Origin: ({}, {})", self.origin_x, self.origin_y);
+        println!("  Volume: {}", self.volume);
+        println!("  Broadcast Messages: {:?}", self.broadcast_messages);
+        println!("  Tracks: [{} items]", self.tracks.len());
+        println!("  Function IDs: [{} items]", self.function_ids.len());
+        println!("  Moments: [{} items]", self.moments.len());
+    }
+}
+
+impl UTKeyframe {
+    pub fn print(&self) {
+        println!("UTKeyframe:");
+        println!("  Key: {}", self.key);
+        println!("  Length: {}", self.length);
+        println!("  Stretch: {}", self.stretch);
+        println!("  Disabled: {}", self.disabled);
+        println!("  Channels: {:?}", self.channels);
+    }
+}
+
+impl UTTrack {
+    pub fn print(&self) {
+        println!("UTTrack:");
+        println!("  Model Name: {}", self.model_name);
+        println!("  Name: {}", self.name);
+        println!("  Built-in Name: {:?}", self.builtin_name);
+        println!("  Traits: {:?}", self.traits);
+        println!("  Is Creation Track: {}", self.is_creation_track);
+        println!("  Tags: {:?}", self.tags);
+        println!("  Sub-Tracks: [{} items]", self.sub_tracks.len());
+        println!("  Keyframes: [{} items]", self.keyframes.len());
+        println!("  GM Anim Curve String: {}", self.gm_anim_curve_string);
+    }
+}
+
+impl UTKeyframeMoment {
+    pub fn print(&self) {
+        println!("UTKeyframeMoment:");
+        println!("  Internal Count: {}", self.internal_count);
+        if let Some(event) = &self.event {
+            println!("  Event: {}", event);
+        } else {
+            println!("  Event: None");
+        }
+    }
+}
+
 
 
 fn format_license_md5(license: &[u8; 16]) -> String {

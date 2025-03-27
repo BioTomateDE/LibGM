@@ -62,6 +62,6 @@ fn main() {
         }
     };
 
-    // println!("{}", data.strings.get_string_by_id(1945716).unwrap());
+    println!("{}", data.strings.get_string_by_pos(12122776).unwrap());
 }
 

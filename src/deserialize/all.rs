@@ -9,7 +9,7 @@ use crate::deserialize::scripts::{parse_chunk_SCPT, UTScript};
 use crate::deserialize::strings::{parse_chunk_STRG, UTStrings};
 use crate::deserialize::variables::{parse_chunk_VARI, UTVariable};
 use crate::deserialize::general_info::{UTGeneralInfo, UTOptions};
-
+use crate::deserialize::rooms::{parse_chunk_ROOM, UTRoom};
 
 pub struct UTData {
     pub strings: UTStrings,                 // STRG
@@ -21,6 +21,7 @@ pub struct UTData {
     pub code_locals: Vec<UTCodeLocal>,      // FUNC
     pub code: Vec<UTCode>,                  // CODE
     pub fonts: Vec<UTFont>,                 // FONT
+    pub rooms: Vec<UTRoom>,                 // ROOM
 }
 
 pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
@@ -66,6 +67,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let chunk_VARI: UTChunk = get_chunk(&chunks, "VARI")?;
     let chunk_CODE: UTChunk = get_chunk(&chunks, "CODE")?;
     let chunk_FONT: UTChunk = get_chunk(&chunks, "FONT")?;
+    let chunk_ROOM: UTChunk = get_chunk(&chunks, "ROOM")?;
 
     let strings: UTStrings = parse_chunk_STRG(chunk_STRG)?;
     // for (id,st) in &strings {
@@ -81,6 +83,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let (functions, code_locals): (Vec<UTFunction>, Vec<UTCodeLocal>) = parse_chunk_FUNC(chunk_FUNC, &strings, &chunk_CODE)?;
     let code: Vec<UTCode> = parse_chunk_CODE(chunk_CODE, bytecode14, &strings, &variables, &functions)?;
     let fonts: Vec<UTFont> = parse_chunk_FONT(chunk_FONT, &general_info, &strings)?;
+    let rooms: Vec<UTRoom> = parse_chunk_ROOM(chunk_ROOM, &general_info, &strings)?;
 
     let data = UTData {
         strings,
@@ -91,7 +94,8 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
         functions,
         code_locals,
         code,
-        fonts
+        fonts,
+        rooms,
     };
 
     // println!("Total data length: {total_length} bytes");

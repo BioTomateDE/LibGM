@@ -7,3 +7,5 @@ pub mod strings;
 pub mod all;
 pub mod fonts;
 pub mod chunk_reading;
+pub mod rooms;
+pub mod sequence;
