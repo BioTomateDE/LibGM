@@ -446,10 +446,13 @@ impl UTRoom {
         println!("  Creation Code ID: {}", self.creation_code_id);
         println!("  Flags: {}", self.flags.to_string());
         println!("  Backgrounds Length: {}", self.backgrounds.len());
-        for background in self.backgrounds.clone() {
-            background.print();
+        // for background in self.backgrounds.clone() {
+        //     background.print();
+        // }
+        println!("  Views Length: {}", self.views.len());
+        for view in self.views.clone() {
+            view.print();
         }
-        println!("  Views: {}", self.views.len());
         println!("  Game Objects: {}", self.game_objects.len());
         println!("  Tiles: {}", self.tiles.len());
         println!("  World: {}", self.world);
@@ -474,21 +477,6 @@ impl UTRoomFlags {
     }
 }
 
-
-impl UTRoomView {
-    pub fn print(&self) {
-        println!("UTRoomView:");
-        println!("  Enabled: {}", self.enabled);
-        println!("  View: ({}, {}) - {}x{}", self.view_x, self.view_y, self.view_width, self.view_height);
-        println!("  Port: ({}, {}) - {}x{}", self.port_x, self.port_y, self.port_width, self.port_height);
-        println!("  Border: ({}, {})", self.border_x, self.border_y);
-        println!("  Speed: ({}, {})", self.speed_x, self.speed_y);
-        println!("  Object ID: {}", self.object_id);
-        println!();
-    }
-}
-
-
 impl UTRoomBackground {
     pub fn print(&self) {
         println!("UTRoomBackground:");
@@ -502,6 +490,20 @@ impl UTRoomBackground {
     }
 }
 
+impl UTRoomView {
+    pub fn print(&self) {
+        println!("UTRoomView:");
+        println!("  Enabled: {}", self.enabled);
+        println!("  View Position: ({}, {})", self.view_x, self.view_y);
+        println!("  View Size: {}x{}", self.view_width, self.view_height);
+        println!("  Port Position: ({}, {})", self.port_x, self.port_y);
+        println!("  Port Size: {}x{}", self.port_width, self.port_height);
+        println!("  Border: ({}, {})", self.border_x, self.border_y);
+        println!("  Speed: ({}, {})", self.speed_x, self.speed_y);
+        println!("  Object ID: {}", self.object_id);
+        println!();
+    }
+}
 
 impl UTSequence {
     pub fn print(&self) {
