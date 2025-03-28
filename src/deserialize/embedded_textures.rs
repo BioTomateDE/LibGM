@@ -1,7 +1,11 @@
 use std::cmp::max;
+use std::io::{BufReader, Read};
 use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::general_info::UTGeneralInfo;
 use crate::printing::hexdump;
+use image;
+use bzip2::read::BzDecoder;
+use qoi;
 
 pub struct UTEmbeddedTexture {
     scaled: u32,
@@ -14,9 +18,11 @@ pub struct UTEmbeddedTexture {
 }
 
 
+#[derive(Debug, Clone)]
 pub enum Image {
-    Png(Vec<u8>),
-
+    Img(image::DynamicImage),
+    // Png(Vec<u8>),
+    // QoiBz2(image::)
 }
 
 
@@ -29,7 +35,8 @@ pub fn parse_chunk_TXTR(mut chunk: UTChunk, general_info: &UTGeneralInfo) -> Res
     }
 
     let mut textures: Vec<UTEmbeddedTexture> = Vec::with_capacity(texture_count);
-    for _ in 0..texture_count {
+    for texture_start_position in texture_pointers {
+        chunk.file_index = texture_start_position;
         let texture: UTEmbeddedTexture = parse_texture(&mut chunk, general_info)?;
         textures.push(texture);
     }
@@ -59,7 +66,16 @@ fn parse_texture(chunk: &mut UTChunk, general_info: &UTGeneralInfo) -> Result<UT
         index_in_group = Some(chunk.read_i32()?);
     }
 
+    let texture_start_position: usize = chunk.read_usize()? - chunk.abs_pos;
+    chunk.file_index = texture_start_position;
     let texture_data: Image = read_raw_texture(chunk, general_info)?;
+
+    // println!("[TexturePage]  {:?}", texture_data);
+    // let img = match &texture_data {
+    //     Image::Img(image::DynamicImage::ImageRgba8(img)) => img,
+    //     _ => panic!()
+    // };
+    // img.save(format!("./_expimg/{}.png", texture_start_position)).unwrap();
 
     Ok(UTEmbeddedTexture {
         scaled,
@@ -90,9 +106,10 @@ fn read_raw_texture(chunk: &mut UTChunk, general_info: &UTGeneralInfo) -> Result
 
     if header == MAGIC_PNG_HEADER {
         // Parse PNG
+        chunk.file_index += 8;  // skip header
         loop {
-            let len: usize = chunk.read_usize_big_endian()?;
-            let type_: usize = chunk.read_usize_big_endian()?;
+            let len: usize = chunk.read_usize_big_endian(true)?;
+            let type_: usize = chunk.read_usize_big_endian(false)?;
             chunk.file_index += len + 4;
             if type_ == 0x49454E44 {
                 break;
@@ -100,30 +117,43 @@ fn read_raw_texture(chunk: &mut UTChunk, general_info: &UTGeneralInfo) -> Result
         }
 
 
-        let bytes: [u8] = chunk.data[start_position .. chunk.file_index];
+        let bytes: &[u8] = &chunk.data[start_position .. chunk.file_index];
         // png image size checks etc. {}
-        Ok(Image::Png(bytes.to_vec()))
+        let image: image::DynamicImage = match image::load_from_memory(&bytes) {
+            Ok(img) => img,
+            Err(error) => return Err(format!(
+                "Could not parse PNG image for texture page at position {} in chunk 'TXTR': \"{:?}\".",
+                start_position, error,
+            )),
+        };
+        Ok(Image::Img(image))
     }
     else if header.starts_with(MAGIC_BZ2_QOI_HEADER) {
         // Parse QOI + BZip2
         chunk.file_index += 8;      // skip past (start of) header
-        let mut serialized_uncompressed_length: i32 = -1;
+        let mut serialized_uncompressed_length: Option<usize> = None;
         let mut header_size: usize = 8;
         if general_info.is_version_at_least(2022, 5, 0, 0) {
-            serialized_uncompressed_length = chunk.read_i32()?;
+            serialized_uncompressed_length = Some(chunk.read_usize()?);    // maybe handle negative numbers?
             header_size = 12;
         }
 
         let end_of_bz2_stream: usize = find_end_of_bz2_stream(chunk)?;
         let compressed_length: usize = end_of_bz2_stream - start_position - header_size;    // maybe negative?? shouldn't ever be though i think
-        let width: u32 = header[4] as u32 | (header[5] << 8) as u32;
-        let height: u32 = header[6] as u32 | (header[7] << 8) as u32;
+        let width: usize = ((header[4] as u32) | ((header[5] as u32) << 8)) as usize;
+        let height: usize = ((header[6] as u32) | ((header[7] as u32) << 8)) as usize;
 
-        Ok(Image {data: vec![vec![(6, 9, 6, 9)]]})
+        // read entire image (excluding bz2 header) to byte array
+        chunk.file_index = start_position + header_size;
+        let raw_image_data: &[u8] = &chunk.data[chunk.file_index .. chunk.file_index + compressed_length];
+        chunk.file_index += compressed_length;
+        let image: Image = image_from_bz2_qoi(&raw_image_data, width, height)?;
+        Ok(image)
     }
     else if header.starts_with(MAGIC_QOI_HEADER) {
         // Parse QOI
-        Ok(Image {data: vec![vec![(6, 9, 6, 9)]]})
+        panic!("Unhandled QOI image at position {} in chunk 'TXTR'.", chunk.file_index);
+        // image_from_qoi(chunk.data[chunk..])
     }
     else {
         let dump: String = hexdump(&header, 0, None)?;
@@ -142,17 +172,17 @@ fn find_end_of_bz2_stream(ut_chunk: &mut UTChunk) -> Result<usize, String> {
     let chunk_size: usize = ut_chunk.data_len - chunk_start_position;
     loop {
         ut_chunk.file_index = chunk_start_position;
-        let chunk_data: [u8] = ut_chunk.data[ut_chunk.file_index .. ut_chunk.file_index + chunk_size];
+        let chunk_data: &[u8] = &ut_chunk.data[ut_chunk.file_index .. ut_chunk.file_index + chunk_size];
         ut_chunk.file_index += chunk_size;
 
         // find first nonzero byte at end of stream
         let mut position: isize = chunk_size as isize - 1;
-        while position >= 0 && chunk_data[position] == 0 {
+        while position >= 0 && chunk_data[position as usize] == 0 {
             position -= 1;
         }
 
         // If we're at nonzero data, then invoke search for footer magic
-        if position >= 0 && chunk_data[position] != 0 {
+        if position >= 0 && chunk_data[position as usize] != 0 {
             let end_data_position: isize = chunk_start_position as isize + position + 1;
             return Ok(find_end_of_bz2_search(ut_chunk, end_data_position as usize)?)
         }
@@ -247,3 +277,45 @@ fn find_end_of_bz2_search(ut_chunk: &mut UTChunk, end_data_position: usize) -> R
     Err("Failed to find BZip2 footer magic".to_string())
 }
 
+
+fn image_from_bz2_qoi(raw_image_data: &[u8], width: usize, height: usize) -> Result<Image, String> {
+    let mut decoder: BzDecoder<&[u8]> = BzDecoder::new(raw_image_data);
+    let mut decompressed_data: Vec<u8> = Vec::new();
+    match decoder.read_to_end(&mut decompressed_data) {
+        Ok(_) => (),
+        Err(error) => return Err(format!(
+            "Could not decode BZip2 data from QOI image with \
+            dimensions {}x{} while parsing chunk 'TXTR': \"{}\"",
+            width, height, error
+        )),
+    }
+
+    image_from_qoi(&decompressed_data, width, height)
+}
+
+fn image_from_qoi(raw_image_data: &[u8], width: usize, height: usize) -> Result<Image, String> {
+    let (header, pixels) = match qoi::decode_to_vec(&raw_image_data) {
+        Ok(ok) => ok,
+        Err(error) => return Err(format!(
+            "Could not parse QOI image with dimensions {}x{} while parsing chunk 'TXTR': \"{}\"",
+            width, height, error
+        )),
+    };
+
+    let image: Option<image::ImageBuffer<image::Rgba<u8>, Vec<u8>>> = match header.channels {
+        qoi::Channels::Rgb => image::RgbaImage::from_raw(header.width, header.height, pixels),
+        qoi::Channels::Rgba => image::RgbaImage::from_raw(header.width, header.height, pixels),
+    };
+
+    let image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> = match image {
+        Some(img) => img,
+        None => return Err(format!(
+            "Could not convert QOI image to image::RgbImage with dimensions {}x{} while parsing chunk 'TXTR'",
+            width, height)),
+    };
+    let image = image::DynamicImage::ImageRgba8(image);
+
+    Ok(Image::Img(image))
+}
+
+// TODO: find out why it's so slow
