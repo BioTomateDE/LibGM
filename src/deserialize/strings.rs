@@ -28,7 +28,8 @@ impl UTStrings {
 }
 
 
-pub fn parse_chunk_STRG(mut chunk: UTChunk) -> Result<UTStrings, String> {
+pub fn parse_chunk_STRG(chunk: &mut UTChunk) -> Result<UTStrings, String> {
+    chunk.file_index = 0;
     let string_count: usize = chunk.read_usize()?;
     // skip redundant list of absolute positions of upcoming strings
     chunk.file_index += string_count * 4;

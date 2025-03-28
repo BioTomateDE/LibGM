@@ -18,6 +18,8 @@ pub struct UTData {
     pub strings: UTStrings,                 // STRG
     pub general_info: UTGeneralInfo,        // GEN8
     pub options: UTOptions,                 // OPTN
+    pub textures: UTTextures,               // TPAG  (and TXTR)
+    pub backgrounds: Vec<UTBackground>,     // BGND
     pub scripts: Vec<UTScript>,             // SCPT
     pub variables: Vec<UTVariable>,         // VARI
     pub functions: Vec<UTFunction>,         // FUNC
@@ -75,7 +77,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let mut chunk_FONT: UTChunk = get_chunk(&chunks, "FONT")?;
     let mut chunk_ROOM: UTChunk = get_chunk(&chunks, "ROOM")?;
 
-    let strings: UTStrings = parse_chunk_STRG(chunk_STRG)?;
+    let strings: UTStrings = parse_chunk_STRG(&mut chunk_STRG)?;
     // for (id,st) in &strings {
     //     if st == "Greetings." {
     //         println!("id: {id}");
@@ -85,9 +87,8 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let bytecode14: bool = general_info.bytecode_version >= 14;
     let options: UTOptions = parse_chunk_OPTN(&mut chunk_OPTN)?;
     let texture_pages: Vec<UTEmbeddedTexture> = parse_chunk_TXTR(&mut chunk_TXTR, &general_info)?;
-    let texture_page_items: UTTextures = parse_chunk_TPAG(&mut chunk_TPAG, texture_pages)?;
-    let backgrounds: Vec<UTBackground> = parse_chunk_BGND(&mut chunk_BGND, &general_info, &strings, &texture_page_items)?;
-    for i in backgrounds {i.print();}
+    let textures: UTTextures = parse_chunk_TPAG(&mut chunk_TPAG, texture_pages)?;
+    let backgrounds: Vec<UTBackground> = parse_chunk_BGND(&mut chunk_BGND, &general_info, &strings, &textures)?;
     let scripts: Vec<UTScript> = parse_chunk_SCPT(&mut chunk_SCPT, &strings)?;
     let variables: Vec<UTVariable> = parse_chunk_VARI(&mut chunk_VARI, &strings)?;
     let (functions, code_locals): (Vec<UTFunction>, Vec<UTCodeLocal>) = parse_chunk_FUNC(&mut chunk_FUNC, &strings, &chunk_CODE)?;
@@ -99,6 +100,8 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
         strings,
         general_info,
         options,
+        textures,
+        backgrounds,
         scripts,
         variables,
         functions,
