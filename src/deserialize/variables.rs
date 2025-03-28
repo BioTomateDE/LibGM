@@ -16,7 +16,7 @@ pub fn parse_chunk_VARI(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<
     let _unknown1: u32 = chunk.read_u32()?;
     let _unknown2: u32 = chunk.read_u32()?;
     let _unknown3: u32 = chunk.read_u32()?;
-    let file_len: usize = chunk.data.len();
+    let file_len: usize = chunk.data_len;
     let mut variables: Vec<UTVariable> = vec![];
 
     // println!("{} {} {}", _unknown1, _unknown2, _unknown3);
