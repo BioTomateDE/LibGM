@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::code::{parse_chunk_CODE, UTCode};
+use crate::deserialize::embedded_textures::{parse_chunk_TXTR, UTEmbeddedTexture};
 use crate::deserialize::fonts::{parse_chunk_FONT, UTFont};
 use crate::deserialize::functions::{parse_chunk_FUNC, UTCodeLocal, UTFunction};
 use crate::deserialize::general_info::{parse_chunk_GEN8, parse_chunk_OPTN};
@@ -62,6 +63,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let chunk_STRG: UTChunk = get_chunk(&chunks, "STRG")?;
     let chunk_GEN8: UTChunk = get_chunk(&chunks, "GEN8")?;
     let chunk_OPTN: UTChunk = get_chunk(&chunks, "OPTN")?;
+    let chunk_TXTR: UTChunk = get_chunk(&chunks, "TXTR")?;
     let chunk_SCPT: UTChunk = get_chunk(&chunks, "SCPT")?;
     let chunk_FUNC: UTChunk = get_chunk(&chunks, "FUNC")?;
     let chunk_VARI: UTChunk = get_chunk(&chunks, "VARI")?;
@@ -78,6 +80,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let general_info: UTGeneralInfo = parse_chunk_GEN8(chunk_GEN8, &strings)?;
     let bytecode14: bool = general_info.bytecode_version >= 14;
     let options: UTOptions = parse_chunk_OPTN(chunk_OPTN)?;
+    let textures: Vec<UTEmbeddedTexture> = parse_chunk_TXTR(chunk_TXTR, &general_info)?;
     let scripts: Vec<UTScript> = parse_chunk_SCPT(chunk_SCPT, &strings)?;
     let variables: Vec<UTVariable> = parse_chunk_VARI(chunk_VARI, &strings)?;
     let (functions, code_locals): (Vec<UTFunction>, Vec<UTCodeLocal>) = parse_chunk_FUNC(chunk_FUNC, &strings, &chunk_CODE)?;
