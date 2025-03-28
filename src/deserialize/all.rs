@@ -114,7 +114,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     // println!("Total data length: {total_length} bytes");
     // println!("Chunk Sizes:");
     // for (chunk_name, chunk) in &data.chunks {
-    //     println!("  {}: {} bytes", chunk_name, chunk.data.len());
+    //     println!("  {}: {} bytes", chunk_name, chunk.data_len);
     // }
 
     // ----- Testing -----
