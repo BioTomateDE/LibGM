@@ -6,7 +6,8 @@ pub struct UTScript {
     pub name: String,
 }
 
-pub fn parse_chunk_SCPT(mut chunk: UTChunk, strings: &UTStrings) -> Result<Vec<UTScript>, String> {
+pub fn parse_chunk_SCPT(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<UTScript>, String> {
+    chunk.file_index = 0;
     let scripts_length: usize = chunk.read_usize()?;
 
     let mut script_ids: Vec<u32> = Vec::with_capacity(scripts_length);

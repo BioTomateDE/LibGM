@@ -12,3 +12,4 @@ pub mod sequence;
 pub mod game_objects;
 pub mod embedded_textures;
 pub mod texture_page_item;
+pub mod backgrounds;

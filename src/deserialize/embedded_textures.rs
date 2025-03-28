@@ -26,7 +26,8 @@ pub enum Image {
 }
 
 
-pub fn parse_chunk_TXTR(mut chunk: UTChunk, general_info: &UTGeneralInfo) -> Result<Vec<UTEmbeddedTexture>, String> {
+pub fn parse_chunk_TXTR(chunk: &mut UTChunk, general_info: &UTGeneralInfo) -> Result<Vec<UTEmbeddedTexture>, String> {
+    chunk.file_index = 0;
     let texture_count: usize = chunk.read_usize()?;
     let mut texture_pointers: Vec<usize> = Vec::with_capacity(texture_count);
 
@@ -37,7 +38,7 @@ pub fn parse_chunk_TXTR(mut chunk: UTChunk, general_info: &UTGeneralInfo) -> Res
     let mut textures: Vec<UTEmbeddedTexture> = Vec::with_capacity(texture_count);
     for texture_start_position in texture_pointers {
         chunk.file_index = texture_start_position;
-        let texture: UTEmbeddedTexture = parse_texture(&mut chunk, general_info)?;
+        let texture: UTEmbeddedTexture = parse_texture(chunk, general_info)?;
         textures.push(texture);
     }
 

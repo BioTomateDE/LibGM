@@ -199,7 +199,8 @@ pub struct UTOptionsFlags {
     pub enable_copy_on_write: bool,
 }
 
-pub fn parse_chunk_GEN8(mut chunk: UTChunk, strings: &UTStrings) -> Result<UTGeneralInfo, String> {
+pub fn parse_chunk_GEN8(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTGeneralInfo, String> {
+    chunk.file_index = 0;
     let is_debugger_disabled: bool = chunk.read_u8()? != 0;
     let bytecode_version: u8 = chunk.read_u8()?;
     let unknown_value: u16 = chunk.read_u16()?;
@@ -229,7 +230,7 @@ pub fn parse_chunk_GEN8(mut chunk: UTChunk, strings: &UTStrings) -> Result<UTGen
     let stable_version: u32 = chunk.read_u32()?;
     let default_window_width: u32 = chunk.read_u32()?;
     let default_window_height: u32 = chunk.read_u32()?;
-    let flags: UTGeneralInfoFlags = parse_flags(&mut chunk)?;
+    let flags: UTGeneralInfoFlags = parse_flags(chunk)?;
 
     let license: [u8; 16] = match chunk.data[chunk.file_index..chunk.file_index+16].try_into() {
         Ok(data) => data,
@@ -255,7 +256,7 @@ pub fn parse_chunk_GEN8(mut chunk: UTChunk, strings: &UTStrings) -> Result<UTGen
     let display_name: String = chunk.read_ut_string(strings)?;
     // probably not actually u64 (rather u32) but it's zero and there's null bytes surrounding it so idk
     let active_targets: u64 = chunk.read_u64()?;
-    let function_classifications: UTFunctionClassifications = parse_function_classifications(&mut chunk)?;
+    let function_classifications: UTFunctionClassifications = parse_function_classifications(chunk)?;
     let steam_appid: u32 = (-chunk.read_i32()?) as u32;
     let debugger_port: u16 = chunk.read_u32()? as u16;
 
@@ -427,10 +428,11 @@ fn parse_options_flags(chunk: &mut UTChunk) -> Result<UTOptionsFlags, String> {
 }
 
 
-pub fn parse_chunk_OPTN(mut chunk: UTChunk) -> Result<UTOptions, String> {
+pub fn parse_chunk_OPTN(chunk: &mut UTChunk) -> Result<UTOptions, String> {
+    chunk.file_index = 0;
     let _unused1: u32 = chunk.read_u32()?;
     let _unused2: u32 = chunk.read_u32()?;
-    let flags: UTOptionsFlags = parse_options_flags(&mut chunk)?;
+    let flags: UTOptionsFlags = parse_options_flags(chunk)?;
     let scale: i32 = chunk.read_i32()?;
     let window_color_r: u8 = chunk.read_u8()?;
     let window_color_g: u8 = chunk.read_u8()?;

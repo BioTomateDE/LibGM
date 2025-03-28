@@ -35,7 +35,8 @@ pub struct UTGlyph {
 }
 
 
-pub fn parse_chunk_FONT(mut chunk: UTChunk, general_info: &UTGeneralInfo, strings: &UTStrings) -> Result<Vec<UTFont>, String> {
+pub fn parse_chunk_FONT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strings: &UTStrings) -> Result<Vec<UTFont>, String> {
+    chunk.file_index = 0;
     let font_count: usize = chunk.read_usize()?;
     let mut font_starting_positions: Vec<usize> = Vec::with_capacity(font_count);
     for _ in 0..font_count {
@@ -78,7 +79,7 @@ pub fn parse_chunk_FONT(mut chunk: UTChunk, general_info: &UTGeneralInfo, string
             line_height = Some(chunk.read_u32()?);
         }
 
-        let glyphs = parse_glyphs(&mut chunk, &name)?;
+        let glyphs = parse_glyphs(chunk, &name)?;
 
         let font: UTFont = UTFont {
             name,

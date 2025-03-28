@@ -19,7 +19,8 @@ pub struct UTCodeLocal {
     pub variables: Vec<UTCodeLocalVariable>,
 }
 
-pub fn parse_chunk_FUNC(mut chunk: UTChunk, strings: &UTStrings, chunk_CODE: &UTChunk) -> Result<(Vec<UTFunction>, Vec<UTCodeLocal>), String> {
+pub fn parse_chunk_FUNC(chunk: &mut UTChunk, strings: &UTStrings, chunk_CODE: &UTChunk) -> Result<(Vec<UTFunction>, Vec<UTCodeLocal>), String> {
+    chunk.file_index = 0;
     let functions_length: usize = chunk.read_usize()?;
     let mut functions: Vec<UTFunction> = Vec::with_capacity(functions_length);
 
