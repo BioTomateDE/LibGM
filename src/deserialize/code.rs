@@ -412,12 +412,13 @@ impl UTCodeBlob {
 
 
 pub fn parse_chunk_CODE(
-    mut chunk: UTChunk,
+    chunk: &mut UTChunk,
     bytecode14: bool,
     strings: &UTStrings,
     variables: &[UTVariable],
     functions: &[UTFunction],
 ) -> Result<Vec<UTCode>, String> {
+    chunk.file_index = 0;
     let codes_count: usize = chunk.read_usize()?;
     let mut code_meta_indexes: Vec<usize> = Vec::with_capacity(codes_count);
     for _ in 0..codes_count {

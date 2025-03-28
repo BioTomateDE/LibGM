@@ -122,7 +122,8 @@ pub enum UTRoomLayerType {
 }
 
 
-pub fn parse_chunk_ROOM(mut chunk: UTChunk, general_info: &UTGeneralInfo, strings: &UTStrings) -> Result<Vec<UTRoom>, String> {
+pub fn parse_chunk_ROOM(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strings: &UTStrings) -> Result<Vec<UTRoom>, String> {
+    chunk.file_index = 0;
     let room_count: usize = chunk.read_usize()?;
     let mut room_starting_positions: Vec<usize> = Vec::with_capacity(room_count);
     for _ in 0..room_count {
@@ -144,10 +145,10 @@ pub fn parse_chunk_ROOM(mut chunk: UTChunk, general_info: &UTGeneralInfo, string
         let draw_background_color: bool = chunk.read_u32()? != 0;
         let creation_code_id: u32 = chunk.read_u32()?;      // (can be -1) reference to code; change type later
         let flags: UTRoomFlags = parse_room_flags(chunk.read_u32()?);
-        let backgrounds: Vec<UTRoomBackground> = parse_room_backgrounds(&mut chunk)?;        // change type later
-        let views: Vec<UTRoomView> = parse_room_views(&mut chunk)?;
-        let game_objects: Vec<UTGameObject> = parse_room_objects(&mut chunk)?;     // change to UTObject
-        let tiles: Vec<UTRoomTile> = parse_room_tiles(&mut chunk, general_info)?;     // change to UTTile
+        let backgrounds: Vec<UTRoomBackground> = parse_room_backgrounds(chunk)?;        // change type later
+        let views: Vec<UTRoomView> = parse_room_views(chunk)?;
+        let game_objects: Vec<UTGameObject> = parse_room_objects(chunk)?;     // change to UTObject
+        let tiles: Vec<UTRoomTile> = parse_room_tiles(chunk, general_info)?;     // change to UTTile
         let world: bool = chunk.read_u32()? != 0;
         let top: u32 = chunk.read_u32()?;
         let left: u32 = chunk.read_u32()?;
@@ -159,9 +160,9 @@ pub fn parse_chunk_ROOM(mut chunk: UTChunk, general_info: &UTGeneralInfo, string
         let mut layers: Option<Vec<UTRoomLayer>> = None;      // change to UTRoomLayer
         let mut sequences: Option<Vec<UTSequence>> = None;      // change to UTSequence
         if general_info.is_version_at_least(2, 0, 0, 0) {
-            layers = Some(parse_room_layers(&mut chunk, strings)?);
+            layers = Some(parse_room_layers(chunk, strings)?);
             if general_info.is_version_at_least(2, 3, 0, 0) {
-                sequences = Some(parse_room_sequences(&mut chunk, strings)?);
+                sequences = Some(parse_room_sequences(chunk, strings)?);
             }
         }
 
