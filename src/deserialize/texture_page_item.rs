@@ -1,7 +1,10 @@
+use std::collections::HashMap;
 use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::embedded_textures::{Image, UTEmbeddedTexture};
 use image;
+use crate::printing::format_type_of;
 
+#[derive(Debug, Clone)]
 pub struct UTTexture {
     pub img: image::DynamicImage,
     pub target_x: u16,
@@ -10,19 +13,31 @@ pub struct UTTexture {
     pub target_height: u16,
     pub bounding_width: u16,
     pub bounding_height: u16,
+    pub index: usize,
 }
 
 
-pub fn parse_chunk_TPAG(mut chunk: UTChunk, texture_pages: Vec<UTEmbeddedTexture>) -> Result<Vec<UTTexture>, String> {
+pub struct UTTextures {
+    textures_by_absolute_position: HashMap<usize, UTTexture>,       // texture page items by absolute position/pointer in data.win
+}
+impl UTTextures {
+    pub fn get_texture_by_pos(&self, abs_pos: usize) -> Option<&UTTexture> {
+        self.textures_by_absolute_position.get(&abs_pos)
+    }
+}
+
+
+pub fn parse_chunk_TPAG(chunk: &mut UTChunk, texture_pages: Vec<UTEmbeddedTexture>) -> Result<UTTextures, String> {
+    chunk.file_index = 0;
     let items_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(items_count);
     for _ in 0..items_count {
         start_positions.push(chunk.read_usize()? - chunk.abs_pos);
     }
 
-    let mut texture_page_items: Vec<UTTexture> = Vec::with_capacity(items_count);
-    for start_position in start_positions {
-        chunk.file_index = start_position;
+    let mut texture_page_items: HashMap<usize, UTTexture> = HashMap::new();
+    for (i, start_position) in start_positions.iter().enumerate() {
+        chunk.file_index = *start_position;
         let source_x: u16 = chunk.read_u16()?;
         let source_y: u16 = chunk.read_u16()?;
         let source_width: u16 = chunk.read_u16()?;
@@ -59,15 +74,12 @@ pub fn parse_chunk_TPAG(mut chunk: UTChunk, texture_pages: Vec<UTEmbeddedTexture
             target_height,
             bounding_width,
             bounding_height,
+            index: i,
         };
-        texture_page_items.push(texture_page_item);
+        texture_page_items.insert(start_position + chunk.abs_pos, texture_page_item);
     }
 
-    Ok(texture_page_items)
-}
-
-
-fn format_type_of<T>(_: &T) -> String {
-    format!("{}", std::any::type_name::<T>())
+    let textures: UTTextures = UTTextures {textures_by_absolute_position: texture_page_items};
+    Ok(textures)
 }
 
