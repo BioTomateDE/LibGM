@@ -8,13 +8,13 @@ use bzip2::read::BzDecoder;
 use qoi;
 
 pub struct UTEmbeddedTexture {
-    scaled: u32,
-    generated_mips: Option<u32>,
-    texture_block_size: Option<u32>,
-    texture_width: Option<i32>,
-    texture_height: Option<i32>,
-    index_in_group: Option<i32>,
-    texture_data: Image,
+    pub scaled: u32,
+    pub generated_mips: Option<u32>,
+    pub texture_block_size: Option<u32>,
+    pub texture_width: Option<i32>,
+    pub texture_height: Option<i32>,
+    pub index_in_group: Option<i32>,
+    pub texture_data: Image,
 }
 
 

@@ -3,6 +3,9 @@ name = "UndertaleModManager"
 version = "0.1.0"
 edition = "2024"
 
+[profile.release]
+debug = true
+
 [dependencies]
 uuid = "1.16.0"
 chrono = "0.4.40"
