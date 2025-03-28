@@ -11,7 +11,8 @@ pub struct UTVariable {
     pub abs_pos: usize,
 }
 
-pub fn parse_chunk_VARI(mut chunk: UTChunk, strings: &UTStrings) -> Result<Vec<UTVariable>, String> {
+pub fn parse_chunk_VARI(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<UTVariable>, String> {
+    chunk.file_index = 0;
     let _unknown1: u32 = chunk.read_u32()?;
     let _unknown2: u32 = chunk.read_u32()?;
     let _unknown3: u32 = chunk.read_u32()?;

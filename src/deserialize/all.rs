@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use crate::deserialize::backgrounds::{parse_chunk_BGND, UTBackground};
 use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::code::{parse_chunk_CODE, UTCode};
 use crate::deserialize::embedded_textures::{parse_chunk_TXTR, UTEmbeddedTexture};
@@ -11,7 +12,7 @@ use crate::deserialize::strings::{parse_chunk_STRG, UTStrings};
 use crate::deserialize::variables::{parse_chunk_VARI, UTVariable};
 use crate::deserialize::general_info::{UTGeneralInfo, UTOptions};
 use crate::deserialize::rooms::{parse_chunk_ROOM, UTRoom};
-use crate::deserialize::texture_page_item::{parse_chunk_TPAG, UTTexture};
+use crate::deserialize::texture_page_item::{parse_chunk_TPAG, UTTexture, UTTextures};
 
 pub struct UTData {
     pub strings: UTStrings,                 // STRG
@@ -61,17 +62,18 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
         all.file_index += chunk_length;
     }
 
-    let chunk_STRG: UTChunk = get_chunk(&chunks, "STRG")?;
-    let chunk_GEN8: UTChunk = get_chunk(&chunks, "GEN8")?;
-    let chunk_OPTN: UTChunk = get_chunk(&chunks, "OPTN")?;
-    let chunk_TXTR: UTChunk = get_chunk(&chunks, "TXTR")?;
-    let chunk_TPAG: UTChunk = get_chunk(&chunks, "TPAG")?;
-    let chunk_SCPT: UTChunk = get_chunk(&chunks, "SCPT")?;
-    let chunk_FUNC: UTChunk = get_chunk(&chunks, "FUNC")?;
-    let chunk_VARI: UTChunk = get_chunk(&chunks, "VARI")?;
-    let chunk_CODE: UTChunk = get_chunk(&chunks, "CODE")?;
-    let chunk_FONT: UTChunk = get_chunk(&chunks, "FONT")?;
-    let chunk_ROOM: UTChunk = get_chunk(&chunks, "ROOM")?;
+    let mut chunk_STRG: UTChunk = get_chunk(&chunks, "STRG")?;
+    let mut chunk_GEN8: UTChunk = get_chunk(&chunks, "GEN8")?;
+    let mut chunk_OPTN: UTChunk = get_chunk(&chunks, "OPTN")?;
+    let mut chunk_TXTR: UTChunk = get_chunk(&chunks, "TXTR")?;
+    let mut chunk_TPAG: UTChunk = get_chunk(&chunks, "TPAG")?;
+    let mut chunk_BGND: UTChunk = get_chunk(&chunks, "BGND")?;
+    let mut chunk_SCPT: UTChunk = get_chunk(&chunks, "SCPT")?;
+    let mut chunk_FUNC: UTChunk = get_chunk(&chunks, "FUNC")?;
+    let mut chunk_VARI: UTChunk = get_chunk(&chunks, "VARI")?;
+    let mut chunk_CODE: UTChunk = get_chunk(&chunks, "CODE")?;
+    let mut chunk_FONT: UTChunk = get_chunk(&chunks, "FONT")?;
+    let mut chunk_ROOM: UTChunk = get_chunk(&chunks, "ROOM")?;
 
     let strings: UTStrings = parse_chunk_STRG(chunk_STRG)?;
     // for (id,st) in &strings {
@@ -79,17 +81,19 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     //         println!("id: {id}");
     //     }
     // }
-    let general_info: UTGeneralInfo = parse_chunk_GEN8(chunk_GEN8, &strings)?;
+    let general_info: UTGeneralInfo = parse_chunk_GEN8(&mut chunk_GEN8, &strings)?;
     let bytecode14: bool = general_info.bytecode_version >= 14;
-    let options: UTOptions = parse_chunk_OPTN(chunk_OPTN)?;
-    let texture_pages: Vec<UTEmbeddedTexture> = parse_chunk_TXTR(chunk_TXTR, &general_info)?;
-    let texture_page_items: Vec<UTTexture> = parse_chunk_TPAG(chunk_TPAG, texture_pages)?;
-    let scripts: Vec<UTScript> = parse_chunk_SCPT(chunk_SCPT, &strings)?;
-    let variables: Vec<UTVariable> = parse_chunk_VARI(chunk_VARI, &strings)?;
-    let (functions, code_locals): (Vec<UTFunction>, Vec<UTCodeLocal>) = parse_chunk_FUNC(chunk_FUNC, &strings, &chunk_CODE)?;
-    let code: Vec<UTCode> = parse_chunk_CODE(chunk_CODE, bytecode14, &strings, &variables, &functions)?;
-    let fonts: Vec<UTFont> = parse_chunk_FONT(chunk_FONT, &general_info, &strings)?;
-    let rooms: Vec<UTRoom> = parse_chunk_ROOM(chunk_ROOM, &general_info, &strings)?;
+    let options: UTOptions = parse_chunk_OPTN(&mut chunk_OPTN)?;
+    let texture_pages: Vec<UTEmbeddedTexture> = parse_chunk_TXTR(&mut chunk_TXTR, &general_info)?;
+    let texture_page_items: UTTextures = parse_chunk_TPAG(&mut chunk_TPAG, texture_pages)?;
+    let backgrounds: Vec<UTBackground> = parse_chunk_BGND(&mut chunk_BGND, &general_info, &strings, &texture_page_items)?;
+    for i in backgrounds {i.print();}
+    let scripts: Vec<UTScript> = parse_chunk_SCPT(&mut chunk_SCPT, &strings)?;
+    let variables: Vec<UTVariable> = parse_chunk_VARI(&mut chunk_VARI, &strings)?;
+    let (functions, code_locals): (Vec<UTFunction>, Vec<UTCodeLocal>) = parse_chunk_FUNC(&mut chunk_FUNC, &strings, &chunk_CODE)?;
+    let code: Vec<UTCode> = parse_chunk_CODE(&mut chunk_CODE, bytecode14, &strings, &variables, &functions)?;
+    let fonts: Vec<UTFont> = parse_chunk_FONT(&mut chunk_FONT, &general_info, &strings)?;
+    let rooms: Vec<UTRoom> = parse_chunk_ROOM(&mut chunk_ROOM, &general_info, &strings)?;
 
     let data = UTData {
         strings,

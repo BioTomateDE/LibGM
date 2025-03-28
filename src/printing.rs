@@ -1,7 +1,10 @@
-﻿use crate::deserialize::fonts::{UTFont, UTGlyph};
+﻿use crate::deserialize::backgrounds::UTBackground;
+use crate::deserialize::embedded_textures::UTEmbeddedTexture;
+use crate::deserialize::fonts::{UTFont, UTGlyph};
 use crate::deserialize::general_info::{UTFunctionClassifications, UTGeneralInfo, UTGeneralInfoFlags, UTOptions, UTOptionsFlags};
 use crate::deserialize::rooms::{UTRoom, UTRoomBackground, UTRoomFlags, UTRoomLayer, UTRoomTile, UTRoomView};
 use crate::deserialize::sequence::{UTKeyframe, UTKeyframeMoment, UTSequence, UTTrack};
+use crate::deserialize::texture_page_item::UTTexture;
 
 impl UTGeneralInfo {
     pub fn print(&self) {
@@ -611,6 +614,58 @@ impl UTKeyframeMoment {
     }
 }
 
+impl UTEmbeddedTexture {
+    pub fn print(&self) {
+        println!("UTEmbeddedTexture:");
+        println!("  Scaled: {}", self.scaled);
+        println!("  Generated Mips: {:?}", self.generated_mips);
+        println!("  Texture Block Size: {:?}", self.texture_block_size);
+        println!("  Texture Width: {:?}", self.texture_width);
+        println!("  Texture Height: {:?}", self.texture_height);
+        println!("  Index In Group: {:?}", self.index_in_group);
+        println!("  Texture Data: <Image Data>");
+        println!();
+    }
+}
+
+impl UTTexture {
+    pub fn print(&self) {
+        println!("UTTexture:");
+        println!("  Target X: {}", self.target_x);
+        println!("  Target Y: {}", self.target_y);
+        println!("  Target Width: {}", self.target_width);
+        println!("  Target Height: {}", self.target_height);
+        println!("  Bounding Width: {}", self.bounding_width);
+        println!("  Bounding Height: {}", self.bounding_height);
+        println!("  Index: {}", self.index);
+        println!("  Image Data: <DynamicImage Data>");
+        println!();
+    }
+}
+
+impl UTBackground {
+    pub fn print(&self) {
+        println!("UTBackground:");
+        println!("  Name: \"{}\"", self.name);
+        println!("  Transparent: {}", self.transparent);
+        println!("  Smooth: {}", self.smooth);
+        println!("  Preload: {}", self.preload);
+        println!("  Texture Index: {}", self.texture.index);
+        self.texture.print();
+        println!("  GMS2 Unknown Always 2: {:?}", self.gms2_unknown_always2);
+        println!("  GMS2 Tile Width: {:?}", self.gms2_tile_width);
+        println!("  GMS2 Tile Height: {:?}", self.gms2_tile_height);
+        println!("  GMS2 Output Border X: {:?}", self.gms2_output_border_x);
+        println!("  GMS2 Output Border Y: {:?}", self.gms2_output_border_y);
+        println!("  GMS2 Tile Columns: {:?}", self.gms2_tile_columns);
+        println!("  GMS2 Items Per Tile Count: {:?}", self.gms2_items_per_tile_count);
+        println!("  GMS2 Tile Count: {:?}", self.gms2_tile_count);
+        println!("  GMS2 Unknown Always Zero: {:?}", self.gms2_unknown_always_zero);
+        println!("  GMS2 Frame Length: {:?}", self.gms2_frame_length);
+        println!("  GMS2 Tile IDs: [{} items]", self.gms2_tile_ids.len());
+        println!();
+    }
+}
 
 
 fn format_license_md5(license: &[u8; 16]) -> String {
@@ -646,3 +701,6 @@ pub fn hexdump(raw_data: &[u8], start: usize, end: Option<usize>) -> Result<Stri
     Ok(string)
 }
 
+pub fn format_type_of<T>(_: &T) -> String {
+    format!("{}", std::any::type_name::<T>())
+}
