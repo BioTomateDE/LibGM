@@ -3,13 +3,13 @@ use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::game_objects::UTGameObject;
 use crate::deserialize::general_info::UTGeneralInfo;
 use crate::deserialize::sequence::{parse_sequence, UTSequence};
-use crate::deserialize::strings::UTStrings;
+use crate::deserialize::strings::{UTStringRef, UTStrings};
 
 
 #[derive(Debug, Clone)]
-pub struct UTRoom {
-    pub name: String,
-    pub caption: String,
+pub struct UTRoom<'a> {
+    pub name: UTStringRef<'a>,
+    pub caption: UTStringRef<'a>,
     pub width: u32,
     pub height: u32,
     pub speed: u32,
@@ -30,8 +30,8 @@ pub struct UTRoom {
     pub gravity_x: f32,
     pub gravity_y: f32,
     pub meters_per_pixel: f32,
-    pub layers: Option<Vec<UTRoomLayer>>,
-    pub sequences: Option<Vec<UTSequence>>,
+    pub layers: Option<Vec<UTRoomLayer<'a>>>,
+    pub sequences: Option<Vec<UTSequence<'a>>>,
 }
 #[derive(Debug, Clone)]
 pub struct UTRoomFlags {
@@ -98,8 +98,8 @@ pub enum UTRoomTileTexture {
 }
 
 #[derive(Debug, Clone)]
-pub struct UTRoomLayer {
-    pub layer_name: String,
+pub struct UTRoomLayer<'a> {
+    pub layer_name: UTStringRef<'a>,
     pub layer_id: u32,
     pub layer_type: UTRoomLayerType,
     pub layer_depth: i32,
@@ -122,7 +122,7 @@ pub enum UTRoomLayerType {
 }
 
 
-pub fn parse_chunk_ROOM(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strings: &UTStrings) -> Result<Vec<UTRoom>, String> {
+pub fn parse_chunk_ROOM<'a>(chunk: &mut UTChunk, general_info: &'a UTGeneralInfo, strings: &'a UTStrings) -> Result<Vec<UTRoom<'a>>, String> {
     chunk.file_index = 0;
     let room_count: usize = chunk.read_usize()?;
     let mut room_starting_positions: Vec<usize> = Vec::with_capacity(room_count);
@@ -135,8 +135,8 @@ pub fn parse_chunk_ROOM(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strin
     for start_position in room_starting_positions {
         chunk.file_index = start_position;
 
-        let name: String = chunk.read_ut_string(strings)?;
-        let caption: String = chunk.read_ut_string(strings)?;
+        let name: UTStringRef = chunk.read_ut_string(strings)?;
+        let caption: UTStringRef = chunk.read_ut_string(strings)?;
         let width: u32 = chunk.read_u32()?;
         let height: u32 = chunk.read_u32()?;
         let speed: u32 = chunk.read_u32()?;
@@ -319,7 +319,7 @@ fn parse_room_tiles(chunk: &mut UTChunk, general_info: &UTGeneralInfo) -> Result
 
         let x: i32 = chunk.read_i32()?;
         let y: i32 = chunk.read_i32()?;
-        let sprite_mode: bool = general_info.is_version_at_least(2, 0, 0, 0);
+        let _sprite_mode: bool = general_info.is_version_at_least(2, 0, 0, 0);
         // if sprite_mode {}
         let _ = chunk.read_u32()?;  // sprite shit
         let texture: UTRoomTileTexture = UTRoomTileTexture::Stub();
@@ -354,7 +354,7 @@ fn parse_room_tiles(chunk: &mut UTChunk, general_info: &UTGeneralInfo) -> Result
     Ok(tiles)
 }
 
-fn parse_room_layers(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<UTRoomLayer>, String> {
+fn parse_room_layers<'a>(chunk: &mut UTChunk, strings: &'a UTStrings) -> Result<Vec<UTRoomLayer<'a>>, String> {
     let layer_pointers: Vec<usize> = chunk.read_pointer_list()?;
     let old_position: usize = chunk.file_index;
     let mut layers: Vec<UTRoomLayer> = Vec::with_capacity(layer_pointers.len());
@@ -362,7 +362,7 @@ fn parse_room_layers(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<UTR
     for pointer in layer_pointers {
         chunk.file_index = pointer;
 
-        let layer_name: String = chunk.read_ut_string(strings)?;
+        let layer_name: UTStringRef = chunk.read_ut_string(strings)?;
         let layer_id: u32 = chunk.read_u32()?;
         let layer_type: u32 = chunk.read_u32()?;
         let layer_type: UTRoomLayerType = match layer_type.try_into() {
@@ -399,7 +399,7 @@ fn parse_room_layers(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<UTR
     Ok(layers)
 }
 
-fn parse_room_sequences(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<UTSequence>, String> {
+fn parse_room_sequences<'a>(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<UTSequence<'a>>, String> {
     let sequence_count: usize = chunk.read_usize()?;
     let mut sequences: Vec<UTSequence> = Vec::with_capacity(sequence_count);
     for _ in 0..sequence_count {
