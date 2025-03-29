@@ -8,7 +8,7 @@ use deserialize::all::{parse_data_file, read_data_file};
 
 mod serialize;
 
-mod structs;   // TODO remove this
+mod structs;   // TODO remove this file
 
 use std::process;
 use crate::deserialize::all::UTData;
@@ -22,10 +22,10 @@ fn main() {
     // }
 
     // let data_file_path: &str = args[1].as_str();
-    let data_file_path: &str = "./data.win";
-    println!("Loading data file {}", data_file_path);
+    let original_data_file_path: &'static str = "./data.win";
 
-    let data_file: Vec<u8> = match read_data_file(data_file_path) {
+    println!("Loading data file \"{}\".", original_data_file_path);
+    let original_data: Vec<u8> = match read_data_file(original_data_file_path) {
         Ok(data_file) => data_file,
         Err(error) => {
             eprintln!("Error while reading data file: {error}");
@@ -33,7 +33,8 @@ fn main() {
         }
     };
 
-    let data: UTData = match parse_data_file(data_file) {
+    println!("Parsing data file.");
+    let data: UTData = match parse_data_file(original_data) {
         Ok(data) => data,
         Err(error) => {
             eprintln!("Error while parsing data file: {error}");
@@ -46,7 +47,8 @@ fn main() {
     // println!();
     // print_options(&data.options);
 
-    let raw_data2: Vec<u8> = match build_data_file(&data) {
+    println!("Building data file.");
+    let modded_data: Vec<u8> = match build_data_file(&data) {
         Ok(data) => data,
         Err(error) => {
             eprintln!("Error while building data file: {error}");
@@ -54,13 +56,17 @@ fn main() {
         }
     };
 
-    match write_data_file("./data_out.win", &raw_data2) {
+    let modded_data_file_path: &'static str = "./data_out.win";
+    println!("Writing data file \"{}\".", modded_data_file_path);
+    match write_data_file(modded_data_file_path, &modded_data) {
         Ok(data) => data,
         Err(error) => {
             eprintln!("Error while writing data file: {error}");
             process::exit(1);
         }
     };
+
+    println!("Done.");
 
     // println!("{}", data.strings.get_string_by_pos(12122776).unwrap());
 }

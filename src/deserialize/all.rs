@@ -3,6 +3,7 @@ use std::fs;
 use crate::deserialize::backgrounds::{parse_chunk_BGND, UTBackground};
 use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::code::{parse_chunk_CODE, UTCode};
+use crate::deserialize::embedded_audio::{parse_chunk_AUDO, UTEmbeddedAudio};
 use crate::deserialize::embedded_textures::{parse_chunk_TXTR, UTEmbeddedTexture};
 use crate::deserialize::fonts::{parse_chunk_FONT, UTFont};
 use crate::deserialize::functions::{parse_chunk_FUNC, UTCodeLocal, UTFunction};
@@ -33,8 +34,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let mut all = UTChunk {
         name: "".to_string(),
         abs_pos: 0,
-        data: raw_data.clone(),
-        data_len: raw_data.len(),
+        data: &raw_data,
         file_index: 0
     };
 
@@ -49,15 +49,20 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     while all.file_index + 8 < raw_data_len {
         let chunk_name: String = all.read_chunk_name()?;
         let chunk_length: usize = all.read_usize()?;
-        let chunk_data: Vec<u8> = all.data[all.file_index .. all.file_index + chunk_length].to_owned();
+        let chunk_data: &[u8] = match all.data.get(all.file_index .. all.file_index + chunk_length) {
+            Some(bytes) => bytes,
+            None => return Err(format!(
+                "Chunk '{}' with specified length {} is out of bounds at absolute position {} while reading chunks: {} > {}.",
+                chunk_name, chunk_length, all.file_index, all.file_index + chunk_length, all.data.len(),
+            )),
+        };
         // println!("{} {}", chunk_name, all.file_index);
         chunks.insert(
             chunk_name.clone(),
             UTChunk {
                 name: chunk_name,
                 abs_pos: all.file_index,
-                data: chunk_data.clone(),
-                data_len: chunk_data.len(),
+                data: &chunk_data,
                 file_index: 0,
             },
         );
@@ -67,6 +72,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let mut chunk_STRG: UTChunk = get_chunk(&chunks, "STRG")?;
     let mut chunk_GEN8: UTChunk = get_chunk(&chunks, "GEN8")?;
     let mut chunk_OPTN: UTChunk = get_chunk(&chunks, "OPTN")?;
+    let mut chunk_AUDO: UTChunk = get_chunk(&chunks, "AUDO")?;
     let mut chunk_TXTR: UTChunk = get_chunk(&chunks, "TXTR")?;
     let mut chunk_TPAG: UTChunk = get_chunk(&chunks, "TPAG")?;
     let mut chunk_BGND: UTChunk = get_chunk(&chunks, "BGND")?;
@@ -86,6 +92,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let general_info: UTGeneralInfo = parse_chunk_GEN8(&mut chunk_GEN8, &strings)?;
     let bytecode14: bool = general_info.bytecode_version >= 14;
     let options: UTOptions = parse_chunk_OPTN(&mut chunk_OPTN)?;
+    let audios: Vec<UTEmbeddedAudio> = parse_chunk_AUDO(&mut chunk_AUDO)?;
     let texture_pages: Vec<UTEmbeddedTexture> = parse_chunk_TXTR(&mut chunk_TXTR, &general_info)?;
     let textures: UTTextures = parse_chunk_TPAG(&mut chunk_TPAG, texture_pages)?;
     let backgrounds: Vec<UTBackground> = parse_chunk_BGND(&mut chunk_BGND, &general_info, &strings, &textures)?;
@@ -114,7 +121,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     // println!("Total data length: {total_length} bytes");
     // println!("Chunk Sizes:");
     // for (chunk_name, chunk) in &data.chunks {
-    //     println!("  {}: {} bytes", chunk_name, chunk.data_len);
+    //     println!("  {}: {} bytes", chunk_name, chunk.data.len());
     // }
 
     // ----- Testing -----
@@ -141,7 +148,7 @@ pub fn read_data_file(data_file_path: &str) -> Result<Vec<u8>, String> {
 }
 
 
-fn get_chunk(chunks: &HashMap<String, UTChunk>, chunk_name: &str) -> Result<UTChunk, String> {
+fn get_chunk<'a>(chunks: &HashMap<String, UTChunk<'a>>, chunk_name: &str) -> Result<UTChunk<'a>, String> {
     match chunks.get(chunk_name) {
         None => Err(format!(
             "Chunk '{}' is missing in data file (chunk hashmap length: {}).",

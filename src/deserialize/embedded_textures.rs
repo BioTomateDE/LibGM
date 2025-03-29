@@ -169,8 +169,8 @@ fn find_end_of_bz2_stream(ut_chunk: &mut UTChunk) -> Result<usize, String> {
     // We want to find the end of nonzero data.
     static MAX_CHUNK_SIZE: usize = 256;
 
-    let mut chunk_start_position: usize = max(stream_start_position, ut_chunk.data_len - MAX_CHUNK_SIZE);
-    let chunk_size: usize = ut_chunk.data_len - chunk_start_position;
+    let mut chunk_start_position: usize = max(stream_start_position, ut_chunk.data.len() - MAX_CHUNK_SIZE);
+    let chunk_size: usize = ut_chunk.data.len() - chunk_start_position;
     loop {
         ut_chunk.file_index = chunk_start_position;
         let chunk_data: &[u8] = &ut_chunk.data[ut_chunk.file_index .. ut_chunk.file_index + chunk_size];
@@ -203,7 +203,7 @@ fn find_end_of_bz2_search(ut_chunk: &mut UTChunk, end_data_position: usize) -> R
 
     // Ensure we don't read past the data bounds
     let start_position = end_data_position.saturating_sub(16);
-    if start_position >= ut_chunk.data_len {
+    if start_position >= ut_chunk.data.len() {
         return Err("Start position out of bounds".to_string());
     }
 
