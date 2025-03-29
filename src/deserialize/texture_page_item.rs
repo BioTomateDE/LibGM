@@ -16,7 +16,7 @@ pub struct UTTexture {
     pub index: usize,
 }
 
-
+#[derive(Debug, Clone)]
 pub struct UTTextures {
     textures_by_absolute_position: HashMap<usize, UTTexture>,       // texture page items by absolute position/pointer in data.win
 }

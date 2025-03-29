@@ -1,7 +1,8 @@
 ﻿use crate::deserialize::chunk_reading::UTChunk;
 use chrono::{DateTime, Utc};
-use crate::deserialize::strings::UTStrings;
+use crate::deserialize::strings::{UTStringRef, UTStrings};
 
+#[derive(Debug, Clone)]
 pub struct UTOptions {
     pub _unused1: u32,
     pub _unused2: u32,
@@ -22,18 +23,18 @@ pub struct UTOptions {
     pub load_alpha: u32,
 }
 
-#[derive(Clone)]
-pub struct UTGeneralInfo {
+#[derive(Debug, Clone)]
+pub struct UTGeneralInfo<'a> {
     pub is_debugger_disabled: bool,
     pub bytecode_version: u8,
     pub unknown_value: u16,
-    pub game_file_name: String,
-    pub config: String,
+    pub game_file_name: UTStringRef<'a>,
+    pub config: UTStringRef<'a>,
     pub last_object_id: u32,
     pub last_tile_id: u32,
     pub game_id: u32,
     pub directplay_guid: uuid::Uuid,
-    pub game_name: String,
+    pub game_name: UTStringRef<'a>,
     pub major_version: u32,
     pub minor_version: u32,
     pub release_version: u32,
@@ -43,7 +44,7 @@ pub struct UTGeneralInfo {
     pub flags: UTGeneralInfoFlags,
     pub license: [u8; 16],
     pub timestamp_created: DateTime<Utc>,
-    pub display_name: String,
+    pub display_name: UTStringRef<'a>,
     pub active_targets: u64,
     pub function_classifications: UTFunctionClassifications,
     pub steam_appid: u32,
@@ -51,7 +52,7 @@ pub struct UTGeneralInfo {
     pub room_order: Vec<u32>,
 }
 
-impl UTGeneralInfo {
+impl UTGeneralInfo<'_> {
     pub fn is_version_at_least(&self, major: u32, minor: u32, release: u32, build: u32) -> bool {
 
         if self.major_version != major {
@@ -199,13 +200,13 @@ pub struct UTOptionsFlags {
     pub enable_copy_on_write: bool,
 }
 
-pub fn parse_chunk_GEN8(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTGeneralInfo, String> {
+pub fn parse_chunk_GEN8<'a>(chunk: &'a mut UTChunk, strings: &'a UTStrings) -> Result<UTGeneralInfo<'a>, String> {
     chunk.file_index = 0;
     let is_debugger_disabled: bool = chunk.read_u8()? != 0;
     let bytecode_version: u8 = chunk.read_u8()?;
     let unknown_value: u16 = chunk.read_u16()?;
-    let game_file_name: String = chunk.read_ut_string(strings)?;
-    let config: String = chunk.read_ut_string(strings)?;
+    let game_file_name: UTStringRef = chunk.read_ut_string(strings)?;
+    let config: UTStringRef = chunk.read_ut_string(strings)?;
     let last_object_id: u32 = chunk.read_u32()?;
     let last_tile_id: u32 = chunk.read_u32()?;
     let game_id: u32 = chunk.read_u32()?;
@@ -223,7 +224,7 @@ pub fn parse_chunk_GEN8(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTGe
     let directplay_guid: uuid::Uuid = uuid::Builder::from_bytes_le(directplay_guid).into_uuid();
     // ^ perhaps not `_le` but idk bc it's usually just null
 
-    let game_name: String = chunk.read_ut_string(strings)?;
+    let game_name: UTStringRef = chunk.read_ut_string(strings)?;
     let major_version: u32 = chunk.read_u32()?;
     let minor_version: u32 = chunk.read_u32()?;
     let release_version: u32 = chunk.read_u32()?;
@@ -253,7 +254,7 @@ pub fn parse_chunk_GEN8(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTGe
         )),
     };
 
-    let display_name: String = chunk.read_ut_string(strings)?;
+    let display_name: UTStringRef = chunk.read_ut_string(strings)?;
     // probably not actually u64 (rather u32) but it's zero and there's null bytes surrounding it so idk
     let active_targets: u64 = chunk.read_u64()?;
     let function_classifications: UTFunctionClassifications = parse_function_classifications(chunk)?;

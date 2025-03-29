@@ -1,11 +1,11 @@
 use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::general_info::UTGeneralInfo;
-use crate::deserialize::strings::UTStrings;
+use crate::deserialize::strings::{UTStringRef, UTStrings};
 
 #[derive(Debug, Clone)]
-pub struct UTFont {
-    pub name: String,
-    pub display_name: String,
+pub struct UTFont<'a> {
+    pub name: UTStringRef<'a>,
+    pub display_name: UTStringRef<'a>,
     pub em_size: u32,
     pub bold: bool,
     pub italic: bool,
@@ -35,7 +35,7 @@ pub struct UTGlyph {
 }
 
 
-pub fn parse_chunk_FONT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strings: &UTStrings) -> Result<Vec<UTFont>, String> {
+pub fn parse_chunk_FONT<'a>(chunk: &mut UTChunk, general_info: &'a UTGeneralInfo, strings: &'a UTStrings) -> Result<Vec<UTFont<'a>>, String> {
     chunk.file_index = 0;
     let font_count: usize = chunk.read_usize()?;
     let mut font_starting_positions: Vec<usize> = Vec::with_capacity(font_count);
@@ -48,8 +48,8 @@ pub fn parse_chunk_FONT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strin
     for start_position in font_starting_positions {
         chunk.file_index = start_position;
 
-        let name: String = chunk.read_ut_string(&strings)?;
-        let display_name: String = chunk.read_ut_string(&strings)?;
+        let name: UTStringRef = chunk.read_ut_string(&strings)?;
+        let display_name: UTStringRef = chunk.read_ut_string(&strings)?;
         let em_size: u32 = chunk.read_u32()?;
         let bold: bool = chunk.read_u32()? != 0;
         let italic: bool = chunk.read_u32()? != 0;
@@ -79,7 +79,7 @@ pub fn parse_chunk_FONT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strin
             line_height = Some(chunk.read_u32()?);
         }
 
-        let glyphs = parse_glyphs(chunk, &name)?;
+        let glyphs: Vec<UTGlyph> = parse_glyphs(chunk, name.resolve()?)?;
 
         let font: UTFont = UTFont {
             name,
