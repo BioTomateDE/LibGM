@@ -1,5 +1,5 @@
 use std::cmp::max;
-use std::io::{BufReader, Read};
+use std::io::Read;
 use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::general_info::UTGeneralInfo;
 use crate::printing::hexdump;
@@ -26,7 +26,7 @@ pub enum Image {
 }
 
 
-pub fn parse_chunk_TXTR(chunk: &mut UTChunk, general_info: &UTGeneralInfo) -> Result<Vec<UTEmbeddedTexture>, String> {
+pub fn parse_chunk_TXTR<'a>(chunk: &mut UTChunk, general_info: &'a UTGeneralInfo) -> Result<Vec<UTEmbeddedTexture>, String> {
     chunk.file_index = 0;
     let texture_count: usize = chunk.read_usize()?;
     let mut texture_pointers: Vec<usize> = Vec::with_capacity(texture_count);
@@ -132,10 +132,9 @@ fn read_raw_texture(chunk: &mut UTChunk, general_info: &UTGeneralInfo) -> Result
     else if header.starts_with(MAGIC_BZ2_QOI_HEADER) {
         // Parse QOI + BZip2
         chunk.file_index += 8;      // skip past (start of) header
-        let mut serialized_uncompressed_length: Option<usize> = None;
         let mut header_size: usize = 8;
         if general_info.is_version_at_least(2022, 5, 0, 0) {
-            serialized_uncompressed_length = Some(chunk.read_usize()?);    // maybe handle negative numbers?
+            let _serialized_uncompressed_length = chunk.read_usize()?;    // maybe handle negative numbers?
             header_size = 12;
         }
 

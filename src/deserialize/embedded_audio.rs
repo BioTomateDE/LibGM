@@ -1,6 +1,7 @@
 use crate::deserialize::chunk_reading::UTChunk;
 // use hound;
 
+#[derive(Debug, Clone)]
 pub struct UTEmbeddedAudio {
     raw_data: Vec<u8>,
 }

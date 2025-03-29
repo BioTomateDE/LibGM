@@ -1,5 +1,4 @@
-﻿use crate::deserialize::rooms::UTRoomBackground;
-use crate::deserialize::strings::UTStrings;
+﻿use crate::deserialize::strings::{UTStringRef, UTStrings};
 
 #[derive(Clone)]
 pub struct UTChunk<'a> {
@@ -299,11 +298,11 @@ impl UTChunk<'_> {
         }
     }
 
-    pub fn read_ut_string(&mut self, ut_strings: &UTStrings) -> Result<String, String> {
+    pub fn read_ut_string<'a>(&mut self, ut_strings: &'a UTStrings) -> Result<UTStringRef<'a>, String> {
         let string_abs_pos: usize = self.read_usize()?;
 
         match ut_strings.get_string_by_pos(string_abs_pos) {
-            Some(string) => Ok(string.clone()),
+            Some(string) => Ok(string),
             None => Err(format!(
                 "Could not read reference string with absolute position {} in chunk '{}' at \
                 position {} because it doesn't exist in the string map (length {})",

@@ -1,5 +1,5 @@
 use crate::deserialize::all::UTData;
-use crate::deserialize::chunk_reading::UTChunk;
+use crate::deserialize::strings::UTStringRef;
 use crate::serialize::all::{build_chunk, DataBuilder};
 use crate::serialize::chunk_writing::ChunkBuilder;
 
@@ -14,16 +14,16 @@ pub fn build_chunk_STRG(data_builder: &mut DataBuilder, ut_data: &UTData) -> Res
     }
 
     for i in 0..len {
-        let string: String = match ut_data.strings.get_string_by_index(i) {
+        let string_ref: UTStringRef = match ut_data.strings.get_string_by_index(i) {
             Some(string) => string,
             None => return Err(format!(
                 "[Internal Error] String index out of bounds ({} >= {}) while building chunk 'STRG'.\
                  This should never happen as `UTData.strings.len()` should return the same length \
-                 as the private `UTData.string.strings_by_index` list.",
-                i,
-                len,
+                 as the private `UTData.strings.strings_by_index` list.",
+                i, len,
             )),
         };
+        let string: &str = string_ref.resolve()?;
 
         builder.write_usize(string.len())?;
         let absolute_position: usize = data_builder.len() + builder.len();
