@@ -1,12 +1,13 @@
 ﻿use crate::deserialize::chunk_reading::UTChunk;
-use crate::deserialize::strings::UTStrings;
+use crate::deserialize::strings::{UTStringRef, UTStrings};
 
-pub struct UTScript {
+#[derive(Debug, Clone)]
+pub struct UTScript<'a> {
     pub script_id: u32,
-    pub name: String,
+    pub name: UTStringRef<'a>,
 }
 
-pub fn parse_chunk_SCPT(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<UTScript>, String> {
+pub fn parse_chunk_SCPT<'a>(chunk: &mut UTChunk, strings: &'a UTStrings) -> Result<Vec<UTScript<'a>>, String> {
     chunk.file_index = 0;
     let scripts_length: usize = chunk.read_usize()?;
 
@@ -16,9 +17,9 @@ pub fn parse_chunk_SCPT(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<
         script_ids.push(script_id);
     }
 
-    let mut script_names: Vec<String> = Vec::with_capacity(scripts_length);
+    let mut script_names: Vec<UTStringRef> = Vec::with_capacity(scripts_length);
     for _ in 0..scripts_length {
-        let script_name: String = chunk.read_ut_string(&strings)?;
+        let script_name: UTStringRef = chunk.read_ut_string(&strings)?;
         script_names.push(script_name);
         chunk.read_u32()?;   // skip counter going up from zero (redundant)
     }
@@ -27,7 +28,7 @@ pub fn parse_chunk_SCPT(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<
     for i in 0..scripts_length {
         // println!("{} {}", script_ids[i], script_names[i]);
         let script_id: u32 = script_ids[i];
-        let name: String = script_names[i].clone();
+        let name: UTStringRef = script_names[i].clone();
         let script: UTScript = UTScript { script_id, name };
         scripts.push(script);
     }

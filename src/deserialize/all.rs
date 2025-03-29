@@ -6,31 +6,34 @@ use crate::deserialize::code::{parse_chunk_CODE, UTCode};
 use crate::deserialize::embedded_audio::{parse_chunk_AUDO, UTEmbeddedAudio};
 use crate::deserialize::embedded_textures::{parse_chunk_TXTR, UTEmbeddedTexture};
 use crate::deserialize::fonts::{parse_chunk_FONT, UTFont};
-use crate::deserialize::functions::{parse_chunk_FUNC, UTCodeLocal, UTFunction};
+use crate::deserialize::functions::{parse_chunk_FUNC, UTCodeLocal, UTFunction, UTFunctions};
 use crate::deserialize::general_info::{parse_chunk_GEN8, parse_chunk_OPTN};
 use crate::deserialize::scripts::{parse_chunk_SCPT, UTScript};
 use crate::deserialize::strings::{parse_chunk_STRG, UTStrings};
 use crate::deserialize::variables::{parse_chunk_VARI, UTVariable};
 use crate::deserialize::general_info::{UTGeneralInfo, UTOptions};
 use crate::deserialize::rooms::{parse_chunk_ROOM, UTRoom};
-use crate::deserialize::texture_page_item::{parse_chunk_TPAG, UTTexture, UTTextures};
+use crate::deserialize::texture_page_item::{parse_chunk_TPAG, UTTextures};
 
-pub struct UTData {
-    pub strings: UTStrings,                 // STRG
-    pub general_info: UTGeneralInfo,        // GEN8
-    pub options: UTOptions,                 // OPTN
-    pub textures: UTTextures,               // TPAG  (and TXTR)
-    pub backgrounds: Vec<UTBackground>,     // BGND
-    pub scripts: Vec<UTScript>,             // SCPT
-    pub variables: Vec<UTVariable>,         // VARI
-    pub functions: Vec<UTFunction>,         // FUNC
-    pub code_locals: Vec<UTCodeLocal>,      // FUNC
-    pub code: Vec<UTCode>,                  // CODE
-    pub fonts: Vec<UTFont>,                 // FONT
-    pub rooms: Vec<UTRoom>,                 // ROOM
+
+#[derive(Debug, Clone)]
+pub struct UTData<'a> {
+    pub strings: UTStrings<'a>,                 // STRG
+    pub general_info: UTGeneralInfo<'a>,        // GEN8
+    pub options: UTOptions,                     // OPTN
+    pub audios: Vec<UTEmbeddedAudio>,           // AUDO
+    pub textures: UTTextures,                   // TPAG  (and TXTR)
+    pub backgrounds: Vec<UTBackground<'a>>,     // BGND
+    pub scripts: Vec<UTScript<'a>>,             // SCPT
+    pub variables: Vec<UTVariable<'a>>,         // VARI
+    pub functions: UTFunctions<'a>,             // FUNC
+    pub code_locals: Vec<UTCodeLocal<'a>>,      // FUNC
+    pub code: Vec<UTCode<'a>>,                  // CODE
+    pub fonts: Vec<UTFont<'a>>,                 // FONT
+    pub rooms: Vec<UTRoom<'a>>,                 // ROOM
 }
 
-pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
+pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData<'static>, String> {
     let mut all = UTChunk {
         name: "".to_string(),
         abs_pos: 0,
@@ -98,7 +101,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let backgrounds: Vec<UTBackground> = parse_chunk_BGND(&mut chunk_BGND, &general_info, &strings, &textures)?;
     let scripts: Vec<UTScript> = parse_chunk_SCPT(&mut chunk_SCPT, &strings)?;
     let variables: Vec<UTVariable> = parse_chunk_VARI(&mut chunk_VARI, &strings)?;
-    let (functions, code_locals): (Vec<UTFunction>, Vec<UTCodeLocal>) = parse_chunk_FUNC(&mut chunk_FUNC, &strings, &chunk_CODE)?;
+    let (functions, code_locals): (UTFunctions, Vec<UTCodeLocal>) = parse_chunk_FUNC(&mut chunk_FUNC, &strings, &chunk_CODE)?;
     let code: Vec<UTCode> = parse_chunk_CODE(&mut chunk_CODE, bytecode14, &strings, &variables, &functions)?;
     let fonts: Vec<UTFont> = parse_chunk_FONT(&mut chunk_FONT, &general_info, &strings)?;
     let rooms: Vec<UTRoom> = parse_chunk_ROOM(&mut chunk_ROOM, &general_info, &strings)?;
@@ -107,6 +110,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
         strings,
         general_info,
         options,
+        audios,
         textures,
         backgrounds,
         scripts,

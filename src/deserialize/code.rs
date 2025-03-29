@@ -4,8 +4,8 @@ use crate::deserialize::variables::UTVariable;
 use colored::Colorize;
 use std::cmp::PartialEq;
 use num_enum::TryFromPrimitive;
-use crate::deserialize::functions::{get_function, UTFunction};
-use crate::deserialize::strings::UTStrings;
+use crate::deserialize::functions::{UTFunctionRef, UTFunctions};
+use crate::deserialize::strings::{UTStringRef, UTStrings};
 use crate::printing::hexdump;
 
 // Taken from UndertaleModTool/UndertaleModLib/UndertaleCode.cs/UndertaleInstruction/
@@ -197,25 +197,25 @@ struct UTGotoInstruction {
     popenv_exit_magic: bool,
 }
 #[derive(Debug, Clone)]
-struct UTPopInstruction {
+struct UTPopInstruction<'a> {
     opcode: UTOpcode,
     instance_type: UTInstanceType,
     type1: UTDataType,
     type2: UTDataType,
-    destination: UTCodeVariable,
+    destination: UTCodeVariable<'a>,
 }
 #[derive(Debug, Clone)]
-struct UTPushInstruction {
+struct UTPushInstruction<'a> {
     opcode: UTOpcode,
     data_type: UTDataType,
-    value: UTValue,
+    value: UTValue<'a>,
 }
 #[derive(Debug, Clone)]
-struct UTCallInstruction {
+struct UTCallInstruction<'a> {
     opcode: UTOpcode,
     arguments_count: usize,
     data_type: UTDataType,
-    function: UTFunction,
+    function: UTFunctionRef<'a>,
 }
 #[derive(Debug, Clone)]
 struct UTBreakInstruction {
@@ -225,48 +225,48 @@ struct UTBreakInstruction {
     int_argument: Option<i32>,
 }
 #[derive(Debug, Clone)]
-enum UTInstruction {
+enum UTInstruction<'a> {
     Cmp(UTComparisonInstruction),
     Goto(UTGotoInstruction),
-    Pop(UTPopInstruction),
-    Push(UTPushInstruction),
-    Call(UTCallInstruction),
+    Pop(UTPopInstruction<'a>),
+    Push(UTPushInstruction<'a>),
+    Call(UTCallInstruction<'a>),
     Break(UTBreakInstruction),
 }
 
 #[derive(Debug, Clone)]
-enum UTCodeVariable {
-    Var(UTVariable, UTVariableType),
+enum UTCodeVariable<'a> {
+    Var(UTVariable<'a>, UTVariableType),
     Unknown(usize, UTVariableType)
 }
 
 
 
 #[derive(Debug, Clone)]
-enum UTValue {
+enum UTValue<'a> {
     Double(f64),
     Float(f32),
     Int32(i32),
     Int64(i64),
     Boolean(bool),
-    Variable(UTCodeVariable),
-    String(String),
+    Variable(UTCodeVariable<'a>),
+    String(UTStringRef<'a>),
     Int16(i16),
 }
 
 #[derive(Debug)]
-struct UTCodeMeta {
-    name: String,
+struct UTCodeMeta<'a> {
+    name: UTStringRef<'a>,
     start_position: usize, // start position of code in chunk CODE
     length: usize,
     locals_count: u32,
     arguments_count: u32,
 }
 
-#[derive(Debug)]
-pub struct UTCode {
-    pub name: String,
-    pub instructions: Vec<UTInstruction>,
+#[derive(Debug, Clone)]
+pub struct UTCode<'a> {
+    pub name: UTStringRef<'a>,
+    pub instructions: Vec<UTInstruction<'a>>,
     pub locals_count: u32,
     pub arguments_count: u32,
 }
@@ -294,12 +294,12 @@ impl UTCodeBlob {
         Ok(byte)
     }
 
-    fn read_value(
+    fn read_value<'a>(
         &mut self,
         data_type: UTDataType,
-        strings: &UTStrings,
-        variables: &[UTVariable],
-    ) -> Result<UTValue, String> {
+        strings: &'a UTStrings,
+        _variables: &[UTVariable],
+    ) -> Result<UTValue<'a>, String> {
         match data_type {
             UTDataType::Double => {
                 let raw: [u8; 8] = match self.raw_data[self.file_index..self.file_index+8].try_into() {
@@ -391,7 +391,7 @@ impl UTCodeBlob {
                 let string_index: usize = u32::from_le_bytes(raw) as usize;
                 self.file_index += 4;
                 match strings.get_string_by_index(string_index) {
-                    Some(string) => Ok(UTValue::String(string.clone())),
+                    Some(string) => Ok(UTValue::String(string)),
                     None => Err(format!("Could not find UTString with String Index {} while reading values in code.", string_index))
                 }
             },
@@ -411,13 +411,13 @@ impl UTCodeBlob {
 }
 
 
-pub fn parse_chunk_CODE(
+pub fn parse_chunk_CODE<'a>(
     chunk: &mut UTChunk,
     bytecode14: bool,
-    strings: &UTStrings,
-    variables: &[UTVariable],
-    functions: &[UTFunction],
-) -> Result<Vec<UTCode>, String> {
+    strings: &'a UTStrings,
+    variables: &'a [UTVariable],
+    functions: &'a UTFunctions,
+) -> Result<Vec<UTCode<'a>>, String> {
     chunk.file_index = 0;
     let codes_count: usize = chunk.read_usize()?;
     let mut code_meta_indexes: Vec<usize> = Vec::with_capacity(codes_count);
@@ -435,7 +435,7 @@ pub fn parse_chunk_CODE(
 
     for ts in code_meta_indexes {
         chunk.file_index = ts;
-        let code_name: String = chunk.read_ut_string(strings)?;
+        let code_name: UTStringRef = chunk.read_ut_string(strings)?;
         let code_length: usize = chunk.read_usize()?;
         let locals_count: u32 = chunk.read_u32()?;
 
@@ -500,14 +500,14 @@ pub fn parse_chunk_CODE(
     Ok(codes)
 }
 
-fn parse_code(
+fn parse_code<'a>(
     blob: &mut UTCodeBlob,
     bytecode14: bool,
-    strings: &UTStrings,
-    variables: &[UTVariable],
-    functions: &[UTFunction],
+    strings: &'a UTStrings,
+    variables: &'a [UTVariable],
+    functions: &'a UTFunctions,
     code_start_pos: usize
-) -> Result<UTInstruction, String> {
+) -> Result<UTInstruction<'a>, String> {
     let b0: u8 = blob.read_byte()?;
     let b1: u8 = blob.read_byte()?;
     let b2: u8 = blob.read_byte()?;
@@ -626,8 +626,8 @@ fn parse_code(
 
             let instance_type: i8 = b0 as i8;
             let instance_type: UTInstanceType = instance_type.try_into().unwrap_or_else(|_| {
-                // let dump = hexdump(&blob.raw_data, (if blob.file_index < 16 {16} else {blob.file_index}) - 16, Some(if blob.file_index + 8 < blob.len {blob.file_index + 8} else {blob.len})).unwrap();
-                // println!("{}", format!("[WARNING] {instance_type:02X} Dump: {dump}").yellow());
+                let dump = hexdump(&blob.raw_data, (if blob.file_index < 16 {16} else {blob.file_index}) - 16, Some(if blob.file_index + 8 < blob.len {blob.file_index + 8} else {blob.len})).unwrap();
+                println!("{}", format!("[WARNING] {instance_type:02X} Dump: {dump}").yellow());
                 UTInstanceType::Undefined
             });
 
@@ -698,7 +698,7 @@ fn parse_code(
 
             // todo fix bullshit variable id
 
-            let mut value: UTValue = blob.read_value(data_type, strings, variables)?;
+            let value: UTValue = blob.read_value(data_type, strings, variables)?;
             // println!("$$$$$ {:?}", value);
 
             Ok(UTInstruction::Push(UTPushInstruction {
@@ -717,7 +717,7 @@ fn parse_code(
             };
 
             blob.file_index += 4;
-            let function: UTFunction = get_function(functions, code_start_pos + blob.file_index)?;
+            let function: UTFunctionRef = functions.get_function_by_occurrence(code_start_pos + blob.file_index)?;
 
             Ok(UTInstruction::Call(UTCallInstruction {
                 opcode,

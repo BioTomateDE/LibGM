@@ -1,52 +1,99 @@
-﻿use std::collections::HashSet;
+﻿use std::collections::{HashMap, HashSet};
 use crate::deserialize::chunk_reading::UTChunk;
-use crate::deserialize::strings::UTStrings;
+use crate::deserialize::strings::{UTStringRef, UTStrings};
 
 #[derive(Debug, Clone)]
-pub struct UTFunction {
-    pub name: String,
-    pub occurrences: HashSet<usize>,                // set of occurrences (call instructions) positions relative to chunk CODE
+pub struct UTFunction<'a> {
+    pub name: UTStringRef<'a>,
+    // pub occurrences: HashSet<usize>,                // set of occurrences (call instructions) positions relative to chunk CODE
 }
 
+#[derive(Debug, Clone)]
+pub struct UTFunctionRef<'a> {
+    pub index: usize,
+    functions_by_index: &'a [UTFunction<'a>],
+}
+
+impl UTFunctionRef<'_> {
+    pub fn resolve<'a>(&self) -> Result<&'a UTFunction, String> {
+        match self.functions_by_index.get(self.index) {
+            Some(func) => Ok(func),
+            None => Err(format!(     // internal error perchance
+                "Could not resolve function with index {} in list with length {}.",
+                self.index, self.functions_by_index.len(),
+            )),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct UTFunctions<'a> {
+    functions_by_index: Vec<UTFunction<'a>>,
+    occurrences_to_indexes: HashMap<usize, usize>,     // maps all occurrence addresses/positions (relative to chunk CODE) to function indexes
+}
+
+impl UTFunctions<'_> {
+    pub fn get_function_by_occurrence(&self, occurrence_position: usize) -> Result<UTFunctionRef, String> {
+        let function_index: usize = match self.occurrences_to_indexes.get(&occurrence_position) {
+            Some(index) => *index,
+            None => return Err(format!(
+                "Could not find any function with absolute occurrence position {} in map with length {} (functions len: {}).",
+                occurrence_position, self.occurrences_to_indexes.len(), self.functions_by_index.len(),
+            )),
+        };
+        Ok(UTFunctionRef {
+            index: function_index,
+            functions_by_index: &self.functions_by_index,
+        })
+    }
+}
 
 #[derive(Debug)]
-pub struct UTCodeLocalVariable {
+pub struct UTCodeLocalVariable<'a> {
     pub index: usize,
-    pub name: String,
+    pub name: UTStringRef<'a>,
 }
-pub struct UTCodeLocal {
-    pub name: String,
-    pub variables: Vec<UTCodeLocalVariable>,
+#[derive(Debug, Clone)]
+pub struct UTCodeLocal<'a> {
+    pub name: UTStringRef<'a>,
+    pub variables: Vec<UTCodeLocalVariable<'a>>,
 }
 
-pub fn parse_chunk_FUNC(chunk: &mut UTChunk, strings: &UTStrings, chunk_CODE: &UTChunk) -> Result<(Vec<UTFunction>, Vec<UTCodeLocal>), String> {
+pub fn parse_chunk_FUNC<'a>(chunk: &mut UTChunk, strings: &'a UTStrings, chunk_CODE: &UTChunk) -> Result<(UTFunctions<'a>, Vec<UTCodeLocal<'a>>), String> {
     chunk.file_index = 0;
     let functions_length: usize = chunk.read_usize()?;
-    let mut functions: Vec<UTFunction> = Vec::with_capacity(functions_length);
+    let mut functions_by_index: Vec<UTFunction> = Vec::with_capacity(functions_length);
+    let mut occurrences_to_indexes: HashMap<usize, usize> = HashMap::new();
 
-    for _ in 0..functions_length {
-        let function_name: String = chunk.read_ut_string(strings)?;
+    for i in 0..functions_length {
+        let function_name: UTStringRef = chunk.read_ut_string(strings)?;
         let occurrence_count: usize = chunk.read_usize()?;
         let first_occurrence: i32 = chunk.read_i32()? - chunk_CODE.abs_pos as i32;
         let occurrences: HashSet<usize> = get_occurrences(occurrence_count, first_occurrence, chunk_CODE);
+        for occurrence in occurrences {
+            occurrences_to_indexes.insert(i, occurrence);
+        }
         let function: UTFunction = UTFunction {
             name: function_name,
-            occurrences,
         };
-        functions.push(function);
+        functions_by_index.push(function);
     }
+    let functions: UTFunctions = UTFunctions {
+        functions_by_index,
+        occurrences_to_indexes,
+    };
 
     let code_locals_length: usize = chunk.read_usize()?;
     let mut code_locals: Vec<UTCodeLocal> = Vec::with_capacity(code_locals_length);
 
     for _ in 0..code_locals_length {
         let local_variables_count: usize = chunk.read_usize()?;
-        let name: String = chunk.read_ut_string(&strings)?;
+        let name: UTStringRef = chunk.read_ut_string(&strings)?;
         let mut variables: Vec<UTCodeLocalVariable> = Vec::with_capacity(local_variables_count);
 
         for _ in 0..local_variables_count {
             let variable_index: usize = chunk.read_usize()?;
-            let variable_name: String = chunk.read_ut_string(&strings)?;
+            let variable_name: UTStringRef = chunk.read_ut_string(&strings)?;
             let variable: UTCodeLocalVariable = UTCodeLocalVariable {
                 index: variable_index,
                 name: variable_name,
@@ -98,18 +145,3 @@ fn get_occurrences(count: usize, first_occurrence: i32, chunk_CODE: &UTChunk) ->
     occurrences
 }
 
-
-pub fn get_function(functions: &[UTFunction], position: usize) -> Result<UTFunction, String> {
-    for function in functions {
-        // println!("{:<30} {:?}", function.name, function.occurrences);
-        if function.occurrences.contains(&position) {
-            // lowkey disgusting solution but whatever i need to save memory
-            return Ok(UTFunction {
-                name: function.name.clone(),
-                occurrences: HashSet::with_capacity(0)
-            });
-            // return Ok(function.clone());
-        }
-    }
-    Err(format!("Could not find function for position {position} (len functions: {}).", functions.len()))
-}

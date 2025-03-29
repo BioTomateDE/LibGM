@@ -1,6 +1,5 @@
 use std::fs;
 use crate::deserialize::all::UTData;
-use crate::deserialize::chunk_reading::UTChunk;
 use crate::serialize::chunk_writing::ChunkBuilder;
 
 use crate::serialize::strings::build_chunk_STRG;

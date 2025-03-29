@@ -1,5 +1,4 @@
 use crate::deserialize::all::UTData;
-use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::general_info::{UTFunctionClassifications, UTGeneralInfoFlags, UTOptionsFlags};
 use crate::serialize::all::{build_chunk, DataBuilder};
 use crate::serialize::chunk_writing::ChunkBuilder;
@@ -10,13 +9,13 @@ pub fn build_chunk_GEN8(data_builder: &mut DataBuilder, ut_data: &UTData) -> Res
     builder.write_bool(ut_data.general_info.is_debugger_disabled)?;
     builder.write_u8(ut_data.general_info.bytecode_version)?;
     builder.write_u16(ut_data.general_info.unknown_value)?;
-    builder.write_string(&ut_data.general_info.game_file_name)?;
-    builder.write_string(&ut_data.general_info.config)?;
+    builder.write_string(&ut_data.general_info.game_file_name.resolve()?)?;
+    builder.write_string(&ut_data.general_info.config.resolve()?)?;
     builder.write_u32(ut_data.general_info.last_object_id)?;
     builder.write_u32(ut_data.general_info.last_tile_id)?;
     builder.write_u32(ut_data.general_info.game_id)?;
     builder.write_string(&ut_data.general_info.directplay_guid.hyphenated().to_string())?;
-    builder.write_string(&ut_data.general_info.game_name)?;
+    builder.write_string(&ut_data.general_info.game_name.resolve()?)?;
     builder.write_u32(ut_data.general_info.major_version)?;
     builder.write_u32(ut_data.general_info.minor_version)?;
     builder.write_u32(ut_data.general_info.release_version)?;
@@ -26,7 +25,7 @@ pub fn build_chunk_GEN8(data_builder: &mut DataBuilder, ut_data: &UTData) -> Res
     builder.write_u64(build_general_info_flags(&ut_data.general_info.flags))?;
     builder.raw_data.extend(ut_data.general_info.license);
     builder.write_i64(ut_data.general_info.timestamp_created.timestamp())?;
-    builder.write_string(&ut_data.general_info.display_name)?;
+    builder.write_string(&ut_data.general_info.display_name.resolve()?)?;
     builder.write_u64(ut_data.general_info.active_targets)?;    // scuffed offsets
     builder.write_u64(build_function_classifications(&ut_data.general_info.function_classifications))?;
     builder.write_i32(-(ut_data.general_info.steam_appid as i32))?;
