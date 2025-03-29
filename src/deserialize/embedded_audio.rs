@@ -1,12 +1,9 @@
 use crate::deserialize::chunk_reading::UTChunk;
-use hound;
+// use hound;
 
-pub struct UTEmbeddedAudio<'a> {
-    // samples: &'a hound::WavSamples<'a &'a[u8], f32>,
-    samples: Box<dyn hound::WavSamples<&[u8], f32>>,
+pub struct UTEmbeddedAudio {
+    raw_data: Vec<u8>,
 }
-
-// fuck lifetimes
 
 
 pub fn parse_chunk_AUDO(chunk: &mut UTChunk) -> Result<Vec<UTEmbeddedAudio>, String> {
@@ -25,27 +22,28 @@ pub fn parse_chunk_AUDO(chunk: &mut UTChunk) -> Result<Vec<UTEmbeddedAudio>, Str
             Some(bytes) => bytes,
             None => return Err(format!(
                 "Trying to read raw audio out of bounds for embedded audio #{} at position {} in chunk 'AUDO': {} >= {}.",
-                i, start_position, chunk.file_index + audio_raw_length, chunk.data_len,
+                i, start_position, chunk.file_index + audio_raw_length, chunk.data.len(),
             )),
         };
         // chunk.file_index += audio_raw_length;    // unnecessary because set at start of for loop anyways
 
-        let mut wav_reader: hound::WavReader<&[u8]> = match hound::WavReader::new(audio_raw) {
-            Ok(reader) => reader,
-            Err(error) => return Err(format!(
-                "Could not read WAV embedded audio #{} at position {} in chunk 'AUDO': \"{}\".",
-                i, start_position, error
-            )),
-        };
+        // let mut wav_reader: hound::WavReader<&[u8]> = match hound::WavReader::new(audio_raw) {
+        //     Ok(reader) => reader,
+        //     Err(error) => return Err(format!(
+        //         "Could not read WAV embedded audio #{} at position {} in chunk 'AUDO': \"{}\".",
+        //         i, start_position, error
+        //     )),
+        // };
 
         // f32 might not be the best sample type? (for undertale)
         // let samples: hound::WavSamples<Vec<u8>, f32> = wav_reader.samples::<f32>();
 
         let audio = UTEmbeddedAudio {
-            wav_reader,
+            raw_data: audio_raw.to_vec(),
         };
+        audios.push(audio);
     }
 
-    Ok
+    Ok(audios)
 }
 
