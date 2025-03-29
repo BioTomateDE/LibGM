@@ -2,15 +2,14 @@
 use crate::deserialize::strings::UTStrings;
 
 #[derive(Clone)]
-pub struct UTChunk {
+pub struct UTChunk<'a> {
     pub name: String,       // 4 letter name of chunk
     pub abs_pos: usize,     // absolute position/index in data.win file
-    pub data: Vec<u8>,      // raw data
-    pub data_len: usize,    // length of data for performance
+    pub data: &'a [u8],     // raw data
     pub file_index: usize,  // gets incremented by .read_{} methods when parsing chunk
 }
 
-impl UTChunk {
+impl UTChunk<'_> {
     // fn apply_changes(&self, mut changes: Vec<DataChange>) {
     //     changes.sort_by(|a, b| b.index.cmp(&a.index));
     //     for change in changes {
@@ -29,13 +28,13 @@ impl UTChunk {
 
     pub fn read_u64(&mut self) -> Result<u64, String> {
         // Read unsigned 64-bit integer (little endian)
-        if self.file_index + 8 > self.data_len {
+        if self.file_index + 8 > self.data.len() {
             return Err(format!(
                 "Trying to read u64 out of bounds in chunk '{}' at position {}: {} > {}.",
                 self.name,
                 self.file_index,
                 self.file_index + 8,
-                self.data_len
+                self.data.len()
             ));
         }
 
@@ -49,13 +48,13 @@ impl UTChunk {
 
     pub fn read_i64(&mut self) -> Result<i64, String> {
         // Read signed 64-bit integer (little endian)
-        if self.file_index + 8 > self.data_len {
+        if self.file_index + 8 > self.data.len() {
             return Err(format!(
                 "Trying to read i64 out of bounds in chunk '{}' at position {}: {} > {}.",
                 self.name,
                 self.file_index,
                 self.file_index + 8,
-                self.data_len
+                self.data.len()
             ));
         }
 
@@ -69,13 +68,13 @@ impl UTChunk {
 
     pub fn read_u32(&mut self) -> Result<u32, String> {
         // Read unsigned 32-bit integer (little endian)
-        if self.file_index + 4 > self.data_len {
+        if self.file_index + 4 > self.data.len() {
             return Err(format!(
                 "Trying to read u32 out of bounds in chunk '{}' at position {}: {} > {}.",
                 self.name,
                 self.file_index,
                 self.file_index + 4,
-                self.data_len
+                self.data.len()
             ));
         }
 
@@ -89,13 +88,13 @@ impl UTChunk {
 
     pub fn read_i32(&mut self) -> Result<i32, String> {
         // Read signed 32-bit integer (little endian)
-        if self.file_index + 4 > self.data_len {
+        if self.file_index + 4 > self.data.len() {
             return Err(format!(
                 "Trying to read i32 out of bounds in chunk '{}' at position {}: {} > {}.",
                 self.name,
                 self.file_index,
                 self.file_index + 4,
-                self.data_len
+                self.data.len()
             ));
         }
 
@@ -108,13 +107,13 @@ impl UTChunk {
     }
     pub fn read_u16(&mut self) -> Result<u16, String> {
         // Read unsigned 16-bit integer (little endian)
-        if self.file_index + 2 > self.data_len {
+        if self.file_index + 2 > self.data.len() {
             return Err(format!(
                 "Trying to read u16 out of bounds in chunk '{}' at position {}: {} > {}.",
                 self.name,
                 self.file_index,
                 self.file_index + 2,
-                self.data_len
+                self.data.len()
             ));
         }
 
@@ -127,13 +126,13 @@ impl UTChunk {
     }
     pub fn read_i16(&mut self) -> Result<i16, String>  {
         // Read signed 16-bit integer (little endian)
-        if self.file_index + 2 > self.data_len {
+        if self.file_index + 2 > self.data.len() {
             return Err(format!(
                 "Trying to read i16 out of bounds in chunk '{}' at position {}: {} > {}.",
                 self.name,
                 self.file_index,
                 self.file_index + 2,
-                self.data_len
+                self.data.len()
             ));
         }
 
@@ -147,13 +146,13 @@ impl UTChunk {
 
     pub fn read_u8(&mut self) -> Result<u8, String> {
         // Read unsigned 8-bit integer (little endian)
-        if self.file_index + 1 > self.data_len {
+        if self.file_index + 1 > self.data.len() {
             return Err(format!(
                 "Trying to read u8 out of bounds in chunk '{}' at position {}: {} > {}.",
                 self.name,
                 self.file_index,
                 self.file_index + 1,
-                self.data_len
+                self.data.len()
             ));
         }
 
@@ -164,13 +163,13 @@ impl UTChunk {
 
     pub fn read_i8(&mut self) -> Result<i8, String> {
         // Read signed 8-bit integer (little endian)
-        if self.file_index + 1 > self.data_len {
+        if self.file_index + 1 > self.data.len() {
             return Err(format!(
                 "Trying to read u8 out of bounds in chunk '{}' at position {}: {} > {}.",
                 self.name,
                 self.file_index,
                 self.file_index + 1,
-                self.data_len
+                self.data.len()
             ));
         }
 
@@ -211,7 +210,7 @@ impl UTChunk {
                 self.name,
                 self.file_index,
                 self.file_index + 4,
-                self.data_len
+                self.data.len()
             )),
         };
         self.file_index += 4;
@@ -234,13 +233,13 @@ impl UTChunk {
 
     pub fn read_f32(&mut self) -> Result<f32, String> {
         // Read a single-precision floating point number (little endian)
-        if self.file_index + 4 > self.data_len {
+        if self.file_index + 4 > self.data.len() {
             return Err(format!(
                 "Trying to read f32 out of bounds in chunk '{}' at position {}: {} > {}.",
                 self.name,
                 self.file_index,
                 self.file_index + 4,
-                self.data_len
+                self.data.len()
             ));
         }
 
@@ -253,7 +252,7 @@ impl UTChunk {
 
     pub fn read_literal_string(&mut self, length: usize) -> Result<String, String> {
         // Read literal ascii/utf8 string with specified length
-        if self.file_index + length > self.data_len {
+        if self.file_index + length > self.data.len() {
             return Err(format!(
                 "Trying to read literal string with length {} out of bounds \
                 in chunk '{}' at position {}: {} > {}.",
@@ -261,7 +260,7 @@ impl UTChunk {
                 self.name,
                 self.file_index,
                 self.file_index + length,
-                self.data_len
+                self.data.len()
             ));
         }
 
@@ -285,12 +284,12 @@ impl UTChunk {
 
     pub fn read_chunk_name(&mut self) -> Result<String, String> {
         // Read chunk name (4 ascii characters)
-        if self.file_index + 4 > self.data_len {
+        if self.file_index + 4 > self.data.len() {
             return Err(format!(
                 "Trying to read chunk name out of bounds at position {}: {} > {}.",
                 self.file_index,
                 self.file_index + 4,
-                self.data_len
+                self.data.len()
             ));
         }
 

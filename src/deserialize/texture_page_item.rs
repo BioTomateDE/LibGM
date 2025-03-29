@@ -58,7 +58,7 @@ pub fn parse_chunk_TPAG(chunk: &mut UTChunk, texture_pages: Vec<UTEmbeddedTextur
             )),
         };
         let spritesheet: &image::RgbaImage = match &texture_page.texture_data {
-            Image::Img(image::DynamicImage::ImageRgba8(img)) => img,
+            Image::Img(image::DynamicImage::ImageRgba8(img)) => &img,
             _ => return Err(format!(
                 "Unknown type of texture page image at position {} in chunk 'TPAG': {}.",
                 chunk.file_index, format_type_of(texture_page),
