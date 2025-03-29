@@ -441,13 +441,13 @@ pub fn parse_chunk_CODE(
 
         let start_offset: i32 = chunk.read_i32()?;
         let start_position: i32 = chunk.file_index as i32 + start_offset - 4;
-        if start_position < 0 || start_position >= chunk.data_len as i32 {
+        if start_position < 0 || start_position >= chunk.data.len() as i32 {
             return Err(format!(
                 "Code starting offset out of bounds \
                 at position {} while parsing chunk 'CODE': \
                 Offset {} corresponds to chunk position {} \
                 which is not 0 <= {} < {}.",
-                chunk.file_index, start_offset, start_position, start_position, chunk.data_len
+                chunk.file_index, start_offset, start_position, start_position, chunk.data.len()
             ));
         }
         let start_position: usize = start_position as usize;

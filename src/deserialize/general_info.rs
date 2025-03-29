@@ -216,7 +216,7 @@ pub fn parse_chunk_GEN8(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTGe
             "Trying to read GUID out of bounds in chunk 'GEN8' at position {}: {} > {}.",
             chunk.file_index,
             chunk.file_index + 16,
-            chunk.data_len,
+            chunk.data.len(),
         )),
     };
     chunk.file_index += 16;
@@ -238,7 +238,7 @@ pub fn parse_chunk_GEN8(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTGe
             "Trying to read license out of bounds in chunk 'GEN8' at position {}: {} > {}.",
             chunk.file_index,
             chunk.file_index + 16,
-            chunk.data_len,
+            chunk.data.len(),
         )),
     };
     chunk.file_index += 16;
