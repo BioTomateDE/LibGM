@@ -27,6 +27,7 @@ impl UTTextures {
 }
 
 
+#[allow(non_snake_case)]
 pub fn parse_chunk_TPAG(chunk: &mut UTChunk, texture_pages: Vec<UTEmbeddedTexture>) -> Result<UTTextures, String> {
     chunk.file_index = 0;
     let items_count: usize = chunk.read_usize()?;

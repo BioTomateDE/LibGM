@@ -3,30 +3,29 @@ use crate::deserialize::chunk_reading::UTChunk;
 
 
 #[derive(Clone, Debug)]
-pub struct UTStringRef<'a> {
+pub struct UTStringRef {
     pub index: usize,
-    strings_by_index: &'a [String],
 }
 
-impl UTStringRef<'_> {
-    pub fn resolve(&self) -> Result<&str, String> {
-        match self.strings_by_index.get(self.index) {
+impl UTStringRef {
+    pub fn resolve<'a>(&self, strings: &'a UTStrings) -> Result<&'a str, String> {
+        match strings.strings_by_index.get(self.index) {
             Some(string) => Ok(string),
             None => Err(format!(
                 "Could not resolve string with index {} in list with length {}.",
-                self.index, self.strings_by_index.len()
+                self.index, strings.strings_by_index.len()
             )),
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct UTStrings<'a> {
+pub struct UTStrings {
     abs_pos_to_index: HashMap<usize, usize>,    // convert absolute position/pointer in data.win to index in Self.strings_by_index
     strings_by_index: Vec<String>,              // strings by index/order in chunk STRG
 }
 
-impl UTStrings<'_> {
+impl UTStrings {
     pub fn get_string_by_pos(&self, position: usize) -> Option<UTStringRef> {
         let string_index: usize = match self.abs_pos_to_index.get(&position) {
             Some(index) => *index,
@@ -34,7 +33,6 @@ impl UTStrings<'_> {
         };
         Some(UTStringRef {
             index: string_index,
-            strings_by_index: &self.strings_by_index,
         })
     }
 
@@ -44,7 +42,6 @@ impl UTStrings<'_> {
         }
         Some(UTStringRef {
             index,
-            strings_by_index: &self.strings_by_index,
         })
     }
 
@@ -54,7 +51,8 @@ impl UTStrings<'_> {
 }
 
 
-pub fn parse_chunk_STRG<'a>(chunk: &mut UTChunk) -> Result<UTStrings<'a>, String> {
+#[allow(non_snake_case)]
+pub fn parse_chunk_STRG(chunk: &mut UTChunk) -> Result<UTStrings, String> {
     chunk.file_index = 0;
     let string_count: usize = chunk.read_usize()?;
     // skip redundant list of absolute positions of upcoming strings

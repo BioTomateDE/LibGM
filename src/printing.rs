@@ -4,26 +4,27 @@ use crate::deserialize::fonts::{UTFont, UTGlyph};
 use crate::deserialize::general_info::{UTFunctionClassifications, UTGeneralInfo, UTGeneralInfoFlags, UTOptions, UTOptionsFlags};
 use crate::deserialize::rooms::{UTRoom, UTRoomBackground, UTRoomFlags, UTRoomLayer, UTRoomTile, UTRoomView};
 use crate::deserialize::sequence::{UTKeyframe, UTKeyframeMoment, UTSequence, UTTrack};
+use crate::deserialize::strings::UTStrings;
 use crate::deserialize::texture_page_item::UTTexture;
 
-impl UTGeneralInfo<'_> {
-    pub fn print(&self) -> Result<(), String> {
+impl UTGeneralInfo {
+    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
         println!("General Info:");
         println!("  GMS Debugger Disabled: {}", self.is_debugger_disabled);
         println!("  Bytecode Version: {}", self.bytecode_version);
-        println!("  File Name: {}", self.game_file_name.resolve()?);
-        println!("  Config: {}", self.config.resolve()?);
+        println!("  File Name: {}", self.game_file_name.resolve(strings)?);
+        println!("  Config: {}", self.config.resolve(strings)?);
         println!("  Last object ID: {}", self.last_object_id);
         println!("  Last tile ID: {}", self.last_tile_id);
         println!("  Game ID: {}", self.game_id);
         println!("  Directplay GUID: {}", self.directplay_guid);
-        println!("  Game Name: {}", self.game_name.resolve()?);
+        println!("  Game Name: {}", self.game_name.resolve(strings)?);
         println!("  Version: {}.{}.{}.{}", self.major_version, self.minor_version, self.release_version, self.stable_version);
         println!("  Default Window Size: {}x{}", self.default_window_width, self.default_window_height);
         println!("  Flags: {}", self.flags.to_string());
         println!("  License: {}", format_license_md5(&self.license));
         println!("  Timestamp: {}", self.timestamp_created);
-        println!("  Display Name: {}", self.display_name.resolve()?);
+        println!("  Display Name: {}", self.display_name.resolve(strings)?);
         println!("  Active Targets: {}", self.active_targets);
         println!("  Function Classifications: {}", &self.function_classifications.to_string());
         println!("  Steam AppID: {}", self.steam_appid);
@@ -400,11 +401,11 @@ impl UTOptionsFlags {
 }
 
 
-impl UTFont<'_> {
-    pub fn print(&self) -> Result<(), String> {
+impl UTFont {
+    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
         println!("UTFont:");
-        println!("  Name: {}", self.name.resolve()?);
-        println!("  Display Name: {}", self.display_name.resolve()?);
+        println!("  Name: {}", self.name.resolve(strings)?);
+        println!("  Display Name: {}", self.display_name.resolve(strings)?);
         println!("  EM Size: {}", self.em_size);
         println!("  Bold: {}", self.bold);
         println!("  Italic: {}", self.italic);
@@ -438,11 +439,11 @@ impl UTGlyph {
 }
 
 
-impl UTRoom<'_> {
-    pub fn print(&self) -> Result<(), String> {
+impl UTRoom {
+    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
         println!("UTRoom:");
-        println!("  Name: \"{}\"", self.name.resolve()?);
-        println!("  Caption: \"{}\"", self.caption.resolve()?);
+        println!("  Name: \"{}\"", self.name.resolve(strings)?);
+        println!("  Caption: \"{}\"", self.caption.resolve(strings)?);
         println!("  Dimensions: {}x{}", self.width, self.height);
         println!("  Speed: {}", self.speed);
         println!("  Persistent: {}", self.persistent);
@@ -471,7 +472,7 @@ impl UTRoom<'_> {
             Some(layers) => {
                 println!("  Layers Length: {}", layers.len());
                 for layer in layers {
-                    layer.print();
+                    layer.print(&strings)?;
                 }
             },
             None => println!("  Layers: None"),
@@ -491,10 +492,10 @@ impl UTRoom<'_> {
     }
 }
 
-impl UTRoomLayer<'_> {
-    pub fn print(&self) -> Result<(), String> {
+impl UTRoomLayer {
+    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
         println!("UTRoomLayer:");
-        println!("  Layer Name: {}", self.layer_name.resolve()?);
+        println!("  Layer Name: {}", self.layer_name.resolve(strings)?);
         println!("  Layer ID: {}", self.layer_id);
         println!("  Layer Type: {:?}", self.layer_type);
         println!("  Layer Depth: {}", self.layer_depth);
@@ -560,10 +561,10 @@ impl UTRoomView {
     }
 }
 
-impl UTSequence<'_> {
-    pub fn print(&self) -> Result<(), String> {
+impl UTSequence {
+    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
         println!("UTSequence:");
-        println!("  Name: {}", self.name.resolve()?);
+        println!("  Name: {}", self.name.resolve(strings)?);
         println!("  Playback: {:?}", self.playback);
         println!("  Playback Speed: {} ({:?})", self.playback_speed, self.playback_speed_type);
         println!("  Length: {}", self.length);
@@ -590,11 +591,11 @@ impl UTKeyframe {
     }
 }
 
-impl UTTrack<'_> {
-    pub fn print(&self) -> Result<(), String> {
+impl UTTrack {
+    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
         println!("UTTrack:");
-        println!("  Model Name: {}", self.model_name.resolve()?);
-        println!("  Name: {}", self.name.resolve()?);
+        println!("  Model Name: {}", self.model_name.resolve(strings)?);
+        println!("  Name: {}", self.name.resolve(strings)?);
         println!("  Built-in Name: {:?}", self.builtin_name);
         println!("  Traits: {:?}", self.traits);
         println!("  Is Creation Track: {}", self.is_creation_track);
@@ -607,12 +608,12 @@ impl UTTrack<'_> {
     }
 }
 
-impl UTKeyframeMoment<'_> {
-    pub fn print(&self) -> Result<(), String> {
+impl UTKeyframeMoment {
+    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
         println!("UTKeyframeMoment:");
         println!("  Internal Count: {}", self.internal_count);
         if let Some(event) = &self.event {
-            println!("  Event: {}", event.resolve()?);
+            println!("  Event: {}", event.resolve(strings)?);
         } else {
             println!("  Event: None");
         }
@@ -650,10 +651,10 @@ impl UTTexture {
     }
 }
 
-impl UTBackground<'_> {
-    pub fn print(&self) -> Result<(), String> {
+impl UTBackground {
+    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
         println!("UTBackground:");
-        println!("  Name: \"{}\"", self.name.resolve()?);
+        println!("  Name: \"{}\"", self.name.resolve(strings)?);
         println!("  Transparent: {}", self.transparent);
         println!("  Smooth: {}", self.smooth);
         println!("  Preload: {}", self.preload);

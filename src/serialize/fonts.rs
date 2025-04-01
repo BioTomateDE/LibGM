@@ -3,6 +3,7 @@ use crate::deserialize::fonts::UTGlyph;
 use crate::serialize::all::{build_chunk, DataBuilder};
 use crate::serialize::chunk_writing::ChunkBuilder;
 
+#[allow(non_snake_case)]
 pub fn build_chunk_FONT(data_builder: &mut DataBuilder, ut_data: &UTData) -> Result<(), String> {
     let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "FONT" };
 
@@ -20,8 +21,8 @@ pub fn build_chunk_FONT(data_builder: &mut DataBuilder, ut_data: &UTData) -> Res
         let bytes: [u8; 4] = (absolute_position as u32).to_le_bytes();
         builder.overwrite_data(&bytes, i * 4 + 4)?;
 
-        builder.write_string(&font.name.resolve()?)?;
-        builder.write_string(&font.display_name.resolve()?)?;
+        builder.write_string(&font.name.resolve(&ut_data.strings)?)?;
+        builder.write_string(&font.display_name.resolve(&ut_data.strings)?)?;
         builder.write_u32(font.em_size)?;
         builder.write_u32(if font.bold {1} else {0})?;
         builder.write_u32(if font.italic {1} else {0})?;
@@ -51,7 +52,7 @@ pub fn build_chunk_FONT(data_builder: &mut DataBuilder, ut_data: &UTData) -> Res
             None => (),
         };
 
-        build_glyphs(data_builder, &mut builder, &font.glyphs, font.name.resolve()?)?;
+        build_glyphs(data_builder, &mut builder, &font.glyphs, font.name.resolve(&ut_data.strings)?)?;
     }
 
     build_chunk(data_builder, builder)?;
