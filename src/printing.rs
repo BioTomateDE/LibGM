@@ -1,8 +1,9 @@
 ﻿use crate::deserialize::backgrounds::UTBackground;
 use crate::deserialize::embedded_textures::UTEmbeddedTexture;
 use crate::deserialize::fonts::{UTFont, UTGlyph};
+use crate::deserialize::game_objects::{UTGameObject, UTGameObjectEvent, UTGameObjectEventAction};
 use crate::deserialize::general_info::{UTFunctionClassifications, UTGeneralInfo, UTGeneralInfoFlags, UTOptions, UTOptionsFlags};
-use crate::deserialize::rooms::{UTRoom, UTRoomBackground, UTRoomFlags, UTRoomLayer, UTRoomTile, UTRoomView};
+use crate::deserialize::rooms::{UTRoom, UTRoomBackground, UTRoomFlags, UTRoomGameObject, UTRoomLayer, UTRoomTile, UTRoomView};
 use crate::deserialize::sequence::{UTKeyframe, UTKeyframeMoment, UTSequence, UTTrack};
 use crate::deserialize::sounds::{UTSound, UTSoundFlags};
 use crate::deserialize::strings::UTStrings;
@@ -705,6 +706,100 @@ impl UTSoundFlags {
         flags.join(", ")
     }
 }
+
+impl UTGameObject {
+    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
+        println!("UTGameObject:");
+        println!("  Name: \"{}\"", self.name.resolve(strings)?);
+        println!("  Sprite Index: {}", self.sprite_index);
+        println!("  Visible: {}", self.visible);
+        println!("  Managed: {:?}", self.managed);
+        println!("  Solid: {}", self.solid);
+        println!("  Depth: {}", self.depth);
+        println!("  Persistent: {}", self.persistent);
+        println!("  Parent ID: {}", self.parent_id);
+        println!("  Texture Mask ID: {}", self.texture_mask_id);
+        println!("  Uses Physics: {}", self.uses_physics);
+        println!("  Is Sensor: {}", self.is_sensor);
+        println!("  Collision Shape: {:?}", self.collision_shape);
+        println!("  Density: {}", self.density);
+        println!("  Restitution: {}", self.restitution);
+        println!("  Group: {}", self.group);
+        println!("  Linear Damping: {}", self.linear_damping);
+        println!("  Angular Damping: {}", self.angular_damping);
+        println!("  Physics Shape Vertex Count: {}", self.physics_shape_vertices.len());
+        println!("  Friction: {}", self.friction);
+        println!("  Awake: {}", self.awake);
+        println!("  Kinematic: {}", self.kinematic);
+        println!("  Events Count: {}", self.events.len());
+        println!();
+        Ok(())
+    }
+}
+
+impl UTGameObjectEvent {
+    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
+        println!("UTGameObjectEvent:");
+        println!("  Subtype: {}", self.subtype);
+        println!("  Actions: [{} items]", self.actions.len());
+        for action in &self.actions {
+            action.print(strings)?;
+        }
+        println!();
+        Ok(())
+    }
+}
+
+impl UTGameObjectEventAction {
+    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
+        println!("UTGameObjectEventAction:");
+        println!("  Lib ID: {}", self.lib_id);
+        println!("  ID: {}", self.id);
+        println!("  Kind: {}", self.kind);
+        println!("  Use Relative: {}", self.use_relative);
+        println!("  Is Question: {}", self.is_question);
+        println!("  Use Apply To: {}", self.use_apply_to);
+        println!("  Exe Type: {}", self.exe_type);
+        println!("  Action Name: \"{}\"", self.action_name.resolve(strings)?);
+        println!("  Code ID: {}", self.code_id);
+        println!("  Argument Count: {}", self.argument_count);
+        println!("  Who: {}", self.who);
+        println!("  Relative: {}", self.relative);
+        println!("  Is Not: {}", self.is_not);
+        println!("  Unknown Always Zero: {}", self.unknown_always_zero);
+        println!();
+        Ok(())
+    }
+}
+
+
+impl UTRoomGameObject {
+    pub fn print(&self) -> Result<(), String> {
+        println!("UTRoomGameObject:");
+        println!("  X: {}", self.x);
+        println!("  Y: {}", self.y);
+        println!("  Object Definition: {:?}", self.object_definition);
+        println!("  Instance ID: {}", self.instance_id);
+        println!("  Creation Code: {}", self.creation_code);
+        println!("  Scale X: {}", self.scale_x);
+        println!("  Scale Y: {}", self.scale_y);
+        if let Some(image_speed) = self.image_speed {
+            println!("  Image Speed: {}", image_speed);
+        }
+        if let Some(image_index) = self.image_index {
+            println!("  Image Index: {}", image_index);
+        }
+        println!("  Color: #{:#010x}", self.color); // Hex format for color
+        println!("  Rotation: {}", self.rotation);
+        if let Some(pre_create_code) = self.pre_create_code {
+            println!("  Pre Create Code: {}", pre_create_code);
+        }
+        println!();
+        Ok(())
+    }
+}
+
+
 
 
 fn format_license_md5(license: &[u8; 16]) -> String {
