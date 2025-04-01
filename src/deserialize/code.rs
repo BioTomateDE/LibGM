@@ -583,8 +583,8 @@ fn parse_code(
 
         UTInstructionType::GotoInstruction => {
             if bytecode14 {
-                let jump_offset: i32 = b0 as i32;
-                let popenv_exit_magic: bool = jump_offset == -1048576;
+                let jump_offset: i32 = b0 as i32 | ((b1 as u32) << 8) as i32 | ((b2 as i32) << 16);     // yeah idk
+                let popenv_exit_magic: bool = jump_offset == -1048576;      // little endian [00 00 F0]
                 return Ok(UTInstruction::Goto(UTGotoInstruction {
                     opcode,
                     jump_offset,
@@ -592,7 +592,7 @@ fn parse_code(
                 }));
             }
 
-            let v: u32 = b0 as u32;   // redundancy in UndertaleModTool again?? or i don't understand c#
+            let v: u32 = b0 as u32 | ((b1 as u32) << 8) | ((b2 as u32) << 16);      // i hate bitshifting
             let popenv_exit_magic: bool = (v & 0x800000) != 0;
             if popenv_exit_magic && v != 0xF00000 {
                 return Err("\"Popenv magic doesn't work\" while parsing Goto Instruction".to_string());
@@ -612,7 +612,6 @@ fn parse_code(
         }
 
         UTInstructionType::PopInstruction => {
-            // bug/redundancy in UndertaleModTool i think (bitshifting by 8 in a u8 will always be 0)
             let type1: u8 = b2 & 0xf;
             let type1: UTDataType = match type1.try_into() {
                 Ok(ok) => ok,
@@ -625,10 +624,10 @@ fn parse_code(
                 Err(_) => return Err(format!("Invalid Data Type {type2:02X} while parsing Pop Instruction.")),
             };
 
-            let instance_type: i8 = b0 as i8;
+            let instance_type: i8 = b0 as i8;       // might be wrong but it only goes to -16 so idek
             let instance_type: UTInstanceType = instance_type.try_into().unwrap_or_else(|_| {
-                let dump = hexdump(&blob.raw_data, (if blob.file_index < 16 {16} else {blob.file_index}) - 16, Some(if blob.file_index + 8 < blob.len {blob.file_index + 8} else {blob.len})).unwrap();
-                println!("{}", format!("[WARNING] {instance_type:02X} Dump: {dump}").yellow());
+                // let dump = hexdump(&blob.raw_data, (if blob.file_index < 16 {16} else {blob.file_index}) - 16, Some(if blob.file_index + 8 < blob.len {blob.file_index + 8} else {blob.len})).unwrap();
+                // println!("{}", format!("[WARNING] {instance_type:02X} Dump: {dump}").yellow());
                 UTInstanceType::Undefined
             });
 
@@ -679,7 +678,7 @@ fn parse_code(
                 Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Push Instruction.")),
             };
             // let value: i16 = b0 as i16;  // typecasting might be wrong
-            let val: i16 = (b0 as i8) as i16;
+            let val: i16 = (b0 as i16) | ((b1 as i16) << 8);
 
             if bytecode14 {
                 // println!("############# {:?} {:?}", data_type, val);
@@ -710,7 +709,7 @@ fn parse_code(
         }
 
         UTInstructionType::CallInstruction => {
-            let arguments_count: usize = b0 as usize;
+            let arguments_count: usize = b0 as usize;       // idgaf it's always one anyways
             let data_type: u8 = b2;
             let data_type: UTDataType = match data_type.try_into() {
                 Ok(ok) => ok,
@@ -729,7 +728,7 @@ fn parse_code(
         }
 
         UTInstructionType::BreakInstruction => {
-            let value: i16 = b0 as i16;
+            let value: i16 = b0 as i16 | ((b1 as i16) << 8);
             let data_type: u8 = b2;
             let data_type: UTDataType = match data_type.try_into() {
                 Ok(ok) => ok,
