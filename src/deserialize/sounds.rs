@@ -58,6 +58,7 @@ impl UTSounds {
 
 #[allow(non_snake_case)]
 pub fn parse_chunk_SOND(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strings: &UTStrings, embedded_audios: &UTEmbeddedAudios) -> Result<UTSounds, String> {
+    chunk.file_index = 0;
     let sounds_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(sounds_count);
     for _ in 0..sounds_count {
