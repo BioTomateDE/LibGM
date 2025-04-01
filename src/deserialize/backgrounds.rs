@@ -24,7 +24,7 @@ pub struct UTBackground {
 }
 
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy)]
 pub struct UTBackgroundRef {
     pub index: usize,
 }
@@ -44,10 +44,10 @@ impl UTBackgroundRef {
 
 #[derive(Debug, Clone)]
 pub struct UTBackgrounds {
-    backgrounds_by_index: Vec<UTBackground>,    // strings by index/order in chunk BGND
+    pub backgrounds_by_index: Vec<UTBackground>,    // strings by index/order in chunk BGND
 }
 impl UTBackgrounds {
-    pub fn get_string_by_index(&self, index: usize) -> Option<UTBackgroundRef> {
+    pub fn get_background_by_index(&self, index: usize) -> Option<UTBackgroundRef> {
         if index >= self.backgrounds_by_index.len() {
             return None;
         }
