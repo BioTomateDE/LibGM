@@ -93,7 +93,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     #[allow(non_snake_case)] let mut chunk_OBJT: UTChunk = get_chunk(&chunks, "OBJT")?;
 
     let strings: UTStrings = parse_chunk_STRG(&mut chunk_STRG)?;
-    // dbg!(strings.get_string_by_pos(12087567).unwrap().resolve(&strings)?);
+    dbg!(strings.get_string_by_pos(12028677).unwrap().resolve(&strings)?);
     let general_info: UTGeneralInfo = parse_chunk_GEN8(&mut chunk_GEN8, &strings)?;
     let bytecode14: bool = general_info.bytecode_version >= 14;
     let options: UTOptions = parse_chunk_OPTN(&mut chunk_OPTN)?;

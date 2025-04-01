@@ -7,7 +7,7 @@ use crate::deserialize::rooms::{UTRoom, UTRoomBackground, UTRoomFlags, UTRoomGam
 use crate::deserialize::sequence::{UTKeyframe, UTKeyframeMoment, UTSequence, UTTrack};
 use crate::deserialize::sounds::{UTSound, UTSoundFlags};
 use crate::deserialize::strings::UTStrings;
-use crate::deserialize::texture_page_item::UTTexture;
+use crate::deserialize::texture_page_item::{UTTexture, UTTextures};
 
 impl UTGeneralInfo {
     pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
@@ -655,14 +655,14 @@ impl UTTexture {
 }
 
 impl UTBackground {
-    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
+    pub fn print(&self, strings: &UTStrings, textures: &UTTextures) -> Result<(), String> {
         println!("UTBackground:");
         println!("  Name: \"{}\"", self.name.resolve(strings)?);
         println!("  Transparent: {}", self.transparent);
         println!("  Smooth: {}", self.smooth);
         println!("  Preload: {}", self.preload);
         println!("  Texture Index: {}", self.texture.index);
-        self.texture.print();
+        self.texture.resolve(&textures)?.print();
         println!("  GMS2 Unknown Always 2: {:?}", self.gms2_unknown_always2);
         println!("  GMS2 Tile Width: {:?}", self.gms2_tile_width);
         println!("  GMS2 Tile Height: {:?}", self.gms2_tile_height);

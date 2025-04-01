@@ -8,7 +8,7 @@ pub struct UTSequence {
     pub name: UTStringRef,
     pub playback: UTSequencePlaybackType,
     pub playback_speed: f32,
-    pub playback_speed_type: UTSequenceAnimSpeedType,
+    pub playback_speed_type: UTAnimSpeedType,
     pub length: f32,
     pub origin_x: i32,
     pub origin_y: i32,
@@ -29,7 +29,7 @@ pub enum UTSequencePlaybackType {
 }
 #[derive(Debug, Clone, TryFromPrimitive)]
 #[repr(u32)]
-pub enum UTSequenceAnimSpeedType {
+pub enum UTAnimSpeedType {
     FramesPerSecond = 0,
     FramesPerGameFrame = 1
 }
@@ -102,7 +102,7 @@ pub fn parse_sequence(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTSequ
     };
     let playback_speed: f32 = chunk.read_f32()?;
     let playback_speed_type: u32 = chunk.read_u32()?;
-    let playback_speed_type: UTSequenceAnimSpeedType = match playback_speed_type.try_into() {
+    let playback_speed_type: UTAnimSpeedType = match playback_speed_type.try_into() {
         Ok(playback) => playback,
         Err(_) => return Err(format!(
             "Invalid Sequence Anim Speed Type 0x{:04X} while parsing sequence at position {} in chunk '{}'.",
