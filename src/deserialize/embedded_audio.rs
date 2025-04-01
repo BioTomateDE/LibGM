@@ -1,14 +1,42 @@
 use crate::deserialize::chunk_reading::UTChunk;
-// use hound;
 
 #[derive(Debug, Clone)]
 pub struct UTEmbeddedAudio {
     raw_data: Vec<u8>,
 }
 
+#[derive(Debug, Clone)]
+pub struct UTEmbeddedAudioRef {
+    index: usize,
+}
+impl UTEmbeddedAudioRef {
+    pub fn resolve<'a>(&self, embedded_audios: &'a UTEmbeddedAudios) -> Result<&'a UTEmbeddedAudio, String> {
+        match embedded_audios.audios_by_index.get(self.index) {
+            Some(audio) => Ok(audio),
+            None => Err(format!(
+                "Could not resolve embedded audio with index {} in list with length {}.",
+                self.index, embedded_audios.audios_by_index.len(),
+            )),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct UTEmbeddedAudios {
+    pub audios_by_index: Vec<UTEmbeddedAudio>,
+}
+impl UTEmbeddedAudios {
+    pub fn get_audio_by_index(&self, index: usize) -> Option<UTEmbeddedAudioRef> {
+        if index >= self.audios_by_index.len() {
+            return None;
+        }
+        Some(UTEmbeddedAudioRef {index})
+    }
+}
+
 
 #[allow(non_snake_case)]
-pub fn parse_chunk_AUDO(chunk: &mut UTChunk) -> Result<Vec<UTEmbeddedAudio>, String> {
+pub fn parse_chunk_AUDO(chunk: &mut UTChunk) -> Result<UTEmbeddedAudios, String> {
     chunk.file_index = 0;
     let audios_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(audios_count);
@@ -16,7 +44,7 @@ pub fn parse_chunk_AUDO(chunk: &mut UTChunk) -> Result<Vec<UTEmbeddedAudio>, Str
         start_positions.push(chunk.read_usize()? - chunk.abs_pos);
     }
 
-    let mut audios: Vec<UTEmbeddedAudio> = Vec::with_capacity(audios_count);
+    let mut audios_by_index: Vec<UTEmbeddedAudio> = Vec::with_capacity(audios_count);
     for (i, start_position) in start_positions.iter().enumerate() {
         chunk.file_index = *start_position;
         let audio_raw_length: usize = chunk.read_usize()?;
@@ -43,9 +71,9 @@ pub fn parse_chunk_AUDO(chunk: &mut UTChunk) -> Result<Vec<UTEmbeddedAudio>, Str
         let audio = UTEmbeddedAudio {
             raw_data: audio_raw.to_vec(),
         };
-        audios.push(audio);
+        audios_by_index.push(audio);
     }
 
-    Ok(audios)
+    Ok(UTEmbeddedAudios{ audios_by_index })
 }
 
