@@ -1,12 +1,9 @@
 ﻿use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::variables::UTVariable;
-
-use colored::Colorize;
 use std::cmp::PartialEq;
 use num_enum::TryFromPrimitive;
 use crate::deserialize::functions::{UTFunctionRef, UTFunctions};
 use crate::deserialize::strings::{UTStringRef, UTStrings};
-use crate::printing::hexdump;
 
 // Taken from UndertaleModTool/UndertaleModLib/UndertaleCode.cs/UndertaleInstruction/
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]

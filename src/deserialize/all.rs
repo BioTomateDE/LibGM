@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use crate::deserialize::backgrounds::{parse_chunk_BGND, UTBackground};
+use crate::deserialize::backgrounds::{parse_chunk_BGND, UTBackgrounds};
 use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::code::{parse_chunk_CODE, UTCode};
 use crate::deserialize::embedded_audio::{parse_chunk_AUDO, UTEmbeddedAudio};
@@ -18,12 +18,12 @@ use crate::deserialize::texture_page_item::{parse_chunk_TPAG, UTTextures};
 
 #[derive(Debug, Clone)]
 pub struct UTData {
-    pub strings: UTStrings,                     // STRG
+    pub strings: UTStrings,                 // STRG
     pub general_info: UTGeneralInfo,        // GEN8
-    pub options: UTOptions,                     // OPTN
-    pub audios: Vec<UTEmbeddedAudio>,           // AUDO
-    pub textures: UTTextures,                   // TPAG  (and TXTR)
-    pub backgrounds: Vec<UTBackground>,     // BGND
+    pub options: UTOptions,                 // OPTN
+    pub audios: Vec<UTEmbeddedAudio>,       // AUDO
+    pub textures: UTTextures,               // TPAG  (and TXTR)
+    pub backgrounds: UTBackgrounds,         // BGND
     pub scripts: Vec<UTScript>,             // SCPT
     pub variables: Vec<UTVariable>,         // VARI
     pub functions: UTFunctions,             // FUNC
@@ -98,7 +98,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let audios: Vec<UTEmbeddedAudio> = parse_chunk_AUDO(&mut chunk_AUDO)?;
     let texture_pages: Vec<UTEmbeddedTexture> = parse_chunk_TXTR(&mut chunk_TXTR, &general_info)?;
     let textures: UTTextures = parse_chunk_TPAG(&mut chunk_TPAG, texture_pages)?;
-    let backgrounds: Vec<UTBackground> = parse_chunk_BGND(&mut chunk_BGND, &general_info, &strings, &textures)?;
+    let backgrounds: UTBackgrounds = parse_chunk_BGND(&mut chunk_BGND, &general_info, &strings, &textures)?;
     let scripts: Vec<UTScript> = parse_chunk_SCPT(&mut chunk_SCPT, &strings)?;
     let variables: Vec<UTVariable> = parse_chunk_VARI(&mut chunk_VARI, &strings)?;
     let (functions, code_locals): (UTFunctions, Vec<UTCodeLocal>) = parse_chunk_FUNC(&mut chunk_FUNC, &strings, &chunk_CODE)?;
