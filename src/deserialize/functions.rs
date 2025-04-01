@@ -70,7 +70,7 @@ pub fn parse_chunk_FUNC(chunk: &mut UTChunk, strings: &UTStrings, chunk_CODE: &U
         let first_occurrence: i32 = chunk.read_i32()? - chunk_CODE.abs_pos as i32;
         let occurrences: HashSet<usize> = get_occurrences(occurrence_count, first_occurrence, chunk_CODE);
         for occurrence in occurrences {
-            occurrences_to_indexes.insert(i, occurrence);
+            occurrences_to_indexes.insert(occurrence, i);
         }
         let function: UTFunction = UTFunction {
             name: function_name,
