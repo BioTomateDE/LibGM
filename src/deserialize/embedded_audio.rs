@@ -7,6 +7,7 @@ pub struct UTEmbeddedAudio {
 }
 
 
+#[allow(non_snake_case)]
 pub fn parse_chunk_AUDO(chunk: &mut UTChunk) -> Result<Vec<UTEmbeddedAudio>, String> {
     chunk.file_index = 0;
     let audios_count: usize = chunk.read_usize()?;

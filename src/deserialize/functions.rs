@@ -3,36 +3,35 @@ use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::strings::{UTStringRef, UTStrings};
 
 #[derive(Debug, Clone)]
-pub struct UTFunction<'a> {
-    pub name: UTStringRef<'a>,
+pub struct UTFunction {
+    pub name: UTStringRef,
     // pub occurrences: HashSet<usize>,                // set of occurrences (call instructions) positions relative to chunk CODE
 }
 
 #[derive(Debug, Clone)]
-pub struct UTFunctionRef<'a> {
+pub struct UTFunctionRef {
     pub index: usize,
-    functions_by_index: &'a [UTFunction<'a>],
 }
 
-impl UTFunctionRef<'_> {
-    pub fn resolve<'a>(&self) -> Result<&'a UTFunction, String> {
-        match self.functions_by_index.get(self.index) {
-            Some(func) => Ok(func),
+impl UTFunctionRef {
+    pub fn resolve(&self, functions: &UTFunctions) -> Result<UTFunction, String> {
+        match functions.functions_by_index.get(self.index) {
+            Some(func) => Ok(func.clone()),
             None => Err(format!(     // internal error perchance
                 "Could not resolve function with index {} in list with length {}.",
-                self.index, self.functions_by_index.len(),
+                self.index, functions.functions_by_index.len(),
             )),
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct UTFunctions<'a> {
-    functions_by_index: Vec<UTFunction<'a>>,
+pub struct UTFunctions {
+    functions_by_index: Vec<UTFunction>,
     occurrences_to_indexes: HashMap<usize, usize>,     // maps all occurrence addresses/positions (relative to chunk CODE) to function indexes
 }
 
-impl UTFunctions<'_> {
+impl UTFunctions {
     pub fn get_function_by_occurrence(&self, occurrence_position: usize) -> Result<UTFunctionRef, String> {
         let function_index: usize = match self.occurrences_to_indexes.get(&occurrence_position) {
             Some(index) => *index,
@@ -43,23 +42,23 @@ impl UTFunctions<'_> {
         };
         Ok(UTFunctionRef {
             index: function_index,
-            functions_by_index: &self.functions_by_index,
         })
     }
 }
 
-#[derive(Debug)]
-pub struct UTCodeLocalVariable<'a> {
+#[derive(Debug, Clone)]
+pub struct UTCodeLocalVariable {
     pub index: usize,
-    pub name: UTStringRef<'a>,
+    pub name: UTStringRef,
 }
 #[derive(Debug, Clone)]
-pub struct UTCodeLocal<'a> {
-    pub name: UTStringRef<'a>,
-    pub variables: Vec<UTCodeLocalVariable<'a>>,
+pub struct UTCodeLocal {
+    pub name: UTStringRef,
+    pub variables: Vec<UTCodeLocalVariable>,
 }
 
-pub fn parse_chunk_FUNC<'a>(chunk: &mut UTChunk, strings: &'a UTStrings, chunk_CODE: &UTChunk) -> Result<(UTFunctions<'a>, Vec<UTCodeLocal<'a>>), String> {
+#[allow(non_snake_case)]
+pub fn parse_chunk_FUNC(chunk: &mut UTChunk, strings: &UTStrings, chunk_CODE: &UTChunk) -> Result<(UTFunctions, Vec<UTCodeLocal>), String> {
     chunk.file_index = 0;
     let functions_length: usize = chunk.read_usize()?;
     let mut functions_by_index: Vec<UTFunction> = Vec::with_capacity(functions_length);
@@ -120,6 +119,7 @@ pub fn parse_chunk_FUNC<'a>(chunk: &mut UTChunk, strings: &'a UTStrings, chunk_C
 }
 
 
+#[allow(non_snake_case)]
 fn get_occurrences(count: usize, first_occurrence: i32, chunk_CODE: &UTChunk) -> HashSet<usize> {
     let mut occurrences: HashSet<usize> = HashSet::new();
     let mut occurrence: i32 = first_occurrence + 4;
