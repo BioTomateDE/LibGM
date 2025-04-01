@@ -298,7 +298,7 @@ impl UTChunk<'_> {
         }
     }
 
-    pub fn read_ut_string<'a>(&mut self, ut_strings: &'a UTStrings) -> Result<UTStringRef<'a>, String> {
+    pub fn read_ut_string(&mut self, ut_strings: &UTStrings) -> Result<UTStringRef, String> {
         let string_abs_pos: usize = self.read_usize()?;
 
         match ut_strings.get_string_by_pos(string_abs_pos) {

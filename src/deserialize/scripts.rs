@@ -2,12 +2,13 @@
 use crate::deserialize::strings::{UTStringRef, UTStrings};
 
 #[derive(Debug, Clone)]
-pub struct UTScript<'a> {
+pub struct UTScript {
     pub script_id: u32,
-    pub name: UTStringRef<'a>,
+    pub name: UTStringRef,
 }
 
-pub fn parse_chunk_SCPT<'a>(chunk: &mut UTChunk, strings: &'a UTStrings) -> Result<Vec<UTScript<'a>>, String> {
+#[allow(non_snake_case)]
+pub fn parse_chunk_SCPT(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<UTScript>, String> {
     chunk.file_index = 0;
     let scripts_length: usize = chunk.read_usize()?;
 

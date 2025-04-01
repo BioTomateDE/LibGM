@@ -184,79 +184,79 @@ fn convert_instruction_kind(kind: u8) -> u8 {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-struct UTComparisonInstruction {
-    // extra: u8,                              // extra byte that should be zero
-    comparison_type: UTComparisonType, // comparison kind
-    type1: UTDataType,                 // datatype of element to compare
-    type2: UTDataType,                 // datatype of element to compare
+pub struct UTComparisonInstruction {
+    // extra: u8,                           // extra byte that should be zero
+    comparison_type: UTComparisonType,      // comparison kind
+    type1: UTDataType,                      // datatype of element to compare
+    type2: UTDataType,                      // datatype of element to compare
 }
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-struct UTGotoInstruction {
+pub struct UTGotoInstruction {
     opcode: UTOpcode,
     jump_offset: i32,
     popenv_exit_magic: bool,
 }
 #[derive(Debug, Clone)]
-struct UTPopInstruction<'a> {
+pub struct UTPopInstruction {
     opcode: UTOpcode,
     instance_type: UTInstanceType,
     type1: UTDataType,
     type2: UTDataType,
-    destination: UTCodeVariable<'a>,
+    destination: UTCodeVariable,
 }
 #[derive(Debug, Clone)]
-struct UTPushInstruction<'a> {
+pub struct UTPushInstruction {
     opcode: UTOpcode,
     data_type: UTDataType,
-    value: UTValue<'a>,
+    value: UTValue,
 }
 #[derive(Debug, Clone)]
-struct UTCallInstruction<'a> {
+pub struct UTCallInstruction {
     opcode: UTOpcode,
     arguments_count: usize,
     data_type: UTDataType,
-    function: UTFunctionRef<'a>,
+    function: UTFunctionRef,
 }
 #[derive(Debug, Clone)]
-struct UTBreakInstruction {
+pub struct UTBreakInstruction {
     opcode: UTOpcode,
     value: i16,
     data_type: UTDataType,
     int_argument: Option<i32>,
 }
 #[derive(Debug, Clone)]
-enum UTInstruction<'a> {
+pub enum UTInstruction {
     Cmp(UTComparisonInstruction),
     Goto(UTGotoInstruction),
-    Pop(UTPopInstruction<'a>),
-    Push(UTPushInstruction<'a>),
-    Call(UTCallInstruction<'a>),
+    Pop(UTPopInstruction),
+    Push(UTPushInstruction),
+    Call(UTCallInstruction),
     Break(UTBreakInstruction),
 }
 
 #[derive(Debug, Clone)]
-enum UTCodeVariable<'a> {
-    Var(UTVariable<'a>, UTVariableType),
+enum UTCodeVariable {
+    Var(UTVariable, UTVariableType),
     Unknown(usize, UTVariableType)
 }
 
 
 
 #[derive(Debug, Clone)]
-enum UTValue<'a> {
+enum UTValue {
     Double(f64),
     Float(f32),
     Int32(i32),
     Int64(i64),
     Boolean(bool),
-    Variable(UTCodeVariable<'a>),
-    String(UTStringRef<'a>),
+    Variable(UTCodeVariable),
+    String(UTStringRef),
     Int16(i16),
 }
 
 #[derive(Debug)]
-struct UTCodeMeta<'a> {
-    name: UTStringRef<'a>,
+struct UTCodeMeta {
+    name: UTStringRef,
     start_position: usize, // start position of code in chunk CODE
     length: usize,
     locals_count: u32,
@@ -264,9 +264,9 @@ struct UTCodeMeta<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub struct UTCode<'a> {
-    pub name: UTStringRef<'a>,
-    pub instructions: Vec<UTInstruction<'a>>,
+pub struct UTCode {
+    pub name: UTStringRef,
+    pub instructions: Vec<UTInstruction>,
     pub locals_count: u32,
     pub arguments_count: u32,
 }
@@ -294,12 +294,12 @@ impl UTCodeBlob {
         Ok(byte)
     }
 
-    fn read_value<'a>(
+    fn read_value(
         &mut self,
         data_type: UTDataType,
-        strings: &'a UTStrings,
+        strings: &UTStrings,
         _variables: &[UTVariable],
-    ) -> Result<UTValue<'a>, String> {
+    ) -> Result<UTValue, String> {
         match data_type {
             UTDataType::Double => {
                 let raw: [u8; 8] = match self.raw_data[self.file_index..self.file_index+8].try_into() {
@@ -411,13 +411,14 @@ impl UTCodeBlob {
 }
 
 
-pub fn parse_chunk_CODE<'a>(
+#[allow(non_snake_case)]
+pub fn parse_chunk_CODE(
     chunk: &mut UTChunk,
     bytecode14: bool,
-    strings: &'a UTStrings,
-    variables: &'a [UTVariable],
-    functions: &'a UTFunctions,
-) -> Result<Vec<UTCode<'a>>, String> {
+    strings: &UTStrings,
+    variables: &[UTVariable],
+    functions: &UTFunctions,
+) -> Result<Vec<UTCode>, String> {
     chunk.file_index = 0;
     let codes_count: usize = chunk.read_usize()?;
     let mut code_meta_indexes: Vec<usize> = Vec::with_capacity(codes_count);
@@ -500,14 +501,14 @@ pub fn parse_chunk_CODE<'a>(
     Ok(codes)
 }
 
-fn parse_code<'a>(
+fn parse_code(
     blob: &mut UTCodeBlob,
     bytecode14: bool,
-    strings: &'a UTStrings,
-    variables: &'a [UTVariable],
-    functions: &'a UTFunctions,
+    strings: &UTStrings,
+    variables: &[UTVariable],
+    functions: &UTFunctions,
     code_start_pos: usize
-) -> Result<UTInstruction<'a>, String> {
+) -> Result<UTInstruction, String> {
     let b0: u8 = blob.read_byte()?;
     let b1: u8 = blob.read_byte()?;
     let b2: u8 = blob.read_byte()?;
