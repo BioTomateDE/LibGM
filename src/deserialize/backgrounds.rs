@@ -24,13 +24,51 @@ pub struct UTBackground {
 }
 
 
+#[derive(Clone, Debug)]
+pub struct UTBackgroundRef {
+    pub index: usize,
+}
+
+impl UTBackgroundRef {
+    pub fn resolve<'a>(&self, backgrounds: &'a UTBackgrounds) -> Result<&'a UTBackground, String> {
+        match backgrounds.backgrounds_by_index.get(self.index) {
+            Some(background) => Ok(background),
+            None => Err(format!(
+                "Could not resolve background with index {} in list with length {}.",
+                self.index, backgrounds.backgrounds_by_index.len()
+            )),
+        }
+    }
+}
+
+
+#[derive(Debug, Clone)]
+pub struct UTBackgrounds {
+    backgrounds_by_index: Vec<UTBackground>,    // strings by index/order in chunk BGND
+}
+impl UTBackgrounds {
+    pub fn get_string_by_index(&self, index: usize) -> Option<UTBackgroundRef> {
+        if index >= self.backgrounds_by_index.len() {
+            return None;
+        }
+        Some(UTBackgroundRef {
+            index,
+        })
+    }
+    pub fn len(&self) -> usize {
+        self.backgrounds_by_index.len()
+    }
+}
+
+
+
 #[allow(non_snake_case)]
 pub fn parse_chunk_BGND(
     chunk: &mut UTChunk,
     general_info: &UTGeneralInfo,
     strings: &UTStrings,
     textures: &UTTextures,
-) -> Result<Vec<UTBackground>, String> {
+) -> Result<UTBackgrounds, String> {
     chunk.file_index = 0;
     let backgrounds_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(backgrounds_count);
@@ -38,7 +76,7 @@ pub fn parse_chunk_BGND(
         start_positions.push(chunk.read_usize()? - chunk.abs_pos);
     }
 
-    let mut backgrounds: Vec<UTBackground> = Vec::with_capacity(backgrounds_count);
+    let mut backgrounds_by_index: Vec<UTBackground> = Vec::with_capacity(backgrounds_count);
     for start_position in start_positions {
         chunk.file_index = start_position;
         let name: UTStringRef = chunk.read_ut_string(strings)?;
@@ -104,10 +142,10 @@ pub fn parse_chunk_BGND(
             gms2_frame_length,
             gms2_tile_ids,
         };
-        backgrounds.push(background);
+        backgrounds_by_index.push(background);
     }
 
-    Ok(backgrounds)
+    Ok(UTBackgrounds{ backgrounds_by_index })
 }
 
 
