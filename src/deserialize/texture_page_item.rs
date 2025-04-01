@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::embedded_textures::{Image, UTEmbeddedTexture};
 use image;
+use crate::deserialize::sounds::{UTSound, UTSounds};
+use crate::deserialize::strings::UTStringRef;
 use crate::printing::format_type_of;
 
 #[derive(Debug, Clone)]
@@ -16,13 +18,40 @@ pub struct UTTexture {
     pub index: usize,
 }
 
+#[derive(Clone, Debug)]
+pub struct UTTextureRef {
+    pub index: usize,
+}
+impl UTTextureRef {
+    pub fn resolve<'a>(&self, textures: &'a UTTextures) -> Result<&'a UTTexture, String> {
+        match textures.textures_by_index.get(self.index) {
+            Some(texture) => Ok(texture),
+            None => Err(format!(
+                "Could not resolve Texture Page Item with index {} in list with length {}.",
+                self.index, textures.textures_by_index.len()
+            )),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct UTTextures {
-    textures_by_absolute_position: HashMap<usize, UTTexture>,       // texture page items by absolute position/pointer in data.win
+    abs_pos_to_index: HashMap<usize, usize>,    // convert absolute position/pointer in data.win to index in Self.textures_by_index
+    textures_by_index: Vec<UTTexture>,          // texture page items by absolute position/pointer in data.win
 }
 impl UTTextures {
-    pub fn get_texture_by_pos(&self, abs_pos: usize) -> Option<&UTTexture> {
-        self.textures_by_absolute_position.get(&abs_pos)
+    pub fn get_texture_by_pos(&self, abs_pos: usize) -> Option<UTTextureRef> {
+        let index: usize = match self.abs_pos_to_index.get(&abs_pos) {
+            Some(index) => *index,
+            None => return None,
+        };
+        Some(UTTextureRef { index })
+    }
+    pub fn get_texture_by_index(&self, index: usize) -> Option<UTTextureRef> {
+        if index >= self.textures_by_index.len() {
+            return None;
+        }
+        Some(UTTextureRef {index})
     }
 }
 
@@ -36,7 +65,8 @@ pub fn parse_chunk_TPAG(chunk: &mut UTChunk, texture_pages: Vec<UTEmbeddedTextur
         start_positions.push(chunk.read_usize()? - chunk.abs_pos);
     }
 
-    let mut texture_page_items: HashMap<usize, UTTexture> = HashMap::new();
+    let mut textures_by_index: Vec<UTTexture> = Vec::with_capacity(items_count);
+    let mut abs_pos_to_index: HashMap<usize, usize> = HashMap::new();
     for (i, start_position) in start_positions.iter().enumerate() {
         chunk.file_index = *start_position;
         let source_x: u16 = chunk.read_u16()?;
@@ -77,10 +107,11 @@ pub fn parse_chunk_TPAG(chunk: &mut UTChunk, texture_pages: Vec<UTEmbeddedTextur
             bounding_height,
             index: i,
         };
-        texture_page_items.insert(start_position + chunk.abs_pos, texture_page_item);
+        textures_by_index.push(texture_page_item);
+        abs_pos_to_index.insert(start_position + chunk.abs_pos, i);
     }
 
-    let textures: UTTextures = UTTextures {textures_by_absolute_position: texture_page_items};
+    let textures: UTTextures = UTTextures { textures_by_index, abs_pos_to_index };
     Ok(textures)
 }
 

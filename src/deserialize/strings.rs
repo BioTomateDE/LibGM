@@ -27,27 +27,21 @@ pub struct UTStrings {
 
 impl UTStrings {
     pub fn get_string_by_pos(&self, position: usize) -> Option<UTStringRef> {
-        let string_index: usize = match self.abs_pos_to_index.get(&position) {
+        let index: usize = match self.abs_pos_to_index.get(&position) {
             Some(index) => *index,
             None => return None,
         };
-        Some(UTStringRef {
-            index: string_index,
-        })
+        Some(UTStringRef { index })
     }
 
     pub fn get_string_by_index(&self, index: usize) -> Option<UTStringRef> {
         if index >= self.strings_by_index.len() {
             return None;
         }
-        Some(UTStringRef {
-            index,
-        })
+        Some(UTStringRef { index })
     }
 
-    pub fn len(&self) -> usize {
-        self.strings_by_index.len()
-    }
+    pub fn len(&self) -> usize { self.strings_by_index.len() }
 }
 
 
