@@ -3,7 +3,7 @@ use std::fs;
 use crate::deserialize::backgrounds::{parse_chunk_BGND, UTBackgrounds};
 use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::code::{parse_chunk_CODE, UTCode};
-use crate::deserialize::embedded_audio::{parse_chunk_AUDO, UTEmbeddedAudio};
+use crate::deserialize::embedded_audio::{parse_chunk_AUDO, UTEmbeddedAudios};
 use crate::deserialize::embedded_textures::{parse_chunk_TXTR, UTEmbeddedTexture};
 use crate::deserialize::fonts::{parse_chunk_FONT, UTFont};
 use crate::deserialize::functions::{parse_chunk_FUNC, UTCodeLocal, UTFunctions};
@@ -13,6 +13,7 @@ use crate::deserialize::strings::{parse_chunk_STRG, UTStrings};
 use crate::deserialize::variables::{parse_chunk_VARI, UTVariable};
 use crate::deserialize::general_info::{UTGeneralInfo, UTOptions};
 use crate::deserialize::rooms::{parse_chunk_ROOM, UTRoom};
+use crate::deserialize::sounds::{parse_chunk_SOND, UTSounds};
 use crate::deserialize::texture_page_item::{parse_chunk_TPAG, UTTextures};
 
 
@@ -21,7 +22,8 @@ pub struct UTData {
     pub strings: UTStrings,                 // STRG
     pub general_info: UTGeneralInfo,        // GEN8
     pub options: UTOptions,                 // OPTN
-    pub audios: Vec<UTEmbeddedAudio>,       // AUDO
+    pub audios: UTEmbeddedAudios,           // AUDO
+    pub sounds: UTSounds,                   // SOND
     pub textures: UTTextures,               // TPAG  (and TXTR)
     pub backgrounds: UTBackgrounds,         // BGND
     pub scripts: Vec<UTScript>,             // SCPT
@@ -76,6 +78,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     #[allow(non_snake_case)] let mut chunk_GEN8: UTChunk = get_chunk(&chunks, "GEN8")?;
     #[allow(non_snake_case)] let mut chunk_OPTN: UTChunk = get_chunk(&chunks, "OPTN")?;
     #[allow(non_snake_case)] let mut chunk_AUDO: UTChunk = get_chunk(&chunks, "AUDO")?;
+    #[allow(non_snake_case)] let mut chunk_SOND: UTChunk = get_chunk(&chunks, "SOND")?;
     #[allow(non_snake_case)] let mut chunk_TXTR: UTChunk = get_chunk(&chunks, "TXTR")?;
     #[allow(non_snake_case)] let mut chunk_TPAG: UTChunk = get_chunk(&chunks, "TPAG")?;
     #[allow(non_snake_case)] let mut chunk_BGND: UTChunk = get_chunk(&chunks, "BGND")?;
@@ -87,15 +90,12 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     #[allow(non_snake_case)] let mut chunk_ROOM: UTChunk = get_chunk(&chunks, "ROOM")?;
 
     let strings: UTStrings = parse_chunk_STRG(&mut chunk_STRG)?;
-    // for (id,st) in &strings {
-    //     if st == "Greetings." {
-    //         println!("id: {id}");
-    //     }
-    // }
+    // dbg!(strings.get_string_by_pos(12011656).unwrap().resolve(&strings)?);
     let general_info: UTGeneralInfo = parse_chunk_GEN8(&mut chunk_GEN8, &strings)?;
     let bytecode14: bool = general_info.bytecode_version >= 14;
     let options: UTOptions = parse_chunk_OPTN(&mut chunk_OPTN)?;
-    let audios: Vec<UTEmbeddedAudio> = parse_chunk_AUDO(&mut chunk_AUDO)?;
+    let audios: UTEmbeddedAudios = parse_chunk_AUDO(&mut chunk_AUDO)?;
+    let sounds: UTSounds = parse_chunk_SOND(&mut chunk_SOND, &general_info, &strings, &audios)?;
     let texture_pages: Vec<UTEmbeddedTexture> = parse_chunk_TXTR(&mut chunk_TXTR, &general_info)?;
     let textures: UTTextures = parse_chunk_TPAG(&mut chunk_TPAG, texture_pages)?;
     let backgrounds: UTBackgrounds = parse_chunk_BGND(&mut chunk_BGND, &general_info, &strings, &textures)?;
@@ -104,13 +104,17 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let (functions, code_locals): (UTFunctions, Vec<UTCodeLocal>) = parse_chunk_FUNC(&mut chunk_FUNC, &strings, &chunk_CODE)?;
     let code: Vec<UTCode> = parse_chunk_CODE(&mut chunk_CODE, bytecode14, &strings, &variables, &functions)?;
     let fonts: Vec<UTFont> = parse_chunk_FONT(&mut chunk_FONT, &general_info, &strings)?;
-    let rooms: Vec<UTRoom> = parse_chunk_ROOM(&mut chunk_ROOM, &general_info, &strings)?;
+    let rooms: Vec<UTRoom> = parse_chunk_ROOM(&mut chunk_ROOM, &general_info, &strings, &backgrounds)?;
+
+    // for i in &rooms {for j in &i.backgrounds {j.print()}}
+    // for i in &sounds.sounds_by_index { i.print(&strings)?; }
 
     let data = UTData {
         strings,
         general_info,
         options,
         audios,
+        sounds,
         textures,
         backgrounds,
         scripts,
