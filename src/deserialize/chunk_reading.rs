@@ -251,22 +251,17 @@ impl UTChunk<'_> {
 
     pub fn read_literal_string(&mut self, length: usize) -> Result<String, String> {
         // Read literal ascii/utf8 string with specified length
-        if self.file_index + length > self.data.len() {
-            return Err(format!(
+        let bytes: Vec<u8> = match self.data.get(self.file_index..self.file_index + length) {
+            Some(bytes) => bytes.to_owned(),
+            None => return Err(format!(
                 "Trying to read literal string with length {} out of bounds \
                 in chunk '{}' at position {}: {} > {}.",
-                length,
-                self.name,
-                self.file_index,
-                self.file_index + length,
-                self.data.len()
-            ));
-        }
-
-        let string: Vec<u8> = self.data[self.file_index..self.file_index + length].to_owned();
+                length, self.name, self.file_index, self.file_index + length, self.data.len()
+            )),
+        };
         self.file_index += length;
 
-        let string = match String::from_utf8(string) {
+        let string = match String::from_utf8(bytes) {
             Ok(string) => string,
             Err(error) => {
                 return Err(format!(
@@ -305,7 +300,7 @@ impl UTChunk<'_> {
             Some(string) => Ok(string),
             None => Err(format!(
                 "Could not read reference string with absolute position {} in chunk '{}' at \
-                position {} because it doesn't exist in the string map (length {})",
+                position {} because it doesn't exist in the string map (length {}).",
                 string_abs_pos,
                 self.name,
                 self.file_index - 4,
@@ -315,14 +310,25 @@ impl UTChunk<'_> {
     }
 
     pub fn read_pointer_list(&mut self) -> Result<Vec<usize>, String> {
-        let pointer_position: usize = self.read_usize()? - self.abs_pos;
+        let pointer_position: usize = match self.read_usize()?.checked_sub(self.abs_pos) {
+            Some(pos) => pos,
+            None => return Err(format!(
+                "Start of Pointer list underflowed at position {} in chunk '{}' with absolute position {}.",
+                self.file_index - 4, self.name, self.abs_pos,
+        ))};
+
         let old_position: usize = self.file_index;
         self.file_index = pointer_position;
 
         let pointer_count: usize = self.read_usize()?;
         let mut pointers: Vec<usize> = Vec::with_capacity(pointer_count);
         for _ in 0..pointer_count {
-            let pointer: usize = self.read_usize()? - self.abs_pos;
+            let pointer: usize = match self.read_usize()?.checked_sub(self.abs_pos) {
+                Some(pos) => pos,
+                None => return Err(format!(
+                    "Element of Pointer list underflowed at position {} in chunk '{}' with absolute position {}.",
+                    self.file_index - 4, self.name, self.abs_pos,
+                ))};
             pointers.push(pointer);
         }
 

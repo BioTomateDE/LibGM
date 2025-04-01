@@ -1,7 +1,7 @@
 use num_enum::TryFromPrimitive;
 use crate::deserialize::backgrounds::{UTBackgroundRef, UTBackgrounds};
 use crate::deserialize::chunk_reading::UTChunk;
-use crate::deserialize::game_objects::UTGameObject;
+use crate::deserialize::game_objects::{UTGameObjectRef, UTGameObjects};
 use crate::deserialize::general_info::UTGeneralInfo;
 use crate::deserialize::sequence::{parse_sequence, UTSequence};
 use crate::deserialize::strings::{UTStringRef, UTStrings};
@@ -21,7 +21,7 @@ pub struct UTRoom {
     pub flags: UTRoomFlags,
     pub backgrounds: Vec<UTRoomBackground>,
     pub views: Vec<UTRoomView>,
-    pub game_objects: Vec<UTGameObject>,
+    pub game_objects: Vec<UTRoomGameObject>,
     pub tiles: Vec<UTRoomTile>,
     pub world: bool,
     pub top: u32,
@@ -122,9 +122,31 @@ pub enum UTRoomLayerType {
     Effect = 6,
 }
 
+#[derive(Debug, Clone)]
+pub struct UTRoomGameObject {
+    pub x: i32,
+    pub y: i32,
+    pub object_definition: UTGameObjectRef,
+    pub instance_id: u32,
+    pub creation_code: i32,     // {!!} change type to code ref
+    pub scale_x: f32,
+    pub scale_y: f32,
+    pub image_speed: Option<f32>,
+    pub image_index: Option<usize>,
+    pub color: u32,
+    pub rotation: f32,
+    pub pre_create_code: Option<i32>,       // {!!} change type to (option) code ref
+}
+
 
 #[allow(non_snake_case)]
-pub fn parse_chunk_ROOM(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strings: &UTStrings, ut_backgrounds: &UTBackgrounds) -> Result<Vec<UTRoom>, String> {
+pub fn parse_chunk_ROOM(
+    chunk: &mut UTChunk,
+    general_info: &UTGeneralInfo,
+    ut_strings: &UTStrings,
+    ut_backgrounds: &UTBackgrounds,
+    ut_game_objects: &UTGameObjects,
+) -> Result<Vec<UTRoom>, String> {
     chunk.file_index = 0;
     let room_count: usize = chunk.read_usize()?;
     let mut room_starting_positions: Vec<usize> = Vec::with_capacity(room_count);
@@ -137,8 +159,8 @@ pub fn parse_chunk_ROOM(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strin
     for start_position in room_starting_positions {
         chunk.file_index = start_position;
 
-        let name: UTStringRef = chunk.read_ut_string(strings)?;
-        let caption: UTStringRef = chunk.read_ut_string(strings)?;
+        let name: UTStringRef = chunk.read_ut_string(ut_strings)?;
+        let caption: UTStringRef = chunk.read_ut_string(ut_strings)?;
         let width: u32 = chunk.read_u32()?;
         let height: u32 = chunk.read_u32()?;
         let speed: u32 = chunk.read_u32()?;
@@ -147,9 +169,9 @@ pub fn parse_chunk_ROOM(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strin
         let draw_background_color: bool = chunk.read_u32()? != 0;
         let creation_code_id: u32 = chunk.read_u32()?;      // (can be -1) reference to code; change type later
         let flags: UTRoomFlags = parse_room_flags(chunk.read_u32()?);
-        let room_backgrounds: Vec<UTRoomBackground> = parse_room_backgrounds(chunk, ut_backgrounds)?;
+        let backgrounds: Vec<UTRoomBackground> = parse_room_backgrounds(chunk, ut_backgrounds)?;
         let views: Vec<UTRoomView> = parse_room_views(chunk)?;
-        let game_objects: Vec<UTGameObject> = parse_room_objects(chunk)?;
+        let game_objects: Vec<UTRoomGameObject> = parse_room_objects(chunk, name.clone(), &general_info, &ut_strings, &ut_game_objects)?;
         let tiles: Vec<UTRoomTile> = parse_room_tiles(chunk, general_info)?;
         let world: bool = chunk.read_u32()? != 0;
         let top: u32 = chunk.read_u32()?;
@@ -162,9 +184,9 @@ pub fn parse_chunk_ROOM(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strin
         let mut layers: Option<Vec<UTRoomLayer>> = None;
         let mut sequences: Option<Vec<UTSequence>> = None;
         if general_info.is_version_at_least(2, 0, 0, 0) {
-            layers = Some(parse_room_layers(chunk, strings)?);
+            layers = Some(parse_room_layers(chunk, ut_strings)?);
             if general_info.is_version_at_least(2, 3, 0, 0) {
-                sequences = Some(parse_room_sequences(chunk, strings)?);
+                sequences = Some(parse_room_sequences(chunk, ut_strings)?);
             }
         }
 
@@ -179,7 +201,7 @@ pub fn parse_chunk_ROOM(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strin
             draw_background_color,
             creation_code_id,
             flags,
-            backgrounds: room_backgrounds,
+            backgrounds,
             views,
             game_objects,
             tiles,
@@ -258,20 +280,68 @@ fn parse_room_views(chunk: &mut UTChunk) -> Result<Vec<UTRoomView>, String> {
     Ok(views)
 }
 
-fn parse_room_objects(chunk: &mut UTChunk) -> Result<Vec<UTGameObject>, String> {
+fn parse_room_objects(
+    chunk: &mut UTChunk,
+    room_name: UTStringRef,
+    general_info: &UTGeneralInfo,
+    strings: &UTStrings,
+    ut_game_objects: &UTGameObjects,
+) -> Result<Vec<UTRoomGameObject>, String> {
     let game_object_pointers: Vec<usize> = chunk.read_pointer_list()?;
     let old_position: usize = chunk.file_index;
-    let mut game_objects: Vec<UTGameObject> = Vec::with_capacity(game_object_pointers.len());
+    let mut room_game_objects: Vec<UTRoomGameObject> = Vec::with_capacity(game_object_pointers.len());
 
     for pointer in game_object_pointers {
         chunk.file_index = pointer;
+        let x: i32 = chunk.read_i32()?;
+        let y: i32 = chunk.read_i32()?;
+        let object_definition: usize = chunk.read_usize()?;
+        let object_definition: UTGameObjectRef = match ut_game_objects.get_game_object_by_index(object_definition) {
+            Some(obj) => obj,
+            None => return Err(format!(
+                "Could not find Game Object with index {} for Room with name \"{}\" at position {} in chunk '{}'.",
+                object_definition,
+                room_name.resolve(strings).unwrap_or_else(|_| "<InvalidStringRef>"),
+                pointer,
+                chunk.name,
+            )),
+        };
+        let instance_id: u32 = chunk.read_u32()?;
+        let creation_code: i32 = chunk.read_i32()?;     // {!!} change type to code ref
+        let scale_x: f32 = chunk.read_f32()?;
+        let scale_y: f32 = chunk.read_f32()?;
+        let mut image_speed: Option<f32> = None;
+        let mut image_index: Option<usize> = None;
+        if general_info.is_version_at_least(2, 2, 2, 302) {
+            image_speed = Some(chunk.read_f32()?);
+            image_index = Some(chunk.read_usize()?);
+        }
+        let color: u32 = chunk.read_u32()?;
+        let rotation: f32 = chunk.read_f32()?;
+        let mut pre_create_code: Option<i32> = None;        // {!!} change type to code ref
+        if general_info.bytecode_version >= 16 {        // [From UndertaleModTool] "is that dependent on bytecode or something else?"
+            pre_create_code = Some(chunk.read_i32()?);
+        }
 
-        let game_object: UTGameObject = UTGameObject { };
-        game_objects.push(game_object);
+        let room_game_object = UTRoomGameObject {
+            x,
+            y,
+            object_definition,
+            instance_id,
+            creation_code,
+            scale_x,
+            scale_y,
+            image_speed,
+            image_index,
+            color,
+            rotation,
+            pre_create_code,
+        };
+        room_game_objects.push(room_game_object);
     }
 
     chunk.file_index = old_position;
-    Ok(game_objects)
+    Ok(room_game_objects)
 }
 
 fn parse_room_backgrounds(chunk: &mut UTChunk, ut_backgrounds: &UTBackgrounds) -> Result<Vec<UTRoomBackground>, String> {
