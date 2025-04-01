@@ -1,7 +1,7 @@
 use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::general_info::UTGeneralInfo;
 use crate::deserialize::strings::{UTStringRef, UTStrings};
-use crate::deserialize::texture_page_item::{UTTexture, UTTextures};
+use crate::deserialize::texture_page_item::{UTTextureRef, UTTextures};
 
 #[derive(Debug, Clone)]
 pub struct UTBackground {
@@ -9,7 +9,7 @@ pub struct UTBackground {
     pub transparent: bool,
     pub smooth: bool,
     pub preload: bool,
-    pub texture: UTTexture,
+    pub texture: UTTextureRef,
     pub gms2_unknown_always2: Option<u32>,
     pub gms2_tile_width: Option<u32>,
     pub gms2_tile_height: Option<u32>,
@@ -84,8 +84,8 @@ pub fn parse_chunk_BGND(
         let smooth: bool = chunk.read_u32()? != 0;
         let preload: bool = chunk.read_u32()? != 0;
         let texture_abs_pos: usize = chunk.read_usize()?;
-        let texture: UTTexture = match textures.get_texture_by_pos(texture_abs_pos) {
-            Some(texture) => texture.clone(),
+        let texture: UTTextureRef = match textures.get_texture_by_pos(texture_abs_pos) {
+            Some(texture) => texture,
             None => return Err(format!(
                 "Could not find texture with absolute position {} for Background with name \"{}\" at position {} in chunk 'BGND'.",
                 texture_abs_pos, name.resolve(strings)?, start_position,
