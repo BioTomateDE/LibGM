@@ -2,8 +2,8 @@
 use crate::deserialize::strings::{UTStringRef, UTStrings};
 
 #[derive(Debug, Clone)]
-pub struct UTVariable<'a> {
-    pub name: UTStringRef<'a>,
+pub struct UTVariable {
+    pub name: UTStringRef,
     pub instance_type: i32,
     pub variable_id: i32,
     pub occurrences_count: u32,
@@ -11,7 +11,8 @@ pub struct UTVariable<'a> {
     pub abs_pos: usize,
 }
 
-pub fn parse_chunk_VARI<'a>(chunk: &mut UTChunk, strings: &'a UTStrings) -> Result<Vec<UTVariable<'a>>, String> {
+#[allow(non_snake_case)]
+pub fn parse_chunk_VARI(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<UTVariable>, String> {
     chunk.file_index = 0;
     let _unknown1: u32 = chunk.read_u32()?;
     let _unknown2: u32 = chunk.read_u32()?;

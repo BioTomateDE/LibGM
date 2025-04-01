@@ -24,17 +24,17 @@ pub struct UTOptions {
 }
 
 #[derive(Debug, Clone)]
-pub struct UTGeneralInfo<'a> {
+pub struct UTGeneralInfo {
     pub is_debugger_disabled: bool,
     pub bytecode_version: u8,
     pub unknown_value: u16,
-    pub game_file_name: UTStringRef<'a>,
-    pub config: UTStringRef<'a>,
+    pub game_file_name: UTStringRef,
+    pub config: UTStringRef,
     pub last_object_id: u32,
     pub last_tile_id: u32,
     pub game_id: u32,
     pub directplay_guid: uuid::Uuid,
-    pub game_name: UTStringRef<'a>,
+    pub game_name: UTStringRef,
     pub major_version: u32,
     pub minor_version: u32,
     pub release_version: u32,
@@ -44,7 +44,7 @@ pub struct UTGeneralInfo<'a> {
     pub flags: UTGeneralInfoFlags,
     pub license: [u8; 16],
     pub timestamp_created: DateTime<Utc>,
-    pub display_name: UTStringRef<'a>,
+    pub display_name: UTStringRef,
     pub active_targets: u64,
     pub function_classifications: UTFunctionClassifications,
     pub steam_appid: u32,
@@ -52,7 +52,7 @@ pub struct UTGeneralInfo<'a> {
     pub room_order: Vec<u32>,
 }
 
-impl UTGeneralInfo<'_> {
+impl UTGeneralInfo {
     pub fn is_version_at_least(&self, major: u32, minor: u32, release: u32, build: u32) -> bool {
 
         if self.major_version != major {
@@ -72,7 +72,7 @@ impl UTGeneralInfo<'_> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UTGeneralInfoFlags {
     // taken from https://github.com/UnderminersTeam/UndertaleModTool/blob/master/UndertaleModLib/Models/UndertaleGeneralInfo.cs
     pub fullscreen: bool,
@@ -95,7 +95,7 @@ pub struct UTGeneralInfoFlags {
     // license_exclusions: bool,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UTFunctionClassifications {
     pub none: bool,
     pub internet: bool,
@@ -166,7 +166,7 @@ pub struct UTFunctionClassifications {
 }
 
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UTOptionsFlags {
     pub fullscreen: bool,
     pub interpolate_pixels: bool,
@@ -200,7 +200,8 @@ pub struct UTOptionsFlags {
     pub enable_copy_on_write: bool,
 }
 
-pub fn parse_chunk_GEN8<'a>(chunk: &'a mut UTChunk, strings: &'a UTStrings) -> Result<UTGeneralInfo<'a>, String> {
+#[allow(non_snake_case)]
+pub fn parse_chunk_GEN8(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTGeneralInfo, String> {
     chunk.file_index = 0;
     let is_debugger_disabled: bool = chunk.read_u8()? != 0;
     let bytecode_version: u8 = chunk.read_u8()?;
@@ -429,6 +430,7 @@ fn parse_options_flags(chunk: &mut UTChunk) -> Result<UTOptionsFlags, String> {
 }
 
 
+#[allow(non_snake_case)]
 pub fn parse_chunk_OPTN(chunk: &mut UTChunk) -> Result<UTOptions, String> {
     chunk.file_index = 0;
     let _unused1: u32 = chunk.read_u32()?;

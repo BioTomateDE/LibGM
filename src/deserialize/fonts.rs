@@ -3,9 +3,9 @@ use crate::deserialize::general_info::UTGeneralInfo;
 use crate::deserialize::strings::{UTStringRef, UTStrings};
 
 #[derive(Debug, Clone)]
-pub struct UTFont<'a> {
-    pub name: UTStringRef<'a>,
-    pub display_name: UTStringRef<'a>,
+pub struct UTFont {
+    pub name: UTStringRef,
+    pub display_name: UTStringRef,
     pub em_size: u32,
     pub bold: bool,
     pub italic: bool,
@@ -35,7 +35,8 @@ pub struct UTGlyph {
 }
 
 
-pub fn parse_chunk_FONT<'a>(chunk: &mut UTChunk, general_info: &'a UTGeneralInfo, strings: &'a UTStrings) -> Result<Vec<UTFont<'a>>, String> {
+#[allow(non_snake_case)]
+pub fn parse_chunk_FONT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strings: &UTStrings) -> Result<Vec<UTFont>, String> {
     chunk.file_index = 0;
     let font_count: usize = chunk.read_usize()?;
     let mut font_starting_positions: Vec<usize> = Vec::with_capacity(font_count);
@@ -79,7 +80,7 @@ pub fn parse_chunk_FONT<'a>(chunk: &mut UTChunk, general_info: &'a UTGeneralInfo
             line_height = Some(chunk.read_u32()?);
         }
 
-        let glyphs: Vec<UTGlyph> = parse_glyphs(chunk, name.resolve()?)?;
+        let glyphs: Vec<UTGlyph> = parse_glyphs(chunk, name.resolve(strings)?)?;
 
         let font: UTFont = UTFont {
             name,

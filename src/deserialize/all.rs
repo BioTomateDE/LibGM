@@ -6,7 +6,7 @@ use crate::deserialize::code::{parse_chunk_CODE, UTCode};
 use crate::deserialize::embedded_audio::{parse_chunk_AUDO, UTEmbeddedAudio};
 use crate::deserialize::embedded_textures::{parse_chunk_TXTR, UTEmbeddedTexture};
 use crate::deserialize::fonts::{parse_chunk_FONT, UTFont};
-use crate::deserialize::functions::{parse_chunk_FUNC, UTCodeLocal, UTFunction, UTFunctions};
+use crate::deserialize::functions::{parse_chunk_FUNC, UTCodeLocal, UTFunctions};
 use crate::deserialize::general_info::{parse_chunk_GEN8, parse_chunk_OPTN};
 use crate::deserialize::scripts::{parse_chunk_SCPT, UTScript};
 use crate::deserialize::strings::{parse_chunk_STRG, UTStrings};
@@ -17,23 +17,23 @@ use crate::deserialize::texture_page_item::{parse_chunk_TPAG, UTTextures};
 
 
 #[derive(Debug, Clone)]
-pub struct UTData<'a> {
-    pub strings: UTStrings<'a>,                 // STRG
-    pub general_info: UTGeneralInfo<'a>,        // GEN8
+pub struct UTData {
+    pub strings: UTStrings,                     // STRG
+    pub general_info: UTGeneralInfo,        // GEN8
     pub options: UTOptions,                     // OPTN
     pub audios: Vec<UTEmbeddedAudio>,           // AUDO
     pub textures: UTTextures,                   // TPAG  (and TXTR)
-    pub backgrounds: Vec<UTBackground<'a>>,     // BGND
-    pub scripts: Vec<UTScript<'a>>,             // SCPT
-    pub variables: Vec<UTVariable<'a>>,         // VARI
-    pub functions: UTFunctions<'a>,             // FUNC
-    pub code_locals: Vec<UTCodeLocal<'a>>,      // FUNC
-    pub code: Vec<UTCode<'a>>,                  // CODE
-    pub fonts: Vec<UTFont<'a>>,                 // FONT
-    pub rooms: Vec<UTRoom<'a>>,                 // ROOM
+    pub backgrounds: Vec<UTBackground>,     // BGND
+    pub scripts: Vec<UTScript>,             // SCPT
+    pub variables: Vec<UTVariable>,         // VARI
+    pub functions: UTFunctions,             // FUNC
+    pub code_locals: Vec<UTCodeLocal>,      // FUNC
+    pub code: Vec<UTCode>,                  // CODE
+    pub fonts: Vec<UTFont>,                 // FONT
+    pub rooms: Vec<UTRoom>,                 // ROOM
 }
 
-pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData<'static>, String> {
+pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let mut all = UTChunk {
         name: "".to_string(),
         abs_pos: 0,
@@ -72,19 +72,19 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData<'static>, String> {
         all.file_index += chunk_length;
     }
 
-    let mut chunk_STRG: UTChunk = get_chunk(&chunks, "STRG")?;
-    let mut chunk_GEN8: UTChunk = get_chunk(&chunks, "GEN8")?;
-    let mut chunk_OPTN: UTChunk = get_chunk(&chunks, "OPTN")?;
-    let mut chunk_AUDO: UTChunk = get_chunk(&chunks, "AUDO")?;
-    let mut chunk_TXTR: UTChunk = get_chunk(&chunks, "TXTR")?;
-    let mut chunk_TPAG: UTChunk = get_chunk(&chunks, "TPAG")?;
-    let mut chunk_BGND: UTChunk = get_chunk(&chunks, "BGND")?;
-    let mut chunk_SCPT: UTChunk = get_chunk(&chunks, "SCPT")?;
-    let mut chunk_FUNC: UTChunk = get_chunk(&chunks, "FUNC")?;
-    let mut chunk_VARI: UTChunk = get_chunk(&chunks, "VARI")?;
-    let mut chunk_CODE: UTChunk = get_chunk(&chunks, "CODE")?;
-    let mut chunk_FONT: UTChunk = get_chunk(&chunks, "FONT")?;
-    let mut chunk_ROOM: UTChunk = get_chunk(&chunks, "ROOM")?;
+    #[allow(non_snake_case)] let mut chunk_STRG: UTChunk = get_chunk(&chunks, "STRG")?;
+    #[allow(non_snake_case)] let mut chunk_GEN8: UTChunk = get_chunk(&chunks, "GEN8")?;
+    #[allow(non_snake_case)] let mut chunk_OPTN: UTChunk = get_chunk(&chunks, "OPTN")?;
+    #[allow(non_snake_case)] let mut chunk_AUDO: UTChunk = get_chunk(&chunks, "AUDO")?;
+    #[allow(non_snake_case)] let mut chunk_TXTR: UTChunk = get_chunk(&chunks, "TXTR")?;
+    #[allow(non_snake_case)] let mut chunk_TPAG: UTChunk = get_chunk(&chunks, "TPAG")?;
+    #[allow(non_snake_case)] let mut chunk_BGND: UTChunk = get_chunk(&chunks, "BGND")?;
+    #[allow(non_snake_case)] let mut chunk_SCPT: UTChunk = get_chunk(&chunks, "SCPT")?;
+    #[allow(non_snake_case)] let mut chunk_FUNC: UTChunk = get_chunk(&chunks, "FUNC")?;
+    #[allow(non_snake_case)] let mut chunk_VARI: UTChunk = get_chunk(&chunks, "VARI")?;
+    #[allow(non_snake_case)] let mut chunk_CODE: UTChunk = get_chunk(&chunks, "CODE")?;
+    #[allow(non_snake_case)] let mut chunk_FONT: UTChunk = get_chunk(&chunks, "FONT")?;
+    #[allow(non_snake_case)] let mut chunk_ROOM: UTChunk = get_chunk(&chunks, "ROOM")?;
 
     let strings: UTStrings = parse_chunk_STRG(&mut chunk_STRG)?;
     // for (id,st) in &strings {

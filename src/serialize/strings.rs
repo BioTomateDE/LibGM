@@ -1,8 +1,9 @@
 use crate::deserialize::all::UTData;
-use crate::deserialize::strings::UTStringRef;
+use crate::deserialize::strings::{UTStringRef};
 use crate::serialize::all::{build_chunk, DataBuilder};
 use crate::serialize::chunk_writing::ChunkBuilder;
 
+#[allow(non_snake_case)]
 pub fn build_chunk_STRG(data_builder: &mut DataBuilder, ut_data: &UTData) -> Result<(), String> {
     let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "STRG" };
     let len: usize = ut_data.strings.len();
@@ -23,7 +24,7 @@ pub fn build_chunk_STRG(data_builder: &mut DataBuilder, ut_data: &UTData) -> Res
                 i, len,
             )),
         };
-        let string: &str = string_ref.resolve()?;
+        let string: &str = string_ref.resolve(&ut_data.strings)?;
 
         builder.write_usize(string.len())?;
         let absolute_position: usize = data_builder.len() + builder.len();

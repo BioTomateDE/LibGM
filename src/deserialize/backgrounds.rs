@@ -4,8 +4,8 @@ use crate::deserialize::strings::{UTStringRef, UTStrings};
 use crate::deserialize::texture_page_item::{UTTexture, UTTextures};
 
 #[derive(Debug, Clone)]
-pub struct UTBackground<'a> {
-    pub name: UTStringRef<'a>,
+pub struct UTBackground {
+    pub name: UTStringRef,
     pub transparent: bool,
     pub smooth: bool,
     pub preload: bool,
@@ -24,12 +24,13 @@ pub struct UTBackground<'a> {
 }
 
 
-pub fn parse_chunk_BGND<'a>(
+#[allow(non_snake_case)]
+pub fn parse_chunk_BGND(
     chunk: &mut UTChunk,
-    general_info: &'a UTGeneralInfo,
-    strings: &'a UTStrings,
-    textures: &'a UTTextures,
-) -> Result<Vec<UTBackground<'a>>, String> {
+    general_info: &UTGeneralInfo,
+    strings: &UTStrings,
+    textures: &UTTextures,
+) -> Result<Vec<UTBackground>, String> {
     chunk.file_index = 0;
     let backgrounds_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(backgrounds_count);
@@ -49,7 +50,7 @@ pub fn parse_chunk_BGND<'a>(
             Some(texture) => texture.clone(),
             None => return Err(format!(
                 "Could not find texture with absolute position {} for Background with name \"{}\" at position {} in chunk 'BGND'.",
-                texture_abs_pos, name.resolve()?, start_position,
+                texture_abs_pos, name.resolve(strings)?, start_position,
             )),
         };
 

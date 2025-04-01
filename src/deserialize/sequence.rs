@@ -4,8 +4,8 @@ use crate::deserialize::strings::{UTStringRef, UTStrings};
 use num_enum::TryFromPrimitive;
 
 #[derive(Debug, Clone)]
-pub struct UTSequence<'a> {
-    pub name: UTStringRef<'a>,
+pub struct UTSequence {
+    pub name: UTStringRef,
     pub playback: UTSequencePlaybackType,
     pub playback_speed: f32,
     pub playback_speed_type: UTSequenceAnimSpeedType,
@@ -13,10 +13,10 @@ pub struct UTSequence<'a> {
     pub origin_x: i32,
     pub origin_y: i32,
     pub volume: f32,
-    pub broadcast_messages: Vec<UTStringRef<'a>>,
-    pub tracks: Vec<UTTrack<'a>>,
-    pub function_ids: HashMap<i32, UTStringRef<'a>>,
-    pub moments: Vec<UTKeyframeMoment<'a>>
+    pub broadcast_messages: Vec<UTStringRef>,
+    pub tracks: Vec<UTTrack>,
+    pub function_ids: HashMap<i32, UTStringRef>,
+    pub moments: Vec<UTKeyframeMoment>
 }
 
 
@@ -42,14 +42,14 @@ pub struct UTKeyframe {
     pub channels: Vec<i32>,
 }
 #[derive(Debug, Clone)]
-pub struct UTTrack<'a> {
-    pub model_name: UTStringRef<'a>,
-    pub name: UTStringRef<'a>,
+pub struct UTTrack {
+    pub model_name: UTStringRef,
+    pub name: UTStringRef,
     pub builtin_name: UTTrackBuiltinName,
     pub traits: UTTrackTraits,
     pub is_creation_track: bool,
     pub tags: Vec<i32>,
-    pub sub_tracks: Vec<UTTrack<'a>>,
+    pub sub_tracks: Vec<UTTrack>,
     pub keyframes: Vec<UTKeyframe>,
     // pub owned_resources: Vec<UTResource>,
     pub gm_anim_curve_string: String,
@@ -82,13 +82,13 @@ pub enum UTTrackTraits {
     ChildrenIgnoreOrigin
 }
 #[derive(Debug, Clone)]
-pub struct UTKeyframeMoment<'a> {
+pub struct UTKeyframeMoment {
     pub internal_count: i32,    // "Should be 0 if none, 1 if there's a message?"
-    pub event: Option<UTStringRef<'a>>,
+    pub event: Option<UTStringRef>,
 }
 
 
-pub fn parse_sequence<'a>(chunk: &mut UTChunk, strings: &'a UTStrings) -> Result<UTSequence<'a>, String> {
+pub fn parse_sequence(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTSequence, String> {
     let name: UTStringRef = chunk.read_ut_string(strings)?;
     let playback: u32 = chunk.read_u32()?;
     let playback: UTSequencePlaybackType = match playback.try_into() {
@@ -158,7 +158,7 @@ pub fn parse_sequence<'a>(chunk: &mut UTChunk, strings: &'a UTStrings) -> Result
 }
 
 
-fn parse_broadcast_messages<'a>(chunk: &mut UTChunk, strings: &'a UTStrings) -> Result<Vec<UTStringRef<'a>>, String> {
+fn parse_broadcast_messages(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<UTStringRef>, String> {
     // might be double list?
     let messages_count: usize = chunk.read_usize()?;
     let mut messages: Vec<UTStringRef> = Vec::with_capacity(messages_count);
@@ -171,7 +171,7 @@ fn parse_broadcast_messages<'a>(chunk: &mut UTChunk, strings: &'a UTStrings) -> 
 }
 
 
-fn parse_track<'a>(chunk: &mut UTChunk, strings: &'a UTStrings) -> Result<UTTrack<'a>, String> {
+fn parse_track(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTTrack, String> {
     // force read string {}
     let model_name: UTStringRef = chunk.read_ut_string(strings)?;
     let name: UTStringRef = chunk.read_ut_string(strings)?;
@@ -267,7 +267,7 @@ fn parse_track<'a>(chunk: &mut UTChunk, strings: &'a UTStrings) -> Result<UTTrac
     })
 }
 
-fn parse_tracks<'a>(chunk: &mut UTChunk, strings: &'a UTStrings) -> Result<Vec<UTTrack<'a>>, String> {
+fn parse_tracks(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<UTTrack>, String> {
     let tracks_count: usize = chunk.read_usize()?;
     let mut tracks: Vec<UTTrack> = Vec::with_capacity(tracks_count);
 
