@@ -14,3 +14,4 @@ pub mod embedded_textures;
 pub mod texture_page_item;
 pub mod backgrounds;
 pub mod embedded_audio;
+pub mod sounds;

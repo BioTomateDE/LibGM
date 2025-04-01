@@ -4,6 +4,7 @@ use crate::deserialize::fonts::{UTFont, UTGlyph};
 use crate::deserialize::general_info::{UTFunctionClassifications, UTGeneralInfo, UTGeneralInfoFlags, UTOptions, UTOptionsFlags};
 use crate::deserialize::rooms::{UTRoom, UTRoomBackground, UTRoomFlags, UTRoomLayer, UTRoomTile, UTRoomView};
 use crate::deserialize::sequence::{UTKeyframe, UTKeyframeMoment, UTSequence, UTTrack};
+use crate::deserialize::sounds::{UTSound, UTSoundFlags};
 use crate::deserialize::strings::UTStrings;
 use crate::deserialize::texture_page_item::UTTexture;
 
@@ -538,6 +539,7 @@ impl UTRoomBackground {
         println!("UTRoomBackground:");
         println!("  Enabled: {}", self.enabled);
         println!("  Foreground: {}", self.foreground);
+        // println!("  Background Definition: {}", self.background_definition);
         println!("  Position: ({}, {})", self.x, self.y);
         println!("  Tile: ({}, {})", self.tile_x, self.tile_y);
         println!("  Speed: ({}, {})", self.speed_x, self.speed_y);
@@ -673,6 +675,34 @@ impl UTBackground {
         println!("  GMS2 Tile IDs: [{} items]", self.gms2_tile_ids.len());
         println!();
         Ok(())
+    }
+}
+
+impl UTSound {
+    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
+        println!("UTSound:");
+        println!("  Name: \"{}\"", self.name.resolve(strings)?);
+        println!("  Flags: {}", self.flags.to_string());
+        println!("  Audio Type: \"{}\"", self.audio_type.resolve(strings)?);
+        println!("  File: \"{}\"", self.file.resolve(strings)?);
+        println!("  Effects: {}", self.effects);
+        println!("  Volume: {}", self.volume);
+        println!("  Pitch: {}", self.pitch);
+        println!("  Audio File: {:?}", self.audio_file);
+        println!("  Length: {} seconds", if self.audio_length.is_some() {self.audio_length.unwrap().to_string()} else {"<Unspecified>".to_string()});
+        println!();
+        Ok(())
+    }
+}
+
+impl UTSoundFlags {
+    pub fn to_string(&self) -> String {
+        let mut flags = Vec::new();
+        if self.is_embedded { flags.push("Embedded"); }
+        if self.is_compressed { flags.push("Compressed"); }
+        if self.is_decompressed_on_load { flags.push("Decompressed On Load"); }
+        if self.regular { flags.push("Regular"); }
+        flags.join(", ")
     }
 }
 
