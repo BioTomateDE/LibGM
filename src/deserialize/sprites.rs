@@ -23,6 +23,7 @@ pub struct UTSprite {
     pub origin_x: i32,
     pub origin_y: i32,
     pub textures: Vec<UTTextureRef>,
+    pub collision_masks: Vec<UTSpriteMaskEntry>,
     pub special_fields: Option<UTSpriteSpecial>,
 }
 
@@ -84,8 +85,6 @@ pub struct UTSpriteSpecial {
     pub playback_speed: Option<f32>,
     /// GMS 2
     pub playback_speed_type: Option<UTAnimSpeedType>,
-    /// GMS2
-    pub collision_masks: Vec<UTSpriteMaskEntry>,
     /// Special Version 2
     pub sequence: Option<UTSequence>,
     /// Special Version 3
@@ -180,6 +179,7 @@ pub fn parse_chunk_SPRT(
         let origin_x: i32 = chunk.read_i32()?;
         let origin_y: i32 = chunk.read_i32()?;
         let mut textures: Vec<UTTextureRef> = Vec::new();
+        let mut collision_masks: Vec<UTSpriteMaskEntry> = Vec::new();
         let mut special_fields: Option<UTSpriteSpecial> = None;
 
         if chunk.read_i32()? == -1 {
@@ -199,7 +199,6 @@ pub fn parse_chunk_SPRT(
             };
             let mut playback_speed: Option<f32> = None;
             let mut playback_speed_type: Option<UTAnimSpeedType> = None;
-            let mut collision_masks: Vec<UTSpriteMaskEntry> = Vec::new();
             let mut swf_version: Option<i32> = None;
             let mut yyswf: Option<UTSpriteYYSWF> = None;
 
@@ -227,52 +226,13 @@ pub fn parse_chunk_SPRT(
                         // read texture list to `textures`
                         read_texture_list(chunk, &mut textures, ut_textures, name.resolve(strings)?, start_position)?;
                         // read mask data
-                        let mask_count: usize = chunk.read_usize()?;
-                        collision_masks.reserve(mask_count);
-
                         let mut mask_width: usize = width;
                         let mut mask_height: usize = height;
                         if general_info.is_version_at_least(2024, 6, 0, 0) {
                             mask_width = (margin_right - margin_left + 1) as usize;
                             mask_height = (margin_bottom - margin_top + 1) as usize;
                         }
-
-                        let len: usize = (mask_width + 7) / 8 * mask_height;
-                        let mut total: usize = 0;
-
-                        for _ in 0..mask_count {
-                            let data: Vec<u8> = match chunk.data.get(chunk.file_index .. chunk.file_index+len) {
-                                Some(bytes) => bytes.to_vec(),
-                                None => return Err(format!(
-                                    "Trying to read Mask Data out of bounds while parsing \
-                                    Sprite with name \"{}\" in chunk '{}' at position {}: {} > {}.",
-                                    name.resolve(strings)?, chunk.name, chunk.file_index, chunk.file_index + len, chunk.data.len(),
-                                )),
-                            };
-                            chunk.file_index += len;
-                            collision_masks.push(UTSpriteMaskEntry { data, width: mask_width, height: mask_height });
-                            total += len;
-                        }
-
-                        // skip padding null bytes
-                        while total % 4 != 0 {
-                            let byte: u8 = chunk.read_u8()?;
-                            if byte != 0 {
-                                return Err(format!(
-                                    "Invalid padding byte 0x{:02X} while parsing Masks for Sprite with name \"{}\" at position {} in chunk '{}'.",
-                                    byte, name.resolve(strings)?, chunk.file_index, chunk.name,
-                                ))
-                            }
-                            total += 1;
-                        }
-
-                        let expected_size: usize = calculate_mask_data_size(mask_width, mask_height, mask_count);
-                        if total != expected_size {
-                            return Err(format!(
-                                "Mask data size is incorrect for Sprite with name \"{}\" at position {} in chunk '{}': Expected: {}; Actual: {}.",
-                                name.resolve(strings)?, chunk.file_index, chunk.name, expected_size, total,
-                            ))
-                        }
+                        collision_masks = read_mask_data(chunk, name.resolve(strings)?, mask_width, mask_height)?;
                     },
 
                     UTSpriteType::SWF => {
@@ -308,6 +268,10 @@ pub fn parse_chunk_SPRT(
                     },
 
                     UTSpriteType::Spine => {
+                        return Err(format!(
+                            "Spine format is not yet implemented for Sprite with name \"{}\" and absolute position {}!",
+                            name.resolve(strings)?, start_position + chunk.abs_pos,
+                        ))
                         // TODO {~~} IMPLEMENT TS
                     }
                 }
@@ -333,12 +297,23 @@ pub fn parse_chunk_SPRT(
                 sprite_type: special_sprite_type,
                 playback_speed,
                 playback_speed_type,
-                collision_masks,
                 sequence,
                 nine_slice,
                 swf_version,
                 yyswf,
             });
+        } else {
+            chunk.file_index -= 4;  // unread the not -1
+            // read into `textures`
+            read_texture_list(chunk, &mut textures, ut_textures, name.resolve(strings)?, start_position)?;
+            // read mask data
+            let mut mask_width: usize = width;
+            let mut mask_height: usize = height;
+            if general_info.is_version_at_least(2024, 6, 0, 0) {
+                mask_width = (margin_right - margin_left + 1) as usize;
+                mask_height = (margin_bottom - margin_top + 1) as usize;
+            }
+            collision_masks = read_mask_data(chunk, name.resolve(strings)?, mask_width, mask_height)?;
         }
 
         sprites_by_index.push(UTSprite {
@@ -357,6 +332,7 @@ pub fn parse_chunk_SPRT(
             origin_x,
             origin_y,
             textures,
+            collision_masks,
             special_fields,
         })
     }
@@ -378,7 +354,7 @@ fn read_texture_list(chunk: &mut UTChunk, textures: &mut Vec<UTTextureRef>, ut_t
     let texture_count: usize = chunk.read_usize()?;
     textures.reserve(texture_count);
     for _ in 0..texture_count {
-        let texture_abs_pos: usize = chunk.file_index + chunk.abs_pos;
+        let texture_abs_pos: usize = chunk.read_usize()?;
         let texture: UTTextureRef = match ut_textures.get_texture_by_pos(texture_abs_pos) {
             Some(texture) => texture,
             None => return Err(format!(
@@ -421,6 +397,52 @@ fn parse_nine_slice(chunk: &mut UTChunk, sprite_name: &str, start_position: usiz
         tile_modes,
     })
 }
+
+
+fn read_mask_data(chunk: &mut UTChunk, sprite_name: &str, mask_width: usize, mask_height: usize) -> Result<Vec<UTSpriteMaskEntry>, String> {
+    let mask_count: usize = chunk.read_usize()?;
+    let mut collision_masks: Vec<UTSpriteMaskEntry> = Vec::with_capacity(mask_count);
+
+    let len: usize = (mask_width + 7) / 8 * mask_height;
+    let mut total: usize = 0;
+
+    for _ in 0..mask_count {
+        let data: Vec<u8> = match chunk.data.get(chunk.file_index .. chunk.file_index+len) {
+            Some(bytes) => bytes.to_vec(),
+            None => return Err(format!(
+                "Trying to read Mask Data out of bounds while parsing \
+                Sprite with name \"{}\" in chunk '{}' at position {}: {} > {}.",
+                sprite_name, chunk.name, chunk.file_index, chunk.file_index + len, chunk.data.len(),
+            )),
+        };
+        chunk.file_index += len;
+        collision_masks.push(UTSpriteMaskEntry { data, width: mask_width, height: mask_height });
+        total += len;
+    }
+
+    // skip padding null bytes
+    while total % 4 != 0 {
+        let byte: u8 = chunk.read_u8()?;
+        if byte != 0 {
+            return Err(format!(
+                "Invalid padding byte 0x{:02X} while parsing Masks for Sprite with name \"{}\" at position {} in chunk '{}'.",
+                byte, sprite_name, chunk.file_index, chunk.name,
+            ))
+        }
+        total += 1;
+    }
+
+    let expected_size: usize = calculate_mask_data_size(mask_width, mask_height, mask_count);
+    if total != expected_size {
+        return Err(format!(
+            "Mask data size is incorrect for Sprite with name \"{}\" at position {} in chunk '{}': Expected: {}; Actual: {}.",
+            sprite_name, chunk.file_index, chunk.name, expected_size, total,
+        ))
+    }
+
+    Ok(collision_masks)
+}
+
 
 /// no idea what this actually does
 pub fn align_reader(chunk: &mut UTChunk, alignment: usize, padding_byte: u8) -> Result<(), String> {
