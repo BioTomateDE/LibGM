@@ -1,16 +1,16 @@
 use num_enum::TryFromPrimitive;
 use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::general_info::UTGeneralInfo;
-use crate::deserialize::sequence::{UTAnimSpeedType, UTSequence};
-use crate::deserialize::sprites_yyswf::UTSpriteYYSWF;
+use crate::deserialize::sequence::{parse_sequence, UTAnimSpeedType, UTSequence};
+use crate::deserialize::sprites_yyswf::{parse_yyswf_timeline, UTSpriteYYSWF, UTSpriteYYSWFTimeline};
 use crate::deserialize::strings::{UTStringRef, UTStrings};
 use crate::deserialize::texture_page_item::{UTTextureRef, UTTextures};
 
 #[derive(Debug, Clone)]
 pub struct UTSprite {
     pub name: UTStringRef,
-    pub width: u32,
-    pub height: u32,
+    pub width: usize,
+    pub height: usize,
     pub margin_left: i32,
     pub margin_right: i32,
     pub margin_bottom: i32,
@@ -19,25 +19,19 @@ pub struct UTSprite {
     pub smooth: bool,
     pub preload: bool,
     pub bbox_mode: i32,
-    pub sep_masks: u32,
+    pub sep_masks: UTSpriteSepMaskType,
     pub origin_x: i32,
     pub origin_y: i32,
     pub textures: Vec<UTTextureRef>,
     pub special_fields: Option<UTSpriteSpecial>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TryFromPrimitive)]
+#[repr(u32)]
 pub enum UTSpriteType {
     Normal,
-    SWF(UTSpriteTypeSWF),
+    SWF,
     Spine,
-}
-
-#[derive(Debug, Clone)]
-pub struct UTSpriteTypeSWF {
-    //// SWF version
-    pub version: i32,
-    pub yyswf: UTSpriteYYSWF,
 }
 
 #[derive(Debug, Clone)]
@@ -71,7 +65,8 @@ pub struct UTSpriteNineSlice {
     pub tile_modes: Vec<UTSpriteNineSliceTileMode>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TryFromPrimitive)]
+#[repr(i32)]
 pub enum UTSpriteNineSliceTileMode {
     Stretch = 0,
     Repeat = 1,
@@ -83,16 +78,21 @@ pub enum UTSpriteNineSliceTileMode {
 #[derive(Debug, Clone)]
 pub struct UTSpriteSpecial {
     /// Version of Special Thingy
-    pub version: u32,
+    pub special_version: u32,
     pub sprite_type: UTSpriteType,
     /// GMS2
     pub playback_speed: Option<f32>,
-    /// GMS2
+    /// GMS 2
     pub playback_speed_type: Option<UTAnimSpeedType>,
+    /// GMS2
+    pub collision_masks: Vec<UTSpriteMaskEntry>,
     /// Special Version 2
-    pub sequence: UTSequence,
+    pub sequence: Option<UTSequence>,
     /// Special Version 3
-    pub nine_slice: UTSpriteNineSlice,
+    pub nine_slice: Option<UTSpriteNineSlice>,
+    /// SWF
+    pub swf_version: Option<i32>,
+    pub yyswf: Option<UTSpriteYYSWF>,
 }
 
 #[derive(Debug, Clone)]
@@ -102,7 +102,7 @@ pub struct UTSpriteRef {
 impl UTSpriteRef {
     pub fn resolve<'a>(&self, sprites: &'a UTSprites) -> Result<&'a UTSprite, String> {
         match sprites.sprites_by_index.get(self.index) {
-            Some(Sprite) => Ok(Sprite),
+            Some(sprite) => Ok(sprite),
             None => Err(format!(
                 "Could not resolve Sprite with index {} in list with length {}.",
                 self.index, sprites.sprites_by_index.len()
@@ -133,13 +133,20 @@ pub enum UTSpriteSepMaskType {
     RotatedRect = 2,
 }
 
+#[derive(Debug, Clone)]
+pub struct UTSpriteMaskEntry {
+    data: Vec<u8>,
+    width: usize,
+    height: usize,
+}
+
 
 #[allow(non_snake_case)]
 pub fn parse_chunk_SPRT(
     chunk: &mut UTChunk,
     general_info: &UTGeneralInfo,
     strings: &UTStrings,
-    textures: &UTTextures,
+    ut_textures: &UTTextures,
 ) -> Result<UTSprites, String> {
     chunk.file_index = 0;
     let sprites_count: usize = chunk.read_usize()?;
@@ -152,8 +159,8 @@ pub fn parse_chunk_SPRT(
     for start_position in start_positions {
         chunk.file_index = start_position;
         let name: UTStringRef = chunk.read_ut_string(strings)?;
-        let width: u32 = chunk.read_u32()?;
-        let height: u32 = chunk.read_u32()?;
+        let width: usize = chunk.read_usize()?;
+        let height: usize = chunk.read_usize()?;
         let margin_left: i32 = chunk.read_i32()?;
         let margin_right: i32 = chunk.read_i32()?;
         let margin_bottom: i32 = chunk.read_i32()?;
@@ -172,11 +179,261 @@ pub fn parse_chunk_SPRT(
         };
         let origin_x: i32 = chunk.read_i32()?;
         let origin_y: i32 = chunk.read_i32()?;
-        if chunk.read_i32()? == -1 {
+        let mut textures: Vec<UTTextureRef> = Vec::new();
+        let mut special_fields: Option<UTSpriteSpecial> = None;
 
+        if chunk.read_i32()? == -1 {
+            let mut sequence_offset: i32 = 0;
+            let mut nine_slice_offset: i32 = 0;
+            let mut sequence: Option<UTSequence> = None;
+            let mut nine_slice: Option<UTSpriteNineSlice> = None;
+
+            let special_version: u32 = chunk.read_u32()?;
+            let special_sprite_type: u32 = chunk.read_u32()?;
+            let special_sprite_type: UTSpriteType = match special_sprite_type.try_into() {
+                Ok(ok) => ok,
+                Err(_) => return Err(format!(
+                    "Invalid Special Sprite Type 0x{:08X} at position {} while parsing Sprite at position {} in chunk '{}'.",
+                    special_sprite_type, chunk.file_index, start_position, chunk.name,
+                )),
+            };
+            let mut playback_speed: Option<f32> = None;
+            let mut playback_speed_type: Option<UTAnimSpeedType> = None;
+            let mut collision_masks: Vec<UTSpriteMaskEntry> = Vec::new();
+            let mut swf_version: Option<i32> = None;
+            let mut yyswf: Option<UTSpriteYYSWF> = None;
+
+            if general_info.is_version_at_least(2, 0, 0, 0) {
+                playback_speed = Some(chunk.read_f32()?);
+                let playback_speed_type_: u32 = chunk.read_u32()?;
+                let playback_speed_type_: UTAnimSpeedType = match playback_speed_type_.try_into() {
+                    Ok(ok) => ok,
+                    Err(_) => return Err(format!(
+                        "Invalid Playback Anim Speed Type 0x{:08X} at position {} while parsing Sprite at position {} in chunk '{}'.",
+                        playback_speed_type_, chunk.file_index, start_position, chunk.name,
+                    )),
+                };
+                playback_speed_type = Some(playback_speed_type_);
+                if special_version >= 2 {
+                    sequence_offset = chunk.read_i32()?;
+                }
+                if special_version >= 3 {
+                    // {~~} set gms version to at least 2.3.2
+                    nine_slice_offset = chunk.read_i32()?;
+                }
+
+                match &special_sprite_type {
+                    UTSpriteType::Normal => {
+                        // read texture list to `textures`
+                        read_texture_list(chunk, &mut textures, ut_textures, name.resolve(strings)?, start_position)?;
+                        // read mask data
+                        let mask_count: usize = chunk.read_usize()?;
+                        collision_masks.reserve(mask_count);
+
+                        let mut mask_width: usize = width;
+                        let mut mask_height: usize = height;
+                        if general_info.is_version_at_least(2024, 6, 0, 0) {
+                            mask_width = (margin_right - margin_left + 1) as usize;
+                            mask_height = (margin_bottom - margin_top + 1) as usize;
+                        }
+
+                        let len: usize = (mask_width + 7) / 8 * mask_height;
+                        let mut total: usize = 0;
+
+                        for _ in 0..mask_count {
+                            let data: Vec<u8> = match chunk.data.get(chunk.file_index .. chunk.file_index+len) {
+                                Some(bytes) => bytes.to_vec(),
+                                None => return Err(format!(
+                                    "Trying to read Mask Data out of bounds while parsing \
+                                    Sprite with name \"{}\" in chunk '{}' at position {}: {} > {}.",
+                                    name.resolve(strings)?, chunk.name, chunk.file_index, chunk.file_index + len, chunk.data.len(),
+                                )),
+                            };
+                            chunk.file_index += len;
+                            collision_masks.push(UTSpriteMaskEntry { data, width: mask_width, height: mask_height });
+                            total += len;
+                        }
+
+                        // skip padding null bytes
+                        while total % 4 != 0 {
+                            let byte: u8 = chunk.read_u8()?;
+                            if byte != 0 {
+                                return Err(format!(
+                                    "Invalid padding byte 0x{:02X} while parsing Masks for Sprite with name \"{}\" at position {} in chunk '{}'.",
+                                    byte, name.resolve(strings)?, chunk.file_index, chunk.name,
+                                ))
+                            }
+                            total += 1;
+                        }
+
+                        let expected_size: usize = calculate_mask_data_size(mask_width, mask_height, mask_count);
+                        if total != expected_size {
+                            return Err(format!(
+                                "Mask data size is incorrect for Sprite with name \"{}\" at position {} in chunk '{}': Expected: {}; Actual: {}.",
+                                name.resolve(strings)?, chunk.file_index, chunk.name, expected_size, total,
+                            ))
+                        }
+                    },
+
+                    UTSpriteType::SWF => {
+                        // [From UndertaleModTool] "This code does not work all the time for some reason."
+                        swf_version = Some(chunk.read_i32()?);
+                        // {~~} assert the version is 7 or 8
+                        if swf_version.unwrap() == 8 {
+                            read_texture_list(chunk, &mut textures, ut_textures, name.resolve(strings)?, start_position)?;
+                        }
+
+                        // read YYSWF
+                        align_reader(chunk, 4, 0x00)?;
+                        let jpeg_len: i32 = chunk.read_i32()? & (!0x80000000u32 as i32);    // the length is ORed with int.MinValue
+                        let jpeg_len: usize = jpeg_len as usize;
+                        let yyswf_version: i32 = chunk.read_i32()?;
+                        let jpeg_table: Vec<u8> = match chunk.data.get(chunk.file_index .. chunk.file_index+jpeg_len) {
+                            Some(bytes) => bytes.to_vec(),
+                            None => return Err(format!(
+                                "Trying to read YYSWF JPEG Table out of bounds while parsing \
+                                Sprite with name \"{}\" in chunk '{}' at position {}: {} > {}.",
+                                name.resolve(strings)?, chunk.name, chunk.file_index, chunk.file_index + jpeg_len, chunk.data.len(),
+                            )),
+                        };
+                        chunk.file_index += jpeg_len;
+                        align_reader(chunk, 4, 0x00)?;
+                        let timeline: UTSpriteYYSWFTimeline = parse_yyswf_timeline(chunk, general_info)?;
+
+                        yyswf = Some(UTSpriteYYSWF {
+                            version: yyswf_version,
+                            jpeg_table,
+                            timeline,
+                        })
+                    },
+
+                    UTSpriteType::Spine => {
+                        // TODO {~~} IMPLEMENT TS
+                    }
+                }
+
+                if sequence_offset != 0 {
+                    let thingy: i32 = chunk.read_i32()?;
+                    if thingy != 1 {
+                        return Err(format!(
+                            "Expected 1 but got {} while parsing Sequence for Sprite with name \"{}\" in chunk '{}'.",
+                            thingy, name.resolve(strings)?, chunk.name,
+                        ))
+                    }
+                    sequence = Some(parse_sequence(chunk, strings)?);
+                }
+
+                if nine_slice_offset != 0 {
+                    nine_slice = Some(parse_nine_slice(chunk, name.resolve(strings)?, start_position)?);
+                }
+            }
+
+            special_fields = Some(UTSpriteSpecial {
+                special_version,
+                sprite_type: special_sprite_type,
+                playback_speed,
+                playback_speed_type,
+                collision_masks,
+                sequence,
+                nine_slice,
+                swf_version,
+                yyswf,
+            });
         }
+
+        sprites_by_index.push(UTSprite {
+            name,
+            width,
+            height,
+            margin_left,
+            margin_right,
+            margin_bottom,
+            margin_top,
+            transparent,
+            smooth,
+            preload,
+            bbox_mode,
+            sep_masks,
+            origin_x,
+            origin_y,
+            textures,
+            special_fields,
+        })
     }
 
 
     Ok(UTSprites {sprites_by_index})
 }
+
+
+fn calculate_mask_data_size(width: usize, height: usize, mask_count: usize) -> usize {
+    let rounded_width: usize = (width + 7) / 8 * 8;                 // round to multiple of 8
+    let data_bits: usize = rounded_width * height * mask_count;
+    let data_bytes: usize = ((data_bits + 31) / 32 * 32) / 8;       // round to multiple of 4 bytes
+    data_bytes
+}
+
+
+fn read_texture_list(chunk: &mut UTChunk, textures: &mut Vec<UTTextureRef>, ut_textures: &UTTextures, sprite_name: &str, start_position: usize) -> Result<(), String> {
+    let texture_count: usize = chunk.read_usize()?;
+    textures.reserve(texture_count);
+    for _ in 0..texture_count {
+        let texture_abs_pos: usize = chunk.file_index + chunk.abs_pos;
+        let texture: UTTextureRef = match ut_textures.get_texture_by_pos(texture_abs_pos) {
+            Some(texture) => texture,
+            None => return Err(format!(
+                "Could not find texture with absolute position {} for Sprite with name \"{}\" at position {} in chunk '{}'.",
+                texture_abs_pos, sprite_name, start_position, chunk.name,
+            )),
+        };
+        textures.push(texture);
+    }
+    Ok(())
+}
+
+fn parse_nine_slice(chunk: &mut UTChunk, sprite_name: &str, start_position: usize) -> Result<UTSpriteNineSlice, String> {
+    let left: i32 = chunk.read_i32()?;
+    let top: i32 = chunk.read_i32()?;
+    let right: i32 = chunk.read_i32()?;
+    let bottom: i32 = chunk.read_i32()?;
+    let enabled: bool = chunk.read_i32()? != 0;
+
+    let mut tile_modes: Vec<UTSpriteNineSliceTileMode> = Vec::with_capacity(5);
+    for _ in 0..5 {
+        let tile_mode: i32 = chunk.read_i32()?;
+        let tile_mode: UTSpriteNineSliceTileMode = match tile_mode.try_into() {
+            Ok(ok) => ok,
+            Err(_) => return Err(format!(
+                "Invalid Tile Mode for Nine Slice 0x{:08X} at position {} \
+                while parsing Sprite with name \"{}\" at position {} in chunk '{}'.",
+                tile_mode, chunk.file_index, sprite_name, start_position, chunk.name,
+            )),
+        };
+        tile_modes.push(tile_mode);
+    }
+
+    Ok(UTSpriteNineSlice {
+        left,
+        top,
+        right,
+        bottom,
+        enabled,
+        tile_modes,
+    })
+}
+
+/// no idea what this actually does
+pub fn align_reader(chunk: &mut UTChunk, alignment: usize, padding_byte: u8) -> Result<(), String> {
+    // maybe `alignment` needs to be i32 like in UndertaleModTool
+    while ((chunk.file_index + chunk.abs_pos) & (alignment - 1)) as u8 != padding_byte {
+        let byte: u8 = chunk.read_u8()?;
+        if byte != padding_byte {
+            return Err(format!(
+                "Invalid alignment padding 0x{:02X} (expected: 0x{}) at position {} in chunk '{}' with alignment value {}.",
+                byte, padding_byte, chunk.file_index - 1, chunk.name, alignment,
+            ));
+        }
+    }
+    Ok(())
+}
+
