@@ -2,8 +2,6 @@ use std::collections::HashMap;
 use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::embedded_textures::{Image, UTEmbeddedTexture};
 use image;
-use crate::deserialize::sounds::{UTSound, UTSounds};
-use crate::deserialize::strings::UTStringRef;
 use crate::printing::format_type_of;
 
 #[derive(Debug, Clone)]
