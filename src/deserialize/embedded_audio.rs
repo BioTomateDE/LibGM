@@ -5,9 +5,9 @@ pub struct UTEmbeddedAudio {
     raw_data: Vec<u8>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UTEmbeddedAudioRef {
-    index: usize,
+    pub index: usize,
 }
 impl UTEmbeddedAudioRef {
     pub fn resolve<'a>(&self, embedded_audios: &'a UTEmbeddedAudios) -> Result<&'a UTEmbeddedAudio, String> {

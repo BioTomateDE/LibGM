@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::general_info::UTGeneralInfo;
 use crate::deserialize::strings::{UTStringRef, UTStrings};
@@ -35,8 +36,48 @@ pub struct UTGlyph {
 }
 
 
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct UTFontRef {
+    pub index: usize,
+}
+impl UTFontRef {
+    pub fn resolve<'a>(&self, fonts: &'a UTFonts) -> Result<&'a UTFont, String> {
+        match fonts.fonts_by_index.get(self.index) {
+            Some(font) => Ok(font),
+            None => Err(format!(
+                "Could not resolve font with index {} in list with length {}.",
+                self.index, fonts.fonts_by_index.len()
+            )),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct UTFonts {
+    abs_pos_to_index: HashMap<usize, usize>,    // convert absolute position/pointer in data.win to index in Self.font_by_index
+    fonts_by_index: Vec<UTFont>,                // fonts by index/order in chunk FONT
+}
+
+impl UTFonts {
+    pub fn get_font_by_pos(&self, position: usize) -> Option<UTFontRef> {
+        let index: usize = match self.abs_pos_to_index.get(&position) {
+            Some(index) => *index,
+            None => return None,
+        };
+        Some(UTFontRef { index })
+    }
+    pub fn get_font_by_index(&self, index: usize) -> Option<UTFontRef> {
+        if index >= self.fonts_by_index.len() {
+            return None;
+        }
+        Some(UTFontRef { index })
+    }
+    pub fn len(&self) -> usize { self.fonts_by_index.len() }
+}
+
+
 #[allow(non_snake_case)]
-pub fn parse_chunk_FONT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strings: &UTStrings) -> Result<Vec<UTFont>, String> {
+pub fn parse_chunk_FONT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strings: &UTStrings) -> Result<UTFonts, String> {
     chunk.file_index = 0;
     let font_count: usize = chunk.read_usize()?;
     let mut font_starting_positions: Vec<usize> = Vec::with_capacity(font_count);
@@ -45,9 +86,10 @@ pub fn parse_chunk_FONT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strin
         font_starting_positions.push(start_position);
     }
 
-    let mut fonts: Vec<UTFont> = Vec::with_capacity(font_count);
-    for start_position in font_starting_positions {
-        chunk.file_index = start_position;
+    let mut fonts_by_index: Vec<UTFont> = Vec::with_capacity(font_count);
+    let mut abs_pos_to_index: HashMap<usize, usize> = HashMap::new();
+    for (i, start_position) in font_starting_positions.iter().enumerate() {
+        chunk.file_index = *start_position;
 
         let name: UTStringRef = chunk.read_ut_string(&strings)?;
         let display_name: UTStringRef = chunk.read_ut_string(&strings)?;
@@ -101,11 +143,13 @@ pub fn parse_chunk_FONT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strin
             line_height,
             glyphs,
         };
-        // println!("\n\n");
-        // font.print();
-        fonts.push(font);
+        abs_pos_to_index.insert(start_position + chunk.abs_pos, i);
+        fonts_by_index.push(font);
     }
-    Ok(fonts)
+    Ok(UTFonts {
+        abs_pos_to_index,
+        fonts_by_index,
+    })
 }
 
 

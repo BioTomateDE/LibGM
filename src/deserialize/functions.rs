@@ -8,7 +8,7 @@ pub struct UTFunction {
     // pub occurrences: HashSet<usize>,                // set of occurrences (call instructions) positions relative to chunk CODE
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UTFunctionRef {
     pub index: usize,
 }

@@ -1,6 +1,6 @@
 ﻿use crate::deserialize::strings::{UTStringRef, UTStrings};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UTChunk<'a> {
     pub name: String,       // 4 letter name of chunk
     pub abs_pos: usize,     // absolute position/index in data.win file

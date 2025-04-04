@@ -5,7 +5,7 @@ use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::code::{parse_chunk_CODE, UTCode};
 use crate::deserialize::embedded_audio::{parse_chunk_AUDO, UTEmbeddedAudios};
 use crate::deserialize::embedded_textures::{parse_chunk_TXTR, UTEmbeddedTexture};
-use crate::deserialize::fonts::{parse_chunk_FONT, UTFont};
+use crate::deserialize::fonts::{parse_chunk_FONT, UTFonts};
 use crate::deserialize::functions::{parse_chunk_FUNC, UTCodeLocal, UTFunctions};
 use crate::deserialize::game_objects::{parse_chunk_OBJT, UTGameObjects};
 use crate::deserialize::general_info::{parse_chunk_GEN8, parse_chunk_OPTN};
@@ -32,7 +32,7 @@ pub struct UTData {
     pub functions: UTFunctions,             // FUNC
     pub code_locals: Vec<UTCodeLocal>,      // FUNC
     pub code: Vec<UTCode>,                  // CODE
-    pub fonts: Vec<UTFont>,                 // FONT
+    pub fonts: UTFonts,                     // FONT
     pub audios: UTEmbeddedAudios,           // AUDO
     pub sounds: UTSounds,                   // SOND
     pub game_objects: UTGameObjects,        // OBJT
@@ -108,7 +108,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let variables: Vec<UTVariable> = parse_chunk_VARI(&mut chunk_VARI, &strings)?;
     let (functions, code_locals): (UTFunctions, Vec<UTCodeLocal>) = parse_chunk_FUNC(&mut chunk_FUNC, &strings, &chunk_CODE)?;
     let code: Vec<UTCode> = parse_chunk_CODE(&mut chunk_CODE, bytecode14, &strings, &variables, &functions)?;
-    let fonts: Vec<UTFont> = parse_chunk_FONT(&mut chunk_FONT, &general_info, &strings)?;
+    let fonts: UTFonts = parse_chunk_FONT(&mut chunk_FONT, &general_info, &strings)?;
     let audios: UTEmbeddedAudios = parse_chunk_AUDO(&mut chunk_AUDO)?;
     let sounds: UTSounds = parse_chunk_SOND(&mut chunk_SOND, &general_info, &strings, &audios)?;
     let game_objects: UTGameObjects = parse_chunk_OBJT(&mut chunk_OBJT, &general_info, &strings)?;

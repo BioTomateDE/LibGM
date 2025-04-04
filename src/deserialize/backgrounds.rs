@@ -24,7 +24,7 @@ pub struct UTBackground {
 }
 
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
 pub struct UTBackgroundRef {
     pub index: usize,
 }

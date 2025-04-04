@@ -37,7 +37,7 @@ pub enum UTGameObjectCollisionShape {
     Custom = 2,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UTGameObjectRef {
     index: usize,
 }
