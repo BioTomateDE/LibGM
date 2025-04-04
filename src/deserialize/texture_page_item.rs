@@ -16,7 +16,7 @@ pub struct UTTexture {
     pub index: usize,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct UTTextureRef {
     pub index: usize,
 }

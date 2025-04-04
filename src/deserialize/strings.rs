@@ -2,7 +2,7 @@
 use crate::deserialize::chunk_reading::UTChunk;
 
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct UTStringRef {
     pub index: usize,
 }

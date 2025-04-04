@@ -1,17 +1,16 @@
 use crate::deserialize::all::UTData;
 use crate::deserialize::strings::{UTStringRef};
-use crate::serialize::all::{build_chunk, DataBuilder};
+use crate::serialize::all::{build_chunk, DataBuilder, UTRef};
 use crate::serialize::chunk_writing::ChunkBuilder;
 
 #[allow(non_snake_case)]
 pub fn build_chunk_STRG(data_builder: &mut DataBuilder, ut_data: &UTData) -> Result<(), String> {
-    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "STRG" };
+    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "STRG", abs_pos: data_builder.len() };
     let len: usize = ut_data.strings.len();
     builder.write_usize(len)?;
 
-    // write placeholder bytes for string absolute positions
-    for _ in 0..len {
-        builder.write_usize(0)?;
+    for i in 0..len {
+        data_builder.push_pointer_position(&mut builder, UTRef::String(UTStringRef { index: i }))?;
     }
 
     for i in 0..len {
@@ -27,12 +26,9 @@ pub fn build_chunk_STRG(data_builder: &mut DataBuilder, ut_data: &UTData) -> Res
         let string: &str = string_ref.resolve(&ut_data.strings)?;
 
         builder.write_usize(string.len())?;
-        let absolute_position: usize = data_builder.len() + builder.len();
-        // write string absolute position to placeholder bytes
-        let bytes: [u8; 4] = (absolute_position as u32).to_le_bytes();
-        builder.overwrite_data(&bytes, i * 4 + 4)?;
+        data_builder.push_pointing_to(&mut builder, UTRef::String(UTStringRef {index: i}))?;
 
-        builder.write_string(&string)?;
+        builder.write_literal_string(&string)?;
         builder.write_u8(0)?        // write trailing null byte
     }
 

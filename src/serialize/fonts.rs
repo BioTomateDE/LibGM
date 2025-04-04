@@ -1,28 +1,25 @@
 use crate::deserialize::all::UTData;
-use crate::deserialize::fonts::UTGlyph;
-use crate::serialize::all::{build_chunk, DataBuilder};
+use crate::deserialize::fonts::{UTFont, UTFontRef, UTGlyph};
+use crate::serialize::all::{build_chunk, DataBuilder, UTRef};
 use crate::serialize::chunk_writing::ChunkBuilder;
 
 #[allow(non_snake_case)]
 pub fn build_chunk_FONT(data_builder: &mut DataBuilder, ut_data: &UTData) -> Result<(), String> {
-    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "FONT" };
+    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "FONT", abs_pos: data_builder.len() };
 
     let font_count: usize = ut_data.fonts.len();
     builder.write_usize(font_count)?;
 
-    // write placeholder bytes for font absolute positions
-    for _ in 0..font_count {
-        builder.write_usize(0)?;
+    for i in 0..font_count {
+        data_builder.push_pointer_position(&mut builder, UTRef::Font(UTFontRef { index: i }))?;
     }
 
-    for (i, font) in ut_data.fonts.iter().enumerate() {
-        let absolute_position: usize = data_builder.len() + builder.len();
-        // write font absolute position to placeholder bytes
-        let bytes: [u8; 4] = (absolute_position as u32).to_le_bytes();
-        builder.overwrite_data(&bytes, i * 4 + 4)?;
-
-        builder.write_string(&font.name.resolve(&ut_data.strings)?)?;
-        builder.write_string(&font.display_name.resolve(&ut_data.strings)?)?;
+    for i in 0..font_count {
+        let font: UTFontRef = ut_data.fonts.get_font_by_index(i).expect("Font out of bounds while building.");
+        let font: &UTFont = font.resolve(&ut_data.fonts)?;
+        data_builder.push_pointing_to(&mut builder, UTRef::Font(UTFontRef { index: i }))?;
+        builder.write_literal_string(&font.name.resolve(&ut_data.strings)?)?;
+        builder.write_literal_string(&font.display_name.resolve(&ut_data.strings)?)?;
         builder.write_u32(font.em_size)?;
         builder.write_u32(if font.bold {1} else {0})?;
         builder.write_u32(if font.italic {1} else {0})?;
