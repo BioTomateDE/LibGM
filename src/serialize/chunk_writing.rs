@@ -1,9 +1,10 @@
-
+use crate::deserialize::strings::{UTStringRef, UTStrings};
 
 #[derive(Debug, Clone)]
 pub struct ChunkBuilder {
     pub raw_data: Vec<u8>,
     pub chunk_name: &'static str,
+    pub abs_pos: usize,
 }
 
 
@@ -75,7 +76,7 @@ impl ChunkBuilder {
         }
         Ok(())
     }
-    pub fn write_string(&mut self, string: &str) -> Result<(), String> {
+    pub fn write_literal_string(&mut self, string: &str) -> Result<(), String> {
         // write an ascii string to the data
         for (i, char) in string.chars().enumerate() {
             let byte: u8 = match char.try_into() {
@@ -85,6 +86,11 @@ impl ChunkBuilder {
             self.raw_data.push(byte);
         }
         Ok(())
+    }
+    pub fn write_ut_string(&mut self, string: &UTStringRef, strings: &UTStrings) -> Result<(), String> {
+        // write a gamemaker string reference to the data
+        let string = string.resolve(&strings)?;
+        self.write_literal_string(string)
     }
     pub fn overwrite_data(&mut self, data: &[u8], position: usize) -> Result<(), String> {
         if position + data.len() >= self.len() {
@@ -102,6 +108,28 @@ impl ChunkBuilder {
 
         Ok(())
     }
+
+    pub fn overwrite_pointer(&mut self, start_position: usize, index: usize) -> Result<(), String> {
+        // start position should be relative to chunk
+        let position: usize = start_position + index * 4;
+        if position + 4 >= self.len() {
+            return Err(format!(
+                "Could not overwrite usize/pointer at position {} (abs: {}) in data with length {} while building chunk.",
+                position,
+                self.abs_pos + position,
+                self.len()
+            ))
+        };
+
+        let number: usize = self.abs_pos + self.len();
+        let bytes = (number as u32).to_le_bytes();
+        for (i, byte) in bytes.iter().enumerate() {
+            self.raw_data[position + i] = *byte;
+        }
+
+        Ok(())
+    }
+
     pub fn len(&self) -> usize {
         self.raw_data.len()
     }
