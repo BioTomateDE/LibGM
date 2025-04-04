@@ -17,7 +17,7 @@ pub struct UTSound {
     pub audio_length: Option<f32>,                  // in seconds probably
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UTSoundRef {
     index: usize,
 }
@@ -52,6 +52,9 @@ impl UTSounds {
             return None;
         }
         Some(UTSoundRef {index})
+    }
+    pub fn len(&self) -> usize {
+        self.sounds_by_index.len()
     }
 }
 

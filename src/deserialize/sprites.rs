@@ -94,7 +94,7 @@ pub struct UTSpriteSpecial {
     pub yyswf: Option<UTSpriteYYSWF>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UTSpriteRef {
     index: usize,
 }
