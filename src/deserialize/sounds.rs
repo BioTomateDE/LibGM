@@ -19,7 +19,7 @@ pub struct UTSound {
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UTSoundRef {
-    index: usize,
+    pub index: usize,
 }
 impl UTSoundRef {
     pub fn resolve<'a>(&self, sounds: &'a UTSounds) -> Result<&'a UTSound, String> {

@@ -9,14 +9,12 @@ pub fn build_chunk_SOND(data_builder: &mut DataBuilder, ut_data: &UTData) -> Res
     let len: usize = ut_data.sounds.len();
     builder.write_usize(len)?;
 
-    let start_position: usize = builder.len();
-    // write placeholder bytes for pointers
-    for _ in 0..len {
-        builder.write_usize(0)?;
+    for i in 0..len {
+        data_builder.push_pointer_position(&mut builder, UTRef::Sound(UTSoundRef { index: i }))?;
     }
 
     for i in 0..len {
-        builder.overwrite_pointer(start_position, i)?;
+        data_builder.push_pointing_to(&mut builder, UTRef::Sound(UTSoundRef { index: i }))?;
         let sound: UTSoundRef = ut_data.sounds.get_sound_by_index(i).expect("Sound out of bounds while building.");
         let sound: &UTSound = sound.resolve(&ut_data.sounds)?;
         builder.write_ut_string(&sound.name, &ut_data.strings)?;
