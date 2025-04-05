@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use image::DynamicImage;
 use crate::deserialize::all::UTData;
 use crate::deserialize::backgrounds::UTBackgroundRef;
 use crate::deserialize::embedded_audio::UTEmbeddedAudioRef;
@@ -10,13 +11,14 @@ use crate::deserialize::scripts::UTScriptRef;
 use crate::deserialize::sounds::UTSoundRef;
 use crate::deserialize::sprites::UTSpriteRef;
 use crate::deserialize::strings::UTStringRef;
-use crate::deserialize::texture_page_item::UTTextureRef;
+use crate::deserialize::texture_page_items::{UTTexturePageItem, UTTextureRef};
 use crate::serialize::chunk_writing::ChunkBuilder;
-
+use crate::serialize::embedded_textures::build_chunk_TXTR;
 use crate::serialize::strings::build_chunk_STRG;
 use crate::serialize::general_info::{build_chunk_OPTN, build_chunk_GEN8};
+use crate::serialize::scripts::build_chunk_SCPT;
 use crate::serialize::sounds::build_chunk_SOND;
-
+use crate::serialize::texture_page_items::{build_chunk_TPAG, generate_texture_pages};
 
 #[derive(Debug, Clone)]
 pub struct DataBuilder {
@@ -66,6 +68,8 @@ pub enum UTRef {
     GameObject(UTGameObjectRef),
     Font(UTFontRef),
     Script(UTScriptRef),
+    TexturePage(usize),
+    TexturePageData(usize),
 }
 #[derive(Debug, Clone)]
 pub struct UTPointer {
@@ -121,8 +125,13 @@ pub fn build_data_file(ut_data: &UTData) -> Result<Vec<u8>, String> {
     build_chunk_GEN8(&mut builder, &ut_data)?;
     build_chunk_OPTN(&mut builder, &ut_data)?;
     build_chunk_STRG(&mut builder, &ut_data)?;
-    // EXTN
     build_chunk_SOND(&mut builder, &ut_data)?;
+    build_chunk_SCPT(&mut builder, &ut_data)?;
+    let (texture_page_items, texture_pages): (Vec<UTTexturePageItem>, Vec<DynamicImage>) = generate_texture_pages(&ut_data.textures)?;
+    build_chunk_TPAG(&mut builder, &ut_data, texture_page_items)?;
+    build_chunk_TXTR(&mut builder, &ut_data, texture_pages)?;
+
+    // {~~} IMPORTANT TODO: resolve pointers
 
     let bytes: [u8; 4] = (builder.len() as u32).to_le_bytes();
     builder.overwrite_data(&bytes, 4)?;     // overwrite placeholder total length
