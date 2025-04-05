@@ -6,6 +6,7 @@ use crate::deserialize::embedded_audio::UTEmbeddedAudioRef;
 use crate::deserialize::fonts::UTFontRef;
 use crate::deserialize::functions::UTFunctionRef;
 use crate::deserialize::game_objects::UTGameObjectRef;
+use crate::deserialize::scripts::UTScriptRef;
 use crate::deserialize::sounds::UTSoundRef;
 use crate::deserialize::sprites::UTSpriteRef;
 use crate::deserialize::strings::UTStringRef;
@@ -64,6 +65,7 @@ pub enum UTRef {
     Background(UTBackgroundRef),
     GameObject(UTGameObjectRef),
     Font(UTFontRef),
+    Script(UTScriptRef),
 }
 #[derive(Debug, Clone)]
 pub struct UTPointer {
