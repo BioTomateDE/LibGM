@@ -1,7 +1,7 @@
 use crate::deserialize::chunk_reading::UTChunk;
 use crate::deserialize::general_info::UTGeneralInfo;
 use crate::deserialize::strings::{UTStringRef, UTStrings};
-use crate::deserialize::texture_page_item::{UTTextureRef, UTTextures};
+use crate::deserialize::texture_page_items::{UTTextureRef, UTTextures};
 
 #[derive(Debug, Clone)]
 pub struct UTBackground {
