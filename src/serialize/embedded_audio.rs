@@ -1,5 +1,5 @@
 use crate::deserialize::all::UTData;
-use crate::deserialize::embedded_audio::{UTEmbeddedAudio, UTEmbeddedAudios, UTEmbeddedAudioRef};
+use crate::deserialize::embedded_audio::{UTEmbeddedAudio, UTEmbeddedAudioRef};
 use crate::serialize::all::{DataBuilder, UTRef};
 use crate::serialize::chunk_writing::ChunkBuilder;
 
@@ -15,7 +15,7 @@ pub fn build_chunk_AUDO(data_builder: &mut DataBuilder, ut_data: &UTData) -> Res
 
     for i in 0..len {
         data_builder.push_pointing_to(&mut builder, UTRef::Audio(UTEmbeddedAudioRef { index: i }))?;
-        let audio: UTEmbeddedAudioRef = ut_data.audios.get_audio_by_index(i).expect("Sound out of bounds while building.");
+        let audio: UTEmbeddedAudioRef = ut_data.audios.get_audio_by_index(i).expect("Audio out of bounds while building.");
         let audio: &UTEmbeddedAudio = audio.resolve(&ut_data.audios)?;
         builder.write_usize(audio.raw_data.len())?;
         builder.write_bytes(&audio.raw_data)?;
