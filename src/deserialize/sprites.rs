@@ -4,7 +4,7 @@ use crate::deserialize::general_info::UTGeneralInfo;
 use crate::deserialize::sequence::{parse_sequence, UTAnimSpeedType, UTSequence};
 use crate::deserialize::sprites_yyswf::{parse_yyswf_timeline, UTSpriteYYSWF, UTSpriteYYSWFTimeline};
 use crate::deserialize::strings::{UTStringRef, UTStrings};
-use crate::deserialize::texture_page_item::{UTTextureRef, UTTextures};
+use crate::deserialize::texture_page_items::{UTTextureRef, UTTextures};
 
 #[derive(Debug, Clone)]
 pub struct UTSprite {

@@ -11,7 +11,7 @@ pub mod rooms;
 pub mod sequence;
 pub mod game_objects;
 pub mod embedded_textures;
-pub mod texture_page_item;
+pub mod texture_page_items;
 pub mod backgrounds;
 pub mod embedded_audio;
 pub mod sounds;
