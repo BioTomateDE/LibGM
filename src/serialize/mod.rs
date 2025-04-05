@@ -5,3 +5,4 @@ mod chunk_writing;
 pub mod fonts;
 pub mod sounds;
 pub mod embedded_audio;
+pub mod scripts;
