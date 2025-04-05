@@ -7,7 +7,7 @@ use crate::deserialize::rooms::{UTRoom, UTRoomBackground, UTRoomFlags, UTRoomGam
 use crate::deserialize::sequence::{UTKeyframe, UTKeyframeMoment, UTSequence, UTTrack};
 use crate::deserialize::sounds::{UTSound, UTSoundFlags};
 use crate::deserialize::strings::UTStrings;
-use crate::deserialize::texture_page_item::{UTTexture, UTTextures};
+use crate::deserialize::texture_page_items::{UTTexture, UTTextures};
 
 impl UTGeneralInfo {
     pub fn print(&self, strings: &UTStrings) -> Result<(), String> {

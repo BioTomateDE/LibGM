@@ -16,7 +16,7 @@ use crate::deserialize::general_info::{UTGeneralInfo, UTOptions};
 use crate::deserialize::rooms::{parse_chunk_ROOM, UTRoom};
 use crate::deserialize::sounds::{parse_chunk_SOND, UTSounds};
 use crate::deserialize::sprites::{parse_chunk_SPRT, UTSprites};
-use crate::deserialize::texture_page_item::{parse_chunk_TPAG, UTTextures};
+use crate::deserialize::texture_page_items::{parse_chunk_TPAG, UTTextures};
 
 
 #[derive(Debug, Clone)]

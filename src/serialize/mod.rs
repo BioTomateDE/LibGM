@@ -6,4 +6,5 @@ pub mod fonts;
 pub mod sounds;
 pub mod embedded_audio;
 pub mod scripts;
-pub mod texture_page_item;
+pub mod texture_page_items;
+mod embedded_textures;

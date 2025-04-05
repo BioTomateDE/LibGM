@@ -1,6 +1,6 @@
 use image::{ImageBuffer, Rgba};
 use crate::deserialize::all::UTData;
-use crate::deserialize::texture_page_item::{UTTexture, UTTexturePageItem, UTTextureRef, UTTextures};
+use crate::deserialize::texture_page_items::{UTTexture, UTTexturePageItem, UTTextureRef, UTTextures};
 use crate::serialize::all::{DataBuilder, UTRef};
 use crate::serialize::chunk_writing::ChunkBuilder;
 
@@ -37,7 +37,7 @@ pub fn build_chunk_TPAG(data_builder: &mut DataBuilder, ut_data: &UTData, textur
 
 // note: in undertale, the dimensions of texture pages are all powers of 2 (512, 1024, 2048)
 //       i don't really know if this is important (i'm ignoring it for now)
-pub fn generate_texture_pages(ut_textures: UTTextures) -> Result<(Vec<UTTexturePageItem>, Vec<image::DynamicImage>), String> {
+pub fn generate_texture_pages(ut_textures: &UTTextures) -> Result<(Vec<UTTexturePageItem>, Vec<image::DynamicImage>), String> {
     static PAGE_MAX_WIDTH: usize = 2048;        // MAX: u16 limit (65535)
     static PAGE_MAX_HEIGHT: usize = 2048;       // MAX: u16 limit (65535)
 
