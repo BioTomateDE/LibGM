@@ -648,7 +648,6 @@ impl UTTexture {
         println!("  Target Height: {}", self.target_height);
         println!("  Bounding Width: {}", self.bounding_width);
         println!("  Bounding Height: {}", self.bounding_height);
-        println!("  Index: {}", self.index);
         println!("  Image Data: <DynamicImage Data>");
         println!();
     }
