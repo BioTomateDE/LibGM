@@ -92,6 +92,12 @@ impl ChunkBuilder {
         let string = string.resolve(&strings)?;
         self.write_literal_string(string)
     }
+    pub fn write_bytes(&mut self, data: &[u8]) -> Result<(), String> {
+        for byte in data {
+            self.raw_data.push(*byte);
+        }
+        Ok(())
+    }
     pub fn overwrite_data(&mut self, data: &[u8], position: usize) -> Result<(), String> {
         if position + data.len() >= self.len() {
             return Err(format!(
