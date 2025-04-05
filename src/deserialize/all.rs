@@ -9,7 +9,7 @@ use crate::deserialize::fonts::{parse_chunk_FONT, UTFonts};
 use crate::deserialize::functions::{parse_chunk_FUNC, UTCodeLocal, UTFunctions};
 use crate::deserialize::game_objects::{parse_chunk_OBJT, UTGameObjects};
 use crate::deserialize::general_info::{parse_chunk_GEN8, parse_chunk_OPTN};
-use crate::deserialize::scripts::{parse_chunk_SCPT, UTScript};
+use crate::deserialize::scripts::{parse_chunk_SCPT, UTScripts};
 use crate::deserialize::strings::{parse_chunk_STRG, UTStrings};
 use crate::deserialize::variables::{parse_chunk_VARI, UTVariable};
 use crate::deserialize::general_info::{UTGeneralInfo, UTOptions};
@@ -27,7 +27,7 @@ pub struct UTData {
     pub textures: UTTextures,               // TPAG  (and TXTR)
     pub backgrounds: UTBackgrounds,         // BGND
     pub sprites: UTSprites,                 // SPRT
-    pub scripts: Vec<UTScript>,             // SCPT
+    pub scripts: UTScripts,                 // SCPT
     pub variables: Vec<UTVariable>,         // VARI
     pub functions: UTFunctions,             // FUNC
     pub code_locals: Vec<UTCodeLocal>,      // FUNC
@@ -104,7 +104,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<UTData, String> {
     let textures: UTTextures = parse_chunk_TPAG(&mut chunk_TPAG, texture_pages)?;
     let backgrounds: UTBackgrounds = parse_chunk_BGND(&mut chunk_BGND, &general_info, &strings, &textures)?;
     let sprites: UTSprites = parse_chunk_SPRT(&mut chunk_SPRT, &general_info, &strings, &textures)?;
-    let scripts: Vec<UTScript> = parse_chunk_SCPT(&mut chunk_SCPT, &strings)?;
+    let scripts: UTScripts = parse_chunk_SCPT(&mut chunk_SCPT, &strings)?;
     let variables: Vec<UTVariable> = parse_chunk_VARI(&mut chunk_VARI, &strings)?;
     let (functions, code_locals): (UTFunctions, Vec<UTCodeLocal>) = parse_chunk_FUNC(&mut chunk_FUNC, &strings, &chunk_CODE)?;
     let code: Vec<UTCode> = parse_chunk_CODE(&mut chunk_CODE, bytecode14, &strings, &variables, &functions)?;
