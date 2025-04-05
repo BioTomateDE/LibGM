@@ -13,7 +13,6 @@ pub struct UTTexture {
     pub target_height: u16,
     pub bounding_width: u16,
     pub bounding_height: u16,
-    pub index: usize,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -51,6 +50,20 @@ impl UTTextures {
         }
         Some(UTTextureRef {index})
     }
+    pub fn len(&self) -> usize {
+        self.textures_by_index.len()
+    }
+}
+
+
+#[derive(Debug, Clone)]
+pub struct UTTexturePageItem {
+    pub source_x: u16,
+    pub source_y: u16,
+    pub source_width: u16,
+    pub source_height: u16,
+    pub texture_page_id: u16,
+    pub texture: UTTextureRef,
 }
 
 
@@ -94,6 +107,7 @@ pub fn parse_chunk_TPAG(chunk: &mut UTChunk, texture_pages: Vec<UTEmbeddedTextur
             )),
         };
 
+        // untested code
         let img = image::imageops::crop_imm(spritesheet, source_x as u32, source_y as u32, source_width as u32, source_height as u32).to_image();
         let texture_page_item: UTTexture = UTTexture {
             img: image::DynamicImage::ImageRgba8(img),
@@ -103,7 +117,6 @@ pub fn parse_chunk_TPAG(chunk: &mut UTChunk, texture_pages: Vec<UTEmbeddedTextur
             target_height,
             bounding_width,
             bounding_height,
-            index: i,
         };
         textures_by_index.push(texture_page_item);
         abs_pos_to_index.insert(start_position + chunk.abs_pos, i);
