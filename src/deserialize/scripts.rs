@@ -63,6 +63,7 @@ pub fn parse_chunk_SCPT(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTSc
         }
         let id: Option<u32> = if id == -1 { None } else { Some(id as u32) };
 
+        // println!("Script  {:<10?} {}", id, name.resolve(strings)?);
         scripts_by_index.push(UTScript { name, id });
         abs_pos_to_index.insert(*abs_start_position, i);
     }
