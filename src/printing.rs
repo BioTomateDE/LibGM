@@ -9,6 +9,7 @@ use crate::deserialize::sounds::{GMSound, GMSoundFlags};
 use crate::deserialize::strings::GMStrings;
 use crate::deserialize::texture_page_items::{GMTexture, GMTextures};
 
+#[allow(dead_code)]
 impl GMGeneralInfo {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("General Info:");
@@ -36,6 +37,7 @@ impl GMGeneralInfo {
     }
 }
 
+#[allow(dead_code)]
 impl GMOptions {
     pub fn print(&self) {
         println!("Options:");
@@ -53,6 +55,7 @@ impl GMOptions {
 }
 
 
+#[allow(dead_code)]
 impl GMGeneralInfoFlags {
     pub fn to_string(&self) -> String {
         let mut flag_strings: Vec<&str> = vec![];
@@ -110,6 +113,7 @@ impl GMGeneralInfoFlags {
 
 
 
+#[allow(dead_code)]
 impl GMFunctionClassifications {
     fn to_string(&self) -> String {
         let mut function_classification_strings: Vec<&str> = vec![];
@@ -303,6 +307,7 @@ impl GMFunctionClassifications {
 }
 
 
+#[allow(dead_code)]
 impl GMOptionsFlags {
     fn to_string(&self) -> String {
         let mut flag_strings: Vec<&str> = vec![];
@@ -403,6 +408,7 @@ impl GMOptionsFlags {
 }
 
 
+#[allow(dead_code)]
 impl GMFont {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMFont:");
@@ -428,6 +434,7 @@ impl GMFont {
 }
 
 
+#[allow(dead_code)]
 impl GMGlyph {
     pub fn print(&self) {
         println!("GMGlyph:");
@@ -441,6 +448,7 @@ impl GMGlyph {
 }
 
 
+#[allow(dead_code)]
 impl GMRoom {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMRoom:");
@@ -494,6 +502,7 @@ impl GMRoom {
     }
 }
 
+#[allow(dead_code)]
 impl GMRoomLayer {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMRoomLayer:");
@@ -508,6 +517,7 @@ impl GMRoomLayer {
     }
 }
 
+#[allow(dead_code)]
 impl GMRoomTile {
     pub fn print(&self) {
         println!("GMRoomTile:");
@@ -523,6 +533,7 @@ impl GMRoomTile {
     }
 }
 
+#[allow(dead_code)]
 impl GMRoomFlags {
     pub fn to_string(&self) -> String {
         let mut flags: Vec<&'static str> = vec![];
@@ -535,6 +546,7 @@ impl GMRoomFlags {
     }
 }
 
+#[allow(dead_code)]
 impl GMRoomBackground {
     pub fn print(&self) {
         println!("GMRoomBackground:");
@@ -549,6 +561,7 @@ impl GMRoomBackground {
     }
 }
 
+#[allow(dead_code)]
 impl GMRoomView {
     pub fn print(&self) {
         println!("GMRoomView:");
@@ -564,6 +577,7 @@ impl GMRoomView {
     }
 }
 
+#[allow(dead_code)]
 impl GMSequence {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMSequence:");
@@ -582,6 +596,7 @@ impl GMSequence {
     }
 }
 
+#[allow(dead_code)]
 impl GMKeyframe {
     pub fn print(&self) {
         println!("GMKeyframe:");
@@ -594,6 +609,7 @@ impl GMKeyframe {
     }
 }
 
+#[allow(dead_code)]
 impl GMTrack {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMTrack:");
@@ -611,6 +627,7 @@ impl GMTrack {
     }
 }
 
+#[allow(dead_code)]
 impl GMKeyframeMoment {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMKeyframeMoment:");
@@ -625,6 +642,7 @@ impl GMKeyframeMoment {
     }
 }
 
+#[allow(dead_code)]
 impl GMEmbeddedTexture {
     pub fn print(&self) {
         println!("GMEmbeddedTexture:");
@@ -639,6 +657,7 @@ impl GMEmbeddedTexture {
     }
 }
 
+#[allow(dead_code)]
 impl GMTexture {
     pub fn print(&self) {
         println!("GMTexture:");
@@ -653,6 +672,7 @@ impl GMTexture {
     }
 }
 
+#[allow(dead_code)]
 impl GMBackground {
     pub fn print(&self, strings: &GMStrings, textures: &GMTextures) -> Result<(), String> {
         println!("GMBackground:");
@@ -678,6 +698,7 @@ impl GMBackground {
     }
 }
 
+#[allow(dead_code)]
 impl GMSound {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMSound:");
@@ -695,6 +716,7 @@ impl GMSound {
     }
 }
 
+#[allow(dead_code)]
 impl GMSoundFlags {
     pub fn to_string(&self) -> String {
         let mut flags = Vec::new();
@@ -706,6 +728,7 @@ impl GMSoundFlags {
     }
 }
 
+#[allow(dead_code)]
 impl GMGameObject {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMGameObject:");
@@ -736,6 +759,7 @@ impl GMGameObject {
     }
 }
 
+#[allow(dead_code)]
 impl GMGameObjectEvent {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMGameObjectEvent:");
@@ -749,6 +773,7 @@ impl GMGameObjectEvent {
     }
 }
 
+#[allow(dead_code)]
 impl GMGameObjectEventAction {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMGameObjectEventAction:");
@@ -772,6 +797,7 @@ impl GMGameObjectEventAction {
 }
 
 
+#[allow(dead_code)]
 impl GMRoomGameObject {
     pub fn print(&self) -> Result<(), String> {
         println!("GMRoomGameObject:");

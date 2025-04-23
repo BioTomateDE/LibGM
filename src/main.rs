@@ -2,7 +2,7 @@ mod printing;
 
 mod deserialize;
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use deserialize::all::{parse_data_file, read_data_file};
 
 mod serialize;
