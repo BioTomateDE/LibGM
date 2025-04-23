@@ -23,158 +23,113 @@ impl GMChunk<'_> {
     //     }
     // }
 
-    // can be refactored (i didn't know about <num>::from_le_bytes)
 
     pub fn read_u64(&mut self) -> Result<u64, String> {
-        // Read unsigned 64-bit integer (little endian)
-        if self.file_index + 8 > self.data.len() {
-            return Err(format!(
+        let bytes = self.data
+            .get(self.file_index..self.file_index + 8)
+            .ok_or(format!(
                 "Trying to read u64 out of bounds in chunk '{}' at position {}: {} > {}.",
                 self.name,
                 self.file_index,
                 self.file_index + 8,
-                self.data.len()
-            ));
-        }
-
-        let mut number: u64 = 0;
-        for i in 0..8 {
-            number |= u64::from(self.data[self.file_index]) << (i << 3);
-            self.file_index += 1;
-        }
-        Ok(number)
+                self.data.len(),
+            ))?;
+        self.file_index += 8;
+        Ok(u64::from_le_bytes(bytes.try_into().unwrap()))
     }
-
+    
     pub fn read_i64(&mut self) -> Result<i64, String> {
-        // Read signed 64-bit integer (little endian)
-        if self.file_index + 8 > self.data.len() {
-            return Err(format!(
+        let bytes = self.data
+            .get(self.file_index..self.file_index + 8)
+            .ok_or(format!(
                 "Trying to read i64 out of bounds in chunk '{}' at position {}: {} > {}.",
                 self.name,
                 self.file_index,
                 self.file_index + 8,
-                self.data.len()
-            ));
-        }
-
-        let mut number: i64 = 0;
-        for i in 0..8 {
-            number |= i64::from(self.data[self.file_index]) << (i << 3);
-            self.file_index += 1;
-        }
-        Ok(number)
+                self.data.len(),
+            ))?;
+        self.file_index += 8;
+        Ok(i64::from_le_bytes(bytes.try_into().unwrap()))
     }
-
+    
     pub fn read_u32(&mut self) -> Result<u32, String> {
-        // Read unsigned 32-bit integer (little endian)
-        if self.file_index + 4 > self.data.len() {
-            return Err(format!(
+        let bytes = self.data
+            .get(self.file_index..self.file_index + 4)
+            .ok_or(format!(
                 "Trying to read u32 out of bounds in chunk '{}' at position {}: {} > {}.",
                 self.name,
                 self.file_index,
                 self.file_index + 4,
-                self.data.len()
-            ));
-        }
-
-        let mut number: u32 = 0;
-        for i in 0..4 {
-            number |= u32::from(self.data[self.file_index]) << (i << 3);
-            self.file_index += 1;
-        }
-        Ok(number)
+                self.data.len(),
+            ))?;
+        self.file_index += 4;
+        Ok(u32::from_le_bytes(bytes.try_into().unwrap()))
     }
-
+    
     pub fn read_i32(&mut self) -> Result<i32, String> {
-        // Read signed 32-bit integer (little endian)
-        if self.file_index + 4 > self.data.len() {
-            return Err(format!(
+        let bytes = self.data
+            .get(self.file_index..self.file_index + 4)
+            .ok_or(format!(
                 "Trying to read i32 out of bounds in chunk '{}' at position {}: {} > {}.",
                 self.name,
                 self.file_index,
                 self.file_index + 4,
-                self.data.len()
-            ));
-        }
-
-        let mut number: i32 = 0;
-        for i in 0..4 {
-            number |= i32::from(self.data[self.file_index]) << (i << 3);
-            self.file_index += 1;
-        }
-        Ok(number)
+                self.data.len(),
+            ))?;
+        self.file_index += 4;
+        Ok(i32::from_le_bytes(bytes.try_into().unwrap()))
     }
+    
     pub fn read_u16(&mut self) -> Result<u16, String> {
-        // Read unsigned 16-bit integer (little endian)
-        if self.file_index + 2 > self.data.len() {
-            return Err(format!(
+        let bytes = self.data
+            .get(self.file_index..self.file_index + 2)
+            .ok_or(format!(
                 "Trying to read u16 out of bounds in chunk '{}' at position {}: {} > {}.",
                 self.name,
                 self.file_index,
                 self.file_index + 2,
-                self.data.len()
-            ));
-        }
-
-        let mut number: u16 = 0;
-        for i in 0..2 {
-            number |= u16::from(self.data[self.file_index]) << (i << 3);
-            self.file_index += 1;
-        }
-        Ok(number)
+                self.data.len(),
+            ))?;
+        self.file_index += 2;
+        Ok(u16::from_le_bytes(bytes.try_into().unwrap()))
     }
-    pub fn read_i16(&mut self) -> Result<i16, String>  {
-        // Read signed 16-bit integer (little endian)
-        if self.file_index + 2 > self.data.len() {
-            return Err(format!(
+    
+    pub fn read_i16(&mut self) -> Result<i16, String> {
+        let bytes = self.data
+            .get(self.file_index..self.file_index + 2)
+            .ok_or(format!(
                 "Trying to read i16 out of bounds in chunk '{}' at position {}: {} > {}.",
                 self.name,
                 self.file_index,
                 self.file_index + 2,
-                self.data.len()
-            ));
-        }
-
-        let mut number: i16 = 0;
-        for i in 0..2 {
-            number |= i16::from(self.data[self.file_index]) << (i << 3);
-            self.file_index += 1;
-        }
-        Ok(number)
+                self.data.len(),
+            ))?;
+        self.file_index += 2;
+        Ok(i16::from_le_bytes(bytes.try_into().unwrap()))
     }
-
+    
     pub fn read_u8(&mut self) -> Result<u8, String> {
-        // Read unsigned 8-bit integer (little endian)
-        if self.file_index + 1 > self.data.len() {
-            return Err(format!(
-                "Trying to read u8 out of bounds in chunk '{}' at position {}: {} > {}.",
+        let byte = *self.data
+            .get(self.file_index)
+            .ok_or(format!(
+                "Trying to read u8 out of bounds in chunk '{}' at position {}.",
                 self.name,
                 self.file_index,
-                self.file_index + 1,
-                self.data.len()
-            ));
-        }
-
-        let number: u8 = u8::from(self.data[self.file_index]);
+            ))?;
         self.file_index += 1;
-        Ok(number)
+        Ok(byte)
     }
-
+    
     pub fn read_i8(&mut self) -> Result<i8, String> {
-        // Read signed 8-bit integer (little endian)
-        if self.file_index + 1 > self.data.len() {
-            return Err(format!(
-                "Trying to read u8 out of bounds in chunk '{}' at position {}: {} > {}.",
+        let byte = *self.data
+            .get(self.file_index)
+            .ok_or(format!(
+                "Trying to read i8 out of bounds in chunk '{}' at position {}.",
                 self.name,
                 self.file_index,
-                self.file_index + 1,
-                self.data.len()
-            ));
-        }
-
-        let number: i8 = self.data[self.file_index] as i8;
+            ))?;
         self.file_index += 1;
-        Ok(number)
+        Ok(byte as i8)
     }
 
     pub fn read_usize(&mut self) -> Result<usize, String> {
@@ -184,34 +139,32 @@ impl GMChunk<'_> {
         let number: usize = number as usize;
 
         if number < FAILSAFE_AMOUNT {
-            Ok(number)
-        } else {
-            Err(format!(
-                "Failsafe triggered in chunk '{}' at position {} trying \
-                to read usize integer: Number {} is larger than failsafe amount {}.",
-                self.name,
-                self.file_index - 4,
-                number,
-                FAILSAFE_AMOUNT
-            ))
+            return Ok(number)
         }
+        Err(format!(
+            "Failsafe triggered in chunk '{}' at position {} trying \
+            to read usize integer: Number {} is larger than failsafe amount {}.",
+            self.name,
+            self.file_index - 4,
+            number,
+            FAILSAFE_AMOUNT
+        ))
     }
 
     pub fn read_usize_big_endian(&mut self, enable_failsafe: bool) -> Result<usize, String> {
         // Read unsigned 32-bit integer and convert to usize (big endian)
         static FAILSAFE_AMOUNT: usize = 200_000_000;
 
-        let bytes: [u8; 4] = match self.data.get(self.file_index .. self.file_index + 4) {
-            Some(bytes) => bytes.try_into().unwrap(),
-            None => return Err(format!(
+        let bytes: [u8; 4] = self.data.get(self.file_index .. self.file_index + 4)
+            .ok_or(format!(
                 "Trying to read big endian usize integer (u32) \
-                out of bounds in chunk '{}' at position {}: {} > {}.",
+                out of bounds in chunk '{}' at position {}: {} > {}.", 
                 self.name,
                 self.file_index,
                 self.file_index + 4,
                 self.data.len()
-            )),
-        };
+            ))?
+            .try_into().unwrap();
         self.file_index += 4;
 
         let number: u32 = u32::from_be_bytes(bytes);
