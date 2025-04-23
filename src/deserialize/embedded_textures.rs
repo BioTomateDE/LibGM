@@ -26,8 +26,7 @@ pub enum Image {
 }
 
 
-#[allow(non_snake_case)]
-pub fn parse_chunk_TXTR(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Vec<GMEmbeddedTexture>, String> {
+pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Vec<GMEmbeddedTexture>, String> {
     chunk.file_index = 0;
     let texture_count: usize = chunk.read_usize()?;
     let mut texture_pointers: Vec<usize> = Vec::with_capacity(texture_count);

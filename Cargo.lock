@@ -6,10 +6,12 @@ version = 4
 name = "LibGM"
 version = "0.1.0"
 dependencies = [
+ "biologischer-log",
  "bzip2",
  "chrono",
  "colored",
  "image",
+ "log",
  "num_enum",
  "qoi",
  "uuid",
@@ -98,6 +100,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "98922d6a4cfbcb08820c69d8eeccc05bb1f29bfa06b4f5b1dbfe9a868bd7608e"
 dependencies = [
  "arrayvec",
+]
+
+[[package]]
+name = "biologischer-log"
+version = "0.1.0"
+source = "git+https://github.com/BioTomateDE/rust-biologischer-log.git#d9b689721153d3d8ea19805fa91c3ff7b14a2468"
+dependencies = [
+ "chrono",
+ "colored",
+ "log",
 ]
 
 [[package]]

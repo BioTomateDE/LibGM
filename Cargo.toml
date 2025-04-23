@@ -14,3 +14,5 @@ colored = "3.0.0"
 image = { version = "0.25.6", features = ["png"] }
 bzip2 = "0.5.2"
 qoi = "0.4.1"
+biologischer-log = { git = "https://github.com/BioTomateDE/rust-biologischer-log.git" }
+log = "0.4"

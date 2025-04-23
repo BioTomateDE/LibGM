@@ -59,8 +59,7 @@ impl GMSounds {
 }
 
 
-#[allow(non_snake_case)]
-pub fn parse_chunk_SOND(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings, embedded_audios: &GMEmbeddedAudios) -> Result<GMSounds, String> {
+pub fn parse_chunk_sond(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings, embedded_audios: &GMEmbeddedAudios) -> Result<GMSounds, String> {
     chunk.file_index = 0;
     let sounds_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(sounds_count);

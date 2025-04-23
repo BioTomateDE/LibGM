@@ -408,8 +408,7 @@ impl GMCodeBlob {
 }
 
 
-#[allow(non_snake_case)]
-pub fn parse_chunk_CODE(
+pub fn parse_chunk_code(
     chunk: &mut GMChunk,
     bytecode14: bool,
     strings: &GMStrings,
