@@ -1,25 +1,25 @@
-use crate::deserialize::all::UTData;
-use crate::deserialize::fonts::{UTFont, UTFontRef, UTGlyph};
-use crate::serialize::all::{build_chunk, DataBuilder, UTRef};
+use crate::deserialize::all::GMData;
+use crate::deserialize::fonts::{GMFont, GMFontRef, GMGlyph};
+use crate::serialize::all::{build_chunk, DataBuilder, GMRef};
 use crate::serialize::chunk_writing::ChunkBuilder;
 
 #[allow(non_snake_case)]
-pub fn build_chunk_FONT(data_builder: &mut DataBuilder, ut_data: &UTData) -> Result<(), String> {
+pub fn build_chunk_FONT(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "FONT", abs_pos: data_builder.len() };
 
-    let font_count: usize = ut_data.fonts.len();
+    let font_count: usize = gm_data.fonts.len();
     builder.write_usize(font_count)?;
 
     for i in 0..font_count {
-        data_builder.push_pointer_position(&mut builder, UTRef::Font(UTFontRef { index: i }))?;
+        data_builder.push_pointer_position(&mut builder, GMRef::Font(GMFontRef { index: i }))?;
     }
 
     for i in 0..font_count {
-        let font: UTFontRef = ut_data.fonts.get_font_by_index(i).expect("Font out of bounds while building.");
-        let font: &UTFont = font.resolve(&ut_data.fonts)?;
-        data_builder.push_pointing_to(&mut builder, UTRef::Font(UTFontRef { index: i }))?;
-        builder.write_literal_string(&font.name.resolve(&ut_data.strings)?)?;
-        builder.write_literal_string(&font.display_name.resolve(&ut_data.strings)?)?;
+        let font: GMFontRef = gm_data.fonts.get_font_by_index(i).expect("Font out of bounds while building.");
+        let font: &GMFont = font.resolve(&gm_data.fonts)?;
+        data_builder.push_pointing_to(&mut builder, GMRef::Font(GMFontRef { index: i }))?;
+        builder.write_literal_string(&font.name.resolve(&gm_data.strings)?)?;
+        builder.write_literal_string(&font.display_name.resolve(&gm_data.strings)?)?;
         builder.write_u32(font.em_size)?;
         builder.write_u32(if font.bold {1} else {0})?;
         builder.write_u32(if font.italic {1} else {0})?;
@@ -49,7 +49,7 @@ pub fn build_chunk_FONT(data_builder: &mut DataBuilder, ut_data: &UTData) -> Res
             None => (),
         };
 
-        build_glyphs(data_builder, &mut builder, &font.glyphs, font.name.resolve(&ut_data.strings)?)?;
+        build_glyphs(data_builder, &mut builder, &font.glyphs, font.name.resolve(&gm_data.strings)?)?;
     }
 
     build_chunk(data_builder, builder)?;
@@ -57,7 +57,7 @@ pub fn build_chunk_FONT(data_builder: &mut DataBuilder, ut_data: &UTData) -> Res
 }
 
 
-fn build_glyphs(data_builder: &DataBuilder, builder: &mut ChunkBuilder, glyphs: &[UTGlyph], font_name: &str) -> Result<(), String> {
+fn build_glyphs(data_builder: &DataBuilder, builder: &mut ChunkBuilder, glyphs: &[GMGlyph], font_name: &str) -> Result<(), String> {
     builder.write_usize(glyphs.len())?;
 
     // write placeholder bytes for glyph absolute positions

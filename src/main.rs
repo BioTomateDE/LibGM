@@ -11,7 +11,7 @@ mod serialize;
 mod structs;   // TODO remove this file
 
 use std::process;
-use crate::deserialize::all::UTData;
+use crate::deserialize::all::GMData;
 use crate::serialize::all::{build_data_file, write_data_file};
 
 fn main() {
@@ -34,7 +34,7 @@ fn main() {
     };
 
     println!("Parsing data file.");
-    let data: UTData = match parse_data_file(original_data) {
+    let data: GMData = match parse_data_file(original_data) {
         Ok(data) => data,
         Err(error) => {
             eprintln!("Error while parsing data file: {error}");

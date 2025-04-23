@@ -1,16 +1,16 @@
-﻿use crate::deserialize::backgrounds::UTBackground;
-use crate::deserialize::embedded_textures::UTEmbeddedTexture;
-use crate::deserialize::fonts::{UTFont, UTGlyph};
-use crate::deserialize::game_objects::{UTGameObject, UTGameObjectEvent, UTGameObjectEventAction};
-use crate::deserialize::general_info::{UTFunctionClassifications, UTGeneralInfo, UTGeneralInfoFlags, UTOptions, UTOptionsFlags};
-use crate::deserialize::rooms::{UTRoom, UTRoomBackground, UTRoomFlags, UTRoomGameObject, UTRoomLayer, UTRoomTile, UTRoomView};
-use crate::deserialize::sequence::{UTKeyframe, UTKeyframeMoment, UTSequence, UTTrack};
-use crate::deserialize::sounds::{UTSound, UTSoundFlags};
-use crate::deserialize::strings::UTStrings;
-use crate::deserialize::texture_page_items::{UTTexture, UTTextures};
+﻿use crate::deserialize::backgrounds::GMBackground;
+use crate::deserialize::embedded_textures::GMEmbeddedTexture;
+use crate::deserialize::fonts::{GMFont, GMGlyph};
+use crate::deserialize::game_objects::{GMGameObject, GMGameObjectEvent, GMGameObjectEventAction};
+use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMOptions, GMOptionsFlags};
+use crate::deserialize::rooms::{GMRoom, GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomLayer, GMRoomTile, GMRoomView};
+use crate::deserialize::sequence::{GMKeyframe, GMKeyframeMoment, GMSequence, GMTrack};
+use crate::deserialize::sounds::{GMSound, GMSoundFlags};
+use crate::deserialize::strings::GMStrings;
+use crate::deserialize::texture_page_items::{GMTexture, GMTextures};
 
-impl UTGeneralInfo {
-    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
+impl GMGeneralInfo {
+    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("General Info:");
         println!("  GMS Debugger Disabled: {}", self.is_debugger_disabled);
         println!("  Bytecode Version: {}", self.bytecode_version);
@@ -36,7 +36,7 @@ impl UTGeneralInfo {
     }
 }
 
-impl UTOptions {
+impl GMOptions {
     pub fn print(&self) {
         println!("Options:");
         println!("  Flags: {}", &self.flags.to_string());
@@ -53,7 +53,7 @@ impl UTOptions {
 }
 
 
-impl UTGeneralInfoFlags {
+impl GMGeneralInfoFlags {
     pub fn to_string(&self) -> String {
         let mut flag_strings: Vec<&str> = vec![];
         if self.borderless_window {
@@ -110,7 +110,7 @@ impl UTGeneralInfoFlags {
 
 
 
-impl UTFunctionClassifications {
+impl GMFunctionClassifications {
     fn to_string(&self) -> String {
         let mut function_classification_strings: Vec<&str> = vec![];
 
@@ -303,7 +303,7 @@ impl UTFunctionClassifications {
 }
 
 
-impl UTOptionsFlags {
+impl GMOptionsFlags {
     fn to_string(&self) -> String {
         let mut flag_strings: Vec<&str> = vec![];
 
@@ -403,9 +403,9 @@ impl UTOptionsFlags {
 }
 
 
-impl UTFont {
-    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
-        println!("UTFont:");
+impl GMFont {
+    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+        println!("GMFont:");
         println!("  Name: {}", self.name.resolve(strings)?);
         println!("  Display Name: {}", self.display_name.resolve(strings)?);
         println!("  EM Size: {}", self.em_size);
@@ -428,9 +428,9 @@ impl UTFont {
 }
 
 
-impl UTGlyph {
+impl GMGlyph {
     pub fn print(&self) {
-        println!("UTGlyph:");
+        println!("GMGlyph:");
         println!("  Character: '{}'", self.character);
         println!("  Position: ({}; {})", self.x, self.y);
         println!("  Size: {} x {}", self.width, self.height);
@@ -441,9 +441,9 @@ impl UTGlyph {
 }
 
 
-impl UTRoom {
-    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
-        println!("UTRoom:");
+impl GMRoom {
+    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+        println!("GMRoom:");
         println!("  Name: \"{}\"", self.name.resolve(strings)?);
         println!("  Caption: \"{}\"", self.caption.resolve(strings)?);
         println!("  Dimensions: {}x{}", self.width, self.height);
@@ -494,9 +494,9 @@ impl UTRoom {
     }
 }
 
-impl UTRoomLayer {
-    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
-        println!("UTRoomLayer:");
+impl GMRoomLayer {
+    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+        println!("GMRoomLayer:");
         println!("  Layer Name: {}", self.layer_name.resolve(strings)?);
         println!("  Layer ID: {}", self.layer_id);
         println!("  Layer Type: {:?}", self.layer_type);
@@ -508,9 +508,9 @@ impl UTRoomLayer {
     }
 }
 
-impl UTRoomTile {
+impl GMRoomTile {
     pub fn print(&self) {
-        println!("UTRoomTile:");
+        println!("GMRoomTile:");
         println!("  Position: ({}, {})", self.x, self.y);
         println!("  Texture: {:?}", self.texture);
         println!("  Source: ({}, {})", self.source_x, self.source_y);
@@ -523,7 +523,7 @@ impl UTRoomTile {
     }
 }
 
-impl UTRoomFlags {
+impl GMRoomFlags {
     pub fn to_string(&self) -> String {
         let mut flags: Vec<&'static str> = vec![];
         if self.enable_views { flags.push("Enable Views"); }
@@ -535,9 +535,9 @@ impl UTRoomFlags {
     }
 }
 
-impl UTRoomBackground {
+impl GMRoomBackground {
     pub fn print(&self) {
-        println!("UTRoomBackground:");
+        println!("GMRoomBackground:");
         println!("  Enabled: {}", self.enabled);
         println!("  Foreground: {}", self.foreground);
         // println!("  Background Definition: {}", self.background_definition);
@@ -549,9 +549,9 @@ impl UTRoomBackground {
     }
 }
 
-impl UTRoomView {
+impl GMRoomView {
     pub fn print(&self) {
-        println!("UTRoomView:");
+        println!("GMRoomView:");
         println!("  Enabled: {}", self.enabled);
         println!("  View Position: ({}, {})", self.view_x, self.view_y);
         println!("  View Size: {}x{}", self.view_width, self.view_height);
@@ -564,9 +564,9 @@ impl UTRoomView {
     }
 }
 
-impl UTSequence {
-    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
-        println!("UTSequence:");
+impl GMSequence {
+    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+        println!("GMSequence:");
         println!("  Name: {}", self.name.resolve(strings)?);
         println!("  Playback: {:?}", self.playback);
         println!("  Playback Speed: {} ({:?})", self.playback_speed, self.playback_speed_type);
@@ -582,9 +582,9 @@ impl UTSequence {
     }
 }
 
-impl UTKeyframe {
+impl GMKeyframe {
     pub fn print(&self) {
-        println!("UTKeyframe:");
+        println!("GMKeyframe:");
         println!("  Key: {}", self.key);
         println!("  Length: {}", self.length);
         println!("  Stretch: {}", self.stretch);
@@ -594,9 +594,9 @@ impl UTKeyframe {
     }
 }
 
-impl UTTrack {
-    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
-        println!("UTTrack:");
+impl GMTrack {
+    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+        println!("GMTrack:");
         println!("  Model Name: {}", self.model_name.resolve(strings)?);
         println!("  Name: {}", self.name.resolve(strings)?);
         println!("  Built-in Name: {:?}", self.builtin_name);
@@ -611,9 +611,9 @@ impl UTTrack {
     }
 }
 
-impl UTKeyframeMoment {
-    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
-        println!("UTKeyframeMoment:");
+impl GMKeyframeMoment {
+    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+        println!("GMKeyframeMoment:");
         println!("  Internal Count: {}", self.internal_count);
         if let Some(event) = &self.event {
             println!("  Event: {}", event.resolve(strings)?);
@@ -625,9 +625,9 @@ impl UTKeyframeMoment {
     }
 }
 
-impl UTEmbeddedTexture {
+impl GMEmbeddedTexture {
     pub fn print(&self) {
-        println!("UTEmbeddedTexture:");
+        println!("GMEmbeddedTexture:");
         println!("  Scaled: {}", self.scaled);
         println!("  Generated Mips: {:?}", self.generated_mips);
         println!("  Texture Block Size: {:?}", self.texture_block_size);
@@ -639,9 +639,9 @@ impl UTEmbeddedTexture {
     }
 }
 
-impl UTTexture {
+impl GMTexture {
     pub fn print(&self) {
-        println!("UTTexture:");
+        println!("GMTexture:");
         println!("  Target X: {}", self.target_x);
         println!("  Target Y: {}", self.target_y);
         println!("  Target Width: {}", self.target_width);
@@ -653,9 +653,9 @@ impl UTTexture {
     }
 }
 
-impl UTBackground {
-    pub fn print(&self, strings: &UTStrings, textures: &UTTextures) -> Result<(), String> {
-        println!("UTBackground:");
+impl GMBackground {
+    pub fn print(&self, strings: &GMStrings, textures: &GMTextures) -> Result<(), String> {
+        println!("GMBackground:");
         println!("  Name: \"{}\"", self.name.resolve(strings)?);
         println!("  Transparent: {}", self.transparent);
         println!("  Smooth: {}", self.smooth);
@@ -665,8 +665,8 @@ impl UTBackground {
         println!("  GMS2 Unknown Always 2: {:?}", self.gms2_unknown_always2);
         println!("  GMS2 Tile Width: {:?}", self.gms2_tile_width);
         println!("  GMS2 Tile Height: {:?}", self.gms2_tile_height);
-        println!("  GMS2 Output Border X: {:?}", self.gms2_output_border_x);
-        println!("  GMS2 Output Border Y: {:?}", self.gms2_output_border_y);
+        println!("  GMS2 Output Border X: {:?}", self.gms2_outpgm_border_x);
+        println!("  GMS2 Output Border Y: {:?}", self.gms2_outpgm_border_y);
         println!("  GMS2 Tile Columns: {:?}", self.gms2_tile_columns);
         println!("  GMS2 Items Per Tile Count: {:?}", self.gms2_items_per_tile_count);
         println!("  GMS2 Tile Count: {:?}", self.gms2_tile_count);
@@ -678,9 +678,9 @@ impl UTBackground {
     }
 }
 
-impl UTSound {
-    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
-        println!("UTSound:");
+impl GMSound {
+    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+        println!("GMSound:");
         println!("  Name: \"{}\"", self.name.resolve(strings)?);
         println!("  Flags: {}", self.flags.to_string());
         println!("  Audio Type: \"{}\"", self.audio_type.resolve(strings)?);
@@ -695,7 +695,7 @@ impl UTSound {
     }
 }
 
-impl UTSoundFlags {
+impl GMSoundFlags {
     pub fn to_string(&self) -> String {
         let mut flags = Vec::new();
         if self.is_embedded { flags.push("Embedded"); }
@@ -706,9 +706,9 @@ impl UTSoundFlags {
     }
 }
 
-impl UTGameObject {
-    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
-        println!("UTGameObject:");
+impl GMGameObject {
+    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+        println!("GMGameObject:");
         println!("  Name: \"{}\"", self.name.resolve(strings)?);
         println!("  Sprite Index: {}", self.sprite_index);
         println!("  Visible: {}", self.visible);
@@ -736,9 +736,9 @@ impl UTGameObject {
     }
 }
 
-impl UTGameObjectEvent {
-    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
-        println!("UTGameObjectEvent:");
+impl GMGameObjectEvent {
+    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+        println!("GMGameObjectEvent:");
         println!("  Subtype: {}", self.subtype);
         println!("  Actions: [{} items]", self.actions.len());
         for action in &self.actions {
@@ -749,9 +749,9 @@ impl UTGameObjectEvent {
     }
 }
 
-impl UTGameObjectEventAction {
-    pub fn print(&self, strings: &UTStrings) -> Result<(), String> {
-        println!("UTGameObjectEventAction:");
+impl GMGameObjectEventAction {
+    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+        println!("GMGameObjectEventAction:");
         println!("  Lib ID: {}", self.lib_id);
         println!("  ID: {}", self.id);
         println!("  Kind: {}", self.kind);
@@ -772,9 +772,9 @@ impl UTGameObjectEventAction {
 }
 
 
-impl UTRoomGameObject {
+impl GMRoomGameObject {
     pub fn print(&self) -> Result<(), String> {
-        println!("UTRoomGameObject:");
+        println!("GMRoomGameObject:");
         println!("  X: {}", self.x);
         println!("  Y: {}", self.y);
         println!("  Object Definition: {:?}", self.object_definition);

@@ -1,11 +1,11 @@
 use num_enum::TryFromPrimitive;
-use crate::deserialize::chunk_reading::UTChunk;
-use crate::deserialize::general_info::UTGeneralInfo;
-use crate::deserialize::strings::{UTStringRef, UTStrings};
+use crate::deserialize::chunk_reading::GMChunk;
+use crate::deserialize::general_info::GMGeneralInfo;
+use crate::deserialize::strings::{GMStringRef, GMStrings};
 
 #[derive(Debug, Clone)]
-pub struct UTGameObject {
-    pub name: UTStringRef,
+pub struct GMGameObject {
+    pub name: GMStringRef,
     pub sprite_index: i32,
     pub visible: bool,
     pub managed: Option<bool>,
@@ -16,7 +16,7 @@ pub struct UTGameObject {
     pub texture_mask_id: i32,                   // {!!} change type to sprite ref
     pub uses_physics: bool,
     pub is_sensor: bool,
-    pub collision_shape: UTGameObjectCollisionShape,
+    pub collision_shape: GMGameObjectCollisionShape,
     pub density: f32,
     pub restitution: f32,
     pub group: u32,
@@ -26,23 +26,23 @@ pub struct UTGameObject {
     pub awake: bool,
     pub kinematic: bool,
     pub physics_shape_vertices: Vec<(f32, f32)>,
-    pub events: Vec<Vec<UTGameObjectEvent>>,
+    pub events: Vec<Vec<GMGameObjectEvent>>,
 }
 
 #[derive(Debug, Clone, TryFromPrimitive)]
 #[repr(u32)]
-pub enum UTGameObjectCollisionShape {
+pub enum GMGameObjectCollisionShape {
     Circle = 0,
     Box = 1,
     Custom = 2,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct UTGameObjectRef {
+pub struct GMGameObjectRef {
     index: usize,
 }
-impl UTGameObjectRef {
-    pub fn resolve<'a>(&self, game_objects: &'a UTGameObjects) -> Result<&'a UTGameObject, String> {
+impl GMGameObjectRef {
+    pub fn resolve<'a>(&self, game_objects: &'a GMGameObjects) -> Result<&'a GMGameObject, String> {
         match game_objects.game_objects_by_index.get(self.index) {
             Some(object) => Ok(object),
             None => Err(format!(
@@ -54,27 +54,27 @@ impl UTGameObjectRef {
 }
 
 #[derive(Debug, Clone)]
-pub struct UTGameObjects {
-    pub game_objects_by_index: Vec<UTGameObject>,
+pub struct GMGameObjects {
+    pub game_objects_by_index: Vec<GMGameObject>,
 }
-impl UTGameObjects {
-    pub fn get_game_object_by_index(&self, index: usize) -> Option<UTGameObjectRef> {
+impl GMGameObjects {
+    pub fn get_game_object_by_index(&self, index: usize) -> Option<GMGameObjectRef> {
         if index >= self.game_objects_by_index.len() {
             return None;
         }
-        Some(UTGameObjectRef {index})
+        Some(GMGameObjectRef {index})
     }
 }
 
 
 #[derive(Debug, Clone)]
-pub struct UTGameObjectEvent {
+pub struct GMGameObjectEvent {
     pub subtype: u32,
-    pub actions: Vec<UTGameObjectEventAction>,
+    pub actions: Vec<GMGameObjectEventAction>,
 }
 
 #[derive(Debug, Clone)]
-pub struct UTGameObjectEventAction {
+pub struct GMGameObjectEventAction {
     pub lib_id: u32,
     pub id: u32,
     pub kind: u32,
@@ -82,7 +82,7 @@ pub struct UTGameObjectEventAction {
     pub is_question: bool,
     pub use_apply_to: bool,
     pub exe_type: u32,
-    pub action_name: UTStringRef,
+    pub action_name: GMStringRef,
     pub code_id: i32,                   // {!!} change type to code ref
     pub argument_count: u32,
     pub who: i32,
@@ -93,7 +93,7 @@ pub struct UTGameObjectEventAction {
 
 
 #[allow(non_snake_case)]
-pub fn parse_chunk_OBJT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strings: &UTStrings) -> Result<UTGameObjects, String> {
+pub fn parse_chunk_OBJT(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMGameObjects, String> {
     chunk.file_index = 0;
     let game_objects_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(game_objects_count);
@@ -101,10 +101,10 @@ pub fn parse_chunk_OBJT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strin
         start_positions.push(chunk.read_usize()? - chunk.abs_pos);
     }
 
-    let mut game_objects_by_index: Vec<UTGameObject> = Vec::with_capacity(game_objects_count);
+    let mut game_objects_by_index: Vec<GMGameObject> = Vec::with_capacity(game_objects_count);
     for start_position in start_positions {
         chunk.file_index = start_position;
-        let name: UTStringRef = chunk.read_ut_string(strings)?;
+        let name: GMStringRef = chunk.read_gm_string(strings)?;
         let sprite_index: i32 = chunk.read_i32()?;        // TODO usize, sprite ref
         let visible: bool = chunk.read_u32()? != 0;
         let mut managed: Option<bool> = None;
@@ -119,7 +119,7 @@ pub fn parse_chunk_OBJT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strin
         let uses_physics: bool = chunk.read_u32()? != 0;
         let is_sensor: bool = chunk.read_u32()? != 0;
         let collision_shape: u32 = chunk.read_u32()?;
-        let collision_shape: UTGameObjectCollisionShape = match collision_shape.try_into() {
+        let collision_shape: GMGameObjectCollisionShape = match collision_shape.try_into() {
             Ok(shape) => shape,
             Err(_) => return Err(format!(
                 "Invalid Collision Shape 0x{:04X} at position {} while parsing Game Object at position {} in chunk '{}'.",
@@ -142,7 +142,7 @@ pub fn parse_chunk_OBJT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strin
             let y: f32 = chunk.read_f32()?;
             physics_shape_vertices.push((x, y));
         }
-        let events: Vec<Vec<UTGameObjectEvent>> = parse_game_object_events(chunk, strings)?;
+        let events: Vec<Vec<GMGameObjectEvent>> = parse_game_object_events(chunk, strings)?;
         // println!("\n\n\n############################ {} ##################################", name.resolve(strings)?);
         // for i in &events {
         //     for j in i {
@@ -150,7 +150,7 @@ pub fn parse_chunk_OBJT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strin
         //     }
         // }
 
-        game_objects_by_index.push(UTGameObject {
+        game_objects_by_index.push(GMGameObject {
             name,
             sprite_index,
             visible,
@@ -176,23 +176,23 @@ pub fn parse_chunk_OBJT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strin
         })
     }
 
-    Ok(UTGameObjects {game_objects_by_index})
+    Ok(GMGameObjects {game_objects_by_index})
 }
 
 
-fn parse_game_object_events(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<Vec<UTGameObjectEvent>>, String> {
+fn parse_game_object_events(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<Vec<GMGameObjectEvent>>, String> {
     let events_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(events_count);
     for _ in 0..events_count {
         start_positions.push(chunk.read_usize()? - chunk.abs_pos);
     }
 
-    let mut events: Vec<Vec<UTGameObjectEvent>> = Vec::with_capacity(events_count);
+    let mut events: Vec<Vec<GMGameObjectEvent>> = Vec::with_capacity(events_count);
 
     for start_position in start_positions {
         chunk.file_index = start_position;
         // there's "events" like OnCreate, OnDestroy. for each "event type" there can be multiple event "instances" or "actions".
-        let event: Vec<UTGameObjectEvent> = parse_game_object_event_instances(chunk, strings)?;
+        let event: Vec<GMGameObjectEvent> = parse_game_object_event_instances(chunk, strings)?;
         events.push(event);
     }
 
@@ -201,7 +201,7 @@ fn parse_game_object_events(chunk: &mut UTChunk, strings: &UTStrings) -> Result<
 }
 
 
-fn parse_game_object_event_instances(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<UTGameObjectEvent>, String> {
+fn parse_game_object_event_instances(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMGameObjectEvent>, String> {
     let event_instances_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(event_instances_count);
     for _ in 0..event_instances_count {
@@ -209,13 +209,13 @@ fn parse_game_object_event_instances(chunk: &mut UTChunk, strings: &UTStrings) -
     }
 
     let old_position: usize = chunk.file_index;
-    let mut events: Vec<UTGameObjectEvent> = Vec::with_capacity(event_instances_count);
+    let mut events: Vec<GMGameObjectEvent> = Vec::with_capacity(event_instances_count);
     for start_position in start_positions {
         chunk.file_index = start_position;
         let subtype: u32 = chunk.read_u32()?;
-        let actions: Vec<UTGameObjectEventAction> = parse_game_object_events_actions(chunk, strings)?;
+        let actions: Vec<GMGameObjectEventAction> = parse_game_object_events_actions(chunk, strings)?;
 
-        events.push(UTGameObjectEvent {
+        events.push(GMGameObjectEvent {
             subtype,
             actions,
         });
@@ -226,14 +226,14 @@ fn parse_game_object_event_instances(chunk: &mut UTChunk, strings: &UTStrings) -
 }
 
 
-fn parse_game_object_events_actions(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<UTGameObjectEventAction>, String> {
+fn parse_game_object_events_actions(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMGameObjectEventAction>, String> {
     let actions_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(actions_count);
     for _ in 0..actions_count {
         start_positions.push(chunk.read_usize()? - chunk.abs_pos);
     }
     let old_position: usize = chunk.file_index;
-    let mut actions: Vec<UTGameObjectEventAction> = Vec::with_capacity(actions_count);
+    let mut actions: Vec<GMGameObjectEventAction> = Vec::with_capacity(actions_count);
 
     for start_position in start_positions {
         chunk.file_index = start_position;
@@ -244,7 +244,7 @@ fn parse_game_object_events_actions(chunk: &mut UTChunk, strings: &UTStrings) ->
         let is_question = chunk.read_u32()? != 0;
         let use_apply_to = chunk.read_u32()? != 0;
         let exe_type = chunk.read_u32()?;
-        let action_name = chunk.read_ut_string(strings)?;
+        let action_name = chunk.read_gm_string(strings)?;
         let code_id = chunk.read_i32()?;                    // {!!} replace type with code ref
         let argument_count = chunk.read_u32()?;
         let who = chunk.read_i32()?;
@@ -252,7 +252,7 @@ fn parse_game_object_events_actions(chunk: &mut UTChunk, strings: &UTStrings) ->
         let is_not = chunk.read_u32()? != 0;
         let unknown_always_zero = chunk.read_u32()?;
 
-        actions.push(UTGameObjectEventAction {
+        actions.push(GMGameObjectEventAction {
             lib_id,
             id,
             kind,

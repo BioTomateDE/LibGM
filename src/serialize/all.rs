@@ -1,17 +1,17 @@
 use std::collections::HashMap;
 use std::fs;
 use image::DynamicImage;
-use crate::deserialize::all::UTData;
-use crate::deserialize::backgrounds::UTBackgroundRef;
-use crate::deserialize::embedded_audio::UTEmbeddedAudioRef;
-use crate::deserialize::fonts::UTFontRef;
-use crate::deserialize::functions::UTFunctionRef;
-use crate::deserialize::game_objects::UTGameObjectRef;
-use crate::deserialize::scripts::UTScriptRef;
-use crate::deserialize::sounds::UTSoundRef;
-use crate::deserialize::sprites::UTSpriteRef;
-use crate::deserialize::strings::UTStringRef;
-use crate::deserialize::texture_page_items::{UTTexturePageItem, UTTextureRef};
+use crate::deserialize::all::GMData;
+use crate::deserialize::backgrounds::GMBackgroundRef;
+use crate::deserialize::embedded_audio::GMEmbeddedAudioRef;
+use crate::deserialize::fonts::GMFontRef;
+use crate::deserialize::functions::GMFunctionRef;
+use crate::deserialize::game_objects::GMGameObjectRef;
+use crate::deserialize::scripts::GMScriptRef;
+use crate::deserialize::sounds::GMSoundRef;
+use crate::deserialize::sprites::GMSpriteRef;
+use crate::deserialize::strings::GMStringRef;
+use crate::deserialize::texture_page_items::{GMTexturePageItem, GMTextureRef};
 use crate::serialize::chunk_writing::ChunkBuilder;
 use crate::serialize::embedded_textures::build_chunk_TXTR;
 use crate::serialize::strings::build_chunk_STRG;
@@ -23,26 +23,26 @@ use crate::serialize::texture_page_items::{build_chunk_TPAG, generate_texture_pa
 #[derive(Debug, Clone)]
 pub struct DataBuilder {
     raw_data: Vec<u8>,
-    pointer_pool: HashMap<UTRef, UTPointer>,
+    pointer_pool: HashMap<GMRef, GMPointer>,
 }
 impl DataBuilder {
-    pub fn push_pointer_position(&mut self, chunk_builder: &mut ChunkBuilder, reference: UTRef) -> Result<(), String> {
+    pub fn push_pointer_position(&mut self, chunk_builder: &mut ChunkBuilder, reference: GMRef) -> Result<(), String> {
         let position: usize = self.len() + chunk_builder.len();
         chunk_builder.write_usize(0)?;      // placeholder
-        let pointer: UTPointer = UTPointer {
+        let pointer: GMPointer = GMPointer {
             position,
             pointing_to: None,
         };
         self.pointer_pool.insert(reference, pointer);
         Ok(())
     }
-    pub fn push_pointer_position_maybe(&mut self, chunk_builder: &mut ChunkBuilder, reference: Option<UTRef>) -> Result<(), String> {
+    pub fn push_pointer_position_maybe(&mut self, chunk_builder: &mut ChunkBuilder, reference: Option<GMRef>) -> Result<(), String> {
         match reference {
             Some(reference) => self.push_pointer_position(chunk_builder, reference),
             None => chunk_builder.write_i32(-1),
         }
     }
-    pub fn push_pointing_to(&mut self, chunk_builder: &mut ChunkBuilder, reference: UTRef) -> Result<(), String> {
+    pub fn push_pointing_to(&mut self, chunk_builder: &mut ChunkBuilder, reference: GMRef) -> Result<(), String> {
         let pointer = match self.pointer_pool.get_mut(&reference) {
             Some(ptr) => ptr,
             None => return Err(format!(
@@ -57,22 +57,22 @@ impl DataBuilder {
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub enum UTRef {
-    String(UTStringRef),
-    Texture(UTTextureRef),
-    Audio(UTEmbeddedAudioRef),
-    Sound(UTSoundRef),
-    Sprite(UTSpriteRef),
-    Function(UTFunctionRef),
-    Background(UTBackgroundRef),
-    GameObject(UTGameObjectRef),
-    Font(UTFontRef),
-    Script(UTScriptRef),
+pub enum GMRef {
+    String(GMStringRef),
+    Texture(GMTextureRef),
+    Audio(GMEmbeddedAudioRef),
+    Sound(GMSoundRef),
+    Sprite(GMSpriteRef),
+    Function(GMFunctionRef),
+    Background(GMBackgroundRef),
+    GameObject(GMGameObjectRef),
+    Font(GMFontRef),
+    Script(GMScriptRef),
     TexturePage(usize),
     TexturePageData(usize),
 }
 #[derive(Debug, Clone)]
-pub struct UTPointer {
+pub struct GMPointer {
     position: usize,
     pointing_to: Option<usize>,
 }
@@ -115,21 +115,21 @@ impl DataBuilder {
 }
 
 
-pub fn build_data_file(ut_data: &UTData) -> Result<Vec<u8>, String> {
+pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     let mut builder: DataBuilder = DataBuilder { raw_data: Vec::new(), pointer_pool: HashMap::new() };
 
     // write placeholder u32 for total length
     builder.write_chunk_name("FORM")?;
     builder.write_usize(0)?;
 
-    build_chunk_GEN8(&mut builder, &ut_data)?;
-    build_chunk_OPTN(&mut builder, &ut_data)?;
-    build_chunk_STRG(&mut builder, &ut_data)?;
-    build_chunk_SOND(&mut builder, &ut_data)?;
-    build_chunk_SCPT(&mut builder, &ut_data)?;
-    let (texture_page_items, texture_pages): (Vec<UTTexturePageItem>, Vec<DynamicImage>) = generate_texture_pages(&ut_data.textures)?;
-    build_chunk_TPAG(&mut builder, &ut_data, texture_page_items)?;
-    build_chunk_TXTR(&mut builder, &ut_data, texture_pages)?;
+    build_chunk_GEN8(&mut builder, &gm_data)?;
+    build_chunk_OPTN(&mut builder, &gm_data)?;
+    build_chunk_STRG(&mut builder, &gm_data)?;
+    build_chunk_SOND(&mut builder, &gm_data)?;
+    build_chunk_SCPT(&mut builder, &gm_data)?;
+    let (texture_page_items, texture_pages): (Vec<GMTexturePageItem>, Vec<DynamicImage>) = generate_texture_pages(&gm_data.textures)?;
+    build_chunk_TPAG(&mut builder, &gm_data, texture_page_items)?;
+    build_chunk_TXTR(&mut builder, &gm_data, texture_pages)?;
 
     // {~~} IMPORTANT TODO: resolve pointers
 

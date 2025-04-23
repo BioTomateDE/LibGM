@@ -1,12 +1,12 @@
 use std::collections::HashMap;
-use crate::deserialize::chunk_reading::UTChunk;
-use crate::deserialize::general_info::UTGeneralInfo;
-use crate::deserialize::strings::{UTStringRef, UTStrings};
+use crate::deserialize::chunk_reading::GMChunk;
+use crate::deserialize::general_info::GMGeneralInfo;
+use crate::deserialize::strings::{GMStringRef, GMStrings};
 
 #[derive(Debug, Clone)]
-pub struct UTFont {
-    pub name: UTStringRef,
-    pub display_name: UTStringRef,
+pub struct GMFont {
+    pub name: GMStringRef,
+    pub display_name: GMStringRef,
     pub em_size: u32,
     pub bold: bool,
     pub italic: bool,
@@ -21,11 +21,11 @@ pub struct UTFont {
     pub ascender: Option<u32>,
     pub sdf_spread: Option<u32>,
     pub line_height: Option<u32>,
-    pub glyphs: Vec<UTGlyph>,
+    pub glyphs: Vec<GMGlyph>,
 }
 
 #[derive(Debug, Clone)]
-pub struct UTGlyph {
+pub struct GMGlyph {
     pub character: char,
     pub x: u16,
     pub y: u16,
@@ -37,11 +37,11 @@ pub struct UTGlyph {
 
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct UTFontRef {
+pub struct GMFontRef {
     pub index: usize,
 }
-impl UTFontRef {
-    pub fn resolve<'a>(&self, fonts: &'a UTFonts) -> Result<&'a UTFont, String> {
+impl GMFontRef {
+    pub fn resolve<'a>(&self, fonts: &'a GMFonts) -> Result<&'a GMFont, String> {
         match fonts.fonts_by_index.get(self.index) {
             Some(font) => Ok(font),
             None => Err(format!(
@@ -53,31 +53,31 @@ impl UTFontRef {
 }
 
 #[derive(Debug, Clone)]
-pub struct UTFonts {
+pub struct GMFonts {
     abs_pos_to_index: HashMap<usize, usize>,    // convert absolute position/pointer in data.win to index in Self.font_by_index
-    fonts_by_index: Vec<UTFont>,                // fonts by index/order in chunk FONT
+    fonts_by_index: Vec<GMFont>,                // fonts by index/order in chunk FONT
 }
 
-impl UTFonts {
-    pub fn get_font_by_pos(&self, position: usize) -> Option<UTFontRef> {
+impl GMFonts {
+    pub fn get_font_by_pos(&self, position: usize) -> Option<GMFontRef> {
         let index: usize = match self.abs_pos_to_index.get(&position) {
             Some(index) => *index,
             None => return None,
         };
-        Some(UTFontRef { index })
+        Some(GMFontRef { index })
     }
-    pub fn get_font_by_index(&self, index: usize) -> Option<UTFontRef> {
+    pub fn get_font_by_index(&self, index: usize) -> Option<GMFontRef> {
         if index >= self.fonts_by_index.len() {
             return None;
         }
-        Some(UTFontRef { index })
+        Some(GMFontRef { index })
     }
     pub fn len(&self) -> usize { self.fonts_by_index.len() }
 }
 
 
 #[allow(non_snake_case)]
-pub fn parse_chunk_FONT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strings: &UTStrings) -> Result<UTFonts, String> {
+pub fn parse_chunk_FONT(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMFonts, String> {
     chunk.file_index = 0;
     let font_count: usize = chunk.read_usize()?;
     let mut font_starting_positions: Vec<usize> = Vec::with_capacity(font_count);
@@ -86,13 +86,13 @@ pub fn parse_chunk_FONT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strin
         font_starting_positions.push(start_position);
     }
 
-    let mut fonts_by_index: Vec<UTFont> = Vec::with_capacity(font_count);
+    let mut fonts_by_index: Vec<GMFont> = Vec::with_capacity(font_count);
     let mut abs_pos_to_index: HashMap<usize, usize> = HashMap::new();
     for (i, start_position) in font_starting_positions.iter().enumerate() {
         chunk.file_index = *start_position;
 
-        let name: UTStringRef = chunk.read_ut_string(&strings)?;
-        let display_name: UTStringRef = chunk.read_ut_string(&strings)?;
+        let name: GMStringRef = chunk.read_gm_string(&strings)?;
+        let display_name: GMStringRef = chunk.read_gm_string(&strings)?;
         let em_size: u32 = chunk.read_u32()?;
         let bold: bool = chunk.read_u32()? != 0;
         let italic: bool = chunk.read_u32()? != 0;
@@ -122,9 +122,9 @@ pub fn parse_chunk_FONT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strin
             line_height = Some(chunk.read_u32()?);
         }
 
-        let glyphs: Vec<UTGlyph> = parse_glyphs(chunk, name.resolve(strings)?)?;
+        let glyphs: Vec<GMGlyph> = parse_glyphs(chunk, name.resolve(strings)?)?;
 
-        let font: UTFont = UTFont {
+        let font: GMFont = GMFont {
             name,
             display_name,
             em_size,
@@ -146,14 +146,14 @@ pub fn parse_chunk_FONT(chunk: &mut UTChunk, general_info: &UTGeneralInfo, strin
         abs_pos_to_index.insert(start_position + chunk.abs_pos, i);
         fonts_by_index.push(font);
     }
-    Ok(UTFonts {
+    Ok(GMFonts {
         abs_pos_to_index,
         fonts_by_index,
     })
 }
 
 
-fn parse_glyphs(chunk: &mut UTChunk, font_name: &str) -> Result<Vec<UTGlyph>, String> {
+fn parse_glyphs(chunk: &mut GMChunk, font_name: &str) -> Result<Vec<GMGlyph>, String> {
     let glyph_count: usize = chunk.read_usize()?;
     let mut glyph_starting_positions: Vec<usize> = Vec::with_capacity(glyph_count);
 
@@ -162,7 +162,7 @@ fn parse_glyphs(chunk: &mut UTChunk, font_name: &str) -> Result<Vec<UTGlyph>, St
         glyph_starting_positions.push(start_position);
     }
 
-    let mut glyphs: Vec<UTGlyph> = Vec::with_capacity(glyph_count);
+    let mut glyphs: Vec<GMGlyph> = Vec::with_capacity(glyph_count);
     for start_position in glyph_starting_positions {
         chunk.file_index = start_position;
 
@@ -184,7 +184,7 @@ fn parse_glyphs(chunk: &mut UTChunk, font_name: &str) -> Result<Vec<UTGlyph>, St
         let offset: i16 = chunk.read_i16()?;
         let _kerning: i16 = chunk.read_i16()?;  // unsupported as vanilla doesn't use it
 
-        let glyph: UTGlyph = UTGlyph {
+        let glyph: GMGlyph = GMGlyph {
             character,
             x,
             y,
