@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::deserialize::chunk_reading::GMChunk;
+use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use crate::deserialize::embedded_textures::{Image, GMEmbeddedTexture};
 use image;
 use crate::printing::format_type_of;
@@ -15,46 +15,11 @@ pub struct GMTexture {
     pub bounding_height: u16,
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct GMTextureRef {
-    pub index: usize,
-}
-impl GMTextureRef {
-    pub fn resolve<'a>(&self, textures: &'a GMTextures) -> Result<&'a GMTexture, String> {
-        match textures.textures_by_index.get(self.index) {
-            Some(texture) => Ok(texture),
-            None => Err(format!(
-                "Could not resolve Texture Page Item with index {} in list with length {}.",
-                self.index, textures.textures_by_index.len()
-            )),
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct GMTextures {
-    abs_pos_to_index: HashMap<usize, usize>,    // convert absolute position/pointer in data.win to index in Self.textures_by_index
-    textures_by_index: Vec<GMTexture>,          // texture page items by absolute position/pointer in data.win
+    pub abs_pos_to_ref: HashMap<usize, GMRef<GMTexture>>,   // convert absolute position/pointer in data.win to texture ref
+    pub textures_by_index: Vec<GMTexture>,                    // texture page items by absolute position/pointer in data.win
 }
-impl GMTextures {
-    pub fn get_texture_by_pos(&self, abs_pos: usize) -> Option<GMTextureRef> {
-        let index: usize = match self.abs_pos_to_index.get(&abs_pos) {
-            Some(index) => *index,
-            None => return None,
-        };
-        Some(GMTextureRef { index })
-    }
-    pub fn get_texture_by_index(&self, index: usize) -> Option<GMTextureRef> {
-        if index >= self.textures_by_index.len() {
-            return None;
-        }
-        Some(GMTextureRef {index})
-    }
-    pub fn len(&self) -> usize {
-        self.textures_by_index.len()
-    }
-}
-
 
 #[derive(Debug, Clone)]
 pub struct GMTexturePageItem {
@@ -63,7 +28,7 @@ pub struct GMTexturePageItem {
     pub source_width: u16,
     pub source_height: u16,
     pub texture_page_id: u16,
-    pub texture: GMTextureRef,
+    pub texture: GMRef<GMTexture>,
 }
 
 
@@ -76,7 +41,7 @@ pub fn parse_chunk_tpag(chunk: &mut GMChunk, texture_pages: Vec<GMEmbeddedTextur
     }
 
     let mut textures_by_index: Vec<GMTexture> = Vec::with_capacity(items_count);
-    let mut abs_pos_to_index: HashMap<usize, usize> = HashMap::new();
+    let mut abs_pos_to_ref: HashMap<usize, GMRef<GMTexture>> = HashMap::new();
     for (i, start_position) in start_positions.iter().enumerate() {
         chunk.file_index = *start_position;
         let source_x: u16 = chunk.read_u16()?;
@@ -118,10 +83,10 @@ pub fn parse_chunk_tpag(chunk: &mut GMChunk, texture_pages: Vec<GMEmbeddedTextur
             bounding_height,
         };
         textures_by_index.push(texture_page_item);
-        abs_pos_to_index.insert(start_position + chunk.abs_pos, i);
+        abs_pos_to_ref.insert(start_position + chunk.abs_pos, GMRef::texture(i));
     }
 
-    let textures: GMTextures = GMTextures { textures_by_index, abs_pos_to_index };
+    let textures: GMTextures = GMTextures { textures_by_index, abs_pos_to_ref };
     Ok(textures)
 }
 

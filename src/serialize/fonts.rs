@@ -1,24 +1,24 @@
 use crate::deserialize::all::GMData;
-use crate::deserialize::fonts::{GMFont, GMFontRef, GMGlyph};
-use crate::serialize::all::{build_chunk, DataBuilder, GMRef};
+use crate::deserialize::chunk_reading::GMRef;
+use crate::deserialize::fonts::{GMFont, GMGlyph};
+use crate::serialize::all::{build_chunk, DataBuilder};
 use crate::serialize::chunk_writing::ChunkBuilder;
 
 pub fn build_chunk_font(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "FONT", abs_pos: data_builder.len() };
 
-    let font_count: usize = gm_data.fonts.len();
+    let font_count: usize = gm_data.fonts.fonts_by_index.len();
     builder.write_usize(font_count);
 
     for i in 0..font_count {
-        data_builder.push_pointer_position(&mut builder, GMRef::Font(GMFontRef { index: i }))?;
+        data_builder.push_pointer_placeholder(&mut builder, GMRef::font(i))?;
     }
 
     for i in 0..font_count {
-        let font: GMFontRef = gm_data.fonts.get_font_by_index(i).expect("Font out of bounds while building.");
-        let font: &GMFont = font.resolve(&gm_data.fonts)?;
-        data_builder.push_pointing_to(&mut builder, GMRef::Font(GMFontRef { index: i }))?;
-        builder.write_literal_string(&font.name.resolve(&gm_data.strings)?)?;
-        builder.write_literal_string(&font.display_name.resolve(&gm_data.strings)?)?;
+        let font: &GMFont = &gm_data.fonts.fonts_by_index[i];
+        data_builder.push_pointer_resolve(&mut builder, GMRef::font(i))?;
+        builder.write_literal_string(&font.name.resolve(&gm_data.strings.strings_by_index)?)?;
+        builder.write_literal_string(&font.display_name.resolve(&gm_data.strings.strings_by_index)?)?;
         builder.write_u32(font.em_size);
         builder.write_u32(if font.bold {1} else {0});
         builder.write_u32(if font.italic {1} else {0});
@@ -44,7 +44,7 @@ pub fn build_chunk_font(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
             builder.write_u32(number);
         };
 
-        build_glyphs(data_builder, &mut builder, &font.glyphs, font.name.resolve(&gm_data.strings)?)?;
+        build_glyphs(data_builder, &mut builder, &font.glyphs, font.name.resolve(&gm_data.strings.strings_by_index)?)?;
     }
 
     build_chunk(data_builder, builder)?;

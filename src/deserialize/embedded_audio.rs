@@ -5,38 +5,10 @@ pub struct GMEmbeddedAudio {
     pub raw_data: Vec<u8>,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct GMEmbeddedAudioRef {
-    pub index: usize,
-}
-impl GMEmbeddedAudioRef {
-    pub fn resolve<'a>(&self, embedded_audios: &'a GMEmbeddedAudios) -> Result<&'a GMEmbeddedAudio, String> {
-        match embedded_audios.audios_by_index.get(self.index) {
-            Some(audio) => Ok(audio),
-            None => Err(format!(
-                "Could not resolve embedded audio with index {} in list with length {}.",
-                self.index, embedded_audios.audios_by_index.len(),
-            )),
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct GMEmbeddedAudios {
     pub audios_by_index: Vec<GMEmbeddedAudio>,
 }
-impl GMEmbeddedAudios {
-    pub fn get_audio_by_index(&self, index: usize) -> Option<GMEmbeddedAudioRef> {
-        if index >= self.audios_by_index.len() {
-            return None;
-        }
-        Some(GMEmbeddedAudioRef {index})
-    }
-    pub fn len(&self) -> usize {
-        self.audios_by_index.len()
-    }
-}
-
 
 pub fn parse_chunk_audo(chunk: &mut GMChunk) -> Result<GMEmbeddedAudios, String> {
     chunk.file_index = 0;
