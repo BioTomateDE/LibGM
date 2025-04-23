@@ -4,10 +4,10 @@ use crate::deserialize::texture_page_items::{GMTexture, GMTexturePageItem, GMTex
 use crate::serialize::all::{DataBuilder, GMRef};
 use crate::serialize::chunk_writing::ChunkBuilder;
 
-pub fn build_chunk_TPAG(data_builder: &mut DataBuilder, gm_data: &GMData, texture_page_items: Vec<GMTexturePageItem>) -> Result<(), String> {
+pub fn build_chunk_tpag(data_builder: &mut DataBuilder, gm_data: &GMData, texture_page_items: Vec<GMTexturePageItem>) -> Result<(), String> {
     let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "TPAG", abs_pos: data_builder.len() };
     let len: usize = texture_page_items.len();
-    builder.write_usize(len)?;
+    builder.write_usize(len);
 
     for texture_page_item in &texture_page_items {
         data_builder.push_pointer_position(&mut builder, GMRef::Texture(GMTextureRef { index: texture_page_item.texture.index }))?;
@@ -17,17 +17,17 @@ pub fn build_chunk_TPAG(data_builder: &mut DataBuilder, gm_data: &GMData, textur
         data_builder.push_pointing_to(&mut builder, GMRef::Texture(GMTextureRef { index: texture_page_item.texture.index }))?;
         let texture: &GMTexture = texture_page_item.texture.resolve(&gm_data.textures)?;
 
-        builder.write_u16(texture_page_item.source_x)?;
-        builder.write_u16(texture_page_item.source_y)?;
-        builder.write_u16(texture_page_item.source_width)?;
-        builder.write_u16(texture_page_item.source_height)?;
-        builder.write_u16(texture.target_x)?;
-        builder.write_u16(texture.target_y)?;
-        builder.write_u16(texture.target_width)?;
-        builder.write_u16(texture.target_height)?;
-        builder.write_u16(texture.bounding_width)?;
-        builder.write_u16(texture.bounding_height)?;
-        builder.write_u16(texture_page_item.texture_page_id)?;
+        builder.write_u16(texture_page_item.source_x);
+        builder.write_u16(texture_page_item.source_y);
+        builder.write_u16(texture_page_item.source_width);
+        builder.write_u16(texture_page_item.source_height);
+        builder.write_u16(texture.target_x);
+        builder.write_u16(texture.target_y);
+        builder.write_u16(texture.target_width);
+        builder.write_u16(texture.target_height);
+        builder.write_u16(texture.bounding_width);
+        builder.write_u16(texture.bounding_height);
+        builder.write_u16(texture_page_item.texture_page_id);
     }
 
     Ok(())
