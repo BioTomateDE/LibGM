@@ -62,8 +62,7 @@ impl GMBackgrounds {
 
 
 
-#[allow(non_snake_case)]
-pub fn parse_chunk_BGND(
+pub fn parse_chunk_bgnd(
     chunk: &mut GMChunk,
     general_info: &GMGeneralInfo,
     strings: &GMStrings,

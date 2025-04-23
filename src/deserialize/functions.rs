@@ -57,8 +57,7 @@ pub struct GMCodeLocal {
     pub variables: Vec<GMCodeLocalVariable>,
 }
 
-#[allow(non_snake_case)]
-pub fn parse_chunk_FUNC(chunk: &mut GMChunk, strings: &GMStrings, chunk_CODE: &GMChunk) -> Result<(GMFunctions, Vec<GMCodeLocal>), String> {
+pub fn parse_chunk_func(chunk: &mut GMChunk, strings: &GMStrings, chunk_CODE: &GMChunk) -> Result<(GMFunctions, Vec<GMCodeLocal>), String> {
     chunk.file_index = 0;
     let functions_length: usize = chunk.read_usize()?;
     let mut functions_by_index: Vec<GMFunction> = Vec::with_capacity(functions_length);
@@ -119,7 +118,6 @@ pub fn parse_chunk_FUNC(chunk: &mut GMChunk, strings: &GMStrings, chunk_CODE: &G
 }
 
 
-#[allow(non_snake_case)]
 fn get_occurrences(count: usize, first_occurrence: i32, chunk_CODE: &GMChunk) -> HashSet<usize> {
     let mut occurrences: HashSet<usize> = HashSet::new();
     let mut occurrence: i32 = first_occurrence + 4;

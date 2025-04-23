@@ -42,8 +42,7 @@ impl GMScripts {
 }
 
 
-#[allow(non_snake_case)]
-pub fn parse_chunk_SCPT(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMScripts, String> {
+pub fn parse_chunk_scpt(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMScripts, String> {
     chunk.file_index = 0;
     let script_count: usize = chunk.read_usize()?;
 

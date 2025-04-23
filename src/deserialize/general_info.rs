@@ -200,8 +200,7 @@ pub struct GMOptionsFlags {
     pub enable_copy_on_write: bool,
 }
 
-#[allow(non_snake_case)]
-pub fn parse_chunk_GEN8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGeneralInfo, String> {
+pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGeneralInfo, String> {
     chunk.file_index = 0;
     let is_debugger_disabled: bool = chunk.read_u8()? != 0;
     let bytecode_version: u8 = chunk.read_u8()?;
@@ -430,8 +429,7 @@ fn parse_options_flags(chunk: &mut GMChunk) -> Result<GMOptionsFlags, String> {
 }
 
 
-#[allow(non_snake_case)]
-pub fn parse_chunk_OPTN(chunk: &mut GMChunk) -> Result<GMOptions, String> {
+pub fn parse_chunk_optn(chunk: &mut GMChunk) -> Result<GMOptions, String> {
     chunk.file_index = 0;
     let _unused1: u32 = chunk.read_u32()?;
     let _unused2: u32 = chunk.read_u32()?;

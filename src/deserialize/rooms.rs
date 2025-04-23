@@ -139,8 +139,7 @@ pub struct GMRoomGameObject {
 }
 
 
-#[allow(non_snake_case)]
-pub fn parse_chunk_ROOM(
+pub fn parse_chunk_room(
     chunk: &mut GMChunk,
     general_info: &GMGeneralInfo,
     gm_strings: &GMStrings,

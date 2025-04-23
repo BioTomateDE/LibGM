@@ -3,7 +3,6 @@ use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfoF
 use crate::serialize::all::{build_chunk, DataBuilder};
 use crate::serialize::chunk_writing::ChunkBuilder;
 
-#[allow(non_snake_case)]
 pub fn build_chunk_GEN8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "GEN8", abs_pos: data_builder.len() };
 
@@ -138,7 +137,6 @@ fn build_function_classifications(function_classifications: &GMFunctionClassific
 }
 
 
-#[allow(non_snake_case)]
 pub fn build_chunk_OPTN(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "OPTN", abs_pos: data_builder.len() };
 
