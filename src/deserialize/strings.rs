@@ -45,8 +45,7 @@ impl GMStrings {
 }
 
 
-#[allow(non_snake_case)]
-pub fn parse_chunk_STRG(chunk: &mut GMChunk) -> Result<GMStrings, String> {
+pub fn parse_chunk_strg(chunk: &mut GMChunk) -> Result<GMStrings, String> {
     chunk.file_index = 0;
     let string_count: usize = chunk.read_usize()?;
     // skip redundant list of absolute positions of upcoming strings

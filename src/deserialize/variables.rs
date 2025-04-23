@@ -11,8 +11,7 @@ pub struct GMVariable {
     pub abs_pos: usize,
 }
 
-#[allow(non_snake_case)]
-pub fn parse_chunk_VARI(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMVariable>, String> {
+pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMVariable>, String> {
     chunk.file_index = 0;
     let _unknown1: u32 = chunk.read_u32()?;
     let _unknown2: u32 = chunk.read_u32()?;

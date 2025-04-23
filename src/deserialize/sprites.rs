@@ -140,8 +140,7 @@ pub struct GMSpriteMaskEntry {
 }
 
 
-#[allow(non_snake_case)]
-pub fn parse_chunk_SPRT(
+pub fn parse_chunk_sprt(
     chunk: &mut GMChunk,
     general_info: &GMGeneralInfo,
     strings: &GMStrings,

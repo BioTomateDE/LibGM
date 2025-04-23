@@ -38,8 +38,7 @@ impl GMEmbeddedAudios {
 }
 
 
-#[allow(non_snake_case)]
-pub fn parse_chunk_AUDO(chunk: &mut GMChunk) -> Result<GMEmbeddedAudios, String> {
+pub fn parse_chunk_audo(chunk: &mut GMChunk) -> Result<GMEmbeddedAudios, String> {
     chunk.file_index = 0;
     let audios_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(audios_count);

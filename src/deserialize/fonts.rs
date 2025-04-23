@@ -76,8 +76,7 @@ impl GMFonts {
 }
 
 
-#[allow(non_snake_case)]
-pub fn parse_chunk_FONT(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMFonts, String> {
+pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMFonts, String> {
     chunk.file_index = 0;
     let font_count: usize = chunk.read_usize()?;
     let mut font_starting_positions: Vec<usize> = Vec::with_capacity(font_count);

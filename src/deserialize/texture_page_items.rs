@@ -67,8 +67,7 @@ pub struct GMTexturePageItem {
 }
 
 
-#[allow(non_snake_case)]
-pub fn parse_chunk_TPAG(chunk: &mut GMChunk, texture_pages: Vec<GMEmbeddedTexture>) -> Result<GMTextures, String> {
+pub fn parse_chunk_tpag(chunk: &mut GMChunk, texture_pages: Vec<GMEmbeddedTexture>) -> Result<GMTextures, String> {
     chunk.file_index = 0;
     let items_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(items_count);

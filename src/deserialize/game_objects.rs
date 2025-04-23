@@ -92,8 +92,7 @@ pub struct GMGameObjectEventAction {
 }
 
 
-#[allow(non_snake_case)]
-pub fn parse_chunk_OBJT(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMGameObjects, String> {
+pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMGameObjects, String> {
     chunk.file_index = 0;
     let game_objects_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(game_objects_count);
