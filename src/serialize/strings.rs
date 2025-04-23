@@ -3,10 +3,10 @@ use crate::deserialize::strings::{GMStringRef};
 use crate::serialize::all::{build_chunk, DataBuilder, GMRef};
 use crate::serialize::chunk_writing::ChunkBuilder;
 
-pub fn build_chunk_STRG(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
+pub fn build_chunk_strg(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "STRG", abs_pos: data_builder.len() };
     let len: usize = gm_data.strings.len();
-    builder.write_usize(len)?;
+    builder.write_usize(len);
 
     for i in 0..len {
         data_builder.push_pointer_position(&mut builder, GMRef::String(GMStringRef { index: i }))?;
@@ -24,11 +24,11 @@ pub fn build_chunk_STRG(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         };
         let string: &str = string_ref.resolve(&gm_data.strings)?;
 
-        builder.write_usize(string.len())?;
+        builder.write_usize(string.len());
         data_builder.push_pointing_to(&mut builder, GMRef::String(GMStringRef {index: i}))?;
 
-        builder.write_literal_string(&string)?;
-        builder.write_u8(0)?        // write trailing null byte
+        builder.write_literal_string(&string);
+        builder.write_u8(0)        // write trailing null byte
     }
 
     build_chunk(data_builder, builder)?;

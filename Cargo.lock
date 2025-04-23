@@ -3,21 +3,6 @@
 version = 4
 
 [[package]]
-name = "LibGM"
-version = "0.1.0"
-dependencies = [
- "biologischer-log",
- "bzip2",
- "chrono",
- "colored",
- "image",
- "log",
- "num_enum",
- "qoi",
- "uuid",
-]
-
-[[package]]
 name = "adler2"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -501,6 +486,21 @@ checksum = "cf78f52d400cf2d84a3a973a78a592b4adc535739e0a5597a0da6f0c357adc75"
 dependencies = [
  "arbitrary",
  "cc",
+]
+
+[[package]]
+name = "libgm"
+version = "0.1.0"
+dependencies = [
+ "biologischer-log",
+ "bzip2",
+ "chrono",
+ "colored",
+ "image",
+ "log",
+ "num_enum",
+ "qoi",
+ "uuid",
 ]
 
 [[package]]
