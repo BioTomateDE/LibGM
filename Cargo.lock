@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "UndertaleModManager"
+name = "LibGM"
 version = "0.1.0"
 dependencies = [
  "bzip2",

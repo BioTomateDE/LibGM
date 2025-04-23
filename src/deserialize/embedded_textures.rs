@@ -1,13 +1,13 @@
 use std::cmp::max;
 use std::io::Read;
-use crate::deserialize::chunk_reading::UTChunk;
-use crate::deserialize::general_info::UTGeneralInfo;
+use crate::deserialize::chunk_reading::GMChunk;
+use crate::deserialize::general_info::GMGeneralInfo;
 use crate::printing::hexdump;
 use image;
 use bzip2::read::BzDecoder;
 use qoi;
 
-pub struct UTEmbeddedTexture {
+pub struct GMEmbeddedTexture {
     pub scaled: u32,
     pub generated_mips: Option<u32>,
     pub texture_block_size: Option<u32>,
@@ -27,7 +27,7 @@ pub enum Image {
 
 
 #[allow(non_snake_case)]
-pub fn parse_chunk_TXTR(chunk: &mut UTChunk, general_info: &UTGeneralInfo) -> Result<Vec<UTEmbeddedTexture>, String> {
+pub fn parse_chunk_TXTR(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Vec<GMEmbeddedTexture>, String> {
     chunk.file_index = 0;
     let texture_count: usize = chunk.read_usize()?;
     let mut texture_pointers: Vec<usize> = Vec::with_capacity(texture_count);
@@ -36,10 +36,10 @@ pub fn parse_chunk_TXTR(chunk: &mut UTChunk, general_info: &UTGeneralInfo) -> Re
         texture_pointers.push(chunk.read_usize()? - chunk.abs_pos);
     }
 
-    let mut textures: Vec<UTEmbeddedTexture> = Vec::with_capacity(texture_count);
+    let mut textures: Vec<GMEmbeddedTexture> = Vec::with_capacity(texture_count);
     for texture_start_position in texture_pointers {
         chunk.file_index = texture_start_position;
-        let texture: UTEmbeddedTexture = parse_texture(chunk, general_info)?;
+        let texture: GMEmbeddedTexture = parse_texture(chunk, general_info)?;
         textures.push(texture);
     }
 
@@ -47,7 +47,7 @@ pub fn parse_chunk_TXTR(chunk: &mut UTChunk, general_info: &UTGeneralInfo) -> Re
 }
 
 
-fn parse_texture(chunk: &mut UTChunk, general_info: &UTGeneralInfo) -> Result<UTEmbeddedTexture, String> {
+fn parse_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GMEmbeddedTexture, String> {
     let scaled: u32 = chunk.read_u32()?;
     let mut generated_mips: Option<u32> = None;
     let mut texture_block_size: Option<u32> = None;
@@ -79,7 +79,7 @@ fn parse_texture(chunk: &mut UTChunk, general_info: &UTGeneralInfo) -> Result<UT
     // };
     // img.save(format!("./_expimg/{}.png", texture_start_position)).unwrap();
 
-    Ok(UTEmbeddedTexture {
+    Ok(GMEmbeddedTexture {
         scaled,
         generated_mips,
         texture_block_size,
@@ -92,7 +92,7 @@ fn parse_texture(chunk: &mut UTChunk, general_info: &UTGeneralInfo) -> Result<UT
 
 
 
-fn read_raw_texture(chunk: &mut UTChunk, general_info: &UTGeneralInfo) -> Result<Image, String> {
+fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Image, String> {
     static MAGIC_PNG_HEADER: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
     static MAGIC_BZ2_QOI_HEADER: &[u8] = "2zoq".as_bytes();
     static MAGIC_QOI_HEADER: &[u8] = "fioq".as_bytes();
@@ -163,18 +163,18 @@ fn read_raw_texture(chunk: &mut UTChunk, general_info: &UTGeneralInfo) -> Result
 }
 
 
-fn find_end_of_bz2_stream(ut_chunk: &mut UTChunk) -> Result<usize, String> {
-    let stream_start_position: usize = ut_chunk.file_index;
+fn find_end_of_bz2_stream(gm_chunk: &mut GMChunk) -> Result<usize, String> {
+    let stream_start_position: usize = gm_chunk.file_index;
     // Read backwards from the max end of stream position, in up to 256-byte chunks.
     // We want to find the end of nonzero data.
     static MAX_CHUNK_SIZE: usize = 256;
 
-    let mut chunk_start_position: usize = max(stream_start_position, ut_chunk.data.len() - MAX_CHUNK_SIZE);
-    let chunk_size: usize = ut_chunk.data.len() - chunk_start_position;
+    let mut chunk_start_position: usize = max(stream_start_position, gm_chunk.data.len() - MAX_CHUNK_SIZE);
+    let chunk_size: usize = gm_chunk.data.len() - chunk_start_position;
     loop {
-        ut_chunk.file_index = chunk_start_position;
-        let chunk_data: &[u8] = &ut_chunk.data[ut_chunk.file_index .. ut_chunk.file_index + chunk_size];
-        ut_chunk.file_index += chunk_size;
+        gm_chunk.file_index = chunk_start_position;
+        let chunk_data: &[u8] = &gm_chunk.data[gm_chunk.file_index .. gm_chunk.file_index + chunk_size];
+        gm_chunk.file_index += chunk_size;
 
         // find first nonzero byte at end of stream
         let mut position: isize = chunk_size as isize - 1;
@@ -185,7 +185,7 @@ fn find_end_of_bz2_stream(ut_chunk: &mut UTChunk) -> Result<usize, String> {
         // If we're at nonzero data, then invoke search for footer magic
         if position >= 0 && chunk_data[position as usize] != 0 {
             let end_data_position: isize = chunk_start_position as isize + position + 1;
-            return Ok(find_end_of_bz2_search(ut_chunk, end_data_position as usize)?)
+            return Ok(find_end_of_bz2_search(gm_chunk, end_data_position as usize)?)
         }
 
         // move backwards to next chunk
@@ -198,17 +198,17 @@ fn find_end_of_bz2_stream(ut_chunk: &mut UTChunk) -> Result<usize, String> {
 
 
 /// function written by chatgpt; unverified
-fn find_end_of_bz2_search(ut_chunk: &mut UTChunk, end_data_position: usize) -> Result<usize, String> {
+fn find_end_of_bz2_search(gm_chunk: &mut GMChunk, end_data_position: usize) -> Result<usize, String> {
     static MAGIC_BZ2_FOOTER: [u8; 6] = [0x17, 0x72, 0x45, 0x38, 0x50, 0x90];
 
     // Ensure we don't read past the data bounds
     let start_position = end_data_position.saturating_sub(16);
-    if start_position >= ut_chunk.data.len() {
+    if start_position >= gm_chunk.data.len() {
         return Err("Start position out of bounds".to_string());
     }
 
     // Extract the last 16 bytes (or fewer if near the start of data)
-    let data = &ut_chunk.data[start_position..end_data_position];
+    let data = &gm_chunk.data[start_position..end_data_position];
 
     // BZ2 footer magic bytes
     let footer_magic: &[u8] = &MAGIC_BZ2_FOOTER;

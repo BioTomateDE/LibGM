@@ -1,20 +1,20 @@
-use crate::deserialize::chunk_reading::UTChunk;
-use crate::deserialize::general_info::UTGeneralInfo;
-use crate::deserialize::strings::{UTStringRef, UTStrings};
-use crate::deserialize::texture_page_items::{UTTextureRef, UTTextures};
+use crate::deserialize::chunk_reading::GMChunk;
+use crate::deserialize::general_info::GMGeneralInfo;
+use crate::deserialize::strings::{GMStringRef, GMStrings};
+use crate::deserialize::texture_page_items::{GMTextureRef, GMTextures};
 
 #[derive(Debug, Clone)]
-pub struct UTBackground {
-    pub name: UTStringRef,
+pub struct GMBackground {
+    pub name: GMStringRef,
     pub transparent: bool,
     pub smooth: bool,
     pub preload: bool,
-    pub texture: UTTextureRef,
+    pub texture: GMTextureRef,
     pub gms2_unknown_always2: Option<u32>,
     pub gms2_tile_width: Option<u32>,
     pub gms2_tile_height: Option<u32>,
-    pub gms2_output_border_x: Option<u32>,
-    pub gms2_output_border_y: Option<u32>,
+    pub gms2_outpgm_border_x: Option<u32>,
+    pub gms2_outpgm_border_y: Option<u32>,
     pub gms2_tile_columns: Option<u32>,
     pub gms2_items_per_tile_count: Option<u32>,
     pub gms2_tile_count: Option<u32>,
@@ -25,12 +25,12 @@ pub struct UTBackground {
 
 
 #[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
-pub struct UTBackgroundRef {
+pub struct GMBackgroundRef {
     pub index: usize,
 }
 
-impl UTBackgroundRef {
-    pub fn resolve<'a>(&self, backgrounds: &'a UTBackgrounds) -> Result<&'a UTBackground, String> {
+impl GMBackgroundRef {
+    pub fn resolve<'a>(&self, backgrounds: &'a GMBackgrounds) -> Result<&'a GMBackground, String> {
         match backgrounds.backgrounds_by_index.get(self.index) {
             Some(background) => Ok(background),
             None => Err(format!(
@@ -43,15 +43,15 @@ impl UTBackgroundRef {
 
 
 #[derive(Debug, Clone)]
-pub struct UTBackgrounds {
-    pub backgrounds_by_index: Vec<UTBackground>,    // strings by index/order in chunk BGND
+pub struct GMBackgrounds {
+    pub backgrounds_by_index: Vec<GMBackground>,    // strings by index/order in chunk BGND
 }
-impl UTBackgrounds {
-    pub fn get_background_by_index(&self, index: usize) -> Option<UTBackgroundRef> {
+impl GMBackgrounds {
+    pub fn get_background_by_index(&self, index: usize) -> Option<GMBackgroundRef> {
         if index >= self.backgrounds_by_index.len() {
             return None;
         }
-        Some(UTBackgroundRef {
+        Some(GMBackgroundRef {
             index,
         })
     }
@@ -64,11 +64,11 @@ impl UTBackgrounds {
 
 #[allow(non_snake_case)]
 pub fn parse_chunk_BGND(
-    chunk: &mut UTChunk,
-    general_info: &UTGeneralInfo,
-    strings: &UTStrings,
-    textures: &UTTextures,
-) -> Result<UTBackgrounds, String> {
+    chunk: &mut GMChunk,
+    general_info: &GMGeneralInfo,
+    strings: &GMStrings,
+    textures: &GMTextures,
+) -> Result<GMBackgrounds, String> {
     chunk.file_index = 0;
     let backgrounds_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(backgrounds_count);
@@ -76,15 +76,15 @@ pub fn parse_chunk_BGND(
         start_positions.push(chunk.read_usize()? - chunk.abs_pos);
     }
 
-    let mut backgrounds_by_index: Vec<UTBackground> = Vec::with_capacity(backgrounds_count);
+    let mut backgrounds_by_index: Vec<GMBackground> = Vec::with_capacity(backgrounds_count);
     for start_position in start_positions {
         chunk.file_index = start_position;
-        let name: UTStringRef = chunk.read_ut_string(strings)?;
+        let name: GMStringRef = chunk.read_gm_string(strings)?;
         let transparent: bool = chunk.read_u32()? != 0;
         let smooth: bool = chunk.read_u32()? != 0;
         let preload: bool = chunk.read_u32()? != 0;
         let texture_abs_pos: usize = chunk.read_usize()?;
-        let texture: UTTextureRef = match textures.get_texture_by_pos(texture_abs_pos) {
+        let texture: GMTextureRef = match textures.get_texture_by_pos(texture_abs_pos) {
             Some(texture) => texture,
             None => return Err(format!(
                 "Could not find texture with absolute position {} for Background with name \"{}\" at position {} in chunk 'BGND'.",
@@ -95,8 +95,8 @@ pub fn parse_chunk_BGND(
         let mut gms2_unknown_always2: Option<u32> = None;
         let mut gms2_tile_width: Option<u32> = None;
         let mut gms2_tile_height: Option<u32> = None;
-        let mut gms2_output_border_x: Option<u32> = None;
-        let mut gms2_output_border_y: Option<u32> = None;
+        let mut gms2_outpgm_border_x: Option<u32> = None;
+        let mut gms2_outpgm_border_y: Option<u32> = None;
         let mut gms2_tile_columns: Option<u32> = None;
         let mut gms2_items_per_tile_count: Option<u32> = None;
         let mut gms2_tile_count: Option<u32> = None;
@@ -108,8 +108,8 @@ pub fn parse_chunk_BGND(
             gms2_unknown_always2 = Some(chunk.read_u32()?);
             gms2_tile_width = Some(chunk.read_u32()?);
             gms2_tile_height = Some(chunk.read_u32()?);
-            gms2_output_border_x = Some(chunk.read_u32()?);
-            gms2_output_border_y = Some(chunk.read_u32()?);
+            gms2_outpgm_border_x = Some(chunk.read_u32()?);
+            gms2_outpgm_border_y = Some(chunk.read_u32()?);
             gms2_tile_columns = Some(chunk.read_u32()?);
             gms2_items_per_tile_count = Some(chunk.read_u32()?);
             gms2_tile_count = Some(chunk.read_u32()?);
@@ -124,7 +124,7 @@ pub fn parse_chunk_BGND(
             }
         }
 
-        let background: UTBackground = UTBackground {
+        let background: GMBackground = GMBackground {
             name,
             transparent,
             smooth,
@@ -133,8 +133,8 @@ pub fn parse_chunk_BGND(
             gms2_unknown_always2,
             gms2_tile_width,
             gms2_tile_height,
-            gms2_output_border_x,
-            gms2_output_border_y,
+            gms2_outpgm_border_x,
+            gms2_outpgm_border_y,
             gms2_tile_columns,
             gms2_items_per_tile_count,
             gms2_tile_count,
@@ -145,7 +145,7 @@ pub fn parse_chunk_BGND(
         backgrounds_by_index.push(background);
     }
 
-    Ok(UTBackgrounds{ backgrounds_by_index })
+    Ok(GMBackgrounds{ backgrounds_by_index })
 }
 
 

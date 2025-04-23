@@ -1,12 +1,12 @@
-﻿use crate::deserialize::chunk_reading::UTChunk;
+﻿use crate::deserialize::chunk_reading::GMChunk;
 use chrono::{DateTime, Utc};
-use crate::deserialize::strings::{UTStringRef, UTStrings};
+use crate::deserialize::strings::{GMStringRef, GMStrings};
 
 #[derive(Debug, Clone)]
-pub struct UTOptions {
+pub struct GMOptions {
     pub _unused1: u32,
     pub _unused2: u32,
-    pub flags: UTOptionsFlags,
+    pub flags: GMOptionsFlags,
     pub scale: i32,
     pub window_color_r: u8,
     pub window_color_g: u8,
@@ -24,35 +24,35 @@ pub struct UTOptions {
 }
 
 #[derive(Debug, Clone)]
-pub struct UTGeneralInfo {
+pub struct GMGeneralInfo {
     pub is_debugger_disabled: bool,
     pub bytecode_version: u8,
     pub unknown_value: u16,
-    pub game_file_name: UTStringRef,
-    pub config: UTStringRef,
+    pub game_file_name: GMStringRef,
+    pub config: GMStringRef,
     pub last_object_id: u32,
     pub last_tile_id: u32,
     pub game_id: u32,
     pub directplay_guid: uuid::Uuid,
-    pub game_name: UTStringRef,
+    pub game_name: GMStringRef,
     pub major_version: u32,
     pub minor_version: u32,
     pub release_version: u32,
     pub stable_version: u32,
     pub default_window_width: u32,
     pub default_window_height: u32,
-    pub flags: UTGeneralInfoFlags,
+    pub flags: GMGeneralInfoFlags,
     pub license: [u8; 16],
     pub timestamp_created: DateTime<Utc>,
-    pub display_name: UTStringRef,
+    pub display_name: GMStringRef,
     pub active_targets: u64,
-    pub function_classifications: UTFunctionClassifications,
+    pub function_classifications: GMFunctionClassifications,
     pub steam_appid: u32,
     pub debugger_port: u16,
     pub room_order: Vec<u32>,
 }
 
-impl UTGeneralInfo {
+impl GMGeneralInfo {
     pub fn is_version_at_least(&self, major: u32, minor: u32, release: u32, build: u32) -> bool {
 
         if self.major_version != major {
@@ -73,7 +73,7 @@ impl UTGeneralInfo {
 }
 
 #[derive(Debug, Clone)]
-pub struct UTGeneralInfoFlags {
+pub struct GMGeneralInfoFlags {
     // taken from https://github.com/UnderminersTeam/UndertaleModTool/blob/master/UndertaleModLib/Models/UndertaleGeneralInfo.cs
     pub fullscreen: bool,
     pub sync_vertex1: bool,
@@ -96,7 +96,7 @@ pub struct UTGeneralInfoFlags {
 }
 
 #[derive(Debug, Clone)]
-pub struct UTFunctionClassifications {
+pub struct GMFunctionClassifications {
     pub none: bool,
     pub internet: bool,
     pub joystick: bool,
@@ -167,7 +167,7 @@ pub struct UTFunctionClassifications {
 
 
 #[derive(Debug, Clone)]
-pub struct UTOptionsFlags {
+pub struct GMOptionsFlags {
     pub fullscreen: bool,
     pub interpolate_pixels: bool,
     pub use_new_audio: bool,
@@ -201,13 +201,13 @@ pub struct UTOptionsFlags {
 }
 
 #[allow(non_snake_case)]
-pub fn parse_chunk_GEN8(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTGeneralInfo, String> {
+pub fn parse_chunk_GEN8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGeneralInfo, String> {
     chunk.file_index = 0;
     let is_debugger_disabled: bool = chunk.read_u8()? != 0;
     let bytecode_version: u8 = chunk.read_u8()?;
     let unknown_value: u16 = chunk.read_u16()?;
-    let game_file_name: UTStringRef = chunk.read_ut_string(strings)?;
-    let config: UTStringRef = chunk.read_ut_string(strings)?;
+    let game_file_name: GMStringRef = chunk.read_gm_string(strings)?;
+    let config: GMStringRef = chunk.read_gm_string(strings)?;
     let last_object_id: u32 = chunk.read_u32()?;
     let last_tile_id: u32 = chunk.read_u32()?;
     let game_id: u32 = chunk.read_u32()?;
@@ -225,14 +225,14 @@ pub fn parse_chunk_GEN8(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTGe
     let directplay_guid: uuid::Uuid = uuid::Builder::from_bytes_le(directplay_guid).into_uuid();
     // ^ perhaps not `_le` but idk bc it's usually just null
 
-    let game_name: UTStringRef = chunk.read_ut_string(strings)?;
+    let game_name: GMStringRef = chunk.read_gm_string(strings)?;
     let major_version: u32 = chunk.read_u32()?;
     let minor_version: u32 = chunk.read_u32()?;
     let release_version: u32 = chunk.read_u32()?;
     let stable_version: u32 = chunk.read_u32()?;
     let default_window_width: u32 = chunk.read_u32()?;
     let default_window_height: u32 = chunk.read_u32()?;
-    let flags: UTGeneralInfoFlags = parse_flags(chunk)?;
+    let flags: GMGeneralInfoFlags = parse_flags(chunk)?;
 
     let license: [u8; 16] = match chunk.data[chunk.file_index..chunk.file_index+16].try_into() {
         Ok(data) => data,
@@ -255,10 +255,10 @@ pub fn parse_chunk_GEN8(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTGe
         )),
     };
 
-    let display_name: UTStringRef = chunk.read_ut_string(strings)?;
+    let display_name: GMStringRef = chunk.read_gm_string(strings)?;
     // probably not actually u64 (rather u32) but it's zero and there's null bytes surrounding it so idk
     let active_targets: u64 = chunk.read_u64()?;
-    let function_classifications: UTFunctionClassifications = parse_function_classifications(chunk)?;
+    let function_classifications: GMFunctionClassifications = parse_function_classifications(chunk)?;
     let steam_appid: u32 = (-chunk.read_i32()?) as u32;
     let debugger_port: u16 = chunk.read_u32()? as u16;
 
@@ -270,7 +270,7 @@ pub fn parse_chunk_GEN8(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTGe
         room_order.push(room_id);
     }
 
-    Ok(UTGeneralInfo {
+    Ok(GMGeneralInfo {
         is_debugger_disabled,
         bytecode_version,
         unknown_value,
@@ -299,9 +299,9 @@ pub fn parse_chunk_GEN8(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTGe
     })
 }
 
-fn parse_flags(chunk: &mut UTChunk) -> Result<UTGeneralInfoFlags, String> {
+fn parse_flags(chunk: &mut GMChunk) -> Result<GMGeneralInfoFlags, String> {
     let raw: u64 = chunk.read_u64()?;
-    Ok(UTGeneralInfoFlags {
+    Ok(GMGeneralInfoFlags {
         fullscreen: 0 != raw & 0x0001,
         sync_vertex1: 0 != raw & 0x0002,
         sync_vertex2: 0 != raw & 0x0004,
@@ -321,9 +321,9 @@ fn parse_flags(chunk: &mut UTChunk) -> Result<UTGeneralInfoFlags, String> {
     })
 }
 
-fn parse_function_classifications(chunk: &mut UTChunk) -> Result<UTFunctionClassifications, String> {
+fn parse_function_classifications(chunk: &mut GMChunk) -> Result<GMFunctionClassifications, String> {
     let raw: u64 = chunk.read_u64()?;
-    Ok(UTFunctionClassifications {
+    Ok(GMFunctionClassifications {
         none: 0 != raw & 0x0,
         internet: 0 != raw & 0x1,
         joystick: 0 != raw & 0x2,
@@ -393,9 +393,9 @@ fn parse_function_classifications(chunk: &mut UTChunk) -> Result<UTFunctionClass
     })
 }
 
-fn parse_options_flags(chunk: &mut UTChunk) -> Result<UTOptionsFlags, String> {
+fn parse_options_flags(chunk: &mut GMChunk) -> Result<GMOptionsFlags, String> {
     let raw: u64 = chunk.read_u64()?;
-    Ok(UTOptionsFlags {
+    Ok(GMOptionsFlags {
         fullscreen: 0 != raw & 0x1,
         interpolate_pixels: 0 != raw & 0x2,
         use_new_audio: 0 != raw & 0x4,
@@ -431,11 +431,11 @@ fn parse_options_flags(chunk: &mut UTChunk) -> Result<UTOptionsFlags, String> {
 
 
 #[allow(non_snake_case)]
-pub fn parse_chunk_OPTN(chunk: &mut UTChunk) -> Result<UTOptions, String> {
+pub fn parse_chunk_OPTN(chunk: &mut GMChunk) -> Result<GMOptions, String> {
     chunk.file_index = 0;
     let _unused1: u32 = chunk.read_u32()?;
     let _unused2: u32 = chunk.read_u32()?;
-    let flags: UTOptionsFlags = parse_options_flags(chunk)?;
+    let flags: GMOptionsFlags = parse_options_flags(chunk)?;
     let scale: i32 = chunk.read_i32()?;
     let window_color_r: u8 = chunk.read_u8()?;
     let window_color_g: u8 = chunk.read_u8()?;
@@ -455,7 +455,7 @@ pub fn parse_chunk_OPTN(chunk: &mut UTChunk) -> Result<UTOptions, String> {
 
     // constants missing
 
-    Ok(UTOptions {
+    Ok(GMOptions {
         _unused1,
         _unused2,
         flags,

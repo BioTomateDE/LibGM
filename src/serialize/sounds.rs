@@ -1,34 +1,34 @@
-use crate::deserialize::all::UTData;
-use crate::deserialize::sounds::{UTSound, UTSoundFlags, UTSoundRef};
-use crate::serialize::all::{DataBuilder, UTRef};
+use crate::deserialize::all::GMData;
+use crate::deserialize::sounds::{GMSound, GMSoundFlags, GMSoundRef};
+use crate::serialize::all::{DataBuilder, GMRef};
 use crate::serialize::chunk_writing::ChunkBuilder;
 
 #[allow(non_snake_case)]
-pub fn build_chunk_SOND(data_builder: &mut DataBuilder, ut_data: &UTData) -> Result<(), String> {
+pub fn build_chunk_SOND(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "SOND", abs_pos: data_builder.len() };
-    let len: usize = ut_data.sounds.len();
+    let len: usize = gm_data.sounds.len();
     builder.write_usize(len)?;
 
     for i in 0..len {
-        data_builder.push_pointer_position(&mut builder, UTRef::Sound(UTSoundRef { index: i }))?;
+        data_builder.push_pointer_position(&mut builder, GMRef::Sound(GMSoundRef { index: i }))?;
     }
 
     for i in 0..len {
-        data_builder.push_pointing_to(&mut builder, UTRef::Sound(UTSoundRef { index: i }))?;
-        let sound: UTSoundRef = ut_data.sounds.get_sound_by_index(i).expect("Sound out of bounds while building.");
-        let sound: &UTSound = sound.resolve(&ut_data.sounds)?;
-        builder.write_ut_string(&sound.name, &ut_data.strings)?;
+        data_builder.push_pointing_to(&mut builder, GMRef::Sound(GMSoundRef { index: i }))?;
+        let sound: GMSoundRef = gm_data.sounds.get_sound_by_index(i).expect("Sound out of bounds while building.");
+        let sound: &GMSound = sound.resolve(&gm_data.sounds)?;
+        builder.write_gm_string(&sound.name, &gm_data.strings)?;
         builder.write_u32(build_sound_flags(&sound.flags))?;
-        builder.write_ut_string(&sound.audio_type, &ut_data.strings)?;
-        builder.write_ut_string(&sound.file, &ut_data.strings)?;
+        builder.write_gm_string(&sound.audio_type, &gm_data.strings)?;
+        builder.write_gm_string(&sound.file, &gm_data.strings)?;
         builder.write_u32(sound.effects)?;
         builder.write_f32(sound.volume)?;
         builder.write_f32(sound.pitch)?;
         // {~~} audio group stuff idk
         builder.write_i32(-1)?;
-        let audio_file: Option<UTRef> = match &sound.audio_file { Some(x) => Some(UTRef::Audio(x.clone())), None => None };
+        let audio_file: Option<GMRef> = match &sound.audio_file { Some(x) => Some(GMRef::Audio(x.clone())), None => None };
         data_builder.push_pointer_position_maybe(&mut builder, audio_file)?;
-        if ut_data.general_info.is_version_at_least(2024, 6, 0, 0) {
+        if gm_data.general_info.is_version_at_least(2024, 6, 0, 0) {
             builder.write_f32(sound.audio_length.expect("Sound Audio length is None."))?;
         }
     }
@@ -37,7 +37,7 @@ pub fn build_chunk_SOND(data_builder: &mut DataBuilder, ut_data: &UTData) -> Res
 }
 
 
-fn build_sound_flags(flags: &UTSoundFlags) -> u32 {
+fn build_sound_flags(flags: &GMSoundFlags) -> u32 {
     let mut raw: u32 = 0;
     if flags.is_embedded { raw |= 0x1 };
     if flags.is_compressed { raw |= 0x2 };
