@@ -1,9 +1,10 @@
-﻿use crate::deserialize::chunk_reading::GMChunk;
+﻿use crate::deserialize::chunk_reading::GMRef;
+use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::variables::GMVariable;
 use std::cmp::PartialEq;
 use num_enum::TryFromPrimitive;
-use crate::deserialize::functions::{GMFunctionRef, GMFunctions};
-use crate::deserialize::strings::{GMStringRef, GMStrings};
+use crate::deserialize::functions::{GMFunction, GMFunctions};
+use crate::deserialize::strings::GMStrings;
 
 // Taken from UndertaleModTool/UndertaleModLib/UndertaleCode.cs/UndertaleInstruction/
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]
@@ -212,7 +213,7 @@ pub struct GMCallInstruction {
     opcode: GMOpcode,
     arguments_count: usize,
     data_type: GMDataType,
-    function: GMFunctionRef,
+    function: GMRef<GMFunction>,
 }
 #[derive(Debug, Clone)]
 pub struct GMBreakInstruction {
@@ -247,13 +248,13 @@ enum GMValue {
     Int64(i64),
     Boolean(bool),
     Variable(GMCodeVariable),
-    String(GMStringRef),
+    String(GMRef<String>),
     Int16(i16),
 }
 
 #[derive(Debug)]
 struct GMCodeMeta {
-    name: GMStringRef,
+    name: GMRef<String>,
     start_position: usize, // start position of code in chunk CODE
     length: usize,
     locals_count: u32,
@@ -262,7 +263,7 @@ struct GMCodeMeta {
 
 #[derive(Debug, Clone)]
 pub struct GMCode {
-    pub name: GMStringRef,
+    pub name: GMRef<String>,
     pub instructions: Vec<GMInstruction>,
     pub locals_count: u32,
     pub arguments_count: u32,
@@ -294,7 +295,6 @@ impl GMCodeBlob {
     fn read_value(
         &mut self,
         data_type: GMDataType,
-        strings: &GMStrings,
         _variables: &[GMVariable],
     ) -> Result<GMValue, String> {
         match data_type {
@@ -387,10 +387,7 @@ impl GMCodeBlob {
                 };
                 let string_index: usize = u32::from_le_bytes(raw) as usize;
                 self.file_index += 4;
-                match strings.get_string_by_index(string_index) {
-                    Some(string) => Ok(GMValue::String(string)),
-                    None => Err(format!("Could not find GMString with String Index {} while reading values in code.", string_index))
-                }
+                Ok(GMValue::String(GMRef::string(string_index)))
             },
 
             GMDataType::Int16 => {
@@ -421,18 +418,13 @@ pub fn parse_chunk_code(
     for _ in 0..codes_count {
         let meta_index: usize = chunk.read_usize()? - chunk.abs_pos;
         code_meta_indexes.push(meta_index);
-        // if i > 0 {
-        //     println!("{} {}", code_id, code_id - code_ids[i-1]);
-        // }
     }
-
-    // let old_pos: usize = chunk.file_index;
 
     let mut code_metas: Vec<GMCodeMeta> = Vec::with_capacity(codes_count);
 
     for ts in code_meta_indexes {
         chunk.file_index = ts;
-        let code_name: GMStringRef = chunk.read_gm_string(strings)?;
+        let code_name: GMRef<String> = chunk.read_gm_string(strings)?;
         let code_length: usize = chunk.read_usize()?;
         let locals_count: u32 = chunk.read_u32()?;
 
@@ -471,7 +463,7 @@ pub fn parse_chunk_code(
         let mut instructions: Vec<GMInstruction> = vec![];
 
         while code_blob.file_index < code_blob.len {
-            let instruction: GMInstruction = parse_code(&mut code_blob, bytecode14, &strings, variables, functions, code_meta.start_position-8)?;
+            let instruction: GMInstruction = parse_code(&mut code_blob, bytecode14, variables, functions, code_meta.start_position-8)?;
             // let dump: String = match hexdump(&*code_blob.raw_data, code_blob.file_index-4, Some(code_blob.file_index)) {
             //     Ok(ok) => ok,
             //     Err(_) => "()".to_string(),
@@ -500,7 +492,6 @@ pub fn parse_chunk_code(
 fn parse_code(
     blob: &mut GMCodeBlob,
     bytecode14: bool,
-    strings: &GMStrings,
     variables: &[GMVariable],
     functions: &GMFunctions,
     code_start_pos: usize
@@ -652,7 +643,7 @@ fn parse_code(
             //     let destination = readvaruiable();
             // }
 
-            let destination: GMCodeVariable = match blob.read_value(GMDataType::Variable, strings, variables)? {
+            let destination: GMCodeVariable = match blob.read_value(GMDataType::Variable, variables)? {
                 GMValue::Variable(var) => var,
                 _ => return Err("[INTERNAL ERROR] GMCodeBlob.read_value(GMDataType::Variable, ...)\
                  did not return a GMVariable while parsing Pop Instruction".to_string()),
@@ -694,7 +685,7 @@ fn parse_code(
 
             // todo fix bullshit variable id
 
-            let value: GMValue = blob.read_value(data_type, strings, variables)?;
+            let value: GMValue = blob.read_value(data_type, variables)?;
             // println!("$$$$$ {:?}", value);
 
             Ok(GMInstruction::Push(GMPushInstruction {
@@ -713,13 +704,15 @@ fn parse_code(
             };
 
             blob.file_index += 4;
-            let function: GMFunctionRef = functions.get_function_by_occurrence(code_start_pos + blob.file_index)?;
+            let function: &GMRef<GMFunction> = functions.occurrences_to_refs.get(&(code_start_pos + blob.file_index))
+                .ok_or(format!("Could not find any function with absolute occurrence position {} in map with length {} (functions len: {}).", 
+                    code_start_pos + blob.file_index, functions.occurrences_to_refs.len(), functions.functions_by_index.len()))?;
 
             Ok(GMInstruction::Call(GMCallInstruction {
                 opcode,
                 arguments_count,
                 data_type,
-                function,
+                function: function.clone(),
             }))
         }
 
@@ -733,7 +726,7 @@ fn parse_code(
             let mut int_argument: Option<i32> = None;
 
             if data_type == GMDataType::Int32 {
-                int_argument = Some(match blob.read_value(GMDataType::Int32, &strings, &variables)? {
+                int_argument = Some(match blob.read_value(GMDataType::Int32, &variables)? {
                     GMValue::Int32(val) => val,
                     _ => return Err("[INTERNAL ERROR] GMCodeBlob.read_value(GMDataType::Int32, ...)\
                     did not return an i32 while parsing Break Instruction".to_string()),

@@ -1,14 +1,15 @@
+use crate::deserialize::chunk_reading::GMRef;
 use num_enum::TryFromPrimitive;
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::sequence::{parse_sequence, GMAnimSpeedType, GMSequence};
 use crate::deserialize::sprites_yyswf::{parse_yyswf_timeline, GMSpriteYYSWF, GMSpriteYYSWFTimeline};
-use crate::deserialize::strings::{GMStringRef, GMStrings};
-use crate::deserialize::texture_page_items::{GMTextureRef, GMTextures};
+use crate::deserialize::strings::GMStrings;
+use crate::deserialize::texture_page_items::{GMTexture, GMTextures};
 
 #[derive(Debug, Clone)]
 pub struct GMSprite {
-    pub name: GMStringRef,
+    pub name: GMRef<String>,
     pub width: usize,
     pub height: usize,
     pub margin_left: i32,
@@ -22,7 +23,7 @@ pub struct GMSprite {
     pub sep_masks: GMSpriteSepMaskType,
     pub origin_x: i32,
     pub origin_y: i32,
-    pub textures: Vec<GMTextureRef>,
+    pub textures: Vec<GMRef<GMTexture>>,
     pub collision_masks: Vec<GMSpriteMaskEntry>,
     pub special_fields: Option<GMSpriteSpecial>,
 }
@@ -94,33 +95,9 @@ pub struct GMSpriteSpecial {
     pub yyswf: Option<GMSpriteYYSWF>,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct GMSpriteRef {
-    index: usize,
-}
-impl GMSpriteRef {
-    pub fn resolve<'a>(&self, sprites: &'a GMSprites) -> Result<&'a GMSprite, String> {
-        match sprites.sprites_by_index.get(self.index) {
-            Some(sprite) => Ok(sprite),
-            None => Err(format!(
-                "Could not resolve Sprite with index {} in list with length {}.",
-                self.index, sprites.sprites_by_index.len()
-            )),
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct GMSprites {
     pub sprites_by_index: Vec<GMSprite>,
-}
-impl GMSprites {
-    pub fn get_sprite_by_index(&self, index: usize) -> Option<GMSpriteRef> {
-        if index >= self.sprites_by_index.len() {
-            return None;
-        }
-        Some(GMSpriteRef {index})
-    }
 }
 
 
@@ -156,7 +133,7 @@ pub fn parse_chunk_sprt(
     let mut sprites_by_index: Vec<GMSprite> = Vec::with_capacity(sprites_count);
     for start_position in start_positions {
         chunk.file_index = start_position;
-        let name: GMStringRef = chunk.read_gm_string(strings)?;
+        let name: GMRef<String> = chunk.read_gm_string(strings)?;
         let width: usize = chunk.read_usize()?;
         let height: usize = chunk.read_usize()?;
         let margin_left: i32 = chunk.read_i32()?;
@@ -177,7 +154,7 @@ pub fn parse_chunk_sprt(
         };
         let origin_x: i32 = chunk.read_i32()?;
         let origin_y: i32 = chunk.read_i32()?;
-        let mut textures: Vec<GMTextureRef> = Vec::new();
+        let mut textures: Vec<GMRef<GMTexture>> = Vec::new();
         let mut collision_masks: Vec<GMSpriteMaskEntry> = Vec::new();
         let mut special_fields: Option<GMSpriteSpecial> = None;
 
@@ -223,7 +200,7 @@ pub fn parse_chunk_sprt(
                 match &special_sprite_type {
                     GMSpriteType::Normal => {
                         // read texture list to `textures`
-                        read_texture_list(chunk, &mut textures, gm_textures, name.resolve(strings)?, start_position)?;
+                        read_texture_list(chunk, &mut textures, gm_textures, name.resolve(&strings.strings_by_index)?)?;
                         // read mask data
                         let mut mask_width: usize = width;
                         let mut mask_height: usize = height;
@@ -231,7 +208,7 @@ pub fn parse_chunk_sprt(
                             mask_width = (margin_right - margin_left + 1) as usize;
                             mask_height = (margin_bottom - margin_top + 1) as usize;
                         }
-                        collision_masks = read_mask_data(chunk, name.resolve(strings)?, mask_width, mask_height)?;
+                        collision_masks = read_mask_data(chunk, name.resolve(&strings.strings_by_index)?, mask_width, mask_height)?;
                     },
 
                     GMSpriteType::SWF => {
@@ -239,7 +216,7 @@ pub fn parse_chunk_sprt(
                         swf_version = Some(chunk.read_i32()?);
                         // {~~} assert the version is 7 or 8
                         if swf_version.unwrap() == 8 {
-                            read_texture_list(chunk, &mut textures, gm_textures, name.resolve(strings)?, start_position)?;
+                            read_texture_list(chunk, &mut textures, gm_textures, name.resolve(&strings.strings_by_index)?)?;
                         }
 
                         // read YYSWF
@@ -252,7 +229,7 @@ pub fn parse_chunk_sprt(
                             None => return Err(format!(
                                 "Trying to read YYSWF JPEG Table out of bounds while parsing \
                                 Sprite with name \"{}\" in chunk '{}' at position {}: {} > {}.",
-                                name.resolve(strings)?, chunk.name, chunk.file_index, chunk.file_index + jpeg_len, chunk.data.len(),
+                                name.resolve(&strings.strings_by_index)?, chunk.name, chunk.file_index, chunk.file_index + jpeg_len, chunk.data.len(),
                             )),
                         };
                         chunk.file_index += jpeg_len;
@@ -269,7 +246,7 @@ pub fn parse_chunk_sprt(
                     GMSpriteType::Spine => {
                         return Err(format!(
                             "Spine format is not yet implemented for Sprite with name \"{}\" and absolute position {}!",
-                            name.resolve(strings)?, start_position + chunk.abs_pos,
+                            name.resolve(&strings.strings_by_index)?, start_position + chunk.abs_pos,
                         ))
                         // TODO {~~} IMPLEMENT TS
                     }
@@ -280,14 +257,14 @@ pub fn parse_chunk_sprt(
                     if thingy != 1 {
                         return Err(format!(
                             "Expected 1 but got {} while parsing Sequence for Sprite with name \"{}\" in chunk '{}'.",
-                            thingy, name.resolve(strings)?, chunk.name,
+                            thingy, name.resolve(&strings.strings_by_index)?, chunk.name,
                         ))
                     }
                     sequence = Some(parse_sequence(chunk, strings)?);
                 }
 
                 if nine_slice_offset != 0 {
-                    nine_slice = Some(parse_nine_slice(chunk, name.resolve(strings)?, start_position)?);
+                    nine_slice = Some(parse_nine_slice(chunk, name.resolve(&strings.strings_by_index)?, start_position)?);
                 }
             }
 
@@ -304,7 +281,7 @@ pub fn parse_chunk_sprt(
         } else {
             chunk.file_index -= 4;  // unread the not -1
             // read into `textures`
-            read_texture_list(chunk, &mut textures, gm_textures, name.resolve(strings)?, start_position)?;
+            read_texture_list(chunk, &mut textures, gm_textures, name.resolve(&strings.strings_by_index)?)?;
             // read mask data
             let mut mask_width: usize = width;
             let mut mask_height: usize = height;
@@ -312,7 +289,7 @@ pub fn parse_chunk_sprt(
                 mask_width = (margin_right - margin_left + 1) as usize;
                 mask_height = (margin_bottom - margin_top + 1) as usize;
             }
-            collision_masks = read_mask_data(chunk, name.resolve(strings)?, mask_width, mask_height)?;
+            collision_masks = read_mask_data(chunk, name.resolve(&strings.strings_by_index)?, mask_width, mask_height)?;
         }
 
         sprites_by_index.push(GMSprite {
@@ -349,19 +326,15 @@ fn calculate_mask_data_size(width: usize, height: usize, mask_count: usize) -> u
 }
 
 
-fn read_texture_list(chunk: &mut GMChunk, textures: &mut Vec<GMTextureRef>, gm_textures: &GMTextures, sprite_name: &str, start_position: usize) -> Result<(), String> {
+fn read_texture_list(chunk: &mut GMChunk, textures: &mut Vec<GMRef<GMTexture>>, gm_textures: &GMTextures, sprite_name: &str) -> Result<(), String> {
     let texture_count: usize = chunk.read_usize()?;
     textures.reserve(texture_count);
     for _ in 0..texture_count {
         let texture_abs_pos: usize = chunk.read_usize()?;
-        let texture: GMTextureRef = match gm_textures.get_texture_by_pos(texture_abs_pos) {
-            Some(texture) => texture,
-            None => return Err(format!(
-                "Could not find texture with absolute position {} for Sprite with name \"{}\" at position {} in chunk '{}'.",
-                texture_abs_pos, sprite_name, start_position, chunk.name,
-            )),
-        };
-        textures.push(texture);
+        let texture: &GMRef<GMTexture> = gm_textures.abs_pos_to_ref.get(&texture_abs_pos)
+            .ok_or(format!("Could not get texture with absolute position {} in map with length {} while \
+            reading texture list of sprite {sprite_name}", texture_abs_pos, gm_textures.abs_pos_to_ref.len()))?;
+        textures.push(texture.clone());
     }
     Ok(())
 }

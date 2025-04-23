@@ -1,12 +1,12 @@
 use std::collections::HashMap;
-use crate::deserialize::chunk_reading::GMChunk;
+use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use crate::deserialize::general_info::GMGeneralInfo;
-use crate::deserialize::strings::{GMStringRef, GMStrings};
+use crate::deserialize::strings::GMStrings;
 
 #[derive(Debug, Clone)]
 pub struct GMFont {
-    pub name: GMStringRef,
-    pub display_name: GMStringRef,
+    pub name: GMRef<String>,
+    pub display_name: GMRef<String>,
     pub em_size: u32,
     pub bold: bool,
     pub italic: bool,
@@ -35,46 +35,11 @@ pub struct GMGlyph {
     pub offset: i16,
 }
 
-
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct GMFontRef {
-    pub index: usize,
-}
-impl GMFontRef {
-    pub fn resolve<'a>(&self, fonts: &'a GMFonts) -> Result<&'a GMFont, String> {
-        match fonts.fonts_by_index.get(self.index) {
-            Some(font) => Ok(font),
-            None => Err(format!(
-                "Could not resolve font with index {} in list with length {}.",
-                self.index, fonts.fonts_by_index.len()
-            )),
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct GMFonts {
-    abs_pos_to_index: HashMap<usize, usize>,    // convert absolute position/pointer in data.win to index in Self.font_by_index
-    fonts_by_index: Vec<GMFont>,                // fonts by index/order in chunk FONT
+    pub abs_pos_to_ref: HashMap<usize, GMRef<GMFont>>,  // convert absolute position/pointer in data.win to font ref
+    pub fonts_by_index: Vec<GMFont>,                    // fonts by index/order in chunk FONT
 }
-
-impl GMFonts {
-    pub fn get_font_by_pos(&self, position: usize) -> Option<GMFontRef> {
-        let index: usize = match self.abs_pos_to_index.get(&position) {
-            Some(index) => *index,
-            None => return None,
-        };
-        Some(GMFontRef { index })
-    }
-    pub fn get_font_by_index(&self, index: usize) -> Option<GMFontRef> {
-        if index >= self.fonts_by_index.len() {
-            return None;
-        }
-        Some(GMFontRef { index })
-    }
-    pub fn len(&self) -> usize { self.fonts_by_index.len() }
-}
-
 
 pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMFonts, String> {
     chunk.file_index = 0;
@@ -86,12 +51,12 @@ pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
     }
 
     let mut fonts_by_index: Vec<GMFont> = Vec::with_capacity(font_count);
-    let mut abs_pos_to_index: HashMap<usize, usize> = HashMap::new();
+    let mut abs_pos_to_ref: HashMap<usize, GMRef<GMFont>> = HashMap::new();
     for (i, start_position) in font_starting_positions.iter().enumerate() {
         chunk.file_index = *start_position;
 
-        let name: GMStringRef = chunk.read_gm_string(&strings)?;
-        let display_name: GMStringRef = chunk.read_gm_string(&strings)?;
+        let name: GMRef<String> = chunk.read_gm_string(&strings)?;
+        let display_name: GMRef<String> = chunk.read_gm_string(&strings)?;
         let em_size: u32 = chunk.read_u32()?;
         let bold: bool = chunk.read_u32()? != 0;
         let italic: bool = chunk.read_u32()? != 0;
@@ -121,7 +86,7 @@ pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
             line_height = Some(chunk.read_u32()?);
         }
 
-        let glyphs: Vec<GMGlyph> = parse_glyphs(chunk, name.resolve(strings)?)?;
+        let glyphs: Vec<GMGlyph> = parse_glyphs(chunk, name.resolve(&strings.strings_by_index)?)?;
 
         let font: GMFont = GMFont {
             name,
@@ -142,11 +107,11 @@ pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
             line_height,
             glyphs,
         };
-        abs_pos_to_index.insert(start_position + chunk.abs_pos, i);
+        abs_pos_to_ref.insert(start_position + chunk.abs_pos, GMRef::font(i));
         fonts_by_index.push(font);
     }
     Ok(GMFonts {
-        abs_pos_to_index,
+        abs_pos_to_ref,
         fonts_by_index,
     })
 }

@@ -1,16 +1,17 @@
+use crate::deserialize::chunk_reading::GMRef;
 use num_enum::TryFromPrimitive;
-use crate::deserialize::backgrounds::{GMBackgroundRef, GMBackgrounds};
+use crate::deserialize::backgrounds::{GMBackground, GMBackgrounds};
 use crate::deserialize::chunk_reading::GMChunk;
-use crate::deserialize::game_objects::{GMGameObjectRef, GMGameObjects};
+use crate::deserialize::game_objects::{GMGameObject};
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::sequence::{parse_sequence, GMSequence};
-use crate::deserialize::strings::{GMStringRef, GMStrings};
+use crate::deserialize::strings::GMStrings;
 
 
 #[derive(Debug, Clone)]
 pub struct GMRoom {
-    pub name: GMStringRef,
-    pub caption: GMStringRef,
+    pub name: GMRef<String>,
+    pub caption: GMRef<String>,
     pub width: u32,
     pub height: u32,
     pub speed: u32,
@@ -61,11 +62,11 @@ pub struct GMRoomView {
     pub object_id: i32,           // change to GMObject later
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct GMRoomBackground {
     pub enabled: bool,
     pub foreground: bool,
-    pub background_definition: Option<GMBackgroundRef>,
+    pub background_definition: Option<GMRef<GMBackground>>,
     pub x: i32,
     pub y: i32,
     pub tile_x: i32,
@@ -100,7 +101,7 @@ pub enum GMRoomTileTexture {
 
 #[derive(Debug, Clone)]
 pub struct GMRoomLayer {
-    pub layer_name: GMStringRef,
+    pub layer_name: GMRef<String>,
     pub layer_id: u32,
     pub layer_type: GMRoomLayerType,
     pub layer_depth: i32,
@@ -126,7 +127,7 @@ pub enum GMRoomLayerType {
 pub struct GMRoomGameObject {
     pub x: i32,
     pub y: i32,
-    pub object_definition: GMGameObjectRef,
+    pub object_definition: GMRef<GMGameObject>,
     pub instance_id: u32,
     pub creation_code: i32,     // {!!} change type to code ref
     pub scale_x: f32,
@@ -144,7 +145,6 @@ pub fn parse_chunk_room(
     general_info: &GMGeneralInfo,
     gm_strings: &GMStrings,
     gm_backgrounds: &GMBackgrounds,
-    gm_game_objects: &GMGameObjects,
 ) -> Result<Vec<GMRoom>, String> {
     chunk.file_index = 0;
     let room_count: usize = chunk.read_usize()?;
@@ -158,8 +158,8 @@ pub fn parse_chunk_room(
     for start_position in room_starting_positions {
         chunk.file_index = start_position;
 
-        let name: GMStringRef = chunk.read_gm_string(gm_strings)?;
-        let caption: GMStringRef = chunk.read_gm_string(gm_strings)?;
+        let name: GMRef<String> = chunk.read_gm_string(gm_strings)?;
+        let caption: GMRef<String> = chunk.read_gm_string(gm_strings)?;
         let width: u32 = chunk.read_u32()?;
         let height: u32 = chunk.read_u32()?;
         let speed: u32 = chunk.read_u32()?;
@@ -168,9 +168,9 @@ pub fn parse_chunk_room(
         let draw_background_color: bool = chunk.read_u32()? != 0;
         let creation_code_id: u32 = chunk.read_u32()?;      // (can be -1) reference to code; change type later
         let flags: GMRoomFlags = parse_room_flags(chunk.read_u32()?);
-        let backgrounds: Vec<GMRoomBackground> = parse_room_backgrounds(chunk, gm_backgrounds)?;
+        let backgrounds: Vec<GMRoomBackground> = parse_room_backgrounds(chunk)?;
         let views: Vec<GMRoomView> = parse_room_views(chunk)?;
-        let game_objects: Vec<GMRoomGameObject> = parse_room_objects(chunk, name.clone(), &general_info, &gm_strings, &gm_game_objects)?;
+        let game_objects: Vec<GMRoomGameObject> = parse_room_objects(chunk, &general_info)?;
         let tiles: Vec<GMRoomTile> = parse_room_tiles(chunk, general_info)?;
         let world: bool = chunk.read_u32()? != 0;
         let top: u32 = chunk.read_u32()?;
@@ -281,10 +281,7 @@ fn parse_room_views(chunk: &mut GMChunk) -> Result<Vec<GMRoomView>, String> {
 
 fn parse_room_objects(
     chunk: &mut GMChunk,
-    room_name: GMStringRef,
     general_info: &GMGeneralInfo,
-    strings: &GMStrings,
-    gm_game_objects: &GMGameObjects,
 ) -> Result<Vec<GMRoomGameObject>, String> {
     let game_object_pointers: Vec<usize> = chunk.read_pointer_list()?;
     let old_position: usize = chunk.file_index;
@@ -295,16 +292,7 @@ fn parse_room_objects(
         let x: i32 = chunk.read_i32()?;
         let y: i32 = chunk.read_i32()?;
         let object_definition: usize = chunk.read_usize()?;
-        let object_definition: GMGameObjectRef = match gm_game_objects.get_game_object_by_index(object_definition) {
-            Some(obj) => obj,
-            None => return Err(format!(
-                "Could not find Game Object with index {} for Room with name \"{}\" at position {} in chunk '{}'.",
-                object_definition,
-                room_name.resolve(strings).unwrap_or_else(|_| "<InvalidStringRef>"),
-                pointer,
-                chunk.name,
-            )),
-        };
+        let object_definition: GMRef<GMGameObject> = GMRef::game_object(object_definition);
         let instance_id: u32 = chunk.read_u32()?;
         let creation_code: i32 = chunk.read_i32()?;     // {!!} change type to code ref
         let scale_x: f32 = chunk.read_f32()?;
@@ -317,7 +305,7 @@ fn parse_room_objects(
         }
         let color: u32 = chunk.read_u32()?;
         let rotation: f32 = chunk.read_f32()?;
-        let mut pre_create_code: Option<i32> = None;        // {!!} change type to code ref
+        let mut pre_create_code: Option<i32> = None;    // {!!} change type to code ref
         if general_info.bytecode_version >= 16 {        // [From UndertaleModTool] "is that dependent on bytecode or something else?"
             pre_create_code = Some(chunk.read_i32()?);
         }
@@ -343,7 +331,7 @@ fn parse_room_objects(
     Ok(room_game_objects)
 }
 
-fn parse_room_backgrounds(chunk: &mut GMChunk, gm_backgrounds: &GMBackgrounds) -> Result<Vec<GMRoomBackground>, String> {
+fn parse_room_backgrounds(chunk: &mut GMChunk) -> Result<Vec<GMRoomBackground>, String> {
     let background_pointers: Vec<usize> = chunk.read_pointer_list()?;
     let old_position: usize = chunk.file_index;
     let mut room_backgrounds: Vec<GMRoomBackground> = Vec::with_capacity(background_pointers.len());
@@ -353,9 +341,9 @@ fn parse_room_backgrounds(chunk: &mut GMChunk, gm_backgrounds: &GMBackgrounds) -
         let enabled: bool = chunk.read_i32()? != 0;
         let foreground: bool = chunk.read_i32()? != 0;
         let background_definition: i32 = chunk.read_i32()?;
-        let background_definition: Option<GMBackgroundRef> =
+        let background_definition: Option<GMRef<GMBackground>> =
             if background_definition == -1 { None }
-            else { gm_backgrounds.get_background_by_index(background_definition as usize) };
+            else { Some(GMRef::background(background_definition as usize)) };
         let x: i32 = chunk.read_i32()?;
         let y: i32 = chunk.read_i32()?;
         let tile_x: i32 = chunk.read_i32()?;    // idk if this should be an int instead of a bool
@@ -436,7 +424,7 @@ fn parse_room_layers(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMR
     for pointer in layer_pointers {
         chunk.file_index = pointer;
 
-        let layer_name: GMStringRef = chunk.read_gm_string(strings)?;
+        let layer_name: GMRef<String> = chunk.read_gm_string(strings)?;
         let layer_id: u32 = chunk.read_u32()?;
         let layer_type: u32 = chunk.read_u32()?;
         let layer_type: GMRoomLayerType = match layer_type.try_into() {

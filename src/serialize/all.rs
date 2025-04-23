@@ -3,16 +3,8 @@ use std::fs;
 use std::path::Path;
 use image::DynamicImage;
 use crate::deserialize::all::GMData;
-use crate::deserialize::backgrounds::GMBackgroundRef;
-use crate::deserialize::embedded_audio::GMEmbeddedAudioRef;
-use crate::deserialize::fonts::GMFontRef;
-use crate::deserialize::functions::GMFunctionRef;
-use crate::deserialize::game_objects::GMGameObjectRef;
-use crate::deserialize::scripts::GMScriptRef;
-use crate::deserialize::sounds::GMSoundRef;
-use crate::deserialize::sprites::GMSpriteRef;
-use crate::deserialize::strings::GMStringRef;
-use crate::deserialize::texture_page_items::{GMTexturePageItem, GMTextureRef};
+use crate::deserialize::chunk_reading::GMRef;
+use crate::deserialize::texture_page_items::{GMTexturePageItem};
 use crate::serialize::chunk_writing::ChunkBuilder;
 use crate::serialize::embedded_textures::build_chunk_txtr;
 use crate::serialize::strings::build_chunk_strg;
@@ -24,10 +16,18 @@ use crate::serialize::texture_page_items::{build_chunk_tpag, generate_texture_pa
 #[derive(Debug, Clone)]
 pub struct DataBuilder {
     raw_data: Vec<u8>,
-    pointer_pool: HashMap<GMRef, GMPointer>,
+    pointer_pool: HashMap<GMRef<()>, GMPointer>,    // GMRef<()> signifies mixed referenced kinds/datatypes
 }
 impl DataBuilder {
-    pub fn push_pointer_position(&mut self, chunk_builder: &mut ChunkBuilder, reference: GMRef) -> Result<(), String> {
+    /// Create a placeholder pointer at the current position in the chunk
+    /// and store the target gamemaker element (reference) in the pool.
+    /// This will later be resolved; replacing the placeholder pointer with
+    /// the absolute position of the target data in the data file
+    /// (assuming the pointer origin position was added to the pool).
+    /// This method should be called, when the data file format expects
+    /// a pointer to some element, but you don't yet (necessarily) know where
+    /// that element will be located in the data file.
+    pub fn push_pointer_placeholder(&mut self, chunk_builder: &mut ChunkBuilder, reference: GMRef<()>) -> Result<(), String> {
         let position: usize = self.len() + chunk_builder.len();
         chunk_builder.write_usize(0);      // placeholder
         let pointer: GMPointer = GMPointer {
@@ -37,10 +37,15 @@ impl DataBuilder {
         self.pointer_pool.insert(reference, pointer);
         Ok(())
     }
-    pub fn push_pointing_to(&mut self, chunk_builder: &mut ChunkBuilder, reference: GMRef) -> Result<(), String> {
+
+    /// Store the gamemaker element's absolute position in the pool.
+    /// The element's absolute position is the chunk builder's current position,
+    /// since this method should get called when the element is built to the data file.
+    pub fn push_pointer_resolve(&mut self, chunk_builder: &mut ChunkBuilder, reference: GMRef<()>) -> Result<(), String> {
         let pointer = match self.pointer_pool.get_mut(&reference) {
             Some(ptr) => ptr,
             None => return Err(format!(
+                // not sure if this should throw an error instead of creating a new GMPointer; check later
                 "Pointer with absolute position {} doesn't exist in pool (len: {}) with reference {:?}.",
                 chunk_builder.abs_pos + chunk_builder.len(), self.pointer_pool.len(), reference,
             )),
@@ -51,21 +56,6 @@ impl DataBuilder {
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub enum GMRef {
-    String(GMStringRef),
-    Texture(GMTextureRef),
-    Audio(GMEmbeddedAudioRef),
-    Sound(GMSoundRef),
-    Sprite(GMSpriteRef),
-    Function(GMFunctionRef),
-    Background(GMBackgroundRef),
-    GameObject(GMGameObjectRef),
-    Font(GMFontRef),
-    Script(GMScriptRef),
-    TexturePage(usize),
-    TexturePageData(usize),
-}
 #[derive(Debug, Clone)]
 pub struct GMPointer {
     position: usize,
@@ -132,7 +122,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
 }
 
 
-pub fn write_data_file(data_file_path: &Path, raw_data: &[u8]) -> Result<(), String> { 
+pub fn write_data_file(data_file_path: &Path, raw_data: &[u8]) -> Result<(), String> {
     fs::write(data_file_path, raw_data)
         .map_err(|e| format!("Could not write data file to location \"{}\": {e}", data_file_path.display()))
 }

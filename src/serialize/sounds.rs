@@ -1,21 +1,21 @@
 use crate::deserialize::all::GMData;
-use crate::deserialize::sounds::{GMSound, GMSoundFlags, GMSoundRef};
-use crate::serialize::all::{DataBuilder, GMRef};
+use crate::deserialize::chunk_reading::GMRef;
+use crate::deserialize::sounds::{GMSound, GMSoundFlags};
+use crate::serialize::all::DataBuilder;
 use crate::serialize::chunk_writing::ChunkBuilder;
 
 pub fn build_chunk_sond(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "SOND", abs_pos: data_builder.len() };
-    let len: usize = gm_data.sounds.len();
+    let len: usize = gm_data.sounds.sounds_by_index.len();
     builder.write_usize(len);
 
     for i in 0..len {
-        data_builder.push_pointer_position(&mut builder, GMRef::Sound(GMSoundRef { index: i }))?;
+        data_builder.push_pointer_placeholder(&mut builder, GMRef::sound(i))?;
     }
 
     for i in 0..len {
-        data_builder.push_pointing_to(&mut builder, GMRef::Sound(GMSoundRef { index: i }))?;
-        let sound: GMSoundRef = gm_data.sounds.get_sound_by_index(i).expect("Sound out of bounds while building.");
-        let sound: &GMSound = sound.resolve(&gm_data.sounds)?;
+        data_builder.push_pointer_resolve(&mut builder, GMRef::sound(i))?;
+        let sound: &GMSound = &gm_data.sounds.sounds_by_index[i];
         builder.write_gm_string(&sound.name, &gm_data.strings)?;
         builder.write_u32(build_sound_flags(&sound.flags));
         builder.write_gm_string(&sound.audio_type, &gm_data.strings)?;
@@ -26,7 +26,7 @@ pub fn build_chunk_sond(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         // {~~} audio group stuff idk
         builder.write_i32(-1);
         match &sound.audio_file {
-            Some(file) => data_builder.push_pointer_position(&mut builder, GMRef::Audio(file.clone()))?,
+            Some(file) => data_builder.push_pointer_placeholder(&mut builder, GMRef::audio(file.index))?,
             None => builder.write_i32(-1),
         }
         if gm_data.general_info.is_version_at_least(2024, 6, 0, 0) {
