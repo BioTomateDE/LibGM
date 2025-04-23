@@ -14,12 +14,12 @@ use crate::deserialize::sprites::GMSpriteRef;
 use crate::deserialize::strings::GMStringRef;
 use crate::deserialize::texture_page_items::{GMTexturePageItem, GMTextureRef};
 use crate::serialize::chunk_writing::ChunkBuilder;
-use crate::serialize::embedded_textures::build_chunk_TXTR;
-use crate::serialize::strings::build_chunk_STRG;
-use crate::serialize::general_info::{build_chunk_OPTN, build_chunk_GEN8};
-use crate::serialize::scripts::build_chunk_SCPT;
-use crate::serialize::sounds::build_chunk_SOND;
-use crate::serialize::texture_page_items::{build_chunk_TPAG, generate_texture_pages};
+use crate::serialize::embedded_textures::build_chunk_txtr;
+use crate::serialize::strings::build_chunk_strg;
+use crate::serialize::general_info::{build_chunk_optn, build_chunk_gen8};
+use crate::serialize::scripts::build_chunk_scpt;
+use crate::serialize::sounds::build_chunk_sond;
+use crate::serialize::texture_page_items::{build_chunk_tpag, generate_texture_pages};
 
 #[derive(Debug, Clone)]
 pub struct DataBuilder {
@@ -29,19 +29,13 @@ pub struct DataBuilder {
 impl DataBuilder {
     pub fn push_pointer_position(&mut self, chunk_builder: &mut ChunkBuilder, reference: GMRef) -> Result<(), String> {
         let position: usize = self.len() + chunk_builder.len();
-        chunk_builder.write_usize(0)?;      // placeholder
+        chunk_builder.write_usize(0);      // placeholder
         let pointer: GMPointer = GMPointer {
             position,
             pointing_to: None,
         };
         self.pointer_pool.insert(reference, pointer);
         Ok(())
-    }
-    pub fn push_pointer_position_maybe(&mut self, chunk_builder: &mut ChunkBuilder, reference: Option<GMRef>) -> Result<(), String> {
-        match reference {
-            Some(reference) => self.push_pointer_position(chunk_builder, reference),
-            None => chunk_builder.write_i32(-1),
-        }
     }
     pub fn push_pointing_to(&mut self, chunk_builder: &mut ChunkBuilder, reference: GMRef) -> Result<(), String> {
         let pointer = match self.pointer_pool.get_mut(&reference) {
@@ -79,19 +73,16 @@ pub struct GMPointer {
 }
 
 impl DataBuilder {
-    pub fn write_usize(&mut self, number: usize) -> Result<(), String> {
-        for byte in (number as u32).to_le_bytes() {
-            self.raw_data.push(byte);
-        }
-        Ok(())
+    pub fn write_usize(&mut self, number: usize) {
+        let bytes = (number as u32).to_le_bytes();
+        self.raw_data.extend_from_slice(&bytes);
     }
     pub fn write_chunk_name(&mut self, string: &str) -> Result<(), String> {
         // write a 4 character ascii string to the data
         for (i, char) in string.chars().enumerate() {
-            let byte: u8 = match char.try_into() {
-                Ok(byte) => byte,
-                Err(_) => return Err(format!("Char Typecasting error while writing chunk name \"{string}\" (i: {i}) to data (len: {})", self.len())),
-            };
+            let byte: u8 = char.try_into().map_err(|e| format!(
+                "Char Typecasting error while writing chunk name \"{string}\" \
+                (i: {i}) to data (len: {}): {e}", self.len()))?;
             self.raw_data.push(byte);
         }
         Ok(())
@@ -121,16 +112,16 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
 
     // write placeholder u32 for total length
     builder.write_chunk_name("FORM")?;
-    builder.write_usize(0)?;
+    builder.write_usize(0);
 
-    build_chunk_GEN8(&mut builder, &gm_data)?;
-    build_chunk_OPTN(&mut builder, &gm_data)?;
-    build_chunk_STRG(&mut builder, &gm_data)?;
-    build_chunk_SOND(&mut builder, &gm_data)?;
-    build_chunk_SCPT(&mut builder, &gm_data)?;
+    build_chunk_gen8(&mut builder, &gm_data)?;
+    build_chunk_optn(&mut builder, &gm_data)?;
+    build_chunk_strg(&mut builder, &gm_data)?;
+    build_chunk_sond(&mut builder, &gm_data)?;
+    build_chunk_scpt(&mut builder, &gm_data)?;
     let (texture_page_items, texture_pages): (Vec<GMTexturePageItem>, Vec<DynamicImage>) = generate_texture_pages(&gm_data.textures)?;
-    build_chunk_TPAG(&mut builder, &gm_data, texture_page_items)?;
-    build_chunk_TXTR(&mut builder, &gm_data, texture_pages)?;
+    build_chunk_tpag(&mut builder, &gm_data, texture_page_items)?;
+    build_chunk_txtr(&mut builder, &gm_data, texture_pages)?;
 
     // {~~} IMPORTANT TODO: resolve pointers
 
@@ -149,7 +140,7 @@ pub fn write_data_file(data_file_path: &Path, raw_data: &[u8]) -> Result<(), Str
 
 pub fn build_chunk(data_builder: &mut DataBuilder, chunk_builder: ChunkBuilder) -> Result<(), String> {
     data_builder.write_chunk_name(chunk_builder.chunk_name)?;
-    data_builder.write_usize(chunk_builder.len())?;
+    data_builder.write_usize(chunk_builder.len());
     data_builder.raw_data.extend(chunk_builder.raw_data);
     Ok(())
 }
