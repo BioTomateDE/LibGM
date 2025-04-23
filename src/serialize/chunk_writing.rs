@@ -1,4 +1,4 @@
-use crate::deserialize::strings::{UTStringRef, UTStrings};
+use crate::deserialize::strings::{GMStringRef, GMStrings};
 
 #[derive(Debug, Clone)]
 pub struct ChunkBuilder {
@@ -87,7 +87,7 @@ impl ChunkBuilder {
         }
         Ok(())
     }
-    pub fn write_ut_string(&mut self, string: &UTStringRef, strings: &UTStrings) -> Result<(), String> {
+    pub fn write_gm_string(&mut self, string: &GMStringRef, strings: &GMStrings) -> Result<(), String> {
         // write a gamemaker string reference to the data
         let string = string.resolve(&strings)?;
         self.write_literal_string(string)

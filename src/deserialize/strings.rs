@@ -1,14 +1,14 @@
 ﻿use std::collections::HashMap;
-use crate::deserialize::chunk_reading::UTChunk;
+use crate::deserialize::chunk_reading::GMChunk;
 
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct UTStringRef {
+pub struct GMStringRef {
     pub index: usize,
 }
 
-impl UTStringRef {
-    pub fn resolve<'a>(&self, strings: &'a UTStrings) -> Result<&'a str, String> {
+impl GMStringRef {
+    pub fn resolve<'a>(&self, strings: &'a GMStrings) -> Result<&'a str, String> {
         match strings.strings_by_index.get(self.index) {
             Some(string) => Ok(string),
             None => Err(format!(
@@ -20,25 +20,25 @@ impl UTStringRef {
 }
 
 #[derive(Debug, Clone)]
-pub struct UTStrings {
+pub struct GMStrings {
     abs_pos_to_index: HashMap<usize, usize>,    // convert absolute position/pointer in data.win to index in Self.strings_by_index
     strings_by_index: Vec<String>,              // strings by index/order in chunk STRG
 }
 
-impl UTStrings {
-    pub fn get_string_by_pos(&self, position: usize) -> Option<UTStringRef> {
+impl GMStrings {
+    pub fn get_string_by_pos(&self, position: usize) -> Option<GMStringRef> {
         let index: usize = match self.abs_pos_to_index.get(&position) {
             Some(index) => *index,
             None => return None,
         };
-        Some(UTStringRef { index })
+        Some(GMStringRef { index })
     }
 
-    pub fn get_string_by_index(&self, index: usize) -> Option<UTStringRef> {
+    pub fn get_string_by_index(&self, index: usize) -> Option<GMStringRef> {
         if index >= self.strings_by_index.len() {
             return None;
         }
-        Some(UTStringRef { index })
+        Some(GMStringRef { index })
     }
 
     pub fn len(&self) -> usize { self.strings_by_index.len() }
@@ -46,7 +46,7 @@ impl UTStrings {
 
 
 #[allow(non_snake_case)]
-pub fn parse_chunk_STRG(chunk: &mut UTChunk) -> Result<UTStrings, String> {
+pub fn parse_chunk_STRG(chunk: &mut GMChunk) -> Result<GMStrings, String> {
     chunk.file_index = 0;
     let string_count: usize = chunk.read_usize()?;
     // skip redundant list of absolute positions of upcoming strings
@@ -63,7 +63,7 @@ pub fn parse_chunk_STRG(chunk: &mut UTChunk) -> Result<UTStrings, String> {
         abs_pos_to_index.insert(absolute_position, i);
     }
 
-    let strings: UTStrings = UTStrings {
+    let strings: GMStrings = GMStrings {
         abs_pos_to_index,
         strings_by_index,
     };

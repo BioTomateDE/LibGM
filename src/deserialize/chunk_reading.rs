@@ -1,14 +1,14 @@
-﻿use crate::deserialize::strings::{UTStringRef, UTStrings};
+﻿use crate::deserialize::strings::{GMStringRef, GMStrings};
 
 #[derive(Debug, Clone)]
-pub struct UTChunk<'a> {
+pub struct GMChunk<'a> {
     pub name: String,       // 4 letter name of chunk
     pub abs_pos: usize,     // absolute position/index in data.win file
     pub data: &'a [u8],     // raw data
     pub file_index: usize,  // gets incremented by .read_{} methods when parsing chunk
 }
 
-impl UTChunk<'_> {
+impl GMChunk<'_> {
     // fn apply_changes(&self, mut changes: Vec<DataChange>) {
     //     changes.sort_by(|a, b| b.index.cmp(&a.index));
     //     for change in changes {
@@ -293,10 +293,10 @@ impl UTChunk<'_> {
         }
     }
 
-    pub fn read_ut_string(&mut self, ut_strings: &UTStrings) -> Result<UTStringRef, String> {
+    pub fn read_gm_string(&mut self, gm_strings: &GMStrings) -> Result<GMStringRef, String> {
         let string_abs_pos: usize = self.read_usize()?;
 
-        match ut_strings.get_string_by_pos(string_abs_pos) {
+        match gm_strings.get_string_by_pos(string_abs_pos) {
             Some(string) => Ok(string),
             None => Err(format!(
                 "Could not read reference string with absolute position {} in chunk '{}' at \
@@ -304,7 +304,7 @@ impl UTChunk<'_> {
                 string_abs_pos,
                 self.name,
                 self.file_index - 4,
-                ut_strings.len(),
+                gm_strings.len(),
             ))
         }
     }

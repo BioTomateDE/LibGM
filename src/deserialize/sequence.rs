@@ -1,40 +1,40 @@
 use std::collections::HashMap;
-use crate::deserialize::chunk_reading::UTChunk;
-use crate::deserialize::strings::{UTStringRef, UTStrings};
+use crate::deserialize::chunk_reading::GMChunk;
+use crate::deserialize::strings::{GMStringRef, GMStrings};
 use num_enum::TryFromPrimitive;
 
 #[derive(Debug, Clone)]
-pub struct UTSequence {
-    pub name: UTStringRef,
-    pub playback: UTSequencePlaybackType,
+pub struct GMSequence {
+    pub name: GMStringRef,
+    pub playback: GMSequencePlaybackType,
     pub playback_speed: f32,
-    pub playback_speed_type: UTAnimSpeedType,
+    pub playback_speed_type: GMAnimSpeedType,
     pub length: f32,
     pub origin_x: i32,
     pub origin_y: i32,
     pub volume: f32,
-    pub broadcast_messages: Vec<UTStringRef>,
-    pub tracks: Vec<UTTrack>,
-    pub function_ids: HashMap<i32, UTStringRef>,
-    pub moments: Vec<UTKeyframeMoment>
+    pub broadcast_messages: Vec<GMStringRef>,
+    pub tracks: Vec<GMTrack>,
+    pub function_ids: HashMap<i32, GMStringRef>,
+    pub moments: Vec<GMKeyframeMoment>
 }
 
 
 #[derive(Debug, Clone, TryFromPrimitive)]
 #[repr(u32)]
-pub enum UTSequencePlaybackType {
+pub enum GMSequencePlaybackType {
     Oneshot = 0,
     Loop = 1,
     Pingpong = 2
 }
 #[derive(Debug, Clone, TryFromPrimitive)]
 #[repr(u32)]
-pub enum UTAnimSpeedType {
+pub enum GMAnimSpeedType {
     FramesPerSecond = 0,
     FramesPerGameFrame = 1
 }
 #[derive(Debug, Clone)]
-pub struct UTKeyframe {
+pub struct GMKeyframe {
     pub key: f32,
     pub length: f32,
     pub stretch: bool,
@@ -42,21 +42,21 @@ pub struct UTKeyframe {
     pub channels: Vec<i32>,
 }
 #[derive(Debug, Clone)]
-pub struct UTTrack {
-    pub model_name: UTStringRef,
-    pub name: UTStringRef,
-    pub builtin_name: UTTrackBuiltinName,
-    pub traits: UTTrackTraits,
+pub struct GMTrack {
+    pub model_name: GMStringRef,
+    pub name: GMStringRef,
+    pub builtin_name: GMTrackBuiltinName,
+    pub traits: GMTrackTraits,
     pub is_creation_track: bool,
     pub tags: Vec<i32>,
-    pub sub_tracks: Vec<UTTrack>,
-    pub keyframes: Vec<UTKeyframe>,
-    // pub owned_resources: Vec<UTResource>,
+    pub sub_tracks: Vec<GMTrack>,
+    pub keyframes: Vec<GMKeyframe>,
+    // pub owned_resources: Vec<GMResource>,
     pub gm_anim_curve_string: String,
 }
 #[derive(Debug, Clone, TryFromPrimitive)]
 #[repr(i32)]
-pub enum UTTrackBuiltinName {
+pub enum GMTrackBuiltinName {
     Gain = 5,
     Pitch = 6,
     Falloff = 7,
@@ -77,21 +77,21 @@ pub enum UTTrackBuiltinName {
 }
 #[derive(Debug, Clone, TryFromPrimitive)]
 #[repr(i32)]
-pub enum UTTrackTraits {
+pub enum GMTrackTraits {
     None,
     ChildrenIgnoreOrigin
 }
 #[derive(Debug, Clone)]
-pub struct UTKeyframeMoment {
+pub struct GMKeyframeMoment {
     pub internal_count: i32,    // "Should be 0 if none, 1 if there's a message?"
-    pub event: Option<UTStringRef>,
+    pub event: Option<GMStringRef>,
 }
 
 
-pub fn parse_sequence(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTSequence, String> {
-    let name: UTStringRef = chunk.read_ut_string(strings)?;
+pub fn parse_sequence(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMSequence, String> {
+    let name: GMStringRef = chunk.read_gm_string(strings)?;
     let playback: u32 = chunk.read_u32()?;
-    let playback: UTSequencePlaybackType = match playback.try_into() {
+    let playback: GMSequencePlaybackType = match playback.try_into() {
         Ok(playback) => playback,
         Err(_) => return Err(format!(
             "Invalid Sequence Playback Type 0x{:04X} while parsing sequence at position {} in chunk '{}'.",
@@ -102,7 +102,7 @@ pub fn parse_sequence(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTSequ
     };
     let playback_speed: f32 = chunk.read_f32()?;
     let playback_speed_type: u32 = chunk.read_u32()?;
-    let playback_speed_type: UTAnimSpeedType = match playback_speed_type.try_into() {
+    let playback_speed_type: GMAnimSpeedType = match playback_speed_type.try_into() {
         Ok(playback) => playback,
         Err(_) => return Err(format!(
             "Invalid Sequence Anim Speed Type 0x{:04X} while parsing sequence at position {} in chunk '{}'.",
@@ -115,33 +115,33 @@ pub fn parse_sequence(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTSequ
     let origin_x: i32 = chunk.read_i32()?;
     let origin_y: i32 = chunk.read_i32()?;
     let volume: f32 = chunk.read_f32()?;
-    let broadcast_messages: Vec<UTStringRef> = parse_broadcast_messages(chunk, &strings)?;  // might be list in list?
-    let tracks: Vec<UTTrack> = parse_tracks(chunk, &strings)?;
+    let broadcast_messages: Vec<GMStringRef> = parse_broadcast_messages(chunk, &strings)?;  // might be list in list?
+    let tracks: Vec<GMTrack> = parse_tracks(chunk, &strings)?;
 
     let function_ids_count: usize = chunk.read_usize()?;
-    let mut function_ids: HashMap<i32, UTStringRef> = HashMap::new();
+    let mut function_ids: HashMap<i32, GMStringRef> = HashMap::new();
     for _ in 0..function_ids_count {
         let key: i32 = chunk.read_i32()?;
-        let function_id: UTStringRef = chunk.read_ut_string(strings)?;
+        let function_id: GMStringRef = chunk.read_gm_string(strings)?;
         function_ids.insert(key, function_id);
     }
 
     let moments_count: usize = chunk.read_usize()?;
-    let mut moments: Vec<UTKeyframeMoment> = Vec::with_capacity(moments_count);
+    let mut moments: Vec<GMKeyframeMoment> = Vec::with_capacity(moments_count);
     for _ in 0..moments_count {
         let internal_count: i32 = chunk.read_i32()?;
-        let mut event: Option<UTStringRef> = None;
+        let mut event: Option<GMStringRef> = None;
         if internal_count > 0 {
-            event = Some(chunk.read_ut_string(strings)?);
+            event = Some(chunk.read_gm_string(strings)?);
         }
-        let moment: UTKeyframeMoment = UTKeyframeMoment {
+        let moment: GMKeyframeMoment = GMKeyframeMoment {
             internal_count,
             event
         };
         moments.push(moment);
     }
 
-    Ok(UTSequence {
+    Ok(GMSequence {
         name,
         playback,
         playback_speed,
@@ -158,25 +158,25 @@ pub fn parse_sequence(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTSequ
 }
 
 
-fn parse_broadcast_messages(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<UTStringRef>, String> {
+fn parse_broadcast_messages(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMStringRef>, String> {
     // might be double list?
     let messages_count: usize = chunk.read_usize()?;
-    let mut messages: Vec<UTStringRef> = Vec::with_capacity(messages_count);
+    let mut messages: Vec<GMStringRef> = Vec::with_capacity(messages_count);
 
     for _ in 0..messages_count {
-        messages.push(chunk.read_ut_string(&strings)?);
+        messages.push(chunk.read_gm_string(&strings)?);
     }
 
     Ok(messages)
 }
 
 
-fn parse_track(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTTrack, String> {
+fn parse_track(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMTrack, String> {
     // force read string {}
-    let model_name: UTStringRef = chunk.read_ut_string(strings)?;
-    let name: UTStringRef = chunk.read_ut_string(strings)?;
+    let model_name: GMStringRef = chunk.read_gm_string(strings)?;
+    let name: GMStringRef = chunk.read_gm_string(strings)?;
     let builtin_name: i32 = chunk.read_i32()?;
-    let builtin_name: UTTrackBuiltinName = match builtin_name.try_into() {
+    let builtin_name: GMTrackBuiltinName = match builtin_name.try_into() {
         Ok(name) => name,
         Err(_) => return Err(format!(
             "Invalid Track builtin name 0x{:04X} while parsing Track at position {} in chunk '{}'.",
@@ -186,7 +186,7 @@ fn parse_track(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTTrack, Stri
         )),
     };
     let traits: i32 = chunk.read_i32()?;
-    let traits: UTTrackTraits = match traits.try_into() {
+    let traits: GMTrackTraits = match traits.try_into() {
         Ok(name) => name,
         Err(_) => return Err(format!(
             "Invalid Track traits 0x{:04X} while parsing Track at position {} in chunk '{}'.",
@@ -246,15 +246,15 @@ fn parse_track(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTTrack, Stri
 
     // owned resources {}
 
-    let mut sub_tracks: Vec<UTTrack> = Vec::with_capacity(track_count);
+    let mut sub_tracks: Vec<GMTrack> = Vec::with_capacity(track_count);
     for _ in 0..track_count {
         sub_tracks.push(parse_track(chunk, strings)?);
     }
 
     // TODO keyframes with different types {}
-    let keyframes: Vec<UTKeyframe> = vec![];
+    let keyframes: Vec<GMKeyframe> = vec![];
 
-    Ok(UTTrack {
+    Ok(GMTrack {
         model_name,
         name,
         builtin_name,
@@ -267,9 +267,9 @@ fn parse_track(chunk: &mut UTChunk, strings: &UTStrings) -> Result<UTTrack, Stri
     })
 }
 
-fn parse_tracks(chunk: &mut UTChunk, strings: &UTStrings) -> Result<Vec<UTTrack>, String> {
+fn parse_tracks(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMTrack>, String> {
     let tracks_count: usize = chunk.read_usize()?;
-    let mut tracks: Vec<UTTrack> = Vec::with_capacity(tracks_count);
+    let mut tracks: Vec<GMTrack> = Vec::with_capacity(tracks_count);
 
     for _ in 0..tracks_count {
         tracks.push(parse_track(chunk, strings)?);
