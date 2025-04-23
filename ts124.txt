@@ -10020,7 +10020,7 @@ General Info:
   Default Window Size: 640x480
   Flags: Sync Vertex 1, Scale, Show Cursor, Screen Key, Studio Version B3
   License: 0B 73 F9 2B AC 15 67 DA E6 E8 2D E1 33 C3 F7 D9
-  Timestamp: 2016-01-19 21:52:03 UTC
+  Timestamp: 2016-01-19 21:52:03 GMC
   Display Name: UNDERTALE
   Active Targets: 0
   Function Classifications: Joystick, Screen Grab, Math, Action, File, INI, Directory, Motion Planning, Shape Collision, Instance, Room, Game, Window, Draw Color, String, Tiles

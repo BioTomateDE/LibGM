@@ -1,14 +1,14 @@
-﻿use crate::deserialize::chunk_reading::UTChunk;
-use crate::deserialize::variables::UTVariable;
+﻿use crate::deserialize::chunk_reading::GMChunk;
+use crate::deserialize::variables::GMVariable;
 use std::cmp::PartialEq;
 use num_enum::TryFromPrimitive;
-use crate::deserialize::functions::{UTFunctionRef, UTFunctions};
-use crate::deserialize::strings::{UTStringRef, UTStrings};
+use crate::deserialize::functions::{GMFunctionRef, GMFunctions};
+use crate::deserialize::strings::{GMStringRef, GMStrings};
 
 // Taken from UndertaleModTool/UndertaleModLib/UndertaleCode.cs/UndertaleInstruction/
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]
 #[repr(u8)]
-enum UTOpcode {
+enum GMOpcode {
     Conv = 0x07,     // Push((Types.Second)Pop) // DoubleTypeInstruction
     Mul = 0x08,      // Push(Pop() * Pop()) // DoubleTypeInstruction
     Div = 0x09,      // Push(Pop() / Pop()) // DoubleTypeInstruction
@@ -45,7 +45,7 @@ enum UTOpcode {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum UTInstructionType {
+enum GMInstructionType {
     SingleTypeInstruction,
     DoubleTypeInstruction,
     ComparisonInstruction,
@@ -58,7 +58,7 @@ enum UTInstructionType {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]
 #[repr(u8)]
-enum UTDataType {
+enum GMDataType {
     Double,
     Float,
     Int32,
@@ -74,7 +74,7 @@ enum UTDataType {
 }
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]
 #[repr(i8)]
-enum UTInstanceType {
+enum GMInstanceType {
     Undefined = 0, // actually, this is just object 0, but also occurs in places where no instance type was set
     Self_ = -1,
     Other = -2,
@@ -89,7 +89,7 @@ enum UTInstanceType {
 }
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]
 #[repr(u8)]
-enum UTVariableType {
+enum GMVariableType {
     Array = 0x00,
     StackTop = 0x80,
     Normal = 0xA0,
@@ -99,7 +99,7 @@ enum UTVariableType {
 }
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]
 #[repr(u8)]
-enum UTComparisonType {
+enum GMComparisonType {
     DUP = 0,    // custom
     LT = 1,
     LTE = 2,
@@ -109,41 +109,41 @@ enum UTComparisonType {
     GT = 6,
 }
 
-fn get_instruction_type(opcode: UTOpcode) -> UTInstructionType {
+fn get_instruction_type(opcode: GMOpcode) -> GMInstructionType {
     match opcode {
-        UTOpcode::Neg
-        | UTOpcode::Not
-        | UTOpcode::Dup
-        | UTOpcode::Ret
-        | UTOpcode::Exit
-        | UTOpcode::Popz
-        | UTOpcode::CallV => UTInstructionType::SingleTypeInstruction,
-        UTOpcode::Conv
-        | UTOpcode::Mul
-        | UTOpcode::Div
-        | UTOpcode::Rem
-        | UTOpcode::Mod
-        | UTOpcode::Add
-        | UTOpcode::Sub
-        | UTOpcode::And
-        | UTOpcode::Or
-        | UTOpcode::Xor
-        | UTOpcode::Shl
-        | UTOpcode::Shr => UTInstructionType::DoubleTypeInstruction,
-        UTOpcode::Cmp => UTInstructionType::ComparisonInstruction,
-        UTOpcode::B | UTOpcode::Bt | UTOpcode::Bf | UTOpcode::PushEnv | UTOpcode::PopEnv => {
-            UTInstructionType::GotoInstruction
+        GMOpcode::Neg
+        | GMOpcode::Not
+        | GMOpcode::Dup
+        | GMOpcode::Ret
+        | GMOpcode::Exit
+        | GMOpcode::Popz
+        | GMOpcode::CallV => GMInstructionType::SingleTypeInstruction,
+        GMOpcode::Conv
+        | GMOpcode::Mul
+        | GMOpcode::Div
+        | GMOpcode::Rem
+        | GMOpcode::Mod
+        | GMOpcode::Add
+        | GMOpcode::Sub
+        | GMOpcode::And
+        | GMOpcode::Or
+        | GMOpcode::Xor
+        | GMOpcode::Shl
+        | GMOpcode::Shr => GMInstructionType::DoubleTypeInstruction,
+        GMOpcode::Cmp => GMInstructionType::ComparisonInstruction,
+        GMOpcode::B | GMOpcode::Bt | GMOpcode::Bf | GMOpcode::PushEnv | GMOpcode::PopEnv => {
+            GMInstructionType::GotoInstruction
         }
 
-        UTOpcode::Pop => UTInstructionType::PopInstruction,
-        UTOpcode::Push
-        | UTOpcode::PushLoc
-        | UTOpcode::PushGlb
-        | UTOpcode::PushBltn
-        | UTOpcode::PushI => UTInstructionType::PushInstruction,
+        GMOpcode::Pop => GMInstructionType::PopInstruction,
+        GMOpcode::Push
+        | GMOpcode::PushLoc
+        | GMOpcode::PushGlb
+        | GMOpcode::PushBltn
+        | GMOpcode::PushI => GMInstructionType::PushInstruction,
 
-        UTOpcode::Call => UTInstructionType::CallInstruction,
-        UTOpcode::Break => UTInstructionType::BreakInstruction,
+        GMOpcode::Call => GMInstructionType::CallInstruction,
+        GMOpcode::Break => GMInstructionType::BreakInstruction,
     }
 }
 
@@ -181,79 +181,79 @@ fn convert_instruction_kind(kind: u8) -> u8 {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub struct UTComparisonInstruction {
+pub struct GMComparisonInstruction {
     // extra: u8,                           // extra byte that should be zero
-    comparison_type: UTComparisonType,      // comparison kind
-    type1: UTDataType,                      // datatype of element to compare
-    type2: UTDataType,                      // datatype of element to compare
+    comparison_type: GMComparisonType,      // comparison kind
+    type1: GMDataType,                      // datatype of element to compare
+    type2: GMDataType,                      // datatype of element to compare
 }
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub struct UTGotoInstruction {
-    opcode: UTOpcode,
+pub struct GMGotoInstruction {
+    opcode: GMOpcode,
     jump_offset: i32,
     popenv_exit_magic: bool,
 }
 #[derive(Debug, Clone)]
-pub struct UTPopInstruction {
-    opcode: UTOpcode,
-    instance_type: UTInstanceType,
-    type1: UTDataType,
-    type2: UTDataType,
-    destination: UTCodeVariable,
+pub struct GMPopInstruction {
+    opcode: GMOpcode,
+    instance_type: GMInstanceType,
+    type1: GMDataType,
+    type2: GMDataType,
+    destination: GMCodeVariable,
 }
 #[derive(Debug, Clone)]
-pub struct UTPushInstruction {
-    opcode: UTOpcode,
-    data_type: UTDataType,
-    value: UTValue,
+pub struct GMPushInstruction {
+    opcode: GMOpcode,
+    data_type: GMDataType,
+    value: GMValue,
 }
 #[derive(Debug, Clone)]
-pub struct UTCallInstruction {
-    opcode: UTOpcode,
+pub struct GMCallInstruction {
+    opcode: GMOpcode,
     arguments_count: usize,
-    data_type: UTDataType,
-    function: UTFunctionRef,
+    data_type: GMDataType,
+    function: GMFunctionRef,
 }
 #[derive(Debug, Clone)]
-pub struct UTBreakInstruction {
-    opcode: UTOpcode,
+pub struct GMBreakInstruction {
+    opcode: GMOpcode,
     value: i16,
-    data_type: UTDataType,
+    data_type: GMDataType,
     int_argument: Option<i32>,
 }
 #[derive(Debug, Clone)]
-pub enum UTInstruction {
-    Cmp(UTComparisonInstruction),
-    Goto(UTGotoInstruction),
-    Pop(UTPopInstruction),
-    Push(UTPushInstruction),
-    Call(UTCallInstruction),
-    Break(UTBreakInstruction),
+pub enum GMInstruction {
+    Cmp(GMComparisonInstruction),
+    Goto(GMGotoInstruction),
+    Pop(GMPopInstruction),
+    Push(GMPushInstruction),
+    Call(GMCallInstruction),
+    Break(GMBreakInstruction),
 }
 
 #[derive(Debug, Clone)]
-enum UTCodeVariable {
-    Var(UTVariable, UTVariableType),
-    Unknown(usize, UTVariableType)
+enum GMCodeVariable {
+    Var(GMVariable, GMVariableType),
+    Unknown(usize, GMVariableType)
 }
 
 
 
 #[derive(Debug, Clone)]
-enum UTValue {
+enum GMValue {
     Double(f64),
     Float(f32),
     Int32(i32),
     Int64(i64),
     Boolean(bool),
-    Variable(UTCodeVariable),
-    String(UTStringRef),
+    Variable(GMCodeVariable),
+    String(GMStringRef),
     Int16(i16),
 }
 
 #[derive(Debug)]
-struct UTCodeMeta {
-    name: UTStringRef,
+struct GMCodeMeta {
+    name: GMStringRef,
     start_position: usize, // start position of code in chunk CODE
     length: usize,
     locals_count: u32,
@@ -261,22 +261,22 @@ struct UTCodeMeta {
 }
 
 #[derive(Debug, Clone)]
-pub struct UTCode {
-    pub name: UTStringRef,
-    pub instructions: Vec<UTInstruction>,
+pub struct GMCode {
+    pub name: GMStringRef,
+    pub instructions: Vec<GMInstruction>,
     pub locals_count: u32,
     pub arguments_count: u32,
 }
 
 
 // wrapper for raw data of a code "script" / instance
-struct UTCodeBlob {
+struct GMCodeBlob {
     raw_data: Vec<u8>,
     len: usize,
     file_index: usize,
 }
 
-impl UTCodeBlob {
+impl GMCodeBlob {
     fn read_byte(&mut self) -> Result<u8, String> {
         if self.file_index + 1 > self.len {
             return Err(format!(
@@ -293,65 +293,65 @@ impl UTCodeBlob {
 
     fn read_value(
         &mut self,
-        data_type: UTDataType,
-        strings: &UTStrings,
-        _variables: &[UTVariable],
-    ) -> Result<UTValue, String> {
+        data_type: GMDataType,
+        strings: &GMStrings,
+        _variables: &[GMVariable],
+    ) -> Result<GMValue, String> {
         match data_type {
-            UTDataType::Double => {
+            GMDataType::Double => {
                 let raw: [u8; 8] = match self.raw_data[self.file_index..self.file_index+8].try_into() {
                     Ok(ok) => ok,
                     Err(_) => return Err("Trying to read f64 out of bounds while reading values in code.".to_string()),
                 };
                 self.file_index += 8;
-                Ok(UTValue::Double(f64::from_le_bytes(raw)))
+                Ok(GMValue::Double(f64::from_le_bytes(raw)))
             },
 
-            UTDataType::Float => {
+            GMDataType::Float => {
                 let raw: [u8; 4] = match self.raw_data[self.file_index..self.file_index+4].try_into() {
                     Ok(ok) => ok,
                     Err(_) => return Err("Trying to read f32 out of bounds while reading values in code.".to_string()),
                 };
                 self.file_index += 4;
-                Ok(UTValue::Float(f32::from_le_bytes(raw)))
+                Ok(GMValue::Float(f32::from_le_bytes(raw)))
             },
 
-            UTDataType::Int32 => {
+            GMDataType::Int32 => {
                 let raw: [u8; 4] = match self.raw_data[self.file_index..self.file_index+4].try_into() {
                     Ok(ok) => ok,
                     Err(_) => return Err("Trying to read i32 out of bounds while reading values in code.".to_string()),
                 };
                 self.file_index += 4;
-                Ok(UTValue::Int32(i32::from_le_bytes(raw)))
+                Ok(GMValue::Int32(i32::from_le_bytes(raw)))
             },
 
-            UTDataType::Int64 => {
+            GMDataType::Int64 => {
                 let raw: [u8; 8] = match self.raw_data[self.file_index..self.file_index+8].try_into() {
                     Ok(ok) => ok,
                     Err(_) => return Err("Trying to read i64 out of bounds while reading values in code.".to_string()),
                 };
                 self.file_index += 8;
-                Ok(UTValue::Int64(i64::from_le_bytes(raw)))
+                Ok(GMValue::Int64(i64::from_le_bytes(raw)))
             },
 
-            UTDataType::Boolean => {
+            GMDataType::Boolean => {
                 if self.raw_data.len() < 1 {
                     return Err("Trying to read boolean out of bounds while reading values in code.".to_string());
                 }
                 self.file_index += 1;
-                Ok(UTValue::Boolean(self.raw_data[0] != 0))
+                Ok(GMValue::Boolean(self.raw_data[0] != 0))
             },
 
-            UTDataType::Variable => {
+            GMDataType::Variable => {
                 let raw: [u8; 4] = match self.raw_data[self.file_index..self.file_index+4].try_into() {
                     Ok(ok) => ok,
-                    Err(_) => return Err("Trying to read UTVariable out of bounds while reading values in code.".to_string()),
+                    Err(_) => return Err("Trying to read GMVariable out of bounds while reading values in code.".to_string()),
                 };
                 self.file_index += 4;
                 let raw_index: [u8; 2] = raw[0..2].try_into().unwrap();
                 let raw_variable_type: u8 = raw[3];
                 let index: usize = u16::from_le_bytes(raw_index) as usize;
-                let variable_type: UTVariableType = match raw_variable_type.try_into() {
+                let variable_type: GMVariableType = match raw_variable_type.try_into() {
                     Ok(ok) => ok,
                     Err(_) => return Err(format!(
                         "Invalid Variable Type {:02X} while reading values in code.",
@@ -361,45 +361,45 @@ impl UTCodeBlob {
 
                 // TODO deal with variable ids and scopes asfbjhiafshasf (var index is wrong)
 
-                Ok(UTValue::Variable(UTCodeVariable::Unknown{ 0: index, 1: variable_type }))
+                Ok(GMValue::Variable(GMCodeVariable::Unknown{ 0: index, 1: variable_type }))
 
-                // let variable: UTVariable = match variables.get(index) {
+                // let variable: GMVariable = match variables.get(index) {
                 //     Some(var) => var.clone(),
                 //     // None => return Err(format!(
-                //     //     "UTVariable index is out of bounds while reading values in code: {} >= {}.",
+                //     //     "GMVariable index is out of bounds while reading values in code: {} >= {}.",
                 //     //     index,
                 //     //     variables.len()
                 //     // ))
                 //     None => {
                 //         eprintln!("WARNING: Could not find variable with index {} (length: {}).", index, variables.len());
-                //         return Ok(UTValue::Variable(UTCodeVariable::Unknown{ 0: index, 1: variable_type }));
+                //         return Ok(GMValue::Variable(GMCodeVariable::Unknown{ 0: index, 1: variable_type }));
                 //     }
                 // };
-                // let code_variable: UTCodeVariable = UTCodeVariable::Var{ 0: variable, 1: variable_type };
-                // Ok(UTValue::Variable(code_variable))
+                // let code_variable: GMCodeVariable = GMCodeVariable::Var{ 0: variable, 1: variable_type };
+                // Ok(GMValue::Variable(code_variable))
             },
 
-            UTDataType::String => {
+            GMDataType::String => {
                 // idk if it's position or string id
                 let raw: [u8; 4] = match self.raw_data[self.file_index..self.file_index+4].try_into() {
                     Ok(ok) => ok,
-                    Err(_) => return Err("Trying to read UTString out of bounds while reading values in code.".to_string()),
+                    Err(_) => return Err("Trying to read GMString out of bounds while reading values in code.".to_string()),
                 };
                 let string_index: usize = u32::from_le_bytes(raw) as usize;
                 self.file_index += 4;
                 match strings.get_string_by_index(string_index) {
-                    Some(string) => Ok(UTValue::String(string)),
-                    None => Err(format!("Could not find UTString with String Index {} while reading values in code.", string_index))
+                    Some(string) => Ok(GMValue::String(string)),
+                    None => Err(format!("Could not find GMString with String Index {} while reading values in code.", string_index))
                 }
             },
 
-            UTDataType::Int16 => {
+            GMDataType::Int16 => {
                 // i think it's within the instruction itself so backtrack
                 let raw: [u8; 2] = match self.raw_data[self.file_index-4 .. self.file_index-2].try_into() {
                     Ok(ok) => ok,
                     Err(_) => return Err("Trying to read i16 out of bounds while reading values in code.".to_string()),
                 };
-                Ok(UTValue::Int16(i16::from_le_bytes(raw)))
+                Ok(GMValue::Int16(i16::from_le_bytes(raw)))
             },
 
             _ => Err(format!("Trying to read unsupported data type {0:?} while reading values in code.", data_type)),
@@ -410,12 +410,12 @@ impl UTCodeBlob {
 
 #[allow(non_snake_case)]
 pub fn parse_chunk_CODE(
-    chunk: &mut UTChunk,
+    chunk: &mut GMChunk,
     bytecode14: bool,
-    strings: &UTStrings,
-    variables: &[UTVariable],
-    functions: &UTFunctions,
-) -> Result<Vec<UTCode>, String> {
+    strings: &GMStrings,
+    variables: &[GMVariable],
+    functions: &GMFunctions,
+) -> Result<Vec<GMCode>, String> {
     chunk.file_index = 0;
     let codes_count: usize = chunk.read_usize()?;
     let mut code_meta_indexes: Vec<usize> = Vec::with_capacity(codes_count);
@@ -429,11 +429,11 @@ pub fn parse_chunk_CODE(
 
     // let old_pos: usize = chunk.file_index;
 
-    let mut code_metas: Vec<UTCodeMeta> = Vec::with_capacity(codes_count);
+    let mut code_metas: Vec<GMCodeMeta> = Vec::with_capacity(codes_count);
 
     for ts in code_meta_indexes {
         chunk.file_index = ts;
-        let code_name: UTStringRef = chunk.read_ut_string(strings)?;
+        let code_name: GMStringRef = chunk.read_gm_string(strings)?;
         let code_length: usize = chunk.read_usize()?;
         let locals_count: u32 = chunk.read_u32()?;
 
@@ -452,7 +452,7 @@ pub fn parse_chunk_CODE(
 
         let arguments_count: u32 = chunk.read_u32()?;
         // println!("{:<16} {:<54} | {:<8} {:<6} {:<14} {:<3} {}", ts, code_name, code_length, locals_count, start_offset, arguments_count, start_position);
-        code_metas.push(UTCodeMeta {
+        code_metas.push(GMCodeMeta {
             name: code_name,
             start_position,
             length: code_length,
@@ -461,18 +461,18 @@ pub fn parse_chunk_CODE(
         })
     }
 
-    let mut codes: Vec<UTCode> = Vec::with_capacity(codes_count);
+    let mut codes: Vec<GMCode> = Vec::with_capacity(codes_count);
     for code_meta in code_metas {
         let raw_data: Vec<u8> = chunk.data[code_meta.start_position..code_meta.start_position + code_meta.length].to_owned();
-        let mut code_blob: UTCodeBlob = UTCodeBlob {
+        let mut code_blob: GMCodeBlob = GMCodeBlob {
             raw_data: raw_data.clone(),
             len: raw_data.len(),
             file_index: 0,
         };
-        let mut instructions: Vec<UTInstruction> = vec![];
+        let mut instructions: Vec<GMInstruction> = vec![];
 
         while code_blob.file_index < code_blob.len {
-            let instruction: UTInstruction = parse_code(&mut code_blob, bytecode14, &strings, variables, functions, code_meta.start_position-8)?;
+            let instruction: GMInstruction = parse_code(&mut code_blob, bytecode14, &strings, variables, functions, code_meta.start_position-8)?;
             // let dump: String = match hexdump(&*code_blob.raw_data, code_blob.file_index-4, Some(code_blob.file_index)) {
             //     Ok(ok) => ok,
             //     Err(_) => "()".to_string(),
@@ -487,7 +487,7 @@ pub fn parse_chunk_CODE(
             instructions.push(instruction);
         }
 
-        codes.push(UTCode {
+        codes.push(GMCode {
             name: code_meta.name,
             instructions,
             locals_count: code_meta.locals_count,
@@ -499,19 +499,19 @@ pub fn parse_chunk_CODE(
 }
 
 fn parse_code(
-    blob: &mut UTCodeBlob,
+    blob: &mut GMCodeBlob,
     bytecode14: bool,
-    strings: &UTStrings,
-    variables: &[UTVariable],
-    functions: &UTFunctions,
+    strings: &GMStrings,
+    variables: &[GMVariable],
+    functions: &GMFunctions,
     code_start_pos: usize
-) -> Result<UTInstruction, String> {
+) -> Result<GMInstruction, String> {
     let b0: u8 = blob.read_byte()?;
     let b1: u8 = blob.read_byte()?;
     let b2: u8 = blob.read_byte()?;
     let opcode_raw: u8 = blob.read_byte()?;
 
-    let mut opcode: UTOpcode = match opcode_raw.try_into() {
+    let mut opcode: GMOpcode = match opcode_raw.try_into() {
         Ok(opcode) => opcode,
         Err(_) => return Err(format!("Invalid Opcode {opcode_raw:02X} while parsing code.")),
     };
@@ -519,13 +519,13 @@ fn parse_code(
     //     let kind: u8 = convert_instruction_kind(kind);
     // }
 
-    let instruction_type: UTInstructionType = get_instruction_type(opcode);
+    let instruction_type: GMInstructionType = get_instruction_type(opcode);
     match instruction_type {
-        UTInstructionType::SingleTypeInstruction |
-        UTInstructionType::DoubleTypeInstruction |
-        UTInstructionType::ComparisonInstruction => {
+        GMInstructionType::SingleTypeInstruction |
+        GMInstructionType::DoubleTypeInstruction |
+        GMInstructionType::ComparisonInstruction => {
             // Parse instruction components from bytes
-            let mut comparison_type: UTComparisonType = match b1.try_into() {
+            let mut comparison_type: GMComparisonType = match b1.try_into() {
                 Ok(comparison_type) => comparison_type,
                 Err(_) => {
                     return Err(format!(
@@ -534,7 +534,7 @@ fn parse_code(
                 }
             };
             let type1: u8 = b2 & 0xf;
-            let type1: UTDataType = match type1.try_into() {
+            let type1: GMDataType = match type1.try_into() {
                 Ok(data_type) => data_type,
                 Err(_) => return Err(format!(
                     "Invalid Data Type {type1:02X} while parsing Comparison Instruction."
@@ -542,18 +542,18 @@ fn parse_code(
 
             };
             let type2: u8 = b2 >> 4;
-            let type2: UTDataType = match type2.try_into() {
+            let type2: GMDataType = match type2.try_into() {
                 Ok(data_type) => data_type,
                 Err(_) => return Err(format!(
                     "Invalid Data Type {type2:02X} while parsing Comparison Instruction."
                 )),
             };
             // Ensure basic conditions hold
-            if b0 != 0 && opcode != UTOpcode::Dup && opcode != UTOpcode::CallV {
+            if b0 != 0 && opcode != GMOpcode::Dup && opcode != GMOpcode::CallV {
                 return Err(format!("Invalid padding {:02X} while parsing Comparison Instruction.", b0));
             }
 
-            if instruction_type == UTInstructionType::SingleTypeInstruction && (type2 as u8) != 0 {
+            if instruction_type == GMInstructionType::SingleTypeInstruction && (type2 as u8) != 0 {
                 return Err(format!(
                     "Second type should be 0 but is {:02X} in \
                     SingleTypeInstruction while parsing Comparison Instruction",
@@ -561,7 +561,7 @@ fn parse_code(
                 ));
             }
 
-            if bytecode14 && opcode == UTOpcode::Cmp {
+            if bytecode14 && opcode == GMOpcode::Cmp {
                 let comparison_type_raw: u8 = opcode_raw - 0x10;
                 comparison_type = match comparison_type_raw.try_into() {
                     Ok(comparison_type) => comparison_type,
@@ -571,18 +571,18 @@ fn parse_code(
             }
             // short circuit stuff {}
 
-            Ok(UTInstruction::Cmp(UTComparisonInstruction {
+            Ok(GMInstruction::Cmp(GMComparisonInstruction {
                 comparison_type,
                 type1,
                 type2,
             }))
         }
 
-        UTInstructionType::GotoInstruction => {
+        GMInstructionType::GotoInstruction => {
             if bytecode14 {
                 let jump_offset: i32 = b0 as i32 | ((b1 as u32) << 8) as i32 | ((b2 as i32) << 16);     // yeah idk
                 let popenv_exit_magic: bool = jump_offset == -1048576;      // little endian [00 00 F0]
-                return Ok(UTInstruction::Goto(UTGotoInstruction {
+                return Ok(GMInstruction::Goto(GMGotoInstruction {
                     opcode,
                     jump_offset,
                     popenv_exit_magic,
@@ -601,51 +601,51 @@ fn parse_code(
             }
             let jump_offset: i32 = jump_offset as i32;
 
-            Ok(UTInstruction::Goto(UTGotoInstruction {
+            Ok(GMInstruction::Goto(GMGotoInstruction {
                 opcode,
                 jump_offset,
                 popenv_exit_magic,
             }))
         }
 
-        UTInstructionType::PopInstruction => {
+        GMInstructionType::PopInstruction => {
             let type1: u8 = b2 & 0xf;
-            let type1: UTDataType = match type1.try_into() {
+            let type1: GMDataType = match type1.try_into() {
                 Ok(ok) => ok,
                 Err(_) => return Err(format!("Invalid Data Type {type1:02X} while parsing Pop Instruction.")),
             };
 
             let type2: u8 = b2 >> 4;
-            let type2: UTDataType = match type2.try_into() {
+            let type2: GMDataType = match type2.try_into() {
                 Ok(ok) => ok,
                 Err(_) => return Err(format!("Invalid Data Type {type2:02X} while parsing Pop Instruction.")),
             };
 
             let instance_type: i8 = b0 as i8;       // might be wrong but it only goes to -16 so idek
-            let instance_type: UTInstanceType = instance_type.try_into().unwrap_or_else(|_| {
+            let instance_type: GMInstanceType = instance_type.try_into().unwrap_or_else(|_| {
                 // let dump = hexdump(&blob.raw_data, (if blob.file_index < 16 {16} else {blob.file_index}) - 16, Some(if blob.file_index + 8 < blob.len {blob.file_index + 8} else {blob.len})).unwrap();
                 // println!("{}", format!("[WARNING] {instance_type:02X} Dump: {dump}").yellow());
-                UTInstanceType::Undefined
+                GMInstanceType::Undefined
             });
 
-            // if type1 == UTDataType::Variable && type2 == UTDataType::Int32 {
+            // if type1 == GMDataType::Variable && type2 == GMDataType::Int32 {
             //     panic!("{} {b0:02X} {b1:02X} {b2:02X} {opcode_raw:02X} | {:02X} {:02X} {:02X} {:02X}", blob.file_index, blob.raw_data[blob.file_index+1],blob.raw_data[blob.file_index+2],blob.raw_data[blob.file_index+3],blob.raw_data[blob.file_index+4])
             // }
 
-            if type1 == UTDataType::Int16 {
+            if type1 == GMDataType::Int16 {
                 return Err(format!(
                     "[Internal Error] Unhandled \"Special swap instruction\" (UndertaleModTool/Issues/#129) \
                     occurred at position {} while parsing Pop Instruction.\
-                    Please report this error to github.com/BioTomateDE/UndertaleModManager/Issues \
+                    Please report this error to github.com/BioTomateDE/LibGM/Issues \
                     along with your data.win file.",
                     blob.file_index + code_start_pos
                 ));
             }
 
-            // if type1 == UTDataType::Int16 {
+            // if type1 == GMDataType::Int16 {
             //     // Special scenario - the swap instruction (see UndertaleModTool/Issues/#129)
             //     let swap_extra: u16 = instance_type;
-            //     instance_type = UTInstanceType::Undefined;
+            //     instance_type = GMInstanceType::Undefined;
             // }
             // else
             // {
@@ -653,13 +653,13 @@ fn parse_code(
             //     let destination = readvaruiable();
             // }
 
-            let destination: UTCodeVariable = match blob.read_value(UTDataType::Variable, strings, variables)? {
-                UTValue::Variable(var) => var,
-                _ => return Err("[INTERNAL ERROR] UTCodeBlob.read_value(UTDataType::Variable, ...)\
-                 did not return a UTVariable while parsing Pop Instruction".to_string()),
+            let destination: GMCodeVariable = match blob.read_value(GMDataType::Variable, strings, variables)? {
+                GMValue::Variable(var) => var,
+                _ => return Err("[INTERNAL ERROR] GMCodeBlob.read_value(GMDataType::Variable, ...)\
+                 did not return a GMVariable while parsing Pop Instruction".to_string()),
             };
 
-            Ok(UTInstruction::Pop(UTPopInstruction {
+            Ok(GMInstruction::Pop(GMPopInstruction {
                 opcode,
                 instance_type,
                 type1,
@@ -668,9 +668,9 @@ fn parse_code(
             }))
         }
 
-        UTInstructionType::PushInstruction => {
+        GMInstructionType::PushInstruction => {
             let data_type: u8 = b2;
-            let data_type: UTDataType = match data_type.try_into() {
+            let data_type: GMDataType = match data_type.try_into() {
                 Ok(ok) => ok,
                 Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Push Instruction.")),
             };
@@ -680,12 +680,12 @@ fn parse_code(
             if bytecode14 {
                 // println!("############# {:?} {:?}", data_type, val);
                 match data_type {
-                    UTDataType::Int16 => opcode = UTOpcode::PushI,
-                    UTDataType::Variable => {
+                    GMDataType::Int16 => opcode = GMOpcode::PushI,
+                    GMDataType::Variable => {
                         match val {
-                            -5 => opcode = UTOpcode::PushGlb,
-                            -6 => opcode = UTOpcode::PushBltn,
-                            -7 => opcode = UTOpcode::PushLoc,
+                            -5 => opcode = GMOpcode::PushGlb,
+                            -6 => opcode = GMOpcode::PushBltn,
+                            -7 => opcode = GMOpcode::PushLoc,
                             _ => ()
                         }
                     },
@@ -695,28 +695,28 @@ fn parse_code(
 
             // todo fix bullshit variable id
 
-            let value: UTValue = blob.read_value(data_type, strings, variables)?;
+            let value: GMValue = blob.read_value(data_type, strings, variables)?;
             // println!("$$$$$ {:?}", value);
 
-            Ok(UTInstruction::Push(UTPushInstruction {
+            Ok(GMInstruction::Push(GMPushInstruction {
                 opcode,
                 data_type,
                 value,
             }))
         }
 
-        UTInstructionType::CallInstruction => {
+        GMInstructionType::CallInstruction => {
             let arguments_count: usize = b0 as usize;       // idgaf it's always one anyways
             let data_type: u8 = b2;
-            let data_type: UTDataType = match data_type.try_into() {
+            let data_type: GMDataType = match data_type.try_into() {
                 Ok(ok) => ok,
                 Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Call Instruction.")),
             };
 
             blob.file_index += 4;
-            let function: UTFunctionRef = functions.get_function_by_occurrence(code_start_pos + blob.file_index)?;
+            let function: GMFunctionRef = functions.get_function_by_occurrence(code_start_pos + blob.file_index)?;
 
-            Ok(UTInstruction::Call(UTCallInstruction {
+            Ok(GMInstruction::Call(GMCallInstruction {
                 opcode,
                 arguments_count,
                 data_type,
@@ -724,19 +724,19 @@ fn parse_code(
             }))
         }
 
-        UTInstructionType::BreakInstruction => {
+        GMInstructionType::BreakInstruction => {
             let value: i16 = b0 as i16 | ((b1 as i16) << 8);
             let data_type: u8 = b2;
-            let data_type: UTDataType = match data_type.try_into() {
+            let data_type: GMDataType = match data_type.try_into() {
                 Ok(ok) => ok,
                 Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Break Instruction.")),
             };
             let mut int_argument: Option<i32> = None;
 
-            if data_type == UTDataType::Int32 {
-                int_argument = Some(match blob.read_value(UTDataType::Int32, &strings, &variables)? {
-                    UTValue::Int32(val) => val,
-                    _ => return Err("[INTERNAL ERROR] UTCodeBlob.read_value(UTDataType::Int32, ...)\
+            if data_type == GMDataType::Int32 {
+                int_argument = Some(match blob.read_value(GMDataType::Int32, &strings, &variables)? {
+                    GMValue::Int32(val) => val,
+                    _ => return Err("[INTERNAL ERROR] GMCodeBlob.read_value(GMDataType::Int32, ...)\
                     did not return an i32 while parsing Break Instruction".to_string()),
                 });
                 // gms version stuff {}
@@ -744,7 +744,7 @@ fn parse_code(
 
             // other gms version stuff {}
 
-            Ok(UTInstruction::Break(UTBreakInstruction {
+            Ok(GMInstruction::Break(GMBreakInstruction {
                 opcode,
                 value,
                 data_type,
