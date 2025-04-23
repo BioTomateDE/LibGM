@@ -1,15 +1,15 @@
-use crate::deserialize::chunk_reading::GMChunk;
+use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use crate::deserialize::general_info::GMGeneralInfo;
-use crate::deserialize::strings::{GMStringRef, GMStrings};
-use crate::deserialize::texture_page_items::{GMTextureRef, GMTextures};
+use crate::deserialize::strings::GMStrings;
+use crate::deserialize::texture_page_items::{GMTexture, GMTextures};
 
 #[derive(Debug, Clone)]
 pub struct GMBackground {
-    pub name: GMStringRef,
+    pub name: GMRef<String>,
     pub transparent: bool,
     pub smooth: bool,
     pub preload: bool,
-    pub texture: GMTextureRef,
+    pub texture: GMRef<GMTexture>,
     pub gms2_unknown_always2: Option<u32>,
     pub gms2_tile_width: Option<u32>,
     pub gms2_tile_height: Option<u32>,
@@ -23,43 +23,10 @@ pub struct GMBackground {
     pub gms2_tile_ids: Vec<u32>,
 }
 
-
-#[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
-pub struct GMBackgroundRef {
-    pub index: usize,
-}
-
-impl GMBackgroundRef {
-    pub fn resolve<'a>(&self, backgrounds: &'a GMBackgrounds) -> Result<&'a GMBackground, String> {
-        match backgrounds.backgrounds_by_index.get(self.index) {
-            Some(background) => Ok(background),
-            None => Err(format!(
-                "Could not resolve background with index {} in list with length {}.",
-                self.index, backgrounds.backgrounds_by_index.len()
-            )),
-        }
-    }
-}
-
-
 #[derive(Debug, Clone)]
 pub struct GMBackgrounds {
     pub backgrounds_by_index: Vec<GMBackground>,    // strings by index/order in chunk BGND
 }
-impl GMBackgrounds {
-    pub fn get_background_by_index(&self, index: usize) -> Option<GMBackgroundRef> {
-        if index >= self.backgrounds_by_index.len() {
-            return None;
-        }
-        Some(GMBackgroundRef {
-            index,
-        })
-    }
-    pub fn len(&self) -> usize {
-        self.backgrounds_by_index.len()
-    }
-}
-
 
 
 pub fn parse_chunk_bgnd(
@@ -78,18 +45,14 @@ pub fn parse_chunk_bgnd(
     let mut backgrounds_by_index: Vec<GMBackground> = Vec::with_capacity(backgrounds_count);
     for start_position in start_positions {
         chunk.file_index = start_position;
-        let name: GMStringRef = chunk.read_gm_string(strings)?;
+        let name: GMRef<String> = chunk.read_gm_string(strings)?;
         let transparent: bool = chunk.read_u32()? != 0;
         let smooth: bool = chunk.read_u32()? != 0;
         let preload: bool = chunk.read_u32()? != 0;
         let texture_abs_pos: usize = chunk.read_usize()?;
-        let texture: GMTextureRef = match textures.get_texture_by_pos(texture_abs_pos) {
-            Some(texture) => texture,
-            None => return Err(format!(
-                "Could not find texture with absolute position {} for Background with name \"{}\" at position {} in chunk 'BGND'.",
-                texture_abs_pos, name.resolve(strings)?, start_position,
-            )),
-        };
+        let texture: &GMRef<GMTexture> = textures.abs_pos_to_ref.get(&texture_abs_pos)
+            .ok_or(format!("Could not find texture with absolute position {} for Background with name \"{}\" at position {} in chunk 'BGND'.", 
+                           texture_abs_pos, name.resolve(&strings.strings_by_index)?, start_position))?;
 
         let mut gms2_unknown_always2: Option<u32> = None;
         let mut gms2_tile_width: Option<u32> = None;
@@ -128,7 +91,7 @@ pub fn parse_chunk_bgnd(
             transparent,
             smooth,
             preload,
-            texture,
+            texture: texture.clone(),
             gms2_unknown_always2,
             gms2_tile_width,
             gms2_tile_height,

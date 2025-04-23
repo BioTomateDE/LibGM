@@ -1,11 +1,12 @@
+use crate::deserialize::chunk_reading::GMRef;
 use num_enum::TryFromPrimitive;
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::general_info::GMGeneralInfo;
-use crate::deserialize::strings::{GMStringRef, GMStrings};
+use crate::deserialize::strings::GMStrings;
 
 #[derive(Debug, Clone)]
 pub struct GMGameObject {
-    pub name: GMStringRef,
+    pub name: GMRef<String>,
     pub sprite_index: i32,
     pub visible: bool,
     pub managed: Option<bool>,
@@ -37,33 +38,9 @@ pub enum GMGameObjectCollisionShape {
     Custom = 2,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct GMGameObjectRef {
-    index: usize,
-}
-impl GMGameObjectRef {
-    pub fn resolve<'a>(&self, game_objects: &'a GMGameObjects) -> Result<&'a GMGameObject, String> {
-        match game_objects.game_objects_by_index.get(self.index) {
-            Some(object) => Ok(object),
-            None => Err(format!(
-                "Could not resolve game object with index {} in list with length {}.",
-                self.index, game_objects.game_objects_by_index.len(),
-            )),
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct GMGameObjects {
     pub game_objects_by_index: Vec<GMGameObject>,
-}
-impl GMGameObjects {
-    pub fn get_game_object_by_index(&self, index: usize) -> Option<GMGameObjectRef> {
-        if index >= self.game_objects_by_index.len() {
-            return None;
-        }
-        Some(GMGameObjectRef {index})
-    }
 }
 
 
@@ -82,7 +59,7 @@ pub struct GMGameObjectEventAction {
     pub is_question: bool,
     pub use_apply_to: bool,
     pub exe_type: u32,
-    pub action_name: GMStringRef,
+    pub action_name: GMRef<String>,
     pub code_id: i32,                   // {!!} change type to code ref
     pub argument_count: u32,
     pub who: i32,
@@ -103,7 +80,7 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
     let mut game_objects_by_index: Vec<GMGameObject> = Vec::with_capacity(game_objects_count);
     for start_position in start_positions {
         chunk.file_index = start_position;
-        let name: GMStringRef = chunk.read_gm_string(strings)?;
+        let name: GMRef<String> = chunk.read_gm_string(strings)?;
         let sprite_index: i32 = chunk.read_i32()?;        // TODO usize, sprite ref
         let visible: bool = chunk.read_u32()? != 0;
         let mut managed: Option<bool> = None;

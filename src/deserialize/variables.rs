@@ -1,9 +1,9 @@
-﻿use crate::deserialize::chunk_reading::GMChunk;
-use crate::deserialize::strings::{GMStringRef, GMStrings};
+﻿use crate::deserialize::chunk_reading::{GMChunk, GMRef};
+use crate::deserialize::strings::GMStrings;
 
 #[derive(Debug, Clone)]
 pub struct GMVariable {
-    pub name: GMStringRef,
+    pub name: GMRef<String>,
     pub instance_type: i32,
     pub variable_id: i32,
     pub occurrences_count: u32,
