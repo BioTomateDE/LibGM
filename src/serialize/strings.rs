@@ -3,7 +3,6 @@ use crate::deserialize::strings::{GMStringRef};
 use crate::serialize::all::{build_chunk, DataBuilder, GMRef};
 use crate::serialize::chunk_writing::ChunkBuilder;
 
-#[allow(non_snake_case)]
 pub fn build_chunk_STRG(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "STRG", abs_pos: data_builder.len() };
     let len: usize = gm_data.strings.len();

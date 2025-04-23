@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use std::path::Path;
 use image::DynamicImage;
 use crate::deserialize::all::GMData;
 use crate::deserialize::backgrounds::GMBackgroundRef;
@@ -140,13 +141,9 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
 }
 
 
-pub fn write_data_file(data_file_path: &str, raw_data: &[u8]) -> Result<(), String> {
-    match fs::write(data_file_path, raw_data) {
-        Ok(_) => Ok(()),
-        Err(error) => {
-            Err(format!("Could not write to data file: {error}"))
-        }
-    }
+pub fn write_data_file(data_file_path: &Path, raw_data: &[u8]) -> Result<(), String> { 
+    fs::write(data_file_path, raw_data)
+        .map_err(|e| format!("Could not write data file to location \"{}\": {e}", data_file_path.display()))
 }
 
 

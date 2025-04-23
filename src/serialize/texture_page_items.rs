@@ -4,7 +4,6 @@ use crate::deserialize::texture_page_items::{GMTexture, GMTexturePageItem, GMTex
 use crate::serialize::all::{DataBuilder, GMRef};
 use crate::serialize::chunk_writing::ChunkBuilder;
 
-#[allow(non_snake_case)]
 pub fn build_chunk_TPAG(data_builder: &mut DataBuilder, gm_data: &GMData, texture_page_items: Vec<GMTexturePageItem>) -> Result<(), String> {
     let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "TPAG", abs_pos: data_builder.len() };
     let len: usize = texture_page_items.len();
