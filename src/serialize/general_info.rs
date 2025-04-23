@@ -9,13 +9,13 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_bool(gm_data.general_info.is_debugger_disabled);
     builder.write_u8(gm_data.general_info.bytecode_version);
     builder.write_u16(gm_data.general_info.unknown_value);
-    builder.write_literal_string(&gm_data.general_info.game_file_name.resolve(&gm_data.strings)?);
-    builder.write_literal_string(&gm_data.general_info.config.resolve(&gm_data.strings)?);
+    builder.write_literal_string(&gm_data.general_info.game_file_name.resolve(&gm_data.strings.strings_by_index)?)?;
+    builder.write_literal_string(&gm_data.general_info.config.resolve(&gm_data.strings.strings_by_index)?)?;
     builder.write_u32(gm_data.general_info.last_object_id);
     builder.write_u32(gm_data.general_info.last_tile_id);
     builder.write_u32(gm_data.general_info.game_id);
-    builder.write_literal_string(&gm_data.general_info.directplay_guid.hyphenated().to_string());
-    builder.write_literal_string(&gm_data.general_info.game_name.resolve(&gm_data.strings)?);
+    builder.write_literal_string(&gm_data.general_info.directplay_guid.hyphenated().to_string())?;
+    builder.write_literal_string(&gm_data.general_info.game_name.resolve(&gm_data.strings.strings_by_index)?)?;
     builder.write_u32(gm_data.general_info.major_version);
     builder.write_u32(gm_data.general_info.minor_version);
     builder.write_u32(gm_data.general_info.release_version);
@@ -25,7 +25,7 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_u64(build_general_info_flags(&gm_data.general_info.flags));
     builder.raw_data.extend(gm_data.general_info.license);
     builder.write_i64(gm_data.general_info.timestamp_created.timestamp());
-    builder.write_literal_string(&gm_data.general_info.display_name.resolve(&gm_data.strings)?);
+    builder.write_literal_string(&gm_data.general_info.display_name.resolve(&gm_data.strings.strings_by_index)?)?;
     builder.write_u64(gm_data.general_info.active_targets);    // scuffed offsets
     builder.write_u64(build_function_classifications(&gm_data.general_info.function_classifications));
     builder.write_i32(-(gm_data.general_info.steam_appid as i32));
@@ -35,7 +35,7 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_u32(*room_id);
     }
 
-    build_chunk(data_builder, builder);
+    build_chunk(data_builder, builder)?;
     Ok(())
 }
 
@@ -160,7 +160,7 @@ pub fn build_chunk_optn(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     // ^
     builder.write_u32(gm_data.options.load_alpha);
 
-    build_chunk(data_builder, builder);
+    build_chunk(data_builder, builder)?;
     Ok(())
 }
 

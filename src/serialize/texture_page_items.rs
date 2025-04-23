@@ -1,7 +1,8 @@
 use image::{ImageBuffer, Rgba};
 use crate::deserialize::all::GMData;
-use crate::deserialize::texture_page_items::{GMTexture, GMTexturePageItem, GMTextureRef, GMTextures};
-use crate::serialize::all::{DataBuilder, GMRef};
+use crate::deserialize::chunk_reading::GMRef;
+use crate::deserialize::texture_page_items::{GMTexture, GMTexturePageItem, GMTextures};
+use crate::serialize::all::DataBuilder;
 use crate::serialize::chunk_writing::ChunkBuilder;
 
 pub fn build_chunk_tpag(data_builder: &mut DataBuilder, gm_data: &GMData, texture_page_items: Vec<GMTexturePageItem>) -> Result<(), String> {
@@ -10,12 +11,12 @@ pub fn build_chunk_tpag(data_builder: &mut DataBuilder, gm_data: &GMData, textur
     builder.write_usize(len);
 
     for texture_page_item in &texture_page_items {
-        data_builder.push_pointer_position(&mut builder, GMRef::Texture(GMTextureRef { index: texture_page_item.texture.index }))?;
+        data_builder.push_pointer_placeholder(&mut builder, GMRef::texture(texture_page_item.texture.index))?;
     }
 
     for texture_page_item in &texture_page_items {
-        data_builder.push_pointing_to(&mut builder, GMRef::Texture(GMTextureRef { index: texture_page_item.texture.index }))?;
-        let texture: &GMTexture = texture_page_item.texture.resolve(&gm_data.textures)?;
+        data_builder.push_pointer_resolve(&mut builder, GMRef::texture(texture_page_item.texture.index))?;
+        let texture: &GMTexture = texture_page_item.texture.resolve(&gm_data.textures.textures_by_index)?;
 
         builder.write_u16(texture_page_item.source_x);
         builder.write_u16(texture_page_item.source_y);
@@ -40,11 +41,10 @@ pub fn generate_texture_pages(gm_textures: &GMTextures) -> Result<(Vec<GMTexture
     static PAGE_MAX_WIDTH: usize = 2048;        // MAX: u16 limit (65535)
     static PAGE_MAX_HEIGHT: usize = 2048;       // MAX: u16 limit (65535)
 
-    let texture_count: usize = gm_textures.len();
+    let texture_count: usize = gm_textures.textures_by_index.len();
     let mut textures: Vec<(usize, &GMTexture)> = Vec::with_capacity(texture_count);
     for i in 0..texture_count {
-        let texture: GMTextureRef = gm_textures.get_texture_by_index(i).expect("Texture out of bounds while generating texture pages.");
-        let texture: &GMTexture = texture.resolve(&gm_textures)?;
+        let texture: &GMTexture = &gm_textures.textures_by_index[i];
         textures.push((i, texture));
     }
     // sort textures by height; ascending order
@@ -77,7 +77,7 @@ pub fn generate_texture_pages(gm_textures: &GMTextures) -> Result<(Vec<GMTexture
             source_width: texture.img.width() as u16,
             source_height: texture.img.height() as u16,
             texture_page_id: texture_pages.len() as u16,
-            texture: GMTextureRef { index },
+            texture: GMRef::texture(index),
         });
         image::imageops::overlay(&mut cur_texture_page, &texture.img, x as i64, y as i64);
         x += texture.img.width() as usize;

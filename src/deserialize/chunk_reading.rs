@@ -1,4 +1,90 @@
-﻿use crate::deserialize::strings::{GMStringRef, GMStrings};
+﻿use crate::deserialize::strings::GMStrings;
+
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub enum RefKind {
+    String,
+    TexturePage,
+    TexturePageData,
+    Texture,
+    Sprite,
+    Audio,
+    Sound,
+    Function,
+    Script,
+    GameObject,
+    Font,
+    Background,
+}
+
+
+// stores actual referenced kind/datatype in `.kind`, to make mixing possible.
+// also has a fake type generic so that the kind/datatype can be specified in struct fields for clarity
+// if kind/datatype is mixed; use () as generic T
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct GMRef<T> {
+    pub index: usize,
+    kind: RefKind,
+    _marker: std::marker::PhantomData<T>,
+}
+impl<T> GMRef<T> {
+    pub fn new(index: usize, kind: RefKind) -> GMRef<T> {
+        Self {
+            index,
+            kind,
+            _marker: std::marker::PhantomData,
+        }
+    }
+    pub fn string(index: usize) -> Self {
+        Self::new(index, RefKind::String)
+    }
+    pub fn texture_page(index: usize) -> Self {
+        Self::new(index, RefKind::TexturePage)
+    }
+    pub fn texture_page_data(index: usize) -> Self {
+        Self::new(index, RefKind::TexturePageData)
+    }
+    pub fn texture(index: usize) -> Self {
+        Self::new(index, RefKind::Texture)
+    }
+    pub fn sprite(index: usize) -> Self {
+        Self::new(index, RefKind::Sprite)
+    }
+    pub fn audio(index: usize) -> Self {
+        Self::new(index, RefKind::Audio)
+    }
+    pub fn sound(index: usize) -> Self {
+        Self::new(index, RefKind::Sound)
+    }
+    pub fn function(index: usize) -> Self {
+        Self::new(index, RefKind::Function)
+    }
+    pub fn script(index: usize) -> Self {
+        Self::new(index, RefKind::Script)
+    }
+    pub fn game_object(index: usize) -> Self {
+        Self::new(index, RefKind::GameObject)
+    }
+    pub fn font(index: usize) -> Self {
+        Self::new(index, RefKind::Font)
+    }
+    pub fn background(index: usize) -> Self {
+        Self::new(index, RefKind::Background)
+    }
+}
+impl<'a, T> GMRef<T> {
+    pub fn resolve(&self, elements_by_index: &'a Vec<T>) -> Result<&'a T, String> {
+        elements_by_index.get(self.index)
+            .ok_or(format!(
+                "Could not resolve {} reference with \
+                index {} in list with length {}.",
+                std::any::type_name::<T>(),
+                self.index,
+                elements_by_index.len(),
+            ))
+    }
+}
+
 
 #[derive(Debug, Clone)]
 pub struct GMChunk<'a> {
@@ -246,20 +332,18 @@ impl GMChunk<'_> {
         }
     }
 
-    pub fn read_gm_string(&mut self, gm_strings: &GMStrings) -> Result<GMStringRef, String> {
+    pub fn read_gm_string(&mut self, gm_strings: &GMStrings) -> Result<GMRef<String>, String> {
         let string_abs_pos: usize = self.read_usize()?;
-
-        match gm_strings.get_string_by_pos(string_abs_pos) {
-            Some(string) => Ok(string),
-            None => Err(format!(
+        let string_ref = gm_strings.abs_pos_to_reference.get(&string_abs_pos)
+            .ok_or(format!(
                 "Could not read reference string with absolute position {} in chunk '{}' at \
-                position {} because it doesn't exist in the string map (length {}).",
+                position {} because it doesn't exist in the string map (length: {}).",
                 string_abs_pos,
                 self.name,
                 self.file_index - 4,
-                gm_strings.len(),
-            ))
-        }
+                gm_strings.abs_pos_to_reference.len(),
+            ))?;
+        Ok(string_ref.clone())
     }
 
     pub fn read_pointer_list(&mut self) -> Result<Vec<usize>, String> {

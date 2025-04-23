@@ -1,75 +1,44 @@
 ﻿use std::collections::{HashMap, HashSet};
-use crate::deserialize::chunk_reading::GMChunk;
-use crate::deserialize::strings::{GMStringRef, GMStrings};
+use crate::deserialize::chunk_reading::{GMChunk, GMRef};
+use crate::deserialize::strings::GMStrings;
 
 #[derive(Debug, Clone)]
 pub struct GMFunction {
-    pub name: GMStringRef,
+    pub name: GMRef<String>,
     // pub occurrences: HashSet<usize>,                // set of occurrences (call instructions) positions relative to chunk CODE
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct GMFunctionRef {
-    pub index: usize,
-}
-
-impl GMFunctionRef {
-    pub fn resolve(&self, functions: &GMFunctions) -> Result<GMFunction, String> {
-        match functions.functions_by_index.get(self.index) {
-            Some(func) => Ok(func.clone()),
-            None => Err(format!(     // internal error perchance
-                "Could not resolve function with index {} in list with length {}.",
-                self.index, functions.functions_by_index.len(),
-            )),
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct GMFunctions {
-    functions_by_index: Vec<GMFunction>,
-    occurrences_to_indexes: HashMap<usize, usize>,     // maps all occurrence addresses/positions (relative to chunk CODE) to function indexes
-}
-
-impl GMFunctions {
-    pub fn get_function_by_occurrence(&self, occurrence_position: usize) -> Result<GMFunctionRef, String> {
-        let function_index: usize = match self.occurrences_to_indexes.get(&occurrence_position) {
-            Some(index) => *index,
-            None => return Err(format!(
-                "Could not find any function with absolute occurrence position {} in map with length {} (functions len: {}).",
-                occurrence_position, self.occurrences_to_indexes.len(), self.functions_by_index.len(),
-            )),
-        };
-        Ok(GMFunctionRef {
-            index: function_index,
-        })
-    }
+    pub functions_by_index: Vec<GMFunction>,
+    pub occurrences_to_refs: HashMap<usize, GMRef<GMFunction>>,     // maps all occurrence addresses/positions (relative to chunk CODE) to function refs
 }
 
 #[derive(Debug, Clone)]
 pub struct GMCodeLocalVariable {
     pub index: usize,
-    pub name: GMStringRef,
+    pub name: GMRef<String>,
 }
 #[derive(Debug, Clone)]
 pub struct GMCodeLocal {
-    pub name: GMStringRef,
+    pub name: GMRef<String>,
     pub variables: Vec<GMCodeLocalVariable>,
 }
 
-pub fn parse_chunk_func(chunk: &mut GMChunk, strings: &GMStrings, chunk_CODE: &GMChunk) -> Result<(GMFunctions, Vec<GMCodeLocal>), String> {
+pub fn parse_chunk_func(chunk: &mut GMChunk, strings: &GMStrings, chunk_code: &GMChunk) -> Result<(GMFunctions, Vec<GMCodeLocal>), String> {
     chunk.file_index = 0;
     let functions_length: usize = chunk.read_usize()?;
     let mut functions_by_index: Vec<GMFunction> = Vec::with_capacity(functions_length);
-    let mut occurrences_to_indexes: HashMap<usize, usize> = HashMap::new();
+    let mut occurrences_to_refs: HashMap<usize, GMRef<GMFunction>> = HashMap::new();
 
     for i in 0..functions_length {
-        let function_name: GMStringRef = chunk.read_gm_string(strings)?;
+        let function_name: GMRef<String> = chunk.read_gm_string(strings)?;
         let occurrence_count: usize = chunk.read_usize()?;
-        let first_occurrence: i32 = chunk.read_i32()? - chunk_CODE.abs_pos as i32;
-        let occurrences: HashSet<usize> = get_occurrences(occurrence_count, first_occurrence, chunk_CODE);
+        let first_occurrence: i32 = chunk.read_i32()? - chunk_code.abs_pos as i32;
+        let occurrences: HashSet<usize> = get_occurrences(occurrence_count, first_occurrence, chunk_code);
         for occurrence in occurrences {
-            occurrences_to_indexes.insert(occurrence, i);
+            occurrences_to_refs.insert(occurrence, GMRef::function(i));
         }
         let function: GMFunction = GMFunction {
             name: function_name,
@@ -78,7 +47,7 @@ pub fn parse_chunk_func(chunk: &mut GMChunk, strings: &GMStrings, chunk_CODE: &G
     }
     let functions: GMFunctions = GMFunctions {
         functions_by_index,
-        occurrences_to_indexes,
+        occurrences_to_refs,
     };
 
     let code_locals_length: usize = chunk.read_usize()?;
@@ -86,12 +55,12 @@ pub fn parse_chunk_func(chunk: &mut GMChunk, strings: &GMStrings, chunk_CODE: &G
 
     for _ in 0..code_locals_length {
         let local_variables_count: usize = chunk.read_usize()?;
-        let name: GMStringRef = chunk.read_gm_string(&strings)?;
+        let name: GMRef<String> = chunk.read_gm_string(&strings)?;
         let mut variables: Vec<GMCodeLocalVariable> = Vec::with_capacity(local_variables_count);
 
         for _ in 0..local_variables_count {
             let variable_index: usize = chunk.read_usize()?;
-            let variable_name: GMStringRef = chunk.read_gm_string(&strings)?;
+            let variable_name: GMRef<String> = chunk.read_gm_string(&strings)?;
             let variable: GMCodeLocalVariable = GMCodeLocalVariable {
                 index: variable_index,
                 name: variable_name,
