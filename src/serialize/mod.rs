@@ -11,3 +11,5 @@ mod embedded_textures;
 mod functions;
 mod game_objects;
 mod stubs;
+mod sprites;
+mod sequence;

@@ -27,7 +27,7 @@ pub enum Image {
 
 
 pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Vec<GMEmbeddedTexture>, String> {
-    chunk.file_index = 0;
+    chunk.cur_pos = 0;
     let texture_count: usize = chunk.read_usize()?;
     let mut texture_pointers: Vec<usize> = Vec::with_capacity(texture_count);
 
@@ -37,7 +37,7 @@ pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Re
 
     let mut textures: Vec<GMEmbeddedTexture> = Vec::with_capacity(texture_count);
     for texture_start_position in texture_pointers {
-        chunk.file_index = texture_start_position;
+        chunk.cur_pos = texture_start_position;
         let texture: GMEmbeddedTexture = parse_texture(chunk, general_info)?;
         textures.push(texture);
     }
@@ -68,7 +68,7 @@ fn parse_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GM
     }
 
     let texture_start_position: usize = chunk.read_usize()? - chunk.abs_pos;
-    chunk.file_index = texture_start_position;
+    chunk.cur_pos = texture_start_position;
     let texture_data: Image = read_raw_texture(chunk, general_info)?;
 
     // println!("[TexturePage]  {:?}", texture_data);
@@ -96,8 +96,8 @@ fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
     static MAGIC_BZ2_QOI_HEADER: &[u8] = "2zoq".as_bytes();
     static MAGIC_QOI_HEADER: &[u8] = "fioq".as_bytes();
 
-    let start_position: usize = chunk.file_index;
-    let header: [u8; 8] = match chunk.data.get(chunk.file_index .. chunk.file_index+8) {
+    let start_position: usize = chunk.cur_pos;
+    let header: [u8; 8] = match chunk.data.get(chunk.cur_pos.. chunk.cur_pos +8) {
         Some(bytes) => bytes.try_into().unwrap(),
         None => return Err(format!(
             "Unexpected end of chunk while trying to read headers of texture at position {} in chunk 'TXTR'.",
@@ -107,18 +107,18 @@ fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
 
     if header == MAGIC_PNG_HEADER {
         // Parse PNG
-        chunk.file_index += 8;  // skip header
+        chunk.cur_pos += 8;  // skip header
         loop {
             let len: usize = chunk.read_usize_big_endian(true)?;
             let type_: usize = chunk.read_usize_big_endian(false)?;
-            chunk.file_index += len + 4;
+            chunk.cur_pos += len + 4;
             if type_ == 0x49454E44 {
                 break;
             }
         }
 
 
-        let bytes: &[u8] = &chunk.data[start_position .. chunk.file_index];
+        let bytes: &[u8] = &chunk.data[start_position .. chunk.cur_pos];
         // png image size checks etc. {}
         let image: image::DynamicImage = match image::load_from_memory(&bytes) {
             Ok(img) => img,
@@ -131,7 +131,7 @@ fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
     }
     else if header.starts_with(MAGIC_BZ2_QOI_HEADER) {
         // Parse QOI + BZip2
-        chunk.file_index += 8;      // skip past (start of) header
+        chunk.cur_pos += 8;      // skip past (start of) header
         let mut header_size: usize = 8;
         if general_info.is_version_at_least(2022, 5, 0, 0) {
             let _serialized_uncompressed_length = chunk.read_usize()?;    // maybe handle negative numbers?
@@ -144,15 +144,15 @@ fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
         let height: usize = ((header[6] as u32) | ((header[7] as u32) << 8)) as usize;
 
         // read entire image (excluding bz2 header) to byte array
-        chunk.file_index = start_position + header_size;
-        let raw_image_data: &[u8] = &chunk.data[chunk.file_index .. chunk.file_index + compressed_length];
-        chunk.file_index += compressed_length;
+        chunk.cur_pos = start_position + header_size;
+        let raw_image_data: &[u8] = &chunk.data[chunk.cur_pos.. chunk.cur_pos + compressed_length];
+        chunk.cur_pos += compressed_length;
         let image: Image = image_from_bz2_qoi(&raw_image_data, width, height)?;
         Ok(image)
     }
     else if header.starts_with(MAGIC_QOI_HEADER) {
         // Parse QOI
-        panic!("Unhandled QOI image at position {} in chunk 'TXTR'.", chunk.file_index);
+        panic!("Unhandled QOI image at position {} in chunk 'TXTR'.", chunk.cur_pos);
         // image_from_qoi(chunk.data[chunk..])
     }
     else {
@@ -163,7 +163,7 @@ fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
 
 
 fn find_end_of_bz2_stream(gm_chunk: &mut GMChunk) -> Result<usize, String> {
-    let stream_start_position: usize = gm_chunk.file_index;
+    let stream_start_position: usize = gm_chunk.cur_pos;
     // Read backwards from the max end of stream position, in up to 256-byte chunks.
     // We want to find the end of nonzero data.
     static MAX_CHUNK_SIZE: usize = 256;
@@ -171,9 +171,9 @@ fn find_end_of_bz2_stream(gm_chunk: &mut GMChunk) -> Result<usize, String> {
     let mut chunk_start_position: usize = max(stream_start_position, gm_chunk.data.len() - MAX_CHUNK_SIZE);
     let chunk_size: usize = gm_chunk.data.len() - chunk_start_position;
     loop {
-        gm_chunk.file_index = chunk_start_position;
-        let chunk_data: &[u8] = &gm_chunk.data[gm_chunk.file_index .. gm_chunk.file_index + chunk_size];
-        gm_chunk.file_index += chunk_size;
+        gm_chunk.cur_pos = chunk_start_position;
+        let chunk_data: &[u8] = &gm_chunk.data[gm_chunk.cur_pos.. gm_chunk.cur_pos + chunk_size];
+        gm_chunk.cur_pos += chunk_size;
 
         // find first nonzero byte at end of stream
         let mut position: isize = chunk_size as isize - 1;

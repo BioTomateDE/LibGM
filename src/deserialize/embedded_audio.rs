@@ -11,7 +11,7 @@ pub struct GMEmbeddedAudios {
 }
 
 pub fn parse_chunk_audo(chunk: &mut GMChunk) -> Result<GMEmbeddedAudios, String> {
-    chunk.file_index = 0;
+    chunk.cur_pos = 0;
     let audios_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(audios_count);
     for _ in 0..audios_count {
@@ -20,13 +20,13 @@ pub fn parse_chunk_audo(chunk: &mut GMChunk) -> Result<GMEmbeddedAudios, String>
 
     let mut audios_by_index: Vec<GMEmbeddedAudio> = Vec::with_capacity(audios_count);
     for (i, start_position) in start_positions.iter().enumerate() {
-        chunk.file_index = *start_position;
+        chunk.cur_pos = *start_position;
         let audio_raw_length: usize = chunk.read_usize()?;
-        let audio_raw: &[u8] = match chunk.data.get(chunk.file_index .. chunk.file_index + audio_raw_length) {
+        let audio_raw: &[u8] = match chunk.data.get(chunk.cur_pos.. chunk.cur_pos + audio_raw_length) {
             Some(bytes) => bytes,
             None => return Err(format!(
                 "Trying to read raw audio out of bounds for embedded audio #{} at position {} in chunk 'AUDO': {} >= {}.",
-                i, start_position, chunk.file_index + audio_raw_length, chunk.data.len(),
+                i, start_position, chunk.cur_pos + audio_raw_length, chunk.data.len(),
             )),
         };
 

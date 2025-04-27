@@ -1,11 +1,13 @@
 use num_enum::TryFromPrimitive;
-use crate::deserialize::chunk_reading::GMChunk;
+use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::sprites::align_reader;
+use crate::deserialize::texture_page_items::GMTexture;
 
 #[derive(Debug, Clone)]
-pub struct GMSpriteYYSWF {
-    pub version: i32,
+pub struct GMSpriteTypeSWF {
+    pub swf_version: i32,
+    pub yyswf_version: i32,
     pub jpeg_table: Vec<u8>,
     pub timeline: GMSpriteYYSWFTimeline,
 }
@@ -229,15 +231,15 @@ pub fn parse_yyswf_timeline(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -
     for _ in 0..collision_masks_count {
         let rle_length: usize = chunk.read_usize()?;        // could be -1 idk
 
-        let rle_data: Vec<u8> = match chunk.data.get(chunk.file_index .. chunk.file_index+rle_length) {
+        let rle_data: Vec<u8> = match chunk.data.get(chunk.cur_pos.. chunk.cur_pos +rle_length) {
             Some(bytes) => bytes.to_vec(),
             None => return Err(format!(
                 "Trying to read RLE Data of Timeline out of bounds while parsing \
                 Sprite YYSWF at position {} in chunk '{}': {} > {}.",
-                chunk.name, chunk.file_index, chunk.file_index + rle_length, chunk.data.len(),
+                chunk.name, chunk.cur_pos, chunk.cur_pos + rle_length, chunk.data.len(),
             )),
         };
-        chunk.file_index += rle_length;
+        chunk.cur_pos += rle_length;
         align_reader(chunk, 4, 0x00)?;      // [From UndertaleModTool] "why it's not aligned before the data is beyond my brain."
 
         collision_masks.push(GMSpriteYYSWFCollisionMask {rle_data});
@@ -264,7 +266,7 @@ fn parse_yyswf_item(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
         Ok(ok) => ok,
         Err(_) => return Err(format!(
             "Invalid YYSWF Item Type 0x{:08X} at position {} while parsing Sprite YYSWF in chunk '{}'.",
-            item_type, chunk.file_index, chunk.name,
+            item_type, chunk.cur_pos, chunk.name,
         )),
     };
     let id: i32 = chunk.read_i32()?;
@@ -367,7 +369,7 @@ fn parse_yyswf_fill_data(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> R
                 Ok(ok) => ok,
                 Err(_) => return Err(format!(
                     "Invalid YYSWF Fill Gradient Type 0x{:08X} at position {} while parsing Sprite YYSWF in chunk '{}'.",
-                    gradient_fill_type, chunk.file_index, chunk.name,
+                    gradient_fill_type, chunk.cur_pos, chunk.name,
                 )),
             };
 
@@ -409,7 +411,7 @@ fn parse_yyswf_fill_data(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> R
                 Ok(ok) => ok,
                 Err(_) => return Err(format!(
                     "Invalid YYSWF Bitmap Fill Type 0x{:08X} at position {} while parsing Sprite YYSWF in chunk '{}'.",
-                    bitmap_fill_type, chunk.file_index, chunk.name,
+                    bitmap_fill_type, chunk.cur_pos, chunk.name,
                 ))
             };
             let char_id: i32 = chunk.read_i32()?;
@@ -424,7 +426,7 @@ fn parse_yyswf_fill_data(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> R
 
         _ => Err(format!(
             "Invalid YYSWF Fill Type 0x{:08X} at position {} while parsing Sprite YYSWF in chunk '{}'.",
-            fill_type, chunk.file_index, chunk.name,
+            fill_type, chunk.cur_pos, chunk.name,
         )),
     }
 }
@@ -501,7 +503,7 @@ fn parse_yyswf_bitmap_data(chunk: &mut GMChunk, general_info: &GMGeneralInfo) ->
         Ok(ok) => ok,
         Err(_) => return Err(format!(
             "Invalid YYSWF Bitmap Type 0x{:08X} at position {} while parsing Sprite YYSWF in chunk '{}'.",
-            bitmap_type, chunk.file_index, chunk.name,
+            bitmap_type, chunk.cur_pos, chunk.name,
         )),
     };
 
@@ -520,35 +522,35 @@ fn parse_yyswf_bitmap_data(chunk: &mut GMChunk, general_info: &GMGeneralInfo) ->
         let alpha_data_length: usize = chunk.read_usize()?;
         let color_palette_data_length: usize = chunk.read_usize()?;
 
-        image_data = match chunk.data.get(chunk.file_index .. chunk.file_index+image_data_length) {
+        image_data = match chunk.data.get(chunk.cur_pos.. chunk.cur_pos +image_data_length) {
             Some(bytes) => bytes.to_vec(),
             None => return Err(format!(
                 "Trying to read Image Data of Bitmap Data out of bounds while parsing \
                 Sprite YYSWF at position {} in chunk '{}': {} > {}.",
-                chunk.name, chunk.file_index, chunk.file_index + image_data_length, chunk.data.len(),
+                chunk.name, chunk.cur_pos, chunk.cur_pos + image_data_length, chunk.data.len(),
             )),
         };
-        chunk.file_index += image_data_length;
+        chunk.cur_pos += image_data_length;
 
-        alpha_data = match chunk.data.get(chunk.file_index .. chunk.file_index+alpha_data_length) {
+        alpha_data = match chunk.data.get(chunk.cur_pos.. chunk.cur_pos +alpha_data_length) {
             Some(bytes) => bytes.to_vec(),
             None => return Err(format!(
                 "Trying to read Alpha Data of Bitmap Data out of bounds while parsing \
                 Sprite YYSWF at position {} in chunk '{}': {} > {}.",
-                chunk.name, chunk.file_index, chunk.file_index + alpha_data_length, chunk.data.len(),
+                chunk.name, chunk.cur_pos, chunk.cur_pos + alpha_data_length, chunk.data.len(),
             )),
         };
-        chunk.file_index += alpha_data_length;
+        chunk.cur_pos += alpha_data_length;
 
-        color_palette_data = match chunk.data.get(chunk.file_index .. chunk.file_index+color_palette_data_length) {
+        color_palette_data = match chunk.data.get(chunk.cur_pos.. chunk.cur_pos +color_palette_data_length) {
             Some(bytes) => bytes.to_vec(),
             None => return Err(format!(
                 "Trying to read Color Palette Data of Bitmap Data out of bounds while parsing \
                 Sprite YYSWF at position {} in chunk '{}': {} > {}.",
-                chunk.name, chunk.file_index, chunk.file_index + color_palette_data_length, chunk.data.len(),
+                chunk.name, chunk.cur_pos, chunk.cur_pos + color_palette_data_length, chunk.data.len(),
             )),
         };
-        chunk.file_index += color_palette_data_length;
+        chunk.cur_pos += color_palette_data_length;
 
         align_reader(chunk, 4, 0x00)?;
 

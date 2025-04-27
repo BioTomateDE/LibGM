@@ -33,7 +33,7 @@ pub struct GMSounds {
 
 
 pub fn parse_chunk_sond(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMSounds, String> {
-    chunk.file_index = 0;
+    chunk.cur_pos = 0;
     let sounds_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(sounds_count);
     for _ in 0..sounds_count {
@@ -42,7 +42,7 @@ pub fn parse_chunk_sond(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
 
     let mut sounds_by_index: Vec<GMSound> = Vec::with_capacity(sounds_count);
     for start_position in start_positions {
-        chunk.file_index = start_position;
+        chunk.cur_pos = start_position;
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
         let flags: GMSoundFlags = parse_sound_flags(chunk.read_u32()?);
         let audio_type: GMRef<String> = chunk.read_gm_string(strings)?;
