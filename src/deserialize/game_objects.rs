@@ -1,20 +1,21 @@
 use crate::deserialize::chunk_reading::GMRef;
-use num_enum::TryFromPrimitive;
+use num_enum::{TryFromPrimitive, IntoPrimitive};
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::general_info::GMGeneralInfo;
+use crate::deserialize::sprites::GMSprite;
 use crate::deserialize::strings::GMStrings;
 
 #[derive(Debug, Clone)]
 pub struct GMGameObject {
     pub name: GMRef<String>,
-    pub sprite_index: i32,
+    pub sprite: Option<GMRef<GMSprite>>,
     pub visible: bool,
     pub managed: Option<bool>,
     pub solid: bool,
     pub depth: i32,
     pub persistent: bool,
     pub parent_id: i32,
-    pub texture_mask_id: i32,                   // {!!} change type to sprite ref
+    pub texture_mask: Option<GMRef<GMSprite>>,
     pub uses_physics: bool,
     pub is_sensor: bool,
     pub collision_shape: GMGameObjectCollisionShape,
@@ -27,10 +28,11 @@ pub struct GMGameObject {
     pub awake: bool,
     pub kinematic: bool,
     pub physics_shape_vertices: Vec<(f32, f32)>,
+    pub uses_physics_shape_vertex: bool,
     pub events: Vec<Vec<GMGameObjectEvent>>,
 }
 
-#[derive(Debug, Clone, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
 #[repr(u32)]
 pub enum GMGameObjectCollisionShape {
     Circle = 0,
@@ -81,7 +83,12 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
     for start_position in start_positions {
         chunk.file_index = start_position;
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
-        let sprite_index: i32 = chunk.read_i32()?;        // TODO usize, sprite ref
+        let sprite: Option<GMRef<GMSprite>> = match chunk.read_i32()? {
+            -1 => None,
+            index => Some(GMRef::sprite(index.try_into().map_err(|_| format!(
+                "Invalid negative sprite index {} for game object's sprite \"{}\" at absolute position {}",
+                index, name.display(strings), start_position + chunk.abs_pos))?)),
+        };
         let visible: bool = chunk.read_u32()? != 0;
         let mut managed: Option<bool> = None;
         if general_info.is_version_at_least(2022, 5, 0, 0) {
@@ -91,7 +98,12 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
         let depth: i32 = chunk.read_i32()?;
         let persistent: bool = chunk.read_u32()? != 0;
         let parent_id: i32 = chunk.read_i32()?;         // TODO usize, object ref  | parent can be: -100 (undefined), -2 (other [not here]), or -1 (self)
-        let texture_mask_id: i32 = chunk.read_i32()?;   // TODO sprite ref
+        let texture_mask: Option<GMRef<GMSprite>> = match chunk.read_i32()? {
+            -1 => None,
+            index => Some(GMRef::sprite(index.try_into().map_err(|_| format!(
+                "Invalid negative sprite index {} for game object's texture mask \"{}\" at absolute position {}",
+                index, name.display(strings), start_position + chunk.abs_pos))?)),
+        };
         let uses_physics: bool = chunk.read_u32()? != 0;
         let is_sensor: bool = chunk.read_u32()? != 0;
         let collision_shape: u32 = chunk.read_u32()?;
@@ -108,6 +120,7 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
         let linear_damping: f32 = chunk.read_f32()?;
         let angular_damping: f32 = chunk.read_f32()?;
         let physics_shape_vertex_count: i32 = chunk.read_i32()?;
+        let uses_physics_shape_vertex: bool = physics_shape_vertex_count == -1;
         let physics_shape_vertex_count: usize = if physics_shape_vertex_count < 0 {0} else {physics_shape_vertex_count as usize};
         let friction: f32 = chunk.read_f32()?;
         let awake: bool = chunk.read_u32()? != 0;
@@ -119,23 +132,17 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
             physics_shape_vertices.push((x, y));
         }
         let events: Vec<Vec<GMGameObjectEvent>> = parse_game_object_events(chunk, strings)?;
-        // println!("\n\n\n############################ {} ##################################", name.resolve(strings)?);
-        // for i in &events {
-        //     for j in i {
-        //         j.print(strings)?;
-        //     }
-        // }
 
         game_objects_by_index.push(GMGameObject {
             name,
-            sprite_index,
+            sprite,
             visible,
             managed,
             solid,
             depth,
             persistent,
             parent_id,
-            texture_mask_id,
+            texture_mask,
             uses_physics,
             is_sensor,
             collision_shape,
@@ -148,6 +155,7 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
             awake,
             kinematic,
             physics_shape_vertices,
+            uses_physics_shape_vertex,
             events,
         })
     }
@@ -189,7 +197,7 @@ fn parse_game_object_event_instances(chunk: &mut GMChunk, strings: &GMStrings) -
     for start_position in start_positions {
         chunk.file_index = start_position;
         let subtype: u32 = chunk.read_u32()?;
-        let actions: Vec<GMGameObjectEventAction> = parse_game_object_events_actions(chunk, strings)?;
+        let actions: Vec<GMGameObjectEventAction> = parse_game_object_event_actions(chunk, strings)?;
 
         events.push(GMGameObjectEvent {
             subtype,
@@ -202,7 +210,7 @@ fn parse_game_object_event_instances(chunk: &mut GMChunk, strings: &GMStrings) -
 }
 
 
-fn parse_game_object_events_actions(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMGameObjectEventAction>, String> {
+fn parse_game_object_event_actions(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMGameObjectEventAction>, String> {
     let actions_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(actions_count);
     for _ in 0..actions_count {
@@ -213,20 +221,20 @@ fn parse_game_object_events_actions(chunk: &mut GMChunk, strings: &GMStrings) ->
 
     for start_position in start_positions {
         chunk.file_index = start_position;
-        let lib_id = chunk.read_u32()?;
-        let id = chunk.read_u32()?;
-        let kind = chunk.read_u32()?;
-        let use_relative = chunk.read_u32()? != 0;
-        let is_question = chunk.read_u32()? != 0;
-        let use_apply_to = chunk.read_u32()? != 0;
-        let exe_type = chunk.read_u32()?;
-        let action_name = chunk.read_gm_string(strings)?;
-        let code_id = chunk.read_i32()?;                    // {!!} replace type with code ref
-        let argument_count = chunk.read_u32()?;
-        let who = chunk.read_i32()?;
-        let relative = chunk.read_u32()? != 0;
-        let is_not = chunk.read_u32()? != 0;
-        let unknown_always_zero = chunk.read_u32()?;
+        let lib_id: u32 = chunk.read_u32()?;
+        let id: u32 = chunk.read_u32()?;
+        let kind: u32 = chunk.read_u32()?;
+        let use_relative: bool = chunk.read_u32()? != 0;
+        let is_question: bool = chunk.read_u32()? != 0;
+        let use_apply_to: bool = chunk.read_u32()? != 0;
+        let exe_type: u32 = chunk.read_u32()?;
+        let action_name: GMRef<String> = chunk.read_gm_string(strings)?;
+        let code_id: i32 = chunk.read_i32()?;                    // {!!} replace type with code ref
+        let argument_count: u32 = chunk.read_u32()?;
+        let who: i32 = chunk.read_i32()?;
+        let relative: bool = chunk.read_u32()? != 0;
+        let is_not: bool = chunk.read_u32()? != 0;
+        let unknown_always_zero: u32 = chunk.read_u32()?;
 
         actions.push(GMGameObjectEventAction {
             lib_id,

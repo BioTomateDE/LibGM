@@ -130,3 +130,11 @@ impl ChunkBuilder {
     }
 }
 
+
+impl GMRef<String> {
+    pub fn display<'a>(&self, gm_strings: &'a GMStrings) -> &'a str {
+        self.resolve(&gm_strings.strings_by_index)
+            .map(|i| i.as_str())
+            .unwrap_or("<invalid string reference>")
+    }
+}
