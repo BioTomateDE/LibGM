@@ -144,7 +144,6 @@ pub fn parse_chunk_room(
     chunk: &mut GMChunk,
     general_info: &GMGeneralInfo,
     gm_strings: &GMStrings,
-    gm_backgrounds: &GMBackgrounds,
 ) -> Result<Vec<GMRoom>, String> {
     chunk.cur_pos = 0;
     let room_count: usize = chunk.read_usize()?;

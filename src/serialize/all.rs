@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 use image::DynamicImage;
 use crate::deserialize::all::GMData;
-use crate::deserialize::chunk_reading::GMRef;
+use crate::deserialize::chunk_reading::{GMRef, RefKind};
 use crate::deserialize::texture_page_items::{GMTexturePageItem};
 use crate::serialize::chunk_writing::ChunkBuilder;
 use crate::serialize::embedded_audio::build_chunk_audo;
@@ -15,6 +15,7 @@ use crate::serialize::strings::build_chunk_strg;
 use crate::serialize::general_info::{build_chunk_optn, build_chunk_gen8};
 use crate::serialize::scripts::build_chunk_scpt;
 use crate::serialize::sounds::build_chunk_sond;
+use crate::serialize::sprites::build_chunk_sprt;
 use crate::serialize::stubs::{build_chunk_agrp, build_chunk_code, build_chunk_dafl, build_chunk_extn, build_chunk_shdr, build_chunk_tmln};
 use crate::serialize::texture_page_items::{build_chunk_tpag, generate_texture_pages};
 
@@ -36,6 +37,7 @@ impl DataBuilder {
     /// that element will be located in the data file.
     pub fn push_pointer_placeholder<T>(&mut self, chunk_builder: &mut ChunkBuilder, reference: GMRef<T>) -> Result<(), String> {
         let position: usize = self.len() + chunk_builder.len();
+        let reference: GMRef<()> = GMRef::new(reference.index, reference.kind);
         chunk_builder.write_usize(0);      // write placeholder
         self.pointer_pool_placeholders.insert(reference, position);
         Ok(())
@@ -44,11 +46,12 @@ impl DataBuilder {
     /// Store the gamemaker element's absolute position in the pool.
     /// The element's absolute position is the chunk builder's current position,
     /// since this method should get called when the element is built to the data file.
-    pub fn push_pointer_resolve(&mut self, chunk_builder: &mut ChunkBuilder, reference: GMRef<()>) -> Result<(), String> {
+    pub fn push_pointer_resolve<T>(&mut self, chunk_builder: &mut ChunkBuilder, reference: GMRef<T>) -> Result<(), String> {
         let position: usize = chunk_builder.abs_pos + chunk_builder.len();
-        if let Some(old_value) = self.pointer_pool_resources.insert(reference.clone(), position) {
+        let reference_kind: RefKind = reference.kind.clone();
+        if let Some(old_value) = self.pointer_pool_resources.insert(reference.erase_type(), position) {
             return Err(format!("Reference to {:?} already resolved to absolute position {}; \
-            tried to resolve again to position {}", reference.kind, old_value, position))
+            tried to resolve again to position {}", reference_kind, old_value, position))
         }
         Ok(())
     }
