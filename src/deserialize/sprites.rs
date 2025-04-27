@@ -168,7 +168,7 @@ pub fn parse_chunk_sprt(
 
             let mut sequence: Option<GMSequence> = None;
             let mut nine_slice: Option<GMSpriteNineSlice> = None;
-            let mut yyswf: Option<GMSpriteTypeSWF> = None;
+            let yyswf: Option<GMSpriteTypeSWF> = None;
 
             let playback_speed: f32 = chunk.read_f32()?;
             let playback_speed_type: u32 = chunk.read_u32()?;
@@ -205,7 +205,7 @@ pub fn parse_chunk_sprt(
                     if !(swf_version == 7 || swf_version == 8) {
                         return Err(format!(
                             "Invalid SWF version {swf_version} for Sprite \"{}\" at absolute position {}.",
-                            name.resolve(&strings.strings_by_index), start_position + chunk.abs_pos,
+                            name.display(strings), start_position + chunk.abs_pos,
                         ))
                     }
                     if swf_version == 8 {

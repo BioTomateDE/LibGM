@@ -113,7 +113,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let audios: GMEmbeddedAudios = parse_chunk_audo(&mut chunk_audo)?;
     let sounds: GMSounds = parse_chunk_sond(&mut chunk_sond, &general_info, &strings)?;
     let game_objects: GMGameObjects = parse_chunk_objt(&mut chunk_objt, &general_info, &strings)?;
-    let rooms: Vec<GMRoom> = parse_chunk_room(&mut chunk_room, &general_info, &strings, &backgrounds)?;
+    let rooms: Vec<GMRoom> = parse_chunk_room(&mut chunk_room, &general_info, &strings)?;
 
     let data = GMData {
         strings,

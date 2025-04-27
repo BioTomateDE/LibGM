@@ -41,7 +41,7 @@ pub struct GMKeyframe {
     pub length: f32,
     pub stretch: bool,
     pub disabled: bool,
-    pub channels: Vec<i32>,
+    pub channels: Vec<i32>,   // {~~} TODO change ts to HashMap
 }
 #[derive(Debug, Clone)]
 pub struct GMTrack {
@@ -54,6 +54,7 @@ pub struct GMTrack {
     pub sub_tracks: Vec<GMTrack>,
     pub keyframes: Vec<GMKeyframe>,
     pub owned_resources: Vec<GMAnimationCurve>,
+    pub anim_curve_string: Option<GMRef<String>>,
 }
 #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
@@ -132,15 +133,15 @@ pub fn parse_sequence(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
     let name: GMRef<String> = chunk.read_gm_string(strings)?;
     let playback: u32 = chunk.read_u32()?;
     let playback: GMSequencePlaybackType = playback.try_into()
-        .map_err(Err(format!(
+        .map_err(|_| format!(
             "Invalid Sequence Playback Type 0x{:04X} while parsing sequence at position {} in chunk '{}'.",
-            playback, chunk.cur_pos, chunk.name)))?;
+            playback, chunk.cur_pos, chunk.name))?;
     let playback_speed: f32 = chunk.read_f32()?;
     let playback_speed_type: u32 = chunk.read_u32()?;
     let playback_speed_type: GMAnimSpeedType = playback_speed_type.try_into()
-        .map_err(|e| Err(format!(
+        .map_err(|_| format!(
             "Invalid Sequence Anim Speed Type 0x{:04X} while parsing sequence at position {} in chunk '{}'.",
-            playback_speed_type, chunk.cur_pos, chunk.name)))?;
+            playback_speed_type, chunk.cur_pos, chunk.name))?;
     let length: f32 = chunk.read_f32()?;
     let origin_x: i32 = chunk.read_i32()?;
     let origin_y: i32 = chunk.read_i32()?;
@@ -202,21 +203,20 @@ fn parse_broadcast_messages(chunk: &mut GMChunk, strings: &GMStrings) -> Result<
 
 
 fn parse_track(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMTrack, String> {
-    // force read string {}
     let model_name: GMRef<String> = chunk.read_gm_string(strings)?;
     let name: GMRef<String> = chunk.read_gm_string(strings)?;
     let builtin_name: i32 = chunk.read_i32()?;
     let builtin_name: GMTrackBuiltinName = builtin_name.try_into()
-        .map_err(|e| Err(format!(
+        .map_err(|_| format!(
             "Invalid Track builtin name 0x{:04X} while parsing Track at position {} in chunk '{}'.",
             builtin_name, chunk.cur_pos, chunk.name
-        )))?;
+        ))?;
     let traits: i32 = chunk.read_i32()?;
     let traits: GMTrackTraits = traits.try_into()
-        .map_err(|e| Err(format!(
+        .map_err(|_| format!(
             "Invalid Track traits 0x{:04X} while parsing Track at position {} in chunk '{}'.",
             traits, chunk.cur_pos, chunk.name
-        )))?;
+        ))?;
     let is_creation_track: bool = chunk.read_u32()? != 0;
 
     let mut tag_count: i32 = chunk.read_i32()?;
@@ -260,14 +260,19 @@ fn parse_track(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMSt
         tags.push(chunk.read_i32()?);
     }
 
+    let mut anim_curve_string: Option<GMRef<String>> = None;
+
     let mut owned_resources: Vec<GMAnimationCurve> = Vec::with_capacity(owned_resources_count);
     for _ in 0..owned_resources_count {
-        let gm_anim_curve_setting: &String = chunk.read_gm_string(strings)?.resolve(&strings.strings_by_index)?;
-        if gm_anim_curve_setting != "GMAnimCurve" {
+        let gm_anim_curve_string: GMRef<String> = chunk.read_gm_string(strings)?;
+        if gm_anim_curve_string.resolve(&strings.strings_by_index)? != "GMAnimCurve" {
             return Err(format!(
                 "Expected owned resource thingy of Track to be \"GMAnimCurve\"; but found \"{}\" for Track \"{}\" at absolute position {}.",
-                gm_anim_curve_setting, name.display(strings), chunk.cur_pos + chunk.abs_pos,
+                gm_anim_curve_string.display(strings), name.display(strings), chunk.cur_pos + chunk.abs_pos,
             ));
+        }
+        if anim_curve_string.is_none() {
+            anim_curve_string = Some(gm_anim_curve_string);
         }
         owned_resources.push(parse_anim_curve(chunk, general_info, strings)?);
     }
@@ -277,7 +282,7 @@ fn parse_track(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMSt
         sub_tracks.push(parse_track(chunk, general_info, strings)?);
     }
 
-    // TODO keyframes with different types {}
+    // TODO keyframes with different types {~~}
     let keyframes: Vec<GMKeyframe> = vec![];
 
     Ok(GMTrack {
@@ -290,6 +295,7 @@ fn parse_track(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMSt
         sub_tracks,
         keyframes,
         owned_resources,
+        anim_curve_string,
     })
 }
 

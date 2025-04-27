@@ -45,10 +45,12 @@ pub fn build_chunk_sprt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
                 builder.write_f32(specials.playback_speed);
                 builder.write_u32(specials.playback_speed_type.into());
                 if specials.special_version >= 2 {
-                    data_builder.push_pointer_placeholder(&mut builder, GMRef::sprite_sequence_position(builder.abs_pos + builder.len()))?;
+                    let position: usize = builder.abs_pos + builder.len();
+                    data_builder.push_pointer_placeholder(&mut builder, GMRef::sprite_sequence_position(position))?;
                 }
                 if specials.special_version >= 3 {
-                    data_builder.push_pointer_placeholder(&mut builder, GMRef::sprite_nine_slice_position(builder.abs_pos + builder.len()))?;
+                    let position: usize = builder.abs_pos + builder.len();
+                    data_builder.push_pointer_placeholder(&mut builder, GMRef::sprite_nine_slice_position(position))?;
                 }
             }
 
@@ -72,9 +74,18 @@ pub fn build_chunk_sprt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
             }
 
             if specials.special_version >= 2 {
-                data_builder.push_pointer_resolve(&mut builder, GMRef::sprite_sequence_position(builder.abs_pos + builder.len()))?;
+                let position: usize = builder.abs_pos + builder.len();
+                data_builder.push_pointer_resolve(&mut builder, GMRef::sprite_sequence_position(position))?;
                 builder.write_i32(1);
-                build_sequence()?
+                match &specials.sequence {
+                    Some(sequence) => build_sequence(data_builder, &mut builder, &gm_data.general_info, &gm_data.strings, sequence)?,
+                    None => return Err(format!(
+                        "Sequence not set for Sprite \"{}\" at absolute position {}.",
+                        sprite.name.display(&gm_data.strings), builder.abs_pos + builder.len(),
+                    )),
+                }
+                // TODO continue ts
+
             }
 
         } else {

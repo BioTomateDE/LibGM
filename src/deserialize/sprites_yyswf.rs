@@ -1,8 +1,7 @@
 use num_enum::TryFromPrimitive;
-use crate::deserialize::chunk_reading::{GMChunk, GMRef};
+use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::sprites::align_reader;
-use crate::deserialize::texture_page_items::GMTexture;
 
 #[derive(Debug, Clone)]
 pub struct GMSpriteTypeSWF {
