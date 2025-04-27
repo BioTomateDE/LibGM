@@ -16,10 +16,10 @@ pub fn build_chunk_sond(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     for i in 0..len {
         data_builder.push_pointer_resolve(&mut builder, GMRef::sound(i))?;
         let sound: &GMSound = &gm_data.sounds.sounds_by_index[i];
-        builder.write_gm_string(&sound.name, &gm_data.strings)?;
+        builder.write_gm_string(data_builder, &sound.name)?;
         builder.write_u32(build_sound_flags(&sound.flags));
-        builder.write_gm_string(&sound.audio_type, &gm_data.strings)?;
-        builder.write_gm_string(&sound.file, &gm_data.strings)?;
+        builder.write_gm_string(data_builder, &sound.audio_type)?;
+        builder.write_gm_string(data_builder, &sound.file)?;
         builder.write_u32(sound.effects);
         builder.write_f32(sound.volume);
         builder.write_f32(sound.pitch);

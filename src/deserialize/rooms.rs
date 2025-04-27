@@ -146,7 +146,7 @@ pub fn parse_chunk_room(
     gm_strings: &GMStrings,
     gm_backgrounds: &GMBackgrounds,
 ) -> Result<Vec<GMRoom>, String> {
-    chunk.file_index = 0;
+    chunk.cur_pos = 0;
     let room_count: usize = chunk.read_usize()?;
     let mut room_starting_positions: Vec<usize> = Vec::with_capacity(room_count);
     for _ in 0..room_count {
@@ -156,7 +156,7 @@ pub fn parse_chunk_room(
 
     let mut rooms: Vec<GMRoom> = Vec::with_capacity(room_count);
     for start_position in room_starting_positions {
-        chunk.file_index = start_position;
+        chunk.cur_pos = start_position;
 
         let name: GMRef<String> = chunk.read_gm_string(gm_strings)?;
         let caption: GMRef<String> = chunk.read_gm_string(gm_strings)?;
@@ -185,7 +185,7 @@ pub fn parse_chunk_room(
         if general_info.is_version_at_least(2, 0, 0, 0) {
             layers = Some(parse_room_layers(chunk, gm_strings)?);
             if general_info.is_version_at_least(2, 3, 0, 0) {
-                sequences = Some(parse_room_sequences(chunk, gm_strings)?);
+                sequences = Some(parse_room_sequences(chunk, general_info, gm_strings)?);
             }
         }
 
@@ -235,11 +235,11 @@ fn parse_room_flags(raw: u32) -> GMRoomFlags {
 
 fn parse_room_views(chunk: &mut GMChunk) -> Result<Vec<GMRoomView>, String> {
     let view_pointers: Vec<usize> = chunk.read_pointer_list()?;
-    let old_position: usize = chunk.file_index;
+    let old_position: usize = chunk.cur_pos;
     let mut views: Vec<GMRoomView> = Vec::with_capacity(view_pointers.len());
 
     for pointer in view_pointers {
-        chunk.file_index = pointer;
+        chunk.cur_pos = pointer;
 
         let enabled: bool = chunk.read_u32()? != 0;
         let view_x: i32 = chunk.read_i32()?;
@@ -275,7 +275,7 @@ fn parse_room_views(chunk: &mut GMChunk) -> Result<Vec<GMRoomView>, String> {
         views.push(view);
     }
 
-    chunk.file_index = old_position;
+    chunk.cur_pos = old_position;
     Ok(views)
 }
 
@@ -284,11 +284,11 @@ fn parse_room_objects(
     general_info: &GMGeneralInfo,
 ) -> Result<Vec<GMRoomGameObject>, String> {
     let game_object_pointers: Vec<usize> = chunk.read_pointer_list()?;
-    let old_position: usize = chunk.file_index;
+    let old_position: usize = chunk.cur_pos;
     let mut room_game_objects: Vec<GMRoomGameObject> = Vec::with_capacity(game_object_pointers.len());
 
     for pointer in game_object_pointers {
-        chunk.file_index = pointer;
+        chunk.cur_pos = pointer;
         let x: i32 = chunk.read_i32()?;
         let y: i32 = chunk.read_i32()?;
         let object_definition: usize = chunk.read_usize()?;
@@ -327,17 +327,17 @@ fn parse_room_objects(
         room_game_objects.push(room_game_object);
     }
 
-    chunk.file_index = old_position;
+    chunk.cur_pos = old_position;
     Ok(room_game_objects)
 }
 
 fn parse_room_backgrounds(chunk: &mut GMChunk) -> Result<Vec<GMRoomBackground>, String> {
     let background_pointers: Vec<usize> = chunk.read_pointer_list()?;
-    let old_position: usize = chunk.file_index;
+    let old_position: usize = chunk.cur_pos;
     let mut room_backgrounds: Vec<GMRoomBackground> = Vec::with_capacity(background_pointers.len());
 
     for pointer in background_pointers {
-        chunk.file_index = pointer;
+        chunk.cur_pos = pointer;
         let enabled: bool = chunk.read_i32()? != 0;
         let foreground: bool = chunk.read_i32()? != 0;
         let background_definition: i32 = chunk.read_i32()?;
@@ -367,17 +367,17 @@ fn parse_room_backgrounds(chunk: &mut GMChunk) -> Result<Vec<GMRoomBackground>, 
         room_backgrounds.push(background);
     }
 
-    chunk.file_index = old_position;
+    chunk.cur_pos = old_position;
     Ok(room_backgrounds)
 }
 
 fn parse_room_tiles(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Vec<GMRoomTile>, String> {  // TODO
     let tile_pointers: Vec<usize> = chunk.read_pointer_list()?;
-    let old_position: usize = chunk.file_index;
+    let old_position: usize = chunk.cur_pos;
     let mut tiles: Vec<GMRoomTile> = Vec::with_capacity(tile_pointers.len());
 
     for pointer in tile_pointers {
-        chunk.file_index = pointer;
+        chunk.cur_pos = pointer;
 
         let x: i32 = chunk.read_i32()?;
         let y: i32 = chunk.read_i32()?;
@@ -412,17 +412,17 @@ fn parse_room_tiles(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
         tiles.push(tile);
     }
 
-    chunk.file_index = old_position;
+    chunk.cur_pos = old_position;
     Ok(tiles)
 }
 
 fn parse_room_layers(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMRoomLayer>, String> {
     let layer_pointers: Vec<usize> = chunk.read_pointer_list()?;
-    let old_position: usize = chunk.file_index;
+    let old_position: usize = chunk.cur_pos;
     let mut layers: Vec<GMRoomLayer> = Vec::with_capacity(layer_pointers.len());
 
     for pointer in layer_pointers {
-        chunk.file_index = pointer;
+        chunk.cur_pos = pointer;
 
         let layer_name: GMRef<String> = chunk.read_gm_string(strings)?;
         let layer_id: u32 = chunk.read_u32()?;
@@ -432,7 +432,7 @@ fn parse_room_layers(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMR
             Err(_) => return Err(format!(
                 "Invalid Room Layer Type 0x{:04X} while parsing room at position {} in chunk '{}'.",
                 layer_type,
-                chunk.file_index,
+                chunk.cur_pos,
                 chunk.name,
             )),
         };
@@ -457,15 +457,15 @@ fn parse_room_layers(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMR
         layers.push(layer);
     }
 
-    chunk.file_index = old_position;
+    chunk.cur_pos = old_position;
     Ok(layers)
 }
 
-fn parse_room_sequences(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMSequence>, String> {
+fn parse_room_sequences(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<Vec<GMSequence>, String> {
     let sequence_count: usize = chunk.read_usize()?;
     let mut sequences: Vec<GMSequence> = Vec::with_capacity(sequence_count);
     for _ in 0..sequence_count {
-        sequences.push(parse_sequence(chunk, strings)?);
+        sequences.push(parse_sequence(chunk, general_info, strings)?);
     }
     Ok(sequences)
 }

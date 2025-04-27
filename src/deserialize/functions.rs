@@ -27,7 +27,7 @@ pub struct GMCodeLocal {
 }
 
 pub fn parse_chunk_func(chunk: &mut GMChunk, strings: &GMStrings, chunk_code: &GMChunk) -> Result<(GMFunctions, Vec<GMCodeLocal>), String> {
-    chunk.file_index = 0;
+    chunk.cur_pos = 0;
     let functions_length: usize = chunk.read_usize()?;
     let mut functions_by_index: Vec<GMFunction> = Vec::with_capacity(functions_length);
     let mut occurrences_to_refs: HashMap<usize, GMRef<GMFunction>> = HashMap::new();

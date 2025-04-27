@@ -10,18 +10,18 @@ pub struct GMStrings {
 
 
 pub fn parse_chunk_strg(chunk: &mut GMChunk) -> Result<GMStrings, String> {
-    chunk.file_index = 0;
+    chunk.cur_pos = 0;
     let string_count: usize = chunk.read_usize()?;
     // skip redundant list of absolute positions of upcoming strings
-    chunk.file_index += string_count * 4;
+    chunk.cur_pos += string_count * 4;
     let mut strings_by_index: Vec<String> = Vec::with_capacity(string_count);
     let mut abs_pos_to_reference: HashMap<usize, GMRef<String>> = HashMap::new();
 
     for i in 0..string_count {
         let string_length: usize = chunk.read_usize()?;
-        let absolute_position: usize = chunk.abs_pos + chunk.file_index;
+        let absolute_position: usize = chunk.abs_pos + chunk.cur_pos;
         let string: String = chunk.read_literal_string(string_length)?;
-        chunk.file_index += 1;  // skip one byte for the null byte after the string
+        chunk.cur_pos += 1;  // skip one byte for the null byte after the string
         strings_by_index.push(string.clone());
         abs_pos_to_reference.insert(absolute_position, GMRef::string(i));
     }

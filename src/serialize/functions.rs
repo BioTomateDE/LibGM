@@ -17,7 +17,7 @@ pub fn build_chunk_func(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         data_builder.push_pointer_resolve(&mut builder, GMRef::function(i))?;
         let function: &GMFunction = &gm_data.functions.functions_by_index[i];
 
-        builder.write_gm_string(&function.name, &gm_data.strings)?;
+        builder.write_gm_string(data_builder, &function.name)?;
         builder.write_usize(function.occurrences.len());
         match function.occurrences.get(0) {
             Some(occurrence_position) => builder.write_usize(*occurrence_position),
