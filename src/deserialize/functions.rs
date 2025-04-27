@@ -1,11 +1,11 @@
-﻿use std::collections::{HashMap, HashSet};
+﻿use std::collections::HashMap;
 use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use crate::deserialize::strings::GMStrings;
 
 #[derive(Debug, Clone)]
 pub struct GMFunction {
     pub name: GMRef<String>,
-    // pub occurrences: HashSet<usize>,                // set of occurrences (call instructions) positions relative to chunk CODE
+    pub occurrences: Vec<usize>,                // list of occurrences (call instructions) positions relative to chunk CODE
 }
 
 
@@ -36,12 +36,13 @@ pub fn parse_chunk_func(chunk: &mut GMChunk, strings: &GMStrings, chunk_code: &G
         let function_name: GMRef<String> = chunk.read_gm_string(strings)?;
         let occurrence_count: usize = chunk.read_usize()?;
         let first_occurrence: i32 = chunk.read_i32()? - chunk_code.abs_pos as i32;
-        let occurrences: HashSet<usize> = get_occurrences(occurrence_count, first_occurrence, chunk_code);
-        for occurrence in occurrences {
-            occurrences_to_refs.insert(occurrence, GMRef::function(i));
+        let occurrences: Vec<usize> = get_occurrences(occurrence_count, first_occurrence, chunk_code);
+        for occurrence in &occurrences {
+            occurrences_to_refs.insert(*occurrence, GMRef::function(i));
         }
         let function: GMFunction = GMFunction {
             name: function_name,
+            occurrences,
         };
         functions_by_index.push(function);
     }
@@ -87,8 +88,8 @@ pub fn parse_chunk_func(chunk: &mut GMChunk, strings: &GMStrings, chunk_code: &G
 }
 
 
-fn get_occurrences(count: usize, first_occurrence: i32, chunk_CODE: &GMChunk) -> HashSet<usize> {
-    let mut occurrences: HashSet<usize> = HashSet::new();
+fn get_occurrences(count: usize, first_occurrence: i32, chunk_code: &GMChunk) -> Vec<usize> {
+    let mut occurrences: Vec<usize> = Vec::new();
     let mut occurrence: i32 = first_occurrence + 4;
 
     // let mut i = 0;
@@ -96,11 +97,11 @@ fn get_occurrences(count: usize, first_occurrence: i32, chunk_CODE: &GMChunk) ->
     for _ in 0..count {
         // println!("occ {occurrence} | {}", chunk_CODE.abs_pos);
         // occurrence -= chunk_CODE.abs_pos as i32;
-        occurrences.insert(occurrence as usize - 4);
+        occurrences.push(occurrence as usize - 4);
         // TODO index safety
-        let raw: [u8; 4] = chunk_CODE.data[(occurrence as usize) .. (occurrence as usize)+4].try_into().unwrap();
+        let raw: [u8; 4] = chunk_code.data[(occurrence as usize) .. (occurrence as usize)+4].try_into().unwrap();
         // println!("{}", hexdump(&chunk_CODE.data, (occurrence as usize)-4, Some(occurrence as usize+4)).unwrap());
-        if chunk_CODE.data[occurrence as usize - 1] != 0xD9 {
+        if chunk_code.data[occurrence as usize - 1] != 0xD9 {
             break;
         }
         occurrence += i32::from_le_bytes(raw);
