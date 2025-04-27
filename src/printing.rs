@@ -621,7 +621,7 @@ impl GMTrack {
         println!("  Tags: {:?}", self.tags);
         println!("  Sub-Tracks: [{} items]", self.sub_tracks.len());
         println!("  Keyframes: [{} items]", self.keyframes.len());
-        println!("  GM Anim Curve String: {}", self.gm_anim_curve_string);
+        println!("  GM Anim Curve String: {}", self.anim_curve_string.clone().map_or("<string is unset>", |i| i.display(strings)));
         println!();
         Ok(())
     }

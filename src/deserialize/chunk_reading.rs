@@ -1,7 +1,15 @@
-﻿use crate::deserialize::strings::GMStrings;
+﻿use crate::deserialize::backgrounds::GMBackground;
+use crate::deserialize::embedded_audio::GMEmbeddedAudio;
+use crate::deserialize::fonts::GMFont;
+use crate::deserialize::functions::GMFunction;
+use crate::deserialize::game_objects::{GMGameObject, GMGameObjectEvent, GMGameObjectEventAction};
+use crate::deserialize::scripts::GMScript;
+use crate::deserialize::sounds::GMSound;
+use crate::deserialize::sprites::GMSprite;
+use crate::deserialize::strings::GMStrings;
+use crate::deserialize::texture_page_items::GMTexture;
 
-
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum RefKind {
     String,
     TexturePage,
@@ -17,7 +25,7 @@ pub enum RefKind {
     GameObject,
     GameObjectEvent,
     GameObjectEventInstance,
-    GameObjectEventInstanceAction,
+    GameObjectEventAction,
     Font,
     Background,
 }
@@ -40,40 +48,91 @@ impl<T> GMRef<T> {
             _marker: std::marker::PhantomData,
         }
     }
+    pub fn erase_type(&self) -> GMRef<()> {
+        GMRef::<()> {
+            index: self.index,
+            kind: self.kind,
+            _marker: std::marker::PhantomData,
+        }
+    }
+}
+impl GMRef<String> {
     pub fn string(index: usize) -> Self {
         Self::new(index, RefKind::String)
     }
+}
+impl GMRef<image::DynamicImage> {
     pub fn texture_page(index: usize) -> Self {
         Self::new(index, RefKind::TexturePage)
     }
     pub fn texture_page_data(index: usize) -> Self {
         Self::new(index, RefKind::TexturePageData)
     }
+}
+impl GMRef<GMTexture> {
     pub fn texture(index: usize) -> Self {
         Self::new(index, RefKind::Texture)
     }
-    pub fn sprite(index: usize) -> Self { Self::new(index, RefKind::Sprite) }
-    pub fn sprite_sequence_position(index: usize) -> Self { Self::new(index, RefKind::SpriteSequencePosition) }     // not really an index but rather an absolute position
-    pub fn sprite_nine_slice_position(index: usize) -> Self { Self::new(index, RefKind::SpriteNineSlicePosition) }   // not really an index but rather an absolute position
+}
+impl GMRef<GMSprite> {
+    pub fn sprite(index: usize) -> Self {
+        Self::new(index, RefKind::Sprite)
+    }
+}
+impl GMRef<usize> {
+    pub fn sprite_sequence_position(index: usize) -> Self {
+        Self::new(index, RefKind::SpriteSequencePosition)
+    }     // not really an index but rather an absolute position
+    pub fn sprite_nine_slice_position(index: usize) -> Self {
+        Self::new(index, RefKind::SpriteNineSlicePosition)
+    }   // not really an index but rather an absolute position
+}
+impl GMRef<GMEmbeddedAudio> {
     pub fn audio(index: usize) -> Self {
         Self::new(index, RefKind::Audio)
     }
+}
+impl GMRef<GMSound> {
     pub fn sound(index: usize) -> Self {
         Self::new(index, RefKind::Sound)
     }
+}
+impl GMRef<GMFunction> {
     pub fn function(index: usize) -> Self {
         Self::new(index, RefKind::Function)
     }
+}
+impl GMRef<GMScript> {
     pub fn script(index: usize) -> Self {
         Self::new(index, RefKind::Script)
     }
-    pub fn game_object(index: usize) -> Self { Self::new(index, RefKind::GameObject) }
-    pub fn game_object_event(index: usize) -> Self { Self::new(index, RefKind::GameObjectEvent) }
-    pub fn game_object_event_instance(index: usize) -> Self { Self::new(index, RefKind::GameObjectEventInstance) }
-    pub fn game_object_event_instance_action(index: usize) -> Self { Self::new(index, RefKind::GameObjectEventInstanceAction) }
+}
+impl GMRef<GMGameObject> {
+    pub fn game_object(index: usize) -> Self {
+        Self::new(index, RefKind::GameObject)
+    }
+}
+impl GMRef<Vec<GMGameObjectEvent>> {
+    pub fn game_object_event(index: usize) -> Self {
+        Self::new(index, RefKind::GameObjectEvent)
+    }
+}
+impl GMRef<GMGameObjectEvent> {
+    pub fn game_object_event_instance(index: usize) -> Self {
+        Self::new(index, RefKind::GameObjectEventInstance)
+    }
+}
+impl GMRef<GMGameObjectEventAction> {
+    pub fn game_object_event_action(index: usize) -> Self {
+        Self::new(index, RefKind::GameObjectEventAction)
+    }
+}
+impl GMRef<GMFont> {
     pub fn font(index: usize) -> Self {
         Self::new(index, RefKind::Font)
     }
+}
+impl GMRef<GMBackground> {
     pub fn background(index: usize) -> Self {
         Self::new(index, RefKind::Background)
     }
@@ -82,8 +141,7 @@ impl<'a, T> GMRef<T> {
     pub fn resolve(&self, elements_by_index: &'a Vec<T>) -> Result<&'a T, String> {
         elements_by_index.get(self.index)
             .ok_or(format!(
-                "Could not resolve {} reference with \
-                index {} in list with length {}.",
+                "Could not resolve {} reference with index {} in list with length {}.",
                 std::any::type_name::<T>(),
                 self.index,
                 elements_by_index.len(),
@@ -97,25 +155,10 @@ pub struct GMChunk<'a> {
     pub name: String,       // 4 letter name of chunk
     pub abs_pos: usize,     // absolute position/index in data.win file
     pub data: &'a [u8],     // raw data
-    pub cur_pos: usize,  // gets incremented by .read_{} methods when parsing chunk
+    pub cur_pos: usize,     // gets incremented by .read_{} methods when parsing chunk
 }
 
 impl GMChunk<'_> {
-    // fn apply_changes(&self, mut changes: Vec<DataChange>) {
-    //     changes.sort_by(|a, b| b.index.cmp(&a.index));
-    //     for change in changes {
-    //         println!(
-    //             "[DataChange @ {}] Index: {} | Len: {} | Delete: {}",
-    //             self.name,
-    //             change.index,
-    //             change.content.len(),
-    //             change.delete
-    //         );
-    //         change.apply(self.data.clone());
-    //     }
-    // }
-
-
     pub fn read_u64(&mut self) -> Result<u64, String> {
         let bytes = self.data
             .get(self.cur_pos..self.cur_pos + 8)
