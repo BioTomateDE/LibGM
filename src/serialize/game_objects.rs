@@ -1,7 +1,6 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::game_objects::{GMGameObject, GMGameObjectEventAction};
-use crate::deserialize::strings::GMStrings;
 use crate::serialize::all::{build_chunk, DataBuilder};
 use crate::serialize::chunk_writing::ChunkBuilder;
 
@@ -81,7 +80,7 @@ fn build_game_object_events(
             data_builder.push_pointer_resolve(builder, GMRef::game_object_event_instance(i))?;
             builder.write_u32(event_instance.subtype);
             build_game_object_event_instance_actions(data_builder, builder, &event_instance.actions)?;
-            data_builder.push_pointer_placeholder(builder, GMRef::game_object_event_instance_action(i))?
+            data_builder.push_pointer_placeholder(builder, GMRef::game_object_event_action(i))?
         }
     }
     Ok(())
@@ -96,11 +95,11 @@ fn build_game_object_event_instance_actions(
     builder.write_usize(actions.len());
 
     for i in 0..actions.len() {
-        data_builder.push_pointer_placeholder(builder, GMRef::game_object_event_instance_action(i))?;
+        data_builder.push_pointer_placeholder(builder, GMRef::game_object_event_action(i))?;
     }
 
     for (i, action) in actions.iter().enumerate() {
-        data_builder.push_pointer_resolve(builder, GMRef::game_object_event_instance_action(i))?;
+        data_builder.push_pointer_resolve(builder, GMRef::game_object_event_action(i))?;
         builder.write_u32(action.lib_id);
         builder.write_u32(action.id);
         builder.write_u32(action.kind);
