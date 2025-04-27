@@ -1,7 +1,7 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::scripts::GMScript;
-use crate::serialize::all::DataBuilder;
+use crate::serialize::all::{build_chunk, DataBuilder};
 use crate::serialize::chunk_writing::ChunkBuilder;
 
 pub fn build_chunk_scpt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
@@ -24,6 +24,7 @@ pub fn build_chunk_scpt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         };
     }
 
+    build_chunk(data_builder, builder)?;
     Ok(())
 }
 
