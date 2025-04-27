@@ -72,7 +72,7 @@ pub struct GMGameObjectEventAction {
 
 
 pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMGameObjects, String> {
-    chunk.file_index = 0;
+    chunk.cur_pos = 0;
     let game_objects_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(game_objects_count);
     for _ in 0..game_objects_count {
@@ -81,7 +81,7 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
 
     let mut game_objects_by_index: Vec<GMGameObject> = Vec::with_capacity(game_objects_count);
     for start_position in start_positions {
-        chunk.file_index = start_position;
+        chunk.cur_pos = start_position;
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
         let sprite: Option<GMRef<GMSprite>> = match chunk.read_i32()? {
             -1 => None,
@@ -111,7 +111,7 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
             Ok(shape) => shape,
             Err(_) => return Err(format!(
                 "Invalid Collision Shape 0x{:04X} at position {} while parsing Game Object at position {} in chunk '{}'.",
-                collision_shape, chunk.file_index, start_position, chunk.name,
+                collision_shape, chunk.cur_pos, start_position, chunk.name,
             )),
         };
         let density: f32 = chunk.read_f32()?;
@@ -174,7 +174,7 @@ fn parse_game_object_events(chunk: &mut GMChunk, strings: &GMStrings) -> Result<
     let mut events: Vec<Vec<GMGameObjectEvent>> = Vec::with_capacity(events_count);
 
     for start_position in start_positions {
-        chunk.file_index = start_position;
+        chunk.cur_pos = start_position;
         // there's "events" like OnCreate, OnDestroy. for each "event type" there can be multiple event "instances" or "actions".
         let event: Vec<GMGameObjectEvent> = parse_game_object_event_instances(chunk, strings)?;
         events.push(event);
@@ -192,10 +192,10 @@ fn parse_game_object_event_instances(chunk: &mut GMChunk, strings: &GMStrings) -
         start_positions.push(chunk.read_usize()? - chunk.abs_pos);
     }
 
-    let old_position: usize = chunk.file_index;
+    let old_position: usize = chunk.cur_pos;
     let mut events: Vec<GMGameObjectEvent> = Vec::with_capacity(event_instances_count);
     for start_position in start_positions {
-        chunk.file_index = start_position;
+        chunk.cur_pos = start_position;
         let subtype: u32 = chunk.read_u32()?;
         let actions: Vec<GMGameObjectEventAction> = parse_game_object_event_actions(chunk, strings)?;
 
@@ -205,7 +205,7 @@ fn parse_game_object_event_instances(chunk: &mut GMChunk, strings: &GMStrings) -
         });
     }
 
-    chunk.file_index = old_position;
+    chunk.cur_pos = old_position;
     Ok(events)
 }
 
@@ -216,11 +216,11 @@ fn parse_game_object_event_actions(chunk: &mut GMChunk, strings: &GMStrings) -> 
     for _ in 0..actions_count {
         start_positions.push(chunk.read_usize()? - chunk.abs_pos);
     }
-    let old_position: usize = chunk.file_index;
+    let old_position: usize = chunk.cur_pos;
     let mut actions: Vec<GMGameObjectEventAction> = Vec::with_capacity(actions_count);
 
     for start_position in start_positions {
-        chunk.file_index = start_position;
+        chunk.cur_pos = start_position;
         let lib_id: u32 = chunk.read_u32()?;
         let id: u32 = chunk.read_u32()?;
         let kind: u32 = chunk.read_u32()?;
@@ -254,7 +254,7 @@ fn parse_game_object_event_actions(chunk: &mut GMChunk, strings: &GMStrings) -> 
         })
     }
 
-    chunk.file_index = old_position;
+    chunk.cur_pos = old_position;
     Ok(actions)
 }
 

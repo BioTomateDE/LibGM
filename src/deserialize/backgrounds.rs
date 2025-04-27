@@ -35,7 +35,7 @@ pub fn parse_chunk_bgnd(
     strings: &GMStrings,
     textures: &GMTextures,
 ) -> Result<GMBackgrounds, String> {
-    chunk.file_index = 0;
+    chunk.cur_pos = 0;
     let backgrounds_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(backgrounds_count);
     for _ in 0..backgrounds_count {
@@ -44,7 +44,7 @@ pub fn parse_chunk_bgnd(
 
     let mut backgrounds_by_index: Vec<GMBackground> = Vec::with_capacity(backgrounds_count);
     for start_position in start_positions {
-        chunk.file_index = start_position;
+        chunk.cur_pos = start_position;
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
         let transparent: bool = chunk.read_u32()? != 0;
         let smooth: bool = chunk.read_u32()? != 0;

@@ -2,7 +2,8 @@ use crate::deserialize::chunk_reading::GMRef;
 use std::collections::HashMap;
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::strings::GMStrings;
-use num_enum::TryFromPrimitive;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+use crate::deserialize::general_info::GMGeneralInfo;
 
 #[derive(Debug, Clone)]
 pub struct GMSequence {
@@ -21,14 +22,14 @@ pub struct GMSequence {
 }
 
 
-#[derive(Debug, Clone, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
 #[repr(u32)]
 pub enum GMSequencePlaybackType {
     Oneshot = 0,
     Loop = 1,
     Pingpong = 2
 }
-#[derive(Debug, Clone, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
 #[repr(u32)]
 pub enum GMAnimSpeedType {
     FramesPerSecond = 0,
@@ -52,10 +53,9 @@ pub struct GMTrack {
     pub tags: Vec<i32>,
     pub sub_tracks: Vec<GMTrack>,
     pub keyframes: Vec<GMKeyframe>,
-    // pub owned_resources: Vec<GMResource>,
-    pub gm_anim_curve_string: String,
+    pub owned_resources: Vec<GMAnimationCurve>,
 }
-#[derive(Debug, Clone, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
 pub enum GMTrackBuiltinName {
     Gain = 5,
@@ -76,7 +76,7 @@ pub enum GMTrackBuiltinName {
     LineSpacing = 22,
     ParagraphSpacing = 23
 }
-#[derive(Debug, Clone, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
 pub enum GMTrackTraits {
     None,
@@ -88,36 +88,65 @@ pub struct GMKeyframeMoment {
     pub event: Option<GMRef<String>>,
 }
 
+#[derive(Debug, Clone)]
+pub struct GMAnimationCurve {
+    pub name: GMRef<String>,
+    pub graph_type: u32,
+    pub channels: Vec<GMAnimationCurveChannel>,
+}
 
-pub fn parse_sequence(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMSequence, String> {
+#[derive(Debug, Clone)]
+pub struct GMAnimationCurveChannel {
+    pub name: GMRef<String>,
+    pub curve_type: GMAnimationCurveType,
+    pub iterations: u32,
+    pub points: Vec<GMAnimationCurveChannelPoint>,
+}
+
+
+#[derive(Debug, Clone)]
+pub struct GMAnimationCurveChannelPoint {
+    pub x: f32,
+    pub y: f32,     // aka Value
+    pub bezier_data: Option<GMAnimationCurveChannelPointBezierData>,
+}
+
+#[derive(Debug, Clone)]
+pub struct GMAnimationCurveChannelPointBezierData {
+    pub x0: f32,
+    pub y0: f32,
+    pub x1: f32,
+    pub y1: f32,
+}
+
+#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[repr(u32)]
+pub enum GMAnimationCurveType {
+    Linear = 0,
+    Smooth = 1,
+    // bezier missing idk
+}
+
+
+pub fn parse_sequence(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMSequence, String> {
     let name: GMRef<String> = chunk.read_gm_string(strings)?;
     let playback: u32 = chunk.read_u32()?;
-    let playback: GMSequencePlaybackType = match playback.try_into() {
-        Ok(playback) => playback,
-        Err(_) => return Err(format!(
+    let playback: GMSequencePlaybackType = playback.try_into()
+        .map_err(Err(format!(
             "Invalid Sequence Playback Type 0x{:04X} while parsing sequence at position {} in chunk '{}'.",
-            playback,
-            chunk.file_index,
-            chunk.name,
-        )),
-    };
+            playback, chunk.cur_pos, chunk.name)))?;
     let playback_speed: f32 = chunk.read_f32()?;
     let playback_speed_type: u32 = chunk.read_u32()?;
-    let playback_speed_type: GMAnimSpeedType = match playback_speed_type.try_into() {
-        Ok(playback) => playback,
-        Err(_) => return Err(format!(
+    let playback_speed_type: GMAnimSpeedType = playback_speed_type.try_into()
+        .map_err(|e| Err(format!(
             "Invalid Sequence Anim Speed Type 0x{:04X} while parsing sequence at position {} in chunk '{}'.",
-            playback_speed_type,
-            chunk.file_index,
-            chunk.name,
-        )),
-    };
+            playback_speed_type, chunk.cur_pos, chunk.name)))?;
     let length: f32 = chunk.read_f32()?;
     let origin_x: i32 = chunk.read_i32()?;
     let origin_y: i32 = chunk.read_i32()?;
     let volume: f32 = chunk.read_f32()?;
     let broadcast_messages: Vec<GMRef<String>> = parse_broadcast_messages(chunk, &strings)?;  // might be list in list?
-    let tracks: Vec<GMTrack> = parse_tracks(chunk, &strings)?;
+    let tracks: Vec<GMTrack> = parse_tracks(chunk, general_info, &strings)?;
 
     let function_ids_count: usize = chunk.read_usize()?;
     let mut function_ids: HashMap<i32, GMRef<String>> = HashMap::new();
@@ -172,30 +201,22 @@ fn parse_broadcast_messages(chunk: &mut GMChunk, strings: &GMStrings) -> Result<
 }
 
 
-fn parse_track(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMTrack, String> {
+fn parse_track(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMTrack, String> {
     // force read string {}
     let model_name: GMRef<String> = chunk.read_gm_string(strings)?;
     let name: GMRef<String> = chunk.read_gm_string(strings)?;
     let builtin_name: i32 = chunk.read_i32()?;
-    let builtin_name: GMTrackBuiltinName = match builtin_name.try_into() {
-        Ok(name) => name,
-        Err(_) => return Err(format!(
+    let builtin_name: GMTrackBuiltinName = builtin_name.try_into()
+        .map_err(|e| Err(format!(
             "Invalid Track builtin name 0x{:04X} while parsing Track at position {} in chunk '{}'.",
-            builtin_name,
-            chunk.file_index,
-            chunk.name
-        )),
-    };
+            builtin_name, chunk.cur_pos, chunk.name
+        )))?;
     let traits: i32 = chunk.read_i32()?;
-    let traits: GMTrackTraits = match traits.try_into() {
-        Ok(name) => name,
-        Err(_) => return Err(format!(
+    let traits: GMTrackTraits = traits.try_into()
+        .map_err(|e| Err(format!(
             "Invalid Track traits 0x{:04X} while parsing Track at position {} in chunk '{}'.",
-            traits,
-            chunk.file_index,
-            chunk.name
-        )),
-    };
+            traits, chunk.cur_pos, chunk.name
+        )))?;
     let is_creation_track: bool = chunk.read_u32()? != 0;
 
     let mut tag_count: i32 = chunk.read_i32()?;
@@ -205,9 +226,7 @@ fn parse_track(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMTrack, Stri
     if tag_count < 0 {
         return Err(format!(
             "Invalid Track tag count {} while parsing Track at position {} in chunk '{}'.",
-            tag_count,
-            chunk.file_index,
-            chunk.name
+            tag_count, chunk.cur_pos, chunk.name
         ));
     }
     let tag_count: usize = tag_count as usize;
@@ -219,12 +238,10 @@ fn parse_track(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMTrack, Stri
     if owned_resources_count < 0 {
         return Err(format!(
             "Invalid Track owned resources count {} while parsing Track at position {} in chunk '{}'.",
-            owned_resources_count,
-            chunk.file_index,
-            chunk.name
+            owned_resources_count, chunk.cur_pos, chunk.name
         ));
     }
-    let _owned_resources_count: usize = owned_resources_count as usize;
+    let owned_resources_count: usize = owned_resources_count as usize;
 
     let mut track_count: i32 = chunk.read_i32()?;
     if track_count == -1 {
@@ -233,9 +250,7 @@ fn parse_track(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMTrack, Stri
     if track_count < 0 {
         return Err(format!(
             "Invalid Track track count {} while parsing Track at position {} in chunk '{}'.",
-            track_count,
-            chunk.file_index,
-            chunk.name
+            track_count, chunk.cur_pos, chunk.name
         ));
     }
     let track_count: usize = track_count as usize;
@@ -245,11 +260,21 @@ fn parse_track(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMTrack, Stri
         tags.push(chunk.read_i32()?);
     }
 
-    // owned resources {}
+    let mut owned_resources: Vec<GMAnimationCurve> = Vec::with_capacity(owned_resources_count);
+    for _ in 0..owned_resources_count {
+        let gm_anim_curve_setting: &String = chunk.read_gm_string(strings)?.resolve(&strings.strings_by_index)?;
+        if gm_anim_curve_setting != "GMAnimCurve" {
+            return Err(format!(
+                "Expected owned resource thingy of Track to be \"GMAnimCurve\"; but found \"{}\" for Track \"{}\" at absolute position {}.",
+                gm_anim_curve_setting, name.display(strings), chunk.cur_pos + chunk.abs_pos,
+            ));
+        }
+        owned_resources.push(parse_anim_curve(chunk, general_info, strings)?);
+    }
 
     let mut sub_tracks: Vec<GMTrack> = Vec::with_capacity(track_count);
     for _ in 0..track_count {
-        sub_tracks.push(parse_track(chunk, strings)?);
+        sub_tracks.push(parse_track(chunk, general_info, strings)?);
     }
 
     // TODO keyframes with different types {}
@@ -264,18 +289,72 @@ fn parse_track(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMTrack, Stri
         tags,
         sub_tracks,
         keyframes,
-        gm_anim_curve_string: "GMAnimCurve".to_string(),
+        owned_resources,
     })
 }
 
-fn parse_tracks(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMTrack>, String> {
+fn parse_tracks(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<Vec<GMTrack>, String> {
     let tracks_count: usize = chunk.read_usize()?;
     let mut tracks: Vec<GMTrack> = Vec::with_capacity(tracks_count);
 
     for _ in 0..tracks_count {
-        tracks.push(parse_track(chunk, strings)?);
+        tracks.push(parse_track(chunk, general_info, strings)?);
     }
 
     Ok(tracks)
+}
+
+
+fn parse_anim_curve(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMAnimationCurve, String> {
+    let name: GMRef<String> = chunk.read_gm_string(strings)?;
+    let graph_type: u32 = chunk.read_u32()?;
+
+    let channels_count: usize = chunk.read_usize()?;
+    let mut channels: Vec<GMAnimationCurveChannel> = Vec::with_capacity(channels_count);
+    for _ in 0..channels_count {
+        let name: GMRef<String> = chunk.read_gm_string(strings)?;
+        let curve_type: u32 = chunk.read_u32()?;
+        let curve_type: GMAnimationCurveType = curve_type.try_into()
+            .map_err(|_| format!(
+                "Invalid Curve Type {} for Animation Curve \"{}\" at absolute position {}.",
+                curve_type, name.display(strings), chunk.cur_pos + chunk.abs_pos))?;
+        let iterations: u32 = chunk.read_u32()?;
+        let points: Vec<GMAnimationCurveChannelPoint> = parse_anim_curve_points(chunk, general_info)?;
+        channels.push(GMAnimationCurveChannel {
+            name,
+            curve_type,
+            iterations,
+            points,
+        })
+    }
+
+    Ok(GMAnimationCurve {
+        name,
+        graph_type,
+        channels,
+    })
+}
+
+fn parse_anim_curve_points(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Vec<GMAnimationCurveChannelPoint>, String> {
+    let points_count: usize = chunk.read_usize()?;
+    let mut points: Vec<GMAnimationCurveChannelPoint> = Vec::with_capacity(points_count);
+    
+    for _ in 0..points_count {
+        let x: f32 = chunk.read_f32()?;
+        let y: f32 = chunk.read_f32()?;
+        let bezier_data: Option<GMAnimationCurveChannelPointBezierData> = if general_info.is_version_at_least(2, 3, 1, 0) {
+            let x0: f32 = chunk.read_f32()?;
+            let y0: f32 = chunk.read_f32()?;
+            let x1: f32 = chunk.read_f32()?;
+            let y1: f32 = chunk.read_f32()?;
+            Some(GMAnimationCurveChannelPointBezierData { x0, y0, x1, y1 })
+        } else {
+            chunk.read_i32()?;
+            None
+        };
+        points.push(GMAnimationCurveChannelPoint { x, y, bezier_data })
+    }
+    
+    Ok(points)
 }
 

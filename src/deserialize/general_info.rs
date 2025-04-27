@@ -201,7 +201,7 @@ pub struct GMOptionsFlags {
 }
 
 pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGeneralInfo, String> {
-    chunk.file_index = 0;
+    chunk.cur_pos = 0;
     let is_debugger_disabled: bool = chunk.read_u8()? != 0;
     let bytecode_version: u8 = chunk.read_u8()?;
     let unknown_value: u16 = chunk.read_u16()?;
@@ -211,16 +211,16 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
     let last_tile_id: u32 = chunk.read_u32()?;
     let game_id: u32 = chunk.read_u32()?;
 
-    let directplay_guid: [u8; 16] = match chunk.data[chunk.file_index..chunk.file_index + 16].try_into() {
+    let directplay_guid: [u8; 16] = match chunk.data[chunk.cur_pos..chunk.cur_pos + 16].try_into() {
         Ok(data) => data,
         Err(_) => return Err(format!(
             "Trying to read GUID out of bounds in chunk 'GEN8' at position {}: {} > {}.",
-            chunk.file_index,
-            chunk.file_index + 16,
+            chunk.cur_pos,
+            chunk.cur_pos + 16,
             chunk.data.len(),
         )),
     };
-    chunk.file_index += 16;
+    chunk.cur_pos += 16;
     let directplay_guid: uuid::Uuid = uuid::Builder::from_bytes_le(directplay_guid).into_uuid();
     // ^ perhaps not `_le` but idk bc it's usually just null
 
@@ -233,16 +233,16 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
     let default_window_height: u32 = chunk.read_u32()?;
     let flags: GMGeneralInfoFlags = parse_flags(chunk)?;
 
-    let license: [u8; 16] = match chunk.data[chunk.file_index..chunk.file_index+16].try_into() {
+    let license: [u8; 16] = match chunk.data[chunk.cur_pos..chunk.cur_pos +16].try_into() {
         Ok(data) => data,
         Err(_) => return Err(format!(
             "Trying to read license out of bounds in chunk 'GEN8' at position {}: {} > {}.",
-            chunk.file_index,
-            chunk.file_index + 16,
+            chunk.cur_pos,
+            chunk.cur_pos + 16,
             chunk.data.len(),
         )),
     };
-    chunk.file_index += 16;
+    chunk.cur_pos += 16;
 
     let timestamp_created: i64 = chunk.read_i64()?;
     let timestamp_created: DateTime<Utc> = match DateTime::from_timestamp(timestamp_created, 0) {
@@ -250,7 +250,7 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
         None => return Err(format!(
             "Invalid Timestamp {:016X} in chunk 'GEN8' at position {}.",
             timestamp_created,
-            chunk.file_index
+            chunk.cur_pos
         )),
     };
 
@@ -264,7 +264,7 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
     let end: usize = chunk.read_usize()? * 4 + 4;
     let mut room_order: Vec<u32> = vec![];
 
-    while chunk.file_index < end {
+    while chunk.cur_pos < end {
         let room_id: u32 = chunk.read_u32()?;
         room_order.push(room_id);
     }
@@ -430,7 +430,7 @@ fn parse_options_flags(chunk: &mut GMChunk) -> Result<GMOptionsFlags, String> {
 
 
 pub fn parse_chunk_optn(chunk: &mut GMChunk) -> Result<GMOptions, String> {
-    chunk.file_index = 0;
+    chunk.cur_pos = 0;
     let _unused1: u32 = chunk.read_u32()?;
     let _unused2: u32 = chunk.read_u32()?;
     let flags: GMOptionsFlags = parse_options_flags(chunk)?;

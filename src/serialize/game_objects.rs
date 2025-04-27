@@ -18,7 +18,7 @@ pub fn build_chunk_objt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         data_builder.push_pointer_resolve(&mut builder, GMRef::game_object(i))?;
         let game_object: &GMGameObject = &gm_data.game_objects.game_objects_by_index[i];
 
-        builder.write_gm_string(&game_object.name, &gm_data.strings)?;
+        builder.write_gm_string(data_builder, &game_object.name)?;
         match &game_object.sprite {
             Some(sprite) => data_builder.push_pointer_placeholder(&mut builder, GMRef::sprite(sprite.index))?,
             None => builder.write_i32(-1),
@@ -50,7 +50,7 @@ pub fn build_chunk_objt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
             builder.write_f32(*x);
             builder.write_f32(*y);
         }
-        build_game_object_events(data_builder, &mut builder, &gm_data.strings, game_object)?;
+        build_game_object_events(data_builder, &mut builder, game_object)?;
     }
 
     build_chunk(data_builder, builder)?;
@@ -61,7 +61,6 @@ pub fn build_chunk_objt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
 fn build_game_object_events(
     data_builder: &mut DataBuilder,
     builder: &mut ChunkBuilder,
-    strings: &GMStrings,
     game_object: &GMGameObject,
 ) -> Result<(), String> {
     builder.write_usize(game_object.events.len());
@@ -81,7 +80,7 @@ fn build_game_object_events(
         for (i, event_instance) in event_instances.iter().enumerate() {
             data_builder.push_pointer_resolve(builder, GMRef::game_object_event_instance(i))?;
             builder.write_u32(event_instance.subtype);
-            build_game_object_event_instance_actions(data_builder, builder, strings, &event_instance.actions)?;
+            build_game_object_event_instance_actions(data_builder, builder, &event_instance.actions)?;
             data_builder.push_pointer_placeholder(builder, GMRef::game_object_event_instance_action(i))?
         }
     }
@@ -92,7 +91,6 @@ fn build_game_object_events(
 fn build_game_object_event_instance_actions(
     data_builder: &mut DataBuilder,
     builder: &mut ChunkBuilder,
-    strings: &GMStrings,
     actions: &Vec<GMGameObjectEventAction>,
 ) -> Result<(), String> {
     builder.write_usize(actions.len());
@@ -110,7 +108,7 @@ fn build_game_object_event_instance_actions(
         builder.write_bool(action.is_question);
         builder.write_bool(action.use_apply_to);
         builder.write_u32(action.exe_type);
-        builder.write_gm_string(&action.action_name, strings)?;
+        builder.write_gm_string(data_builder, &action.action_name)?;
         builder.write_i32(action.code_id);      // should be code ref
         builder.write_u32(action.argument_count);
         builder.write_i32(action.who);

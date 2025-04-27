@@ -17,7 +17,7 @@ pub fn build_chunk_scpt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         data_builder.push_pointer_resolve(&mut builder, GMRef::script(i))?;
         let script: &GMScript = &gm_data.scripts.scripts_by_index[i];
 
-        builder.write_gm_string(&script.name, &gm_data.strings)?;
+        builder.write_gm_string(data_builder, &script.name)?;
         match script.id {
             Some(id) => builder.write_u32(id),
             None => builder.write_i32(-1),

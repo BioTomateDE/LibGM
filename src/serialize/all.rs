@@ -21,7 +21,9 @@ use crate::serialize::texture_page_items::{build_chunk_tpag, generate_texture_pa
 #[derive(Debug, Clone)]
 pub struct DataBuilder {
     raw_data: Vec<u8>,
-    pointer_pool: HashMap<GMRef<()>, GMPointer>,    // GMRef<()> signifies mixed referenced kinds/datatypes
+    // GMRef<()> signifies mixed referenced kinds/datatypes
+    pointer_pool_placeholders: HashMap<GMRef<()>, usize>,  // maps gamemaker element references to absolute positions of where they're referenced
+    pointer_pool_resources: HashMap<GMRef<()>, usize>,     // maps gamemaker element references to absolute positions of where their data is
 }
 impl DataBuilder {
     /// Create a placeholder pointer at the current position in the chunk
@@ -32,14 +34,10 @@ impl DataBuilder {
     /// This method should be called, when the data file format expects
     /// a pointer to some element, but you don't yet (necessarily) know where
     /// that element will be located in the data file.
-    pub fn push_pointer_placeholder(&mut self, chunk_builder: &mut ChunkBuilder, reference: GMRef<()>) -> Result<(), String> {
+    pub fn push_pointer_placeholder<T>(&mut self, chunk_builder: &mut ChunkBuilder, reference: GMRef<T>) -> Result<(), String> {
         let position: usize = self.len() + chunk_builder.len();
-        chunk_builder.write_usize(0);      // placeholder
-        let pointer: GMPointer = GMPointer {
-            position,
-            pointing_to: None,
-        };
-        self.pointer_pool.insert(reference, pointer);
+        chunk_builder.write_usize(0);      // write placeholder
+        self.pointer_pool_placeholders.insert(reference, position);
         Ok(())
     }
 
@@ -47,24 +45,13 @@ impl DataBuilder {
     /// The element's absolute position is the chunk builder's current position,
     /// since this method should get called when the element is built to the data file.
     pub fn push_pointer_resolve(&mut self, chunk_builder: &mut ChunkBuilder, reference: GMRef<()>) -> Result<(), String> {
-        let pointer = match self.pointer_pool.get_mut(&reference) {
-            Some(ptr) => ptr,
-            None => return Err(format!(
-                // not sure if this should throw an error instead of creating a new GMPointer; check later
-                "Pointer with absolute position {} doesn't exist in pool (len: {}) with reference {:?}.",
-                chunk_builder.abs_pos + chunk_builder.len(), self.pointer_pool.len(), reference,
-            )),
-        };
-
-        pointer.pointing_to = Some(chunk_builder.abs_pos + chunk_builder.len());
+        let position: usize = chunk_builder.abs_pos + chunk_builder.len();
+        if let Some(old_value) = self.pointer_pool_resources.insert(reference.clone(), position) {
+            return Err(format!("Reference to {:?} already resolved to absolute position {}; \
+            tried to resolve again to position {}", reference.kind, old_value, position))
+        }
         Ok(())
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct GMPointer {
-    position: usize,
-    pointing_to: Option<usize>,
 }
 
 impl DataBuilder {
@@ -103,7 +90,7 @@ impl DataBuilder {
 
 
 pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
-    let mut builder: DataBuilder = DataBuilder { raw_data: Vec::new(), pointer_pool: HashMap::new() };
+    let mut builder: DataBuilder = DataBuilder { raw_data: Vec::new(), pointer_pool_placeholders: HashMap::new(), pointer_pool_resources: HashMap::new() };
 
     let (texture_page_items, texture_pages): (Vec<GMTexturePageItem>, Vec<DynamicImage>) = generate_texture_pages(&gm_data.textures)?;
 
@@ -116,7 +103,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     build_chunk_extn(&mut builder, &gm_data)?;      // stub
     build_chunk_sond(&mut builder, &gm_data)?;
     build_chunk_agrp(&mut builder, &gm_data)?;      // stub
-    // build_chunk_sprt(&mut builder, &gm_data)?;
+    build_chunk_sprt(&mut builder, &gm_data)?;
     // build_chunk_bgnd(&mut builder, &gm_data)?;
     // build_chunk_path(&mut builder, &gm_data)?;
     build_chunk_scpt(&mut builder, &gm_data)?;

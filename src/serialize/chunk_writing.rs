@@ -1,5 +1,6 @@
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::strings::GMStrings;
+use crate::serialize::all::DataBuilder;
 
 #[derive(Debug, Clone)]
 pub struct ChunkBuilder {
@@ -77,10 +78,10 @@ impl ChunkBuilder {
         }
         Ok(())
     }
-    pub fn write_gm_string(&mut self, string: &GMRef<String>, strings: &GMStrings) -> Result<(), String> {
+    pub fn write_gm_string(&mut self, data_builder: &mut DataBuilder, string_ref: &GMRef<String>) -> Result<(), String> {
         // write a gamemaker string reference to the data
-        let string: &String = string.resolve(&strings.strings_by_index)?;
-        self.write_literal_string(string)
+        data_builder.push_pointer_resolve(self, GMRef::string(string_ref.index))?;
+        Ok(())
     }
     pub fn write_bytes(&mut self, data: &[u8]) {
         for byte in data {
