@@ -13,6 +13,9 @@ pub enum RefKind {
     Function,
     Script,
     GameObject,
+    GameObjectEvent,
+    GameObjectEventInstance,
+    GameObjectEventInstanceAction,
     Font,
     Background,
 }
@@ -47,9 +50,7 @@ impl<T> GMRef<T> {
     pub fn texture(index: usize) -> Self {
         Self::new(index, RefKind::Texture)
     }
-    pub fn sprite(index: usize) -> Self {
-        Self::new(index, RefKind::Sprite)
-    }
+    pub fn sprite(index: usize) -> Self { Self::new(index, RefKind::Sprite) }
     pub fn audio(index: usize) -> Self {
         Self::new(index, RefKind::Audio)
     }
@@ -62,9 +63,10 @@ impl<T> GMRef<T> {
     pub fn script(index: usize) -> Self {
         Self::new(index, RefKind::Script)
     }
-    pub fn game_object(index: usize) -> Self {
-        Self::new(index, RefKind::GameObject)
-    }
+    pub fn game_object(index: usize) -> Self { Self::new(index, RefKind::GameObject) }
+    pub fn game_object_event(index: usize) -> Self { Self::new(index, RefKind::GameObjectEvent) }
+    pub fn game_object_event_instance(index: usize) -> Self { Self::new(index, RefKind::GameObjectEventInstance) }
+    pub fn game_object_event_instance_action(index: usize) -> Self { Self::new(index, RefKind::GameObjectEventInstanceAction) }
     pub fn font(index: usize) -> Self {
         Self::new(index, RefKind::Font)
     }

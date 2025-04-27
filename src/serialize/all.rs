@@ -6,11 +6,16 @@ use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::texture_page_items::{GMTexturePageItem};
 use crate::serialize::chunk_writing::ChunkBuilder;
+use crate::serialize::embedded_audio::build_chunk_audo;
 use crate::serialize::embedded_textures::build_chunk_txtr;
+use crate::serialize::fonts::build_chunk_font;
+use crate::serialize::functions::build_chunk_func;
+use crate::serialize::game_objects::build_chunk_objt;
 use crate::serialize::strings::build_chunk_strg;
 use crate::serialize::general_info::{build_chunk_optn, build_chunk_gen8};
 use crate::serialize::scripts::build_chunk_scpt;
 use crate::serialize::sounds::build_chunk_sond;
+use crate::serialize::stubs::{build_chunk_agrp, build_chunk_code, build_chunk_dafl, build_chunk_extn, build_chunk_shdr, build_chunk_tmln};
 use crate::serialize::texture_page_items::{build_chunk_tpag, generate_texture_pages};
 
 #[derive(Debug, Clone)]
@@ -100,18 +105,34 @@ impl DataBuilder {
 pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     let mut builder: DataBuilder = DataBuilder { raw_data: Vec::new(), pointer_pool: HashMap::new() };
 
+    let (texture_page_items, texture_pages): (Vec<GMTexturePageItem>, Vec<DynamicImage>) = generate_texture_pages(&gm_data.textures)?;
+
     // write placeholder u32 for total length
     builder.write_chunk_name("FORM")?;
     builder.write_usize(0);
 
     build_chunk_gen8(&mut builder, &gm_data)?;
     build_chunk_optn(&mut builder, &gm_data)?;
-    build_chunk_strg(&mut builder, &gm_data)?;
+    build_chunk_extn(&mut builder, &gm_data)?;      // stub
     build_chunk_sond(&mut builder, &gm_data)?;
+    build_chunk_agrp(&mut builder, &gm_data)?;      // stub
+    // build_chunk_sprt(&mut builder, &gm_data)?;
+    // build_chunk_bgnd(&mut builder, &gm_data)?;
+    // build_chunk_path(&mut builder, &gm_data)?;
     build_chunk_scpt(&mut builder, &gm_data)?;
-    let (texture_page_items, texture_pages): (Vec<GMTexturePageItem>, Vec<DynamicImage>) = generate_texture_pages(&gm_data.textures)?;
+    build_chunk_shdr(&mut builder, &gm_data)?;      // stub
+    build_chunk_font(&mut builder, &gm_data)?;
+    build_chunk_tmln(&mut builder, &gm_data)?;      // stub
+    build_chunk_objt(&mut builder, &gm_data)?;
+    // build_chunk_room(&mut builder, &gm_data)?;
+    build_chunk_dafl(&mut builder, &gm_data)?;      // stub
     build_chunk_tpag(&mut builder, &gm_data, texture_page_items)?;
+    build_chunk_code(&mut builder, &gm_data)?;      // stub
+    // build_chunk_vari(&mut builder, &gm_data)?;
+    build_chunk_func(&mut builder, &gm_data)?;
+    build_chunk_strg(&mut builder, &gm_data)?;
     build_chunk_txtr(&mut builder, &gm_data, texture_pages)?;
+    build_chunk_audo(&mut builder, &gm_data)?;
 
     // {~~} IMPORTANT TODO: resolve pointers
 
