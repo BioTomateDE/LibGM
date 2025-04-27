@@ -1,9 +1,9 @@
 use crate::deserialize::chunk_reading::GMRef;
-use num_enum::TryFromPrimitive;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::sequence::{parse_sequence, GMAnimSpeedType, GMSequence};
-use crate::deserialize::sprites_yyswf::{parse_yyswf_timeline, GMSpriteYYSWF, GMSpriteYYSWFTimeline};
+use crate::deserialize::sprites_yyswf::{parse_yyswf_timeline, GMSpriteTypeSWF, GMSpriteYYSWFTimeline};
 use crate::deserialize::strings::GMStrings;
 use crate::deserialize::texture_page_items::{GMTexture, GMTextures};
 
@@ -28,12 +28,16 @@ pub struct GMSprite {
     pub special_fields: Option<GMSpriteSpecial>,
 }
 
-#[derive(Debug, Clone, TryFromPrimitive)]
-#[repr(u32)]
+#[derive(Debug, Clone)]
 pub enum GMSpriteType {
-    Normal,
-    SWF,
-    Spine,
+    Normal(GMSpriteTypeNormal),
+    SWF(GMSpriteTypeSWF),
+    Spine(GMSpriteTypeSpine),
+}
+
+#[derive(Debug, Clone)]
+pub struct GMSpriteTypeNormal {
+    pub collision_masks: Vec<GMSpriteMaskEntry>,
 }
 
 #[derive(Debug, Clone)]
@@ -82,17 +86,16 @@ pub struct GMSpriteSpecial {
     /// Version of Special Thingy
     pub special_version: u32,
     pub sprite_type: GMSpriteType,
-    /// GMS2
-    pub playback_speed: Option<f32>,
     /// GMS 2
-    pub playback_speed_type: Option<GMAnimSpeedType>,
+    pub playback_speed: f32,
+    /// GMS 2
+    pub playback_speed_type: GMAnimSpeedType,
     /// Special Version 2
     pub sequence: Option<GMSequence>,
     /// Special Version 3
     pub nine_slice: Option<GMSpriteNineSlice>,
     /// SWF
-    pub swf_version: Option<i32>,
-    pub yyswf: Option<GMSpriteYYSWF>,
+    pub yyswf: Option<GMSpriteTypeSWF>,
 }
 
 #[derive(Debug, Clone)]
@@ -101,7 +104,7 @@ pub struct GMSprites {
 }
 
 
-#[derive(Debug, Clone, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
 #[repr(u32)]
 pub enum GMSpriteSepMaskType {
     AxisAlignedRect = 0,
@@ -111,9 +114,9 @@ pub enum GMSpriteSepMaskType {
 
 #[derive(Debug, Clone)]
 pub struct GMSpriteMaskEntry {
-    data: Vec<u8>,
-    width: usize,
-    height: usize,
+    pub data: Vec<u8>,
+    pub width: usize,
+    pub height: usize,
 }
 
 
@@ -123,7 +126,7 @@ pub fn parse_chunk_sprt(
     strings: &GMStrings,
     gm_textures: &GMTextures,
 ) -> Result<GMSprites, String> {
-    chunk.file_index = 0;
+    chunk.cur_pos = 0;
     let sprites_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(sprites_count);
     for _ in 0..sprites_count {
@@ -132,7 +135,7 @@ pub fn parse_chunk_sprt(
 
     let mut sprites_by_index: Vec<GMSprite> = Vec::with_capacity(sprites_count);
     for start_position in start_positions {
-        chunk.file_index = start_position;
+        chunk.cur_pos = start_position;
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
         let width: usize = chunk.read_usize()?;
         let height: usize = chunk.read_usize()?;
@@ -149,7 +152,7 @@ pub fn parse_chunk_sprt(
             Ok(masks) => masks,
             Err(_) => return Err(format!(
                 "Invalid Sep Masks Type 0x{:08X} at position {} while parsing Sprite at position {} in chunk '{}'.",
-                sep_masks, chunk.file_index, start_position, chunk.name,
+                sep_masks, chunk.cur_pos, start_position, chunk.name,
             )),
         };
         let origin_x: i32 = chunk.read_i32()?;
@@ -158,130 +161,126 @@ pub fn parse_chunk_sprt(
         let mut collision_masks: Vec<GMSpriteMaskEntry> = Vec::new();
         let mut special_fields: Option<GMSpriteSpecial> = None;
 
-        if chunk.read_i32()? == -1 {
-            let mut sequence_offset: i32 = 0;
-            let mut nine_slice_offset: i32 = 0;
-            let mut sequence: Option<GMSequence> = None;
-            let mut nine_slice: Option<GMSpriteNineSlice> = None;
-
+        // combination of these conditions may be incorrect
+        if chunk.read_i32()? == -1 && general_info.is_version_at_least(2, 0, 0, 0) {
             let special_version: u32 = chunk.read_u32()?;
             let special_sprite_type: u32 = chunk.read_u32()?;
-            let special_sprite_type: GMSpriteType = match special_sprite_type.try_into() {
+
+            let mut sequence: Option<GMSequence> = None;
+            let mut nine_slice: Option<GMSpriteNineSlice> = None;
+            let mut yyswf: Option<GMSpriteTypeSWF> = None;
+
+            let playback_speed: f32 = chunk.read_f32()?;
+            let playback_speed_type: u32 = chunk.read_u32()?;
+            let playback_speed_type: GMAnimSpeedType = match playback_speed_type.try_into() {
                 Ok(ok) => ok,
                 Err(_) => return Err(format!(
-                    "Invalid Special Sprite Type 0x{:08X} at position {} while parsing Sprite at position {} in chunk '{}'.",
-                    special_sprite_type, chunk.file_index, start_position, chunk.name,
+                    "Invalid Playback Anim Speed Type 0x{:08X} at position {} while parsing Sprite at position {} in chunk '{}'.",
+                    playback_speed_type, chunk.cur_pos, start_position, chunk.name,
                 )),
             };
-            let mut playback_speed: Option<f32> = None;
-            let mut playback_speed_type: Option<GMAnimSpeedType> = None;
-            let mut swf_version: Option<i32> = None;
-            let mut yyswf: Option<GMSpriteYYSWF> = None;
+            // both of these seem to be not an offset but instead an absolute position (see UndertaleModLib/Models/UndertaleSprite.cs@507)
+            let sequence_offset: i32 = if special_version >= 2 { chunk.read_i32()? } else { 0 };
+            let nine_slice_offset: i32 = if special_version >= 3 { chunk.read_i32()? } else { 0 };
+            // {~~} set gms version to at least 2.3.2 if nine slice offset
 
-            if general_info.is_version_at_least(2, 0, 0, 0) {
-                playback_speed = Some(chunk.read_f32()?);
-                let playback_speed_type_: u32 = chunk.read_u32()?;
-                let playback_speed_type_: GMAnimSpeedType = match playback_speed_type_.try_into() {
-                    Ok(ok) => ok,
-                    Err(_) => return Err(format!(
-                        "Invalid Playback Anim Speed Type 0x{:08X} at position {} while parsing Sprite at position {} in chunk '{}'.",
-                        playback_speed_type_, chunk.file_index, start_position, chunk.name,
-                    )),
-                };
-                playback_speed_type = Some(playback_speed_type_);
-                if special_version >= 2 {
-                    sequence_offset = chunk.read_i32()?;
-                }
-                if special_version >= 3 {
-                    // {~~} set gms version to at least 2.3.2
-                    nine_slice_offset = chunk.read_i32()?;
-                }
-
-                match &special_sprite_type {
-                    GMSpriteType::Normal => {
-                        // read texture list to `textures`
-                        read_texture_list(chunk, &mut textures, gm_textures, name.resolve(&strings.strings_by_index)?)?;
-                        // read mask data
-                        let mut mask_width: usize = width;
-                        let mut mask_height: usize = height;
-                        if general_info.is_version_at_least(2024, 6, 0, 0) {
-                            mask_width = (margin_right - margin_left + 1) as usize;
-                            mask_height = (margin_bottom - margin_top + 1) as usize;
-                        }
-                        collision_masks = read_mask_data(chunk, name.resolve(&strings.strings_by_index)?, mask_width, mask_height)?;
-                    },
-
-                    GMSpriteType::SWF => {
-                        // [From UndertaleModTool] "This code does not work all the time for some reason."
-                        swf_version = Some(chunk.read_i32()?);
-                        // {~~} assert the version is 7 or 8
-                        if swf_version.unwrap() == 8 {
-                            read_texture_list(chunk, &mut textures, gm_textures, name.resolve(&strings.strings_by_index)?)?;
-                        }
-
-                        // read YYSWF
-                        align_reader(chunk, 4, 0x00)?;
-                        let jpeg_len: i32 = chunk.read_i32()? & (!0x80000000u32 as i32);    // the length is ORed with int.MinValue
-                        let jpeg_len: usize = jpeg_len as usize;
-                        let yyswf_version: i32 = chunk.read_i32()?;
-                        let jpeg_table: Vec<u8> = match chunk.data.get(chunk.file_index .. chunk.file_index+jpeg_len) {
-                            Some(bytes) => bytes.to_vec(),
-                            None => return Err(format!(
-                                "Trying to read YYSWF JPEG Table out of bounds while parsing \
-                                Sprite with name \"{}\" in chunk '{}' at position {}: {} > {}.",
-                                name.resolve(&strings.strings_by_index)?, chunk.name, chunk.file_index, chunk.file_index + jpeg_len, chunk.data.len(),
-                            )),
-                        };
-                        chunk.file_index += jpeg_len;
-                        align_reader(chunk, 4, 0x00)?;
-                        let timeline: GMSpriteYYSWFTimeline = parse_yyswf_timeline(chunk, general_info)?;
-
-                        yyswf = Some(GMSpriteYYSWF {
-                            version: yyswf_version,
-                            jpeg_table,
-                            timeline,
-                        })
-                    },
-
-                    GMSpriteType::Spine => {
-                        return Err(format!(
-                            "Spine format is not yet implemented for Sprite with name \"{}\" and absolute position {}!",
-                            name.resolve(&strings.strings_by_index)?, start_position + chunk.abs_pos,
-                        ))
-                        // TODO {~~} IMPLEMENT TS
+            let sprite_type: GMSpriteType = match &special_sprite_type {
+                0 => {      // Normal
+                    textures = read_texture_list(chunk, gm_textures, name.resolve(&strings.strings_by_index)?)?;
+                    // read mask data
+                    let mut mask_width: usize = width;
+                    let mut mask_height: usize = height;
+                    if general_info.is_version_at_least(2024, 6, 0, 0) {
+                        mask_width = (margin_right - margin_left + 1) as usize;
+                        mask_height = (margin_bottom - margin_top + 1) as usize;
                     }
-                }
+                    let collision_masks: Vec<GMSpriteMaskEntry> = read_mask_data(chunk, name.resolve(&strings.strings_by_index)?, mask_width, mask_height)?;
+                    GMSpriteType::Normal(GMSpriteTypeNormal { collision_masks })
+                },
 
-                if sequence_offset != 0 {
-                    let thingy: i32 = chunk.read_i32()?;
-                    if thingy != 1 {
+                1 => {      // SWF
+                    // [From UndertaleModTool] "This code does not work all the time for some reason."
+                    let swf_version: i32 = chunk.read_i32()?;
+                    // assert swf version is either 7 or 8
+                    if !(swf_version == 7 || swf_version == 8) {
                         return Err(format!(
-                            "Expected 1 but got {} while parsing Sequence for Sprite with name \"{}\" in chunk '{}'.",
-                            thingy, name.resolve(&strings.strings_by_index)?, chunk.name,
+                            "Invalid SWF version {swf_version} for Sprite \"{}\" at absolute position {}.",
+                            name.resolve(&strings.strings_by_index), start_position + chunk.abs_pos,
                         ))
                     }
-                    sequence = Some(parse_sequence(chunk, strings)?);
+                    if swf_version == 8 {
+                        textures = read_texture_list(chunk, gm_textures, name.resolve(&strings.strings_by_index)?)?
+                    }
+
+                    // read YYSWF
+                    align_reader(chunk, 4, 0x00)?;
+                    let jpeg_len: i32 = chunk.read_i32()? & (!0x80000000u32 as i32);    // the length is `OR`ed with int.MinValue
+                    let jpeg_len: usize = jpeg_len as usize;
+                    let yyswf_version: i32 = chunk.read_i32()?;
+                    let jpeg_table: Vec<u8> = match chunk.data.get(chunk.cur_pos.. chunk.cur_pos +jpeg_len) {
+                        Some(bytes) => bytes.to_vec(),
+                        None => return Err(format!(
+                            "Trying to read YYSWF JPEG Table out of bounds while parsing \
+                            Sprite with name \"{}\" in chunk '{}' at position {}: {} > {}.",
+                            name.resolve(&strings.strings_by_index)?, chunk.name, chunk.cur_pos, chunk.cur_pos + jpeg_len, chunk.data.len(),
+                        )),
+                    };
+                    chunk.cur_pos += jpeg_len;
+                    align_reader(chunk, 4, 0x00)?;
+                    let timeline: GMSpriteYYSWFTimeline = parse_yyswf_timeline(chunk, general_info)?;
+
+                    GMSpriteType::SWF(GMSpriteTypeSWF {
+                        swf_version,
+                        yyswf_version,
+                        jpeg_table,
+                        timeline,
+                    })
+                },
+
+                2 => {      // Spine
+                    return Err(format!(
+                        "Spine format is not yet implemented for Sprite with name \"{}\" and absolute position {}!",
+                        name.resolve(&strings.strings_by_index)?, start_position + chunk.abs_pos,
+                    ))
+                    // TODO {~~} IMPLEMENT TS
                 }
 
-                if nine_slice_offset != 0 {
-                    nine_slice = Some(parse_nine_slice(chunk, name.resolve(&strings.strings_by_index)?, start_position)?);
+                other => {
+                    return Err(format!(
+                        "Invalid Sprite Type {other} for Sprite with name \"{}\" and absolute position {}.",
+                        name.resolve(&strings.strings_by_index)?, start_position + chunk.abs_pos,
+                    ))
                 }
+            };
+
+            if sequence_offset != 0 {
+                let thingy: i32 = chunk.read_i32()?;
+                if thingy != 1 {
+                    return Err(format!(
+                        "Expected 1 but got {} while parsing Sequence for Sprite with name \"{}\" in chunk '{}'.",
+                        thingy, name.resolve(&strings.strings_by_index)?, chunk.name,
+                    ))
+                }
+                sequence = Some(parse_sequence(chunk, general_info, strings)?);
+            }
+
+            if nine_slice_offset != 0 {
+                nine_slice = Some(parse_nine_slice(chunk, name.resolve(&strings.strings_by_index)?, start_position)?);
             }
 
             special_fields = Some(GMSpriteSpecial {
                 special_version,
-                sprite_type: special_sprite_type,
+                sprite_type,
                 playback_speed,
                 playback_speed_type,
                 sequence,
                 nine_slice,
-                swf_version,
                 yyswf,
             });
         } else {
-            chunk.file_index -= 4;  // unread the not -1
+            chunk.cur_pos -= 4;  // unread the not -1
             // read into `textures`
-            read_texture_list(chunk, &mut textures, gm_textures, name.resolve(&strings.strings_by_index)?)?;
+            textures = read_texture_list(chunk, gm_textures, name.resolve(&strings.strings_by_index)?)?;
             // read mask data
             let mut mask_width: usize = width;
             let mut mask_height: usize = height;
@@ -326,9 +325,10 @@ fn calculate_mask_data_size(width: usize, height: usize, mask_count: usize) -> u
 }
 
 
-fn read_texture_list(chunk: &mut GMChunk, textures: &mut Vec<GMRef<GMTexture>>, gm_textures: &GMTextures, sprite_name: &str) -> Result<(), String> {
+fn read_texture_list(chunk: &mut GMChunk, gm_textures: &GMTextures, sprite_name: &str) -> Result<Vec<GMRef<GMTexture>>, String> {
     let texture_count: usize = chunk.read_usize()?;
-    textures.reserve(texture_count);
+    let mut textures: Vec<GMRef<GMTexture>> = Vec::with_capacity(texture_count);
+
     for _ in 0..texture_count {
         let texture_abs_pos: usize = chunk.read_usize()?;
         let texture: &GMRef<GMTexture> = gm_textures.abs_pos_to_ref.get(&texture_abs_pos)
@@ -336,7 +336,8 @@ fn read_texture_list(chunk: &mut GMChunk, textures: &mut Vec<GMRef<GMTexture>>, 
             reading texture list of sprite {sprite_name}", texture_abs_pos, gm_textures.abs_pos_to_ref.len()))?;
         textures.push(texture.clone());
     }
-    Ok(())
+
+    Ok(textures)
 }
 
 fn parse_nine_slice(chunk: &mut GMChunk, sprite_name: &str, start_position: usize) -> Result<GMSpriteNineSlice, String> {
@@ -354,7 +355,7 @@ fn parse_nine_slice(chunk: &mut GMChunk, sprite_name: &str, start_position: usiz
             Err(_) => return Err(format!(
                 "Invalid Tile Mode for Nine Slice 0x{:08X} at position {} \
                 while parsing Sprite with name \"{}\" at position {} in chunk '{}'.",
-                tile_mode, chunk.file_index, sprite_name, start_position, chunk.name,
+                tile_mode, chunk.cur_pos, sprite_name, start_position, chunk.name,
             )),
         };
         tile_modes.push(tile_mode);
@@ -379,15 +380,15 @@ fn read_mask_data(chunk: &mut GMChunk, sprite_name: &str, mask_width: usize, mas
     let mut total: usize = 0;
 
     for _ in 0..mask_count {
-        let data: Vec<u8> = match chunk.data.get(chunk.file_index .. chunk.file_index+len) {
+        let data: Vec<u8> = match chunk.data.get(chunk.cur_pos.. chunk.cur_pos +len) {
             Some(bytes) => bytes.to_vec(),
             None => return Err(format!(
                 "Trying to read Mask Data out of bounds while parsing \
                 Sprite with name \"{}\" in chunk '{}' at position {}: {} > {}.",
-                sprite_name, chunk.name, chunk.file_index, chunk.file_index + len, chunk.data.len(),
+                sprite_name, chunk.name, chunk.cur_pos, chunk.cur_pos + len, chunk.data.len(),
             )),
         };
-        chunk.file_index += len;
+        chunk.cur_pos += len;
         collision_masks.push(GMSpriteMaskEntry { data, width: mask_width, height: mask_height });
         total += len;
     }
@@ -398,7 +399,7 @@ fn read_mask_data(chunk: &mut GMChunk, sprite_name: &str, mask_width: usize, mas
         if byte != 0 {
             return Err(format!(
                 "Invalid padding byte 0x{:02X} while parsing Masks for Sprite with name \"{}\" at position {} in chunk '{}'.",
-                byte, sprite_name, chunk.file_index, chunk.name,
+                byte, sprite_name, chunk.cur_pos, chunk.name,
             ))
         }
         total += 1;
@@ -408,7 +409,7 @@ fn read_mask_data(chunk: &mut GMChunk, sprite_name: &str, mask_width: usize, mas
     if total != expected_size {
         return Err(format!(
             "Mask data size is incorrect for Sprite with name \"{}\" at position {} in chunk '{}': Expected: {}; Actual: {}.",
-            sprite_name, chunk.file_index, chunk.name, expected_size, total,
+            sprite_name, chunk.cur_pos, chunk.name, expected_size, total,
         ))
     }
 
@@ -419,12 +420,12 @@ fn read_mask_data(chunk: &mut GMChunk, sprite_name: &str, mask_width: usize, mas
 /// no idea what this actually does
 pub fn align_reader(chunk: &mut GMChunk, alignment: usize, padding_byte: u8) -> Result<(), String> {
     // maybe `alignment` needs to be i32 like in UndertaleModTool
-    while ((chunk.file_index + chunk.abs_pos) & (alignment - 1)) as u8 != padding_byte {
+    while ((chunk.cur_pos + chunk.abs_pos) & (alignment - 1)) as u8 != padding_byte {
         let byte: u8 = chunk.read_u8()?;
         if byte != padding_byte {
             return Err(format!(
                 "Invalid alignment padding 0x{:02X} (expected: 0x{}) at position {} in chunk '{}' with alignment value {}.",
-                byte, padding_byte, chunk.file_index - 1, chunk.name, alignment,
+                byte, padding_byte, chunk.cur_pos - 1, chunk.name, alignment,
             ));
         }
     }

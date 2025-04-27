@@ -412,7 +412,7 @@ pub fn parse_chunk_code(
     variables: &[GMVariable],
     functions: &GMFunctions,
 ) -> Result<Vec<GMCode>, String> {
-    chunk.file_index = 0;
+    chunk.cur_pos = 0;
     let codes_count: usize = chunk.read_usize()?;
     let mut code_meta_indexes: Vec<usize> = Vec::with_capacity(codes_count);
     for _ in 0..codes_count {
@@ -423,20 +423,20 @@ pub fn parse_chunk_code(
     let mut code_metas: Vec<GMCodeMeta> = Vec::with_capacity(codes_count);
 
     for ts in code_meta_indexes {
-        chunk.file_index = ts;
+        chunk.cur_pos = ts;
         let code_name: GMRef<String> = chunk.read_gm_string(strings)?;
         let code_length: usize = chunk.read_usize()?;
         let locals_count: u32 = chunk.read_u32()?;
 
         let start_offset: i32 = chunk.read_i32()?;
-        let start_position: i32 = chunk.file_index as i32 + start_offset - 4;
+        let start_position: i32 = chunk.cur_pos as i32 + start_offset - 4;
         if start_position < 0 || start_position >= chunk.data.len() as i32 {
             return Err(format!(
                 "Code starting offset out of bounds \
                 at position {} while parsing chunk 'CODE': \
                 Offset {} corresponds to chunk position {} \
                 which is not 0 <= {} < {}.",
-                chunk.file_index, start_offset, start_position, start_position, chunk.data.len()
+                chunk.cur_pos, start_offset, start_position, start_position, chunk.data.len()
             ));
         }
         let start_position: usize = start_position as usize;

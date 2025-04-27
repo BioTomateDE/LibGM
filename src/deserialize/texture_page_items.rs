@@ -33,7 +33,7 @@ pub struct GMTexturePageItem {
 
 
 pub fn parse_chunk_tpag(chunk: &mut GMChunk, texture_pages: Vec<GMEmbeddedTexture>) -> Result<GMTextures, String> {
-    chunk.file_index = 0;
+    chunk.cur_pos = 0;
     let items_count: usize = chunk.read_usize()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(items_count);
     for _ in 0..items_count {
@@ -43,7 +43,7 @@ pub fn parse_chunk_tpag(chunk: &mut GMChunk, texture_pages: Vec<GMEmbeddedTextur
     let mut textures_by_index: Vec<GMTexture> = Vec::with_capacity(items_count);
     let mut abs_pos_to_ref: HashMap<usize, GMRef<GMTexture>> = HashMap::new();
     for (i, start_position) in start_positions.iter().enumerate() {
-        chunk.file_index = *start_position;
+        chunk.cur_pos = *start_position;
         let source_x: u16 = chunk.read_u16()?;
         let source_y: u16 = chunk.read_u16()?;
         let source_width: u16 = chunk.read_u16()?;
@@ -60,14 +60,14 @@ pub fn parse_chunk_tpag(chunk: &mut GMChunk, texture_pages: Vec<GMEmbeddedTextur
             Some(page) => page,
             None => return Err(format!(
                 "Texture Page ID out ouf bounds at position {} in chunk 'TPAG': {} >= {}.",
-                chunk.file_index, texture_page_id, texture_pages.len(),
+                chunk.cur_pos, texture_page_id, texture_pages.len(),
             )),
         };
         let spritesheet: &image::RgbaImage = match &texture_page.texture_data {
             Image::Img(image::DynamicImage::ImageRgba8(img)) => &img,
             _ => return Err(format!(
                 "Unknown type of texture page image at position {} in chunk 'TPAG': {}.",
-                chunk.file_index, format_type_of(texture_page),
+                chunk.cur_pos, format_type_of(texture_page),
             )),
         };
 

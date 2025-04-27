@@ -42,7 +42,7 @@ pub struct GMFonts {
 }
 
 pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMFonts, String> {
-    chunk.file_index = 0;
+    chunk.cur_pos = 0;
     let font_count: usize = chunk.read_usize()?;
     let mut font_starting_positions: Vec<usize> = Vec::with_capacity(font_count);
     for _ in 0..font_count {
@@ -53,7 +53,7 @@ pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
     let mut fonts_by_index: Vec<GMFont> = Vec::with_capacity(font_count);
     let mut abs_pos_to_ref: HashMap<usize, GMRef<GMFont>> = HashMap::new();
     for (i, start_position) in font_starting_positions.iter().enumerate() {
-        chunk.file_index = *start_position;
+        chunk.cur_pos = *start_position;
 
         let name: GMRef<String> = chunk.read_gm_string(&strings)?;
         let display_name: GMRef<String> = chunk.read_gm_string(&strings)?;
@@ -128,7 +128,7 @@ fn parse_glyphs(chunk: &mut GMChunk, font_name: &str) -> Result<Vec<GMGlyph>, St
 
     let mut glyphs: Vec<GMGlyph> = Vec::with_capacity(glyph_count);
     for start_position in glyph_starting_positions {
-        chunk.file_index = start_position;
+        chunk.cur_pos = start_position;
 
         let character: i16 = chunk.read_i16()?;
         let character: char = match char::from_u32(character as u32) {
@@ -136,7 +136,7 @@ fn parse_glyphs(chunk: &mut GMChunk, font_name: &str) -> Result<Vec<GMGlyph>, St
             None => return Err(format!(
                 "Invalid unicode character 0x{:04X} at position {} in chunk 'FONT' while parsing glyphs for font {}.",
                 character,
-                chunk.file_index,
+                chunk.cur_pos,
                 font_name,
             )),
         };

@@ -45,7 +45,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
         name: "".to_string(),
         abs_pos: 0,
         data: &raw_data,
-        file_index: 0
+        cur_pos: 0
     };
 
     if all.read_chunk_name()? != "FORM" {
@@ -53,17 +53,17 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     }
 
     // get chunks
-    let raw_data_len: usize = all.read_usize()? + all.file_index;
+    let raw_data_len: usize = all.read_usize()? + all.cur_pos;
     let mut chunks: HashMap<String, GMChunk> = HashMap::new();
 
-    while all.file_index + 8 < raw_data_len {
+    while all.cur_pos + 8 < raw_data_len {
         let chunk_name: String = all.read_chunk_name()?;
         let chunk_length: usize = all.read_usize()?;
-        let chunk_data: &[u8] = match all.data.get(all.file_index .. all.file_index + chunk_length) {
+        let chunk_data: &[u8] = match all.data.get(all.cur_pos.. all.cur_pos + chunk_length) {
             Some(bytes) => bytes,
             None => return Err(format!(
                 "Chunk '{}' with specified length {} is out of bounds at absolute position {} while reading chunks: {} > {}.",
-                chunk_name, chunk_length, all.file_index, all.file_index + chunk_length, all.data.len(),
+                chunk_name, chunk_length, all.cur_pos, all.cur_pos + chunk_length, all.data.len(),
             )),
         };
         // println!("{} {}", chunk_name, all.file_index);
@@ -71,12 +71,12 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
             chunk_name.clone(),
             GMChunk {
                 name: chunk_name,
-                abs_pos: all.file_index,
+                abs_pos: all.cur_pos,
                 data: &chunk_data,
-                file_index: 0,
+                cur_pos: 0,
             },
         );
-        all.file_index += chunk_length;
+        all.cur_pos += chunk_length;
     }
 
     let mut chunk_strg: GMChunk = get_chunk(&chunks, "STRG")?;

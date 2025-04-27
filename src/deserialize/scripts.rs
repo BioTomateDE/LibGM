@@ -16,7 +16,7 @@ pub struct GMScripts {
 }
 
 pub fn parse_chunk_scpt(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMScripts, String> {
-    chunk.file_index = 0;
+    chunk.cur_pos = 0;
     let script_count: usize = chunk.read_usize()?;
 
     let mut absolute_start_positions: Vec<usize> = Vec::with_capacity(script_count);
@@ -27,7 +27,7 @@ pub fn parse_chunk_scpt(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMSc
     let mut abs_pos_to_index: HashMap<usize, usize> = HashMap::new();
     let mut scripts_by_index: Vec<GMScript> = Vec::with_capacity(script_count);
     for (i, abs_start_position) in absolute_start_positions.iter().enumerate() {
-        chunk.file_index = abs_start_position - chunk.abs_pos;
+        chunk.cur_pos = abs_start_position - chunk.abs_pos;
         let name: GMRef<String> = chunk.read_gm_string(&strings)?;
         let id: i32 = chunk.read_i32()?;
         if id < -1 {
