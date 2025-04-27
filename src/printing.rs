@@ -733,14 +733,14 @@ impl GMGameObject {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMGameObject:");
         println!("  Name: \"{}\"", self.name.resolve(&strings.strings_by_index)?);
-        println!("  Sprite Index: {}", self.sprite_index);
+        println!("  Sprite Index: {:?}", self.sprite);
         println!("  Visible: {}", self.visible);
         println!("  Managed: {:?}", self.managed);
         println!("  Solid: {}", self.solid);
         println!("  Depth: {}", self.depth);
         println!("  Persistent: {}", self.persistent);
         println!("  Parent ID: {}", self.parent_id);
-        println!("  Texture Mask ID: {}", self.texture_mask_id);
+        println!("  Texture Mask ID: {:?}", self.texture_mask);
         println!("  Uses Physics: {}", self.uses_physics);
         println!("  Is Sensor: {}", self.is_sensor);
         println!("  Collision Shape: {:?}", self.collision_shape);

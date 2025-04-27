@@ -51,8 +51,8 @@ pub fn parse_chunk_bgnd(
         let preload: bool = chunk.read_u32()? != 0;
         let texture_abs_pos: usize = chunk.read_usize()?;
         let texture: &GMRef<GMTexture> = textures.abs_pos_to_ref.get(&texture_abs_pos)
-            .ok_or(format!("Could not find texture with absolute position {} for Background with name \"{}\" at position {} in chunk 'BGND'.", 
-                           texture_abs_pos, name.resolve(&strings.strings_by_index)?, start_position))?;
+            .ok_or(format!("Could not find texture with absolute position {} for Background with name \"{}\" at position {} in chunk 'BGND'.",
+                texture_abs_pos, name.display(strings), start_position))?;
 
         let mut gms2_unknown_always2: Option<u32> = None;
         let mut gms2_tile_width: Option<u32> = None;
