@@ -13,3 +13,4 @@ mod game_objects;
 mod stubs;
 mod sprites;
 mod sequence;
+mod backgrounds;
