@@ -15,7 +15,7 @@ use crate::deserialize::strings::{parse_chunk_strg, GMStrings};
 use crate::deserialize::variables::{parse_chunk_vari, GMVariable};
 use crate::deserialize::general_info::{GMGeneralInfo, GMOptions};
 use crate::deserialize::paths::{parse_chunk_path, GMPaths};
-use crate::deserialize::rooms::{parse_chunk_room, GMRoom};
+use crate::deserialize::rooms::{parse_chunk_room, GMRooms};
 use crate::deserialize::sounds::{parse_chunk_sond, GMSounds};
 use crate::deserialize::sprites::{parse_chunk_sprt, GMSprites};
 use crate::deserialize::texture_page_items::{parse_chunk_tpag, GMTextures};
@@ -38,7 +38,7 @@ pub struct GMData {
     pub audios: GMEmbeddedAudios,           // AUDO
     pub sounds: GMSounds,                   // SOND
     pub game_objects: GMGameObjects,        // OBJT
-    pub rooms: Vec<GMRoom>,                 // ROOM
+    pub rooms: GMRooms,                     // ROOM
     pub paths: GMPaths,                     // PATH
 }
 
@@ -116,7 +116,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let audios: GMEmbeddedAudios = parse_chunk_audo(&mut chunk_audo)?;
     let sounds: GMSounds = parse_chunk_sond(&mut chunk_sond, &general_info, &strings)?;
     let game_objects: GMGameObjects = parse_chunk_objt(&mut chunk_objt, &general_info, &strings)?;
-    let rooms: Vec<GMRoom> = parse_chunk_room(&mut chunk_room, &general_info, &strings)?;
+    let rooms: GMRooms = parse_chunk_room(&mut chunk_room, &general_info, &strings)?;
     let paths: GMPaths = parse_chunk_path(&mut chunk_path, &strings)?;
 
     let data = GMData {
