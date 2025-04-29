@@ -38,7 +38,7 @@ pub fn parse_chunk_func(chunk: &mut GMChunk, strings: &GMStrings, chunk_code: &G
         let first_occurrence: i32 = chunk.read_i32()? - chunk_code.abs_pos as i32;
         let occurrences: Vec<usize> = get_occurrences(occurrence_count, first_occurrence, chunk_code);
         for occurrence in &occurrences {
-            occurrences_to_refs.insert(*occurrence, GMRef::function(i));
+            occurrences_to_refs.insert(*occurrence, GMRef::new(i));
         }
         let function: GMFunction = GMFunction {
             name: function_name,

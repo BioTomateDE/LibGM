@@ -21,11 +21,11 @@ pub struct GMFont {
     pub ascender: Option<u32>,
     pub sdf_spread: Option<u32>,
     pub line_height: Option<u32>,
-    pub glyphs: Vec<GMGlyph>,
+    pub glyphs: Vec<GMFontGlyph>,
 }
 
 #[derive(Debug, Clone)]
-pub struct GMGlyph {
+pub struct GMFontGlyph {
     pub character: char,
     pub x: u16,
     pub y: u16,
@@ -86,7 +86,7 @@ pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
             line_height = Some(chunk.read_u32()?);
         }
 
-        let glyphs: Vec<GMGlyph> = parse_glyphs(chunk, name.resolve(&strings.strings_by_index)?)?;
+        let glyphs: Vec<GMFontGlyph> = parse_glyphs(chunk, name.resolve(&strings.strings_by_index)?)?;
 
         let font: GMFont = GMFont {
             name,
@@ -107,7 +107,7 @@ pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
             line_height,
             glyphs,
         };
-        abs_pos_to_ref.insert(start_position + chunk.abs_pos, GMRef::font(i));
+        abs_pos_to_ref.insert(start_position + chunk.abs_pos, GMRef::new(i));
         fonts_by_index.push(font);
     }
     Ok(GMFonts {
@@ -117,7 +117,7 @@ pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
 }
 
 
-fn parse_glyphs(chunk: &mut GMChunk, font_name: &str) -> Result<Vec<GMGlyph>, String> {
+fn parse_glyphs(chunk: &mut GMChunk, font_name: &str) -> Result<Vec<GMFontGlyph>, String> {
     let glyph_count: usize = chunk.read_usize()?;
     let mut glyph_starting_positions: Vec<usize> = Vec::with_capacity(glyph_count);
 
@@ -126,7 +126,7 @@ fn parse_glyphs(chunk: &mut GMChunk, font_name: &str) -> Result<Vec<GMGlyph>, St
         glyph_starting_positions.push(start_position);
     }
 
-    let mut glyphs: Vec<GMGlyph> = Vec::with_capacity(glyph_count);
+    let mut glyphs: Vec<GMFontGlyph> = Vec::with_capacity(glyph_count);
     for start_position in glyph_starting_positions {
         chunk.cur_pos = start_position;
 
@@ -148,7 +148,7 @@ fn parse_glyphs(chunk: &mut GMChunk, font_name: &str) -> Result<Vec<GMGlyph>, St
         let offset: i16 = chunk.read_i16()?;
         let _kerning: i16 = chunk.read_i16()?;  // unsupported as vanilla doesn't use it
 
-        let glyph: GMGlyph = GMGlyph {
+        let glyph: GMFontGlyph = GMFontGlyph {
             character,
             x,
             y,
