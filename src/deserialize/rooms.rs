@@ -1,6 +1,6 @@
 use crate::deserialize::chunk_reading::GMRef;
 use num_enum::TryFromPrimitive;
-use crate::deserialize::backgrounds::{GMBackground, GMBackgrounds};
+use crate::deserialize::backgrounds::GMBackground;
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::game_objects::{GMGameObject};
 use crate::deserialize::general_info::GMGeneralInfo;

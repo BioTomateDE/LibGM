@@ -10,17 +10,22 @@ pub struct GMBackground {
     pub smooth: bool,
     pub preload: bool,
     pub texture: GMRef<GMTexture>,
-    pub gms2_unknown_always2: Option<u32>,
-    pub gms2_tile_width: Option<u32>,
-    pub gms2_tile_height: Option<u32>,
-    pub gms2_outpgm_border_x: Option<u32>,
-    pub gms2_outpgm_border_y: Option<u32>,
-    pub gms2_tile_columns: Option<u32>,
-    pub gms2_items_per_tile_count: Option<u32>,
-    pub gms2_tile_count: Option<u32>,
-    pub gms2_unknown_always_zero: Option<u32>,
-    pub gms2_frame_length: Option<i64>,
-    pub gms2_tile_ids: Vec<u32>,
+    pub gms2_data: Option<GMBackgroundGMS2Data>,
+}
+
+#[derive(Debug, Clone)]
+pub struct GMBackgroundGMS2Data {
+    pub unknown_always2: u32,
+    pub tile_width: u32,
+    pub tile_height: u32,
+    pub output_border_x: u32,
+    pub output_border_y: u32,
+    pub tile_columns: u32,
+    pub items_per_tile_count: usize,
+    pub tile_count: usize,
+    pub unknown_always_zero: u32,
+    pub frame_length: i64,
+    pub tile_ids: Vec<u32>,
 }
 
 #[derive(Debug, Clone)]
@@ -54,36 +59,39 @@ pub fn parse_chunk_bgnd(
             .ok_or(format!("Could not find texture with absolute position {} for Background with name \"{}\" at position {} in chunk 'BGND'.",
                 texture_abs_pos, name.display(strings), start_position))?;
 
-        let mut gms2_unknown_always2: Option<u32> = None;
-        let mut gms2_tile_width: Option<u32> = None;
-        let mut gms2_tile_height: Option<u32> = None;
-        let mut gms2_outpgm_border_x: Option<u32> = None;
-        let mut gms2_outpgm_border_y: Option<u32> = None;
-        let mut gms2_tile_columns: Option<u32> = None;
-        let mut gms2_items_per_tile_count: Option<u32> = None;
-        let mut gms2_tile_count: Option<u32> = None;
-        let mut gms2_unknown_always_zero: Option<u32> = None;
-        let mut gms2_frame_length: Option<i64> = None;
-        let mut gms2_tile_ids: Vec<u32> = vec![];     // empty --> `None`
-
+        let mut gms2_data: Option<GMBackgroundGMS2Data> = None;
         if general_info.is_version_at_least(2, 0, 0, 0) {
-            gms2_unknown_always2 = Some(chunk.read_u32()?);
-            gms2_tile_width = Some(chunk.read_u32()?);
-            gms2_tile_height = Some(chunk.read_u32()?);
-            gms2_outpgm_border_x = Some(chunk.read_u32()?);
-            gms2_outpgm_border_y = Some(chunk.read_u32()?);
-            gms2_tile_columns = Some(chunk.read_u32()?);
-            gms2_items_per_tile_count = Some(chunk.read_u32()?);
-            gms2_tile_count = Some(chunk.read_u32()?);
-            gms2_unknown_always_zero = Some(chunk.read_u32()?);
-            gms2_frame_length = Some(chunk.read_i64()?);
+            let unknown_always2: u32 = chunk.read_u32()?;
+            let tile_width: u32 = chunk.read_u32()?;
+            let tile_height: u32 = chunk.read_u32()?;
+            let output_border_x: u32 = chunk.read_u32()?;
+            let output_border_y: u32 = chunk.read_u32()?;
+            let tile_columns: u32 = chunk.read_u32()?;
+            let items_per_tile_count: usize = chunk.read_usize()?;
+            let tile_count: usize = chunk.read_usize()?;
+            let unknown_always_zero: u32 = chunk.read_u32()?;
+            let frame_length: i64 = chunk.read_i64()?;
 
-            let tile_count: usize = gms2_tile_count.unwrap() as usize * gms2_items_per_tile_count.unwrap() as usize;
-            gms2_tile_ids.reserve(tile_count);
+            let tile_count: usize = tile_count * items_per_tile_count;
+            let mut tile_ids: Vec<u32> = Vec::with_capacity(tile_count);
             for _ in 0..tile_count {
                 let tile_id: u32 = chunk.read_u32()?;
-                gms2_tile_ids.push(tile_id);
+                tile_ids.push(tile_id);
             }
+
+            gms2_data = Some(GMBackgroundGMS2Data {
+                unknown_always2,
+                tile_width,
+                tile_height,
+                output_border_x,
+                output_border_y,
+                tile_columns,
+                items_per_tile_count,
+                tile_count,
+                unknown_always_zero,
+                frame_length,
+                tile_ids,
+            })
         }
 
         let background: GMBackground = GMBackground {
@@ -92,17 +100,7 @@ pub fn parse_chunk_bgnd(
             smooth,
             preload,
             texture: texture.clone(),
-            gms2_unknown_always2,
-            gms2_tile_width,
-            gms2_tile_height,
-            gms2_outpgm_border_x,
-            gms2_outpgm_border_y,
-            gms2_tile_columns,
-            gms2_items_per_tile_count,
-            gms2_tile_count,
-            gms2_unknown_always_zero,
-            gms2_frame_length,
-            gms2_tile_ids,
+            gms2_data,
         };
         backgrounds_by_index.push(background);
     }
