@@ -10,9 +10,18 @@ mod serialize;
 mod structs;   // TODO remove this file
 
 use std::process;
+use std::sync::Arc;
+use biologischer_log::CustomLogger;
 use log::{info, error};
 use crate::deserialize::all::GMData;
 use crate::serialize::all::{build_data_file, write_data_file};
+
+
+fn error_exit(logger: Arc<CustomLogger>) -> ! {
+    logger.shutdown();
+    process::exit(1);
+}
+
 
 fn main() {
     let logger = biologischer_log::init_logger(env!("CARGO_PKG_NAME"));
@@ -23,7 +32,7 @@ fn main() {
         Ok(data_file) => data_file,
         Err(error) => {
             error!("Error while reading data file: {error}");
-            process::exit(1);
+            error_exit(logger);
         }
     };
 
@@ -32,7 +41,7 @@ fn main() {
         Ok(data) => data,
         Err(error) => {
             error!("Error while parsing data file: {error}");
-            process::exit(1);
+            error_exit(logger);
         }
     };
 
@@ -41,7 +50,7 @@ fn main() {
         Ok(data) => data,
         Err(error) => {
             error!("Error while building data file: {error}");
-            process::exit(1);
+            error_exit(logger);
         }
     };
 
@@ -51,7 +60,7 @@ fn main() {
         Ok(data) => data,
         Err(error) => {
             error!("Error while writing data file: {error}");
-            process::exit(1);
+            error_exit(logger);
         }
     };
 
