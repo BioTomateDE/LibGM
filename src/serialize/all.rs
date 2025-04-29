@@ -13,6 +13,7 @@ use crate::serialize::functions::build_chunk_func;
 use crate::serialize::game_objects::build_chunk_objt;
 use crate::serialize::strings::build_chunk_strg;
 use crate::serialize::general_info::{build_chunk_optn, build_chunk_gen8};
+use crate::serialize::paths::build_chunk_path;
 use crate::serialize::scripts::build_chunk_scpt;
 use crate::serialize::sounds::build_chunk_sond;
 use crate::serialize::sprites::build_chunk_sprt;
@@ -105,7 +106,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     build_chunk_agrp(&mut builder, &gm_data)?;      // stub
     build_chunk_sprt(&mut builder, &gm_data)?;
     build_chunk_bgnd(&mut builder, &gm_data)?;
-    // build_chunk_path(&mut builder, &gm_data)?;
+    build_chunk_path(&mut builder, &gm_data)?;
     build_chunk_scpt(&mut builder, &gm_data)?;
     build_chunk_shdr(&mut builder, &gm_data)?;      // stub
     build_chunk_font(&mut builder, &gm_data)?;
