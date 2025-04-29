@@ -83,7 +83,7 @@ pub fn parse_chunk_tpag(chunk: &mut GMChunk, texture_pages: Vec<GMEmbeddedTextur
             bounding_height,
         };
         textures_by_index.push(texture_page_item);
-        abs_pos_to_ref.insert(start_position + chunk.abs_pos, GMRef::texture(i));
+        abs_pos_to_ref.insert(start_position + chunk.abs_pos, GMRef::new(i));
     }
 
     let textures: GMTextures = GMTextures { textures_by_index, abs_pos_to_ref };

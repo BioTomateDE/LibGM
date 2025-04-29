@@ -2,7 +2,7 @@ use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::scripts::GMScript;
 use crate::serialize::all::{build_chunk, DataBuilder};
-use crate::serialize::chunk_writing::ChunkBuilder;
+use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
 pub fn build_chunk_scpt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "SCPT", abs_pos: data_builder.len() };
@@ -10,11 +10,11 @@ pub fn build_chunk_scpt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_usize(len);
 
     for i in 0..len {
-        data_builder.push_pointer_placeholder(&mut builder, GMRef::script(i))?;
+        data_builder.push_pointer_placeholder(&mut builder, GMPointer::script(i))?;
     }
 
     for i in 0..len {
-        data_builder.push_pointer_resolve(&mut builder, GMRef::script(i))?;
+        data_builder.push_pointer_resolve(&mut builder, GMPointer::script(i))?;
         let script: &GMScript = &gm_data.scripts.scripts_by_index[i];
 
         builder.write_gm_string(data_builder, &script.name)?;

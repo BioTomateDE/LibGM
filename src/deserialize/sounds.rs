@@ -59,7 +59,7 @@ pub fn parse_chunk_sond(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
         let audio_file: i32 = chunk.read_i32()?;
         let audio_file: Option<GMRef<GMEmbeddedAudio>> =
             if audio_file == -1 { None }
-            else { Some(GMRef::audio(audio_file as usize)) };
+            else { Some(GMRef::new(audio_file as usize)) };
 
         let mut audio_length: Option<f32> = None;
         if general_info.is_version_at_least(2024, 6, 0, 0) {

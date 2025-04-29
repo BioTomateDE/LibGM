@@ -387,7 +387,7 @@ impl GMCodeBlob {
                 };
                 let string_index: usize = u32::from_le_bytes(raw) as usize;
                 self.file_index += 4;
-                Ok(GMValue::String(GMRef::string(string_index)))
+                Ok(GMValue::String(GMRef::new(string_index)))
             },
 
             GMDataType::Int16 => {

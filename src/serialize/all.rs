@@ -3,9 +3,8 @@ use std::fs;
 use std::path::Path;
 use image::DynamicImage;
 use crate::deserialize::all::GMData;
-use crate::deserialize::chunk_reading::{GMRef, RefKind};
 use crate::deserialize::texture_page_items::{GMTexturePageItem};
-use crate::serialize::chunk_writing::ChunkBuilder;
+use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 use crate::serialize::embedded_audio::build_chunk_audo;
 use crate::serialize::embedded_textures::build_chunk_txtr;
 use crate::serialize::fonts::build_chunk_font;
@@ -22,9 +21,8 @@ use crate::serialize::texture_page_items::{build_chunk_tpag, generate_texture_pa
 #[derive(Debug, Clone)]
 pub struct DataBuilder {
     raw_data: Vec<u8>,
-    // GMRef<()> signifies mixed referenced kinds/datatypes
-    pointer_pool_placeholders: HashMap<GMRef<()>, usize>,  // maps gamemaker element references to absolute positions of where they're referenced
-    pointer_pool_resources: HashMap<GMRef<()>, usize>,     // maps gamemaker element references to absolute positions of where their data is
+    pointer_pool_placeholders: HashMap<GMPointer, usize>,  // maps gamemaker element references to absolute positions of where they're referenced
+    pointer_pool_resources: HashMap<GMPointer, usize>,     // maps gamemaker element references to absolute positions of where their data is
 }
 impl DataBuilder {
     /// Create a placeholder pointer at the current position in the chunk
@@ -35,23 +33,21 @@ impl DataBuilder {
     /// This method should be called, when the data file format expects
     /// a pointer to some element, but you don't yet (necessarily) know where
     /// that element will be located in the data file.
-    pub fn push_pointer_placeholder<T>(&mut self, chunk_builder: &mut ChunkBuilder, reference: GMRef<T>) -> Result<(), String> {
+    pub fn push_pointer_placeholder(&mut self, chunk_builder: &mut ChunkBuilder, pointer: GMPointer) -> Result<(), String> {
         let position: usize = self.len() + chunk_builder.len();
-        let reference: GMRef<()> = GMRef::new(reference.index, reference.kind);
         chunk_builder.write_usize(0);      // write placeholder
-        self.pointer_pool_placeholders.insert(reference, position);
+        self.pointer_pool_placeholders.insert(pointer, position);
         Ok(())
     }
 
     /// Store the gamemaker element's absolute position in the pool.
     /// The element's absolute position is the chunk builder's current position,
     /// since this method should get called when the element is built to the data file.
-    pub fn push_pointer_resolve<T>(&mut self, chunk_builder: &mut ChunkBuilder, reference: GMRef<T>) -> Result<(), String> {
+    pub fn push_pointer_resolve(&mut self, chunk_builder: &mut ChunkBuilder, pointer: GMPointer) -> Result<(), String> {
         let position: usize = chunk_builder.abs_pos + chunk_builder.len();
-        let reference_kind: RefKind = reference.kind.clone();
-        if let Some(old_value) = self.pointer_pool_resources.insert(reference.erase_type(), position) {
-            return Err(format!("Reference to {:?} already resolved to absolute position {}; \
-            tried to resolve again to position {}", reference_kind, old_value, position))
+        if let Some(old_value) = self.pointer_pool_resources.insert(pointer.clone(), position) {
+            return Err(format!("Pointer to {:?} already resolved to absolute position {}; \
+            tried to resolve again to position {}.", pointer, old_value, position))
         }
         Ok(())
     }
