@@ -1,5 +1,4 @@
 use crate::deserialize::all::GMData;
-use crate::deserialize::chunk_reading::GMRef;
 use crate::serialize::all::DataBuilder;
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
