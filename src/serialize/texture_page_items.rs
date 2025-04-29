@@ -3,7 +3,7 @@ use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::texture_page_items::{GMTexture, GMTexturePageItem, GMTextures};
 use crate::serialize::all::DataBuilder;
-use crate::serialize::chunk_writing::ChunkBuilder;
+use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
 pub fn build_chunk_tpag(data_builder: &mut DataBuilder, gm_data: &GMData, texture_page_items: Vec<GMTexturePageItem>) -> Result<(), String> {
     let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "TPAG", abs_pos: data_builder.len() };
@@ -11,11 +11,11 @@ pub fn build_chunk_tpag(data_builder: &mut DataBuilder, gm_data: &GMData, textur
     builder.write_usize(len);
 
     for texture_page_item in &texture_page_items {
-        data_builder.push_pointer_placeholder(&mut builder, GMRef::texture(texture_page_item.texture.index))?;
+        data_builder.push_pointer_placeholder(&mut builder, GMPointer::texture(texture_page_item.texture.index))?;
     }
 
     for texture_page_item in &texture_page_items {
-        data_builder.push_pointer_resolve(&mut builder, GMRef::texture(texture_page_item.texture.index))?;
+        data_builder.push_pointer_resolve(&mut builder, GMPointer::texture(texture_page_item.texture.index))?;
         let texture: &GMTexture = texture_page_item.texture.resolve(&gm_data.textures.textures_by_index)?;
 
         builder.write_u16(texture_page_item.source_x);
@@ -77,7 +77,7 @@ pub fn generate_texture_pages(gm_textures: &GMTextures) -> Result<(Vec<GMTexture
             source_width: texture.img.width() as u16,
             source_height: texture.img.height() as u16,
             texture_page_id: texture_pages.len() as u16,
-            texture: GMRef::texture(index),
+            texture: GMRef::new(index),
         });
         image::imageops::overlay(&mut cur_texture_page, &texture.img, x as i64, y as i64);
         x += texture.img.width() as usize;

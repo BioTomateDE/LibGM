@@ -291,7 +291,7 @@ fn parse_room_objects(
         let x: i32 = chunk.read_i32()?;
         let y: i32 = chunk.read_i32()?;
         let object_definition: usize = chunk.read_usize()?;
-        let object_definition: GMRef<GMGameObject> = GMRef::game_object(object_definition);
+        let object_definition: GMRef<GMGameObject> = GMRef::new(object_definition);
         let instance_id: u32 = chunk.read_u32()?;
         let creation_code: i32 = chunk.read_i32()?;     // {!!} change type to code ref
         let scale_x: f32 = chunk.read_f32()?;
@@ -342,7 +342,7 @@ fn parse_room_backgrounds(chunk: &mut GMChunk) -> Result<Vec<GMRoomBackground>, 
         let background_definition: i32 = chunk.read_i32()?;
         let background_definition: Option<GMRef<GMBackground>> =
             if background_definition == -1 { None }
-            else { Some(GMRef::background(background_definition as usize)) };
+            else { Some(GMRef::new(background_definition as usize)) };
         let x: i32 = chunk.read_i32()?;
         let y: i32 = chunk.read_i32()?;
         let tile_x: i32 = chunk.read_i32()?;    // idk if this should be an int instead of a bool

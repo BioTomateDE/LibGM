@@ -1,6 +1,6 @@
 ﻿use crate::deserialize::backgrounds::GMBackground;
 use crate::deserialize::embedded_textures::GMEmbeddedTexture;
-use crate::deserialize::fonts::{GMFont, GMGlyph};
+use crate::deserialize::fonts::{GMFont, GMFontGlyph};
 use crate::deserialize::game_objects::{GMGameObject, GMGameObjectEvent, GMGameObjectEventAction};
 use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMOptions, GMOptionsFlags};
 use crate::deserialize::rooms::{GMRoom, GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomLayer, GMRoomTile, GMRoomView};
@@ -435,7 +435,7 @@ impl GMFont {
 
 
 #[allow(dead_code)]
-impl GMGlyph {
+impl GMFontGlyph {
     pub fn print(&self) {
         println!("GMGlyph:");
         println!("  Character: '{}'", self.character);

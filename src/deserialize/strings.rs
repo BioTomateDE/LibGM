@@ -23,7 +23,7 @@ pub fn parse_chunk_strg(chunk: &mut GMChunk) -> Result<GMStrings, String> {
         let string: String = chunk.read_literal_string(string_length)?;
         chunk.cur_pos += 1;  // skip one byte for the null byte after the string
         strings_by_index.push(string.clone());
-        abs_pos_to_reference.insert(absolute_position, GMRef::string(i));
+        abs_pos_to_reference.insert(absolute_position, GMRef::new(i));
     }
 
     let strings: GMStrings = GMStrings {

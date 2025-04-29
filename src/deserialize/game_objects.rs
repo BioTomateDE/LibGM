@@ -85,7 +85,7 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
         let sprite: Option<GMRef<GMSprite>> = match chunk.read_i32()? {
             -1 => None,
-            index => Some(GMRef::sprite(index.try_into().map_err(|_| format!(
+            index => Some(GMRef::new(index.try_into().map_err(|_| format!(
                 "Invalid negative sprite index {} for game object's sprite \"{}\" at absolute position {}",
                 index, name.display(strings), start_position + chunk.abs_pos))?)),
         };
@@ -100,7 +100,7 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
         let parent_id: i32 = chunk.read_i32()?;         // TODO usize, object ref  | parent can be: -100 (undefined), -2 (other [not here]), or -1 (self)
         let texture_mask: Option<GMRef<GMSprite>> = match chunk.read_i32()? {
             -1 => None,
-            index => Some(GMRef::sprite(index.try_into().map_err(|_| format!(
+            index => Some(GMRef::new(index.try_into().map_err(|_| format!(
                 "Invalid negative sprite index {} for game object's texture mask \"{}\" at absolute position {}",
                 index, name.display(strings), start_position + chunk.abs_pos))?)),
         };

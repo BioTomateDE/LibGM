@@ -1,8 +1,7 @@
 use crate::deserialize::all::GMData;
-use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::game_objects::{GMGameObject, GMGameObjectEventAction};
 use crate::serialize::all::{build_chunk, DataBuilder};
-use crate::serialize::chunk_writing::ChunkBuilder;
+use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
 pub fn build_chunk_objt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "OBJT", abs_pos: data_builder.len() };
@@ -10,16 +9,16 @@ pub fn build_chunk_objt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_usize(len);
 
     for i in 0..len {
-        data_builder.push_pointer_placeholder(&mut builder, GMRef::game_object(i))?;
+        data_builder.push_pointer_placeholder(&mut builder, GMPointer::game_object(i))?;
     }
 
     for i in 0..len {
-        data_builder.push_pointer_resolve(&mut builder, GMRef::game_object(i))?;
+        data_builder.push_pointer_resolve(&mut builder, GMPointer::game_object(i))?;
         let game_object: &GMGameObject = &gm_data.game_objects.game_objects_by_index[i];
 
         builder.write_gm_string(data_builder, &game_object.name)?;
         match &game_object.sprite {
-            Some(sprite) => data_builder.push_pointer_placeholder(&mut builder, GMRef::sprite(sprite.index))?,
+            Some(sprite) => data_builder.push_pointer_placeholder(&mut builder, GMPointer::sprite(sprite.index))?,
             None => builder.write_i32(-1),
         };
         builder.write_bool(game_object.visible);
@@ -33,7 +32,7 @@ pub fn build_chunk_objt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_bool(game_object.persistent);
         builder.write_i32(game_object.parent_id);
         match &game_object.texture_mask {
-            Some(sprite) => data_builder.push_pointer_placeholder(&mut builder, GMRef::sprite(sprite.index))?,
+            Some(sprite) => data_builder.push_pointer_placeholder(&mut builder, GMPointer::sprite(sprite.index))?,
             None => builder.write_i32(-1),
         };
         builder.write_bool(game_object.uses_physics);
@@ -49,7 +48,7 @@ pub fn build_chunk_objt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
             builder.write_f32(*x);
             builder.write_f32(*y);
         }
-        build_game_object_events(data_builder, &mut builder, game_object)?;
+        build_game_object_events(data_builder, &mut builder, game_object, i)?;
     }
 
     build_chunk(data_builder, builder)?;
@@ -61,26 +60,26 @@ fn build_game_object_events(
     data_builder: &mut DataBuilder,
     builder: &mut ChunkBuilder,
     game_object: &GMGameObject,
+    game_object_index: usize,
 ) -> Result<(), String> {
     builder.write_usize(game_object.events.len());
 
     for i in 0..game_object.events.len() {
-        data_builder.push_pointer_placeholder(builder, GMRef::game_object_event(i))?;
+        data_builder.push_pointer_placeholder(builder, GMPointer::game_object_event(game_object_index, i))?;
     }
 
     for (i, event_instances) in game_object.events.iter().enumerate() {
-        data_builder.push_pointer_resolve(builder, GMRef::game_object_event(i))?;
+        data_builder.push_pointer_resolve(builder, GMPointer::game_object_event(game_object_index, i))?;
         builder.write_usize(event_instances.len());
 
-        for i in 0..event_instances.len() {
-            data_builder.push_pointer_placeholder(builder, GMRef::game_object_event_instance(i))?;
+        for j in 0..event_instances.len() {
+            data_builder.push_pointer_placeholder(builder, GMPointer::game_object_event_instance(game_object_index, i, j))?;
         }
 
-        for (i, event_instance) in event_instances.iter().enumerate() {
-            data_builder.push_pointer_resolve(builder, GMRef::game_object_event_instance(i))?;
+        for (j, event_instance) in event_instances.iter().enumerate() {
+            data_builder.push_pointer_resolve(builder, GMPointer::game_object_event_instance(game_object_index, i, j))?;
             builder.write_u32(event_instance.subtype);
-            build_game_object_event_instance_actions(data_builder, builder, &event_instance.actions)?;
-            data_builder.push_pointer_placeholder(builder, GMRef::game_object_event_action(i))?
+            build_game_object_event_instance_actions(data_builder, builder, &event_instance.actions, game_object_index, i, j)?;
         }
     }
     Ok(())
@@ -91,15 +90,18 @@ fn build_game_object_event_instance_actions(
     data_builder: &mut DataBuilder,
     builder: &mut ChunkBuilder,
     actions: &Vec<GMGameObjectEventAction>,
+    game_object_index: usize,
+    event_index: usize,
+    instance_index: usize,
 ) -> Result<(), String> {
     builder.write_usize(actions.len());
 
     for i in 0..actions.len() {
-        data_builder.push_pointer_placeholder(builder, GMRef::game_object_event_action(i))?;
+        data_builder.push_pointer_placeholder(builder, GMPointer::game_object_event_action(game_object_index, event_index, instance_index, i))?;
     }
 
     for (i, action) in actions.iter().enumerate() {
-        data_builder.push_pointer_resolve(builder, GMRef::game_object_event_action(i))?;
+        data_builder.push_pointer_resolve(builder, GMPointer::game_object_event_action(game_object_index, event_index, instance_index, i))?;
         builder.write_u32(action.lib_id);
         builder.write_u32(action.id);
         builder.write_u32(action.kind);

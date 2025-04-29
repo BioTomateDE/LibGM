@@ -1,140 +1,23 @@
-﻿use crate::deserialize::backgrounds::GMBackground;
-use crate::deserialize::embedded_audio::GMEmbeddedAudio;
-use crate::deserialize::fonts::GMFont;
-use crate::deserialize::functions::GMFunction;
-use crate::deserialize::game_objects::{GMGameObject, GMGameObjectEvent, GMGameObjectEventAction};
-use crate::deserialize::scripts::GMScript;
-use crate::deserialize::sounds::GMSound;
-use crate::deserialize::sprites::GMSprite;
-use crate::deserialize::strings::GMStrings;
-use crate::deserialize::texture_page_items::GMTexture;
+﻿use crate::deserialize::strings::GMStrings;
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-pub enum RefKind {
-    String,
-    TexturePage,
-    TexturePageData,
-    Texture,
-    Sprite,
-    SpriteSequencePosition,
-    SpriteNineSlicePosition,
-    Audio,
-    Sound,
-    Function,
-    Script,
-    GameObject,
-    GameObjectEvent,
-    GameObjectEventInstance,
-    GameObjectEventAction,
-    Font,
-    Background,
-}
-
-
-// stores actual referenced kind/datatype in `.kind`, to make mixing possible.
-// also has a fake type generic so that the kind/datatype can be specified in struct fields for clarity
-// if kind/datatype is mixed; use () as generic T
+// GMRef is for parsing chunks:
+// It has (fake) generic types to make it
+// clearer which type it belongs to (`name: GMRef` vs `name: GMRef<String>`).
+// It can be resolved to the data it references using the `.resolve()` method,
+// which needs the list the elements are stored in.
+// [See GMPointer to understand difference]
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct GMRef<T> {
     pub index: usize,
-    pub kind: RefKind,
+    // marker needs to be here to ignore "unused generic T" error; doesn't store any data
     _marker: std::marker::PhantomData<T>,
 }
 impl<T> GMRef<T> {
-    pub fn new(index: usize, kind: RefKind) -> GMRef<T> {
+    pub fn new(index: usize) -> GMRef<T> {
         Self {
             index,
-            kind,
             _marker: std::marker::PhantomData,
         }
-    }
-    pub fn erase_type(&self) -> GMRef<()> {
-        GMRef::<()> {
-            index: self.index,
-            kind: self.kind,
-            _marker: std::marker::PhantomData,
-        }
-    }
-}
-impl GMRef<String> {
-    pub fn string(index: usize) -> Self {
-        Self::new(index, RefKind::String)
-    }
-}
-impl GMRef<image::DynamicImage> {
-    pub fn texture_page(index: usize) -> Self {
-        Self::new(index, RefKind::TexturePage)
-    }
-    pub fn texture_page_data(index: usize) -> Self {
-        Self::new(index, RefKind::TexturePageData)
-    }
-}
-impl GMRef<GMTexture> {
-    pub fn texture(index: usize) -> Self {
-        Self::new(index, RefKind::Texture)
-    }
-}
-impl GMRef<GMSprite> {
-    pub fn sprite(index: usize) -> Self {
-        Self::new(index, RefKind::Sprite)
-    }
-}
-impl GMRef<usize> {
-    pub fn sprite_sequence_position(index: usize) -> Self {
-        Self::new(index, RefKind::SpriteSequencePosition)
-    }     // not really an index but rather an absolute position
-    pub fn sprite_nine_slice_position(index: usize) -> Self {
-        Self::new(index, RefKind::SpriteNineSlicePosition)
-    }   // not really an index but rather an absolute position
-}
-impl GMRef<GMEmbeddedAudio> {
-    pub fn audio(index: usize) -> Self {
-        Self::new(index, RefKind::Audio)
-    }
-}
-impl GMRef<GMSound> {
-    pub fn sound(index: usize) -> Self {
-        Self::new(index, RefKind::Sound)
-    }
-}
-impl GMRef<GMFunction> {
-    pub fn function(index: usize) -> Self {
-        Self::new(index, RefKind::Function)
-    }
-}
-impl GMRef<GMScript> {
-    pub fn script(index: usize) -> Self {
-        Self::new(index, RefKind::Script)
-    }
-}
-impl GMRef<GMGameObject> {
-    pub fn game_object(index: usize) -> Self {
-        Self::new(index, RefKind::GameObject)
-    }
-}
-impl GMRef<Vec<GMGameObjectEvent>> {
-    pub fn game_object_event(index: usize) -> Self {
-        Self::new(index, RefKind::GameObjectEvent)
-    }
-}
-impl GMRef<GMGameObjectEvent> {
-    pub fn game_object_event_instance(index: usize) -> Self {
-        Self::new(index, RefKind::GameObjectEventInstance)
-    }
-}
-impl GMRef<GMGameObjectEventAction> {
-    pub fn game_object_event_action(index: usize) -> Self {
-        Self::new(index, RefKind::GameObjectEventAction)
-    }
-}
-impl GMRef<GMFont> {
-    pub fn font(index: usize) -> Self {
-        Self::new(index, RefKind::Font)
-    }
-}
-impl GMRef<GMBackground> {
-    pub fn background(index: usize) -> Self {
-        Self::new(index, RefKind::Background)
     }
 }
 impl<'a, T> GMRef<T> {
