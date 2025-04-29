@@ -17,3 +17,4 @@ pub mod embedded_audio;
 pub mod sounds;
 pub mod sprites;
 pub mod sprites_yyswf;
+mod paths;

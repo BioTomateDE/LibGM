@@ -4,6 +4,7 @@ use std::path::Path;
 use image::DynamicImage;
 use crate::deserialize::all::GMData;
 use crate::deserialize::texture_page_items::{GMTexturePageItem};
+use crate::serialize::backgrounds::build_chunk_bgnd;
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 use crate::serialize::embedded_audio::build_chunk_audo;
 use crate::serialize::embedded_textures::build_chunk_txtr;
@@ -103,7 +104,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     build_chunk_sond(&mut builder, &gm_data)?;
     build_chunk_agrp(&mut builder, &gm_data)?;      // stub
     build_chunk_sprt(&mut builder, &gm_data)?;
-    // build_chunk_bgnd(&mut builder, &gm_data)?;
+    build_chunk_bgnd(&mut builder, &gm_data)?;
     // build_chunk_path(&mut builder, &gm_data)?;
     build_chunk_scpt(&mut builder, &gm_data)?;
     build_chunk_shdr(&mut builder, &gm_data)?;      // stub

@@ -4,9 +4,9 @@ use crate::serialize::all::DataBuilder;
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct Index(usize);
+pub struct Index(usize);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct Position(usize);
+pub struct Position(usize);
 
 // GMPointer is for building chunks:
 // It has to store the kind (data type) of the referenced element,
