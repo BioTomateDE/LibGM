@@ -690,7 +690,6 @@ impl GMBackground {
             println!("  GMS2 Output Border Y: {:?}", gms2_data.output_border_y);
             println!("  GMS2 Tile Columns: {:?}", gms2_data.tile_columns);
             println!("  GMS2 Items Per Tile Count: {:?}", gms2_data.items_per_tile_count);
-            println!("  GMS2 Tile Count: {:?}", gms2_data.tile_count);
             println!("  GMS2 Unknown Always Zero: {:?}", gms2_data.unknown_always_zero);
             println!("  GMS2 Frame Length: {:?}", gms2_data.frame_length);
             println!("  GMS2 Tile IDs: [{} items]", gms2_data.tile_ids.len());
