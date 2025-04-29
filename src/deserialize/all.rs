@@ -12,7 +12,7 @@ use crate::deserialize::game_objects::{parse_chunk_objt, GMGameObjects};
 use crate::deserialize::general_info::{parse_chunk_gen8, parse_chunk_optn};
 use crate::deserialize::scripts::{parse_chunk_scpt, GMScripts};
 use crate::deserialize::strings::{parse_chunk_strg, GMStrings};
-use crate::deserialize::variables::{parse_chunk_vari, GMVariable};
+use crate::deserialize::variables::{parse_chunk_vari, GMVariables};
 use crate::deserialize::general_info::{GMGeneralInfo, GMOptions};
 use crate::deserialize::paths::{parse_chunk_path, GMPaths};
 use crate::deserialize::rooms::{parse_chunk_room, GMRooms};
@@ -30,7 +30,7 @@ pub struct GMData {
     pub backgrounds: GMBackgrounds,         // BGND
     pub sprites: GMSprites,                 // SPRT
     pub scripts: GMScripts,                 // SCPT
-    pub variables: Vec<GMVariable>,         // VARI
+    pub variables: GMVariables,             // VARI
     pub functions: GMFunctions,             // FUNC
     pub code_locals: Vec<GMCodeLocal>,      // FUNC
     pub code: Vec<GMCode>,                  // CODE
@@ -109,7 +109,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let backgrounds: GMBackgrounds = parse_chunk_bgnd(&mut chunk_bgnd, &general_info, &strings, &textures)?;
     let sprites: GMSprites = parse_chunk_sprt(&mut chunk_sprt, &general_info, &strings, &textures)?;
     let scripts: GMScripts = parse_chunk_scpt(&mut chunk_scpt, &strings)?;
-    let variables: Vec<GMVariable> = parse_chunk_vari(&mut chunk_vari, &strings)?;
+    let variables: GMVariables = parse_chunk_vari(&mut chunk_vari, &strings, &general_info, &mut chunk_code)?;
     let (functions, code_locals): (GMFunctions, Vec<GMCodeLocal>) = parse_chunk_func(&mut chunk_func, &strings, &chunk_code)?;
     let code: Vec<GMCode> = parse_chunk_code(&mut chunk_code, bytecode14, &strings, &variables, &functions)?;
     let fonts: GMFonts = parse_chunk_font(&mut chunk_font, &general_info, &strings)?;
