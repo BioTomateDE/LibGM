@@ -20,6 +20,7 @@ use crate::serialize::sounds::build_chunk_sond;
 use crate::serialize::sprites::build_chunk_sprt;
 use crate::serialize::stubs::{build_chunk_agrp, build_chunk_code, build_chunk_dafl, build_chunk_extn, build_chunk_shdr, build_chunk_tmln};
 use crate::serialize::texture_page_items::{build_chunk_tpag, generate_texture_pages};
+use crate::serialize::variables::build_chunk_vari;
 
 #[derive(Debug, Clone)]
 pub struct DataBuilder {
@@ -117,7 +118,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     build_chunk_dafl(&mut builder, &gm_data)?;      // stub
     build_chunk_tpag(&mut builder, &gm_data, texture_page_items)?;
     build_chunk_code(&mut builder, &gm_data)?;      // stub
-    // build_chunk_vari(&mut builder, &gm_data)?;
+    build_chunk_vari(&mut builder, &gm_data)?;
     build_chunk_func(&mut builder, &gm_data)?;
     build_chunk_strg(&mut builder, &gm_data)?;
     build_chunk_txtr(&mut builder, &gm_data, texture_pages)?;

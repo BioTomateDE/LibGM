@@ -16,3 +16,4 @@ mod sequence;
 mod backgrounds;
 mod paths;
 mod rooms;
+mod variables;

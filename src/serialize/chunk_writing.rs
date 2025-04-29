@@ -28,6 +28,7 @@ pub enum GMPointer {
     SpriteNineSlice(Position),
     Audio(Index),
     Sound(Index),
+    Variable(Index),
     Function(Index),
     Script(Index),
     GameObject(Index),
@@ -71,6 +72,9 @@ impl GMPointer {
     }
     pub fn sound(sound_index: usize) -> Self {
         Self::Sound(Index(sound_index))
+    }
+    pub fn variable(variable_index: usize) -> Self {
+        Self::Variable(Index(variable_index))
     }
     pub fn function(function_index: usize) -> Self {
         Self::Function(Index(function_index))
