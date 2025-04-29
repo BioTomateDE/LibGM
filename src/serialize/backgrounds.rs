@@ -1,5 +1,5 @@
 use crate::deserialize::all::GMData;
-use crate::deserialize::backgrounds::GMBackground;
+use crate::deserialize::backgrounds::{GMBackground, GMBackgroundGMS2Data};
 use crate::deserialize::chunk_reading::GMRef;
 use crate::serialize::all::{build_chunk, DataBuilder};
 use crate::serialize::chunk_writing::ChunkBuilder;
@@ -22,8 +22,33 @@ pub fn build_chunk_bgnd(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_bool(background.smooth);
         builder.write_bool(background.preload);
         data_builder.push_pointer_placeholder(&mut builder, background.texture.clone())?;
+
         if gm_data.general_info.is_version_at_least(2, 0, 0, 0) {
-            todo!() // TODO
+            let gms2_data: &GMBackgroundGMS2Data = background.gms2_data.as_ref()
+                .ok_or(format!("GMS2 data not set for Background \"{}\"", background.name.display(&gm_data.strings)))?;
+
+            if gms2_data.tile_ids.len() % gms2_data.items_per_tile_count != 0 {
+                return Err(format!(
+                    "Too many or too few Tile items for Background \"{}\": {} Tile IDs/items, which would have leftovers with {} items per tile.",
+                    background.name.display(&gm_data.strings), gms2_data.tile_ids.len(), gms2_data.items_per_tile_count,
+                ))
+            }
+            let tile_count: usize = gms2_data.tile_ids.len() / gms2_data.items_per_tile_count;
+
+            builder.write_u32(gms2_data.unknown_always2);
+            builder.write_u32(gms2_data.tile_width);
+            builder.write_u32(gms2_data.tile_height);
+            builder.write_u32(gms2_data.output_border_x);
+            builder.write_u32(gms2_data.output_border_y);
+            builder.write_u32(gms2_data.tile_columns);
+            builder.write_usize(gms2_data.items_per_tile_count);
+            builder.write_usize(tile_count);
+            builder.write_u32(gms2_data.unknown_always_zero);
+            builder.write_i64(gms2_data.frame_length);
+
+            for tile_id in &gms2_data.tile_ids {
+                builder.write_u32(*tile_id);
+            }
         }
     }
 
