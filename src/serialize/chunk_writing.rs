@@ -38,6 +38,11 @@ pub enum GMPointer {
     FontGlyph(Index, Index),
     Background(Index),
     Path(Index),
+    Room(Index),
+    RoomBackground(Index, Index),
+    RoomView(Index, Index),
+    RoomGameObject(Index, Index),
+    RoomTile(Index, Index),
 }
 impl GMPointer {
     pub fn string(string_index: usize) -> Self {
@@ -96,6 +101,21 @@ impl GMPointer {
     }
     pub fn path(path_index: usize) -> Self {
         Self::Path(Index(path_index))
+    }
+    pub fn room(room_index: usize) -> Self {
+        Self::Room(Index(room_index))
+    }
+    pub fn room_background(room_index: usize, room_background_index: usize) -> Self {
+        Self::RoomBackground(Index(room_index), Index(room_background_index))
+    }
+    pub fn room_view(room_index: usize, view_index: usize) -> Self {
+        Self::RoomView(Index(room_index), Index(view_index))
+    }
+    pub fn room_game_object(room_index: usize, room_game_object_index: usize) -> Self {
+        Self::RoomGameObject(Index(room_index), Index(room_game_object_index))
+    }
+    pub fn room_tile(room_index: usize, tile_index: usize) -> Self {
+        Self::RoomTile(Index(room_index), Index(tile_index))
     }
 }
 
