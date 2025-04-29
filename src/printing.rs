@@ -682,17 +682,19 @@ impl GMBackground {
         println!("  Preload: {}", self.preload);
         println!("  Texture Index: {}", self.texture.index);
         self.texture.resolve(&textures.textures_by_index)?.print();
-        println!("  GMS2 Unknown Always 2: {:?}", self.gms2_unknown_always2);
-        println!("  GMS2 Tile Width: {:?}", self.gms2_tile_width);
-        println!("  GMS2 Tile Height: {:?}", self.gms2_tile_height);
-        println!("  GMS2 Output Border X: {:?}", self.gms2_outpgm_border_x);
-        println!("  GMS2 Output Border Y: {:?}", self.gms2_outpgm_border_y);
-        println!("  GMS2 Tile Columns: {:?}", self.gms2_tile_columns);
-        println!("  GMS2 Items Per Tile Count: {:?}", self.gms2_items_per_tile_count);
-        println!("  GMS2 Tile Count: {:?}", self.gms2_tile_count);
-        println!("  GMS2 Unknown Always Zero: {:?}", self.gms2_unknown_always_zero);
-        println!("  GMS2 Frame Length: {:?}", self.gms2_frame_length);
-        println!("  GMS2 Tile IDs: [{} items]", self.gms2_tile_ids.len());
+        if let Some(ref gms2_data) = self.gms2_data {
+            println!("  GMS2 Unknown Always 2: {:?}", gms2_data.unknown_always2);
+            println!("  GMS2 Tile Width: {:?}", gms2_data.tile_width);
+            println!("  GMS2 Tile Height: {:?}", gms2_data.tile_height);
+            println!("  GMS2 Output Border X: {:?}", gms2_data.output_border_x);
+            println!("  GMS2 Output Border Y: {:?}", gms2_data.output_border_y);
+            println!("  GMS2 Tile Columns: {:?}", gms2_data.tile_columns);
+            println!("  GMS2 Items Per Tile Count: {:?}", gms2_data.items_per_tile_count);
+            println!("  GMS2 Tile Count: {:?}", gms2_data.tile_count);
+            println!("  GMS2 Unknown Always Zero: {:?}", gms2_data.unknown_always_zero);
+            println!("  GMS2 Frame Length: {:?}", gms2_data.frame_length);
+            println!("  GMS2 Tile IDs: [{} items]", gms2_data.tile_ids.len());
+        }
         println!();
         Ok(())
     }
