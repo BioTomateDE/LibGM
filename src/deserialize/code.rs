@@ -1,7 +1,8 @@
 ﻿use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::chunk_reading::GMChunk;
-use crate::deserialize::variables::GMVariable;
+use crate::deserialize::variables::{GMVariable, GMVariables};
 use std::cmp::PartialEq;
+use std::env::var;
 use num_enum::TryFromPrimitive;
 use crate::deserialize::functions::{GMFunction, GMFunctions};
 use crate::deserialize::strings::GMStrings;
@@ -75,7 +76,7 @@ enum GMDataType {
 }
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]
 #[repr(i8)]
-enum GMInstanceType {
+pub enum GMInstanceType {
     Undefined = 0, // actually, this is just object 0, but also occurs in places where no instance type was set
     Self_ = -1,
     Other = -2,
@@ -184,43 +185,43 @@ fn convert_instruction_kind(kind: u8) -> u8 {
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct GMComparisonInstruction {
     // extra: u8,                           // extra byte that should be zero
-    comparison_type: GMComparisonType,      // comparison kind
-    type1: GMDataType,                      // datatype of element to compare
-    type2: GMDataType,                      // datatype of element to compare
+    pub comparison_type: GMComparisonType,  // comparison kind
+    pub type1: GMDataType,                  // datatype of element to compare
+    pub type2: GMDataType,                  // datatype of element to compare
 }
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct GMGotoInstruction {
-    opcode: GMOpcode,
-    jump_offset: i32,
-    popenv_exit_magic: bool,
+    pub opcode: GMOpcode,
+    pub jump_offset: i32,
+    pub popenv_exit_magic: bool,
 }
 #[derive(Debug, Clone)]
 pub struct GMPopInstruction {
-    opcode: GMOpcode,
-    instance_type: GMInstanceType,
-    type1: GMDataType,
-    type2: GMDataType,
-    destination: GMCodeVariable,
+    pub opcode: GMOpcode,
+    pub instance_type: GMInstanceType,
+    pub type1: GMDataType,
+    pub type2: GMDataType,
+    pub destination: GMCodeVariable,
 }
 #[derive(Debug, Clone)]
 pub struct GMPushInstruction {
-    opcode: GMOpcode,
-    data_type: GMDataType,
-    value: GMValue,
+    pub opcode: GMOpcode,
+    pub data_type: GMDataType,
+    pub value: GMValue,
 }
 #[derive(Debug, Clone)]
 pub struct GMCallInstruction {
-    opcode: GMOpcode,
-    arguments_count: usize,
-    data_type: GMDataType,
-    function: GMRef<GMFunction>,
+    pub opcode: GMOpcode,
+    pub arguments_count: usize,
+    pub data_type: GMDataType,
+    pub function: GMRef<GMFunction>,
 }
 #[derive(Debug, Clone)]
 pub struct GMBreakInstruction {
-    opcode: GMOpcode,
-    value: i16,
-    data_type: GMDataType,
-    int_argument: Option<i32>,
+    pub opcode: GMOpcode,
+    pub value: i16,
+    pub data_type: GMDataType,
+    pub int_argument: Option<i32>,
 }
 #[derive(Debug, Clone)]
 pub enum GMInstruction {
@@ -233,9 +234,9 @@ pub enum GMInstruction {
 }
 
 #[derive(Debug, Clone)]
-enum GMCodeVariable {
-    Var(GMVariable, GMVariableType),
-    Unknown(usize, GMVariableType)
+pub struct GMCodeVariable {
+    variable: GMRef<GMVariable>,
+    variable_type: GMVariableType,
 }
 
 
@@ -271,10 +272,10 @@ pub struct GMCode {
 
 
 // wrapper for raw data of a code "script" / instance
-struct GMCodeBlob {
-    raw_data: Vec<u8>,
-    len: usize,
-    file_index: usize,
+pub struct GMCodeBlob {
+    pub raw_data: Vec<u8>,
+    pub len: usize,
+    pub file_index: usize,
 }
 
 impl GMCodeBlob {
@@ -282,9 +283,7 @@ impl GMCodeBlob {
         if self.file_index + 1 > self.len {
             return Err(format!(
                 "Trying to read u8 out of bounds while parsing code at position {}: {} > {}.",
-                self.file_index,
-                self.file_index + 1,
-                self.len,
+                self.file_index, self.file_index + 1, self.len,
             ));
         }
         let byte: u8 = self.raw_data[self.file_index];
@@ -295,7 +294,7 @@ impl GMCodeBlob {
     fn read_value(
         &mut self,
         data_type: GMDataType,
-        _variables: &[GMVariable],
+        _variables: &GMVariables,
     ) -> Result<GMValue, String> {
         match data_type {
             GMDataType::Double => {
@@ -361,7 +360,7 @@ impl GMCodeBlob {
 
                 // TODO deal with variable ids and scopes asfbjhiafshasf (var index is wrong)
 
-                Ok(GMValue::Variable(GMCodeVariable::Unknown{ 0: index, 1: variable_type }))
+                Ok(GMValue::Variable(GMCodeVariable{ variable: GMRef::new(99999999963299999), variable_type }))
 
                 // let variable: GMVariable = match variables.get(index) {
                 //     Some(var) => var.clone(),
@@ -409,7 +408,7 @@ pub fn parse_chunk_code(
     chunk: &mut GMChunk,
     bytecode14: bool,
     strings: &GMStrings,
-    variables: &[GMVariable],
+    variables: &GMVariables,
     functions: &GMFunctions,
 ) -> Result<Vec<GMCode>, String> {
     chunk.cur_pos = 0;
@@ -463,7 +462,7 @@ pub fn parse_chunk_code(
         let mut instructions: Vec<GMInstruction> = vec![];
 
         while code_blob.file_index < code_blob.len {
-            let instruction: GMInstruction = parse_code(&mut code_blob, bytecode14, variables, functions, code_meta.start_position-8)?;
+            let instruction: GMInstruction = parse_instruction(&mut code_blob, bytecode14, variables, functions, code_meta.start_position-8)?;
             // let dump: String = match hexdump(&*code_blob.raw_data, code_blob.file_index-4, Some(code_blob.file_index)) {
             //     Ok(ok) => ok,
             //     Err(_) => "()".to_string(),
@@ -489,25 +488,23 @@ pub fn parse_chunk_code(
     Ok(codes)
 }
 
-fn parse_code(
+pub fn parse_instruction(
     blob: &mut GMCodeBlob,
     bytecode14: bool,
-    variables: &[GMVariable],
+    variables: &GMVariables,
     functions: &GMFunctions,
     code_start_pos: usize
 ) -> Result<GMInstruction, String> {
     let b0: u8 = blob.read_byte()?;
     let b1: u8 = blob.read_byte()?;
     let b2: u8 = blob.read_byte()?;
-    let opcode_raw: u8 = blob.read_byte()?;
+    let mut opcode_raw: u8 = blob.read_byte()?;
 
-    let mut opcode: GMOpcode = match opcode_raw.try_into() {
-        Ok(opcode) => opcode,
-        Err(_) => return Err(format!("Invalid Opcode {opcode_raw:02X} while parsing code.")),
-    };
-    // if Bytecode14OrLower {
-    //     let kind: u8 = convert_instruction_kind(kind);
-    // }
+    if bytecode14 {
+        opcode_raw = convert_instruction_kind(opcode_raw);
+    }
+    let mut opcode: GMOpcode = opcode_raw.try_into()
+        .map_err(|_| format!("Invalid Opcode 0x{opcode_raw:02X} while parsing code instruction."))?;
 
     let instruction_type: GMInstructionType = get_instruction_type(opcode);
     match instruction_type {
@@ -643,6 +640,8 @@ fn parse_code(
             //     let destination = readvaruiable();
             // }
 
+            // let aaaaaa =read_variable_reference(blob)?;
+
             let destination: GMCodeVariable = match blob.read_value(GMDataType::Variable, variables)? {
                 GMValue::Variable(var) => var,
                 _ => return Err("[INTERNAL ERROR] GMCodeBlob.read_value(GMDataType::Variable, ...)\
@@ -750,6 +749,53 @@ fn parse_code(
         //     opcode_raw, blob.file_index, blob.len, code_start_pos + blob.len,
         // )),
     }
+}
+
+
+pub fn read_variable_reference(chunk: &mut GMChunk, variable: GMRef<GMVariable>) -> Result<(GMPopInstruction, usize), String> {
+    chunk.cur_pos -= 4;
+    let b0: u8 = chunk.read_u8()?;
+    let _b1: u8 = chunk.read_u8()?;
+    let b2: u8 = chunk.read_u8()?;
+    let _b3: u8 = chunk.read_u8()?;
+    let raw_value: i32 = chunk.read_i32()?;
+
+    let instance_type: i8 = b0 as i8;       // might be wrong but it only goes to -16 so idek
+    let instance_type: GMInstanceType = instance_type.try_into()
+        .map_err(|_| format!("Invalid Variable Instance Type 0x{instance_type:02X} while parsing Pop Instruction (variable reference)."))?;
+
+    let type1: u8 = b2 & 0xf;
+    let type1: GMDataType = type1.try_into()
+        .map_err(|_| format!("Invalid Data Type 1 {type1:02X} while parsing Pop Instruction (variable reference)."))?;
+
+    let type2: u8 = b2 >> 4;
+    let type2: GMDataType = type2.try_into()
+        .map_err(|_| format!("Invalid Data Type 1 {type2:02X} while parsing Pop Instruction (variable reference)."))?;
+
+    let next_occurrence_offset: i32 = raw_value & 0x07FFFFFF;
+    let next_occurrence_offset: usize = next_occurrence_offset as usize;
+
+    let variable_type: i32 = (raw_value >> 24) & 0xF8;
+    let variable_type: u8 = variable_type as u8;
+    let variable_type: GMVariableType = variable_type.try_into()
+        .map_err(|_| format!("Invalid Variable Type 0x{variable_type:02X} while parsing variable reference chain."))?;
+
+    let destination = GMCodeVariable {
+        variable,
+        variable_type
+    };
+
+    log::debug!("var ref {} {} {:?}", chunk.cur_pos, next_occurrence_offset, variable_type);
+
+    let instruction = GMPopInstruction {
+        opcode: GMOpcode::Pop,
+        instance_type,
+        type1,
+        type2,
+        destination,
+    };
+
+    Ok((instruction, next_occurrence_offset))
 }
 
 
