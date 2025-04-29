@@ -5,6 +5,7 @@ use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::game_objects::{GMGameObject};
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::sequence::{parse_sequence, GMSequence};
+use crate::deserialize::sprites::GMSprite;
 use crate::deserialize::strings::GMStrings;
 
 
@@ -76,7 +77,7 @@ pub struct GMRoomBackground {
     pub stretch: bool,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct GMRoomTile {
     pub x: i32,
     pub y: i32,
@@ -92,11 +93,10 @@ pub struct GMRoomTile {
     pub color: u32,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum GMRoomTileTexture {
-    Stub(),
-    // Sprite(GMSprite),
-    // Background(GMBackground),
+    Sprite(GMRef<GMSprite>),
+    Background(GMRef<GMBackground>),
 }
 
 #[derive(Debug, Clone)]
@@ -140,11 +140,17 @@ pub struct GMRoomGameObject {
 }
 
 
+#[derive(Debug, Clone)]
+pub struct GMRooms {
+    pub rooms_by_index: Vec<GMRoom>,
+}
+
+
 pub fn parse_chunk_room(
     chunk: &mut GMChunk,
     general_info: &GMGeneralInfo,
     gm_strings: &GMStrings,
-) -> Result<Vec<GMRoom>, String> {
+) -> Result<GMRooms, String> {
     chunk.cur_pos = 0;
     let room_count: usize = chunk.read_usize()?;
     let mut room_starting_positions: Vec<usize> = Vec::with_capacity(room_count);
@@ -153,7 +159,7 @@ pub fn parse_chunk_room(
         room_starting_positions.push(start_position);
     }
 
-    let mut rooms: Vec<GMRoom> = Vec::with_capacity(room_count);
+    let mut rooms_by_index: Vec<GMRoom> = Vec::with_capacity(room_count);
     for start_position in room_starting_positions {
         chunk.cur_pos = start_position;
 
@@ -214,11 +220,10 @@ pub fn parse_chunk_room(
             layers,
             sequences,
         };
-        // room.print();
-        rooms.push(room);
+        rooms_by_index.push(room);
     }
 
-    Ok(rooms)
+    Ok(GMRooms{ rooms_by_index })
 }
 
 
@@ -370,7 +375,7 @@ fn parse_room_backgrounds(chunk: &mut GMChunk) -> Result<Vec<GMRoomBackground>, 
     Ok(room_backgrounds)
 }
 
-fn parse_room_tiles(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Vec<GMRoomTile>, String> {  // TODO
+fn parse_room_tiles(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Vec<GMRoomTile>, String> {
     let tile_pointers: Vec<usize> = chunk.read_pointer_list()?;
     let old_position: usize = chunk.cur_pos;
     let mut tiles: Vec<GMRoomTile> = Vec::with_capacity(tile_pointers.len());
@@ -380,10 +385,12 @@ fn parse_room_tiles(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
 
         let x: i32 = chunk.read_i32()?;
         let y: i32 = chunk.read_i32()?;
-        let _sprite_mode: bool = general_info.is_version_at_least(2, 0, 0, 0);
-        // if sprite_mode {}
-        let _ = chunk.read_u32()?;  // sprite shit
-        let texture: GMRoomTileTexture = GMRoomTileTexture::Stub();
+        let texture_index: usize = chunk.read_usize()?;
+        let texture: GMRoomTileTexture = if general_info.is_version_at_least(2, 0, 0, 0) {
+            GMRoomTileTexture::Sprite(GMRef::new(texture_index))
+        } else {
+            GMRoomTileTexture::Background(GMRef::new(texture_index))
+        };
         let source_x: u32 = chunk.read_u32()?;
         let source_y: u32 = chunk.read_u32()?;
         let width: u32 = chunk.read_u32()?;
