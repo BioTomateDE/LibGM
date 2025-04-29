@@ -14,3 +14,4 @@ mod stubs;
 mod sprites;
 mod sequence;
 mod backgrounds;
+mod paths;
