@@ -37,6 +37,7 @@ pub enum GMPointer {
     Font(Index),
     FontGlyph(Index, Index),
     Background(Index),
+    Path(Index),
 }
 impl GMPointer {
     pub fn string(string_index: usize) -> Self {
@@ -92,6 +93,9 @@ impl GMPointer {
     }
     pub fn background(background_index: usize) -> Self {
         Self::Background(Index(background_index))
+    }
+    pub fn path(path_index: usize) -> Self {
+        Self::Path(Index(path_index))
     }
 }
 
