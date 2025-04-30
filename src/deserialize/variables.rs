@@ -1,4 +1,5 @@
-﻿use itertools::izip;
+﻿use std::collections::HashMap;
+use itertools::izip;
 use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use crate::deserialize::code::{parse_instance_type, GMCodeVariable, GMDataType, GMInstanceType, GMOpcode, GMPopInstruction, GMVariableType};
 use crate::deserialize::general_info::GMGeneralInfo;
@@ -9,8 +10,6 @@ pub struct GMVariable {
     pub name: GMRef<String>,
     pub instance_type: GMInstanceType,
     pub variable_id: Option<i32>,
-    /// List of occurrences of the variable in code as absolute positions. Only meant for parsing code; irrelevant (and potentially incorrect) after parsing.
-    pub occurrences: Vec<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -18,10 +17,15 @@ pub struct GMVariables {
     pub global_variables: Vec<GMVariable>,
     pub instance_variables: Vec<GMVariable>,
     pub local_variables: Vec<GMVariable>,
+
+    // Maps absolute positions of variable occurrences (in code) to variable references.
+    // Only meant for parsing code; irrelevant (and potentially incorrect) after parsing.
+    pub global_occurrence_map: HashMap<usize, GMRef<GMVariable>>,
+    pub instance_occurrence_map: HashMap<usize, GMRef<GMVariable>>,
+    pub local_occurrence_map: HashMap<usize, GMRef<GMVariable>>,
 }
 
 pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: &GMGeneralInfo, chunk_code: &mut GMChunk) -> Result<GMVariables, String> {
-    // TODO please someone fix this. also in parsing chunk CODE.
     chunk.cur_pos = 0;
     let globals_count: usize = chunk.read_usize()?;         // the amount of global variables
     let instances_count: usize = chunk.read_usize()?;       // the amount of `Self` variables (local to own object)
@@ -31,9 +35,14 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
     let mut instance_variables: Vec<GMVariable> = Vec::with_capacity(instances_count);
     let mut local_variables: Vec<GMVariable> = Vec::with_capacity(locals_count);
 
-    for (variable_count, variables, default_instance_type) in izip!(
+    let mut global_occurrence_map: HashMap<usize, GMRef<GMVariable>> = HashMap::new();
+    let mut instance_occurrence_map: HashMap<usize, GMRef<GMVariable>> = HashMap::new();
+    let mut local_occurrence_map: HashMap<usize, GMRef<GMVariable>> = HashMap::new();
+
+    for (variable_count, variables, occurrence_map, default_instance_type) in izip!(
         [globals_count, instances_count, locals_count],
         [&mut global_variables, &mut instance_variables, &mut local_variables],
+        [&mut global_occurrence_map, &mut instance_occurrence_map, &mut local_occurrence_map],
         [GMInstanceType::Global, GMInstanceType::Self_(None), GMInstanceType::Local],
     ) {
         for i in 0..variable_count {
@@ -45,9 +54,6 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
             if general_info.bytecode_version >= 15 {
                 instance_type = parse_instance_type(chunk.read_i32()? as i16)
                     .map_err(|e| format!("Could not get instance type for variable \"{}\" while parsing chunk VARI: {e}", name.display(strings)))?;
-                // let instance_type_: i32 = chunk.read_i32()?;
-                // instance_type = instance_type_.try_into()
-                //     .map_err(|_| format!("Invalid instance type 0x{instance_type_:8X} at absolute position {} while parsing variables.", chunk.cur_pos+chunk.abs_pos))?;
                 variable_id = Some(chunk.read_i32()?);
             }
 
@@ -62,11 +68,20 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
                 occurrences_count
             )?;
 
+            for occurrence in occurrences {
+                if let Some(old_value) = occurrence_map.insert(occurrence, GMRef::new(i)) {
+                    return Err(format!(
+                        "Conflicting occurrence positions while parsing variables: \
+                        Was already set for {:?} variable #{}; trying to set to #{} with name \"{}\".",
+                        default_instance_type, old_value.index, i, name.display(strings),
+                    ))
+                }
+            }
+
             variables.push(GMVariable {
                 name,
                 instance_type,
                 variable_id,
-                occurrences,
             });
         }
     }
@@ -76,6 +91,9 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
         global_variables,
         instance_variables,
         local_variables,
+        global_occurrence_map,
+        instance_occurrence_map,
+        local_occurrence_map,
     })
 }
 
@@ -148,27 +166,11 @@ pub fn read_variable_reference(chunk: &mut GMChunk, variable: GMRef<GMVariable>)
     //     other => return Err(format!("Invalid opcode {other:?} while parsing reference chain of variable."))
     // }
 
-    // let variable_type: i32 = (raw_value >> 24) & 0xF8;
-    // let variable_type: u8 = variable_type as u8;
-    // let variable_type: GMVariableType = variable_type.try_into()
-    //     .map_err(|_| format!("Invalid Variable Type 0x{variable_type:02X} while parsing variable reference chain."))?;
+
 
     let next_occurrence_offset: i32 = raw_value & 0x07FFFFFF;
     let next_occurrence_offset: usize = next_occurrence_offset as usize;
 
-
-    // let destination = GMCodeVariable {
-    //     variable,
-    //     variable_type
-    // };
-
-    // let instruction = GMPopInstruction {
-    //     opcode,
-    //     instance_type,
-    //     type1,
-    //     type2,
-    //     destination,
-    // };
 
     Ok(next_occurrence_offset)
 }
