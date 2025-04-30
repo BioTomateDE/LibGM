@@ -63,7 +63,6 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
             let occurrences: Vec<usize> = parse_occurrence_chain(
                 chunk_code,
                 name.display(strings),
-                GMRef::new(i),
                 first_occurrence_address,
                 occurrences_count
             )?;
@@ -71,9 +70,9 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
             for occurrence in occurrences {
                 if let Some(old_value) = occurrence_map.insert(occurrence, GMRef::new(i)) {
                     return Err(format!(
-                        "Conflicting occurrence positions while parsing variables: \
-                        Was already set for {:?} variable #{}; trying to set to #{} with name \"{}\".",
-                        default_instance_type, old_value.index, i, name.display(strings),
+                        "Conflicting occurrence positions while parsing variables: absolute position {} \
+                        was already set for {:?} variable #{} with name \"{}\"; trying to set to variable #{} with name \"{}\".",
+                        occurrence, default_instance_type, old_value.index, old_value.resolve(variables)?.name.display(strings), i, name.display(strings),
                     ))
                 }
             }
@@ -101,7 +100,6 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
 fn parse_occurrence_chain(
     chunk_code: &mut GMChunk,
     variable_name: &str,
-    variable_ref: GMRef<GMVariable>,
     first_occurrence_abs_pos: i32,
     occurrence_count: usize,
 ) -> Result<Vec<usize>, String> {
@@ -118,60 +116,22 @@ fn parse_occurrence_chain(
 
     let mut occurrences: Vec<usize> = Vec::with_capacity(occurrence_count);
 
-    for _ in 0..occurrence_count {
+    for _ in 0..occurrence_count-1 {        // this -1 seems to be correct (?)
+        occurrence_pos += 4;
         chunk_code.cur_pos = occurrence_pos;
-        let offset = read_variable_reference(chunk_code, variable_ref.clone())?;
+        let offset: usize = read_variable_reference(chunk_code)?;
         occurrence_pos += offset;
-        occurrences.push(occurrence_pos + chunk_code.abs_pos);
+        occurrences.push(occurrence_pos);
     }
 
     Ok(occurrences)
 }
 
 
-pub fn read_variable_reference(chunk: &mut GMChunk, variable: GMRef<GMVariable>) -> Result<usize, String> {
-    // let b0: u8 = chunk.read_u8()?;
-    // let b1: u8 = chunk.read_u8()?;
-    // let b2: u8 = chunk.read_u8()?;
-    // let raw_opcode: u8 = chunk.read_u8()?;
-    chunk.cur_pos += 4;  // skip ^
+pub fn read_variable_reference(chunk: &mut GMChunk) -> Result<usize, String> {
     let raw_value: i32 = chunk.read_i32()?;
-
-    // if bytecode14 {
-    //     raw_opcode = convert_instruction_kind(raw_opcode);
-    // }
-    // let opcode: GMOpcode = raw_opcode.try_into()
-    //     .map_err(|_| format!("Invalid Opcode 0x{raw_opcode:02X} while parsing code instruction."))?;
-
-    // match opcode {
-    //     GMOpcode::Pop | GMOpcode::Popz | GMOpcode::PopEnv => {
-    //         let type1: u8 = b2 & 0xf;
-    //         let type1: GMDataType = type1.try_into()
-    //             .map_err(|_| format!("Invalid Data Type 1 {type1:02X} while parsing Pop Instruction for variable reference chain."))?;
-    //
-    //         let type2: u8 = b2 >> 4;
-    //         let type2: GMDataType = type2.try_into()
-    //             .map_err(|_| format!("Invalid Data Type 2 {type2:02X} while parsing Pop Instruction for variable reference chain."))?;
-    //
-    //         let instance_type: i16 = b0 as i16 | ((b1 as i16) << 8);
-    //         let instance_type: GMInstanceType = parse_instance_type(instance_type)?;
-    //
-    //         GMPopInstruction
-    //     }
-    //
-    //     GMOpcode::Push | GMOpcode::PushEnv | GMOpcode::PushBltn | GMOpcode::PushGlb | GMOpcode::PushLoc => {
-    //
-    //     }
-    //
-    //     other => return Err(format!("Invalid opcode {other:?} while parsing reference chain of variable."))
-    // }
-
-
-
     let next_occurrence_offset: i32 = raw_value & 0x07FFFFFF;
     let next_occurrence_offset: usize = next_occurrence_offset as usize;
-
-
     Ok(next_occurrence_offset)
 }
 
