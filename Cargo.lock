@@ -497,6 +497,7 @@ dependencies = [
  "chrono",
  "colored",
  "image",
+ "itertools",
  "log",
  "num_enum",
  "qoi",

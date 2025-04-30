@@ -5,6 +5,7 @@ use std::cmp::PartialEq;
 use std::env::var;
 use num_enum::TryFromPrimitive;
 use crate::deserialize::functions::{GMFunction, GMFunctions};
+use crate::deserialize::game_objects::GMGameObject;
 use crate::deserialize::strings::GMStrings;
 
 // Taken from UndertaleModTool/UndertaleModLib/UndertaleCode.cs/UndertaleInstruction/
@@ -74,20 +75,18 @@ enum GMDataType {
     UnsignedInt,
     Int16 = 0x0f,
 }
-#[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]
-#[repr(i16)]
+#[derive(Debug, Clone)]
 pub enum GMInstanceType {
-    Undefined = 0, // actually, this is just object 0, but also occurs in places where no instance type was set
-    Self_ = -1,
-    Other = -2,
-    All = -3,
-    Noone = -4,
-    Global = -5,
-    Builtin = -6, // Note: Used only in UndertaleVariable.VarID (which is not really even InstanceType)
-    Local = -7,
-    Stacktop = -9,
-    Arg = -15,
-    Static = -16,
+    Undefined,  // actually, this is just object 0, but also occurs in places where no instance type was set
+    Self_(Option<GMRef<GMGameObject>>),
+    Other,
+    All,
+    Noone,
+    Global,
+    Local,
+    Stacktop,
+    Arg,
+    Static,
 }
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]
 #[repr(u8)]
@@ -240,7 +239,6 @@ pub struct GMCodeVariable {
 }
 
 
-
 #[derive(Debug, Clone)]
 enum GMValue {
     Double(f64),
@@ -248,7 +246,6 @@ enum GMValue {
     Int32(i32),
     Int64(i64),
     Boolean(bool),
-    Variable(GMCodeVariable),
     String(GMRef<String>),
     Int16(i16),
 }
@@ -291,11 +288,7 @@ impl GMCodeBlob {
         Ok(byte)
     }
 
-    fn read_value(
-        &mut self,
-        data_type: GMDataType,
-        _variables: &GMVariables,
-    ) -> Result<GMValue, String> {
+    fn read_value(&mut self, data_type: GMDataType) -> Result<GMValue, String> {
         match data_type {
             GMDataType::Double => {
                 let raw: [u8; 8] = match self.raw_data[self.file_index..self.file_index+8].try_into() {
@@ -341,43 +334,6 @@ impl GMCodeBlob {
                 Ok(GMValue::Boolean(self.raw_data[0] != 0))
             },
 
-            GMDataType::Variable => {
-                let raw: [u8; 4] = match self.raw_data[self.file_index..self.file_index+4].try_into() {
-                    Ok(ok) => ok,
-                    Err(_) => return Err("Trying to read GMVariable out of bounds while reading values in code.".to_string()),
-                };
-                self.file_index += 4;
-                let raw_index: [u8; 2] = raw[0..2].try_into().unwrap();
-                let raw_variable_type: u8 = raw[3];
-                let index: usize = u16::from_le_bytes(raw_index) as usize;
-                let variable_type: GMVariableType = match raw_variable_type.try_into() {
-                    Ok(ok) => ok,
-                    Err(_) => return Err(format!(
-                        "Invalid Variable Type {:02X} while reading values in code.",
-                        raw_variable_type
-                    ))
-                };
-
-                // TODO deal with variable ids and scopes asfbjhiafshasf (var index is wrong)
-
-                Ok(GMValue::Variable(GMCodeVariable{ variable: GMRef::new(99999999963299999), variable_type }))
-
-                // let variable: GMVariable = match variables.get(index) {
-                //     Some(var) => var.clone(),
-                //     // None => return Err(format!(
-                //     //     "GMVariable index is out of bounds while reading values in code: {} >= {}.",
-                //     //     index,
-                //     //     variables.len()
-                //     // ))
-                //     None => {
-                //         eprintln!("WARNING: Could not find variable with index {} (length: {}).", index, variables.len());
-                //         return Ok(GMValue::Variable(GMCodeVariable::Unknown{ 0: index, 1: variable_type }));
-                //     }
-                // };
-                // let code_variable: GMCodeVariable = GMCodeVariable::Var{ 0: variable, 1: variable_type };
-                // Ok(GMValue::Variable(code_variable))
-            },
-
             GMDataType::String => {
                 // idk if it's position or string id
                 let raw: [u8; 4] = match self.raw_data[self.file_index..self.file_index+4].try_into() {
@@ -400,6 +356,43 @@ impl GMCodeBlob {
 
             _ => Err(format!("Trying to read unsupported data type {0:?} while reading values in code.", data_type)),
         }
+    }
+
+    fn read_variable(&mut self, variables: &GMVariables) -> Result<GMCodeVariable, String> {
+        let raw: [u8; 4] = match self.raw_data[self.file_index..self.file_index+4].try_into() {
+            Ok(ok) => ok,
+            Err(_) => return Err("Trying to read GMVariable out of bounds while reading values in code.".to_string()),
+        };
+        self.file_index += 4;
+        let raw_index: [u8; 2] = raw[0..2].try_into().unwrap();
+        let raw_variable_type: u8 = raw[3];
+        let index: usize = u16::from_le_bytes(raw_index) as usize;
+        let variable_type: GMVariableType = match raw_variable_type.try_into() {
+            Ok(ok) => ok,
+            Err(_) => return Err(format!(
+                "Invalid Variable Type {:02X} while reading values in code.",
+                raw_variable_type
+            ))
+        };
+
+        // TODO deal with variable ids and scopes asfbjhiafshasf (var index is wrong)
+
+        Ok(GMCodeVariable{ variable: GMRef::new(99999999963299999), variable_type })
+
+        // let variable: GMVariable = match variables.get(index) {
+        //     Some(var) => var.clone(),
+        //     // None => return Err(format!(
+        //     //     "GMVariable index is out of bounds while reading values in code: {} >= {}.",
+        //     //     index,
+        //     //     variables.len()
+        //     // ))
+        //     None => {
+        //         eprintln!("WARNING: Could not find variable with index {} (length: {}).", index, variables.len());
+        //         return Ok(GMValue::Variable(GMCodeVariable::Unknown{ 0: index, 1: variable_type }));
+        //     }
+        // };
+        // let code_variable: GMCodeVariable = GMCodeVariable::Var{ 0: variable, 1: variable_type };
+        // Ok(GMValue::Variable(code_variable))
     }
 }
 
@@ -609,15 +602,7 @@ pub fn parse_instruction(
             };
 
             let instance_type: i16 = b0 as i16 | ((b1 as i16) << 8);
-            let instance_type: GMInstanceType = instance_type.try_into().unwrap_or_else(|_| {
-                // let dump = hexdump(&blob.raw_data, (if blob.file_index < 16 {16} else {blob.file_index}) - 16, Some(if blob.file_index + 8 < blob.len {blob.file_index + 8} else {blob.len})).unwrap();
-                // println!("{}", format!("[WARNING] {instance_type:02X} Dump: {dump}").yellow());
-                GMInstanceType::Undefined
-            });
-
-            // if type1 == GMDataType::Variable && type2 == GMDataType::Int32 {
-            //     panic!("{} {b0:02X} {b1:02X} {b2:02X} {opcode_raw:02X} | {:02X} {:02X} {:02X} {:02X}", blob.file_index, blob.raw_data[blob.file_index+1],blob.raw_data[blob.file_index+2],blob.raw_data[blob.file_index+3],blob.raw_data[blob.file_index+4])
-            // }
+            let instance_type: GMInstanceType = parse_instance_type(instance_type)?;
 
             if type1 == GMDataType::Int16 {
                 return Err(format!(
@@ -629,25 +614,7 @@ pub fn parse_instruction(
                 ));
             }
 
-            // if type1 == GMDataType::Int16 {
-            //     // Special scenario - the swap instruction (see UndertaleModTool/Issues/#129)
-            //     let swap_extra: u16 = instance_type;
-            //     instance_type = GMInstanceType::Undefined;
-            // }
-            // else
-            // {
-            //     // Destination is an actual variable
-            //     let destination = readvaruiable();
-            // }
-
-            // let aaaaaa =read_variable_reference(blob)?;
-
-            let destination: GMCodeVariable = match blob.read_value(GMDataType::Variable, variables)? {
-                GMValue::Variable(var) => var,
-                _ => return Err("[INTERNAL ERROR] GMCodeBlob.read_value(GMDataType::Variable, ...)\
-                 did not return a GMVariable while parsing Pop Instruction".to_string()),
-            };
-
+            let destination: GMCodeVariable = blob.read_variable(variables)?;
             Ok(GMInstruction::Pop(GMPopInstruction {
                 opcode,
                 instance_type,
@@ -659,11 +626,9 @@ pub fn parse_instruction(
 
         GMInstructionType::PushInstruction => {
             let data_type: u8 = b2;
-            let data_type: GMDataType = match data_type.try_into() {
-                Ok(ok) => ok,
-                Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Push Instruction.")),
-            };
-            // let value: i16 = b0 as i16;  // typecasting might be wrong
+            let data_type: GMDataType = data_type.try_into()
+                .map_err(|_| format!("Invalid Data Type {data_type:02X} while parsing Push Instruction."))?;
+
             let val: i16 = (b0 as i16) | ((b1 as i16) << 8);
 
             if bytecode14 {
@@ -684,7 +649,7 @@ pub fn parse_instruction(
 
             // todo fix bullshit variable id
 
-            let value: GMValue = blob.read_value(data_type, variables)?;
+            let value: GMValue = blob.read_value(data_type)?;
             // println!("$$$$$ {:?}", value);
 
             Ok(GMInstruction::Push(GMPushInstruction {
@@ -725,7 +690,7 @@ pub fn parse_instruction(
             let mut int_argument: Option<i32> = None;
 
             if data_type == GMDataType::Int32 {
-                int_argument = Some(match blob.read_value(GMDataType::Int32, &variables)? {
+                int_argument = Some(match blob.read_value(GMDataType::Int32)? {
                     GMValue::Int32(val) => val,
                     _ => return Err("[INTERNAL ERROR] GMCodeBlob.read_value(GMDataType::Int32, ...)\
                     did not return an i32 while parsing Break Instruction".to_string()),
@@ -749,6 +714,29 @@ pub fn parse_instruction(
         //     opcode_raw, blob.file_index, blob.len, code_start_pos + blob.len,
         // )),
     }
+}
+
+
+pub fn parse_instance_type(raw_value: i16) -> Result<GMInstanceType, String> {
+    // If >= 0; then game object id. If < 0, then variable instance type.
+    if raw_value >= 0 {
+        return Ok(GMInstanceType::Self_(Some(GMRef::new(raw_value as usize))))
+    }
+
+    let instance_type = match raw_value {
+        0 => GMInstanceType::Undefined,
+        -2 => GMInstanceType::Other,
+        -3 => GMInstanceType::All,
+        -4 => GMInstanceType::Noone,
+        -5 => GMInstanceType::Global,
+        -7 => GMInstanceType::Local,
+        -9 => GMInstanceType::Stacktop,
+        -15 => GMInstanceType::Arg,
+        -16 => GMInstanceType::Static,
+        _ => return Err(format!("Invalid instance type {raw_value} (0x{raw_value:04X})."))
+    };
+
+    Ok(instance_type)
 }
 
 
@@ -783,17 +771,10 @@ pub fn read_variable_reference(chunk: &mut GMChunk, variable: GMRef<GMVariable>)
     let next_occurrence_offset: i32 = raw_value & 0x07FFFFFF;
     let next_occurrence_offset: usize = next_occurrence_offset as usize;
 
-    // log::debug!("VarRef | {opcode:?} | {b0} {b1} {b2} {raw_value} | @{} +{} {:?} | {type1:?} {type2:?}", chunk.cur_pos, next_occurrence_offset, variable_type);
+    log::info!("VarRef | {opcode:?} | {b0} {b1} {b2} {raw_value} | @{} +{} {:?} | {type1:?} {type2:?}", chunk.cur_pos, next_occurrence_offset, variable_type);
 
-    // VVVVV  this is the code that sometimes doesn't work  VVVVV
     let instance_type: i16 = b0 as i16 | ((b1 as i16) << 8);
-    let instance_type: GMInstanceType = instance_type.try_into()
-        // .map_err(|_| format!("Invalid Variable Instance Type 0x{instance_type:02X} while parsing Pop Instruction (variable reference)."))?;
-        .unwrap_or_else(|_| {
-            log::error!("Invalid Variable Instance Type 0x{instance_type:02X} while parsing Pop Instruction (variable reference).");
-            GMInstanceType::Undefined
-        });
-    // ^^^^^
+    let instance_type: GMInstanceType = parse_instance_type(instance_type)?;
 
     let destination = GMCodeVariable {
         variable,
