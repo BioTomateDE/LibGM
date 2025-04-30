@@ -75,7 +75,7 @@ enum GMDataType {
     Int16 = 0x0f,
 }
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]
-#[repr(i8)]
+#[repr(i16)]
 pub enum GMInstanceType {
     Undefined = 0, // actually, this is just object 0, but also occurs in places where no instance type was set
     Self_ = -1,
@@ -608,7 +608,7 @@ pub fn parse_instruction(
                 Err(_) => return Err(format!("Invalid Data Type {type2:02X} while parsing Pop Instruction.")),
             };
 
-            let instance_type: i8 = b0 as i8;       // might be wrong but it only goes to -16 so idek
+            let instance_type: i16 = b0 as i16 | ((b1 as i16) << 8);
             let instance_type: GMInstanceType = instance_type.try_into().unwrap_or_else(|_| {
                 // let dump = hexdump(&blob.raw_data, (if blob.file_index < 16 {16} else {blob.file_index}) - 16, Some(if blob.file_index + 8 < blob.len {blob.file_index + 8} else {blob.len})).unwrap();
                 // println!("{}", format!("[WARNING] {instance_type:02X} Dump: {dump}").yellow());
@@ -753,17 +753,20 @@ pub fn parse_instruction(
 
 
 pub fn read_variable_reference(chunk: &mut GMChunk, variable: GMRef<GMVariable>) -> Result<(GMPopInstruction, usize), String> {
-    chunk.cur_pos -= 4;
+    // chunk.cur_pos -= 4;
     let b0: u8 = chunk.read_u8()?;
-    let _b1: u8 = chunk.read_u8()?;
+    let b1: u8 = chunk.read_u8()?;
     let b2: u8 = chunk.read_u8()?;
-    let _b3: u8 = chunk.read_u8()?;
+    let raw_opcode: u8 = chunk.read_u8()?;
     let raw_value: i32 = chunk.read_i32()?;
 
-    let instance_type: i8 = b0 as i8;       // might be wrong but it only goes to -16 so idek
-    let instance_type: GMInstanceType = instance_type.try_into()
-        .map_err(|_| format!("Invalid Variable Instance Type 0x{instance_type:02X} while parsing Pop Instruction (variable reference)."))?;
+    // if bytecode14 {
+    //     raw_opcode = convert_instruction_kind(raw_opcode);
+    // }
+    let opcode: GMOpcode = raw_opcode.try_into()
+        .map_err(|_| format!("Invalid Opcode 0x{raw_opcode:02X} while parsing code instruction."))?;
 
+    // TODO type1 and type1 only make sense for a pop instruction; push needs to be parsed differently
     let type1: u8 = b2 & 0xf;
     let type1: GMDataType = type1.try_into()
         .map_err(|_| format!("Invalid Data Type 1 {type1:02X} while parsing Pop Instruction (variable reference)."))?;
@@ -772,23 +775,39 @@ pub fn read_variable_reference(chunk: &mut GMChunk, variable: GMRef<GMVariable>)
     let type2: GMDataType = type2.try_into()
         .map_err(|_| format!("Invalid Data Type 1 {type2:02X} while parsing Pop Instruction (variable reference)."))?;
 
-    let next_occurrence_offset: i32 = raw_value & 0x07FFFFFF;
-    let next_occurrence_offset: usize = next_occurrence_offset as usize;
-
     let variable_type: i32 = (raw_value >> 24) & 0xF8;
     let variable_type: u8 = variable_type as u8;
     let variable_type: GMVariableType = variable_type.try_into()
         .map_err(|_| format!("Invalid Variable Type 0x{variable_type:02X} while parsing variable reference chain."))?;
+
+    let next_occurrence_offset: i32 = raw_value & 0x07FFFFFF;
+    let next_occurrence_offset: usize = next_occurrence_offset as usize;
+
+    // log::debug!("VarRef | {opcode:?} | {b0} {b1} {b2} {raw_value} | @{} +{} {:?} | {type1:?} {type2:?}", chunk.cur_pos, next_occurrence_offset, variable_type);
+
+    // VVVVV  this is the code that sometimes doesn't work  VVVVV
+    let instance_type: i16 = b0 as i16 | ((b1 as i16) << 8);
+    let instance_type: GMInstanceType = instance_type.try_into()
+        // .map_err(|_| format!("Invalid Variable Instance Type 0x{instance_type:02X} while parsing Pop Instruction (variable reference)."))?;
+        .unwrap_or_else(|_| {
+            log::error!("Invalid Variable Instance Type 0x{instance_type:02X} while parsing Pop Instruction (variable reference).");
+            GMInstanceType::Undefined
+        });
+    // ^^^^^
 
     let destination = GMCodeVariable {
         variable,
         variable_type
     };
 
-    log::debug!("var ref {} {} {:?}", chunk.cur_pos, next_occurrence_offset, variable_type);
+    // if type1 != GMDataType::Variable || type2 != GMDataType::Double {
+    // if opcode == GMOpcode::Pop {
+    // if true {
+    //     log::debug!("VarRef | {opcode:?} | {b0} {_b1} {b2} {raw_value} | @{} +{} {:?} | {type1:?} {type2:?}", chunk.cur_pos, next_occurrence_offset, variable_type);
+    // }
 
     let instruction = GMPopInstruction {
-        opcode: GMOpcode::Pop,
+        opcode,
         instance_type,
         type1,
         type2,
@@ -798,7 +817,3 @@ pub fn read_variable_reference(chunk: &mut GMChunk, variable: GMRef<GMVariable>)
     Ok((instruction, next_occurrence_offset))
 }
 
-
-// TODO:
-// variables bullshit (scopes, ids) (this is gonna be fucking pain)
-// a lot of Invalid Instance Types while parsing Pop Instruction.
