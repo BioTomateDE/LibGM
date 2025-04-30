@@ -11,7 +11,7 @@ use crate::deserialize::strings::GMStrings;
 // Taken from UndertaleModTool/UndertaleModLib/UndertaleCode.cs/UndertaleInstruction/
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]
 #[repr(u8)]
-enum GMOpcode {
+pub enum GMOpcode {
     Conv = 0x07,     // Push((Types.Second)Pop) // DoubleTypeInstruction
     Mul = 0x08,      // Push(Pop() * Pop()) // DoubleTypeInstruction
     Div = 0x09,      // Push(Pop() / Pop()) // DoubleTypeInstruction
@@ -61,7 +61,7 @@ enum GMInstructionType {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]
 #[repr(u8)]
-enum GMDataType {
+pub enum GMDataType {
     Double,
     Float,
     Int32,
@@ -90,7 +90,7 @@ pub enum GMInstanceType {
 }
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]
 #[repr(u8)]
-enum GMVariableType {
+pub enum GMVariableType {
     Array = 0x00,
     StackTop = 0x80,
     Normal = 0xA0,
@@ -234,8 +234,8 @@ pub enum GMInstruction {
 
 #[derive(Debug, Clone)]
 pub struct GMCodeVariable {
-    variable: GMRef<GMVariable>,
-    variable_type: GMVariableType,
+    pub variable: GMRef<GMVariable>,
+    pub variable_type: GMVariableType,
 }
 
 
@@ -725,6 +725,7 @@ pub fn parse_instance_type(raw_value: i16) -> Result<GMInstanceType, String> {
 
     let instance_type = match raw_value {
         0 => GMInstanceType::Undefined,
+        -1 => GMInstanceType::Self_(None),
         -2 => GMInstanceType::Other,
         -3 => GMInstanceType::All,
         -4 => GMInstanceType::Noone,
@@ -738,63 +739,3 @@ pub fn parse_instance_type(raw_value: i16) -> Result<GMInstanceType, String> {
 
     Ok(instance_type)
 }
-
-
-pub fn read_variable_reference(chunk: &mut GMChunk, variable: GMRef<GMVariable>) -> Result<(GMPopInstruction, usize), String> {
-    // chunk.cur_pos -= 4;
-    let b0: u8 = chunk.read_u8()?;
-    let b1: u8 = chunk.read_u8()?;
-    let b2: u8 = chunk.read_u8()?;
-    let raw_opcode: u8 = chunk.read_u8()?;
-    let raw_value: i32 = chunk.read_i32()?;
-
-    // if bytecode14 {
-    //     raw_opcode = convert_instruction_kind(raw_opcode);
-    // }
-    let opcode: GMOpcode = raw_opcode.try_into()
-        .map_err(|_| format!("Invalid Opcode 0x{raw_opcode:02X} while parsing code instruction."))?;
-
-    // TODO type1 and type1 only make sense for a pop instruction; push needs to be parsed differently
-    let type1: u8 = b2 & 0xf;
-    let type1: GMDataType = type1.try_into()
-        .map_err(|_| format!("Invalid Data Type 1 {type1:02X} while parsing Pop Instruction (variable reference)."))?;
-
-    let type2: u8 = b2 >> 4;
-    let type2: GMDataType = type2.try_into()
-        .map_err(|_| format!("Invalid Data Type 1 {type2:02X} while parsing Pop Instruction (variable reference)."))?;
-
-    let variable_type: i32 = (raw_value >> 24) & 0xF8;
-    let variable_type: u8 = variable_type as u8;
-    let variable_type: GMVariableType = variable_type.try_into()
-        .map_err(|_| format!("Invalid Variable Type 0x{variable_type:02X} while parsing variable reference chain."))?;
-
-    let next_occurrence_offset: i32 = raw_value & 0x07FFFFFF;
-    let next_occurrence_offset: usize = next_occurrence_offset as usize;
-
-    log::info!("VarRef | {opcode:?} | {b0} {b1} {b2} {raw_value} | @{} +{} {:?} | {type1:?} {type2:?}", chunk.cur_pos, next_occurrence_offset, variable_type);
-
-    let instance_type: i16 = b0 as i16 | ((b1 as i16) << 8);
-    let instance_type: GMInstanceType = parse_instance_type(instance_type)?;
-
-    let destination = GMCodeVariable {
-        variable,
-        variable_type
-    };
-
-    // if type1 != GMDataType::Variable || type2 != GMDataType::Double {
-    // if opcode == GMOpcode::Pop {
-    // if true {
-    //     log::debug!("VarRef | {opcode:?} | {b0} {_b1} {b2} {raw_value} | @{} +{} {:?} | {type1:?} {type2:?}", chunk.cur_pos, next_occurrence_offset, variable_type);
-    // }
-
-    let instruction = GMPopInstruction {
-        opcode,
-        instance_type,
-        type1,
-        type2,
-        destination,
-    };
-
-    Ok((instruction, next_occurrence_offset))
-}
-
