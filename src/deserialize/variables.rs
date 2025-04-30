@@ -1,6 +1,6 @@
 ﻿use itertools::izip;
 use crate::deserialize::chunk_reading::{GMChunk, GMRef};
-use crate::deserialize::code::{parse_instance_type, read_variable_reference, GMInstanceType, GMPopInstruction};
+use crate::deserialize::code::{parse_instance_type, GMCodeVariable, GMDataType, GMInstanceType, GMOpcode, GMPopInstruction, GMVariableType};
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::strings::GMStrings;
 
@@ -9,7 +9,8 @@ pub struct GMVariable {
     pub name: GMRef<String>,
     pub instance_type: GMInstanceType,
     pub variable_id: Option<i32>,
-    pub occurrences: Vec<GMPopInstruction>,
+    /// List of occurrences of the variable in code as absolute positions. Only meant for parsing code; irrelevant (and potentially incorrect) after parsing.
+    pub occurrences: Vec<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -53,7 +54,7 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
             let occurrences_count: usize = chunk.read_usize()?;
             let first_occurrence_address: i32 = chunk.read_i32()?;
 
-            let occurrences: Vec<GMPopInstruction> = parse_occurrence_chain(
+            let occurrences: Vec<usize> = parse_occurrence_chain(
                 chunk_code,
                 name.display(strings),
                 GMRef::new(i),
@@ -85,7 +86,7 @@ fn parse_occurrence_chain(
     variable_ref: GMRef<GMVariable>,
     first_occurrence_abs_pos: i32,
     occurrence_count: usize,
-) -> Result<Vec<GMPopInstruction>, String> {
+) -> Result<Vec<usize>, String> {
     if occurrence_count < 1 {
         return Ok(vec![]);
     }
@@ -97,15 +98,78 @@ fn parse_occurrence_chain(
             variable_name, chunk_code.abs_pos, first_occurrence_abs_pos, chunk_code.abs_pos + chunk_code.data.len(),
         ))?;
 
-    let mut occurrences: Vec<GMPopInstruction> = Vec::with_capacity(occurrence_count);
+    let mut occurrences: Vec<usize> = Vec::with_capacity(occurrence_count);
 
     for _ in 0..occurrence_count {
         chunk_code.cur_pos = occurrence_pos;
-        let (instruction, offset): (GMPopInstruction, usize) = read_variable_reference(chunk_code, variable_ref.clone())?;
+        let offset = read_variable_reference(chunk_code, variable_ref.clone())?;
         occurrence_pos += offset;
-        occurrences.push(instruction);
+        occurrences.push(occurrence_pos + chunk_code.abs_pos);
     }
 
     Ok(occurrences)
+}
+
+
+pub fn read_variable_reference(chunk: &mut GMChunk, variable: GMRef<GMVariable>) -> Result<usize, String> {
+    // let b0: u8 = chunk.read_u8()?;
+    // let b1: u8 = chunk.read_u8()?;
+    // let b2: u8 = chunk.read_u8()?;
+    // let raw_opcode: u8 = chunk.read_u8()?;
+    chunk.cur_pos += 4;  // skip ^
+    let raw_value: i32 = chunk.read_i32()?;
+
+    // if bytecode14 {
+    //     raw_opcode = convert_instruction_kind(raw_opcode);
+    // }
+    // let opcode: GMOpcode = raw_opcode.try_into()
+    //     .map_err(|_| format!("Invalid Opcode 0x{raw_opcode:02X} while parsing code instruction."))?;
+
+    // match opcode {
+    //     GMOpcode::Pop | GMOpcode::Popz | GMOpcode::PopEnv => {
+    //         let type1: u8 = b2 & 0xf;
+    //         let type1: GMDataType = type1.try_into()
+    //             .map_err(|_| format!("Invalid Data Type 1 {type1:02X} while parsing Pop Instruction for variable reference chain."))?;
+    //
+    //         let type2: u8 = b2 >> 4;
+    //         let type2: GMDataType = type2.try_into()
+    //             .map_err(|_| format!("Invalid Data Type 2 {type2:02X} while parsing Pop Instruction for variable reference chain."))?;
+    //
+    //         let instance_type: i16 = b0 as i16 | ((b1 as i16) << 8);
+    //         let instance_type: GMInstanceType = parse_instance_type(instance_type)?;
+    //
+    //         GMPopInstruction
+    //     }
+    //
+    //     GMOpcode::Push | GMOpcode::PushEnv | GMOpcode::PushBltn | GMOpcode::PushGlb | GMOpcode::PushLoc => {
+    //
+    //     }
+    //
+    //     other => return Err(format!("Invalid opcode {other:?} while parsing reference chain of variable."))
+    // }
+
+    // let variable_type: i32 = (raw_value >> 24) & 0xF8;
+    // let variable_type: u8 = variable_type as u8;
+    // let variable_type: GMVariableType = variable_type.try_into()
+    //     .map_err(|_| format!("Invalid Variable Type 0x{variable_type:02X} while parsing variable reference chain."))?;
+
+    let next_occurrence_offset: i32 = raw_value & 0x07FFFFFF;
+    let next_occurrence_offset: usize = next_occurrence_offset as usize;
+
+
+    // let destination = GMCodeVariable {
+    //     variable,
+    //     variable_type
+    // };
+
+    // let instruction = GMPopInstruction {
+    //     opcode,
+    //     instance_type,
+    //     type1,
+    //     type2,
+    //     destination,
+    // };
+
+    Ok(next_occurrence_offset)
 }
 
