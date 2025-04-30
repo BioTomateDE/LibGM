@@ -4,6 +4,7 @@ use crate::deserialize::variables::{GMVariable, GMVariables};
 use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::env::var;
+use itertools::Itertools;
 use num_enum::TryFromPrimitive;
 use crate::deserialize::functions::{GMFunction, GMFunctions};
 use crate::deserialize::game_objects::GMGameObject;
@@ -298,6 +299,7 @@ impl GMCodeBlob {
                 self.cur_pos, self.cur_pos+4, self.len,
             ))?;
         let value: i32 = i32::from_le_bytes(bytes.try_into().unwrap());
+        self.cur_pos += 4;
         Ok(value)
     }
 
@@ -376,7 +378,7 @@ impl GMCodeBlob {
     }
 
     fn read_variable(&mut self, variables: &GMVariables, instance_type: &GMInstanceType) -> Result<GMCodeVariable, String> {
-        let occurrence_position: usize = self.abs_pos + self.cur_pos;
+        let occurrence_position: usize = self.cur_pos; // TODO abs
         let raw_value: i32 = self.read_i32()?;
 
         let variable_type: i32 = (raw_value >> 24) & 0xF8;
@@ -393,11 +395,16 @@ impl GMCodeBlob {
             ))
         };
 
-        let variable: GMRef<GMVariable> = occurrence_map.get(&occurrence_position)
-            .ok_or_else(|| format!(
-                "Could not find {:?} Variable with absolute occurrence position {} in hashmap with length {}.",
-                instance_type, occurrence_position, occurrence_map.len(),
-            ))?.clone();
+        let mut ts = occurrence_map.keys().collect_vec();
+        ts.sort_by(|a,b| (**a as i32-occurrence_position as i32).abs().cmp(&(**b as i32-occurrence_position as i32).abs()));
+        log::info!("{occurrence_position} {:?}", &ts[..10]);
+
+        let variable = GMRef::new(3154623473357); //TODO
+        // let variable: GMRef<GMVariable> = occurrence_map.get(&occurrence_position)
+        //     .ok_or_else(|| format!(
+        //         "Could not find {:?} Variable with absolute occurrence position {} in hashmap with length {} while parsing code values.",
+        //         instance_type, occurrence_position, occurrence_map.len(),
+        //     ))?.clone();
 
         Ok(GMCodeVariable { variable, variable_type })
     }
