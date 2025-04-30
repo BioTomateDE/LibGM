@@ -2,6 +2,7 @@
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::variables::{GMVariable, GMVariables};
 use std::cmp::PartialEq;
+use std::collections::HashMap;
 use std::env::var;
 use num_enum::TryFromPrimitive;
 use crate::deserialize::functions::{GMFunction, GMFunctions};
@@ -247,6 +248,7 @@ enum GMValue {
     Int64(i64),
     Boolean(bool),
     String(GMRef<String>),
+    Variable(GMCodeVariable),
     Int16(i16),
 }
 
@@ -272,57 +274,68 @@ pub struct GMCode {
 pub struct GMCodeBlob {
     pub raw_data: Vec<u8>,
     pub len: usize,
-    pub file_index: usize,
+    pub cur_pos: usize,
+    pub abs_pos: usize,
 }
 
 impl GMCodeBlob {
     fn read_byte(&mut self) -> Result<u8, String> {
-        if self.file_index + 1 > self.len {
+        if self.cur_pos + 1 > self.len {
             return Err(format!(
                 "Trying to read u8 out of bounds while parsing code at position {}: {} > {}.",
-                self.file_index, self.file_index + 1, self.len,
+                self.cur_pos, self.cur_pos + 1, self.len,
             ));
         }
-        let byte: u8 = self.raw_data[self.file_index];
-        self.file_index += 1;
+        let byte: u8 = self.raw_data[self.cur_pos];
+        self.cur_pos += 1;
         Ok(byte)
+    }
+
+    fn read_i32(&mut self) -> Result<i32, String> {
+        let bytes: &[u8] = self.raw_data.get(self.cur_pos .. self.cur_pos+4)
+            .ok_or_else(|| format!(
+                "Trying to read i32 out of bounds while parsing code at position {}: {} > {}.",
+                self.cur_pos, self.cur_pos+4, self.len,
+            ))?;
+        let value: i32 = i32::from_le_bytes(bytes.try_into().unwrap());
+        Ok(value)
     }
 
     fn read_value(&mut self, data_type: GMDataType) -> Result<GMValue, String> {
         match data_type {
             GMDataType::Double => {
-                let raw: [u8; 8] = match self.raw_data[self.file_index..self.file_index+8].try_into() {
+                let raw: [u8; 8] = match self.raw_data[self.cur_pos..self.cur_pos +8].try_into() {
                     Ok(ok) => ok,
                     Err(_) => return Err("Trying to read f64 out of bounds while reading values in code.".to_string()),
                 };
-                self.file_index += 8;
+                self.cur_pos += 8;
                 Ok(GMValue::Double(f64::from_le_bytes(raw)))
             },
 
             GMDataType::Float => {
-                let raw: [u8; 4] = match self.raw_data[self.file_index..self.file_index+4].try_into() {
+                let raw: [u8; 4] = match self.raw_data[self.cur_pos..self.cur_pos +4].try_into() {
                     Ok(ok) => ok,
                     Err(_) => return Err("Trying to read f32 out of bounds while reading values in code.".to_string()),
                 };
-                self.file_index += 4;
+                self.cur_pos += 4;
                 Ok(GMValue::Float(f32::from_le_bytes(raw)))
             },
 
             GMDataType::Int32 => {
-                let raw: [u8; 4] = match self.raw_data[self.file_index..self.file_index+4].try_into() {
+                let raw: [u8; 4] = match self.raw_data[self.cur_pos..self.cur_pos +4].try_into() {
                     Ok(ok) => ok,
                     Err(_) => return Err("Trying to read i32 out of bounds while reading values in code.".to_string()),
                 };
-                self.file_index += 4;
+                self.cur_pos += 4;
                 Ok(GMValue::Int32(i32::from_le_bytes(raw)))
             },
 
             GMDataType::Int64 => {
-                let raw: [u8; 8] = match self.raw_data[self.file_index..self.file_index+8].try_into() {
+                let raw: [u8; 8] = match self.raw_data[self.cur_pos..self.cur_pos +8].try_into() {
                     Ok(ok) => ok,
                     Err(_) => return Err("Trying to read i64 out of bounds while reading values in code.".to_string()),
                 };
-                self.file_index += 8;
+                self.cur_pos += 8;
                 Ok(GMValue::Int64(i64::from_le_bytes(raw)))
             },
 
@@ -330,24 +343,28 @@ impl GMCodeBlob {
                 if self.raw_data.len() < 1 {
                     return Err("Trying to read boolean out of bounds while reading values in code.".to_string());
                 }
-                self.file_index += 1;
+                self.cur_pos += 1;
                 Ok(GMValue::Boolean(self.raw_data[0] != 0))
             },
 
             GMDataType::String => {
                 // idk if it's position or string id
-                let raw: [u8; 4] = match self.raw_data[self.file_index..self.file_index+4].try_into() {
+                let raw: [u8; 4] = match self.raw_data[self.cur_pos..self.cur_pos +4].try_into() {
                     Ok(ok) => ok,
                     Err(_) => return Err("Trying to read GMString out of bounds while reading values in code.".to_string()),
                 };
                 let string_index: usize = u32::from_le_bytes(raw) as usize;
-                self.file_index += 4;
+                self.cur_pos += 4;
                 Ok(GMValue::String(GMRef::new(string_index)))
             },
 
+            // GMDataType::Variable => {
+            //     Ok(GMValue::Variable(self.read_variable(variables)?))
+            // },
+
             GMDataType::Int16 => {
                 // i think it's within the instruction itself so backtrack
-                let raw: [u8; 2] = match self.raw_data[self.file_index-4 .. self.file_index-2].try_into() {
+                let raw: [u8; 2] = match self.raw_data[self.cur_pos -4 .. self.cur_pos -2].try_into() {
                     Ok(ok) => ok,
                     Err(_) => return Err("Trying to read i16 out of bounds while reading values in code.".to_string()),
                 };
@@ -358,41 +375,31 @@ impl GMCodeBlob {
         }
     }
 
-    fn read_variable(&mut self, variables: &GMVariables) -> Result<GMCodeVariable, String> {
-        let raw: [u8; 4] = match self.raw_data[self.file_index..self.file_index+4].try_into() {
-            Ok(ok) => ok,
-            Err(_) => return Err("Trying to read GMVariable out of bounds while reading values in code.".to_string()),
-        };
-        self.file_index += 4;
-        let raw_index: [u8; 2] = raw[0..2].try_into().unwrap();
-        let raw_variable_type: u8 = raw[3];
-        let index: usize = u16::from_le_bytes(raw_index) as usize;
-        let variable_type: GMVariableType = match raw_variable_type.try_into() {
-            Ok(ok) => ok,
-            Err(_) => return Err(format!(
-                "Invalid Variable Type {:02X} while reading values in code.",
-                raw_variable_type
+    fn read_variable(&mut self, variables: &GMVariables, instance_type: &GMInstanceType) -> Result<GMCodeVariable, String> {
+        let occurrence_position: usize = self.abs_pos + self.cur_pos;
+        let raw_value: i32 = self.read_i32()?;
+
+        let variable_type: i32 = (raw_value >> 24) & 0xF8;
+        let variable_type: u8 = variable_type as u8;
+        let variable_type: GMVariableType = variable_type.try_into()
+            .map_err(|_| format!("Invalid Variable Type 0x{variable_type:02X} while parsing variable reference chain."))?;
+
+        let occurrence_map: &HashMap<usize, GMRef<GMVariable>> = match instance_type {
+            GMInstanceType::Self_(_) => &variables.instance_occurrence_map,
+            GMInstanceType::Global => &variables.global_occurrence_map,
+            GMInstanceType::Local => &variables.local_occurrence_map,
+            other => return Err(format!(
+                "Invalid Variable Instance type {other:?} at absolute position {occurrence_position} while parsing code values."
             ))
         };
 
-        // TODO deal with variable ids and scopes asfbjhiafshasf (var index is wrong)
+        let variable: GMRef<GMVariable> = occurrence_map.get(&occurrence_position)
+            .ok_or_else(|| format!(
+                "Could not find {:?} Variable with absolute occurrence position {} in hashmap with length {}.",
+                instance_type, occurrence_position, occurrence_map.len(),
+            ))?.clone();
 
-        Ok(GMCodeVariable{ variable: GMRef::new(99999999963299999), variable_type })
-
-        // let variable: GMVariable = match variables.get(index) {
-        //     Some(var) => var.clone(),
-        //     // None => return Err(format!(
-        //     //     "GMVariable index is out of bounds while reading values in code: {} >= {}.",
-        //     //     index,
-        //     //     variables.len()
-        //     // ))
-        //     None => {
-        //         eprintln!("WARNING: Could not find variable with index {} (length: {}).", index, variables.len());
-        //         return Ok(GMValue::Variable(GMCodeVariable::Unknown{ 0: index, 1: variable_type }));
-        //     }
-        // };
-        // let code_variable: GMCodeVariable = GMCodeVariable::Var{ 0: variable, 1: variable_type };
-        // Ok(GMValue::Variable(code_variable))
+        Ok(GMCodeVariable { variable, variable_type })
     }
 }
 
@@ -450,11 +457,12 @@ pub fn parse_chunk_code(
         let mut code_blob: GMCodeBlob = GMCodeBlob {
             raw_data: raw_data.clone(),
             len: raw_data.len(),
-            file_index: 0,
+            cur_pos: 0,
+            abs_pos: code_meta.start_position + chunk.abs_pos,
         };
         let mut instructions: Vec<GMInstruction> = vec![];
 
-        while code_blob.file_index < code_blob.len {
+        while code_blob.cur_pos < code_blob.len {
             let instruction: GMInstruction = parse_instruction(&mut code_blob, bytecode14, variables, functions, code_meta.start_position-8)?;
             // let dump: String = match hexdump(&*code_blob.raw_data, code_blob.file_index-4, Some(code_blob.file_index)) {
             //     Ok(ok) => ok,
@@ -610,11 +618,11 @@ pub fn parse_instruction(
                     occurred at position {} while parsing Pop Instruction.\
                     Please report this error to github.com/BioTomateDE/LibGM/Issues \
                     along with your data.win file.",
-                    blob.file_index + code_start_pos
+                    blob.cur_pos + code_start_pos
                 ));
             }
 
-            let destination: GMCodeVariable = blob.read_variable(variables)?;
+            let destination: GMCodeVariable = blob.read_variable(variables, &instance_type)?;
             Ok(GMInstruction::Pop(GMPopInstruction {
                 opcode,
                 instance_type,
@@ -647,9 +655,14 @@ pub fn parse_instruction(
                 }
             }
 
-            // todo fix bullshit variable id
+            let value: GMValue = if data_type == GMDataType::Variable {
+                let instance_type: GMInstanceType = parse_instance_type(val)?;
+                let variable: GMCodeVariable = blob.read_variable(variables, &instance_type)?;
+                GMValue::Variable(variable)
+            } else {
+                blob.read_value(data_type)?
+            };
 
-            let value: GMValue = blob.read_value(data_type)?;
             // println!("$$$$$ {:?}", value);
 
             Ok(GMInstruction::Push(GMPushInstruction {
@@ -667,10 +680,10 @@ pub fn parse_instruction(
                 Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Call Instruction.")),
             };
 
-            blob.file_index += 4;
-            let function: &GMRef<GMFunction> = functions.occurrences_to_refs.get(&(code_start_pos + blob.file_index))
-                .ok_or(format!("Could not find any function with absolute occurrence position {} in map with length {} (functions len: {}).", 
-                    code_start_pos + blob.file_index, functions.occurrences_to_refs.len(), functions.functions_by_index.len()))?;
+            blob.cur_pos += 4;
+            let function: &GMRef<GMFunction> = functions.occurrences_to_refs.get(&(code_start_pos + blob.cur_pos))
+                .ok_or(format!("Could not find any function with absolute occurrence position {} in map with length {} (functions len: {}).",
+                               code_start_pos + blob.cur_pos, functions.occurrences_to_refs.len(), functions.functions_by_index.len()))?;
 
             Ok(GMInstruction::Call(GMCallInstruction {
                 opcode,
