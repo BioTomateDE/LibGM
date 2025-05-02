@@ -109,9 +109,18 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let backgrounds: GMBackgrounds = parse_chunk_bgnd(&mut chunk_bgnd, &general_info, &strings, &textures)?;
     let sprites: GMSprites = parse_chunk_sprt(&mut chunk_sprt, &general_info, &strings, &textures)?;
     let scripts: GMScripts = parse_chunk_scpt(&mut chunk_scpt, &strings)?;
-    let variables: GMVariables = parse_chunk_vari(&mut chunk_vari, &strings, &general_info, &mut chunk_code)?;
+    let variables: GMVariables = GMVariables{
+        global_variables: vec![],
+        instance_variables: vec![],
+        local_variables: vec![],
+        global_occurrence_map: Default::default(),
+        instance_occurrence_map: Default::default(),
+        local_occurrence_map: Default::default(),
+    };   // TODO remove temp fix
+    // let variables: GMVariables = parse_chunk_vari(&mut chunk_vari, &strings, &general_info, &mut chunk_code)?;
     let (functions, code_locals): (GMFunctions, Vec<GMCodeLocal>) = parse_chunk_func(&mut chunk_func, &strings, &chunk_code)?;
-    let code: Vec<GMCode> = parse_chunk_code(&mut chunk_code, bytecode14, &strings, &variables, &functions)?;
+    let code: Vec<GMCode> = vec![]; // TODO remve temp fix
+    // let code: Vec<GMCode> = parse_chunk_code(&mut chunk_code, bytecode14, &strings, &variables, &functions)?;
     let fonts: GMFonts = parse_chunk_font(&mut chunk_font, &general_info, &strings)?;
     let audios: GMEmbeddedAudios = parse_chunk_audo(&mut chunk_audo)?;
     let sounds: GMSounds = parse_chunk_sond(&mut chunk_sond, &general_info, &strings)?;
