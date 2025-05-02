@@ -7,7 +7,9 @@ use deserialize::all::{parse_data_file, read_data_file};
 
 mod serialize;
 
-mod structs;   // TODO remove this file
+mod structs;
+mod export_mod;
+// TODO remove this file
 
 use std::process;
 use std::sync::Arc;

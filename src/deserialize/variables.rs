@@ -117,6 +117,7 @@ fn parse_occurrence_chain(
     let mut occurrences: Vec<usize> = Vec::with_capacity(occurrence_count);
 
     for _ in 0..occurrence_count-1 {        // this -1 seems to be correct (?)
+        log::info!("{}/{}", occurrence_pos, chunk_code.data.len());
         occurrence_pos += 4;
         chunk_code.cur_pos = occurrence_pos;
         let offset: usize = read_variable_reference(chunk_code)?;
@@ -129,9 +130,15 @@ fn parse_occurrence_chain(
 
 
 pub fn read_variable_reference(chunk: &mut GMChunk) -> Result<usize, String> {
+    chunk.cur_pos -= 4;
+    let a = chunk.read_u8()?;
+    chunk.cur_pos += 3;
+    
     let raw_value: i32 = chunk.read_i32()?;
     let next_occurrence_offset: i32 = raw_value & 0x07FFFFFF;
     let next_occurrence_offset: usize = next_occurrence_offset as usize;
+
+    log::info!("asegsdg {a} {} {}", raw_value, next_occurrence_offset);
     Ok(next_occurrence_offset)
 }
 
