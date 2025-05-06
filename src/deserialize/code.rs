@@ -205,6 +205,7 @@ fn convert_instruction_kind(kind: u8) -> u8 {
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct GMComparisonInstruction {
     // extra: u8,                           // extra byte that should be zero
+    pub opcode: GMOpcode,
     pub comparison_type: GMComparisonType,  // comparison kind
     pub type1: GMDataType,                  // datatype of element to compare
     pub type2: GMDataType,                  // datatype of element to compare
@@ -565,9 +566,10 @@ pub fn parse_instruction(
             }
 
             if instruction_type == GMInstructionType::SingleTypeInstruction && (type2 as u8) != 0 {
+                // log::warn!("{} | {:02X} {:02X} {:02X} {:02X} / {:02X} {:02X} {:02X} {:02X}", blob.cur_pos+blob.chunk_code_pos, b0,b1,b2,opcode_raw, blob.raw_data[blob.cur_pos], blob.raw_data[blob.cur_pos+1], blob.raw_data[blob.cur_pos+2], blob.raw_data[blob.cur_pos+3]);
                 return Err(format!(
                     "Second type should be 0 but is {:02X} in \
-                    SingleTypeInstruction while parsing Comparison Instruction",
+                    SingleTypeInstruction while parsing Comparison Instruction.",
                     type2 as u8
                 ));
             }
@@ -580,9 +582,10 @@ pub fn parse_instruction(
                     {comparison_type_raw:02X} (Opcode: {opcode_raw:02X}) while parsing Comparison Instruction.")),
                 };
             }
-            // short circuit stuff {}
+            // short circuit stuff {~~}
 
             Ok(GMInstruction::Cmp(GMComparisonInstruction {
+                opcode,
                 comparison_type,
                 type1,
                 type2,
@@ -633,9 +636,6 @@ pub fn parse_instruction(
             };
 
             let instance_type: i16 = b0 as i16 | ((b1 as i16) << 8);
-            // if instance_type == 0 {
-            //     log::error!("PopInstTypeZero  {type1:?} {type2:?} | {b0:02X} {b1:02X} {b2:02X} {opcode_raw:02X}")
-            // }
             let instance_type: GMInstanceType = parse_instance_type(instance_type)?;
 
             if type1 == GMDataType::Int16 {
@@ -734,10 +734,10 @@ pub fn parse_instruction(
                     _ => return Err("[INTERNAL ERROR] GMCodeBlob.read_value(GMDataType::Int32, ...)\
                     did not return an i32 while parsing Break Instruction".to_string()),
                 });
-                // gms version stuff {}
+                // set gms version to at least ... {~~}
             }
 
-            // other gms version stuff {}
+            // other set gms version stuff {~~}
 
             Ok(GMInstruction::Break(GMBreakInstruction {
                 opcode,
@@ -746,12 +746,6 @@ pub fn parse_instruction(
                 int_argument,
             }))
         }
-
-        // _ => Err(format!(
-        //     "Unhandled opcode {:02X} at position {}/{} (abs: {}) while parsing code. \
-        //     Please report this error to github.com/BioTomateDE/LibGM/issues.",
-        //     opcode_raw, blob.file_index, blob.len, code_start_pos + blob.len,
-        // )),
     }
 }
 
@@ -778,3 +772,4 @@ pub fn parse_instance_type(raw_value: i16) -> Result<GMInstanceType, String> {
 
     Ok(instance_type)
 }
+
