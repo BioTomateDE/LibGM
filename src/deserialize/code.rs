@@ -749,7 +749,7 @@ pub fn parse_instruction(
 
         // _ => Err(format!(
         //     "Unhandled opcode {:02X} at position {}/{} (abs: {}) while parsing code. \
-        //     Please report this error to github.com/BioTomateDE/UndertaleModManager/issues.",
+        //     Please report this error to github.com/BioTomateDE/LibGM/issues.",
         //     opcode_raw, blob.file_index, blob.len, code_start_pos + blob.len,
         // )),
     }
