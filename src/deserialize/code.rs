@@ -677,7 +677,7 @@ pub fn parse_instruction(
             let val: i16 = (b0 as i16) | ((b1 as i16) << 8);
 
             if bytecode14 {
-                println!("############# {:?} {:?}", data_type, val);
+                // log::info!("bytecode14 push ############# {:?} {:?}", data_type, val);
                 match data_type {
                     GMDataType::Int16 => opcode = GMOpcode::PushI,
                     GMDataType::Variable => {
