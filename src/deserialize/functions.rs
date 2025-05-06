@@ -117,16 +117,13 @@ fn parse_occurrence_chain(chunk_code: &GMChunk, function_name: &str, first_occur
             while parsing function reference chain: {} > {}", occurrence_pos, chunk_code.data.len()))?
             .try_into().unwrap();
 
-        // println!("{}", hexdump(&chunk_CODE.data, (occurrence as usize)-4, Some(occurrence as usize+4)).unwrap());
         if chunk_code.data[occurrence_pos- 1] != 0xD9 {
-            log::info!("funciton not d9: {occurrence_pos} {}", chunk_code.data[occurrence_pos - 1]);
+            log::error!("Function {function_name} not D9: {occurrence_pos} {}", chunk_code.data[occurrence_pos - 1]);
             break;
         }
         occurrence_pos += i32::from_le_bytes(raw) as usize;
-        // log::info!("functionref {} {} {} {}", function_name, occurrence_count, occurrence_pos, i32::from_le_bytes(raw))
     }
 
-    // println!("FUNCITONSBDF | expected: {count:<10},  actual: {i:<10}   {}", count==i);
 
     Ok(occurrences)
 }
