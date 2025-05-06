@@ -449,16 +449,16 @@ pub fn parse_chunk_code(
 ) -> Result<Vec<GMCode>, String> {
     chunk.cur_pos = 0;
     let codes_count: usize = chunk.read_usize()?;
-    let mut code_meta_indexes: Vec<usize> = Vec::with_capacity(codes_count);
+    let mut code_meta_start_positions: Vec<usize> = Vec::with_capacity(codes_count);
     for _ in 0..codes_count {
         let meta_index: usize = chunk.read_usize()? - chunk.abs_pos;
-        code_meta_indexes.push(meta_index);
+        code_meta_start_positions.push(meta_index);
     }
 
     let mut code_metas: Vec<GMCodeMeta> = Vec::with_capacity(codes_count);
 
-    for ts in code_meta_indexes {
-        chunk.cur_pos = ts;
+    for code_meta_start_position in code_meta_start_positions {
+        chunk.cur_pos = code_meta_start_position;
         let code_name: GMRef<String> = chunk.read_gm_string(strings)?;
         let code_length: usize = chunk.read_usize()?;
         let locals_count: u32 = chunk.read_u32()?;
