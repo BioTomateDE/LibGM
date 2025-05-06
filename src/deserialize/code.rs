@@ -1,9 +1,11 @@
-﻿use crate::deserialize::chunk_reading::GMRef;
+﻿use std::any::type_name_of_val;
+use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::variables::{GMVariable, GMVariables};
 use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::env::var;
+use std::fmt::{Display, Formatter, Write};
 use itertools::Itertools;
 use num_enum::TryFromPrimitive;
 use crate::deserialize::functions::{GMFunction, GMFunctions};
@@ -89,6 +91,23 @@ pub enum GMInstanceType {
     Stacktop,
     Arg,
     Static,
+}
+impl Display for GMInstanceType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            GMInstanceType::Self_(Some(reference)) => write!(f, "Self<{}>", reference.index),
+            GMInstanceType::Self_(None) => write!(f, "Self"),
+            GMInstanceType::Undefined => write!(f, "Undefined"),
+            GMInstanceType::Other => write!(f, "Other"),
+            GMInstanceType::All => write!(f, "All"),
+            GMInstanceType::Noone => write!(f, "Noone"),
+            GMInstanceType::Global => write!(f, "Global"),
+            GMInstanceType::Local => write!(f, "Local"),
+            GMInstanceType::Stacktop => write!(f, "Stacktop"),
+            GMInstanceType::Arg => write!(f, "Arg"),
+            GMInstanceType::Static => write!(f, "Static"),
+        }
+    }
 }
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]
 #[repr(u8)]
@@ -276,7 +295,7 @@ pub struct GMCodeBlob {
     pub raw_data: Vec<u8>,
     pub len: usize,
     pub cur_pos: usize,
-    pub abs_pos: usize,
+    pub chunk_code_pos: usize,
 }
 
 impl GMCodeBlob {
@@ -378,7 +397,7 @@ impl GMCodeBlob {
     }
 
     fn read_variable(&mut self, variables: &GMVariables, instance_type: &GMInstanceType) -> Result<GMCodeVariable, String> {
-        let occurrence_position: usize = self.cur_pos; // TODO abs
+        let occurrence_position: usize = self.cur_pos + self.chunk_code_pos;
         let raw_value: i32 = self.read_i32()?;
 
         let variable_type: i32 = (raw_value >> 24) & 0xF8;
@@ -386,25 +405,22 @@ impl GMCodeBlob {
         let variable_type: GMVariableType = variable_type.try_into()
             .map_err(|_| format!("Invalid Variable Type 0x{variable_type:02X} while parsing variable reference chain."))?;
 
-        let occurrence_map: &HashMap<usize, GMRef<GMVariable>> = match instance_type {
-            GMInstanceType::Self_(_) => &variables.instance_occurrence_map,
-            GMInstanceType::Global => &variables.global_occurrence_map,
-            GMInstanceType::Local => &variables.local_occurrence_map,
-            other => return Err(format!(
-                "Invalid Variable Instance type {other:?} at absolute position {occurrence_position} while parsing code values."
-            ))
-        };
 
-        let mut ts = occurrence_map.keys().collect_vec();
-        ts.sort_by(|a,b| (**a as i32-occurrence_position as i32).abs().cmp(&(**b as i32-occurrence_position as i32).abs()));
-        log::info!("{occurrence_position} {:?}", &ts[..10]);
+        // let mut ts = variables.occurrence_map.keys().collect_vec();
+        // // ts.sort();
+        // ts.sort_by(|a,b| (**a as i32-occurrence_position as i32).abs().cmp(&(**b as i32-occurrence_position as i32).abs()));
+        // if occurrence_position == *ts[0] {
+        //     log::info!("{occurrence_position} {} {:?}", instance_type, &ts[..10]);
+        // } else {
+        //     log::warn!("{occurrence_position} {} {:?}", instance_type, &ts[..10]);
+        // }
 
-        let variable = GMRef::new(3154623473357); //TODO
-        // let variable: GMRef<GMVariable> = occurrence_map.get(&occurrence_position)
-        //     .ok_or_else(|| format!(
-        //         "Could not find {:?} Variable with absolute occurrence position {} in hashmap with length {} while parsing code values.",
-        //         instance_type, occurrence_position, occurrence_map.len(),
-        //     ))?.clone();
+        // let variable = GMRef::new(3154623473357); //TODO
+        let variable: GMRef<GMVariable> = variables.occurrence_map.get(&occurrence_position)
+            .ok_or_else(|| format!(
+                "Could not find {} Variable with occurrence position {} in hashmap with length {} while parsing code values.",
+                instance_type, occurrence_position, variables.occurrence_map.len(),
+            ))?.clone();
 
         Ok(GMCodeVariable { variable, variable_type })
     }
@@ -465,7 +481,7 @@ pub fn parse_chunk_code(
             raw_data: raw_data.clone(),
             len: raw_data.len(),
             cur_pos: 0,
-            abs_pos: code_meta.start_position + chunk.abs_pos,
+            chunk_code_pos: code_meta.start_position,
         };
         let mut instructions: Vec<GMInstruction> = vec![];
 
@@ -617,6 +633,9 @@ pub fn parse_instruction(
             };
 
             let instance_type: i16 = b0 as i16 | ((b1 as i16) << 8);
+            // if instance_type == 0 {
+            //     log::error!("PopInstTypeZero  {type1:?} {type2:?} | {b0:02X} {b1:02X} {b2:02X} {opcode_raw:02X}")
+            // }
             let instance_type: GMInstanceType = parse_instance_type(instance_type)?;
 
             if type1 == GMDataType::Int16 {
@@ -738,8 +757,8 @@ pub fn parse_instruction(
 
 
 pub fn parse_instance_type(raw_value: i16) -> Result<GMInstanceType, String> {
-    // If >= 0; then game object id. If < 0, then variable instance type.
-    if raw_value >= 0 {
+    // If > 0; then game object id. If < 0, then variable instance type.
+    if raw_value > 0 {
         return Ok(GMInstanceType::Self_(Some(GMRef::new(raw_value as usize))))
     }
 
