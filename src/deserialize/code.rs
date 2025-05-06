@@ -397,7 +397,7 @@ impl GMCodeBlob {
         }
     }
 
-    fn read_variable(&mut self, variables: &GMVariables, instance_type: &GMInstanceType) -> Result<GMCodeVariable, String> {
+    fn read_variable(&mut self, variables: &GMVariables, instance_type: &GMInstanceType, ispop: bool) -> Result<GMCodeVariable, String> {
         let occurrence_position: usize = self.cur_pos + self.chunk_code_pos;
         let raw_value: i32 = self.read_i32()?;
 
@@ -418,11 +418,23 @@ impl GMCodeBlob {
 
         // let variable = GMRef::new(3154623473357); //TODO
         let variable: GMRef<GMVariable> = variables.occurrence_map.get(&occurrence_position)
-            .ok_or_else(|| format!(
-                "Could not find {} Variable with occurrence position {} in hashmap with length {} while parsing code values.",
-                instance_type, occurrence_position, variables.occurrence_map.len(),
-            ))?.clone();
+            // .ok_or_else(|| format!(
+            //     "Could not find {} Variable with occurrence position {} in hashmap with length {} while parsing code values.",
+            //     instance_type, occurrence_position, variables.occurrence_map.len(),
+            // ))?.clone();
+            .map_or_else(
+                || {
+                let mut ts = variables.occurrence_map.keys().collect_vec();
+                ts.sort_by(|a,b| (**a as i32-occurrence_position as i32).abs().cmp(&(**b as i32-occurrence_position as i32).abs()));
+                if ispop {
+                    log::info!("{occurrence_position} {} {:?}", instance_type, &ts[..10]);
+                } else {
+                    log::warn!("{occurrence_position} {} {:?}", instance_type, &ts[..10]);
+                }
+                    GMRef::new(1)
+            }, |e| e.clone());
 
+        // log::info!("var {} {}", instance_type, variable.index);
         Ok(GMCodeVariable { variable, variable_type })
     }
 }
@@ -487,7 +499,7 @@ pub fn parse_chunk_code(
         let mut instructions: Vec<GMInstruction> = vec![];
 
         while code_blob.cur_pos < code_blob.len {
-            let instruction: GMInstruction = parse_instruction(&mut code_blob, bytecode14, variables, functions, code_meta.start_position-8)?;
+            let instruction: GMInstruction = parse_instruction(&mut code_blob, bytecode14, variables, functions)?;
             // let dump: String = match hexdump(&*code_blob.raw_data, code_blob.file_index-4, Some(code_blob.file_index)) {
             //     Ok(ok) => ok,
             //     Err(_) => "()".to_string(),
@@ -518,7 +530,6 @@ pub fn parse_instruction(
     bytecode14: bool,
     variables: &GMVariables,
     functions: &GMFunctions,
-    code_start_pos: usize
 ) -> Result<GMInstruction, String> {
     let b0: u8 = blob.read_byte()?;
     let b1: u8 = blob.read_byte()?;
@@ -644,11 +655,11 @@ pub fn parse_instruction(
                     occurred at position {} while parsing Pop Instruction.\
                     Please report this error to github.com/BioTomateDE/LibGM/Issues \
                     along with your data.win file.",
-                    blob.cur_pos + code_start_pos
+                    blob.cur_pos + blob.chunk_code_pos
                 ));
             }
 
-            let destination: GMCodeVariable = blob.read_variable(variables, &instance_type)?;
+            let destination: GMCodeVariable = blob.read_variable(variables, &instance_type, true)?;
             Ok(GMInstruction::Pop(GMPopInstruction {
                 opcode,
                 instance_type,
@@ -666,7 +677,7 @@ pub fn parse_instruction(
             let val: i16 = (b0 as i16) | ((b1 as i16) << 8);
 
             if bytecode14 {
-                // println!("############# {:?} {:?}", data_type, val);
+                println!("############# {:?} {:?}", data_type, val);
                 match data_type {
                     GMDataType::Int16 => opcode = GMOpcode::PushI,
                     GMDataType::Variable => {
@@ -683,7 +694,7 @@ pub fn parse_instruction(
 
             let value: GMValue = if data_type == GMDataType::Variable {
                 let instance_type: GMInstanceType = parse_instance_type(val)?;
-                let variable: GMCodeVariable = blob.read_variable(variables, &instance_type)?;
+                let variable: GMCodeVariable = blob.read_variable(variables, &instance_type, false)?;
                 GMValue::Variable(variable)
             } else {
                 blob.read_value(data_type)?
@@ -706,10 +717,10 @@ pub fn parse_instruction(
                 Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Call Instruction.")),
             };
 
-            blob.cur_pos += 4;
-            let function: &GMRef<GMFunction> = functions.occurrences_to_refs.get(&(code_start_pos + blob.cur_pos))
+            let function: &GMRef<GMFunction> = functions.occurrences_to_refs.get(&(blob.chunk_code_pos + blob.cur_pos))
                 .ok_or(format!("Could not find any function with absolute occurrence position {} in map with length {} (functions len: {}).",
-                               code_start_pos + blob.cur_pos, functions.occurrences_to_refs.len(), functions.functions_by_index.len()))?;
+                               blob.chunk_code_pos + blob.cur_pos, functions.occurrences_to_refs.len(), functions.functions_by_index.len()))?;
+            blob.cur_pos += 4;
 
             Ok(GMInstruction::Call(GMCallInstruction {
                 opcode,
