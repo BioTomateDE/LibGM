@@ -38,7 +38,6 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
         for _ in 0..variable_count {
             let name: GMRef<String> = chunk.read_gm_string(strings)?;
 
-            // bytecode>=15 might reads instance type here, so maybe it doesn't have the 3 global/instance/local count in the beginning?
             let mut instance_type: GMInstanceType = default_instance_type.clone();
             let mut variable_id: Option<i32> = None;
             if general_info.bytecode_version >= 15 {
@@ -93,6 +92,10 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
 }
 
 
+
+// could be made more efficient by passing in a &mut to the
+// occurrence map rather than inserting them all later
+// (this also applies to function occurrences)
 fn parse_occurrence_chain(
     chunk_code: &mut GMChunk,
     variable_name: &str,
