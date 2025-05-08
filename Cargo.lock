@@ -372,6 +372,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "diffs"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff116c9781d74b71b9b8958281309dd2faaeabad2f0a3df27e50bd79ce5dc805"
+
+[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -665,7 +671,7 @@ dependencies = [
  "biologischer-log",
  "bzip2",
  "chrono",
- "colored",
+ "diffs",
  "image",
  "itertools",
  "log",
