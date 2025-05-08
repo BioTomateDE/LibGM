@@ -79,7 +79,7 @@ pub enum GMDataType {
     UnsignedInt,
     Int16 = 0x0f,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum GMInstanceType {
     Undefined,  // actually, this is just object 0, but also occurs in places where no instance type was set
     Self_(Option<GMRef<GMGameObject>>),
@@ -216,7 +216,7 @@ pub struct GMGotoInstruction {
     pub jump_offset: i32,
     pub popenv_exit_magic: bool,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMPopInstruction {
     pub opcode: GMOpcode,
     pub instance_type: GMInstanceType,
@@ -224,27 +224,27 @@ pub struct GMPopInstruction {
     pub type2: GMDataType,
     pub destination: GMCodeVariable,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMPushInstruction {
     pub opcode: GMOpcode,
     pub data_type: GMDataType,
     pub value: GMValue,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMCallInstruction {
     pub opcode: GMOpcode,
     pub arguments_count: usize,
     pub data_type: GMDataType,
     pub function: GMRef<GMFunction>,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMBreakInstruction {
     pub opcode: GMOpcode,
     pub value: i16,
     pub data_type: GMDataType,
     pub int_argument: Option<i32>,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum GMInstruction {
     Cmp(GMComparisonInstruction),
     Goto(GMGotoInstruction),
@@ -254,14 +254,14 @@ pub enum GMInstruction {
     Break(GMBreakInstruction),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMCodeVariable {
     pub variable: GMRef<GMVariable>,
     pub variable_type: GMVariableType,
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 enum GMValue {
     Double(f64),
     Float(f32),
@@ -282,7 +282,7 @@ struct GMCodeMeta {
     arguments_count: u32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMCode {
     pub name: GMRef<String>,
     pub instructions: Vec<GMInstruction>,
@@ -440,13 +440,18 @@ impl GMCodeBlob {
 }
 
 
+#[derive(Debug, Clone)]
+pub struct GMCodes {
+    pub codes_by_index: Vec<GMCode>,
+}
+
 pub fn parse_chunk_code(
     chunk: &mut GMChunk,
     bytecode14: bool,
     strings: &GMStrings,
     variables: &GMVariables,
     functions: &GMFunctions,
-) -> Result<Vec<GMCode>, String> {
+) -> Result<GMCodes, String> {
     chunk.cur_pos = 0;
     let codes_count: usize = chunk.read_usize()?;
     let mut code_meta_start_positions: Vec<usize> = Vec::with_capacity(codes_count);
@@ -487,7 +492,7 @@ pub fn parse_chunk_code(
         })
     }
 
-    let mut codes: Vec<GMCode> = Vec::with_capacity(codes_count);
+    let mut codes_by_index: Vec<GMCode> = Vec::with_capacity(codes_count);
     for code_meta in code_metas {
         let raw_data: Vec<u8> = chunk.data[code_meta.start_position..code_meta.start_position + code_meta.length].to_owned();
         let mut code_blob: GMCodeBlob = GMCodeBlob {
@@ -514,7 +519,7 @@ pub fn parse_chunk_code(
             instructions.push(instruction);
         }
 
-        codes.push(GMCode {
+        codes_by_index.push(GMCode {
             name: code_meta.name,
             instructions,
             locals_count: code_meta.locals_count,
@@ -522,7 +527,7 @@ pub fn parse_chunk_code(
         });
     }
 
-    Ok(codes)
+    Ok(GMCodes { codes_by_index })
 }
 
 pub fn parse_instruction(

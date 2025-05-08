@@ -2,7 +2,7 @@
 use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use crate::deserialize::strings::GMStrings;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMFunction {
     pub name: GMRef<String>,
     pub occurrences: Vec<usize>,                // list of occurrences (call instructions) positions relative to chunk CODE
@@ -15,12 +15,12 @@ pub struct GMFunctions {
     pub occurrences_to_refs: HashMap<usize, GMRef<GMFunction>>,     // maps all occurrence addresses/positions (relative to chunk CODE) to function refs
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMCodeLocalVariable {
     pub index: usize,
     pub name: GMRef<String>,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMCodeLocal {
     pub name: GMRef<String>,
     pub variables: Vec<GMCodeLocalVariable>,

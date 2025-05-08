@@ -3,7 +3,7 @@ use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::strings::GMStrings;
 use crate::deserialize::texture_page_items::{GMTexture, GMTextures};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMBackground {
     pub name: GMRef<String>,
     pub transparent: bool,
@@ -13,7 +13,7 @@ pub struct GMBackground {
     pub gms2_data: Option<GMBackgroundGMS2Data>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMBackgroundGMS2Data {
     pub unknown_always2: u32,
     pub tile_width: u32,
