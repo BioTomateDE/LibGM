@@ -9,7 +9,7 @@ use crate::deserialize::sprites::GMSprite;
 use crate::deserialize::strings::GMStrings;
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMRoom {
     pub name: GMRef<String>,
     pub caption: GMRef<String>,
@@ -36,7 +36,7 @@ pub struct GMRoom {
     pub layers: Option<Vec<GMRoomLayer>>,
     pub sequences: Option<Vec<GMSequence>>,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMRoomFlags {
     pub enable_views: bool,                 // views are enabled
     pub show_color: bool,                   // meaning uncertain
@@ -45,7 +45,7 @@ pub struct GMRoomFlags {
     pub is_gms2_3: bool,                    // room was made in GameMaker: Studio 2.3
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMRoomView {
     pub enabled: bool,
     pub view_x: i32,
@@ -63,7 +63,7 @@ pub struct GMRoomView {
     pub object_id: i32,           // change to GMObject later
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMRoomBackground {
     pub enabled: bool,
     pub foreground: bool,
@@ -77,7 +77,7 @@ pub struct GMRoomBackground {
     pub stretch: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMRoomTile {
     pub x: i32,
     pub y: i32,
@@ -93,13 +93,13 @@ pub struct GMRoomTile {
     pub color: u32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum GMRoomTileTexture {
     Sprite(GMRef<GMSprite>),
     Background(GMRef<GMBackground>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMRoomLayer {
     pub layer_name: GMRef<String>,
     pub layer_id: u32,
@@ -112,7 +112,7 @@ pub struct GMRoomLayer {
     pub is_visible: bool,
 }
 
-#[derive(Debug, Clone, TryFromPrimitive)]
+#[derive(Debug, Clone, PartialEq, TryFromPrimitive)]
 #[repr(u32)]
 pub enum GMRoomLayerType {
     Path = 0,
@@ -123,7 +123,7 @@ pub enum GMRoomLayerType {
     Effect = 6,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMRoomGameObject {
     pub x: i32,
     pub y: i32,

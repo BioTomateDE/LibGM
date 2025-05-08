@@ -5,7 +5,7 @@ use crate::deserialize::code::{parse_instance_type, GMInstanceType};
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::strings::GMStrings;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMVariable {
     pub name: GMRef<String>,
     pub instance_type: GMInstanceType,

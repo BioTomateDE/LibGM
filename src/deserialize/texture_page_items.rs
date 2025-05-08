@@ -4,7 +4,7 @@ use crate::deserialize::embedded_textures::{Image, GMEmbeddedTexture};
 use image;
 use crate::printing::format_type_of;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMTexture {
     pub img: image::DynamicImage,
     pub target_x: u16,

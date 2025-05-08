@@ -2,7 +2,7 @@
 use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use crate::deserialize::strings::GMStrings;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMScript {
     pub name: GMRef<String>,
     pub id: Option<u32>,
