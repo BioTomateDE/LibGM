@@ -1,6 +1,6 @@
 use crate::deserialize::chunk_reading::GMChunk;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMEmbeddedAudio {
     pub raw_data: Vec<u8>,
 }
