@@ -5,7 +5,7 @@ use crate::deserialize::strings::GMStrings;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::deserialize::general_info::GMGeneralInfo;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMSequence {
     pub name: GMRef<String>,
     pub playback: GMSequencePlaybackType,
@@ -22,20 +22,20 @@ pub struct GMSequence {
 }
 
 
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u32)]
 pub enum GMSequencePlaybackType {
     Oneshot = 0,
     Loop = 1,
     Pingpong = 2
 }
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u32)]
 pub enum GMAnimSpeedType {
     FramesPerSecond = 0,
     FramesPerGameFrame = 1
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframe {
     pub key: f32,
     pub length: f32,
@@ -43,7 +43,7 @@ pub struct GMKeyframe {
     pub disabled: bool,
     pub channels: Vec<i32>,   // {~~} TODO change ts to HashMap
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMTrack {
     pub model_name: GMRef<String>,
     pub name: GMRef<String>,
@@ -56,7 +56,7 @@ pub struct GMTrack {
     pub owned_resources: Vec<GMAnimationCurve>,
     pub anim_curve_string: Option<GMRef<String>>,
 }
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
 pub enum GMTrackBuiltinName {
     Gain = 5,
@@ -77,26 +77,26 @@ pub enum GMTrackBuiltinName {
     LineSpacing = 22,
     ParagraphSpacing = 23
 }
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
 pub enum GMTrackTraits {
     None,
     ChildrenIgnoreOrigin
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeMoment {
     pub internal_count: i32,    // "Should be 0 if none, 1 if there's a message?"
     pub event: Option<GMRef<String>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMAnimationCurve {
     pub name: GMRef<String>,
     pub graph_type: u32,
     pub channels: Vec<GMAnimationCurveChannel>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMAnimationCurveChannel {
     pub name: GMRef<String>,
     pub curve_type: GMAnimationCurveType,
@@ -105,14 +105,14 @@ pub struct GMAnimationCurveChannel {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMAnimationCurveChannelPoint {
     pub x: f32,
     pub y: f32,     // aka Value
     pub bezier_data: Option<GMAnimationCurveChannelPointBezierData>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMAnimationCurveChannelPointBezierData {
     pub x0: f32,
     pub y0: f32,
@@ -120,7 +120,7 @@ pub struct GMAnimationCurveChannelPointBezierData {
     pub y1: f32,
 }
 
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u32)]
 pub enum GMAnimationCurveType {
     Linear = 0,

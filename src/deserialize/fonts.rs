@@ -3,7 +3,7 @@ use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::strings::GMStrings;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMFont {
     pub name: GMRef<String>,
     pub display_name: GMRef<String>,
@@ -24,7 +24,7 @@ pub struct GMFont {
     pub glyphs: Vec<GMFontGlyph>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMFontGlyph {
     pub character: char,
     pub x: u16,

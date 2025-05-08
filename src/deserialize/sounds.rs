@@ -3,7 +3,7 @@ use crate::deserialize::embedded_audio::GMEmbeddedAudio;
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::strings::GMStrings;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMSound {
     pub name: GMRef<String>,                         // e.g. "abc_123_a"
     pub flags: GMSoundFlags,                         // e.g. Regular
@@ -17,7 +17,7 @@ pub struct GMSound {
     pub audio_length: Option<f32>,               // in seconds probably
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMSoundFlags {
     pub is_embedded: bool,
     pub is_compressed: bool,

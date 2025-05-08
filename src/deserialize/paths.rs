@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use crate::deserialize::strings::GMStrings;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMPath {
     pub name: GMRef<String>,
     pub is_smooth: bool,
@@ -11,7 +11,7 @@ pub struct GMPath {
     pub points: Vec<GMPathPoint>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMPathPoint {
     pub x: f32,
     pub y: f32,

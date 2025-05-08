@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 use crate::deserialize::backgrounds::{parse_chunk_bgnd, GMBackgrounds};
 use crate::deserialize::chunk_reading::GMChunk;
-use crate::deserialize::code::{parse_chunk_code, GMCode};
+use crate::deserialize::code::{parse_chunk_code, GMCodes};
 use crate::deserialize::embedded_audio::{parse_chunk_audo, GMEmbeddedAudios};
 use crate::deserialize::embedded_textures::{parse_chunk_txtr, GMEmbeddedTexture};
 use crate::deserialize::fonts::{parse_chunk_font, GMFonts};
@@ -33,7 +33,7 @@ pub struct GMData {
     pub variables: GMVariables,             // VARI
     pub functions: GMFunctions,             // FUNC
     pub code_locals: Vec<GMCodeLocal>,      // FUNC
-    pub code: Vec<GMCode>,                  // CODE
+    pub codes: GMCodes,                     // CODE
     pub fonts: GMFonts,                     // FONT
     pub audios: GMEmbeddedAudios,           // AUDO
     pub sounds: GMSounds,                   // SOND
@@ -111,8 +111,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let scripts: GMScripts = parse_chunk_scpt(&mut chunk_scpt, &strings)?;
     let variables: GMVariables = parse_chunk_vari(&mut chunk_vari, &strings, &general_info, &mut chunk_code)?;
     let (functions, code_locals): (GMFunctions, Vec<GMCodeLocal>) = parse_chunk_func(&mut chunk_func, &strings, &chunk_code)?;
-    let code: Vec<GMCode> = parse_chunk_code(&mut chunk_code, bytecode14, &strings, &variables, &functions)?;
-    // let code: Vec<GMCode> = vec![]; // TODO remove stub
+    let codes: GMCodes = parse_chunk_code(&mut chunk_code, bytecode14, &strings, &variables, &functions)?;
     let fonts: GMFonts = parse_chunk_font(&mut chunk_font, &general_info, &strings)?;
     let audios: GMEmbeddedAudios = parse_chunk_audo(&mut chunk_audo)?;
     let sounds: GMSounds = parse_chunk_sond(&mut chunk_sond, &general_info, &strings)?;
@@ -131,7 +130,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
         variables,
         functions,
         code_locals,
-        code,
+        codes,
         fonts,
         audios,
         sounds,

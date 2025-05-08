@@ -5,7 +5,7 @@ use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::sprites::GMSprite;
 use crate::deserialize::strings::GMStrings;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMGameObject {
     pub name: GMRef<String>,
     pub sprite: Option<GMRef<GMSprite>>,
@@ -32,7 +32,7 @@ pub struct GMGameObject {
     pub events: Vec<Vec<GMGameObjectEvent>>,
 }
 
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u32)]
 pub enum GMGameObjectCollisionShape {
     Circle = 0,
@@ -46,13 +46,13 @@ pub struct GMGameObjects {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMGameObjectEvent {
     pub subtype: u32,
     pub actions: Vec<GMGameObjectEventAction>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMGameObjectEventAction {
     pub lib_id: u32,
     pub id: u32,
