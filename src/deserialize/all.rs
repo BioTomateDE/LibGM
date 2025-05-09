@@ -112,7 +112,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let variables: GMVariables = parse_chunk_vari(&mut chunk_vari, &strings, &general_info, &mut chunk_code)?;
     let (functions, code_locals): (GMFunctions, Vec<GMCodeLocal>) = parse_chunk_func(&mut chunk_func, &strings, &chunk_code)?;
     let codes: GMCodes = parse_chunk_code(&mut chunk_code, bytecode14, &strings, &variables, &functions)?;
-    let fonts: GMFonts = parse_chunk_font(&mut chunk_font, &general_info, &strings)?;
+    let fonts: GMFonts = parse_chunk_font(&mut chunk_font, &general_info, &strings, &textures)?;
     let audios: GMEmbeddedAudios = parse_chunk_audo(&mut chunk_audo)?;
     let sounds: GMSounds = parse_chunk_sond(&mut chunk_sond, &general_info, &strings)?;
     let game_objects: GMGameObjects = parse_chunk_objt(&mut chunk_objt, &general_info, &strings)?;

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::strings::GMStrings;
+use crate::deserialize::texture_page_items::{GMTexture, GMTextures};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMFont {
@@ -14,7 +15,7 @@ pub struct GMFont {
     pub charset: u8,
     pub anti_alias: u8,
     pub range_end: u32,
-    pub texture: u32,   // Replace with TexturePageItem when available
+    pub texture: GMRef<GMTexture>,
     pub scale_x: f32,
     pub scale_y: f32,
     pub ascender_offset: Option<i32>,
@@ -41,7 +42,7 @@ pub struct GMFonts {
     pub fonts_by_index: Vec<GMFont>,                    // fonts by index/order in chunk FONT
 }
 
-pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMFonts, String> {
+pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings, textures: &GMTextures) -> Result<GMFonts, String> {
     chunk.cur_pos = 0;
     let font_count: usize = chunk.read_usize()?;
     let mut font_starting_positions: Vec<usize> = Vec::with_capacity(font_count);
@@ -64,7 +65,10 @@ pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
         let charset: u8 = chunk.read_u8()?;
         let anti_alias: u8 = chunk.read_u8()?;
         let range_end: u32 = chunk.read_u32()?;
-        let texture: u32 = chunk.read_u32()?;       // REPLACE WITH TexturePageItem WHEN AVAILABLE
+        let texture_abs_pos: usize = chunk.read_usize()?;
+        let texture: &GMRef<GMTexture> = textures.abs_pos_to_ref.get(&texture_abs_pos)
+            .ok_or(format!("Could not find texture with absolute position {} for Font with name \"{}\" at position {} in chunk 'FONT'.",
+                           texture_abs_pos, name.display(strings), start_position))?;
         let scale_x: f32 = chunk.read_f32()?;
         let scale_y: f32 = chunk.read_f32()?;
 
@@ -98,7 +102,7 @@ pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
             charset,
             anti_alias,
             range_end,
-            texture,
+            texture: texture.clone(),
             scale_x,
             scale_y,
             ascender_offset,

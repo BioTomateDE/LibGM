@@ -421,7 +421,7 @@ impl GMFont {
         println!("  Charset: {}", self.charset);
         println!("  Anti-Alias: {}", self.anti_alias);
         println!("  Range End: {}", self.range_end);
-        println!("  Texture: {}", self.texture);
+        println!("  Texture: #{}", self.texture.index);
         println!("  Scale X: {}", self.scale_x);
         println!("  Scale Y: {}", self.scale_y);
         println!("  Ascender Offset: {:?}", self.ascender_offset);
