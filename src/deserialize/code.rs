@@ -1,10 +1,7 @@
-﻿use std::any::type_name_of_val;
-use crate::deserialize::chunk_reading::GMRef;
+﻿use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::variables::{GMVariable, GMVariables};
 use std::cmp::PartialEq;
-use std::collections::HashMap;
-use std::env::var;
 use std::fmt::{Display, Formatter, Write};
 use itertools::Itertools;
 use num_enum::TryFromPrimitive;

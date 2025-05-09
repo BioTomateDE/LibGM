@@ -101,7 +101,7 @@ fn parse_occurrence_chain(chunk_code: &GMChunk, function_name: &str, first_occur
         return Ok(vec![]);
     }
 
-    let mut occurrence_pos: i32 = first_occurrence_abs_pos - chunk_code.abs_pos as i32 + 4;
+    let occurrence_pos: i32 = first_occurrence_abs_pos - chunk_code.abs_pos as i32 + 4;
     let mut occurrence_pos: usize = occurrence_pos.try_into()
         .map_err(|_| format!(
             "First occurrence of function \"{}\" is out of bounds; should be: {} <= {} < {}.",
