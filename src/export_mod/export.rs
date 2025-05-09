@@ -2,7 +2,9 @@ use crate::deserialize::all::GMData;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Cursor;
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
+use serde::{Deserialize, Serialize};
 use zip::write::{FileOptions, SimpleFileOptions};
 use zip::{CompressionMethod, ZipWriter};
 use crate::deserialize::backgrounds::GMBackground;
@@ -19,15 +21,16 @@ use crate::deserialize::sounds::GMSound;
 use crate::deserialize::sprites::GMSprite;
 use crate::deserialize::texture_page_items::GMTexture;
 use crate::deserialize::variables::GMVariable;
-use crate::export_mod::unordered_list::{export_changes_unordered_list, GModUnorderedListChanges};
+use crate::export_mod::fonts::ModFont;
+use crate::export_mod::unordered_list::{export_changes_unordered_list, AModUnorderedListChanges, GModUnorderedListChanges};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ModUnorderedRef {
     Edit(usize),
     Add(usize),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ModOrderedRef {
     index: usize,
 }
@@ -40,15 +43,47 @@ pub const FILE_OPTIONS: LazyLock<FileOptions<()>> = LazyLock::new(||
     .compression_level(Some(9))
 );
 
-fn export_mod(gm_data: &GMData) {
+
+fn zw_write_file(zip_writer: &mut ModWriter, filename: &str, data: &[u8]) -> Result<(), String> {
+    zip_writer.start_file(filename, *FILE_OPTIONS)
+        .map_err(|e| format!("Could not create {filename} file in zip archive: {e}"))?;
+    zip_writer.write_all(data)
+        .map_err(|e| format!("Could not write data to {filename} file in zip archive: {e}"))?;
+    Ok(())
+}
+
+fn zw_write_unordered_list_changes<A: Serialize>(zip_writer: &mut ModWriter, filename: &str, changes: &AModUnorderedListChanges<A>) -> Result<(), String> {
+    let string: String = serde_json::to_string_pretty(changes)
+        .map_err(|e| format!("Could not convert changes to json for zip file {filename}: {e}"))?;
+    let data: &[u8] = string.as_bytes();
+    zw_write_file(zip_writer, filename, data)
+}
+
+
+fn export_mod(original_data: &GMData, modified_data: &GMData, target_file: &Path) -> Result<(), String> {
     let mut data: Vec<u8> = Vec::new();
     let buff = Cursor::new(&mut data);
     let mut zip_writer = ZipWriter::new(buff);
-    zip_writer.start_file("some.txt", SimpleFileOptions::default()).unwrap();
-    zip_writer.write_all(b"hello").unwrap();
-    zip_writer.finish().unwrap();
-    let mut file = File::create("foo.zip").unwrap();
-    file.write_all(data.as_slice()).unwrap();
+
+    let gm_changes: GModData = export_changes_gamemaker(original_data, modified_data)?;
+    let strings: AModUnorderedListChanges<String> = gm_changes.convert_strings(&gm_changes.strings)?;
+    let fonts: AModUnorderedListChanges<ModFont> = gm_changes.convert_fonts(&gm_changes.fonts)?;
+    // repeat ts for every element
+
+    zw_write_unordered_list_changes(&mut zip_writer, "strings.json", &strings)?;
+    zw_write_unordered_list_changes(&mut zip_writer, "fonts.json", &fonts)?;
+    // repeat ts for every element
+
+    // also export textures and audio separately
+
+    zip_writer.finish()
+        .map_err(|e| format!("Could not finish zip archive: {e}"))?;
+
+    let mut file = File::create(target_file)
+        .map_err(|e| format!("Could not create target mod file with path {target_file:?}: {e}"))?;
+    file.write_all(data.as_slice())
+        .map_err(|e| format!("Could not write zip archive data to target mod file with path {target_file:?}: {e}"))?;
+    Ok(())
 }
 
 
@@ -205,7 +240,6 @@ impl<'o, 'm> GModData<'o, 'm> {
     resolve_reference_fn!(resolve_string_ref, strings, String, strings_by_index);
     resolve_reference_fn!(resolve_variable_ref, variables, GMVariable, variables);
 }
-
 
 
 pub fn edit_field<'a, T: PartialEq + Clone>(original: &T, modified: &T) -> Option<T> {
