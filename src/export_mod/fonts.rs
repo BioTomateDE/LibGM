@@ -1,9 +1,10 @@
 use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
 use crate::deserialize::fonts::{GMFont, GMFontGlyph};
 use crate::export_mod::export::{edit_field, edit_field_option, GModData, ModUnorderedRef};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, AModUnorderedListChanges, GModUnorderedListChanges};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModFont {
     pub name: Option<ModUnorderedRef>, // String
     pub display_name: Option<ModUnorderedRef>,  // String
@@ -24,7 +25,7 @@ pub struct ModFont {
     pub glyphs: AModUnorderedListChanges<ModFontGlyph>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModFontGlyph {
     pub character: Option<char>,
     pub x: Option<u16>,

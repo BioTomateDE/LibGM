@@ -121,7 +121,7 @@ pub enum GMVariableType {
 }
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]
 #[repr(u8)]
-enum GMComparisonType {
+pub enum GMComparisonType {
     DUP = 0,    // custom
     LT = 1,
     LTE = 2,
@@ -262,7 +262,7 @@ pub struct GMCodeVariable {
 
 
 #[derive(Debug, Clone, PartialEq)]
-enum GMValue {
+pub enum GMValue {
     Double(f64),
     Float(f32),
     Int32(i32),
