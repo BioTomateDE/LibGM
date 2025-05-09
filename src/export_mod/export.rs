@@ -21,13 +21,13 @@ use crate::deserialize::texture_page_items::GMTexture;
 use crate::deserialize::variables::GMVariable;
 use crate::export_mod::unordered_list::{export_changes_unordered_list, GModUnorderedListChanges};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ModUnorderedRef {
     Edit(usize),
     Add(usize),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ModOrderedRef {
     index: usize,
 }
@@ -54,21 +54,21 @@ fn export_mod(gm_data: &GMData) {
 
 #[derive(Debug, Clone)]
 pub struct GModData<'o, 'm> {
-    modified_data: &'m GMData,
-    backgrounds: GModUnorderedListChanges<'o, 'm, GMBackground>,
-    codes: GModUnorderedListChanges<'o, 'm, GMCode>,
-    audios: GModUnorderedListChanges<'o, 'm, GMEmbeddedAudio>,
-    textures: GModUnorderedListChanges<'o, 'm, GMTexture>,
-    fonts: GModUnorderedListChanges<'o, 'm, GMFont>,
-    functions: GModUnorderedListChanges<'o, 'm, GMFunction>,
-    game_objects: GModUnorderedListChanges<'o, 'm, GMGameObject>,
-    paths: GModUnorderedListChanges<'o, 'm, GMPath>,
-    rooms: GModUnorderedListChanges<'o, 'm, GMRoom>,
-    scripts: GModUnorderedListChanges<'o, 'm, GMScript>,
-    sounds: GModUnorderedListChanges<'o, 'm, GMSound>,
-    sprites: GModUnorderedListChanges<'o, 'm, GMSprite>,
-    strings: GModUnorderedListChanges<'o, 'm, String>,
-    variables: GModUnorderedListChanges<'o, 'm, GMVariable>,
+    pub modified_data: &'m GMData,
+    pub backgrounds: GModUnorderedListChanges<'o, 'm, GMBackground>,
+    pub codes: GModUnorderedListChanges<'o, 'm, GMCode>,
+    pub audios: GModUnorderedListChanges<'o, 'm, GMEmbeddedAudio>,
+    pub textures: GModUnorderedListChanges<'o, 'm, GMTexture>,
+    pub fonts: GModUnorderedListChanges<'o, 'm, GMFont>,
+    pub functions: GModUnorderedListChanges<'o, 'm, GMFunction>,
+    pub game_objects: GModUnorderedListChanges<'o, 'm, GMGameObject>,
+    pub paths: GModUnorderedListChanges<'o, 'm, GMPath>,
+    pub rooms: GModUnorderedListChanges<'o, 'm, GMRoom>,
+    pub scripts: GModUnorderedListChanges<'o, 'm, GMScript>,
+    pub sounds: GModUnorderedListChanges<'o, 'm, GMSound>,
+    pub sprites: GModUnorderedListChanges<'o, 'm, GMSprite>,
+    pub strings: GModUnorderedListChanges<'o, 'm, String>,
+    pub variables: GModUnorderedListChanges<'o, 'm, GMVariable>,
 }
 
 fn export_changes_gamemaker<'o, 'm>(original_data: &'o GMData, modified_data: &'m GMData) -> Result<GModData<'o, 'm>, String> {
@@ -165,7 +165,7 @@ fn export_changes_gamemaker<'o, 'm>(original_data: &'o GMData, modified_data: &'
 
 macro_rules! resolve_reference_fn {
     ($fn_name:ident, $field:ident, $type:ty, $lookup_field:ident) => {
-        pub fn $fn_name(&self, reference: GMRef<$type>) -> Result<ModUnorderedRef, String> {
+        pub fn $fn_name(&self, reference: &GMRef<$type>) -> Result<ModUnorderedRef, String> {
             if self.$field.edits.contains_key(&reference.index) {
                 return Ok(ModUnorderedRef::Edit(reference.index));
             }
@@ -190,20 +190,36 @@ macro_rules! resolve_reference_fn {
 }
 
 impl<'o, 'm> GModData<'o, 'm> {
-    resolve_reference_fn!(resolve_background_reference, backgrounds, GMBackground, backgrounds_by_index);
-    resolve_reference_fn!(resolve_code_reference, codes, GMCode, codes_by_index);
-    resolve_reference_fn!(resolve_audio_reference, audios, GMEmbeddedAudio, audios_by_index);
-    resolve_reference_fn!(resolve_texture_reference, textures, GMTexture, textures_by_index);
-    resolve_reference_fn!(resolve_font_reference, fonts, GMFont, fonts_by_index);
-    resolve_reference_fn!(resolve_function_reference, functions, GMFunction, functions_by_index);
-    resolve_reference_fn!(resolve_game_object_reference, game_objects, GMGameObject, game_objects_by_index);
-    resolve_reference_fn!(resolve_path_reference, paths, GMPath, paths_by_index);
-    resolve_reference_fn!(resolve_room_reference, rooms, GMRoom, rooms_by_index);
-    resolve_reference_fn!(resolve_script_reference, scripts, GMScript, scripts_by_index);
-    resolve_reference_fn!(resolve_sound_reference, sounds, GMSound, sounds_by_index);
-    resolve_reference_fn!(resolve_sprite_reference, sprites, GMSprite, sprites_by_index);
-    resolve_reference_fn!(resolve_string_reference, strings, String, strings_by_index);
-    resolve_reference_fn!(resolve_variable_reference, variables, GMVariable, variables);
+    resolve_reference_fn!(resolve_background_ref, backgrounds, GMBackground, backgrounds_by_index);
+    resolve_reference_fn!(resolve_code_ref, codes, GMCode, codes_by_index);
+    resolve_reference_fn!(resolve_audio_ref, audios, GMEmbeddedAudio, audios_by_index);
+    resolve_reference_fn!(resolve_texture_ref, textures, GMTexture, textures_by_index);
+    resolve_reference_fn!(resolve_font_ref, fonts, GMFont, fonts_by_index);
+    resolve_reference_fn!(resolve_function_ref, functions, GMFunction, functions_by_index);
+    resolve_reference_fn!(resolve_game_object_ref, game_objects, GMGameObject, game_objects_by_index);
+    resolve_reference_fn!(resolve_path_ref, paths, GMPath, paths_by_index);
+    resolve_reference_fn!(resolve_room_ref, rooms, GMRoom, rooms_by_index);
+    resolve_reference_fn!(resolve_script_ref, scripts, GMScript, scripts_by_index);
+    resolve_reference_fn!(resolve_sound_ref, sounds, GMSound, sounds_by_index);
+    resolve_reference_fn!(resolve_sprite_ref, sprites, GMSprite, sprites_by_index);
+    resolve_reference_fn!(resolve_string_ref, strings, String, strings_by_index);
+    resolve_reference_fn!(resolve_variable_ref, variables, GMVariable, variables);
 }
 
 
+
+pub fn edit_field<'a, T: PartialEq + Clone>(original: &T, modified: &T) -> Option<T> {
+    if original == modified {
+        Some(modified.clone())
+    } else {
+        None
+    }
+}
+
+pub fn edit_field_option<'a, T: PartialEq>(original: &Option<T>, modified: &'a Option<T>) -> &'a Option<T> {
+    if original == modified {
+        modified
+    } else {
+        &None
+    }
+}
