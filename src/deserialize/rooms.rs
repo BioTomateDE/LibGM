@@ -1,5 +1,6 @@
 use crate::deserialize::chunk_reading::GMRef;
 use num_enum::TryFromPrimitive;
+use serde::{Deserialize, Serialize};
 use crate::deserialize::backgrounds::GMBackground;
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::game_objects::{GMGameObject};
@@ -112,7 +113,7 @@ pub struct GMRoomLayer {
     pub is_visible: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, TryFromPrimitive)]
+#[derive(Debug, Clone, PartialEq, TryFromPrimitive, Serialize, Deserialize)]
 #[repr(u32)]
 pub enum GMRoomLayerType {
     Path = 0,
