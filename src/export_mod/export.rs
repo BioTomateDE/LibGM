@@ -242,6 +242,14 @@ impl<'o, 'm> GModData<'o, 'm> {
 }
 
 
+pub fn flag_field(original: bool, modified: bool) -> Option<bool> {
+    if original == modified {
+        None
+    } else {
+        Some(modified)
+    }
+}
+
 pub fn edit_field<'a, T: PartialEq + Clone>(original: &T, modified: &T) -> Option<T> {
     if original == modified {
         Some(modified.clone())
