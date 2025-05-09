@@ -1,5 +1,4 @@
 use crate::deserialize::all::GMData;
-use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::code::GMInstanceType;
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::variables::GMVariable;
