@@ -1,9 +1,9 @@
 use std::any::type_name;
 use std::cmp::min;
 use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
 
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AModUnorderedListChanges<A> {
     pub additions: Vec<A>,
     pub edits: HashMap<usize, A>,
