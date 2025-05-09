@@ -25,7 +25,7 @@ pub fn build_chunk_font(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_u8(font.charset);
         builder.write_u8(font.anti_alias);
         builder.write_u32(font.range_end);
-        builder.write_u32(font.texture);   // REPLACE WITH TexturePageItem WHEN AVAILABLE
+        data_builder.push_pointer_placeholder(&mut builder, GMPointer::texture(font.texture.index))?;
         builder.write_f32(font.scale_x);
         builder.write_f32(font.scale_y);
 
