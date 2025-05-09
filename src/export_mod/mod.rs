@@ -5,3 +5,5 @@ mod fonts;
 mod strings;
 mod rooms;
 mod sequences;
+mod functions;
+mod sounds;
