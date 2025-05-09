@@ -2,7 +2,7 @@ use crate::deserialize::all::GMData;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Cursor;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::LazyLock;
 use serde::{Deserialize, Serialize};
 use zip::write::{FileOptions, SimpleFileOptions};
