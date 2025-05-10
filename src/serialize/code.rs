@@ -17,7 +17,6 @@ pub fn build_chunk_code(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     }
 
     let mut code_meta_placeholders: Vec<usize> = Vec::with_capacity(len);
-    let mut code_length_placeholders: Vec<usize> = Vec::with_capacity(len);
 
     for (i, code) in gm_data.codes.codes_by_index.iter().enumerate() {
         data_builder.push_pointer_resolve(&mut builder, GMPointer::code_meta(i))?;
@@ -25,11 +24,11 @@ pub fn build_chunk_code(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_gm_string(data_builder, &code.name)?;
 
         code_meta_placeholders.push(builder.len());
-        builder.write_u64(0);   // PLACEHOLDER CODE INSTRUCTIONS LENGTH
-        builder.write_u64(0);   // PLACEHOLDER CODE START OFFSET
+        builder.write_u32(0);   // PLACEHOLDER CODE INSTRUCTIONS LENGTH
+        builder.write_u32(0);   // PLACEHOLDER CODE START OFFSET
 
-        builder.write_u64(code.locals_count);
-        builder.write_u64(code.arguments_count);
+        builder.write_u32(code.locals_count);
+        builder.write_u32(code.arguments_count);
     }
 
     for (i, code) in gm_data.codes.codes_by_index.iter().enumerate() {
@@ -98,11 +97,12 @@ fn build_instruction(
                     other => return Err(format!("Invalid Double Type Instruction opcode {other:?} while building instructions.")),
                 }
             };
-            let type_raw: u8 = instr.type1.into() | instr.type2.into() << 4;
+            let type1: u8 = instr.type1.into();
+            let type2: u8 = instr.type2.into();
 
             builder.write_u8(0);
             builder.write_u8(0);
-            builder.write_u8(type_raw);
+            builder.write_u8(type1 | type2 << 4);
             builder.write_u8(opcode_raw);
         }
 
@@ -112,11 +112,12 @@ fn build_instruction(
             } else {
                 instr.opcode.into()     // always GMOpcode::Cmp
             };
-            let type_raw: u8 = instr.type1.into() | instr.type2.into() << 4;
+            let type1: u8 = instr.type1.into();
+            let type2: u8 = instr.type2.into();
 
             builder.write_u8(0);
             builder.write_u8(0);
-            builder.write_u8(type_raw);
+            builder.write_u8(type1 | type2 << 4);
             builder.write_u8(opcode_raw);
         }
 
@@ -156,11 +157,11 @@ fn build_instruction(
                     other => return Err(format!("Invalid Pop Instruction opcode {other:?} while building instructions.")),
                 }
             };
-
-            let type_raw: u8 = instr.type1.into() | instr.type2.into() << 4;
+            let type1: u8 = instr.type1.into();
+            let type2: u8 = instr.type2.into();
 
             builder.write_i16(build_instance_type(&instr.instance_type));
-            builder.write_u8(type_raw);
+            builder.write_u8(type1 | type2 << 4);
             builder.write_u8(opcode_raw);
         }
 
@@ -176,11 +177,11 @@ fn build_instruction(
             builder.write_u8(if bytecode14 { instr.opcode.into() } else { 0xC0 });
             
             match &instr.value {
-                GMValue::Double(double) => builder.write_u64(*double as u64),
-                GMValue::Float(float) => builder.write_u64(*float as u32),
-                GMValue::Int32(int32) => builder.write_i32(int32),
-                GMValue::Int64(int64) => builder.write_i64(int64),
-                GMValue::Boolean(boolean) => builder.write_u8(if boolean {1} else {0}),
+                GMValue::Double(double) => builder.write_f64(*double),
+                GMValue::Float(float) => builder.write_f32(*float),
+                GMValue::Int32(int32) => builder.write_i32(*int32),
+                GMValue::Int64(int64) => builder.write_i64(*int64),
+                GMValue::Boolean(boolean) => builder.write_u8(if *boolean {1} else {0}),
                 GMValue::String(string_ref) => builder.write_usize(string_ref.index),
                 GMValue::Variable(_) | GMValue::Int16(_) => {}     // nothing because it was already written inside the instruction
             }

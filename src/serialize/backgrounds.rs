@@ -34,19 +34,19 @@ pub fn build_chunk_bgnd(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
             }
             let tile_count: usize = gms2_data.tile_ids.len() / gms2_data.items_per_tile_count;
 
-            builder.write_u64(gms2_data.unknown_always2);
-            builder.write_u64(gms2_data.tile_width);
-            builder.write_u64(gms2_data.tile_height);
-            builder.write_u64(gms2_data.output_border_x);
-            builder.write_u64(gms2_data.output_border_y);
-            builder.write_u64(gms2_data.tile_columns);
+            builder.write_u32(gms2_data.unknown_always2);
+            builder.write_u32(gms2_data.tile_width);
+            builder.write_u32(gms2_data.tile_height);
+            builder.write_u32(gms2_data.output_border_x);
+            builder.write_u32(gms2_data.output_border_y);
+            builder.write_u32(gms2_data.tile_columns);
             builder.write_usize(gms2_data.items_per_tile_count);
             builder.write_usize(tile_count);
-            builder.write_u64(gms2_data.unknown_always_zero);
+            builder.write_u32(gms2_data.unknown_always_zero);
             builder.write_i64(gms2_data.frame_length);
 
             for tile_id in &gms2_data.tile_ids {
-                builder.write_u64(*tile_id);
+                builder.write_u32(*tile_id);
             }
         }
     }
