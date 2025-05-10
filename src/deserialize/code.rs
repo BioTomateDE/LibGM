@@ -2,7 +2,7 @@
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::variables::{GMVariable, GMVariables};
 use std::cmp::PartialEq;
-use std::fmt::{Display, Formatter, Write};
+use std::fmt::{Display, Formatter};
 use itertools::Itertools;
 use num_enum::TryFromPrimitive;
 use crate::deserialize::functions::{GMFunction, GMFunctions};

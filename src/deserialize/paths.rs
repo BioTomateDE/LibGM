@@ -38,8 +38,8 @@ pub fn parse_chunk_path(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMPa
         chunk.cur_pos = *start_position;
 
         let name: GMRef<String> = chunk.read_gm_string(&strings)?;
-        let is_smooth: bool = chunk.read_u32()? != 0;
-        let is_closed: bool = chunk.read_u32()? != 0;
+        let is_smooth: bool = chunk.read_bool32()?;
+        let is_closed: bool = chunk.read_bool32()?;
         let precision: u32 = chunk.read_u32()?;
         let points: Vec<GMPathPoint> = parse_path_points(chunk)?;
 

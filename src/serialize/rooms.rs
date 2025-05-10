@@ -22,16 +22,16 @@ pub fn build_chunk_room(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_u32(room.width);
         builder.write_u32(room.height);
         builder.write_u32(room.speed);
-        builder.write_bool(room.persistent);
+        builder.write_bool32(room.persistent);
         builder.write_u32(room.background_color);
-        builder.write_bool(room.draw_background_color);
+        builder.write_bool32(room.draw_background_color);
         builder.write_u32(room.creation_code_id);
         builder.write_u32(build_room_flags(&room.flags));
         build_room_backgrounds(data_builder, &mut builder, i, &room.backgrounds)?;
         build_room_views(data_builder, &mut builder, i, &room.views)?;
         build_room_objects(data_builder, &mut builder, &gm_data.general_info, i, &room.game_objects)?;
         build_room_tiles(data_builder, &mut builder, &gm_data.general_info, i, &room.tiles)?;
-        builder.write_bool(room.world);
+        builder.write_bool32(room.world);
         builder.write_u32(room.top);
         builder.write_u32(room.left);
         builder.write_u32(room.right);
@@ -67,8 +67,8 @@ fn build_room_backgrounds(data_builder: &mut DataBuilder, builder: &mut ChunkBui
 
     for (i, background) in backgrounds.iter().enumerate() {
         data_builder.push_pointer_resolve(builder, GMPointer::room_background(room_index, i))?;
-        builder.write_bool(background.enabled);
-        builder.write_bool(background.foreground);
+        builder.write_bool32(background.enabled);
+        builder.write_bool32(background.foreground);
         if let Some(ref background) = background.background_definition {
             data_builder.push_pointer_placeholder(builder, GMPointer::background(background.index))?;
         } else {
@@ -80,7 +80,7 @@ fn build_room_backgrounds(data_builder: &mut DataBuilder, builder: &mut ChunkBui
         builder.write_i32(background.tile_y);
         builder.write_i32(background.speed_x);
         builder.write_i32(background.speed_y);
-        builder.write_bool(background.stretch);
+        builder.write_bool32(background.stretch);
     }
 
     Ok(())
@@ -96,7 +96,7 @@ fn build_room_views(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, 
 
     for (i, view) in views.iter().enumerate() {
         data_builder.push_pointer_resolve(builder, GMPointer::room_view(room_index, i))?;
-        builder.write_bool(view.enabled);
+        builder.write_bool32(view.enabled);
         builder.write_i32(view.view_x);
         builder.write_i32(view.view_y);
         builder.write_i32(view.view_width);

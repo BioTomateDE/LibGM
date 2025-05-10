@@ -47,7 +47,7 @@ fn build_tracks(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, gene
         builder.write_gm_string(data_builder, &track.name)?;
         builder.write_i32(track.builtin_name.into());
         builder.write_i32(track.traits.into());
-        builder.write_bool(track.is_creation_track);
+        builder.write_bool32(track.is_creation_track);
         builder.write_usize(track.tags.len());
         builder.write_usize(track.owned_resources.len());
         builder.write_usize(track.sub_tracks.len());
@@ -129,8 +129,8 @@ fn build_keyframes(builder: &mut ChunkBuilder, _general_info: &GMGeneralInfo, ke
     for keyframe in keyframes {
         builder.write_f32(keyframe.key);
         builder.write_f32(keyframe.length);
-        builder.write_bool(keyframe.stretch);
-        builder.write_bool(keyframe.disabled);
+        builder.write_bool32(keyframe.stretch);
+        builder.write_bool32(keyframe.disabled);
 
         // TODO hashmap
         for ts in &keyframe.channels {
