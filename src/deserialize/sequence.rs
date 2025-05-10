@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::strings::GMStrings;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use crate::deserialize::game_objects::GMGameObject;
 use crate::deserialize::general_info::GMGeneralInfo;
+use crate::deserialize::sprites::GMSprite;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSequence {
@@ -43,6 +45,66 @@ pub struct GMKeyframe {
     pub disabled: bool,
     pub channels: Vec<i32>,   // {~~} TODO change ts to HashMap
 }
+
+#[derive(Debug, Clone)]
+pub struct GMKeyframesAudio {
+    pub keyframes: Vec<GMKeyframe>,
+    pub mode: i32,
+}
+#[derive(Debug, Clone)]
+pub struct GMKeyframesInstance {
+    pub keyframes: Vec<GMKeyframe>,
+    pub object: GMRef<GMGameObject>,
+}
+#[derive(Debug, Clone)]
+pub struct GMKeyframesGraphic {
+    pub keyframes: Vec<GMKeyframe>,
+    pub sprite: GMRef<GMSprite>,
+}
+#[derive(Debug, Clone)]
+pub struct GMKeyframesSequence {
+    pub keyframes: Vec<GMKeyframe>,
+    pub sequence: GMRef<GMSequence>,
+}
+#[derive(Debug, Clone)]
+pub struct GMKeyframesSpriteFrames {
+    pub keyframes: Vec<GMKeyframe>,
+    pub value: i32,
+}
+#[derive(Debug, Clone)]
+pub struct GMKeyframesBool {
+    pub keyframes: Vec<GMKeyframe>,
+    pub boolean: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct GMKeyframesString {
+    pub keyframes: Vec<GMKeyframe>,
+    pub string: GMRef<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct GMKeyframesColor {
+    pub keyframes: Vec<GMKeyframe>,
+    pub interpolation: i32,
+}
+
+#[derive(Debug, Clone)]
+pub struct GMKeyframesText {
+    pub keyframes: Vec<GMKeyframe>,
+    pub text: GMRef<String>,
+    pub wrap: bool,
+    pub alignment_v: i8,
+    pub alignment_h: i8,
+    pub font_index: i32,
+}
+
+// #[derive(Debug, Clone)]
+// pub struct GMKeyframesParticle {
+//     pub keyframes: Vec<GMKeyframe>,
+//     pub particle: GMRef<GMParticle>,
+// }
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMTrack {
     pub model_name: GMRef<String>,
@@ -284,6 +346,7 @@ fn parse_track(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMSt
 
     // TODO keyframes with different types {~~}
     let keyframes: Vec<GMKeyframe> = vec![];
+    log::info!("asg");
 
     Ok(GMTrack {
         model_name,

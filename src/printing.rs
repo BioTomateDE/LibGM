@@ -576,7 +576,7 @@ impl GMRoomView {
         println!("  Port Size: {}x{}", self.port_width, self.port_height);
         println!("  Border: ({}, {})", self.border_x, self.border_y);
         println!("  Speed: ({}, {})", self.speed_x, self.speed_y);
-        println!("  Object ID: {}", self.object.index);
+        println!("  Object ID: {:?}", self.object);
         println!();
     }
 }

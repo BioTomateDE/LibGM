@@ -113,7 +113,11 @@ fn build_room_views(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, 
         builder.write_u32(view.border_y);
         builder.write_i32(view.speed_x);
         builder.write_i32(view.speed_y);
-        data_builder.push_pointer_placeholder(builder, GMPointer::game_object(view.object.index))?
+        if let Some(ref obj) = view.object {
+            data_builder.push_pointer_placeholder(builder, GMPointer::game_object(obj.index))?;
+        } else {
+            builder.write_i32(-1);
+        }
     }
 
     Ok(())
