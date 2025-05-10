@@ -23,9 +23,9 @@ pub fn build_chunk_sprt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_i32(sprite.margin_right);
         builder.write_i32(sprite.margin_bottom);
         builder.write_i32(sprite.margin_top);
-        builder.write_bool(sprite.transparent);
-        builder.write_bool(sprite.smooth);
-        builder.write_bool(sprite.preload);
+        builder.write_bool32(sprite.transparent);
+        builder.write_bool32(sprite.smooth);
+        builder.write_bool32(sprite.preload);
         builder.write_i32(sprite.bbox_mode);
         builder.write_u32(sprite.sep_masks.into());
         builder.write_i32(sprite.origin_x);

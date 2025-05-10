@@ -21,22 +21,22 @@ pub fn build_chunk_objt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
             Some(sprite) => data_builder.push_pointer_placeholder(&mut builder, GMPointer::sprite(sprite.index))?,
             None => builder.write_i32(-1),
         };
-        builder.write_bool(game_object.visible);
+        builder.write_bool32(game_object.visible);
         if gm_data.general_info.is_version_at_least(2022, 5, 0, 0) {
-            builder.write_bool(game_object.managed.ok_or_else(|| format!(
+            builder.write_bool32(game_object.managed.ok_or_else(|| format!(
                 "Bool `managed` not set for game object with name \"{}\"",
                 game_object.name.display(&gm_data.strings)))?)
         }
-        builder.write_bool(game_object.solid);
+        builder.write_bool32(game_object.solid);
         builder.write_i32(game_object.depth);
-        builder.write_bool(game_object.persistent);
+        builder.write_bool32(game_object.persistent);
         builder.write_i32(game_object.parent_id);
         match &game_object.texture_mask {
             Some(sprite) => data_builder.push_pointer_placeholder(&mut builder, GMPointer::sprite(sprite.index))?,
             None => builder.write_i32(-1),
         };
-        builder.write_bool(game_object.uses_physics);
-        builder.write_bool(game_object.is_sensor);
+        builder.write_bool32(game_object.uses_physics);
+        builder.write_bool32(game_object.is_sensor);
         builder.write_u32(game_object.collision_shape.into());
         builder.write_f32(game_object.density);
         builder.write_f32(game_object.restitution);
@@ -105,16 +105,16 @@ fn build_game_object_event_instance_actions(
         builder.write_u32(action.lib_id);
         builder.write_u32(action.id);
         builder.write_u32(action.kind);
-        builder.write_bool(action.use_relative);
-        builder.write_bool(action.is_question);
-        builder.write_bool(action.use_apply_to);
+        builder.write_bool32(action.use_relative);
+        builder.write_bool32(action.is_question);
+        builder.write_bool32(action.use_apply_to);
         builder.write_u32(action.exe_type);
         builder.write_gm_string(data_builder, &action.action_name)?;
         builder.write_i32(action.code_id);      // should be code ref
         builder.write_u32(action.argument_count);
         builder.write_i32(action.who);
-        builder.write_bool(action.relative);
-        builder.write_bool(action.is_not);
+        builder.write_bool32(action.relative);
+        builder.write_bool32(action.is_not);
         builder.write_u32(action.unknown_always_zero);
     }
 

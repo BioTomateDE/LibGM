@@ -59,8 +59,8 @@ pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
         let name: GMRef<String> = chunk.read_gm_string(&strings)?;
         let display_name: GMRef<String> = chunk.read_gm_string(&strings)?;
         let em_size: u32 = chunk.read_u32()?;
-        let bold: bool = chunk.read_u32()? != 0;
-        let italic: bool = chunk.read_u32()? != 0;
+        let bold: bool = chunk.read_bool32()?;
+        let italic: bool = chunk.read_bool32()?;
         let range_start: u16 = chunk.read_u16()?;
         let charset: u8 = chunk.read_u8()?;
         let anti_alias: u8 = chunk.read_u8()?;

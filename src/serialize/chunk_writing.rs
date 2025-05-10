@@ -184,11 +184,9 @@ impl ChunkBuilder {
             self.raw_data.push(byte);
         }
     }
-    pub fn write_bool(&mut self, boolean: bool) {
-        let number: u8 = if boolean {1} else {0};
-        for byte in number.to_le_bytes() {
-            self.raw_data.push(byte);
-        }
+    pub fn write_bool32(&mut self, boolean: bool) {
+        let number: u32 = if boolean {1} else {0};
+        self.write_u32(number);
     }
     pub fn write_literal_string(&mut self, string: &str) -> Result<(), String> {
         // write an ascii string to the data
