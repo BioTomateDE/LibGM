@@ -1,6 +1,6 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
-use crate::deserialize::sprites::{GMSpriteMaskEntry, GMSpriteType};
+use crate::deserialize::sprites::{GMSpriteMaskEntry, GMSpriteNineSlice, GMSpriteType};
 use crate::deserialize::texture_page_items::GMTexture;
 use crate::serialize::all::{build_chunk, DataBuilder};
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
@@ -44,13 +44,11 @@ pub fn build_chunk_sprt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
             if gm_data.general_info.is_version_at_least(2, 0, 0, 0) {
                 builder.write_f32(specials.playback_speed);
                 builder.write_u32(specials.playback_speed_type.into());
-                if specials.special_version >= 2 {
-                    let position: usize = builder.abs_pos + builder.len();
-                    data_builder.push_pointer_placeholder(&mut builder, GMPointer::sprite_sequence(position))?;
+                if specials.special_version >= 2 && specials.sequence.is_some() {
+                    data_builder.push_pointer_placeholder(&mut builder, GMPointer::sprite_sequence(i))?;
                 }
-                if specials.special_version >= 3 {
-                    let position: usize = builder.abs_pos + builder.len();
-                    data_builder.push_pointer_placeholder(&mut builder, GMPointer::sprite_nine_slice(position))?;
+                if specials.special_version >= 3 && specials.nine_slice.is_some() {
+                    data_builder.push_pointer_placeholder(&mut builder, GMPointer::sprite_nine_slice(i))?;
                 }
             }
 
@@ -74,18 +72,17 @@ pub fn build_chunk_sprt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
             }
 
             if specials.special_version >= 2 {
-                let position: usize = builder.abs_pos + builder.len();
-                data_builder.push_pointer_resolve(&mut builder, GMPointer::sprite_sequence(position))?;
-                builder.write_i32(1);
-                match &specials.sequence {
-                    Some(sequence) => build_sequence(data_builder, &mut builder, &gm_data.general_info, &gm_data.strings, sequence)?,
-                    None => return Err(format!(
-                        "Sequence not set for Sprite \"{}\" at absolute position {}.",
-                        sprite.name.display(&gm_data.strings), builder.abs_pos + builder.len(),
-                    )),
+                if let Some(ref sequence) = specials.sequence {
+                    data_builder.push_pointer_resolve(&mut builder, GMPointer::sprite_sequence(i))?;
+                    builder.write_i32(1);
+                    build_sequence(data_builder, &mut builder, &gm_data.general_info, &gm_data.strings, sequence)?;
                 }
-                // TODO continue ts
-
+            }
+            if specials.special_version >= 3 {
+                if let Some(ref nine_slice) = specials.nine_slice {
+                    data_builder.push_pointer_resolve(&mut builder, GMPointer::sprite_nine_slice(i))?;
+                    build_nine_slice(&mut builder, nine_slice)?;
+                }
             }
 
         } else {
@@ -133,3 +130,20 @@ fn align_writer(builder: &mut ChunkBuilder, alignment: usize, padding_byte: u8) 
     }
 }
 
+
+fn build_nine_slice(
+    builder: &mut ChunkBuilder,
+    nine_slice: &GMSpriteNineSlice,
+) -> Result<(), String> {
+    builder.write_i32(nine_slice.left);
+    builder.write_i32(nine_slice.top);
+    builder.write_i32(nine_slice.right);
+    builder.write_i32(nine_slice.bottom);
+    builder.write_bool32(nine_slice.enabled);
+
+    for i in 0..5 {
+        builder.write_i32(nine_slice.tile_modes[i].clone().into())
+    }
+
+    Ok(())
+}

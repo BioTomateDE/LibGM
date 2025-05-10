@@ -5,8 +5,6 @@ use crate::serialize::all::DataBuilder;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Index(usize);
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Position(usize);
 
 // GMPointer is for building chunks:
 // It has to store the kind (data type) of the referenced element,
@@ -24,8 +22,8 @@ pub enum GMPointer {
     TexturePageData(Index),
     Texture(Index),
     Sprite(Index),
-    SpriteSequence(Position),
-    SpriteNineSlice(Position),
+    SpriteSequence(Index),
+    SpriteNineSlice(Index),
     Audio(Index),
     Sound(Index),
     Variable(Index),
@@ -65,10 +63,10 @@ impl GMPointer {
         Self::Sprite(Index(sprite_index))
     }
     pub fn sprite_sequence(sequence_absolute_position: usize) -> Self {
-        Self::SpriteSequence(Position(sequence_absolute_position))
+        Self::SpriteSequence(Index(sequence_absolute_position))
     }
     pub fn sprite_nine_slice(nine_slice_absolute_position: usize) -> Self {
-        Self::SpriteNineSlice(Position(nine_slice_absolute_position))
+        Self::SpriteNineSlice(Index(nine_slice_absolute_position))
     }
     pub fn audio(audio_index: usize) -> Self {
         Self::Audio(Index(audio_index))
