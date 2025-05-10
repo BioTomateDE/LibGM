@@ -1,6 +1,6 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::embedded_audio::GMEmbeddedAudio;
-use crate::serialize::all::DataBuilder;
+use crate::serialize::all::{build_chunk, DataBuilder};
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
 pub fn build_chunk_audo(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
@@ -19,6 +19,7 @@ pub fn build_chunk_audo(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_bytes(&audio.raw_data);
     }
 
+    build_chunk(data_builder, builder)?;
     Ok(())
 }
 

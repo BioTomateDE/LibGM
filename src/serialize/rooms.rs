@@ -19,23 +19,23 @@ pub fn build_chunk_room(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_gm_string(data_builder, &room.name)?;
         builder.write_gm_string(data_builder, &room.name)?;
         builder.write_gm_string(data_builder, &room.caption)?;
-        builder.write_u32(room.width);
-        builder.write_u32(room.height);
-        builder.write_u32(room.speed);
+        builder.write_u64(room.width);
+        builder.write_u64(room.height);
+        builder.write_u64(room.speed);
         builder.write_bool32(room.persistent);
-        builder.write_u32(room.background_color);
+        builder.write_u64(room.background_color);
         builder.write_bool32(room.draw_background_color);
-        builder.write_u32(room.creation_code_id);
-        builder.write_u32(build_room_flags(&room.flags));
+        builder.write_u64(room.creation_code_id);
+        builder.write_u64(build_room_flags(&room.flags));
         build_room_backgrounds(data_builder, &mut builder, i, &room.backgrounds)?;
         build_room_views(data_builder, &mut builder, i, &room.views)?;
         build_room_objects(data_builder, &mut builder, &gm_data.general_info, i, &room.game_objects)?;
         build_room_tiles(data_builder, &mut builder, &gm_data.general_info, i, &room.tiles)?;
         builder.write_bool32(room.world);
-        builder.write_u32(room.top);
-        builder.write_u32(room.left);
-        builder.write_u32(room.right);
-        builder.write_u32(room.bottom);
+        builder.write_u64(room.top);
+        builder.write_u64(room.left);
+        builder.write_u64(room.right);
+        builder.write_u64(room.bottom);
         builder.write_f32(room.gravity_x);
         builder.write_f32(room.gravity_y);
         builder.write_f32(room.meters_per_pixel);
@@ -105,8 +105,8 @@ fn build_room_views(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, 
         builder.write_i32(view.port_y);
         builder.write_i32(view.port_width);
         builder.write_i32(view.port_height);
-        builder.write_u32(view.border_x);
-        builder.write_u32(view.border_y);
+        builder.write_u64(view.border_x);
+        builder.write_u64(view.border_y);
         builder.write_i32(view.speed_x);
         builder.write_i32(view.speed_y);
         builder.write_i32(view.object_id);
@@ -134,7 +134,7 @@ fn build_room_objects(
         builder.write_i32(game_object.x);
         builder.write_i32(game_object.y);
         data_builder.push_pointer_placeholder(builder, GMPointer::game_object(game_object.object_definition.index))?;
-        builder.write_u32(game_object.instance_id);
+        builder.write_u64(game_object.instance_id);
         builder.write_i32(game_object.creation_code);
         builder.write_f32(game_object.scale_x);
         builder.write_f32(game_object.scale_y);
@@ -150,7 +150,7 @@ fn build_room_objects(
             builder.write_usize(image_index);
         }
 
-        builder.write_u32(game_object.color);
+        builder.write_u64(game_object.color);
         builder.write_f32(game_object.rotation);
 
         if general_info.bytecode_version >= 16 {
@@ -201,15 +201,15 @@ fn build_room_tiles(
                 ))
             };
         }
-        builder.write_u32(tile.source_x);
-        builder.write_u32(tile.source_y);
-        builder.write_u32(tile.width);
-        builder.write_u32(tile.height);
+        builder.write_u64(tile.source_x);
+        builder.write_u64(tile.source_y);
+        builder.write_u64(tile.width);
+        builder.write_u64(tile.height);
         builder.write_i32(tile.tile_depth);
-        builder.write_u32(tile.instance_id);
+        builder.write_u64(tile.instance_id);
         builder.write_f32(tile.scale_x);
         builder.write_f32(tile.scale_y);
-        builder.write_u32(tile.color);
+        builder.write_u64(tile.color);
     }
 
     Ok(())
