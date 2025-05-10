@@ -435,7 +435,7 @@ fn parse_options_flags(raw: u64) -> GMOptionsFlags {
 
 pub fn parse_chunk_optn(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMTextures) -> Result<GMOptions, String> {
     chunk.cur_pos = 0;
-    let is_new_format: bool = chunk.read_u32()? == 0;     // not sure if this condition is correct
+    let is_new_format: bool = chunk.read_u32()? == 0x80000000;
     chunk.cur_pos = 0;
 
     let options: GMOptions = if is_new_format {
@@ -606,20 +606,13 @@ fn parse_constants(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMOpt
 }
 
 fn parse_options_image(chunk: &mut GMChunk, textures: &GMTextures) -> Result<Option<GMRef<GMTexture>>, String> {
-    let absolute_position: i32 = chunk.read_i32()?;
-    if absolute_position < -1 {
-        return Err(format!(
-            "Invalid texture absolute position {0} (0x{0:08X}) while parsing options images at position {1}.",
-            absolute_position, chunk.cur_pos,
-        ))
-    }
-    if absolute_position == -1 {
+    let absolute_position: usize = chunk.read_usize()?;
+    if absolute_position == 0 {
         return Ok(None)
     }
-    let absolute_position: usize = absolute_position as usize;
 
     let texture: GMRef<GMTexture> = textures.abs_pos_to_ref.get(&absolute_position)
-        .ok_or_else(|| format!("Could not get Options image with absolute texture position {absolute_position:08X}"))?
+        .ok_or_else(|| format!("Could not get Options image with absolute texture position {absolute_position}."))?
         .clone();
 
     Ok(Some(texture))

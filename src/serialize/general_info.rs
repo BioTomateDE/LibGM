@@ -12,13 +12,13 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_u8(if info.is_debugger_disabled {1} else {0});
     builder.write_u8(info.bytecode_version);
     builder.write_u16(info.unknown_value);
-    data_builder.push_pointer_resolve(&mut builder, GMPointer::string(info.game_file_name.index))?;
-    data_builder.push_pointer_resolve(&mut builder, GMPointer::string(info.config.index))?;
+    data_builder.push_pointer_placeholder(&mut builder, GMPointer::string(info.game_file_name.index))?;
+    data_builder.push_pointer_placeholder(&mut builder, GMPointer::string(info.config.index))?;
     builder.write_u32(info.last_object_id);
     builder.write_u32(info.last_tile_id);
     builder.write_u32(info.game_id);
     builder.raw_data.extend(info.directplay_guid.as_bytes());
-    data_builder.push_pointer_resolve(&mut builder, GMPointer::string(info.game_name.index))?;
+    data_builder.push_pointer_placeholder(&mut builder, GMPointer::string(info.game_name.index))?;
     builder.write_u32(info.major_version);
     builder.write_u32(info.minor_version);
     builder.write_u32(info.release_version);
@@ -29,7 +29,7 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_u32(info.license_crc32);
     builder.raw_data.extend(info.license_md5);
     builder.write_i64(info.timestamp_created.timestamp());
-    data_builder.push_pointer_resolve(&mut builder, GMPointer::string(info.display_name.index))?;
+    data_builder.push_pointer_placeholder(&mut builder, GMPointer::string(info.display_name.index))?;
     builder.write_u64(info.active_targets);
     builder.write_u64(build_function_classifications(&info.function_classifications));
     builder.write_i32(info.steam_appid);
