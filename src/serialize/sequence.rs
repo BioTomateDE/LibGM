@@ -7,9 +7,9 @@ use crate::serialize::chunk_writing::ChunkBuilder;
 
 pub fn build_sequence(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, general_info: &GMGeneralInfo, strings: &GMStrings, sequence: &GMSequence) -> Result<(), String> {
     builder.write_gm_string(data_builder, &sequence.name)?;
-    builder.write_u64(sequence.playback.into());
+    builder.write_u32(sequence.playback.into());
     builder.write_f32(sequence.playback_speed);
-    builder.write_u64(sequence.playback_speed_type.into());
+    builder.write_u32(sequence.playback_speed_type.into());
     builder.write_f32(sequence.length);
     builder.write_i32(sequence.origin_x);
     builder.write_i32(sequence.origin_y);
@@ -66,7 +66,7 @@ fn build_tracks(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, gene
                 Some(string_ref) => builder.write_gm_string(data_builder, &string_ref)?,
             }
             builder.write_gm_string(data_builder, &anim_curve.name)?;
-            builder.write_u64(anim_curve.graph_type);
+            builder.write_u32(anim_curve.graph_type);
             build_anim_curve_channels(data_builder, builder, general_info, &anim_curve.channels)?;
         }
 
@@ -87,8 +87,8 @@ fn build_anim_curve_channels(
 
     for channel in channels {
         builder.write_gm_string(data_builder, &channel.name)?;
-        builder.write_u64(channel.curve_type.into());
-        builder.write_u64(channel.iterations);
+        builder.write_u32(channel.curve_type.into());
+        builder.write_u32(channel.iterations);
         build_anim_curve_channel_points(builder, general_info, &channel.points)?;
     }
 
