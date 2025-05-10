@@ -28,7 +28,7 @@ fn error_exit(logger: Arc<CustomLogger>) -> ! {
 fn main() {
     let logger = biologischer_log::init_logger(env!("CARGO_PKG_NAME"));
     
-    let original_data_file_path: &Path = Path::new("data.win");
+    let original_data_file_path: &Path = Path::new("_code1.win");
     info!("Loading data file \"{}\".", original_data_file_path.display());
     let original_data: Vec<u8> = match read_data_file(original_data_file_path) {
         Ok(data_file) => data_file,

@@ -41,8 +41,8 @@ fn build_variable(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, ge
 pub fn build_instance_type(instance_type: &GMInstanceType) -> i32 {
     match instance_type {
         GMInstanceType::Undefined => 0,
-        GMInstanceType::Self_(Some(obj_ref)) => obj_ref.index as i32,
-        GMInstanceType::Self_(None) => -1,
+        GMInstanceType::Instance(Some(obj_ref)) => obj_ref.index as i32,
+        GMInstanceType::Instance(None) => -1,
         GMInstanceType::Other => -2,
         GMInstanceType::All => -3,
         GMInstanceType::Noone => -4,
