@@ -62,7 +62,7 @@ pub struct GMRoomView {
     pub border_y: u32,
     pub speed_x: i32,
     pub speed_y: i32,
-    pub object: GMRef<GMGameObject>,
+    pub object: Option<GMRef<GMGameObject>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -261,8 +261,8 @@ fn parse_room_views(chunk: &mut GMChunk) -> Result<Vec<GMRoomView>, String> {
         let border_y: u32 = chunk.read_u32()?;
         let speed_x: i32 = chunk.read_i32()?;
         let speed_y: i32 = chunk.read_i32()?;
-        let object_id: usize = chunk.read_usize()?;
-        let object: GMRef<GMGameObject> = GMRef::new(object_id);
+        let object_id: i32 = chunk.read_i32()?;
+        let object: Option<GMRef<GMGameObject>> = if object_id == -1 { None } else { Some(GMRef::new(object_id as usize)) };
 
         let view: GMRoomView = GMRoomView {
             enabled,
