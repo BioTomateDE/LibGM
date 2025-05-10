@@ -126,7 +126,7 @@ fn build_anim_curve_channel_points(builder: &mut ChunkBuilder, general_info: &GM
 }
 
 
-fn build_keyframes(builder: &mut ChunkBuilder, _general_info: &GMGeneralInfo, keyframes: &Vec<GMKeyframe>) -> Result<(), String> {
+fn build_keyframes(builder: &mut ChunkBuilder, general_info: &GMGeneralInfo, keyframes: &Vec<GMKeyframe>) -> Result<(), String> {
     while (builder.len() + builder.abs_pos) % 4 != 0 {
         builder.write_u8(0);
     }

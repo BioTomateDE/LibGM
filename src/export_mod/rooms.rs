@@ -315,7 +315,7 @@ impl GModData<'_, '_> {
                 border_y: Some(view.border_y),
                 speed_x: Some(view.speed_x),
                 speed_y: Some(view.speed_y),
-                object: Some(self.resolve_game_object_ref(&view.object)?),
+                object: if let Some(ref obj) = view.object { Some(self.resolve_game_object_ref(&obj)?) } else { None },
             });
         }
 
@@ -341,7 +341,8 @@ impl GModData<'_, '_> {
                 border_y: edit_field(&original.border_y, &modified.border_y),
                 speed_x: edit_field(&original.speed_x, &modified.speed_x),
                 speed_y: edit_field(&original.speed_y, &modified.speed_y),
-                object: edit_field(&self.resolve_game_object_ref(&original.object)?, &self.resolve_game_object_ref(&modified.object)?),
+                object: None,   // TODO
+                // object: edit_field(&self.resolve_game_object_ref(&original.object)?, &self.resolve_game_object_ref(&modified.object)?),
             });
         }
 
