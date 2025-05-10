@@ -463,7 +463,7 @@ impl GMRoom {
         println!("  Persistent: {}", self.persistent);
         println!("  Background Color: #{:06X}", self.background_color & 0xFFFFFF);
         println!("  Draw Background Color: {}", self.draw_background_color);
-        println!("  Creation Code ID: {}", self.creation_code_id);
+        println!("  Creation Code: {:?}", self.creation_code);
         println!("  Flags: {}", self.flags.to_string());
         println!("  Backgrounds Length: {}", self.backgrounds.len());
         // for background in self.backgrounds.clone() {
@@ -576,7 +576,7 @@ impl GMRoomView {
         println!("  Port Size: {}x{}", self.port_width, self.port_height);
         println!("  Border: ({}, {})", self.border_x, self.border_y);
         println!("  Speed: ({}, {})", self.speed_x, self.speed_y);
-        println!("  Object ID: {}", self.object_id);
+        println!("  Object ID: {}", self.object.index);
         println!();
     }
 }
@@ -790,7 +790,7 @@ impl GMGameObjectEventAction {
         println!("  Use Apply To: {}", self.use_apply_to);
         println!("  Exe Type: {}", self.exe_type);
         println!("  Action Name: \"{}\"", self.action_name.resolve(&strings.strings_by_index)?);
-        println!("  Code ID: {}", self.code_id);
+        println!("  Code: {:?}", self.code);
         println!("  Argument Count: {}", self.argument_count);
         println!("  Who: {}", self.who);
         println!("  Relative: {}", self.relative);
@@ -810,7 +810,7 @@ impl GMRoomGameObject {
         println!("  Y: {}", self.y);
         println!("  Object Definition: {:?}", self.object_definition);
         println!("  Instance ID: {}", self.instance_id);
-        println!("  Creation Code: {}", self.creation_code);
+        println!("  Creation Code: {:?}", self.creation_code);
         println!("  Scale X: {}", self.scale_x);
         println!("  Scale Y: {}", self.scale_y);
         if let Some(image_speed) = self.image_speed {
@@ -821,9 +821,7 @@ impl GMRoomGameObject {
         }
         println!("  Color: #{:#010x}", self.color); // Hex format for color
         println!("  Rotation: {}", self.rotation);
-        if let Some(pre_create_code) = self.pre_create_code {
-            println!("  Pre Create Code: {}", pre_create_code);
-        }
+        println!("  Pre Create Code: {:?}", self.pre_create_code);
         println!();
         Ok(())
     }

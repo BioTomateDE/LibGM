@@ -110,7 +110,11 @@ fn build_game_object_event_instance_actions(
         builder.write_bool32(action.use_apply_to);
         builder.write_u32(action.exe_type);
         builder.write_gm_string(data_builder, &action.action_name)?;
-        builder.write_i32(action.code_id);      // should be code ref
+        if let Some(ref code) = action.code {
+            data_builder.push_pointer_placeholder(builder, GMPointer::code(code.index))?;
+        } else {
+            builder.write_i32(-1);
+        }
         builder.write_u32(action.argument_count);
         builder.write_i32(action.who);
         builder.write_bool32(action.relative);
