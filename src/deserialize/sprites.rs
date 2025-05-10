@@ -71,7 +71,7 @@ pub struct GMSpriteNineSlice {
     pub tile_modes: Vec<GMSpriteNineSliceTileMode>,
 }
 
-#[derive(Debug, Clone, PartialEq, TryFromPrimitive)]
+#[derive(Debug, Clone, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
 pub enum GMSpriteNineSliceTileMode {
     Stretch = 0,
