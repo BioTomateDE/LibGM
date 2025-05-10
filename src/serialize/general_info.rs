@@ -1,37 +1,42 @@
 use crate::deserialize::all::GMData;
-use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfoFlags, GMOptionsFlags};
+use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMOptionsFlags};
 use crate::serialize::all::{build_chunk, DataBuilder};
-use crate::serialize::chunk_writing::ChunkBuilder;
+use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
 pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "GEN8", abs_pos: data_builder.len() };
+    let info: &GMGeneralInfo = &gm_data.general_info;
 
-    builder.write_bool(gm_data.general_info.is_debugger_disabled);
-    builder.write_u8(gm_data.general_info.bytecode_version);
-    builder.write_u16(gm_data.general_info.unknown_value);
-    builder.write_literal_string(&gm_data.general_info.game_file_name.resolve(&gm_data.strings.strings_by_index)?)?;
-    builder.write_literal_string(&gm_data.general_info.config.resolve(&gm_data.strings.strings_by_index)?)?;
-    builder.write_u32(gm_data.general_info.last_object_id);
-    builder.write_u32(gm_data.general_info.last_tile_id);
-    builder.write_u32(gm_data.general_info.game_id);
-    builder.write_literal_string(&gm_data.general_info.directplay_guid.hyphenated().to_string())?;
-    builder.write_literal_string(&gm_data.general_info.game_name.resolve(&gm_data.strings.strings_by_index)?)?;
-    builder.write_u32(gm_data.general_info.major_version);
-    builder.write_u32(gm_data.general_info.minor_version);
-    builder.write_u32(gm_data.general_info.release_version);
-    builder.write_u32(gm_data.general_info.stable_version);
-    builder.write_u32(gm_data.general_info.default_window_width);
-    builder.write_u32(gm_data.general_info.default_window_height);
-    builder.write_u64(build_general_info_flags(&gm_data.general_info.flags));
-    builder.raw_data.extend(gm_data.general_info.license);
-    builder.write_i64(gm_data.general_info.timestamp_created.timestamp());
-    builder.write_literal_string(&gm_data.general_info.display_name.resolve(&gm_data.strings.strings_by_index)?)?;
-    builder.write_u64(gm_data.general_info.active_targets);    // scuffed offsets
-    builder.write_u64(build_function_classifications(&gm_data.general_info.function_classifications));
-    builder.write_i32(-(gm_data.general_info.steam_appid as i32));
-    builder.write_u32(gm_data.general_info.debugger_port as u32);
-    builder.write_usize(gm_data.general_info.room_order.len());
-    for room_id in &gm_data.general_info.room_order {
+    builder.write_bool(info.is_debugger_disabled);
+    builder.write_u8(info.bytecode_version);
+    builder.write_u16(info.unknown_value);
+    data_builder.push_pointer_resolve(&mut builder, GMPointer::string(info.game_file_name.index))?;
+    data_builder.push_pointer_resolve(&mut builder, GMPointer::string(info.config.index))?;
+    builder.write_u32(info.last_object_id);
+    builder.write_u32(info.last_tile_id);
+    builder.write_u32(info.game_id);
+    builder.raw_data.extend(info.directplay_guid.as_bytes());
+    data_builder.push_pointer_resolve(&mut builder, GMPointer::string(info.game_name.index))?;
+    builder.write_u32(info.major_version);
+    builder.write_u32(info.minor_version);
+    builder.write_u32(info.release_version);
+    builder.write_u32(info.stable_version);
+    builder.write_u32(info.default_window_width);
+    builder.write_u32(info.default_window_height);
+    builder.write_u64(build_general_info_flags(&info.flags));
+    builder.write_u32(info.license_crc32);
+    builder.raw_data.extend(info.license_md5);
+    builder.write_i64(info.timestamp_created.timestamp());
+    data_builder.push_pointer_resolve(&mut builder, GMPointer::string(info.display_name.index))?;
+    builder.write_u64(info.active_targets);
+    builder.write_u64(build_function_classifications(&info.function_classifications));
+    builder.write_i32(info.steam_appid);
+    if info.bytecode_version >= 14 {
+        builder.write_u32(info.debugger_port.ok_or("General info: debugger port not set!")?);
+    }
+
+    builder.write_usize(info.room_order.len());
+    for room_id in &info.room_order {
         builder.write_u32(*room_id);
     }
 

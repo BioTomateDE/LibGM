@@ -42,19 +42,19 @@ pub struct GMGeneralInfo {
     pub default_window_width: u32,
     pub default_window_height: u32,
     pub flags: GMGeneralInfoFlags,
-    pub license: [u8; 16],
+    pub license_crc32: u32,
+    pub license_md5: [u8; 16],
     pub timestamp_created: DateTime<Utc>,
     pub display_name: GMRef<String>,
     pub active_targets: u64,
     pub function_classifications: GMFunctionClassifications,
-    pub steam_appid: u32,
-    pub debugger_port: u16,
+    pub steam_appid: i32,
+    pub debugger_port: Option<u32>,
     pub room_order: Vec<u32>,
 }
 
 impl GMGeneralInfo {
     pub fn is_version_at_least(&self, major: u32, minor: u32, release: u32, build: u32) -> bool {
-
         if self.major_version != major {
             return self.major_version > major;
         }
@@ -67,7 +67,6 @@ impl GMGeneralInfo {
         if self.stable_version != build {
             return self.stable_version > build;
         }
-
         true   // The version is exactly what was supplied.
     }
 }
@@ -87,12 +86,11 @@ pub struct GMGeneralInfoFlags {
     pub studio_version_b1: bool,
     pub studio_version_b2: bool,
     pub studio_version_b3: bool,
-    // studio_version_mask
     pub steam_enabled: bool,
     pub local_data_enabled: bool,
     pub borderless_window: bool,
     pub javascript_mode: bool,
-    // license_exclusions: bool,
+    pub license_exclusions: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -211,18 +209,15 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
     let last_tile_id: u32 = chunk.read_u32()?;
     let game_id: u32 = chunk.read_u32()?;
 
-    let directplay_guid: [u8; 16] = match chunk.data[chunk.cur_pos..chunk.cur_pos + 16].try_into() {
-        Ok(data) => data,
-        Err(_) => return Err(format!(
+    let directplay_guid: [u8; 16] = chunk.data.get(chunk.cur_pos..chunk.cur_pos + 16)
+        .ok_or_else(|| format!(
             "Trying to read GUID out of bounds in chunk 'GEN8' at position {}: {} > {}.",
             chunk.cur_pos,
             chunk.cur_pos + 16,
             chunk.data.len(),
-        )),
-    };
+        ))?.try_into().expect("GUID length somehow not 16");
     chunk.cur_pos += 16;
     let directplay_guid: uuid::Uuid = uuid::Builder::from_bytes_le(directplay_guid).into_uuid();
-    // ^ perhaps not `_le` but idk bc it's usually just null
 
     let game_name: GMRef<String> = chunk.read_gm_string(strings)?;
     let major_version: u32 = chunk.read_u32()?;
@@ -231,40 +226,35 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
     let stable_version: u32 = chunk.read_u32()?;
     let default_window_width: u32 = chunk.read_u32()?;
     let default_window_height: u32 = chunk.read_u32()?;
-    let flags: GMGeneralInfoFlags = parse_flags(chunk)?;
+    let flags: GMGeneralInfoFlags = parse_flags(chunk.read_u32()?);
+    let license_crc32: u32 = chunk.read_u32()?;
 
-    let license: [u8; 16] = match chunk.data[chunk.cur_pos..chunk.cur_pos +16].try_into() {
-        Ok(data) => data,
-        Err(_) => return Err(format!(
-            "Trying to read license out of bounds in chunk 'GEN8' at position {}: {} > {}.",
+    let license_md5: [u8; 16] = chunk.data.get(chunk.cur_pos .. chunk.cur_pos + 16)
+        .ok_or_else(|| format!(
+            "Trying to read license (MD5) out of bounds in chunk 'GEN8' at position {}: {} > {}.",
             chunk.cur_pos,
             chunk.cur_pos + 16,
             chunk.data.len(),
-        )),
-    };
+        ))?.try_into().expect("GUID length somehow not 16");
     chunk.cur_pos += 16;
 
     let timestamp_created: i64 = chunk.read_i64()?;
-    let timestamp_created: DateTime<Utc> = match DateTime::from_timestamp(timestamp_created, 0) {
-        Some(timestamp) => timestamp,
-        None => return Err(format!(
-            "Invalid Timestamp {:016X} in chunk 'GEN8' at position {}.",
+    let timestamp_created: DateTime<Utc> = DateTime::from_timestamp(timestamp_created, 0)
+        .ok_or_else(|| format!(
+            "Invalid Creation Timestamp 0x{:016X} in chunk 'GEN8' at position {}.",
             timestamp_created,
             chunk.cur_pos
-        )),
-    };
+        ))?;
 
     let display_name: GMRef<String> = chunk.read_gm_string(strings)?;
-    // probably not actually u64 (rather u32) but it's zero and there's null bytes surrounding it so idk
     let active_targets: u64 = chunk.read_u64()?;
-    let function_classifications: GMFunctionClassifications = parse_function_classifications(chunk)?;
-    let steam_appid: u32 = (-chunk.read_i32()?) as u32;
-    let debugger_port: u16 = chunk.read_u32()? as u16;
+    let function_classifications: GMFunctionClassifications = parse_function_classifications(chunk.read_u64()?);
+    let steam_appid: i32 = chunk.read_i32()?;
+    let debugger_port: Option<u32> = if bytecode_version >= 14 { Some(chunk.read_u32()?) } else { None };
 
-    let end: usize = chunk.read_usize()? * 4 + 4;
-    let mut room_order: Vec<u32> = vec![];
-
-    while chunk.cur_pos < end {
+    let room_count: usize = chunk.read_usize()?;
+    let mut room_order: Vec<u32> = Vec::with_capacity(room_count);
+    for _ in 0..room_count {
         let room_id: u32 = chunk.read_u32()?;
         room_order.push(room_id);
     }
@@ -287,7 +277,8 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
         default_window_width,
         default_window_height,
         flags,
-        license,
+        license_crc32,
+        license_md5,
         timestamp_created,
         display_name,
         active_targets,
@@ -298,9 +289,8 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
     })
 }
 
-fn parse_flags(chunk: &mut GMChunk) -> Result<GMGeneralInfoFlags, String> {
-    let raw: u64 = chunk.read_u64()?;
-    Ok(GMGeneralInfoFlags {
+fn parse_flags(raw: u32) -> GMGeneralInfoFlags{
+    GMGeneralInfoFlags {
         fullscreen: 0 != raw & 0x0001,
         sync_vertex1: 0 != raw & 0x0002,
         sync_vertex2: 0 != raw & 0x0004,
@@ -317,12 +307,12 @@ fn parse_flags(chunk: &mut GMChunk) -> Result<GMGeneralInfoFlags, String> {
         local_data_enabled: 0 != raw & 0x2000,
         borderless_window: 0 != raw & 0x4000,
         javascript_mode: 0 != raw & 0x8000,
-    })
+        license_exclusions: 0 != raw & 0x10000,
+    }
 }
 
-fn parse_function_classifications(chunk: &mut GMChunk) -> Result<GMFunctionClassifications, String> {
-    let raw: u64 = chunk.read_u64()?;
-    Ok(GMFunctionClassifications {
+fn parse_function_classifications(raw: u64) -> GMFunctionClassifications {
+    GMFunctionClassifications {
         none: 0 != raw & 0x0,
         internet: 0 != raw & 0x1,
         joystick: 0 != raw & 0x2,
@@ -389,7 +379,7 @@ fn parse_function_classifications(chunk: &mut GMChunk) -> Result<GMFunctionClass
         _unused3: 0 != raw & 2310346608841064448,
         shaders: 0 != raw & 0x4000000000000000,
         vertex_buffers: 0 != raw & 9223372036854775808,
-    })
+    }
 }
 
 fn parse_options_flags(chunk: &mut GMChunk) -> Result<GMOptionsFlags, String> {
