@@ -3,7 +3,6 @@ use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::variables::{GMVariable, GMVariables};
 use std::cmp::PartialEq;
 use std::fmt::{Display, Formatter};
-use itertools::Itertools;
 use num_enum::TryFromPrimitive;
 use crate::deserialize::functions::{GMFunction, GMFunctions};
 use crate::deserialize::game_objects::GMGameObject;
@@ -394,7 +393,7 @@ impl GMCodeBlob {
         }
     }
 
-    fn read_variable(&mut self, variables: &GMVariables, instance_type: &GMInstanceType, ispop: bool) -> Result<GMCodeVariable, String> {
+    fn read_variable(&mut self, variables: &GMVariables, instance_type: &GMInstanceType) -> Result<GMCodeVariable, String> {
         let occurrence_position: usize = self.cur_pos + self.chunk_code_pos;
         let raw_value: i32 = self.read_i32()?;
 
@@ -403,35 +402,12 @@ impl GMCodeBlob {
         let variable_type: GMVariableType = variable_type.try_into()
             .map_err(|_| format!("Invalid Variable Type 0x{variable_type:02X} while parsing variable reference chain."))?;
 
-
-        // let mut ts = variables.occurrence_map.keys().collect_vec();
-        // // ts.sort();
-        // ts.sort_by(|a,b| (**a as i32-occurrence_position as i32).abs().cmp(&(**b as i32-occurrence_position as i32).abs()));
-        // if occurrence_position == *ts[0] {
-        //     log::info!("{occurrence_position} {} {:?}", instance_type, &ts[..10]);
-        // } else {
-        //     log::warn!("{occurrence_position} {} {:?}", instance_type, &ts[..10]);
-        // }
-
-        // let variable = GMRef::new(3154623473357); //TODO
         let variable: GMRef<GMVariable> = variables.occurrence_map.get(&occurrence_position)
-            // .ok_or_else(|| format!(
-            //     "Could not find {} Variable with occurrence position {} in hashmap with length {} while parsing code values.",
-            //     instance_type, occurrence_position, variables.occurrence_map.len(),
-            // ))?.clone();
-            .map_or_else(
-                || {
-                let mut ts = variables.occurrence_map.keys().collect_vec();
-                ts.sort_by(|a,b| (**a as i32-occurrence_position as i32).abs().cmp(&(**b as i32-occurrence_position as i32).abs()));
-                if ispop {
-                    log::info!("{occurrence_position} {} {:?}", instance_type, &ts[..10]);
-                } else {
-                    log::warn!("{occurrence_position} {} {:?}", instance_type, &ts[..10]);
-                }
-                    GMRef::new(1)
-            }, |e| e.clone());
+            .ok_or_else(|| format!(
+                "Could not find {} Variable with occurrence position {} in hashmap with length {} while parsing code values.",
+                instance_type, occurrence_position, variables.occurrence_map.len(),
+            ))?.clone();
 
-        // log::info!("var {} {}", instance_type, variable.index);
         Ok(GMCodeVariable { variable, variable_type })
     }
 }
@@ -661,7 +637,7 @@ pub fn parse_instruction(
                 ));
             }
 
-            let destination: GMCodeVariable = blob.read_variable(variables, &instance_type, true)?;
+            let destination: GMCodeVariable = blob.read_variable(variables, &instance_type)?;
             Ok(GMInstruction::Pop(GMPopInstruction {
                 opcode,
                 instance_type,
@@ -696,7 +672,7 @@ pub fn parse_instruction(
 
             let value: GMValue = if data_type == GMDataType::Variable {
                 let instance_type: GMInstanceType = parse_instance_type(val)?;
-                let variable: GMCodeVariable = blob.read_variable(variables, &instance_type, false)?;
+                let variable: GMCodeVariable = blob.read_variable(variables, &instance_type)?;
                 GMValue::Variable(variable)
             } else {
                 blob.read_value(data_type)?
