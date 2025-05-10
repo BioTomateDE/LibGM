@@ -5,7 +5,13 @@ use crate::deserialize::strings::GMStrings;
 use crate::serialize::all::DataBuilder;
 use crate::serialize::chunk_writing::ChunkBuilder;
 
-pub fn build_sequence(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, general_info: &GMGeneralInfo, strings: &GMStrings, sequence: &GMSequence) -> Result<(), String> {
+pub fn build_sequence(
+    data_builder: &mut DataBuilder,
+    builder: &mut ChunkBuilder,
+    general_info: &GMGeneralInfo,
+    strings: &GMStrings,
+    sequence: &GMSequence,
+) -> Result<(), String> {
     builder.write_gm_string(data_builder, &sequence.name)?;
     builder.write_u32(sequence.playback.into());
     builder.write_f32(sequence.playback_speed);
