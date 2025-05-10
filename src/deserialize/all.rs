@@ -61,14 +61,12 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     while all.cur_pos + 8 < raw_data_len {
         let chunk_name: String = all.read_chunk_name()?;
         let chunk_length: usize = all.read_usize()?;
-        let chunk_data: &[u8] = match all.data.get(all.cur_pos.. all.cur_pos + chunk_length) {
-            Some(bytes) => bytes,
-            None => return Err(format!(
+        let chunk_data: &[u8] = all.data.get(all.cur_pos.. all.cur_pos + chunk_length)
+            .ok_or_else(|| format!(
                 "Chunk '{}' with specified length {} is out of bounds at absolute position {} while reading chunks: {} > {}.",
                 chunk_name, chunk_length, all.cur_pos, all.cur_pos + chunk_length, all.data.len(),
-            )),
-        };
-        // println!("{} {}", chunk_name, all.file_index);
+            ))?;
+
         chunks.insert(
             chunk_name.clone(),
             GMChunk {
@@ -100,9 +98,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let mut chunk_path: GMChunk = get_chunk(&chunks, "PATH")?;
 
     let strings: GMStrings = parse_chunk_strg(&mut chunk_strg)?;
-    // dbg!(strings.get_string_by_pos(12028677).unwrap().resolve(&strings)?);
     let general_info: GMGeneralInfo = parse_chunk_gen8(&mut chunk_gen8, &strings)?;
-    let bytecode14: bool = general_info.bytecode_version <= 14;
     let options: GMOptions = parse_chunk_optn(&mut chunk_optn)?;
     let texture_pages: Vec<GMEmbeddedTexture> = parse_chunk_txtr(&mut chunk_txtr, &general_info)?;
     let textures: GMTextures = parse_chunk_tpag(&mut chunk_tpag, texture_pages)?;
@@ -111,7 +107,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let scripts: GMScripts = parse_chunk_scpt(&mut chunk_scpt, &strings)?;
     let variables: GMVariables = parse_chunk_vari(&mut chunk_vari, &strings, &general_info, &mut chunk_code)?;
     let (functions, code_locals): (GMFunctions, Vec<GMCodeLocal>) = parse_chunk_func(&mut chunk_func, &strings, &chunk_code)?;
-    let codes: GMCodes = parse_chunk_code(&mut chunk_code, bytecode14, &strings, &variables, &functions)?;
+    let codes: GMCodes = parse_chunk_code(&mut chunk_code, general_info.bytecode_version <= 14, &strings, &variables, &functions)?;
     let fonts: GMFonts = parse_chunk_font(&mut chunk_font, &general_info, &strings, &textures)?;
     let audios: GMEmbeddedAudios = parse_chunk_audo(&mut chunk_audo)?;
     let sounds: GMSounds = parse_chunk_sond(&mut chunk_sond, &general_info, &strings)?;
@@ -149,13 +145,12 @@ pub fn read_data_file(data_file_path: &Path) -> Result<Vec<u8>, String> {
 }
 
 fn get_chunk<'a>(chunks: &HashMap<String, GMChunk<'a>>, chunk_name: &str) -> Result<GMChunk<'a>, String> {
-    match chunks.get(chunk_name) {
-        None => Err(format!(
+    chunks.get(chunk_name)
+        .map(|i| i.to_owned())
+        .ok_or_else(|| format!(
             "Chunk '{}' is missing in data file (chunk hashmap length: {}).",
             chunk_name,
             chunks.len()
-        )),
-        Some(chunk) => Ok(chunk.clone())
-    }
+        ))
 }
 

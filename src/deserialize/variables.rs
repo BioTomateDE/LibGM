@@ -49,20 +49,13 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
             let occurrences_count: usize = chunk.read_usize()?;
             let first_occurrence_address: i32 = chunk.read_i32()?;
 
-            // log::info!("getting {} occurrences of {:?} variable {}", occurrences_count, instance_type, name.display(strings));
+            log::info!("getting {} occurrences of {:?} variable {}", occurrences_count, instance_type, name.display(strings));
             let occurrences: Vec<usize> = parse_occurrence_chain(
                 chunk_code,
                 name.display(strings),
                 first_occurrence_address,
                 occurrences_count
             )?;
-
-            // let occurrence_map = match instance_type {
-            //     GMInstanceType::Global => &mut global_occurrence_map,
-            //     GMInstanceType::Self_(_) => &mut instance_occurrence_map,
-            //     GMInstanceType::Local => &mut local_occurrence_map,
-            //     other => return Err(format!("Invalid instance type {other:?} for variable {} while parsing variables.", name.display(strings))),
-            // };
 
             for occurrence in occurrences {
                 if let Some(old_value) = occurrence_map.insert(occurrence, GMRef::new(cur_index)) {
@@ -82,8 +75,6 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
             cur_index += 1;
         }
     }
-
-    // log::debug!("var len: {}", variables_by_index.len());
 
     Ok(GMVariables {
         variables,
