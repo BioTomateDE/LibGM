@@ -14,19 +14,19 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_u16(info.unknown_value);
     data_builder.push_pointer_placeholder(&mut builder, GMPointer::string(info.game_file_name.index))?;
     data_builder.push_pointer_placeholder(&mut builder, GMPointer::string(info.config.index))?;
-    builder.write_u32(info.last_object_id);
-    builder.write_u32(info.last_tile_id);
-    builder.write_u32(info.game_id);
+    builder.write_u64(info.last_object_id);
+    builder.write_u64(info.last_tile_id);
+    builder.write_u64(info.game_id);
     builder.raw_data.extend(info.directplay_guid.as_bytes());
     data_builder.push_pointer_placeholder(&mut builder, GMPointer::string(info.game_name.index))?;
-    builder.write_u32(info.major_version);
-    builder.write_u32(info.minor_version);
-    builder.write_u32(info.release_version);
-    builder.write_u32(info.stable_version);
-    builder.write_u32(info.default_window_width);
-    builder.write_u32(info.default_window_height);
+    builder.write_u64(info.major_version);
+    builder.write_u64(info.minor_version);
+    builder.write_u64(info.release_version);
+    builder.write_u64(info.stable_version);
+    builder.write_u64(info.default_window_width);
+    builder.write_u64(info.default_window_height);
     builder.write_u64(build_general_info_flags(&info.flags));
-    builder.write_u32(info.license_crc32);
+    builder.write_u64(info.license_crc32);
     builder.raw_data.extend(info.license_md5);
     builder.write_i64(info.timestamp_created.timestamp());
     data_builder.push_pointer_placeholder(&mut builder, GMPointer::string(info.display_name.index))?;
@@ -34,12 +34,12 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_u64(build_function_classifications(&info.function_classifications));
     builder.write_i32(info.steam_appid);
     if info.bytecode_version >= 14 {
-        builder.write_u32(info.debugger_port.ok_or("General info: debugger port not set!")?);
+        builder.write_u64(info.debugger_port.ok_or("General info: debugger port not set!")?);
     }
 
     builder.write_usize(info.room_order.len());
     for room_id in &info.room_order {
-        builder.write_u32(*room_id);
+        builder.write_u64(*room_id);
     }
 
     build_chunk(data_builder, builder)?;
@@ -212,13 +212,13 @@ fn build_options_old(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder,
 
     builder.write_bool32(options.flags.change_resolution);
 
-    builder.write_u32(options.color_depth);
-    builder.write_u32(options.resolution);
-    builder.write_u32(options.frequency);
+    builder.write_u64(options.color_depth);
+    builder.write_u64(options.resolution);
+    builder.write_u64(options.frequency);
 
     builder.write_bool32(options.flags.no_buttons);
 
-    builder.write_u32(options.vertex_sync);
+    builder.write_u64(options.vertex_sync);
 
     builder.write_bool32(options.flags.screen_key);
     builder.write_bool32(options.flags.help_key);
@@ -227,7 +227,7 @@ fn build_options_old(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder,
     builder.write_bool32(options.flags.screenshot_key);
     builder.write_bool32(options.flags.close_sec);
 
-    builder.write_u32(options.priority);
+    builder.write_u64(options.priority);
 
     builder.write_bool32(options.flags.freeze);
     builder.write_bool32(options.flags.show_progress);
@@ -238,7 +238,7 @@ fn build_options_old(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder,
 
     builder.write_bool32(options.flags.load_transparent);
 
-    builder.write_u32(options.load_alpha);
+    builder.write_u64(options.load_alpha);
 
     builder.write_bool32(options.flags.scale_progress);
     builder.write_bool32(options.flags.display_errors);
@@ -251,20 +251,20 @@ fn build_options_old(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder,
 
 
 fn build_options_new(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, options: &GMOptions) -> Result<(), String> {
-    builder.write_u32(options.unknown1);
-    builder.write_u32(options.unknown2);
+    builder.write_u64(options.unknown1);
+    builder.write_u64(options.unknown2);
     builder.write_u64(build_options_flags_new(&options.flags));
     builder.write_i32(options.scale);
     build_options_window_color(builder, &options.window_color);
-    builder.write_u32(options.color_depth);
-    builder.write_u32(options.resolution);
-    builder.write_u32(options.frequency);
-    builder.write_u32(options.vertex_sync);
-    builder.write_u32(options.priority);
+    builder.write_u64(options.color_depth);
+    builder.write_u64(options.resolution);
+    builder.write_u64(options.frequency);
+    builder.write_u64(options.vertex_sync);
+    builder.write_u64(options.priority);
     build_options_image(data_builder, builder, &options.back_image)?;
     build_options_image(data_builder, builder, &options.front_image)?;
     build_options_image(data_builder, builder, &options.load_image)?;
-    builder.write_u32(options.load_alpha);
+    builder.write_u64(options.load_alpha);
     Ok(())
 }
 

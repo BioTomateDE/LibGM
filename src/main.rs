@@ -1,16 +1,10 @@
 mod printing;
-
 mod deserialize;
+mod serialize;
+mod export_mod;
 
 use std::path::Path;
 use deserialize::all::{parse_data_file, read_data_file};
-
-mod serialize;
-
-mod structs;
-mod export_mod;
-// TODO remove this file
-
 use std::process;
 use std::sync::Arc;
 use biologischer_log::CustomLogger;

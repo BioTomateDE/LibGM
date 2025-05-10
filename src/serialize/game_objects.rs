@@ -37,10 +37,10 @@ pub fn build_chunk_objt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         };
         builder.write_bool32(game_object.uses_physics);
         builder.write_bool32(game_object.is_sensor);
-        builder.write_u32(game_object.collision_shape.into());
+        builder.write_u64(game_object.collision_shape.into());
         builder.write_f32(game_object.density);
         builder.write_f32(game_object.restitution);
-        builder.write_u32(game_object.group);
+        builder.write_u64(game_object.group);
         builder.write_f32(game_object.linear_damping);
         builder.write_f32(game_object.angular_damping);
         builder.write_i32(if game_object.uses_physics_shape_vertex {game_object.physics_shape_vertices.len() as i32} else {-1});
@@ -78,7 +78,7 @@ fn build_game_object_events(
 
         for (j, event_instance) in event_instances.iter().enumerate() {
             data_builder.push_pointer_resolve(builder, GMPointer::game_object_event_instance(game_object_index, i, j))?;
-            builder.write_u32(event_instance.subtype);
+            builder.write_u64(event_instance.subtype);
             build_game_object_event_instance_actions(data_builder, builder, &event_instance.actions, game_object_index, i, j)?;
         }
     }
@@ -102,20 +102,20 @@ fn build_game_object_event_instance_actions(
 
     for (i, action) in actions.iter().enumerate() {
         data_builder.push_pointer_resolve(builder, GMPointer::game_object_event_action(game_object_index, event_index, instance_index, i))?;
-        builder.write_u32(action.lib_id);
-        builder.write_u32(action.id);
-        builder.write_u32(action.kind);
+        builder.write_u64(action.lib_id);
+        builder.write_u64(action.id);
+        builder.write_u64(action.kind);
         builder.write_bool32(action.use_relative);
         builder.write_bool32(action.is_question);
         builder.write_bool32(action.use_apply_to);
-        builder.write_u32(action.exe_type);
+        builder.write_u64(action.exe_type);
         builder.write_gm_string(data_builder, &action.action_name)?;
         builder.write_i32(action.code_id);      // should be code ref
-        builder.write_u32(action.argument_count);
+        builder.write_u64(action.argument_count);
         builder.write_i32(action.who);
         builder.write_bool32(action.relative);
         builder.write_bool32(action.is_not);
-        builder.write_u32(action.unknown_always_zero);
+        builder.write_u64(action.unknown_always_zero);
     }
 
     Ok(())
