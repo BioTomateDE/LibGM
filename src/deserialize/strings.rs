@@ -12,24 +12,25 @@ pub struct GMStrings {
 pub fn parse_chunk_strg(chunk: &mut GMChunk) -> Result<GMStrings, String> {
     chunk.cur_pos = 0;
     let string_count: usize = chunk.read_usize()?;
-    // skip redundant list of absolute positions of upcoming strings
-    chunk.cur_pos += string_count * 4;
+    let mut start_positions: Vec<usize> = Vec::with_capacity(string_count);
+    for _ in 0..string_count {
+        start_positions.push(chunk.read_usize()?);
+    }
+
     let mut strings_by_index: Vec<String> = Vec::with_capacity(string_count);
     let mut abs_pos_to_reference: HashMap<usize, GMRef<String>> = HashMap::new();
 
-    for i in 0..string_count {
+    for (i, start_position) in start_positions.iter().enumerate() {
+        chunk.cur_pos = *start_position - chunk.abs_pos;
         let string_length: usize = chunk.read_usize()?;
-        let absolute_position: usize = chunk.abs_pos + chunk.cur_pos;
         let string: String = chunk.read_literal_string(string_length)?;
-        chunk.cur_pos += 1;  // skip one byte for the null byte after the string
         strings_by_index.push(string.clone());
-        abs_pos_to_reference.insert(absolute_position, GMRef::new(i));
+        abs_pos_to_reference.insert(start_position + 4, GMRef::new(i));
     }
 
-    let strings: GMStrings = GMStrings {
+    Ok(GMStrings {
         abs_pos_to_reference,
         strings_by_index,
-    };
-    Ok(strings)
+    })
 }
 
