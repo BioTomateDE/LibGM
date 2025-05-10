@@ -79,7 +79,7 @@ pub enum GMDataType {
 #[derive(Debug, Clone, PartialEq)]
 pub enum GMInstanceType {
     Undefined,  // actually, this is just object 0, but also occurs in places where no instance type was set
-    Self_(Option<GMRef<GMGameObject>>),
+    Instance(Option<GMRef<GMGameObject>>),
     Other,
     All,
     Noone,
@@ -92,8 +92,8 @@ pub enum GMInstanceType {
 impl Display for GMInstanceType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
-            GMInstanceType::Self_(Some(reference)) => write!(f, "Self<{}>", reference.index),
-            GMInstanceType::Self_(None) => write!(f, "Self"),
+            GMInstanceType::Instance(Some(reference)) => write!(f, "Self<{}>", reference.index),
+            GMInstanceType::Instance(None) => write!(f, "Self"),
             GMInstanceType::Undefined => write!(f, "Undefined"),
             GMInstanceType::Other => write!(f, "Other"),
             GMInstanceType::All => write!(f, "All"),
@@ -766,12 +766,12 @@ pub fn parse_instruction(
 pub fn parse_instance_type(raw_value: i16) -> Result<GMInstanceType, String> {
     // If > 0; then game object id. If < 0, then variable instance type.
     if raw_value > 0 {
-        return Ok(GMInstanceType::Self_(Some(GMRef::new(raw_value as usize))))
+        return Ok(GMInstanceType::Instance(Some(GMRef::new(raw_value as usize))))
     }
 
     let instance_type = match raw_value {
         0 => GMInstanceType::Undefined,
-        -1 => GMInstanceType::Self_(None),
+        -1 => GMInstanceType::Instance(None),
         -2 => GMInstanceType::Other,
         -3 => GMInstanceType::All,
         -4 => GMInstanceType::Noone,
