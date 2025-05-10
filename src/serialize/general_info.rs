@@ -1,5 +1,7 @@
 use crate::deserialize::all::GMData;
-use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMOptionsFlags};
+use crate::deserialize::chunk_reading::GMRef;
+use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMOptions, GMOptionsFlags, GMOptionsWindowColor};
+use crate::deserialize::texture_page_items::GMTexture;
 use crate::serialize::all::{build_chunk, DataBuilder};
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
@@ -7,7 +9,7 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "GEN8", abs_pos: data_builder.len() };
     let info: &GMGeneralInfo = &gm_data.general_info;
 
-    builder.write_bool(info.is_debugger_disabled);
+    builder.write_u8(if info.is_debugger_disabled {1} else {0});
     builder.write_u8(info.bytecode_version);
     builder.write_u16(info.unknown_value);
     data_builder.push_pointer_resolve(&mut builder, GMPointer::string(info.game_file_name.index))?;
@@ -87,7 +89,7 @@ fn build_function_classifications(function_classifications: &GMFunctionClassific
     if function_classifications.filename {raw |= 0x1000};
     if function_classifications.directory {raw |= 0x2000};
     if function_classifications.environment {raw |= 0x4000};
-    if function_classifications._unused1 {raw |= 0x8000};
+    if function_classifications.unused1 {raw |= 0x8000};
     if function_classifications.http {raw |= 0x10000};
     if function_classifications.encoding {raw |= 0x20000};
     if function_classifications.uidialog {raw |= 0x40000};
@@ -118,7 +120,7 @@ fn build_function_classifications(function_classifications: &GMFunctionClassific
     if function_classifications.legacy_sound {raw |= 0x80000000000};
     if function_classifications.audio {raw |= 0x100000000000};
     if function_classifications.event {raw |= 0x200000000000};
-    if function_classifications._unused2 {raw |= 0x400000000000};
+    if function_classifications.unused2 {raw |= 0x400000000000};
     if function_classifications.free_type {raw |= 0x800000000000};
     if function_classifications.analytics {raw |= 0x1000000000000};
     if function_classifications.unused3 {raw |= 0x2000000000000};
@@ -134,7 +136,7 @@ fn build_function_classifications(function_classifications: &GMFunctionClassific
     if function_classifications.console {raw |= 0x800000000000000};
     if function_classifications.buffer {raw |= 0x1000000000000000};
     if function_classifications.steam {raw |= 0x2000000000000000};
-    if function_classifications._unused3 {raw |= 2310346608841064448};
+    if function_classifications.unused5 {raw |= 2310346608841064448};
     if function_classifications.shaders {raw |= 0x4000000000000000};
     if function_classifications.vertex_buffers {raw |= 9223372036854775808};
 
@@ -145,32 +147,18 @@ fn build_function_classifications(function_classifications: &GMFunctionClassific
 pub fn build_chunk_optn(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "OPTN", abs_pos: data_builder.len() };
 
-    builder.write_u32(gm_data.options._unused1);
-    builder.write_u32(gm_data.options._unused2);
-    builder.write_u64(build_options_flags(&gm_data.options.flags));
-    builder.write_i32(gm_data.options.scale);
-    builder.write_u8(gm_data.options.window_color_r);
-    builder.write_u8(gm_data.options.window_color_g);
-    builder.write_u8(gm_data.options.window_color_b);
-    builder.write_u8(gm_data.options.window_color_a);
-    builder.write_u32(gm_data.options.color_depth);
-    builder.write_u32(gm_data.options.resolution);
-    builder.write_u32(gm_data.options.frequency);
-    builder.write_u32(gm_data.options.vertex_sync);
-    builder.write_u32(gm_data.options.priority);
-    // CHANGE TYPES TO `texture page item` WHEN SUPPORTED
-    builder.write_u32(gm_data.options.back_image);
-    builder.write_u32(gm_data.options.front_image);
-    builder.write_u32(gm_data.options.load_image);
-    // ^
-    builder.write_u32(gm_data.options.load_alpha);
+    if gm_data.options.is_new_format {
+        build_options_new(data_builder, &mut builder, &gm_data.options)?;
+    } else {
+        build_options_old(data_builder, &mut builder, &gm_data.options)?;
+    }
 
     build_chunk(data_builder, builder)?;
     Ok(())
 }
 
 
-fn build_options_flags(flags: &GMOptionsFlags) -> u64 {
+fn build_options_flags_new(flags: &GMOptionsFlags) -> u64 {
     let mut raw: u64 = 0;
 
     if flags.fullscreen {raw |= 0x1};
@@ -186,7 +174,7 @@ fn build_options_flags(flags: &GMOptionsFlags) -> u64 {
     if flags.help_key {raw |= 0x400};
     if flags.quit_key {raw |= 0x800};
     if flags.save_key {raw |= 0x1000};
-    if flags.screen_shot_key {raw |= 0x2000};
+    if flags.screenshot_key {raw |= 0x2000};
     if flags.close_sec {raw |= 0x4000};
     if flags.freeze {raw |= 0x8000};
     if flags.show_progress {raw |= 0x10000};
@@ -205,5 +193,95 @@ fn build_options_flags(flags: &GMOptionsFlags) -> u64 {
     if flags.enable_copy_on_write {raw |= 0x20000000};
 
     raw
+}
+
+
+fn build_options_old(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, options: &GMOptions) -> Result<(), String> {
+    builder.write_bool32(options.flags.fullscreen);
+    builder.write_bool32(options.flags.interpolate_pixels);
+    builder.write_bool32(options.flags.use_new_audio);
+    builder.write_bool32(options.flags.no_border);
+    builder.write_bool32(options.flags.show_cursor);
+
+    builder.write_i32(options.scale);
+
+    builder.write_bool32(options.flags.sizeable);
+    builder.write_bool32(options.flags.stay_on_top);
+
+    build_options_window_color(builder, &options.window_color);
+
+    builder.write_bool32(options.flags.change_resolution);
+
+    builder.write_u32(options.color_depth);
+    builder.write_u32(options.resolution);
+    builder.write_u32(options.frequency);
+
+    builder.write_bool32(options.flags.no_buttons);
+
+    builder.write_u32(options.vertex_sync);
+
+    builder.write_bool32(options.flags.screen_key);
+    builder.write_bool32(options.flags.help_key);
+    builder.write_bool32(options.flags.quit_key);
+    builder.write_bool32(options.flags.save_key);
+    builder.write_bool32(options.flags.screenshot_key);
+    builder.write_bool32(options.flags.close_sec);
+
+    builder.write_u32(options.priority);
+
+    builder.write_bool32(options.flags.freeze);
+    builder.write_bool32(options.flags.show_progress);
+
+    build_options_image(data_builder, builder, &options.back_image)?;
+    build_options_image(data_builder, builder, &options.front_image)?;
+    build_options_image(data_builder, builder, &options.load_image)?;
+
+    builder.write_bool32(options.flags.load_transparent);
+
+    builder.write_u32(options.load_alpha);
+
+    builder.write_bool32(options.flags.scale_progress);
+    builder.write_bool32(options.flags.display_errors);
+    builder.write_bool32(options.flags.write_errors);
+    builder.write_bool32(options.flags.abort_errors);
+    builder.write_bool32(options.flags.variable_errors);
+    builder.write_bool32(options.flags.creation_event_order);
+    Ok(())
+}
+
+
+fn build_options_new(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, options: &GMOptions) -> Result<(), String> {
+    builder.write_u32(options.unknown1);
+    builder.write_u32(options.unknown2);
+    builder.write_u64(build_options_flags_new(&options.flags));
+    builder.write_i32(options.scale);
+    build_options_window_color(builder, &options.window_color);
+    builder.write_u32(options.color_depth);
+    builder.write_u32(options.resolution);
+    builder.write_u32(options.frequency);
+    builder.write_u32(options.vertex_sync);
+    builder.write_u32(options.priority);
+    build_options_image(data_builder, builder, &options.back_image)?;
+    build_options_image(data_builder, builder, &options.front_image)?;
+    build_options_image(data_builder, builder, &options.load_image)?;
+    builder.write_u32(options.load_alpha);
+    Ok(())
+}
+
+
+fn build_options_image(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, texture: &Option<GMRef<GMTexture>>) -> Result<(), String> {
+    match texture {
+        None => builder.write_usize(0),
+        Some(reference) => data_builder.push_pointer_placeholder(builder, GMPointer::texture(reference.index))?
+    }
+    Ok(())
+}
+
+
+fn build_options_window_color(builder: &mut ChunkBuilder, window_color: &GMOptionsWindowColor) {
+    builder.write_u8(window_color.r);
+    builder.write_u8(window_color.g);
+    builder.write_u8(window_color.b);
+    builder.write_u8(window_color.a);
 }
 

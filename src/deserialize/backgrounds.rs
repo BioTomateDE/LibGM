@@ -50,9 +50,9 @@ pub fn parse_chunk_bgnd(
     for start_position in start_positions {
         chunk.cur_pos = start_position;
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
-        let transparent: bool = chunk.read_u32()? != 0;
-        let smooth: bool = chunk.read_u32()? != 0;
-        let preload: bool = chunk.read_u32()? != 0;
+        let transparent: bool = chunk.read_bool32()?;
+        let smooth: bool = chunk.read_bool32()?;
+        let preload: bool = chunk.read_bool32()?;
         let texture_abs_pos: usize = chunk.read_usize()?;
         let texture: &GMRef<GMTexture> = textures.abs_pos_to_ref.get(&texture_abs_pos)
             .ok_or(format!("Could not find texture with absolute position {} for Background with name \"{}\" at position {} in chunk 'BGND'.",

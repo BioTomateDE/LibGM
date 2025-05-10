@@ -44,7 +44,7 @@ impl GMOptions {
         println!("Options:");
         println!("  Flags: {}", &self.flags.to_string());
         println!("  Scale: {}", self.scale);
-        println!("  Window Color: #{:02X}{:02X}{:02X}{:02X}", self.window_color_a, self.window_color_b, self.window_color_g, self.window_color_r);
+        println!("  Window Color: {:?}", self.window_color);
         println!("  Color Depth: {}", self.color_depth);
         println!("  Resolution: {}", self.resolution);
         println!("  Frequency: {}", self.frequency);
@@ -355,7 +355,7 @@ impl GMOptionsFlags {
         if self.save_key {
             flag_strings.push("Save Key");
         }
-        if self.screen_shot_key {
+        if self.screenshot_key {
             flag_strings.push("Screenshot Key");
         }
         if self.close_sec {

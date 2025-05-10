@@ -99,7 +99,6 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
 
     let strings: GMStrings = parse_chunk_strg(&mut chunk_strg)?;
     let general_info: GMGeneralInfo = parse_chunk_gen8(&mut chunk_gen8, &strings)?;
-    let options: GMOptions = parse_chunk_optn(&mut chunk_optn)?;
     let texture_pages: Vec<GMEmbeddedTexture> = parse_chunk_txtr(&mut chunk_txtr, &general_info)?;
     let textures: GMTextures = parse_chunk_tpag(&mut chunk_tpag, texture_pages)?;
     let backgrounds: GMBackgrounds = parse_chunk_bgnd(&mut chunk_bgnd, &general_info, &strings, &textures)?;
@@ -114,6 +113,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let game_objects: GMGameObjects = parse_chunk_objt(&mut chunk_objt, &general_info, &strings)?;
     let rooms: GMRooms = parse_chunk_room(&mut chunk_room, &general_info, &strings)?;
     let paths: GMPaths = parse_chunk_path(&mut chunk_path, &strings)?;
+    let options: GMOptions = parse_chunk_optn(&mut chunk_optn, &strings, &textures)?;
 
     let data = GMData {
         strings,

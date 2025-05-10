@@ -89,14 +89,14 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
                 "Invalid negative sprite index {} for game object's sprite \"{}\" at absolute position {}",
                 index, name.display(strings), start_position + chunk.abs_pos))?)),
         };
-        let visible: bool = chunk.read_u32()? != 0;
+        let visible: bool = chunk.read_bool32()?;
         let mut managed: Option<bool> = None;
         if general_info.is_version_at_least(2022, 5, 0, 0) {
-            managed = Some(chunk.read_u32()? != 0);
+            managed = Some(chunk.read_bool32()?);
         }
-        let solid: bool = chunk.read_u32()? != 0;
+        let solid: bool = chunk.read_bool32()?;
         let depth: i32 = chunk.read_i32()?;
-        let persistent: bool = chunk.read_u32()? != 0;
+        let persistent: bool = chunk.read_bool32()?;
         let parent_id: i32 = chunk.read_i32()?;         // TODO usize, object ref  | parent can be: -100 (undefined), -2 (other [not here]), or -1 (self)
         let texture_mask: Option<GMRef<GMSprite>> = match chunk.read_i32()? {
             -1 => None,
@@ -104,8 +104,8 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
                 "Invalid negative sprite index {} for game object's texture mask \"{}\" at absolute position {}",
                 index, name.display(strings), start_position + chunk.abs_pos))?)),
         };
-        let uses_physics: bool = chunk.read_u32()? != 0;
-        let is_sensor: bool = chunk.read_u32()? != 0;
+        let uses_physics: bool = chunk.read_bool32()?;
+        let is_sensor: bool = chunk.read_bool32()?;
         let collision_shape: u32 = chunk.read_u32()?;
         let collision_shape: GMGameObjectCollisionShape = match collision_shape.try_into() {
             Ok(shape) => shape,
@@ -123,8 +123,8 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
         let uses_physics_shape_vertex: bool = physics_shape_vertex_count == -1;
         let physics_shape_vertex_count: usize = if physics_shape_vertex_count < 0 {0} else {physics_shape_vertex_count as usize};
         let friction: f32 = chunk.read_f32()?;
-        let awake: bool = chunk.read_u32()? != 0;
-        let kinematic: bool = chunk.read_u32()? != 0;
+        let awake: bool = chunk.read_bool32()?;
+        let kinematic: bool = chunk.read_bool32()?;
         let mut physics_shape_vertices: Vec<(f32, f32)> = Vec::with_capacity(physics_shape_vertex_count);
         for _ in 0..physics_shape_vertex_count {
             let x: f32 = chunk.read_f32()?;
@@ -224,16 +224,16 @@ fn parse_game_object_event_actions(chunk: &mut GMChunk, strings: &GMStrings) -> 
         let lib_id: u32 = chunk.read_u32()?;
         let id: u32 = chunk.read_u32()?;
         let kind: u32 = chunk.read_u32()?;
-        let use_relative: bool = chunk.read_u32()? != 0;
-        let is_question: bool = chunk.read_u32()? != 0;
-        let use_apply_to: bool = chunk.read_u32()? != 0;
+        let use_relative: bool = chunk.read_bool32()?;
+        let is_question: bool = chunk.read_bool32()?;
+        let use_apply_to: bool = chunk.read_bool32()?;
         let exe_type: u32 = chunk.read_u32()?;
         let action_name: GMRef<String> = chunk.read_gm_string(strings)?;
         let code_id: i32 = chunk.read_i32()?;                    // {!!} replace type with code ref
         let argument_count: u32 = chunk.read_u32()?;
         let who: i32 = chunk.read_i32()?;
-        let relative: bool = chunk.read_u32()? != 0;
-        let is_not: bool = chunk.read_u32()? != 0;
+        let relative: bool = chunk.read_bool32()?;
+        let is_not: bool = chunk.read_bool32()?;
         let unknown_always_zero: u32 = chunk.read_u32()?;
 
         actions.push(GMGameObjectEventAction {

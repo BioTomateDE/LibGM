@@ -217,7 +217,7 @@ fn parse_track(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMSt
             "Invalid Track traits 0x{:04X} while parsing Track at position {} in chunk '{}'.",
             traits, chunk.cur_pos, chunk.name
         ))?;
-    let is_creation_track: bool = chunk.read_u32()? != 0;
+    let is_creation_track: bool = chunk.read_bool32()?;
 
     let mut tag_count: i32 = chunk.read_i32()?;
     if tag_count == -1 {
