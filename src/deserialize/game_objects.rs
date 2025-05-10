@@ -1,6 +1,7 @@
 use crate::deserialize::chunk_reading::GMRef;
 use num_enum::{TryFromPrimitive, IntoPrimitive};
 use crate::deserialize::chunk_reading::GMChunk;
+use crate::deserialize::code::GMCode;
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::sprites::GMSprite;
 use crate::deserialize::strings::GMStrings;
@@ -62,7 +63,7 @@ pub struct GMGameObjectEventAction {
     pub use_apply_to: bool,
     pub exe_type: u32,
     pub action_name: GMRef<String>,
-    pub code_id: i32,                   // {!!} change type to code ref
+    pub code: Option<GMRef<GMCode>>,
     pub argument_count: u32,
     pub who: i32,
     pub relative: bool,
@@ -229,7 +230,8 @@ fn parse_game_object_event_actions(chunk: &mut GMChunk, strings: &GMStrings) -> 
         let use_apply_to: bool = chunk.read_bool32()?;
         let exe_type: u32 = chunk.read_u32()?;
         let action_name: GMRef<String> = chunk.read_gm_string(strings)?;
-        let code_id: i32 = chunk.read_i32()?;                    // {!!} replace type with code ref
+        let code_id: i32 = chunk.read_i32()?;
+        let code: Option<GMRef<GMCode>> = if code_id == -1 { None } else { Some(GMRef::new(code_id as usize)) };
         let argument_count: u32 = chunk.read_u32()?;
         let who: i32 = chunk.read_i32()?;
         let relative: bool = chunk.read_bool32()?;
@@ -245,7 +247,7 @@ fn parse_game_object_event_actions(chunk: &mut GMChunk, strings: &GMStrings) -> 
             use_apply_to,
             exe_type,
             action_name,
-            code_id,
+            code,
             argument_count,
             who,
             relative,

@@ -25,7 +25,11 @@ pub fn build_chunk_room(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_bool32(room.persistent);
         builder.write_u32(room.background_color);
         builder.write_bool32(room.draw_background_color);
-        builder.write_u32(room.creation_code_id);
+        if let Some(ref creation_code) = room.creation_code {
+            data_builder.push_pointer_placeholder(&mut builder, GMPointer::code(creation_code.index))?;
+        } else {
+            builder.write_i32(-1);
+        }
         builder.write_u32(build_room_flags(&room.flags));
         build_room_backgrounds(data_builder, &mut builder, i, &room.backgrounds)?;
         build_room_views(data_builder, &mut builder, i, &room.views)?;
@@ -109,7 +113,7 @@ fn build_room_views(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, 
         builder.write_u32(view.border_y);
         builder.write_i32(view.speed_x);
         builder.write_i32(view.speed_y);
-        builder.write_i32(view.object_id);
+        data_builder.push_pointer_placeholder(builder, GMPointer::game_object(view.object.index))?
     }
 
     Ok(())
@@ -135,7 +139,11 @@ fn build_room_objects(
         builder.write_i32(game_object.y);
         data_builder.push_pointer_placeholder(builder, GMPointer::game_object(game_object.object_definition.index))?;
         builder.write_u32(game_object.instance_id);
-        builder.write_i32(game_object.creation_code);
+        if let Some(ref creation_code) = game_object.creation_code {
+            data_builder.push_pointer_placeholder(builder, GMPointer::code(creation_code.index))?;
+        } else {
+            builder.write_i32(-1);
+        }
         builder.write_f32(game_object.scale_x);
         builder.write_f32(game_object.scale_y);
 
@@ -154,10 +162,11 @@ fn build_room_objects(
         builder.write_f32(game_object.rotation);
 
         if general_info.bytecode_version >= 16 {
-            let pre_create_code: i32 = game_object.pre_create_code.ok_or_else(|| format!(
-                "Pre Create Code not set for Room Object with Instance ID {} at position ({}; {}) in room with index {}.",
-                game_object.instance_id, game_object.x, game_object.y, room_index))?;
-            builder.write_i32(pre_create_code);         // should be code reference {~~}
+            if let Some(ref creation_code) = game_object.creation_code {
+                data_builder.push_pointer_placeholder(builder, GMPointer::code(creation_code.index))?;
+            } else {
+                builder.write_i32(-1);
+            }
         }
     }
 
