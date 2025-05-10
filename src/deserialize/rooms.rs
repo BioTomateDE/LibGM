@@ -3,6 +3,7 @@ use num_enum::TryFromPrimitive;
 use serde::{Deserialize, Serialize};
 use crate::deserialize::backgrounds::GMBackground;
 use crate::deserialize::chunk_reading::GMChunk;
+use crate::deserialize::code::GMCode;
 use crate::deserialize::game_objects::{GMGameObject};
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::sequence::{parse_sequence, GMSequence};
@@ -20,7 +21,7 @@ pub struct GMRoom {
     pub persistent: bool,
     pub background_color: u32,
     pub draw_background_color: bool,
-    pub creation_code_id: u32,
+    pub creation_code: Option<GMRef<GMCode>>,
     pub flags: GMRoomFlags,
     pub backgrounds: Vec<GMRoomBackground>,
     pub views: Vec<GMRoomView>,
@@ -61,7 +62,7 @@ pub struct GMRoomView {
     pub border_y: u32,
     pub speed_x: i32,
     pub speed_y: i32,
-    pub object_id: i32,           // change to GMObject later
+    pub object: GMRef<GMGameObject>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -130,14 +131,14 @@ pub struct GMRoomGameObject {
     pub y: i32,
     pub object_definition: GMRef<GMGameObject>,
     pub instance_id: u32,
-    pub creation_code: i32,     // {!!} change type to code ref
+    pub creation_code: Option<GMRef<GMCode>>,
     pub scale_x: f32,
     pub scale_y: f32,
     pub image_speed: Option<f32>,
     pub image_index: Option<usize>,
     pub color: u32,
     pub rotation: f32,
-    pub pre_create_code: Option<i32>,       // {!!} change type to (option) code ref
+    pub pre_create_code: Option<GMRef<GMCode>>,
 }
 
 
@@ -172,7 +173,8 @@ pub fn parse_chunk_room(
         let persistent: bool = chunk.read_bool32()?;
         let background_color: u32 = chunk.read_u32()? | 0xFF000000;     // make alpha 255 (background color doesn't have transparency)
         let draw_background_color: bool = chunk.read_bool32()?;
-        let creation_code_id: u32 = chunk.read_u32()?;      // (can be -1) reference to code; change type later
+        let creation_code_id: i32 = chunk.read_i32()?;
+        let creation_code: Option<GMRef<GMCode>> = if creation_code_id == -1 { None } else { Some(GMRef::new(creation_code_id as usize)) };
         let flags: GMRoomFlags = parse_room_flags(chunk.read_u32()?);
         let backgrounds: Vec<GMRoomBackground> = parse_room_backgrounds(chunk)?;
         let views: Vec<GMRoomView> = parse_room_views(chunk)?;
@@ -204,7 +206,7 @@ pub fn parse_chunk_room(
             persistent,
             background_color,
             draw_background_color,
-            creation_code_id,
+            creation_code,
             flags,
             backgrounds,
             views,
@@ -259,7 +261,8 @@ fn parse_room_views(chunk: &mut GMChunk) -> Result<Vec<GMRoomView>, String> {
         let border_y: u32 = chunk.read_u32()?;
         let speed_x: i32 = chunk.read_i32()?;
         let speed_y: i32 = chunk.read_i32()?;
-        let object_id: i32 = chunk.read_i32()?;           // change to GMObject later
+        let object_id: usize = chunk.read_usize()?;
+        let object: GMRef<GMGameObject> = GMRef::new(object_id);
 
         let view: GMRoomView = GMRoomView {
             enabled,
@@ -275,7 +278,7 @@ fn parse_room_views(chunk: &mut GMChunk) -> Result<Vec<GMRoomView>, String> {
             border_y,
             speed_x,
             speed_y,
-            object_id,
+            object,
         };
         views.push(view);
     }
@@ -299,7 +302,8 @@ fn parse_room_objects(
         let object_definition: usize = chunk.read_usize()?;
         let object_definition: GMRef<GMGameObject> = GMRef::new(object_definition);
         let instance_id: u32 = chunk.read_u32()?;
-        let creation_code: i32 = chunk.read_i32()?;     // {!!} change type to code ref
+        let creation_code_id: i32 = chunk.read_i32()?;
+        let creation_code: Option<GMRef<GMCode>> = if creation_code_id == -1 { None } else { Some(GMRef::new(creation_code_id as usize)) };
         let scale_x: f32 = chunk.read_f32()?;
         let scale_y: f32 = chunk.read_f32()?;
         let mut image_speed: Option<f32> = None;
@@ -310,10 +314,11 @@ fn parse_room_objects(
         }
         let color: u32 = chunk.read_u32()?;
         let rotation: f32 = chunk.read_f32()?;
-        let mut pre_create_code: Option<i32> = None;    // {!!} change type to code ref
-        if general_info.bytecode_version >= 16 {        // [From UndertaleModTool] "is that dependent on bytecode or something else?"
-            pre_create_code = Some(chunk.read_i32()?);
-        }
+
+        // [From UndertaleModTool] "is that dependent on bytecode or something else?"
+        let pre_create_code: Option<GMRef<GMCode>> = if general_info.bytecode_version <= 15 { None } else {
+            if chunk.read_i32()? == -1 { None } else { Some(GMRef::new(creation_code_id as usize)) }
+        };
 
         let room_game_object = GMRoomGameObject {
             x,

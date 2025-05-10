@@ -16,7 +16,7 @@ pub struct ModRoom {
     pub persistent: Option<bool>,
     pub background_color: Option<u32>,
     pub draw_background_color: Option<bool>,
-    pub creation_code_id: Option<u32>,
+    pub creation_code: Option<ModUnorderedRef>,
     pub flags: Option<ModRoomFlags>,
     pub backgrounds: Option<AModUnorderedListChanges<ModRoomBackground>>,
     pub views: Option<AModUnorderedListChanges<ModRoomView>>,
@@ -58,7 +58,7 @@ pub struct ModRoomView {
     pub border_y: Option<u32>,
     pub speed_x: Option<i32>,
     pub speed_y: Option<i32>,
-    pub object_id: Option<i32>, // Could later be ModUnorderedRef<GMObject>
+    pub object: Option<ModUnorderedRef>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -116,14 +116,14 @@ pub struct ModRoomGameObject {
     pub y: Option<i32>,
     pub object_definition: Option<ModUnorderedRef>, // GMGameObject
     pub instance_id: Option<u32>,
-    pub creation_code: Option<i32>, // Change to code ref later {!!}
+    pub creation_code: Option<ModUnorderedRef>,
     pub scale_x: Option<f32>,
     pub scale_y: Option<f32>,
     pub image_speed: Option<f32>,
     pub image_index: Option<usize>,
     pub color: Option<u32>,
     pub rotation: Option<f32>,
-    pub pre_create_code: Option<i32>, // Change to code ref later {!!}
+    pub pre_create_code: Option<ModUnorderedRef>,
 }
 
 
@@ -141,7 +141,7 @@ impl GModData<'_, '_> {
                 persistent: Some(room.persistent),
                 background_color: Some(room.background_color),
                 draw_background_color: Some(room.draw_background_color),
-                creation_code_id: Some(room.creation_code_id),
+                creation_code: if let Some(ref code) = room.creation_code { Some(self.resolve_code_ref(code)?) } else { None },
                 flags: Some(self.convert_room_flags_additions(&room.flags)),
                 backgrounds: Some(AModUnorderedListChanges {additions: self.convert_room_backgrounds_additions(&room.backgrounds)?, edits: HashMap::new()}),
                 views: Some(AModUnorderedListChanges {additions: self.convert_room_views_additions(&room.views)?, edits: HashMap::new()}),
@@ -175,6 +175,13 @@ impl GModData<'_, '_> {
             static EMPTY_VEC_LAYERS: Vec<GMRoomLayer> = Vec::new();
             static EMPTY_VEC_SEQUENCES: Vec<GMSequence> = Vec::new();
 
+            let orig_creation_code: Option<ModUnorderedRef> = if let Some(code) = &original.creation_code {
+                Some(self.resolve_code_ref(code)?)
+            } else { None };
+            let mod_creation_code: Option<ModUnorderedRef> = if let Some(code) = &modified.creation_code {
+                Some(self.resolve_code_ref(code)?)
+            } else { None };
+
             edits.insert(*index, ModRoom {
                 name: edit_field(&self.resolve_string_ref(&original.name)?, &self.resolve_string_ref(&modified.name)?),
                 caption: edit_field(&self.resolve_string_ref(&original.caption)?, &self.resolve_string_ref(&modified.caption)?),
@@ -184,7 +191,7 @@ impl GModData<'_, '_> {
                 persistent: edit_field(&original.persistent, &modified.persistent),
                 background_color: edit_field(&original.background_color, &modified.background_color),
                 draw_background_color: edit_field(&original.draw_background_color, &modified.draw_background_color),
-                creation_code_id: edit_field(&original.creation_code_id, &modified.creation_code_id),
+                creation_code: edit_field_option(&orig_creation_code, &mod_creation_code).clone(),
                 flags: Some(self.convert_room_flags(&original.flags, &modified.flags)),
                 backgrounds: Some(self.convert_room_backgrounds(export_changes_unordered_list(&original.backgrounds, &modified.backgrounds)?)?),
                 views: Some(self.convert_room_views(&export_changes_unordered_list(&original.views, &modified.views)?)?),
@@ -308,7 +315,7 @@ impl GModData<'_, '_> {
                 border_y: Some(view.border_y),
                 speed_x: Some(view.speed_x),
                 speed_y: Some(view.speed_y),
-                object_id: Some(view.object_id),
+                object: Some(self.resolve_game_object_ref(&view.object)?),
             });
         }
 
@@ -334,7 +341,7 @@ impl GModData<'_, '_> {
                 border_y: edit_field(&original.border_y, &modified.border_y),
                 speed_x: edit_field(&original.speed_x, &modified.speed_x),
                 speed_y: edit_field(&original.speed_y, &modified.speed_y),
-                object_id: edit_field(&original.object_id, &modified.object_id),
+                object: edit_field(&self.resolve_game_object_ref(&original.object)?, &self.resolve_game_object_ref(&modified.object)?),
             });
         }
 
@@ -448,14 +455,14 @@ impl GModData<'_, '_> {
                 y: Some(obj.y),
                 object_definition: Some(self.resolve_game_object_ref(&obj.object_definition)?),
                 instance_id: Some(obj.instance_id),
-                creation_code: Some(obj.creation_code),
+                creation_code: if let Some(ref code) = obj.creation_code { Some(self.resolve_code_ref(&code)?) } else { None },
                 scale_x: Some(obj.scale_x),
                 scale_y: Some(obj.scale_y),
                 image_speed: obj.image_speed,
                 image_index: obj.image_index,
                 color: Some(obj.color),
                 rotation: Some(obj.rotation),
-                pre_create_code: obj.pre_create_code,
+                pre_create_code: if let Some(ref code) = obj.pre_create_code { Some(self.resolve_code_ref(&code)?) } else { None },
             });
         }
 
@@ -467,19 +474,33 @@ impl GModData<'_, '_> {
         let mut edits: HashMap<usize, ModRoomGameObject> = HashMap::new();
 
         for (index, (original, modified)) in &changes.edits {
+            let orig_creation_code: Option<ModUnorderedRef> = if let Some(code) = &original.creation_code {
+                Some(self.resolve_code_ref(code)?)
+            } else { None };
+            let mod_creation_code: Option<ModUnorderedRef> = if let Some(code) = &modified.creation_code {
+                Some(self.resolve_code_ref(code)?)
+            } else { None };
+
+            let orig_pre_create_code: Option<ModUnorderedRef> = if let Some(code) = &original.pre_create_code {
+                Some(self.resolve_code_ref(code)?)
+            } else { None };
+            let mod_pre_create_code: Option<ModUnorderedRef> = if let Some(code) = &modified.pre_create_code {
+                Some(self.resolve_code_ref(code)?)
+            } else { None };
+
             edits.insert(*index, ModRoomGameObject {
                 x: edit_field(&original.x, &modified.x),
                 y: edit_field(&original.y, &modified.y),
                 object_definition: edit_field(&self.resolve_game_object_ref(&original.object_definition)?, &self.resolve_game_object_ref(&modified.object_definition)?),
                 instance_id: edit_field(&original.instance_id, &modified.instance_id),
-                creation_code: edit_field(&original.creation_code, &modified.creation_code),
+                creation_code: edit_field_option(&orig_creation_code, &mod_creation_code).clone(),
                 scale_x: edit_field(&original.scale_x, &modified.scale_x),
                 scale_y: edit_field(&original.scale_y, &modified.scale_y),
                 image_speed: *edit_field_option(&original.image_speed, &modified.image_speed),
                 image_index: *edit_field_option(&original.image_index, &modified.image_index),
                 color: edit_field(&original.color, &modified.color),
                 rotation: edit_field(&original.rotation, &modified.rotation),
-                pre_create_code: *edit_field_option(&original.pre_create_code, &modified.pre_create_code),      // {~~} change to code ref
+                pre_create_code: edit_field_option(&orig_pre_create_code, &mod_pre_create_code).clone(),
             });
         }
 
