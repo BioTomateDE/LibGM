@@ -146,7 +146,7 @@ pub struct ChunkBuilder {
 
 
 impl ChunkBuilder {
-    pub fn write_u32(&mut self, number: u64) {
+    pub fn write_u64(&mut self, number: u64) {
         for byte in number.to_le_bytes() {
             self.raw_data.push(byte);
         }
@@ -156,7 +156,7 @@ impl ChunkBuilder {
             self.raw_data.push(byte);
         }
     }
-    pub fn write_u64(&mut self, number: u32) {
+    pub fn write_u32(&mut self, number: u32) {
         for byte in number.to_le_bytes() {
             self.raw_data.push(byte);
         }
@@ -191,6 +191,11 @@ impl ChunkBuilder {
             self.raw_data.push(byte);
         }
     }
+    pub fn write_f64(&mut self, number: f64) {
+        for byte in number.to_le_bytes() {
+            self.raw_data.push(byte);
+        }
+    }
     pub fn write_f32(&mut self, number: f32) {
         for byte in number.to_le_bytes() {
             self.raw_data.push(byte);
@@ -198,7 +203,7 @@ impl ChunkBuilder {
     }
     pub fn write_bool32(&mut self, boolean: bool) {
         let number: u32 = if boolean {1} else {0};
-        self.write_u64(number);
+        self.write_u32(number);
     }
     pub fn write_literal_string(&mut self, string: &str) -> Result<(), String> {
         // write an ascii string to the data
