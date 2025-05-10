@@ -18,13 +18,13 @@ pub fn build_chunk_font(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         data_builder.push_pointer_resolve(&mut builder, GMPointer::font(i))?;
         builder.write_literal_string(&font.name.resolve(&gm_data.strings.strings_by_index)?)?;
         builder.write_literal_string(&font.display_name.resolve(&gm_data.strings.strings_by_index)?)?;
-        builder.write_u32(font.em_size);
-        builder.write_u32(if font.bold {1} else {0});
-        builder.write_u32(if font.italic {1} else {0});
+        builder.write_u64(font.em_size);
+        builder.write_u64(if font.bold {1} else {0});
+        builder.write_u64(if font.italic {1} else {0});
         builder.write_u16(font.range_start);
         builder.write_u8(font.charset);
         builder.write_u8(font.anti_alias);
-        builder.write_u32(font.range_end);
+        builder.write_u64(font.range_end);
         data_builder.push_pointer_placeholder(&mut builder, GMPointer::texture(font.texture.index))?;
         builder.write_f32(font.scale_x);
         builder.write_f32(font.scale_y);
@@ -34,13 +34,13 @@ pub fn build_chunk_font(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
             builder.write_i32(number);
         };
         if let Some(number) = font.ascender {
-            builder.write_u32(number);
+            builder.write_u64(number);
         };
         if let Some(number) = font.sdf_spread {
-            builder.write_u32(number);
+            builder.write_u64(number);
         };
         if let Some(number) = font.line_height {
-            builder.write_u32(number);
+            builder.write_u64(number);
         };
 
         build_glyphs(data_builder, &mut builder, &font.glyphs, i, font.name.resolve(&gm_data.strings.strings_by_index)?)?;

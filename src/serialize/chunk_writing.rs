@@ -44,6 +44,9 @@ pub enum GMPointer {
     RoomView(Index, Index),
     RoomGameObject(Index, Index),
     RoomTile(Index, Index),
+    CodeMeta(Index),
+    CodeLength(Index),
+    Code(Index),
 }
 impl GMPointer {
     pub fn string(string_index: usize) -> Self {
@@ -121,6 +124,15 @@ impl GMPointer {
     pub fn room_tile(room_index: usize, tile_index: usize) -> Self {
         Self::RoomTile(Index(room_index), Index(tile_index))
     }
+    pub fn code_meta(code_index: usize) -> Self {
+        Self::CodeMeta(Index(code_index))
+    }
+    pub fn code_length(code_index: usize) -> Self {
+        Self::CodeLength(Index(code_index))
+    }
+    pub fn code(code_index: usize) -> Self {
+        Self::Code(Index(code_index))
+    }
 }
 
 
@@ -134,7 +146,7 @@ pub struct ChunkBuilder {
 
 
 impl ChunkBuilder {
-    pub fn write_u64(&mut self, number: u64) {
+    pub fn write_u32(&mut self, number: u64) {
         for byte in number.to_le_bytes() {
             self.raw_data.push(byte);
         }
@@ -144,7 +156,7 @@ impl ChunkBuilder {
             self.raw_data.push(byte);
         }
     }
-    pub fn write_u32(&mut self, number: u32) {
+    pub fn write_u64(&mut self, number: u32) {
         for byte in number.to_le_bytes() {
             self.raw_data.push(byte);
         }
@@ -186,7 +198,7 @@ impl ChunkBuilder {
     }
     pub fn write_bool32(&mut self, boolean: bool) {
         let number: u32 = if boolean {1} else {0};
-        self.write_u32(number);
+        self.write_u64(number);
     }
     pub fn write_literal_string(&mut self, string: &str) -> Result<(), String> {
         // write an ascii string to the data
