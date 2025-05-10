@@ -25,13 +25,14 @@ impl GMGeneralInfo {
         println!("  Version: {}.{}.{}.{}", self.major_version, self.minor_version, self.release_version, self.stable_version);
         println!("  Default Window Size: {}x{}", self.default_window_width, self.default_window_height);
         println!("  Flags: {}", self.flags.to_string());
-        println!("  License: {}", format_license_md5(&self.license));
+        println!("  License CRC32: {}", self.license_crc32);
+        println!("  License MD5: {}", format_license_md5(&self.license_md5));
         println!("  Timestamp: {}", self.timestamp_created);
         println!("  Display Name: {}", self.display_name.resolve(&strings.strings_by_index)?);
         println!("  Active Targets: {}", self.active_targets);
         println!("  Function Classifications: {}", &self.function_classifications.to_string());
         println!("  Steam AppID: {}", self.steam_appid);
-        println!("  Debugger Port: {}", self.debugger_port);
+        println!("  Debugger Port: {:?}", self.debugger_port);
         println!();
         Ok(())
     }
@@ -106,6 +107,9 @@ impl GMGeneralInfoFlags {
         }
         if self.javascript_mode {
             flag_strings.push("JavaScript Mode");
+        }
+        if self.license_exclusions {
+            flag_strings.push("Licence Exclusions");
         }
         flag_strings.join(", ")
     }
