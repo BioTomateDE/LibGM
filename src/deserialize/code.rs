@@ -335,23 +335,23 @@ impl GMCodeBlob<'_> {
         match data_type {
             GMDataType::Double => {
                 let raw: [u8; 8] = self.raw_data.get(self.cur_pos..self.cur_pos + 8)
-                    .ok_or_else(|| format!("Trying to read f64 out of bounds while reading values in code: {} > {}", self.cur_pos, self.len))?
-                    .try_into().expect("Buffer not 8 bytes big somehow")?;
+                    .ok_or_else(|| format!("Trying to read f64 out of bounds while reading values in code: {} > {}", self.cur_pos+8, self.len))?
+                    .try_into().expect("Buffer not 8 bytes big somehow");
                 self.cur_pos += 8;
                 Ok(GMValue::Double(f64::from_le_bytes(raw)))
             }
 
             GMDataType::Float => {
                 let raw: [u8; 4] = self.raw_data.get(self.cur_pos..self.cur_pos + 4)
-                    .ok_or_else(|| format!("Trying to read f32 out of bounds while reading values in code: {} > {}", self.cur_pos, self.len))?
-                    .try_into().expect("Buffer not 4 bytes big somehow")?;
+                    .ok_or_else(|| format!("Trying to read f32 out of bounds while reading values in code: {} > {}", self.cur_pos+4, self.len))?
+                    .try_into().expect("Buffer not 4 bytes big somehow");
                 self.cur_pos += 4;
                 Ok(GMValue::Float(f32::from_le_bytes(raw)))
             }
-
+            
             GMDataType::Int32 => {
                 let raw: [u8; 4] = self.raw_data.get(self.cur_pos..self.cur_pos + 4)
-                    .ok_or_else(|| format!("Trying to read i32 out of bounds while reading values in code: {} > {}", self.cur_pos, self.len))?
+                    .ok_or_else(|| format!("Trying to read i32 out of bounds while reading values in code: {} > {}", self.cur_pos+4, self.len))?
                     .try_into().expect("Buffer not 4 bytes big somehow");
                 self.cur_pos += 4;
                 Ok(GMValue::Int32(i32::from_le_bytes(raw)))
@@ -359,7 +359,7 @@ impl GMCodeBlob<'_> {
 
             GMDataType::Int64 => {
                 let raw: [u8; 8] = self.raw_data.get(self.cur_pos..self.cur_pos + 8)
-                    .ok_or_else(|| format!("Trying to read i64 out of bounds while reading values in code: {} > {}", self.cur_pos, self.len))?
+                    .ok_or_else(|| format!("Trying to read i64 out of bounds while reading values in code: {} > {}", self.cur_pos+8, self.len))?
                     .try_into().expect("Buffer not 8 bytes big somehow");
                 self.cur_pos += 8;
                 Ok(GMValue::Int64(i64::from_le_bytes(raw)))

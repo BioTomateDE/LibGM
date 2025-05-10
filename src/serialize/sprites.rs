@@ -27,15 +27,15 @@ pub fn build_chunk_sprt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_bool32(sprite.smooth);
         builder.write_bool32(sprite.preload);
         builder.write_i32(sprite.bbox_mode);
-        builder.write_u64(sprite.sep_masks.into());
+        builder.write_u32(sprite.sep_masks.into());
         builder.write_i32(sprite.origin_x);
         builder.write_i32(sprite.origin_y);
 
         if let Some(specials) = &sprite.special_fields {
             // {~~} assert >= version 2.0.0.0
             builder.write_i32(-1);
-            builder.write_u64(specials.special_version);
-            builder.write_u64(match specials.sprite_type {
+            builder.write_u32(specials.special_version);
+            builder.write_u32(match specials.sprite_type {
                 GMSpriteType::Normal(_) => 0,
                 GMSpriteType::SWF(_) => 1,
                 GMSpriteType::Spine(_) => 2,
@@ -43,7 +43,7 @@ pub fn build_chunk_sprt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
 
             if gm_data.general_info.is_version_at_least(2, 0, 0, 0) {
                 builder.write_f32(specials.playback_speed);
-                builder.write_u64(specials.playback_speed_type.into());
+                builder.write_u32(specials.playback_speed_type.into());
                 if specials.special_version >= 2 {
                     let position: usize = builder.abs_pos + builder.len();
                     data_builder.push_pointer_placeholder(&mut builder, GMPointer::sprite_sequence(position))?;
