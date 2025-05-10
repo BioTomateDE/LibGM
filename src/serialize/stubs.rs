@@ -46,14 +46,3 @@ pub fn build_chunk_dafl(data_builder: &mut DataBuilder, _gm_data: &GMData) -> Re
     build_chunk(data_builder, builder)?;
     Ok(())
 }
-
-pub fn build_chunk_code(data_builder: &mut DataBuilder, _gm_data: &GMData) -> Result<(), String> {
-    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "CODE", abs_pos: data_builder.len() };
-
-    // builder.raw_data = _gm_data.chunk_code;
-    builder.write_usize(0);    // TODO
-
-    build_chunk(data_builder, builder)?;
-    Ok(())
-}
-

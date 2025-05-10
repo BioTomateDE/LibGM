@@ -18,12 +18,12 @@ pub fn build_chunk_scpt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
 
         builder.write_gm_string(data_builder, &script.name)?;
         match script.id {
-            Some(id) => builder.write_u32(id),
+            Some(id) => builder.write_u64(id),
             None => builder.write_i32(-1),
         };
     }
 
     build_chunk(data_builder, builder)?;
     Ok(())
-}
+} // TODO
 
