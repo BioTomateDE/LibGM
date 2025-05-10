@@ -16,8 +16,8 @@ pub fn build_chunk_path(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     for (i, path) in gm_data.paths.paths_by_index.iter().enumerate() {
         data_builder.push_pointer_resolve(&mut builder, GMPointer::path(i))?;
         builder.write_gm_string(data_builder, &path.name)?;
-        builder.write_bool(path.is_smooth);
-        builder.write_bool(path.is_closed);
+        builder.write_bool32(path.is_smooth);
+        builder.write_bool32(path.is_closed);
         builder.write_u32(path.precision);
         build_path_points(&mut builder, &path.points);
     }

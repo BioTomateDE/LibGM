@@ -169,16 +169,16 @@ pub fn parse_chunk_room(
         let width: u32 = chunk.read_u32()?;
         let height: u32 = chunk.read_u32()?;
         let speed: u32 = chunk.read_u32()?;
-        let persistent: bool = chunk.read_u32()? != 0;
+        let persistent: bool = chunk.read_bool32()?;
         let background_color: u32 = chunk.read_u32()? | 0xFF000000;     // make alpha 255 (background color doesn't have transparency)
-        let draw_background_color: bool = chunk.read_u32()? != 0;
+        let draw_background_color: bool = chunk.read_bool32()?;
         let creation_code_id: u32 = chunk.read_u32()?;      // (can be -1) reference to code; change type later
         let flags: GMRoomFlags = parse_room_flags(chunk.read_u32()?);
         let backgrounds: Vec<GMRoomBackground> = parse_room_backgrounds(chunk)?;
         let views: Vec<GMRoomView> = parse_room_views(chunk)?;
         let game_objects: Vec<GMRoomGameObject> = parse_room_objects(chunk, &general_info)?;
         let tiles: Vec<GMRoomTile> = parse_room_tiles(chunk, general_info)?;
-        let world: bool = chunk.read_u32()? != 0;
+        let world: bool = chunk.read_bool32()?;
         let top: u32 = chunk.read_u32()?;
         let left: u32 = chunk.read_u32()?;
         let right: u32 = chunk.read_u32()?;
@@ -246,7 +246,7 @@ fn parse_room_views(chunk: &mut GMChunk) -> Result<Vec<GMRoomView>, String> {
     for pointer in view_pointers {
         chunk.cur_pos = pointer;
 
-        let enabled: bool = chunk.read_u32()? != 0;
+        let enabled: bool = chunk.read_bool32()?;
         let view_x: i32 = chunk.read_i32()?;
         let view_y: i32 = chunk.read_i32()?;
         let view_width: i32 = chunk.read_i32()?;
@@ -343,8 +343,8 @@ fn parse_room_backgrounds(chunk: &mut GMChunk) -> Result<Vec<GMRoomBackground>, 
 
     for pointer in background_pointers {
         chunk.cur_pos = pointer;
-        let enabled: bool = chunk.read_i32()? != 0;
-        let foreground: bool = chunk.read_i32()? != 0;
+        let enabled: bool = chunk.read_bool32()?;
+        let foreground: bool = chunk.read_bool32()?;
         let background_definition: i32 = chunk.read_i32()?;
         let background_definition: Option<GMRef<GMBackground>> =
             if background_definition == -1 { None }
@@ -355,7 +355,7 @@ fn parse_room_backgrounds(chunk: &mut GMChunk) -> Result<Vec<GMRoomBackground>, 
         let tile_y: i32 = chunk.read_i32()?;    // ^
         let speed_x: i32 = chunk.read_i32()?;
         let speed_y: i32 = chunk.read_i32()?;
-        let stretch: bool = chunk.read_i32()? != 0;
+        let stretch: bool = chunk.read_bool32()?;
 
         let background: GMRoomBackground = GMRoomBackground {
             enabled,
@@ -448,7 +448,7 @@ fn parse_room_layers(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMR
         let y_offset: f32 = chunk.read_f32()?;
         let horizontal_speed: f32 = chunk.read_f32()?;
         let vertical_speed: f32 = chunk.read_f32()?;
-        let is_visible: bool = chunk.read_u32()? != 0;
+        let is_visible: bool = chunk.read_bool32()?;
 
         let layer: GMRoomLayer = GMRoomLayer {
             layer_name,

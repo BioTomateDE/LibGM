@@ -220,6 +220,19 @@ impl GMChunk<'_> {
     }
 
 
+    pub fn read_bool32(&mut self) -> Result<bool, String> {
+        // Read a 32-bit integer and convert it to a bool.
+        let number: u32 = self.read_u32()?;
+        match number {
+            0 => Ok(false),
+            1 => Ok(true),
+            _ => Err(format!(
+                "Read invalid boolean value in chunk '{0}' at position {1}: {2} (0x{2:08X}).",
+                self.name, self.cur_pos, number,
+            ))
+        }
+    }
+
     pub fn read_literal_string(&mut self, length: usize) -> Result<String, String> {
         // Read literal ascii/utf8 string with specified length
         let bytes: Vec<u8> = match self.data.get(self.cur_pos..self.cur_pos + length) {

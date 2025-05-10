@@ -143,9 +143,9 @@ pub fn parse_chunk_sprt(
         let margin_right: i32 = chunk.read_i32()?;
         let margin_bottom: i32 = chunk.read_i32()?;
         let margin_top: i32 = chunk.read_i32()?;
-        let transparent: bool = chunk.read_u32()? != 0;
-        let smooth: bool = chunk.read_u32()? != 0;
-        let preload: bool = chunk.read_u32()? != 0;
+        let transparent: bool = chunk.read_bool32()?;
+        let smooth: bool = chunk.read_bool32()?;
+        let preload: bool = chunk.read_bool32()?;
         let bbox_mode: i32 = chunk.read_i32()?;
         let sep_masks: u32 = chunk.read_u32()?;
         let sep_masks: GMSpriteSepMaskType = match sep_masks.try_into() {
@@ -345,7 +345,7 @@ fn parse_nine_slice(chunk: &mut GMChunk, sprite_name: &str, start_position: usiz
     let top: i32 = chunk.read_i32()?;
     let right: i32 = chunk.read_i32()?;
     let bottom: i32 = chunk.read_i32()?;
-    let enabled: bool = chunk.read_i32()? != 0;
+    let enabled: bool = chunk.read_bool32()?;
 
     let mut tile_modes: Vec<GMSpriteNineSliceTileMode> = Vec::with_capacity(5);
     for _ in 0..5 {
