@@ -77,7 +77,7 @@ fn build_tracks(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, gene
         }
 
         build_tracks(data_builder, builder, general_info, strings, &track.sub_tracks)?;
-        build_keyframes(builder, general_info, &track.keyframes)?;
+        build_keyframes(builder, &track.keyframes)?;
     }
 
     Ok(())
@@ -126,7 +126,7 @@ fn build_anim_curve_channel_points(builder: &mut ChunkBuilder, general_info: &GM
 }
 
 
-fn build_keyframes(builder: &mut ChunkBuilder, general_info: &GMGeneralInfo, keyframes: &Vec<GMKeyframe>) -> Result<(), String> {
+fn build_keyframes(builder: &mut ChunkBuilder, keyframes: &Vec<GMKeyframe>) -> Result<(), String> {
     while (builder.len() + builder.abs_pos) % 4 != 0 {
         builder.write_u8(0);
     }
