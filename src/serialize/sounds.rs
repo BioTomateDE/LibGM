@@ -22,8 +22,7 @@ pub fn build_chunk_sond(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_u32(sound.effects);
         builder.write_f32(sound.volume);
         builder.write_f32(sound.pitch);
-        // {~~} audio group stuff idk
-        builder.write_i32(-1);
+        builder.write_i32(-1);    // {~~} audio group stuff idk
         match &sound.audio_file {
             Some(file) => data_builder.push_pointer_placeholder(&mut builder, GMPointer::audio(file.index))?,
             None => builder.write_i32(-1),
