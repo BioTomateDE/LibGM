@@ -26,7 +26,7 @@ use crate::serialize::variables::build_chunk_vari;
 #[derive(Debug, Clone)]
 pub struct DataBuilder {
     raw_data: Vec<u8>,
-    pointer_pool_placeholders: HashMap<GMPointer, usize>,  // maps gamemaker element references to absolute positions of where they're referenced
+    pointer_pool_placeholders: HashMap<usize, GMPointer>,  // maps gamemaker element references to absolute positions of where they're referenced
     pointer_pool_resources: HashMap<GMPointer, usize>,     // maps gamemaker element references to absolute positions of where their data is
 }
 impl DataBuilder {
@@ -41,7 +41,13 @@ impl DataBuilder {
     pub fn push_pointer_placeholder(&mut self, chunk_builder: &mut ChunkBuilder, pointer: GMPointer) -> Result<(), String> {
         let position: usize = self.len() + chunk_builder.len();
         chunk_builder.write_usize(0);      // write placeholder
-        self.pointer_pool_placeholders.insert(pointer, position);
+        if let Some(old_value) = self.pointer_pool_placeholders.insert(position, pointer.clone()) {
+            return Err(format!(
+                "Conflicting placeholder positions while pushing placeholder in chunk '{}': absolute position {} \
+                was already set for pointer {:?}; tried to set to new pointer {:?}.",
+                chunk_builder.chunk_name, position, old_value, pointer,
+            ))
+        }
         Ok(())
     }
 
@@ -98,10 +104,10 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
 
     let (texture_page_items, texture_pages): (Vec<GMTexturePageItem>, Vec<DynamicImage>) = generate_texture_pages(&gm_data.textures)?;
 
-    // write placeholder u32 for total length
     builder.write_chunk_name("FORM")?;
-    builder.write_usize(0);
+    builder.write_usize(0);  // write placeholder for total data length
 
+    // same chunk order as in undertale 1.01
     build_chunk_gen8(&mut builder, &gm_data)?;
     build_chunk_optn(&mut builder, &gm_data)?;
     build_chunk_extn(&mut builder, &gm_data)?;      // stub
@@ -125,10 +131,30 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     build_chunk_txtr(&mut builder, &gm_data, texture_pages)?;
     build_chunk_audo(&mut builder, &gm_data)?;
 
-    // {~~} IMPORTANT TODO: resolve pointers
+    let total_length: usize = builder.len();
+    let bytes: [u8; 4] = (total_length as u32).to_le_bytes();
+    builder.overwrite_data(&bytes, 4)?;     // overwrite placeholder total data length
 
-    let bytes: [u8; 4] = (builder.len() as u32).to_le_bytes();
-    builder.overwrite_data(&bytes, 4)?;     // overwrite placeholder total length
+    // resolve pointer placeholders
+    for (placeholder_position, pointer) in &builder.pointer_pool_placeholders {
+        let resource_position: usize = *builder.pointer_pool_resources.get(&pointer)
+            .ok_or_else(|| format!(
+                "Could not resolve resource {:?} for placeholder position {}.",
+                pointer, placeholder_position,
+            ))?;
+
+        let raw: &[u8] = &resource_position.to_le_bytes();
+        for (i, byte) in raw.iter().enumerate() {
+            let source_byte: &mut u8 = builder.raw_data.get_mut(placeholder_position + i)
+                .ok_or_else(|| format!(
+                    "Could not overwrite {} bytes at position {} in data with length {} while resolving pointer placeholders.",
+                    raw.len(),
+                    placeholder_position + i,
+                    total_length,
+                ))?;
+            *source_byte = *byte;
+        }
+    }
 
     Ok(builder.raw_data)
 }
