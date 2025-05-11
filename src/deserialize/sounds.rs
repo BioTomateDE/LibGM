@@ -14,7 +14,7 @@ pub struct GMSound {
     pub pitch: f32,                                  // e.g. 4.20
     // pub audio_group: u32,                         // idk; type is wrong
     pub audio_file: Option<GMRef<GMEmbeddedAudio>>,  // e.g. UndertaleEmbeddedAudio#17
-    pub audio_length: Option<f32>,               // in seconds probably
+    pub audio_length: Option<f32>,                   // in seconds probably
 }
 
 #[derive(Debug, Clone, PartialEq)]
