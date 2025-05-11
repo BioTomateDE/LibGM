@@ -1,6 +1,6 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
-use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMOptions, GMOptionsFlags, GMOptionsWindowColor};
+use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMOptions, GMOptionsConstant, GMOptionsFlags, GMOptionsWindowColor};
 use crate::deserialize::rooms::GMRooms;
 use crate::deserialize::texture_page_items::GMTexture;
 use crate::serialize::all::{build_chunk, DataBuilder};
@@ -275,6 +275,7 @@ fn build_options_new(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder,
     build_options_image(data_builder, builder, &options.front_image)?;
     build_options_image(data_builder, builder, &options.load_image)?;
     builder.write_u32(options.load_alpha);
+    build_constants(data_builder, builder, &options.constants)?;
     Ok(())
 }
 
@@ -293,5 +294,17 @@ fn build_options_window_color(builder: &mut ChunkBuilder, window_color: &GMOptio
     builder.write_u8(window_color.g);
     builder.write_u8(window_color.b);
     builder.write_u8(window_color.a);
+}
+
+
+fn build_constants(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, constants: &Vec<GMOptionsConstant>) -> Result<(), String> {
+    builder.write_usize(constants.len());
+
+    for constant in constants {
+        builder.write_gm_string(data_builder, &constant.name)?;
+        builder.write_gm_string(data_builder, &constant.value)?;
+    }
+
+    Ok(())
 }
 
