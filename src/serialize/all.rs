@@ -40,8 +40,6 @@ impl DataBuilder {
     /// that element will be located in the data file.
     pub fn push_pointer_placeholder(&mut self, chunk_builder: &mut ChunkBuilder, pointer: GMPointer) -> Result<(), String> {
         let position: usize = chunk_builder.abs_pos + chunk_builder.len() + 8;      // plus 8 for chunk name and chunk length
-        log::warn!("placeholder start {}, off {} = pos {position} | {pointer:?} | {}", chunk_builder.abs_pos, chunk_builder.len(), crate::printing::hexdump(&self.raw_data, self.len().saturating_sub(12), None)?);
-        if pointer == GMPointer::string(5738) {panic!()}
         chunk_builder.write_usize(0);      // write placeholder
         if let Some(old_value) = self.pointer_pool_placeholders.insert(position, pointer.clone()) {
             return Err(format!(
