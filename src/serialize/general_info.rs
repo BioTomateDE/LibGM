@@ -3,7 +3,7 @@ use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMOptions, GMOptionsFlags, GMOptionsWindowColor};
 use crate::deserialize::rooms::GMRooms;
 use crate::deserialize::texture_page_items::GMTexture;
-use crate::serialize::all::DataBuilder;
+use crate::serialize::all::{build_chunk, DataBuilder};
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
 pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
@@ -13,13 +13,13 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_u8(if info.is_debugger_disabled {1} else {0});
     builder.write_u8(info.bytecode_version);
     builder.write_u16(info.unknown_value);
-    builder.write_gm_string(data_builder, &info.game_file_name)?;
-    builder.write_gm_string(data_builder, &info.config)?;
+    data_builder.push_pointer_placeholder(&mut builder, GMPointer::string(info.game_file_name.index))?;
+    data_builder.push_pointer_placeholder(&mut builder, GMPointer::string(info.config.index))?;
     builder.write_usize(gm_data.game_objects.game_objects_by_index.len());
     builder.write_usize(get_last_tile_id(&gm_data.rooms));
     builder.write_u32(info.game_id);
     builder.raw_data.extend(info.directplay_guid.as_bytes());
-    builder.write_gm_string(data_builder, &info.game_name)?;
+    data_builder.push_pointer_placeholder(&mut builder, GMPointer::string(info.game_name.index))?;
     builder.write_u32(info.major_version);
     builder.write_u32(info.minor_version);
     builder.write_u32(info.release_version);
@@ -30,7 +30,7 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_u32(info.license_crc32);
     builder.raw_data.extend(info.license_md5);
     builder.write_i64(info.timestamp_created.timestamp());
-    builder.write_gm_string(data_builder, &info.display_name)?;
+    data_builder.push_pointer_placeholder(&mut builder, GMPointer::string(info.display_name.index))?;
     builder.write_u64(info.active_targets);
     builder.write_u64(build_function_classifications(&info.function_classifications));
     builder.write_i32(info.steam_appid);
@@ -43,8 +43,7 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_u32(*room_id);
     }
 
-    data_builder.write_chunk_name(builder.chunk_name)?;
-    data_builder.raw_data.extend(builder.raw_data);
+    build_chunk(data_builder, builder)?;
     Ok(())
 }
 
@@ -164,8 +163,7 @@ pub fn build_chunk_optn(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         build_options_old(data_builder, &mut builder, &gm_data.options)?;
     }
 
-    data_builder.write_chunk_name(builder.chunk_name)?;
-    data_builder.raw_data.extend(builder.raw_data);
+    build_chunk(data_builder, builder)?;
     Ok(())
 }
 
