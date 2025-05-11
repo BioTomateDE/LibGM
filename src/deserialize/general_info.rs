@@ -30,8 +30,6 @@ pub struct GMGeneralInfo {
     pub unknown_value: u16,
     pub game_file_name: GMRef<String>,
     pub config: GMRef<String>,
-    pub last_object_id: u32,
-    pub last_tile_id: u32,
     pub game_id: u32,
     pub directplay_guid: uuid::Uuid,
     pub game_name: GMRef<String>,
@@ -220,8 +218,8 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
     let unknown_value: u16 = chunk.read_u16()?;
     let game_file_name: GMRef<String> = chunk.read_gm_string(strings)?;
     let config: GMRef<String> = chunk.read_gm_string(strings)?;
-    let last_object_id: u32 = chunk.read_u32()?;
-    let last_tile_id: u32 = chunk.read_u32()?;
+    let _last_object_id: u32 = chunk.read_u32()?;
+    let _last_tile_id: u32 = chunk.read_u32()?;
     let game_id: u32 = chunk.read_u32()?;
 
     let directplay_guid: [u8; 16] = chunk.data.get(chunk.cur_pos..chunk.cur_pos + 16)
@@ -280,8 +278,6 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
         unknown_value,
         game_file_name,
         config,
-        last_object_id,
-        last_tile_id,
         game_id,
         directplay_guid,
         game_name,
