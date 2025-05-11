@@ -5,7 +5,7 @@ use crate::serialize::all::{build_chunk, DataBuilder};
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
 pub fn build_chunk_room(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
-    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "PATH", abs_pos: data_builder.len() };
+    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "ROOM", abs_pos: data_builder.len() };
 
     let room_count: usize = gm_data.rooms.rooms_by_index.len();
     builder.write_usize(room_count);
