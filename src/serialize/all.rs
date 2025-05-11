@@ -39,7 +39,9 @@ impl DataBuilder {
     /// a pointer to some element, but you don't yet (necessarily) know where
     /// that element will be located in the data file.
     pub fn push_pointer_placeholder(&mut self, chunk_builder: &mut ChunkBuilder, pointer: GMPointer) -> Result<(), String> {
-        let position: usize = self.len() + chunk_builder.len();
+        let position: usize = chunk_builder.abs_pos + chunk_builder.len() + 8;      // plus 8 for chunk name and chunk length
+        log::warn!("placeholder start {}, off {} = pos {position} | {pointer:?} | {}", chunk_builder.abs_pos, chunk_builder.len(), crate::printing::hexdump(&self.raw_data, self.len().saturating_sub(12), None)?);
+        if pointer == GMPointer::string(5738) {panic!()}
         chunk_builder.write_usize(0);      // write placeholder
         if let Some(old_value) = self.pointer_pool_placeholders.insert(position, pointer.clone()) {
             return Err(format!(
@@ -143,6 +145,10 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
                 pointer, placeholder_position,
             ))?;
 
+        if *placeholder_position == 12 {
+            log::info!("alarm {:?}   {} {}", pointer, resource_position, if let GMPointer::String(a) = pointer {crate::deserialize::chunk_reading::GMRef::new(a.0).resolve(&gm_data.strings.strings_by_index)?} else {"?"})
+        }
+
         let raw: &[u8] = &resource_position.to_le_bytes();
         for (i, byte) in raw.iter().enumerate() {
             let source_byte: &mut u8 = builder.raw_data.get_mut(placeholder_position + i)
@@ -169,6 +175,7 @@ pub fn write_data_file(data_file_path: &Path, raw_data: &[u8]) -> Result<(), Str
 pub fn build_chunk(data_builder: &mut DataBuilder, chunk_builder: ChunkBuilder) -> Result<(), String> {
     data_builder.write_chunk_name(chunk_builder.chunk_name)?;
     data_builder.write_usize(chunk_builder.len());
+    log::info!("build chunk {} {} @ {} | {}", chunk_builder.chunk_name, chunk_builder.len(), data_builder.len(), crate::printing::hexdump(&data_builder.raw_data, data_builder.len() - 12, None)?);
     data_builder.raw_data.extend(chunk_builder.raw_data);
     Ok(())
 }
