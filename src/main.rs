@@ -21,8 +21,10 @@ fn error_exit(logger: Arc<CustomLogger>) -> ! {
 
 fn main() {
     let logger = biologischer_log::init_logger(env!("CARGO_PKG_NAME"));
-    
-    let original_data_file_path: &Path = Path::new("data.win");
+
+    let args: Vec<String> = std::env::args().collect();
+    let original_data_file_path: &Path = Path::new(args.get(1).map_or("data.win", |s| s));
+
     info!("Loading data file \"{}\".", original_data_file_path.display());
     let original_data: Vec<u8> = match read_data_file(original_data_file_path) {
         Ok(data_file) => data_file,
