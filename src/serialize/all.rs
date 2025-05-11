@@ -25,7 +25,7 @@ use crate::serialize::variables::build_chunk_vari;
 
 #[derive(Debug, Clone)]
 pub struct DataBuilder {
-    pub raw_data: Vec<u8>,
+    raw_data: Vec<u8>,
     pointer_pool_placeholders: HashMap<usize, GMPointer>,  // maps gamemaker element references to absolute positions of where they're referenced
     pointer_pool_resources: HashMap<GMPointer, usize>,     // maps gamemaker element references to absolute positions of where their data is
 }
@@ -166,8 +166,6 @@ pub fn write_data_file(data_file_path: &Path, raw_data: &[u8]) -> Result<(), Str
 }
 
 
-
-/// Should not be used for GEN8 and OPTN
 pub fn build_chunk(data_builder: &mut DataBuilder, chunk_builder: ChunkBuilder) -> Result<(), String> {
     data_builder.write_chunk_name(chunk_builder.chunk_name)?;
     data_builder.write_usize(chunk_builder.len());
