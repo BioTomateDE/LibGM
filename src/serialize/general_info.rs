@@ -26,7 +26,7 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_u32(info.stable_version);
     builder.write_u32(info.default_window_width);
     builder.write_u32(info.default_window_height);
-    builder.write_u64(build_general_info_flags(&info.flags));
+    builder.write_u32(build_general_info_flags(&info.flags));
     builder.write_u32(info.license_crc32);
     builder.raw_data.extend(info.license_md5);
     builder.write_i64(info.timestamp_created.timestamp());
@@ -57,8 +57,8 @@ fn get_last_tile_id(rooms: &GMRooms) -> usize {
 }
 
 
-fn build_general_info_flags(flags: &GMGeneralInfoFlags) -> u64 {
-    let mut raw: u64 = 0;
+fn build_general_info_flags(flags: &GMGeneralInfoFlags) -> u32 {
+    let mut raw: u32 = 0;
 
     if flags.fullscreen {raw |= 0x0001};
     if flags.sync_vertex1 {raw |= 0x0002};
