@@ -32,6 +32,7 @@ pub fn build_chunk_code(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     }
 
     for (i, code) in gm_data.codes.codes_by_index.iter().enumerate() {
+        data_builder.push_pointer_resolve(&mut builder, GMPointer::code(i))?;
         let placeholder_position: usize = code_meta_placeholders[i];
         let start_offset: usize = builder.len() - placeholder_position + 4;
         for (j, byte) in start_offset.to_le_bytes().iter().enumerate() {
