@@ -17,8 +17,6 @@ impl GMGeneralInfo {
         println!("  Bytecode Version: {}", self.bytecode_version);
         println!("  File Name: {}", self.game_file_name.resolve(&strings.strings_by_index)?);
         println!("  Config: {}", self.config.resolve(&strings.strings_by_index)?);
-        println!("  Last object ID: {}", self.last_object_id);
-        println!("  Last tile ID: {}", self.last_tile_id);
         println!("  Game ID: {}", self.game_id);
         println!("  Directplay GUID: {}", self.directplay_guid);
         println!("  Game Name: {}", self.game_name.resolve(&strings.strings_by_index)?);
