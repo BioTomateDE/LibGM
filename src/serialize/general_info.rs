@@ -1,6 +1,7 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMOptions, GMOptionsFlags, GMOptionsWindowColor};
+use crate::deserialize::rooms::GMRooms;
 use crate::deserialize::texture_page_items::GMTexture;
 use crate::serialize::all::{build_chunk, DataBuilder};
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
@@ -14,8 +15,8 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_u16(info.unknown_value);
     data_builder.push_pointer_placeholder(&mut builder, GMPointer::string(info.game_file_name.index))?;
     data_builder.push_pointer_placeholder(&mut builder, GMPointer::string(info.config.index))?;
-    builder.write_u32(info.last_object_id);
-    builder.write_u32(info.last_tile_id);
+    builder.write_usize(gm_data.game_objects.game_objects_by_index.len());
+    builder.write_usize(get_last_tile_id(&gm_data.rooms));
     builder.write_u32(info.game_id);
     builder.raw_data.extend(info.directplay_guid.as_bytes());
     data_builder.push_pointer_placeholder(&mut builder, GMPointer::string(info.game_name.index))?;
@@ -44,6 +45,15 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
 
     build_chunk(data_builder, builder)?;
     Ok(())
+}
+
+
+fn get_last_tile_id(rooms: &GMRooms) -> usize {
+    let mut tile_id: usize = 10_000_000;
+    for room in &rooms.rooms_by_index {
+        tile_id += room.tiles.len();
+    }
+    tile_id
 }
 
 
