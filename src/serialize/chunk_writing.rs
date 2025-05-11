@@ -4,7 +4,7 @@ use crate::serialize::all::DataBuilder;
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Index(usize);
+pub struct Index(pub usize);
 
 // GMPointer is for building chunks:
 // It has to store the kind (data type) of the referenced element,
@@ -43,7 +43,6 @@ pub enum GMPointer {
     RoomGameObject(Index, Index),
     RoomTile(Index, Index),
     CodeMeta(Index),
-    CodeLength(Index),
     Code(Index),
 }
 impl GMPointer {
@@ -124,9 +123,6 @@ impl GMPointer {
     }
     pub fn code_meta(code_index: usize) -> Self {
         Self::CodeMeta(Index(code_index))
-    }
-    pub fn code_length(code_index: usize) -> Self {
-        Self::CodeLength(Index(code_index))
     }
     pub fn code(code_index: usize) -> Self {
         Self::Code(Index(code_index))
