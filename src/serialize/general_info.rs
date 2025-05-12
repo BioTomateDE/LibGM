@@ -3,11 +3,11 @@ use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMOptions, GMOptionsConstant, GMOptionsFlags, GMOptionsWindowColor};
 use crate::deserialize::rooms::GMRooms;
 use crate::deserialize::texture_page_items::GMTexture;
-use crate::serialize::all::{build_chunk, DataBuilder};
+use crate::serialize::all::DataBuilder;
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
 pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
-    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "GEN8", abs_pos: data_builder.len() };
+    let mut builder = ChunkBuilder::new(data_builder, "GEN8");
     let info: &GMGeneralInfo = &gm_data.general_info;
 
     builder.write_u8(if info.is_debugger_disabled {1} else {0});
@@ -43,7 +43,7 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_u32(*room_id);
     }
 
-    build_chunk(data_builder, builder)?;
+    builder.finish(data_builder)?;
     Ok(())
 }
 
@@ -155,7 +155,7 @@ fn build_function_classifications(function_classifications: &GMFunctionClassific
 
 
 pub fn build_chunk_optn(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
-    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "OPTN", abs_pos: data_builder.len() };
+    let mut builder = ChunkBuilder::new(data_builder, "OPTN");
 
     if gm_data.options.is_new_format {
         build_options_new(data_builder, &mut builder, &gm_data.options)?;
@@ -163,7 +163,7 @@ pub fn build_chunk_optn(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         build_options_old(data_builder, &mut builder, &gm_data.options)?;
     }
 
-    build_chunk(data_builder, builder)?;
+    builder.finish(data_builder)?;
     Ok(())
 }
 

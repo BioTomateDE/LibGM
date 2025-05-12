@@ -1,10 +1,10 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::functions::GMFunction;
-use crate::serialize::all::{build_chunk, DataBuilder};
+use crate::serialize::all::DataBuilder;
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
 pub fn build_chunk_func(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
-    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "FUNC", abs_pos: data_builder.len() };
+    let mut builder = ChunkBuilder::new(data_builder, "FUNC");
     let len: usize = gm_data.functions.functions_by_index.len();
     builder.write_usize(len);
 
@@ -24,7 +24,7 @@ pub fn build_chunk_func(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         }
     }
 
-    build_chunk(data_builder, builder)?;
+    builder.finish(data_builder)?;
     Ok(())
 }
 

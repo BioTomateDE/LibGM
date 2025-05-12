@@ -1,9 +1,9 @@
 use crate::deserialize::all::GMData;
-use crate::serialize::all::{build_chunk, DataBuilder};
+use crate::serialize::all::DataBuilder;
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
 pub fn build_chunk_strg(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
-    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "STRG", abs_pos: data_builder.len() };
+    let mut builder = ChunkBuilder::new(data_builder, "STRG");
     let len: usize = gm_data.strings.strings_by_index.len();
     builder.write_usize(len);
 
@@ -21,7 +21,7 @@ pub fn build_chunk_strg(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_u8(0)        // write trailing null byte
     }
 
-    build_chunk(data_builder, builder)?;
+    builder.finish(data_builder)?;
     Ok(())
 }
 

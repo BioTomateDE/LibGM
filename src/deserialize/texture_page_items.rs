@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::deserialize::chunk_reading::{GMChunk, GMRef};
-use crate::deserialize::embedded_textures::{Image, GMEmbeddedTexture};
+use crate::deserialize::embedded_textures::GMEmbeddedTexture;
 use image;
 use crate::printing::format_type_of;
 
@@ -64,7 +64,7 @@ pub fn parse_chunk_tpag(chunk: &mut GMChunk, texture_pages: Vec<GMEmbeddedTextur
             )),
         };
         let spritesheet: &image::RgbaImage = match &texture_page.texture_data {
-            Image::Img(image::DynamicImage::ImageRgba8(img)) => &img,
+            image::DynamicImage::ImageRgba8(img) => &img,
             _ => return Err(format!(
                 "Unknown type of texture page image at position {} in chunk 'TPAG': {}.",
                 chunk.cur_pos, format_type_of(texture_page),
@@ -72,7 +72,14 @@ pub fn parse_chunk_tpag(chunk: &mut GMChunk, texture_pages: Vec<GMEmbeddedTextur
         };
 
         // untested code
-        let img = image::imageops::crop_imm(spritesheet, source_x as u32, source_y as u32, source_width as u32, source_height as u32).to_image();
+        let img = image::imageops::crop_imm(
+            spritesheet,
+            source_x as u32,
+            source_y as u32,
+            source_width as u32,
+            source_height as u32
+        ).to_image();
+
         let texture_page_item: GMTexture = GMTexture {
             img: image::DynamicImage::ImageRgba8(img),
             target_x,

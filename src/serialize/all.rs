@@ -25,7 +25,7 @@ use crate::serialize::variables::build_chunk_vari;
 
 #[derive(Debug, Clone)]
 pub struct DataBuilder {
-    raw_data: Vec<u8>,
+    pub raw_data: Vec<u8>,
     pointer_pool_placeholders: HashMap<usize, GMPointer>,  // maps gamemaker element references to absolute positions of where they're referenced
     pointer_pool_resources: HashMap<GMPointer, usize>,     // maps gamemaker element references to absolute positions of where their data is
 }
@@ -39,7 +39,7 @@ impl DataBuilder {
     /// a pointer to some element, but you don't yet (necessarily) know where
     /// that element will be located in the data file.
     pub fn push_pointer_placeholder(&mut self, chunk_builder: &mut ChunkBuilder, pointer: GMPointer) -> Result<(), String> {
-        let position: usize = chunk_builder.abs_pos + chunk_builder.len() + 8;      // plus 8 for chunk name and chunk length
+        let position: usize = chunk_builder.abs_pos + chunk_builder.len();
         chunk_builder.write_usize(0);      // write placeholder
         if let Some(old_value) = self.pointer_pool_placeholders.insert(position, pointer.clone()) {
             return Err(format!(
@@ -69,16 +69,23 @@ impl DataBuilder {
         let bytes = (number as u32).to_le_bytes();
         self.raw_data.extend_from_slice(&bytes);
     }
-    pub fn write_chunk_name(&mut self, string: &str) -> Result<(), String> {
+
+    pub fn write_chunk_name(&mut self, name: &str) -> Result<(), String> {
         // write a 4 character ascii string to the data
-        for (i, char) in string.chars().enumerate() {
+        if name.len() != 4 {
+            return Err(format!("Chunk name '{}' is {} chars long, but needs to be exactly 4 chars/bytes long.", name, name.len()))
+        }
+
+        for (i, char) in name.chars().enumerate() {
             let byte: u8 = char.try_into().map_err(|e| format!(
-                "Char Typecasting error while writing chunk name \"{string}\" \
+                "Char Typecasting error while writing chunk name \"{name}\" \
                 (i: {i}) to data (len: {}): {e}", self.len()))?;
             self.raw_data.push(byte);
         }
+
         Ok(())
     }
+
     pub fn overwrite_data(&mut self, data: &[u8], position: usize) -> Result<(), String> {
         if position + data.len() >= self.len() {
             return Err(format!(
@@ -93,6 +100,7 @@ impl DataBuilder {
         }
         Ok(())
     }
+
     pub fn len(&self) -> usize {
         self.raw_data.len()
     }
@@ -147,7 +155,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
             log::info!("alarm {:?}   {} {}", pointer, resource_position, if let GMPointer::String(a) = pointer {crate::deserialize::chunk_reading::GMRef::new(a.0).resolve(&gm_data.strings.strings_by_index)?} else {"?"})
         }
 
-        let raw: &[u8] = &resource_position.to_le_bytes();
+        let raw: &[u8] = &(resource_position as u32).to_le_bytes();
         for (i, byte) in raw.iter().enumerate() {
             let source_byte: &mut u8 = builder.raw_data.get_mut(placeholder_position + i)
                 .ok_or_else(|| format!(
@@ -167,14 +175,5 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
 pub fn write_data_file(data_file_path: &Path, raw_data: &[u8]) -> Result<(), String> {
     fs::write(data_file_path, raw_data)
         .map_err(|e| format!("Could not write data file to location \"{}\": {e}", data_file_path.display()))
-}
-
-
-pub fn build_chunk(data_builder: &mut DataBuilder, chunk_builder: ChunkBuilder) -> Result<(), String> {
-    data_builder.write_chunk_name(chunk_builder.chunk_name)?;
-    data_builder.write_usize(chunk_builder.len());
-    log::info!("build chunk {} {} @ {} | {}", chunk_builder.chunk_name, chunk_builder.len(), data_builder.len(), crate::printing::hexdump(&data_builder.raw_data, data_builder.len() - 12, None)?);
-    data_builder.raw_data.extend(chunk_builder.raw_data);
-    Ok(())
 }
 

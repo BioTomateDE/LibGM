@@ -2,11 +2,11 @@ use image::{ImageBuffer, Rgba};
 use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::texture_page_items::{GMTexture, GMTexturePageItem, GMTextures};
-use crate::serialize::all::{build_chunk, DataBuilder};
+use crate::serialize::all::DataBuilder;
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
 pub fn build_chunk_tpag(data_builder: &mut DataBuilder, gm_data: &GMData, texture_page_items: Vec<GMTexturePageItem>) -> Result<(), String> {
-    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "TPAG", abs_pos: data_builder.len() };
+    let mut builder = ChunkBuilder::new(data_builder, "TPAG");
     let len: usize = texture_page_items.len();
     builder.write_usize(len);
 
@@ -31,7 +31,7 @@ pub fn build_chunk_tpag(data_builder: &mut DataBuilder, gm_data: &GMData, textur
         builder.write_u16(texture_page_item.texture_page_id);
     }
 
-    build_chunk(data_builder, builder)?;
+    builder.finish(data_builder)?;
     Ok(())
 }
 

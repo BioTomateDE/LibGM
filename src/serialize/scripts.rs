@@ -1,10 +1,10 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::scripts::GMScript;
-use crate::serialize::all::{build_chunk, DataBuilder};
+use crate::serialize::all::DataBuilder;
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
 pub fn build_chunk_scpt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
-    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "SCPT", abs_pos: data_builder.len() };
+    let mut builder = ChunkBuilder::new(data_builder, "SCPT");
     let len: usize = gm_data.scripts.scripts_by_index.len();
     builder.write_usize(len);
 
@@ -17,13 +17,20 @@ pub fn build_chunk_scpt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         let script: &GMScript = &gm_data.scripts.scripts_by_index[i];
 
         builder.write_gm_string(data_builder, &script.name)?;
-        match script.id {
-            Some(id) => builder.write_u32(id),
-            None => builder.write_i32(-1),
-        };
+        if let Some(ref code) = script.code {
+            if script.is_constructor {
+                builder.write_usize(code.index | 0x7FFFFFFF);
+            } else {
+                builder.write_usize(code.index);
+            }
+        }
+        else {
+            builder.write_i32(-1);
+        }
+
     }
 
-    build_chunk(data_builder, builder)?;
+    builder.finish(data_builder)?;
     Ok(())
-} // TODO
+}
 
