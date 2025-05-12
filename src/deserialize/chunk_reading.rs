@@ -1,4 +1,5 @@
-﻿use crate::deserialize::strings::GMStrings;
+﻿use itertools::Itertools;
+use crate::deserialize::strings::GMStrings;
 
 // GMRef is for parsing chunks:
 // It has (fake) generic types to make it
