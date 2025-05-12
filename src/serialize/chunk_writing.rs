@@ -17,7 +17,13 @@ pub struct Index(pub usize);
 // [See GMRef to understand difference]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GMPointer {
+    /// `String`: Used for string references basically everywhere.
+    /// Points to actual the actual string, not to the string gm object (which includes the upcoming string length)
     String(Index),
+    /// `StringPointerList`: Used for string list in chunk STRG.
+    /// Points to the GameMaker object (meaning it points to the string length, not the actual string data).
+    /// Effectively `String` - 4 bytes.
+    StringPointerList(Index),
     TexturePage(Index),
     TexturePageData(Index),
     Texture(Index),
@@ -48,6 +54,9 @@ pub enum GMPointer {
 impl GMPointer {
     pub fn string(string_index: usize) -> Self {
         Self::String(Index(string_index))
+    }
+    pub fn string_pointerlist(string_index: usize) -> Self {
+        Self::StringPointerList(Index(string_index))
     }
     pub fn texture_page(texture_page_index: usize) -> Self {
         Self::TexturePage(Index(texture_page_index))
