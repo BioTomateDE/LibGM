@@ -245,18 +245,10 @@ impl GMChunk<'_> {
         };
         self.cur_pos += length;
 
-        let string = match String::from_utf8(bytes) {
-            Ok(string) => string,
-            Err(error) => {
-                return Err(format!(
-                    "Could not parse literal string with length {} in chunk '{}' at position {}: {}",
-                    length,
-                    self.name,
-                    self.cur_pos - length,
-                    error
-                ));
-            }
-        };
+        let string: String = String::from_utf8(bytes).map_err(|e| format!(
+            "Could not parse literal string with length {} in chunk '{}' at position {}: {e}",
+            length, self.name, self.cur_pos - length,
+        ))?;
         Ok(string)
     }
 
@@ -271,10 +263,7 @@ impl GMChunk<'_> {
             ));
         }
 
-        match self.read_literal_string(4) {
-            Ok(string) => Ok(string),
-            Err(error) => Err(format!("Could not parse chunk name at position {}: {}", self.cur_pos, error))
-        }
+        self.read_literal_string(4).map_err(|e| format!("Could not parse chunk name at position {}: {e}", self.cur_pos))
     }
 
     pub fn read_gm_string(&mut self, gm_strings: &GMStrings) -> Result<GMRef<String>, String> {

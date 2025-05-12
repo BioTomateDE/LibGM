@@ -11,11 +11,9 @@ pub fn build_chunk_strg(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         data_builder.push_pointer_placeholder(&mut builder, GMPointer::string(i))?;
     }
 
-    for i in 0..len {
-        let string: &String = &gm_data.strings.strings_by_index[i];
-
-        builder.write_usize(string.len());
+    for (i, string) in gm_data.strings.strings_by_index.iter().enumerate() {
         data_builder.push_pointer_resolve(&mut builder, GMPointer::string(i))?;
+        builder.write_usize(string.len());
 
         builder.write_literal_string(string)?;
         builder.write_u8(0)        // write trailing null byte
