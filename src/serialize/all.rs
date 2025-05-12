@@ -151,11 +151,11 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
                 pointer, placeholder_position,
             ))?;
 
-        if *placeholder_position == 12 {
+        if *placeholder_position == 12 {    // TODO remove
             log::info!("alarm {:?}   {} {}", pointer, resource_position, if let GMPointer::String(a) = pointer {crate::deserialize::chunk_reading::GMRef::new(a.0).resolve(&gm_data.strings.strings_by_index)?} else {"?"})
         }
 
-        let raw: &[u8] = &(resource_position as u32).to_le_bytes();
+        let raw: &[u8; 4] = &(resource_position as u32).to_le_bytes();
         for (i, byte) in raw.iter().enumerate() {
             let source_byte: &mut u8 = builder.raw_data.get_mut(placeholder_position + i)
                 .ok_or_else(|| format!(
