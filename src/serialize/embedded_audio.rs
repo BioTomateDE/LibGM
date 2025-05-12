@@ -1,10 +1,10 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::embedded_audio::GMEmbeddedAudio;
-use crate::serialize::all::{build_chunk, DataBuilder};
+use crate::serialize::all::DataBuilder;
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
 pub fn build_chunk_audo(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
-    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "AUDO", abs_pos: data_builder.len() };
+    let mut builder = ChunkBuilder::new(data_builder, "AUDO");
     let len: usize = gm_data.audios.audios_by_index.len();
     builder.write_usize(len);
 
@@ -19,7 +19,7 @@ pub fn build_chunk_audo(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_bytes(&audio.raw_data);
     }
 
-    build_chunk(data_builder, builder)?;
+    builder.finish(data_builder)?;
     Ok(())
 }
 

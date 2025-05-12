@@ -1,10 +1,10 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::backgrounds::{GMBackground, GMBackgroundGMS2Data};
-use crate::serialize::all::{build_chunk, DataBuilder};
+use crate::serialize::all::DataBuilder;
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
 pub fn build_chunk_bgnd(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
-    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "BGND", abs_pos: data_builder.len() };
+    let mut builder = ChunkBuilder::new(data_builder, "BGND");
     let len: usize = gm_data.backgrounds.backgrounds_by_index.len();
     builder.write_usize(len);
 
@@ -51,7 +51,7 @@ pub fn build_chunk_bgnd(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         }
     }
 
-    build_chunk(data_builder, builder)?;
+    builder.finish(data_builder)?;
     Ok(())
 }
 

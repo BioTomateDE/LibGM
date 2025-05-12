@@ -1,10 +1,10 @@
 use crate::deserialize::all::GMData;
-use crate::serialize::all::{build_chunk, DataBuilder};
+use crate::serialize::all::DataBuilder;
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
 
 pub fn build_chunk_txtr(data_builder: &mut DataBuilder, gm_data: &GMData, texture_pages: Vec<image::DynamicImage>) -> Result<(), String> {
-    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "TXTR", abs_pos: data_builder.len() };
+    let mut builder = ChunkBuilder::new(data_builder, "TXTR");
     let len: usize = texture_pages.len();
     builder.write_usize(len);
 
@@ -38,7 +38,7 @@ pub fn build_chunk_txtr(data_builder: &mut DataBuilder, gm_data: &GMData, textur
         builder.write_bytes(&buf.into_inner());
     }
 
-    build_chunk(data_builder, builder)?;
+    builder.finish(data_builder)?;
     Ok(())
 }
 
