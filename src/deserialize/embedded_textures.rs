@@ -5,6 +5,7 @@ use crate::deserialize::general_info::GMGeneralInfo;
 use crate::printing::hexdump;
 use image;
 use bzip2::read::BzDecoder;
+use image::DynamicImage;
 use qoi;
 
 pub struct GMEmbeddedTexture {
@@ -14,15 +15,7 @@ pub struct GMEmbeddedTexture {
     pub texture_width: Option<i32>,
     pub texture_height: Option<i32>,
     pub index_in_group: Option<i32>,
-    pub texture_data: Image,
-}
-
-
-#[derive(Debug, Clone)]
-pub enum Image {
-    Img(image::DynamicImage),
-    // Png(Vec<u8>),
-    // QoiBz2(image::)
+    pub texture_data: DynamicImage,
 }
 
 
@@ -69,15 +62,8 @@ fn parse_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GM
 
     let texture_start_position: usize = chunk.read_usize()? - chunk.abs_pos;
     chunk.cur_pos = texture_start_position;
-    let texture_data: Image = read_raw_texture(chunk, general_info)?;
-
-    // println!("[TexturePage]  {:?}", texture_data);
-    // let img = match &texture_data {
-    //     Image::Img(image::DynamicImage::ImageRgba8(img)) => img,
-    //     _ => panic!()
-    // };
-    // img.save(format!("./_expimg/{}.png", texture_start_position)).unwrap();
-
+    let texture_data: DynamicImage = read_raw_texture(chunk, general_info)?;
+    
     Ok(GMEmbeddedTexture {
         scaled,
         generated_mips,
@@ -91,7 +77,7 @@ fn parse_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GM
 
 
 
-fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Image, String> {
+fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<DynamicImage, String> {
     static MAGIC_PNG_HEADER: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
     static MAGIC_BZ2_QOI_HEADER: &[u8] = "2zoq".as_bytes();
     static MAGIC_QOI_HEADER: &[u8] = "fioq".as_bytes();
@@ -112,7 +98,7 @@ fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
             let len: usize = chunk.read_usize_big_endian(true)?;
             let type_: usize = chunk.read_usize_big_endian(false)?;
             chunk.cur_pos += len + 4;
-            if type_ == 0x49454E44 {
+            if type_ == 0x49454E44 {    // no idea lol
                 break;
             }
         }
@@ -120,14 +106,14 @@ fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
 
         let bytes: &[u8] = &chunk.data[start_position .. chunk.cur_pos];
         // png image size checks etc. {}
-        let image: image::DynamicImage = match image::load_from_memory(&bytes) {
+        let image: DynamicImage = match image::load_from_memory(&bytes) {
             Ok(img) => img,
             Err(error) => return Err(format!(
                 "Could not parse PNG image for texture page at position {} in chunk 'TXTR': \"{:?}\".",
                 start_position, error,
             )),
         };
-        Ok(Image::Img(image))
+        Ok(image)
     }
     else if header.starts_with(MAGIC_BZ2_QOI_HEADER) {
         // Parse QOI + BZip2
@@ -147,7 +133,7 @@ fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
         chunk.cur_pos = start_position + header_size;
         let raw_image_data: &[u8] = &chunk.data[chunk.cur_pos.. chunk.cur_pos + compressed_length];
         chunk.cur_pos += compressed_length;
-        let image: Image = image_from_bz2_qoi(&raw_image_data, width, height)?;
+        let image: DynamicImage = image_from_bz2_qoi(&raw_image_data, width, height)?;
         Ok(image)
     }
     else if header.starts_with(MAGIC_QOI_HEADER) {
@@ -278,7 +264,7 @@ fn find_end_of_bz2_search(gm_chunk: &mut GMChunk, end_data_position: usize) -> R
 }
 
 
-fn image_from_bz2_qoi(raw_image_data: &[u8], width: usize, height: usize) -> Result<Image, String> {
+fn image_from_bz2_qoi(raw_image_data: &[u8], width: usize, height: usize) -> Result<DynamicImage, String> {
     let mut decoder: BzDecoder<&[u8]> = BzDecoder::new(raw_image_data);
     let mut decompressed_data: Vec<u8> = Vec::new();
     match decoder.read_to_end(&mut decompressed_data) {
@@ -293,7 +279,7 @@ fn image_from_bz2_qoi(raw_image_data: &[u8], width: usize, height: usize) -> Res
     image_from_qoi(&decompressed_data, width, height)
 }
 
-fn image_from_qoi(raw_image_data: &[u8], width: usize, height: usize) -> Result<Image, String> {
+fn image_from_qoi(raw_image_data: &[u8], width: usize, height: usize) -> Result<DynamicImage, String> {
     let (header, pixels) = match qoi::decode_to_vec(&raw_image_data) {
         Ok(ok) => ok,
         Err(error) => return Err(format!(
@@ -310,12 +296,11 @@ fn image_from_qoi(raw_image_data: &[u8], width: usize, height: usize) -> Result<
     let image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> = match image {
         Some(img) => img,
         None => return Err(format!(
-            "Could not convert QOI image to image::RgbImage with dimensions {}x{} while parsing chunk 'TXTR'",
+            "Could not convert QOI image to image::RgbImage with dimensions {}x{} while parsing chunk 'TXTR'.",
             width, height)),
     };
-    let image = image::DynamicImage::ImageRgba8(image);
+    let image = DynamicImage::ImageRgba8(image);
 
-    Ok(Image::Img(image))
+    Ok(image)
 }
 
-// TODO: find out why it's so slow

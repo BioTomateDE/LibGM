@@ -1,10 +1,10 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::game_objects::{GMGameObject, GMGameObjectEventAction};
-use crate::serialize::all::{build_chunk, DataBuilder};
+use crate::serialize::all::DataBuilder;
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
 pub fn build_chunk_objt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
-    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "OBJT", abs_pos: data_builder.len() };
+    let mut builder = ChunkBuilder::new(data_builder, "OBJT");
     let len: usize = gm_data.game_objects.game_objects_by_index.len();
     builder.write_usize(len);
 
@@ -51,7 +51,7 @@ pub fn build_chunk_objt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         build_game_object_events(data_builder, &mut builder, game_object, i)?;
     }
 
-    build_chunk(data_builder, builder)?;
+    builder.finish(data_builder)?;
     Ok(())
 }
 

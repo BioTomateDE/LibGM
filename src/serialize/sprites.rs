@@ -2,12 +2,12 @@ use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::sprites::{GMSpriteMaskEntry, GMSpriteNineSlice, GMSpriteType};
 use crate::deserialize::texture_page_items::GMTexture;
-use crate::serialize::all::{build_chunk, DataBuilder};
+use crate::serialize::all::DataBuilder;
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 use crate::serialize::sequence::build_sequence;
 
 pub fn build_chunk_sprt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
-    let mut builder: ChunkBuilder = ChunkBuilder { raw_data: Vec::new(), chunk_name: "SPRT", abs_pos: data_builder.len() };
+    let mut builder = ChunkBuilder::new(data_builder, "SPRT");
     builder.write_usize(gm_data.sprites.sprites_by_index.len());
 
     for i in 0..gm_data.sprites.sprites_by_index.len() {
@@ -91,7 +91,7 @@ pub fn build_chunk_sprt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         }
     }
 
-    build_chunk(data_builder, builder)?;
+    builder.finish(data_builder)?;
     Ok(())
 }
 
