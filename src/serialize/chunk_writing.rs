@@ -140,6 +140,22 @@ pub struct ChunkBuilder {
 
 
 impl ChunkBuilder {
+    pub fn new(data_builder: &mut DataBuilder, name: &'static str) -> Self {
+        Self {
+            raw_data: vec![],
+            chunk_name: name,
+            abs_pos: data_builder.len() + 8,
+        }
+        // abs_pos = data_len+8 to account for chunk name and length which is written before the actual chunk data
+    }
+
+    pub fn finish(&self, data_builder: &mut DataBuilder) -> Result<(), String> {
+        data_builder.write_chunk_name(self.chunk_name)?;
+        data_builder.write_usize(self.raw_data.len());
+        data_builder.raw_data.extend(&self.raw_data);
+        Ok(())
+    }
+
     pub fn write_u64(&mut self, number: u64) {
         for byte in number.to_le_bytes() {
             self.raw_data.push(byte);
