@@ -60,7 +60,12 @@ fn parse_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GM
         index_in_group = Some(chunk.read_i32()?);
     }
 
-    let texture_start_position: usize = chunk.read_usize()? - chunk.abs_pos;
+    let texture_abs_start_position: usize = chunk.read_usize()?;
+    let texture_start_position: usize = texture_abs_start_position.checked_sub(chunk.abs_pos)
+        .ok_or_else(|| format!(
+            "Trying to subtract with overflow for absolute texture start position {0} (0x{0:08X}) with chunk position {1}.", 
+            texture_abs_start_position, chunk.abs_pos
+        ))?;
     chunk.cur_pos = texture_start_position;
     let texture_data: DynamicImage = read_raw_texture(chunk, general_info)?;
     
