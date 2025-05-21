@@ -132,9 +132,9 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     build_chunk_room(&mut builder, &gm_data)?;
     build_chunk_dafl(&mut builder, &gm_data)?;      // stub
     build_chunk_tpag(&mut builder, &gm_data, texture_page_items)?;
-    build_chunk_code(&mut builder, &gm_data)?;
-    build_chunk_vari(&mut builder, &gm_data)?;
-    build_chunk_func(&mut builder, &gm_data)?;
+    let (variable_occurrences_map, function_occurrences_map): (HashMap<usize, Vec<usize>>, HashMap<usize, Vec<usize>>) = build_chunk_code(&mut builder, &gm_data)?;
+    build_chunk_vari(&mut builder, &gm_data, variable_occurrences_map)?;
+    build_chunk_func(&mut builder, &gm_data, function_occurrences_map)?;
     build_chunk_strg(&mut builder, &gm_data)?;
     build_chunk_txtr(&mut builder, &gm_data, texture_pages)?;
     build_chunk_audo(&mut builder, &gm_data)?;

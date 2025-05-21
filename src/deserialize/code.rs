@@ -105,7 +105,7 @@ impl Display for GMInstanceType {
         }
     }
 }
-#[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum GMVariableType {
     Array = 0x00,
@@ -402,10 +402,10 @@ impl GMCodeBlob<'_> {
         let variable_type: GMVariableType = variable_type.try_into()
             .map_err(|_| format!("Invalid Variable Type 0x{variable_type:02X} while parsing variable reference chain."))?;
 
-        let variable: GMRef<GMVariable> = variables.occurrence_map.get(&occurrence_position)
+        let variable: GMRef<GMVariable> = variables.occurrences_to_refs.get(&occurrence_position)
             .ok_or_else(|| format!(
                 "Could not find {} Variable with occurrence position {} in hashmap with length {} while parsing code values.",
-                instance_type, occurrence_position, variables.occurrence_map.len(),
+                instance_type, occurrence_position, variables.occurrences_to_refs.len(),
             ))?.clone();
 
         Ok(GMCodeVariable { variable, variable_type })
@@ -773,5 +773,51 @@ pub fn parse_instance_type(raw_value: i16) -> Result<GMInstanceType, String> {
     };
 
     Ok(instance_type)
+}
+
+
+pub fn parse_occurrence_chain(
+    chunk_code: &mut GMChunk,
+    gm_name: &str,
+    first_occurrence_abs_pos: i32,
+    occurrence_count: usize,
+) -> Result<(Vec<usize>, i32), String> {
+    if occurrence_count < 1 {
+        return Ok((vec![], first_occurrence_abs_pos));
+    }
+
+    let occurrence_pos: i32 = first_occurrence_abs_pos - chunk_code.abs_pos as i32 + 4;
+    let mut occurrence_pos: usize = occurrence_pos.try_into()
+        .map_err(|_| format!(
+            "First occurrence of variable/function \"{}\" is out of bounds; should be: {} <= {} < {}.",
+            gm_name, chunk_code.abs_pos, first_occurrence_abs_pos, chunk_code.abs_pos + chunk_code.data.len(),
+        ))?;
+
+    let mut occurrences: Vec<usize> = Vec::with_capacity(occurrence_count);
+    let mut offset: i32 = first_occurrence_abs_pos;
+
+    for _ in 0..occurrence_count {
+        occurrences.push(occurrence_pos);
+        chunk_code.cur_pos = occurrence_pos;
+        offset = read_occurrence(chunk_code)?;
+        occurrence_pos += offset as usize;
+    }
+
+    let name_string_id: i32 = offset;
+
+    Ok((occurrences, name_string_id))
+}
+
+
+fn read_occurrence(chunk_code: &mut GMChunk) -> Result<i32, String> {
+    let raw_value: i32 = chunk_code.read_i32()?;
+    let next_occurrence_offset: i32 = raw_value & 0x07FFFFFF;
+    if next_occurrence_offset < 1 {
+        return Err(format!(
+            "Next occurrence offset is {0} (0x{0:08X}) should be positive while parsing variable/function occurrences at absolute position {1} (raw value is 0x{2:08X}).",
+            next_occurrence_offset, chunk_code.cur_pos-4, raw_value,
+        ))
+    }
+    Ok(next_occurrence_offset)
 }
 

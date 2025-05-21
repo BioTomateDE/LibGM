@@ -1,26 +1,41 @@
+use std::collections::HashMap;
 use crate::deserialize::all::GMData;
-use crate::deserialize::functions::GMFunction;
 use crate::serialize::all::DataBuilder;
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
-pub fn build_chunk_func(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
+pub fn build_chunk_func(data_builder: &mut DataBuilder, gm_data: &GMData, function_occurrences_map: HashMap<usize, Vec<usize>>) -> Result<(), String> {
     let mut builder = ChunkBuilder::new(data_builder, "FUNC");
-    let len: usize = gm_data.functions.functions_by_index.len();
-    builder.write_usize(len);
+    builder.write_usize(gm_data.functions.functions_by_index.len());
 
-    for i in 0..len {
+    for i in 0..gm_data.functions.functions_by_index.len() {
         data_builder.push_pointer_placeholder(&mut builder, GMPointer::function(i))?;
     }
 
-    for i in 0..len {
+    for (i, function) in gm_data.functions.functions_by_index.iter().enumerate() {
         data_builder.push_pointer_resolve(&mut builder, GMPointer::function(i))?;
-        let function: &GMFunction = &gm_data.functions.functions_by_index[i];
-
         builder.write_gm_string(data_builder, &function.name)?;
-        builder.write_usize(function.occurrences.len());
-        match function.occurrences.get(0) {
-            Some(occurrence_position) => builder.write_usize(*occurrence_position),
-            None => builder.write_i32(-1),
+        
+        if let Some(occurrences) = function_occurrences_map.get(&i) {
+            builder.write_usize(occurrences.len());
+            builder.write_usize(occurrences[0]);
+        } else {
+            builder.write_i32(-1);
+            builder.write_i32(function.name_string_id);
+        }
+    }
+
+    for i in 0..gm_data.code_locals.len() {
+        data_builder.push_pointer_placeholder(&mut builder, GMPointer::code_local(i))?;
+    }
+
+    for (i, code_local) in gm_data.code_locals.iter().enumerate() {
+        data_builder.push_pointer_resolve(&mut builder, GMPointer::code_local(i))?;
+        builder.write_gm_string(data_builder, &code_local.name)?;
+        builder.write_usize(code_local.variables.len());
+        
+        for variable in &code_local.variables {
+            builder.write_usize(variable.index);
+            builder.write_gm_string(data_builder, &variable.name)?;
         }
     }
 
