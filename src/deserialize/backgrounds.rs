@@ -9,7 +9,7 @@ pub struct GMBackground {
     pub transparent: bool,
     pub smooth: bool,
     pub preload: bool,
-    pub texture: GMRef<GMTexture>,
+    pub texture: Option<GMRef<GMTexture>>,
     pub gms2_data: Option<GMBackgroundGMS2Data>,
 }
 
@@ -54,9 +54,12 @@ pub fn parse_chunk_bgnd(
         let smooth: bool = chunk.read_bool32()?;
         let preload: bool = chunk.read_bool32()?;
         let texture_abs_pos: usize = chunk.read_usize()?;
-        let texture: &GMRef<GMTexture> = textures.abs_pos_to_ref.get(&texture_abs_pos)
-            .ok_or(format!("Could not find texture with absolute position {} for Background with name \"{}\" at position {} in chunk 'BGND'.",
-                texture_abs_pos, name.display(strings), start_position))?;
+        let texture: Option<GMRef<GMTexture>> = if texture_abs_pos == 0 { None } else { 
+            Some(textures.abs_pos_to_ref.get(&texture_abs_pos)
+                .ok_or_else(|| format!("Could not find texture with absolute position {} for Background with name \"{}\" at position {} in chunk 'BGND'.", 
+                                       texture_abs_pos, name.display(strings), start_position))?
+                .clone())
+        };
 
         let mut gms2_data: Option<GMBackgroundGMS2Data> = None;
         if general_info.is_version_at_least(2, 0, 0, 0) {
@@ -97,7 +100,7 @@ pub fn parse_chunk_bgnd(
             transparent,
             smooth,
             preload,
-            texture: texture.clone(),
+            texture,
             gms2_data,
         };
         backgrounds_by_index.push(background);

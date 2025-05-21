@@ -7,7 +7,7 @@ use crate::deserialize::rooms::{GMRoom, GMRoomBackground, GMRoomFlags, GMRoomGam
 use crate::deserialize::sequence::{GMKeyframe, GMKeyframeMoment, GMSequence, GMTrack};
 use crate::deserialize::sounds::{GMSound, GMSoundFlags};
 use crate::deserialize::strings::GMStrings;
-use crate::deserialize::texture_page_items::{GMTexture, GMTextures};
+use crate::deserialize::texture_page_items::GMTexture;
 
 #[allow(dead_code)]
 impl GMGeneralInfo {
@@ -440,7 +440,7 @@ impl GMFont {
 impl GMFontGlyph {
     pub fn print(&self) {
         println!("GMGlyph:");
-        println!("  Character: '{}'", self.character);
+        println!("  Character: {}", if let Some(chr) = self.character { format!("'{chr}'") } else { "None".to_string() });
         println!("  Position: ({}; {})", self.x, self.y);
         println!("  Size: {} x {}", self.width, self.height);
         println!("  Shift Modifier: {}", self.shift_modifier);
@@ -676,14 +676,13 @@ impl GMTexture {
 
 #[allow(dead_code)]
 impl GMBackground {
-    pub fn print(&self, strings: &GMStrings, textures: &GMTextures) -> Result<(), String> {
+    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMBackground:");
         println!("  Name: \"{}\"", self.name.resolve(&strings.strings_by_index)?);
         println!("  Transparent: {}", self.transparent);
         println!("  Smooth: {}", self.smooth);
         println!("  Preload: {}", self.preload);
-        println!("  Texture Index: {}", self.texture.index);
-        self.texture.resolve(&textures.textures_by_index)?.print();
+        println!("  Texture Index: {}", if let Some(ref tex) = self.texture { format!("{}", tex.index) } else { "None".to_string() });
         if let Some(ref gms2_data) = self.gms2_data {
             println!("  GMS2 Unknown Always 2: {:?}", gms2_data.unknown_always2);
             println!("  GMS2 Tile Width: {:?}", gms2_data.tile_width);

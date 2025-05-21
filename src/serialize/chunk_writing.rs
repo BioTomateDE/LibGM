@@ -225,14 +225,8 @@ impl ChunkBuilder {
         self.write_u32(number);
     }
     pub fn write_literal_string(&mut self, string: &str) -> Result<(), String> {
-        // write an ascii string to the data
-        for (i, char) in string.chars().enumerate() {
-            let byte: u8 = match char.try_into() {
-                Ok(byte) => byte,
-                Err(_) => return Err(format!("Char Typecasting error while writing string \"{string}\" (i: {i}) to chunk (len: {})", self.len())),
-            };
-            self.raw_data.push(byte);
-        }
+        // write an utf-8 string to the data
+        self.raw_data.extend_from_slice(string.as_bytes());
         Ok(())
     }
     pub fn write_gm_string(&mut self, data_builder: &mut DataBuilder, string_ref: &GMRef<String>) -> Result<(), String> {
@@ -254,27 +248,6 @@ impl ChunkBuilder {
         };
 
         for (i, byte) in data.iter().enumerate() {
-            self.raw_data[position + i] = *byte;
-        }
-
-        Ok(())
-    }
-
-    pub fn overwrite_pointer(&mut self, start_position: usize, index: usize) -> Result<(), String> {
-        // start position should be relative to chunk
-        let position: usize = start_position + index * 4;
-        if position + 4 >= self.len() {
-            return Err(format!(
-                "Could not overwrite usize/pointer at position {} (abs: {}) in data with length {} while building chunk.",
-                position,
-                self.abs_pos + position,
-                self.len()
-            ))
-        };
-
-        let number: usize = self.abs_pos + self.len();
-        let bytes = (number as u32).to_le_bytes();
-        for (i, byte) in bytes.iter().enumerate() {
             self.raw_data[position + i] = *byte;
         }
 

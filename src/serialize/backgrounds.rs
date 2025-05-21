@@ -20,7 +20,11 @@ pub fn build_chunk_bgnd(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_bool32(background.transparent);
         builder.write_bool32(background.smooth);
         builder.write_bool32(background.preload);
-        data_builder.push_pointer_placeholder(&mut builder, GMPointer::texture(background.texture.index))?;
+        if let Some(ref texture) = background.texture {
+            data_builder.push_pointer_placeholder(&mut builder, GMPointer::texture(texture.index))?;
+        } else {
+            builder.write_usize(0);
+        }
 
         if gm_data.general_info.is_version_at_least(2, 0, 0, 0) {
             let gms2_data: &GMBackgroundGMS2Data = background.gms2_data.as_ref()
