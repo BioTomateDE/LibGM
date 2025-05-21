@@ -27,7 +27,7 @@ pub struct GMFont {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMFontGlyph {
-    pub character: char,
+    pub character: Option<char>,
     pub x: u16,
     pub y: u16,
     pub width: u16,
@@ -131,19 +131,14 @@ fn parse_glyphs(chunk: &mut GMChunk, font_name: &str) -> Result<Vec<GMFontGlyph>
     }
 
     let mut glyphs: Vec<GMFontGlyph> = Vec::with_capacity(glyph_count);
-    for start_position in glyph_starting_positions {
-        chunk.cur_pos = start_position;
+    for (i, start_position) in glyph_starting_positions.iter().enumerate() {
+        chunk.cur_pos = *start_position;
 
         let character: i16 = chunk.read_i16()?;
-        let character: char = match char::from_u32(character as u32) {
-            Some(ch) => ch,
-            None => return Err(format!(
-                "Invalid unicode character 0x{:04X} at position {} in chunk 'FONT' while parsing glyphs for font {}.",
-                character,
-                chunk.cur_pos,
-                font_name,
-            )),
-        };
+        let character: Option<char> = convert_char(character).map_err(|_| format!(
+            "Invalid character 0x{:04X} at absolute position {} in chunk 'FONT' for glyph #{} of font \"{}\".",
+            character, chunk.abs_pos+chunk.cur_pos, i, font_name,
+        ))?;
         let x: u16 = chunk.read_u16()?;
         let y: u16 = chunk.read_u16()?;
         let width: u16 = chunk.read_u16()?;
@@ -161,11 +156,22 @@ fn parse_glyphs(chunk: &mut GMChunk, font_name: &str) -> Result<Vec<GMFontGlyph>
             shift_modifier,
             offset,
         };
-        // glyph.print();
-        // println!("\n");
         glyphs.push(glyph);
     }
 
     Ok(glyphs)
 }
+
+
+fn convert_char(value: i16) -> Result<Option<char>, ()> {
+    if value == 0 {
+        return Ok(None);
+    }
+    let char_code = value as u16;
+    match char::from_u32(char_code as u32) {
+        Some(c) => Ok(Some(c)),
+        None => Err(()),
+    }
+}
+
 

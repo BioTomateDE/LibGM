@@ -22,7 +22,7 @@ pub fn parse_chunk_strg(chunk: &mut GMChunk) -> Result<GMStrings, String> {
 
     for (i, abs_start_position) in abs_start_positions.iter().enumerate() {
         chunk.cur_pos = *abs_start_position - chunk.abs_pos;
-        log::info!("afasfax {} {} {}", i, abs_start_position, chunk.cur_pos);
+        // log::info!("afasfax {} {} {}", i, abs_start_position, chunk.cur_pos);
         let string_length: usize = chunk.read_usize()?;
         let string: String = chunk.read_literal_string(string_length)?;
         strings_by_index.push(string.clone());
