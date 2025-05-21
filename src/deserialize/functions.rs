@@ -1,18 +1,21 @@
 ﻿use std::collections::HashMap;
 use crate::deserialize::chunk_reading::{GMChunk, GMRef};
+use crate::deserialize::code::parse_occurrence_chain;
 use crate::deserialize::strings::GMStrings;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMFunction {
     pub name: GMRef<String>,
-    pub occurrences: Vec<usize>,                // list of occurrences (call instructions) positions relative to chunk CODE
+    pub name_string_id: i32,
 }
 
 
 #[derive(Debug, Clone)]
 pub struct GMFunctions {
     pub functions_by_index: Vec<GMFunction>,
-    pub occurrences_to_refs: HashMap<usize, GMRef<GMFunction>>,     // maps all occurrence addresses/positions (relative to chunk CODE) to function refs
+    /// Maps absolute positions of function occurrences (in code) to function references.
+    /// Only meant for parsing code; irrelevant (and potentially incorrect) after parsing.
+    pub occurrences_to_refs: HashMap<usize, GMRef<GMFunction>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -26,7 +29,7 @@ pub struct GMCodeLocal {
     pub variables: Vec<GMCodeLocalVariable>,
 }
 
-pub fn parse_chunk_func(chunk: &mut GMChunk, strings: &GMStrings, chunk_code: &GMChunk) -> Result<(GMFunctions, Vec<GMCodeLocal>), String> {
+pub fn parse_chunk_func(chunk: &mut GMChunk, strings: &GMStrings, chunk_code: &mut GMChunk) -> Result<(GMFunctions, Vec<GMCodeLocal>), String> {
     chunk.cur_pos = 0;
     let functions_count: usize = chunk.read_usize()?;
     let mut functions_by_index: Vec<GMFunction> = Vec::with_capacity(functions_count);
@@ -36,7 +39,7 @@ pub fn parse_chunk_func(chunk: &mut GMChunk, strings: &GMStrings, chunk_code: &G
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
         let occurrence_count: usize = chunk.read_usize()?;
         let first_occurrence: i32 = chunk.read_i32()?;
-        let occurrences: Vec<usize> = parse_occurrence_chain(chunk_code, name.resolve(&strings.strings_by_index)?, first_occurrence, occurrence_count)?;
+        let (occurrences, name_string_id): (Vec<usize>, i32) = parse_occurrence_chain(chunk_code, name.resolve(&strings.strings_by_index)?, first_occurrence, occurrence_count)?;
 
         for occurrence in &occurrences {
             if let Some(old_value) = occurrences_to_refs.insert(*occurrence, GMRef::new(i)) {
@@ -50,7 +53,7 @@ pub fn parse_chunk_func(chunk: &mut GMChunk, strings: &GMStrings, chunk_code: &G
 
         let function: GMFunction = GMFunction {
             name,
-            occurrences,
+            name_string_id,
         };
         functions_by_index.push(function);
     }
@@ -85,46 +88,5 @@ pub fn parse_chunk_func(chunk: &mut GMChunk, strings: &GMStrings, chunk_code: &G
 
     }
 
-    // for i in &functions {
-    //     println!("[Function]    {:<32} | {:<4} | {:?}", i.name, i.occurrences.len(), i.occurrences);
-    // }
-    // for i in &code_locals {
-    //     println!("[Code Local]    {:<48} | {:?}", i.name, i.variables);
-    // }
-
     Ok((functions, code_locals))
 }
-
-
-fn parse_occurrence_chain(chunk_code: &GMChunk, function_name: &str, first_occurrence_abs_pos: i32, occurrence_count: usize) -> Result<Vec<usize>, String> {
-    if occurrence_count < 1 {
-        return Ok(vec![]);
-    }
-
-    let occurrence_pos: i32 = first_occurrence_abs_pos - chunk_code.abs_pos as i32 + 4;
-    let mut occurrence_pos: usize = occurrence_pos.try_into()
-        .map_err(|_| format!(
-            "First occurrence of function \"{}\" is out of bounds; should be: {} <= {} < {}.",
-            function_name, chunk_code.abs_pos, first_occurrence_abs_pos, chunk_code.abs_pos + chunk_code.data.len(),
-        ))?;
-
-    let mut occurrences: Vec<usize> = Vec::with_capacity(occurrence_count);
-
-    for _ in 0..occurrence_count {
-        occurrences.push(occurrence_pos);
-        let raw: [u8; 4] = chunk_code.data.get(occurrence_pos .. occurrence_pos+4)
-            .ok_or_else(|| format!("Trying to read next occurrence offset out of bounds \
-            while parsing function reference chain: {} > {}", occurrence_pos, chunk_code.data.len()))?
-            .try_into().unwrap();
-
-        if chunk_code.data[occurrence_pos- 1] != 0xD9 {
-            log::error!("Function {function_name} not D9: {occurrence_pos} {}", chunk_code.data[occurrence_pos - 1]);
-            break;
-        }
-        occurrence_pos += i32::from_le_bytes(raw) as usize;
-    }
-
-
-    Ok(occurrences)
-}
-
