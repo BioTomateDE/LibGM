@@ -16,8 +16,8 @@ pub fn build_chunk_font(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     for i in 0..font_count {
         let font: &GMFont = &gm_data.fonts.fonts_by_index[i];
         data_builder.push_pointer_resolve(&mut builder, GMPointer::font(i))?;
-        builder.write_literal_string(&font.name.resolve(&gm_data.strings.strings_by_index)?)?;
-        builder.write_literal_string(&font.display_name.resolve(&gm_data.strings.strings_by_index)?)?;
+        builder.write_gm_string(data_builder, &font.name)?;
+        builder.write_gm_string(data_builder, &font.display_name)?;
         builder.write_u32(font.em_size);
         builder.write_u32(if font.bold {1} else {0});
         builder.write_u32(if font.italic {1} else {0});
@@ -61,13 +61,8 @@ fn build_glyphs(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, glyp
     for (i, glyph) in glyphs.iter().enumerate() {
         data_builder.push_pointer_resolve(builder, GMPointer::font_glyph(font_index, i))?;
 
-        let character: u16 = glyph.character.try_into()
-            .map_err(|e| format!(
-                "Unable to fit character '{}' (0x{:04X}) into 16 bits \
-                (which is required by GameMaker) for glyph with index {} \
-                in font \"{}\". Error message: {e}",
-                glyph.character, glyph.character as u32, i, font_name,
-            ))?;
+        let character: u16 = convert_char(glyph.character)
+            .map_err(|e| format!("{e} for glyph #{i} of font \"{font_name}\"."))?;
         
         builder.write_u16(character);
         builder.write_u16(glyph.x);
@@ -80,5 +75,18 @@ fn build_glyphs(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, glyp
     }
 
     Ok(())
+}
+
+
+fn convert_char(character: Option<char>) -> Result<u16, String> {
+    match character {
+        None => Ok(0),
+        Some(ch) => {
+            let number: u32 = ch.into();
+            let number: u16 = u16::try_from(number)
+                .map_err(|_| format!("Could not fit character '{ch}' (0x{number:08X}) into 16 bits (which is required by GameMaker)"))?;
+            Ok(number)
+        }
+    }
 }
 

@@ -100,7 +100,8 @@ impl GModData<'_, '_> {
 
         for glyph in gm_glyphs {
             mod_glyphs.push(ModFontGlyph {
-                character: Some(glyph.character),
+                // character: Some(glyph.character),
+                character: None,    //TODO
                 x: Some(glyph.x),
                 y: Some(glyph.y),
                 width: Some(glyph.width),
@@ -119,7 +120,8 @@ impl GModData<'_, '_> {
 
         for (index, (original, modified)) in &changes.edits {
             edits.insert(*index, ModFontGlyph {
-                character: edit_field(&original.character, &modified.character),
+                // character: edit_field(&original.character, &modified.character),
+                character: None, //TODO
                 x: edit_field(&original.x, &modified.x),
                 y: edit_field(&original.y, &modified.y),
                 width: edit_field(&original.width, &modified.width),

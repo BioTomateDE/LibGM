@@ -175,13 +175,10 @@ impl GMChunk<'_> {
         static FAILSAFE_AMOUNT: usize = 200_000_000;
 
         let bytes: [u8; 4] = self.data.get(self.cur_pos.. self.cur_pos + 4)
-            .ok_or(format!(
+            .ok_or_else(|| format!(
                 "Trying to read big endian usize integer (u32) \
                 out of bounds in chunk '{}' at position {}: {} > {}.",
-                self.name,
-                self.cur_pos,
-                self.cur_pos + 4,
-                self.data.len()
+                self.name, self.cur_pos, self.cur_pos + 4, self.data.len(),
             ))?
             .try_into().unwrap();
         self.cur_pos += 4;
@@ -195,10 +192,7 @@ impl GMChunk<'_> {
         Err(format!(
             "Failsafe triggered in chunk '{}' at position {} trying \
             to read big endian usize integer: Number {} is larger than failsafe amount {}.",
-            self.name,
-            self.cur_pos - 4,
-            number,
-            FAILSAFE_AMOUNT
+            self.name, self.cur_pos - 4, number, FAILSAFE_AMOUNT,
         ))
     }
 
@@ -207,10 +201,7 @@ impl GMChunk<'_> {
         if self.cur_pos + 4 > self.data.len() {
             return Err(format!(
                 "Trying to read f32 out of bounds in chunk '{}' at position {}: {} > {}.",
-                self.name,
-                self.cur_pos,
-                self.cur_pos + 4,
-                self.data.len()
+                self.name, self.cur_pos, self.cur_pos + 4, self.data.len(),
             ));
         }
 
