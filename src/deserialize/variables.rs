@@ -61,7 +61,8 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
             GMInstanceType::Undefined   // idk if this information is even available atp
         };
 
-        let occurrences_count: usize = chunk.read_usize()?;
+        let occurrences_count: i32 = chunk.read_i32()?;
+        let occurrences_count: usize = if occurrences_count < 0 { 0 } else { occurrences_count as usize };
         let first_occurrence_address: i32 = chunk.read_i32()?;
 
         let (occurrences, name_string_id): (Vec<usize>, i32) = parse_occurrence_chain(
