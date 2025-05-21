@@ -34,6 +34,7 @@ pub enum GMPointer {
     Sound(Index),
     Variable(Index),
     Function(Index),
+    CodeLocal(Index),
     Script(Index),
     GameObject(Index),
     GameObjectEvent(Index, Index),
@@ -87,6 +88,9 @@ impl GMPointer {
     }
     pub fn function(function_index: usize) -> Self {
         Self::Function(Index(function_index))
+    }
+    pub fn code_local(code_local_index: usize) -> Self {
+        Self::CodeLocal(Index(code_local_index))
     }
     pub fn script(script_index: usize) -> Self {
         Self::Script(Index(script_index))

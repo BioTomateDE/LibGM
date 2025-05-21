@@ -1,11 +1,13 @@
+use std::collections::HashMap;
 use crate::deserialize::all::GMData;
-use crate::deserialize::code::{GMDataType, GMInstanceType, GMInstruction, GMOpcode, GMValue};
-use crate::deserialize::variables::GMVariables;
+use crate::deserialize::code::{GMDataType, GMInstanceType, GMInstruction, GMOpcode, GMValue, GMVariableType};
+use crate::deserialize::functions::{GMFunction, GMFunctions};
+use crate::deserialize::variables::{GMVariable, GMVariables};
 use crate::serialize::all::DataBuilder;
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
 
-pub fn build_chunk_code(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
+pub fn build_chunk_code(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(HashMap<usize, Vec<usize>>, HashMap<usize, Vec<usize>>), String> {
     let mut builder = ChunkBuilder::new(data_builder, "CODE");
     let len: usize = gm_data.codes.codes_by_index.len();
     builder.write_usize(len);
@@ -30,7 +32,10 @@ pub fn build_chunk_code(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_u32(code.locals_count);
         builder.write_u32(code.arguments_count);
     }
-
+    
+    let mut variable_occurrences_map: HashMap<usize, Vec<usize>> = HashMap::new();
+    let mut function_occurrences_map: HashMap<usize, Vec<usize>> = HashMap::new();
+    
     for (i, code) in gm_data.codes.codes_by_index.iter().enumerate() {
         data_builder.push_pointer_resolve(&mut builder, GMPointer::code(i))?;
         let placeholder_position: usize = code_meta_placeholders[i];
@@ -41,7 +46,7 @@ pub fn build_chunk_code(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         let start_position: usize = builder.len();
 
         for instruction in &code.instructions {
-            build_instruction(data_builder, &mut builder, bytecode14, &gm_data.variables, &instruction)?;
+            build_instruction(&mut builder, bytecode14, &gm_data.variables, &gm_data.functions, &instruction, &mut variable_occurrences_map, &mut function_occurrences_map)?;
         }
 
         let instructions_length: usize = builder.len() - start_position;
@@ -51,16 +56,20 @@ pub fn build_chunk_code(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     }
 
     builder.finish(data_builder)?;
-    Ok(())
+    Ok((variable_occurrences_map, function_occurrences_map))
 }
 
 fn build_instruction(
-    data_builder: &mut DataBuilder,
     builder: &mut ChunkBuilder,
     bytecode14: bool,
     variables: &GMVariables,
+    functions: &GMFunctions,
     instruction: &GMInstruction,
+    variable_occurrences_map: &mut HashMap<usize, Vec<usize>>,
+    function_occurrences_map: &mut HashMap<usize, Vec<usize>>,
 ) -> Result<(), String> {
+    let abs_pos: usize = builder.abs_pos + builder.len();
+    
     match instruction {
         GMInstruction::SingleType(instr) => {
             let opcode_raw: u8 = if !bytecode14 { instr.opcode.into() } else {
@@ -164,6 +173,9 @@ fn build_instruction(
             builder.write_i16(build_instance_type(&instr.instance_type));
             builder.write_u8(type1 | type2 << 4);
             builder.write_u8(opcode_raw);
+            
+            let variable: &GMVariable = instr.destination.variable.resolve(&variables.variables)?;
+            write_occurrence(builder, variable_occurrences_map, instr.destination.variable.index, abs_pos, variable.name_string_id, Some(instr.destination.variable_type))?;
         }
 
         GMInstruction::Push(instr) => {
@@ -184,7 +196,11 @@ fn build_instruction(
                 GMValue::Int64(int64) => builder.write_i64(*int64),
                 GMValue::Boolean(boolean) => builder.write_u8(if *boolean {1} else {0}),
                 GMValue::String(string_ref) => builder.write_usize(string_ref.index),
-                GMValue::Variable(_) | GMValue::Int16(_) => {}     // nothing because it was already written inside the instruction
+                GMValue::Int16(_) => {}     // nothing because it was already written inside the instruction
+                GMValue::Variable(code_variable) => {
+                    let variable: &GMVariable = code_variable.variable.resolve(&variables.variables)?;
+                    write_occurrence(builder, variable_occurrences_map, code_variable.variable.index, abs_pos, variable.name_string_id, Some(code_variable.variable_type))?;
+                }
             }
         }
 
@@ -192,7 +208,9 @@ fn build_instruction(
             builder.write_u8(instr.arguments_count as u8);
             builder.write_u8(instr.data_type.into());
             builder.write_u8(if bytecode14 { instr.opcode.into() } else { 0xDA });
-            data_builder.push_pointer_placeholder(builder, GMPointer::function(instr.function.index))?;
+
+            let function: &GMFunction = instr.function.resolve(&functions.functions_by_index)?;
+            write_occurrence(builder, function_occurrences_map, instr.function.index, abs_pos, function.name_string_id, None)?;
         }
 
         GMInstruction::Break(instr) => {
@@ -225,5 +243,36 @@ pub fn build_instance_type(instance_type: &GMInstanceType) -> i16 {
         GMInstanceType::Arg => -15,
         GMInstanceType::Static => -16,
     }
+}
+
+
+
+fn write_occurrence(
+    builder: &mut ChunkBuilder,
+    occurrence_map: &mut HashMap<usize, Vec<usize>>,
+    gm_index: usize,
+    occurrence_position: usize,
+    name_string_id: i32,
+    variable_type: Option<GMVariableType>,
+) -> Result<(), String> {
+    let entry: &mut Vec<usize> = occurrence_map
+        .entry(gm_index)
+        .or_insert_with(Vec::new);
+
+    if let Some(last_occurrence_position) = entry.last() {
+        // replace last occurrence (which is name string id) with next occurrence offset
+        let occurrence_offset: i32 = occurrence_position as i32 - *last_occurrence_position as i32;
+        let variable_type_raw: u8 = if let Some(var_type) = variable_type { var_type.into() } else { 0 };
+        let occurrence_offset_full: i32 = occurrence_offset & 0x07FFFFFF | ((variable_type_raw & 0xF8) as i32);        // TODO this is 17% wrong
+        let bytes: [u8; 4] = occurrence_offset_full.to_le_bytes();
+        builder.overwrite_data(&bytes, last_occurrence_position - builder.abs_pos)?;
+    }
+    
+    // write name string id for this occurrence. this is correct if it is the last occurrence.
+    // otherwise, it will be overwritten later by the code above.
+    builder.write_i32(name_string_id);
+    
+    entry.push(occurrence_position);
+    Ok(())
 }
 
