@@ -105,7 +105,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let sprites: GMSprites = parse_chunk_sprt(&mut chunk_sprt, &general_info, &strings, &textures)?;
     let scripts: GMScripts = parse_chunk_scpt(&mut chunk_scpt, &strings)?;
     let variables: GMVariables = parse_chunk_vari(&mut chunk_vari, &strings, &general_info, &mut chunk_code)?;
-    let (functions, code_locals): (GMFunctions, Vec<GMCodeLocal>) = parse_chunk_func(&mut chunk_func, &strings, &chunk_code)?;
+    let (functions, code_locals): (GMFunctions, Vec<GMCodeLocal>) = parse_chunk_func(&mut chunk_func, &strings, &mut chunk_code)?;
     let codes: GMCodes = parse_chunk_code(&mut chunk_code, general_info.bytecode_version <= 14, &strings, &variables, &functions)?;
     let fonts: GMFonts = parse_chunk_font(&mut chunk_font, &general_info, &strings, &textures)?;
     let audios: GMEmbeddedAudios = parse_chunk_audo(&mut chunk_audo)?;
@@ -141,7 +141,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
 
 pub fn read_data_file(data_file_path: &Path) -> Result<Vec<u8>, String> {
     fs::read(data_file_path)
-        .map_err(|e| format!("Could not read data file with path \"{}\": {e}", data_file_path.display()))
+        .map_err(|e| format!("Could not read data file with path \"{}\": {e}.", data_file_path.display()))
 }
 
 fn get_chunk<'a>(chunks: &HashMap<String, GMChunk<'a>>, chunk_name: &str) -> Result<GMChunk<'a>, String> {
@@ -149,8 +149,7 @@ fn get_chunk<'a>(chunks: &HashMap<String, GMChunk<'a>>, chunk_name: &str) -> Res
         .map(|i| i.to_owned())
         .ok_or_else(|| format!(
             "Chunk '{}' is missing in data file (chunk hashmap length: {}).",
-            chunk_name,
-            chunks.len()
+            chunk_name, chunks.len(), 
         ))
 }
 

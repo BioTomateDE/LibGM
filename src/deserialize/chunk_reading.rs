@@ -1,9 +1,8 @@
-﻿use itertools::Itertools;
-use crate::deserialize::strings::GMStrings;
+﻿use crate::deserialize::strings::GMStrings;
 
 // GMRef is for parsing chunks:
-// It has (fake) generic types to make it
-// clearer which type it belongs to (`name: GMRef` vs `name: GMRef<String>`).
+// It has (fake) generic types to make it clearer
+// which type it belongs to (`name: GMRef` vs `name: GMRef<String>`).
 // It can be resolved to the data it references using the `.resolve()` method,
 // which needs the list the elements are stored in.
 // [See GMPointer to understand difference]
@@ -232,7 +231,7 @@ impl GMChunk<'_> {
             None => return Err(format!(
                 "Trying to read literal string with length {} out of bounds \
                 in chunk '{}' at position {}: {} > {}.",
-                length, self.name, self.cur_pos, self.cur_pos + length, self.data.len()
+                length, self.name, self.cur_pos, self.cur_pos + length, self.data.len(),
             )),
         };
         self.cur_pos += length;
@@ -249,13 +248,16 @@ impl GMChunk<'_> {
         if self.cur_pos + 4 > self.data.len() {
             return Err(format!(
                 "Trying to read chunk name out of bounds at position {}: {} > {}.",
-                self.cur_pos,
-                self.cur_pos + 4,
-                self.data.len()
+                self.cur_pos, self.cur_pos + 4, self.data.len(),
             ));
         }
 
-        self.read_literal_string(4).map_err(|e| format!("Could not parse chunk name at position {}: {e}", self.cur_pos))
+        self.read_literal_string(4)
+            .map_err(|e| if self.abs_pos == 0 && self.cur_pos == 4 {
+                "Invalid data.win file (because it doesn't start with 'FORM')!".to_string()
+            } else { 
+                format!("Could not parse chunk name at position {}: {e}.", self.cur_pos)
+            })
     }
 
     pub fn read_gm_string(&mut self, gm_strings: &GMStrings) -> Result<GMRef<String>, String> {
