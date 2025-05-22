@@ -170,6 +170,7 @@ pub fn parse_chunk_room(
         let width: u32 = chunk.read_u32()?;
         let height: u32 = chunk.read_u32()?;
         let speed: u32 = chunk.read_u32()?;
+        log::info!("width {} height {} speed {}", width, height, speed);
         let persistent: bool = chunk.read_bool32()?;
         let background_color: u32 = chunk.read_u32()? | 0xFF000000;     // make alpha 255 (background color doesn't have transparency)
         let draw_background_color: bool = chunk.read_bool32()?;
@@ -342,7 +343,9 @@ fn parse_room_objects(
 }
 
 fn parse_room_backgrounds(chunk: &mut GMChunk) -> Result<Vec<GMRoomBackground>, String> {
+    log::warn!("a");
     let background_pointers: Vec<usize> = chunk.read_pointer_list()?;
+    log::warn!("bv");
     let old_position: usize = chunk.cur_pos;
     let mut room_backgrounds: Vec<GMRoomBackground> = Vec::with_capacity(background_pointers.len());
 

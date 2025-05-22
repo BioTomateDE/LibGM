@@ -9,11 +9,11 @@ pub fn build_chunk_scpt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_usize(len);
 
     for i in 0..len {
-        data_builder.push_pointer_placeholder(&mut builder, GMPointer::script(i))?;
+        data_builder.push_pointer_placeholder(&mut builder, GMPointer::Script(i))?;
     }
 
     for i in 0..len {
-        data_builder.push_pointer_resolve(&mut builder, GMPointer::script(i))?;
+        data_builder.push_pointer_resolve(&mut builder, GMPointer::Script(i))?;
         let script: &GMScript = &gm_data.scripts.scripts_by_index[i];
 
         builder.write_gm_string(data_builder, &script.name)?;

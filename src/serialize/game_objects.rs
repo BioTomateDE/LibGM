@@ -9,16 +9,16 @@ pub fn build_chunk_objt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_usize(len);
 
     for i in 0..len {
-        data_builder.push_pointer_placeholder(&mut builder, GMPointer::game_object(i))?;
+        data_builder.push_pointer_placeholder(&mut builder, GMPointer::GameObject(i))?;
     }
 
     for i in 0..len {
-        data_builder.push_pointer_resolve(&mut builder, GMPointer::game_object(i))?;
+        data_builder.push_pointer_resolve(&mut builder, GMPointer::GameObject(i))?;
         let game_object: &GMGameObject = &gm_data.game_objects.game_objects_by_index[i];
 
         builder.write_gm_string(data_builder, &game_object.name)?;
         match &game_object.sprite {
-            Some(sprite) => data_builder.push_pointer_placeholder(&mut builder, GMPointer::sprite(sprite.index))?,
+            Some(sprite) => data_builder.push_pointer_placeholder(&mut builder, GMPointer::Sprite(sprite.index))?,
             None => builder.write_i32(-1),
         };
         builder.write_bool32(game_object.visible);
@@ -32,7 +32,7 @@ pub fn build_chunk_objt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_bool32(game_object.persistent);
         builder.write_i32(game_object.parent_id);
         match &game_object.texture_mask {
-            Some(sprite) => data_builder.push_pointer_placeholder(&mut builder, GMPointer::sprite(sprite.index))?,
+            Some(sprite) => data_builder.push_pointer_placeholder(&mut builder, GMPointer::Sprite(sprite.index))?,
             None => builder.write_i32(-1),
         };
         builder.write_bool32(game_object.uses_physics);
@@ -65,19 +65,19 @@ fn build_game_object_events(
     builder.write_usize(game_object.events.len());
 
     for i in 0..game_object.events.len() {
-        data_builder.push_pointer_placeholder(builder, GMPointer::game_object_event(game_object_index, i))?;
+        data_builder.push_pointer_placeholder(builder, GMPointer::GameObjectEvent(game_object_index, i))?;
     }
 
     for (i, event_instances) in game_object.events.iter().enumerate() {
-        data_builder.push_pointer_resolve(builder, GMPointer::game_object_event(game_object_index, i))?;
+        data_builder.push_pointer_resolve(builder, GMPointer::GameObjectEvent(game_object_index, i))?;
         builder.write_usize(event_instances.len());
 
         for j in 0..event_instances.len() {
-            data_builder.push_pointer_placeholder(builder, GMPointer::game_object_event_instance(game_object_index, i, j))?;
+            data_builder.push_pointer_placeholder(builder, GMPointer::GameObjectEventInstance(game_object_index, i, j))?;
         }
 
         for (j, event_instance) in event_instances.iter().enumerate() {
-            data_builder.push_pointer_resolve(builder, GMPointer::game_object_event_instance(game_object_index, i, j))?;
+            data_builder.push_pointer_resolve(builder, GMPointer::GameObjectEventInstance(game_object_index, i, j))?;
             builder.write_u32(event_instance.subtype);
             build_game_object_event_instance_actions(data_builder, builder, &event_instance.actions, game_object_index, i, j)?;
         }
@@ -97,11 +97,11 @@ fn build_game_object_event_instance_actions(
     builder.write_usize(actions.len());
 
     for i in 0..actions.len() {
-        data_builder.push_pointer_placeholder(builder, GMPointer::game_object_event_action(game_object_index, event_index, instance_index, i))?;
+        data_builder.push_pointer_placeholder(builder, GMPointer::GameObjectEventInstanceAction(game_object_index, event_index, instance_index, i))?;
     }
 
     for (i, action) in actions.iter().enumerate() {
-        data_builder.push_pointer_resolve(builder, GMPointer::game_object_event_action(game_object_index, event_index, instance_index, i))?;
+        data_builder.push_pointer_resolve(builder, GMPointer::GameObjectEventInstanceAction(game_object_index, event_index, instance_index, i))?;
         builder.write_u32(action.lib_id);
         builder.write_u32(action.id);
         builder.write_u32(action.kind);
@@ -111,7 +111,7 @@ fn build_game_object_event_instance_actions(
         builder.write_u32(action.exe_type);
         builder.write_gm_string(data_builder, &action.action_name)?;
         if let Some(ref code) = action.code {
-            data_builder.push_pointer_placeholder(builder, GMPointer::code(code.index))?;
+            data_builder.push_pointer_placeholder(builder, GMPointer::Code(code.index))?;
         } else {
             builder.write_i32(-1);
         }

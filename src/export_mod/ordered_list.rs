@@ -133,7 +133,7 @@ pub fn apply_changes_ordered_list<G, A>(
                 for (i, edit) in edits.iter().enumerate() {
                     let data_list_len: usize = data_list.len();
                     let element: &mut G = data_list.get_mut(*index + i)
-                        .ok_or(format!("Trying to edit element out of bounds: {} > {}", *index + i, data_list_len))?;
+                        .ok_or_else(|| format!("Trying to edit element out of bounds: {} > {}", *index + i, data_list_len))?;
                     map_edit(element, edit);
                 }
             }
