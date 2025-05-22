@@ -25,7 +25,7 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     let original_data_file_path: &Path = Path::new(args.get(1).map_or("data_out.win", |s| s));
 
-    info!("Loading data file \"{}\".", original_data_file_path.display());
+    info!("Loading data file \"{}\"", original_data_file_path.display());
     let original_data: Vec<u8> = match read_data_file(original_data_file_path) {
         Ok(data_file) => data_file,
         Err(error) => {
@@ -34,7 +34,7 @@ fn main() {
         }
     };
 
-    info!("Parsing data file.");
+    info!("Parsing data file");
     let data: GMData = match parse_data_file(original_data) {
         Ok(data) => data,
         Err(error) => {
@@ -43,7 +43,7 @@ fn main() {
         }
     };
 
-    info!("Building data file.");
+    info!("Building data file");
     let modded_data: Vec<u8> = match build_data_file(&data) {
         Ok(data) => data,
         Err(error) => {
@@ -53,7 +53,7 @@ fn main() {
     };
 
     let modded_data_file_path: &Path = Path::new("./data_out.win");
-    info!("Writing data file \"{}\".", modded_data_file_path.display());
+    info!("Writing data file \"{}\"", modded_data_file_path.display());
     match write_data_file(modded_data_file_path, &modded_data) {
         Ok(data) => data,
         Err(error) => {
@@ -62,7 +62,7 @@ fn main() {
         }
     };
 
-    info!("Done.");
+    info!("Done");
     logger.shutdown();
 }
 

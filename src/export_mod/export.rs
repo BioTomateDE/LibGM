@@ -214,7 +214,7 @@ macro_rules! resolve_reference_fn {
 
             Err(format!(
                 "Could not resolve {} reference for GameMaker index {} in edits \
-                list with length {} or additions list with length {}.",
+                list with length {} or additions list with length {}",
                 stringify!($field),
                 reference.index,
                 self.$field.edits.len(),

@@ -44,7 +44,7 @@ impl DataBuilder {
         if let Some(old_value) = self.pointer_pool_placeholders.insert(position, pointer.clone()) {
             return Err(format!(
                 "Conflicting placeholder positions while pushing placeholder in chunk '{}': absolute position {} \
-                was already set for pointer {:?}; tried to set to new pointer {:?}.",
+                was already set for pointer {:?}; tried to set to new pointer {:?}",
                 chunk_builder.chunk_name, position, old_value, pointer,
             ))
         }
@@ -58,7 +58,7 @@ impl DataBuilder {
         let position: usize = chunk_builder.abs_pos + chunk_builder.len();
         if let Some(old_value) = self.pointer_pool_resources.insert(pointer.clone(), position) {
             return Err(format!("Pointer to {:?} already resolved to absolute position {}; \
-            tried to resolve again to position {}.", pointer, old_value, position))
+            tried to resolve again to position {}", pointer, old_value, position))
         }
         Ok(())
     }
@@ -73,7 +73,7 @@ impl DataBuilder {
     pub fn write_chunk_name(&mut self, name: &str) -> Result<(), String> {
         // write a 4 character ascii string to the data
         if name.len() != 4 {
-            return Err(format!("Chunk name '{}' is {} chars long, but needs to be exactly 4 chars/bytes long.", name, name.len()))
+            return Err(format!("Chunk name '{}' is {} chars long, but needs to be exactly 4 chars/bytes long", name, name.len()))
         }
 
         for (i, char) in name.chars().enumerate() {
@@ -89,7 +89,7 @@ impl DataBuilder {
     pub fn overwrite_data(&mut self, data: &[u8], position: usize) -> Result<(), String> {
         if position + data.len() >= self.len() {
             return Err(format!(
-                "Could not overwrite {} bytes at position {} in data with length {} while building data.",
+                "Could not overwrite {} bytes at position {} in data with length {} while building data",
                 data.len(),
                 position,
                 self.len()
@@ -147,7 +147,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     for (placeholder_position, pointer) in &builder.pointer_pool_placeholders {
         let resource_position: usize = *builder.pointer_pool_resources.get(&pointer)
             .ok_or_else(|| format!(
-                "Could not resolve resource {:?} for placeholder position {}.",
+                "Could not resolve resource {:?} for placeholder position {}",
                 pointer, placeholder_position,
             ))?;
 
@@ -155,7 +155,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
         for (i, byte) in raw.iter().enumerate() {
             let source_byte: &mut u8 = builder.raw_data.get_mut(placeholder_position + i)
                 .ok_or_else(|| format!(
-                    "Could not overwrite {} bytes at position {} in data with length {} while resolving pointer placeholders.",
+                    "Could not overwrite {} bytes at position {} in data with length {} while resolving pointer placeholders",
                     raw.len(),
                     placeholder_position + i,
                     total_length,

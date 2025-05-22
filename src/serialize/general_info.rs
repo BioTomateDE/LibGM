@@ -35,7 +35,7 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_u64(build_function_classifications(&info.function_classifications));
     builder.write_i32(info.steam_appid);
     if info.bytecode_version >= 14 {
-        builder.write_u32(info.debugger_port.ok_or("General info: debugger port not set!")?);
+        builder.write_u32(info.debugger_port.ok_or("General info: debugger port not set")?);
     }
 
     builder.write_usize(info.room_order.len());

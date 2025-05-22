@@ -45,7 +45,7 @@ pub fn parse_chunk_func(chunk: &mut GMChunk, strings: &GMStrings, chunk_code: &m
             if let Some(old_value) = occurrences_to_refs.insert(*occurrence, GMRef::new(i)) {
                 return Err(format!(
                     "Conflicting occurrence positions while parsing functions: absolute position {} \
-                    was already set for function #{} with name \"{}\"; trying to set to function #{} with name \"{}\".",
+                    was already set for function #{} with name \"{}\"; trying to set to function #{} with name \"{}\"",
                     occurrence, old_value.index, old_value.resolve(&functions_by_index)?.name.display(strings), i, name.display(strings),
                 ))
             }

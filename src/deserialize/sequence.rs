@@ -196,13 +196,13 @@ pub fn parse_sequence(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
     let playback: u32 = chunk.read_u32()?;
     let playback: GMSequencePlaybackType = playback.try_into()
         .map_err(|_| format!(
-            "Invalid Sequence Playback Type 0x{:04X} while parsing sequence at position {} in chunk '{}'.",
+            "Invalid Sequence Playback Type 0x{:04X} while parsing sequence at position {} in chunk '{}'",
             playback, chunk.cur_pos, chunk.name))?;
     let playback_speed: f32 = chunk.read_f32()?;
     let playback_speed_type: u32 = chunk.read_u32()?;
     let playback_speed_type: GMAnimSpeedType = playback_speed_type.try_into()
         .map_err(|_| format!(
-            "Invalid Sequence Anim Speed Type 0x{:04X} while parsing sequence at position {} in chunk '{}'.",
+            "Invalid Sequence Anim Speed Type 0x{:04X} while parsing sequence at position {} in chunk '{}'",
             playback_speed_type, chunk.cur_pos, chunk.name))?;
     let length: f32 = chunk.read_f32()?;
     let origin_x: i32 = chunk.read_i32()?;
@@ -270,13 +270,13 @@ fn parse_track(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMSt
     let builtin_name: i32 = chunk.read_i32()?;
     let builtin_name: GMTrackBuiltinName = builtin_name.try_into()
         .map_err(|_| format!(
-            "Invalid Track builtin name 0x{:04X} while parsing Track at position {} in chunk '{}'.",
+            "Invalid Track builtin name 0x{:04X} while parsing Track at position {} in chunk '{}'",
             builtin_name, chunk.cur_pos, chunk.name
         ))?;
     let traits: i32 = chunk.read_i32()?;
     let traits: GMTrackTraits = traits.try_into()
         .map_err(|_| format!(
-            "Invalid Track traits 0x{:04X} while parsing Track at position {} in chunk '{}'.",
+            "Invalid Track traits 0x{:04X} while parsing Track at position {} in chunk '{}'",
             traits, chunk.cur_pos, chunk.name
         ))?;
     let is_creation_track: bool = chunk.read_bool32()?;
@@ -287,7 +287,7 @@ fn parse_track(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMSt
     }
     if tag_count < 0 {
         return Err(format!(
-            "Invalid Track tag count {} while parsing Track at position {} in chunk '{}'.",
+            "Invalid Track tag count {} while parsing Track at position {} in chunk '{}'",
             tag_count, chunk.cur_pos, chunk.name
         ));
     }
@@ -299,7 +299,7 @@ fn parse_track(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMSt
     }
     if owned_resources_count < 0 {
         return Err(format!(
-            "Invalid Track owned resources count {} while parsing Track at position {} in chunk '{}'.",
+            "Invalid Track owned resources count {} while parsing Track at position {} in chunk '{}'",
             owned_resources_count, chunk.cur_pos, chunk.name
         ));
     }
@@ -311,7 +311,7 @@ fn parse_track(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMSt
     }
     if track_count < 0 {
         return Err(format!(
-            "Invalid Track track count {} while parsing Track at position {} in chunk '{}'.",
+            "Invalid Track track count {} while parsing Track at position {} in chunk '{}'",
             track_count, chunk.cur_pos, chunk.name
         ));
     }
@@ -329,7 +329,7 @@ fn parse_track(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMSt
         let gm_anim_curve_string: GMRef<String> = chunk.read_gm_string(strings)?;
         if gm_anim_curve_string.resolve(&strings.strings_by_index)? != "GMAnimCurve" {
             return Err(format!(
-                "Expected owned resource thingy of Track to be \"GMAnimCurve\"; but found \"{}\" for Track \"{}\" at absolute position {}.",
+                "Expected owned resource thingy of Track to be \"GMAnimCurve\"; but found \"{}\" for Track \"{}\" at absolute position {}",
                 gm_anim_curve_string.display(strings), name.display(strings), chunk.cur_pos + chunk.abs_pos,
             ));
         }
@@ -385,7 +385,7 @@ fn parse_anim_curve(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: 
         let curve_type: u32 = chunk.read_u32()?;
         let curve_type: GMAnimationCurveType = curve_type.try_into()
             .map_err(|_| format!(
-                "Invalid Curve Type {} for Animation Curve \"{}\" at absolute position {}.",
+                "Invalid Curve Type {} for Animation Curve \"{}\" at absolute position {}",
                 curve_type, name.display(strings), chunk.cur_pos + chunk.abs_pos))?;
         let iterations: u32 = chunk.read_u32()?;
         let points: Vec<GMAnimationCurveChannelPoint> = parse_anim_curve_points(chunk, general_info)?;

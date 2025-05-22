@@ -159,7 +159,7 @@ impl ChunkBuilder {
     pub fn overwrite_data(&mut self, data: &[u8], position: usize) -> Result<(), String> {
         if position + data.len() >= self.len() {
             return Err(format!(
-                "Could not overwrite {} bytes at position {} in data with length {} while building chunk.",
+                "Could not overwrite {} bytes at position {} in data with length {} while building chunk",
                 data.len(), position, self.len(),
             ))
         };

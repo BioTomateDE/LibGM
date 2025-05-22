@@ -10,7 +10,7 @@ pub fn build_chunk_vari(data_builder: &mut DataBuilder, gm_data: &GMData, variab
     let mut builder = ChunkBuilder::new(data_builder, "VARI");
 
     if gm_data.general_info.bytecode_version >= 15 {
-        let scuffed: &GMVariablesScuffed = gm_data.variables.scuffed.as_ref().ok_or_else(|| "Variables scuffed fields (variable counts) not set!")?;
+        let scuffed: &GMVariablesScuffed = gm_data.variables.scuffed.as_ref().ok_or_else(|| "Variables scuffed fields (variable counts) not set")?;
         builder.write_usize(scuffed.globals_count);
         builder.write_usize(scuffed.instances_count);
         builder.write_usize(scuffed.locals_count);
@@ -20,7 +20,7 @@ pub fn build_chunk_vari(data_builder: &mut DataBuilder, gm_data: &GMData, variab
         // there is no pointer list.
         build_variable(data_builder, &mut builder, &gm_data.general_info, variable, variable_occurrences_map.get(&i))
             .map_err(|e| format!(
-                "{e} for variable #{i} with name \"{}\".", 
+                "{e} for variable #{i} with name \"{}\"",
                 variable.name.display(&gm_data.strings),
             ))?;
     }
