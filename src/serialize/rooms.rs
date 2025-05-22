@@ -1,8 +1,11 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::general_info::GMGeneralInfo;
-use crate::deserialize::rooms::{GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomTile, GMRoomTileTexture, GMRoomView};
+use crate::deserialize::rooms::{GMRoom, GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomLayer, GMRoomTile, GMRoomTileTexture, GMRoomView};
+use crate::deserialize::sequence::GMSequence;
+use crate::deserialize::strings::GMStrings;
 use crate::serialize::all::DataBuilder;
 use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
+use crate::serialize::sequence::build_sequence;
 
 pub fn build_chunk_room(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     let mut builder = ChunkBuilder::new(data_builder, "ROOM");
@@ -16,39 +19,50 @@ pub fn build_chunk_room(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
 
     for (i, room) in gm_data.rooms.rooms_by_index.iter().enumerate() {
         data_builder.push_pointer_resolve(&mut builder, GMPointer::Room(i))?;
-        builder.write_gm_string(data_builder, &room.name)?;
-        builder.write_gm_string(data_builder, &room.caption)?;
-        builder.write_u32(room.width);
-        builder.write_u32(room.height);
-        builder.write_u32(room.speed);
-        builder.write_bool32(room.persistent);
-        builder.write_u32(room.background_color ^ 0xFF000000);    // remove alpha (background color doesn't have alpha)
-        builder.write_bool32(room.draw_background_color);
-        if let Some(ref creation_code) = room.creation_code {
-            data_builder.push_pointer_placeholder(&mut builder, GMPointer::Code(creation_code.index))?;
-        } else {
-            builder.write_i32(-1);
-        }
-        builder.write_u32(build_room_flags(&room.flags));
-        build_room_backgrounds(data_builder, &mut builder, i, &room.backgrounds)?;
-        build_room_views(data_builder, &mut builder, i, &room.views)?;
-        build_room_objects(data_builder, &mut builder, &gm_data.general_info, i, &room.game_objects)?;
-        build_room_tiles(data_builder, &mut builder, &gm_data.general_info, i, &room.tiles)?;
-        builder.write_bool32(room.world);
-        builder.write_u32(room.top);
-        builder.write_u32(room.left);
-        builder.write_u32(room.right);
-        builder.write_u32(room.bottom);
-        builder.write_f32(room.gravity_x);
-        builder.write_f32(room.gravity_y);
-        builder.write_f32(room.meters_per_pixel);
+        build_room(data_builder, &mut builder, &gm_data.general_info, &gm_data.strings, i, room)
+            .map_err(|e| format!("{e} for Room #{i} with name \"{}\" while building Rooms.", room.name.display(&gm_data.strings)))?;
     }
-
-
+    
     builder.finish(data_builder)?;
     Ok(())
 }
 
+
+fn build_room(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, general_info: &GMGeneralInfo, strings: &GMStrings, room_index: usize, room: &GMRoom) -> Result<(), String> {
+    builder.write_gm_string(data_builder, &room.name)?;
+    builder.write_gm_string(data_builder, &room.caption)?;
+    builder.write_u32(room.width);
+    builder.write_u32(room.height);
+    builder.write_u32(room.speed);
+    builder.write_bool32(room.persistent);
+    builder.write_u32(room.background_color ^ 0xFF000000);    // remove alpha (background color doesn't have alpha)
+    builder.write_bool32(room.draw_background_color);
+    if let Some(ref creation_code) = room.creation_code {
+        data_builder.push_pointer_placeholder(builder, GMPointer::Code(creation_code.index))?;
+    } else {
+        builder.write_i32(-1);
+    }
+    builder.write_u32(build_room_flags(&room.flags));
+    build_room_backgrounds(data_builder, builder, room_index, &room.backgrounds)?;
+    build_room_views(data_builder, builder, room_index, &room.views)?;
+    build_room_objects(data_builder, builder, &general_info, room_index, &room.game_objects)?;
+    build_room_tiles(data_builder, builder, &general_info, room_index, &room.tiles)?;
+    builder.write_bool32(room.world);
+    builder.write_u32(room.top);
+    builder.write_u32(room.left);
+    builder.write_u32(room.right);
+    builder.write_u32(room.bottom);
+    builder.write_f32(room.gravity_x);
+    builder.write_f32(room.gravity_y);
+    builder.write_f32(room.meters_per_pixel);
+    if general_info.is_version_at_least(2, 0, 0, 0) {
+        build_room_layers(data_builder, builder, room_index, room.layers.as_ref().ok_or("Layers not set")?)?;
+        if general_info.is_version_at_least(2, 3, 0, 0) {
+            build_room_sequences(data_builder, builder, general_info, strings, room.sequences.as_ref().ok_or("Sequences not set")?)?;
+        }
+    }
+    Ok(())
+}
 
 fn build_room_flags(flags: &GMRoomFlags) -> u32 {
     let mut raw: u32 = 0;
@@ -232,6 +246,41 @@ fn build_room_tiles(
         builder.write_u32(tile.color);
     }
 
+    Ok(())
+}
+
+
+fn build_room_layers(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, room_index: usize, layers: &Vec<GMRoomLayer>) -> Result<(), String> {
+    data_builder.push_pointer_placeholder(builder, GMPointer::RoomLayerPointerList(room_index))?;
+    data_builder.push_pointer_resolve(builder, GMPointer::RoomLayerPointerList(room_index))?;
+    builder.write_usize(layers.len());
+
+    for i in 0..layers.len() {
+        data_builder.push_pointer_placeholder(builder, GMPointer::RoomLayer(room_index, i))?;
+    }
+
+    for (i, layer) in layers.iter().enumerate() {
+        data_builder.push_pointer_resolve(builder, GMPointer::RoomLayer(room_index, i))?;
+        builder.write_gm_string(data_builder, &layer.layer_name)?;
+        builder.write_u32(layer.layer_id);
+        builder.write_u32(layer.layer_type.into());
+        builder.write_i32(layer.layer_depth);
+        builder.write_f32(layer.x_offset);
+        builder.write_f32(layer.y_offset);
+        builder.write_f32(layer.horizontal_speed);
+        builder.write_f32(layer.vertical_speed);
+        builder.write_bool32(layer.is_visible);
+    }
+
+    Ok(())
+}
+
+
+fn build_room_sequences(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, general_info: &GMGeneralInfo, strings: &GMStrings, sequences: &Vec<GMSequence>) -> Result<(), String> {
+    builder.write_usize(sequences.len());
+    for sequence in sequences {
+        build_sequence(data_builder, builder, general_info, strings, sequence)?;
+    }
     Ok(())
 }
 

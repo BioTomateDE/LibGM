@@ -50,6 +50,8 @@ pub enum GMPointer {
     RoomGameObjectPointerList(usize),
     RoomTile(usize, usize),
     RoomTilePointerList(usize),
+    RoomLayer(usize, usize),
+    RoomLayerPointerList(usize),
     CodeMeta(usize),
     Code(usize),
 }
