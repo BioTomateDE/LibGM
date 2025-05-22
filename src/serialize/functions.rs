@@ -5,6 +5,8 @@ use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
 
 pub fn build_chunk_func(data_builder: &mut DataBuilder, gm_data: &GMData, function_occurrences_map: HashMap<usize, Vec<usize>>) -> Result<(), String> {
     let mut builder = ChunkBuilder::new(data_builder, "FUNC");
+    
+    // write functions
     builder.write_usize(gm_data.functions.functions_by_index.len());
 
     for i in 0..gm_data.functions.functions_by_index.len() {
@@ -23,6 +25,9 @@ pub fn build_chunk_func(data_builder: &mut DataBuilder, gm_data: &GMData, functi
             builder.write_i32(function.name_string_id);
         }
     }
+    
+    // write code locals
+    builder.write_usize(gm_data.code_locals.len());
 
     for i in 0..gm_data.code_locals.len() {
         data_builder.push_pointer_placeholder(&mut builder, GMPointer::code_local(i))?;
