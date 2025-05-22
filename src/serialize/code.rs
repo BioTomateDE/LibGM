@@ -263,9 +263,9 @@ fn write_occurrence(
         // replace last occurrence (which is name string id) with next occurrence offset
         let occurrence_offset: i32 = occurrence_position as i32 - *last_occurrence_position as i32;
         let variable_type_raw: u8 = if let Some(var_type) = variable_type { var_type.into() } else { 0 };
-        let occurrence_offset_full: i32 = occurrence_offset & 0x07FFFFFF | ((variable_type_raw & 0xF8) as i32);        // TODO this is 17% wrong
+        let occurrence_offset_full: i32 = occurrence_offset & 0x07FFFFFF | (((variable_type_raw & 0xF8) as i32) << 24);
         let bytes: [u8; 4] = occurrence_offset_full.to_le_bytes();
-        builder.overwrite_data(&bytes, last_occurrence_position - builder.abs_pos)?;
+        builder.overwrite_data(&bytes, last_occurrence_position - builder.abs_pos + 4)?;
     }
     
     // write name string id for this occurrence. this is correct if it is the last occurrence.
