@@ -67,7 +67,7 @@ pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
         let range_end: u32 = chunk.read_u32()?;
         let texture_abs_pos: usize = chunk.read_usize()?;
         let texture: &GMRef<GMTexture> = textures.abs_pos_to_ref.get(&texture_abs_pos)
-            .ok_or_else(|| format!("Could not find texture with absolute position {} for Font with name \"{}\" at position {} in chunk 'FONT'.",
+            .ok_or_else(|| format!("Could not find texture with absolute position {} for Font with name \"{}\" at position {} in chunk 'FONT'",
                            texture_abs_pos, name.display(strings), start_position))?;
         let scale_x: f32 = chunk.read_f32()?;
         let scale_y: f32 = chunk.read_f32()?;
@@ -136,7 +136,7 @@ fn parse_glyphs(chunk: &mut GMChunk, font_name: &str) -> Result<Vec<GMFontGlyph>
 
         let character: i16 = chunk.read_i16()?;
         let character: Option<char> = convert_char(character).map_err(|_| format!(
-            "Invalid character 0x{:04X} at absolute position {} in chunk 'FONT' for glyph #{} of font \"{}\".",
+            "Invalid character 0x{:04X} at absolute position {} in chunk 'FONT' for glyph #{} of font \"{}\"",
             character, chunk.abs_pos+chunk.cur_pos, i, font_name,
         ))?;
         let x: u16 = chunk.read_u16()?;

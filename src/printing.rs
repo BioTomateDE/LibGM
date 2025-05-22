@@ -841,10 +841,10 @@ pub fn hexdump(raw_data: &[u8], start: usize, end: Option<usize>) -> Result<Stri
     let len: usize = raw_data.len();
     let end: usize = end.unwrap_or_else(|| len);
     if end > len {
-        return Err(format!("Specified end of hexdump is out ouf bounds: {} >= {} (start: {}).", end, len, start));
+        return Err(format!("Specified end of hexdump is out ouf bounds: {} >= {} (start: {})", end, len, start));
     }
     if start > end {
-        return Err(format!("Specified start of hexdump is greater or equal to specified end: {} >= {} (len: {}).", start, end, len));
+        return Err(format!("Specified start of hexdump is greater or equal to specified end: {} >= {} (len: {})", start, end, len));
     }
     let len: usize = end - start;
     if len < 1 {

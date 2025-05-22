@@ -62,7 +62,7 @@ fn build_glyphs(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, glyp
         data_builder.push_pointer_resolve(builder, GMPointer::FontGlyph(font_index, i))?;
 
         let character: u16 = convert_char(glyph.character)
-            .map_err(|e| format!("{e} for glyph #{i} of font \"{font_name}\"."))?;
+            .map_err(|e| format!("{e} for glyph #{i} of font \"{font_name}\""))?;
         
         builder.write_u16(character);
         builder.write_u16(glyph.x);

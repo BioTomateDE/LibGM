@@ -65,7 +65,7 @@ fn build_tracks(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, gene
         for anim_curve in &track.owned_resources {
             match &track.anim_curve_string {
                 None => {
-                    log::warn!("Anim curve string not set for Track \"{}\" at absolute position {}; writing -1 as fallback.",
+                    log::warn!("Anim curve string not set for Track \"{}\" at absolute position {}; writing -1 as fallback",
                         track.name.display(strings), builder.abs_pos+builder.len());
                     builder.write_i32(-1);
                 }

@@ -111,7 +111,7 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
         let collision_shape: GMGameObjectCollisionShape = match collision_shape.try_into() {
             Ok(shape) => shape,
             Err(_) => return Err(format!(
-                "Invalid Collision Shape 0x{:04X} at position {} while parsing Game Object at position {} in chunk '{}'.",
+                "Invalid Collision Shape 0x{:04X} at position {} while parsing Game Object at position {} in chunk '{}'",
                 collision_shape, chunk.cur_pos, start_position, chunk.name,
             )),
         };

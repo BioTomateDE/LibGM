@@ -56,7 +56,7 @@ pub fn parse_chunk_bgnd(
         let texture_abs_pos: usize = chunk.read_usize()?;
         let texture: Option<GMRef<GMTexture>> = if texture_abs_pos == 0 { None } else { 
             Some(textures.abs_pos_to_ref.get(&texture_abs_pos)
-                .ok_or_else(|| format!("Could not find texture with absolute position {} for Background with name \"{}\" at position {} in chunk 'BGND'.", 
+                .ok_or_else(|| format!("Could not find texture with absolute position {} for Background with name \"{}\" at position {} in chunk 'BGND'",
                                        texture_abs_pos, name.display(strings), start_position))?
                 .clone())
         };

@@ -28,7 +28,7 @@ pub fn build_chunk_sond(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
             None => builder.write_i32(-1),
         }
         if gm_data.general_info.is_version_at_least(2024, 6, 0, 0) {
-            builder.write_f32(sound.audio_length.expect("Sound Audio length is None."));
+            builder.write_f32(sound.audio_length.expect("Sound Audio length is None"));
         }
     }
 
