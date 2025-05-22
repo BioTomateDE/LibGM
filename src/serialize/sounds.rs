@@ -9,11 +9,11 @@ pub fn build_chunk_sond(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_usize(len);
 
     for i in 0..len {
-        data_builder.push_pointer_placeholder(&mut builder, GMPointer::sound(i))?;
+        data_builder.push_pointer_placeholder(&mut builder, GMPointer::Sound(i))?;
     }
 
     for i in 0..len {
-        data_builder.push_pointer_resolve(&mut builder, GMPointer::sound(i))?;
+        data_builder.push_pointer_resolve(&mut builder, GMPointer::Sound(i))?;
         let sound: &GMSound = &gm_data.sounds.sounds_by_index[i];
         builder.write_gm_string(data_builder, &sound.name)?;
         builder.write_u32(build_sound_flags(&sound.flags));
@@ -24,7 +24,7 @@ pub fn build_chunk_sond(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_f32(sound.pitch);
         builder.write_i32(-1);    // {~~} audio group stuff idk
         match &sound.audio_file {
-            Some(file) => data_builder.push_pointer_placeholder(&mut builder, GMPointer::audio(file.index))?,
+            Some(file) => data_builder.push_pointer_placeholder(&mut builder, GMPointer::Audio(file.index))?,
             None => builder.write_i32(-1),
         }
         if gm_data.general_info.is_version_at_least(2024, 6, 0, 0) {

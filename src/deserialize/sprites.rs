@@ -332,7 +332,7 @@ fn read_texture_list(chunk: &mut GMChunk, gm_textures: &GMTextures, sprite_name:
     for _ in 0..texture_count {
         let texture_abs_pos: usize = chunk.read_usize()?;
         let texture: &GMRef<GMTexture> = gm_textures.abs_pos_to_ref.get(&texture_abs_pos)
-            .ok_or(format!("Could not get texture with absolute position {} in map with length {} while \
+            .ok_or_else(|| format!("Could not get texture with absolute position {} in map with length {} while \
             reading texture list of sprite {sprite_name}", texture_abs_pos, gm_textures.abs_pos_to_ref.len()))?;
         textures.push(texture.clone());
     }

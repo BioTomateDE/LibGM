@@ -709,7 +709,7 @@ pub fn parse_instruction(
             };
 
             let function: &GMRef<GMFunction> = functions.occurrences_to_refs.get(&(blob.chunk_code_pos + blob.cur_pos))
-                .ok_or(format!("Could not find any function with absolute occurrence position {} in map with length {} (functions len: {}).",
+                .ok_or_else(|| format!("Could not find any function with absolute occurrence position {} in map with length {} (functions len: {}).",
                                blob.chunk_code_pos + blob.cur_pos, functions.occurrences_to_refs.len(), functions.functions_by_index.len()))?;
             blob.cur_pos += 4;
 

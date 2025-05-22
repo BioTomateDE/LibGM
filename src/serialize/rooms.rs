@@ -11,22 +11,21 @@ pub fn build_chunk_room(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_usize(room_count);
 
     for i in 0..room_count {
-        data_builder.push_pointer_placeholder(&mut builder, GMPointer::room(i))?;
+        data_builder.push_pointer_placeholder(&mut builder, GMPointer::Room(i))?;
     }
 
     for (i, room) in gm_data.rooms.rooms_by_index.iter().enumerate() {
-        data_builder.push_pointer_resolve(&mut builder, GMPointer::room(i))?;
-        builder.write_gm_string(data_builder, &room.name)?;
+        data_builder.push_pointer_resolve(&mut builder, GMPointer::Room(i))?;
         builder.write_gm_string(data_builder, &room.name)?;
         builder.write_gm_string(data_builder, &room.caption)?;
         builder.write_u32(room.width);
         builder.write_u32(room.height);
         builder.write_u32(room.speed);
         builder.write_bool32(room.persistent);
-        builder.write_u32(room.background_color);
+        builder.write_u32(room.background_color ^ 0xFF000000);    // remove alpha (background color doesn't have alpha)
         builder.write_bool32(room.draw_background_color);
         if let Some(ref creation_code) = room.creation_code {
-            data_builder.push_pointer_placeholder(&mut builder, GMPointer::code(creation_code.index))?;
+            data_builder.push_pointer_placeholder(&mut builder, GMPointer::Code(creation_code.index))?;
         } else {
             builder.write_i32(-1);
         }
@@ -63,18 +62,20 @@ fn build_room_flags(flags: &GMRoomFlags) -> u32 {
 
 
 fn build_room_backgrounds(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, room_index: usize, backgrounds: &Vec<GMRoomBackground>) -> Result<(), String> {
+    data_builder.push_pointer_placeholder(builder, GMPointer::RoomBackgroundPointerList(room_index))?;
+    data_builder.push_pointer_resolve(builder, GMPointer::RoomBackgroundPointerList(room_index))?;
     builder.write_usize(backgrounds.len());
 
     for i in 0..backgrounds.len() {
-        data_builder.push_pointer_placeholder(builder, GMPointer::room_background(room_index, i))?;
+        data_builder.push_pointer_placeholder(builder, GMPointer::RoomBackground(room_index, i))?;
     }
 
     for (i, background) in backgrounds.iter().enumerate() {
-        data_builder.push_pointer_resolve(builder, GMPointer::room_background(room_index, i))?;
+        data_builder.push_pointer_resolve(builder, GMPointer::RoomBackground(room_index, i))?;
         builder.write_bool32(background.enabled);
         builder.write_bool32(background.foreground);
         if let Some(ref background) = background.background_definition {
-            data_builder.push_pointer_placeholder(builder, GMPointer::background(background.index))?;
+            data_builder.push_pointer_placeholder(builder, GMPointer::Background(background.index))?;
         } else {
             builder.write_i32(-1);
         }
@@ -92,14 +93,16 @@ fn build_room_backgrounds(data_builder: &mut DataBuilder, builder: &mut ChunkBui
 
 
 fn build_room_views(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, room_index: usize, views: &Vec<GMRoomView>) -> Result<(), String> {
+    data_builder.push_pointer_placeholder(builder, GMPointer::RoomViewPointerList(room_index))?;
+    data_builder.push_pointer_resolve(builder, GMPointer::RoomViewPointerList(room_index))?;
     builder.write_usize(views.len());
 
     for i in 0..views.len() {
-        data_builder.push_pointer_placeholder(builder, GMPointer::room_view(room_index, i))?;
+        data_builder.push_pointer_placeholder(builder, GMPointer::RoomView(room_index, i))?;
     }
 
     for (i, view) in views.iter().enumerate() {
-        data_builder.push_pointer_resolve(builder, GMPointer::room_view(room_index, i))?;
+        data_builder.push_pointer_resolve(builder, GMPointer::RoomView(room_index, i))?;
         builder.write_bool32(view.enabled);
         builder.write_i32(view.view_x);
         builder.write_i32(view.view_y);
@@ -114,7 +117,7 @@ fn build_room_views(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, 
         builder.write_i32(view.speed_x);
         builder.write_i32(view.speed_y);
         if let Some(ref obj) = view.object {
-            data_builder.push_pointer_placeholder(builder, GMPointer::game_object(obj.index))?;
+            data_builder.push_pointer_placeholder(builder, GMPointer::GameObject(obj.index))?;
         } else {
             builder.write_i32(-1);
         }
@@ -131,20 +134,22 @@ fn build_room_objects(
     room_index: usize,
     views: &Vec<GMRoomGameObject>,
 ) -> Result<(), String> {
+    data_builder.push_pointer_placeholder(builder, GMPointer::RoomGameObjectPointerList(room_index))?;
+    data_builder.push_pointer_resolve(builder, GMPointer::RoomGameObjectPointerList(room_index))?;
     builder.write_usize(views.len());
 
     for i in 0..views.len() {
-        data_builder.push_pointer_placeholder(builder, GMPointer::room_game_object(room_index, i))?;
+        data_builder.push_pointer_placeholder(builder, GMPointer::RoomGameObject(room_index, i))?;
     }
 
     for (i, game_object) in views.iter().enumerate() {
-        data_builder.push_pointer_resolve(builder, GMPointer::room_game_object(room_index, i))?;
+        data_builder.push_pointer_resolve(builder, GMPointer::RoomGameObject(room_index, i))?;
         builder.write_i32(game_object.x);
         builder.write_i32(game_object.y);
-        data_builder.push_pointer_placeholder(builder, GMPointer::game_object(game_object.object_definition.index))?;
+        data_builder.push_pointer_placeholder(builder, GMPointer::GameObject(game_object.object_definition.index))?;
         builder.write_u32(game_object.instance_id);
         if let Some(ref creation_code) = game_object.creation_code {
-            data_builder.push_pointer_placeholder(builder, GMPointer::code(creation_code.index))?;
+            data_builder.push_pointer_placeholder(builder, GMPointer::Code(creation_code.index))?;
         } else {
             builder.write_i32(-1);
         }
@@ -167,7 +172,7 @@ fn build_room_objects(
 
         if general_info.bytecode_version >= 16 {
             if let Some(ref creation_code) = game_object.creation_code {
-                data_builder.push_pointer_placeholder(builder, GMPointer::code(creation_code.index))?;
+                data_builder.push_pointer_placeholder(builder, GMPointer::Code(creation_code.index))?;
             } else {
                 builder.write_i32(-1);
             }
@@ -185,19 +190,21 @@ fn build_room_tiles(
     room_index: usize,
     tiles: &Vec<GMRoomTile>,
 ) -> Result<(), String> {
+    data_builder.push_pointer_placeholder(builder, GMPointer::RoomTilePointerList(room_index))?;
+    data_builder.push_pointer_resolve(builder, GMPointer::RoomTilePointerList(room_index))?;
     builder.write_usize(tiles.len());
 
     for i in 0..tiles.len() {
-        data_builder.push_pointer_placeholder(builder, GMPointer::room_tile(room_index, i))?;
+        data_builder.push_pointer_placeholder(builder, GMPointer::RoomTile(room_index, i))?;
     }
 
     for (i, tile) in tiles.iter().enumerate() {
-        data_builder.push_pointer_resolve(builder, GMPointer::room_tile(room_index, i))?;
+        data_builder.push_pointer_resolve(builder, GMPointer::RoomTile(room_index, i))?;
         builder.write_i32(tile.x);
         builder.write_i32(tile.y);
         if general_info.is_version_at_least(2, 0, 0, 0) {
             if let GMRoomTileTexture::Sprite(ref sprite) = tile.texture {
-                data_builder.push_pointer_placeholder(builder, GMPointer::sprite(sprite.index))?;
+                data_builder.push_pointer_placeholder(builder, GMPointer::Sprite(sprite.index))?;
             } else {
                 return Err(format!(
                     "Invalid Room Tile Texture Mode (expected Sprite, got {:?}) for tile with Instance ID {} in room with index {}.",
@@ -206,7 +213,7 @@ fn build_room_tiles(
             };
         } else {
             if let GMRoomTileTexture::Background(ref background) = tile.texture {
-                data_builder.push_pointer_placeholder(builder, GMPointer::background(background.index))?;
+                data_builder.push_pointer_placeholder(builder, GMPointer::Background(background.index))?;
             } else {
                 return Err(format!(
                     "Invalid Room Tile Texture Mode (expected Background, got {:?}) for tile with Instance ID {} in room with index {}.",
