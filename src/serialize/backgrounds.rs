@@ -9,11 +9,11 @@ pub fn build_chunk_bgnd(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_usize(len);
 
     for i in 0..len {
-        data_builder.push_pointer_placeholder(&mut builder, GMPointer::background(i))?;
+        data_builder.push_pointer_placeholder(&mut builder, GMPointer::Background(i))?;
     }
 
     for i in 0..len {
-        data_builder.push_pointer_resolve(&mut builder, GMPointer::background(i))?;
+        data_builder.push_pointer_resolve(&mut builder, GMPointer::Background(i))?;
         let background: &GMBackground = &gm_data.backgrounds.backgrounds_by_index[i];
 
         builder.write_gm_string(data_builder, &background.name)?;
@@ -21,14 +21,14 @@ pub fn build_chunk_bgnd(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_bool32(background.smooth);
         builder.write_bool32(background.preload);
         if let Some(ref texture) = background.texture {
-            data_builder.push_pointer_placeholder(&mut builder, GMPointer::texture(texture.index))?;
+            data_builder.push_pointer_placeholder(&mut builder, GMPointer::Texture(texture.index))?;
         } else {
             builder.write_usize(0);
         }
 
         if gm_data.general_info.is_version_at_least(2, 0, 0, 0) {
             let gms2_data: &GMBackgroundGMS2Data = background.gms2_data.as_ref()
-                .ok_or(format!("GMS2 data not set for Background \"{}\"", background.name.display(&gm_data.strings)))?;
+                .ok_or_else(|| format!("GMS2 data not set for Background \"{}\"", background.name.display(&gm_data.strings)))?;
 
             if gms2_data.tile_ids.len() % gms2_data.items_per_tile_count != 0 {
                 return Err(format!(

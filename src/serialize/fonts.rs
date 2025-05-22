@@ -10,12 +10,12 @@ pub fn build_chunk_font(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_usize(font_count);
 
     for i in 0..font_count {
-        data_builder.push_pointer_placeholder(&mut builder, GMPointer::font(i))?;
+        data_builder.push_pointer_placeholder(&mut builder, GMPointer::Font(i))?;
     }
 
     for i in 0..font_count {
         let font: &GMFont = &gm_data.fonts.fonts_by_index[i];
-        data_builder.push_pointer_resolve(&mut builder, GMPointer::font(i))?;
+        data_builder.push_pointer_resolve(&mut builder, GMPointer::Font(i))?;
         builder.write_gm_string(data_builder, &font.name)?;
         builder.write_gm_string(data_builder, &font.display_name)?;
         builder.write_u32(font.em_size);
@@ -25,7 +25,7 @@ pub fn build_chunk_font(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_u8(font.charset);
         builder.write_u8(font.anti_alias);
         builder.write_u32(font.range_end);
-        data_builder.push_pointer_placeholder(&mut builder, GMPointer::texture(font.texture.index))?;
+        data_builder.push_pointer_placeholder(&mut builder, GMPointer::Texture(font.texture.index))?;
         builder.write_f32(font.scale_x);
         builder.write_f32(font.scale_y);
 
@@ -55,11 +55,11 @@ fn build_glyphs(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, glyp
     builder.write_usize(glyphs.len());
 
     for i in 0..glyphs.len() {
-        data_builder.push_pointer_placeholder(builder, GMPointer::font_glyph(font_index, i))?;
+        data_builder.push_pointer_placeholder(builder, GMPointer::FontGlyph(font_index, i))?;
     }
 
     for (i, glyph) in glyphs.iter().enumerate() {
-        data_builder.push_pointer_resolve(builder, GMPointer::font_glyph(font_index, i))?;
+        data_builder.push_pointer_resolve(builder, GMPointer::FontGlyph(font_index, i))?;
 
         let character: u16 = convert_char(glyph.character)
             .map_err(|e| format!("{e} for glyph #{i} of font \"{font_name}\"."))?;

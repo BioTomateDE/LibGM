@@ -23,7 +23,7 @@ impl<T> GMRef<T> {
 impl<'a, T> GMRef<T> {
     pub fn resolve(&self, elements_by_index: &'a Vec<T>) -> Result<&'a T, String> {
         elements_by_index.get(self.index)
-            .ok_or(format!(
+            .ok_or_else(|| format!(
                 "Could not resolve {} reference with index {} in list with length {}.",
                 std::any::type_name::<T>(),
                 self.index,
@@ -45,12 +45,9 @@ impl GMChunk<'_> {
     pub fn read_u64(&mut self) -> Result<u64, String> {
         let bytes = self.data
             .get(self.cur_pos..self.cur_pos + 8)
-            .ok_or(format!(
+            .ok_or_else(|| format!(
                 "Trying to read u64 out of bounds in chunk '{}' at position {}: {} > {}.",
-                self.name,
-                self.cur_pos,
-                self.cur_pos + 8,
-                self.data.len(),
+                self.name, self.cur_pos, self.cur_pos + 8, self.data.len(),
             ))?;
         self.cur_pos += 8;
         Ok(u64::from_le_bytes(bytes.try_into().unwrap()))
@@ -59,12 +56,9 @@ impl GMChunk<'_> {
     pub fn read_i64(&mut self) -> Result<i64, String> {
         let bytes = self.data
             .get(self.cur_pos..self.cur_pos + 8)
-            .ok_or(format!(
+            .ok_or_else(|| format!(
                 "Trying to read i64 out of bounds in chunk '{}' at position {}: {} > {}.",
-                self.name,
-                self.cur_pos,
-                self.cur_pos + 8,
-                self.data.len(),
+                self.name, self.cur_pos, self.cur_pos + 8, self.data.len(),
             ))?;
         self.cur_pos += 8;
         Ok(i64::from_le_bytes(bytes.try_into().unwrap()))
@@ -73,12 +67,9 @@ impl GMChunk<'_> {
     pub fn read_u32(&mut self) -> Result<u32, String> {
         let bytes = self.data
             .get(self.cur_pos..self.cur_pos + 4)
-            .ok_or(format!(
+            .ok_or_else(|| format!(
                 "Trying to read u32 out of bounds in chunk '{}' at position {}: {} > {}.",
-                self.name,
-                self.cur_pos,
-                self.cur_pos + 4,
-                self.data.len(),
+                self.name, self.cur_pos, self.cur_pos + 4, self.data.len(),
             ))?;
         self.cur_pos += 4;
         Ok(u32::from_le_bytes(bytes.try_into().unwrap()))
@@ -87,12 +78,9 @@ impl GMChunk<'_> {
     pub fn read_i32(&mut self) -> Result<i32, String> {
         let bytes = self.data
             .get(self.cur_pos..self.cur_pos + 4)
-            .ok_or(format!(
+            .ok_or_else(|| format!(
                 "Trying to read i32 out of bounds in chunk '{}' at position {}: {} > {}.",
-                self.name,
-                self.cur_pos,
-                self.cur_pos + 4,
-                self.data.len(),
+                self.name, self.cur_pos, self.cur_pos + 4, self.data.len(),
             ))?;
         self.cur_pos += 4;
         Ok(i32::from_le_bytes(bytes.try_into().unwrap()))
@@ -101,12 +89,9 @@ impl GMChunk<'_> {
     pub fn read_u16(&mut self) -> Result<u16, String> {
         let bytes = self.data
             .get(self.cur_pos..self.cur_pos + 2)
-            .ok_or(format!(
+            .ok_or_else(|| format!(
                 "Trying to read u16 out of bounds in chunk '{}' at position {}: {} > {}.",
-                self.name,
-                self.cur_pos,
-                self.cur_pos + 2,
-                self.data.len(),
+                self.name, self.cur_pos, self.cur_pos + 2, self.data.len(),
             ))?;
         self.cur_pos += 2;
         Ok(u16::from_le_bytes(bytes.try_into().unwrap()))
@@ -115,12 +100,9 @@ impl GMChunk<'_> {
     pub fn read_i16(&mut self) -> Result<i16, String> {
         let bytes = self.data
             .get(self.cur_pos..self.cur_pos + 2)
-            .ok_or(format!(
+            .ok_or_else(|| format!(
                 "Trying to read i16 out of bounds in chunk '{}' at position {}: {} > {}.",
-                self.name,
-                self.cur_pos,
-                self.cur_pos + 2,
-                self.data.len(),
+                self.name, self.cur_pos, self.cur_pos + 2, self.data.len(),
             ))?;
         self.cur_pos += 2;
         Ok(i16::from_le_bytes(bytes.try_into().unwrap()))
@@ -129,10 +111,9 @@ impl GMChunk<'_> {
     pub fn read_u8(&mut self) -> Result<u8, String> {
         let byte = *self.data
             .get(self.cur_pos)
-            .ok_or(format!(
+            .ok_or_else(|| format!(
                 "Trying to read u8 out of bounds in chunk '{}' at position {}.",
-                self.name,
-                self.cur_pos,
+                self.name, self.cur_pos,
             ))?;
         self.cur_pos += 1;
         Ok(byte)
@@ -141,10 +122,9 @@ impl GMChunk<'_> {
     pub fn read_i8(&mut self) -> Result<i8, String> {
         let byte = *self.data
             .get(self.cur_pos)
-            .ok_or(format!(
+            .ok_or_else(|| format!(
                 "Trying to read i8 out of bounds in chunk '{}' at position {}.",
-                self.name,
-                self.cur_pos,
+                self.name, self.cur_pos,
             ))?;
         self.cur_pos += 1;
         Ok(byte as i8)
@@ -162,10 +142,7 @@ impl GMChunk<'_> {
         Err(format!(
             "Failsafe triggered in chunk '{}' at position {} trying \
             to read usize integer: Number {} is larger than failsafe amount {}.",
-            self.name,
-            self.cur_pos - 4,
-            number,
-            FAILSAFE_AMOUNT
+            self.name, self.cur_pos - 4, number, FAILSAFE_AMOUNT,
         ))
     }
 
@@ -263,37 +240,33 @@ impl GMChunk<'_> {
     pub fn read_gm_string(&mut self, gm_strings: &GMStrings) -> Result<GMRef<String>, String> {
         let string_abs_pos: usize = self.read_usize()?;
         let string_ref = gm_strings.abs_pos_to_reference.get(&string_abs_pos)
-            .ok_or(format!(
+            .ok_or_else(|| format!(
                 "Could not read reference string with absolute position {} in chunk '{}' at \
                 position {} because it doesn't exist in the string map (length: {}).",
-                string_abs_pos,
-                self.name,
-                self.cur_pos - 4,
-                gm_strings.abs_pos_to_reference.len(),
+                string_abs_pos, self.name, self.cur_pos - 4, gm_strings.abs_pos_to_reference.len(),
             ))?;
         Ok(string_ref.clone())
     }
 
+    /// read pointer to pointer list (only used in rooms)
     pub fn read_pointer_list(&mut self) -> Result<Vec<usize>, String> {
-        let pointer_position: usize = match self.read_usize()?.checked_sub(self.abs_pos) {
-            Some(pos) => pos,
-            None => return Err(format!(
-                "Start of Pointer list underflowed at position {} in chunk '{}' with absolute position {}.",
-                self.cur_pos - 4, self.name, self.abs_pos,
-        ))};
+        let abs_pointers_start_pos: usize = self.read_usize()?;
+        let pointers_start_pos: usize = abs_pointers_start_pos.checked_sub(self.abs_pos).ok_or_else(||format!(
+            "Pointer to start of Pointer list underflowed at position {} in chunk '{}': {} - {} < 0.",
+            self.cur_pos - 4, self.name, abs_pointers_start_pos, self.abs_pos,
+        ))?;
 
         let old_position: usize = self.cur_pos;
-        self.cur_pos = pointer_position;
+        self.cur_pos = pointers_start_pos;
 
         let pointer_count: usize = self.read_usize()?;
         let mut pointers: Vec<usize> = Vec::with_capacity(pointer_count);
         for _ in 0..pointer_count {
-            let pointer: usize = match self.read_usize()?.checked_sub(self.abs_pos) {
-                Some(pos) => pos,
-                None => return Err(format!(
-                    "Element of Pointer list underflowed at position {} in chunk '{}' with absolute position {}.",
-                    self.cur_pos - 4, self.name, self.abs_pos,
-                ))};
+            let abs_pointer_pos: usize = self.read_usize()?;
+            let pointer: usize = abs_pointer_pos.checked_sub(self.abs_pos).ok_or_else(|| format!(
+                "Element of Pointer list underflowed at position {} in chunk '{}': {} - {} < 0.",
+                self.cur_pos - 4, self.name, abs_pointer_pos, self.abs_pos,
+            ))?;
             pointers.push(pointer);
         }
 
@@ -301,3 +274,5 @@ impl GMChunk<'_> {
         Ok(pointers)
     }
 }
+
+
