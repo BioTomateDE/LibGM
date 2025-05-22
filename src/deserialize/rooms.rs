@@ -1,5 +1,5 @@
 use crate::deserialize::chunk_reading::GMRef;
-use num_enum::TryFromPrimitive;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use crate::deserialize::backgrounds::GMBackground;
 use crate::deserialize::chunk_reading::GMChunk;
@@ -114,7 +114,7 @@ pub struct GMRoomLayer {
     pub is_visible: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, TryFromPrimitive, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive, Serialize, Deserialize)]
 #[repr(u32)]
 pub enum GMRoomLayerType {
     Path = 0,
@@ -442,15 +442,10 @@ fn parse_room_layers(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMR
         let layer_name: GMRef<String> = chunk.read_gm_string(strings)?;
         let layer_id: u32 = chunk.read_u32()?;
         let layer_type: u32 = chunk.read_u32()?;
-        let layer_type: GMRoomLayerType = match layer_type.try_into() {
-            Ok(layer_type) => layer_type,
-            Err(_) => return Err(format!(
-                "Invalid Room Layer Type 0x{:04X} while parsing room at position {} in chunk '{}'.",
-                layer_type,
-                chunk.cur_pos,
-                chunk.name,
-            )),
-        };
+        let layer_type: GMRoomLayerType = layer_type.try_into().map_err(|_| format!(
+            "Invalid Room Layer Type 0x{:04X} while parsing room at position {} in chunk '{}'.",
+            layer_type, chunk.cur_pos, chunk.name,
+        ))?;
         let layer_depth: i32 = chunk.read_i32()?;
         let x_offset: f32 = chunk.read_f32()?;
         let y_offset: f32 = chunk.read_f32()?;
