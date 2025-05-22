@@ -10,11 +10,11 @@ pub fn build_chunk_func(data_builder: &mut DataBuilder, gm_data: &GMData, functi
     builder.write_usize(gm_data.functions.functions_by_index.len());
 
     for i in 0..gm_data.functions.functions_by_index.len() {
-        data_builder.push_pointer_placeholder(&mut builder, GMPointer::function(i))?;
+        data_builder.push_pointer_placeholder(&mut builder, GMPointer::Function(i))?;
     }
 
     for (i, function) in gm_data.functions.functions_by_index.iter().enumerate() {
-        data_builder.push_pointer_resolve(&mut builder, GMPointer::function(i))?;
+        data_builder.push_pointer_resolve(&mut builder, GMPointer::Function(i))?;
         builder.write_gm_string(data_builder, &function.name)?;
         
         if let Some(occurrences) = function_occurrences_map.get(&i) {
@@ -30,11 +30,11 @@ pub fn build_chunk_func(data_builder: &mut DataBuilder, gm_data: &GMData, functi
     builder.write_usize(gm_data.code_locals.len());
 
     for i in 0..gm_data.code_locals.len() {
-        data_builder.push_pointer_placeholder(&mut builder, GMPointer::code_local(i))?;
+        data_builder.push_pointer_placeholder(&mut builder, GMPointer::CodeLocal(i))?;
     }
 
     for (i, code_local) in gm_data.code_locals.iter().enumerate() {
-        data_builder.push_pointer_resolve(&mut builder, GMPointer::code_local(i))?;
+        data_builder.push_pointer_resolve(&mut builder, GMPointer::CodeLocal(i))?;
         builder.write_gm_string(data_builder, &code_local.name)?;
         builder.write_usize(code_local.variables.len());
         
