@@ -185,8 +185,8 @@ fn build_room_objects(
         builder.write_f32(game_object.rotation);
 
         if general_info.bytecode_version >= 16 {
-            if let Some(ref creation_code) = game_object.creation_code {
-                data_builder.push_pointer_placeholder(builder, GMPointer::Code(creation_code.index))?;
+            if let Some(ref pre_creation_code) = game_object.pre_create_code {
+                data_builder.push_pointer_placeholder(builder, GMPointer::Code(pre_creation_code.index))?;
             } else {
                 builder.write_i32(-1);
             }
