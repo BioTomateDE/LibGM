@@ -24,7 +24,7 @@ impl<'a, T> GMRef<T> {
     pub fn resolve(&self, elements_by_index: &'a Vec<T>) -> Result<&'a T, String> {
         elements_by_index.get(self.index)
             .ok_or_else(|| format!(
-                "Could not resolve {} reference with index {} in list with length {}.",
+                "Could not resolve {} reference with index {} in list with length {}",
                 std::any::type_name::<T>(),
                 self.index,
                 elements_by_index.len(),
@@ -46,7 +46,7 @@ impl GMChunk<'_> {
         let bytes = self.data
             .get(self.cur_pos..self.cur_pos + 8)
             .ok_or_else(|| format!(
-                "Trying to read u64 out of bounds in chunk '{}' at position {}: {} > {}.",
+                "Trying to read u64 out of bounds in chunk '{}' at position {}: {} > {}",
                 self.name, self.cur_pos, self.cur_pos + 8, self.data.len(),
             ))?;
         self.cur_pos += 8;
@@ -57,7 +57,7 @@ impl GMChunk<'_> {
         let bytes = self.data
             .get(self.cur_pos..self.cur_pos + 8)
             .ok_or_else(|| format!(
-                "Trying to read i64 out of bounds in chunk '{}' at position {}: {} > {}.",
+                "Trying to read i64 out of bounds in chunk '{}' at position {}: {} > {}",
                 self.name, self.cur_pos, self.cur_pos + 8, self.data.len(),
             ))?;
         self.cur_pos += 8;
@@ -68,7 +68,7 @@ impl GMChunk<'_> {
         let bytes = self.data
             .get(self.cur_pos..self.cur_pos + 4)
             .ok_or_else(|| format!(
-                "Trying to read u32 out of bounds in chunk '{}' at position {}: {} > {}.",
+                "Trying to read u32 out of bounds in chunk '{}' at position {}: {} > {}",
                 self.name, self.cur_pos, self.cur_pos + 4, self.data.len(),
             ))?;
         self.cur_pos += 4;
@@ -79,7 +79,7 @@ impl GMChunk<'_> {
         let bytes = self.data
             .get(self.cur_pos..self.cur_pos + 4)
             .ok_or_else(|| format!(
-                "Trying to read i32 out of bounds in chunk '{}' at position {}: {} > {}.",
+                "Trying to read i32 out of bounds in chunk '{}' at position {}: {} > {}",
                 self.name, self.cur_pos, self.cur_pos + 4, self.data.len(),
             ))?;
         self.cur_pos += 4;
@@ -90,7 +90,7 @@ impl GMChunk<'_> {
         let bytes = self.data
             .get(self.cur_pos..self.cur_pos + 2)
             .ok_or_else(|| format!(
-                "Trying to read u16 out of bounds in chunk '{}' at position {}: {} > {}.",
+                "Trying to read u16 out of bounds in chunk '{}' at position {}: {} > {}",
                 self.name, self.cur_pos, self.cur_pos + 2, self.data.len(),
             ))?;
         self.cur_pos += 2;
@@ -101,7 +101,7 @@ impl GMChunk<'_> {
         let bytes = self.data
             .get(self.cur_pos..self.cur_pos + 2)
             .ok_or_else(|| format!(
-                "Trying to read i16 out of bounds in chunk '{}' at position {}: {} > {}.",
+                "Trying to read i16 out of bounds in chunk '{}' at position {}: {} > {}",
                 self.name, self.cur_pos, self.cur_pos + 2, self.data.len(),
             ))?;
         self.cur_pos += 2;
@@ -112,7 +112,7 @@ impl GMChunk<'_> {
         let byte = *self.data
             .get(self.cur_pos)
             .ok_or_else(|| format!(
-                "Trying to read u8 out of bounds in chunk '{}' at position {}.",
+                "Trying to read u8 out of bounds in chunk '{}' at position {}",
                 self.name, self.cur_pos,
             ))?;
         self.cur_pos += 1;
@@ -123,7 +123,7 @@ impl GMChunk<'_> {
         let byte = *self.data
             .get(self.cur_pos)
             .ok_or_else(|| format!(
-                "Trying to read i8 out of bounds in chunk '{}' at position {}.",
+                "Trying to read i8 out of bounds in chunk '{}' at position {}",
                 self.name, self.cur_pos,
             ))?;
         self.cur_pos += 1;
@@ -141,7 +141,7 @@ impl GMChunk<'_> {
         }
         Err(format!(
             "Failsafe triggered in chunk '{}' at position {} trying \
-            to read usize integer: Number {} is larger than failsafe amount {}.",
+            to read usize integer: Number {} is larger than failsafe amount {}",
             self.name, self.cur_pos - 4, number, FAILSAFE_AMOUNT,
         ))
     }
@@ -153,7 +153,7 @@ impl GMChunk<'_> {
         let bytes: [u8; 4] = self.data.get(self.cur_pos.. self.cur_pos + 4)
             .ok_or_else(|| format!(
                 "Trying to read big endian usize integer (u32) \
-                out of bounds in chunk '{}' at position {}: {} > {}.",
+                out of bounds in chunk '{}' at position {}: {} > {}",
                 self.name, self.cur_pos, self.cur_pos + 4, self.data.len(),
             ))?
             .try_into().unwrap();
@@ -167,7 +167,7 @@ impl GMChunk<'_> {
         }
         Err(format!(
             "Failsafe triggered in chunk '{}' at position {} trying \
-            to read big endian usize integer: Number {} is larger than failsafe amount {}.",
+            to read big endian usize integer: Number {} is larger than failsafe amount {}",
             self.name, self.cur_pos - 4, number, FAILSAFE_AMOUNT,
         ))
     }
@@ -176,7 +176,7 @@ impl GMChunk<'_> {
         // Read a single-precision floating point number (little endian)
         if self.cur_pos + 4 > self.data.len() {
             return Err(format!(
-                "Trying to read f32 out of bounds in chunk '{}' at position {}: {} > {}.",
+                "Trying to read f32 out of bounds in chunk '{}' at position {}: {} > {}",
                 self.name, self.cur_pos, self.cur_pos + 4, self.data.len(),
             ));
         }
@@ -195,7 +195,7 @@ impl GMChunk<'_> {
             0 => Ok(false),
             1 => Ok(true),
             _ => Err(format!(
-                "Read invalid boolean value in chunk '{0}' at position {1}: {2} (0x{2:08X}).",
+                "Read invalid boolean value in chunk '{0}' at position {1}: {2} (0x{2:08X})",
                 self.name, self.cur_pos, number,
             ))
         }
@@ -207,7 +207,7 @@ impl GMChunk<'_> {
             Some(bytes) => bytes.to_owned(),
             None => return Err(format!(
                 "Trying to read literal string with length {} out of bounds \
-                in chunk '{}' at position {}: {} > {}.",
+                in chunk '{}' at position {}: {} > {}",
                 length, self.name, self.cur_pos, self.cur_pos + length, self.data.len(),
             )),
         };
@@ -224,16 +224,16 @@ impl GMChunk<'_> {
         // Read chunk name (4 ascii characters)
         if self.cur_pos + 4 > self.data.len() {
             return Err(format!(
-                "Trying to read chunk name out of bounds at position {}: {} > {}.",
+                "Trying to read chunk name out of bounds at position {}: {} > {}",
                 self.cur_pos, self.cur_pos + 4, self.data.len(),
             ));
         }
 
         self.read_literal_string(4)
             .map_err(|e| if self.abs_pos == 0 && self.cur_pos == 4 {
-                "Invalid data.win file (because it doesn't start with 'FORM')!".to_string()
+                "Invalid data.win file (because it doesn't start with 'FORM')".to_string()
             } else { 
-                format!("Could not parse chunk name at position {}: {e}.", self.cur_pos)
+                format!("Could not parse chunk name at position {}: {e}", self.cur_pos)
             })
     }
 
@@ -242,7 +242,7 @@ impl GMChunk<'_> {
         let string_ref = gm_strings.abs_pos_to_reference.get(&string_abs_pos)
             .ok_or_else(|| format!(
                 "Could not read reference string with absolute position {} in chunk '{}' at \
-                position {} because it doesn't exist in the string map (length: {}).",
+                position {} because it doesn't exist in the string map (length: {})",
                 string_abs_pos, self.name, self.cur_pos - 4, gm_strings.abs_pos_to_reference.len(),
             ))?;
         Ok(string_ref.clone())
@@ -252,7 +252,7 @@ impl GMChunk<'_> {
     pub fn read_pointer_list(&mut self) -> Result<Vec<usize>, String> {
         let abs_pointers_start_pos: usize = self.read_usize()?;
         let pointers_start_pos: usize = abs_pointers_start_pos.checked_sub(self.abs_pos).ok_or_else(||format!(
-            "Pointer to start of Pointer list underflowed at position {} in chunk '{}': {} - {} < 0.",
+            "Pointer to start of Pointer list underflowed at position {} in chunk '{}': {} - {} < 0",
             self.cur_pos - 4, self.name, abs_pointers_start_pos, self.abs_pos,
         ))?;
 
@@ -264,7 +264,7 @@ impl GMChunk<'_> {
         for _ in 0..pointer_count {
             let abs_pointer_pos: usize = self.read_usize()?;
             let pointer: usize = abs_pointer_pos.checked_sub(self.abs_pos).ok_or_else(|| format!(
-                "Element of Pointer list underflowed at position {} in chunk '{}': {} - {} < 0.",
+                "Element of Pointer list underflowed at position {} in chunk '{}': {} - {} < 0",
                 self.cur_pos - 4, self.name, abs_pointer_pos, self.abs_pos,
             ))?;
             pointers.push(pointer);

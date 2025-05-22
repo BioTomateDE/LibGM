@@ -151,7 +151,7 @@ pub fn parse_chunk_sprt(
         let sep_masks: GMSpriteSepMaskType = match sep_masks.try_into() {
             Ok(masks) => masks,
             Err(_) => return Err(format!(
-                "Invalid Sep Masks Type 0x{:08X} at position {} while parsing Sprite at position {} in chunk '{}'.",
+                "Invalid Sep Masks Type 0x{:08X} at position {} while parsing Sprite at position {} in chunk '{}'",
                 sep_masks, chunk.cur_pos, start_position, chunk.name,
             )),
         };
@@ -175,7 +175,7 @@ pub fn parse_chunk_sprt(
             let playback_speed_type: GMAnimSpeedType = match playback_speed_type.try_into() {
                 Ok(ok) => ok,
                 Err(_) => return Err(format!(
-                    "Invalid Playback Anim Speed Type 0x{:08X} at position {} while parsing Sprite at position {} in chunk '{}'.",
+                    "Invalid Playback Anim Speed Type 0x{:08X} at position {} while parsing Sprite at position {} in chunk '{}'",
                     playback_speed_type, chunk.cur_pos, start_position, chunk.name,
                 )),
             };
@@ -199,12 +199,12 @@ pub fn parse_chunk_sprt(
                 },
 
                 1 => {      // SWF
-                    // [From UndertaleModTool] "This code does not work all the time for some reason."
+                    // [From UndertaleModTool] "This code does not work all the time for some reason"
                     let swf_version: i32 = chunk.read_i32()?;
                     // assert swf version is either 7 or 8
                     if !(swf_version == 7 || swf_version == 8) {
                         return Err(format!(
-                            "Invalid SWF version {swf_version} for Sprite \"{}\" at absolute position {}.",
+                            "Invalid SWF version {swf_version} for Sprite \"{}\" at absolute position {}",
                             name.display(strings), start_position + chunk.abs_pos,
                         ))
                     }
@@ -221,7 +221,7 @@ pub fn parse_chunk_sprt(
                         Some(bytes) => bytes.to_vec(),
                         None => return Err(format!(
                             "Trying to read YYSWF JPEG Table out of bounds while parsing \
-                            Sprite with name \"{}\" in chunk '{}' at position {}: {} > {}.",
+                            Sprite with name \"{}\" in chunk '{}' at position {}: {} > {}",
                             name.resolve(&strings.strings_by_index)?, chunk.name, chunk.cur_pos, chunk.cur_pos + jpeg_len, chunk.data.len(),
                         )),
                     };
@@ -239,7 +239,7 @@ pub fn parse_chunk_sprt(
 
                 2 => {      // Spine
                     return Err(format!(
-                        "Spine format is not yet implemented for Sprite with name \"{}\" and absolute position {}!",
+                        "Spine format is not yet implemented for Sprite with name \"{}\" and absolute position {}",
                         name.resolve(&strings.strings_by_index)?, start_position + chunk.abs_pos,
                     ))
                     // TODO {~~} IMPLEMENT TS
@@ -247,7 +247,7 @@ pub fn parse_chunk_sprt(
 
                 other => {
                     return Err(format!(
-                        "Invalid Sprite Type {other} for Sprite with name \"{}\" and absolute position {}.",
+                        "Invalid Sprite Type {other} for Sprite with name \"{}\" and absolute position {}",
                         name.resolve(&strings.strings_by_index)?, start_position + chunk.abs_pos,
                     ))
                 }
@@ -257,7 +257,7 @@ pub fn parse_chunk_sprt(
                 let thingy: i32 = chunk.read_i32()?;
                 if thingy != 1 {
                     return Err(format!(
-                        "Expected 1 but got {} while parsing Sequence for Sprite with name \"{}\" in chunk '{}'.",
+                        "Expected 1 but got {} while parsing Sequence for Sprite with name \"{}\" in chunk '{}'",
                         thingy, name.resolve(&strings.strings_by_index)?, chunk.name,
                     ))
                 }
@@ -354,7 +354,7 @@ fn parse_nine_slice(chunk: &mut GMChunk, sprite_name: &str, start_position: usiz
             Ok(ok) => ok,
             Err(_) => return Err(format!(
                 "Invalid Tile Mode for Nine Slice 0x{:08X} at position {} \
-                while parsing Sprite with name \"{}\" at position {} in chunk '{}'.",
+                while parsing Sprite with name \"{}\" at position {} in chunk '{}'",
                 tile_mode, chunk.cur_pos, sprite_name, start_position, chunk.name,
             )),
         };
@@ -384,7 +384,7 @@ fn read_mask_data(chunk: &mut GMChunk, sprite_name: &str, mask_width: usize, mas
             Some(bytes) => bytes.to_vec(),
             None => return Err(format!(
                 "Trying to read Mask Data out of bounds while parsing \
-                Sprite with name \"{}\" in chunk '{}' at position {}: {} > {}.",
+                Sprite with name \"{}\" in chunk '{}' at position {}: {} > {}",
                 sprite_name, chunk.name, chunk.cur_pos, chunk.cur_pos + len, chunk.data.len(),
             )),
         };
@@ -398,7 +398,7 @@ fn read_mask_data(chunk: &mut GMChunk, sprite_name: &str, mask_width: usize, mas
         let byte: u8 = chunk.read_u8()?;
         if byte != 0 {
             return Err(format!(
-                "Invalid padding byte 0x{:02X} while parsing Masks for Sprite with name \"{}\" at position {} in chunk '{}'.",
+                "Invalid padding byte 0x{:02X} while parsing Masks for Sprite with name \"{}\" at position {} in chunk '{}'",
                 byte, sprite_name, chunk.cur_pos, chunk.name,
             ))
         }
@@ -408,7 +408,7 @@ fn read_mask_data(chunk: &mut GMChunk, sprite_name: &str, mask_width: usize, mas
     let expected_size: usize = calculate_mask_data_size(mask_width, mask_height, mask_count);
     if total != expected_size {
         return Err(format!(
-            "Mask data size is incorrect for Sprite with name \"{}\" at position {} in chunk '{}': Expected: {}; Actual: {}.",
+            "Mask data size is incorrect for Sprite with name \"{}\" at position {} in chunk '{}': Expected: {}; Actual: {}",
             sprite_name, chunk.cur_pos, chunk.name, expected_size, total,
         ))
     }
@@ -424,7 +424,7 @@ pub fn align_reader(chunk: &mut GMChunk, alignment: usize, padding_byte: u8) -> 
         let byte: u8 = chunk.read_u8()?;
         if byte != padding_byte {
             return Err(format!(
-                "Invalid alignment padding 0x{:02X} (expected: 0x{}) at position {} in chunk '{}' with alignment value {}.",
+                "Invalid alignment padding 0x{:02X} (expected: 0x{}) at position {} in chunk '{}' with alignment value {}",
                 byte, padding_byte, chunk.cur_pos - 1, chunk.name, alignment,
             ));
         }

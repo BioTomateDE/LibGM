@@ -80,7 +80,7 @@ fn build_instruction(
                     GMOpcode::Ret => 0x9D,
                     GMOpcode::Exit => 0x9E,
                     GMOpcode::Popz => 0x9F,
-                    other => return Err(format!("Invalid Single Type Instruction opcode {other:?} while building instructions.")),
+                    other => return Err(format!("Invalid Single Type Instruction opcode {other:?} while building instructions")),
                 }
             };
             builder.write_u8(instr.extra);
@@ -104,7 +104,7 @@ fn build_instruction(
                     GMOpcode::Xor => 0x0C,
                     GMOpcode::Shl => 0x0F,
                     GMOpcode::Shr => 0x10,
-                    other => return Err(format!("Invalid Double Type Instruction opcode {other:?} while building instructions.")),
+                    other => return Err(format!("Invalid Double Type Instruction opcode {other:?} while building instructions")),
                 }
             };
             let type1: u8 = instr.type1.into();
@@ -139,7 +139,7 @@ fn build_instruction(
                     GMOpcode::Bf => 0xB9,
                     GMOpcode::PushEnv => 0xBB,
                     GMOpcode::PopEnv => 0xBC,
-                    other => return Err(format!("Invalid Goto Instruction opcode {other:?} while building instructions.")),
+                    other => return Err(format!("Invalid Goto Instruction opcode {other:?} while building instructions")),
                 }
             };
 
@@ -158,13 +158,13 @@ fn build_instruction(
 
         GMInstruction::Pop(instr) => {
             if instr.type1 == GMDataType::Int16 {
-                return Err("Int16 Data Type not yet supported while building Pop Instruction.".to_string())
+                return Err("Int16 Data Type not yet supported while building Pop Instruction".to_string())
             }
 
             let opcode_raw: u8 = if !bytecode14 { instr.opcode.into() } else {
                 match instr.opcode {
                     GMOpcode::Pop => 0x41,
-                    other => return Err(format!("Invalid Pop Instruction opcode {other:?} while building instructions.")),
+                    other => return Err(format!("Invalid Pop Instruction opcode {other:?} while building instructions")),
                 }
             };
             let type1: u8 = instr.type1.into();
@@ -218,7 +218,7 @@ fn build_instruction(
             builder.write_u8(instr.data_type.into());
             builder.write_u8(instr.opcode.into());
             if instr.data_type == GMDataType::Int32 {
-                let int_argument: i32 = instr.int_argument.ok_or_else(|| "Int argument not set but Data Type is Int32 while building Break Instruction.")?;
+                let int_argument: i32 = instr.int_argument.ok_or_else(|| "Int argument not set but Data Type is Int32 while building Break Instruction")?;
                 builder.write_i32(int_argument);
             }
         }

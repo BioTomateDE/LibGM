@@ -32,7 +32,7 @@ pub fn build_chunk_bgnd(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
 
             if gms2_data.tile_ids.len() % gms2_data.items_per_tile_count != 0 {
                 return Err(format!(
-                    "Too many or too few Tile items for Background \"{}\": {} Tile IDs/items, which would have leftovers with {} items per tile.",
+                    "Too many or too few Tile items for Background \"{}\": {} Tile IDs/items, which would have leftovers with {} items per tile",
                     background.name.display(&gm_data.strings), gms2_data.tile_ids.len(), gms2_data.items_per_tile_count,
                 ))
             }

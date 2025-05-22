@@ -311,7 +311,7 @@ impl GMCodeBlob<'_> {
     fn read_byte(&mut self) -> Result<u8, String> {
         if self.cur_pos + 1 > self.len {
             return Err(format!(
-                "Trying to read u8 out of bounds while parsing code at position {}: {} > {}.",
+                "Trying to read u8 out of bounds while parsing code at position {}: {} > {}",
                 self.cur_pos, self.cur_pos + 1, self.len,
             ));
         }
@@ -323,7 +323,7 @@ impl GMCodeBlob<'_> {
     fn read_i32(&mut self) -> Result<i32, String> {
         let bytes: &[u8] = self.raw_data.get(self.cur_pos .. self.cur_pos+4)
             .ok_or_else(|| format!(
-                "Trying to read i32 out of bounds while parsing code at position {}: {} > {}.",
+                "Trying to read i32 out of bounds while parsing code at position {}: {} > {}",
                 self.cur_pos, self.cur_pos+4, self.len,
             ))?;
         let value: i32 = i32::from_le_bytes(bytes.try_into().unwrap());
@@ -389,7 +389,7 @@ impl GMCodeBlob<'_> {
                 Ok(GMValue::Int16(i16::from_le_bytes(raw)))
             }
 
-            other => Err(format!("Trying to read unsupported data type {other:?} while reading values in code.")),
+            other => Err(format!("Trying to read unsupported data type {other:?} while reading values in code")),
         }
     }
 
@@ -400,11 +400,11 @@ impl GMCodeBlob<'_> {
         let variable_type: i32 = (raw_value >> 24) & 0xF8;
         let variable_type: u8 = variable_type as u8;
         let variable_type: GMVariableType = variable_type.try_into()
-            .map_err(|_| format!("Invalid Variable Type 0x{variable_type:02X} while parsing variable reference chain."))?;
+            .map_err(|_| format!("Invalid Variable Type 0x{variable_type:02X} while parsing variable reference chain"))?;
 
         let variable: GMRef<GMVariable> = variables.occurrences_to_refs.get(&occurrence_position)
             .ok_or_else(|| format!(
-                "Could not find {} Variable with occurrence position {} in hashmap with length {} while parsing code values.",
+                "Could not find {} Variable with occurrence position {} in hashmap with length {} while parsing code values",
                 instance_type, occurrence_position, variables.occurrences_to_refs.len(),
             ))?.clone();
 
@@ -442,7 +442,7 @@ pub fn parse_chunk_code(chunk: &mut GMChunk, bytecode14: bool, strings: &GMStrin
                 "Code starting offset out of bounds \
                 at position {} while parsing chunk 'CODE': \
                 Offset {} corresponds to chunk position {} \
-                which is not 0 <= {} < {}.",
+                which is not 0 <= {} < {}",
                 chunk.cur_pos, start_offset, start_position, start_position, chunk.data.len()
             ));
         }
@@ -512,26 +512,26 @@ pub fn parse_instruction(
         opcode_raw = convert_instruction_kind(opcode_raw);
     }
     let mut opcode: GMOpcode = opcode_raw.try_into()
-        .map_err(|_| format!("Invalid Opcode 0x{opcode_raw:02X} while parsing code instruction."))?;
+        .map_err(|_| format!("Invalid Opcode 0x{opcode_raw:02X} while parsing code instruction"))?;
 
     let instruction_type: GMInstructionType = get_instruction_type(opcode);
     match instruction_type {
         GMInstructionType::SingleTypeInstruction => {
             let data_type: u8 = b2 & 0xf;
             let data_type: GMDataType = data_type.try_into().map_err(|_| format!(
-                "Invalid Data Type {data_type:02X} while parsing Single Type Instruction."
+                "Invalid Data Type {data_type:02X} while parsing Single Type Instruction"
             ))?;
 
             // Ensure basic conditions hold
             if b0 != 0 && opcode != GMOpcode::Dup && opcode != GMOpcode::CallV {
-                return Err(format!("Invalid padding {:02X} while parsing Single Type Instruction.", b0));
+                return Err(format!("Invalid padding {:02X} while parsing Single Type Instruction", b0));
             }
             if b2 >> 4 != 0 {
-                return Err(format!("Second type should be zero but is {0} (0x{0:02X}) for Single Type Instruction.", b2 >> 4))
+                return Err(format!("Second type should be zero but is {0} (0x{0:02X}) for Single Type Instruction", b2 >> 4))
             }
 
             if b1 != 0 {
-                return Err(format!("b1 should be zero but is {b1} (0x{b1:02X}) for Single Type Instruction."))
+                return Err(format!("b1 should be zero but is {b1} (0x{b1:02X}) for Single Type Instruction"))
             }
 
             Ok(GMInstruction::SingleType(GMSingleTypeInstruction {
@@ -544,16 +544,16 @@ pub fn parse_instruction(
         GMInstructionType::DoubleTypeInstruction => {
             let type1: u8 = b2 & 0xf;
             let type1: GMDataType = type1.try_into().map_err(|_| format!(
-                "Invalid Data Type {type1:02X} while parsing Double Type Instruction."
+                "Invalid Data Type {type1:02X} while parsing Double Type Instruction"
             ))?;
 
             let type2: u8 = b2 >> 4;
             let type2: GMDataType = type2.try_into().map_err(|_| format!(
-                "Invalid Data Type {type2:02X} while parsing Double Type Instruction."
+                "Invalid Data Type {type2:02X} while parsing Double Type Instruction"
             ))?;
 
             if b1 != 0 {
-                return Err(format!("b1 should be zero but is {b1} (0x{b1:02X}) for Double Type Instruction."))
+                return Err(format!("b1 should be zero but is {b1} (0x{b1:02X}) for Double Type Instruction"))
             }
 
             Ok(GMInstruction::DoubleType(GMDoubleTypeInstruction {
@@ -566,17 +566,17 @@ pub fn parse_instruction(
         GMInstructionType::ComparisonInstruction => {
             // Parse instruction components from bytes
             let mut comparison_type: GMComparisonType = b1.try_into().map_err(|_| format!(
-                "Invalid Comparison Type {b1:02X} while parsing Comparison Instruction."
+                "Invalid Comparison Type {b1:02X} while parsing Comparison Instruction"
             ))?;
 
             let type1: u8 = b2 & 0xf;
             let type1: GMDataType = type1.try_into().map_err(|_| format!(
-                "Invalid Data Type {type1:02X} while parsing Comparison Instruction."
+                "Invalid Data Type {type1:02X} while parsing Comparison Instruction"
             ))?;
 
             let type2: u8 = b2 >> 4;
             let type2: GMDataType = type2.try_into().map_err(|_| format!(
-                "Invalid Data Type {type2:02X} while parsing Comparison Instruction."
+                "Invalid Data Type {type2:02X} while parsing Comparison Instruction"
             ))?;
 
             if bytecode14 {
@@ -584,7 +584,7 @@ pub fn parse_instruction(
                 let comparison_type_raw: u8 = opcode_raw - 0x10;
                 comparison_type = comparison_type_raw.try_into()
                     .map_err(|_| format!("Invalid Bytecode14 Comparison Type {comparison_type_raw:02X} \
-                        (Opcode: 0x{opcode_raw:02X}) while parsing Comparison Instruction."))?;
+                        (Opcode: 0x{opcode_raw:02X}) while parsing Comparison Instruction"))?;
             }
 
             // short circuit stuff {~~}
@@ -631,13 +631,13 @@ pub fn parse_instruction(
             let type1: u8 = b2 & 0xf;
             let type1: GMDataType = match type1.try_into() {
                 Ok(ok) => ok,
-                Err(_) => return Err(format!("Invalid Data Type {type1:02X} while parsing Pop Instruction.")),
+                Err(_) => return Err(format!("Invalid Data Type {type1:02X} while parsing Pop Instruction")),
             };
 
             let type2: u8 = b2 >> 4;
             let type2: GMDataType = match type2.try_into() {
                 Ok(ok) => ok,
-                Err(_) => return Err(format!("Invalid Data Type {type2:02X} while parsing Pop Instruction.")),
+                Err(_) => return Err(format!("Invalid Data Type {type2:02X} while parsing Pop Instruction")),
             };
 
             let instance_type: i16 = b0 as i16 | ((b1 as i16) << 8);
@@ -648,7 +648,7 @@ pub fn parse_instruction(
                     "[Internal Error] Unhandled \"Special swap instruction\" (UndertaleModTool/Issues/#129) \
                     occurred at position {} while parsing Pop Instruction.\
                     Please report this error to github.com/BioTomateDE/LibGM/Issues \
-                    along with your data.win file.",
+                    along with your data.win file",
                     blob.cur_pos + blob.chunk_code_pos
                 ));
             }
@@ -666,7 +666,7 @@ pub fn parse_instruction(
         GMInstructionType::PushInstruction => {
             let data_type: u8 = b2;
             let data_type: GMDataType = data_type.try_into()
-                .map_err(|_| format!("Invalid Data Type {data_type:02X} while parsing Push Instruction."))?;
+                .map_err(|_| format!("Invalid Data Type {data_type:02X} while parsing Push Instruction"))?;
 
             let val: i16 = (b0 as i16) | ((b1 as i16) << 8);
 
@@ -705,11 +705,11 @@ pub fn parse_instruction(
             let data_type: u8 = b2;
             let data_type: GMDataType = match data_type.try_into() {
                 Ok(ok) => ok,
-                Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Call Instruction.")),
+                Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Call Instruction")),
             };
 
             let function: &GMRef<GMFunction> = functions.occurrences_to_refs.get(&(blob.chunk_code_pos + blob.cur_pos))
-                .ok_or_else(|| format!("Could not find any function with absolute occurrence position {} in map with length {} (functions len: {}).",
+                .ok_or_else(|| format!("Could not find any function with absolute occurrence position {} in map with length {} (functions len: {})",
                                blob.chunk_code_pos + blob.cur_pos, functions.occurrences_to_refs.len(), functions.functions_by_index.len()))?;
             blob.cur_pos += 4;
 
@@ -726,7 +726,7 @@ pub fn parse_instruction(
             let data_type: u8 = b2;
             let data_type: GMDataType = match data_type.try_into() {
                 Ok(ok) => ok,
-                Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Break Instruction.")),
+                Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Break Instruction")),
             };
             let mut int_argument: Option<i32> = None;
 
@@ -734,7 +734,7 @@ pub fn parse_instruction(
                 int_argument = Some(match blob.read_value(GMDataType::Int32)? {
                     GMValue::Int32(val) => val,
                     other => return Err(format!("[INTERNAL ERROR] GMCodeBlob.read_value(GMDataType::Int32, ...) \
-                        returned {other:?} instead of i32 while parsing Break Instruction.")),
+                        returned {other:?} instead of i32 while parsing Break Instruction")),
                 });
                 // set gms version to at least ... {~~}
             }
@@ -769,7 +769,7 @@ pub fn parse_instance_type(raw_value: i16) -> Result<GMInstanceType, String> {
         -9 => GMInstanceType::Stacktop,
         -15 => GMInstanceType::Arg,
         -16 => GMInstanceType::Static,
-        _ => return Err(format!("Invalid instance type {raw_value} (0x{raw_value:04X})."))
+        _ => return Err(format!("Invalid instance type {raw_value} (0x{raw_value:04X})"))
     };
 
     Ok(instance_type)
@@ -789,7 +789,7 @@ pub fn parse_occurrence_chain(
     let occurrence_pos: i32 = first_occurrence_abs_pos - chunk_code.abs_pos as i32 + 4;
     let mut occurrence_pos: usize = occurrence_pos.try_into()
         .map_err(|_| format!(
-            "First occurrence of variable/function \"{}\" is out of bounds; should be: {} <= {} < {}.",
+            "First occurrence of variable/function \"{}\" is out of bounds; should be: {} <= {} < {}",
             gm_name, chunk_code.abs_pos, first_occurrence_abs_pos, chunk_code.abs_pos + chunk_code.data.len(),
         ))?;
 
@@ -814,7 +814,7 @@ fn read_occurrence(chunk_code: &mut GMChunk) -> Result<i32, String> {
     let next_occurrence_offset: i32 = raw_value & 0x07FFFFFF;
     if next_occurrence_offset < 1 {
         return Err(format!(
-            "Next occurrence offset is {0} (0x{0:08X}) should be positive while parsing variable/function occurrences at absolute position {1} (raw value is 0x{2:08X}).",
+            "Next occurrence offset is {0} (0x{0:08X}) should be positive while parsing variable/function occurrences at absolute position {1} (raw value is 0x{2:08X})",
             next_occurrence_offset, chunk_code.cur_pos-4, raw_value,
         ))
     }

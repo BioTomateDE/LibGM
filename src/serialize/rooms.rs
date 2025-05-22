@@ -20,9 +20,9 @@ pub fn build_chunk_room(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     for (i, room) in gm_data.rooms.rooms_by_index.iter().enumerate() {
         data_builder.push_pointer_resolve(&mut builder, GMPointer::Room(i))?;
         build_room(data_builder, &mut builder, &gm_data.general_info, &gm_data.strings, i, room)
-            .map_err(|e| format!("{e} for Room #{i} with name \"{}\" while building Rooms.", room.name.display(&gm_data.strings)))?;
+            .map_err(|e| format!("{e} for Room #{i} with name \"{}\" while building Rooms", room.name.display(&gm_data.strings)))?;
     }
-    
+
     builder.finish(data_builder)?;
     Ok(())
 }
@@ -172,10 +172,10 @@ fn build_room_objects(
 
         if general_info.is_version_at_least(2, 2, 2, 302) {
             let image_speed: f32 = game_object.image_speed.ok_or_else(|| format!(
-                "Image Speed not set for Room Object with Instance ID {} at position ({}; {}) in room with index {}.",
+                "Image Speed not set for Room Object with Instance ID {} at position ({}; {}) in room with index {}",
                 game_object.instance_id, game_object.x, game_object.y, room_index))?;
             let image_index: usize = game_object.image_index.ok_or_else(|| format!(
-                "Image Index not set for Room Object with Instance ID {} at position ({}; {}) in room with index {}.",
+                "Image Index not set for Room Object with Instance ID {} at position ({}; {}) in room with index {}",
                 game_object.instance_id, game_object.x, game_object.y, room_index))?;
             builder.write_f32(image_speed);
             builder.write_usize(image_index);
@@ -221,7 +221,7 @@ fn build_room_tiles(
                 data_builder.push_pointer_placeholder(builder, GMPointer::Sprite(sprite.index))?;
             } else {
                 return Err(format!(
-                    "Invalid Room Tile Texture Mode (expected Sprite, got {:?}) for tile with Instance ID {} in room with index {}.",
+                    "Invalid Room Tile Texture Mode (expected Sprite, got {:?}) for tile with Instance ID {} in room with index {}",
                     tile.texture, tile.instance_id, room_index,
                 ))
             };
@@ -230,7 +230,7 @@ fn build_room_tiles(
                 data_builder.push_pointer_placeholder(builder, GMPointer::Background(background.index))?;
             } else {
                 return Err(format!(
-                    "Invalid Room Tile Texture Mode (expected Background, got {:?}) for tile with Instance ID {} in room with index {}.",
+                    "Invalid Room Tile Texture Mode (expected Background, got {:?}) for tile with Instance ID {} in room with index {}",
                     tile.texture, tile.instance_id, room_index,
                 ))
             };

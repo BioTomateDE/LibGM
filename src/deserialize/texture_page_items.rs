@@ -59,14 +59,14 @@ pub fn parse_chunk_tpag(chunk: &mut GMChunk, texture_pages: Vec<GMEmbeddedTextur
         let texture_page: &GMEmbeddedTexture = match texture_pages.get(texture_page_id) {
             Some(page) => page,
             None => return Err(format!(
-                "Texture Page ID out ouf bounds at position {} in chunk 'TPAG': {} >= {}.",
+                "Texture Page ID out ouf bounds at position {} in chunk 'TPAG': {} >= {}",
                 chunk.cur_pos, texture_page_id, texture_pages.len(),
             )),
         };
         let spritesheet: &image::RgbaImage = match &texture_page.texture_data {
             image::DynamicImage::ImageRgba8(img) => &img,
             _ => return Err(format!(
-                "Unknown type of texture page image at position {} in chunk 'TPAG': {}.",
+                "Unknown type of texture page image at position {} in chunk 'TPAG': {}",
                 chunk.cur_pos, format_type_of(texture_page),
             )),
         };
