@@ -25,7 +25,7 @@ pub fn parse_chunk_audo(chunk: &mut GMChunk) -> Result<GMEmbeddedAudios, String>
         let audio_raw: &[u8] = match chunk.data.get(chunk.cur_pos.. chunk.cur_pos + audio_raw_length) {
             Some(bytes) => bytes,
             None => return Err(format!(
-                "Trying to read raw audio out of bounds for embedded audio #{} at position {} in chunk 'AUDO': {} >= {}.",
+                "Trying to read raw audio out of bounds for embedded audio #{} at position {} in chunk 'AUDO': {} >= {}",
                 i, start_position, chunk.cur_pos + audio_raw_length, chunk.data.len(),
             )),
         };

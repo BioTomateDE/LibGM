@@ -76,7 +76,7 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
             if let Some(old_value) = occurrence_map.insert(occurrence, GMRef::new(cur_index)) {
                 return Err(format!(
                     "Conflicting occurrence positions while parsing variables: absolute position {} \
-                    was already set for {:?} variable #{} with name \"{}\"; trying to set to variable #{} with name \"{}\".",
+                    was already set for {:?} variable #{} with name \"{}\"; trying to set to variable #{} with name \"{}\"",
                     occurrence, instance_type, old_value.index, old_value.resolve(&variables)?.name.display(strings), cur_index, name.display(strings),
                 ))
             }

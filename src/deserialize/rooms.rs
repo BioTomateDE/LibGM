@@ -443,7 +443,7 @@ fn parse_room_layers(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMR
         let layer_id: u32 = chunk.read_u32()?;
         let layer_type: u32 = chunk.read_u32()?;
         let layer_type: GMRoomLayerType = layer_type.try_into().map_err(|_| format!(
-            "Invalid Room Layer Type 0x{:04X} while parsing room at position {} in chunk '{}'.",
+            "Invalid Room Layer Type 0x{:04X} while parsing room at position {} in chunk '{}'",
             layer_type, chunk.cur_pos, chunk.name,
         ))?;
         let layer_depth: i32 = chunk.read_i32()?;

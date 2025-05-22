@@ -51,7 +51,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     };
 
     if all.read_chunk_name()? != "FORM" {
-        return Err("Invalid or corrupted data.win file: 'FORM' chunk missing!".to_string());
+        return Err("Invalid or corrupted data.win file: 'FORM' chunk missing".to_string());
     }
 
     // get chunks
@@ -63,7 +63,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
         let chunk_length: usize = all.read_usize()?;
         let chunk_data: &[u8] = all.data.get(all.cur_pos.. all.cur_pos + chunk_length)
             .ok_or_else(|| format!(
-                "Chunk '{}' with specified length {} is out of bounds at absolute position {} while reading chunks: {} > {}.",
+                "Chunk '{}' with specified length {} is out of bounds at absolute position {} while reading chunks: {} > {}",
                 chunk_name, chunk_length, all.cur_pos, all.cur_pos + chunk_length, all.data.len(),
             ))?;
 
@@ -141,14 +141,14 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
 
 pub fn read_data_file(data_file_path: &Path) -> Result<Vec<u8>, String> {
     fs::read(data_file_path)
-        .map_err(|e| format!("Could not read data file with path \"{}\": {e}.", data_file_path.display()))
+        .map_err(|e| format!("Could not read data file with path \"{}\": {e}", data_file_path.display()))
 }
 
 fn get_chunk<'a>(chunks: &HashMap<String, GMChunk<'a>>, chunk_name: &str) -> Result<GMChunk<'a>, String> {
     chunks.get(chunk_name)
         .map(|i| i.to_owned())
         .ok_or_else(|| format!(
-            "Chunk '{}' is missing in data file (chunk hashmap length: {}).",
+            "Chunk '{}' is missing in data file (chunk hashmap length: {})",
             chunk_name, chunks.len(), 
         ))
 }

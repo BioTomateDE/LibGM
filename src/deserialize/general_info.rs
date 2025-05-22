@@ -224,7 +224,7 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
 
     let directplay_guid: [u8; 16] = chunk.data.get(chunk.cur_pos..chunk.cur_pos + 16)
         .ok_or_else(|| format!(
-            "Trying to read GUID out of bounds in chunk 'GEN8' at position {}: {} > {}.",
+            "Trying to read GUID out of bounds in chunk 'GEN8' at position {}: {} > {}",
             chunk.cur_pos,
             chunk.cur_pos + 16,
             chunk.data.len(),
@@ -244,7 +244,7 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
 
     let license_md5: [u8; 16] = chunk.data.get(chunk.cur_pos .. chunk.cur_pos + 16)
         .ok_or_else(|| format!(
-            "Trying to read license (MD5) out of bounds in chunk 'GEN8' at position {}: {} > {}.",
+            "Trying to read license (MD5) out of bounds in chunk 'GEN8' at position {}: {} > {}",
             chunk.cur_pos,
             chunk.cur_pos + 16,
             chunk.data.len(),
@@ -254,7 +254,7 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
     let timestamp_created: i64 = chunk.read_i64()?;
     let timestamp_created: DateTime<Utc> = DateTime::from_timestamp(timestamp_created, 0)
         .ok_or_else(|| format!(
-            "Invalid Creation Timestamp 0x{:016X} in chunk 'GEN8' at position {}.",
+            "Invalid Creation Timestamp 0x{:016X} in chunk 'GEN8' at position {}",
             timestamp_created,
             chunk.cur_pos
         ))?;
@@ -608,7 +608,7 @@ fn parse_options_image(chunk: &mut GMChunk, textures: &GMTextures) -> Result<Opt
     }
 
     let texture: GMRef<GMTexture> = textures.abs_pos_to_ref.get(&absolute_position)
-        .ok_or_else(|| format!("Could not get Options image with absolute texture position {absolute_position}."))?
+        .ok_or_else(|| format!("Could not get Options image with absolute texture position {absolute_position}"))?
         .clone();
 
     Ok(Some(texture))

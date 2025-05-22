@@ -68,7 +68,7 @@ fn parse_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GM
     let texture_abs_start_position: usize = chunk.read_usize()?;
     let texture_start_position: usize = texture_abs_start_position.checked_sub(chunk.abs_pos)
         .ok_or_else(|| format!(
-            "Trying to subtract with overflow for absolute texture start position {0} (0x{0:08X}) with chunk position {1}.", 
+            "Trying to subtract with overflow for absolute texture start position {0} (0x{0:08X}) with chunk position {1}",
             texture_abs_start_position, chunk.abs_pos,
         ))?;
     // log::info!("ts pmo {}", texture_start_position);
@@ -97,7 +97,7 @@ fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
     let header: [u8; 8] = match chunk.data.get(chunk.cur_pos.. chunk.cur_pos +8) {
         Some(bytes) => bytes.try_into().unwrap(),
         None => return Err(format!(
-            "Unexpected end of chunk while trying to read headers of texture at position {} in chunk 'TXTR'.",
+            "Unexpected end of chunk while trying to read headers of texture at position {} in chunk 'TXTR'",
             start_position
         )),
     };
@@ -117,7 +117,7 @@ fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
         let bytes: &[u8] = &chunk.data[start_position .. chunk.cur_pos];
         // png image size checks {~~}
         let image: DynamicImage = image::load_from_memory(&bytes)
-            .map_err(|e| format!("Could not parse PNG image for texture page at position {start_position} in chunk 'TXTR': \"{e}\"."
+            .map_err(|e| format!("Could not parse PNG image for texture page at position {start_position} in chunk 'TXTR': \"{e}\""
         ))?;
         Ok(image)
     }
@@ -144,12 +144,12 @@ fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
     }
     else if header.starts_with(MAGIC_QOI_HEADER) {
         // Parse QOI
-        panic!("Unhandled QOI image at position {} in chunk 'TXTR'.", chunk.cur_pos);
+        panic!("Unhandled QOI image at position {} in chunk 'TXTR'", chunk.cur_pos);
         // image_from_qoi(chunk.data[chunk..])
     }
     else {
         let dump: String = hexdump(&header, 0, None)?;
-        Err(format!("Invalid image header [{dump}] while parsing texture at position {start_position} in chunk 'TXTR'."))
+        Err(format!("Invalid image header [{dump}] while parsing texture at position {start_position} in chunk 'TXTR'"))
     }
 }
 
@@ -182,7 +182,7 @@ fn find_end_of_bz2_stream(gm_chunk: &mut GMChunk) -> Result<usize, String> {
         // move backwards to next chunk
         chunk_start_position = max(stream_start_position, chunk_start_position - MAX_CHUNK_SIZE);
         if chunk_start_position <= stream_start_position {
-            return Err("Failed to find nonzero data while trying to find end of bz2 stream.".to_string())
+            return Err("Failed to find nonzero data while trying to find end of bz2 stream".to_string())
         }
     }
 }
@@ -302,7 +302,7 @@ fn image_from_qoi(raw_image_data: &[u8], width: usize, height: usize) -> Result<
     let image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> = match image {
         Some(img) => img,
         None => return Err(format!(
-            "Could not convert QOI image to image::RgbImage with dimensions {}x{} while parsing chunk 'TXTR'.",
+            "Could not convert QOI image to image::RgbImage with dimensions {}x{} while parsing chunk 'TXTR'",
             width, height)),
     };
     let image = DynamicImage::ImageRgba8(image);

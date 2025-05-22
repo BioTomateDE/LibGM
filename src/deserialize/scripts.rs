@@ -45,7 +45,7 @@ pub fn parse_chunk_scpt(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMSc
             None
         } else {
             let code_id: usize = usize::try_from(code_id).map_err(|e| format!(
-                "Could not convert Code ID {code_id} (0x{code_id:08X}) to usize for Script \"{}\": {e}.", name.display(strings),
+                "Could not convert Code ID {code_id} (0x{code_id:08X}) to usize for Script \"{}\": {e}", name.display(strings),
             ))?;
             Some(GMRef::new(code_id))
         };
