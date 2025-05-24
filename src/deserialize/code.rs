@@ -126,7 +126,7 @@ pub enum GMComparisonType {
     GT = 6,
 }
 
-pub fn get_instruction_type(opcode: GMOpcode) -> GMInstructionType {
+fn get_instruction_type(opcode: GMOpcode) -> GMInstructionType {
     match opcode {
         GMOpcode::Neg
         | GMOpcode::Not
@@ -239,7 +239,7 @@ pub struct GMPushInstruction {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMCallInstruction {
     pub opcode: GMOpcode,
-    pub arguments_count: usize,
+    pub arguments_count: u8,
     pub data_type: GMDataType,
     pub function: GMRef<GMFunction>,
 }
@@ -647,9 +647,8 @@ pub fn parse_instruction(
                 return Err(format!(
                     "[Internal Error] Unhandled \"Special swap instruction\" (UndertaleModTool/Issues/#129) \
                     occurred at position {} while parsing Pop Instruction.\
-                    Please report this error to github.com/BioTomateDE/LibGM/Issues \
-                    along with your data.win file",
-                    blob.cur_pos + blob.chunk_code_pos
+                    Please report this error to https://github.com/BioTomateDE/LibGM/issues",
+                    blob.cur_pos + blob.chunk_code_pos,
                 ));
             }
 
@@ -701,7 +700,6 @@ pub fn parse_instruction(
         }
 
         GMInstructionType::CallInstruction => {
-            let arguments_count: usize = b0 as usize;       // idgaf it's always one anyways
             let data_type: u8 = b2;
             let data_type: GMDataType = match data_type.try_into() {
                 Ok(ok) => ok,
@@ -715,7 +713,7 @@ pub fn parse_instruction(
 
             Ok(GMInstruction::Call(GMCallInstruction {
                 opcode,
-                arguments_count,
+                arguments_count: b0,
                 data_type,
                 function: function.clone(),
             }))
@@ -795,7 +793,7 @@ pub fn parse_occurrence_chain(
 
     let mut occurrences: Vec<usize> = Vec::with_capacity(occurrence_count);
     let mut offset: i32 = first_occurrence_abs_pos;
-
+    
     for _ in 0..occurrence_count {
         occurrences.push(occurrence_pos);
         chunk_code.cur_pos = occurrence_pos;
@@ -814,7 +812,7 @@ fn read_occurrence(chunk_code: &mut GMChunk) -> Result<i32, String> {
     let next_occurrence_offset: i32 = raw_value & 0x07FFFFFF;
     if next_occurrence_offset < 1 {
         return Err(format!(
-            "Next occurrence offset is {0} (0x{0:08X}) should be positive while parsing variable/function occurrences at absolute position {1} (raw value is 0x{2:08X})",
+            "Next occurrence offset is {0} (0x{0:08X}) which is not positive while parsing variable/function occurrences at absolute position {1} (raw value is 0x{2:08X})",
             next_occurrence_offset, chunk_code.cur_pos-4, raw_value,
         ))
     }
