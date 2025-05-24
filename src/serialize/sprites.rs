@@ -124,7 +124,7 @@ fn build_mask_data(builder: &mut ChunkBuilder, collision_masks: &Vec<GMSpriteMas
 }
 
 
-fn align_writer(builder: &mut ChunkBuilder, alignment: usize, padding_byte: u8) {
+pub fn align_writer(builder: &mut ChunkBuilder, alignment: usize, padding_byte: u8) {
     while (builder.abs_pos + builder.len()) & (alignment - 1) != padding_byte as usize {
         builder.write_u8(padding_byte);
     }
