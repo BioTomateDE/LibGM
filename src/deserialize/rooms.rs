@@ -170,7 +170,6 @@ pub fn parse_chunk_room(
         let width: u32 = chunk.read_u32()?;
         let height: u32 = chunk.read_u32()?;
         let speed: u32 = chunk.read_u32()?;
-        log::info!("width {} height {} speed {}", width, height, speed);
         let persistent: bool = chunk.read_bool32()?;
         let background_color: u32 = chunk.read_u32()? | 0xFF000000;     // make alpha 255 (background color doesn't have transparency)
         let draw_background_color: bool = chunk.read_bool32()?;
@@ -242,10 +241,8 @@ fn parse_room_flags(raw: u32) -> GMRoomFlags {
 }
 
 fn parse_room_views(chunk: &mut GMChunk) -> Result<Vec<GMRoomView>, String> {
-    log::warn!("a");
     let view_pointers: Vec<usize> = chunk.read_pointer_list()?;
     let old_position: usize = chunk.cur_pos;
-    log::warn!("bb");
     let mut views: Vec<GMRoomView> = Vec::with_capacity(view_pointers.len());
 
     for pointer in view_pointers {
