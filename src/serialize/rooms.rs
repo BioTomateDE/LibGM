@@ -43,10 +43,10 @@ fn build_room(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, genera
         builder.write_i32(-1);
     }
     builder.write_u32(build_room_flags(&room.flags));
-    build_room_backgrounds(data_builder, builder, room_index, &room.backgrounds)?;
-    build_room_views(data_builder, builder, room_index, &room.views)?;
-    build_room_objects(data_builder, builder, &general_info, room_index, &room.game_objects)?;
-    build_room_tiles(data_builder, builder, &general_info, room_index, &room.tiles)?;
+    data_builder.write_pointer_placeholder(builder, GMPointer::RoomBackgroundPointerList(room_index))?;
+    data_builder.write_pointer_placeholder(builder, GMPointer::RoomViewPointerList(room_index))?;
+    data_builder.write_pointer_placeholder(builder, GMPointer::RoomGameObjectPointerList(room_index))?;
+    data_builder.write_pointer_placeholder(builder, GMPointer::RoomTilePointerList(room_index))?;
     builder.write_bool32(room.world);
     builder.write_u32(room.top);
     builder.write_u32(room.left);
@@ -55,12 +55,20 @@ fn build_room(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, genera
     builder.write_f32(room.gravity_x);
     builder.write_f32(room.gravity_y);
     builder.write_f32(room.meters_per_pixel);
+    
     if general_info.is_version_at_least(2, 0, 0, 0) {
         build_room_layers(data_builder, builder, room_index, room.layers.as_ref().ok_or("Layers not set")?)?;
         if general_info.is_version_at_least(2, 3, 0, 0) {
             build_room_sequences(data_builder, builder, general_info, strings, room.sequences.as_ref().ok_or("Sequences not set")?)?;
         }
     }
+
+
+    build_room_backgrounds(data_builder, builder, room_index, &room.backgrounds)?;
+    build_room_views(data_builder, builder, room_index, &room.views)?;
+    build_room_objects(data_builder, builder, &general_info, room_index, &room.game_objects)?;
+    build_room_tiles(data_builder, builder, &general_info, room_index, &room.tiles)?;
+    
     Ok(())
 }
 
@@ -76,7 +84,6 @@ fn build_room_flags(flags: &GMRoomFlags) -> u32 {
 
 
 fn build_room_backgrounds(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, room_index: usize, backgrounds: &Vec<GMRoomBackground>) -> Result<(), String> {
-    data_builder.write_pointer_placeholder(builder, GMPointer::RoomBackgroundPointerList(room_index))?;
     data_builder.resolve_pointer(builder, GMPointer::RoomBackgroundPointerList(room_index))?;
     builder.write_usize(backgrounds.len());
 
@@ -107,7 +114,6 @@ fn build_room_backgrounds(data_builder: &mut DataBuilder, builder: &mut ChunkBui
 
 
 fn build_room_views(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, room_index: usize, views: &Vec<GMRoomView>) -> Result<(), String> {
-    data_builder.write_pointer_placeholder(builder, GMPointer::RoomViewPointerList(room_index))?;
     data_builder.resolve_pointer(builder, GMPointer::RoomViewPointerList(room_index))?;
     builder.write_usize(views.len());
 
@@ -141,14 +147,7 @@ fn build_room_views(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, 
 }
 
 
-fn build_room_objects(
-    data_builder: &mut DataBuilder,
-    builder: &mut ChunkBuilder,
-    general_info: &GMGeneralInfo,
-    room_index: usize,
-    views: &Vec<GMRoomGameObject>,
-) -> Result<(), String> {
-    data_builder.write_pointer_placeholder(builder, GMPointer::RoomGameObjectPointerList(room_index))?;
+fn build_room_objects(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, general_info: &GMGeneralInfo, room_index: usize, views: &Vec<GMRoomGameObject>) -> Result<(), String> {
     data_builder.resolve_pointer(builder, GMPointer::RoomGameObjectPointerList(room_index))?;
     builder.write_usize(views.len());
 
@@ -197,14 +196,7 @@ fn build_room_objects(
 }
 
 
-fn build_room_tiles(
-    data_builder: &mut DataBuilder,
-    builder: &mut ChunkBuilder,
-    general_info: &GMGeneralInfo,
-    room_index: usize,
-    tiles: &Vec<GMRoomTile>,
-) -> Result<(), String> {
-    data_builder.write_pointer_placeholder(builder, GMPointer::RoomTilePointerList(room_index))?;
+fn build_room_tiles(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, general_info: &GMGeneralInfo, room_index: usize, tiles: &Vec<GMRoomTile>) -> Result<(), String> {
     data_builder.resolve_pointer(builder, GMPointer::RoomTilePointerList(room_index))?;
     builder.write_usize(tiles.len());
 
