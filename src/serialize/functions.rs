@@ -9,12 +9,8 @@ pub fn build_chunk_func(data_builder: &mut DataBuilder, gm_data: &GMData, functi
     // write functions
     builder.write_usize(gm_data.functions.functions_by_index.len());
 
-    for i in 0..gm_data.functions.functions_by_index.len() {
-        data_builder.write_pointer_placeholder(&mut builder, GMPointer::Function(i))?;
-    }
-
     for (i, function) in gm_data.functions.functions_by_index.iter().enumerate() {
-        data_builder.resolve_pointer(&mut builder, GMPointer::Function(i))?;
+        // there is no pointer list
         builder.write_gm_string(data_builder, &function.name)?;
         
         if let Some(occurrences) = function_occurrences_map.get(&i) {
