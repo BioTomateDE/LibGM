@@ -5,6 +5,7 @@ use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::variables::{GMVariable, GMVariablesScuffed};
 use crate::serialize::all::DataBuilder;
 use crate::serialize::chunk_writing::ChunkBuilder;
+use crate::serialize::code::build_instance_type;
 
 pub fn build_chunk_vari(data_builder: &mut DataBuilder, gm_data: &GMData, variable_occurrences_map: HashMap<usize, Vec<usize>>) -> Result<(), String> {
     let mut builder = ChunkBuilder::new(data_builder, "VARI");
@@ -33,7 +34,7 @@ pub fn build_chunk_vari(data_builder: &mut DataBuilder, gm_data: &GMData, variab
 fn build_variable(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, general_info: &GMGeneralInfo, variable: &GMVariable, variable_occurrences: Option<&Vec<usize>>) -> Result<(), String> {
     builder.write_gm_string(data_builder, &variable.name)?;
     if general_info.bytecode_version >= 15 {
-        builder.write_i32(build_instance_type(&variable.instance_type));
+        builder.write_i32(build_instance_type(&variable.instance_type) as i32);
         builder.write_i32(variable.variable_id.ok_or("Variable ID not set")?);
     }
     
@@ -47,21 +48,3 @@ fn build_variable(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, ge
 
     Ok(())
 }
-
-
-pub fn build_instance_type(instance_type: &GMInstanceType) -> i32 {
-    match instance_type {
-        GMInstanceType::Undefined => 0,
-        GMInstanceType::Instance(Some(obj_ref)) => obj_ref.index as i32,
-        GMInstanceType::Instance(None) => -1,
-        GMInstanceType::Other => -2,
-        GMInstanceType::All => -3,
-        GMInstanceType::Noone => -4,
-        GMInstanceType::Global => -5,
-        GMInstanceType::Local => -7,
-        GMInstanceType::Stacktop => -9,
-        GMInstanceType::Arg => -15,
-        GMInstanceType::Static => -16,
-    }
-}
-
