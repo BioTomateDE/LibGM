@@ -205,7 +205,8 @@ fn build_instruction(
         }
 
         GMInstruction::Call(instr) => {
-            builder.write_u8(instr.arguments_count as u8);
+            builder.write_u8(instr.arguments_count);
+            builder.write_u8(0);        // TODO check if writing zero is ok since b1 isn't checked or saved
             builder.write_u8(instr.data_type.into());
             builder.write_u8(if bytecode14 { instr.opcode.into() } else { 0xDA });
 
