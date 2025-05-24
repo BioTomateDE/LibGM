@@ -6,11 +6,18 @@
 // It can be resolved to the data it references using the `.resolve()` method,
 // which needs the list the elements are stored in.
 // [See GMPointer to understand difference]
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub struct GMRef<T> {
     pub index: usize,
     // marker needs to be here to ignore "unused generic T" error; doesn't store any data
     _marker: std::marker::PhantomData<T>,
+}
+impl<T> std::fmt::Debug for GMRef<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GMRef")
+            .field("index", &self.index)
+            .finish()
+    }
 }
 impl<T> GMRef<T> {
     pub fn new(index: usize) -> GMRef<T> {
