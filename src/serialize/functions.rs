@@ -20,7 +20,7 @@ pub fn build_chunk_func(data_builder: &mut DataBuilder, gm_data: &GMData, functi
             builder.write_usize(occurrences.len());
             builder.write_usize(occurrences[0]);
         } else {
-            builder.write_i32(-1);
+            builder.write_i32(0);
             builder.write_i32(function.name_string_id);
         }
     }
