@@ -55,7 +55,7 @@ pub fn build_chunk_code(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         
         if !bytecode14 {
             let start_offset: usize = builder.len() - meta_placeholders_offset[i];
-            builder.overwrite_data(&start_offset.to_le_bytes(), meta_placeholders_offset[i])?;
+            builder.overwrite_usize(start_offset, meta_placeholders_offset[i])?;
         }
         
         let start_position: usize = builder.len();
@@ -64,7 +64,7 @@ pub fn build_chunk_code(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         }
         let instructions_length: usize = builder.len() - start_position;
         
-        builder.overwrite_data(&instructions_length.to_le_bytes(), meta_placeholders_length[i])?;
+        builder.overwrite_usize(instructions_length, meta_placeholders_length[i])?;
     }
 
     builder.finish(data_builder)?;
@@ -278,8 +278,7 @@ fn write_occurrence(
         let occurrence_offset: i32 = occurrence_position as i32 - *last_occurrence_position as i32;
         let variable_type_raw: u8 = if let Some(var_type) = variable_type { var_type.into() } else { 0 };
         let occurrence_offset_full: i32 = occurrence_offset & 0x07FFFFFF | (((variable_type_raw & 0xF8) as i32) << 24);
-        let bytes: [u8; 4] = occurrence_offset_full.to_le_bytes();
-        builder.overwrite_data(&bytes, last_occurrence_position - builder.abs_pos + 4)?;
+        builder.overwrite_i32(occurrence_offset_full, last_occurrence_position - builder.abs_pos + 4)?;
     }
     
     // write name string id for this occurrence. this is correct if it is the last occurrence.
