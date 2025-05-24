@@ -311,7 +311,7 @@ pub fn parse_chunk_code(chunk: &mut GMChunk, bytecode14: bool, strings: &GMStrin
         let meta_index: usize = chunk.read_usize()? - chunk.abs_pos;
         code_meta_start_positions.push(meta_index);
     }
-    
+
     let mut codes_by_index: Vec<GMCode> = Vec::with_capacity(codes_count);
 
     for code_meta_start_position in code_meta_start_positions {
@@ -328,21 +328,16 @@ pub fn parse_chunk_code(chunk: &mut GMChunk, bytecode14: bool, strings: &GMStrin
             let arguments_count_raw: u16 = chunk.read_u16()?;
             let arguments_count: u16 = arguments_count_raw & 0x7FFF;
             let weird_local_flag: bool = arguments_count_raw & 0x8000 != 0;
-            let bytecode_relative_address: i32 = chunk.read_i32()? - 4;
-            if bytecode_relative_address < 0 {
-                return Err(format!(
-                    "Bytecode address underflowed while parsing code with name \"{}\" and length {}: {} < 0",
-                    name.display(strings), code_length, bytecode_relative_address,
-                ))
-            }
-            let bytecode_relative_address: usize = bytecode_relative_address as usize;
+
+            let bytecode_relative_address: i32 = chunk.read_i32()?;
+            let bytecode_absolute_address: usize = (chunk.abs_pos as i32 - 4 + bytecode_relative_address) as usize;
 
             let offset: usize = chunk.read_usize()?;
 
             // child check {~~}
 
-            chunk.cur_pos += bytecode_relative_address;
-            end = bytecode_relative_address + code_length + 4;
+            chunk.cur_pos = bytecode_absolute_address - chunk.abs_pos;
+            end = bytecode_absolute_address + code_length;
 
             Some(GMCodeBytecode15 {
                 locals_count,
@@ -356,7 +351,8 @@ pub fn parse_chunk_code(chunk: &mut GMChunk, bytecode14: bool, strings: &GMStrin
         while chunk.cur_pos < end {
             instructions.push(parse_instruction(chunk, bytecode14, variables, functions)?);
         }
-        
+
+
         codes_by_index.push(GMCode {
             name,
             instructions,
@@ -419,6 +415,7 @@ pub fn parse_instruction(
     let b1: u8 = chunk.read_u8()?;
     let b2: u8 = chunk.read_u8()?;
     let mut opcode_raw: u8 = chunk.read_u8()?;
+    // log::info!("45sfjao654ys {} | {:02X} {:02X} {:02X} {:02X}", chunk.cur_pos+chunk.abs_pos, b0, b1, b2, opcode_raw);
 
     if bytecode14 {
         opcode_raw = convert_instruction_kind(opcode_raw);
@@ -619,7 +616,7 @@ pub fn parse_instruction(
             };
 
             let function: &GMRef<GMFunction> = functions.occurrences_to_refs.get(&chunk.cur_pos).ok_or_else(|| format!(
-                "Could not find any function with absolute occurrence position {} in map with length {} (functions len: {}) while parsing Call Instruction", 
+                "Could not find any function with absolute occurrence position {} in map with length {} (functions len: {}) while parsing Call Instruction",
                 chunk.cur_pos, functions.occurrences_to_refs.len(), functions.functions_by_index.len(),
             ))?;
             chunk.cur_pos += 4;
@@ -639,14 +636,14 @@ pub fn parse_instruction(
                 Ok(ok) => ok,
                 Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Break Instruction")),
             };
-            
+
             let int_argument: Option<i32> = if data_type == GMDataType::Int32 {
                 Some(chunk.read_i32()?)
                 // set gms version to at least ... {~~}
             } else {
                 None
             };
-            
+
             // other set gms version stuff {~~}
 
             Ok(GMInstruction::Break(GMBreakInstruction {
