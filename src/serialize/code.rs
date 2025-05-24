@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::deserialize::all::GMData;
-use crate::deserialize::code::{GMDataType, GMInstanceType, GMInstruction, GMOpcode, GMValue, GMVariableType};
+use crate::deserialize::code::{GMCodeBytecode15, GMDataType, GMInstanceType, GMInstruction, GMOpcode, GMValue, GMVariableType};
 use crate::deserialize::functions::{GMFunction, GMFunctions};
 use crate::deserialize::variables::{GMVariable, GMVariables};
 use crate::serialize::all::DataBuilder;
@@ -18,19 +18,33 @@ pub fn build_chunk_code(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         data_builder.write_pointer_placeholder(&mut builder, GMPointer::CodeMeta(i))?;
     }
 
-    let mut code_meta_placeholders: Vec<usize> = Vec::with_capacity(len);
+    let mut meta_placeholders_length: Vec<usize> = Vec::with_capacity(len);
+    let mut meta_placeholders_offset: Vec<usize> = Vec::with_capacity(len);
 
     for (i, code) in gm_data.codes.codes_by_index.iter().enumerate() {
         data_builder.resolve_pointer(&mut builder, GMPointer::CodeMeta(i))?;
 
         builder.write_gm_string(data_builder, &code.name)?;
 
-        code_meta_placeholders.push(builder.len());
+        meta_placeholders_length.push(builder.len());
         builder.write_u32(0);   // PLACEHOLDER CODE INSTRUCTIONS LENGTH
-        builder.write_u32(0);   // PLACEHOLDER CODE START OFFSET
 
-        builder.write_u32(code.locals_count);
-        builder.write_u32(code.arguments_count);
+        if !bytecode14 {
+            let b15_info: &GMCodeBytecode15 = code.bytecode15_info.as_ref().ok_or_else(|| format!(
+                "Bytecode 15 info not set for Code #{i} with name \"{}\"",
+                code.name.display(&gm_data.strings)
+            ))?;
+            
+            builder.write_u16(b15_info.locals_count);
+            builder.write_u16(b15_info.arguments_count | if b15_info.weird_local_flag { 0x8000 } else { 0 });
+
+            // TODO this is probably wrong. UTMT handled this in a very weird way:
+            // "no instructions get written here; they're in a separate blob"
+            meta_placeholders_offset.push(builder.len());
+            builder.write_u32(0);   // PLACEHOLDER CODE START OFFSET
+            
+            builder.write_usize(b15_info.offset);
+        }
     }
     
     let mut variable_occurrences_map: HashMap<usize, Vec<usize>> = HashMap::new();
@@ -38,21 +52,19 @@ pub fn build_chunk_code(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     
     for (i, code) in gm_data.codes.codes_by_index.iter().enumerate() {
         data_builder.resolve_pointer(&mut builder, GMPointer::Code(i))?;
-        let placeholder_position: usize = code_meta_placeholders[i];
-        let start_offset: usize = builder.len() - placeholder_position + 4;
-        for (j, byte) in start_offset.to_le_bytes().iter().enumerate() {
-            builder.raw_data[placeholder_position + 4 + j] = *byte;
+        
+        if !bytecode14 {
+            let start_offset: usize = builder.len() - meta_placeholders_offset[i];
+            builder.overwrite_data(&start_offset.to_le_bytes(), meta_placeholders_offset[i])?;
         }
+        
         let start_position: usize = builder.len();
-
         for instruction in &code.instructions {
             build_instruction(&mut builder, bytecode14, &gm_data.variables, &gm_data.functions, &instruction, &mut variable_occurrences_map, &mut function_occurrences_map)?;
         }
-
         let instructions_length: usize = builder.len() - start_position;
-        for (j, byte) in instructions_length.to_le_bytes().iter().enumerate() {
-            builder.raw_data[placeholder_position + j] = *byte;
-        }
+        
+        builder.overwrite_data(&instructions_length.to_le_bytes(), meta_placeholders_length[i])?;
     }
 
     builder.finish(data_builder)?;

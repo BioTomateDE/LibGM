@@ -179,22 +179,30 @@ impl GMChunk<'_> {
         ))
     }
 
-    pub fn read_f32(&mut self) -> Result<f32, String> {
-        // Read a single-precision floating point number (little endian)
-        if self.cur_pos + 4 > self.data.len() {
-            return Err(format!(
-                "Trying to read f32 out of bounds in chunk '{}' at position {}: {} > {}",
-                self.name, self.cur_pos, self.cur_pos + 4, self.data.len(),
-            ));
-        }
+    pub fn read_f64(&mut self) -> Result<f64, String> {
+        // Read a double-precision floating point number (little endian)
+        let bytes: [u8; 8] = self.data.get(self.cur_pos .. self.cur_pos+8).ok_or_else(|| format!(
+            "Trying to read f64 out of bounds in chunk '{}' at position {}: {} > {}",
+            self.name, self.cur_pos, self.cur_pos + 8, self.data.len(),
+        ))?.try_into().unwrap();
 
-        let raw: [u8; 4] = self.data[self.cur_pos.. self.cur_pos + 4].try_into().unwrap();
-        let number: f32 = f32::from_le_bytes(raw);
-        self.cur_pos += 4;
+        let number: f64 = f64::from_le_bytes(bytes);
+        self.cur_pos += 8;
         Ok(number)
     }
 
+    pub fn read_f32(&mut self) -> Result<f32, String> {
+        // Read a single-precision floating point number (little endian)
+        let bytes: [u8; 4] = self.data.get(self.cur_pos .. self.cur_pos+4).ok_or_else(|| format!(
+            "Trying to read f32 out of bounds in chunk '{}' at position {}: {} > {}",
+            self.name, self.cur_pos, self.cur_pos + 4, self.data.len(),
+        ))?.try_into().unwrap();
 
+        let number: f32 = f32::from_le_bytes(bytes);
+        self.cur_pos += 4;
+        Ok(number)
+    }
+    
     pub fn read_bool32(&mut self) -> Result<bool, String> {
         // Read a 32-bit integer and convert it to a bool.
         let number: u32 = self.read_u32()?;
