@@ -9,11 +9,11 @@ pub fn build_chunk_audo(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_usize(len);
 
     for i in 0..len {
-        data_builder.push_pointer_placeholder(&mut builder, GMPointer::Audio(i))?;
+        data_builder.write_pointer_placeholder(&mut builder, GMPointer::Audio(i))?;
     }
 
     for i in 0..len {
-        data_builder.push_pointer_resolve(&mut builder,GMPointer::Audio(i))?;
+        data_builder.resolve_pointer(&mut builder, GMPointer::Audio(i))?;
         let audio: &GMEmbeddedAudio = &gm_data.audios.audios_by_index[i];
         builder.write_usize(audio.raw_data.len());
         builder.write_bytes(&audio.raw_data);

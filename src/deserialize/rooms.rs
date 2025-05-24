@@ -242,8 +242,10 @@ fn parse_room_flags(raw: u32) -> GMRoomFlags {
 }
 
 fn parse_room_views(chunk: &mut GMChunk) -> Result<Vec<GMRoomView>, String> {
+    log::warn!("a");
     let view_pointers: Vec<usize> = chunk.read_pointer_list()?;
     let old_position: usize = chunk.cur_pos;
+    log::warn!("bb");
     let mut views: Vec<GMRoomView> = Vec::with_capacity(view_pointers.len());
 
     for pointer in view_pointers {
@@ -343,9 +345,7 @@ fn parse_room_objects(
 }
 
 fn parse_room_backgrounds(chunk: &mut GMChunk) -> Result<Vec<GMRoomBackground>, String> {
-    log::warn!("a");
     let background_pointers: Vec<usize> = chunk.read_pointer_list()?;
-    log::warn!("bv");
     let old_position: usize = chunk.cur_pos;
     let mut room_backgrounds: Vec<GMRoomBackground> = Vec::with_capacity(background_pointers.len());
 

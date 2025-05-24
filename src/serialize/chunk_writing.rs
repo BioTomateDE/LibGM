@@ -148,7 +148,7 @@ impl ChunkBuilder {
     }
     pub fn write_gm_string(&mut self, data_builder: &mut DataBuilder, string_ref: &GMRef<String>) -> Result<(), String> {
         // write a gamemaker string reference to the data
-        data_builder.push_pointer_placeholder(self, GMPointer::String(string_ref.index))?;
+        data_builder.write_pointer_placeholder(self, GMPointer::String(string_ref.index))?;
         Ok(())
     }
     pub fn write_bytes(&mut self, data: &[u8]) {

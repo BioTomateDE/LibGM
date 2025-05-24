@@ -13,13 +13,13 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_u8(if info.is_debugger_disabled {1} else {0});
     builder.write_u8(info.bytecode_version);
     builder.write_u16(info.unknown_value);
-    data_builder.push_pointer_placeholder(&mut builder, GMPointer::String(info.game_file_name.index))?;
-    data_builder.push_pointer_placeholder(&mut builder, GMPointer::String(info.config.index))?;
+    data_builder.write_pointer_placeholder(&mut builder, GMPointer::String(info.game_file_name.index))?;
+    data_builder.write_pointer_placeholder(&mut builder, GMPointer::String(info.config.index))?;
     builder.write_usize(gm_data.game_objects.game_objects_by_index.len());
     builder.write_usize(get_last_tile_id(&gm_data.rooms));
     builder.write_u32(info.game_id);
     builder.raw_data.extend(info.directplay_guid.as_bytes());
-    data_builder.push_pointer_placeholder(&mut builder, GMPointer::String(info.game_name.index))?;
+    data_builder.write_pointer_placeholder(&mut builder, GMPointer::String(info.game_name.index))?;
     builder.write_u32(info.major_version);
     builder.write_u32(info.minor_version);
     builder.write_u32(info.release_version);
@@ -30,7 +30,7 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_u32(info.license_crc32);
     builder.raw_data.extend(info.license_md5);
     builder.write_i64(info.timestamp_created.timestamp());
-    data_builder.push_pointer_placeholder(&mut builder, GMPointer::String(info.display_name.index))?;
+    data_builder.write_pointer_placeholder(&mut builder, GMPointer::String(info.display_name.index))?;
     builder.write_u64(info.active_targets);
     builder.write_u64(build_function_classifications(&info.function_classifications));
     builder.write_i32(info.steam_appid);
@@ -283,7 +283,7 @@ fn build_options_new(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder,
 fn build_options_image(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, texture: &Option<GMRef<GMTexture>>) -> Result<(), String> {
     match texture {
         None => builder.write_usize(0),
-        Some(reference) => data_builder.push_pointer_placeholder(builder, GMPointer::Texture(reference.index))?
+        Some(reference) => data_builder.write_pointer_placeholder(builder, GMPointer::Texture(reference.index))?
     }
     Ok(())
 }
