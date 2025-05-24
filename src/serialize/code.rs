@@ -233,15 +233,16 @@ pub fn build_instance_type(instance_type: &GMInstanceType) -> i16 {
     // If > 0; then game object id. If < 0, then variable instance type.
     match instance_type {
         GMInstanceType::Undefined => 0,
-        GMInstanceType::Instance(Some(game_object_ref)) => game_object_ref.index as i16,
         GMInstanceType::Instance(None) => -1,
+        GMInstanceType::Instance(Some(game_object_ref)) => game_object_ref.index as i16,
         GMInstanceType::Other => -2,
         GMInstanceType::All => -3,
         GMInstanceType::Noone => -4,
         GMInstanceType::Global => -5,
+        GMInstanceType::Builtin => -6,
         GMInstanceType::Local => -7,
-        GMInstanceType::Stacktop => -8,
-        GMInstanceType::Arg => -15,
+        GMInstanceType::StackTop => -8,
+        GMInstanceType::Argument => -15,
         GMInstanceType::Static => -16,
     }
 }
