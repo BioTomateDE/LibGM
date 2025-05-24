@@ -26,7 +26,7 @@ pub fn build_chunk_func(data_builder: &mut DataBuilder, gm_data: &GMData, functi
     }
     
     // write code locals
-    if !gm_data.general_info.is_version_at_least(2024, 8, 0, 0) {
+    if gm_data.general_info.bytecode_version >= 15 && !gm_data.general_info.is_version_at_least(2024, 8, 0, 0) {
         builder.write_usize(gm_data.code_locals.len());
         for code_local in &gm_data.code_locals {
             build_code_local(data_builder, &mut builder, code_local)?;
@@ -39,8 +39,8 @@ pub fn build_chunk_func(data_builder: &mut DataBuilder, gm_data: &GMData, functi
 
 
 fn build_code_local(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, code_local: &GMCodeLocal) -> Result<(), String> {
-    builder.write_gm_string(data_builder, &code_local.name)?;
     builder.write_usize(code_local.variables.len());
+    builder.write_gm_string(data_builder, &code_local.name)?;
 
     for variable in &code_local.variables {
         builder.write_usize(variable.index);
