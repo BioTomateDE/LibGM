@@ -249,8 +249,8 @@ impl GMChunk<'_> {
         let string_ref = gm_strings.abs_pos_to_reference.get(&string_abs_pos)
             .ok_or_else(|| format!(
                 "Could not read reference string with absolute position {} in chunk '{}' at \
-                position {} because it doesn't exist in the string map (length: {})",
-                string_abs_pos, self.name, self.cur_pos - 4, gm_strings.abs_pos_to_reference.len(),
+                absolute position {} because it doesn't exist in the string map (length: {})",
+                string_abs_pos, self.name, self.abs_pos + self.cur_pos - 4, gm_strings.abs_pos_to_reference.len(),
             ))?;
         Ok(string_ref.clone())
     }

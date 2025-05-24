@@ -77,30 +77,32 @@ pub enum GMDataType {
 }
 #[derive(Debug, Clone, PartialEq)]
 pub enum GMInstanceType {
-    Undefined,  // actually, this is just object 0, but also occurs in places where no instance type was set
-    Instance(Option<GMRef<GMGameObject>>),
-    Other,
-    All,
-    Noone,
-    Global,
-    Local,
-    Stacktop,
-    Arg,
-    Static,
+    Undefined,  // Idk
+    Instance(Option<GMRef<GMGameObject>>),      // Represents the current self instance.
+    Other,      // Represents the other context, which has multiple definitions based on the location used.
+    All,        // Represents all active object instances. Assignment operations can perform a loop.
+    Noone,      // Represents no object/instance.
+    Global,     // Used for global variables.
+    Builtin,    // Used for GML built-in variables.
+    Local,      // Used for local variables; local to their code script.
+    StackTop,   // Instance is stored in a Variable data type on the top of the stack.
+    Argument,   // Used for function argument variables in GMLv2 (GMS 2.3).
+    Static,     // Used for static variables.
 }
 impl Display for GMInstanceType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
-            GMInstanceType::Instance(Some(reference)) => write!(f, "Self<{}>", reference.index),
-            GMInstanceType::Instance(None) => write!(f, "Self"),
             GMInstanceType::Undefined => write!(f, "Undefined"),
+            GMInstanceType::Instance(None) => write!(f, "Self"),
+            GMInstanceType::Instance(Some(reference)) => write!(f, "Self<{}>", reference.index),
             GMInstanceType::Other => write!(f, "Other"),
             GMInstanceType::All => write!(f, "All"),
             GMInstanceType::Noone => write!(f, "Noone"),
             GMInstanceType::Global => write!(f, "Global"),
+            GMInstanceType::Builtin => write!(f, "Builtin"),
             GMInstanceType::Local => write!(f, "Local"),
-            GMInstanceType::Stacktop => write!(f, "Stacktop"),
-            GMInstanceType::Arg => write!(f, "Arg"),
+            GMInstanceType::StackTop => write!(f, "StackTop"),
+            GMInstanceType::Argument => write!(f, "Argument"),
             GMInstanceType::Static => write!(f, "Static"),
         }
     }
@@ -757,15 +759,16 @@ pub fn parse_instance_type(raw_value: i16) -> Result<GMInstanceType, String> {
     }
 
     let instance_type = match raw_value {
-        0 => GMInstanceType::Undefined,
+        0 => GMInstanceType::Undefined,         // this doesn't exit in UTMT anymore but enums in C# can hold any value so idk
         -1 => GMInstanceType::Instance(None),
         -2 => GMInstanceType::Other,
         -3 => GMInstanceType::All,
         -4 => GMInstanceType::Noone,
         -5 => GMInstanceType::Global,
+        -6 => GMInstanceType::Builtin,
         -7 => GMInstanceType::Local,
-        -9 => GMInstanceType::Stacktop,
-        -15 => GMInstanceType::Arg,
+        -9 => GMInstanceType::StackTop,
+        -15 => GMInstanceType::Argument,
         -16 => GMInstanceType::Static,
         _ => return Err(format!("Invalid instance type {raw_value} (0x{raw_value:04X})"))
     };
@@ -793,7 +796,7 @@ pub fn parse_occurrence_chain(
 
     let mut occurrences: Vec<usize> = Vec::with_capacity(occurrence_count);
     let mut offset: i32 = first_occurrence_abs_pos;
-    
+
     for _ in 0..occurrence_count {
         occurrences.push(occurrence_pos);
         chunk_code.cur_pos = occurrence_pos;
