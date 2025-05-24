@@ -11,11 +11,11 @@ pub fn build_chunk_sprt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_usize(gm_data.sprites.sprites_by_index.len());
 
     for i in 0..gm_data.sprites.sprites_by_index.len() {
-        data_builder.push_pointer_placeholder(&mut builder, GMPointer::Sprite(i))?;
+        data_builder.write_pointer_placeholder(&mut builder, GMPointer::Sprite(i))?;
     }
 
     for (i, sprite) in gm_data.sprites.sprites_by_index.iter().enumerate() {
-        data_builder.push_pointer_resolve(&mut builder, GMPointer::Sprite(i))?;
+        data_builder.resolve_pointer(&mut builder, GMPointer::Sprite(i))?;
         builder.write_gm_string(data_builder, &sprite.name)?;
         builder.write_usize(sprite.width);
         builder.write_usize(sprite.height);
@@ -45,10 +45,10 @@ pub fn build_chunk_sprt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
                 builder.write_f32(specials.playback_speed);
                 builder.write_u32(specials.playback_speed_type.into());
                 if specials.special_version >= 2 && specials.sequence.is_some() {
-                    data_builder.push_pointer_placeholder(&mut builder, GMPointer::SpriteSequence(i))?;
+                    data_builder.write_pointer_placeholder(&mut builder, GMPointer::SpriteSequence(i))?;
                 }
                 if specials.special_version >= 3 && specials.nine_slice.is_some() {
-                    data_builder.push_pointer_placeholder(&mut builder, GMPointer::SpriteNineSlice(i))?;
+                    data_builder.write_pointer_placeholder(&mut builder, GMPointer::SpriteNineSlice(i))?;
                 }
             }
 
@@ -73,14 +73,14 @@ pub fn build_chunk_sprt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
 
             if specials.special_version >= 2 {
                 if let Some(ref sequence) = specials.sequence {
-                    data_builder.push_pointer_resolve(&mut builder, GMPointer::SpriteSequence(i))?;
+                    data_builder.resolve_pointer(&mut builder, GMPointer::SpriteSequence(i))?;
                     builder.write_i32(1);
                     build_sequence(data_builder, &mut builder, &gm_data.general_info, &gm_data.strings, sequence)?;
                 }
             }
             if specials.special_version >= 3 {
                 if let Some(ref nine_slice) = specials.nine_slice {
-                    data_builder.push_pointer_resolve(&mut builder, GMPointer::SpriteNineSlice(i))?;
+                    data_builder.resolve_pointer(&mut builder, GMPointer::SpriteNineSlice(i))?;
                     build_nine_slice(&mut builder, nine_slice)?;
                 }
             }
@@ -99,7 +99,7 @@ pub fn build_chunk_sprt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
 fn build_texture_list(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, textures: &Vec<GMRef<GMTexture>>) -> Result<(), String> {
     builder.write_usize(textures.len());
     for i in 0..textures.len() {
-        data_builder.push_pointer_placeholder(builder, GMPointer::Texture(i))?;
+        data_builder.write_pointer_placeholder(builder, GMPointer::Texture(i))?;
     }
     Ok(())
 }

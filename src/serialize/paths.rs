@@ -10,11 +10,11 @@ pub fn build_chunk_path(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_usize(path_count);
 
     for i in 0..path_count {
-        data_builder.push_pointer_placeholder(&mut builder, GMPointer::Path(i))?;
+        data_builder.write_pointer_placeholder(&mut builder, GMPointer::Path(i))?;
     }
 
     for (i, path) in gm_data.paths.paths_by_index.iter().enumerate() {
-        data_builder.push_pointer_resolve(&mut builder, GMPointer::Path(i))?;
+        data_builder.resolve_pointer(&mut builder, GMPointer::Path(i))?;
         builder.write_gm_string(data_builder, &path.name)?;
         builder.write_bool32(path.is_smooth);
         builder.write_bool32(path.is_closed);
