@@ -415,7 +415,6 @@ pub fn parse_instruction(
     let b1: u8 = chunk.read_u8()?;
     let b2: u8 = chunk.read_u8()?;
     let mut opcode_raw: u8 = chunk.read_u8()?;
-    // log::info!("45sfjao654ys {} | {:02X} {:02X} {:02X} {:02X}", chunk.cur_pos+chunk.abs_pos, b0, b1, b2, opcode_raw);
 
     if bytecode14 {
         opcode_raw = convert_instruction_kind(opcode_raw);
