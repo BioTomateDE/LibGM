@@ -8,7 +8,7 @@ use crate::export_mod::unordered_list::{export_changes_unordered_list, AModUnord
 pub struct ModFont {
     pub name: Option<ModUnorderedRef>, // String
     pub display_name: Option<ModUnorderedRef>,  // String
-    pub em_size: Option<u32>,
+    pub em_size: Option<f32>,
     pub bold: Option<bool>,
     pub italic: Option<bool>,
     pub range_start: Option<u16>,
