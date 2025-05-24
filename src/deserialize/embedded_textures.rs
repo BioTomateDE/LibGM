@@ -1,5 +1,4 @@
 use std::cmp::max;
-use std::fmt::format;
 use std::io::Read;
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::general_info::GMGeneralInfo;
