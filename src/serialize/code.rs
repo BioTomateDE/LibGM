@@ -15,13 +15,13 @@ pub fn build_chunk_code(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     let bytecode14: bool = gm_data.general_info.bytecode_version <= 14;
 
     for i in 0..len {
-        data_builder.push_pointer_placeholder(&mut builder, GMPointer::CodeMeta(i))?;
+        data_builder.write_pointer_placeholder(&mut builder, GMPointer::CodeMeta(i))?;
     }
 
     let mut code_meta_placeholders: Vec<usize> = Vec::with_capacity(len);
 
     for (i, code) in gm_data.codes.codes_by_index.iter().enumerate() {
-        data_builder.push_pointer_resolve(&mut builder, GMPointer::CodeMeta(i))?;
+        data_builder.resolve_pointer(&mut builder, GMPointer::CodeMeta(i))?;
 
         builder.write_gm_string(data_builder, &code.name)?;
 
@@ -37,7 +37,7 @@ pub fn build_chunk_code(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     let mut function_occurrences_map: HashMap<usize, Vec<usize>> = HashMap::new();
     
     for (i, code) in gm_data.codes.codes_by_index.iter().enumerate() {
-        data_builder.push_pointer_resolve(&mut builder, GMPointer::Code(i))?;
+        data_builder.resolve_pointer(&mut builder, GMPointer::Code(i))?;
         let placeholder_position: usize = code_meta_placeholders[i];
         let start_offset: usize = builder.len() - placeholder_position + 4;
         for (j, byte) in start_offset.to_le_bytes().iter().enumerate() {

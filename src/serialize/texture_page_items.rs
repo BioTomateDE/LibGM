@@ -11,11 +11,11 @@ pub fn build_chunk_tpag(data_builder: &mut DataBuilder, gm_data: &GMData, textur
     builder.write_usize(len);
 
     for texture_page_item in &texture_page_items {
-        data_builder.push_pointer_placeholder(&mut builder, GMPointer::Texture(texture_page_item.texture.index))?;
+        data_builder.write_pointer_placeholder(&mut builder, GMPointer::Texture(texture_page_item.texture.index))?;
     }
 
     for texture_page_item in &texture_page_items {
-        data_builder.push_pointer_resolve(&mut builder, GMPointer::Texture(texture_page_item.texture.index))?;
+        data_builder.resolve_pointer(&mut builder, GMPointer::Texture(texture_page_item.texture.index))?;
         let texture: &GMTexture = texture_page_item.texture.resolve(&gm_data.textures.textures_by_index)?;
 
         builder.write_u16(texture_page_item.source_x);

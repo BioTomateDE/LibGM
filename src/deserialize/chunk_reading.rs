@@ -1,4 +1,5 @@
-﻿use crate::deserialize::strings::GMStrings;
+﻿use itertools::chain;
+use crate::deserialize::strings::GMStrings;
 
 // GMRef is for parsing chunks:
 // It has (fake) generic types to make it clearer
@@ -251,10 +252,12 @@ impl GMChunk<'_> {
     /// read pointer to pointer list (only used in rooms)
     pub fn read_pointer_list(&mut self) -> Result<Vec<usize>, String> {
         let abs_pointers_start_pos: usize = self.read_usize()?;
-        let pointers_start_pos: usize = abs_pointers_start_pos.checked_sub(self.abs_pos).ok_or_else(||format!(
+        log::info!("hfskkfhernjkfdsnhsfgighfrsw {}  {} // {}", abs_pointers_start_pos, self.abs_pos, self.cur_pos as i64 - abs_pointers_start_pos as i64 +self.abs_pos as i64);
+        let pointers_start_pos: usize = abs_pointers_start_pos.checked_sub(self.abs_pos).ok_or_else(|| format!(
             "Pointer to start of Pointer list underflowed at position {} in chunk '{}': {} - {} < 0",
             self.cur_pos - 4, self.name, abs_pointers_start_pos, self.abs_pos,
         ))?;
+
 
         let old_position: usize = self.cur_pos;
         self.cur_pos = pointers_start_pos;
