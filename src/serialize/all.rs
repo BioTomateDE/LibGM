@@ -38,7 +38,7 @@ impl DataBuilder {
     /// This method should be called, when the data file format expects
     /// a pointer to some element, but you don't yet (necessarily) know where
     /// that element will be located in the data file.
-    pub fn push_pointer_placeholder(&mut self, chunk_builder: &mut ChunkBuilder, pointer: GMPointer) -> Result<(), String> {
+    pub fn write_pointer_placeholder(&mut self, chunk_builder: &mut ChunkBuilder, pointer: GMPointer) -> Result<(), String> {
         let position: usize = chunk_builder.abs_pos + chunk_builder.len();
         chunk_builder.write_usize(0);      // write placeholder
         if let Some(old_value) = self.pointer_pool_placeholders.insert(position, pointer.clone()) {
@@ -54,7 +54,7 @@ impl DataBuilder {
     /// Store the gamemaker element's absolute position in the pool.
     /// The element's absolute position is the chunk builder's current position,
     /// since this method should get called when the element is built to the data file.
-    pub fn push_pointer_resolve(&mut self, chunk_builder: &mut ChunkBuilder, pointer: GMPointer) -> Result<(), String> {
+    pub fn resolve_pointer(&mut self, chunk_builder: &mut ChunkBuilder, pointer: GMPointer) -> Result<(), String> {
         let position: usize = chunk_builder.abs_pos + chunk_builder.len();
         if let Some(old_value) = self.pointer_pool_resources.insert(pointer.clone(), position) {
             return Err(format!("Pointer to {:?} already resolved to absolute position {}; \

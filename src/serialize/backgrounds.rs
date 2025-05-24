@@ -9,11 +9,11 @@ pub fn build_chunk_bgnd(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_usize(len);
 
     for i in 0..len {
-        data_builder.push_pointer_placeholder(&mut builder, GMPointer::Background(i))?;
+        data_builder.write_pointer_placeholder(&mut builder, GMPointer::Background(i))?;
     }
 
     for i in 0..len {
-        data_builder.push_pointer_resolve(&mut builder, GMPointer::Background(i))?;
+        data_builder.resolve_pointer(&mut builder, GMPointer::Background(i))?;
         let background: &GMBackground = &gm_data.backgrounds.backgrounds_by_index[i];
 
         builder.write_gm_string(data_builder, &background.name)?;
@@ -21,7 +21,7 @@ pub fn build_chunk_bgnd(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_bool32(background.smooth);
         builder.write_bool32(background.preload);
         if let Some(ref texture) = background.texture {
-            data_builder.push_pointer_placeholder(&mut builder, GMPointer::Texture(texture.index))?;
+            data_builder.write_pointer_placeholder(&mut builder, GMPointer::Texture(texture.index))?;
         } else {
             builder.write_usize(0);
         }
