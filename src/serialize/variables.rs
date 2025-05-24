@@ -42,7 +42,7 @@ fn build_variable(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, ge
         builder.write_usize(occurrences.len());
         builder.write_usize(occurrences[0]);
     } else {
-        builder.write_i32(-1);      // TODO not sure if this should be 0 or -1   (same for functions)
+        builder.write_i32(0);      // TODO not sure if this should be 0 or -1   (same for functions)
         builder.write_i32(variable.name_string_id);
     }
 
