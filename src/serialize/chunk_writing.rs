@@ -83,68 +83,43 @@ impl ChunkBuilder {
     }
 
     pub fn write_u64(&mut self, number: u64) {
-        for byte in number.to_le_bytes() {
-            self.raw_data.push(byte);
-        }
+        self.raw_data.extend(number.to_le_bytes());
     }
     pub fn write_i64(&mut self, number: i64) {
-        for byte in number.to_le_bytes() {
-            self.raw_data.push(byte);
-        }
+        self.raw_data.extend(number.to_le_bytes());
     }
     pub fn write_u32(&mut self, number: u32) {
-        for byte in number.to_le_bytes() {
-            self.raw_data.push(byte);
-        }
+        self.raw_data.extend(number.to_le_bytes());
     }
     pub fn write_i32(&mut self, number: i32) {
-        for byte in number.to_le_bytes() {
-            self.raw_data.push(byte);
-        }
+        self.raw_data.extend(number.to_le_bytes());
     }
     pub fn write_u16(&mut self, number: u16) {
-        for byte in number.to_le_bytes() {
-            self.raw_data.push(byte);
-        }
+        self.raw_data.extend(number.to_le_bytes());
     }
-    pub fn write_i16(&mut self, number: i16){
-        for byte in number.to_le_bytes() {
-            self.raw_data.push(byte);
-        }
+    pub fn write_i16(&mut self, number: i16) {
+        self.raw_data.extend(number.to_le_bytes());
     }
     pub fn write_u8(&mut self, number: u8) {
-        for byte in number.to_le_bytes() {
-            self.raw_data.push(byte);
-        }
+        self.raw_data.extend(number.to_le_bytes());
     }
     pub fn write_i8(&mut self, number: i8) {
-        for byte in number.to_le_bytes() {
-            self.raw_data.push(byte);
-        }
+        self.raw_data.extend(number.to_le_bytes());
     }
     pub fn write_usize(&mut self, number: usize) {
-        for byte in (number as u32).to_le_bytes() {
-            self.raw_data.push(byte);
-        }
+        self.write_u32(number as u32);
     }
     pub fn write_f64(&mut self, number: f64) {
-        for byte in number.to_le_bytes() {
-            self.raw_data.push(byte);
-        }
+        self.raw_data.extend(number.to_le_bytes());
     }
     pub fn write_f32(&mut self, number: f32) {
-        for byte in number.to_le_bytes() {
-            self.raw_data.push(byte);
-        }
+        self.raw_data.extend(number.to_le_bytes());
     }
     pub fn write_bool32(&mut self, boolean: bool) {
-        let number: u32 = if boolean {1} else {0};
-        self.write_u32(number);
+        self.write_u32(if boolean {1} else {0});
     }
-    pub fn write_literal_string(&mut self, string: &str) -> Result<(), String> {
-        // write an utf-8 string to the data
+    pub fn write_literal_string(&mut self, string: &str) {
         self.raw_data.extend_from_slice(string.as_bytes());
-        Ok(())
     }
     pub fn write_gm_string(&mut self, data_builder: &mut DataBuilder, string_ref: &GMRef<String>) -> Result<(), String> {
         // write a gamemaker string reference to the data
@@ -152,15 +127,13 @@ impl ChunkBuilder {
         Ok(())
     }
     pub fn write_bytes(&mut self, data: &[u8]) {
-        for byte in data {
-            self.raw_data.push(*byte);
-        }
+        self.raw_data.extend_from_slice(data);
     }
-    pub fn overwrite_data(&mut self, data: &[u8], position: usize) -> Result<(), String> {
+    pub fn overwrite_bytes(&mut self, data: &[u8], position: usize) -> Result<(), String> {
         if position + data.len() >= self.len() {
             return Err(format!(
-                "Could not overwrite {} bytes at position {} in data with length {} while building chunk",
-                data.len(), position, self.len(),
+                "Could not overwrite {} bytes at position {} in data with length {} while building chunk '{}'",
+                data.len(), position, self.len(), self.chunk_name,
             ))
         };
 
@@ -168,6 +141,17 @@ impl ChunkBuilder {
             self.raw_data[position + i] = *byte;
         }
 
+        Ok(())
+    }
+
+    pub fn overwrite_usize(&mut self, number: usize, position: usize) -> Result<(), String> {
+        let bytes: [u8; 4] = (number as u32).to_le_bytes();
+        self.overwrite_bytes(&bytes, position)?;
+        Ok(())
+    }
+    pub fn overwrite_i32(&mut self, number: i32, position: usize) -> Result<(), String> {
+        let bytes: [u8; 4] = number.to_le_bytes();
+        self.overwrite_bytes(&bytes, position)?;
         Ok(())
     }
 
@@ -183,8 +167,8 @@ impl ChunkBuilder {
             self.write_usize(abs_pointer);
         }
 
-        let pointer_list_start_bytes = (self.raw_data.len() + self.abs_pos).to_le_bytes();
-        self.overwrite_data(&pointer_list_start_bytes, start_pos_placeholder)?;
+        let pointer_list_start_position: usize = self.raw_data.len() + self.abs_pos;
+        self.overwrite_usize(pointer_list_start_position, start_pos_placeholder)?;
         Ok(())
     }
 

@@ -16,7 +16,7 @@ pub fn build_chunk_strg(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_usize(string.len());
         data_builder.resolve_pointer(&mut builder, GMPointer::String(i))?; // actual string reference need to get resolved here bc of gamemaker moment
 
-        builder.write_literal_string(string)?;
+        builder.write_literal_string(string);
         builder.write_u8(0)        // write trailing null byte
     }
 
