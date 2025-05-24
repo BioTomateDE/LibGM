@@ -78,7 +78,7 @@ pub enum GMDataType {
 #[derive(Debug, Clone, PartialEq)]
 pub enum GMInstanceType {
     Undefined,  // Idk
-    Instance(Option<GMRef<GMGameObject>>),      // Represents the current self instance.
+    Instance(Option<GMRef<GMGameObject>>),      // Represents the current chunk instance.
     Other,      // Represents the other context, which has multiple definitions based on the location used.
     All,        // Represents all active object instances. Assignment operations can perform a loop.
     Noone,      // Represents no object/instance.
@@ -283,137 +283,20 @@ pub enum GMValue {
     Int16(i16),
 }
 
-#[derive(Debug)]
-struct GMCodeMeta {
-    name: GMRef<String>,
-    start_position: usize, // start position of code in chunk CODE
-    length: usize,
-    locals_count: u32,
-    arguments_count: u32,
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMCode {
     pub name: GMRef<String>,
     pub instructions: Vec<GMInstruction>,
-    pub locals_count: u32,
-    pub arguments_count: u32,
+    pub bytecode15_info: Option<GMCodeBytecode15>,
 }
 
-
-// wrapper for raw data of a code "script" / instance
-pub struct GMCodeBlob<'a> {
-    pub raw_data: &'a [u8],
-    pub len: usize,
-    pub cur_pos: usize,
-    pub chunk_code_pos: usize,
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMCodeBytecode15 {
+    pub locals_count: u16,
+    pub arguments_count: u16,
+    pub weird_local_flag: bool,
+    pub offset: usize,
 }
-
-impl GMCodeBlob<'_> {
-    fn read_byte(&mut self) -> Result<u8, String> {
-        if self.cur_pos + 1 > self.len {
-            return Err(format!(
-                "Trying to read u8 out of bounds while parsing code at position {}: {} > {}",
-                self.cur_pos, self.cur_pos + 1, self.len,
-            ));
-        }
-        let byte: u8 = self.raw_data[self.cur_pos];
-        self.cur_pos += 1;
-        Ok(byte)
-    }
-
-    fn read_i32(&mut self) -> Result<i32, String> {
-        let bytes: &[u8] = self.raw_data.get(self.cur_pos .. self.cur_pos+4)
-            .ok_or_else(|| format!(
-                "Trying to read i32 out of bounds while parsing code at position {}: {} > {}",
-                self.cur_pos, self.cur_pos+4, self.len,
-            ))?;
-        let value: i32 = i32::from_le_bytes(bytes.try_into().unwrap());
-        self.cur_pos += 4;
-        Ok(value)
-    }
-
-    fn read_value(&mut self, data_type: GMDataType) -> Result<GMValue, String> {
-        match data_type {
-            GMDataType::Double => {
-                let raw: [u8; 8] = self.raw_data.get(self.cur_pos..self.cur_pos + 8)
-                    .ok_or_else(|| format!("Trying to read f64 out of bounds while reading values in code: {} > {}", self.cur_pos+8, self.len))?
-                    .try_into().expect("Buffer not 8 bytes big somehow");
-                self.cur_pos += 8;
-                Ok(GMValue::Double(f64::from_le_bytes(raw)))
-            }
-
-            GMDataType::Float => {
-                let raw: [u8; 4] = self.raw_data.get(self.cur_pos..self.cur_pos + 4)
-                    .ok_or_else(|| format!("Trying to read f32 out of bounds while reading values in code: {} > {}", self.cur_pos+4, self.len))?
-                    .try_into().expect("Buffer not 4 bytes big somehow");
-                self.cur_pos += 4;
-                Ok(GMValue::Float(f32::from_le_bytes(raw)))
-            }
-            
-            GMDataType::Int32 => {
-                let raw: [u8; 4] = self.raw_data.get(self.cur_pos..self.cur_pos + 4)
-                    .ok_or_else(|| format!("Trying to read i32 out of bounds while reading values in code: {} > {}", self.cur_pos+4, self.len))?
-                    .try_into().expect("Buffer not 4 bytes big somehow");
-                self.cur_pos += 4;
-                Ok(GMValue::Int32(i32::from_le_bytes(raw)))
-            }
-
-            GMDataType::Int64 => {
-                let raw: [u8; 8] = self.raw_data.get(self.cur_pos..self.cur_pos + 8)
-                    .ok_or_else(|| format!("Trying to read i64 out of bounds while reading values in code: {} > {}", self.cur_pos+8, self.len))?
-                    .try_into().expect("Buffer not 8 bytes big somehow");
-                self.cur_pos += 8;
-                Ok(GMValue::Int64(i64::from_le_bytes(raw)))
-            }
-
-            GMDataType::Boolean => {
-                let byte: u8 = self.raw_data.get(self.cur_pos)
-                    .ok_or_else(|| format!("Trying to read boolean out of bounds while reading values in code: {} > {}", self.cur_pos+1, self.len))?.clone();
-                self.cur_pos += 1;
-                Ok(GMValue::Boolean(byte != 0))
-            },
-
-            GMDataType::String => {
-                let raw: [u8; 4] = self.raw_data.get(self.cur_pos..self.cur_pos + 4)
-                    .ok_or_else(|| format!("Trying to read GMString out of bounds while reading values in code: {} > {}", self.cur_pos+4, self.len))?
-                    .try_into().expect("Buffer not 4 bytes big somehow");
-                let string_index: usize = u32::from_le_bytes(raw) as usize;
-                self.cur_pos += 4;
-                Ok(GMValue::String(GMRef::new(string_index)))
-            }
-
-            GMDataType::Int16 => {
-                // it's within the instruction itself so backtrack
-                let raw: [u8; 2] = self.raw_data.get(self.cur_pos-4 .. self.cur_pos-2)
-                    .ok_or_else(|| format!("(somehow) Trying to read i16 out of bounds while reading values in code: {} > {}", self.cur_pos-2, self.len))?
-                    .try_into().expect("Buffer not 2 bytes big somehow");
-                Ok(GMValue::Int16(i16::from_le_bytes(raw)))
-            }
-
-            other => Err(format!("Trying to read unsupported data type {other:?} while reading values in code")),
-        }
-    }
-
-    fn read_variable(&mut self, variables: &GMVariables, instance_type: &GMInstanceType) -> Result<GMCodeVariable, String> {
-        let occurrence_position: usize = self.cur_pos + self.chunk_code_pos;
-        let raw_value: i32 = self.read_i32()?;
-
-        let variable_type: i32 = (raw_value >> 24) & 0xF8;
-        let variable_type: u8 = variable_type as u8;
-        let variable_type: GMVariableType = variable_type.try_into()
-            .map_err(|_| format!("Invalid Variable Type 0x{variable_type:02X} while parsing variable reference chain"))?;
-
-        let variable: GMRef<GMVariable> = variables.occurrences_to_refs.get(&occurrence_position)
-            .ok_or_else(|| format!(
-                "Could not find {} Variable with occurrence position {} in hashmap with length {} while parsing code values",
-                instance_type, occurrence_position, variables.occurrences_to_refs.len(),
-            ))?.clone();
-
-        Ok(GMCodeVariable { variable, variable_type })
-    }
-}
-
 
 #[derive(Debug, Clone)]
 pub struct GMCodes {
@@ -428,87 +311,114 @@ pub fn parse_chunk_code(chunk: &mut GMChunk, bytecode14: bool, strings: &GMStrin
         let meta_index: usize = chunk.read_usize()? - chunk.abs_pos;
         code_meta_start_positions.push(meta_index);
     }
-
-    let mut code_metas: Vec<GMCodeMeta> = Vec::with_capacity(codes_count);
+    
+    let mut codes_by_index: Vec<GMCode> = Vec::with_capacity(codes_count);
 
     for code_meta_start_position in code_meta_start_positions {
         chunk.cur_pos = code_meta_start_position;
-        let code_name: GMRef<String> = chunk.read_gm_string(strings)?;
+        let name: GMRef<String> = chunk.read_gm_string(strings)?;
         let code_length: usize = chunk.read_usize()?;
-        let locals_count: u32 = chunk.read_u32()?;
 
-        let start_offset: i32 = chunk.read_i32()?;
-        let start_position: i32 = chunk.cur_pos as i32 + start_offset - 4;
-        if start_position < 0 || start_position >= chunk.data.len() as i32 {
-            return Err(format!(
-                "Code starting offset out of bounds \
-                at position {} while parsing chunk 'CODE': \
-                Offset {} corresponds to chunk position {} \
-                which is not 0 <= {} < {}",
-                chunk.cur_pos, start_offset, start_position, start_position, chunk.data.len()
-            ));
-        }
-        let start_position: usize = start_position as usize;
+        let end: usize;
+        let bytecode15_info: Option<GMCodeBytecode15> = if bytecode14 {
+            end = chunk.cur_pos + code_length;
+            None
+        } else {
+            let locals_count: u16 = chunk.read_u16()?;
+            let arguments_count_raw: u16 = chunk.read_u16()?;
+            let arguments_count: u16 = arguments_count_raw & 0x7FFF;
+            let weird_local_flag: bool = arguments_count_raw & 0x8000 != 0;
+            let bytecode_relative_address: i32 = chunk.read_i32()? - 4;
+            if bytecode_relative_address < 0 {
+                return Err(format!(
+                    "Bytecode address underflowed while parsing code with name \"{}\" and length {}: {} < 0",
+                    name.display(strings), code_length, bytecode_relative_address,
+                ))
+            }
+            let bytecode_relative_address: usize = bytecode_relative_address as usize;
 
-        let arguments_count: u32 = chunk.read_u32()?;
-        // println!("{:<16} {:<54} | {:<8} {:<6} {:<14} {:<3} {}", ts, code_name, code_length, locals_count, start_offset, arguments_count, start_position);
-        code_metas.push(GMCodeMeta {
-            name: code_name,
-            start_position,
-            length: code_length,
-            locals_count,
-            arguments_count,
-        })
-    }
+            let offset: usize = chunk.read_usize()?;
 
-    let mut codes_by_index: Vec<GMCode> = Vec::with_capacity(codes_count);
-    for code_meta in code_metas {
-        let raw_data: &[u8] = &chunk.data[code_meta.start_position .. code_meta.start_position + code_meta.length];
-        let mut code_blob: GMCodeBlob = GMCodeBlob {
-            raw_data,
-            len: raw_data.len(),
-            cur_pos: 0,
-            chunk_code_pos: code_meta.start_position,
+            // child check {~~}
+
+            chunk.cur_pos += bytecode_relative_address;
+            end = bytecode_relative_address + code_length + 4;
+
+            Some(GMCodeBytecode15 {
+                locals_count,
+                arguments_count,
+                weird_local_flag,
+                offset,
+            })
         };
-        let mut instructions: Vec<GMInstruction> = vec![];
 
-        while code_blob.cur_pos < code_blob.len {
-            let instruction: GMInstruction = parse_instruction(&mut code_blob, bytecode14, variables, functions)?;
-            // let dump: String = match hexdump(&*code_blob.raw_data, code_blob.file_index-4, Some(code_blob.file_index)) {
-            //     Ok(ok) => ok,
-            //     Err(_) => "()".to_string(),
-            // };
-            // println!("{} | {}/{} | {} | {:?}",
-            //     code_meta.name,
-            //     code_blob.len,
-            //     code_blob.file_index,
-            //     dump,
-            //     instruction,
-            // );
-            instructions.push(instruction);
+        let mut instructions: Vec<GMInstruction> = Vec::new();
+        while chunk.cur_pos < end {
+            instructions.push(parse_instruction(chunk, bytecode14, variables, functions)?);
         }
-
+        
         codes_by_index.push(GMCode {
-            name: code_meta.name,
+            name,
             instructions,
-            locals_count: code_meta.locals_count,
-            arguments_count: code_meta.arguments_count,
-        });
+            bytecode15_info,
+        })
     }
 
     Ok(GMCodes { codes_by_index })
 }
 
+
+fn read_code_value(chunk: &mut GMChunk, data_type: GMDataType) -> Result<GMValue, String> {
+    match data_type {
+        GMDataType::Double => chunk.read_f64().map(|i| GMValue::Double(i)),
+        GMDataType::Float => chunk.read_f32().map(|i| GMValue::Float(i)),
+        GMDataType::Int32 => chunk.read_i32().map(|i| GMValue::Int32(i)),
+        GMDataType::Int64 => chunk.read_i64().map(|i| GMValue::Int64(i)),
+        GMDataType::Boolean => chunk.read_u8().map(|i| match i {
+            0 => Ok(GMValue::Boolean(false)),
+            1 => Ok(GMValue::Boolean(true)),
+            other => Err(format!("Invalid boolean value {other} (0x{other:02X}) while reading value in code at absolute position {}", chunk.abs_pos+chunk.cur_pos-1))
+        })?,
+        GMDataType::String => chunk.read_usize().map(|i| GMValue::String(GMRef::new(i))),
+        GMDataType::Int16 => {
+            chunk.cur_pos -= 4;
+            let number: i16 = chunk.read_i16()?;
+            chunk.cur_pos += 2;
+            Ok(GMValue::Int16(number))
+        }
+        other => Err(format!("Trying to read unsupported data type {other:?} while reading value in code at absolute position {}", chunk.abs_pos+chunk.cur_pos)),
+    }
+}
+
+fn read_variable(chunk: &mut GMChunk, variables: &GMVariables, instance_type: &GMInstanceType) -> Result<GMCodeVariable, String> {
+    let occurrence_position: usize = chunk.cur_pos;
+    let raw_value: i32 = chunk.read_i32()?;
+
+    let variable_type: i32 = (raw_value >> 24) & 0xF8;
+    let variable_type: u8 = variable_type as u8;
+    let variable_type: GMVariableType = variable_type.try_into()
+        .map_err(|_| format!("Invalid Variable Type {variable_type} (0x{variable_type:02X}) while parsing variable reference chain"))?;
+
+    let variable: GMRef<GMVariable> = variables.occurrences_to_refs.get(&occurrence_position)
+        .ok_or_else(|| format!(
+            "Could not find {} Variable with occurrence position {} in hashmap with length {} while parsing code value",
+            instance_type, occurrence_position, variables.occurrences_to_refs.len(),
+        ))?.clone();
+
+    Ok(GMCodeVariable { variable, variable_type })
+}
+
+
 pub fn parse_instruction(
-    blob: &mut GMCodeBlob,
+    chunk: &mut GMChunk,
     bytecode14: bool,
     variables: &GMVariables,
     functions: &GMFunctions,
 ) -> Result<GMInstruction, String> {
-    let b0: u8 = blob.read_byte()?;
-    let b1: u8 = blob.read_byte()?;
-    let b2: u8 = blob.read_byte()?;
-    let mut opcode_raw: u8 = blob.read_byte()?;
+    let b0: u8 = chunk.read_u8()?;
+    let b1: u8 = chunk.read_u8()?;
+    let b2: u8 = chunk.read_u8()?;
+    let mut opcode_raw: u8 = chunk.read_u8()?;
 
     if bytecode14 {
         opcode_raw = convert_instruction_kind(opcode_raw);
@@ -582,7 +492,7 @@ pub fn parse_instruction(
             ))?;
 
             if bytecode14 {
-                // in bytecode14, the comparison kind is encoded in the opcode itself
+                // in bytecode14, the comparison kind is encoded in the opcode itchunk
                 let comparison_type_raw: u8 = opcode_raw - 0x10;
                 comparison_type = comparison_type_raw.try_into()
                     .map_err(|_| format!("Invalid Bytecode14 Comparison Type {comparison_type_raw:02X} \
@@ -648,13 +558,13 @@ pub fn parse_instruction(
             if type1 == GMDataType::Int16 {
                 return Err(format!(
                     "[Internal Error] Unhandled \"Special swap instruction\" (UndertaleModTool/Issues/#129) \
-                    occurred at position {} while parsing Pop Instruction.\
+                    occurred at absolute position {} while parsing Pop Instruction.\
                     Please report this error to https://github.com/BioTomateDE/LibGM/issues",
-                    blob.cur_pos + blob.chunk_code_pos,
+                    chunk.cur_pos + chunk.abs_pos,
                 ));
             }
 
-            let destination: GMCodeVariable = blob.read_variable(variables, &instance_type)?;
+            let destination: GMCodeVariable = read_variable(chunk, variables, &instance_type)?;
             Ok(GMInstruction::Pop(GMPopInstruction {
                 opcode,
                 instance_type,
@@ -688,10 +598,10 @@ pub fn parse_instruction(
 
             let value: GMValue = if data_type == GMDataType::Variable {
                 let instance_type: GMInstanceType = parse_instance_type(val)?;
-                let variable: GMCodeVariable = blob.read_variable(variables, &instance_type)?;
+                let variable: GMCodeVariable = read_variable(chunk, variables, &instance_type)?;
                 GMValue::Variable(variable)
             } else {
-                blob.read_value(data_type)?
+                read_code_value(chunk, data_type)?
             };
 
             Ok(GMInstruction::Push(GMPushInstruction {
@@ -708,10 +618,11 @@ pub fn parse_instruction(
                 Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Call Instruction")),
             };
 
-            let function: &GMRef<GMFunction> = functions.occurrences_to_refs.get(&(blob.chunk_code_pos + blob.cur_pos))
-                .ok_or_else(|| format!("Could not find any function with absolute occurrence position {} in map with length {} (functions len: {})",
-                               blob.chunk_code_pos + blob.cur_pos, functions.occurrences_to_refs.len(), functions.functions_by_index.len()))?;
-            blob.cur_pos += 4;
+            let function: &GMRef<GMFunction> = functions.occurrences_to_refs.get(&chunk.cur_pos).ok_or_else(|| format!(
+                "Could not find any function with absolute occurrence position {} in map with length {} (functions len: {}) while parsing Call Instruction", 
+                chunk.cur_pos, functions.occurrences_to_refs.len(), functions.functions_by_index.len(),
+            ))?;
+            chunk.cur_pos += 4;
 
             Ok(GMInstruction::Call(GMCallInstruction {
                 opcode,
@@ -728,17 +639,14 @@ pub fn parse_instruction(
                 Ok(ok) => ok,
                 Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Break Instruction")),
             };
-            let mut int_argument: Option<i32> = None;
-
-            if data_type == GMDataType::Int32 {
-                int_argument = Some(match blob.read_value(GMDataType::Int32)? {
-                    GMValue::Int32(val) => val,
-                    other => return Err(format!("[INTERNAL ERROR] GMCodeBlob.read_value(GMDataType::Int32, ...) \
-                        returned {other:?} instead of i32 while parsing Break Instruction")),
-                });
+            
+            let int_argument: Option<i32> = if data_type == GMDataType::Int32 {
+                Some(chunk.read_i32()?)
                 // set gms version to at least ... {~~}
-            }
-
+            } else {
+                None
+            };
+            
             // other set gms version stuff {~~}
 
             Ok(GMInstruction::Break(GMBreakInstruction {
