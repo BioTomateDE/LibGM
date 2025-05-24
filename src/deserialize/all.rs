@@ -105,7 +105,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let sprites: GMSprites = parse_chunk_sprt(&mut chunk_sprt, &general_info, &strings, &textures)?;
     let scripts: GMScripts = parse_chunk_scpt(&mut chunk_scpt, &strings)?;
     let variables: GMVariables = parse_chunk_vari(&mut chunk_vari, &strings, &general_info, &mut chunk_code)?;
-    let (functions, code_locals): (GMFunctions, Vec<GMCodeLocal>) = parse_chunk_func(&mut chunk_func, &strings, &mut chunk_code)?;
+    let (functions, code_locals): (GMFunctions, Vec<GMCodeLocal>) = parse_chunk_func(&mut chunk_func, &general_info, &strings, &mut chunk_code)?;
     let codes: GMCodes = parse_chunk_code(&mut chunk_code, general_info.bytecode_version <= 14, &strings, &variables, &functions)?;
     let fonts: GMFonts = parse_chunk_font(&mut chunk_font, &general_info, &strings, &textures)?;
     let audios: GMEmbeddedAudios = parse_chunk_audo(&mut chunk_audo)?;
