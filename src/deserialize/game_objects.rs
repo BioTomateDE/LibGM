@@ -121,7 +121,7 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
         let linear_damping: f32 = chunk.read_f32()?;
         let angular_damping: f32 = chunk.read_f32()?;
         let physics_shape_vertex_count: i32 = chunk.read_i32()?;
-        let uses_physics_shape_vertex: bool = physics_shape_vertex_count == -1;
+        let uses_physics_shape_vertex: bool = physics_shape_vertex_count != -1;
         let physics_shape_vertex_count: usize = if physics_shape_vertex_count < 0 {0} else {physics_shape_vertex_count as usize};
         let friction: f32 = chunk.read_f32()?;
         let awake: bool = chunk.read_bool32()?;
