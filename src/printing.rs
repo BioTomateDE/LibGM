@@ -786,7 +786,7 @@ impl GMGameObjectEventAction {
         println!("  Is Question: {}", self.is_question);
         println!("  Use Apply To: {}", self.use_apply_to);
         println!("  Exe Type: {}", self.exe_type);
-        println!("  Action Name: \"{}\"", self.action_name.resolve(&strings.strings_by_index)?);
+        // println!("  Action Name: {}", self.action_name.as_ref().map(|i| i.resolve(&strings.strings_by_index))..unwrap_or_else(|| "None".to_string()));
         println!("  Code: {:?}", self.code);
         println!("  Argument Count: {}", self.argument_count);
         println!("  Who: {}", self.who);

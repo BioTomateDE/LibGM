@@ -121,11 +121,21 @@ impl ChunkBuilder {
     pub fn write_literal_string(&mut self, string: &str) {
         self.raw_data.extend_from_slice(string.as_bytes());
     }
+
     pub fn write_gm_string(&mut self, data_builder: &mut DataBuilder, string_ref: &GMRef<String>) -> Result<(), String> {
-        // write a gamemaker string reference to the data
         data_builder.write_pointer_placeholder(self, GMPointer::String(string_ref.index))?;
         Ok(())
     }
+
+    /// write a gamemaker string reference to the data if Some else zero
+    pub fn write_gm_string_optional(&mut self, data_builder: &mut DataBuilder, string_ref_optional: &Option<GMRef<String>>) -> Result<(), String> {
+        match string_ref_optional {
+            None => self.write_usize(0),
+            Some(string_ref) => data_builder.write_pointer_placeholder(self, GMPointer::String(string_ref.index))?,
+        }
+        Ok(())
+    }
+    
     pub fn write_bytes(&mut self, data: &[u8]) {
         self.raw_data.extend_from_slice(data);
     }
