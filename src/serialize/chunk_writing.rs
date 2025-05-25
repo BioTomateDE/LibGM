@@ -29,9 +29,6 @@ pub enum GMPointer {
     SpriteNineSlice(usize),
     Audio(usize),
     Sound(usize),
-    Variable(usize),
-    Function(usize),
-    CodeLocal(usize),
     Script(usize),
     GameObject(usize),
     GameObjectEvent(usize, usize),
@@ -53,7 +50,6 @@ pub enum GMPointer {
     RoomLayer(usize, usize),
     RoomLayerPointerList(usize),
     CodeMeta(usize),
-    Code(usize),
 }
 
 
