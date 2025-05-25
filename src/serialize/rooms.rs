@@ -38,7 +38,7 @@ fn build_room(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, genera
     builder.write_u32(room.background_color ^ 0xFF000000);    // remove alpha (background color doesn't have alpha)
     builder.write_bool32(room.draw_background_color);
     if let Some(ref creation_code) = room.creation_code {
-        data_builder.write_pointer_placeholder(builder, GMPointer::Code(creation_code.index))?;
+        builder.write_usize(creation_code.index);
     } else {
         builder.write_i32(-1);
     }
@@ -162,7 +162,7 @@ fn build_room_objects(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder
         data_builder.write_pointer_placeholder(builder, GMPointer::GameObject(game_object.object_definition.index))?;
         builder.write_u32(game_object.instance_id);
         if let Some(ref creation_code) = game_object.creation_code {
-            data_builder.write_pointer_placeholder(builder, GMPointer::Code(creation_code.index))?;
+            builder.write_usize(creation_code.index);
         } else {
             builder.write_i32(-1);
         }
@@ -185,7 +185,7 @@ fn build_room_objects(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder
 
         if general_info.bytecode_version >= 16 {
             if let Some(ref pre_creation_code) = game_object.pre_create_code {
-                data_builder.write_pointer_placeholder(builder, GMPointer::Code(pre_creation_code.index))?;
+                builder.write_usize(pre_creation_code.index);
             } else {
                 builder.write_i32(-1);
             }

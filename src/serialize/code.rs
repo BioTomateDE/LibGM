@@ -48,7 +48,7 @@ fn build_code_b14(
         let length_placeholder_pos: usize = builder.len();
         builder.write_u32(0xDEAD);
 
-        data_builder.resolve_pointer(builder, GMPointer::Code(i))?;     // TODO probably wrong??????
+        // data_builder.resolve_pointer(builder, GMPointer::Code(i))?;     // TODO probably wrong??????
         for (j, instruction) in code.instructions.iter().enumerate() {
             build_instruction(builder, true, variables, functions, instruction, &mut variable_occurrences_map, &mut function_occurrences_map)
                 .map_err(|e| format!("{e} while building Instruction #{j} of Code #{i} with name \"{}\"", code.name.display(strings)))?;
@@ -103,7 +103,7 @@ fn build_code_b15(
     for (i, code) in codes.codes_by_index.iter().enumerate() {
         let start: usize = builder.len();
 
-        data_builder.resolve_pointer(builder, GMPointer::Code(i))?;         // TODO also probably wrong?? maybe it's just the same as CodeMeta?
+        // data_builder.resolve_pointer(builder, GMPointer::Code(i))?;         // TODO also probably wrong?? maybe it's just the same as CodeMeta?
         for (j, instruction) in code.instructions.iter().enumerate() {
             build_instruction(builder, false, variables, functions, instruction, &mut variable_occurrences_map, &mut function_occurrences_map)
                 .map_err(|e| format!("{e} while building Instruction #{j} of Code #{i} with name \"{}\"", code.name.display(strings)))?;

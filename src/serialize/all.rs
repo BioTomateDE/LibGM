@@ -37,11 +37,11 @@ impl DataBuilder {
     /// This will later be resolved; replacing the placeholder pointer with
     /// the absolute position of the target data in the data file
     /// (assuming the pointer origin position was added to the pool).
-    /// This method should be called, when the data file format expects
+    /// This method should be called when the data file format expects
     /// a pointer to some element, but you don't yet (necessarily) know where
     /// that element will be located in the data file.
     pub fn write_pointer_placeholder(&mut self, chunk_builder: &mut ChunkBuilder, pointer: GMPointer) -> Result<(), String> {
-        let position: usize = chunk_builder.abs_pos + chunk_builder.len();
+        let position: usize = chunk_builder.abs_pos + chunk_builder.len() + 8;  // TODO
         chunk_builder.write_usize(0xDEAD);      // write placeholder
         if let Some(old_value) = self.pointer_pool_placeholders.insert(position, pointer.clone()) {
             return Err(format!(
@@ -54,7 +54,7 @@ impl DataBuilder {
     }
 
     /// Store the gamemaker element's absolute position in the pool.
-    /// The element's absolute position is the chunk builder's current position,
+    /// The element's absolute position is the chunk builder's current position;
     /// since this method should get called when the element is built to the data file.
     pub fn resolve_pointer(&mut self, chunk_builder: &mut ChunkBuilder, pointer: GMPointer) -> Result<(), String> {
         let position: usize = chunk_builder.abs_pos + chunk_builder.len();
@@ -155,6 +155,10 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
                 "Could not resolve resource {:?} for placeholder position {}",
                 pointer, placeholder_position,
             ))?;
+        
+        if *placeholder_position == 436 {
+            panic!()
+        }
 
         let raw: &[u8; 4] = &(resource_position as u32).to_le_bytes();
         for (i, byte) in raw.iter().enumerate() {
