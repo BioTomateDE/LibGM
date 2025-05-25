@@ -30,7 +30,6 @@ pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Re
 
     let mut textures: Vec<GMEmbeddedTexture> = Vec::with_capacity(texture_count);
     for texture_start_position in texture_pointers {
-        // log::warn!("Fdgsddgs {} {} {}", chunk.cur_pos, texture_start_position, texture_count);
         chunk.cur_pos = texture_start_position;
         let texture: GMEmbeddedTexture = parse_texture(chunk, general_info)?;
         textures.push(texture);
@@ -51,11 +50,9 @@ fn parse_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GM
 
     if general_info.is_version_at_least(2, 0, 6, 0) {
         generated_mips = Some(chunk.read_u32()?);
-        log::info!("generated_mips {generated_mips:?}");
     }
     if general_info.is_version_at_least(2022, 3, 0, 0) {
         texture_block_size = Some(chunk.read_u32()?);
-        log::info!("textb {texture_block_size:?}");
     }
     if general_info.is_version_at_least(2022, 9, 0, 0) {
         texture_width = Some(chunk.read_i32()?);
@@ -63,14 +60,12 @@ fn parse_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GM
         index_in_group = Some(chunk.read_i32()?);
     }
     
-    // log::info!("shdgHDGWSdwg     {} {:?} {:?} {:?}", scaled, texture_width, texture_height, index_in_group);
     let texture_abs_start_position: usize = chunk.read_usize()?;
     let texture_start_position: usize = texture_abs_start_position.checked_sub(chunk.abs_pos)
         .ok_or_else(|| format!(
             "Trying to subtract with overflow for absolute texture start position {0} (0x{0:08X}) with chunk position {1}",
             texture_abs_start_position, chunk.abs_pos,
         ))?;
-    // log::info!("ts pmo {}", texture_start_position);
     chunk.cur_pos = texture_start_position;
     let texture_data: DynamicImage = read_raw_texture(chunk, general_info)?;
     
