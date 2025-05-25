@@ -314,8 +314,8 @@ pub fn parse_chunk_code(chunk: &mut GMChunk, bytecode14: bool, strings: &GMStrin
 
     let mut codes_by_index: Vec<GMCode> = Vec::with_capacity(codes_count);
 
-    for code_meta_start_position in code_meta_start_positions {
-        chunk.cur_pos = code_meta_start_position;
+    for (i, code_meta_start_position) in code_meta_start_positions.iter().enumerate() {
+        chunk.cur_pos = *code_meta_start_position;
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
         let code_length: usize = chunk.read_usize()?;
 
@@ -330,14 +330,15 @@ pub fn parse_chunk_code(chunk: &mut GMChunk, bytecode14: bool, strings: &GMStrin
             let weird_local_flag: bool = arguments_count_raw & 0x8000 != 0;
 
             let bytecode_relative_address: i32 = chunk.read_i32()?;
-            let bytecode_absolute_address: usize = (chunk.abs_pos as i32 - 4 + bytecode_relative_address) as usize;
+            let bytecode_start_address: usize = (bytecode_relative_address + chunk.cur_pos as i32 - 4) as usize;
 
-            let offset: usize = chunk.read_usize()?;
+            let offset: usize = chunk.read_usize()?;    //TODO check wtf this is
 
             // child check {~~}
 
-            chunk.cur_pos = bytecode_absolute_address - chunk.abs_pos;
-            end = bytecode_absolute_address + code_length;
+            // log::info!("dsghfhsdjfh {} {} {} {} = {}", bytecode_relative_address, bytecode_start_address, chunk.cur_pos, chunk.abs_pos, bytecode_start_address as i64 - chunk.abs_pos as i64);
+            chunk.cur_pos = bytecode_start_address;
+            end = bytecode_start_address + code_length;      // TODO isn't this just straight up wrong?? why is it absolute
 
             Some(GMCodeBytecode15 {
                 locals_count,
@@ -348,8 +349,13 @@ pub fn parse_chunk_code(chunk: &mut GMChunk, bytecode14: bool, strings: &GMStrin
         };
 
         let mut instructions: Vec<GMInstruction> = Vec::new();
+        let start: usize = chunk.cur_pos;
         while chunk.cur_pos < end {
-            instructions.push(parse_instruction(chunk, bytecode14, variables, functions)?);
+            let instruction: GMInstruction = parse_instruction(chunk, bytecode14, variables, functions).map_err(|e| format!(
+                "{e} for Instruction #{} (at absolute position {}) of Code #{i}/{codes_count} with name \"{}\" and absolute start position {}",
+                instructions.len(), chunk.cur_pos+chunk.abs_pos, name.display(strings), start + chunk.abs_pos,
+            ))?;
+            instructions.push(instruction);
         }
 
 
@@ -420,7 +426,7 @@ pub fn parse_instruction(
         opcode_raw = convert_instruction_kind(opcode_raw);
     }
     let mut opcode: GMOpcode = opcode_raw.try_into()
-        .map_err(|_| format!("Invalid Opcode 0x{opcode_raw:02X} while parsing code instruction"))?;
+        .map_err(|_| format!("Invalid Opcode 0x{opcode_raw:02X}"))?;
 
     let instruction_type: GMInstructionType = get_instruction_type(opcode);
     match instruction_type {

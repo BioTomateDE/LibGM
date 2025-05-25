@@ -19,7 +19,7 @@ use crate::deserialize::rooms::{parse_chunk_room, GMRooms};
 use crate::deserialize::sounds::{parse_chunk_sond, GMSounds};
 use crate::deserialize::sprites::{parse_chunk_sprt, GMSprites};
 use crate::deserialize::texture_page_items::{parse_chunk_tpag, GMTextures};
-
+use crate::trace_parse;
 
 #[derive(Debug, Clone)]
 pub struct GMData {
@@ -43,6 +43,8 @@ pub struct GMData {
 }
 
 pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
+    let tstart = cpu_time::ProcessTime::now();
+    
     let mut all = GMChunk {
         name: "".to_string(),
         abs_pos: 0,
@@ -96,24 +98,26 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let mut chunk_room: GMChunk = get_chunk(&chunks, "ROOM")?;
     let mut chunk_objt: GMChunk = get_chunk(&chunks, "OBJT")?;
     let mut chunk_path: GMChunk = get_chunk(&chunks, "PATH")?;
+    
+    log::trace!("Parsing FORM took {:?}", tstart.elapsed());
 
-    let strings: GMStrings = parse_chunk_strg(&mut chunk_strg)?;
-    let general_info: GMGeneralInfo = parse_chunk_gen8(&mut chunk_gen8, &strings)?;
-    let texture_pages: Vec<GMEmbeddedTexture> = parse_chunk_txtr(&mut chunk_txtr, &general_info)?;
-    let textures: GMTextures = parse_chunk_tpag(&mut chunk_tpag, texture_pages)?;
-    let backgrounds: GMBackgrounds = parse_chunk_bgnd(&mut chunk_bgnd, &general_info, &strings, &textures)?;
-    let sprites: GMSprites = parse_chunk_sprt(&mut chunk_sprt, &general_info, &strings, &textures)?;
-    let scripts: GMScripts = parse_chunk_scpt(&mut chunk_scpt, &strings)?;
-    let variables: GMVariables = parse_chunk_vari(&mut chunk_vari, &strings, &general_info, &mut chunk_code)?;
-    let (functions, code_locals): (GMFunctions, Vec<GMCodeLocal>) = parse_chunk_func(&mut chunk_func, &general_info, &strings, &mut chunk_code)?;
-    let codes: GMCodes = parse_chunk_code(&mut chunk_code, general_info.bytecode_version <= 14, &strings, &variables, &functions)?;
-    let fonts: GMFonts = parse_chunk_font(&mut chunk_font, &general_info, &strings, &textures)?;
-    let audios: GMEmbeddedAudios = parse_chunk_audo(&mut chunk_audo)?;
-    let sounds: GMSounds = parse_chunk_sond(&mut chunk_sond, &general_info, &strings)?;
-    let game_objects: GMGameObjects = parse_chunk_objt(&mut chunk_objt, &general_info, &strings)?;
-    let rooms: GMRooms = parse_chunk_room(&mut chunk_room, &general_info, &strings)?;
-    let paths: GMPaths = parse_chunk_path(&mut chunk_path, &strings)?;
-    let options: GMOptions = parse_chunk_optn(&mut chunk_optn, &strings, &textures)?;
+    let strings: GMStrings = trace_parse!("STRG", parse_chunk_strg(&mut chunk_strg)?);
+    let general_info: GMGeneralInfo = trace_parse!("GEN8", parse_chunk_gen8(&mut chunk_gen8, &strings)?);
+    let texture_pages: Vec<GMEmbeddedTexture> = trace_parse!("TXTR", parse_chunk_txtr(&mut chunk_txtr, &general_info)?);
+    let textures: GMTextures = trace_parse!("TPAG", parse_chunk_tpag(&mut chunk_tpag, texture_pages)?);
+    let backgrounds: GMBackgrounds = trace_parse!("BGND", parse_chunk_bgnd(&mut chunk_bgnd, &general_info, &strings, &textures)?);
+    let sprites: GMSprites = trace_parse!("SPRT", parse_chunk_sprt(&mut chunk_sprt, &general_info, &strings, &textures)?);
+    let scripts: GMScripts = trace_parse!("SCPT", parse_chunk_scpt(&mut chunk_scpt, &strings)?);
+    let variables: GMVariables = trace_parse!("VARI", parse_chunk_vari(&mut chunk_vari, &strings, &general_info, &mut chunk_code)?);
+    let (functions, code_locals): (GMFunctions, Vec<GMCodeLocal>) = trace_parse!("FUNC", parse_chunk_func(&mut chunk_func, &general_info, &strings, &mut chunk_code)?);
+    let codes: GMCodes = trace_parse!("CODE", parse_chunk_code(&mut chunk_code, general_info.bytecode_version <= 14, &strings, &variables, &functions)?);
+    let fonts: GMFonts = trace_parse!("FONT", parse_chunk_font(&mut chunk_font, &general_info, &strings, &textures)?);
+    let audios: GMEmbeddedAudios = trace_parse!("AUDO", parse_chunk_audo(&mut chunk_audo)?);
+    let sounds: GMSounds = trace_parse!("SOND", parse_chunk_sond(&mut chunk_sond, &general_info, &strings)?);
+    let game_objects: GMGameObjects = trace_parse!("OBJT", parse_chunk_objt(&mut chunk_objt, &general_info, &strings)?);
+    let rooms: GMRooms = trace_parse!("ROOM", parse_chunk_room(&mut chunk_room, &general_info, &strings)?);
+    let paths: GMPaths = trace_parse!("PATH", parse_chunk_path(&mut chunk_path, &strings)?);
+    let options: GMOptions = trace_parse!("OPTN", parse_chunk_optn(&mut chunk_optn, &strings, &textures)?);
 
     let data = GMData {
         strings,
@@ -152,4 +156,13 @@ fn get_chunk<'a>(chunks: &HashMap<String, GMChunk<'a>>, chunk_name: &str) -> Res
             chunk_name, chunks.len(), 
         ))
 }
+
+
+pub fn trace_cpu_time<T, E, F: FnOnce() -> Result<T, E>>(label: &str, f: F) -> Result<T, E> {
+    let start = cpu_time::ProcessTime::now();
+    let result = f();
+    log::trace!("Parsing chunk '{}' took {:.2?}", label, start.elapsed());
+    result
+}
+
 
