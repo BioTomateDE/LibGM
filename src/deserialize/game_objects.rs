@@ -62,7 +62,7 @@ pub struct GMGameObjectEventAction {
     pub is_question: bool,
     pub use_apply_to: bool,
     pub exe_type: u32,
-    pub action_name: GMRef<String>,
+    pub action_name: Option<GMRef<String>>,
     pub code: Option<GMRef<GMCode>>,
     pub argument_count: u32,
     pub who: i32,
@@ -229,7 +229,7 @@ fn parse_game_object_event_actions(chunk: &mut GMChunk, strings: &GMStrings) -> 
         let is_question: bool = chunk.read_bool32()?;
         let use_apply_to: bool = chunk.read_bool32()?;
         let exe_type: u32 = chunk.read_u32()?;
-        let action_name: GMRef<String> = chunk.read_gm_string(strings)?;
+        let action_name: Option<GMRef<String>> = chunk.read_gm_string_optional(strings)?;
         let code_id: i32 = chunk.read_i32()?;
         let code: Option<GMRef<GMCode>> = if code_id == -1 { None } else { Some(GMRef::new(code_id as usize)) };
         let argument_count: u32 = chunk.read_u32()?;
