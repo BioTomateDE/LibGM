@@ -1,4 +1,5 @@
 use image::{ImageBuffer, Rgba};
+use crate::debug_utils::DurationExt;
 use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::texture_page_items::{GMTexture, GMTexturePageItem, GMTextures};
@@ -49,7 +50,9 @@ pub fn generate_texture_pages(gm_textures: &GMTextures) -> Result<(Vec<GMTexture
         textures.push((i, texture));
     }
     // sort textures by height; ascending order
+    let tstart = ::cpu_time::ProcessTime::now();
     textures.sort_by(|(_, a), (_, b)| a.img.height().cmp(&b.img.height()));
+    log::trace!("Sorting textures by height took {}", tstart.elapsed().ms());
 
     let mut texture_pages: Vec<image::DynamicImage> = Vec::new();
     let mut texture_page_items: Vec<GMTexturePageItem> = Vec::with_capacity(texture_count);
