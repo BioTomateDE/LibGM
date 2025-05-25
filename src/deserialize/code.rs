@@ -110,12 +110,12 @@ impl Display for GMInstanceType {
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum GMVariableType {
-    Array = 0x00,
-    StackTop = 0x80,
-    Normal = 0xA0,
-    Instance = 0xE0,    // the InstanceType is an instance ID inside the room -100000
-    ArrayPushAF = 0x10, // GMS2.3+, multidimensional array with pushaf
-    ArrayPopAF = 0x90,  // GMS2.3+, multidimensional array with pushaf or popaf
+    Array = 0x00,           // Used for normal single-dimension array variables
+    StackTop = 0x80,        // Used when referencing a variable on another variable, e.g. a chain referenc
+    Normal = 0xA0,          // normal
+    Instance = 0xE0,        // used when referencing variables on room instance IDs, e.g. something like "inst_01ABCDEF.x" in GML
+    MultiPush = 0x10,       // GMS2.3+, multidimensional array with pushaf
+    MultiPushPop = 0x90,    // GMS2.3+, multidimensional array with pushaf or popaf
 }
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
