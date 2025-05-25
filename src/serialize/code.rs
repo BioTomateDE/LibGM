@@ -182,15 +182,15 @@ fn build_instruction(
 
         GMInstruction::Comparison(instr) => {
             let opcode_raw: u8 = if bytecode14 {
-                instr.comparison_type.into()
+                u8::from(instr.comparison_type) + 0x10
             } else {
-                instr.opcode.into()     // always GMOpcode::Cmp
+                u8::from(instr.opcode)     // always GMOpcode::Cmp
             };
             let type1: u8 = instr.type1.into();
             let type2: u8 = instr.type2.into();
 
             builder.write_u8(0);
-            builder.write_u8(0);
+            builder.write_u8(instr.comparison_type.into());
             builder.write_u8(type1 | type2 << 4);
             builder.write_u8(opcode_raw);
         }
