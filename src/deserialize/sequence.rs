@@ -346,7 +346,7 @@ fn parse_track(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMSt
 
     // TODO keyframes with different types {~~}
     let keyframes: Vec<GMKeyframe> = vec![];
-    log::info!("asg");
+    log::warn!("Keyframes not supported yet for Track with name \"{}\" at absolute position {}! Will be deleted or corrupted when building data.", name.display(strings), chunk.abs_pos);
 
     Ok(GMTrack {
         model_name,
