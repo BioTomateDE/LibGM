@@ -114,7 +114,7 @@ fn build_game_object_event_instance_actions(
         builder.write_u32(action.exe_type);
         builder.write_gm_string_optional(data_builder, &action.action_name)?;
         if let Some(ref code) = action.code {
-            data_builder.write_pointer_placeholder(builder, GMPointer::Code(code.index))?;
+            data_builder.write_usize(code.index);
         } else {
             builder.write_i32(-1);
         }
