@@ -43,7 +43,10 @@ pub fn build_chunk_objt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_u32(game_object.group);
         builder.write_f32(game_object.linear_damping);
         builder.write_f32(game_object.angular_damping);
-        builder.write_i32(if game_object.uses_physics_shape_vertex {game_object.physics_shape_vertices.len() as i32} else {-1});
+        builder.write_i32(if game_object.uses_physics_shape_vertex { game_object.physics_shape_vertices.len() as i32 } else { -1 });
+        builder.write_f32(game_object.friction);
+        builder.write_bool32(game_object.awake);
+        builder.write_bool32(game_object.kinematic);
         for (x, y) in &game_object.physics_shape_vertices {
             builder.write_f32(*x);
             builder.write_f32(*y);
@@ -109,7 +112,7 @@ fn build_game_object_event_instance_actions(
         builder.write_bool32(action.is_question);
         builder.write_bool32(action.use_apply_to);
         builder.write_u32(action.exe_type);
-        builder.write_gm_string(data_builder, &action.action_name)?;
+        builder.write_gm_string_optional(data_builder, &action.action_name)?;
         if let Some(ref code) = action.code {
             data_builder.write_pointer_placeholder(builder, GMPointer::Code(code.index))?;
         } else {

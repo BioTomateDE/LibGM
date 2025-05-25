@@ -254,6 +254,9 @@ impl GMChunk<'_> {
 
     pub fn read_gm_string(&mut self, gm_strings: &GMStrings) -> Result<GMRef<String>, String> {
         let string_abs_pos: usize = self.read_usize()?;
+        if gm_strings.abs_pos_to_reference.get(&string_abs_pos).is_none() {
+            log::error!("this is only here for easy breakpoints; comment out this if statement otherwise")
+        }
         let string_ref = gm_strings.abs_pos_to_reference.get(&string_abs_pos)
             .ok_or_else(|| format!(
                 "Could not read reference string with absolute position {} in chunk '{}' at \
@@ -261,6 +264,15 @@ impl GMChunk<'_> {
                 string_abs_pos, self.name, self.abs_pos + self.cur_pos - 4, gm_strings.abs_pos_to_reference.len(),
             ))?;
         Ok(string_ref.clone())
+    }
+
+    /// Try to read a GM String Reference. If the value is zero, return None.
+    pub fn read_gm_string_optional(&mut self, gm_strings: &GMStrings) -> Result<Option<GMRef<String>>, String> {
+        let string_abs_pos: usize = self.read_usize()?;
+        match gm_strings.abs_pos_to_reference.get(&string_abs_pos) {
+            None => Ok(None),
+            Some(string_ref) => Ok(Some(string_ref.clone())),
+        }
     }
 
     /// read pointer to pointer list (only used in rooms)
