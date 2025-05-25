@@ -157,13 +157,3 @@ fn get_chunk<'a>(chunks: &HashMap<String, GMChunk<'a>>, chunk_name: &str) -> Res
             chunk_name, chunks.len(), 
         ))
 }
-
-
-pub fn trace_cpu_time<T, E, F: FnOnce() -> Result<T, E>>(label: &str, f: F) -> Result<T, E> {
-    let start = cpu_time::ProcessTime::now();
-    let result = f();
-    log::trace!("Parsing chunk '{}' took {:.2?}", label, start.elapsed());
-    result
-}
-
-
