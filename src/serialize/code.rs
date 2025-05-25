@@ -332,7 +332,6 @@ fn write_occurrence(
         let occurrence_offset: i32 = occurrence_position as i32 - *last_occurrence_position as i32;
         let variable_type_raw: u8 = if let Some(var_type) = variable_type { var_type.into() } else { 0 };       // TODO idk if variable types are always the same (probably not)
         let occurrence_offset_full: i32 = occurrence_offset & 0x07FFFFFF | (((variable_type_raw & 0xF8) as i32) << 24);
-        log::warn!("hfjjdf {} {} {:08X} {:?}", occurrence_offset, variable_type_raw, occurrence_offset_full, variable_type);
         builder.overwrite_i32(occurrence_offset_full, last_occurrence_position - builder.abs_pos + 4)?;
     }
     
