@@ -22,6 +22,7 @@ use crate::serialize::sprites::build_chunk_sprt;
 use crate::serialize::stubs::{build_chunk_agrp, build_chunk_dafl, build_chunk_extn, build_chunk_shdr, build_chunk_tmln};
 use crate::serialize::texture_page_items::{build_chunk_tpag, generate_texture_pages};
 use crate::serialize::variables::build_chunk_vari;
+use crate::trace_build;
 
 #[derive(Debug, Clone)]
 pub struct DataBuilder {
@@ -40,7 +41,7 @@ impl DataBuilder {
     /// that element will be located in the data file.
     pub fn write_pointer_placeholder(&mut self, chunk_builder: &mut ChunkBuilder, pointer: GMPointer) -> Result<(), String> {
         let position: usize = chunk_builder.abs_pos + chunk_builder.len();
-        chunk_builder.write_usize(0);      // write placeholder
+        chunk_builder.write_usize(0xDEAD);      // write placeholder
         if let Some(old_value) = self.pointer_pool_placeholders.insert(position, pointer.clone()) {
             return Err(format!(
                 "Conflicting placeholder positions while pushing placeholder in chunk '{}': absolute position {} \
@@ -110,39 +111,42 @@ impl DataBuilder {
 pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     let mut builder: DataBuilder = DataBuilder { raw_data: Vec::new(), pointer_pool_placeholders: HashMap::new(), pointer_pool_resources: HashMap::new() };
 
+    let tstart = cpu_time::ProcessTime::now();
     let (texture_page_items, texture_pages): (Vec<GMTexturePageItem>, Vec<DynamicImage>) = generate_texture_pages(&gm_data.textures)?;
+    log::trace!("Generating {} texture pages and {} texture page items took {:.2?}", texture_pages.len(), texture_page_items.len(), tstart.elapsed());
 
     builder.write_chunk_name("FORM")?;
     builder.write_usize(0);  // write placeholder for total data length
 
     // same chunk order as in undertale 1.01
-    build_chunk_gen8(&mut builder, &gm_data)?;
-    build_chunk_optn(&mut builder, &gm_data)?;
-    build_chunk_extn(&mut builder, &gm_data)?;      // stub
-    build_chunk_sond(&mut builder, &gm_data)?;
-    build_chunk_agrp(&mut builder, &gm_data)?;      // stub
-    build_chunk_sprt(&mut builder, &gm_data)?;
-    build_chunk_bgnd(&mut builder, &gm_data)?;
-    build_chunk_path(&mut builder, &gm_data)?;
-    build_chunk_scpt(&mut builder, &gm_data)?;
-    build_chunk_shdr(&mut builder, &gm_data)?;      // stub
-    build_chunk_font(&mut builder, &gm_data)?;
-    build_chunk_tmln(&mut builder, &gm_data)?;      // stub
-    build_chunk_objt(&mut builder, &gm_data)?;
-    build_chunk_room(&mut builder, &gm_data)?;
-    build_chunk_dafl(&mut builder, &gm_data)?;      // stub
-    build_chunk_tpag(&mut builder, &gm_data, texture_page_items)?;
-    let (variable_occurrences_map, function_occurrences_map): (HashMap<usize, Vec<usize>>, HashMap<usize, Vec<usize>>) = build_chunk_code(&mut builder, &gm_data)?;
-    build_chunk_vari(&mut builder, &gm_data, variable_occurrences_map)?;
-    build_chunk_func(&mut builder, &gm_data, function_occurrences_map)?;
-    build_chunk_strg(&mut builder, &gm_data)?;
-    build_chunk_txtr(&mut builder, &gm_data, texture_pages)?;
-    build_chunk_audo(&mut builder, &gm_data)?;
-
+    trace_build!("GEN8", build_chunk_gen8(&mut builder, &gm_data)?);
+    trace_build!("OPTN", build_chunk_optn(&mut builder, &gm_data)?);
+    trace_build!("EXTN", build_chunk_extn(&mut builder, &gm_data)?);      // stub
+    trace_build!("SOND", build_chunk_sond(&mut builder, &gm_data)?);
+    trace_build!("AGRP", build_chunk_agrp(&mut builder, &gm_data)?);      // stub
+    trace_build!("SPRT", build_chunk_sprt(&mut builder, &gm_data)?);
+    trace_build!("BGND", build_chunk_bgnd(&mut builder, &gm_data)?);
+    trace_build!("PATH", build_chunk_path(&mut builder, &gm_data)?);
+    trace_build!("SCPT", build_chunk_scpt(&mut builder, &gm_data)?);
+    trace_build!("SHDR", build_chunk_shdr(&mut builder, &gm_data)?);      // stub
+    trace_build!("FONT", build_chunk_font(&mut builder, &gm_data)?);
+    trace_build!("TMLN", build_chunk_tmln(&mut builder, &gm_data)?);      // stub
+    trace_build!("OBJT", build_chunk_objt(&mut builder, &gm_data)?);
+    trace_build!("ROOM", build_chunk_room(&mut builder, &gm_data)?);
+    trace_build!("DAFL", build_chunk_dafl(&mut builder, &gm_data)?);      // stub
+    trace_build!("TPAG", build_chunk_tpag(&mut builder, &gm_data, texture_page_items))?;
+    let (variable_occurrences_map, function_occurrences_map): (HashMap<usize, Vec<usize>>, HashMap<usize, Vec<usize>>) = trace_build!("CODE", build_chunk_code(&mut builder, &gm_data)?);
+    trace_build!("VARI", build_chunk_vari(&mut builder, &gm_data, variable_occurrences_map)?);
+    trace_build!("FUNC", build_chunk_func(&mut builder, &gm_data, function_occurrences_map)?);
+    trace_build!("STRG", build_chunk_strg(&mut builder, &gm_data)?);
+    trace_build!("TXTR", build_chunk_txtr(&mut builder, &gm_data, texture_pages)?);
+    trace_build!("AUDO", build_chunk_audo(&mut builder, &gm_data)?);
+    
     let total_length: usize = builder.len();
     let bytes: [u8; 4] = (total_length as u32).to_le_bytes();
     builder.overwrite_data(&bytes, 4)?;     // overwrite placeholder total data length
 
+    let tstart = cpu_time::ProcessTime::now();
     // resolve pointer placeholders
     for (placeholder_position, pointer) in &builder.pointer_pool_placeholders {
         let resource_position: usize = *builder.pointer_pool_resources.get(&pointer)
@@ -163,6 +167,8 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
             *source_byte = *byte;
         }
     }
+    
+    log::trace!("Resolving {} pointers took {:.2?}", builder.pointer_pool_placeholders.len(), tstart.elapsed());
 
     Ok(builder.raw_data)
 }

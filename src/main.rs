@@ -2,6 +2,7 @@ mod printing;
 mod deserialize;
 mod serialize;
 mod export_mod;
+mod debug_utils;
 
 use std::path::Path;
 use deserialize::all::{parse_data_file, read_data_file};
