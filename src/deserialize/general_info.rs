@@ -1,4 +1,5 @@
-﻿use crate::deserialize::chunk_reading::{GMChunk, GMRef};
+﻿use std::fmt::Formatter;
+use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use chrono::{DateTime, Utc};
 use crate::deserialize::strings::GMStrings;
 use crate::deserialize::texture_page_items::{GMTexture, GMTextures};
@@ -33,10 +34,7 @@ pub struct GMGeneralInfo {
     pub game_id: u32,
     pub directplay_guid: uuid::Uuid,
     pub game_name: GMRef<String>,
-    pub major_version: u32,
-    pub minor_version: u32,
-    pub release_version: u32,
-    pub stable_version: u32,
+    pub version: GMVersion,
     pub default_window_width: u32,
     pub default_window_height: u32,
     pub flags: GMGeneralInfoFlags,
@@ -50,22 +48,34 @@ pub struct GMGeneralInfo {
     pub debugger_port: Option<u32>,
     pub room_order: Vec<u32>,
 }
-
 impl GMGeneralInfo {
     pub fn is_version_at_least(&self, major: u32, minor: u32, release: u32, build: u32) -> bool {
-        if self.major_version != major {
-            return self.major_version > major;
+        if self.version.major != major {
+            return self.version.major > major;
         }
-        if self.minor_version != minor {
-            return self.minor_version > minor;
+        if self.version.minor != minor {
+            return self.version.minor > minor;
         }
-        if self.release_version != release {
-            return self.release_version > release;
+        if self.version.release != release {
+            return self.version.release > release;
         }
-        if self.stable_version != build {
-            return self.stable_version > build;
+        if self.version.stable != build {
+            return self.version.stable > build;
         }
         true   // The version is exactly what was supplied.
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct GMVersion {
+    pub major: u32,
+    pub minor: u32,
+    pub release: u32,
+    pub stable: u32,
+}
+impl std::fmt::Display for GMVersion {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}.{}.{}", self.major, self.minor, self.release, self.stable)
     }
 }
 
@@ -233,10 +243,7 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
     let directplay_guid: uuid::Uuid = uuid::Builder::from_bytes_le(directplay_guid).into_uuid();
 
     let game_name: GMRef<String> = chunk.read_gm_string(strings)?;
-    let major_version: u32 = chunk.read_u32()?;
-    let minor_version: u32 = chunk.read_u32()?;
-    let release_version: u32 = chunk.read_u32()?;
-    let stable_version: u32 = chunk.read_u32()?;
+    let version: GMVersion = parse_version(chunk)?;
     let default_window_width: u32 = chunk.read_u32()?;
     let default_window_height: u32 = chunk.read_u32()?;
     let flags: GMGeneralInfoFlags = parse_general_info_flags(chunk.read_u32()?);
@@ -281,10 +288,7 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
         game_id,
         directplay_guid,
         game_name,
-        major_version,
-        minor_version,
-        release_version,
-        stable_version,
+        version,
         default_window_width,
         default_window_height,
         flags,
@@ -297,6 +301,20 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
         steam_appid,
         debugger_port,
         room_order,
+    })
+}
+
+
+fn parse_version(chunk: &mut GMChunk) -> Result<GMVersion, String> {
+    let major: u32 = chunk.read_u32()?;
+    let minor: u32 = chunk.read_u32()?;
+    let release: u32 = chunk.read_u32()?;
+    let stable: u32 = chunk.read_u32()?;
+    Ok(GMVersion {
+        major,
+        minor,
+        release,
+        stable,
     })
 }
 

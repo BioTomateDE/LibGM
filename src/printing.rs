@@ -20,7 +20,7 @@ impl GMGeneralInfo {
         println!("  Game ID: {}", self.game_id);
         println!("  Directplay GUID: {}", self.directplay_guid);
         println!("  Game Name: {}", self.game_name.resolve(&strings.strings_by_index)?);
-        println!("  Version: {}.{}.{}.{}", self.major_version, self.minor_version, self.release_version, self.stable_version);
+        println!("  Version: {}", self.version);
         println!("  Default Window Size: {}x{}", self.default_window_width, self.default_window_height);
         println!("  Flags: {}", self.flags.to_string());
         println!("  License CRC32: {}", self.license_crc32);
