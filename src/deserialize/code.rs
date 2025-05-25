@@ -481,7 +481,7 @@ pub fn parse_instruction(
             // Parse instruction components from bytes
             let mut comparison_type: GMComparisonType = b1.try_into().map_err(|_| format!(
                 "Invalid Comparison Type {b1:02X} while parsing Comparison Instruction"
-            ))?;
+            ))?;    // TODO probably doesn't work for bytecode14; needs to be checked before
 
             let type1: u8 = b2 & 0xf;
             let type1: GMDataType = type1.try_into().map_err(|_| format!(
@@ -494,7 +494,7 @@ pub fn parse_instruction(
             ))?;
 
             if bytecode14 {
-                // in bytecode14, the comparison kind is encoded in the opcode itchunk
+                // in bytecode14, the comparison kind is encoded in the opcode
                 let comparison_type_raw: u8 = opcode_raw - 0x10;
                 comparison_type = comparison_type_raw.try_into()
                     .map_err(|_| format!("Invalid Bytecode14 Comparison Type {comparison_type_raw:02X} \
