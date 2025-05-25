@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use crate::deserialize::all::GMData;
-use crate::deserialize::code::GMInstanceType;
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::variables::{GMVariable, GMVariablesScuffed};
 use crate::serialize::all::DataBuilder;
