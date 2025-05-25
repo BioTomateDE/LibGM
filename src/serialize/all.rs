@@ -1,3 +1,4 @@
+use crate::debug_utils::DurationExt;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -113,7 +114,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
 
     let tstart = cpu_time::ProcessTime::now();
     let (texture_page_items, texture_pages): (Vec<GMTexturePageItem>, Vec<DynamicImage>) = generate_texture_pages(&gm_data.textures)?;
-    log::trace!("Generating {} texture pages and {} texture page items took {:.2?}", texture_pages.len(), texture_page_items.len(), tstart.elapsed());
+    log::trace!("Generating {} texture pages and {} texture page items took {}", texture_pages.len(), texture_page_items.len(), tstart.elapsed().ms());
 
     builder.write_chunk_name("FORM")?;
     builder.write_usize(0);  // write placeholder for total data length
@@ -168,7 +169,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
         }
     }
     
-    log::trace!("Resolving {} pointers took {:.2?}", builder.pointer_pool_placeholders.len(), tstart.elapsed());
+    log::trace!("Resolving {} pointers took {}", builder.pointer_pool_placeholders.len(), tstart.elapsed().ms());
 
     Ok(builder.raw_data)
 }

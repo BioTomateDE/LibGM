@@ -1,3 +1,4 @@
+use crate::debug_utils::DurationExt;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -99,7 +100,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let mut chunk_objt: GMChunk = get_chunk(&chunks, "OBJT")?;
     let mut chunk_path: GMChunk = get_chunk(&chunks, "PATH")?;
     
-    log::trace!("Parsing FORM took {:?}", tstart.elapsed());
+    log::trace!("Parsing FORM took {}", tstart.elapsed().ms());
 
     let strings: GMStrings = trace_parse!("STRG", parse_chunk_strg(&mut chunk_strg)?);
     let general_info: GMGeneralInfo = trace_parse!("GEN8", parse_chunk_gen8(&mut chunk_gen8, &strings)?);
