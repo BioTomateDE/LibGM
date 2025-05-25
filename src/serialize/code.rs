@@ -115,7 +115,7 @@ fn build_code_b15(
         builder.overwrite_usize(code_length, length_placeholders[i])?;
 
         // overwrite code instructions start address placeholder
-        let bytecode_relative_address: usize = end - start_placeholders[i] + 4;     // +4 because it's -4 in deserialize idk
+        let bytecode_relative_address: usize = end - start_placeholders[i] - code_length;
         builder.overwrite_usize(bytecode_relative_address, start_placeholders[i])?;
     }
 
@@ -251,8 +251,9 @@ fn build_instruction(
             });
 
             builder.write_u8(instr.data_type.into());
-            builder.write_u8(if bytecode14 { instr.opcode.into() } else { 0xC0 });
-            
+            // builder.write_u8(if bytecode14 { instr.opcode.into() } else { 0xC0 });
+            builder.write_u8(instr.opcode.into());
+
             match &instr.value {
                 GMValue::Double(double) => builder.write_f64(*double),
                 GMValue::Float(float) => builder.write_f32(*float),
@@ -272,7 +273,8 @@ fn build_instruction(
             builder.write_u8(instr.arguments_count);
             builder.write_u8(0);        // TODO check if writing zero is ok since b1 isn't checked or saved
             builder.write_u8(instr.data_type.into());
-            builder.write_u8(if bytecode14 { instr.opcode.into() } else { 0xDA });
+            builder.write_u8(instr.opcode.into());  // v removing this (also for push instruction) might break bytecode14 but the line below is wrong too
+            // builder.write_u8(if bytecode14 { instr.opcode.into() } else { 0xDA });
 
             let function: &GMFunction = instr.function.resolve(&functions.functions_by_index)?;
             write_occurrence(builder, function_occurrences_map, instr.function.index, abs_pos, function.name_string_id, None)?;
@@ -328,14 +330,16 @@ fn write_occurrence(
     if let Some(last_occurrence_position) = entry.last() {
         // replace last occurrence (which is name string id) with next occurrence offset
         let occurrence_offset: i32 = occurrence_position as i32 - *last_occurrence_position as i32;
-        let variable_type_raw: u8 = if let Some(var_type) = variable_type { var_type.into() } else { 0 };
+        let variable_type_raw: u8 = if let Some(var_type) = variable_type { var_type.into() } else { 0 };       // TODO idk if variable types are always the same (probably not)
         let occurrence_offset_full: i32 = occurrence_offset & 0x07FFFFFF | (((variable_type_raw & 0xF8) as i32) << 24);
+        log::warn!("hfjjdf {} {} {:08X} {:?}", occurrence_offset, variable_type_raw, occurrence_offset_full, variable_type);
         builder.overwrite_i32(occurrence_offset_full, last_occurrence_position - builder.abs_pos + 4)?;
     }
     
     // write name string id for this occurrence. this is correct if it is the last occurrence.
     // otherwise, it will be overwritten later by the code above.
-    builder.write_i32(name_string_id);
+    let variable_type_raw: u8 = if let Some(var_type) = variable_type { var_type.into() } else { 0 };
+    builder.write_i32(name_string_id & 0x07FFFFFF | (((variable_type_raw & 0xF8) as i32) << 24));
     
     entry.push(occurrence_position);
     Ok(())
