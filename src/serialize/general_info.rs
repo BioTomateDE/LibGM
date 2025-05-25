@@ -1,6 +1,6 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
-use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMOptions, GMOptionsConstant, GMOptionsFlags, GMOptionsWindowColor};
+use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMOptions, GMOptionsConstant, GMOptionsFlags, GMOptionsWindowColor, GMVersion};
 use crate::deserialize::rooms::GMRooms;
 use crate::deserialize::texture_page_items::GMTexture;
 use crate::serialize::all::DataBuilder;
@@ -20,10 +20,7 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
     builder.write_u32(info.game_id);
     builder.raw_data.extend(info.directplay_guid.as_bytes());
     data_builder.write_pointer_placeholder(&mut builder, GMPointer::String(info.game_name.index))?;
-    builder.write_u32(info.major_version);
-    builder.write_u32(info.minor_version);
-    builder.write_u32(info.release_version);
-    builder.write_u32(info.stable_version);
+    build_version(&mut builder, &info.version);
     builder.write_u32(info.default_window_width);
     builder.write_u32(info.default_window_height);
     builder.write_u32(build_general_info_flags(&info.flags));
@@ -45,6 +42,14 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
 
     builder.finish(data_builder)?;
     Ok(())
+}
+
+
+fn build_version(chunk: &mut ChunkBuilder, version: &GMVersion) {
+    chunk.write_u32(version.major);
+    chunk.write_u32(version.minor);
+    chunk.write_u32(version.release);
+    chunk.write_u32(version.stable);
 }
 
 
