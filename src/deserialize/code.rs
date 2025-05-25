@@ -332,13 +332,13 @@ pub fn parse_chunk_code(chunk: &mut GMChunk, bytecode14: bool, strings: &GMStrin
             let bytecode_relative_address: i32 = chunk.read_i32()?;
             let bytecode_start_address: usize = (bytecode_relative_address + chunk.cur_pos as i32 - 4) as usize;
 
-            let offset: usize = chunk.read_usize()?;    //TODO check wtf this is
+            let offset: usize = chunk.read_usize()?;
 
             // child check {~~}
 
             // log::info!("dsghfhsdjfh {} {} {} {} = {}", bytecode_relative_address, bytecode_start_address, chunk.cur_pos, chunk.abs_pos, bytecode_start_address as i64 - chunk.abs_pos as i64);
             chunk.cur_pos = bytecode_start_address;
-            end = bytecode_start_address + code_length;      // TODO isn't this just straight up wrong?? why is it absolute
+            end = bytecode_start_address + code_length;
 
             Some(GMCodeBytecode15 {
                 locals_count,
@@ -355,9 +355,9 @@ pub fn parse_chunk_code(chunk: &mut GMChunk, bytecode14: bool, strings: &GMStrin
                 "{e} for Instruction #{} (at absolute position {}) of Code #{i}/{codes_count} with name \"{}\" and absolute start position {}",
                 instructions.len(), chunk.cur_pos+chunk.abs_pos, name.display(strings), start + chunk.abs_pos,
             ))?;
+            log::info!("dsgsdgsd {} {:?}", chunk.cur_pos+chunk.abs_pos, instruction);
             instructions.push(instruction);
         }
-
 
         codes_by_index.push(GMCode {
             name,
