@@ -51,7 +51,7 @@ pub fn build_chunk_objt(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         build_game_object_events(builder, game_object, i)?;
     }
 
-    builder.finish_chunk()?;
+    builder.finish_chunk(&gm_data.general_info)?;
     Ok(())
 }
 
