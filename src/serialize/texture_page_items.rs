@@ -3,20 +3,19 @@ use crate::debug_utils::DurationExt;
 use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::texture_page_items::{GMTexture, GMTexturePageItem, GMTextures};
-use crate::serialize::all::DataBuilder;
-use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 
-pub fn build_chunk_tpag(data_builder: &mut DataBuilder, gm_data: &GMData, texture_page_items: Vec<GMTexturePageItem>) -> Result<(), String> {
-    let mut builder = ChunkBuilder::new(data_builder, "TPAG");
+pub fn build_chunk_tpag(builder: &mut DataBuilder, gm_data: &GMData, texture_page_items: Vec<GMTexturePageItem>) -> Result<(), String> {
+    builder.start_chunk("TPAG")?;
     let len: usize = texture_page_items.len();
     builder.write_usize(len);
 
     for texture_page_item in &texture_page_items {
-        data_builder.write_pointer_placeholder(&mut builder, GMPointer::Texture(texture_page_item.texture.index))?;
+        builder.write_placeholder(GMPointer::Texture(texture_page_item.texture.index))?;
     }
 
     for texture_page_item in &texture_page_items {
-        data_builder.resolve_pointer(&mut builder, GMPointer::Texture(texture_page_item.texture.index))?;
+        builder.resolve_pointer(GMPointer::Texture(texture_page_item.texture.index))?;
         let texture: &GMTexture = texture_page_item.texture.resolve(&gm_data.textures.textures_by_index)?;
 
         builder.write_u16(texture_page_item.source_x);
@@ -32,7 +31,7 @@ pub fn build_chunk_tpag(data_builder: &mut DataBuilder, gm_data: &GMData, textur
         builder.write_u16(texture_page_item.texture_page_id);
     }
 
-    builder.finish(data_builder)?;
+    builder.finish_chunk()?;
     Ok(())
 }
 
