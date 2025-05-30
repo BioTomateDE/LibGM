@@ -6,7 +6,7 @@ use image::DynamicImage;
 use crate::deserialize::all::GMData;
 use crate::deserialize::texture_page_items::{GMTexturePageItem};
 use crate::serialize::backgrounds::build_chunk_bgnd;
-use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 use crate::serialize::code::build_chunk_code;
 use crate::serialize::embedded_audio::build_chunk_audo;
 use crate::serialize::embedded_textures::build_chunk_txtr;
@@ -25,99 +25,21 @@ use crate::serialize::texture_page_items::{build_chunk_tpag, generate_texture_pa
 use crate::serialize::variables::build_chunk_vari;
 use crate::trace_build;
 
-#[derive(Debug, Clone)]
-pub struct DataBuilder {
-    pub raw_data: Vec<u8>,
-    pointer_pool_placeholders: HashMap<usize, GMPointer>,  // maps gamemaker element references to absolute positions of where they're referenced
-    pointer_pool_resources: HashMap<GMPointer, usize>,     // maps gamemaker element references to absolute positions of where their data is
-}
-impl DataBuilder {
-    /// Create a placeholder pointer at the current position in the chunk
-    /// and store the target gamemaker element (reference) in the pool.
-    /// This will later be resolved; replacing the placeholder pointer with
-    /// the absolute position of the target data in the data file
-    /// (assuming the pointer origin position was added to the pool).
-    /// This method should be called when the data file format expects
-    /// a pointer to some element, but you don't yet (necessarily) know where
-    /// that element will be located in the data file.
-    pub fn write_pointer_placeholder(&mut self, chunk_builder: &mut ChunkBuilder, pointer: GMPointer) -> Result<(), String> {
-        let position: usize = chunk_builder.abs_pos + chunk_builder.len() + 8;  // TODO
-        chunk_builder.write_usize(0xDEAD);      // write placeholder
-        if let Some(old_value) = self.pointer_pool_placeholders.insert(position, pointer.clone()) {
-            return Err(format!(
-                "Conflicting placeholder positions while pushing placeholder in chunk '{}': absolute position {} \
-                was already set for pointer {:?}; tried to set to new pointer {:?}",
-                chunk_builder.chunk_name, position, old_value, pointer,
-            ))
-        }
-        Ok(())
-    }
-
-    /// Store the gamemaker element's absolute position in the pool.
-    /// The element's absolute position is the chunk builder's current position;
-    /// since this method should get called when the element is built to the data file.
-    pub fn resolve_pointer(&mut self, chunk_builder: &mut ChunkBuilder, pointer: GMPointer) -> Result<(), String> {
-        let position: usize = chunk_builder.abs_pos + chunk_builder.len();
-        if let Some(old_value) = self.pointer_pool_resources.insert(pointer.clone(), position) {
-            return Err(format!("Pointer to {:?} already resolved to absolute position {}; \
-            tried to resolve again to position {}", pointer, old_value, position))
-        }
-        Ok(())
-    }
-}
-
-impl DataBuilder {
-    pub fn write_usize(&mut self, number: usize) {
-        let bytes = (number as u32).to_le_bytes();
-        self.raw_data.extend_from_slice(&bytes);
-    }
-
-    pub fn write_chunk_name(&mut self, name: &str) -> Result<(), String> {
-        // write a 4 character ascii string to the data
-        if name.len() != 4 {
-            return Err(format!("Chunk name '{}' is {} chars long, but needs to be exactly 4 chars/bytes long", name, name.len()))
-        }
-
-        for (i, char) in name.chars().enumerate() {
-            let byte: u8 = char.try_into().map_err(|e| format!(
-                "Char Typecasting error while writing chunk name \"{name}\" \
-                (i: {i}) to data (len: {}): {e}", self.len()))?;
-            self.raw_data.push(byte);
-        }
-
-        Ok(())
-    }
-
-    pub fn overwrite_data(&mut self, data: &[u8], position: usize) -> Result<(), String> {
-        if position + data.len() >= self.len() {
-            return Err(format!(
-                "Could not overwrite {} bytes at position {} in data with length {} while building data",
-                data.len(),
-                position,
-                self.len()
-            ))
-        };
-        for (i, byte) in data.iter().enumerate() {
-            self.raw_data[position + i] = *byte;
-        }
-        Ok(())
-    }
-
-    pub fn len(&self) -> usize {
-        self.raw_data.len()
-    }
-}
-
 
 pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
-    let mut builder: DataBuilder = DataBuilder { raw_data: Vec::new(), pointer_pool_placeholders: HashMap::new(), pointer_pool_resources: HashMap::new() };
+    let mut builder = DataBuilder {
+        raw_data: Vec::new(),
+        chunk_start_pos: None,
+        pool_placeholders: HashMap::new(),
+        placeholder_pool_resources: HashMap::new(),
+    };
 
     let tstart = cpu_time::ProcessTime::now();
     let (texture_page_items, texture_pages): (Vec<GMTexturePageItem>, Vec<DynamicImage>) = generate_texture_pages(&gm_data.textures)?;
     log::trace!("Generating {} texture pages and {} texture page items took {}", texture_pages.len(), texture_page_items.len(), tstart.elapsed().ms());
 
-    builder.write_chunk_name("FORM")?;
-    builder.write_usize(0);  // write placeholder for total data length
+    builder.write_literal_string("FORM");
+    builder.write_placeholder(GMPointer::FormLength)?;
 
     // same chunk order as in undertale 1.01
     trace_build!("GEN8", build_chunk_gen8(&mut builder, &gm_data)?);
@@ -143,37 +65,30 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     trace_build!("TXTR", build_chunk_txtr(&mut builder, &gm_data, texture_pages)?);
     trace_build!("AUDO", build_chunk_audo(&mut builder, &gm_data)?);
     
-    let total_length: usize = builder.len();
-    let bytes: [u8; 4] = (total_length as u32).to_le_bytes();
-    builder.overwrite_data(&bytes, 4)?;     // overwrite placeholder total data length
-
+    builder.resolve_placeholder(GMPointer::FormLength, builder.len() as i32)?;
+    
     let tstart = cpu_time::ProcessTime::now();
     // resolve pointer placeholders
-    for (placeholder_position, pointer) in &builder.pointer_pool_placeholders {
-        let resource_position: usize = *builder.pointer_pool_resources.get(&pointer)
+    for (placeholder_position, pointer) in &builder.pool_placeholders {
+        let resource_data: i32 = *builder.placeholder_pool_resources.get(&pointer)
             .ok_or_else(|| format!(
                 "Could not resolve resource {:?} for placeholder position {}",
                 pointer, placeholder_position,
             ))?;
-        
-        if *placeholder_position == 436 {
-            panic!()
-        }
 
-        let raw: &[u8; 4] = &(resource_position as u32).to_le_bytes();
+        let raw: &[u8; 4] = &(resource_data as u32).to_le_bytes();
         for (i, byte) in raw.iter().enumerate() {
             let source_byte: &mut u8 = builder.raw_data.get_mut(placeholder_position + i)
                 .ok_or_else(|| format!(
-                    "Could not overwrite {} bytes at position {} in data with length {} while resolving pointer placeholders",
+                    "Could not overwrite {} bytes at position {} while resolving pointer placeholders",
                     raw.len(),
                     placeholder_position + i,
-                    total_length,
                 ))?;
             *source_byte = *byte;
         }
     }
     
-    log::trace!("Resolving {} pointers took {}", builder.pointer_pool_placeholders.len(), tstart.elapsed().ms());
+    log::trace!("Resolving {} pointers took {}", builder.pool_placeholders.len(), tstart.elapsed().ms());
 
     Ok(builder.raw_data)
 }

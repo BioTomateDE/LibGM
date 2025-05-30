@@ -3,31 +3,30 @@ use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMOptions, GMOptionsConstant, GMOptionsFlags, GMOptionsWindowColor, GMVersion};
 use crate::deserialize::rooms::GMRooms;
 use crate::deserialize::texture_page_items::GMTexture;
-use crate::serialize::all::DataBuilder;
-use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 
-pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
-    let mut builder = ChunkBuilder::new(data_builder, "GEN8");
+pub fn build_chunk_gen8(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
+    builder.start_chunk("GEN8")?;
     let info: &GMGeneralInfo = &gm_data.general_info;
 
     builder.write_u8(if info.is_debugger_disabled {1} else {0});
     builder.write_u8(info.bytecode_version);
     builder.write_u16(info.unknown_value);
-    data_builder.write_pointer_placeholder(&mut builder, GMPointer::String(info.game_file_name.index))?;
-    data_builder.write_pointer_placeholder(&mut builder, GMPointer::String(info.config.index))?;
+    builder.write_placeholder(GMPointer::String(info.game_file_name.index))?;
+    builder.write_placeholder(GMPointer::String(info.config.index))?;
     builder.write_usize(gm_data.game_objects.game_objects_by_index.len());
     builder.write_usize(get_last_tile_id(&gm_data.rooms));
     builder.write_u32(info.game_id);
     builder.raw_data.extend(info.directplay_guid.as_bytes());
-    data_builder.write_pointer_placeholder(&mut builder, GMPointer::String(info.game_name.index))?;
-    build_version(&mut builder, &info.version);
+    builder.write_placeholder(GMPointer::String(info.game_name.index))?;
+    build_version(builder, &info.version);
     builder.write_u32(info.default_window_width);
     builder.write_u32(info.default_window_height);
     builder.write_u32(build_general_info_flags(&info.flags));
     builder.write_u32(info.license_crc32);
     builder.raw_data.extend(info.license_md5);
     builder.write_i64(info.timestamp_created.timestamp());
-    data_builder.write_pointer_placeholder(&mut builder, GMPointer::String(info.display_name.index))?;
+    builder.write_placeholder(GMPointer::String(info.display_name.index))?;
     builder.write_u64(info.active_targets);
     builder.write_u64(build_function_classifications(&info.function_classifications));
     builder.write_i32(info.steam_appid);
@@ -40,12 +39,12 @@ pub fn build_chunk_gen8(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         builder.write_u32(*room_id);
     }
 
-    builder.finish(data_builder)?;
+    builder.finish_chunk()?;
     Ok(())
 }
 
 
-fn build_version(chunk: &mut ChunkBuilder, version: &GMVersion) {
+fn build_version(chunk: &mut DataBuilder, version: &GMVersion) {
     chunk.write_u32(version.major);
     chunk.write_u32(version.minor);
     chunk.write_u32(version.release);
@@ -159,16 +158,16 @@ fn build_function_classifications(function_classifications: &GMFunctionClassific
 }
 
 
-pub fn build_chunk_optn(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
-    let mut builder = ChunkBuilder::new(data_builder, "OPTN");
+pub fn build_chunk_optn(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
+    builder.start_chunk("OPTN")?;
 
     if gm_data.options.is_new_format {
-        build_options_new(data_builder, &mut builder, &gm_data.options)?;
+        build_options_new(builder, &gm_data.options)?;
     } else {
-        build_options_old(data_builder, &mut builder, &gm_data.options)?;
+        build_options_old(builder, &gm_data.options)?;
     }
 
-    builder.finish(data_builder)?;
+    builder.finish_chunk()?;
     Ok(())
 }
 
@@ -211,7 +210,7 @@ fn build_options_flags_new(flags: &GMOptionsFlags) -> u64 {
 }
 
 
-fn build_options_old(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, options: &GMOptions) -> Result<(), String> {
+fn build_options_old(builder: &mut DataBuilder, options: &GMOptions) -> Result<(), String> {
     builder.write_bool32(options.flags.fullscreen);
     builder.write_bool32(options.flags.interpolate_pixels);
     builder.write_bool32(options.flags.use_new_audio);
@@ -247,9 +246,9 @@ fn build_options_old(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder,
     builder.write_bool32(options.flags.freeze);
     builder.write_bool32(options.flags.show_progress);
 
-    build_options_image(data_builder, builder, &options.back_image)?;
-    build_options_image(data_builder, builder, &options.front_image)?;
-    build_options_image(data_builder, builder, &options.load_image)?;
+    build_options_image(builder, &options.back_image)?;
+    build_options_image(builder, &options.front_image)?;
+    build_options_image(builder, &options.load_image)?;
 
     builder.write_bool32(options.flags.load_transparent);
 
@@ -265,7 +264,7 @@ fn build_options_old(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder,
 }
 
 
-fn build_options_new(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, options: &GMOptions) -> Result<(), String> {
+fn build_options_new(builder: &mut DataBuilder, options: &GMOptions) -> Result<(), String> {
     builder.write_u32(options.unknown1);
     builder.write_u32(options.unknown2);
     builder.write_u64(build_options_flags_new(&options.flags));
@@ -276,25 +275,25 @@ fn build_options_new(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder,
     builder.write_u32(options.frequency);
     builder.write_u32(options.vertex_sync);
     builder.write_u32(options.priority);
-    build_options_image(data_builder, builder, &options.back_image)?;
-    build_options_image(data_builder, builder, &options.front_image)?;
-    build_options_image(data_builder, builder, &options.load_image)?;
+    build_options_image(builder, &options.back_image)?;
+    build_options_image(builder, &options.front_image)?;
+    build_options_image(builder, &options.load_image)?;
     builder.write_u32(options.load_alpha);
-    build_constants(data_builder, builder, &options.constants)?;
+    build_constants(builder, &options.constants)?;
     Ok(())
 }
 
 
-fn build_options_image(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, texture: &Option<GMRef<GMTexture>>) -> Result<(), String> {
+fn build_options_image(builder: &mut DataBuilder, texture: &Option<GMRef<GMTexture>>) -> Result<(), String> {
     match texture {
         None => builder.write_usize(0),
-        Some(reference) => data_builder.write_pointer_placeholder(builder, GMPointer::Texture(reference.index))?
+        Some(reference) => builder.write_placeholder(GMPointer::Texture(reference.index))?
     }
     Ok(())
 }
 
 
-fn build_options_window_color(builder: &mut ChunkBuilder, window_color: &GMOptionsWindowColor) {
+fn build_options_window_color(builder: &mut DataBuilder, window_color: &GMOptionsWindowColor) {
     builder.write_u8(window_color.r);
     builder.write_u8(window_color.g);
     builder.write_u8(window_color.b);
@@ -302,12 +301,12 @@ fn build_options_window_color(builder: &mut ChunkBuilder, window_color: &GMOptio
 }
 
 
-fn build_constants(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, constants: &Vec<GMOptionsConstant>) -> Result<(), String> {
+fn build_constants(builder: &mut DataBuilder, constants: &Vec<GMOptionsConstant>) -> Result<(), String> {
     builder.write_usize(constants.len());
 
     for constant in constants {
-        builder.write_gm_string(data_builder, &constant.name)?;
-        builder.write_gm_string(data_builder, &constant.value)?;
+        builder.write_gm_string(&constant.name)?;
+        builder.write_gm_string(&constant.value)?;
     }
 
     Ok(())

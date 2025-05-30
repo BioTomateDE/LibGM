@@ -1,34 +1,32 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::fonts::{GMFont, GMFontGlyph, GMFontGlyphKerning};
 use crate::deserialize::general_info::GMGeneralInfo;
-use crate::serialize::all::DataBuilder;
-use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 use crate::serialize::sprites::align_writer;
 
-pub fn build_chunk_font(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
-    let mut builder = ChunkBuilder::new(data_builder, "FONT");
-
+pub fn build_chunk_font(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
+    builder.start_chunk("FONT")?;
     let font_count: usize = gm_data.fonts.fonts_by_index.len();
     builder.write_usize(font_count);
 
     for i in 0..font_count {
-        data_builder.write_pointer_placeholder(&mut builder, GMPointer::Font(i))?;
+        builder.write_placeholder(GMPointer::Font(i))?;
     }
 
     for (i, font) in gm_data.fonts.fonts_by_index.iter().enumerate() {
-        data_builder.resolve_pointer(&mut builder, GMPointer::Font(i))?;
-        build_font(data_builder, &mut builder, &gm_data.general_info, i, font)
+        builder.resolve_pointer(GMPointer::Font(i))?;
+        build_font(builder, &gm_data.general_info, i, font)
             .map_err(|e| format!("{e} while building Font #{} with name \"{}\"", i, font.name.display(&gm_data.strings)))?;
     }
 
-    builder.finish(data_builder)?;
+    builder.finish_chunk()?;
     Ok(())
 }
 
 
-fn build_font(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, general_info: &GMGeneralInfo, font_index: usize, font: &GMFont) -> Result<(), String> {
-    builder.write_gm_string(data_builder, &font.name)?;
-    builder.write_gm_string(data_builder, &font.display_name)?;
+fn build_font(builder: &mut DataBuilder, general_info: &GMGeneralInfo, font_index: usize, font: &GMFont) -> Result<(), String> {
+    builder.write_gm_string(&font.name)?;
+    builder.write_gm_string(&font.display_name)?;
     if general_info.is_version_at_least(2, 3, 0, 0) {   // {!!} i made this up; this doesn't exist in UTMT
         builder.write_f32(-font.em_size);
     } else {
@@ -40,7 +38,7 @@ fn build_font(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, genera
     builder.write_u8(font.charset);
     builder.write_u8(font.anti_alias);
     builder.write_u32(font.range_end);
-    data_builder.write_pointer_placeholder(builder, GMPointer::Texture(font.texture.index))?;
+    builder.write_placeholder(GMPointer::Texture(font.texture.index))?;
     builder.write_f32(font.scale_x);
     builder.write_f32(font.scale_y);
 
@@ -57,7 +55,7 @@ fn build_font(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, genera
         builder.write_u32(font.line_height.ok_or("Line height not set")?)
     }
 
-    build_glyphs(data_builder, builder, general_info, &font.glyphs, font_index)?;
+    build_glyphs(builder, general_info, &font.glyphs, font_index)?;
 
     if general_info.is_version_at_least(2024, 14, 0, 0) {
         align_writer(builder, 4, 0x00);
@@ -67,15 +65,15 @@ fn build_font(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, genera
 }
 
 
-fn build_glyphs(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, general_info: &GMGeneralInfo, glyphs: &[GMFontGlyph], font_index: usize) -> Result<(), String> {
+fn build_glyphs(builder: &mut DataBuilder, general_info: &GMGeneralInfo, glyphs: &[GMFontGlyph], font_index: usize) -> Result<(), String> {
     builder.write_usize(glyphs.len());
 
     for i in 0..glyphs.len() {
-        data_builder.write_pointer_placeholder(builder, GMPointer::FontGlyph(font_index, i))?;
+        builder.write_placeholder(GMPointer::FontGlyph(font_index, i))?;
     }
 
     for (i, glyph) in glyphs.iter().enumerate() {
-        data_builder.resolve_pointer(builder, GMPointer::FontGlyph(font_index, i))?;
+        builder.resolve_pointer(GMPointer::FontGlyph(font_index, i))?;
 
         let character: u16 = convert_char(glyph.character)
             .map_err(|e| format!("{e} for Glyph #{i}"))?;
@@ -97,7 +95,7 @@ fn build_glyphs(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, gene
 }
 
 
-fn build_kernings(builder: &mut ChunkBuilder, kernings: &Vec<GMFontGlyphKerning>) -> Result<(), String> {
+fn build_kernings(builder: &mut DataBuilder, kernings: &Vec<GMFontGlyphKerning>) -> Result<(), String> {
     builder.write_u16(kernings.len() as u16);
     
     for kerning in kernings {

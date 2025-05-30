@@ -1,30 +1,29 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::sounds::{GMSound, GMSoundFlags};
-use crate::serialize::all::DataBuilder;
-use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 
-pub fn build_chunk_sond(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
-    let mut builder = ChunkBuilder::new(data_builder, "SOND");
+pub fn build_chunk_sond(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
+    builder.start_chunk("SOND")?;
     let len: usize = gm_data.sounds.sounds_by_index.len();
     builder.write_usize(len);
 
     for i in 0..len {
-        data_builder.write_pointer_placeholder(&mut builder, GMPointer::Sound(i))?;
+        builder.write_placeholder(GMPointer::Sound(i))?;
     }
 
     for i in 0..len {
-        data_builder.resolve_pointer(&mut builder, GMPointer::Sound(i))?;
+        builder.resolve_pointer(GMPointer::Sound(i))?;
         let sound: &GMSound = &gm_data.sounds.sounds_by_index[i];
-        builder.write_gm_string(data_builder, &sound.name)?;
+        builder.write_gm_string(&sound.name)?;
         builder.write_u32(build_sound_flags(&sound.flags));
-        builder.write_gm_string(data_builder, &sound.audio_type)?;
-        builder.write_gm_string(data_builder, &sound.file)?;
+        builder.write_gm_string(&sound.audio_type)?;
+        builder.write_gm_string(&sound.file)?;
         builder.write_u32(sound.effects);
         builder.write_f32(sound.volume);
         builder.write_f32(sound.pitch);
         builder.write_i32(-1);    // {~~} audio group stuff idk
         match &sound.audio_file {
-            Some(file) => data_builder.write_pointer_placeholder(&mut builder, GMPointer::Audio(file.index))?,
+            Some(file) => builder.write_placeholder(GMPointer::Audio(file.index))?,
             None => builder.write_i32(-1),
         }
         if gm_data.general_info.is_version_at_least(2024, 6, 0, 0) {
@@ -32,7 +31,7 @@ pub fn build_chunk_sond(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
         }
     }
 
-    builder.finish(data_builder)?;
+    builder.finish_chunk()?;
     Ok(())
 }
 

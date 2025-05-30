@@ -4,33 +4,30 @@ use crate::deserialize::code::{GMCodeBytecode15, GMCodes, GMDataType, GMInstance
 use crate::deserialize::functions::{GMFunction, GMFunctions};
 use crate::deserialize::strings::GMStrings;
 use crate::deserialize::variables::{GMVariable, GMVariables};
-use crate::serialize::all::DataBuilder;
-use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 
-
-pub fn build_chunk_code(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(HashMap<usize, Vec<usize>>, HashMap<usize, Vec<usize>>), String> {
-    let mut builder = ChunkBuilder::new(data_builder, "CODE");
+pub fn build_chunk_code(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(HashMap<usize, Vec<usize>>, HashMap<usize, Vec<usize>>), String> {
+    builder.start_chunk("CODE")?;
     let len: usize = gm_data.codes.codes_by_index.len();
     builder.write_usize(len);
 
     for i in 0..len {
-        data_builder.write_pointer_placeholder(&mut builder, GMPointer::CodeMeta(i))?;
+        builder.write_placeholder(GMPointer::CodeMeta(i))?;
     }
 
     let (variable_occurrences_map, function_occurrences_map) = if gm_data.general_info.bytecode_version <= 14 {
-        build_code_b14(data_builder, &mut builder, &gm_data.strings, &gm_data.variables, &gm_data.functions, &gm_data.codes)?
+        build_code_b14(builder, &gm_data.strings, &gm_data.variables, &gm_data.functions, &gm_data.codes)?
     } else {
-        build_code_b15(data_builder, &mut builder, &gm_data.strings, &gm_data.variables, &gm_data.functions, &gm_data.codes)?
+        build_code_b15(builder, &gm_data.strings, &gm_data.variables, &gm_data.functions, &gm_data.codes)?
     };
 
-    builder.finish(data_builder)?;
+    builder.finish_chunk()?;
     Ok((variable_occurrences_map, function_occurrences_map))
 }
 
 
 fn build_code_b14(
-    data_builder: &mut DataBuilder,
-    builder: &mut ChunkBuilder,
+    builder: &mut DataBuilder,
     strings: &GMStrings,
     variables: &GMVariables,
     functions: &GMFunctions,
@@ -40,23 +37,17 @@ fn build_code_b14(
     let mut function_occurrences_map: HashMap<usize, Vec<usize>> = HashMap::new();
 
     for (i, code) in codes.codes_by_index.iter().enumerate() {
-        data_builder.resolve_pointer(builder, GMPointer::CodeMeta(i))?;
-
-        builder.write_gm_string(data_builder, &code.name)?;
-
-        // write placeholder for code length
-        let length_placeholder_pos: usize = builder.len();
-        builder.write_u32(0xDEAD);
-
-        // data_builder.resolve_pointer(builder, GMPointer::Code(i))?;     // TODO probably wrong??????
+        builder.resolve_pointer(GMPointer::CodeMeta(i))?;
+        builder.write_gm_string(&code.name)?;
+        builder.write_placeholder(GMPointer::CodeLength(i))?;
+        let start: usize = builder.len();
+        
         for (j, instruction) in code.instructions.iter().enumerate() {
             build_instruction(builder, true, variables, functions, instruction, &mut variable_occurrences_map, &mut function_occurrences_map)
                 .map_err(|e| format!("{e} while building Instruction #{j} of Code #{i} with name \"{}\"", code.name.display(strings)))?;
         }
 
-        // overwrite placeholder for code length
-        let code_length: usize = builder.len() - length_placeholder_pos - 4;        // -4 because the length specification doesn't count
-        builder.overwrite_usize(code_length, length_placeholder_pos)?;
+        builder.resolve_placeholder(GMPointer::CodeLength(i), (builder.len() - start) as i32)?;
     }
 
     Ok((variable_occurrences_map, function_occurrences_map))
@@ -64,8 +55,7 @@ fn build_code_b14(
 
 
 fn build_code_b15(
-    data_builder: &mut DataBuilder,
-    builder: &mut ChunkBuilder,
+    builder: &mut DataBuilder,
     strings: &GMStrings,
     variables: &GMVariables,
     functions: &GMFunctions,
@@ -74,17 +64,12 @@ fn build_code_b15(
     let mut variable_occurrences_map: HashMap<usize, Vec<usize>> = HashMap::new();
     let mut function_occurrences_map: HashMap<usize, Vec<usize>> = HashMap::new();
 
-    let mut length_placeholders: Vec<usize> = Vec::with_capacity(codes.codes_by_index.len());
     let mut start_placeholders: Vec<usize> = Vec::with_capacity(codes.codes_by_index.len());
 
     for (i, code) in codes.codes_by_index.iter().enumerate() {
-        data_builder.resolve_pointer(builder, GMPointer::CodeMeta(i))?;
-
-        builder.write_gm_string(data_builder, &code.name)?;
-
-        // write placeholder for code length
-        length_placeholders.push(builder.len());
-        builder.write_u32(0xDEAD);
+        builder.resolve_pointer(GMPointer::CodeMeta(i))?;
+        builder.write_gm_string(&code.name)?;
+        builder.write_placeholder(GMPointer::CodeLength(i))?;
 
         // write bytecode15 info
         let b15_info: &GMCodeBytecode15 = code.bytecode15_info.as_ref()
@@ -103,7 +88,6 @@ fn build_code_b15(
     for (i, code) in codes.codes_by_index.iter().enumerate() {
         let start: usize = builder.len();
 
-        // data_builder.resolve_pointer(builder, GMPointer::Code(i))?;         // TODO also probably wrong?? maybe it's just the same as CodeMeta?
         for (j, instruction) in code.instructions.iter().enumerate() {
             build_instruction(builder, false, variables, functions, instruction, &mut variable_occurrences_map, &mut function_occurrences_map)
                 .map_err(|e| format!("{e} while building Instruction #{j} of Code #{i} with name \"{}\"", code.name.display(strings)))?;
@@ -111,12 +95,10 @@ fn build_code_b15(
 
         let end: usize = builder.len();
         // overwrite code length placeholder
-        let code_length: usize = end - start;
-        builder.overwrite_usize(code_length, length_placeholders[i])?;
+        builder.resolve_placeholder(GMPointer::CodeLength(i), (end - start) as i32)?;
 
         // overwrite code instructions start address placeholder
-        let bytecode_relative_address: usize = end - start_placeholders[i] - code_length;
-        builder.overwrite_usize(bytecode_relative_address, start_placeholders[i])?;
+        builder.overwrite_usize(start - start_placeholders[i], start_placeholders[i])?;
     }
 
     Ok((variable_occurrences_map, function_occurrences_map))
@@ -124,7 +106,7 @@ fn build_code_b15(
 
 
 fn build_instruction(
-    builder: &mut ChunkBuilder,
+    builder: &mut DataBuilder,
     bytecode14: bool,
     variables: &GMVariables,
     functions: &GMFunctions,
@@ -132,7 +114,7 @@ fn build_instruction(
     variable_occurrences_map: &mut HashMap<usize, Vec<usize>>,
     function_occurrences_map: &mut HashMap<usize, Vec<usize>>,
 ) -> Result<(), String> {
-    let abs_pos: usize = builder.abs_pos + builder.len();
+    let abs_pos: usize = builder.len();
     
     match instruction {
         GMInstruction::SingleType(instr) => {
@@ -316,7 +298,7 @@ pub fn build_instance_type(instance_type: &GMInstanceType) -> i16 {
 
 
 fn write_occurrence(
-    builder: &mut ChunkBuilder,
+    builder: &mut DataBuilder,
     occurrence_map: &mut HashMap<usize, Vec<usize>>,
     gm_index: usize,
     occurrence_position: usize,
@@ -330,15 +312,16 @@ fn write_occurrence(
     if let Some(last_occurrence_position) = entry.last() {
         // replace last occurrence (which is name string id) with next occurrence offset
         let occurrence_offset: i32 = occurrence_position as i32 - *last_occurrence_position as i32;
-        let variable_type_raw: u8 = if let Some(var_type) = variable_type { var_type.into() } else { 0 };       // TODO idk if variable types are always the same (probably not)
+        let variable_type_raw: u8 = if let Some(var_type) = variable_type { var_type.into() } else { 0 };    // TODO idk if variable types are always the same (probably not)
         let occurrence_offset_full: i32 = occurrence_offset & 0x07FFFFFF | (((variable_type_raw & 0xF8) as i32) << 24);
-        builder.overwrite_i32(occurrence_offset_full, last_occurrence_position - builder.abs_pos + 4)?;
+        builder.resolve_placeholder(GMPointer::CodeOccurrence(*last_occurrence_position), occurrence_offset_full)?;
     }
     
     // write name string id for this occurrence. this is correct if it is the last occurrence.
     // otherwise, it will be overwritten later by the code above.
     let variable_type_raw: u8 = if let Some(var_type) = variable_type { var_type.into() } else { 0 };
-    builder.write_i32(name_string_id & 0x07FFFFFF | (((variable_type_raw & 0xF8) as i32) << 24));
+    let data: i32 = name_string_id & 0x07FFFFFF | (((variable_type_raw & 0xF8) as i32) << 24);
+    builder.write_placeholder_with_data(GMPointer::CodeOccurrence(builder.len()), data)?;
     
     entry.push(occurrence_position);
     Ok(())
