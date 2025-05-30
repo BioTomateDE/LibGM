@@ -79,7 +79,7 @@ impl DataBuilder {
         }
         self.write_literal_string(chunk_name);
         self.chunk_start_pos = Some(self.len());
-        self.write_usize(0xDEAD);
+        self.write_usize(0xDEADC0DE);
         Ok(())
     }
 
@@ -180,7 +180,7 @@ impl DataBuilder {
     /// write pointer to pointer list (only used in rooms)
     pub fn write_pointer_list(&mut self, pointers: &[usize]) -> Result<(), String> {
         let start_pos_placeholder: usize = self.raw_data.len();
-        self.write_usize(0xDEAD);   // will overwrite later
+        self.write_usize(0xDEADC0DE);   // will overwrite later
 
         self.write_usize(pointers.len());
 
@@ -202,7 +202,7 @@ impl DataBuilder {
     /// that element will be located in the data file.
     pub fn write_placeholder(&mut self, pointer: GMPointer) -> Result<(), String> {
         let position: usize = self.len();
-        self.write_usize(0xDEAD);      // write placeholder
+        self.write_usize(0xDEADC0DE);      // write placeholder
         if let Some(old_value) = self.pool_placeholders.insert(position, pointer.clone()) {
             return Err(format!(
                 "Conflicting placeholder positions while pushing placeholder in chunk with start position {:?}: absolute position {} \
