@@ -2,21 +2,20 @@ use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::sprites::{GMSpriteMaskEntry, GMSpriteNineSlice, GMSpriteType};
 use crate::deserialize::texture_page_items::GMTexture;
-use crate::serialize::all::DataBuilder;
-use crate::serialize::chunk_writing::{ChunkBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 use crate::serialize::sequence::build_sequence;
 
-pub fn build_chunk_sprt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
-    let mut builder = ChunkBuilder::new(data_builder, "SPRT");
+pub fn build_chunk_sprt(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
+    builder.start_chunk("SPRT")?;
     builder.write_usize(gm_data.sprites.sprites_by_index.len());
 
     for i in 0..gm_data.sprites.sprites_by_index.len() {
-        data_builder.write_pointer_placeholder(&mut builder, GMPointer::Sprite(i))?;
+        builder.write_placeholder(GMPointer::Sprite(i))?;
     }
 
     for (i, sprite) in gm_data.sprites.sprites_by_index.iter().enumerate() {
-        data_builder.resolve_pointer(&mut builder, GMPointer::Sprite(i))?;
-        builder.write_gm_string(data_builder, &sprite.name)?;
+        builder.resolve_pointer(GMPointer::Sprite(i))?;
+        builder.write_gm_string(&sprite.name)?;
         builder.write_usize(sprite.width);
         builder.write_usize(sprite.height);
         builder.write_i32(sprite.margin_left);
@@ -45,67 +44,67 @@ pub fn build_chunk_sprt(data_builder: &mut DataBuilder, gm_data: &GMData) -> Res
                 builder.write_f32(specials.playback_speed);
                 builder.write_u32(specials.playback_speed_type.into());
                 if specials.special_version >= 2 && specials.sequence.is_some() {
-                    data_builder.write_pointer_placeholder(&mut builder, GMPointer::SpriteSequence(i))?;
+                    builder.write_placeholder(GMPointer::SpriteSequence(i))?;
                 }
                 if specials.special_version >= 3 && specials.nine_slice.is_some() {
-                    data_builder.write_pointer_placeholder(&mut builder, GMPointer::SpriteNineSlice(i))?;
+                    builder.write_placeholder(GMPointer::SpriteNineSlice(i))?;
                 }
             }
 
             match &specials.sprite_type {
                 GMSpriteType::Normal(sprite_type) => {
-                    build_texture_list(data_builder, &mut builder, &sprite.textures)?;
-                    build_mask_data(&mut builder, &sprite_type.collision_masks);
+                    build_texture_list(builder, &sprite.textures)?;
+                    build_mask_data(builder, &sprite_type.collision_masks);
                 }
 
                 GMSpriteType::SWF(sprite_type) => {
                     builder.write_i32(sprite_type.swf_version);
                     if sprite_type.swf_version == 8 {
-                        build_texture_list(data_builder, &mut builder, &sprite.textures)?;
+                        build_texture_list(builder, &sprite.textures)?;
                     }
                 }
 
                 GMSpriteType::Spine(_sprite_type) => {
-                    align_writer(&mut builder, 4, 0x00);
+                    align_writer(builder, 4, 0x00);
                     return Err(format!("Sprite Type Spine not yet implemented for Sprite \"{}\"", sprite.name.display(&gm_data.strings)))
                 }
             }
 
             if specials.special_version >= 2 {
                 if let Some(ref sequence) = specials.sequence {
-                    data_builder.resolve_pointer(&mut builder, GMPointer::SpriteSequence(i))?;
+                    builder.resolve_pointer(GMPointer::SpriteSequence(i))?;
                     builder.write_i32(1);
-                    build_sequence(data_builder, &mut builder, &gm_data.general_info, &gm_data.strings, sequence)?;
+                    build_sequence(builder, &gm_data.general_info, &gm_data.strings, sequence)?;
                 }
             }
             if specials.special_version >= 3 {
                 if let Some(ref nine_slice) = specials.nine_slice {
-                    data_builder.resolve_pointer(&mut builder, GMPointer::SpriteNineSlice(i))?;
-                    build_nine_slice(&mut builder, nine_slice)?;
+                    builder.resolve_pointer(GMPointer::SpriteNineSlice(i))?;
+                    build_nine_slice(builder, nine_slice)?;
                 }
             }
 
         } else {
-            build_texture_list(data_builder, &mut builder, &sprite.textures)?;
-            build_mask_data(&mut builder, &sprite.collision_masks);
+            build_texture_list(builder, &sprite.textures)?;
+            build_mask_data(builder, &sprite.collision_masks);
         }
     }
 
-    builder.finish(data_builder)?;
+    builder.finish_chunk()?;
     Ok(())
 }
 
 
-fn build_texture_list(data_builder: &mut DataBuilder, builder: &mut ChunkBuilder, textures: &Vec<GMRef<GMTexture>>) -> Result<(), String> {
+fn build_texture_list(builder: &mut DataBuilder, textures: &Vec<GMRef<GMTexture>>) -> Result<(), String> {
     builder.write_usize(textures.len());
     for i in 0..textures.len() {
-        data_builder.write_pointer_placeholder(builder, GMPointer::Texture(i))?;
+        builder.write_placeholder(GMPointer::Texture(i))?;
     }
     Ok(())
 }
 
 
-fn build_mask_data(builder: &mut ChunkBuilder, collision_masks: &Vec<GMSpriteMaskEntry>) {
+fn build_mask_data(builder: &mut DataBuilder, collision_masks: &Vec<GMSpriteMaskEntry>) {
     builder.write_usize(collision_masks.len());
     let mut total_length: usize = 0;
 
@@ -124,15 +123,15 @@ fn build_mask_data(builder: &mut ChunkBuilder, collision_masks: &Vec<GMSpriteMas
 }
 
 
-pub fn align_writer(builder: &mut ChunkBuilder, alignment: usize, padding_byte: u8) {
-    while (builder.abs_pos + builder.len()) & (alignment - 1) != padding_byte as usize {
+pub fn align_writer(builder: &mut DataBuilder, alignment: usize, padding_byte: u8) {
+    while builder.len() & (alignment - 1) != padding_byte as usize {
         builder.write_u8(padding_byte);
     }
 }
 
 
 fn build_nine_slice(
-    builder: &mut ChunkBuilder,
+    builder: &mut DataBuilder,
     nine_slice: &GMSpriteNineSlice,
 ) -> Result<(), String> {
     builder.write_i32(nine_slice.left);
