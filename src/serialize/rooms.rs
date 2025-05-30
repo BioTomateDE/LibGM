@@ -95,7 +95,7 @@ fn build_room_backgrounds(builder: &mut DataBuilder, room_index: usize, backgrou
         builder.write_bool32(background.enabled);
         builder.write_bool32(background.foreground);
         if let Some(ref background) = background.background_definition {
-            builder.write_placeholder(GMPointer::Background(background.index))?;
+            builder.write_usize(background.index);
         } else {
             builder.write_i32(-1);
         }
@@ -218,7 +218,7 @@ fn build_room_tiles(builder: &mut DataBuilder, general_info: &GMGeneralInfo, roo
             };
         } else {
             if let GMRoomTileTexture::Background(ref background) = tile.texture {
-                builder.write_placeholder(GMPointer::Background(background.index))?;
+                builder.write_usize(background.index);
             } else {
                 return Err(format!(
                     "Invalid Room Tile Texture Mode (expected Background, got {:?}) for tile with Instance ID {} in room with index {}",

@@ -79,7 +79,7 @@ fn build_code_b15(
 
         // write placeholder for code instructions start address
         start_placeholders.push(builder.len());
-        builder.write_u32(0xDEAD);
+        builder.write_u32(0xDEADC0DE);
 
         // write offset thingy
         builder.write_usize(b15_info.offset);
