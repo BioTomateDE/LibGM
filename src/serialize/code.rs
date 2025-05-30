@@ -64,26 +64,7 @@ fn build_code_b15(
     let mut variable_occurrences_map: HashMap<usize, Vec<usize>> = HashMap::new();
     let mut function_occurrences_map: HashMap<usize, Vec<usize>> = HashMap::new();
 
-    let mut start_placeholders: Vec<usize> = Vec::with_capacity(codes.codes_by_index.len());
-
-    for (i, code) in codes.codes_by_index.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::CodeMeta(i))?;
-        builder.write_gm_string(&code.name)?;
-        builder.write_placeholder(GMPointer::CodeLength(i))?;
-
-        // write bytecode15 info
-        let b15_info: &GMCodeBytecode15 = code.bytecode15_info.as_ref()
-            .ok_or_else(|| format!("Bytecode 15 info not set for Code #{i} with name \"{}\"", code.name.display(&strings)))?;
-        builder.write_u16(b15_info.locals_count);
-        builder.write_u16(b15_info.arguments_count | if b15_info.weird_local_flag { 0x8000 } else { 0 });
-
-        // write placeholder for code instructions start address
-        start_placeholders.push(builder.len());
-        builder.write_u32(0xDEADC0DE);
-
-        // write offset thingy
-        builder.write_usize(b15_info.offset);
-    }
+    let mut code_start_positions: Vec<usize> = Vec::with_capacity(codes.codes_by_index.len());
 
     for (i, code) in codes.codes_by_index.iter().enumerate() {
         let start: usize = builder.len();
@@ -97,8 +78,25 @@ fn build_code_b15(
         // overwrite code length placeholder
         builder.resolve_placeholder(GMPointer::CodeLength(i), (end - start) as i32)?;
 
-        // overwrite code instructions start address placeholder
-        builder.overwrite_usize(start - start_placeholders[i], start_placeholders[i])?;
+        code_start_positions.push(start);
+    }
+
+    for (i, code) in codes.codes_by_index.iter().enumerate() {
+        builder.resolve_pointer(GMPointer::CodeMeta(i))?;
+        builder.write_gm_string(&code.name)?;
+        builder.write_placeholder(GMPointer::CodeLength(i))?;
+
+        // write bytecode15 info
+        let b15_info: &GMCodeBytecode15 = code.bytecode15_info.as_ref()
+            .ok_or_else(|| format!("Bytecode 15 info not set for Code #{i} with name \"{}\"", code.name.display(&strings)))?;
+        builder.write_u16(b15_info.locals_count);
+        builder.write_u16(b15_info.arguments_count | if b15_info.weird_local_flag { 0x8000 } else { 0 });
+
+        // overwrite placeholder for code instructions start address
+        builder.write_i32(code_start_positions[i] as i32 - builder.len() as i32);
+        
+        // write offset thingy
+        builder.write_usize(b15_info.offset);
     }
 
     Ok((variable_occurrences_map, function_occurrences_map))
