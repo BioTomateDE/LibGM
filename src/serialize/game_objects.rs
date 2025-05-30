@@ -15,7 +15,7 @@ pub fn build_chunk_objt(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         builder.resolve_pointer(GMPointer::GameObject(i))?;
         builder.write_gm_string(&game_object.name)?;
         match &game_object.sprite {
-            Some(sprite) => builder.write_placeholder(GMPointer::Sprite(sprite.index))?,
+            Some(sprite) => builder.write_usize(sprite.index),
             None => builder.write_i32(-1),
         };
         builder.write_bool32(game_object.visible);
@@ -29,7 +29,7 @@ pub fn build_chunk_objt(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         builder.write_bool32(game_object.persistent);
         builder.write_i32(game_object.parent_id);
         match &game_object.texture_mask {
-            Some(sprite) => builder.write_placeholder(GMPointer::Sprite(sprite.index))?,
+            Some(sprite) => builder.write_usize(sprite.index),
             None => builder.write_i32(-1),
         };
         builder.write_bool32(game_object.uses_physics);
