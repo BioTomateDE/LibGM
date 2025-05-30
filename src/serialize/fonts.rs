@@ -18,6 +18,16 @@ pub fn build_chunk_font(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         build_font(builder, &gm_data.general_info, i, font)
             .map_err(|e| format!("{e} while building Font #{} with name \"{}\"", i, font.name.display(&gm_data.strings)))?;
     }
+    
+    if !gm_data.general_info.is_version_at_least(2024, 14, 0,0) {
+        // padding could be saved from deserialization potentially but this should also work according to UTMT
+        for i in 0..0x80 {
+            builder.write_u16(i);
+        }
+        for _ in 0..0x80 {
+            builder.write_u16(0x3f);
+        }
+    }
 
     builder.finish_chunk()?;
     Ok(())
