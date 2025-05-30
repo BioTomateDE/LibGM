@@ -21,9 +21,9 @@ pub fn build_chunk_sond(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         builder.write_u32(sound.effects);
         builder.write_f32(sound.volume);
         builder.write_f32(sound.pitch);
-        builder.write_i32(-1);    // {~~} audio group stuff idk
+        builder.write_i32(-1);    // {~~} audio group stuff idk   TODO check if -1 is a valid stub
         match &sound.audio_file {
-            Some(file) => builder.write_placeholder(GMPointer::Audio(file.index))?,
+            Some(file) => builder.write_usize(file.index),
             None => builder.write_i32(-1),
         }
         if gm_data.general_info.is_version_at_least(2024, 6, 0, 0) {

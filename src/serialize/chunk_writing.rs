@@ -50,10 +50,8 @@ pub enum GMPointer {
     RoomLayer(usize, usize),
     RoomLayerPointerList(usize),
     CodeMeta(usize),
-
-    FormLength,
-    CodeOccurrence(usize),  // occurrence abs pos
     CodeLength(usize),
+    FormLength,
 }
 
 
