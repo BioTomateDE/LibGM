@@ -150,7 +150,7 @@ impl DataBuilder {
         self.raw_data.extend_from_slice(data);
     }
     pub fn overwrite_bytes(&mut self, data: &[u8], position: usize) -> Result<(), String> {
-        if position + data.len() >= self.len() {
+        if position + data.len() > self.len() {
             return Err(format!(
                 "Could not overwrite {} bytes at position {} in data with length {} while building chunk with start position {:?}",
                 data.len(), position, self.len(), self.chunk_start_pos,
