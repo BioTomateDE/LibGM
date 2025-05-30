@@ -39,7 +39,7 @@ pub fn build_chunk_gen8(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         builder.write_u32(*room_id);
     }
 
-    builder.finish_chunk()?;
+    builder.finish_chunk(&gm_data.general_info)?;
     Ok(())
 }
 
@@ -167,7 +167,7 @@ pub fn build_chunk_optn(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         build_options_old(builder, &gm_data.options)?;
     }
 
-    builder.finish_chunk()?;
+    builder.finish_chunk(&gm_data.general_info)?;
     Ok(())
 }
 

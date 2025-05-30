@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use crate::deserialize::chunk_reading::GMRef;
+use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::strings::GMStrings;
 
 
@@ -81,15 +82,17 @@ impl DataBuilder {
         Ok(())
     }
 
-    pub fn finish_chunk(&mut self) -> Result<(), String> {
-        if let Some(chunk_start_pos) = self.chunk_start_pos {
-            let chunk_length: usize = self.len() - chunk_start_pos - 4;
-            self.overwrite_usize(chunk_length, chunk_start_pos)?;
-            self.chunk_start_pos = None;
-            Ok(())
-        } else {
-            Err("Could not finish writing chunk because there is no chunk start position (chunk was never started)".to_string())
+    pub fn finish_chunk(&mut self, general_info: &GMGeneralInfo) -> Result<(), String> {
+        let chunk_start_pos: usize = self.chunk_start_pos.ok_or("Could not finish writing chunk because there is no chunk start position (chunk was never started)")?;
+        let chunk_length: usize = self.len() - chunk_start_pos - 4;
+        self.overwrite_usize(chunk_length, chunk_start_pos)?;
+        self.chunk_start_pos = None;
+        
+        if general_info.is_version_at_least(1, 0, 0, 9999) {
+            self.align(4, 0x00);        // TODO the alignment is different gsdjdtbujdsdsg
         }
+        
+        Ok(())
     }
 
     pub fn write_u64(&mut self, number: u64) {
@@ -234,6 +237,12 @@ impl DataBuilder {
             ))
         }
         Ok(())
+    }
+
+    pub fn align(&mut self, alignment: usize, padding_byte: u8) {
+        while self.len() & (alignment - 1) != padding_byte as usize {
+            self.write_u8(padding_byte);
+        }
     }
 
     pub fn len(&self) -> usize {

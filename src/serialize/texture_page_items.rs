@@ -31,7 +31,7 @@ pub fn build_chunk_tpag(builder: &mut DataBuilder, gm_data: &GMData, texture_pag
         builder.write_u16(texture_page_item.texture_page_id);
     }
 
-    builder.finish_chunk()?;
+    builder.finish_chunk(&gm_data.general_info)?;
     Ok(())
 }
 

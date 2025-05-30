@@ -18,7 +18,7 @@ pub fn build_chunk_audo(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         builder.write_bytes(&audio.raw_data);
     }
 
-    builder.finish_chunk()?;
+    builder.finish_chunk(&gm_data.general_info)?;
     Ok(())
 }
 

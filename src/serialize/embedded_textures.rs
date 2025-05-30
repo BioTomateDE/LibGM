@@ -37,7 +37,11 @@ pub fn build_chunk_txtr(builder: &mut DataBuilder, gm_data: &GMData, texture_pag
         builder.write_bytes(&buf.into_inner());
     }
 
-    builder.finish_chunk()?;
+    while builder.len() % 4 != 0 {
+        builder.write_u8(0);
+    }
+
+    builder.finish_chunk(&gm_data.general_info)?;
     Ok(())
 }
 

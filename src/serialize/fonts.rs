@@ -2,7 +2,6 @@ use crate::deserialize::all::GMData;
 use crate::deserialize::fonts::{GMFont, GMFontGlyph, GMFontGlyphKerning};
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
-use crate::serialize::sprites::align_writer;
 
 pub fn build_chunk_font(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     builder.start_chunk("FONT")?;
@@ -18,7 +17,7 @@ pub fn build_chunk_font(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         build_font(builder, &gm_data.general_info, i, font)
             .map_err(|e| format!("{e} while building Font #{} with name \"{}\"", i, font.name.display(&gm_data.strings)))?;
     }
-    
+
     if !gm_data.general_info.is_version_at_least(2024, 14, 0,0) {
         // padding could be saved from deserialization potentially but this should also work according to UTMT
         for i in 0..0x80 {
@@ -29,7 +28,7 @@ pub fn build_chunk_font(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         }
     }
 
-    builder.finish_chunk()?;
+    builder.finish_chunk(&gm_data.general_info)?;
     Ok(())
 }
 
@@ -68,7 +67,7 @@ fn build_font(builder: &mut DataBuilder, general_info: &GMGeneralInfo, font_inde
     build_glyphs(builder, general_info, &font.glyphs, font_index)?;
 
     if general_info.is_version_at_least(2024, 14, 0, 0) {
-        align_writer(builder, 4, 0x00);
+        builder.align(4, 0x00);
     }
 
     Ok(())
