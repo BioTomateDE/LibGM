@@ -136,7 +136,7 @@ fn build_room_views(builder: &mut DataBuilder, room_index: usize, views: &Vec<GM
         builder.write_i32(view.speed_x);
         builder.write_i32(view.speed_y);
         if let Some(ref obj) = view.object {
-            builder.write_placeholder(GMPointer::GameObject(obj.index))?;
+            builder.write_usize(obj.index);
         } else {
             builder.write_i32(-1);
         }
@@ -158,7 +158,7 @@ fn build_room_objects(builder: &mut DataBuilder, general_info: &GMGeneralInfo, r
         builder.resolve_pointer(GMPointer::RoomGameObject(room_index, i))?;
         builder.write_i32(game_object.x);
         builder.write_i32(game_object.y);
-        builder.write_placeholder(GMPointer::GameObject(game_object.object_definition.index))?;
+        builder.write_usize(game_object.object_definition.index);
         builder.write_u32(game_object.instance_id);
         if let Some(ref creation_code) = game_object.creation_code {
             builder.write_usize(creation_code.index);
@@ -209,7 +209,7 @@ fn build_room_tiles(builder: &mut DataBuilder, general_info: &GMGeneralInfo, roo
         builder.write_i32(tile.y);
         if general_info.is_version_at_least(2, 0, 0, 0) {
             if let GMRoomTileTexture::Sprite(ref sprite) = tile.texture {
-                builder.write_placeholder(GMPointer::Sprite(sprite.index))?;
+                builder.write_usize(sprite.index);
             } else {
                 return Err(format!(
                     "Invalid Room Tile Texture Mode (expected Sprite, got {:?}) for tile with Instance ID {} in room with index {}",
