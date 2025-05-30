@@ -24,7 +24,7 @@ pub fn build_chunk_vari(builder: &mut DataBuilder, gm_data: &GMData, variable_oc
             ))?;
     }
     
-    builder.finish_chunk()?;
+    builder.finish_chunk(&gm_data.general_info)?;
     Ok(())
 }
 

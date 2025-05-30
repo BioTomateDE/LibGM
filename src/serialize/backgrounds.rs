@@ -12,6 +12,7 @@ pub fn build_chunk_bgnd(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
     }
 
     for i in 0..len {
+        builder.align(8, 0x00);
         builder.resolve_pointer(GMPointer::Background(i))?;
         let background: &GMBackground = &gm_data.backgrounds.backgrounds_by_index[i];
 
@@ -54,7 +55,7 @@ pub fn build_chunk_bgnd(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         }
     }
 
-    builder.finish_chunk()?;
+    builder.finish_chunk(&gm_data.general_info)?;
     Ok(())
 }
 
