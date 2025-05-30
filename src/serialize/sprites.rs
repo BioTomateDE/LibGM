@@ -65,7 +65,7 @@ pub fn build_chunk_sprt(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
                 }
 
                 GMSpriteType::Spine(_sprite_type) => {
-                    align_writer(builder, 4, 0x00);
+                    builder.align(4, 0x00);
                     return Err(format!("Sprite Type Spine not yet implemented for Sprite \"{}\"", sprite.name.display(&gm_data.strings)))
                 }
             }
@@ -90,7 +90,7 @@ pub fn build_chunk_sprt(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         }
     }
 
-    builder.finish_chunk()?;
+    builder.finish_chunk(&gm_data.general_info)?;
     Ok(())
 }
 
@@ -120,13 +120,6 @@ fn build_mask_data(builder: &mut DataBuilder, collision_masks: &Vec<GMSpriteMask
     }
 
     // {~~} check if dimensions are valid
-}
-
-
-pub fn align_writer(builder: &mut DataBuilder, alignment: usize, padding_byte: u8) {
-    while builder.len() & (alignment - 1) != padding_byte as usize {
-        builder.write_u8(padding_byte);
-    }
 }
 
 

@@ -22,7 +22,7 @@ pub fn build_chunk_room(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
             .map_err(|e| format!("{e} for Room #{i} with name \"{}\" while building Rooms", room.name.display(&gm_data.strings)))?;
     }
 
-    builder.finish_chunk()?;
+    builder.finish_chunk(&gm_data.general_info)?;
     Ok(())
 }
 

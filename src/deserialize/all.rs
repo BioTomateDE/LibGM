@@ -69,6 +69,8 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
                 "Chunk '{}' with specified length {} is out of bounds at absolute position {} while reading chunks: {} > {}",
                 chunk_name, chunk_length, all.cur_pos, all.cur_pos + chunk_length, all.data.len(),
             ))?;
+        
+        // {~~} padding stuff
 
         chunks.insert(
             chunk_name.clone(),

@@ -11,6 +11,7 @@ pub fn build_chunk_strg(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
     }
 
     for (i, string) in gm_data.strings.strings_by_index.iter().enumerate() {
+        builder.align(4, 0x00);
         builder.resolve_pointer(GMPointer::StringPointerList(i))?;
         builder.write_usize(string.len());
         builder.resolve_pointer(GMPointer::String(i))?; // actual string reference need to get resolved here bc of gamemaker moment
@@ -18,8 +19,12 @@ pub fn build_chunk_strg(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         builder.write_literal_string(string);
         builder.write_u8(0)        // write trailing null byte
     }
+    
+    while builder.len() % 0x80 != 0 {
+        builder.write_u8(0);
+    }
 
-    builder.finish_chunk()?;
+    builder.finish_chunk(&gm_data.general_info)?;
     Ok(())
 }
 

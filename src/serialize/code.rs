@@ -21,7 +21,7 @@ pub fn build_chunk_code(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         build_code_b15(builder, &gm_data.strings, &gm_data.variables, &gm_data.functions, &gm_data.codes)?
     };
 
-    builder.finish_chunk()?;
+    builder.finish_chunk(&gm_data.general_info)?;
     Ok((variable_occurrences_map, function_occurrences_map))
 }
 
@@ -94,7 +94,7 @@ fn build_code_b15(
 
         // overwrite placeholder for code instructions start address
         builder.write_i32(code_start_positions[i] as i32 - builder.len() as i32);
-        
+
         // write offset thingy
         builder.write_usize(b15_info.offset);
     }

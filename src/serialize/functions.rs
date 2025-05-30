@@ -32,7 +32,7 @@ pub fn build_chunk_func(builder: &mut DataBuilder, gm_data: &GMData, function_oc
         }
     }
 
-    builder.finish_chunk()?;
+    builder.finish_chunk(&gm_data.general_info)?;
     Ok(())
 }
 

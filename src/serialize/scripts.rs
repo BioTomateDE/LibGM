@@ -29,7 +29,7 @@ pub fn build_chunk_scpt(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
 
     }
 
-    builder.finish_chunk()?;
+    builder.finish_chunk(&gm_data.general_info)?;
     Ok(())
 }
 

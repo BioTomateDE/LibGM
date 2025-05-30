@@ -34,9 +34,9 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
         placeholder_pool_resources: HashMap::new(),
     };
 
-    let tstart = cpu_time::ProcessTime::now();
+    let t_start = cpu_time::ProcessTime::now();
     let (texture_page_items, texture_pages): (Vec<GMTexturePageItem>, Vec<DynamicImage>) = generate_texture_pages(&gm_data.textures)?;
-    log::trace!("Generating {} texture pages and {} texture page items took {}", texture_pages.len(), texture_page_items.len(), tstart.elapsed().ms());
+    log::trace!("Generating {} texture pages and {} texture page items took {}", texture_pages.len(), texture_page_items.len(), t_start.elapsed().ms());
 
     builder.write_literal_string("FORM");
     builder.write_placeholder(GMPointer::FormLength)?;
@@ -67,7 +67,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     
     builder.resolve_placeholder(GMPointer::FormLength, builder.len() as i32)?;
     
-    let tstart = cpu_time::ProcessTime::now();
+    let t_start = cpu_time::ProcessTime::now();
     // resolve pointer placeholders
     for (placeholder_position, pointer) in &builder.pool_placeholders {
         let resource_data: i32 = *builder.placeholder_pool_resources.get(&pointer)
@@ -88,7 +88,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
         }
     }
     
-    log::trace!("Resolving {} pointers took {}", builder.pool_placeholders.len(), tstart.elapsed().ms());
+    log::trace!("Resolving {} pointers took {}", builder.pool_placeholders.len(), t_start.elapsed().ms());
 
     Ok(builder.raw_data)
 }
