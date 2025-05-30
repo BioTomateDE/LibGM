@@ -5,23 +5,16 @@ mod export_mod;
 mod debug_utils;
 
 use std::path::Path;
-use deserialize::all::{parse_data_file, read_data_file};
-use std::process;
-use std::sync::Arc;
-use biologischer_log::CustomLogger;
+use std::process::exit;
 use log::{info, error};
+
+use crate::deserialize::all::{parse_data_file, read_data_file};
 use crate::deserialize::all::GMData;
 use crate::serialize::all::{build_data_file, write_data_file};
 
 
-fn error_exit(logger: Arc<CustomLogger>) -> ! {
-    logger.shutdown();
-    process::exit(1);
-}
-
-
 fn main() {
-    let logger = biologischer_log::init_logger(env!("CARGO_PKG_NAME"));
+    biologischer_log::init(env!("CARGO_PKG_NAME"));
 
     let args: Vec<String> = std::env::args().collect();
     let original_data_file_path: &Path = Path::new(args.get(1).map_or("data.win", |s| s));
@@ -31,7 +24,7 @@ fn main() {
         Ok(data_file) => data_file,
         Err(error) => {
             error!("Error while reading data file: {error}");
-            error_exit(logger);
+            exit(1);
         }
     };
 
@@ -40,7 +33,7 @@ fn main() {
         Ok(data) => data,
         Err(error) => {
             error!("Error while parsing data file: {error}");
-            error_exit(logger);
+            exit(1);
         }
     };
 
@@ -49,7 +42,7 @@ fn main() {
         Ok(data) => data,
         Err(error) => {
             error!("Error while building data file: {error}");
-            error_exit(logger);
+            exit(1);
         }
     };
 
@@ -59,11 +52,10 @@ fn main() {
         Ok(data) => data,
         Err(error) => {
             error!("Error while writing data file: {error}");
-            error_exit(logger);
+            exit(1);
         }
     };
 
     info!("Done");
-    logger.shutdown();
 }
 
