@@ -39,9 +39,6 @@ pub fn build_chunk_tmln(builder: &mut DataBuilder, _gm_data: &GMData) -> Result<
 
 pub fn build_chunk_dafl(builder: &mut DataBuilder, _gm_data: &GMData) -> Result<(), String> {
     builder.start_chunk("DAFL")?;
-
-    builder.write_usize(0);
-
     builder.finish_chunk()?;
     Ok(())
 }
