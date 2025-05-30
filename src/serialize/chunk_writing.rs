@@ -227,20 +227,6 @@ impl DataBuilder {
         Ok(())
     }
 
-    /// More generic function to write placeholder but with "default value" for the placeholder or whatever
-    pub fn write_placeholder_with_data(&mut self, pointer: GMPointer, data: i32) -> Result<(), String> {
-        let position: usize = self.len();
-        self.write_i32(data);
-        if let Some(old_value) = self.pool_placeholders.insert(position, pointer.clone()) {
-            return Err(format!(
-                "Conflicting placeholder positions while pushing placeholder in chunk with start position {:?}: absolute position {} \
-                was already set for pointer {:?}; tried to set to new pointer {:?} with data {}",
-                self.chunk_start_pos, position, old_value, pointer, data,
-            ))
-        }
-        Ok(())
-    }
-
     /// More generic function to overwrite placeholder with any data instead of the current position
     pub fn resolve_placeholder(&mut self, pointer: GMPointer, data: i32) -> Result<(), String> {
         if let Some(old_value) = self.placeholder_pool_resources.insert(pointer.clone(), data) {
