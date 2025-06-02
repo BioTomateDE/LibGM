@@ -17,7 +17,7 @@ pub struct GMEmbeddedTexture {
     pub texture_width: Option<i32>,
     pub texture_height: Option<i32>,
     pub index_in_group: Option<i32>,
-    pub image: DynamicImage,
+    pub image: Option<DynamicImage>,
 }
 
 
@@ -62,13 +62,15 @@ fn parse_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GM
     }
     
     let texture_abs_start_position: usize = chunk.read_usize()?;
-    let texture_start_position: usize = texture_abs_start_position.checked_sub(chunk.abs_pos)
-        .ok_or_else(|| format!(
+    // can be zero if the texture is "external"
+    let image: Option<DynamicImage> = if texture_abs_start_position == 0 { None } else {
+        let texture_start_position: usize = texture_abs_start_position.checked_sub(chunk.abs_pos).ok_or_else(|| format!(
             "Trying to subtract with overflow for absolute texture start position {0} (0x{0:08X}) with chunk position {1}",
             texture_abs_start_position, chunk.abs_pos,
         ))?;
-    chunk.cur_pos = texture_start_position;
-    let texture_data: DynamicImage = read_raw_texture(chunk, general_info)?;
+        chunk.cur_pos = texture_start_position;
+        Some(read_raw_texture(chunk, general_info)?)
+    };
     
     Ok(GMEmbeddedTexture {
         scaled,
@@ -76,7 +78,7 @@ fn parse_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GM
         texture_width,
         texture_height,
         index_in_group,
-        image: texture_data,
+        image,
     })
 }
 
