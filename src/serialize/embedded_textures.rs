@@ -72,8 +72,8 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
     if general_info.is_version_at_least(2022, 3, 0, 0) {
         builder.resolve_placeholder(GMPointer::TexturePageDataSize(index), buf.position() as i32)?;
     }
-    
     builder.write_bytes(&buf.into_inner());
+
     Ok(())
 }
 
