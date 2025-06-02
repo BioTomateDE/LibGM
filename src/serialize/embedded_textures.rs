@@ -1,3 +1,4 @@
+use image::DynamicImage;
 use crate::deserialize::all::GMData;
 use crate::deserialize::embedded_textures::GMEmbeddedTexture;
 use crate::deserialize::general_info::GMGeneralInfo;
@@ -20,17 +21,9 @@ pub fn build_chunk_txtr(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
     }
 
     for (i, texture_page) in gm_data.texture_pages.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::TexturePageData(i))?;
-        
-        // TODO formats other than PNG?
-        let mut buf: std::io::Cursor<Vec<u8>> = std::io::Cursor::new(Vec::new());
-        texture_page.image.write_to(&mut buf, image::ImageFormat::Png)
-            .map_err(|e| format!("Could not build PNG image for texture page #{i}: {e}"))?;
-        
-        if gm_data.general_info.is_version_at_least(2022, 3, 0, 0) {
-            builder.resolve_placeholder(GMPointer::TexturePageDataSize(i), buf.position() as i32)?;
+        if let Some(ref image) = texture_page.image {
+            build_texture_page_image(builder, &gm_data.general_info, i, image)?;
         }
-        builder.write_bytes(&buf.into_inner());
     }
 
     // nobody knows if this actually correct
@@ -47,15 +40,40 @@ fn build_texture_page(builder: &mut DataBuilder, general_info: &GMGeneralInfo, i
     if general_info.is_version_at_least(2, 0, 6, 0) {
         builder.write_u32(texture_page.generated_mips.ok_or("Generated mipmap levels not set")?);
     }
-    if general_info.is_version_at_least(2022, 3, 0, 0) {
+    if general_info.is_version_at_least(2022, 3, 0, 0) && texture_page.image.is_some() {
         builder.write_placeholder(GMPointer::TexturePageDataSize(index))?;
     }
     if general_info.is_version_at_least(2022, 9, 0, 0) {
-        builder.write_u32(texture_page.image.width());
-        builder.write_u32(texture_page.image.height());
+        builder.write_i32(texture_page.texture_width.ok_or("Texture width not set")?);
+        builder.write_i32(texture_page.texture_height.ok_or("Texture height not set")?);
         builder.write_usize(index);     // TODO not sure what "index in group" means. maybe this is not just the index?
     }
-    builder.write_placeholder(GMPointer::TexturePageData(index))?;
+    if texture_page.image.is_some() {
+        builder.write_placeholder(GMPointer::TexturePageData(index))?;
+    } else {
+        builder.write_usize(0);
+    }
+    Ok(())
+}
+
+fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralInfo, index: usize, image: &DynamicImage) -> Result<(), String> {
+    // padding
+    while builder.len() % 0x80 != 0 {
+        builder.write_u8(0);
+    }
+    
+    builder.resolve_pointer(GMPointer::TexturePageData(index))?;
+    
+    // TODO formats other than PNG?
+    let mut buf: std::io::Cursor<Vec<u8>> = std::io::Cursor::new(Vec::new());
+    image.write_to(&mut buf, image::ImageFormat::Png)
+        .map_err(|e| format!("Could not build PNG image for texture page #{index}: {e}"))?;
+
+    if general_info.is_version_at_least(2022, 3, 0, 0) {
+        builder.resolve_placeholder(GMPointer::TexturePageDataSize(index), buf.position() as i32)?;
+    }
+    
+    builder.write_bytes(&buf.into_inner());
     Ok(())
 }
 
