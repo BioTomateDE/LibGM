@@ -3,7 +3,7 @@ use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::sprites::align_reader;
 use crate::deserialize::strings::GMStrings;
-use crate::deserialize::texture_page_items::{GMTexture, GMTextures};
+use crate::deserialize::texture_page_items::{GMTexturePageItem, GMTextures};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMFont {
@@ -16,7 +16,7 @@ pub struct GMFont {
     pub charset: u8,
     pub anti_alias: u8,
     pub range_end: u32,
-    pub texture: GMRef<GMTexture>,
+    pub texture: GMRef<GMTexturePageItem>,
     pub scale_x: f32,
     pub scale_y: f32,
     pub ascender_offset: Option<i32>,
@@ -79,7 +79,7 @@ pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
         let anti_alias: u8 = chunk.read_u8()?;
         let range_end: u32 = chunk.read_u32()?;
         let texture_abs_pos: usize = chunk.read_usize()?;
-        let texture: GMRef<GMTexture> = textures.abs_pos_to_ref.get(&texture_abs_pos).ok_or_else(|| format!(
+        let texture: GMRef<GMTexturePageItem> = textures.abs_pos_to_ref.get(&texture_abs_pos).ok_or_else(|| format!(
             "Could not find texture with absolute position {} for Font with name \"{}\" at position {} in chunk 'FONT'", 
             texture_abs_pos, name.display(strings), start_position,
         ))?.clone();

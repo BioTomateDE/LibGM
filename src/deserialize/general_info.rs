@@ -2,7 +2,7 @@
 use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use chrono::{DateTime, Utc};
 use crate::deserialize::strings::GMStrings;
-use crate::deserialize::texture_page_items::{GMTexture, GMTextures};
+use crate::deserialize::texture_page_items::{GMTexturePageItem, GMTextures};
 
 #[derive(Debug, Clone)]
 pub struct GMOptions {
@@ -17,9 +17,9 @@ pub struct GMOptions {
     pub frequency: u32,
     pub vertex_sync: u32,
     pub priority: u32,
-    pub back_image: Option<GMRef<GMTexture>>,
-    pub front_image: Option<GMRef<GMTexture>>,
-    pub load_image: Option<GMRef<GMTexture>>,
+    pub back_image: Option<GMRef<GMTexturePageItem>>,
+    pub front_image: Option<GMRef<GMTexturePageItem>>,
+    pub load_image: Option<GMRef<GMTexturePageItem>>,
     pub load_alpha: u32,
     pub constants: Vec<GMOptionsConstant>,
 }
@@ -472,9 +472,9 @@ fn parse_options_new(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMText
     let frequency: u32 = chunk.read_u32()?;
     let vertex_sync: u32 = chunk.read_u32()?;
     let priority: u32 = chunk.read_u32()?;
-    let back_image: Option<GMRef<GMTexture>> = parse_options_image(chunk, textures)?;
-    let front_image: Option<GMRef<GMTexture>> = parse_options_image(chunk, textures)?;
-    let load_image: Option<GMRef<GMTexture>> = parse_options_image(chunk, textures)?;
+    let back_image: Option<GMRef<GMTexturePageItem>> = parse_options_image(chunk, textures)?;
+    let front_image: Option<GMRef<GMTexturePageItem>> = parse_options_image(chunk, textures)?;
+    let load_image: Option<GMRef<GMTexturePageItem>> = parse_options_image(chunk, textures)?;
     let load_alpha: u32 = chunk.read_u32()?;
     let constants: Vec<GMOptionsConstant> = parse_constants(chunk, strings)?;
 
@@ -534,9 +534,9 @@ fn parse_options_old(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMText
     let flag_freeze: bool = chunk.read_bool32()?;
     let flag_show_progress: bool = chunk.read_bool32()?;
 
-    let back_image: Option<GMRef<GMTexture>> = parse_options_image(chunk, textures)?;
-    let front_image: Option<GMRef<GMTexture>> = parse_options_image(chunk, textures)?;
-    let load_image: Option<GMRef<GMTexture>> = parse_options_image(chunk, textures)?;
+    let back_image: Option<GMRef<GMTexturePageItem>> = parse_options_image(chunk, textures)?;
+    let front_image: Option<GMRef<GMTexturePageItem>> = parse_options_image(chunk, textures)?;
+    let load_image: Option<GMRef<GMTexturePageItem>> = parse_options_image(chunk, textures)?;
 
     let flag_load_transparent: bool = chunk.read_bool32()?;
 
@@ -619,13 +619,13 @@ fn parse_constants(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMOpt
     Ok(constants)
 }
 
-fn parse_options_image(chunk: &mut GMChunk, textures: &GMTextures) -> Result<Option<GMRef<GMTexture>>, String> {
+fn parse_options_image(chunk: &mut GMChunk, textures: &GMTextures) -> Result<Option<GMRef<GMTexturePageItem>>, String> {
     let absolute_position: usize = chunk.read_usize()?;
     if absolute_position == 0 {
         return Ok(None)
     }
 
-    let texture: GMRef<GMTexture> = textures.abs_pos_to_ref.get(&absolute_position)
+    let texture: GMRef<GMTexturePageItem> = textures.abs_pos_to_ref.get(&absolute_position)
         .ok_or_else(|| format!("Could not get Options image with absolute texture position {absolute_position}"))?
         .clone();
 
