@@ -19,7 +19,7 @@ use crate::deserialize::rooms::GMRoom;
 use crate::deserialize::scripts::GMScript;
 use crate::deserialize::sounds::GMSound;
 use crate::deserialize::sprites::GMSprite;
-use crate::deserialize::texture_page_items::GMTexture;
+use crate::deserialize::texture_page_items::GMTexturePageItem;
 use crate::deserialize::variables::GMVariable;
 use crate::export_mod::fonts::ModFont;
 use crate::export_mod::unordered_list::{export_changes_unordered_list, AModUnorderedListChanges, GModUnorderedListChanges};
@@ -93,7 +93,7 @@ pub struct GModData<'o, 'm> {
     pub backgrounds: GModUnorderedListChanges<'o, 'm, GMBackground>,
     pub codes: GModUnorderedListChanges<'o, 'm, GMCode>,
     pub audios: GModUnorderedListChanges<'o, 'm, GMEmbeddedAudio>,
-    pub textures: GModUnorderedListChanges<'o, 'm, GMTexture>,
+    pub texture_page_items: GModUnorderedListChanges<'o, 'm, GMTexturePageItem>,
     pub fonts: GModUnorderedListChanges<'o, 'm, GMFont>,
     pub functions: GModUnorderedListChanges<'o, 'm, GMFunction>,
     pub game_objects: GModUnorderedListChanges<'o, 'm, GMGameObject>,
@@ -127,9 +127,9 @@ fn export_changes_gamemaker<'o, 'm>(original_data: &'o GMData, modified_data: &'
         &modified_data.audios.audios_by_index,
     )?;
 
-    let textures: GModUnorderedListChanges<GMTexture> = export_changes_unordered_list(
-        &original_data.textures.textures_by_index,
-        &modified_data.textures.textures_by_index,
+    let texture_page_items: GModUnorderedListChanges<GMTexturePageItem> = export_changes_unordered_list(
+        &original_data.texture_page_items.textures_by_index,
+        &modified_data.texture_page_items.textures_by_index,
     )?;
 
     let fonts: GModUnorderedListChanges<GMFont> = export_changes_unordered_list(
@@ -183,7 +183,7 @@ fn export_changes_gamemaker<'o, 'm>(original_data: &'o GMData, modified_data: &'
         backgrounds,
         codes,
         audios,
-        textures,
+        texture_page_items,
         fonts,
         functions,
         game_objects,
@@ -228,7 +228,7 @@ impl<'o, 'm> GModData<'o, 'm> {
     resolve_reference_fn!(resolve_background_ref, backgrounds, GMBackground, backgrounds_by_index);
     resolve_reference_fn!(resolve_code_ref, codes, GMCode, codes_by_index);
     resolve_reference_fn!(resolve_audio_ref, audios, GMEmbeddedAudio, audios_by_index);
-    resolve_reference_fn!(resolve_texture_ref, textures, GMTexture, textures_by_index);
+    resolve_reference_fn!(resolve_texture_ref, texture_page_items, GMTexturePageItem, textures_by_index);
     resolve_reference_fn!(resolve_font_ref, fonts, GMFont, fonts_by_index);
     resolve_reference_fn!(resolve_function_ref, functions, GMFunction, functions_by_index);
     resolve_reference_fn!(resolve_game_object_ref, game_objects, GMGameObject, game_objects_by_index);

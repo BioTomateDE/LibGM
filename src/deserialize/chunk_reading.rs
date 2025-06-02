@@ -169,7 +169,7 @@ impl GMChunk<'_> {
         let number: u32 = u32::from_be_bytes(bytes);
         let number: usize = number as usize;
 
-        if number < FAILSAFE_AMOUNT || !enable_failsafe {
+        if !enable_failsafe || number < FAILSAFE_AMOUNT {
             return Ok(number);
         }
         Err(format!(
