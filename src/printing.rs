@@ -7,7 +7,7 @@ use crate::deserialize::rooms::{GMRoom, GMRoomBackground, GMRoomFlags, GMRoomGam
 use crate::deserialize::sequence::{GMKeyframe, GMKeyframeMoment, GMSequence, GMTrack};
 use crate::deserialize::sounds::{GMSound, GMSoundFlags};
 use crate::deserialize::strings::GMStrings;
-use crate::deserialize::texture_page_items::GMTexture;
+use crate::deserialize::texture_page_items::GMTexturePageItem;
 
 #[allow(dead_code)]
 impl GMGeneralInfo {
@@ -650,17 +650,15 @@ impl GMEmbeddedTexture {
         println!("GMEmbeddedTexture:");
         println!("  Scaled: {}", self.scaled);
         println!("  Generated Mips: {:?}", self.generated_mips);
-        println!("  Texture Block Size: {:?}", self.texture_block_size);
         println!("  Texture Width: {:?}", self.texture_width);
         println!("  Texture Height: {:?}", self.texture_height);
         println!("  Index In Group: {:?}", self.index_in_group);
-        println!("  Texture Data: <Image Data>");
         println!();
     }
 }
 
 #[allow(dead_code)]
-impl GMTexture {
+impl GMTexturePageItem {
     pub fn print(&self) {
         println!("GMTexture:");
         println!("  Target X: {}", self.target_x);

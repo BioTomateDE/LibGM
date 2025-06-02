@@ -47,7 +47,7 @@ fn build_font(builder: &mut DataBuilder, general_info: &GMGeneralInfo, font_inde
     builder.write_u8(font.charset);
     builder.write_u8(font.anti_alias);
     builder.write_u32(font.range_end);
-    builder.write_placeholder(GMPointer::Texture(font.texture.index))?;
+    builder.write_placeholder(GMPointer::TexturePageItem(font.texture.index))?;
     builder.write_f32(font.scale_x);
     builder.write_f32(font.scale_y);
 

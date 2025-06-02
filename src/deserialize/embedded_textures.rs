@@ -8,14 +8,16 @@ use bzip2::read::BzDecoder;
 use image::DynamicImage;
 use qoi;
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMEmbeddedTexture {
+    /// not sure what `scaled` actually is
     pub scaled: u32,
+    /// same with this
     pub generated_mips: Option<u32>,
-    pub texture_block_size: Option<u32>,
     pub texture_width: Option<i32>,
     pub texture_height: Option<i32>,
     pub index_in_group: Option<i32>,
-    pub texture_data: DynamicImage,
+    pub image: DynamicImage,
 }
 
 
@@ -42,7 +44,6 @@ pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Re
 fn parse_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GMEmbeddedTexture, String> {
     let scaled: u32 = chunk.read_u32()?;
     let mut generated_mips: Option<u32> = None;
-    let mut texture_block_size: Option<u32> = None;
     let mut texture_width: Option<i32> = None;
     let mut texture_height: Option<i32> = None;
     let mut index_in_group: Option<i32> = None;
@@ -51,9 +52,9 @@ fn parse_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GM
     if general_info.is_version_at_least(2, 0, 6, 0) {
         generated_mips = Some(chunk.read_u32()?);
     }
-    if general_info.is_version_at_least(2022, 3, 0, 0) {
-        texture_block_size = Some(chunk.read_u32()?);
-    }
+    // if general_info.is_version_at_least(2022, 3, 0, 0) {
+    //     texture_block_size = Some(chunk.read_u32()?);
+    // }
     if general_info.is_version_at_least(2022, 9, 0, 0) {
         texture_width = Some(chunk.read_i32()?);
         texture_height = Some(chunk.read_i32()?);
@@ -72,27 +73,26 @@ fn parse_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GM
     Ok(GMEmbeddedTexture {
         scaled,
         generated_mips,
-        texture_block_size,
         texture_width,
         texture_height,
         index_in_group,
-        texture_data,
+        image: texture_data,
     })
 }
 
 
 
 fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<DynamicImage, String> {
-    static MAGIC_PNG_HEADER: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
-    static MAGIC_BZ2_QOI_HEADER: &[u8] = "2zoq".as_bytes();
-    static MAGIC_QOI_HEADER: &[u8] = "fioq".as_bytes();
+    const MAGIC_PNG_HEADER: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
+    const MAGIC_BZ2_QOI_HEADER: &[u8] = "2zoq".as_bytes();
+    const MAGIC_QOI_HEADER: &[u8] = "fioq".as_bytes();
 
     let start_position: usize = chunk.cur_pos;
-    let header: [u8; 8] = match chunk.data.get(chunk.cur_pos.. chunk.cur_pos +8) {
+    let header: [u8; 8] = match chunk.data.get(chunk.cur_pos.. chunk.cur_pos+8) {
         Some(bytes) => bytes.try_into().unwrap(),
         None => return Err(format!(
             "Unexpected end of chunk while trying to read headers of texture at position {} in chunk 'TXTR'",
-            start_position
+            start_position,
         )),
     };
 
@@ -108,7 +108,10 @@ fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
             }
         }
         
-        let bytes: &[u8] = &chunk.data[start_position .. chunk.cur_pos];
+        let bytes: &[u8] = &chunk.data.get(start_position .. chunk.cur_pos).ok_or_else(|| format!(
+            "Trying to read PNG data out of bounds in chunk 'TXTR' at position {}: {} > {}",
+            start_position, chunk.cur_pos, chunk.data.len(),
+        ))?;
         // png image size checks {~~}
         let image: DynamicImage = image::load_from_memory(&bytes)
             .map_err(|e| format!("Could not parse PNG image for texture page at position {start_position} in chunk 'TXTR': \"{e}\""
@@ -138,7 +141,7 @@ fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
     }
     else if header.starts_with(MAGIC_QOI_HEADER) {
         // Parse QOI
-        panic!("Unhandled QOI image at position {} in chunk 'TXTR'", chunk.cur_pos);
+        return Err(format!("Unhandled QOI image at position {} in chunk 'TXTR'", chunk.cur_pos));
         // image_from_qoi(chunk.data[chunk..])
     }
     else {
@@ -267,15 +270,9 @@ fn find_end_of_bz2_search(gm_chunk: &mut GMChunk, end_data_position: usize) -> R
 fn image_from_bz2_qoi(raw_image_data: &[u8], width: usize, height: usize) -> Result<DynamicImage, String> {
     let mut decoder: BzDecoder<&[u8]> = BzDecoder::new(raw_image_data);
     let mut decompressed_data: Vec<u8> = Vec::new();
-    match decoder.read_to_end(&mut decompressed_data) {
-        Ok(_) => (),
-        Err(error) => return Err(format!(
-            "Could not decode BZip2 data from QOI image with \
-            dimensions {}x{} while parsing chunk 'TXTR': \"{}\"",
-            width, height, error
-        )),
-    }
-
+    decoder.read_to_end(&mut decompressed_data).map_err(|e| format!(
+        "Could not decode BZip2 data from QOI image with dimensions {width}x{height} while parsing chunk 'TXTR': \"{e}\"",
+    ))?;
     image_from_qoi(&decompressed_data, width, height)
 }
 

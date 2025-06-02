@@ -1,7 +1,7 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::sprites::{GMSpriteMaskEntry, GMSpriteNineSlice, GMSpriteType};
-use crate::deserialize::texture_page_items::GMTexture;
+use crate::deserialize::texture_page_items::GMTexturePageItem;
 use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 use crate::serialize::sequence::build_sequence;
 
@@ -95,10 +95,10 @@ pub fn build_chunk_sprt(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
 }
 
 
-fn build_texture_list(builder: &mut DataBuilder, textures: &Vec<GMRef<GMTexture>>) -> Result<(), String> {
+fn build_texture_list(builder: &mut DataBuilder, textures: &Vec<GMRef<GMTexturePageItem>>) -> Result<(), String> {
     builder.write_usize(textures.len());
     for i in 0..textures.len() {
-        builder.write_placeholder(GMPointer::Texture(i))?;
+        builder.write_placeholder(GMPointer::TexturePageItem(i))?;
     }
     Ok(())
 }
