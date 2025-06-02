@@ -1,7 +1,7 @@
 use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::strings::GMStrings;
-use crate::deserialize::texture_page_items::{GMTexture, GMTextures};
+use crate::deserialize::texture_page_items::{GMTexturePageItem, GMTextures};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMBackground {
@@ -9,7 +9,7 @@ pub struct GMBackground {
     pub transparent: bool,
     pub smooth: bool,
     pub preload: bool,
-    pub texture: Option<GMRef<GMTexture>>,
+    pub texture: Option<GMRef<GMTexturePageItem>>,
     pub gms2_data: Option<GMBackgroundGMS2Data>,
 }
 
@@ -54,7 +54,7 @@ pub fn parse_chunk_bgnd(
         let smooth: bool = chunk.read_bool32()?;
         let preload: bool = chunk.read_bool32()?;
         let texture_abs_pos: usize = chunk.read_usize()?;
-        let texture: Option<GMRef<GMTexture>> = if texture_abs_pos == 0 { None } else { 
+        let texture: Option<GMRef<GMTexturePageItem>> = if texture_abs_pos == 0 { None } else {
             Some(textures.abs_pos_to_ref.get(&texture_abs_pos)
                 .ok_or_else(|| format!("Could not find texture with absolute position {} for Background with name \"{}\" at position {} in chunk 'BGND'",
                                        texture_abs_pos, name.display(strings), start_position))?

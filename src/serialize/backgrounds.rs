@@ -21,7 +21,7 @@ pub fn build_chunk_bgnd(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         builder.write_bool32(background.smooth);
         builder.write_bool32(background.preload);
         if let Some(ref texture) = background.texture {
-            builder.write_placeholder(GMPointer::Texture(texture.index))?;
+            builder.write_placeholder(GMPointer::TexturePageItem(texture.index))?;
         } else {
             builder.write_usize(0);
         }

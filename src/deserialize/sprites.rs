@@ -5,7 +5,7 @@ use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::sequence::{parse_sequence, GMAnimSpeedType, GMSequence};
 use crate::deserialize::sprites_yyswf::{parse_yyswf_timeline, GMSpriteTypeSWF, GMSpriteYYSWFTimeline};
 use crate::deserialize::strings::GMStrings;
-use crate::deserialize::texture_page_items::{GMTexture, GMTextures};
+use crate::deserialize::texture_page_items::{GMTexturePageItem, GMTextures};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSprite {
@@ -23,7 +23,7 @@ pub struct GMSprite {
     pub sep_masks: GMSpriteSepMaskType,
     pub origin_x: i32,
     pub origin_y: i32,
-    pub textures: Vec<GMRef<GMTexture>>,
+    pub textures: Vec<GMRef<GMTexturePageItem>>,
     pub collision_masks: Vec<GMSpriteMaskEntry>,
     pub special_fields: Option<GMSpriteSpecial>,
 }
@@ -157,7 +157,7 @@ pub fn parse_chunk_sprt(
         };
         let origin_x: i32 = chunk.read_i32()?;
         let origin_y: i32 = chunk.read_i32()?;
-        let mut textures: Vec<GMRef<GMTexture>> = Vec::new();
+        let mut textures: Vec<GMRef<GMTexturePageItem>> = Vec::new();
         let mut collision_masks: Vec<GMSpriteMaskEntry> = Vec::new();
         let mut special_fields: Option<GMSpriteSpecial> = None;
 
@@ -325,13 +325,13 @@ fn calculate_mask_data_size(width: usize, height: usize, mask_count: usize) -> u
 }
 
 
-fn read_texture_list(chunk: &mut GMChunk, gm_textures: &GMTextures, sprite_name: &str) -> Result<Vec<GMRef<GMTexture>>, String> {
+fn read_texture_list(chunk: &mut GMChunk, gm_textures: &GMTextures, sprite_name: &str) -> Result<Vec<GMRef<GMTexturePageItem>>, String> {
     let texture_count: usize = chunk.read_usize()?;
-    let mut textures: Vec<GMRef<GMTexture>> = Vec::with_capacity(texture_count);
+    let mut textures: Vec<GMRef<GMTexturePageItem>> = Vec::with_capacity(texture_count);
 
     for _ in 0..texture_count {
         let texture_abs_pos: usize = chunk.read_usize()?;
-        let texture: &GMRef<GMTexture> = gm_textures.abs_pos_to_ref.get(&texture_abs_pos)
+        let texture: &GMRef<GMTexturePageItem> = gm_textures.abs_pos_to_ref.get(&texture_abs_pos)
             .ok_or_else(|| format!("Could not get texture with absolute position {} in map with length {} while \
             reading texture list of sprite {sprite_name}", texture_abs_pos, gm_textures.abs_pos_to_ref.len()))?;
         textures.push(texture.clone());

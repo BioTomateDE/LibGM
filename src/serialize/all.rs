@@ -2,9 +2,7 @@ use crate::debug_utils::DurationExt;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use image::DynamicImage;
 use crate::deserialize::all::GMData;
-use crate::deserialize::texture_page_items::{GMTexturePageItem};
 use crate::serialize::backgrounds::build_chunk_bgnd;
 use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 use crate::serialize::code::build_chunk_code;
@@ -21,7 +19,7 @@ use crate::serialize::scripts::build_chunk_scpt;
 use crate::serialize::sounds::build_chunk_sond;
 use crate::serialize::sprites::build_chunk_sprt;
 use crate::serialize::stubs::{build_chunk_agrp, build_chunk_dafl, build_chunk_extn, build_chunk_shdr, build_chunk_tmln};
-use crate::serialize::texture_page_items::{build_chunk_tpag, generate_texture_pages};
+use crate::serialize::texture_page_items::build_chunk_tpag;
 use crate::serialize::variables::build_chunk_vari;
 use crate::trace_build;
 
@@ -33,10 +31,6 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
         pool_placeholders: HashMap::new(),
         placeholder_pool_resources: HashMap::new(),
     };
-
-    let t_start = cpu_time::ProcessTime::now();
-    let (texture_page_items, texture_pages): (Vec<GMTexturePageItem>, Vec<DynamicImage>) = generate_texture_pages(&gm_data.textures)?;
-    log::trace!("Generating {} texture pages and {} texture page items took {}", texture_pages.len(), texture_page_items.len(), t_start.elapsed().ms());
 
     builder.write_literal_string("FORM");
     builder.write_placeholder(GMPointer::FormLength)?;
@@ -57,12 +51,12 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     trace_build!("OBJT", build_chunk_objt(&mut builder, &gm_data)?);
     trace_build!("ROOM", build_chunk_room(&mut builder, &gm_data)?);
     trace_build!("DAFL", build_chunk_dafl(&mut builder, &gm_data)?);      // stub
-    trace_build!("TPAG", build_chunk_tpag(&mut builder, &gm_data, texture_page_items))?;
+    trace_build!("TPAG", build_chunk_tpag(&mut builder, &gm_data)?);
     let (variable_occurrences_map, function_occurrences_map): (HashMap<usize, Vec<usize>>, HashMap<usize, Vec<usize>>) = trace_build!("CODE", build_chunk_code(&mut builder, &gm_data)?);
     trace_build!("VARI", build_chunk_vari(&mut builder, &gm_data, variable_occurrences_map)?);
     trace_build!("FUNC", build_chunk_func(&mut builder, &gm_data, function_occurrences_map)?);
     trace_build!("STRG", build_chunk_strg(&mut builder, &gm_data)?);
-    trace_build!("TXTR", build_chunk_txtr(&mut builder, &gm_data, texture_pages)?);
+    trace_build!("TXTR", build_chunk_txtr(&mut builder, &gm_data)?);
     trace_build!("AUDO", build_chunk_audo(&mut builder, &gm_data)?);
     
     builder.resolve_placeholder(GMPointer::FormLength, builder.len() as i32)?;

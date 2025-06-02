@@ -2,7 +2,7 @@ use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMOptions, GMOptionsConstant, GMOptionsFlags, GMOptionsWindowColor, GMVersion};
 use crate::deserialize::rooms::GMRooms;
-use crate::deserialize::texture_page_items::GMTexture;
+use crate::deserialize::texture_page_items::GMTexturePageItem;
 use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 
 pub fn build_chunk_gen8(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
@@ -284,10 +284,10 @@ fn build_options_new(builder: &mut DataBuilder, options: &GMOptions) -> Result<(
 }
 
 
-fn build_options_image(builder: &mut DataBuilder, texture: &Option<GMRef<GMTexture>>) -> Result<(), String> {
+fn build_options_image(builder: &mut DataBuilder, texture: &Option<GMRef<GMTexturePageItem>>) -> Result<(), String> {
     match texture {
         None => builder.write_usize(0),
-        Some(reference) => builder.write_placeholder(GMPointer::Texture(reference.index))?
+        Some(reference) => builder.write_placeholder(GMPointer::TexturePageItem(reference.index))?
     }
     Ok(())
 }

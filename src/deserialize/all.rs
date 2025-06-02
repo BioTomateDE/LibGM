@@ -27,7 +27,8 @@ pub struct GMData {
     pub strings: GMStrings,                 // STRG
     pub general_info: GMGeneralInfo,        // GEN8
     pub options: GMOptions,                 // OPTN
-    pub textures: GMTextures,               // TPAG  (and TXTR)
+    pub texture_pages: Vec<GMEmbeddedTexture>,     // TPAG
+    pub texture_page_items: GMTextures,     // TPAG
     pub backgrounds: GMBackgrounds,         // BGND
     pub sprites: GMSprites,                 // SPRT
     pub scripts: GMScripts,                 // SCPT
@@ -107,26 +108,27 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let strings: GMStrings = trace_parse!("STRG", parse_chunk_strg(&mut chunk_strg)?);
     let general_info: GMGeneralInfo = trace_parse!("GEN8", parse_chunk_gen8(&mut chunk_gen8, &strings)?);
     let texture_pages: Vec<GMEmbeddedTexture> = trace_parse!("TXTR", parse_chunk_txtr(&mut chunk_txtr, &general_info)?);
-    let textures: GMTextures = trace_parse!("TPAG", parse_chunk_tpag(&mut chunk_tpag, texture_pages)?);
-    let backgrounds: GMBackgrounds = trace_parse!("BGND", parse_chunk_bgnd(&mut chunk_bgnd, &general_info, &strings, &textures)?);
-    let sprites: GMSprites = trace_parse!("SPRT", parse_chunk_sprt(&mut chunk_sprt, &general_info, &strings, &textures)?);
+    let texture_page_items: GMTextures = trace_parse!("TPAG", parse_chunk_tpag(&mut chunk_tpag)?);
+    let backgrounds: GMBackgrounds = trace_parse!("BGND", parse_chunk_bgnd(&mut chunk_bgnd, &general_info, &strings, &texture_page_items)?);
+    let sprites: GMSprites = trace_parse!("SPRT", parse_chunk_sprt(&mut chunk_sprt, &general_info, &strings, &texture_page_items)?);
     let scripts: GMScripts = trace_parse!("SCPT", parse_chunk_scpt(&mut chunk_scpt, &strings)?);
     let variables: GMVariables = trace_parse!("VARI", parse_chunk_vari(&mut chunk_vari, &strings, &general_info, &mut chunk_code)?);
     let (functions, code_locals): (GMFunctions, Vec<GMCodeLocal>) = trace_parse!("FUNC", parse_chunk_func(&mut chunk_func, &general_info, &strings, &mut chunk_code)?);
     let codes: GMCodes = trace_parse!("CODE", parse_chunk_code(&mut chunk_code, general_info.bytecode_version <= 14, &strings, &variables, &functions)?);
-    let fonts: GMFonts = trace_parse!("FONT", parse_chunk_font(&mut chunk_font, &general_info, &strings, &textures)?);
+    let fonts: GMFonts = trace_parse!("FONT", parse_chunk_font(&mut chunk_font, &general_info, &strings, &texture_page_items)?);
     let audios: GMEmbeddedAudios = trace_parse!("AUDO", parse_chunk_audo(&mut chunk_audo)?);
     let sounds: GMSounds = trace_parse!("SOND", parse_chunk_sond(&mut chunk_sond, &general_info, &strings)?);
     let game_objects: GMGameObjects = trace_parse!("OBJT", parse_chunk_objt(&mut chunk_objt, &general_info, &strings)?);
     let rooms: GMRooms = trace_parse!("ROOM", parse_chunk_room(&mut chunk_room, &general_info, &strings)?);
     let paths: GMPaths = trace_parse!("PATH", parse_chunk_path(&mut chunk_path, &strings)?);
-    let options: GMOptions = trace_parse!("OPTN", parse_chunk_optn(&mut chunk_optn, &strings, &textures)?);
+    let options: GMOptions = trace_parse!("OPTN", parse_chunk_optn(&mut chunk_optn, &strings, &texture_page_items)?);
 
     let data = GMData {
         strings,
         general_info,
         options,
-        textures,
+        texture_pages,
+        texture_page_items,
         backgrounds,
         sprites,
         scripts,
