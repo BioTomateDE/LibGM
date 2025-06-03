@@ -1,4 +1,5 @@
-﻿use crate::deserialize::strings::GMStrings;
+﻿use crate::debug_utils::format_bytes;
+use crate::deserialize::strings::GMStrings;
 
 // GMRef is for parsing chunks:
 // It has (fake) generic types to make it clearer
@@ -148,8 +149,9 @@ impl GMChunk<'_> {
         }
         Err(format!(
             "Failsafe triggered in chunk '{}' at position {} trying \
-            to read usize integer: Number {} is larger than failsafe amount {}",
-            self.name, self.cur_pos - 4, number, FAILSAFE_AMOUNT,
+            to read usize integer: Number {} is larger than failsafe amount {}. \
+            If your data file is larger than {}, this error is a false positive.",
+            self.name, self.cur_pos - 4, number, FAILSAFE_AMOUNT, format_bytes(FAILSAFE_AMOUNT),
         ))
     }
 
