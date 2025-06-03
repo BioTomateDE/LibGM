@@ -1,7 +1,6 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMOptions, GMOptionsConstant, GMOptionsFlags, GMOptionsWindowColor, GMVersion};
-use crate::deserialize::rooms::GMRooms;
 use crate::deserialize::texture_page_items::GMTexturePageItem;
 use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 
@@ -14,8 +13,8 @@ pub fn build_chunk_gen8(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
     builder.write_u16(info.unknown_value);
     builder.write_placeholder(GMPointer::String(info.game_file_name.index))?;
     builder.write_placeholder(GMPointer::String(info.config.index))?;
-    builder.write_usize(gm_data.game_objects.game_objects_by_index.len());
-    builder.write_usize(get_last_tile_id(&gm_data.rooms));
+    builder.write_u32(info.last_object_id);     // these have to be incremented when mods add objects/tiles!
+    builder.write_u32(info.last_tile_id);       // ^
     builder.write_u32(info.game_id);
     builder.raw_data.extend(info.directplay_guid.as_bytes());
     builder.write_placeholder(GMPointer::String(info.game_name.index))?;
@@ -50,16 +49,6 @@ fn build_version(chunk: &mut DataBuilder, version: &GMVersion) {
     chunk.write_u32(version.release);
     chunk.write_u32(version.stable);
 }
-
-
-fn get_last_tile_id(rooms: &GMRooms) -> usize {
-    let mut tile_id: usize = 10_000_000;
-    for room in &rooms.rooms_by_index {
-        tile_id += room.tiles.len();
-    }
-    tile_id
-}
-
 
 fn build_general_info_flags(flags: &GMGeneralInfoFlags) -> u32 {
     let mut raw: u32 = 0;
