@@ -2,7 +2,7 @@ use std::io::Write;
 use image::DynamicImage;
 use crate::debug_utils::DurationExt;
 use crate::deserialize::all::GMData;
-use crate::deserialize::embedded_textures::{GMEmbeddedTexture, MAGIC_BZ2_QOI_HEADER};
+use crate::deserialize::embedded_textures::{GMEmbeddedTexture, MAGIC_BZ2_QOI_HEADER, MAGIC_QOI_HEADER};
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 
@@ -59,6 +59,7 @@ fn build_texture_page(builder: &mut DataBuilder, general_info: &GMGeneralInfo, i
 }
 
 fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralInfo, index: usize, image: &DynamicImage) -> Result<(), String> {
+    log::warn!("");
     let t_start1 = cpu_time::ProcessTime::now();
     // padding
     while builder.len() % 0x80 != 0 {
@@ -69,19 +70,34 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
 
     let width: u32 = image.width();
     let height: u32 = image.height();
-    let bytes: Vec<u8> = image.to_rgba8().into_raw();
+    let pixels = if let Some(rgba) = image.as_rgba8() {
+        rgba.clone().into_raw()         // Zero-copy if already RGBA    (.clone does not copy entire image buffer; only takes ownership)
+    } else {
+        log::warn!("Image is not Rgba8! This should not happen if the image loaded was PNG or \
+        QOI (always the case in GameMaker). Cloning entire image buffer as fallback. Image: {image:?}");
+        image.to_rgba8().into_raw()     // Fallback to conversion
+    };
 
-    let data: Vec<u8> = qoi::encode_to_vec(bytes, width, height)
+    let t_start2 = cpu_time::ProcessTime::now();
+    let qoi_header = rapid_qoi::Qoi {
+        width,
+        height,
+        colors: rapid_qoi::Colors::Rgba,
+    };
+    let mut uncompressed_data = Vec::with_capacity((width * height * 4) as usize + MAGIC_QOI_HEADER.len());
+    qoi_header.encode(&pixels, &mut uncompressed_data)
         .map_err(|e| format!("Could not build QOI image for texture page #{index}: {e}"))?;
-    let uncompressed_size: usize = data.len();
+    let uncompressed_size: usize = uncompressed_data.len();
+    log::debug!("Encoding image into QOI took {}", t_start2.elapsed().ms());
 
     let t_start2 = cpu_time::ProcessTime::now();
     let mut encoder = bzip2::write::BzEncoder::new(Vec::new(), bzip2::Compression::best());
-    encoder.write_all(&data)
+    encoder.write_all(&uncompressed_data)
         .map_err(|e| format!("Could not write QOI image data to BZip2 archive: {e}"))?;
-    drop(data);
+    drop(uncompressed_data);
     let compressed_data: Vec<u8> = encoder.finish()
         .map_err(|e| format!("Could not finish compressing Bzip2 QOI image: {e}"))?;
+    // let compressed_data: Vec<u8> = compress_bzip2_ffi(&uncompressed_data)?;
     let compressed_size: usize = compressed_data.len();
     log::debug!("Compressing QOI image data using Bzip2 took {}", t_start2.elapsed().ms());
 
@@ -99,4 +115,33 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
     log::debug!("Writing image with dimensions {width}x{height} took {}", t_start1.elapsed().ms());
     Ok(())
 }
+
+
+
+
+// // Unsafe but FAST - compresses in a single call
+// fn compress_bzip2_ffi(data: &[u8]) -> Result<Vec<u8>, String> {
+//     use libbz2_rs_sys::*;
+//     
+//     let mut dest_len: u32 = (data.len() * 2) as u32;   // Conservative estimate
+//     let mut dest: Vec<u8> = Vec::with_capacity(dest_len as usize);
+// 
+//     let ret = unsafe { BZ2_bzBuffToBuffCompress(
+//         dest.as_mut_ptr() as *mut std::ffi::c_char,   // *mut c_char
+//         &mut dest_len as *mut u32,                    // *mut u32
+//         data.as_ptr() as *mut std::ffi::c_char,       // *mut c_char
+//         data.len() as u32,                            // u32
+//         9,      // Best compression
+//         0,         // Verbosity (0 = silent)
+//         30,      // Work factor (default=30)
+//     ) };
+// 
+//     if ret != BZ_OK {
+//         return Err(format!("Bzip compression not successful: error code {ret}"))
+//     }
+//     unsafe { dest.set_len(dest_len as usize); }
+//     Ok(dest)
+// }
+// 
+
 
