@@ -5,8 +5,8 @@ use crate::deserialize::general_info::GMGeneralInfo;
 use crate::printing::hexdump;
 use image;
 use bzip2::read::BzDecoder;
-use image::DynamicImage;
-use qoi;
+use image::{DynamicImage, ImageBuffer, Rgba};
+use rapid_qoi::Qoi;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMEmbeddedTexture {
@@ -137,7 +137,8 @@ fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
         chunk.cur_pos = start_position + header_size;
         let raw_image_data: &[u8] = &chunk.data[chunk.cur_pos.. chunk.cur_pos + compressed_length];
         chunk.cur_pos += compressed_length;
-        let image: DynamicImage = image_from_bz2_qoi(&raw_image_data, width, height)?;
+        let image: DynamicImage = image_from_bz2_qoi(&raw_image_data, width, height)
+            .map_err(|e| format!("{e} while parsing QOI image with dimensions {width}x{height} at position {start_position} in chunk 'TXTR'"))?;
         Ok(image)
     }
     else if header.starts_with(MAGIC_QOI_HEADER) {
@@ -268,37 +269,31 @@ fn find_end_of_bz2_search(gm_chunk: &mut GMChunk, end_data_position: usize) -> R
 }
 
 
-fn image_from_bz2_qoi(raw_image_data: &[u8], width: usize, height: usize) -> Result<DynamicImage, String> {
-    let mut decoder: BzDecoder<&[u8]> = BzDecoder::new(raw_image_data);
+fn decode_bzip2(compressed_data: &[u8]) -> Result<Vec<u8>, String> {
+    let mut decoder: BzDecoder<&[u8]> = BzDecoder::new(compressed_data);
     let mut decompressed_data: Vec<u8> = Vec::new();
-    decoder.read_to_end(&mut decompressed_data).map_err(|e| format!(
-        "Could not decode BZip2 data from QOI image with dimensions {width}x{height} while parsing chunk 'TXTR': \"{e}\"",
-    ))?;
+    decoder.read_to_end(&mut decompressed_data)
+        .map_err(|e| format!("Could not decode BZip2 data: \"{e}\""))?;
+    Ok(decompressed_data)
+}
+
+fn image_from_bz2_qoi(raw_image_data: &[u8], width: usize, height: usize) -> Result<DynamicImage, String> {
+    let decompressed_data: Vec<u8> = decode_bzip2(raw_image_data)?;
     image_from_qoi(&decompressed_data, width, height)
 }
 
 fn image_from_qoi(raw_image_data: &[u8], width: usize, height: usize) -> Result<DynamicImage, String> {
-    let (header, pixels) = match qoi::decode_to_vec(&raw_image_data) {
-        Ok(ok) => ok,
-        Err(error) => return Err(format!(
-            "Could not parse QOI image with dimensions {}x{} while parsing chunk 'TXTR': \"{}\"",
-            width, height, error
-        )),
+    let mut pixels: Vec<u8> = Vec::with_capacity(width * height * 4);  // assume 4 channels because a texture page without transparency is useless
+    let header: Qoi = Qoi::decode(&raw_image_data, &mut pixels)
+        .map_err(|e| format!("Could not decode QOI image: {e}"))?;
+
+    let image: Option<ImageBuffer<Rgba<u8>, Vec<u8>>> = match header.colors.channels() {
+        3 => image::RgbaImage::from_raw(header.width, header.height, pixels),
+        4 => image::RgbaImage::from_raw(header.width, header.height, pixels),
+        other => return Err(format!("Invalid number of QOI image channels: {other}"))
     };
 
-    let image: Option<image::ImageBuffer<image::Rgba<u8>, Vec<u8>>> = match header.channels {
-        qoi::Channels::Rgb => image::RgbaImage::from_raw(header.width, header.height, pixels),
-        qoi::Channels::Rgba => image::RgbaImage::from_raw(header.width, header.height, pixels),
-    };
-
-    let image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> = match image {
-        Some(img) => img,
-        None => return Err(format!(
-            "Could not convert QOI image to image::RgbImage with dimensions {}x{} while parsing chunk 'TXTR'",
-            width, height)),
-    };
-    let image = DynamicImage::ImageRgba8(image);
-
-    Ok(image)
+    let image: ImageBuffer<Rgba<u8>, Vec<u8>> = image.ok_or("Could not construct image::RgbaImage from pixel data")?;
+    Ok(DynamicImage::ImageRgba8(image))
 }
 
