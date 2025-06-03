@@ -20,6 +20,10 @@ pub struct GMEmbeddedTexture {
     pub image: Option<DynamicImage>,
 }
 
+pub const MAGIC_PNG_HEADER: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
+pub const MAGIC_BZ2_QOI_HEADER: &[u8] = "2zoq".as_bytes();
+pub const MAGIC_QOI_HEADER: &[u8] = "fioq".as_bytes();
+
 
 pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Vec<GMEmbeddedTexture>, String> {
     chunk.cur_pos = 0;
@@ -83,12 +87,7 @@ fn parse_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GM
 }
 
 
-
 fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<DynamicImage, String> {
-    const MAGIC_PNG_HEADER: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
-    const MAGIC_BZ2_QOI_HEADER: &[u8] = "2zoq".as_bytes();
-    const MAGIC_QOI_HEADER: &[u8] = "fioq".as_bytes();
-
     let start_position: usize = chunk.cur_pos;
     let header: [u8; 8] = match chunk.data.get(chunk.cur_pos.. chunk.cur_pos+8) {
         Some(bytes) => bytes.try_into().unwrap(),
