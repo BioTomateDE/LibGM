@@ -51,7 +51,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
         name: "".to_string(),
         abs_pos: 0,
         data: &raw_data,
-        cur_pos: 0
+        cur_pos: 0,
     };
 
     if all.read_chunk_name()? != "FORM" {
