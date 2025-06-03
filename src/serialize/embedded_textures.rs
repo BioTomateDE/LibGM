@@ -1,8 +1,9 @@
 use std::io::Write;
+use hardqoi::common::QOIHeader;
 use image::DynamicImage;
 use crate::debug_utils::DurationExt;
 use crate::deserialize::all::GMData;
-use crate::deserialize::embedded_textures::{GMEmbeddedTexture, MAGIC_BZ2_QOI_HEADER, MAGIC_QOI_HEADER};
+use crate::deserialize::embedded_textures::{GMEmbeddedTexture, MAGIC_BZ2_QOI_HEADER};
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 
@@ -70,7 +71,7 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
 
     let width: u32 = image.width();
     let height: u32 = image.height();
-    let pixels = if let Some(rgba) = image.as_rgba8() {
+    let pixels: Vec<u8> = if let Some(rgba) = image.as_rgba8() {
         rgba.clone().into_raw()         // Zero-copy if already RGBA    (.clone does not copy entire image buffer; only takes ownership)
     } else {
         log::warn!("Image is not Rgba8! This should not happen if the image loaded was PNG or \
@@ -79,14 +80,17 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
     };
 
     let t_start2 = cpu_time::ProcessTime::now();
-    let qoi_header = rapid_qoi::Qoi {
+    let qoi_header = QOIHeader {
         width,
         height,
-        colors: rapid_qoi::Colors::Rgba,
+        has_alpha: image.color().has_alpha(),   // will basically always be true
+        linear_rgb: false,
     };
-    let mut uncompressed_data = Vec::with_capacity((width * height * 4) as usize + MAGIC_QOI_HEADER.len());
-    qoi_header.encode(&pixels, &mut uncompressed_data)
-        .map_err(|e| format!("Could not build QOI image for texture page #{index}: {e}"))?;
+    let pixels: Vec<u32> = rgba8_to_rgba32(pixels);
+    let mut uncompressed_data: Vec<u8> = vec![0; (width * height * 4) as usize];
+    hardqoi::encode(&pixels, &mut uncompressed_data, qoi_header).map_err(|(last_pos, pixel_count)| format!(
+        "Could not build QOI image for texture page #{index}; last pos is {last_pos} and pixel count is {pixel_count}",
+    ))?;
     let uncompressed_size: usize = uncompressed_data.len();
     log::debug!("Encoding image into QOI took {}", t_start2.elapsed().ms());
 
@@ -119,29 +123,21 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
 
 
 
-// // Unsafe but FAST - compresses in a single call
-// fn compress_bzip2_ffi(data: &[u8]) -> Result<Vec<u8>, String> {
-//     use libbz2_rs_sys::*;
-//     
-//     let mut dest_len: u32 = (data.len() * 2) as u32;   // Conservative estimate
-//     let mut dest: Vec<u8> = Vec::with_capacity(dest_len as usize);
-// 
-//     let ret = unsafe { BZ2_bzBuffToBuffCompress(
-//         dest.as_mut_ptr() as *mut std::ffi::c_char,   // *mut c_char
-//         &mut dest_len as *mut u32,                    // *mut u32
-//         data.as_ptr() as *mut std::ffi::c_char,       // *mut c_char
-//         data.len() as u32,                            // u32
-//         9,      // Best compression
-//         0,         // Verbosity (0 = silent)
-//         30,      // Work factor (default=30)
-//     ) };
-// 
-//     if ret != BZ_OK {
-//         return Err(format!("Bzip compression not successful: error code {ret}"))
-//     }
-//     unsafe { dest.set_len(dest_len as usize); }
-//     Ok(dest)
-// }
-// 
 
+fn rgba8_to_rgba32(bytes: Vec<u8>) -> Vec<u32> {
+    assert_eq!(bytes.len() % 4, 0);
+    assert_eq!(bytes.as_ptr() as usize % align_of::<u32>(), 0);
+
+    let mut bytes = bytes;
+    let (ptr, len, cap) = (bytes.as_mut_ptr(), bytes.len(), bytes.capacity());
+
+    // SAFETY: 
+    // - Original Vec<u8> is properly aligned (asserted above)
+    // - Length is divisible by 4 (asserted above)
+    // - u32 and [u8; 4] have the same size/alignment
+    unsafe {
+        std::mem::forget(bytes); // Prevent double-free
+        Vec::from_raw_parts(ptr as *mut u32, len / 4, cap / 4)
+    }
+}
 
