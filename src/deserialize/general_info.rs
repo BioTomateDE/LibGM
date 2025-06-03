@@ -31,6 +31,8 @@ pub struct GMGeneralInfo {
     pub unknown_value: u16,
     pub game_file_name: GMRef<String>,
     pub config: GMRef<String>,
+    pub last_object_id: u32,
+    pub last_tile_id: u32,
     pub game_id: u32,
     pub directplay_guid: uuid::Uuid,
     pub game_name: GMRef<String>,
@@ -228,8 +230,8 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
     let unknown_value: u16 = chunk.read_u16()?;
     let game_file_name: GMRef<String> = chunk.read_gm_string(strings)?;
     let config: GMRef<String> = chunk.read_gm_string(strings)?;
-    let _last_object_id: u32 = chunk.read_u32()?;
-    let _last_tile_id: u32 = chunk.read_u32()?;
+    let last_object_id: u32 = chunk.read_u32()?;
+    let last_tile_id: u32 = chunk.read_u32()?;
     let game_id: u32 = chunk.read_u32()?;
 
     let directplay_guid: [u8; 16] = chunk.data.get(chunk.cur_pos..chunk.cur_pos + 16)
@@ -252,18 +254,15 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
     let license_md5: [u8; 16] = chunk.data.get(chunk.cur_pos .. chunk.cur_pos + 16)
         .ok_or_else(|| format!(
             "Trying to read license (MD5) out of bounds in chunk 'GEN8' at position {}: {} > {}",
-            chunk.cur_pos,
-            chunk.cur_pos + 16,
-            chunk.data.len(),
-        ))?.try_into().expect("GUID length somehow not 16");
+            chunk.cur_pos, chunk.cur_pos + 16, chunk.data.len(),
+        ))?.try_into().expect("MD5 Licence length somehow not 16");
     chunk.cur_pos += 16;
 
     let timestamp_created: i64 = chunk.read_i64()?;
     let timestamp_created: DateTime<Utc> = DateTime::from_timestamp(timestamp_created, 0)
         .ok_or_else(|| format!(
             "Invalid Creation Timestamp 0x{:016X} in chunk 'GEN8' at position {}",
-            timestamp_created,
-            chunk.cur_pos
+            timestamp_created, chunk.cur_pos,
         ))?;
 
     let display_name: GMRef<String> = chunk.read_gm_string(strings)?;
@@ -285,6 +284,8 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
         unknown_value,
         game_file_name,
         config,
+        last_object_id,
+        last_tile_id,
         game_id,
         directplay_guid,
         game_name,

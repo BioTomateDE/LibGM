@@ -1,4 +1,5 @@
 ﻿use crate::deserialize::backgrounds::GMBackground;
+use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::embedded_textures::GMEmbeddedTexture;
 use crate::deserialize::fonts::{GMFont, GMFontGlyph};
 use crate::deserialize::game_objects::{GMGameObject, GMGameObjectEvent, GMGameObjectEventAction};
@@ -15,6 +16,7 @@ impl GMGeneralInfo {
         println!("General Info:");
         println!("  GMS Debugger Disabled: {}", self.is_debugger_disabled);
         println!("  Bytecode Version: {}", self.bytecode_version);
+        println!("  Unknown Value: {}", self.unknown_value);
         println!("  File Name: {}", self.game_file_name.resolve(&strings.strings_by_index)?);
         println!("  Config: {}", self.config.resolve(&strings.strings_by_index)?);
         println!("  Game ID: {}", self.game_id);
@@ -31,6 +33,7 @@ impl GMGeneralInfo {
         println!("  Function Classifications: {}", &self.function_classifications.to_string());
         println!("  Steam AppID: {}", self.steam_appid);
         println!("  Debugger Port: {:?}", self.debugger_port);
+        println!("  Room Order: {:?}", self.room_order);
         println!();
         Ok(())
     }
@@ -784,6 +787,7 @@ impl GMGameObjectEventAction {
         println!("  Is Question: {}", self.is_question);
         println!("  Use Apply To: {}", self.use_apply_to);
         println!("  Exe Type: {}", self.exe_type);
+        println!("  Action Name: {}", resolve_str_maybe(&self.action_name, strings));
         // println!("  Action Name: {}", self.action_name.as_ref().map(|i| i.resolve(&strings.strings_by_index)).unwrap_or_else(|| "None".to_string()));
         println!("  Code: {:?}", self.code);
         println!("  Argument Count: {}", self.argument_count);
@@ -861,3 +865,13 @@ pub fn hexdump(raw_data: &[u8], start: usize, end: Option<usize>) -> Result<Stri
 pub fn format_type_of<T>(_: &T) -> String {
     format!("{}", std::any::type_name::<T>())
 }
+
+pub fn resolve_str_maybe<'a>(str_maybe: &'a Option<GMRef<String>>, strings: &'a GMStrings) -> &'a str {
+    match str_maybe {
+        None => "<none>",
+        Some(s) => s.resolve(&strings.strings_by_index)
+            .map(|s| s.as_str())
+            .unwrap_or("<invalid string reference>"),
+    }
+}
+
