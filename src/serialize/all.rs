@@ -59,7 +59,8 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     trace_build!("TXTR", build_chunk_txtr(&mut builder, &gm_data)?);
     trace_build!("AUDO", build_chunk_audo(&mut builder, &gm_data)?);
     
-    builder.resolve_placeholder(GMPointer::FormLength, builder.len() as i32)?;
+    let raw_data_len: i32 = builder.len() as i32 - 8;
+    builder.resolve_placeholder(GMPointer::FormLength, raw_data_len)?;
     
     let t_start = cpu_time::ProcessTime::now();
     // resolve pointer placeholders
@@ -74,9 +75,8 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
         for (i, byte) in raw.iter().enumerate() {
             let source_byte: &mut u8 = builder.raw_data.get_mut(placeholder_position + i)
                 .ok_or_else(|| format!(
-                    "Could not overwrite {} bytes at position {} while resolving pointer placeholders",
-                    raw.len(),
-                    placeholder_position + i,
+                    "Could not overwrite {} bytes at position {} while resolving placeholders",
+                    raw.len(), placeholder_position + i,
                 ))?;
             *source_byte = *byte;
         }
