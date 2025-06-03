@@ -1,6 +1,8 @@
+use std::io::Write;
 use image::DynamicImage;
+use crate::debug_utils::DurationExt;
 use crate::deserialize::all::GMData;
-use crate::deserialize::embedded_textures::GMEmbeddedTexture;
+use crate::deserialize::embedded_textures::{GMEmbeddedTexture, MAGIC_BZ2_QOI_HEADER};
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 
@@ -57,23 +59,44 @@ fn build_texture_page(builder: &mut DataBuilder, general_info: &GMGeneralInfo, i
 }
 
 fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralInfo, index: usize, image: &DynamicImage) -> Result<(), String> {
+    let t_start1 = cpu_time::ProcessTime::now();
     // padding
     while builder.len() % 0x80 != 0 {
         builder.write_u8(0);
     }
     
     builder.resolve_pointer(GMPointer::TexturePageData(index))?;
-    
-    // TODO formats other than PNG?
-    let mut buf: std::io::Cursor<Vec<u8>> = std::io::Cursor::new(Vec::new());
-    image.write_to(&mut buf, image::ImageFormat::Png)
-        .map_err(|e| format!("Could not build PNG image for texture page #{index}: {e}"))?;
 
-    if general_info.is_version_at_least(2022, 3, 0, 0) {
-        builder.resolve_placeholder(GMPointer::TexturePageDataSize(index), buf.position() as i32)?;
+    let width: u32 = image.width();
+    let height: u32 = image.height();
+    let bytes: Vec<u8> = image.to_rgba8().into_raw();
+
+    let data: Vec<u8> = qoi::encode_to_vec(bytes, width, height)
+        .map_err(|e| format!("Could not build QOI image for texture page #{index}: {e}"))?;
+    let uncompressed_size: usize = data.len();
+
+    let t_start2 = cpu_time::ProcessTime::now();
+    let mut encoder = bzip2::write::BzEncoder::new(Vec::new(), bzip2::Compression::best());
+    encoder.write_all(&data)
+        .map_err(|e| format!("Could not write QOI image data to BZip2 archive: {e}"))?;
+    drop(data);
+    let compressed_data: Vec<u8> = encoder.finish()
+        .map_err(|e| format!("Could not finish compressing Bzip2 QOI image: {e}"))?;
+    let compressed_size: usize = compressed_data.len();
+    log::debug!("Compressing QOI image data using Bzip2 took {}", t_start2.elapsed().ms());
+
+    builder.write_bytes(MAGIC_BZ2_QOI_HEADER);
+    builder.write_u16(width as u16);
+    builder.write_u16(height as u16);
+    if general_info.is_version_at_least(2022, 5, 0, 0) {
+        builder.write_usize(uncompressed_size);
     }
-    builder.write_bytes(&buf.into_inner());
-
+    builder.write_bytes(&compressed_data);
+    
+    if general_info.is_version_at_least(2022, 3, 0, 0) {
+        builder.resolve_placeholder(GMPointer::TexturePageDataSize(index), compressed_size as i32)?;
+    }
+    log::debug!("Writing image with dimensions {width}x{height} took {}", t_start1.elapsed().ms());
     Ok(())
 }
 
