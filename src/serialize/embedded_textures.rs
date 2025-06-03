@@ -60,8 +60,8 @@ fn build_texture_page(builder: &mut DataBuilder, general_info: &GMGeneralInfo, i
 }
 
 fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralInfo, index: usize, image: &DynamicImage) -> Result<(), String> {
-    log::warn!("");
-    let t_start1 = cpu_time::ProcessTime::now();
+    // log::warn!("");
+    // let t_start1 = cpu_time::ProcessTime::now();
     // padding
     while builder.len() % 0x80 != 0 {
         builder.write_u8(0);
@@ -79,7 +79,7 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
         image.to_rgba8().into_raw()     // Fallback to conversion
     };
 
-    let t_start2 = cpu_time::ProcessTime::now();
+    // let t_start2 = cpu_time::ProcessTime::now();
     let qoi_header = QOIHeader {
         width,
         height,
@@ -92,18 +92,18 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
         "Could not build QOI image for texture page #{index}; last pos is {last_pos} and pixel count is {pixel_count}",
     ))?;
     let uncompressed_size: usize = uncompressed_data.len();
-    log::debug!("Encoding image into QOI took {}", t_start2.elapsed().ms());
-
-    let t_start2 = cpu_time::ProcessTime::now();
-    let mut encoder = bzip2::write::BzEncoder::new(Vec::new(), bzip2::Compression::best());
-    encoder.write_all(&uncompressed_data)
-        .map_err(|e| format!("Could not write QOI image data to BZip2 archive: {e}"))?;
-    drop(uncompressed_data);
-    let compressed_data: Vec<u8> = encoder.finish()
-        .map_err(|e| format!("Could not finish compressing Bzip2 QOI image: {e}"))?;
-    // let compressed_data: Vec<u8> = compress_bzip2_ffi(&uncompressed_data)?;
-    let compressed_size: usize = compressed_data.len();
-    log::debug!("Compressing QOI image data using Bzip2 took {}", t_start2.elapsed().ms());
+    // log::debug!("Encoding image into QOI took {}", t_start2.elapsed().ms());
+    
+    // // let t_start2 = cpu_time::ProcessTime::now();
+    // let mut encoder = bzip2::write::BzEncoder::new(Vec::new(), bzip2::Compression::best());
+    // encoder.write_all(&uncompressed_data)
+    //     .map_err(|e| format!("Could not write QOI image data to BZip2 archive: {e}"))?;
+    // drop(uncompressed_data);
+    // let data: Vec<u8> = encoder.finish()
+    //     .map_err(|e| format!("Could not finish compressing Bzip2 QOI image: {e}"))?;
+    let data = uncompressed_data;   // comment out lines above to use bzip compression (slower)
+    let data_size: usize = data.len();
+    // log::debug!("Compressing QOI image data using Bzip2 took {}", t_start2.elapsed().ms());
 
     builder.write_bytes(MAGIC_BZ2_QOI_HEADER);
     builder.write_u16(width as u16);
@@ -111,12 +111,12 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
     if general_info.is_version_at_least(2022, 5, 0, 0) {
         builder.write_usize(uncompressed_size);
     }
-    builder.write_bytes(&compressed_data);
+    builder.write_bytes(&data);
     
     if general_info.is_version_at_least(2022, 3, 0, 0) {
-        builder.resolve_placeholder(GMPointer::TexturePageDataSize(index), compressed_size as i32)?;
+        builder.resolve_placeholder(GMPointer::TexturePageDataSize(index), data_size as i32)?;
     }
-    log::debug!("Writing image with dimensions {width}x{height} took {}", t_start1.elapsed().ms());
+    // log::debug!("Writing image with dimensions {width}x{height} took {}", t_start1.elapsed().ms());
     Ok(())
 }
 
@@ -131,7 +131,7 @@ fn rgba8_to_rgba32(bytes: Vec<u8>) -> Vec<u32> {
     let mut bytes = bytes;
     let (ptr, len, cap) = (bytes.as_mut_ptr(), bytes.len(), bytes.capacity());
 
-    // SAFETY: 
+    // SAFETY:
     // - Original Vec<u8> is properly aligned (asserted above)
     // - Length is divisible by 4 (asserted above)
     // - u32 and [u8; 4] have the same size/alignment
