@@ -19,7 +19,6 @@ macro_rules! trace_parse {
 }
 
 
-
 pub trait DurationExt {
     fn ms(&self) -> String;
 }
@@ -29,3 +28,23 @@ impl DurationExt for std::time::Duration {
         format!("{:.2} ms", self.as_secs_f64() * 1000.0)
     }
 }
+
+
+pub fn format_bytes(bytes: usize) -> String {
+    const UNITS: [&str; 6] = ["B", "KB", "MB", "GB", "TB", "PB"];
+    let mut size = bytes as f64;
+    let mut unit_idx = 0;
+
+    while size >= 1024.0 && unit_idx < UNITS.len() - 1 {
+        size /= 1024.0;
+        unit_idx += 1;
+    }
+
+    // Trim trailing `.0` for whole numbers
+    if size.fract() == 0.0 {
+        format!("{} {}", size as u64, UNITS[unit_idx])
+    } else {
+        format!("{:.1} {}", size, UNITS[unit_idx])
+    }
+}
+
