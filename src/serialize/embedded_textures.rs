@@ -94,14 +94,14 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
     let uncompressed_size: usize = uncompressed_data.len();
     // log::debug!("Encoding image into QOI took {}", t_start2.elapsed().ms());
     
-    // // let t_start2 = cpu_time::ProcessTime::now();
-    // let mut encoder = bzip2::write::BzEncoder::new(Vec::new(), bzip2::Compression::best());
-    // encoder.write_all(&uncompressed_data)
-    //     .map_err(|e| format!("Could not write QOI image data to BZip2 archive: {e}"))?;
-    // drop(uncompressed_data);
-    // let data: Vec<u8> = encoder.finish()
-    //     .map_err(|e| format!("Could not finish compressing Bzip2 QOI image: {e}"))?;
-    let data = uncompressed_data;   // comment out lines above to use bzip compression (slower)
+    // let t_start2 = cpu_time::ProcessTime::now();
+    let mut encoder = bzip2::write::BzEncoder::new(Vec::new(), bzip2::Compression::best());
+    encoder.write_all(&uncompressed_data)
+        .map_err(|e| format!("Could not write QOI image data to BZip2 archive: {e}"))?;
+    drop(uncompressed_data);
+    let data: Vec<u8> = encoder.finish()
+        .map_err(|e| format!("Could not finish compressing Bzip2 QOI image: {e}"))?;
+    // let data = uncompressed_data;   // comment out the lines above to not use slow bzip compression
     let data_size: usize = data.len();
     // log::debug!("Compressing QOI image data using Bzip2 took {}", t_start2.elapsed().ms());
 
