@@ -282,21 +282,12 @@ fn image_from_bz2_qoi(raw_image_data: &[u8], width: usize, height: usize) -> Res
 }
 
 fn image_from_qoi(raw_image_data: &Vec<u8>, width: usize, height: usize) -> Result<DynamicImage, String> {
-    let mut pixels: Vec<u32> = Vec::with_capacity(width * height);
-    hardqoi::decode(&raw_image_data, &mut pixels).map_err(|(last_pos, pixel_count)| format!(
-        "Could not decode QOI image; last pos is {last_pos} and pixel count is {pixel_count}",
-    ))?;
-
-    // Convert Vec<u32> to Vec<u8> without copying data
-    let bytes: Vec<u8> = unsafe {
-        let (ptr, len, cap) = (pixels.as_ptr(), pixels.len(), pixels.capacity());
-        std::mem::forget(pixels);   // Prevent double-free
-        Vec::from_raw_parts(ptr as *mut u8, len * 4, cap * 4)
-    };
-
-    // Create ImageBuffer directly from the bytes
+    let (_header, bytes) = qoi::decode_to_vec(raw_image_data)
+        .map_err(|e| format!("Could not decode QOI image: {e}"))?;
+    
     let image = ImageBuffer::<Rgba<u8>, Vec<u8>>::from_raw(width as u32, height as u32, bytes)
         .ok_or("Could not construct image::RgbaImage from pixel data")?;
+    
     Ok(DynamicImage::ImageRgba8(image))
 }
 
