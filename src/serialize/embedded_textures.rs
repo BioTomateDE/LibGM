@@ -3,7 +3,6 @@ use std::io::Write;
 use std::sync::Mutex;
 use image::DynamicImage;
 use rayon::prelude::IntoParallelIterator;
-use rayon::ThreadPool;
 use crate::deserialize::all::GMData;
 use crate::deserialize::embedded_textures::{GMEmbeddedTexture, MAGIC_BZ2_QOI_HEADER};
 use crate::deserialize::general_info::GMGeneralInfo;
@@ -33,12 +32,9 @@ pub fn build_chunk_txtr(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
             .map_err(|e| format!("{e} for texture page #{i} and \"index in group\" #{:?}", texture_page.index_in_group))?;
     }
     
-    let texture_page_images_compressed: Vec<Option<ImageData>> = render_image_bz2_qoi(gm_data.texture_pages.iter().map(|i| &i.image).collect())?;
-
-    for (i, compressed_image) in texture_page_images_compressed.iter().enumerate() {
-        if let Some(image_data) = compressed_image {
-            build_texture_page_image(builder, &gm_data.general_info, i, image_data)?;
-        }
+    let texture_page_images_compressed: Vec<ImageData> = render_image_bz2_qoi(gm_data.texture_pages.iter().filter_map(|i| i.image.as_ref()).collect())?;
+    for (i, image_data) in texture_page_images_compressed.iter().enumerate() { 
+        build_texture_page_image(builder, &gm_data.general_info, i, image_data)?;
     }
 
     // nobody knows if this actually correct
@@ -96,38 +92,31 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
 }
 
 
-fn render_image_bz2_qoi(images: Vec<&Option<DynamicImage>>) -> Result<Vec<Option<ImageData>>, String> {
-    let pool: ThreadPool = rayon::ThreadPoolBuilder::new()
-        .build().map_err(|e| format!("Could not build rayon thread pool: {e}"))?;
+fn render_image_bz2_qoi(images: Vec<&DynamicImage>) -> Result<Vec<ImageData>, String> {
+    let compressed_images: Mutex<Vec<ImageData>> = Mutex::new(Vec::with_capacity(images.len()));
     
-    let compressed_images= Mutex::new(Vec::with_capacity(images.len()));
-    
-    images.into_par_iter().try_for_each(|image| {
-        let data: Option<ImageData> = if let Some(img) = image {
-            let width: u32 = img.width();
-            let height: u32 = img.height();
-            let bytes: Vec<u8> = img.to_rgba8().into_raw();
+    images.into_par_iter().try_for_each(|image| { 
+        let width: u32 = image.width();
+        let height: u32 = image.height();
+        let bytes: Vec<u8> = image.to_rgba8().into_raw();
 
-            let data: Vec<u8> = qoi::encode_to_vec(bytes, width, height)
-                .map_err(|e| format!("Could not build QOI image: {e}"))?;
-            let uncompressed_size: usize = data.len();
+        let data: Vec<u8> = qoi::encode_to_vec(bytes, width, height)
+            .map_err(|e| format!("Could not build QOI image: {e}"))?;
+        let uncompressed_size: usize = data.len();
 
-            let mut encoder = bzip2::write::BzEncoder::new(Vec::new(), bzip2::Compression::best());
-            encoder.write_all(&data)
-                .map_err(|e| format!("Could not write QOI image data to BZip2 archive: {e}"))?;
-            drop(data);
-            let compressed_data: Vec<u8> = encoder.finish()
-                .map_err(|e| format!("Could not finish compressing Bzip2 QOI image: {e}"))?;
-            Some(ImageData {
-                compressed_data,
-                uncompressed_size,
-                width,
-                height,
-            })
-        } else {
-            None
-        };
-        compressed_images.lock().unwrap().push(data);
+        let mut encoder = bzip2::write::BzEncoder::new(Vec::new(), bzip2::Compression::best());
+        encoder.write_all(&data)
+            .map_err(|e| format!("Could not write QOI image data to BZip2 archive: {e}"))?;
+        drop(data);
+        let compressed_data: Vec<u8> = encoder.finish()
+            .map_err(|e| format!("Could not finish compressing Bzip2 QOI image: {e}"))?;
+        
+        compressed_images.lock().unwrap().push(ImageData { 
+            compressed_data,
+            uncompressed_size,
+            width, 
+            height, 
+        });
         Ok(())
     }).map_err(|e: String| format!("Error while rendering bzip2 qoi images: {e}"))?;
     
