@@ -62,6 +62,7 @@ fn build_texture_page(builder: &mut DataBuilder, general_info: &GMGeneralInfo, i
 fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralInfo, index: usize, image: &DynamicImage) -> Result<(), String> {
     // log::warn!("");
     // let t_start1 = cpu_time::ProcessTime::now();
+
     // padding
     while builder.len() % 0x80 != 0 {
         builder.write_u8(0);
@@ -95,11 +96,12 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
     // log::debug!("Encoding image into QOI took {}", t_start2.elapsed().ms());
     
     // let t_start2 = cpu_time::ProcessTime::now();
-    let mut encoder: BzEncoder<&[u8]> = BzEncoder::new(uncompressed_data.as_slice(), bzip2::Compression::best());
-    let mut data: Vec<u8> = Vec::with_capacity(uncompressed_data.len());
-    encoder.read_to_end(&mut data)
-        .map_err(|e| format!("Could not write QOI image data to BZip2 archive: {e}"))?;
-    drop(uncompressed_data);
+    let data: Vec<u8> = my_bzip::compress_parallel(&uncompressed_data, 32);
+    // let mut encoder: BzEncoder<&[u8]> = BzEncoder::new(uncompressed_data.as_slice(), bzip2::Compression::best());
+    // let mut data: Vec<u8> = Vec::with_capacity(uncompressed_data.len());
+    // encoder.read_to_end(&mut data)
+    //     .map_err(|e| format!("Could not write QOI image data to BZip2 archive: {e}"))?;
+    // drop(uncompressed_data);
     let data_size: usize = data.len();
     // log::debug!("Compressing QOI image data using Bzip2 took {}", t_start2.elapsed().ms());
 
