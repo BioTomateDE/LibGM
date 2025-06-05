@@ -1,10 +1,21 @@
+use rayon::iter::ParallelIterator;
 use std::io::Write;
+use std::sync::Mutex;
 use image::DynamicImage;
-use crate::debug_utils::DurationExt;
+use rayon::prelude::IntoParallelIterator;
+use rayon::ThreadPool;
 use crate::deserialize::all::GMData;
 use crate::deserialize::embedded_textures::{GMEmbeddedTexture, MAGIC_BZ2_QOI_HEADER};
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
+
+
+struct ImageData {
+    compressed_data: Vec<u8>,
+    uncompressed_size: usize,
+    width: u32,
+    height: u32,
+}
 
 
 pub fn build_chunk_txtr(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
@@ -21,10 +32,12 @@ pub fn build_chunk_txtr(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         build_texture_page(builder, &gm_data.general_info, i, texture_page)
             .map_err(|e| format!("{e} for texture page #{i} and \"index in group\" #{:?}", texture_page.index_in_group))?;
     }
+    
+    let texture_page_images_compressed: Vec<Option<ImageData>> = render_image_bz2_qoi(gm_data.texture_pages.iter().map(|i| &i.image).collect())?;
 
-    for (i, texture_page) in gm_data.texture_pages.iter().enumerate() {
-        if let Some(ref image) = texture_page.image {
-            build_texture_page_image(builder, &gm_data.general_info, i, image)?;
+    for (i, compressed_image) in texture_page_images_compressed.iter().enumerate() {
+        if let Some(image_data) = compressed_image {
+            build_texture_page_image(builder, &gm_data.general_info, i, image_data)?;
         }
     }
 
@@ -58,8 +71,7 @@ fn build_texture_page(builder: &mut DataBuilder, general_info: &GMGeneralInfo, i
     Ok(())
 }
 
-fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralInfo, index: usize, image: &DynamicImage) -> Result<(), String> {
-    let t_start1 = cpu_time::ProcessTime::now();
+fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralInfo, index: usize, image_data: &ImageData) -> Result<(), String> {
     // padding
     while builder.len() % 0x80 != 0 {
         builder.write_u8(0);
@@ -67,36 +79,59 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
     
     builder.resolve_pointer(GMPointer::TexturePageData(index))?;
 
-    let width: u32 = image.width();
-    let height: u32 = image.height();
-    let bytes: Vec<u8> = image.to_rgba8().into_raw();
-
-    let data: Vec<u8> = qoi::encode_to_vec(bytes, width, height)
-        .map_err(|e| format!("Could not build QOI image for texture page #{index}: {e}"))?;
-    let uncompressed_size: usize = data.len();
-
-    let t_start2 = cpu_time::ProcessTime::now();
-    let mut encoder = bzip2::write::BzEncoder::new(Vec::new(), bzip2::Compression::best());
-    encoder.write_all(&data)
-        .map_err(|e| format!("Could not write QOI image data to BZip2 archive: {e}"))?;
-    drop(data);
-    let compressed_data: Vec<u8> = encoder.finish()
-        .map_err(|e| format!("Could not finish compressing Bzip2 QOI image: {e}"))?;
-    let compressed_size: usize = compressed_data.len();
-    log::debug!("Compressing QOI image data using Bzip2 took {}", t_start2.elapsed().ms());
-
     builder.write_bytes(MAGIC_BZ2_QOI_HEADER);
-    builder.write_u16(width as u16);
-    builder.write_u16(height as u16);
+    builder.write_u16(image_data.width as u16);
+    builder.write_u16(image_data.height as u16);
+    
     if general_info.is_version_at_least(2022, 5, 0, 0) {
-        builder.write_usize(uncompressed_size);
+        builder.write_usize(image_data.uncompressed_size);
     }
-    builder.write_bytes(&compressed_data);
+    builder.write_bytes(&image_data.compressed_data);
     
     if general_info.is_version_at_least(2022, 3, 0, 0) {
-        builder.resolve_placeholder(GMPointer::TexturePageDataSize(index), compressed_size as i32)?;
+        builder.resolve_placeholder(GMPointer::TexturePageDataSize(index), image_data.compressed_data.len() as i32)?;
     }
-    log::debug!("Writing image with dimensions {width}x{height} took {}", t_start1.elapsed().ms());
+    
     Ok(())
 }
 
+
+fn render_image_bz2_qoi(images: Vec<&Option<DynamicImage>>) -> Result<Vec<Option<ImageData>>, String> {
+    let pool: ThreadPool = rayon::ThreadPoolBuilder::new()
+        .build().map_err(|e| format!("Could not build rayon thread pool: {e}"))?;
+    
+    let compressed_images= Mutex::new(Vec::with_capacity(images.len()));
+    
+    images.into_par_iter().try_for_each(|image| {
+        let data: Option<ImageData> = if let Some(img) = image {
+            let width: u32 = img.width();
+            let height: u32 = img.height();
+            let bytes: Vec<u8> = img.to_rgba8().into_raw();
+
+            let data: Vec<u8> = qoi::encode_to_vec(bytes, width, height)
+                .map_err(|e| format!("Could not build QOI image: {e}"))?;
+            let uncompressed_size: usize = data.len();
+
+            let mut encoder = bzip2::write::BzEncoder::new(Vec::new(), bzip2::Compression::best());
+            encoder.write_all(&data)
+                .map_err(|e| format!("Could not write QOI image data to BZip2 archive: {e}"))?;
+            drop(data);
+            let compressed_data: Vec<u8> = encoder.finish()
+                .map_err(|e| format!("Could not finish compressing Bzip2 QOI image: {e}"))?;
+            Some(ImageData {
+                compressed_data,
+                uncompressed_size,
+                width,
+                height,
+            })
+        } else {
+            None
+        };
+        compressed_images.lock().unwrap().push(data);
+        Ok(())
+    }).map_err(|e: String| format!("Error while rendering bzip2 qoi images: {e}"))?;
+    
+    
+    
+    Ok(compressed_images.into_inner().map_err(|e| format!("Could not acquire compressed images mutex: {e}"))?)
+}
