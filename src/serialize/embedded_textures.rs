@@ -1,10 +1,9 @@
-use std::io::Read;
-use bzip2::read::BzEncoder;
 use hardqoi::common::QOIHeader;
 use image::DynamicImage;
 use crate::deserialize::all::GMData;
 use crate::deserialize::embedded_textures::{GMEmbeddedTexture, MAGIC_BZ2_QOI_HEADER};
 use crate::deserialize::general_info::GMGeneralInfo;
+use crate::external::bzip2_ffi::bz_compress;
 use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 
 
@@ -95,11 +94,8 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
     // log::debug!("Encoding image into QOI took {}", t_start2.elapsed().ms());
     
     // let t_start2 = cpu_time::ProcessTime::now();
-    let mut encoder: BzEncoder<&[u8]> = BzEncoder::new(uncompressed_data.as_slice(), bzip2::Compression::best());
-    let mut data: Vec<u8> = Vec::with_capacity(uncompressed_data.len());
-    encoder.read_to_end(&mut data)
-        .map_err(|e| format!("Could not write QOI image data to BZip2 archive: {e}"))?;
-    drop(uncompressed_data);
+    let data: Vec<u8> = bz_compress(&uncompressed_data)
+        .map_err(|e| format!("Could not compress QOI image data with BZip2: {e}"))?;
     let data_size: usize = data.len();
     // log::debug!("Compressing QOI image data using Bzip2 took {}", t_start2.elapsed().ms());
 
@@ -117,9 +113,6 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
     // log::debug!("Writing image with dimensions {width}x{height} took {}", t_start1.elapsed().ms());
     Ok(())
 }
-
-
-
 
 
 fn rgba8_to_rgba32(bytes: Vec<u8>) -> Vec<u32> {
