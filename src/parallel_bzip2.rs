@@ -27,7 +27,7 @@ unsafe extern "C" {
     ) -> c_int;
 }
 
-unsafe fn compress_chunk(input: &[u8]) -> Result<Vec<u8>, String> {
+unsafe fn compress_chunk(input: &[u8]) -> Vec<u8> {
     let block_size: i32 = 9;     // max compression (900k blocks)
     let mut output_len: u32 = (input.len() as f32 * 1.01) as u32 + 600;   // bzip2's max formula
 
@@ -43,10 +43,10 @@ unsafe fn compress_chunk(input: &[u8]) -> Result<Vec<u8>, String> {
     );
 
     if ret != 0 {
-        return Err(format!("BZip2 compression failed with error code {ret}"))
+        panic!("BZip2 compression failed with error code {ret}")
     }
     output.set_len(output_len as usize);
-    Ok(output)
+    output
 }
 
 
@@ -58,50 +58,18 @@ pub fn compress_parallel(input: &[u8], chunk_size: usize) -> Result<Vec<u8>, Str
         .map_err(|e| format!("Could not build rayon ThreadPool: {e}"))?;
 
     let chunks: Vec<&[u8]> = input.chunks(chunk_size).collect::<Vec<_>>();
-    let compressed_chunks: Arc<Mutex<Vec<Vec<u8>>>> = Arc::new(Mutex::new(Vec::with_capacity(chunks.len())));
-    let error_flag: Arc<Mutex<Option<Arc<String>>>> = Arc::new(Mutex::new(None));
+    let compressed_chunks: Mutex<Vec<Vec<u8>>> = Mutex::new(Vec::with_capacity(chunks.len()));
 
     pool.install(|| {
         chunks.into_par_iter().for_each(|chunk| {
-            fn set_err(error_flag: &Arc<Mutex<Option<Arc<String>>>>, e: String) {
-                *error_flag.lock().expect("Could not acquire error flag mutex while compressing bzip") = Some(Arc::new(e));
-            }
-
-            if !error_flag.lock().is_ok_and(|i| i.is_none()) {
-                return;   // early return if another thread failed or panicked
-            }
-            match unsafe {compress_chunk(chunk) } {
-                Ok(compressed) => {
-                    let mut chunks_guard: MutexGuard<Vec<Vec<u8>>> = match compressed_chunks.lock() {
-                        Ok(guard) => guard,
-                        Err(e) => {
-                            set_err(&error_flag, format!("Could not acquire compressed chunks mutex: {e}"));
-                            return
-                        },
-                    };
-                    chunks_guard.push(compressed);
-                }
-                Err(e) => set_err(&error_flag, e)
-            }
+            let compressed_chunk: Vec<u8> = unsafe {compress_chunk(chunk) };
+            let mut chunks_guard: MutexGuard<Vec<Vec<u8>>> = compressed_chunks.lock().expect("Could not acquire compressed chunks mutex");
+            chunks_guard.push(compressed_chunk);
         });
     });
-
-    // disgusting error handling (just to avoid unwrap)
-    let error_flag: Option<Arc<String>> = Arc::try_unwrap(error_flag)
-        .map_err(|_| "Could not unwrap error flag arc".to_string())?
-        .into_inner()
-        .map_err(|e| format!("Could not acquire error flag mutex: {e}"))?;
-    
-    if let Some(error_arc) = error_flag {
-        let error_str: String = Arc::try_unwrap(error_arc)
-            .map_err(|_| "Could not unwrap error flag arc".to_string())?;
-        return Err(error_str);
-    }
     
     // combine chunks
-    let compressed_chunks: Vec<Vec<u8>> = Arc::try_unwrap(compressed_chunks)
-        .map_err(|_| "Could not unwrap compressed chunks arc".to_string())?
-        .into_inner()
+    let compressed_chunks: Vec<Vec<u8>> = compressed_chunks.into_inner()
         .map_err(|e| format!("Could not acquire compressed chunks mutex: {e}"))?;
     Ok(compressed_chunks.concat())
 }
