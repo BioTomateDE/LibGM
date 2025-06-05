@@ -120,7 +120,5 @@ fn render_image_bz2_qoi(images: Vec<&DynamicImage>) -> Result<Vec<ImageData>, St
         Ok(())
     }).map_err(|e: String| format!("Error while rendering bzip2 qoi images: {e}"))?;
     
-    
-    
     Ok(compressed_images.into_inner().map_err(|e| format!("Could not acquire compressed images mutex: {e}"))?)
 }
