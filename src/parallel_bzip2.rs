@@ -1,4 +1,5 @@
 use std::ffi::{c_char, c_int};
+use std::mem::MaybeUninit;
 use rayon::prelude::*;
 use std::sync::{Mutex, MutexGuard};
 use rayon::ThreadPool;
@@ -27,32 +28,51 @@ unsafe extern "C" {
     ) -> c_int;
 }
 
-unsafe fn compress_chunk(input: &[u8]) -> Vec<u8> {
-    let block_size: i32 = 9;     // max compression (900k blocks)
-    let mut output_len: u32 = (input.len() as f32 * 1.01) as u32 + 600;   // bzip2's max formula
+unsafe fn compress_chunk(input: &[u8]) -> Result<Vec<u8>, &'static str> {
+    // preallocate maximum possible output size (1% + 600 bytes overhead)
+    let mut output_len: u32 = (input.len() as f32 * 1.01) as u32 + 600;
+    let output: Vec<u8> = Vec::with_capacity(output_len as usize);
 
-    let mut output = Vec::with_capacity(output_len as usize);
+    // use MaybeUninit to avoid zeroing memory
+    let mut output: MaybeUninit<Vec<u8>> = MaybeUninit::new(output);
+    let output_ptr: *mut Vec<u8> = output.as_mut_ptr();
+
+    // perform compression directly into the vector's buffer
     let ret = BZ2_bzBuffToBuffCompress(
-        output.as_mut_ptr() as *mut c_char,
+        (*output_ptr).as_mut_ptr() as *mut c_char,
         &mut output_len,
         input.as_ptr() as *const c_char,
         input.len() as u32,
-        block_size,
-        0,    // verbosity
-        30, // workFactor
+        9,      // 900k block size (max compression)
+        0,         // no verbosity
+        30,      // default work factor
     );
 
     if ret != 0 {
-        panic!("BZip2 compression failed with error code {ret}")
+        return Err(match ret {
+            1 => "BZ_CONFIG_ERROR",
+            2 => "BZ_PARAM_ERROR",
+            3 => "BZ_MEM_ERROR",
+            4 => "BZ_OUTBUFF_FULL",
+            _ => "BZ_UNKNOWN_ERROR",
+        });
     }
+
+    // SAFETY: capacity is sufficient
+    let mut output: Vec<u8> = output.assume_init();
     output.set_len(output_len as usize);
-    output
+
+    // shrink to fit if it was over allocated significantly
+    if output.capacity() > output.len() * 2 {
+        output.shrink_to_fit();
+    }
+
+    Ok(output)
 }
 
 
 pub fn compress_parallel(input: &[u8], chunk_size: usize) -> Result<Vec<u8>, String> {
-    // let num_threads: usize = optimal_thread_count(input.len());
-    let num_threads: usize = 12522;
+    let num_threads: usize = optimal_thread_count(input.len());
     let pool: ThreadPool = rayon::ThreadPoolBuilder::new()
         .num_threads(num_threads)
         .build()
@@ -63,7 +83,12 @@ pub fn compress_parallel(input: &[u8], chunk_size: usize) -> Result<Vec<u8>, Str
 
     pool.install(|| {
         chunks.into_par_iter().for_each(|chunk| {
-            let compressed_chunk: Vec<u8> = unsafe {compress_chunk(chunk) };
+            let compressed_chunk: Vec<u8> = unsafe {
+                match compress_chunk(chunk) {
+                    Ok(c) => c,
+                    Err(e) => panic!("Error while bzip2 compressing chunk: {e}")
+                }
+            };
             let mut chunks_guard: MutexGuard<Vec<Vec<u8>>> = compressed_chunks.lock().expect("Could not acquire compressed chunks mutex");
             chunks_guard.push(compressed_chunk);
         });
