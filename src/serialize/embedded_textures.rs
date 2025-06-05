@@ -1,10 +1,9 @@
-use std::io::Read;
-use bzip2::read::BzEncoder;
 use hardqoi::common::QOIHeader;
 use image::DynamicImage;
 use crate::deserialize::all::GMData;
 use crate::deserialize::embedded_textures::{GMEmbeddedTexture, MAGIC_BZ2_QOI_HEADER};
 use crate::deserialize::general_info::GMGeneralInfo;
+use crate::parallel_bzip2::compress_parallel;
 use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 
 
@@ -92,16 +91,14 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
     hardqoi::encode(&pixels, &mut uncompressed_data, qoi_header).map_err(|(last_pos, pixel_count)| format!(
         "Could not build QOI image for texture page #{index}; last pos is {last_pos} and pixel count is {pixel_count}",
     ))?;
+    drop(pixels);
     let uncompressed_size: usize = uncompressed_data.len();
     // log::debug!("Encoding image into QOI took {}", t_start2.elapsed().ms());
     
     // let t_start2 = cpu_time::ProcessTime::now();
-    let data: Vec<u8> = my_bzip::compress_parallel(&uncompressed_data, 32);
-    // let mut encoder: BzEncoder<&[u8]> = BzEncoder::new(uncompressed_data.as_slice(), bzip2::Compression::best());
-    // let mut data: Vec<u8> = Vec::with_capacity(uncompressed_data.len());
-    // encoder.read_to_end(&mut data)
-    //     .map_err(|e| format!("Could not write QOI image data to BZip2 archive: {e}"))?;
-    // drop(uncompressed_data);
+    let data: Vec<u8> = compress_parallel(&uncompressed_data, 10_000_000)
+        .map_err(|e| format!("Could not write QOI image data to BZip2 archive: {e}"))?;
+    drop(uncompressed_data);
     let data_size: usize = data.len();
     // log::debug!("Compressing QOI image data using Bzip2 took {}", t_start2.elapsed().ms());
 
@@ -112,6 +109,7 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
         builder.write_usize(uncompressed_size);
     }
     builder.write_bytes(&data);
+    drop(data);
     
     if general_info.is_version_at_least(2022, 3, 0, 0) {
         builder.resolve_placeholder(GMPointer::TexturePageDataSize(index), data_size as i32)?;
@@ -119,8 +117,6 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
     // log::debug!("Writing image with dimensions {width}x{height} took {}", t_start1.elapsed().ms());
     Ok(())
 }
-
-
 
 
 

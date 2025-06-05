@@ -27,7 +27,7 @@ unsafe extern "C" {
     ) -> c_int;
 }
 
-pub unsafe fn compress_chunk(input: &[u8]) -> Result<Vec<u8>, String> {
+unsafe fn compress_chunk(input: &[u8]) -> Result<Vec<u8>, String> {
     let block_size: i32 = 9;     // max compression (900k blocks)
     let mut output_len: u32 = (input.len() as f32 * 1.01) as u32 + 600;   // bzip2's max formula
 
@@ -38,7 +38,7 @@ pub unsafe fn compress_chunk(input: &[u8]) -> Result<Vec<u8>, String> {
         input.as_ptr() as *const c_char,
         input.len() as u32,
         block_size,
-        0, // verbosity
+        0,    // verbosity
         30, // workFactor
     );
 
@@ -48,6 +48,7 @@ pub unsafe fn compress_chunk(input: &[u8]) -> Result<Vec<u8>, String> {
     output.set_len(output_len as usize);
     Ok(output)
 }
+
 
 pub fn compress_parallel(input: &[u8], chunk_size: usize) -> Result<Vec<u8>, String> {
     let num_threads: usize = optimal_thread_count(input.len());
