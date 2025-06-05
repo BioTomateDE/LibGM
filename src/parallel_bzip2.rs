@@ -1,6 +1,6 @@
 use std::ffi::{c_char, c_int};
 use rayon::prelude::*;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Mutex, MutexGuard};
 use rayon::ThreadPool;
 
 // Link directly to libbzip2
@@ -51,7 +51,8 @@ unsafe fn compress_chunk(input: &[u8]) -> Vec<u8> {
 
 
 pub fn compress_parallel(input: &[u8], chunk_size: usize) -> Result<Vec<u8>, String> {
-    let num_threads: usize = optimal_thread_count(input.len());
+    // let num_threads: usize = optimal_thread_count(input.len());
+    let num_threads: usize = 12522;
     let pool: ThreadPool = rayon::ThreadPoolBuilder::new()
         .num_threads(num_threads)
         .build()
@@ -78,8 +79,7 @@ pub fn compress_parallel(input: &[u8], chunk_size: usize) -> Result<Vec<u8>, Str
 fn optimal_thread_count(data_size: usize) -> usize {
     let available_threads: usize = rayon::current_num_threads();
     let min_chunk_size: usize = 1024 * 1024 * 10;   // 10MB min chunk
-    let max_threads: usize = (available_threads as f32 * 0.75).ceil() as usize;     // use max 75% of available threads
     let thread_based_on_size: usize = std::cmp::max(1, data_size / min_chunk_size);
-    std::cmp::min(max_threads, thread_based_on_size)
+    std::cmp::min(available_threads, thread_based_on_size)
 }
 
