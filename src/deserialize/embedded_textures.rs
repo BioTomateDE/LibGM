@@ -1,5 +1,6 @@
 use std::cmp::max;
 use std::io::Read;
+use std::sync::Mutex;
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::printing::hexdump;
@@ -19,9 +20,31 @@ pub struct GMEmbeddedTexture {
     pub image: Option<DynamicImage>,
 }
 
+struct GMEmbeddedTextureRaw<'a> {
+    scaled: u32,
+    generated_mips: Option<u32>,
+    texture_width: Option<i32>,
+    texture_height: Option<i32>,
+    index_in_group: Option<i32>,
+    image: Option<RawImage<'a>>,
+}
+
 pub const MAGIC_PNG_HEADER: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
 pub const MAGIC_BZ2_QOI_HEADER: &[u8] = "2zoq".as_bytes();
 pub const MAGIC_QOI_HEADER: &[u8] = "fioq".as_bytes();
+
+
+struct RawImage<'a> {
+    data: &'a [u8],
+    position_in_data: usize,
+    kind: RawImageKind,
+}
+
+enum RawImageKind {
+    Png,
+    Bz2Qoi,
+    // Qoi,
+}
 
 
 pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Vec<GMEmbeddedTexture>, String> {
@@ -33,62 +56,75 @@ pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Re
         texture_pointers.push(chunk.read_usize()? - chunk.abs_pos);
     }
 
-    let mut textures: Vec<GMEmbeddedTexture> = Vec::with_capacity(texture_count);
+    let mut textures_raw: Vec<GMEmbeddedTextureRaw> = Vec::with_capacity(texture_count);
     for texture_start_position in texture_pointers {
         chunk.cur_pos = texture_start_position;
-        let texture: GMEmbeddedTexture = parse_texture(chunk, general_info)?;
-        textures.push(texture);
+
+        let scaled: u32 = chunk.read_u32()?;
+        let mut generated_mips: Option<u32> = None;
+        let mut texture_width: Option<i32> = None;
+        let mut texture_height: Option<i32> = None;
+        let mut index_in_group: Option<i32> = None;
+        // reader directory {}
+
+        if general_info.is_version_at_least(2, 0, 6, 0) {
+            generated_mips = Some(chunk.read_u32()?);
+        }
+        // if general_info.is_version_at_least(2022, 3, 0, 0) {
+        //     texture_block_size = Some(chunk.read_u32()?);
+        // }
+        if general_info.is_version_at_least(2022, 9, 0, 0) {
+            texture_width = Some(chunk.read_i32()?);
+            texture_height = Some(chunk.read_i32()?);
+            index_in_group = Some(chunk.read_i32()?);
+        }
+
+        let texture_abs_start_position: usize = chunk.read_usize()?;
+        // can be zero if the texture is "external"
+        let image: Option<RawImage> = if texture_abs_start_position == 0 { None } else {
+            let texture_start_position: usize = texture_abs_start_position.checked_sub(chunk.abs_pos).ok_or_else(|| format!(
+                "Trying to subtract with overflow for absolute texture start position {0} (0x{0:08X}) with chunk position {1}",
+                texture_abs_start_position, chunk.abs_pos,
+            ))?;
+            chunk.cur_pos = texture_start_position;
+            Some(read_raw_texture(chunk, general_info)?)
+        };
+
+        textures_raw.push(GMEmbeddedTextureRaw {
+            scaled,
+            generated_mips,
+            texture_width,
+            texture_height,
+            index_in_group,
+            image,
+        });
     }
 
-    Ok(textures)
+    let textures: Mutex<Vec<GMEmbeddedTexture>> = Mutex::new(Vec::with_capacity(texture_count));
+    textures_raw.iter().try_for_each(|raw_texture| {
+        let image: Option<DynamicImage> = if let Some(ref raw_img) = raw_texture.image {
+            Some(read_raw_image(raw_img)?)
+        } else {
+            None
+        };
+        textures.lock().unwrap().push(GMEmbeddedTexture {
+            scaled: raw_texture.scaled,
+            generated_mips: raw_texture.generated_mips,
+            texture_width: raw_texture.texture_width,
+            texture_height: raw_texture.texture_height,
+            index_in_group: raw_texture.index_in_group,
+            image,
+        });
+        Ok(())
+    }).map_err(|e: String| format!("Error while parsing bzip2 qoi images: {e}"))?;
+
+    Ok(textures.into_inner().map_err(|e| format!("Could not acquire textures mutex: {e}"))?)
 }
 
 
-fn parse_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GMEmbeddedTexture, String> {
-    let scaled: u32 = chunk.read_u32()?;
-    let mut generated_mips: Option<u32> = None;
-    let mut texture_width: Option<i32> = None;
-    let mut texture_height: Option<i32> = None;
-    let mut index_in_group: Option<i32> = None;
-    // reader directory {}
-
-    if general_info.is_version_at_least(2, 0, 6, 0) {
-        generated_mips = Some(chunk.read_u32()?);
-    }
-    // if general_info.is_version_at_least(2022, 3, 0, 0) {
-    //     texture_block_size = Some(chunk.read_u32()?);
-    // }
-    if general_info.is_version_at_least(2022, 9, 0, 0) {
-        texture_width = Some(chunk.read_i32()?);
-        texture_height = Some(chunk.read_i32()?);
-        index_in_group = Some(chunk.read_i32()?);
-    }
-    
-    let texture_abs_start_position: usize = chunk.read_usize()?;
-    // can be zero if the texture is "external"
-    let image: Option<DynamicImage> = if texture_abs_start_position == 0 { None } else {
-        let texture_start_position: usize = texture_abs_start_position.checked_sub(chunk.abs_pos).ok_or_else(|| format!(
-            "Trying to subtract with overflow for absolute texture start position {0} (0x{0:08X}) with chunk position {1}",
-            texture_abs_start_position, chunk.abs_pos,
-        ))?;
-        chunk.cur_pos = texture_start_position;
-        Some(read_raw_texture(chunk, general_info)?)
-    };
-    
-    Ok(GMEmbeddedTexture {
-        scaled,
-        generated_mips,
-        texture_width,
-        texture_height,
-        index_in_group,
-        image,
-    })
-}
-
-
-fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<DynamicImage, String> {
+fn read_raw_texture<'a>(chunk: &mut GMChunk<'a>, general_info: &GMGeneralInfo) -> Result<RawImage<'a>, String> {
     let start_position: usize = chunk.cur_pos;
-    let header: [u8; 8] = match chunk.data.get(chunk.cur_pos.. chunk.cur_pos+8) {
+    let header: [u8; 8] = match chunk.data.get(chunk.cur_pos..chunk.cur_pos+8) {
         Some(bytes) => bytes.try_into().unwrap(),
         None => return Err(format!(
             "Unexpected end of chunk while trying to read headers of texture at position {} in chunk 'TXTR'",
@@ -113,10 +149,11 @@ fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
             start_position, chunk.cur_pos, chunk.data.len(),
         ))?;
         // png image size checks {~~}
-        let image: DynamicImage = image::load_from_memory(&bytes)
-            .map_err(|e| format!("Could not parse PNG image for texture page at position {start_position} in chunk 'TXTR': \"{e}\""
-        ))?;
-        Ok(image)
+        Ok(RawImage {
+            data: bytes,
+            position_in_data: start_position,
+            kind: RawImageKind::Png,
+        })
     }
     else if header.starts_with(MAGIC_BZ2_QOI_HEADER) {
         // Parse QOI + BZip2
@@ -129,26 +166,41 @@ fn read_raw_texture(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
 
         let end_of_bz2_stream: usize = find_end_of_bz2_stream(chunk)?;
         let compressed_length: usize = end_of_bz2_stream - start_position - header_size;    // maybe negative?? shouldn't ever be though i think
-        let width: usize = ((header[4] as u32) | ((header[5] as u32) << 8)) as usize;
-        let height: usize = ((header[6] as u32) | ((header[7] as u32) << 8)) as usize;
 
         // read entire image (excluding bz2 header) to byte array
         chunk.cur_pos = start_position + header_size;
         let raw_image_data: &[u8] = &chunk.data[chunk.cur_pos.. chunk.cur_pos + compressed_length];
         chunk.cur_pos += compressed_length;
-        let image: DynamicImage = image_from_bz2_qoi(&raw_image_data, width, height)
-            .map_err(|e| format!("{e} while parsing QOI image with dimensions {width}x{height} at position {start_position} in chunk 'TXTR'"))?;
-        Ok(image)
+        Ok(RawImage {
+            data: raw_image_data,
+            position_in_data: start_position,
+            kind: RawImageKind::Bz2Qoi,
+        })
     }
     else if header.starts_with(MAGIC_QOI_HEADER) {
         // Parse QOI
-        return Err(format!("Unhandled QOI image at position {} in chunk 'TXTR'", chunk.cur_pos));
+        return Err(format!("Raw QOI images not yet implemented at position {} in chunk 'TXTR'", chunk.cur_pos));
         // image_from_qoi(chunk.data[chunk..])
     }
     else {
         let dump: String = hexdump(&header, 0, None)?;
         Err(format!("Invalid image header [{dump}] while parsing texture at position {start_position} in chunk 'TXTR'"))
     }
+}
+
+
+fn read_raw_image(raw_image: &RawImage) -> Result<DynamicImage, String> {
+    let dynamic_image: DynamicImage = match &raw_image.kind {
+        RawImageKind::Png => {
+            image::load_from_memory(&raw_image.data)
+                .map_err(|e| format!("Could not parse PNG image for texture page at position {} in chunk 'TXTR': \"{e}\"", raw_image.position_in_data))?
+        }
+        RawImageKind::Bz2Qoi => {
+            image_from_bz2_qoi(&raw_image.data)
+                .map_err(|e| format!("Could not parse PNG image for texture page at position {} in chunk 'TXTR': \"{e}\"", raw_image.position_in_data))?
+        }
+    };
+    Ok(dynamic_image)
 }
 
 
@@ -268,19 +320,19 @@ fn find_end_of_bz2_search(gm_chunk: &mut GMChunk, end_data_position: usize) -> R
 }
 
 
-fn image_from_bz2_qoi(raw_image_data: &[u8], width: usize, height: usize) -> Result<DynamicImage, String> {
+fn image_from_bz2_qoi(raw_image_data: &[u8]) -> Result<DynamicImage, String> {
     let mut decoder: BzDecoder<&[u8]> = BzDecoder::new(raw_image_data);
     let mut decompressed_data: Vec<u8> = Vec::new();
     decoder.read_to_end(&mut decompressed_data)
         .map_err(|e| format!("Could not decode BZip2 data: \"{e}\""))?;
-    image_from_qoi(&decompressed_data, width, height)
+    image_from_qoi(&decompressed_data)
 }
 
-fn image_from_qoi(raw_image_data: &Vec<u8>, width: usize, height: usize) -> Result<DynamicImage, String> {
-    let (_header, bytes) = qoi::decode_to_vec(raw_image_data)
+fn image_from_qoi(raw_image_data: &Vec<u8>) -> Result<DynamicImage, String> {
+    let (header, bytes) = qoi::decode_to_vec(raw_image_data)
         .map_err(|e| format!("Could not decode QOI image: {e}"))?;
     
-    let image = ImageBuffer::<Rgba<u8>, Vec<u8>>::from_raw(width as u32, height as u32, bytes)
+    let image = ImageBuffer::<Rgba<u8>, Vec<u8>>::from_raw(header.width, header.height, bytes)
         .ok_or("Could not construct image::RgbaImage from pixel data")?;
     
     Ok(DynamicImage::ImageRgba8(image))
