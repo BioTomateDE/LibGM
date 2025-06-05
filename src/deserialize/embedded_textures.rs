@@ -268,16 +268,11 @@ fn find_end_of_bz2_search(gm_chunk: &mut GMChunk, end_data_position: usize) -> R
 }
 
 
-fn decode_bzip2(compressed_data: &[u8]) -> Result<Vec<u8>, String> {
-    let mut decoder: BzDecoder<&[u8]> = BzDecoder::new(compressed_data);
+fn image_from_bz2_qoi(raw_image_data: &[u8], width: usize, height: usize) -> Result<DynamicImage, String> {
+    let mut decoder: BzDecoder<&[u8]> = BzDecoder::new(raw_image_data);
     let mut decompressed_data: Vec<u8> = Vec::new();
     decoder.read_to_end(&mut decompressed_data)
         .map_err(|e| format!("Could not decode BZip2 data: \"{e}\""))?;
-    Ok(decompressed_data)
-}
-
-fn image_from_bz2_qoi(raw_image_data: &[u8], width: usize, height: usize) -> Result<DynamicImage, String> {
-    let decompressed_data: Vec<u8> = decode_bzip2(raw_image_data)?;
     image_from_qoi(&decompressed_data, width, height)
 }
 
