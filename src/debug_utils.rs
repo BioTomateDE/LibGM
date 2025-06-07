@@ -1,22 +1,50 @@
-#[macro_export]
-macro_rules! trace_build {
-    ($label:expr, $expr:expr) => {{
+use std::fmt::{Display, Formatter};
+use std::time::{Duration, Instant};
+use cpu_time::ProcessTime;
+
+pub struct Stopwatch {
+    cpu_time: ProcessTime,
+    real_time: Instant,
+}
+impl Stopwatch {
+    pub fn start() -> Self {
+        Self {
+            cpu_time: ProcessTime::now(),
+            real_time: Instant::now(),
+        }
+    }
+    pub fn elapsed_real(&self) -> Duration {
+        self.real_time.elapsed()
+    }
+    pub fn elapsed_cpu(&self) -> Duration {
+        self.cpu_time.elapsed()
+    }
+}
+impl Display for Stopwatch {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         use crate::debug_utils::DurationExt;
-        let _start = ::cpu_time::ProcessTime::now();
-        let result = $expr;
-        ::log::trace!("Building chunk '{}' took {}", $label, _start.elapsed().ms());
-        result
+        write!(f, "real {} | cpu {}", self.real_time.elapsed().ms(), self.cpu_time.elapsed().ms())
+    }
+}
+
+
+#[macro_export]
+macro_rules! bench_build {
+    ($label:expr, $expr:expr) => {{
+        let _start = crate::debug_utils::Stopwatch::start();
+        let _result = $expr;
+        ::log::trace!("Building chunk '{}' took {}", $label, _start);
+        _result
     }};
 }
 
 #[macro_export]
-macro_rules! trace_parse {
+macro_rules! bench_parse {
     ($label:expr, $expr:expr) => {{
-        use crate::debug_utils::DurationExt;
-        let _start = ::cpu_time::ProcessTime::now();
-        let result = $expr;
-        ::log::trace!("Parsing chunk '{}' took {}", $label, _start.elapsed().ms());
-        result
+        let _start = crate::debug_utils::Stopwatch::start();
+        let _result = $expr;
+        ::log::trace!("Parsing chunk '{}' took {}", $label, _start);
+        _result
     }};
 }
 
@@ -24,8 +52,7 @@ macro_rules! trace_parse {
 pub trait DurationExt {
     fn ms(&self) -> String;
 }
-
-impl DurationExt for std::time::Duration {
+impl DurationExt for Duration {
     fn ms(&self) -> String {
         format!("{:.2} ms", self.as_secs_f64() * 1000.0)
     }
