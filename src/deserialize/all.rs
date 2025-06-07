@@ -1,4 +1,4 @@
-use crate::debug_utils::DurationExt;
+use crate::debug_utils::{DurationExt, Stopwatch};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -45,7 +45,7 @@ pub struct GMData {
 }
 
 pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
-    let t_start = cpu_time::ProcessTime::now();
+    let stopwatch = Stopwatch::start();
     
     let mut all = GMChunk {
         name: "".to_string(),
@@ -103,7 +103,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let mut chunk_objt: GMChunk = get_chunk(&chunks, "OBJT")?;
     let mut chunk_path: GMChunk = get_chunk(&chunks, "PATH")?;
     
-    log::trace!("Parsing FORM took {}", t_start.elapsed().ms());
+    log::trace!("Parsing FORM took {stopwatch}");
 
     let strings: GMStrings = bench_parse!("STRG", parse_chunk_strg(&mut chunk_strg)?);
     let general_info: GMGeneralInfo = bench_parse!("GEN8", parse_chunk_gen8(&mut chunk_gen8, &strings)?);
@@ -144,18 +144,22 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
         paths,
     };
 
+    log::trace!("Parsing data took {stopwatch}");
     Ok(data)
 }
 
 
 pub fn read_data_file(data_file_path: &Path) -> Result<Vec<u8>, String> {
-    fs::read(data_file_path)
-        .map_err(|e| format!("Could not read data file with path \"{}\": {e}", data_file_path.display()))
+    let stopwatch = Stopwatch::start();
+    let data: Vec<u8> = fs::read(data_file_path)
+        .map_err(|e| format!("Could not read data file with path \"{}\": {e}", data_file_path.display()))?;
+    log::trace!("Reading data file took {stopwatch}");
+    Ok(data)
 }
 
 fn get_chunk<'a>(chunks: &HashMap<String, GMChunk<'a>>, chunk_name: &str) -> Result<GMChunk<'a>, String> {
     chunks.get(chunk_name)
-        .map(|i| i.to_owned())
+        .map(|i| i.to_owned())  // does not clone chunk data, only metadata
         .ok_or_else(|| format!(
             "Chunk '{}' is missing in data file (chunk hashmap length: {})",
             chunk_name, chunks.len(), 
