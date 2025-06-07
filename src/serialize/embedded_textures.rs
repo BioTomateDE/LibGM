@@ -24,11 +24,11 @@ pub fn build_chunk_txtr(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         build_texture_page(builder, &gm_data.general_info, i, texture_page)
             .map_err(|e| format!("{e} for texture page #{i} and \"index in group\" #{:?}", texture_page.index_in_group))?;
     }
-    
+
     let images: Vec<&DynamicImage> = gm_data.texture_pages.iter().filter_map(|i| i.image.as_ref()).collect();
     let version_2022_5: bool = gm_data.general_info.is_version_at_least(2022, 5, 0, 0);
     let texture_page_images_compressed: Vec<Vec<u8>> = render_image_bz2_qoi(images, version_2022_5)?;
-    
+
     for (i, image_data) in texture_page_images_compressed.iter().enumerate() { 
         build_texture_page_image(builder, &gm_data.general_info, i, image_data)
             .map_err(|e| format!("{e} for texture page #{i}"))?;
@@ -81,20 +81,20 @@ fn render_image_bz2_qoi(images: Vec<&DynamicImage>, version_2022_5: bool) -> Res
     let compressed_images: Mutex<Vec<Vec<u8>>> = Mutex::new(Vec::with_capacity(images.len()));
     
     images.into_par_iter().try_for_each(|image| {
-        let width: u32 = image.width();
-        let height: u32 = image.height();
+        let width: u16 = image.width() as u16;
+        let height: u16 = image.height() as u16;
         let bytes: Vec<u8> = image.to_rgba8().into_raw();
         let data: Vec<u8> = qoi::encode_to_vec(bytes, width, height)
             .map_err(|e| format!("Could not build QOI image: {e}"))?;
 
         let mut buf: Vec<u8> = Vec::with_capacity(data.len() / 2);  // decent estimate
         buf.extend(MAGIC_BZ2_QOI_HEADER);
-        buf.extend((width as u16).to_le_bytes());
-        buf.extend((height as u16).to_le_bytes());
+        buf.extend(width.to_le_bytes());
+        buf.extend(height.to_le_bytes());
         if version_2022_5 {   // write uncompressed size
             buf.extend((data.len() as u32).to_le_bytes());
         }
-        
+
         let mut encoder = bzip2::read::BzEncoder::new(data.as_slice(), bzip2::Compression::best());
         encoder.read_to_end(&mut buf)
             .map_err(|e| format!("Could not BZip2 compress QOI image data: {e}"))?;
