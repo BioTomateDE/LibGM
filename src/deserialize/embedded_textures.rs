@@ -337,8 +337,8 @@ fn image_from_bz2_qoi(raw_image_data: &[u8]) -> Result<DynamicImage, String> {
 
     let (header, rgba_data) = qoi::decode_to_vec(decompressed_data)
         .map_err(|e| format!("Could not decode QOI image: {e}"))?;
-    
-    let image = RgbaImage::from_vec(header.width, header.height, rgba_data)
+
+    let image = RgbaImage::from_vec(u32::from(header.width), u32::from(header.height), rgba_data)
         .ok_or("Could not convert raw RGBA bytes into ImageBuffer")?;
     Ok(DynamicImage::ImageRgba8(image))
 }
