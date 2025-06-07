@@ -8,7 +8,6 @@ use image;
 use bzip2::read::BzDecoder;
 use image::{DynamicImage, ImageBuffer, RgbaImage};
 use rayon::prelude::IntoParallelIterator;
-use crate::debug_utils::unlikely;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMEmbeddedTexture {
