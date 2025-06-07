@@ -6,7 +6,6 @@ use rayon::prelude::IntoParallelIterator;
 use crate::deserialize::all::GMData;
 use crate::deserialize::embedded_textures::{GMEmbeddedTexture, MAGIC_BZ2_QOI_HEADER};
 use crate::deserialize::general_info::GMGeneralInfo;
-use crate::serialize::qoi;
 use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 
 
@@ -84,8 +83,8 @@ fn render_image_bz2_qoi(images: Vec<&DynamicImage>, version_2022_5: bool) -> Res
     images.into_par_iter().try_for_each(|image| {
         let width: u32 = image.width();
         let height: u32 = image.height();
-        
-        let data: Vec<u8> = qoi::to_bytes_le(&image)
+        let bytes: Vec<u8> = image.to_rgba8().into_raw();
+        let data: Vec<u8> = qoi::encode_to_vec(bytes, width, height)
             .map_err(|e| format!("Could not build QOI image: {e}"))?;
 
         let mut buf: Vec<u8> = Vec::with_capacity(data.len() / 2);  // decent estimate

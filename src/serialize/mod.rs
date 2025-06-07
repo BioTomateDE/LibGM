@@ -18,4 +18,3 @@ mod paths;
 mod rooms;
 mod variables;
 mod code;
-pub(super) mod qoi;
