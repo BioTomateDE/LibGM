@@ -165,12 +165,10 @@ fn read_raw_texture<'a>(chunk: &mut GMChunk<'a>, general_info: &GMGeneralInfo) -
         }
 
         let end_of_bz2_stream: usize = find_end_of_bz2_stream(chunk)?;
-        let compressed_length: usize = end_of_bz2_stream - start_position - header_size;    // maybe negative?? shouldn't ever be though i think
-
         // read entire image (excluding bz2 header) to byte array
         chunk.cur_pos = start_position + header_size;
-        let raw_image_data: &[u8] = &chunk.data[chunk.cur_pos.. chunk.cur_pos + compressed_length];
-        chunk.cur_pos += compressed_length;
+        let raw_image_data: &[u8] = &chunk.data[start_position+header_size .. end_of_bz2_stream];
+        chunk.cur_pos = end_of_bz2_stream;
         Ok(RawImage {
             data: raw_image_data,
             position_in_data: start_position,
