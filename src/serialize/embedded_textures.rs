@@ -6,6 +6,7 @@ use rayon::prelude::IntoParallelIterator;
 use crate::deserialize::all::GMData;
 use crate::deserialize::embedded_textures::{GMEmbeddedTexture, MAGIC_BZ2_QOI_HEADER};
 use crate::deserialize::general_info::GMGeneralInfo;
+use crate::serialize::qoi;
 use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 
 
@@ -83,18 +84,16 @@ fn render_image_bz2_qoi(images: Vec<&DynamicImage>, version_2022_5: bool) -> Res
     images.into_par_iter().try_for_each(|image| {
         let width: u32 = image.width();
         let height: u32 = image.height();
-        let bytes: Vec<u8> = image.to_rgba8().into_raw();
-
-        let data: Vec<u8> = qoi::encode_to_vec(bytes, width, height)
+        
+        let data: Vec<u8> = qoi::to_bytes_le(&image)
             .map_err(|e| format!("Could not build QOI image: {e}"))?;
-        let uncompressed_size: usize = data.len();
 
-        let mut buf: Vec<u8> = Vec::with_capacity((width*height*4) as usize);
+        let mut buf: Vec<u8> = Vec::with_capacity(data.len() / 2);  // decent estimate
         buf.extend(MAGIC_BZ2_QOI_HEADER);
         buf.extend((width as u16).to_le_bytes());
         buf.extend((height as u16).to_le_bytes());
-        if version_2022_5 {
-            buf.extend((uncompressed_size as u32).to_le_bytes());
+        if version_2022_5 {   // write uncompressed size
+            buf.extend((data.len() as u32).to_le_bytes());
         }
         
         let mut encoder = bzip2::read::BzEncoder::new(data.as_slice(), bzip2::Compression::best());
@@ -108,3 +107,4 @@ fn render_image_bz2_qoi(images: Vec<&DynamicImage>, version_2022_5: bool) -> Res
     
     Ok(compressed_images.into_inner().map_err(|e| format!("Could not acquire compressed images Mutex: {e}"))?)
 }
+
