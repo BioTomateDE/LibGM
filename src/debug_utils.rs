@@ -1,5 +1,6 @@
 use std::fmt::{Display, Formatter};
 use std::time::{Duration, Instant};
+use colored::Colorize;
 use cpu_time::ProcessTime;
 
 pub struct Stopwatch {
@@ -23,7 +24,10 @@ impl Stopwatch {
 impl Display for Stopwatch {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         use crate::debug_utils::DurationExt;
-        write!(f, "real {} | cpu {}", self.real_time.elapsed().ms(), self.cpu_time.elapsed().ms())
+        use ::colored::Colorize;
+        let real: Duration = self.real_time.elapsed();
+        let cpu: Duration = self.cpu_time.elapsed();
+        write!(f, "{} {} {}{}", real.ms().bright_magenta(), "(cpu:".dimmed(), cpu.ms().magenta(), ")".dimmed())
     }
 }
 
