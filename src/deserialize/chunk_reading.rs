@@ -1,4 +1,4 @@
-﻿use crate::debug_utils::format_bytes;
+﻿use crate::debug_utils::{format_bytes, likely};
 use crate::deserialize::strings::GMStrings;
 
 // GMRef is for parsing chunks:
@@ -144,7 +144,7 @@ impl GMChunk<'_> {
         let number: u32 = self.read_u32()?;
         let number: usize = number as usize;
 
-        if number < FAILSAFE_AMOUNT {
+        if likely(number < FAILSAFE_AMOUNT) {
             return Ok(number)
         }
         Err(format!(
@@ -171,7 +171,7 @@ impl GMChunk<'_> {
         let number: u32 = u32::from_be_bytes(bytes);
         let number: usize = number as usize;
 
-        if !enable_failsafe || number < FAILSAFE_AMOUNT {
+        if !enable_failsafe || likely(number < FAILSAFE_AMOUNT) {
             return Ok(number);
         }
         Err(format!(
@@ -256,9 +256,9 @@ impl GMChunk<'_> {
 
     pub fn read_gm_string(&mut self, gm_strings: &GMStrings) -> Result<GMRef<String>, String> {
         let string_abs_pos: usize = self.read_usize()?;
-        if gm_strings.abs_pos_to_reference.get(&string_abs_pos).is_none() {
-            log::error!("this is only here for easy breakpoints; comment out this if statement otherwise")
-        }
+        // if gm_strings.abs_pos_to_reference.get(&string_abs_pos).is_none() {
+        //     log::error!("this is only here for easy breakpoints; comment out this if statement otherwise")
+        // }
         let string_ref = gm_strings.abs_pos_to_reference.get(&string_abs_pos)
             .ok_or_else(|| format!(
                 "Could not read reference string with absolute position {} in chunk '{}' at \
