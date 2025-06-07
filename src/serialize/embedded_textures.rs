@@ -1,6 +1,5 @@
 use rayon::iter::ParallelIterator;
 use std::io::Read;
-use std::sync::Mutex;
 use image::DynamicImage;
 use rayon::prelude::IntoParallelIterator;
 use crate::deserialize::all::GMData;
@@ -78,9 +77,7 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
 
 
 fn render_image_bz2_qoi(images: Vec<&DynamicImage>, version_2022_5: bool) -> Result<Vec<Vec<u8>>, String> {
-    let compressed_images: Mutex<Vec<Vec<u8>>> = Mutex::new(Vec::with_capacity(images.len()));
-    
-    images.into_par_iter().try_for_each(|image| {
+    images.into_par_iter().map(|image| {
         let width: u16 = image.width() as u16;
         let height: u16 = image.height() as u16;
         let data: Vec<u8> = match image {
@@ -106,10 +103,7 @@ fn render_image_bz2_qoi(images: Vec<&DynamicImage>, version_2022_5: bool) -> Res
             .map_err(|e| format!("Could not BZip2 compress QOI image data: {e}"))?;
         drop(data);
         
-        compressed_images.lock().unwrap().push(buf);
-        Ok(())
-    }).map_err(|e: String| format!("Error while rendering BZip2 QOI images: {e}"))?;
-    
-    Ok(compressed_images.into_inner().map_err(|e| format!("Could not acquire compressed images Mutex: {e}"))?)
+        Ok(buf)
+    }).collect()
 }
 

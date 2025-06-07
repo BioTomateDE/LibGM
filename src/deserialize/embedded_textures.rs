@@ -1,12 +1,13 @@
+use rayon::iter::ParallelIterator;
 use std::cmp::max;
 use std::io::Read;
-use std::sync::Mutex;
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::printing::hexdump;
 use image;
 use bzip2::read::BzDecoder;
 use image::{DynamicImage, ImageBuffer, RgbaImage};
+use rayon::prelude::IntoParallelIterator;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMEmbeddedTexture {
@@ -100,26 +101,22 @@ pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Re
         });
     }
 
-    let textures: Mutex<Vec<GMEmbeddedTexture>> = Mutex::new(Vec::with_capacity(texture_count));
-    textures_raw.iter().try_for_each(|raw_texture| {
+    let textures: Result<Vec<GMEmbeddedTexture>, String> = textures_raw.into_par_iter().map(|raw_texture| {
         let image: Option<DynamicImage> = if let Some(ref raw_img) = raw_texture.image {
             Some(read_raw_image(raw_img).map_err(|e| format!("{e} for texture page at position {} in chunk 'TXTR'", raw_img.position_in_data))?)
         } else {
             None
         };
-        textures.lock().unwrap().push(GMEmbeddedTexture {
+        Ok(GMEmbeddedTexture {
             scaled: raw_texture.scaled,
             generated_mips: raw_texture.generated_mips,
             texture_width: raw_texture.texture_width,
             texture_height: raw_texture.texture_height,
             index_in_group: raw_texture.index_in_group,
             image,
-        });
-        Ok(())
-    }).map_err(|e: String| format!("Error while parsing texture page images: {e}"))?;
-
-    let textures = textures.into_inner()
-        .map_err(|e| format!("Could not acquire textures Mutex: {e}"))?;
+        })
+    }).collect();
+    let textures: Vec<GMEmbeddedTexture> = textures.map_err(|e| format!("Error while parsing texture page images: {e}"))?;
 
     // for (i, texture) in textures.iter().enumerate() {
     //     if let Some(ref img) = texture.image {
