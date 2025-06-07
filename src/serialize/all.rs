@@ -1,4 +1,4 @@
-use crate::debug_utils::DurationExt;
+use crate::debug_utils::{DurationExt, Stopwatch};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -25,6 +25,7 @@ use crate::bench_build;
 
 
 pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
+    let stopwatch_all = Stopwatch::start();
     let mut builder = DataBuilder {
         raw_data: Vec::new(),
         chunk_start_pos: None,
@@ -62,7 +63,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     let raw_data_len: i32 = builder.len() as i32 - 8;
     builder.resolve_placeholder(GMPointer::FormLength, raw_data_len)?;
     
-    let t_start = cpu_time::ProcessTime::now();
+    let stopwatch_placeholders = Stopwatch::start();
     // resolve pointer placeholders
     for (placeholder_position, pointer) in &builder.pool_placeholders {
         let resource_data: i32 = *builder.placeholder_pool_resources.get(&pointer)
@@ -82,14 +83,18 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
         }
     }
     
-    log::trace!("Resolving {} pointers took {}", builder.pool_placeholders.len(), t_start.elapsed().ms());
+    log::trace!("Resolving {} pointers took {stopwatch_placeholders}", builder.pool_placeholders.len());
+    log::trace!("Building data took {stopwatch_all}");
 
     Ok(builder.raw_data)
 }
 
 
 pub fn write_data_file(data_file_path: &Path, raw_data: &[u8]) -> Result<(), String> {
+    let stopwatch = Stopwatch::start();
     fs::write(data_file_path, raw_data)
-        .map_err(|e| format!("Could not write data file to location \"{}\": {e}", data_file_path.display()))
+        .map_err(|e| format!("Could not write data file to location \"{}\": {e}", data_file_path.display()))?;
+    log::trace!("Writing data file took {stopwatch}");
+    Ok(())
 }
 
