@@ -1,4 +1,5 @@
 ﻿use std::collections::HashMap;
+use crate::debug_utils::unlikely;
 use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use crate::deserialize::code::parse_occurrence_chain;
 use crate::deserialize::general_info::GMGeneralInfo;

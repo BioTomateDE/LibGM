@@ -8,6 +8,7 @@ use image;
 use bzip2::read::BzDecoder;
 use image::{DynamicImage, ImageBuffer, RgbaImage};
 use rayon::prelude::IntoParallelIterator;
+use crate::debug_utils::unlikely;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMEmbeddedTexture {
@@ -147,6 +148,7 @@ fn read_raw_texture<'a>(chunk: &mut GMChunk<'a>, general_info: &GMGeneralInfo) -
             let len: usize = chunk.read_usize_big_endian(true)?;
             let type_: usize = chunk.read_usize_big_endian(false)?;
             chunk.cur_pos += len + 4;
+            // TODO check average iteration count, maybe add unlikely(). but make sure it is actually faster
             if type_ == 0x49454E44 {    // no idea lol
                 break;
             }
