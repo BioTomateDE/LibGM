@@ -117,8 +117,19 @@ pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Re
         });
         Ok(())
     }).map_err(|e: String| format!("Error while parsing bzip2 qoi images: {e}"))?;
+    
+    let textures = textures.into_inner()
+        .map_err(|e| format!("Could not acquire textures Mutex: {e}"))?;
 
-    Ok(textures.into_inner().map_err(|e| format!("Could not acquire textures mutex: {e}"))?)
+    // for (i, texture) in textures.iter().enumerate() {
+    //     if let Some(ref img) = texture.image {
+    //         use std::path::PathBuf;
+    //         let path = PathBuf::from(format!("./_texture_pages/{i}.png"));
+    //         img.save(path).map_err(|e| format!("Could not save image #{i}: {e}"))?;
+    //     }
+    // }
+        
+    Ok(textures)
 }
 
 
