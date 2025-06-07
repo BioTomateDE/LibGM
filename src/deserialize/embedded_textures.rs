@@ -6,8 +6,7 @@ use crate::deserialize::general_info::GMGeneralInfo;
 use crate::printing::hexdump;
 use image;
 use bzip2::read::BzDecoder;
-use image::DynamicImage;
-use crate::deserialize::qoi;
+use image::{DynamicImage, RgbaImage};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMEmbeddedTexture {
@@ -118,7 +117,7 @@ pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Re
         });
         Ok(())
     }).map_err(|e: String| format!("Error while parsing texture page images: {e}"))?;
-    
+
     let textures = textures.into_inner()
         .map_err(|e| format!("Could not acquire textures Mutex: {e}"))?;
 
@@ -129,7 +128,7 @@ pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Re
     //         img.save(path).map_err(|e| format!("Could not save image #{i}: {e}"))?;
     //     }
     // }
-        
+
     Ok(textures)
 }
 
@@ -335,7 +334,11 @@ fn image_from_bz2_qoi(raw_image_data: &[u8]) -> Result<DynamicImage, String> {
     let mut decompressed_data: Vec<u8> = Vec::new();
     decoder.read_to_end(&mut decompressed_data)
         .map_err(|e| format!("Could not decode BZip2 data: \"{e}\""))?;
-    let image: DynamicImage = qoi::from_bytes_le(&decompressed_data)
+
+    let (header, rgba_data) = qoi::decode_to_vec(decompressed_data)
         .map_err(|e| format!("Could not decode QOI image: {e}"))?;
-    Ok(image)
+    
+    let image = RgbaImage::from_vec(header.width, header.height, rgba_data)
+        .ok_or("Could not convert raw RGBA bytes into ImageBuffer")?;
+    Ok(DynamicImage::ImageRgba8(image))
 }
