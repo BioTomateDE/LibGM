@@ -83,9 +83,14 @@ fn render_image_bz2_qoi(images: Vec<&DynamicImage>, version_2022_5: bool) -> Res
     images.into_par_iter().try_for_each(|image| {
         let width: u16 = image.width() as u16;
         let height: u16 = image.height() as u16;
-        let bytes: Vec<u8> = image.to_rgba8().into_raw();
-        let data: Vec<u8> = qoi::encode_to_vec(bytes, width, height)
-            .map_err(|e| format!("Could not build QOI image: {e}"))?;
+        let data: Vec<u8> = match image {
+            DynamicImage::ImageRgba8(i) => {
+                qoi::encode_to_vec(i.as_raw(), width, height)
+            },
+            _ => {
+                qoi::encode_to_vec(image.to_rgba8().as_raw(), width, height)
+            },
+        }.map_err(|e| format!("Could not build QOI image: {e}"))?;
 
         let mut buf: Vec<u8> = Vec::with_capacity(data.len() / 2);  // decent estimate
         buf.extend(MAGIC_BZ2_QOI_HEADER);
@@ -94,6 +99,7 @@ fn render_image_bz2_qoi(images: Vec<&DynamicImage>, version_2022_5: bool) -> Res
         if version_2022_5 {   // write uncompressed size
             buf.extend((data.len() as u32).to_le_bytes());
         }
+        // buf.extend(data);
 
         let mut encoder = bzip2::read::BzEncoder::new(data.as_slice(), bzip2::Compression::best());
         encoder.read_to_end(&mut buf)

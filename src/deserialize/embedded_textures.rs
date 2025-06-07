@@ -6,7 +6,7 @@ use crate::deserialize::general_info::GMGeneralInfo;
 use crate::printing::hexdump;
 use image;
 use bzip2::read::BzDecoder;
-use image::{DynamicImage, RgbaImage};
+use image::{DynamicImage, ImageBuffer, RgbaImage};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMEmbeddedTexture {
@@ -103,7 +103,7 @@ pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Re
     let textures: Mutex<Vec<GMEmbeddedTexture>> = Mutex::new(Vec::with_capacity(texture_count));
     textures_raw.iter().try_for_each(|raw_texture| {
         let image: Option<DynamicImage> = if let Some(ref raw_img) = raw_texture.image {
-            Some(read_raw_image(raw_img)?)
+            Some(read_raw_image(raw_img).map_err(|e| format!("{e} for texture page at position {} in chunk 'TXTR'", raw_img.position_in_data))?)
         } else {
             None
         };
@@ -201,12 +201,35 @@ fn read_raw_texture<'a>(chunk: &mut GMChunk<'a>, general_info: &GMGeneralInfo) -
 fn read_raw_image(raw_image: &RawImage) -> Result<DynamicImage, String> {
     let dynamic_image: DynamicImage = match &raw_image.kind {
         RawImageKind::Png => {
-            image::load_from_memory(&raw_image.data)
-                .map_err(|e| format!("Could not parse PNG image for texture page at position {} in chunk 'TXTR': {e}", raw_image.position_in_data))?
+            let decoder = png::Decoder::new(raw_image.data);
+            let mut reader = decoder.read_info().map_err(|e| format!("Could not read PNG metadata: {e}"))?;
+            let mut buf: Vec<u8> = vec![0; reader.output_buffer_size()];
+            let info = reader.next_frame(&mut buf).map_err(|e| format!("Could not read PNG data: {e}"))?;
+            match info.color_type {
+                png::ColorType::Rgb => {
+                    ImageBuffer::from_raw(info.width, info.height, buf)
+                        .map(DynamicImage::ImageRgb8)
+                        .ok_or_else(|| format!(
+                            "Invalid PNG dimensions at position {}: {}x{}",
+                            raw_image.position_in_data, info.width, info.height,
+                        ))?
+                }
+                png::ColorType::Rgba => {
+                    ImageBuffer::from_raw(info.width, info.height, buf)
+                        .map(DynamicImage::ImageRgba8)
+                        .ok_or_else(|| format!(
+                            "Invalid PNG dimensions at position {}: {}x{}",
+                            raw_image.position_in_data, info.width, info.height,
+                        ))?
+                }
+                _ => return Err(format!(
+                    "Unsupported PNG color type at position {}: {:?}",
+                    raw_image.position_in_data, info.color_type,
+                )),
+            }
         }
         RawImageKind::Bz2Qoi => {
-            image_from_bz2_qoi(&raw_image.data)
-                .map_err(|e| format!("Could not parse Bz2 QOI image for texture page at position {} in chunk 'TXTR': {e}", raw_image.position_in_data))?
+            image_from_bz2_qoi(&raw_image.data).map_err(|e| format!("Could not parse BZip2 QOI image: {e}"))?
         }
     };
     Ok(dynamic_image)

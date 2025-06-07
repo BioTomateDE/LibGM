@@ -1,6 +1,7 @@
 #[macro_export]
 macro_rules! trace_build {
     ($label:expr, $expr:expr) => {{
+        use crate::debug_utils::DurationExt;
         let _start = ::cpu_time::ProcessTime::now();
         let result = $expr;
         ::log::trace!("Building chunk '{}' took {}", $label, _start.elapsed().ms());
@@ -11,6 +12,7 @@ macro_rules! trace_build {
 #[macro_export]
 macro_rules! trace_parse {
     ($label:expr, $expr:expr) => {{
+        use crate::debug_utils::DurationExt;
         let _start = ::cpu_time::ProcessTime::now();
         let result = $expr;
         ::log::trace!("Parsing chunk '{}' took {}", $label, _start.elapsed().ms());
