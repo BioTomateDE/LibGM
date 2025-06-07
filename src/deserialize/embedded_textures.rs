@@ -6,7 +6,8 @@ use crate::deserialize::general_info::GMGeneralInfo;
 use crate::printing::hexdump;
 use image;
 use bzip2::read::BzDecoder;
-use image::{DynamicImage, ImageBuffer, Rgba};
+use image::DynamicImage;
+use crate::deserialize::qoi;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMEmbeddedTexture {
@@ -116,7 +117,7 @@ pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Re
             image,
         });
         Ok(())
-    }).map_err(|e: String| format!("Error while parsing bzip2 qoi images: {e}"))?;
+    }).map_err(|e: String| format!("Error while parsing texture page images: {e}"))?;
     
     let textures = textures.into_inner()
         .map_err(|e| format!("Could not acquire textures Mutex: {e}"))?;
@@ -202,11 +203,11 @@ fn read_raw_image(raw_image: &RawImage) -> Result<DynamicImage, String> {
     let dynamic_image: DynamicImage = match &raw_image.kind {
         RawImageKind::Png => {
             image::load_from_memory(&raw_image.data)
-                .map_err(|e| format!("Could not parse PNG image for texture page at position {} in chunk 'TXTR': \"{e}\"", raw_image.position_in_data))?
+                .map_err(|e| format!("Could not parse PNG image for texture page at position {} in chunk 'TXTR': {e}", raw_image.position_in_data))?
         }
         RawImageKind::Bz2Qoi => {
             image_from_bz2_qoi(&raw_image.data)
-                .map_err(|e| format!("Could not parse PNG image for texture page at position {} in chunk 'TXTR': \"{e}\"", raw_image.position_in_data))?
+                .map_err(|e| format!("Could not parse Bz2 QOI image for texture page at position {} in chunk 'TXTR': {e}", raw_image.position_in_data))?
         }
     };
     Ok(dynamic_image)
@@ -334,16 +335,7 @@ fn image_from_bz2_qoi(raw_image_data: &[u8]) -> Result<DynamicImage, String> {
     let mut decompressed_data: Vec<u8> = Vec::new();
     decoder.read_to_end(&mut decompressed_data)
         .map_err(|e| format!("Could not decode BZip2 data: \"{e}\""))?;
-    image_from_qoi(&decompressed_data)
-}
-
-fn image_from_qoi(raw_image_data: &Vec<u8>) -> Result<DynamicImage, String> {
-    let (header, bytes) = qoi::decode_to_vec(raw_image_data)
+    let image: DynamicImage = qoi::from_bytes_le(&decompressed_data)
         .map_err(|e| format!("Could not decode QOI image: {e}"))?;
-    
-    let image = ImageBuffer::<Rgba<u8>, Vec<u8>>::from_raw(header.width, header.height, bytes)
-        .ok_or("Could not construct image::RgbaImage from pixel data")?;
-    
-    Ok(DynamicImage::ImageRgba8(image))
+    Ok(image)
 }
-
