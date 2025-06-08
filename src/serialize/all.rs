@@ -5,7 +5,7 @@ use std::path::Path;
 use crate::deserialize::all::GMData;
 use crate::serialize::backgrounds::build_chunk_bgnd;
 use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
-use crate::serialize::code::build_chunk_code;
+use crate::serialize::code::{build_chunk_code, Occurrences};
 use crate::serialize::embedded_audio::build_chunk_audo;
 use crate::serialize::embedded_textures::build_chunk_txtr;
 use crate::serialize::fonts::build_chunk_font;
@@ -53,7 +53,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     bench_build!("ROOM", build_chunk_room(&mut builder, &gm_data)?);
     bench_build!("DAFL", build_chunk_dafl(&mut builder, &gm_data)?);      // stub
     bench_build!("TPAG", build_chunk_tpag(&mut builder, &gm_data)?);
-    let (variable_occurrences_map, function_occurrences_map): (HashMap<usize, Vec<usize>>, HashMap<usize, Vec<usize>>) = bench_build!("CODE", build_chunk_code(&mut builder, &gm_data)?);
+    let (variable_occurrences_map, function_occurrences_map): (Occurrences, Occurrences) = bench_build!("CODE", build_chunk_code(&mut builder, &gm_data)?);
     bench_build!("VARI", build_chunk_vari(&mut builder, &gm_data, variable_occurrences_map)?);
     bench_build!("FUNC", build_chunk_func(&mut builder, &gm_data, function_occurrences_map)?);
     bench_build!("STRG", build_chunk_strg(&mut builder, &gm_data)?);
