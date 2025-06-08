@@ -6,8 +6,9 @@ use crate::deserialize::general_info::GMGeneralInfo;
 use crate::printing::hexdump;
 use image;
 use bzip2::read::BzDecoder;
-use image::{DynamicImage, ImageBuffer, RgbaImage};
+use image::{DynamicImage, ImageBuffer};
 use rayon::prelude::IntoParallelIterator;
+use crate::qoi;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMEmbeddedTexture {
@@ -356,10 +357,7 @@ fn image_from_bz2_qoi(raw_image_data: &[u8]) -> Result<DynamicImage, String> {
     decoder.read_to_end(&mut decompressed_data)
         .map_err(|e| format!("Could not decode BZip2 data: \"{e}\""))?;
 
-    let (header, rgba_data) = qoi::decode_to_vec(decompressed_data)
+    let image = qoi::get_image_from_bytes(&decompressed_data)
         .map_err(|e| format!("Could not decode QOI image: {e}"))?;
-
-    let image = RgbaImage::from_vec(u32::from(header.width), u32::from(header.height), rgba_data)
-        .ok_or("Could not convert raw RGBA bytes into ImageBuffer")?;
-    Ok(DynamicImage::ImageRgba8(image))
+    Ok(image)
 }
