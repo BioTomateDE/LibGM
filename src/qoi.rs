@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::io::Read;
 use std::convert::TryInto;
 use image::{DynamicImage, ImageBuffer, Rgba};
 
@@ -18,17 +17,6 @@ const QOI_MASK_2: u8 = 0xc0;
 const QOI_MASK_3: u8 = 0xe0;
 const QOI_MASK_4: u8 = 0xf0;
 
-pub fn get_image_from_stream<R: Read>(mut stream: R) -> Result<DynamicImage, String> {
-    let mut header = [0u8; 12];
-    stream.read_exact(&mut header).map_err(|e| e.to_string())?;
-
-    let length = u32::from_le_bytes(header[8..12].try_into().unwrap()) as usize;
-    let mut bytes = vec![0u8; 12 + length];
-    stream.read_exact(&mut bytes[12..]).map_err(|e| e.to_string())?;
-    bytes[..12].copy_from_slice(&header);
-
-    get_image_from_bytes(&bytes)
-}
 
 pub fn get_image_from_bytes(bytes: &[u8]) -> Result<DynamicImage, String> {
     if bytes.len() < 12 {
@@ -50,12 +38,12 @@ pub fn get_image_from_bytes(bytes: &[u8]) -> Result<DynamicImage, String> {
 
     let pixel_data = &bytes[12..12+length];
 
-    let mut pos = 0;
-    let mut run = 0;
-    let mut r = 0u8;
-    let mut g = 0u8;
-    let mut b = 0u8;
-    let mut a = 255u8;
+    let mut pos: usize = 0;
+    let mut run: usize = 0;
+    let mut r: u8 = 0;
+    let mut g: u8 = 0;
+    let mut b: u8 = 0;
+    let mut a: u8 = 255;
     let mut index = [[0u8; 4]; 64];
 
     let mut img = ImageBuffer::new(width as u32, height as u32);
