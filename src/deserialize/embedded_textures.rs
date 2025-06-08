@@ -361,3 +361,4 @@ fn image_from_bz2_qoi(raw_image_data: &[u8]) -> Result<DynamicImage, String> {
         .map_err(|e| format!("Could not decode QOI image: {e}"))?;
     Ok(image)
 }
+
