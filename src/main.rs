@@ -3,6 +3,7 @@ mod deserialize;
 mod serialize;
 mod export_mod;
 mod debug_utils;
+mod qoi;
 
 use std::path::Path;
 use std::process::exit;
