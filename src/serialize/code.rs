@@ -6,7 +6,9 @@ use crate::deserialize::strings::GMStrings;
 use crate::deserialize::variables::{GMVariable, GMVariables};
 use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 
-pub fn build_chunk_code(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(HashMap<usize, Vec<usize>>, HashMap<usize, Vec<usize>>), String> {
+pub type Occurrences = HashMap<usize, Vec<(usize, Option<GMVariableType>)>>;
+
+pub fn build_chunk_code(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(Occurrences, Occurrences), String> {
     builder.start_chunk("CODE")?;
     let len: usize = gm_data.codes.codes_by_index.len();
     builder.write_usize(len);
@@ -32,9 +34,9 @@ fn build_code_b14(
     variables: &GMVariables,
     functions: &GMFunctions,
     codes: &GMCodes,
-) -> Result<(HashMap<usize, Vec<usize>>, HashMap<usize, Vec<usize>>), String> {
-    let mut variable_occurrences_map: HashMap<usize, Vec<usize>> = HashMap::new();
-    let mut function_occurrences_map: HashMap<usize, Vec<usize>> = HashMap::new();
+) -> Result<(Occurrences, Occurrences), String> {
+    let mut variable_occurrences_map: Occurrences = HashMap::new();
+    let mut function_occurrences_map: Occurrences = HashMap::new();
 
     for (i, code) in codes.codes_by_index.iter().enumerate() {
         builder.resolve_pointer(GMPointer::CodeMeta(i))?;
@@ -60,9 +62,9 @@ fn build_code_b15(
     variables: &GMVariables,
     functions: &GMFunctions,
     codes: &GMCodes,
-) -> Result<(HashMap<usize, Vec<usize>>, HashMap<usize, Vec<usize>>), String> {
-    let mut variable_occurrences_map: HashMap<usize, Vec<usize>> = HashMap::new();
-    let mut function_occurrences_map: HashMap<usize, Vec<usize>> = HashMap::new();
+) -> Result<(Occurrences, Occurrences), String> {
+    let mut variable_occurrences_map: Occurrences = HashMap::new();
+    let mut function_occurrences_map: Occurrences = HashMap::new();
 
     let mut code_start_positions: Vec<usize> = Vec::with_capacity(codes.codes_by_index.len());
 
@@ -109,8 +111,8 @@ fn build_instruction(
     variables: &GMVariables,
     functions: &GMFunctions,
     instruction: &GMInstruction,
-    variable_occurrences_map: &mut HashMap<usize, Vec<usize>>,
-    function_occurrences_map: &mut HashMap<usize, Vec<usize>>,
+    variable_occurrences_map: &mut Occurrences,
+    function_occurrences_map: &mut Occurrences,
 ) -> Result<(), String> {
     let abs_pos: usize = builder.len();
     
@@ -298,22 +300,22 @@ pub fn build_instance_type(instance_type: &GMInstanceType) -> i16 {
 
 fn write_occurrence(
     builder: &mut DataBuilder,
-    occurrence_map: &mut HashMap<usize, Vec<usize>>,
+    occurrence_map: &mut HashMap<usize, Vec<(usize, Option<GMVariableType>)>>,
     gm_index: usize,
     occurrence_position: usize,
     name_string_id: i32,
     variable_type: Option<GMVariableType>,
 ) -> Result<(), String> {
-    let entry: &mut Vec<usize> = occurrence_map
+    let entry: &mut Vec<(usize, Option<GMVariableType>)> = occurrence_map
         .entry(gm_index)
         .or_insert_with(Vec::new);
 
-    if let Some(last_occurrence_position) = entry.last() {
+    if let Some((last_occurrence_pos, old_variable_type)) = entry.last() {
         // replace last occurrence (which is name string id) with next occurrence offset
-        let occurrence_offset: i32 = occurrence_position as i32 - *last_occurrence_position as i32;
-        let variable_type_raw: u8 = if let Some(var_type) = variable_type { var_type.into() } else { 0 };       // TODO idk if variable types are always the same (probably not)
-        let occurrence_offset_full: i32 = occurrence_offset & 0x07FFFFFF | (((variable_type_raw & 0xF8) as i32) << 24);
-        builder.overwrite_i32(occurrence_offset_full, last_occurrence_position + 4)?;
+        let occurrence_offset: i32 = occurrence_position as i32 - *last_occurrence_pos as i32;
+        let old_var_type: u8 = old_variable_type.map(|i| i.into()).unwrap_or(0);
+        let occurrence_offset_full: i32 = occurrence_offset & 0x07FFFFFF | (((old_var_type & 0xF8) as i32) << 24);
+        builder.overwrite_i32(occurrence_offset_full, last_occurrence_pos + 4)?;
     }
 
     // write name string id for this occurrence. this is correct if it is the last occurrence.
@@ -321,6 +323,6 @@ fn write_occurrence(
     let variable_type_raw: u8 = if let Some(var_type) = variable_type { var_type.into() } else { 0 };
     builder.write_i32(name_string_id & 0x07FFFFFF | (((variable_type_raw & 0xF8) as i32) << 24));
 
-    entry.push(occurrence_position);
+    entry.push((occurrence_position, variable_type));
     Ok(())
 }
