@@ -1,9 +1,9 @@
-use std::collections::HashMap;
 use crate::deserialize::all::GMData;
 use crate::deserialize::functions::GMCodeLocal;
 use crate::serialize::chunk_writing::DataBuilder;
+use crate::serialize::code::Occurrences;
 
-pub fn build_chunk_func(builder: &mut DataBuilder, gm_data: &GMData, function_occurrences_map: HashMap<usize, Vec<usize>>) -> Result<(), String> { 
+pub fn build_chunk_func(builder: &mut DataBuilder, gm_data: &GMData, function_occurrences_map: Occurrences) -> Result<(), String> { 
     builder.start_chunk("FUNC")?;
     
     // write functions
@@ -17,7 +17,7 @@ pub fn build_chunk_func(builder: &mut DataBuilder, gm_data: &GMData, function_oc
         
         if let Some(occurrences) = function_occurrences_map.get(&i) {
             builder.write_usize(occurrences.len());
-            builder.write_usize(occurrences[0]);
+            builder.write_usize(occurrences[0].0);
         } else {
             builder.write_i32(0);
             builder.write_i32(function.name_string_id);

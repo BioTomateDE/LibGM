@@ -1,11 +1,11 @@
-use std::collections::HashMap;
 use crate::deserialize::all::GMData;
+use crate::deserialize::code::GMVariableType;
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::variables::{GMVariable, GMVariablesScuffed};
 use crate::serialize::chunk_writing::DataBuilder;
-use crate::serialize::code::build_instance_type;
+use crate::serialize::code::{build_instance_type, Occurrences};
 
-pub fn build_chunk_vari(builder: &mut DataBuilder, gm_data: &GMData, variable_occurrences_map: HashMap<usize, Vec<usize>>) -> Result<(), String> {
+pub fn build_chunk_vari(builder: &mut DataBuilder, gm_data: &GMData, variable_occurrences_map: Occurrences) -> Result<(), String> {
     builder.start_chunk("VARI")?;
 
     if gm_data.general_info.bytecode_version >= 15 {
@@ -29,7 +29,7 @@ pub fn build_chunk_vari(builder: &mut DataBuilder, gm_data: &GMData, variable_oc
 }
 
 
-fn build_variable(builder: &mut DataBuilder, general_info: &GMGeneralInfo, variable: &GMVariable, variable_occurrences: Option<&Vec<usize>>) -> Result<(), String> {
+fn build_variable(builder: &mut DataBuilder, general_info: &GMGeneralInfo, variable: &GMVariable, variable_occurrences: Option<&Vec<(usize, Option<GMVariableType>)>>) -> Result<(), String> {
     builder.write_gm_string(&variable.name)?;
     if general_info.bytecode_version >= 15 {
         builder.write_i32(build_instance_type(&variable.instance_type) as i32);
@@ -38,7 +38,7 @@ fn build_variable(builder: &mut DataBuilder, general_info: &GMGeneralInfo, varia
     
     if let Some(occurrences) = variable_occurrences {
         builder.write_usize(occurrences.len());
-        builder.write_usize(occurrences[0]);
+        builder.write_usize(occurrences[0].0);
     } else {
         builder.write_i32(0);      // TODO not sure if this should be 0 or -1   (same for functions)
         builder.write_i32(variable.name_string_id);
