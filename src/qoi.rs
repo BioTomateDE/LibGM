@@ -193,10 +193,7 @@ pub fn get_bytes_from_image(img: &DynamicImage) -> Vec<u8> {
                         && (-2..2).contains(&vg)
                         && (-2..2).contains(&vb)
                     {
-                        buffer[res_pos] = QOI_DIFF_8
-                            | (((vr + 2) as u8) << 4 & 0x30)
-                            | (((vg + 2) as u8) << 2 & 0x0c)
-                            | ((vb + 2) as u8 & 0x03);
+                        buffer[res_pos] = QOI_DIFF_8 | ((vr as u8) << 4 & 0x30) | ((vg as u8) << 2 & 0x0c) | (vb as u8 & 0x03);
                         res_pos += 1;
                     } else if va == 0
                         && (-8..8).contains(&vg)
@@ -220,7 +217,6 @@ pub fn get_bytes_from_image(img: &DynamicImage) -> Vec<u8> {
 
                     buffer[res_pos] = QOI_COLOR | flags;
                     res_pos += 1;
-
                     if flags & 0x08 != 0 { buffer[res_pos] = r; res_pos += 1; }
                     if flags & 0x04 != 0 { buffer[res_pos] = g; res_pos += 1; }
                     if flags & 0x02 != 0 { buffer[res_pos] = b; res_pos += 1; }
