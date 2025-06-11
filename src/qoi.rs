@@ -144,7 +144,7 @@ pub fn get_bytes_from_image(img: &DynamicImage) -> Vec<u8> {
     let mut a: u8;
     let mut run: i32 = 0;
     let mut v: u32;
-    let mut v_prev: u32 = 0xffu32;
+    let mut v_prev: u32 = 0xff;
     let mut index: [u32; 64] = [0; 64];
 
     for raw_data_pos in (0..raw_data_length).step_by(4) {
@@ -202,15 +202,13 @@ pub fn get_bytes_from_image(img: &DynamicImage) -> Vec<u8> {
                         && (-8..8).contains(&vg)
                         && (-8..8).contains(&vb)
                     {
-                        buffer[res_pos] = QOI_DIFF_16 | ((vr + 16) as u8 & 0x1f);
-                        buffer[res_pos + 1] = (((vg + 8) as u8) << 4 & 0xf0) | ((vb + 8) as u8 & 0x0f);
+                        buffer[res_pos] = QOI_DIFF_16 | (vr as u8 & 0x1f);
+                        buffer[res_pos + 1] = ((vg as u8) << 4 & 0xf0) | (vb as u8 & 0x0f);
                         res_pos += 2;
                     } else {
-                        buffer[res_pos] = QOI_DIFF_24 | (((vr + 16) >> 1) as u8 & 0x0f);
-                        buffer[res_pos + 1] = (((vr + 16) as u8) << 7 & 0x80)
-                            | (((vg + 32) as u8) << 2 & 0x7c)
-                            | (((vb + 32) >> 3) as u8 & 0x03);
-                        buffer[res_pos + 2] = (((vb + 32) as u8) << 5 & 0xe0) | ((va + 32) as u8 & 0x1f);
+                        buffer[res_pos] = QOI_DIFF_24 | ((vr >> 1) as u8 & 0x0f);
+                        buffer[res_pos + 1] = ((vr as u8) << 7 & 0x80) | ((vg as u8) << 2 & 0x7c) | ((vb >> 3) as u8 & 0x03);
+                        buffer[res_pos + 2] = ((vb as u8) << 5 & 0xe0) | (va as u8 & 0x1f);
                         res_pos += 3;
                     }
                 } else {
