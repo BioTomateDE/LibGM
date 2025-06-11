@@ -38,7 +38,7 @@ pub struct GMRoom {
     pub layers: Option<Vec<GMRoomLayer>>,
     pub sequences: Option<Vec<GMSequence>>,
 }
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMRoomFlags {
     pub enable_views: bool,                 // views are enabled
     pub show_color: bool,                   // meaning uncertain

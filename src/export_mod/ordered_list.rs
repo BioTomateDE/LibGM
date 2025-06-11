@@ -89,8 +89,8 @@ impl<G: Clone, A> diffs::Diff for MyDiffEngine<'_, G, A> {
 
     fn replace(&mut self, old: usize, _old_len: usize, new: usize, new_len: usize) -> Result<(), Self::Error> {
         let data: Map<Iter<G>, fn(&G) -> A> = self.modified_data[new..new+new_len].iter().map(self.map_change);
-        if let Some(DataChange::Edit(_, last_editment_data)) = self.get_last_change() {
-            last_editment_data.extend(data);
+        if let Some(DataChange::Edit(_, last_data_edit)) = self.get_last_change() {
+            last_data_edit.extend(data);
         } else {
             self.changes.push(DataChange::Edit(old, data.collect()))
         }

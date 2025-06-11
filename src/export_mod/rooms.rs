@@ -3,11 +3,111 @@ use std::collections::HashMap;
 use crate::deserialize::rooms::{GMRoom, GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomLayer, GMRoomLayerType, GMRoomTile, GMRoomTileTexture, GMRoomView};
 use crate::deserialize::sequence::GMSequence;
 use crate::export_mod::export::{edit_field, edit_field_option, flag_field, GModData, ModUnorderedRef};
-use crate::export_mod::sequences::ModSequence;
-use crate::export_mod::unordered_list::{export_changes_unordered_list, AModUnorderedListChanges, GModUnorderedListChanges};
+use crate::export_mod::sequences::{AddSequence, EditSequence};
+use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList, GModUnorderedListChanges};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModRoom {
+pub struct AddRoom {
+    pub name: ModUnorderedRef,
+    pub caption: ModUnorderedRef,
+    pub width: u32,
+    pub height: u32,
+    pub speed: u32,
+    pub persistent: bool,
+    pub background_color: u32,
+    pub draw_background_color: bool,
+    pub creation_code: Option<ModUnorderedRef>,
+    pub flags: GMRoomFlags,
+    pub backgrounds: Vec<AddRoomBackground>,
+    pub views: Vec<AddRoomView>,
+    pub game_objects: Vec<AddRoomGameObject>,
+    pub tiles: Vec<AddRoomTile>,
+    pub world: bool,
+    pub top: u32,
+    pub left: u32,
+    pub right: u32,
+    pub bottom: u32,
+    pub gravity_x: f32,
+    pub gravity_y: f32,
+    pub meters_per_pixel: f32,
+    pub layers: Option<Vec<AddRoomLayer>>,
+    pub sequences: Option<Vec<AddSequence>>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddRoomView {
+    pub enabled: bool,
+    pub view_x: i32,
+    pub view_y: i32,
+    pub view_width: i32,
+    pub view_height: i32,
+    pub port_x: i32,
+    pub port_y: i32,
+    pub port_width: i32,
+    pub port_height: i32,
+    pub border_x: u32,
+    pub border_y: u32,
+    pub speed_x: i32,
+    pub speed_y: i32,
+    pub object: Option<ModUnorderedRef>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddRoomBackground {
+    pub enabled: bool,
+    pub foreground: bool,
+    pub background_definition: Option<ModUnorderedRef>, // GMBackground
+    pub x: i32,
+    pub y: i32,
+    pub tile_x: i32,
+    pub tile_y: i32,
+    pub speed_x: i32,
+    pub speed_y: i32,
+    pub stretch: bool,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddRoomTile {
+    pub x: i32,
+    pub y: i32,
+    pub texture: ModRoomTileTexture,
+    pub source_x: u32,
+    pub source_y: u32,
+    pub width: u32,
+    pub height: u32,
+    pub tile_depth: i32,
+    pub instance_id: u32,
+    pub scale_x: f32,
+    pub scale_y: f32,
+    pub color: u32,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddRoomLayer {
+    pub layer_name: ModUnorderedRef, // String
+    pub layer_id: u32,
+    pub layer_type: GMRoomLayerType,
+    pub layer_depth: i32,
+    pub x_offset: f32,
+    pub y_offset: f32,
+    pub horizontal_speed: f32,
+    pub vertical_speed: f32,
+    pub is_visible: bool,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddRoomGameObject {
+    pub x: i32,
+    pub y: i32,
+    pub object_definition: ModUnorderedRef, // GMGameObject
+    pub instance_id: u32,
+    pub creation_code: Option<ModUnorderedRef>,
+    pub scale_x: f32,
+    pub scale_y: f32,
+    pub image_speed: Option<f32>,
+    pub image_index: Option<usize>,
+    pub color: u32,
+    pub rotation: f32,
+    pub pre_create_code: Option<ModUnorderedRef>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EditRoom {
     pub name: Option<ModUnorderedRef>,
     pub caption: Option<ModUnorderedRef>,
     pub width: Option<u32>,
@@ -17,11 +117,11 @@ pub struct ModRoom {
     pub background_color: Option<u32>,
     pub draw_background_color: Option<bool>,
     pub creation_code: Option<ModUnorderedRef>,
-    pub flags: Option<ModRoomFlags>,
-    pub backgrounds: Option<AModUnorderedListChanges<ModRoomBackground>>,
-    pub views: Option<AModUnorderedListChanges<ModRoomView>>,
-    pub game_objects: Option<AModUnorderedListChanges<ModRoomGameObject>>,
-    pub tiles: Option<AModUnorderedListChanges<ModRoomTile>>,
+    pub flags: Option<EditRoomFlags>,
+    pub backgrounds: Option<EditUnorderedList<AddRoomBackground, EditRoomBackground>>,
+    pub views: Option<EditUnorderedList<AddRoomView, EditRoomView>>,
+    pub game_objects: Option<EditUnorderedList<AddRoomGameObject, EditRoomGameObject>>,
+    pub tiles: Option<EditUnorderedList<AddRoomTile, EditRoomTile>>,    // TODO no more Option 
     pub world: Option<bool>,
     pub top: Option<u32>,
     pub left: Option<u32>,
@@ -30,21 +130,19 @@ pub struct ModRoom {
     pub gravity_x: Option<f32>,
     pub gravity_y: Option<f32>,
     pub meters_per_pixel: Option<f32>,
-    pub layers: Option<AModUnorderedListChanges<ModRoomLayer>>,
-    pub sequences: Option<AModUnorderedListChanges<ModSequence>>,
+    pub layers: Option<EditUnorderedList<AddRoomLayer, EditRoomLayer>>,
+    pub sequences: Option<EditUnorderedList<AddSequence, EditSequence>>,
 }
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModRoomFlags {
+pub struct EditRoomFlags {
     pub enable_views: Option<bool>,
     pub show_color: Option<bool>,
     pub dont_clear_display_buffer: Option<bool>,
     pub is_gms2: Option<bool>,
     pub is_gms2_3: Option<bool>,
 }
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModRoomView {
+pub struct EditRoomView {
     pub enabled: Option<bool>,
     pub view_x: Option<i32>,
     pub view_y: Option<i32>,
@@ -60,9 +158,8 @@ pub struct ModRoomView {
     pub speed_y: Option<i32>,
     pub object: Option<ModUnorderedRef>,
 }
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModRoomBackground {
+pub struct EditRoomBackground {
     pub enabled: Option<bool>,
     pub foreground: Option<bool>,
     pub background_definition: Option<ModUnorderedRef>, // GMBackground
@@ -74,9 +171,8 @@ pub struct ModRoomBackground {
     pub speed_y: Option<i32>,
     pub stretch: Option<bool>,
 }
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModRoomTile {
+pub struct EditRoomTile {
     pub x: Option<i32>,
     pub y: Option<i32>,
     pub texture: Option<ModRoomTileTexture>,
@@ -90,15 +186,8 @@ pub struct ModRoomTile {
     pub scale_y: Option<f32>,
     pub color: Option<u32>,
 }
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum ModRoomTileTexture {
-    Sprite(ModUnorderedRef),     // GMSprite
-    Background(ModUnorderedRef), // GMBackground
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModRoomLayer {
+pub struct EditRoomLayer {
     pub layer_name: Option<ModUnorderedRef>, // String
     pub layer_id: Option<u32>,
     pub layer_type: Option<GMRoomLayerType>,
@@ -109,9 +198,8 @@ pub struct ModRoomLayer {
     pub vertical_speed: Option<f32>,
     pub is_visible: Option<bool>,
 }
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModRoomGameObject {
+pub struct EditRoomGameObject {
     pub x: Option<i32>,
     pub y: Option<i32>,
     pub object_definition: Option<ModUnorderedRef>, // GMGameObject
@@ -126,49 +214,55 @@ pub struct ModRoomGameObject {
     pub pre_create_code: Option<ModUnorderedRef>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ModRoomTileTexture {
+    Sprite(ModUnorderedRef),     // GMSprite
+    Background(ModUnorderedRef), // GMBackground
+}
+
 
 impl GModData<'_, '_> {
-    pub fn convert_room_additions(&self, gm_rooms: &Vec<GMRoom>) -> Result<Vec<ModRoom>, String> {
-        let mut mod_rooms = Vec::with_capacity(gm_rooms.len());
-
-        for room in gm_rooms {
-            mod_rooms.push(ModRoom {
-                name: Some(self.resolve_string_ref(&room.name)?),
-                caption: Some(self.resolve_string_ref(&room.caption)?),
-                width: Some(room.width),
-                height: Some(room.height),
-                speed: Some(room.speed),
-                persistent: Some(room.persistent),
-                background_color: Some(room.background_color),
-                draw_background_color: Some(room.draw_background_color),
-                creation_code: if let Some(ref code) = room.creation_code { Some(self.resolve_code_ref(code)?) } else { None },
-                flags: Some(self.convert_room_flags_additions(&room.flags)),
-                backgrounds: Some(AModUnorderedListChanges {additions: self.convert_room_backgrounds_additions(&room.backgrounds)?, edits: HashMap::new()}),
-                views: Some(AModUnorderedListChanges {additions: self.convert_room_views_additions(&room.views)?, edits: HashMap::new()}),
-                game_objects: Some(AModUnorderedListChanges {additions: self.convert_room_game_objects_additions(&room.game_objects)?, edits: HashMap::new()}),
-                tiles: Some(AModUnorderedListChanges {additions: self.convert_room_tiles_additions(&room.tiles)?, edits: HashMap::new()}),
-                world: Some(room.world),
-                top: Some(room.top),
-                left: Some(room.left),
-                right: Some(room.right),
-                bottom: Some(room.bottom),
-                gravity_x: Some(room.gravity_x),
-                gravity_y: Some(room.gravity_y),
-                meters_per_pixel: Some(room.meters_per_pixel),
-                layers: if let Some(ref layers) = room.layers { Some(AModUnorderedListChanges {
-                    additions: self.convert_room_layers_additions(&layers)?,
-                    edits: HashMap::new()
-                })} else { None },
-                sequences: Default::default(),  // {~~} TODO implement sequence
-                // sequences: self.convert_room_sequences(&room.sequences)?,
-            });
-        }
-
-        Ok(mod_rooms)
+    pub fn convert_room_additions(&self, rooms: &[GMRoom]) -> Result<Vec<AddRoom>, String> {
+        rooms.iter().map(|i| {
+            Ok(AddRoom {
+                name: self.resolve_string_ref(&i.name)?,
+                caption: self.resolve_string_ref(&i.caption)?,
+                width: i.width,
+                height: i.height,
+                speed: i.speed,
+                persistent: i.persistent,
+                background_color: i.background_color,
+                draw_background_color: i.draw_background_color,
+                creation_code: self.resolve_optional_code_ref(&i.creation_code)?,
+                flags: i.flags.clone(),
+                backgrounds: self.convert_room_backgrounds_additions(&i.backgrounds)?,
+                views: self.convert_room_views_additions(&i.views)?,
+                game_objects: self.convert_room_game_objects_additions(&i.game_objects)?,
+                tiles: self.convert_room_tiles_additions(&i.tiles)?,
+                world: i.world,
+                top: i.top,
+                left: i.left,
+                right: i.right,
+                bottom: i.bottom,
+                gravity_x: i.gravity_x,
+                gravity_y: i.gravity_y,
+                meters_per_pixel: i.meters_per_pixel,
+                layers: if let Some(ref layers) = i.layers {
+                    Some(self.convert_room_layers_additions(layers)?)
+                } else {
+                    None
+                },
+                sequences: if let Some(ref sequences) = i.sequences {
+                    Some(self.convert_sequences_additions(sequences)?)
+                } else {
+                    None
+                },
+            })
+        }).collect()
     }
 
-    pub fn convert_rooms(&self, changes: &GModUnorderedListChanges<GMRoom>) -> Result<AModUnorderedListChanges<ModRoom>, String> {
-        let additions = self.convert_room_additions(&changes.additions)?;
+    pub fn convert_rooms(&self, changes: &GModUnorderedListChanges<GMRoom>) -> Result<EditUnorderedList<AddRoom, EditRoom>, String> {
+        let additions = self.convert_room_additions(changes.additions)?;
         let mut edits = HashMap::new();
 
         for (index, (original, modified)) in &changes.edits {
@@ -182,7 +276,7 @@ impl GModData<'_, '_> {
                 Some(self.resolve_code_ref(code)?)
             } else { None };
 
-            edits.insert(*index, ModRoom {
+            edits.insert(*index, EditRoom {
                 name: edit_field(&self.resolve_string_ref(&original.name)?, &self.resolve_string_ref(&modified.name)?),
                 caption: edit_field(&self.resolve_string_ref(&original.caption)?, &self.resolve_string_ref(&modified.caption)?),
                 width: edit_field(&original.width, &modified.width),
@@ -216,21 +310,11 @@ impl GModData<'_, '_> {
             });
         }
 
-        Ok(AModUnorderedListChanges { additions, edits })
+        Ok(EditUnorderedList { additions, edits })
     }
 
-    pub fn convert_room_flags_additions(&self, flags: &GMRoomFlags) -> ModRoomFlags {
-        ModRoomFlags {
-            enable_views: Some(flags.enable_views),
-            show_color: Some(flags.show_color),
-            dont_clear_display_buffer: Some(flags.dont_clear_display_buffer),
-            is_gms2: Some(flags.is_gms2),
-            is_gms2_3: Some(flags.is_gms2_3),
-        }
-    }
-
-    pub fn convert_room_flags(&self, original: &GMRoomFlags, modified: &GMRoomFlags) -> ModRoomFlags {
-        ModRoomFlags {
+    pub fn convert_room_flags(&self, original: &GMRoomFlags, modified: &GMRoomFlags) -> EditRoomFlags {
+        EditRoomFlags {
             enable_views: flag_field(original.enable_views, modified.enable_views),
             show_color: flag_field(original.show_color, modified.show_color),
             dont_clear_display_buffer: flag_field(original.dont_clear_display_buffer, modified.dont_clear_display_buffer),
@@ -239,33 +323,30 @@ impl GModData<'_, '_> {
         }
     }
 
-    pub fn convert_room_backgrounds_additions(&self, backgrounds: &Vec<GMRoomBackground>) -> Result<Vec<ModRoomBackground>, String> {
+    pub fn convert_room_backgrounds_additions(&self, backgrounds: &[GMRoomBackground]) -> Result<Vec<AddRoomBackground>, String> {
         let mut mod_backgrounds = Vec::with_capacity(backgrounds.len());
 
-        for bg in backgrounds {
-            mod_backgrounds.push(ModRoomBackground {
-                enabled: Some(bg.enabled),
-                foreground: Some(bg.foreground),
-                background_definition: match &bg.background_definition {
-                    Some(def) => Some(self.resolve_background_ref(def)?),
-                    None => None,
-                },
-                x: Some(bg.x),
-                y: Some(bg.y),
-                tile_x: Some(bg.tile_x),
-                tile_y: Some(bg.tile_y),
-                speed_x: Some(bg.speed_x),
-                speed_y: Some(bg.speed_y),
-                stretch: Some(bg.stretch),
+        for i in backgrounds {
+            mod_backgrounds.push(AddRoomBackground {
+                enabled: i.enabled,
+                foreground: i.foreground,
+                background_definition: self.resolve_optional_background_ref(&i.background_definition)?,
+                x: i.x,
+                y: i.y,
+                tile_x: i.tile_x,
+                tile_y: i.tile_y,
+                speed_x: i.speed_x,
+                speed_y: i.speed_y,
+                stretch: i.stretch,
             });
         }
 
         Ok(mod_backgrounds)
     }
 
-    pub fn convert_room_backgrounds(&self, changes: GModUnorderedListChanges<GMRoomBackground>) -> Result<AModUnorderedListChanges<ModRoomBackground>, String> {
-        let additions: Vec<ModRoomBackground> = self.convert_room_backgrounds_additions(&changes.additions)?;
-        let mut edits: HashMap<usize, ModRoomBackground> = HashMap::new();
+    pub fn convert_room_backgrounds(&self, changes: GModUnorderedListChanges<GMRoomBackground>) -> Result<EditUnorderedList<AddRoomBackground, EditRoomBackground>, String> {
+        let additions: Vec<AddRoomBackground> = self.convert_room_backgrounds_additions(changes.additions)?;
+        let mut edits: HashMap<usize, EditRoomBackground> = HashMap::new();
 
         for (index, (original, modified)) in &changes.edits {
             let resolved_original_background = original
@@ -280,7 +361,7 @@ impl GModData<'_, '_> {
                 .map(|def| self.resolve_background_ref(def))
                 .transpose()?;
 
-            edits.insert(*index, ModRoomBackground {
+            edits.insert(*index, EditRoomBackground {
                 enabled: edit_field(&original.enabled, &modified.enabled),
                 foreground: edit_field(&original.foreground, &modified.foreground),
                 background_definition: edit_field_option(&resolved_original_background, &resolved_modified_background).clone(),
@@ -294,40 +375,40 @@ impl GModData<'_, '_> {
             });
         }
 
-        Ok(AModUnorderedListChanges { additions, edits })
+        Ok(EditUnorderedList { additions, edits })
     }
 
-    pub fn convert_room_views_additions(&self, views: &Vec<GMRoomView>) -> Result<Vec<ModRoomView>, String> {
-        let mut mod_views: Vec<ModRoomView> = Vec::with_capacity(views.len());
+    pub fn convert_room_views_additions(&self, views: &[GMRoomView]) -> Result<Vec<AddRoomView>, String> {
+        let mut mod_views = Vec::with_capacity(views.len());
 
-        for view in views {
-            mod_views.push(ModRoomView {
-                enabled: Some(view.enabled),
-                view_x: Some(view.view_x),
-                view_y: Some(view.view_y),
-                view_width: Some(view.view_width),
-                view_height: Some(view.view_height),
-                port_x: Some(view.port_x),
-                port_y: Some(view.port_y),
-                port_width: Some(view.port_width),
-                port_height: Some(view.port_height),
-                border_x: Some(view.border_x),
-                border_y: Some(view.border_y),
-                speed_x: Some(view.speed_x),
-                speed_y: Some(view.speed_y),
-                object: if let Some(ref obj) = view.object { Some(self.resolve_game_object_ref(&obj)?) } else { None },
+        for i in views {
+            mod_views.push(AddRoomView {
+                enabled: i.enabled,
+                view_x: i.view_x,
+                view_y: i.view_y,
+                view_width: i.view_width,
+                view_height: i.view_height,
+                port_x: i.port_x,
+                port_y: i.port_y,
+                port_width: i.port_width,
+                port_height: i.port_height,
+                border_x: i.border_x,
+                border_y: i.border_y,
+                speed_x: i.speed_x,
+                speed_y: i.speed_y,
+                object: self.resolve_optional_game_object_ref(&i.object)?,
             });
         }
 
         Ok(mod_views)
     }
 
-    pub fn convert_room_views(&self, changes: &GModUnorderedListChanges<GMRoomView>) -> Result<AModUnorderedListChanges<ModRoomView>, String> {
-        let additions: Vec<ModRoomView> = self.convert_room_views_additions(&changes.additions)?;
-        let mut edits: HashMap<usize, ModRoomView> = HashMap::new();
+    pub fn convert_room_views(&self, changes: &GModUnorderedListChanges<GMRoomView>) -> Result<EditUnorderedList<AddRoomView, EditRoomView>, String> {
+        let additions = self.convert_room_views_additions(&changes.additions)?;
+        let mut edits: HashMap<usize, EditRoomView> = HashMap::new();
 
         for (index, (original, modified)) in &changes.edits {
-            edits.insert(*index, ModRoomView {
+            edits.insert(*index, EditRoomView {
                 enabled: edit_field(&original.enabled, &modified.enabled),
                 view_x: edit_field(&original.view_x, &modified.view_x),
                 view_y: edit_field(&original.view_y, &modified.view_y),
@@ -346,50 +427,37 @@ impl GModData<'_, '_> {
             });
         }
 
-        Ok(AModUnorderedListChanges { additions, edits })
+        Ok(EditUnorderedList { additions, edits })
     }
 
-    pub fn convert_room_tiles_additions(&self, tiles: &Vec<GMRoomTile>) -> Result<Vec<ModRoomTile>, String> {
-        let mut mod_tiles: Vec<ModRoomTile> = Vec::with_capacity(tiles.len());
-
-        for tile in tiles {
-            mod_tiles.push(ModRoomTile {
-                x: Some(tile.x),
-                y: Some(tile.y),
-                texture: Some(match &tile.texture {
-                    GMRoomTileTexture::Sprite(sprite) => ModRoomTileTexture::Sprite(self.resolve_sprite_ref(sprite)?),
-                    GMRoomTileTexture::Background(background) => ModRoomTileTexture::Background(self.resolve_background_ref(background)?),
-                }),
-                source_x: Some(tile.source_x),
-                source_y: Some(tile.source_y),
-                width: Some(tile.width),
-                height: Some(tile.height),
-                tile_depth: Some(tile.tile_depth),
-                instance_id: Some(tile.instance_id),
-                scale_x: Some(tile.scale_x),
-                scale_y: Some(tile.scale_y),
-                color: Some(tile.color),
-            });
-        }
-
-        Ok(mod_tiles)
+    pub fn convert_room_tiles_additions(&self, tiles: &[GMRoomTile]) -> Result<Vec<AddRoomTile>, String> {
+        tiles.iter().map(|i| {
+            Ok(AddRoomTile {
+                x: i.x,
+                y: i.y,
+                texture: self.convert_room_tile_texture(&i.texture)?,
+                source_x: i.source_x,
+                source_y: i.source_y,
+                width: i.width,
+                height: i.height,
+                tile_depth: i.tile_depth,
+                instance_id: i.instance_id,
+                scale_x: i.scale_x,
+                scale_y: i.scale_y,
+                color: i.color,
+            })
+        }).collect()
     }
 
-    pub fn convert_room_tiles(&self, changes: &GModUnorderedListChanges<GMRoomTile>) -> Result<AModUnorderedListChanges<ModRoomTile>, String> {
-        let additions: Vec<ModRoomTile> = self.convert_room_tiles_additions(&changes.additions)?;
-        let mut edits: HashMap<usize, ModRoomTile> = HashMap::new();
+    pub fn convert_room_tiles(&self, changes: &GModUnorderedListChanges<GMRoomTile>) -> Result<EditUnorderedList<AddRoomTile, EditRoomTile>, String> {
+        let additions = self.convert_room_tiles_additions(&changes.additions)?;
+        let mut edits: HashMap<usize, EditRoomTile> = HashMap::new();
 
         for (index, (original, modified)) in &changes.edits {
-            edits.insert(*index, ModRoomTile {
+            edits.insert(*index, EditRoomTile {
                 x: edit_field(&original.x, &modified.x),
                 y: edit_field(&original.y, &modified.y),
-                texture: edit_field(&match &original.texture {
-                    GMRoomTileTexture::Sprite(sprite) => ModRoomTileTexture::Sprite(self.resolve_sprite_ref(&sprite)?),
-                    GMRoomTileTexture::Background(background) => ModRoomTileTexture::Background(self.resolve_background_ref(&background)?),
-                }, &match &modified.texture {
-                    GMRoomTileTexture::Sprite(sprite) => ModRoomTileTexture::Sprite(self.resolve_sprite_ref(&sprite)?),
-                    GMRoomTileTexture::Background(background) => ModRoomTileTexture::Background(self.resolve_background_ref(&background)?),
-                }),
+                texture: edit_field(&self.convert_room_tile_texture(&original.texture)?, &self.convert_room_tile_texture(&modified.texture)?),
                 source_x: edit_field(&original.source_x, &modified.source_x),
                 source_y: edit_field(&original.source_y, &modified.source_y),
                 width: edit_field(&original.width, &modified.width),
@@ -402,35 +470,38 @@ impl GModData<'_, '_> {
             });
         }
 
-        Ok(AModUnorderedListChanges { additions, edits })
+        Ok(EditUnorderedList { additions, edits })
     }
-
-    pub fn convert_room_layers_additions(&self, layers: &Vec<GMRoomLayer>) -> Result<Vec<ModRoomLayer>, String> {
-        let mut mod_layers: Vec<ModRoomLayer> = Vec::with_capacity(layers.len());
-
-        for layer in layers {
-            mod_layers.push(ModRoomLayer {
-                layer_name: Some(self.resolve_string_ref(&layer.layer_name)?),
-                layer_id: Some(layer.layer_id),
-                layer_type: Some(layer.layer_type.clone()),
-                layer_depth: Some(layer.layer_depth),
-                x_offset: Some(layer.x_offset),
-                y_offset: Some(layer.y_offset),
-                horizontal_speed: Some(layer.horizontal_speed),
-                vertical_speed: Some(layer.vertical_speed),
-                is_visible: Some(layer.is_visible),
-            });
+    
+    fn convert_room_tile_texture(&self, room_tile_texture: &GMRoomTileTexture) -> Result<ModRoomTileTexture, String> { 
+        match room_tile_texture {
+            GMRoomTileTexture::Sprite(sprite) => Ok(ModRoomTileTexture::Sprite(self.resolve_sprite_ref(&sprite)?)),
+            GMRoomTileTexture::Background(background) => Ok(ModRoomTileTexture::Background(self.resolve_background_ref(&background)?)),
         }
-
-        Ok(mod_layers)
     }
 
-    pub fn convert_room_layers(&self, changes: &GModUnorderedListChanges<GMRoomLayer>) -> Result<AModUnorderedListChanges<ModRoomLayer>, String> {
-        let additions: Vec<ModRoomLayer> = self.convert_room_layers_additions(&changes.additions)?;
-        let mut edits: HashMap<usize, ModRoomLayer> = HashMap::new();
+    pub fn convert_room_layers_additions(&self, layers: &[GMRoomLayer]) -> Result<Vec<AddRoomLayer>, String> {
+        layers.iter().map(|i| {
+            Ok(AddRoomLayer {
+                layer_name: self.resolve_string_ref(&i.layer_name)?,
+                layer_id: i.layer_id,
+                layer_type: i.layer_type,
+                layer_depth: i.layer_depth,
+                x_offset: i.x_offset,
+                y_offset: i.y_offset,
+                horizontal_speed: i.horizontal_speed,
+                vertical_speed: i.vertical_speed,
+                is_visible: i.is_visible,
+            })
+        }).collect()
+    }
+
+    pub fn convert_room_layers(&self, changes: &GModUnorderedListChanges<GMRoomLayer>) -> Result<EditUnorderedList<AddRoomLayer, EditRoomLayer>, String> {
+        let additions = self.convert_room_layers_additions(&changes.additions)?;
+        let mut edits: HashMap<usize, EditRoomLayer> = HashMap::new();
 
         for (index, (original, modified)) in &changes.edits {
-            edits.insert(*index, ModRoomLayer {
+            edits.insert(*index, EditRoomLayer {
                 layer_name: edit_field(&self.resolve_string_ref(&original.layer_name)?, &self.resolve_string_ref(&modified.layer_name)?),
                 layer_id: edit_field(&original.layer_id, &modified.layer_id),
                 layer_type: edit_field(&original.layer_type, &modified.layer_type),
@@ -443,36 +514,34 @@ impl GModData<'_, '_> {
             });
         }
 
-        Ok(AModUnorderedListChanges { additions, edits })
+        Ok(EditUnorderedList { additions, edits })
     }
 
 
-    pub fn convert_room_game_objects_additions(&self, objects: &Vec<GMRoomGameObject>) -> Result<Vec<ModRoomGameObject>, String> {
+    pub fn convert_room_game_objects_additions(&self, objects: &[GMRoomGameObject]) -> Result<Vec<AddRoomGameObject>, String> {
         let mut mod_objects = Vec::with_capacity(objects.len());
-
-        for obj in objects {
-            mod_objects.push(ModRoomGameObject {
-                x: Some(obj.x),
-                y: Some(obj.y),
-                object_definition: Some(self.resolve_game_object_ref(&obj.object_definition)?),
-                instance_id: Some(obj.instance_id),
-                creation_code: if let Some(ref code) = obj.creation_code { Some(self.resolve_code_ref(&code)?) } else { None },
-                scale_x: Some(obj.scale_x),
-                scale_y: Some(obj.scale_y),
-                image_speed: obj.image_speed,
-                image_index: obj.image_index,
-                color: Some(obj.color),
-                rotation: Some(obj.rotation),
-                pre_create_code: if let Some(ref code) = obj.pre_create_code { Some(self.resolve_code_ref(&code)?) } else { None },
+        for i in objects {
+            mod_objects.push(AddRoomGameObject {
+                x: i.x,
+                y: i.y,
+                object_definition: self.resolve_game_object_ref(&i.object_definition)?,
+                instance_id: i.instance_id,
+                creation_code: self.resolve_optional_code_ref(&i.creation_code)?,
+                scale_x: i.scale_x,
+                scale_y: i.scale_y,
+                image_speed: i.image_speed,
+                image_index: i.image_index,
+                color: i.color,
+                rotation: i.rotation,
+                pre_create_code: self.resolve_optional_code_ref(&i.pre_create_code)?,
             });
         }
-
         Ok(mod_objects)
     }
 
-    pub fn convert_room_game_objects(&self, changes: &GModUnorderedListChanges<GMRoomGameObject>) -> Result<AModUnorderedListChanges<ModRoomGameObject>, String> {
-        let additions: Vec<ModRoomGameObject> = self.convert_room_game_objects_additions(&changes.additions)?;
-        let mut edits: HashMap<usize, ModRoomGameObject> = HashMap::new();
+    pub fn convert_room_game_objects(&self, changes: &GModUnorderedListChanges<GMRoomGameObject>) -> Result<EditUnorderedList<AddRoomGameObject, EditRoomGameObject>, String> {
+        let additions = self.convert_room_game_objects_additions(&changes.additions)?;
+        let mut edits: HashMap<usize, EditRoomGameObject> = HashMap::new();
 
         for (index, (original, modified)) in &changes.edits {
             let orig_creation_code: Option<ModUnorderedRef> = if let Some(code) = &original.creation_code {
@@ -489,7 +558,7 @@ impl GModData<'_, '_> {
                 Some(self.resolve_code_ref(code)?)
             } else { None };
 
-            edits.insert(*index, ModRoomGameObject {
+            edits.insert(*index, EditRoomGameObject {
                 x: edit_field(&original.x, &modified.x),
                 y: edit_field(&original.y, &modified.y),
                 object_definition: edit_field(&self.resolve_game_object_ref(&original.object_definition)?, &self.resolve_game_object_ref(&modified.object_definition)?),
@@ -497,15 +566,15 @@ impl GModData<'_, '_> {
                 creation_code: edit_field_option(&orig_creation_code, &mod_creation_code).clone(),
                 scale_x: edit_field(&original.scale_x, &modified.scale_x),
                 scale_y: edit_field(&original.scale_y, &modified.scale_y),
-                image_speed: *edit_field_option(&original.image_speed, &modified.image_speed),
-                image_index: *edit_field_option(&original.image_index, &modified.image_index),
+                image_speed: edit_field_option(&original.image_speed, &modified.image_speed),
+                image_index: edit_field_option(&original.image_index, &modified.image_index),
                 color: edit_field(&original.color, &modified.color),
                 rotation: edit_field(&original.rotation, &modified.rotation),
                 pre_create_code: edit_field_option(&orig_pre_create_code, &mod_pre_create_code).clone(),
             });
         }
 
-        Ok(AModUnorderedListChanges { additions, edits })
+        Ok(EditUnorderedList { additions, edits })
     }
 
 
