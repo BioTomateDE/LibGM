@@ -1,8 +1,7 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use crate::deserialize::fonts::{GMFont, GMFontGlyph};
-use crate::export_mod::export::{convert_additions, convert_edits, edit_field, edit_field_option, ModExporter, ModRef};
-use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList, GModUnorderedListChanges};
+use crate::deserialize::fonts::GMFontGlyph;
+use crate::export_mod::export::{convert_additions, edit_field, edit_field_option, ModExporter, ModRef};
+use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

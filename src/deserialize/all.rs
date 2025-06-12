@@ -1,4 +1,4 @@
-use crate::debug_utils::{DurationExt, Stopwatch};
+use crate::debug_utils::Stopwatch;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;

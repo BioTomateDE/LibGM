@@ -1,11 +1,8 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use crate::deserialize::game_objects::GMGameObject;
-use crate::deserialize::rooms::{GMRoom, GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomLayer, GMRoomLayerType, GMRoomTile, GMRoomTileTexture, GMRoomView};
-use crate::deserialize::sequence::GMSequence;
-use crate::export_mod::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, edit_field_option, flag_field, ModExporter, ModRef};
+use crate::deserialize::rooms::{GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomLayer, GMRoomLayerType, GMRoomTile, GMRoomTileTexture, GMRoomView};
+use crate::export_mod::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, flag_field, ModExporter, ModRef};
 use crate::export_mod::sequences::{AddSequence, EditSequence};
-use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList, GModUnorderedListChanges};
+use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddRoom {
