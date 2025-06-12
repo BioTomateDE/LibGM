@@ -15,21 +15,30 @@ pub struct GModUnorderedListChanges<'o, 'm, G> {
     pub edits: HashMap<usize, (&'o G, &'m G)>,
 }
 
-pub fn export_changes_unordered_list<'o, 'm, G: PartialEq + Clone>(original_data: &'o Vec<G>, modified_data: &'m Vec<G>) -> Result<GModUnorderedListChanges<'o, 'm, G>, String> {
-    let additions: &[G] = modified_data.get(original_data.len() .. modified_data.len())
+pub fn export_changes_unordered_list<GM: PartialEq + Clone, ADD, EDIT>(
+    original_list: &Vec<GM>,
+    modified_list: &Vec<GM>,
+    map_addition: impl Fn(&GM) -> Result<ADD, String>,
+    map_edit: impl Fn(&GM, &GM) -> Result<EDIT, String>,
+) -> Result<EditUnorderedList<ADD, EDIT>, String> {
+    let additions: Vec<ADD> = modified_list
+        .get(original_list.len() .. modified_list.len())
         .ok_or_else(|| format!(
-            "Could not get {} additions slice with original data len {} and modified data len {}", 
-            type_name::<G>(), original_data.len(), modified_data.len(),
-        ))?;
-
-    let mut edits: HashMap<usize, (&G, &G)> = HashMap::new();
-    for i in 0..min(original_data.len(), modified_data.len()) {
-        if original_data[i] == modified_data[i] {
+            "Could not get {} additions slice with original data len {} and modified data len {}",
+            type_name::<GM>(), original_list.len(), modified_list.len(),
+        ))?
+        .iter()
+        .map(map_addition)
+        .collect::<Result<Vec<_>, _>>()?;
+    
+    let mut edits: HashMap<usize, EDIT> = HashMap::new();
+    for i in 0..min(original_list.len(), modified_list.len()) {
+        if original_list[i] == modified_list[i] {
             continue
         }
-        edits.insert(i, (&original_data[i], &modified_data[i]));
+        edits.insert(i, map_edit(&original_list[i], &modified_list[i])?);
     }
 
-    Ok(GModUnorderedListChanges { additions, edits })
+    Ok(EditUnorderedList { additions, edits })
 }
 
