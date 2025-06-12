@@ -418,7 +418,7 @@ impl GMFont {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMFont:");
         println!("  Name: {}", self.name.resolve(&strings.strings_by_index)?);
-        println!("  Display Name: {}", self.display_name.resolve(&strings.strings_by_index)?);
+        println!("  Display Name: {}", resolve_str_maybe(&self.display_name, strings));
         println!("  EM Size: {}", self.em_size);
         println!("  Bold: {}", self.bold);
         println!("  Italic: {}", self.italic);

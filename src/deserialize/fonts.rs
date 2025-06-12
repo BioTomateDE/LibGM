@@ -8,7 +8,7 @@ use crate::deserialize::texture_page_items::{GMTexturePageItem, GMTextures};
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMFont {
     pub name: GMRef<String>,
-    pub display_name: GMRef<String>,
+    pub display_name: Option<GMRef<String>>,
     pub em_size: f32,
     pub bold: bool,
     pub italic: bool,
@@ -65,7 +65,7 @@ pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
         chunk.cur_pos = *start_position;
 
         let name: GMRef<String> = chunk.read_gm_string(&strings)?;
-        let display_name: GMRef<String> = chunk.read_gm_string(&strings)?;
+        let display_name: Option<GMRef<String>> = chunk.read_gm_string_optional(&strings)?;
         let em_size: u32 = chunk.read_u32()?;   // before GMS 2.3: int. after: float
         let em_size: f32 = if em_size & (1 << 31) != 0 {    // since the float is always written negated, it has the first bit set.
             -f32::from_bits(em_size)

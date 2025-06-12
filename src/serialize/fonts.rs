@@ -35,7 +35,7 @@ pub fn build_chunk_font(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
 
 fn build_font(builder: &mut DataBuilder, general_info: &GMGeneralInfo, font_index: usize, font: &GMFont) -> Result<(), String> {
     builder.write_gm_string(&font.name)?;
-    builder.write_gm_string(&font.display_name)?;
+    builder.write_gm_string_optional(&font.display_name)?;
     if general_info.is_version_at_least(2, 3, 0, 0) {   // {!!} i made this up; this doesn't exist in UTMT
         builder.write_f32(-font.em_size);
     } else {
