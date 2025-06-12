@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::deserialize::sequence::GMSequence;
+use crate::export_mod::export::ModExporter;
 use crate::export_mod::unordered_list::{EditUnorderedList, GModUnorderedListChanges};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -12,12 +13,12 @@ pub struct EditSequence {
     // {~~} {!!} Define fields as needed based on GMSequence
 }
 
-impl GModData<'_, '_> {
-    pub fn convert_sequences_additions(&self, gm_sequences: &[GMSequence]) -> Result<Vec<AddSequence>, String> {
+impl ModExporter<'_, '_> {
+    pub fn add_sequence(&self, i: &GMSequence) -> Result<AddSequence, String> {
         todo!()
     }
 
-    pub fn convert_sequences(&self, changes: GModUnorderedListChanges<GMSequence>) -> Result<EditUnorderedList<AddSequence, EditSequence>, String> {
+    pub fn edit_sequence(&self, o: &GMSequence, m: &GMSequence) -> Result<EditSequence, String> {
         todo!()
     }
 }
