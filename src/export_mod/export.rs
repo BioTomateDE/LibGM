@@ -110,15 +110,16 @@ fn export_mod(original_data: &GMData, modified_data: &GMData, target_file: &Path
     let mut data: Vec<u8> = Vec::new();
     let buff = Cursor::new(&mut data);
     let mut zip_writer = ZipWriter::new(buff);
-    
+
     let mod_exporter = ModExporter {original_data, modified_data};
     let fonts: EditUnorderedList<AddFont, EditFont> = mod_exporter.export_fonts()?;
     let sounds: EditUnorderedList<AddSound, EditSound> = mod_exporter.export_sounds()?;
     let strings: EditUnorderedList<String, String> = mod_exporter.export_strings()?;
     // repeat ts for every element
 
-    zw_write_unordered_list_changes(&mut zip_writer, "strings.json", &strings)?;
     zw_write_unordered_list_changes(&mut zip_writer, "fonts.json", &fonts)?;
+    zw_write_unordered_list_changes(&mut zip_writer, "sounds.json", &sounds)?;
+    zw_write_unordered_list_changes(&mut zip_writer, "strings.json", &strings)?;
     // repeat ts for every element
 
     // also export textures and audio separately
