@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::deserialize::sequence::GMSequence;
 use crate::export_mod::export::ModExporter;
-use crate::export_mod::unordered_list::{EditUnorderedList, GModUnorderedListChanges};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddSequence {

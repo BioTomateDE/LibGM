@@ -1,5 +1,5 @@
 use crate::export_mod::export::ModExporter;
-use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList, GModUnorderedListChanges};
+use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
 
 impl ModExporter<'_, '_> {
