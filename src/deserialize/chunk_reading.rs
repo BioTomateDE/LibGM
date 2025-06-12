@@ -7,12 +7,18 @@ use crate::deserialize::strings::GMStrings;
 // It can be resolved to the data it references using the `.resolve()` method,
 // which needs the list the elements are stored in.
 // [See GMPointer to understand difference]
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Hash, PartialEq, Eq)]
 pub struct GMRef<T> {
     pub index: usize,
     // marker needs to be here to ignore "unused generic T" error; doesn't store any data
     _marker: std::marker::PhantomData<T>,
 }
+impl<T> Clone for GMRef<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+impl<T> Copy for GMRef<T> {}
 impl<T> std::fmt::Debug for GMRef<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GMRef")
