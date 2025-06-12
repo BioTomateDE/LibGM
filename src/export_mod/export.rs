@@ -12,6 +12,8 @@ use crate::deserialize::backgrounds::GMBackground;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::code::GMCode;
 use crate::deserialize::embedded_audio::GMEmbeddedAudio;
+use crate::deserialize::game_objects::GMGameObject;
+use crate::deserialize::sprites::GMSprite;
 use crate::deserialize::texture_page_items::GMTexturePageItem;
 use crate::export_mod::fonts::{AddFont, EditFont};
 use crate::export_mod::sounds::{AddSound, EditSound};
@@ -37,6 +39,12 @@ impl ModExporter<'_, '_> {
         convert_reference(gm_background_ref, &self.original_data.backgrounds.backgrounds_by_index, &self.modified_data.backgrounds.backgrounds_by_index)
     }
     // TODO continue
+    pub fn convert_game_object_ref(&self, gm_game_object_ref: GMRef<GMGameObject>) -> Result<ModRef, String> {
+        convert_reference(gm_game_object_ref, &self.original_data.game_objects.game_objects_by_index, &self.modified_data.game_objects.game_objects_by_index)
+    }
+    pub fn convert_sprite_ref(&self, gm_sprite_ref: GMRef<GMSprite>) -> Result<ModRef, String> {
+        convert_reference(gm_sprite_ref, &self.original_data.sprites.sprites_by_index, &self.modified_data.sprites.sprites_by_index)
+    }
     pub fn convert_string_ref(&self, gm_string_ref: GMRef<String>) -> Result<ModRef, String> {
         convert_reference(gm_string_ref, &self.original_data.strings.strings_by_index, &self.modified_data.strings.strings_by_index)
     }
@@ -44,11 +52,17 @@ impl ModExporter<'_, '_> {
         convert_reference(gm_texture_ref, &self.original_data.texture_page_items.textures_by_index, &self.modified_data.texture_page_items.textures_by_index)
     }
 
-    pub fn convert_audio_ref_optional(&self, gm_audio_ref: Option<GMRef<GMEmbeddedAudio>>) -> Result<Option<ModRef>, String> {
+    pub fn convert_audio_ref_opt(&self, gm_audio_ref: Option<GMRef<GMEmbeddedAudio>>) -> Result<Option<ModRef>, String> {
         convert_reference_optional(gm_audio_ref, &self.original_data.audios.audios_by_index, &self.modified_data.audios.audios_by_index)
     }
-    pub fn convert_code_ref_optional(&self, gm_code_ref: Option<GMRef<GMCode>>) -> Result<Option<ModRef>, String> {
+    pub fn convert_background_ref_opt(&self, gm_background_ref: Option<GMRef<GMBackground>>) -> Result<Option<ModRef>, String> {
+        convert_reference_optional(gm_background_ref, &self.original_data.backgrounds.backgrounds_by_index, &self.modified_data.backgrounds.backgrounds_by_index)
+    }
+    pub fn convert_code_ref_opt(&self, gm_code_ref: Option<GMRef<GMCode>>) -> Result<Option<ModRef>, String> {
         convert_reference_optional(gm_code_ref, &self.original_data.codes.codes_by_index, &self.modified_data.codes.codes_by_index)
+    }
+    pub fn convert_game_object_ref_opt(&self, gm_game_object_ref: Option<GMRef<GMGameObject>>) -> Result<Option<ModRef>, String> {
+        convert_reference_optional(gm_game_object_ref, &self.original_data.game_objects.game_objects_by_index, &self.modified_data.game_objects.game_objects_by_index)
     }
 }
 
@@ -145,7 +159,7 @@ pub fn flag_field(original: bool, modified: bool) -> Option<bool> {
 }
 
 pub fn edit_field<'a, T: PartialEq + Clone>(original: &T, modified: &T) -> Option<T> {
-    if original == modified {
+    if original != modified {
         Some(modified.clone())
     } else {
         None
@@ -153,7 +167,7 @@ pub fn edit_field<'a, T: PartialEq + Clone>(original: &T, modified: &T) -> Optio
 }
 /// TODO remove edit_field_option (impossible to tell whether it should be set to None or ignored; use two layers of Option instead)
 pub fn edit_field_option<T: PartialEq + Clone>(original: &Option<T>, modified: &Option<T>) -> Option<T> {
-    if original == modified {
+    if original != modified {
         modified.clone()
     } else {
         None
@@ -164,7 +178,18 @@ pub fn edit_field_convert<GM>(
     modified: GMRef<GM>,
     converter: impl Fn(GMRef<GM>) -> Result<ModRef, String>,
 ) -> Result<Option<ModRef>, String> {
-    if original.index == modified.index {
+    if original.index != modified.index {
+        Ok(Some(converter(modified)?))
+    } else {
+        Ok(None)
+    }
+}
+pub fn edit_field_convert_option<GM: PartialEq>(
+    original: Option<GMRef<GM>>,
+    modified: Option<GMRef<GM>>,
+    converter: impl Fn(Option<GMRef<GM>>) -> Result<Option<ModRef>, String>,
+) -> Result<Option<Option<ModRef>>, String> {
+    if original == modified {
         Ok(Some(converter(modified)?))
     } else {
         Ok(None)
