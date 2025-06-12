@@ -20,6 +20,35 @@ use crate::export_mod::sounds::{AddSound, EditSound};
 use crate::export_mod::unordered_list::{EditUnorderedList, GModUnorderedListChanges};
 
 
+pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file: &Path) -> Result<(), String> {
+    let mut data: Vec<u8> = Vec::new();
+    let buff = Cursor::new(&mut data);
+    let mut zip_writer = ZipWriter::new(buff);
+
+    let mod_exporter = ModExporter {original_data, modified_data};
+    let fonts: EditUnorderedList<AddFont, EditFont> = mod_exporter.export_fonts()?;
+    let sounds: EditUnorderedList<AddSound, EditSound> = mod_exporter.export_sounds()?;
+    let strings: EditUnorderedList<String, String> = mod_exporter.export_strings()?;
+    // repeat ts for every element
+
+    zw_write_unordered_list_changes(&mut zip_writer, "fonts.json", &fonts)?;
+    zw_write_unordered_list_changes(&mut zip_writer, "sounds.json", &sounds)?;
+    zw_write_unordered_list_changes(&mut zip_writer, "strings.json", &strings)?;
+    // repeat ts for every element
+
+    // also export textures and audio separately
+
+    zip_writer.finish()
+        .map_err(|e| format!("Could not finish zip archive: {e}"))?;
+
+    let mut file = File::create(target_file)
+        .map_err(|e| format!("Could not create target mod file with path {target_file:?}: {e}"))?;
+    file.write_all(data.as_slice())
+        .map_err(|e| format!("Could not write zip archive data to target mod file with path {target_file:?}: {e}"))?;
+    Ok(())
+}
+
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ModRef {
     Data(usize),    // index in gamemaker data list; assumes element also exists in the data it will be loaded in
@@ -97,7 +126,7 @@ fn convert_reference_optional<GM>(gm_reference_optional: Option<GMRef<GM>>, orig
 
 
 pub type ModWriter<'a> = ZipWriter<Cursor<&'a mut Vec<u8>>>;
-pub const FILE_OPTIONS: LazyLock<FileOptions<()>> = LazyLock::new(|| 
+const FILE_OPTIONS: LazyLock<FileOptions<()>> = LazyLock::new(|| 
     SimpleFileOptions::default()
     .compression_method(CompressionMethod::Bzip2)
     .compression_level(Some(9))
@@ -118,36 +147,6 @@ fn zw_write_unordered_list_changes<ADD: Serialize, EDIT: Serialize>(zip_writer: 
     let data: &[u8] = string.as_bytes();
     zw_write_file(zip_writer, filename, data)
 }
-
-
-fn export_mod(original_data: &GMData, modified_data: &GMData, target_file: &Path) -> Result<(), String> {
-    let mut data: Vec<u8> = Vec::new();
-    let buff = Cursor::new(&mut data);
-    let mut zip_writer = ZipWriter::new(buff);
-
-    let mod_exporter = ModExporter {original_data, modified_data};
-    let fonts: EditUnorderedList<AddFont, EditFont> = mod_exporter.export_fonts()?;
-    let sounds: EditUnorderedList<AddSound, EditSound> = mod_exporter.export_sounds()?;
-    let strings: EditUnorderedList<String, String> = mod_exporter.export_strings()?;
-    // repeat ts for every element
-
-    zw_write_unordered_list_changes(&mut zip_writer, "fonts.json", &fonts)?;
-    zw_write_unordered_list_changes(&mut zip_writer, "sounds.json", &sounds)?;
-    zw_write_unordered_list_changes(&mut zip_writer, "strings.json", &strings)?;
-    // repeat ts for every element
-
-    // also export textures and audio separately
-
-    zip_writer.finish()
-        .map_err(|e| format!("Could not finish zip archive: {e}"))?;
-
-    let mut file = File::create(target_file)
-        .map_err(|e| format!("Could not create target mod file with path {target_file:?}: {e}"))?;
-    file.write_all(data.as_slice())
-        .map_err(|e| format!("Could not write zip archive data to target mod file with path {target_file:?}: {e}"))?;
-    Ok(())
-}
-
 
 
 pub fn flag_field(original: bool, modified: bool) -> Option<bool> {
