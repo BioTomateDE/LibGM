@@ -73,7 +73,7 @@ fn main_export_mod() -> Result<(), String> {
 fn main() {
     biologischer_log::init(env!("CARGO_PKG_NAME"));
     
-    if let Err(e) = main_open_and_close() {
+    if let Err(e) = main_export_mod() {
         error!("{e}");
         exit(1);
     }

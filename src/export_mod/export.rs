@@ -93,6 +93,9 @@ impl ModExporter<'_, '_> {
     pub fn convert_game_object_ref_opt(&self, gm_game_object_ref: Option<GMRef<GMGameObject>>) -> Result<Option<ModRef>, String> {
         convert_reference_optional(gm_game_object_ref, &self.original_data.game_objects.game_objects_by_index, &self.modified_data.game_objects.game_objects_by_index)
     }
+    pub fn convert_string_ref_opt(&self, gm_string_ref: Option<GMRef<String>>) -> Result<Option<ModRef>, String> {
+        convert_reference_optional(gm_string_ref, &self.original_data.strings.strings_by_index, &self.modified_data.strings.strings_by_index)
+    }
 }
 
 fn convert_reference<GM>(gm_reference: GMRef<GM>, original_list: &[GM], modified_list: &[GM]) -> Result<ModRef, String> {
@@ -165,9 +168,9 @@ pub fn edit_field<'a, T: PartialEq + Clone>(original: &T, modified: &T) -> Optio
     }
 }
 /// TODO remove edit_field_option (impossible to tell whether it should be set to None or ignored; use two layers of Option instead)
-pub fn edit_field_option<T: PartialEq + Clone>(original: &Option<T>, modified: &Option<T>) -> Option<T> {
+pub fn edit_field_option<T: PartialEq + Clone>(original: Option<T>, modified: Option<T>) -> Option<Option<T>> {
     if original != modified {
-        modified.clone()
+        Some(modified)
     } else {
         None
     }
