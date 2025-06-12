@@ -12,28 +12,73 @@ use crate::deserialize::backgrounds::GMBackground;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::code::GMCode;
 use crate::deserialize::embedded_audio::GMEmbeddedAudio;
-use crate::deserialize::fonts::GMFont;
-use crate::deserialize::functions::GMFunction;
-use crate::deserialize::game_objects::GMGameObject;
-use crate::deserialize::paths::GMPath;
-use crate::deserialize::rooms::GMRoom;
-use crate::deserialize::scripts::GMScript;
-use crate::deserialize::sounds::GMSound;
-use crate::deserialize::sprites::GMSprite;
 use crate::deserialize::texture_page_items::GMTexturePageItem;
-use crate::deserialize::variables::GMVariable;
 use crate::export_mod::fonts::{AddFont, EditFont};
-use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList, GModUnorderedListChanges};
+use crate::export_mod::sounds::{AddSound, EditSound};
+use crate::export_mod::unordered_list::{EditUnorderedList, GModUnorderedListChanges};
+
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum ModUnorderedRef {
+pub enum ModRef {
     Data(usize),    // index in gamemaker data list; assumes element also exists in the data it will be loaded in
     Add(usize),     // element is being added by this mod; index of this mod's addition list
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ModOrderedRef {
-    index: usize,
+pub struct ModExporter<'o, 'm> {
+    pub original_data: &'o GMData,
+    pub modified_data: &'m GMData,
+}
+
+impl ModExporter<'_, '_> {
+    pub fn convert_audio_ref(&self, gm_audio_ref: GMRef<GMEmbeddedAudio>) -> Result<ModRef, String> {
+        convert_reference(gm_audio_ref, &self.original_data.audios.audios_by_index, &self.modified_data.audios.audios_by_index)
+    }
+    pub fn convert_background_ref(&self, gm_background_ref: GMRef<GMBackground>) -> Result<ModRef, String> {
+        convert_reference(gm_background_ref, &self.original_data.backgrounds.backgrounds_by_index, &self.modified_data.backgrounds.backgrounds_by_index)
+    }
+    // TODO continue
+    pub fn convert_string_ref(&self, gm_string_ref: GMRef<String>) -> Result<ModRef, String> {
+        convert_reference(gm_string_ref, &self.original_data.strings.strings_by_index, &self.modified_data.strings.strings_by_index)
+    }
+    pub fn convert_texture_ref(&self, gm_texture_ref: GMRef<GMTexturePageItem>) -> Result<ModRef, String> {
+        convert_reference(gm_texture_ref, &self.original_data.texture_page_items.textures_by_index, &self.modified_data.texture_page_items.textures_by_index)
+    }
+
+    pub fn convert_audio_ref_optional(&self, gm_audio_ref: Option<GMRef<GMEmbeddedAudio>>) -> Result<Option<ModRef>, String> {
+        convert_reference_optional(gm_audio_ref, &self.original_data.audios.audios_by_index, &self.modified_data.audios.audios_by_index)
+    }
+    pub fn convert_code_ref_optional(&self, gm_code_ref: Option<GMRef<GMCode>>) -> Result<Option<ModRef>, String> {
+        convert_reference_optional(gm_code_ref, &self.original_data.codes.codes_by_index, &self.modified_data.codes.codes_by_index)
+    }
+}
+
+fn convert_reference<GM>(gm_reference: GMRef<GM>, original_list: &[GM], modified_list: &[GM]) -> Result<ModRef, String> {
+    // If reference index out of bounds in modified data; throw error.
+    // This should never happen in healthy gm data; just being cautious that the mod will be fully functional.
+    if gm_reference.index >= modified_list.len() {
+        return Err(format!(
+            "Could not resolve {} reference with GameMaker index {} in list with length {}; out of bounds",
+            std::any::type_name_of_val(&gm_reference), gm_reference.index, modified_list.len(),
+        ))
+    }
+
+    let original_length = original_list.len();
+    if gm_reference.index >= original_length {
+        // If reference index exists (isn't out of bounds) in modified data but not in original data,
+        // then the element was newly added --> "Add" reference
+        Ok(ModRef::Add(gm_reference.index - original_length))
+    } else {
+        // If reference index exists in original data (and modified data; assumes unordered lists never remove elements),
+        // then the element is a reference to the gamemaker data the mod will later be loaded in.
+        Ok(ModRef::Data(gm_reference.index))
+    }
+}
+
+fn convert_reference_optional<GM>(gm_reference_optional: Option<GMRef<GM>>, original_list: &[GM], modified_list: &[GM]) -> Result<Option<ModRef>, String> {
+    match gm_reference_optional {
+        Some(gm_reference) => Ok(Some(convert_reference(gm_reference, original_list, modified_list)?)),
+        None => Ok(None),
+    }
 }
 
 
@@ -65,10 +110,11 @@ fn export_mod(original_data: &GMData, modified_data: &GMData, target_file: &Path
     let mut data: Vec<u8> = Vec::new();
     let buff = Cursor::new(&mut data);
     let mut zip_writer = ZipWriter::new(buff);
-
-    let gm_changes: GModData = export_changes_gamemaker(original_data, modified_data)?;
-    let strings: EditUnorderedList<String, String> = gm_changes.convert_strings(&gm_changes.strings)?;
-    let fonts: EditUnorderedList<AddFont, EditFont> = gm_changes.convert_fonts(&gm_changes.fonts)?;
+    
+    let mod_exporter = ModExporter {original_data, modified_data};
+    let fonts: EditUnorderedList<AddFont, EditFont> = mod_exporter.export_fonts()?;
+    let sounds: EditUnorderedList<AddSound, EditSound> = mod_exporter.export_sounds()?;
+    let strings: EditUnorderedList<String, String> = mod_exporter.export_strings()?;
     // repeat ts for every element
 
     zw_write_unordered_list_changes(&mut zip_writer, "strings.json", &strings)?;
@@ -88,233 +134,6 @@ fn export_mod(original_data: &GMData, modified_data: &GMData, target_file: &Path
 }
 
 
-#[derive(Debug, Clone)]
-pub struct GModData<'o, 'm> {
-    pub original_data: &'o GMData,
-    pub modified_data: &'m GMData,
-    pub backgrounds: GModUnorderedListChanges<'o, 'm, GMBackground>,
-    pub codes: GModUnorderedListChanges<'o, 'm, GMCode>,
-    pub audios: GModUnorderedListChanges<'o, 'm, GMEmbeddedAudio>,
-    pub texture_page_items: GModUnorderedListChanges<'o, 'm, GMTexturePageItem>,
-    pub fonts: GModUnorderedListChanges<'o, 'm, GMFont>,
-    pub functions: GModUnorderedListChanges<'o, 'm, GMFunction>,
-    pub game_objects: GModUnorderedListChanges<'o, 'm, GMGameObject>,
-    pub paths: GModUnorderedListChanges<'o, 'm, GMPath>,
-    pub rooms: GModUnorderedListChanges<'o, 'm, GMRoom>,
-    pub scripts: GModUnorderedListChanges<'o, 'm, GMScript>,
-    pub sounds: GModUnorderedListChanges<'o, 'm, GMSound>,
-    pub sprites: GModUnorderedListChanges<'o, 'm, GMSprite>,
-    pub strings: GModUnorderedListChanges<'o, 'm, String>,
-    pub variables: GModUnorderedListChanges<'o, 'm, GMVariable>,
-}
-
-fn export_changes_gamemaker<'o, 'm>(original_data: &'o GMData, modified_data: &'m GMData) -> Result<GModData<'o, 'm>, String> {
-    let strings: GModUnorderedListChanges<String> = export_changes_unordered_list(
-        &original_data.strings.strings_by_index,
-        &modified_data.strings.strings_by_index,
-    )?;
-
-    let backgrounds: GModUnorderedListChanges<GMBackground> = export_changes_unordered_list(
-        &original_data.backgrounds.backgrounds_by_index,
-        &modified_data.backgrounds.backgrounds_by_index,
-    )?;
-
-    let codes: GModUnorderedListChanges<GMCode> = export_changes_unordered_list(
-        &original_data.codes.codes_by_index,
-        &modified_data.codes.codes_by_index,
-    )?;
-
-    let audios: GModUnorderedListChanges<GMEmbeddedAudio> = export_changes_unordered_list(
-        &original_data.audios.audios_by_index,
-        &modified_data.audios.audios_by_index,
-    )?;
-
-    let texture_page_items: GModUnorderedListChanges<GMTexturePageItem> = export_changes_unordered_list(
-        &original_data.texture_page_items.textures_by_index,
-        &modified_data.texture_page_items.textures_by_index,
-    )?;
-
-    let fonts: GModUnorderedListChanges<GMFont> = export_changes_unordered_list(
-        &original_data.fonts.fonts_by_index,
-        &modified_data.fonts.fonts_by_index,
-    )?;
-
-    let functions: GModUnorderedListChanges<GMFunction> = export_changes_unordered_list(
-        &original_data.functions.functions_by_index,
-        &modified_data.functions.functions_by_index,
-    )?;
-
-    let game_objects: GModUnorderedListChanges<GMGameObject> = export_changes_unordered_list(
-        &original_data.game_objects.game_objects_by_index,
-        &modified_data.game_objects.game_objects_by_index,
-    )?;
-
-    let paths: GModUnorderedListChanges<GMPath> = export_changes_unordered_list(
-        &original_data.paths.paths_by_index,
-        &modified_data.paths.paths_by_index,
-    )?;
-
-    let rooms: GModUnorderedListChanges<GMRoom> = export_changes_unordered_list(
-        &original_data.rooms.rooms_by_index,
-        &modified_data.rooms.rooms_by_index,
-    )?;
-
-    let scripts: GModUnorderedListChanges<GMScript> = export_changes_unordered_list(
-        &original_data.scripts.scripts_by_index,
-        &modified_data.scripts.scripts_by_index,
-    )?;
-
-
-    let sounds: GModUnorderedListChanges<GMSound> = export_changes_unordered_list(
-        &original_data.sounds.sounds_by_index,
-        &modified_data.sounds.sounds_by_index,
-    )?;
-
-    let sprites: GModUnorderedListChanges<GMSprite> = export_changes_unordered_list(
-        &original_data.sprites.sprites_by_index,
-        &modified_data.sprites.sprites_by_index,
-    )?;
-
-    let variables: GModUnorderedListChanges<GMVariable> = export_changes_unordered_list(
-        &original_data.variables.variables,
-        &modified_data.variables.variables,
-    )?;
-
-    Ok(GModData {
-        modified_data,
-        backgrounds,
-        codes,
-        audios,
-        texture_page_items,
-        fonts,
-        functions,
-        game_objects,
-        paths,
-        rooms,
-        scripts,
-        sounds,
-        sprites,
-        strings,
-        variables,
-    })
-}
-
-
-macro_rules! resolve_reference_fn {
-    ($fn_name:ident, $field:ident, $type:ty, $lookup_field:ident) => {
-        pub fn $fn_name(&self, reference: &GMRef<$type>) -> Result<ModUnorderedRef, String> {
-            // If reference index out of bounds in modified data; throw error.
-            // This should never happen in healthy gm data; just being cautious that the mod will be fully functional.
-            if reference.index >= self.modified_data.$field.$lookup_field.len() {
-                return Err(format!(
-                    "Could not resolve {} reference for GameMaker index {} in edits \
-                    list with length {} or additions list with length {}", 
-                    stringify!($field), reference.index, self.$field.edits.len(), self.$field.additions.len(), 
-                ))
-            }
-            
-            let original_length = self.original_data.$field.$lookup_field.len();
-            if reference.index >= original_length {
-                // If reference index exists (isn't out of bounds) in modified data but not in original data,
-                // then the element was newly added --> "Add" reference
-                Ok(ModUnorderedRef::Add(reference.index - original_length))
-            } else {
-                // If reference index exists in original data (and modified data; assumes unordered lists never remove elements),
-                // then the element is a reference to the gamemaker data the mod will later be loaded in.
-                Ok(ModUnorderedRef::Data(reference.index))
-            }
-        }
-    };
-}
-
-macro_rules! resolve_reference_optional_fn {
-    ($fn_name:ident, $field:ident, $type:ty, $lookup_field:ident) => {
-        pub fn $fn_name(&self, reference: &Option<GMRef<$type>>) -> Result<Option<ModUnorderedRef>, String> {
-            let reference: &GMRef<$type> = match reference {
-                None => return Ok(None),
-                Some(x) => x,
-            };
-
-            if reference.index >= self.modified_data.$field.$lookup_field.len() {
-                return Err(format!(
-                    "Could not resolve optional {} reference for GameMaker index {} in edits \
-                    list with length {} or additions list with length {}", 
-                    stringify!($field), reference.index, self.$field.edits.len(), self.$field.additions.len(), 
-                ))
-            }
-            
-            let original_length = self.original_data.$field.$lookup_field.len();
-            if reference.index >= original_length {
-                Ok(Some(ModUnorderedRef::Add(reference.index - original_length)))
-            } else {
-                Ok(Some(ModUnorderedRef::Data(reference.index)))
-            }
-        }
-    };
-}
-
-impl<'o, 'm> GModData<'o, 'm> {
-    resolve_reference_fn!(resolve_background_ref, backgrounds, GMBackground, backgrounds_by_index);
-    resolve_reference_fn!(resolve_code_ref, codes, GMCode, codes_by_index);
-    resolve_reference_fn!(resolve_audio_ref, audios, GMEmbeddedAudio, audios_by_index);
-    resolve_reference_fn!(resolve_texture_ref, texture_page_items, GMTexturePageItem, textures_by_index);
-    resolve_reference_fn!(resolve_font_ref, fonts, GMFont, fonts_by_index);
-    resolve_reference_fn!(resolve_function_ref, functions, GMFunction, functions_by_index);
-    resolve_reference_fn!(resolve_game_object_ref, game_objects, GMGameObject, game_objects_by_index);
-    resolve_reference_fn!(resolve_path_ref, paths, GMPath, paths_by_index);
-    resolve_reference_fn!(resolve_room_ref, rooms, GMRoom, rooms_by_index);
-    resolve_reference_fn!(resolve_script_ref, scripts, GMScript, scripts_by_index);
-    resolve_reference_fn!(resolve_sound_ref, sounds, GMSound, sounds_by_index);
-    resolve_reference_fn!(resolve_sprite_ref, sprites, GMSprite, sprites_by_index);
-    resolve_reference_fn!(resolve_string_ref, strings, String, strings_by_index);
-    resolve_reference_fn!(resolve_variable_ref, variables, GMVariable, variables);
-
-    resolve_reference_optional_fn!(resolve_optional_background_ref, backgrounds, GMBackground, backgrounds_by_index);
-    resolve_reference_optional_fn!(resolve_optional_code_ref, codes, GMCode, codes_by_index);
-    resolve_reference_optional_fn!(resolve_optional_audio_ref, audios, GMEmbeddedAudio, audios_by_index);
-    resolve_reference_optional_fn!(resolve_optional_texture_ref, texture_page_items, GMTexturePageItem, textures_by_index);
-    resolve_reference_optional_fn!(resolve_optional_font_ref, fonts, GMFont, fonts_by_index);
-    resolve_reference_optional_fn!(resolve_optional_function_ref, functions, GMFunction, functions_by_index);
-    resolve_reference_optional_fn!(resolve_optional_game_object_ref, game_objects, GMGameObject, game_objects_by_index);
-    resolve_reference_optional_fn!(resolve_optional_path_ref, paths, GMPath, paths_by_index);
-    resolve_reference_optional_fn!(resolve_optional_room_ref, rooms, GMRoom, rooms_by_index);
-    resolve_reference_optional_fn!(resolve_optional_script_ref, scripts, GMScript, scripts_by_index);
-    resolve_reference_optional_fn!(resolve_optional_sound_ref, sounds, GMSound, sounds_by_index);
-    resolve_reference_optional_fn!(resolve_optional_sprite_ref, sprites, GMSprite, sprites_by_index);
-    resolve_reference_optional_fn!(resolve_optional_string_ref, strings, String, strings_by_index);
-    resolve_reference_optional_fn!(resolve_optional_variable_ref, variables, GMVariable, variables);
-    
-    
-    // pub fn ts(&self) -> Result<EditUnorderedList<AddFont, EditFont>, String> {
-    //     let changes = export_changes_unordered_list(&self.original_data.fonts.fonts_by_index, &self.modified_data.fonts.fonts_by_index)?;
-    //     self.convert_edits(
-    //         &changes,
-    //         |i| self.convert_font_additions(changes.additions),
-    //         |o, m| {
-    //             Ok(EditFont {
-    //                 name: edit_field(&self.resolve_string_ref(&o.name)?, &self.resolve_string_ref(&m.name)?),
-    //                 display_name: edit_field(&self.resolve_string_ref(&o.display_name)?, &self.resolve_string_ref(&m.display_name)?),
-    //                 em_size: edit_field(&o.em_size, &m.em_size),
-    //                 bold: edit_field(&o.bold, &m.bold),
-    //                 italic: edit_field(&o.italic, &m.italic),
-    //                 range_start: edit_field(&o.range_start, &m.range_start),
-    //                 charset: edit_field(&o.charset, &m.charset),
-    //                 anti_alias: edit_field(&o.anti_alias, &m.anti_alias),
-    //                 range_end: edit_field(&o.range_end, &m.range_end),
-    //                 texture: edit_field(&o.texture, &m.texture),
-    //                 scale_x: edit_field(&o.scale_x, &m.scale_x),
-    //                 scale_y: edit_field(&o.scale_y, &m.scale_y),
-    //                 ascender_offset: edit_field(&o.ascender_offset, &m.ascender_offset),
-    //                 ascender: edit_field(&o.ascender, &m.ascender),
-    //                 sdf_spread: edit_field(&o.sdf_spread, &m.sdf_spread),
-    //                 line_height: edit_field(&o.line_height, &m.line_height),
-    //                 glyphs: EditUnorderedList {TODO},
-    //             })
-    //         }
-    //     )
-    // }
-}
-
 
 pub fn flag_field(original: bool, modified: bool) -> Option<bool> {
     if original == modified {
@@ -331,12 +150,23 @@ pub fn edit_field<'a, T: PartialEq + Clone>(original: &T, modified: &T) -> Optio
         None
     }
 }
-
+/// TODO remove edit_field_option (impossible to tell whether it should be set to None or ignored; use two layers of Option instead)
 pub fn edit_field_option<T: PartialEq + Clone>(original: &Option<T>, modified: &Option<T>) -> Option<T> {
     if original == modified {
         modified.clone()
     } else {
         None
+    }
+}
+pub fn edit_field_convert<GM>(
+    original: GMRef<GM>,
+    modified: GMRef<GM>,
+    converter: impl Fn(GMRef<GM>) -> Result<ModRef, String>,
+) -> Result<Option<ModRef>, String> {
+    if original.index == modified.index {
+        Ok(Some(converter(modified)?))
+    } else {
+        Ok(None)
     }
 }
 

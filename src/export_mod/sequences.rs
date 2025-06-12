@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use crate::deserialize::sequence::GMSequence;
-use crate::export_mod::export::GModData;
 use crate::export_mod::unordered_list::{EditUnorderedList, GModUnorderedListChanges};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
