@@ -1,8 +1,6 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use crate::deserialize::functions::GMFunction;
-use crate::export_mod::export::{edit_field, edit_field_convert, ModExporter, ModRef};
-use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList, GModUnorderedListChanges};
+use crate::export_mod::export::{edit_field_convert, ModExporter, ModRef};
+use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddFunction {
