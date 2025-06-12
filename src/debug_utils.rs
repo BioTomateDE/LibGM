@@ -1,6 +1,5 @@
 use std::fmt::{Display, Formatter};
 use std::time::{Duration, Instant};
-use colored::Colorize;
 use cpu_time::ProcessTime;
 
 pub struct Stopwatch {
