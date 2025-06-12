@@ -9,12 +9,6 @@ pub struct EditUnorderedList<ADD, EDIT> {
     pub edits: HashMap<usize, EDIT>,
 }
 
-#[derive(Debug, Clone)]
-pub struct GModUnorderedListChanges<'o, 'm, G> {
-    pub additions: &'m [G],
-    pub edits: HashMap<usize, (&'o G, &'m G)>,
-}
-
 pub fn export_changes_unordered_list<GM: PartialEq + Clone, ADD, EDIT>(
     original_list: &[GM],
     modified_list: &[GM],

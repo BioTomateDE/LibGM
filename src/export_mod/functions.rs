@@ -10,6 +10,7 @@ pub struct AddFunction {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde_with::skip_serializing_none]
 pub struct EditFunction {
     pub name: Option<ModRef>,  // String
     pub name_string_id: Option<i32>,

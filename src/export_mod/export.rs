@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use crate::deserialize::all::GMData;
 use std::fs::File;
 use std::io::prelude::*;
@@ -17,7 +16,7 @@ use crate::deserialize::sprites::GMSprite;
 use crate::deserialize::texture_page_items::GMTexturePageItem;
 use crate::export_mod::fonts::{AddFont, EditFont};
 use crate::export_mod::sounds::{AddSound, EditSound};
-use crate::export_mod::unordered_list::{EditUnorderedList, GModUnorderedListChanges};
+use crate::export_mod::unordered_list::EditUnorderedList;
 
 
 pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file: &Path) -> Result<(), String> {
@@ -167,7 +166,6 @@ pub fn edit_field<'a, T: PartialEq + Clone>(original: &T, modified: &T) -> Optio
         None
     }
 }
-/// TODO remove edit_field_option (impossible to tell whether it should be set to None or ignored; use two layers of Option instead)
 pub fn edit_field_option<T: PartialEq + Clone>(original: Option<T>, modified: Option<T>) -> Option<Option<T>> {
     if original != modified {
         Some(modified)
@@ -196,19 +194,6 @@ pub fn edit_field_convert_option<GM: PartialEq>(
     } else {
         Ok(None)
     }
-}
-
-pub fn convert_edits<GM, ADD, EDIT>(
-    changes: &GModUnorderedListChanges<GM>,
-    map_additions: impl Fn(&[GM]) -> Result<Vec<ADD>, String>,
-    map_edit: impl Fn(&GM, &GM) -> Result<EDIT, String>,
-) -> Result<EditUnorderedList<ADD, EDIT>, String> {
-    let additions: Vec<ADD> = map_additions(&changes.additions)?;
-    let edits: HashMap<usize, EDIT> = changes.edits
-        .iter()
-        .map(|(i, (original, modified))| Ok((*i, map_edit(original, modified)?)))
-        .collect::<Result<HashMap<_, _>, String>>()?;
-    Ok(EditUnorderedList { additions, edits })
 }
 
 pub fn convert_additions<GM, ADD>(gm_elements: &[GM], map_addition: impl Fn(&GM) -> Result<ADD, String>) -> Result<Vec<ADD>, String> {

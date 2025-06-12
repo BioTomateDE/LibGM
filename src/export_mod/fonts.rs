@@ -36,6 +36,7 @@ pub struct AddFontGlyph {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde_with::skip_serializing_none]
 pub struct EditFont {
     pub name: Option<ModRef>, // String
     pub display_name: Option<Option<ModRef>>,  // String
@@ -56,6 +57,7 @@ pub struct EditFont {
     pub glyphs: EditUnorderedList<AddFontGlyph, EditFontGlyph>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde_with::skip_serializing_none]
 pub struct EditFontGlyph {
     pub character: Option<Option<char>>,
     pub x: Option<u16>,
