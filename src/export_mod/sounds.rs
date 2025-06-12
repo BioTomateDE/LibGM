@@ -58,7 +58,7 @@ impl ModExporter<'_, '_> {
                 effects: i.effects,
                 volume: i.volume,
                 pitch: i.pitch,
-                audio_file: self.convert_audio_ref_optional(i.audio_file)?,
+                audio_file: self.convert_audio_ref_opt(i.audio_file)?,
                 audio_length: i.audio_length,
             }),
             |o, m| Ok(EditSound {
@@ -69,7 +69,7 @@ impl ModExporter<'_, '_> {
                 effects: edit_field(&o.effects, &m.effects),
                 volume: edit_field(&o.volume, &m.volume),
                 pitch: edit_field(&o.pitch, &m.pitch),
-                audio_data: edit_field(&self.convert_audio_ref_optional(o.audio_file)?, &self.convert_audio_ref_optional(m.audio_file)?),
+                audio_data: edit_field(&self.convert_audio_ref_opt(o.audio_file)?, &self.convert_audio_ref_opt(m.audio_file)?),
                 audio_length: edit_field(&o.audio_length, &m.audio_length),
             }),
         )

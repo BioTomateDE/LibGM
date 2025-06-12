@@ -16,8 +16,8 @@ pub struct GModUnorderedListChanges<'o, 'm, G> {
 }
 
 pub fn export_changes_unordered_list<GM: PartialEq + Clone, ADD, EDIT>(
-    original_list: &Vec<GM>,
-    modified_list: &Vec<GM>,
+    original_list: &[GM],
+    modified_list: &[GM],
     map_addition: impl Fn(&GM) -> Result<ADD, String>,
     map_edit: impl Fn(&GM, &GM) -> Result<EDIT, String>,
 ) -> Result<EditUnorderedList<ADD, EDIT>, String> {
