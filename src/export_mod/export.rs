@@ -5,6 +5,8 @@ use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 use image::{DynamicImage, ImageFormat};
 use serde::{Deserialize, Serialize};
+use crate::{bench_build, bench_export};
+use crate::debug_utils::Stopwatch;
 use crate::deserialize::backgrounds::GMBackground;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::code::GMCode;
@@ -24,6 +26,7 @@ use crate::export_mod::unordered_list::EditUnorderedList;
 
 
 pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_path: &Path) -> Result<(), String> {
+    let stopwatch = Stopwatch::start();
     // initialize file and tarball
     let file = File::create(target_file_path)
         .map_err(|e| format!("Could not create archive file with path \"{}\": {e}", target_file_path.display()))?;
@@ -32,15 +35,17 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     let mut tar = tar::Builder::new(zstd_encoder);
 
     let mod_exporter = ModExporter {original_data, modified_data};
-    let codes: EditUnorderedList<AddCode, EditCode> = mod_exporter.export_codes()?;
-    let fonts: EditUnorderedList<AddFont, EditFont> = mod_exporter.export_fonts()?;
-    let functions: EditUnorderedList<AddFunction, EditFunction> = mod_exporter.export_functions()?;
-    let rooms: EditUnorderedList<AddRoom, EditRoom> = mod_exporter.export_rooms()?;
-    let sounds: EditUnorderedList<AddSound, EditSound> = mod_exporter.export_sounds()?;
-    let strings: EditUnorderedList<String, String> = mod_exporter.export_strings()?;
-    let (texture_page_items, images): (EditUnorderedList<AddTexturePageItem, EditTexturePageItem>, Vec<DynamicImage>) = mod_exporter.export_textures()?;
+    let codes: EditUnorderedList<AddCode, EditCode> = bench_export!("Code", mod_exporter.export_codes())?;
+    let fonts: EditUnorderedList<AddFont, EditFont> = bench_export!("Fonts", mod_exporter.export_fonts())?;
+    let functions: EditUnorderedList<AddFunction, EditFunction> = bench_export!("Functions", mod_exporter.export_functions())?;
+    let rooms: EditUnorderedList<AddRoom, EditRoom> = bench_export!("Rooms", mod_exporter.export_rooms())?;
+    let sounds: EditUnorderedList<AddSound, EditSound> = bench_export!("Sounds", mod_exporter.export_sounds())?;
+    let strings: EditUnorderedList<String, String> = bench_export!("Strings", mod_exporter.export_strings())?;
+    let (texture_page_items, images) = bench_export!("Textures", mod_exporter.export_textures())?;
     // repeat ts for every element {~~}
 
+    log::trace!("Exporting changes took {stopwatch}");
+    
     tar_write_json_file(&mut tar, "codes", &codes)?;
     tar_write_json_file(&mut tar, "fonts", &fonts)?;
     tar_write_json_file(&mut tar, "functions", &functions)?;
@@ -67,6 +72,8 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
         .map_err(|e| format!("Could not get inner value of tarball: {e}"))?
         .finish()
         .map_err(|e| format!("Could not finish writing tarball: {e}"))?;
+    
+    log::trace!("Exporting changes and writing tarball took {stopwatch}");
     Ok(())
 }
 
