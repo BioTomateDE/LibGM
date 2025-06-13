@@ -1,6 +1,4 @@
 use std::cmp::Ordering;
-use std::iter::Map;
-use std::slice::Iter;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,7 +32,7 @@ impl<T> Ord for DataChange<T> {
         if self_index == other_index && matches!(self, DataChange::Delete(_, _)) {
             return Ordering::Less;
         }
-        if  self_index == other_index && matches!(other, DataChange::Delete(_, _)) {
+        if self_index == other_index && matches!(other, DataChange::Delete(_, _)) {
             return Ordering::Greater;
         }
 
@@ -42,17 +40,22 @@ impl<T> Ord for DataChange<T> {
     }
 }
 
-// G stands for GameMaker data
-// A stands for AcornGM data
+
 #[derive(Debug, Clone)]
-struct MyDiffEngine<'a, G, A> {
-    changes: Vec<DataChange<A>>,
-    modified_data: &'a Vec<G>,
-    map_change: fn(&G) -> A,
+struct MyDiffEngine<'a, GM, EDIT, FN>
+where
+    FN: Fn(&GM) -> Result<EDIT, String>,
+{
+    changes: Vec<DataChange<EDIT>>,
+    modified_data: &'a Vec<GM>,
+    map_change: FN,
 }
 
-impl<'a, G, A> MyDiffEngine<'a, G, A> {
-    fn new(modified_data: &'a Vec<G>, map_change: fn(&G) -> A) -> Self {
+impl<'a, GM, EDIT, FN> MyDiffEngine<'a, GM, EDIT, FN>
+where
+    FN: Fn(&GM) -> Result<EDIT, String>,
+{
+    fn new(modified_data: &'a Vec<GM>, map_change: FN) -> Self {
         Self {
             changes: vec![],
             modified_data,
@@ -61,8 +64,11 @@ impl<'a, G, A> MyDiffEngine<'a, G, A> {
     }
 }
 
-impl<G: Clone, A> diffs::Diff for MyDiffEngine<'_, G, A> {
-    type Error = std::convert::Infallible;
+impl<GM: Clone, EDIT, FN> diffs::Diff for MyDiffEngine<'_, GM, EDIT, FN>
+where
+    FN: Fn(&GM) -> Result<EDIT, String>,
+{
+    type Error = String;
 
     fn delete(&mut self, old: usize, len: usize, _new: usize) -> Result<(), Self::Error> {
         if let Some(DataChange::Delete(last_deletion_index, last_deletion_length)) = self.get_last_change() {
@@ -76,46 +82,62 @@ impl<G: Clone, A> diffs::Diff for MyDiffEngine<'_, G, A> {
     }
 
     fn insert(&mut self, old: usize, new: usize, new_len: usize) -> Result<(), Self::Error> {
-        let data: Map<Iter<G>, fn(&G) -> A> = self.modified_data[new..new+new_len].iter().map(self.map_change);
+        let data: Vec<EDIT> = self.get_data(new, new_len)?;
         if let Some(DataChange::Insert(last_insertion_index, last_insertion_data)) = self.get_last_change() {
             if old == *last_insertion_index {
                 last_insertion_data.extend(data);
                 return Ok(())
             }
         }
-        self.changes.push(DataChange::Insert(old, data.collect()));
+        self.changes.push(DataChange::Insert(old, data));
         Ok(())
     }
 
     fn replace(&mut self, old: usize, _old_len: usize, new: usize, new_len: usize) -> Result<(), Self::Error> {
-        let data: Map<Iter<G>, fn(&G) -> A> = self.modified_data[new..new+new_len].iter().map(self.map_change);
+        let data: Vec<EDIT> = self.get_data(new, new_len)?;
         if let Some(DataChange::Edit(_, last_data_edit)) = self.get_last_change() {
             last_data_edit.extend(data);
         } else {
-            self.changes.push(DataChange::Edit(old, data.collect()))
+            self.changes.push(DataChange::Edit(old, data))
         }
         Ok(())
     }
 }
 
-impl<G, A> MyDiffEngine<'_, G, A> {
-    fn get_last_change(&mut self) -> Option<&mut DataChange<A>> {
+impl<GM, EDIT, FN> MyDiffEngine<'_, GM, EDIT, FN>
+where
+    FN: Fn(&GM) -> Result<EDIT, String>,
+{
+    fn get_last_change(&mut self) -> Option<&mut DataChange<EDIT>> {
         let last_index: usize = match self.changes.len().checked_sub(1) {
             Some(idx) => idx,
             None => return None,
         };
         self.changes.get_mut(last_index)
     }
+    
+    fn get_data(&self, start: usize, length: usize) -> Result<Vec<EDIT>, String> {
+        let end: usize = start + length;
+        self.modified_data[start..end].iter().map(&self.map_change).collect::<Result<Vec<_>, String>>()
+            .map_err(|e| format!("Error while mapping GameMaker to Acorn elements in ordered list from index {start}-{end}: {e}"))
+    }
 }
 
 
-pub fn export_changes_ordered_list<G: PartialEq + Clone, A>(original_data: &Vec<G>, modified_data: &Vec<G>, map_change: fn(&G) -> A) -> Vec<DataChange<A>> {
-    let mut engine: MyDiffEngine<G, A> = MyDiffEngine::new(modified_data, map_change);
+pub fn export_changes_ordered_list<GM: PartialEq + Clone, EDIT, FN>(
+    original_data: &Vec<GM>,
+    modified_data: &Vec<GM>,
+    map_change: FN,
+) -> Result<Vec<DataChange<EDIT>>, String>
+where
+    FN: Fn(&GM) -> Result<EDIT, String>,
+{
+    let mut engine: MyDiffEngine<GM, EDIT, FN> = MyDiffEngine::new(modified_data, map_change);
 
     diffs::myers::diff(&mut engine, original_data, 0, original_data.len(), modified_data, 0, modified_data.len())
-        .map_err(|e| format!("Error while generating diffs: {e}")).unwrap();  // REMOVE .unwrap IF NOT Infallible
+        .map_err(|e| format!("Error while generating diffs: {e}"))?;
 
-    engine.changes
+    Ok(engine.changes)
 }
 
 
