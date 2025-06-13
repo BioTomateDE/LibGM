@@ -114,3 +114,9 @@ pub const fn unlikely(b: bool) -> bool {
     b
 }
 
+
+pub fn typename<T>() -> String {
+    let string: &str = std::any::type_name::<T>();
+    string.rsplit_once("::").map(|(_, i)| i).unwrap_or(string).to_string()
+}
+
