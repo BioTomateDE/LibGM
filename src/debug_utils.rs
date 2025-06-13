@@ -34,9 +34,9 @@ impl Display for Stopwatch {
 #[macro_export]
 macro_rules! bench_build {
     ($label:expr, $expr:expr) => {{
-        let _start = crate::debug_utils::Stopwatch::start();
+        let _stopwatch = crate::debug_utils::Stopwatch::start();
         let _result = $expr;
-        ::log::trace!("Building chunk '{}' took {}", $label, _start);
+        ::log::trace!("Building chunk '{}' took {}", $label, _stopwatch);
         _result
     }};
 }
@@ -44,9 +44,19 @@ macro_rules! bench_build {
 #[macro_export]
 macro_rules! bench_parse {
     ($label:expr, $expr:expr) => {{
-        let _start = crate::debug_utils::Stopwatch::start();
+        let _stopwatch = crate::debug_utils::Stopwatch::start();
         let _result = $expr;
-        ::log::trace!("Parsing chunk '{}' took {}", $label, _start);
+        ::log::trace!("Parsing chunk '{}' took {}", $label, _stopwatch);
+        _result
+    }};
+}
+
+#[macro_export]
+macro_rules! bench_export {
+    ($label:expr, $expr:expr) => {{
+        let _stopwatch = crate::debug_utils::Stopwatch::start();
+        let _result = $expr;
+        ::log::trace!("Exporting {} took {}", $label, _stopwatch);
         _result
     }};
 }
