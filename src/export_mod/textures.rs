@@ -19,6 +19,7 @@ pub struct AddTexturePageItem {
     pub bounding_height: u16,
 }
 
+#[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditTexturePageItem {
     pub texture_page: Option<ModRef>,   //???

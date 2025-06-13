@@ -9,3 +9,4 @@ mod functions;
 mod sounds;
 mod code;
 mod textures;
+mod game_objects;
