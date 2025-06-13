@@ -170,6 +170,9 @@ impl ModExporter<'_, '_> {
     pub fn convert_game_object_ref_opt(&self, gm_game_object_ref: Option<GMRef<GMGameObject>>) -> Result<Option<ModRef>, String> {
         convert_reference_optional(gm_game_object_ref, &self.original_data.game_objects.game_objects_by_index, &self.modified_data.game_objects.game_objects_by_index)
     }
+    pub fn convert_sprite_ref_opt(&self, gm_sprite_ref: Option<GMRef<GMSprite>>) -> Result<Option<ModRef>, String> {
+        convert_reference_optional(gm_sprite_ref, &self.original_data.sprites.sprites_by_index, &self.modified_data.sprites.sprites_by_index)
+    }
     pub fn convert_string_ref_opt(&self, gm_string_ref: Option<GMRef<String>>) -> Result<Option<ModRef>, String> {
         convert_reference_optional(gm_string_ref, &self.original_data.strings.strings_by_index, &self.modified_data.strings.strings_by_index)
     }
