@@ -267,7 +267,7 @@ fn build_instruction(
             builder.write_u8(instr.data_type.into());
             builder.write_u8(instr.opcode.into());
             if instr.data_type == GMDataType::Int32 {
-                let int_argument: i32 = instr.int_argument.ok_or_else(|| "Int argument not set but Data Type is Int32 while building Break Instruction")?;
+                let int_argument: i32 = instr.int_argument.ok_or("Int argument not set but Data Type is Int32 while building Break Instruction")?;
                 builder.write_i32(int_argument);
             }
         }
@@ -285,7 +285,7 @@ pub fn build_instance_type(instance_type: &GMInstanceType) -> i16 {
         GMInstanceType::Instance(Some(game_object_ref)) => game_object_ref.index as i16,
         GMInstanceType::Other => -2,
         GMInstanceType::All => -3,
-        GMInstanceType::Noone => -4,
+        GMInstanceType::None => -4,
         GMInstanceType::Global => -5,
         GMInstanceType::Builtin => -6,
         GMInstanceType::Local => -7,
