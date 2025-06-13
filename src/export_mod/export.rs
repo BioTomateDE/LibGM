@@ -1,7 +1,9 @@
 use crate::deserialize::all::GMData;
 use std::fs::File;
+use std::io::Cursor;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
+use image::{DynamicImage, ImageFormat};
 use serde::{Deserialize, Serialize};
 use crate::deserialize::backgrounds::GMBackground;
 use crate::deserialize::chunk_reading::GMRef;
@@ -17,15 +19,17 @@ use crate::export_mod::fonts::{AddFont, EditFont};
 use crate::export_mod::functions::{AddFunction, EditFunction};
 use crate::export_mod::rooms::{AddRoom, EditRoom};
 use crate::export_mod::sounds::{AddSound, EditSound};
+use crate::export_mod::textures::{AddTexturePageItem, EditTexturePageItem};
 use crate::export_mod::unordered_list::EditUnorderedList;
 
 
 pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_path: &Path) -> Result<(), String> {
+    // initialize file and tarball
     let file = File::create(target_file_path)
         .map_err(|e| format!("Could not create archive file with path \"{}\": {e}", target_file_path.display()))?;
-    let zst = zstd::Encoder::new(file, 19)
+    let zstd_encoder = zstd::Encoder::new(file, 19)
         .map_err(|e| format!("Could not create Zstd encoder: {e}"))?;
-    let mut tar = tar::Builder::new(zst);
+    let mut tar = tar::Builder::new(zstd_encoder);
 
     let mod_exporter = ModExporter {original_data, modified_data};
     let codes: EditUnorderedList<AddCode, EditCode> = mod_exporter.export_codes()?;
@@ -34,6 +38,7 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     let rooms: EditUnorderedList<AddRoom, EditRoom> = mod_exporter.export_rooms()?;
     let sounds: EditUnorderedList<AddSound, EditSound> = mod_exporter.export_sounds()?;
     let strings: EditUnorderedList<String, String> = mod_exporter.export_strings()?;
+    let (texture_page_items, images): (EditUnorderedList<AddTexturePageItem, EditTexturePageItem>, Vec<DynamicImage>) = mod_exporter.export_textures()?;
     // repeat ts for every element {~~}
 
     tar_write_json_file(&mut tar, "codes", &codes)?;
@@ -42,10 +47,22 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     tar_write_json_file(&mut tar, "sounds", &sounds)?;
     tar_write_json_file(&mut tar, "rooms", &rooms)?;
     tar_write_json_file(&mut tar, "strings", &strings)?;
+    tar_write_json_file(&mut tar, "textures", &texture_page_items)?;
     // repeat ts for every element {~~}
 
-    // also export textures and audio separately {~~}
+    // export textures into textures/{i}.png
+    for (i, image) in images.iter().enumerate() {
+        let file_path: String = format!("textures/{i}.png");
+        let mut buffer = Cursor::new(Vec::new());
+        image.write_to(&mut buffer, ImageFormat::Png)
+            .map_err(|e| format!("Could not encode PNG image: {e}"))?;
+        tar_write_raw_file(&mut tar, &file_path, &buffer.into_inner())?;
+    }
 
+    // export audio into audios/{i}.wav
+    // ^ TODO
+
+    // finalize
     tar.into_inner()
         .map_err(|e| format!("Could not get inner value of tarball: {e}"))?
         .finish()
@@ -59,10 +76,6 @@ fn tar_write_json_file<ADD: Serialize, EDIT: Serialize>(
     changes: &EditUnorderedList<ADD, EDIT>,
 ) -> Result<(), String> {
     let filename: String = format!("{name}.json");
-    let time_now: u64 = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("Time travellers are not allowed")
-        .as_secs();
 
     let data: Vec<u8> = serde_json::to_vec_pretty(changes)
         .map_err(|e| format!("Could not serialize {name} changes to json: {e}"))?;
@@ -72,11 +85,31 @@ fn tar_write_json_file<ADD: Serialize, EDIT: Serialize>(
         .map_err(|e| format!("Could not set tar file path for json file \"{filename}\": {e}"))?;
     header.set_size(data.len() as u64);
     header.set_mode(0o644);
-    header.set_mtime(time_now);
+    header.set_mtime(get_current_unix_time());
     header.set_cksum();   // has to be called last
     tar.append(&header, data.as_slice())
         .map_err(|e| format!("Could not append json file \"{filename}\" to tarball: {e}"))?;
     Ok(())
+}
+
+fn tar_write_raw_file(tar: &mut tar::Builder<zstd::Encoder<File>>, file_path: &str, data: &[u8]) -> Result<(), String> {
+    let mut header = tar::Header::new_gnu();
+    header.set_path(&file_path)
+        .map_err(|e| format!("Could not set tar file path for raw file \"{file_path}\": {e}"))?;
+    header.set_size(data.len() as u64);
+    header.set_mode(0o644);
+    header.set_mtime(get_current_unix_time());
+    header.set_cksum();   // has to be called last
+    tar.append(&header, data)
+        .map_err(|e| format!("Could not append raw file \"{file_path}\" to tarball: {e}"))?;
+    Ok(())
+}
+
+fn get_current_unix_time() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time travellers are not allowed")
+        .as_secs()
 }
 
 
