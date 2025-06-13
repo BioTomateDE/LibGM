@@ -1,5 +1,6 @@
 use crate::deserialize::chunk_reading::GMRef;
 use num_enum::{TryFromPrimitive, IntoPrimitive};
+use serde::{Deserialize, Serialize};
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::code::GMCode;
 use crate::deserialize::general_info::GMGeneralInfo;
@@ -33,19 +34,13 @@ pub struct GMGameObject {
     pub events: Vec<Vec<GMGameObjectEvent>>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive, Serialize, Deserialize)]
 #[repr(u32)]
 pub enum GMGameObjectCollisionShape {
     Circle = 0,
     Box = 1,
     Custom = 2,
 }
-
-#[derive(Debug, Clone)]
-pub struct GMGameObjects {
-    pub game_objects_by_index: Vec<GMGameObject>,
-}
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMGameObjectEvent {
@@ -69,6 +64,11 @@ pub struct GMGameObjectEventAction {
     pub relative: bool,
     pub is_not: bool,
     pub unknown_always_zero: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct GMGameObjects {
+    pub game_objects_by_index: Vec<GMGameObject>,
 }
 
 
