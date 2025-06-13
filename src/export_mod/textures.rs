@@ -39,7 +39,8 @@ impl ModExporter<'_, '_> {
         let texture_page_items: &[GMTexturePageItem] = modified_list
             .get(original_list.len() .. modified_list.len())
             .ok_or_else(|| format!(
-                "Could not get texture additions slice with original data len {} and modified data len {}",
+                "Could not get texture additions slice with original data len {} and modified data len {}. \
+                If there are purposefully fewer texture page items in your modified data file, please report this as a bug.",
                 original_list.len(), modified_list.len(),
             ))?;
         
