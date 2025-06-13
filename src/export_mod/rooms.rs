@@ -112,8 +112,8 @@ pub struct AddRoomFlags {
     pub is_gms2_3: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditRoom {
     pub name: Option<ModRef>,
     pub caption: Option<ModRef>,
@@ -140,8 +140,8 @@ pub struct EditRoom {
     pub layers: Option<EditUnorderedList<AddRoomLayer, EditRoomLayer>>,
     pub sequences: Option<EditUnorderedList<AddSequence, EditSequence>>,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditRoomFlags {
     pub enable_views: Option<bool>,
     pub show_color: Option<bool>,
@@ -149,8 +149,8 @@ pub struct EditRoomFlags {
     pub is_gms2: Option<bool>,
     pub is_gms2_3: Option<bool>,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditRoomView {
     pub enabled: Option<bool>,
     pub view_x: Option<i32>,
@@ -167,8 +167,8 @@ pub struct EditRoomView {
     pub speed_y: Option<i32>,
     pub object: Option<Option<ModRef>>,   // GMGameObject
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditRoomBackground {
     pub enabled: Option<bool>,
     pub foreground: Option<bool>,
@@ -181,8 +181,8 @@ pub struct EditRoomBackground {
     pub speed_y: Option<i32>,
     pub stretch: Option<bool>,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditRoomTile {
     pub x: Option<i32>,
     pub y: Option<i32>,
@@ -197,8 +197,8 @@ pub struct EditRoomTile {
     pub scale_y: Option<f32>,
     pub color: Option<u32>,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditRoomLayer {
     pub layer_name: Option<ModRef>, // String
     pub layer_id: Option<u32>,
@@ -210,8 +210,8 @@ pub struct EditRoomLayer {
     pub vertical_speed: Option<f32>,
     pub is_visible: Option<bool>,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditRoomGameObject {
     pub x: Option<i32>,
     pub y: Option<i32>,

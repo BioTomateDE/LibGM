@@ -24,8 +24,8 @@ pub struct AddSoundFlags {
     pub regular: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditSound {
     pub name: Option<ModRef>,      // String
     pub flags: EditSoundFlags,
@@ -37,8 +37,8 @@ pub struct EditSound {
     pub audio_data: Option<Option<ModRef>>,  // Embedded Audio
     pub audio_length: Option<Option<f32>>,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditSoundFlags {
     pub is_embedded: Option<bool>,
     pub is_compressed: Option<bool>,
