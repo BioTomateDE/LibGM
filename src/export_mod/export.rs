@@ -7,10 +7,14 @@ use crate::deserialize::backgrounds::GMBackground;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::code::GMCode;
 use crate::deserialize::embedded_audio::GMEmbeddedAudio;
+use crate::deserialize::functions::GMFunction;
 use crate::deserialize::game_objects::GMGameObject;
 use crate::deserialize::sprites::GMSprite;
 use crate::deserialize::texture_page_items::GMTexturePageItem;
+use crate::deserialize::variables::GMVariable;
 use crate::export_mod::fonts::{AddFont, EditFont};
+use crate::export_mod::functions::{AddFunction, EditFunction};
+use crate::export_mod::rooms::{AddRoom, EditRoom};
 use crate::export_mod::sounds::{AddSound, EditSound};
 use crate::export_mod::unordered_list::EditUnorderedList;
 
@@ -24,17 +28,21 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
 
     let mod_exporter = ModExporter {original_data, modified_data};
     let fonts: EditUnorderedList<AddFont, EditFont> = mod_exporter.export_fonts()?;
+    let functions: EditUnorderedList<AddFunction, EditFunction> = mod_exporter.export_functions()?;
+    let rooms: EditUnorderedList<AddRoom, EditRoom> = mod_exporter.export_rooms()?;
     let sounds: EditUnorderedList<AddSound, EditSound> = mod_exporter.export_sounds()?;
     let strings: EditUnorderedList<String, String> = mod_exporter.export_strings()?;
     // repeat ts for every element {~~}
 
     tar_write_json_file(&mut tar, "fonts", &fonts)?;
+    tar_write_json_file(&mut tar, "functions", &functions)?;
     tar_write_json_file(&mut tar, "sounds", &sounds)?;
+    tar_write_json_file(&mut tar, "rooms", &rooms)?;
     tar_write_json_file(&mut tar, "strings", &strings)?;
     // repeat ts for every element {~~}
-    
+
     // also export textures and audio separately {~~}
-    
+
     tar.into_inner()
         .map_err(|e| format!("Could not get inner value of tarball: {e}"))?
         .finish()
@@ -87,6 +95,9 @@ impl ModExporter<'_, '_> {
     pub fn convert_background_ref(&self, gm_background_ref: GMRef<GMBackground>) -> Result<ModRef, String> {
         convert_reference(gm_background_ref, &self.original_data.backgrounds.backgrounds_by_index, &self.modified_data.backgrounds.backgrounds_by_index)
     }
+    pub fn convert_function_ref(&self, gm_function_ref: GMRef<GMFunction>) -> Result<ModRef, String> {
+        convert_reference(gm_function_ref, &self.original_data.functions.functions_by_index, &self.modified_data.functions.functions_by_index)
+    }
     // TODO continue
     pub fn convert_game_object_ref(&self, gm_game_object_ref: GMRef<GMGameObject>) -> Result<ModRef, String> {
         convert_reference(gm_game_object_ref, &self.original_data.game_objects.game_objects_by_index, &self.modified_data.game_objects.game_objects_by_index)
@@ -99,6 +110,9 @@ impl ModExporter<'_, '_> {
     }
     pub fn convert_texture_ref(&self, gm_texture_ref: GMRef<GMTexturePageItem>) -> Result<ModRef, String> {
         convert_reference(gm_texture_ref, &self.original_data.texture_page_items.textures_by_index, &self.modified_data.texture_page_items.textures_by_index)
+    }
+    pub fn convert_variable_ref(&self, gm_variable_ref: GMRef<GMVariable>) -> Result<ModRef, String> {
+        convert_reference(gm_variable_ref, &self.original_data.variables.variables, &self.modified_data.variables.variables)
     }
 
     pub fn convert_audio_ref_opt(&self, gm_audio_ref: Option<GMRef<GMEmbeddedAudio>>) -> Result<Option<ModRef>, String> {
