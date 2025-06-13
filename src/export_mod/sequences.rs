@@ -7,6 +7,7 @@ pub struct AddSequence {
     // {~~} {!!} Define fields as needed based on GMSequence
 }
 
+#[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditSequence {
     // {~~} {!!} Define fields as needed based on GMSequence

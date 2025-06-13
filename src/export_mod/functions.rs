@@ -9,8 +9,8 @@ pub struct AddFunction {
     // idk how to handle function and variable occurrences yet
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditFunction {
     pub name: Option<ModRef>,  // String
     pub name_string_id: Option<i32>,
