@@ -8,3 +8,4 @@ mod sequences;
 mod functions;
 mod sounds;
 mod code;
+mod textures;
