@@ -1,12 +1,8 @@
 use crate::deserialize::all::GMData;
 use std::fs::File;
-use std::io::prelude::*;
-use std::io::Cursor;
 use std::path::Path;
-use std::sync::LazyLock;
+use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
-use zip::write::{FileOptions, SimpleFileOptions};
-use zip::{CompressionMethod, ZipWriter};
 use crate::deserialize::backgrounds::GMBackground;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::code::GMCode;
@@ -19,31 +15,56 @@ use crate::export_mod::sounds::{AddSound, EditSound};
 use crate::export_mod::unordered_list::EditUnorderedList;
 
 
-pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file: &Path) -> Result<(), String> {
-    let mut data: Vec<u8> = Vec::new();
-    let buff = Cursor::new(&mut data);
-    let mut zip_writer = ZipWriter::new(buff);
+pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_path: &Path) -> Result<(), String> {
+    let file = File::create(target_file_path)
+        .map_err(|e| format!("Could not create archive file with path \"{}\": {e}", target_file_path.display()))?;
+    let zst = zstd::Encoder::new(file, 19)
+        .map_err(|e| format!("Could not create Zstd encoder: {e}"))?;
+    let mut tar = tar::Builder::new(zst);
 
     let mod_exporter = ModExporter {original_data, modified_data};
     let fonts: EditUnorderedList<AddFont, EditFont> = mod_exporter.export_fonts()?;
     let sounds: EditUnorderedList<AddSound, EditSound> = mod_exporter.export_sounds()?;
     let strings: EditUnorderedList<String, String> = mod_exporter.export_strings()?;
-    // repeat ts for every element
+    // repeat ts for every element {~~}
 
-    zw_write_unordered_list_changes(&mut zip_writer, "fonts.json", &fonts)?;
-    zw_write_unordered_list_changes(&mut zip_writer, "sounds.json", &sounds)?;
-    zw_write_unordered_list_changes(&mut zip_writer, "strings.json", &strings)?;
-    // repeat ts for every element
+    tar_write_json_file(&mut tar, "fonts", &fonts)?;
+    tar_write_json_file(&mut tar, "sounds", &sounds)?;
+    tar_write_json_file(&mut tar, "strings", &strings)?;
+    // repeat ts for every element {~~}
+    
+    // also export textures and audio separately {~~}
+    
+    tar.into_inner()
+        .map_err(|e| format!("Could not get inner value of tarball: {e}"))?
+        .finish()
+        .map_err(|e| format!("Could not finish writing tarball: {e}"))?;
+    Ok(())
+}
 
-    // also export textures and audio separately
+fn tar_write_json_file<ADD: Serialize, EDIT: Serialize>(
+    tar: &mut tar::Builder<zstd::Encoder<File>>,
+    name: &str,
+    changes: &EditUnorderedList<ADD, EDIT>,
+) -> Result<(), String> {
+    let filename: String = format!("{name}.json");
+    let time_now: u64 = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time travellers are not allowed")
+        .as_secs();
 
-    zip_writer.finish()
-        .map_err(|e| format!("Could not finish zip archive: {e}"))?;
+    let data: Vec<u8> = serde_json::to_vec_pretty(changes)
+        .map_err(|e| format!("Could not serialize {name} changes to json: {e}"))?;
 
-    let mut file = File::create(target_file)
-        .map_err(|e| format!("Could not create target mod file with path {target_file:?}: {e}"))?;
-    file.write_all(data.as_slice())
-        .map_err(|e| format!("Could not write zip archive data to target mod file with path {target_file:?}: {e}"))?;
+    let mut header = tar::Header::new_gnu();
+    header.set_path(&filename)
+        .map_err(|e| format!("Could not set tar file path for json file \"{filename}\": {e}"))?;
+    header.set_size(data.len() as u64);
+    header.set_mode(0o644);
+    header.set_mtime(time_now);
+    header.set_cksum();   // has to be called last
+    tar.append(&header, data.as_slice())
+        .map_err(|e| format!("Could not append json file \"{filename}\" to tarball: {e}"))?;
     Ok(())
 }
 
@@ -124,30 +145,6 @@ fn convert_reference_optional<GM>(gm_reference_optional: Option<GMRef<GM>>, orig
         Some(gm_reference) => Ok(Some(convert_reference(gm_reference, original_list, modified_list)?)),
         None => Ok(None),
     }
-}
-
-
-pub type ModWriter<'a> = ZipWriter<Cursor<&'a mut Vec<u8>>>;
-const FILE_OPTIONS: LazyLock<FileOptions<()>> = LazyLock::new(|| 
-    SimpleFileOptions::default()
-    .compression_method(CompressionMethod::Bzip2)
-    .compression_level(Some(9))
-);
-
-
-fn zw_write_file(zip_writer: &mut ModWriter, filename: &str, data: &[u8]) -> Result<(), String> {
-    zip_writer.start_file(filename, *FILE_OPTIONS)
-        .map_err(|e| format!("Could not create {filename} file in zip archive: {e}"))?;
-    zip_writer.write_all(data)
-        .map_err(|e| format!("Could not write data to {filename} file in zip archive: {e}"))?;
-    Ok(())
-}
-
-fn zw_write_unordered_list_changes<ADD: Serialize, EDIT: Serialize>(zip_writer: &mut ModWriter, filename: &str, changes: &EditUnorderedList<ADD, EDIT>) -> Result<(), String> {
-    let string: String = serde_json::to_string_pretty(changes)
-        .map_err(|e| format!("Could not convert changes to json for zip file {filename}: {e}"))?;
-    let data: &[u8] = string.as_bytes();
-    zw_write_file(zip_writer, filename, data)
 }
 
 
