@@ -12,6 +12,7 @@ use crate::deserialize::game_objects::GMGameObject;
 use crate::deserialize::sprites::GMSprite;
 use crate::deserialize::texture_page_items::GMTexturePageItem;
 use crate::deserialize::variables::GMVariable;
+use crate::export_mod::code::{AddCode, EditCode};
 use crate::export_mod::fonts::{AddFont, EditFont};
 use crate::export_mod::functions::{AddFunction, EditFunction};
 use crate::export_mod::rooms::{AddRoom, EditRoom};
@@ -27,6 +28,7 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     let mut tar = tar::Builder::new(zst);
 
     let mod_exporter = ModExporter {original_data, modified_data};
+    let codes: EditUnorderedList<AddCode, EditCode> = mod_exporter.export_codes()?;
     let fonts: EditUnorderedList<AddFont, EditFont> = mod_exporter.export_fonts()?;
     let functions: EditUnorderedList<AddFunction, EditFunction> = mod_exporter.export_functions()?;
     let rooms: EditUnorderedList<AddRoom, EditRoom> = mod_exporter.export_rooms()?;
@@ -34,6 +36,7 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     let strings: EditUnorderedList<String, String> = mod_exporter.export_strings()?;
     // repeat ts for every element {~~}
 
+    tar_write_json_file(&mut tar, "codes", &codes)?;
     tar_write_json_file(&mut tar, "fonts", &fonts)?;
     tar_write_json_file(&mut tar, "functions", &functions)?;
     tar_write_json_file(&mut tar, "sounds", &sounds)?;
