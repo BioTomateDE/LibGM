@@ -4,12 +4,13 @@ use crate::deserialize::variables::{GMVariable, GMVariables};
 use std::cmp::PartialEq;
 use std::fmt::{Display, Formatter};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use serde::{Deserialize, Serialize};
 use crate::deserialize::functions::{GMFunction, GMFunctions};
 use crate::deserialize::game_objects::GMGameObject;
 use crate::deserialize::strings::GMStrings;
 
 // Taken from UndertaleModTool/UndertaleModLib/UndertaleCode.cs/UndertaleInstruction/
-#[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum GMOpcode {
     Conv = 0x07,     // Push((Types.Second)Pop) // DoubleTypeInstruction
@@ -81,7 +82,7 @@ pub enum GMInstanceType {
     Instance(Option<GMRef<GMGameObject>>),      // Represents the current chunk instance.
     Other,      // Represents the other context, which has multiple definitions based on the location used.
     All,        // Represents all active object instances. Assignment operations can perform a loop.
-    Noone,      // Represents no object/instance.
+    None,       // Represents no object/instance.
     Global,     // Used for global variables.
     Builtin,    // Used for GML built-in variables.
     Local,      // Used for local variables; local to their code script.
@@ -97,7 +98,7 @@ impl Display for GMInstanceType {
             GMInstanceType::Instance(Some(reference)) => write!(f, "Self<{}>", reference.index),
             GMInstanceType::Other => write!(f, "Other"),
             GMInstanceType::All => write!(f, "All"),
-            GMInstanceType::Noone => write!(f, "Noone"),
+            GMInstanceType::None => write!(f, "None"),
             GMInstanceType::Global => write!(f, "Global"),
             GMInstanceType::Builtin => write!(f, "Builtin"),
             GMInstanceType::Local => write!(f, "Local"),
@@ -269,7 +270,6 @@ pub struct GMCodeVariable {
     pub variable: GMRef<GMVariable>,
     pub variable_type: GMVariableType,
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum GMValue {
@@ -671,7 +671,7 @@ pub fn parse_instance_type(raw_value: i16) -> Result<GMInstanceType, String> {
         -1 => GMInstanceType::Instance(None),
         -2 => GMInstanceType::Other,
         -3 => GMInstanceType::All,
-        -4 => GMInstanceType::Noone,
+        -4 => GMInstanceType::None,
         -5 => GMInstanceType::Global,
         -6 => GMInstanceType::Builtin,
         -7 => GMInstanceType::Local,

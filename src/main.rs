@@ -44,7 +44,7 @@ fn main_export_mod() -> Result<(), String> {
     let args: Vec<String> = std::env::args().collect();
     let original_data_file_path: &Path = Path::new(args.get(1).map_or("data_original.win", |s| s));
     let modified_data_file_path: &Path = Path::new(args.get(2).map_or("data_modified.win", |s| s));
-    let mod_data_path: &Path = Path::new(args.get(3).map_or("mod.acornmod", |s| s));
+    let mod_data_path: &Path = Path::new(args.get(3).map_or("acornmod.tar.zst", |s| s));
 
     info!("Loading original data file \"{}\"", original_data_file_path.display());
     let original_data_raw: Vec<u8> = read_data_file(original_data_file_path)
