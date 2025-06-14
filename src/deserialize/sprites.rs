@@ -138,6 +138,7 @@ pub fn parse_chunk_sprt(
     for start_position in start_positions {
         chunk.cur_pos = start_position;
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
+        let name_resolved: &String = name.resolve(&strings.strings_by_index)?;
         let width: u32 = chunk.read_u32()?;
         let height: u32 = chunk.read_u32()?;
         let margin_left: i32 = chunk.read_i32()?;
@@ -149,13 +150,10 @@ pub fn parse_chunk_sprt(
         let preload: bool = chunk.read_bool32()?;
         let bbox_mode: i32 = chunk.read_i32()?;
         let sep_masks: u32 = chunk.read_u32()?;
-        let sep_masks: GMSpriteSepMaskType = match sep_masks.try_into() {
-            Ok(masks) => masks,
-            Err(_) => return Err(format!(
-                "Invalid Sep Masks Type 0x{:08X} at position {} while parsing Sprite at position {} in chunk '{}'",
-                sep_masks, chunk.cur_pos, start_position, chunk.name,
-            )),
-        };
+        let sep_masks: GMSpriteSepMaskType = sep_masks.try_into().map_err(|_| format!(
+            "Invalid Sep Masks Type 0x{:08X} at position {} while parsing Sprite at position {} in chunk '{}'",
+            sep_masks, chunk.cur_pos, start_position, chunk.name,
+        ))?;
         let origin_x: i32 = chunk.read_i32()?;
         let origin_y: i32 = chunk.read_i32()?;
         let mut textures: Vec<GMRef<GMTexturePageItem>> = Vec::new();
@@ -173,13 +171,10 @@ pub fn parse_chunk_sprt(
 
             let playback_speed: f32 = chunk.read_f32()?;
             let playback_speed_type: u32 = chunk.read_u32()?;
-            let playback_speed_type: GMAnimSpeedType = match playback_speed_type.try_into() {
-                Ok(ok) => ok,
-                Err(_) => return Err(format!(
-                    "Invalid Playback Anim Speed Type 0x{:08X} at position {} while parsing Sprite at position {} in chunk '{}'",
-                    playback_speed_type, chunk.cur_pos, start_position, chunk.name,
-                )),
-            };
+            let playback_speed_type: GMAnimSpeedType = playback_speed_type.try_into().map_err(|_| format!(
+                "Invalid Playback Anim Speed Type 0x{:08X} at position {} while parsing Sprite at position {} in chunk '{}'",
+                playback_speed_type, chunk.cur_pos, start_position, chunk.name,
+            ))?;
             // both of these seem to be not an offset but instead an absolute position (see UndertaleModLib/Models/UndertaleSprite.cs@507)
             let sequence_offset: i32 = if special_version >= 2 { chunk.read_i32()? } else { 0 };
             let nine_slice_offset: i32 = if special_version >= 3 { chunk.read_i32()? } else { 0 };
@@ -187,7 +182,7 @@ pub fn parse_chunk_sprt(
 
             let sprite_type: GMSpriteType = match &special_sprite_type {
                 0 => {      // Normal
-                    textures = read_texture_list(chunk, gm_textures, name.resolve(&strings.strings_by_index)?)?;
+                    textures = read_texture_list(chunk, gm_textures, name_resolved)?;
                     // read mask data
                     let mut mask_width = width as usize;
                     let mut mask_height = height as usize;
@@ -195,7 +190,7 @@ pub fn parse_chunk_sprt(
                         mask_width = (margin_right - margin_left + 1) as usize;
                         mask_height = (margin_bottom - margin_top + 1) as usize;
                     }
-                    let collision_masks: Vec<GMSpriteMaskEntry> = read_mask_data(chunk, name.resolve(&strings.strings_by_index)?, mask_width, mask_height)?;
+                    let collision_masks: Vec<GMSpriteMaskEntry> = read_mask_data(chunk, name_resolved, mask_width, mask_height)?;
                     GMSpriteType::Normal(GMSpriteTypeNormal { collision_masks })
                 },
 
@@ -210,7 +205,7 @@ pub fn parse_chunk_sprt(
                         ))
                     }
                     if swf_version == 8 {
-                        textures = read_texture_list(chunk, gm_textures, name.resolve(&strings.strings_by_index)?)?
+                        textures = read_texture_list(chunk, gm_textures, name_resolved)?
                     }
 
                     // read YYSWF
@@ -218,14 +213,11 @@ pub fn parse_chunk_sprt(
                     let jpeg_len: i32 = chunk.read_i32()? & (!0x80000000u32 as i32);    // the length is `OR`ed with int.MinValue
                     let jpeg_len: usize = jpeg_len as usize;
                     let yyswf_version: i32 = chunk.read_i32()?;
-                    let jpeg_table: Vec<u8> = match chunk.data.get(chunk.cur_pos.. chunk.cur_pos +jpeg_len) {
-                        Some(bytes) => bytes.to_vec(),
-                        None => return Err(format!(
-                            "Trying to read YYSWF JPEG Table out of bounds while parsing \
-                            Sprite with name \"{}\" in chunk '{}' at position {}: {} > {}",
-                            name.resolve(&strings.strings_by_index)?, chunk.name, chunk.cur_pos, chunk.cur_pos + jpeg_len, chunk.data.len(),
-                        )),
-                    };
+                    let jpeg_table: Vec<u8> = chunk.data.get(chunk.cur_pos.. chunk.cur_pos+jpeg_len).ok_or_else(|| format!(
+                        "Trying to read YYSWF JPEG Table out of bounds while parsing \
+                        Sprite with name \"{}\" in chunk '{}' at position {}: {} > {}",
+                        name_resolved, chunk.name, chunk.cur_pos, chunk.cur_pos + jpeg_len, chunk.data.len(),
+                    ))?.to_vec();
                     chunk.cur_pos += jpeg_len;
                     align_reader(chunk, 4, 0x00)?;
                     let timeline: GMSpriteYYSWFTimeline = parse_yyswf_timeline(chunk, general_info)?;
@@ -249,7 +241,7 @@ pub fn parse_chunk_sprt(
                 other => {
                     return Err(format!(
                         "Invalid Sprite Type {other} for Sprite with name \"{}\" and absolute position {}",
-                        name.resolve(&strings.strings_by_index)?, start_position + chunk.abs_pos,
+                        name_resolved, start_position + chunk.abs_pos,
                     ))
                 }
             };
@@ -259,14 +251,14 @@ pub fn parse_chunk_sprt(
                 if thingy != 1 {
                     return Err(format!(
                         "Expected 1 but got {} while parsing Sequence for Sprite with name \"{}\" in chunk '{}'",
-                        thingy, name.resolve(&strings.strings_by_index)?, chunk.name,
+                        thingy, name_resolved, chunk.name,
                     ))
                 }
                 sequence = Some(parse_sequence(chunk, general_info, strings)?);
             }
 
             if nine_slice_offset != 0 {
-                nine_slice = Some(parse_nine_slice(chunk, name.resolve(&strings.strings_by_index)?, start_position)?);
+                nine_slice = Some(parse_nine_slice(chunk, name_resolved, start_position)?);
             }
 
             special_fields = Some(GMSpriteSpecial {
@@ -281,7 +273,7 @@ pub fn parse_chunk_sprt(
         } else {
             chunk.cur_pos -= 4;  // unread the not -1
             // read into `textures`
-            textures = read_texture_list(chunk, gm_textures, name.resolve(&strings.strings_by_index)?)?;
+            textures = read_texture_list(chunk, gm_textures, name_resolved)?;
             // read mask data
             let mut mask_width = width as usize;
             let mut mask_height = height as usize;
@@ -289,7 +281,7 @@ pub fn parse_chunk_sprt(
                 mask_width = (margin_right - margin_left + 1) as usize;
                 mask_height = (margin_bottom - margin_top + 1) as usize;
             }
-            collision_masks = read_mask_data(chunk, name.resolve(&strings.strings_by_index)?, mask_width, mask_height)?;
+            collision_masks = read_mask_data(chunk, name_resolved, mask_width, mask_height)?;
         }
 
         sprites_by_index.push(GMSprite {
@@ -351,14 +343,11 @@ fn parse_nine_slice(chunk: &mut GMChunk, sprite_name: &str, start_position: usiz
     let mut tile_modes: Vec<GMSpriteNineSliceTileMode> = Vec::with_capacity(5);
     for _ in 0..5 {
         let tile_mode: i32 = chunk.read_i32()?;
-        let tile_mode: GMSpriteNineSliceTileMode = match tile_mode.try_into() {
-            Ok(ok) => ok,
-            Err(_) => return Err(format!(
-                "Invalid Tile Mode for Nine Slice 0x{:08X} at position {} \
-                while parsing Sprite with name \"{}\" at position {} in chunk '{}'",
-                tile_mode, chunk.cur_pos, sprite_name, start_position, chunk.name,
-            )),
-        };
+        let tile_mode: GMSpriteNineSliceTileMode = tile_mode.try_into().map_err(|_| format!(
+            "Invalid Tile Mode for Nine Slice 0x{:08X} at position {} \
+            while parsing Sprite with name \"{}\" at position {} in chunk '{}'",
+            tile_mode, chunk.cur_pos, sprite_name, start_position, chunk.name,
+        ))?;
         tile_modes.push(tile_mode);
     }
 
@@ -381,14 +370,11 @@ fn read_mask_data(chunk: &mut GMChunk, sprite_name: &str, mask_width: usize, mas
     let mut total: usize = 0;
 
     for _ in 0..mask_count {
-        let data: Vec<u8> = match chunk.data.get(chunk.cur_pos.. chunk.cur_pos +len) {
-            Some(bytes) => bytes.to_vec(),
-            None => return Err(format!(
-                "Trying to read Mask Data out of bounds while parsing \
-                Sprite with name \"{}\" in chunk '{}' at position {}: {} > {}",
-                sprite_name, chunk.name, chunk.cur_pos, chunk.cur_pos + len, chunk.data.len(),
-            )),
-        };
+        let data: Vec<u8> = chunk.data.get(chunk.cur_pos.. chunk.cur_pos+len).ok_or_else(|| format!(
+            "Trying to read Mask Data out of bounds while parsing \
+            Sprite with name \"{}\" in chunk '{}' at position {}: {} > {}",
+            sprite_name, chunk.name, chunk.cur_pos, chunk.cur_pos + len, chunk.data.len(),
+        ))?.to_vec();
         chunk.cur_pos += len;
         collision_masks.push(GMSpriteMaskEntry { data, width: mask_width, height: mask_height });
         total += len;

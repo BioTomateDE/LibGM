@@ -84,11 +84,15 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
     for start_position in start_positions {
         chunk.cur_pos = start_position;
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
-        let sprite: Option<GMRef<GMSprite>> = match chunk.read_i32()? {
-            -1 => None,
-            index => Some(GMRef::new(index.try_into().map_err(|_| format!(
+        let sprite_index: i32 = chunk.read_i32()?;
+        let sprite: Option<GMRef<GMSprite>> = if sprite_index == -1 {
+            None
+        } else {
+            let index: usize = sprite_index.try_into().map_err(|_| format!(
                 "Invalid negative sprite index {} for game object's sprite \"{}\" at absolute position {}",
-                index, name.display(strings), start_position + chunk.abs_pos))?)),
+                sprite_index, name.display(strings), start_position + chunk.abs_pos,
+            ))?;
+            Some(GMRef::new(index))
         };
         let visible: bool = chunk.read_bool32()?;
         let mut managed: Option<bool> = None;
@@ -108,11 +112,15 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
                 Some(GMRef::new(parent_id))
             },
         };
-        let texture_mask: Option<GMRef<GMSprite>> = match chunk.read_i32()? {
-            -1 => None,
-            index => Some(GMRef::new(index.try_into().map_err(|_| format!(
+        let sprite_index: i32 = chunk.read_i32()?;
+        let texture_mask: Option<GMRef<GMSprite>> = if sprite_index == -1 {
+            None
+        } else {
+            let index: usize = sprite_index.try_into().map_err(|_| format!(
                 "Invalid negative sprite index {} for game object's texture mask \"{}\" at absolute position {}",
-                index, name.display(strings), start_position + chunk.abs_pos))?)),
+                sprite_index, name.display(strings), start_position + chunk.abs_pos,
+            ))?;
+            Some(GMRef::new(index))
         };
         let uses_physics: bool = chunk.read_bool32()?;
         let is_sensor: bool = chunk.read_bool32()?;
