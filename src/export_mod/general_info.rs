@@ -26,6 +26,7 @@ pub struct EditGeneralInfo {
     pub room_order: Vec<DataChange<ModRef>>,    // GMRoom reference
 }
 
+#[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditGeneralInfoFlags {
     /// Whether the game starts in fullscreen mode
@@ -97,6 +98,7 @@ pub struct EditGeneralInfoFlags {
 /// ___ 
 /// Keep in mind that the disabled fields only prevent these flags/classifications from being *toggled* (most importantly, enabled).
 /// If the target game already has them enabled, then the mod's code can execute these functions just fine.
+#[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditFunctionClassifications {
     /// Basic functions with no special classification

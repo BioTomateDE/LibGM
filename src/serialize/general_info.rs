@@ -206,7 +206,7 @@ fn build_options_old(builder: &mut DataBuilder, options: &GMOptions) -> Result<(
     builder.write_bool32(options.flags.no_border);
     builder.write_bool32(options.flags.show_cursor);
 
-    builder.write_i32(options.scale);
+    builder.write_i32(options.window_scale);
 
     builder.write_bool32(options.flags.sizeable);
     builder.write_bool32(options.flags.stay_on_top);
@@ -257,7 +257,7 @@ fn build_options_new(builder: &mut DataBuilder, options: &GMOptions) -> Result<(
     builder.write_u32(options.unknown1);
     builder.write_u32(options.unknown2);
     builder.write_u64(build_options_flags_new(&options.flags));
-    builder.write_i32(options.scale);
+    builder.write_i32(options.window_scale);
     build_options_window_color(builder, &options.window_color);
     builder.write_u32(options.color_depth);
     builder.write_u32(options.resolution);

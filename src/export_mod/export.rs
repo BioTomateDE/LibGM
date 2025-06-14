@@ -154,6 +154,7 @@ impl ModExporter<'_, '_> {
     pub fn convert_string_ref(&self, gm_string_ref: GMRef<String>) -> Result<ModRef, String> {
         convert_reference(gm_string_ref, &self.original_data.strings.strings_by_index, &self.modified_data.strings.strings_by_index)
     }
+    /// TODO make custom function for texture page items (since texture contents are not checked)
     pub fn convert_texture_ref(&self, gm_texture_ref: GMRef<GMTexturePageItem>) -> Result<ModRef, String> {
         convert_reference(gm_texture_ref, &self.original_data.texture_page_items.textures_by_index, &self.modified_data.texture_page_items.textures_by_index)
     }
@@ -178,6 +179,10 @@ impl ModExporter<'_, '_> {
     }
     pub fn convert_string_ref_opt(&self, gm_string_ref: Option<GMRef<String>>) -> Result<Option<ModRef>, String> {
         convert_reference_optional(gm_string_ref, &self.original_data.strings.strings_by_index, &self.modified_data.strings.strings_by_index)
+    }
+    /// TODO make custom function for texture page items (since texture contents are not checked)
+    pub fn convert_texture_ref_opt(&self, gm_texture_ref: Option<GMRef<GMTexturePageItem>>) -> Result<Option<ModRef>, String> {
+        convert_reference_optional(gm_texture_ref, &self.original_data.texture_page_items.textures_by_index, &self.modified_data.texture_page_items.textures_by_index)
     }
 }
 
