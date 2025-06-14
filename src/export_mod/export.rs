@@ -23,6 +23,7 @@ use crate::export_mod::functions::{AddFunction, EditFunction};
 use crate::export_mod::game_objects::{AddGameObject, EditGameObject};
 use crate::export_mod::general_info::EditGeneralInfo;
 use crate::export_mod::options::EditOptions;
+use crate::export_mod::paths::ModPath;
 use crate::export_mod::rooms::{AddRoom, EditRoom};
 use crate::export_mod::sounds::{AddSound, EditSound};
 use crate::export_mod::unordered_list::EditUnorderedList;
@@ -44,6 +45,7 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     let game_objects: EditUnorderedList<AddGameObject, EditGameObject> = bench_export!("Game Objects", mod_exporter.export_game_objects())?;
     let general_info: EditGeneralInfo = bench_export!("General Info", mod_exporter.export_general_info())?;
     let options: EditOptions = bench_export!("Options", mod_exporter.export_options())?;
+    let paths: EditUnorderedList<ModPath, ModPath> = bench_export!("Paths", mod_exporter.export_paths())?;
     let rooms: EditUnorderedList<AddRoom, EditRoom> = bench_export!("Rooms", mod_exporter.export_rooms())?;
     let sounds: EditUnorderedList<AddSound, EditSound> = bench_export!("Sounds", mod_exporter.export_sounds())?;
     let strings: EditUnorderedList<String, String> = bench_export!("Strings", mod_exporter.export_strings())?;
@@ -57,6 +59,7 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     tar_write_json_file(&mut tar, "functions", &functions)?;
     tar_write_json_file(&mut tar, "game_objects", &game_objects)?;
     tar_write_json_file(&mut tar, "general_info", &general_info)?;
+    tar_write_json_file(&mut tar, "paths", &paths)?;
     tar_write_json_file(&mut tar, "options", &options)?;
     tar_write_json_file(&mut tar, "rooms", &rooms)?;
     tar_write_json_file(&mut tar, "sounds", &sounds)?;

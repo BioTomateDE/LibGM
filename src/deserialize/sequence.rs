@@ -22,8 +22,6 @@ pub struct GMSequence {
     pub function_ids: HashMap<i32, GMRef<String>>,
     pub moments: Vec<GMKeyframeMoment>
 }
-
-
 #[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u32)]
 pub enum GMSequencePlaybackType {

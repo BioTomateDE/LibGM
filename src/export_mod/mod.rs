@@ -12,3 +12,4 @@ mod textures;
 mod game_objects;
 mod general_info;
 mod options;
+mod paths;
