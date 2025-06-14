@@ -211,9 +211,9 @@ pub fn parse_sequence(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
     let broadcast_messages: Vec<GMRef<String>> = parse_broadcast_messages(chunk, &strings)?;  // might be list in list?
     let tracks: Vec<GMTrack> = parse_tracks(chunk, general_info, &strings)?;
 
-    let function_ids_count: usize = chunk.read_usize_count()?;
-    let mut function_ids: HashMap<i32, GMRef<String>> = HashMap::new();
-    for _ in 0..function_ids_count {
+    let function_id_count: usize = chunk.read_usize_count()?;
+    let mut function_ids: HashMap<i32, GMRef<String>> = HashMap::with_capacity(function_id_count);
+    for _ in 0..function_id_count {
         let key: i32 = chunk.read_i32()?;
         let function_id: GMRef<String> = chunk.read_gm_string(strings)?;
         function_ids.insert(key, function_id);

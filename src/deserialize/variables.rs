@@ -33,6 +33,7 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
     chunk.cur_pos = 0;
 
     let variables_length: usize = if general_info.bytecode_version >= 15 { 20 } else { 12 };
+    let variable_count: usize = chunk.data.len() / variables_length;
     let scuffed: Option<GMVariablesScuffed> = if general_info.bytecode_version >= 15 {
         let globals_count: usize = chunk.read_usize_count()?;         // these variables don't actually represent what they say
         let instances_count: usize = chunk.read_usize_count()?;       // because gamemaker is weird
@@ -44,8 +45,8 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
         })
     } else { None };
 
-    let mut variables: Vec<GMVariable> = Vec::with_capacity(chunk.data.len() / variables_length);
-    let mut occurrence_map: HashMap<usize, GMRef<GMVariable>> = HashMap::new();
+    let mut variables: Vec<GMVariable> = Vec::with_capacity(variable_count);
+    let mut occurrence_map: HashMap<usize, GMRef<GMVariable>> = HashMap::with_capacity(variable_count);
     let mut cur_index: usize = 0;
 
     while chunk.cur_pos + variables_length <= chunk.data.len() {
