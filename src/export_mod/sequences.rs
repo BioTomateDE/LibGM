@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use crate::deserialize::sequence::GMSequence;
 use crate::export_mod::export::{ModExporter, ModRef};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AddSequence {
     // pub name: ModRef,
     // pub playback: GMSequencePlaybackType,

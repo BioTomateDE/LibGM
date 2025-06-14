@@ -1,16 +1,17 @@
 use num_enum::TryFromPrimitive;
+use serde::{Deserialize, Serialize};
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::sprites::align_reader;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteTypeSWF {
     pub swf_version: i32,
     pub yyswf_version: i32,
     pub jpeg_table: Vec<u8>,
     pub timeline: GMSpriteYYSWFTimeline,
 }
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteYYSWFTimeline {
     pub framerate: i32,
     pub min_x: f32,
@@ -23,14 +24,14 @@ pub struct GMSpriteYYSWFTimeline {
     pub frames: Vec<GMSpriteYYSWFTimelineFrame>,
     pub collision_masks: Vec<GMSpriteYYSWFCollisionMask>,
 }
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteYYSWFItem {
     pub id: i32,
     pub item_type: GMSpriteYYSWFItemType,
     pub shape_data: Option<GMSpriteYYSWFShapeData>,
     pub bitmap_data: Option<GMSpriteYYSWFBitmapData>,
 }
-#[derive(Debug, Clone, PartialEq, TryFromPrimitive)]
+#[derive(Debug, Clone, PartialEq, TryFromPrimitive, Serialize, Deserialize)]
 #[repr(i32)]
 pub enum GMSpriteYYSWFItemType {
     ItemInvalid,
@@ -40,14 +41,14 @@ pub enum GMSpriteYYSWFItemType {
     ItemTextField,
     ItemSprite,
 }
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GMSpriteYYSWFFillData {
     FillInvalid,
     FillSolid(GMSpriteYYSWFSolidFillData),
     FillGradient(GMSpriteYYSWFGradientFillData),
     FillBitmap(GMSpriteYYSWFBitmapFillData),
 }
-#[derive(Debug, Clone, PartialEq, TryFromPrimitive)]
+#[derive(Debug, Clone, PartialEq, TryFromPrimitive, Serialize, Deserialize)]
 #[repr(i32)]
 pub enum GMSpriteYYSWFBitmapFillType {
     FillRepeat,
@@ -55,14 +56,14 @@ pub enum GMSpriteYYSWFBitmapFillType {
     FillRepeatPoint,
     FillClampPoint,
 }
-#[derive(Debug, Clone, PartialEq, TryFromPrimitive)]
+#[derive(Debug, Clone, PartialEq, TryFromPrimitive, Serialize, Deserialize)]
 #[repr(i32)]
 pub enum GMSpriteYYSWFGradientFillType {
     FillLinear,
     FillRadial,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteYYSWFShapeData {
     pub min_x: f32,
     pub max_x: f32,
@@ -70,14 +71,14 @@ pub struct GMSpriteYYSWFShapeData {
     pub max_y: f32,
     pub style_groups: Vec<GMSpriteYYSWFStyleGroup>
 }
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteYYSWFStyleGroup {
     pub fill_styles: Vec<GMSpriteYYSWFFillData>,
     pub line_styles: Vec<GMSpriteYYSWFLineStyleData>,
     pub subshapes: Vec<GMSpriteYYSWFSubshapeData>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteYYSWFBitmapFillData {
     pub bitmap_fill_type: GMSpriteYYSWFBitmapFillType,
     pub char_id: i32,
@@ -85,12 +86,12 @@ pub struct GMSpriteYYSWFBitmapFillData {
 }
 
 pub static YYSWF_MATRIX33_MATRIX_SIZE: usize = 9;
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteYYSWFMatrix33 {
     pub values: Vec<f32>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteYYSWFGradientFillData {
     pub tpe_index: Option<usize>,
     pub gradient_fill_type: GMSpriteYYSWFGradientFillType,
@@ -98,7 +99,7 @@ pub struct GMSpriteYYSWFGradientFillData {
     pub records: Vec<GMSpriteYYSWFGradientRecord>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteYYSWFGradientRecord {
     pub ratio: i32,
     pub red: u8,
@@ -107,7 +108,7 @@ pub struct GMSpriteYYSWFGradientRecord {
     pub alpha: u8,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteYYSWFSolidFillData {
     pub red: u8,
     pub green: u8,
@@ -115,7 +116,7 @@ pub struct GMSpriteYYSWFSolidFillData {
     pub alpha: u8,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteYYSWFLineStyleData {
     pub red: u8,
     pub green: u8,
@@ -123,7 +124,7 @@ pub struct GMSpriteYYSWFLineStyleData {
     pub alpha: u8,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteYYSWFSubshapeData {
     pub fill_style1: i32,
     pub fill_style2: i32,
@@ -137,7 +138,7 @@ pub struct GMSpriteYYSWFSubshapeData {
     pub line_aa_vectors: Vec<(f32, f32)>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteYYSWFBitmapData {
     bitmap_type: GMSpriteYYSWFBitmapType,
     width: usize,
@@ -151,7 +152,7 @@ pub struct GMSpriteYYSWFBitmapData {
     color_palette_data: Vec<u8>,
 }
 
-#[derive(Debug, Clone, PartialEq, TryFromPrimitive)]
+#[derive(Debug, Clone, PartialEq, TryFromPrimitive, Serialize, Deserialize)]
 #[repr(i32)]
 pub enum GMSpriteYYSWFBitmapType {
     TypeJPEGNoHeader,
@@ -166,7 +167,7 @@ pub enum GMSpriteYYSWFBitmapType {
     TypeLossless32bit,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteYYSWFTimelineFrame {
     pub frame_objects: Vec<GMSpriteYYSWFTimelineObject>,
     pub min_x: f32,
@@ -175,7 +176,7 @@ pub struct GMSpriteYYSWFTimelineFrame {
     pub max_y: f32,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteYYSWFTimelineObject {
     pub char_id: i32,
     pub char_index: i32,
@@ -190,13 +191,13 @@ pub struct GMSpriteYYSWFTimelineObject {
 }
 
 pub static YYSWF_COLOR_MATRIX_SIZE: usize = 4;
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteYYSWFColorMatrix {
     pub additive: Vec<i32>,
     pub multiply: Vec<i32>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteYYSWFCollisionMask {
     pub rle_data: Vec<u8>,
 }

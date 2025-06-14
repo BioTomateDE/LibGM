@@ -1,5 +1,6 @@
 use crate::deserialize::chunk_reading::GMRef;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use serde::{Deserialize, Serialize};
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::sequence::{parse_sequence, GMAnimSpeedType, GMSequence};
@@ -28,19 +29,19 @@ pub struct GMSprite {
     pub special_fields: Option<GMSpriteSpecial>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GMSpriteType {
     Normal(GMSpriteTypeNormal),
     SWF(GMSpriteTypeSWF),
     Spine(GMSpriteTypeSpine),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteTypeNormal {
     pub collision_masks: Vec<GMSpriteMaskEntry>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteTypeSpine {
     /// Spine version
     pub version: i32,
@@ -51,7 +52,7 @@ pub struct GMSpriteTypeSpine {
     pub atlas: String,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteSplineTextureEntry {
     pub page_width: i32,
     pub page_height: i32,
@@ -61,7 +62,7 @@ pub struct GMSpriteSplineTextureEntry {
     pub is_qoi: bool,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteNineSlice {
     pub left: i32,
     pub top: i32,
@@ -71,7 +72,7 @@ pub struct GMSpriteNineSlice {
     pub tile_modes: Vec<GMSpriteNineSliceTileMode>,
 }
 
-#[derive(Debug, Clone, PartialEq, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, PartialEq, TryFromPrimitive, IntoPrimitive, Serialize, Deserialize)]
 #[repr(i32)]
 pub enum GMSpriteNineSliceTileMode {
     Stretch = 0,
@@ -104,7 +105,7 @@ pub struct GMSprites {
 }
 
 
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive, Serialize, Deserialize)]
 #[repr(u32)]
 pub enum GMSpriteSepMaskType {
     AxisAlignedRect = 0,
@@ -112,7 +113,7 @@ pub enum GMSpriteSepMaskType {
     RotatedRect = 2,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteMaskEntry {
     pub data: Vec<u8>,
     pub width: usize,
