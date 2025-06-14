@@ -27,7 +27,17 @@ pub fn build_chunk_objt(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         builder.write_bool32(game_object.solid);
         builder.write_i32(game_object.depth);
         builder.write_bool32(game_object.persistent);
-        builder.write_i32(game_object.parent_id);
+        match game_object.parent {
+            Some(parent_ref) if parent_ref.index == i => {
+                builder.write_i32(-1)   // parent is self
+            }
+            Some(parent_ref) => {
+                builder.write_usize(parent_ref.index)   // normal parent id
+            }
+            None => {
+                builder.write_i32(-100)     // no parent
+            }
+        }
         match &game_object.texture_mask {
             Some(sprite) => builder.write_usize(sprite.index),
             None => builder.write_i32(-1),
