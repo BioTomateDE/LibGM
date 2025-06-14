@@ -82,12 +82,7 @@ pub fn format_bytes(bytes: usize) -> String {
         unit_idx += 1;
     }
 
-    // Trim trailing `.0` for whole numbers
-    if size.fract() == 0.0 {
-        format!("{} {}", size as u64, UNITS[unit_idx])
-    } else {
-        format!("{:.1} {}", size, UNITS[unit_idx])
-    }
+    format!("{:.1} {}", size, UNITS[unit_idx])
 }
 
 

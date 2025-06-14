@@ -47,10 +47,11 @@ impl<'a, T> GMRef<T> {
 
 #[derive(Debug, Clone)]
 pub struct GMChunk<'a> {
-    pub name: String,       // 4 letter name of chunk
-    pub abs_pos: usize,     // absolute position/index in data.win file
-    pub data: &'a [u8],     // raw data
-    pub cur_pos: usize,     // gets incremented by .read_{} methods when parsing chunk
+    pub name: String,           // 4 letter name of chunk
+    pub abs_pos: usize,         // absolute position/index in data.win file
+    pub data: &'a [u8],         // raw data
+    pub cur_pos: usize,         // gets incremented by .read_{} methods when parsing chunk
+    pub total_data_len: usize,  // used for read_usize failsafe
 }
 
 impl GMChunk<'_> {
@@ -142,20 +143,43 @@ impl GMChunk<'_> {
         Ok(byte as i8)
     }
 
-    pub fn read_usize(&mut self) -> Result<usize, String> {
-        // Read unsigned 32-bit integer and convert to usize (little endian)
-        static FAILSAFE_AMOUNT: usize = 100_000_000;
+    fn read_usize(&mut self) -> Result<usize, String> {
         let number: u32 = self.read_u32()?;
         let number: usize = number as usize;
+        Ok(number)
+    }
+
+    /// Read unsigned 32-bit integer and convert to usize (little endian).
+    /// Meant for reading positions/pointers; uses total data length as failsafe.
+    pub fn read_usize_pos(&mut self) -> Result<usize, String> {
+        let failsafe_amount: usize = self.total_data_len;
+        let number: usize = self.read_usize()?;
+
+        if likely(number < failsafe_amount) {
+            return Ok(number)
+        }
+
+        Err(format!(
+            "Failsafe triggered in chunk '{}' at position {} while trying to read usize \
+            (pointer) integer: Number {} ({}) is larger than the total data length of {} ({})",
+            self.name, self.cur_pos-4, number, format_bytes(number), failsafe_amount, format_bytes(failsafe_amount),
+        ))
+    }
+
+    /// Read unsigned 32-bit integer and convert to usize (little endian).
+    /// Meant for reading (pointer list element) count; uses small constant number as failsafe.
+    pub fn read_usize_count(&mut self) -> Result<usize, String> {
+        const FAILSAFE_AMOUNT: usize = 10_000;    // increase limit is not enough
+        let number: usize = self.read_usize()?;
 
         if likely(number < FAILSAFE_AMOUNT) {
             return Ok(number)
         }
+
         Err(format!(
-            "Failsafe triggered in chunk '{}' at position {} trying \
-            to read usize integer: Number {} is larger than failsafe amount {}. \
-            If your data file is larger than {}, this error is a false positive.",
-            self.name, self.cur_pos - 4, number, FAILSAFE_AMOUNT, format_bytes(FAILSAFE_AMOUNT),
+            "Failsafe triggered in chunk '{}' at position {} while trying \
+            to read usize (count) integer: Number {} is larger than the failsafe count of {}",
+            self.name, self.cur_pos-4, number, FAILSAFE_AMOUNT,
         ))
     }
 
@@ -259,7 +283,7 @@ impl GMChunk<'_> {
     }
 
     pub fn read_gm_string(&mut self, gm_strings: &GMStrings) -> Result<GMRef<String>, String> {
-        let string_abs_pos: usize = self.read_usize()?;
+        let string_abs_pos: usize = self.read_usize_pos()?;
         // if gm_strings.abs_pos_to_reference.get(&string_abs_pos).is_none() {
         //     log::error!("this is only here for easy breakpoints; comment out this if statement otherwise")
         // }
@@ -274,7 +298,7 @@ impl GMChunk<'_> {
 
     /// Try to read a GM String Reference. If the value is zero, return None.
     pub fn read_gm_string_optional(&mut self, gm_strings: &GMStrings) -> Result<Option<GMRef<String>>, String> {
-        let string_abs_pos: usize = self.read_usize()?;
+        let string_abs_pos: usize = self.read_usize_pos()?;
         match gm_strings.abs_pos_to_reference.get(&string_abs_pos) {
             None => Ok(None),
             Some(string_ref) => Ok(Some(string_ref.clone())),
@@ -283,7 +307,7 @@ impl GMChunk<'_> {
 
     /// read pointer to pointer list (only used in rooms)
     pub fn read_pointer_list(&mut self) -> Result<Vec<usize>, String> {
-        let abs_pointers_start_pos: usize = self.read_usize()?;
+        let abs_pointers_start_pos: usize = self.read_usize_pos()?;
         let pointers_start_pos: usize = abs_pointers_start_pos.checked_sub(self.abs_pos).ok_or_else(|| format!(
             "Pointer to start of Pointer list underflowed at position {} in chunk '{}': {} - {} < 0",
             self.cur_pos - 4, self.name, abs_pointers_start_pos, self.abs_pos,
@@ -293,10 +317,10 @@ impl GMChunk<'_> {
         let old_position: usize = self.cur_pos;
         self.cur_pos = pointers_start_pos;
 
-        let pointer_count: usize = self.read_usize()?;
+        let pointer_count: usize = self.read_usize_count()?;
         let mut pointers: Vec<usize> = Vec::with_capacity(pointer_count);
         for _ in 0..pointer_count {
-            let abs_pointer_pos: usize = self.read_usize()?;
+            let abs_pointer_pos: usize = self.read_usize_pos()?;
             let pointer: usize = abs_pointer_pos.checked_sub(self.abs_pos).ok_or_else(|| format!(
                 "Element of Pointer list underflowed at position {} in chunk '{}': {} - {} < 0",
                 self.cur_pos - 4, self.name, abs_pointer_pos, self.abs_pos,

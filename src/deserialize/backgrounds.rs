@@ -40,10 +40,10 @@ pub fn parse_chunk_bgnd(
     textures: &GMTextures,
 ) -> Result<GMBackgrounds, String> {
     chunk.cur_pos = 0;
-    let backgrounds_count: usize = chunk.read_usize()?;
+    let backgrounds_count: usize = chunk.read_usize_count()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(backgrounds_count);
     for _ in 0..backgrounds_count {
-        start_positions.push(chunk.read_usize()? - chunk.abs_pos);
+        start_positions.push(chunk.read_usize_pos()? - chunk.abs_pos);
     }
 
     let mut backgrounds_by_index: Vec<GMBackground> = Vec::with_capacity(backgrounds_count);
@@ -53,7 +53,7 @@ pub fn parse_chunk_bgnd(
         let transparent: bool = chunk.read_bool32()?;
         let smooth: bool = chunk.read_bool32()?;
         let preload: bool = chunk.read_bool32()?;
-        let texture_abs_pos: usize = chunk.read_usize()?;
+        let texture_abs_pos: usize = chunk.read_usize_pos()?;
         let texture: Option<GMRef<GMTexturePageItem>> = if texture_abs_pos == 0 { None } else {
             Some(textures.abs_pos_to_ref.get(&texture_abs_pos)
                 .ok_or_else(|| format!(
@@ -71,8 +71,8 @@ pub fn parse_chunk_bgnd(
             let output_border_x: u32 = chunk.read_u32()?;
             let output_border_y: u32 = chunk.read_u32()?;
             let tile_columns: u32 = chunk.read_u32()?;
-            let items_per_tile_count: usize = chunk.read_usize()?;
-            let tile_count: usize = chunk.read_usize()?;
+            let items_per_tile_count: usize = chunk.read_usize_count()?;
+            let tile_count: usize = chunk.read_usize_count()?;
             let unknown_always_zero: u32 = chunk.read_u32()?;
             let frame_length: i64 = chunk.read_i64()?;
 

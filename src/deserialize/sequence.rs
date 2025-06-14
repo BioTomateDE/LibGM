@@ -120,6 +120,7 @@ pub struct GMTrack {
 #[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
 pub enum GMTrackBuiltinName {
+    None = 0,   // no idea when/why this happens exactly
     Gain = 5,
     Pitch = 6,
     Falloff = 7,
@@ -136,13 +137,13 @@ pub enum GMTrackBuiltinName {
     FrameSize = 20,
     CharacterSpacing = 21,
     LineSpacing = 22,
-    ParagraphSpacing = 23
+    ParagraphSpacing = 23,
 }
 #[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
 pub enum GMTrackTraits {
     None,
-    ChildrenIgnoreOrigin
+    ChildrenIgnoreOrigin,
 }
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeMoment {
@@ -210,7 +211,7 @@ pub fn parse_sequence(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
     let broadcast_messages: Vec<GMRef<String>> = parse_broadcast_messages(chunk, &strings)?;  // might be list in list?
     let tracks: Vec<GMTrack> = parse_tracks(chunk, general_info, &strings)?;
 
-    let function_ids_count: usize = chunk.read_usize()?;
+    let function_ids_count: usize = chunk.read_usize_count()?;
     let mut function_ids: HashMap<i32, GMRef<String>> = HashMap::new();
     for _ in 0..function_ids_count {
         let key: i32 = chunk.read_i32()?;
@@ -218,7 +219,7 @@ pub fn parse_sequence(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
         function_ids.insert(key, function_id);
     }
 
-    let moments_count: usize = chunk.read_usize()?;
+    let moments_count: usize = chunk.read_usize_count()?;
     let mut moments: Vec<GMKeyframeMoment> = Vec::with_capacity(moments_count);
     for _ in 0..moments_count {
         let internal_count: i32 = chunk.read_i32()?;
@@ -252,7 +253,7 @@ pub fn parse_sequence(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
 
 fn parse_broadcast_messages(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMRef<String>>, String> {
     // might be double list?
-    let messages_count: usize = chunk.read_usize()?;
+    let messages_count: usize = chunk.read_usize_count()?;
     let mut messages: Vec<GMRef<String>> = Vec::with_capacity(messages_count);
 
     for _ in 0..messages_count {
@@ -362,7 +363,7 @@ fn parse_track(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMSt
 }
 
 fn parse_tracks(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<Vec<GMTrack>, String> {
-    let tracks_count: usize = chunk.read_usize()?;
+    let tracks_count: usize = chunk.read_usize_count()?;
     let mut tracks: Vec<GMTrack> = Vec::with_capacity(tracks_count);
 
     for _ in 0..tracks_count {
@@ -377,7 +378,7 @@ fn parse_anim_curve(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: 
     let name: GMRef<String> = chunk.read_gm_string(strings)?;
     let graph_type: u32 = chunk.read_u32()?;
 
-    let channels_count: usize = chunk.read_usize()?;
+    let channels_count: usize = chunk.read_usize_count()?;
     let mut channels: Vec<GMAnimationCurveChannel> = Vec::with_capacity(channels_count);
     for _ in 0..channels_count {
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
@@ -404,7 +405,7 @@ fn parse_anim_curve(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: 
 }
 
 fn parse_anim_curve_points(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Vec<GMAnimationCurveChannelPoint>, String> {
-    let points_count: usize = chunk.read_usize()?;
+    let points_count: usize = chunk.read_usize_count()?;
     let mut points: Vec<GMAnimationCurveChannelPoint> = Vec::with_capacity(points_count);
     
     for _ in 0..points_count {

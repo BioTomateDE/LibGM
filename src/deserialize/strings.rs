@@ -11,10 +11,10 @@ pub struct GMStrings {
 
 pub fn parse_chunk_strg(chunk: &mut GMChunk) -> Result<GMStrings, String> {
     chunk.cur_pos = 0;
-    let string_count: usize = chunk.read_usize()?;
+    let string_count: usize = chunk.read_usize_count()?;
     let mut abs_start_positions: Vec<usize> = Vec::with_capacity(string_count);
     for _ in 0..string_count {
-        abs_start_positions.push(chunk.read_usize()?);
+        abs_start_positions.push(chunk.read_usize_pos()?);
     }
 
     let mut strings_by_index: Vec<String> = Vec::with_capacity(string_count);
@@ -22,7 +22,7 @@ pub fn parse_chunk_strg(chunk: &mut GMChunk) -> Result<GMStrings, String> {
 
     for (i, abs_start_position) in abs_start_positions.iter().enumerate() {
         chunk.cur_pos = *abs_start_position - chunk.abs_pos;
-        let string_length: usize = chunk.read_usize()?;
+        let string_length: usize = chunk.read_usize_pos()?;
         let string: String = chunk.read_literal_string(string_length)?;
         strings_by_index.push(string.clone());
         // start_position + 4 because gamemaker moment
