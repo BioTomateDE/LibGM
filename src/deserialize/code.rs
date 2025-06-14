@@ -305,10 +305,10 @@ pub struct GMCodes {
 
 pub fn parse_chunk_code(chunk: &mut GMChunk, bytecode14: bool, strings: &GMStrings, variables: &GMVariables, functions: &GMFunctions) -> Result<GMCodes, String> {
     chunk.cur_pos = 0;
-    let codes_count: usize = chunk.read_usize()?;
+    let codes_count: usize = chunk.read_usize_count()?;
     let mut code_meta_start_positions: Vec<usize> = Vec::with_capacity(codes_count);
     for _ in 0..codes_count {
-        let meta_index: usize = chunk.read_usize()? - chunk.abs_pos;
+        let meta_index: usize = chunk.read_usize_pos()? - chunk.abs_pos;
         code_meta_start_positions.push(meta_index);
     }
 
@@ -317,7 +317,7 @@ pub fn parse_chunk_code(chunk: &mut GMChunk, bytecode14: bool, strings: &GMStrin
     for (i, code_meta_start_position) in code_meta_start_positions.iter().enumerate() {
         chunk.cur_pos = *code_meta_start_position;
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
-        let code_length: usize = chunk.read_usize()?;
+        let code_length: usize = chunk.read_usize_pos()?;
 
         let end: usize;
         let bytecode15_info: Option<GMCodeBytecode15> = if bytecode14 {
@@ -332,7 +332,7 @@ pub fn parse_chunk_code(chunk: &mut GMChunk, bytecode14: bool, strings: &GMStrin
             let bytecode_relative_address: i32 = chunk.read_i32()?;
             let bytecode_start_address: usize = (bytecode_relative_address + chunk.cur_pos as i32 - 4) as usize;
 
-            let offset: usize = chunk.read_usize()?;
+            let offset: usize = chunk.read_usize_pos()?;
 
             // child check {~~}
 
@@ -379,7 +379,7 @@ fn read_code_value(chunk: &mut GMChunk, data_type: GMDataType) -> Result<GMValue
             1 => Ok(GMValue::Boolean(true)),
             other => Err(format!("Invalid boolean value {other} (0x{other:02X}) while reading value in code at absolute position {}", chunk.abs_pos+chunk.cur_pos-1))
         })?,
-        GMDataType::String => chunk.read_usize().map(|i| GMValue::String(GMRef::new(i))),
+        GMDataType::String => chunk.read_usize_count().map(|i| GMValue::String(GMRef::new(i))),
         GMDataType::Int16 => {
             chunk.cur_pos -= 4;
             let number: i16 = chunk.read_i16()?;

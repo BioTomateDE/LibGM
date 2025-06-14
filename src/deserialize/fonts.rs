@@ -52,10 +52,10 @@ pub struct GMFonts {
 
 pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings, textures: &GMTextures) -> Result<GMFonts, String> {
     chunk.cur_pos = 0;
-    let font_count: usize = chunk.read_usize()?;
+    let font_count: usize = chunk.read_usize_count()?;
     let mut font_starting_positions: Vec<usize> = Vec::with_capacity(font_count);
     for _ in 0..font_count {
-        let start_position: usize = chunk.read_usize()? - chunk.abs_pos;
+        let start_position: usize = chunk.read_usize_pos()? - chunk.abs_pos;
         font_starting_positions.push(start_position);
     }
 
@@ -78,7 +78,7 @@ pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
         let charset: u8 = chunk.read_u8()?;
         let anti_alias: u8 = chunk.read_u8()?;
         let range_end: u32 = chunk.read_u32()?;
-        let texture_abs_pos: usize = chunk.read_usize()?;
+        let texture_abs_pos: usize = chunk.read_usize_pos()?;
         let texture: GMRef<GMTexturePageItem> = textures.abs_pos_to_ref.get(&texture_abs_pos).ok_or_else(|| format!(
             "Could not find texture with absolute position {} for Font with name \"{}\" at position {} in chunk 'FONT'", 
             texture_abs_pos, name.display(strings), start_position,
@@ -141,11 +141,11 @@ pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
 
 
 fn parse_glyphs(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Vec<GMFontGlyph>, String> {
-    let glyph_count: usize = chunk.read_usize()?;
+    let glyph_count: usize = chunk.read_usize_count()?;
     let mut glyph_starting_positions: Vec<usize> = Vec::with_capacity(glyph_count);
 
     for _ in 0..glyph_count {
-        let start_position: usize = chunk.read_usize()? - chunk.abs_pos;
+        let start_position: usize = chunk.read_usize_pos()? - chunk.abs_pos;
         glyph_starting_positions.push(start_position);
     }
 

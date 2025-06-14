@@ -19,11 +19,11 @@ pub struct GMScripts {
 
 pub fn parse_chunk_scpt(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMScripts, String> {
     chunk.cur_pos = 0;
-    let script_count: usize = chunk.read_usize()?;
+    let script_count: usize = chunk.read_usize_count()?;
 
     let mut abs_start_positions: Vec<usize> = Vec::with_capacity(script_count);
     for _ in 0..script_count {
-        abs_start_positions.push(chunk.read_usize()?);
+        abs_start_positions.push(chunk.read_usize_pos()?);
     }
 
     let mut abs_pos_to_index: HashMap<usize, usize> = HashMap::new();

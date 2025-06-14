@@ -10,8 +10,8 @@ use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnord
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddSprite {
     pub name: ModRef,
-    pub width: usize,
-    pub height: usize,
+    pub width: u32,
+    pub height: u32,
     pub margin_left: i32,
     pub margin_right: i32,
     pub margin_bottom: i32,
@@ -48,8 +48,8 @@ pub struct AddSpriteSpecial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditSprite {
     pub name: Option<ModRef>,
-    pub width: Option<usize>,
-    pub height: Option<usize>,
+    pub width: Option<u32>,
+    pub height: Option<u32>,
     pub margin_left: Option<i32>,
     pub margin_right: Option<i32>,
     pub margin_bottom: Option<i32>,
