@@ -3,9 +3,9 @@ use std::fs::File;
 use std::io::Cursor;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
-use image::{DynamicImage, ImageFormat};
+use image::ImageFormat;
 use serde::{Deserialize, Serialize};
-use crate::{bench_build, bench_export};
+use crate::bench_export;
 use crate::debug_utils::Stopwatch;
 use crate::deserialize::backgrounds::GMBackground;
 use crate::deserialize::chunk_reading::GMRef;
@@ -21,7 +21,6 @@ use crate::export_mod::fonts::{AddFont, EditFont};
 use crate::export_mod::functions::{AddFunction, EditFunction};
 use crate::export_mod::rooms::{AddRoom, EditRoom};
 use crate::export_mod::sounds::{AddSound, EditSound};
-use crate::export_mod::textures::{AddTexturePageItem, EditTexturePageItem};
 use crate::export_mod::unordered_list::EditUnorderedList;
 
 
