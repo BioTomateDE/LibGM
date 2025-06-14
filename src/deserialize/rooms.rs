@@ -148,16 +148,12 @@ pub struct GMRooms {
 }
 
 
-pub fn parse_chunk_room(
-    chunk: &mut GMChunk,
-    general_info: &GMGeneralInfo,
-    gm_strings: &GMStrings,
-) -> Result<GMRooms, String> {
+pub fn parse_chunk_room(chunk: &mut GMChunk, general_info: &GMGeneralInfo, gm_strings: &GMStrings) -> Result<GMRooms, String> {
     chunk.cur_pos = 0;
-    let room_count: usize = chunk.read_usize()?;
+    let room_count: usize = chunk.read_usize_count()?;
     let mut room_starting_positions: Vec<usize> = Vec::with_capacity(room_count);
     for _ in 0..room_count {
-        let start_position: usize = chunk.read_usize()? - chunk.abs_pos;
+        let start_position: usize = chunk.read_usize_pos()? - chunk.abs_pos;
         room_starting_positions.push(start_position);
     }
 
@@ -299,7 +295,7 @@ fn parse_room_objects(
         chunk.cur_pos = pointer;
         let x: i32 = chunk.read_i32()?;
         let y: i32 = chunk.read_i32()?;
-        let object_definition: usize = chunk.read_usize()?;
+        let object_definition: usize = chunk.read_usize_count()?;
         let object_definition: GMRef<GMGameObject> = GMRef::new(object_definition);
         let instance_id: u32 = chunk.read_u32()?;
         let creation_code_id: i32 = chunk.read_i32()?;
@@ -310,7 +306,7 @@ fn parse_room_objects(
         let mut image_index: Option<usize> = None;
         if general_info.is_version_at_least(2, 2, 2, 302) {
             image_speed = Some(chunk.read_f32()?);
-            image_index = Some(chunk.read_usize()?);
+            image_index = Some(chunk.read_usize_pos()?);
         }
         let color: u32 = chunk.read_u32()?;
         let rotation: f32 = chunk.read_f32()?;
@@ -391,7 +387,7 @@ fn parse_room_tiles(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
 
         let x: i32 = chunk.read_i32()?;
         let y: i32 = chunk.read_i32()?;
-        let texture_index: usize = chunk.read_usize()?;
+        let texture_index: usize = chunk.read_usize_count()?;
         let texture: GMRoomTileTexture = if general_info.is_version_at_least(2, 0, 0, 0) {
             GMRoomTileTexture::Sprite(GMRef::new(texture_index))
         } else {
@@ -469,7 +465,7 @@ fn parse_room_layers(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMR
 }
 
 fn parse_room_sequences(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<Vec<GMSequence>, String> {
-    let sequence_count: usize = chunk.read_usize()?;
+    let sequence_count: usize = chunk.read_usize_count()?;
     let mut sequences: Vec<GMSequence> = Vec::with_capacity(sequence_count);
     for _ in 0..sequence_count {
         sequences.push(parse_sequence(chunk, general_info, strings)?);

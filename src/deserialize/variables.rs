@@ -34,9 +34,9 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
 
     let variables_length: usize = if general_info.bytecode_version >= 15 { 20 } else { 12 };
     let scuffed: Option<GMVariablesScuffed> = if general_info.bytecode_version >= 15 {
-        let globals_count: usize = chunk.read_usize()?;         // these variables don't actually represent what they say
-        let instances_count: usize = chunk.read_usize()?;       // because gamemaker is weird
-        let locals_count: usize = chunk.read_usize()?;          // TODO: probably needs to be incremented when a variable is added?
+        let globals_count: usize = chunk.read_usize_count()?;         // these variables don't actually represent what they say
+        let instances_count: usize = chunk.read_usize_count()?;       // because gamemaker is weird
+        let locals_count: usize = chunk.read_usize_count()?;          // TODO: probably needs to be incremented when a variable is added?
         Some(GMVariablesScuffed {
             globals_count,
             instances_count,

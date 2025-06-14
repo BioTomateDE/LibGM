@@ -11,8 +11,8 @@ use crate::deserialize::texture_page_items::{GMTexturePageItem, GMTextures};
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSprite {
     pub name: GMRef<String>,
-    pub width: usize,
-    pub height: usize,
+    pub width: u32,
+    pub height: u32,
     pub margin_left: i32,
     pub margin_right: i32,
     pub margin_bottom: i32,
@@ -128,18 +128,18 @@ pub fn parse_chunk_sprt(
     gm_textures: &GMTextures,
 ) -> Result<GMSprites, String> {
     chunk.cur_pos = 0;
-    let sprites_count: usize = chunk.read_usize()?;
+    let sprites_count: usize = chunk.read_usize_count()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(sprites_count);
     for _ in 0..sprites_count {
-        start_positions.push(chunk.read_usize()? - chunk.abs_pos);
+        start_positions.push(chunk.read_usize_pos()? - chunk.abs_pos);
     }
 
     let mut sprites_by_index: Vec<GMSprite> = Vec::with_capacity(sprites_count);
     for start_position in start_positions {
         chunk.cur_pos = start_position;
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
-        let width: usize = chunk.read_usize()?;
-        let height: usize = chunk.read_usize()?;
+        let width: u32 = chunk.read_u32()?;
+        let height: u32 = chunk.read_u32()?;
         let margin_left: i32 = chunk.read_i32()?;
         let margin_right: i32 = chunk.read_i32()?;
         let margin_bottom: i32 = chunk.read_i32()?;
@@ -189,8 +189,8 @@ pub fn parse_chunk_sprt(
                 0 => {      // Normal
                     textures = read_texture_list(chunk, gm_textures, name.resolve(&strings.strings_by_index)?)?;
                     // read mask data
-                    let mut mask_width: usize = width;
-                    let mut mask_height: usize = height;
+                    let mut mask_width = width as usize;
+                    let mut mask_height = height as usize;
                     if general_info.is_version_at_least(2024, 6, 0, 0) {
                         mask_width = (margin_right - margin_left + 1) as usize;
                         mask_height = (margin_bottom - margin_top + 1) as usize;
@@ -283,8 +283,8 @@ pub fn parse_chunk_sprt(
             // read into `textures`
             textures = read_texture_list(chunk, gm_textures, name.resolve(&strings.strings_by_index)?)?;
             // read mask data
-            let mut mask_width: usize = width;
-            let mut mask_height: usize = height;
+            let mut mask_width = width as usize;
+            let mut mask_height = height as usize;
             if general_info.is_version_at_least(2024, 6, 0, 0) {
                 mask_width = (margin_right - margin_left + 1) as usize;
                 mask_height = (margin_bottom - margin_top + 1) as usize;
@@ -327,11 +327,11 @@ fn calculate_mask_data_size(width: usize, height: usize, mask_count: usize) -> u
 
 
 fn read_texture_list(chunk: &mut GMChunk, gm_textures: &GMTextures, sprite_name: &str) -> Result<Vec<GMRef<GMTexturePageItem>>, String> {
-    let texture_count: usize = chunk.read_usize()?;
+    let texture_count: usize = chunk.read_usize_count()?;
     let mut textures: Vec<GMRef<GMTexturePageItem>> = Vec::with_capacity(texture_count);
 
     for _ in 0..texture_count {
-        let texture_abs_pos: usize = chunk.read_usize()?;
+        let texture_abs_pos: usize = chunk.read_usize_pos()?;
         let texture: &GMRef<GMTexturePageItem> = gm_textures.abs_pos_to_ref.get(&texture_abs_pos)
             .ok_or_else(|| format!("Could not get texture with absolute position {} in map with length {} while \
             reading texture list of sprite {sprite_name}", texture_abs_pos, gm_textures.abs_pos_to_ref.len()))?;
@@ -374,7 +374,7 @@ fn parse_nine_slice(chunk: &mut GMChunk, sprite_name: &str, start_position: usiz
 
 
 fn read_mask_data(chunk: &mut GMChunk, sprite_name: &str, mask_width: usize, mask_height: usize) -> Result<Vec<GMSpriteMaskEntry>, String> {
-    let mask_count: usize = chunk.read_usize()?;
+    let mask_count: usize = chunk.read_usize_count()?;
     let mut collision_masks: Vec<GMSpriteMaskEntry> = Vec::with_capacity(mask_count);
 
     let len: usize = (mask_width + 7) / 8 * mask_height;

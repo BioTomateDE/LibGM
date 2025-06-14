@@ -37,7 +37,7 @@ pub fn parse_chunk_func(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
     let functions_count: usize = if general_info.bytecode_version <= 14 {
         chunk.data.len() / 12
     } else {
-        chunk.read_usize()?
+        chunk.read_usize_count()?
     };
     
     let mut functions_by_index: Vec<GMFunction> = Vec::with_capacity(functions_count);
@@ -45,7 +45,7 @@ pub fn parse_chunk_func(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
 
     for i in 0..functions_count {
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
-        let occurrence_count: usize = chunk.read_usize()?;
+        let occurrence_count: usize = chunk.read_usize_pos()?;
         let first_occurrence_abs_pos: i32 = chunk.read_i32()?;
 
         let (occurrences, name_string_id): (Vec<usize>, i32) = parse_occurrence_chain(chunk_code, name.resolve(&strings.strings_by_index)?, first_occurrence_abs_pos, occurrence_count)?;
@@ -75,7 +75,7 @@ pub fn parse_chunk_func(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
     let code_locals_count: usize = if general_info.bytecode_version <= 14 || general_info.is_version_at_least(2024, 8, 0, 0) {
         0
     } else {
-        chunk.read_usize()?
+        chunk.read_usize_count()?
     };
     
     let mut code_locals: Vec<GMCodeLocal> = Vec::with_capacity(code_locals_count);
@@ -88,12 +88,12 @@ pub fn parse_chunk_func(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
 
 
 fn read_code_local(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMCodeLocal, String> {
-    let local_variables_count: usize = chunk.read_usize()?;
+    let local_variables_count: usize = chunk.read_usize_count()?;
     let name: GMRef<String> = chunk.read_gm_string(&strings)?;
     let mut variables: Vec<GMCodeLocalVariable> = Vec::with_capacity(local_variables_count);
 
     for _ in 0..local_variables_count {
-        let variable_index: usize = chunk.read_usize()?;
+        let variable_index: usize = chunk.read_usize_count()?;
         let variable_name: GMRef<String> = chunk.read_gm_string(&strings)?;
         let variable: GMCodeLocalVariable = GMCodeLocalVariable {
             index: variable_index,

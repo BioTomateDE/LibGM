@@ -51,11 +51,11 @@ enum RawImageKind {
 
 pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Vec<GMEmbeddedTexture>, String> {
     chunk.cur_pos = 0;
-    let texture_count: usize = chunk.read_usize()?;
+    let texture_count: usize = chunk.read_usize_count()?;
     let mut texture_pointers: Vec<usize> = Vec::with_capacity(texture_count);
 
     for _ in 0..texture_count {
-        texture_pointers.push(chunk.read_usize()? - chunk.abs_pos);
+        texture_pointers.push(chunk.read_usize_pos()? - chunk.abs_pos);
     }
 
     let mut textures_raw: Vec<GMEmbeddedTextureRaw> = Vec::with_capacity(texture_count);
@@ -81,7 +81,7 @@ pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Re
             index_in_group = Some(chunk.read_i32()?);
         }
 
-        let texture_abs_start_position: usize = chunk.read_usize()?;
+        let texture_abs_start_position: usize = chunk.read_usize_pos()?;
         // can be zero if the texture is "external"
         let image: Option<RawImage> = if texture_abs_start_position == 0 { None } else {
             let texture_start_position: usize = texture_abs_start_position.checked_sub(chunk.abs_pos).ok_or_else(|| format!(
@@ -170,7 +170,7 @@ fn read_raw_texture<'a>(chunk: &mut GMChunk<'a>, general_info: &GMGeneralInfo) -
         chunk.cur_pos += 8;      // skip past (start of) header
         let mut header_size: usize = 8;
         if general_info.is_version_at_least(2022, 5, 0, 0) {
-            let _serialized_uncompressed_length = chunk.read_usize()?;    // maybe handle negative numbers?
+            let _serialized_uncompressed_length = chunk.read_usize_pos()?;    // maybe handle negative numbers?
             header_size = 12;
         }
 

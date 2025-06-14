@@ -25,10 +25,10 @@ pub struct GMPaths {
 
 pub fn parse_chunk_path(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMPaths, String> {
     chunk.cur_pos = 0;
-    let path_count: usize = chunk.read_usize()?;
+    let path_count: usize = chunk.read_usize_count()?;
     let mut path_starting_positions: Vec<usize> = Vec::with_capacity(path_count);
     for _ in 0..path_count {
-        let start_position: usize = chunk.read_usize()? - chunk.abs_pos;
+        let start_position: usize = chunk.read_usize_pos()? - chunk.abs_pos;
         path_starting_positions.push(start_position);
     }
 
@@ -58,7 +58,7 @@ pub fn parse_chunk_path(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMPa
 
 
 fn parse_path_points(chunk: &mut GMChunk) -> Result<Vec<GMPathPoint>, String> {
-    let point_count: usize = chunk.read_usize()?;
+    let point_count: usize = chunk.read_usize_count()?;
     let mut points: Vec<GMPathPoint> = Vec::with_capacity(point_count);
 
     for _ in 0..point_count {
