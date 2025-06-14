@@ -33,7 +33,7 @@ pub fn parse_chunk_path(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMPa
     }
 
     let mut paths_by_index: Vec<GMPath> = Vec::with_capacity(path_count);
-    let mut abs_pos_to_ref: HashMap<usize, GMRef<GMPath>> = HashMap::new();
+    let mut abs_pos_to_ref: HashMap<usize, GMRef<GMPath>> = HashMap::with_capacity(path_count);
     for (i, start_position) in path_starting_positions.iter().enumerate() {
         chunk.cur_pos = *start_position;
 

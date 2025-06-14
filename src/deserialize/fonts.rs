@@ -60,7 +60,7 @@ pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
     }
 
     let mut fonts_by_index: Vec<GMFont> = Vec::with_capacity(font_count);
-    let mut abs_pos_to_ref: HashMap<usize, GMRef<GMFont>> = HashMap::new();
+    let mut abs_pos_to_ref: HashMap<usize, GMRef<GMFont>> = HashMap::with_capacity(font_count);
     for (i, start_position) in font_starting_positions.iter().enumerate() {
         chunk.cur_pos = *start_position;
 

@@ -18,7 +18,7 @@ pub fn parse_chunk_strg(chunk: &mut GMChunk) -> Result<GMStrings, String> {
     }
 
     let mut strings_by_index: Vec<String> = Vec::with_capacity(string_count);
-    let mut abs_pos_to_reference: HashMap<usize, GMRef<String>> = HashMap::new();
+    let mut abs_pos_to_reference: HashMap<usize, GMRef<String>> = HashMap::with_capacity(string_count);
 
     for (i, abs_start_position) in abs_start_positions.iter().enumerate() {
         chunk.cur_pos = *abs_start_position - chunk.abs_pos;
