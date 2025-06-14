@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::strings::GMStrings;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use serde::{Deserialize, Serialize};
 use crate::deserialize::game_objects::GMGameObject;
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::sprites::GMSprite;
@@ -22,20 +23,20 @@ pub struct GMSequence {
     pub function_ids: HashMap<i32, GMRef<String>>,
     pub moments: Vec<GMKeyframeMoment>
 }
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive, Serialize, Deserialize)]
 #[repr(u32)]
 pub enum GMSequencePlaybackType {
     Oneshot = 0,
     Loop = 1,
     Pingpong = 2
 }
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive, Serialize, Deserialize)]
 #[repr(u32)]
 pub enum GMAnimSpeedType {
     FramesPerSecond = 0,
     FramesPerGameFrame = 1
 }
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMKeyframe {
     pub key: f32,
     pub length: f32,
