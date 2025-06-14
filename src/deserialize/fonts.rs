@@ -208,15 +208,11 @@ fn parse_kernings(chunk: &mut GMChunk) -> Result<Vec<GMFontGlyphKerning>, String
 }
 
 
-fn convert_char(value: i16) -> Result<Option<char>, ()> {
-    if value == 0 {
+fn convert_char(codepoint: i16) -> Result<Option<char>, ()> {
+    if codepoint == 0 {
         return Ok(None);
     }
-    let char_code = value as u16;
-    match char::from_u32(char_code as u32) {
-        Some(c) => Ok(Some(c)),
-        None => Err(()),
-    }
+    char::from_u32(codepoint as u32).map(Some).ok_or(())
 }
 
 
