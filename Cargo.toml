@@ -7,8 +7,8 @@ edition = "2024"
 debug = true
 
 [dependencies]
-uuid = "1.16.0"
-chrono = "0.4.40"
+uuid = { version = "1.16.0", features = ["serde"] }
+chrono = { version = "0.4.40", features = ["serde"] }
 num_enum = "0.7"
 image = { version = "0.25.6", features = ["png"] }
 bzip2 = "0.5.2"
