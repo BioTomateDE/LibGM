@@ -17,6 +17,7 @@ use crate::deserialize::rooms::GMRoom;
 use crate::deserialize::sprites::GMSprite;
 use crate::deserialize::texture_page_items::GMTexturePageItem;
 use crate::deserialize::variables::GMVariable;
+use crate::export_mod::backgrounds::{AddBackground, EditBackground};
 use crate::export_mod::code::{AddCode, EditCode};
 use crate::export_mod::fonts::{AddFont, EditFont};
 use crate::export_mod::functions::{AddFunction, EditFunction};
@@ -25,9 +26,11 @@ use crate::export_mod::general_info::EditGeneralInfo;
 use crate::export_mod::options::EditOptions;
 use crate::export_mod::paths::ModPath;
 use crate::export_mod::rooms::{AddRoom, EditRoom};
+use crate::export_mod::scripts::ModScript;
 use crate::export_mod::sounds::{AddSound, EditSound};
+use crate::export_mod::sprites::{AddSprite, EditSprite};
 use crate::export_mod::unordered_list::EditUnorderedList;
-
+use crate::export_mod::variables::{AddVariable, EditVariable};
 
 pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_path: &Path) -> Result<(), String> {
     let stopwatch = Stopwatch::start();
@@ -40,6 +43,7 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
 
     let mod_exporter = ModExporter {original_data, modified_data};
     let audios: EditUnorderedList<Vec<u8>, Vec<u8>> = bench_export!("Audio", mod_exporter.export_audios())?;
+    let backgrounds: EditUnorderedList<AddBackground, EditBackground> = bench_export!("Backgrounds", mod_exporter.export_backgrounds())?;
     let codes: EditUnorderedList<AddCode, EditCode> = bench_export!("Code", mod_exporter.export_codes())?;
     let fonts: EditUnorderedList<AddFont, EditFont> = bench_export!("Fonts", mod_exporter.export_fonts())?;
     let functions: EditUnorderedList<AddFunction, EditFunction> = bench_export!("Functions", mod_exporter.export_functions())?;
@@ -48,13 +52,17 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     let options: EditOptions = bench_export!("Options", mod_exporter.export_options())?;
     let paths: EditUnorderedList<ModPath, ModPath> = bench_export!("Paths", mod_exporter.export_paths())?;
     let rooms: EditUnorderedList<AddRoom, EditRoom> = bench_export!("Rooms", mod_exporter.export_rooms())?;
+    let scripts: EditUnorderedList<ModScript, ModScript> = bench_export!("Scripts", mod_exporter.export_scripts())?;
     let sounds: EditUnorderedList<AddSound, EditSound> = bench_export!("Sounds", mod_exporter.export_sounds())?;
+    let sprites: EditUnorderedList<AddSprite, EditSprite> = bench_export!("Sprites", mod_exporter.export_sprites())?;
     let strings: EditUnorderedList<String, String> = bench_export!("Strings", mod_exporter.export_strings())?;
     let (texture_page_items, images) = bench_export!("Textures", mod_exporter.export_textures())?;
+    let variables: EditUnorderedList<AddVariable, EditVariable> = bench_export!("Variables", mod_exporter.export_variables())?;
     // repeat ts for every element {~~}
 
     log::trace!("Exporting changes took {stopwatch}");
     
+    tar_write_json_file(&mut tar, "backgrounds", backgrounds)?;
     tar_write_json_file(&mut tar, "codes", codes)?;
     tar_write_json_file(&mut tar, "fonts", fonts)?;
     tar_write_json_file(&mut tar, "functions", functions)?;
@@ -63,9 +71,12 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     tar_write_json_file(&mut tar, "paths", paths)?;
     tar_write_json_file(&mut tar, "options", options)?;
     tar_write_json_file(&mut tar, "rooms", rooms)?;
+    tar_write_json_file(&mut tar, "scripts", scripts)?;
     tar_write_json_file(&mut tar, "sounds", sounds)?;
+    tar_write_json_file(&mut tar, "sprites", sprites)?;
     tar_write_json_file(&mut tar, "strings", strings)?;
     tar_write_json_file(&mut tar, "textures", texture_page_items)?;
+    tar_write_json_file(&mut tar, "variables", variables)?;
     // repeat ts for every element {~~}
 
     // export textures into textures/{i}.png
