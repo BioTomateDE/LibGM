@@ -169,7 +169,7 @@ impl GMChunk<'_> {
     /// Read unsigned 32-bit integer and convert to usize (little endian).
     /// Meant for reading (pointer list element) count; uses small constant number as failsafe.
     pub fn read_usize_count(&mut self) -> Result<usize, String> {
-        const FAILSAFE_AMOUNT: usize = 10_000;    // increase limit is not enough
+        const FAILSAFE_AMOUNT: usize = 100_000;    // increase limit is not enough
         let number: usize = self.read_usize()?;
 
         if likely(number < FAILSAFE_AMOUNT) {
