@@ -270,10 +270,10 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
     let steam_appid: i32 = chunk.read_i32()?;
     let debugger_port: Option<u32> = if bytecode_version >= 14 { Some(chunk.read_u32()?) } else { None };
 
-    let room_count: usize = chunk.read_usize()?;
+    let room_count: usize = chunk.read_usize_count()?;
     let mut room_order: Vec<GMRef<GMRoom>> = Vec::with_capacity(room_count);
     for _ in 0..room_count {
-        let room_id: usize = chunk.read_usize()?;
+        let room_id: usize = chunk.read_usize_count()?;
         room_order.push(GMRef::new(room_id));
     }
 
@@ -604,7 +604,7 @@ fn parse_options_old(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMText
 
 
 fn parse_constants(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMOptionsConstant>, String> {
-    let constants_count: usize = chunk.read_usize()?;
+    let constants_count: usize = chunk.read_usize_count()?;
     let mut constants: Vec<GMOptionsConstant> = Vec::with_capacity(constants_count);
 
     for _ in 0..constants_count {
@@ -620,7 +620,7 @@ fn parse_constants(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMOpt
 }
 
 fn parse_options_image(chunk: &mut GMChunk, textures: &GMTextures) -> Result<Option<GMRef<GMTexturePageItem>>, String> {
-    let absolute_position: usize = chunk.read_usize()?;
+    let absolute_position: usize = chunk.read_usize_pos()?;
     if absolute_position == 0 {
         return Ok(None)
     }

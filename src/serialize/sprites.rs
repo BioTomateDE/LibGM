@@ -16,8 +16,8 @@ pub fn build_chunk_sprt(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
     for (i, sprite) in gm_data.sprites.sprites_by_index.iter().enumerate() {
         builder.resolve_pointer(GMPointer::Sprite(i))?;
         builder.write_gm_string(&sprite.name)?;
-        builder.write_usize(sprite.width);
-        builder.write_usize(sprite.height);
+        builder.write_u32(sprite.width);
+        builder.write_u32(sprite.height);
         builder.write_i32(sprite.margin_left);
         builder.write_i32(sprite.margin_right);
         builder.write_i32(sprite.margin_bottom);

@@ -52,6 +52,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
         abs_pos: 0,
         data: &raw_data,
         cur_pos: 0,
+        total_data_len: usize::MAX,
     };
 
     if all.read_chunk_name()? != "FORM" {
@@ -59,12 +60,12 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     }
 
     // get chunks
-    let raw_data_len: usize = all.read_usize()? + all.cur_pos;
+    let raw_data_len: usize = all.read_usize_pos()? + all.cur_pos;
     let mut chunks: HashMap<String, GMChunk> = HashMap::new();
 
     while all.cur_pos + 8 < raw_data_len {
         let chunk_name: String = all.read_chunk_name()?;
-        let chunk_length: usize = all.read_usize()?;
+        let chunk_length: usize = all.read_usize_pos()?;
         let chunk_data: &[u8] = all.data.get(all.cur_pos.. all.cur_pos + chunk_length)
             .ok_or_else(|| format!(
                 "Chunk '{}' with specified length {} is out of bounds at absolute position {} while reading chunks: {} > {}",
@@ -80,6 +81,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
                 abs_pos: all.cur_pos,
                 data: &chunk_data,
                 cur_pos: 0,
+                total_data_len: raw_data_len,
             },
         );
         all.cur_pos += chunk_length;
