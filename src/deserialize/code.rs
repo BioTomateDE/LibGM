@@ -541,18 +541,11 @@ pub fn parse_instruction(
 
         GMInstructionType::PopInstruction => {
             let type1: u8 = b2 & 0xf;
-            let type1: GMDataType = match type1.try_into() {
-                Ok(ok) => ok,
-                Err(_) => return Err(format!("Invalid Data Type {type1:02X} while parsing Pop Instruction")),
-            };
-
             let type2: u8 = b2 >> 4;
-            let type2: GMDataType = match type2.try_into() {
-                Ok(ok) => ok,
-                Err(_) => return Err(format!("Invalid Data Type {type2:02X} while parsing Pop Instruction")),
-            };
-
             let instance_type: i16 = b0 as i16 | ((b1 as i16) << 8);
+
+            let type1: GMDataType = type1.try_into().map_err(|_| format!("Invalid Data Type {type1:02X} while parsing Pop Instruction"))?;
+            let type2: GMDataType = type2.try_into().map_err(|_| format!("Invalid Data Type {type2:02X} while parsing Pop Instruction"))?;
             let instance_type: GMInstanceType = parse_instance_type(instance_type)?;
 
             if type1 == GMDataType::Int16 {
@@ -613,10 +606,7 @@ pub fn parse_instruction(
 
         GMInstructionType::CallInstruction => {
             let data_type: u8 = b2;
-            let data_type: GMDataType = match data_type.try_into() {
-                Ok(ok) => ok,
-                Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Call Instruction")),
-            };
+            let data_type: GMDataType = data_type.try_into().map_err(|_| format!("Invalid Data Type {data_type:02X} while parsing Call Instruction"))?;
 
             let function: &GMRef<GMFunction> = functions.occurrences_to_refs.get(&chunk.cur_pos).ok_or_else(|| format!(
                 "Could not find any function with absolute occurrence position {} in map with length {} (functions len: {}) while parsing Call Instruction",
@@ -635,10 +625,7 @@ pub fn parse_instruction(
         GMInstructionType::BreakInstruction => {
             let value: i16 = b0 as i16 | ((b1 as i16) << 8);
             let data_type: u8 = b2;
-            let data_type: GMDataType = match data_type.try_into() {
-                Ok(ok) => ok,
-                Err(_) => return Err(format!("Invalid Data Type {data_type:02X} while parsing Break Instruction")),
-            };
+            let data_type: GMDataType = data_type.try_into().map_err(|_| format!("Invalid Data Type {data_type:02X} while parsing Break Instruction"))?;
 
             let int_argument: Option<i32> = if data_type == GMDataType::Int32 {
                 Some(chunk.read_i32()?)

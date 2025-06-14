@@ -259,13 +259,10 @@ pub fn parse_yyswf_timeline(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -
 
 fn parse_yyswf_item(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GMSpriteYYSWFItem, String> {
     let item_type: i32 = chunk.read_i32()?;
-    let item_type: GMSpriteYYSWFItemType = match item_type.try_into() {
-        Ok(ok) => ok,
-        Err(_) => return Err(format!(
-            "Invalid YYSWF Item Type 0x{:08X} at position {} while parsing Sprite YYSWF in chunk '{}'",
-            item_type, chunk.cur_pos, chunk.name,
-        )),
-    };
+    let item_type: GMSpriteYYSWFItemType = item_type.try_into().map_err(|_| format!(
+        "Invalid YYSWF Item Type 0x{:08X} at position {} while parsing Sprite YYSWF in chunk '{}'",
+        item_type, chunk.cur_pos, chunk.name,
+    ))?;
     let id: i32 = chunk.read_i32()?;
     let mut shape_data: Option<GMSpriteYYSWFShapeData> = None;
     let mut bitmap_data: Option<GMSpriteYYSWFBitmapData> = None;
@@ -362,13 +359,10 @@ fn parse_yyswf_fill_data(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> R
 
         2 => {  // Gradient Fill
             let gradient_fill_type: i32 = chunk.read_i32()?;
-            let gradient_fill_type: GMSpriteYYSWFGradientFillType = match gradient_fill_type.try_into() {
-                Ok(ok) => ok,
-                Err(_) => return Err(format!(
-                    "Invalid YYSWF Fill Gradient Type 0x{:08X} at position {} while parsing Sprite YYSWF in chunk '{}'",
-                    gradient_fill_type, chunk.cur_pos, chunk.name,
-                )),
-            };
+            let gradient_fill_type: GMSpriteYYSWFGradientFillType = gradient_fill_type.try_into().map_err(|_|format!(
+                "Invalid YYSWF Fill Gradient Type 0x{:08X} at position {} while parsing Sprite YYSWF in chunk '{}'",
+                gradient_fill_type, chunk.cur_pos, chunk.name,
+            ))?;
 
             let mut tpe_index: Option<usize> = None;
             if general_info.is_version_at_least(2022, 1, 0, 0) {
@@ -404,13 +398,10 @@ fn parse_yyswf_fill_data(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> R
 
         3 => {      // Fill Bitmap
             let bitmap_fill_type: i32 = chunk.read_i32()?;
-            let bitmap_fill_type: GMSpriteYYSWFBitmapFillType = match bitmap_fill_type.try_into() {
-                Ok(ok) => ok,
-                Err(_) => return Err(format!(
-                    "Invalid YYSWF Bitmap Fill Type 0x{:08X} at position {} while parsing Sprite YYSWF in chunk '{}'",
-                    bitmap_fill_type, chunk.cur_pos, chunk.name,
-                ))
-            };
+            let bitmap_fill_type: GMSpriteYYSWFBitmapFillType = bitmap_fill_type.try_into().map_err(|_| format!(
+                "Invalid YYSWF Bitmap Fill Type 0x{:08X} at position {} while parsing Sprite YYSWF in chunk '{}'",
+                bitmap_fill_type, chunk.cur_pos, chunk.name,
+            ))?;
             let char_id: i32 = chunk.read_i32()?;
             let transformation_matrix: GMSpriteYYSWFMatrix33 = parse_yyswf_transformation_matrix(chunk)?;
 
@@ -496,13 +487,10 @@ fn parse_yyswf_subshapes(chunk: &mut GMChunk) -> Result<GMSpriteYYSWFSubshapeDat
 
 fn parse_yyswf_bitmap_data(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GMSpriteYYSWFBitmapData, String> {
     let bitmap_type: i32 = chunk.read_i32()?;
-    let bitmap_type: GMSpriteYYSWFBitmapType = match bitmap_type.try_into() {
-        Ok(ok) => ok,
-        Err(_) => return Err(format!(
-            "Invalid YYSWF Bitmap Type 0x{:08X} at position {} while parsing Sprite YYSWF in chunk '{}'",
-            bitmap_type, chunk.cur_pos, chunk.name,
-        )),
-    };
+    let bitmap_type: GMSpriteYYSWFBitmapType = bitmap_type.try_into().map_err(|_| format!(
+        "Invalid YYSWF Bitmap Type 0x{:08X} at position {} while parsing Sprite YYSWF in chunk '{}'",
+        bitmap_type, chunk.cur_pos, chunk.name,
+    ))?;
 
     let width: u32 = chunk.read_u32()?;             // could be -1 idk
     let height: u32 = chunk.read_u32()?;            // could be -1 idk
