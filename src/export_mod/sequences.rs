@@ -1,10 +1,21 @@
 use serde::{Deserialize, Serialize};
 use crate::deserialize::sequence::GMSequence;
-use crate::export_mod::export::ModExporter;
+use crate::export_mod::export::{ModExporter, ModRef};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddSequence {
-    // {~~} {!!} Define fields as needed based on GMSequence
+    // pub name: ModRef,
+    // pub playback: GMSequencePlaybackType,
+    // pub playback_speed: f32,
+    // pub playback_speed_type: GMAnimSpeedType,
+    // pub length: f32,
+    // pub origin_x: i32,
+    // pub origin_y: i32,
+    // pub volume: f32,
+    // pub broadcast_messages: Vec<ModRef>,    // String ref
+    // pub tracks: Vec<GMTrack>,
+    // pub function_ids: HashMap<i32, GMRef<String>>,
+    // pub moments: Vec<GMKeyframeMoment>
 }
 
 #[serde_with::skip_serializing_none]
@@ -15,11 +26,11 @@ pub struct EditSequence {
 
 impl ModExporter<'_, '_> {
     pub fn add_sequence(&self, i: &GMSequence) -> Result<AddSequence, String> {
-        todo!()
+        todo!("sequences not yet implemented")
     }
 
     pub fn edit_sequence(&self, o: &GMSequence, m: &GMSequence) -> Result<EditSequence, String> {
-        todo!()
+        todo!("sequences not yet implemented")
     }
 }
 
