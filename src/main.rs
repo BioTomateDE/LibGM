@@ -53,6 +53,21 @@ fn main_export_mod() -> Result<(), String> {
     info!("Parsing original data file");
     let original_data: GMData = parse_data_file(original_data_raw)
         .map_err(|e| format!("Error while parsing original data file: {e}"))?;
+    
+    // let obj = &original_data.game_objects.game_objects_by_index[621];
+    // println!("Printing object events {}", obj.name.display(&original_data.strings));
+    // for (i, vec) in obj.events.iter().enumerate() {
+    //     println!("------------------------------------->");
+    //     println!("Game object event thingy #{i}");
+    //     for event in vec {
+    //         event.print(&original_data.strings)?;
+    //     }
+    //     println!("<-------------------------------------");
+    // }
+    
+    // for i in &original_data.game_objects.game_objects_by_index {
+    //     println!("{}", i.events.len())
+    // }
 
     info!("Loading modified data file \"{}\"", modified_data_file_path.display());
     let modified_data_raw: Vec<u8> = read_data_file(modified_data_file_path)

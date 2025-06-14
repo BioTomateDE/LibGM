@@ -21,7 +21,7 @@ impl<T> Clone for GMRef<T> {
 impl<T> Copy for GMRef<T> {}
 impl<T> std::fmt::Debug for GMRef<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "GMRef<{} #{}>", typename::<T>(), self.index)
+        write!(f, "GMRef<{}#{}>", typename::<T>(), self.index)
     }
 }
 impl<T> GMRef<T> {
