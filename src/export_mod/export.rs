@@ -58,10 +58,9 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     let strings: EditUnorderedList<String, String> = bench_export!("Strings", mod_exporter.export_strings())?;
     let (texture_page_items, images) = bench_export!("Textures", mod_exporter.export_textures())?;
     let variables: EditUnorderedList<AddVariable, EditVariable> = bench_export!("Variables", mod_exporter.export_variables())?;
-    // repeat ts for every element {~~}
-
     log::trace!("Exporting changes took {stopwatch}");
-    
+
+    let stopwatch2 = Stopwatch::start();
     tar_write_json_file(&mut tar, "backgrounds", backgrounds)?;
     tar_write_json_file(&mut tar, "codes", codes)?;
     tar_write_json_file(&mut tar, "fonts", fonts)?;
@@ -77,9 +76,11 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     tar_write_json_file(&mut tar, "strings", strings)?;
     tar_write_json_file(&mut tar, "textures", texture_page_items)?;
     tar_write_json_file(&mut tar, "variables", variables)?;
-    // repeat ts for every element {~~}
+    log::trace!("Writing json files took {stopwatch2}");
 
     // export textures into textures/{i}.png
+    let stopwatch2 = Stopwatch::start();
+    let image_count = images.len();
     for (i, image) in images.into_iter().enumerate() {
         let file_path: String = format!("textures/{i}.png");
         let mut buffer = Cursor::new(Vec::new());
@@ -88,22 +89,31 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
         drop(image);
         tar_write_raw_file(&mut tar, &file_path, &buffer.into_inner())?;
     }
+    log::trace!("Writing {image_count} images took {stopwatch2}");
 
     // export audio additions into audio_additions/{i}.wav
+    let stopwatch2 = Stopwatch::start();
+    let audio_addition_count = audios.additions.len();
     for (i, audio_data) in audios.additions.into_iter().enumerate() {
         tar_write_raw_file(&mut tar, &format!("audio_additions/{i}.wav"), &audio_data)?;
     }
+    log::trace!("Writing {audio_addition_count} audio additions took {stopwatch2}");
     
     // export audio edits into audio_edits/{i}.wav
+    let stopwatch2 = Stopwatch::start();
+    let audio_edit_count = audios.edits.len();
     for (i, audio_data) in audios.edits {
         tar_write_raw_file(&mut tar, &format!("audio_edits/{i}.wav"), &audio_data)?;
     }
+    log::trace!("Writing {audio_edit_count} audio edits took {stopwatch2}");
 
+    let stopwatch2 = Stopwatch::start();
     // finalize
     tar.into_inner()
         .map_err(|e| format!("Could not get inner value of tarball: {e}"))?
         .finish()
         .map_err(|e| format!("Could not finish writing tarball: {e}"))?;
+    log::trace!("Finalizing tarball took {stopwatch2}");
     
     log::trace!("Exporting changes and writing tarball took {stopwatch}");
     Ok(())
