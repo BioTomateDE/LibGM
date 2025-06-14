@@ -17,3 +17,4 @@ mod audio;
 mod variables;
 mod backgrounds;
 mod sprites;
+mod scripts;
