@@ -1,4 +1,4 @@
-﻿use crate::debug_utils::{format_bytes, likely};
+﻿use crate::debug_utils::{format_bytes, likely, typename};
 use crate::deserialize::strings::GMStrings;
 
 // GMRef is for parsing chunks:
@@ -21,9 +21,7 @@ impl<T> Clone for GMRef<T> {
 impl<T> Copy for GMRef<T> {}
 impl<T> std::fmt::Debug for GMRef<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("GMRef")
-            .field("index", &self.index)
-            .finish()
+        write!(f, "GMRef<{} #{}>", typename::<T>(), self.index)
     }
 }
 impl<T> GMRef<T> {

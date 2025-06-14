@@ -16,7 +16,7 @@ pub struct GMGameObject {
     pub solid: bool,
     pub depth: i32,
     pub persistent: bool,
-    pub parent_id: i32,
+    pub parent: Option<GMRef<GMGameObject>>,
     pub texture_mask: Option<GMRef<GMSprite>>,
     pub uses_physics: bool,
     pub is_sensor: bool,
@@ -98,7 +98,16 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
         let solid: bool = chunk.read_bool32()?;
         let depth: i32 = chunk.read_i32()?;
         let persistent: bool = chunk.read_bool32()?;
-        let parent_id: i32 = chunk.read_i32()?;         // TODO usize, object ref  | parent can be: -100 (undefined), -2 (other [not here]), or -1 (self)
+        let parent_id: i32 = chunk.read_i32()?;
+        let parent: Option<GMRef<GMGameObject>> = match parent_id {
+            -100 => None,   // No parent
+            -1 => Some(GMRef::new(game_objects_by_index.len())),    // Parent is Self
+            _ => {
+                let parent_id: usize = u32::try_from(parent_id)
+                    .map_err(|_| format!("Invalid game object parent id {parent_id}"))? as usize;
+                Some(GMRef::new(parent_id))
+            },
+        };
         let texture_mask: Option<GMRef<GMSprite>> = match chunk.read_i32()? {
             -1 => None,
             index => Some(GMRef::new(index.try_into().map_err(|_| format!(
@@ -108,13 +117,10 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
         let uses_physics: bool = chunk.read_bool32()?;
         let is_sensor: bool = chunk.read_bool32()?;
         let collision_shape: u32 = chunk.read_u32()?;
-        let collision_shape: GMGameObjectCollisionShape = match collision_shape.try_into() {
-            Ok(shape) => shape,
-            Err(_) => return Err(format!(
-                "Invalid Collision Shape 0x{:04X} at position {} while parsing Game Object at position {} in chunk '{}'",
-                collision_shape, chunk.cur_pos, start_position, chunk.name,
-            )),
-        };
+        let collision_shape: GMGameObjectCollisionShape = collision_shape.try_into().map_err(|_| format!(
+            "Invalid Collision Shape 0x{:04X} at position {} while parsing Game Object at position {} in chunk '{}'",
+            collision_shape, chunk.cur_pos, start_position, chunk.name,
+        ))?;
         let density: f32 = chunk.read_f32()?;
         let restitution: f32 = chunk.read_f32()?;
         let group: u32 = chunk.read_u32()?;
@@ -142,7 +148,7 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
             solid,
             depth,
             persistent,
-            parent_id,
+            parent,
             texture_mask,
             uses_physics,
             is_sensor,

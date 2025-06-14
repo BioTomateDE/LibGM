@@ -742,7 +742,7 @@ impl GMGameObject {
         println!("  Solid: {}", self.solid);
         println!("  Depth: {}", self.depth);
         println!("  Persistent: {}", self.persistent);
-        println!("  Parent ID: {}", self.parent_id);
+        println!("  Parent ID: {:?}", self.parent);
         println!("  Texture Mask ID: {:?}", self.texture_mask);
         println!("  Uses Physics: {}", self.uses_physics);
         println!("  Is Sensor: {}", self.is_sensor);
