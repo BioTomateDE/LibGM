@@ -20,6 +20,9 @@ use crate::deserialize::variables::GMVariable;
 use crate::export_mod::code::{AddCode, EditCode};
 use crate::export_mod::fonts::{AddFont, EditFont};
 use crate::export_mod::functions::{AddFunction, EditFunction};
+use crate::export_mod::game_objects::{AddGameObject, EditGameObject};
+use crate::export_mod::general_info::EditGeneralInfo;
+use crate::export_mod::options::EditOptions;
 use crate::export_mod::rooms::{AddRoom, EditRoom};
 use crate::export_mod::sounds::{AddSound, EditSound};
 use crate::export_mod::unordered_list::EditUnorderedList;
@@ -38,6 +41,9 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     let codes: EditUnorderedList<AddCode, EditCode> = bench_export!("Code", mod_exporter.export_codes())?;
     let fonts: EditUnorderedList<AddFont, EditFont> = bench_export!("Fonts", mod_exporter.export_fonts())?;
     let functions: EditUnorderedList<AddFunction, EditFunction> = bench_export!("Functions", mod_exporter.export_functions())?;
+    let game_objects: EditUnorderedList<AddGameObject, EditGameObject> = bench_export!("Game Objects", mod_exporter.export_game_objects())?;
+    let general_info: EditGeneralInfo = bench_export!("General Info", mod_exporter.export_general_info())?;
+    let options: EditOptions = bench_export!("Options", mod_exporter.export_options())?;
     let rooms: EditUnorderedList<AddRoom, EditRoom> = bench_export!("Rooms", mod_exporter.export_rooms())?;
     let sounds: EditUnorderedList<AddSound, EditSound> = bench_export!("Sounds", mod_exporter.export_sounds())?;
     let strings: EditUnorderedList<String, String> = bench_export!("Strings", mod_exporter.export_strings())?;
@@ -49,8 +55,11 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     tar_write_json_file(&mut tar, "codes", &codes)?;
     tar_write_json_file(&mut tar, "fonts", &fonts)?;
     tar_write_json_file(&mut tar, "functions", &functions)?;
-    tar_write_json_file(&mut tar, "sounds", &sounds)?;
+    tar_write_json_file(&mut tar, "game_objects", &game_objects)?;
+    tar_write_json_file(&mut tar, "general_info", &general_info)?;
+    tar_write_json_file(&mut tar, "options", &options)?;
     tar_write_json_file(&mut tar, "rooms", &rooms)?;
+    tar_write_json_file(&mut tar, "sounds", &sounds)?;
     tar_write_json_file(&mut tar, "strings", &strings)?;
     tar_write_json_file(&mut tar, "textures", &texture_page_items)?;
     // repeat ts for every element {~~}
@@ -77,14 +86,10 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     Ok(())
 }
 
-fn tar_write_json_file<ADD: Serialize, EDIT: Serialize>(
-    tar: &mut tar::Builder<zstd::Encoder<File>>,
-    name: &str,
-    changes: &EditUnorderedList<ADD, EDIT>,
-) -> Result<(), String> {
+fn tar_write_json_file<J: Serialize>(tar: &mut tar::Builder<zstd::Encoder<File>>, name: &str, json_struct: &J) -> Result<(), String> {
     let filename: String = format!("{name}.json");
 
-    let data: Vec<u8> = serde_json::to_vec_pretty(changes)
+    let data: Vec<u8> = serde_json::to_vec_pretty(json_struct)
         .map_err(|e| format!("Could not serialize {name} changes to json: {e}"))?;
 
     let mut header = tar::Header::new_gnu();

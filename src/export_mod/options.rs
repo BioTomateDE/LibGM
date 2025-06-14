@@ -66,15 +66,6 @@ pub struct EditOptionsFlags {
     pub enable_copy_on_write: Option<bool>,
 }
 
-// #[serde_with::skip_serializing_none]
-// #[derive(Debug, Clone, Serialize, Deserialize)]
-// pub struct RgbaColor {
-//     pub r: Option<u8>,
-//     pub g: Option<u8>,
-//     pub b: Option<u8>,
-//     pub a: Option<u8>,
-// }
-
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditOptionsConstant {
