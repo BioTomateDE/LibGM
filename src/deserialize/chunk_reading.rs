@@ -248,14 +248,11 @@ impl GMChunk<'_> {
 
     pub fn read_literal_string(&mut self, length: usize) -> Result<String, String> {
         // Read literal ascii/utf8 string with specified length
-        let bytes: Vec<u8> = match self.data.get(self.cur_pos..self.cur_pos + length) {
-            Some(bytes) => bytes.to_owned(),
-            None => return Err(format!(
-                "Trying to read literal string with length {} out of bounds \
-                in chunk '{}' at position {}: {} > {}",
-                length, self.name, self.cur_pos, self.cur_pos + length, self.data.len(),
-            )),
-        };
+        let bytes: Vec<u8> = self.data.get(self.cur_pos..self.cur_pos + length).ok_or_else(|| format!(
+            "Trying to read literal string with length {} out of bounds \
+            in chunk '{}' at position {}: {} > {}",
+            length, self.name, self.cur_pos, self.cur_pos + length, self.data.len(),
+        ))?.to_vec();
         self.cur_pos += length;
 
         let string: String = String::from_utf8(bytes).map_err(|e| format!(
@@ -299,10 +296,8 @@ impl GMChunk<'_> {
     /// Try to read a GM String Reference. If the value is zero, return None.
     pub fn read_gm_string_optional(&mut self, gm_strings: &GMStrings) -> Result<Option<GMRef<String>>, String> {
         let string_abs_pos: usize = self.read_usize_pos()?;
-        match gm_strings.abs_pos_to_reference.get(&string_abs_pos) {
-            None => Ok(None),
-            Some(string_ref) => Ok(Some(string_ref.clone())),
-        }
+        let string_ref: Option<GMRef<String>> = gm_strings.abs_pos_to_reference.get(&string_abs_pos).cloned();
+        Ok(string_ref)
     }
 
     /// read pointer to pointer list (only used in rooms)

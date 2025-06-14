@@ -133,13 +133,9 @@ pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Re
 
 fn read_raw_texture<'a>(chunk: &mut GMChunk<'a>, general_info: &GMGeneralInfo) -> Result<RawImage<'a>, String> {
     let start_position: usize = chunk.cur_pos;
-    let header: [u8; 8] = match chunk.data.get(chunk.cur_pos..chunk.cur_pos+8) {
-        Some(bytes) => bytes.try_into().unwrap(),
-        None => return Err(format!(
-            "Unexpected end of chunk while trying to read headers of texture at position {} in chunk 'TXTR'",
-            start_position,
-        )),
-    };
+    let header: [u8; 8] = chunk.data.get(chunk.cur_pos..chunk.cur_pos+8).ok_or_else(|| format!(
+        "Unexpected end of chunk while trying to read headers of texture at position {start_position} in chunk 'TXTR'"
+    ))?.try_into().unwrap();
 
     if header == MAGIC_PNG_HEADER {
         // Parse PNG
