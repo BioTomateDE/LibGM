@@ -13,6 +13,7 @@ use crate::deserialize::code::GMCode;
 use crate::deserialize::embedded_audio::GMEmbeddedAudio;
 use crate::deserialize::functions::GMFunction;
 use crate::deserialize::game_objects::GMGameObject;
+use crate::deserialize::rooms::GMRoom;
 use crate::deserialize::sprites::GMSprite;
 use crate::deserialize::texture_page_items::GMTexturePageItem;
 use crate::deserialize::variables::GMVariable;
@@ -143,6 +144,9 @@ impl ModExporter<'_, '_> {
     // TODO continue
     pub fn convert_game_object_ref(&self, gm_game_object_ref: GMRef<GMGameObject>) -> Result<ModRef, String> {
         convert_reference(gm_game_object_ref, &self.original_data.game_objects.game_objects_by_index, &self.modified_data.game_objects.game_objects_by_index)
+    }
+    pub fn convert_room_ref(&self, gm_room_ref: GMRef<GMRoom>) -> Result<ModRef, String> {
+        convert_reference(gm_room_ref, &self.original_data.rooms.rooms_by_index, &self.modified_data.rooms.rooms_by_index)
     }
     pub fn convert_sprite_ref(&self, gm_sprite_ref: GMRef<GMSprite>) -> Result<ModRef, String> {
         convert_reference(gm_sprite_ref, &self.original_data.sprites.sprites_by_index, &self.modified_data.sprites.sprites_by_index)

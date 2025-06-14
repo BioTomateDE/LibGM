@@ -34,8 +34,8 @@ pub fn build_chunk_gen8(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
     }
 
     builder.write_usize(info.room_order.len());
-    for room_id in &info.room_order {
-        builder.write_u32(*room_id);
+    for room_ref in &info.room_order {
+        builder.write_usize(room_ref.index);
     }
 
     builder.finish_chunk(&gm_data.general_info)?;
