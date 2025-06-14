@@ -39,6 +39,7 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     let mut tar = tar::Builder::new(zstd_encoder);
 
     let mod_exporter = ModExporter {original_data, modified_data};
+    let audios: EditUnorderedList<Vec<u8>, Vec<u8>> = bench_export!("Audio", mod_exporter.export_audios())?;
     let codes: EditUnorderedList<AddCode, EditCode> = bench_export!("Code", mod_exporter.export_codes())?;
     let fonts: EditUnorderedList<AddFont, EditFont> = bench_export!("Fonts", mod_exporter.export_fonts())?;
     let functions: EditUnorderedList<AddFunction, EditFunction> = bench_export!("Functions", mod_exporter.export_functions())?;
@@ -54,30 +55,38 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
 
     log::trace!("Exporting changes took {stopwatch}");
     
-    tar_write_json_file(&mut tar, "codes", &codes)?;
-    tar_write_json_file(&mut tar, "fonts", &fonts)?;
-    tar_write_json_file(&mut tar, "functions", &functions)?;
-    tar_write_json_file(&mut tar, "game_objects", &game_objects)?;
-    tar_write_json_file(&mut tar, "general_info", &general_info)?;
-    tar_write_json_file(&mut tar, "paths", &paths)?;
-    tar_write_json_file(&mut tar, "options", &options)?;
-    tar_write_json_file(&mut tar, "rooms", &rooms)?;
-    tar_write_json_file(&mut tar, "sounds", &sounds)?;
-    tar_write_json_file(&mut tar, "strings", &strings)?;
-    tar_write_json_file(&mut tar, "textures", &texture_page_items)?;
+    tar_write_json_file(&mut tar, "codes", codes)?;
+    tar_write_json_file(&mut tar, "fonts", fonts)?;
+    tar_write_json_file(&mut tar, "functions", functions)?;
+    tar_write_json_file(&mut tar, "game_objects", game_objects)?;
+    tar_write_json_file(&mut tar, "general_info", general_info)?;
+    tar_write_json_file(&mut tar, "paths", paths)?;
+    tar_write_json_file(&mut tar, "options", options)?;
+    tar_write_json_file(&mut tar, "rooms", rooms)?;
+    tar_write_json_file(&mut tar, "sounds", sounds)?;
+    tar_write_json_file(&mut tar, "strings", strings)?;
+    tar_write_json_file(&mut tar, "textures", texture_page_items)?;
     // repeat ts for every element {~~}
 
     // export textures into textures/{i}.png
-    for (i, image) in images.iter().enumerate() {
+    for (i, image) in images.into_iter().enumerate() {
         let file_path: String = format!("textures/{i}.png");
         let mut buffer = Cursor::new(Vec::new());
         image.write_to(&mut buffer, ImageFormat::Png)
             .map_err(|e| format!("Could not encode PNG image: {e}"))?;
+        drop(image);
         tar_write_raw_file(&mut tar, &file_path, &buffer.into_inner())?;
     }
 
-    // export audio into audios/{i}.wav
-    // ^ TODO
+    // export audio additions into audio_additions/{i}.wav
+    for (i, audio_data) in audios.additions.into_iter().enumerate() {
+        tar_write_raw_file(&mut tar, &format!("audio_additions/{i}.wav"), &audio_data)?;
+    }
+    
+    // export audio edits into audio_edits/{i}.wav
+    for (i, audio_data) in audios.edits {
+        tar_write_raw_file(&mut tar, &format!("audio_edits/{i}.wav"), &audio_data)?;
+    }
 
     // finalize
     tar.into_inner()
@@ -89,10 +98,10 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     Ok(())
 }
 
-fn tar_write_json_file<J: Serialize>(tar: &mut tar::Builder<zstd::Encoder<File>>, name: &str, json_struct: &J) -> Result<(), String> {
+fn tar_write_json_file<J: Serialize>(tar: &mut tar::Builder<zstd::Encoder<File>>, name: &str, json_struct: J) -> Result<(), String> {
     let filename: String = format!("{name}.json");
 
-    let data: Vec<u8> = serde_json::to_vec_pretty(json_struct)
+    let data: Vec<u8> = serde_json::to_vec_pretty(&json_struct)
         .map_err(|e| format!("Could not serialize {name} changes to json: {e}"))?;
 
     let mut header = tar::Header::new_gnu();
