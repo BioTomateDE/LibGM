@@ -11,7 +11,7 @@ pub struct GMOptions {
     pub unknown1: u32,
     pub unknown2: u32,
     pub flags: GMOptionsFlags,
-    pub scale: i32,
+    pub window_scale: i32,
     pub window_color: GMOptionsWindowColor,
     pub color_depth: u32,
     pub resolution: u32,
@@ -217,7 +217,7 @@ pub struct GMOptionsWindowColor {
     pub a: u8,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMOptionsConstant {
     pub name: GMRef<String>,
     pub value: GMRef<String>,
@@ -483,7 +483,7 @@ fn parse_options_new(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMText
         unknown1,
         unknown2,
         flags,
-        scale,
+        window_scale: scale,
         window_color,
         color_depth,
         resolution,
@@ -587,7 +587,7 @@ fn parse_options_old(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMText
             disable_sandbox: false,
             enable_copy_on_write: false,
         },
-        scale,
+        window_scale: scale,
         window_color,
         color_depth,
         resolution,
