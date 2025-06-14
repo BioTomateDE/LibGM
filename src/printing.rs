@@ -44,7 +44,7 @@ impl GMOptions {
     pub fn print(&self) {
         println!("Options:");
         println!("  Flags: {}", &self.flags.to_string());
-        println!("  Scale: {}", self.scale);
+        println!("  Scale: {}", self.window_scale);
         println!("  Window Color: {:?}", self.window_color);
         println!("  Color Depth: {}", self.color_depth);
         println!("  Resolution: {}", self.resolution);
