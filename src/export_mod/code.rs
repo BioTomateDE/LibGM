@@ -92,7 +92,7 @@ pub struct ModCodeVariable {
     pub variable: ModRef,
     pub variable_type: ModVariableType,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ModInstanceType {
     Undefined,
     Instance(Option<ModRef>),   // GMGameObject. Is optional depending on context
@@ -195,7 +195,7 @@ impl ModExporter<'_, '_> {
         })
     }
     
-    fn convert_instance_type(&self, i: &GMInstanceType) -> Result<ModInstanceType, String> {
+    pub fn convert_instance_type(&self, i: &GMInstanceType) -> Result<ModInstanceType, String> {
         match i {
             GMInstanceType::Undefined => Ok(ModInstanceType::Undefined),
             GMInstanceType::Instance(obj_ref) => Ok(ModInstanceType::Instance(self.convert_game_object_ref_opt(*obj_ref)?)),
