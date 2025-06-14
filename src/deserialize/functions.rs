@@ -41,7 +41,7 @@ pub fn parse_chunk_func(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
     };
     
     let mut functions_by_index: Vec<GMFunction> = Vec::with_capacity(functions_count);
-    let mut occurrences_to_refs: HashMap<usize, GMRef<GMFunction>> = HashMap::new();
+    let mut occurrences_to_refs: HashMap<usize, GMRef<GMFunction>> = HashMap::with_capacity(functions_count);
 
     for i in 0..functions_count {
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
