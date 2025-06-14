@@ -1,6 +1,7 @@
 ﻿use std::fmt::Formatter;
 use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use chrono::{DateTime, Utc};
+use crate::deserialize::rooms::GMRoom;
 use crate::deserialize::strings::GMStrings;
 use crate::deserialize::texture_page_items::{GMTexturePageItem, GMTextures};
 
@@ -44,11 +45,11 @@ pub struct GMGeneralInfo {
     pub license_md5: [u8; 16],
     pub timestamp_created: DateTime<Utc>,
     pub display_name: GMRef<String>,
-    pub active_targets: u64,
+    pub active_targets: u64,        // TODO make a flags struct for this
     pub function_classifications: GMFunctionClassifications,
     pub steam_appid: i32,
     pub debugger_port: Option<u32>,
-    pub room_order: Vec<u32>,
+    pub room_order: Vec<GMRef<GMRoom>>,
 }
 impl GMGeneralInfo {
     pub fn is_version_at_least(&self, major: u32, minor: u32, release: u32, build: u32) -> bool {
@@ -237,9 +238,7 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
     let directplay_guid: [u8; 16] = chunk.data.get(chunk.cur_pos..chunk.cur_pos + 16)
         .ok_or_else(|| format!(
             "Trying to read GUID out of bounds in chunk 'GEN8' at position {}: {} > {}",
-            chunk.cur_pos,
-            chunk.cur_pos + 16,
-            chunk.data.len(),
+            chunk.cur_pos, chunk.cur_pos + 16, chunk.data.len(),
         ))?.try_into().expect("GUID length somehow not 16");
     chunk.cur_pos += 16;
     let directplay_guid: uuid::Uuid = uuid::Builder::from_bytes_le(directplay_guid).into_uuid();
@@ -272,10 +271,10 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
     let debugger_port: Option<u32> = if bytecode_version >= 14 { Some(chunk.read_u32()?) } else { None };
 
     let room_count: usize = chunk.read_usize()?;
-    let mut room_order: Vec<u32> = Vec::with_capacity(room_count);
+    let mut room_order: Vec<GMRef<GMRoom>> = Vec::with_capacity(room_count);
     for _ in 0..room_count {
-        let room_id: u32 = chunk.read_u32()?;
-        room_order.push(room_id);
+        let room_id: usize = chunk.read_usize()?;
+        room_order.push(GMRef::new(room_id));
     }
 
     Ok(GMGeneralInfo {
