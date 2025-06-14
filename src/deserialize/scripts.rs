@@ -26,8 +26,8 @@ pub fn parse_chunk_scpt(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMSc
         abs_start_positions.push(chunk.read_usize_pos()?);
     }
 
-    let mut abs_pos_to_index: HashMap<usize, usize> = HashMap::new();
     let mut scripts_by_index: Vec<GMScript> = Vec::with_capacity(script_count);
+    let mut abs_pos_to_index: HashMap<usize, usize> = HashMap::with_capacity(script_count);
 
     for (i, abs_start_position) in abs_start_positions.iter().enumerate() {
         chunk.cur_pos = *abs_start_position - chunk.abs_pos;

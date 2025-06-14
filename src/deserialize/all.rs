@@ -61,7 +61,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
 
     // get chunks
     let raw_data_len: usize = all.read_usize_pos()? + all.cur_pos;
-    let mut chunks: HashMap<String, GMChunk> = HashMap::new();
+    let mut chunks: HashMap<String, GMChunk> = HashMap::with_capacity(24);
 
     while all.cur_pos + 8 < raw_data_len {
         let chunk_name: String = all.read_chunk_name()?;
@@ -104,6 +104,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let mut chunk_room: GMChunk = get_chunk(&chunks, "ROOM")?;
     let mut chunk_objt: GMChunk = get_chunk(&chunks, "OBJT")?;
     let mut chunk_path: GMChunk = get_chunk(&chunks, "PATH")?;
+    // TODO implement all other chunks
     
     log::trace!("Parsing FORM took {stopwatch}");
 

@@ -32,7 +32,7 @@ pub fn parse_chunk_tpag(chunk: &mut GMChunk) -> Result<GMTextures, String> {
     }
 
     let mut textures_by_index: Vec<GMTexturePageItem> = Vec::with_capacity(items_count);
-    let mut abs_pos_to_ref: HashMap<usize, GMRef<GMTexturePageItem>> = HashMap::new();
+    let mut abs_pos_to_ref: HashMap<usize, GMRef<GMTexturePageItem>> = HashMap::with_capacity(items_count);
     for (i, start_position) in start_positions.iter().enumerate() {
         chunk.cur_pos = *start_position;
         let source_x: u16 = chunk.read_u16()?;
