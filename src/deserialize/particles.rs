@@ -7,26 +7,33 @@ use crate::deserialize::strings::GMStrings;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMParticleSystem {
-    name: GMRef<String>,
-    origin_x: i32,
-    origin_y: i32,
-    draw_order: i32,
-    global_space_particles: Option<bool>,
+    pub name: GMRef<String>,
+    pub origin_x: i32,
+    pub origin_y: i32,
+    pub draw_order: i32,
+    pub global_space_particles: Option<bool>,
+    pub emitters: Vec<GMRef<GMParticleEmitter>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct GMParticleSystems {
     pub particle_systems: Vec<GMParticleSystem>,
 }
+impl GMParticleSystems {
+    pub fn empty() -> Self {
+        Self { particle_systems: vec![] }
+    }
+}
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMParticleEmitter {
     pub name: GMRef<String>,
     pub enabled: Option<bool>,
     pub mode: EmitMode,
     pub emit_count: u32,
     pub data_2023_8: Option<GMParticleEmitter2023_8>,
+    pub data_pre_2023_8: Option<GMParticleEmitterPre2023_8>,
     pub distribution: EmitterDistribution,
     pub shape: EmitterShape,
     pub region_x: f32,
@@ -67,14 +74,14 @@ pub struct GMParticleEmitter {
     pub spawn_on_update_count: u32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMParticleEmitter2023_4 {
     pub animate: bool,
     pub stretch: bool,
     pub is_random: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMParticleEmitter2023_8 {
     pub emit_relative: bool,
     pub delay_min: f32,
@@ -93,26 +100,34 @@ pub struct GMParticleEmitter2023_8 {
     pub size_wiggle_y: f32,
 }
 
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMParticleEmitterPre2023_8 {
+    pub size_min: f32,
+    pub size_max: f32,
+    pub size_increase: f32,
+    pub size_wiggle: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
 pub enum EmitMode {
     Stream = 0,
     Burst = 1,
 }
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
 pub enum TimeUnit {
     Seconds = 0,
     Frames = 1,
 }
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
 pub enum EmitterDistribution {
     Linear = 0,
     Gaussian = 1,
     InverseGaussian = 2,
 }
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
 pub enum EmitterShape {
     Rectangle = 0,
@@ -121,7 +136,7 @@ pub enum EmitterShape {
     Line = 3,
 }
 #[repr(i32)]
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 pub enum EmitterTexture {
     None = -1,
     Pixel = 0,
@@ -154,11 +169,21 @@ struct TempParticleEmitter2023_8 {
 pub struct GMParticleEmitters {
     pub emitters: Vec<GMParticleEmitter>,
 }
+impl GMParticleEmitters {
+    pub fn empty() -> Self {
+        Self { emitters: vec![] }
+    }
+}
 
 
 pub fn parse_chunk_psys(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMParticleSystems, String> {
     chunk.cur_pos = 0;
     chunk.align(4)?;
+    
+    let psys_version: u32 = chunk.read_u32()?;
+    if psys_version != 1 {
+        return Err(format!("Invalid or unsupported PSYS version {0} (0x{0:8X})", psys_version))
+    }
 
     let count: usize = chunk.read_usize_count()?;
     let mut starting_positions: Vec<usize> = Vec::with_capacity(count);
@@ -187,6 +212,7 @@ pub fn parse_chunk_psys(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
             origin_y,
             draw_order,
             global_space_particles,
+            emitters,
         });
     }
 
@@ -197,6 +223,11 @@ pub fn parse_chunk_psys(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
 pub fn parse_chunk_psem(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMParticleEmitters, String> {
     chunk.cur_pos = 0;
     chunk.align(4)?;
+    
+    let psem_version: u32 = chunk.read_u32()?;
+    if psem_version != 1 {
+        return Err(format!("Invalid or unsupported PSEM version {0} (0x{0:8X})", psem_version))
+    }
 
     let count: usize = chunk.read_usize_count()?;
     let mut starting_positions: Vec<usize> = Vec::with_capacity(count);
@@ -221,21 +252,21 @@ fn parse_particle_emitter(chunk: &mut GMChunk, general_info: &GMGeneralInfo, str
         Some(chunk.read_bool32()?)
     } else { None };
     let mode: i32 = chunk.read_i32()?;
-    let mode: EmitMode = mode.try_into().map_err(|_| format!("Invalid Emit Mode {mode} (0x{mode:04X})"))?;
+    let mode: EmitMode = mode.try_into().map_err(|_| format!("Invalid Emit Mode {mode} (0x{mode:08X})"))?;
 
     let emit_count: u32;
-    let data_2023_8: Option<TempParticleEmitter2023_8> = if general_info.is_version_at_least(2023, 8, 0, 0) {
+    let temp_data_2023_8: Option<TempParticleEmitter2023_8> = if general_info.is_version_at_least(2023, 8, 0, 0) {
         emit_count = chunk.read_f32()? as u32;              // don't see how a float is a count but ok
         let emit_relative: bool = chunk.read_bool32()?;     // always zero
         let delay_min: f32 = chunk.read_f32()?;
         let delay_max: f32 = chunk.read_f32()?;
         let delay_unit: i32 = chunk.read_i32()?;
-        let delay_unit: TimeUnit = delay_unit.try_into().map_err(|_| format!("Invalid Time Unit for delay: {delay_unit} (0x{delay_unit:04X})"))?;
+        let delay_unit: TimeUnit = delay_unit.try_into().map_err(|_| format!("Invalid Time Unit for delay: {delay_unit} (0x{delay_unit:08X})"))?;
         let interval_min: f32 = chunk.read_f32()?;
         let interval_max: f32 = chunk.read_f32()?;
         let interval_unit: i32 = chunk.read_i32()?;
         let interval_unit: TimeUnit = interval_unit.try_into()
-            .map_err(|_| format!("Invalid Time Unit for interval: {interval_unit} (0x{interval_unit:04X})"))?;
+            .map_err(|_| format!("Invalid Time Unit for interval: {interval_unit} (0x{interval_unit:08X})"))?;
 
         Some(TempParticleEmitter2023_8 {
             emit_relative,
@@ -253,10 +284,10 @@ fn parse_particle_emitter(chunk: &mut GMChunk, general_info: &GMGeneralInfo, str
 
     let distribution: i32 = chunk.read_i32()?;
     let distribution: EmitterDistribution = distribution.try_into()
-        .map_err(|_| format!("Invalid Emitter Distribution {distribution} (0x{distribution:04X})"))?;
+        .map_err(|_| format!("Invalid Emitter Distribution {distribution} (0x{distribution:08X})"))?;
 
     let shape: i32 = chunk.read_i32()?;
-    let shape: EmitterShape = shape.try_into().map_err(|_| format!("Invalid Emitter Shape {shape} (0x{shape:04X})"))?;
+    let shape: EmitterShape = shape.try_into().map_err(|_| format!("Invalid Emitter Shape {shape} (0x{shape:08X})"))?;
 
     let region_x: f32 = chunk.read_f32()?;
     let region_y: f32 = chunk.read_f32()?;
@@ -267,7 +298,7 @@ fn parse_particle_emitter(chunk: &mut GMChunk, general_info: &GMGeneralInfo, str
 
     let texture: i32 = chunk.read_i32()?;
     let texture: EmitterTexture = texture.try_into()
-        .map_err(|_| format!("Invalid Emitter Texture {texture} (0x{texture:04X})"))?;
+        .map_err(|_| format!("Invalid Emitter Texture {texture} (0x{texture:08X})"))?;
 
     let frame_index: f32 = chunk.read_f32()?;
 
@@ -287,7 +318,9 @@ fn parse_particle_emitter(chunk: &mut GMChunk, general_info: &GMGeneralInfo, str
     let scale_x: f32 = chunk.read_f32()?;
     let scale_y: f32 = chunk.read_f32()?;
 
-    let data_2023_8: Option<GMParticleEmitter2023_8> = if general_info.is_version_at_least(2023, 8, 0, 0) {
+    let data_2023_8: Option<GMParticleEmitter2023_8>;
+    let data_pre_2023_8: Option<GMParticleEmitterPre2023_8>;
+    if general_info.is_version_at_least(2023, 8, 0, 0) {
         let size_min_x: f32 = chunk.read_f32()?;
         let size_max_x: f32 = chunk.read_f32()?;
         let size_min_y: f32 = chunk.read_f32()?;
@@ -296,8 +329,8 @@ fn parse_particle_emitter(chunk: &mut GMChunk, general_info: &GMGeneralInfo, str
         let size_increase_y: f32 = chunk.read_f32()?;
         let size_wiggle_x: f32 = chunk.read_f32()?;
         let size_wiggle_y: f32 = chunk.read_f32()?;
-        let temp: TempParticleEmitter2023_8 = data_2023_8.expect("Temp 2023.8 data not set somehow");
-        Some(GMParticleEmitter2023_8 {
+        let temp: TempParticleEmitter2023_8 = temp_data_2023_8.expect("Temp 2023.8 data not set somehow");
+        data_2023_8 = Some(GMParticleEmitter2023_8 {
             emit_relative: temp.emit_relative,
             delay_min: temp.delay_min,
             delay_max: temp.delay_max,
@@ -313,8 +346,21 @@ fn parse_particle_emitter(chunk: &mut GMChunk, general_info: &GMGeneralInfo, str
             size_increase_y,
             size_wiggle_x,
             size_wiggle_y,
+        });
+        data_pre_2023_8 = None;
+    } else {
+        let size_min: f32 = chunk.read_f32()?;
+        let size_max: f32 = chunk.read_f32()?;
+        let size_increase: f32 = chunk.read_f32()?;
+        let size_wiggle: f32 = chunk.read_f32()?;
+        data_2023_8 = None;
+        data_pre_2023_8 = Some(GMParticleEmitterPre2023_8 {
+            size_min,
+            size_max,
+            size_increase,
+            size_wiggle,
         })
-    } else { None };
+    };
 
     let speed_min: f32 = chunk.read_f32()?;
     let speed_max: f32 = chunk.read_f32()?;
@@ -343,6 +389,7 @@ fn parse_particle_emitter(chunk: &mut GMChunk, general_info: &GMGeneralInfo, str
         mode,
         emit_count,
         data_2023_8,
+        data_pre_2023_8,
         distribution,
         shape,
         region_x,
@@ -383,3 +430,4 @@ fn parse_particle_emitter(chunk: &mut GMChunk, general_info: &GMGeneralInfo, str
         spawn_on_update_count,
     })
 }
+

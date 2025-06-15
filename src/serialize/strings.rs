@@ -11,7 +11,7 @@ pub fn build_chunk_strg(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
     }
 
     for (i, string) in gm_data.strings.strings_by_index.iter().enumerate() {
-        builder.align(4, 0x00);
+        builder.align(4);
         builder.resolve_pointer(GMPointer::StringPointerList(i))?;
         builder.write_usize(string.len());
         builder.resolve_pointer(GMPointer::String(i))?; // actual string reference need to get resolved here bc of gamemaker moment
