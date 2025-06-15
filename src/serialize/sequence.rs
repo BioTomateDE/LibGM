@@ -1,6 +1,23 @@
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::general_info::GMGeneralInfo;
-use crate::deserialize::sequence::{GMAnimationCurveChannel, GMAnimationCurveChannelPoint, GMTrackKeyframe, GMSequence, GMTrack};
+use crate::deserialize::sequence::{
+    GMAnimationCurveChannel,
+    GMAnimationCurveChannelPoint,
+    GMKeyframeAudio,
+    GMKeyframeBool,
+    GMKeyframeGraphic,
+    GMKeyframeInstance,
+    GMKeyframeParticle,
+    GMKeyframeReal,
+    GMKeyframeSequence,
+    GMKeyframeSpriteFrames,
+    GMKeyframeString,
+    GMKeyframeText,
+    GMKeyframes,
+    GMKeyframesData,
+    GMSequence,
+    GMTrack,
+};
 use crate::deserialize::strings::GMStrings;
 use crate::serialize::chunk_writing::DataBuilder;
 
@@ -75,7 +92,22 @@ fn build_tracks(builder: &mut DataBuilder, general_info: &GMGeneralInfo, strings
         }
 
         build_tracks(builder, general_info, strings, &track.sub_tracks)?;
-        build_keyframes(builder, &track.keyframes)?;
+        
+        // Build keyframes
+        builder.align(4);
+        match &track.keyframes {
+            GMKeyframes::Audio(k) => build_keyframes(builder, k, build_keyframe_audio, false)?,
+            GMKeyframes::Instance(k) => build_keyframes(builder, k, build_keyframe_instance, false)?,
+            GMKeyframes::Graphic(k) => build_keyframes(builder, k, build_keyframe_graphic, false)?,
+            GMKeyframes::Sequence(k) => build_keyframes(builder, k, build_keyframe_sequence, false)?,
+            GMKeyframes::SpriteFrames(k) => build_keyframes(builder, k, build_keyframe_sprite_frames, false)?,
+            GMKeyframes::Bool(k) => build_keyframes(builder, k, build_keyframe_bool, false)?,
+            GMKeyframes::String(k) => build_keyframes(builder, k, build_keyframe_string, false)?,
+            GMKeyframes::Color(k) => build_keyframes(builder, k, build_keyframe_color, true)?,
+            GMKeyframes::Text(k) => build_keyframes(builder, k, build_keyframe_text, false)?,
+            GMKeyframes::Particle(k) => build_keyframes(builder, k, build_keyframe_particle, false)?,
+        }
+        
     }
 
     Ok(())
@@ -123,24 +155,88 @@ fn build_anim_curve_channel_points(builder: &mut DataBuilder, general_info: &GMG
 }
 
 
-fn build_keyframes(builder: &mut DataBuilder, keyframes: &Vec<GMTrackKeyframe>) -> Result<(), String> {
+fn build_keyframes<T>(
+    builder: &mut DataBuilder,
+    keyframes_data: &GMKeyframesData<T>,
+    build_keyframe_fn: impl Fn(&mut DataBuilder, &T) -> Result<(), String>,
+    write_interpolation: bool,
+) -> Result<(), String> {
     while builder.len() % 4 != 0 {
         builder.write_u8(0);
     }
+    
+    if write_interpolation {
+        builder.write_i32(keyframes_data.interpolation.ok_or("Interpolation data not set")?)
+    }
 
-    builder.write_usize(keyframes.len());
-    for keyframe in keyframes {
-        builder.write_f32(keyframe.key);
-        builder.write_f32(keyframe.length);
-        builder.write_bool32(keyframe.stretch);
-        builder.write_bool32(keyframe.disabled);
+    builder.write_usize(keyframes_data.keyframes.len());
+    for keyframe_data in &keyframes_data.keyframes {
+        builder.write_f32(keyframe_data.key);
+        builder.write_f32(keyframe_data.length);
+        builder.write_bool32(keyframe_data.stretch);
+        builder.write_bool32(keyframe_data.disabled);
 
-        for (i, keyframe_data) in &keyframe.channels {
+        for (i, keyframe) in &keyframe_data.channels {
             builder.write_i32(*i);
-            builder.write_i32(0);   // TODO placeholder; probably doesn't work
+            build_keyframe_fn(builder, keyframe)?;
         }
     }
 
     Ok(())
 }
 
+
+fn build_keyframe_audio(builder: &mut DataBuilder, keyframe: &GMKeyframeAudio) -> Result<(), String> {
+    builder.write_usize(keyframe.sound.index);
+    builder.write_i32(0);
+    builder.write_i32(keyframe.mode);
+    Ok(())
+}
+
+fn build_keyframe_instance(builder: &mut DataBuilder, keyframe: &GMKeyframeInstance) -> Result<(), String> {
+    builder.write_usize(keyframe.object.index);
+    Ok(())
+}
+
+fn build_keyframe_graphic(builder: &mut DataBuilder, keyframe: &GMKeyframeGraphic) -> Result<(), String> {
+    builder.write_usize(keyframe.sprite.index);
+    Ok(())
+}
+
+fn build_keyframe_sequence(builder: &mut DataBuilder, keyframe: &GMKeyframeSequence) -> Result<(), String> {
+    builder.write_usize(keyframe.sequence.index);
+    Ok(())
+}
+
+fn build_keyframe_sprite_frames(builder: &mut DataBuilder, keyframe: &GMKeyframeSpriteFrames) -> Result<(), String> {
+    builder.write_i32(keyframe.value);
+    Ok(())
+}
+
+fn build_keyframe_bool(builder: &mut DataBuilder, keyframe: &GMKeyframeBool) -> Result<(), String> {
+    builder.write_bool32(keyframe.boolean);
+    Ok(())
+}
+
+fn build_keyframe_string(builder: &mut DataBuilder, keyframe: &GMKeyframeString) -> Result<(), String> {
+    builder.write_gm_string(&keyframe.string)?;
+    Ok(())
+}
+
+fn build_keyframe_color(builder: &mut DataBuilder, keyframe: &GMKeyframeReal) -> Result<(), String> {
+    builder.write_f32(keyframe.value);
+    Ok(())
+}
+
+fn build_keyframe_text(builder: &mut DataBuilder, keyframe: &GMKeyframeText) -> Result<(), String> {
+    builder.write_gm_string(&keyframe.text)?;
+    builder.write_bool32(keyframe.wrap);
+    builder.write_i32((keyframe.alignment_v as i32) << 8 & (keyframe.alignment_h as i32));
+    builder.write_i32(keyframe.font_index);
+    Ok(())
+}
+
+fn build_keyframe_particle(builder: &mut DataBuilder, keyframe: &GMKeyframeParticle) -> Result<(), String> {
+    builder.write_usize(keyframe.particle.index);
+    Ok(())
+}

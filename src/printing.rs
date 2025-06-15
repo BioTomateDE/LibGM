@@ -1,11 +1,13 @@
-﻿use crate::deserialize::backgrounds::GMBackground;
+﻿use std::fmt::Debug;
+use crate::debug_utils::typename;
+use crate::deserialize::backgrounds::GMBackground;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::embedded_textures::GMEmbeddedTexture;
 use crate::deserialize::fonts::{GMFont, GMFontGlyph};
 use crate::deserialize::game_objects::{GMGameObject, GMGameObjectEvent, GMGameObjectEventAction};
 use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMOptions, GMOptionsFlags};
 use crate::deserialize::rooms::{GMRoom, GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomLayer, GMRoomTile, GMRoomView};
-use crate::deserialize::sequence::{GMTrackKeyframe, GMKeyframeMoment, GMSequence, GMTrack};
+use crate::deserialize::sequence::{GMKeyframeData, GMKeyframeMoment, GMSequence, GMTrack};
 use crate::deserialize::sounds::{GMSound, GMSoundFlags};
 use crate::deserialize::strings::GMStrings;
 use crate::deserialize::texture_page_items::GMTexturePageItem;
@@ -602,9 +604,9 @@ impl GMSequence {
 }
 
 #[allow(dead_code)]
-impl GMTrackKeyframe {
+impl<T: Debug> GMKeyframeData<T> {
     pub fn print(&self) {
-        println!("GMKeyframe:");
+        println!("GMKeyframe<{}>:", typename::<T>());
         println!("  Key: {}", self.key);
         println!("  Length: {}", self.length);
         println!("  Stretch: {}", self.stretch);
@@ -625,7 +627,7 @@ impl GMTrack {
         println!("  Is Creation Track: {}", self.is_creation_track);
         println!("  Tags: {:?}", self.tags);
         println!("  Sub-Tracks: [{} items]", self.sub_tracks.len());
-        println!("  Keyframes: [{} items]", self.keyframes.len());
+        println!("  Keyframes: {:?}", self.keyframes);
         println!("  GM Anim Curve String: {}", self.anim_curve_string.clone().map_or("<string is unset>", |i| i.display(strings)));
         println!();
         Ok(())
@@ -862,9 +864,6 @@ pub fn hexdump(raw_data: &[u8], start: usize, end: Option<usize>) -> Result<Stri
     Ok(string)
 }
 
-pub fn format_type_of<T>(_: &T) -> String {
-    format!("{}", std::any::type_name::<T>())
-}
 
 pub fn resolve_str_maybe<'a>(str_maybe: &'a Option<GMRef<String>>, strings: &'a GMStrings) -> &'a str {
     match str_maybe {

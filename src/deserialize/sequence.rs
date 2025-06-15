@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::deserialize::game_objects::GMGameObject;
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::particles::GMParticleSystem;
+use crate::deserialize::sounds::GMSound;
 use crate::deserialize::sprites::GMSprite;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -39,30 +40,37 @@ pub enum GMAnimSpeedType {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMTrackKeyframe {
+pub struct GMKeyframesData<T> {
+    /// only set for RealKeyframes (and IntKeyframes but that doesn't exist)
+    pub interpolation: Option<i32>,
+    pub keyframes: Vec<GMKeyframeData<T>>,
+}
+#[derive(Debug, Clone, PartialEq)]
+pub enum GMKeyframes {
+    Audio(GMKeyframesData<GMKeyframeAudio>),
+    Instance(GMKeyframesData<GMKeyframeInstance>),
+    Graphic(GMKeyframesData<GMKeyframeGraphic>),
+    Sequence(GMKeyframesData<GMKeyframeSequence>),
+    SpriteFrames(GMKeyframesData<GMKeyframeSpriteFrames>),
+    Bool(GMKeyframesData<GMKeyframeBool>),
+    // Asset(GMKeyframes<GMKeyframeAsset>),
+    String(GMKeyframesData<GMKeyframeString>),
+    // Int(GMKeyframes<GMKeyframeInt>),
+    Color(GMKeyframesData<GMKeyframeReal>),
+    Text(GMKeyframesData<GMKeyframeText>),
+    Particle(GMKeyframesData<GMKeyframeParticle>),
+}
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMKeyframeData<T> {
     pub key: f32,
     pub length: f32,
     pub stretch: bool,
     pub disabled: bool,
-    pub channels: HashMap<i32, GMKeyframeData>,
-}
-#[derive(Debug, Clone, PartialEq)]
-pub enum GMKeyframeData {
-    Audio(GMKeyframeAudio),
-    Instance(GMKeyframeInstance),
-    Graphic(GMKeyframeGraphic),
-    Sequence(GMKeyframeSequence),
-    SpriteFrames(GMKeyframeSpriteFrames),
-    Bool(GMKeyframeBool),
-    // Asset(GMKeyframeAsset),
-    String(GMKeyframeString),
-    // Int(GMKeyframeInt),
-    Color(GMKeyframeColor),
-    Text(GMKeyframeText),
-    Particle(GMKeyframeParticle),
+    pub channels: HashMap<i32, T>,
 }
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeAudio {
+    pub sound: GMRef<GMSound>,
     pub mode: i32,
 }
 #[derive(Debug, Clone, PartialEq)]
@@ -90,8 +98,8 @@ pub struct GMKeyframeString {
     pub string: GMRef<String>,
 }
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMKeyframeColor {
-    pub interpolation: i32,
+pub struct GMKeyframeReal {
+    pub value: f32,
 }
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeText {
@@ -115,7 +123,7 @@ pub struct GMTrack {
     pub is_creation_track: bool,
     pub tags: Vec<i32>,
     pub sub_tracks: Vec<GMTrack>,
-    pub keyframes: Vec<GMTrackKeyframe>,
+    pub keyframes: GMKeyframes,
     pub owned_resources: Vec<GMAnimationCurve>,
     pub anim_curve_string: Option<GMRef<String>>,
 }
@@ -346,9 +354,21 @@ fn parse_track(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMSt
         sub_tracks.push(parse_track(chunk, general_info, strings)?);
     }
 
-    // TODO keyframes with different types {~~}
-    let keyframes: Vec<GMTrackKeyframe> = vec![];
-    log::warn!("Keyframes not supported yet for Track with name \"{}\" at absolute position {}! Will be deleted or corrupted when building data.", name.display(strings), chunk.abs_pos);
+    let keyframes = match model_name.resolve(&strings.strings_by_index)?.as_str() {
+        "GMAudioTrack" => parse_track_keyframes(chunk, parse_keyframe_audio, GMKeyframes::Audio, false)?,
+        "GMInstanceTrack" => parse_track_keyframes(chunk, parse_keyframe_instance, GMKeyframes::Instance, false)?,
+        "GMGraphicTrack" => parse_track_keyframes(chunk, parse_keyframe_graphic, GMKeyframes::Graphic, false)?,
+        "GMSequenceTrack" => parse_track_keyframes(chunk, parse_keyframe_sequence, GMKeyframes::Sequence, false)?,
+        "GMSpriteFramesTrack" => parse_track_keyframes(chunk, parse_keyframe_sprite_frames, GMKeyframes::SpriteFrames, false)?,
+        "GMAssetTrack" => return Err("Asset Track not yet supported".to_string()),
+        "GMBoolTrack" => parse_track_keyframes(chunk, parse_keyframe_bool, GMKeyframes::Bool, false)?,
+        "GMStringTrack" => parse_track_keyframes(chunk, |c| parse_keyframe_string(c, strings), GMKeyframes::String, false)?,
+        "GMIntTrack" => return Err("Int Track not yet supported".to_string()),
+        "GMColourTrack" | "GMRealTrack" => parse_track_keyframes(chunk, parse_keyframe_color, GMKeyframes::Color, true)?,
+        "GMTextTrack" => parse_track_keyframes(chunk, |c| parse_keyframe_text(c, strings), GMKeyframes::Text, false)?,
+        "GMParticleTrack" => parse_track_keyframes(chunk, parse_keyframe_particle, GMKeyframes::Particle, false)?,
+        other => return Err(format!("Invalid Model Name \"{other}\" while parsing Track")),
+    };
 
     Ok(GMTrack {
         model_name,
@@ -427,5 +447,110 @@ fn parse_anim_curve_points(chunk: &mut GMChunk, general_info: &GMGeneralInfo) ->
     }
     
     Ok(points)
+}
+
+
+fn parse_track_keyframes<T>(
+    chunk: &mut GMChunk,
+    parse_keyframe_fn: impl Fn(&mut GMChunk) -> Result<T, String>,
+    map_keyframes_fn: fn(GMKeyframesData<T>) -> GMKeyframes,
+    read_interpolation: bool,
+) -> Result<GMKeyframes, String> {
+    chunk.align(4)?;
+    let interpolation: Option<i32> = if read_interpolation {
+        Some(chunk.read_i32()?)
+    } else { None };
+
+    let keyframe_count: usize = chunk.read_usize_count()?;
+    let mut keyframes: Vec<GMKeyframeData<T>> = Vec::with_capacity(keyframe_count);
+    for _ in 0..keyframe_count {
+        let key: f32 = chunk.read_f32()?;
+        let length: f32 = chunk.read_f32()?;
+        let stretch: bool = chunk.read_bool32()?;
+        let disabled: bool = chunk.read_bool32()?;
+        let count: usize = chunk.read_usize_count()?;
+        let mut channels: HashMap<i32, T> = HashMap::with_capacity(count);
+        for _ in 0..count {
+            let channel: i32 = chunk.read_i32()?;
+            let keyframe: T = parse_keyframe_fn(chunk)?;
+            channels.insert(channel, keyframe);
+        }
+        keyframes.push(GMKeyframeData {
+            key,
+            length,
+            stretch,
+            disabled,
+            channels,
+        });
+    }
+    let keyframes_data = GMKeyframesData {
+        interpolation,
+        keyframes,
+    };
+    Ok(map_keyframes_fn(keyframes_data))
+}
+
+fn parse_keyframe_audio(chunk: &mut GMChunk) -> Result<GMKeyframeAudio, String> {
+    let sound: GMRef<GMSound> = GMRef::new(chunk.read_usize_count()?);
+    let always_zero: u32 = chunk.read_u32()?;
+    if always_zero != 0 {
+        return Err(format!("Expected 0 in Audio Keyframes; got {always_zero}"))
+    }
+    let mode: i32 = chunk.read_i32()?;
+    Ok(GMKeyframeAudio { sound, mode })
+}
+
+fn parse_keyframe_instance(chunk: &mut GMChunk) -> Result<GMKeyframeInstance, String> {
+    let object: GMRef<GMGameObject> = GMRef::new(chunk.read_usize_count()?);
+    Ok(GMKeyframeInstance { object })
+}
+
+fn parse_keyframe_graphic(chunk: &mut GMChunk) -> Result<GMKeyframeGraphic, String> {
+    let sprite: GMRef<GMSprite> = GMRef::new(chunk.read_usize_count()?);
+    Ok(GMKeyframeGraphic { sprite })
+}
+
+fn parse_keyframe_sequence(chunk: &mut GMChunk) -> Result<GMKeyframeSequence, String> {
+    let sequence: GMRef<GMSequence> = GMRef::new(chunk.read_usize_count()?);  // TODO parse chunk SEQN
+    Ok(GMKeyframeSequence { sequence })
+}
+
+fn parse_keyframe_sprite_frames(chunk: &mut GMChunk) -> Result<GMKeyframeSpriteFrames, String> {
+    let value: i32 = chunk.read_i32()?;
+    Ok(GMKeyframeSpriteFrames { value })
+}
+
+fn parse_keyframe_bool(chunk: &mut GMChunk) -> Result<GMKeyframeBool, String> {
+    let boolean: bool = chunk.read_bool32()?;
+    Ok(GMKeyframeBool { boolean })      // in UTMT, they use SimpleIntData but i assume that's just laziness
+}
+
+fn parse_keyframe_string(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMKeyframeString, String> {
+    let string: GMRef<String> = chunk.read_gm_string(strings)?;
+    Ok(GMKeyframeString { string })
+}
+
+fn parse_keyframe_color(chunk: &mut GMChunk) -> Result<GMKeyframeReal, String> {
+    let value: f32 = chunk.read_f32()?;
+    Ok(GMKeyframeReal { value })
+}
+
+fn parse_keyframe_text(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMKeyframeText, String> {
+    let text: GMRef<String> = chunk.read_gm_string(strings)?;
+    let wrap: bool = chunk.read_bool32()?;
+    let alignment: i32 = chunk.read_i32()?;
+    let font_index: i32 = chunk.read_i32()?;
+    Ok(GMKeyframeText {
+        text,
+        wrap,
+        alignment_v: ((alignment >> 8) & 0xff) as i8,
+        alignment_h: (alignment & 0xff) as i8,
+        font_index,
+    })
+}
+
+fn parse_keyframe_particle(chunk: &mut GMChunk) -> Result<GMKeyframeParticle, String> {
+    let particle: GMRef<GMParticleSystem> = GMRef::new(chunk.read_usize_count()?);
+    Ok(GMKeyframeParticle { particle })
 }
 
