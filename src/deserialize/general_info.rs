@@ -235,12 +235,8 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
     let last_tile_id: u32 = chunk.read_u32()?;
     let game_id: u32 = chunk.read_u32()?;
 
-    let directplay_guid: [u8; 16] = chunk.data.get(chunk.cur_pos..chunk.cur_pos + 16)
-        .ok_or_else(|| format!(
-            "Trying to read GUID out of bounds in chunk 'GEN8' at position {}: {} > {}",
-            chunk.cur_pos, chunk.cur_pos + 16, chunk.data.len(),
-        ))?.try_into().expect("GUID length somehow not 16");
-    chunk.cur_pos += 16;
+    let directplay_guid: [u8; 16] = *chunk.read_bytes_const()
+        .map_err(|e| format!("Trying to read GUID {e}"))?;
     let directplay_guid: uuid::Uuid = uuid::Builder::from_bytes_le(directplay_guid).into_uuid();
 
     let game_name: GMRef<String> = chunk.read_gm_string(strings)?;
@@ -250,12 +246,8 @@ pub fn parse_chunk_gen8(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMGe
     let flags: GMGeneralInfoFlags = parse_general_info_flags(chunk.read_u32()?);
     let license_crc32: u32 = chunk.read_u32()?;
 
-    let license_md5: [u8; 16] = chunk.data.get(chunk.cur_pos .. chunk.cur_pos + 16)
-        .ok_or_else(|| format!(
-            "Trying to read license (MD5) out of bounds in chunk 'GEN8' at position {}: {} > {}",
-            chunk.cur_pos, chunk.cur_pos + 16, chunk.data.len(),
-        ))?.try_into().expect("MD5 Licence length somehow not 16");
-    chunk.cur_pos += 16;
+    let license_md5: [u8; 16] = *chunk.read_bytes_const()
+        .map_err(|e| format!("Trying to read license (MD5) {e}"))?;
 
     let timestamp_created: i64 = chunk.read_i64()?;
     let timestamp_created: DateTime<Utc> = DateTime::from_timestamp(timestamp_created, 0)

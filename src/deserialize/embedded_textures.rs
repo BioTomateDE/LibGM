@@ -133,27 +133,24 @@ pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Re
 
 fn read_raw_texture<'a>(chunk: &mut GMChunk<'a>, general_info: &GMGeneralInfo) -> Result<RawImage<'a>, String> {
     let start_position: usize = chunk.cur_pos;
-    let header: [u8; 8] = chunk.data.get(chunk.cur_pos..chunk.cur_pos+8).ok_or_else(|| format!(
-        "Unexpected end of chunk while trying to read headers of texture at position {start_position} in chunk 'TXTR'"
-    ))?.try_into().unwrap();
+    let header: [u8; 8] = *chunk.read_bytes_const()
+        .map_err(|e| format!("Trying to read headers {e} at position {start_position} while parsing images of texture pages"))?;
 
     if header == MAGIC_PNG_HEADER {
         // Parse PNG
         chunk.cur_pos += 8;  // skip header
         loop {
-            let len: usize = chunk.read_usize_big_endian(true)?;
-            let type_: usize = chunk.read_usize_big_endian(false)?;
+            let len: usize = u32::from_be_bytes(*chunk.read_bytes_const()?) as usize;
+            let type_: usize = u32::from_be_bytes(*chunk.read_bytes_const()?) as usize;
             chunk.cur_pos += len + 4;
-            // TODO check average iteration count, maybe add unlikely(). but make sure it is actually faster
             if type_ == 0x49454E44 {    // no idea lol
                 break;
             }
         }
         
-        let bytes: &[u8] = &chunk.data.get(start_position .. chunk.cur_pos).ok_or_else(|| format!(
-            "Trying to read PNG data out of bounds in chunk 'TXTR' at position {}: {} > {}",
-            start_position, chunk.cur_pos, chunk.data.len(),
-        ))?;
+        let data_length: usize = chunk.cur_pos - start_position;
+        chunk.cur_pos = start_position;
+        let bytes: &[u8] = chunk.read_bytes_dyn(data_length).map_err(|e| format!("Trying to read PNG image data {e}"))?;
         // png image size checks {~~}
         Ok(RawImage {
             data: bytes,
@@ -170,11 +167,10 @@ fn read_raw_texture<'a>(chunk: &mut GMChunk<'a>, general_info: &GMGeneralInfo) -
             header_size = 12;
         }
 
-        let end_of_bz2_stream: usize = find_end_of_bz2_stream(chunk)?;
+        let bz2_stream_length: usize = find_end_of_bz2_stream(chunk)? - start_position - header_size;   // TODO verify that this new logic is correct (fd3d4c65)
         // read entire image (excluding bz2 header) to byte array
         chunk.cur_pos = start_position + header_size;
-        let raw_image_data: &[u8] = &chunk.data[start_position+header_size .. end_of_bz2_stream];
-        chunk.cur_pos = end_of_bz2_stream;
+        let raw_image_data: &[u8] = chunk.read_bytes_dyn(bz2_stream_length).map_err(|e| format!("Trying to read Bzip2 Stream of Bz2 Qoi Image {e}"))?;
         Ok(RawImage {
             data: raw_image_data,
             position_in_data: start_position,

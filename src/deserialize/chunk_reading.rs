@@ -1,4 +1,4 @@
-﻿use crate::debug_utils::{format_bytes, likely, typename};
+﻿use crate::debug_utils::{format_bytes, likely, typename, unlikely};
 use crate::deserialize::strings::GMStrings;
 
 // GMRef is for parsing chunks:
@@ -54,128 +54,88 @@ pub struct GMChunk<'a> {
     pub total_data_len: usize,  // used for read_usize failsafe
 }
 
-impl GMChunk<'_> {
+impl<'a> GMChunk<'a> {
+    pub fn read_bytes_dyn(&mut self, count: usize) -> Result<&'a [u8], String> {
+        let slice: &[u8] = self.data.get(self.cur_pos..self.cur_pos+count).ok_or_else(|| format!(
+            "out of bounds at absolute position {} in chunk '{}': {} > {}",
+            self.cur_pos+self.abs_pos, self.name, self.cur_pos+self.abs_pos+count, self.data.len(),
+        ))?;
+        self.cur_pos += count;
+        Ok(slice)
+    }
+    pub fn read_bytes_const<const N: usize>(&mut self) -> Result<&'a [u8; N], String> {
+        let slice: &[u8] = self.read_bytes_dyn(N)?;
+        Ok(slice.try_into().unwrap())
+    }
+
     pub fn read_u64(&mut self) -> Result<u64, String> {
-        let bytes = self.data
-            .get(self.cur_pos..self.cur_pos + 8)
-            .ok_or_else(|| format!(
-                "Trying to read u64 out of bounds in chunk '{}' at position {}: {} > {}",
-                self.name, self.cur_pos, self.cur_pos + 8, self.data.len(),
-            ))?;
-        self.cur_pos += 8;
-        Ok(u64::from_le_bytes(bytes.try_into().unwrap()))
+        let bytes: &[u8; 8] = self.read_bytes_const().map_err(|e| format!("Trying to read u64 {e}"))?;
+        Ok(u64::from_le_bytes(*bytes))
     }
-    
     pub fn read_i64(&mut self) -> Result<i64, String> {
-        let bytes = self.data
-            .get(self.cur_pos..self.cur_pos + 8)
-            .ok_or_else(|| format!(
-                "Trying to read i64 out of bounds in chunk '{}' at position {}: {} > {}",
-                self.name, self.cur_pos, self.cur_pos + 8, self.data.len(),
-            ))?;
-        self.cur_pos += 8;
-        Ok(i64::from_le_bytes(bytes.try_into().unwrap()))
+        let bytes: &[u8; 8] = self.read_bytes_const().map_err(|e| format!("Trying to read i64 {e}"))?;
+        Ok(i64::from_le_bytes(*bytes))
     }
-    
     pub fn read_u32(&mut self) -> Result<u32, String> {
-        let bytes = self.data
-            .get(self.cur_pos..self.cur_pos + 4)
-            .ok_or_else(|| format!(
-                "Trying to read u32 out of bounds in chunk '{}' at position {}: {} > {}",
-                self.name, self.cur_pos, self.cur_pos + 4, self.data.len(),
-            ))?;
-        self.cur_pos += 4;
-        Ok(u32::from_le_bytes(bytes.try_into().unwrap()))
+        let bytes: &[u8; 4] = self.read_bytes_const().map_err(|e| format!("Trying to read u32 {e}"))?;
+        Ok(u32::from_le_bytes(*bytes))
     }
-    
     pub fn read_i32(&mut self) -> Result<i32, String> {
-        let bytes = self.data
-            .get(self.cur_pos..self.cur_pos + 4)
-            .ok_or_else(|| format!(
-                "Trying to read i32 out of bounds in chunk '{}' at position {}: {} > {}",
-                self.name, self.cur_pos, self.cur_pos + 4, self.data.len(),
-            ))?;
-        self.cur_pos += 4;
-        Ok(i32::from_le_bytes(bytes.try_into().unwrap()))
+        let bytes: &[u8; 4] = self.read_bytes_const().map_err(|e| format!("Trying to read i32 {e}"))?;
+        Ok(i32::from_le_bytes(*bytes))
     }
-    
     pub fn read_u16(&mut self) -> Result<u16, String> {
-        let bytes = self.data
-            .get(self.cur_pos..self.cur_pos + 2)
-            .ok_or_else(|| format!(
-                "Trying to read u16 out of bounds in chunk '{}' at position {}: {} > {}",
-                self.name, self.cur_pos, self.cur_pos + 2, self.data.len(),
-            ))?;
-        self.cur_pos += 2;
-        Ok(u16::from_le_bytes(bytes.try_into().unwrap()))
+        let bytes: &[u8; 2] = self.read_bytes_const().map_err(|e| format!("Trying to read u16 {e}"))?;
+        Ok(u16::from_le_bytes(*bytes))
     }
-    
     pub fn read_i16(&mut self) -> Result<i16, String> {
-        let bytes = self.data
-            .get(self.cur_pos..self.cur_pos + 2)
-            .ok_or_else(|| format!(
-                "Trying to read i16 out of bounds in chunk '{}' at position {}: {} > {}",
-                self.name, self.cur_pos, self.cur_pos + 2, self.data.len(),
-            ))?;
-        self.cur_pos += 2;
-        Ok(i16::from_le_bytes(bytes.try_into().unwrap()))
+        let bytes: &[u8; 2] = self.read_bytes_const().map_err(|e| format!("Trying to read i16 {e}"))?;
+        Ok(i16::from_le_bytes(*bytes))
     }
-    
     pub fn read_u8(&mut self) -> Result<u8, String> {
-        let byte = *self.data
-            .get(self.cur_pos)
-            .ok_or_else(|| format!(
-                "Trying to read u8 out of bounds in chunk '{}' at position {}",
-                self.name, self.cur_pos,
-            ))?;
-        self.cur_pos += 1;
-        Ok(byte)
+        let bytes: &[u8; 1] = self.read_bytes_const().map_err(|e| format!("Trying to read u8 {e}"))?;
+        Ok(u8::from_le_bytes(*bytes))
     }
-    
     pub fn read_i8(&mut self) -> Result<i8, String> {
-        let byte = *self.data
-            .get(self.cur_pos)
-            .ok_or_else(|| format!(
-                "Trying to read i8 out of bounds in chunk '{}' at position {}",
-                self.name, self.cur_pos,
-            ))?;
-        self.cur_pos += 1;
-        Ok(byte as i8)
+        let bytes: &[u8; 1] = self.read_bytes_const().map_err(|e| format!("Trying to read i8 {e}"))?;
+        Ok(i8::from_le_bytes(*bytes))
     }
 
-    fn read_usize(&mut self) -> Result<usize, String> {
+    pub fn read_f64(&mut self) -> Result<f64, String> {
+        let bytes: &[u8; 8] = self.read_bytes_const().map_err(|e| format!("Trying to read f64 {e}"))?;
+        Ok(f64::from_le_bytes(*bytes))
+    }
+    pub fn read_f32(&mut self) -> Result<f32, String> {
+        let bytes: &[u8; 4] = self.read_bytes_const().map_err(|e| format!("Trying to read f32 {e}"))?;
+        Ok(f32::from_le_bytes(*bytes))
+    }
+
+    fn read_usize_internal(&mut self) -> Result<usize, String> {
         let number: u32 = self.read_u32()?;
-        let number: usize = number as usize;
-        Ok(number)
+        Ok(number as usize)
     }
-
     /// Read unsigned 32-bit integer and convert to usize (little endian).
     /// Meant for reading positions/pointers; uses total data length as failsafe.
     pub fn read_usize_pos(&mut self) -> Result<usize, String> {
         let failsafe_amount: usize = self.total_data_len;
-        let number: usize = self.read_usize()?;
-
+        let number: usize = self.read_usize_internal()?;
         if likely(number < failsafe_amount) {
             return Ok(number)
         }
-
         Err(format!(
             "Failsafe triggered in chunk '{}' at position {} while trying to read usize \
             (pointer) integer: Number {} ({}) is larger than the total data length of {} ({})",
             self.name, self.cur_pos-4, number, format_bytes(number), failsafe_amount, format_bytes(failsafe_amount),
         ))
     }
-
     /// Read unsigned 32-bit integer and convert to usize (little endian).
     /// Meant for reading (pointer list element) count; uses small constant number as failsafe.
     pub fn read_usize_count(&mut self) -> Result<usize, String> {
         const FAILSAFE_AMOUNT: usize = 100_000;    // increase limit is not enough
-        let number: usize = self.read_usize()?;
-
+        let number: usize = self.read_usize_internal()?;
         if likely(number < FAILSAFE_AMOUNT) {
             return Ok(number)
         }
-
         Err(format!(
             "Failsafe triggered in chunk '{}' at position {} while trying \
             to read usize (count) integer: Number {} is larger than the failsafe count of {}",
@@ -183,58 +143,10 @@ impl GMChunk<'_> {
         ))
     }
 
-    pub fn read_usize_big_endian(&mut self, enable_failsafe: bool) -> Result<usize, String> {
-        // Read unsigned 32-bit integer and convert to usize (big endian)
-        static FAILSAFE_AMOUNT: usize = 200_000_000;
-
-        let bytes: [u8; 4] = self.data.get(self.cur_pos.. self.cur_pos + 4)
-            .ok_or_else(|| format!(
-                "Trying to read big endian usize integer (u32) \
-                out of bounds in chunk '{}' at position {}: {} > {}",
-                self.name, self.cur_pos, self.cur_pos + 4, self.data.len(),
-            ))?
-            .try_into().unwrap();
-        self.cur_pos += 4;
-
-        let number: u32 = u32::from_be_bytes(bytes);
-        let number: usize = number as usize;
-
-        if !enable_failsafe || likely(number < FAILSAFE_AMOUNT) {
-            return Ok(number);
-        }
-        Err(format!(
-            "Failsafe triggered in chunk '{}' at position {} trying \
-            to read big endian usize integer: Number {} is larger than failsafe amount {}",
-            self.name, self.cur_pos - 4, number, FAILSAFE_AMOUNT,
-        ))
-    }
-
-    pub fn read_f64(&mut self) -> Result<f64, String> {
-        // Read a double-precision floating point number (little endian)
-        let bytes: [u8; 8] = self.data.get(self.cur_pos .. self.cur_pos+8).ok_or_else(|| format!(
-            "Trying to read f64 out of bounds in chunk '{}' at position {}: {} > {}",
-            self.name, self.cur_pos, self.cur_pos + 8, self.data.len(),
-        ))?.try_into().unwrap();
-
-        let number: f64 = f64::from_le_bytes(bytes);
-        self.cur_pos += 8;
-        Ok(number)
-    }
-
-    pub fn read_f32(&mut self) -> Result<f32, String> {
-        // Read a single-precision floating point number (little endian)
-        let bytes: [u8; 4] = self.data.get(self.cur_pos .. self.cur_pos+4).ok_or_else(|| format!(
-            "Trying to read f32 out of bounds in chunk '{}' at position {}: {} > {}",
-            self.name, self.cur_pos, self.cur_pos + 4, self.data.len(),
-        ))?.try_into().unwrap();
-
-        let number: f32 = f32::from_le_bytes(bytes);
-        self.cur_pos += 4;
-        Ok(number)
-    }
-    
+    /// Read a 32-bit integer and convert it to a bool.
+    /// ___
+    /// Returns `Err<String>` when the read number is neither 0 nor 1.
     pub fn read_bool32(&mut self) -> Result<bool, String> {
-        // Read a 32-bit integer and convert it to a bool.
         let number: u32 = self.read_u32()?;
         match number {
             0 => Ok(false),
@@ -247,43 +159,40 @@ impl GMChunk<'_> {
     }
 
     pub fn read_literal_string(&mut self, length: usize) -> Result<String, String> {
-        // Read literal ascii/utf8 string with specified length
-        let bytes: Vec<u8> = self.data.get(self.cur_pos..self.cur_pos + length).ok_or_else(|| format!(
-            "Trying to read literal string with length {} out of bounds \
-            in chunk '{}' at position {}: {} > {}",
-            length, self.name, self.cur_pos, self.cur_pos + length, self.data.len(),
-        ))?.to_vec();
-        self.cur_pos += length;
-
-        let string: String = String::from_utf8(bytes).map_err(|e| format!(
+        let bytes: &[u8] = self.read_bytes_dyn(length)
+            .map_err(|e| format!("Trying to read literal string with length {length} {e}"))?;
+        let string: String = String::from_utf8(bytes.to_vec()).map_err(|e| format!(
             "Could not parse literal string with length {} in chunk '{}' at position {}: {e}",
-            length, self.name, self.cur_pos - length,
+            length, self.name, self.cur_pos,
         ))?;
         Ok(string)
     }
-
+    
+    /// Read chunk name (4 ascii characters)
     pub fn read_chunk_name(&mut self) -> Result<String, String> {
-        // Read chunk name (4 ascii characters)
-        if self.cur_pos + 4 > self.data.len() {
+        if unlikely(self.abs_pos != 0) {
             return Err(format!(
-                "Trying to read chunk name out of bounds at position {}: {} > {}",
-                self.cur_pos, self.cur_pos + 4, self.data.len(),
-            ));
+                "Reading a chunk name outside of the special \"all chunk\" isn't \
+                allowed (chunk is called '{}' and has abs pos {})", self.name, self.abs_pos,
+            ))
         }
-
-        self.read_literal_string(4)
+        let string: String = self.read_literal_string(4)
             .map_err(|e| if self.abs_pos == 0 && self.cur_pos == 4 {
-                "Invalid data.win file (because it doesn't start with 'FORM')".to_string()
-            } else { 
+                "Invalid data.win file; data doesn't start with 'FORM' string".to_string()
+            } else {
                 format!("Could not parse chunk name at position {}: {e}", self.cur_pos)
-            })
+            })?;
+        if unlikely(string.len() != 4 || !string.is_ascii()) {  // can happen because of unicode
+            return Err(format!("Chunk name string \"{string}\" has length {} (chunk names need to be 4 ascii chars long)", string.len()))
+        }
+        Ok(string)
     }
 
     pub fn read_gm_string(&mut self, gm_strings: &GMStrings) -> Result<GMRef<String>, String> {
         let string_abs_pos: usize = self.read_usize_pos()?;
-        // if gm_strings.abs_pos_to_reference.get(&string_abs_pos).is_none() {
-        //     log::error!("this is only here for easy breakpoints; comment out this if statement otherwise")
-        // }
+        if gm_strings.abs_pos_to_reference.get(&string_abs_pos).is_none() {
+            log::error!("this is only here for easy breakpoints; comment out this if statement otherwise")
+        }
         let string_ref = gm_strings.abs_pos_to_reference.get(&string_abs_pos)
             .ok_or_else(|| format!(
                 "Could not read reference string with absolute position {} in chunk '{}' at \
@@ -307,7 +216,6 @@ impl GMChunk<'_> {
             "Pointer to start of Pointer list underflowed at position {} in chunk '{}': {} - {} < 0",
             self.cur_pos - 4, self.name, abs_pointers_start_pos, self.abs_pos,
         ))?;
-
 
         let old_position: usize = self.cur_pos;
         self.cur_pos = pointers_start_pos;
