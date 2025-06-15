@@ -57,7 +57,7 @@ pub struct GMSpriteSplineTextureEntry {
     pub page_width: i32,
     pub page_height: i32,
     /// empty for gmVersion >= 2023.1
-    pub texture_blob: Vec<u8>,
+    pub texture_blob: Vec<u8>,  // implementing Serialize for this probably isn't the best idea
     pub texture_entry_length: usize,
     pub is_qoi: bool,
 }
@@ -322,8 +322,17 @@ fn read_texture_list(chunk: &mut GMChunk, gm_textures: &GMTextures, sprite_name:
     let texture_count: usize = chunk.read_usize_count()?;
     let mut textures: Vec<GMRef<GMTexturePageItem>> = Vec::with_capacity(texture_count);
 
-    for _ in 0..texture_count {
+    // if texture_count == 0 {
+    //     log::debug!("Texture count is zero for Sprite \"{sprite_name}\"")
+    // }
+
+    for i in 0..texture_count {
         let texture_abs_pos: usize = chunk.read_usize_pos()?;
+        if texture_abs_pos == 0 {
+            // technically, it's "wrong" to just ignore these instead since there are null texture entries but also empty texture lists
+            // log::warn!("Null Texture Page Item reference for texture #{i}/{texture_count} of Sprite \"{sprite_name}\"; skipping");
+            continue
+        }
         let texture: &GMRef<GMTexturePageItem> = gm_textures.abs_pos_to_ref.get(&texture_abs_pos)
             .ok_or_else(|| format!("Could not get texture with absolute position {} in map with length {} while \
             reading texture list of sprite {sprite_name}", texture_abs_pos, gm_textures.abs_pos_to_ref.len()))?;
