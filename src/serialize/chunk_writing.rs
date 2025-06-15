@@ -63,8 +63,10 @@ pub enum GMPointer {
 pub struct DataBuilder {
     pub raw_data: Vec<u8>,
     pub chunk_start_pos: Option<usize>,
-    pub pool_placeholders: HashMap<usize, GMPointer>,          // maps gamemaker element references to absolute positions of where they're referenced
-    pub placeholder_pool_resources: HashMap<GMPointer, i32>,   // maps gamemaker element references to absolute positions of where their data is OR sometimes any other data
+    /// maps gamemaker element references to absolute positions of where they're referenced
+    pub pool_placeholders: HashMap<usize, GMPointer>,
+    /// maps gamemaker element references to absolute positions of where their data is OR sometimes any other data
+    pub placeholder_pool_resources: HashMap<GMPointer, i32>,
 }
 
 
@@ -122,14 +124,14 @@ impl DataBuilder {
     pub fn write_i8(&mut self, number: i8) {
         self.raw_data.extend(number.to_le_bytes());
     }
-    pub fn write_usize(&mut self, number: usize) {
-        self.write_u32(number as u32);
-    }
     pub fn write_f64(&mut self, number: f64) {
         self.raw_data.extend(number.to_le_bytes());
     }
     pub fn write_f32(&mut self, number: f32) {
         self.raw_data.extend(number.to_le_bytes());
+    }
+    pub fn write_usize(&mut self, number: usize) {
+        self.write_u32(number as u32);
     }
     pub fn write_bool32(&mut self, boolean: bool) {
         self.write_u32(if boolean {1} else {0});
