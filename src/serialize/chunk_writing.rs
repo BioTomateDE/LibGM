@@ -53,6 +53,8 @@ pub enum GMPointer {
     RoomLayerPointerList(usize),
     CodeMeta(usize),
     CodeLength(usize),
+    ParticleSystem(usize),
+    ParticleEmitter(usize),
     FormLength,
 }
 
@@ -90,7 +92,7 @@ impl DataBuilder {
         self.chunk_start_pos = None;
         
         if general_info.is_version_at_least(1, 0, 0, 9999) {
-            self.align(4, 0x00);        // TODO the alignment is different gsdjdtbujdsdsg
+            self.align(4);        // TODO the alignment is different gsdjdtbujdsdsg
         }
         
         Ok(())
@@ -240,9 +242,9 @@ impl DataBuilder {
         Ok(())
     }
 
-    pub fn align(&mut self, alignment: usize, padding_byte: u8) {
-        while self.len() & (alignment - 1) != padding_byte as usize {
-            self.write_u8(padding_byte);
+    pub fn align(&mut self, alignment: usize) {
+        while self.len() & (alignment - 1) != 0 {
+            self.write_u8(0);
         }
     }
 

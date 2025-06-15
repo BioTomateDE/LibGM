@@ -17,7 +17,7 @@ pub fn build_chunk_audo(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
 
         // padding
         if i + 1 != len {
-            builder.align(4, 0x00);
+            builder.align(4);
         }
     }
 
