@@ -65,7 +65,7 @@ pub fn build_chunk_sprt(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
                 }
 
                 GMSpriteType::Spine(_sprite_type) => {
-                    builder.align(4, 0x00);
+                    builder.align(4);
                     return Err(format!("Sprite Type Spine not yet implemented for Sprite \"{}\"", sprite.name.display(&gm_data.strings)))
                 }
             }
