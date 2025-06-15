@@ -209,7 +209,7 @@ pub fn parse_chunk_sprt(
                     }
 
                     // read YYSWF
-                    align_reader(chunk, 4, 0x00)?;
+                    chunk.align(4)?;
                     let jpeg_len: i32 = chunk.read_i32()? & (!0x80000000u32 as i32);    // the length is `OR`ed with int.MinValue
                     let jpeg_len: usize = jpeg_len as usize;
                     let yyswf_version: i32 = chunk.read_i32()?;
@@ -219,7 +219,7 @@ pub fn parse_chunk_sprt(
                         name_resolved, chunk.name, chunk.cur_pos, chunk.cur_pos + jpeg_len, chunk.data.len(),
                     ))?.to_vec();
                     chunk.cur_pos += jpeg_len;
-                    align_reader(chunk, 4, 0x00)?;
+                    chunk.align(4)?;
                     let timeline: GMSpriteYYSWFTimeline = parse_yyswf_timeline(chunk, general_info)?;
 
                     GMSpriteType::SWF(GMSpriteTypeSWF {
@@ -401,21 +401,5 @@ fn read_mask_data(chunk: &mut GMChunk, sprite_name: &str, mask_width: usize, mas
     }
 
     Ok(collision_masks)
-}
-
-
-/// no idea what this actually does
-pub fn align_reader(chunk: &mut GMChunk, alignment: usize, padding_byte: u8) -> Result<(), String> {
-    // maybe `alignment` needs to be i32 like in UndertaleModTool
-    while ((chunk.cur_pos + chunk.abs_pos) & (alignment - 1)) as u8 != padding_byte {
-        let byte: u8 = chunk.read_u8()?;
-        if byte != padding_byte {
-            return Err(format!(
-                "Invalid alignment padding 0x{:02X} (expected: 0x{}) at position {} in chunk '{}' with alignment value {}",
-                byte, padding_byte, chunk.cur_pos - 1, chunk.name, alignment,
-            ));
-        }
-    }
-    Ok(())
 }
 

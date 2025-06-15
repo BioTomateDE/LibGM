@@ -18,3 +18,4 @@ pub(super) mod sounds;
 pub(super) mod sprites;
 pub(super) mod sprites_yyswf;
 pub(super) mod paths;
+mod particles;
