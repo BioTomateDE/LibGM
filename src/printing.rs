@@ -5,7 +5,7 @@ use crate::deserialize::fonts::{GMFont, GMFontGlyph};
 use crate::deserialize::game_objects::{GMGameObject, GMGameObjectEvent, GMGameObjectEventAction};
 use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMOptions, GMOptionsFlags};
 use crate::deserialize::rooms::{GMRoom, GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomLayer, GMRoomTile, GMRoomView};
-use crate::deserialize::sequence::{GMKeyframe, GMKeyframeMoment, GMSequence, GMTrack};
+use crate::deserialize::sequence::{GMTrackKeyframe, GMKeyframeMoment, GMSequence, GMTrack};
 use crate::deserialize::sounds::{GMSound, GMSoundFlags};
 use crate::deserialize::strings::GMStrings;
 use crate::deserialize::texture_page_items::GMTexturePageItem;
@@ -602,7 +602,7 @@ impl GMSequence {
 }
 
 #[allow(dead_code)]
-impl GMKeyframe {
+impl GMTrackKeyframe {
     pub fn print(&self) {
         println!("GMKeyframe:");
         println!("  Key: {}", self.key);

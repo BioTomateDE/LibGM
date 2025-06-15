@@ -326,6 +326,13 @@ impl GMChunk<'_> {
         self.cur_pos = old_position;
         Ok(pointers)
     }
+
+    pub fn align(&mut self, alignment: usize) -> Result<(), String> {
+        while (self.cur_pos + self.abs_pos) & (alignment - 1) != 0 {
+            self.read_u8()?;
+        }
+        Ok(())
+    }
 }
 
 
