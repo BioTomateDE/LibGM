@@ -67,7 +67,7 @@ fn build_font(builder: &mut DataBuilder, general_info: &GMGeneralInfo, font_inde
     build_glyphs(builder, general_info, &font.glyphs, font_index)?;
 
     if general_info.is_version_at_least(2024, 14, 0, 0) {
-        builder.align(4, 0x00);
+        builder.align(4);
     }
 
     Ok(())

@@ -21,27 +21,30 @@ use crate::deserialize::sounds::{parse_chunk_sond, GMSounds};
 use crate::deserialize::sprites::{parse_chunk_sprt, GMSprites};
 use crate::deserialize::texture_page_items::{parse_chunk_tpag, GMTextures};
 use crate::bench_parse;
+use crate::deserialize::particles::{parse_chunk_psem, parse_chunk_psys, GMParticleEmitters, GMParticleSystems};
 
 #[derive(Debug, Clone)]
 pub struct GMData {
-    pub strings: GMStrings,                 // STRG
-    pub general_info: GMGeneralInfo,        // GEN8
-    pub options: GMOptions,                 // OPTN
-    pub texture_pages: Vec<GMEmbeddedTexture>,     // TPAG
-    pub texture_page_items: GMTextures,     // TPAG
-    pub backgrounds: GMBackgrounds,         // BGND
-    pub sprites: GMSprites,                 // SPRT
-    pub scripts: GMScripts,                 // SCPT
-    pub variables: GMVariables,             // VARI
-    pub functions: GMFunctions,             // FUNC
-    pub code_locals: Vec<GMCodeLocal>,      // FUNC
-    pub codes: GMCodes,                     // CODE
-    pub fonts: GMFonts,                     // FONT
-    pub audios: GMEmbeddedAudios,           // AUDO
-    pub sounds: GMSounds,                   // SOND
-    pub game_objects: GMGameObjects,        // OBJT
-    pub rooms: GMRooms,                     // ROOM
-    pub paths: GMPaths,                     // PATH
+    pub strings: GMStrings,                             // STRG
+    pub general_info: GMGeneralInfo,                    // GEN8
+    pub options: GMOptions,                             // OPTN
+    pub texture_pages: Vec<GMEmbeddedTexture>,          // TPAG
+    pub texture_page_items: GMTextures,                 // TPAG
+    pub backgrounds: GMBackgrounds,                     // BGND
+    pub sprites: GMSprites,                             // SPRT
+    pub scripts: GMScripts,                             // SCPT
+    pub variables: GMVariables,                         // VARI
+    pub functions: GMFunctions,                         // FUNC
+    pub code_locals: Vec<GMCodeLocal>,                  // FUNC
+    pub codes: GMCodes,                                 // CODE
+    pub fonts: GMFonts,                                 // FONT
+    pub audios: GMEmbeddedAudios,                       // AUDO
+    pub sounds: GMSounds,                               // SOND
+    pub game_objects: GMGameObjects,                    // OBJT
+    pub rooms: GMRooms,                                 // ROOM
+    pub paths: GMPaths,                                 // PATH
+    pub particle_systems: GMParticleSystems,            // PSYS
+    pub particle_emitters: GMParticleEmitters,          // PSEM
 }
 
 pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
@@ -104,6 +107,9 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let mut chunk_room: GMChunk = get_chunk(&chunks, "ROOM")?;
     let mut chunk_objt: GMChunk = get_chunk(&chunks, "OBJT")?;
     let mut chunk_path: GMChunk = get_chunk(&chunks, "PATH")?;
+
+    let mut chunk_psys: Option<GMChunk> = chunks.get("PSYS").cloned();
+    let mut chunk_psem: Option<GMChunk> = chunks.get("PSEM").cloned();
     // TODO implement all other chunks
     
     log::trace!("Parsing FORM took {stopwatch}");
@@ -126,6 +132,17 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let paths: GMPaths = bench_parse!("PATH", parse_chunk_path(&mut chunk_path, &strings)?);
     let options: GMOptions = bench_parse!("OPTN", parse_chunk_optn(&mut chunk_optn, &strings, &texture_page_items)?);
 
+    let particle_systems: GMParticleSystems;
+    let particle_emitters: GMParticleEmitters;
+    if let Some(ref mut chunk) = chunk_psys {
+        particle_systems = bench_parse!("PSYS", parse_chunk_psys(chunk, &general_info, &strings)?);
+        let chunk: &mut GMChunk = &mut chunk_psem.ok_or("Chunk PSYS exists but PSEM does not")?;
+        particle_emitters = bench_parse!("PSEM", parse_chunk_psem(chunk, &general_info, &strings)?);
+    } else {
+        particle_systems = GMParticleSystems::empty();
+        particle_emitters = GMParticleEmitters::empty();
+    }
+
     let data = GMData {
         strings,
         general_info,
@@ -145,6 +162,8 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
         game_objects,
         rooms,
         paths,
+        particle_systems,
+        particle_emitters,
     };
 
     log::trace!("Parsing data took {stopwatch}");
