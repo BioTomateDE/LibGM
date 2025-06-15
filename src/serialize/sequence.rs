@@ -1,6 +1,6 @@
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::general_info::GMGeneralInfo;
-use crate::deserialize::sequence::{GMAnimationCurveChannel, GMAnimationCurveChannelPoint, GMKeyframe, GMSequence, GMTrack};
+use crate::deserialize::sequence::{GMAnimationCurveChannel, GMAnimationCurveChannelPoint, GMTrackKeyframe, GMSequence, GMTrack};
 use crate::deserialize::strings::GMStrings;
 use crate::serialize::chunk_writing::DataBuilder;
 
@@ -123,7 +123,7 @@ fn build_anim_curve_channel_points(builder: &mut DataBuilder, general_info: &GMG
 }
 
 
-fn build_keyframes(builder: &mut DataBuilder, keyframes: &Vec<GMKeyframe>) -> Result<(), String> {
+fn build_keyframes(builder: &mut DataBuilder, keyframes: &Vec<GMTrackKeyframe>) -> Result<(), String> {
     while builder.len() % 4 != 0 {
         builder.write_u8(0);
     }
@@ -135,10 +135,9 @@ fn build_keyframes(builder: &mut DataBuilder, keyframes: &Vec<GMKeyframe>) -> Re
         builder.write_bool32(keyframe.stretch);
         builder.write_bool32(keyframe.disabled);
 
-        // TODO hashmap
-        for ts in &keyframe.channels {
-            builder.write_i32(*ts);
-            builder.write_i32(0);   // placeholder; probably doesn't work
+        for (i, keyframe_data) in &keyframe.channels {
+            builder.write_i32(*i);
+            builder.write_i32(0);   // TODO placeholder; probably doesn't work
         }
     }
 
