@@ -67,26 +67,24 @@ pub fn get_image_from_bytes(bytes: &[u8]) -> Result<DynamicImage, String> {
                 pos += 1;
                 run = (((b1 & 0x1f) as usize) << 8 | b2) + 32;
             } else if (b1 & QOI_MASK_2) == QOI_DIFF_8 {
-                r = r.wrapping_add(((b1 & 0x30) >> 4).wrapping_sub(2));
-                g = g.wrapping_add(((b1 & 0x0c) >> 2).wrapping_sub(2));
-                b = b.wrapping_add((b1 & 0x03).wrapping_sub(2));
+                r = r.wrapping_add((b1 & 0x30) >> 4);
+                g = g.wrapping_add((b1 & 0x0c) >> 2);
+                b = b.wrapping_add(b1 & 0x03);
             } else if (b1 & QOI_MASK_3) == QOI_DIFF_16 {
                 let b2 = pixel_data[pos];
                 pos += 1;
-                let merged = ((b1 as u16) << 8) | (b2 as u16);
-                r = r.wrapping_add(((merged & 0x1f00) >> 8) as u8);
-                g = g.wrapping_add((((merged & 0x00f0) >> 4) as u8).wrapping_sub(8));
-                b = b.wrapping_add(((merged & 0x000f) as u8).wrapping_sub(8));
+                r = r.wrapping_add(b1 & 0x1f);
+                g = g.wrapping_add(b2 >> 4);
+                b = b.wrapping_add(b2 & 0x0f);
             } else if (b1 & QOI_MASK_4) == QOI_DIFF_24 {
                 let b2 = pixel_data[pos];
                 pos += 1;
                 let b3 = pixel_data[pos];
                 pos += 1;
-                let merged = ((b1 as u32) << 16) | ((b2 as u32) << 8) | (b3 as u32);
-                r = r.wrapping_add(((merged & 0x0f0000) >> 16) as u8);
-                g = g.wrapping_add((((merged & 0x00f800) >> 11) as u8).wrapping_sub(16));
-                b = b.wrapping_add((((merged & 0x0007c0) >> 6) as u8).wrapping_sub(16));
-                a = a.wrapping_add(((merged & 0x00003f) as u8).wrapping_sub(32));
+                r = r.wrapping_add(((b1 & 0x0f) << 1) | (b2 >> 7));
+                g = g.wrapping_add((b2 & 0x7c) >> 2);
+                b = b.wrapping_add(((b2 & 0x03) << 3) | (b3 >> 5));
+                a = a.wrapping_add(b3 & 0x1f);
             } else if (b1 & QOI_MASK_4) == QOI_COLOR {
                 if (b1 & 0x08) != 0 {
                     r = pixel_data[pos];
@@ -109,7 +107,7 @@ pub fn get_image_from_bytes(bytes: &[u8]) -> Result<DynamicImage, String> {
             let index_pos = ((r ^ g ^ b ^ a) & 0x3f) as usize;
             index[index_pos] = [r, g, b, a];
         }
-        
+
         *pixel = Rgba([r, g, b, a]);
     }
 
