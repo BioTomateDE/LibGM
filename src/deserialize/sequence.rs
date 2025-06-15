@@ -6,6 +6,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use crate::deserialize::game_objects::GMGameObject;
 use crate::deserialize::general_info::GMGeneralInfo;
+use crate::deserialize::particles::GMParticleSystem;
 use crate::deserialize::sprites::GMSprite;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -36,73 +37,74 @@ pub enum GMAnimSpeedType {
     FramesPerSecond = 0,
     FramesPerGameFrame = 1
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct GMKeyframe {
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMTrackKeyframe {
     pub key: f32,
     pub length: f32,
     pub stretch: bool,
     pub disabled: bool,
-    pub channels: Vec<i32>,   // {~~} TODO change ts to HashMap
+    pub channels: HashMap<i32, GMKeyframeData>,
 }
-
-#[derive(Debug, Clone)]
-pub struct GMKeyframesAudio {
-    pub keyframes: Vec<GMKeyframe>,
+#[derive(Debug, Clone, PartialEq)]
+pub enum GMKeyframeData {
+    Audio(GMKeyframeAudio),
+    Instance(GMKeyframeInstance),
+    Graphic(GMKeyframeGraphic),
+    Sequence(GMKeyframeSequence),
+    SpriteFrames(GMKeyframeSpriteFrames),
+    Bool(GMKeyframeBool),
+    // Asset(GMKeyframeAsset),
+    String(GMKeyframeString),
+    // Int(GMKeyframeInt),
+    Color(GMKeyframeColor),
+    Text(GMKeyframeText),
+    Particle(GMKeyframeParticle),
+}
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMKeyframeAudio {
     pub mode: i32,
 }
-#[derive(Debug, Clone)]
-pub struct GMKeyframesInstance {
-    pub keyframes: Vec<GMKeyframe>,
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMKeyframeInstance {
     pub object: GMRef<GMGameObject>,
 }
-#[derive(Debug, Clone)]
-pub struct GMKeyframesGraphic {
-    pub keyframes: Vec<GMKeyframe>,
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMKeyframeGraphic {
     pub sprite: GMRef<GMSprite>,
 }
-#[derive(Debug, Clone)]
-pub struct GMKeyframesSequence {
-    pub keyframes: Vec<GMKeyframe>,
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMKeyframeSequence {
     pub sequence: GMRef<GMSequence>,
 }
-#[derive(Debug, Clone)]
-pub struct GMKeyframesSpriteFrames {
-    pub keyframes: Vec<GMKeyframe>,
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMKeyframeSpriteFrames {
     pub value: i32,
 }
-#[derive(Debug, Clone)]
-pub struct GMKeyframesBool {
-    pub keyframes: Vec<GMKeyframe>,
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMKeyframeBool {
     pub boolean: bool,
 }
-
-#[derive(Debug, Clone)]
-pub struct GMKeyframesString {
-    pub keyframes: Vec<GMKeyframe>,
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMKeyframeString {
     pub string: GMRef<String>,
 }
-
-#[derive(Debug, Clone)]
-pub struct GMKeyframesColor {
-    pub keyframes: Vec<GMKeyframe>,
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMKeyframeColor {
     pub interpolation: i32,
 }
-
-#[derive(Debug, Clone)]
-pub struct GMKeyframesText {
-    pub keyframes: Vec<GMKeyframe>,
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMKeyframeText {
     pub text: GMRef<String>,
     pub wrap: bool,
     pub alignment_v: i8,
     pub alignment_h: i8,
     pub font_index: i32,
 }
-
-// #[derive(Debug, Clone)]
-// pub struct GMKeyframesParticle {
-//     pub keyframes: Vec<GMKeyframe>,
-//     pub particle: GMRef<GMParticle>,
-// }
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMKeyframeParticle {
+    pub particle: GMRef<GMParticleSystem>,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMTrack {
@@ -113,7 +115,7 @@ pub struct GMTrack {
     pub is_creation_track: bool,
     pub tags: Vec<i32>,
     pub sub_tracks: Vec<GMTrack>,
-    pub keyframes: Vec<GMKeyframe>,
+    pub keyframes: Vec<GMTrackKeyframe>,
     pub owned_resources: Vec<GMAnimationCurve>,
     pub anim_curve_string: Option<GMRef<String>>,
 }
@@ -345,7 +347,7 @@ fn parse_track(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMSt
     }
 
     // TODO keyframes with different types {~~}
-    let keyframes: Vec<GMKeyframe> = vec![];
+    let keyframes: Vec<GMTrackKeyframe> = vec![];
     log::warn!("Keyframes not supported yet for Track with name \"{}\" at absolute position {}! Will be deleted or corrupted when building data.", name.display(strings), chunk.abs_pos);
 
     Ok(GMTrack {

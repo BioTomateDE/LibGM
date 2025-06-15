@@ -2,7 +2,6 @@ use num_enum::TryFromPrimitive;
 use serde::{Deserialize, Serialize};
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::general_info::GMGeneralInfo;
-use crate::deserialize::sprites::align_reader;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteTypeSWF {
@@ -237,7 +236,7 @@ pub fn parse_yyswf_timeline(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -
             chunk.name, chunk.cur_pos, chunk.cur_pos + rle_length, chunk.data.len(),
         ))?.to_vec();
         chunk.cur_pos += rle_length;
-        align_reader(chunk, 4, 0x00)?;    // [From UndertaleModTool] "why it's not aligned before the data is beyond my brain"
+        chunk.align(4)?;    // [From UndertaleModTool] "why it's not aligned before the data is beyond my brain"
 
         collision_masks.push(GMSpriteYYSWFCollisionMask {rle_data});
     }
@@ -527,9 +526,7 @@ fn parse_yyswf_bitmap_data(chunk: &mut GMChunk, general_info: &GMGeneralInfo) ->
             chunk.name, chunk.cur_pos, chunk.cur_pos + color_palette_data_length, chunk.data.len(),
         ))?.to_vec();
         chunk.cur_pos += color_palette_data_length;
-
-        align_reader(chunk, 4, 0x00)?;
-
+        chunk.align(4)?;
     }
 
     Ok(GMSpriteYYSWFBitmapData {

@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use crate::deserialize::general_info::GMGeneralInfo;
-use crate::deserialize::sprites::align_reader;
 use crate::deserialize::strings::GMStrings;
 use crate::deserialize::texture_page_items::{GMTexturePageItem, GMTextures};
 
@@ -108,7 +107,7 @@ pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
             .map_err(|e| format!("{e} of font #{i} with name \"{}\"", name.display(strings)))?;
         
         if general_info.is_version_at_least(2024, 14, 0, 0) {
-            align_reader(chunk, 4, 0x00)?;
+            chunk.align(4)?;
         }
 
         let font: GMFont = GMFont {
