@@ -8,7 +8,7 @@ use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnord
 pub struct AddSound {
     pub name: ModRef,      // String
     pub flags: AddSoundFlags,
-    pub audio_type: ModRef,  // String
+    pub audio_type: Option<ModRef>,  // String
     pub file: ModRef,      // String
     pub effects: u32,
     pub volume: f32,
@@ -29,7 +29,7 @@ pub struct AddSoundFlags {
 pub struct EditSound {
     pub name: Option<ModRef>,      // String
     pub flags: EditSoundFlags,
-    pub audio_type: Option<ModRef>,  // String
+    pub audio_type: Option<Option<ModRef>>,  // String
     pub filename: Option<ModRef>,      // String
     pub effects: Option<u32>,
     pub volume: Option<f32>,
@@ -55,7 +55,7 @@ impl ModExporter<'_, '_> {
             |i| Ok(AddSound {
                 name: self.convert_string_ref(&i.name)?,
                 flags: add_sound_flags(&i.flags),
-                audio_type: self.convert_string_ref(&i.audio_type)?,
+                audio_type: self.convert_string_ref_opt(&i.audio_type)?,
                 file: self.convert_string_ref(&i.file)?,
                 effects: i.effects,
                 volume: i.volume,
@@ -66,7 +66,7 @@ impl ModExporter<'_, '_> {
             |o, m| Ok(EditSound {
                 name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
                 flags: edit_sound_flags(&o.flags, &m.flags),
-                audio_type: edit_field_convert(&o.audio_type, &m.audio_type, |r| self.convert_string_ref(r))?,
+                audio_type: edit_field_convert_option(&o.audio_type, &m.audio_type, |r| self.convert_string_ref(r))?,
                 filename: edit_field_convert(&o.file, &m.file, |r| self.convert_string_ref(r))?,
                 effects: edit_field(&o.effects, &m.effects),
                 volume: edit_field(&o.volume, &m.volume),
