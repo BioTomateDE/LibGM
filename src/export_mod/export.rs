@@ -170,61 +170,64 @@ pub struct ModExporter<'o, 'm> {
 }
 
 impl ModExporter<'_, '_> {
-    pub fn convert_audio_ref(&self, gm_audio_ref: GMRef<GMEmbeddedAudio>) -> Result<ModRef, String> {
+    pub fn convert_audio_ref(&self, gm_audio_ref: &GMRef<GMEmbeddedAudio>) -> Result<ModRef, String> {
         convert_reference(gm_audio_ref, &self.original_data.audios.audios_by_index, &self.modified_data.audios.audios_by_index)
     }
-    pub fn convert_background_ref(&self, gm_background_ref: GMRef<GMBackground>) -> Result<ModRef, String> {
+    pub fn convert_background_ref(&self, gm_background_ref: &GMRef<GMBackground>) -> Result<ModRef, String> {
         convert_reference(gm_background_ref, &self.original_data.backgrounds.backgrounds_by_index, &self.modified_data.backgrounds.backgrounds_by_index)
     }
-    pub fn convert_function_ref(&self, gm_function_ref: GMRef<GMFunction>) -> Result<ModRef, String> {
+    pub fn convert_code_ref(&self, gm_code_ref: &GMRef<GMCode>) -> Result<ModRef, String> {
+        convert_reference(gm_code_ref, &self.original_data.codes.codes_by_index, &self.modified_data.codes.codes_by_index)
+    }
+    pub fn convert_function_ref(&self, gm_function_ref: &GMRef<GMFunction>) -> Result<ModRef, String> {
         convert_reference(gm_function_ref, &self.original_data.functions.functions_by_index, &self.modified_data.functions.functions_by_index)
     }
     // TODO continue
-    pub fn convert_game_object_ref(&self, gm_game_object_ref: GMRef<GMGameObject>) -> Result<ModRef, String> {
+    pub fn convert_game_object_ref(&self, gm_game_object_ref: &GMRef<GMGameObject>) -> Result<ModRef, String> {
         convert_reference(gm_game_object_ref, &self.original_data.game_objects.game_objects_by_index, &self.modified_data.game_objects.game_objects_by_index)
     }
-    pub fn convert_room_ref(&self, gm_room_ref: GMRef<GMRoom>) -> Result<ModRef, String> {
+    pub fn convert_room_ref(&self, gm_room_ref: &GMRef<GMRoom>) -> Result<ModRef, String> {
         convert_reference(gm_room_ref, &self.original_data.rooms.rooms_by_index, &self.modified_data.rooms.rooms_by_index)
     }
-    pub fn convert_sprite_ref(&self, gm_sprite_ref: GMRef<GMSprite>) -> Result<ModRef, String> {
+    pub fn convert_sprite_ref(&self, gm_sprite_ref: &GMRef<GMSprite>) -> Result<ModRef, String> {
         convert_reference(gm_sprite_ref, &self.original_data.sprites.sprites_by_index, &self.modified_data.sprites.sprites_by_index)
     }
-    pub fn convert_string_ref(&self, gm_string_ref: GMRef<String>) -> Result<ModRef, String> {
+    pub fn convert_string_ref(&self, gm_string_ref: &GMRef<String>) -> Result<ModRef, String> {
         convert_reference(gm_string_ref, &self.original_data.strings.strings_by_index, &self.modified_data.strings.strings_by_index)
     }
     /// TODO make custom function for texture page items (since texture contents are not checked)
-    pub fn convert_texture_ref(&self, gm_texture_ref: GMRef<GMTexturePageItem>) -> Result<ModRef, String> {
+    pub fn convert_texture_ref(&self, gm_texture_ref: &GMRef<GMTexturePageItem>) -> Result<ModRef, String> {
         convert_reference(gm_texture_ref, &self.original_data.texture_page_items.textures_by_index, &self.modified_data.texture_page_items.textures_by_index)
     }
-    pub fn convert_variable_ref(&self, gm_variable_ref: GMRef<GMVariable>) -> Result<ModRef, String> {
+    pub fn convert_variable_ref(&self, gm_variable_ref: &GMRef<GMVariable>) -> Result<ModRef, String> {
         convert_reference(gm_variable_ref, &self.original_data.variables.variables, &self.modified_data.variables.variables)
     }
 
-    pub fn convert_audio_ref_opt(&self, gm_audio_ref: Option<GMRef<GMEmbeddedAudio>>) -> Result<Option<ModRef>, String> {
+    pub fn convert_audio_ref_opt(&self, gm_audio_ref: &Option<GMRef<GMEmbeddedAudio>>) -> Result<Option<ModRef>, String> {
         convert_reference_optional(gm_audio_ref, &self.original_data.audios.audios_by_index, &self.modified_data.audios.audios_by_index)
     }
-    pub fn convert_background_ref_opt(&self, gm_background_ref: Option<GMRef<GMBackground>>) -> Result<Option<ModRef>, String> {
+    pub fn convert_background_ref_opt(&self, gm_background_ref: &Option<GMRef<GMBackground>>) -> Result<Option<ModRef>, String> {
         convert_reference_optional(gm_background_ref, &self.original_data.backgrounds.backgrounds_by_index, &self.modified_data.backgrounds.backgrounds_by_index)
     }
-    pub fn convert_code_ref_opt(&self, gm_code_ref: Option<GMRef<GMCode>>) -> Result<Option<ModRef>, String> {
+    pub fn convert_code_ref_opt(&self, gm_code_ref: &Option<GMRef<GMCode>>) -> Result<Option<ModRef>, String> {
         convert_reference_optional(gm_code_ref, &self.original_data.codes.codes_by_index, &self.modified_data.codes.codes_by_index)
     }
-    pub fn convert_game_object_ref_opt(&self, gm_game_object_ref: Option<GMRef<GMGameObject>>) -> Result<Option<ModRef>, String> {
+    pub fn convert_game_object_ref_opt(&self, gm_game_object_ref: &Option<GMRef<GMGameObject>>) -> Result<Option<ModRef>, String> {
         convert_reference_optional(gm_game_object_ref, &self.original_data.game_objects.game_objects_by_index, &self.modified_data.game_objects.game_objects_by_index)
     }
-    pub fn convert_sprite_ref_opt(&self, gm_sprite_ref: Option<GMRef<GMSprite>>) -> Result<Option<ModRef>, String> {
+    pub fn convert_sprite_ref_opt(&self, gm_sprite_ref: &Option<GMRef<GMSprite>>) -> Result<Option<ModRef>, String> {
         convert_reference_optional(gm_sprite_ref, &self.original_data.sprites.sprites_by_index, &self.modified_data.sprites.sprites_by_index)
     }
-    pub fn convert_string_ref_opt(&self, gm_string_ref: Option<GMRef<String>>) -> Result<Option<ModRef>, String> {
+    pub fn convert_string_ref_opt(&self, gm_string_ref: &Option<GMRef<String>>) -> Result<Option<ModRef>, String> {
         convert_reference_optional(gm_string_ref, &self.original_data.strings.strings_by_index, &self.modified_data.strings.strings_by_index)
     }
     /// TODO make custom function for texture page items (since texture contents are not checked)
-    pub fn convert_texture_ref_opt(&self, gm_texture_ref: Option<GMRef<GMTexturePageItem>>) -> Result<Option<ModRef>, String> {
+    pub fn convert_texture_ref_opt(&self, gm_texture_ref: &Option<GMRef<GMTexturePageItem>>) -> Result<Option<ModRef>, String> {
         convert_reference_optional(gm_texture_ref, &self.original_data.texture_page_items.textures_by_index, &self.modified_data.texture_page_items.textures_by_index)
     }
 }
 
-fn convert_reference<GM>(gm_reference: GMRef<GM>, original_list: &[GM], modified_list: &[GM]) -> Result<ModRef, String> {
+fn convert_reference<GM>(gm_reference: &GMRef<GM>, original_list: &[GM], modified_list: &[GM]) -> Result<ModRef, String> {
     // If reference index out of bounds in modified data; throw error.
     // This should never happen in healthy gm data; just being cautious that the mod will be fully functional.
     if gm_reference.index >= modified_list.len() {
@@ -246,7 +249,7 @@ fn convert_reference<GM>(gm_reference: GMRef<GM>, original_list: &[GM], modified
     }
 }
 
-fn convert_reference_optional<GM>(gm_reference_optional: Option<GMRef<GM>>, original_list: &[GM], modified_list: &[GM]) -> Result<Option<ModRef>, String> {
+fn convert_reference_optional<GM>(gm_reference_optional: &Option<GMRef<GM>>, original_list: &[GM], modified_list: &[GM]) -> Result<Option<ModRef>, String> {
     match gm_reference_optional {
         Some(gm_reference) => Ok(Some(convert_reference(gm_reference, original_list, modified_list)?)),
         None => Ok(None),
@@ -269,17 +272,17 @@ pub fn edit_field<'a, T: PartialEq + Clone>(original: &T, modified: &T) -> Optio
         None
     }
 }
-pub fn edit_field_option<T: PartialEq + Clone>(original: Option<T>, modified: Option<T>) -> Option<Option<T>> {
+pub fn edit_field_option<T: PartialEq + Clone>(original: &Option<T>, modified: &Option<T>) -> Option<Option<T>> {
     if original != modified {
-        Some(modified)
+        Some(modified.clone())
     } else {
         None
     }
 }
 pub fn edit_field_convert<GM>(
-    original: GMRef<GM>,
-    modified: GMRef<GM>,
-    converter: impl Fn(GMRef<GM>) -> Result<ModRef, String>,
+    original: &GMRef<GM>,
+    modified: &GMRef<GM>,
+    converter: impl Fn(&GMRef<GM>) -> Result<ModRef, String>,
 ) -> Result<Option<ModRef>, String> {
     if original.index != modified.index {
         Ok(Some(converter(modified)?))
@@ -287,16 +290,53 @@ pub fn edit_field_convert<GM>(
         Ok(None)
     }
 }
-pub fn edit_field_convert_option<GM: PartialEq>(
-    original: Option<GMRef<GM>>,
-    modified: Option<GMRef<GM>>,
-    converter: impl Fn(Option<GMRef<GM>>) -> Result<Option<ModRef>, String>,
-) -> Result<Option<Option<ModRef>>, String> {
+pub fn edit_field_convert_option<GM: PartialEq, MOD>(
+    original: &Option<GM>,
+    modified: &Option<GM>,
+    converter: impl Fn(&GM) -> Result<MOD, String>,
+) -> Result<Option<Option<MOD>>, String> {
     if original == modified {
-        Ok(Some(converter(modified)?))
+        if let Some(m) = modified {
+            Ok(Some(Some(converter(m)?)))
+        } else {
+            Ok(Some(None))
+        }
     } else {
         Ok(None)
     }
+}
+// pub fn edit_field_map_option<GM: PartialEq, MOD>(
+//     original: &GM,
+//     modified: &GM,
+//     map_fn: impl Fn(&GM, &GM) -> Result<MOD, String>,
+// ) -> Result<Option<MOD>, String> {
+//     if original != modified {
+//         Ok(Some(map_fn(original, modified)?))
+//     } else {
+//         Ok(None)
+//     }
+// }
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum EditWrapper<A, E> {
+    Add(A),
+    Edit(E),
+    None,
+}
+
+pub fn wrap_edit_option<G, A, E>(
+    o: &Option<G>,
+    m: &Option<G>,
+    add_map: impl Fn(&G) -> Result<A, String>,
+    edit_map: impl Fn(&G, &G) -> Result<E, String>,
+) -> Result<Option<EditWrapper<A, E>>, String> {
+    Ok(match (o, m) {
+        (None, None) => None,
+        (None, Some(m)) => Some(EditWrapper::Add(add_map(m)?)),
+        (Some(_), None) => Some(EditWrapper::None),
+        (Some(o), Some(m)) => Some(EditWrapper::Edit(edit_map(o, m)?)),
+    })
 }
 
 pub fn convert_additions<GM, ADD>(gm_elements: &[GM], map_addition: impl Fn(&GM) -> Result<ADD, String>) -> Result<Vec<ADD>, String> {

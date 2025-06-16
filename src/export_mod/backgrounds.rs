@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::deserialize::backgrounds::GMBackgroundGMS2Data;
-use crate::export_mod::export::{edit_field, edit_field_convert, edit_field_convert_option, edit_field_option, ModExporter, ModRef};
+use crate::export_mod::export::{edit_field, edit_field_convert, edit_field_convert_option, ModExporter, ModRef};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,20 +43,20 @@ impl ModExporter<'_, '_> {
             &self.original_data.backgrounds.backgrounds_by_index,
             &self.modified_data.backgrounds.backgrounds_by_index,
             |i| Ok(AddBackground {
-                name: self.convert_string_ref(i.name)?,
+                name: self.convert_string_ref(&i.name)?,
                 transparent: i.transparent,
                 smooth: i.smooth,
                 preload: i.preload,
-                texture: self.convert_texture_ref_opt(i.texture)?,
+                texture: self.convert_texture_ref_opt(&i.texture)?,
                 gms2_data: i.gms2_data.as_ref().map(convert_gms2_data),
             }),
             |o, m| Ok(EditBackground {
-                name: edit_field_convert(o.name, m.name, |r| self.convert_string_ref(r))?,
+                name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
                 transparent: edit_field(&o.transparent, &m.transparent),
                 smooth: edit_field(&o.smooth, &m.smooth),
                 preload: edit_field(&o.preload, &m.preload),
-                texture: edit_field_convert_option(o.texture, m.texture, |r| self.convert_texture_ref_opt(r))?,
-                gms2_data: edit_field_option(o.gms2_data.as_ref().map(convert_gms2_data), m.gms2_data.as_ref().map(convert_gms2_data)).unwrap_or(None),
+                texture: edit_field_convert_option(&o.texture, &m.texture, |r| self.convert_texture_ref(r))?,
+                gms2_data: edit_field_convert_option(&o.gms2_data, &m.gms2_data, |i| Ok(convert_gms2_data(i)))?.unwrap_or(None),
             })
         )
     }

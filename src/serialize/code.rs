@@ -3,7 +3,7 @@ use crate::deserialize::all::GMData;
 use crate::deserialize::code::{GMCodeBytecode15, GMCodes, GMDataType, GMInstanceType, GMInstruction, GMOpcode, GMValue, GMVariableType};
 use crate::deserialize::functions::{GMFunction, GMFunctions};
 use crate::deserialize::strings::GMStrings;
-use crate::deserialize::variables::{GMVariable, GMVariables};
+use crate::deserialize::variables::{GMVariable, GMVariableB15Data, GMVariables};
 use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 
 pub type Occurrences = HashMap<usize, Vec<(usize, Option<GMVariableType>)>>;
@@ -228,7 +228,11 @@ fn build_instruction(
             // Write 16-bit integer, instance type, or empty data
             builder.write_i16(match &instr.value {
                 GMValue::Int16(int16) => *int16,
-                GMValue::Variable(variable) => build_instance_type(&variable.variable.resolve(&variables.variables)?.instance_type),
+                GMValue::Variable(variable) if !bytecode14 => {
+                    let variable: &GMVariable = variable.variable.resolve(&variables.variables)?;
+                    let b15_data: &GMVariableB15Data = variable.b15_data.as_ref().ok_or("Variable Bytecode 15 data not set while building Push Instruction")?;
+                    build_instance_type(&b15_data.instance_type)
+                },
                 _ => 0
             });
 

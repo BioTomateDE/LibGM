@@ -7,6 +7,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use crate::deserialize::functions::{GMFunction, GMFunctions};
 use crate::deserialize::game_objects::GMGameObject;
+use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::strings::GMStrings;
 
 // Taken from UndertaleModTool/UndertaleModLib/UndertaleCode.cs/UndertaleInstruction/
@@ -674,19 +675,23 @@ pub fn parse_instance_type(raw_value: i16) -> Result<GMInstanceType, String> {
 
 pub fn parse_occurrence_chain(
     chunk_code: &mut GMChunk,
+    general_info: &GMGeneralInfo,
     gm_name: &str,
-    first_occurrence_abs_pos: i32,
+    mut first_occurrence_abs_pos: i32,
     occurrence_count: usize,
+    is_function: bool,
 ) -> Result<(Vec<usize>, i32), String> {
     if occurrence_count < 1 {
         return Ok((vec![], first_occurrence_abs_pos));
     }
-
+    if is_function && general_info.is_version_at_least(2, 3, 0, 0) {
+        first_occurrence_abs_pos -= 4;
+    }
     let occurrence_pos: i32 = first_occurrence_abs_pos - chunk_code.abs_pos as i32 + 4;
     let mut occurrence_pos: usize = occurrence_pos.try_into()
         .map_err(|_| format!(
-            "First occurrence of variable/function \"{}\" is out of bounds; should be: {} <= {} < {}",
-            gm_name, chunk_code.abs_pos, first_occurrence_abs_pos, chunk_code.abs_pos + chunk_code.data.len(),
+            "First occurrence of {} \"{}\" is out of bounds; should be: {} <= {} < {}",
+            if is_function {"function"} else {"variable"}, gm_name, chunk_code.abs_pos, first_occurrence_abs_pos, chunk_code.abs_pos + chunk_code.data.len(),
         ))?;
 
     let mut occurrences: Vec<usize> = Vec::with_capacity(occurrence_count);
@@ -695,7 +700,9 @@ pub fn parse_occurrence_chain(
     for _ in 0..occurrence_count {
         occurrences.push(occurrence_pos);
         chunk_code.cur_pos = occurrence_pos;
-        offset = read_occurrence(chunk_code)?;
+        // println!("gdsmjigds {}", crate::printing::hexdump(chunk_code.data, occurrence_pos-8, Some(occurrence_pos+8))?);
+        offset = read_occurrence(chunk_code, is_function)?;
+        // println!("*#$YUDFGB {occurrence_count} | {offset} = 0x{offset:08X}");
         occurrence_pos += offset as usize;
     }
 
@@ -705,13 +712,14 @@ pub fn parse_occurrence_chain(
 }
 
 
-fn read_occurrence(chunk_code: &mut GMChunk) -> Result<i32, String> {
+fn read_occurrence(chunk_code: &mut GMChunk, is_function: bool) -> Result<i32, String> {
     let raw_value: i32 = chunk_code.read_i32()?;
     let next_occurrence_offset: i32 = raw_value & 0x07FFFFFF;
     if next_occurrence_offset < 1 {
         return Err(format!(
-            "Next occurrence offset is {0} (0x{0:08X}) which is not positive while parsing variable/function occurrences at absolute position {1} (raw value is 0x{2:08X})",
-            next_occurrence_offset, chunk_code.cur_pos-4, raw_value,
+            "Next occurrence offset is {0} (0x{0:08X}) which is not a positive number while parsing \
+            {3} occurrences at absolute position {1} (raw value is 0x{2:08X})",
+            next_occurrence_offset, chunk_code.cur_pos-4, raw_value, if is_function {"function"} else {"variable"},
         ))
     }
     Ok(next_occurrence_offset)

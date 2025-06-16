@@ -240,15 +240,15 @@ impl ModExporter<'_, '_> {
             &self.original_data.rooms.rooms_by_index,
             &self.modified_data.rooms.rooms_by_index,
             |i| Ok(AddRoom {
-                name: self.convert_string_ref(i.name)?,
-                caption: self.convert_string_ref(i.caption)?,
+                name: self.convert_string_ref(&i.name)?,
+                caption: self.convert_string_ref(&i.caption)?,
                 width: i.width,
                 height: i.height,
                 speed: i.speed,
                 persistent: i.persistent,
                 background_color: i.background_color,
                 draw_background_color: i.draw_background_color,
-                creation_code: self.convert_code_ref_opt(i.creation_code)?,
+                creation_code: self.convert_code_ref_opt(&i.creation_code)?,
                 flags: i.flags.clone(),
                 backgrounds: convert_additions(&i.backgrounds, |r| self.add_room_background(r))?,
                 views: convert_additions(&i.views, |view| self.add_room_view(view))?,
@@ -274,15 +274,15 @@ impl ModExporter<'_, '_> {
                 },
             }),
             |o, m| Ok(EditRoom {
-                name: edit_field_convert(o.name, m.name, |r| self.convert_string_ref(r))?,
-                caption: edit_field_convert(o.caption, m.caption, |r| self.convert_string_ref(r))?,
+                name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
+                caption: edit_field_convert(&o.caption, &m.caption, |r| self.convert_string_ref(r))?,
                 width: edit_field(&o.width, &m.width),
                 height: edit_field(&o.height, &m.height),
                 speed: edit_field(&o.speed, &m.speed),
                 persistent: edit_field(&o.persistent, &m.persistent),
                 background_color: edit_field(&o.background_color, &m.background_color),
                 draw_background_color: edit_field(&o.draw_background_color, &m.draw_background_color),
-                creation_code: edit_field(&self.convert_code_ref_opt(o.creation_code)?, &self.convert_code_ref_opt(m.creation_code)?),
+                creation_code: edit_field_convert_option(&o.creation_code, &m.creation_code, |r| self.convert_code_ref(r))?,
                 flags: edit_room_flags(&o.flags, &m.flags),
                 backgrounds: export_changes_unordered_list(
                     &o.backgrounds,
@@ -340,7 +340,7 @@ impl ModExporter<'_, '_> {
         Ok(AddRoomBackground {
             enabled: i.enabled,
             foreground: i.foreground,
-            background_definition: self.convert_background_ref_opt(i.background_definition)?,
+            background_definition: self.convert_background_ref_opt(&i.background_definition)?,
             x: i.x,
             y: i.y,
             tile_x: i.tile_x,
@@ -355,10 +355,11 @@ impl ModExporter<'_, '_> {
         Ok(EditRoomBackground {
             enabled: edit_field(&o.enabled, &m.enabled),
             foreground: edit_field(&o.foreground, &m.foreground),
-            background_definition: edit_field(
-                &self.convert_background_ref_opt(o.background_definition)?,
-                &self.convert_background_ref_opt(m.background_definition)?,
-            ),
+            background_definition: edit_field_convert_option(
+                &o.background_definition,
+                &m.background_definition,
+                |r| self.convert_background_ref(r)
+            )?,
             x: edit_field(&o.x, &m.x),
             y: edit_field(&o.y, &m.y),
             tile_x: edit_field(&o.tile_x, &m.tile_x),
@@ -384,7 +385,7 @@ impl ModExporter<'_, '_> {
             border_y: i.border_y,
             speed_x: i.speed_x,
             speed_y: i.speed_y,
-            object: self.convert_game_object_ref_opt(i.object)?,
+            object: self.convert_game_object_ref_opt(&i.object)?,
         })
     }
     
@@ -403,17 +404,17 @@ impl ModExporter<'_, '_> {
             border_y: edit_field(&o.border_y, &m.border_y),
             speed_x: edit_field(&o.speed_x, &m.speed_x),
             speed_y: edit_field(&o.speed_y, &m.speed_y),
-            object: edit_field_convert_option(o.object, m.object, |r| self.convert_game_object_ref_opt(r))?,
+            object: edit_field_convert_option(&o.object, &m.object, |r| self.convert_game_object_ref(r))?,
         })
     }
     
     fn convert_room_tile_texture(&self, room_tile_texture: &GMRoomTileTexture) -> Result<ModRoomTileTexture, String> {
         match room_tile_texture {
             GMRoomTileTexture::Sprite(sprite) => {
-                self.convert_sprite_ref(*sprite).map(ModRoomTileTexture::Sprite)
+                self.convert_sprite_ref(sprite).map(ModRoomTileTexture::Sprite)
             },
             GMRoomTileTexture::Background(background) => {
-                self.convert_background_ref(*background).map(ModRoomTileTexture::Background)
+                self.convert_background_ref(background).map(ModRoomTileTexture::Background)
             },
         }
     }
@@ -454,7 +455,7 @@ impl ModExporter<'_, '_> {
     
     fn add_room_layer(&self, i: &GMRoomLayer) -> Result<AddRoomLayer, String> {
         Ok(AddRoomLayer {
-            layer_name: self.convert_string_ref(i.layer_name)?,
+            layer_name: self.convert_string_ref(&i.layer_name)?,
             layer_id: i.layer_id,
             layer_type: i.layer_type,
             layer_depth: i.layer_depth,
@@ -468,7 +469,7 @@ impl ModExporter<'_, '_> {
     
     fn edit_room_layer(&self, o: &GMRoomLayer, m: &GMRoomLayer) -> Result<EditRoomLayer, String> {
         Ok(EditRoomLayer {
-            layer_name: edit_field_convert(o.layer_name, m.layer_name, |r| self.convert_string_ref(r))?,
+            layer_name: edit_field_convert(&o.layer_name, &m.layer_name, |r| self.convert_string_ref(r))?,
             layer_id: edit_field(&o.layer_id, &m.layer_id),
             layer_type: edit_field(&o.layer_type, &m.layer_type),
             layer_depth: edit_field(&o.layer_depth, &m.layer_depth),
@@ -484,16 +485,16 @@ impl ModExporter<'_, '_> {
         Ok(AddRoomGameObject {
             x: i.x,
             y: i.y,
-            object_definition: self.convert_game_object_ref(i.object_definition)?,
+            object_definition: self.convert_game_object_ref(&i.object_definition)?,
             instance_id: i.instance_id,
-            creation_code: self.convert_code_ref_opt(i.creation_code)?,
+            creation_code: self.convert_code_ref_opt(&i.creation_code)?,
             scale_x: i.scale_x,
             scale_y: i.scale_y,
             image_speed: i.image_speed,
             image_index: i.image_index,
             color: i.color,
             rotation: i.rotation,
-            pre_create_code: self.convert_code_ref_opt(i.pre_create_code)?,
+            pre_create_code: self.convert_code_ref_opt(&i.pre_create_code)?,
         })
     }
     
@@ -501,16 +502,16 @@ impl ModExporter<'_, '_> {
         Ok(EditRoomGameObject {
             x: edit_field(&o.x, &m.x),
             y: edit_field(&o.y, &m.y),
-            object_definition: edit_field_convert(o.object_definition, m.object_definition, |r| self.convert_game_object_ref(r))?,
+            object_definition: edit_field_convert(&o.object_definition, &m.object_definition, |r| self.convert_game_object_ref(r))?,
             instance_id: edit_field(&o.instance_id, &m.instance_id),
-            creation_code: edit_field_convert_option(o.creation_code, m.creation_code, |r| self.convert_code_ref_opt(r))?,
+            creation_code: edit_field_convert_option(&o.creation_code, &m.creation_code, |r| self.convert_code_ref(r))?,
             scale_x: edit_field(&o.scale_x, &m.scale_x),
             scale_y: edit_field(&o.scale_y, &m.scale_y),
             image_speed: edit_field(&o.image_speed, &m.image_speed),
             image_index: edit_field(&o.image_index, &m.image_index),
             color: edit_field(&o.color, &m.color),
             rotation: edit_field(&o.rotation, &m.rotation),
-            pre_create_code: edit_field_convert_option(o.pre_create_code, m.pre_create_code, |r| self.convert_code_ref_opt(r))?,
+            pre_create_code: edit_field_convert_option(&o.pre_create_code, &m.pre_create_code, |r| self.convert_code_ref(r))?,
         })
     }
 }

@@ -314,20 +314,20 @@ impl ModExporter<'_, '_> {
         let m: &GMGeneralInfo = &self.modified_data.general_info;
         Ok(EditGeneralInfo {
             debugger_enabled: edit_field(&o.is_debugger_disabled, &m.is_debugger_disabled),
-            game_name: edit_field_convert(o.game_name, m.game_name, |r| self.convert_string_ref(r))?,
-            file_name: edit_field_convert(o.game_file_name, m.game_file_name, |r| self.convert_string_ref(r))?,
-            gamemaker_config_string: edit_field_convert(o.config, m.config, |r| self.convert_string_ref(r))?,
+            game_name: edit_field_convert(&o.game_name, &m.game_name, |r| self.convert_string_ref(r))?,
+            file_name: edit_field_convert(&o.game_file_name, &m.game_file_name, |r| self.convert_string_ref(r))?,
+            gamemaker_config_string: edit_field_convert(&o.config, &m.config, |r| self.convert_string_ref(r))?,
             game_id: edit_field(&o.game_id, &m.game_id),
             creation_timestamp: edit_field(&o.timestamp_created, &m.timestamp_created),
             default_window_width: edit_field(&o.default_window_width, &m.default_window_width),
             default_window_height: edit_field(&o.default_window_height, &m.default_window_height),
-            default_window_title: edit_field_convert(o.display_name, m.display_name, |r| self.convert_string_ref(r))?,
+            default_window_title: edit_field_convert(&o.display_name, &m.display_name, |r| self.convert_string_ref(r))?,
             directplay_guid: edit_field(&o.directplay_guid, &m.directplay_guid),
             steam_app_id: edit_field(&o.steam_appid, &m.steam_appid),
             debugger_port: edit_field(&o.debugger_port, &m.debugger_port),
             flags: edit_flags(&o.flags, &m.flags),
             function_classifications: edit_function_classifications(&o.function_classifications, &m.function_classifications),
-            room_order: export_changes_ordered_list(&o.room_order, &m.room_order, |i| self.convert_room_ref(*i))?,
+            room_order: export_changes_ordered_list(&o.room_order, &m.room_order, |i| self.convert_room_ref(i))?,
         })
     }
 }
