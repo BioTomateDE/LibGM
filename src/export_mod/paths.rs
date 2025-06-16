@@ -27,6 +27,7 @@ impl ModExporter<'_, '_> {
             &self.modified_data.paths.paths_by_index,
             |i| self.convert_path(i),
             |_, m| self.convert_path(m),    // force override all fields if path is edited (merging will not work properly)
+            false,
         )
     }
     

@@ -130,7 +130,8 @@ impl ModExporter<'_, '_> {
                 name: edit_field_convert(&o.name, &o.name, |r| self.convert_string_ref(r))?,
                 instructions: export_changes_ordered_list(&o.instructions, &m.instructions, |r| self.convert_instruction(r))?,
                 bytecode15_info: edit_field(&o.bytecode15_info, &m.bytecode15_info).unwrap_or(None).as_ref().map(convert_bytecode15_info),
-            })
+            }),
+            false,
         )
     }
     

@@ -111,8 +111,9 @@ impl ModExporter<'_, '_> {
                 ascender: edit_field_option(&o.ascender, &m.ascender),
                 sdf_spread: edit_field_option(&o.sdf_spread, &m.sdf_spread),
                 line_height: edit_field_option(&o.line_height, &m.line_height),
-                glyphs: export_changes_unordered_list(&o.glyphs, &m.glyphs, add_font_glyph, edit_font_glyph)?,
-            })
+                glyphs: export_changes_unordered_list(&o.glyphs, &m.glyphs, add_font_glyph, edit_font_glyph, false)?,
+            }),
+            false,
         )
     }
 }
