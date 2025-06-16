@@ -74,6 +74,7 @@ impl ModExporter<'_, '_> {
                 audio_data: edit_field_convert_option(&o.audio_file, &m.audio_file, |r| self.convert_audio_ref(r))?,
                 audio_length: edit_field(&o.audio_length, &m.audio_length),
             }),
+            false,
         )
     }
 }

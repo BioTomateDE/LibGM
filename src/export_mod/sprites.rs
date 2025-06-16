@@ -123,6 +123,7 @@ impl ModExporter<'_, '_> {
                     &m.collision_masks,
                     |i| Ok(i.clone()),
                     |o, m| Ok(m.clone()),
+                    false,
                 )?,
                 special_fields: wrap_edit_option(
                     &o.special_fields,
@@ -131,6 +132,7 @@ impl ModExporter<'_, '_> {
                     |o, m| self.edit_specials(o, m),
                 )?,
             }),
+            false,
         )
     }
     

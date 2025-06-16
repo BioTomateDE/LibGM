@@ -25,6 +25,7 @@ impl ModExporter<'_, '_> {
                 is_constructor: m.is_constructor,
                 code: self.convert_code_ref_opt(&m.code)?,
             }),
+            false,
         )
     }
 }

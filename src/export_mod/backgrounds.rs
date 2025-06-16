@@ -57,7 +57,8 @@ impl ModExporter<'_, '_> {
                 preload: edit_field(&o.preload, &m.preload),
                 texture: edit_field_convert_option(&o.texture, &m.texture, |r| self.convert_texture_ref(r))?,
                 gms2_data: edit_field_convert_option(&o.gms2_data, &m.gms2_data, |i| Ok(convert_gms2_data(i)))?.unwrap_or(None),
-            })
+            }),
+            false,
         )
     }
 }
