@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use crate::deserialize::sequence::{GMAnimSpeedType, GMSequence};
 use crate::deserialize::sprites::{GMSpriteMaskEntry, GMSpriteNineSlice, GMSpriteSepMaskType, GMSpriteSpecial, GMSpriteType};
 use crate::deserialize::sprites_yyswf::GMSpriteTypeSWF;
-use crate::export_mod::export::{edit_field, edit_field_convert, edit_field_convert_option, edit_field_option, wrap_edit_option, EditWrapper, ModExporter, ModRef};
+use crate::export_mod::export::{edit_field, edit_field_convert, edit_field_convert_option, wrap_edit_option, EditWrapper, ModExporter, ModRef};
 use crate::export_mod::ordered_list::{export_changes_ordered_list, DataChange};
 use crate::export_mod::sequences::AddSequence;
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
