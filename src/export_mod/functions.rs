@@ -24,11 +24,11 @@ impl ModExporter<'_, '_> {
             &self.original_data.functions.functions_by_index,
             &self.modified_data.functions.functions_by_index,
             |i| Ok(AddFunction {
-                name: self.convert_string_ref(i.name)?,
+                name: self.convert_string_ref(&i.name)?,
                 name_string_id: i.name_string_id,
             }),
             |o, m| Ok(EditFunction {
-                name: edit_field_convert(o.name, m.name, |r| self.convert_string_ref(r))?,
+                name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
                 name_string_id: None,
             })
         )

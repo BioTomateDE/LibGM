@@ -7,9 +7,14 @@ use crate::deserialize::strings::GMStrings;
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMVariable {
     pub name: GMRef<String>,
-    pub instance_type: GMInstanceType,
-    pub variable_id: Option<i32>,
+    pub b15_data: Option<GMVariableB15Data>,
     pub name_string_id: i32,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMVariableB15Data {
+    pub instance_type: GMInstanceType,
+    pub variable_id: i32,
 }
 
 #[derive(Debug, Clone)]
@@ -52,15 +57,12 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
     while chunk.cur_pos + variables_length <= chunk.data.len() {
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
 
-        let mut variable_id: Option<i32> = None;
-        let instance_type: GMInstanceType = if general_info.bytecode_version >= 15 {
-            let instance_type_: GMInstanceType = parse_instance_type(chunk.read_i32()? as i16)
+        let b15_data: Option<GMVariableB15Data> = if general_info.bytecode_version >= 15 {
+            let instance_type: GMInstanceType = parse_instance_type(chunk.read_i32()? as i16)
                 .map_err(|e| format!("Could not get instance type for variable \"{}\" while parsing chunk VARI: {e}", name.display(strings)))?;
-            variable_id = Some(chunk.read_i32()?);
-            instance_type_
-        } else {
-            GMInstanceType::Undefined   // idk if this information is even available atp
-        };
+            let variable_id: i32 = chunk.read_i32()?;
+            Some(GMVariableB15Data { instance_type, variable_id })
+        } else { None };
 
         let occurrences_count: i32 = chunk.read_i32()?;
         let occurrences_count: usize = if occurrences_count < 0 { 0 } else { occurrences_count as usize };
@@ -68,25 +70,31 @@ pub fn parse_chunk_vari(chunk: &mut GMChunk, strings: &GMStrings, general_info: 
 
         let (occurrences, name_string_id): (Vec<usize>, i32) = parse_occurrence_chain(
             chunk_code,
+            general_info,
             name.display(strings),
             first_occurrence_address,
             occurrences_count,
+            false,
         )?;
 
         for occurrence in occurrences {
             if let Some(old_value) = occurrence_map.insert(occurrence, GMRef::new(cur_index)) {
                 return Err(format!(
                     "Conflicting occurrence positions while parsing variables: absolute position {} \
-                    was already set for {:?} variable #{} with name \"{}\"; trying to set to variable #{} with name \"{}\"",
-                    occurrence, instance_type, old_value.index, old_value.resolve(&variables)?.name.display(strings), cur_index, name.display(strings),
+                    was already set for {}variable #{} with name \"{}\"; trying to set to variable #{} with name \"{}\"",
+                    occurrence,
+                    b15_data.map_or_else(|| "".to_string(), |i| format!("{} ", i.instance_type)),
+                    old_value.index,
+                    old_value.resolve(&variables)?.name.display(strings),
+                    cur_index,
+                    name.display(strings),
                 ))
             }
         }
 
         variables.push(GMVariable {
             name,
-            instance_type,
-            variable_id,
+            b15_data,
             name_string_id,
         });
         cur_index += 1;

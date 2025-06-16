@@ -122,12 +122,12 @@ impl ModExporter<'_, '_> {
             &self.original_data.codes.codes_by_index,
             &self.modified_data.codes.codes_by_index,
             |i| Ok(AddCode {
-                name: self.convert_string_ref(i.name)?,
+                name: self.convert_string_ref(&i.name)?,
                 instructions: convert_additions(&i.instructions, |i| self.convert_instruction(i))?,
                 bytecode15_info: i.bytecode15_info.as_ref().map(convert_bytecode15_info),
             }),
             |o, m| Ok(EditCode {
-                name: edit_field_convert(o.name, o.name, |r| self.convert_string_ref(r))?,
+                name: edit_field_convert(&o.name, &o.name, |r| self.convert_string_ref(r))?,
                 instructions: export_changes_ordered_list(&o.instructions, &m.instructions, |r| self.convert_instruction(r))?,
                 bytecode15_info: edit_field(&o.bytecode15_info, &m.bytecode15_info).unwrap_or(None).as_ref().map(convert_bytecode15_info),
             })
@@ -168,7 +168,7 @@ impl ModExporter<'_, '_> {
             ),
             GMInstruction::Call(i) => ModInstructionKind::Call(
                 convert_data_type(i.data_type)?,
-                self.convert_function_ref(i.function)?,
+                self.convert_function_ref(&i.function)?,
                 i.arguments_count,
             ),
             GMInstruction::Break(i) => ModInstructionKind::Break(
@@ -198,7 +198,7 @@ impl ModExporter<'_, '_> {
     pub fn convert_instance_type(&self, i: &GMInstanceType) -> Result<ModInstanceType, String> {
         match i {
             GMInstanceType::Undefined => Ok(ModInstanceType::Undefined),
-            GMInstanceType::Instance(obj_ref) => Ok(ModInstanceType::Instance(self.convert_game_object_ref_opt(*obj_ref)?)),
+            GMInstanceType::Instance(obj_ref) => Ok(ModInstanceType::Instance(self.convert_game_object_ref_opt(obj_ref)?)),
             GMInstanceType::Other => Ok(ModInstanceType::Other),
             GMInstanceType::All => Ok(ModInstanceType::All),
             GMInstanceType::None => Ok(ModInstanceType::None),
@@ -213,7 +213,7 @@ impl ModExporter<'_, '_> {
 
     fn convert_code_variable(&self, i: &GMCodeVariable) -> Result<ModCodeVariable, String> {
         Ok(ModCodeVariable {
-            variable: self.convert_variable_ref(i.variable)?,
+            variable: self.convert_variable_ref(&i.variable)?,
             variable_type: match i.variable_type {
                 GMVariableType::Array => ModVariableType::Array,
                 GMVariableType::StackTop => ModVariableType::StackTop,
@@ -233,7 +233,7 @@ impl ModExporter<'_, '_> {
             GMValue::Int32(i) => ModValue::Int32(*i),
             GMValue::Int64(i) => ModValue::Int64(*i),
             GMValue::Boolean(i) => ModValue::Boolean(*i),
-            GMValue::String(i) => ModValue::String(self.convert_string_ref(*i)?),
+            GMValue::String(i) => ModValue::String(self.convert_string_ref(i)?),
             GMValue::Variable(i) => ModValue::Variable(self.convert_code_variable(i)?),
         })
     }
