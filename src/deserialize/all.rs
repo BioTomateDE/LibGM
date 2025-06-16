@@ -10,17 +10,18 @@ use crate::deserialize::embedded_textures::{parse_chunk_txtr, GMEmbeddedTexture}
 use crate::deserialize::fonts::{parse_chunk_font, GMFonts};
 use crate::deserialize::functions::{parse_chunk_func, GMCodeLocal, GMFunctions};
 use crate::deserialize::game_objects::{parse_chunk_objt, GMGameObjects};
-use crate::deserialize::general_info::{parse_chunk_gen8, parse_chunk_optn};
+use crate::deserialize::general_info::parse_chunk_gen8;
 use crate::deserialize::scripts::{parse_chunk_scpt, GMScripts};
 use crate::deserialize::strings::{parse_chunk_strg, GMStrings};
 use crate::deserialize::variables::{parse_chunk_vari, GMVariables};
-use crate::deserialize::general_info::{GMGeneralInfo, GMOptions};
+use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::paths::{parse_chunk_path, GMPaths};
 use crate::deserialize::rooms::{parse_chunk_room, GMRooms};
 use crate::deserialize::sounds::{parse_chunk_sond, GMSounds};
 use crate::deserialize::sprites::{parse_chunk_sprt, GMSprites};
 use crate::deserialize::texture_page_items::{parse_chunk_tpag, GMTextures};
 use crate::bench_parse;
+use crate::deserialize::options::{parse_chunk_optn, GMOptions};
 use crate::deserialize::particles::{parse_chunk_psem, parse_chunk_psys, GMParticleEmitters, GMParticleSystems};
 
 #[derive(Debug, Clone)]
