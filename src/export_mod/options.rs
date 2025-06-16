@@ -3,6 +3,14 @@ use crate::deserialize::general_info::{GMOptions, GMOptionsFlags};
 use crate::export_mod::export::{edit_field, edit_field_convert, edit_field_convert_option, flag_field, ModExporter, ModRef};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
+macro_rules! prevent_changing {
+    ($original:expr, $modified:expr, $field:ident, $name:expr) => {{
+        if $original.$field != $modified.$field {
+            return Err(format!("Changing options field {} is not allowed!", $name))
+        }
+    }};
+}
+
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditOptions {
@@ -84,6 +92,12 @@ impl ModExporter<'_, '_> {
     pub fn export_options(&self) -> Result<EditOptions, String> {
         let o: &GMOptions = &self.original_data.options;
         let m: &GMOptions = &self.modified_data.options;
+        
+        prevent_changing!(o, m, unknown1, "Unknown Value 1");
+        prevent_changing!(o, m, unknown2, "Unknown Value 2");
+        prevent_changing!(o, m, window_scale, "Window Scale (legacy)");
+        prevent_changing!(o, m, window_color, "Window Color (legacy)");
+        
         Ok(EditOptions {
             flags: edit_flags(&o.flags, &m.flags),
             color_depth: edit_field(&o.color_depth, &m.color_depth),
