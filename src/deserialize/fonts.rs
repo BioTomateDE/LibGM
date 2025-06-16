@@ -152,7 +152,7 @@ fn parse_glyphs(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Vec
     for (i, start_position) in glyph_starting_positions.iter().enumerate() {
         chunk.cur_pos = *start_position;
 
-        let character: i16 = chunk.read_i16()?;
+        let character: u16 = chunk.read_u16()?;
         let character: Option<char> = convert_char(character).map_err(|_| format!(
             "Invalid UTF-8 character with code point {character} (0x{character:04X}) at absolute position {} in chunk 'FONT' for glyph #{i}",
             chunk.abs_pos + chunk.cur_pos,
@@ -191,7 +191,7 @@ fn parse_kernings(chunk: &mut GMChunk) -> Result<Vec<GMFontGlyphKerning>, String
     let mut kernings: Vec<GMFontGlyphKerning> = Vec::with_capacity(kerning_count);
     
     for i in 0..kerning_count {
-        let character: i16 = chunk.read_i16()?;
+        let character: u16 = chunk.read_u16()?;
         let character: char = convert_char(character)
             .map_err(|_| format!("Invalid UTF-8 character with code point {character} (0x{character:04X}) for Kerning #{i}"))?
             .ok_or_else(|| format!("Character not set (code point is zero) for Kerning #{i}"))?;
@@ -207,7 +207,7 @@ fn parse_kernings(chunk: &mut GMChunk) -> Result<Vec<GMFontGlyphKerning>, String
 }
 
 
-fn convert_char(codepoint: i16) -> Result<Option<char>, ()> {
+fn convert_char(codepoint: u16) -> Result<Option<char>, ()> {
     if codepoint == 0 {
         return Ok(None);
     }
