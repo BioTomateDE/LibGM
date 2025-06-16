@@ -289,24 +289,28 @@ impl ModExporter<'_, '_> {
                     &m.backgrounds,
                     |i| self.add_room_background(i),
                     |o, m| self.edit_room_background(o, m),
+                    false,
                 )?,
                 views: export_changes_unordered_list(
                     &o.views,
                     &m.views,
                     |i| self.add_room_view(i),
                     |o, m| self.edit_room_view(o, m),
+                    false,
                 )?,
                 game_objects: export_changes_unordered_list(
                     &o.game_objects,
                     &m.game_objects,
                     |i| self.add_room_game_object(i),
                     |o, m| self.edit_room_game_object(o, m),
+                    false,
                 )?,
                 tiles: export_changes_unordered_list(
                     &o.tiles,
                     &m.tiles,
                     |i| self.add_room_tile(i),
                     |o, m| self.edit_room_tile(o, m),
+                    false,
                 )?,
                 world: edit_field(&o.world, &m.world),
                 top: edit_field(&o.top, &m.top),
@@ -322,6 +326,7 @@ impl ModExporter<'_, '_> {
                         m_layers,
                         |i| self.add_room_layer(i),
                         |o, m| self.edit_room_layer(o, m),
+                        false,
                     )?)
                 } else { None },
                 sequences: if let Some(ref m_sequences) = m.sequences {
@@ -330,9 +335,11 @@ impl ModExporter<'_, '_> {
                         m_sequences,
                         |i| self.add_sequence(i),
                         |o, m| self.edit_sequence(o, m),
+                        false,
                     )?)
                 } else { None },
             }),
+            false,
         )
     }
 

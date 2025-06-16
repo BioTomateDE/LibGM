@@ -9,6 +9,7 @@ impl ModExporter<'_, '_> {
             &self.modified_data.strings.strings_by_index,
             |i| Ok(i.clone()),
             |_, m| Ok(m.clone()),
+            false,
         )
     }
 }

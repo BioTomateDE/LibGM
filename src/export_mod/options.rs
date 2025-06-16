@@ -119,7 +119,8 @@ impl ModExporter<'_, '_> {
                 |o, m| Ok(EditOptionsConstant {
                     name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
                     value: edit_field_convert(&o.value, &m.value, |r| self.convert_string_ref(r))?,
-                })
+                }),
+                false,
             )?,
         })
     }
