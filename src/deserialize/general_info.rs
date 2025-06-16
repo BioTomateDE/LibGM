@@ -69,7 +69,7 @@ impl GMGeneralInfo {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMVersion {
     pub major: u32,
     pub minor: u32,
@@ -209,7 +209,7 @@ pub struct GMOptionsFlags {
     pub enable_copy_on_write: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMOptionsWindowColor {
     pub r: u8,
     pub g: u8,
