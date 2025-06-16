@@ -305,18 +305,6 @@ pub fn edit_field_convert_option<GM: PartialEq, MOD>(
         Ok(None)
     }
 }
-// pub fn edit_field_map_option<GM: PartialEq, MOD>(
-//     original: &GM,
-//     modified: &GM,
-//     map_fn: impl Fn(&GM, &GM) -> Result<MOD, String>,
-// ) -> Result<Option<MOD>, String> {
-//     if original != modified {
-//         Ok(Some(map_fn(original, modified)?))
-//     } else {
-//         Ok(None)
-//     }
-// }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EditWrapper<A, E> {
