@@ -436,15 +436,11 @@ pub fn parse_instruction(
             ))?;
 
             // Ensure basic conditions hold
-            if b0 != 0 && opcode != GMOpcode::Dup && opcode != GMOpcode::CallV {
+            if b0 != 0 && !matches!(opcode, GMOpcode::Dup | GMOpcode::CallV) {
                 return Err(format!("Invalid padding {:02X} while parsing Single Type Instruction", b0));
             }
             if b2 >> 4 != 0 {
                 return Err(format!("Second type should be zero but is {0} (0x{0:02X}) for Single Type Instruction", b2 >> 4))
-            }
-
-            if b1 != 0 {
-                return Err(format!("b1 should be zero but is {b1} (0x{b1:02X}) for Single Type Instruction"))
             }
 
             Ok(GMInstruction::SingleType(GMSingleTypeInstruction {
@@ -465,7 +461,7 @@ pub fn parse_instruction(
                 "Invalid Data Type {type2:02X} while parsing Double Type Instruction"
             ))?;
 
-            if b1 != 0 {
+            if b1 != 0 {    // might be incorrect; remove if issues
                 return Err(format!("b1 should be zero but is {b1} (0x{b1:02X}) for Double Type Instruction"))
             }
 

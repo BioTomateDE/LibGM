@@ -46,9 +46,8 @@ pub fn parse_chunk_func(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
     for i in 0..functions_count {
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
         let occurrence_count: usize = chunk.read_usize_pos()?;
-        let  first_occurrence_abs_pos: i32 = chunk.read_i32()?;
+        let first_occurrence_abs_pos: i32 = chunk.read_i32()?;
 
-        println!("gdsgh {} {}", occurrence_count, first_occurrence_abs_pos);
         let (occurrences, name_string_id): (Vec<usize>, i32) = parse_occurrence_chain(
             chunk_code,
             general_info,
