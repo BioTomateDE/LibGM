@@ -677,17 +677,21 @@ pub fn parse_occurrence_chain(
     chunk_code: &mut GMChunk,
     general_info: &GMGeneralInfo,
     gm_name: &str,
-    mut first_occurrence_abs_pos: i32,
+    first_occurrence_abs_pos: i32,
     occurrence_count: usize,
     is_function: bool,
 ) -> Result<(Vec<usize>, i32), String> {
     if occurrence_count < 1 {
         return Ok((vec![], first_occurrence_abs_pos));
     }
-    if is_function && general_info.is_version_at_least(2, 3, 0, 0) {
-        first_occurrence_abs_pos -= 4;
-    }
-    let occurrence_pos: i32 = first_occurrence_abs_pos - chunk_code.abs_pos as i32 + 4;
+    // FIXME: in UTMT, this is checked using gmversion 2.3 (not 2.0!); but deltarune 1.00 (?) has gmversion 2.0.0.0 and needs the zero offset.
+    // if are any errors regarding function parsing, this is probably the cause
+    let initial_offset: i32 = if is_function && general_info.is_version_at_least(2, 0, 0, 0) {
+        0
+    } else {
+        4
+    };
+    let occurrence_pos: i32 = first_occurrence_abs_pos - chunk_code.abs_pos as i32 + initial_offset;
     let mut occurrence_pos: usize = occurrence_pos.try_into()
         .map_err(|_| format!(
             "First occurrence of {} \"{}\" is out of bounds; should be: {} <= {} < {}",
@@ -700,13 +704,11 @@ pub fn parse_occurrence_chain(
     for _ in 0..occurrence_count {
         occurrences.push(occurrence_pos);
         chunk_code.cur_pos = occurrence_pos;
-        // println!("gdsmjigds {}", crate::printing::hexdump(chunk_code.data, occurrence_pos-8, Some(occurrence_pos+8))?);
         offset = read_occurrence(chunk_code, is_function)?;
-        // println!("*#$YUDFGB {occurrence_count} | {offset} = 0x{offset:08X}");
         occurrence_pos += offset as usize;
     }
 
-    let name_string_id: i32 = offset;
+    let name_string_id: i32 = offset & 0xFFFFFF;
 
     Ok((occurrences, name_string_id))
 }
