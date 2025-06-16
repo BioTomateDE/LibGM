@@ -14,7 +14,7 @@ use crate::deserialize::strings::GMStrings;
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMRoom {
     pub name: GMRef<String>,
-    pub caption: GMRef<String>,
+    pub caption: Option<GMRef<String>>,
     pub width: u32,
     pub height: u32,
     pub speed: u32,
@@ -162,7 +162,7 @@ pub fn parse_chunk_room(chunk: &mut GMChunk, general_info: &GMGeneralInfo, gm_st
         chunk.cur_pos = start_position;
 
         let name: GMRef<String> = chunk.read_gm_string(gm_strings)?;
-        let caption: GMRef<String> = chunk.read_gm_string(gm_strings)?;
+        let caption: Option<GMRef<String>> = chunk.read_gm_string_optional(gm_strings)?;
         let width: u32 = chunk.read_u32()?;
         let height: u32 = chunk.read_u32()?;
         let speed: u32 = chunk.read_u32()?;

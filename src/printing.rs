@@ -461,7 +461,7 @@ impl GMRoom {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMRoom:");
         println!("  Name: \"{}\"", self.name.resolve(&strings.strings_by_index)?);
-        println!("  Caption: \"{}\"", self.caption.resolve(&strings.strings_by_index)?);
+        println!("  Caption: \"{}\"", resolve_str_maybe(&self.caption, strings));
         println!("  Dimensions: {}x{}", self.width, self.height);
         println!("  Speed: {}", self.speed);
         println!("  Persistent: {}", self.persistent);
@@ -710,7 +710,7 @@ impl GMSound {
         println!("GMSound:");
         println!("  Name: \"{}\"", self.name.resolve(&strings.strings_by_index)?);
         println!("  Flags: {}", self.flags.to_string());
-        println!("  Audio Type: \"{}\"", self.audio_type.resolve(&strings.strings_by_index)?);
+        println!("  Audio Type: \"{}\"", resolve_str_maybe(&self.audio_type, strings));
         println!("  File: \"{}\"", self.file.resolve(&strings.strings_by_index)?);
         println!("  Effects: {}", self.effects);
         println!("  Volume: {}", self.volume);

@@ -7,7 +7,7 @@ use crate::deserialize::strings::GMStrings;
 pub struct GMSound {
     pub name: GMRef<String>,                         // e.g. "abc_123_a"
     pub flags: GMSoundFlags,                         // e.g. Regular
-    pub audio_type: GMRef<String>,                   // e.g. ".mp3"
+    pub audio_type: Option<GMRef<String>>,           // e.g. ".mp3"
     pub file: GMRef<String>,                         // e.g. "abc_123_a.ogg"; doesn't have to actually be a real file in game files (rather embedded audio)
     pub effects: u32,                                // idk; always zero
     pub volume: f32,                                 // e.g. 0.69
@@ -45,7 +45,7 @@ pub fn parse_chunk_sond(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
         chunk.cur_pos = start_position;
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
         let flags: GMSoundFlags = parse_sound_flags(chunk.read_u32()?);
-        let audio_type: GMRef<String> = chunk.read_gm_string(strings)?;
+        let audio_type: Option<GMRef<String>> = chunk.read_gm_string_optional(strings)?;
         let file: GMRef<String> = chunk.read_gm_string(strings)?;
         let effects: u32 = chunk.read_u32()?;
         let volume: f32 = chunk.read_f32()?;

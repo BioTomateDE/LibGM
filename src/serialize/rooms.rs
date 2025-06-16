@@ -29,7 +29,7 @@ pub fn build_chunk_room(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
 
 fn build_room(builder: &mut DataBuilder, general_info: &GMGeneralInfo, strings: &GMStrings, room_index: usize, room: &GMRoom) -> Result<(), String> {
     builder.write_gm_string(&room.name)?;
-    builder.write_gm_string(&room.caption)?;
+    builder.write_gm_string_optional(&room.caption)?;
     builder.write_u32(room.width);
     builder.write_u32(room.height);
     builder.write_u32(room.speed);

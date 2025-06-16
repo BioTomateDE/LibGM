@@ -16,7 +16,7 @@ pub fn build_chunk_sond(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
         let sound: &GMSound = &gm_data.sounds.sounds_by_index[i];
         builder.write_gm_string(&sound.name)?;
         builder.write_u32(build_sound_flags(&sound.flags));
-        builder.write_gm_string(&sound.audio_type)?;
+        builder.write_gm_string_optional(&sound.audio_type)?;
         builder.write_gm_string(&sound.file)?;
         builder.write_u32(sound.effects);
         builder.write_f32(sound.volume);
