@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::time::{Duration, Instant};
 use cpu_time::ProcessTime;
@@ -69,6 +70,51 @@ impl DurationExt for Duration {
     fn ms(&self) -> String {
         format!("{:.2} ms", self.as_secs_f64() * 1000.0)
     }
+}
+
+
+
+pub(crate) type RuntimeData = HashMap<&'static str, (Duration, usize)>; // (total_time, call_count)
+
+/// how to use
+/// - import crate once_cell
+/// ```
+/// static RUNTIME_STATS: Lazy<Mutex<RuntimeData>> = Lazy::new(|| 
+///     Mutex::new(HashMap::new())
+/// );
+/// ...
+/// track_runtime!("my_function_name", {
+///    // logic here
+/// });
+/// print_runtime_stats!();
+/// ```
+#[macro_export]
+macro_rules! track_runtime {
+    ($fn_name:expr, $code:block) => {{
+        use ::std::time::{Instant, Duration};
+        let start = Instant::now();
+        let result = $code;
+        let elapsed = start.elapsed();
+
+        let mut stats = RUNTIME_STATS.lock().unwrap();
+        let entry = stats.entry($fn_name).or_insert((Duration::ZERO, 0));
+        entry.0 += elapsed;
+        entry.1 += 1;
+
+        result
+    }};
+}
+#[macro_export]
+macro_rules! print_runtime_stats {
+    () => {{
+       let stats = RUNTIME_STATS.lock().unwrap();
+        println!("{:<20} | {:>12} | {:>10} | {:>12}", "Function", "Calls", "Total Time", "Avg/Call");
+        println!("{}", "-".repeat(70));
+        for (name, (total, calls)) in stats.iter() {
+            let avg = *total / (*calls as u32).max(1);
+            println!("{:<20} | {:>12} | {:>10.3?} | {:>10.3?}", name, calls, total, avg);
+        }
+    }}
 }
 
 
