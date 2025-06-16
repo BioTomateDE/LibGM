@@ -12,7 +12,7 @@ use crate::serialize::fonts::build_chunk_font;
 use crate::serialize::functions::build_chunk_func;
 use crate::serialize::game_objects::build_chunk_objt;
 use crate::serialize::strings::build_chunk_strg;
-use crate::serialize::general_info::{build_chunk_optn, build_chunk_gen8};
+use crate::serialize::general_info::build_chunk_gen8;
 use crate::serialize::paths::build_chunk_path;
 use crate::serialize::rooms::build_chunk_room;
 use crate::serialize::scripts::build_chunk_scpt;
@@ -22,6 +22,7 @@ use crate::serialize::stubs::{build_chunk_agrp, build_chunk_dafl, build_chunk_ex
 use crate::serialize::texture_page_items::build_chunk_tpag;
 use crate::serialize::variables::build_chunk_vari;
 use crate::bench_build;
+use crate::serialize::options::build_chunk_optn;
 use crate::serialize::particles::{build_chunk_psem, build_chunk_psys};
 
 pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
