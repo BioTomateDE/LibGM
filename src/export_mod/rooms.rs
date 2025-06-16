@@ -7,7 +7,7 @@ use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnord
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddRoom {
     pub name: ModRef,
-    pub caption: ModRef,
+    pub caption: Option<ModRef>,
     pub width: u32,
     pub height: u32,
     pub speed: u32,
@@ -116,7 +116,7 @@ pub struct AddRoomFlags {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditRoom {
     pub name: Option<ModRef>,
-    pub caption: Option<ModRef>,
+    pub caption: Option<Option<ModRef>>,
     pub width: Option<u32>,
     pub height: Option<u32>,
     pub speed: Option<u32>,
@@ -241,7 +241,7 @@ impl ModExporter<'_, '_> {
             &self.modified_data.rooms.rooms_by_index,
             |i| Ok(AddRoom {
                 name: self.convert_string_ref(&i.name)?,
-                caption: self.convert_string_ref(&i.caption)?,
+                caption: self.convert_string_ref_opt(&i.caption)?,
                 width: i.width,
                 height: i.height,
                 speed: i.speed,
@@ -275,7 +275,7 @@ impl ModExporter<'_, '_> {
             }),
             |o, m| Ok(EditRoom {
                 name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
-                caption: edit_field_convert(&o.caption, &m.caption, |r| self.convert_string_ref(r))?,
+                caption: edit_field_convert_option(&o.caption, &m.caption, |r| self.convert_string_ref(r))?,
                 width: edit_field(&o.width, &m.width),
                 height: edit_field(&o.height, &m.height),
                 speed: edit_field(&o.speed, &m.speed),
