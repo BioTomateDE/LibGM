@@ -1,5 +1,5 @@
 use crate::deserialize::all::GMData;
-use crate::deserialize::backgrounds::{GMBackground, GMBackgroundGMS2Data};
+use crate::deserialize::backgrounds::GMBackgroundGMS2Data;
 use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 
 pub fn build_chunk_bgnd(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
