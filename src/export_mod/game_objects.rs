@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::deserialize::game_objects::{GMGameObjectCollisionShape, GMGameObjectEvent, GMGameObjectEventAction};
 use crate::export_mod::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, ModExporter, ModRef};
-use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
+use crate::export_mod::unordered_list::{export_changes_unordered_list, export_changes_unordered_list_allow_less, EditUnorderedList};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddGameObject {
@@ -169,7 +169,7 @@ impl ModExporter<'_, '_> {
                 continue
             }
             
-            edited_events.push(export_changes_unordered_list(
+            edited_events.push(export_changes_unordered_list_allow_less(
                 original_event,
                 modified_event,
                 |i| Ok(AddGameObjectEvent {
