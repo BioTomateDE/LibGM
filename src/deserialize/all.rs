@@ -1,7 +1,6 @@
 use crate::debug_utils::Stopwatch;
 use std::collections::HashMap;
 use std::fs;
-use std::io::Read;
 use std::path::Path;
 use crate::deserialize::backgrounds::{parse_chunk_bgnd, GMBackgrounds};
 use crate::deserialize::chunk_reading::GMChunk;
@@ -105,7 +104,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let mut chunk_path: GMChunk = get_chunk(&chunks, "PATH")?;
 
     let mut chunk_psys: Option<GMChunk> = chunks.get("PSYS").cloned();
-    let mut chunk_psem: Option<GMChunk> = chunks.get("PSEM").cloned();
+    let chunk_psem: Option<GMChunk> = chunks.get("PSEM").cloned();
     // TODO implement all other chunks
     
     log::trace!("Parsing FORM took {stopwatch}");
