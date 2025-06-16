@@ -91,20 +91,20 @@ impl ModExporter<'_, '_> {
             frequency: edit_field(&o.frequency, &m.frequency),
             vertex_sync: edit_field(&o.vertex_sync, &m.vertex_sync),
             priority: edit_field(&o.priority, &m.priority),
-            back_image: edit_field_convert_option(o.back_image, m.back_image, |r| self.convert_texture_ref_opt(r))?.unwrap_or(None),
-            front_image: edit_field_convert_option(o.front_image, m.front_image, |r| self.convert_texture_ref_opt(r))?.unwrap_or(None),
-            load_image: edit_field_convert_option(o.load_image, m.load_image, |r| self.convert_texture_ref_opt(r))?.unwrap_or(None),
+            back_image: edit_field_convert_option(&o.back_image, &m.back_image, |r| self.convert_texture_ref(r))?.unwrap_or(None),
+            front_image: edit_field_convert_option(&o.front_image, &m.front_image, |r| self.convert_texture_ref(r))?.unwrap_or(None),
+            load_image: edit_field_convert_option(&o.load_image, &m.load_image, |r| self.convert_texture_ref(r))?.unwrap_or(None),
             load_alpha: edit_field(&o.load_alpha, &m.load_alpha),
             constants: export_changes_unordered_list(
                 &o.constants,
                 &m.constants,
                 |i| Ok(AddOptionsConstant {
-                    name: self.convert_string_ref(i.name)?,
-                    value: self.convert_string_ref(i.value)?,
+                    name: self.convert_string_ref(&i.name)?,
+                    value: self.convert_string_ref(&i.value)?,
                 }),
                 |o, m| Ok(EditOptionsConstant {
-                    name: edit_field_convert(o.name, m.name, |r| self.convert_string_ref(r))?,
-                    value: edit_field_convert(o.value, m.value, |r| self.convert_string_ref(r))?,
+                    name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
+                    value: edit_field_convert(&o.value, &m.value, |r| self.convert_string_ref(r))?,
                 })
             )?,
         })

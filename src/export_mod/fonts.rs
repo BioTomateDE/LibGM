@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::deserialize::fonts::GMFontGlyph;
-use crate::export_mod::export::{convert_additions, edit_field, edit_field_option, ModExporter, ModRef};
+use crate::export_mod::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, edit_field_option, ModExporter, ModRef};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
 
@@ -76,8 +76,8 @@ impl ModExporter<'_, '_> {
             &self.original_data.fonts.fonts_by_index,
             &self.modified_data.fonts.fonts_by_index,
             |i| Ok(AddFont {
-                name: self.convert_string_ref(i.name)?,
-                display_name: self.convert_string_ref_opt(i.display_name)?,
+                name: self.convert_string_ref(&i.name)?,
+                display_name: self.convert_string_ref_opt(&i.display_name)?,
                 em_size: i.em_size,
                 bold: i.bold,
                 italic: i.italic,
@@ -85,7 +85,7 @@ impl ModExporter<'_, '_> {
                 charset: i.charset,
                 anti_alias: i.anti_alias,
                 range_end: i.range_end,
-                texture: self.convert_texture_ref(i.texture)?,
+                texture: self.convert_texture_ref(&i.texture)?,
                 scale_x: i.scale_x,
                 scale_y: i.scale_y,
                 ascender_offset: i.ascender_offset,
@@ -95,8 +95,8 @@ impl ModExporter<'_, '_> {
                 glyphs: convert_additions(&i.glyphs, add_font_glyph)?,
             }),
             |o, m| Ok(EditFont {
-                name: edit_field(&self.convert_string_ref(o.name)?, &self.convert_string_ref(m.name)?),
-                display_name: edit_field_option(self.convert_string_ref_opt(o.display_name)?, self.convert_string_ref_opt(m.display_name)?),
+                name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
+                display_name: edit_field_convert_option(&o.display_name, &m.display_name, |r| self.convert_string_ref(r))?,
                 em_size: edit_field(&o.em_size, &m.em_size),
                 bold: edit_field(&o.bold, &m.bold),
                 italic: edit_field(&o.italic, &m.italic),
@@ -104,13 +104,13 @@ impl ModExporter<'_, '_> {
                 charset: edit_field(&o.charset, &m.charset),
                 anti_alias: edit_field(&o.anti_alias, &m.anti_alias),
                 range_end: edit_field(&o.range_end, &m.range_end),
-                texture: edit_field(&self.convert_texture_ref(o.texture)?, &self.convert_texture_ref(m.texture)?),
+                texture: edit_field_convert(&o.texture, &m.texture, |r| self.convert_texture_ref(r))?,
                 scale_x: edit_field(&o.scale_x, &m.scale_x),
                 scale_y: edit_field(&o.scale_y, &m.scale_y),
-                ascender_offset: edit_field_option(o.ascender_offset, m.ascender_offset),
-                ascender: edit_field_option(o.ascender, m.ascender),
-                sdf_spread: edit_field_option(o.sdf_spread, m.sdf_spread),
-                line_height: edit_field_option(o.line_height, m.line_height),
+                ascender_offset: edit_field_option(&o.ascender_offset, &m.ascender_offset),
+                ascender: edit_field_option(&o.ascender, &m.ascender),
+                sdf_spread: edit_field_option(&o.sdf_spread, &m.sdf_spread),
+                line_height: edit_field_option(&o.line_height, &m.line_height),
                 glyphs: export_changes_unordered_list(&o.glyphs, &m.glyphs, add_font_glyph, edit_font_glyph)?,
             })
         )
@@ -132,7 +132,7 @@ fn add_font_glyph(i: &GMFontGlyph) -> Result<AddFontGlyph, String> {
 
 fn edit_font_glyph(o: &GMFontGlyph, m: &GMFontGlyph) -> Result<EditFontGlyph, String> {
     Ok(EditFontGlyph {
-        character: edit_field_option(o.character, m.character),
+        character: edit_field_option(&o.character, &m.character),
         x: edit_field(&o.x, &m.x),
         y: edit_field(&o.y, &m.y),
         width: edit_field(&o.width, &m.width),
