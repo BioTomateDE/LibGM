@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::deserialize::sounds::GMSoundFlags;
-use crate::export_mod::export::{edit_field, edit_field_convert, flag_field, ModExporter, ModRef};
+use crate::export_mod::export::{edit_field, edit_field_convert, edit_field_convert_option, flag_field, ModExporter, ModRef};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
 
@@ -53,25 +53,25 @@ impl ModExporter<'_, '_> {
             &self.original_data.sounds.sounds_by_index,
             &self.modified_data.sounds.sounds_by_index,
             |i| Ok(AddSound {
-                name: self.convert_string_ref(i.name)?,
+                name: self.convert_string_ref(&i.name)?,
                 flags: add_sound_flags(&i.flags),
-                audio_type: self.convert_string_ref(i.audio_type)?,
-                file: self.convert_string_ref(i.file)?,
+                audio_type: self.convert_string_ref(&i.audio_type)?,
+                file: self.convert_string_ref(&i.file)?,
                 effects: i.effects,
                 volume: i.volume,
                 pitch: i.pitch,
-                audio_file: self.convert_audio_ref_opt(i.audio_file)?,
+                audio_file: self.convert_audio_ref_opt(&i.audio_file)?,
                 audio_length: i.audio_length,
             }),
             |o, m| Ok(EditSound {
-                name: edit_field_convert(o.name, m.name, |r| self.convert_string_ref(r))?,
+                name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
                 flags: edit_sound_flags(&o.flags, &m.flags),
-                audio_type: edit_field_convert(o.audio_type, m.audio_type, |r| self.convert_string_ref(r))?,
-                filename: edit_field_convert(o.file, m.file, |r| self.convert_string_ref(r))?,
+                audio_type: edit_field_convert(&o.audio_type, &m.audio_type, |r| self.convert_string_ref(r))?,
+                filename: edit_field_convert(&o.file, &m.file, |r| self.convert_string_ref(r))?,
                 effects: edit_field(&o.effects, &m.effects),
                 volume: edit_field(&o.volume, &m.volume),
                 pitch: edit_field(&o.pitch, &m.pitch),
-                audio_data: edit_field(&self.convert_audio_ref_opt(o.audio_file)?, &self.convert_audio_ref_opt(m.audio_file)?),
+                audio_data: edit_field_convert_option(&o.audio_file, &m.audio_file, |r| self.convert_audio_ref(r))?,
                 audio_length: edit_field(&o.audio_length, &m.audio_length),
             }),
         )

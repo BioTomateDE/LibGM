@@ -56,6 +56,9 @@ pub struct GMChunk<'a> {
 
 impl<'a> GMChunk<'a> {
     pub fn read_bytes_dyn(&mut self, count: usize) -> Result<&'a [u8], String> {
+        if self.cur_pos+count > self.data.len() {
+            log::error!("this is only here for easy breakpoints; comment out this if statement otherwise")
+        }
         let slice: &[u8] = self.data.get(self.cur_pos..self.cur_pos+count).ok_or_else(|| format!(
             "out of bounds at absolute position {} in chunk '{}': {} > {}",
             self.cur_pos+self.abs_pos, self.name, self.cur_pos+self.abs_pos+count, self.data.len(),
@@ -190,9 +193,9 @@ impl<'a> GMChunk<'a> {
 
     pub fn read_gm_string(&mut self, gm_strings: &GMStrings) -> Result<GMRef<String>, String> {
         let string_abs_pos: usize = self.read_usize_pos()?;
-        if gm_strings.abs_pos_to_reference.get(&string_abs_pos).is_none() {
-            log::error!("this is only here for easy breakpoints; comment out this if statement otherwise")
-        }
+        // if gm_strings.abs_pos_to_reference.get(&string_abs_pos).is_none() {
+        //     log::error!("this is only here for easy breakpoints; comment out this if statement otherwise")
+        // }
         let string_ref = gm_strings.abs_pos_to_reference.get(&string_abs_pos)
             .ok_or_else(|| format!(
                 "Could not read reference string with absolute position {} in chunk '{}' at \

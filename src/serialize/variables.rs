@@ -1,7 +1,7 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::code::GMVariableType;
 use crate::deserialize::general_info::GMGeneralInfo;
-use crate::deserialize::variables::{GMVariable, GMVariablesScuffed};
+use crate::deserialize::variables::{GMVariable, GMVariableB15Data, GMVariablesScuffed};
 use crate::serialize::chunk_writing::DataBuilder;
 use crate::serialize::code::{build_instance_type, Occurrences};
 
@@ -32,8 +32,9 @@ pub fn build_chunk_vari(builder: &mut DataBuilder, gm_data: &GMData, variable_oc
 fn build_variable(builder: &mut DataBuilder, general_info: &GMGeneralInfo, variable: &GMVariable, variable_occurrences: Option<&Vec<(usize, Option<GMVariableType>)>>) -> Result<(), String> {
     builder.write_gm_string(&variable.name)?;
     if general_info.bytecode_version >= 15 {
-        builder.write_i32(build_instance_type(&variable.instance_type) as i32);
-        builder.write_i32(variable.variable_id.ok_or("Variable ID not set")?);
+        let b15_data: &GMVariableB15Data = variable.b15_data.as_ref().ok_or("Bytecode 15 data not set")?;
+        builder.write_i32(i32::from(build_instance_type(&b15_data.instance_type)));
+        builder.write_i32(b15_data.variable_id);
     }
     
     if let Some(occurrences) = variable_occurrences {

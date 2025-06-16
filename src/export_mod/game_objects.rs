@@ -82,15 +82,15 @@ impl ModExporter<'_, '_> {
             &self.original_data.game_objects.game_objects_by_index,
             &self.modified_data.game_objects.game_objects_by_index,
             |i| Ok(AddGameObject {
-                name: self.convert_string_ref(i.name)?,
-                sprite: self.convert_sprite_ref_opt(i.sprite)?,
+                name: self.convert_string_ref(&i.name)?,
+                sprite: self.convert_sprite_ref_opt(&i.sprite)?,
                 visible: i.visible,
                 managed: i.managed,
                 solid: i.solid,
                 depth: i.depth,
                 persistent: i.persistent,
-                parent: self.convert_game_object_ref_opt(i.parent)?,
-                texture_mask: self.convert_sprite_ref_opt(i.texture_mask)?,
+                parent: self.convert_game_object_ref_opt(&i.parent)?,
+                texture_mask: self.convert_sprite_ref_opt(&i.texture_mask)?,
                 uses_physics: i.uses_physics,
                 is_sensor: i.is_sensor,
                 collision_shape: i.collision_shape,
@@ -112,15 +112,15 @@ impl ModExporter<'_, '_> {
                 )?,
             }),
             |o, m| Ok(EditGameObject {
-                name: edit_field_convert(o.name, m.name, |r| self.convert_string_ref(r))?,
-                sprite: edit_field_convert_option(o.sprite, m.sprite, |r| self.convert_sprite_ref_opt(r))?,
+                name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(&r))?,
+                sprite: edit_field_convert_option(&o.sprite, &m.sprite, |r| self.convert_sprite_ref(r))?,
                 visible: edit_field(&o.visible, &m.visible),
                 managed: edit_field(&o.managed, &m.managed),
                 solid: edit_field(&o.solid, &m.solid),
                 depth: edit_field(&o.depth, &m.depth),
                 persistent: edit_field(&o.persistent, &m.persistent),
-                parent: edit_field_convert_option(o.parent, m.parent, |r| self.convert_game_object_ref_opt(r))?,
-                texture_mask: edit_field_convert_option(o.texture_mask, m.texture_mask, |r| self.convert_sprite_ref_opt(r))?,
+                parent: edit_field_convert_option(&o.parent, &m.parent, |r| self.convert_game_object_ref(r))?,
+                texture_mask: edit_field_convert_option(&o.texture_mask, &m.texture_mask, |r| self.convert_sprite_ref(r))?,
                 uses_physics: edit_field(&o.uses_physics, &m.uses_physics),
                 is_sensor: edit_field(&o.is_sensor, &m.is_sensor),
                 collision_shape: edit_field(&o.collision_shape, &m.collision_shape),
@@ -148,7 +148,7 @@ impl ModExporter<'_, '_> {
     
     fn add_event_action(&self, i: &GMGameObjectEventAction) -> Result<AddGameObjectEventAction, String> {
         Ok(AddGameObjectEventAction {
-            code: self.convert_code_ref_opt(i.code)?,
+            code: self.convert_code_ref_opt(&i.code)?,
         })
     }
     
@@ -192,7 +192,7 @@ impl ModExporter<'_, '_> {
     
     fn edit_event_action(&self, o: &GMGameObjectEventAction, m: &GMGameObjectEventAction) -> Result<EditGameObjectEventAction, String> {
         Ok(EditGameObjectEventAction {
-            code: edit_field_convert_option(o.code, m.code, |r| self.convert_code_ref_opt(r))?,
+            code: edit_field_convert_option(&o.code, &m.code, |r| self.convert_code_ref(r))?,
         })
     }
 }
