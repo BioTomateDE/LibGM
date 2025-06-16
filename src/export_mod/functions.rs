@@ -30,7 +30,8 @@ impl ModExporter<'_, '_> {
             |o, m| Ok(EditFunction {
                 name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
                 name_string_id: None,
-            })
+            }),
+            false,
         )
     }
 }

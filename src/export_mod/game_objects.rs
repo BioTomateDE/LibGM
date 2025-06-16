@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::deserialize::game_objects::{GMGameObjectCollisionShape, GMGameObjectEvent, GMGameObjectEventAction};
 use crate::export_mod::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, ModExporter, ModRef};
-use crate::export_mod::unordered_list::{export_changes_unordered_list, export_changes_unordered_list_allow_less, EditUnorderedList};
+use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddGameObject {
@@ -135,7 +135,8 @@ impl ModExporter<'_, '_> {
                 physics_shape_vertices: edit_field(&o.physics_shape_vertices, &m.physics_shape_vertices),
                 uses_physics_shape_vertex: edit_field(&o.uses_physics_shape_vertex, &m.uses_physics_shape_vertex),
                 events: self.edit_events(&o.events, &m.events)?,
-            })
+            }),
+            false,
         )
     }
     
@@ -169,7 +170,7 @@ impl ModExporter<'_, '_> {
                 continue
             }
             
-            edited_events.push(export_changes_unordered_list_allow_less(
+            edited_events.push(export_changes_unordered_list(
                 original_event,
                 modified_event,
                 |i| Ok(AddGameObjectEvent {
@@ -183,8 +184,10 @@ impl ModExporter<'_, '_> {
                         &m.actions,
                         |i| self.add_event_action(i),
                         |o, m| self.edit_event_action(o, m),
+                        false,
                     )?,
                 }),
+                true,
             )?);
         }
         Ok(edited_events)

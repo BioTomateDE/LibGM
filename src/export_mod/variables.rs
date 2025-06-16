@@ -50,6 +50,7 @@ impl ModExporter<'_, '_> {
                 )?,
                 name_string_id: edit_field(&o.name_string_id, &m.name_string_id),
             }),
+            false,
         )
     }
     

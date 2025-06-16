@@ -9,6 +9,7 @@ impl ModExporter<'_, '_> {
             &self.modified_data.audios.audios_by_index,
             |i| Ok(i.raw_data.to_vec()),
             |_, m| Ok(m.raw_data.to_vec()),
+            false,
         )
     }
 }
