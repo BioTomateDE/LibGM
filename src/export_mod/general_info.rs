@@ -4,6 +4,22 @@ use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo,
 use crate::export_mod::export::{edit_field, edit_field_convert, flag_field, ModExporter, ModRef};
 use crate::export_mod::ordered_list::{export_changes_ordered_list, DataChange};
 
+macro_rules! prevent_enabling {
+    ($original:expr, $modified:expr, $field:ident) => {{
+        if !$original.$field && $modified.$field {
+            return Err(format!("Enabling function classification {} is not allowed for security reasons!", stringify!($field)))
+        }
+    }};
+}
+
+macro_rules! prevent_changing {
+    ($original:expr, $modified:expr, $field:ident, $name:expr) => {{
+        if $original.$field != $modified.$field {
+            return Err(format!("Changing general info field {} is not allowed!", $name))
+        }
+    }};
+}
+
 
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -21,7 +37,6 @@ pub struct EditGeneralInfo {
     pub steam_app_id: Option<i32>,
     pub debugger_port: Option<Option<u32>>,
     pub flags: EditGeneralInfoFlags,
-    // pub active_targets: Option<u64>,    // change type to some flag struct soon
     pub function_classifications: EditFunctionClassifications,
     pub room_order: Vec<DataChange<ModRef>>,    // GMRoom reference
 }
@@ -312,6 +327,15 @@ impl ModExporter<'_, '_> {
     pub fn export_general_info(&self) -> Result<EditGeneralInfo, String> {
         let o: &GMGeneralInfo = &self.original_data.general_info;
         let m: &GMGeneralInfo = &self.modified_data.general_info;
+        
+        prevent_changing!(o, m, bytecode_version, "Bytecode Version");
+        prevent_changing!(o, m, unknown_value, "Unknown Value");
+        prevent_changing!(o, m, directplay_guid, "Directplay GUID");
+        prevent_changing!(o, m, version, "GameMaker version");
+        prevent_changing!(o, m, license_crc32, "Licence (CRC32)");
+        prevent_changing!(o, m, license_md5, "Licence (MD5)");
+        prevent_changing!(o, m, active_targets, "Active Targets");
+        
         Ok(EditGeneralInfo {
             debugger_enabled: edit_field(&o.is_debugger_disabled, &m.is_debugger_disabled),
             game_name: edit_field_convert(&o.game_name, &m.game_name, |r| self.convert_string_ref(r))?,
@@ -326,7 +350,7 @@ impl ModExporter<'_, '_> {
             steam_app_id: edit_field(&o.steam_appid, &m.steam_appid),
             debugger_port: edit_field(&o.debugger_port, &m.debugger_port),
             flags: edit_flags(&o.flags, &m.flags),
-            function_classifications: edit_function_classifications(&o.function_classifications, &m.function_classifications),
+            function_classifications: edit_function_classifications(&o.function_classifications, &m.function_classifications)?,
             room_order: export_changes_ordered_list(&o.room_order, &m.room_order, |i| self.convert_room_ref(i))?,
         })
     }
@@ -354,8 +378,17 @@ fn edit_flags(o: &GMGeneralInfoFlags, m: &GMGeneralInfoFlags) -> EditGeneralInfo
     }
 }
 
-fn edit_function_classifications(o: &GMFunctionClassifications, m: &GMFunctionClassifications) -> EditFunctionClassifications {
-    EditFunctionClassifications {
+fn edit_function_classifications(o: &GMFunctionClassifications, m: &GMFunctionClassifications) -> Result<EditFunctionClassifications, String> {
+    prevent_enabling!(o, m, http);
+    prevent_enabling!(o, m, io);
+    prevent_enabling!(o, m, external_call);
+    prevent_enabling!(o, m, analytics);
+    prevent_enabling!(o, m, ads);
+    prevent_enabling!(o, m, os);
+    prevent_enabling!(o, m, iap);
+    prevent_enabling!(o, m, facebook);
+
+    Ok(EditFunctionClassifications {
         none: flag_field(o.none, m.none),
         joystick: flag_field(o.joystick, m.joystick),
         gamepad: flag_field(o.gamepad, m.gamepad),
@@ -408,6 +441,6 @@ fn edit_function_classifications(o: &GMFunctionClassifications, m: &GMFunctionCl
         steam: flag_field(o.steam, m.steam),
         shaders: flag_field(o.shaders, m.shaders),
         vertex_buffers: flag_field(o.vertex_buffers, m.vertex_buffers),
-    }
+    })
 }
 
