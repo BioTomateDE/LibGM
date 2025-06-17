@@ -213,7 +213,7 @@ impl<'a> GMChunk<'a> {
     }
 
     /// read pointer to pointer list (only used in rooms)
-    pub fn read_pointer_list(&mut self) -> Result<Vec<usize>, String> {
+    pub fn read_pointer_to_pointer_list(&mut self) -> Result<Vec<usize>, String> {
         let abs_pointers_start_pos: usize = self.read_usize_pos()?;
         let pointers_start_pos: usize = abs_pointers_start_pos.checked_sub(self.abs_pos).ok_or_else(|| format!(
             "Pointer to start of Pointer list underflowed at position {} in chunk '{}': {} - {} < 0",

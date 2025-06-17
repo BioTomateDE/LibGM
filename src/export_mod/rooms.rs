@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::deserialize::rooms::{GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomLayer, GMRoomLayerType, GMRoomTile, GMRoomTileTexture, GMRoomView};
 use crate::export_mod::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, flag_field, ModExporter, ModRef};
+use crate::export_mod::ordered_list::{export_changes_ordered_list, DataChange};
 use crate::export_mod::sequences::{AddSequence, EditSequence};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
@@ -71,7 +72,6 @@ pub struct AddRoomTile {
     pub width: u32,
     pub height: u32,
     pub tile_depth: i32,
-    pub instance_id: u32,
     pub scale_x: f32,
     pub scale_y: f32,
     pub color: u32,
@@ -93,7 +93,6 @@ pub struct AddRoomGameObject {
     pub x: i32,
     pub y: i32,
     pub object_definition: ModRef, // GMGameObject
-    pub instance_id: u32,
     pub creation_code: Option<ModRef>,
     pub scale_x: f32,
     pub scale_y: f32,
@@ -192,7 +191,6 @@ pub struct EditRoomTile {
     pub width: Option<u32>,
     pub height: Option<u32>,
     pub tile_depth: Option<i32>,
-    pub instance_id: Option<u32>,
     pub scale_x: Option<f32>,
     pub scale_y: Option<f32>,
     pub color: Option<u32>,
@@ -216,7 +214,6 @@ pub struct EditRoomGameObject {
     pub x: Option<i32>,
     pub y: Option<i32>,
     pub object_definition: Option<ModRef>, // GMGameObject
-    pub instance_id: Option<u32>,
     pub creation_code: Option<Option<ModRef>>,
     pub scale_x: Option<f32>,
     pub scale_y: Option<f32>,
@@ -303,14 +300,14 @@ impl ModExporter<'_, '_> {
                     &m.game_objects,
                     |i| self.add_room_game_object(i),
                     |o, m| self.edit_room_game_object(o, m),
-                    false,
+                    true,
                 )?,
                 tiles: export_changes_unordered_list(
                     &o.tiles,
                     &m.tiles,
                     |i| self.add_room_tile(i),
                     |o, m| self.edit_room_tile(o, m),
-                    false,
+                    true,
                 )?,
                 world: edit_field(&o.world, &m.world),
                 top: edit_field(&o.top, &m.top),
@@ -329,7 +326,7 @@ impl ModExporter<'_, '_> {
                         false,
                     )?)
                 } else { None },
-                sequences: if let Some(ref m_sequences) = m.sequences {
+                sequences: if let Some(ref m_sequences) = m.sequences {     // TODO not sure if order matters for layer's sequences
                     Some(export_changes_unordered_list(
                         o.sequences.as_deref().unwrap_or_default(),
                         m_sequences,
@@ -436,7 +433,6 @@ impl ModExporter<'_, '_> {
             width: i.width,
             height: i.height,
             tile_depth: i.tile_depth,
-            instance_id: i.instance_id,
             scale_x: i.scale_x,
             scale_y: i.scale_y,
             color: i.color,
@@ -453,7 +449,6 @@ impl ModExporter<'_, '_> {
             width: edit_field(&o.width, &m.width),
             height: edit_field(&o.height, &m.height),
             tile_depth: edit_field(&o.tile_depth, &m.tile_depth),
-            instance_id: edit_field(&o.instance_id, &m.instance_id),
             scale_x: edit_field(&o.scale_x, &m.scale_x),
             scale_y: edit_field(&o.scale_y, &m.scale_y),
             color: edit_field(&o.color, &m.color),
@@ -493,7 +488,6 @@ impl ModExporter<'_, '_> {
             x: i.x,
             y: i.y,
             object_definition: self.convert_game_object_ref(&i.object_definition)?,
-            instance_id: i.instance_id,
             creation_code: self.convert_code_ref_opt(&i.creation_code)?,
             scale_x: i.scale_x,
             scale_y: i.scale_y,
@@ -510,7 +504,6 @@ impl ModExporter<'_, '_> {
             x: edit_field(&o.x, &m.x),
             y: edit_field(&o.y, &m.y),
             object_definition: edit_field_convert(&o.object_definition, &m.object_definition, |r| self.convert_game_object_ref(r))?,
-            instance_id: edit_field(&o.instance_id, &m.instance_id),
             creation_code: edit_field_convert_option(&o.creation_code, &m.creation_code, |r| self.convert_code_ref(r))?,
             scale_x: edit_field(&o.scale_x, &m.scale_x),
             scale_y: edit_field(&o.scale_y, &m.scale_y),
