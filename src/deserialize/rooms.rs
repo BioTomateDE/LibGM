@@ -179,7 +179,7 @@ pub struct GMRoomLayerDataTiles {
 pub struct GMRoomLayerDataBackground {
     pub visible: bool,
     pub foreground: bool,
-    pub sprite: GMRef<GMSprite>,
+    pub sprite: Option<GMRef<GMSprite>>,
     pub tiled_horizontally: bool,
     pub tiled_vertically: bool,
     pub stretch: bool,
@@ -623,7 +623,7 @@ fn parse_room_layers(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings:
             GMRoomLayerType::Tiles => GMRoomLayerData::Tiles(parse_layer_tiles(chunk, general_info)?),
             GMRoomLayerType::Effect => GMRoomLayerData::Effect(parse_layer_effect(chunk, general_info, strings)?),
         };
-        
+
         let layer: GMRoomLayer = GMRoomLayer {
             layer_name,
             layer_id,
@@ -704,7 +704,15 @@ fn parse_layer_tiles(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Resul
 fn parse_layer_background(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GMRoomLayerDataBackground, String> {
     let visible: bool = chunk.read_bool32()?;
     let foreground: bool = chunk.read_bool32()?;
-    let sprite: GMRef<GMSprite> = GMRef::new(chunk.read_usize_count()?);
+    let sprite_id: i32 = chunk.read_i32()?;
+    if sprite_id < -1 {
+        return Err(format!("Invalid sprite id {0} (0x{0:08X}) while parsing Room Background Layer", sprite_id))
+    }
+    let sprite: Option<GMRef<GMSprite>> = if sprite_id == -1 {
+        None
+    } else {
+        Some(GMRef::new(chunk.read_usize_count()?))
+    };
     let tiled_horizontally: bool = chunk.read_bool32()?;
     let tiled_vertically: bool = chunk.read_bool32()?;
     let stretch: bool = chunk.read_bool32()?;
@@ -736,7 +744,7 @@ fn parse_layer_assets(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
     let mut nine_slices_pointer: Option<usize> = None;
     let mut particle_systems_pointer: Option<usize> = None;
     let mut text_items_pointer: Option<usize> = None;
-    
+
     if general_info.is_version_at_least(2, 3, 0, 0) {
         sequences_pointer = Some(chunk.read_usize_pos()?);
     }
@@ -761,7 +769,7 @@ fn parse_layer_assets(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
     for _ in 0..sprite_count {
         sprites.push(parse_sprite_instance(chunk, strings)?);
     }
-    
+
     let mut sequences: Vec<GMSequenceInstance> = Vec::new();
     let mut nine_slices: Vec<GMSpriteInstance> = Vec::new();
     let mut particle_systems: Vec<GMParticleSystemInstance> = Vec::new();
@@ -774,7 +782,7 @@ fn parse_layer_assets(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
             sequences.push(parse_sequence_instance(chunk, strings)?);
         }
     }
-    
+
     if !general_info.is_version_at_least(2, 3, 2, 0) {
         let nine_slice_count: usize = chunk.read_usize_count()?;
         nine_slices.reserve(nine_slice_count);
@@ -782,7 +790,7 @@ fn parse_layer_assets(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
             nine_slices.push(parse_sprite_instance(chunk, strings)?);
         }
     }
-    
+
     if general_info.is_version_at_least(2023, 2, 0, 0) {   // {~~} non LTS
         let particle_system_count: usize = chunk.read_usize_count()?;
         particle_systems.reserve(particle_system_count);
@@ -790,7 +798,7 @@ fn parse_layer_assets(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
             particle_systems.push(parse_particle_system_instance(chunk, strings)?);
         }
     }
-    
+
     if general_info.is_version_at_least(2024, 6, 0, 0) {
         let text_item_count: usize = chunk.read_usize_count()?;
         text_items.reserve(text_item_count);
@@ -798,9 +806,9 @@ fn parse_layer_assets(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
             text_items.push(parse_text_item_instance(chunk, strings)?);
         }
     }
-    
+
     // TODO pointers are very scuffed; issue will probably arise
-    
+
     Ok(GMRoomLayerDataAssets {
         legacy_tiles,
         sprites,
@@ -825,7 +833,7 @@ fn parse_sprite_instance(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMS
         .map_err(|_| format!("Invalid Animation Speed Type {0} (0x{0:08X}) while parsing Room Assets Layer Sprite Instance", animation_speed_type))?;
     let frame_index: f32 = chunk.read_f32()?;
     let rotation: f32 = chunk.read_f32()?;
-    
+
     Ok(GMSpriteInstance {
         name,
         sprite,
@@ -937,15 +945,15 @@ fn parse_text_item_instance(chunk: &mut GMChunk, strings: &GMStrings) -> Result<
 fn parse_layer_effect(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMRoomLayerDataEffect, String> {
     // {~~} dont serialize if >= 2022.1
     let effect_type: GMRef<String> = chunk.read_gm_string(strings)?;
-    
+
     let properties_count: usize = chunk.read_usize_count()?;
     let mut properties: Vec<GMRoomLayerEffectProperty> = Vec::with_capacity(properties_count);
-    
+
     for _ in 0..properties_count {
         let kind: i32 = chunk.read_i32()?;
         let kind: GMRoomLayerEffectPropertyType = kind.try_into()
             .map_err(|_| format!("Invalid Property Type {0} (0x{0:08X}) while parsing Room Effect Layers", kind))?;
-        
+
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
         let value: GMRef<String> = chunk.read_gm_string(strings)?;
         properties.push(GMRoomLayerEffectProperty {
@@ -954,7 +962,7 @@ fn parse_layer_effect(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
             value,
         });
     }
-    
+
     Ok(GMRoomLayerDataEffect {
         effect_type,
         properties,
