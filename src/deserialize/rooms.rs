@@ -747,9 +747,9 @@ fn parse_layer_assets(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
 
     if general_info.is_version_at_least(2, 3, 0, 0) {
         sequences_pointer = Some(chunk.read_usize_pos()?);
-    }
-    if !general_info.is_version_at_least(2, 3, 2, 0) {
-        nine_slices_pointer = Some(chunk.read_usize_pos()?);
+        if !general_info.is_version_at_least(2, 3, 2, 0) {
+            nine_slices_pointer = Some(chunk.read_usize_pos()?);
+        }
     }
     if general_info.is_version_at_least(2023, 2, 0, 0) {   // {~~} non LTS
         particle_systems_pointer = Some(chunk.read_usize_pos()?);
