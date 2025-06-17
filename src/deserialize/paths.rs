@@ -28,8 +28,7 @@ pub fn parse_chunk_path(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMPa
     let path_count: usize = chunk.read_usize_count()?;
     let mut path_starting_positions: Vec<usize> = Vec::with_capacity(path_count);
     for _ in 0..path_count {
-        let start_position: usize = chunk.read_usize_pos()? - chunk.abs_pos;
-        path_starting_positions.push(start_position);
+        path_starting_positions.push(chunk.read_relative_pointer()?);
     }
 
     let mut paths_by_index: Vec<GMPath> = Vec::with_capacity(path_count);

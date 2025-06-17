@@ -21,16 +21,16 @@ pub fn parse_chunk_scpt(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMSc
     chunk.cur_pos = 0;
     let script_count: usize = chunk.read_usize_count()?;
 
-    let mut abs_start_positions: Vec<usize> = Vec::with_capacity(script_count);
+    let mut start_positions: Vec<usize> = Vec::with_capacity(script_count);
     for _ in 0..script_count {
-        abs_start_positions.push(chunk.read_usize_pos()?);
+        start_positions.push(chunk.read_relative_pointer()?);
     }
 
     let mut scripts_by_index: Vec<GMScript> = Vec::with_capacity(script_count);
     let mut abs_pos_to_index: HashMap<usize, usize> = HashMap::with_capacity(script_count);
 
-    for (i, abs_start_position) in abs_start_positions.iter().enumerate() {
-        chunk.cur_pos = *abs_start_position - chunk.abs_pos;
+    for (i, start_position) in start_positions.iter().enumerate() {
+        chunk.cur_pos = *start_position;
         let name: GMRef<String> = chunk.read_gm_string(&strings)?;
 
         let mut code_id: i32 = chunk.read_i32()?;
@@ -51,7 +51,7 @@ pub fn parse_chunk_scpt(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMSc
         };
 
         scripts_by_index.push(GMScript { name, is_constructor, code });
-        abs_pos_to_index.insert(*abs_start_position, i);
+        abs_pos_to_index.insert(*start_position+chunk.abs_pos, i);
     }
 
 

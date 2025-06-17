@@ -309,7 +309,7 @@ pub fn parse_chunk_code(chunk: &mut GMChunk, bytecode14: bool, strings: &GMStrin
     let codes_count: usize = chunk.read_usize_count()?;
     let mut code_meta_start_positions: Vec<usize> = Vec::with_capacity(codes_count);
     for _ in 0..codes_count {
-        let meta_index: usize = chunk.read_usize_pos()? - chunk.abs_pos;
+        let meta_index: usize = chunk.read_relative_pointer()?;
         code_meta_start_positions.push(meta_index);
     }
 
@@ -318,7 +318,7 @@ pub fn parse_chunk_code(chunk: &mut GMChunk, bytecode14: bool, strings: &GMStrin
     for (i, code_meta_start_position) in code_meta_start_positions.iter().enumerate() {
         chunk.cur_pos = *code_meta_start_position;
         let name: GMRef<String> = chunk.read_gm_string(strings)?;
-        let code_length: usize = chunk.read_usize_pos()?;
+        let code_length: usize = chunk.read_usize()?;
 
         let end: usize;
         let bytecode15_info: Option<GMCodeBytecode15> = if bytecode14 {
@@ -333,7 +333,7 @@ pub fn parse_chunk_code(chunk: &mut GMChunk, bytecode14: bool, strings: &GMStrin
             let bytecode_relative_address: i32 = chunk.read_i32()?;
             let bytecode_start_address: usize = (bytecode_relative_address + chunk.cur_pos as i32 - 4) as usize;
 
-            let offset: usize = chunk.read_usize_pos()?;
+            let offset: usize = chunk.read_usize()?;
 
             // child check {~~}
 

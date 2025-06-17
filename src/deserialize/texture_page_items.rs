@@ -28,7 +28,7 @@ pub fn parse_chunk_tpag(chunk: &mut GMChunk) -> Result<GMTextures, String> {
     let items_count: usize = chunk.read_usize_count()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(items_count);
     for _ in 0..items_count {
-        start_positions.push(chunk.read_usize_pos()? - chunk.abs_pos);
+        start_positions.push(chunk.read_relative_pointer()?);
     }
 
     let mut textures_by_index: Vec<GMTexturePageItem> = Vec::with_capacity(items_count);

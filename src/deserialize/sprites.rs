@@ -131,7 +131,7 @@ pub fn parse_chunk_sprt(
     let sprites_count: usize = chunk.read_usize_count()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(sprites_count);
     for _ in 0..sprites_count {
-        start_positions.push(chunk.read_usize_pos()? - chunk.abs_pos);
+        start_positions.push(chunk.read_relative_pointer()?);
     }
 
     let mut sprites_by_index: Vec<GMSprite> = Vec::with_capacity(sprites_count);
@@ -326,8 +326,8 @@ fn read_texture_list(chunk: &mut GMChunk, gm_textures: &GMTextures, sprite_name:
     //     log::debug!("Texture count is zero for Sprite \"{sprite_name}\"")
     // }
 
-    for i in 0..texture_count {
-        let texture_abs_pos: usize = chunk.read_usize_pos()?;
+    for _ in 0..texture_count {
+        let texture_abs_pos: usize = chunk.read_usize()?;
         if texture_abs_pos == 0 {
             // technically, it's "wrong" to just ignore these instead since there are null texture entries but also empty texture lists
             // log::warn!("Null Texture Page Item reference for texture #{i}/{texture_count} of Sprite \"{sprite_name}\"; skipping");
