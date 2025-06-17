@@ -37,7 +37,7 @@ pub fn parse_chunk_sond(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
     let sounds_count: usize = chunk.read_usize_count()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(sounds_count);
     for _ in 0..sounds_count {
-        start_positions.push(chunk.read_usize_pos()? - chunk.abs_pos);
+        start_positions.push(chunk.read_relative_pointer()?);
     }
 
     let mut sounds_by_index: Vec<GMSound> = Vec::with_capacity(sounds_count);
