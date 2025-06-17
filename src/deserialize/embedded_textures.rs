@@ -55,7 +55,7 @@ pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Re
     let mut texture_pointers: Vec<usize> = Vec::with_capacity(texture_count);
 
     for _ in 0..texture_count {
-        texture_pointers.push(chunk.read_usize_pos()? - chunk.abs_pos);
+        texture_pointers.push(chunk.read_relative_pointer()?);
     }
 
     let mut textures_raw: Vec<GMEmbeddedTextureRaw> = Vec::with_capacity(texture_count);
@@ -81,13 +81,9 @@ pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Re
             index_in_group = Some(chunk.read_i32()?);
         }
 
-        let texture_abs_start_position: usize = chunk.read_usize_pos()?;
+        let texture_data_start_pos: usize = chunk.read_relative_pointer()?;
         // can be zero if the texture is "external"
-        let image: Option<RawImage> = if texture_abs_start_position == 0 { None } else {
-            let texture_start_position: usize = texture_abs_start_position.checked_sub(chunk.abs_pos).ok_or_else(|| format!(
-                "Trying to subtract with overflow for absolute texture start position {0} (0x{0:08X}) with chunk position {1}",
-                texture_abs_start_position, chunk.abs_pos,
-            ))?;
+        let image: Option<RawImage> = if texture_data_start_pos == 0 { None } else {
             chunk.cur_pos = texture_start_position;
             Some(read_raw_texture(chunk, general_info)?)
         };
@@ -163,7 +159,7 @@ fn read_raw_texture<'a>(chunk: &mut GMChunk<'a>, general_info: &GMGeneralInfo) -
         chunk.cur_pos += 8;      // skip past (start of) header
         let mut header_size: usize = 8;
         if general_info.is_version_at_least(2022, 5, 0, 0) {
-            let _serialized_uncompressed_length = chunk.read_usize_pos()?;    // maybe handle negative numbers?
+            let _serialized_uncompressed_length = chunk.read_usize()?;    // maybe handle negative numbers?
             header_size = 12;
         }
 

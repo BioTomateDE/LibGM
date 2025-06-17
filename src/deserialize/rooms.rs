@@ -297,7 +297,7 @@ pub fn parse_chunk_room(chunk: &mut GMChunk, general_info: &GMGeneralInfo, gm_st
     let room_count: usize = chunk.read_usize_count()?;
     let mut room_starting_positions: Vec<usize> = Vec::with_capacity(room_count);
     for _ in 0..room_count {
-        let start_position: usize = chunk.read_usize_pos()? - chunk.abs_pos;
+        let start_position: usize = chunk.read_relative_pointer()?;
         room_starting_positions.push(start_position);
     }
 
@@ -450,7 +450,7 @@ fn parse_room_objects(
         let mut image_index: Option<usize> = None;
         if general_info.is_version_at_least(2, 2, 2, 302) {
             image_speed = Some(chunk.read_f32()?);
-            image_index = Some(chunk.read_usize_pos()?);
+            image_index = Some(chunk.read_usize()?);
         }
         let color: u32 = chunk.read_u32()?;
         let rotation: f32 = chunk.read_f32()?;
@@ -738,32 +738,34 @@ fn parse_layer_background(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> 
 }
 
 fn parse_layer_assets(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMRoomLayerDataAssets, String> {
-    let legacy_tiles_pointer: usize = chunk.read_usize_pos()?;
-    let sprites_pointer: usize = chunk.read_usize_pos()?;
+    let legacy_tiles_pointer: usize = chunk.read_relative_pointer()?;
+    let sprites_pointer: usize = chunk.read_relative_pointer()?;
     let mut sequences_pointer: Option<usize> = None;
     let mut nine_slices_pointer: Option<usize> = None;
     let mut particle_systems_pointer: Option<usize> = None;
     let mut text_items_pointer: Option<usize> = None;
 
     if general_info.is_version_at_least(2, 3, 0, 0) {
-        sequences_pointer = Some(chunk.read_usize_pos()?);
+        sequences_pointer = Some(chunk.read_relative_pointer()?);
         if !general_info.is_version_at_least(2, 3, 2, 0) {
-            nine_slices_pointer = Some(chunk.read_usize_pos()?);
+            nine_slices_pointer = Some(chunk.read_relative_pointer()?);
         }
     }
     if general_info.is_version_at_least(2023, 2, 0, 0) {   // {~~} non LTS
-        particle_systems_pointer = Some(chunk.read_usize_pos()?);
+        particle_systems_pointer = Some(chunk.read_relative_pointer()?);
     }
     if general_info.is_version_at_least(2024, 6, 0, 0) {
-        text_items_pointer = Some(chunk.read_usize_pos()?);
+        text_items_pointer = Some(chunk.read_relative_pointer()?);
     }
 
+    chunk.cur_pos = legacy_tiles_pointer;
     let legacy_tile_count: usize = chunk.read_usize_count()?;
     let mut legacy_tiles: Vec<GMRoomTile> = Vec::with_capacity(legacy_tile_count);
     for _ in 0..legacy_tile_count {
         legacy_tiles.push(parse_room_tile(chunk, general_info)?);
     }
 
+    chunk.cur_pos = sprites_pointer;
     let sprite_count: usize = chunk.read_usize_count()?;
     let mut sprites: Vec<GMSpriteInstance> = Vec::with_capacity(sprite_count);
     for _ in 0..sprite_count {
@@ -776,6 +778,7 @@ fn parse_layer_assets(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
     let mut text_items: Vec<GMTextItemInstance> = Vec::new();
 
     if general_info.is_version_at_least(2, 3, 0, 0) {
+        chunk.cur_pos = sequences_pointer.unwrap();
         let sequence_count: usize = chunk.read_usize_count()?;
         sequences.reserve(sequence_count);
         for _ in 0..sequence_count {
@@ -784,6 +787,7 @@ fn parse_layer_assets(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
     }
 
     if !general_info.is_version_at_least(2, 3, 2, 0) {
+        chunk.cur_pos = nine_slices_pointer.unwrap();
         let nine_slice_count: usize = chunk.read_usize_count()?;
         nine_slices.reserve(nine_slice_count);
         for _ in 0..nine_slice_count {
@@ -792,6 +796,7 @@ fn parse_layer_assets(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
     }
 
     if general_info.is_version_at_least(2023, 2, 0, 0) {   // {~~} non LTS
+        chunk.cur_pos = particle_systems_pointer.unwrap();
         let particle_system_count: usize = chunk.read_usize_count()?;
         particle_systems.reserve(particle_system_count);
         for _ in 0..particle_system_count {
@@ -800,6 +805,7 @@ fn parse_layer_assets(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
     }
 
     if general_info.is_version_at_least(2024, 6, 0, 0) {
+        chunk.cur_pos = text_items_pointer.unwrap();
         let text_item_count: usize = chunk.read_usize_count()?;
         text_items.reserve(text_item_count);
         for _ in 0..text_item_count {

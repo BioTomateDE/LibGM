@@ -77,7 +77,7 @@ pub fn parse_chunk_objt(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
     let game_objects_count: usize = chunk.read_usize_count()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(game_objects_count);
     for _ in 0..game_objects_count {
-        start_positions.push(chunk.read_usize_pos()? - chunk.abs_pos);
+        start_positions.push(chunk.read_relative_pointer()?);
     }
 
     let mut game_objects_by_index: Vec<GMGameObject> = Vec::with_capacity(game_objects_count);
@@ -183,7 +183,7 @@ fn parse_game_object_events(chunk: &mut GMChunk, strings: &GMStrings) -> Result<
     let events_count: usize = chunk.read_usize_count()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(events_count);
     for _ in 0..events_count {
-        start_positions.push(chunk.read_usize_pos()? - chunk.abs_pos);
+        start_positions.push(chunk.read_relative_pointer()?);
     }
 
     let mut events: Vec<Vec<GMGameObjectEvent>> = Vec::with_capacity(events_count);
@@ -204,7 +204,7 @@ fn parse_game_object_event_instances(chunk: &mut GMChunk, strings: &GMStrings) -
     let event_instances_count: usize = chunk.read_usize_count()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(event_instances_count);
     for _ in 0..event_instances_count {
-        start_positions.push(chunk.read_usize_pos()? - chunk.abs_pos);
+        start_positions.push(chunk.read_relative_pointer()?);
     }
 
     let old_position: usize = chunk.cur_pos;
@@ -229,7 +229,7 @@ fn parse_game_object_event_actions(chunk: &mut GMChunk, strings: &GMStrings) -> 
     let actions_count: usize = chunk.read_usize_count()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(actions_count);
     for _ in 0..actions_count {
-        start_positions.push(chunk.read_usize_pos()? - chunk.abs_pos);
+        start_positions.push(chunk.read_relative_pointer()?);
     }
     let old_position: usize = chunk.cur_pos;
     let mut actions: Vec<GMGameObjectEventAction> = Vec::with_capacity(actions_count);
