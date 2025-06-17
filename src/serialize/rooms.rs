@@ -209,7 +209,7 @@ fn build_room_tiles(builder: &mut DataBuilder, general_info: &GMGeneralInfo, roo
         builder.write_i32(tile.y);
         if general_info.is_version_at_least(2, 0, 0, 0) {
             if let GMRoomTileTexture::Sprite(ref sprite) = tile.texture {
-                builder.write_usize(sprite.index);
+                builder.write_resource_id_option(sprite);
             } else {
                 return Err(format!(
                     "Invalid Room Tile Texture Mode (expected Sprite, got {:?}) for tile with Instance ID {} in room with index {}",
@@ -218,7 +218,7 @@ fn build_room_tiles(builder: &mut DataBuilder, general_info: &GMGeneralInfo, roo
             };
         } else {
             if let GMRoomTileTexture::Background(ref background) = tile.texture {
-                builder.write_usize(background.index);
+                builder.write_resource_id_option(background);
             } else {
                 return Err(format!(
                     "Invalid Room Tile Texture Mode (expected Background, got {:?}) for tile with Instance ID {} in room with index {}",

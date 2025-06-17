@@ -133,6 +133,15 @@ impl DataBuilder {
     pub fn write_usize(&mut self, number: usize) {
         self.write_u32(number as u32);
     }
+    pub fn write_resource_id<T>(&mut self, resource: &GMRef<T>) {
+        self.write_usize(resource.index);
+    }
+    pub fn write_resource_id_option<T>(&mut self, resource: &Option<GMRef<T>>) {
+        match resource {
+            Some(gm_ref) => self.write_usize(gm_ref.index),
+            None => self.write_i32(-1),
+        }
+    }
     pub fn write_bool32(&mut self, boolean: bool) {
         self.write_u32(if boolean {1} else {0});
     }
