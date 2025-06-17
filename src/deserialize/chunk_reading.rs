@@ -54,6 +54,9 @@ pub struct GMChunk<'a> {
     pub total_data_len: usize,  // used for read_usize failsafe
 }
 
+const FAILSAFE_COUNT: usize = 100_000;    // increase limit is not enough
+
+
 impl<'a> GMChunk<'a> {
     pub fn read_bytes_dyn(&mut self, count: usize) -> Result<&'a [u8], String> {
         if self.cur_pos+count > self.data.len() {
@@ -141,19 +144,42 @@ impl<'a> GMChunk<'a> {
         }
         Ok(number)
     }
+    
+    pub fn read_resource_by_id<T>(&mut self) -> Result<GMRef<T>, String> {
+        Ok(GMRef::new(self.read_usize_count()?))
+    }
+
+    pub fn read_resource_by_id_option<T>(&mut self) -> Result<Option<GMRef<T>>, String> {
+        let number: i32 = self.read_i32()?;
+        if number == -1 {
+            return Ok(None)
+        }
+        let number: usize = number.try_into().map_err(|_| format!(
+            "Invalid negative number {number} (0x{number:08X}) while reading optional resource by ID",
+        ))?;
+        if number > FAILSAFE_COUNT {
+            return Err(format!(
+                "Failsafe triggered in chunk '{}' at position {} \
+                while reading optional resource by ID: \
+                Number {} is larger than the failsafe count of {}",
+                self.name, self.cur_pos - 4, number, FAILSAFE_COUNT,
+            ))
+        }
+        Ok(Some(GMRef::<T>::new(number)))
+    }
+
     /// Read unsigned 32-bit integer and convert to usize (little endian).
     /// Meant for reading (pointer list element) count; uses small constant number as failsafe.
     pub fn read_usize_count(&mut self) -> Result<usize, String> {
-        const FAILSAFE_AMOUNT: usize = 100_000;    // increase limit is not enough
         let number: usize = self.read_usize()?;
-        if likely(number < FAILSAFE_AMOUNT) {
-            return Ok(number)
+        if number > FAILSAFE_COUNT {
+            return Err(format!(
+                "Failsafe triggered in chunk '{}' at position {} while trying \
+                to read usize (count) integer: Number {} is larger than the failsafe count of {}",
+                self.name, self.cur_pos-4, number, FAILSAFE_COUNT,
+            ))
         }
-        Err(format!(
-            "Failsafe triggered in chunk '{}' at position {} while trying \
-            to read usize (count) integer: Number {} is larger than the failsafe count of {}",
-            self.name, self.cur_pos-4, number, FAILSAFE_AMOUNT,
-        ))
+        Ok(number)
     }
 
     /// Read a 32-bit integer and convert it to a bool.
