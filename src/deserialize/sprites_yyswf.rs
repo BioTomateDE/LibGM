@@ -228,7 +228,7 @@ pub fn parse_yyswf_timeline(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -
 
     let mut collision_masks = Vec::with_capacity(collision_masks_count);
     for _ in 0..collision_masks_count {
-        let rle_length: usize = chunk.read_usize_pos()?;      // could be -1 idk
+        let rle_length: usize = chunk.read_usize()?;      // could be -1 idk
 
         let rle_data: Vec<u8> = chunk.data.get(chunk.cur_pos.. chunk.cur_pos+rle_length).ok_or_else(|| format!(
             "Trying to read RLE Data of Timeline out of bounds while parsing \
@@ -502,9 +502,9 @@ fn parse_yyswf_bitmap_data(chunk: &mut GMChunk, general_info: &GMGeneralInfo) ->
     if general_info.is_version_at_least(2022, 1, 0, 0) {
         tpe_index = Some(chunk.read_i32()?);
     } else {
-        let image_data_length: usize = chunk.read_usize_pos()?;
-        let alpha_data_length: usize = chunk.read_usize_pos()?;
-        let color_palette_data_length: usize = chunk.read_usize_pos()?;
+        let image_data_length: usize = chunk.read_usize()?;
+        let alpha_data_length: usize = chunk.read_usize()?;
+        let color_palette_data_length: usize = chunk.read_usize()?;
 
         image_data = chunk.data.get(chunk.cur_pos.. chunk.cur_pos+image_data_length).ok_or_else(|| format!(
             "Trying to read Image Data of Bitmap Data out of bounds while parsing \

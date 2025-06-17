@@ -64,12 +64,12 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     }
 
     // get chunks
-    let total_data_len: usize = all.read_usize_pos()? + all.cur_pos;
+    let total_data_len: usize = all.read_usize()? + all.cur_pos;
     let mut chunks: HashMap<String, GMChunk> = HashMap::with_capacity(24);
 
     while all.cur_pos + 8 < total_data_len {
         let name: String = all.read_chunk_name()?;
-        let chunk_length: usize = all.read_usize_pos()?;
+        let chunk_length: usize = all.read_usize()?;
         let abs_pos: usize = all.cur_pos;
         let data: &[u8] = all.read_bytes_dyn(chunk_length)
             .map_err(|e| format!("Trying to read chunk '{name}' with specified length {chunk_length} {e}"))?;

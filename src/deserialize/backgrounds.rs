@@ -43,7 +43,7 @@ pub fn parse_chunk_bgnd(
     let backgrounds_count: usize = chunk.read_usize_count()?;
     let mut start_positions: Vec<usize> = Vec::with_capacity(backgrounds_count);
     for _ in 0..backgrounds_count {
-        start_positions.push(chunk.read_usize_pos()? - chunk.abs_pos);
+        start_positions.push(chunk.read_relative_pointer()?);
     }
 
     let mut backgrounds_by_index: Vec<GMBackground> = Vec::with_capacity(backgrounds_count);
@@ -53,12 +53,12 @@ pub fn parse_chunk_bgnd(
         let transparent: bool = chunk.read_bool32()?;
         let smooth: bool = chunk.read_bool32()?;
         let preload: bool = chunk.read_bool32()?;
-        let texture_abs_pos: usize = chunk.read_usize_pos()?;
-        let texture: Option<GMRef<GMTexturePageItem>> = if texture_abs_pos == 0 { None } else {
-            Some(textures.abs_pos_to_ref.get(&texture_abs_pos)
+        let texture_pos: usize = chunk.read_usize()?;
+        let texture: Option<GMRef<GMTexturePageItem>> = if texture_pos == 0 { None } else {
+            Some(textures.abs_pos_to_ref.get(&texture_pos)
                 .ok_or_else(|| format!(
-                    "Could not find texture with absolute position {} for Background with name \"{}\" at position {} in chunk 'BGND'", 
-                    texture_abs_pos, name.display(strings), start_position
+                    "Could not find texture with position {} for Background with name \"{}\" at position {} in chunk 'BGND'",
+                    texture_pos, name.display(strings), start_position
                 ))?.clone()
             )
         };

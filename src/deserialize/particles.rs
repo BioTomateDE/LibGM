@@ -188,7 +188,7 @@ pub fn parse_chunk_psys(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
     let count: usize = chunk.read_usize_count()?;
     let mut starting_positions: Vec<usize> = Vec::with_capacity(count);
     for _ in 0..count {
-        starting_positions.push(chunk.read_usize_pos()? - chunk.abs_pos);
+        starting_positions.push(chunk.read_relative_pointer()?);
     }
 
     let mut particle_systems: Vec<GMParticleSystem> = Vec::with_capacity(count);
@@ -232,7 +232,7 @@ pub fn parse_chunk_psem(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
     let count: usize = chunk.read_usize_count()?;
     let mut starting_positions: Vec<usize> = Vec::with_capacity(count);
     for _ in 0..count {
-        starting_positions.push(chunk.read_usize_pos()? - chunk.abs_pos);
+        starting_positions.push(chunk.read_relative_pointer()?);
     }
 
     let mut emitters: Vec<GMParticleEmitter> = Vec::with_capacity(count);

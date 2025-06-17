@@ -278,7 +278,7 @@ fn parse_constants(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMOpt
 }
 
 fn parse_options_image(chunk: &mut GMChunk, textures: &GMTextures) -> Result<Option<GMRef<GMTexturePageItem>>, String> {
-    let absolute_position: usize = chunk.read_usize_pos()?;
+    let absolute_position: usize = chunk.read_usize()?;
     if absolute_position == 0 {
         return Ok(None)
     }
