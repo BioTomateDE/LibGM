@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::deserialize::rooms::{GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomLayer, GMRoomLayerType, GMRoomTile, GMRoomTileTexture, GMRoomView};
 use crate::export_mod::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, flag_field, ModExporter, ModRef};
-use crate::export_mod::ordered_list::{export_changes_ordered_list, DataChange};
 use crate::export_mod::sequences::{AddSequence, EditSequence};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
@@ -226,8 +225,8 @@ pub struct EditRoomGameObject {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ModRoomTileTexture {
-    Sprite(ModRef),     // GMSprite
-    Background(ModRef), // GMBackground
+    Sprite(Option<ModRef>),     // GMSprite
+    Background(Option<ModRef>), // GMBackground
 }
 
 
@@ -415,10 +414,10 @@ impl ModExporter<'_, '_> {
     fn convert_room_tile_texture(&self, room_tile_texture: &GMRoomTileTexture) -> Result<ModRoomTileTexture, String> {
         match room_tile_texture {
             GMRoomTileTexture::Sprite(sprite) => {
-                self.convert_sprite_ref(sprite).map(ModRoomTileTexture::Sprite)
+                self.convert_sprite_ref_opt(sprite).map(ModRoomTileTexture::Sprite)
             },
             GMRoomTileTexture::Background(background) => {
-                self.convert_background_ref(background).map(ModRoomTileTexture::Background)
+                self.convert_background_ref_opt(background).map(ModRoomTileTexture::Background)
             },
         }
     }

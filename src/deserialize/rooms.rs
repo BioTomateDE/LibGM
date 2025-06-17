@@ -1,13 +1,13 @@
 use crate::deserialize::chunk_reading::GMRef;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
-use crate::deserialize::backgrounds::{GMBackground, GMBackgroundGMS2Data};
+use crate::deserialize::backgrounds::GMBackground;
 use crate::deserialize::chunk_reading::GMChunk;
 use crate::deserialize::code::GMCode;
 use crate::deserialize::fonts::GMFont;
 use crate::deserialize::game_objects::{GMGameObject};
 use crate::deserialize::general_info::GMGeneralInfo;
-use crate::deserialize::particles::{GMParticleSystem, GMParticleSystems};
+use crate::deserialize::particles::GMParticleSystem;
 use crate::deserialize::sequence::{parse_sequence, GMAnimSpeedType, GMSequence};
 use crate::deserialize::sprites::GMSprite;
 use crate::deserialize::strings::GMStrings;
@@ -99,8 +99,8 @@ pub struct GMRoomTile {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum GMRoomTileTexture {
-    Sprite(GMRef<GMSprite>),
-    Background(GMRef<GMBackground>),
+    Sprite(Option<GMRef<GMSprite>>),
+    Background(Option<GMRef<GMBackground>>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -539,11 +539,10 @@ fn parse_room_tiles(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result
 fn parse_room_tile(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GMRoomTile, String> {
     let x: i32 = chunk.read_i32()?;
     let y: i32 = chunk.read_i32()?;
-    let texture_index: usize = chunk.read_usize_count()?;
     let texture: GMRoomTileTexture = if general_info.is_version_at_least(2, 0, 0, 0) {
-        GMRoomTileTexture::Sprite(GMRef::new(texture_index))
+        GMRoomTileTexture::Sprite(chunk.read_resource_by_id_option()?)
     } else {
-        GMRoomTileTexture::Background(GMRef::new(texture_index))
+        GMRoomTileTexture::Background(chunk.read_resource_by_id_option()?)
     };
     let source_x: u32 = chunk.read_u32()?;
     let source_y: u32 = chunk.read_u32()?;
@@ -617,11 +616,11 @@ fn parse_room_layers(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings:
 
         let data: GMRoomLayerData = match layer_type {
             GMRoomLayerType::Path => GMRoomLayerData::None,
-            GMRoomLayerType::Background => GMRoomLayerData::Background(parse_layer_background(chunk, general_info)?),
-            GMRoomLayerType::Instances => GMRoomLayerData::Instances(parse_layer_instances(chunk, general_info, room_game_objects)?),
+            GMRoomLayerType::Background => GMRoomLayerData::Background(parse_layer_background(chunk)?),
+            GMRoomLayerType::Instances => GMRoomLayerData::Instances(parse_layer_instances(chunk, room_game_objects)?),
             GMRoomLayerType::Assets => GMRoomLayerData::Assets(parse_layer_assets(chunk, general_info, strings)?),
             GMRoomLayerType::Tiles => GMRoomLayerData::Tiles(parse_layer_tiles(chunk, general_info)?),
-            GMRoomLayerType::Effect => GMRoomLayerData::Effect(parse_layer_effect(chunk, general_info, strings)?),
+            GMRoomLayerType::Effect => GMRoomLayerData::Effect(parse_layer_effect(chunk, strings)?),
         };
 
         let layer: GMRoomLayer = GMRoomLayer {
@@ -662,7 +661,7 @@ fn get_room_game_object_by_instance_id(room_game_objects: &Vec<GMRoomGameObject>
     None
 }
 
-fn parse_layer_instances(chunk: &mut GMChunk, general_info: &GMGeneralInfo, room_game_objects: &Vec<GMRoomGameObject>) -> Result<GMRoomLayerDataInstances, String> {
+fn parse_layer_instances(chunk: &mut GMChunk, room_game_objects: &Vec<GMRoomGameObject>) -> Result<GMRoomLayerDataInstances, String> {
     let count: usize = chunk.read_usize_count()?;
     let mut instances: Vec<GMRoomGameObject> = Vec::with_capacity(count);
     // {~~} check scuffed conditions for false positive idk
@@ -670,7 +669,7 @@ fn parse_layer_instances(chunk: &mut GMChunk, general_info: &GMGeneralInfo, room
     for _ in 0..count {
         let instance_id: u32 = chunk.read_u32()?;
         let room_game_object: GMRoomGameObject = get_room_game_object_by_instance_id(room_game_objects, instance_id)
-            .ok_or_else(|| format!("Nonexistent room game objects are not supported yet (has instance id {instance_id}"))?;
+            .ok_or_else(|| format!("Nonexistent room game objects are not supported yet (has instance id {instance_id})"))?;
         instances.push(room_game_object);
     }
 
@@ -701,7 +700,7 @@ fn parse_layer_tiles(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Resul
     })
 }
 
-fn parse_layer_background(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<GMRoomLayerDataBackground, String> {
+fn parse_layer_background(chunk: &mut GMChunk) -> Result<GMRoomLayerDataBackground, String> {
     let visible: bool = chunk.read_bool32()?;
     let foreground: bool = chunk.read_bool32()?;
     let sprite_id: i32 = chunk.read_i32()?;
@@ -711,7 +710,7 @@ fn parse_layer_background(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> 
     let sprite: Option<GMRef<GMSprite>> = if sprite_id == -1 {
         None
     } else {
-        Some(GMRef::new(chunk.read_usize_count()?))
+        Some(GMRef::new(sprite_id as usize))
     };
     let tiled_horizontally: bool = chunk.read_bool32()?;
     let tiled_vertically: bool = chunk.read_bool32()?;
@@ -760,15 +759,25 @@ fn parse_layer_assets(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
 
     chunk.cur_pos = legacy_tiles_pointer;
     let legacy_tile_count: usize = chunk.read_usize_count()?;
-    let mut legacy_tiles: Vec<GMRoomTile> = Vec::with_capacity(legacy_tile_count);
+    let mut legacy_tile_pointers: Vec<usize> = Vec::with_capacity(legacy_tile_count);
     for _ in 0..legacy_tile_count {
+        legacy_tile_pointers.push(chunk.read_relative_pointer()?);
+    }
+    let mut legacy_tiles: Vec<GMRoomTile> = Vec::with_capacity(legacy_tile_count);
+    for start_pos in legacy_tile_pointers {
+        chunk.cur_pos = start_pos;
         legacy_tiles.push(parse_room_tile(chunk, general_info)?);
     }
 
     chunk.cur_pos = sprites_pointer;
     let sprite_count: usize = chunk.read_usize_count()?;
-    let mut sprites: Vec<GMSpriteInstance> = Vec::with_capacity(sprite_count);
+    let mut sprite_pointers: Vec<usize> = Vec::with_capacity(sprite_count);
     for _ in 0..sprite_count {
+        sprite_pointers.push(chunk.read_relative_pointer()?);
+    }
+    let mut sprites: Vec<GMSpriteInstance> = Vec::with_capacity(sprite_count);
+    for start_pos in sprite_pointers {
+        chunk.cur_pos = start_pos;
         sprites.push(parse_sprite_instance(chunk, strings)?);
     }
 
@@ -780,26 +789,36 @@ fn parse_layer_assets(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
     if general_info.is_version_at_least(2, 3, 0, 0) {
         chunk.cur_pos = sequences_pointer.unwrap();
         let sequence_count: usize = chunk.read_usize_count()?;
-        sequences.reserve(sequence_count);
+        let mut sequence_pointers: Vec<usize> = Vec::with_capacity(sequence_count);
         for _ in 0..sequence_count {
+            sequence_pointers.push(chunk.read_relative_pointer()?);
+        }
+        sequences.reserve(sequence_count);
+        for start_pos in sequence_pointers {
+            chunk.cur_pos = start_pos;
             sequences.push(parse_sequence_instance(chunk, strings)?);
         }
-    }
 
-    if !general_info.is_version_at_least(2, 3, 2, 0) {
-        chunk.cur_pos = nine_slices_pointer.unwrap();
-        let nine_slice_count: usize = chunk.read_usize_count()?;
-        nine_slices.reserve(nine_slice_count);
-        for _ in 0..nine_slice_count {
-            nine_slices.push(parse_sprite_instance(chunk, strings)?);
+        if !general_info.is_version_at_least(2, 3, 2, 0) {
+            chunk.cur_pos = nine_slices_pointer.unwrap();
+            let nine_slice_count: usize = chunk.read_usize_count()?;
+            nine_slices.reserve(nine_slice_count);
+            for _ in 0..nine_slice_count {
+                nine_slices.push(parse_sprite_instance(chunk, strings)?);
+            }
         }
     }
 
     if general_info.is_version_at_least(2023, 2, 0, 0) {   // {~~} non LTS
         chunk.cur_pos = particle_systems_pointer.unwrap();
         let particle_system_count: usize = chunk.read_usize_count()?;
-        particle_systems.reserve(particle_system_count);
+        let mut particle_system_pointers: Vec<usize> = Vec::with_capacity(particle_system_count);
         for _ in 0..particle_system_count {
+            particle_system_pointers.push(chunk.read_relative_pointer()?);
+        }
+        particle_systems.reserve(particle_system_count);
+        for start_pos in particle_system_pointers {
+            chunk.cur_pos = start_pos;
             particle_systems.push(parse_particle_system_instance(chunk, strings)?);
         }
     }
@@ -807,13 +826,16 @@ fn parse_layer_assets(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings
     if general_info.is_version_at_least(2024, 6, 0, 0) {
         chunk.cur_pos = text_items_pointer.unwrap();
         let text_item_count: usize = chunk.read_usize_count()?;
-        text_items.reserve(text_item_count);
+        let mut text_item_pointers: Vec<usize> = Vec::with_capacity(text_item_count);
         for _ in 0..text_item_count {
+            text_item_pointers.push(chunk.read_relative_pointer()?);
+        }
+        text_items.reserve(text_item_count);
+        for start_pos in text_item_pointers {
+            chunk.cur_pos = start_pos;
             text_items.push(parse_text_item_instance(chunk, strings)?);
         }
     }
-
-    // TODO pointers are very scuffed; issue will probably arise
 
     Ok(GMRoomLayerDataAssets {
         legacy_tiles,
@@ -948,7 +970,7 @@ fn parse_text_item_instance(chunk: &mut GMChunk, strings: &GMStrings) -> Result<
     })
 }
 
-fn parse_layer_effect(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMRoomLayerDataEffect, String> {
+fn parse_layer_effect(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMRoomLayerDataEffect, String> {
     // {~~} dont serialize if >= 2022.1
     let effect_type: GMRef<String> = chunk.read_gm_string(strings)?;
 
