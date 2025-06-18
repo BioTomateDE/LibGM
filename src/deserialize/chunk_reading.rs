@@ -1,12 +1,9 @@
 ﻿use std::collections::HashMap;
-use crate::debug_utils::{format_bytes, likely, typename, unlikely};
-use crate::deserialize::all::GMData;
+use crate::debug_utils::{format_bytes, typename, unlikely};
 use crate::deserialize::functions::GMFunction;
 use crate::deserialize::general_info::GMGeneralInfo;
-use crate::deserialize::strings::GMStrings;
 use crate::deserialize::texture_page_items::GMTexturePageItem;
 use crate::deserialize::variables::GMVariable;
-use crate::serialize::chunk_writing::DataBuilder;
 
 // GMRef is for parsing chunks:
 // It has (fake) generic types to make it clearer
@@ -71,13 +68,14 @@ pub struct GMReader {
 
     data: Vec<u8>,
     chunk: GMChunk,
-    pub cur_pos: usize,
+    cur_pos: usize,
 }
 impl GMReader {
     pub fn new(data: Vec<u8>) -> Self {
         Self {
             general_info: GMGeneralInfo::stub(),
             string_occurrence_map: HashMap::new(),
+            texture_page_item_occurrence_map: HashMap::new(),
             variable_occurrence_map: HashMap::new(),
             function_occurrence_map: HashMap::new(),
             chunk: GMChunk {
@@ -355,15 +353,38 @@ impl GMReader {
         Ok(())
     }
     
-    pub fn set_abs_pos(&mut self, absolute_position: usize) -> Result<(), String> {
+    pub fn set_abs_cur_pos(&mut self, absolute_position: usize) -> Result<(), String> {
         if absolute_position < self.chunk.start_pos || absolute_position > self.chunk.end_pos {
             return Err(format!(
-                "Tried to set absolute reader position to {} in chunk '{}' with start position {} and end position {}; out of bounds",
+                "Tried to set absolute reader position {} in chunk '{}' with start position {} and end position {}; out of bounds",
                 absolute_position, self.chunk.name, self.chunk.start_pos, self.chunk.end_pos,
             ))
         }
         self.cur_pos = absolute_position;
         Ok(())
+    }
+    pub fn set_rel_cur_pos(&mut self, relative_position: usize) -> Result<(), String> {
+        if self.chunk.start_pos + relative_position > self.chunk.end_pos {
+            return Err(format!(
+                "Tried to set relative reader position to {} in chunk '{}' with start position {} and end position {}; out of bounds",
+                relative_position, self.chunk.name, self.chunk.start_pos, self.chunk.end_pos,
+            ))
+        }
+        self.cur_pos = self.chunk.start_pos + relative_position;
+        Ok(())
+    }
+    pub fn skip_bytes(&mut self, bytes_count: usize) {
+        self.cur_pos += bytes_count;
+    }
+
+    pub fn get_abs_cur_pos(&self) -> usize {
+        self.cur_pos
+    }
+    pub fn get_rel_cur_pos(&self) -> usize {
+        self.cur_pos - self.chunk.start_pos
+    }
+    pub fn get_chunk_length(&self) -> usize {
+        self.chunk.end_pos - self.chunk.start_pos
     }
 
     pub fn assert_chunk_name(&self, chunk_name: &str) -> Result<(), String> {

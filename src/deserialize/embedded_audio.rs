@@ -1,36 +1,31 @@
-use crate::deserialize::chunk_reading::GMChunk;
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMEmbeddedAudio {
-    pub raw_data: Vec<u8>,
-}
+use crate::deserialize::chunk_reading::{GMChunk, GMChunkElement, GMElement, GMReader};
 
 #[derive(Debug, Clone)]
 pub struct GMEmbeddedAudios {
-    pub audios_by_index: Vec<GMEmbeddedAudio>,
+    pub audios: Vec<GMEmbeddedAudio>,
+    pub exists: bool,
+}
+impl GMChunkElement for GMEmbeddedAudios {
+    fn empty() -> Self {
+        Self { audios: vec![], exists: false }
+    }
+}
+impl GMElement for GMEmbeddedAudios {
+    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+        let audios = reader.read_pointer_list()?;
+        Ok(Self { audios, exists: true })
+    }
 }
 
-pub fn parse_chunk_audo(chunk: &mut GMChunk) -> Result<GMEmbeddedAudios, String> {
-    chunk.cur_pos = 0;
-    let audios_count: usize = chunk.read_usize_count()?;
-    let mut start_positions: Vec<usize> = Vec::with_capacity(audios_count);
-    for _ in 0..audios_count {
-        start_positions.push(chunk.read_relative_pointer()?);
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMEmbeddedAudio {
+    pub audio_data: Vec<u8>,
+}
+impl GMElement for GMEmbeddedAudio {
+    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+        let audio_data_length: usize = reader.read_usize()?;
+        let audio_data: Vec<u8> = reader.read_bytes_dyn(audio_data_length)?.to_vec();
+        Ok(Self { audio_data })
     }
-
-    let mut audios_by_index: Vec<GMEmbeddedAudio> = Vec::with_capacity(audios_count);
-    for (i, start_position) in start_positions.iter().enumerate() {
-        chunk.cur_pos = *start_position;
-        let audio_raw_length: usize = chunk.read_usize()?;
-        let audio_raw: &[u8] = chunk.read_bytes_dyn(audio_raw_length)
-            .map_err(|e| format!("Trying to read raw audio #{i} with length {audio_raw_length} {e}"))?;
-
-        let audio = GMEmbeddedAudio {
-            raw_data: audio_raw.to_vec(),
-        };
-        audios_by_index.push(audio);
-    }
-
-    Ok(GMEmbeddedAudios{ audios_by_index })
 }
 
