@@ -331,7 +331,7 @@ pub fn parse_chunk_room(chunk: &mut GMChunk, general_info: &GMGeneralInfo, gm_st
         let mut layers: Option<Vec<GMRoomLayer>> = None;
         let mut sequences: Option<Vec<GMSequence>> = None;
         if general_info.is_version_at_least(2, 0, 0, 0) {
-            layers = Some(parse_room_layers(chunk, general_info, gm_strings, &game_objects)?);
+            layers = Some(parse_room_layers(chunk, general_info, gm_strings, name.display(gm_strings), &game_objects)?);
             if general_info.is_version_at_least(2, 3, 0, 0) {
                 sequences = Some(parse_room_sequences(chunk, general_info, gm_strings)?);
             }
@@ -570,7 +570,13 @@ fn parse_room_tile(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<
     })
 }
 
-fn parse_room_layers(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings, room_game_objects: &Vec<GMRoomGameObject>) -> Result<Vec<GMRoomLayer>, String> {
+fn parse_room_layers(
+    chunk: &mut GMChunk,
+    general_info: &GMGeneralInfo,
+    strings: &GMStrings,
+    room_name: &str,
+    room_game_objects: &Vec<GMRoomGameObject>,
+) -> Result<Vec<GMRoomLayer>, String> {
     let layer_pointers: Vec<usize> = chunk.read_pointer_to_pointer_list()?;
     let old_position: usize = chunk.cur_pos;
     let mut layers: Vec<GMRoomLayer> = Vec::with_capacity(layer_pointers.len());
@@ -593,9 +599,10 @@ fn parse_room_layers(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings:
         let is_visible: bool = chunk.read_bool32()?;
         
         let data_2022_1: Option<GMRoomLayer2022_1> = if general_info.is_version_at_least(2022, 1, 0, 0) {
-            let effect_enabled = chunk.read_bool32()?;
-            let effect_type = chunk.read_gm_string(strings)?;
-            let effect_properties_len = chunk.read_usize_count()?;
+            // TODO auto detect gm version; since gm2 the version in gen8 is stuck on 2.0
+            let effect_enabled: bool = chunk.read_bool32()?;
+            let effect_type: GMRef<String> = chunk.read_gm_string(strings)?;
+            let effect_properties_len: usize = chunk.read_usize_count()?;
             let mut effect_properties: Vec<GMRoomLayerEffectProperty> = Vec::with_capacity(effect_properties_len);
             for _ in 0..effect_properties_len {
                 let kind: i32 = chunk.read_i32()?;
@@ -617,7 +624,7 @@ fn parse_room_layers(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings:
         let data: GMRoomLayerData = match layer_type {
             GMRoomLayerType::Path => GMRoomLayerData::None,
             GMRoomLayerType::Background => GMRoomLayerData::Background(parse_layer_background(chunk)?),
-            GMRoomLayerType::Instances => GMRoomLayerData::Instances(parse_layer_instances(chunk, room_game_objects)?),
+            GMRoomLayerType::Instances => GMRoomLayerData::Instances(parse_layer_instances(chunk, room_name, room_game_objects)?),
             GMRoomLayerType::Assets => GMRoomLayerData::Assets(parse_layer_assets(chunk, general_info, strings)?),
             GMRoomLayerType::Tiles => GMRoomLayerData::Tiles(parse_layer_tiles(chunk, general_info)?),
             GMRoomLayerType::Effect => GMRoomLayerData::Effect(parse_layer_effect(chunk, strings)?),
@@ -661,13 +668,17 @@ fn get_room_game_object_by_instance_id(room_game_objects: &Vec<GMRoomGameObject>
     None
 }
 
-fn parse_layer_instances(chunk: &mut GMChunk, room_game_objects: &Vec<GMRoomGameObject>) -> Result<GMRoomLayerDataInstances, String> {
+fn parse_layer_instances(chunk: &mut GMChunk, room_name: &str, room_game_objects: &Vec<GMRoomGameObject>) -> Result<GMRoomLayerDataInstances, String> {
     let count: usize = chunk.read_usize_count()?;
     let mut instances: Vec<GMRoomGameObject> = Vec::with_capacity(count);
     // {~~} check scuffed conditions for false positive idk
 
-    for _ in 0..count {
+    for i in 0..count {
         let instance_id: u32 = chunk.read_u32()?;
+        if instance_id == 0 {
+            log::warn!("Skipping Zero Instance ID #{i} of Instance Layer of Room \"{room_name}\"");
+            continue
+        }
         let room_game_object: GMRoomGameObject = get_room_game_object_by_instance_id(room_game_objects, instance_id)
             .ok_or_else(|| format!("Nonexistent room game objects are not supported yet (has instance id {instance_id})"))?;
         instances.push(room_game_object);
@@ -703,15 +714,7 @@ fn parse_layer_tiles(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Resul
 fn parse_layer_background(chunk: &mut GMChunk) -> Result<GMRoomLayerDataBackground, String> {
     let visible: bool = chunk.read_bool32()?;
     let foreground: bool = chunk.read_bool32()?;
-    let sprite_id: i32 = chunk.read_i32()?;
-    if sprite_id < -1 {
-        return Err(format!("Invalid sprite id {0} (0x{0:08X}) while parsing Room Background Layer", sprite_id))
-    }
-    let sprite: Option<GMRef<GMSprite>> = if sprite_id == -1 {
-        None
-    } else {
-        Some(GMRef::new(sprite_id as usize))
-    };
+    let sprite: Option<GMRef<GMSprite>> = chunk.read_resource_by_id_option()?;
     let tiled_horizontally: bool = chunk.read_bool32()?;
     let tiled_vertically: bool = chunk.read_bool32()?;
     let stretch: bool = chunk.read_bool32()?;
