@@ -1,4 +1,5 @@
 ﻿pub mod all;
+mod detect_version;
 pub(super) mod general_info;
 pub(super) mod variables;
 pub(super) mod scripts;
@@ -20,4 +21,4 @@ pub(super) mod sprites_yyswf;
 pub(super) mod paths;
 pub(super) mod particles;
 pub(super) mod options;
-mod detect_version;
+pub(super) mod irrelevant;
