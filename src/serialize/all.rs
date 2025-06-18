@@ -22,6 +22,7 @@ use crate::serialize::stubs::{build_chunk_agrp, build_chunk_dafl, build_chunk_ex
 use crate::serialize::texture_page_items::build_chunk_tpag;
 use crate::serialize::variables::build_chunk_vari;
 use crate::bench_build;
+use crate::serialize::irrelevant::{build_chunk_glob, build_chunk_lang};
 use crate::serialize::options::build_chunk_optn;
 use crate::serialize::particles::{build_chunk_psem, build_chunk_psys};
 
@@ -64,7 +65,11 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
         bench_build!("PSYS", build_chunk_psys(&mut builder, &gm_data)?);
         bench_build!("PSEM", build_chunk_psem(&mut builder, &gm_data)?);
     }
-    
+    bench_build!("LANG", build_chunk_lang(&mut builder, &gm_data)?);
+    bench_build!("EXTN", build_chunk_extn(&mut builder, &gm_data)?);
+    bench_build!("AGRP", build_chunk_agrp(&mut builder, &gm_data)?);
+    bench_build!("GLOB", build_chunk_glob(&mut builder, &gm_data)?);
+
     let raw_data_len: i32 = builder.len() as i32 - 8;
     builder.resolve_placeholder(GMPointer::FormLength, raw_data_len)?;
     
