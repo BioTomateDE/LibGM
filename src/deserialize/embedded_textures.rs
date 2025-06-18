@@ -1,14 +1,34 @@
-use rayon::iter::ParallelIterator;
 use std::cmp::max;
 use std::io::Read;
-use crate::deserialize::chunk_reading::GMChunk;
-use crate::deserialize::general_info::GMGeneralInfo;
+use crate::deserialize::chunk_reading::{GMChunkElement, GMElement, GMReader};
 use crate::printing::hexdump;
 use image;
 use bzip2::read::BzDecoder;
 use image::{DynamicImage, ImageBuffer};
-use rayon::prelude::IntoParallelIterator;
 use crate::qoi;
+
+
+pub const MAGIC_PNG_HEADER: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
+pub const MAGIC_BZ2_QOI_HEADER: &[u8] = "2zoq".as_bytes();
+pub const MAGIC_QOI_HEADER: &[u8] = "fioq".as_bytes();
+
+
+pub struct GMEmbeddedTextures {
+    pub texture_pages: Vec<GMEmbeddedTexture>,
+    pub exists: bool,
+}
+impl GMChunkElement for GMEmbeddedTextures {
+    fn empty() -> Self {
+        Self { texture_pages: vec![], exists: false }
+    }
+}
+impl GMElement for GMEmbeddedTextures {
+    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+        let texture_pages: Vec<GMEmbeddedTexture> = reader.read_pointer_list()?;
+        Ok(Self { texture_pages, exists: true })
+    }
+}
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMEmbeddedTexture {
@@ -21,161 +41,90 @@ pub struct GMEmbeddedTexture {
     pub index_in_group: Option<i32>,
     pub image: Option<DynamicImage>,
 }
-
-struct GMEmbeddedTextureRaw<'a> {
-    scaled: u32,
-    generated_mips: Option<u32>,
-    texture_width: Option<i32>,
-    texture_height: Option<i32>,
-    index_in_group: Option<i32>,
-    image: Option<RawImage<'a>>,
-}
-
-pub const MAGIC_PNG_HEADER: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
-pub const MAGIC_BZ2_QOI_HEADER: &[u8] = "2zoq".as_bytes();
-pub const MAGIC_QOI_HEADER: &[u8] = "fioq".as_bytes();
-
-
-struct RawImage<'a> {
-    data: &'a [u8],
-    position_in_data: usize,
-    kind: RawImageKind,
-}
-
-enum RawImageKind {
-    Png,
-    Bz2Qoi,
-    // Qoi,
-}
-
-
-pub fn parse_chunk_txtr(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Vec<GMEmbeddedTexture>, String> {
-    chunk.cur_pos = 0;
-    let texture_count: usize = chunk.read_usize_count()?;
-    let mut texture_pointers: Vec<usize> = Vec::with_capacity(texture_count);
-
-    for _ in 0..texture_count {
-        texture_pointers.push(chunk.read_relative_pointer()?);
-    }
-
-    let mut textures_raw: Vec<GMEmbeddedTextureRaw> = Vec::with_capacity(texture_count);
-    for texture_start_position in texture_pointers {
-        chunk.cur_pos = texture_start_position;
-
-        let scaled: u32 = chunk.read_u32()?;
+impl GMElement for GMEmbeddedTexture {
+    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+        let scaled: u32 = reader.read_u32()?;
         let mut generated_mips: Option<u32> = None;
         let mut texture_width: Option<i32> = None;
         let mut texture_height: Option<i32> = None;
         let mut index_in_group: Option<i32> = None;
         // reader directory {}
 
-        if general_info.is_version_at_least(2, 0, 6, 0) {
-            generated_mips = Some(chunk.read_u32()?);
+        if reader.general_info.is_version_at_least(2, 0, 6, 0) {
+            generated_mips = Some(reader.read_u32()?);
         }
         // if general_info.is_version_at_least(2022, 3, 0, 0) {
         //     texture_block_size = Some(chunk.read_u32()?);
         // }
-        if general_info.is_version_at_least(2022, 9, 0, 0) {
-            texture_width = Some(chunk.read_i32()?);
-            texture_height = Some(chunk.read_i32()?);
-            index_in_group = Some(chunk.read_i32()?);
+        if reader.general_info.is_version_at_least(2022, 9, 0, 0) {
+            texture_width = Some(reader.read_i32()?);
+            texture_height = Some(reader.read_i32()?);
+            index_in_group = Some(reader.read_i32()?);
         }
 
-        let texture_data_start_pos: usize = chunk.read_relative_pointer()?;
-        // can be zero if the texture is "external"
-        let image: Option<RawImage> = if texture_data_start_pos == 0 { None } else {
-            chunk.cur_pos = texture_start_position;
-            Some(read_raw_texture(chunk, general_info)?)
+        let texture_data_start_pos: usize = reader.read_pointer()?;
+        let image: Option<DynamicImage> = if texture_data_start_pos == 0 {   // can be zero if the texture is "external"
+            None
+        } else {
+            reader.set_abs_cur_pos(texture_data_start_pos)?;
+            Some(read_raw_texture(reader)?)
         };
 
-        textures_raw.push(GMEmbeddedTextureRaw {
+        Ok(GMEmbeddedTexture {
             scaled,
             generated_mips,
             texture_width,
             texture_height,
             index_in_group,
             image,
-        });
-    }
-
-    let textures: Result<Vec<GMEmbeddedTexture>, String> = textures_raw.into_par_iter().map(|raw_texture| {
-        let image: Option<DynamicImage> = if let Some(ref raw_img) = raw_texture.image {
-            Some(read_raw_image(raw_img).map_err(|e| format!("{e} for texture page at position {} in chunk 'TXTR'", raw_img.position_in_data))?)
-        } else {
-            None
-        };
-        Ok(GMEmbeddedTexture {
-            scaled: raw_texture.scaled,
-            generated_mips: raw_texture.generated_mips,
-            texture_width: raw_texture.texture_width,
-            texture_height: raw_texture.texture_height,
-            index_in_group: raw_texture.index_in_group,
-            image,
         })
-    }).collect();
-    let textures: Vec<GMEmbeddedTexture> = textures.map_err(|e| format!("Error while parsing texture page images: {e}"))?;
-
-    // for (i, texture) in textures.iter().enumerate() {
-    //     if let Some(ref img) = texture.image {
-    //         use std::path::PathBuf;
-    //         let path = PathBuf::from(format!("./_texture_pages/{i}.png"));
-    //         img.save(path).map_err(|e| format!("Could not save image #{i}: {e}"))?;
-    //     }
-    // }
-
-    Ok(textures)
+    }
 }
 
 
-fn read_raw_texture<'a>(chunk: &mut GMChunk<'a>, general_info: &GMGeneralInfo) -> Result<RawImage<'a>, String> {
-    let start_position: usize = chunk.cur_pos;
-    let header: [u8; 8] = *chunk.read_bytes_const()
+fn read_raw_texture(reader: &mut GMReader) -> Result<DynamicImage, String> {
+    let start_position: usize = reader.get_abs_cur_pos();
+    let header: [u8; 8] = *reader.read_bytes_const()
         .map_err(|e| format!("Trying to read headers {e} at position {start_position} while parsing images of texture pages"))?;
 
     if header == MAGIC_PNG_HEADER {
         // Parse PNG
-        chunk.cur_pos += 8;  // skip header
+        reader.skip_bytes(8);   // skip header
         loop {
-            let len: usize = u32::from_be_bytes(*chunk.read_bytes_const()?) as usize;
-            let type_: usize = u32::from_be_bytes(*chunk.read_bytes_const()?) as usize;
-            chunk.cur_pos += len + 4;
+            let len: usize = u32::from_be_bytes(*reader.read_bytes_const()?) as usize;
+            let type_: usize = u32::from_be_bytes(*reader.read_bytes_const()?) as usize;
+            reader.skip_bytes(len + 4);
             if type_ == 0x49454E44 {    // no idea lol
                 break;
             }
         }
         
-        let data_length: usize = chunk.cur_pos - start_position;
-        chunk.cur_pos = start_position;
-        let bytes: &[u8] = chunk.read_bytes_dyn(data_length).map_err(|e| format!("Trying to read PNG image data {e}"))?;
+        let data_length: usize = reader.get_abs_cur_pos() - start_position;
+        reader.set_abs_cur_pos(start_position)?;
+        let bytes: &[u8] = reader.read_bytes_dyn(data_length).map_err(|e| format!("Trying to read PNG image data {e}"))?;
         // png image size checks {~~}
-        Ok(RawImage {
-            data: bytes,
-            position_in_data: start_position,
-            kind: RawImageKind::Png,
-        })
+        Ok(decode_png(bytes)?)
     }
     else if header.starts_with(MAGIC_BZ2_QOI_HEADER) {
         // Parse QOI + BZip2
-        chunk.cur_pos += 8;      // skip past (start of) header
+        reader.skip_bytes(8);    // skip past (start of) header
         let mut header_size: usize = 8;
-        if general_info.is_version_at_least(2022, 5, 0, 0) {
-            let _serialized_uncompressed_length = chunk.read_usize()?;    // maybe handle negative numbers?
+        if reader.general_info.is_version_at_least(2022, 5, 0, 0) {
+            let _serialized_uncompressed_length = reader.read_usize()?;    // maybe handle negative numbers?
             header_size = 12;
         }
 
-        let bz2_stream_length: usize = find_end_of_bz2_stream(chunk)? - start_position - header_size;   // TODO verify that this new logic is correct (fd3d4c65)
+        let bz2_stream_length: usize = find_end_of_bz2_stream(reader)? - start_position - header_size;   // TODO verify that this new logic is correct (fd3d4c65)
         // read entire image (excluding bz2 header) to byte array
-        chunk.cur_pos = start_position + header_size;
-        let raw_image_data: &[u8] = chunk.read_bytes_dyn(bz2_stream_length).map_err(|e| format!("Trying to read Bzip2 Stream of Bz2 Qoi Image {e}"))?;
-        Ok(RawImage {
-            data: raw_image_data,
-            position_in_data: start_position,
-            kind: RawImageKind::Bz2Qoi,
-        })
+        reader.set_abs_cur_pos(start_position + header_size)?;
+        let raw_image_data: &[u8] = reader.read_bytes_dyn(bz2_stream_length)
+            .map_err(|e| format!("Trying to read Bzip2 Stream of Bz2 Qoi Image {e}"))?;
+        let image: DynamicImage = image_from_bz2_qoi(raw_image_data).map_err(|e| format!("Could not parse BZip2 QOI image: {e}"))?;
+        Ok(image)
     }
     else if header.starts_with(MAGIC_QOI_HEADER) {
         // Parse QOI
-        return Err(format!("Raw QOI images not yet implemented at position {} in chunk 'TXTR'", chunk.cur_pos));
+        return Err("Raw QOI images without Bzip2 not yet implemented".to_string());
         // image_from_qoi(chunk.data[chunk..])
     }
     else {
@@ -185,56 +134,47 @@ fn read_raw_texture<'a>(chunk: &mut GMChunk<'a>, general_info: &GMGeneralInfo) -
 }
 
 
-fn read_raw_image(raw_image: &RawImage) -> Result<DynamicImage, String> {
-    let dynamic_image: DynamicImage = match &raw_image.kind {
-        RawImageKind::Png => {
-            let decoder = png::Decoder::new(raw_image.data);
-            let mut reader = decoder.read_info().map_err(|e| format!("Could not read PNG metadata: {e}"))?;
-            let mut buf: Vec<u8> = vec![0; reader.output_buffer_size()];
-            let info = reader.next_frame(&mut buf).map_err(|e| format!("Could not read PNG data: {e}"))?;
-            match info.color_type {
-                png::ColorType::Rgb => {
-                    ImageBuffer::from_raw(info.width, info.height, buf)
-                        .map(DynamicImage::ImageRgb8)
-                        .ok_or_else(|| format!(
-                            "Invalid PNG dimensions at position {}: {}x{}",
-                            raw_image.position_in_data, info.width, info.height,
-                        ))?
-                }
-                png::ColorType::Rgba => {
-                    ImageBuffer::from_raw(info.width, info.height, buf)
-                        .map(DynamicImage::ImageRgba8)
-                        .ok_or_else(|| format!(
-                            "Invalid PNG dimensions at position {}: {}x{}",
-                            raw_image.position_in_data, info.width, info.height,
-                        ))?
-                }
-                _ => return Err(format!(
-                    "Unsupported PNG color type at position {}: {:?}",
-                    raw_image.position_in_data, info.color_type,
-                )),
-            }
+fn decode_png(data: &[u8]) -> Result<DynamicImage, String> {
+    let png_decoder = png::Decoder::new(data);
+    let mut png_reader = png_decoder.read_info().map_err(|e| format!("Could not read PNG metadata: {e}"))?;
+    let mut buffer: Vec<u8> = vec![0; png_reader.output_buffer_size()];
+    let info = png_reader.next_frame(&mut buffer).map_err(|e| format!("Could not read PNG data: {e}"))?;
+    match info.color_type {
+        png::ColorType::Rgb => {
+            ImageBuffer::from_raw(info.width, info.height, buffer)
+                .map(DynamicImage::ImageRgb8)
+                .ok_or_else(|| format!(
+                    "Could not fit Rgb PNG with dimensions {}x{} into buffer with length {}",
+                    info.width, info.height, png_reader.output_buffer_size(),
+                ))
         }
-        RawImageKind::Bz2Qoi => {
-            image_from_bz2_qoi(&raw_image.data).map_err(|e| format!("Could not parse BZip2 QOI image: {e}"))?
+        png::ColorType::Rgba => {
+            ImageBuffer::from_raw(info.width, info.height, buffer)
+                .map(DynamicImage::ImageRgba8)
+                .ok_or_else(|| format!(
+                    "Could not fit Rgba PNG with dimensions {}x{} into buffer with length {}",
+                    info.width, info.height, png_reader.output_buffer_size(),
+                ))
         }
-    };
-    Ok(dynamic_image)
+        _ => Err(format!(
+            "Unsupported PNG color type: {:?}", info.color_type,
+        )),
+    }
 }
 
 
-fn find_end_of_bz2_stream(gm_chunk: &mut GMChunk) -> Result<usize, String> {
-    let stream_start_position: usize = gm_chunk.cur_pos;
+fn find_end_of_bz2_stream(reader: &mut GMReader) -> Result<usize, String> {
+    let stream_start_position: usize = reader.get_rel_cur_pos();
     // Read backwards from the max end of stream position, in up to 256-byte chunks.
     // We want to find the end of nonzero data.
     static MAX_CHUNK_SIZE: usize = 256;
 
-    let mut chunk_start_position: usize = max(stream_start_position, gm_chunk.data.len() - MAX_CHUNK_SIZE);
-    let chunk_size: usize = gm_chunk.data.len() - chunk_start_position;
+    let mut chunk_start_position: usize = max(stream_start_position, reader.get_chunk_length() - MAX_CHUNK_SIZE);
+    let chunk_size: usize = reader.get_chunk_length() - chunk_start_position;
     loop {
-        gm_chunk.cur_pos = chunk_start_position;
-        let chunk_data: &[u8] = &gm_chunk.data[gm_chunk.cur_pos.. gm_chunk.cur_pos + chunk_size];
-        gm_chunk.cur_pos += chunk_size;
+        reader.set_rel_cur_pos(chunk_start_position)?;
+        let chunk_data: &[u8] = reader.read_bytes_dyn(chunk_size)?;
+        reader.skip_bytes(chunk_size);
 
         // find first nonzero byte at end of stream
         let mut position: isize = chunk_size as isize - 1;
@@ -245,7 +185,7 @@ fn find_end_of_bz2_stream(gm_chunk: &mut GMChunk) -> Result<usize, String> {
         // If we're at nonzero data, then invoke search for footer magic
         if position >= 0 && chunk_data[position as usize] != 0 {
             let end_data_position: isize = chunk_start_position as isize + position + 1;
-            return Ok(find_end_of_bz2_search(gm_chunk, end_data_position as usize)?)
+            return Ok(find_end_of_bz2_search(reader, end_data_position as usize)?)
         }
 
         // move backwards to next chunk
@@ -258,17 +198,20 @@ fn find_end_of_bz2_stream(gm_chunk: &mut GMChunk) -> Result<usize, String> {
 
 
 /// function written by chatgpt; unverified
-fn find_end_of_bz2_search(gm_chunk: &mut GMChunk, end_data_position: usize) -> Result<usize, String> {
+fn find_end_of_bz2_search(reader: &mut GMReader, end_data_position: usize) -> Result<usize, String> {
     static MAGIC_BZ2_FOOTER: [u8; 6] = [0x17, 0x72, 0x45, 0x38, 0x50, 0x90];
 
     // Ensure we don't read past the data bounds
     let start_position = end_data_position.saturating_sub(16);
-    if start_position >= gm_chunk.data.len() {
+    if start_position >= reader.get_chunk_length() {
         return Err("Start position out of bounds".to_string());
     }
+    let length = end_data_position - start_position;    // redundant???
 
     // Extract the last 16 bytes (or fewer if near the start of data)
-    let data = &gm_chunk.data[start_position..end_data_position];
+    let saved_pos: usize = reader.get_abs_cur_pos();
+    reader.set_rel_cur_pos(start_position)?;
+    let data: &[u8] = reader.read_bytes_dyn(length)?;
 
     // BZ2 footer magic bytes
     let footer_magic: &[u8] = &MAGIC_BZ2_FOOTER;
@@ -324,6 +267,7 @@ fn find_end_of_bz2_search(gm_chunk: &mut GMChunk, end_data_position: usize) -> R
                 end_of_bz2_stream_position += 1;
             }
 
+            reader.set_abs_cur_pos(saved_pos)?;
             return Ok(start_position + end_of_bz2_stream_position);
         }
 
@@ -335,6 +279,7 @@ fn find_end_of_bz2_search(gm_chunk: &mut GMChunk, end_data_position: usize) -> R
         }
     }
 
+    reader.set_abs_cur_pos(saved_pos)?;
     Err("Failed to find BZip2 footer magic".to_string())
 }
 
