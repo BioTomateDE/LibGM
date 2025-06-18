@@ -682,7 +682,7 @@ pub fn parse_occurrence_chain(
     }
     // FIXME: in UTMT, this is checked using gmversion 2.3 (not 2.0!); but deltarune 1.00 (?) has gmversion 2.0.0.0 and needs the zero offset.
     // if are any errors regarding function parsing, this is probably the cause
-    let initial_offset: i32 = if is_function && general_info.is_version_at_least(2, 0, 0, 0) {
+    let initial_offset: i32 = if is_function && general_info.is_version_at_least(2, 3, 0, 0) {
         0
     } else {
         4

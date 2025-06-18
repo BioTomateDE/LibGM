@@ -134,9 +134,6 @@ impl<'a> GMChunk<'a> {
             ))
         }
         if number != 0 {    // zero should be preserved and not throw an error
-            if number.checked_sub(self.abs_pos).is_none() {
-                log::info!("todo remove debug")
-            }
             number = number.checked_sub(self.abs_pos).ok_or_else(|| format!(
                 "Number underflowed while reading usize pointer in chunk '{}' at absolute position {}: {} > {}",
                 number, self.name, self.cur_pos + self.abs_pos, self.abs_pos,
@@ -229,9 +226,9 @@ impl<'a> GMChunk<'a> {
 
     pub fn read_gm_string(&mut self, gm_strings: &GMStrings) -> Result<GMRef<String>, String> {
         let string_abs_pos: usize = self.read_usize()?;
-        if gm_strings.abs_pos_to_reference.get(&string_abs_pos).is_none() {
-            log::error!("this is only here for easy breakpoints; comment out this if statement otherwise")
-        }
+        // if gm_strings.abs_pos_to_reference.get(&string_abs_pos).is_none() {
+        //     log::error!("this is only here for easy breakpoints; comment out this if statement otherwise")
+        // }
         let string_ref = gm_strings.abs_pos_to_reference.get(&string_abs_pos)
             .ok_or_else(|| format!(
                 "Could not read reference string with absolute position {} in chunk '{}' at \
@@ -269,6 +266,15 @@ impl<'a> GMChunk<'a> {
         while (self.cur_pos + self.abs_pos) & (alignment - 1) != 0 {
             self.read_u8()?;
         }
+        Ok(())
+    }
+    
+    pub fn set_abs_pos(&mut self, absolute_position: usize) -> Result<(), String> {
+        let relative_position: usize = absolute_position.checked_sub(self.abs_pos).ok_or_else(|| format!(
+            "Absolute position underflowed while trying to set absolute position chunk '{}': {} > {}",
+            self.name, absolute_position, self.abs_pos+self.data.len(),
+        ))?;
+        self.cur_pos = relative_position;
         Ok(())
     }
 }

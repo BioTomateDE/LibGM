@@ -20,3 +20,4 @@ pub(super) mod sprites_yyswf;
 pub(super) mod paths;
 pub(super) mod particles;
 pub(super) mod options;
+mod detect_version;

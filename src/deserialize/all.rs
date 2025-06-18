@@ -10,7 +10,7 @@ use crate::deserialize::embedded_textures::{parse_chunk_txtr, GMEmbeddedTexture}
 use crate::deserialize::fonts::{parse_chunk_font, GMFonts};
 use crate::deserialize::functions::{parse_chunk_func, GMCodeLocal, GMFunctions};
 use crate::deserialize::game_objects::{parse_chunk_objt, GMGameObjects};
-use crate::deserialize::general_info::parse_chunk_gen8;
+use crate::deserialize::general_info::{parse_chunk_gen8, GMVersion};
 use crate::deserialize::scripts::{parse_chunk_scpt, GMScripts};
 use crate::deserialize::strings::{parse_chunk_strg, GMStrings};
 use crate::deserialize::variables::{parse_chunk_vari, GMVariables};
@@ -21,6 +21,7 @@ use crate::deserialize::sounds::{parse_chunk_sond, GMSounds};
 use crate::deserialize::sprites::{parse_chunk_sprt, GMSprites};
 use crate::deserialize::texture_page_items::{parse_chunk_tpag, GMTextures};
 use crate::bench_parse;
+use crate::deserialize::detect_version::detect_gamemaker_version;
 use crate::deserialize::options::{parse_chunk_optn, GMOptions};
 use crate::deserialize::particles::{parse_chunk_psem, parse_chunk_psys, GMParticleEmitters, GMParticleSystems};
 
@@ -111,7 +112,15 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     log::trace!("Parsing FORM took {stopwatch}");
 
     let strings: GMStrings = bench_parse!("STRG", parse_chunk_strg(&mut chunk_strg)?);
-    let general_info: GMGeneralInfo = bench_parse!("GEN8", parse_chunk_gen8(&mut chunk_gen8, &strings)?);
+    let mut general_info: GMGeneralInfo = bench_parse!("GEN8", parse_chunk_gen8(&mut chunk_gen8, &strings)?);
+    
+    let stopwatch2 = Stopwatch::start();
+    if let Some(detected_version) = detect_gamemaker_version(&chunks)? {
+        log::info!("General info specified incorrect GameMaker version {}; automatically detected real version {}", general_info.version, detected_version);
+        general_info.version = detected_version;
+    }
+    log::trace!("Detecting GameMaker Version took {stopwatch2}");
+    
     let texture_pages: Vec<GMEmbeddedTexture> = bench_parse!("TXTR", parse_chunk_txtr(&mut chunk_txtr, &general_info)?);
     let texture_page_items: GMTextures = bench_parse!("TPAG", parse_chunk_tpag(&mut chunk_tpag)?);
     let backgrounds: GMBackgrounds = bench_parse!("BGND", parse_chunk_bgnd(&mut chunk_bgnd, &general_info, &strings, &texture_page_items)?);
