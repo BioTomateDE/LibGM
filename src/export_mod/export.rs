@@ -171,7 +171,7 @@ pub struct ModExporter<'o, 'm> {
 
 impl ModExporter<'_, '_> {
     pub fn convert_audio_ref(&self, gm_audio_ref: &GMRef<GMEmbeddedAudio>) -> Result<ModRef, String> {
-        convert_reference(gm_audio_ref, &self.original_data.audios.audios_by_index, &self.modified_data.audios.audios_by_index)
+        convert_reference(gm_audio_ref, &self.original_data.audios.audios, &self.modified_data.audios.audios)
     }
     pub fn convert_background_ref(&self, gm_background_ref: &GMRef<GMBackground>) -> Result<ModRef, String> {
         convert_reference(gm_background_ref, &self.original_data.backgrounds.backgrounds, &self.modified_data.backgrounds.backgrounds)
@@ -204,7 +204,7 @@ impl ModExporter<'_, '_> {
     }
 
     pub fn convert_audio_ref_opt(&self, gm_audio_ref: &Option<GMRef<GMEmbeddedAudio>>) -> Result<Option<ModRef>, String> {
-        convert_reference_optional(gm_audio_ref, &self.original_data.audios.audios_by_index, &self.modified_data.audios.audios_by_index)
+        convert_reference_optional(gm_audio_ref, &self.original_data.audios.audios, &self.modified_data.audios.audios)
     }
     pub fn convert_background_ref_opt(&self, gm_background_ref: &Option<GMRef<GMBackground>>) -> Result<Option<ModRef>, String> {
         convert_reference_optional(gm_background_ref, &self.original_data.backgrounds.backgrounds, &self.modified_data.backgrounds.backgrounds)
