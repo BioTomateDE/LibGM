@@ -260,33 +260,30 @@ impl GMReader {
         }
         Ok(string)
     }
-    
+
     pub fn read_gm_string(&mut self) -> Result<GMRef<String>, String> {
-        let pointer: usize = self.read_usize()?;
-        self.string_occurrence_map.get(&pointer)
-            .cloned()
-            .ok_or_else(|| format!(
-                "Could not read gamemaker string with absolute position {} in chunk '{}' at position {} \
-                because it doesn't exist in the occurrence map (length: {})",
-                pointer, self.chunk.name, self.cur_pos - 4, self.string_occurrence_map.len()
-            ))
+        let occurrence_position: usize = self.read_usize()?;
+        resolve_occurrence(occurrence_position, &self.string_occurrence_map, &self.chunk.name, self.cur_pos)
     }
     pub fn read_gm_texture(&mut self) -> Result<GMRef<GMTexturePageItem>, String> {
-        let pointer: usize = self.read_usize()?;
-        self.texture_page_item_occurrence_map.get(&pointer)
-            .cloned()
-            .ok_or_else(|| format!(
-                "Could not read texture page item with absolute position {} in chunk '{}' at position {} \
-                because it doesn't exist in the occurrence map (length: {})",
-                pointer, self.chunk.name, self.cur_pos - 4, self.texture_page_item_occurrence_map.len()
-            ))
+        let occurrence_position: usize = self.read_usize()?;
+        resolve_occurrence(occurrence_position, &self.texture_page_item_occurrence_map, &self.chunk.name, self.cur_pos)
+    }
+    
+    pub fn read_gm_string_opt(&mut self) -> Result<Option<GMRef<String>>, String> {
+        let occurrence_position: usize = self.read_usize()?;
+        if occurrence_position == 0 {
+            return Ok(None)
+        }
+        Ok(Some(resolve_occurrence(occurrence_position, &self.string_occurrence_map, &self.chunk.name, self.cur_pos)?))
     }
 
-    /// Try to read a GM String Reference. If the value is zero, return None.
-    pub fn read_gm_string_optional(&mut self) -> Result<Option<GMRef<String>>, String> {
-        let string_abs_pos: usize = self.read_usize()?;
-        let string_ref: Option<GMRef<String>> = self.string_occurrence_map.get(&string_abs_pos).cloned();
-        Ok(string_ref)
+    pub fn read_gm_texture_opt(&mut self) -> Result<Option<GMRef<GMTexturePageItem>>, String> {
+        let occurrence_position: usize = self.read_usize()?;
+        if occurrence_position == 0 {
+            return Ok(None)
+        }
+        Ok(Some(resolve_occurrence(occurrence_position, &self.texture_page_item_occurrence_map, &self.chunk.name, self.cur_pos)?))
     }
 
     pub fn read_simple_list<T: GMElement>(&mut self) -> Result<Vec<T>, String> {
@@ -338,7 +335,7 @@ impl GMReader {
         }
         Ok(elements)
     }
-    
+
     pub fn read_pointer_list_with_occurrence_map<T: GMElement+GMElementByAbsPos>(&mut self) -> Result<(Vec<T>, HashMap<usize, GMRef<T>>), String> {
         let pointers: Vec<GMPointer> = self.read_simple_list::<GMPointer>()?;
         let mut occurrences: HashMap<usize, GMRef<T>> = HashMap::with_capacity(pointers.len());
@@ -382,6 +379,16 @@ impl GMReader {
 }
 
 
+fn resolve_occurrence<T>(occurrence_position: usize, occurrence_map: &HashMap<usize, GMRef<T>>, chunk_name: &str, position: usize) -> Result<GMRef<T>, String> {
+    occurrence_map.get(&occurrence_position)
+        .ok_or_else(|| format!(
+            "Could not read {} with absolute position {} in chunk '{}' at position {} \
+            because it doesn't exist in the occurrence map (length: {})",
+            typename::<T>(), occurrence_position, chunk_name, position, occurrence_map.len(),
+        ))
+        .cloned()
+}
+
 pub trait GMElement {
     fn deserialize(reader: &mut GMReader) -> Result<Self, String> where Self: Sized;
     // fn serialize(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String>;
@@ -404,5 +411,19 @@ impl GMElement for GMPointer {
     // fn serialize(_: &mut DataBuilder, _: &GMData) -> Result<(), String> {
     //     unimplemented!()
     // }
+}
+
+
+pub fn vec_with_capacity<T>(count: usize) -> Result<Vec<T>, String> {
+    const FAILSAFE_SIZE: usize = 1_000_000;   // 1 Megabyte
+    let implied_size = size_of::<T>() * count;
+    if implied_size > FAILSAFE_SIZE {
+        return Err(format!(
+            "Failsafe triggered while initializing list of {}: \
+            Element count {} implies a total data size of {} which is larget than the failsafe size of {}",
+            typename::<T>(), count, format_bytes(implied_size), format_bytes(FAILSAFE_SIZE),
+        ))
+    }
+    Ok(Vec::with_capacity(count))
 }
 
