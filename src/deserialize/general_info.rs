@@ -61,6 +61,11 @@ impl std::fmt::Display for GMVersion {
         write!(f, "{}.{}.{}.{}", self.major, self.minor, self.release, self.stable)
     }
 }
+impl GMVersion {
+    pub fn new(major: u32, minor: u32, release: u32, stable: u32) -> Self {
+        Self { major, minor, release, stable }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct GMGeneralInfoFlags {
@@ -233,12 +238,7 @@ fn parse_version(chunk: &mut GMChunk) -> Result<GMVersion, String> {
     let minor: u32 = chunk.read_u32()?;
     let release: u32 = chunk.read_u32()?;
     let stable: u32 = chunk.read_u32()?;
-    Ok(GMVersion {
-        major,
-        minor,
-        release,
-        stable,
-    })
+    Ok(GMVersion::new(major, minor, release, stable))
 }
 
 fn parse_general_info_flags(raw: u32) -> GMGeneralInfoFlags{
