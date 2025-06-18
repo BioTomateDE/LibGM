@@ -5,14 +5,14 @@ use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 
 pub fn build_chunk_font(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     builder.start_chunk("FONT")?;
-    let font_count: usize = gm_data.fonts.fonts_by_index.len();
+    let font_count: usize = gm_data.fonts.fonts.len();
     builder.write_usize(font_count);
 
     for i in 0..font_count {
         builder.write_placeholder(GMPointer::Font(i))?;
     }
 
-    for (i, font) in gm_data.fonts.fonts_by_index.iter().enumerate() {
+    for (i, font) in gm_data.fonts.fonts.iter().enumerate() {
         builder.resolve_pointer(GMPointer::Font(i))?;
         build_font(builder, &gm_data.general_info, i, font)
             .map_err(|e| format!("{e} while building Font #{} with name \"{}\"", i, font.name.display(&gm_data.strings)))?;

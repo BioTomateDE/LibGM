@@ -1,6 +1,23 @@
-use std::collections::HashMap;
-use crate::deserialize::chunk_reading::{GMChunk, GMRef};
-use crate::deserialize::strings::GMStrings;
+use crate::deserialize::chunk_reading::{GMChunkElement, GMElement, GMReader, GMRef};
+
+
+#[derive(Debug, Clone)]
+pub struct GMPaths {
+    pub paths: Vec<GMPath>,
+    pub exists: bool,
+}
+impl GMChunkElement for GMPaths {
+    fn empty() -> Self {
+        Self { paths: vec![], exists: false }
+    }
+}
+impl GMElement for GMPaths {
+    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+        let paths: Vec<GMPath> = reader.read_pointer_list::<GMPath>()?;
+        Ok(GMPaths { paths, exists: true })
+    }
+}
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMPath {
@@ -10,6 +27,17 @@ pub struct GMPath {
     pub precision: u32,
     pub points: Vec<GMPathPoint>,
 }
+impl GMElement for GMPath {
+    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+        let name: GMRef<String> = reader.read_gm_string()?;
+        let is_smooth: bool = reader.read_bool32()?;
+        let is_closed: bool = reader.read_bool32()?;
+        let precision: u32 = reader.read_u32()?;
+        let points: Vec<GMPathPoint> = reader.read_simple_list()?;
+        Ok(GMPath { name, is_smooth, is_closed, precision, points })
+    }
+}
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMPathPoint {
@@ -17,60 +45,12 @@ pub struct GMPathPoint {
     pub y: f32,
     pub speed: f32,
 }
-
-#[derive(Debug, Clone)]
-pub struct GMPaths {
-    pub paths_by_index: Vec<GMPath>,  // paths by index/order in chunk PATH
-}
-
-pub fn parse_chunk_path(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMPaths, String> {
-    chunk.cur_pos = 0;
-    let path_count: usize = chunk.read_usize_count()?;
-    let mut path_starting_positions: Vec<usize> = Vec::with_capacity(path_count);
-    for _ in 0..path_count {
-        path_starting_positions.push(chunk.read_relative_pointer()?);
+impl GMElement for GMPathPoint {
+    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+        let x: f32 = reader.read_f32()?;
+        let y: f32 = reader.read_f32()?;
+        let speed: f32 = reader.read_f32()?;
+        Ok(GMPathPoint { x, y, speed })
     }
-
-    let mut paths_by_index: Vec<GMPath> = Vec::with_capacity(path_count);
-    let mut abs_pos_to_ref: HashMap<usize, GMRef<GMPath>> = HashMap::with_capacity(path_count);
-    for (i, start_position) in path_starting_positions.iter().enumerate() {
-        chunk.cur_pos = *start_position;
-
-        let name: GMRef<String> = chunk.read_gm_string(&strings)?;
-        let is_smooth: bool = chunk.read_bool32()?;
-        let is_closed: bool = chunk.read_bool32()?;
-        let precision: u32 = chunk.read_u32()?;
-        let points: Vec<GMPathPoint> = parse_path_points(chunk)?;
-
-        let path: GMPath = GMPath {
-            name,
-            is_smooth,
-            is_closed,
-            precision,
-            points,
-        };
-        abs_pos_to_ref.insert(start_position + chunk.abs_pos, GMRef::new(i));
-        paths_by_index.push(path);
-    }
-    Ok(GMPaths { paths_by_index})
-}
-
-
-fn parse_path_points(chunk: &mut GMChunk) -> Result<Vec<GMPathPoint>, String> {
-    let point_count: usize = chunk.read_usize_count()?;
-    let mut points: Vec<GMPathPoint> = Vec::with_capacity(point_count);
-
-    for _ in 0..point_count {
-        let x: f32 = chunk.read_f32()?;
-        let y: f32 = chunk.read_f32()?;
-        let speed: f32 = chunk.read_f32()?;
-        points.push(GMPathPoint {
-            x,
-            y,
-            speed,
-        })
-    }
-
-    Ok(points)
 }
 

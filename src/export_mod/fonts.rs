@@ -73,8 +73,8 @@ pub struct EditFontGlyph {
 impl ModExporter<'_, '_> {
     pub fn export_fonts(&self) -> Result<EditUnorderedList<AddFont, EditFont>, String> {
         export_changes_unordered_list(
-            &self.original_data.fonts.fonts_by_index,
-            &self.modified_data.fonts.fonts_by_index,
+            &self.original_data.fonts.fonts,
+            &self.modified_data.fonts.fonts,
             |i| Ok(AddFont {
                 name: self.convert_string_ref(&i.name)?,
                 display_name: self.convert_string_ref_opt(&i.display_name)?,
