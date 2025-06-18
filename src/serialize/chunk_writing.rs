@@ -55,6 +55,8 @@ pub enum GMPointer {
     CodeLength(usize),
     ParticleSystem(usize),
     ParticleEmitter(usize),
+    Extension(usize),
+    AudioGroup(usize),
     FormLength,
 }
 
@@ -193,7 +195,7 @@ impl DataBuilder {
     }
 
     /// write pointer to pointer list (only used in rooms)
-    pub fn write_pointer_list(&mut self, pointers: &[usize]) -> Result<(), String> {
+    pub fn write_pointer_to_pointer_list(&mut self, pointers: &[usize]) -> Result<(), String> {
         let start_pos_placeholder: usize = self.raw_data.len();
         self.write_usize(0xDEADC0DE);   // will overwrite later
 

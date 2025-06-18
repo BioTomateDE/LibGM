@@ -22,6 +22,7 @@ use crate::deserialize::sprites::{parse_chunk_sprt, GMSprites};
 use crate::deserialize::texture_page_items::{parse_chunk_tpag, GMTextures};
 use crate::bench_parse;
 use crate::deserialize::detect_version::detect_gamemaker_version;
+use crate::deserialize::irrelevant::{parse_chunk_agrp, parse_chunk_extn, parse_chunk_glob, parse_chunk_lang, GMAudioGroups, GMExtensions, GMGlobalInits, GMLanguageRoot};
 use crate::deserialize::options::{parse_chunk_optn, GMOptions};
 use crate::deserialize::particles::{parse_chunk_psem, parse_chunk_psys, GMParticleEmitters, GMParticleSystems};
 
@@ -47,6 +48,10 @@ pub struct GMData {
     pub paths: GMPaths,                                 // PATH
     pub particle_systems: GMParticleSystems,            // PSYS
     pub particle_emitters: GMParticleEmitters,          // PSEM
+    pub language_root: Option<GMLanguageRoot>,          // LANG
+    pub extensions: GMExtensions,                       // EXTN
+    pub audio_groups: GMAudioGroups,                    // AGRP
+    pub global_inits: GMGlobalInits,                    // GLOB
 }
 
 pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
@@ -106,7 +111,11 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let mut chunk_path: GMChunk = get_chunk(&chunks, "PATH")?;
 
     let mut chunk_psys: Option<GMChunk> = chunks.get("PSYS").cloned();
-    let chunk_psem: Option<GMChunk> = chunks.get("PSEM").cloned();
+    let mut chunk_psem: Option<GMChunk> = chunks.get("PSEM").cloned();
+    let mut chunk_lang: Option<GMChunk> = chunks.get("LANG").cloned();
+    let mut chunk_extn: Option<GMChunk> = chunks.get("EXTN").cloned();
+    let mut chunk_agrp: Option<GMChunk> = chunks.get("AGRP").cloned();
+    let mut chunk_glob: Option<GMChunk> = chunks.get("GLOB").cloned();
     // TODO implement all other chunks
     
     log::trace!("Parsing FORM took {stopwatch}");
@@ -141,12 +150,28 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let particle_emitters: GMParticleEmitters;
     if let Some(ref mut chunk) = chunk_psys {
         particle_systems = bench_parse!("PSYS", parse_chunk_psys(chunk, &general_info, &strings)?);
-        let chunk: &mut GMChunk = &mut chunk_psem.ok_or("Chunk PSYS exists but PSEM does not")?;
+        let chunk: &mut GMChunk = chunk_psem.as_mut().ok_or("Chunk PSYS exists but PSEM does not")?;
         particle_emitters = bench_parse!("PSEM", parse_chunk_psem(chunk, &general_info, &strings)?);
     } else {
         particle_systems = GMParticleSystems::empty();
         particle_emitters = GMParticleEmitters::empty();
     }
+
+    let language_root: Option<GMLanguageRoot> = if let Some(ref mut chunk) = chunk_lang {
+        Some(bench_parse!("LANG", parse_chunk_lang(chunk, &strings)?))
+    } else { None };
+
+    let extensions: GMExtensions = if let Some(ref mut chunk) = chunk_extn {
+        bench_parse!("EXTN", parse_chunk_extn(chunk, &strings)?)
+    } else { GMExtensions::empty() };
+
+    let audio_groups: GMAudioGroups = if let Some(ref mut chunk) = chunk_agrp {
+        bench_parse!("AGRP", parse_chunk_agrp(chunk, &general_info, &strings)?)
+    } else { GMAudioGroups::empty() };
+
+    let global_inits: GMGlobalInits = if let Some(ref mut chunk) = chunk_agrp {
+        bench_parse!("GLOB", parse_chunk_glob(chunk)?)
+    } else { GMGlobalInits::empty() };
 
     let data = GMData {
         strings,
@@ -169,6 +194,10 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
         paths,
         particle_systems,
         particle_emitters,
+        language_root,
+        extensions,
+        audio_groups,
+        global_inits,
     };
 
     log::trace!("Parsing data took {stopwatch}");
