@@ -1,8 +1,23 @@
-use std::collections::HashMap;
-use crate::deserialize::chunk_reading::{GMChunk, GMRef};
-use crate::deserialize::general_info::GMGeneralInfo;
-use crate::deserialize::strings::GMStrings;
-use crate::deserialize::texture_page_items::{GMTexturePageItem, GMTextures};
+use crate::deserialize::chunk_reading::{GMChunkElement, GMElement, GMReader, GMRef};
+use crate::deserialize::texture_page_items::GMTexturePageItem;
+
+#[derive(Debug, Clone)]
+pub struct GMFonts {
+    pub fonts: Vec<GMFont>,
+    pub exists: bool,
+}
+impl GMChunkElement for GMFonts {
+    fn empty() -> Self {
+        Self { fonts: vec![], exists: false }
+    }
+}
+impl GMElement for GMFonts {
+    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+        let fonts: Vec<GMFont> = reader.read_pointer_list()?;
+        Ok(Self { fonts, exists: true })
+    }
+}
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMFont {
@@ -24,93 +39,49 @@ pub struct GMFont {
     pub line_height: Option<u32>,
     pub glyphs: Vec<GMFontGlyph>,
 }
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMFontGlyph {
-    pub character: Option<char>,
-    pub x: u16,
-    pub y: u16,
-    pub width: u16,
-    pub height: u16,
-    pub shift_modifier: i16,
-    pub offset: i16,
-    pub kernings: Vec<GMFontGlyphKerning>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMFontGlyphKerning {
-    pub character: char,
-    pub shift_modifier: i16,
-}
-
-#[derive(Debug, Clone)]
-pub struct GMFonts {
-    pub abs_pos_to_ref: HashMap<usize, GMRef<GMFont>>,  // convert absolute position/pointer in data.win to font ref
-    pub fonts_by_index: Vec<GMFont>,                    // fonts by index/order in chunk FONT
-}
-
-pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings, textures: &GMTextures) -> Result<GMFonts, String> {
-    chunk.cur_pos = 0;
-    let font_count: usize = chunk.read_usize_count()?;
-    let mut font_starting_positions: Vec<usize> = Vec::with_capacity(font_count);
-    for _ in 0..font_count {
-        let start_position: usize = chunk.read_relative_pointer()?;
-        font_starting_positions.push(start_position);
-    }
-
-    let mut fonts_by_index: Vec<GMFont> = Vec::with_capacity(font_count);
-    let mut abs_pos_to_ref: HashMap<usize, GMRef<GMFont>> = HashMap::with_capacity(font_count);
-    for (i, start_position) in font_starting_positions.iter().enumerate() {
-        chunk.cur_pos = *start_position;
-
-        let name: GMRef<String> = chunk.read_gm_string(&strings)?;
-        let display_name: Option<GMRef<String>> = chunk.read_gm_string_optional(&strings)?;
-        let em_size: u32 = chunk.read_u32()?;   // before GMS 2.3: int. after: float
+impl GMElement for GMFont {
+    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+        let name: GMRef<String> = reader.read_gm_string()?;
+        let display_name: Option<GMRef<String>> = reader.read_gm_string_optional()?;
+        let em_size: u32 = reader.read_u32()?;   // before GMS 2.3: int. after: float
         let em_size: f32 = if em_size & (1 << 31) != 0 {    // since the float is always written negated, it has the first bit set.
             -f32::from_bits(em_size)
         } else {
             em_size as f32
         };
-        let bold: bool = chunk.read_bool32()?;
-        let italic: bool = chunk.read_bool32()?;
-        let range_start: u16 = chunk.read_u16()?;
-        let charset: u8 = chunk.read_u8()?;
-        let anti_alias: u8 = chunk.read_u8()?;
-        let range_end: u32 = chunk.read_u32()?;
-        let texture_abs_pos: usize = chunk.read_usize()?;
-        let texture: GMRef<GMTexturePageItem> = textures.abs_pos_to_ref.get(&texture_abs_pos).ok_or_else(|| format!(
-            "Could not find texture with absolute position {} for Font with name \"{}\" at position {} in chunk 'FONT'", 
-            texture_abs_pos, name.display(strings), start_position,
-        ))?.clone();
-        let scale_x: f32 = chunk.read_f32()?;
-        let scale_y: f32 = chunk.read_f32()?;
+        let bold: bool = reader.read_bool32()?;
+        let italic: bool = reader.read_bool32()?;
+        let range_start: u16 = reader.read_u16()?;
+        let charset: u8 = reader.read_u8()?;
+        let anti_alias: u8 = reader.read_u8()?;
+        let range_end: u32 = reader.read_u32()?;
+        let texture: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
+        let scale_x: f32 = reader.read_f32()?;
+        let scale_y: f32 = reader.read_f32()?;
 
         let mut ascender_offset: Option<i32> = None;
         let mut ascender: Option<u32> = None;
         let mut sdf_spread: Option<u32> = None;
         let mut line_height: Option<u32> = None;
 
-        if general_info.bytecode_version >= 17 {
-            ascender_offset = Some(chunk.read_i32()?);
+        if reader.general_info.bytecode_version >= 17 {
+            ascender_offset = Some(reader.read_i32()?);
         }
-        if general_info.is_version_at_least(2022, 2, 0, 0) {
-            ascender = Some(chunk.read_u32()?);
+        if reader.general_info.is_version_at_least(2022, 2, 0, 0) {
+            ascender = Some(reader.read_u32()?);
         }
-        if general_info.is_version_at_least(2023, 2, 0, 0) {    // TODO non LTS {~~}
-            sdf_spread = Some(chunk.read_u32()?);
+        if reader.general_info.is_version_at_least(2023, 2, 0, 0) {   // TODO non LTS {~~}
+            sdf_spread = Some(reader.read_u32()?);
         }
-        if general_info.is_version_at_least(2023, 6, 0, 0) {
-            line_height = Some(chunk.read_u32()?);
+        if reader.general_info.is_version_at_least(2023, 6, 0, 0) {
+            line_height = Some(reader.read_u32()?);
         }
-
-        let glyphs: Vec<GMFontGlyph> = parse_glyphs(chunk, general_info)
-            .map_err(|e| format!("{e} of font #{i} with name \"{}\"", name.display(strings)))?;
-        
-        if general_info.is_version_at_least(2024, 14, 0, 0) {
-            chunk.align(4)?;
+        let glyphs: Vec<GMFontGlyph> = reader.read_simple_list_short()?;
+        if reader.general_info.is_version_at_least(2024, 14, 0, 0) {
+            reader.align(4)?;
         }
 
-        let font: GMFont = GMFont {
+        Ok(GMFont {
             name,
             display_name,
             em_size,
@@ -128,48 +99,40 @@ pub fn parse_chunk_font(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
             sdf_spread,
             line_height,
             glyphs,
-        };
-        abs_pos_to_ref.insert(start_position + chunk.abs_pos, GMRef::new(i));
-        fonts_by_index.push(font);
+        })
     }
-    Ok(GMFonts {
-        abs_pos_to_ref,
-        fonts_by_index,
-    })
 }
 
 
-fn parse_glyphs(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Vec<GMFontGlyph>, String> {
-    let glyph_count: usize = chunk.read_usize_count()?;
-    let mut glyph_starting_positions: Vec<usize> = Vec::with_capacity(glyph_count);
-
-    for _ in 0..glyph_count {
-        let start_position: usize = chunk.read_relative_pointer()?;
-        glyph_starting_positions.push(start_position);
-    }
-
-    let mut glyphs: Vec<GMFontGlyph> = Vec::with_capacity(glyph_count);
-    for (i, start_position) in glyph_starting_positions.iter().enumerate() {
-        chunk.cur_pos = *start_position;
-
-        let character: u16 = chunk.read_u16()?;
-        let character: Option<char> = convert_char(character).map_err(|_| format!(
-            "Invalid UTF-8 character with code point {character} (0x{character:04X}) at absolute position {} in chunk 'FONT' for glyph #{i}",
-            chunk.abs_pos + chunk.cur_pos,
-        ))?;
-        let x: u16 = chunk.read_u16()?;
-        let y: u16 = chunk.read_u16()?;
-        let width: u16 = chunk.read_u16()?;
-        let height: u16 = chunk.read_u16()?;
-        let shift_modifier: i16 = chunk.read_i16()?;
-        let offset: i16 = chunk.read_i16()?;    // potential assumption idk
-        if general_info.is_version_at_least(2024, 11, 0, 0) {
-            let _unknown_always_zero = chunk.read_i16();
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMFontGlyph {
+    pub character: Option<char>,
+    pub x: u16,
+    pub y: u16,
+    pub width: u16,
+    pub height: u16,
+    pub shift_modifier: i16,
+    pub offset: i16,
+    pub kernings: Vec<GMFontGlyphKerning>,
+}
+impl GMElement for GMFontGlyph {
+    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+        let character: u16 = reader.read_u16()?;
+        let character: Option<char> = if character == 0 { None } else {
+            Some(char::from_u32(character.into()).ok_or_else(|| format!("Invalid UTF-8 character with code point {0} (0x{0:04X})", character))?)
+        };
+        let x: u16 = reader.read_u16()?;
+        let y: u16 = reader.read_u16()?;
+        let width: u16 = reader.read_u16()?;
+        let height: u16 = reader.read_u16()?;
+        let shift_modifier: i16 = reader.read_i16()?;
+        let offset: i16 = reader.read_i16()?;    // potential assumption according to utmt
+        if reader.general_info.is_version_at_least(2024, 11, 0, 0) {
+            let _unknown_always_zero = reader.read_i16();
         }
-        let kernings: Vec<GMFontGlyphKerning> = parse_kernings(chunk)
-            .map_err(|e| format!("{e} for Glyph #{i}"))?;
+        let kernings: Vec<GMFontGlyphKerning> = reader.read_simple_list()?;
 
-        let glyph: GMFontGlyph = GMFontGlyph {
+        Ok(GMFontGlyph {
             character,
             x,
             y,
@@ -178,40 +141,25 @@ fn parse_glyphs(chunk: &mut GMChunk, general_info: &GMGeneralInfo) -> Result<Vec
             shift_modifier,
             offset,
             kernings,
-        };
-        glyphs.push(glyph);
-    }
-
-    Ok(glyphs)
-}
-
-
-fn parse_kernings(chunk: &mut GMChunk) -> Result<Vec<GMFontGlyphKerning>, String> {
-    let kerning_count: usize = chunk.read_u16()? as usize;
-    let mut kernings: Vec<GMFontGlyphKerning> = Vec::with_capacity(kerning_count);
-    
-    for i in 0..kerning_count {
-        let character: u16 = chunk.read_u16()?;
-        let character: char = convert_char(character)
-            .map_err(|_| format!("Invalid UTF-8 character with code point {character} (0x{character:04X}) for Kerning #{i}"))?
-            .ok_or_else(|| format!("Character not set (code point is zero) for Kerning #{i}"))?;
-        let shift_modifier: i16 = chunk.read_i16()?;
-        
-        kernings.push(GMFontGlyphKerning {
-            character,
-            shift_modifier,
         })
     }
-    
-    Ok(kernings)
 }
 
 
-fn convert_char(codepoint: u16) -> Result<Option<char>, ()> {
-    if codepoint == 0 {
-        return Ok(None);
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMFontGlyphKerning {
+    pub character: char,
+    pub shift_modifier: i16,
+}
+impl GMElement for GMFontGlyphKerning {
+    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+        let character: u16 = reader.read_u16()?;
+        if character == 0 {
+            return Err("Character not set (code point is zero)".to_string())
+        }
+        let character: char = char::from_u32(character.into())
+            .ok_or_else(|| format!("Invalid UTF-8 character with code point {0} (0x{0:04X})", character))?;
+        let shift_modifier: i16 = reader.read_i16()?;
+        Ok(GMFontGlyphKerning { character, shift_modifier })
     }
-    char::from_u32(codepoint as u32).map(Some).ok_or(())
 }
-
-

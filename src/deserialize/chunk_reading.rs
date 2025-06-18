@@ -1,5 +1,12 @@
-﻿use crate::debug_utils::{format_bytes, likely, typename, unlikely};
+﻿use std::collections::HashMap;
+use crate::debug_utils::{format_bytes, likely, typename, unlikely};
+use crate::deserialize::all::GMData;
+use crate::deserialize::functions::GMFunction;
+use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::strings::GMStrings;
+use crate::deserialize::texture_page_items::GMTexturePageItem;
+use crate::deserialize::variables::GMVariable;
+use crate::serialize::chunk_writing::DataBuilder;
 
 // GMRef is for parsing chunks:
 // It has (fake) generic types to make it clearer
@@ -9,7 +16,7 @@ use crate::deserialize::strings::GMStrings;
 // [See GMPointer to understand difference]
 #[derive(Hash, PartialEq, Eq)]
 pub struct GMRef<T> {
-    pub index: usize,
+    pub index: u32,
     // marker needs to be here to ignore "unused generic T" error; doesn't store any data
     _marker: std::marker::PhantomData<T>,
 }
@@ -25,7 +32,7 @@ impl<T> std::fmt::Debug for GMRef<T> {
     }
 }
 impl<T> GMRef<T> {
-    pub fn new(index: usize) -> GMRef<T> {
+    pub fn new(index: u32) -> GMRef<T> {
         Self {
             index,
             _marker: std::marker::PhantomData,
@@ -34,7 +41,7 @@ impl<T> GMRef<T> {
 }
 impl<'a, T> GMRef<T> {
     pub fn resolve(&self, elements_by_index: &'a Vec<T>) -> Result<&'a T, String> {
-        elements_by_index.get(self.index)
+        elements_by_index.get(self.index as usize)
             .ok_or_else(|| format!(
                 "Could not resolve {} reference with index {} in list with length {}",
                 std::any::type_name::<T>(),
@@ -46,31 +53,66 @@ impl<'a, T> GMRef<T> {
 
 
 #[derive(Debug, Clone)]
-pub struct GMChunk<'a> {
-    pub name: String,           // 4 letter name of chunk
-    pub abs_pos: usize,         // absolute position/index in data.win file
-    pub data: &'a [u8],         // raw data
-    pub cur_pos: usize,         // gets incremented by .read_{} methods when parsing chunk
-    pub total_data_len: usize,  // used for read_usize failsafe
+pub struct GMChunk {
+    pub name: String,
+    pub start_pos: usize,
+    pub end_pos: usize,
 }
 
-const FAILSAFE_COUNT: usize = 100_000;    // increase limit is not enough
+const FAILSAFE_COUNT: u32 = 100_000;    // increase limit is not enough
 
 
-impl<'a> GMChunk<'a> {
-    pub fn read_bytes_dyn(&mut self, count: usize) -> Result<&'a [u8], String> {
-        if self.cur_pos+count > self.data.len() {
-            log::error!("this is only here for easy breakpoints; comment out this if statement otherwise")
+pub struct GMReader {
+    pub general_info: GMGeneralInfo,
+    string_occurrence_map: HashMap<usize, GMRef<String>>,
+    texture_page_item_occurrence_map: HashMap<usize, GMRef<GMTexturePageItem>>,
+    variable_occurrence_map: HashMap<usize, GMRef<GMVariable>>,
+    function_occurrence_map: HashMap<usize, GMRef<GMFunction>>,
+
+    data: Vec<u8>,
+    chunk: GMChunk,
+    pub cur_pos: usize,
+}
+impl GMReader {
+    pub fn new(data: Vec<u8>) -> Self {
+        Self {
+            general_info: GMGeneralInfo::stub(),
+            string_occurrence_map: HashMap::new(),
+            variable_occurrence_map: HashMap::new(),
+            function_occurrence_map: HashMap::new(),
+            chunk: GMChunk {
+                name: "grievous_error".to_string(),
+                start_pos: 0,
+                end_pos: data.len(),
+            },
+            data,
+            cur_pos: 0,
         }
-        let slice: &[u8] = self.data.get(self.cur_pos..self.cur_pos+count).ok_or_else(|| format!(
-            "out of bounds at absolute position {} in chunk '{}': {} > {}",
-            self.cur_pos+self.abs_pos, self.name, self.cur_pos+self.abs_pos+count, self.data.len(),
-        ))?;
+    }
+
+    pub fn read_bytes_dyn(&mut self, count: usize) -> Result<&[u8], String> {
+        if self.cur_pos < self.chunk.start_pos {
+            return Err(format!(
+                "underflowed at reader position {} in chunk '{}': {} < {}",
+                self.cur_pos, self.chunk.name, self.cur_pos, self.chunk.start_pos,
+            ))
+        }
+        if self.cur_pos+count > self.chunk.end_pos {
+            return Err(format!(
+                "overflowed at reader position {} in chunk '{}': {} > {}",
+                self.cur_pos, self.chunk.name, self.cur_pos+count, self.chunk.end_pos,
+            ))
+        }
+        // if chunk.start_pos and chunk.end_pos are set correctly; this should never fail
+        // it may even be replaced with .unwrap_unchecked() for performance
+        let slice: &[u8] = self.data.get(self.cur_pos..self.cur_pos+count).unwrap();
         self.cur_pos += count;
         Ok(slice)
     }
-    pub fn read_bytes_const<const N: usize>(&mut self) -> Result<&'a [u8; N], String> {
+    pub fn read_bytes_const<const N: usize>(&mut self) -> Result<&[u8; N], String> {
         let slice: &[u8] = self.read_bytes_dyn(N)?;
+        // read_bytes_dyn is guaranteed to read N bytes so the unwrap never fails.
+        // it may even be replaced with .unwrap_unchecked() for performance
         Ok(slice.try_into().unwrap())
     }
 
@@ -123,27 +165,21 @@ impl<'a> GMChunk<'a> {
     /// Read unsigned 32-bit integer and convert to usize (little endian).
     /// Meant for reading positions/pointers; uses total data length as failsafe.
     /// Automatically subtracts `chunks.abs_pos`; converting it to a relative chunk position.
-    pub fn read_relative_pointer(&mut self) -> Result<usize, String> {
-        let failsafe_amount: usize = self.total_data_len;
-        let mut number: usize = self.read_usize()?;
+    pub fn read_pointer(&mut self) -> Result<usize, String> {
+        let failsafe_amount: usize = self.data.len();
+        let number: usize = self.read_usize()?;
         if number >= failsafe_amount {
             return Err(format!(
                 "Failsafe triggered in chunk '{}' at position {} while trying to read usize \
                 (pointer) integer: Number {} ({}) is larger than the total data length of {} ({})",
-                self.name, self.cur_pos-4, number, format_bytes(number), failsafe_amount, format_bytes(failsafe_amount),
+                self.chunk.name, self.cur_pos-4, number, format_bytes(number), failsafe_amount, format_bytes(failsafe_amount),
             ))
-        }
-        if number != 0 {    // zero should be preserved and not throw an error
-            number = number.checked_sub(self.abs_pos).ok_or_else(|| format!(
-                "Number underflowed while reading usize pointer in chunk '{}' at absolute position {}: {} > {}",
-                number, self.name, self.cur_pos + self.abs_pos, self.abs_pos,
-            ))?;
         }
         Ok(number)
     }
     
     pub fn read_resource_by_id<T>(&mut self) -> Result<GMRef<T>, String> {
-        Ok(GMRef::new(self.read_usize_count()?))
+        Ok(GMRef::new(self.read_u32()?))
     }
 
     pub fn read_resource_by_id_option<T>(&mut self) -> Result<Option<GMRef<T>>, String> {
@@ -151,7 +187,7 @@ impl<'a> GMChunk<'a> {
         if number == -1 {
             return Ok(None)
         }
-        let number: usize = number.try_into().map_err(|_| format!(
+        let number: u32 = number.try_into().map_err(|_| format!(
             "Invalid negative number {number} (0x{number:08X}) while reading optional resource by ID",
         ))?;
         if number > FAILSAFE_COUNT {
@@ -159,25 +195,25 @@ impl<'a> GMChunk<'a> {
                 "Failsafe triggered in chunk '{}' at position {} \
                 while reading optional resource by ID: \
                 Number {} is larger than the failsafe count of {}",
-                self.name, self.cur_pos - 4, number, FAILSAFE_COUNT,
+                self.chunk.name, self.cur_pos - 4, number, FAILSAFE_COUNT,
             ))
         }
-        Ok(Some(GMRef::<T>::new(number)))
+        Ok(Some(GMRef::new(number)))
     }
 
-    /// Read unsigned 32-bit integer and convert to usize (little endian).
-    /// Meant for reading (pointer list element) count; uses small constant number as failsafe.
-    pub fn read_usize_count(&mut self) -> Result<usize, String> {
-        let number: usize = self.read_usize()?;
-        if number > FAILSAFE_COUNT {
-            return Err(format!(
-                "Failsafe triggered in chunk '{}' at position {} while trying \
-                to read usize (count) integer: Number {} is larger than the failsafe count of {}",
-                self.name, self.cur_pos-4, number, FAILSAFE_COUNT,
-            ))
-        }
-        Ok(number)
-    }
+    // /// Read unsigned 32-bit integer and convert to usize (little endian).
+    // /// Meant for reading (pointer list element) count; uses small constant number as failsafe.
+    // pub fn read_usize_count(&mut self) -> Result<usize, String> {
+    //     let number: usize = self.read_usize()?;
+    //     if number > FAILSAFE_COUNT {
+    //         return Err(format!(
+    //             "Failsafe triggered in chunk '{}' at position {} while trying \
+    //             to read usize (count) integer: Number {} is larger than the failsafe count of {}",
+    //             self.name, self.cur_pos-4, number, FAILSAFE_COUNT,
+    //         ))
+    //     }
+    //     Ok(number)
+    // }
 
     /// Read a 32-bit integer and convert it to a bool.
     /// ___
@@ -189,7 +225,7 @@ impl<'a> GMChunk<'a> {
             1 => Ok(true),
             _ => Err(format!(
                 "Read invalid boolean value in chunk '{0}' at position {1}: {2} (0x{2:08X})",
-                self.name, self.cur_pos, number,
+                self.chunk.name, self.cur_pos, number,
             ))
         }
     }
@@ -199,21 +235,22 @@ impl<'a> GMChunk<'a> {
             .map_err(|e| format!("Trying to read literal string with length {length} {e}"))?;
         let string: String = String::from_utf8(bytes.to_vec()).map_err(|e| format!(
             "Could not parse literal string with length {} in chunk '{}' at position {}: {e}",
-            length, self.name, self.cur_pos,
+            length, self.chunk.name, self.cur_pos,
         ))?;
         Ok(string)
     }
     
     /// Read chunk name (4 ascii characters)
     pub fn read_chunk_name(&mut self) -> Result<String, String> {
-        if unlikely(self.abs_pos != 0) {
+        if unlikely(self.chunk.start_pos != 0) {
             return Err(format!(
-                "Reading a chunk name outside of the special \"all chunk\" isn't \
-                allowed (chunk is called '{}' and has abs pos {})", self.name, self.abs_pos,
+                "Reading a chunk name is only allowed in root; not in a chunk!
+                Chunk is called '{}' and has start position {} and end position {}",
+                self.chunk.name, self.chunk.start_pos, self.chunk.end_pos,
             ))
         }
         let string: String = self.read_literal_string(4)
-            .map_err(|e| if self.abs_pos == 0 && self.cur_pos == 4 {
+            .map_err(|e| if self.cur_pos == 4 {
                 "Invalid data.win file; data doesn't start with 'FORM' string".to_string()
             } else {
                 format!("Could not parse chunk name at position {}: {e}", self.cur_pos)
@@ -223,60 +260,149 @@ impl<'a> GMChunk<'a> {
         }
         Ok(string)
     }
-
-    pub fn read_gm_string(&mut self, gm_strings: &GMStrings) -> Result<GMRef<String>, String> {
-        let string_abs_pos: usize = self.read_usize()?;
-        // if gm_strings.abs_pos_to_reference.get(&string_abs_pos).is_none() {
-        //     log::error!("this is only here for easy breakpoints; comment out this if statement otherwise")
-        // }
-        let string_ref = gm_strings.abs_pos_to_reference.get(&string_abs_pos)
+    
+    pub fn read_gm_string(&mut self) -> Result<GMRef<String>, String> {
+        let pointer: usize = self.read_usize()?;
+        self.string_occurrence_map.get(&pointer)
+            .cloned()
             .ok_or_else(|| format!(
-                "Could not read reference string with absolute position {} in chunk '{}' at \
-                absolute position {} because it doesn't exist in the string map (length: {})",
-                string_abs_pos, self.name, self.abs_pos + self.cur_pos - 4, gm_strings.abs_pos_to_reference.len(),
-            ))?;
-        Ok(string_ref.clone())
+                "Could not read gamemaker string with absolute position {} in chunk '{}' at position {} \
+                because it doesn't exist in the occurrence map (length: {})",
+                pointer, self.chunk.name, self.cur_pos - 4, self.string_occurrence_map.len()
+            ))
+    }
+    pub fn read_gm_texture(&mut self) -> Result<GMRef<GMTexturePageItem>, String> {
+        let pointer: usize = self.read_usize()?;
+        self.texture_page_item_occurrence_map.get(&pointer)
+            .cloned()
+            .ok_or_else(|| format!(
+                "Could not read texture page item with absolute position {} in chunk '{}' at position {} \
+                because it doesn't exist in the occurrence map (length: {})",
+                pointer, self.chunk.name, self.cur_pos - 4, self.texture_page_item_occurrence_map.len()
+            ))
     }
 
     /// Try to read a GM String Reference. If the value is zero, return None.
-    pub fn read_gm_string_optional(&mut self, gm_strings: &GMStrings) -> Result<Option<GMRef<String>>, String> {
+    pub fn read_gm_string_optional(&mut self) -> Result<Option<GMRef<String>>, String> {
         let string_abs_pos: usize = self.read_usize()?;
-        let string_ref: Option<GMRef<String>> = gm_strings.abs_pos_to_reference.get(&string_abs_pos).cloned();
+        let string_ref: Option<GMRef<String>> = self.string_occurrence_map.get(&string_abs_pos).cloned();
         Ok(string_ref)
     }
 
-    /// read pointer to pointer list (only used in rooms)
-    pub fn read_pointer_to_pointer_list(&mut self) -> Result<Vec<usize>, String> {
-        let pointers_start_pos: usize = self.read_relative_pointer()?;
-        let old_position: usize = self.cur_pos;
-        self.cur_pos = pointers_start_pos;
-
-        let pointer_count: usize = self.read_usize_count()?;
-        let mut pointers: Vec<usize> = Vec::with_capacity(pointer_count);
-        for _ in 0..pointer_count {
-            let pointer: usize = self.read_relative_pointer()?;
-            pointers.push(pointer);
+    pub fn read_simple_list<T: GMElement>(&mut self) -> Result<Vec<T>, String> {
+        const FAILSAFE_SIZE: usize = 100_000;   // 100 Kilobytes
+        let count: usize = self.read_usize()?;
+        let implied_data_size: usize = count * size_of::<T>();
+        if implied_data_size > FAILSAFE_SIZE {
+            return Err(format!(
+                "Failsafe triggered in chunk '{}' at position {} while trying \
+                to read simple list of {}: Element count {} implies a total data \
+                size of {} which is larget than the failsafe size of {}",
+                self.chunk.name, self.cur_pos-4, typename::<T>(),
+                count, format_bytes(implied_data_size), format_bytes(FAILSAFE_SIZE),
+            ))
         }
+        let mut elements: Vec<T> = Vec::with_capacity(count);
+        for _ in 0..count {
+            elements.push(T::deserialize(self)?);
+        }
+        Ok(elements)
+    }
 
-        self.cur_pos = old_position;
-        Ok(pointers)
+    pub fn read_simple_list_short<T: GMElement>(&mut self) -> Result<Vec<T>, String> {
+        const FAILSAFE_SIZE: usize = 1_000;   // 1 Kilobyte
+        let count: usize = self.read_u16()? as usize;
+        let implied_data_size: usize = count * size_of::<T>();
+        if implied_data_size > FAILSAFE_SIZE {
+            return Err(format!(
+                "Failsafe triggered in chunk '{}' at position {} while trying \
+                to read short simple list of {}: Element count {} implies a total data \
+                size of {} which is larget than the failsafe size of {}",
+                self.chunk.name, self.cur_pos-4, typename::<T>(),
+                count, format_bytes(implied_data_size), format_bytes(FAILSAFE_SIZE),
+            ))
+        }
+        let mut elements: Vec<T> = Vec::with_capacity(count);
+        for _ in 0..count {
+            elements.push(T::deserialize(self)?);
+        }
+        Ok(elements)
+    }
+
+    pub fn read_pointer_list<T: GMElement>(&mut self) -> Result<Vec<T>, String> {
+        let pointers: Vec<GMPointer> = self.read_simple_list::<GMPointer>()?;
+        let mut elements: Vec<T> = Vec::with_capacity(pointers.len());
+        for pointer in pointers {
+            self.cur_pos = pointer.pointer_position;
+            elements.push(T::deserialize(self)?);
+        }
+        Ok(elements)
+    }
+    
+    pub fn read_pointer_list_with_occurrence_map<T: GMElement+GMElementByAbsPos>(&mut self) -> Result<(Vec<T>, HashMap<usize, GMRef<T>>), String> {
+        let pointers: Vec<GMPointer> = self.read_simple_list::<GMPointer>()?;
+        let mut occurrences: HashMap<usize, GMRef<T>> = HashMap::with_capacity(pointers.len());
+        let mut elements: Vec<T> = Vec::with_capacity(pointers.len());
+        for (i, pointer) in pointers.iter().enumerate() {
+            self.cur_pos = pointer.pointer_position;
+            occurrences.insert(self.cur_pos, GMRef::new(i as u32));
+            elements.push(T::deserialize(self)?);
+        }
+        Ok((elements, occurrences))
     }
 
     pub fn align(&mut self, alignment: usize) -> Result<(), String> {
-        while (self.cur_pos + self.abs_pos) & (alignment - 1) != 0 {
+        while self.cur_pos & (alignment - 1) != 0 {
             self.read_u8()?;
         }
         Ok(())
     }
     
     pub fn set_abs_pos(&mut self, absolute_position: usize) -> Result<(), String> {
-        let relative_position: usize = absolute_position.checked_sub(self.abs_pos).ok_or_else(|| format!(
-            "Absolute position underflowed while trying to set absolute position chunk '{}': {} > {}",
-            self.name, absolute_position, self.abs_pos+self.data.len(),
-        ))?;
-        self.cur_pos = relative_position;
+        if absolute_position < self.chunk.start_pos || absolute_position > self.chunk.end_pos {
+            return Err(format!(
+                "Tried to set absolute reader position to {} in chunk '{}' with start position {} and end position {}; out of bounds",
+                absolute_position, self.chunk.name, self.chunk.start_pos, self.chunk.end_pos,
+            ))
+        }
+        self.cur_pos = absolute_position;
         Ok(())
+    }
+
+    pub fn assert_chunk_name(&self, chunk_name: &str) -> Result<(), String> {
+        if self.chunk.name == chunk_name {
+            Ok(())
+        } else {
+            Err(format!(
+                "Expected chunk with name '{}'; got chunk with name '{}' (length: {})",
+                self.chunk.name, chunk_name, chunk_name.len(),
+            ))
+        }
     }
 }
 
+
+pub trait GMElement {
+    fn deserialize(reader: &mut GMReader) -> Result<Self, String> where Self: Sized;
+    // fn serialize(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String>;
+}
+
+pub trait GMElementByAbsPos {}
+pub trait GMChunkElement {
+    fn empty() -> Self;
+}
+
+
+struct GMPointer {
+    pointer_position: usize,
+}
+impl GMElement for GMPointer {
+    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+        let pointer_position: usize = reader.read_usize()?;
+        Ok(Self { pointer_position })
+    }
+    // fn serialize(_: &mut DataBuilder, _: &GMData) -> Result<(), String> {
+    //     unimplemented!()
+    // }
+}
 

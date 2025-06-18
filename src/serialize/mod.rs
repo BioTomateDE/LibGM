@@ -1,7 +1,7 @@
 pub mod all;
 mod strings;
 mod general_info;
-mod chunk_writing;
+pub(super) mod chunk_writing;
 mod fonts;
 mod sounds;
 mod embedded_audio;
