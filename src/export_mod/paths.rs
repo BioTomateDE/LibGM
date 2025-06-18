@@ -23,8 +23,8 @@ pub struct ModPathPoint {
 impl ModExporter<'_, '_> {
     pub fn export_paths(&self) -> Result<EditUnorderedList<ModPath, ModPath>, String> {
         export_changes_unordered_list(
-            &self.original_data.paths.paths_by_index,
-            &self.modified_data.paths.paths_by_index,
+            &self.original_data.paths.paths,
+            &self.modified_data.paths.paths,
             |i| self.convert_path(i),
             |_, m| self.convert_path(m),    // force override all fields if path is edited (merging will not work properly)
             false,
