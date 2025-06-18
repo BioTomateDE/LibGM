@@ -4,14 +4,14 @@ use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
 
 pub fn build_chunk_bgnd(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     builder.start_chunk("BGND")?;
-    let len: usize = gm_data.backgrounds.backgrounds_by_index.len();
+    let len: usize = gm_data.backgrounds.backgrounds.len();
     builder.write_usize(len);
 
     for i in 0..len {
         builder.write_placeholder(GMPointer::Background(i))?;
     }
 
-    for (i, background) in gm_data.backgrounds.backgrounds_by_index.iter().enumerate() {
+    for (i, background) in gm_data.backgrounds.backgrounds.iter().enumerate() {
         builder.align(8);
         builder.resolve_pointer(GMPointer::Background(i))?;
 

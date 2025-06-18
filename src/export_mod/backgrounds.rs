@@ -40,8 +40,8 @@ pub struct ModBackgroundGMS2Data {
 impl ModExporter<'_, '_> {
     pub fn export_backgrounds(&self) -> Result<EditUnorderedList<AddBackground, EditBackground>, String> {
         export_changes_unordered_list(
-            &self.original_data.backgrounds.backgrounds_by_index,
-            &self.modified_data.backgrounds.backgrounds_by_index,
+            &self.original_data.backgrounds.backgrounds,
+            &self.modified_data.backgrounds.backgrounds,
             |i| Ok(AddBackground {
                 name: self.convert_string_ref(&i.name)?,
                 transparent: i.transparent,
