@@ -1,4 +1,4 @@
-use crate::deserialize::chunk_reading::{vec_with_capacity, GMChunkElement, GMElement, GMReader, GMRef};
+use crate::deserialize::chunk_reading::{vec_with_capacity, GMChunkElement, GMElement, DataReader, GMRef};
 use crate::deserialize::texture_page_items::GMTexturePageItem;
 
 
@@ -13,7 +13,7 @@ impl GMChunkElement for GMBackgrounds {
     }
 }
 impl GMElement for GMBackgrounds {
-    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let backgrounds: Vec<GMBackground> = reader.read_pointer_list()?;
         Ok(Self { backgrounds, exists: true })
     }
@@ -32,7 +32,7 @@ pub struct GMBackground {
 
 
 impl GMElement for GMBackground {
-    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let transparent: bool = reader.read_bool32()?;
         let smooth: bool = reader.read_bool32()?;
@@ -69,7 +69,7 @@ pub struct GMBackgroundGMS2Data {
     pub tile_ids: Vec<u32>,
 }
 impl GMElement for GMBackgroundGMS2Data {
-    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let unknown_always2: u32 = reader.read_u32()?;
         let tile_width: u32 = reader.read_u32()?;
         let tile_height: u32 = reader.read_u32()?;

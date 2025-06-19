@@ -1,7 +1,7 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::particles::{GMParticleEmitter, GMParticleEmitter2023_4, GMParticleEmitter2023_8, GMParticleEmitterPre2023_8, GMParticleSystem};
-use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, DataPlaceholder};
 
 pub fn build_chunk_psys(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     // if !gm_data.general_info.is_version_at_least(2023, 2, 0, 0) {
@@ -14,11 +14,11 @@ pub fn build_chunk_psys(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
     let len: usize = gm_data.particle_systems.particle_systems.len();
     builder.write_usize(len);
     for i in 0..len {
-        builder.write_placeholder(GMPointer::ParticleSystem(i))?;
+        builder.write_placeholder(DataPlaceholder::ParticleSystem(i))?;
     }
 
     for (i, particle_system) in gm_data.particle_systems.particle_systems.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::ParticleSystem(i))?;
+        builder.resolve_pointer(DataPlaceholder::ParticleSystem(i))?;
         build_particle_system(builder, &gm_data.general_info, particle_system)
             .map_err(|e| format!("{e} for Particle System #{i} with name \"{}\"", particle_system.name.display(&gm_data.strings)))?;
     }
@@ -53,11 +53,11 @@ pub fn build_chunk_psem(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
     let emitters: &Vec<GMParticleEmitter> = &gm_data.particle_emitters.emitters;
     builder.write_usize(emitters.len());
     for i in 0..emitters.len() {
-        builder.write_placeholder(GMPointer::ParticleEmitter(i))?;
+        builder.write_placeholder(DataPlaceholder::ParticleEmitter(i))?;
     }
 
     for (i, emitter) in emitters.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::ParticleSystem(i))?;
+        builder.resolve_pointer(DataPlaceholder::ParticleSystem(i))?;
         build_particle_emitter(builder, &gm_data.general_info, emitter)
             .map_err(|e| format!("{e} for Particle Emitter #{i} with name \"{}\"", emitter.name.display(&gm_data.strings)))?;
     }

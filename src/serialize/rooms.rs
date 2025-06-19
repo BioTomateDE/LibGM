@@ -3,21 +3,21 @@ use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::rooms::{GMRoom, GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomLayer, GMRoomTile, GMRoomTileTexture, GMRoomView};
 use crate::deserialize::sequence::GMSequence;
 use crate::deserialize::strings::GMStrings;
-use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, DataPlaceholder};
 use crate::serialize::sequence::build_sequence;
 
 pub fn build_chunk_room(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     builder.start_chunk("ROOM")?;
 
-    let room_count: usize = gm_data.rooms.rooms_by_index.len();
+    let room_count: usize = gm_data.rooms.rooms.len();
     builder.write_usize(room_count);
 
     for i in 0..room_count {
-        builder.write_placeholder(GMPointer::Room(i))?;
+        builder.write_placeholder(DataPlaceholder::Room(i))?;
     }
 
-    for (i, room) in gm_data.rooms.rooms_by_index.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::Room(i))?;
+    for (i, room) in gm_data.rooms.rooms.iter().enumerate() {
+        builder.resolve_pointer(DataPlaceholder::Room(i))?;
         build_room(builder, &gm_data.general_info, &gm_data.strings, i, room)
             .map_err(|e| format!("{e} for Room #{i} with name \"{}\" while building Rooms", room.name.display(&gm_data.strings)))?;
     }
@@ -42,10 +42,10 @@ fn build_room(builder: &mut DataBuilder, general_info: &GMGeneralInfo, strings: 
         builder.write_i32(-1);
     }
     builder.write_u32(build_room_flags(&room.flags));
-    builder.write_placeholder(GMPointer::RoomBackgroundPointerList(room_index))?;
-    builder.write_placeholder(GMPointer::RoomViewPointerList(room_index))?;
-    builder.write_placeholder(GMPointer::RoomGameObjectPointerList(room_index))?;
-    builder.write_placeholder(GMPointer::RoomTilePointerList(room_index))?;
+    builder.write_placeholder(DataPlaceholder::RoomBackgroundPointerList(room_index))?;
+    builder.write_placeholder(DataPlaceholder::RoomViewPointerList(room_index))?;
+    builder.write_placeholder(DataPlaceholder::RoomGameObjectPointerList(room_index))?;
+    builder.write_placeholder(DataPlaceholder::RoomTilePointerList(room_index))?;
     builder.write_bool32(room.world);
     builder.write_u32(room.top);
     builder.write_u32(room.left);
@@ -83,15 +83,15 @@ fn build_room_flags(flags: &GMRoomFlags) -> u32 {
 
 
 fn build_room_backgrounds(builder: &mut DataBuilder, room_index: usize, backgrounds: &Vec<GMRoomBackground>) -> Result<(), String> {
-    builder.resolve_pointer(GMPointer::RoomBackgroundPointerList(room_index))?;
+    builder.resolve_pointer(DataPlaceholder::RoomBackgroundPointerList(room_index))?;
     builder.write_usize(backgrounds.len());
 
     for i in 0..backgrounds.len() {
-        builder.write_placeholder(GMPointer::RoomBackground(room_index, i))?;
+        builder.write_placeholder(DataPlaceholder::RoomBackground(room_index, i))?;
     }
 
     for (i, background) in backgrounds.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::RoomBackground(room_index, i))?;
+        builder.resolve_pointer(DataPlaceholder::RoomBackground(room_index, i))?;
         builder.write_bool32(background.enabled);
         builder.write_bool32(background.foreground);
         if let Some(ref background) = background.background_definition {
@@ -113,15 +113,15 @@ fn build_room_backgrounds(builder: &mut DataBuilder, room_index: usize, backgrou
 
 
 fn build_room_views(builder: &mut DataBuilder, room_index: usize, views: &Vec<GMRoomView>) -> Result<(), String> {
-    builder.resolve_pointer(GMPointer::RoomViewPointerList(room_index))?;
+    builder.resolve_pointer(DataPlaceholder::RoomViewPointerList(room_index))?;
     builder.write_usize(views.len());
 
     for i in 0..views.len() {
-        builder.write_placeholder(GMPointer::RoomView(room_index, i))?;
+        builder.write_placeholder(DataPlaceholder::RoomView(room_index, i))?;
     }
 
     for (i, view) in views.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::RoomView(room_index, i))?;
+        builder.resolve_pointer(DataPlaceholder::RoomView(room_index, i))?;
         builder.write_bool32(view.enabled);
         builder.write_i32(view.view_x);
         builder.write_i32(view.view_y);
@@ -147,15 +147,15 @@ fn build_room_views(builder: &mut DataBuilder, room_index: usize, views: &Vec<GM
 
 
 fn build_room_objects(builder: &mut DataBuilder, general_info: &GMGeneralInfo, room_index: usize, views: &Vec<GMRoomGameObject>) -> Result<(), String> {
-    builder.resolve_pointer(GMPointer::RoomGameObjectPointerList(room_index))?;
+    builder.resolve_pointer(DataPlaceholder::RoomGameObjectPointerList(room_index))?;
     builder.write_usize(views.len());
 
     for i in 0..views.len() {
-        builder.write_placeholder(GMPointer::RoomGameObject(room_index, i))?;
+        builder.write_placeholder(DataPlaceholder::RoomGameObject(room_index, i))?;
     }
 
     for (i, game_object) in views.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::RoomGameObject(room_index, i))?;
+        builder.resolve_pointer(DataPlaceholder::RoomGameObject(room_index, i))?;
         builder.write_i32(game_object.x);
         builder.write_i32(game_object.y);
         builder.write_usize(game_object.object_definition.index);
@@ -196,15 +196,15 @@ fn build_room_objects(builder: &mut DataBuilder, general_info: &GMGeneralInfo, r
 
 
 fn build_room_tiles(builder: &mut DataBuilder, general_info: &GMGeneralInfo, room_index: usize, tiles: &Vec<GMRoomTile>) -> Result<(), String> {
-    builder.resolve_pointer(GMPointer::RoomTilePointerList(room_index))?;
+    builder.resolve_pointer(DataPlaceholder::RoomTilePointerList(room_index))?;
     builder.write_usize(tiles.len());
 
     for i in 0..tiles.len() {
-        builder.write_placeholder(GMPointer::RoomTile(room_index, i))?;
+        builder.write_placeholder(DataPlaceholder::RoomTile(room_index, i))?;
     }
 
     for (i, tile) in tiles.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::RoomTile(room_index, i))?;
+        builder.resolve_pointer(DataPlaceholder::RoomTile(room_index, i))?;
         builder.write_i32(tile.x);
         builder.write_i32(tile.y);
         if general_info.is_version_at_least(2, 0, 0, 0) {
@@ -242,16 +242,16 @@ fn build_room_tiles(builder: &mut DataBuilder, general_info: &GMGeneralInfo, roo
 
 
 fn build_room_layers(builder: &mut DataBuilder, room_index: usize, layers: &Vec<GMRoomLayer>) -> Result<(), String> {
-    builder.write_placeholder(GMPointer::RoomLayerPointerList(room_index))?;
-    builder.resolve_pointer(GMPointer::RoomLayerPointerList(room_index))?;
+    builder.write_placeholder(DataPlaceholder::RoomLayerPointerList(room_index))?;
+    builder.resolve_pointer(DataPlaceholder::RoomLayerPointerList(room_index))?;
     builder.write_usize(layers.len());
 
     for i in 0..layers.len() {
-        builder.write_placeholder(GMPointer::RoomLayer(room_index, i))?;
+        builder.write_placeholder(DataPlaceholder::RoomLayer(room_index, i))?;
     }
 
     for (i, layer) in layers.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::RoomLayer(room_index, i))?;
+        builder.resolve_pointer(DataPlaceholder::RoomLayer(room_index, i))?;
         builder.write_gm_string(&layer.layer_name)?;
         builder.write_u32(layer.layer_id);
         builder.write_u32(layer.layer_type.into());

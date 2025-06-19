@@ -20,18 +20,18 @@ impl GMGeneralInfo {
         println!("  GMS Debugger Disabled: {}", self.is_debugger_disabled);
         println!("  Bytecode Version: {}", self.bytecode_version);
         println!("  Unknown Value: {}", self.unknown_value);
-        println!("  File Name: {}", self.game_file_name.resolve(&strings.strings_by_index)?);
-        println!("  Config: {}", self.config.resolve(&strings.strings_by_index)?);
+        println!("  File Name: {}", self.game_file_name.resolve(&strings.strings)?);
+        println!("  Config: {}", self.config.resolve(&strings.strings)?);
         println!("  Game ID: {}", self.game_id);
         println!("  Directplay GUID: {}", self.directplay_guid);
-        println!("  Game Name: {}", self.game_name.resolve(&strings.strings_by_index)?);
+        println!("  Game Name: {}", self.game_name.resolve(&strings.strings)?);
         println!("  Version: {}", self.version);
         println!("  Default Window Size: {}x{}", self.default_window_width, self.default_window_height);
         println!("  Flags: {}", self.flags.to_string());
         println!("  License CRC32: {}", self.license_crc32);
         println!("  License MD5: {}", format_license_md5(&self.license_md5));
         println!("  Timestamp: {}", self.timestamp_created);
-        println!("  Display Name: {}", self.display_name.resolve(&strings.strings_by_index)?);
+        println!("  Display Name: {}", self.display_name.resolve(&strings.strings)?);
         println!("  Active Targets: {}", self.active_targets);
         println!("  Function Classifications: {}", &self.function_classifications.to_string());
         println!("  Steam AppID: {}", self.steam_appid);
@@ -420,7 +420,7 @@ impl GMOptionsFlags {
 impl GMFont {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMFont:");
-        println!("  Name: {}", self.name.resolve(&strings.strings_by_index)?);
+        println!("  Name: {}", self.name.resolve(&strings.strings)?);
         println!("  Display Name: {}", resolve_str_maybe(&self.display_name, strings));
         println!("  EM Size: {}", self.em_size);
         println!("  Bold: {}", self.bold);
@@ -460,7 +460,7 @@ impl GMFontGlyph {
 impl GMRoom {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMRoom:");
-        println!("  Name: \"{}\"", self.name.resolve(&strings.strings_by_index)?);
+        println!("  Name: \"{}\"", self.name.resolve(&strings.strings)?);
         println!("  Caption: \"{}\"", resolve_str_maybe(&self.caption, strings));
         println!("  Dimensions: {}x{}", self.width, self.height);
         println!("  Speed: {}", self.speed);
@@ -514,7 +514,7 @@ impl GMRoom {
 impl GMRoomLayer {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMRoomLayer:");
-        println!("  Layer Name: {}", self.layer_name.resolve(&strings.strings_by_index)?);
+        println!("  Layer Name: {}", self.layer_name.resolve(&strings.strings)?);
         println!("  Layer ID: {}", self.layer_id);
         println!("  Layer Type: {:?}", self.layer_type);
         println!("  Layer Depth: {}", self.layer_depth);
@@ -589,7 +589,7 @@ impl GMRoomView {
 impl GMSequence {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMSequence:");
-        println!("  Name: {}", self.name.resolve(&strings.strings_by_index)?);
+        println!("  Name: {}", self.name.resolve(&strings.strings)?);
         println!("  Playback: {:?}", self.playback);
         println!("  Playback Speed: {} ({:?})", self.playback_speed, self.playback_speed_type);
         println!("  Length: {}", self.length);
@@ -621,8 +621,8 @@ impl<T: Debug> GMKeyframeData<T> {
 impl GMTrack {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMTrack:");
-        println!("  Model Name: {}", self.model_name.resolve(&strings.strings_by_index)?);
-        println!("  Name: {}", self.name.resolve(&strings.strings_by_index)?);
+        println!("  Model Name: {}", self.model_name.resolve(&strings.strings)?);
+        println!("  Name: {}", self.name.resolve(&strings.strings)?);
         println!("  Built-in Name: {:?}", self.builtin_name);
         println!("  Traits: {:?}", self.traits);
         println!("  Is Creation Track: {}", self.is_creation_track);
@@ -641,7 +641,7 @@ impl GMKeyframeMoment {
         println!("GMKeyframeMoment:");
         println!("  Internal Count: {}", self.internal_count);
         if let Some(event) = &self.event {
-            println!("  Event: {}", event.resolve(&strings.strings_by_index)?);
+            println!("  Event: {}", event.resolve(&strings.strings)?);
         } else {
             println!("  Event: None");
         }
@@ -682,7 +682,7 @@ impl GMTexturePageItem {
 impl GMBackground {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMBackground:");
-        println!("  Name: \"{}\"", self.name.resolve(&strings.strings_by_index)?);
+        println!("  Name: \"{}\"", self.name.resolve(&strings.strings)?);
         println!("  Transparent: {}", self.transparent);
         println!("  Smooth: {}", self.smooth);
         println!("  Preload: {}", self.preload);
@@ -708,10 +708,10 @@ impl GMBackground {
 impl GMSound {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMSound:");
-        println!("  Name: \"{}\"", self.name.resolve(&strings.strings_by_index)?);
+        println!("  Name: \"{}\"", self.name.resolve(&strings.strings)?);
         println!("  Flags: {}", self.flags.to_string());
         println!("  Audio Type: \"{}\"", resolve_str_maybe(&self.audio_type, strings));
-        println!("  File: \"{}\"", self.file.resolve(&strings.strings_by_index)?);
+        println!("  File: \"{}\"", self.file.resolve(&strings.strings)?);
         println!("  Effects: {}", self.effects);
         println!("  Volume: {}", self.volume);
         println!("  Pitch: {}", self.pitch);
@@ -738,7 +738,7 @@ impl GMSoundFlags {
 impl GMGameObject {
     pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
         println!("GMGameObject:");
-        println!("  Name: \"{}\"", self.name.resolve(&strings.strings_by_index)?);
+        println!("  Name: \"{}\"", self.name.resolve(&strings.strings)?);
         println!("  Sprite Index: {:?}", self.sprite);
         println!("  Visible: {}", self.visible);
         println!("  Managed: {:?}", self.managed);
@@ -869,7 +869,7 @@ pub fn hexdump(raw_data: &[u8], start: usize, end: Option<usize>) -> Result<Stri
 pub fn resolve_str_maybe<'a>(str_maybe: &'a Option<GMRef<String>>, strings: &'a GMStrings) -> &'a str {
     match str_maybe {
         None => "<none>",
-        Some(s) => s.resolve(&strings.strings_by_index)
+        Some(s) => s.resolve(&strings.strings)
             .map(|s| s.as_str())
             .unwrap_or("<invalid string reference>"),
     }

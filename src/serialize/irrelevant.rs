@@ -1,7 +1,7 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::irrelevant::{GMAudioGroup, GMExtension, GMGlobalInit};
-use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, DataPlaceholder};
 
 pub fn build_chunk_lang(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     let Some(lang) = &gm_data.language_root else { return Ok(()) };
@@ -34,11 +34,11 @@ pub fn build_chunk_extn(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
     let extensions: &Vec<GMExtension> = &gm_data.extensions.extensions;
     
     for i in 0..extensions.len() {
-        builder.write_placeholder(GMPointer::Extension(i))?;
+        builder.write_placeholder(DataPlaceholder::Extension(i))?;
     }
     
     for (i, extension) in extensions.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::Extension(i))?;
+        builder.resolve_pointer(DataPlaceholder::Extension(i))?;
         builder.write_gm_string(&extension.name)?;
         builder.write_gm_string(&extension.value)?;
         builder.write_u32(extension.kind.into());
@@ -50,18 +50,18 @@ pub fn build_chunk_extn(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
 
 
 pub fn build_chunk_agrp(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
-    if !gm_data.audio_groups.serialize {
+    if !gm_data.audio_groups.exists {
         return Ok(())
     }
     builder.start_chunk("AGRP")?;
     let audio_groups: &Vec<GMAudioGroup> = &gm_data.audio_groups.audio_groups;
 
     for i in 0..audio_groups.len() {
-        builder.write_placeholder(GMPointer::AudioGroup(i))?;
+        builder.write_placeholder(DataPlaceholder::AudioGroup(i))?;
     }
 
     for (i, audio_group) in audio_groups.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::AudioGroup(i))?;
+        builder.resolve_pointer(DataPlaceholder::AudioGroup(i))?;
         builder.write_gm_string(&audio_group.name)?;
         if gm_data.general_info.is_version_at_least(2024, 14, 0, 0) {
             let path: &GMRef<String> = &audio_group.path.ok_or_else(|| format!(
@@ -77,7 +77,7 @@ pub fn build_chunk_agrp(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
 }
 
 pub fn build_chunk_glob(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
-    if !gm_data.global_inits.serialize {
+    if !gm_data.global_inits.exists {
         return Ok(())
     }
     builder.start_chunk("GLOB")?;

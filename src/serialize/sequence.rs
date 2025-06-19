@@ -8,13 +8,13 @@ use crate::deserialize::sequence::{
     GMKeyframeGraphic,
     GMKeyframeInstance,
     GMKeyframeParticle,
-    GMKeyframeReal,
+    GMKeyframeColor,
     GMKeyframeSequence,
     GMKeyframeSpriteFrames,
     GMKeyframeString,
     GMKeyframeText,
-    GMKeyframes,
-    GMKeyframesData,
+    GMTrackKeyframes,
+    GMTrackKeyframesData,
     GMSequence,
     GMTrack,
 };
@@ -96,16 +96,16 @@ fn build_tracks(builder: &mut DataBuilder, general_info: &GMGeneralInfo, strings
         // Build keyframes
         builder.align(4);
         match &track.keyframes {
-            GMKeyframes::Audio(k) => build_keyframes(builder, k, build_keyframe_audio, false)?,
-            GMKeyframes::Instance(k) => build_keyframes(builder, k, build_keyframe_instance, false)?,
-            GMKeyframes::Graphic(k) => build_keyframes(builder, k, build_keyframe_graphic, false)?,
-            GMKeyframes::Sequence(k) => build_keyframes(builder, k, build_keyframe_sequence, false)?,
-            GMKeyframes::SpriteFrames(k) => build_keyframes(builder, k, build_keyframe_sprite_frames, false)?,
-            GMKeyframes::Bool(k) => build_keyframes(builder, k, build_keyframe_bool, false)?,
-            GMKeyframes::String(k) => build_keyframes(builder, k, build_keyframe_string, false)?,
-            GMKeyframes::Color(k) => build_keyframes(builder, k, build_keyframe_color, true)?,
-            GMKeyframes::Text(k) => build_keyframes(builder, k, build_keyframe_text, false)?,
-            GMKeyframes::Particle(k) => build_keyframes(builder, k, build_keyframe_particle, false)?,
+            GMTrackKeyframes::Audio(k) => build_keyframes(builder, k, build_keyframe_audio, false)?,
+            GMTrackKeyframes::Instance(k) => build_keyframes(builder, k, build_keyframe_instance, false)?,
+            GMTrackKeyframes::Graphic(k) => build_keyframes(builder, k, build_keyframe_graphic, false)?,
+            GMTrackKeyframes::Sequence(k) => build_keyframes(builder, k, build_keyframe_sequence, false)?,
+            GMTrackKeyframes::SpriteFrames(k) => build_keyframes(builder, k, build_keyframe_sprite_frames, false)?,
+            GMTrackKeyframes::Bool(k) => build_keyframes(builder, k, build_keyframe_bool, false)?,
+            GMTrackKeyframes::String(k) => build_keyframes(builder, k, build_keyframe_string, false)?,
+            GMTrackKeyframes::Color(k) => build_keyframes(builder, k, build_keyframe_color, true)?,
+            GMTrackKeyframes::Text(k) => build_keyframes(builder, k, build_keyframe_text, false)?,
+            GMTrackKeyframes::Particle(k) => build_keyframes(builder, k, build_keyframe_particle, false)?,
         }
         
     }
@@ -157,7 +157,7 @@ fn build_anim_curve_channel_points(builder: &mut DataBuilder, general_info: &GMG
 
 fn build_keyframes<T>(
     builder: &mut DataBuilder,
-    keyframes_data: &GMKeyframesData<T>,
+    keyframes_data: &GMTrackKeyframesData<T>,
     build_keyframe_fn: impl Fn(&mut DataBuilder, &T) -> Result<(), String>,
     write_interpolation: bool,
 ) -> Result<(), String> {
@@ -194,7 +194,7 @@ fn build_keyframe_audio(builder: &mut DataBuilder, keyframe: &GMKeyframeAudio) -
 }
 
 fn build_keyframe_instance(builder: &mut DataBuilder, keyframe: &GMKeyframeInstance) -> Result<(), String> {
-    builder.write_usize(keyframe.object.index);
+    builder.write_usize(keyframe.game_object.index);
     Ok(())
 }
 
@@ -223,7 +223,7 @@ fn build_keyframe_string(builder: &mut DataBuilder, keyframe: &GMKeyframeString)
     Ok(())
 }
 
-fn build_keyframe_color(builder: &mut DataBuilder, keyframe: &GMKeyframeReal) -> Result<(), String> {
+fn build_keyframe_color(builder: &mut DataBuilder, keyframe: &GMKeyframeColor) -> Result<(), String> {
     builder.write_f32(keyframe.value);
     Ok(())
 }

@@ -50,8 +50,8 @@ pub struct EditSoundFlags {
 impl ModExporter<'_, '_> {
     pub fn export_sounds(&self) -> Result<EditUnorderedList<AddSound, EditSound>, String> {
         export_changes_unordered_list(
-            &self.original_data.sounds.sounds_by_index,
-            &self.modified_data.sounds.sounds_by_index,
+            &self.original_data.sounds.sounds,
+            &self.modified_data.sounds.sounds,
             |i| Ok(AddSound {
                 name: self.convert_string_ref(&i.name)?,
                 flags: add_sound_flags(&i.flags),
