@@ -45,7 +45,7 @@ fn build_version(chunk: &mut DataBuilder, version: &GMVersion) {
     chunk.write_u32(version.major);
     chunk.write_u32(version.minor);
     chunk.write_u32(version.release);
-    chunk.write_u32(version.stable);
+    chunk.write_u32(version.build);
 }
 
 fn build_general_info_flags(flags: &GMGeneralInfoFlags) -> u32 {

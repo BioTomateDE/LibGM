@@ -69,7 +69,7 @@ pub struct GMChunk {
 
 pub struct DataReader<'a> {
     /// Should not be read until GEN8 chunk is parsed
-    pub general_info: &'a GMGeneralInfo,
+    pub general_info: &'a mut GMGeneralInfo,
     strings: &'a GMStrings,
     
     pub chunks: HashMap<String, GMChunk>,
@@ -87,7 +87,7 @@ pub struct DataReader<'a> {
     script_occurrence_map: HashMap<usize, GMRef<GMScript>>,
 }
 impl<'a> DataReader<'a> {
-    pub fn new(data: &'a [u8], general_info: &'a GMGeneralInfo, strings: &'a GMStrings) -> Self {
+    pub fn new(data: &'a [u8], general_info: &'a mut GMGeneralInfo, strings: &'a mut GMStrings) -> Self {
         Self {
             general_info,
             strings,

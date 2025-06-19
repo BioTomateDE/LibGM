@@ -1,4 +1,5 @@
-﻿use std::fmt::Formatter;
+﻿use std::borrow::Borrow;
+use std::fmt::Formatter;
 use crate::deserialize::chunk_reading::{DataReader, GMChunkElement, GMElement, GMRef};
 use chrono::{DateTime, Utc};
 use crate::deserialize::rooms::GMRoom;
@@ -50,7 +51,7 @@ impl GMChunkElement for GMGeneralInfo {
                 major: 69420,
                 minor: 69420,
                 release: 69420,
-                stable: 69420,
+                build: 69420,
                 lts: GMVersionLTS::Post2022_0,
             },
             default_window_width: 69420,
@@ -154,36 +155,42 @@ impl GMChunkElement for GMGeneralInfo {
     }
 }
 
-impl GMGeneralInfo {
-    pub fn is_version_at_least(&self, major: u32, minor: u32, release: u32, build: u32) -> bool {
-        if self.version.major != major {
-            return self.version.major > major;
+impl GMGeneralInfo { 
+    pub fn is_version_at_least<V: Borrow<GMVersionReq>>(&self, version_req: V) -> bool {
+        let ver: &GMVersionReq = version_req.borrow();
+        if self.version.major != ver.major {
+            return self.version.major > ver.minor;
         }
-        if self.version.minor != minor {
-            return self.version.minor > minor;
+        if self.version.minor != ver.minor {
+            return self.version.minor > ver.minor;
         }
-        if self.version.release != release {
-            return self.version.release > release;
+        if self.version.release != ver.release {
+            return self.version.release > ver.release;
         }
-        if self.version.stable != build {
-            return self.version.stable > build;
+        if self.version.build != ver.build {
+            return self.version.build > ver.build;
         }
-        true   // The version is exactly what was supplied.
+        true   // The version is exactly what was supplied. 
     }
     
-    pub fn set_version_at_least(&mut self, major: u32, minor: u32, release: u32, build: u32, lts: Option<GMVersionLTS>) -> Result<(), String> {
-        let old_version = &self.version;
-        let lts: GMVersionLTS = lts.unwrap_or(old_version.lts);
-        let new_version = GMVersion::new(major, minor, release, build, lts);
-        if !matches!(self.version.major, 2|2022|2023|2024) {
+    pub fn set_version_at_least<V: Into<GMVersionReq>>(&mut self, version_req: V) -> Result<(), String> {
+        let new_ver: GMVersionReq = version_req.into();
+        if !matches!(new_ver.major, 2|2022|2023|2024) {
             return Err(format!(
-                "Tried to set GameMaker Version to {new_version} which is not allowed for original GameMaker Version {old_version}",
+                "Tried to set GameMaker Version to {} which is not allowed for original GameMaker Version {}",
+                new_ver, self.version,
             ))
         }
-        if self.is_version_at_least(major, minor, release, build) {
+        if self.is_version_at_least(&new_ver) {
             return Ok(())   // only override version if new version is higher
         }
-        self.version = new_version;
+        self.version.major = new_ver.major;
+        self.version.minor = new_ver.minor;
+        self.version.release = new_ver.release;
+        self.version.build = new_ver.build;
+        if let Some(lts_branch) = new_ver.lts {
+            self.version.lts = lts_branch;
+        }
         Ok(())
     }
 }
@@ -263,23 +270,27 @@ pub enum GMVersionLTS {
     LTS2022_0,
     Post2022_0,
 }
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMVersion {
     pub major: u32,
     pub minor: u32,
     pub release: u32,
-    pub stable: u32,
+    pub build: u32,
     pub lts: GMVersionLTS,
 }
 impl GMVersion {
     pub fn new(major: u32, minor: u32, release: u32, stable: u32, lts: GMVersionLTS) -> Self {
-        Self { major, minor, release, stable, lts }
+        Self { major, minor, release, build: stable, lts }
     }
 }
 impl std::fmt::Display for GMVersion {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}.{}.{}.{} ({:?})", self.major, self.minor, self.release, self.stable, self.lts)
+        let lts_str = match self.lts {
+            GMVersionLTS::Pre2022_0 => "pre2022_0",
+            GMVersionLTS::LTS2022_0 => "lts2022_0",
+            GMVersionLTS::Post2022_0 => "post2022_0",
+        };
+        write!(f, "{}.{}.{}.{} ({lts_str})", self.major, self.minor, self.release, self.build)
     }
 }
 impl GMElement for GMVersion {
@@ -290,6 +301,87 @@ impl GMElement for GMVersion {
         let stable: u32 = reader.read_u32()?;
         // since gen8 gm version is stuck on maximum 2.0.0.0; LTS will (initially) always be Pre2022_0
         Ok(GMVersion::new(major, minor, release, stable, GMVersionLTS::Pre2022_0))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMVersionReq {
+    pub major: u32,
+    pub minor: u32,
+    pub release: u32,
+    pub build: u32,
+    pub lts: Option<GMVersionLTS>,
+    pub bytecode: Option<u8>,
+}
+impl GMVersionReq {
+    pub fn bytecode(bytecode_version: u8) -> Self {
+        Self {
+            major: 0,
+            minor: 0,
+            release: 0,
+            build: 0,
+            lts: None,
+            bytecode: Some(bytecode_version),
+        }
+    }
+}
+impl From<(u32, u32)> for GMVersionReq {
+    fn from((major, minor): (u32, u32)) -> Self {
+        Self {
+            major,
+            minor,
+            release: 0,
+            build: 0,
+            lts: None,
+            bytecode: None,
+        }
+    }
+}
+impl From<(u32, u32, u32)> for GMVersionReq {
+    fn from((major, minor, release): (u32, u32, u32)) -> Self {
+        Self {
+            major,
+            minor,
+            release,
+            build: 0,
+            lts: None,
+            bytecode: None,
+        }
+    }
+}
+impl From<(u32, u32, u32, u32)> for GMVersionReq {
+    fn from((major, minor, release, build): (u32, u32, u32, u32)) -> Self {
+        Self {
+            major,
+            minor,
+            release,
+            build,
+            lts: None,
+            bytecode: None,
+        }
+    }
+}
+impl From<(u32, u32, u32, u32, GMVersionLTS)> for GMVersionReq {
+    fn from((major, minor, release, build, lts): (u32, u32, u32, u32, GMVersionLTS)) -> Self {
+        Self {
+            major,
+            minor,
+            release,
+            build,
+            lts: Some(lts),
+            bytecode: None,
+        }
+    }
+}
+impl std::fmt::Display for GMVersionReq {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let lts_str = match self.lts {
+            Some(GMVersionLTS::Pre2022_0) => " (pre2022_0)",
+            Some(GMVersionLTS::LTS2022_0) => " (lts2022_0)",
+            Some(GMVersionLTS::Post2022_0) => " (post2022_0)",
+            None => "",
+        };
+        write!(f, "{}.{}.{}.{}{lts_str}", self.major, self.minor, self.release, self.build)
     }
 }
 
