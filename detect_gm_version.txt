@@ -1,0 +1,27 @@
+NL = Non LTS; LTS has to be BranchType::Post2022_2
+B_{n} = Minimum Bytecode Version {n}
+
+
+Chunk   Detected    Required minimum Version
+Name    Version     in order to detect
+----------------------------------------------
+EXTN    2022.6      2.3
+EXTN    2023.4      2022.6
+SOND    2024.6      2023.2_NL
+AGRP    2024.14     2024.13
+SPRT    2024.6      2023.2_NL
+FONT    2022.2      B_17
+FONT    2023.6      2022.8              # merged v
+FONT    2024.11     2024.6              # merged ^
+FONT    2024.14     2024.13
+OBJT    2022.5      2.3
+ROOM    2022.1      2.3
+ROOM    2.2.2.302   2.0
+ROOM    2024.2      2023.2
+FUNC    2024.8      B_15
+TXTR    2022.3      2.3                 # merged v
+TXTR    2022.5      2.3                 # merged ^
+TXTR    2.0.6       2.0
+TGIN    2023.1_NL   2.3                 # merged v
+TGIN    2022_9      2.3                 # merged ^
+ACRV    2.3.1       none
