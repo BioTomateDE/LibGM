@@ -1,6 +1,6 @@
 use std::cmp::max;
 use std::io::Read;
-use crate::deserialize::chunk_reading::{GMChunkElement, GMElement, GMReader};
+use crate::deserialize::chunk_reading::{GMChunkElement, GMElement, DataReader};
 use crate::printing::hexdump;
 use image;
 use bzip2::read::BzDecoder;
@@ -23,7 +23,7 @@ impl GMChunkElement for GMEmbeddedTextures {
     }
 }
 impl GMElement for GMEmbeddedTextures {
-    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let texture_pages: Vec<GMEmbeddedTexture> = reader.read_pointer_list()?;
         Ok(Self { texture_pages, exists: true })
     }
@@ -42,7 +42,7 @@ pub struct GMEmbeddedTexture {
     pub image: Option<DynamicImage>,
 }
 impl GMElement for GMEmbeddedTexture {
-    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let scaled: u32 = reader.read_u32()?;
         let mut generated_mips: Option<u32> = None;
         let mut texture_width: Option<i32> = None;
@@ -66,7 +66,7 @@ impl GMElement for GMEmbeddedTexture {
         let image: Option<DynamicImage> = if texture_data_start_pos == 0 {   // can be zero if the texture is "external"
             None
         } else {
-            reader.set_abs_cur_pos(texture_data_start_pos)?;
+            reader.cur_pos = texture_data_start_pos;
             Some(read_raw_texture(reader)?)
         };
 
@@ -82,8 +82,8 @@ impl GMElement for GMEmbeddedTexture {
 }
 
 
-fn read_raw_texture(reader: &mut GMReader) -> Result<DynamicImage, String> {
-    let start_position: usize = reader.get_abs_cur_pos();
+fn read_raw_texture(reader: &mut DataReader) -> Result<DynamicImage, String> {
+    let start_position: usize = reader.cur_pos;
     let header: [u8; 8] = *reader.read_bytes_const()
         .map_err(|e| format!("Trying to read headers {e} at position {start_position} while parsing images of texture pages"))?;
 
@@ -99,8 +99,8 @@ fn read_raw_texture(reader: &mut GMReader) -> Result<DynamicImage, String> {
             }
         }
         
-        let data_length: usize = reader.get_abs_cur_pos() - start_position;
-        reader.set_abs_cur_pos(start_position)?;
+        let data_length: usize = reader.cur_pos - start_position;
+        reader.cur_pos = start_position;
         let bytes: &[u8] = reader.read_bytes_dyn(data_length).map_err(|e| format!("Trying to read PNG image data {e}"))?;
         // png image size checks {~~}
         Ok(decode_png(bytes)?)
@@ -116,7 +116,7 @@ fn read_raw_texture(reader: &mut GMReader) -> Result<DynamicImage, String> {
 
         let bz2_stream_length: usize = find_end_of_bz2_stream(reader)? - start_position - header_size;   // TODO verify that this new logic is correct (fd3d4c65)
         // read entire image (excluding bz2 header) to byte array
-        reader.set_abs_cur_pos(start_position + header_size)?;
+        reader.cur_pos = start_position + header_size;
         let raw_image_data: &[u8] = reader.read_bytes_dyn(bz2_stream_length)
             .map_err(|e| format!("Trying to read Bzip2 Stream of Bz2 Qoi Image {e}"))?;
         let image: DynamicImage = image_from_bz2_qoi(raw_image_data).map_err(|e| format!("Could not parse BZip2 QOI image: {e}"))?;
@@ -163,7 +163,7 @@ fn decode_png(data: &[u8]) -> Result<DynamicImage, String> {
 }
 
 
-fn find_end_of_bz2_stream(reader: &mut GMReader) -> Result<usize, String> {
+fn find_end_of_bz2_stream(reader: &mut DataReader) -> Result<usize, String> {
     let stream_start_position: usize = reader.get_rel_cur_pos();
     // Read backwards from the max end of stream position, in up to 256-byte chunks.
     // We want to find the end of nonzero data.
@@ -198,7 +198,7 @@ fn find_end_of_bz2_stream(reader: &mut GMReader) -> Result<usize, String> {
 
 
 /// function written by chatgpt; unverified
-fn find_end_of_bz2_search(reader: &mut GMReader, end_data_position: usize) -> Result<usize, String> {
+fn find_end_of_bz2_search(reader: &mut DataReader, end_data_position: usize) -> Result<usize, String> {
     static MAGIC_BZ2_FOOTER: [u8; 6] = [0x17, 0x72, 0x45, 0x38, 0x50, 0x90];
 
     // Ensure we don't read past the data bounds
@@ -209,9 +209,10 @@ fn find_end_of_bz2_search(reader: &mut GMReader, end_data_position: usize) -> Re
     let length = end_data_position - start_position;    // redundant???
 
     // Extract the last 16 bytes (or fewer if near the start of data)
-    let saved_pos: usize = reader.get_abs_cur_pos();
+    let saved_pos: usize = reader.cur_pos;
     reader.set_rel_cur_pos(start_position)?;
     let data: &[u8] = reader.read_bytes_dyn(length)?;
+    reader.cur_pos = saved_pos;
 
     // BZ2 footer magic bytes
     let footer_magic: &[u8] = &MAGIC_BZ2_FOOTER;
@@ -219,15 +220,15 @@ fn find_end_of_bz2_search(reader: &mut GMReader, end_data_position: usize) -> Re
     let mut search_start_bit_position = 0;
 
     while search_start_position >= 0 {
-        let mut found_match = false;
-        let mut bit_position = search_start_bit_position;
-        let mut search_position = search_start_position;
-        let mut magic_bit_position = 0;
-        let mut magic_position = footer_magic.len() as isize - 1;
+        let mut found_match: bool = false;
+        let mut bit_position: i32 = search_start_bit_position;
+        let mut search_position: isize = search_start_position;
+        let mut magic_bit_position: i32 = 0;
+        let mut magic_position: isize = footer_magic.len() as isize - 1;
 
         while search_position >= 0 {
-            let current_byte = data[search_position as usize];
-            let magic_byte = footer_magic[magic_position as usize];
+            let current_byte: u8 = data[search_position as usize];
+            let magic_byte: u8 = footer_magic[magic_position as usize];
 
             // Extract specific bits from the current and magic bytes
             let current_bit = (current_byte & (1 << bit_position)) != 0;
@@ -267,7 +268,6 @@ fn find_end_of_bz2_search(reader: &mut GMReader, end_data_position: usize) -> Re
                 end_of_bz2_stream_position += 1;
             }
 
-            reader.set_abs_cur_pos(saved_pos)?;
             return Ok(start_position + end_of_bz2_stream_position);
         }
 
@@ -279,7 +279,6 @@ fn find_end_of_bz2_search(reader: &mut GMReader, end_data_position: usize) -> Re
         }
     }
 
-    reader.set_abs_cur_pos(saved_pos)?;
     Err("Failed to find BZip2 footer magic".to_string())
 }
 

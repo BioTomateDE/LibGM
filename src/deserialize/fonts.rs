@@ -1,4 +1,5 @@
-use crate::deserialize::chunk_reading::{GMChunkElement, GMElement, GMReader, GMRef};
+use crate::deserialize::chunk_reading::{GMChunkElement, GMElement, DataReader, GMRef};
+use crate::deserialize::general_info::GMVersionLTS;
 use crate::deserialize::texture_page_items::GMTexturePageItem;
 
 #[derive(Debug, Clone)]
@@ -12,7 +13,7 @@ impl GMChunkElement for GMFonts {
     }
 }
 impl GMElement for GMFonts {
-    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let fonts: Vec<GMFont> = reader.read_pointer_list()?;
         Ok(Self { fonts, exists: true })
     }
@@ -23,7 +24,7 @@ impl GMElement for GMFonts {
 pub struct GMFont {
     pub name: GMRef<String>,
     pub display_name: Option<GMRef<String>>,
-    pub em_size: f32,
+    pub em_size: GMFontSize,
     pub bold: bool,
     pub italic: bool,
     pub range_start: u16,
@@ -40,14 +41,14 @@ pub struct GMFont {
     pub glyphs: Vec<GMFontGlyph>,
 }
 impl GMElement for GMFont {
-    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let display_name: Option<GMRef<String>> = reader.read_gm_string_optional()?;
+        let display_name: Option<GMRef<String>> = reader.read_gm_string_opt()?;
         let em_size: u32 = reader.read_u32()?;   // before GMS 2.3: int. after: float
-        let em_size: f32 = if em_size & (1 << 31) != 0 {    // since the float is always written negated, it has the first bit set.
-            -f32::from_bits(em_size)
+        let em_size: GMFontSize = if em_size & (1 << 31) != 0 {    // since the float is always written negated, it has the first bit set.
+            GMFontSize::Float(-f32::from_bits(em_size))
         } else {
-            em_size as f32
+            GMFontSize::Int(em_size)
         };
         let bold: bool = reader.read_bool32()?;
         let italic: bool = reader.read_bool32()?;
@@ -70,7 +71,7 @@ impl GMElement for GMFont {
         if reader.general_info.is_version_at_least(2022, 2, 0, 0) {
             ascender = Some(reader.read_u32()?);
         }
-        if reader.general_info.is_version_at_least(2023, 2, 0, 0) {   // TODO non LTS {~~}
+        if reader.general_info.is_version_at_least(2023, 2, 0, 0) && reader.general_info.version.lts == GMVersionLTS::Post2022_0 {
             sdf_spread = Some(reader.read_u32()?);
         }
         if reader.general_info.is_version_at_least(2023, 6, 0, 0) {
@@ -116,7 +117,7 @@ pub struct GMFontGlyph {
     pub kernings: Vec<GMFontGlyphKerning>,
 }
 impl GMElement for GMFontGlyph {
-    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let character: u16 = reader.read_u16()?;
         let character: Option<char> = if character == 0 { None } else {
             Some(char::from_u32(character.into()).ok_or_else(|| format!("Invalid UTF-8 character with code point {0} (0x{0:04X})", character))?)
@@ -152,7 +153,7 @@ pub struct GMFontGlyphKerning {
     pub shift_modifier: i16,
 }
 impl GMElement for GMFontGlyphKerning {
-    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let character: u16 = reader.read_u16()?;
         if character == 0 {
             return Err("Character not set (code point is zero)".to_string())
@@ -163,3 +164,10 @@ impl GMElement for GMFontGlyphKerning {
         Ok(GMFontGlyphKerning { character, shift_modifier })
     }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum GMFontSize {
+    Float(f32),
+    Int(u32),
+}
+

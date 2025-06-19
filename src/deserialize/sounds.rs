@@ -1,7 +1,26 @@
-use crate::deserialize::chunk_reading::{GMChunk, GMRef};
+use crate::deserialize::chunk_reading::{DataReader, GMChunk, GMChunkElement, GMElement, GMRef};
 use crate::deserialize::embedded_audio::GMEmbeddedAudio;
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::strings::GMStrings;
+
+
+#[derive(Debug, Clone)]
+pub struct GMSounds {
+    pub sounds: Vec<GMSound>,
+    pub exists: bool,
+}
+impl GMChunkElement for GMSounds {
+    fn empty() -> Self {
+        Self { sounds: vec![], exists: false }
+    }
+}
+impl GMElement for GMSounds {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        let sounds: Vec<GMSound> = reader.read_pointer_list()?;
+        Ok(Self { sounds, exists: true })
+    }
+}
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSound {
@@ -16,57 +35,29 @@ pub struct GMSound {
     pub audio_file: Option<GMRef<GMEmbeddedAudio>>,  // e.g. UndertaleEmbeddedAudio#17
     pub audio_length: Option<f32>,                   // in seconds probably
 }
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMSoundFlags {
-    pub is_embedded: bool,
-    pub is_compressed: bool,
-    pub is_decompressed_on_load: bool,
-    pub regular: bool,
-}
-
-
-#[derive(Debug, Clone)]
-pub struct GMSounds {
-    pub sounds_by_index: Vec<GMSound>,
-}
-
-
-pub fn parse_chunk_sond(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMSounds, String> {
-    chunk.cur_pos = 0;
-    let sounds_count: usize = chunk.read_usize_count()?;
-    let mut start_positions: Vec<usize> = Vec::with_capacity(sounds_count);
-    for _ in 0..sounds_count {
-        start_positions.push(chunk.read_relative_pointer()?);
-    }
-
-    let mut sounds_by_index: Vec<GMSound> = Vec::with_capacity(sounds_count);
-    for start_position in start_positions {
-        chunk.cur_pos = start_position;
-        let name: GMRef<String> = chunk.read_gm_string(strings)?;
-        let flags: GMSoundFlags = parse_sound_flags(chunk.read_u32()?);
-        let audio_type: Option<GMRef<String>> = chunk.read_gm_string_optional(strings)?;
-        let file: GMRef<String> = chunk.read_gm_string(strings)?;
-        let effects: u32 = chunk.read_u32()?;
-        let volume: f32 = chunk.read_f32()?;
-        let pitch: f32 = chunk.read_f32()?;
-        if flags.regular && general_info.bytecode_version >= 14 {
-            // audio group stuff {~~}
+impl GMElement for GMSound {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        let name: GMRef<String> = reader.read_gm_string()?;
+        let flags = GMSoundFlags::deserialize(reader)?;
+        let audio_type: Option<GMRef<String>> = reader.read_gm_string_opt()?;
+        let file: GMRef<String> = reader.read_gm_string()?;
+        let effects: u32 = reader.read_u32()?;
+        let volume: f32 = reader.read_f32()?;
+        let pitch: f32 = reader.read_f32()?;
+        if flags.regular && reader.general_info.bytecode_version >= 14 {
+            // audio group stuff {~~} TODO
         } else {
             // group id stuff {~~}
         }
-        let _ = chunk.read_u32()?;      // because we skipped group stuff
-        let audio_file: i32 = chunk.read_i32()?;
-        let audio_file: Option<GMRef<GMEmbeddedAudio>> =
-            if audio_file == -1 { None }
-            else { Some(GMRef::new(audio_file as usize)) };
+        let _ = reader.read_u32()?;      // because we skipped group stuff
+        let audio_file: Option<GMRef<GMEmbeddedAudio>> = reader.read_resource_by_id_option()?;
 
         let mut audio_length: Option<f32> = None;
-        if general_info.is_version_at_least(2024, 6, 0, 0) {
-            audio_length = Some(chunk.read_f32()?);
+        if reader.general_info.is_version_at_least(2024, 6, 0, 0) {
+            audio_length = Some(reader.read_f32()?);
         }
 
-        let sound: GMSound = GMSound {
+        Ok(GMSound {
             name,
             flags,
             audio_type,
@@ -76,20 +67,27 @@ pub fn parse_chunk_sond(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
             pitch,
             audio_file,
             audio_length,
-        };
-        sounds_by_index.push(sound);
+        })
     }
-
-    Ok(GMSounds{ sounds_by_index })
 }
 
 
-fn parse_sound_flags(raw: u32) -> GMSoundFlags {
-    GMSoundFlags {
-        is_embedded: 0 != raw & 0x1,
-        is_compressed: 0 != raw & 0x2,
-        is_decompressed_on_load: 3 == raw & 0x3,    // maybe??? UndertaleModTool doesn't know either
-        regular: 0 != raw & 0x64,
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMSoundFlags {
+    pub is_embedded: bool,
+    pub is_compressed: bool,
+    pub is_decompressed_on_load: bool,
+    pub regular: bool,
+}
+impl GMElement for GMSoundFlags {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        let raw: u32 = reader.read_u32()?;
+        Ok(GMSoundFlags {
+            is_embedded: 0 != raw & 0x1,
+            is_compressed: 0 != raw & 0x2,
+            is_decompressed_on_load: 3 == raw & 0x3,    // maybe??? UndertaleModTool doesn't know either
+            regular: 0 != raw & 0x64,
+        })
     }
 }
 

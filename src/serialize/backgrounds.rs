@@ -1,6 +1,6 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::backgrounds::GMBackgroundGMS2Data;
-use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, DataPlaceholder};
 
 pub fn build_chunk_bgnd(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     builder.start_chunk("BGND")?;
@@ -8,19 +8,19 @@ pub fn build_chunk_bgnd(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
     builder.write_usize(len);
 
     for i in 0..len {
-        builder.write_placeholder(GMPointer::Background(i))?;
+        builder.write_placeholder(DataPlaceholder::Background(i))?;
     }
 
     for (i, background) in gm_data.backgrounds.backgrounds.iter().enumerate() {
         builder.align(8);
-        builder.resolve_pointer(GMPointer::Background(i))?;
+        builder.resolve_pointer(DataPlaceholder::Background(i))?;
 
         builder.write_gm_string(&background.name)?;
         builder.write_bool32(background.transparent);
         builder.write_bool32(background.smooth);
         builder.write_bool32(background.preload);
         if let Some(ref texture) = background.texture {
-            builder.write_placeholder(GMPointer::TexturePageItem(texture.index))?;
+            builder.write_placeholder(DataPlaceholder::TexturePageItem(texture.index))?;
         } else {
             builder.write_usize(0);
         }

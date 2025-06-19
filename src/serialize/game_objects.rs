@@ -1,18 +1,18 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::game_objects::{GMGameObject, GMGameObjectEventAction};
-use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, DataPlaceholder};
 
 pub fn build_chunk_objt(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     builder.start_chunk("OBJT")?;
-    let len: usize = gm_data.game_objects.game_objects_by_index.len();
+    let len: usize = gm_data.game_objects.game_objects.len();
     builder.write_usize(len);
 
     for i in 0..len {
-        builder.write_placeholder(GMPointer::GameObject(i))?;
+        builder.write_placeholder(DataPlaceholder::GameObject(i))?;
     }
 
-    for (i, game_object) in gm_data.game_objects.game_objects_by_index.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::GameObject(i))?;
+    for (i, game_object) in gm_data.game_objects.game_objects.iter().enumerate() {
+        builder.resolve_pointer(DataPlaceholder::GameObject(i))?;
         builder.write_gm_string(&game_object.name)?;
         match &game_object.sprite {
             Some(sprite) => builder.write_usize(sprite.index),
@@ -74,19 +74,19 @@ fn build_game_object_events(
     builder.write_usize(game_object.events.len());
 
     for i in 0..game_object.events.len() {
-        builder.write_placeholder(GMPointer::GameObjectEvent(game_object_index, i))?;
+        builder.write_placeholder(DataPlaceholder::GameObjectEvent(game_object_index, i))?;
     }
 
     for (i, event_instances) in game_object.events.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::GameObjectEvent(game_object_index, i))?;
+        builder.resolve_pointer(DataPlaceholder::GameObjectEvent(game_object_index, i))?;
         builder.write_usize(event_instances.len());
 
         for j in 0..event_instances.len() {
-            builder.write_placeholder(GMPointer::GameObjectEventInstance(game_object_index, i, j))?;
+            builder.write_placeholder(DataPlaceholder::GameObjectEventInstance(game_object_index, i, j))?;
         }
 
         for (j, event_instance) in event_instances.iter().enumerate() {
-            builder.resolve_pointer(GMPointer::GameObjectEventInstance(game_object_index, i, j))?;
+            builder.resolve_pointer(DataPlaceholder::GameObjectEventInstance(game_object_index, i, j))?;
             builder.write_u32(event_instance.subtype);
             build_game_object_event_instance_actions(builder, &event_instance.actions, game_object_index, i, j)?;
         }
@@ -105,11 +105,11 @@ fn build_game_object_event_instance_actions(
     builder.write_usize(actions.len());
 
     for i in 0..actions.len() {
-        builder.write_placeholder(GMPointer::GameObjectEventInstanceAction(game_object_index, event_index, instance_index, i))?;
+        builder.write_placeholder(DataPlaceholder::GameObjectEventInstanceAction(game_object_index, event_index, instance_index, i))?;
     }
 
     for (i, action) in actions.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::GameObjectEventInstanceAction(game_object_index, event_index, instance_index, i))?;
+        builder.resolve_pointer(DataPlaceholder::GameObjectEventInstanceAction(game_object_index, event_index, instance_index, i))?;
         builder.write_u32(action.lib_id);
         builder.write_u32(action.id);
         builder.write_u32(action.kind);

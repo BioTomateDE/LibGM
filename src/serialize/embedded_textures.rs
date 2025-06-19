@@ -6,7 +6,7 @@ use crate::deserialize::all::GMData;
 use crate::deserialize::embedded_textures::{GMEmbeddedTexture, MAGIC_BZ2_QOI_HEADER};
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::qoi;
-use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, DataPlaceholder};
 
 
 
@@ -16,11 +16,11 @@ pub fn build_chunk_txtr(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
     builder.write_usize(len);
 
     for i in 0..len {
-        builder.write_placeholder(GMPointer::TexturePage(i))?;
+        builder.write_placeholder(DataPlaceholder::TexturePage(i))?;
     }
 
     for (i, texture_page) in gm_data.texture_pages.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::TexturePage(i))?;
+        builder.resolve_pointer(DataPlaceholder::TexturePage(i))?;
         build_texture_page(builder, &gm_data.general_info, i, texture_page)
             .map_err(|e| format!("{e} for texture page #{i} and \"index in group\" #{:?}", texture_page.index_in_group))?;
     }
@@ -49,7 +49,7 @@ fn build_texture_page(builder: &mut DataBuilder, general_info: &GMGeneralInfo, i
         builder.write_u32(texture_page.generated_mips.ok_or("Generated mipmap levels not set")?);
     }
     if general_info.is_version_at_least(2022, 3, 0, 0) && texture_page.image.is_some() {
-        builder.write_placeholder(GMPointer::TexturePageDataSize(index))?;
+        builder.write_placeholder(DataPlaceholder::TexturePageDataSize(index))?;
     }
     if general_info.is_version_at_least(2022, 9, 0, 0) {
         builder.write_i32(texture_page.texture_width.ok_or("Texture width not set")?);
@@ -57,7 +57,7 @@ fn build_texture_page(builder: &mut DataBuilder, general_info: &GMGeneralInfo, i
         builder.write_usize(index);     // TODO not sure what "index in group" means. maybe this is not just the index?
     }
     if texture_page.image.is_some() {
-        builder.write_placeholder(GMPointer::TexturePageData(index))?;
+        builder.write_placeholder(DataPlaceholder::TexturePageData(index))?;
     } else {
         builder.write_usize(0);
     }
@@ -68,10 +68,10 @@ fn build_texture_page_image(builder: &mut DataBuilder, general_info: &GMGeneralI
     while builder.len() % 0x80 != 0 {
         builder.write_u8(0);    // padding
     }
-    builder.resolve_pointer(GMPointer::TexturePageData(index))?;
+    builder.resolve_pointer(DataPlaceholder::TexturePageData(index))?;
     builder.write_bytes(image_data);
     if general_info.is_version_at_least(2022, 3, 0, 0) {
-        builder.resolve_placeholder(GMPointer::TexturePageDataSize(index), image_data.len() as i32)?;
+        builder.resolve_placeholder(DataPlaceholder::TexturePageDataSize(index), image_data.len() as i32)?;
     }
     Ok(())
 }

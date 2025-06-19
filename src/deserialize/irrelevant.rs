@@ -1,15 +1,7 @@
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use crate::deserialize::chunk_reading::{GMChunk, GMRef};
+use crate::deserialize::chunk_reading::{vec_with_capacity, DataReader, GMChunkElement, GMElement, GMRef};
 use crate::deserialize::code::GMCode;
-use crate::deserialize::general_info::GMGeneralInfo;
-use crate::deserialize::strings::GMStrings;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMLanguageRoot {
-    pub unknown1: u32,
-    pub languages: Vec<GMLanguageData>,
-    pub entry_ids: Vec<GMRef<String>>,
-}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMLanguageData {
@@ -18,38 +10,74 @@ pub struct GMLanguageData {
     pub entries: Vec<GMRef<String>>,
 }
 
-pub fn parse_chunk_lang(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMLanguageRoot, String> {
-    chunk.cur_pos = 0;
-    let unknown1: u32 = chunk.read_u32()?;
-    let language_count: usize = chunk.read_usize_count()?;
-    let entry_count: usize = chunk.read_usize_count()?;
-
-    let mut languages: Vec<GMLanguageData> = Vec::with_capacity(language_count);
-    let mut entry_ids: Vec<GMRef<String>> = Vec::with_capacity(language_count);
-
-    for _ in 0..entry_count {
-        entry_ids.push(chunk.read_gm_string(strings)?);
-    }
-
-    for _ in 0..language_count {
-        let name: GMRef<String> = chunk.read_gm_string(strings)?;
-        let region: GMRef<String> = chunk.read_gm_string(strings)?;
-        let mut entries: Vec<GMRef<String>> = Vec::with_capacity(entry_count);
-        for _ in 0..entry_count {
-            entries.push(chunk.read_gm_string(strings)?);
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMLanguageInfo {
+    pub unknown1: u32,
+    pub languages: Vec<GMLanguageData>,
+    pub entry_ids: Vec<GMRef<String>>,
+    pub exists: bool,
+}
+impl GMChunkElement for GMLanguageInfo {
+    fn empty() -> Self {
+        Self {
+            unknown1: 0,
+            languages: vec![],
+            entry_ids: vec![],
+            exists: false,
         }
-        languages.push(GMLanguageData {
-            name,
-            region,
-            entries,
+    }
+}
+impl GMElement for GMLanguageInfo {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        let unknown1: u32 = reader.read_u32()?;
+        let language_count: usize = reader.read_usize()?;
+        let entry_count: usize = reader.read_usize()?;
+
+        let mut entry_ids: Vec<GMRef<String>> = vec_with_capacity(entry_count)?;
+        for _ in 0..entry_count {
+            entry_ids.push(reader.read_gm_string()?);
+        }
+
+        let mut languages: Vec<GMLanguageData> = vec_with_capacity(language_count)?;
+        for _ in 0..language_count {
+            let name: GMRef<String> = reader.read_gm_string()?;
+            let region: GMRef<String> = reader.read_gm_string()?;
+            let mut entries: Vec<GMRef<String>> = Vec::with_capacity(entry_count);
+            for _ in 0..entry_count {
+                entries.push(reader.read_gm_string()?);
+            }
+            languages.push(GMLanguageData {
+                name,
+                region,
+                entries,
+            });
+        }
+
+        Ok(GMLanguageInfo {
+            unknown1,
+            languages,
+            entry_ids,
+            exists: true,
         })
     }
+}
 
-    Ok(GMLanguageRoot {
-        unknown1,
-        languages,
-        entry_ids,
-    })
+
+#[derive(Debug, Clone)]
+pub struct GMExtensions {
+    pub extensions: Vec<GMExtension>,
+    pub exists: bool,
+}
+impl GMChunkElement for GMExtensions {
+    fn empty() -> Self {
+        Self { extensions: vec![], exists: false }
+    }
+}
+impl GMElement for GMExtensions {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        let extensions: Vec<GMExtension> = reader.read_pointer_list()?;
+        Ok(GMExtensions { extensions, exists: true })
+    }
 }
 
 
@@ -59,6 +87,20 @@ pub struct GMExtension {
     pub value: GMRef<String>,
     pub kind: GMExtensionOptionKind,
 }
+impl GMElement for GMExtension {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        let name: GMRef<String> = reader.read_gm_string()?;
+        let value: GMRef<String> = reader.read_gm_string()?;
+        let kind: u32 = reader.read_u32()?;
+        let kind: GMExtensionOptionKind = kind.try_into().map_err(|_| format!("Invalid Extension Option Kind {kind} (0x{kind:08X})"))?;
+        Ok(GMExtension {
+            name,
+            value,
+            kind,
+        })
+    }
+}
+
 
 #[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u32)]
@@ -68,40 +110,23 @@ pub enum GMExtensionOptionKind {
     String = 2,
 }
 
+
+
 #[derive(Debug, Clone)]
-pub struct GMExtensions {
-    pub extensions: Vec<GMExtension>,
-    pub serialize: bool,
+pub struct GMAudioGroups {
+    pub audio_groups: Vec<GMAudioGroup>,
+    pub exists: bool,
 }
-impl GMExtensions {
-    pub fn empty() -> Self {
-        Self { extensions: vec![], serialize: false }
+impl GMChunkElement for GMAudioGroups {
+    fn empty() -> Self {
+        Self { audio_groups: vec![], exists: false }
     }
 }
-
-pub fn parse_chunk_extn(chunk: &mut GMChunk, strings: &GMStrings) -> Result<GMExtensions, String> {
-    chunk.cur_pos = 0;
-    let extension_count: usize = chunk.read_usize_count()?;
-    let mut start_positions: Vec<usize> = Vec::with_capacity(extension_count);
-    for _ in 0..extension_count {
-        start_positions.push(chunk.read_relative_pointer()?);
+impl GMElement for GMAudioGroups {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        let audio_groups: Vec<GMAudioGroup> = reader.read_pointer_list()?;
+        Ok(Self { audio_groups, exists: true })
     }
-    
-    let mut extensions: Vec<GMExtension> = Vec::with_capacity(extension_count);
-    for start_pos in start_positions {
-        chunk.cur_pos = start_pos;
-        let name: GMRef<String> = chunk.read_gm_string(strings)?;
-        let value: GMRef<String> = chunk.read_gm_string(strings)?;
-        let kind: u32 = chunk.read_u32()?;
-        let kind: GMExtensionOptionKind = kind.try_into().map_err(|_| format!("Invalid Extension Option Kind {kind} (0x{kind:08X})"))?;
-        extensions.push(GMExtension {
-            name,
-            value,
-            kind,
-        });
-    }
-
-    Ok(GMExtensions { extensions, serialize: true })
 }
 
 
@@ -110,40 +135,53 @@ pub struct GMAudioGroup {
     pub name: GMRef<String>,
     pub path: Option<GMRef<String>>,
 }
+impl GMElement for GMAudioGroup {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        let name: GMRef<String> = reader.read_gm_string()?;
+        let path: Option<GMRef<String>> = if reader.general_info.is_version_at_least(2024, 14, 0, 0) {
+            Some(reader.read_gm_string()?)
+        } else {
+            None
+        };
+        Ok(Self { name, path })
+    }
+}
+
+
 
 #[derive(Debug, Clone)]
-pub struct GMAudioGroups {
-    pub audio_groups: Vec<GMAudioGroup>,
-    pub serialize: bool,
+pub struct GMGlobalInitScripts {
+    pub global_inits: Vec<GMGlobalInit>,
+    pub exists: bool,
 }
-impl GMAudioGroups {
-    pub fn empty() -> Self {
-        Self { audio_groups: vec![], serialize: false }
+impl GMChunkElement for GMGlobalInitScripts {
+    fn empty() -> Self {
+        Self { global_inits: vec![], exists: false }
+    }
+}
+impl GMElement for GMGlobalInitScripts {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        let global_inits: Vec<GMGlobalInit> = reader.read_simple_list()?;
+        Ok(Self { global_inits, exists: true })
     }
 }
 
-pub fn parse_chunk_agrp(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strings: &GMStrings) -> Result<GMAudioGroups, String> {
-    chunk.cur_pos = 0;
-    let audio_group_count: usize = chunk.read_usize_count()?;
-    let mut start_positions: Vec<usize> = Vec::with_capacity(audio_group_count);
-    for _ in 0..audio_group_count {
-        start_positions.push(chunk.read_relative_pointer()?);
-    }
 
-    let mut audio_groups: Vec<GMAudioGroup> = Vec::with_capacity(audio_group_count);
-    for start_pos in start_positions {
-        chunk.cur_pos = start_pos;
-        let name: GMRef<String> = chunk.read_gm_string(strings)?;
-        let path: Option<GMRef<String>> = if general_info.is_version_at_least(2024, 14, 0, 0) {
-            Some(chunk.read_gm_string(strings)?)
-        } else { None };
-        audio_groups.push(GMAudioGroup {
-            name,
-            path,
-        });
+#[derive(Debug, Clone)]
+pub struct GMGameEndScripts {
+    pub global_inits: Vec<GMGlobalInit>,
+    pub exists: bool,
+}
+impl GMChunkElement for GMGameEndScripts {
+    fn empty() -> Self {
+        Self { global_inits: vec![], exists: false }
     }
-
-    Ok(GMAudioGroups { audio_groups, serialize: true })
+}
+impl GMElement for GMGameEndScripts {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        let global_inits: Vec<GMGlobalInit> = reader.read_simple_list()?;
+        Ok(Self { global_inits, exists: true })
+    }
 }
 
 
@@ -151,29 +189,10 @@ pub fn parse_chunk_agrp(chunk: &mut GMChunk, general_info: &GMGeneralInfo, strin
 pub struct GMGlobalInit {
     pub code: GMRef<GMCode>,
 }
-
-#[derive(Debug, Clone)]
-pub struct GMGlobalInits {
-    pub global_inits: Vec<GMGlobalInit>,
-    pub serialize: bool,
-}
-impl GMGlobalInits {
-    pub fn empty() -> Self {
-        Self { global_inits: vec![], serialize: false }
+impl GMElement for GMGlobalInit {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        let code: GMRef<GMCode> = reader.read_resource_by_id()?;
+        Ok(Self { code })
     }
-}
-
-pub fn parse_chunk_glob(chunk: &mut GMChunk) -> Result<GMGlobalInits, String> {
-    // TODO also chunk 'GMEN'???
-    chunk.cur_pos = 0;
-    let global_inits_count: usize = chunk.read_usize_count()?;
-    let mut global_inits: Vec<GMGlobalInit> = Vec::with_capacity(global_inits_count);
-    
-    for _ in 0..global_inits_count {
-        let code: GMRef<GMCode> = chunk.read_resource_by_id()?;
-        global_inits.push(GMGlobalInit { code });
-    }
-
-    Ok(GMGlobalInits { global_inits, serialize: true })
 }
 
