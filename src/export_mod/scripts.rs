@@ -13,8 +13,8 @@ pub struct ModScript {
 impl ModExporter<'_, '_> {
     pub fn export_scripts(&self) -> Result<EditUnorderedList<ModScript, ModScript>, String> {
         export_changes_unordered_list(
-            &self.original_data.scripts.scripts_by_index,
-            &self.modified_data.scripts.scripts_by_index,
+            &self.original_data.scripts.scripts,
+            &self.modified_data.scripts.scripts,
             |i| Ok(ModScript {
                 name: self.convert_string_ref(&i.name)?,
                 is_constructor: i.is_constructor,

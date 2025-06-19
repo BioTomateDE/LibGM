@@ -1,7 +1,7 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::fonts::{GMFont, GMFontGlyph, GMFontGlyphKerning};
 use crate::deserialize::general_info::GMGeneralInfo;
-use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, DataPlaceholder};
 
 pub fn build_chunk_font(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     builder.start_chunk("FONT")?;
@@ -9,11 +9,11 @@ pub fn build_chunk_font(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
     builder.write_usize(font_count);
 
     for i in 0..font_count {
-        builder.write_placeholder(GMPointer::Font(i))?;
+        builder.write_placeholder(DataPlaceholder::Font(i))?;
     }
 
     for (i, font) in gm_data.fonts.fonts.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::Font(i))?;
+        builder.resolve_pointer(DataPlaceholder::Font(i))?;
         build_font(builder, &gm_data.general_info, i, font)
             .map_err(|e| format!("{e} while building Font #{} with name \"{}\"", i, font.name.display(&gm_data.strings)))?;
     }
@@ -47,7 +47,7 @@ fn build_font(builder: &mut DataBuilder, general_info: &GMGeneralInfo, font_inde
     builder.write_u8(font.charset);
     builder.write_u8(font.anti_alias);
     builder.write_u32(font.range_end);
-    builder.write_placeholder(GMPointer::TexturePageItem(font.texture.index))?;
+    builder.write_placeholder(DataPlaceholder::TexturePageItem(font.texture.index))?;
     builder.write_f32(font.scale_x);
     builder.write_f32(font.scale_y);
 
@@ -78,11 +78,11 @@ fn build_glyphs(builder: &mut DataBuilder, general_info: &GMGeneralInfo, glyphs:
     builder.write_usize(glyphs.len());
 
     for i in 0..glyphs.len() {
-        builder.write_placeholder(GMPointer::FontGlyph(font_index, i))?;
+        builder.write_placeholder(DataPlaceholder::FontGlyph(font_index, i))?;
     }
 
     for (i, glyph) in glyphs.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::FontGlyph(font_index, i))?;
+        builder.resolve_pointer(DataPlaceholder::FontGlyph(font_index, i))?;
 
         let character: u16 = convert_char(glyph.character)
             .map_err(|e| format!("{e} for Glyph #{i}"))?;

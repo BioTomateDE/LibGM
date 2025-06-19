@@ -81,8 +81,8 @@ pub struct EditSpriteSpecial {
 impl ModExporter<'_, '_> {
     pub fn export_sprites(&self) -> Result<EditUnorderedList<AddSprite, EditSprite>, String> {
         export_changes_unordered_list(
-            &self.original_data.sprites.sprites_by_index,
-            &self.modified_data.sprites.sprites_by_index,
+            &self.original_data.sprites.sprites,
+            &self.modified_data.sprites.sprites,
             |i| Ok(AddSprite {
                 name: self.convert_string_ref(&i.name)?,
                 width: i.width,

@@ -1,5 +1,5 @@
 use crate::deserialize::all::GMData;
-use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, DataPlaceholder};
 
 pub fn build_chunk_audo(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     builder.start_chunk("AUDO")?;
@@ -7,11 +7,11 @@ pub fn build_chunk_audo(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
     builder.write_usize(len);
 
     for i in 0..len {
-        builder.write_placeholder(GMPointer::Audio(i))?;
+        builder.write_placeholder(DataPlaceholder::Audio(i))?;
     }
 
     for (i, audio) in gm_data.audios.audios.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::Audio(i))?;
+        builder.resolve_pointer(DataPlaceholder::Audio(i))?;
         builder.write_usize(audio.audio_data.len());
         builder.write_bytes(&audio.audio_data);
 

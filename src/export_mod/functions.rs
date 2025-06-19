@@ -21,8 +21,8 @@ pub struct EditFunction {
 impl ModExporter<'_, '_> {
     pub fn export_functions(&self) -> Result<EditUnorderedList<AddFunction, EditFunction>, String> {
         export_changes_unordered_list(
-            &self.original_data.functions.functions_by_index,
-            &self.modified_data.functions.functions_by_index,
+            &self.original_data.functions.functions,
+            &self.modified_data.functions.functions,
             |i| Ok(AddFunction {
                 name: self.convert_string_ref(&i.name)?,
                 name_string_id: i.name_string_id,

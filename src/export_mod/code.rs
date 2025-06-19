@@ -119,8 +119,8 @@ pub enum ModVariableType {
 impl ModExporter<'_, '_> {
     pub fn export_codes(&self) -> Result<EditUnorderedList<AddCode, EditCode>, String> {
         export_changes_unordered_list(
-            &self.original_data.codes.codes_by_index,
-            &self.modified_data.codes.codes_by_index,
+            &self.original_data.codes.codes,
+            &self.modified_data.codes.codes,
             |i| Ok(AddCode {
                 name: self.convert_string_ref(&i.name)?,
                 instructions: convert_additions(&i.instructions, |i| self.convert_instruction(i))?,

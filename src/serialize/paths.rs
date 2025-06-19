@@ -1,6 +1,6 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::paths::GMPathPoint;
-use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, DataPlaceholder};
 
 pub fn build_chunk_path(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     builder.start_chunk("PATH")?;
@@ -9,11 +9,11 @@ pub fn build_chunk_path(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
     builder.write_usize(path_count);
 
     for i in 0..path_count {
-        builder.write_placeholder(GMPointer::Path(i))?;
+        builder.write_placeholder(DataPlaceholder::Path(i))?;
     }
 
     for (i, path) in gm_data.paths.paths.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::Path(i))?;
+        builder.resolve_pointer(DataPlaceholder::Path(i))?;
         builder.write_gm_string(&path.name)?;
         builder.write_bool32(path.is_smooth);
         builder.write_bool32(path.is_closed);

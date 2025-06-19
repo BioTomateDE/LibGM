@@ -79,8 +79,8 @@ pub struct EditGameObjectEventAction {
 impl ModExporter<'_, '_> {
     pub fn export_game_objects(&self) -> Result<EditUnorderedList<AddGameObject, EditGameObject>, String> {
         export_changes_unordered_list(
-            &self.original_data.game_objects.game_objects_by_index,
-            &self.modified_data.game_objects.game_objects_by_index,
+            &self.original_data.game_objects.game_objects,
+            &self.modified_data.game_objects.game_objects,
             |i| Ok(AddGameObject {
                 name: self.convert_string_ref(&i.name)?,
                 sprite: self.convert_sprite_ref_opt(&i.sprite)?,

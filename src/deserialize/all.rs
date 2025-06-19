@@ -3,10 +3,10 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use crate::deserialize::backgrounds::{parse_chunk_bgnd, GMBackgrounds};
-use crate::deserialize::chunk_reading::GMChunk;
+use crate::deserialize::chunk_reading::{GMChunk, DataReader, GMElement, GMChunkElement};
 use crate::deserialize::code::{parse_chunk_code, GMCodes};
 use crate::deserialize::embedded_audio::{parse_chunk_audo, GMEmbeddedAudios};
-use crate::deserialize::embedded_textures::{parse_chunk_txtr, GMEmbeddedTexture};
+use crate::deserialize::embedded_textures::{parse_chunk_txtr, GMEmbeddedTexture, GMEmbeddedTextures};
 use crate::deserialize::fonts::{parse_chunk_font, GMFonts};
 use crate::deserialize::functions::{parse_chunk_func, GMCodeLocal, GMFunctions};
 use crate::deserialize::game_objects::{parse_chunk_objt, GMGameObjects};
@@ -19,10 +19,10 @@ use crate::deserialize::paths::{parse_chunk_path, GMPaths};
 use crate::deserialize::rooms::{parse_chunk_room, GMRooms};
 use crate::deserialize::sounds::{parse_chunk_sond, GMSounds};
 use crate::deserialize::sprites::{parse_chunk_sprt, GMSprites};
-use crate::deserialize::texture_page_items::{parse_chunk_tpag, GMTextures};
+use crate::deserialize::texture_page_items::{parse_chunk_tpag, GMTexturePageItems};
 use crate::bench_parse;
 use crate::deserialize::detect_version::detect_gamemaker_version;
-use crate::deserialize::irrelevant::{parse_chunk_agrp, parse_chunk_extn, parse_chunk_glob, parse_chunk_lang, GMAudioGroups, GMExtensions, GMGlobalInits, GMLanguageRoot};
+use crate::deserialize::irrelevant::{parse_chunk_agrp, parse_chunk_extn, parse_chunk_glob, parse_chunk_lang, GMAudioGroups, GMExtensions, GMGameEndScripts, GMGlobalInitScripts, GMLanguageInfo};
 use crate::deserialize::options::{parse_chunk_optn, GMOptions};
 use crate::deserialize::particles::{parse_chunk_psem, parse_chunk_psys, GMParticleEmitters, GMParticleSystems};
 
@@ -32,7 +32,7 @@ pub struct GMData {
     pub general_info: GMGeneralInfo,                    // GEN8
     pub options: GMOptions,                             // OPTN
     pub texture_pages: Vec<GMEmbeddedTexture>,          // TPAG
-    pub texture_page_items: GMTextures,                 // TPAG
+    pub texture_page_items: GMTexturePageItems,                 // TPAG
     pub backgrounds: GMBackgrounds,                     // BGND
     pub sprites: GMSprites,                             // SPRT
     pub scripts: GMScripts,                             // SCPT
@@ -48,81 +48,62 @@ pub struct GMData {
     pub paths: GMPaths,                                 // PATH
     pub particle_systems: GMParticleSystems,            // PSYS
     pub particle_emitters: GMParticleEmitters,          // PSEM
-    pub language_root: Option<GMLanguageRoot>,          // LANG
+    pub language_root: Option<GMLanguageInfo>,          // LANG
     pub extensions: GMExtensions,                       // EXTN
     pub audio_groups: GMAudioGroups,                    // AGRP
-    pub global_inits: GMGlobalInits,                    // GLOB
+    pub global_inits: GMGlobalInitScripts,                    // GLOB
 }
 
 pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let stopwatch = Stopwatch::start();
-    
-    let mut all = GMChunk {
-        name: "".to_string(),
-        abs_pos: 0,
-        data: &raw_data,
-        cur_pos: 0,
-        total_data_len: usize::MAX,
-    };
+    let mut strings = GMStrings::empty();
+    let mut general_info = GMGeneralInfo::empty();
+    let mut reader = DataReader::new(&raw_data, &general_info, &strings);
 
-    if all.read_chunk_name()? != "FORM" {
+    if reader.read_chunk_name()? != "FORM" {
         return Err("Invalid or corrupted data.win file: 'FORM' chunk missing".to_string());
     }
+    let total_data_len: usize = reader.read_usize()? + reader.cur_pos;
 
-    // get chunks
-    let total_data_len: usize = all.read_usize()? + all.cur_pos;
-    let mut chunks: HashMap<String, GMChunk> = HashMap::with_capacity(24);
-
-    while all.cur_pos + 8 < total_data_len {
-        let name: String = all.read_chunk_name()?;
-        let chunk_length: usize = all.read_usize()?;
-        let abs_pos: usize = all.cur_pos;
-        let data: &[u8] = all.read_bytes_dyn(chunk_length)
-            .map_err(|e| format!("Trying to read chunk '{name}' with specified length {chunk_length} {e}"))?;
-        // {~~} padding stuff
-        chunks.insert(
-            name.clone(),
-            GMChunk {
-                name,
-                abs_pos,
-                data,
-                total_data_len,
-                cur_pos: 0,
-            },
-        );
+    // let strings: GMStrings; 
+    // let general_info: GMGeneralInfo; 
+    // let mut texture_pages: Option<GMEmbeddedTextures> = None; 
+    // let mut texture_page_items: Option<GMTextures> = None;
+    // let mut backgrounds: Option<GMBackgrounds> = None;
+    // let mut sprites: Option<GMSprites> = None;
+    // let mut scripts: Option<GMScripts> = None;
+    // let mut variables: Option<GMVariables> = None;
+    // let mut functions: Option<GMFunctions> = None; 
+    // let mut code_locals: Option<GMCodeLocals> = None; 
+    // let mut codes: Option<GMCodes> = None;
+    // let mut fonts: Option<GMFonts> = None;
+    // let mut audios: Option<GMEmbeddedAudios> = None;
+    // let mut sounds: Option<GMSounds> = None;
+    // let mut game_objects: Option<GMGameObjects> = None;
+    // let mut rooms: Option<GMRooms> = None;
+    // let mut paths: Option<GMPaths> = None;
+    // let mut options: Option<GMOptions> = None;
+    
+    while reader.cur_pos + 8 < total_data_len { 
+        let name: String = reader.read_chunk_name()?;
+        let chunk_length: usize = reader.read_usize()?;
+        let start_pos: usize = reader.cur_pos;
+        reader.cur_pos += chunk_length;
+        let chunk = GMChunk {
+            name: name.clone(),
+            start_pos,
+            end_pos: reader.cur_pos,
+        };
+        if let Some(old_chunk) = reader.chunks.insert(name.clone(), chunk.clone()) {
+            return Err(format!(
+                "Chunk '{}' is defined multiple times: old data range {}..{}; new data range {}..{}",
+                name, old_chunk.start_pos, old_chunk.end_pos, chunk.start_pos, chunk.end_pos,
+            ))
+        }
     }
-
-    let mut chunk_strg: GMChunk = get_chunk(&chunks, "STRG")?;
-    let mut chunk_gen8: GMChunk = get_chunk(&chunks, "GEN8")?;
-    let mut chunk_optn: GMChunk = get_chunk(&chunks, "OPTN")?;
-    let mut chunk_txtr: GMChunk = get_chunk(&chunks, "TXTR")?;
-    let mut chunk_tpag: GMChunk = get_chunk(&chunks, "TPAG")?;
-    let mut chunk_bgnd: GMChunk = get_chunk(&chunks, "BGND")?;
-    let mut chunk_sprt: GMChunk = get_chunk(&chunks, "SPRT")?;
-    let mut chunk_scpt: GMChunk = get_chunk(&chunks, "SCPT")?;
-    let mut chunk_func: GMChunk = get_chunk(&chunks, "FUNC")?;
-    let mut chunk_vari: GMChunk = get_chunk(&chunks, "VARI")?;
-    let mut chunk_code: GMChunk = get_chunk(&chunks, "CODE")?;
-    let mut chunk_font: GMChunk = get_chunk(&chunks, "FONT")?;
-    let mut chunk_audo: GMChunk = get_chunk(&chunks, "AUDO")?;
-    let mut chunk_sond: GMChunk = get_chunk(&chunks, "SOND")?;
-    let mut chunk_room: GMChunk = get_chunk(&chunks, "ROOM")?;
-    let mut chunk_objt: GMChunk = get_chunk(&chunks, "OBJT")?;
-    let mut chunk_path: GMChunk = get_chunk(&chunks, "PATH")?;
-
-    let mut chunk_psys: Option<GMChunk> = chunks.get("PSYS").cloned();
-    let mut chunk_psem: Option<GMChunk> = chunks.get("PSEM").cloned();
-    let mut chunk_lang: Option<GMChunk> = chunks.get("LANG").cloned();
-    let mut chunk_extn: Option<GMChunk> = chunks.get("EXTN").cloned();
-    let mut chunk_agrp: Option<GMChunk> = chunks.get("AGRP").cloned();
-    let mut chunk_glob: Option<GMChunk> = chunks.get("GLOB").cloned();
-    // TODO implement all other chunks
     
-    log::trace!("Parsing FORM took {stopwatch}");
-
-    let strings: GMStrings = bench_parse!("STRG", parse_chunk_strg(&mut chunk_strg)?);
-    let mut general_info: GMGeneralInfo = bench_parse!("GEN8", parse_chunk_gen8(&mut chunk_gen8, &strings)?);
-    
+    strings = reader.read_chunk_required("STRG")?;
+    general_info = reader.read_chunk_required("GEN8")?;
     let stopwatch2 = Stopwatch::start();
     if let Some(detected_version) = detect_gamemaker_version(&chunks)? {
         log::info!("General info specified incorrect GameMaker version {}; automatically detected real version {}", general_info.version, detected_version);
@@ -130,48 +111,38 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     }
     log::trace!("Detecting GameMaker Version took {stopwatch2}");
     
-    let texture_pages: Vec<GMEmbeddedTexture> = bench_parse!("TXTR", parse_chunk_txtr(&mut chunk_txtr, &general_info)?);
-    let texture_page_items: GMTextures = bench_parse!("TPAG", parse_chunk_tpag(&mut chunk_tpag)?);
-    let backgrounds: GMBackgrounds = bench_parse!("BGND", parse_chunk_bgnd(&mut chunk_bgnd, &general_info, &strings, &texture_page_items)?);
-    let sprites: GMSprites = bench_parse!("SPRT", parse_chunk_sprt(&mut chunk_sprt, &general_info, &strings, &texture_page_items)?);
-    let scripts: GMScripts = bench_parse!("SCPT", parse_chunk_scpt(&mut chunk_scpt, &strings)?);
-    let variables: GMVariables = bench_parse!("VARI", parse_chunk_vari(&mut chunk_vari, &strings, &general_info, &mut chunk_code)?);
-    let (functions, code_locals): (GMFunctions, Vec<GMCodeLocal>) = bench_parse!("FUNC", parse_chunk_func(&mut chunk_func, &general_info, &strings, &mut chunk_code)?);
-    let codes: GMCodes = bench_parse!("CODE", parse_chunk_code(&mut chunk_code, general_info.bytecode_version <= 14, &strings, &variables, &functions)?);
-    let fonts: GMFonts = bench_parse!("FONT", parse_chunk_font(&mut chunk_font, &general_info, &strings, &texture_page_items)?);
-    let audios: GMEmbeddedAudios = bench_parse!("AUDO", parse_chunk_audo(&mut chunk_audo)?);
-    let sounds: GMSounds = bench_parse!("SOND", parse_chunk_sond(&mut chunk_sond, &general_info, &strings)?);
-    let game_objects: GMGameObjects = bench_parse!("OBJT", parse_chunk_objt(&mut chunk_objt, &general_info, &strings)?);
-    let rooms: GMRooms = bench_parse!("ROOM", parse_chunk_room(&mut chunk_room, &general_info, &strings)?);
-    let paths: GMPaths = bench_parse!("PATH", parse_chunk_path(&mut chunk_path, &strings)?);
-    let options: GMOptions = bench_parse!("OPTN", parse_chunk_optn(&mut chunk_optn, &strings, &texture_page_items)?);
+    let embedded_textures: GMEmbeddedTextures = reader.read_chunk_required("TXTR")?;
+    let texture_pages: GMTexturePageItems = reader.read_chunk_required("TPAG")?;
+    let variables: GMVariables = reader.read_chunk_required("VARI")?;
+    let functions: GMFunctions = reader.read_chunk_required("FUNC")?;
+    let scripts: GMScripts = reader.read_chunk_required("SCPT")?;
+    let codes: GMCodes = reader.read_chunk_required("CODE")?;
+    let fonts: GMFonts = reader.read_chunk_required("FONT")?;
+    let sprites: GMSprites = reader.read_chunk_required("SPRT")?;
+    let game_objects: GMGameObjects = reader.read_chunk_required("OBJT")?;
+    let rooms: GMRooms = reader.read_chunk_required("ROOM")?;
+    let rooms: GMRooms = reader.read_chunk_required("ROOM")?;
+    let backgrounds: GMBackgrounds = reader.read_chunk_required("BGND")?;
+    let paths: GMPaths = reader.read_chunk_required("PATH")?;
+    let audios: GMEmbeddedAudios = reader.read_chunk_required("AUDO")?;
+    let options: GMOptions = reader.read_chunk_required("OPTN")?;
+    // some of these probably aren't actually required; make optional when issue occur
+    
+    let particle_systems: GMParticleSystems = reader.read_chunk_optional("PSYS")?;
+    let particle_emitters: GMParticleEmitters = reader.read_chunk_optional("PSEM")?;
+    let language_info: GMLanguageInfo = reader.read_chunk_optional("LANG")?;
+    let extensions: GMExtensions = reader.read_chunk_optional("EXTN")?;
+    let audio_groups: GMAudioGroups = reader.read_chunk_optional("AGRP")?;
+    let global_init_scripts: GMGlobalInitScripts = reader.read_chunk_optional("GLOB")?;
+    let game_end_scripts: GMGameEndScripts = reader.read_chunk_optional("GMEN")?;
+    // TODO implement all other chunks
+    
+    log::trace!("Parsing FORM took {stopwatch}");
 
-    let particle_systems: GMParticleSystems;
-    let particle_emitters: GMParticleEmitters;
-    if let Some(ref mut chunk) = chunk_psys {
-        particle_systems = bench_parse!("PSYS", parse_chunk_psys(chunk, &general_info, &strings)?);
-        let chunk: &mut GMChunk = chunk_psem.as_mut().ok_or("Chunk PSYS exists but PSEM does not")?;
-        particle_emitters = bench_parse!("PSEM", parse_chunk_psem(chunk, &general_info, &strings)?);
-    } else {
-        particle_systems = GMParticleSystems::empty();
-        particle_emitters = GMParticleEmitters::empty();
-    }
-
-    let language_root: Option<GMLanguageRoot> = if let Some(ref mut chunk) = chunk_lang {
-        Some(bench_parse!("LANG", parse_chunk_lang(chunk, &strings)?))
-    } else { None };
-
-    let extensions: GMExtensions = if let Some(ref mut chunk) = chunk_extn {
-        bench_parse!("EXTN", parse_chunk_extn(chunk, &strings)?)
-    } else { GMExtensions::empty() };
-
-    let audio_groups: GMAudioGroups = if let Some(ref mut chunk) = chunk_agrp {
-        bench_parse!("AGRP", parse_chunk_agrp(chunk, &general_info, &strings)?)
-    } else { GMAudioGroups::empty() };
-
-    let global_inits: GMGlobalInits = if let Some(ref mut chunk) = chunk_agrp {
-        bench_parse!("GLOB", parse_chunk_glob(chunk)?)
-    } else { GMGlobalInits::empty() };
+    let strings: GMStrings = bench_parse!("STRG", parse_chunk_strg(&mut chunk_strg)?);
+    let mut general_info: GMGeneralInfo = bench_parse!("GEN8", parse_chunk_gen8(&mut chunk_gen8, &strings)?);
+    
+    
 
     let data = GMData {
         strings,

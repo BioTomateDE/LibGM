@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use crate::deserialize::chunk_reading::GMChunk;
-use crate::deserialize::general_info::GMVersion;
+use crate::deserialize::chunk_reading::{DataReader, GMChunk};
+use crate::deserialize::general_info::{GMVersion, GMVersionLTS};
 
 
 macro_rules! try_check {
@@ -28,7 +28,7 @@ fn get_chunk_required<'a>(chunks: &HashMap<String, GMChunk<'a>>, chunk_name: &'s
     }
 }
 
-fn get_chunk_optional<'a>(chunks: &HashMap<String, GMChunk<'a>>, chunk_name: &'static str) -> Option<GMChunk<'a>> {
+fn get_chunk_optional<'a>(chunks: &HashMap<String, GMChunk>, chunk_name: &'static str) -> Option<GMChunk<'a>> {
     chunks.get(chunk_name).map(clone_chunk)
 }
 
@@ -36,9 +36,9 @@ fn get_chunk_optional<'a>(chunks: &HashMap<String, GMChunk<'a>>, chunk_name: &'s
 // TODO in utmt, the CheckFor202X_X methods check the "current" version in the beginning
 // cc means check_chunk
 
-pub fn detect_gamemaker_version(chunks: &HashMap<String, GMChunk>) -> Result<Option<GMVersion>, String> {
-    if chunks.contains_key("UILR") {
-        return Ok(Some(GMVersion::new(2024, 13, 0, 0)))
+pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVersion>, String> {
+    if reader.chunks.contains_key("UILR") {
+        return Ok(Some(GMVersion::new(2024, 13, 0, 0, GMVersionLTS::Post2022_0)))
     }
     
     let mut chunk_sond: GMChunk = get_chunk_required(chunks, "SOND")?;
@@ -51,23 +51,23 @@ pub fn detect_gamemaker_version(chunks: &HashMap<String, GMChunk>) -> Result<Opt
     try_check!(&mut chunk_extn, cc_extn_2023_4);
     
     if chunks.contains_key("PSEM") {
-        return Ok(Some(GMVersion::new(2023, 2, 0, 0)))
+        return Ok(Some(GMVersion::new(2023, 2, 0, 0, GMVersionLTS::Post2022_0)))
     }
     if chunks.contains_key("FEAT") {
-        return Ok(Some(GMVersion::new(2022, 8, 0, 0)))
+        return Ok(Some(GMVersion::new(2022, 8, 0, 0, GMVersionLTS::Pre2022_0)))
     }
     
     let mut chunk_font: GMChunk = get_chunk_required(chunks, "FONT")?;
     try_check!(&mut chunk_font, cc_font_2022_2);
 
     if chunks.contains_key("FEDS") {
-        return Ok(Some(GMVersion::new(2, 3, 6, 0)))
+        return Ok(Some(GMVersion::new(2, 3, 6, 0, GMVersionLTS::Pre2022_0)))
     }
     if chunks.contains_key("SEQN") {
-        return Ok(Some(GMVersion::new(2, 3, 0, 0)))
+        return Ok(Some(GMVersion::new(2, 3, 0, 0, GMVersionLTS::Pre2022_0)))
     }
     if chunks.contains_key("TGIN") {
-        return Ok(Some(GMVersion::new(2, 2, 1, 0)))
+        return Ok(Some(GMVersion::new(2, 2, 1, 0, GMVersionLTS::Pre2022_0)))
     }
     
     // TODO implement rest
@@ -93,14 +93,14 @@ fn cc_extn_2023_4(chunk: &mut GMChunk) -> Result<Option<GMVersion>, String> {
     Ok(None)
 }
 
-fn cc_sond_2024_6(chunk: &mut GMChunk) -> Result<Option<GMVersion>, String> {
+fn cc_sond_2024_6(reader: &mut DataReader) -> Result<Option<GMVersion>, String> {
     // {~~} check lts shit
-    let target_ver = Ok(Some(GMVersion::new(2024, 6, 0, 0)));
-    let possible_sound_count: usize = chunk.read_usize_count()?;
+    let target_ver = Ok(Some(GMVersion::new(2024, 6, 0, 0, GMVersionLTS::Post2022_0)));
+    let possible_sound_count: usize = reader.read_usize()?;
     let mut sound_pointers: Vec<u32> = Vec::with_capacity(2);
 
     for _ in 0..possible_sound_count {
-        let pointer: u32 = chunk.read_u32()?;
+        let pointer: u32 = reader.read_u32()?;
         if pointer == 0 { continue }
         sound_pointers.push(pointer);
         if sound_pointers.len() >= 2 { break }
@@ -118,8 +118,8 @@ fn cc_sond_2024_6(chunk: &mut GMChunk) -> Result<Option<GMVersion>, String> {
             if abs_pos % 16 != 4 {
                 return Err("Expected to be on specific alignment at this point".to_string())
             }
-            chunk.set_abs_pos(abs_pos as usize)?;
-            if chunk.read_u32()? != 0 {
+            reader.cur_pos = abs_pos as usize;
+            if reader.read_u32()? != 0 {
                 return target_ver;
             }
         }

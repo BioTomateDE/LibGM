@@ -8,10 +8,10 @@ pub fn build_chunk_func(builder: &mut DataBuilder, gm_data: &GMData, function_oc
     
     // write functions
     if gm_data.general_info.bytecode_version >= 14 {
-        builder.write_usize(gm_data.functions.functions_by_index.len());
+        builder.write_usize(gm_data.functions.functions.len());
     }
     
-    for (i, function) in gm_data.functions.functions_by_index.iter().enumerate() {
+    for (i, function) in gm_data.functions.functions.iter().enumerate() {
         // there is no pointer list
         builder.write_gm_string(&function.name)?;
         

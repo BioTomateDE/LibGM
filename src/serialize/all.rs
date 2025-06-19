@@ -4,7 +4,7 @@ use std::fs;
 use std::path::Path;
 use crate::deserialize::all::GMData;
 use crate::serialize::backgrounds::build_chunk_bgnd;
-use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, DataPlaceholder};
 use crate::serialize::code::{build_chunk_code, Occurrences};
 use crate::serialize::embedded_audio::build_chunk_audo;
 use crate::serialize::embedded_textures::build_chunk_txtr;
@@ -36,7 +36,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     };
 
     builder.write_literal_string("FORM");
-    builder.write_placeholder(GMPointer::FormLength)?;
+    builder.write_placeholder(DataPlaceholder::FormLength)?;
 
     // same chunk order as in undertale 1.01
     bench_build!("GEN8", build_chunk_gen8(&mut builder, &gm_data)?);
@@ -71,7 +71,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     bench_build!("GLOB", build_chunk_glob(&mut builder, &gm_data)?);
 
     let raw_data_len: i32 = builder.len() as i32 - 8;
-    builder.resolve_placeholder(GMPointer::FormLength, raw_data_len)?;
+    builder.resolve_placeholder(DataPlaceholder::FormLength, raw_data_len)?;
     
     let stopwatch_placeholders = Stopwatch::start();
     // resolve pointer placeholders
