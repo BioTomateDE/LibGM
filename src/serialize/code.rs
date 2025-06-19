@@ -4,17 +4,17 @@ use crate::deserialize::code::{GMCodeBytecode15, GMCodes, GMDataType, GMInstance
 use crate::deserialize::functions::{GMFunction, GMFunctions};
 use crate::deserialize::strings::GMStrings;
 use crate::deserialize::variables::{GMVariable, GMVariableB15Data, GMVariables};
-use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, DataPlaceholder};
 
 pub type Occurrences = HashMap<usize, Vec<(usize, Option<GMVariableType>)>>;
 
 pub fn build_chunk_code(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(Occurrences, Occurrences), String> {
     builder.start_chunk("CODE")?;
-    let len: usize = gm_data.codes.codes_by_index.len();
+    let len: usize = gm_data.codes.codes.len();
     builder.write_usize(len);
 
     for i in 0..len {
-        builder.write_placeholder(GMPointer::CodeMeta(i))?;
+        builder.write_placeholder(DataPlaceholder::CodeMeta(i))?;
     }
 
     let (variable_occurrences_map, function_occurrences_map) = if gm_data.general_info.bytecode_version <= 14 {
@@ -38,10 +38,10 @@ fn build_code_b14(
     let mut variable_occurrences_map: Occurrences = HashMap::new();
     let mut function_occurrences_map: Occurrences = HashMap::new();
 
-    for (i, code) in codes.codes_by_index.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::CodeMeta(i))?;
+    for (i, code) in codes.codes.iter().enumerate() {
+        builder.resolve_pointer(DataPlaceholder::CodeMeta(i))?;
         builder.write_gm_string(&code.name)?;
-        builder.write_placeholder(GMPointer::CodeLength(i))?;
+        builder.write_placeholder(DataPlaceholder::CodeLength(i))?;
         let start: usize = builder.len();
         
         for (j, instruction) in code.instructions.iter().enumerate() {
@@ -49,7 +49,7 @@ fn build_code_b14(
                 .map_err(|e| format!("{e} while building Instruction #{j} of Code #{i} with name \"{}\"", code.name.display(strings)))?;
         }
 
-        builder.resolve_placeholder(GMPointer::CodeLength(i), (builder.len() - start) as i32)?;
+        builder.resolve_placeholder(DataPlaceholder::CodeLength(i), (builder.len() - start) as i32)?;
     }
 
     Ok((variable_occurrences_map, function_occurrences_map))
@@ -66,9 +66,9 @@ fn build_code_b15(
     let mut variable_occurrences_map: Occurrences = HashMap::new();
     let mut function_occurrences_map: Occurrences = HashMap::new();
 
-    let mut code_start_positions: Vec<usize> = Vec::with_capacity(codes.codes_by_index.len());
+    let mut code_start_positions: Vec<usize> = Vec::with_capacity(codes.codes.len());
 
-    for (i, code) in codes.codes_by_index.iter().enumerate() {
+    for (i, code) in codes.codes.iter().enumerate() {
         let start: usize = builder.len();
 
         for (j, instruction) in code.instructions.iter().enumerate() {
@@ -78,15 +78,15 @@ fn build_code_b15(
 
         let end: usize = builder.len();
         // overwrite code length placeholder
-        builder.resolve_placeholder(GMPointer::CodeLength(i), (end - start) as i32)?;
+        builder.resolve_placeholder(DataPlaceholder::CodeLength(i), (end - start) as i32)?;
 
         code_start_positions.push(start);
     }
 
-    for (i, code) in codes.codes_by_index.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::CodeMeta(i))?;
+    for (i, code) in codes.codes.iter().enumerate() {
+        builder.resolve_pointer(DataPlaceholder::CodeMeta(i))?;
         builder.write_gm_string(&code.name)?;
-        builder.write_placeholder(GMPointer::CodeLength(i))?;
+        builder.write_placeholder(DataPlaceholder::CodeLength(i))?;
 
         // write bytecode15 info
         let b15_info: &GMCodeBytecode15 = code.bytecode15_info.as_ref()
@@ -262,7 +262,7 @@ fn build_instruction(
             builder.write_u8(instr.opcode.into());  // v removing this (also for push instruction) might break bytecode14 but the line below is wrong too
             // builder.write_u8(if bytecode14 { instr.opcode.into() } else { 0xDA });
 
-            let function: &GMFunction = instr.function.resolve(&functions.functions_by_index)?;
+            let function: &GMFunction = instr.function.resolve(&functions.functions)?;
             write_occurrence(builder, function_occurrences_map, instr.function.index, abs_pos, function.name_string_id, None)?;
         }
 

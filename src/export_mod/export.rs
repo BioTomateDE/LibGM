@@ -177,27 +177,27 @@ impl ModExporter<'_, '_> {
         convert_reference(gm_background_ref, &self.original_data.backgrounds.backgrounds, &self.modified_data.backgrounds.backgrounds)
     }
     pub fn convert_code_ref(&self, gm_code_ref: &GMRef<GMCode>) -> Result<ModRef, String> {
-        convert_reference(gm_code_ref, &self.original_data.codes.codes_by_index, &self.modified_data.codes.codes_by_index)
+        convert_reference(gm_code_ref, &self.original_data.codes.codes, &self.modified_data.codes.codes)
     }
     pub fn convert_function_ref(&self, gm_function_ref: &GMRef<GMFunction>) -> Result<ModRef, String> {
-        convert_reference(gm_function_ref, &self.original_data.functions.functions_by_index, &self.modified_data.functions.functions_by_index)
+        convert_reference(gm_function_ref, &self.original_data.functions.functions, &self.modified_data.functions.functions)
     }
     // TODO continue
     pub fn convert_game_object_ref(&self, gm_game_object_ref: &GMRef<GMGameObject>) -> Result<ModRef, String> {
-        convert_reference(gm_game_object_ref, &self.original_data.game_objects.game_objects_by_index, &self.modified_data.game_objects.game_objects_by_index)
+        convert_reference(gm_game_object_ref, &self.original_data.game_objects.game_objects, &self.modified_data.game_objects.game_objects)
     }
     pub fn convert_room_ref(&self, gm_room_ref: &GMRef<GMRoom>) -> Result<ModRef, String> {
-        convert_reference(gm_room_ref, &self.original_data.rooms.rooms_by_index, &self.modified_data.rooms.rooms_by_index)
+        convert_reference(gm_room_ref, &self.original_data.rooms.rooms, &self.modified_data.rooms.rooms)
     }
     pub fn convert_sprite_ref(&self, gm_sprite_ref: &GMRef<GMSprite>) -> Result<ModRef, String> {
-        convert_reference(gm_sprite_ref, &self.original_data.sprites.sprites_by_index, &self.modified_data.sprites.sprites_by_index)
+        convert_reference(gm_sprite_ref, &self.original_data.sprites.sprites, &self.modified_data.sprites.sprites)
     }
     pub fn convert_string_ref(&self, gm_string_ref: &GMRef<String>) -> Result<ModRef, String> {
-        convert_reference(gm_string_ref, &self.original_data.strings.strings_by_index, &self.modified_data.strings.strings_by_index)
+        convert_reference(gm_string_ref, &self.original_data.strings.strings, &self.modified_data.strings.strings)
     }
     /// TODO make custom function for texture page items (since texture contents are not checked)
     pub fn convert_texture_ref(&self, gm_texture_ref: &GMRef<GMTexturePageItem>) -> Result<ModRef, String> {
-        convert_reference(gm_texture_ref, &self.original_data.texture_page_items.textures_by_index, &self.modified_data.texture_page_items.textures_by_index)
+        convert_reference(gm_texture_ref, &self.original_data.texture_page_items.texture_page_items, &self.modified_data.texture_page_items.texture_page_items)
     }
     pub fn convert_variable_ref(&self, gm_variable_ref: &GMRef<GMVariable>) -> Result<ModRef, String> {
         convert_reference(gm_variable_ref, &self.original_data.variables.variables, &self.modified_data.variables.variables)
@@ -210,20 +210,20 @@ impl ModExporter<'_, '_> {
         convert_reference_optional(gm_background_ref, &self.original_data.backgrounds.backgrounds, &self.modified_data.backgrounds.backgrounds)
     }
     pub fn convert_code_ref_opt(&self, gm_code_ref: &Option<GMRef<GMCode>>) -> Result<Option<ModRef>, String> {
-        convert_reference_optional(gm_code_ref, &self.original_data.codes.codes_by_index, &self.modified_data.codes.codes_by_index)
+        convert_reference_optional(gm_code_ref, &self.original_data.codes.codes, &self.modified_data.codes.codes)
     }
     pub fn convert_game_object_ref_opt(&self, gm_game_object_ref: &Option<GMRef<GMGameObject>>) -> Result<Option<ModRef>, String> {
-        convert_reference_optional(gm_game_object_ref, &self.original_data.game_objects.game_objects_by_index, &self.modified_data.game_objects.game_objects_by_index)
+        convert_reference_optional(gm_game_object_ref, &self.original_data.game_objects.game_objects, &self.modified_data.game_objects.game_objects)
     }
     pub fn convert_sprite_ref_opt(&self, gm_sprite_ref: &Option<GMRef<GMSprite>>) -> Result<Option<ModRef>, String> {
-        convert_reference_optional(gm_sprite_ref, &self.original_data.sprites.sprites_by_index, &self.modified_data.sprites.sprites_by_index)
+        convert_reference_optional(gm_sprite_ref, &self.original_data.sprites.sprites, &self.modified_data.sprites.sprites)
     }
     pub fn convert_string_ref_opt(&self, gm_string_ref: &Option<GMRef<String>>) -> Result<Option<ModRef>, String> {
-        convert_reference_optional(gm_string_ref, &self.original_data.strings.strings_by_index, &self.modified_data.strings.strings_by_index)
+        convert_reference_optional(gm_string_ref, &self.original_data.strings.strings, &self.modified_data.strings.strings)
     }
     /// TODO make custom function for texture page items (since texture contents are not checked)
     pub fn convert_texture_ref_opt(&self, gm_texture_ref: &Option<GMRef<GMTexturePageItem>>) -> Result<Option<ModRef>, String> {
-        convert_reference_optional(gm_texture_ref, &self.original_data.texture_page_items.textures_by_index, &self.modified_data.texture_page_items.textures_by_index)
+        convert_reference_optional(gm_texture_ref, &self.original_data.texture_page_items.texture_page_items, &self.modified_data.texture_page_items.texture_page_items)
     }
 }
 

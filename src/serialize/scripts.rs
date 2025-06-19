@@ -1,19 +1,19 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::scripts::GMScript;
-use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, DataPlaceholder};
 
 pub fn build_chunk_scpt(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     builder.start_chunk("SCPT")?;
-    let len: usize = gm_data.scripts.scripts_by_index.len();
+    let len: usize = gm_data.scripts.scripts.len();
     builder.write_usize(len);
 
     for i in 0..len {
-        builder.write_placeholder(GMPointer::Script(i))?;
+        builder.write_placeholder(DataPlaceholder::Script(i))?;
     }
 
     for i in 0..len {
-        builder.resolve_pointer(GMPointer::Script(i))?;
-        let script: &GMScript = &gm_data.scripts.scripts_by_index[i];
+        builder.resolve_pointer(DataPlaceholder::Script(i))?;
+        let script: &GMScript = &gm_data.scripts.scripts[i];
 
         builder.write_gm_string(&script.name)?;
         if let Some(ref code) = script.code {

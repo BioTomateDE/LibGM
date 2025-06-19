@@ -2,19 +2,19 @@ use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
 use crate::deserialize::sprites::{GMSpriteMaskEntry, GMSpriteNineSlice, GMSpriteType};
 use crate::deserialize::texture_page_items::GMTexturePageItem;
-use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, DataPlaceholder};
 use crate::serialize::sequence::build_sequence;
 
 pub fn build_chunk_sprt(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     builder.start_chunk("SPRT")?;
-    builder.write_usize(gm_data.sprites.sprites_by_index.len());
+    builder.write_usize(gm_data.sprites.sprites.len());
 
-    for i in 0..gm_data.sprites.sprites_by_index.len() {
-        builder.write_placeholder(GMPointer::Sprite(i))?;
+    for i in 0..gm_data.sprites.sprites.len() {
+        builder.write_placeholder(DataPlaceholder::Sprite(i))?;
     }
 
-    for (i, sprite) in gm_data.sprites.sprites_by_index.iter().enumerate() {
-        builder.resolve_pointer(GMPointer::Sprite(i))?;
+    for (i, sprite) in gm_data.sprites.sprites.iter().enumerate() {
+        builder.resolve_pointer(DataPlaceholder::Sprite(i))?;
         builder.write_gm_string(&sprite.name)?;
         builder.write_u32(sprite.width);
         builder.write_u32(sprite.height);
@@ -44,10 +44,10 @@ pub fn build_chunk_sprt(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
                 builder.write_f32(specials.playback_speed);
                 builder.write_u32(specials.playback_speed_type.into());
                 if specials.special_version >= 2 && specials.sequence.is_some() {
-                    builder.write_placeholder(GMPointer::SpriteSequence(i))?;
+                    builder.write_placeholder(DataPlaceholder::SpriteSequence(i))?;
                 }
                 if specials.special_version >= 3 && specials.nine_slice.is_some() {
-                    builder.write_placeholder(GMPointer::SpriteNineSlice(i))?;
+                    builder.write_placeholder(DataPlaceholder::SpriteNineSlice(i))?;
                 }
             }
 
@@ -72,14 +72,14 @@ pub fn build_chunk_sprt(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
 
             if specials.special_version >= 2 {
                 if let Some(ref sequence) = specials.sequence {
-                    builder.resolve_pointer(GMPointer::SpriteSequence(i))?;
+                    builder.resolve_pointer(DataPlaceholder::SpriteSequence(i))?;
                     builder.write_i32(1);
                     build_sequence(builder, &gm_data.general_info, &gm_data.strings, sequence)?;
                 }
             }
             if specials.special_version >= 3 {
                 if let Some(ref nine_slice) = specials.nine_slice {
-                    builder.resolve_pointer(GMPointer::SpriteNineSlice(i))?;
+                    builder.resolve_pointer(DataPlaceholder::SpriteNineSlice(i))?;
                     build_nine_slice(builder, nine_slice)?;
                 }
             }
@@ -98,7 +98,7 @@ pub fn build_chunk_sprt(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
 fn build_texture_list(builder: &mut DataBuilder, textures: &Vec<GMRef<GMTexturePageItem>>) -> Result<(), String> {
     builder.write_usize(textures.len());
     for i in 0..textures.len() {
-        builder.write_placeholder(GMPointer::TexturePageItem(i))?;
+        builder.write_placeholder(DataPlaceholder::TexturePageItem(i))?;
     }
     Ok(())
 }

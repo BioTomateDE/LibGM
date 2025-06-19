@@ -233,8 +233,8 @@ pub enum ModRoomTileTexture {
 impl ModExporter<'_, '_> {
     pub fn export_rooms(&self) -> Result<EditUnorderedList<AddRoom, EditRoom>, String> {
         export_changes_unordered_list(
-            &self.original_data.rooms.rooms_by_index,
-            &self.modified_data.rooms.rooms_by_index,
+            &self.original_data.rooms.rooms,
+            &self.modified_data.rooms.rooms,
             |i| Ok(AddRoom {
                 name: self.convert_string_ref(&i.name)?,
                 caption: self.convert_string_ref_opt(&i.caption)?,

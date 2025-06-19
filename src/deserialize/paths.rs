@@ -1,4 +1,4 @@
-use crate::deserialize::chunk_reading::{GMChunkElement, GMElement, GMReader, GMRef};
+use crate::deserialize::chunk_reading::{GMChunkElement, GMElement, DataReader, GMRef};
 
 
 #[derive(Debug, Clone)]
@@ -12,7 +12,7 @@ impl GMChunkElement for GMPaths {
     }
 }
 impl GMElement for GMPaths {
-    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let paths: Vec<GMPath> = reader.read_pointer_list::<GMPath>()?;
         Ok(GMPaths { paths, exists: true })
     }
@@ -28,7 +28,7 @@ pub struct GMPath {
     pub points: Vec<GMPathPoint>,
 }
 impl GMElement for GMPath {
-    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let is_smooth: bool = reader.read_bool32()?;
         let is_closed: bool = reader.read_bool32()?;
@@ -46,7 +46,7 @@ pub struct GMPathPoint {
     pub speed: f32,
 }
 impl GMElement for GMPathPoint {
-    fn deserialize(reader: &mut GMReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let x: f32 = reader.read_f32()?;
         let y: f32 = reader.read_f32()?;
         let speed: f32 = reader.read_f32()?;

@@ -1,6 +1,6 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMVersion};
-use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, DataPlaceholder};
 
 pub fn build_chunk_gen8(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     builder.start_chunk("GEN8")?;
@@ -9,13 +9,13 @@ pub fn build_chunk_gen8(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
     builder.write_u8(if info.is_debugger_disabled {1} else {0});
     builder.write_u8(info.bytecode_version);
     builder.write_u16(info.unknown_value);
-    builder.write_placeholder(GMPointer::String(info.game_file_name.index))?;
-    builder.write_placeholder(GMPointer::String(info.config.index))?;
+    builder.write_placeholder(DataPlaceholder::String(info.game_file_name.index))?;
+    builder.write_placeholder(DataPlaceholder::String(info.config.index))?;
     builder.write_u32(info.last_object_id);     // these have to be incremented when mods add objects/tiles!
     builder.write_u32(info.last_tile_id);       // ^
     builder.write_u32(info.game_id);
     builder.raw_data.extend(info.directplay_guid.as_bytes());
-    builder.write_placeholder(GMPointer::String(info.game_name.index))?;
+    builder.write_placeholder(DataPlaceholder::String(info.game_name.index))?;
     build_version(builder, &info.version);
     builder.write_u32(info.default_window_width);
     builder.write_u32(info.default_window_height);
@@ -23,7 +23,7 @@ pub fn build_chunk_gen8(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(
     builder.write_u32(info.license_crc32);
     builder.raw_data.extend(info.license_md5);
     builder.write_i64(info.timestamp_created.timestamp());
-    builder.write_placeholder(GMPointer::String(info.display_name.index))?;
+    builder.write_placeholder(DataPlaceholder::String(info.display_name.index))?;
     builder.write_u64(info.active_targets);
     builder.write_u64(build_function_classifications(&info.function_classifications));
     builder.write_i32(info.steam_appid);

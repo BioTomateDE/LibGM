@@ -1,19 +1,19 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::sounds::{GMSound, GMSoundFlags};
-use crate::serialize::chunk_writing::{DataBuilder, GMPointer};
+use crate::serialize::chunk_writing::{DataBuilder, DataPlaceholder};
 
 pub fn build_chunk_sond(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String> {
     builder.start_chunk("SOND")?;
-    let len: usize = gm_data.sounds.sounds_by_index.len();
+    let len: usize = gm_data.sounds.sounds.len();
     builder.write_usize(len);
 
     for i in 0..len {
-        builder.write_placeholder(GMPointer::Sound(i))?;
+        builder.write_placeholder(DataPlaceholder::Sound(i))?;
     }
 
     for i in 0..len {
-        builder.resolve_pointer(GMPointer::Sound(i))?;
-        let sound: &GMSound = &gm_data.sounds.sounds_by_index[i];
+        builder.resolve_pointer(DataPlaceholder::Sound(i))?;
+        let sound: &GMSound = &gm_data.sounds.sounds[i];
         builder.write_gm_string(&sound.name)?;
         builder.write_u32(build_sound_flags(&sound.flags));
         builder.write_gm_string_optional(&sound.audio_type)?;

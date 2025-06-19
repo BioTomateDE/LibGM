@@ -34,8 +34,8 @@ pub struct EditTexturePageItem {
 impl ModExporter<'_, '_> {
     pub fn export_textures(&self) -> Result<(EditUnorderedList<AddTexturePageItem, EditTexturePageItem>, Vec<DynamicImage>), String> {
         // export_changes_unordered_list(
-        let original_list: &Vec<GMTexturePageItem> = &self.original_data.texture_page_items.textures_by_index;
-        let modified_list: &Vec<GMTexturePageItem> = &self.modified_data.texture_page_items.textures_by_index;
+        let original_list: &Vec<GMTexturePageItem> = &self.original_data.texture_page_items.texture_page_items;
+        let modified_list: &Vec<GMTexturePageItem> = &self.modified_data.texture_page_items.texture_page_items;
         
         let texture_page_items: &[GMTexturePageItem] = modified_list
             .get(original_list.len() .. modified_list.len())

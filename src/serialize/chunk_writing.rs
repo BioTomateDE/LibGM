@@ -14,7 +14,7 @@ use crate::deserialize::strings::GMStrings;
 // and they can be differentiated in the pool hashmap.
 // [See GMRef to understand difference]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum GMPointer {
+pub enum DataPlaceholder {
     /// `String`: Used for string references basically everywhere.
     /// Points to actual the actual string, not to the string gm object (which includes the upcoming string length)
     String(usize),
@@ -66,9 +66,9 @@ pub struct DataBuilder {
     pub raw_data: Vec<u8>,
     pub chunk_start_pos: Option<usize>,
     /// maps gamemaker element references to absolute positions of where they're referenced
-    pub pool_placeholders: HashMap<usize, GMPointer>,
+    pub pool_placeholders: HashMap<usize, DataPlaceholder>,
     /// maps gamemaker element references to absolute positions of where their data is OR sometimes any other data
-    pub placeholder_pool_resources: HashMap<GMPointer, i32>,
+    pub placeholder_pool_resources: HashMap<DataPlaceholder, i32>,
 }
 
 
@@ -152,7 +152,7 @@ impl DataBuilder {
     }
 
     pub fn write_gm_string(&mut self, string_ref: &GMRef<String>) -> Result<(), String> {
-        self.write_placeholder(GMPointer::String(string_ref.index))?;
+        self.write_placeholder(DataPlaceholder::String(string_ref.index))?;
         Ok(())
     }
 
@@ -160,7 +160,7 @@ impl DataBuilder {
     pub fn write_gm_string_optional(&mut self, string_ref_optional: &Option<GMRef<String>>) -> Result<(), String> {
         match string_ref_optional {
             None => self.write_usize(0),
-            Some(string_ref) => self.write_placeholder(GMPointer::String(string_ref.index))?,
+            Some(string_ref) => self.write_placeholder(DataPlaceholder::String(string_ref.index))?,
         }
         Ok(())
     }
@@ -217,7 +217,7 @@ impl DataBuilder {
     /// This method should be called when the data file format expects
     /// a pointer to some element, but you don't yet (necessarily) know where
     /// that element will be located in the data file.
-    pub fn write_placeholder(&mut self, pointer: GMPointer) -> Result<(), String> {
+    pub fn write_placeholder(&mut self, pointer: DataPlaceholder) -> Result<(), String> {
         let position: usize = self.len();
         self.write_usize(0xDEADC0DE);      // write placeholder
         if let Some(old_value) = self.pool_placeholders.insert(position, pointer.clone()) {
@@ -233,7 +233,7 @@ impl DataBuilder {
     /// Store the gamemaker element's absolute position in the pool.
     /// The element's absolute position is the chunk builder's current position;
     /// since this method should get called when the element is built to the data file.
-    pub fn resolve_pointer(&mut self, pointer: GMPointer) -> Result<(), String> {
+    pub fn resolve_pointer(&mut self, pointer: DataPlaceholder) -> Result<(), String> {
         let position: usize = self.len();
         if let Some(old_value) = self.placeholder_pool_resources.insert(pointer.clone(), position as i32) {
             return Err(format!(
@@ -245,7 +245,7 @@ impl DataBuilder {
     }
 
     /// More generic function to overwrite placeholder with any data instead of the current position
-    pub fn resolve_placeholder(&mut self, pointer: GMPointer, data: i32) -> Result<(), String> {
+    pub fn resolve_placeholder(&mut self, pointer: DataPlaceholder, data: i32) -> Result<(), String> {
         if let Some(old_value) = self.placeholder_pool_resources.insert(pointer.clone(), data) {
             return Err(format!(
                 "Placeholder for {:?} already resolved to data {}; tried to resolve again to data {}",
@@ -269,7 +269,7 @@ impl DataBuilder {
 
 impl GMRef<String> {
     pub fn display<'a>(&self, gm_strings: &'a GMStrings) -> &'a str {
-        self.resolve(&gm_strings.strings_by_index)
+        self.resolve(&gm_strings.strings)
             .map(|i| i.as_str())
             .unwrap_or("<invalid string reference>")
     }

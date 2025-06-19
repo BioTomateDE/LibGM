@@ -1,6 +1,6 @@
 use crate::deserialize::chunk_reading::{GMChunk, GMRef};
 use crate::deserialize::strings::GMStrings;
-use crate::deserialize::texture_page_items::{GMTexturePageItem, GMTextures};
+use crate::deserialize::texture_page_items::{GMTexturePageItem, GMTexturePageItems};
 
 #[derive(Debug, Clone)]
 pub struct GMOptions {
@@ -71,7 +71,7 @@ pub struct GMOptionsConstant {
 }
 
 
-pub fn parse_chunk_optn(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMTextures) -> Result<GMOptions, String> {
+pub fn parse_chunk_optn(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMTexturePageItems) -> Result<GMOptions, String> {
     chunk.cur_pos = 0;
     let is_new_format: bool = chunk.read_u32()? == 0x80000000;
     chunk.cur_pos = 0;
@@ -85,7 +85,7 @@ pub fn parse_chunk_optn(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMT
 }
 
 
-fn parse_options_new(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMTextures) -> Result<GMOptions, String> {
+fn parse_options_new(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMTexturePageItems) -> Result<GMOptions, String> {
     let unknown1: u32 = chunk.read_u32()?;
     let unknown2: u32 = chunk.read_u32()?;
     let flags: GMOptionsFlags = parse_options_flags(chunk.read_u64()?);
@@ -122,7 +122,7 @@ fn parse_options_new(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMText
     })
 }
 
-fn parse_options_old(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMTextures) -> Result<GMOptions, String> {
+fn parse_options_old(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMTexturePageItems) -> Result<GMOptions, String> {
     let flag_fullscreen: bool = chunk.read_bool32()?;
     let flag_interpolate_pixels: bool = chunk.read_bool32()?;
     let flag_use_new_audio: bool = chunk.read_bool32()?;
@@ -277,7 +277,7 @@ fn parse_constants(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMOpt
     Ok(constants)
 }
 
-fn parse_options_image(chunk: &mut GMChunk, textures: &GMTextures) -> Result<Option<GMRef<GMTexturePageItem>>, String> {
+fn parse_options_image(chunk: &mut GMChunk, textures: &GMTexturePageItems) -> Result<Option<GMRef<GMTexturePageItem>>, String> {
     let absolute_position: usize = chunk.read_usize()?;
     if absolute_position == 0 {
         return Ok(None)
