@@ -2,29 +2,28 @@ use crate::debug_utils::Stopwatch;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use crate::deserialize::backgrounds::{parse_chunk_bgnd, GMBackgrounds};
-use crate::deserialize::chunk_reading::{GMChunk, DataReader, GMElement, GMChunkElement};
-use crate::deserialize::code::{parse_chunk_code, GMCodes};
-use crate::deserialize::embedded_audio::{parse_chunk_audo, GMEmbeddedAudios};
-use crate::deserialize::embedded_textures::{parse_chunk_txtr, GMEmbeddedTexture, GMEmbeddedTextures};
-use crate::deserialize::fonts::{parse_chunk_font, GMFonts};
-use crate::deserialize::functions::{parse_chunk_func, GMCodeLocal, GMFunctions};
-use crate::deserialize::game_objects::{parse_chunk_objt, GMGameObjects};
-use crate::deserialize::general_info::{parse_chunk_gen8, GMVersion};
-use crate::deserialize::scripts::{parse_chunk_scpt, GMScripts};
-use crate::deserialize::strings::{parse_chunk_strg, GMStrings};
-use crate::deserialize::variables::{parse_chunk_vari, GMVariables};
-use crate::deserialize::general_info::GMGeneralInfo;
-use crate::deserialize::paths::{parse_chunk_path, GMPaths};
-use crate::deserialize::rooms::{parse_chunk_room, GMRooms};
-use crate::deserialize::sounds::{parse_chunk_sond, GMSounds};
-use crate::deserialize::sprites::{parse_chunk_sprt, GMSprites};
-use crate::deserialize::texture_page_items::{parse_chunk_tpag, GMTexturePageItems};
 use crate::bench_parse;
-use crate::deserialize::detect_version::detect_gamemaker_version;
-use crate::deserialize::irrelevant::{parse_chunk_agrp, parse_chunk_extn, parse_chunk_glob, parse_chunk_lang, GMAudioGroups, GMExtensions, GMGameEndScripts, GMGlobalInitScripts, GMLanguageInfo};
+use crate::deserialize::backgrounds::{GMBackgrounds};
+use crate::deserialize::chunk_reading::{GMChunk, DataReader, GMChunkElement};
+use crate::deserialize::code::GMCodes;
+use crate::deserialize::embedded_audio::GMEmbeddedAudios;
+use crate::deserialize::embedded_textures::{GMEmbeddedTexture, GMEmbeddedTextures};
+use crate::deserialize::fonts::GMFonts;
+use crate::deserialize::functions::{GMCodeLocal, GMFunctions};
+use crate::deserialize::game_objects::GMGameObjects;
+use crate::deserialize::scripts::GMScripts;
+use crate::deserialize::strings::GMStrings;
+use crate::deserialize::variables::GMVariables;
+use crate::deserialize::general_info::GMGeneralInfo;
+use crate::deserialize::paths::GMPaths;
+use crate::deserialize::rooms::GMRooms;
+use crate::deserialize::sounds::GMSounds;
+use crate::deserialize::sprites::GMSprites;
+use crate::deserialize::texture_page_items::GMTexturePageItems;
 use crate::deserialize::options::{parse_chunk_optn, GMOptions};
-use crate::deserialize::particles::{parse_chunk_psem, parse_chunk_psys, GMParticleEmitters, GMParticleSystems};
+use crate::deserialize::detect_version::detect_gamemaker_version;
+use crate::deserialize::irrelevant::{GMAudioGroups, GMExtensions, GMGameEndScripts, GMGlobalInitScripts, GMLanguageInfo};
+use crate::deserialize::particles::{GMParticleEmitters, GMParticleSystems};
 
 #[derive(Debug, Clone)]
 pub struct GMData {
@@ -32,7 +31,7 @@ pub struct GMData {
     pub general_info: GMGeneralInfo,                    // GEN8
     pub options: GMOptions,                             // OPTN
     pub texture_pages: Vec<GMEmbeddedTexture>,          // TPAG
-    pub texture_page_items: GMTexturePageItems,                 // TPAG
+    pub texture_page_items: GMTexturePageItems,         // TPAG
     pub backgrounds: GMBackgrounds,                     // BGND
     pub sprites: GMSprites,                             // SPRT
     pub scripts: GMScripts,                             // SCPT
@@ -51,14 +50,14 @@ pub struct GMData {
     pub language_root: Option<GMLanguageInfo>,          // LANG
     pub extensions: GMExtensions,                       // EXTN
     pub audio_groups: GMAudioGroups,                    // AGRP
-    pub global_inits: GMGlobalInitScripts,                    // GLOB
+    pub global_inits: GMGlobalInitScripts,              // GLOB
 }
 
 pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let stopwatch = Stopwatch::start();
     let mut strings = GMStrings::empty();
     let mut general_info = GMGeneralInfo::empty();
-    let mut reader = DataReader::new(&raw_data, &general_info, &strings);
+    let mut reader = DataReader::new(&raw_data, &mut general_info, &mut strings);
 
     if reader.read_chunk_name()? != "FORM" {
         return Err("Invalid or corrupted data.win file: 'FORM' chunk missing".to_string());
@@ -102,15 +101,14 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
         }
     }
     
-    strings = reader.read_chunk_required("STRG")?;
+    strings = reader.read_chunk_required("STRG")?;      // FIXME: hopefully this also updates reader.strings
     general_info = reader.read_chunk_required("GEN8")?;
     let stopwatch2 = Stopwatch::start();
-    if let Some(detected_version) = detect_gamemaker_version(&chunks)? {
+    if let Some(detected_version) = detect_gamemaker_version(&mut reader)? {
         log::info!("General info specified incorrect GameMaker version {}; automatically detected real version {}", general_info.version, detected_version);
-        general_info.version = detected_version;
     }
     log::trace!("Detecting GameMaker Version took {stopwatch2}");
-    
+
     let embedded_textures: GMEmbeddedTextures = reader.read_chunk_required("TXTR")?;
     let texture_pages: GMTexturePageItems = reader.read_chunk_required("TPAG")?;
     let variables: GMVariables = reader.read_chunk_required("VARI")?;
@@ -127,7 +125,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let audios: GMEmbeddedAudios = reader.read_chunk_required("AUDO")?;
     let options: GMOptions = reader.read_chunk_required("OPTN")?;
     // some of these probably aren't actually required; make optional when issue occur
-    
+
     let particle_systems: GMParticleSystems = reader.read_chunk_optional("PSYS")?;
     let particle_emitters: GMParticleEmitters = reader.read_chunk_optional("PSEM")?;
     let language_info: GMLanguageInfo = reader.read_chunk_optional("LANG")?;
@@ -142,7 +140,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let strings: GMStrings = bench_parse!("STRG", parse_chunk_strg(&mut chunk_strg)?);
     let mut general_info: GMGeneralInfo = bench_parse!("GEN8", parse_chunk_gen8(&mut chunk_gen8, &strings)?);
     
-    
+
 
     let data = GMData {
         strings,
