@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::deserialize::sounds::GMSoundFlags;
+use crate::gamemaker::sounds::GMSoundFlags;
 use crate::export_mod::export::{edit_field, edit_field_convert, edit_field_convert_option, flag_field, ModExporter, ModRef};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 

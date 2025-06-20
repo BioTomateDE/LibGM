@@ -1,18 +1,21 @@
 mod printing;
-mod deserialize;
-mod serialize;
+mod gamemaker;
+mod serialize_old;
 mod export_mod;
 mod debug_utils;
 mod qoi;
+mod gm_serialize;
+pub mod gm_deserialize;
+mod detect_version;
 
 use std::path::Path;
 use std::process::exit;
-use log::{info, error};
+use log::{error, info};
 
-use crate::deserialize::all::{parse_data_file, read_data_file};
-use crate::deserialize::all::GMData;
+use gm_deserialize::GMData;
 use crate::export_mod::export::export_mod;
-use crate::serialize::all::{build_data_file, write_data_file};
+use crate::gm_deserialize::{parse_data_file, read_data_file};
+use crate::serialize_old::all::{build_data_file, write_data_file};
 
 
 fn main_open_and_close() -> Result<(), String> {

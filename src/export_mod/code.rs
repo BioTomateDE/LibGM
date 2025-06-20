@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::deserialize::code::{GMCodeBytecode15, GMCodeVariable, GMComparisonType, GMDataType, GMInstanceType, GMInstruction, GMOpcode, GMValue, GMVariableType};
+use crate::gamemaker::code::{GMCodeBytecode15, GMCodeVariable, GMComparisonType, GMDataType, GMInstanceType, GMInstruction, GMOpcode, GMValue, GMVariableType};
 use crate::export_mod::export::{convert_additions, edit_field, edit_field_convert, ModExporter, ModRef};
 use crate::export_mod::ordered_list::{export_changes_ordered_list, DataChange};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};

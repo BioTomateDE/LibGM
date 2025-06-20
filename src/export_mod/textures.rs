@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::iter::zip;
 use image::DynamicImage;
 use serde::{Deserialize, Serialize};
-use crate::deserialize::embedded_textures::GMEmbeddedTexture;
-use crate::deserialize::texture_page_items::GMTexturePageItem;
+use crate::gamemaker::embedded_textures::GMEmbeddedTexture;
+use crate::gamemaker::texture_page_items::GMTexturePageItem;
 use crate::export_mod::export::{edit_field, ModExporter, ModRef};
 use crate::export_mod::unordered_list::EditUnorderedList;
 
@@ -50,7 +50,7 @@ impl ModExporter<'_, '_> {
         
         for i in texture_page_items {
             // TODO handle GMEmbeddedTexture fields like scaled or generated_mips
-            let texture_page: &GMEmbeddedTexture = i.texture_page.resolve(&self.modified_data.texture_pages)?;
+            let texture_page: &GMEmbeddedTexture = i.texture_page.resolve(&self.modified_data.texture_page_items)?;
             let cropped_image: DynamicImage = crop_from_texture_page(texture_page, i)?;
             
             let add_texture_page_item = AddTexturePageItem {
@@ -68,8 +68,8 @@ impl ModExporter<'_, '_> {
 
         let mut edits: HashMap<usize, EditTexturePageItem> = HashMap::new();
         for (i, (original, modified)) in zip(original_list, modified_list).enumerate() {
-            let original_texture_page: &GMEmbeddedTexture = original.texture_page.resolve(&self.original_data.texture_pages)?;
-            let modified_texture_page: &GMEmbeddedTexture = modified.texture_page.resolve(&self.modified_data.texture_pages)?;
+            let original_texture_page: &GMEmbeddedTexture = original.texture_page.resolve(&self.original_data.texture_page_items)?;
+            let modified_texture_page: &GMEmbeddedTexture = modified.texture_page.resolve(&self.modified_data.texture_page_items)?;
             let original_cropped: DynamicImage = crop_from_texture_page(original_texture_page, original)?;
             let modified_cropped: DynamicImage = crop_from_texture_page(modified_texture_page, modified)?;
 
