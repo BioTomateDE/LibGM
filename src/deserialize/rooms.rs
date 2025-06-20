@@ -402,12 +402,15 @@ pub enum GMRoomLayerEffectPropertyType {
 #[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u32)]
 pub enum GMRoomLayerType {
+    /// unused?
     Path = 0,
     Background = 1,
     Instances = 2,
     Assets = 3,
     Tiles = 4,
     Effect = 6,
+    /// introduced in 2024.13
+    Path2 = 7,
 }
 
 #[derive(Debug, Clone, PartialEq)]
