@@ -1,8 +1,8 @@
-use std::borrow::Borrow;
-use std::collections::HashMap;
 use crate::deserialize::chunk_reading::{vec_with_capacity, DataReader, GMChunk};
-use crate::deserialize::general_info::{GMVersion, GMVersionLTS, GMVersionReq};
-
+use crate::deserialize::embedded_textures::MAGIC_BZ2_QOI_HEADER;
+use crate::deserialize::general_info::{GMVersion, GMVersionReq};
+use crate::deserialize::general_info::GMVersionLTS::{Post2022_0, Pre2022_0};
+use crate::deserialize::rooms::GMRoomLayerType;
 
 fn try_check<R: Into<GMVersionReq>, T: Into<GMVersionReq>>(
     reader: &mut DataReader,
@@ -12,13 +12,13 @@ fn try_check<R: Into<GMVersionReq>, T: Into<GMVersionReq>>(
     target_version: T,
 ) -> Result<(), String> {
     let target_version: GMVersionReq = target_version.into();
-    if reader.general_info.is_version_at_least(&target_version) {   // TODO check lts
+    if reader.general_info.is_version_at_least(target_version.clone()) {
         return Ok(())    // no need to check if already
     }
 
     if let Some(chunk) = reader.chunks.get(chunk_name) {
         let required_version: GMVersionReq = required_version.into();
-        if !reader.general_info.is_version_at_least(&required_version) {
+        if !reader.general_info.is_version_at_least(required_version.clone()) {
             return Err(format!(
                 "Version requirement for checking version {} in chunk '{}' failed: {} < {}",
                 target_version, chunk_name, reader.general_info.version, required_version,
@@ -46,40 +46,45 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
     let saved_chunk: GMChunk = reader.chunk.clone();
     
     if reader.chunks.contains_key("TGIN") {
-        reader.general_info.set_version_at_least((2, 2, 1))?;
+        reader.general_info.set_version_at_least((2, 2, 1, Pre2022_0))?;
     }
     if reader.chunks.contains_key("SEQN") {
-        reader.general_info.set_version_at_least((2, 3, 0))?;
+        reader.general_info.set_version_at_least((2, 3, Pre2022_0))?;
     }
     if reader.chunks.contains_key("FEDS") {
-        reader.general_info.set_version_at_least((2, 3, 6))?;
+        reader.general_info.set_version_at_least((2, 3, 6, Pre2022_0))?;
     }
     if reader.chunks.contains_key("FEAT") {
-        reader.general_info.set_version_at_least((2022, 8, 6))?;
+        reader.general_info.set_version_at_least((2022, 8, Pre2022_0))?;      // FIXME: In UTMT it says Pre2022_0 (even though it's 2022.8???)
     }
     if reader.chunks.contains_key("PSEM") {
-        reader.general_info.set_version_at_least((2023, 20))?;
+        reader.general_info.set_version_at_least((2023, 2, Post2022_0))?;
     }
     if reader.chunks.contains_key("UILR") {
-        reader.general_info.set_version_at_least((2024, 13))?;
+        reader.general_info.set_version_at_least((2024, 13, Post2022_0))?;
     }
 
-    // TODO implement FUNC:bytecode>=15 and FONT:bytecode>=17 in checker
-    try_check(reader, "FUNC", cc_func_2024_8, GMVersionReq::bytecode(15), (2024, 8))?;
-    try_check(reader, "FONT", cc_font_2022_2, GMVersionReq::bytecode(17), (2022, 2))?;
-    try_check(reader, "ARCV", cc_acrv_2_3_1, (0, 0), (2, 3, 1))?;
+    if reader.general_info.bytecode_version >= 17 {
+        try_check(reader, "FONT", cc_font_2022_2, GMVersionReq::none(), (2022, 2))?;
+    }
+    if reader.general_info.bytecode_version >= 17 {
+        try_check(reader, "FUNC", cc_func_2024_8, GMVersionReq::none(), (2024, 8))?;
+    }
+    try_check(reader, "ARCV", cc_acrv_2_3_1, GMVersionReq::none(), (2, 3, 1))?;
     try_check(reader, "ROOM", cc_room_2_2_2_302, (2, 0), (2, 2, 2, 302))?;
     try_check(reader, "TXTR", cc_txtr_2_0_6, (2, 0), (2, 0, 6))?;
-    try_check(reader, "TGIN", cc_tgin_2_0_6_and_2023_1_nl, (2, 3), (2023, 1, 0, 0, GMVersionLTS::Post2022_0))?;
-    try_check(reader, "TXTR", cc_txtr_2022_3_and_2022_5, (2, 3), (2022, 5))?;
+    try_check(reader, "TGIN", cc_tgin_2022_9, (2, 3), (2022, 9))?;
+    try_check(reader, "TGIN", cc_tgin_2023_1, (2022, 9), (2023, 1))?;
+    try_check(reader, "TXTR", cc_txtr_2022_3, (2, 3), (2022, 3))?;
+    try_check(reader, "TXTR", cc_txtr_2022_5, (2022, 3), (2022, 5))?;
     try_check(reader, "ROOM", cc_room_2022_1, (2, 3), (2022, 1))?;
     try_check(reader, "OBJT", cc_objt_2022_5, (2, 3), (2022, 5))?;
     try_check(reader, "EXTN", cc_extn_2022_6, (2, 3), (2022, 6))?;
     try_check(reader, "EXTN", cc_extn_2023_4, (2022, 6), (2023, 4))?;
     try_check(reader, "FONT", cc_font_2023_6_and_2024_11, (2022, 6), (2024, 11))?;
     try_check(reader, "ROOM", cc_room_2024_2, (2023, 2), (2024, 2))?;
-    try_check(reader, "SOND", cc_sond_2024_6, (2022, 2, 0, 0, GMVersionLTS::Post2022_0), (2024, 6))?;
-    try_check(reader, "SPRT", cc_sprt_2024_6, (2022, 2, 0, 0, GMVersionLTS::Post2022_0), (2024, 6))?;
+    try_check(reader, "SOND", cc_sond_2024_6, (2022, 2, Post2022_0), (2024, 6))?;
+    try_check(reader, "SPRT", cc_sprt_2024_6, (2022, 2, Post2022_0), (2024, 6))?;
     try_check(reader, "FONT", cc_font_2024_14, (2024, 13), (2024, 14))?;
     try_check(reader, "AGRP", cc_agrp_2024_14, (2024, 13), (2024, 14))?;
     // TODO implement rest
@@ -90,8 +95,11 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
     if *ver == original_version {
         return Ok(None)
     }
-    let lts: Option<GMVersionLTS> = if original_version.lts == ver.lts { None } else { Some(ver.lts) };
-    Ok(Some((ver.major, ver.minor, ver.release, ver.build, lts).into()))
+    if original_version.lts == ver.lts {
+        Ok(Some((ver.major, ver.minor, ver.release, ver.build).into()))
+    } else {
+        Ok(Some((ver.major, ver.minor, ver.release, ver.build, ver.lts).into()))
+    }
 }
 
 /// assert version >= 2.3
@@ -387,6 +395,527 @@ fn cc_font_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
     target_ver
 }
 
-// TODO: FONT::CheckForGM2023_6AndGM2024_11
 
+
+/// We already know whether the version is more or less than 2022.8 due to the FEAT chunk being present.
+/// Taking advantage of that, this is basically the same as the 2022.2 check, but it:
+/// - Checks for the LineHeight value instead of Ascender (added in 2023.6)
+///     PSEM (2023.2) is not used, as it would return a false negative on LTS (2022.9+ equivalent with no particles).
+/// - Checks for UnknownAlwaysZero in Glyphs (added in 2024.11)
+///     It's possible for the null pointer check planted in UTPointerList deserialisation to not be triggered:
+///     for example, if SDF is enabled for any fonts, the shaders related to SDF will not be stripped;
+///     it's also possible to prevent audiogroup_default from being stripped by doing
+///         audio_group_name(audiogroup_default)
+///     So we check for the presence of UnknownAlwaysZero as a last resort.
+fn cc_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+    // explicit check because the logic is very scuffed
+    if !reader.general_info.is_version_at_least((2022, 8)) {
+        return Ok(None)     // version requirement (for checking 2023.6) not satisfied
+    }
+    if reader.general_info.is_version_at_least((2023, 6)) && !reader.general_info.is_version_at_least((2024, 6)) {
+        return Ok(None)     // 2023.6 already detected; but 2024.6 not yet detected
+    }
+    if !reader.general_info.is_version_at_least((2024, 11)) {
+        return Ok(None)     // 2024.11 already detected
+    }
+
+    let possible_font_count = reader.read_i32()?;
+    let mut first_two_pointers: Vec<usize> = Vec::with_capacity(2);
+    for _ in 0..possible_font_count {
+        let ptr = reader.read_usize()?;
+        if ptr == 0 {
+            continue
+        }
+        first_two_pointers.push(ptr);
+        if first_two_pointers.len() >= 2 {
+            break
+        }
+    }
+    if first_two_pointers.len() < 1 {
+        return Ok(None)     // nothing to detect
+    }
+    if first_two_pointers.len() == 1 {
+        // Add in the position of the padding i.e. the end of the font list
+        first_two_pointers.push(reader.chunk.end_pos - 512);
+    }
+
+    reader.cur_pos = first_two_pointers[0] + 52;    // Also the LineHeight value. 48 + 4 = 52
+    if reader.general_info.is_version_at_least((2023, 2, 0, 0, Post2022_0)) {
+        // SDFSpread is present from 2023.2 non-LTS onward
+        reader.cur_pos += 4;    // (detected by PSEM/PSYS chunk existence)
+    }
+
+    let glyph_count: usize = reader.read_usize()?;
+    if glyph_count * 4 > first_two_pointers[1] - reader.cur_pos || glyph_count < 1 {
+        return Ok(None)
+    }
+
+    let mut glyph_pointers: Vec<usize> = vec_with_capacity(glyph_count)?;
+    for _ in 0..glyph_count {
+        let ptr = reader.read_usize()?;
+        if ptr == 0 {
+            return Err("One of the glyph pointers is zero".to_string())
+        }
+        glyph_pointers.push(ptr);
+    }
+
+    // let mut detecting_2024_11_failed: bool = false;
+    for (i, glyph_pointer) in glyph_pointers.iter().enumerate() {
+        if reader.cur_pos != *glyph_pointer {
+            return Ok(None)
+        }
+        reader.cur_pos += 14;
+        let kerning_count = reader.read_u16()?;
+
+        // Hopefully the last thing in a UTFont is the glyph list
+        let next_glyph_pointer = if i < glyph_pointers.len()-1 { glyph_pointers[i+1] } else { first_two_pointers[1] };
+        // And hopefully the last thing in a glyph is the kerning list
+        // Note that we're actually skipping all items of the Glyph.Kerning SimpleList here;
+        // 4 is supposed to be the size of a GlyphKerning object
+        let pointer_after_kerning_list = reader.cur_pos + 4*kerning_count as usize;
+        // If we don't land on the next glyph/font after skipping the Kerning list,
+        // kerningLength is probably bogus and UnknownAlwaysZero may be present
+        if next_glyph_pointer == pointer_after_kerning_list {
+            return Ok(Some((2023, 6).into()))   // 2023.6 succeeded; 2024.11 failed
+        }
+        // Discard last read, which would be of UnknownAlwaysZero
+        let kerning_count: u16 = reader.read_u16()?;
+        let pointer_after_kerning_list = reader.cur_pos + 4*kerning_count as usize;
+        if next_glyph_pointer != pointer_after_kerning_list {
+            return Err(
+                "There appears to be more/less values than UnknownAlwaysZero before \
+                the kerning list in GMFontGlyph; data file potentially corrupted".to_string()
+            )
+        }
+        return Ok(Some((2024, 11).into()))      // 2024.11 succeeded (2023.6 did too but doesn't matter)
+    }
+
+    Ok(Some((2023, 6).into()))  // 2024.11 failed or could not be detected; 2023.6 succeeded
+}
+
+
+fn cc_font_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+    // Check for new padding added (and final chunk "padding" removed) in 2024.14
+    let font_count = reader.read_u32()?;
+    let mut last_font_position: usize = 0;
+    for _ in 0..font_count {
+        let ptr = reader.read_usize()?;
+        if ptr != 0 {
+            last_font_position = ptr;
+        }
+    }
+
+    // If we have a last font, advance to the end of its data (ignoring the new alignment added in 2024.14)
+    if last_font_position != 0 {
+        reader.cur_pos = last_font_position + 56;
+
+        // Advance to last glyph in pointer list
+        let glyph_count = reader.read_usize()?;
+        reader.cur_pos += (glyph_count - 1) * 4;
+        reader.cur_pos = reader.read_usize()? + 16;
+
+        // Advance past kerning
+        let kerning_count = reader.read_u16()?;
+        reader.cur_pos += kerning_count as usize * 4;
+    }
+
+    // Check for the final chunk padding being missing
+    if reader.cur_pos + 512 > reader.chunk.end_pos {
+        // No padding can fit, so this is 2024.14
+        return Ok(Some((2024, 14).into()))
+    }
+
+    Ok(None)
+}
+
+
+fn cc_objt_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+    let target_ver = Ok(Some((2022, 5).into()));
+    let object_count = reader.read_u32()?;
+    if object_count < 1 {
+        return Ok(None)     // no objects; nothing to detect
+    }
+    let first_object_pointer = reader.read_usize()?;
+    reader.cur_pos += first_object_pointer + 64;
+    let vertex_count = reader.read_usize()?;
+
+    if reader.cur_pos + 12 + 8*vertex_count >= reader.chunk.end_pos {
+        return target_ver      // Bounds check on vertex data "failed" => 2022.5
+    }
+
+    reader.cur_pos += 8*vertex_count;
+    if reader.cur_pos == 15 {   // !! 15 has to equal variant count of GMGameObjectEventType enum !!
+        let sub_event_pointer = reader.read_usize()?;
+        if reader.cur_pos + 56 == sub_event_pointer {
+            return Ok(None)     // subevent pointer check "succeeded" (Should start right after the list) => not 2022.5
+        }
+    }
+
+    target_ver
+}
+
+
+fn cc_room_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+    let target_ver = Ok(Some((2022, 1).into()));
+    // Iterate over all rooms until a length check is performed
+
+    let room_count = reader.read_usize()?;
+    for room_index in 0..room_count {
+        // Advance to room data we're interested in (and grab pointer for next room)
+        reader.set_rel_cur_pos(4*room_index + 4)?;
+        let room_pointer = reader.read_usize()?;
+        reader.cur_pos = room_pointer + 22*4;
+
+        // Get the pointer for this room's layer list, as well as pointer to sequence list
+        let layer_list_pointer = reader.read_usize()?;
+        let sequence_pointer = reader.read_usize()?;
+        reader.cur_pos = layer_list_pointer;
+        let layer_count = reader.read_i32()?;
+        if layer_count < 1 {
+            continue    // no layers to detect; go to next room
+        }
+
+        // Get pointer into the individual layer data (plus 8 bytes) for the first layer in the room
+        let jump_pointer = reader.read_usize()? + 8;
+
+        // Find the offset for the end of this layer
+        let next_pointer = if layer_count == 1 {
+            sequence_pointer
+        } else {
+            reader.read_usize()?    // pointer to next element in the layer list
+        };
+
+        // Actually perform the length checks, depending on layer data
+        reader.cur_pos = jump_pointer;
+        let layer_type = reader.read_u32()?;
+        let Ok(layer_type) = GMRoomLayerType::try_from(layer_type) else { continue };
+
+        match layer_type {
+            GMRoomLayerType::Path | GMRoomLayerType::Path2 => continue,
+            GMRoomLayerType::Background => if next_pointer - reader.cur_pos > 16*4 {
+                return target_ver
+            }
+            GMRoomLayerType::Instances => {
+                reader.cur_pos += 6*4;
+                let instance_count = reader.read_usize()?;
+                if next_pointer - reader.cur_pos != instance_count*4 {
+                    return target_ver
+                }
+            }
+            GMRoomLayerType::Assets => {
+                reader.cur_pos += 6*4;
+                let tile_pointer = reader.read_usize()?;
+                if tile_pointer != reader.cur_pos+8 && tile_pointer != reader.cur_pos+12 {
+                    return target_ver
+                }
+            }
+            GMRoomLayerType::Tiles => {
+                reader.cur_pos += 6*4;
+                let tile_map_width = reader.read_usize()?;
+                let tile_map_height = reader.read_usize()?;
+                if next_pointer - reader.cur_pos != (tile_map_width * tile_map_height * 4) {
+                    return target_ver
+                }
+            }
+            GMRoomLayerType::Effect => {
+                reader.cur_pos += 7*4;
+                let property_count = reader.read_usize()?;
+                if next_pointer - reader.cur_pos != (property_count * 3 * 4) {
+                    return target_ver
+                }
+            }
+        }
+        return Ok(None)   // Check complete, found and tested a layer (but didn't detect 2022.1)
+    }
+
+    Ok(None)
+}
+
+
+fn cc_room_2_2_2_302(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+    // Check the size of the first GameObject in a room
+    let room_count = reader.read_usize()?;
+
+    for room_index in 0..room_count {
+        // Advance to room data we're interested in (and grab pointer for next room)
+        reader.set_rel_cur_pos(4*room_index + 4)?;
+        let room_pointer = reader.read_usize()?;
+        reader.cur_pos = room_pointer + 12*4;
+
+        // Get the pointer for this room's object list, as well as pointer to tile list
+        let object_list_pointer = reader.read_usize()?;
+        let tile_list_pointer = reader.read_usize()?;
+        reader.cur_pos = object_list_pointer;
+        let object_count = reader.read_usize()?;
+        if object_count < 1 {
+            continue    // no objects => nothing to detect; go to next room
+        }
+
+        let pointer1 = reader.read_usize()?;
+        let pointer2 = if object_count == 1 {
+            tile_list_pointer   // Tile list starts right after, so it works as an alternate
+        } else {
+            reader.read_usize()?
+        };
+        if pointer2 - pointer1 == 48 {
+            return Ok(Some((2, 2, 2, 302).into()))
+        }
+    }
+
+    Ok(None)
+}
+
+
+fn cc_room_2024_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+    // check for tile compression
+    let room_count = reader.read_usize()?;
+
+    for room_index in 0..room_count {
+        // Advance to room data we're interested in (and grab pointer for next room)
+        reader.set_rel_cur_pos(4*room_index + 4)?;
+        let room_pointer = reader.read_usize()?;
+        reader.cur_pos = room_pointer + 22*4;
+
+        // Get the pointer for this room's layer list, as well as pointer to sequence list
+        let layer_list_pointer = reader.read_usize()?;
+        let sequence_pointer = reader.read_usize()?;
+        reader.cur_pos = layer_list_pointer;
+        let layer_count = reader.read_i32()?;
+        if layer_count < 1 {
+            continue    // no layers to detect; go to next room
+        }
+        let layer_count = layer_count as usize;
+
+        let mut check_next_layer_offset = false;
+        for layer_index in 0..layer_count {
+            let layer_pointer = layer_list_pointer + 4*layer_index;
+            if check_next_layer_offset && layer_pointer%4 != 0 {
+                return Ok(None)     // misaligned layer
+            }
+
+            reader.cur_pos = layer_pointer + 4;
+            // Get pointer into the individual layer data (plus 8 bytes)
+            let jump_pointer = reader.read_usize()? + 8;
+
+            // Find the offset for the end of this layer
+            let next_pointer = if layer_index == layer_count - 1 {
+                sequence_pointer
+            } else {
+                reader.read_usize()?   // pointer to next element in the layer list
+            };
+
+            // Actually perform the length checks
+            reader.cur_pos = jump_pointer;
+            let layer_type = reader.read_i32()?;
+            if layer_type != 4 {    // GMRoomLayerType::Tiles
+                check_next_layer_offset = false;
+                continue
+            }
+            check_next_layer_offset = true;
+            reader.cur_pos += 12;
+            let effect_count = reader.read_usize()?;
+            reader.cur_pos += 12*effect_count + 4;
+
+            let tile_map_width = reader.read_usize()?;
+            let tile_map_height = reader.read_usize()?;
+            if next_pointer - reader.cur_pos != (tile_map_width * tile_map_height * 4) {
+                return Ok(Some((2024, 2).into()))
+            }
+
+        }
+    }
+
+    Ok(None)
+}
+
+
+fn cc_func_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+    let target_ver = Ok(Some((2024, 8).into()));
+    // The CodeLocals list was removed in 2024.8, so we check if Functions is the only thing in here.
+    let function_count = reader.read_usize()?;
+    // Skip over the (Simple)List
+    // (3*4 is the size of an UndertaleFunction object)
+    reader.cur_pos += function_count * 3*4;
+
+    if reader.cur_pos == reader.chunk.end_pos {
+        // Directly reached the end of the chunk after the function list, so code locals are definitely missing
+        return target_ver
+    }
+
+    // align position
+    // TODO: use 16, 4 or 1 for padding depending on FORM (reader.undertaleData.PaddingAlignException; 16 if unset)
+    let padding = 16;
+    let mut padding_bytes_read = 0;
+
+    while reader.cur_pos & (padding - 1) != 0 {
+        if reader.cur_pos >= reader.chunk.end_pos || reader.read_u8()? != 0 {
+            return Ok(None)   // If we hit a non-zero byte (or exceed chunk boundaries), it can't be padding
+        }
+        padding_bytes_read += 1;
+    }
+
+    // If we're at the end of the chunk after aligning padding, code locals are either empty or do not exist altogether.
+    if reader.cur_pos != reader.chunk.end_pos {
+        return Ok(None)
+    }
+
+    if padding_bytes_read < 4 {
+        return target_ver
+    }
+
+    // If we read at least 4 padding bytes, we don't know for sure unless we have at least one code entry.
+    if let Some(chunk_code) = reader.chunks.get("CODE") {
+        reader.chunk = chunk_code.clone();
+        reader.cur_pos = chunk_code.start_pos;
+        let code_count = reader.read_usize()?;
+        if code_count < 1 {
+            return Ok(None)
+        }
+    }
+
+    target_ver
+}
+
+
+fn cc_txtr_2022_3(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+    let target_ver = Ok(Some((2022, 3).into()));
+    let texture_count = reader.read_usize()?;
+    if texture_count < 1 {
+        return Ok(None)    // can't detect if there are no texture pages
+    }
+    if texture_count == 1 {
+        reader.cur_pos += 16;   // Jump to either padding or length, depending on version
+        if reader.read_u32()? > 0 {   // Check whether it's padding or length
+            return target_ver
+        }
+    } else {
+        let pointer1 = reader.read_usize()?;
+        let pointer2 = reader.read_usize()?;
+        if pointer1 + 16 == pointer2 {
+            return target_ver
+        }
+    }
+
+    Ok(None)
+}
+
+
+fn cc_txtr_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+    let target_ver = Ok(Some((2022, 5).into()));
+    let texture_count = reader.read_usize()?;
+    for i in 0..texture_count {
+        // Go to each texture, and then to each texture's data
+        reader.cur_pos = 4*i + 4;
+        reader.cur_pos = reader.read_usize()? + 12;    // go to texture; at an offset
+        reader.cur_pos = reader.read_usize()?;    // go to texture data
+        let header: &[u8; 4] = reader.read_bytes_const()?;
+        if header != MAGIC_BZ2_QOI_HEADER {
+            continue    // Nothing useful, check the next texture
+        }
+        reader.cur_pos += 4;    // skip width/height
+        // now check actual bz2 headers
+        if reader.read_bytes_const::<3>()? != b"BZh" {
+            return target_ver
+        }
+        reader.cur_pos += 1;
+        if *reader.read_bytes_const::<6>()? != [0x31, 0x41, 0x59, 0x26, 0x53, 0x59] {   // Digits of pi (block header)
+            return target_ver
+        }
+        return Ok(None)  // if first bzip2+qoi texture page version check was unsuccessful, don't bother with other ones
+    }
+
+    Ok(None)
+}
+
+
+fn cc_txtr_2_0_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+    let texture_count = reader.read_usize()?;
+    if texture_count < 1 {
+        return Ok(None)
+    }
+    if texture_count == 1 {
+        // Go to the first texture pointer (+ minimal texture entry size)
+        reader.cur_pos = reader.read_usize()? + 8;
+        if reader.read_u32()? == 0 {
+            return Ok(None)   // If there is a zero instead of texture data pointer; it's not 2.0.6
+        }
+    }
+    if texture_count >= 2 {
+        let pointer1 = reader.read_u32()?;
+        let pointer2 = reader.read_u32()?;
+        if pointer2 - pointer1 == 8 {   // "Scaled" + "_textureData" -> 8
+            return Ok(None)
+        }
+    }
+
+    Ok(Some((2, 0, 6).into()))
+}
+
+
+fn cc_tgin_2022_9(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+    if reader.general_info.is_version_at_least((2023, 1, Post2022_0)) {
+        return Ok(None)
+    }
+    
+    let tgin_count = reader.read_usize()?;
+    if tgin_count < 1 {
+        return Ok(None)
+    }
+    let pointer1 = reader.read_usize()?;
+    let pointer2 = if tgin_count >= 2 { reader.read_usize()? } else { reader.chunk.end_pos };
+    reader.cur_pos = pointer1 + 4;
+
+    // Check to see if the pointer located at this address points within this object
+    // If not, then we know we're using a new format!
+    let ptr = reader.read_usize()?;
+    if ptr < pointer1 || ptr >= pointer2 {
+        return Ok(Some((2022, 9).into()))
+    }
+    
+    Ok(None)
+}
+
+
+fn cc_tgin_2023_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+    if reader.general_info.is_version_at_least((2023, 1, Post2022_0)) {
+        return Ok(None)
+    }
+
+    let tgin_count = reader.read_usize()?;
+    if tgin_count < 1 {
+        return Ok(None)
+    }
+    let pointer1 = reader.read_usize()?;
+    
+    // Go to the 4th list pointer of the first TGIN entry.
+    // (either to "Fonts" or "SpineTextures" depending on the version)
+    reader.cur_pos = pointer1 + 16 + 4*3;
+    let pointer4 = reader.read_usize()?;
+    
+    // If there's a "TexturePages" count instead of the 5th list pointer.
+    // The count can't be greater than the pointer.
+    // (the list could be either "Tilesets" or "Fonts").
+    if reader.read_usize()? <= pointer4 {
+        return Ok(Some((2023, 1, Post2022_0).into()))
+    }
+
+    Ok(None)
+}
+
+
+fn cc_acrv_2_3_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+    let count = reader.read_u32()?;
+    if count < 1 {
+        return Ok(None)
+    }
+    
+    // go to the first "point"
+    reader.cur_pos = reader.read_usize()? + 8;
+    if reader.read_u32()? != 0 {
+        // In 2.3 an int with the value of 0 would be set here, it cannot be version 2.3 if this value isn't 0
+        return Ok(Some((2, 3, 1).into()))
+    }
+    
+    Ok(None)
+}
 
