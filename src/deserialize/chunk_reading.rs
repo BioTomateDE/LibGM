@@ -402,6 +402,9 @@ impl<'a> DataReader<'a> {
 
     pub fn align(&mut self, alignment: usize) -> Result<(), String> {
         while self.cur_pos & (alignment - 1) != 0 {
+            if self.cur_pos > self.chunk.end_pos {
+                return Err(format!("Trying to align reader out of chunk bounds at position {}", self.cur_pos))
+            }
             self.read_u8()?;
         }
         Ok(())
