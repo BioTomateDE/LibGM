@@ -1,5 +1,4 @@
-﻿use std::borrow::Borrow;
-use std::fmt::Formatter;
+﻿use std::fmt::Formatter;
 use crate::deserialize::chunk_reading::{DataReader, GMChunkElement, GMElement, GMRef};
 use chrono::{DateTime, Utc};
 use crate::deserialize::rooms::GMRoom;
@@ -156,8 +155,11 @@ impl GMChunkElement for GMGeneralInfo {
 }
 
 impl GMGeneralInfo { 
-    pub fn is_version_at_least<V: Borrow<GMVersionReq>>(&self, version_req: V) -> bool {
-        let ver: &GMVersionReq = version_req.borrow();
+    pub fn is_version_at_least<V: Into<GMVersionReq>>(&self, version_req: V) -> bool {
+        let ver: GMVersionReq = version_req.into();
+        if ver.non_lts && self.version.lts < GMVersionLTS::Post2022_0 {
+            return false
+        }
         if self.version.major != ver.major {
             return self.version.major > ver.minor;
         }
@@ -181,15 +183,15 @@ impl GMGeneralInfo {
                 new_ver, self.version,
             ))
         }
-        if self.is_version_at_least(&new_ver) {
+        if self.is_version_at_least(new_ver.clone()) {
             return Ok(())   // only override version if new version is higher
         }
         self.version.major = new_ver.major;
         self.version.minor = new_ver.minor;
         self.version.release = new_ver.release;
         self.version.build = new_ver.build;
-        if let Some(lts_branch) = new_ver.lts {
-            self.version.lts = lts_branch;
+        if new_ver.non_lts {
+            self.version.lts = GMVersionLTS::Post2022_0;
         }
         Ok(())
     }
@@ -264,7 +266,7 @@ impl GMElement for GMGeneralInfo {
 }
 
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum GMVersionLTS {
     Pre2022_0,
     LTS2022_0,
@@ -310,18 +312,16 @@ pub struct GMVersionReq {
     pub minor: u32,
     pub release: u32,
     pub build: u32,
-    pub lts: Option<GMVersionLTS>,
-    pub bytecode: Option<u8>,
+    pub non_lts: bool,
 }
 impl GMVersionReq {
-    pub fn bytecode(bytecode_version: u8) -> Self {
+    pub fn none() -> Self {
         Self {
             major: 0,
             minor: 0,
             release: 0,
             build: 0,
-            lts: None,
-            bytecode: Some(bytecode_version),
+            non_lts: false,
         }
     }
 }
@@ -332,8 +332,7 @@ impl From<(u32, u32)> for GMVersionReq {
             minor,
             release: 0,
             build: 0,
-            lts: None,
-            bytecode: None,
+            non_lts: false,
         }
     }
 }
@@ -344,8 +343,7 @@ impl From<(u32, u32, u32)> for GMVersionReq {
             minor,
             release,
             build: 0,
-            lts: None,
-            bytecode: None,
+            non_lts: false,
         }
     }
 }
@@ -356,8 +354,29 @@ impl From<(u32, u32, u32, u32)> for GMVersionReq {
             minor,
             release,
             build,
-            lts: None,
-            bytecode: None,
+            non_lts: false,
+        }
+    }
+}
+impl From<(u32, u32, GMVersionLTS)> for GMVersionReq {
+    fn from((major, minor, lts): (u32, u32, GMVersionLTS)) -> Self {
+        Self {
+            major,
+            minor,
+            release: 0,
+            build: 0,
+            non_lts: matches!(lts, GMVersionLTS::Post2022_0),
+        }
+    }
+}
+impl From<(u32, u32, u32, GMVersionLTS)> for GMVersionReq {
+    fn from((major, minor, release, lts): (u32, u32, u32, GMVersionLTS)) -> Self {
+        Self {
+            major,
+            minor,
+            release,
+            build: 0,
+            non_lts: matches!(lts, GMVersionLTS::Post2022_0),
         }
     }
 }
@@ -368,19 +387,13 @@ impl From<(u32, u32, u32, u32, GMVersionLTS)> for GMVersionReq {
             minor,
             release,
             build,
-            lts: Some(lts),
-            bytecode: None,
+            non_lts: matches!(lts, GMVersionLTS::Post2022_0),
         }
     }
 }
 impl std::fmt::Display for GMVersionReq {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let lts_str = match self.lts {
-            Some(GMVersionLTS::Pre2022_0) => " (pre2022_0)",
-            Some(GMVersionLTS::LTS2022_0) => " (lts2022_0)",
-            Some(GMVersionLTS::Post2022_0) => " (post2022_0)",
-            None => "",
-        };
+        let lts_str = if self.non_lts { " (Non LTS)" } else { "" };
         write!(f, "{}.{}.{}.{}{lts_str}", self.major, self.minor, self.release, self.build)
     }
 }
