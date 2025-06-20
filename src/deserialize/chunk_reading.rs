@@ -1,6 +1,6 @@
 ﻿use std::collections::HashMap;
 use crate::debug_utils::{format_bytes, typename, unlikely, Stopwatch};
-use crate::deserialize::functions::{GMFunction, GMFunctions};
+use crate::deserialize::functions::GMFunction;
 use crate::deserialize::general_info::GMGeneralInfo;
 use crate::deserialize::scripts::GMScript;
 use crate::deserialize::strings::GMStrings;
@@ -77,8 +77,9 @@ pub struct DataReader<'a> {
     
     data: &'a [u8],
     pub cur_pos: usize,
-    
-    string_occurrence_map: HashMap<usize, GMRef<String>>,
+
+    /// Should only be set by `GMStrings::deserialize`
+    pub string_occurrence_map: HashMap<usize, GMRef<String>>,
     texture_page_item_occurrence_map: HashMap<usize, GMRef<GMTexturePageItem>>,
     /// Should only be set by `GMVariables::deserialize`
     pub variable_occurrence_map: HashMap<usize, GMRef<GMVariable>>,
@@ -384,11 +385,6 @@ impl<'a> DataReader<'a> {
         }
         Ok((elements, occurrences))
     }
-    pub fn read_strings_with_occurrences(&mut self) -> Result<Vec<String>, String> {
-        let (elements, occurrences) = self.read_pointer_list_with_occurrence_map()?;
-        self.string_occurrence_map = occurrences;
-        Ok(elements)
-    }
     pub fn read_texture_page_items_with_occurrences(&mut self) -> Result<Vec<GMTexturePageItem>, String> {
         let (elements, occurrences) = self.read_pointer_list_with_occurrence_map()?;
         self.texture_page_item_occurrence_map = occurrences;
@@ -461,7 +457,7 @@ fn resolve_occurrence<T>(occurrence_position: usize, occurrence_map: &HashMap<us
 }
 
 pub trait GMElement {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String>;       // TODO change arg name
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> where Self: Sized;
     // fn serialize(builder: &mut DataBuilder, gm_data: &GMData) -> Result<(), String>;
 }
 
@@ -558,6 +554,6 @@ pub fn hashmap_with_capacity<K, V>(count: usize) -> Result<HashMap<K, V>, String
             typename::<K>(), typename::<V>(), count, format_bytes(implied_size), format_bytes(FAILSAFE_SIZE),
         ))
     }
-    Ok(Vec::with_capacity(count))
+    Ok(HashMap::with_capacity(count))
 }
 

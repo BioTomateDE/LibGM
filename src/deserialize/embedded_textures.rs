@@ -13,6 +13,7 @@ pub const MAGIC_BZ2_QOI_HEADER: &[u8] = "2zoq".as_bytes();
 pub const MAGIC_QOI_HEADER: &[u8] = "fioq".as_bytes();
 
 
+#[derive(Debug, Clone)]
 pub struct GMEmbeddedTextures {
     pub texture_pages: Vec<GMEmbeddedTexture>,
     pub exists: bool,
@@ -50,13 +51,13 @@ impl GMElement for GMEmbeddedTexture {
         let mut index_in_group: Option<i32> = None;
         // reader directory {}
 
-        if reader.general_info.is_version_at_least(2, 0, 6, 0) {
+        if reader.general_info.is_version_at_least((2, 0, 6, 0)) {
             generated_mips = Some(reader.read_u32()?);
         }
         // if general_info.is_version_at_least(2022, 3, 0, 0) {
         //     texture_block_size = Some(chunk.read_u32()?);
         // }
-        if reader.general_info.is_version_at_least(2022, 9, 0, 0) {
+        if reader.general_info.is_version_at_least((2022, 9, 0, 0)) {
             texture_width = Some(reader.read_i32()?);
             texture_height = Some(reader.read_i32()?);
             index_in_group = Some(reader.read_i32()?);
@@ -109,7 +110,7 @@ fn read_raw_texture(reader: &mut DataReader) -> Result<DynamicImage, String> {
         // Parse QOI + BZip2
         reader.skip_bytes(8);    // skip past (start of) header
         let mut header_size: usize = 8;
-        if reader.general_info.is_version_at_least(2022, 5, 0, 0) {
+        if reader.general_info.is_version_at_least((2022, 5, 0, 0)) {
             let _serialized_uncompressed_length = reader.read_usize()?;    // maybe handle negative numbers?
             header_size = 12;
         }

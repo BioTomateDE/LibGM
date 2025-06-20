@@ -138,7 +138,7 @@ pub struct GMAudioGroup {
 impl GMElement for GMAudioGroup {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let path: Option<GMRef<String>> = if reader.general_info.is_version_at_least(2024, 14, 0, 0) {
+        let path: Option<GMRef<String>> = if reader.general_info.is_version_at_least((2024, 14, 0, 0)) {
             Some(reader.read_gm_string()?)
         } else {
             None

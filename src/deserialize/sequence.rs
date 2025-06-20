@@ -73,7 +73,7 @@ impl GMElement for GMSequence {
 
         let mut width: Option<f32> = None;
         let mut height: Option<f32> = None;
-        if reader.general_info.is_version_at_least(2024, 13, 0, 0) {
+        if reader.general_info.is_version_at_least((2024, 13, 0, 0)) {
             width = Some(reader.read_f32()?);
             height = Some(reader.read_f32()?);
         }
@@ -542,7 +542,7 @@ impl GMElement for GMAnimationCurveChannelPoint {
         let x: f32 = reader.read_f32()?;
         let y: f32 = reader.read_f32()?;
         let bezier_data: Option<GMAnimationCurveChannelPointBezierData>;
-        if reader.general_info.is_version_at_least(2, 3, 1, 0) {
+        if reader.general_info.is_version_at_least((2, 3, 1, 0)) {
             bezier_data = Some(GMAnimationCurveChannelPointBezierData::deserialize(reader)?)
         } else {
             reader.read_i32()?;
