@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::deserialize::paths::GMPath;
+use crate::gamemaker::paths::GMPath;
 use crate::export_mod::export::{ModExporter, ModRef};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 

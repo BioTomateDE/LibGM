@@ -1,17 +1,17 @@
 ﻿use std::fmt::Debug;
 use crate::debug_utils::typename;
-use crate::deserialize::backgrounds::GMBackground;
-use crate::deserialize::chunk_reading::GMRef;
-use crate::deserialize::embedded_textures::GMEmbeddedTexture;
-use crate::deserialize::fonts::{GMFont, GMFontGlyph};
-use crate::deserialize::game_objects::{GMGameObject, GMGameObjectEvent, GMGameObjectEventAction};
-use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags};
-use crate::deserialize::options::{GMOptions, GMOptionsFlags};
-use crate::deserialize::rooms::{GMRoom, GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomLayer, GMRoomTile, GMRoomView};
-use crate::deserialize::sequence::{GMKeyframeData, GMKeyframeMoment, GMSequence, GMTrack};
-use crate::deserialize::sounds::{GMSound, GMSoundFlags};
-use crate::deserialize::strings::GMStrings;
-use crate::deserialize::texture_page_items::GMTexturePageItem;
+use crate::gamemaker::backgrounds::GMBackground;
+use crate::gamemaker::chunk_reading::GMRef;
+use crate::gamemaker::embedded_textures::GMEmbeddedTexture;
+use crate::gamemaker::fonts::{GMFont, GMFontGlyph};
+use crate::gamemaker::game_objects::{GMGameObject, GMGameObjectEvent, GMGameObjectEventAction};
+use crate::gamemaker::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags};
+use crate::gamemaker::options::{GMOptions, GMOptionsFlags};
+use crate::gamemaker::rooms::{GMRoom, GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomLayer, GMRoomTile, GMRoomView};
+use crate::gamemaker::sequence::{GMKeyframeData, GMKeyframeMoment, GMSequence, GMTrack};
+use crate::gamemaker::sounds::{GMSound, GMSoundFlags};
+use crate::gamemaker::strings::GMStrings;
+use crate::gamemaker::texture_page_items::GMTexturePageItem;
 
 #[allow(dead_code)]
 impl GMGeneralInfo {
@@ -688,7 +688,7 @@ impl GMBackground {
         println!("  Preload: {}", self.preload);
         println!("  Texture Index: {}", if let Some(ref tex) = self.texture { format!("{}", tex.index) } else { "None".to_string() });
         if let Some(ref gms2_data) = self.gms2_data {
-            println!("  GMS2 Unknown Always 2: {:?}", gms2_data.unknown_always2);
+            println!("  GMS2 Unknown Always 2: {:?}", gms2_data.unknown_always_two);
             println!("  GMS2 Tile Width: {:?}", gms2_data.tile_width);
             println!("  GMS2 Tile Height: {:?}", gms2_data.tile_height);
             println!("  GMS2 Output Border X: {:?}", gms2_data.output_border_x);

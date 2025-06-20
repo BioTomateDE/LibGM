@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::deserialize::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags};
+use crate::gamemaker::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags};
 use crate::export_mod::export::{edit_field, edit_field_convert, flag_field, ModExporter, ModRef};
 use crate::export_mod::ordered_list::{export_changes_ordered_list, DataChange};
 
