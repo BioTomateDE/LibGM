@@ -41,7 +41,7 @@ impl GMElement for GMParticleSystem {
         let origin_x: i32 = reader.read_i32()?;
         let origin_y: i32 = reader.read_i32()?;
         let draw_order: i32 = reader.read_i32()?;
-        let global_space_particles: Option<bool> = if reader.general_info.is_version_at_least(2023, 8, 0, 0) {
+        let global_space_particles: Option<bool> = if reader.general_info.is_version_at_least((2023, 8, 0, 0)) {
             Some(reader.read_bool32()?)
         } else {
             None
@@ -133,7 +133,7 @@ pub struct GMParticleEmitter {
 impl GMElement for GMParticleEmitter {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let enabled: Option<bool> = if reader.general_info.is_version_at_least(2023, 6, 0, 0) {
+        let enabled: Option<bool> = if reader.general_info.is_version_at_least((2023, 6, 0, 0)) {
             Some(reader.read_bool32()?)
         } else {
             None
@@ -142,7 +142,7 @@ impl GMElement for GMParticleEmitter {
         let mode: EmitMode = mode.try_into().map_err(|_| format!("Invalid Emit Mode {mode} (0x{mode:08X})"))?;
 
         let emit_count: u32;
-        let temp_data_2023_8: Option<TempParticleEmitter2023_8> = if reader.general_info.is_version_at_least(2023, 8, 0, 0) {
+        let temp_data_2023_8: Option<TempParticleEmitter2023_8> = if reader.general_info.is_version_at_least((2023, 8, 0, 0)) {
             emit_count = reader.read_f32()? as u32;              // don't see how a float is a count but ok
             let emit_relative: bool = reader.read_bool32()?;     // always zero
             let delay_min: f32 = reader.read_f32()?;
@@ -189,7 +189,7 @@ impl GMElement for GMParticleEmitter {
 
         let frame_index: f32 = reader.read_f32()?;
 
-        let data_2023_4: Option<GMParticleEmitter2023_4> = if reader.general_info.is_version_at_least(2023, 4, 0, 0) {
+        let data_2023_4: Option<GMParticleEmitter2023_4> = if reader.general_info.is_version_at_least((2023, 4, 0, 0)) {
             let animate: bool = reader.read_bool32()?;
             let stretch: bool = reader.read_bool32()?;
             let is_random: bool = reader.read_bool32()?;
@@ -207,7 +207,7 @@ impl GMElement for GMParticleEmitter {
 
         let data_2023_8: Option<GMParticleEmitter2023_8>;
         let data_pre_2023_8: Option<GMParticleEmitterPre2023_8>;
-        if reader.general_info.is_version_at_least(2023, 8, 0, 0) {
+        if reader.general_info.is_version_at_least((2023, 8, 0, 0)) {
             let size_min_x: f32 = reader.read_f32()?;
             let size_max_x: f32 = reader.read_f32()?;
             let size_min_y: f32 = reader.read_f32()?;

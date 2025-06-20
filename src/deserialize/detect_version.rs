@@ -1,8 +1,10 @@
+use crate::debug_utils::typename;
 use crate::deserialize::chunk_reading::{vec_with_capacity, DataReader, GMChunk};
 use crate::deserialize::embedded_textures::MAGIC_BZ2_QOI_HEADER;
 use crate::deserialize::general_info::{GMVersion, GMVersionReq};
 use crate::deserialize::general_info::GMVersionLTS::{Post2022_0, Pre2022_0};
 use crate::deserialize::rooms::GMRoomLayerType;
+
 
 fn try_check<R: Into<GMVersionReq>, T: Into<GMVersionReq>>(
     reader: &mut DataReader,
@@ -29,16 +31,10 @@ fn try_check<R: Into<GMVersionReq>, T: Into<GMVersionReq>>(
         if let Some(version_req) = check_fn(reader)? {
             reader.general_info.set_version_at_least(version_req.clone())?;
         }
-        Ok(())
-    } else {
-        Ok(())
     }
+    Ok(())
 }
 
-
-// TODO LTS stuff :c
-// TODO in utmt, the CheckFor202X_X methods check the "current" version in the beginning
-// cc means check_chunk
 
 pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
     let original_version: GMVersion = reader.general_info.version.clone();
@@ -63,7 +59,8 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
     if reader.chunks.contains_key("UILR") {
         reader.general_info.set_version_at_least((2024, 13, Post2022_0))?;
     }
-
+    
+    // cc means check_chunk
     if reader.general_info.bytecode_version >= 17 {
         try_check(reader, "FONT", cc_font_2022_2, GMVersionReq::none(), (2022, 2))?;
     }
@@ -87,7 +84,6 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
     try_check(reader, "SPRT", cc_sprt_2024_6, (2022, 2, Post2022_0), (2024, 6))?;
     try_check(reader, "FONT", cc_font_2024_14, (2024, 13), (2024, 14))?;
     try_check(reader, "AGRP", cc_agrp_2024_14, (2024, 13), (2024, 14))?;
-    // TODO implement rest
     
     reader.cur_pos = saved_pos;
     reader.chunk = saved_chunk;
@@ -101,6 +97,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
         Ok(Some((ver.major, ver.minor, ver.release, ver.build, ver.lts).into()))
     }
 }
+
 
 /// assert version >= 2.3
 fn cc_extn_2022_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {

@@ -70,7 +70,7 @@ impl GMElement for GMSprite {
         let mut special_fields: Option<GMSpriteSpecial> = None;
 
         // combination of these conditions may be incorrect
-        if reader.read_i32()? == -1 && reader.general_info.is_version_at_least(2, 0, 0, 0) {
+        if reader.read_i32()? == -1 && reader.general_info.is_version_at_least((2, 0, 0, 0)) {
             let special_version: u32 = reader.read_u32()?;
             let special_sprite_type: u32 = reader.read_u32()?;
 
@@ -95,7 +95,7 @@ impl GMElement for GMSprite {
                     // read mask data
                     let mut mask_width = width as usize;
                     let mut mask_height = height as usize;
-                    if reader.general_info.is_version_at_least(2024, 6, 0, 0) {
+                    if reader.general_info.is_version_at_least((2024, 6, 0, 0)) {
                         mask_width = (margin_right - margin_left + 1) as usize;
                         mask_height = (margin_bottom - margin_top + 1) as usize;
                     }
@@ -166,7 +166,7 @@ impl GMElement for GMSprite {
             // read mask data
             let mut mask_width = width as usize;
             let mut mask_height = height as usize;
-            if reader.general_info.is_version_at_least(2024, 6, 0, 0) {
+            if reader.general_info.is_version_at_least((2024, 6, 0, 0)) {
                 mask_width = (margin_right - margin_left + 1) as usize;
                 mask_height = (margin_bottom - margin_top + 1) as usize;
             }

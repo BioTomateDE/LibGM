@@ -22,7 +22,7 @@ impl GMElement for GMStrings {
             let string_length: usize = reader.read_usize()?;
             let string: String = reader.read_literal_string(string_length)?;
             strings_by_index.push(string.clone());
-            // start_position + 4 because yoyogames moment
+            // occurrence is start_position + 4 because yoyogames moment
             // gamemaker does this because it's faster to access strings if you don't need to add or subtract 4 every time
             abs_pos_to_reference.insert(pointer.pointing_to_position + 4, GMRef::new(i as u32));
         }

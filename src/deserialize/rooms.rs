@@ -80,10 +80,10 @@ impl GMElement for GMRoom {
         let meters_per_pixel: f32 = reader.read_f32()?;
         let mut layers: Vec<GMRoomLayer> = Vec::new();
         let mut sequences: Vec<GMSequence> = Vec::new();
-        if reader.general_info.is_version_at_least(2, 0, 0, 0) {
+        if reader.general_info.is_version_at_least((2, 0, 0, 0)) {
             layers = reader.read_pointer_list()?;
         }
-        if reader.general_info.is_version_at_least(2, 3, 0, 0) {
+        if reader.general_info.is_version_at_least((2, 3, 0, 0)) {
             sequences = reader.read_pointer_list()?;
         }
 
@@ -255,7 +255,7 @@ impl GMElement for GMRoomTile {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let x: i32 = reader.read_i32()?;
         let y: i32 = reader.read_i32()?;
-        let texture: GMRoomTileTexture = if reader.general_info.is_version_at_least(2, 0, 0, 0) {
+        let texture: GMRoomTileTexture = if reader.general_info.is_version_at_least((2, 0, 0, 0)) {
             GMRoomTileTexture::Sprite(reader.read_resource_by_id_option()?)
         } else {
             GMRoomTileTexture::Background(reader.read_resource_by_id_option()?)
@@ -325,7 +325,7 @@ impl GMElement for GMRoomLayer {
         let vertical_speed: f32 = reader.read_f32()?;
         let is_visible: bool = reader.read_bool32()?;
 
-        let data_2022_1: Option<GMRoomLayer2022_1> = if reader.general_info.is_version_at_least(2022, 1, 0, 0) {
+        let data_2022_1: Option<GMRoomLayer2022_1> = if reader.general_info.is_version_at_least((2022, 1, 0, 0)) {
             // TODO auto detect gm version; since gm2 the version in gen8 is stuck on 2.0
             Some(GMRoomLayer2022_1::deserialize(reader)?)
         } else {
@@ -333,7 +333,7 @@ impl GMElement for GMRoomLayer {
         };
 
         let data: GMRoomLayerData = match layer_type {
-            GMRoomLayerType::Path => GMRoomLayerData::None,
+            GMRoomLayerType::Path | GMRoomLayerType::Path2 => GMRoomLayerData::None,
             GMRoomLayerType::Background => GMRoomLayerData::Background(GMRoomLayerDataBackground::deserialize(reader)?),
             GMRoomLayerType::Instances => GMRoomLayerData::Instances(GMRoomLayerDataInstances::deserialize(reader)?),
             GMRoomLayerType::Assets => GMRoomLayerData::Assets(GMRoomLayerDataAssets::deserialize(reader)?),
@@ -463,7 +463,7 @@ impl GMElement for GMRoomLayerDataTiles {
         let background: GMRef<GMBackground> = reader.read_resource_by_id()?;
         let width: usize = reader.read_usize()?;
         let height: usize = reader.read_usize()?;
-        if reader.general_info.is_version_at_least(2024, 2, 0, 0) {
+        if reader.general_info.is_version_at_least((2024, 2, 0, 0)) {
             return Err("Compressed tile data (GM >= 2024.2) is not supported yet. Report this error to GitHub".to_string())     // TODO
         }
         let mut tile_data: Vec<u32> = vec_with_capacity(width * height)?;
@@ -545,16 +545,16 @@ impl GMElement for GMRoomLayerDataAssets {
         let mut particle_systems_pointer: Option<usize> = None;
         let mut text_items_pointer: Option<usize> = None;
 
-        if reader.general_info.is_version_at_least(2, 3, 0, 0) {
+        if reader.general_info.is_version_at_least((2, 3, 0, 0)) {
             sequences_pointer = Some(reader.read_usize()?);
-            if !reader.general_info.is_version_at_least(2, 3, 2, 0) {
+            if !reader.general_info.is_version_at_least((2, 3, 2, 0)) {
                 nine_slices_pointer = Some(reader.read_usize()?);
             }
         }
-        if reader.general_info.is_version_at_least(2023, 2, 0, 0) {   // {~~} non LTS
+        if reader.general_info.is_version_at_least((2023, 2, 0, 0)) {   // {~~} non LTS
             particle_systems_pointer = Some(reader.read_usize()?);
         }
-        if reader.general_info.is_version_at_least(2024, 6, 0, 0) {
+        if reader.general_info.is_version_at_least((2024, 6, 0, 0)) {
             text_items_pointer = Some(reader.read_usize()?);
         }
 
@@ -569,22 +569,22 @@ impl GMElement for GMRoomLayerDataAssets {
         let mut particle_systems: Vec<GMParticleSystemInstance> = Vec::new();
         let mut text_items: Vec<GMTextItemInstance> = Vec::new();
 
-        if reader.general_info.is_version_at_least(2, 3, 0, 0) {
+        if reader.general_info.is_version_at_least((2, 3, 0, 0)) {
             reader.cur_pos = sequences_pointer.unwrap();
             sequences = reader.read_pointer_list()?;
 
-            if !reader.general_info.is_version_at_least(2, 3, 2, 0) {
+            if !reader.general_info.is_version_at_least((2, 3, 2, 0)) {
                 reader.cur_pos = nine_slices_pointer.unwrap();
                 nine_slices = reader.read_pointer_list()?;
             }
         }
 
-        if reader.general_info.is_version_at_least(2023, 2, 0, 0) {   // {~~} non LTS
+        if reader.general_info.is_version_at_least((2023, 2, 0, 0)) {   // {~~} non LTS
             reader.cur_pos = particle_systems_pointer.unwrap();
-            particle_systems = reader.read_pointer_list()?;;
+            particle_systems = reader.read_pointer_list()?;
         }
 
-        if reader.general_info.is_version_at_least(2024, 6, 0, 0) {
+        if reader.general_info.is_version_at_least((2024, 6, 0, 0)) {
             reader.cur_pos = text_items_pointer.unwrap();
             text_items = reader.read_pointer_list()?;
         }
@@ -835,7 +835,7 @@ impl GMElement for GMRoomGameObject {
         let scale_y: f32 = reader.read_f32()?;
         let mut image_speed: Option<f32> = None;
         let mut image_index: Option<usize> = None;
-        if reader.general_info.is_version_at_least(2, 2, 2, 302) {
+        if reader.general_info.is_version_at_least((2, 2, 2, 302)) {
             image_speed = Some(reader.read_f32()?);
             image_index = Some(reader.read_usize()?);
         }

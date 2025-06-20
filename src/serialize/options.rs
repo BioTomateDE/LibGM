@@ -1,6 +1,6 @@
 use crate::deserialize::all::GMData;
 use crate::deserialize::chunk_reading::GMRef;
-use crate::deserialize::options::{GMOptions, GMOptionsConstant, GMOptionsFlags, GMOptionsWindowColor};
+use crate::deserialize::options::{GMOptions, GMOptionsConstant, GMOptionsFlags};
 use crate::deserialize::texture_page_items::GMTexturePageItem;
 use crate::serialize::chunk_writing::{DataBuilder, DataPlaceholder};
 
