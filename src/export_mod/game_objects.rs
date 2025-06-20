@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::deserialize::game_objects::{GMGameObjectCollisionShape, GMGameObjectEvent, GMGameObjectEventAction};
+use crate::gamemaker::game_objects::{GMGameObjectCollisionShape, GMGameObjectEvent, GMGameObjectEventAction};
 use crate::export_mod::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, ModExporter, ModRef};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 

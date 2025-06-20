@@ -1,4 +1,4 @@
-use crate::deserialize::all::GMData;
+use crate::gm_deserialize::GMData;
 use std::fs::File;
 use std::io::Cursor;
 use std::path::Path;
@@ -7,16 +7,16 @@ use image::ImageFormat;
 use serde::{Deserialize, Serialize};
 use crate::bench_export;
 use crate::debug_utils::Stopwatch;
-use crate::deserialize::backgrounds::GMBackground;
-use crate::deserialize::chunk_reading::GMRef;
-use crate::deserialize::code::GMCode;
-use crate::deserialize::embedded_audio::GMEmbeddedAudio;
-use crate::deserialize::functions::GMFunction;
-use crate::deserialize::game_objects::GMGameObject;
-use crate::deserialize::rooms::GMRoom;
-use crate::deserialize::sprites::GMSprite;
-use crate::deserialize::texture_page_items::GMTexturePageItem;
-use crate::deserialize::variables::GMVariable;
+use crate::gamemaker::backgrounds::GMBackground;
+use crate::gamemaker::chunk_reading::GMRef;
+use crate::gamemaker::code::GMCode;
+use crate::gamemaker::embedded_audio::GMEmbeddedAudio;
+use crate::gamemaker::functions::GMFunction;
+use crate::gamemaker::game_objects::GMGameObject;
+use crate::gamemaker::rooms::GMRoom;
+use crate::gamemaker::sprites::GMSprite;
+use crate::gamemaker::texture_page_items::GMTexturePageItem;
+use crate::gamemaker::variables::GMVariable;
 use crate::export_mod::backgrounds::{AddBackground, EditBackground};
 use crate::export_mod::code::{AddCode, EditCode};
 use crate::export_mod::fonts::{AddFont, EditFont};
@@ -123,7 +123,7 @@ fn tar_write_json_file<J: Serialize>(tar: &mut tar::Builder<zstd::Encoder<File>>
     let filename: String = format!("{name}.json");
 
     let data: Vec<u8> = serde_json::to_vec_pretty(&json_struct)
-        .map_err(|e| format!("Could not serialize {name} changes to json: {e}"))?;
+        .map_err(|e| format!("Could not serialize_old {name} changes to json: {e}"))?;
 
     let mut header = tar::Header::new_gnu();
     header.set_path(&filename)
