@@ -1,15 +1,13 @@
 use crate::debug_utils::Stopwatch;
-use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use crate::bench_parse;
 use crate::deserialize::backgrounds::{GMBackgrounds};
 use crate::deserialize::chunk_reading::{GMChunk, DataReader, GMChunkElement};
 use crate::deserialize::code::GMCodes;
 use crate::deserialize::embedded_audio::GMEmbeddedAudios;
-use crate::deserialize::embedded_textures::{GMEmbeddedTexture, GMEmbeddedTextures};
+use crate::deserialize::embedded_textures::GMEmbeddedTextures;
 use crate::deserialize::fonts::GMFonts;
-use crate::deserialize::functions::{GMCodeLocal, GMFunctions};
+use crate::deserialize::functions::GMFunctions;
 use crate::deserialize::game_objects::GMGameObjects;
 use crate::deserialize::scripts::GMScripts;
 use crate::deserialize::strings::GMStrings;
@@ -20,7 +18,7 @@ use crate::deserialize::rooms::GMRooms;
 use crate::deserialize::sounds::GMSounds;
 use crate::deserialize::sprites::GMSprites;
 use crate::deserialize::texture_page_items::GMTexturePageItems;
-use crate::deserialize::options::{parse_chunk_optn, GMOptions};
+use crate::deserialize::options::GMOptions;
 use crate::deserialize::detect_version::detect_gamemaker_version;
 use crate::deserialize::irrelevant::{GMAudioGroups, GMExtensions, GMGameEndScripts, GMGlobalInitScripts, GMLanguageInfo};
 use crate::deserialize::particles::{GMParticleEmitters, GMParticleSystems};
@@ -29,28 +27,28 @@ use crate::deserialize::particles::{GMParticleEmitters, GMParticleSystems};
 pub struct GMData {
     pub strings: GMStrings,                             // STRG
     pub general_info: GMGeneralInfo,                    // GEN8
-    pub options: GMOptions,                             // OPTN
-    pub texture_pages: Vec<GMEmbeddedTexture>,          // TPAG
-    pub texture_page_items: GMTexturePageItems,         // TPAG
-    pub backgrounds: GMBackgrounds,                     // BGND
-    pub sprites: GMSprites,                             // SPRT
-    pub scripts: GMScripts,                             // SCPT
+    pub embedded_textures: GMEmbeddedTextures,          // TXTR
+    pub texture_pages: GMTexturePageItems,              // TPAG
     pub variables: GMVariables,                         // VARI
     pub functions: GMFunctions,                         // FUNC
-    pub code_locals: Vec<GMCodeLocal>,                  // FUNC
+    pub scripts: GMScripts,                             // SCPT
     pub codes: GMCodes,                                 // CODE
     pub fonts: GMFonts,                                 // FONT
-    pub audios: GMEmbeddedAudios,                       // AUDO
-    pub sounds: GMSounds,                               // SOND
+    pub sprites: GMSprites,                             // SPRT
     pub game_objects: GMGameObjects,                    // OBJT
     pub rooms: GMRooms,                                 // ROOM
+    pub backgrounds: GMBackgrounds,                     // BGND
     pub paths: GMPaths,                                 // PATH
+    pub audios: GMEmbeddedAudios,                       // AUDO
+    pub sounds: GMSounds,                               // SOND
+    pub options: GMOptions,                             // OPTN
     pub particle_systems: GMParticleSystems,            // PSYS
     pub particle_emitters: GMParticleEmitters,          // PSEM
-    pub language_root: Option<GMLanguageInfo>,          // LANG
+    pub language_info: GMLanguageInfo,                  // LANG
     pub extensions: GMExtensions,                       // EXTN
     pub audio_groups: GMAudioGroups,                    // AGRP
-    pub global_inits: GMGlobalInitScripts,              // GLOB
+    pub global_init_scripts: GMGlobalInitScripts,       // GLOB
+    pub game_end_scripts: GMGameEndScripts,             // GMEN
 }
 
 pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
@@ -63,25 +61,6 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
         return Err("Invalid or corrupted data.win file: 'FORM' chunk missing".to_string());
     }
     let total_data_len: usize = reader.read_usize()? + reader.cur_pos;
-
-    // let strings: GMStrings; 
-    // let general_info: GMGeneralInfo; 
-    // let mut texture_pages: Option<GMEmbeddedTextures> = None; 
-    // let mut texture_page_items: Option<GMTextures> = None;
-    // let mut backgrounds: Option<GMBackgrounds> = None;
-    // let mut sprites: Option<GMSprites> = None;
-    // let mut scripts: Option<GMScripts> = None;
-    // let mut variables: Option<GMVariables> = None;
-    // let mut functions: Option<GMFunctions> = None; 
-    // let mut code_locals: Option<GMCodeLocals> = None; 
-    // let mut codes: Option<GMCodes> = None;
-    // let mut fonts: Option<GMFonts> = None;
-    // let mut audios: Option<GMEmbeddedAudios> = None;
-    // let mut sounds: Option<GMSounds> = None;
-    // let mut game_objects: Option<GMGameObjects> = None;
-    // let mut rooms: Option<GMRooms> = None;
-    // let mut paths: Option<GMPaths> = None;
-    // let mut options: Option<GMOptions> = None;
     
     while reader.cur_pos + 8 < total_data_len { 
         let name: String = reader.read_chunk_name()?;
@@ -100,15 +79,18 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
             ))
         }
     }
+    log::trace!("Parsing FORM took {stopwatch}");
     
     strings = reader.read_chunk_required("STRG")?;      // FIXME: hopefully this also updates reader.strings
     general_info = reader.read_chunk_required("GEN8")?;
+    
     let stopwatch2 = Stopwatch::start();
     if let Some(detected_version) = detect_gamemaker_version(&mut reader)? {
         log::info!("General info specified incorrect GameMaker version {}; automatically detected real version {}", general_info.version, detected_version);
     }
     log::trace!("Detecting GameMaker Version took {stopwatch2}");
 
+    let stopwatch2 = Stopwatch::start();
     let embedded_textures: GMEmbeddedTextures = reader.read_chunk_required("TXTR")?;
     let texture_pages: GMTexturePageItems = reader.read_chunk_required("TPAG")?;
     let variables: GMVariables = reader.read_chunk_required("VARI")?;
@@ -119,10 +101,10 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let sprites: GMSprites = reader.read_chunk_required("SPRT")?;
     let game_objects: GMGameObjects = reader.read_chunk_required("OBJT")?;
     let rooms: GMRooms = reader.read_chunk_required("ROOM")?;
-    let rooms: GMRooms = reader.read_chunk_required("ROOM")?;
     let backgrounds: GMBackgrounds = reader.read_chunk_required("BGND")?;
     let paths: GMPaths = reader.read_chunk_required("PATH")?;
     let audios: GMEmbeddedAudios = reader.read_chunk_required("AUDO")?;
+    let sounds: GMSounds = reader.read_chunk_required("SOND")?;
     let options: GMOptions = reader.read_chunk_required("OPTN")?;
     // some of these probably aren't actually required; make optional when issue occur
 
@@ -135,38 +117,34 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let game_end_scripts: GMGameEndScripts = reader.read_chunk_optional("GMEN")?;
     // TODO implement all other chunks
     
-    log::trace!("Parsing FORM took {stopwatch}");
-
-    let strings: GMStrings = bench_parse!("STRG", parse_chunk_strg(&mut chunk_strg)?);
-    let mut general_info: GMGeneralInfo = bench_parse!("GEN8", parse_chunk_gen8(&mut chunk_gen8, &strings)?);
-    
+    log::trace!("Parsing chunks took {stopwatch2}");
 
 
     let data = GMData {
         strings,
         general_info,
-        options,
+        embedded_textures,
         texture_pages,
-        texture_page_items,
-        backgrounds,
-        sprites,
-        scripts,
         variables,
         functions,
-        code_locals,
+        scripts,
         codes,
         fonts,
-        audios,
-        sounds,
+        sprites,
         game_objects,
         rooms,
+        backgrounds,
         paths,
+        audios,
+        sounds,
+        options,
         particle_systems,
         particle_emitters,
-        language_root,
+        language_info,
         extensions,
         audio_groups,
-        global_inits,
+        global_init_scripts,
+        game_end_scripts,
     };
 
     log::trace!("Parsing data took {stopwatch}");
@@ -182,11 +160,3 @@ pub fn read_data_file(data_file_path: &Path) -> Result<Vec<u8>, String> {
     Ok(data)
 }
 
-fn get_chunk<'a>(chunks: &HashMap<String, GMChunk<'a>>, chunk_name: &str) -> Result<GMChunk<'a>, String> {
-    chunks.get(chunk_name)
-        .map(|i| i.to_owned())  // does not clone chunk data, only metadata
-        .ok_or_else(|| format!(
-            "Chunk '{}' is missing in data file (chunk hashmap length: {})",
-            chunk_name, chunks.len(), 
-        ))
-}

@@ -148,7 +148,7 @@ impl GMElement for GMSpriteYYSWFFillData {
                 ))?;
 
                 let mut tpe_index: Option<usize> = None;
-                if reader.general_info.is_version_at_least(2022, 1, 0, 0) {
+                if reader.general_info.is_version_at_least((2022, 1, 0, 0)) {
                     tpe_index = Some(reader.read_usize()?);      // maybe -1 idk
                 }
 
@@ -441,7 +441,7 @@ impl GMElement for GMSpriteYYSWFBitmapData {
         let mut alpha_data: Vec<u8> = Vec::with_capacity(0);
         let mut color_palette_data: Vec<u8> = Vec::with_capacity(0);
 
-        if reader.general_info.is_version_at_least(2022, 1, 0, 0) {
+        if reader.general_info.is_version_at_least((2022, 1, 0, 0)) {
             tpe_index = Some(reader.read_i32()?);
         } else {
             let image_data_length: usize = reader.read_usize()?;

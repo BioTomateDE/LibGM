@@ -1,6 +1,5 @@
-use crate::deserialize::chunk_reading::{GMChunk, GMRef};
-use crate::deserialize::strings::GMStrings;
-use crate::deserialize::texture_page_items::{GMTexturePageItem, GMTexturePageItems};
+use crate::deserialize::chunk_reading::{DataReader, GMChunkElement, GMElement, GMRef};
+use crate::deserialize::texture_page_items::GMTexturePageItem;
 
 #[derive(Debug, Clone)]
 pub struct GMOptions {
@@ -9,7 +8,7 @@ pub struct GMOptions {
     pub unknown2: u32,
     pub flags: GMOptionsFlags,
     pub window_scale: i32,
-    pub window_color: GMOptionsWindowColor,
+    pub window_color: u32,
     pub color_depth: u32,
     pub resolution: u32,
     pub frequency: u32,
@@ -20,7 +19,75 @@ pub struct GMOptions {
     pub load_image: Option<GMRef<GMTexturePageItem>>,
     pub load_alpha: u32,
     pub constants: Vec<GMOptionsConstant>,
+    pub exists: bool,
 }
+impl GMChunkElement for GMOptions {
+    /// probably shouldn't be used other than as a stub
+    fn empty() -> Self {
+        Self {
+            is_new_format: false,
+            unknown1: 69420,
+            unknown2: 69420,
+            flags: GMOptionsFlags {
+                fullscreen: false,
+                interpolate_pixels: false,
+                use_new_audio: false,
+                no_border: false,
+                show_cursor: false,
+                sizeable: false,
+                stay_on_top: false,
+                change_resolution: false,
+                no_buttons: false,
+                screen_key: false,
+                help_key: false,
+                quit_key: false,
+                save_key: false,
+                screenshot_key: false,
+                close_sec: false,
+                freeze: false,
+                show_progress: false,
+                load_transparent: false,
+                scale_progress: false,
+                display_errors: false,
+                write_errors: false,
+                abort_errors: false,
+                variable_errors: false,
+                creation_event_order: false,
+                use_front_touch: false,
+                use_rear_touch: false,
+                use_fast_collision: false,
+                fast_collision_compatibility: false,
+                disable_sandbox: false,
+                enable_copy_on_write: false,
+            },
+            window_scale: 69420,
+            window_color: 69420,
+            color_depth: 69420,
+            resolution: 69420,
+            frequency: 69420,
+            vertex_sync: 69420,
+            priority: 69420,
+            back_image: None,
+            front_image: None,
+            load_image: None,
+            load_alpha: 69420,
+            constants: vec![],
+            exists: false,
+        }
+    }
+}
+impl GMElement for GMOptions {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        let is_new_format: bool = reader.read_u32()? == 0x80000000;
+        reader.cur_pos -= 4;
+        if is_new_format {
+            parse_options_new(reader)
+        } else {
+            parse_options_old(reader)
+        }
+    }
+}
+
 
 #[derive(Debug, Clone)]
 pub struct GMOptionsFlags {
@@ -55,59 +122,85 @@ pub struct GMOptionsFlags {
     pub disable_sandbox: bool,
     pub enable_copy_on_write: bool,
 }
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMOptionsWindowColor {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    pub a: u8,
+impl GMElement for GMOptionsFlags {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        let raw = reader.read_u64()?;
+        Ok(GMOptionsFlags {
+            fullscreen: 0 != raw & 0x1,
+            interpolate_pixels: 0 != raw & 0x2,
+            use_new_audio: 0 != raw & 0x4,
+            no_border: 0 != raw & 0x8,
+            show_cursor: 0 != raw & 0x10,
+            sizeable: 0 != raw & 0x20,
+            stay_on_top: 0 != raw & 0x40,
+            change_resolution: 0 != raw & 0x80,
+            no_buttons: 0 != raw & 0x100,
+            screen_key: 0 != raw & 0x200,
+            help_key: 0 != raw & 0x400,
+            quit_key: 0 != raw & 0x800,
+            save_key: 0 != raw & 0x1000,
+            screenshot_key: 0 != raw & 0x2000,
+            close_sec: 0 != raw & 0x4000,
+            freeze: 0 != raw & 0x8000,
+            show_progress: 0 != raw & 0x10000,
+            load_transparent: 0 != raw & 0x20000,
+            scale_progress: 0 != raw & 0x40000,
+            display_errors: 0 != raw & 0x80000,
+            write_errors: 0 != raw & 0x100000,
+            abort_errors: 0 != raw & 0x200000,
+            variable_errors: 0 != raw & 0x400000,
+            creation_event_order: 0 != raw & 0x800000,
+            use_front_touch: 0 != raw & 0x1000000,
+            use_rear_touch: 0 != raw & 0x2000000,
+            use_fast_collision: 0 != raw & 0x4000000,
+            fast_collision_compatibility: 0 != raw & 0x8000000,
+            disable_sandbox: 0 != raw & 0x10000000,
+            enable_copy_on_write: 0 != raw & 0x20000000,
+        })
+    }
 }
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMOptionsConstant {
     pub name: GMRef<String>,
     pub value: GMRef<String>,
 }
-
-
-pub fn parse_chunk_optn(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMTexturePageItems) -> Result<GMOptions, String> {
-    chunk.cur_pos = 0;
-    let is_new_format: bool = chunk.read_u32()? == 0x80000000;
-    chunk.cur_pos = 0;
-
-    let options: GMOptions = if is_new_format {
-        parse_options_new(chunk, strings, textures)?
-    } else {
-        parse_options_old(chunk, strings, textures)?
-    };
-    Ok(options)
+impl GMElement for GMOptionsConstant {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        let name: GMRef<String> = reader.read_gm_string()?;
+        let value: GMRef<String> = reader.read_gm_string()?;
+        Ok(GMOptionsConstant {
+            name,
+            value,
+        })
+    }
 }
 
 
-fn parse_options_new(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMTexturePageItems) -> Result<GMOptions, String> {
-    let unknown1: u32 = chunk.read_u32()?;
-    let unknown2: u32 = chunk.read_u32()?;
-    let flags: GMOptionsFlags = parse_options_flags(chunk.read_u64()?);
-    let scale: i32 = chunk.read_i32()?;
-    let window_color: GMOptionsWindowColor = parse_options_window_color(chunk)?;
-    let color_depth: u32 = chunk.read_u32()?;
-    let resolution: u32 = chunk.read_u32()?;
-    let frequency: u32 = chunk.read_u32()?;
-    let vertex_sync: u32 = chunk.read_u32()?;
-    let priority: u32 = chunk.read_u32()?;
-    let back_image: Option<GMRef<GMTexturePageItem>> = parse_options_image(chunk, textures)?;
-    let front_image: Option<GMRef<GMTexturePageItem>> = parse_options_image(chunk, textures)?;
-    let load_image: Option<GMRef<GMTexturePageItem>> = parse_options_image(chunk, textures)?;
-    let load_alpha: u32 = chunk.read_u32()?;
-    let constants: Vec<GMOptionsConstant> = parse_constants(chunk, strings)?;
+fn parse_options_new(reader: &mut DataReader) -> Result<GMOptions, String> {
+    let unknown1: u32 = reader.read_u32()?;
+    let unknown2: u32 = reader.read_u32()?;
+    let flags = GMOptionsFlags::deserialize(reader)?;
+    let window_scale: i32 = reader.read_i32()?;
+    let window_color: u32 = reader.read_u32()?;
+    let color_depth: u32 = reader.read_u32()?;
+    let resolution: u32 = reader.read_u32()?;
+    let frequency: u32 = reader.read_u32()?;
+    let vertex_sync: u32 = reader.read_u32()?;
+    let priority: u32 = reader.read_u32()?;
+    let back_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
+    let front_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
+    let load_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
+    let load_alpha: u32 = reader.read_u32()?;
+    let constants: Vec<GMOptionsConstant> = reader.read_simple_list()?;
 
     Ok(GMOptions {
         is_new_format: true,
         unknown1,
         unknown2,
         flags,
-        window_scale: scale,
+        window_scale,
         window_color,
         color_depth,
         resolution,
@@ -119,61 +212,63 @@ fn parse_options_new(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMText
         load_image,
         load_alpha,
         constants,
+        exists: true,
     })
 }
 
-fn parse_options_old(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMTexturePageItems) -> Result<GMOptions, String> {
-    let flag_fullscreen: bool = chunk.read_bool32()?;
-    let flag_interpolate_pixels: bool = chunk.read_bool32()?;
-    let flag_use_new_audio: bool = chunk.read_bool32()?;
-    let flag_no_border: bool = chunk.read_bool32()?;
-    let flag_show_cursor: bool = chunk.read_bool32()?;
 
-    let scale: i32 = chunk.read_i32()?;
+fn parse_options_old(reader: &mut DataReader) -> Result<GMOptions, String> {
+    let flag_fullscreen: bool = reader.read_bool32()?;
+    let flag_interpolate_pixels: bool = reader.read_bool32()?;
+    let flag_use_new_audio: bool = reader.read_bool32()?;
+    let flag_no_border: bool = reader.read_bool32()?;
+    let flag_show_cursor: bool = reader.read_bool32()?;
 
-    let flag_sizeable: bool = chunk.read_bool32()?;
-    let flag_stay_on_top: bool = chunk.read_bool32()?;
+    let scale: i32 = reader.read_i32()?;
 
-    let window_color: GMOptionsWindowColor = parse_options_window_color(chunk)?;
+    let flag_sizeable: bool = reader.read_bool32()?;
+    let flag_stay_on_top: bool = reader.read_bool32()?;
 
-    let flag_change_resolution: bool = chunk.read_bool32()?;
+    let window_color: u32 = reader.read_u32()?;
 
-    let color_depth: u32 = chunk.read_u32()?;
-    let resolution: u32 = chunk.read_u32()?;
-    let frequency: u32 = chunk.read_u32()?;
+    let flag_change_resolution: bool = reader.read_bool32()?;
 
-    let flag_no_buttons: bool = chunk.read_bool32()?;
+    let color_depth: u32 = reader.read_u32()?;
+    let resolution: u32 = reader.read_u32()?;
+    let frequency: u32 = reader.read_u32()?;
 
-    let vertex_sync: u32 = chunk.read_u32()?;
+    let flag_no_buttons: bool = reader.read_bool32()?;
 
-    let flag_screen_key: bool = chunk.read_bool32()?;
-    let flag_help_key: bool = chunk.read_bool32()?;
-    let flag_quit_key: bool = chunk.read_bool32()?;
-    let flag_save_key: bool = chunk.read_bool32()?;
-    let flag_screenshot_key: bool = chunk.read_bool32()?;
-    let flag_close_sec: bool = chunk.read_bool32()?;
+    let vertex_sync: u32 = reader.read_u32()?;
 
-    let priority: u32 = chunk.read_u32()?;
+    let flag_screen_key: bool = reader.read_bool32()?;
+    let flag_help_key: bool = reader.read_bool32()?;
+    let flag_quit_key: bool = reader.read_bool32()?;
+    let flag_save_key: bool = reader.read_bool32()?;
+    let flag_screenshot_key: bool = reader.read_bool32()?;
+    let flag_close_sec: bool = reader.read_bool32()?;
 
-    let flag_freeze: bool = chunk.read_bool32()?;
-    let flag_show_progress: bool = chunk.read_bool32()?;
+    let priority: u32 = reader.read_u32()?;
 
-    let back_image: Option<GMRef<GMTexturePageItem>> = parse_options_image(chunk, textures)?;
-    let front_image: Option<GMRef<GMTexturePageItem>> = parse_options_image(chunk, textures)?;
-    let load_image: Option<GMRef<GMTexturePageItem>> = parse_options_image(chunk, textures)?;
+    let flag_freeze: bool = reader.read_bool32()?;
+    let flag_show_progress: bool = reader.read_bool32()?;
 
-    let flag_load_transparent: bool = chunk.read_bool32()?;
+    let back_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
+    let front_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
+    let load_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
 
-    let load_alpha: u32 = chunk.read_u32()?;
+    let flag_load_transparent: bool = reader.read_bool32()?;
 
-    let flag_scale_progress: bool = chunk.read_bool32()?;
-    let flag_display_errors: bool = chunk.read_bool32()?;
-    let flag_write_errors: bool = chunk.read_bool32()?;
-    let flag_abort_errors: bool = chunk.read_bool32()?;
-    let flag_variable_errors: bool = chunk.read_bool32()?;
-    let flag_creation_event_order: bool = chunk.read_bool32()?;
+    let load_alpha: u32 = reader.read_u32()?;
 
-    let constants: Vec<GMOptionsConstant> = parse_constants(chunk, strings)?;
+    let flag_scale_progress: bool = reader.read_bool32()?;
+    let flag_display_errors: bool = reader.read_bool32()?;
+    let flag_write_errors: bool = reader.read_bool32()?;
+    let flag_abort_errors: bool = reader.read_bool32()?;
+    let flag_variable_errors: bool = reader.read_bool32()?;
+    let flag_creation_event_order: bool = reader.read_bool32()?;
+
+    let constants: Vec<GMOptionsConstant> = reader.read_simple_list()?;
 
     Ok(GMOptions {
         is_new_format: false,
@@ -223,85 +318,7 @@ fn parse_options_old(chunk: &mut GMChunk, strings: &GMStrings, textures: &GMText
         load_image,
         load_alpha,
         constants,
+        exists: true,
     })
-}
-
-fn parse_options_flags(raw: u64) -> GMOptionsFlags {
-    GMOptionsFlags {
-        fullscreen: 0 != raw & 0x1,
-        interpolate_pixels: 0 != raw & 0x2,
-        use_new_audio: 0 != raw & 0x4,
-        no_border: 0 != raw & 0x8,
-        show_cursor: 0 != raw & 0x10,
-        sizeable: 0 != raw & 0x20,
-        stay_on_top: 0 != raw & 0x40,
-        change_resolution: 0 != raw & 0x80,
-        no_buttons: 0 != raw & 0x100,
-        screen_key: 0 != raw & 0x200,
-        help_key: 0 != raw & 0x400,
-        quit_key: 0 != raw & 0x800,
-        save_key: 0 != raw & 0x1000,
-        screenshot_key: 0 != raw & 0x2000,
-        close_sec: 0 != raw & 0x4000,
-        freeze: 0 != raw & 0x8000,
-        show_progress: 0 != raw & 0x10000,
-        load_transparent: 0 != raw & 0x20000,
-        scale_progress: 0 != raw & 0x40000,
-        display_errors: 0 != raw & 0x80000,
-        write_errors: 0 != raw & 0x100000,
-        abort_errors: 0 != raw & 0x200000,
-        variable_errors: 0 != raw & 0x400000,
-        creation_event_order: 0 != raw & 0x800000,
-        use_front_touch: 0 != raw & 0x1000000,
-        use_rear_touch: 0 != raw & 0x2000000,
-        use_fast_collision: 0 != raw & 0x4000000,
-        fast_collision_compatibility: 0 != raw & 0x8000000,
-        disable_sandbox: 0 != raw & 0x10000000,
-        enable_copy_on_write: 0 != raw & 0x20000000,
-    }
-}
-
-fn parse_constants(chunk: &mut GMChunk, strings: &GMStrings) -> Result<Vec<GMOptionsConstant>, String> {
-    let constants_count: usize = chunk.read_usize_count()?;
-    let mut constants: Vec<GMOptionsConstant> = Vec::with_capacity(constants_count);
-
-    for _ in 0..constants_count {
-        let name: GMRef<String> = chunk.read_gm_string(strings)?;
-        let value: GMRef<String> = chunk.read_gm_string(strings)?;
-        constants.push(GMOptionsConstant {
-            name,
-            value,
-        })
-    }
-
-    Ok(constants)
-}
-
-fn parse_options_image(chunk: &mut GMChunk, textures: &GMTexturePageItems) -> Result<Option<GMRef<GMTexturePageItem>>, String> {
-    let absolute_position: usize = chunk.read_usize()?;
-    if absolute_position == 0 {
-        return Ok(None)
-    }
-
-    let texture: GMRef<GMTexturePageItem> = textures.abs_pos_to_ref.get(&absolute_position)
-        .ok_or_else(|| format!("Could not get Options image with absolute texture position {absolute_position}"))?
-        .clone();
-
-    Ok(Some(texture))
-}
-
-fn parse_options_window_color(chunk: &mut GMChunk) -> Result<GMOptionsWindowColor, String> {
-    // TODO check if rgba or abgr
-    let window_color_r: u8 = chunk.read_u8()?;
-    let window_color_g: u8 = chunk.read_u8()?;
-    let window_color_b: u8 = chunk.read_u8()?;
-    let window_color_a: u8 = chunk.read_u8()?;
-    let window_color = GMOptionsWindowColor {
-        r: window_color_r,
-        g: window_color_g,
-        b: window_color_b,
-        a: window_color_a,
-    };
-    Ok(window_color)
 }
 

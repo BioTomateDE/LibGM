@@ -39,7 +39,7 @@ impl GMElement for GMBackground {
         let preload: bool = reader.read_bool32()?;
         let texture: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
         
-        let gms2_data: Option<GMBackgroundGMS2Data> = if reader.general_info.is_version_at_least(2, 0, 0, 0) {
+        let gms2_data: Option<GMBackgroundGMS2Data> = if reader.general_info.is_version_at_least((2, 0, 0, 0)) {
             Some(GMBackgroundGMS2Data::deserialize(reader)?)
         } else { None };
         
