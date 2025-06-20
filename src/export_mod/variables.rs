@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::deserialize::variables::GMVariableB15Data;
+use crate::gamemaker::variables::GMVariableB15Data;
 use crate::export_mod::code::ModInstanceType;
 use crate::export_mod::export::{edit_field, edit_field_convert, wrap_edit_option, EditWrapper, ModExporter, ModRef};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
