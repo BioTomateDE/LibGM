@@ -1,7 +1,5 @@
-use crate::deserialize::chunk_reading::{DataReader, GMChunk, GMChunkElement, GMElement, GMRef};
+use crate::deserialize::chunk_reading::{DataReader, GMChunkElement, GMElement, GMRef};
 use crate::deserialize::embedded_audio::GMEmbeddedAudio;
-use crate::deserialize::general_info::GMGeneralInfo;
-use crate::deserialize::strings::GMStrings;
 
 
 #[derive(Debug, Clone)]
@@ -53,7 +51,7 @@ impl GMElement for GMSound {
         let audio_file: Option<GMRef<GMEmbeddedAudio>> = reader.read_resource_by_id_option()?;
 
         let mut audio_length: Option<f32> = None;
-        if reader.general_info.is_version_at_least(2024, 6, 0, 0) {
+        if reader.general_info.is_version_at_least((2024, 6, 0, 0)) {
             audio_length = Some(reader.read_f32()?);
         }
 

@@ -71,7 +71,7 @@ impl GMChunkElement for GMCodeLocals {
 }
 impl GMElement for GMCodeLocals {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        if reader.general_info.bytecode_version <= 14 || reader.general_info.is_version_at_least(2024, 8, 0, 0) {
+        if reader.general_info.bytecode_version <= 14 || reader.general_info.is_version_at_least((2024, 8, 0, 0)) {
             return Ok(Self::empty())
         }
         let code_locals: Vec<GMCodeLocal> = reader.read_simple_list()?;
@@ -105,12 +105,9 @@ pub struct GMCodeLocalVariable {
 }
 impl GMElement for GMCodeLocalVariable {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let index: usize = reader.read_u32()?;
+        let index: u32 = reader.read_u32()?;
         let name: GMRef<String> = reader.read_gm_string()?;
-        Ok(GMCodeLocalVariable {
-            index,
-            name,
-        })
+        Ok(GMCodeLocalVariable { index, name })
     }
 }
 
@@ -125,7 +122,7 @@ pub fn parse_occurrence_chain(reader: &mut DataReader, first_occurrence_pos: i32
     reader.chunk = reader.chunks.get("CODE").cloned().ok_or("Chunk CODE not set while parsing function occurrences")?;
 
     let first_extra_offset: usize;
-    if reader.general_info.is_version_at_least(2, 3, 0, 0) {
+    if reader.general_info.is_version_at_least((2, 3, 0, 0)) {
         first_extra_offset = 0;
     } else {
         first_extra_offset = 4;
