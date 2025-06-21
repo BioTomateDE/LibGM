@@ -1,5 +1,6 @@
 use num_enum::TryFromPrimitive;
-use crate::gm_deserialize::{vec_with_capacity, DataReader, GMElement};
+use crate::gm_deserialize::{DataReader, GMElement};
+use crate::utility::vec_with_capacity;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteTypeSWF {
@@ -51,18 +52,7 @@ impl GMElement for GMSpriteYYSWFTimeline {
             collision_masks.push(GMSpriteYYSWFCollisionMask {rle_data});
         }
 
-        Ok(GMSpriteYYSWFTimeline {
-            framerate,
-            min_x,
-            max_x,
-            min_y,
-            max_y,
-            mask_width,
-            mask_height,
-            used_items,
-            frames,
-            collision_masks,
-        })
+        Ok(GMSpriteYYSWFTimeline { framerate, min_x, max_x, min_y, max_y, mask_width, mask_height, used_items, frames, collision_masks })
     }
 }
 
@@ -94,12 +84,7 @@ impl GMElement for GMSpriteYYSWFItem {
             GMSpriteYYSWFItemType::ItemSprite => {},
         }
 
-        Ok(GMSpriteYYSWFItem {
-            id,
-            item_type,
-            shape_data,
-            bitmap_data,
-        })
+        Ok(GMSpriteYYSWFItem { id, item_type, shape_data, bitmap_data })
     }
 }
 
@@ -250,11 +235,7 @@ impl GMElement for GMSpriteYYSWFStyleGroup {
             subshapes.push(GMSpriteYYSWFSubshapeData::deserialize(reader)?);
         }
 
-        Ok(GMSpriteYYSWFStyleGroup {
-            fill_styles,
-            line_styles,
-            subshapes,
-        })
+        Ok(GMSpriteYYSWFStyleGroup { fill_styles, line_styles, subshapes })
     }
 }
 
@@ -295,13 +276,7 @@ impl GMElement for GMSpriteYYSWFGradientRecord {
         let green: u8 = reader.read_u8()?;
         let blue: u8 = reader.read_u8()?;
         let alpha: u8 = reader.read_u8()?;
-        Ok(GMSpriteYYSWFGradientRecord {
-            ratio,
-            red,
-            green,
-            blue,
-            alpha,
-        })
+        Ok(GMSpriteYYSWFGradientRecord { ratio, red, green, blue, alpha })
     }
 }
 
@@ -458,15 +433,7 @@ impl GMElement for GMSpriteYYSWFBitmapData {
             reader.align(4)?;
         }
 
-        Ok(GMSpriteYYSWFBitmapData {
-            bitmap_type,
-            width,
-            height,
-            tpe_index,
-            image_data,
-            alpha_data,
-            color_palette_data,
-        })
+        Ok(GMSpriteYYSWFBitmapData { bitmap_type, width, height, tpe_index, image_data, alpha_data, color_palette_data })
     }
 }
 
