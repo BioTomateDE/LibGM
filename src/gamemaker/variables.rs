@@ -1,5 +1,7 @@
-﻿use crate::gm_deserialize::{vec_with_capacity, DataReader, GMChunk, GMChunkElement, GMElement, GMRef};
-use crate::gamemaker::code::{parse_instance_type, GMInstanceType};
+﻿use crate::gm_deserialize::{DataReader, GMChunk, GMChunkElement, GMElement, GMRef};
+use crate::gamemaker::code::{build_instance_type, parse_instance_type, GMInstanceType};
+use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
+use crate::utility::vec_with_capacity;
 
 #[derive(Debug, Clone)]
 pub struct GMVariables {
@@ -17,31 +19,15 @@ impl GMElement for GMVariables {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let variables_length: usize = if reader.general_info.bytecode_version >= 15 { 20 } else { 12 };
         let variable_count: usize = reader.get_chunk_length() / variables_length;
-        let mut scuffed: Option<GMVariablesScuffed> = None;
-        if reader.general_info.bytecode_version >= 15 {
-            let globals_count: usize = reader.read_usize()?;    // these variables don't actually represent what they say
-            let instances_count: usize = reader.read_usize()?;  // because gamemaker is weird
-            let locals_count: usize = reader.read_usize()?;     // TODO: probably needs to be incremented when a variable is added?
-            scuffed = Some(GMVariablesScuffed {
-                globals_count,
-                instances_count,
-                locals_count,
-            })
-        };
+        let scuffed: Option<GMVariablesScuffed> = reader.deserialize_if_bytecode_version(15)?;
 
         let mut variables: Vec<GMVariable> = Vec::with_capacity(variable_count);
-        // let mut occurrence_map: HashMap<usize, GMRef<GMVariable>> = HashMap::with_capacity(variable_count);
         let mut cur_index: u32 = 0;
 
         while reader.cur_pos + variables_length <= reader.chunk.end_pos {
             let name: GMRef<String> = reader.read_gm_string()?;
 
-            let b15_data: Option<GMVariableB15Data> = if reader.general_info.bytecode_version >= 15 {
-                let instance_type: GMInstanceType = parse_instance_type(reader.read_i32()? as i16)
-                    .map_err(|e| format!("Could not get instance type for variable \"{}\" while parsing chunk VARI: {e}", reader.display_gm_str(name)))?;
-                let variable_id: i32 = reader.read_i32()?;
-                Some(GMVariableB15Data { instance_type, variable_id })
-            } else { None };
+            let b15_data: Option<GMVariableB15Data> = reader.deserialize_if_bytecode_version(15)?;
 
             let occurrences_count: i32 = reader.read_i32()?;
             let occurrences_count: usize = if occurrences_count < 0 { 0 } else { occurrences_count as usize };
@@ -64,18 +50,33 @@ impl GMElement for GMVariables {
                 }
             }
 
-            variables.push(GMVariable {
-                name,
-                b15_data,
-                name_string_id,
-            });
+            variables.push(GMVariable { name, b15_data, name_string_id });
             cur_index += 1;
         }
 
         Ok(GMVariables { variables, scuffed, exists: true })
     }
-}
 
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+        self.scuffed.serialize_if_bytecode_version(builder, "Scuffed bytecode 15 fields", 15)?;
+        for (i, variable) in self.variables.iter().enumerate() {
+            builder.write_gm_string(&variable.name)?;
+            variable.b15_data.serialize_if_bytecode_version(builder, "Bytecode 15 data", 15)?;
+            
+            let occurrences = builder.variable_occurrences.get(i)
+                .ok_or_else(|| format!("Could not resolve variable occurrence with index {i} in list with length {}", builder.function_occurrences.len()))?;
+            let occurrence_count: usize = occurrences.len();
+            let first_occurrence: i32 = match occurrences.first() {
+                Some((occurrence, _)) => *occurrence as i32 - 4,    // subtract 4 so it points to the instruction; not the next offset
+                None => variable.name_string_id,    // not sure if correct tbh
+            };
+            builder.write_usize(occurrence_count)?;
+            builder.write_i32(first_occurrence);
+        }
+        Ok(())
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMVariable {
@@ -89,12 +90,42 @@ pub struct GMVariableB15Data {
     pub instance_type: GMInstanceType,
     pub variable_id: i32,
 }
+impl GMElement for GMVariableB15Data {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        let instance_type: GMInstanceType = parse_instance_type(reader.read_i32()? as i16)?;
+        let variable_id: i32 = reader.read_i32()?;
+        Ok(GMVariableB15Data { instance_type, variable_id })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_i32(build_instance_type(&self.instance_type) as i32);
+        builder.write_i32(self.variable_id);
+        Ok(())
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct GMVariablesScuffed {
-    pub globals_count: usize,
-    pub instances_count: usize,
-    pub locals_count: usize,
+    pub var_count1: usize,
+    pub var_count2: usize,
+    pub max_local_var_count: usize,
+}
+impl GMElement for GMVariablesScuffed {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        // nobody knows what the fuck these values mean
+        // TODO remember to increment these when a variable is added by a mod
+        let var_count1: usize = reader.read_usize()?;
+        let var_count2: usize = reader.read_usize()?;
+        let max_local_var_count: usize = reader.read_usize()?;
+        Ok(GMVariablesScuffed { var_count1, var_count2, max_local_var_count })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_usize(self.var_count1)?;
+        builder.write_usize(self.var_count2)?;
+        builder.write_usize(self.max_local_var_count)?;
+        Ok(())
+    }
 }
 
 

@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use crate::gamemaker::code::GMVariableType;
+use crate::gamemaker::general_info::GMVersionReq;
 use crate::utility::{typename, Stopwatch};
 use crate::gamemaker::texture_page_items::GMTexturePageItem;
 use crate::gm_deserialize::{GMChunkElement, GMData, GMElement, GMRef};
@@ -52,6 +54,9 @@ pub struct DataBuilder<'a> {
     pointer_placeholder_positions: Vec<(usize, usize)>,
     /// Maps memory addresses of GameMaker elements to their resolved data position
     pointer_resource_positions: HashMap<usize, usize>,
+
+    pub function_occurrences: Vec<Vec<usize>>,
+    pub variable_occurrences: Vec<Vec<(usize, GMVariableType)>>,
 }
 
 
@@ -63,9 +68,11 @@ impl<'a> DataBuilder<'a> {
             is_last_chunk: false,
             pointer_placeholder_positions: Vec::new(),
             pointer_resource_positions: HashMap::new(),
+            function_occurrences: Vec::new(),
+            variable_occurrences: Vec::new(),
         }
-    } 
-    
+    }
+
     pub fn build_chunk<T: GMElement+GMChunkElement>(&mut self, chunk_name: &'static str, element: &T) -> Result<(), String> {
         assert_eq!(chunk_name.len(), 4);
         assert_eq!(chunk_name.as_bytes().len(), 4);
@@ -74,10 +81,10 @@ impl<'a> DataBuilder<'a> {
         let start_pos: usize = self.len();
         self.write_literal_string(chunk_name);
         self.write_u32(0xDEADC0DE);   // chunk length placeholder
-        
+
         element.serialize(self)
             .map_err(|e| format!("{e}\n>while serializing chunk '{chunk_name}'"))?;
-        
+
         // potentially write padding
         let ver = &self.gm_data.general_info.version;
         if !self.is_last_chunk && ver.major >= 2 || (ver.major == 1 && ver.build >= 9999) {
@@ -85,16 +92,16 @@ impl<'a> DataBuilder<'a> {
                 self.write_u8(0);
             }
         }
-        
+
         let chunk_length: usize = self.len() - start_pos;
         if chunk_length == 0 {
             // chunk is completely empty; undo writing chunk name and length placeholder (and padding)
             self.raw_data.truncate(start_pos);
             return Ok(())
         }
-        
+
         self.overwrite_usize(chunk_length, start_pos + 4)?;   // resolve chunk length placeholder
-        
+
         log::trace!("Building chunk '{chunk_name}' took {stopwatch}");
         Ok(())
     }
@@ -154,7 +161,7 @@ impl<'a> DataBuilder<'a> {
             None => self.write_i32(-1),
         }
     }
-    
+
     pub fn write_simple_list<T: GMElement>(&mut self, elements: &Vec<T>) -> Result<(), String> {
         let count: usize = elements.len();
         self.write_usize(count)?;
@@ -166,7 +173,7 @@ impl<'a> DataBuilder<'a> {
         }
         Ok(())
     }
-    
+
     pub fn write_simple_list_short<T: GMElement>(&mut self, elements: &Vec<T>) -> Result<(), String> {
         let count: usize = elements.len();
         let count: u16 = count.try_into().map_err(|_| format!(
@@ -181,14 +188,14 @@ impl<'a> DataBuilder<'a> {
         }
         Ok(())
     }
-    
+
     pub fn write_pointer_list<T: GMElement>(&mut self, elements: &Vec<T>) -> Result<(), String> {
         let count: usize = elements.len();
         let pointer_list_start_pos: usize = self.len();
         for _ in 0..count {
             self.write_u32(0xDEADC0DE);
         }
-        
+
         for (i, element) in elements.iter().enumerate() {
             let resolved_pointer_pos: usize = self.len();
             self.overwrite_usize(resolved_pointer_pos, pointer_list_start_pos + 4*i)?;
@@ -199,11 +206,11 @@ impl<'a> DataBuilder<'a> {
         }
         Ok(())
     }
-    
 
-    /// Create a placeholder pointer at the current position in the chunk and remember 
+
+    /// Create a placeholder pointer at the current position in the chunk and remember
     /// its data position paired with the target GameMaker element's memory address.
-    /// 
+    ///
     /// This will later be resolved by calling `DataBuilder::resolve_pointer`; replacing the
     /// pointer placeholder with the written data position of the target GameMaker element.
     /// ___
@@ -260,7 +267,7 @@ impl<'a> DataBuilder<'a> {
         }
         Ok(())
     }
-    
+
     pub fn overwrite_bytes(&mut self, data: &[u8], position: usize) -> Result<(), String> {
         if position + data.len() > self.len() {
             return Err(format!(
@@ -284,7 +291,7 @@ impl<'a> DataBuilder<'a> {
         self.overwrite_bytes(&bytes, position)?;
         Ok(())
     }
-    
+
     pub fn align(&mut self, alignment: usize) {
         while self.len() & (alignment - 1) != 0 {
             self.write_u8(0);
@@ -294,6 +301,43 @@ impl<'a> DataBuilder<'a> {
     pub fn len(&self) -> usize {
         self.raw_data.len()
     }
+
+    pub fn is_gm_version_at_least<V: Into<GMVersionReq>>(&self, version_req: V) -> bool {
+        self.gm_data.general_info.version.is_version_at_least(version_req)
+    }
+
+    pub fn bytecode_version(&self) -> u8 {
+        self.gm_data.general_info.bytecode_version
+    }
 }
 
+
+pub trait GMSerializeIfVersion {
+    fn serialize_if_gm_version<V: Into<GMVersionReq>>(&self, builder: &mut DataBuilder, field_name: &'static str, ver_req: V) -> Result<(), String>;
+    fn serialize_if_bytecode_version(&self, builder: &mut DataBuilder, field_name: &'static str, ver_req: u8) -> Result<(), String>;
+}
+impl<T: GMElement> GMSerializeIfVersion for Option<T> {
+    fn serialize_if_gm_version<V: Into<GMVersionReq>>(&self, builder: &mut DataBuilder, field_name: &'static str, ver_req: V) -> Result<(), String> {
+        let ver_req: GMVersionReq = ver_req.into();
+        if !builder.is_gm_version_at_least(ver_req.clone()) {
+            return Ok(())   // don't serialize if version requirement not met
+        }
+        let element: &T = self.as_ref().ok_or_else(|| format!(
+            "Field '{}' of {} is not set in data with GameMaker version {} but needs to be set since GameMaker version {}",
+            field_name, typename::<T>(), builder.gm_data.general_info.version, ver_req,
+        ))?;
+        element.serialize(builder)
+    }
+
+    fn serialize_if_bytecode_version(&self, builder: &mut DataBuilder, field_name: &'static str, ver_req: u8) -> Result<(), String> {
+        if builder.bytecode_version() < ver_req {
+            return Ok(())   // don't serialize if version requirement not met
+        }
+        let element: &T = self.as_ref().ok_or_else(|| format!(
+            "Field '{}' of {} is not set in data with Bytecode version {} but needs to be set since Bytecode version {}",
+            field_name, typename::<T>(), builder.gm_data.general_info.bytecode_version, ver_req,
+        ))?;
+        element.serialize(builder)
+    }
+}
 
