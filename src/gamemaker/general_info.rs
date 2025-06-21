@@ -1,5 +1,5 @@
 ﻿use std::fmt::Formatter;
-use crate::gamemaker::chunk_reading::{DataReader, GMChunkElement, GMElement, GMRef};
+use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use chrono::{DateTime, Utc};
 use crate::gamemaker::rooms::GMRoom;
 use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};

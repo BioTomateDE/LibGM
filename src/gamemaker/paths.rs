@@ -1,4 +1,4 @@
-use crate::gamemaker::chunk_reading::{GMChunkElement, GMElement, DataReader, GMRef};
+use crate::gm_deserialize::{GMChunkElement, GMElement, DataReader, GMRef};
 
 
 #[derive(Debug, Clone)]
