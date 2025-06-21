@@ -2,7 +2,7 @@
 use crate::gamemaker::chunk_reading::{DataReader, GMChunkElement, GMElement, GMRef};
 use chrono::{DateTime, Utc};
 use crate::gamemaker::rooms::GMRoom;
-
+use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 
 #[derive(Debug, Clone)]
 pub struct GMGeneralInfo {

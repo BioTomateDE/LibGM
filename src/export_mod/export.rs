@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use image::ImageFormat;
 use serde::{Deserialize, Serialize};
 use crate::bench_export;
-use crate::debug_utils::Stopwatch;
+use crate::utility::Stopwatch;
 use crate::gamemaker::backgrounds::GMBackground;
 use crate::gamemaker::chunk_reading::GMRef;
 use crate::gamemaker::code::GMCode;

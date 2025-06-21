@@ -1,5 +1,5 @@
 ﻿use std::collections::HashMap;
-use crate::gamemaker::chunk_reading::{DataReader, GMChunkElement, GMElement, GMPointer, GMRef};
+use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMPointer, GMRef};
 
 #[derive(Debug, Clone)]
 pub struct GMStrings {

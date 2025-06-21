@@ -1,5 +1,5 @@
 ﻿use std::fmt::Debug;
-use crate::debug_utils::typename;
+use crate::utility::typename;
 use crate::gamemaker::backgrounds::GMBackground;
 use crate::gamemaker::chunk_reading::GMRef;
 use crate::gamemaker::embedded_textures::GMEmbeddedTexture;
