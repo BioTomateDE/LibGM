@@ -1,7 +1,7 @@
 ﻿use std::fmt::Debug;
 use crate::utility::typename;
 use crate::gamemaker::backgrounds::GMBackground;
-use crate::gamemaker::chunk_reading::GMRef;
+use crate::gm_deserialize::GMRef;
 use crate::gamemaker::embedded_textures::GMEmbeddedTexture;
 use crate::gamemaker::fonts::{GMFont, GMFontGlyph};
 use crate::gamemaker::game_objects::{GMGameObject, GMGameObjectEvent, GMGameObjectEventAction};

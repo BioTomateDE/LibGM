@@ -1,5 +1,5 @@
 ﻿use num_enum::{IntoPrimitive, TryFromPrimitive};
-use crate::gamemaker::chunk_reading::{DataReader, GMChunkElement, GMElement, GMRef};
+use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use crate::gamemaker::sprites::GMSprite;
 
 

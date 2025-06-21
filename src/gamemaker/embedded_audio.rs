@@ -1,4 +1,4 @@
-use crate::gamemaker::chunk_reading::{GMChunk, GMChunkElement, GMElement, DataReader};
+use crate::gm_deserialize::{GMChunk, GMChunkElement, GMElement, DataReader};
 
 #[derive(Debug, Clone)]
 pub struct GMEmbeddedAudios {

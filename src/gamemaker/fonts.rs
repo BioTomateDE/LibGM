@@ -1,4 +1,4 @@
-use crate::gamemaker::chunk_reading::{GMChunkElement, GMElement, DataReader, GMRef};
+use crate::gm_deserialize::{GMChunkElement, GMElement, DataReader, GMRef};
 use crate::gamemaker::general_info::GMVersionLTS::Post2022_0;
 use crate::gamemaker::texture_page_items::GMTexturePageItem;
 use crate::serialize_old::chunk_writing::{DataBuilder, SerializeIfGMVersion};

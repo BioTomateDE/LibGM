@@ -1,4 +1,4 @@
-use crate::gamemaker::chunk_reading::{vec_with_capacity, DataReader, GMChunkElement, GMElement, GMRef};
+use crate::gm_deserialize::{vec_with_capacity, DataReader, GMChunkElement, GMElement, GMRef};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::sequence::{GMAnimSpeedType, GMSequence};

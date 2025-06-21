@@ -1,4 +1,4 @@
-﻿use crate::gamemaker::chunk_reading::{DataReader, GMChunkElement, GMElement, GMRef};
+﻿use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use crate::gamemaker::variables::GMVariable;
 use std::cmp::PartialEq;
 use std::fmt::{Display, Formatter};
