@@ -1,5 +1,6 @@
 ﻿use std::collections::HashMap;
 use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMPointer, GMRef};
+use crate::gm_serialize::DataBuilder;
 
 #[derive(Debug, Clone)]
 pub struct GMStrings {
@@ -30,7 +31,26 @@ impl GMElement for GMStrings {
 
         reader.string_occurrence_map = abs_pos_to_reference;
         
-        Ok(GMStrings { strings: strings_by_index })
+        Ok(GMStrings { strings: strings_by_index, exists: true })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists {
+            return Err("Required chunk STRG does not exist".to_string())
+        }
+        builder.write_usize(self.strings.len())?;
+        let pointer_list_start: usize = builder.len();
+        for _ in 0..self.strings.len() {
+            builder.write_u32(0xDEADC0DE);
+        }
+        for (i, string) in self.strings.iter().enumerate() {
+            builder.overwrite_usize(builder.len(), pointer_list_start + 4*i)?;
+            builder.write_usize(string.len())?;
+            builder.resolve_pointer(string)?;   // gamemaker string references point to the actual string data
+            builder.write_literal_string(string);
+            builder.write_u8(0);    // trailing null byte
+        }
+        Ok(())
     }
 }
 
