@@ -1,10 +1,11 @@
-use crate::gm_deserialize::{vec_with_capacity, DataReader, GMChunkElement, GMElement, GMRef};
+use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::sequence::{GMAnimSpeedType, GMSequence};
 use crate::gamemaker::sprites_yyswf::{GMSpriteTypeSWF, GMSpriteYYSWFTimeline};
 use crate::gamemaker::texture_page_items::GMTexturePageItem;
-
+use crate::gm_serialize::DataBuilder;
+use crate::utility::vec_with_capacity;
 
 #[derive(Debug, Clone)]
 pub struct GMSprites {
@@ -20,6 +21,12 @@ impl GMElement for GMSprites {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String>{
         let sprites: Vec<GMSprite> = reader.read_pointer_list()?;
         Ok(Self { sprites, exists: true })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+        builder.write_pointer_list(&self.sprites)?;
+        Ok(())
     }
 }
 
@@ -91,7 +98,7 @@ impl GMElement for GMSprite {
 
             let sprite_type: GMSpriteType = match &special_sprite_type {
                 0 => {      // Normal
-                    textures = reader.read_simple_list()?;
+                    textures = Self::read_texture_list(reader)?;
                     // read mask data
                     let mut mask_width = width as usize;
                     let mut mask_height = height as usize;
@@ -99,8 +106,8 @@ impl GMElement for GMSprite {
                         mask_width = (margin_right - margin_left + 1) as usize;
                         mask_height = (margin_bottom - margin_top + 1) as usize;
                     }
-                    let collision_masks: Vec<GMSpriteMaskEntry> = read_mask_data(reader, mask_width, mask_height)?;
-                    GMSpriteType::Normal(GMSpriteTypeNormal { collision_masks })
+                    collision_masks = read_mask_data(reader, mask_width, mask_height)?;
+                    GMSpriteType::Normal(GMSpriteTypeNormal{})
                 },
 
                 1 => {      // SWF
@@ -111,7 +118,7 @@ impl GMElement for GMSprite {
                         return Err(format!("Invalid SWF version {swf_version} for Sprite \"{name_str}\""))
                     }
                     if swf_version == 8 {
-                        textures = reader.read_simple_list()?;
+                        textures = Self::read_texture_list(reader)?;
                     }
 
                     // read YYSWF
@@ -122,12 +129,7 @@ impl GMElement for GMSprite {
                     let jpeg_table: Vec<u8> = reader.read_bytes_dyn(jpeg_len).map_err(|e| format!("Trying to read YYSWF JPEG Table {e}"))?.to_vec();
                     reader.align(4)?;
                     let timeline = GMSpriteYYSWFTimeline::deserialize(reader)?;
-                    GMSpriteType::SWF(GMSpriteTypeSWF {
-                        swf_version,
-                        yyswf_version,
-                        jpeg_table,
-                        timeline,
-                    })
+                    GMSpriteType::SWF(GMSpriteTypeSWF { swf_version, yyswf_version, jpeg_table, timeline })
                 },
 
                 2 => {      // Spine
@@ -150,19 +152,11 @@ impl GMElement for GMSprite {
                 nine_slice = Some(GMSpriteNineSlice::deserialize(reader)?);
             }
 
-            special_fields = Some(GMSpriteSpecial {
-                special_version,
-                sprite_type,
-                playback_speed,
-                playback_speed_type,
-                sequence,
-                nine_slice,
-                yyswf,
-            });
+            special_fields = Some(GMSpriteSpecial { special_version, sprite_type, playback_speed, playback_speed_type, sequence, nine_slice, yyswf });
         } else {
             reader.cur_pos -= 4;  // unread the not -1
             // read into `textures`
-            textures = reader.read_simple_list()?;
+            textures = Self::read_texture_list(reader)?;
             // read mask data
             let mut mask_width = width as usize;
             let mut mask_height = height as usize;
@@ -193,7 +187,143 @@ impl GMElement for GMSprite {
             special_fields,
         })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.name)?;
+        builder.write_u32(self.width);
+        builder.write_u32(self.height);
+        builder.write_i32(self.margin_left);
+        builder.write_i32(self.margin_right);
+        builder.write_i32(self.margin_top);
+        builder.write_i32(self.margin_bottom);
+        builder.write_bool32(self.transparent);
+        builder.write_bool32(self.smooth);
+        builder.write_bool32(self.preload);
+        builder.write_i32(self.bbox_mode);
+        builder.write_u32(self.sep_masks.into());
+        builder.write_i32(self.origin_x);
+        builder.write_i32(self.origin_y);
+        if self.special_fields.is_none() {
+            Self::build_texture_list(builder, &self.textures)?;
+            self.build_mask_data(builder, &self.collision_masks)?;
+            return Ok(())
+        }
+
+        let special_fields: &GMSpriteSpecial = self.special_fields.as_ref().unwrap();
+        builder.write_i32(-1);
+        builder.write_u32(special_fields.special_version);
+        builder.write_u32(match special_fields.sprite_type {
+            GMSpriteType::Normal(_) => 0,
+            GMSpriteType::SWF(_) => 1,
+            GMSpriteType::Spine(_) => 2,
+        });
+
+        if builder.is_gm_version_at_least((2, 0)) {
+            builder.write_f32(special_fields.playback_speed);
+            builder.write_u32(special_fields.playback_speed_type.into());
+            if special_fields.special_version >= 2 {
+                builder.write_pointer(&special_fields.sequence)?;
+            }
+            if special_fields.special_version >= 3 {
+                builder.write_pointer(&special_fields.sequence)?;
+            }
+        }
+
+        match &special_fields.sprite_type {
+            GMSpriteType::Normal(_) => {
+                Self::build_texture_list(builder, &self.textures)?;
+                self.build_mask_data(builder, &self.collision_masks)?;
+            }
+            GMSpriteType::SWF(swf) => {
+                builder.write_i32(swf.swf_version);
+                if swf.swf_version == 8 {
+                    Self::build_texture_list(builder, &self.textures)?;
+                }
+                builder.align(4);
+                builder.write_usize(swf.jpeg_table.len())?;   // can be unset?
+                builder.write_i32(swf.yyswf_version);
+                builder.write_bytes(&swf.jpeg_table);
+                builder.align(4);
+                swf.timeline.serialize(builder)?;
+            }
+            GMSpriteType::Spine(spine) => {
+                return Err(format!(  // TODO implement spine and vector
+                    "Spine Sprites not yet implemented while trying to build Sprite \"{}\", please report this error",
+                    builder.display_gm_str(&self.name),
+                ))
+            }
+        }
+
+
+        if builder.is_gm_version_at_least((2, 0)) {
+            if special_fields.special_version >= 2 && matches!(special_fields.sprite_type, GMSpriteType::Normal(_)) {
+                let sequence: &GMSequence = special_fields.sequence.as_ref().ok_or_else(|| format!(
+                    "Sequence not set for Normal Sprite \"{}\" with special version 2 in GMS2 data file",
+                    builder.display_gm_str(&self.name),
+                ))?;
+                builder.resolve_pointer(&special_fields.sequence)?;
+                builder.write_u32(1);
+                sequence.serialize(builder)?;
+            }
+            if special_fields.special_version >= 3 {
+                let nine_slice: &GMSpriteNineSlice = special_fields.nine_slice.as_ref().ok_or_else(|| format!(
+                    "Nine slice not set for Sprite \"{}\" with special version 3 in GMS2 data file",
+                    builder.display_gm_str(&self.name),
+                ))?;
+                builder.resolve_pointer(&special_fields.nine_slice)?;
+                nine_slice.serialize(builder)?;
+            }
+        }
+        Ok(())
+    }
 }
+impl GMSprite {
+    fn read_texture_list(reader: &mut DataReader) -> Result<Vec<GMRef<GMTexturePageItem>>, String> {
+        let count: usize = reader.read_usize()?;
+        let mut textures: Vec<GMRef<GMTexturePageItem>> = Vec::with_capacity(count);
+        for _ in 0..count {
+            textures.push(reader.read_gm_texture()?);
+        }
+        Ok(textures)
+    }
+
+    fn build_texture_list(builder: &mut DataBuilder, texture_list: &Vec<GMRef<GMTexturePageItem>>) -> Result<(), String> {
+        builder.write_usize(texture_list.len())?;
+        for texture_page_item_ref in texture_list {
+            builder.write_pointer(texture_page_item_ref)?;
+        }
+        Ok(())
+    }
+
+    fn build_mask_data(&self, builder: &mut DataBuilder, masks: &Vec<GMSpriteMaskEntry>) -> Result<(), String> {
+        builder.write_usize(masks.len())?;
+        let mut total: usize = 0;
+
+        for mask in masks {
+            builder.write_bytes(&mask.data);
+            total += mask.data.len();
+        }
+
+        while total % 4 != 0 {
+            builder.write_u8(0);
+            total += 1;
+        }
+
+        let (width, height) = if builder.is_gm_version_at_least((2024, 6)) {
+            (self.margin_right as u32 - self.margin_left as u32 + 1, self.margin_bottom as u32 - self.margin_top as u32 + 1)
+        } else {
+            (self.width, self.height)
+        };
+        let rounded_width = (width + 7) / 8 * 8;   // round to multiple of 8
+        let data_bits = rounded_width * height * masks.len() as u32;
+        let data_bytes = (data_bits + 31) / 32 * 32 / 8;    // round to multiple of 4 bytes
+        if total != data_bytes as usize {
+            return Err(format!("Invalid mask data for Sprite: expected {data_bytes} bytes; got {total} bytes"))
+        }
+        Ok(())
+    }
+}
+
 
 
 #[derive(Debug, Clone, PartialEq)]
@@ -204,9 +334,7 @@ pub enum GMSpriteType {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMSpriteTypeNormal {
-    pub collision_masks: Vec<GMSpriteMaskEntry>,
-}
+pub struct GMSpriteTypeNormal {}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteTypeSpine {
@@ -238,7 +366,7 @@ pub struct GMSpriteNineSlice {
     pub right: i32,
     pub bottom: i32,
     pub enabled: bool,
-    pub tile_modes: Vec<GMSpriteNineSliceTileMode>,
+    pub tile_modes: [GMSpriteNineSliceTileMode; 5],
 }
 impl GMElement for GMSpriteNineSlice {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
@@ -264,13 +392,25 @@ impl GMElement for GMSpriteNineSlice {
             right,
             bottom,
             enabled,
-            tile_modes,
+            tile_modes: tile_modes.try_into().unwrap(),
         })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_i32(self.left);
+        builder.write_i32(self.top);
+        builder.write_i32(self.right);
+        builder.write_i32(self.bottom);
+        builder.write_bool32(self.enabled);
+        for tile_mode in &self.tile_modes {
+            builder.write_i32((*tile_mode).into());
+        }
+        Ok(())
     }
 }
 
 
-#[derive(Debug, Clone, PartialEq, TryFromPrimitive, IntoPrimitive, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive, Serialize, Deserialize)]
 #[repr(i32)]
 pub enum GMSpriteNineSliceTileMode {
     Stretch = 0,

@@ -246,7 +246,7 @@ impl<'a> DataBuilder<'a> {
         Ok(())
     }
     
-    pub fn resolve_placeholder<T: GMElement>(&mut self, element: &T, resolved_value: u32) -> Result<(), String> {
+    pub fn resolve_placeholder<T>(&mut self, element: &T, resolved_value: u32) -> Result<(), String> {
         let memory_address: usize = element as *const _ as usize;
         if let Some(old_resource_pos) = self.pointer_resource_positions.insert(memory_address, resolved_value) {
             return Err(format!(
