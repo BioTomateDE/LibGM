@@ -53,7 +53,31 @@ impl GMElement for GMFunctions {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.po
+        if !self.exists { return Ok(()) }
+        let count: usize = self.functions.len();
+        let pointer_list_start_pos: usize = builder.len();
+        for _ in 0..count {
+            builder.write_u32(0xDEADC0DE);
+        }
+
+        for (i, function) in self.functions.iter().enumerate() {
+            let resolved_pointer_pos: usize = builder.len();
+            builder.overwrite_usize(resolved_pointer_pos, pointer_list_start_pos + 4*i)?;
+
+            let occurrences: &Vec<usize> = builder.function_occurrences.get(i)
+                .ok_or_else(|| format!("Could not resolve function occurrence with index {i} in list with length {}", builder.function_occurrences.len()))?;
+            let occurrence_count: usize = occurrences.len();
+            let first_occurrence: i32 = match occurrences.first() {
+                Some(occurrence) if builder.is_gm_version_at_least((2, 3)) => *occurrence as i32,
+                Some(occurrence) => *occurrence as i32 - 4,  // before gm 2.3, the first occurrence points to the instruction rather than the next offset
+                None => function.name_string_id,    // UTMT writes -1 if zero occurrences??? but they handle the occurrence chain differently so maybe it's ok
+            };
+
+            builder.write_gm_string(&function.name)?;
+            builder.write_usize(occurrence_count)?;
+            builder.write_i32(first_occurrence);
+        }
+        Ok(())
     }
 }
 
@@ -82,6 +106,12 @@ impl GMElement for GMCodeLocals {
         let code_locals: Vec<GMCodeLocal> = reader.read_simple_list()?;
         Ok(Self { code_locals, exists: true })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+        builder.write_simple_list(&self.code_locals)?;
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -99,6 +129,15 @@ impl GMElement for GMCodeLocal {
         }
         Ok(GMCodeLocal { name, variables })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_usize(self.variables.len())?;
+        builder.write_gm_string(&self.name)?;
+        for local_var in &self.variables {
+            local_var.serialize(builder)?;
+        }
+        Ok(())
+    }
 }
 
 
@@ -113,6 +152,12 @@ impl GMElement for GMCodeLocalVariable {
         let index: u32 = reader.read_u32()?;
         let name: GMRef<String> = reader.read_gm_string()?;
         Ok(GMCodeLocalVariable { index, name })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_u32(self.index);
+        builder.write_gm_string(&self.name)?;
+        Ok(())
     }
 }
 
