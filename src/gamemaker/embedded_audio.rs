@@ -18,6 +18,7 @@ impl GMElement for GMEmbeddedAudios {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
         builder.write_pointer_list(&self.audios)
     }
 }
