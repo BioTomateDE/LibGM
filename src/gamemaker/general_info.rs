@@ -29,6 +29,7 @@ pub struct GMGeneralInfo {
     pub steam_appid: i32,
     pub debugger_port: Option<u32>,
     pub room_order: Vec<GMRef<GMRoom>>,
+    pub exists: bool,
 }
 impl GMChunkElement for GMGeneralInfo {
     /// Should only be used as a small stub in GMReader because Rust doesn't have nullables (options are too ugly for this).
@@ -150,6 +151,7 @@ impl GMChunkElement for GMGeneralInfo {
             steam_appid: 69420,
             debugger_port: None,
             room_order: vec![],
+            exists: false,
         }
     }
 }
@@ -165,7 +167,11 @@ impl GMGeneralInfo {
 
 impl GMElement for GMGeneralInfo {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let is_debugger_disabled: bool = reader.read_u8()? != 0;
+        let is_debugger_disabled: bool = match reader.read_u8()? {
+            0 => false,
+            1 => true,
+            other => return Err(format!("Invalid u8 bool {other} while reading general info \"is debugger disabled\"")),
+        };
         let bytecode_version: u8 = reader.read_u8()?;
         let unknown_value: u16 = reader.read_u16()?;
         let game_file_name: GMRef<String> = reader.read_gm_string()?;
@@ -227,6 +233,7 @@ impl GMElement for GMGeneralInfo {
             steam_appid,
             debugger_port,
             room_order,
+            exists: true,
         })
     }
 }

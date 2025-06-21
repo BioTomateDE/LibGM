@@ -49,6 +49,9 @@ pub struct GMData {
     pub audio_groups: GMAudioGroups,                    // AGRP
     pub global_init_scripts: GMGlobalInitScripts,       // GLOB
     pub game_end_scripts: GMGameEndScripts,             // GMEN
+    
+    /// Should not be edited; only set by `GMData::read_chunk_padding`.
+    pub padding: usize,
 }
 
 pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
@@ -64,12 +67,24 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
         let name: String = reader.read_chunk_name()?;
         let chunk_length: usize = reader.read_usize()?;
         let start_pos: usize = reader.cur_pos;
+        
         reader.cur_pos += chunk_length;
+        if reader.cur_pos > raw_data.len() {
+            return Err(format!(
+                "Trying to read chunk '{}' out of data bounds: specified length {} implies chunk \
+                end position {}; which is greater than the total data length {}",
+                name, chunk_length, reader.cur_pos, raw_data.len(),
+            ))
+        }
+        
+        let is_last_chunk: bool = reader.cur_pos == raw_data.len();
         let chunk = GMChunk {
             name: name.clone(),
             start_pos,
             end_pos: reader.cur_pos,
+            is_last_chunk,
         };
+        
         if let Some(old_chunk) = reader.chunks.insert(name.clone(), chunk.clone()) {
             return Err(format!(
                 "Chunk '{}' is defined multiple times: old data range {}..{}; new data range {}..{}",
@@ -104,7 +119,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let audios: GMEmbeddedAudios = reader.read_chunk_required("AUDO")?;
     let sounds: GMSounds = reader.read_chunk_required("SOND")?;
     let options: GMOptions = reader.read_chunk_required("OPTN")?;
-    // some of these probably aren't actually required; make optional when issue occur
+    // some of these chunks probably aren't actually required; make them optional when issues occur
 
     let particle_systems: GMParticleSystems = reader.read_chunk_optional("PSYS")?;
     let particle_emitters: GMParticleEmitters = reader.read_chunk_optional("PSEM")?;
@@ -143,6 +158,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
         audio_groups,
         global_init_scripts,
         game_end_scripts,
+        padding: reader.padding,
     };
 
     log::trace!("Parsing data took {stopwatch}");
