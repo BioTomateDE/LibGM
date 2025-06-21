@@ -337,11 +337,11 @@ impl<'a> DataBuilder<'a> {
 
 
 pub trait GMSerializeIfVersion {
-    fn serialize_if_gm_version<V: Into<GMVersionReq>>(&self, builder: &mut DataBuilder, field_name: &'static str, ver_req: V) -> Result<(), String>;
-    fn serialize_if_bytecode_version(&self, builder: &mut DataBuilder, field_name: &'static str, ver_req: u8) -> Result<(), String>;
+    fn serialize_if_gm_ver<V: Into<GMVersionReq>>(&self, builder: &mut DataBuilder, field_name: &'static str, ver_req: V) -> Result<(), String>;
+    fn serialize_if_bytecode_ver(&self, builder: &mut DataBuilder, field_name: &'static str, ver_req: u8) -> Result<(), String>;
 }
 impl<T: GMElement> GMSerializeIfVersion for Option<T> {
-    fn serialize_if_gm_version<V: Into<GMVersionReq>>(&self, builder: &mut DataBuilder, field_name: &'static str, ver_req: V) -> Result<(), String> {
+    fn serialize_if_gm_ver<V: Into<GMVersionReq>>(&self, builder: &mut DataBuilder, field_name: &'static str, ver_req: V) -> Result<(), String> {
         let ver_req: GMVersionReq = ver_req.into();
         if !builder.is_gm_version_at_least(ver_req.clone()) {
             return Ok(())   // don't serialize if version requirement not met
@@ -353,7 +353,7 @@ impl<T: GMElement> GMSerializeIfVersion for Option<T> {
         element.serialize(builder)
     }
 
-    fn serialize_if_bytecode_version(&self, builder: &mut DataBuilder, field_name: &'static str, ver_req: u8) -> Result<(), String> {
+    fn serialize_if_bytecode_ver(&self, builder: &mut DataBuilder, field_name: &'static str, ver_req: u8) -> Result<(), String> {
         if builder.bytecode_version() < ver_req {
             return Ok(())   // don't serialize if version requirement not met
         }
