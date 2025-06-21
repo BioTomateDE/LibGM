@@ -1,7 +1,7 @@
-use crate::gm_deserialize::{vec_with_capacity, GMChunkElement, GMElement, DataReader, GMRef};
+use crate::gm_deserialize::{GMChunkElement, GMElement, DataReader, GMRef};
 use crate::gamemaker::texture_page_items::GMTexturePageItem;
-use crate::serialize_old::chunk_writing::DataBuilder;
-
+use crate::gm_serialize::DataBuilder;
+use crate::utility::vec_with_capacity;
 
 #[derive(Debug, Clone)]
 pub struct GMBackgrounds {

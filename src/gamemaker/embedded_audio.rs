@@ -1,4 +1,5 @@
-use crate::gm_deserialize::{GMChunk, GMChunkElement, GMElement, DataReader};
+use crate::gm_deserialize::{GMChunkElement, GMElement, DataReader};
+use crate::gm_serialize::DataBuilder;
 
 #[derive(Debug, Clone)]
 pub struct GMEmbeddedAudios {
@@ -17,7 +18,7 @@ impl GMElement for GMEmbeddedAudios {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder
+        builder.write_pointer_list(&self.audios)
     }
 }
 
@@ -30,6 +31,12 @@ impl GMElement for GMEmbeddedAudio {
         let audio_data_length: usize = reader.read_usize()?;
         let audio_data: Vec<u8> = reader.read_bytes_dyn(audio_data_length)?.to_vec();
         Ok(Self { audio_data })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_usize(self.audio_data.len())?;
+        builder.write_bytes(&self.audio_data);
+        Ok(())
     }
 }
 
