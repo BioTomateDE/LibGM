@@ -1,13 +1,15 @@
-use crate::gm_deserialize::{vec_with_capacity, DataReader, GMChunkElement, GMElement, GMRef};
+use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::backgrounds::GMBackground;
 use crate::gamemaker::code::GMCode;
 use crate::gamemaker::fonts::GMFont;
 use crate::gamemaker::game_objects::{GMGameObject};
+use crate::gamemaker::general_info::GMVersionLTS::Post2022_0;
 use crate::gamemaker::particles::GMParticleSystem;
 use crate::gamemaker::sequence::{GMAnimSpeedType, GMSequence};
 use crate::gamemaker::sprites::GMSprite;
-
+use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
+use crate::utility::vec_with_capacity;
 
 #[derive(Debug, Clone)]
 pub struct GMRooms {
@@ -23,6 +25,12 @@ impl GMElement for GMRooms {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let rooms: Vec<GMRoom> = reader.read_pointer_list()?;
         Ok(Self { rooms, exists: true })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+        builder.write_pointer_list(&self.rooms)?;
+        Ok(())
     }
 }
 
@@ -43,6 +51,7 @@ pub struct GMRoom {
     pub views: Vec<GMRoomView>,
     pub game_objects: Vec<GMRoomGameObject>,
     pub tiles: Vec<GMRoomTile>,
+    pub instance_creation_order_ids: Vec<i32>,
     pub world: bool,
     pub top: u32,
     pub left: u32,
@@ -66,10 +75,32 @@ impl GMElement for GMRoom {
         let draw_background_color: bool = reader.read_bool32()?;
         let creation_code: Option<GMRef<GMCode>> = reader.read_resource_by_id_option()?;
         let flags = GMRoomFlags::deserialize(reader)?;
+
+        let backgrounds_ptr: usize = reader.read_pointer()?;
+        let views_ptr: usize = reader.read_pointer()?;
+        let game_objects_ptr: usize = reader.read_pointer()?;
+        let tiles_ptr: usize = reader.read_pointer()?;
+        let saved_pos: usize = reader.cur_pos;
+        reader.cur_pos = backgrounds_ptr;
         let backgrounds: Vec<GMRoomBackground> = reader.read_pointer_list()?;
+        reader.cur_pos = views_ptr;
         let views: Vec<GMRoomView> = reader.read_pointer_list()?;
+        reader.cur_pos = game_objects_ptr;
         let game_objects: Vec<GMRoomGameObject> = reader.read_pointer_list()?;
+        reader.cur_pos = tiles_ptr;
         let tiles: Vec<GMRoomTile> = reader.read_pointer_list()?;
+        reader.cur_pos = saved_pos;
+
+        let instance_creation_order_ids: Vec<i32> = if reader.general_info.is_version_at_least((2024, 13)) {
+            let list_ptr: usize = reader.read_pointer()?;
+            let saved_pos: usize = reader.cur_pos;
+            reader.cur_pos = list_ptr;
+            let list: Vec<i32> = reader.read_simple_list()?;
+            reader.cur_pos = saved_pos;
+            list
+        } else {
+            Vec::new()
+        };
         let world: bool = reader.read_bool32()?;
         let top: u32 = reader.read_u32()?;
         let left: u32 = reader.read_u32()?;
@@ -81,10 +112,18 @@ impl GMElement for GMRoom {
         let mut layers: Vec<GMRoomLayer> = Vec::new();
         let mut sequences: Vec<GMSequence> = Vec::new();
         if reader.general_info.is_version_at_least((2, 0, 0, 0)) {
+            let saved_pos: usize = reader.cur_pos;
+            let layers_ptr: usize = reader.read_pointer()?;
+            reader.cur_pos = layers_ptr;
             layers = reader.read_pointer_list()?;
+            reader.cur_pos = saved_pos;
         }
         if reader.general_info.is_version_at_least((2, 3, 0, 0)) {
+            let saved_pos: usize = reader.cur_pos;
+            let sequences_ptr: usize = reader.read_pointer()?;
+            reader.cur_pos = sequences_ptr;
             sequences = reader.read_pointer_list()?;
+            reader.cur_pos = saved_pos;
         }
 
         Ok(GMRoom {
@@ -102,6 +141,7 @@ impl GMElement for GMRoom {
             views,
             game_objects,
             tiles,
+            instance_creation_order_ids,
             world,
             top,
             left,
@@ -113,6 +153,61 @@ impl GMElement for GMRoom {
             layers,
             sequences,
         })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string_opt(&self.caption)?;
+        builder.write_u32(self.width);
+        builder.write_u32(self.height);
+        builder.write_u32(self.speed);
+        builder.write_bool32(self.persistent);
+        builder.write_u32(self.background_color ^ 0xFF000000);    // remove alpha (background color doesn't have alpha)
+        builder.write_bool32(self.draw_background_color);
+        builder.write_resource_id_opt(&self.creation_code);
+        self.flags.serialize(builder)?;
+        builder.write_pointer(&self.backgrounds)?;
+        builder.write_pointer(&self.views)?;
+        builder.write_pointer(&self.game_objects)?;
+        builder.write_pointer(&self.tiles)?;
+        if builder.is_gm_version_at_least((2024, 13)) {
+            builder.write_pointer(&self.instance_creation_order_ids)?;
+        }
+        builder.write_bool32(self.world);
+        builder.write_u32(self.top);
+        builder.write_u32(self.left);
+        builder.write_u32(self.right);
+        builder.write_u32(self.bottom);
+        builder.write_f32(self.gravity_x);
+        builder.write_f32(self.gravity_y);
+        builder.write_f32(self.meters_per_pixel);
+        if builder.is_gm_version_at_least((2, 0)) {
+            builder.write_pointer(&self.layers)?;
+            if builder.sequences_exist {
+                builder.write_pointer(&self.sequences)?;
+            }
+        }
+        builder.resolve_pointer(&self.backgrounds)?;
+        builder.write_pointer_list(&self.backgrounds)?;
+        builder.resolve_pointer(&self.views)?;
+        builder.write_pointer_list(&self.views)?;
+        builder.resolve_pointer(&self.game_objects)?;
+        builder.write_pointer_list(&self.game_objects)?;
+        builder.resolve_pointer(&self.tiles)?;
+        builder.write_pointer_list(&self.tiles)?;
+        if builder.is_gm_version_at_least((2024, 13)) {
+            builder.resolve_pointer(&self.instance_creation_order_ids)?;
+            builder.write_pointer_list(&self.instance_creation_order_ids)?;
+        }
+        if builder.is_gm_version_at_least((2, 0)) {
+            builder.resolve_pointer(&self.layers)?;
+            builder.write_pointer_list(&self.layers)?;
+            if builder.sequences_exist {
+                builder.resolve_pointer(&self.sequences)?;
+                builder.write_pointer_list(&self.sequences)?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -127,7 +222,7 @@ pub struct GMRoomFlags {
 }
 impl GMElement for GMRoomFlags {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let raw = reader.read_u32()?;
+        let raw: u32 = reader.read_u32()?;
         Ok(GMRoomFlags {
             enable_views: 0 != raw & 1,
             show_color: 0 != raw & 2,
@@ -135,6 +230,19 @@ impl GMElement for GMRoomFlags {
             is_gms2: 0 != raw & 131072,
             is_gms2_3: 0 != raw & 65536,
         })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        let mut raw: u32 = 0;
+
+        if self.enable_views { raw |= 1 };
+        if self.show_color { raw |= 2 };
+        if self.dont_clear_display_buffer { raw |= 4 };
+        if self.is_gms2 { raw |= 131072 };
+        if self.is_gms2_3 { raw |= 1365536 };
+
+        builder.write_u32(raw);
+        Ok(())
     }
 }
 
@@ -190,6 +298,24 @@ impl GMElement for GMRoomView {
             object,
         })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_bool32(self.enabled);
+        builder.write_i32(self.view_x);
+        builder.write_i32(self.view_y);
+        builder.write_i32(self.view_width);
+        builder.write_i32(self.view_height);
+        builder.write_i32(self.port_x);
+        builder.write_i32(self.port_y);
+        builder.write_i32(self.port_width);
+        builder.write_i32(self.port_height);
+        builder.write_u32(self.border_x);
+        builder.write_u32(self.border_y);
+        builder.write_i32(self.speed_x);
+        builder.write_i32(self.speed_y);
+        builder.write_resource_id_opt(&self.object);
+        Ok(())
+    }
 }
 
 
@@ -219,18 +345,21 @@ impl GMElement for GMRoomBackground {
         let speed_y: i32 = reader.read_i32()?;
         let stretch: bool = reader.read_bool32()?;
 
-        Ok(GMRoomBackground {
-            enabled,
-            foreground,
-            background_definition,
-            x,
-            y,
-            tile_x,
-            tile_y,
-            speed_x,
-            speed_y,
-            stretch,
-        })
+        Ok(GMRoomBackground { enabled, foreground, background_definition, x, y, tile_x, tile_y, speed_x, speed_y, stretch })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_bool32(self.enabled);
+        builder.write_bool32(self.foreground);
+        builder.write_resource_id_opt(&self.background_definition);
+        builder.write_i32(self.x);
+        builder.write_i32(self.y);
+        builder.write_i32(self.tile_x);
+        builder.write_i32(self.tile_y);
+        builder.write_i32(self.speed_x);
+        builder.write_i32(self.speed_y);
+        builder.write_bool32(self.stretch);
+        Ok(())
     }
 }
 
@@ -255,7 +384,7 @@ impl GMElement for GMRoomTile {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let x: i32 = reader.read_i32()?;
         let y: i32 = reader.read_i32()?;
-        let texture: GMRoomTileTexture = if reader.general_info.is_version_at_least((2, 0, 0, 0)) {
+        let texture: GMRoomTileTexture = if reader.general_info.is_version_at_least((2, 0)) {
             GMRoomTileTexture::Sprite(reader.read_resource_by_id_option()?)
         } else {
             GMRoomTileTexture::Background(reader.read_resource_by_id_option()?)
@@ -270,20 +399,35 @@ impl GMElement for GMRoomTile {
         let scale_y: f32 = reader.read_f32()?;
         let color: u32 = reader.read_u32()?;
 
-        Ok(GMRoomTile {
-            x,
-            y,
-            texture,
-            source_x,
-            source_y,
-            width,
-            height,
-            tile_depth,
-            instance_id,
-            scale_x,
-            scale_y,
-            color,
-        })
+        Ok(GMRoomTile { x, y, texture, source_x, source_y, width, height, tile_depth, instance_id, scale_x, scale_y, color })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_i32(self.x);
+        builder.write_i32(self.y);
+        // TODO this is going to cause mod compatibility issues
+        match self.texture {
+            GMRoomTileTexture::Sprite(gm_ref) => if builder.is_gm_version_at_least((2, 0)) {
+                builder.write_resource_id_opt(&gm_ref)
+            } else {
+                return Err("Room tile texture should be a Background reference in GMS2; not a Sprite reference".to_string())
+            }
+            GMRoomTileTexture::Background(gm_ref) => if builder.is_gm_version_at_least((2, 0)) {
+                builder.write_resource_id_opt(&gm_ref)
+            } else {
+                return Err("Room tile texture should be a Sprite reference before GMS2; not a Background reference".to_string())
+            }
+        }
+        builder.write_u32(self.source_x);
+        builder.write_u32(self.source_y);
+        builder.write_u32(self.width);
+        builder.write_u32(self.height);
+        builder.write_i32(self.tile_depth);
+        builder.write_u32(self.instance_id);
+        builder.write_f32(self.scale_x);
+        builder.write_f32(self.scale_y);
+        builder.write_u32(self.color);
+        Ok(())
     }
 }
 
@@ -324,13 +468,7 @@ impl GMElement for GMRoomLayer {
         let horizontal_speed: f32 = reader.read_f32()?;
         let vertical_speed: f32 = reader.read_f32()?;
         let is_visible: bool = reader.read_bool32()?;
-
-        let data_2022_1: Option<GMRoomLayer2022_1> = if reader.general_info.is_version_at_least((2022, 1, 0, 0)) {
-            // TODO auto detect gm version; since gm2 the version in gen8 is stuck on 2.0
-            Some(GMRoomLayer2022_1::deserialize(reader)?)
-        } else {
-            None
-        };
+        let data_2022_1: Option<GMRoomLayer2022_1> = reader.deserialize_if_gm_version((2022, 1))?;
 
         let data: GMRoomLayerData = match layer_type {
             GMRoomLayerType::Path | GMRoomLayerType::Path2 => GMRoomLayerData::None,
@@ -338,7 +476,11 @@ impl GMElement for GMRoomLayer {
             GMRoomLayerType::Instances => GMRoomLayerData::Instances(GMRoomLayerDataInstances::deserialize(reader)?),
             GMRoomLayerType::Assets => GMRoomLayerData::Assets(GMRoomLayerDataAssets::deserialize(reader)?),
             GMRoomLayerType::Tiles => GMRoomLayerData::Tiles(GMRoomLayerDataTiles::deserialize(reader)?),
-            GMRoomLayerType::Effect => GMRoomLayerData::Effect(GMRoomLayerDataEffect::deserialize(reader)?),
+            GMRoomLayerType::Effect => if reader.general_info.is_version_at_least((2022, 1)) {
+                return Err("Room Effect Layers are not supported in GM >= 2022.1; please report this error. (note: UTMT doesn't parse effect data in 2022.1+)".to_string())
+            } else {
+                GMRoomLayerData::Effect(GMRoomLayerDataEffect::deserialize(reader)?)
+            },
         };
 
         Ok(GMRoomLayer {
@@ -355,6 +497,27 @@ impl GMElement for GMRoomLayer {
             data,
         })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.layer_name)?;
+        builder.write_u32(self.layer_id);
+        builder.write_u32(self.layer_type.into());
+        builder.write_f32(self.x_offset);
+        builder.write_f32(self.y_offset);
+        builder.write_f32(self.horizontal_speed);
+        builder.write_f32(self.vertical_speed);
+        builder.write_bool32(self.is_visible);
+        self.data_2022_1.serialize_if_gm_ver(builder, "Effect Data", (2022, 1))?;
+        match &self.data {
+            GMRoomLayerData::None => {}
+            GMRoomLayerData::Instances(data) => data.serialize(builder)?,
+            GMRoomLayerData::Tiles(data) => data.serialize(builder)?,
+            GMRoomLayerData::Background(data) => data.serialize(builder)?,
+            GMRoomLayerData::Assets(data) => data.serialize(builder)?,
+            GMRoomLayerData::Effect(data) => data.serialize(builder)?,
+        }
+        Ok(())
+    }
 }
 
 
@@ -370,6 +533,13 @@ impl GMElement for GMRoomLayer2022_1 {
         let effect_type: GMRef<String> = reader.read_gm_string()?;
         let effect_properties: Vec<GMRoomLayerEffectProperty> = reader.read_simple_list()?;
         Ok(GMRoomLayer2022_1 { effect_enabled, effect_type, effect_properties })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_bool32(self.effect_enabled);
+        builder.write_gm_string(&self.effect_type)?;
+        builder.write_simple_list(&self.effect_properties)?;
+        Ok(())
     }
 }
 
@@ -388,10 +558,17 @@ impl GMElement for GMRoomLayerEffectProperty {
         let value: GMRef<String> = reader.read_gm_string()?;
         Ok(GMRoomLayerEffectProperty { kind, name, value })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_i32(self.kind.into());
+        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.value)?;
+        Ok(())
+    }
 }
 
 
-#[derive(Debug, Clone, PartialEq, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
 pub enum GMRoomLayerEffectPropertyType {
     Real = 0,
@@ -448,6 +625,11 @@ impl GMElement for GMRoomLayerDataInstances {
 
         Ok(GMRoomLayerDataInstances { instances })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_simple_list(&self.instances)?;
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -463,8 +645,8 @@ impl GMElement for GMRoomLayerDataTiles {
         let background: GMRef<GMBackground> = reader.read_resource_by_id()?;
         let width: usize = reader.read_usize()?;
         let height: usize = reader.read_usize()?;
-        if reader.general_info.is_version_at_least((2024, 2, 0, 0)) {
-            return Err("Compressed tile data (GM >= 2024.2) is not supported yet. Report this error to GitHub".to_string())     // TODO
+        if reader.general_info.is_version_at_least((2024, 2)) {
+            return Err("Compressed tile data (GM >= 2024.2) is not supported yet; please report this error".to_string())     // TODO
         }
         let mut tile_data: Vec<u32> = vec_with_capacity(width * height)?;
         for _y in 0..height {
@@ -473,12 +655,17 @@ impl GMElement for GMRoomLayerDataTiles {
             }
         }
 
-        Ok(GMRoomLayerDataTiles {
-            background,
-            tile_data,
-            width,
-            height,
-        })
+        Ok(GMRoomLayerDataTiles { background, tile_data, width, height })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_resource_id(&self.background);
+        builder.write_usize(self.width)?;
+        builder.write_usize(self.height)?;
+        for id in &self.tile_data {
+            builder.write_u32(*id);
+        }
+        Ok(())
     }
 }
 
@@ -524,6 +711,20 @@ impl GMElement for GMRoomLayerDataBackground {
             animation_speed_type,
         })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_bool32(self.visible);
+        builder.write_bool32(self.foreground);
+        builder.write_resource_id_opt(&self.sprite);
+        builder.write_bool32(self.tiled_horizontally);
+        builder.write_bool32(self.tiled_vertically);
+        builder.write_bool32(self.stretch);
+        builder.write_u32(self.color);
+        builder.write_f32(self.first_frame);
+        builder.write_f32(self.animation_speed);
+        builder.write_u32(self.animation_speed_type.into());
+        Ok(())
+    }
 }
 
 
@@ -540,22 +741,22 @@ impl GMElement for GMRoomLayerDataAssets {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let legacy_tiles_pointer: usize = reader.read_usize()?;
         let sprites_pointer: usize = reader.read_usize()?;
-        let mut sequences_pointer: Option<usize> = None;
-        let mut nine_slices_pointer: Option<usize> = None;
-        let mut particle_systems_pointer: Option<usize> = None;
-        let mut text_items_pointer: Option<usize> = None;
+        let mut sequences_pointer: usize = 0;
+        let mut nine_slices_pointer: usize = 0;
+        let mut particle_systems_pointer: usize = 0;
+        let mut text_items_pointer: usize = 0;
 
-        if reader.general_info.is_version_at_least((2, 3, 0, 0)) {
-            sequences_pointer = Some(reader.read_usize()?);
-            if !reader.general_info.is_version_at_least((2, 3, 2, 0)) {
-                nine_slices_pointer = Some(reader.read_usize()?);
+        if reader.general_info.is_version_at_least((2, 3)) {
+            sequences_pointer = reader.read_usize()?;
+            if !reader.general_info.is_version_at_least((2, 3, 2)) {
+                nine_slices_pointer = reader.read_usize()?;
             }
         }
-        if reader.general_info.is_version_at_least((2023, 2, 0, 0)) {   // {~~} non LTS
-            particle_systems_pointer = Some(reader.read_usize()?);
+        if reader.general_info.is_version_at_least((2023, 2)) {   // {~~} non LTS
+            particle_systems_pointer = reader.read_usize()?;
         }
-        if reader.general_info.is_version_at_least((2024, 6, 0, 0)) {
-            text_items_pointer = Some(reader.read_usize()?);
+        if reader.general_info.is_version_at_least((2024, 6)) {
+            text_items_pointer = reader.read_usize()?;
         }
 
         reader.cur_pos = legacy_tiles_pointer;
@@ -569,34 +770,64 @@ impl GMElement for GMRoomLayerDataAssets {
         let mut particle_systems: Vec<GMParticleSystemInstance> = Vec::new();
         let mut text_items: Vec<GMTextItemInstance> = Vec::new();
 
-        if reader.general_info.is_version_at_least((2, 3, 0, 0)) {
-            reader.cur_pos = sequences_pointer.unwrap();
+        if reader.general_info.is_version_at_least((2, 3)) {
+            reader.cur_pos = sequences_pointer;
             sequences = reader.read_pointer_list()?;
 
-            if !reader.general_info.is_version_at_least((2, 3, 2, 0)) {
-                reader.cur_pos = nine_slices_pointer.unwrap();
+            if !reader.general_info.is_version_at_least((2, 3, 2)) {
+                reader.cur_pos = nine_slices_pointer;
                 nine_slices = reader.read_pointer_list()?;
             }
         }
 
-        if reader.general_info.is_version_at_least((2023, 2, 0, 0)) {   // {~~} non LTS
-            reader.cur_pos = particle_systems_pointer.unwrap();
+        if reader.general_info.is_version_at_least((2023, 2, Post2022_0)) {
+            reader.cur_pos = particle_systems_pointer;
             particle_systems = reader.read_pointer_list()?;
         }
 
-        if reader.general_info.is_version_at_least((2024, 6, 0, 0)) {
-            reader.cur_pos = text_items_pointer.unwrap();
+        if reader.general_info.is_version_at_least((2024, 6)) {
+            reader.cur_pos = text_items_pointer;
             text_items = reader.read_pointer_list()?;
         }
 
-        Ok(GMRoomLayerDataAssets {
-            legacy_tiles,
-            sprites,
-            sequences,
-            nine_slices,
-            particle_systems,
-            text_items,
-        })
+        Ok(GMRoomLayerDataAssets { legacy_tiles, sprites, sequences, nine_slices, particle_systems, text_items })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_pointer(&self.legacy_tiles)?;
+        builder.write_pointer(&self.sprites)?;
+        if builder.is_gm_version_at_least((2, 3)) {
+            builder.write_pointer(&self.sequences)?;
+            if !builder.is_gm_version_at_least((2, 3, 2)) {
+                builder.write_pointer(&self.nine_slices)?;
+            }
+            if !builder.is_gm_version_at_least((2023, 2)) {
+                builder.write_pointer(&self.particle_systems)?;
+            }
+            if !builder.is_gm_version_at_least((2024, 6)) {
+                builder.write_pointer(&self.text_items)?;
+            }
+        }
+        builder.resolve_pointer(&self.legacy_tiles)?;
+        builder.write_pointer_list(&self.legacy_tiles)?;
+        builder.write_pointer_list(&self.sprites)?;
+        if builder.is_gm_version_at_least((2, 3)) {
+            builder.resolve_pointer(&self.sequences)?;
+            builder.write_pointer_list(&self.sequences)?;
+            if !builder.is_gm_version_at_least((2, 3, 2)) {
+                builder.resolve_pointer(&self.nine_slices)?;
+                builder.write_pointer_list(&self.nine_slices)?;
+            }
+            if !builder.is_gm_version_at_least((2023, 2)) {
+                builder.resolve_pointer(&self.particle_systems)?;
+                builder.write_pointer_list(&self.particle_systems)?;
+            }
+            if !builder.is_gm_version_at_least((2024, 6)) {
+                builder.resolve_pointer(&self.text_items)?;
+                builder.write_pointer_list(&self.text_items)?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -608,10 +839,16 @@ pub struct GMRoomLayerDataEffect {
 }
 impl GMElement for GMRoomLayerDataEffect {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        // {~~} dont serialize_old if >= 2022.1
+        // {~~} dont serialize_old if >= 2022.1??
         let effect_type: GMRef<String> = reader.read_gm_string()?;
         let properties: Vec<GMRoomLayerEffectProperty> = reader.read_simple_list()?;
         Ok(GMRoomLayerDataEffect { effect_type, properties })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.effect_type)?;
+        builder.write_simple_list(&self.properties)?;
+        Ok(())
     }
 }
 
@@ -645,20 +882,22 @@ impl GMElement for GMSpriteInstance {
             .map_err(|_| format!("Invalid Animation Speed Type {0} (0x{0:08X}) while parsing Room Assets Layer Sprite Instance", animation_speed_type))?;
         let frame_index: f32 = reader.read_f32()?;
         let rotation: f32 = reader.read_f32()?;
+        Ok(GMSpriteInstance { name, sprite, x, y, scale_x, scale_y, color, animation_speed, animation_speed_type, frame_index, rotation })
+    }
 
-        Ok(GMSpriteInstance {
-            name,
-            sprite,
-            x,
-            y,
-            scale_x,
-            scale_y,
-            color,
-            animation_speed,
-            animation_speed_type,
-            frame_index,
-            rotation,
-        })
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.name)?;
+        builder.write_resource_id(&self.sprite);
+        builder.write_i32(self.x);
+        builder.write_i32(self.y);
+        builder.write_f32(self.scale_x);
+        builder.write_f32(self.scale_y);
+        builder.write_u32(self.color);
+        builder.write_f32(self.animation_speed);
+        builder.write_u32(self.animation_speed_type.into());
+        builder.write_f32(self.frame_index);
+        builder.write_f32(self.rotation);
+        Ok(())
     }
 }
 
@@ -692,20 +931,22 @@ impl GMElement for GMSequenceInstance {
             .map_err(|_| format!("Invalid Animation Speed Type {0} (0x{0:08X}) while parsing Room Assets Layer Sprite Instance", animation_speed_type))?;
         let frame_index: f32 = reader.read_f32()?;
         let rotation: f32 = reader.read_f32()?;
+        Ok(GMSequenceInstance { name, sequence, x, y, scale_x, scale_y, color, animation_speed, animation_speed_type, frame_index, rotation })
+    }
 
-        Ok(GMSequenceInstance {
-            name,
-            sequence,
-            x,
-            y,
-            scale_x,
-            scale_y,
-            color,
-            animation_speed,
-            animation_speed_type,
-            frame_index,
-            rotation,
-        })
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.name)?;
+        builder.write_resource_id(&self.sequence);
+        builder.write_i32(self.x);
+        builder.write_i32(self.y);
+        builder.write_f32(self.scale_x);
+        builder.write_f32(self.scale_y);
+        builder.write_u32(self.color);
+        builder.write_f32(self.animation_speed);
+        builder.write_u32(self.animation_speed_type.into());
+        builder.write_f32(self.frame_index);
+        builder.write_f32(self.rotation);
+        Ok(())
     }
 }
 
@@ -731,17 +972,19 @@ impl GMElement for GMParticleSystemInstance {
         let scale_y: f32 = reader.read_f32()?;
         let color: u32 = reader.read_u32()?;
         let rotation: f32 = reader.read_f32()?;
+        Ok(GMParticleSystemInstance { name, particle_system, x, y, scale_x, scale_y, color, rotation })
+    }
 
-        Ok(GMParticleSystemInstance {
-            name,
-            particle_system,
-            x,
-            y,
-            scale_x,
-            scale_y,
-            color,
-            rotation,
-        })
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.name)?;
+        builder.write_resource_id(&self.particle_system);
+        builder.write_i32(self.x);
+        builder.write_i32(self.y);
+        builder.write_f32(self.scale_x);
+        builder.write_f32(self.scale_y);
+        builder.write_u32(self.color);
+        builder.write_f32(self.rotation);
+        Ok(())
     }
 }
 
@@ -806,6 +1049,27 @@ impl GMElement for GMTextItemInstance {
             wrap,
         })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.name)?;
+        builder.write_i32(self.x);
+        builder.write_i32(self.y);
+        builder.write_resource_id(&self.font);
+        builder.write_f32(self.scale_x);
+        builder.write_f32(self.scale_y);
+        builder.write_f32(self.rotation);
+        builder.write_u32(self.color);
+        builder.write_f32(self.origin_x);
+        builder.write_f32(self.origin_y);
+        builder.write_gm_string(&self.text)?;
+        builder.write_i32(self.alignment);
+        builder.write_f32(self.character_spacing);
+        builder.write_f32(self.line_spacing);
+        builder.write_f32(self.frame_width);
+        builder.write_f32(self.frame_height);
+        builder.write_bool32(self.wrap);
+        Ok(())
+    }
 }
 
 
@@ -840,13 +1104,13 @@ impl GMElement for GMRoomGameObject {
             image_index = Some(reader.read_usize()?);
         }
         let color: u32 = reader.read_u32()?;
-        let rotation: f32 = reader.read_f32()?;
+        let rotation: f32 = reader.read_f32()?;   // {~~} FloatAsInt (negative zero handling stuff)
 
         // [From UndertaleModTool] "is that dependent on bytecode or something else?"
-        let pre_create_code: Option<GMRef<GMCode>> = if reader.general_info.bytecode_version <= 15 {
-            None
+        let pre_create_code: Option<GMRef<GMCode>> = if reader.general_info.bytecode_version >= 16 {
+            reader.read_resource_by_id_option()?
         } else {
-            if reader.read_i32()? == -1 { None } else { creation_code }
+            None
         };
 
         Ok(GMRoomGameObject {
@@ -863,6 +1127,24 @@ impl GMElement for GMRoomGameObject {
             rotation,
             pre_create_code,
         })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_i32(self.x);
+        builder.write_i32(self.y);
+        builder.write_resource_id(&self.object_definition);
+        builder.write_u32(self.instance_id);
+        builder.write_resource_id_opt(&self.creation_code);
+        builder.write_f32(self.scale_x);
+        builder.write_f32(self.scale_y);
+        if builder.is_gm_version_at_least((2, 2, 2, 302)) {
+            builder.write_f32(self.image_speed.ok_or("Room Game Object: Image Speed not set in 2.2.2.302+")?);
+            builder.write_usize(self.image_index.ok_or("Room Game Object: Image Index not set in 2.2.2.302+")?)?;
+        }
+        builder.write_u32(self.color);
+        builder.write_f32(self.rotation);
+        self.pre_create_code.serialize_if_bytecode_ver(builder, "Pre Create Code", 16)?;
+        Ok(())
     }
 }
 

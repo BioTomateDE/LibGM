@@ -1,5 +1,5 @@
 use crate::gm_deserialize::{GMChunkElement, GMElement, DataReader, GMRef};
-
+use crate::gm_serialize::DataBuilder;
 
 #[derive(Debug, Clone)]
 pub struct GMPaths {
@@ -15,6 +15,12 @@ impl GMElement for GMPaths {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let paths: Vec<GMPath> = reader.read_pointer_list::<GMPath>()?;
         Ok(GMPaths { paths, exists: true })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+        builder.write_pointer_list(&self.paths)?;
+        Ok(())
     }
 }
 
@@ -36,6 +42,15 @@ impl GMElement for GMPath {
         let points: Vec<GMPathPoint> = reader.read_simple_list()?;
         Ok(GMPath { name, is_smooth, is_closed, precision, points })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.name)?;
+        builder.write_bool32(self.is_smooth);
+        builder.write_bool32(self.is_closed);
+        builder.write_u32(self.precision);
+        builder.write_simple_list(&self.points)?;
+        Ok(())
+    }
 }
 
 
@@ -51,6 +66,13 @@ impl GMElement for GMPathPoint {
         let y: f32 = reader.read_f32()?;
         let speed: f32 = reader.read_f32()?;
         Ok(GMPathPoint { x, y, speed })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_f32(self.x);
+        builder.write_f32(self.y);
+        builder.write_f32(self.speed);
+        Ok(())
     }
 }
 
