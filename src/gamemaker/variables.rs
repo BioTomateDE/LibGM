@@ -59,11 +59,11 @@ impl GMElement for GMVariables {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         if !self.exists { return Ok(()) }
-        self.scuffed.serialize_if_bytecode_version(builder, "Scuffed bytecode 15 fields", 15)?;
+        self.scuffed.serialize_if_bytecode_ver(builder, "Scuffed bytecode 15 fields", 15)?;
         for (i, variable) in self.variables.iter().enumerate() {
             builder.resolve_pointer(variable)?;
             builder.write_gm_string(&variable.name)?;
-            variable.b15_data.serialize_if_bytecode_version(builder, "Bytecode 15 data", 15)?;
+            variable.b15_data.serialize_if_bytecode_ver(builder, "Bytecode 15 data", 15)?;
             
             let occurrences = builder.variable_occurrences.get(i)
                 .ok_or_else(|| format!("Could not resolve variable occurrence with index {i} in list with length {}", builder.function_occurrences.len()))?;

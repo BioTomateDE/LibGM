@@ -45,13 +45,13 @@ impl GMElement for GMEmbeddedTextures {
         for (i, texture_page) in self.texture_pages.iter().enumerate() {
             builder.overwrite_usize(builder.len(), pointer_list_start_pos + i*4)?;
             builder.write_u32(texture_page.scaled);
-            texture_page.generated_mips.serialize_if_gm_version(builder, "Generated Mipmap levels", (2, 0, 6))?;
+            texture_page.generated_mips.serialize_if_gm_ver(builder, "Generated Mipmap levels", (2, 0, 6))?;
             if builder.is_gm_version_at_least((2022, 3)) {
                 texture_block_size_placeholders[i] = builder.len();
                 // placeholder for texture block size. will not be overwritten if external
                 builder.write_u32(texture_page.texture_block_size.ok_or("Texture block size not set in 2022.3+")?);
             }
-            texture_page.data_2022_9.serialize_if_gm_version(builder, "Texture Page 2022.9 data", (2022, 9))?;
+            texture_page.data_2022_9.serialize_if_gm_ver(builder, "Texture Page 2022.9 data", (2022, 9))?;
 
             if texture_page.image.is_some() {
                 builder.write_pointer(&texture_page.image)?;
