@@ -1,6 +1,4 @@
 use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
 use crate::utility::{format_bytes, typename, Stopwatch};
 use crate::gm_serialize::DataBuilder;
 use crate::detect_version::detect_gamemaker_version;
@@ -23,7 +21,7 @@ use crate::gamemaker::texture_page_items::{GMTexturePageItem, GMTexturePageItems
 use crate::gamemaker::options::GMOptions;
 use crate::gamemaker::particles::{GMParticleEmitters, GMParticleSystems};
 use crate::gamemaker::irrelevant::{GMAudioGroups, GMExtensions, GMGameEndScripts, GMGlobalInitScripts, GMLanguageInfo};
-
+use crate::gamemaker::sequence::GMSequences;
 
 #[derive(Debug, Clone)]
 pub struct GMData {
@@ -44,6 +42,7 @@ pub struct GMData {
     pub audios: GMEmbeddedAudios,                       // AUDO
     pub sounds: GMSounds,                               // SOND
     pub options: GMOptions,                             // OPTN
+    pub sequences: GMSequences,                         // SEQN
     pub particle_systems: GMParticleSystems,            // PSYS
     pub particle_emitters: GMParticleEmitters,          // PSEM
     pub language_info: GMLanguageInfo,                  // LANG
@@ -124,6 +123,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let options: GMOptions = reader.read_chunk_required("OPTN")?;
     // some of these chunks probably aren't actually required; make them optional when issues occur
 
+    let sequences: GMSequences = reader.read_chunk_optional("SEQN")?;
     let particle_systems: GMParticleSystems = reader.read_chunk_optional("PSYS")?;
     let particle_emitters: GMParticleEmitters = reader.read_chunk_optional("PSEM")?;
     let language_info: GMLanguageInfo = reader.read_chunk_optional("LANG")?;
@@ -154,6 +154,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
         audios,
         sounds,
         options,
+        sequences,
         particle_systems,
         particle_emitters,
         language_info,
