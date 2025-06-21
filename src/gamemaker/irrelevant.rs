@@ -1,6 +1,8 @@
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use crate::gm_deserialize::{vec_with_capacity, DataReader, GMChunkElement, GMElement, GMRef};
+use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use crate::gamemaker::code::GMCode;
+use crate::gm_serialize::DataBuilder;
+use crate::utility::vec_with_capacity;
 
 
 #[derive(Debug, Clone, PartialEq)]
@@ -46,19 +48,28 @@ impl GMElement for GMLanguageInfo {
             for _ in 0..entry_count {
                 entries.push(reader.read_gm_string()?);
             }
-            languages.push(GMLanguageData {
-                name,
-                region,
-                entries,
-            });
+            languages.push(GMLanguageData { name, region, entries });
         }
 
-        Ok(GMLanguageInfo {
-            unknown1,
-            languages,
-            entry_ids,
-            exists: true,
-        })
+        Ok(GMLanguageInfo { unknown1, languages, entry_ids, exists: true })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+        builder.write_u32(self.unknown1);
+        builder.write_usize(self.languages.len())?;
+        builder.write_usize(self.entry_ids.len())?;
+        for entry in &self.entry_ids {
+            builder.write_gm_string(entry)?;
+        }
+        for language in &self.languages {
+            builder.write_gm_string(&language.name)?;
+            builder.write_gm_string(&language.region)?;
+            for entry in &language.entries {
+                builder.write_gm_string(entry)?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -78,6 +89,12 @@ impl GMElement for GMExtensions {
         let extensions: Vec<GMExtension> = reader.read_pointer_list()?;
         Ok(GMExtensions { extensions, exists: true })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+        builder.write_pointer_list(&self.extensions)?;
+        Ok(())
+    }
 }
 
 
@@ -93,11 +110,14 @@ impl GMElement for GMExtension {
         let value: GMRef<String> = reader.read_gm_string()?;
         let kind: u32 = reader.read_u32()?;
         let kind: GMExtensionOptionKind = kind.try_into().map_err(|_| format!("Invalid Extension Option Kind {kind} (0x{kind:08X})"))?;
-        Ok(GMExtension {
-            name,
-            value,
-            kind,
-        })
+        Ok(GMExtension { name, value, kind })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.value)?;
+        builder.write_u32(self.kind.into());
+        Ok(())
     }
 }
 
@@ -127,6 +147,12 @@ impl GMElement for GMAudioGroups {
         let audio_groups: Vec<GMAudioGroup> = reader.read_pointer_list()?;
         Ok(Self { audio_groups, exists: true })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+        builder.write_pointer_list(&self.audio_groups)?;
+        Ok(())
+    }
 }
 
 
@@ -138,12 +164,20 @@ pub struct GMAudioGroup {
 impl GMElement for GMAudioGroup {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let path: Option<GMRef<String>> = if reader.general_info.is_version_at_least((2024, 14, 0, 0)) {
+        let path: Option<GMRef<String>> = if reader.general_info.is_version_at_least((2024, 14)) {
             Some(reader.read_gm_string()?)
         } else {
             None
         };
         Ok(Self { name, path })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.name)?;
+        if builder.is_gm_version_at_least((2024, 14)) {
+            builder.write_gm_string(&self.path.ok_or("Audio Group Path not set for 2024.14+")?)?;
+        }
+        Ok(())
     }
 }
 
@@ -164,6 +198,12 @@ impl GMElement for GMGlobalInitScripts {
         let global_inits: Vec<GMGlobalInit> = reader.read_simple_list()?;
         Ok(Self { global_inits, exists: true })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+        builder.write_simple_list(&self.global_inits)?;
+        Ok(())
+    }
 }
 
 
@@ -182,6 +222,12 @@ impl GMElement for GMGameEndScripts {
         let global_inits: Vec<GMGlobalInit> = reader.read_simple_list()?;
         Ok(Self { global_inits, exists: true })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+        builder.write_simple_list(&self.global_inits)?;
+        Ok(())
+    }
 }
 
 
@@ -193,6 +239,11 @@ impl GMElement for GMGlobalInit {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let code: GMRef<GMCode> = reader.read_resource_by_id()?;
         Ok(Self { code })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_resource_id(&self.code);
+        Ok(())
     }
 }
 
