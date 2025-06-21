@@ -1,8 +1,7 @@
 use std::collections::HashMap;
-use crate::debug_utils::{typename, Stopwatch};
-use crate::gamemaker::chunk_reading::{GMChunkElement, GMElement, GMRef};
+use crate::utility::{typename, Stopwatch};
 use crate::gamemaker::texture_page_items::GMTexturePageItem;
-use crate::gm_deserialize::GMData;
+use crate::gm_deserialize::{GMChunkElement, GMData, GMElement, GMRef};
 
 pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     let stopwatch = Stopwatch::start();
@@ -67,7 +66,7 @@ impl<'a> DataBuilder<'a> {
         }
     } 
     
-    pub fn build_chunk<T: GMElement+GMChunkElement>(&mut self, chunk_name: &str, element: &T) -> Result<(), String> {
+    pub fn build_chunk<T: GMElement+GMChunkElement>(&mut self, chunk_name: &'static str, element: &T) -> Result<(), String> {
         assert_eq!(chunk_name.len(), 4);
         assert_eq!(chunk_name.as_bytes().len(), 4);
         let stopwatch = Stopwatch::start();
@@ -96,7 +95,6 @@ impl<'a> DataBuilder<'a> {
         
         self.overwrite_usize(chunk_length, start_pos + 4)?;   // resolve chunk length placeholder
         
-        // TODO padding
         log::trace!("Building chunk '{chunk_name}' took {stopwatch}");
         Ok(())
     }

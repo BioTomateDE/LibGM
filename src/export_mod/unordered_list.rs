@@ -2,7 +2,7 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator, IntoParallelRefIterato
 use std::cmp::min;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use crate::debug_utils::typename;
+use crate::utility::typename;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditUnorderedList<ADD, EDIT> {
