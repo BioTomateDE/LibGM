@@ -1,4 +1,4 @@
-﻿use crate::gamemaker::chunk_reading::{vec_with_capacity, DataReader, GMChunk, GMChunkElement, GMElement, GMRef};
+﻿use crate::gm_deserialize::{vec_with_capacity, DataReader, GMChunk, GMChunkElement, GMElement, GMRef};
 use crate::gamemaker::code::{parse_instance_type, GMInstanceType};
 
 #[derive(Debug, Clone)]

@@ -1,6 +1,7 @@
 ﻿use std::collections::HashMap;
-use crate::gamemaker::chunk_reading::{vec_with_capacity, DataReader, GMChunk, GMChunkElement, GMElement, GMRef};
-
+use crate::gm_deserialize::{DataReader, GMChunk, GMChunkElement, GMElement, GMRef};
+use crate::gm_serialize::DataBuilder;
+use crate::utility::vec_with_capacity;
 
 #[derive(Debug, Clone)]
 pub struct GMFunctions {
@@ -49,6 +50,10 @@ impl GMElement for GMFunctions {
 
         let code_locals: GMCodeLocals = GMCodeLocals::deserialize(reader)?;
         Ok(GMFunctions { functions, code_locals, exists: true })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.po
     }
 }
 

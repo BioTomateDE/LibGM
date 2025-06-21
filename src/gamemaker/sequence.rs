@@ -1,4 +1,4 @@
-use crate::gamemaker::chunk_reading::{hashmap_with_capacity, vec_with_capacity, DataReader, GMChunkElement, GMElement, GMRef};
+use crate::gm_deserialize::{hashmap_with_capacity, vec_with_capacity, DataReader, GMChunkElement, GMElement, GMRef};
 use std::collections::HashMap;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};

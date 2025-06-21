@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::bench_export;
 use crate::utility::Stopwatch;
 use crate::gamemaker::backgrounds::GMBackground;
-use crate::gamemaker::chunk_reading::GMRef;
+use crate::gm_deserialize::GMRef;
 use crate::gamemaker::code::GMCode;
 use crate::gamemaker::embedded_audio::GMEmbeddedAudio;
 use crate::gamemaker::functions::GMFunction;

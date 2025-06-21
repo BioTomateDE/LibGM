@@ -1,5 +1,5 @@
 use num_enum::TryFromPrimitive;
-use crate::gamemaker::chunk_reading::{vec_with_capacity, DataReader, GMElement};
+use crate::gm_deserialize::{vec_with_capacity, DataReader, GMElement};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteTypeSWF {
