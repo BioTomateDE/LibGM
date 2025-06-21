@@ -2,7 +2,7 @@ mod printing;
 mod gamemaker;
 mod serialize_old;
 mod export_mod;
-mod debug_utils;
+mod utility;
 mod qoi;
 mod gm_serialize;
 pub mod gm_deserialize;

@@ -1,4 +1,4 @@
-use crate::debug_utils::typename;
+use crate::utility::typename;
 use crate::gamemaker::chunk_reading::{vec_with_capacity, DataReader, GMChunk};
 use crate::gamemaker::embedded_textures::MAGIC_BZ2_QOI_HEADER;
 use crate::gamemaker::general_info::{GMVersion, GMVersionReq};
