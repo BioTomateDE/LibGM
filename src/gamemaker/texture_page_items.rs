@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::gamemaker::chunk_reading::{DataReader, GMChunk, GMChunkElement, GMElement, GMRef};
+use crate::gm_deserialize::{DataReader, GMChunk, GMChunkElement, GMElement, GMRef};
 use crate::gamemaker::embedded_textures::GMEmbeddedTexture;
 
 

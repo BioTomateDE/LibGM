@@ -1,6 +1,6 @@
 use std::cmp::max;
 use std::io::Read;
-use crate::gamemaker::chunk_reading::{GMChunkElement, GMElement, DataReader};
+use crate::gm_deserialize::{GMChunkElement, GMElement, DataReader};
 use crate::printing::hexdump;
 use image;
 use bzip2::read::BzDecoder;

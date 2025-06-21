@@ -1,4 +1,4 @@
-use crate::gamemaker::chunk_reading::{DataReader, GMChunkElement, GMElement, GMRef};
+use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use crate::gamemaker::texture_page_items::GMTexturePageItem;
 
 #[derive(Debug, Clone)]
