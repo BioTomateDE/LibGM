@@ -1,7 +1,7 @@
 use crate::gm_deserialize::{GMChunkElement, GMElement, DataReader, GMRef};
 use crate::gamemaker::general_info::GMVersionLTS::Post2022_0;
 use crate::gamemaker::texture_page_items::GMTexturePageItem;
-use crate::serialize_old::chunk_writing::{DataBuilder, SerializeIfGMVersion};
+use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
 
 #[derive(Debug, Clone)]
 pub struct GMFonts {
@@ -126,10 +126,10 @@ impl GMElement for GMFont {
         builder.write_gm_texture(&self.texture)?;
         builder.write_f32(self.scale_x);
         builder.write_f32(self.scale_y);
-        self.ascender_offset.serialize_if_bytecode_ver("Ascender Offset", builder, 17)?;
-        self.ascender.serialize_if_gm_ver("Ascender", builder, (2022, 2))?;
-        self.sdf_spread.serialize_if_gm_ver("SDF Spread", builder, (2023, 2))?;
-        self.line_height.serialize_if_gm_ver("Line Height", builder, (2023, 6))?;
+        self.ascender_offset.serialize_if_bytecode_ver(builder, "Ascender Offset", 17)?;
+        self.ascender.serialize_if_gm_ver(builder, "Ascender", (2022, 2))?;
+        self.sdf_spread.serialize_if_gm_ver(builder, "SDF Spread", (2023, 2))?;
+        self.line_height.serialize_if_gm_ver(builder, "Line Height", (2023, 6))?;
         builder.write_pointer_list(&self.glyphs)?;
         if builder.is_gm_version_at_least((2024, 14)) {
             builder.align(4);

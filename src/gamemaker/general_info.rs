@@ -344,7 +344,7 @@ impl GMElement for GMGeneralInfo {
         builder.write_u64(self.active_targets);
         self.function_classifications.serialize(builder)?;
         builder.write_i32(self.steam_appid);
-        self.debugger_port.serialize_if_bytecode_version(builder, "Debugger Port", 14)?;
+        self.debugger_port.serialize_if_bytecode_ver(builder, "Debugger Port", 14)?;
         builder.write_simple_list(&self.room_order)?;
         if builder.is_gm_version_at_least((2, 0)) {
             // Write random UID
@@ -366,7 +366,7 @@ impl GMElement for GMGeneralInfo {
                     builder.write_u32(second);
                 }
             }
-            
+
             builder.write_f32(gms2_info.fps);
             builder.write_bool32(gms2_info.allow_statistics);
             builder.write_bytes(&gms2_info.game_guid);
@@ -392,7 +392,7 @@ impl GMGeneralInfo {
         info_number ^= self.bytecode_version as i64;
         info_number
     }
-    
+
     fn uid_bitmush(info_number: i64) -> i64 {
         let mut temp: u64 = info_number as u64;
         temp = (temp << 56 & 0xFF00_0000_0000_0000) |
