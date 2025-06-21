@@ -48,7 +48,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
 #[derive(Debug, Clone)]
 pub struct DataBuilder<'a> {
     pub gm_data: &'a GMData,
-    raw_data: Vec<u8>,
+    pub raw_data: Vec<u8>,
     pub is_last_chunk: bool,
     /// Pairs data positions of pointer placeholders with the memory address of the GameMaker element they're pointing to
     pointer_placeholder_positions: Vec<(u32, usize)>,
@@ -220,7 +220,7 @@ impl<'a> DataBuilder<'a> {
     /// ___
     /// This system exists because it is virtually impossible to predict which data position a GameMaker element will be written to.
     /// Circular references and writing order would make predicting these pointer resource positions even harder.
-    pub fn write_pointer<T: GMElement>(&mut self, element: &T) -> Result<(), String> {
+    pub fn write_pointer<T>(&mut self, element: &T) -> Result<(), String> {
         let memory_address: usize = element as *const _ as usize;
         let placeholder_position: u32 = self.len() as u32;  // gamemaker is 32bit anyway
         self.write_u32(0xDEADC0DE);
@@ -231,7 +231,7 @@ impl<'a> DataBuilder<'a> {
     /// Store the written GameMaker element's data position paired with its memory address in the pointer resource pool.
     /// The element's absolute position corresponds to the data builder's current position,
     /// since this method should get called when the element is serialized.
-    pub fn resolve_pointer<T: GMElement>(&mut self, element: &T) -> Result<(), String> {
+    pub fn resolve_pointer<T>(&mut self, element: &T) -> Result<(), String> {
         let memory_address: usize = element as *const _ as usize;
         let resource_position: u32 = self.len() as u32;
         if let Some(old_resource_pos) = self.pointer_resource_positions.insert(memory_address, resource_position) {
