@@ -1,7 +1,7 @@
 ﻿use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use crate::gamemaker::sprites::GMSprite;
-
+use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
 
 #[derive(Debug, Clone)]
 pub struct GMParticleSystems {
@@ -23,6 +23,14 @@ impl GMElement for GMParticleSystems {
         let particle_systems: Vec<GMParticleSystem> = reader.read_pointer_list()?;
         Ok(Self { particle_systems, exists: true })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+        builder.align(4);
+        builder.write_u32(1);   // PSYS Version
+        builder.write_pointer_list(&self.particle_systems)?;
+        Ok(())
+    }
 }
 
 
@@ -41,21 +49,19 @@ impl GMElement for GMParticleSystem {
         let origin_x: i32 = reader.read_i32()?;
         let origin_y: i32 = reader.read_i32()?;
         let draw_order: i32 = reader.read_i32()?;
-        let global_space_particles: Option<bool> = if reader.general_info.is_version_at_least((2023, 8, 0, 0)) {
-            Some(reader.read_bool32()?)
-        } else {
-            None
-        };
+        let global_space_particles: Option<bool> = reader.deserialize_if_gm_version((2023, 8))?;
         let emitters: Vec<GMRef<GMParticleEmitter>> = reader.read_simple_list()?;
+        Ok(Self { name, origin_x, origin_y, draw_order, global_space_particles, emitters })
+    }
 
-        Ok(Self {
-            name,
-            origin_x,
-            origin_y,
-            draw_order,
-            global_space_particles,
-            emitters,
-        })
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.name)?;
+        builder.write_i32(self.origin_x);
+        builder.write_i32(self.origin_y);
+        builder.write_i32(self.draw_order);
+        self.global_space_particles.serialize_if_gm_ver(builder, "Global Space Particles", (2023, 8))?;
+        builder.write_simple_list(&self.emitters)?;
+        Ok(())
     }
 }
 
@@ -79,6 +85,14 @@ impl GMElement for GMParticleEmitters {
         }
         let emitters: Vec<GMParticleEmitter> = reader.read_pointer_list()?;
         Ok(Self { emitters, exists: true })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+        builder.align(4);
+        builder.write_u32(1);   // PSEM Version
+        builder.write_pointer_list(&self.emitters)?;
+        Ok(())
     }
 }
 
@@ -125,9 +139,9 @@ pub struct GMParticleEmitter {
     pub orientation_increase: f32,
     pub orientation_wiggle: f32,
     pub orientation_relative: bool,
-    pub spawn_on_death: GMRef<Self>,
+    pub spawn_on_death: Option<GMRef<Self>>,
     pub spawn_on_death_count: u32,
-    pub spawn_on_update: GMRef<Self>,
+    pub spawn_on_update: Option<GMRef<Self>>,
     pub spawn_on_update_count: u32,
 }
 impl GMElement for GMParticleEmitter {
@@ -265,9 +279,9 @@ impl GMElement for GMParticleEmitter {
         let orientation_wiggle: f32 = reader.read_f32()?;
         let orientation_relative: bool = reader.read_bool32()?;
 
-        let spawn_on_death: GMRef<GMParticleEmitter> = reader.read_resource_by_id()?;
+        let spawn_on_death: Option<GMRef<GMParticleEmitter>> = reader.read_resource_by_id_option()?;
         let spawn_on_death_count: u32 = reader.read_u32()?;
-        let spawn_on_update: GMRef<GMParticleEmitter> = reader.read_resource_by_id()?;
+        let spawn_on_update: Option<GMRef<GMParticleEmitter>> = reader.read_resource_by_id_option()?;
         let spawn_on_update_count: u32 = reader.read_u32()?;
 
         Ok(GMParticleEmitter {
@@ -316,6 +330,86 @@ impl GMElement for GMParticleEmitter {
             spawn_on_update,
             spawn_on_update_count,
         })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.name)?;
+        self.enabled.serialize_if_gm_ver(builder, "Enabled", (2023, 6))?;
+        builder.write_i32(self.mode.into());
+        if builder.is_gm_version_at_least((2023, 8)) {
+            let data_2023_8: &GMParticleEmitter2023_8 = self.data_2023_8.as_ref().ok_or("2023.8 Data not set")?;
+            builder.write_f32(self.emit_count as f32);
+            builder.write_bool32(data_2023_8.emit_relative);
+            builder.write_f32(data_2023_8.delay_min);
+            builder.write_f32(data_2023_8.delay_max);
+            builder.write_i32(data_2023_8.delay_unit.into());
+            builder.write_f32(data_2023_8.interval_min);
+            builder.write_f32(data_2023_8.interval_max);
+            builder.write_i32(data_2023_8.interval_unit.into());
+        } else {
+            builder.write_u32(self.emit_count);
+        }
+        builder.write_i32(self.distribution.into());
+        builder.write_i32(self.shape.into());
+        builder.write_f32(self.region_x);
+        builder.write_f32(self.region_y);
+        builder.write_f32(self.region_w);
+        builder.write_f32(self.region_h);
+        builder.write_f32(self.rotation);
+        builder.write_resource_id(&self.sprite);
+        builder.write_i32(self.texture.into());
+        builder.write_f32(self.frame_index);
+        if builder.is_gm_version_at_least((2023, 4)) {
+            let data_2023_4: &GMParticleEmitter2023_4 = self.data_2023_4.as_ref().ok_or("2023.4 Data not set")?;
+            builder.write_bool32(data_2023_4.animate);
+            builder.write_bool32(data_2023_4.stretch);
+            builder.write_bool32(data_2023_4.is_random);
+        }
+        builder.write_u32(self.start_color);
+        builder.write_u32(self.mid_color);
+        builder.write_u32(self.end_color);
+        builder.write_bool32(self.additive_blend);
+        builder.write_f32(self.lifetime_min);
+        builder.write_f32(self.lifetime_max);
+        builder.write_f32(self.scale_x);
+        builder.write_f32(self.scale_y);
+        if builder.is_gm_version_at_least((2023, 8)) {
+            let data_2023_8: &GMParticleEmitter2023_8 = self.data_2023_8.as_ref().ok_or("2023.8 Data not set")?;
+            builder.write_f32(data_2023_8.size_min_x);
+            builder.write_f32(data_2023_8.size_max_x);
+            builder.write_f32(data_2023_8.size_min_y);
+            builder.write_f32(data_2023_8.size_max_y);
+            builder.write_f32(data_2023_8.size_increase_x);
+            builder.write_f32(data_2023_8.size_increase_y);
+            builder.write_f32(data_2023_8.size_wiggle_x);
+            builder.write_f32(data_2023_8.size_wiggle_y);
+        } else {
+            let data_pre_2023_8: &GMParticleEmitterPre2023_8 = self.data_pre_2023_8.as_ref().ok_or("Pre 2023.8 Data not set")?;
+            builder.write_f32(data_pre_2023_8.size_min);
+            builder.write_f32(data_pre_2023_8.size_max);
+            builder.write_f32(data_pre_2023_8.size_increase);
+            builder.write_f32(data_pre_2023_8.size_wiggle);
+        }
+        builder.write_f32(self.speed_min);
+        builder.write_f32(self.speed_max);
+        builder.write_f32(self.speed_increase);
+        builder.write_f32(self.speed_wiggle);
+        builder.write_f32(self.gravity_force);
+        builder.write_f32(self.gravity_direction);
+        builder.write_f32(self.direction_min);
+        builder.write_f32(self.direction_max);
+        builder.write_f32(self.direction_increase);
+        builder.write_f32(self.direction_wiggle);
+        builder.write_f32(self.orientation_min);
+        builder.write_f32(self.orientation_max);
+        builder.write_f32(self.orientation_increase);
+        builder.write_f32(self.orientation_wiggle);
+        builder.write_bool32(self.orientation_relative);
+        builder.write_resource_id_opt(&self.spawn_on_death);
+        builder.write_u32(self.spawn_on_death_count);
+        builder.write_resource_id_opt(&self.spawn_on_update);
+        builder.write_u32(self.spawn_on_update_count);
+        Ok(())
     }
 }
 
