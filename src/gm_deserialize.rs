@@ -787,6 +787,16 @@ impl GMElement for f64 {
         Ok(())
     }
 }
+impl GMElement for bool {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        reader.read_bool32()
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_bool32(*self);
+        Ok(())
+    }
+}
 
 pub trait GMChunkElement {
     fn empty() -> Self;
