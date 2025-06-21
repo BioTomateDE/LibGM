@@ -1,6 +1,7 @@
 use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use crate::gamemaker::embedded_audio::GMEmbeddedAudio;
-
+use crate::gamemaker::irrelevant::GMAudioGroup;
+use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
 
 #[derive(Debug, Clone)]
 pub struct GMSounds {
@@ -17,6 +18,12 @@ impl GMElement for GMSounds {
         let sounds: Vec<GMSound> = reader.read_pointer_list()?;
         Ok(Self { sounds, exists: true })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+        builder.write_pointer_list(&self.sounds)?;
+        Ok(())
+    }
 }
 
 
@@ -29,7 +36,7 @@ pub struct GMSound {
     pub effects: u32,                                // idk; always zero
     pub volume: f32,                                 // e.g. 0.69
     pub pitch: f32,                                  // e.g. 4.20
-    // pub audio_group: u32,                         // idk; type is wrong
+    pub audio_group: Option<GMRef<GMAudioGroup>>,    // Bytecode14+
     pub audio_file: Option<GMRef<GMEmbeddedAudio>>,  // e.g. UndertaleEmbeddedAudio#17
     pub audio_length: Option<f32>,                   // in seconds probably
 }
@@ -38,34 +45,39 @@ impl GMElement for GMSound {
         let name: GMRef<String> = reader.read_gm_string()?;
         let flags = GMSoundFlags::deserialize(reader)?;
         let audio_type: Option<GMRef<String>> = reader.read_gm_string_opt()?;
-        let file: GMRef<String> = reader.read_gm_string()?;
+        let file    : GMRef<String> = reader.read_gm_string()?;
         let effects: u32 = reader.read_u32()?;
         let volume: f32 = reader.read_f32()?;
         let pitch: f32 = reader.read_f32()?;
+        let mut audio_group: Option<GMRef<GMAudioGroup>> = None;
         if flags.regular && reader.general_info.bytecode_version >= 14 {
-            // audio group stuff {~~} TODO
+            audio_group = Some(reader.read_resource_by_id()?);
         } else {
-            // group id stuff {~~}
+            let preload: bool = reader.read_bool32()?;
+            if !preload {
+                return Err(format!("Preload is unexpectedly set to false for sound \"{}\"; please report this error", reader.display_gm_str(name)))
+            }
         }
-        let _ = reader.read_u32()?;      // because we skipped group stuff
         let audio_file: Option<GMRef<GMEmbeddedAudio>> = reader.read_resource_by_id_option()?;
+        let audio_length: Option<f32> = reader.deserialize_if_gm_version((2024, 6))?;
+        Ok(GMSound { name, flags, audio_type, file, effects, volume, pitch, audio_group, audio_file, audio_length })
+    }
 
-        let mut audio_length: Option<f32> = None;
-        if reader.general_info.is_version_at_least((2024, 6, 0, 0)) {
-            audio_length = Some(reader.read_f32()?);
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.name)?;
+        self.flags.serialize(builder)?;
+        builder.write_gm_string_opt(&self.audio_type)?;
+        builder.write_gm_string(&self.file)?;
+        builder.write_u32(self.effects);
+        builder.write_f32(self.volume);
+        builder.write_f32(self.pitch);
+        if self.flags.regular && builder.bytecode_version() >= 14 {
+            builder.write_resource_id(&self.audio_group.ok_or("Regular Sound's Audio group not set in Bytecode 14+")?)
         }
-
-        Ok(GMSound {
-            name,
-            flags,
-            audio_type,
-            file,
-            effects,
-            volume,
-            pitch,
-            audio_file,
-            audio_length,
-        })
+        builder.write_bool32(true);   // Preload
+        builder.write_resource_id_opt(&self.audio_file);
+        self.audio_length.serialize_if_gm_ver(builder, "Audio Length", (2024, 6))?;
+        Ok(())
     }
 }
 
@@ -86,6 +98,18 @@ impl GMElement for GMSoundFlags {
             is_decompressed_on_load: 3 == raw & 0x3,    // maybe??? UndertaleModTool doesn't know either
             regular: 0 != raw & 0x64,
         })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        let mut raw: u32 = 0;
+
+        if self.is_embedded { raw |= 0x1 };
+        if self.is_compressed { raw |= 0x2 };
+        if self.is_decompressed_on_load { raw |= 0x3 };
+        if self.regular { raw |= 0x64 };
+
+        builder.write_u32(raw);
+        Ok(())
     }
 }
 
