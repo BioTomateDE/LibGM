@@ -1,12 +1,11 @@
 ﻿use std::collections::HashMap;
 use crate::debug_utils::{format_bytes, typename, unlikely, Stopwatch};
 use crate::gamemaker::functions::GMFunction;
-use crate::gamemaker::general_info::GMGeneralInfo;
+use crate::gamemaker::general_info::{GMGeneralInfo, GMVersion};
 use crate::gamemaker::scripts::GMScript;
 use crate::gamemaker::strings::GMStrings;
 use crate::gamemaker::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::variables::GMVariable;
-use crate::serialize_old::chunk_writing::DataBuilder;
 
 /// GMRef has (fake) generic types to make it clearer which type it belongs to (`name: GMRef` vs `name: GMRef<String>`).
 /// It can be resolved to the data it references using the `.resolve()` method, which needs the list the elements are stored in.
@@ -68,6 +67,7 @@ pub struct GMChunk {
     pub name: String,
     pub start_pos: usize,
     pub end_pos: usize,
+    pub is_last_chunk: bool,
 }
 
 pub struct DataReader<'a> {
@@ -81,6 +81,7 @@ pub struct DataReader<'a> {
     
     data: &'a [u8],
     pub cur_pos: usize,
+    pub padding: usize,
 
     /// Should only be set by `GMStrings::gamemaker`
     pub string_occurrence_map: HashMap<usize, GMRef<String>>,
@@ -101,9 +102,11 @@ impl<'a> DataReader<'a> {
                 name: "grievous_error".to_string(),
                 start_pos: 0,
                 end_pos: data.len(),
+                is_last_chunk: true,
             },
             data,
             cur_pos: 0,
+            padding: 16,    // default padding value (if used) is 16
             string_occurrence_map: HashMap::new(),
             texture_page_item_occurrence_map: HashMap::new(),
             variable_occurrence_map: HashMap::new(),
@@ -280,7 +283,11 @@ impl<'a> DataReader<'a> {
         self.chunk = chunk;
 
         let stopwatch = Stopwatch::start();
-        let element = T::deserialize(self)?;
+        
+        let element = T::deserialize(self)
+            .map_err(|e| format!("{e}\n>while deserializing required chunk '{chunk_name}'"))?;
+        self.read_chunk_padding()?;
+        
         log::trace!("Parsing required chunk '{chunk_name}' took {stopwatch}");
         Ok(element)
     }
@@ -290,13 +297,52 @@ impl<'a> DataReader<'a> {
             self.cur_pos = chunk.start_pos;
             self.chunk = chunk.clone();
             let stopwatch = Stopwatch::start();
-            let element = T::deserialize(self)?;
+            
+            let element = T::deserialize(self)
+                .map_err(|e| format!("{e}\n>while deserializing optional chunk '{chunk_name}'"))?;
+            self.read_chunk_padding()?;
+            
             log::trace!("Parsing optional chunk '{chunk_name}' took {stopwatch}");
             Ok(element)
         } else {
             log::trace!("Skipped parsing optional chunk '{chunk_name}' because it does not exist in the chunks hashmap");
             Ok(T::empty())
         }
+    }
+    
+    fn read_chunk_padding(&mut self) -> Result<(), String> {
+        if self.chunk.is_last_chunk {
+            return Ok(())   // last chunk does not get padding
+        }
+        let ver: GMVersion = if self.general_info.exists {
+            self.general_info.version.clone()
+        } else {
+            self.unstable_get_gm_version()?     // only happens before chunk GEN8 is read (STRG)
+        };
+        if !(ver.major >= 2 || (ver.major == 1 && ver.minor >= 9999)) {
+            return Ok(())     // no padding before these versions
+        }
+        
+        while self.cur_pos % self.padding != 0 {
+            let byte: u8 = self.read_u8()?;
+            if byte == 0 { continue }
+            // byte is not zero => padding is incorrect
+            self.cur_pos -= 1;  // undo reading incorrect padding byte
+            self.padding = if self.cur_pos % 4 == 0 { 4 } else { 1 };
+            return Ok(())
+        }
+        Ok(())    // padding was already set correctly
+    }
+    
+    fn unstable_get_gm_version(&mut self) -> Result<GMVersion, String> {
+        let saved_pos: usize = self.cur_pos;
+        let saved_chunk: GMChunk = self.chunk.clone();
+        self.chunk = self.chunks.get("GEN8").cloned().ok_or("Chunk GEN8 does not exist while trying to (unstable) read gm version")?;
+        self.cur_pos = self.chunk.start_pos + 44;   // skip to GEN8 GameMaker version
+        let gm_version = GMVersion::deserialize(self)?;
+        self.cur_pos = saved_pos;
+        self.chunk = saved_chunk;
+        Ok(gm_version)
     }
 
     pub fn read_gm_string(&mut self) -> Result<GMRef<String>, String> {
