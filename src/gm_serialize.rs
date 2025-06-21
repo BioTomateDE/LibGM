@@ -47,13 +47,13 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
 
 #[derive(Debug, Clone)]
 pub struct DataBuilder<'a> {
-    gm_data: &'a GMData,
+    pub gm_data: &'a GMData,
     raw_data: Vec<u8>,
     pub is_last_chunk: bool,
     /// Pairs data positions of pointer placeholders with the memory address of the GameMaker element they're pointing to
-    pointer_placeholder_positions: Vec<(usize, usize)>,
+    pointer_placeholder_positions: Vec<(u32, usize)>,
     /// Maps memory addresses of GameMaker elements to their resolved data position
-    pointer_resource_positions: HashMap<usize, usize>,
+    pointer_resource_positions: HashMap<usize, u32>,
 
     pub function_occurrences: Vec<Vec<usize>>,
     pub variable_occurrences: Vec<Vec<(usize, GMVariableType)>>,
@@ -149,6 +149,10 @@ impl<'a> DataBuilder<'a> {
     pub fn write_bool32(&mut self, boolean: bool) {
         self.write_u32(if boolean {1} else {0});
     }
+    pub fn write_i24(&mut self, number: i32) {
+        let masked: u32 = (number as u32) & 0x00FF_FFFF;
+        self.raw_data.extend_from_slice(&masked.to_le_bytes()[..3]);
+    }
     pub fn write_literal_string(&mut self, string: &str) {
         self.raw_data.extend_from_slice(string.as_bytes());
     }
@@ -218,7 +222,7 @@ impl<'a> DataBuilder<'a> {
     /// Circular references and writing order would make predicting these pointer resource positions even harder.
     pub fn write_pointer<T: GMElement>(&mut self, element: &T) -> Result<(), String> {
         let memory_address: usize = element as *const _ as usize;
-        let placeholder_position: usize = self.len();
+        let placeholder_position: u32 = self.len() as u32;  // gamemaker is 32bit anyway
         self.write_u32(0xDEADC0DE);
         self.pointer_placeholder_positions.push((placeholder_position, memory_address));
         Ok(())
@@ -229,7 +233,7 @@ impl<'a> DataBuilder<'a> {
     /// since this method should get called when the element is serialized.
     pub fn resolve_pointer<T: GMElement>(&mut self, element: &T) -> Result<(), String> {
         let memory_address: usize = element as *const _ as usize;
-        let resource_position: usize = self.len();
+        let resource_position: u32 = self.len() as u32;
         if let Some(old_resource_pos) = self.pointer_resource_positions.insert(memory_address, resource_position) {
             return Err(format!(
                 "Pointer placeholder for {} with memory address {} already resolved \
@@ -239,12 +243,24 @@ impl<'a> DataBuilder<'a> {
         }
         Ok(())
     }
+    
+    pub fn resolve_placeholder<T: GMElement>(&mut self, element: &T, resolved_value: u32) -> Result<(), String> {
+        let memory_address: usize = element as *const _ as usize;
+        if let Some(old_resource_pos) = self.pointer_resource_positions.insert(memory_address, resolved_value) {
+            return Err(format!(
+                "Placeholder for {} with memory address {} already resolved \
+                to data position {}; tried to resolve again to value {} (0x{:08X})",
+                typename::<T>(), memory_address, old_resource_pos, resolved_value, resolved_value,
+            ))
+        }
+        Ok(())
+    }
 
     pub fn write_gm_string(&mut self, gm_string_ref: &GMRef<String>) -> Result<(), String> {
         let resolved_string: &String = gm_string_ref.resolve(&self.gm_data.strings.strings)?;
         // GameMaker string pointers point to the actual character string; not the GameMaker string element
         let memory_address: usize = resolved_string as *const _ as usize;
-        let placeholder_position: usize = self.len();
+        let placeholder_position: u32 = self.len() as u32;
         self.write_u32(0xDEADC0DE);
         self.pointer_placeholder_positions.push((placeholder_position, memory_address));
         Ok(())
@@ -308,6 +324,14 @@ impl<'a> DataBuilder<'a> {
 
     pub fn bytecode_version(&self) -> u8 {
         self.gm_data.general_info.bytecode_version
+    }
+    
+    pub fn resolve_gm_str(&self, gm_string_ref: &GMRef<String>) -> Result<&String, String> {
+        gm_string_ref.resolve(&self.gm_data.strings.strings)
+    }
+    
+    pub fn display_gm_str(&self, gm_string_ref: &GMRef<String>) -> &str {
+        gm_string_ref.display(&self.gm_data.strings)
     }
 }
 
