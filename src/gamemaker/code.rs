@@ -1,11 +1,11 @@
 ﻿use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
-use crate::gamemaker::variables::GMVariable;
+use crate::gamemaker::variables::{GMVariable, GMVariableB15Data};
 use std::cmp::PartialEq;
 use std::fmt::{Display, Formatter};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::functions::GMFunction;
 use crate::gamemaker::game_objects::GMGameObject;
-
+use crate::gm_serialize::DataBuilder;
 
 #[derive(Debug, Clone)]
 pub struct GMCodes {
@@ -21,6 +21,43 @@ impl GMElement for GMCodes {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let codes: Vec<GMCode> = reader.read_pointer_list()?;
         Ok(GMCodes { codes, exists: true })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+
+        if builder.bytecode_version() >= 15 {
+            // in bytecode 15, the codes' instructions are written before the codes metadata
+            let mut instructions_start_positions: Vec<usize> = Vec::with_capacity(self.codes.len());
+            let mut instructions_end_positions: Vec<usize> = Vec::with_capacity(self.codes.len());
+
+            for (i, code) in self.codes.iter().enumerate() {
+                instructions_start_positions.push(builder.len());
+                for instruction in &code.instructions {
+                    instruction.serialize(builder).map_err(|e| format!(
+                        "{e}\n>while serializing bytecode15 code #{i} with name \"{}\"",
+                        builder.display_gm_str(&code.name),
+                    ))?;
+                }
+                instructions_end_positions.push(builder.len());
+            }
+
+            for (i, code) in self.codes.iter().enumerate() {
+                builder.resolve_pointer(self)?;
+                let b15_info: &GMCodeBytecode15 = code.bytecode15_info.as_ref()
+                    .ok_or_else(|| format!("Code bytecode 15 data not set in Bytecode version {}", builder.bytecode_version()))?;
+                let length = instructions_end_positions[i] - instructions_start_positions[i];
+                builder.write_usize(length)?;
+                builder.write_u16(b15_info.locals_count);
+                builder.write_u16(b15_info.arguments_count | if b15_info.weird_local_flag {0x8000} else {0});
+                builder.write_usize(instructions_start_positions[i] - builder.len())?;  // bytecode relative address
+                builder.write_usize(b15_info.offset)?;
+            }
+        } else {  // bytecode 14
+
+        }
+        builder.write_pointer_list(&self.codes)?;
+        Ok(())
     }
 }
 
@@ -57,6 +94,32 @@ impl GMElement for GMCode {
         instructions.shrink_to_fit();
         Ok(GMCode { name, instructions, bytecode15_info })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if builder.bytecode_version() > 14 {
+            return Err(format!(
+                "[internal error] GMCode::serialize is only meant to be called for bytecode14; data has bytecode version {}",
+                builder.bytecode_version(),
+            ))
+        }
+        builder.resolve_pointer(self)?;
+        builder.write_gm_string(&self.name)?;
+        let length_placeholder_pos: usize = builder.len();
+        builder.write_u32(0xDEADC0DE);
+        let start: usize = builder.len();
+
+        // in bytecode 14, instructions are written immediately
+        for (i, instruction) in self.instructions.iter().enumerate() {
+            instruction.serialize(builder).map_err(|e| format!(
+                "{e}\n>while building bytecode14 code #{i} with name \"{}\"",
+                builder.display_gm_str(&self.name),
+            ))?;
+        }
+
+        let code_length: i32 = builder.len() as i32 - start as i32;
+        builder.overwrite_i32(code_length, length_placeholder_pos)?;
+        Ok(())
+    }
 }
 
 
@@ -83,6 +146,10 @@ impl GMElement for GMCodeBytecode15 {
         // child check {~~}
 
         Ok(GMCodeBytecode15 { locals_count, arguments_count, weird_local_flag, offset, bytecode_start_address })
+    }
+
+    fn serialize(&self, _builder: &mut DataBuilder) -> Result<(), String> {
+        unreachable!("[internal error] GMCodeBytecode15::serialize is not supported; use GMCodes::serialize instead")
     }
 }
 
@@ -329,6 +396,172 @@ impl GMElement for GMInstruction {
        
        Ok(GMInstruction { opcode, kind: instruction_data })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        let instr_abs_pos: usize = builder.len();
+        let bytecode14: bool = builder.bytecode_version() <= 14;
+
+        match &self.kind {
+            GMInstructionData::SingleType(instr) => {
+                let opcode_raw: u8 = if !bytecode14 { self.opcode.into() } else {
+                    match self.opcode {
+                        GMOpcode::Neg => 0x0D,
+                        GMOpcode::Not => 0x0E,
+                        GMOpcode::Dup => 0x82,
+                        GMOpcode::Ret => 0x9D,
+                        GMOpcode::Exit => 0x9E,
+                        GMOpcode::Popz => 0x9F,
+                        other => return Err(format!("Invalid Single Type Instruction opcode {other:?} while building instructions")),
+                    }
+                };
+                builder.write_u8(instr.extra);
+                builder.write_u8(0);
+                builder.write_u8(instr.data_type.into());
+                builder.write_u8(opcode_raw);
+            }
+
+            GMInstructionData::DoubleType(instr) => {
+                let opcode_raw: u8 = if !bytecode14 { self.opcode.into() } else {
+                    match self.opcode {
+                        GMOpcode::Conv => 0x03,
+                        GMOpcode::Mul => 0x04,
+                        GMOpcode::Div => 0x05,
+                        GMOpcode::Rem => 0x06,
+                        GMOpcode::Mod => 0x07,
+                        GMOpcode::Add => 0x08,
+                        GMOpcode::Sub => 0x09,
+                        GMOpcode::And => 0x0A,
+                        GMOpcode::Or => 0x0B,
+                        GMOpcode::Xor => 0x0C,
+                        GMOpcode::Shl => 0x0F,
+                        GMOpcode::Shr => 0x10,
+                        other => return Err(format!("Invalid Double Type Instruction opcode {other:?} while building instructions")),
+                    }
+                };
+                let type1: u8 = instr.type1.into();
+                let type2: u8 = instr.type2.into();
+
+                builder.write_u8(0);
+                builder.write_u8(0);
+                builder.write_u8(type1 | type2 << 4);
+                builder.write_u8(opcode_raw);
+            }
+
+            GMInstructionData::Comparison(instr) => {
+                let opcode_raw: u8 = if bytecode14 {
+                    u8::from(instr.comparison_type) + 0x10
+                } else {
+                    u8::from(self.opcode)     // always GMOpcode::Cmp
+                };
+                let type1: u8 = instr.type1.into();
+                let type2: u8 = instr.type2.into();
+
+                builder.write_u8(0);
+                builder.write_u8(instr.comparison_type.into());
+                builder.write_u8(type1 | type2 << 4);
+                builder.write_u8(opcode_raw);
+            }
+
+            GMInstructionData::Goto(instr) => {
+                let opcode_raw: u8 = if !bytecode14 { self.opcode.into() } else {
+                    match self.opcode {
+                        GMOpcode::B => 0xB7,
+                        GMOpcode::Bt => 0xB8,
+                        GMOpcode::Bf => 0xB9,
+                        GMOpcode::PushEnv => 0xBB,
+                        GMOpcode::PopEnv => 0xBC,
+                        other => return Err(format!("Invalid Goto Instruction opcode {other:?} while building instructions")),
+                    }
+                };
+
+                if bytecode14 {
+                    builder.write_i24(instr.jump_offset);
+                } else if instr.popenv_exit_magic {
+                    builder.write_i24(0xF00000);    // idek
+                } else {
+                    // If not using popenv exit magic, encode jump offset as 23-bit signed integer
+                    builder.write_i24(instr.jump_offset & 0x7fffff);    // TODO verify that this works
+                }
+                builder.write_u8(opcode_raw);
+            }
+
+            GMInstructionData::Pop(instr) => {
+                if instr.type1 == GMDataType::Int16 {
+                    return Err("Int16 Data Type not yet supported while building Pop Instruction".to_string())
+                }
+
+                let opcode_raw: u8 = if !bytecode14 { self.opcode.into() } else {
+                    match self.opcode {
+                        GMOpcode::Pop => 0x41,
+                        other => return Err(format!("Invalid Pop Instruction opcode {other:?} while building instructions")),
+                    }
+                };
+                let type1: u8 = instr.type1.into();
+                let type2: u8 = instr.type2.into();
+
+                builder.write_i16(build_instance_type(&instr.instance_type));
+                builder.write_u8(type1 | type2 << 4);
+                builder.write_u8(opcode_raw);
+
+                let variable: &GMVariable = instr.destination.variable.resolve(&builder.gm_data.variables.variables)?;
+                write_variable_occurrence(builder, instr.destination.variable.index, instr_abs_pos, variable.name_string_id, instr.destination.variable_type)?;
+            }
+
+            GMInstructionData::Push(instr) => {
+                // Write 16-bit integer, instance type, or empty data
+                builder.write_i16(match &instr.value {
+                    GMValue::Int16(int16) => *int16,
+                    GMValue::Variable(variable) if !bytecode14 => {
+                        let variable: &GMVariable = variable.variable.resolve(&builder.gm_data.variables.variables)?;
+                        let b15_data: &GMVariableB15Data = variable.b15_data.as_ref().ok_or("Variable Bytecode 15 data not set while building Push Instruction")?;
+                        build_instance_type(&b15_data.instance_type)
+                    },
+                    _ => 0
+                });
+
+                builder.write_u8(instr.data_type.into());
+                // builder.write_u8(if bytecode14 { instr.opcode.into() } else { 0xC0 });
+                builder.write_u8(self.opcode.into());
+
+                match &instr.value {
+                    GMValue::Double(double) => builder.write_f64(*double),
+                    GMValue::Float(float) => builder.write_f32(*float),
+                    GMValue::Int32(int32) => builder.write_i32(*int32),
+                    GMValue::Int64(int64) => builder.write_i64(*int64),
+                    GMValue::Boolean(boolean) => builder.write_u8(if *boolean {1} else {0}),
+                    GMValue::String(string_ref) => builder.write_u32(string_ref.index),
+                    GMValue::Int16(_) => {}     // nothing because it was already written inside the instruction
+                    GMValue::Variable(code_variable) => {
+                        let variable: &GMVariable = code_variable.variable.resolve(&builder.gm_data.variables.variables)?;
+                        write_variable_occurrence(builder, code_variable.variable.index, instr_abs_pos, variable.name_string_id, code_variable.variable_type)?;
+                    }
+                }
+            }
+
+            GMInstructionData::Call(instr) => {
+                builder.write_u8(instr.arguments_count);
+                builder.write_u8(0);        // TODO check if writing zero is ok since b1 isn't checked or saved
+                builder.write_u8(instr.data_type.into());
+                builder.write_u8(self.opcode.into());  // v removing this (also for push instruction) might break bytecode14 but the line below is wrong too
+                // builder.write_u8(if bytecode14 { instr.opcode.into() } else { 0xDA });
+
+                let function: &GMFunction = instr.function.resolve(&builder.gm_data.functions.functions)?;
+                write_function_occurrence(builder, instr.function.index, instr_abs_pos, function.name_string_id)?;
+            }
+
+            GMInstructionData::Break(instr) => {
+                builder.write_i16(instr.value);
+                builder.write_u8(instr.data_type.into());
+                builder.write_u8(self.opcode.into());
+                if instr.data_type == GMDataType::Int32 {
+                    let int_argument: i32 = instr.int_argument.ok_or("Int argument not set but Data Type is Int32 while building Break Instruction")?;
+                    builder.write_i32(int_argument);
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 
@@ -409,6 +642,11 @@ impl GMElement for GMOpcode {
             raw = Self::convert_bytecode14(raw);
         }
         Self::try_from(raw).map_err(|_| format!("Invalid Opcode 0x{raw:02X}"))
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_u8(u8::from(*self));
+        Ok(())
     }
 }
 
@@ -635,4 +873,55 @@ pub fn build_instance_type(instance_type: &GMInstanceType) -> i16 {
     }
 }
 
+
+fn write_variable_occurrence(
+    builder: &mut DataBuilder,
+    gm_index: u32,
+    occurrence_position: usize,
+    name_string_id: i32,
+    variable_type: GMVariableType,
+) -> Result<(), String> {
+    let occurrence_map_len: usize = builder.variable_occurrences.len();   // prevent double borrow on error message
+    let occurrences: &mut Vec<(usize, GMVariableType)> = builder.variable_occurrences.get_mut(gm_index as usize).ok_or_else(|| format!(
+        "Trying to get inner variable occurrences vec out of bounds while writing occurrence: {} >= {}",
+        gm_index, occurrence_map_len,
+    ))?;
+
+    if let Some((last_occurrence_pos, old_variable_type)) = occurrences.last().cloned() {
+        // replace last occurrence (which is name string id) with next occurrence offset
+        let occurrence_offset: i32 = occurrence_position as i32 - last_occurrence_pos as i32;
+        let occurrence_offset_full: i32 = occurrence_offset & 0x07FFFFFF | (((u8::from(old_variable_type) & 0xF8) as i32) << 24);
+        builder.overwrite_i32(occurrence_offset_full, last_occurrence_pos+4)?;
+    }
+
+    // write name string id for this occurrence. this is correct if it is the last occurrence.
+    // otherwise, it will be overwritten later by the code above.
+    builder.write_i32(name_string_id & 0x07FFFFFF | (((u8::from(variable_type) & 0xF8) as i32) << 24));
+
+    // fuckass borrow checker
+    builder.variable_occurrences.get_mut(gm_index as usize).unwrap().push((occurrence_position, variable_type));
+    Ok(())
+}
+
+
+fn write_function_occurrence(builder: &mut DataBuilder, gm_index: u32, occurrence_position: usize, name_string_id: i32) -> Result<(), String> {
+    let occurrence_map_len: usize = builder.function_occurrences.len();   // prevent double borrow on error message
+    let occurrences: &mut Vec<usize> = builder.function_occurrences.get_mut(gm_index as usize).ok_or_else(|| format!(
+        "Trying to get inner function occurrences vec out of bounds while writing occurrence: {} >= {}",
+        gm_index, occurrence_map_len,
+    ))?;
+
+    if let Some(last_occurrence_pos) = occurrences.last().cloned() {
+        // replace last occurrence (which is name string id) with next occurrence offset
+        let occurrence_offset: i32 = occurrence_position as i32 - last_occurrence_pos as i32;
+        builder.overwrite_i32(occurrence_offset & 0x07FFFFFF, last_occurrence_pos+4)?;
+    }
+
+    // write name string id for this occurrence. this is correct if it is the last occurrence.
+    // otherwise, it will be overwritten later by the code above.
+    builder.write_i32(name_string_id & 0x07FFFFFF);
+
+    builder.function_occurrences.get_mut(gm_index as usize).unwrap().push(occurrence_position);
+    Ok(())
+}
 

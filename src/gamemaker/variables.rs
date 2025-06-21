@@ -61,6 +61,7 @@ impl GMElement for GMVariables {
         if !self.exists { return Ok(()) }
         self.scuffed.serialize_if_bytecode_version(builder, "Scuffed bytecode 15 fields", 15)?;
         for (i, variable) in self.variables.iter().enumerate() {
+            builder.resolve_pointer(variable)?;
             builder.write_gm_string(&variable.name)?;
             variable.b15_data.serialize_if_bytecode_version(builder, "Bytecode 15 data", 15)?;
             
@@ -84,6 +85,15 @@ pub struct GMVariable {
     pub b15_data: Option<GMVariableB15Data>,
     pub name_string_id: i32,
 }
+impl GMElement for GMVariable {
+    fn deserialize(_: &mut DataReader) -> Result<Self, String> {
+        unreachable!("[internal error] GMVariable::deserialize is not supported; use GMVariables::deserialize instead")
+    }
+    fn serialize(&self, _: &mut DataBuilder) -> Result<(), String> {
+        unreachable!("[internal error] GMVariable::serialize is not supported; use GMVariables::serialize instead")
+    }
+}
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMVariableB15Data {
