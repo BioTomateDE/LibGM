@@ -169,15 +169,6 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
 }
 
 
-pub fn read_data_file(data_file_path: &Path) -> Result<Vec<u8>, String> {
-    let stopwatch = Stopwatch::start();
-    let data: Vec<u8> = fs::read(data_file_path)
-        .map_err(|e| format!("Could not read data file with path \"{}\": {e}", data_file_path.display()))?;
-    log::trace!("Reading data file took {stopwatch}");
-    Ok(data)
-}
-
-
 /// GMRef has (fake) generic types to make it clearer which type it belongs to (`name: GMRef` vs `name: GMRef<String>`).
 /// It can be resolved to the data it references using the `.resolve()` method, which needs the list the elements are stored in.
 /// This means that removing or inserting elements in the middle of the list will shift all their `GMRef`s; breaking them.
