@@ -59,7 +59,7 @@ fn main_open_and_close() -> Result<(), String> {
     info!("Writing data file \"{}\"", modified_data_file_path.display());
     write_data_file(modified_data_raw, modified_data_file_path)
         .map_err(|e| format!("{e}\n>while writing data file"))?;
-    
+
     Ok(())
 }
 

@@ -1,8 +1,10 @@
 ﻿use std::fmt::Formatter;
-use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use chrono::{DateTime, Utc};
-use crate::gamemaker::rooms::GMRoom;
+use rand::rngs::StdRng;
+use rand::{Rng, RngCore, SeedableRng};
 use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
+use crate::gamemaker::rooms::GMRoom;
+use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
 
 #[derive(Debug, Clone)]
 pub struct GMGeneralInfo {
@@ -24,11 +26,12 @@ pub struct GMGeneralInfo {
     pub license_md5: [u8; 16],
     pub timestamp_created: DateTime<Utc>,
     pub display_name: GMRef<String>,
-    pub active_targets: u64,        // TODO make a flags struct for this
+    pub active_targets: u64,
     pub function_classifications: GMFunctionClassifications,
     pub steam_appid: i32,
     pub debugger_port: Option<u32>,
     pub room_order: Vec<GMRef<GMRoom>>,
+    pub gms2_info: Option<GMGeneralInfoGMS2>,
     pub exists: bool,
 }
 impl GMChunkElement for GMGeneralInfo {
@@ -151,6 +154,7 @@ impl GMChunkElement for GMGeneralInfo {
             steam_appid: 69420,
             debugger_port: None,
             room_order: vec![],
+            gms2_info: None,
             exists: false,
         }
     }
@@ -188,7 +192,8 @@ impl GMElement for GMGeneralInfo {
         let version = GMVersion::deserialize(reader)?;
         let default_window_width: u32 = reader.read_u32()?;
         let default_window_height: u32 = reader.read_u32()?;
-        let flags = GMGeneralInfoFlags::deserialize(reader)?;
+        let flags_raw: u32 = reader.read_u32()?;
+        let flags = GMGeneralInfoFlags::parse(flags_raw);
         let license_crc32: u32 = reader.read_u32()?;
 
         let license_md5: [u8; 16] = *reader.read_bytes_const()
@@ -206,8 +211,77 @@ impl GMElement for GMGeneralInfo {
         let function_classifications = GMFunctionClassifications::deserialize(reader)?;
         let steam_appid: i32 = reader.read_i32()?;
         let debugger_port: Option<u32> = if bytecode_version >= 14 { Some(reader.read_u32()?) } else { None };
-
         let room_order: Vec<GMRef<GMRoom>> = reader.read_simple_list()?;
+
+        let mut gms2_info: Option<GMGeneralInfoGMS2> = None;
+        if version.major >= 2 {
+            // Parse and verify UUID
+            let timestamp: i64 = timestamp_created.timestamp();
+            let mut info_timestamp_offset: bool = true;
+            let seed: u32 = (timestamp & 0xFFFFFFFF) as u32;
+            let mut rng = StdRng::seed_from_u64(seed as u64);
+
+            let first_random: i64 = ((rng.random::<u32>() as i64) << 32) | (rng.random::<u32>() as i64);
+            if reader.read_i64()? != first_random {
+                return Err("Unexpected random UID #1".to_string());
+            }
+
+            let info_location: i32 = ((timestamp & 0xFFFF) as i32 / 7 + (game_id - default_window_width) as i32 + room_order.len() as i32).abs() % 4;
+            let mut random_uid: Vec<i64> = Vec::with_capacity(4);
+
+            let get_info_number = |first_random: i64, info_timestamp_offset: bool| -> i64 {
+                let mut info_number: i64 = timestamp;
+                if info_timestamp_offset {
+                    info_number -= 1000;
+                }
+                info_number = Self::uid_bitmush(info_number);
+                info_number ^= first_random;
+                info_number = !info_number;
+                info_number ^= ((game_id as i64) << 32) | (game_id as i64);
+                info_number ^= (default_window_width as i64 + flags_raw as i64) << 48 |
+                    (default_window_height as i64 + flags_raw as i64) << 32 |
+                    (default_window_height as i64 + flags_raw as i64) << 16 |
+                    (default_window_width as i64 + flags_raw as i64);
+                info_number ^= bytecode_version as i64;
+                info_number
+            };
+
+            for i in 0..4 {
+                if i == info_location {
+                    let curr: i64 = reader.read_i64()?;
+                    random_uid.push(curr);
+
+                    if curr != get_info_number(first_random, true) {
+                        if curr != get_info_number(first_random, false) {
+                            return Err("Unexpected random UID info".to_string());
+                        } else {
+                            info_timestamp_offset = false;
+                        }
+                    }
+                } else {
+                    let first: u32 = reader.read_u32()?;
+                    let second: u32 = reader.read_u32()?;
+                    if first != rng.next_u32() {
+                        return Err("Unexpected random UID #2".to_string());
+                    }
+                    if second != rng.next_u32() {
+                        return Err("Unexpected random UID #3".to_string());
+                    }
+
+                    random_uid.push(((first as i64) << 32) | (second as i64));
+                }
+            }
+            let fps: f32 = reader.read_f32()?;
+            let allow_statistics: bool = reader.read_bool32()?;
+            let game_guid: [u8; 16] = reader.read_bytes_const::<16>()?.to_owned();
+            gms2_info = Some(GMGeneralInfoGMS2 {
+                random_uid,
+                fps,
+                allow_statistics,
+                game_guid,
+                info_timestamp_offset,
+            })
+        }
 
         Ok(GMGeneralInfo {
             is_debugger_disabled,
@@ -233,9 +307,114 @@ impl GMElement for GMGeneralInfo {
             steam_appid,
             debugger_port,
             room_order,
+            gms2_info,
             exists: true,
         })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists {
+            return Err("General info was never deserialized".to_string())
+        }
+        builder.write_u8(if self.is_debugger_disabled {1} else {0});
+        builder.write_u8(self.bytecode_version);
+        builder.write_u16(self.unknown_value);
+        builder.write_gm_string(&self.game_file_name)?;
+        builder.write_gm_string(&self.config)?;
+        builder.write_u32(self.last_object_id);
+        builder.write_u32(self.last_tile_id);
+        builder.write_u32(self.game_id);
+        builder.write_bytes(self.directplay_guid.to_bytes_le().as_slice());
+        builder.write_gm_string(&self.game_name)?;
+        if self.version.major == 1 {
+            self.version.serialize(builder)?;
+        } else {    // yoyogames moment
+            builder.write_u32(2);
+            builder.write_u32(0);
+            builder.write_u32(0);
+            builder.write_u32(0);
+        }
+        builder.write_u32(self.default_window_width);
+        builder.write_u32(self.default_window_height);
+        self.flags.serialize(builder)?;
+        builder.write_u32(self.license_crc32);
+        builder.write_bytes(&self.license_md5);
+        builder.write_i64(self.timestamp_created.timestamp());
+        builder.write_gm_string(&self.display_name)?;
+        builder.write_u64(self.active_targets);
+        self.function_classifications.serialize(builder)?;
+        builder.write_i32(self.steam_appid);
+        self.debugger_port.serialize_if_bytecode_version(builder, "Debugger Port", 14)?;
+        builder.write_simple_list(&self.room_order)?;
+        if builder.is_gm_version_at_least((2, 0)) {
+            // Write random UID
+            let gms2_info: &GMGeneralInfoGMS2 = self.gms2_info.as_ref().ok_or("GMS2 Data not set in General Info")?;
+            let timestamp: i64 = self.timestamp_created.timestamp();
+            let seed: u32 = (timestamp & 0xFFFFFFFF) as u32;
+            let mut rng = StdRng::seed_from_u64(seed as u64);
+            let first_random: i64 = ((rng.next_u32() as i64) << 32) | rng.next_u32() as i64;
+            let info_number = self.get_info_number(first_random, gms2_info.info_timestamp_offset);
+            let info_location: i32 = ((timestamp & 0xFFFF) as i32 / 7 + (self.game_id - self.default_window_width) as i32 + self.room_order.len() as i32).abs() % 4;
+            builder.write_i64(first_random);
+            for i in 0..4 {
+                if i == info_location {
+                    builder.write_i64(info_number);
+                } else {
+                    let first: u32 = rng.next_u32();
+                    let second: u32 = rng.next_u32();
+                    builder.write_u32(first);
+                    builder.write_u32(second);
+                }
+            }
+            
+            builder.write_f32(gms2_info.fps);
+            builder.write_bool32(gms2_info.allow_statistics);
+            builder.write_bytes(&gms2_info.game_guid);
+        }
+        Ok(())
+    }
+}
+impl GMGeneralInfo {
+    fn get_info_number(&self, first_random: i64, info_timestamp_offset: bool) -> i64 {
+        let flags_raw: u32 = self.flags.build();
+        let mut info_number: i64 = self.timestamp_created.timestamp();
+        if info_timestamp_offset {
+            info_number -= 1000;
+        }
+        info_number = Self::uid_bitmush(info_number);
+        info_number ^= first_random;
+        info_number = !info_number;
+        info_number ^= ((self.game_id as i64) << 32) | (self.game_id as i64);
+        info_number ^= (self.default_window_width as i64 + flags_raw as i64) << 48 |
+            (self.default_window_height as i64 + flags_raw as i64) << 32 |
+            (self.default_window_height as i64 + flags_raw as i64) << 16 |
+            (self.default_window_width as i64 + flags_raw as i64);
+        info_number ^= self.bytecode_version as i64;
+        info_number
+    }
+    
+    fn uid_bitmush(info_number: i64) -> i64 {
+        let mut temp: u64 = info_number as u64;
+        temp = (temp << 56 & 0xFF00_0000_0000_0000) |
+            (temp >> 08 & 0x00FF_0000_0000_0000) |
+            (temp << 32 & 0x0000_FF00_0000_0000) |
+            (temp >> 16 & 0x0000_00FF_0000_0000) |
+            (temp << 08 & 0x0000_0000_FF00_0000) |
+            (temp >> 24 & 0x0000_0000_00FF_0000) |
+            (temp >> 16 & 0x0000_0000_0000_FF00) |
+            (temp >> 32 & 0x0000_0000_0000_00FF);
+        temp as i64
+    }
+}
+
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMGeneralInfoGMS2 {
+    pub random_uid: Vec<i64>,
+    pub fps: f32,
+    pub allow_statistics: bool,
+    pub game_guid: [u8; 16],
+    pub info_timestamp_offset: bool,
 }
 
 
@@ -245,6 +424,7 @@ pub enum GMVersionLTS {
     LTS2022_0,
     Post2022_0,
 }
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMVersion {
     pub major: u32,
@@ -273,9 +453,17 @@ impl GMElement for GMVersion {
         let major: u32 = reader.read_u32()?;
         let minor: u32 = reader.read_u32()?;
         let release: u32 = reader.read_u32()?;
-        let stable: u32 = reader.read_u32()?;
+        let build: u32 = reader.read_u32()?;
         // since gen8 gm version is stuck on maximum 2.0.0.0; LTS will (initially) always be Pre2022_0
-        Ok(GMVersion::new(major, minor, release, stable, GMVersionLTS::Pre2022_0))
+        Ok(GMVersion::new(major, minor, release, build, GMVersionLTS::Pre2022_0))
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_u32(self.major);
+        builder.write_u32(self.minor);
+        builder.write_u32(self.release);
+        builder.write_u32(self.build);
+        Ok(())
     }
 }
 
@@ -416,7 +604,6 @@ impl GMVersion {
 
 #[derive(Debug, Clone)]
 pub struct GMGeneralInfoFlags {
-    // taken from https://github.com/UnderminersTeam/UndertaleModTool/blob/master/UndertaleModLib/Models/UndertaleGeneralInfo.cs
     pub fullscreen: bool,
     pub sync_vertex1: bool,
     pub sync_vertex2: bool,
@@ -438,7 +625,18 @@ pub struct GMGeneralInfoFlags {
 impl GMElement for GMGeneralInfoFlags {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let raw: u32 = reader.read_u32()?;
-        Ok(GMGeneralInfoFlags {
+        Ok(Self::parse(raw))
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_u32(self.build());
+        Ok(())
+    }
+}
+
+impl GMGeneralInfoFlags {
+    fn parse(raw: u32) -> Self {
+        Self {
             fullscreen: 0 != raw & 0x0001,
             sync_vertex1: 0 != raw & 0x0002,
             sync_vertex2: 0 != raw & 0x0004,
@@ -456,7 +654,27 @@ impl GMElement for GMGeneralInfoFlags {
             borderless_window: 0 != raw & 0x4000,
             javascript_mode: 0 != raw & 0x8000,
             license_exclusions: 0 != raw & 0x10000,
-        })
+        }
+    }
+    fn build(&self) -> u32 {
+        let mut raw: u32 = 0;
+        if self.fullscreen {raw |= 0x0001};
+        if self.sync_vertex1 {raw |= 0x0002};
+        if self.sync_vertex2 {raw |= 0x0004};
+        if self.sync_vertex3 {raw |= 0x0100};
+        if self.interpolate {raw |= 0x0008};
+        if self.scale {raw |= 0x0010};
+        if self.show_cursor {raw |= 0x0020};
+        if self.sizeable {raw |= 0x0040};
+        if self.screen_key {raw |= 0x0080};
+        if self.studio_version_b1 {raw |= 0x0200};
+        if self.studio_version_b2 {raw |= 0x0400};
+        if self.studio_version_b3 {raw |= 0x0800};
+        if self.steam_enabled {raw |= 0x1000};
+        if self.local_data_enabled {raw |= 0x2000};
+        if self.borderless_window {raw |= 0x4000};
+        if self.javascript_mode {raw |= 0x8000};
+        raw
     }
 }
 
@@ -602,6 +820,77 @@ impl GMElement for GMFunctionClassifications {
             vertex_buffers: 0 != raw & 9223372036854775808,
         })
     }
-}
 
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        let mut raw: u64 = 0;
+        if self.none {raw |= 0x0};
+        if self.internet {raw |= 0x1};
+        if self.joystick {raw |= 0x2};
+        if self.gamepad {raw |= 0x4};
+        if self.immersion {raw |= 0x8};
+        if self.screengrab {raw |= 0x10};
+        if self.math {raw |= 0x20};
+        if self.action {raw |= 0x40};
+        if self.matrix_d3d {raw |= 0x80};
+        if self.d3dmodel {raw |= 0x100};
+        if self.data_structures {raw |= 0x200};
+        if self.file {raw |= 0x400};
+        if self.ini {raw |= 0x800};
+        if self.filename {raw |= 0x1000};
+        if self.directory {raw |= 0x2000};
+        if self.environment {raw |= 0x4000};
+        if self.unused1 {raw |= 0x8000};
+        if self.http {raw |= 0x10000};
+        if self.encoding {raw |= 0x20000};
+        if self.uidialog {raw |= 0x40000};
+        if self.motion_planning {raw |= 0x80000};
+        if self.shape_collision {raw |= 0x100000};
+        if self.instance {raw |= 0x200000};
+        if self.room {raw |= 0x400000};
+        if self.game {raw |= 0x800000};
+        if self.display {raw |= 0x1000000};
+        if self.device {raw |= 0x2000000};
+        if self.window {raw |= 0x4000000};
+        if self.draw_color {raw |= 0x8000000};
+        if self.texture {raw |= 0x10000000};
+        if self.layer {raw |= 0x20000000};
+        if self.string {raw |= 0x40000000};
+        if self.tiles {raw |= 0x80000000};
+        if self.surface {raw |= 0x100000000};
+        if self.skeleton {raw |= 0x200000000};
+        if self.io {raw |= 0x400000000};
+        if self.variables {raw |= 0x800000000};
+        if self.array {raw |= 0x1000000000};
+        if self.external_call {raw |= 0x2000000000};
+        if self.notification {raw |= 0x4000000000};
+        if self.date {raw |= 0x8000000000};
+        if self.particle {raw |= 0x10000000000};
+        if self.sprite {raw |= 0x20000000000};
+        if self.clickable {raw |= 0x40000000000};
+        if self.legacy_sound {raw |= 0x80000000000};
+        if self.audio {raw |= 0x100000000000};
+        if self.event {raw |= 0x200000000000};
+        if self.unused2 {raw |= 0x400000000000};
+        if self.free_type {raw |= 0x800000000000};
+        if self.analytics {raw |= 0x1000000000000};
+        if self.unused3 {raw |= 0x2000000000000};
+        if self.unused4 {raw |= 0x4000000000000};
+        if self.achievement {raw |= 0x8000000000000};
+        if self.cloud_saving {raw |= 0x10000000000000};
+        if self.ads {raw |= 0x20000000000000};
+        if self.os {raw |= 0x40000000000000};
+        if self.iap {raw |= 0x80000000000000};
+        if self.facebook {raw |= 0x100000000000000};
+        if self.physics {raw |= 0x200000000000000};
+        if self.flash_aa {raw |= 0x400000000000000};
+        if self.console {raw |= 0x800000000000000};
+        if self.buffer {raw |= 0x1000000000000000};
+        if self.steam {raw |= 0x2000000000000000};
+        if self.unused5 {raw |= 2310346608841064448};
+        if self.shaders {raw |= 0x4000000000000000};
+        if self.vertex_buffers {raw |= 9223372036854775808};
+        builder.write_u64(raw);
+        Ok(())
+    }
+}
 
