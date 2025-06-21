@@ -15,6 +15,10 @@ impl GMElement for GMEmbeddedAudios {
         let audios: Vec<GMEmbeddedAudio> = reader.read_pointer_list()?;
         Ok(Self { audios, exists: true })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
