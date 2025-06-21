@@ -3,7 +3,7 @@ use num_enum::{TryFromPrimitive, IntoPrimitive};
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::code::GMCode;
 use crate::gamemaker::sprites::GMSprite;
-
+use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
 
 #[derive(Debug, Clone)]
 pub struct GMGameObjects {
@@ -116,6 +116,52 @@ impl GMElement for GMGameObjects {
 
         Ok(Self { game_objects, exists: true })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+        builder.write_usize(self.game_objects.len())?;
+        let pointer_list_pos: usize = builder.len();
+        for _ in 0..self.game_objects.len() {
+            builder.write_u32(0xDEADC0DE);
+        }
+
+        for (i, game_object) in self.game_objects.iter().enumerate() {
+            builder.resolve_pointer(game_object)?;
+            builder.overwrite_usize(builder.len(), pointer_list_pos + 4*i)?;
+
+            builder.write_gm_string(&game_object.name)?;
+            builder.write_resource_id_opt(&game_object.sprite);
+            builder.write_bool32(game_object.visible);
+            game_object.managed.serialize_if_gm_ver(builder, "Managed", (2022, 5))?;
+            builder.write_bool32(game_object.solid);
+            builder.write_i32(game_object.depth);
+            builder.write_bool32(game_object.persistent);
+            match game_object.parent {
+                None => builder.write_i32(-100),    // No Parent
+                Some(obj_ref) if obj_ref.index == i as u32 => builder.write_i32(-1),    // Parent is Self
+                Some(obj_ref) => builder.write_resource_id(&obj_ref),   // Normal Parent
+            }
+            builder.write_resource_id_opt(&game_object.texture_mask);
+            builder.write_bool32(game_object.uses_physics);
+            builder.write_bool32(game_object.is_sensor);
+            builder.write_u32(game_object.collision_shape.into());
+            builder.write_f32(game_object.density);
+            builder.write_f32(game_object.restitution);
+            builder.write_u32(game_object.group);
+            builder.write_f32(game_object.linear_damping);
+            builder.write_f32(game_object.angular_damping);
+            builder.write_usize(game_object.physics_shape_vertices.len())?;   // "new meaning" according to UTMT?
+            builder.write_f32(game_object.friction);
+            builder.write_bool32(game_object.awake);
+            builder.write_bool32(game_object.kinematic);
+            for (x, y) in &game_object.physics_shape_vertices {
+                builder.write_f32(*x);
+                builder.write_f32(*y);
+            }
+            builder.write_pointer_list(&game_object.events)?;
+        }
+        Ok(())
+    }
 }
 
 
@@ -156,6 +202,10 @@ impl GMElement for GMGameObjectEvents {
         let events: Vec<GMGameObjectEvent> = reader.read_pointer_list()?;
         Ok(Self { events })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_pointer_list(&self.events)
+    }
 }
 
 
@@ -170,6 +220,12 @@ impl GMElement for GMGameObjectEvent {
         let subtype: u32 = reader.read_u32()?;
         let actions: Vec<GMGameObjectEventAction> = reader.read_pointer_list()?;
         Ok(Self { subtype, actions })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_u32(self.subtype);
+        builder.write_pointer_list(&self.actions)?;
+        Ok(())
     }
 }
 
@@ -201,8 +257,7 @@ impl GMElement for GMGameObjectEventAction {
         let use_apply_to: bool = reader.read_bool32()?;
         let exe_type: u32 = reader.read_u32()?;
         let action_name: Option<GMRef<String>> = reader.read_gm_string_opt()?;
-        let code_id: i32 = reader.read_i32()?;
-        let code: Option<GMRef<GMCode>> = if code_id == -1 { None } else { Some(GMRef::new(code_id as u32)) };
+        let code: Option<GMRef<GMCode>> = reader.read_resource_by_id_option()?;
         let argument_count: u32 = reader.read_u32()?;
         let who: i32 = reader.read_i32()?;
         let relative: bool = reader.read_bool32()?;
@@ -225,6 +280,24 @@ impl GMElement for GMGameObjectEventAction {
             is_not,
             unknown_always_zero,
         })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_u32(self.lib_id);
+        builder.write_u32(self.id);
+        builder.write_u32(self.kind);
+        builder.write_bool32(self.use_relative);
+        builder.write_bool32(self.is_question);
+        builder.write_bool32(self.use_apply_to);
+        builder.write_u32(self.exe_type);
+        builder.write_gm_string_opt(&self.action_name)?;
+        builder.write_resource_id_opt(&self.code);
+        builder.write_u32(self.argument_count);
+        builder.write_i32(self.who);
+        builder.write_bool32(self.relative);
+        builder.write_bool32(self.is_not);
+        builder.write_u32(self.unknown_always_zero);
+        Ok(())
     }
 }
 
