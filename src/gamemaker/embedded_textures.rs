@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::cmp::max;
 use std::io::Read;
 use crate::gm_deserialize::{GMChunkElement, GMElement, DataReader};
@@ -5,6 +6,7 @@ use crate::printing::hexdump;
 use image;
 use bzip2::read::BzDecoder;
 use image::{DynamicImage, ImageBuffer};
+use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
 use crate::qoi;
 
 
@@ -28,6 +30,47 @@ impl GMElement for GMEmbeddedTextures {
         let texture_pages: Vec<GMEmbeddedTexture> = reader.read_pointer_list()?;
         Ok(Self { texture_pages, exists: true })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+        // builder.write_pointer_list(&self.texture_pages)
+        builder.write_usize(self.texture_pages.len())?;
+        let pointer_list_start_pos: usize = builder.len();
+        for _ in 0..self.texture_pages.len() {
+            builder.write_u32(0xDEADC0DE);
+        }
+
+        let mut texture_block_size_placeholders: Vec<usize> = vec![0; self.texture_pages.len()];
+
+        for (i, texture_page) in self.texture_pages.iter().enumerate() {
+            builder.overwrite_usize(builder.len(), pointer_list_start_pos + i*4)?;
+            builder.write_u32(texture_page.scaled);
+            texture_page.generated_mips.serialize_if_gm_version(builder, "Generated Mipmap levels", (2, 0, 6))?;
+            if builder.is_gm_version_at_least((2022, 3)) {
+                texture_block_size_placeholders[i] = builder.len();
+                // placeholder for texture block size. will not be overwritten if external
+                builder.write_u32(texture_page.texture_block_size.ok_or("Texture block size not set in 2022.3+")?);
+            }
+            texture_page.data_2022_9.serialize_if_gm_version(builder, "Texture Page 2022.9 data", (2022, 9))?;
+
+            if texture_page.image.is_some() {
+                builder.write_pointer(&texture_page.image)?;
+            } else {
+                builder.write_u32(0);   // external texture
+            }
+        }
+
+        for (i, texture_page) in self.texture_pages.iter().enumerate() {
+            if let Some(ref img) = texture_page.image {
+                builder.resolve_pointer(&texture_page.image)?;
+                let start_pos: usize = builder.len();
+                build_raw_texture(builder, img)?;
+                let length: usize = start_pos - builder.len();
+                builder.overwrite_usize(length, texture_block_size_placeholders[i])?
+            }
+        }
+        Ok(())
+    }
 }
 
 
@@ -37,31 +80,17 @@ pub struct GMEmbeddedTexture {
     pub scaled: u32,
     /// same with this
     pub generated_mips: Option<u32>,
-    pub texture_width: Option<i32>,
-    pub texture_height: Option<i32>,
-    pub index_in_group: Option<i32>,
+    /// TODO maybe this could be used to speed up parsing textures in 2022.3+
+    pub texture_block_size: Option<u32>,
+    pub data_2022_9: Option<GMEmbeddedTexture2022_9>,
     pub image: Option<DynamicImage>,
 }
 impl GMElement for GMEmbeddedTexture {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let scaled: u32 = reader.read_u32()?;
-        let mut generated_mips: Option<u32> = None;
-        let mut texture_width: Option<i32> = None;
-        let mut texture_height: Option<i32> = None;
-        let mut index_in_group: Option<i32> = None;
-        // reader directory {}
-
-        if reader.general_info.is_version_at_least((2, 0, 6, 0)) {
-            generated_mips = Some(reader.read_u32()?);
-        }
-        // if general_info.is_version_at_least(2022, 3, 0, 0) {
-        //     texture_block_size = Some(chunk.read_u32()?);
-        // }
-        if reader.general_info.is_version_at_least((2022, 9, 0, 0)) {
-            texture_width = Some(reader.read_i32()?);
-            texture_height = Some(reader.read_i32()?);
-            index_in_group = Some(reader.read_i32()?);
-        }
+        let generated_mips: Option<u32> = reader.deserialize_if_gm_version((2, 0, 6))?;
+        let texture_block_size: Option<u32> = reader.deserialize_if_gm_version((2022, 3))?;
+        let data_2022_9: Option<GMEmbeddedTexture2022_9> = reader.deserialize_if_gm_version((2022, 9))?;
 
         let texture_data_start_pos: usize = reader.read_pointer()?;
         let image: Option<DynamicImage> = if texture_data_start_pos == 0 {   // can be zero if the texture is "external"
@@ -71,14 +100,34 @@ impl GMElement for GMEmbeddedTexture {
             Some(read_raw_texture(reader)?)
         };
 
-        Ok(GMEmbeddedTexture {
-            scaled,
-            generated_mips,
-            texture_width,
-            texture_height,
-            index_in_group,
-            image,
-        })
+        Ok(GMEmbeddedTexture { scaled, generated_mips, texture_block_size, data_2022_9, image })
+    }
+
+    fn serialize(&self, _builder: &mut DataBuilder) -> Result<(), String> {
+        unreachable!("[internal error] GMEmbeddedTexture::serialize is not supported; use GMEmbeddedTextures::serialize instead")
+    }
+}
+
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMEmbeddedTexture2022_9 {
+    pub texture_width: i32,
+    pub texture_height: i32,
+    pub index_in_group: i32,
+}
+impl GMElement for GMEmbeddedTexture2022_9 {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        let texture_width: i32 = reader.read_i32()?;
+        let texture_height: i32 = reader.read_i32()?;
+        let index_in_group: i32 = reader.read_i32()?;
+        Ok(Self { texture_width, texture_height, index_in_group })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_i32(self.texture_width);
+        builder.write_i32(self.texture_height);
+        builder.write_i32(self.index_in_group);
+        Ok(())
     }
 }
 
@@ -294,4 +343,24 @@ fn image_from_bz2_qoi(raw_image_data: &[u8]) -> Result<DynamicImage, String> {
         .map_err(|e| format!("Could not decode QOI image: {e}"))?;
     Ok(image)
 }
+
+
+
+fn build_raw_texture(builder: &mut DataBuilder, image: &DynamicImage) -> Result<(), String> {
+    let rgba_image = match image {
+        DynamicImage::ImageRgba8(img) => Cow::Borrowed(img),
+        _ => Cow::Owned(image.to_rgba8()),
+    };
+
+    let mut encoder = png::Encoder::new(&mut builder.raw_data, image.width(), image.height());
+    encoder.set_color(png::ColorType::Rgba);
+    encoder.set_depth(png::BitDepth::Eight);
+    encoder.set_compression(png::Compression::Default);    // adjust for runtime/filesize tradeoff
+    encoder.set_filter(png::FilterType::Sub);
+    encoder.set_adaptive_filter(png::AdaptiveFilterType::Adaptive);
+    let mut writer = encoder.write_header().map_err(|e| format!("Error while trying to write PNG header: {e}"))?;
+    writer.write_image_data(&rgba_image).map_err(|e| format!("Error while trying to write PNG image data: {e}"))?;
+    Ok(())
+}
+
 
