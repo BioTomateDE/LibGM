@@ -23,7 +23,7 @@ impl Stopwatch {
 }
 impl Display for Stopwatch {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        use crate::debug_utils::DurationExt;
+        use crate::utility::DurationExt;
         use ::colored::Colorize;
         let real: Duration = self.real_time.elapsed();
         let cpu: Duration = self.cpu_time.elapsed();
@@ -35,7 +35,7 @@ impl Display for Stopwatch {
 #[macro_export]
 macro_rules! bench_export {
     ($label:expr, $expr:expr) => {{
-        let _stopwatch = crate::debug_utils::Stopwatch::start();
+        let _stopwatch = crate::utility::Stopwatch::start();
         let _result = $expr;
         ::log::trace!("Exporting {} took {}", $label, _stopwatch);
         _result
@@ -112,32 +112,36 @@ pub fn format_bytes(bytes: usize) -> String {
 }
 
 
-/// to understand these seemingly meaningless functions, check out [PGO](https://doc.rust-lang.org/rustc/profile-guided-optimization.html)
-
-#[inline(always)]
-#[cold]
-pub const fn cold() {}
-
-#[inline(always)]
-#[allow(unused)]
-pub const fn likely(b: bool) -> bool {
-    if !b {
-        cold();
-    }
-    b
-}
-
-#[inline(always)]
-pub const fn unlikely(b: bool) -> bool {
-    if b {
-        cold();
-    }
-    b
-}
-
 
 pub fn typename<T>() -> String {
     let string: &str = std::any::type_name::<T>();
     string.rsplit_once("::").map(|(_, i)| i).unwrap_or(string).to_string()
+}
+
+
+pub fn vec_with_capacity<T>(count: usize) -> Result<Vec<T>, String> {
+    const FAILSAFE_SIZE: usize = 1_000_000;   // 1 Megabyte
+    let implied_size = size_of::<T>() * count;
+    if implied_size > FAILSAFE_SIZE {
+        return Err(format!(
+            "Failsafe triggered while initializing list of {}: \
+            Element count {} implies a total data size of {} which is larger than the failsafe size of {}",
+            typename::<T>(), count, format_bytes(implied_size), format_bytes(FAILSAFE_SIZE),
+        ))
+    }
+    Ok(Vec::with_capacity(count))
+}
+
+pub fn hashmap_with_capacity<K, V>(count: usize) -> Result<HashMap<K, V>, String> {
+    const FAILSAFE_SIZE: usize = 100_000;   // 100 KB
+    let implied_size = size_of::<K>() * size_of::<V>() * count;
+    if implied_size > FAILSAFE_SIZE {
+        return Err(format!(
+            "Failsafe triggered while initializing HashMap of <{}, {}>: \
+            Element count {} implies a total data size of {} which is larger than the failsafe size of {}",
+            typename::<K>(), typename::<V>(), count, format_bytes(implied_size), format_bytes(FAILSAFE_SIZE),
+        ))
+    }
+    Ok(HashMap::with_capacity(count))
 }
 
