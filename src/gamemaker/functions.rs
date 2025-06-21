@@ -61,6 +61,7 @@ impl GMElement for GMFunctions {
         }
 
         for (i, function) in self.functions.iter().enumerate() {
+            builder.resolve_pointer(function)?;
             let resolved_pointer_pos: usize = builder.len();
             builder.overwrite_usize(resolved_pointer_pos, pointer_list_start_pos + 4*i)?;
 
@@ -85,6 +86,14 @@ impl GMElement for GMFunctions {
 pub struct GMFunction {
     pub name: GMRef<String>,
     pub name_string_id: i32,
+}
+impl GMElement for GMFunction {
+    fn deserialize(_: &mut DataReader) -> Result<Self, String> {
+        unreachable!("[internal error] GMFunction::deserialize is not supported; use GMFunctions::deserialize instead")
+    }
+    fn serialize(&self, _: &mut DataBuilder) -> Result<(), String> {
+        unreachable!("[internal error] GMFunction::serialize is not supported; use GMFunctions::serialize instead")
+    }
 }
 
 
