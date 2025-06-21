@@ -14,7 +14,7 @@ use crate::gamemaker::game_objects::GMGameObjects;
 use crate::gamemaker::scripts::{GMScript, GMScripts};
 use crate::gamemaker::strings::GMStrings;
 use crate::gamemaker::variables::{GMVariable, GMVariables};
-use crate::gamemaker::general_info::{GMGeneralInfo, GMVersion};
+use crate::gamemaker::general_info::{GMGeneralInfo, GMVersion, GMVersionReq};
 use crate::gamemaker::paths::GMPaths;
 use crate::gamemaker::rooms::GMRooms;
 use crate::gamemaker::sounds::GMSounds;
@@ -51,7 +51,7 @@ pub struct GMData {
     pub audio_groups: GMAudioGroups,                    // AGRP
     pub global_init_scripts: GMGlobalInitScripts,       // GLOB
     pub game_end_scripts: GMGameEndScripts,             // GMEN
-    
+
     /// Should not be edited; only set by `GMData::read_chunk_padding`.
     pub padding: usize,
 }
@@ -70,7 +70,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
         let name: String = reader.read_chunk_name()?;
         let chunk_length: usize = reader.read_usize()?;
         let start_pos: usize = reader.cur_pos;
-        
+
         reader.cur_pos += chunk_length;
         if reader.cur_pos > raw_data.len() {
             return Err(format!(
@@ -79,7 +79,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
                 name, chunk_length, reader.cur_pos, raw_data.len(),
             ))
         }
-        
+
         let is_last_chunk: bool = reader.cur_pos == raw_data.len();
         let chunk = GMChunk {
             name: name.clone(),
@@ -87,7 +87,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
             end_pos: reader.cur_pos,
             is_last_chunk,
         };
-        
+
         if let Some(old_chunk) = reader.chunks.insert(name.clone(), chunk.clone()) {
             return Err(format!(
                 "Chunk '{}' is defined multiple times: old data range {}..{}; new data range {}..{}",
@@ -661,6 +661,22 @@ impl<'a> DataReader<'a> {
     }
     pub fn display_gm_str(&self, string_ref: GMRef<String>) -> &str {
         string_ref.display(&self.strings)
+    }
+
+    pub fn deserialize_if_gm_version<T: GMElement, V: Into<GMVersionReq>>(&mut self, ver_req: V) -> Result<Option<T>, String> {
+        if self.general_info.is_version_at_least(ver_req) {
+            Ok(Some(T::deserialize(self)?))
+        } else {
+            Ok(None)
+        }
+    }
+    
+    pub fn deserialize_if_bytecode_version<T: GMElement>(&mut self, ver_req: u8) -> Result<Option<T>, String> {
+        if self.general_info.bytecode_version >= ver_req {
+            Ok(Some(T::deserialize(self)?))
+        } else {
+            Ok(None)
+        }
     }
 }
 
