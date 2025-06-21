@@ -57,6 +57,7 @@ pub struct DataBuilder<'a> {
 
     pub function_occurrences: Vec<Vec<usize>>,
     pub variable_occurrences: Vec<Vec<(usize, GMVariableType)>>,
+    pub sequences_exist: bool,
 }
 
 
@@ -70,6 +71,7 @@ impl<'a> DataBuilder<'a> {
             pointer_resource_positions: HashMap::new(),
             function_occurrences: Vec::new(),
             variable_occurrences: Vec::new(),
+            sequences_exist: gm_data.sequences.exists,
         }
     }
 
