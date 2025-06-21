@@ -4,10 +4,11 @@ use crate::gamemaker::chunk_reading::{DataReader, GMChunkElement, GMElement, GMP
 #[derive(Debug, Clone)]
 pub struct GMStrings {
     pub strings: Vec<String>,
+    pub exists: bool,
 }
 impl GMChunkElement for GMStrings {
     fn empty() -> Self {
-        Self { strings: vec![] }
+        Self { strings: vec![], exists: false }
     }
 }
 impl GMElement for GMStrings {
@@ -30,6 +31,15 @@ impl GMElement for GMStrings {
         reader.string_occurrence_map = abs_pos_to_reference;
         
         Ok(GMStrings { strings: strings_by_index })
+    }
+}
+
+
+impl GMRef<String> {
+    pub fn display<'a>(&self, gm_strings: &'a GMStrings) -> &'a str {
+        self.resolve(&gm_strings.strings)
+            .map(|i| i.as_str())
+            .unwrap_or("<invalid string reference>")
     }
 }
 
