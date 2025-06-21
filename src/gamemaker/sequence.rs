@@ -1,4 +1,4 @@
-use crate::gm_deserialize::{hashmap_with_capacity, vec_with_capacity, DataReader, GMChunkElement, GMElement, GMRef};
+use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use std::collections::HashMap;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
@@ -6,6 +6,8 @@ use crate::gamemaker::game_objects::GMGameObject;
 use crate::gamemaker::particles::GMParticleSystem;
 use crate::gamemaker::sounds::GMSound;
 use crate::gamemaker::sprites::GMSprite;
+use crate::gm_serialize::DataBuilder;
+use crate::utility::{hashmap_with_capacity, vec_with_capacity};
 
 /// This struct belong to the chunk SEQN.
 /// Sprites can _also_ contain sequences (not by reference; the actual data).
@@ -31,6 +33,14 @@ impl GMElement for GMSequences {
         }
         let sequences: Vec<GMSequence> = reader.read_pointer_list()?;
         Ok(Self { sequences, exists: true })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+        builder.align(4);
+        builder.write_u32(1);   // SEQN Version 1
+        builder.write_pointer_list(&self.sequences)?;
+        Ok(())
     }
 }
 
@@ -124,6 +134,29 @@ impl GMElement for GMSequence {
             moments,
         })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.name)?;
+        builder.write_u32(self.playback.into());
+        builder.write_f32(self.playback_speed);
+        builder.write_u32(self.playback_speed_type.into());
+        builder.write_f32(self.length);
+        builder.write_i32(self.origin_x);
+        builder.write_i32(self.origin_y);
+        builder.write_f32(self.volume);
+        if builder.is_gm_version_at_least((2024, 13)) {
+            builder.write_f32(self.width.ok_or("Sequence width not set in 2024.13+")?);
+            builder.write_f32(self.height.ok_or("Sequence height not set in 2024.13+")?);
+        }
+        builder.write_simple_list(&self.broadcast_messages)?;
+        builder.write_simple_list(&self.tracks)?;
+        for (key, function_id) in &self.function_ids {
+            builder.write_i32(*key);
+            builder.write_gm_string(function_id)?;
+        }
+        builder.write_simple_list(&self.moments)?;
+        Ok(())
+    }
 }
 
 
@@ -136,6 +169,12 @@ impl<T: GMElement> GMElement for GMTrackKeyframesData<T> {
         reader.align(4)?;
         let keyframes: Vec<GMKeyframeData<T>> = reader.read_simple_list()?;
         Ok(Self { keyframes })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.align(4);
+        builder.write_simple_list(&self.keyframes)?;
+        Ok(())
     }
 }
 
@@ -151,6 +190,13 @@ impl<T: GMElement> GMElement for GMColorTrackKeyframesData<T> {
         let interpolation: i32 = reader.read_i32()?;
         let keyframes: Vec<GMKeyframeData<T>> = reader.read_simple_list()?;
         Ok(Self { interpolation, keyframes })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.align(4);
+        builder.write_i32(self.interpolation);
+        builder.write_simple_list(&self.keyframes)?;
+        Ok(())
     }
 }
 
@@ -196,6 +242,19 @@ impl<T: GMElement> GMElement for GMKeyframeData<T> {
         }
         Ok(Self { key, length, stretch, disabled, channels })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_f32(self.key);
+        builder.write_f32(self.length);
+        builder.write_bool32(self.stretch);
+        builder.write_bool32(self.disabled);
+        builder.write_usize(self.channels.len())?;
+        for (channel, keyframe) in &self.channels {
+            builder.write_i32(*channel);
+            keyframe.serialize(builder)?;
+        }
+        Ok(())
+    }
 }
 
 
@@ -210,6 +269,12 @@ impl GMElement for GMKeyframeAudio {
         let mode: i32 = reader.read_i32()?;
         Ok(Self { sound, mode })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_resource_id(&self.sound);
+        builder.write_i32(self.mode);
+        Ok(())
+    }
 }
 
 
@@ -221,6 +286,11 @@ impl GMElement for GMKeyframeInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let game_object: GMRef<GMGameObject> = reader.read_resource_by_id()?;
         Ok(Self { game_object })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_resource_id(&self.game_object);
+        Ok(())
     }
 }
 
@@ -234,6 +304,11 @@ impl GMElement for GMKeyframeGraphic {
         let sprite: GMRef<GMSprite> = reader.read_resource_by_id()?;
         Ok(Self { sprite })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_resource_id(&self.sprite);
+        Ok(())
+    }
 }
 
 
@@ -245,6 +320,11 @@ impl GMElement for GMKeyframeSequence {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let sequence: GMRef<GMSequence> = reader.read_resource_by_id()?;
         Ok(Self { sequence })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_resource_id(&self.sequence);
+        Ok(())
     }
 }
 
@@ -258,6 +338,11 @@ impl GMElement for GMKeyframeSpriteFrames {
         let value: i32 = reader.read_i32()?;
         Ok(Self { value })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_i32(self.value);
+        Ok(())
+    }
 }
 
 
@@ -269,6 +354,11 @@ impl GMElement for GMKeyframeBool {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let boolean: bool = reader.read_bool32()?;
         Ok(Self { boolean })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_bool32(self.boolean);
+        Ok(())
     }
 }
 
@@ -282,6 +372,11 @@ impl GMElement for GMKeyframeString {
         let string: GMRef<String> = reader.read_gm_string()?;
         Ok(Self { string })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.string)?;
+        Ok(())
+    }
 }
 
 
@@ -293,6 +388,11 @@ impl GMElement for GMKeyframeColor {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let value: f32 = reader.read_f32()?;
         Ok(Self { value })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_f32(self.value);
+        Ok(())
     }
 }
 
@@ -319,6 +419,14 @@ impl GMElement for GMKeyframeText {
             font_index,
         })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.text)?;
+        builder.write_bool32(self.wrap);
+        builder.write_i32((self.alignment_v as i32) << 8 | self.alignment_h as i32);
+        builder.write_i32(self.font_index);   // TODO no idea what this is but shouldn't it be a GMRef<GMFont> instead of an i32?
+        Ok(())
+    }
 }
 
 
@@ -330,6 +438,11 @@ impl GMElement for GMKeyframeParticle {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let particle: GMRef<GMParticleSystem> = reader.read_resource_by_id()?;
         Ok(Self { particle })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_resource_id(&self.particle);
+        Ok(())
     }
 }
 
@@ -346,6 +459,14 @@ impl GMElement for GMBroadcastMessage {
             messages.push(reader.read_gm_string()?);
         }
         Ok(Self { messages })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_usize(self.messages.len())?;
+        for message in &self.messages {
+            builder.write_gm_string(message)?;
+        }
+        Ok(())
     }
 }
 
@@ -364,6 +485,15 @@ impl GMElement for GMKeyframeMoment {
             None
         };
         Ok(Self { internal_count, event })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_i32(self.internal_count);
+        if let Some(ref event) = self.event {
+            builder.write_gm_string(event)?;
+        }
+        // FIXME: maybe there should be null written if event string not set?
+        Ok(())
     }
 }
 
@@ -490,6 +620,41 @@ impl GMElement for GMTrack {
             anim_curve_string,
         })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.model_name)?;
+        builder.write_gm_string(&self.name)?;
+        builder.write_i32(self.builtin_name.into());
+        builder.write_i32(self.traits.into());
+        builder.write_bool32(self.is_creation_track);
+        builder.write_usize(self.tags.len())?;
+        builder.write_usize(self.owned_resources.len())?;
+        builder.write_usize(self.sub_tracks.len())?;
+        for tag in &self.tags {
+            builder.write_i32(*tag);
+        }
+        for animation_curve in &self.owned_resources {
+            builder.write_gm_string(&animation_curve.name)?;
+            animation_curve.serialize(builder)?;
+        }
+        for track in &self.sub_tracks {
+            track.serialize(builder)?;
+        }
+        match &self.keyframes {
+            GMTrackKeyframes::Audio(k) => k.serialize(builder)?,
+            GMTrackKeyframes::Instance(k) => k.serialize(builder)?,
+            GMTrackKeyframes::Graphic(k) => k.serialize(builder)?,
+            GMTrackKeyframes::Sequence(k) => k.serialize(builder)?,
+            GMTrackKeyframes::SpriteFrames(k) => k.serialize(builder)?,
+            GMTrackKeyframes::Bool(k) => k.serialize(builder)?,
+            GMTrackKeyframes::String(k) => k.serialize(builder)?,
+            GMTrackKeyframes::Color(k) => k.serialize(builder)?,
+            GMTrackKeyframes::Text(k) => k.serialize(builder)?,
+            GMTrackKeyframes::Particle(k) => k.serialize(builder)?,
+            GMTrackKeyframes::BroadcastMessage(k) => k.serialize(builder)?,
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -504,6 +669,13 @@ impl GMElement for GMAnimationCurve {
         let graph_type: u32 = reader.read_u32()?;
         let channels: Vec<GMAnimationCurveChannel> = reader.read_simple_list()?;
         Ok(GMAnimationCurve { name, graph_type, channels })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.name)?;
+        builder.write_u32(self.graph_type.into());
+        builder.write_simple_list(&self.channels)?;
+        Ok(())
     }
 }
 
@@ -528,6 +700,14 @@ impl GMElement for GMAnimationCurveChannel {
         let points: Vec<GMAnimationCurveChannelPoint> = reader.read_simple_list()?;
         Ok(GMAnimationCurveChannel { name, curve_type, iterations, points })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.name)?;
+        builder.write_u32(self.curve_type.into());
+        builder.write_u32(self.iterations);
+        builder.write_simple_list(&self.points)?;
+        Ok(())
+    }
 }
 
 
@@ -550,6 +730,17 @@ impl GMElement for GMAnimationCurveChannelPoint {
         };
         Ok(GMAnimationCurveChannelPoint { x, y, bezier_data })
     }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_f32(self.x);
+        builder.write_f32(self.y);
+        if builder.is_gm_version_at_least((2, 3, 1)) {
+            let bezier_data: &GMAnimationCurveChannelPointBezierData = self.bezier_data.as_ref()
+                .ok_or("Sequence Track Animation Curve Point: Bezier data not set in 2.3.1+")?;
+            bezier_data.serialize(builder)?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -566,6 +757,14 @@ impl GMElement for GMAnimationCurveChannelPointBezierData {
         let x1: f32 = reader.read_f32()?;
         let y1: f32 = reader.read_f32()?;
         Ok(Self { x0, y0, x1, y1 })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_f32(self.x0);
+        builder.write_f32(self.y0);
+        builder.write_f32(self.x1);
+        builder.write_f32(self.y1);
+        Ok(())
     }
 }
 
