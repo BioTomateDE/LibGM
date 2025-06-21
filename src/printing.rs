@@ -422,7 +422,7 @@ impl GMFont {
         println!("GMFont:");
         println!("  Name: {}", self.name.resolve(&strings.strings)?);
         println!("  Display Name: {}", resolve_str_maybe(&self.display_name, strings));
-        println!("  EM Size: {}", self.em_size);
+        println!("  EM Size: {:?}", self.em_size);
         println!("  Bold: {}", self.bold);
         println!("  Italic: {}", self.italic);
         println!("  Range Start: {}", self.range_start);
@@ -486,25 +486,25 @@ impl GMRoom {
         println!("  Bounds: ({}, {}) - ({}, {})", self.left, self.top, self.right, self.bottom);
         println!("  Gravity: ({}, {})", self.gravity_x, self.gravity_y);
         println!("  Meters Per Pixel: {}", self.meters_per_pixel);
-        match &self.layers {
-            Some(layers) => {
-                println!("  Layers Length: {}", layers.len());
-                for layer in layers {
-                    layer.print(&strings)?;
-                }
-            },
-            None => println!("  Layers: None"),
-        }
-
-        match &self.sequences {
-            Some(sequences) => {
-                println!("  Sequences Length: {}", sequences.len());
-                // for sequences in sequences {
-                //     sequences.print();
-                // }
-            },
-            None => println!("  Sequences: None"),
-        }
+        // match &self.layers {
+        //     Some(layers) => {
+        //         println!("  Layers Length: {}", layers.len());
+        //         for layer in layers {
+        //             layer.print(&strings)?;
+        //         }
+        //     },
+        //     None => println!("  Layers: None"),
+        // }
+        // 
+        // match &self.sequences {
+        //     Some(sequences) => {
+        //         println!("  Sequences Length: {}", sequences.len());
+        //         // for sequences in sequences {
+        //         //     sequences.print();
+        //         // }
+        //     },
+        //     None => println!("  Sequences: None"),
+        // }
         println!();
         Ok(())
     }
@@ -656,9 +656,9 @@ impl GMEmbeddedTexture {
         println!("GMEmbeddedTexture:");
         println!("  Scaled: {}", self.scaled);
         println!("  Generated Mips: {:?}", self.generated_mips);
-        println!("  Texture Width: {:?}", self.texture_width);
-        println!("  Texture Height: {:?}", self.texture_height);
-        println!("  Index In Group: {:?}", self.index_in_group);
+        println!("  Texture Width: {:?}", self.data_2022_9.as_ref().map_or(69420, |i| i.texture_width));
+        println!("  Texture Heigt: {:?}", self.data_2022_9.as_ref().map_or(69420, |i| i.texture_height));
+        println!("  Index In Group: {:?}", self.data_2022_9.as_ref().map_or(69420, |i| i.index_in_group));
         println!();
     }
 }
