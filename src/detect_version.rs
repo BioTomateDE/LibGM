@@ -1,5 +1,5 @@
-use crate::utility::typename;
-use crate::gm_deserialize::{vec_with_capacity, DataReader, GMChunk};
+use crate::utility::vec_with_capacity;
+use crate::gm_deserialize::{DataReader, GMChunk};
 use crate::gamemaker::embedded_textures::MAGIC_BZ2_QOI_HEADER;
 use crate::gamemaker::general_info::{GMVersion, GMVersionReq};
 use crate::gamemaker::general_info::GMVersionLTS::{Post2022_0, Pre2022_0};
