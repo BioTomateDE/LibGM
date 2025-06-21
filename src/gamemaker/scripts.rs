@@ -1,6 +1,6 @@
 ﻿use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use crate::gamemaker::code::GMCode;
-
+use crate::gm_serialize::DataBuilder;
 
 #[derive(Debug, Clone)]
 pub struct GMScripts {
@@ -16,6 +16,12 @@ impl GMElement for GMScripts {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let scripts: Vec<GMScript> = reader.read_scripts_with_occurrences()?;
         Ok(Self { scripts, exists: true })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+        builder.write_pointer_list(&self.scripts)?;
+        Ok(())
     }
 }
 
@@ -48,6 +54,20 @@ impl GMElement for GMScript {
         };
 
         Ok(GMScript { name, is_constructor, code })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_gm_string(&self.name)?;
+        if self.is_constructor {
+            if let Some(ref gm_code_ref) = self.code {
+                builder.write_u32(gm_code_ref.index | 0x80000000);
+            } else {
+                builder.write_i32(-1);
+            }
+        } else {
+            builder.write_resource_id_opt(&self.code);
+        }
+        Ok(())
     }
 }
 
