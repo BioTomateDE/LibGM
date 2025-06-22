@@ -536,7 +536,7 @@ impl<'a> DataReader<'a> {
     }
 
     pub fn read_simple_list<T: GMElement>(&mut self) -> Result<Vec<T>, String> {
-        const FAILSAFE_SIZE: usize = 100_000;   // 100 Kilobytes
+        const FAILSAFE_SIZE: usize = 1_000_000;   // 1 Megabyte
         let count: usize = self.read_usize()?;
         let implied_data_size: usize = count * size_of::<T>();
         if implied_data_size > FAILSAFE_SIZE {
@@ -556,7 +556,7 @@ impl<'a> DataReader<'a> {
     }
 
     pub fn read_simple_list_short<T: GMElement>(&mut self) -> Result<Vec<T>, String> {
-        const FAILSAFE_SIZE: usize = 1_000;   // 1 Kilobyte
+        const FAILSAFE_SIZE: usize = 10_000;   // 10 Kilobytes
         let count: usize = self.read_u16()? as usize;
         let implied_data_size: usize = count * size_of::<T>();
         if implied_data_size > FAILSAFE_SIZE {
