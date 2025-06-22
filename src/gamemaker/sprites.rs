@@ -47,7 +47,7 @@ pub struct GMSprite {
     pub sep_masks: GMSpriteSepMaskType,
     pub origin_x: i32,
     pub origin_y: i32,
-    pub textures: Vec<GMRef<GMTexturePageItem>>,
+    pub textures: Vec<Option<GMRef<GMTexturePageItem>>>,
     pub collision_masks: Vec<GMSpriteMaskEntry>,
     pub special_fields: Option<GMSpriteSpecial>,
 }
@@ -72,7 +72,7 @@ impl GMElement for GMSprite {
         ))?;
         let origin_x: i32 = reader.read_i32()?;
         let origin_y: i32 = reader.read_i32()?;
-        let mut textures: Vec<GMRef<GMTexturePageItem>> = Vec::new();
+        let mut textures: Vec<Option<GMRef<GMTexturePageItem>>> = Vec::new();
         let mut collision_masks: Vec<GMSpriteMaskEntry> = Vec::new();
         let mut special_fields: Option<GMSpriteSpecial> = None;
 
@@ -141,9 +141,9 @@ impl GMElement for GMSprite {
             };
 
             if sequence_offset != 0 {
-                let thingy: i32 = reader.read_i32()?;
-                if thingy != 1 {
-                    return Err(format!("Expected 1 but got {thingy} while parsing Sequence for Sprite with name \"{name_str}\""))
+                let sequence_version: i32 = reader.read_i32()?;
+                if sequence_version != 1 {
+                    return Err(format!("Expected SEQN version 1 but got {sequence_version} while parsing Sequence for Sprite with name \"{name_str}\""))
                 }
                 sequence = Some(GMSequence::deserialize(reader)?);
             }
@@ -278,19 +278,23 @@ impl GMElement for GMSprite {
     }
 }
 impl GMSprite {
-    fn read_texture_list(reader: &mut DataReader) -> Result<Vec<GMRef<GMTexturePageItem>>, String> {
+    fn read_texture_list(reader: &mut DataReader) -> Result<Vec<Option<GMRef<GMTexturePageItem>>>, String> {
         let count: usize = reader.read_usize()?;
-        let mut textures: Vec<GMRef<GMTexturePageItem>> = Vec::with_capacity(count);
+        let mut textures: Vec<Option<GMRef<GMTexturePageItem>>> = Vec::with_capacity(count);
         for _ in 0..count {
-            textures.push(reader.read_gm_texture()?);
+            textures.push(reader.read_gm_texture_opt()?);
         }
         Ok(textures)
     }
 
-    fn build_texture_list(builder: &mut DataBuilder, texture_list: &Vec<GMRef<GMTexturePageItem>>) -> Result<(), String> {
+    fn build_texture_list(builder: &mut DataBuilder, texture_list: &Vec<Option<GMRef<GMTexturePageItem>>>) -> Result<(), String> {
         builder.write_usize(texture_list.len())?;
-        for texture_page_item_ref in texture_list {
-            builder.write_pointer(texture_page_item_ref)?;
+        for texture_page_item_ref_opt in texture_list {
+            if let Some(texture_page_item_ref) = texture_page_item_ref_opt {
+                builder.write_pointer(texture_page_item_ref)?;
+            } else {
+                builder.write_u32(0);
+            }
         }
         Ok(())
     }
