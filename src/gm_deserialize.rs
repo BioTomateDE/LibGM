@@ -446,7 +446,7 @@ impl<'a> DataReader<'a> {
         let stopwatch = Stopwatch::start();
 
         let element = T::deserialize(self)
-            .map_err(|e| format!("{e}\n>while deserializing required chunk '{chunk_name}'"))?;
+            .map_err(|e| format!("{e}\n↳ while deserializing required chunk '{chunk_name}'"))?;
         self.read_chunk_padding()?;
 
         log::trace!("Parsing required chunk '{chunk_name}' took {stopwatch}");
@@ -460,7 +460,7 @@ impl<'a> DataReader<'a> {
             let stopwatch = Stopwatch::start();
 
             let element = T::deserialize(self)
-                .map_err(|e| format!("{e}\n>while deserializing optional chunk '{chunk_name}'"))?;
+                .map_err(|e| format!("{e}\n↳ while deserializing optional chunk '{chunk_name}'"))?;
             self.read_chunk_padding()?;
 
             log::trace!("Parsing optional chunk '{chunk_name}' took {stopwatch}");
