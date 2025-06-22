@@ -35,7 +35,7 @@ impl GMElement for GMCodes {
                 instructions_start_positions.push(builder.len());
                 for instruction in &code.instructions {
                     instruction.serialize(builder).map_err(|e| format!(
-                        "{e}\n>while serializing bytecode15 code #{i} with name \"{}\"",
+                        "{e}\n↳ while serializing bytecode15 code #{i} with name \"{}\"",
                         builder.display_gm_str(&code.name),
                     ))?;
                 }
@@ -111,7 +111,7 @@ impl GMElement for GMCode {
         // in bytecode 14, instructions are written immediately
         for (i, instruction) in self.instructions.iter().enumerate() {
             instruction.serialize(builder).map_err(|e| format!(
-                "{e}\n>while building bytecode14 code #{i} with name \"{}\"",
+                "{e}\n↳ while building bytecode14 code #{i} with name \"{}\"",
                 builder.display_gm_str(&self.name),
             ))?;
         }

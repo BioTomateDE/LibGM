@@ -85,7 +85,7 @@ impl<'a> DataBuilder<'a> {
         self.write_u32(0xDEADC0DE);   // chunk length placeholder
 
         element.serialize(self)
-            .map_err(|e| format!("{e}\n>while serializing chunk '{chunk_name}'"))?;
+            .map_err(|e| format!("{e}\n↳ while serializing chunk '{chunk_name}'"))?;
 
         // potentially write padding
         let ver = &self.gm_data.general_info.version;
@@ -173,7 +173,7 @@ impl<'a> DataBuilder<'a> {
         self.write_usize(count)?;
         for element in elements {
             element.serialize(self).map_err(|e| format!(
-                "{e}\n>while building simple list of {} with {} elements",
+                "{e}\n↳ while building simple list of {} with {} elements",
                 typename::<T>(), count,
             ))?;
         }
@@ -188,7 +188,7 @@ impl<'a> DataBuilder<'a> {
         self.write_u16(count);
         for element in elements {
             element.serialize(self).map_err(|e| format!(
-                "{e}\n>while building short simple list of {} with {} elements",
+                "{e}\n↳ while building short simple list of {} with {} elements",
                 typename::<T>(), count,
             ))?;
         }
@@ -206,7 +206,7 @@ impl<'a> DataBuilder<'a> {
             let resolved_pointer_pos: usize = self.len();
             self.overwrite_usize(resolved_pointer_pos, pointer_list_start_pos + 4*i)?;
             element.serialize(self).map_err(|e| format!(
-                "{e}\n>while building pointer list of {} with {} elements",
+                "{e}\n↳ while building pointer list of {} with {} elements",
                 typename::<T>(), count,
             ))?;
         }
