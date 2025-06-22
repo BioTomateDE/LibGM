@@ -279,8 +279,8 @@ impl<'a> DataReader<'a> {
     pub fn read_bytes_dyn(&mut self, count: usize) -> Result<&'a [u8], String> {
         if self.cur_pos < self.chunk.start_pos {
             return Err(format!(
-                "underflowed at reader position {} in chunk '{}': {} < {}",
-                self.cur_pos, self.chunk.name, self.cur_pos, self.chunk.start_pos,
+                "underflowed at reader position {} in chunk '{}' with start position {}",
+                self.cur_pos, self.chunk.name, self.chunk.start_pos,
             ))
         }
         if self.cur_pos+count > self.chunk.end_pos {
