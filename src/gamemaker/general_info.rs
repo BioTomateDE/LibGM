@@ -349,7 +349,9 @@ impl GMElement for GMGeneralInfo {
         self.function_classifications.serialize(builder)?;
         builder.write_i32(self.steam_appid);
         self.debugger_port.serialize_if_bytecode_ver(builder, "Debugger Port", 14)?;
-        builder.write_simple_list(&self.room_order)?;
+        for room_ref in &self.room_order {
+            builder.write_resource_id(room_ref);
+        }
         if builder.is_gm_version_at_least((2, 0)) {
             // Write random UID
             let gms2_info: &GMGeneralInfoGMS2 = self.gms2_info.as_ref().ok_or("GMS2 Data not set in General Info")?;
@@ -358,7 +360,9 @@ impl GMElement for GMGeneralInfo {
             let mut rng = CSharpRng::new(seed);
             let first_random: i64 = ((rng.next() as i64) << 32) | rng.next() as i64;
             let info_number = self.get_info_number(first_random, gms2_info.info_timestamp_offset);
-            let info_location: i32 = ((timestamp & 0xFFFF) as i32 / 7 + (self.game_id - self.default_window_width) as i32 + self.room_order.len() as i32).abs() % 4;
+            let info_location: i32 = ((timestamp & 0xFFFF) as i32 / 7 
+                + self.game_id.wrapping_sub(self.default_window_width) as i32 
+                + self.room_order.len() as i32).abs() % 4;
             builder.write_i64(first_random);
             for i in 0..4 {
                 if i == info_location {
