@@ -139,12 +139,11 @@ fn read_raw_texture(reader: &mut DataReader) -> Result<DynamicImage, String> {
 
     if header == MAGIC_PNG_HEADER {
         // Parse PNG
-        reader.skip_bytes(8);   // skip header
         loop {
             let len: usize = u32::from_be_bytes(*reader.read_bytes_const()?) as usize;
             let type_: usize = u32::from_be_bytes(*reader.read_bytes_const()?) as usize;
-            reader.skip_bytes(len + 4);
-            if type_ == 0x49454E44 {    // no idea lol
+            reader.cur_pos += len + 4;
+            if type_ == 0x49454E44 {    // "IEND"
                 break;
             }
         }
@@ -157,7 +156,6 @@ fn read_raw_texture(reader: &mut DataReader) -> Result<DynamicImage, String> {
     }
     else if header.starts_with(MAGIC_BZ2_QOI_HEADER) {
         // Parse QOI + BZip2
-        reader.skip_bytes(8);    // skip past (start of) header
         let mut header_size: usize = 8;
         if reader.general_info.is_version_at_least((2022, 5, 0, 0)) {
             let _serialized_uncompressed_length = reader.read_usize()?;    // maybe handle negative numbers?
