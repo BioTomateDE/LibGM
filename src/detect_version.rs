@@ -21,10 +21,11 @@ fn try_check<R: Into<GMVersionReq>, T: Into<GMVersionReq>>(
     if let Some(chunk) = reader.chunks.get(chunk_name) {
         let required_version: GMVersionReq = required_version.into();
         if !reader.general_info.is_version_at_least(required_version.clone()) {
-            return Err(format!(
-                "Version requirement for checking version {} in chunk '{}' failed: {} < {}",
-                target_version, chunk_name, reader.general_info.version, required_version,
-            ))
+            // return Err(format!(
+            //     "Version requirement for checking version {} in chunk '{}' failed: {} < {}",
+            //     target_version, chunk_name, reader.general_info.version, required_version,
+            // ))
+            return Ok(())   // could not detect version
         }
         reader.chunk = chunk.clone();
         reader.cur_pos = chunk.start_pos;
