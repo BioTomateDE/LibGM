@@ -30,6 +30,7 @@ fn try_check<R: Into<GMVersionReq>, T: Into<GMVersionReq>>(
         reader.chunk = chunk.clone();
         reader.cur_pos = chunk.start_pos;
         if let Some(version_req) = check_fn(reader)? {
+            log::debug!("Checking for version {} in chunk '{}' successful; upgraded from version {}", version_req, chunk_name, reader.general_info.version);
             reader.general_info.set_version_at_least(version_req.clone())?;
         }
     }
@@ -541,8 +542,8 @@ fn cc_objt_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
         return target_ver      // Bounds check on vertex data "failed" => 2022.5
     }
 
-    reader.cur_pos += 8*vertex_count;
-    if reader.cur_pos == 15 {   // !! 15 has to equal variant count of GMGameObjectEventType enum !!
+    reader.cur_pos += 12 + 8*vertex_count;
+    if reader.read_u32()? == 15 {   // !! 15 has to equal variant count of GMGameObjectEventType enum !!
         let sub_event_pointer = reader.read_usize()?;
         if reader.cur_pos + 56 == sub_event_pointer {
             return Ok(None)     // subevent pointer check "succeeded" (Should start right after the list) => not 2022.5
