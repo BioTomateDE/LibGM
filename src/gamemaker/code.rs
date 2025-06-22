@@ -85,7 +85,7 @@ impl GMElement for GMCode {
         let start_pos: usize = reader.cur_pos;
         while reader.cur_pos < end_pos {
             let instruction = GMInstruction::deserialize(reader).map_err(|e| format!(
-                "{e} for Instruction #{} (at absolute position {}) of Code entry \"{}\" with absolute start position {}",
+                "{e}\n↳ for Instruction #{} (at absolute position {}) of Code entry \"{}\" with absolute start position {}",
                 instructions.len(), reader.cur_pos, reader.display_gm_str(name), start_pos,
             ))?;
             instructions.push(instruction);
@@ -800,7 +800,7 @@ fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMV
             1 => Ok(GMValue::Boolean(true)),
             other => Err(format!("Invalid boolean value {other} (0x{other:02X}) while reading value in code at absolute position {}", reader.cur_pos-1))
         })?,
-        GMDataType::String => reader.read_gm_string().map(GMValue::String),
+        GMDataType::String => reader.read_resource_by_id().map(GMValue::String),
         GMDataType::Int16 => {
             reader.cur_pos -= 4;
             let number: i16 = reader.read_i16()?;
