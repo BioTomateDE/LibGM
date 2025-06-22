@@ -5,10 +5,10 @@ use crate::gm_deserialize::{GMChunkElement, GMElement, DataReader};
 use crate::printing::hexdump;
 use image;
 use bzip2::read::BzDecoder;
-use image::{DynamicImage, ImageBuffer};
+use image::{DynamicImage, ImageBuffer, ImageFormat};
 use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
 use crate::qoi;
-
+use crate::utility::Stopwatch;
 
 pub const MAGIC_PNG_HEADER: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
 pub const MAGIC_BZ2_QOI_HEADER: &[u8] = "2zoq".as_bytes();
@@ -183,31 +183,8 @@ fn read_raw_texture(reader: &mut DataReader) -> Result<DynamicImage, String> {
 
 
 fn decode_png(data: &[u8]) -> Result<DynamicImage, String> {
-    let png_decoder = png::Decoder::new(data);
-    let mut png_reader = png_decoder.read_info().map_err(|e| format!("Could not read PNG metadata: {e}"))?;
-    let mut buffer: Vec<u8> = vec![0; png_reader.output_buffer_size()];
-    let info = png_reader.next_frame(&mut buffer).map_err(|e| format!("Could not read PNG data: {e}"))?;
-    match info.color_type {
-        png::ColorType::Rgb => {
-            ImageBuffer::from_raw(info.width, info.height, buffer)
-                .map(DynamicImage::ImageRgb8)
-                .ok_or_else(|| format!(
-                    "Could not fit Rgb PNG with dimensions {}x{} into buffer with length {}",
-                    info.width, info.height, png_reader.output_buffer_size(),
-                ))
-        }
-        png::ColorType::Rgba => {
-            ImageBuffer::from_raw(info.width, info.height, buffer)
-                .map(DynamicImage::ImageRgba8)
-                .ok_or_else(|| format!(
-                    "Could not fit Rgba PNG with dimensions {}x{} into buffer with length {}",
-                    info.width, info.height, png_reader.output_buffer_size(),
-                ))
-        }
-        _ => Err(format!(
-            "Unsupported PNG color type: {:?}", info.color_type,
-        )),
-    }
+    image::load_from_memory_with_format(data, ImageFormat::Png)
+        .map_err(|e| format!("Could not parse PNG: {e}"))
 }
 
 
