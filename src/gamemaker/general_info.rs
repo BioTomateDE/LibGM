@@ -569,7 +569,7 @@ impl GMVersion {
             return false
         }
         if self.major != ver.major {
-            return self.major > ver.minor;
+            return self.major > ver.major;
         }
         if self.minor != ver.minor {
             return self.minor > ver.minor;
