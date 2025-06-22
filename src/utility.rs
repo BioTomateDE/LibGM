@@ -25,8 +25,8 @@ impl Display for Stopwatch {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         use crate::utility::DurationExt;
         use ::colored::Colorize;
-        let real: Duration = self.real_time.elapsed();
-        let cpu: Duration = self.cpu_time.elapsed();
+        let real: Duration = self.elapsed_real();
+        let cpu: Duration = self.elapsed_cpu();
         write!(f, "{} {} {}{}", real.ms().bright_magenta(), "(cpu:".dimmed(), cpu.ms().magenta(), ")".dimmed())
     }
 }
