@@ -46,19 +46,19 @@ fn main_open_and_close() -> Result<(), String> {
 
     info!("Loading data file \"{}\"", original_data_file_path.display());
     let original_data_raw: Vec<u8> = read_data_file(original_data_file_path)
-        .map_err(|e| format!("{e}\n>while reading data file"))?;
+        .map_err(|e| format!("{e}\n↳ while reading data file"))?;
 
     info!("Parsing data file");
     let original_data: GMData = parse_data_file(original_data_raw)
-        .map_err(|e| format!("{e}\n>while parsing data file"))?;
+        .map_err(|e| format!("{e}\n↳ while parsing data file"))?;
 
     info!("Building data file");
     let modified_data_raw: Vec<u8> = build_data_file(&original_data)
-        .map_err(|e| format!("{e}\n>while building data file"))?;
+        .map_err(|e| format!("{e}\n↳ while building data file"))?;
 
     info!("Writing data file \"{}\"", modified_data_file_path.display());
     write_data_file(modified_data_raw, modified_data_file_path)
-        .map_err(|e| format!("{e}\n>while writing data file"))?;
+        .map_err(|e| format!("{e}\n↳ while writing data file"))?;
 
     Ok(())
 }
@@ -69,27 +69,27 @@ fn main_open_and_close() -> Result<(), String> {
 //     let original_data_file_path = path_from_arg(args.get(1), "data_original.win");
 //     let modified_data_file_path = path_from_arg(args.get(2), "data_modified.win");
 //     let mod_data_path = path_from_arg(args.get(3), "acornmod.tar.zst");
-// 
+//
 //     info!("Loading original data file \"{}\"", original_data_file_path.display());
 //     let original_data_raw: Vec<u8> = read_data_file(original_data_file_path)
-//         .map_err(|e| format!("{e}\n>while reading original data file"))?;
-// 
+//         .map_err(|e| format!("{e}\n↳ while reading original data file"))?;
+//
 //     info!("Parsing original data file");
 //     let original_data: GMData = parse_data_file(original_data_raw)
-//         .map_err(|e| format!("{e}\n>while parsing original data file"))?;
-// 
+//         .map_err(|e| format!("{e}\n↳ while parsing original data file"))?;
+//
 //     info!("Loading modified data file \"{}\"", modified_data_file_path.display());
 //     let modified_data_raw: Vec<u8> = read_data_file(modified_data_file_path)
-//         .map_err(|e| format!("{e}\n>while reading modified data file"))?;
-// 
+//         .map_err(|e| format!("{e}\n↳ while reading modified data file"))?;
+//
 //     info!("Parsing modified data file");
 //     let modified_data: GMData = parse_data_file(modified_data_raw)
-//         .map_err(|e| format!("{e}\n>while parsing modified data file"))?;
-//     
+//         .map_err(|e| format!("{e}\n↳ while parsing modified data file"))?;
+//
 //     info!("Extracting changes and exporting mod to file \"{}\"", mod_data_path.display());
 //     export_mod(&original_data, &modified_data, mod_data_path)
-//         .map_err(|e| format!("{e}\n>while exporting AcornGM mod"))?;
-// 
+//         .map_err(|e| format!("{e}\n↳ while exporting AcornGM mod"))?;
+//
 //     Ok(())
 // }
 
