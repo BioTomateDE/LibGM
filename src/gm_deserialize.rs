@@ -109,7 +109,7 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     let stopwatch2 = Stopwatch::start();
     let embedded_textures: GMEmbeddedTextures = reader.read_chunk_required("TXTR")?;
     let texture_page_items: GMTexturePageItems = reader.read_chunk_required("TPAG")?;
-    let variables: GMVariables = reader.read_chunk_required("VARI")?;
+    let variables: GMVariables = reader.read_chunk_required("VARI")?;   // variables and functions have to be parsed before code
     let functions: GMFunctions = reader.read_chunk_required("FUNC")?;
     let scripts: GMScripts = reader.read_chunk_required("SCPT")?;
     let codes: GMCodes = reader.read_chunk_required("CODE")?;
