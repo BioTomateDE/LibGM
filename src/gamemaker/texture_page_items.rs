@@ -1,7 +1,6 @@
-use std::collections::HashMap;
-use crate::gm_deserialize::{DataReader, GMChunk, GMChunkElement, GMElement, GMRef};
+use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use crate::gamemaker::embedded_textures::GMEmbeddedTexture;
-
+use crate::gm_serialize::DataBuilder;
 
 #[derive(Debug, Clone)]
 pub struct GMTexturePageItems {
@@ -17,6 +16,12 @@ impl GMElement for GMTexturePageItems {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let texture_page_items: Vec<GMTexturePageItem> = reader.read_texture_page_items_with_occurrences()?;
         Ok(Self { texture_page_items, exists: true })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if !self.exists { return Ok(()) }
+        builder.write_pointer_list(&self.texture_page_items)?;
+        Ok(())
     }
 }
 
@@ -63,6 +68,21 @@ impl GMElement for GMTexturePageItem {
             bounding_height,
             texture_page,
         })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_u16(self.source_x);
+        builder.write_u16(self.source_y);
+        builder.write_u16(self.source_width);
+        builder.write_u16(self.source_height);
+        builder.write_u16(self.target_x);
+        builder.write_u16(self.target_y);
+        builder.write_u16(self.target_width);
+        builder.write_u16(self.target_height);
+        builder.write_u16(self.bounding_width);
+        builder.write_u16(self.bounding_height);
+        builder.write_resource_id(&self.texture_page);
+        Ok(())
     }
 }
 
