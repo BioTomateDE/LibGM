@@ -65,7 +65,7 @@ impl GMElement for GMEmbeddedTextures {
                 builder.resolve_pointer(&texture_page.image)?;
                 let start_pos: usize = builder.len();
                 build_raw_texture(builder, img)?;
-                let length: usize = start_pos - builder.len();
+                let length: usize = builder.len() - start_pos;
                 builder.overwrite_usize(length, texture_block_size_placeholders[i])?
             }
         }
