@@ -491,6 +491,7 @@ impl<'a> DataReader<'a> {
             // byte is not zero => padding is incorrect
             self.cur_pos -= 1;  // undo reading incorrect padding byte
             self.padding = if self.cur_pos % 4 == 0 { 4 } else { 1 };
+            log::debug!("Set padding to {}", self.padding);
             return Ok(())
         }
         Ok(())    // padding was already set correctly
