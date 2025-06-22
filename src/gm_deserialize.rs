@@ -543,7 +543,7 @@ impl<'a> DataReader<'a> {
             return Err(format!(
                 "Failsafe triggered in chunk '{}' at position {} while trying \
                 to read simple list of {}: Element count {} implies a total data \
-                size of {} which is larget than the failsafe size of {}",
+                size of {} which is larger than the failsafe size of {}",
                 self.chunk.name, self.cur_pos-4, typename::<T>(),
                 count, format_bytes(implied_data_size), format_bytes(FAILSAFE_SIZE),
             ))
@@ -563,7 +563,7 @@ impl<'a> DataReader<'a> {
             return Err(format!(
                 "Failsafe triggered in chunk '{}' at position {} while trying \
                 to read short simple list of {}: Element count {} implies a total data \
-                size of {} which is larget than the failsafe size of {}",
+                size of {} which is larger than the failsafe size of {}",
                 self.chunk.name, self.cur_pos-4, typename::<T>(),
                 count, format_bytes(implied_data_size), format_bytes(FAILSAFE_SIZE),
             ))
