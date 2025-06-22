@@ -534,7 +534,7 @@ fn cc_objt_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
         return Ok(None)     // no objects; nothing to detect
     }
     let first_object_pointer = reader.read_usize()?;
-    reader.cur_pos += first_object_pointer + 64;
+    reader.cur_pos = first_object_pointer + 64;
     let vertex_count = reader.read_usize()?;
 
     if reader.cur_pos + 12 + 8*vertex_count >= reader.chunk.end_pos {
