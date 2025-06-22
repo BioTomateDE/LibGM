@@ -6,6 +6,7 @@ mod qoi;
 mod gm_serialize;
 pub mod gm_deserialize;
 mod detect_version;
+mod csharp_rng;
 
 use std::path::Path;
 use std::process::exit;

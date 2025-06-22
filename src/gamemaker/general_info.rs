@@ -1,7 +1,6 @@
 ﻿use std::fmt::Formatter;
 use chrono::{DateTime, Utc};
-use rand::rngs::StdRng;
-use rand::{Rng, RngCore, SeedableRng};
+use crate::csharp_rng::CSharpRng;
 use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use crate::gamemaker::rooms::GMRoom;
 use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
@@ -218,10 +217,10 @@ impl GMElement for GMGeneralInfo {
             // Parse and verify UUID
             let timestamp: i64 = timestamp_created.timestamp();
             let mut info_timestamp_offset: bool = true;
-            let seed: u32 = (timestamp & 0xFFFFFFFF) as u32;
-            let mut rng = StdRng::seed_from_u64(seed as u64);
+            let seed: i32 = (timestamp & 0xFFFFFFFF) as i32;
+            let mut rng = CSharpRng::new(seed);
 
-            let first_expected: i64 = ((rng.random::<u32>() as i64) << 32) | (rng.random::<u32>() as i64);
+            let first_expected: i64 = ((rng.next() as i64) << 32) | (rng.next() as i64);
             let first_actual: i64 = reader.read_i64()?;
             if first_actual != first_expected {
                 return Err(format!("Unexpected random UID #1: expected {first_expected}; got {first_actual}"));
@@ -262,8 +261,8 @@ impl GMElement for GMGeneralInfo {
                 } else {
                     let second_actual: u32 = reader.read_u32()?;
                     let third_actual: u32 = reader.read_u32()?;
-                    let second_expected: u32 = rng.next_u32();
-                    let third_expected: u32 = rng.next_u32();
+                    let second_expected: u32 = rng.next() as u32;
+                    let third_expected: u32 = rng.next() as u32;
                     if second_actual != second_expected {
                         return Err(format!("Unexpected random UID #2: expected {second_expected}; got {second_actual}"));
                     }
@@ -353,9 +352,9 @@ impl GMElement for GMGeneralInfo {
             // Write random UID
             let gms2_info: &GMGeneralInfoGMS2 = self.gms2_info.as_ref().ok_or("GMS2 Data not set in General Info")?;
             let timestamp: i64 = self.timestamp_created.timestamp();
-            let seed: u32 = (timestamp & 0xFFFFFFFF) as u32;
-            let mut rng = StdRng::seed_from_u64(seed as u64);
-            let first_random: i64 = ((rng.next_u32() as i64) << 32) | rng.next_u32() as i64;
+            let seed: i32 = (timestamp & 0xFFFFFFFF) as i32;
+            let mut rng = CSharpRng::new(seed);
+            let first_random: i64 = ((rng.next() as i64) << 32) | rng.next() as i64;
             let info_number = self.get_info_number(first_random, gms2_info.info_timestamp_offset);
             let info_location: i32 = ((timestamp & 0xFFFF) as i32 / 7 + (self.game_id - self.default_window_width) as i32 + self.room_order.len() as i32).abs() % 4;
             builder.write_i64(first_random);
@@ -363,8 +362,8 @@ impl GMElement for GMGeneralInfo {
                 if i == info_location {
                     builder.write_i64(info_number);
                 } else {
-                    let first: u32 = rng.next_u32();
-                    let second: u32 = rng.next_u32();
+                    let first: u32 = rng.next() as u32;
+                    let second: u32 = rng.next() as u32;
                     builder.write_u32(first);
                     builder.write_u32(second);
                 }
