@@ -67,25 +67,12 @@ impl GMElement for GMFont {
         let scale_x: f32 = reader.read_f32()?;
         let scale_y: f32 = reader.read_f32()?;
 
-        let mut ascender_offset: Option<i32> = None;
-        let mut ascender: Option<u32> = None;
-        let mut sdf_spread: Option<u32> = None;
-        let mut line_height: Option<u32> = None;
-
-        if reader.general_info.bytecode_version >= 17 {
-            ascender_offset = Some(reader.read_i32()?);
-        }
-        if reader.general_info.is_version_at_least((2022, 2, 0, 0)) {
-            ascender = Some(reader.read_u32()?);
-        }
-        if reader.general_info.is_version_at_least((2023, 2, 0, 0, Post2022_0)) {
-            sdf_spread = Some(reader.read_u32()?);
-        }
-        if reader.general_info.is_version_at_least((2023, 6, 0, 0)) {
-            line_height = Some(reader.read_u32()?);
-        }
-        let glyphs: Vec<GMFontGlyph> = reader.read_simple_list_short()?;
-        if reader.general_info.is_version_at_least((2024, 14, 0, 0)) {
+        let ascender_offset: Option<i32> = reader.deserialize_if_bytecode_version(17)?;
+        let ascender: Option<u32> = reader.deserialize_if_gm_version((2022, 2))?;
+        let sdf_spread: Option<u32> = reader.deserialize_if_gm_version((2023, 2, Post2022_0))?;
+        let line_height: Option<u32> = reader.deserialize_if_gm_version((2023, 6))?;
+        let glyphs: Vec<GMFontGlyph> = reader.read_pointer_list()?;
+        if reader.general_info.is_version_at_least((2024, 14)) {
             reader.align(4)?;
         }
 
@@ -162,13 +149,13 @@ impl GMElement for GMFontGlyph {
         let height: u16 = reader.read_u16()?;
         let shift_modifier: i16 = reader.read_i16()?;
         let offset: i16 = reader.read_i16()?;    // potential assumption according to utmt
-        if reader.general_info.is_version_at_least((2024, 11, 0, 0)) {
+        if reader.general_info.is_version_at_least((2024, 11)) {
             let unknown_always_zero: i16 = reader.read_i16()?;
             if unknown_always_zero != 0 {
                 return Err(format!("Unknown Always Zero in Font Glyph with character {:?} has value {}", character, unknown_always_zero))
             }
         }
-        let kernings: Vec<GMFontGlyphKerning> = reader.read_simple_list()?;
+        let kernings: Vec<GMFontGlyphKerning> = reader.read_simple_list_short()?;
 
         Ok(GMFontGlyph { character, x, y, width, height, shift_modifier, offset, kernings })
     }
