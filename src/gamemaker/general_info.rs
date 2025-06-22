@@ -221,9 +221,10 @@ impl GMElement for GMGeneralInfo {
             let seed: u32 = (timestamp & 0xFFFFFFFF) as u32;
             let mut rng = StdRng::seed_from_u64(seed as u64);
 
-            let first_random: i64 = ((rng.random::<u32>() as i64) << 32) | (rng.random::<u32>() as i64);
-            if reader.read_i64()? != first_random {
-                return Err("Unexpected random UID #1".to_string());
+            let first_expected: i64 = ((rng.random::<u32>() as i64) << 32) | (rng.random::<u32>() as i64);
+            let first_actual: i64 = reader.read_i64()?;
+            if first_actual != first_expected {
+                return Err(format!("Unexpected random UID #1: expected {first_expected}; got {first_actual}"));
             }
 
             let info_location: i32 = ((timestamp & 0xFFFF) as i32 / 7 + (game_id - default_window_width) as i32 + room_order.len() as i32).abs() % 4;
@@ -251,24 +252,26 @@ impl GMElement for GMGeneralInfo {
                     let curr: i64 = reader.read_i64()?;
                     random_uid.push(curr);
 
-                    if curr != get_info_number(first_random, true) {
-                        if curr != get_info_number(first_random, false) {
+                    if curr != get_info_number(first_expected, true) {
+                        if curr != get_info_number(first_expected, false) {
                             return Err("Unexpected random UID info".to_string());
                         } else {
                             info_timestamp_offset = false;
                         }
                     }
                 } else {
-                    let first: u32 = reader.read_u32()?;
-                    let second: u32 = reader.read_u32()?;
-                    if first != rng.next_u32() {
-                        return Err("Unexpected random UID #2".to_string());
+                    let second_actual: u32 = reader.read_u32()?;
+                    let third_actual: u32 = reader.read_u32()?;
+                    let second_expected: u32 = rng.next_u32();
+                    let third_expected: u32 = rng.next_u32();
+                    if second_actual != second_expected {
+                        return Err(format!("Unexpected random UID #2: expected {second_expected}; got {second_actual}"));
                     }
-                    if second != rng.next_u32() {
-                        return Err("Unexpected random UID #3".to_string());
+                    if third_actual != third_expected {
+                        return Err(format!("Unexpected random UID #3: expected {third_expected}; got {third_actual}"));
                     }
 
-                    random_uid.push(((first as i64) << 32) | (second as i64));
+                    random_uid.push(((second_actual as i64) << 32) | (third_actual as i64));
                 }
             }
             let fps: f32 = reader.read_f32()?;
