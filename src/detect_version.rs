@@ -854,6 +854,11 @@ fn cc_tgin_2022_9(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
         return Ok(None)
     }
     
+    let tgin_version: u32 = reader.read_u32()?;
+    if tgin_version != 1 {
+        return Err(format!("Expected TGIN version 1; got {tgin_version}"))
+    }
+    
     let tgin_count = reader.read_usize()?;
     if tgin_count < 1 {
         return Ok(None)
@@ -876,6 +881,11 @@ fn cc_tgin_2022_9(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
 fn cc_tgin_2023_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
     if reader.general_info.is_version_at_least((2023, 1, Post2022_0)) {
         return Ok(None)
+    }
+
+    let tgin_version: u32 = reader.read_u32()?;
+    if tgin_version != 1 {
+        return Err(format!("Expected TGIN version 1; got {tgin_version}"))
     }
 
     let tgin_count = reader.read_usize()?;
