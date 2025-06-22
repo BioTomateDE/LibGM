@@ -51,11 +51,11 @@ fn main_open_and_close() -> Result<(), String> {
 
     info!("Parsing data file");
     let original_data: GMData = parse_data_file(original_data_raw)
-        .map_err(|e| format!("{e}\n↳ while parsing data file"))?;
+        .map_err(|e| format!("\n{e}\n↳ while parsing data file"))?;
 
     info!("Building data file");
     let modified_data_raw: Vec<u8> = build_data_file(&original_data)
-        .map_err(|e| format!("{e}\n↳ while building data file"))?;
+        .map_err(|e| format!("\n{e}\n↳ while building data file"))?;
 
     info!("Writing data file \"{}\"", modified_data_file_path.display());
     write_data_file(modified_data_raw, modified_data_file_path)

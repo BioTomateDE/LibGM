@@ -675,13 +675,14 @@ impl<'a> DataReader<'a> {
 
 
 fn resolve_occurrence<T>(occurrence_position: usize, occurrence_map: &HashMap<usize, GMRef<T>>, chunk_name: &str, position: usize) -> Result<GMRef<T>, String> {
-    occurrence_map.get(&occurrence_position)
-        .ok_or_else(|| format!(
+    match occurrence_map.get(&occurrence_position) {
+        Some(gm_ref) => Ok(gm_ref.clone()),
+        None => Err(format!(
             "Could not read {} with absolute position {} in chunk '{}' at position {} \
             because it doesn't exist in the occurrence map (length: {})",
             typename::<T>(), occurrence_position, chunk_name, position, occurrence_map.len(),
         ))
-        .cloned()
+    }
 }
 
 pub trait GMElement {
