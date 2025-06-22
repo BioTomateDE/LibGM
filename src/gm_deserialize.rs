@@ -100,8 +100,9 @@ pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
     reader.general_info = reader.read_chunk_required("GEN8")?;
     
     let stopwatch2 = Stopwatch::start();
+    let old_version: GMVersion = reader.general_info.version.clone();
     if let Some(detected_version) = detect_gamemaker_version(&mut reader)? {
-        log::info!("General info specified incorrect GameMaker version {}; automatically detected real version {}", reader.general_info.version, detected_version);
+        log::info!("General info specified incorrect GameMaker version {}; automatically detected real version {}", old_version, detected_version);
     }
     log::trace!("Detecting GameMaker Version took {stopwatch2}");
 
