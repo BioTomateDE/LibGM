@@ -41,8 +41,8 @@ fn path_from_arg<'a>(arg: Option<&'a String>, default: &'a str) -> &'a Path {
 
 fn main_open_and_close() -> Result<(), String> {
     let args: Vec<String> = std::env::args().collect();
-    let original_data_file_path: &Path = Path::new(args.get(1).map_or("data.win", |s| s));
-    let modified_data_file_path: &Path = Path::new("./data_out.win");
+    let original_data_file_path: &Path = path_from_arg(args.get(1), "data.win");
+    let modified_data_file_path: &Path = path_from_arg(args.get(2), "data_out.win");
 
     info!("Loading data file \"{}\"", original_data_file_path.display());
     let original_data_raw: Vec<u8> = read_data_file(original_data_file_path)

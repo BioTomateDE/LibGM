@@ -135,8 +135,8 @@ impl GMElement for GMBackgroundGMS2Data {
             ));
         }
         let tile_count: usize = total_tile_count / items_per_tile;
-        builder.write_usize(items_per_tile);
-        builder.write_usize(tile_count);
+        builder.write_usize(items_per_tile)?;
+        builder.write_usize(tile_count)?;
         
         builder.write_u32(self.unknown_always_zero);
         builder.write_i64(self.frame_length);
