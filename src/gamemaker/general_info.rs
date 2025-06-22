@@ -226,7 +226,9 @@ impl GMElement for GMGeneralInfo {
                 return Err(format!("Unexpected random UID #1: expected {first_expected}; got {first_actual}"));
             }
 
-            let info_location: i32 = ((timestamp & 0xFFFF) as i32 / 7 + (game_id - default_window_width) as i32 + room_order.len() as i32).abs() % 4;
+            let info_location: i32 = ((timestamp & 0xFFFF) as i32 / 7
+                + game_id.wrapping_sub(default_window_width) as i32
+                + room_order.len() as i32).abs() % 4;
             let mut random_uid: Vec<i64> = Vec::with_capacity(4);
 
             let get_info_number = |first_random: i64, info_timestamp_offset: bool| -> i64 {
