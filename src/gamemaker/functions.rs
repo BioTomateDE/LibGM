@@ -27,7 +27,6 @@ impl GMElement for GMFunctions {
         };
 
         let mut functions: Vec<GMFunction> = vec_with_capacity(functions_count)?;
-        let mut occurrences_to_refs: HashMap<usize, GMRef<GMFunction>> = HashMap::with_capacity(functions_count);
 
         for i in 0..functions_count {
             let name: GMRef<String> = reader.read_gm_string()?;
@@ -36,7 +35,7 @@ impl GMElement for GMFunctions {
             let (occurrences, name_string_id): (Vec<usize>, i32) = parse_occurrence_chain(reader, first_occurrence_abs_pos, occurrence_count)?;
             
             for occurrence in &occurrences {
-                if let Some(old_value) = occurrences_to_refs.insert(*occurrence, GMRef::new(i as u32)) {
+                if let Some(old_value) = reader.function_occurrence_map.insert(*occurrence, GMRef::new(i as u32)) {
                     return Err(format!(
                         "Conflicting occurrence positions while parsing functions: absolute position {} \
                         was already set for function #{} with name \"{}\"; trying to set to function #{} with name \"{}\"",
