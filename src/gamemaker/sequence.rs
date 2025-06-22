@@ -83,7 +83,7 @@ impl GMElement for GMSequence {
 
         let mut width: Option<f32> = None;
         let mut height: Option<f32> = None;
-        if reader.general_info.is_version_at_least((2024, 13, 0, 0)) {
+        if reader.general_info.is_version_at_least((2024, 13)) {
             width = Some(reader.read_f32()?);
             height = Some(reader.read_f32()?);
         }
@@ -233,7 +233,7 @@ impl<T: GMElement> GMElement for GMKeyframeData<T> {
         let length: f32 = reader.read_f32()?;
         let stretch: bool = reader.read_bool32()?;
         let disabled: bool = reader.read_bool32()?;
-        let count: usize = reader.read_usize()?;
+        let count: usize = reader.read_usize()?;    // i32 in UTMT
         let mut channels: HashMap<i32, T> = hashmap_with_capacity(count)?;
         for _ in 0..count {
             let channel: i32 = reader.read_i32()?;
