@@ -278,29 +278,29 @@ impl<'a> DataReader<'a> {
     }
 
     pub fn read_bytes_dyn(&mut self, count: usize) -> Result<&'a [u8], String> {
-        if self.cur_pos < self.chunk.start_pos {
-            return Err(format!(
-                "underflowed at reader position {} in chunk '{}' with start position {}",
-                self.cur_pos, self.chunk.name, self.chunk.start_pos,
-            ))
+        // combined check to hopefully increase performance
+        if !(self.chunk.start_pos <= self.cur_pos && self.cur_pos+count <= self.chunk.end_pos) {
+            return if self.cur_pos < self.chunk.start_pos {
+                Err(format!(
+                    "out of lower bounds at position {} in chunk '{}' with start position {}",
+                    self.cur_pos, self.chunk.name, self.chunk.start_pos,
+                ))
+            } else {
+                Err(format!(
+                    "out of upper bounds at position {} in chunk '{}': {} > {}",
+                    self.cur_pos, self.chunk.name, self.cur_pos+count, self.chunk.end_pos,
+                ))
+            }
         }
-        if self.cur_pos+count > self.chunk.end_pos {
-            return Err(format!(
-                "overflowed at reader position {} in chunk '{}': {} > {}",
-                self.cur_pos, self.chunk.name, self.cur_pos+count, self.chunk.end_pos,
-            ))
-        }
-        // if chunk.start_pos and chunk.end_pos are set correctly; this should never fail
-        // it may even be replaced with .unwrap_unchecked() for performance
-        let slice: &[u8] = self.data.get(self.cur_pos..self.cur_pos+count).unwrap();
+        // if chunk.start_pos and chunk.end_pos are set correctly; this should never read memory out of bounds.
+        let slice: &[u8] = unsafe { self.data.get_unchecked(self.cur_pos..self.cur_pos + count) };
         self.cur_pos += count;
         Ok(slice)
     }
     pub fn read_bytes_const<const N: usize>(&mut self) -> Result<&[u8; N], String> {
         let slice: &[u8] = self.read_bytes_dyn(N)?;
         // read_bytes_dyn is guaranteed to read N bytes so the unwrap never fails.
-        // it may even be replaced with .unwrap_unchecked() for performance
-        Ok(slice.try_into().unwrap())
+        Ok(unsafe { &*(slice.as_ptr() as *const [u8; N]) })
     }
 
     pub fn read_u64(&mut self) -> Result<u64, String> {
