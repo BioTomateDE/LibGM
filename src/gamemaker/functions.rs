@@ -202,7 +202,7 @@ pub fn parse_occurrence_chain(reader: &mut DataReader, first_occurrence_pos: i32
                 offset, reader.cur_pos-4, raw_value,
             ))
         }
-        occurrence_pos = offset as usize;   // might overflow on last occurrence (name string id) but doesn't matter
+        occurrence_pos += offset as usize;   // might overflow on last occurrence (name string id) but doesn't matter
     }
 
     let name_string_id: i32 = offset & 0xFFFFFF;
