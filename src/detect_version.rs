@@ -1,5 +1,5 @@
 use crate::utility::vec_with_capacity;
-use crate::gm_deserialize::{DataReader, GMChunk};
+use crate::gm_deserialize::{DataReader, GMChunk, GMPointer};
 use crate::gamemaker::embedded_textures::MAGIC_BZ2_QOI_HEADER;
 use crate::gamemaker::general_info::{GMVersion, GMVersionReq};
 use crate::gamemaker::general_info::GMVersionLTS::{Post2022_0, Pre2022_0};
@@ -21,10 +21,6 @@ fn try_check<R: Into<GMVersionReq>, T: Into<GMVersionReq>>(
     if let Some(chunk) = reader.chunks.get(chunk_name) {
         let required_version: GMVersionReq = required_version.into();
         if !reader.general_info.is_version_at_least(required_version.clone()) {
-            // return Err(format!(
-            //     "Version requirement for checking version {} in chunk '{}' failed: {} < {}",
-            //     target_version, chunk_name, reader.general_info.version, required_version,
-            // ))
             return Ok(())   // could not detect version
         }
         reader.chunk = chunk.clone();
@@ -70,6 +66,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
         try_check(reader, "FUNC", cc_func_2024_8, GMVersionReq::none(), (2024, 8))?;
     }
     try_check(reader, "ARCV", cc_acrv_2_3_1, GMVersionReq::none(), (2, 3, 1))?;
+    try_check(reader, "SPRT", cc_sprt_2_3_2, (2, 0), (2, 3, 2))?;
     try_check(reader, "ROOM", cc_room_2_2_2_302, (2, 0), (2, 2, 2, 302))?;
     try_check(reader, "TXTR", cc_txtr_2_0_6, (2, 0), (2, 0, 6))?;
     try_check(reader, "TGIN", cc_tgin_2022_9, (2, 3), (2022, 9))?;
@@ -86,6 +83,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
     try_check(reader, "SPRT", cc_sprt_2024_6, (2022, 2, Post2022_0), (2024, 6))?;
     try_check(reader, "FONT", cc_font_2024_14, (2024, 13), (2024, 14))?;
     try_check(reader, "AGRP", cc_agrp_2024_14, (2024, 13), (2024, 14))?;
+    // TODO implement even more checks :c
     
     reader.cur_pos = saved_pos;
     reader.chunk = saved_chunk;
@@ -742,11 +740,9 @@ fn cc_func_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
     }
 
     // align position
-    // TODO: use 16, 4 or 1 for padding depending on FORM (reader.undertaleData.PaddingAlignException; 16 if unset)
-    let padding = 16;
-    let mut padding_bytes_read = 0;
+    let mut padding_bytes_read: u32 = 0;
 
-    while reader.cur_pos & (padding - 1) != 0 {
+    while reader.cur_pos & (reader.padding - 1) != 0 {
         if reader.cur_pos >= reader.chunk.end_pos || reader.read_u8()? != 0 {
             return Ok(None)   // If we hit a non-zero byte (or exceed chunk boundaries), it can't be padding
         }
@@ -927,4 +923,22 @@ fn cc_acrv_2_3_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String
     
     Ok(None)
 }
+
+
+fn cc_sprt_2_3_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+    let pointers: Vec<GMPointer> = reader.read_simple_list()?;
+    for pointer in pointers {
+        if pointer.pointing_to_position == 0 { continue }
+        reader.cur_pos = pointer.pointing_to_position + 14*4;
+        if reader.read_i32()? != -1 {
+            continue        // sprite is not special type
+        }
+        let special_version: u32 = reader.read_u32()?;
+        if special_version >= 3 {
+            return Ok(Some((2, 3, 2).into()))
+        }
+    }
+    Ok(None)
+}
+
 

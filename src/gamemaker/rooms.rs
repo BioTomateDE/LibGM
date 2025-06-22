@@ -80,27 +80,10 @@ impl GMElement for GMRoom {
         let views_ptr: usize = reader.read_pointer()?;
         let game_objects_ptr: usize = reader.read_pointer()?;
         let tiles_ptr: usize = reader.read_pointer()?;
-        let saved_pos: usize = reader.cur_pos;
-        reader.cur_pos = backgrounds_ptr;
-        let backgrounds: Vec<GMRoomBackground> = reader.read_pointer_list()?;
-        reader.cur_pos = views_ptr;
-        let views: Vec<GMRoomView> = reader.read_pointer_list()?;
-        reader.cur_pos = game_objects_ptr;
-        let game_objects: Vec<GMRoomGameObject> = reader.read_pointer_list()?;
-        reader.cur_pos = tiles_ptr;
-        let tiles: Vec<GMRoomTile> = reader.read_pointer_list()?;
-        reader.cur_pos = saved_pos;
+        let instances_ptr: usize = if reader.general_info.is_version_at_least((2024, 13)) {
+            reader.read_pointer()?
+        } else { 0 };
 
-        let instance_creation_order_ids: Vec<i32> = if reader.general_info.is_version_at_least((2024, 13)) {
-            let list_ptr: usize = reader.read_pointer()?;
-            let saved_pos: usize = reader.cur_pos;
-            reader.cur_pos = list_ptr;
-            let list: Vec<i32> = reader.read_simple_list()?;
-            reader.cur_pos = saved_pos;
-            list
-        } else {
-            Vec::new()
-        };
         let world: bool = reader.read_bool32()?;
         let top: u32 = reader.read_u32()?;
         let left: u32 = reader.read_u32()?;
@@ -109,22 +92,54 @@ impl GMElement for GMRoom {
         let gravity_x: f32 = reader.read_f32()?;
         let gravity_y: f32 = reader.read_f32()?;
         let meters_per_pixel: f32 = reader.read_f32()?;
-        let mut layers: Vec<GMRoomLayer> = Vec::new();
-        let mut sequences: Vec<GMSequence> = Vec::new();
-        if reader.general_info.is_version_at_least((2, 0, 0, 0)) {
-            let saved_pos: usize = reader.cur_pos;
-            let layers_ptr: usize = reader.read_pointer()?;
-            reader.cur_pos = layers_ptr;
-            layers = reader.read_pointer_list()?;
-            reader.cur_pos = saved_pos;
+
+        let layers_ptr: usize = if reader.general_info.is_version_at_least((2, 0)) {
+            reader.read_pointer()?
+        } else { 0 };
+        let sequences_ptr: usize = if reader.general_info.is_version_at_least((2, 3)) {
+            reader.read_pointer()?
+        } else { 0 };
+
+        if reader.cur_pos != backgrounds_ptr {
+            return Err(format!("Backgrounds pointer misaligned: expected position {} but reader is actually at {}", backgrounds_ptr, reader.cur_pos))
         }
-        if reader.general_info.is_version_at_least((2, 3, 0, 0)) {
-            let saved_pos: usize = reader.cur_pos;
-            let sequences_ptr: usize = reader.read_pointer()?;
-            reader.cur_pos = sequences_ptr;
-            sequences = reader.read_pointer_list()?;
-            reader.cur_pos = saved_pos;
+        let backgrounds: Vec<GMRoomBackground> = reader.read_pointer_list()?;
+
+        if reader.cur_pos != views_ptr {
+            return Err(format!("Views pointer misaligned: expected position {} but reader is actually at {}", views_ptr, reader.cur_pos))
         }
+        let views: Vec<GMRoomView> = reader.read_pointer_list()?;
+
+        if reader.cur_pos != game_objects_ptr {
+            return Err(format!("Game Objects pointer misaligned: expected position {} but reader is actually at {}", game_objects_ptr, reader.cur_pos))
+        }
+        let game_objects: Vec<GMRoomGameObject> = reader.read_pointer_list()?;
+
+        if reader.cur_pos != tiles_ptr {
+            return Err(format!("Tiles pointer misaligned: expected position {} but reader is actually at {}", tiles_ptr, reader.cur_pos))
+        }
+        let tiles: Vec<GMRoomTile> = reader.read_pointer_list()?;
+
+        let instance_creation_order_ids: Vec<i32> = if reader.general_info.is_version_at_least((2024, 13)) {
+            if reader.cur_pos != instances_ptr {
+                return Err(format!("Instance Creation Order IDs pointer misaligned: expected position {} but reader is actually at {}", instances_ptr, reader.cur_pos))
+            }
+            reader.read_simple_list()?
+        } else { Vec::new() };
+
+        let layers: Vec<GMRoomLayer> = if reader.general_info.is_version_at_least((2, 0)) {
+            if reader.cur_pos != layers_ptr {
+                return Err(format!("Layers pointer misaligned: expected position {} but reader is actually at {}", layers_ptr, reader.cur_pos))
+            }
+            reader.read_pointer_list()?
+        } else { Vec::new() };
+
+        let sequences: Vec<GMSequence> = if reader.general_info.is_version_at_least((2, 3)) {
+            if reader.cur_pos != sequences_ptr {
+                return Err(format!("Sequences misaligned: expected position {} but reader is actually at {}", sequences_ptr, reader.cur_pos))
+            }
+            reader.read_pointer_list()?
+        } else { Vec::new() };
 
         Ok(GMRoom {
             name,
