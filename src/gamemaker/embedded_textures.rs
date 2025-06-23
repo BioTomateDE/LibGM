@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use std::cmp::max;
-use std::io::Read;
+use std::io::{BufWriter, Cursor, Read};
 use crate::gm_deserialize::{GMChunkElement, GMElement, DataReader};
 use crate::printing::hexdump;
 use image;
@@ -322,6 +322,7 @@ fn image_from_bz2_qoi(raw_image_data: &[u8]) -> Result<DynamicImage, String> {
 
 
 fn build_raw_texture(builder: &mut DataBuilder, image: &DynamicImage) -> Result<(), String> {
+    let stopwatch = Stopwatch::start();
     let rgba_image = match image {
         DynamicImage::ImageRgba8(img) => Cow::Borrowed(img),
         _ => Cow::Owned(image.to_rgba8()),
@@ -335,7 +336,15 @@ fn build_raw_texture(builder: &mut DataBuilder, image: &DynamicImage) -> Result<
     encoder.set_adaptive_filter(png::AdaptiveFilterType::Adaptive);
     let mut writer = encoder.write_header().map_err(|e| format!("Error while trying to write PNG header: {e}"))?;
     writer.write_image_data(&rgba_image).map_err(|e| format!("Error while trying to write PNG image data: {e}"))?;
+    log::debug!("sdgsdg {stopwatch}");
     Ok(())
 }
 
+fn build_raw_texture2(builder: &mut DataBuilder, image: &DynamicImage) -> Result<(), String> {
+    let stopwatch = Stopwatch::start();
+    let mut writer = BufWriter::with_capacity(8 * 1024, Cursor::new(&mut builder.raw_data));
+    image.write_to(&mut writer, ImageFormat::Png).map_err(|e| format!("Error while trying to write PNG image data: {e}"))?;
+    log::debug!("brt2 {stopwatch}");
+    Ok(())
+}
 

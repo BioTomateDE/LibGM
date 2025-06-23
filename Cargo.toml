@@ -15,7 +15,7 @@ codegen-units = 1   # potentially better optimisations but build process way slo
 uuid = { version = "1.16.0", features = ["serde"] }
 chrono = { version = "0.4.40", features = ["serde"] }
 num_enum = "0.7"
-image = { version = "0.25.6", features = ["png"] }
+image = { version = "0.25.6", features = ["png", "rayon"] }
 bzip2 = "0.5.2"
 biologischer-log = { git = "https://github.com/BioTomateDE/rust-biologischer-log.git" }
 log = "0.4"
@@ -29,3 +29,10 @@ cpu-time = "1.0.0"
 rayon = "1.10.0"
 png = "0.17.16"
 colored = "3.0.0"
+mtpng = "0.4.1"
+
+[dev-dependencies]
+criterion = "0.4"
+[[bench]]
+name = "benchmark"
+harness = false
