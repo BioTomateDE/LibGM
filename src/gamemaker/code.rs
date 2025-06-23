@@ -25,38 +25,47 @@ impl GMElement for GMCodes {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         if !self.exists { return Ok(()) }
-
-        if builder.bytecode_version() >= 15 {
-            // in bytecode 15, the codes' instructions are written before the codes metadata
-            let mut instructions_start_positions: Vec<usize> = Vec::with_capacity(self.codes.len());
-            let mut instructions_end_positions: Vec<usize> = Vec::with_capacity(self.codes.len());
-
-            for (i, code) in self.codes.iter().enumerate() {
-                instructions_start_positions.push(builder.len());
-                for instruction in &code.instructions {
-                    instruction.serialize(builder).map_err(|e| format!(
-                        "{e}\n↳ while serializing bytecode15 code #{i} with name \"{}\"",
-                        builder.display_gm_str(&code.name),
-                    ))?;
-                }
-                instructions_end_positions.push(builder.len());
-            }
-
-            for (i, code) in self.codes.iter().enumerate() {
-                builder.resolve_pointer(self)?;
-                let b15_info: &GMCodeBytecode15 = code.bytecode15_info.as_ref()
-                    .ok_or_else(|| format!("Code bytecode 15 data not set in Bytecode version {}", builder.bytecode_version()))?;
-                let length = instructions_end_positions[i] - instructions_start_positions[i];
-                builder.write_usize(length)?;
-                builder.write_u16(b15_info.locals_count);
-                builder.write_u16(b15_info.arguments_count | if b15_info.weird_local_flag {0x8000} else {0});
-                builder.write_usize(instructions_start_positions[i] - builder.len())?;  // bytecode relative address
-                builder.write_usize(b15_info.offset)?;
-            }
-        } else {  // bytecode 14
-
+        
+        // bytecode 14 my beloved
+        if builder.bytecode_version() <= 14 {
+            builder.write_pointer_list(&self.codes)?;
+            return Ok(())
         }
-        builder.write_pointer_list(&self.codes)?;
+        
+        builder.write_usize(self.codes.len())?;
+        let pointer_list_pos: usize = builder.len();
+        for _ in 0..self.codes.len() {
+            builder.write_u32(0xDEADC0DE);
+        }
+        
+        // in bytecode 15, the codes' instructions are written before the codes metadata
+        let mut instructions_start_positions: Vec<usize> = Vec::with_capacity(self.codes.len());
+        let mut instructions_end_positions: Vec<usize> = Vec::with_capacity(self.codes.len());
+
+        for (i, code) in self.codes.iter().enumerate() {
+            instructions_start_positions.push(builder.len());
+            for instruction in &code.instructions {
+                instruction.serialize(builder).map_err(|e| format!(
+                    "{e}\n↳ while serializing bytecode15 code #{i} with name \"{}\"",
+                    builder.display_gm_str(&code.name),
+                ))?;
+            }
+            instructions_end_positions.push(builder.len());
+        }
+
+        for (i, code) in self.codes.iter().enumerate() {
+            builder.overwrite_usize(builder.len(), pointer_list_pos + 4*i)?;
+            builder.resolve_pointer(code)?;
+            let b15_info: &GMCodeBytecode15 = code.bytecode15_info.as_ref()
+                .ok_or_else(|| format!("Code bytecode 15 data not set in Bytecode version {}", builder.bytecode_version()))?;
+            let length = instructions_end_positions[i] - instructions_start_positions[i];
+            builder.write_usize(length)?;
+            builder.write_u16(b15_info.locals_count);
+            builder.write_u16(b15_info.arguments_count | if b15_info.weird_local_flag {0x8000} else {0});
+            builder.write_i32(instructions_start_positions[i] as i32 - builder.len() as i32);  // bytecode relative address
+            builder.write_usize(b15_info.offset)?;
+        }
+        
         Ok(())
     }
 }
