@@ -50,7 +50,7 @@ fn main_open_and_close() -> Result<(), String> {
         .map_err(|e| format!("{e}\n↳ while reading data file"))?;
 
     info!("Parsing data file");
-    let original_data: GMData = parse_data_file(original_data_raw)
+    let original_data: GMData = parse_data_file(&original_data_raw)
         .map_err(|e| format!("\n{e}\n↳ while parsing data file"))?;
 
     info!("Building data file");

@@ -16,10 +16,10 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     builder.build_chunk("GEN8", &gm_data.general_info)?;
     builder.build_chunk("TXTR", &gm_data.embedded_textures)?;
     builder.build_chunk("TPAG", &gm_data.texture_page_items)?;
+    builder.build_chunk("CODE", &gm_data.codes)?;
     builder.build_chunk("VARI", &gm_data.variables)?;
     builder.build_chunk("FUNC", &gm_data.functions)?;
     builder.build_chunk("SCPT", &gm_data.scripts)?;
-    builder.build_chunk("CODE", &gm_data.codes)?;
     builder.build_chunk("FONT", &gm_data.fonts)?;
     builder.build_chunk("SPRT", &gm_data.sprites)?;
     builder.build_chunk("OBJT", &gm_data.game_objects)?;
@@ -69,8 +69,8 @@ impl<'a> DataBuilder<'a> {
             is_last_chunk: false,
             pointer_placeholder_positions: Vec::new(),
             pointer_resource_positions: HashMap::new(),
-            function_occurrences: Vec::new(),
-            variable_occurrences: Vec::new(),
+            function_occurrences: vec![Vec::new(); gm_data.functions.functions.len()],
+            variable_occurrences: vec![Vec::new(); gm_data.variables.variables.len()],
             sequences_exist: gm_data.sequences.exists,
         }
     }
