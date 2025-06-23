@@ -77,7 +77,7 @@ impl GMElement for GMSprite {
         let mut special_fields: Option<GMSpriteSpecial> = None;
 
         // combination of these conditions may be incorrect
-        if reader.read_i32()? == -1 && reader.general_info.is_version_at_least((2, 0, 0, 0)) {
+        if reader.read_i32()? == -1 && reader.general_info.is_version_at_least((2, 0)) {
             let special_version: u32 = reader.read_u32()?;
             let special_sprite_type: u32 = reader.read_u32()?;
 
@@ -222,10 +222,18 @@ impl GMElement for GMSprite {
             builder.write_f32(special_fields.playback_speed);
             builder.write_u32(special_fields.playback_speed_type.into());
             if special_fields.special_version >= 2 {
-                builder.write_pointer(&special_fields.sequence)?;
+                if special_fields.sequence.is_some() {
+                    builder.write_pointer(&special_fields.sequence)?;
+                } else {
+                    builder.write_u32(0);
+                }
             }
             if special_fields.special_version >= 3 {
-                builder.write_pointer(&special_fields.sequence)?;
+                if special_fields.nine_slice.is_some() {
+                    builder.write_pointer(&special_fields.nine_slice)?;
+                } else {
+                    builder.write_u32(0);
+                }
             }
         }
 
@@ -253,25 +261,20 @@ impl GMElement for GMSprite {
                 ))
             }
         }
-
-
+        
         if builder.is_gm_version_at_least((2, 0)) {
             if special_fields.special_version >= 2 && matches!(special_fields.sprite_type, GMSpriteType::Normal(_)) {
-                let sequence: &GMSequence = special_fields.sequence.as_ref().ok_or_else(|| format!(
-                    "Sequence not set for Normal Sprite \"{}\" with special version 2 in GMS2 data file",
-                    builder.display_gm_str(&self.name),
-                ))?;
-                builder.resolve_pointer(&special_fields.sequence)?;
-                builder.write_u32(1);
-                sequence.serialize(builder)?;
+                if let Some(ref sequence) = special_fields.sequence {
+                    builder.resolve_pointer(&special_fields.sequence)?;
+                    builder.write_u32(1);   // SEQN version
+                    sequence.serialize(builder)?;
+                }
             }
             if special_fields.special_version >= 3 {
-                let nine_slice: &GMSpriteNineSlice = special_fields.nine_slice.as_ref().ok_or_else(|| format!(
-                    "Nine slice not set for Sprite \"{}\" with special version 3 in GMS2 data file",
-                    builder.display_gm_str(&self.name),
-                ))?;
-                builder.resolve_pointer(&special_fields.nine_slice)?;
-                nine_slice.serialize(builder)?;
+                if let Some(ref nine_slice) = special_fields.nine_slice {
+                    builder.resolve_pointer(&special_fields.nine_slice)?;
+                    nine_slice.serialize(builder)?;
+                }
             }
         }
         Ok(())
