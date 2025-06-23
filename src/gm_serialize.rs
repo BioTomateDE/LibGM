@@ -38,6 +38,25 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     builder.is_last_chunk = true;
     builder.build_chunk("GMEN", &gm_data.game_end_scripts)?;
     
+    // resolve pointers/placeholders
+    let stopwatch2 = Stopwatch::start();
+    for (placeholder_data_pos, element_mem_addr) in &builder.pointer_placeholder_positions {
+        let resource_data_pos: u32 = *builder.pointer_resource_positions.get(element_mem_addr).ok_or_else(|| format!(
+            "Could not resolve pointer placeholder with data position {} and memory address {}",
+            placeholder_data_pos, element_mem_addr,
+        ))?;
+        // overwrite placeholder 0xDEADC0DE
+        let mut_slice: &mut [u8] = builder.raw_data.get_mut(*placeholder_data_pos as usize .. *placeholder_data_pos as usize + 4)
+            .ok_or_else(|| format!("Could not get 4 bytes of raw data at position {} while resolving pointer placeholders", placeholder_data_pos))?;
+        mut_slice.copy_from_slice(&resource_data_pos.to_le_bytes());
+    }
+    log::trace!("Resolving {} pointer placeholders to {} resources took {stopwatch2}",
+        builder.pointer_placeholder_positions.len(),
+        builder.pointer_resource_positions.len(),
+    );
+
+
+
     builder.overwrite_usize(builder.len() - 8, 4)?;   // overwrite data length placeholder
     log::trace!("Building data file took {stopwatch}");
     Ok(builder.raw_data)
@@ -301,13 +320,11 @@ impl<'a> DataBuilder<'a> {
 
     pub fn overwrite_usize(&mut self, number: usize, position: usize) -> Result<(), String> {
         let bytes: [u8; 4] = (number as u32).to_le_bytes();
-        self.overwrite_bytes(&bytes, position)?;
-        Ok(())
+        self.overwrite_bytes(&bytes, position)
     }
     pub fn overwrite_i32(&mut self, number: i32, position: usize) -> Result<(), String> {
         let bytes: [u8; 4] = number.to_le_bytes();
-        self.overwrite_bytes(&bytes, position)?;
-        Ok(())
+        self.overwrite_bytes(&bytes, position)
     }
 
     pub fn align(&mut self, alignment: usize) {
