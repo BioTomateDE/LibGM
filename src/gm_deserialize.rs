@@ -56,7 +56,7 @@ pub struct GMData {
 }
 
 
-pub fn parse_data_file(raw_data: Vec<u8>) -> Result<GMData, String> {
+pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
     let stopwatch = Stopwatch::start();
     let mut reader = DataReader::new(&raw_data);
 
