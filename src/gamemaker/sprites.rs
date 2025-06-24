@@ -1,10 +1,11 @@
 use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
+use crate::field_muid;
 use crate::gamemaker::sequence::{GMAnimSpeedType, GMSequence};
 use crate::gamemaker::sprites_yyswf::{GMSpriteTypeSWF, GMSpriteYYSWFTimeline};
 use crate::gamemaker::texture_page_items::GMTexturePageItem;
-use crate::gm_serialize::DataBuilder;
+use crate::gm_serialize::{instance_muid, DataBuilder};
 use crate::utility::vec_with_capacity;
 
 #[derive(Debug, Clone)]
@@ -189,6 +190,7 @@ impl GMElement for GMSprite {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.resolve_pointer(instance_muid(self))?;
         builder.write_gm_string(&self.name)?;
         builder.write_u32(self.width);
         builder.write_u32(self.height);
@@ -223,14 +225,14 @@ impl GMElement for GMSprite {
             builder.write_u32(special_fields.playback_speed_type.into());
             if special_fields.special_version >= 2 {
                 if special_fields.sequence.is_some() {
-                    builder.write_pointer(&special_fields.sequence)?;
+                    builder.write_pointer(field_muid!(GMSpriteSpecial, special_fields, sequence))?;
                 } else {
                     builder.write_u32(0);
                 }
             }
             if special_fields.special_version >= 3 {
                 if special_fields.nine_slice.is_some() {
-                    builder.write_pointer(&special_fields.nine_slice)?;
+                    builder.write_pointer(field_muid!(GMSpriteSpecial, special_fields, nine_slice))?;
                 } else {
                     builder.write_u32(0);
                 }
@@ -265,14 +267,14 @@ impl GMElement for GMSprite {
         if builder.is_gm_version_at_least((2, 0)) {
             if special_fields.special_version >= 2 && matches!(special_fields.sprite_type, GMSpriteType::Normal(_)) {
                 if let Some(ref sequence) = special_fields.sequence {
-                    builder.resolve_pointer(&special_fields.sequence)?;
+                    builder.resolve_pointer(field_muid!(GMSpriteSpecial, special_fields, sequence))?;
                     builder.write_u32(1);   // SEQN version
                     sequence.serialize(builder)?;
                 }
             }
             if special_fields.special_version >= 3 {
                 if let Some(ref nine_slice) = special_fields.nine_slice {
-                    builder.resolve_pointer(&special_fields.nine_slice)?;
+                    builder.resolve_pointer(field_muid!(GMSpriteSpecial, special_fields, nine_slice))?;
                     nine_slice.serialize(builder)?;
                 }
             }
@@ -294,7 +296,7 @@ impl GMSprite {
         builder.write_usize(texture_list.len())?;
         for texture_page_item_ref_opt in texture_list {
             if let Some(texture_page_item_ref) = texture_page_item_ref_opt {
-                builder.write_pointer(texture_page_item_ref)?;
+                builder.write_gm_texture(texture_page_item_ref)?;
             } else {
                 builder.write_u32(0);
             }

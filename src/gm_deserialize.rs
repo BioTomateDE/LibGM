@@ -370,7 +370,7 @@ impl<'a> DataReader<'a> {
         Ok(GMRef::new(self.read_u32()?))
     }
 
-    pub fn read_resource_by_id_option<T>(&mut self) -> Result<Option<GMRef<T>>, String> {
+    pub fn read_resource_by_id_opt<T>(&mut self) -> Result<Option<GMRef<T>>, String> {
         const FAILSAFE_COUNT: u32 = 100_000;    // increase limit is not enough
         let number: i32 = self.read_i32()?;
         if number == -1 {
