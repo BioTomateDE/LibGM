@@ -6,6 +6,8 @@ use crate::gamemaker::general_info::GMVersionLTS::{Post2022_0, Pre2022_0};
 use crate::gamemaker::rooms::GMRoomLayerType;
 
 
+/// If `check_fn` can detect multiple versions, `required_version` should be set to its _lowest_ required version
+/// whereas `target_version` should be set to the _highest_ possible version it can detect.
 fn try_check<R: Into<GMVersionReq>, T: Into<GMVersionReq>>(
     reader: &mut DataReader,
     chunk_name: &str,
@@ -65,6 +67,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
     if reader.general_info.bytecode_version >= 17 {
         try_check(reader, "FUNC", cc_func_2024_8, GMVersionReq::none(), (2024, 8))?;
     }
+    try_check(reader, "PSEM", cc_psem_2023_x, GMVersionReq::none(), (2023, 8))?;
     try_check(reader, "ARCV", cc_acrv_2_3_1, GMVersionReq::none(), (2, 3, 1))?;
     try_check(reader, "SPRT", cc_sprt_2_3_2, (2, 0), (2, 3, 2))?;
     try_check(reader, "ROOM", cc_room_2_2_2_302, (2, 0), (2, 2, 2, 302))?;
@@ -941,4 +944,39 @@ fn cc_sprt_2_3_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String
     Ok(None)
 }
 
+
+fn cc_psem_2023_x(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+    let mut target_ver = None;
+    reader.align(4)?;
+    let psem_version = reader.read_u32()?;
+    if psem_version != 1 {
+        return Err(format!("Expected PSEM version 1; got {psem_version}"))
+    }
+    let count: u32 = reader.read_u32()?;
+    if count < 11 {   // 2023.2 automatically adds eleven, later versions don't
+        target_ver = Some((2023, 4).into());
+    }
+    if count == 0 {
+        return Ok(target_ver)   // nothing more to detect
+    }
+    if count == 1 {
+        match reader.chunk.end_pos - reader.chunk.start_pos {
+            0xF8 => target_ver = Some((2023, 8).into()),
+            0xD8 => target_ver = Some((2023, 6).into()),
+            0xC8 => target_ver = Some((2023, 4).into()),
+            elem_size => return Err(format!("Unrecognized PSEM size {elem_size} with only one element"))
+        }
+    } else {
+        let pointer1 = reader.read_u32()?;
+        let pointer2 = reader.read_u32()?;
+        match pointer2 - pointer1 {
+            0xEC => target_ver = Some((2023, 8).into()),
+            0xC0 => target_ver = Some((2023, 6).into()),
+            0xBC => target_ver = Some((2023, 4).into()),
+            0xB0 => {},   // 2023.2
+            elem_size => return Err(format!("Unrecognized PSEM size {elem_size} with {count} elements"))
+        }
+    }
+    Ok(target_ver)
+}
 
