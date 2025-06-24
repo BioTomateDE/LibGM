@@ -35,6 +35,7 @@ impl GMElement for GMEmbeddedAudio {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.resolve_pointer_elem(self)?;
         builder.write_usize(self.audio_data.len())?;
         builder.write_bytes(&self.audio_data);
         Ok(())
