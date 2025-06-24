@@ -315,19 +315,18 @@ impl<'a> DataBuilder<'a> {
         Ok(())
     }
 
-    pub fn overwrite_bytes(&mut self, data: &[u8], position: usize) -> Result<(), String> {
-        if position + data.len() > self.len() {
-            return Err(format!(
+    pub fn overwrite_bytes(&mut self, bytes: &[u8], position: usize) -> Result<(), String> {
+        if let Some(mut_slice) = self.raw_data.get_mut(position .. position+bytes.len()) {
+            mut_slice.copy_from_slice(bytes);
+            Ok(())
+        } else {
+            Err(format!(
                 "Could not overwrite {} bytes at position {} in data with length {}; out of bounds",
-                data.len(), position, self.len(),
+                bytes.len(), position, self.raw_data.len(),
             ))
-        };
-        for (i, byte) in data.iter().enumerate() {
-            self.raw_data[position + i] = *byte;
         }
-        Ok(())
     }
-
+    
     pub fn overwrite_usize(&mut self, number: usize, position: usize) -> Result<(), String> {
         let bytes: [u8; 4] = (number as u32).to_le_bytes();
         self.overwrite_bytes(&bytes, position)
