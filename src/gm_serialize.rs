@@ -326,7 +326,7 @@ impl<'a> DataBuilder<'a> {
             ))
         }
     }
-    
+
     pub fn overwrite_usize(&mut self, number: usize, position: usize) -> Result<(), String> {
         let bytes: [u8; 4] = (number as u32).to_le_bytes();
         self.overwrite_bytes(&bytes, position)
