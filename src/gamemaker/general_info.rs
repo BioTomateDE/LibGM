@@ -210,7 +210,7 @@ impl GMElement for GMGeneralInfo {
         let function_classifications = GMFunctionClassifications::deserialize(reader)?;
         let steam_appid: i32 = reader.read_i32()?;
         let debugger_port: Option<u32> = if bytecode_version >= 14 { Some(reader.read_u32()?) } else { None };
-        let room_order: Vec<GMRef<GMRoom>> = reader.read_simple_list()?;
+        let room_order: Vec<GMRef<GMRoom>> = reader.read_simple_list_of_resource_ids()?;
 
         let mut gms2_info: Option<GMGeneralInfoGMS2> = None;
         if version.major >= 2 {

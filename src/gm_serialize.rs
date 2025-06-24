@@ -199,6 +199,14 @@ impl<'a> DataBuilder<'a> {
         Ok(())
     }
 
+    pub fn write_simple_list_of_resource_ids<T: GMElement>(&mut self, elements: &Vec<GMRef<T>>) -> Result<(), String> {
+        self.write_usize(elements.len())?;
+        for gm_ref in elements {
+            self.write_resource_id(gm_ref);
+        }
+        Ok(())
+    }
+
     pub fn write_simple_list_short<T: GMElement>(&mut self, elements: &Vec<T>) -> Result<(), String> {
         let count: usize = elements.len();
         let count: u16 = count.try_into().map_err(|_| format!(
@@ -241,9 +249,12 @@ impl<'a> DataBuilder<'a> {
     /// ___
     /// This system exists because it is virtually impossible to predict which data position a GameMaker element will be written to.
     /// Circular references and writing order would make predicting these pointer resource positions even harder.
-    pub fn write_pointer<T>(&mut self, element: &T) -> Result<(), String> {
+    pub fn write_pointer<T: std::fmt::Debug>(&mut self, element: &T) -> Result<(), String> {
         let memory_address: usize = element as *const _ as usize;
         let placeholder_position: u32 = self.len() as u32;  // gamemaker is 32bit anyway
+        if placeholder_position == 20801748 {
+            log::debug!("ngdsjgdsnjsd {} {:?}", typename::<T>(), element)
+        }
         self.write_u32(0xDEADC0DE);
         self.pointer_placeholder_positions.push((placeholder_position, memory_address));
         Ok(())
