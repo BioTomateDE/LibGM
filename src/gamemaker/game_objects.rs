@@ -3,7 +3,7 @@ use num_enum::{TryFromPrimitive, IntoPrimitive};
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::code::GMCode;
 use crate::gamemaker::sprites::GMSprite;
-use crate::gm_serialize::{instance_muid, DataBuilder, GMSerializeIfVersion};
+use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
 
 #[derive(Debug, Clone)]
 pub struct GMGameObjects {
@@ -126,7 +126,7 @@ impl GMElement for GMGameObjects {
         }
 
         for (i, game_object) in self.game_objects.iter().enumerate() {
-            builder.resolve_pointer(instance_muid(game_object))?;
+            builder.resolve_pointer(game_object)?;
             builder.overwrite_usize(builder.len(), pointer_list_pos + 4*i)?;
 
             builder.write_gm_string(&game_object.name)?;
@@ -257,7 +257,7 @@ impl GMElement for GMGameObjectEventAction {
         let use_apply_to: bool = reader.read_bool32()?;
         let exe_type: u32 = reader.read_u32()?;
         let action_name: Option<GMRef<String>> = reader.read_gm_string_opt()?;
-        let code: Option<GMRef<GMCode>> = reader.read_resource_by_id_opt()?;
+        let code: Option<GMRef<GMCode>> = reader.read_resource_by_id_option()?;
         let argument_count: u32 = reader.read_u32()?;
         let who: i32 = reader.read_i32()?;
         let relative: bool = reader.read_bool32()?;

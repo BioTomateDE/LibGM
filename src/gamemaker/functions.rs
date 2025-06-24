@@ -1,4 +1,5 @@
-﻿use crate::gm_deserialize::{DataReader, GMChunk, GMChunkElement, GMElement, GMRef};
+﻿use std::collections::HashMap;
+use crate::gm_deserialize::{DataReader, GMChunk, GMChunkElement, GMElement, GMRef};
 use crate::gm_serialize::DataBuilder;
 use crate::utility::vec_with_capacity;
 
@@ -59,7 +60,7 @@ impl GMElement for GMFunctions {
         }
 
         for (i, function) in self.functions.iter().enumerate() {
-            builder.resolve_pointer_elem(function)?;
+            builder.resolve_pointer(function)?;
             let resolved_pointer_pos: usize = builder.len();
             builder.overwrite_usize(resolved_pointer_pos, pointer_list_start_pos + 4*i)?;
 

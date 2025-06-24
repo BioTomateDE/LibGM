@@ -1,7 +1,7 @@
 use crate::gm_deserialize::{GMChunkElement, GMElement, DataReader, GMRef};
 use crate::gamemaker::general_info::GMVersionLTS::Post2022_0;
 use crate::gamemaker::texture_page_items::GMTexturePageItem;
-use crate::gm_serialize::{instance_muid, DataBuilder, GMSerializeIfVersion};
+use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
 
 #[derive(Debug, Clone)]
 pub struct GMFonts {
@@ -98,7 +98,6 @@ impl GMElement for GMFont {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.resolve_pointer_elem(self)?;
         builder.write_gm_string(&self.name)?;
         builder.write_gm_string_opt(&self.display_name)?;
         match self.em_size {

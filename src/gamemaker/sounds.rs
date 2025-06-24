@@ -58,13 +58,12 @@ impl GMElement for GMSound {
                 return Err(format!("Preload is unexpectedly set to false for sound \"{}\"; please report this error", reader.display_gm_str(name)))
             }
         }
-        let audio_file: Option<GMRef<GMEmbeddedAudio>> = reader.read_resource_by_id_opt()?;
+        let audio_file: Option<GMRef<GMEmbeddedAudio>> = reader.read_resource_by_id_option()?;
         let audio_length: Option<f32> = reader.deserialize_if_gm_version((2024, 6))?;
         Ok(GMSound { name, flags, audio_type, file, effects, volume, pitch, audio_group, audio_file, audio_length })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.resolve_pointer_elem(self)?;
         builder.write_gm_string(&self.name)?;
         self.flags.serialize(builder)?;
         builder.write_gm_string_opt(&self.audio_type)?;
