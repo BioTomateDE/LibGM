@@ -9,7 +9,7 @@ opt-level = 1       # slight optimisations in debug profile
 [profile.release]
 debug = true        # debug info
 lto = true          # link time optimisation
-codegen-units = 1   # potentially better optimisations but build process way slower
+#codegen-units = 1   # potentially better optimisations but build process way slower
 
 [dependencies]
 uuid = { version = "1.16.0", features = ["serde"] }
