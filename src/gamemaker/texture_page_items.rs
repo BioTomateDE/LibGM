@@ -71,6 +71,7 @@ impl GMElement for GMTexturePageItem {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.resolve_pointer(self)?;
         builder.write_u16(self.source_x);
         builder.write_u16(self.source_y);
         builder.write_u16(self.source_width);
