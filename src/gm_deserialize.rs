@@ -202,14 +202,6 @@ impl<T> std::fmt::Debug for GMRef<T> {
     }
 }
 
-// impl<T> GMElement for GMRef<T> {
-//     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-//         reader.read_resource_by_id::<T>()
-//     }
-//     fn serialize(&self, _builder: &mut DataBuilder) -> Result<(), String> {
-//         unreachable!("[internal error] Using GMRef::serialize is not supported; use DataBuilder::write_resource_id() or DataBuilder::write_gm_x()")
-//     }
-// }
 
 impl<'a, T> GMRef<T> {
     pub fn resolve(&self, elements_by_index: &'a Vec<T>) -> Result<&'a T, String> {

@@ -295,7 +295,7 @@ impl GMSprite {
         builder.write_usize(texture_list.len())?;
         for texture_page_item_ref_opt in texture_list {
             if let Some(texture_page_item_ref) = texture_page_item_ref_opt {
-                builder.write_pointer(texture_page_item_ref)?;
+                builder.write_gm_texture(texture_page_item_ref)?;
             } else {
                 builder.write_u32(0);
             }

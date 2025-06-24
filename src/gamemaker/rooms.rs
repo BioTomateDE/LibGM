@@ -813,6 +813,7 @@ impl GMElement for GMRoomLayerDataAssets {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         builder.write_pointer(&self.legacy_tiles)?;
         builder.write_pointer(&self.sprites)?;
+        
         if builder.is_gm_version_at_least((2, 3)) {
             builder.write_pointer(&self.sequences)?;
             if !builder.is_gm_version_at_least((2, 3, 2)) {
@@ -824,13 +825,18 @@ impl GMElement for GMRoomLayerDataAssets {
             if !builder.is_gm_version_at_least((2024, 6)) {
                 builder.write_pointer(&self.text_items)?;
             }
+            
         }
         builder.resolve_pointer(&self.legacy_tiles)?;
         builder.write_pointer_list(&self.legacy_tiles)?;
+        
+        builder.resolve_pointer(&self.sprites)?;
         builder.write_pointer_list(&self.sprites)?;
+        
         if builder.is_gm_version_at_least((2, 3)) {
             builder.resolve_pointer(&self.sequences)?;
             builder.write_pointer_list(&self.sequences)?;
+            
             if !builder.is_gm_version_at_least((2, 3, 2)) {
                 builder.resolve_pointer(&self.nine_slices)?;
                 builder.write_pointer_list(&self.nine_slices)?;
