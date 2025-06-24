@@ -202,14 +202,14 @@ impl<T> std::fmt::Debug for GMRef<T> {
     }
 }
 
-impl<T> GMElement for GMRef<T> {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        reader.read_resource_by_id::<T>()
-    }
-    fn serialize(&self, _builder: &mut DataBuilder) -> Result<(), String> {
-        unreachable!("[internal error] Using GMRef::serialize is not supported; use DataBuilder::write_resource_id() or DataBuilder::write_gm_x()")
-    }
-}
+// impl<T> GMElement for GMRef<T> {
+//     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+//         reader.read_resource_by_id::<T>()
+//     }
+//     fn serialize(&self, _builder: &mut DataBuilder) -> Result<(), String> {
+//         unreachable!("[internal error] Using GMRef::serialize is not supported; use DataBuilder::write_resource_id() or DataBuilder::write_gm_x()")
+//     }
+// }
 
 impl<'a, T> GMRef<T> {
     pub fn resolve(&self, elements_by_index: &'a Vec<T>) -> Result<&'a T, String> {
@@ -537,7 +537,7 @@ impl<'a> DataReader<'a> {
         T::deserialize(self)
     }
 
-    pub fn read_simple_list<T: GMElement>(&mut self) -> Result<Vec<T>, String> {
+    fn read_simple_list_internal<T>(&mut self, deserializer_fn: impl Fn(&mut Self) -> Result<T, String>) -> Result<Vec<T>, String> {
         const FAILSAFE_SIZE: usize = 1_000_000;   // 1 Megabyte
         let count: usize = self.read_usize()?;
         let implied_data_size: usize = count * size_of::<T>();
@@ -552,11 +552,21 @@ impl<'a> DataReader<'a> {
         }
         let mut elements: Vec<T> = Vec::with_capacity(count);
         for _ in 0..count {
-            elements.push(T::deserialize(self)?);
+            let element: T = deserializer_fn(self)?;
+            elements.push(element);
         }
         Ok(elements)
     }
 
+    pub fn read_simple_list<T: GMElement>(&mut self) -> Result<Vec<T>, String> {
+        self.read_simple_list_internal(T::deserialize)
+    }
+    
+    pub fn read_simple_list_of_resource_ids<T: GMElement>(&mut self) -> Result<Vec<GMRef<T>>, String> {
+        self.read_simple_list_internal(|reader| reader.read_resource_by_id())
+    }
+
+    /// this could probably be moved to gmkerning; it doesn't seem to be used anywhere else 
     pub fn read_simple_list_short<T: GMElement>(&mut self) -> Result<Vec<T>, String> {
         const FAILSAFE_SIZE: usize = 10_000;   // 10 Kilobytes
         let count: usize = self.read_u16()? as usize;
