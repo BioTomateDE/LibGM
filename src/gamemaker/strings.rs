@@ -1,6 +1,6 @@
 ﻿use std::collections::HashMap;
 use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMPointer, GMRef};
-use crate::gm_serialize::{instance_muid, DataBuilder};
+use crate::gm_serialize::DataBuilder;
 
 #[derive(Debug, Clone)]
 pub struct GMStrings {
@@ -46,7 +46,7 @@ impl GMElement for GMStrings {
         for (i, string) in self.strings.iter().enumerate() {
             builder.overwrite_usize(builder.len(), pointer_list_start + 4*i)?;
             builder.write_usize(string.len())?;
-            builder.resolve_pointer(instance_muid(string))?;   // gamemaker string references point to the actual string data
+            builder.resolve_pointer(string)?;   // gamemaker string references point to the actual string data
             builder.write_literal_string(string);
             builder.write_u8(0);    // trailing null byte
         }

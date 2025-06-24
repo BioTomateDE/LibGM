@@ -5,22 +5,6 @@ use crate::utility::{typename, Stopwatch};
 use crate::gamemaker::texture_page_items::GMTexturePageItem;
 use crate::gm_deserialize::{GMChunkElement, GMData, GMElement, GMRef};
 
-/// Get a unique value (memory address) for a field of a struct instance.
-#[macro_export]
-macro_rules! field_muid {
-    ($struct_type:ty, $struct_instance:expr, $field:ident) => {{
-        let base = $struct_instance as *const $struct_type as usize;
-        let offset = ::memoffset::offset_of!($struct_type, $field);
-        base + offset
-    }};
-}
-
-pub fn instance_muid<T>(struct_instance: &T) -> usize {
-    struct_instance as *const _ as usize
-}
-
-
-
 pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     let stopwatch = Stopwatch::start();
     let mut builder = DataBuilder::new(gm_data);
@@ -257,43 +241,41 @@ impl<'a> DataBuilder<'a> {
     /// ___
     /// This system exists because it is virtually impossible to predict which data position a GameMaker element will be written to.
     /// Circular references and writing order would make predicting these pointer resource positions even harder.
-    pub fn write_pointer(&mut self, memory_unique_id: usize) -> Result<(), String> {
+    pub fn write_pointer<T>(&mut self, element: &T) -> Result<(), String> {
+        let memory_address: usize = element as *const _ as usize;
         let placeholder_position: u32 = self.len() as u32;  // gamemaker is 32bit anyway
         self.write_u32(0xDEADC0DE);
-        self.pointer_placeholder_positions.push((placeholder_position, memory_unique_id));
+        self.pointer_placeholder_positions.push((placeholder_position, memory_address));
         Ok(())
     }
 
     /// Store the written GameMaker element's data position paired with its memory address in the pointer resource pool.
     /// The element's absolute position corresponds to the data builder's current position,
     /// since this method should get called when the element is serialized.
-    pub fn resolve_pointer(&mut self, memory_unique_id: usize) -> Result<(), String> {
+    pub fn resolve_pointer<T>(&mut self, element: &T) -> Result<(), String> {
+        let memory_address: usize = element as *const _ as usize;
         let resource_position: u32 = self.len() as u32;
-        if let Some(old_resource_pos) = self.pointer_resource_positions.insert(memory_unique_id, resource_position) {
+        if let Some(old_resource_pos) = self.pointer_resource_positions.insert(memory_address, resource_position) {
             return Err(format!(
-                "Pointer placeholder for memory unique id {} already resolved \
+                "Pointer placeholder for {} with memory address {} already resolved \
                 to data position {}; tried to resolve again to data position {}",
-                memory_unique_id, old_resource_pos, resource_position,
+                typename::<T>(), memory_address, old_resource_pos, resource_position,
             ))
         }
         Ok(())
     }
     
-    pub fn resolve_pointer_elem<T: GMElement>(&mut self, gm_element: &T) -> Result<(), String> {
-        self.resolve_pointer(instance_muid(gm_element))
+    pub fn resolve_placeholder<T>(&mut self, element: &T, resolved_value: u32) -> Result<(), String> {
+        let memory_address: usize = element as *const _ as usize;
+        if let Some(old_resource_pos) = self.pointer_resource_positions.insert(memory_address, resolved_value) {
+            return Err(format!(
+                "Placeholder for {} with memory address {} already resolved \
+                to data position {}; tried to resolve again to value {} (0x{:08X})",
+                typename::<T>(), memory_address, old_resource_pos, resolved_value, resolved_value,
+            ))
+        }
+        Ok(())
     }
-    
-    // pub fn resolve_placeholder<T>(&mut self, element: &T, resolved_value: u32) -> Result<(), String> {
-    //     let memory_address: usize = element as *const _ as usize;
-    //     if let Some(old_resource_pos) = self.pointer_resource_positions.insert(memory_address, resolved_value) {
-    //         return Err(format!(
-    //             "Placeholder for {} with memory address {} already resolved \
-    //             to data position {}; tried to resolve again to value {} (0x{:08X})",
-    //             typename::<T>(), memory_address, old_resource_pos, resolved_value, resolved_value,
-    //         ))
-    //     }
-    //     Ok(())
-    // }
 
     pub fn write_gm_string(&mut self, gm_string_ref: &GMRef<String>) -> Result<(), String> {
         let resolved_string: &String = gm_string_ref.resolve(&self.gm_data.strings.strings)?;
@@ -313,7 +295,7 @@ impl<'a> DataBuilder<'a> {
     }
     pub fn write_gm_texture(&mut self, gm_texture_ref: &GMRef<GMTexturePageItem>) -> Result<(), String> {
         let resolved_texture_page_item: &GMTexturePageItem = gm_texture_ref.resolve(&self.gm_data.texture_page_items.texture_page_items)?;
-        self.write_pointer(instance_muid(resolved_texture_page_item))
+        self.write_pointer(resolved_texture_page_item)
     }
     pub fn write_gm_texture_opt(&mut self, gm_texture_ref_opt: &Option<GMRef<GMTexturePageItem>>) -> Result<(), String> {
         match gm_texture_ref_opt {

@@ -55,7 +55,6 @@ impl GMElement for GMParticleSystem {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.resolve_pointer_elem(self)?;
         builder.write_gm_string(&self.name)?;
         builder.write_i32(self.origin_x);
         builder.write_i32(self.origin_y);
@@ -280,9 +279,9 @@ impl GMElement for GMParticleEmitter {
         let orientation_wiggle: f32 = reader.read_f32()?;
         let orientation_relative: bool = reader.read_bool32()?;
 
-        let spawn_on_death: Option<GMRef<GMParticleEmitter>> = reader.read_resource_by_id_opt()?;
+        let spawn_on_death: Option<GMRef<GMParticleEmitter>> = reader.read_resource_by_id_option()?;
         let spawn_on_death_count: u32 = reader.read_u32()?;
-        let spawn_on_update: Option<GMRef<GMParticleEmitter>> = reader.read_resource_by_id_opt()?;
+        let spawn_on_update: Option<GMRef<GMParticleEmitter>> = reader.read_resource_by_id_option()?;
         let spawn_on_update_count: u32 = reader.read_u32()?;
 
         Ok(GMParticleEmitter {
@@ -334,7 +333,6 @@ impl GMElement for GMParticleEmitter {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.resolve_pointer_elem(self)?;
         builder.write_gm_string(&self.name)?;
         self.enabled.serialize_if_gm_ver(builder, "Enabled", (2023, 6))?;
         builder.write_i32(self.mode.into());

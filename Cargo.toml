@@ -30,8 +30,6 @@ rayon = "1.10.0"
 png = "0.17.16"
 colored = "3.0.0"
 mtpng = "0.4.1"
-tynm = "0.2.0"
-memoffset = "0.9.1"
 
 [dev-dependencies]
 criterion = "0.4"
