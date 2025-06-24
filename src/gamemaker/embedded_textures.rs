@@ -5,10 +5,9 @@ use crate::gm_deserialize::{GMChunkElement, GMElement, DataReader};
 use crate::printing::hexdump;
 use image;
 use bzip2::read::BzDecoder;
-use image::{DynamicImage, ImageBuffer, ImageFormat};
+use image::{DynamicImage, ImageFormat};
 use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
 use crate::qoi;
-use crate::utility::Stopwatch;
 
 pub const MAGIC_PNG_HEADER: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
 pub const MAGIC_BZ2_QOI_HEADER: &[u8] = "2zoq".as_bytes();
@@ -33,7 +32,6 @@ impl GMElement for GMEmbeddedTextures {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         if !self.exists { return Ok(()) }
-        // builder.write_pointer_list(&self.texture_pages)
         builder.write_usize(self.texture_pages.len())?;
         let pointer_list_start_pos: usize = builder.len();
         for _ in 0..self.texture_pages.len() {
@@ -65,7 +63,7 @@ impl GMElement for GMEmbeddedTextures {
             if let Some(ref img) = texture_page.image {
                 builder.resolve_pointer(&texture_page.image)?;
                 let start_pos: usize = builder.len();
-                build_raw_texture(builder, img)?;
+                img.build(builder)?;
                 if builder.is_gm_version_at_least((2022, 3)) {
                     let length: usize = builder.len() - start_pos;
                     builder.overwrite_usize(length, texture_block_size_placeholders[i])?
@@ -87,7 +85,7 @@ pub struct GMEmbeddedTexture {
     /// TODO maybe this could be used to speed up parsing textures in 2022.3+
     pub texture_block_size: Option<u32>,
     pub data_2022_9: Option<GMEmbeddedTexture2022_9>,
-    pub image: Option<DynamicImage>,
+    pub image: Option<GMImage>,
 }
 impl GMElement for GMEmbeddedTexture {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
@@ -97,7 +95,7 @@ impl GMElement for GMEmbeddedTexture {
         let data_2022_9: Option<GMEmbeddedTexture2022_9> = reader.deserialize_if_gm_version((2022, 9))?;
 
         let texture_data_start_pos: usize = reader.read_pointer()?;
-        let image: Option<DynamicImage> = if texture_data_start_pos == 0 {   // can be zero if the texture is "external"
+        let image: Option<GMImage> = if texture_data_start_pos == 0 {   // can be zero if the texture is "external"
             None
         } else {
             reader.cur_pos = texture_data_start_pos;
@@ -136,7 +134,7 @@ impl GMElement for GMEmbeddedTexture2022_9 {
 }
 
 
-fn read_raw_texture(reader: &mut DataReader) -> Result<DynamicImage, String> {
+fn read_raw_texture(reader: &mut DataReader) -> Result<GMImage, String> {
     let start_position: usize = reader.cur_pos;
     let header: [u8; 8] = *reader.read_bytes_const()
         .map_err(|e| format!("Trying to read headers {e} at position {start_position} while parsing images of texture pages"))?;
@@ -156,7 +154,8 @@ fn read_raw_texture(reader: &mut DataReader) -> Result<DynamicImage, String> {
         reader.cur_pos = start_position;
         let bytes: &[u8] = reader.read_bytes_dyn(data_length).map_err(|e| format!("Trying to read PNG image data {e}"))?;
         // png image size checks {~~}
-        Ok(decode_png(bytes)?)
+        let image = GMImage::from_png(bytes.to_vec());
+        Ok(image)
     }
     else if header.starts_with(MAGIC_BZ2_QOI_HEADER) {
         // Parse QOI + BZip2
@@ -171,7 +170,7 @@ fn read_raw_texture(reader: &mut DataReader) -> Result<DynamicImage, String> {
         reader.cur_pos = start_position + header_size;
         let raw_image_data: &[u8] = reader.read_bytes_dyn(bz2_stream_length)
             .map_err(|e| format!("Trying to read Bzip2 Stream of Bz2 Qoi Image {e}"))?;
-        let image: DynamicImage = image_from_bz2_qoi(raw_image_data).map_err(|e| format!("Could not parse BZip2 QOI image: {e}"))?;
+        let image: GMImage = GMImage::from_bz2_qoi(raw_image_data.to_vec());
         Ok(image)
     }
     else if header.starts_with(MAGIC_QOI_HEADER) {
@@ -186,9 +185,75 @@ fn read_raw_texture(reader: &mut DataReader) -> Result<DynamicImage, String> {
 }
 
 
-fn decode_png(data: &[u8]) -> Result<DynamicImage, String> {
-    image::load_from_memory_with_format(data, ImageFormat::Png)
-        .map_err(|e| format!("Could not parse PNG: {e}"))
+#[derive(Debug, Clone)]
+pub enum GMImage {
+    DynImg(DynamicImage),
+    Png(Vec<u8>),
+    Bz2Qoi(Vec<u8>),
+}
+impl GMImage {
+    pub fn from_dynamic_image(dyn_img: DynamicImage) -> Self {
+        Self::DynImg(dyn_img)
+    }
+    
+    pub fn from_png(raw_png_data: Vec<u8>) -> Self {
+        Self::Png(raw_png_data)
+    }
+    
+    pub fn from_bz2_qoi(raw_bz2_qoi_data: Vec<u8>) -> Self {
+        Self::Bz2Qoi(raw_bz2_qoi_data)
+    }
+    
+    pub fn to_dynamic_image(&self) -> Result<Cow<DynamicImage>, String> {
+        match self {
+            GMImage::DynImg(dyn_img) => Ok(Cow::Borrowed(dyn_img)),
+            GMImage::Png(raw_png_data) => Ok(Cow::Owned(Self::decode_png(&raw_png_data)?)),
+            GMImage::Bz2Qoi(raw_bz2_qoi_data) => Ok(Cow::Owned(Self::decode_bz2_qoi(&raw_bz2_qoi_data)?)),
+        }
+    }
+
+    fn decode_png(raw_png_data: &[u8]) -> Result<DynamicImage, String> {
+        image::load_from_memory_with_format(raw_png_data, ImageFormat::Png)
+            .map_err(|e| format!("Could not parse PNG: {e}"))
+    }
+
+    fn decode_bz2_qoi(raw_bz2_qoi_data: &[u8]) -> Result<DynamicImage, String> {
+        let mut decoder: BzDecoder<&[u8]> = BzDecoder::new(raw_bz2_qoi_data);
+        let mut decompressed_data: Vec<u8> = Vec::new();
+        decoder.read_to_end(&mut decompressed_data)
+            .map_err(|e| format!("Could not decode BZip2 data: \"{e}\""))?;
+        let image = qoi::get_image_from_bytes(&decompressed_data)
+            .map_err(|e| format!("Could not decode QOI image: {e}"))?;
+        Ok(image)
+    }
+
+
+    pub fn build(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        match self {
+            GMImage::DynImg(dyn_img) => {
+                let mut writer = BufWriter::with_capacity(8 * 1024, Cursor::new(&mut builder.raw_data));
+                dyn_img.write_to(&mut writer, ImageFormat::Png).map_err(|e| format!("Error while trying to write PNG image data: {e}"))?;
+            }
+            GMImage::Png(raw_png_data) => builder.write_bytes(&raw_png_data),
+            GMImage::Bz2Qoi(raw_bz2_qoi_data) => builder.write_bytes(&raw_bz2_qoi_data),
+        }
+        Ok(())
+    }
+
+}
+
+impl PartialEq for GMImage {
+    fn eq(&self, other: &Self) -> bool {
+        let img1 = match self.to_dynamic_image() {
+            Ok(dyn_img) => dyn_img,
+            Err(_) => return false,
+        };
+        let img2 = match other.to_dynamic_image() {
+            Ok(dyn_img) => dyn_img,
+            Err(_) => return false,
+        };
+        img1.eq(&img2)
+    }
 }
 
 
@@ -310,45 +375,3 @@ fn find_end_of_bz2_search(reader: &mut DataReader, end_data_position: usize) -> 
 
     Err("Failed to find BZip2 footer magic".to_string())
 }
-
-
-fn image_from_bz2_qoi(raw_image_data: &[u8]) -> Result<DynamicImage, String> {
-    let mut decoder: BzDecoder<&[u8]> = BzDecoder::new(raw_image_data);
-    let mut decompressed_data: Vec<u8> = Vec::new();
-    decoder.read_to_end(&mut decompressed_data)
-        .map_err(|e| format!("Could not decode BZip2 data: \"{e}\""))?;
-
-    let image = qoi::get_image_from_bytes(&decompressed_data)
-        .map_err(|e| format!("Could not decode QOI image: {e}"))?;
-    Ok(image)
-}
-
-
-
-fn build_raw_texture(builder: &mut DataBuilder, image: &DynamicImage) -> Result<(), String> {
-    let stopwatch = Stopwatch::start();
-    let rgba_image = match image {
-        DynamicImage::ImageRgba8(img) => Cow::Borrowed(img),
-        _ => Cow::Owned(image.to_rgba8()),
-    };
-
-    let mut encoder = png::Encoder::new(&mut builder.raw_data, image.width(), image.height());
-    encoder.set_color(png::ColorType::Rgba);
-    encoder.set_depth(png::BitDepth::Eight);
-    encoder.set_compression(png::Compression::Default);    // adjust for runtime/filesize tradeoff
-    encoder.set_filter(png::FilterType::Sub);
-    encoder.set_adaptive_filter(png::AdaptiveFilterType::Adaptive);
-    let mut writer = encoder.write_header().map_err(|e| format!("Error while trying to write PNG header: {e}"))?;
-    writer.write_image_data(&rgba_image).map_err(|e| format!("Error while trying to write PNG image data: {e}"))?;
-    log::debug!("sdgsdg {stopwatch}");
-    Ok(())
-}
-
-fn build_raw_texture2(builder: &mut DataBuilder, image: &DynamicImage) -> Result<(), String> {
-    let stopwatch = Stopwatch::start();
-    let mut writer = BufWriter::with_capacity(8 * 1024, Cursor::new(&mut builder.raw_data));
-    image.write_to(&mut writer, ImageFormat::Png).map_err(|e| format!("Error while trying to write PNG image data: {e}"))?;
-    log::debug!("brt2 {stopwatch}");
-    Ok(())
-}
-
