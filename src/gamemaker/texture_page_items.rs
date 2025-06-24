@@ -1,6 +1,6 @@
 use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use crate::gamemaker::embedded_textures::GMEmbeddedTexture;
-use crate::gm_serialize::DataBuilder;
+use crate::gm_serialize::{instance_muid, DataBuilder};
 
 #[derive(Debug, Clone)]
 pub struct GMTexturePageItems {
@@ -71,6 +71,7 @@ impl GMElement for GMTexturePageItem {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.resolve_pointer_elem(self)?;
         builder.write_u16(self.source_x);
         builder.write_u16(self.source_y);
         builder.write_u16(self.source_width);
