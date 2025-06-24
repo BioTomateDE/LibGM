@@ -189,6 +189,7 @@ impl GMElement for GMSprite {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.resolve_pointer(self)?;
         builder.write_gm_string(&self.name)?;
         builder.write_u32(self.width);
         builder.write_u32(self.height);

@@ -98,6 +98,7 @@ impl GMElement for GMFont {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.resolve_pointer(self)?;
         builder.write_gm_string(&self.name)?;
         builder.write_gm_string_opt(&self.display_name)?;
         match self.em_size {
