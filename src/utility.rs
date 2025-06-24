@@ -114,8 +114,7 @@ pub fn format_bytes(bytes: usize) -> String {
 
 
 pub fn typename<T>() -> String {
-    let string: &str = std::any::type_name::<T>();
-    string.rsplit_once("::").map(|(_, i)| i).unwrap_or(string).to_string()
+    tynm::type_name::<T>()
 }
 
 
