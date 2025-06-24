@@ -36,6 +36,7 @@ impl GMElement for GMRooms {
 
 
 #[derive(Debug, Clone, PartialEq)]
+#[repr(C)]  // need explicit layout so memory addresses for gm pointers don't collide
 pub struct GMRoom {
     pub name: GMRef<String>,
     pub caption: Option<GMRef<String>>,
