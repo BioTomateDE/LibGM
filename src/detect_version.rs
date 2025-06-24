@@ -1,4 +1,4 @@
-use crate::utility::vec_with_capacity;
+use crate::utility::{vec_with_capacity, Stopwatch};
 use crate::gm_deserialize::{DataReader, GMChunk, GMPointer};
 use crate::gamemaker::embedded_textures::MAGIC_BZ2_QOI_HEADER;
 use crate::gamemaker::general_info::{GMVersion, GMVersionReq};
@@ -87,7 +87,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
     try_check(reader, "FONT", cc_font_2024_14, (2024, 13), (2024, 14))?;
     try_check(reader, "AGRP", cc_agrp_2024_14, (2024, 13), (2024, 14))?;
     // TODO implement even more checks :c
-    
+
     try_check(reader, "CODE", cc_code_2023_8_and_2024_4, GMVersionReq::none(), (2024, 4))?;
     // ^ no idea if there's a requirement for CODE but process last anyway because expensive ("last resort" detection)
     
@@ -1053,20 +1053,17 @@ fn cc_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
             let length = reader.read_usize()?;
             let end = reader.cur_pos + length;
             while reader.cur_pos < end {
-                // match check_instruction(reader)? {
-                //     23_8 => detected_2023_8 = true,
-                //     24_4 => return Ok(Some((2024, 4).into())),  // return immediately if highest possible detectable version found
-                //     _ => {}  // nothing detected; continue
-                // }
-                //pop,push,call, (pot. break; relevant)
-                // c0,
                 let first_word = reader.read_u32()?;
                 let opcode = (first_word >> 24) as u8;
-                if matches!(opcode, 0xC0|0xC1|0xC2|0xC3|0x41|0xDA) {
+                let type1 = ((first_word & 0x00FF0000) >> 16) as u8;
+                if matches!(opcode, 0x41|0xDA) {    // pop, call
+                    reader.cur_pos += 4;
+                }
+                if matches!(opcode, 0xC0|0xC1|0xC2|0xC3) && type1 != 0x0f {   // push variants; account for int16
                     reader.cur_pos += 4;
                 }
                 if opcode != 0xFF {continue}    // break instruction
-                if ((first_word & 0x00FF0000) >> 16) as u8 == 2 {   // if type1 == int32
+                if type1 == 2 {   // if type1 is int32
                     if check_if_asset_type_2024_4(reader)? {
                         return Ok(Some((2024, 4).into()))   //  return immediately if highest detectable version (2024.4) is found
                     } else {
@@ -1087,12 +1084,15 @@ fn cc_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
             while reader.cur_pos < end {
                 let first_word = reader.read_u32()?;
                 let opcode = (first_word >> 24) as u8;
-                if matches!(opcode, 0xC0|0xC1|0xC2|0xC3|0x45|0xD9) {
-                    // FIXME: maybe "normal" push instructions can still have an int16 type (meaning no += 4)???
+                let type1 = ((first_word & 0x00FF0000) >> 16) as u8;
+                if matches!(opcode, 0x45|0xD9) {    // pop, call
+                    reader.cur_pos += 4;
+                }
+                if matches!(opcode, 0xC0|0xC1|0xC2|0xC3) && type1 != 0x0f {   // push variants; account for int16
                     reader.cur_pos += 4;
                 }
                 if opcode != 0xFF {continue}  // break instruction
-                if ((first_word & 0x00FF0000) >> 16) as u8 == 2 {   // if type1 == int32
+                if type1 == 2 {   // if type1 is int32
                     if check_if_asset_type_2024_4(reader)? {
                         return Ok(Some((2024, 4).into()))   // return immediately if highest detectable version (2024.4) is found
                     } else {
