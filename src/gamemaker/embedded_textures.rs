@@ -7,7 +7,7 @@ use image;
 use bzip2::read::BzDecoder;
 use image::{DynamicImage, ImageBuffer, ImageFormat};
 use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
-use crate::{field_muid, qoi};
+use crate::qoi;
 use crate::utility::Stopwatch;
 
 pub const MAGIC_PNG_HEADER: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
@@ -54,7 +54,7 @@ impl GMElement for GMEmbeddedTextures {
             texture_page.data_2022_9.serialize_if_gm_ver(builder, "Texture Page 2022.9 data", (2022, 9))?;
 
             if texture_page.image.is_some() {
-                builder.write_pointer(field_muid!(GMEmbeddedTexture, texture_page, image))?;
+                builder.write_pointer(&texture_page.image)?;
             } else {
                 builder.write_u32(0);   // external texture
             }
@@ -62,7 +62,7 @@ impl GMElement for GMEmbeddedTextures {
 
         for (i, texture_page) in self.texture_pages.iter().enumerate() {
             if let Some(ref img) = texture_page.image {
-                builder.resolve_pointer(field_muid!(GMEmbeddedTexture, texture_page, image))?;
+                builder.resolve_pointer(&texture_page.image)?;
                 let start_pos: usize = builder.len();
                 build_raw_texture(builder, img)?;
                 let length: usize = builder.len() - start_pos;
