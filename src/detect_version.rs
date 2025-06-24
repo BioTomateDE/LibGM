@@ -88,6 +88,9 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
     try_check(reader, "AGRP", cc_agrp_2024_14, (2024, 13), (2024, 14))?;
     // TODO implement even more checks :c
     
+    try_check(reader, "CODE", cc_code_2023_8_and_2024_4, GMVersionReq::none(), (2024, 4))?;
+    // ^ no idea if there's a requirement for CODE but process last anyway because expensive ("last resort" detection)
+    
     reader.cur_pos = saved_pos;
     reader.chunk = saved_chunk;
     let ver: &GMVersion = &reader.general_info.version;
@@ -978,5 +981,132 @@ fn cc_psem_2023_x(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
         }
     }
     Ok(target_ver)
+}
+
+
+fn cc_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+    fn get_chunk_elem_count(reader: &mut DataReader, chunk_name: &'static str) -> Result<u32, String> {
+        let chunk = match reader.chunks.get(chunk_name) {
+            Some(c) => c,
+            None => return Ok(0),
+        };
+        let saved_chunk = reader.chunk.clone();
+        let saved_pos = reader.cur_pos;
+        reader.chunk = chunk.clone();
+        reader.cur_pos = chunk.start_pos;
+        let count = reader.read_u32()?;
+        reader.chunk = saved_chunk;
+        reader.cur_pos = saved_pos;
+        Ok(count)
+    }
+    fn get_chunk_elem_count_weird(reader: &mut DataReader, chunk_name: &'static str) -> Result<u32, String> {
+        let chunk = match reader.chunks.get(chunk_name) {
+            Some(c) => c,
+            None => return Ok(0),
+        };
+        let saved_chunk = reader.chunk.clone();
+        let saved_pos = reader.cur_pos;
+        reader.chunk = chunk.clone();
+        reader.cur_pos = chunk.start_pos;
+        reader.align(4)?;
+        if reader.read_u32()? != 1 {
+            return Err("Expected version 1".to_string())
+        }
+        let count = reader.read_u32()?;
+        reader.chunk = saved_chunk;
+        reader.cur_pos = saved_pos;
+        Ok(count)
+    }
+
+    fn check_if_asset_type_2024_4(reader: &mut DataReader) -> Result<bool, String> {
+        let int_argument = reader.read_u32()?;
+        let resource_id = int_argument & 0xffffff;
+        Ok(match (int_argument >> 24) as u8 {
+            4 => resource_id >= get_chunk_elem_count(reader, "BGND")?,
+            5 => resource_id >= get_chunk_elem_count(reader, "PATH")?,
+            6 => resource_id >= get_chunk_elem_count(reader, "SCPT")?,
+            7 => resource_id >= get_chunk_elem_count(reader, "FONT")?,
+            8 => resource_id >= get_chunk_elem_count(reader, "TMLN")?,
+            9 => true,  // used to be unused, now are sequences
+            10 => resource_id >= get_chunk_elem_count(reader, "SHDR")?,
+            11 => resource_id >= get_chunk_elem_count_weird(reader, "SEQN")?,
+            // case 12 used to be animcurves, but now is unused (so would actually mean earlier than 2024.4)
+            13 => resource_id >= get_chunk_elem_count_weird(reader, "PSYS")?,
+            _ => false,
+        })
+    }
+
+
+    let code_count = reader.read_usize()?;
+    let mut code_pointers = vec_with_capacity(code_count)?;
+    for _ in 0..code_count {
+        let ptr = reader.read_usize()?;
+        if ptr != 0 {
+            code_pointers.push(ptr);
+        }
+    }
+    let mut detected_2023_8: bool = false;
+
+    if reader.general_info.bytecode_version <= 14 {
+        for code_ptr in code_pointers {
+            reader.cur_pos = code_ptr + 4;
+            let length = reader.read_usize()?;
+            let end = reader.cur_pos + length;
+            while reader.cur_pos < end {
+                // match check_instruction(reader)? {
+                //     23_8 => detected_2023_8 = true,
+                //     24_4 => return Ok(Some((2024, 4).into())),  // return immediately if highest possible detectable version found
+                //     _ => {}  // nothing detected; continue
+                // }
+                //pop,push,call, (pot. break; relevant)
+                // c0,
+                let first_word = reader.read_u32()?;
+                let opcode = (first_word >> 24) as u8;
+                if matches!(opcode, 0xC0|0xC1|0xC2|0xC3|0x41|0xDA) {
+                    reader.cur_pos += 4;
+                }
+                if opcode != 0xFF {continue}    // break instruction
+                if ((first_word & 0x00FF0000) >> 16) as u8 == 2 {   // if type1 == int32
+                    if check_if_asset_type_2024_4(reader)? {
+                        return Ok(Some((2024, 4).into()))   //  return immediately if highest detectable version (2024.4) is found
+                    } else {
+                        detected_2023_8 = true;
+                    }
+                }
+            }
+        }
+    } else {    // bytecode >= 15
+        for code_ptr in code_pointers {
+            reader.cur_pos = code_ptr + 4;
+            let length = reader.read_usize()?;
+            let end = reader.cur_pos + length;
+            reader.cur_pos += 4;
+            let start = reader.read_usize()?;
+            reader.cur_pos = start;
+            
+            while reader.cur_pos < end {
+                let first_word = reader.read_u32()?;
+                let opcode = (first_word >> 24) as u8;
+                if matches!(opcode, 0xC0|0xC1|0xC2|0xC3|0x45|0xD9) {
+                    // FIXME: maybe "normal" push instructions can still have an int16 type (meaning no += 4)???
+                    reader.cur_pos += 4;
+                }
+                if opcode != 0xFF {continue}  // break instruction
+                if ((first_word & 0x00FF0000) >> 16) as u8 == 2 {   // if type1 == int32
+                    if check_if_asset_type_2024_4(reader)? {
+                        return Ok(Some((2024, 4).into()))   // return immediately if highest detectable version (2024.4) is found
+                    } else {
+                        detected_2023_8 = true;
+                    }
+                }
+            }
+        }
+    }
+
+    if detected_2023_8 {
+        Ok(Some((2023, 8).into()))
+    } else {
+        Ok(None)
+    }
 }
 
