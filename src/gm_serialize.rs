@@ -249,10 +249,12 @@ impl<'a> DataBuilder<'a> {
     /// ___
     /// This system exists because it is virtually impossible to predict which data position a GameMaker element will be written to.
     /// Circular references and writing order would make predicting these pointer resource positions even harder.
+    /// ___
+    /// This function should NOT be called for `GMRef`s; use their `DataBuilder::write_gm_x()` methods instead.
     pub fn write_pointer<T: std::fmt::Debug>(&mut self, element: &T) -> Result<(), String> {
         let memory_address: usize = element as *const _ as usize;
         let placeholder_position: u32 = self.len() as u32;  // gamemaker is 32bit anyway
-        if placeholder_position == 20801748 {
+        if placeholder_position == 32255624 {
             log::debug!("ngdsjgdsnjsd {} {:?}", typename::<T>(), element)
         }
         self.write_u32(0xDEADC0DE);
