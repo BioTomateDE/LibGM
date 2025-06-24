@@ -1160,7 +1160,11 @@ impl GMElement for GMRoomGameObject {
         }
         builder.write_u32(self.color);
         builder.write_f32(self.rotation);
-        self.pre_create_code.serialize_if_bytecode_ver(builder, "Pre Create Code", 16)?;
+        if builder.bytecode_version() >= 16 {
+            builder.write_resource_id_opt(&self.pre_create_code);
+        } else {
+            builder.write_i32(-1);
+        }
         Ok(())
     }
 }
