@@ -422,8 +422,11 @@ impl<'a> DataReader<'a> {
             } else {
                 format!("Could not parse chunk name at position {}: {e}", self.cur_pos)
             })?;
-        if string.len() != 4 || !string.is_ascii() {  // can happen because of unicode
-            return Err(format!("Chunk name string \"{string}\" has length {} (chunk names need to be 4 ascii chars long)", string.len()))
+        if string.len() != 4 {
+            return Err(format!("Chunk name string \"{string}\" has length {} (chunk names need to be 4 chars long)", string.len()))
+        }
+        if !string.is_ascii() {
+            return Err(format!("Chunk name string \"{string}\" is not ascii"))
         }
         Ok(string)
     }
@@ -553,12 +556,12 @@ impl<'a> DataReader<'a> {
     pub fn read_simple_list<T: GMElement>(&mut self) -> Result<Vec<T>, String> {
         self.read_simple_list_internal(T::deserialize)
     }
-    
+
     pub fn read_simple_list_of_resource_ids<T: GMElement>(&mut self) -> Result<Vec<GMRef<T>>, String> {
         self.read_simple_list_internal(|reader| reader.read_resource_by_id())
     }
 
-    /// this could probably be moved to gmkerning; it doesn't seem to be used anywhere else 
+    /// this could probably be moved to gmkerning; it doesn't seem to be used anywhere else
     pub fn read_simple_list_short<T: GMElement>(&mut self) -> Result<Vec<T>, String> {
         const FAILSAFE_SIZE: usize = 10_000;   // 10 Kilobytes
         let count: usize = self.read_u16()? as usize;
