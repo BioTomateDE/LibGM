@@ -44,6 +44,7 @@ impl GMElement for GMEmbeddedTextures {
 
         for (i, texture_page) in self.texture_pages.iter().enumerate() {
             builder.overwrite_usize(builder.len(), pointer_list_start_pos + i*4)?;
+            builder.resolve_pointer(self)?;
             builder.write_u32(texture_page.scaled);
             texture_page.generated_mips.serialize_if_gm_ver(builder, "Generated Mipmap levels", (2, 0, 6))?;
             if builder.is_gm_version_at_least((2022, 3)) {
