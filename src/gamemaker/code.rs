@@ -372,7 +372,7 @@ impl GMElement for GMInstruction {
                     "Could not find any function with absolute occurrence position {} in map with length {} while parsing Call Instruction",
                     reader.cur_pos, reader.function_occurrence_map.len(),
                 ))?.clone();
-                reader.skip_bytes(4);   // skip next occurrence offset
+                reader.cur_pos += 4;   // skip next occurrence offset
                 
                 GMInstructionData::Call(GMCallInstruction {
                     arguments_count: b0,

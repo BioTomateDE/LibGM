@@ -253,7 +253,7 @@ impl<'a> DataReader<'a> {
             strings: GMStrings::empty(),
             chunks: HashMap::with_capacity(24),
             chunk: GMChunk {
-                name: "grievous_error".to_string(),
+                name: "grievous error".to_string(),
                 start_pos: 0,
                 end_pos: data.len(),
                 is_last_chunk: true,
