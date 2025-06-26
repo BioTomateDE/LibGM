@@ -14,6 +14,9 @@ impl GMChunkElement for GMVariables {
     fn empty() -> Self {
         Self { variables: vec![], scuffed: None, exists: false }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMVariables {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {

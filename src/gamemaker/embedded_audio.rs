@@ -10,6 +10,9 @@ impl GMChunkElement for GMEmbeddedAudios {
     fn empty() -> Self {
         Self { audios: vec![], exists: false }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMEmbeddedAudios {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {

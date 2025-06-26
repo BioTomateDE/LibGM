@@ -12,6 +12,9 @@ impl GMChunkElement for GMSounds {
     fn empty() -> Self {
         Self { sounds: vec![], exists: false }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMSounds {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {

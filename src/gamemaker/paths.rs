@@ -10,6 +10,9 @@ impl GMChunkElement for GMPaths {
     fn empty() -> Self {
         Self { paths: vec![], exists: false }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMPaths {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
