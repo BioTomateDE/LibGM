@@ -173,7 +173,6 @@ impl GMElement for GMAudioGroup {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.resolve_pointer(self)?;
         builder.write_gm_string(&self.name)?;
         if builder.is_gm_version_at_least((2024, 14)) {
             builder.write_gm_string(&self.path.ok_or("Audio Group Path not set for 2024.14+")?)?;
