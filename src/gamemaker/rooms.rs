@@ -541,20 +541,20 @@ impl GMElement for GMRoomLayer {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMRoomLayer2022_1 {
     pub effect_enabled: bool,
-    pub effect_type: GMRef<String>, 
+    pub effect_type: Option<GMRef<String>>, 
     pub effect_properties: Vec<GMRoomLayerEffectProperty>,
 }
 impl GMElement for GMRoomLayer2022_1 {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let effect_enabled: bool = reader.read_bool32()?;
-        let effect_type: GMRef<String> = reader.read_gm_string()?;
+        let effect_type: Option<GMRef<String>> = reader.read_gm_string_opt()?;
         let effect_properties: Vec<GMRoomLayerEffectProperty> = reader.read_simple_list()?;
         Ok(GMRoomLayer2022_1 { effect_enabled, effect_type, effect_properties })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         builder.write_bool32(self.effect_enabled);
-        builder.write_gm_string(&self.effect_type)?;
+        builder.write_gm_string_opt(&self.effect_type)?;
         builder.write_simple_list(&self.effect_properties)?;
         Ok(())
     }
