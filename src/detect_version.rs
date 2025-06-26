@@ -1101,24 +1101,33 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
         reader.cur_pos = saved_pos;
         Ok(count)
     }
+    
+    let background_count = get_chunk_elem_count(reader, "BGND")?;
+    let path_count = get_chunk_elem_count(reader, "PATH")?;
+    let script_count = get_chunk_elem_count(reader, "SCPT")?;
+    let font_count = get_chunk_elem_count(reader, "FONT")?;
+    let timeline_count = get_chunk_elem_count(reader, "TMLN")?;
+    let shader_count = get_chunk_elem_count(reader, "SHDR")?;
+    let sequence_count = get_chunk_elem_count_weird(reader, "SEQN")?;
+    let particle_system_count = get_chunk_elem_count_weird(reader, "SEQN")?;
 
-    fn check_if_asset_type_2024_4(reader: &mut DataReader) -> Result<bool, String> {
+    let check_if_asset_type_2024_4 = |reader: &mut DataReader| -> Result<bool, String> {
         let int_argument = reader.read_u32()?;
         let resource_id = int_argument & 0xffffff;
         Ok(match (int_argument >> 24) as u8 {
-            4 => resource_id >= get_chunk_elem_count(reader, "BGND")?,
-            5 => resource_id >= get_chunk_elem_count(reader, "PATH")?,
-            6 => resource_id >= get_chunk_elem_count(reader, "SCPT")?,
-            7 => resource_id >= get_chunk_elem_count(reader, "FONT")?,
-            8 => resource_id >= get_chunk_elem_count(reader, "TMLN")?,
+            4 => resource_id >= background_count,
+            5 => resource_id >= path_count,
+            6 => resource_id >= script_count,
+            7 => resource_id >= font_count,
+            8 => resource_id >= timeline_count,
             9 => true,  // used to be unused, now are sequences
-            10 => resource_id >= get_chunk_elem_count(reader, "SHDR")?,
-            11 => resource_id >= get_chunk_elem_count_weird(reader, "SEQN")?,
+            10 => resource_id >= shader_count,
+            11 => resource_id >= sequence_count,
             // case 12 used to be animcurves, but now is unused (so would actually mean earlier than 2024.4)
-            13 => resource_id >= get_chunk_elem_count_weird(reader, "PSYS")?,
+            13 => resource_id >= particle_system_count,
             _ => false,
         })
-    }
+    };
 
 
     let code_count = reader.read_usize()?;
