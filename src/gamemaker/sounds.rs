@@ -64,7 +64,6 @@ impl GMElement for GMSound {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.resolve_pointer(self)?;
         builder.write_gm_string(&self.name)?;
         self.flags.serialize(builder)?;
         builder.write_gm_string_opt(&self.audio_type)?;

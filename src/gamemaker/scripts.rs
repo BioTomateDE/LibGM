@@ -57,7 +57,6 @@ impl GMElement for GMScript {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.resolve_pointer(self)?;
         builder.write_gm_string(&self.name)?;
         if self.is_constructor {
             if let Some(ref gm_code_ref) = self.code {

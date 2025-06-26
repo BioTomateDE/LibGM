@@ -61,7 +61,6 @@ impl GMElement for GMVariables {
         if !self.exists { return Ok(()) }
         self.scuffed.serialize_if_bytecode_ver(builder, "Scuffed bytecode 15 fields", 15)?;
         for (i, variable) in self.variables.iter().enumerate() {
-            builder.resolve_pointer(variable)?;
             builder.write_gm_string(&variable.name)?;
             variable.b15_data.serialize_if_bytecode_ver(builder, "Bytecode 15 data", 15)?;
             
