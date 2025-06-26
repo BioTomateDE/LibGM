@@ -16,6 +16,9 @@ impl GMChunkElement for GMSprites {
     fn empty() -> Self {
         Self { sprites: vec![], exists: false }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMSprites {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String>{

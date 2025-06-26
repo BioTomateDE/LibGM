@@ -12,7 +12,7 @@ use crate::gamemaker::game_objects::GMGameObjects;
 use crate::gamemaker::scripts::{GMScript, GMScripts};
 use crate::gamemaker::strings::GMStrings;
 use crate::gamemaker::variables::{GMVariable, GMVariables};
-use crate::gamemaker::general_info::{GMGeneralInfo, GMVersion, GMVersionReq};
+use crate::gamemaker::general_info::{GMGeneralInfo, GMVersion, GMVersionBranch, GMVersionReq};
 use crate::gamemaker::paths::GMPaths;
 use crate::gamemaker::rooms::GMRooms;
 use crate::gamemaker::sounds::GMSounds;
@@ -137,7 +137,10 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
     // TODO implement all other chunks
     
     log::trace!("Parsing chunks took {stopwatch2}");
-
+    
+    if reader.general_info.is_version_at_least((2023, 1)) && reader.general_info.version.branch == GMVersionBranch::Pre2022_0 {
+        reader.general_info.version.branch = GMVersionBranch::LTS2022_0;
+    }
 
     let data = GMData {
         strings: reader.strings,
@@ -255,7 +258,7 @@ impl<'a> DataReader<'a> {
             strings: GMStrings::empty(),
             chunks: HashMap::with_capacity(24),
             chunk: GMChunk {
-                name: "grievous error".to_string(),
+                name: "FORM".to_string(),
                 start_pos: 0,
                 end_pos: data.len(),
                 is_last_chunk: true,
@@ -811,6 +814,7 @@ impl GMElement for bool {
 
 pub trait GMChunkElement {
     fn empty() -> Self;
+    fn exists(&self) -> bool;
 }
 
 

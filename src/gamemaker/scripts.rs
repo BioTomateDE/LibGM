@@ -11,6 +11,9 @@ impl GMChunkElement for GMScripts {
     fn empty() -> Self {
         Self { scripts: vec![], exists: false }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMScripts {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {

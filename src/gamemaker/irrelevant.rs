@@ -28,6 +28,9 @@ impl GMChunkElement for GMLanguageInfo {
             exists: false,
         }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMLanguageInfo {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
@@ -82,6 +85,9 @@ pub struct GMExtensions {
 impl GMChunkElement for GMExtensions {
     fn empty() -> Self {
         Self { extensions: vec![], exists: false }
+    }
+    fn exists(&self) -> bool {
+        self.exists
     }
 }
 impl GMElement for GMExtensions {
@@ -141,6 +147,9 @@ impl GMChunkElement for GMAudioGroups {
     fn empty() -> Self {
         Self { audio_groups: vec![], exists: false }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMAudioGroups {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
@@ -192,6 +201,9 @@ impl GMChunkElement for GMGlobalInitScripts {
     fn empty() -> Self {
         Self { global_inits: vec![], exists: false }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMGlobalInitScripts {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
@@ -215,6 +227,9 @@ pub struct GMGameEndScripts {
 impl GMChunkElement for GMGameEndScripts {
     fn empty() -> Self {
         Self { global_inits: vec![], exists: false }
+    }
+    fn exists(&self) -> bool {
+        self.exists
     }
 }
 impl GMElement for GMGameEndScripts {
