@@ -120,14 +120,8 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
     
     loop {
         // permanently filter out already detected versions
-        // log::debug!("gdsfghBEF4R {} - {} {checks:?}", reader.general_info.version, checks.len());
-        // let debug_removed: Vec<VersionCheck> = checks.iter().filter(|i| reader.general_info.is_version_at_least(i.target_version.clone())).cloned().collect();
         checks.retain(|i| !reader.general_info.is_version_at_least(i.target_version.clone()));
-        // log::debug!("gdsfghAFTER {} - {}; removed: {:?}", reader.general_info.version, checks.len(), 513265136);
-        // for i in debug_removed {
-        //     println!("{} {} {}", i.chunk_name, i.required_version, i.target_version);
-        // }
-
+        
         let mut updated_version: bool = false;
         let mut checks_to_remove: Vec<bool> = vec![false; checks.len()];
         
