@@ -28,7 +28,7 @@ fn try_check<R: Into<GMVersionReq>, T: Into<GMVersionReq>>(
         reader.chunk = chunk.clone();
         reader.cur_pos = chunk.start_pos;
         if let Some(version_req) = check_fn(reader)? {
-            log::debug!("Checking for version {} in chunk '{}' successful; upgraded from version {}", version_req, chunk_name, reader.general_info.version);
+            log::debug!("Manually checking for version {} in chunk '{}' successful; upgraded from version {}", version_req, chunk_name, reader.general_info.version);
             reader.general_info.set_version_at_least(version_req.clone())?;
         }
     }
@@ -95,8 +95,8 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
     }
     
     let mut checks: Vec<VersionCheck> = vec![
-        VersionCheck::new("ACRV", cv_acrv_2_3_1, GMVersionReq::none(), (2023, 8)),
-        VersionCheck::new("PSEM", cv_psem_2023_x, GMVersionReq::none(), (2023, 8)),
+        VersionCheck::new("ACRV", cv_acrv_2_3_1, (2, 3), (2, 3, 1)),
+        VersionCheck::new("PSEM", cv_psem_2023_x, (2023, 2), (2023, 8)),
         VersionCheck::new("SOND", cv_sond_2024_6, (2022, 2, Post2022_0), (2024, 6)),
         VersionCheck::new("TXTR", cv_txtr_2_0_6, (2, 0), (2, 0, 6)),
         VersionCheck::new("TGIN", cv_tgin_2022_9, (2, 3), (2022, 9)),
@@ -133,7 +133,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
         
         for (i, check) in checks.iter().enumerate().rev() {
             // for this iteration, filter out versions whose version requirements are not (yet) met
-            if reader.general_info.is_version_at_least(check.required_version.clone()) {
+            if !reader.general_info.is_version_at_least(check.required_version.clone()) {
                 continue
             }
             
@@ -1004,9 +1004,11 @@ fn cv_acrv_2_3_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String
     
     // go to the first "point"
     reader.cur_pos = reader.read_usize()? + 8;
-    if reader.read_u32()? != 0 {
-        // In 2.3 an int with the value of 0 would be set here, it cannot be version 2.3 if this value isn't 0
-        return Ok(Some((2, 3, 1).into()))
+    for _ in 0..2 {
+        if reader.read_u32()? != 0 {
+            // In 2.3 an int with the value of 0 would be set here, it cannot be version 2.3 if this value isn't 0
+            return Ok(Some((2, 3, 1).into()))
+        }
     }
     
     Ok(None)
