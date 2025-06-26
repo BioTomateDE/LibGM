@@ -116,7 +116,6 @@ impl GMElement for GMBackgroundGMS2Data {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.resolve_pointer(self)?;
         builder.write_u32(self.unknown_always_two);
         builder.write_u32(self.tile_width);
         builder.write_u32(self.tile_height);

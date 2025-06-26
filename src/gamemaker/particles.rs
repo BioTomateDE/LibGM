@@ -55,7 +55,6 @@ impl GMElement for GMParticleSystem {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.resolve_pointer(self)?;
         builder.write_gm_string(&self.name)?;
         builder.write_i32(self.origin_x);
         builder.write_i32(self.origin_y);
@@ -334,7 +333,6 @@ impl GMElement for GMParticleEmitter {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.resolve_pointer(self)?;
         builder.write_gm_string(&self.name)?;
         self.enabled.serialize_if_gm_ver(builder, "Enabled", (2023, 6))?;
         builder.write_i32(self.mode.into());

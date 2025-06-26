@@ -126,7 +126,6 @@ impl GMElement for GMGameObjects {
         }
 
         for (i, game_object) in self.game_objects.iter().enumerate() {
-            builder.resolve_pointer(game_object)?;
             builder.overwrite_usize(builder.len(), pointer_list_pos + 4*i)?;
 
             builder.write_gm_string(&game_object.name)?;
