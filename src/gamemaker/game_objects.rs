@@ -14,6 +14,9 @@ impl GMChunkElement for GMGameObjects {
     fn empty() -> Self {
         Self { game_objects: vec![], exists: false }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMGameObjects {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {

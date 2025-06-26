@@ -97,11 +97,15 @@ impl<'a> DataBuilder<'a> {
     pub fn build_chunk<T: GMElement+GMChunkElement>(&mut self, chunk_name: &'static str, element: &T) -> Result<(), String> {
         assert_eq!(chunk_name.len(), 4);
         assert_eq!(chunk_name.as_bytes().len(), 4);
+        if !element.exists() {
+            log::trace!("Skipped building chunk '{chunk_name}' because it does not exist");
+            return Ok(())
+        }
+        
         let stopwatch = Stopwatch::start();
-
-        let start_pos: usize = self.len();
         self.write_literal_string(chunk_name);
         self.write_u32(0xDEADC0DE);   // chunk length placeholder
+        let start_pos: usize = self.len();
 
         element.serialize(self)
             .map_err(|e| format!("{e}\n↳ while serializing chunk '{chunk_name}'"))?;
@@ -115,13 +119,7 @@ impl<'a> DataBuilder<'a> {
         }
 
         let chunk_length: usize = self.len() - start_pos;
-        if chunk_length == 0 {
-            // chunk is completely empty; undo writing chunk name and length placeholder (and padding)
-            self.raw_data.truncate(start_pos);
-            return Ok(())
-        }
-
-        self.overwrite_usize(chunk_length, start_pos + 4)?;   // resolve chunk length placeholder
+        self.overwrite_usize(chunk_length, start_pos - 4)?;   // resolve chunk length placeholder
 
         log::trace!("Building chunk '{chunk_name}' took {stopwatch}");
         Ok(())

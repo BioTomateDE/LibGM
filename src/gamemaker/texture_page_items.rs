@@ -11,6 +11,9 @@ impl GMChunkElement for GMTexturePageItems {
     fn empty() -> Self {
         Self { texture_page_items: vec![], exists: false }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMTexturePageItems {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {

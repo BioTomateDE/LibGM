@@ -16,6 +16,9 @@ impl GMChunkElement for GMFunctions {
             exists: false,
         }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMFunctions {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
@@ -102,6 +105,9 @@ pub struct GMCodeLocals {
 impl GMChunkElement for GMCodeLocals {
     fn empty() -> Self {
         Self { code_locals: vec![], exists: false }
+    }
+    fn exists(&self) -> bool {
+        self.exists
     }
 }
 impl GMElement for GMCodeLocals {

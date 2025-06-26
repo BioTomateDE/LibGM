@@ -11,6 +11,9 @@ impl GMChunkElement for GMStrings {
     fn empty() -> Self {
         Self { strings: vec![], exists: false }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMStrings {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {

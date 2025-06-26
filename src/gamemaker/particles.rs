@@ -12,6 +12,9 @@ impl GMChunkElement for GMParticleSystems {
     fn empty() -> Self {
         Self { particle_systems: vec![], exists: false }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMParticleSystems {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
@@ -74,6 +77,9 @@ pub struct GMParticleEmitters {
 impl GMChunkElement for GMParticleEmitters {
     fn empty() -> Self {
         Self { emitters: vec![], exists: false }
+    }
+    fn exists(&self) -> bool {
+        self.exists
     }
 }
 impl GMElement for GMParticleEmitters {

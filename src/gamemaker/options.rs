@@ -76,6 +76,9 @@ impl GMChunkElement for GMOptions {
             exists: false,
         }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMOptions {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
