@@ -120,8 +120,14 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
     
     loop {
         // permanently filter out already detected versions
-        checks.retain(|i| reader.general_info.is_version_at_least(i.target_version.clone()));
-        
+        // log::debug!("gdsfghBEF4R {} - {} {checks:?}", reader.general_info.version, checks.len());
+        // let debug_removed: Vec<VersionCheck> = checks.iter().filter(|i| reader.general_info.is_version_at_least(i.target_version.clone())).cloned().collect();
+        checks.retain(|i| !reader.general_info.is_version_at_least(i.target_version.clone()));
+        // log::debug!("gdsfghAFTER {} - {}; removed: {:?}", reader.general_info.version, checks.len(), 513265136);
+        // for i in debug_removed {
+        //     println!("{} {} {}", i.chunk_name, i.required_version, i.target_version);
+        // }
+
         let mut updated_version: bool = false;
         let mut checks_to_remove: Vec<bool> = vec![false; checks.len()];
         
@@ -134,7 +140,14 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
             // permanently remove check; no matter if successful or not
             checks_to_remove[i] = true;
             
-            let detected_version_opt: Option<GMVersionReq> = (check.checker_fn)(reader)?;
+            // if chunk doesn't exist; just skip the check
+            let Some(chunk) = reader.chunks.get(check.chunk_name) else {continue};
+            reader.chunk = chunk.clone();
+            reader.cur_pos = reader.chunk.start_pos;
+            
+            let detected_version_opt: Option<GMVersionReq> = (check.checker_fn)(reader)
+                .map_err(|e| format!("{e}\n↳ while trying to detect version {} in chunk '{}'", check.target_version, check.chunk_name))?;
+
             if let Some(detected_version) = detected_version_opt {
                 log::debug!("Checking for version {} in chunk '{}' successful; upgraded from version {}",
                     detected_version, check.chunk_name, reader.general_info.version);
@@ -144,6 +157,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
             }
         }
         
+        // remove all performed checks
         for (i, should_remove) in checks_to_remove.into_iter().enumerate().rev() {
             if should_remove {
                 checks.remove(i);
