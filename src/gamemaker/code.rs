@@ -55,7 +55,6 @@ impl GMElement for GMCodes {
 
         for (i, code) in self.codes.iter().enumerate() {
             builder.overwrite_usize(builder.len(), pointer_list_pos + 4*i)?;
-            builder.resolve_pointer(code)?;
             let b15_info: &GMCodeBytecode15 = code.bytecode15_info.as_ref()
                 .ok_or_else(|| format!("Code bytecode 15 data not set in Bytecode version {}", builder.bytecode_version()))?;
             let length = instructions_end_positions[i] - instructions_start_positions[i];
@@ -111,7 +110,6 @@ impl GMElement for GMCode {
                 builder.bytecode_version(),
             ))
         }
-        builder.resolve_pointer(self)?;
         builder.write_gm_string(&self.name)?;
         let length_placeholder_pos: usize = builder.len();
         builder.write_u32(0xDEADC0DE);

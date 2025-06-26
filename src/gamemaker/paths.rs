@@ -44,7 +44,6 @@ impl GMElement for GMPath {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.resolve_pointer(self)?;
         builder.write_gm_string(&self.name)?;
         builder.write_bool32(self.is_smooth);
         builder.write_bool32(self.is_closed);
