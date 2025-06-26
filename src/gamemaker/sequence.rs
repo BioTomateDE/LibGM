@@ -20,6 +20,9 @@ impl GMChunkElement for GMSequences {
     fn empty() -> Self {
         Self { sequences: vec![], exists: false }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMSequences {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {

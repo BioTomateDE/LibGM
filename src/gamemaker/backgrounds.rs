@@ -12,6 +12,9 @@ impl GMChunkElement for GMBackgrounds {
     fn empty() -> Self {
         Self { backgrounds: vec![], exists: false }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMBackgrounds {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {

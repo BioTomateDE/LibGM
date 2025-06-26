@@ -1,5 +1,5 @@
 use crate::gm_deserialize::{GMChunkElement, GMElement, DataReader, GMRef};
-use crate::gamemaker::general_info::GMVersionLTS::Post2022_0;
+use crate::gamemaker::general_info::GMVersionBranch::Post2022_0;
 use crate::gamemaker::texture_page_items::GMTexturePageItem;
 use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
 
@@ -11,6 +11,9 @@ pub struct GMFonts {
 impl GMChunkElement for GMFonts {
     fn empty() -> Self {
         Self { fonts: vec![], exists: false }
+    }
+    fn exists(&self) -> bool {
+        self.exists
     }
 }
 impl GMElement for GMFonts {

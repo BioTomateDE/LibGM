@@ -23,6 +23,9 @@ impl GMChunkElement for GMEmbeddedTextures {
     fn empty() -> Self {
         Self { texture_pages: vec![], exists: false }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMEmbeddedTextures {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {

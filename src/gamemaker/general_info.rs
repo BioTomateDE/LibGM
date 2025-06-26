@@ -54,7 +54,7 @@ impl GMChunkElement for GMGeneralInfo {
                 minor: 69420,
                 release: 69420,
                 build: 69420,
-                lts: GMVersionLTS::Post2022_0,
+                branch: GMVersionBranch::Post2022_0,
             },
             default_window_width: 69420,
             default_window_height: 69420,
@@ -156,6 +156,9 @@ impl GMChunkElement for GMGeneralInfo {
             gms2_info: None,
             exists: false,
         }
+    }
+    fn exists(&self) -> bool {
+        self.exists
     }
 }
 
@@ -427,7 +430,7 @@ pub struct GMGeneralInfoGMS2 {
 
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub enum GMVersionLTS {
+pub enum GMVersionBranch {
     Pre2022_0,
     LTS2022_0,
     Post2022_0,
@@ -439,21 +442,21 @@ pub struct GMVersion {
     pub minor: u32,
     pub release: u32,
     pub build: u32,
-    pub lts: GMVersionLTS,
+    pub branch: GMVersionBranch,
 }
 impl GMVersion {
-    pub fn new(major: u32, minor: u32, release: u32, stable: u32, lts: GMVersionLTS) -> Self {
-        Self { major, minor, release, build: stable, lts }
+    pub fn new(major: u32, minor: u32, release: u32, build: u32, branch: GMVersionBranch) -> Self {
+        Self { major, minor, release, build, branch }
     }
 }
 impl std::fmt::Display for GMVersion {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let lts_str = match self.lts {
-            GMVersionLTS::Pre2022_0 => "pre2022_0",
-            GMVersionLTS::LTS2022_0 => "lts2022_0",
-            GMVersionLTS::Post2022_0 => "post2022_0",
+        let branch_str = match self.branch {
+            GMVersionBranch::Pre2022_0 => "pre2022_0",
+            GMVersionBranch::LTS2022_0 => "lts2022_0",
+            GMVersionBranch::Post2022_0 => "post2022_0",
         };
-        write!(f, "{}.{}.{}.{} ({lts_str})", self.major, self.minor, self.release, self.build)
+        write!(f, "{}.{}.{}.{} ({branch_str})", self.major, self.minor, self.release, self.build)
     }
 }
 impl GMElement for GMVersion {
@@ -463,7 +466,7 @@ impl GMElement for GMVersion {
         let release: u32 = reader.read_u32()?;
         let build: u32 = reader.read_u32()?;
         // since gen8 gm version is stuck on maximum 2.0.0.0; LTS will (initially) always be Pre2022_0
-        Ok(GMVersion::new(major, minor, release, build, GMVersionLTS::Pre2022_0))
+        Ok(GMVersion::new(major, minor, release, build, GMVersionBranch::Pre2022_0))
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
@@ -527,36 +530,36 @@ impl From<(u32, u32, u32, u32)> for GMVersionReq {
         }
     }
 }
-impl From<(u32, u32, GMVersionLTS)> for GMVersionReq {
-    fn from((major, minor, lts): (u32, u32, GMVersionLTS)) -> Self {
+impl From<(u32, u32, GMVersionBranch)> for GMVersionReq {
+    fn from((major, minor, lts): (u32, u32, GMVersionBranch)) -> Self {
         Self {
             major,
             minor,
             release: 0,
             build: 0,
-            non_lts: matches!(lts, GMVersionLTS::Post2022_0),
+            non_lts: matches!(lts, GMVersionBranch::Post2022_0),
         }
     }
 }
-impl From<(u32, u32, u32, GMVersionLTS)> for GMVersionReq {
-    fn from((major, minor, release, lts): (u32, u32, u32, GMVersionLTS)) -> Self {
+impl From<(u32, u32, u32, GMVersionBranch)> for GMVersionReq {
+    fn from((major, minor, release, lts): (u32, u32, u32, GMVersionBranch)) -> Self {
         Self {
             major,
             minor,
             release,
             build: 0,
-            non_lts: matches!(lts, GMVersionLTS::Post2022_0),
+            non_lts: matches!(lts, GMVersionBranch::Post2022_0),
         }
     }
 }
-impl From<(u32, u32, u32, u32, GMVersionLTS)> for GMVersionReq {
-    fn from((major, minor, release, build, lts): (u32, u32, u32, u32, GMVersionLTS)) -> Self {
+impl From<(u32, u32, u32, u32, GMVersionBranch)> for GMVersionReq {
+    fn from((major, minor, release, build, lts): (u32, u32, u32, u32, GMVersionBranch)) -> Self {
         Self {
             major,
             minor,
             release,
             build,
-            non_lts: matches!(lts, GMVersionLTS::Post2022_0),
+            non_lts: matches!(lts, GMVersionBranch::Post2022_0),
         }
     }
 }
@@ -569,7 +572,7 @@ impl std::fmt::Display for GMVersionReq {
 impl GMVersion {
     pub fn is_version_at_least<V: Into<GMVersionReq>>(&self, version_req: V) -> bool {
         let ver: GMVersionReq = version_req.into();
-        if ver.non_lts && self.lts < GMVersionLTS::Post2022_0 {
+        if ver.non_lts && self.branch < GMVersionBranch::Post2022_0 {
             return false
         }
         if self.major != ver.major {
@@ -603,7 +606,7 @@ impl GMVersion {
         self.release = new_ver.release;
         self.build = new_ver.build;
         if new_ver.non_lts {
-            self.lts = GMVersionLTS::Post2022_0;
+            self.branch = GMVersionBranch::Post2022_0;
         }
         Ok(())
     }

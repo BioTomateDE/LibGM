@@ -2,7 +2,7 @@ use crate::utility::vec_with_capacity;
 use crate::gm_deserialize::{DataReader, GMChunk, GMPointer};
 use crate::gamemaker::embedded_textures::MAGIC_BZ2_QOI_HEADER;
 use crate::gamemaker::general_info::{GMVersion, GMVersionReq};
-use crate::gamemaker::general_info::GMVersionLTS::{Post2022_0, Pre2022_0};
+use crate::gamemaker::general_info::GMVersionBranch::{Post2022_0, Pre2022_0};
 use crate::gamemaker::rooms::GMRoomLayerType;
 
 
@@ -121,7 +121,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
     loop {
         // permanently filter out already detected versions
         checks.retain(|i| !reader.general_info.is_version_at_least(i.target_version.clone()));
-        
+
         let mut updated_version: bool = false;
         let mut checks_to_remove: Vec<bool> = vec![false; checks.len()];
         
@@ -130,10 +130,10 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
             if !reader.general_info.is_version_at_least(check.required_version.clone()) {
                 continue
             }
-            
+
             // permanently remove check; no matter if successful or not
             checks_to_remove[i] = true;
-            
+
             // if chunk doesn't exist; just skip the check
             let Some(chunk) = reader.chunks.get(check.chunk_name) else {continue};
             reader.chunk = chunk.clone();
@@ -150,7 +150,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
                 break  // potentially new checks available (required version met); restart 
             }
         }
-        
+
         // remove all performed checks
         for (i, should_remove) in checks_to_remove.into_iter().enumerate().rev() {
             if should_remove {
@@ -170,10 +170,10 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
     if *ver == original_version {
         return Ok(None)
     }
-    if original_version.lts == ver.lts {
+    if original_version.branch == ver.branch {
         Ok(Some((ver.major, ver.minor, ver.release, ver.build).into()))
     } else {
-        Ok(Some((ver.major, ver.minor, ver.release, ver.build, ver.lts).into()))
+        Ok(Some((ver.major, ver.minor, ver.release, ver.build, ver.branch).into()))
     }
 }
 
@@ -1095,7 +1095,7 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
         reader.cur_pos = saved_pos;
         Ok(count)
     }
-    
+
     let background_count = get_chunk_elem_count(reader, "BGND")?;
     let path_count = get_chunk_elem_count(reader, "PATH")?;
     let script_count = get_chunk_elem_count(reader, "SCPT")?;

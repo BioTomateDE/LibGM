@@ -16,6 +16,9 @@ impl GMChunkElement for GMCodes {
     fn empty() -> Self {
         Self { codes: vec![], exists: false }
     }
+    fn exists(&self) -> bool {
+        self.exists
+    }
 }
 impl GMElement for GMCodes {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
