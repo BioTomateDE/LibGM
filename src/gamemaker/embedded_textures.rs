@@ -258,17 +258,17 @@ impl PartialEq for GMImage {
 
 
 fn find_end_of_bz2_stream(reader: &mut DataReader) -> Result<usize, String> {
-    let stream_start_position: usize = reader.get_rel_cur_pos();
+    let stream_start_position: usize = reader.cur_pos;
     // Read backwards from the max end of stream position, in up to 256-byte chunks.
     // We want to find the end of nonzero data.
     static MAX_CHUNK_SIZE: usize = 256;
 
-    let mut chunk_start_position: usize = max(stream_start_position, reader.get_chunk_length() - MAX_CHUNK_SIZE);
-    let chunk_size: usize = reader.get_chunk_length() - chunk_start_position;
+    let mut chunk_start_position: usize = max(stream_start_position, reader.chunk.end_pos - MAX_CHUNK_SIZE);
+    let chunk_size: usize = reader.chunk.end_pos - chunk_start_position;
     loop {
-        reader.set_rel_cur_pos(chunk_start_position)?;
+        reader.cur_pos = chunk_start_position;
         let chunk_data: &[u8] = reader.read_bytes_dyn(chunk_size)?;
-        reader.skip_bytes(chunk_size);
+        reader.cur_pos += chunk_size;
 
         // find first nonzero byte at end of stream
         let mut position: isize = chunk_size as isize - 1;
@@ -291,61 +291,59 @@ fn find_end_of_bz2_stream(reader: &mut DataReader) -> Result<usize, String> {
 }
 
 
-/// function written by chatgpt; unverified
 fn find_end_of_bz2_search(reader: &mut DataReader, end_data_position: usize) -> Result<usize, String> {
-    static MAGIC_BZ2_FOOTER: [u8; 6] = [0x17, 0x72, 0x45, 0x38, 0x50, 0x90];
+    const MAGIC_BZ2_FOOTER: [u8; 6] = [0x17, 0x72, 0x45, 0x38, 0x50, 0x90];
+    const BUFFER_LENGTH: usize = 16; 
 
-    // Ensure we don't read past the data bounds
-    let start_position = end_data_position.saturating_sub(16);
-    if start_position >= reader.get_chunk_length() {
-        return Err("Start position out of bounds".to_string());
+    let start_position: usize = end_data_position - BUFFER_LENGTH;
+    if start_position >= reader.chunk.end_pos {
+        return Err("Start position out of bounds while searching for end of BZip2 stream".to_string());
     }
-    let length = end_data_position - start_position;    // redundant???
 
-    // Extract the last 16 bytes (or fewer if near the start of data)
-    let saved_pos: usize = reader.cur_pos;
-    reader.set_rel_cur_pos(start_position)?;
-    let data: &[u8] = reader.read_bytes_dyn(length)?;
-    reader.cur_pos = saved_pos;
+    // Read 16 bytes from the end of the BZ2 stream
+    reader.cur_pos = start_position;
+    let data: [u8; BUFFER_LENGTH] = reader.read_bytes_const()?.clone();
+    // FIXME: if this read fails due to overflow; implement saturating logic like in utmt
 
-    // BZ2 footer magic bytes
-    let footer_magic: &[u8] = &MAGIC_BZ2_FOOTER;
-    let mut search_start_position = data.len() as isize - 1;
-    let mut search_start_bit_position = 0;
+    // Start searching for magic, bit by bit (it is not always byte-aligned)
+    let mut search_start_position: isize = BUFFER_LENGTH as isize - 1;
+    let mut search_start_bit_position: u8 = 0;
 
     while search_start_position >= 0 {
+        // Perform search starting from the current search start position
         let mut found_match: bool = false;
-        let mut bit_position: i32 = search_start_bit_position;
+        let mut bit_position: u8 = search_start_bit_position;
         let mut search_position: isize = search_start_position;
         let mut magic_bit_position: i32 = 0;
-        let mut magic_position: isize = footer_magic.len() as isize - 1;
+        let mut magic_position: isize = MAGIC_BZ2_FOOTER.len() as isize - 1;
 
         while search_position >= 0 {
+            // Get bits at search position and corresponding magic position
             let current_byte: u8 = data[search_position as usize];
-            let magic_byte: u8 = footer_magic[magic_position as usize];
-
-            // Extract specific bits from the current and magic bytes
-            let current_bit = (current_byte & (1 << bit_position)) != 0;
-            let magic_current_bit = (magic_byte & (1 << magic_bit_position)) != 0;
-
+            let magic_byte: u8 = MAGIC_BZ2_FOOTER[magic_position as usize];
+            
+            let current_bit: bool = (current_byte & (1 << bit_position)) != 0;
+            let magic_current_bit: bool = (magic_byte & (1 << magic_bit_position)) != 0;
+            
+            // If bits mismatch, terminate the current search
             if current_bit != magic_current_bit {
-                break;
+                break
             }
 
-            // Progress through magic bits
+            // Found a matching bit; progress magic position to next bit
             magic_bit_position += 1;
             if magic_bit_position >= 8 {
                 magic_bit_position = 0;
                 magic_position -= 1;
             }
 
-            // If we matched the entire magic footer, we found the end
+            // If we reached the end of the magic, then we successfully found a full match!
             if magic_position < 0 {
                 found_match = true;
-                break;
+                break
             }
 
-            // Move to the next bit in the search data
+            // We didn't find a full match yet, so we also need to progress our search position to the next bit
             bit_position += 1;
             if bit_position >= 8 {
                 bit_position = 0;
@@ -357,15 +355,16 @@ fn find_end_of_bz2_search(reader: &mut DataReader, end_data_position: usize) -> 
             const FOOTER_BYTE_LENGTH: usize = 10;
             let mut end_of_bz2_stream_position = (search_position + FOOTER_BYTE_LENGTH as isize) as usize;
 
-            // If the footer started mid-byte, account for unused padding bits
             if bit_position != 7 {
+                // BZip2 footer started partway through a byte, and so it will end partway through the last byte.
+                // By the BZip2 specification, the unused bits of the last byte are essentially padding.
                 end_of_bz2_stream_position += 1;
             }
 
             return Ok(start_position + end_of_bz2_stream_position);
         }
 
-        // Move to the next bit for searching
+        // Current search failed to make a full match, so progress to next bit, to search starting from there
         search_start_bit_position += 1;
         if search_start_bit_position >= 8 {
             search_start_bit_position = 0;
@@ -375,3 +374,4 @@ fn find_end_of_bz2_search(reader: &mut DataReader, end_data_position: usize) -> 
 
     Err("Failed to find BZip2 footer magic".to_string())
 }
+
