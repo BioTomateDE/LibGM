@@ -4,7 +4,7 @@ use crate::gamemaker::backgrounds::GMBackground;
 use crate::gamemaker::code::GMCode;
 use crate::gamemaker::fonts::GMFont;
 use crate::gamemaker::game_objects::{GMGameObject};
-use crate::gamemaker::general_info::GMVersionBranch::Post2022_0;
+use crate::gamemaker::general_info::LTSBranch::Post2022_0;
 use crate::gamemaker::particles::GMParticleSystem;
 use crate::gamemaker::sequence::{GMAnimSpeedType, GMSequence};
 use crate::gamemaker::sprites::GMSprite;

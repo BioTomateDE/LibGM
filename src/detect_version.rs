@@ -2,7 +2,7 @@ use crate::utility::vec_with_capacity;
 use crate::gm_deserialize::{DataReader, GMChunk, GMPointer};
 use crate::gamemaker::embedded_textures::MAGIC_BZ2_QOI_HEADER;
 use crate::gamemaker::general_info::{GMVersion, GMVersionReq};
-use crate::gamemaker::general_info::GMVersionBranch::{Post2022_0, Pre2022_0};
+use crate::gamemaker::general_info::LTSBranch::{Post2022_0, Pre2022_0};
 use crate::gamemaker::rooms::GMRoomLayerType;
 
 
