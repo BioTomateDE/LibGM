@@ -11,7 +11,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     
     builder.write_literal_string("FORM");
     builder.write_u32(0xDEADC0DE);  // data length placeholder
-    
+
     builder.build_chunk("STRG", &gm_data.strings)?;
     builder.build_chunk("GEN8", &gm_data.general_info)?;
     builder.build_chunk("TXTR", &gm_data.embedded_textures)?;
@@ -112,7 +112,7 @@ impl<'a> DataBuilder<'a> {
 
         // potentially write padding
         let ver = &self.gm_data.general_info.version;
-        if !self.is_last_chunk && ver.major >= 2 || (ver.major == 1 && ver.build >= 9999) {
+        if !self.is_last_chunk && (ver.major >= 2 || (ver.major == 1 && ver.build >= 9999)) {
             while self.len() % self.gm_data.padding != 0 {
                 self.write_u8(0);
             }

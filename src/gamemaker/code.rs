@@ -84,25 +84,37 @@ impl GMElement for GMCode {
         let name: GMRef<String> = reader.read_gm_string()?;
         let code_length: usize = reader.read_usize()?;
 
-        let (end_pos, bytecode15_info): (usize, Option<GMCodeBytecode15>) = if reader.general_info.bytecode_version <= 14 {
-            (reader.cur_pos + code_length, None)
+        let instructions_start_pos: usize;
+        let instructions_end_pos: usize;
+        let bytecode15_info: Option<GMCodeBytecode15>;
+        
+        if reader.general_info.bytecode_version <= 14 {
+            instructions_start_pos = reader.cur_pos;    // instructions are placed immediately after code metadata; how convenient!
+            instructions_end_pos = reader.cur_pos + code_length;
+            bytecode15_info = None;
         } else {
             let b15_info = GMCodeBytecode15::deserialize(reader)?;
-            reader.cur_pos = b15_info.bytecode_start_address;
-            (b15_info.bytecode_start_address + code_length, Some(b15_info))
+            instructions_start_pos = b15_info.bytecode_start_address;
+            instructions_end_pos = b15_info.bytecode_start_address + code_length;
+            bytecode15_info = Some(b15_info);
         };
-
+        
+        let saved_pos: usize = reader.cur_pos;
+        reader.cur_pos = instructions_start_pos;
         let mut instructions: Vec<GMInstruction> = Vec::with_capacity(code_length * 5);  // estimate
-        let start_pos: usize = reader.cur_pos;
-        while reader.cur_pos < end_pos {
+        
+        while reader.cur_pos < instructions_end_pos {
             let instruction = GMInstruction::deserialize(reader).map_err(|e| format!(
                 "{e}\n↳ for Instruction #{} (at absolute position {}) of Code entry \"{}\" with absolute start position {}",
-                instructions.len(), reader.cur_pos, reader.display_gm_str(name), start_pos,
+                instructions.len(), reader.cur_pos, reader.display_gm_str(name), instructions_start_pos,
             ))?;
             instructions.push(instruction);
         }
 
         instructions.shrink_to_fit();
+        if reader.general_info.bytecode_version >= 15 {
+            reader.cur_pos = saved_pos;     // since the instructions are stored somewhere else
+        }
         Ok(GMCode { name, instructions, bytecode15_info })
     }
 

@@ -12,7 +12,7 @@ use crate::gamemaker::game_objects::GMGameObjects;
 use crate::gamemaker::scripts::{GMScript, GMScripts};
 use crate::gamemaker::strings::GMStrings;
 use crate::gamemaker::variables::{GMVariable, GMVariables};
-use crate::gamemaker::general_info::{GMGeneralInfo, GMVersion, GMVersionBranch, GMVersionReq};
+use crate::gamemaker::general_info::{GMGeneralInfo, GMVersion, LTSBranch, GMVersionReq};
 use crate::gamemaker::paths::GMPaths;
 use crate::gamemaker::rooms::GMRooms;
 use crate::gamemaker::sounds::GMSounds;
@@ -138,8 +138,8 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
     
     log::trace!("Parsing chunks took {stopwatch2}");
     
-    if reader.general_info.is_version_at_least((2023, 1)) && reader.general_info.version.branch == GMVersionBranch::Pre2022_0 {
-        reader.general_info.version.branch = GMVersionBranch::LTS2022_0;
+    if reader.general_info.is_version_at_least((2023, 1)) && reader.general_info.version.branch == LTSBranch::Pre2022_0 {
+        reader.general_info.version.branch = LTSBranch::LTS2022_0;
     }
 
     let data = GMData {
@@ -436,40 +436,23 @@ impl<'a> DataReader<'a> {
         Ok(string)
     }
 
-    pub fn read_chunk_required<T: GMChunkElement + GMElement>(&mut self, chunk_name: &str) -> Result<T, String> {
-        let chunk: GMChunk = self.chunks.get(chunk_name).ok_or_else(|| format!(
-            "Required chunk '{}' not found in chunk hashmap with length {}",
-            chunk_name, self.chunks.len(),
-        ))?.clone();
+    fn read_chunk_internal<T: GMChunkElement + GMElement>(&mut self, chunk: GMChunk) -> Result<T, String> {
+        let stopwatch = Stopwatch::start();
         self.cur_pos = chunk.start_pos;
         self.chunk = chunk;
 
-        let stopwatch = Stopwatch::start();
-
-        let element = T::deserialize(self)
-            .map_err(|e| format!("{e}\n↳ while deserializing required chunk '{chunk_name}'"))?;
+        let element = T::deserialize(self)?;
         self.read_chunk_padding()?;
 
-        log::trace!("Parsing required chunk '{chunk_name}' took {stopwatch}");
-        Ok(element)
-    }
-
-    pub fn read_chunk_optional<T: GMChunkElement + GMElement>(&mut self, chunk_name: &str) -> Result<T, String> {
-        if let Some(chunk) = self.chunks.get(chunk_name) {
-            self.cur_pos = chunk.start_pos;
-            self.chunk = chunk.clone();
-            let stopwatch = Stopwatch::start();
-
-            let element = T::deserialize(self)
-                .map_err(|e| format!("{e}\n↳ while deserializing optional chunk '{chunk_name}'"))?;
-            self.read_chunk_padding()?;
-
-            log::trace!("Parsing optional chunk '{chunk_name}' took {stopwatch}");
-            Ok(element)
-        } else {
-            log::trace!("Skipped parsing optional chunk '{chunk_name}' because it does not exist in the chunks hashmap");
-            Ok(T::empty())
+        if self.cur_pos != self.chunk.end_pos {
+            return Err(format!(
+                "Misaligned chunk '{}': expected chunk end position {} but reader is actually at position {} (diff: {})",
+                self.chunk.name, self.chunk.end_pos, self.cur_pos, self.chunk.end_pos - self.cur_pos,
+            ))
         }
+
+        log::trace!("Parsing chunk '{}' took {stopwatch}", self.chunk.name);
+        Ok(element)
     }
 
     fn read_chunk_padding(&mut self) -> Result<(), String> {
@@ -486,7 +469,7 @@ impl<'a> DataReader<'a> {
         }
 
         while self.cur_pos % self.padding != 0 {
-            let byte: u8 = self.read_u8()?;
+            let byte: u8 = self.read_u8().map_err(|e| format!("{e}\n↳ while reading chunk padding"))?;
             if byte == 0 { continue }
             // byte is not zero => padding is incorrect
             self.cur_pos -= 1;  // undo reading incorrect padding byte
@@ -495,6 +478,27 @@ impl<'a> DataReader<'a> {
             return Ok(())
         }
         Ok(())    // padding was already set correctly
+    }
+
+    pub fn read_chunk_required<T: GMChunkElement + GMElement>(&mut self, chunk_name: &str) -> Result<T, String> {
+        let chunk: GMChunk = self.chunks.get(chunk_name).ok_or_else(|| format!(
+            "Required chunk '{}' not found in chunk hashmap with length {}",
+            chunk_name, self.chunks.len(),
+        ))?.clone();
+
+        let element: T = self.read_chunk_internal(chunk)
+            .map_err(|e| format!("{e}\n↳ while deserializing required chunk '{chunk_name}'"))?;
+        Ok(element)
+    }
+
+    pub fn read_chunk_optional<T: GMChunkElement + GMElement>(&mut self, chunk_name: &str) -> Result<T, String> {
+        let Some(chunk) = self.chunks.get(chunk_name).cloned() else {
+            log::trace!("Skipped parsing optional chunk '{chunk_name}' because it does not exist in the chunks hashmap");
+            return Ok(T::empty())
+        };
+        let element: T = self.read_chunk_internal(chunk)
+            .map_err(|e| format!("{e}\n↳ while deserializing optional chunk '{chunk_name}'"))?;
+        Ok(element)
     }
 
     fn unstable_get_gm_version(&mut self) -> Result<GMVersion, String> {
@@ -512,6 +516,7 @@ impl<'a> DataReader<'a> {
         let occurrence_position: usize = self.read_usize()?;
         resolve_occurrence(occurrence_position, &self.string_occurrence_map, &self.chunk.name, self.cur_pos)
     }
+
     pub fn read_gm_texture(&mut self) -> Result<GMRef<GMTexturePageItem>, String> {
         let occurrence_position: usize = self.read_usize()?;
         resolve_occurrence(occurrence_position, &self.texture_page_item_occurrence_map, &self.chunk.name, self.cur_pos)
