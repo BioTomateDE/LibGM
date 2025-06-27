@@ -1,16 +1,17 @@
 use crate::gm_deserialize::{GMChunkElement, GMElement, DataReader, GMRef};
-use crate::gamemaker::general_info::GMVersionBranch::Post2022_0;
+use crate::gamemaker::general_info::LTSBranch::Post2022_0;
 use crate::gamemaker::texture_page_items::GMTexturePageItem;
 use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
 
 #[derive(Debug, Clone)]
 pub struct GMFonts {
     pub fonts: Vec<GMFont>,
+    pub padding: Option<[u8; 512]>,
     pub exists: bool,
 }
 impl GMChunkElement for GMFonts {
     fn empty() -> Self {
-        Self { fonts: vec![], exists: false }
+        Self { fonts: vec![], padding: None, exists: false }
     }
     fn exists(&self) -> bool {
         self.exists
@@ -19,11 +20,25 @@ impl GMChunkElement for GMFonts {
 impl GMElement for GMFonts {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let fonts: Vec<GMFont> = reader.read_pointer_list()?;
-        Ok(Self { fonts, exists: true })
+        
+        let mut padding: Option<[u8; 512]> = None;
+        if !reader.general_info.is_version_at_least((2024, 14)) {
+            padding = Some(reader.read_bytes_const()?.clone())
+        }
+        
+        Ok(Self { fonts, padding, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         if !self.exists { return Ok(()) }
+
+        if !builder.is_gm_version_at_least((2024, 14)) {
+            let Some(padding) = self.padding else {
+                return Err("FONT Chunk padding not set before 2024.14 (this could've been a warning probably since there is a fallback)".to_string())
+            };
+            builder.write_bytes(&padding);
+        }
+
         builder.write_pointer_list(&self.fonts)?;
         Ok(())
     }
