@@ -222,6 +222,7 @@ impl<'a> DataBuilder<'a> {
 
     pub fn write_pointer_list<T: GMElement>(&mut self, elements: &Vec<T>) -> Result<(), String> {
         let count: usize = elements.len();
+        self.write_usize(count)?;
         let pointer_list_start_pos: usize = self.len();
         for _ in 0..count {
             self.write_u32(0xDEADC0DE);
