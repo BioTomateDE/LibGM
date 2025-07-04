@@ -104,7 +104,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
     let detected_version_opt = detect_gamemaker_version(&mut reader)
         .map_err(|e| format!("{e}\n↳ while detecting gamemaker version"))?;
     log::trace!("Detecting GameMaker Version took {stopwatch2}");
-    
+
     if let Some(detected_version) = detected_version_opt {
         log::info!("Data file specified GameMaker version {}; detected real version {}", old_version, detected_version);
     } else {

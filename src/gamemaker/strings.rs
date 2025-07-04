@@ -26,6 +26,10 @@ impl GMElement for GMStrings {
             reader.cur_pos = pointer.pointing_to_position;
             let string_length: usize = reader.read_usize()?;
             let string: String = reader.read_literal_string(string_length)?;
+            let byte: u8 = reader.read_u8()?;
+            if byte != 0 {
+                return Err(format!("Expected null terminator byte after string, found {byte} (0x{byte:02X})"))
+            }
             strings_by_index.push(string.clone());
             // occurrence is start_position + 4 because yoyogames moment
             // gamemaker does this because it's faster to access strings if you don't need to add or subtract 4 every time
@@ -34,7 +38,7 @@ impl GMElement for GMStrings {
         
         // padding
         while reader.cur_pos % 0x80 != 0 {
-            let byte = reader.read_u8()?;
+            let byte: u8 = reader.read_u8()?;
             if byte != 0 {
                 return Err(format!("Invalid padding byte at the end of Chunk STRG: expected zero; got {byte} (0x{byte:2X})"))
             }
@@ -61,7 +65,7 @@ impl GMElement for GMStrings {
             builder.write_usize(string.len())?;
             builder.resolve_pointer(string)?;   // gamemaker string references point to the actual string data
             builder.write_literal_string(string);
-            builder.write_u8(0);    // trailing null byte
+            builder.write_u8(0);    // trailing null terminator byte
         }
         
         // padding
