@@ -118,6 +118,10 @@ pub fn typename<T>() -> String {
     tynm::type_name::<T>()
 }
 
+pub fn typename_val<T>(_: &T) -> String {
+    tynm::type_name::<T>()
+}
+
 
 pub fn vec_with_capacity<T>(count: usize) -> Result<Vec<T>, String> {
     const FAILSAFE_SIZE: usize = 1_000_000;   // 1 Megabyte
