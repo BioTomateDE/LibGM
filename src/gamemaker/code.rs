@@ -83,6 +83,7 @@ impl GMElement for GMCode {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let code_length: usize = reader.read_usize()?;
+        // log::warn!("{}", reader.resolve_gm_str(name)?);
 
         let instructions_start_pos: usize;
         let instructions_end_pos: usize;
@@ -198,9 +199,10 @@ impl GMElement for GMInstruction {
         let b0: u8 = reader.read_u8()?;
         let b1: u8 = reader.read_u8()?;
         let b2: u8 = reader.read_u8()?;
-        let mut opcode = GMOpcode::deserialize(reader)?;
-
-       let instruction_data: GMInstructionData = match opcode {
+        let opcode = GMOpcode::deserialize(reader)?;
+        // log::debug!("{} // {:02X} {:02X} {:02X} {:02X} // {:?}", reader.cur_pos-4, b0, b1, b2, u8::from(opcode), opcode);
+        
+        let instruction_data: GMInstructionData = match opcode {
             GMOpcode::Neg |
             GMOpcode::Not |
             GMOpcode::Dup |
@@ -255,9 +257,14 @@ impl GMElement for GMInstruction {
 
             GMOpcode::Cmp => {
                 // Parse instruction components from bytes
-                let mut comparison_type: GMComparisonType = b1.try_into().map_err(|_| format!(
-                    "Invalid Comparison Type {b1:02X} while parsing Comparison Instruction"
-                ))?;    // TODO probably doesn't work for bytecode14; needs to be checked before
+                let comparison_type_raw: u8 = if reader.general_info.bytecode_version <= 14 {
+                    u8::from(opcode) - 0x10   // In bytecode 14, the comparison kind is encoded in the opcode itself
+                } else {
+                    b1
+                };
+                let comparison_type: GMComparisonType = comparison_type_raw.try_into().map_err(|_| format!(
+                    "Invalid Comparison Type {comparison_type_raw:02X} while parsing Comparison Instruction"
+                ))?;
 
                 let type1: u8 = b2 & 0xf;
                 let type1: GMDataType = type1.try_into().map_err(|_| format!(
@@ -268,15 +275,7 @@ impl GMElement for GMInstruction {
                 let type2: GMDataType = type2.try_into().map_err(|_| format!(
                     "Invalid Data Type {type2:02X} while parsing Comparison Instruction"
                 ))?;
-
-                if reader.general_info.bytecode_version <= 14 {
-                    // in bytecode14, the comparison kind is encoded in the opcode
-                    let comparison_type_raw: u8 = u8::from(opcode) - 0x10;
-                    comparison_type = comparison_type_raw.try_into().map_err(|_| format!(
-                        "Invalid Bytecode14 Comparison Type {:02X} (Opcode {:?} = 0x{:02X}) while parsing Comparison Instruction",
-                        comparison_type_raw, opcode, u8::from(opcode),
-                    ))?;
-                }
+                
                 // short circuit stuff {~~}
                 
                 GMInstructionData::Comparison(GMComparisonInstruction { comparison_type, type1, type2 })
@@ -348,20 +347,16 @@ impl GMElement for GMInstruction {
 
                 let val: i16 = (b0 as i16) | ((b1 as i16) << 8);
 
-                if reader.general_info.bytecode_version <= 14 {
-                    match data_type {
-                        GMDataType::Int16 => opcode = GMOpcode::PushI,
-                        GMDataType::Variable => {
-                            match val {
-                                -5 => opcode = GMOpcode::PushGlb,
-                                -6 => opcode = GMOpcode::PushBltn,
-                                -7 => opcode = GMOpcode::PushLoc,
-                                _ => ()
-                            }
-                        },
-                        _ => ()
-                    }
-                }
+                //// this was removed from utmt??? v
+                // if reader.general_info.bytecode_version <= 14 {
+                //     match data_type {
+                //         GMDataType::Int16 => opcode = GMOpcode::PushI,
+                //         GMDataType::Variable if val == -5 => opcode = GMOpcode::PushGlb,
+                //         GMDataType::Variable if val == -6 => opcode = GMOpcode::PushBltn,
+                //         GMDataType::Variable if val == -7 => opcode = GMOpcode::PushLoc,
+                //         _ => {}
+                //     }
+                // }
 
                 let value: GMValue = if data_type == GMDataType::Variable {
                     let instance_type: GMInstanceType = parse_instance_type(val)?;
@@ -542,8 +537,11 @@ impl GMElement for GMInstruction {
                 });
 
                 builder.write_u8(instr.data_type.into());
-                // builder.write_u8(if bytecode14 { instr.opcode.into() } else { 0xC0 });
-                builder.write_u8(self.opcode.into());
+                if bytecode14 && instr.data_type == GMDataType::Int16 {
+                    builder.write_u8(GMOpcode::Push.into());    // write `push.e` instead of `pushi.e` in bytecode14
+                } else {
+                    builder.write_u8(self.opcode.into());
+                }
 
                 match &instr.value {
                     GMValue::Double(double) => builder.write_f64(*double),
@@ -824,6 +822,7 @@ fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMV
         })?,
         GMDataType::String => reader.read_resource_by_id().map(GMValue::String),
         GMDataType::Int16 => {
+            // int16 in embedded in the instruction itself
             reader.cur_pos -= 4;
             let number: i16 = reader.read_i16()?;
             reader.cur_pos += 2;
