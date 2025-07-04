@@ -1,8 +1,8 @@
 use crate::utility::vec_with_capacity;
 use crate::gm_deserialize::{DataReader, GMChunk, GMPointer};
 use crate::gamemaker::embedded_textures::MAGIC_BZ2_QOI_HEADER;
-use crate::gamemaker::general_info::{GMVersion, GMVersionReq};
-use crate::gamemaker::general_info::LTSBranch::{Post2022_0, Pre2022_0};
+use crate::gamemaker::general_info::{GMVersion, GMVersionReq, LTSBranch};
+use crate::gamemaker::general_info::LTSBranch::{Post2022_0, Pre2022_0, LTS2022_0};
 use crate::gamemaker::rooms::GMRoomLayerType;
 
 
@@ -162,7 +162,10 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
             break   // no more checks left; stop
         }
     }
-    
+
+    if reader.general_info.is_version_at_least((2023, 1)) && reader.general_info.version.branch == Pre2022_0 {
+        reader.general_info.version.branch = LTS2022_0;
+    }
     
     reader.cur_pos = saved_pos;
     reader.chunk = saved_chunk;
@@ -408,6 +411,7 @@ fn cv_sprt_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
         }
         
         if full_end_pos == expected_end_offset {
+            log::warn!("full_end_pos == expected_end_offset while detecting SPRT_2024.6; may lead to false positives");
             return Ok(None)   // "Full" mask data is valid   (TODO no idea why it returns here tbh; check if there is bug in utmt pls)
         }
         if bbox_end_pos == expected_end_offset {
@@ -419,9 +423,7 @@ fn cv_sprt_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
 }
 
 
-/// assert BYTECODE version >= 17
 fn cv_font_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
-    // {~~} return if bytecode<17 or at gm >= 2022.2
     let target_ver = Ok(Some((2022, 2).into()));
     let possible_font_count: u32 = reader.read_u32()?;
     if possible_font_count < 1 {
@@ -442,11 +444,12 @@ fn cv_font_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
 
     reader.cur_pos = first_font_pointer + 48;
     let glyph_count: usize = reader.read_usize()?;
-    if glyph_count * 4 > reader.chunk.end_pos - reader.chunk.start_pos {
+    if glyph_count * 4 > reader.get_chunk_length() {
         return Ok(None)
     }
     if glyph_count == 0 {
-        return target_ver   // FIXME: seems stupid but i think the logic in utmt is equivalent to this
+        log::warn!("Glyph count is zero while detecting FONT_2022.2; may lead to false positives");
+        return target_ver   // UTMT also assumes that it is 2022.2; even if there are no glyphs
     }
 
     let mut glyph_pointers: Vec<usize> = vec_with_capacity(glyph_count)?;
@@ -1123,11 +1126,11 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
         })
     };
 
-
     let code_count = reader.read_usize()?;
     let mut code_pointers = vec_with_capacity(code_count)?;
     for _ in 0..code_count {
         let ptr = reader.read_usize()?;
+        // log::debug!("gndseudsh {} | {}", ptr, code_count);
         if ptr != 0 {
             code_pointers.push(ptr);
         }
@@ -1161,14 +1164,14 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
         }
     } else {    // bytecode >= 15
         for code_ptr in code_pointers {
-            reader.cur_pos = code_ptr + 4;
-            let length = reader.read_usize()?;
-            let end = reader.cur_pos + length;
-            reader.cur_pos += 4;
-            let start = reader.read_usize()?;
-            reader.cur_pos = start;
+            reader.cur_pos = code_ptr + 4;  // skip name
+            let instructions_length: usize = reader.read_usize()?;
+            reader.cur_pos += 4;    // skip locals and arguments count
+            let instructions_start: usize = reader.read_usize()?;
+            let instructions_end: usize = instructions_start + instructions_length;
+            reader.cur_pos = instructions_start;
             
-            while reader.cur_pos < end {
+            while reader.cur_pos < instructions_end {
                 let first_word = reader.read_u32()?;
                 let opcode = (first_word >> 24) as u8;
                 let type1 = ((first_word & 0x00FF0000) >> 16) as u8;

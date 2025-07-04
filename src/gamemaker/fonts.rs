@@ -31,6 +31,8 @@ impl GMElement for GMFonts {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         if !self.exists { return Ok(()) }
+        
+        builder.write_pointer_list(&self.fonts)?;
 
         if !builder.is_gm_version_at_least((2024, 14)) {
             let Some(padding) = self.padding else {
@@ -39,7 +41,6 @@ impl GMElement for GMFonts {
             builder.write_bytes(&padding);
         }
 
-        builder.write_pointer_list(&self.fonts)?;
         Ok(())
     }
 }
