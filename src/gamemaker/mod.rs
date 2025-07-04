@@ -18,4 +18,7 @@ pub(super) mod sprites_yyswf;
 pub(super) mod paths;
 pub(super) mod particles;
 pub(super) mod options;
-pub(super) mod irrelevant;
+pub(super) mod global_init;
+pub(super) mod audio_groups;
+pub(super) mod extensions;
+pub(super) mod languages;

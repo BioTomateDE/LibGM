@@ -2,17 +2,21 @@ use std::collections::HashMap;
 use crate::utility::{format_bytes, typename, Stopwatch};
 use crate::gm_serialize::DataBuilder;
 use crate::detect_version::detect_gamemaker_version;
+use crate::gamemaker::audio_groups::GMAudioGroups;
 use crate::gamemaker::backgrounds::GMBackgrounds;
 use crate::gamemaker::code::GMCodes;
 use crate::gamemaker::embedded_audio::GMEmbeddedAudios;
 use crate::gamemaker::embedded_textures::GMEmbeddedTextures;
+use crate::gamemaker::extensions::GMExtensions;
 use crate::gamemaker::fonts::GMFonts;
 use crate::gamemaker::functions::{GMFunction, GMFunctions};
 use crate::gamemaker::game_objects::GMGameObjects;
 use crate::gamemaker::scripts::{GMScript, GMScripts};
 use crate::gamemaker::strings::GMStrings;
 use crate::gamemaker::variables::{GMVariable, GMVariables};
-use crate::gamemaker::general_info::{GMGeneralInfo, GMVersion, LTSBranch, GMVersionReq};
+use crate::gamemaker::general_info::{GMGeneralInfo, GMVersion, GMVersionReq};
+use crate::gamemaker::global_init::{GMGameEndScripts, GMGlobalInitScripts};
+use crate::gamemaker::languages::GMLanguageInfo;
 use crate::gamemaker::paths::GMPaths;
 use crate::gamemaker::rooms::GMRooms;
 use crate::gamemaker::sounds::GMSounds;
@@ -20,7 +24,6 @@ use crate::gamemaker::sprites::GMSprites;
 use crate::gamemaker::texture_page_items::{GMTexturePageItem, GMTexturePageItems};
 use crate::gamemaker::options::GMOptions;
 use crate::gamemaker::particles::{GMParticleEmitters, GMParticleSystems};
-use crate::gamemaker::irrelevant::{GMAudioGroups, GMExtensions, GMGameEndScripts, GMGlobalInitScripts, GMLanguageInfo};
 use crate::gamemaker::sequence::GMSequences;
 
 #[derive(Debug, Clone)]
@@ -612,12 +615,12 @@ impl<'a> DataReader<'a> {
         }
         Ok((elements, occurrences))
     }
-    pub fn read_texture_page_items_with_occurrences(&mut self) -> Result<Vec<GMTexturePageItem>, String> {
+    pub fn read_texture_page_items(&mut self) -> Result<Vec<GMTexturePageItem>, String> {
         let (elements, occurrences) = self.read_pointer_list_with_occurrence_map()?;
         self.texture_page_item_occurrence_map = occurrences;
         Ok(elements)
     }
-    pub fn read_scripts_with_occurrences(&mut self) -> Result<Vec<GMScript>, String> {
+    pub fn read_scripts(&mut self) -> Result<Vec<GMScript>, String> {
         let (elements, occurrences) = self.read_pointer_list_with_occurrence_map()?;
         self.script_occurrence_map = occurrences;
         Ok(elements)
