@@ -26,6 +26,7 @@ use crate::gamemaker::options::GMOptions;
 use crate::gamemaker::particles::{GMParticleEmitters, GMParticleSystems};
 use crate::gamemaker::sequence::GMSequences;
 use crate::gamemaker::shaders::GMShaders;
+use crate::gamemaker::ui_nodes::GMRootUINodes;
 
 #[derive(Debug, Clone)]
 pub struct GMData {
@@ -55,6 +56,7 @@ pub struct GMData {
     pub global_init_scripts: GMGlobalInitScripts,       // GLOB
     pub game_end_scripts: GMGameEndScripts,             // GMEN
     pub shaders: GMShaders,                             // SHDR
+    pub root_ui_nodes: GMRootUINodes,                   // UILR
 
     /// Should not be edited; only set by `GMData::read_chunk_padding`.
     pub padding: usize,
@@ -143,6 +145,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
     let global_init_scripts: GMGlobalInitScripts = reader.read_chunk_optional("GLOB")?;
     let game_end_scripts: GMGameEndScripts = reader.read_chunk_optional("GMEN")?;
     let shaders: GMShaders = reader.read_chunk_optional("SHDR")?;
+    let root_ui_nodes: GMRootUINodes = reader.read_chunk_optional("UILR")?;
     // TODO implement all other chunks
     
     log::trace!("Parsing chunks took {stopwatch2}");
@@ -174,6 +177,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
         global_init_scripts,
         game_end_scripts,
         shaders,
+        root_ui_nodes,
         padding: reader.padding,
     };
 
