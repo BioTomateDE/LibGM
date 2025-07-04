@@ -103,10 +103,13 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
     let old_version: GMVersion = reader.general_info.version.clone();
     let detected_version_opt = detect_gamemaker_version(&mut reader)
         .map_err(|e| format!("{e}\n↳ while detecting gamemaker version"))?;
-    if let Some(detected_version) = detected_version_opt {
-        log::info!("General info specified incorrect GameMaker version {}; automatically detected real version {}", old_version, detected_version);
-    }
     log::trace!("Detecting GameMaker Version took {stopwatch2}");
+    
+    if let Some(detected_version) = detected_version_opt {
+        log::info!("Data file specified GameMaker version {}; detected real version {}", old_version, detected_version);
+    } else {
+        log::info!("Data file specified GameMaker version {}", old_version);
+    }
 
     let stopwatch2 = Stopwatch::start();
     let embedded_textures: GMEmbeddedTextures = reader.read_chunk_required("TXTR")?;
@@ -137,10 +140,6 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
     // TODO implement all other chunks
     
     log::trace!("Parsing chunks took {stopwatch2}");
-    
-    if reader.general_info.is_version_at_least((2023, 1)) && reader.general_info.version.branch == LTSBranch::Pre2022_0 {
-        reader.general_info.version.branch = LTSBranch::LTS2022_0;
-    }
 
     let data = GMData {
         strings: reader.strings,

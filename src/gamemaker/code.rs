@@ -101,7 +101,7 @@ impl GMElement for GMCode {
         
         let saved_pos: usize = reader.cur_pos;
         reader.cur_pos = instructions_start_pos;
-        let mut instructions: Vec<GMInstruction> = Vec::with_capacity(code_length * 5);  // estimate
+        let mut instructions: Vec<GMInstruction> = Vec::with_capacity(code_length / 3);  // estimate
         
         while reader.cur_pos < instructions_end_pos {
             let instruction = GMInstruction::deserialize(reader).map_err(|e| format!(
@@ -138,8 +138,8 @@ impl GMElement for GMCode {
             ))?;
         }
 
-        let code_length: i32 = builder.len() as i32 - start as i32;
-        builder.overwrite_i32(code_length, length_placeholder_pos)?;
+        let code_length: usize = builder.len() - start;
+        builder.overwrite_usize(code_length, length_placeholder_pos)?;
         Ok(())
     }
 }
