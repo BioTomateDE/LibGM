@@ -1,7 +1,7 @@
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gm_deserialize::{DataReader, GMElement};
 use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
-use crate::utility::vec_with_capacity;
+use crate::utility::{num_enum_from, vec_with_capacity};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteTypeSWF {
@@ -265,11 +265,7 @@ pub struct GMSpriteYYSWFBitmapFillData {
 }
 impl GMElement for GMSpriteYYSWFBitmapFillData {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String>{
-        let bitmap_fill_type: i32 = reader.read_i32()?;
-        let bitmap_fill_type: GMSpriteYYSWFBitmapFillType = bitmap_fill_type.try_into().map_err(|_| format!(
-            "Invalid YYSWF Bitmap Fill Type 0x{:08X} at position {} while parsing Sprite YYSWF Bitmap Fill Data",
-            bitmap_fill_type, reader.cur_pos,
-        ))?;
+        let bitmap_fill_type: GMSpriteYYSWFBitmapFillType = num_enum_from(reader.read_i32()?)?;
         let char_id: i32 = reader.read_i32()?;
         let transformation_matrix = GMSpriteYYSWFMatrix33::deserialize(reader)?;
         Ok(GMSpriteYYSWFBitmapFillData { bitmap_fill_type, char_id, transformation_matrix })
@@ -316,11 +312,7 @@ pub struct GMSpriteYYSWFGradientFillData {
 }
 impl GMElement for GMSpriteYYSWFGradientFillData {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let gradient_fill_type: i32 = reader.read_i32()?;
-        let gradient_fill_type: GMSpriteYYSWFGradientFillType = gradient_fill_type.try_into().map_err(|_|format!(
-            "Invalid YYSWF Fill Gradient Type 0x{:08X} at position {} while parsing Sprite YYSWF Gradient Fill Data",
-            gradient_fill_type, reader.cur_pos,
-        ))?;
+        let gradient_fill_type: GMSpriteYYSWFGradientFillType = num_enum_from(reader.read_i32()?)?;
         let tpe_index: Option<i32> = reader.deserialize_if_gm_version((2022, 1))?;
         let transformation_matrix = GMSpriteYYSWFMatrix33::deserialize(reader)?;
         let records: Vec<GMSpriteYYSWFGradientRecord> = reader.read_simple_list()?;
@@ -571,11 +563,7 @@ pub struct GMSpriteYYSWFBitmapData {
 }
 impl GMElement for GMSpriteYYSWFBitmapData {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let bitmap_type: i32 = reader.read_i32()?;
-        let bitmap_type: GMSpriteYYSWFBitmapType = bitmap_type.try_into().map_err(|_| format!(
-            "Invalid YYSWF Bitmap Type 0x{:08X} at position {} while parsing Sprite YYSWF Bitmap Data",
-            bitmap_type, reader.cur_pos,
-        ))?;
+        let bitmap_type: GMSpriteYYSWFBitmapType = num_enum_from(reader.read_i32()?)?;
         let width: i32 = reader.read_i32()?;
         let height: i32 = reader.read_i32()?;
 
