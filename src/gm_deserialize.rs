@@ -25,6 +25,7 @@ use crate::gamemaker::texture_page_items::{GMTexturePageItem, GMTexturePageItems
 use crate::gamemaker::options::GMOptions;
 use crate::gamemaker::particles::{GMParticleEmitters, GMParticleSystems};
 use crate::gamemaker::sequence::GMSequences;
+use crate::gamemaker::shaders::GMShaders;
 
 #[derive(Debug, Clone)]
 pub struct GMData {
@@ -53,6 +54,7 @@ pub struct GMData {
     pub audio_groups: GMAudioGroups,                    // AGRP
     pub global_init_scripts: GMGlobalInitScripts,       // GLOB
     pub game_end_scripts: GMGameEndScripts,             // GMEN
+    pub shaders: GMShaders,                             // SHDR
 
     /// Should not be edited; only set by `GMData::read_chunk_padding`.
     pub padding: usize,
@@ -140,6 +142,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
     let audio_groups: GMAudioGroups = reader.read_chunk_optional("AGRP")?;
     let global_init_scripts: GMGlobalInitScripts = reader.read_chunk_optional("GLOB")?;
     let game_end_scripts: GMGameEndScripts = reader.read_chunk_optional("GMEN")?;
+    let shaders: GMShaders = reader.read_chunk_optional("SHDR")?;
     // TODO implement all other chunks
     
     log::trace!("Parsing chunks took {stopwatch2}");
@@ -170,6 +173,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
         audio_groups,
         global_init_scripts,
         game_end_scripts,
+        shaders,
         padding: reader.padding,
     };
 
@@ -571,6 +575,10 @@ impl<'a> DataReader<'a> {
 
     pub fn read_simple_list_of_resource_ids<T: GMElement>(&mut self) -> Result<Vec<GMRef<T>>, String> {
         self.read_simple_list_internal(|reader| reader.read_resource_by_id())
+    }
+
+    pub fn read_simple_list_of_strings(&mut self) -> Result<Vec<GMRef<String>>, String> {
+        self.read_simple_list_internal(|reader| reader.read_gm_string())
     }
 
     /// this could probably be moved to gmkerning; it doesn't seem to be used anywhere else
