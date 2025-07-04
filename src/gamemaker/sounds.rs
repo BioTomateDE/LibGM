@@ -1,6 +1,6 @@
+use crate::gamemaker::audio_groups::GMAudioGroup;
 use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use crate::gamemaker::embedded_audio::GMEmbeddedAudio;
-use crate::gamemaker::irrelevant::GMAudioGroup;
 use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
 
 #[derive(Debug, Clone)]

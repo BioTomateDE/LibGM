@@ -5,11 +5,12 @@ use crate::gm_serialize::DataBuilder;
 #[derive(Debug, Clone)]
 pub struct GMTexturePageItems {
     pub texture_page_items: Vec<GMTexturePageItem>,
+    pub is_4_byte_aligned: bool,
     pub exists: bool,
 }
 impl GMChunkElement for GMTexturePageItems {
     fn empty() -> Self {
-        Self { texture_page_items: vec![], exists: false }
+        Self { texture_page_items: vec![], is_4_byte_aligned: false, exists: false }
     }
     fn exists(&self) -> bool {
         self.exists
@@ -17,13 +18,20 @@ impl GMChunkElement for GMTexturePageItems {
 }
 impl GMElement for GMTexturePageItems {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let texture_page_items: Vec<GMTexturePageItem> = reader.read_texture_page_items_with_occurrences()?;
-        Ok(Self { texture_page_items, exists: true })
+        let is_4_byte_aligned: bool = reader.get_chunk_length() % 4 == 0;
+        let texture_page_items: Vec<GMTexturePageItem> = reader.read_texture_page_items()?;
+        if is_4_byte_aligned {
+            reader.align(4)?;   // has warning instead of hard error in utmt if misaligned
+        }
+        Ok(Self { texture_page_items, is_4_byte_aligned, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         if !self.exists { return Ok(()) }
         builder.write_pointer_list(&self.texture_page_items)?;
+        if self.is_4_byte_aligned {
+            builder.align(4);
+        }
         Ok(())
     }
 }

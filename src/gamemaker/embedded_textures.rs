@@ -64,15 +64,18 @@ impl GMElement for GMEmbeddedTextures {
 
         for (i, texture_page) in self.texture_pages.iter().enumerate() {
             if let Some(ref img) = texture_page.image {
+                builder.align(0x80);
                 builder.resolve_pointer(&texture_page.image)?;
                 let start_pos: usize = builder.len();
-                img.build(builder)?;
+                img.serialize(builder)?;
                 if builder.is_gm_version_at_least((2022, 3)) {
                     let length: usize = builder.len() - start_pos;
                     builder.overwrite_usize(length, texture_block_size_placeholders[i])?
                 }
             }
         }
+        
+        builder.align(4);
         Ok(())
     }
 }
@@ -138,6 +141,7 @@ impl GMElement for GMEmbeddedTexture2022_9 {
 
 
 fn read_raw_texture(reader: &mut DataReader) -> Result<GMImage, String> {
+    reader.align(0x80)?;
     let start_position: usize = reader.cur_pos;
     let header: [u8; 8] = *reader.read_bytes_const()
         .map_err(|e| format!("Trying to read headers {e} at position {start_position} while parsing images of texture pages"))?;
@@ -230,8 +234,7 @@ impl GMImage {
         Ok(image)
     }
 
-
-    pub fn build(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    pub fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         match self {
             GMImage::DynImg(dyn_img) => {
                 let mut writer = BufWriter::with_capacity(8 * 1024, Cursor::new(&mut builder.raw_data));
