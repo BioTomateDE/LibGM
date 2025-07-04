@@ -2,6 +2,7 @@
 use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use crate::gamemaker::sprites::GMSprite;
 use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
+use crate::utility::num_enum_from;
 
 #[derive(Debug, Clone)]
 pub struct GMParticleSystems {
@@ -158,8 +159,7 @@ impl GMElement for GMParticleEmitter {
         } else {
             None
         };
-        let mode: i32 = reader.read_i32()?;
-        let mode: EmitMode = mode.try_into().map_err(|_| format!("Invalid Emit Mode {mode} (0x{mode:08X})"))?;
+        let mode: EmitMode = num_enum_from(reader.read_i32()?)?;
 
         let emit_count: u32;
         let temp_data_2023_8: Option<TempParticleEmitter2023_8> = if reader.general_info.is_version_at_least((2023, 8, 0, 0)) {
@@ -167,13 +167,10 @@ impl GMElement for GMParticleEmitter {
             let emit_relative: bool = reader.read_bool32()?;     // always zero
             let delay_min: f32 = reader.read_f32()?;
             let delay_max: f32 = reader.read_f32()?;
-            let delay_unit: i32 = reader.read_i32()?;
-            let delay_unit: TimeUnit = delay_unit.try_into().map_err(|_| format!("Invalid Time Unit for delay: {delay_unit} (0x{delay_unit:08X})"))?;
+            let delay_unit: TimeUnit = num_enum_from(reader.read_i32()?)?;
             let interval_min: f32 = reader.read_f32()?;
             let interval_max: f32 = reader.read_f32()?;
-            let interval_unit: i32 = reader.read_i32()?;
-            let interval_unit: TimeUnit = interval_unit.try_into()
-                .map_err(|_| format!("Invalid Time Unit for interval: {interval_unit} (0x{interval_unit:08X})"))?;
+            let interval_unit: TimeUnit = num_enum_from(reader.read_i32()?)?;
 
             Some(TempParticleEmitter2023_8 {
                 emit_relative,
@@ -189,24 +186,15 @@ impl GMElement for GMParticleEmitter {
             None
         };
 
-        let distribution: i32 = reader.read_i32()?;
-        let distribution: EmitterDistribution = distribution.try_into()
-            .map_err(|_| format!("Invalid Emitter Distribution {distribution} (0x{distribution:08X})"))?;
-
-        let shape: i32 = reader.read_i32()?;
-        let shape: EmitterShape = shape.try_into().map_err(|_| format!("Invalid Emitter Shape {shape} (0x{shape:08X})"))?;
-
+        let distribution: EmitterDistribution = num_enum_from(reader.read_i32()?)?;
+        let shape: EmitterShape = num_enum_from(reader.read_i32()?)?;
         let region_x: f32 = reader.read_f32()?;
         let region_y: f32 = reader.read_f32()?;
         let region_w: f32 = reader.read_f32()?;
         let region_h: f32 = reader.read_f32()?;
         let rotation: f32 = reader.read_f32()?;
         let sprite: GMRef<GMSprite> = reader.read_resource_by_id()?;
-
-        let texture: i32 = reader.read_i32()?;
-        let texture: EmitterTexture = texture.try_into()
-            .map_err(|_| format!("Invalid Emitter Texture {texture} (0x{texture:08X})"))?;
-
+        let texture: EmitterTexture = num_enum_from(reader.read_i32()?)?;
         let frame_index: f32 = reader.read_f32()?;
 
         let data_2023_4: Option<GMParticleEmitter2023_4> = if reader.general_info.is_version_at_least((2023, 4, 0, 0)) {

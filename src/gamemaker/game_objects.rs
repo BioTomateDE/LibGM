@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::gamemaker::code::GMCode;
 use crate::gamemaker::sprites::GMSprite;
 use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
+use crate::utility::num_enum_from;
 
 #[derive(Debug, Clone)]
 pub struct GMGameObjects {
@@ -66,11 +67,8 @@ impl GMElement for GMGameObjects {
             };
             let uses_physics: bool = reader.read_bool32()?;
             let is_sensor: bool = reader.read_bool32()?;
-            let collision_shape: u32 = reader.read_u32()?;
-            let collision_shape: GMGameObjectCollisionShape = collision_shape.try_into().map_err(|_| format!(
-                "Invalid Collision Shape 0x{:04X} at position {} while parsing Game Object",
-                collision_shape, reader.cur_pos,
-            ))?;
+            let collision_shape: GMGameObjectCollisionShape = num_enum_from(reader.read_u32()?)
+                .map_err(|e| format!("{e} while parsing Game Object"))?;
             let density: f32 = reader.read_f32()?;
             let restitution: f32 = reader.read_f32()?;
             let group: u32 = reader.read_u32()?;

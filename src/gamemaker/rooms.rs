@@ -9,7 +9,7 @@ use crate::gamemaker::particles::GMParticleSystem;
 use crate::gamemaker::sequence::{GMAnimSpeedType, GMSequence};
 use crate::gamemaker::sprites::GMSprite;
 use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
-use crate::utility::vec_with_capacity;
+use crate::utility::{num_enum_from, vec_with_capacity};
 
 #[derive(Debug, Clone)]
 pub struct GMRooms {
@@ -476,11 +476,7 @@ impl GMElement for GMRoomLayer {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let layer_name: GMRef<String> = reader.read_gm_string()?;
         let layer_id: u32 = reader.read_u32()?;
-        let layer_type: u32 = reader.read_u32()?;
-        let layer_type: GMRoomLayerType = layer_type.try_into().map_err(|_| format!(
-            "Invalid Room Layer Type 0x{:04X} at position {} while parsing Room",
-            layer_type, reader.cur_pos,
-        ))?;
+        let layer_type: GMRoomLayerType = num_enum_from(reader.read_u32()?)?;
         let layer_depth: i32 = reader.read_i32()?;
         let x_offset: f32 = reader.read_f32()?;
         let y_offset: f32 = reader.read_f32()?;
@@ -571,8 +567,7 @@ pub struct GMRoomLayerEffectProperty {
 }
 impl GMElement for GMRoomLayerEffectProperty {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let kind: i32 = reader.read_i32()?;
-        let kind: GMRoomLayerEffectPropertyType = kind.try_into().map_err(|_| format!("Invalid Room Layer Effect Property {kind} (0x{kind:08X})"))?;
+        let kind: GMRoomLayerEffectPropertyType = num_enum_from(reader.read_i32()?)?;
         let name: GMRef<String> = reader.read_gm_string()?;
         let value: GMRef<String> = reader.read_gm_string()?;
         Ok(GMRoomLayerEffectProperty { kind, name, value })
@@ -713,9 +708,8 @@ impl GMElement for GMRoomLayerDataBackground {
         let color: u32 = reader.read_u32()?;
         let first_frame: f32 = reader.read_f32()?;
         let animation_speed: f32 = reader.read_f32()?;
-        let animation_speed_type: u32 = reader.read_u32()?;
-        let animation_speed_type: GMAnimSpeedType = animation_speed_type.try_into()
-            .map_err(|_| format!("Invalid Animation Speed Type {0} (0x{0:08X}) while parsing Room Background Layer", animation_speed_type))?;
+        let animation_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)
+            .map_err(|e| format!("{e} while parsing Room Background Layer"))?;
 
         Ok(GMRoomLayerDataBackground {
             visible,
@@ -902,9 +896,8 @@ impl GMElement for GMSpriteInstance {
         let scale_y: f32 = reader.read_f32()?;
         let color: u32 = reader.read_u32()?;
         let animation_speed: f32 = reader.read_f32()?;
-        let animation_speed_type: u32 = reader.read_u32()?;
-        let animation_speed_type: GMAnimSpeedType = animation_speed_type.try_into()
-            .map_err(|_| format!("Invalid Animation Speed Type {0} (0x{0:08X}) while parsing Room Assets Layer Sprite Instance", animation_speed_type))?;
+        let animation_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)
+            .map_err(|e| format!("{e} while parsing Room Assets Layer Sprite Instance"))?;
         let frame_index: f32 = reader.read_f32()?;
         let rotation: f32 = reader.read_f32()?;
         Ok(GMSpriteInstance { name, sprite, x, y, scale_x, scale_y, color, animation_speed, animation_speed_type, frame_index, rotation })
@@ -952,8 +945,8 @@ impl GMElement for GMSequenceInstance {
         let color: u32 = reader.read_u32()?;
         let animation_speed: f32 = reader.read_f32()?;
         let animation_speed_type: u32 = reader.read_u32()?;
-        let animation_speed_type: GMAnimSpeedType = animation_speed_type.try_into()
-            .map_err(|_| format!("Invalid Animation Speed Type {0} (0x{0:08X}) while parsing Room Assets Layer Sprite Instance", animation_speed_type))?;
+        let animation_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)
+            .map_err(|e| format!("{e} while parsing Room Assets Layer Sequence Instance"))?;
         let frame_index: f32 = reader.read_f32()?;
         let rotation: f32 = reader.read_f32()?;
         Ok(GMSequenceInstance { name, sequence, x, y, scale_x, scale_y, color, animation_speed, animation_speed_type, frame_index, rotation })
