@@ -22,4 +22,4 @@ pub(super) mod global_init;
 pub(super) mod audio_groups;
 pub(super) mod extensions;
 pub(super) mod languages;
-mod shaders;
+pub(super) mod shaders;
