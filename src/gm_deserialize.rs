@@ -5,6 +5,7 @@ use crate::detect_version::detect_gamemaker_version;
 use crate::gamemaker::audio_groups::GMAudioGroups;
 use crate::gamemaker::backgrounds::GMBackgrounds;
 use crate::gamemaker::code::GMCodes;
+use crate::gamemaker::data_files::GMDataFiles;
 use crate::gamemaker::embedded_audio::GMEmbeddedAudios;
 use crate::gamemaker::embedded_textures::GMEmbeddedTextures;
 use crate::gamemaker::extensions::GMExtensions;
@@ -57,6 +58,7 @@ pub struct GMData {
     pub game_end_scripts: GMGameEndScripts,             // GMEN
     pub shaders: GMShaders,                             // SHDR
     pub root_ui_nodes: GMRootUINodes,                   // UILR
+    pub data_files: GMDataFiles,                        // DAFL
 
     /// Should not be edited; only set by `GMData::read_chunk_padding`.
     pub padding: usize,
@@ -146,6 +148,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
     let game_end_scripts: GMGameEndScripts = reader.read_chunk_optional("GMEN")?;
     let shaders: GMShaders = reader.read_chunk_optional("SHDR")?;
     let root_ui_nodes: GMRootUINodes = reader.read_chunk_optional("UILR")?;
+    let data_files: GMDataFiles = reader.read_chunk_optional("DAFL")?;
     // TODO implement all other chunks
     
     log::trace!("Parsing chunks took {stopwatch2}");
@@ -187,6 +190,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
         game_end_scripts,
         shaders,
         root_ui_nodes,
+        data_files,
         padding: reader.padding,
     };
 
