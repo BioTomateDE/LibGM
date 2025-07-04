@@ -17,6 +17,7 @@ impl GMChunkElement for GMBackgrounds {
     }
 }
 impl GMElement for GMBackgrounds {
+    // TODO UndertaleAlignUpdatedListChunk for BGND and STRG
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let backgrounds: Vec<GMBackground> = reader.read_pointer_list()?;
         Ok(Self { backgrounds, exists: true })
