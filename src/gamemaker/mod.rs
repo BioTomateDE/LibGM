@@ -23,3 +23,4 @@ pub(super) mod audio_groups;
 pub(super) mod extensions;
 pub(super) mod languages;
 pub(super) mod shaders;
+pub(super) mod ui_nodes;
