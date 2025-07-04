@@ -205,6 +205,16 @@ impl<'a> DataBuilder<'a> {
         Ok(())
     }
 
+    pub fn write_simple_list_of_strings(&mut self, elements: &Vec<GMRef<String>>) -> Result<(), String> {
+        let count: usize = elements.len();
+        self.write_usize(count)?;
+        for gm_string_ref in elements {
+            self.write_gm_string(gm_string_ref)
+                .map_err(|e| format!("{e}\n↳ while building simple list of String with {count} elements"))?;
+        }
+        Ok(())
+    }
+
     pub fn write_simple_list_short<T: GMElement>(&mut self, elements: &Vec<T>) -> Result<(), String> {
         let count: usize = elements.len();
         let count: u16 = count.try_into().map_err(|_| format!(
@@ -255,6 +265,15 @@ impl<'a> DataBuilder<'a> {
         let placeholder_position: u32 = self.len() as u32;  // gamemaker is 32bit anyway
         self.write_u32(0xDEADC0DE);
         self.pointer_placeholder_positions.push((placeholder_position, memory_address));
+        Ok(())
+    }
+
+    pub fn write_pointer_opt<T>(&mut self, element: &Option<T>) -> Result<(), String> {
+        if let Some(elem) = element {
+            self.write_pointer(elem)?;
+        } else {
+            self.write_i32(0);
+        }
         Ok(())
     }
 
