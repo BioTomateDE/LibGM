@@ -429,12 +429,12 @@ impl GMElement for GMRoomTile {
             GMRoomTileTexture::Sprite(gm_ref) => if builder.is_gm_version_at_least((2, 0)) {
                 builder.write_resource_id_opt(&gm_ref)
             } else {
-                return Err("Room tile texture should be a Background reference in GMS2; not a Sprite reference".to_string())
+                return Err("Room tile texture should be a Background reference since GMS2; not a Sprite reference".to_string())
             }
             GMRoomTileTexture::Background(gm_ref) => if builder.is_gm_version_at_least((2, 0)) {
-                builder.write_resource_id_opt(&gm_ref)
-            } else {
                 return Err("Room tile texture should be a Sprite reference before GMS2; not a Background reference".to_string())
+            } else {
+                builder.write_resource_id_opt(&gm_ref)
             }
         }
         builder.write_u32(self.source_x);
