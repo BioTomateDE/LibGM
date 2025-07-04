@@ -30,6 +30,7 @@ impl GMChunkElement for GMEmbeddedTextures {
 impl GMElement for GMEmbeddedTextures {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let texture_pages: Vec<GMEmbeddedTexture> = reader.read_pointer_list()?;
+        reader.align(4)?;   // maybe relative chunk position?
         Ok(Self { texture_pages, exists: true })
     }
 
@@ -177,7 +178,7 @@ fn read_raw_texture(reader: &mut DataReader) -> Result<GMImage, String> {
     }
     else if header.starts_with(MAGIC_QOI_HEADER) {
         // Parse QOI
-        return Err("Raw QOI images without Bzip2 not yet implemented".to_string());
+        return Err("Raw QOI images without Bzip2 not yet implemented".to_string()); // TODO
         // image_from_qoi(chunk.data[chunk..])
     }
     else {
