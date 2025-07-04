@@ -7,7 +7,7 @@ use crate::gamemaker::particles::GMParticleSystem;
 use crate::gamemaker::sounds::GMSound;
 use crate::gamemaker::sprites::GMSprite;
 use crate::gm_serialize::DataBuilder;
-use crate::utility::{hashmap_with_capacity, vec_with_capacity};
+use crate::utility::{hashmap_with_capacity, num_enum_from, vec_with_capacity};
 
 /// This struct belong to the chunk SEQN.
 /// Sprites can _also_ contain sequences (not by reference; the actual data).
@@ -68,17 +68,11 @@ pub struct GMSequence {
 impl GMElement for GMSequence {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let playback: u32 = reader.read_u32()?;
-        let playback: GMSequencePlaybackType = playback.try_into().map_err(|_| format!(
-            "Invalid Sequence Playback Type 0x{:04X} while parsing sequence at position {} in chunk '{}'",
-            playback, reader.cur_pos, reader.chunk.name,
-        ))?;
+        let playback: GMSequencePlaybackType = num_enum_from(reader.read_u32()?)
+            .map_err(|e| format!("{e} while parsing sequence at position {} in chunk '{}'", reader.cur_pos, reader.chunk.name))?;
         let playback_speed: f32 = reader.read_f32()?;
-        let playback_speed_type: u32 = reader.read_u32()?;
-        let playback_speed_type: GMAnimSpeedType = playback_speed_type.try_into().map_err(|_| format!(
-            "Invalid Sequence Anim Speed Type 0x{:04X} while parsing sequence at position {} in chunk '{}'",
-            playback_speed_type, reader.cur_pos, reader.chunk.name
-        ))?;
+        let playback_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)
+            .map_err(|e| format!("{e} while parsing sequence at position {} in chunk '{}'", reader.cur_pos, reader.chunk.name))?;
         let length: f32 = reader.read_f32()?;
         let origin_x: i32 = reader.read_i32()?;
         let origin_y: i32 = reader.read_i32()?;
@@ -518,16 +512,10 @@ impl GMElement for GMTrack {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let model_name: GMRef<String> = reader.read_gm_string()?;
         let name: GMRef<String> = reader.read_gm_string()?;
-        let builtin_name: i32 = reader.read_i32()?;
-        let builtin_name: GMTrackBuiltinName = builtin_name.try_into().map_err(|_| format!(
-            "Invalid Track builtin name 0x{:04X} while parsing Track at position {} in chunk '{}'",
-            builtin_name, reader.cur_pos, reader.chunk.name,
-        ))?;
-        let traits: i32 = reader.read_i32()?;
-        let traits: GMTrackTraits = traits.try_into().map_err(|_| format!(
-            "Invalid Track traits 0x{:04X} while parsing Track at position {} in chunk '{}'",
-            traits, reader.cur_pos, reader.chunk.name,
-        ))?;
+        let builtin_name: GMTrackBuiltinName = num_enum_from(reader.read_i32()?)
+            .map_err(|e| format!("{e} while parsing Track at position {} in chunk '{}'", reader.cur_pos, reader.chunk.name))?;
+        let traits: GMTrackTraits = num_enum_from(reader.read_i32()?)
+            .map_err(|e| format!("{e} while parsing Track at position {} in chunk '{}'", reader.cur_pos, reader.chunk.name))?;
         let is_creation_track: bool = reader.read_bool32()?;
 
         let mut tag_count: i32 = reader.read_i32()?;

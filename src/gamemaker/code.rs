@@ -6,6 +6,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::functions::GMFunction;
 use crate::gamemaker::game_objects::GMGameObject;
 use crate::gm_serialize::DataBuilder;
+use crate::utility::num_enum_from;
 
 #[derive(Debug, Clone)]
 pub struct GMCodes {
@@ -210,11 +211,9 @@ impl GMElement for GMInstruction {
             GMOpcode::Exit |
             GMOpcode::Popz |
             GMOpcode::CallV => {
-                let data_type: u8 = b2 & 0xf;
-                let data_type: GMDataType = data_type.try_into().map_err(|_| format!(
-                    "Invalid Data Type {data_type:02X} while parsing Single Type Instruction"
-                ))?;
-
+                let data_type: GMDataType = num_enum_from(b2 & 0xf)
+                    .map_err(|e| format!("{e} while parsing Single Type Instruction"))?;
+                
                 // Ensure basic conditions hold
                 if b0 != 0 && !matches!(opcode, GMOpcode::Dup | GMOpcode::CallV) {
                     return Err(format!("Invalid padding {:02X} while parsing Single Type Instruction", b0));
@@ -238,15 +237,10 @@ impl GMElement for GMInstruction {
             GMOpcode::Xor |
             GMOpcode::Shl |
             GMOpcode::Shr => {
-                let type1: u8 = b2 & 0xf;
-                let type1: GMDataType = type1.try_into().map_err(|_| format!(
-                    "Invalid Data Type {type1:02X} while parsing Double Type Instruction"
-                ))?;
-
-                let type2: u8 = b2 >> 4;
-                let type2: GMDataType = type2.try_into().map_err(|_| format!(
-                    "Invalid Data Type {type2:02X} while parsing Double Type Instruction"
-                ))?;
+                let type1: GMDataType = num_enum_from(b2 & 0xf)
+                    .map_err(|e| format!("{e} for type1 while parsing Double Type Instruction"))?;
+                let type2: GMDataType = num_enum_from(b2 >> 4).
+                    map_err(|e| format!("{e} for type2 while parsing Double Type Instruction"))?;
 
                 if b1 != 0 {    // might be incorrect; remove if issues
                     return Err(format!("b1 should be zero but is {b1} (0x{b1:02X}) for Double Type Instruction"))
@@ -262,19 +256,12 @@ impl GMElement for GMInstruction {
                 } else {
                     b1
                 };
-                let comparison_type: GMComparisonType = comparison_type_raw.try_into().map_err(|_| format!(
-                    "Invalid Comparison Type {comparison_type_raw:02X} while parsing Comparison Instruction"
-                ))?;
-
-                let type1: u8 = b2 & 0xf;
-                let type1: GMDataType = type1.try_into().map_err(|_| format!(
-                    "Invalid Data Type {type1:02X} while parsing Comparison Instruction"
-                ))?;
-
-                let type2: u8 = b2 >> 4;
-                let type2: GMDataType = type2.try_into().map_err(|_| format!(
-                    "Invalid Data Type {type2:02X} while parsing Comparison Instruction"
-                ))?;
+                let comparison_type: GMComparisonType = num_enum_from(comparison_type_raw)
+                    .map_err(|e| format!("{e} while parsing Comparison Instruction"))?;
+                let type1: GMDataType = num_enum_from(b2 & 0xf)
+                    .map_err(|e| format!("{e} for type1 while parsing Double Type Instruction"))?;
+                let type2: GMDataType = num_enum_from(b2 >> 4).
+                    map_err(|e| format!("{e} for type2 while parsing Double Type Instruction"))?;
                 
                 // short circuit stuff {~~}
                 
@@ -310,13 +297,11 @@ impl GMElement for GMInstruction {
             }
 
             GMOpcode::Pop => {
-                let type1: u8 = b2 & 0xf;
-                let type2: u8 = b2 >> 4;
-                let instance_type: i16 = b0 as i16 | ((b1 as i16) << 8);
-
-                let type1: GMDataType = type1.try_into().map_err(|_| format!("Invalid Data Type 1 {type1:02X} while parsing Pop Instruction"))?;
-                let type2: GMDataType = type2.try_into().map_err(|_| format!("Invalid Data Type 2 {type2:02X} while parsing Pop Instruction"))?;
-                let instance_type: GMInstanceType = parse_instance_type(instance_type)?;
+                let type1: GMDataType = num_enum_from(b2 & 0xf)
+                    .map_err(|e| format!("{e} for type1 while parsing Pop Type Instruction"))?;
+                let type2: GMDataType = num_enum_from(b2 >> 4).
+                    map_err(|e| format!("{e} for type2 while parsing Pop Type Instruction"))?;
+                let instance_type: GMInstanceType = parse_instance_type(b0 as i16 | ((b1 as i16) << 8))?;
 
                 if type1 == GMDataType::Int16 {
                     return Err(format!(
@@ -341,10 +326,7 @@ impl GMElement for GMInstruction {
             GMOpcode::PushGlb |
             GMOpcode::PushBltn |
             GMOpcode::PushI => {
-                let data_type: u8 = b2;
-                let data_type: GMDataType = data_type.try_into()
-                    .map_err(|_| format!("Invalid Data Type {data_type:02X} while parsing Push Instruction"))?;
-
+                let data_type: GMDataType = num_enum_from(b2).map_err(|e| format!("{e} while parsing Push Instruction"))?;
                 let val: i16 = (b0 as i16) | ((b1 as i16) << 8);
 
                 //// this was removed from utmt??? v
@@ -373,9 +355,7 @@ impl GMElement for GMInstruction {
             }
 
             GMOpcode::Call => {
-                let data_type: u8 = b2;
-                let data_type: GMDataType = data_type.try_into().map_err(|_| format!("Invalid Data Type {data_type:02X} while parsing Call Instruction"))?;
-
+                let data_type: GMDataType = num_enum_from(b2).map_err(|e| format!("{e} while parsing Call Instruction"))?;
                 let function: GMRef<GMFunction> = reader.function_occurrence_map.get(&reader.cur_pos).ok_or_else(|| format!(
                     "Could not find any function with absolute occurrence position {} in map with length {} while parsing Call Instruction",
                     reader.cur_pos, reader.function_occurrence_map.len(),
@@ -391,9 +371,7 @@ impl GMElement for GMInstruction {
 
             GMOpcode::Break => {
                 let value: i16 = b0 as i16 | ((b1 as i16) << 8);
-                let data_type: u8 = b2;
-                let data_type: GMDataType = data_type.try_into().map_err(|_| format!("Invalid Data Type {data_type:02X} while parsing Break Instruction"))?;
-
+                let data_type: GMDataType = num_enum_from(b2).map_err(|e| format!("{e} while parsing Break Instruction"))?;
                 let int_argument: Option<i32> = if data_type == GMDataType::Int32 {
                     // reader.general_info.set_version_at_least(2023, 8, 0, 0, None)?;
                     Some(reader.read_i32()?)
@@ -838,9 +816,8 @@ fn read_variable(reader: &mut DataReader, instance_type: &GMInstanceType) -> Res
     let raw_value: i32 = reader.read_i32()?;
 
     let variable_type: i32 = (raw_value >> 24) & 0xF8;
-    let variable_type: u8 = variable_type as u8;
-    let variable_type: GMVariableType = variable_type.try_into()
-        .map_err(|_| format!("Invalid Variable Type {variable_type} (0x{variable_type:02X}) while parsing variable reference chain"))?;
+    let variable_type: GMVariableType = num_enum_from(variable_type as u8)
+        .map_err(|e| format!("{e} while parsing variable reference chain"))?;
 
     let variable: GMRef<GMVariable> = reader.variable_occurrence_map.get(&occurrence_position)
         .ok_or_else(|| format!(

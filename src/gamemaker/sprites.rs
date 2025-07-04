@@ -5,7 +5,7 @@ use crate::gamemaker::sequence::{GMAnimSpeedType, GMSequence};
 use crate::gamemaker::sprites_yyswf::{GMSpriteTypeSWF, GMSpriteYYSWFTimeline};
 use crate::gamemaker::texture_page_items::GMTexturePageItem;
 use crate::gm_serialize::DataBuilder;
-use crate::utility::vec_with_capacity;
+use crate::utility::{num_enum_from, vec_with_capacity};
 
 #[derive(Debug, Clone)]
 pub struct GMSprites {
@@ -68,11 +68,7 @@ impl GMElement for GMSprite {
         let smooth: bool = reader.read_bool32()?;
         let preload: bool = reader.read_bool32()?;
         let bbox_mode: i32 = reader.read_i32()?;
-        let sep_masks: u32 = reader.read_u32()?;
-        let sep_masks: GMSpriteSepMaskType = sep_masks.try_into().map_err(|_| format!(
-            "Invalid Sep Masks Type 0x{:08X} at position {} while parsing Sprite",
-            sep_masks, reader.cur_pos,
-        ))?;
+        let sep_masks: GMSpriteSepMaskType = num_enum_from(reader.read_u32()?)?;
         let origin_x: i32 = reader.read_i32()?;
         let origin_y: i32 = reader.read_i32()?;
         let mut textures: Vec<Option<GMRef<GMTexturePageItem>>> = Vec::new();
@@ -89,11 +85,7 @@ impl GMElement for GMSprite {
             let yyswf: Option<GMSpriteTypeSWF> = None;
 
             let playback_speed: f32 = reader.read_f32()?;
-            let playback_speed_type: u32 = reader.read_u32()?;
-            let playback_speed_type: GMAnimSpeedType = playback_speed_type.try_into().map_err(|_| format!(
-                "Invalid Playback Anim Speed Type 0x{:08X} at position {} while parsing Sprite",
-                playback_speed_type, reader.cur_pos,
-            ))?;
+            let playback_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)?;
             // both of these seem to be not an offset but instead an absolute position (see UndertaleModLib/Models/UndertaleSprite.cs@507)
             let sequence_offset: i32 = if special_version >= 2 { reader.read_i32()? } else { 0 };
             let nine_slice_offset: i32 = if special_version >= 3 { reader.read_i32()? } else { 0 };
@@ -386,14 +378,9 @@ impl GMElement for GMSpriteNineSlice {
         let bottom: i32 = reader.read_i32()?;
         let enabled: bool = reader.read_bool32()?;
 
-        let mut tile_modes: Vec<GMSpriteNineSliceTileMode> = Vec::with_capacity(5);
-        for _ in 0..5 {
-            let tile_mode: i32 = reader.read_i32()?;
-            let tile_mode: GMSpriteNineSliceTileMode = tile_mode.try_into().map_err(|_| format!(
-                "Invalid Tile Mode for Nine Slice 0x{:08X} at position {} in chunk '{}'",
-                tile_mode, reader.cur_pos, reader.chunk.name,
-            ))?;
-            tile_modes.push(tile_mode);
+        let mut tile_modes: [GMSpriteNineSliceTileMode; 5] = [GMSpriteNineSliceTileMode::Stretch; 5];   // ignore default value
+        for tile_mode in &mut tile_modes {
+            *tile_mode = num_enum_from(reader.read_i32()?)?;
         }
 
         Ok(GMSpriteNineSlice {
@@ -402,7 +389,7 @@ impl GMElement for GMSpriteNineSlice {
             right,
             bottom,
             enabled,
-            tile_modes: tile_modes.try_into().unwrap(),
+            tile_modes,
         })
     }
 

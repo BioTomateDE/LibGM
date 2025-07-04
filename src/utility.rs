@@ -1,7 +1,8 @@
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, Formatter, UpperHex};
 use std::time::{Duration, Instant};
 use cpu_time::ProcessTime;
+use num_enum::TryFromPrimitive;
 
 pub struct Stopwatch {
     cpu_time: ProcessTime,
@@ -142,5 +143,14 @@ pub fn hashmap_with_capacity<K, V>(count: usize) -> Result<HashMap<K, V>, String
         ))
     }
     Ok(HashMap::with_capacity(count))
+}
+
+
+pub fn num_enum_from<I, E>(value: I) -> Result<E, String>
+where
+    I: Display + UpperHex + Copy,
+    E: TryFromPrimitive + TryFrom<I>
+{
+    value.try_into().map_err(|_| format!("Invalid {0} {1} (0x:{1:08X})", typename::<E>(), value))
 }
 
