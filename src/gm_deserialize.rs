@@ -63,7 +63,7 @@ pub struct GMData {
 }
 
 
-pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
+pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<GMData, String> {
     let stopwatch = Stopwatch::start();
     let mut reader = DataReader::new(&raw_data);
 
@@ -103,7 +103,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
     }
     log::trace!("Parsing FORM took {stopwatch}");
     
-    reader.strings = reader.read_chunk_required("STRG")?;      // FIXME: hopefully this also updates reader.strings
+    reader.strings = reader.read_chunk_required("STRG")?;
     reader.general_info = reader.read_chunk_required("GEN8")?;
     
     let stopwatch2 = Stopwatch::start();
@@ -149,6 +149,15 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
     // TODO implement all other chunks
     
     log::trace!("Parsing chunks took {stopwatch2}");
+    
+    // Throw error if not all chunks read to prevent silent data loss
+    if !allow_unread_chunks && !reader.chunks.is_empty() {
+        let chunks_str: String = reader.chunks.keys().cloned().collect::<Vec<_>>().join(", ");
+        return Err(format!(
+            "Not all chunks in the data file were read, which would lead to data loss when writing.\n\
+            The following chunks are unknown or not supported: [{chunks_str}]"
+        ))
+    }
 
     let data = GMData {
         strings: reader.strings,
@@ -498,11 +507,17 @@ impl<'a> DataReader<'a> {
 
         let element: T = self.read_chunk_internal(chunk)
             .map_err(|e| format!("{e}\n↳ while deserializing required chunk '{chunk_name}'"))?;
+
+        // Remove the chunk only after chunk parsing completes.
+        // Removing it earlier (e.g. when reading GEN8) would prevent
+        // the padding handling from finding the GEN8 chunk in the map,
+        // since the real GEN8 info is only set after this function returns.
+        self.chunks.remove(chunk_name);
         Ok(element)
     }
 
     pub fn read_chunk_optional<T: GMChunkElement + GMElement>(&mut self, chunk_name: &str) -> Result<T, String> {
-        let Some(chunk) = self.chunks.get(chunk_name).cloned() else {
+        let Some(chunk) = self.chunks.remove(chunk_name) else {
             log::trace!("Skipped parsing optional chunk '{chunk_name}' because it does not exist in the chunks hashmap");
             return Ok(T::empty())
         };
