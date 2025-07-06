@@ -12,7 +12,7 @@ use crate::gamemaker::extensions::GMExtensions;
 use crate::gamemaker::fonts::GMFonts;
 use crate::gamemaker::functions::{GMFunction, GMFunctions};
 use crate::gamemaker::game_objects::GMGameObjects;
-use crate::gamemaker::scripts::{GMScript, GMScripts};
+use crate::gamemaker::scripts::GMScripts;
 use crate::gamemaker::strings::GMStrings;
 use crate::gamemaker::variables::{GMVariable, GMVariables};
 use crate::gamemaker::general_info::{GMGeneralInfo, GMVersion, GMVersionReq};
@@ -28,6 +28,8 @@ use crate::gamemaker::particles::{GMParticleEmitters, GMParticleSystems};
 use crate::gamemaker::sequence::GMSequences;
 use crate::gamemaker::shaders::GMShaders;
 use crate::gamemaker::ui_nodes::GMRootUINodes;
+use crate::gamemaker::timelines::GMTimelines;
+
 
 #[derive(Debug, Clone)]
 pub struct GMData {
@@ -59,6 +61,7 @@ pub struct GMData {
     pub shaders: GMShaders,                             // SHDR
     pub root_ui_nodes: GMRootUINodes,                   // UILR
     pub data_files: GMDataFiles,                        // DAFL
+    pub timelines: GMTimelines,							// TMLN
 
     /// Should not be edited; only set by `GMData::read_chunk_padding`.
     pub padding: usize,
@@ -149,6 +152,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
     let shaders: GMShaders = reader.read_chunk_optional("SHDR")?;
     let root_ui_nodes: GMRootUINodes = reader.read_chunk_optional("UILR")?;
     let data_files: GMDataFiles = reader.read_chunk_optional("DAFL")?;
+    let timelines: GMTimelines = reader.read_chunk_optional("TMLN")?;
     // TODO implement all other chunks
     
     log::trace!("Parsing chunks took {stopwatch2}");
@@ -191,6 +195,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
         shaders,
         root_ui_nodes,
         data_files,
+        timelines,
         padding: reader.padding,
     };
 
@@ -255,7 +260,7 @@ pub struct GMChunk {
 pub struct DataReader<'a> {
     /// Should not be read until GEN8 chunk is parsed
     pub general_info: GMGeneralInfo,
-    /// Should only be set by `gamemaker::gamemaker`
+    /// Should only be set by `gamemaker::string`
     pub strings: GMStrings,
 
     pub chunks: HashMap<String, GMChunk>,
@@ -265,14 +270,14 @@ pub struct DataReader<'a> {
     pub cur_pos: usize,
     pub padding: usize,
 
-    /// Should only be set by `GMStrings::gamemaker`
+    /// Should only be set by `gamemaker::strings::GMStrings`
     pub string_occurrence_map: HashMap<usize, GMRef<String>>,
-    texture_page_item_occurrence_map: HashMap<usize, GMRef<GMTexturePageItem>>,
-    /// Should only be set by `GMVariables::gamemaker`
+    /// Should only be set by `gamemaker::texture_page_items::GMTexturePageItems`
+    pub texture_page_item_occurrence_map: HashMap<usize, GMRef<GMTexturePageItem>>,
+    /// Should only be set by `gamemaker::variables::GMVariables`
     pub variable_occurrence_map: HashMap<usize, GMRef<GMVariable>>,
-    /// Should only be set by `GMFunctions::gamemaker`
+    /// Should only be set by `gamemaker::functions::GMFunctions`
     pub function_occurrence_map: HashMap<usize, GMRef<GMFunction>>,
-    script_occurrence_map: HashMap<usize, GMRef<GMScript>>,
 }
 impl<'a> DataReader<'a> {
     pub fn new(data: &'a [u8]) -> Self {
@@ -293,7 +298,6 @@ impl<'a> DataReader<'a> {
             texture_page_item_occurrence_map: HashMap::new(),
             variable_occurrence_map: HashMap::new(),
             function_occurrence_map: HashMap::new(),
-            script_occurrence_map: HashMap::new(),
         }
     }
 
@@ -626,34 +630,17 @@ impl<'a> DataReader<'a> {
     }
 
     pub fn read_pointer_list<T: GMElement>(&mut self) -> Result<Vec<T>, String> {
-        let pointers: Vec<GMPointer> = self.read_simple_list::<GMPointer>()?;
+        let pointers: Vec<usize> = self.read_simple_list()?;
+        let count: usize = pointers.len();
         let mut elements: Vec<T> = Vec::with_capacity(pointers.len());
         for pointer in pointers {
-            self.cur_pos = pointer.pointing_to_position;
-            elements.push(T::deserialize(self)?);
+            self.cur_pos = pointer;
+            let element = T::deserialize(self).map_err(|e| format!(
+                "{e}\n↳ while reading pointer list of {} with {} elements",
+                typename::<T>(), count,
+            ))?;
+            elements.push(element);
         }
-        Ok(elements)
-    }
-
-    fn read_pointer_list_with_occurrence_map<T: GMElement>(&mut self) -> Result<(Vec<T>, HashMap<usize, GMRef<T>>), String> {
-        let pointers: Vec<GMPointer> = self.read_simple_list::<GMPointer>()?;
-        let mut occurrences: HashMap<usize, GMRef<T>> = HashMap::with_capacity(pointers.len());
-        let mut elements: Vec<T> = Vec::with_capacity(pointers.len());
-        for (i, pointer) in pointers.iter().enumerate() {
-            self.cur_pos = pointer.pointing_to_position;
-            occurrences.insert(self.cur_pos, GMRef::new(i as u32));
-            elements.push(T::deserialize(self)?);
-        }
-        Ok((elements, occurrences))
-    }
-    pub fn read_texture_page_items(&mut self) -> Result<Vec<GMTexturePageItem>, String> {
-        let (elements, occurrences) = self.read_pointer_list_with_occurrence_map()?;
-        self.texture_page_item_occurrence_map = occurrences;
-        Ok(elements)
-    }
-    pub fn read_scripts(&mut self) -> Result<Vec<GMScript>, String> {
-        let (elements, occurrences) = self.read_pointer_list_with_occurrence_map()?;
-        self.script_occurrence_map = occurrences;
         Ok(elements)
     }
 
@@ -743,7 +730,6 @@ impl GMElement for u8 {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         reader.read_u8()
     }
-
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         builder.write_u8(*self);
         Ok(())
@@ -753,7 +739,6 @@ impl GMElement for i8 {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         reader.read_i8()
     }
-
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         builder.write_i8(*self);
         Ok(())
@@ -763,7 +748,6 @@ impl GMElement for u16 {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         reader.read_u16()
     }
-
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         builder.write_u16(*self);
         Ok(())
@@ -773,7 +757,6 @@ impl GMElement for i16 {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         reader.read_i16()
     }
-
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         builder.write_i16(*self);
         Ok(())
@@ -783,7 +766,6 @@ impl GMElement for u32 {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         reader.read_u32()
     }
-
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         builder.write_u32(*self);
         Ok(())
@@ -793,7 +775,6 @@ impl GMElement for i32 {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         reader.read_i32()
     }
-
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         builder.write_i32(*self);
         Ok(())
@@ -803,7 +784,6 @@ impl GMElement for u64 {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         reader.read_u64()
     }
-
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         builder.write_u64(*self);
         Ok(())
@@ -813,7 +793,6 @@ impl GMElement for i64 {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         reader.read_i64()
     }
-
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         builder.write_i64(*self);
         Ok(())
@@ -823,7 +802,6 @@ impl GMElement for f32 {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         reader.read_f32()
     }
-
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         builder.write_f32(*self);
         Ok(())
@@ -833,9 +811,17 @@ impl GMElement for f64 {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         reader.read_f64()
     }
-
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         builder.write_f64(*self);
+        Ok(())
+    }
+}
+impl GMElement for usize {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        reader.read_usize()
+    }
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.write_usize(*self)?;
         Ok(())
     }
 }
@@ -843,7 +829,6 @@ impl GMElement for bool {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         reader.read_bool32()
     }
-
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         builder.write_bool32(*self);
         Ok(())
@@ -855,17 +840,4 @@ pub trait GMChunkElement {
     fn exists(&self) -> bool;
 }
 
-
-pub struct GMPointer {
-    pub pointing_to_position: usize,
-}
-impl GMElement for GMPointer {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let pointer_position: usize = reader.read_usize()?;
-        Ok(Self { pointing_to_position: pointer_position })
-    }
-    fn serialize(&self, _builder: &mut DataBuilder) -> Result<(), String> {
-        unreachable!("[internal error] Serializing GMPointer is not supported; use DataBuilder::write_pointer instead")
-    }
-}
 

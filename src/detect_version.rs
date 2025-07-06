@@ -1,7 +1,7 @@
 use crate::utility::vec_with_capacity;
-use crate::gm_deserialize::{DataReader, GMChunk, GMPointer};
+use crate::gm_deserialize::{DataReader, GMChunk};
 use crate::gamemaker::embedded_textures::MAGIC_BZ2_QOI_HEADER;
-use crate::gamemaker::general_info::{GMVersion, GMVersionReq, LTSBranch};
+use crate::gamemaker::general_info::{GMVersion, GMVersionReq};
 use crate::gamemaker::general_info::LTSBranch::{Post2022_0, Pre2022_0, LTS2022_0};
 use crate::gamemaker::rooms::GMRoomLayerType;
 
@@ -1013,10 +1013,10 @@ fn cv_acrv_2_3_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String
 
 
 fn cv_sprt_2_3_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
-    let pointers: Vec<GMPointer> = reader.read_simple_list()?;
+    let pointers: Vec<usize> = reader.read_simple_list()?;
     for pointer in pointers {
-        if pointer.pointing_to_position == 0 { continue }
-        reader.cur_pos = pointer.pointing_to_position + 14*4;
+        if pointer == 0 { continue }
+        reader.cur_pos = pointer + 14*4;
         if reader.read_i32()? != -1 {
             continue        // sprite is not special type
         }
