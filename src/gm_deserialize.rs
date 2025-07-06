@@ -7,6 +7,7 @@ use crate::gamemaker::backgrounds::GMBackgrounds;
 use crate::gamemaker::code::GMCodes;
 use crate::gamemaker::data_files::GMDataFiles;
 use crate::gamemaker::embedded_audio::GMEmbeddedAudios;
+use crate::gamemaker::embedded_images::GMEmbeddedImages;
 use crate::gamemaker::embedded_textures::GMEmbeddedTextures;
 use crate::gamemaker::extensions::GMExtensions;
 use crate::gamemaker::fonts::GMFonts;
@@ -27,6 +28,8 @@ use crate::gamemaker::options::GMOptions;
 use crate::gamemaker::particles::{GMParticleEmitters, GMParticleSystems};
 use crate::gamemaker::sequence::GMSequences;
 use crate::gamemaker::shaders::GMShaders;
+use crate::gamemaker::tags::GMTags;
+use crate::gamemaker::texture_group_info::GMTextureGroupInfos;
 use crate::gamemaker::ui_nodes::GMRootUINodes;
 use crate::gamemaker::timelines::GMTimelines;
 
@@ -62,6 +65,9 @@ pub struct GMData {
     pub root_ui_nodes: GMRootUINodes,                   // UILR
     pub data_files: GMDataFiles,                        // DAFL
     pub timelines: GMTimelines,							// TMLN
+    pub embedded_images: GMEmbeddedImages,              // EMBI
+    pub texture_group_infos: GMTextureGroupInfos,       // TGIN
+    pub tags: GMTags,                                   // TAGS
 
     /// Should not be edited; only set by `GMData::read_chunk_padding`.
     pub padding: usize,
@@ -153,6 +159,9 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
     let root_ui_nodes: GMRootUINodes = reader.read_chunk_optional("UILR")?;
     let data_files: GMDataFiles = reader.read_chunk_optional("DAFL")?;
     let timelines: GMTimelines = reader.read_chunk_optional("TMLN")?;
+    let embedded_images: GMEmbeddedImages = reader.read_chunk_optional("EMBI")?;
+    let texture_group_infos: GMTextureGroupInfos = reader.read_chunk_optional("TGIN")?;
+    let tags: GMTags = reader.read_chunk_optional("TAGS")?;
     // TODO implement all other chunks
     
     log::trace!("Parsing chunks took {stopwatch2}");
@@ -196,6 +205,9 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
         root_ui_nodes,
         data_files,
         timelines,
+        embedded_images,
+        texture_group_infos,
+        tags,
         padding: reader.padding,
     };
 
@@ -650,6 +662,13 @@ impl<'a> DataReader<'a> {
                 return Err(format!("Trying to align reader out of chunk bounds at position {}", self.cur_pos))
             }
             self.read_u8()?;
+        }
+        Ok(())
+    }
+
+    pub fn assert_pos(&self, position: usize, pointer_name: &'static str) -> Result<(), String> {
+        if self.cur_pos != position {
+            return Err(format!("{pointer_name} pointer misaligned: expected position {} but reader is actually at {}", position, self.cur_pos))
         }
         Ok(())
     }

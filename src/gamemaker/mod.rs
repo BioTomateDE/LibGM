@@ -26,3 +26,6 @@ pub(super) mod shaders;
 pub(super) mod ui_nodes;
 pub(super) mod data_files;
 pub(super) mod timelines;
+pub(super) mod embedded_images;
+pub(super) mod texture_group_info;
+pub(super) mod tags;
