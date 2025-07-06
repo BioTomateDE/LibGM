@@ -1,4 +1,4 @@
-use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMPointer, GMRef};
+use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use num_enum::{TryFromPrimitive, IntoPrimitive};
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::code::GMCode;
@@ -21,11 +21,11 @@ impl GMChunkElement for GMGameObjects {
 }
 impl GMElement for GMGameObjects {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let pointers: Vec<GMPointer> = reader.read_simple_list::<GMPointer>()?;
+        let pointers: Vec<usize> = reader.read_simple_list()?;
         let mut game_objects: Vec<GMGameObject> = Vec::with_capacity(pointers.len());
 
         for pointer in pointers {
-            reader.cur_pos = pointer.pointing_to_position;
+            reader.cur_pos = pointer;
             let name: GMRef<String> = reader.read_gm_string()?;
             let sprite_index: i32 = reader.read_i32()?;
             let sprite: Option<GMRef<GMSprite>> = if sprite_index == -1 {
