@@ -35,8 +35,19 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     builder.build_chunk("EXTN", &gm_data.extensions)?;
     builder.build_chunk("AGRP", &gm_data.audio_groups)?;
     builder.build_chunk("GLOB", &gm_data.global_init_scripts)?;
-    builder.is_last_chunk = true;
     builder.build_chunk("GMEN", &gm_data.game_end_scripts)?;
+    builder.build_chunk("SHDR", &gm_data.shaders)?;
+    builder.build_chunk("UILR", &gm_data.root_ui_nodes)?;
+    builder.build_chunk("DAFL", &gm_data.data_files)?;
+    builder.build_chunk("TMLN", &gm_data.timelines)?;
+    builder.build_chunk("EMBI", &gm_data.embedded_images)?;
+    builder.build_chunk("TGIN", &gm_data.texture_group_infos)?;
+    builder.build_chunk("TAGS", &gm_data.tags)?;
+    builder.build_chunk("FEAT", &gm_data.feature_flags)?;
+    builder.build_chunk("FEDS", &gm_data.filter_effects)?;
+
+    // undo padding for last chunk
+    builder.raw_data.truncate(builder.padding_start_pos);   // kind of unstable; may cause issues
     
     // resolve pointers/placeholders
     let stopwatch2 = Stopwatch::start();
@@ -55,9 +66,9 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
         builder.pointer_resource_positions.len(),
     );
 
+    // overwrite data length placeholder
+    builder.overwrite_usize(builder.len() - 8, 4)?;
 
-
-    builder.overwrite_usize(builder.len() - 8, 4)?;   // overwrite data length placeholder
     log::trace!("Building data file took {stopwatch}");
     Ok(builder.raw_data)
 }
@@ -68,7 +79,8 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
 pub struct DataBuilder<'a> {
     pub gm_data: &'a GMData,
     pub raw_data: Vec<u8>,
-    pub is_last_chunk: bool,
+    /// Keeps track of where padding at the end of chunks starts. Used for undoing the padding for the last chunk.
+    pub padding_start_pos: usize,
     /// Pairs data positions of pointer placeholders with the memory address of the GameMaker element they're pointing to
     pointer_placeholder_positions: Vec<(u32, usize)>,
     /// Maps memory addresses of GameMaker elements to their resolved data position
@@ -85,7 +97,7 @@ impl<'a> DataBuilder<'a> {
         Self {
             gm_data,
             raw_data: Vec::new(),
-            is_last_chunk: false,
+            padding_start_pos: 0,   // should only cause issues if no chunks were written at all (impossible)
             pointer_placeholder_positions: Vec::new(),
             pointer_resource_positions: HashMap::new(),
             function_occurrences: vec![Vec::new(); gm_data.functions.functions.len()],
@@ -111,8 +123,9 @@ impl<'a> DataBuilder<'a> {
             .map_err(|e| format!("{e}\n↳ while serializing chunk '{chunk_name}'"))?;
 
         // potentially write padding
+        self.padding_start_pos = self.len();
         let ver = &self.gm_data.general_info.version;
-        if !self.is_last_chunk && (ver.major >= 2 || (ver.major == 1 && ver.build >= 9999)) {
+        if ver.major >= 2 || (ver.major == 1 && ver.build >= 9999) {
             while self.len() % self.gm_data.padding != 0 {
                 self.write_u8(0);
             }

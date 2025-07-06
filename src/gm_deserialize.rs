@@ -10,6 +10,8 @@ use crate::gamemaker::embedded_audio::GMEmbeddedAudios;
 use crate::gamemaker::embedded_images::GMEmbeddedImages;
 use crate::gamemaker::embedded_textures::GMEmbeddedTextures;
 use crate::gamemaker::extensions::GMExtensions;
+use crate::gamemaker::feature_flags::GMFeatureFlags;
+use crate::gamemaker::filter_effects::GMFilterEffects;
 use crate::gamemaker::fonts::GMFonts;
 use crate::gamemaker::functions::{GMFunction, GMFunctions};
 use crate::gamemaker::game_objects::GMGameObjects;
@@ -68,6 +70,8 @@ pub struct GMData {
     pub embedded_images: GMEmbeddedImages,              // EMBI
     pub texture_group_infos: GMTextureGroupInfos,       // TGIN
     pub tags: GMTags,                                   // TAGS
+    pub feature_flags: GMFeatureFlags,                  // FEAT
+    pub filter_effects: GMFilterEffects,                // FEDS
 
     /// Should not be edited; only set by `GMData::read_chunk_padding`.
     pub padding: usize,
@@ -162,8 +166,8 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
     let embedded_images: GMEmbeddedImages = reader.read_chunk_optional("EMBI")?;
     let texture_group_infos: GMTextureGroupInfos = reader.read_chunk_optional("TGIN")?;
     let tags: GMTags = reader.read_chunk_optional("TAGS")?;
-    // TODO implement all other chunks
-    
+    let feature_flags: GMFeatureFlags = reader.read_chunk_optional("FEAT")?;
+    let filter_effects: GMFilterEffects = reader.read_chunk_optional("FEDS")?;
     log::trace!("Parsing chunks took {stopwatch2}");
     
     // Throw error if not all chunks read to prevent silent data loss
@@ -208,6 +212,8 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
         embedded_images,
         texture_group_infos,
         tags,
+        feature_flags,
+        filter_effects,
         padding: reader.padding,
     };
 
@@ -538,7 +544,7 @@ impl<'a> DataReader<'a> {
 
     pub fn read_chunk_optional<T: GMChunkElement + GMElement>(&mut self, chunk_name: &str) -> Result<T, String> {
         let Some(chunk) = self.chunks.remove(chunk_name) else {
-            log::trace!("Skipped parsing optional chunk '{chunk_name}' because it does not exist in the chunks hashmap");
+            log::trace!("Skipped parsing optional chunk '{chunk_name}'");
             return Ok(T::empty())
         };
         let element: T = self.read_chunk_internal(chunk)

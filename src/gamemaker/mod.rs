@@ -29,3 +29,5 @@ pub(super) mod timelines;
 pub(super) mod embedded_images;
 pub(super) mod texture_group_info;
 pub(super) mod tags;
+pub(super) mod feature_flags;
+pub(super) mod filter_effects;
