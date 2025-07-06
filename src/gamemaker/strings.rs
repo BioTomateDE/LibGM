@@ -1,5 +1,5 @@
 ﻿use std::collections::HashMap;
-use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMPointer, GMRef};
+use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use crate::gm_serialize::DataBuilder;
 
 #[derive(Debug, Clone)]
@@ -17,13 +17,13 @@ impl GMChunkElement for GMStrings {
 }
 impl GMElement for GMStrings {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let start_positions: Vec<GMPointer> = reader.read_simple_list()?;
+        let start_positions: Vec<usize> = reader.read_simple_list()?;
 
         let mut strings_by_index: Vec<String> = Vec::with_capacity(start_positions.len());
         let mut abs_pos_to_reference: HashMap<usize, GMRef<String>> = HashMap::with_capacity(start_positions.len());
 
         for (i, pointer) in start_positions.into_iter().enumerate() {
-            reader.cur_pos = pointer.pointing_to_position;
+            reader.cur_pos = pointer;
             let string_length: usize = reader.read_usize()?;
             let string: String = reader.read_literal_string(string_length)?;
             let byte: u8 = reader.read_u8()?;
@@ -33,7 +33,7 @@ impl GMElement for GMStrings {
             strings_by_index.push(string.clone());
             // occurrence is start_position + 4 because yoyogames moment
             // gamemaker does this because it's faster to access strings if you don't need to add or subtract 4 every time
-            abs_pos_to_reference.insert(pointer.pointing_to_position + 4, GMRef::new(i as u32));
+            abs_pos_to_reference.insert(pointer + 4, GMRef::new(i as u32));
         }
         
         // padding

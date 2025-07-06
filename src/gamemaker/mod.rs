@@ -25,3 +25,4 @@ pub(super) mod languages;
 pub(super) mod shaders;
 pub(super) mod ui_nodes;
 pub(super) mod data_files;
+pub(super) mod timelines;

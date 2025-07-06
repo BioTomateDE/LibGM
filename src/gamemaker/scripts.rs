@@ -17,7 +17,7 @@ impl GMChunkElement for GMScripts {
 }
 impl GMElement for GMScripts {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let scripts: Vec<GMScript> = reader.read_scripts()?;
+        let scripts: Vec<GMScript> = reader.read_pointer_list()?;
         Ok(Self { scripts, exists: true })
     }
 

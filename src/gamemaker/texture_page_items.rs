@@ -19,10 +19,20 @@ impl GMChunkElement for GMTexturePageItems {
 impl GMElement for GMTexturePageItems {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let is_4_byte_aligned: bool = reader.get_chunk_length() % 4 == 0;
-        let texture_page_items: Vec<GMTexturePageItem> = reader.read_texture_page_items()?;
+        
+        let pointers: Vec<usize> = reader.read_simple_list()?;
+        let mut texture_page_items: Vec<GMTexturePageItem> = Vec::with_capacity(pointers.len());
+        
+        for (i, pointer) in pointers.into_iter().enumerate() {
+            reader.cur_pos = pointer;
+            reader.texture_page_item_occurrence_map.insert(pointer, GMRef::new(i as u32));
+            texture_page_items.push(GMTexturePageItem::deserialize(reader)?);
+        }
+        
         if is_4_byte_aligned {
             reader.align(4)?;   // has warning instead of hard error in utmt if misaligned
         }
+        
         Ok(Self { texture_page_items, is_4_byte_aligned, exists: true })
     }
 
