@@ -87,15 +87,6 @@ pub struct GMVariable {
     pub b15_data: Option<GMVariableB15Data>,
     pub name_string_id: i32,
 }
-impl GMElement for GMVariable {
-    fn deserialize(_: &mut DataReader) -> Result<Self, String> {
-        unreachable!("[internal error] GMVariable::deserialize is not supported; use GMVariables::deserialize instead")
-    }
-    fn serialize(&self, _: &mut DataBuilder) -> Result<(), String> {
-        unreachable!("[internal error] GMVariable::serialize is not supported; use GMVariables::serialize instead")
-    }
-}
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMVariableB15Data {
