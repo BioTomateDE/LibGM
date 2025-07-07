@@ -654,13 +654,18 @@ impl<'a> DataReader<'a> {
 
         let mut elements: Vec<T> = Vec::with_capacity(count);
         for (i, pointer) in pointers.into_iter().enumerate() {
-            // TODO maybe pre padding (sprites) is "skipped" in the pointer?
-            self.assert_pos(pointer, &format!("(Pointer list) {}", typename::<T>()))?;
-            let element = T::deserialize(self).map_err(|e| format!(
+            // note: this scuffed closure is only used to prevent repetition in map_err.
+            //       it will be replaced when try blocks are added to stable.
+            let element: T = (|| {
+                // TODO maybe pre padding (sprites) is "skipped" in the pointer?
+                self.assert_pos(pointer, &format!("(Pointer list) {}", typename::<T>()))?;
+                let element = T::deserialize(self)?;
+                T::deserialize_post_padding(self, i == count-1)?;
+                Ok(element)
+            })().map_err(|e: String| format!(
                 "{e}\n↳ while reading pointer list of {} with {} elements",
                 typename::<T>(), count,
             ))?;
-            T::deserialize_post_padding(self, i == count-1)?;
             elements.push(element);
         }
         Ok(elements)
