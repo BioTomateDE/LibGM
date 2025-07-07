@@ -1167,7 +1167,8 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
             reader.cur_pos = code_ptr + 4;  // skip name
             let instructions_length: usize = reader.read_usize()?;
             reader.cur_pos += 4;    // skip locals and arguments count
-            let instructions_start: usize = reader.read_usize()?;
+            let instructions_start_relative: i32 = reader.read_i32()?;
+            let instructions_start: usize = (reader.cur_pos as i32 - 4 + instructions_start_relative) as usize;
             let instructions_end: usize = instructions_start + instructions_length;
             reader.cur_pos = instructions_start;
             
