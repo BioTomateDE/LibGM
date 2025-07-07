@@ -16,10 +16,10 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     builder.build_chunk("STRG", &gm_data.strings)?;
     builder.build_chunk("TXTR", &gm_data.embedded_textures)?;
     builder.build_chunk("TPAG", &gm_data.texture_page_items)?;
+    builder.build_chunk("CODE", &gm_data.codes)?;       // CODE has to be written before VARI and FUNC
     builder.build_chunk("VARI", &gm_data.variables)?;
     builder.build_chunk("FUNC", &gm_data.functions)?;
     builder.build_chunk("SCPT", &gm_data.scripts)?;
-    builder.build_chunk("CODE", &gm_data.codes)?;
     builder.build_chunk("FONT", &gm_data.fonts)?;
     builder.build_chunk("SPRT", &gm_data.sprites)?;
     builder.build_chunk("OBJT", &gm_data.game_objects)?;

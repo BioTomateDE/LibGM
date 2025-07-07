@@ -257,7 +257,7 @@ impl GMElement for GMGameObjectEventAction {
         let use_apply_to: bool = reader.read_bool32()?;
         let exe_type: u32 = reader.read_u32()?;
         let action_name: Option<GMRef<String>> = reader.read_gm_string_opt()?;
-        let code: Option<GMRef<GMCode>> = reader.read_resource_by_id_option()?;
+        let code: Option<GMRef<GMCode>> = reader.read_resource_by_id_opt()?;
         let argument_count: u32 = reader.read_u32()?;
         let who: i32 = reader.read_i32()?;
         let relative: bool = reader.read_bool32()?;
