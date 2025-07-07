@@ -31,3 +31,4 @@ pub mod texture_group_info;
 pub mod tags;
 pub mod feature_flags;
 pub mod filter_effects;
+mod animation_curves;
