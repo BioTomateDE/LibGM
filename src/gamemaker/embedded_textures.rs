@@ -159,7 +159,7 @@ fn read_raw_texture(reader: &mut DataReader) -> Result<GMImage, String> {
     if header == MAGIC_PNG_HEADER {
         // Parse PNG
         loop {
-            let len: u32 = u32::from_be_bytes(*reader.read_bytes_const()?) as u32;
+            let len: u32 = u32::from_be_bytes(*reader.read_bytes_const()?);
             let r#type: u32 = u32::from_be_bytes(*reader.read_bytes_const()?);
             reader.cur_pos += len as usize + 4;
             if r#type == 0x49454E44 {    // "IEND"
