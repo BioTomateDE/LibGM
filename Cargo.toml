@@ -4,7 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [profile.dev]
-opt-level = 1       # slight optimisations in debug profile
+#opt-level = 1    # slight optimisations in debug profile
+opt-level = 0     # NO optimisations in debug profile so variables are not optimized out
+debug = true
+debug-assertions = true
+overflow-checks = true
 
 [profile.release]
 debug = true        # debug info
