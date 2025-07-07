@@ -6,6 +6,8 @@ use crate::utility::vec_with_capacity;
 pub struct GMFunctions {
     pub functions: Vec<GMFunction>,
     pub code_locals: GMCodeLocals,
+    /// YYC, 14 < bytecode <= 16, chunk is empty but exists
+    pub is_yyc: bool,
     pub exists: bool,
 }
 impl GMChunkElement for GMFunctions {
@@ -13,6 +15,7 @@ impl GMChunkElement for GMFunctions {
         Self {
             functions: vec![],
             code_locals: GMCodeLocals::empty(),
+            is_yyc: false,
             exists: false,
         }
     }
@@ -22,6 +25,15 @@ impl GMChunkElement for GMFunctions {
 }
 impl GMElement for GMFunctions {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        if reader.get_chunk_length() == 0 && reader.general_info.bytecode_version >= 15 {
+            return Ok(Self {
+                functions: vec![],
+                code_locals: GMCodeLocals { code_locals: vec![], exists: false },
+                is_yyc: true,
+                exists: true,
+            })
+        }
+
         let functions_count: usize = if reader.general_info.bytecode_version <= 14 {
             reader.get_chunk_length() / 12
         } else {
@@ -49,28 +61,22 @@ impl GMElement for GMFunctions {
             functions.push(GMFunction { name, name_string_id });
         }
 
+        // log::debug!("{}", functions.iter().map(|i| format!("{:<6} {}", i.name_string_id, reader.display_gm_str(i.name))).collect::<Vec<_>>().join("\n"));
+
         let code_locals: GMCodeLocals = GMCodeLocals::deserialize(reader)?;
-        Ok(GMFunctions { functions, code_locals, exists: true })
+        Ok(GMFunctions { functions, code_locals, is_yyc: false, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        if !self.exists { return Ok(()) }
-        let count: usize = self.functions.len();
-        let pointer_list_start_pos: usize = builder.len();
-        for _ in 0..count {
-            builder.write_u32(0xDEADC0DE);
-        }
+        if !self.exists || self.is_yyc { return Ok(()) }
 
         for (i, function) in self.functions.iter().enumerate() {
-            let resolved_pointer_pos: usize = builder.len();
-            builder.overwrite_usize(resolved_pointer_pos, pointer_list_start_pos + 4*i)?;
-
             let occurrences: &Vec<usize> = builder.function_occurrences.get(i)
                 .ok_or_else(|| format!("Could not resolve function occurrence with index {i} in list with length {}", builder.function_occurrences.len()))?;
             let occurrence_count: usize = occurrences.len();
             let first_occurrence: i32 = match occurrences.first() {
-                Some(occurrence) if builder.is_gm_version_at_least((2, 3)) => *occurrence as i32,
-                Some(occurrence) => *occurrence as i32 - 4,  // before gm 2.3, the first occurrence points to the instruction rather than the next offset
+                Some(occurrence) if builder.is_gm_version_at_least((2, 3)) => *occurrence as i32 + 4,
+                Some(occurrence) => *occurrence as i32,  // before gm 2.3, the first occurrence points to the instruction rather than the next offset
                 None => function.name_string_id,    // UTMT writes -1 if zero occurrences??? but they handle the occurrence chain differently so maybe it's ok
             };
 
@@ -78,6 +84,7 @@ impl GMElement for GMFunctions {
             builder.write_usize(occurrence_count)?;
             builder.write_i32(first_occurrence);
         }
+
         Ok(())
     }
 }

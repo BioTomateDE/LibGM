@@ -11,11 +11,12 @@ use crate::utility::num_enum_from;
 #[derive(Debug, Clone)]
 pub struct GMCodes {
     pub codes: Vec<GMCode>,
+    pub yyc: bool,
     pub exists: bool,
 }
 impl GMChunkElement for GMCodes {
     fn empty() -> Self {
-        Self { codes: vec![], exists: false }
+        Self { codes: vec![], yyc: false, exists: false }
     }
     fn exists(&self) -> bool {
         self.exists
@@ -23,8 +24,11 @@ impl GMChunkElement for GMCodes {
 }
 impl GMElement for GMCodes {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        if reader.get_chunk_length() == 0 {
+            return Ok(Self { codes: vec![], yyc: true, exists: true })
+        }
         let codes: Vec<GMCode> = reader.read_pointer_list()?;
-        Ok(GMCodes { codes, exists: true })
+        Ok(GMCodes { codes, yyc: false, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
