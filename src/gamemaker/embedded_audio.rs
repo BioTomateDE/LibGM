@@ -16,13 +16,41 @@ impl GMChunkElement for GMEmbeddedAudios {
 }
 impl GMElement for GMEmbeddedAudios {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let audios: Vec<GMEmbeddedAudio> = reader.read_pointer_list()?;
+        let pointers: Vec<usize> = reader.read_simple_list()?;
+        let mut audios: Vec<GMEmbeddedAudio> = Vec::with_capacity(pointers.len());
+        let last_index = pointers.len() - 1;
+
+        for (i, pointer) in pointers.into_iter().enumerate() {
+            reader.cur_pos = pointer;
+            let audio = GMEmbeddedAudio::deserialize(reader)?;
+            if i != last_index {
+                reader.align(4)?;
+            }
+            audios.push(audio);
+        }
+
         Ok(Self { audios, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         if !self.exists { return Ok(()) }
-        builder.write_pointer_list(&self.audios)
+
+        let count: usize = self.audios.len();
+        builder.write_usize(count)?;
+        let pointer_list_start_pos: usize = builder.len();
+        for _ in 0..count {
+            builder.write_u32(0xDEADC0DE);
+        }
+
+        for (i, audio) in self.audios.iter().enumerate() {
+            builder.overwrite_usize(builder.len(), pointer_list_start_pos + 4*i)?;
+            audio.serialize(builder)?;
+            if i != count - 1 {
+                builder.align(4);
+            }
+        }
+
+        Ok(())
     }
 }
 
