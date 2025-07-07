@@ -688,14 +688,12 @@ impl GMBackground {
         println!("  Preload: {}", self.preload);
         println!("  Texture Index: {}", if let Some(ref tex) = self.texture { format!("{}", tex.index) } else { "None".to_string() });
         if let Some(ref gms2_data) = self.gms2_data {
-            println!("  GMS2 Unknown Always 2: {:?}", gms2_data.unknown_always_two);
             println!("  GMS2 Tile Width: {:?}", gms2_data.tile_width);
             println!("  GMS2 Tile Height: {:?}", gms2_data.tile_height);
             println!("  GMS2 Output Border X: {:?}", gms2_data.output_border_x);
             println!("  GMS2 Output Border Y: {:?}", gms2_data.output_border_y);
             println!("  GMS2 Tile Columns: {:?}", gms2_data.tile_columns);
             println!("  GMS2 Items Per Tile Count: {:?}", gms2_data.items_per_tile_count);
-            println!("  GMS2 Unknown Always Zero: {:?}", gms2_data.unknown_always_zero);
             println!("  GMS2 Frame Length: {:?}", gms2_data.frame_length);
             println!("  GMS2 Tile IDs: [{} items]", gms2_data.tile_ids.len());
         }
