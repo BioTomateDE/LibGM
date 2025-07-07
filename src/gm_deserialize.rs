@@ -168,6 +168,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
     let tags: GMTags = reader.read_chunk_optional("TAGS")?;
     let feature_flags: GMFeatureFlags = reader.read_chunk_optional("FEAT")?;
     let filter_effects: GMFilterEffects = reader.read_chunk_optional("FEDS")?;
+    let 
     log::trace!("Parsing chunks took {stopwatch2}");
     
     // Throw error if not all chunks read to prevent silent data loss
