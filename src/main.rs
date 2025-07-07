@@ -1,4 +1,14 @@
 #![deny(unused_must_use)]
+#![deny(unreachable_patterns)]
+#![deny(unused_assignments)]
+#![deny(unused_imports)]
+#![deny(unused_mut)]
+#![deny(unused_macros)]
+#![deny(clippy::all)]
+
+#![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
+#![warn(clippy::cargo)]
 
 mod printing;
 mod gamemaker;
@@ -6,7 +16,7 @@ mod export_mod;
 mod utility;
 mod qoi;
 mod gm_serialize;
-pub mod gm_deserialize;
+mod gm_deserialize;
 mod detect_version;
 mod csharp_rng;
 

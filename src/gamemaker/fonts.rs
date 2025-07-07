@@ -192,7 +192,9 @@ impl GMElement for GMFontGlyph {
         builder.write_u16(self.height);
         builder.write_i16(self.shift_modifier);
         builder.write_i16(self.offset);
-        builder.write_u16(0);   // UnknownAlwaysZero
+        if builder.is_gm_version_at_least((2024, 11)) {
+            builder.write_u16(0);   // UnknownAlwaysZero
+        }
         builder.write_simple_list_short(&self.kernings)?;
         Ok(())
     }
