@@ -40,20 +40,6 @@ impl GMElement for GMEmbeddedAudios {
 
         Ok(())
     }
-
-    fn deserialize_post_padding(reader: &mut DataReader, is_last: bool) -> Result<(), String> {
-        if is_last {
-            reader.align(4)?;
-        }
-        Ok(())
-    }
-
-    fn serialize_post_padding(builder: &mut DataBuilder, is_last: bool) -> Result<(), String> {
-        if is_last {
-            builder.align(4);
-        }
-        Ok(())
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -70,6 +56,20 @@ impl GMElement for GMEmbeddedAudio {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         builder.write_usize(self.audio_data.len())?;
         builder.write_bytes(&self.audio_data);
+        Ok(())
+    }
+
+    fn deserialize_post_padding(reader: &mut DataReader, is_last: bool) -> Result<(), String> {
+        if !is_last {
+            reader.align(4)?;
+        }
+        Ok(())
+    }
+
+    fn serialize_post_padding(builder: &mut DataBuilder, is_last: bool) -> Result<(), String> {
+        if !is_last {
+            builder.align(4);
+        }
         Ok(())
     }
 }
