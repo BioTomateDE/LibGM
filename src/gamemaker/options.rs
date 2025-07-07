@@ -412,9 +412,9 @@ fn build_options_old(builder: &mut DataBuilder, options: &GMOptions) -> Result<(
     builder.write_bool32(options.flags.freeze);
     builder.write_bool32(options.flags.show_progress);
 
-    builder.write_pointer(&options.back_image)?;
-    builder.write_pointer(&options.front_image)?;
-    builder.write_pointer(&options.load_image)?;
+    builder.write_pointer_opt(&options.back_image)?;
+    builder.write_pointer_opt(&options.front_image)?;
+    builder.write_pointer_opt(&options.load_image)?;
 
     builder.write_bool32(options.flags.load_transparent);
 
@@ -441,9 +441,9 @@ fn build_options_new(builder: &mut DataBuilder, options: &GMOptions) -> Result<(
     builder.write_u32(options.frequency);
     builder.write_u32(options.vertex_sync);
     builder.write_u32(options.priority);
-    builder.write_pointer(&options.back_image)?;
-    builder.write_pointer(&options.front_image)?;
-    builder.write_pointer(&options.load_image)?;
+    builder.write_pointer_opt(&options.back_image)?;
+    builder.write_pointer_opt(&options.front_image)?;
+    builder.write_pointer_opt(&options.load_image)?;
     builder.write_u32(options.load_alpha);
     builder.write_simple_list(&options.constants)?;
     Ok(())

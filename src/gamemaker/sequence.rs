@@ -2,6 +2,7 @@ use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use std::collections::HashMap;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
+use crate::gamemaker::animation_curves::GMAnimationCurve;
 use crate::gamemaker::game_objects::GMGameObject;
 use crate::gamemaker::particles::GMParticleSystem;
 use crate::gamemaker::sounds::GMSound;
@@ -648,117 +649,6 @@ impl GMElement for GMTrack {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMAnimationCurve {
-    pub name: GMRef<String>,
-    pub graph_type: u32,
-    pub channels: Vec<GMAnimationCurveChannel>,
-}
-impl GMElement for GMAnimationCurve {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let name: GMRef<String> = reader.read_gm_string()?;
-        let graph_type: u32 = reader.read_u32()?;
-        let channels: Vec<GMAnimationCurveChannel> = reader.read_simple_list()?;
-        Ok(GMAnimationCurve { name, graph_type, channels })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.write_gm_string(&self.name)?;
-        builder.write_u32(self.graph_type.into());
-        builder.write_simple_list(&self.channels)?;
-        Ok(())
-    }
-}
-
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMAnimationCurveChannel {
-    pub name: GMRef<String>,
-    pub curve_type: GMAnimationCurveType,
-    pub iterations: u32,
-    pub points: Vec<GMAnimationCurveChannelPoint>,
-}
-impl GMElement for GMAnimationCurveChannel {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let name: GMRef<String> = reader.read_gm_string()?;
-        let curve_type: u32 = reader.read_u32()?;
-        let curve_type: GMAnimationCurveType = curve_type.try_into()
-            .map_err(|_| format!(
-                "Invalid Curve Type {} for Animation Curve \"{}\" at absolute position {} in chunk '{}'",
-                curve_type, reader.display_gm_str(name), reader.cur_pos, reader.chunk.name,
-            ))?;
-        let iterations: u32 = reader.read_u32()?;
-        let points: Vec<GMAnimationCurveChannelPoint> = reader.read_simple_list()?;
-        Ok(GMAnimationCurveChannel { name, curve_type, iterations, points })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.write_gm_string(&self.name)?;
-        builder.write_u32(self.curve_type.into());
-        builder.write_u32(self.iterations);
-        builder.write_simple_list(&self.points)?;
-        Ok(())
-    }
-}
-
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMAnimationCurveChannelPoint {
-    pub x: f32,
-    pub y: f32,     // aka Value
-    pub bezier_data: Option<GMAnimationCurveChannelPointBezierData>,
-}
-impl GMElement for GMAnimationCurveChannelPoint {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let x: f32 = reader.read_f32()?;
-        let y: f32 = reader.read_f32()?;
-        let bezier_data: Option<GMAnimationCurveChannelPointBezierData>;
-        if reader.general_info.is_version_at_least((2, 3, 1, 0)) {
-            bezier_data = Some(GMAnimationCurveChannelPointBezierData::deserialize(reader)?)
-        } else {
-            reader.read_i32()?;
-            bezier_data = None;
-        };
-        Ok(GMAnimationCurveChannelPoint { x, y, bezier_data })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.write_f32(self.x);
-        builder.write_f32(self.y);
-        if builder.is_gm_version_at_least((2, 3, 1)) {
-            let bezier_data: &GMAnimationCurveChannelPointBezierData = self.bezier_data.as_ref()
-                .ok_or("Sequence Track Animation Curve Point: Bezier data not set in 2.3.1+")?;
-            bezier_data.serialize(builder)?;
-        }
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMAnimationCurveChannelPointBezierData {
-    pub x0: f32,
-    pub y0: f32,
-    pub x1: f32,
-    pub y1: f32,
-}
-impl GMElement for GMAnimationCurveChannelPointBezierData {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let x0: f32 = reader.read_f32()?;
-        let y0: f32 = reader.read_f32()?;
-        let x1: f32 = reader.read_f32()?;
-        let y1: f32 = reader.read_f32()?;
-        Ok(Self { x0, y0, x1, y1 })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.write_f32(self.x0);
-        builder.write_f32(self.y0);
-        builder.write_f32(self.x1);
-        builder.write_f32(self.y1);
-        Ok(())
-    }
-}
-
 
 #[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive, Serialize, Deserialize)]
 #[repr(u32)]
@@ -803,13 +693,5 @@ pub enum GMTrackBuiltinName {
 pub enum GMTrackTraits {
     None,
     ChildrenIgnoreOrigin,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
-#[repr(u32)]
-pub enum GMAnimationCurveType {
-    Linear = 0,
-    Smooth = 1,
-    // bezier missing idk
 }
 
