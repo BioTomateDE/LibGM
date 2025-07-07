@@ -2,14 +2,18 @@
 use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
 use crate::gm_serialize::DataBuilder;
 
+
+const ALIGNMENT: usize = 4;
+
 #[derive(Debug, Clone)]
 pub struct GMStrings {
     pub strings: Vec<String>,
+    pub is_aligned: bool,
     pub exists: bool,
 }
 impl GMChunkElement for GMStrings {
     fn empty() -> Self {
-        Self { strings: vec![], exists: false }
+        Self { strings: vec![], is_aligned: true, exists: false }
     }
     fn exists(&self) -> bool {
         self.exists
@@ -17,13 +21,20 @@ impl GMChunkElement for GMStrings {
 }
 impl GMElement for GMStrings {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let start_positions: Vec<usize> = reader.read_simple_list()?;
+        let mut is_aligned: bool = true;
+        let pointers: Vec<usize> = reader.read_simple_list()?;
 
-        let mut strings_by_index: Vec<String> = Vec::with_capacity(start_positions.len());
-        let mut abs_pos_to_reference: HashMap<usize, GMRef<String>> = HashMap::with_capacity(start_positions.len());
+        let mut strings_by_index: Vec<String> = Vec::with_capacity(pointers.len());
+        let mut abs_pos_to_reference: HashMap<usize, GMRef<String>> = HashMap::with_capacity(pointers.len());
 
-        for (i, pointer) in start_positions.into_iter().enumerate() {
+        for (i, pointer) in pointers.into_iter().enumerate() {
+            if pointer % ALIGNMENT != 0 {
+                is_aligned = false;
+            }
             reader.cur_pos = pointer;
+            if is_aligned {
+                reader.align(ALIGNMENT)?;
+            }
             let string_length: usize = reader.read_usize()?;
             let string: String = reader.read_literal_string(string_length)?;
             let byte: u8 = reader.read_u8()?;
@@ -46,7 +57,7 @@ impl GMElement for GMStrings {
 
         reader.string_occurrence_map = abs_pos_to_reference;
         
-        Ok(GMStrings { strings: strings_by_index, exists: true })
+        Ok(GMStrings { strings: strings_by_index, is_aligned, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
@@ -61,6 +72,9 @@ impl GMElement for GMStrings {
         }
         
         for (i, string) in self.strings.iter().enumerate() {
+            if self.is_aligned {
+                builder.align(ALIGNMENT);
+            }
             builder.overwrite_usize(builder.len(), pointer_list_start + 4*i)?;
             builder.write_usize(string.len())?;
             builder.resolve_pointer(string)?;   // gamemaker string references point to the actual string data

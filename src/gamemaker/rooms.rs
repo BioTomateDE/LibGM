@@ -1141,17 +1141,13 @@ impl GMElement for GMRoomGameObject {
         builder.write_resource_id_opt(&self.creation_code);
         builder.write_f32(self.scale_x);
         builder.write_f32(self.scale_y);
-        if builder.is_gm_version_at_least((2, 2, 2, 302)) {
-            builder.write_f32(self.image_speed.ok_or("Room Game Object: Image Speed not set in 2.2.2.302+")?);
-            builder.write_usize(self.image_index.ok_or("Room Game Object: Image Index not set in 2.2.2.302+")?)?;
-        }
+        self.image_speed.serialize_if_gm_ver(builder, "Image Speed", (2, 2, 2, 302))?;
+        self.image_index.serialize_if_gm_ver(builder, "Image Index", (2, 2, 2, 302))?;
         builder.write_u32(self.color);
         builder.write_f32(self.rotation);
         if builder.bytecode_version() >= 16 {
             builder.write_resource_id_opt(&self.pre_create_code);
-        } else {
-            builder.write_i32(-1);
-        }
+        };
         Ok(())
     }
 }

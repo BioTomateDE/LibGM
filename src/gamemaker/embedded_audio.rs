@@ -66,7 +66,7 @@ impl GMElement for GMEmbeddedAudio {
         Ok(())
     }
 
-    fn serialize_post_padding(builder: &mut DataBuilder, is_last: bool) -> Result<(), String> {
+    fn serialize_post_padding(&self, builder: &mut DataBuilder, is_last: bool) -> Result<(), String> {
         if !is_last {
             builder.align(4);
         }

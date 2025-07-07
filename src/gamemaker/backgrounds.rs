@@ -1,31 +1,38 @@
 use crate::gm_deserialize::{GMChunkElement, GMElement, DataReader, GMRef};
 use crate::gamemaker::texture_page_items::GMTexturePageItem;
-use crate::gm_serialize::DataBuilder;
+use crate::gm_serialize::{DataBuilder, GMSerializeIfVersion};
 use crate::utility::vec_with_capacity;
+
+const ALIGNMENT: usize = 8;
 
 #[derive(Debug, Clone)]
 pub struct GMBackgrounds {
     pub backgrounds: Vec<GMBackground>,
+    pub is_aligned: bool,
     pub exists: bool,
 }
 impl GMChunkElement for GMBackgrounds {
     fn empty() -> Self {
-        Self { backgrounds: vec![], exists: false }
+        Self { backgrounds: vec![], is_aligned: true, exists: false }
     }
     fn exists(&self) -> bool {
         self.exists
     }
 }
 impl GMElement for GMBackgrounds {
-    // TODO UndertaleAlignUpdatedListChunk for BGND and STRG
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let backgrounds: Vec<GMBackground> = reader.read_pointer_list()?;
-        Ok(Self { backgrounds, exists: true })
+        let mut is_aligned: bool = true;
+        let backgrounds: Vec<GMBackground> = reader.read_aligned_list_chunk(ALIGNMENT, &mut is_aligned)?;
+        Ok(Self { backgrounds, is_aligned, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         if !self.exists { return Ok(()) }
-        builder.write_pointer_list(&self.backgrounds)?;
+        if self.is_aligned {
+            builder.write_aligned_list_chunk(&self.backgrounds, ALIGNMENT)?;
+        } else {
+            builder.write_pointer_list(&self.backgrounds)?;
+        }
         Ok(())
     }
 }
@@ -47,10 +54,7 @@ impl GMElement for GMBackground {
         let smooth: bool = reader.read_bool32()?;
         let preload: bool = reader.read_bool32()?;
         let texture: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
-        
-        let gms2_data: Option<GMBackgroundGMS2Data> = if reader.general_info.is_version_at_least((2, 0, 0, 0)) {
-            Some(GMBackgroundGMS2Data::deserialize(reader)?)
-        } else { None };
+        let gms2_data: Option<GMBackgroundGMS2Data> = reader.deserialize_if_gm_version((2, 0))?;
         
         Ok(GMBackground { name, transparent, smooth, preload, texture, gms2_data })
     }
@@ -60,11 +64,8 @@ impl GMElement for GMBackground {
         builder.write_bool32(self.transparent);
         builder.write_bool32(self.smooth);
         builder.write_bool32(self.preload);
-        builder.write_resource_id_opt(&self.texture);
-        if builder.is_gm_version_at_least((2, 0, 0, 0)) {
-            let gms2_data = self.gms2_data.as_ref().ok_or("GMS2 data not set")?;
-            gms2_data.serialize(builder)?;
-        }
+        builder.write_gm_texture_opt(&self.texture)?;
+        self.gms2_data.serialize_if_gm_ver(builder, "GMS2 data", (2, 0))?;
         Ok(())
     }
 }
