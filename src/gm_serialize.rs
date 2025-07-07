@@ -113,7 +113,7 @@ impl<'a> DataBuilder<'a> {
             log::trace!("Skipped building chunk '{chunk_name}' because it does not exist");
             return Ok(())
         }
-        
+
         let stopwatch = Stopwatch::start();
         self.write_literal_string(chunk_name);
         self.write_u32(0xDEADC0DE);   // chunk length placeholder

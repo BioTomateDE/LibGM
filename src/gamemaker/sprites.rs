@@ -56,6 +56,7 @@ pub struct GMSprite {
 }
 impl GMElement for GMSprite {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        reader.align(4)?;
         let name: GMRef<String> = reader.read_gm_string()?;
         let name_str: String = reader.display_gm_str(name).to_string();
         let width: u32 = reader.read_u32()?;
@@ -184,6 +185,7 @@ impl GMElement for GMSprite {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.align(4);
         builder.write_gm_string(&self.name)?;
         builder.write_u32(self.width);
         builder.write_u32(self.height);
