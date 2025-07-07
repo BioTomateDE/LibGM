@@ -273,9 +273,9 @@ impl GMElement for GMParticleEmitter {
         let orientation_wiggle: f32 = reader.read_f32()?;
         let orientation_relative: bool = reader.read_bool32()?;
 
-        let spawn_on_death: Option<GMRef<GMParticleEmitter>> = reader.read_resource_by_id_option()?;
+        let spawn_on_death: Option<GMRef<GMParticleEmitter>> = reader.read_resource_by_id_opt()?;
         let spawn_on_death_count: u32 = reader.read_u32()?;
-        let spawn_on_update: Option<GMRef<GMParticleEmitter>> = reader.read_resource_by_id_option()?;
+        let spawn_on_update: Option<GMRef<GMParticleEmitter>> = reader.read_resource_by_id_opt()?;
         let spawn_on_update_count: u32 = reader.read_u32()?;
 
         Ok(GMParticleEmitter {

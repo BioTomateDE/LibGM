@@ -77,7 +77,7 @@ impl GMElement for GMRoom {
         let persistent: bool = reader.read_bool32()?;
         let background_color: u32 = reader.read_u32()? | 0xFF000000;   // make alpha 255 (background color doesn't have transparency)
         let draw_background_color: bool = reader.read_bool32()?;
-        let creation_code: Option<GMRef<GMCode>> = reader.read_resource_by_id_option()?;
+        let creation_code: Option<GMRef<GMCode>> = reader.read_resource_by_id_opt()?;
         let flags = GMRoomFlags::deserialize(reader)?;
 
         let backgrounds_ptr: usize = reader.read_pointer()?;
@@ -284,7 +284,7 @@ impl GMElement for GMRoomView {
         let border_y: u32 = reader.read_u32()?;
         let speed_x: i32 = reader.read_i32()?;
         let speed_y: i32 = reader.read_i32()?;
-        let object: Option<GMRef<GMGameObject>> = reader.read_resource_by_id_option()?;
+        let object: Option<GMRef<GMGameObject>> = reader.read_resource_by_id_opt()?;
 
         Ok(GMRoomView {
             enabled,
@@ -341,7 +341,7 @@ impl GMElement for GMRoomBackground {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let enabled: bool = reader.read_bool32()?;
         let foreground: bool = reader.read_bool32()?;
-        let background_definition: Option<GMRef<GMBackground>> = reader.read_resource_by_id_option()?;
+        let background_definition: Option<GMRef<GMBackground>> = reader.read_resource_by_id_opt()?;
         let x: i32 = reader.read_i32()?;
         let y: i32 = reader.read_i32()?;
         let tile_x: i32 = reader.read_i32()?;    // idk if this should be an int instead of a bool
@@ -390,9 +390,9 @@ impl GMElement for GMRoomTile {
         let x: i32 = reader.read_i32()?;
         let y: i32 = reader.read_i32()?;
         let texture: GMRoomTileTexture = if reader.general_info.is_version_at_least((2, 0)) {
-            GMRoomTileTexture::Sprite(reader.read_resource_by_id_option()?)
+            GMRoomTileTexture::Sprite(reader.read_resource_by_id_opt()?)
         } else {
-            GMRoomTileTexture::Background(reader.read_resource_by_id_option()?)
+            GMRoomTileTexture::Background(reader.read_resource_by_id_opt()?)
         };
         let source_x: u32 = reader.read_u32()?;
         let source_y: u32 = reader.read_u32()?;
@@ -687,7 +687,7 @@ impl GMElement for GMRoomLayerDataBackground {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let visible: bool = reader.read_bool32()?;
         let foreground: bool = reader.read_bool32()?;
-        let sprite: Option<GMRef<GMSprite>> = reader.read_resource_by_id_option()?;
+        let sprite: Option<GMRef<GMSprite>> = reader.read_resource_by_id_opt()?;
         let tiled_horizontally: bool = reader.read_bool32()?;
         let tiled_vertically: bool = reader.read_bool32()?;
         let stretch: bool = reader.read_bool32()?;
@@ -1098,7 +1098,7 @@ impl GMElement for GMRoomGameObject {
         let y: i32 = reader.read_i32()?;
         let object_definition: GMRef<GMGameObject> = reader.read_resource_by_id()?;
         let instance_id: u32 = reader.read_u32()?;
-        let creation_code: Option<GMRef<GMCode>> = reader.read_resource_by_id_option()?;
+        let creation_code: Option<GMRef<GMCode>> = reader.read_resource_by_id_opt()?;
         let scale_x: f32 = reader.read_f32()?;
         let scale_y: f32 = reader.read_f32()?;
         let mut image_speed: Option<f32> = None;
@@ -1112,7 +1112,7 @@ impl GMElement for GMRoomGameObject {
 
         // [From UndertaleModTool] "is that dependent on bytecode or something else?"
         let pre_create_code: Option<GMRef<GMCode>> = if reader.general_info.bytecode_version >= 16 {
-            reader.read_resource_by_id_option()?
+            reader.read_resource_by_id_opt()?
         } else {
             None
         };
