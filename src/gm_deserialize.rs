@@ -671,6 +671,27 @@ impl<'a> DataReader<'a> {
         Ok(elements)
     }
 
+    /// UndertaleAlignUpdatedListChunk; used for BGND and STRG
+    pub fn read_aligned_list_chunk<T: GMElement>(&mut self, alignment: usize, is_aligned: &mut bool) -> Result<Vec<T>, String> {
+        let pointers: Vec<usize> = self.read_simple_list()?;
+        let mut elements: Vec<T> = Vec::with_capacity(pointers.len());
+
+        for pointer in pointers {
+            if pointer % alignment != 0 {
+                *is_aligned = false;
+            }
+            if pointer == 0 {
+                continue    // can happen in 2024.11+ (unused assets removal)
+            }
+            let element = T::deserialize(self)?;
+            if *is_aligned {
+                self.align(alignment)?;
+            }
+            elements.push(element);
+        }
+        Ok(elements)
+    }
+
     pub fn align(&mut self, alignment: usize) -> Result<(), String> {
         while self.cur_pos & (alignment - 1) != 0 {
             if self.cur_pos > self.chunk.end_pos {
@@ -767,7 +788,7 @@ pub trait GMElement {
     fn deserialize_post_padding(reader: &mut DataReader, is_last: bool) -> Result<(), String> {
         Ok(())
     }
-    fn serialize_post_padding(builder: &mut DataBuilder, is_last: bool) -> Result<(), String> {
+    fn serialize_post_padding(&self, builder: &mut DataBuilder, is_last: bool) -> Result<(), String> {
         Ok(())
     }
 }

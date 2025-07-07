@@ -258,11 +258,34 @@ impl<'a> DataBuilder<'a> {
                 "{e}\n↳ while building pointer list of {} with {} elements",
                 typename::<T>(), count,
             ))?;
-            T::serialize_post_padding(self, i == count-1)?;
+            element.serialize_post_padding(self, i == count-1)?;
         }
         Ok(())
     }
 
+    /// UndertaleAlignUpdatedListChunk; used for BGND and STRG.
+    /// Assumes `chunk.is_aligned`.
+    /// TODO: copypasted ass function
+    pub fn write_aligned_list_chunk<T: GMElement>(&mut self, elements: &Vec<T>, alignment: usize) -> Result<(), String> {
+        let count: usize = elements.len();
+        self.write_usize(count)?;
+        let pointer_list_start_pos: usize = self.len();
+        for _ in 0..count {
+            self.write_u32(0xDEADC0DE);
+        }
+
+        for (i, element) in elements.iter().enumerate() {
+            self.align(alignment);
+            let resolved_pointer_pos: usize = self.len();
+            self.overwrite_usize(resolved_pointer_pos, pointer_list_start_pos + 4*i)?;
+            element.serialize(self).map_err(|e| format!(
+                "{e}\n↳ while building aligned chunk pointer list of {} with {} elements",
+                typename::<T>(), count,
+            ))?;
+            element.serialize_post_padding(self, i == count-1)?;
+        }
+        Ok(())
+    }
 
     /// Create a placeholder pointer at the current position in the chunk and remember
     /// its data position paired with the target GameMaker element's memory address.
