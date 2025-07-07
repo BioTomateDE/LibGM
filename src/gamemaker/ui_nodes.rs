@@ -67,9 +67,7 @@ impl GMElement for GMNodeUI {
             }
         }
 
-        if data_pointer != reader.cur_pos {
-            return Err(format!("UI Node data pointer misaligned: expected position {} but reader is actually at {}", data_pointer, reader.cur_pos))
-        }
+        reader.assert_pos(data_pointer, "UI Node data")?;
         
         let node: GMNodeUIData = match type_id {
             0 => GMNodeUIData::Layer(GMNodeUILayer::deserialize(reader)?),

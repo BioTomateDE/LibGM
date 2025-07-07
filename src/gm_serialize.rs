@@ -258,6 +258,7 @@ impl<'a> DataBuilder<'a> {
                 "{e}\n↳ while building pointer list of {} with {} elements",
                 typename::<T>(), count,
             ))?;
+            T::serialize_post_padding(self, i == count-1)?;
         }
         Ok(())
     }
