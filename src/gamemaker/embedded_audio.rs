@@ -16,19 +16,7 @@ impl GMChunkElement for GMEmbeddedAudios {
 }
 impl GMElement for GMEmbeddedAudios {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let pointers: Vec<usize> = reader.read_simple_list()?;
-        let mut audios: Vec<GMEmbeddedAudio> = Vec::with_capacity(pointers.len());
-        let last_index = pointers.len() - 1;
-
-        for (i, pointer) in pointers.into_iter().enumerate() {
-            reader.cur_pos = pointer;
-            let audio = GMEmbeddedAudio::deserialize(reader)?;
-            if i != last_index {
-                reader.align(4)?;
-            }
-            audios.push(audio);
-        }
-
+        let audios: Vec<GMEmbeddedAudio> = reader.read_pointer_list()?;
         Ok(Self { audios, exists: true })
     }
 
@@ -50,6 +38,20 @@ impl GMElement for GMEmbeddedAudios {
             }
         }
 
+        Ok(())
+    }
+
+    fn deserialize_post_padding(reader: &mut DataReader, is_last: bool) -> Result<(), String> {
+        if is_last {
+            reader.align(4)?;
+        }
+        Ok(())
+    }
+
+    fn serialize_post_padding(builder: &mut DataBuilder, is_last: bool) -> Result<(), String> {
+        if is_last {
+            builder.align(4);
+        }
         Ok(())
     }
 }
