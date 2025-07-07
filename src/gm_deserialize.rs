@@ -648,11 +648,14 @@ impl<'a> DataReader<'a> {
     }
 
     pub fn read_pointer_list<T: GMElement>(&mut self) -> Result<Vec<T>, String> {
+        // TODO implement 2024.11+ null pointers (unused asset removal)
         let pointers: Vec<usize> = self.read_simple_list()?;
         let count: usize = pointers.len();
-        let mut elements: Vec<T> = Vec::with_capacity(pointers.len());
+
+        let mut elements: Vec<T> = Vec::with_capacity(count);
         for pointer in pointers {
-            self.cur_pos = pointer;
+            self.assert_pos(pointer, &format!("(Pointer list) {}", typename::<T>()))?;
+            //// assume elements are stored contiguously (just like utmt does)
             let element = T::deserialize(self).map_err(|e| format!(
                 "{e}\n↳ while reading pointer list of {} with {} elements",
                 typename::<T>(), count,
@@ -672,7 +675,7 @@ impl<'a> DataReader<'a> {
         Ok(())
     }
 
-    pub fn assert_pos(&self, position: usize, pointer_name: &'static str) -> Result<(), String> {
+    pub fn assert_pos(&self, position: usize, pointer_name: &str) -> Result<(), String> {
         if self.cur_pos != position {
             return Err(format!("{pointer_name} pointer misaligned: expected position {} but reader is actually at {}", position, self.cur_pos))
         }
@@ -746,9 +749,14 @@ fn resolve_occurrence<T>(occurrence_position: usize, occurrence_map: &HashMap<us
     }
 }
 
+
+#[allow(unused_variables)]
 pub trait GMElement {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> where Self: Sized;
+    fn deserialize_post_padding(reader: &mut DataReader, is_last: bool) -> Result<(), String> { Ok(()) }
+
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String>;
+    fn serialize_post_padding(builder: &mut DataBuilder, is_last: bool) -> Result<(), String> { Ok(()) }
 }
 
 impl GMElement for u8 {
