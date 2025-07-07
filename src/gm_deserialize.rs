@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use crate::utility::{format_bytes, typename, Stopwatch};
 use crate::gm_serialize::DataBuilder;
 use crate::detect_version::detect_gamemaker_version;
+use crate::gamemaker::animation_curves::GMAnimationCurves;
 use crate::gamemaker::audio_groups::GMAudioGroups;
 use crate::gamemaker::backgrounds::GMBackgrounds;
 use crate::gamemaker::code::GMCodes;
@@ -38,8 +39,8 @@ use crate::gamemaker::timelines::GMTimelines;
 
 #[derive(Debug, Clone)]
 pub struct GMData {
-    pub strings: GMStrings,                             // STRG
     pub general_info: GMGeneralInfo,                    // GEN8
+    pub strings: GMStrings,                             // STRG
     pub embedded_textures: GMEmbeddedTextures,          // TXTR
     pub texture_page_items: GMTexturePageItems,         // TPAG
     pub variables: GMVariables,                         // VARI
@@ -72,6 +73,7 @@ pub struct GMData {
     pub tags: GMTags,                                   // TAGS
     pub feature_flags: GMFeatureFlags,                  // FEAT
     pub filter_effects: GMFilterEffects,                // FEDS
+    pub animation_curves: GMAnimationCurves,            // ACRV
 
     /// Should not be edited; only set by `GMData::read_chunk_padding`.
     pub padding: usize,
@@ -168,7 +170,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
     let tags: GMTags = reader.read_chunk_optional("TAGS")?;
     let feature_flags: GMFeatureFlags = reader.read_chunk_optional("FEAT")?;
     let filter_effects: GMFilterEffects = reader.read_chunk_optional("FEDS")?;
-    let 
+    let animation_curves: GMAnimationCurves = reader.read_chunk_optional("ACRV")?;
     log::trace!("Parsing chunks took {stopwatch2}");
     
     // Throw error if not all chunks read to prevent silent data loss
@@ -181,8 +183,8 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
     }
 
     let data = GMData {
-        strings: reader.strings,
         general_info: reader.general_info,
+        strings: reader.strings,
         embedded_textures,
         texture_page_items,
         variables,
@@ -215,6 +217,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
         tags,
         feature_flags,
         filter_effects,
+        animation_curves,
         padding: reader.padding,
     };
 
@@ -588,10 +591,6 @@ impl<'a> DataReader<'a> {
             return Ok(None)
         }
         Ok(Some(resolve_occurrence(occurrence_position, &self.texture_page_item_occurrence_map, &self.chunk.name, self.cur_pos)?))
-    }
-
-    pub fn read_gm_element<T: GMElement>(&mut self) -> Result<T, String> {
-        T::deserialize(self)
     }
 
     fn read_simple_list_internal<T>(&mut self, deserializer_fn: impl Fn(&mut Self) -> Result<T, String>) -> Result<Vec<T>, String> {

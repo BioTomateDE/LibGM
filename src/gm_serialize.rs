@@ -11,15 +11,15 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     
     builder.write_literal_string("FORM");
     builder.write_u32(0xDEADC0DE);  // data length placeholder
-
+    
     builder.build_chunk("GEN8", &gm_data.general_info)?;
     builder.build_chunk("STRG", &gm_data.strings)?;
     builder.build_chunk("TXTR", &gm_data.embedded_textures)?;
     builder.build_chunk("TPAG", &gm_data.texture_page_items)?;
-    builder.build_chunk("CODE", &gm_data.codes)?;
     builder.build_chunk("VARI", &gm_data.variables)?;
     builder.build_chunk("FUNC", &gm_data.functions)?;
     builder.build_chunk("SCPT", &gm_data.scripts)?;
+    builder.build_chunk("CODE", &gm_data.codes)?;
     builder.build_chunk("FONT", &gm_data.fonts)?;
     builder.build_chunk("SPRT", &gm_data.sprites)?;
     builder.build_chunk("OBJT", &gm_data.game_objects)?;
@@ -28,7 +28,8 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     builder.build_chunk("PATH", &gm_data.paths)?;
     builder.build_chunk("AUDO", &gm_data.audios)?;
     builder.build_chunk("SOND", &gm_data.sounds)?;
-    
+    builder.build_chunk("OPTN", &gm_data.options)?;
+    builder.build_chunk("SEQN", &gm_data.sequences)?;
     builder.build_chunk("PSYS", &gm_data.particle_systems)?;
     builder.build_chunk("PSEM", &gm_data.particle_emitters)?;
     builder.build_chunk("LANG", &gm_data.language_info)?;
@@ -45,9 +46,13 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     builder.build_chunk("TAGS", &gm_data.tags)?;
     builder.build_chunk("FEAT", &gm_data.feature_flags)?;
     builder.build_chunk("FEDS", &gm_data.filter_effects)?;
+    builder.build_chunk("ACRV", &gm_data.animation_curves)?;
 
     // undo padding for last chunk
-    builder.raw_data.truncate(builder.padding_start_pos);   // kind of unstable; may cause issues
+    let padding_data: Vec<u8> = builder.raw_data.split_off(builder.padding_start_pos);
+    if padding_data.iter().any(|i| *i != 0) {
+        return Err("Built padding at end of the data contains non-null bytes; something went wrong internally".to_string())
+    }
     
     // resolve pointers/placeholders
     let stopwatch2 = Stopwatch::start();
@@ -96,7 +101,7 @@ impl<'a> DataBuilder<'a> {
     pub fn new(gm_data: &'a GMData) -> Self {
         Self {
             gm_data,
-            raw_data: Vec::new(),
+            raw_data: Vec::new(),   // TODO: use Vec::with_capacity with original data size
             padding_start_pos: 0,   // should only cause issues if no chunks were written at all (impossible)
             pointer_placeholder_positions: Vec::new(),
             pointer_resource_positions: HashMap::new(),
@@ -300,6 +305,9 @@ impl<'a> DataBuilder<'a> {
     pub fn write_pointer<T>(&mut self, element: &T) -> Result<(), String> {
         let memory_address: usize = element as *const _ as usize;
         let placeholder_position: u32 = self.len() as u32;  // gamemaker is 32bit anyway
+        if placeholder_position == 56305698 {
+            log::debug!("well shit")
+        }
         self.write_u32(0xDEADC0DE);
         self.pointer_placeholder_positions.push((placeholder_position, memory_address));
         Ok(())
