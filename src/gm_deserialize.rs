@@ -492,7 +492,7 @@ impl<'a> DataReader<'a> {
         if self.cur_pos != self.chunk.end_pos {
             return Err(format!(
                 "Misaligned chunk '{}': expected chunk end position {} but reader is actually at position {} (diff: {})",
-                self.chunk.name, self.chunk.end_pos, self.cur_pos, self.chunk.end_pos - self.cur_pos,
+                self.chunk.name, self.chunk.end_pos, self.cur_pos, self.chunk.end_pos as i64 - self.cur_pos as i64,
             ))
         }
 
@@ -653,13 +653,14 @@ impl<'a> DataReader<'a> {
         let count: usize = pointers.len();
 
         let mut elements: Vec<T> = Vec::with_capacity(count);
-        for pointer in pointers {
+        for (i, pointer) in pointers.into_iter().enumerate() {
+            // TODO maybe pre padding (sprites) is "skipped" in the pointer?
             self.assert_pos(pointer, &format!("(Pointer list) {}", typename::<T>()))?;
-            //// assume elements are stored contiguously (just like utmt does)
             let element = T::deserialize(self).map_err(|e| format!(
                 "{e}\n↳ while reading pointer list of {} with {} elements",
                 typename::<T>(), count,
             ))?;
+            T::deserialize_post_padding(self, i == count-1)?;
             elements.push(element);
         }
         Ok(elements)
@@ -677,7 +678,10 @@ impl<'a> DataReader<'a> {
 
     pub fn assert_pos(&self, position: usize, pointer_name: &str) -> Result<(), String> {
         if self.cur_pos != position {
-            return Err(format!("{pointer_name} pointer misaligned: expected position {} but reader is actually at {}", position, self.cur_pos))
+            return Err(format!(
+                "{} pointer misaligned: expected position {} but reader is actually at {} (diff: {})",
+                pointer_name, position, self.cur_pos, position as i64 - self.cur_pos as i64,
+            ))
         }
         Ok(())
     }
@@ -753,10 +757,14 @@ fn resolve_occurrence<T>(occurrence_position: usize, occurrence_map: &HashMap<us
 #[allow(unused_variables)]
 pub trait GMElement {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> where Self: Sized;
-    fn deserialize_post_padding(reader: &mut DataReader, is_last: bool) -> Result<(), String> { Ok(()) }
-
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String>;
-    fn serialize_post_padding(builder: &mut DataBuilder, is_last: bool) -> Result<(), String> { Ok(()) }
+
+    fn deserialize_post_padding(reader: &mut DataReader, is_last: bool) -> Result<(), String> {
+        Ok(())
+    }
+    fn serialize_post_padding(builder: &mut DataBuilder, is_last: bool) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 impl GMElement for u8 {

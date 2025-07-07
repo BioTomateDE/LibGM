@@ -29,8 +29,19 @@ impl GMChunkElement for GMEmbeddedTextures {
 }
 impl GMElement for GMEmbeddedTextures {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let texture_pages: Vec<GMEmbeddedTexture> = reader.read_pointer_list()?;
-        reader.align(4)?;   // maybe relative chunk position?
+        let mut texture_pages: Vec<GMEmbeddedTexture> = reader.read_pointer_list()?;
+        for texture_page in &mut texture_pages {
+            let Some(ref mut gm_image) = texture_page.image else {
+                continue
+            };
+            let GMImage::NotYetDeserialized(blob_position) = gm_image else {
+                return Err("GMImage enum variant is somehow not `NotYetDeserialized`".to_string())
+            };
+            reader.cur_pos = *blob_position;
+            *gm_image = read_raw_texture(reader)?;
+        }
+
+        reader.align(4)?;
         Ok(Self { texture_pages, exists: true })
     }
 
@@ -101,11 +112,10 @@ impl GMElement for GMEmbeddedTexture {
         let data_2022_9: Option<GMEmbeddedTexture2022_9> = reader.deserialize_if_gm_version((2022, 9))?;
 
         let texture_data_start_pos: usize = reader.read_pointer()?;
-        let image: Option<GMImage> = if texture_data_start_pos == 0 {   // can be zero if the texture is "external"
-            None
+        let image: Option<GMImage> = if texture_data_start_pos == 0 {
+            None    // texture_data_start_pos is zero if the texture is "external"
         } else {
-            reader.cur_pos = texture_data_start_pos;
-            Some(read_raw_texture(reader)?)
+            Some(GMImage::NotYetDeserialized(texture_data_start_pos))
         };
 
         Ok(GMEmbeddedTexture { scaled, generated_mips, texture_block_size, data_2022_9, image })
@@ -149,10 +159,10 @@ fn read_raw_texture(reader: &mut DataReader) -> Result<GMImage, String> {
     if header == MAGIC_PNG_HEADER {
         // Parse PNG
         loop {
-            let len: usize = u32::from_be_bytes(*reader.read_bytes_const()?) as usize;
-            let type_: usize = u32::from_be_bytes(*reader.read_bytes_const()?) as usize;
-            reader.cur_pos += len + 4;
-            if type_ == 0x49454E44 {    // "IEND"
+            let len: u32 = u32::from_be_bytes(*reader.read_bytes_const()?) as u32;
+            let r#type: u32 = u32::from_be_bytes(*reader.read_bytes_const()?);
+            reader.cur_pos += len as usize + 4;
+            if r#type == 0x49454E44 {    // "IEND"
                 break;
             }
         }
@@ -197,6 +207,7 @@ pub enum GMImage {
     DynImg(DynamicImage),
     Png(Vec<u8>),
     Bz2Qoi(Vec<u8>),
+    NotYetDeserialized(usize),
 }
 impl GMImage {
     pub fn from_dynamic_image(dyn_img: DynamicImage) -> Self {
@@ -216,6 +227,7 @@ impl GMImage {
             GMImage::DynImg(dyn_img) => Ok(Cow::Borrowed(dyn_img)),
             GMImage::Png(raw_png_data) => Ok(Cow::Owned(Self::decode_png(&raw_png_data)?)),
             GMImage::Bz2Qoi(raw_bz2_qoi_data) => Ok(Cow::Owned(Self::decode_bz2_qoi(&raw_bz2_qoi_data)?)),
+            GMImage::NotYetDeserialized(_) => Err("Image not deserialized".to_string())
         }
     }
 
@@ -242,6 +254,7 @@ impl GMImage {
             }
             GMImage::Png(raw_png_data) => builder.write_bytes(&raw_png_data),
             GMImage::Bz2Qoi(raw_bz2_qoi_data) => builder.write_bytes(&raw_bz2_qoi_data),
+            GMImage::NotYetDeserialized(_) => return Err("Image not deserialized".to_string()),
         }
         Ok(())
     }
