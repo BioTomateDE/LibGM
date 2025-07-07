@@ -675,14 +675,19 @@ impl<'a> DataReader<'a> {
     pub fn read_aligned_list_chunk<T: GMElement>(&mut self, alignment: usize, is_aligned: &mut bool) -> Result<Vec<T>, String> {
         let pointers: Vec<usize> = self.read_simple_list()?;
         let mut elements: Vec<T> = Vec::with_capacity(pointers.len());
-
-        for pointer in pointers {
+        
+        for pointer in &pointers {
             if pointer % alignment != 0 {
                 *is_aligned = false;
             }
-            if pointer == 0 {
-                continue    // can happen in 2024.11+ (unused assets removal)
+            if *pointer == 0 {
+                // can happen in 2024.11+ (unused assets removal)
+                return Err("Null pointers are not yet supported while parsing aligned list chunk".to_string())
             }
+        }
+        
+        for pointer in pointers {
+            self.assert_pos(pointer, "Aligned list chunk")?;    // UTMT doesn't do this afaik
             let element = T::deserialize(self)?;
             if *is_aligned {
                 self.align(alignment)?;

@@ -73,20 +73,21 @@ impl GMElement for GMBackground {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMBackgroundGMS2Data {
-    pub unknown_always_two: u32,
     pub tile_width: u32,
     pub tile_height: u32,
     pub output_border_x: u32,
     pub output_border_y: u32,
     pub tile_columns: u32,
     pub items_per_tile_count: usize,
-    pub unknown_always_zero: u32,
     pub frame_length: i64,
     pub tile_ids: Vec<u32>,
 }
 impl GMElement for GMBackgroundGMS2Data {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let unknown_always_two: u32 = reader.read_u32()?;
+        if unknown_always_two != 2 {
+            return Err(format!("Expected UnknownAlwaysTwo but got {unknown_always_two} in Background GMS2 data"))
+        }
         let tile_width: u32 = reader.read_u32()?;
         let tile_height: u32 = reader.read_u32()?;
         let output_border_x: u32 = reader.read_u32()?;
@@ -98,6 +99,9 @@ impl GMElement for GMBackgroundGMS2Data {
         }
         let tile_count: usize = reader.read_usize()?;
         let unknown_always_zero: u32 = reader.read_u32()?;
+        if unknown_always_zero != 0 {
+            return Err(format!("Expected UnknownAlwaysZero but got {unknown_always_zero} in Background GMS2 data"))
+        }
         let frame_length: i64 = reader.read_i64()?;
 
         let total_tile_count: usize = tile_count * items_per_tile_count;
@@ -107,21 +111,19 @@ impl GMElement for GMBackgroundGMS2Data {
         }
 
         Ok(GMBackgroundGMS2Data {
-            unknown_always_two,
             tile_width,
             tile_height,
             output_border_x,
             output_border_y,
             tile_columns,
             items_per_tile_count,
-            unknown_always_zero,
             frame_length,
             tile_ids,
         })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.write_u32(self.unknown_always_two);
+        builder.write_u32(2);       // UnknownAlwaysTwo
         builder.write_u32(self.tile_width);
         builder.write_u32(self.tile_height);
         builder.write_u32(self.output_border_x);
@@ -143,7 +145,7 @@ impl GMElement for GMBackgroundGMS2Data {
         builder.write_usize(items_per_tile)?;
         builder.write_usize(tile_count)?;
         
-        builder.write_u32(self.unknown_always_zero);
+        builder.write_u32(0);   // UnknownAlwaysZero
         builder.write_i64(self.frame_length);
         for tile_id in &self.tile_ids {
             builder.write_u32(*tile_id);

@@ -103,7 +103,7 @@ impl GMElement for GMTexturePageItem {
         builder.write_u16(self.target_height);
         builder.write_u16(self.bounding_width);
         builder.write_u16(self.bounding_height);
-        builder.write_resource_id(&self.texture_page);
+        builder.write_u16(self.texture_page.index as u16);
         Ok(())
     }
 }
