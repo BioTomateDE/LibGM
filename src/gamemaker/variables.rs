@@ -8,11 +8,12 @@ pub struct GMVariables {
     /// List of all variables; mixing global, local and self.
     pub variables: Vec<GMVariable>,
     pub scuffed: Option<GMVariablesScuffed>,
+    pub yyc: bool,
     pub exists: bool,
 }
 impl GMChunkElement for GMVariables {
     fn empty() -> Self {
-        Self { variables: vec![], scuffed: None, exists: false }
+        Self { variables: vec![], scuffed: None, yyc: false, exists: false }
     }
     fn exists(&self) -> bool {
         self.exists
@@ -20,6 +21,9 @@ impl GMChunkElement for GMVariables {
 }
 impl GMElement for GMVariables {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        if reader.get_chunk_length() == 0 {
+            return Ok(Self { variables: vec![], scuffed: None, yyc: true, exists: true })
+        }
         let variables_length: usize = if reader.general_info.bytecode_version >= 15 { 20 } else { 12 };
         let variable_count: usize = reader.get_chunk_length() / variables_length;
         let scuffed: Option<GMVariablesScuffed> = reader.deserialize_if_bytecode_version(15)?;
@@ -57,11 +61,11 @@ impl GMElement for GMVariables {
             cur_index += 1;
         }
 
-        Ok(GMVariables { variables, scuffed, exists: true })
+        Ok(GMVariables { variables, scuffed, yyc: false, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        if !self.exists { return Ok(()) }
+        if !self.exists || self.yyc { return Ok(()) }
         self.scuffed.serialize_if_bytecode_ver(builder, "Scuffed bytecode 15 fields", 15)?;
         for (i, variable) in self.variables.iter().enumerate() {
             builder.write_gm_string(&variable.name)?;
@@ -71,7 +75,7 @@ impl GMElement for GMVariables {
                 .ok_or_else(|| format!("Could not resolve variable occurrence with index {i} in list with length {}", builder.function_occurrences.len()))?;
             let occurrence_count: usize = occurrences.len();
             let first_occurrence: i32 = match occurrences.first() {
-                Some((occurrence, _)) => *occurrence as i32 - 4,    // subtract 4 so it points to the instruction; not the next offset
+                Some((occurrence, _)) => *occurrence as i32,
                 None => variable.name_string_id,    // not sure if correct tbh
             };
             builder.write_usize(occurrence_count)?;
