@@ -258,6 +258,7 @@ impl<'a> DataBuilder<'a> {
         }
 
         for (i, element) in elements.iter().enumerate() {
+            element.serialize_pre_padding(self)?;
             let resolved_pointer_pos: usize = self.len();
             self.overwrite_usize(resolved_pointer_pos, pointer_list_start_pos + 4*i)?;
             element.serialize(self).map_err(|e| format!(
@@ -288,7 +289,6 @@ impl<'a> DataBuilder<'a> {
                 "{e}\n↳ while building aligned chunk pointer list of {} with {} elements",
                 typename::<T>(), count,
             ))?;
-            element.serialize_post_padding(self, i == count-1)?;
         }
         Ok(())
     }

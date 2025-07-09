@@ -38,7 +38,6 @@ impl GMElement for GMShaders {
             let [pointer, entry_end] = win else { unreachable!("Iterator window size somehow not 2") };
             reader.cur_pos = *pointer;
             let name: GMRef<String> = reader.read_gm_string()?;
-            log::debug!("gbdsudgsbug {}", reader.resolve_gm_str(name)?);
             let shader_type: GMShaderType = num_enum_from(reader.read_u32()? & 0x7FFFFFFF)?;
 
             let glsl_es_vertex: GMRef<String> = reader.read_gm_string()?;
@@ -250,6 +249,7 @@ fn read_shader_data(
     if expected_length == 0 {
         // might be unnecessary but im just going to copy the utmt logic exactly
         if actual_length != 0 {
+            // this seems to be normal??? the warning can be removed probably
             log::warn!("Shader expected length is zero but actual length is {actual_length}");
         }
         let data: Vec<u8> = reader.read_bytes_dyn(actual_length)?.to_vec();
