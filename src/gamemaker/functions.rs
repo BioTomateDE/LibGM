@@ -69,6 +69,10 @@ impl GMElement for GMFunctions {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         if !self.exists || self.is_yyc { return Ok(()) }
+        
+        if builder.bytecode_version() >= 15 {
+            builder.write_usize(self.functions.len())?;
+        }
 
         for (i, function) in self.functions.iter().enumerate() {
             let occurrences: &Vec<usize> = builder.function_occurrences.get(i)
@@ -84,6 +88,11 @@ impl GMElement for GMFunctions {
             builder.write_usize(occurrence_count)?;
             builder.write_i32(first_occurrence);
         }
+        
+        if builder.bytecode_version() >= 15 && !builder.is_gm_version_at_least((2024, 8)) {
+            // could assert that they actually exist
+            self.code_locals.serialize(builder)?;
+        }
 
         Ok(())
     }
@@ -93,14 +102,6 @@ impl GMElement for GMFunctions {
 pub struct GMFunction {
     pub name: GMRef<String>,
     pub name_string_id: i32,
-}
-impl GMElement for GMFunction {
-    fn deserialize(_: &mut DataReader) -> Result<Self, String> {
-        unreachable!("[internal error] GMFunction::deserialize is not supported; use GMFunctions::deserialize instead")
-    }
-    fn serialize(&self, _: &mut DataBuilder) -> Result<(), String> {
-        unreachable!("[internal error] GMFunction::serialize is not supported; use GMFunctions::serialize instead")
-    }
 }
 
 
@@ -119,7 +120,7 @@ impl GMChunkElement for GMCodeLocals {
 }
 impl GMElement for GMCodeLocals {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        if reader.general_info.bytecode_version <= 14 || reader.general_info.is_version_at_least((2024, 8, 0, 0)) {
+        if reader.general_info.bytecode_version <= 14 || reader.general_info.is_version_at_least((2024, 8)) {
             return Ok(Self::empty())
         }
         let code_locals: Vec<GMCodeLocal> = reader.read_simple_list()?;

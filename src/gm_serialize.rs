@@ -215,7 +215,7 @@ impl<'a> DataBuilder<'a> {
         Ok(())
     }
 
-    pub fn write_simple_list_of_resource_ids<T: GMElement>(&mut self, elements: &Vec<GMRef<T>>) -> Result<(), String> {
+    pub fn write_simple_list_of_resource_ids<T/*: GMElement*/>(&mut self, elements: &Vec<GMRef<T>>) -> Result<(), String> {
         self.write_usize(elements.len())?;
         for gm_ref in elements {
             self.write_resource_id(gm_ref);
