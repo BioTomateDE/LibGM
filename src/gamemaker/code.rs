@@ -1,5 +1,5 @@
 ﻿use crate::gm_deserialize::{DataReader, GMChunkElement, GMElement, GMRef};
-use crate::gamemaker::variables::{GMVariable, GMVariableB15Data};
+use crate::gamemaker::variables::GMVariable;
 use std::cmp::PartialEq;
 use std::fmt::{Display, Formatter};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
@@ -307,8 +307,8 @@ impl GMElement for GMInstruction {
                     ));
                 }
 
-                let destination: GMCodeVariable = read_variable(reader, &instance_type)?;
-                GMInstructionData::Pop(GMPopInstruction { instance_type, type1, type2, destination })
+                let destination: GMCodeVariable = read_variable(reader, instance_type)?;
+                GMInstructionData::Pop(GMPopInstruction { type1, type2, destination })
             }
 
             GMOpcode::Push |
@@ -332,7 +332,7 @@ impl GMElement for GMInstruction {
 
                 let value: GMValue = if data_type == GMDataType::Variable {
                     let instance_type: GMInstanceType = parse_instance_type(val)?;
-                    let variable: GMCodeVariable = read_variable(reader, &instance_type)?;
+                    let variable: GMCodeVariable = read_variable(reader, instance_type)?;
                     GMValue::Variable(variable)
                 } else {
                     read_code_value(reader, data_type)?
@@ -477,7 +477,7 @@ impl GMElement for GMInstruction {
                 let type1: u8 = instr.type1.into();
                 let type2: u8 = instr.type2.into();
 
-                builder.write_i16(build_instance_type(&instr.instance_type));
+                builder.write_i16(build_instance_type(&instr.destination.instance_type));
                 builder.write_u8(type1 | type2 << 4);
                 builder.write_u8(opcode_raw);
 
@@ -489,12 +489,7 @@ impl GMElement for GMInstruction {
                 // Write 16-bit integer, instance type, or empty data
                 builder.write_i16(match &instr.value {
                     GMValue::Int16(int16) => *int16,
-                    // maybe the bytecode14 check is wrong???
-                    GMValue::Variable(variable) if !bytecode14 => {
-                        let variable: &GMVariable = variable.variable.resolve(&builder.gm_data.variables.variables)?;
-                        let b15_data: &GMVariableB15Data = variable.b15_data.as_ref().ok_or("Variable Bytecode 15 data not set while building Push Instruction")?;
-                        build_instance_type(&b15_data.instance_type)
-                    },
+                    GMValue::Variable(variable) => build_instance_type(&variable.instance_type),
                     _ => 0
                 });
 
@@ -656,7 +651,6 @@ pub struct GMGotoInstruction {
 }
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMPopInstruction {
-    pub instance_type: GMInstanceType,
     pub type1: GMDataType,
     pub type2: GMDataType,
     pub destination: GMCodeVariable,
@@ -756,6 +750,7 @@ pub enum GMComparisonType {
 pub struct GMCodeVariable {
     pub variable: GMRef<GMVariable>,
     pub variable_type: GMVariableType,
+    pub instance_type: GMInstanceType,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -795,7 +790,7 @@ fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMV
 }
 
 
-fn read_variable(reader: &mut DataReader, instance_type: &GMInstanceType) -> Result<GMCodeVariable, String> {
+fn read_variable(reader: &mut DataReader, instance_type: GMInstanceType) -> Result<GMCodeVariable, String> {
     let occurrence_position: usize = reader.cur_pos;
     let raw_value: i32 = reader.read_i32()?;
 
@@ -809,7 +804,7 @@ fn read_variable(reader: &mut DataReader, instance_type: &GMInstanceType) -> Res
             instance_type, occurrence_position, reader.variable_occurrence_map.len(),
         ))?.clone();
 
-    Ok(GMCodeVariable { variable, variable_type })
+    Ok(GMCodeVariable { variable, variable_type, instance_type })
 }
 
 
