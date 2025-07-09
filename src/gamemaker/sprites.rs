@@ -56,7 +56,6 @@ pub struct GMSprite {
 }
 impl GMElement for GMSprite {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        reader.align(4)?;
         let name: GMRef<String> = reader.read_gm_string()?;
         let name_str: String = reader.display_gm_str(name).to_string();
         let width: u32 = reader.read_u32()?;
@@ -119,9 +118,11 @@ impl GMElement for GMSprite {
 
                     // read YYSWF
                     reader.align(4)?;
-                    let jpeg_len: i32 = reader.read_i32()? & (!0x80000000u32 as i32);    // the length is `OR`ed with int.MinValue
-                    let jpeg_len: usize = jpeg_len as usize;
+                    let jpeg_len: usize = (reader.read_i32()? & (!i32::MIN)) as usize;
                     let yyswf_version: i32 = reader.read_i32()?;
+                    if !matches!(yyswf_version, 7|8) {
+                        return Err(format!("Expected YYSWF Version 7 or 8 but got {yyswf_version}"))
+                    }
                     let jpeg_table: Vec<u8> = reader.read_bytes_dyn(jpeg_len).map_err(|e| format!("Trying to read YYSWF JPEG Table {e}"))?.to_vec();
                     reader.align(4)?;
                     let timeline = GMSpriteYYSWFTimeline::deserialize(reader)?;
@@ -185,7 +186,6 @@ impl GMElement for GMSprite {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.align(4);
         builder.write_gm_string(&self.name)?;
         builder.write_u32(self.width);
         builder.write_u32(self.height);
@@ -276,7 +276,18 @@ impl GMElement for GMSprite {
         }
         Ok(())
     }
+
+    fn deserialize_pre_padding(reader: &mut DataReader) -> Result<(), String> {
+        reader.align(4)?;
+        Ok(())
+    }
+
+    fn serialize_pre_padding(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        builder.align(4);
+        Ok(())
+    }
 }
+
 impl GMSprite {
     fn read_texture_list(reader: &mut DataReader) -> Result<Vec<Option<GMRef<GMTexturePageItem>>>, String> {
         let count: usize = reader.read_usize()?;
@@ -385,14 +396,7 @@ impl GMElement for GMSpriteNineSlice {
             *tile_mode = num_enum_from(reader.read_i32()?)?;
         }
 
-        Ok(GMSpriteNineSlice {
-            left,
-            top,
-            right,
-            bottom,
-            enabled,
-            tile_modes,
-        })
+        Ok(GMSpriteNineSlice { left, top, right, bottom, enabled, tile_modes })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {

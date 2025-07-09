@@ -657,7 +657,7 @@ impl<'a> DataReader<'a> {
             // note: this scuffed closure is only used to prevent repetition in map_err.
             //       it will be replaced when try blocks are added to stable.
             let element: T = (|| {
-                // TODO maybe pre padding (sprites) is "skipped" in the pointer?
+                T::deserialize_pre_padding(self)?;
                 self.assert_pos(pointer, &format!("(Pointer list) {}", typename::<T>()))?;
                 let element = T::deserialize(self)?;
                 T::deserialize_post_padding(self, i == count-1)?;
@@ -790,6 +790,12 @@ pub trait GMElement {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> where Self: Sized;
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String>;
 
+    fn deserialize_pre_padding(reader: &mut DataReader) -> Result<(), String> {
+        Ok(())
+    }
+    fn serialize_pre_padding(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        Ok(())
+    }
     fn deserialize_post_padding(reader: &mut DataReader, is_last: bool) -> Result<(), String> {
         Ok(())
     }
