@@ -38,7 +38,8 @@ impl GMElement for GMShaders {
             let [pointer, entry_end] = win else { unreachable!("Iterator window size somehow not 2") };
             reader.cur_pos = *pointer;
             let name: GMRef<String> = reader.read_gm_string()?;
-            let shader_type: GMShaderType = num_enum_from(reader.read_u32()?)?;
+            log::debug!("gbdsudgsbug {}", reader.resolve_gm_str(name)?);
+            let shader_type: GMShaderType = num_enum_from(reader.read_u32()? & 0x7FFFFFFF)?;
 
             let glsl_es_vertex: GMRef<String> = reader.read_gm_string()?;
             let glsl_es_fragment: GMRef<String> = reader.read_gm_string()?;
@@ -156,7 +157,7 @@ impl GMElement for GMShader {
     
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         builder.write_gm_string(&self.name)?;
-        builder.write_u32(self.shader_type.into());
+        builder.write_u32(u32::from(self.shader_type) | 0x80000000);
         builder.write_gm_string(&self.glsl_es_vertex)?;
         builder.write_gm_string(&self.glsl_es_fragment)?;
         builder.write_gm_string(&self.glsl_vertex)?;
