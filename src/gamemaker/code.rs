@@ -272,19 +272,16 @@ impl GMElement for GMInstruction {
             GMOpcode::PushEnv |
             GMOpcode::PopEnv => {
                 if reader.general_info.bytecode_version <= 14 {
-                    let jump_offset: i32 = b0 as i32 | ((b1 as u32) << 8) as i32 | ((b2 as i32) << 16);     // yeah idk
+                    let jump_offset: i32 = b0 as i32 | ((b1 as u32) << 8) as i32 | ((b2 as i32) << 16);
                     let popenv_exit_magic: bool = jump_offset == -1048576;      // little endian [00 00 F0]
-                    GMInstructionData::Goto(GMGotoInstruction {
-                        jump_offset,
-                        popenv_exit_magic,
-                    })
+                    GMInstructionData::Goto(GMGotoInstruction { jump_offset, popenv_exit_magic })
                 } else {
                     let v: u32 = b0 as u32 | ((b1 as u32) << 8) | ((b2 as u32) << 16);      // i hate bitshifting
                     let popenv_exit_magic: bool = (v & 0x800000) != 0;
                     if popenv_exit_magic && v != 0xF00000 {
                         return Err("\"Popenv magic doesn't work\" while parsing Goto Instruction".to_string());
                     }
-                    // The rest is int23 signed value, so make sure (<-- idk what this is supposed to mean)
+                    // "The rest is int23 signed value, so make sure" (<-- idk what this is supposed to mean)
                     let mut jump_offset: u32 = v & 0x003FFFFF;
                     if (v & 0x00C00000) != 0 {
                         jump_offset |= 0xFFC00000;
@@ -311,12 +308,7 @@ impl GMElement for GMInstruction {
                 }
 
                 let destination: GMCodeVariable = read_variable(reader, &instance_type)?;
-                GMInstructionData::Pop(GMPopInstruction {
-                    instance_type,
-                    type1,
-                    type2,
-                    destination,
-                })
+                GMInstructionData::Pop(GMPopInstruction { instance_type, type1, type2, destination })
             }
 
             GMOpcode::Push |
@@ -346,10 +338,7 @@ impl GMElement for GMInstruction {
                     read_code_value(reader, data_type)?
                 };
 
-                GMInstructionData::Push(GMPushInstruction {
-                    data_type,
-                    value,
-                })
+                GMInstructionData::Push(GMPushInstruction { data_type, value })
             }
 
             GMOpcode::Call => {
@@ -379,11 +368,7 @@ impl GMElement for GMInstruction {
 
                 // other set gms version stuff {~~}
 
-                GMInstructionData::Break(GMBreakInstruction {
-                    value,
-                    data_type,
-                    int_argument,
-                })
+                GMInstructionData::Break(GMBreakInstruction { value, data_type, int_argument })
             } 
        };
        
@@ -504,6 +489,7 @@ impl GMElement for GMInstruction {
                 // Write 16-bit integer, instance type, or empty data
                 builder.write_i16(match &instr.value {
                     GMValue::Int16(int16) => *int16,
+                    // maybe the bytecode14 check is wrong???
                     GMValue::Variable(variable) if !bytecode14 => {
                         let variable: &GMVariable = variable.variable.resolve(&builder.gm_data.variables.variables)?;
                         let b15_data: &GMVariableB15Data = variable.b15_data.as_ref().ok_or("Variable Bytecode 15 data not set while building Push Instruction")?;
@@ -524,7 +510,7 @@ impl GMElement for GMInstruction {
                     GMValue::Float(float) => builder.write_f32(*float),
                     GMValue::Int32(int32) => builder.write_i32(*int32),
                     GMValue::Int64(int64) => builder.write_i64(*int64),
-                    GMValue::Boolean(boolean) => builder.write_u8(if *boolean {1} else {0}),
+                    GMValue::Boolean(boolean) => builder.write_u32(if *boolean {1} else {0}),
                     GMValue::String(string_ref) => builder.write_u32(string_ref.index),
                     GMValue::Int16(_) => {}     // nothing because it was already written inside the instruction
                     GMValue::Variable(code_variable) => {
@@ -791,7 +777,7 @@ fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMV
         GMDataType::Float => reader.read_f32().map(|i| GMValue::Float(i)),
         GMDataType::Int32 => reader.read_i32().map(|i| GMValue::Int32(i)),
         GMDataType::Int64 => reader.read_i64().map(|i| GMValue::Int64(i)),
-        GMDataType::Boolean => reader.read_u8().map(|i| match i {
+        GMDataType::Boolean => reader.read_u32().map(|i| match i {
             0 => Ok(GMValue::Boolean(false)),
             1 => Ok(GMValue::Boolean(true)),
             other => Err(format!("Invalid boolean value {other} (0x{other:02X}) while reading value in code at absolute position {}", reader.cur_pos-1))
@@ -833,8 +819,8 @@ pub fn parse_instance_type(raw_value: i16) -> Result<GMInstanceType, String> {
         return Ok(GMInstanceType::Instance(Some(GMRef::new(raw_value as u32))))
     }
 
-    let instance_type = match raw_value {
-        0 => GMInstanceType::Undefined,         // this doesn't exit in UTMT anymore but enums in C# can hold any value so idk
+    let instance_type: GMInstanceType = match raw_value {
+        0 => GMInstanceType::Undefined,         // this doesn't exist in UTMT anymore but enums in C# can hold any value so idk
         -1 => GMInstanceType::Instance(None),
         -2 => GMInstanceType::Other,
         -3 => GMInstanceType::All,
