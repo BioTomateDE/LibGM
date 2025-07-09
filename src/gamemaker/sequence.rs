@@ -64,7 +64,7 @@ pub struct GMSequence {
     pub broadcast_messages: Vec<GMKeyframeData<GMBroadcastMessage>>,
     pub tracks: Vec<GMTrack>,
     pub function_ids: HashMap<i32, GMRef<String>>,
-    pub moments: Vec<GMKeyframeMoment>
+    pub moments: Vec<GMKeyframeData<GMKeyframeMoment>>
 }
 impl GMElement for GMSequence {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
@@ -90,30 +90,14 @@ impl GMElement for GMSequence {
         let tracks: Vec<GMTrack> = reader.read_simple_list()?;
 
         let function_id_count: usize = reader.read_usize()?;
-        if function_id_count > 10000 {
-            return Err(format!("Function id count {function_id_count} larger than failsafe amount 10k"))
-        }
-        let mut function_ids: HashMap<i32, GMRef<String>> = HashMap::with_capacity(function_id_count);
+        let mut function_ids: HashMap<i32, GMRef<String>> = hashmap_with_capacity(function_id_count)?;
         for _ in 0..function_id_count {
             let key: i32 = reader.read_i32()?;
             let function_id: GMRef<String> = reader.read_gm_string()?;
             function_ids.insert(key, function_id);
         }
 
-        let moments_count: usize = reader.read_usize()?;
-        let mut moments: Vec<GMKeyframeMoment> = Vec::with_capacity(moments_count);
-        for _ in 0..moments_count {
-            let internal_count: i32 = reader.read_i32()?;
-            let mut event: Option<GMRef<String>> = None;
-            if internal_count > 0 {
-                event = Some(reader.read_gm_string()?);
-            }
-            let moment: GMKeyframeMoment = GMKeyframeMoment {
-                internal_count,
-                event
-            };
-            moments.push(moment);
-        }
+        let moments: Vec<GMKeyframeData<GMKeyframeMoment>> = reader.read_simple_list()?;
 
         Ok(GMSequence {
             name,
@@ -148,10 +132,13 @@ impl GMElement for GMSequence {
         }
         builder.write_simple_list(&self.broadcast_messages)?;
         builder.write_simple_list(&self.tracks)?;
+        
+        builder.write_usize(self.function_ids.len())?;
         for (key, function_id) in &self.function_ids {
             builder.write_i32(*key);
             builder.write_gm_string(function_id)?;
         }
+        
         builder.write_simple_list(&self.moments)?;
         Ok(())
     }
@@ -525,7 +512,7 @@ impl GMElement for GMTrack {
         }
         if tag_count < 0 {
             return Err(format!(
-                "Invalid Track tag count {} while parsing Track at position {} in chunk '{}'",
+                "Invalid Track Tag count {} while parsing Track at position {} in chunk '{}'",
                 tag_count, reader.cur_pos, reader.chunk.name,
             ));
         }
@@ -537,7 +524,7 @@ impl GMElement for GMTrack {
         }
         if owned_resources_count < 0 {
             return Err(format!(
-                "Invalid Track owned resources count {} while parsing Track at position {} in chunk '{}'",
+                "Invalid Track Owned Resources count {} while parsing Track at position {} in chunk '{}'",
                 owned_resources_count, reader.cur_pos, reader.chunk.name,
             ));
         }
@@ -549,7 +536,7 @@ impl GMElement for GMTrack {
         }
         if track_count < 0 {
             return Err(format!(
-                "Invalid Track track count {} while parsing Track at position {} in chunk '{}'",
+                "Invalid Track Track count {} while parsing Track at position {} in chunk '{}'",
                 track_count, reader.cur_pos, reader.chunk.name,
             ));
         }
