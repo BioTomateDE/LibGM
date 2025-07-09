@@ -618,7 +618,7 @@ impl<'a> DataReader<'a> {
         self.read_simple_list_internal(T::deserialize)
     }
 
-    pub fn read_simple_list_of_resource_ids<T: GMElement>(&mut self) -> Result<Vec<GMRef<T>>, String> {
+    pub fn read_simple_list_of_resource_ids<T/*: GMElement*/>(&mut self) -> Result<Vec<GMRef<T>>, String> {
         self.read_simple_list_internal(|reader| reader.read_resource_by_id())
     }
 

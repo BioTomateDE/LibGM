@@ -27,23 +27,101 @@ impl GMElement for GMCodes {
         if reader.get_chunk_length() == 0 {
             return Ok(Self { codes: vec![], yyc: true, exists: true })
         }
-        let codes: Vec<GMCode> = reader.read_pointer_list()?;
+        
+        let pointers: Vec<usize> = reader.read_simple_list()?;
+        reader.cur_pos = match pointers.first() {
+            Some(ptr) => *ptr,
+            None => return Ok(Self { codes: vec![], yyc: false, exists: true })
+        };
+        let count: usize = pointers.len();
+        let mut codes: Vec<GMCode> = Vec::with_capacity(count);
+        let mut instructions_ranges: Vec<(usize, usize)> = Vec::with_capacity(count);
+        let mut last_pos = reader.cur_pos;
+        
+        for pointer in pointers {
+            reader.assert_pos(pointer, "Code")?;
+            let name: GMRef<String> = reader.read_gm_string()?;
+            let code_length: usize = reader.read_usize()?;
+
+            let instructions_start_pos: usize;
+            let instructions_end_pos: usize;
+            let bytecode15_info: Option<GMCodeBytecode15>;
+
+            if reader.general_info.bytecode_version <= 14 {
+                instructions_start_pos = reader.cur_pos;    // instructions are placed immediately after code metadata; how convenient!
+                instructions_end_pos = reader.cur_pos + code_length;
+                bytecode15_info = None;
+            } else {
+                let locals_count: u16 = reader.read_u16()?;
+                let arguments_count_raw: u16 = reader.read_u16()?;
+                let arguments_count: u16 = arguments_count_raw & 0x7FFF;
+                let weird_local_flag: bool = arguments_count_raw & 0x8000 != 0;
+
+                let instructions_start_offset: i32 = reader.read_i32()?;
+                instructions_start_pos = (instructions_start_offset + reader.cur_pos as i32 - 4) as usize;
+
+                let offset: usize = reader.read_usize()?;
+                // child check {~~}
+                let b15_info = GMCodeBytecode15 { locals_count, arguments_count, weird_local_flag, offset };
+                instructions_end_pos = instructions_start_pos + code_length;
+                bytecode15_info = Some(b15_info);
+            };
+            
+            codes.push(GMCode { name, instructions: vec![], bytecode15_info });
+            instructions_ranges.push((instructions_start_pos, instructions_end_pos));
+            last_pos = reader.cur_pos;
+        }
+        
+        for (i, (start, end)) in instructions_ranges.into_iter().enumerate() {
+            let code: &mut GMCode = &mut codes[i];
+            let length: usize = end - start;
+            reader.cur_pos = start;
+            code.instructions = Vec::with_capacity(length / 3);  // estimate; TODO: better estimate
+
+            while reader.cur_pos < end {
+                let instruction = GMInstruction::deserialize(reader).map_err(|e| format!(
+                    "{e}\n↳ for Instruction #{} (at absolute position {}) of Code entry \"{}\" with absolute start position {}",
+                    code.instructions.len(), reader.cur_pos, reader.display_gm_str(code.name), start,
+                ))?;
+                code.instructions.push(instruction);
+            }
+            code.instructions.shrink_to_fit();
+        }
+        
+        reader.cur_pos = last_pos;  // has to be chunk end (since instructions are stored separately in b15+)
         Ok(GMCodes { codes, yyc: false, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         if !self.exists { return Ok(()) }
-        
-        // bytecode 14 my beloved
-        if builder.bytecode_version() <= 14 {
-            builder.write_pointer_list(&self.codes)?;
-            return Ok(())
-        }
-        
+
         builder.write_usize(self.codes.len())?;
         let pointer_list_pos: usize = builder.len();
         for _ in 0..self.codes.len() {
             builder.write_u32(0xDEADC0DE);
+        }
+        
+        // bytecode 14 my beloved
+        if builder.bytecode_version() <= 14 {
+            for (i, code) in self.codes.iter().enumerate() {
+                builder.overwrite_usize(builder.len(), pointer_list_pos + 4*i)?;
+                builder.write_gm_string(&code.name)?;
+                let length_placeholder_pos: usize = builder.len();
+                builder.write_u32(0xDEADC0DE);
+                let start: usize = builder.len();
+
+                // in bytecode 14, instructions are written immediately
+                for (i, instruction) in code.instructions.iter().enumerate() {
+                    instruction.serialize(builder).map_err(|e| format!(
+                        "{e}\n↳ while building bytecode14 code #{i} with name \"{}\"",
+                        builder.display_gm_str(&code.name),
+                    ))?;
+                }
+
+                let code_length: usize = builder.len() - start;
+                builder.overwrite_usize(code_length, length_placeholder_pos)?;
+            }
+            return Ok(())
         }
         
         // in bytecode 15, the codes' instructions are written before the codes metadata
@@ -63,13 +141,16 @@ impl GMElement for GMCodes {
 
         for (i, code) in self.codes.iter().enumerate() {
             builder.overwrite_usize(builder.len(), pointer_list_pos + 4*i)?;
+            let length: usize = instructions_end_positions[i] - instructions_start_positions[i];
             let b15_info: &GMCodeBytecode15 = code.bytecode15_info.as_ref()
                 .ok_or_else(|| format!("Code bytecode 15 data not set in Bytecode version {}", builder.bytecode_version()))?;
-            let length = instructions_end_positions[i] - instructions_start_positions[i];
+            
+            builder.write_gm_string(&code.name)?;
             builder.write_usize(length)?;
             builder.write_u16(b15_info.locals_count);
             builder.write_u16(b15_info.arguments_count | if b15_info.weird_local_flag {0x8000} else {0});
-            builder.write_i32(instructions_start_positions[i] as i32 - builder.len() as i32);  // bytecode relative address
+            let instructions_start_offset: i32 = instructions_start_positions[i] as i32 - builder.len() as i32;
+            builder.write_i32(instructions_start_offset);
             builder.write_usize(b15_info.offset)?;
         }
         
@@ -84,71 +165,6 @@ pub struct GMCode {
     pub instructions: Vec<GMInstruction>,
     pub bytecode15_info: Option<GMCodeBytecode15>,
 }
-impl GMElement for GMCode {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let name: GMRef<String> = reader.read_gm_string()?;
-        let code_length: usize = reader.read_usize()?;
-        // log::warn!("{}", reader.resolve_gm_str(name)?);
-
-        let instructions_start_pos: usize;
-        let instructions_end_pos: usize;
-        let bytecode15_info: Option<GMCodeBytecode15>;
-        
-        if reader.general_info.bytecode_version <= 14 {
-            instructions_start_pos = reader.cur_pos;    // instructions are placed immediately after code metadata; how convenient!
-            instructions_end_pos = reader.cur_pos + code_length;
-            bytecode15_info = None;
-        } else {
-            let b15_info = GMCodeBytecode15::deserialize(reader)?;
-            instructions_start_pos = b15_info.bytecode_start_address;
-            instructions_end_pos = b15_info.bytecode_start_address + code_length;
-            bytecode15_info = Some(b15_info);
-        };
-        
-        let saved_pos: usize = reader.cur_pos;
-        reader.cur_pos = instructions_start_pos;
-        let mut instructions: Vec<GMInstruction> = Vec::with_capacity(code_length / 3);  // estimate
-        
-        while reader.cur_pos < instructions_end_pos {
-            let instruction = GMInstruction::deserialize(reader).map_err(|e| format!(
-                "{e}\n↳ for Instruction #{} (at absolute position {}) of Code entry \"{}\" with absolute start position {}",
-                instructions.len(), reader.cur_pos, reader.display_gm_str(name), instructions_start_pos,
-            ))?;
-            instructions.push(instruction);
-        }
-
-        instructions.shrink_to_fit();
-        if reader.general_info.bytecode_version >= 15 {
-            reader.cur_pos = saved_pos;     // since the instructions are stored somewhere else
-        }
-        Ok(GMCode { name, instructions, bytecode15_info })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        if builder.bytecode_version() > 14 {
-            return Err(format!(
-                "[internal error] GMCode::serialize is only meant to be called for bytecode14; data has bytecode version {}",
-                builder.bytecode_version(),
-            ))
-        }
-        builder.write_gm_string(&self.name)?;
-        let length_placeholder_pos: usize = builder.len();
-        builder.write_u32(0xDEADC0DE);
-        let start: usize = builder.len();
-
-        // in bytecode 14, instructions are written immediately
-        for (i, instruction) in self.instructions.iter().enumerate() {
-            instruction.serialize(builder).map_err(|e| format!(
-                "{e}\n↳ while building bytecode14 code #{i} with name \"{}\"",
-                builder.display_gm_str(&self.name),
-            ))?;
-        }
-
-        let code_length: usize = builder.len() - start;
-        builder.overwrite_usize(code_length, length_placeholder_pos)?;
-        Ok(())
-    }
-}
 
 
 #[derive(Debug, Clone, PartialEq)]
@@ -157,28 +173,6 @@ pub struct GMCodeBytecode15 {
     pub arguments_count: u16,
     pub weird_local_flag: bool,
     pub offset: usize,
-    /// only exists for deserializing code
-    bytecode_start_address: usize,
-}
-impl GMElement for GMCodeBytecode15 {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let locals_count: u16 = reader.read_u16()?;
-        let arguments_count_raw: u16 = reader.read_u16()?;
-        let arguments_count: u16 = arguments_count_raw & 0x7FFF;
-        let weird_local_flag: bool = arguments_count_raw & 0x8000 != 0;
-
-        let bytecode_relative_address: i32 = reader.read_i32()?;
-        let bytecode_start_address: usize = (bytecode_relative_address + reader.cur_pos as i32 - 4) as usize;
-
-        let offset: usize = reader.read_usize()?;
-        // child check {~~}
-
-        Ok(GMCodeBytecode15 { locals_count, arguments_count, weird_local_flag, offset, bytecode_start_address })
-    }
-
-    fn serialize(&self, _builder: &mut DataBuilder) -> Result<(), String> {
-        unreachable!("[internal error] GMCodeBytecode15::serialize is not supported; use GMCodes::serialize instead")
-    }
 }
 
 
