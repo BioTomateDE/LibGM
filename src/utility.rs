@@ -151,16 +151,19 @@ pub fn hashmap_with_capacity<K, V>(count: usize) -> Result<HashMap<K, V>, String
 
 
 /// most readable rust function:
-pub fn num_enum_from<I, E>(value: I) -> Result<E, String>
+pub fn num_enum_from<I, N>(value: I) -> Result<N, String>
 where
     I: Display + UpperHex + Copy,
-    E: TryFromPrimitive + TryFrom<I>,
+    N: TryFromPrimitive + TryFrom<I>,
 {
-    value.try_into().map_err(|_| format!(
-        "Invalid {0} {1} (0x{1:0width$X})",
-        typename::<E>(),
-        value,
-        width = size_of::<I>() * 2,
-    ))
+    match value.try_into() {
+        Ok(val) => Ok(val),
+        Err(_) => Err(format!(
+            "Invalid {0} {1} (0x{1:0width$X})",
+            typename::<N>(),
+            value,
+            width = size_of::<I>() * 2,
+        )),
+    }
 }
 
