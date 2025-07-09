@@ -687,11 +687,11 @@ impl<'a> DataReader<'a> {
         }
         
         for pointer in pointers {
-            self.assert_pos(pointer, "Aligned list chunk")?;    // UTMT doesn't do this afaik
-            let element = T::deserialize(self)?;
             if *is_aligned {
                 self.align(alignment)?;
             }
+            self.assert_pos(pointer, "Aligned list chunk")?;    // UTMT doesn't do this afaik
+            let element = T::deserialize(self)?;
             elements.push(element);
         }
         Ok(elements)
