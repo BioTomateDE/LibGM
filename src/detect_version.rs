@@ -1129,8 +1129,7 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
     let code_count = reader.read_usize()?;
     let mut code_pointers = vec_with_capacity(code_count)?;
     for _ in 0..code_count {
-        let ptr = reader.read_usize()?;
-        // log::debug!("gndseudsh {} | {}", ptr, code_count);
+        let ptr: usize = reader.read_usize()?;
         if ptr != 0 {
             code_pointers.push(ptr);
         }

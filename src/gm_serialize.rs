@@ -306,9 +306,6 @@ impl<'a> DataBuilder<'a> {
     pub fn write_pointer<T>(&mut self, element: &T) -> Result<(), String> {
         let memory_address: usize = element as *const _ as usize;
         let placeholder_position: u32 = self.len() as u32;  // gamemaker is 32bit anyway
-        if placeholder_position == 56305698 {
-            log::debug!("well shit")
-        }
         self.write_u32(0xDEADC0DE);
         self.pointer_placeholder_positions.push((placeholder_position, memory_address));
         Ok(())
