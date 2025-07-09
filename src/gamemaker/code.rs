@@ -49,7 +49,8 @@ impl GMElement for GMCodes {
 
             if reader.general_info.bytecode_version <= 14 {
                 instructions_start_pos = reader.cur_pos;    // instructions are placed immediately after code metadata; how convenient!
-                instructions_end_pos = reader.cur_pos + code_length;
+                reader.cur_pos += code_length;  // skip over them; they will get parsed in the next loop
+                instructions_end_pos = reader.cur_pos;
                 bytecode15_info = None;
             } else {
                 let locals_count: u16 = reader.read_u16()?;
