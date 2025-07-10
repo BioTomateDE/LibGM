@@ -95,7 +95,7 @@ impl GMElement for GMCodes {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        if !self.exists { return Ok(()) }
+        if !self.exists || self.yyc { return Ok(()) }
 
         builder.write_usize(self.codes.len())?;
         let pointer_list_pos: usize = builder.len();
@@ -332,10 +332,10 @@ impl GMElement for GMInstruction {
                 //     }
                 // }
 
-                let value: GMValue = if data_type == GMDataType::Variable {
+                let value: GMCodeValue = if data_type == GMDataType::Variable {
                     let instance_type: GMInstanceType = parse_instance_type(val)?;
                     let variable: GMCodeVariable = read_variable(reader, instance_type)?;
-                    GMValue::Variable(variable)
+                    GMCodeValue::Variable(variable)
                 } else {
                     read_code_value(reader, data_type)?
                 };
@@ -490,8 +490,8 @@ impl GMElement for GMInstruction {
             GMInstructionData::Push(instr) => {
                 // Write 16-bit integer, instance type, or empty data
                 builder.write_i16(match &instr.value {
-                    GMValue::Int16(int16) => *int16,
-                    GMValue::Variable(variable) => build_instance_type(&variable.instance_type),
+                    GMCodeValue::Int16(int16) => *int16,
+                    GMCodeValue::Variable(variable) => build_instance_type(&variable.instance_type),
                     _ => 0
                 });
 
@@ -503,16 +503,20 @@ impl GMElement for GMInstruction {
                 }
 
                 match &instr.value {
-                    GMValue::Double(double) => builder.write_f64(*double),
-                    GMValue::Float(float) => builder.write_f32(*float),
-                    GMValue::Int32(int32) => builder.write_i32(*int32),
-                    GMValue::Int64(int64) => builder.write_i64(*int64),
-                    GMValue::Boolean(boolean) => builder.write_u32(if *boolean {1} else {0}),
-                    GMValue::String(string_ref) => builder.write_u32(string_ref.index),
-                    GMValue::Int16(_) => {}     // nothing because it was already written inside the instruction
-                    GMValue::Variable(code_variable) => {
+                    GMCodeValue::Int16(_) => {}     // nothing because it was already written inside the instruction
+                    GMCodeValue::Int32(int32) => builder.write_i32(*int32),
+                    GMCodeValue::Int64(int64) => builder.write_i64(*int64),
+                    GMCodeValue::Double(double) => builder.write_f64(*double),
+                    GMCodeValue::Float(float) => builder.write_f32(*float),
+                    GMCodeValue::Boolean(boolean) => builder.write_bool32(*boolean),
+                    GMCodeValue::String(string_ref) => builder.write_u32(string_ref.index),
+                    GMCodeValue::Variable(code_variable) => {
                         let variable: &GMVariable = code_variable.variable.resolve(&builder.gm_data.variables.variables)?;
                         write_variable_occurrence(builder, code_variable.variable.index, instr_abs_pos, variable.name_string_id, code_variable.variable_type)?;
+                    }
+                    GMCodeValue::Function(func_ref) => {
+                        let function: &GMFunction = func_ref.resolve(&builder.gm_data.functions.functions)?;
+                        write_function_occurrence(builder, func_ref.index, instr_abs_pos, function.name_string_id)?;
                     }
                 }
             }
@@ -660,7 +664,7 @@ pub struct GMPopInstruction {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMPushInstruction {
     pub data_type: GMDataType,
-    pub value: GMValue,
+    pub value: GMCodeValue,
 }
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMCallInstruction {
@@ -756,36 +760,40 @@ pub struct GMCodeVariable {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum GMValue {
-    Double(f64),
-    Float(f32),
+pub enum GMCodeValue {
+    Int16(i16),
     Int32(i32),
     Int64(i64),
+    Double(f64),
+    Float(f32),
     Boolean(bool),
     String(GMRef<String>),
     Variable(GMCodeVariable),
-    Int16(i16),
+    /// Does not exist in UTMT. Added in order to support inline functions.
+    Function(GMRef<GMFunction>),
 }
 
 
-fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMValue, String> {
+fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMCodeValue, String> {
     match data_type {
-        GMDataType::Double => reader.read_f64().map(|i| GMValue::Double(i)),
-        GMDataType::Float => reader.read_f32().map(|i| GMValue::Float(i)),
-        GMDataType::Int32 => reader.read_i32().map(|i| GMValue::Int32(i)),
-        GMDataType::Int64 => reader.read_i64().map(|i| GMValue::Int64(i)),
-        GMDataType::Boolean => reader.read_u32().map(|i| match i {
-            0 => Ok(GMValue::Boolean(false)),
-            1 => Ok(GMValue::Boolean(true)),
-            other => Err(format!("Invalid boolean value {other} (0x{other:02X}) while reading value in code at absolute position {}", reader.cur_pos-1))
-        })?,
-        GMDataType::String => reader.read_resource_by_id().map(GMValue::String),
+        GMDataType::Double => reader.read_f64().map(GMCodeValue::Double),
+        GMDataType::Float => reader.read_f32().map(GMCodeValue::Float),
+        GMDataType::Int32 => {
+            let value: i32 = reader.read_i32()?;
+            if let Some(function) = reader.function_occurrence_map.get(&(value as usize)) {
+                return Ok(GMCodeValue::Function(function.clone()))
+            }
+            Ok(GMCodeValue::Int32(value))
+        },
+        GMDataType::Int64 => reader.read_i64().map(GMCodeValue::Int64),
+        GMDataType::Boolean => reader.read_bool32().map(GMCodeValue::Boolean),
+        GMDataType::String => reader.read_resource_by_id().map(GMCodeValue::String),
         GMDataType::Int16 => {
             // int16 in embedded in the instruction itself
             reader.cur_pos -= 4;
             let number: i16 = reader.read_i16()?;
             reader.cur_pos += 2;
-            Ok(GMValue::Int16(number))
+            Ok(GMCodeValue::Int16(number))
         }
         other => Err(format!("Trying to read unsupported data type {other:?} while reading value in code at absolute position {}", reader.cur_pos)),
     }
