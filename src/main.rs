@@ -10,24 +10,19 @@
 #![warn(clippy::nursery)]
 #![warn(clippy::cargo)]
 
-mod printing;
 mod gamemaker;
 mod export_mod;
 mod utility;
-mod qoi;
-mod gm_serialize;
-mod gm_deserialize;
-mod detect_version;
 mod csharp_rng;
 
 use std::path::Path;
 use std::process::exit;
 use log::{error, info};
 
-use gm_deserialize::GMData;
+use gamemaker::deserialize::GMData;
 // use crate::export_mod::export::export_mod;
-use crate::gm_deserialize::parse_data_file;
-use crate::gm_serialize::build_data_file;
+use gamemaker::deserialize::parse_data_file;
+use gamemaker::serialize::build_data_file;
 use crate::utility::Stopwatch;
 
 
@@ -109,6 +104,7 @@ fn main_open_and_close() -> Result<(), String> {
 
 fn main() {
     biologischer_log::init(env!("CARGO_PKG_NAME"));
+    log::debug!("LibGM '{}'", env!("CARGO_PKG_VERSION"));
     
     if let Err(e) = main_open_and_close() {
         error!("{e}");
