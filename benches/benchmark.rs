@@ -37,6 +37,6 @@ criterion_group! {
         .warm_up_time(std::time::Duration::from_secs(4))
         .measurement_time(std::time::Duration::from_secs(20))
         .sample_size(30);
-    targets = builder_benchmark
+    targets = parser_benchmark
 }
 criterion_main!(benches);
