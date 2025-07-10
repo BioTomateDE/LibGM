@@ -104,7 +104,7 @@ fn main_open_and_close() -> Result<(), String> {
 
 fn main() {
     biologischer_log::init(env!("CARGO_PKG_NAME"));
-    log::debug!("LibGM '{}'", env!("CARGO_PKG_VERSION"));
+    log::debug!("============= LibGM v{} =============", env!("CARGO_PKG_VERSION"));
     
     if let Err(e) = main_open_and_close() {
         error!("{e}");

@@ -758,18 +758,18 @@ impl GMElement for GMRoomLayerDataAssets {
             if !reader.general_info.is_version_at_least((2, 3, 2)) {
                 nine_slices_pointer = reader.read_usize()?;
             }
-        }
-        if reader.general_info.is_version_at_least((2023, 2, LTSBranch::Post2022_0)) {
-            particle_systems_pointer = reader.read_usize()?;
-        }
-        if reader.general_info.is_version_at_least((2024, 6)) {
-            text_items_pointer = reader.read_usize()?;
+            if reader.general_info.is_version_at_least((2023, 2, LTSBranch::Post2022_0)) {
+                particle_systems_pointer = reader.read_usize()?;
+            }
+            if reader.general_info.is_version_at_least((2024, 6)) {
+                text_items_pointer = reader.read_usize()?;
+            }
         }
 
-        reader.cur_pos = legacy_tiles_pointer;
+        reader.assert_pos(legacy_tiles_pointer, "Legacy Tiles")?;
         let legacy_tiles: Vec<GMRoomTile> = reader.read_pointer_list()?;
 
-        reader.cur_pos = sprites_pointer;
+        reader.assert_pos(sprites_pointer, "Sprite Instances")?;
         let sprites: Vec<GMSpriteInstance> = reader.read_pointer_list()?;
 
         let mut sequences: Vec<GMSequenceInstance> = Vec::new();
@@ -778,23 +778,22 @@ impl GMElement for GMRoomLayerDataAssets {
         let mut text_items: Vec<GMTextItemInstance> = Vec::new();
 
         if reader.general_info.is_version_at_least((2, 3)) {
-            reader.cur_pos = sequences_pointer;
+            reader.assert_pos(sequences_pointer, "Sequences")?;
             sequences = reader.read_pointer_list()?;
 
             if !reader.general_info.is_version_at_least((2, 3, 2)) {
-                reader.cur_pos = nine_slices_pointer;
+                reader.assert_pos(nine_slices_pointer, "Nine Slices")?;
                 nine_slices = reader.read_pointer_list()?;
             }
-        }
+            if reader.general_info.is_version_at_least((2023, 2, LTSBranch::Post2022_0)) {
+                reader.assert_pos(particle_systems_pointer, "Particle Systems")?;
+                particle_systems = reader.read_pointer_list()?;
+            }
 
-        if reader.general_info.is_version_at_least((2023, 2, crate::gamemaker::gm_version::LTSBranch::Post2022_0)) {
-            reader.cur_pos = particle_systems_pointer;
-            particle_systems = reader.read_pointer_list()?;
-        }
-
-        if reader.general_info.is_version_at_least((2024, 6)) {
-            reader.cur_pos = text_items_pointer;
-            text_items = reader.read_pointer_list()?;
+            if reader.general_info.is_version_at_least((2024, 6)) {
+                reader.assert_pos(text_items_pointer, "Text Items")?;
+                text_items = reader.read_pointer_list()?;
+            }
         }
 
         Ok(GMRoomLayerDataAssets { legacy_tiles, sprites, sequences, nine_slices, particle_systems, text_items })
@@ -809,10 +808,10 @@ impl GMElement for GMRoomLayerDataAssets {
             if !builder.is_gm_version_at_least((2, 3, 2)) {
                 builder.write_pointer(&self.nine_slices)?;
             }
-            if !builder.is_gm_version_at_least((2023, 2)) {
+            if builder.is_gm_version_at_least((2023, 2, LTSBranch::Post2022_0)) {
                 builder.write_pointer(&self.particle_systems)?;
             }
-            if !builder.is_gm_version_at_least((2024, 6)) {
+            if builder.is_gm_version_at_least((2024, 6)) {
                 builder.write_pointer(&self.text_items)?;
             }
             
@@ -831,11 +830,11 @@ impl GMElement for GMRoomLayerDataAssets {
                 builder.resolve_pointer(&self.nine_slices)?;
                 builder.write_pointer_list(&self.nine_slices)?;
             }
-            if !builder.is_gm_version_at_least((2023, 2)) {
+            if builder.is_gm_version_at_least((2023, 2, LTSBranch::Post2022_0)) {
                 builder.resolve_pointer(&self.particle_systems)?;
                 builder.write_pointer_list(&self.particle_systems)?;
             }
-            if !builder.is_gm_version_at_least((2024, 6)) {
+            if builder.is_gm_version_at_least((2024, 6)) {
                 builder.resolve_pointer(&self.text_items)?;
                 builder.write_pointer_list(&self.text_items)?;
             }
