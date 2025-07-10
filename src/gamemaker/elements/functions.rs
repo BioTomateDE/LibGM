@@ -50,6 +50,9 @@ impl GMElement for GMFunctions {
             let occurrence_count: usize = reader.read_usize()?;
             let first_occurrence_abs_pos: i32 = reader.read_i32()?;
             let (occurrences, name_string_id): (Vec<usize>, i32) = parse_occurrence_chain(reader, first_occurrence_abs_pos, occurrence_count)?;
+            if reader.resolve_gm_str(name)? == "gml_Script_c_soundplay_wait" {
+                log::debug!("gebhgdswBSGDFBDGSFF {} {} {:?} {}", occurrence_count, first_occurrence_abs_pos, occurrences, name_string_id)
+            }
             
             for occurrence in &occurrences {
                 if let Some(old_value) = reader.function_occurrence_map.insert(*occurrence, GMRef::new(i as u32)) {
@@ -84,7 +87,7 @@ impl GMElement for GMFunctions {
             let first_occurrence: i32 = match occurrences.first() {
                 Some(occurrence) if builder.is_gm_version_at_least((2, 3)) => *occurrence as i32 + 4,
                 Some(occurrence) => *occurrence as i32,  // before gm 2.3, the first occurrence points to the instruction rather than the next offset
-                None => function.name_string_id,    // UTMT writes -1 if zero occurrences??? but they handle the occurrence chain differently so maybe it's ok
+                None => -1,
             };
 
             builder.write_gm_string(&function.name)?;
@@ -93,7 +96,9 @@ impl GMElement for GMFunctions {
         }
         
         if builder.bytecode_version() >= 15 && !builder.is_gm_version_at_least((2024, 8)) {
-            // could assert that they actually exist
+            if !self.code_locals.exists {
+                return Err("Code Locals don't exist in bytecode version 15+".to_string())
+            }
             self.code_locals.serialize(builder)?;
         }
 
