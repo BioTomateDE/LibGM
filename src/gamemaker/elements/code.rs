@@ -197,12 +197,31 @@ pub struct GMInstruction {
 }
 impl GMElement for GMInstruction {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        if reader.general_info.bytecode_version < 15 {
+            Self::deserialize_versioned::<true>(reader)
+        } else {
+            Self::deserialize_versioned::<false>(reader)
+        }
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        if builder.bytecode_version() < 15 {
+            self.serialize_versioned::<true>(builder)?;
+        } else {
+            self.serialize_versioned::<false>(builder)?;
+        }
+        Ok(())
+    }
+}
+
+impl GMInstruction {
+    fn deserialize_versioned<const PRE_BYTECODE_15: bool>(reader: &mut DataReader) -> Result<Self, String> {
         let b0: u8 = reader.read_u8()?;
         let b1: u8 = reader.read_u8()?;
         let b2: u8 = reader.read_u8()?;
         let opcode = GMOpcode::deserialize(reader)?;
         // log::debug!("{} // {:02X} {:02X} {:02X} {:02X} // {:?}", reader.cur_pos-4, b0, b1, b2, u8::from(opcode), opcode);
-        
+
         let instruction_data: GMInstructionData = match opcode {
             GMOpcode::Neg |
             GMOpcode::Not |
@@ -213,7 +232,7 @@ impl GMElement for GMInstruction {
             GMOpcode::CallV => {
                 let data_type: GMDataType = num_enum_from(b2 & 0xf)
                     .map_err(|e| format!("{e} while parsing Single Type Instruction"))?;
-                
+
                 // Ensure basic conditions hold
                 if b0 != 0 && !matches!(opcode, GMOpcode::Dup | GMOpcode::CallV) {
                     return Err(format!("Invalid padding {:02X} while parsing Single Type Instruction", b0));
@@ -251,7 +270,7 @@ impl GMElement for GMInstruction {
 
             GMOpcode::Cmp => {
                 // Parse instruction components from bytes
-                let comparison_type_raw: u8 = if reader.general_info.bytecode_version <= 14 {
+                let comparison_type_raw: u8 = if PRE_BYTECODE_15 {
                     u8::from(opcode) - 0x10   // In bytecode 14, the comparison kind is encoded in the opcode itself
                 } else {
                     b1
@@ -262,9 +281,9 @@ impl GMElement for GMInstruction {
                     .map_err(|e| format!("{e} for type1 while parsing Double Type Instruction"))?;
                 let type2: GMDataType = num_enum_from(b2 >> 4).
                     map_err(|e| format!("{e} for type2 while parsing Double Type Instruction"))?;
-                
+
                 // short circuit stuff {~~}
-                
+
                 GMInstructionData::Comparison(GMComparisonInstruction { comparison_type, type1, type2 })
             }
 
@@ -273,7 +292,7 @@ impl GMElement for GMInstruction {
             GMOpcode::Bf |
             GMOpcode::PushEnv |
             GMOpcode::PopEnv => {
-                if reader.general_info.bytecode_version <= 14 {
+                if PRE_BYTECODE_15 {
                     let jump_offset: i32 = b0 as i32 | ((b1 as u32) << 8) as i32 | ((b2 as i32) << 16);
                     let popenv_exit_magic: bool = jump_offset == -1048576;      // little endian [00 00 F0]
                     GMInstructionData::Goto(GMGotoInstruction { jump_offset, popenv_exit_magic })
@@ -322,7 +341,7 @@ impl GMElement for GMInstruction {
                 let val: i16 = (b0 as i16) | ((b1 as i16) << 8);
 
                 //// this was removed from utmt??? v
-                // if reader.general_info.bytecode_version <= 14 {
+                // if PRE_BYTECODE_15 {
                 //     match data_type {
                 //         GMDataType::Int16 => opcode = GMOpcode::PushI,
                 //         GMDataType::Variable if val == -5 => opcode = GMOpcode::PushGlb,
@@ -350,12 +369,8 @@ impl GMElement for GMInstruction {
                     reader.cur_pos, reader.function_occurrence_map.len(),
                 ))?.clone();
                 reader.cur_pos += 4;   // skip next occurrence offset
-                
-                GMInstructionData::Call(GMCallInstruction {
-                    arguments_count: b0,
-                    data_type,
-                    function,
-                })
+
+                GMInstructionData::Call(GMCallInstruction { arguments_count: b0, data_type, function })
             }
 
             GMOpcode::Break => {
@@ -371,19 +386,18 @@ impl GMElement for GMInstruction {
                 // other set gms version stuff {~~}
 
                 GMInstructionData::Break(GMBreakInstruction { value, data_type, int_argument })
-            } 
-       };
-       
-       Ok(GMInstruction { opcode, kind: instruction_data })
+            }
+        };
+
+        Ok(GMInstruction { opcode, kind: instruction_data })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize_versioned<const PRE_BYTECODE_15: bool>(&self, builder: &mut DataBuilder) -> Result<(), String> {
         let instr_abs_pos: usize = builder.len();
-        let bytecode14: bool = builder.bytecode_version() <= 14;
 
         match &self.kind {
             GMInstructionData::SingleType(instr) => {
-                let opcode_raw: u8 = if !bytecode14 { self.opcode.into() } else {
+                let opcode_raw: u8 = if !PRE_BYTECODE_15 { self.opcode.into() } else {
                     match self.opcode {
                         GMOpcode::Neg => 0x0D,
                         GMOpcode::Not => 0x0E,
@@ -401,7 +415,7 @@ impl GMElement for GMInstruction {
             }
 
             GMInstructionData::DoubleType(instr) => {
-                let opcode_raw: u8 = if !bytecode14 { self.opcode.into() } else {
+                let opcode_raw: u8 = if !PRE_BYTECODE_15 { self.opcode.into() } else {
                     match self.opcode {
                         GMOpcode::Conv => 0x03,
                         GMOpcode::Mul => 0x04,
@@ -428,7 +442,7 @@ impl GMElement for GMInstruction {
             }
 
             GMInstructionData::Comparison(instr) => {
-                let opcode_raw: u8 = if bytecode14 {
+                let opcode_raw: u8 = if PRE_BYTECODE_15 {
                     u8::from(instr.comparison_type) + 0x10
                 } else {
                     u8::from(self.opcode)     // always GMOpcode::Cmp
@@ -443,7 +457,7 @@ impl GMElement for GMInstruction {
             }
 
             GMInstructionData::Goto(instr) => {
-                let opcode_raw: u8 = if !bytecode14 { self.opcode.into() } else {
+                let opcode_raw: u8 = if !PRE_BYTECODE_15 { self.opcode.into() } else {
                     match self.opcode {
                         GMOpcode::B => 0xB7,
                         GMOpcode::Bt => 0xB8,
@@ -454,7 +468,7 @@ impl GMElement for GMInstruction {
                     }
                 };
 
-                if bytecode14 {
+                if PRE_BYTECODE_15 {
                     builder.write_i24(instr.jump_offset);
                 } else if instr.popenv_exit_magic {
                     builder.write_i24(0xF00000);    // idek
@@ -470,7 +484,7 @@ impl GMElement for GMInstruction {
                     return Err("Int16 Data Type not yet supported while building Pop Instruction".to_string())
                 }
 
-                let opcode_raw: u8 = if !bytecode14 { self.opcode.into() } else {
+                let opcode_raw: u8 = if !PRE_BYTECODE_15 { self.opcode.into() } else {
                     match self.opcode {
                         GMOpcode::Pop => 0x41,
                         other => return Err(format!("Invalid Pop Instruction opcode {other:?} while building instructions")),
@@ -496,7 +510,7 @@ impl GMElement for GMInstruction {
                 });
 
                 builder.write_u8(instr.data_type.into());
-                if bytecode14 && instr.data_type == GMDataType::Int16 {
+                if PRE_BYTECODE_15 && instr.data_type == GMDataType::Int16 {
                     builder.write_u8(GMOpcode::Push.into());    // write `push.e` instead of `pushi.e` in bytecode14
                 } else {
                     builder.write_u8(self.opcode.into());
@@ -542,7 +556,6 @@ impl GMElement for GMInstruction {
                 }
             }
         }
-
         Ok(())
     }
 }
