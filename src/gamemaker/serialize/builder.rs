@@ -27,7 +27,7 @@ impl<'a> DataBuilder<'a> {
     pub fn new(gm_data: &'a GMData) -> Self {
         Self {
             gm_data,
-            raw_data: Vec::new(),   // TODO: use Vec::with_capacity with original data size
+            raw_data: Vec::with_capacity(gm_data.original_data_size),
             padding_start_pos: 0,   // should only cause issues if no chunks were written at all (impossible)
             pointer_placeholder_positions: Vec::new(),
             pointer_resource_positions: HashMap::new(),

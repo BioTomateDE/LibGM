@@ -516,7 +516,6 @@ impl GMElement for GMInstruction {
                     }
                     GMCodeValue::Function(func_ref) => {
                         let function: &GMFunction = func_ref.resolve(&builder.gm_data.functions.functions)?;
-                        log::info!("hdfhfd {} {}", function.name_string_id, builder.display_gm_str(&function.name));
                         write_function_occurrence(builder, func_ref.index, instr_abs_pos, function.name_string_id)?;
                     }
                 }
@@ -780,10 +779,11 @@ fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMC
         GMDataType::Double => reader.read_f64().map(GMCodeValue::Double),
         GMDataType::Float => reader.read_f32().map(GMCodeValue::Float),
         GMDataType::Int32 => {
+            let value: i32 = reader.read_i32()?;
             if let Some(function) = reader.function_occurrence_map.get(&reader.cur_pos) {
                 return Ok(GMCodeValue::Function(function.clone()))
             }
-            reader.read_i32().map(GMCodeValue::Int32)
+            Ok(GMCodeValue::Int32(value))
         },
         GMDataType::Int64 => reader.read_i64().map(GMCodeValue::Int64),
         GMDataType::Boolean => reader.read_bool32().map(GMCodeValue::Boolean),
@@ -892,9 +892,6 @@ fn write_variable_occurrence(
 
 
 fn write_function_occurrence(builder: &mut DataBuilder, gm_index: u32, occurrence_position: usize, name_string_id: u32) -> Result<(), String> {
-    if name_string_id == 10 {
-        log::error!("sednjdsnif {} {} {}", gm_index, occurrence_position, -8747)
-    }
     let occurrence_map_len: usize = builder.function_occurrences.len();   // prevent double borrow on error message
     let occurrences: &mut Vec<usize> = builder.function_occurrences.get_mut(gm_index as usize).ok_or_else(|| format!(
         "Trying to get inner function occurrences vec out of bounds while writing occurrence: {} >= {}",

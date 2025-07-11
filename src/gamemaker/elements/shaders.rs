@@ -248,11 +248,6 @@ fn read_shader_data(
     let is_last: bool = next_ptr == 0;
 
     if expected_length == 0 {
-        // might be unnecessary but im just going to copy the utmt logic exactly
-        if actual_length != 0 {
-            // this seems to be normal??? the warning can be removed probably
-            log::warn!("Shader expected length is zero but actual length is {actual_length}");
-        }
         let data: Vec<u8> = reader.read_bytes_dyn(actual_length)?.to_vec();
         return Ok(Some(GMShaderData { data }))
     }
