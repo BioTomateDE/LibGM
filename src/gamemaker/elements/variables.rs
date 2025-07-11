@@ -44,7 +44,7 @@ impl GMElement for GMVariables {
             let occurrences_count: usize = if occurrences_count < 0 { 0 } else { occurrences_count as usize };
             let first_occurrence_address: i32 = reader.read_i32()?;
 
-            let (occurrences, name_string_id): (Vec<usize>, i32) = parse_occurrence_chain(reader, first_occurrence_address, occurrences_count)?;
+            let (occurrences, name_string_id): (Vec<usize>, u32) = parse_occurrence_chain(reader, first_occurrence_address, occurrences_count)?;
 
             for occurrence in occurrences {
                 if let Some(old_value) = reader.variable_occurrence_map.insert(occurrence, GMRef::new(cur_index)) {
@@ -78,12 +78,12 @@ impl GMElement for GMVariables {
             let occurrences = builder.variable_occurrences.get(i)
                 .ok_or_else(|| format!("Could not resolve variable occurrence with index {i} in list with length {}", builder.function_occurrences.len()))?;
             let occurrence_count: usize = occurrences.len();
-            let first_occurrence: i32 = match occurrences.first() {
-                Some((occurrence, _)) => *occurrence as i32,
+            let first_occurrence: u32 = match occurrences.first() {
+                Some((occurrence, _)) => *occurrence as u32,
                 None => variable.name_string_id,    // not sure if correct tbh
             };
             builder.write_usize(occurrence_count)?;
-            builder.write_i32(first_occurrence);
+            builder.write_u32(first_occurrence);
         }
         Ok(())
     }
@@ -93,7 +93,7 @@ impl GMElement for GMVariables {
 pub struct GMVariable {
     pub name: GMRef<String>,
     pub b15_data: Option<GMVariableB15Data>,
-    pub name_string_id: i32,
+    pub name_string_id: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -140,9 +140,9 @@ impl GMElement for GMVariablesScuffed {
 }
 
 
-pub fn parse_occurrence_chain(reader: &mut DataReader, first_occurrence_pos: i32, occurrence_count: usize) -> Result<(Vec<usize>, i32), String> {
+pub fn parse_occurrence_chain(reader: &mut DataReader, first_occurrence_pos: i32, occurrence_count: usize) -> Result<(Vec<usize>, u32), String> {
     if occurrence_count < 1 {
-        return Ok((vec![], first_occurrence_pos));
+        return Ok((vec![], first_occurrence_pos as u32));
     }
 
     let saved_chunk: GMChunk = reader.chunk.clone();
@@ -168,7 +168,7 @@ pub fn parse_occurrence_chain(reader: &mut DataReader, first_occurrence_pos: i32
         occurrence_pos += offset as usize;   // might overflow on last occurrence (name string id) but doesn't matter
     }
 
-    let name_string_id: i32 = offset & 0xFFFFFF;
+    let name_string_id: u32 = (offset & 0xFFFFFF) as u32;
     reader.chunk = saved_chunk;
     reader.cur_pos = saved_position;
     Ok((occurrences, name_string_id))
