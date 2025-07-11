@@ -496,8 +496,8 @@ impl GMElement for GMInstruction {
                 });
 
                 builder.write_u8(instr.data_type.into());
-                if bytecode14 && instr.data_type == GMDataType::Int16 {
-                    builder.write_u8(GMOpcode::Push.into());    // write `push.e` instead of `pushi.e` in bytecode14
+                if bytecode14 {
+                    builder.write_u8(GMOpcode::Push.into());
                 } else {
                     builder.write_u8(self.opcode.into());
                 }
@@ -780,15 +780,10 @@ fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMC
         GMDataType::Double => reader.read_f64().map(GMCodeValue::Double),
         GMDataType::Float => reader.read_f32().map(GMCodeValue::Float),
         GMDataType::Int32 => {
-            let value: i32 = reader.read_i32()?;
-            // if value == 18715328 || value == 20762044 {
-            //     log::debug!("sdfnhuiogfsdiohgdrihoretgo9jioijhgdsoi ")
-            // }
-            if let Some(function) = reader.function_occurrence_map.get(&(value as usize)) {
-                log::debug!("sdfnhuiogfsdiohgdrihoretgo9jioijhgdsoi ");
+            if let Some(function) = reader.function_occurrence_map.get(&reader.cur_pos) {
                 return Ok(GMCodeValue::Function(function.clone()))
             }
-            Ok(GMCodeValue::Int32(value))
+            reader.read_i32().map(GMCodeValue::Int32)
         },
         GMDataType::Int64 => reader.read_i64().map(GMCodeValue::Int64),
         GMDataType::Boolean => reader.read_bool32().map(GMCodeValue::Boolean),
