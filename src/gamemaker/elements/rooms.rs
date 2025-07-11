@@ -190,7 +190,7 @@ impl GMElement for GMRoom {
         builder.write_f32(self.meters_per_pixel);
         if builder.is_gm_version_at_least((2, 0)) {
             builder.write_pointer(&self.layers)?;
-            if builder.sequences_exist {
+            if builder.gm_data.sequences.exists {
                 builder.write_pointer(&self.sequences)?;
             }
         }
@@ -209,7 +209,7 @@ impl GMElement for GMRoom {
         if builder.is_gm_version_at_least((2, 0)) {
             builder.resolve_pointer(&self.layers)?;
             builder.write_pointer_list(&self.layers)?;
-            if builder.sequences_exist {
+            if builder.gm_data.sequences.exists {
                 builder.resolve_pointer(&self.sequences)?;
                 builder.write_pointer_list(&self.sequences)?;
             }

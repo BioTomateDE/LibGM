@@ -11,17 +11,21 @@ use crate::gamemaker::gm_version::GMVersionReq;
 use crate::utility::format_bytes;
 
 pub struct DataReader<'a> {
-    /// Should not be read until GEN8 chunk is parsed
-    pub general_info: GMGeneralInfo,
-    /// Should only be set by `gamemaker::string`
-    pub strings: GMStrings,
+    data: &'a [u8],
+    pub cur_pos: usize,
+    pub chunk_padding: usize,
+
+    /// Indicates whether the data is formatted using big-endian byte order.    
+    /// This applies only to certain target platforms that require big-endian encoding (e.g. PS3 or Xbox 360).
+    pub is_big_endian: bool,
 
     pub chunks: HashMap<String, GMChunk>,
     pub chunk: GMChunk,
 
-    data: &'a [u8],
-    pub cur_pos: usize,
-    pub padding: usize,
+    /// Should not be read until GEN8 chunk is parsed
+    pub general_info: GMGeneralInfo,
+    /// Should only be set by `gamemaker::string`
+    pub strings: GMStrings,
 
     /// Should only be set by `gamemaker::strings::GMStrings`
     pub string_occurrence_map: HashMap<usize, GMRef<String>>,
@@ -32,6 +36,7 @@ pub struct DataReader<'a> {
     /// Should only be set by `gamemaker::functions::GMFunctions`
     pub function_occurrence_map: HashMap<usize, GMRef<GMFunction>>,
 }
+
 impl<'a> DataReader<'a> {
     pub fn new(data: &'a [u8]) -> Self {
         Self {
@@ -46,11 +51,12 @@ impl<'a> DataReader<'a> {
             },
             data,
             cur_pos: 0,
-            padding: 16,    // default padding value (if used) is 16
+            chunk_padding: 16,    // default padding value (if used) is 16
             string_occurrence_map: HashMap::new(),
             texture_page_item_occurrence_map: HashMap::new(),
             variable_occurrence_map: HashMap::new(),
             function_occurrence_map: HashMap::new(),
+            is_big_endian: false,   // assume little endian
         }
     }
 

@@ -96,6 +96,11 @@ impl GMElement for GMStrings {
 
 
 impl GMRef<String> {
+    /// Tries to resolve a GameMaker string reference to the actual character string.
+    /// Returns a placeholder string if resolving failed.
+    ///
+    /// This function is meant to be used in closures where propagating errors is awkward.
+    /// Otherwise, using [`GMRef::resolve`] is preferred.
     pub fn display<'a>(&self, gm_strings: &'a GMStrings) -> &'a str {
         self.resolve(&gm_strings.strings)
             .map(|i| i.as_str())
