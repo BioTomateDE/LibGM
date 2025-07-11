@@ -50,9 +50,6 @@ impl GMElement for GMFunctions {
             let occurrence_count: usize = reader.read_usize()?;
             let first_occurrence_abs_pos: i32 = reader.read_i32()?;
             let (occurrences, name_string_id): (Vec<usize>, u32) = parse_occurrence_chain(reader, first_occurrence_abs_pos, occurrence_count)?;
-            if reader.resolve_gm_str(name)? == "gml_Script_c_soundplay_wait" {
-                log::debug!("gebhgdswBSGDFBDGSFF {} {} {:?} {}", occurrence_count, first_occurrence_abs_pos, occurrences, name_string_id)
-            }
             
             for occurrence in &occurrences {
                 if let Some(old_value) = reader.function_occurrence_map.insert(*occurrence, GMRef::new(i as u32)) {

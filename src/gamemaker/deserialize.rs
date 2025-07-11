@@ -86,6 +86,8 @@ pub struct GMData {
 
     /// Should not be edited; only set by `GMData::read_chunk_padding`.
     pub padding: usize,
+    /// Size of the original data file; useful for approximating.
+    pub original_data_size: usize,
 }
 
 
@@ -228,6 +230,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
         filter_effects,
         animation_curves,
         padding: reader.padding,
+        original_data_size: raw_data.len(),
     };
 
     log::trace!("Parsing data took {stopwatch}");
