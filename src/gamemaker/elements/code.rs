@@ -516,6 +516,7 @@ impl GMElement for GMInstruction {
                     }
                     GMCodeValue::Function(func_ref) => {
                         let function: &GMFunction = func_ref.resolve(&builder.gm_data.functions.functions)?;
+                        log::info!("hdfhfd {} {}", function.name_string_id, builder.display_gm_str(&function.name));
                         write_function_occurrence(builder, func_ref.index, instr_abs_pos, function.name_string_id)?;
                     }
                 }
@@ -780,7 +781,11 @@ fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMC
         GMDataType::Float => reader.read_f32().map(GMCodeValue::Float),
         GMDataType::Int32 => {
             let value: i32 = reader.read_i32()?;
+            // if value == 18715328 || value == 20762044 {
+            //     log::debug!("sdfnhuiogfsdiohgdrihoretgo9jioijhgdsoi ")
+            // }
             if let Some(function) = reader.function_occurrence_map.get(&(value as usize)) {
+                log::debug!("sdfnhuiogfsdiohgdrihoretgo9jioijhgdsoi ");
                 return Ok(GMCodeValue::Function(function.clone()))
             }
             Ok(GMCodeValue::Int32(value))
@@ -865,7 +870,7 @@ fn write_variable_occurrence(
     builder: &mut DataBuilder,
     gm_index: u32,
     occurrence_position: usize,
-    name_string_id: i32,
+    name_string_id: u32,
     variable_type: GMVariableType,
 ) -> Result<(), String> {
     let occurrence_map_len: usize = builder.variable_occurrences.len();   // prevent double borrow on error message
@@ -883,7 +888,7 @@ fn write_variable_occurrence(
 
     // write name string id for this occurrence. this is correct if it is the last occurrence.
     // otherwise, it will be overwritten later by the code above.
-    builder.write_i32(name_string_id & 0x07FFFFFF | (((u8::from(variable_type) & 0xF8) as i32) << 24));
+    builder.write_u32(name_string_id & 0x07FFFFFF | (((u8::from(variable_type) & 0xF8) as u32) << 24));
 
     // fuckass borrow checker
     builder.variable_occurrences.get_mut(gm_index as usize).unwrap().push((occurrence_position, variable_type));
@@ -891,7 +896,10 @@ fn write_variable_occurrence(
 }
 
 
-fn write_function_occurrence(builder: &mut DataBuilder, gm_index: u32, occurrence_position: usize, name_string_id: i32) -> Result<(), String> {
+fn write_function_occurrence(builder: &mut DataBuilder, gm_index: u32, occurrence_position: usize, name_string_id: u32) -> Result<(), String> {
+    if name_string_id == 10 {
+        log::error!("sednjdsnif {} {} {}", gm_index, occurrence_position, -8747)
+    }
     let occurrence_map_len: usize = builder.function_occurrences.len();   // prevent double borrow on error message
     let occurrences: &mut Vec<usize> = builder.function_occurrences.get_mut(gm_index as usize).ok_or_else(|| format!(
         "Trying to get inner function occurrences vec out of bounds while writing occurrence: {} >= {}",
@@ -906,7 +914,7 @@ fn write_function_occurrence(builder: &mut DataBuilder, gm_index: u32, occurrenc
 
     // write name string id for this occurrence. this is correct if it is the last occurrence.
     // otherwise, it will be overwritten later by the code above.
-    builder.write_i32(name_string_id & 0x07FFFFFF);
+    builder.write_u32(name_string_id & 0x07FFFFFF);
 
     builder.function_occurrences.get_mut(gm_index as usize).unwrap().push(occurrence_position);
     Ok(())
