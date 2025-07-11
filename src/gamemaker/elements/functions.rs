@@ -49,7 +49,7 @@ impl GMElement for GMFunctions {
             let name: GMRef<String> = reader.read_gm_string()?;
             let occurrence_count: usize = reader.read_usize()?;
             let first_occurrence_abs_pos: i32 = reader.read_i32()?;
-            let (occurrences, name_string_id): (Vec<usize>, i32) = parse_occurrence_chain(reader, first_occurrence_abs_pos, occurrence_count)?;
+            let (occurrences, name_string_id): (Vec<usize>, u32) = parse_occurrence_chain(reader, first_occurrence_abs_pos, occurrence_count)?;
             if reader.resolve_gm_str(name)? == "gml_Script_c_soundplay_wait" {
                 log::debug!("gebhgdswBSGDFBDGSFF {} {} {:?} {}", occurrence_count, first_occurrence_abs_pos, occurrences, name_string_id)
             }
@@ -109,7 +109,7 @@ impl GMElement for GMFunctions {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMFunction {
     pub name: GMRef<String>,
-    pub name_string_id: i32,
+    pub name_string_id: u32,
 }
 
 
@@ -190,9 +190,9 @@ impl GMElement for GMCodeLocalVariable {
 }
 
 
-pub fn parse_occurrence_chain(reader: &mut DataReader, first_occurrence_pos: i32, occurrence_count: usize) -> Result<(Vec<usize>, i32), String> {
+pub fn parse_occurrence_chain(reader: &mut DataReader, first_occurrence_pos: i32, occurrence_count: usize) -> Result<(Vec<usize>, u32), String> {
     if occurrence_count < 1 {
-        return Ok((vec![], first_occurrence_pos));
+        return Ok((vec![], first_occurrence_pos as u32));
     }
 
     let saved_chunk: GMChunk = reader.chunk.clone();
@@ -200,7 +200,7 @@ pub fn parse_occurrence_chain(reader: &mut DataReader, first_occurrence_pos: i32
     reader.chunk = reader.chunks.get("CODE").cloned().ok_or("Chunk CODE not set while parsing function occurrences")?;
 
     let first_extra_offset: usize;
-    if reader.general_info.is_version_at_least((2, 3, 0, 0)) {
+    if reader.general_info.is_version_at_least((2, 3)) {
         first_extra_offset = 0;
     } else {
         first_extra_offset = 4;
@@ -221,11 +221,11 @@ pub fn parse_occurrence_chain(reader: &mut DataReader, first_occurrence_pos: i32
                 offset, reader.cur_pos-4, raw_value,
             ))
         }
-        occurrence_pos += offset as usize;   // might overflow on last occurrence (name string id) but doesn't matter
+        occurrence_pos += offset as usize;
     }
 
-    let name_string_id: i32 = offset & 0xFFFFFF;
-    reader.chunk = saved_chunk;
+    let name_string_id: u32 = (offset & 0xFFFFFF) as u32;
+    reader.chunk = saved_chunk;    // TODO optimize by parsing all occurrences at the end (only switch chunk twice)
     reader.cur_pos = saved_position;
     Ok((occurrences, name_string_id))
 }
