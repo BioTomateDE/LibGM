@@ -70,13 +70,13 @@ impl DataReader<'_> {
             return Ok(())     // no padding before these versions
         }
 
-        while self.cur_pos % self.padding != 0 {
+        while self.cur_pos % self.chunk_padding != 0 {
             let byte: u8 = self.read_u8().map_err(|e| format!("{e}\n↳ while reading chunk padding"))?;
             if byte == 0 { continue }
             // byte is not zero => padding is incorrect
             self.cur_pos -= 1;  // undo reading incorrect padding byte
-            self.padding = if self.cur_pos % 4 == 0 { 4 } else { 1 };
-            log::debug!("Set padding to {}", self.padding);
+            self.chunk_padding = if self.cur_pos % 4 == 0 { 4 } else { 1 };
+            log::debug!("Set padding to {}", self.chunk_padding);
             return Ok(())
         }
         Ok(())    // padding was already set correctly

@@ -37,26 +37,47 @@ impl std::fmt::Display for GMVersion {
 }
 
 impl GMVersion {
+    /// Checks if the current version is at least the specified version.
+    ///
+    /// Compares major, minor, release, and build numbers in sequence,
+    /// and also considers the branch for non-LTS versions.
+    ///
+    /// # Parameters
+    /// - `version_req`: The version requirement to compare against (convertible into `GMVersionReq`).
+    ///
+    /// # Returns
+    /// `true` if `self` is greater than or equal to `version_req`.
     pub fn is_version_at_least<V: Into<GMVersionReq>>(&self, version_req: V) -> bool {
         let ver: GMVersionReq = version_req.into();
         if ver.non_lts && self.branch < LTSBranch::Post2022_0 {
             return false
         }
         if self.major != ver.major {
-            return self.major > ver.major;
+            return self.major > ver.major
         }
         if self.minor != ver.minor {
-            return self.minor > ver.minor;
+            return self.minor > ver.minor
         }
         if self.release != ver.release {
-            return self.release > ver.release;
+            return self.release > ver.release
         }
         if self.build != ver.build {
-            return self.build > ver.build;
+            return self.build > ver.build
         }
         true   // The version is exactly what was supplied.
     }
 
+    /// Sets the version to at least the specified version.
+    /// Only updates if the new version is higher than the current one.
+    ///
+    /// # Parameters
+    /// - `version_req`: The minimum version to set (convertible into `GMVersionReq`).
+    ///
+    /// # Errors
+    /// Returns an error if the requested version is not allowed (invalid major version).
+    ///
+    /// # Notes
+    /// Setting a non-LTS version updates the branch accordingly.
     pub fn set_version_at_least<V: Into<GMVersionReq>>(&mut self, version_req: V) -> Result<(), String> {
         let new_ver: GMVersionReq = version_req.into();
         if !matches!(new_ver.major, 2|2022|2023|2024) {

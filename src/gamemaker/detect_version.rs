@@ -826,7 +826,7 @@ fn cv_func_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
     // align position
     let mut padding_bytes_read: u32 = 0;
 
-    while reader.cur_pos & (reader.padding - 1) != 0 {
+    while reader.cur_pos & (reader.chunk_padding - 1) != 0 {
         if reader.cur_pos >= reader.chunk.end_pos || reader.read_u8()? != 0 {
             return Ok(None)   // If we hit a non-zero byte (or exceed chunk boundaries), it can't be padding
         }

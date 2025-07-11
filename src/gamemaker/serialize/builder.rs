@@ -1,10 +1,10 @@
 use std::collections::HashMap;
-use crate::gamemaker::deserialize::{GMData, GMRef};
+use crate::gamemaker::deserialize::GMData;
 use crate::gamemaker::element::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::code::GMVariableType;
-use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::gm_version::GMVersionReq;
 use crate::utility::{typename, Stopwatch};
+
 
 #[derive(Debug, Clone)]
 pub struct DataBuilder<'a> {
@@ -19,7 +19,6 @@ pub struct DataBuilder<'a> {
 
     pub function_occurrences: Vec<Vec<usize>>,
     pub variable_occurrences: Vec<Vec<(usize, GMVariableType)>>,
-    pub sequences_exist: bool,
 }
 
 
@@ -33,189 +32,117 @@ impl<'a> DataBuilder<'a> {
             pointer_resource_positions: HashMap::new(),
             function_occurrences: vec![Vec::new(); gm_data.functions.functions.len()],
             variable_occurrences: vec![Vec::new(); gm_data.variables.variables.len()],
-            sequences_exist: gm_data.sequences.exists,
         }
     }
 
-    pub fn build_chunk<T: GMElement+GMChunkElement>(&mut self, chunk_name: &'static str, element: &T) -> Result<(), String> {
-        assert_eq!(chunk_name.len(), 4);
-        assert_eq!(chunk_name.as_bytes().len(), 4);
-        if !element.exists() {
-            log::trace!("Skipped building chunk '{chunk_name}' because it does not exist");
-            return Ok(())
-        }
-
-        let stopwatch = Stopwatch::start();
-        self.write_literal_string(chunk_name);
-        self.write_u32(0xDEADC0DE);   // chunk length placeholder
-        let start_pos: usize = self.len();
-
-        element.serialize(self)
-            .map_err(|e| format!("{e}\n↳ while serializing chunk '{chunk_name}'"))?;
-
-        // potentially write padding
-        self.padding_start_pos = self.len();
-        let ver = &self.gm_data.general_info.version;
-        if ver.major >= 2 || (ver.major == 1 && ver.build >= 9999) {
-            while self.len() % self.gm_data.padding != 0 {
-                self.write_u8(0);
-            }
-        }
-
-        let chunk_length: usize = self.len() - start_pos;
-        self.overwrite_usize(chunk_length, start_pos - 4)?;   // resolve chunk length placeholder
-
-        log::trace!("Building chunk '{chunk_name}' took {stopwatch}");
-        Ok(())
+    /// The current length (aka. "position") of the internal buffer.
+    pub fn len(&self) -> usize {
+        self.raw_data.len()
     }
 
+    pub fn is_gm_version_at_least<V: Into<GMVersionReq>>(&self, version_req: V) -> bool {
+        self.gm_data.general_info.version.is_version_at_least(version_req)
+    }
+
+    pub fn bytecode_version(&self) -> u8 {
+        self.gm_data.general_info.bytecode_version
+    }
+
+    /// Pads the internal buffer with zero bytes until its length is aligned to `alignment`.
+    ///
+    /// This adds zero bytes until `self.len()` is a multiple of `alignment`.
+    pub fn align(&mut self, alignment: usize) {
+        while self.len() % alignment != 0 {
+            self.write_u8(0);
+        }
+    }
+
+    /// Appends the given bytes to the internal data buffer.
     pub fn write_bytes(&mut self, data: &[u8]) {
         self.raw_data.extend_from_slice(data);
     }
-    pub fn write_u64(&mut self, number: u64) {
-        self.write_bytes(&number.to_le_bytes());
+
+    /// Overwrites bytes at the given position in the internal data buffer.
+    ///
+    /// Useful for patching data like lengths or offsets after serialization.
+    fn overwrite_bytes(&mut self, bytes: &[u8], position: usize) -> Result<(), String> {
+        if let Some(mut_slice) = self.raw_data.get_mut(position .. position+bytes.len()) {
+            mut_slice.copy_from_slice(bytes);
+            Ok(())
+        } else {
+            Err(format!(
+                "Could not overwrite {} bytes at position {} in data with length {}; out of bounds",
+                bytes.len(), position, self.raw_data.len(),
+            ))
+        }
     }
-    pub fn write_i64(&mut self, number: i64) {
-        self.write_bytes(&number.to_le_bytes());
-    }
-    pub fn write_u32(&mut self, number: u32) {
-        self.write_bytes(&number.to_le_bytes());
-    }
-    pub fn write_i32(&mut self, number: i32) {
-        self.write_bytes(&number.to_le_bytes());
-    }
-    pub fn write_u16(&mut self, number: u16) {
-        self.write_bytes(&number.to_le_bytes());
-    }
-    pub fn write_i16(&mut self, number: i16) {
-        self.write_bytes(&number.to_le_bytes());
-    }
-    pub fn write_u8(&mut self, number: u8) {
-        self.write_bytes(&number.to_le_bytes());
-    }
-    pub fn write_i8(&mut self, number: i8) {
-        self.write_bytes(&number.to_le_bytes());
-    }
-    pub fn write_f64(&mut self, number: f64) {
-        self.write_bytes(&number.to_le_bytes());
-    }
-    pub fn write_f32(&mut self, number: f32) {
-        self.write_bytes(&number.to_le_bytes());
-    }
-    pub fn write_usize(&mut self, number: usize) -> Result<(), String> {
-        let number: u32 = number.try_into().map_err(|_| format!(
-            "Number {number} (0x{number:016X}) does not fit into 32 bits while writing usize integer",
-        ))?;
-        self.write_u32(number);
-        Ok(())
-    }
+
+    /// Write a GameMaker boolean as a 32-bit integer.
+    /// - If `true`, write `1_i32`.
+    /// - If `false`, write `0_i32`.
     pub fn write_bool32(&mut self, boolean: bool) {
         self.write_u32(if boolean {1} else {0});
     }
-    pub fn write_i24(&mut self, number: i32) {
-        let masked: u32 = (number as u32) & 0x00FF_FFFF;
-        self.raw_data.extend_from_slice(&masked.to_le_bytes()[..3]);
-    }
+
+    /// Write an actual character string.
+    ///
+    /// This should only be used for writing chunk names and in the `STRG` chunk.
+    /// For writing regular GameMaker string references, see [`Self::write_gm_string`].
     pub fn write_literal_string(&mut self, string: &str) {
         self.raw_data.extend_from_slice(string.as_bytes());
     }
-    pub fn write_resource_id<T>(&mut self, resource: &GMRef<T>) {
-        self.write_u32(resource.index);
-    }
-    pub fn write_resource_id_opt<T>(&mut self, resource: &Option<GMRef<T>>) {
-        match resource {
-            Some(gm_ref) => self.write_u32(gm_ref.index),
-            None => self.write_i32(-1),
-        }
-    }
 
-    pub fn write_simple_list<T: GMElement>(&mut self, elements: &Vec<T>) -> Result<(), String> {
-        let count: usize = elements.len();
-        self.write_usize(count)?;
-        for element in elements {
-            element.serialize(self).map_err(|e| format!(
-                "{e}\n↳ while building simple list of {} with {} elements",
-                typename::<T>(), count,
-            ))?;
+    /// Write a 4 character ASCII GameMaker chunk name.
+    /// Accounts for endianness.
+    pub fn write_chunk_name(&mut self, name: &str) -> Result<(), String> {
+        if name.len() != 4 {
+            return Err(format!(
+                "Expected chunk name '{}' to be 4 characters long; but is actually {} characters long",
+                name, name.len(),
+            ))
         }
+        
+        let err_fn = || format!(
+            "Expected chunk name '{}' to be 4 bytes long; but is actually {} bytes long",
+            name, name.as_bytes().len(),
+        );
+
+        let bytes: [u8; 4] = if self.gm_data.is_big_endian {
+            // reverse the bytes if big endian
+            name.bytes().rev().collect::<Vec<u8>>().try_into().map_err(|_| err_fn())?
+        } else {
+            name.as_bytes().try_into().map_err(|_| err_fn())?
+        };
+        
+        self.write_bytes(&bytes);
         Ok(())
     }
 
-    pub fn write_simple_list_of_resource_ids<T/*: GMElement*/>(&mut self, elements: &Vec<GMRef<T>>) -> Result<(), String> {
-        self.write_usize(elements.len())?;
-        for gm_ref in elements {
-            self.write_resource_id(gm_ref);
-        }
-        Ok(())
+    /// Overwrites a 4-byte unsigned integer (`usize` truncated to `u32`) at `position`.
+    ///
+    /// Useful for patching fixed-size numeric values like lengths or offsets after serialization.
+    /// For writing regular pointer lists, see `write_pointer_list`.
+    pub fn overwrite_usize(&mut self, number: usize, position: usize) -> Result<(), String> {
+        let number: u32 = number as u32;
+        let bytes: [u8; 4] = if self.gm_data.is_big_endian {
+            number.to_be_bytes()
+        } else {
+            number.to_le_bytes()
+        };
+        self.overwrite_bytes(&bytes, position)
     }
 
-    pub fn write_simple_list_of_strings(&mut self, elements: &Vec<GMRef<String>>) -> Result<(), String> {
-        let count: usize = elements.len();
-        self.write_usize(count)?;
-        for gm_string_ref in elements {
-            self.write_gm_string(gm_string_ref)
-                .map_err(|e| format!("{e}\n↳ while building simple list of String with {count} elements"))?;
-        }
-        Ok(())
-    }
-
-    pub fn write_simple_list_short<T: GMElement>(&mut self, elements: &Vec<T>) -> Result<(), String> {
-        let count: usize = elements.len();
-        let count: u16 = count.try_into().map_err(|_| format!(
-            "Error while building short simple list with {count} elements: cannot fit element count into 16 bits",
-        ))?;
-        self.write_u16(count);
-        for element in elements {
-            element.serialize(self).map_err(|e| format!(
-                "{e}\n↳ while building short simple list of {} with {} elements",
-                typename::<T>(), count,
-            ))?;
-        }
-        Ok(())
-    }
-
-    pub fn write_pointer_list<T: GMElement>(&mut self, elements: &Vec<T>) -> Result<(), String> {
-        let count: usize = elements.len();
-        self.write_usize(count)?;
-        let pointer_list_start_pos: usize = self.len();
-        for _ in 0..count {
-            self.write_u32(0xDEADC0DE);
-        }
-
-        for (i, element) in elements.iter().enumerate() {
-            element.serialize_pre_padding(self)?;
-            let resolved_pointer_pos: usize = self.len();
-            self.overwrite_usize(resolved_pointer_pos, pointer_list_start_pos + 4*i)?;
-            element.serialize(self).map_err(|e| format!(
-                "{e}\n↳ while building pointer list of {} with {} elements",
-                typename::<T>(), count,
-            ))?;
-            element.serialize_post_padding(self, i == count-1)?;
-        }
-        Ok(())
-    }
-
-    /// UndertaleAlignUpdatedListChunk; used for BGND and STRG.
-    /// Assumes `chunk.is_aligned`.
-    /// TODO: copypasted ass function
-    pub fn write_aligned_list_chunk<T: GMElement>(&mut self, elements: &Vec<T>, alignment: usize) -> Result<(), String> {
-        let count: usize = elements.len();
-        self.write_usize(count)?;
-        let pointer_list_start_pos: usize = self.len();
-        for _ in 0..count {
-            self.write_u32(0xDEADC0DE);
-        }
-
-        for (i, element) in elements.iter().enumerate() {
-            self.align(alignment);
-            let resolved_pointer_pos: usize = self.len();
-            self.overwrite_usize(resolved_pointer_pos, pointer_list_start_pos + 4*i)?;
-            element.serialize(self).map_err(|e| format!(
-                "{e}\n↳ while building aligned chunk pointer list of {} with {} elements",
-                typename::<T>(), count,
-            ))?;
-        }
-        Ok(())
+    /// Overwrites a 4-byte signed integer (`i32`) at `position`.
+    ///
+    /// Useful for patching fixed-size numeric values like lengths or offsets after serialization.
+    /// For writing regular pointer lists, see `write_pointer_list`.
+    pub fn overwrite_i32(&mut self, number: i32, position: usize) -> Result<(), String> {
+        let bytes: [u8; 4] = if self.gm_data.is_big_endian {
+            number.to_be_bytes()
+        } else {
+            number.to_le_bytes()
+        };
+        self.overwrite_bytes(&bytes, position)
     }
 
     /// Create a placeholder pointer at the current position in the chunk and remember
@@ -236,6 +163,9 @@ impl<'a> DataBuilder<'a> {
         Ok(())
     }
 
+    /// Writes a pointer to the given `Option` value.
+    /// - If `Some`, writes a pointer to the contained value using `write_pointer`.
+    /// - If `None`, writes a null pointer (0) using `write_i32`.
     pub fn write_pointer_opt<T>(&mut self, element: &Option<T>) -> Result<(), String> {
         if let Some(elem) = element {
             self.write_pointer(elem)?;
@@ -261,91 +191,42 @@ impl<'a> DataBuilder<'a> {
         Ok(())
     }
 
-    pub fn resolve_placeholder<T>(&mut self, element: &T, resolved_value: u32) -> Result<(), String> {
-        let memory_address: usize = element as *const _ as usize;
-        if let Some(old_resource_pos) = self.pointer_resource_positions.insert(memory_address, resolved_value) {
-            return Err(format!(
-                "Placeholder for {} with memory address {} already resolved \
-                to data position {}; tried to resolve again to value {} (0x{:08X})",
-                typename::<T>(), memory_address, old_resource_pos, resolved_value, resolved_value,
-            ))
+    /// Writes a GameMaker data chunk with the given 4-character name.
+    /// Skips the chunk if the element does not exist.
+    ///
+    /// Appends padding if required by the GameMaker version.
+    /// This padding has to then be manually cut off for the last chunk in the data file.
+    /// # Parameters
+    /// - `chunk_name`: 4-character chunk name (e.g., "SCPT", "ROOM").
+    /// - `element`: A serializable element implementing `GMElement + GMChunkElement`.
+    pub fn build_chunk<T: GMElement+GMChunkElement>(&mut self, chunk_name: &'static str, element: &T) -> Result<(), String> {
+        if !element.exists() {
+            log::trace!("Skipped building chunk '{chunk_name}' because it does not exist");
+            return Ok(())
         }
+
+        let stopwatch = Stopwatch::start();
+        self.write_chunk_name(chunk_name)?;
+        self.write_u32(0xDEADC0DE);   // chunk length placeholder
+        let start_pos: usize = self.len();
+
+        element.serialize(self)
+            .map_err(|e| format!("{e}\n↳ while serializing chunk '{chunk_name}'"))?;
+
+        // potentially write padding
+        self.padding_start_pos = self.len();
+        let ver = &self.gm_data.general_info.version;
+        if ver.major >= 2 || (ver.major == 1 && ver.build >= 9999) {
+            while self.len() % self.gm_data.chunk_padding != 0 {
+                self.write_u8(0);
+            }
+        }
+
+        let chunk_length: usize = self.len() - start_pos;
+        self.overwrite_usize(chunk_length, start_pos - 4)?;   // resolve chunk length placeholder
+
+        log::trace!("Building chunk '{chunk_name}' took {stopwatch}");
         Ok(())
-    }
-
-    pub fn write_gm_string(&mut self, gm_string_ref: &GMRef<String>) -> Result<(), String> {
-        let resolved_string: &String = gm_string_ref.resolve(&self.gm_data.strings.strings)?;
-        // GameMaker string pointers point to the actual character string; not the GameMaker string element
-        let memory_address: usize = resolved_string as *const _ as usize;
-        let placeholder_position: u32 = self.len() as u32;
-        self.write_u32(0xDEADC0DE);
-        self.pointer_placeholder_positions.push((placeholder_position, memory_address));
-        Ok(())
-    }
-    pub fn write_gm_string_opt(&mut self, gm_string_ref_opt: &Option<GMRef<String>>) -> Result<(), String> {
-        match gm_string_ref_opt {
-            Some(string_ref) => self.write_gm_string(string_ref)?,
-            None => self.write_u32(0),
-        }
-        Ok(())
-    }
-    pub fn write_gm_texture(&mut self, gm_texture_ref: &GMRef<GMTexturePageItem>) -> Result<(), String> {
-        let resolved_texture_page_item: &GMTexturePageItem = gm_texture_ref.resolve(&self.gm_data.texture_page_items.texture_page_items)?;
-        self.write_pointer(resolved_texture_page_item)
-    }
-    pub fn write_gm_texture_opt(&mut self, gm_texture_ref_opt: &Option<GMRef<GMTexturePageItem>>) -> Result<(), String> {
-        match gm_texture_ref_opt {
-            Some(gm_texture_ref) => self.write_gm_texture(gm_texture_ref)?,
-            None => self.write_u32(0),
-        }
-        Ok(())
-    }
-
-    pub fn overwrite_bytes(&mut self, bytes: &[u8], position: usize) -> Result<(), String> {
-        if let Some(mut_slice) = self.raw_data.get_mut(position .. position+bytes.len()) {
-            mut_slice.copy_from_slice(bytes);
-            Ok(())
-        } else {
-            Err(format!(
-                "Could not overwrite {} bytes at position {} in data with length {}; out of bounds",
-                bytes.len(), position, self.raw_data.len(),
-            ))
-        }
-    }
-
-    pub fn overwrite_usize(&mut self, number: usize, position: usize) -> Result<(), String> {
-        let bytes: [u8; 4] = (number as u32).to_le_bytes();
-        self.overwrite_bytes(&bytes, position)
-    }
-    pub fn overwrite_i32(&mut self, number: i32, position: usize) -> Result<(), String> {
-        let bytes: [u8; 4] = number.to_le_bytes();
-        self.overwrite_bytes(&bytes, position)
-    }
-
-    pub fn align(&mut self, alignment: usize) {
-        while self.len() & (alignment - 1) != 0 {
-            self.write_u8(0);
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.raw_data.len()
-    }
-
-    pub fn is_gm_version_at_least<V: Into<GMVersionReq>>(&self, version_req: V) -> bool {
-        self.gm_data.general_info.version.is_version_at_least(version_req)
-    }
-
-    pub fn bytecode_version(&self) -> u8 {
-        self.gm_data.general_info.bytecode_version
-    }
-
-    pub fn resolve_gm_str(&self, gm_string_ref: &GMRef<String>) -> Result<&String, String> {
-        gm_string_ref.resolve(&self.gm_data.strings.strings)
-    }
-
-    pub fn display_gm_str(&self, gm_string_ref: &GMRef<String>) -> &str {
-        gm_string_ref.display(&self.gm_data.strings)
     }
 }
 

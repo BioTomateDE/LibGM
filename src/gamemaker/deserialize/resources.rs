@@ -36,6 +36,16 @@ impl<T> std::fmt::Debug for GMRef<T> {
 }
 
 impl<'a, T> GMRef<T> {
+    /// Attempts to resolve this reference to an element in the given list by its index.
+    ///
+    /// Returns a reference to the element if the index is valid, or an error string if out of bounds.
+    ///
+    /// # Parameters
+    /// - `elements_by_index`: A vector of elements indexed by `self.index`.
+    ///
+    /// # Errors
+    /// Returns an error if `self.index` is out of bounds for the provided vector.
+    ///
     pub fn resolve(&self, elements_by_index: &'a Vec<T>) -> Result<&'a T, String> {
         elements_by_index.get(self.index as usize)
             .ok_or_else(|| format!(

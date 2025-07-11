@@ -1,5 +1,8 @@
 mod builder;
 pub mod traits;
+mod numbers;
+mod lists;
+mod resources;
 
 pub use builder::DataBuilder;
 use crate::gamemaker::deserialize::GMData;
@@ -10,7 +13,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     let stopwatch = Stopwatch::start();
     let mut builder = DataBuilder::new(gm_data);
 
-    builder.write_literal_string("FORM");
+    builder.write_chunk_name("FORM")?;
     builder.write_u32(0xDEADC0DE);  // data length placeholder
 
     builder.build_chunk("GEN8", &gm_data.general_info)?;
@@ -64,9 +67,14 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
             placeholder_data_pos, element_mem_addr,
         ))?;
         // overwrite placeholder 0xDEADC0DE
+        let resource_data: [u8; 4] = if builder.gm_data.is_big_endian {
+            resource_data_pos.to_be_bytes()
+        } else {
+            resource_data_pos.to_le_bytes()
+        };
         let mut_slice: &mut [u8] = builder.raw_data.get_mut(*placeholder_data_pos as usize .. *placeholder_data_pos as usize + 4)
             .ok_or_else(|| format!("Could not get 4 bytes of raw data at position {} while resolving pointer placeholders", placeholder_data_pos))?;
-        mut_slice.copy_from_slice(&resource_data_pos.to_le_bytes());
+        mut_slice.copy_from_slice(&resource_data);
     }
     log::trace!("Resolving {} pointer placeholders to {} resources took {stopwatch2}",
         builder.pointer_placeholder_positions.len(),

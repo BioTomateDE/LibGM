@@ -28,6 +28,7 @@ pub fn get_image_from_bytes(bytes: &[u8]) -> Result<DynamicImage, String> {
         return Err("Invalid little-endian QOIF image magic".to_string());
     }
 
+    // TODO support big endian
     let width = u16::from_le_bytes(header[4..6].try_into().unwrap()) as usize;
     let height = u16::from_le_bytes(header[6..8].try_into().unwrap()) as usize;
     let length = u32::from_le_bytes(header[8..12].try_into().unwrap()) as usize;
@@ -125,6 +126,7 @@ pub fn get_bytes_from_image(img: &DynamicImage) -> Vec<u8> {
     buffer[1] = b'i';
     buffer[2] = b'o';
     buffer[3] = b'q';
+    // TODO: support big endian
     buffer[4..6].copy_from_slice(&(width as u16).to_le_bytes());
     buffer[6..8].copy_from_slice(&(height as u16).to_le_bytes());
 
@@ -227,6 +229,7 @@ pub fn get_bytes_from_image(img: &DynamicImage) -> Vec<u8> {
     }
 
     let length = (res_pos - HEADER_SIZE) as u32;
+    // TODO: support big endian
     buffer[8..12].copy_from_slice(&length.to_le_bytes());
 
     buffer.truncate(res_pos);
