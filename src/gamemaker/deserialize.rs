@@ -85,7 +85,12 @@ pub struct GMData {
     pub animation_curves: GMAnimationCurves,            // ACRV
 
     /// Should not be edited; only set by `GMData::read_chunk_padding`.
-    pub padding: usize,
+    pub chunk_padding: usize,
+    
+    /// Whether the data file is formatted as big endian.
+    /// This is only the case for certain target architectures.
+    pub is_big_endian: bool,
+
     /// Size of the original data file; useful for approximating.
     pub original_data_size: usize,
 }
@@ -95,9 +100,12 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
     let stopwatch = Stopwatch::start();
     let mut reader = DataReader::new(&raw_data);
 
-    if reader.read_chunk_name()? != "FORM" {
-        return Err("Invalid or corrupted data.win file: 'FORM' chunk missing".to_string());
-    }
+    let root_chunk_name: String = reader.read_chunk_name()?;
+    reader.is_big_endian = match root_chunk_name.as_str() {
+        "FORM" => false,
+        "MROF" => true,
+        _ => return Err(format!("Invalid data file: expected root chunk to be 'FORM' but found '{root_chunk_name}'"))
+    };
     let total_data_len: usize = reader.read_usize()? + reader.cur_pos;
     
     while reader.cur_pos + 8 < total_data_len { 
@@ -229,7 +237,9 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
         feature_flags,
         filter_effects,
         animation_curves,
-        padding: reader.padding,
+        
+        chunk_padding: reader.chunk_padding,
+        is_big_endian: reader.is_big_endian,
         original_data_size: raw_data.len(),
     };
 
