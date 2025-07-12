@@ -3,17 +3,6 @@ use std::path::Path;
 use criterion::{criterion_group, criterion_main, Criterion};
 use libgm::{build_data_file, parse_data_file};
 
-fn parser_benchmark(c: &mut Criterion) {
-    biologischer_log::init(env!("CARGO_PKG_NAME"));
-    let data_path = Path::new("data.win");
-    let data = std::fs::read(data_path).expect("could not read data file");
-    c.bench_function("deserialize", |b| {
-        b.iter(|| {
-            parse_data_file(black_box(&data), false).expect("could not parse data file");
-        })
-    });
-}
-
 
 fn builder_benchmark(c: &mut Criterion) {
     biologischer_log::init(env!("CARGO_PKG_NAME"));
@@ -29,7 +18,6 @@ fn builder_benchmark(c: &mut Criterion) {
         })
     });
 }
-
 
 criterion_group! {
     name = benches;
