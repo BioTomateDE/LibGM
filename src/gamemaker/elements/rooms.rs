@@ -1,3 +1,4 @@
+use std::cmp::min;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::element::{GMChunkElement, GMElement};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
@@ -611,26 +612,10 @@ pub enum GMRoomLayerData {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMRoomLayerDataInstances {
     pub instances: Vec<u32>,
-    // pub instances: Vec<GMRoomGameObject>,        // TODO {~~}
 }
-
 impl GMElement for GMRoomLayerDataInstances {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let count: usize = reader.read_usize()?;
-        let mut instances: Vec<u32> = vec_with_capacity(count)?;
-        // {~~} check scuffed conditions for false positive idk
-
-        for i in 0..count {
-            let instance_id: u32 = reader.read_u32()?;
-            // if instance_id == 0 {
-            //     log::warn!("Skipping Zero Instance ID #{i} of Instance Layer of Room \"{room_name}\"");
-            //     continue
-            // }
-            // let room_game_object: GMRoomGameObject = get_room_game_object_by_instance_id(room_game_objects, instance_id)
-            //     .ok_or_else(|| format!("Nonexistent room game objects are not supported yet (has instance id {instance_id})"))?;
-            instances.push(instance_id);
-        }
-
+        let instances: Vec<u32> = reader.read_simple_list()?;
         Ok(GMRoomLayerDataInstances { instances })
     }
 
@@ -653,13 +638,15 @@ impl GMElement for GMRoomLayerDataTiles {
         let background: GMRef<GMBackground> = reader.read_resource_by_id()?;
         let width: usize = reader.read_usize()?;
         let height: usize = reader.read_usize()?;
-        if reader.general_info.is_version_at_least((2024, 2)) {
-            return Err("Compressed tile data (GM >= 2024.2) is not supported yet; please report this error".to_string())     // TODO
-        }
         let mut tile_data: Vec<u32> = vec_with_capacity(width * height)?;
-        for _y in 0..height {
-            for _x in 0..width {
-                tile_data.push(reader.read_u32()?);
+
+        if reader.general_info.is_version_at_least((2024, 2)) {
+            Self::read_compressed_tile_data(reader, &mut tile_data)?;
+        } else {
+            for _y in 0..height {
+                for _x in 0..width {
+                    tile_data.push(reader.read_u32()?);
+                }
             }
         }
 
@@ -670,8 +657,141 @@ impl GMElement for GMRoomLayerDataTiles {
         builder.write_resource_id(&self.background);
         builder.write_usize(self.width)?;
         builder.write_usize(self.height)?;
-        for id in &self.tile_data {
-            builder.write_u32(*id);
+        if builder.is_gm_version_at_least((2024, 2)) {
+            self.build_compressed_tile_data(builder)?;
+        } else {
+            for id in &self.tile_data {
+                builder.write_u32(*id);
+            }
+        }
+        Ok(())
+    }
+}
+impl GMRoomLayerDataTiles {
+    fn read_compressed_tile_data(reader: &mut DataReader, tile_data: &mut Vec<u32>) -> Result<(), String> {
+        let total_size: usize = tile_data.capacity();
+        if total_size == 0 {
+            return Ok(())
+        }
+
+        'outer: loop {
+            let length: u8 = reader.read_u8()?;
+            if length >= 128 {
+                // repeat run
+                let run_length: u8 = (length & 0x7F) + 1;
+                let tile: u32 = reader.read_u32()?;
+                for _ in 0..run_length {
+                    tile_data.push(tile);
+                    if tile_data.len() >= total_size {
+                        break 'outer
+                    }
+                }
+            } else {
+                // verbatim run
+                for _ in 0..length {
+                    let tile: u32 = reader.read_u32()?;
+                    tile_data.push(tile);
+                    if tile_data.len() >= total_size {
+                        break 'outer
+                    }
+                }
+            }
+        }
+
+        // Due to a GMAC bug, 2 blank tiles are inserted into the layer
+        // if the last 2 tiles in the layer are different.
+        // This is a certified YoyoGames moment right here.
+        let has_padding: bool = tile_data.last() != tile_data.get(tile_data.len() - 2);
+        if has_padding {
+            let length: u8 = reader.read_u8()?;
+            let tile: u32 = reader.read_u32()?;
+
+            // sanity check: run of 2 empty tiles
+            if length != 0x81 {
+                return Err(format!("Expected 0x81 for run length of compressed tile data padding; got 0x{length:02X}"))
+            }
+            if tile != u32::MAX {
+                return Err(format!("Expected -1 for tile of compressed tile data padding; got 0x{length:02X}"))
+            }
+        }
+
+        if reader.general_info.is_version_at_least((2024, 4)) {
+            reader.align(4)?;
+        }
+        Ok(())
+    }
+
+    fn build_compressed_tile_data(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        let tile_count: usize = self.tile_data.len();
+        if tile_count == 0 {
+            return Ok(())
+        }
+
+        // Perform run-length encoding using process identical to GameMaker's logic.
+        // This only serializes data when outputting a repeat run, upon which the
+        // previous verbatim run is serialized first.
+        // We also iterate in 1D, which requires some division and modulo to work with
+        // the 2D array we have for representation here.
+        let mut last_tile: u32 = self.tile_data[0];
+        let mut num_verbatim: i32 = 0;
+        let mut verbatim_start: i32 = 0;
+        let mut i = 1;
+        
+        // note: we go out of bounds to ensure a repeat run at the end
+        while i <= tile_count + 1 {
+            let mut curr_tile: u32 = if i >= tile_count {u32::MAX} else {self.tile_data[i]};
+            i += 1;
+            
+            if curr_tile != last_tile { 
+                // We have different tiles, so just increase the number of tiles in this verbatim run
+                num_verbatim += 1;
+                last_tile = curr_tile;
+                continue 
+            }
+            
+            // We have two tiles in a row - construct a repeating run.
+            // Figure out how far this repeat goes, first.
+            let mut num_repeats: i32 = 2;
+            while i < tile_count {
+                if curr_tile != self.tile_data[i] {
+                    break
+                }
+                num_repeats += 1;
+                i += 1;
+            }
+    
+            // Serialize the preceding verbatim run, splitting into 127-length chunks
+            while num_verbatim > 0 {
+                let num_to_write: i32 = min(num_verbatim, 127);
+                builder.write_u8(num_to_write as u8);
+                for j in 0..num_to_write {
+                    let tile: u32 = self.tile_data[(verbatim_start + j) as usize];
+                    builder.write_u32(tile);
+                }
+                num_verbatim -= num_to_write;
+                verbatim_start += num_to_write;
+            }
+    
+            // Serialize this repeat run, splitting into 128-length chunks
+            while num_repeats > 0 {
+                let num_to_write: i32 = min(num_verbatim, 128);
+                builder.write_u8((num_to_write as u8 - 1) | 0x80);
+                builder.write_u32(last_tile);
+                num_repeats -= num_to_write;
+            }
+    
+            // Update our current tile to be the one after the run
+            curr_tile = if i >= tile_count {0} else {self.tile_data[i]};
+    
+            // Update the start of our next verbatim run, and move on
+            verbatim_start = i as i32;
+            num_verbatim = 0;
+            i += 1; 
+            last_tile = curr_tile;
+        }
+        
+        if builder.is_gm_version_at_least((2024, 4)) {
+            builder.align(4);
         }
         Ok(())
     }
@@ -937,7 +1057,6 @@ impl GMElement for GMSequenceInstance {
         let scale_y: f32 = reader.read_f32()?;
         let color: u32 = reader.read_u32()?;
         let animation_speed: f32 = reader.read_f32()?;
-        let animation_speed_type: u32 = reader.read_u32()?;
         let animation_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)
             .map_err(|e| format!("{e} while parsing Room Assets Layer Sequence Instance"))?;
         let frame_index: f32 = reader.read_f32()?;
