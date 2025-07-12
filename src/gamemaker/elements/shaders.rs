@@ -21,10 +21,6 @@ impl GMElement for GMShaders {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         // Figure out where the starts/ends of each shader object are
         let count: usize = reader.read_usize()?;
-        if count > 0 {
-            log::warn!("Shaders are untested; issues may occur");
-        }
-
         let mut locations: Vec<usize> = vec_with_capacity(count + 1)?;
         for _ in 0..count {
             let pointer: usize = reader.read_usize()?;
