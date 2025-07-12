@@ -78,7 +78,7 @@ impl GMElement for GMCodes {
             let code: &mut GMCode = &mut codes[i];
             let length: usize = end - start;
             reader.cur_pos = start;
-            code.instructions = Vec::with_capacity(length / 3);  // estimate; TODO: better estimate
+            code.instructions = Vec::with_capacity(length / 6);  // estimate; data is from deltarune 1.00
 
             while reader.cur_pos < end {
                 let instruction = GMInstruction::deserialize(reader).map_err(|e| format!(
