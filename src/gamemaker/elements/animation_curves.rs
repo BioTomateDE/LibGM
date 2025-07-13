@@ -2,6 +2,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::element::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
+use crate::utility::num_enum_from;
 
 #[derive(Debug, Clone)]
 pub struct GMAnimationCurves {
@@ -72,12 +73,7 @@ pub struct GMAnimationCurveChannel {
 impl GMElement for GMAnimationCurveChannel {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let curve_type: u32 = reader.read_u32()?;
-        let curve_type: GMAnimationCurveType = curve_type.try_into()
-            .map_err(|_| format!(
-                "Invalid Curve Type {} for Animation Curve \"{}\" at absolute position {} in chunk '{}'",
-                curve_type, reader.display_gm_str(name), reader.cur_pos, reader.chunk.name,
-            ))?;
+        let curve_type: GMAnimationCurveType = num_enum_from(reader.read_u32()?)?;
         let iterations: u32 = reader.read_u32()?;
         let points: Vec<GMAnimationCurveChannelPoint> = reader.read_simple_list()?;
         Ok(GMAnimationCurveChannel { name, curve_type, iterations, points })
@@ -159,6 +155,6 @@ impl GMElement for PointBezierData {
 pub enum GMAnimationCurveType {
     Linear = 0,
     Smooth = 1,
-    // bezier missing idk
+    Bezier = 2,
 }
 
