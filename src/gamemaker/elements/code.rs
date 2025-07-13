@@ -2,6 +2,7 @@
 use crate::gamemaker::element::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::variables::GMVariable;
 use std::cmp::PartialEq;
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::elements::functions::GMFunction;
@@ -37,7 +38,8 @@ impl GMElement for GMCodes {
         let count: usize = pointers.len();
         let mut codes: Vec<GMCode> = Vec::with_capacity(count);
         let mut instructions_ranges: Vec<(usize, usize)> = Vec::with_capacity(count);
-        let mut last_pos = reader.cur_pos;
+        let mut codes_by_pos: HashMap<usize, GMRef<GMCode>> = HashMap::new();
+        let mut last_pos: usize = reader.cur_pos;
         
         for pointer in pointers {
             reader.assert_pos(pointer, "Code")?;
@@ -63,8 +65,7 @@ impl GMElement for GMCodes {
                 instructions_start_pos = (instructions_start_offset + reader.cur_pos as i32 - 4) as usize;
 
                 let offset: usize = reader.read_usize()?;
-                // child check {~~}
-                let b15_info = GMCodeBytecode15 { locals_count, arguments_count, weird_local_flag, offset };
+                let b15_info = GMCodeBytecode15 { locals_count, arguments_count, weird_local_flag, offset, parent: None };
                 instructions_end_pos = instructions_start_pos + code_length;
                 bytecode15_info = Some(b15_info);
             };
@@ -77,6 +78,15 @@ impl GMElement for GMCodes {
         for (i, (start, end)) in instructions_ranges.into_iter().enumerate() {
             let code: &mut GMCode = &mut codes[i];
             let length: usize = end - start;
+            
+            // if bytecode15+ and the instructions pointer is known, then it's a child code entry
+            if length > 0
+                && let Some(parent_code) = codes_by_pos.get(&start) 
+                && let Some(ref mut b15_info) = code.bytecode15_info {
+                b15_info.parent = Some(parent_code.clone());
+                continue
+            }
+            
             reader.cur_pos = start;
             code.instructions = Vec::with_capacity(length / 6);  // estimate; data is from deltarune 1.00
 
@@ -88,6 +98,11 @@ impl GMElement for GMCodes {
                 code.instructions.push(instruction);
             }
             code.instructions.shrink_to_fit();
+            
+            if length > 0 {
+                // Update information to mark this entry as the root (if we have at least 1 instruction)
+                codes_by_pos.insert(start, GMRef::new(i as u32));
+            }
         }
         
         reader.cur_pos = last_pos;  // has to be chunk end (since instructions are stored separately in b15+)
@@ -127,23 +142,31 @@ impl GMElement for GMCodes {
         }
         
         // in bytecode 15, the codes' instructions are written before the codes metadata
-        let mut instructions_start_positions: Vec<usize> = Vec::with_capacity(self.codes.len());
-        let mut instructions_end_positions: Vec<usize> = Vec::with_capacity(self.codes.len());
+        let mut instructions_ranges: Vec<(usize, usize)> = Vec::with_capacity(self.codes.len());
 
         for (i, code) in self.codes.iter().enumerate() {
-            instructions_start_positions.push(builder.len());
+            if code.bytecode15_info.as_ref().unwrap().parent.is_some() {
+                // If this is a child code entry, don't write instructions; just repeat last pointer
+                instructions_ranges.push(instructions_ranges.last().unwrap().clone());
+                // ^ this unwrap will fail if the first entry is a child entry (which is invalid anyway)
+                continue
+            }
+            
+            let start: usize = builder.len();
             for instruction in &code.instructions {
                 instruction.serialize(builder).map_err(|e| format!(
                     "{e}\n↳ while serializing bytecode15 code #{i} with name \"{}\"",
                     builder.display_gm_str(&code.name),
                 ))?;
             }
-            instructions_end_positions.push(builder.len());
+            let end: usize = builder.len();
+            instructions_ranges.push((start, end));
         }
 
         for (i, code) in self.codes.iter().enumerate() {
             builder.overwrite_usize(builder.len(), pointer_list_pos + 4*i)?;
-            let length: usize = instructions_end_positions[i] - instructions_start_positions[i];
+            let (start, end) = instructions_ranges[i];
+            let length: usize = end - start;
             let b15_info: &GMCodeBytecode15 = code.bytecode15_info.as_ref()
                 .ok_or_else(|| format!("Code bytecode 15 data not set in Bytecode version {}", builder.bytecode_version()))?;
             
@@ -151,7 +174,7 @@ impl GMElement for GMCodes {
             builder.write_usize(length)?;
             builder.write_u16(b15_info.locals_count);
             builder.write_u16(b15_info.arguments_count | if b15_info.weird_local_flag {0x8000} else {0});
-            let instructions_start_offset: i32 = instructions_start_positions[i] as i32 - builder.len() as i32;
+            let instructions_start_offset: i32 = start as i32 - builder.len() as i32;
             builder.write_i32(instructions_start_offset);
             builder.write_usize(b15_info.offset)?;
         }
@@ -175,6 +198,7 @@ pub struct GMCodeBytecode15 {
     pub arguments_count: u16,
     pub weird_local_flag: bool,
     pub offset: usize,
+    pub parent: Option<GMRef<GMCode>>,
 }
 
 
