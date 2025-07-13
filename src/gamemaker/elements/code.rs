@@ -854,7 +854,7 @@ pub fn build_instance_type(instance_type: &GMInstanceType) -> i16 {
         GMInstanceType::Global => -5,
         GMInstanceType::Builtin => -6,
         GMInstanceType::Local => -7,
-        GMInstanceType::StackTop => -8,
+        GMInstanceType::StackTop => -9,
         GMInstanceType::Argument => -15,
         GMInstanceType::Static => -16,
     }
