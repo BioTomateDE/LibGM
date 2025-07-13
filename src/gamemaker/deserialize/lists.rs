@@ -18,7 +18,10 @@ impl DataReader<'_> {
         }
         let mut elements: Vec<T> = Vec::with_capacity(count);
         for _ in 0..count {
-            let element: T = deserializer_fn(self)?;
+            let element: T = deserializer_fn(self).map_err(|e| format!(
+                "{e}\n↳ while deserializing element #{}/{} of {} simple list",
+                elements.len(), count, typename::<T>(),
+            ))?;
             elements.push(element);
         }
         Ok(elements)
@@ -73,8 +76,8 @@ impl DataReader<'_> {
                 T::deserialize_post_padding(self, i == count-1)?;
                 Ok(element)
             })().map_err(|e: String| format!(
-                "{e}\n↳ while reading pointer list of {} with {} elements",
-                typename::<T>(), count,
+                "{e}\n↳ while deserializing element #{}/{} of {} pointer list",
+                elements.len(), count, typename::<T>(),
             ))?;
             elements.push(element);
         }
