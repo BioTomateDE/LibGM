@@ -1,7 +1,7 @@
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use std::borrow::Cow;
 use std::cmp::max;
-use std::io::{BufWriter, Cursor, Read};
+use std::io::{Cursor, Read};
 use crate::gamemaker::deserialize::DataReader;
 use crate::gamemaker::printing::hexdump;
 use image;
@@ -219,7 +219,7 @@ fn read_raw_texture(reader: &mut DataReader, max_end_of_stream_pos: usize, textu
         reader.cur_pos = start_position + header_size;
         let raw_image_data: &[u8] = reader.read_bytes_dyn(bz2_stream_length)
             .map_err(|e| format!("Trying to read Bzip2 Stream of Bz2 Qoi Image {e}"))?;
-        
+
         let u16_from = if reader.is_big_endian {u16::from_be_bytes} else {u16::from_le_bytes};
         let width: u16 = u16_from((&header[0..2]).try_into().unwrap());
         let height: u16 = u16_from((&header[2..4]).try_into().unwrap());
@@ -277,6 +277,15 @@ impl GMImage {
         }
     }
 
+    pub fn into_dynamic_image(self) -> Result<Self, String> {
+        Ok(GMImage::DynImg(match self {
+            GMImage::DynImg(dyn_img) => dyn_img,
+            GMImage::Png(raw_png_data) => Self::decode_png(&raw_png_data)?,
+            GMImage::Bz2Qoi(raw_bz2_qoi_data, _) => Self::decode_bz2_qoi(&raw_bz2_qoi_data)?,
+            GMImage::NotYetDeserialized(_) => return Err("Image not deserialized".to_string()),
+        }))
+    }
+
     fn decode_png(raw_png_data: &[u8]) -> Result<DynamicImage, String> {
         image::load_from_memory_with_format(raw_png_data, ImageFormat::Png)
             .map_err(|e| format!("Could not parse PNG: {e}"))
@@ -295,8 +304,10 @@ impl GMImage {
     pub fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         match self {
             GMImage::DynImg(dyn_img) => {
-                let mut writer = BufWriter::with_capacity(8 * 1024, Cursor::new(&mut builder.raw_data));
-                dyn_img.write_to(&mut writer, ImageFormat::Png).map_err(|e| format!("Error while trying to write PNG image data: {e}"))?;
+                let mut png_data: Vec<u8> = Vec::new();
+                dyn_img.write_to(&mut Cursor::new(&mut png_data), ImageFormat::Png)
+                    .map_err(|e| format!("Error while trying to write PNG image data: {e}"))?;
+                builder.raw_data.extend_from_slice(&png_data);
             }
             GMImage::Png(raw_png_data) => builder.write_bytes(&raw_png_data),
             GMImage::Bz2Qoi(raw_bz2_qoi_data, header) => {
