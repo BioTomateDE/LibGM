@@ -50,6 +50,23 @@ impl GMElement for GMFunctions {
             let occurrence_count: usize = reader.read_usize()?;
             let first_occurrence_abs_pos: i32 = reader.read_i32()?;
             let (occurrences, name_string_id): (Vec<usize>, u32) = parse_occurrence_chain(reader, first_occurrence_abs_pos, occurrence_count)?;
+
+            // if reader.resolve_gm_str(name)? == "gml_Script_c_soundplay_wait" {
+            //     log::debug!("gdsnuidsgnugds {i} | {} {} | {:?} | [{}]", occurrence_count, first_occurrence_abs_pos, occurrences, occurrences.iter().map(|i| {
+            //         let saved_chunk: GMChunk = reader.chunk.clone();
+            //         let saved_position: usize = reader.cur_pos;
+            //         reader.chunk = reader.chunks.get("CODE").cloned().unwrap();
+            //         reader.cur_pos = *i - 4;
+            //         let b0 = reader.read_u8().unwrap();
+            //         let b1 = reader.read_u8().unwrap();
+            //         let b2 = reader.read_u8().unwrap();
+            //         let opcode = GMOpcode::try_from(reader.read_u8().unwrap()).unwrap();
+            //         let extra = reader.read_u32().unwrap();
+            //         reader.chunk = saved_chunk;
+            //         reader.cur_pos = saved_position;
+            //         format!("{{{b0} {b1} {b2} {opcode:?} | {extra}}}")
+            //     }).collect::<Vec<_>>().join(", "));
+            // }
             
             for occurrence in &occurrences {
                 if let Some(old_value) = reader.function_occurrence_map.insert(*occurrence, GMRef::new(i as u32)) {
@@ -222,7 +239,7 @@ pub fn parse_occurrence_chain(reader: &mut DataReader, first_occurrence_pos: i32
     }
 
     let name_string_id: u32 = (offset & 0xFFFFFF) as u32;
-    reader.chunk = saved_chunk;    // TODO optimize by parsing all occurrences at the end (only switch chunk twice)
+    reader.chunk = saved_chunk;
     reader.cur_pos = saved_position;
     Ok((occurrences, name_string_id))
 }
