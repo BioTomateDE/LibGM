@@ -76,7 +76,7 @@ impl DataReader<'_> {
             // byte is not zero => padding is incorrect
             self.cur_pos -= 1;  // undo reading incorrect padding byte
             self.chunk_padding = if self.cur_pos % 4 == 0 { 4 } else { 1 };
-            log::debug!("Set padding to {}", self.chunk_padding);
+            log::debug!("Set chunk padding to {}", self.chunk_padding);
             return Ok(())
         }
         Ok(())    // padding was already set correctly
