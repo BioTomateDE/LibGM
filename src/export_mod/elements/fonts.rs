@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
-use crate::gamemaker::fonts::GMFontGlyph;
 use crate::export_mod::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, edit_field_option, ModExporter, ModRef};
+use crate::export_mod::ordered_list::{export_changes_ordered_list, DataChange};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
-
+use crate::gamemaker::elements::fonts::{GMFontGlyph, GMFontGlyphKerning, GMFontSize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddFont {
@@ -67,6 +67,13 @@ pub struct EditFontGlyph {
     pub height: Option<u16>,
     pub shift_modifier: Option<i16>,
     pub offset: Option<i16>,
+    pub kernings: Vec<DataChange<ModKerning>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModKerning {
+    pub character: char,
+    pub shift_modifier: i16,
 }
 
 
@@ -78,7 +85,7 @@ impl ModExporter<'_, '_> {
             |i| Ok(AddFont {
                 name: self.convert_string_ref(&i.name)?,
                 display_name: self.convert_string_ref_opt(&i.display_name)?,
-                em_size: i.em_size,
+                em_size: convert_font_size(&i.em_size),
                 bold: i.bold,
                 italic: i.italic,
                 range_start: i.range_start,
@@ -97,7 +104,7 @@ impl ModExporter<'_, '_> {
             |o, m| Ok(EditFont {
                 name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
                 display_name: edit_field_convert_option(&o.display_name, &m.display_name, |r| self.convert_string_ref(r))?,
-                em_size: edit_field(&o.em_size, &m.em_size),
+                em_size: edit_field(&convert_font_size(&o.em_size), &convert_font_size(&m.em_size)),
                 bold: edit_field(&o.bold, &m.bold),
                 italic: edit_field(&o.italic, &m.italic),
                 range_start: edit_field(&o.range_start, &m.range_start),
@@ -140,7 +147,21 @@ fn edit_font_glyph(o: &GMFontGlyph, m: &GMFontGlyph) -> Result<EditFontGlyph, St
         height: edit_field(&o.height, &m.height),
         shift_modifier: edit_field(&o.shift_modifier, &m.shift_modifier),
         offset: edit_field(&o.offset, &m.offset),
+        kernings: export_changes_ordered_list(&o.kernings, &m.kernings, convert_font_kerning)?,
     })
 }
 
+fn convert_font_size(i: &GMFontSize) -> f32 {
+    match i {
+        GMFontSize::Float(float) => *float,
+        GMFontSize::Int(int) => *int as f32,
+    }
+}
+
+fn convert_font_kerning(i: &GMFontGlyphKerning) -> Result<ModKerning, String> {
+    Ok(ModKerning {
+        character: i.character,
+        shift_modifier: i.shift_modifier,
+    })
+}
 

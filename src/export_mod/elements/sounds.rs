@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::gamemaker::sounds::GMSoundFlags;
+use crate::gamemaker::elements::sounds::GMSoundFlags;
 use crate::export_mod::export::{edit_field, edit_field_convert, edit_field_convert_option, flag_field, ModExporter, ModRef};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
@@ -34,12 +34,14 @@ pub struct EditSound {
     pub effects: Option<u32>,
     pub volume: Option<f32>,
     pub pitch: Option<f32>,
+    pub audio_group: Option<ModRef>,    // Audio Group
     pub audio_data: Option<Option<ModRef>>,  // Embedded Audio
     pub audio_length: Option<Option<f32>>,
 }
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditSoundFlags {
+    // TODO: remove (some of) these??
     pub is_embedded: Option<bool>,
     pub is_compressed: Option<bool>,
     pub is_decompressed_on_load: Option<bool>,
@@ -71,6 +73,7 @@ impl ModExporter<'_, '_> {
                 effects: edit_field(&o.effects, &m.effects),
                 volume: edit_field(&o.volume, &m.volume),
                 pitch: edit_field(&o.pitch, &m.pitch),
+                audio_group: edit_field_convert(&o.audio_group, &m.audio_group, |r| self.convert_audio_group_ref(r))?,
                 audio_data: edit_field_convert_option(&o.audio_file, &m.audio_file, |r| self.convert_audio_ref(r))?,
                 audio_length: edit_field(&o.audio_length, &m.audio_length),
             }),

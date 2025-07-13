@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::gamemaker::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags};
+use crate::gamemaker::elements::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags};
 use crate::export_mod::export::{edit_field, edit_field_convert, flag_field, ModExporter, ModRef};
 use crate::export_mod::ordered_list::{export_changes_ordered_list, DataChange};
 
@@ -332,9 +332,10 @@ impl ModExporter<'_, '_> {
         prevent_changing!(o, m, unknown_value, "Unknown Value");
         prevent_changing!(o, m, directplay_guid, "Directplay GUID");
         prevent_changing!(o, m, version, "GameMaker version");
-        // prevent_changing!(o, m, license_crc32, "Licence (CRC32)");
-        // prevent_changing!(o, m, license_md5, "Licence (MD5)");       // TODO remove debug
+        prevent_changing!(o, m, license_crc32, "Licence (CRC32)");
+        prevent_changing!(o, m, license_md5, "Licence (MD5)");
         prevent_changing!(o, m, active_targets, "Active Targets");
+        // TODO: find function usages in code when loading; i dont trust the runner 
         
         Ok(EditGeneralInfo {
             debugger_enabled: edit_field(&o.is_debugger_disabled, &m.is_debugger_disabled),

@@ -51,6 +51,15 @@ impl GMElement for GMFunctions {
             let first_occurrence_abs_pos: i32 = reader.read_i32()?;
             let (occurrences, name_string_id): (Vec<usize>, u32) = parse_occurrence_chain(reader, first_occurrence_abs_pos, occurrence_count)?;
             
+            // verify name string id
+            if name.index != name_string_id {
+                // maybe this is also allowed to be -1 for unused functions?
+                return Err(format!(
+                    "Function #{i} with name \"{}\" specifies name string id {}; but the id of name string is actually {}",
+                    reader.resolve_gm_str(name)?, name_string_id, name.index,
+                ))
+            }
+            
             for occurrence in &occurrences {
                 if let Some(old_value) = reader.function_occurrence_map.insert(*occurrence, GMRef::new(i as u32)) {
                     return Err(format!(
@@ -61,7 +70,7 @@ impl GMElement for GMFunctions {
                 }
             }
 
-            functions.push(GMFunction { name, name_string_id });
+            functions.push(GMFunction { name });
         }
 
         let code_locals: GMCodeLocals = GMCodeLocals::deserialize(reader)?;
@@ -104,7 +113,6 @@ impl GMElement for GMFunctions {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMFunction {
     pub name: GMRef<String>,
-    pub name_string_id: u32,
 }
 
 

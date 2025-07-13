@@ -75,13 +75,21 @@ impl GMElement for GMBackground {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMBackgroundGMS2Data {
+    /// The width of a tile in this tileset.
     pub tile_width: u32,
+    /// The height of a tile in this tileset.
     pub tile_height: u32,
+    /// The amount of extra empty pixels left and right a tile in this tileset.
     pub output_border_x: u32,
+    /// The amount of extra empty pixels above and below a tile in this tileset.
     pub output_border_y: u32,
+    /// The amount of columns this tileset has.
     pub tile_columns: u32,
+    /// The number of frames of the tileset animation.
     pub items_per_tile_count: usize,
+    /// The time for each frame in microseconds.
     pub frame_length: i64,
+    /// All tile ids of this tileset.
     pub tile_ids: Vec<u32>,
 }
 impl GMElement for GMBackgroundGMS2Data {
