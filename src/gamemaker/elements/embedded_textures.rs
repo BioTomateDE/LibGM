@@ -190,7 +190,7 @@ fn read_raw_texture(reader: &mut DataReader, max_end_of_stream_pos: usize, textu
                 expected_size, data_length,
             ))
         }
-        
+
         reader.cur_pos = start_position;
         let bytes: &[u8] = reader.read_bytes_dyn(data_length).map_err(|e| format!("Trying to read PNG image data {e}"))?;
         // png image size checks {~~}
@@ -200,8 +200,9 @@ fn read_raw_texture(reader: &mut DataReader, max_end_of_stream_pos: usize, textu
     else if header.starts_with(MAGIC_BZ2_QOI_HEADER) {
         // Parse QOI + BZip2
         let mut header_size: usize = 8;
+        let mut uncompressed_size = None;
         if reader.general_info.is_version_at_least((2022, 5)) {
-            let _serialized_uncompressed_length = reader.read_usize()?;    // maybe handle negative numbers?
+            uncompressed_size = Some(reader.read_usize()?);
             header_size = 12;
         }
 
@@ -218,7 +219,12 @@ fn read_raw_texture(reader: &mut DataReader, max_end_of_stream_pos: usize, textu
         reader.cur_pos = start_position + header_size;
         let raw_image_data: &[u8] = reader.read_bytes_dyn(bz2_stream_length)
             .map_err(|e| format!("Trying to read Bzip2 Stream of Bz2 Qoi Image {e}"))?;
-        let image: GMImage = GMImage::from_bz2_qoi(raw_image_data.to_vec());
+        
+        let u16_from = if reader.is_big_endian {u16::from_be_bytes} else {u16::from_le_bytes};
+        let width: u16 = u16_from((&header[0..2]).try_into().unwrap());
+        let height: u16 = u16_from((&header[2..4]).try_into().unwrap());
+        let header = Bzip2QoiHeader { width, height, uncompressed_size };
+        let image: GMImage = GMImage::from_bz2_qoi(raw_image_data.to_vec(), header);
         Ok(image)
     }
     else if header.starts_with(MAGIC_QOI_HEADER) {
@@ -234,10 +240,18 @@ fn read_raw_texture(reader: &mut DataReader, max_end_of_stream_pos: usize, textu
 
 
 #[derive(Debug, Clone)]
+pub struct Bzip2QoiHeader {
+    width: u16,
+    height: u16,
+    /// Present in 2022.5+
+    uncompressed_size: Option<usize>,
+}
+
+#[derive(Debug, Clone)]
 pub enum GMImage {
     DynImg(DynamicImage),
     Png(Vec<u8>),
-    Bz2Qoi(Vec<u8>),
+    Bz2Qoi(Vec<u8>, Bzip2QoiHeader),
     /// Only temporarily used when parsing.
     NotYetDeserialized(usize),
 }
@@ -250,15 +264,15 @@ impl GMImage {
         Self::Png(raw_png_data)
     }
     
-    pub fn from_bz2_qoi(raw_bz2_qoi_data: Vec<u8>) -> Self {
-        Self::Bz2Qoi(raw_bz2_qoi_data)
+    pub fn from_bz2_qoi(raw_bz2_qoi_data: Vec<u8>, header: Bzip2QoiHeader) -> Self {
+        Self::Bz2Qoi(raw_bz2_qoi_data, header)
     }
     
     pub fn to_dynamic_image(&self) -> Result<Cow<DynamicImage>, String> {
         match self {
             GMImage::DynImg(dyn_img) => Ok(Cow::Borrowed(dyn_img)),
             GMImage::Png(raw_png_data) => Ok(Cow::Owned(Self::decode_png(&raw_png_data)?)),
-            GMImage::Bz2Qoi(raw_bz2_qoi_data) => Ok(Cow::Owned(Self::decode_bz2_qoi(&raw_bz2_qoi_data)?)),
+            GMImage::Bz2Qoi(raw_bz2_qoi_data, _) => Ok(Cow::Owned(Self::decode_bz2_qoi(&raw_bz2_qoi_data)?)),
             GMImage::NotYetDeserialized(_) => Err("Image not deserialized".to_string())
         }
     }
@@ -285,7 +299,13 @@ impl GMImage {
                 dyn_img.write_to(&mut writer, ImageFormat::Png).map_err(|e| format!("Error while trying to write PNG image data: {e}"))?;
             }
             GMImage::Png(raw_png_data) => builder.write_bytes(&raw_png_data),
-            GMImage::Bz2Qoi(raw_bz2_qoi_data) => builder.write_bytes(&raw_bz2_qoi_data),
+            GMImage::Bz2Qoi(raw_bz2_qoi_data, header) => {
+                builder.write_bytes(MAGIC_BZ2_QOI_HEADER);
+                builder.write_u16(header.width);
+                builder.write_u16(header.height);
+                header.uncompressed_size.serialize_if_gm_ver(builder, "Uncompressed data size", (2022, 5))?;
+                builder.write_bytes(&raw_bz2_qoi_data);
+            },
             GMImage::NotYetDeserialized(_) => return Err("Image not deserialized".to_string()),
         }
         Ok(())
