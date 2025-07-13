@@ -1,8 +1,9 @@
+use std::borrow::Cow;
 use std::fs::File;
 use std::io::Cursor;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
-use image::ImageFormat;
+use image::{DynamicImage, ImageFormat};
 use serde::{Deserialize, Serialize};
 use crate::bench_export;
 use crate::utility::Stopwatch;
@@ -18,12 +19,18 @@ use crate::export_mod::elements::rooms::{AddRoom, EditRoom};
 use crate::export_mod::elements::scripts::ModScript;
 use crate::export_mod::elements::sounds::{AddSound, EditSound};
 use crate::export_mod::elements::sprites::{AddSprite, EditSprite};
+use crate::export_mod::elements::textures::{AddTexturePageItem, EditTexturePageItem};
 use crate::export_mod::unordered_list::EditUnorderedList;
 use crate::export_mod::elements::variables::{AddVariable, EditVariable};
 use crate::gamemaker::deserialize::{GMData, GMRef};
+use crate::gamemaker::elements::embedded_textures::GMEmbeddedTexture;
 
 pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_path: &Path) -> Result<(), String> {
     let stopwatch = Stopwatch::start();
+    
+    let original_images: Vec<Option<Cow<DynamicImage>>> = get_images(&original_data.embedded_textures.texture_pages)?;
+    let modified_images: Vec<Option<Cow<DynamicImage>>> = get_images(&modified_data.embedded_textures.texture_pages)?;
+    log::trace!("Getting {} dynamic images took {stopwatch}", original_images.len() + modified_images.len());
     
     // initialize file and tarball
     let file = File::create(target_file_path)
@@ -47,7 +54,9 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     let sounds: EditUnorderedList<AddSound, EditSound> = bench_export!("Sounds", mod_exporter.export_sounds())?;
     let sprites: EditUnorderedList<AddSprite, EditSprite> = bench_export!("Sprites", mod_exporter.export_sprites())?;
     let strings: EditUnorderedList<String, String> = bench_export!("Strings", mod_exporter.export_strings())?;
-    let (texture_page_items, images) = bench_export!("Textures", mod_exporter.export_textures())?;
+    let (texture_page_items, images): 
+        (EditUnorderedList<AddTexturePageItem, EditTexturePageItem>, Vec<DynamicImage>) 
+        = bench_export!("Textures", mod_exporter.export_textures(original_images, modified_images))?;
     let variables: EditUnorderedList<AddVariable, EditVariable> = bench_export!("Variables", mod_exporter.export_variables())?;
     log::trace!("Exporting changes took {stopwatch}");
 
@@ -109,6 +118,19 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     log::trace!("Exporting changes and writing tarball took {stopwatch}");
     Ok(())
 }
+
+fn get_images(texture_pages: &[GMEmbeddedTexture]) -> Result<Vec<Option<Cow<DynamicImage>>>, String> {
+    use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+    texture_pages
+        .par_iter()
+        .map(|texture_page| {
+            texture_page.image
+                .as_ref()
+                .map(|img| img.to_dynamic_image())
+                .transpose()
+        }).collect()
+}
+
 
 fn tar_write_json_file<J: Serialize>(tar: &mut tar::Builder<zstd::Encoder<File>>, name: &str, json_struct: J) -> Result<(), String> {
     let filename: String = format!("{name}.json");
