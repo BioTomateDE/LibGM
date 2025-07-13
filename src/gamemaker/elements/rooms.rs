@@ -709,7 +709,6 @@ impl GMRoomLayerDataTiles {
         } else {
             false   // no tiles => no padding (should never happen though?)
         };
-        log::debug!("{has_padding}");
         if has_padding {
             let length: u8 = reader.read_u8()?;
             let tile: u32 = reader.read_u32()?;

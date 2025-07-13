@@ -1,19 +1,18 @@
-use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use std::borrow::Cow;
 use std::cmp::max;
 use std::io::{Cursor, Read};
-use crate::gamemaker::deserialize::DataReader;
-use crate::gamemaker::printing::hexdump;
 use image;
 use bzip2::read::BzDecoder;
-use image::{DynamicImage, ImageFormat};
+use image::{DynamicImage, ImageFormat};use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
+use crate::gamemaker::deserialize::DataReader;
+use crate::gamemaker::printing::hexdump;
 use crate::gamemaker::element::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::qoi;
 
-pub const MAGIC_PNG_HEADER: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
-pub const MAGIC_BZ2_QOI_HEADER: &[u8] = "2zoq".as_bytes();
-pub const MAGIC_QOI_HEADER: &[u8] = "fioq".as_bytes();
+pub const MAGIC_PNG_HEADER: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+pub const MAGIC_BZ2_QOI_HEADER: &[u8; 4] = b"2zoq";
+pub const MAGIC_QOI_HEADER: &[u8; 4] = b"fioq";
 
 
 #[derive(Debug, Clone)]
@@ -221,8 +220,8 @@ fn read_raw_texture(reader: &mut DataReader, max_end_of_stream_pos: usize, textu
             .map_err(|e| format!("Trying to read Bzip2 Stream of Bz2 Qoi Image {e}"))?;
 
         let u16_from = if reader.is_big_endian {u16::from_be_bytes} else {u16::from_le_bytes};
-        let width: u16 = u16_from((&header[0..2]).try_into().unwrap());
-        let height: u16 = u16_from((&header[2..4]).try_into().unwrap());
+        let width: u16 = u16_from((&header[4..6]).try_into().unwrap());
+        let height: u16 = u16_from((&header[6..8]).try_into().unwrap());
         let header = Bzip2QoiHeader { width, height, uncompressed_size };
         let image: GMImage = GMImage::from_bz2_qoi(raw_image_data.to_vec(), header);
         Ok(image)
@@ -307,7 +306,7 @@ impl GMImage {
                 let mut png_data: Vec<u8> = Vec::new();
                 dyn_img.write_to(&mut Cursor::new(&mut png_data), ImageFormat::Png)
                     .map_err(|e| format!("Error while trying to write PNG image data: {e}"))?;
-                builder.raw_data.extend_from_slice(&png_data);
+                builder.write_bytes(&png_data);
             }
             GMImage::Png(raw_png_data) => builder.write_bytes(&raw_png_data),
             GMImage::Bz2Qoi(raw_bz2_qoi_data, header) => {

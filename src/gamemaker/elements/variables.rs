@@ -88,12 +88,12 @@ impl GMElement for GMVariables {
             let occurrences = builder.variable_occurrences.get(i)
                 .ok_or_else(|| format!("Could not resolve variable occurrence with index {i} in list with length {}", builder.function_occurrences.len()))?;
             let occurrence_count: usize = occurrences.len();
-            let first_occurrence: u32 = match occurrences.first() {
-                Some((occurrence, _)) => *occurrence as u32,
-                None => variable.name_string_id,    // not sure if correct tbh
+            let first_occurrence: i32 = match occurrences.first() {
+                Some((occurrence, _)) => *occurrence as i32,
+                None => -1,
             };
             builder.write_usize(occurrence_count)?;
-            builder.write_u32(first_occurrence);
+            builder.write_i32(first_occurrence);
         }
         Ok(())
     }
