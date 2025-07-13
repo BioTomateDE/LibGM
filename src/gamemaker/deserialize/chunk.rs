@@ -16,10 +16,10 @@ pub struct GMChunk {
 impl DataReader<'_> {
     /// Read chunk name (4 ascii characters)
     pub fn read_chunk_name(&mut self) -> Result<String, String> {
-        if self.chunk.start_pos != 0 {
+        if self.chunk.name != "FORM" {
             return Err(format!(
                 "Reading a chunk name is only allowed in root; not in a chunk!
-                Chunk is called '{}' and has start position {} and end position {}",
+                Current chunk is called '{}' and has start position {} and end position {}",
                 self.chunk.name, self.chunk.start_pos, self.chunk.end_pos,
             ))
         }
