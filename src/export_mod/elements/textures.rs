@@ -33,7 +33,11 @@ pub struct EditTexturePageItem {
 }
 
 impl ModExporter<'_, '_> {
-    pub fn export_textures(&self) -> Result<(EditUnorderedList<AddTexturePageItem, EditTexturePageItem>, Vec<DynamicImage>), String> {
+    pub fn export_textures(
+        &self,
+        original_images: Vec<Option<Cow<DynamicImage>>>,
+        modified_images: Vec<Option<Cow<DynamicImage>>>,
+    ) -> Result<(EditUnorderedList<AddTexturePageItem, EditTexturePageItem>, Vec<DynamicImage>), String> {
         // export_changes_unordered_list(
         let original_list: &Vec<GMTexturePageItem> = &self.original_data.texture_page_items.texture_page_items;
         let modified_list: &Vec<GMTexturePageItem> = &self.modified_data.texture_page_items.texture_page_items;
@@ -50,8 +54,8 @@ impl ModExporter<'_, '_> {
         let mut additions = Vec::with_capacity(texture_page_items.len());
         
         for i in texture_page_items {
-            let texture_page: &GMEmbeddedTexture = i.texture_page.resolve(&self.modified_data.embedded_textures.texture_pages)?;
-            let cropped_image: DynamicImage = crop_from_texture_page(texture_page, i)?;
+            let texture_page_img: &Cow<DynamicImage> = &modified_images[i.texture_page.index as usize].as_ref().unwrap();
+            let cropped_image: DynamicImage = crop_from_texture_page(texture_page_img, i)?;
             
             let add_texture_page_item = AddTexturePageItem {
                 image: ModRef::Add(textures.len() as u32),
@@ -68,11 +72,12 @@ impl ModExporter<'_, '_> {
 
         let mut edits: HashMap<usize, EditTexturePageItem> = HashMap::new();
         for (i, (original, modified)) in zip(original_list, modified_list).enumerate() {
-            let original_texture_page: &GMEmbeddedTexture = original.texture_page.resolve(&self.original_data.embedded_textures.texture_pages)?;
-            let modified_texture_page: &GMEmbeddedTexture = modified.texture_page.resolve(&self.modified_data.embedded_textures.texture_pages)?;
-            let original_cropped: DynamicImage = crop_from_texture_page(original_texture_page, original)?;  // <-- slow operation
-            let modified_cropped: DynamicImage = crop_from_texture_page(modified_texture_page, modified)?;  // <-- slow operation
+            let original_texture_page_img: &Cow<DynamicImage> = &original_images[original.texture_page.index as usize].as_ref().unwrap();
+            let modified_texture_page_img: &Cow<DynamicImage> = &modified_images[modified.texture_page.index as usize].as_ref().unwrap();
+            let original_cropped: DynamicImage = crop_from_texture_page(original_texture_page_img, original)?;  // <-- slow operation
+            let modified_cropped: DynamicImage = crop_from_texture_page(modified_texture_page_img, modified)?;  // <-- slow operation
 
+            // TODO: optimize
             let image_unchanged: bool = original_cropped == modified_cropped;   // <-- slow operation
             if image_unchanged
                 && original.target_x == modified.target_x
@@ -84,7 +89,7 @@ impl ModExporter<'_, '_> {
                 continue
             }
             
-            // TODO it will always create a new cropped image; even if the texture is also in the original
+            // it will always create a new cropped image; even if the texture is also in the original
             let edit = EditTexturePageItem {
                 image: Some(ModRef::Add(textures.len() as u32)),
                 target_x: edit_field(&original.target_x, &modified.target_x),
@@ -103,12 +108,8 @@ impl ModExporter<'_, '_> {
 }
 
 
-fn crop_from_texture_page(texture_page: &GMEmbeddedTexture, texture_page_item: &GMTexturePageItem) -> Result<DynamicImage, String> {
-    let gm_image: &GMImage = texture_page.image.as_ref()
-        .ok_or_else(|| format!("Image not set for texture page #{}; external textures pages are not yet supported", texture_page_item.texture_page.index))?;
-    let texture_page_image: Cow<DynamicImage> = gm_image.to_dynamic_image()?;   // <--- slow operation
-    
-    let cropped_image: DynamicImage = texture_page_image.crop_imm(
+fn crop_from_texture_page(texture_page_img: &Cow<DynamicImage>, texture_page_item: &GMTexturePageItem) -> Result<DynamicImage, String> {
+    let cropped_image: DynamicImage = texture_page_img.crop_imm(
         texture_page_item.source_x as u32,
         texture_page_item.source_y as u32,
         texture_page_item.source_width as u32,

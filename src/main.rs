@@ -15,11 +15,6 @@ mod csharp_rng;
 
 use std::path::Path;
 use std::process::exit;
-
-use gamemaker::deserialize::GMData;
-// use crate::export_mod::export::export_mod;
-use gamemaker::deserialize::parse_data_file;
-use gamemaker::serialize::build_data_file;
 use crate::utility::Stopwatch;
 
 
@@ -45,6 +40,8 @@ fn path_from_arg<'a>(arg: Option<&'a String>, default: &'a str) -> &'a Path {
 
 
 fn main_open_and_close() -> Result<(), String> {
+    use crate::gamemaker::deserialize::{GMData, parse_data_file};
+    use crate::gamemaker::serialize::build_data_file;
     let args: Vec<String> = std::env::args().collect();
     let original_data_file_path: &Path = path_from_arg(args.get(1), "data.win");
     let modified_data_file_path: &Path = path_from_arg(args.get(2), "data_out.win");
@@ -56,6 +53,7 @@ fn main_open_and_close() -> Result<(), String> {
     log::info!("Parsing data file");
     let original_data: GMData = parse_data_file(&original_data_raw, false)
         .map_err(|e| format!("\n{e}\n↳ while parsing data file"))?;
+    drop(original_data_raw);
     
     // // sample changes
     // let string_id = original_data.strings.strings.len();
@@ -74,41 +72,45 @@ fn main_open_and_close() -> Result<(), String> {
 }
 
 
-// fn main_export_mod() -> Result<(), String> {
-//     let args: Vec<String> = std::env::args().collect();
-//     let original_data_file_path = path_from_arg(args.get(1), "data_original.win");
-//     let modified_data_file_path = path_from_arg(args.get(2), "data_modified.win");
-//     let mod_data_path = path_from_arg(args.get(3), "acornmod.tar.zst");
-//
-//     log::info!("Loading original data file \"{}\"", original_data_file_path.display());
-//     let original_data_raw: Vec<u8> = read_data_file(original_data_file_path)
-//         .map_err(|e| format!("{e}\n↳ while reading original data file"))?;
-//
-//     log::info!("Parsing original data file");
-//     let original_data: GMData = parse_data_file(original_data_raw)
-//         .map_err(|e| format!("{e}\n↳ while parsing original data file"))?;
-//
-//     log::info!("Loading modified data file \"{}\"", modified_data_file_path.display());
-//     let modified_data_raw: Vec<u8> = read_data_file(modified_data_file_path)
-//         .map_err(|e| format!("{e}\n↳ while reading modified data file"))?;
-//
-//     log::info!("Parsing modified data file");
-//     let modified_data: GMData = parse_data_file(modified_data_raw)
-//         .map_err(|e| format!("{e}\n↳ while parsing modified data file"))?;
-//
-//     log::info!("Extracting changes and exporting mod to file \"{}\"", mod_data_path.display());
-//     export_mod(&original_data, &modified_data, mod_data_path)
-//         .map_err(|e| format!("{e}\n↳ while exporting AcornGM mod"))?;
-//
-//     Ok(())
-// }
+fn main_export_mod() -> Result<(), String> {
+    use crate::export_mod::export::{export_mod};
+    use crate::gamemaker::deserialize::{parse_data_file, GMData};
+    let args: Vec<String> = std::env::args().collect();
+    let original_data_file_path = path_from_arg(args.get(1), "data_original.win");
+    let modified_data_file_path = path_from_arg(args.get(2), "data_modified.win");
+    let mod_data_path = path_from_arg(args.get(3), "acornmod.tar.zst");
+
+    log::info!("Loading original data file \"{}\"", original_data_file_path.display());
+    let original_data_raw: Vec<u8> = read_data_file(original_data_file_path)
+        .map_err(|e| format!("{e}\n↳ while reading original data file"))?;
+
+    log::info!("Parsing original data file");
+    let original_data: GMData = parse_data_file(&original_data_raw, false)
+        .map_err(|e| format!("{e}\n↳ while parsing original data file"))?;
+    drop(original_data_raw);
+
+    log::info!("Loading modified data file \"{}\"", modified_data_file_path.display());
+    let modified_data_raw: Vec<u8> = read_data_file(modified_data_file_path)
+        .map_err(|e| format!("{e}\n↳ while reading modified data file"))?;
+
+    log::info!("Parsing modified data file");
+    let modified_data: GMData = parse_data_file(&modified_data_raw, false)
+        .map_err(|e| format!("{e}\n↳ while parsing modified data file"))?;
+    drop(modified_data_raw);
+
+    log::info!("Extracting changes and exporting mod to file \"{}\"", mod_data_path.display());
+    export_mod(&original_data, &modified_data, mod_data_path)
+        .map_err(|e| format!("{e}\n↳ while exporting AcornGM mod"))?;
+
+    Ok(())
+}
 
 
 fn main() {
     biologischer_log::init(env!("CARGO_PKG_NAME"));
     log::debug!("============= LibGM v{} =============", env!("CARGO_PKG_VERSION"));
     
-    if let Err(e) = main_open_and_close() {
+    if let Err(e) = main_export_mod() {
         log::error!("{e}");
         exit(1);
     }

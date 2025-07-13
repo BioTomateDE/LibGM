@@ -58,7 +58,6 @@ pub fn export_changes_unordered_list<GM, ADD, EDIT>(
             typename::<GM>(), original_list.len(), modified_list.len(),
         ))?
     }.par_iter().map(map_addition).collect::<Result<Vec<_>, _>>()?;
-    // TODO: does this par_iter implicitly send the entire ModExporter struct across threads?
     
     let edits: HashMap<usize, EDIT> = export_edits(original_list, modified_list, map_edit)?;
     Ok(EditUnorderedList { additions, edits })
