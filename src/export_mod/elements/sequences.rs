@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::gamemaker::sequence::GMSequence;
+use crate::gamemaker::elements::sequence::GMSequence;
 use crate::export_mod::export::ModExporter;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

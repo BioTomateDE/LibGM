@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
-use crate::gamemaker::rooms::{GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomLayer, GMRoomLayerType, GMRoomTile, GMRoomTileTexture, GMRoomView};
+use crate::gamemaker::elements::rooms::{GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomLayer, GMRoomLayerType, GMRoomTile, GMRoomTileTexture, GMRoomView};
 use crate::export_mod::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, flag_field, ModExporter, ModRef};
-use crate::export_mod::sequences::{AddSequence, EditSequence};
+use crate::export_mod::elements::sequences::{AddSequence, EditSequence};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -15,7 +15,7 @@ pub struct AddRoom {
     pub background_color: u32,
     pub draw_background_color: bool,
     pub creation_code: Option<ModRef>,
-    pub flags: GMRoomFlags,
+    pub flags: AddRoomFlags,
     pub backgrounds: Vec<AddRoomBackground>,
     pub views: Vec<AddRoomView>,
     pub game_objects: Vec<AddRoomGameObject>,
@@ -28,8 +28,8 @@ pub struct AddRoom {
     pub gravity_x: f32,
     pub gravity_y: f32,
     pub meters_per_pixel: f32,
-    pub layers: Option<Vec<AddRoomLayer>>,
-    pub sequences: Option<Vec<AddSequence>>,
+    pub layers: Vec<AddRoomLayer>,
+    pub sequences: Vec<AddSequence>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddRoomView {
@@ -79,7 +79,7 @@ pub struct AddRoomTile {
 pub struct AddRoomLayer {
     pub layer_name: ModRef, // String
     pub layer_id: u32,
-    pub layer_type: GMRoomLayerType,
+    pub layer_type: ModRoomLayerType,
     pub layer_depth: i32,
     pub x_offset: f32,
     pub y_offset: f32,
@@ -104,10 +104,7 @@ pub struct AddRoomGameObject {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddRoomFlags {
     pub enable_views: bool,
-    pub show_color: bool,
     pub dont_clear_display_buffer: bool,
-    pub is_gms2: bool,
-    pub is_gms2_3: bool,
 }
 
 #[serde_with::skip_serializing_none]
@@ -135,17 +132,14 @@ pub struct EditRoom {
     pub gravity_x: Option<f32>,
     pub gravity_y: Option<f32>,
     pub meters_per_pixel: Option<f32>,
-    pub layers: Option<EditUnorderedList<AddRoomLayer, EditRoomLayer>>,
-    pub sequences: Option<EditUnorderedList<AddSequence, EditSequence>>,
+    pub layers: EditUnorderedList<AddRoomLayer, EditRoomLayer>,
+    pub sequences: EditUnorderedList<AddSequence, EditSequence>,
 }
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditRoomFlags {
     pub enable_views: Option<bool>,
-    pub show_color: Option<bool>,
     pub dont_clear_display_buffer: Option<bool>,
-    pub is_gms2: Option<bool>,
-    pub is_gms2_3: Option<bool>,
 }
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -199,7 +193,7 @@ pub struct EditRoomTile {
 pub struct EditRoomLayer {
     pub layer_name: Option<ModRef>, // String
     pub layer_id: Option<u32>,
-    pub layer_type: Option<GMRoomLayerType>,
+    pub layer_type: Option<ModRoomLayerType>,
     pub layer_depth: Option<i32>,
     pub x_offset: Option<f32>,
     pub y_offset: Option<f32>,
@@ -228,6 +222,16 @@ pub enum ModRoomTileTexture {
     Sprite(Option<ModRef>),     // GMSprite
     Background(Option<ModRef>), // GMBackground
 }
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[repr(u32)]
+pub enum ModRoomLayerType {
+    Background = 1,
+    Instances = 2,
+    Assets = 3,
+    Tiles = 4,
+    Effect = 6,
+    Path2 = 7,
+}
 
 
 impl ModExporter<'_, '_> {
@@ -245,7 +249,10 @@ impl ModExporter<'_, '_> {
                 background_color: i.background_color,
                 draw_background_color: i.draw_background_color,
                 creation_code: self.convert_code_ref_opt(&i.creation_code)?,
-                flags: i.flags.clone(),
+                flags: AddRoomFlags {
+                    enable_views: i.flags.enable_views,
+                    dont_clear_display_buffer: i.flags.dont_clear_display_buffer,
+                },
                 backgrounds: convert_additions(&i.backgrounds, |r| self.add_room_background(r))?,
                 views: convert_additions(&i.views, |view| self.add_room_view(view))?,
                 game_objects: convert_additions(&i.game_objects, |obj| self.add_room_game_object(obj))?,
@@ -258,16 +265,8 @@ impl ModExporter<'_, '_> {
                 gravity_x: i.gravity_x,
                 gravity_y: i.gravity_y,
                 meters_per_pixel: i.meters_per_pixel,
-                layers: if let Some(ref layers) = i.layers {
-                    Some(convert_additions(layers, |layer| self.add_room_layer(layer))?)
-                } else {
-                    None
-                },
-                sequences: if let Some(ref sequences) = i.sequences {
-                    Some(convert_additions(sequences, |sequence| self.add_sequence(sequence))?)
-                } else {
-                    None
-                },
+                layers: convert_additions(&i.layers, |layer| self.add_room_layer(layer))?,
+                sequences: convert_additions(&i.sequences, |sequence| self.add_sequence(sequence))?,
             }),
             |o, m| Ok(EditRoom {
                 name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
@@ -316,24 +315,20 @@ impl ModExporter<'_, '_> {
                 gravity_x: edit_field(&o.gravity_x, &m.gravity_x),
                 gravity_y: edit_field(&o.gravity_y, &m.gravity_y),
                 meters_per_pixel: edit_field(&o.meters_per_pixel, &m.meters_per_pixel),
-                layers: if let Some(ref m_layers) = m.layers {
-                    Some(export_changes_unordered_list(
-                        o.layers.as_deref().unwrap_or_default(),
-                        m_layers,
-                        |i| self.add_room_layer(i),
-                        |o, m| self.edit_room_layer(o, m),
-                        false,
-                    )?)
-                } else { None },
-                sequences: if let Some(ref m_sequences) = m.sequences {     // TODO not sure if order matters for layer's sequences
-                    Some(export_changes_unordered_list(
-                        o.sequences.as_deref().unwrap_or_default(),
-                        m_sequences,
-                        |i| self.add_sequence(i),
-                        |o, m| self.edit_sequence(o, m),
-                        false,
-                    )?)
-                } else { None },
+                layers: export_changes_unordered_list(
+                    &o.layers,
+                    &m.layers,
+                    |i| self.add_room_layer(i),
+                    |o, m| self.edit_room_layer(o, m),
+                    false,
+                )?,
+                sequences: export_changes_unordered_list(    // TODO not sure if order matters for layer's sequences
+                    &o.sequences,
+                    &m.sequences,
+                    |i| self.add_sequence(i),
+                    |o, m| self.edit_sequence(o, m),
+                    false,
+                )?,
             }),
             false,
         )
@@ -458,7 +453,7 @@ impl ModExporter<'_, '_> {
         Ok(AddRoomLayer {
             layer_name: self.convert_string_ref(&i.layer_name)?,
             layer_id: i.layer_id,
-            layer_type: i.layer_type,
+            layer_type: convert_layer_type(&i.layer_type)?,
             layer_depth: i.layer_depth,
             x_offset: i.x_offset,
             y_offset: i.y_offset,
@@ -472,7 +467,7 @@ impl ModExporter<'_, '_> {
         Ok(EditRoomLayer {
             layer_name: edit_field_convert(&o.layer_name, &m.layer_name, |r| self.convert_string_ref(r))?,
             layer_id: edit_field(&o.layer_id, &m.layer_id),
-            layer_type: edit_field(&o.layer_type, &m.layer_type),
+            layer_type: edit_field(&convert_layer_type(&o.layer_type)?, &convert_layer_type(&m.layer_type)?),
             layer_depth: edit_field(&o.layer_depth, &m.layer_depth),
             x_offset: edit_field(&o.x_offset, &m.x_offset),
             y_offset: edit_field(&o.y_offset, &m.y_offset),
@@ -518,20 +513,26 @@ impl ModExporter<'_, '_> {
 fn add_room_flags(i: &GMRoomFlags) -> AddRoomFlags {
     AddRoomFlags {
         enable_views: i.enable_views,
-        show_color: i.show_color,
         dont_clear_display_buffer: i.dont_clear_display_buffer,
-        is_gms2: i.is_gms2,
-        is_gms2_3: i.is_gms2_3,
     }
 }
 
 fn edit_room_flags(o: &GMRoomFlags, m: &GMRoomFlags) -> EditRoomFlags {
     EditRoomFlags {
         enable_views: flag_field(o.enable_views, m.enable_views),
-        show_color: flag_field(o.show_color, m.show_color),
         dont_clear_display_buffer: flag_field(o.dont_clear_display_buffer, m.dont_clear_display_buffer),
-        is_gms2: flag_field(o.is_gms2, m.is_gms2),
-        is_gms2_3: flag_field(o.is_gms2_3, m.is_gms2_3),
     }
+}
+
+fn convert_layer_type(i: &GMRoomLayerType) -> Result<ModRoomLayerType, String> {
+    Ok(match i {
+        GMRoomLayerType::Path => return Err("Room Layer Type 'Path' is not supported since it seemed to be unused (report this error)".to_string()),
+        GMRoomLayerType::Background => ModRoomLayerType::Background,
+        GMRoomLayerType::Instances => ModRoomLayerType::Instances,
+        GMRoomLayerType::Assets => ModRoomLayerType::Assets,
+        GMRoomLayerType::Tiles => ModRoomLayerType::Tiles,
+        GMRoomLayerType::Effect => ModRoomLayerType::Effect,
+        GMRoomLayerType::Path2 => ModRoomLayerType::Path2,
+    })
 }
 

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
-use crate::gamemaker::backgrounds::GMBackgroundGMS2Data;
 use crate::export_mod::export::{edit_field, edit_field_convert, edit_field_convert_option, ModExporter, ModRef};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
+use crate::gamemaker::elements::backgrounds::GMBackgroundGMS2Data;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddBackground {
@@ -33,6 +33,7 @@ pub struct ModBackgroundGMS2Data {
     pub tile_columns: u32,
     pub items_per_tile_count: usize,
     pub frame_length: i64,
+    /// {!!} blob
     pub tile_ids: Vec<u32>,
 }
 

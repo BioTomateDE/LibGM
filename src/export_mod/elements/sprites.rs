@@ -1,10 +1,9 @@
 use serde::{Deserialize, Serialize};
-use crate::gamemaker::sequence::{GMAnimSpeedType, GMSequence};
-use crate::gamemaker::sprites::{GMSpriteMaskEntry, GMSpriteNineSlice, GMSpriteSepMaskType, GMSpriteSpecial, GMSpriteType};
-use crate::gamemaker::sprites_yyswf::GMSpriteTypeSWF;
+use crate::gamemaker::elements::sequence::GMAnimSpeedType;
+use crate::gamemaker::elements::sprites::{GMSpriteMaskEntry, GMSpriteNineSlice, GMSpriteNineSliceTileMode, GMSpriteSepMaskType, GMSpriteSpecial, GMSpriteType};
 use crate::export_mod::export::{edit_field, edit_field_convert, edit_field_convert_option, wrap_edit_option, EditWrapper, ModExporter, ModRef};
 use crate::export_mod::ordered_list::{export_changes_ordered_list, DataChange};
-use crate::export_mod::sequences::AddSequence;
+use crate::export_mod::elements::sequences::AddSequence;
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,7 +30,7 @@ pub struct AddSprite {
 pub struct AddSpriteSpecial {
     /// Version of Special Thingy
     pub special_version: u32,
-    pub sprite_type: GMSpriteType,
+    // pub sprite_type: AddSpriteType,
     /// GMS 2
     pub playback_speed: f32,
     /// GMS 2
@@ -39,9 +38,9 @@ pub struct AddSpriteSpecial {
     /// Special Version 2
     pub sequence: Option<AddSequence>,
     /// Special Version 3
-    pub nine_slice: Option<GMSpriteNineSlice>,
-    /// SWF
-    pub yyswf: Option<GMSpriteTypeSWF>,   // just reuse the gm struct; im not touching yyswf with a 3m pole
+    pub nine_slice: Option<ModSpriteNineSlice>,
+    // /// SWF
+    // pub yyswf: Option<GMSpriteTypeSWF>,   // just reuse the gm struct; im not touching yyswf with a 3m pole
 }
 
 #[serde_with::skip_serializing_none]
@@ -69,12 +68,22 @@ pub struct EditSprite {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditSpriteSpecial {
     pub special_version: Option<u32>,
-    pub sprite_type: Option<GMSpriteType>,
+    // pub sprite_type: Option<GMSpriteType>,
     pub playback_speed: Option<f32>,
     pub playback_speed_type: Option<GMAnimSpeedType>,
     pub sequence: Option<Option<AddSequence>>,
-    pub nine_slice: Option<Option<GMSpriteNineSlice>>,
-    pub yyswf: Option<Option<GMSpriteTypeSWF>>,   // just reuse the gm struct; im not touching yyswf with a 3m pole
+    pub nine_slice: Option<ModSpriteNineSlice>,
+    // pub yyswf: Option<Option<GMSpriteTypeSWF>>,   // just reuse the gm struct; im not touching yyswf with a 3m pole
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModSpriteNineSlice {
+    pub left: i32,
+    pub top: i32,
+    pub right: i32,
+    pub bottom: i32,
+    pub enabled: bool,
+    pub tile_modes: [GMSpriteNineSliceTileMode; 5],
 }
 
 
@@ -98,7 +107,7 @@ impl ModExporter<'_, '_> {
                 sep_masks: i.sep_masks,
                 origin_x: i.origin_x,
                 origin_y: i.origin_y,
-                textures: i.textures.iter().map(|r| self.convert_texture_ref(r)).collect::<Result<Vec<_>, String>>()?,
+                textures: i.textures.iter().flatten().map(|r| self.convert_texture_ref(r)).collect::<Result<Vec<_>, String>>()?,
                 collision_masks: i.collision_masks.clone(),
                 special_fields: i.special_fields.as_ref().map(|i| self.add_specials(i)).transpose()?,
             }),
@@ -117,12 +126,16 @@ impl ModExporter<'_, '_> {
                 sep_masks: edit_field(&o.sep_masks, &m.sep_masks),
                 origin_x: edit_field(&o.origin_x, &m.origin_x),
                 origin_y: edit_field(&o.origin_y, &m.origin_y),
-                textures: export_changes_ordered_list(&o.textures, &m.textures, |r| self.convert_texture_ref(r))?,
+                textures: export_changes_ordered_list(
+                    &o.textures.iter().flatten().collect(),   // remove null entries
+                    &m.textures.iter().flatten().collect(),
+                    |r| self.convert_texture_ref(r)
+                )?,
                 collision_masks: export_changes_unordered_list(
                     &o.collision_masks,
                     &m.collision_masks,
                     |i| Ok(i.clone()),
-                    |o, m| Ok(m.clone()),
+                    |_, m| Ok(m.clone()),
                     false,
                 )?,
                 special_fields: wrap_edit_option(
@@ -137,32 +150,48 @@ impl ModExporter<'_, '_> {
     }
     
     fn add_specials(&self, i: &GMSpriteSpecial) -> Result<AddSpriteSpecial, String> {
+        if !matches!(i.sprite_type, GMSpriteType::Normal(_)) {
+            return Err("Spine and SWF sprites are not supported yet for modding".to_string())   // TODO
+        }
         Ok(AddSpriteSpecial {
             special_version: i.special_version,
-            sprite_type: i.sprite_type.clone(),
+            // sprite_type: i.sprite_type.clone(),
             playback_speed: i.playback_speed,
             playback_speed_type: i.playback_speed_type,
             sequence: i.sequence.as_ref().map(|i| self.add_sequence(&i)).transpose()?,
-            nine_slice: i.nine_slice.clone(),
-            yyswf: i.yyswf.clone(),
+            nine_slice: i.nine_slice.as_ref().map(|i| ModSpriteNineSlice {
+                left: i.left,
+                top: i.top,
+                right: i.right,
+                bottom: i.bottom,
+                enabled: i.enabled,
+                tile_modes: i.tile_modes,
+            })
+            // yyswf: i.yyswf.clone(),
         })
     }
     
     fn edit_specials(&self, o: &GMSpriteSpecial, m: &GMSpriteSpecial) -> Result<EditSpriteSpecial, String> {
         Ok(EditSpriteSpecial {
             special_version: edit_field(&o.special_version, &m.special_version),
-            sprite_type: edit_field(&o.sprite_type, &m.sprite_type),
+            // sprite_type: edit_field(&o.sprite_type, &m.sprite_type),
             playback_speed: edit_field(&o.playback_speed, &m.playback_speed),
             playback_speed_type: edit_field(&o.playback_speed_type, &m.playback_speed_type),
             sequence: edit_field_convert_option(&o.sequence, &m.sequence, |i| self.add_sequence(i))?,
-            nine_slice: edit_field(&o.nine_slice, &m.nine_slice),
-            yyswf: edit_field(&o.yyswf, &m.yyswf),
+            nine_slice: convert_nine_slice(&m.nine_slice)
+            // yyswf: edit_field(&o.yyswf, &m.yyswf),
         })
     }
-    
-    /// this is probably wrong idc
-    fn ugly_ass_code(&self, i: &Option<GMSequence>) -> Result<Option<AddSequence>, String> {
-        i.as_ref().map(|i| self.add_sequence(&i)).transpose()
-    }
+}
+
+fn convert_nine_slice(i: &Option<GMSpriteNineSlice>) -> Option<ModSpriteNineSlice> {
+    i.as_ref().map(|i| ModSpriteNineSlice {
+        left: i.left,
+        top: i.top,
+        right: i.right,
+        bottom: i.bottom,
+        enabled: i.enabled,
+        tile_modes: i.tile_modes,
+    })
 }
 
