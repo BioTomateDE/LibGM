@@ -1,16 +1,17 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::iter::zip;
 use image::DynamicImage;
 use serde::{Deserialize, Serialize};
-use crate::gamemaker::embedded_textures::GMEmbeddedTexture;
-use crate::gamemaker::texture_page_items::GMTexturePageItem;
+use crate::gamemaker::elements::embedded_textures::{GMEmbeddedTexture, GMImage};
+use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::export_mod::export::{edit_field, ModExporter, ModRef};
 use crate::export_mod::unordered_list::EditUnorderedList;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddTexturePageItem {
     // texture is stored as a png; referenced by {index}.png
-    pub texture_page: ModRef,   //???
+    pub image: ModRef,   // image ref
     pub target_x: u16,
     pub target_y: u16,
     pub target_width: u16,
@@ -22,7 +23,7 @@ pub struct AddTexturePageItem {
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditTexturePageItem {
-    pub texture_page: Option<ModRef>,   //???
+    pub image: Option<ModRef>,   // image ref
     pub target_x: Option<u16>,
     pub target_y: Option<u16>,
     pub target_width: Option<u16>,
@@ -49,12 +50,11 @@ impl ModExporter<'_, '_> {
         let mut additions = Vec::with_capacity(texture_page_items.len());
         
         for i in texture_page_items {
-            // TODO handle GMEmbeddedTexture fields like scaled or generated_mips
-            let texture_page: &GMEmbeddedTexture = i.texture_page.resolve(&self.modified_data.texture_page_items)?;
+            let texture_page: &GMEmbeddedTexture = i.texture_page.resolve(&self.modified_data.embedded_textures.texture_pages)?;
             let cropped_image: DynamicImage = crop_from_texture_page(texture_page, i)?;
             
             let add_texture_page_item = AddTexturePageItem {
-                texture_page: ModRef::Add(textures.len()),
+                image: ModRef::Add(textures.len() as u32),
                 target_x: i.target_x,
                 target_y: i.target_y,
                 target_width: i.target_width,
@@ -68,12 +68,13 @@ impl ModExporter<'_, '_> {
 
         let mut edits: HashMap<usize, EditTexturePageItem> = HashMap::new();
         for (i, (original, modified)) in zip(original_list, modified_list).enumerate() {
-            let original_texture_page: &GMEmbeddedTexture = original.texture_page.resolve(&self.original_data.texture_page_items)?;
-            let modified_texture_page: &GMEmbeddedTexture = modified.texture_page.resolve(&self.modified_data.texture_page_items)?;
-            let original_cropped: DynamicImage = crop_from_texture_page(original_texture_page, original)?;
-            let modified_cropped: DynamicImage = crop_from_texture_page(modified_texture_page, modified)?;
+            let original_texture_page: &GMEmbeddedTexture = original.texture_page.resolve(&self.original_data.embedded_textures.texture_pages)?;
+            let modified_texture_page: &GMEmbeddedTexture = modified.texture_page.resolve(&self.modified_data.embedded_textures.texture_pages)?;
+            let original_cropped: DynamicImage = crop_from_texture_page(original_texture_page, original)?;  // <-- slow operation
+            let modified_cropped: DynamicImage = crop_from_texture_page(modified_texture_page, modified)?;  // <-- slow operation
 
-            if original_cropped == modified_cropped
+            let image_unchanged: bool = original_cropped == modified_cropped;   // <-- slow operation
+            if image_unchanged
                 && original.target_x == modified.target_x
                 && original.target_y == modified.target_y
                 && original.target_width == modified.target_width
@@ -85,7 +86,7 @@ impl ModExporter<'_, '_> {
             
             // TODO it will always create a new cropped image; even if the texture is also in the original
             let edit = EditTexturePageItem {
-                texture_page: Some(ModRef::Add(textures.len())),
+                image: Some(ModRef::Add(textures.len() as u32)),
                 target_x: edit_field(&original.target_x, &modified.target_x),
                 target_y: edit_field(&original.target_y, &modified.target_y),
                 target_width: edit_field(&original.target_width, &modified.target_width),
@@ -103,16 +104,16 @@ impl ModExporter<'_, '_> {
 
 
 fn crop_from_texture_page(texture_page: &GMEmbeddedTexture, texture_page_item: &GMTexturePageItem) -> Result<DynamicImage, String> {
-    let texture_page_image: &DynamicImage = texture_page.image.as_ref()
+    let gm_image: &GMImage = texture_page.image.as_ref()
         .ok_or_else(|| format!("Image not set for texture page #{}; external textures pages are not yet supported", texture_page_item.texture_page.index))?;
+    let texture_page_image: Cow<DynamicImage> = gm_image.to_dynamic_image()?;   // <--- slow operation
     
     let cropped_image: DynamicImage = texture_page_image.crop_imm(
         texture_page_item.source_x as u32,
         texture_page_item.source_y as u32,
         texture_page_item.source_width as u32,
         texture_page_item.source_height as u32,
-    );
-    
+    );  // <--- slow operation
     Ok(cropped_image)
 }
 

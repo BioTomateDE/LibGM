@@ -1,14 +1,13 @@
 use serde::{Deserialize, Serialize};
-use crate::gamemaker::variables::GMVariableB15Data;
-use crate::export_mod::code::ModInstanceType;
+use crate::export_mod::elements::code::ModInstanceType;
 use crate::export_mod::export::{edit_field, edit_field_convert, wrap_edit_option, EditWrapper, ModExporter, ModRef};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
+use crate::gamemaker::elements::variables::GMVariableB15Data;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddVariable {
     pub name: ModRef,
     pub b15_data: Option<AddVariableB15>,
-    pub name_string_id: i32,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddVariableB15 {
@@ -21,7 +20,6 @@ pub struct AddVariableB15 {
 pub struct EditVariable {
     pub name: Option<ModRef>,
     pub b15_data: Option<EditWrapper<AddVariableB15, EditVariableB15>>,
-    pub name_string_id: Option<i32>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditVariableB15 {
@@ -38,7 +36,6 @@ impl ModExporter<'_, '_> {
             |i| Ok(AddVariable {
                 name: self.convert_string_ref(&i.name)?,
                 b15_data: if let Some(ref b15_data) = i.b15_data {Some(self.add_bytecode15_data(b15_data)?)} else {None},
-                name_string_id: i.name_string_id,
             }),
             |o, m| Ok(EditVariable {
                 name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
@@ -48,7 +45,6 @@ impl ModExporter<'_, '_> {
                     |i| self.add_bytecode15_data(i),
                     |o, m| self.edit_bytecode15_data(o, m),
                 )?,
-                name_string_id: edit_field(&o.name_string_id, &m.name_string_id),
             }),
             false,
         )

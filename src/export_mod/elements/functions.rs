@@ -5,16 +5,12 @@ use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnord
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddFunction {
     pub name: ModRef,  // String
-    pub name_string_id: i32,
-    // idk how to handle function and variable occurrences yet
 }
 
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditFunction {
     pub name: Option<ModRef>,  // String
-    pub name_string_id: Option<i32>,
-    // idk how to handle function and variable occurrences yet
 }
 
 
@@ -25,11 +21,9 @@ impl ModExporter<'_, '_> {
             &self.modified_data.functions.functions,
             |i| Ok(AddFunction {
                 name: self.convert_string_ref(&i.name)?,
-                name_string_id: i.name_string_id,
             }),
             |o, m| Ok(EditFunction {
                 name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
-                name_string_id: None,
             }),
             false,
         )

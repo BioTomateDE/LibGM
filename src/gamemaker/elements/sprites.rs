@@ -103,7 +103,7 @@ impl GMElement for GMSprite {
                         mask_height = (margin_bottom - margin_top + 1) as usize;
                     }
                     collision_masks = read_mask_data(reader, mask_width, mask_height)?;
-                    GMSpriteType::Normal(GMSpriteTypeNormal{})
+                    GMSpriteType::Normal(())
                 },
 
                 1 => {      // SWF
@@ -344,13 +344,10 @@ impl GMSprite {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum GMSpriteType {
-    Normal(GMSpriteTypeNormal),
+    Normal(()),
     SWF(GMSpriteTypeSWF),
     Spine(GMSpriteTypeSpine),
 }
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMSpriteTypeNormal {}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteTypeSpine {

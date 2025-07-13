@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::gamemaker::code::{GMCodeBytecode15, GMCodeVariable, GMComparisonType, GMDataType, GMInstanceType, GMInstruction, GMOpcode, GMValue, GMVariableType};
+use crate::gamemaker::elements::code::{GMCodeBytecode15, GMCodeValue, GMCodeVariable, GMComparisonType, GMDataType, GMInstanceType, GMInstruction, GMInstructionData, GMOpcode, GMVariableType};
 use crate::export_mod::export::{convert_additions, edit_field, edit_field_convert, ModExporter, ModRef};
 use crate::export_mod::ordered_list::{export_changes_ordered_list, DataChange};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
@@ -32,12 +32,13 @@ pub struct EditCodeBytecode15 {
     pub locals_count: u16,
     pub arguments_count: u16,
     pub weird_local_flag: bool,
+    /// TODO: vulnerable; check overflow
     pub offset: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModInstruction {
-    pub opcode: GMOpcode,  // {!!} GM 
+    pub opcode: ModOpcode, 
     pub kind: ModInstructionKind,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,7 +48,7 @@ pub enum ModInstructionKind {
     Comparison(ModDataType, ModDataType, ModComparisonType),
     Goto(ModGotoTarget),
     Push(ModDataType, ModValue),
-    Pop(ModDataType, ModDataType, ModInstanceType, ModCodeVariable),
+    Pop(ModDataType, ModDataType, ModCodeVariable),
     Call(ModDataType, ModRef, u8),   // function ref, args count
     Break(ModDataType, i16, Option<i32>),   // TODO this will probably also be really incompatible
 }
@@ -74,7 +75,8 @@ pub enum ModComparisonType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ModGotoTarget {
     PopenvMagic,
-    Offset(i32),    // TODO this integer will immensely fuck up compatibility but idk how else to do it
+    /// Offset in instruction counts; not bytes. TODO implement
+    Offset(i32),
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ModValue {
@@ -86,25 +88,21 @@ pub enum ModValue {
     Boolean(bool),
     String(ModRef),
     Variable(ModCodeVariable),
+    Function(ModRef),
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModCodeVariable {
     pub variable: ModRef,
     pub variable_type: ModVariableType,
+    pub instance_type: ModInstanceType,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ModInstanceType {
-    Undefined,
     Instance(Option<ModRef>),   // GMGameObject. Is optional depending on context
-    Other,
-    All,
-    None,
     Global,
-    Builtin,
     Local,
-    StackTop,
     Argument,
-    Static,
+    // TODO: this will cause issues lol; i removed like half the instance types
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ModVariableType {
@@ -112,9 +110,47 @@ pub enum ModVariableType {
     StackTop,
     Instance,
     Array,
-    MultiPush,
-    MultiPushPop,
+    ArrayPushAF,
+    ArrayPopAF,
 }
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+pub enum ModOpcode {
+    Conv = 0x07,
+    Mul = 0x08,
+    Div = 0x09,
+    Rem = 0x0A,
+    Mod = 0x0B,
+    Add = 0x0C,
+    Sub = 0x0D,
+    And = 0x0E,
+    Or = 0x0F,
+    Xor = 0x10,
+    Neg = 0x11,
+    Not = 0x12,
+    Shl = 0x13,
+    Shr = 0x14,
+    Cmp = 0x15,
+    Pop = 0x45,
+    Dup = 0x86,
+    Ret = 0x9C,
+    Exit = 0x9D,
+    PopZ = 0x9E,
+    Branch = 0xB6,
+    BranchTrue = 0xB7,
+    BranchFalse = 0xB8,
+    PushEnv = 0xBA,
+    PopEnv = 0xBB,
+    Push = 0xC0,
+    PushLoc = 0xC1,
+    PushGlb = 0xC2,
+    PushBltn = 0xC3,
+    PushI = 0x84,
+    Call = 0xD9,
+    CallV = 0x99,
+    Extended = 0xFF,
+}
+
 
 impl ModExporter<'_, '_> {
     pub fn export_codes(&self) -> Result<EditUnorderedList<AddCode, EditCode>, String> {
@@ -136,58 +172,82 @@ impl ModExporter<'_, '_> {
     }
     
     fn convert_instruction(&self, instruction: &GMInstruction) -> Result<ModInstruction, String> {
-        let kind: ModInstructionKind = match instruction {
-            GMInstruction::SingleType(i) => ModInstructionKind::SingleType(
+        let kind: ModInstructionKind = match &instruction.kind {
+            GMInstructionData::SingleType(i) => ModInstructionKind::SingleType(
                 convert_data_type(i.data_type)?,
             ),
-            GMInstruction::DoubleType(i) => ModInstructionKind::DoubleType(
+            GMInstructionData::DoubleType(i) => ModInstructionKind::DoubleType(
                 convert_data_type(i.type1)?,
                 convert_data_type(i.type2)?,
             ),
-            GMInstruction::Comparison(i) => ModInstructionKind::Comparison(
+            GMInstructionData::Comparison(i) => ModInstructionKind::Comparison(
                 convert_data_type(i.type1)?,
                 convert_data_type(i.type2)?,
                 convert_comparison_type(i.comparison_type),
             ),
-            GMInstruction::Goto(i) => ModInstructionKind::Goto(
+            GMInstructionData::Goto(i) => ModInstructionKind::Goto(
                 if i.popenv_exit_magic {
                     ModGotoTarget::PopenvMagic
                 } else {
                     ModGotoTarget::Offset(i.jump_offset)
                 }
             ),
-            GMInstruction::Pop(i) => ModInstructionKind::Pop(
+            GMInstructionData::Pop(i) => ModInstructionKind::Pop(
                 convert_data_type(i.type1)?,
                 convert_data_type(i.type2)?,
-                self.convert_instance_type(&i.instance_type)?,
                 self.convert_code_variable(&i.destination)?,
                 
             ),
-            GMInstruction::Push(i) => ModInstructionKind::Push(
+            GMInstructionData::Push(i) => ModInstructionKind::Push(
                 convert_data_type(i.data_type)?,
                 self.convert_value(&i.value)?,
             ),
-            GMInstruction::Call(i) => ModInstructionKind::Call(
+            GMInstructionData::Call(i) => ModInstructionKind::Call(
                 convert_data_type(i.data_type)?,
                 self.convert_function_ref(&i.function)?,
                 i.arguments_count,
             ),
-            GMInstruction::Break(i) => ModInstructionKind::Break(
+            GMInstructionData::Break(i) => ModInstructionKind::Break(
                 convert_data_type(i.data_type)?,
                 i.value,
                 i.int_argument,
             ),
         };
         
-        let opcode: GMOpcode = match instruction {
-            GMInstruction::SingleType(i) => i.opcode,
-            GMInstruction::DoubleType(i) => i.opcode,
-            GMInstruction::Comparison(i) => i.opcode,
-            GMInstruction::Goto(i) => i.opcode,
-            GMInstruction::Pop(i) => i.opcode,
-            GMInstruction::Push(i) => i.opcode,
-            GMInstruction::Call(i) => i.opcode,
-            GMInstruction::Break(i) => i.opcode,
+        let opcode: ModOpcode = match instruction.opcode {
+            GMOpcode::Convert => ModOpcode::Conv,
+            GMOpcode::Multiply => ModOpcode::Mul,
+            GMOpcode::Divide => ModOpcode::Div,
+            GMOpcode::Remainder => ModOpcode::Rem,
+            GMOpcode::Modulus => ModOpcode::Mod,
+            GMOpcode::Add => ModOpcode::Add,
+            GMOpcode::Subtract => ModOpcode::Sub,
+            GMOpcode::And => ModOpcode::And,
+            GMOpcode::Or => ModOpcode::Or,
+            GMOpcode::Xor => ModOpcode::Xor,
+            GMOpcode::Negate => ModOpcode::Neg,
+            GMOpcode::Not => ModOpcode::Not,
+            GMOpcode::ShiftLeft => ModOpcode::Shl,
+            GMOpcode::ShiftRight => ModOpcode::Shr,
+            GMOpcode::Compare => ModOpcode::Cmp,
+            GMOpcode::Pop => ModOpcode::Pop,
+            GMOpcode::Duplicate => ModOpcode::Dup,
+            GMOpcode::Return => ModOpcode::Ret,
+            GMOpcode::Exit => ModOpcode::Exit,
+            GMOpcode::PopDiscard => ModOpcode::PopZ,
+            GMOpcode::Branch => ModOpcode::Branch,
+            GMOpcode::BranchIf => ModOpcode::BranchTrue,
+            GMOpcode::BranchUnless => ModOpcode::BranchFalse,
+            GMOpcode::PushWithContext => ModOpcode::PushEnv,
+            GMOpcode::PopWithContext => ModOpcode::PopEnv,
+            GMOpcode::Push => ModOpcode::Push,
+            GMOpcode::PushLocal => ModOpcode::PushLoc,
+            GMOpcode::PushGlobal => ModOpcode::PushGlb,
+            GMOpcode::PushBuiltin => ModOpcode::PushBltn,
+            GMOpcode::PushImmediate => ModOpcode::PushI,
+            GMOpcode::Call => ModOpcode::Call,
+            GMOpcode::CallVariable => ModOpcode::CallV,
+            GMOpcode::Extended => ModOpcode::Extended,
         };
 
         Ok(ModInstruction {
@@ -198,17 +258,17 @@ impl ModExporter<'_, '_> {
     
     pub fn convert_instance_type(&self, i: &GMInstanceType) -> Result<ModInstanceType, String> {
         match i {
-            GMInstanceType::Undefined => Ok(ModInstanceType::Undefined),
             GMInstanceType::Instance(obj_ref) => Ok(ModInstanceType::Instance(self.convert_game_object_ref_opt(obj_ref)?)),
-            GMInstanceType::Other => Ok(ModInstanceType::Other),
-            GMInstanceType::All => Ok(ModInstanceType::All),
-            GMInstanceType::None => Ok(ModInstanceType::None),
             GMInstanceType::Global => Ok(ModInstanceType::Global),
-            GMInstanceType::Builtin => Ok(ModInstanceType::Builtin),
             GMInstanceType::Local => Ok(ModInstanceType::Local),
-            GMInstanceType::StackTop => Ok(ModInstanceType::StackTop),
             GMInstanceType::Argument => Ok(ModInstanceType::Argument),
-            GMInstanceType::Static => Ok(ModInstanceType::Static),
+            GMInstanceType::Undefined |
+            GMInstanceType::Other |
+            GMInstanceType::All |
+            GMInstanceType::None |
+            GMInstanceType::Builtin |
+            GMInstanceType::StackTop |
+            GMInstanceType::Static => Err(format!("Instance Type {i:?} not (yet) supported for modding"))
         }
     }
 
@@ -220,22 +280,24 @@ impl ModExporter<'_, '_> {
                 GMVariableType::StackTop => ModVariableType::StackTop,
                 GMVariableType::Normal => ModVariableType::Normal,
                 GMVariableType::Instance => ModVariableType::Instance,
-                GMVariableType::MultiPush => ModVariableType::MultiPush,
-                GMVariableType::MultiPushPop => ModVariableType::MultiPushPop,
+                GMVariableType::MultiPush => ModVariableType::ArrayPushAF,
+                GMVariableType::MultiPushPop => ModVariableType::ArrayPopAF,
             },
+            instance_type: self.convert_instance_type(&i.instance_type)?,
         })
     }
 
-    fn convert_value(&self, val: &GMValue) -> Result<ModValue, String> {
+    fn convert_value(&self, val: &GMCodeValue) -> Result<ModValue, String> {
         Ok(match val {
-            GMValue::Double(i) => ModValue::Double(*i),
-            GMValue::Float(i) => ModValue::Float(*i),
-            GMValue::Int16(i) => ModValue::Int16(*i),
-            GMValue::Int32(i) => ModValue::Int32(*i),
-            GMValue::Int64(i) => ModValue::Int64(*i),
-            GMValue::Boolean(i) => ModValue::Boolean(*i),
-            GMValue::String(i) => ModValue::String(self.convert_string_ref(i)?),
-            GMValue::Variable(i) => ModValue::Variable(self.convert_code_variable(i)?),
+            GMCodeValue::Double(i) => ModValue::Double(*i),
+            GMCodeValue::Float(i) => ModValue::Float(*i),
+            GMCodeValue::Int16(i) => ModValue::Int16(*i),
+            GMCodeValue::Int32(i) => ModValue::Int32(*i),
+            GMCodeValue::Int64(i) => ModValue::Int64(*i),
+            GMCodeValue::Boolean(i) => ModValue::Boolean(*i),
+            GMCodeValue::String(i) => ModValue::String(self.convert_string_ref(i)?),
+            GMCodeValue::Variable(i) => ModValue::Variable(self.convert_code_variable(i)?),
+            GMCodeValue::Function(i) => ModValue::Function(self.convert_function_ref(i)?),
         })
     }
 }

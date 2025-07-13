@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::gamemaker::game_objects::{GMGameObjectCollisionShape, GMGameObjectEvent, GMGameObjectEventAction};
+use crate::gamemaker::elements::game_objects::{GMGameObjectCollisionShape, GMGameObjectEvent, GMGameObjectEventAction, GMGameObjectEvents};
 use crate::export_mod::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, ModExporter, ModRef};
 use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
@@ -16,7 +16,7 @@ pub struct AddGameObject {
     pub texture_mask: Option<ModRef>,   // Sprite ref
     pub uses_physics: bool,
     pub is_sensor: bool,
-    pub collision_shape: GMGameObjectCollisionShape,
+    pub collision_shape: ModGameObjectCollisionShape,
     pub density: f32,
     pub restitution: f32,
     pub group: u32,
@@ -53,7 +53,7 @@ pub struct EditGameObject {
     pub texture_mask: Option<Option<ModRef>>,   // Sprite ref
     pub uses_physics: Option<bool>,
     pub is_sensor: Option<bool>,
-    pub collision_shape: Option<GMGameObjectCollisionShape>,
+    pub collision_shape: Option<ModGameObjectCollisionShape>,
     pub density: Option<f32>,
     pub restitution: Option<f32>,
     pub group: Option<u32>,
@@ -76,6 +76,14 @@ pub struct EditGameObjectEventAction {
     pub code: Option<Option<ModRef>>,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[repr(u32)]
+pub enum ModGameObjectCollisionShape {
+    Circle = 0,
+    Box = 1,
+    Custom = 2,
+}
+
 impl ModExporter<'_, '_> {
     pub fn export_game_objects(&self) -> Result<EditUnorderedList<AddGameObject, EditGameObject>, String> {
         export_changes_unordered_list(
@@ -93,7 +101,7 @@ impl ModExporter<'_, '_> {
                 texture_mask: self.convert_sprite_ref_opt(&i.texture_mask)?,
                 uses_physics: i.uses_physics,
                 is_sensor: i.is_sensor,
-                collision_shape: i.collision_shape,
+                collision_shape: convert_collision_shape(i.collision_shape),
                 density: i.density,
                 restitution: i.restitution,
                 group: i.group,
@@ -104,12 +112,9 @@ impl ModExporter<'_, '_> {
                 kinematic: i.kinematic,
                 physics_shape_vertices: i.physics_shape_vertices.clone(),
                 uses_physics_shape_vertex: i.uses_physics_shape_vertex,
-                // TODO i think the order of events actions is irrelevant? verify that anyways
-                events: convert_additions(
-                    &i.events, |i| convert_additions(
-                        &i, |i| self.add_event(i)
-                    )
-                )?,
+                events: i.events.iter().map(|i| 
+                    convert_additions(&i.events, |i| self.add_event(i)
+                )).collect::<Result<Vec<_>, String>>()?,
             }),
             |o, m| Ok(EditGameObject {
                 name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(&r))?,
@@ -123,7 +128,7 @@ impl ModExporter<'_, '_> {
                 texture_mask: edit_field_convert_option(&o.texture_mask, &m.texture_mask, |r| self.convert_sprite_ref(r))?,
                 uses_physics: edit_field(&o.uses_physics, &m.uses_physics),
                 is_sensor: edit_field(&o.is_sensor, &m.is_sensor),
-                collision_shape: edit_field(&o.collision_shape, &m.collision_shape),
+                collision_shape: edit_field(&convert_collision_shape(o.collision_shape), &convert_collision_shape(m.collision_shape)),
                 density: edit_field(&o.density, &m.density),
                 restitution: edit_field(&o.restitution, &m.restitution),
                 group: edit_field(&o.group, &m.group),
@@ -155,24 +160,24 @@ impl ModExporter<'_, '_> {
     
     fn edit_events(
         &self,
-        original_events: &Vec<Vec<GMGameObjectEvent>>,
-        modified_events: &Vec<Vec<GMGameObjectEvent>>,
+        original_events: &Vec<GMGameObjectEvents>,
+        modified_events: &Vec<GMGameObjectEvents>,
     ) -> Result<Vec<EditUnorderedList<AddGameObjectEvent, EditGameObjectEvent>>, String> {
         let mut edited_events = Vec::with_capacity(modified_events.len());
         for (i, modified_event) in modified_events.iter().enumerate() {
             // outer event list (for event "types") should be the same length (always 12 or 14 or whatever).
             // if different; probably different gamemaker version; default to empty inner event list.
             let original_event: &[GMGameObjectEvent] = match original_events.get(i) {
-                Some(i) => i.as_slice(),
+                Some(i) => i.events.as_slice(),
                 None => &[],
             };
-            if modified_event == original_event {
+            if modified_event.events == original_event {
                 continue
             }
             
             edited_events.push(export_changes_unordered_list(
                 original_event,
-                modified_event,
+                &modified_event.events,
                 |i| Ok(AddGameObjectEvent {
                     subtype: i.subtype,
                     actions: convert_additions(&i.actions, |i| self.add_event_action(i))?,
@@ -200,4 +205,12 @@ impl ModExporter<'_, '_> {
     }
 }
 
+
+fn convert_collision_shape(i: GMGameObjectCollisionShape) -> ModGameObjectCollisionShape {
+    match i {
+        GMGameObjectCollisionShape::Circle => ModGameObjectCollisionShape::Circle,
+        GMGameObjectCollisionShape::Box => ModGameObjectCollisionShape::Box,
+        GMGameObjectCollisionShape::Custom => ModGameObjectCollisionShape::Custom,
+    }
+}
 

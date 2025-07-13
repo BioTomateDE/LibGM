@@ -46,7 +46,7 @@ impl GMElement for GMVariables {
             let first_occurrence_pos: u32 = reader.read_u32()?;
             occurrence_infos.push((occurrence_count, first_occurrence_pos));
 
-            variables.push(GMVariable { name, b15_data, name_string_id: 696969 });
+            variables.push(GMVariable { name, b15_data });
         }
         
         // resolve occurrences
@@ -55,8 +55,17 @@ impl GMElement for GMVariables {
         reader.chunk = reader.chunks.get("CODE").cloned().ok_or("Chunk CODE not set while parsing variable occurrences")?;
         
         for (i, (occurrence_count, first_occurrence_pos)) in occurrence_infos.into_iter().enumerate() {
+            let name: GMRef<String> = variables[i].name;
             let (occurrences, name_string_id): (Vec<usize>, u32) = parse_occurrence_chain(reader, first_occurrence_pos, occurrence_count)?;
-            variables[i].name_string_id = name_string_id;
+            
+            // verify name string id. unused variables (`prototype`, `@@array@@` and all 
+            // `arguments` in ut) have a name string id of -1 which wraps around to u32::MAX.
+            if name_string_id != u32::MAX && name.index != name_string_id {
+                return Err(format!(
+                    "Variable #{i} with name \"{}\" specifies name string id {}; but the id of name string is actually {}",
+                    reader.resolve_gm_str(name)?, name_string_id, name.index,
+                ))
+            }
 
             for occurrence in occurrences {
                 if let Some(old_value) = reader.variable_occurrence_map.insert(occurrence, GMRef::new(i as u32)) {
@@ -103,7 +112,6 @@ impl GMElement for GMVariables {
 pub struct GMVariable {
     pub name: GMRef<String>,
     pub b15_data: Option<GMVariableB15Data>,
-    pub name_string_id: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]

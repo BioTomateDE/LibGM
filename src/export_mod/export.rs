@@ -1,4 +1,3 @@
-use crate::gm_deserialize::GMData;
 use std::fs::File;
 use std::io::Cursor;
 use std::path::Path;
@@ -7,38 +6,30 @@ use image::ImageFormat;
 use serde::{Deserialize, Serialize};
 use crate::bench_export;
 use crate::utility::Stopwatch;
-use crate::gamemaker::backgrounds::GMBackground;
-use crate::gm_deserialize::GMRef;
-use crate::gamemaker::code::GMCode;
-use crate::gamemaker::embedded_audio::GMEmbeddedAudio;
-use crate::gamemaker::functions::GMFunction;
-use crate::gamemaker::game_objects::GMGameObject;
-use crate::gamemaker::rooms::GMRoom;
-use crate::gamemaker::sprites::GMSprite;
-use crate::gamemaker::texture_page_items::GMTexturePageItem;
-use crate::gamemaker::variables::GMVariable;
-use crate::export_mod::backgrounds::{AddBackground, EditBackground};
-use crate::export_mod::code::{AddCode, EditCode};
-use crate::export_mod::fonts::{AddFont, EditFont};
-use crate::export_mod::functions::{AddFunction, EditFunction};
-use crate::export_mod::game_objects::{AddGameObject, EditGameObject};
-use crate::export_mod::general_info::EditGeneralInfo;
-use crate::export_mod::options::EditOptions;
-use crate::export_mod::paths::ModPath;
-use crate::export_mod::rooms::{AddRoom, EditRoom};
-use crate::export_mod::scripts::ModScript;
-use crate::export_mod::sounds::{AddSound, EditSound};
-use crate::export_mod::sprites::{AddSprite, EditSprite};
+use crate::export_mod::elements::backgrounds::{AddBackground, EditBackground};
+use crate::export_mod::elements::code::{AddCode, EditCode};
+use crate::export_mod::elements::fonts::{AddFont, EditFont};
+use crate::export_mod::elements::functions::{AddFunction, EditFunction};
+use crate::export_mod::elements::game_objects::{AddGameObject, EditGameObject};
+use crate::export_mod::elements::general_info::EditGeneralInfo;
+use crate::export_mod::elements::options::EditOptions;
+use crate::export_mod::elements::paths::ModPath;
+use crate::export_mod::elements::rooms::{AddRoom, EditRoom};
+use crate::export_mod::elements::scripts::ModScript;
+use crate::export_mod::elements::sounds::{AddSound, EditSound};
+use crate::export_mod::elements::sprites::{AddSprite, EditSprite};
 use crate::export_mod::unordered_list::EditUnorderedList;
-use crate::export_mod::variables::{AddVariable, EditVariable};
+use crate::export_mod::elements::variables::{AddVariable, EditVariable};
+use crate::gamemaker::deserialize::{GMData, GMRef};
 
 pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_path: &Path) -> Result<(), String> {
     let stopwatch = Stopwatch::start();
+    
     // initialize file and tarball
     let file = File::create(target_file_path)
         .map_err(|e| format!("Could not create archive file with path \"{}\": {e}", target_file_path.display()))?;
     let zstd_encoder = zstd::Encoder::new(file, 19)
-        .map_err(|e| format!("Could not create Zstd encoder: {e}"))?;
+        .map_err(|e| format!("Could not create ZStd encoder: {e}"))?;
     let mut tar = tar::Builder::new(zstd_encoder);
 
     let mod_exporter = ModExporter {original_data, modified_data};
@@ -160,100 +151,13 @@ fn get_current_unix_time() -> u64 {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ModRef {
-    Data(usize),    // index in gamemaker data list; assumes element also exists in the data it will be loaded in
-    Add(usize),     // element is being added by this mod; index of this mod's addition list
+    Data(u32),    // index in gamemaker data list; assumes element also exists in the data it will be loaded in
+    Add(u32),     // element is being added by this mod; index of this mod's addition list
 }
 
 pub struct ModExporter<'o, 'm> {
     pub original_data: &'o GMData,
     pub modified_data: &'m GMData,
-}
-
-impl ModExporter<'_, '_> {
-    pub fn convert_audio_ref(&self, gm_audio_ref: &GMRef<GMEmbeddedAudio>) -> Result<ModRef, String> {
-        convert_reference(gm_audio_ref, &self.original_data.audios.audios, &self.modified_data.audios.audios)
-    }
-    pub fn convert_background_ref(&self, gm_background_ref: &GMRef<GMBackground>) -> Result<ModRef, String> {
-        convert_reference(gm_background_ref, &self.original_data.backgrounds.backgrounds, &self.modified_data.backgrounds.backgrounds)
-    }
-    pub fn convert_code_ref(&self, gm_code_ref: &GMRef<GMCode>) -> Result<ModRef, String> {
-        convert_reference(gm_code_ref, &self.original_data.codes.codes, &self.modified_data.codes.codes)
-    }
-    pub fn convert_function_ref(&self, gm_function_ref: &GMRef<GMFunction>) -> Result<ModRef, String> {
-        convert_reference(gm_function_ref, &self.original_data.functions.functions, &self.modified_data.functions.functions)
-    }
-    // TODO continue
-    pub fn convert_game_object_ref(&self, gm_game_object_ref: &GMRef<GMGameObject>) -> Result<ModRef, String> {
-        convert_reference(gm_game_object_ref, &self.original_data.game_objects.game_objects, &self.modified_data.game_objects.game_objects)
-    }
-    pub fn convert_room_ref(&self, gm_room_ref: &GMRef<GMRoom>) -> Result<ModRef, String> {
-        convert_reference(gm_room_ref, &self.original_data.rooms.rooms, &self.modified_data.rooms.rooms)
-    }
-    pub fn convert_sprite_ref(&self, gm_sprite_ref: &GMRef<GMSprite>) -> Result<ModRef, String> {
-        convert_reference(gm_sprite_ref, &self.original_data.sprites.sprites, &self.modified_data.sprites.sprites)
-    }
-    pub fn convert_string_ref(&self, gm_string_ref: &GMRef<String>) -> Result<ModRef, String> {
-        convert_reference(gm_string_ref, &self.original_data.strings.strings, &self.modified_data.strings.strings)
-    }
-    /// TODO make custom function for texture page items (since texture contents are not checked)
-    pub fn convert_texture_ref(&self, gm_texture_ref: &GMRef<GMTexturePageItem>) -> Result<ModRef, String> {
-        convert_reference(gm_texture_ref, &self.original_data.texture_page_items.texture_page_items, &self.modified_data.texture_page_items.texture_page_items)
-    }
-    pub fn convert_variable_ref(&self, gm_variable_ref: &GMRef<GMVariable>) -> Result<ModRef, String> {
-        convert_reference(gm_variable_ref, &self.original_data.variables.variables, &self.modified_data.variables.variables)
-    }
-
-    pub fn convert_audio_ref_opt(&self, gm_audio_ref: &Option<GMRef<GMEmbeddedAudio>>) -> Result<Option<ModRef>, String> {
-        convert_reference_optional(gm_audio_ref, &self.original_data.audios.audios, &self.modified_data.audios.audios)
-    }
-    pub fn convert_background_ref_opt(&self, gm_background_ref: &Option<GMRef<GMBackground>>) -> Result<Option<ModRef>, String> {
-        convert_reference_optional(gm_background_ref, &self.original_data.backgrounds.backgrounds, &self.modified_data.backgrounds.backgrounds)
-    }
-    pub fn convert_code_ref_opt(&self, gm_code_ref: &Option<GMRef<GMCode>>) -> Result<Option<ModRef>, String> {
-        convert_reference_optional(gm_code_ref, &self.original_data.codes.codes, &self.modified_data.codes.codes)
-    }
-    pub fn convert_game_object_ref_opt(&self, gm_game_object_ref: &Option<GMRef<GMGameObject>>) -> Result<Option<ModRef>, String> {
-        convert_reference_optional(gm_game_object_ref, &self.original_data.game_objects.game_objects, &self.modified_data.game_objects.game_objects)
-    }
-    pub fn convert_sprite_ref_opt(&self, gm_sprite_ref: &Option<GMRef<GMSprite>>) -> Result<Option<ModRef>, String> {
-        convert_reference_optional(gm_sprite_ref, &self.original_data.sprites.sprites, &self.modified_data.sprites.sprites)
-    }
-    pub fn convert_string_ref_opt(&self, gm_string_ref: &Option<GMRef<String>>) -> Result<Option<ModRef>, String> {
-        convert_reference_optional(gm_string_ref, &self.original_data.strings.strings, &self.modified_data.strings.strings)
-    }
-    /// TODO make custom function for texture page items (since texture contents are not checked)
-    pub fn convert_texture_ref_opt(&self, gm_texture_ref: &Option<GMRef<GMTexturePageItem>>) -> Result<Option<ModRef>, String> {
-        convert_reference_optional(gm_texture_ref, &self.original_data.texture_page_items.texture_page_items, &self.modified_data.texture_page_items.texture_page_items)
-    }
-}
-
-fn convert_reference<GM>(gm_reference: &GMRef<GM>, original_list: &[GM], modified_list: &[GM]) -> Result<ModRef, String> {
-    // If reference index out of bounds in modified data; throw error.
-    // This should never happen in healthy gm data; just being cautious that the mod will be fully functional.
-    if gm_reference.index >= modified_list.len() {
-        return Err(format!(
-            "Could not resolve {} reference with GameMaker index {} in list with length {}; out of bounds",
-            std::any::type_name_of_val(&gm_reference), gm_reference.index, modified_list.len(),
-        ))
-    }
-
-    let original_length = original_list.len();
-    if gm_reference.index >= original_length {
-        // If reference index exists (isn't out of bounds) in modified data but not in original data,
-        // then the element was newly added --> "Add" reference
-        Ok(ModRef::Add(gm_reference.index - original_length))
-    } else {
-        // If reference index exists in original data (and modified data; assumes unordered lists never remove elements),
-        // then the element is a reference to the gamemaker data the mod will later be loaded in.
-        Ok(ModRef::Data(gm_reference.index))
-    }
-}
-
-fn convert_reference_optional<GM>(gm_reference_optional: &Option<GMRef<GM>>, original_list: &[GM], modified_list: &[GM]) -> Result<Option<ModRef>, String> {
-    match gm_reference_optional {
-        Some(gm_reference) => Ok(Some(convert_reference(gm_reference, original_list, modified_list)?)),
-        None => Ok(None),
-    }
 }
 
 
