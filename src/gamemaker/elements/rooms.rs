@@ -701,7 +701,15 @@ impl GMRoomLayerDataTiles {
         // Due to a GMAC bug, 2 blank tiles are inserted into the layer
         // if the last 2 tiles in the layer are different.
         // This is a certified YoyoGames moment right here.
-        let has_padding: bool = tile_data.last() != tile_data.get(tile_data.len() - 2);
+        let has_padding: bool = if tile_data.len() == 1 {
+            true   // Single tile always has padding
+        } else if tile_data.len() >= 2 {
+            let len = tile_data.len();
+            tile_data[len-1] != tile_data[len-2]
+        } else {
+            false   // no tiles => no padding (should never happen though?)
+        };
+        log::debug!("{has_padding}");
         if has_padding {
             let length: u8 = reader.read_u8()?;
             let tile: u32 = reader.read_u32()?;
@@ -736,19 +744,19 @@ impl GMRoomLayerDataTiles {
         let mut num_verbatim: i32 = 0;
         let mut verbatim_start: i32 = 0;
         let mut i = 1;
-        
+
         // note: we go out of bounds to ensure a repeat run at the end
         while i <= tile_count + 1 {
             let mut curr_tile: u32 = if i >= tile_count {u32::MAX} else {self.tile_data[i]};
             i += 1;
-            
-            if curr_tile != last_tile { 
+
+            if curr_tile != last_tile {
                 // We have different tiles, so just increase the number of tiles in this verbatim run
                 num_verbatim += 1;
                 last_tile = curr_tile;
-                continue 
+                continue
             }
-            
+
             // We have two tiles in a row - construct a repeating run.
             // Figure out how far this repeat goes, first.
             let mut num_repeats: i32 = 2;
@@ -759,7 +767,7 @@ impl GMRoomLayerDataTiles {
                 num_repeats += 1;
                 i += 1;
             }
-    
+
             // Serialize the preceding verbatim run, splitting into 127-length chunks
             while num_verbatim > 0 {
                 let num_to_write: i32 = min(num_verbatim, 127);
@@ -771,7 +779,7 @@ impl GMRoomLayerDataTiles {
                 num_verbatim -= num_to_write;
                 verbatim_start += num_to_write;
             }
-    
+
             // Serialize this repeat run, splitting into 128-length chunks
             while num_repeats > 0 {
                 let num_to_write: i32 = min(num_verbatim, 128);
@@ -779,17 +787,17 @@ impl GMRoomLayerDataTiles {
                 builder.write_u32(last_tile);
                 num_repeats -= num_to_write;
             }
-    
+
             // Update our current tile to be the one after the run
             curr_tile = if i >= tile_count {0} else {self.tile_data[i]};
-    
+
             // Update the start of our next verbatim run, and move on
             verbatim_start = i as i32;
             num_verbatim = 0;
-            i += 1; 
+            i += 1;
             last_tile = curr_tile;
         }
-        
+
         if builder.is_gm_version_at_least((2024, 4)) {
             builder.align(4);
         }
