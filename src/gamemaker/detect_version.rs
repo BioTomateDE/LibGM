@@ -1,4 +1,4 @@
-use crate::utility::vec_with_capacity;
+use crate::utility::{num_enum_from, vec_with_capacity};
 use crate::gamemaker::deserialize::{DataReader, GMChunk};
 use crate::gamemaker::elements::embedded_textures::MAGIC_BZ2_QOI_HEADER;
 use crate::gamemaker::elements::rooms::GMRoomLayerType;
@@ -109,7 +109,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
         VersionCheck::new("TXTR", cv_txtr_2022_5, (2022, 3), (2022, 5)),
         VersionCheck::new("EXTN", cv_extn_2022_6, (2, 3), (2022, 6)),
         VersionCheck::new("ROOM", cv_room_2_2_2_302, (2, 0), (2, 2, 2, 302)),
-        VersionCheck::new("ROOM", cv_room_2024_2, (2023, 2), (2024, 2)),
+        VersionCheck::new("ROOM", cv_room_2024_2_and_2024_4, (2023, 2), (2024, 4)),
         VersionCheck::new("ROOM", cv_room_2022_1, (2, 3), (2022, 1)),
         VersionCheck::new("FONT", cv_font_2023_6_and_2024_11, (2022, 8), (2023, 6)),  // hopefully this duplicate works as expected
         VersionCheck::new("FONT", cv_font_2023_6_and_2024_11, (2024, 6), (2024, 11)),
@@ -743,9 +743,10 @@ fn cv_room_2_2_2_302(reader: &mut DataReader) -> Result<Option<GMVersionReq>, St
 }
 
 
-fn cv_room_2024_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_room_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
     // check for tile compression
-    let room_count = reader.read_usize()?;
+    let room_count: usize = reader.read_usize()?;
+    let mut any_layers_misaligned: bool = false;
 
     for room_index in 0..room_count {
         // Advance to room data we're interested in (and grab pointer for next room)
@@ -754,54 +755,56 @@ fn cv_room_2024_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
         reader.cur_pos = room_pointer + 22*4;
 
         // Get the pointer for this room's layer list, as well as pointer to sequence list
-        let layer_list_pointer = reader.read_usize()?;
-        let sequence_pointer = reader.read_usize()?;
-        reader.cur_pos = layer_list_pointer;
-        let layer_count = reader.read_i32()?;
+        let layer_list_ptr = reader.read_usize()?;
+        let sequence_ptr = reader.read_usize()?;
+        reader.cur_pos = layer_list_ptr;
+        let layer_count = reader.read_usize()?;
         if layer_count < 1 {
             continue    // no layers to detect; go to next room
         }
-        let layer_count = layer_count as usize;
 
-        let mut check_next_layer_offset = false;
+        let mut check_next_layer_offset: bool = false;
         for layer_index in 0..layer_count {
-            let layer_pointer = layer_list_pointer + 4*layer_index;
-            if check_next_layer_offset && layer_pointer%4 != 0 {
-                return Ok(None)     // misaligned layer
+            let layer_ptr = layer_list_ptr + 4*layer_index;
+            if check_next_layer_offset && layer_ptr %4 != 0 {
+                any_layers_misaligned = true;
             }
 
-            reader.cur_pos = layer_pointer + 4;
-            // Get pointer into the individual layer data (plus 8 bytes)
-            let jump_pointer = reader.read_usize()? + 8;
+            reader.cur_pos = layer_ptr + 4;
+            // Get pointer into the individual layer data
+            let layer_data_ptr: usize = reader.read_usize()?;
 
             // Find the offset for the end of this layer
-            let next_pointer = if layer_index == layer_count - 1 {
-                sequence_pointer
+            let next_pointer: usize = if layer_index == layer_count - 1 {
+                sequence_ptr
             } else {
                 reader.read_usize()?   // pointer to next element in the layer list
             };
 
             // Actually perform the length checks
-            reader.cur_pos = jump_pointer;
-            let layer_type = reader.read_i32()?;
-            if layer_type != 4 {    // GMRoomLayerType::Tiles
+            reader.cur_pos = layer_data_ptr + 8;
+            let layer_type: GMRoomLayerType = num_enum_from(reader.read_u32()?)?;
+            if layer_type != GMRoomLayerType::Tiles {
                 check_next_layer_offset = false;
                 continue
             }
             check_next_layer_offset = true;
-            reader.cur_pos += 12;
-            let effect_count = reader.read_usize()?;
+            reader.cur_pos += 32;
+            let effect_count: usize = reader.read_usize()?;
             reader.cur_pos += 12*effect_count + 4;
 
             let tile_map_width = reader.read_usize()?;
             let tile_map_height = reader.read_usize()?;
             if next_pointer - reader.cur_pos != (tile_map_width * tile_map_height * 4) {
-                return Ok(Some((2024, 2).into()))
+                return if any_layers_misaligned {
+                    Ok(Some((2024, 2).into()))
+                } else {
+                    Ok(Some((2024, 4).into()))
+                }
             }
-
         }
     }
-
+    
     Ok(None)
 }
 
