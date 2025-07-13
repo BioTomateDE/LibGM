@@ -35,15 +35,27 @@ impl GMChunkElement for GMEmbeddedTextures {
 impl GMElement for GMEmbeddedTextures {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let mut texture_pages: Vec<GMEmbeddedTexture> = reader.read_pointer_list()?;
-        for texture_page in &mut texture_pages {
+        for i in 0..texture_pages.len() {
+            // find next element start position
+            let mut max_end_of_stream_pos = reader.chunk.end_pos;
+            for texture_page in &texture_pages[i+1..] {
+                let Some(ref img) = texture_page.image else {continue};
+                let GMImage::NotYetDeserialized(blob_pos) = img else {
+                    return Err("GMImage enum variant is somehow not `NotYetDeserialized`".to_string())
+                };
+                max_end_of_stream_pos = *blob_pos;
+                break
+            }
+
+            let texture_page: &mut GMEmbeddedTexture = &mut texture_pages[i];
             let Some(ref mut gm_image) = texture_page.image else {
-                continue
+                continue    // texture is external
             };
             let GMImage::NotYetDeserialized(blob_position) = gm_image else {
                 return Err("GMImage enum variant is somehow not `NotYetDeserialized`".to_string())
             };
             reader.cur_pos = *blob_position;
-            *gm_image = read_raw_texture(reader)?;
+            *gm_image = read_raw_texture(reader, max_end_of_stream_pos, texture_page.texture_block_size)?;
         }
 
         reader.align(4)?;
@@ -102,9 +114,9 @@ impl GMElement for GMEmbeddedTextures {
 pub struct GMEmbeddedTexture {
     /// not sure what `scaled` actually is
     pub scaled: u32,
-    /// same with this
+    /// The amount of generated mipmap levels. Present in 2.0.6+
     pub generated_mips: Option<u32>,
-    /// TODO maybe this could be used to speed up parsing textures in 2022.3+
+    /// Size of the texture attached to this texture page in bytes. Present in 2022.3+
     pub texture_block_size: Option<u32>,
     pub data_2022_9: Option<GMEmbeddedTexture2022_9>,
     pub image: Option<GMImage>,
@@ -155,7 +167,7 @@ impl GMElement for GMEmbeddedTexture2022_9 {
 }
 
 
-fn read_raw_texture(reader: &mut DataReader) -> Result<GMImage, String> {
+fn read_raw_texture(reader: &mut DataReader, max_end_of_stream_pos: usize, texture_block_size: Option<u32>) -> Result<GMImage, String> {
     reader.align(0x80)?;
     let start_position: usize = reader.cur_pos;
     let header: [u8; 8] = *reader.read_bytes_const()
@@ -182,12 +194,14 @@ fn read_raw_texture(reader: &mut DataReader) -> Result<GMImage, String> {
     else if header.starts_with(MAGIC_BZ2_QOI_HEADER) {
         // Parse QOI + BZip2
         let mut header_size: usize = 8;
-        if reader.general_info.is_version_at_least((2022, 5, 0, 0)) {
+        if reader.general_info.is_version_at_least((2022, 5)) {
             let _serialized_uncompressed_length = reader.read_usize()?;    // maybe handle negative numbers?
             header_size = 12;
         }
 
-        let bz2_stream_length: usize = find_end_of_bz2_stream(reader)? - start_position - header_size;   // TODO verify that this new logic is correct (fd3d4c65)
+        let bz2_stream_end: usize = find_end_of_bz2_stream(reader, max_end_of_stream_pos)?;
+        let bz2_stream_length: usize = bz2_stream_end - start_position - header_size;
+        
         // read entire image (excluding bz2 header) to byte array
         reader.cur_pos = start_position + header_size;
         let raw_image_data: &[u8] = reader.read_bytes_dyn(bz2_stream_length)
@@ -212,6 +226,7 @@ pub enum GMImage {
     DynImg(DynamicImage),
     Png(Vec<u8>),
     Bz2Qoi(Vec<u8>),
+    /// Only temporarily used when parsing.
     NotYetDeserialized(usize),
 }
 impl GMImage {
@@ -281,20 +296,20 @@ impl PartialEq for GMImage {
 }
 
 
-fn find_end_of_bz2_stream(reader: &mut DataReader) -> Result<usize, String> {
-    let stream_start_position: usize = reader.cur_pos;
+fn find_end_of_bz2_stream(reader: &mut DataReader, max_end_of_stream_pos: usize) -> Result<usize, String> {
+    const MAX_CHUNK_SIZE: usize = 256;
     // Read backwards from the max end of stream position, in up to 256-byte chunks.
     // We want to find the end of nonzero data.
-    static MAX_CHUNK_SIZE: usize = 256;
 
-    let mut chunk_start_position: usize = max(stream_start_position, reader.chunk.end_pos - MAX_CHUNK_SIZE);
-    let chunk_size: usize = reader.chunk.end_pos - chunk_start_position;
+    let stream_start_position: usize = reader.cur_pos;
+    let mut chunk_start_position: usize = max(stream_start_position, max_end_of_stream_pos - MAX_CHUNK_SIZE);
+    let chunk_size: usize = max_end_of_stream_pos - chunk_start_position;
     loop {
         reader.cur_pos = chunk_start_position;
         let chunk_data: &[u8] = reader.read_bytes_dyn(chunk_size)?;
         reader.cur_pos += chunk_size;
 
-        // find first nonzero byte at end of stream
+        // Find first nonzero byte at end of stream
         let mut position: isize = chunk_size as isize - 1;
         while position >= 0 && chunk_data[position as usize] == 0 {
             position -= 1;
