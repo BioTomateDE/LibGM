@@ -82,14 +82,14 @@ impl GMElement for GMShaders {
                 }
             }
 
-            let hlsl11_vertex_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 7, hlsl11_vertex_ptr, 0, hlsl11_pixel_ptr)?;
-            let hlsl11_pixel_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 7, hlsl11_pixel_ptr, 0, pssl_vertex_ptr)?;
-            let pssl_vertex_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 7, pssl_vertex_ptr, pssl_vertex_len, pssl_pixel_ptr)?;
-            let pssl_pixel_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 7, pssl_pixel_ptr, pssl_pixel_len, cg_psvita_vertex_ptr)?;
-            let cg_psvita_vertex_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 7, cg_psvita_vertex_ptr, cg_psvita_vertex_len, cg_psvita_pixel_ptr)?;
-            let cg_psvita_pixel_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 7, cg_psvita_pixel_ptr, cg_psvita_pixel_len, cg_ps3_vertex_ptr)?;
-            let cg_ps3_vertex_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 15, cg_ps3_vertex_ptr, cg_ps3_vertex_len, cg_ps3_pixel_ptr)?;
-            let cg_ps3_pixel_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 15, cg_ps3_pixel_ptr, cg_ps3_pixel_len, 0)?;
+            let hlsl11_vertex_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 8, hlsl11_vertex_ptr, 0, hlsl11_pixel_ptr)?;
+            let hlsl11_pixel_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 8, hlsl11_pixel_ptr, 0, pssl_vertex_ptr)?;
+            let pssl_vertex_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 8, pssl_vertex_ptr, pssl_vertex_len, pssl_pixel_ptr)?;
+            let pssl_pixel_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 8, pssl_pixel_ptr, pssl_pixel_len, cg_psvita_vertex_ptr)?;
+            let cg_psvita_vertex_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 8, cg_psvita_vertex_ptr, cg_psvita_vertex_len, cg_psvita_pixel_ptr)?;
+            let cg_psvita_pixel_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 8, cg_psvita_pixel_ptr, cg_psvita_pixel_len, cg_ps3_vertex_ptr)?;
+            let cg_ps3_vertex_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 16, cg_ps3_vertex_ptr, cg_ps3_vertex_len, cg_ps3_pixel_ptr)?;
+            let cg_ps3_pixel_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 16, cg_ps3_pixel_ptr, cg_ps3_pixel_len, 0)?;
 
             shaders.push(GMShader {
                 name,
@@ -184,14 +184,14 @@ impl GMElement for GMShader {
             }
         }
         
-        write_shader_data(builder, 7, &self.hlsl11_vertex_data)?;
-        write_shader_data(builder, 7, &self.hlsl11_pixel_data)?;
-        write_shader_data(builder, 7, &self.pssl_vertex_data)?;
-        write_shader_data(builder, 7, &self.pssl_pixel_data)?;
-        write_shader_data(builder, 7, &self.cg_psvita_vertex_data)?;
-        write_shader_data(builder, 7, &self.cg_psvita_pixel_data)?;
-        write_shader_data(builder, 15, &self.cg_ps3_vertex_data)?;
-        write_shader_data(builder, 15, &self.cg_ps3_pixel_data)?;
+        write_shader_data(builder, 8, &self.hlsl11_vertex_data)?;
+        write_shader_data(builder, 8, &self.hlsl11_pixel_data)?;
+        write_shader_data(builder, 8, &self.pssl_vertex_data)?;
+        write_shader_data(builder, 8, &self.pssl_pixel_data)?;
+        write_shader_data(builder, 8, &self.cg_psvita_vertex_data)?;
+        write_shader_data(builder, 8, &self.cg_psvita_pixel_data)?;
+        write_shader_data(builder, 16, &self.cg_ps3_vertex_data)?;
+        write_shader_data(builder, 16, &self.cg_ps3_pixel_data)?;
 
         Ok(())
     }
