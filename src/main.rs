@@ -1,8 +1,6 @@
 #![deny(unused_must_use)]
 #![deny(unreachable_patterns)]
 #![deny(unused_assignments)]
-#![deny(unused_imports)]
-#![deny(unused_mut)]
 #![deny(unused_macros)]
 #![deny(clippy::all)]
 
@@ -58,6 +56,11 @@ fn main_open_and_close() -> Result<(), String> {
     log::info!("Parsing data file");
     let original_data: GMData = parse_data_file(&original_data_raw, false)
         .map_err(|e| format!("\n{e}\n↳ while parsing data file"))?;
+    
+    // // sample changes
+    // let string_id = original_data.strings.strings.len();
+    // original_data.strings.strings.push("Modded using AcornGM".to_string());
+    // original_data.general_info.display_name = GMRef::new(string_id as u32);
 
     log::info!("Building data file");
     let modified_data_raw: Vec<u8> = build_data_file(&original_data)

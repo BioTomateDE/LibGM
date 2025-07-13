@@ -78,15 +78,15 @@ impl GMElement for GMCodes {
         for (i, (start, end)) in instructions_ranges.into_iter().enumerate() {
             let code: &mut GMCode = &mut codes[i];
             let length: usize = end - start;
-            
+
             // if bytecode15+ and the instructions pointer is known, then it's a child code entry
             if length > 0
-                && let Some(parent_code) = codes_by_pos.get(&start) 
+                && let Some(parent_code) = codes_by_pos.get(&start)
                 && let Some(ref mut b15_info) = code.bytecode15_info {
                 b15_info.parent = Some(parent_code.clone());
                 continue
             }
-            
+
             reader.cur_pos = start;
             code.instructions = Vec::with_capacity(length / 6);  // estimate; data is from deltarune 1.00
 
@@ -98,7 +98,7 @@ impl GMElement for GMCodes {
                 code.instructions.push(instruction);
             }
             code.instructions.shrink_to_fit();
-            
+
             if length > 0 {
                 // Update information to mark this entry as the root (if we have at least 1 instruction)
                 codes_by_pos.insert(start, GMRef::new(i as u32));
@@ -803,11 +803,11 @@ fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMC
         GMDataType::Double => reader.read_f64().map(GMCodeValue::Double),
         GMDataType::Float => reader.read_f32().map(GMCodeValue::Float),
         GMDataType::Int32 => {
-            let value: i32 = reader.read_i32()?;
             if let Some(function) = reader.function_occurrence_map.get(&reader.cur_pos) {
+                reader.cur_pos += 4;    // skip next occurrence offset
                 return Ok(GMCodeValue::Function(function.clone()))
             }
-            Ok(GMCodeValue::Int32(value))
+            reader.read_i32().map(GMCodeValue::Int32)
         },
         GMDataType::Int64 => reader.read_i64().map(GMCodeValue::Int64),
         GMDataType::Boolean => reader.read_bool32().map(GMCodeValue::Boolean),
