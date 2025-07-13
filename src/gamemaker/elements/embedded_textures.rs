@@ -11,7 +11,6 @@ use crate::gamemaker::element::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::qoi;
 
-
 pub const MAGIC_PNG_HEADER: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
 pub const MAGIC_BZ2_QOI_HEADER: &[u8] = "2zoq".as_bytes();
 pub const MAGIC_QOI_HEADER: &[u8] = "fioq".as_bytes();
@@ -185,6 +184,13 @@ fn read_raw_texture(reader: &mut DataReader, max_end_of_stream_pos: usize, textu
         }
         
         let data_length: usize = reader.cur_pos - start_position;
+        if let Some(expected_size) = texture_block_size && expected_size as usize != data_length {
+            return Err(format!(
+                "Texture Page Entry specified texture block size {}; actually detected length {} for PNG Image data",
+                expected_size, data_length,
+            ))
+        }
+        
         reader.cur_pos = start_position;
         let bytes: &[u8] = reader.read_bytes_dyn(data_length).map_err(|e| format!("Trying to read PNG image data {e}"))?;
         // png image size checks {~~}
@@ -201,7 +207,13 @@ fn read_raw_texture(reader: &mut DataReader, max_end_of_stream_pos: usize, textu
 
         let bz2_stream_end: usize = find_end_of_bz2_stream(reader, max_end_of_stream_pos)?;
         let bz2_stream_length: usize = bz2_stream_end - start_position - header_size;
-        
+        if let Some(expected_size) = texture_block_size && expected_size as usize != bz2_stream_length+header_size {
+            return Err(format!(
+                "Texture Page Entry specified texture block size {}; actually detected length {} for Bzip2 QOI Image data",
+                expected_size, bz2_stream_length+header_size,
+            ))
+        }
+
         // read entire image (excluding bz2 header) to byte array
         reader.cur_pos = start_position + header_size;
         let raw_image_data: &[u8] = reader.read_bytes_dyn(bz2_stream_length)
