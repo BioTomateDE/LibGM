@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::elements::rooms::{GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomLayer, GMRoomLayerType, GMRoomTile, GMRoomTileTexture, GMRoomView};
-use crate::modding::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, flag_field, ModExporter, ModRef};
+use crate::modding::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, edit_field_option, flag_field, ModExporter, ModRef};
 use crate::modding::elements::sequences::{AddSequence, EditSequence};
 use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
@@ -110,20 +110,20 @@ pub struct AddRoomFlags {
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditRoom {
-    pub name: Option<ModRef>,
-    pub caption: Option<Option<ModRef>>,
+    pub name: Option<ModRef>,       // string rewf
+    pub caption: Option<ModRef>,    // string ref
     pub width: Option<u32>,
     pub height: Option<u32>,
     pub speed: Option<u32>,
     pub persistent: Option<bool>,
     pub background_color: Option<u32>,
     pub draw_background_color: Option<bool>,
-    pub creation_code: Option<Option<ModRef>>,
+    pub creation_code: Option<Option<ModRef>>,  // code ref
     pub flags: EditRoomFlags,
     pub backgrounds: EditUnorderedList<AddRoomBackground, EditRoomBackground>,
     pub views: EditUnorderedList<AddRoomView, EditRoomView>,
     pub game_objects: EditUnorderedList<AddRoomGameObject, EditRoomGameObject>,
-    pub tiles: EditUnorderedList<AddRoomTile, EditRoomTile>,    // TODO no more Option
+    pub tiles: EditUnorderedList<AddRoomTile, EditRoomTile>,
     pub world: Option<bool>,
     pub top: Option<u32>,
     pub left: Option<u32>,
@@ -210,8 +210,8 @@ pub struct EditRoomGameObject {
     pub creation_code: Option<Option<ModRef>>,
     pub scale_x: Option<f32>,
     pub scale_y: Option<f32>,
-    pub image_speed: Option<Option<f32>>,
-    pub image_index: Option<Option<usize>>,
+    pub image_speed: Option<f32>,
+    pub image_index: Option<usize>,
     pub color: Option<u32>,
     pub rotation: Option<f32>,
     pub pre_create_code: Option<Option<ModRef>>,
@@ -270,7 +270,7 @@ impl ModExporter<'_, '_> {
             }),
             |o, m| Ok(EditRoom {
                 name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
-                caption: edit_field_convert_option(&o.caption, &m.caption, |r| self.convert_string_ref(r))?,
+                caption: edit_field_convert_option(&o.caption, &m.caption, |r| self.convert_string_ref(r))?.flatten(),
                 width: edit_field(&o.width, &m.width),
                 height: edit_field(&o.height, &m.height),
                 speed: edit_field(&o.speed, &m.speed),
@@ -501,8 +501,8 @@ impl ModExporter<'_, '_> {
             creation_code: edit_field_convert_option(&o.creation_code, &m.creation_code, |r| self.convert_code_ref(r))?,
             scale_x: edit_field(&o.scale_x, &m.scale_x),
             scale_y: edit_field(&o.scale_y, &m.scale_y),
-            image_speed: edit_field(&o.image_speed, &m.image_speed),
-            image_index: edit_field(&o.image_index, &m.image_index),
+            image_speed: edit_field_option(&o.image_speed, &m.image_speed).flatten(),
+            image_index: edit_field_option(&o.image_index, &m.image_index).flatten(),
             color: edit_field(&o.color, &m.color),
             rotation: edit_field(&o.rotation, &m.rotation),
             pre_create_code: edit_field_convert_option(&o.pre_create_code, &m.pre_create_code, |r| self.convert_code_ref(r))?,

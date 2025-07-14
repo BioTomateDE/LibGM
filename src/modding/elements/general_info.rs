@@ -40,7 +40,7 @@ pub struct EditGeneralInfo {
     pub default_window_title: Option<ModRef>,   // String ref
     pub directplay_guid: Option<uuid::Uuid>,
     pub steam_app_id: Option<i32>,
-    pub debugger_port: Option<Option<u32>>,
+    pub debugger_port: Option<u32>,
     pub flags: EditGeneralInfoFlags,
     pub function_classifications: EditFunctionClassifications,
     pub room_order: Vec<DataChange<ModRef>>,    // GMRoom reference
@@ -356,7 +356,7 @@ impl ModExporter<'_, '_> {
             default_window_title: edit_field_convert(&o.display_name, &m.display_name, |r| self.convert_string_ref(r))?,
             directplay_guid: edit_field(&o.directplay_guid, &m.directplay_guid),
             steam_app_id: edit_field(&o.steam_appid, &m.steam_appid),
-            debugger_port: edit_field(&o.debugger_port, &m.debugger_port),
+            debugger_port: edit_field(&o.debugger_port, &m.debugger_port).flatten(),
             flags: edit_flags(&o.flags, &m.flags),
             function_classifications: edit_function_classifications(&o.function_classifications, &m.function_classifications)?,
             room_order: export_changes_ordered_list(&o.room_order, &m.room_order, |i| self.convert_room_ref(i))?,

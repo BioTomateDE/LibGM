@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::elements::sequence::GMAnimSpeedType;
 use crate::gamemaker::elements::sprites::{GMSpriteMaskEntry, GMSpriteNineSlice, GMSpriteNineSliceTileMode, GMSpriteSepMaskType, GMSpriteSpecial, GMSpriteType};
-use crate::modding::export::{edit_field, edit_field_convert, edit_field_convert_option, wrap_edit_option, EditWrapper, ModExporter, ModRef};
+use crate::modding::export::{edit_field, edit_field_convert, edit_field_option, ModExporter, ModRef};
 use crate::modding::ordered_list::{export_changes_ordered_list, DataChange};
 use crate::modding::elements::sequences::AddSequence;
 use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
@@ -24,23 +24,7 @@ pub struct AddSprite {
     pub origin_y: i32,
     pub textures: Vec<ModRef>,
     pub collision_masks: Vec<GMSpriteMaskEntry>,
-    pub special_fields: Option<AddSpriteSpecial>,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AddSpriteSpecial {
-    /// Version of Special Thingy
-    pub special_version: u32,
-    // pub sprite_type: AddSpriteType,
-    /// GMS 2
-    pub playback_speed: f32,
-    /// GMS 2
-    pub playback_speed_type: GMAnimSpeedType,
-    /// Special Version 2
-    pub sequence: Option<AddSequence>,
-    /// Special Version 3
-    pub nine_slice: Option<ModSpriteNineSlice>,
-    // /// SWF
-    // pub yyswf: Option<GMSpriteTypeSWF>,   // just reuse the gm struct; im not touching yyswf with a 3m pole
+    pub special_fields: Option<ModSpriteSpecial>,
 }
 
 #[serde_with::skip_serializing_none]
@@ -62,20 +46,25 @@ pub struct EditSprite {
     pub origin_y: Option<i32>,
     pub textures: Vec<DataChange<ModRef>>,
     pub collision_masks: EditUnorderedList<GMSpriteMaskEntry, GMSpriteMaskEntry>,
-    pub special_fields: Option<EditWrapper<AddSpriteSpecial, EditSpriteSpecial>>,
-}
-#[serde_with::skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EditSpriteSpecial {
-    pub special_version: Option<u32>,
-    // pub sprite_type: Option<GMSpriteType>,
-    pub playback_speed: Option<f32>,
-    pub playback_speed_type: Option<GMAnimSpeedType>,
-    pub sequence: Option<Option<AddSequence>>,
-    pub nine_slice: Option<ModSpriteNineSlice>,
-    // pub yyswf: Option<Option<GMSpriteTypeSWF>>,   // just reuse the gm struct; im not touching yyswf with a 3m pole
+    pub special_fields: Option<ModSpriteSpecial>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModSpriteSpecial {
+    /// Version of Special Thingy
+    pub special_version: u32,
+    // pub sprite_type: AddSpriteType,
+    /// GMS 2
+    pub playback_speed: f32,
+    /// GMS 2
+    pub playback_speed_type: GMAnimSpeedType,
+    /// Special Version 2
+    pub sequence: Option<AddSequence>,
+    /// Special Version 3
+    pub nine_slice: Option<ModSpriteNineSlice>,
+    // /// SWF
+    // pub yyswf: Option<GMSpriteTypeSWF>,   // just reuse the gm struct; im not touching yyswf with a 3m pole
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModSpriteNineSlice {
     pub left: i32,
@@ -109,7 +98,7 @@ impl ModExporter<'_, '_> {
                 origin_y: i.origin_y,
                 textures: i.textures.iter().flatten().map(|r| self.convert_texture_ref(r)).collect::<Result<Vec<_>, String>>()?,
                 collision_masks: i.collision_masks.clone(),
-                special_fields: i.special_fields.as_ref().map(|i| self.add_specials(i)).transpose()?,
+                special_fields: i.special_fields.as_ref().map(|i| self.convert_specials(i)).transpose()?,
             }),
             |o, m| Ok(EditSprite {
                 name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
@@ -138,22 +127,17 @@ impl ModExporter<'_, '_> {
                     |_, m| Ok(m.clone()),
                     false,
                 )?,
-                special_fields: wrap_edit_option(
-                    &o.special_fields,
-                    &m.special_fields,
-                    |i| self.add_specials(i),
-                    |o, m| self.edit_specials(o, m),
-                )?,
+                special_fields: edit_field_option(&o.special_fields, &m.special_fields).flatten().map(|i| self.convert_specials(&i)).transpose()?,
             }),
             false,
         )
     }
     
-    fn add_specials(&self, i: &GMSpriteSpecial) -> Result<AddSpriteSpecial, String> {
+    fn convert_specials(&self, i: &GMSpriteSpecial) -> Result<ModSpriteSpecial, String> {
         if !matches!(i.sprite_type, GMSpriteType::Normal(_)) {
             return Err("Spine and SWF sprites are not supported yet for modding".to_string())   // TODO
         }
-        Ok(AddSpriteSpecial {
+        Ok(ModSpriteSpecial {
             special_version: i.special_version,
             // sprite_type: i.sprite_type.clone(),
             playback_speed: i.playback_speed,
@@ -168,18 +152,6 @@ impl ModExporter<'_, '_> {
                 tile_modes: i.tile_modes,
             })
             // yyswf: i.yyswf.clone(),
-        })
-    }
-    
-    fn edit_specials(&self, o: &GMSpriteSpecial, m: &GMSpriteSpecial) -> Result<EditSpriteSpecial, String> {
-        Ok(EditSpriteSpecial {
-            special_version: edit_field(&o.special_version, &m.special_version),
-            // sprite_type: edit_field(&o.sprite_type, &m.sprite_type),
-            playback_speed: edit_field(&o.playback_speed, &m.playback_speed),
-            playback_speed_type: edit_field(&o.playback_speed_type, &m.playback_speed_type),
-            sequence: edit_field_convert_option(&o.sequence, &m.sequence, |i| self.add_sequence(i))?,
-            nine_slice: convert_nine_slice(&m.nine_slice)
-            // yyswf: edit_field(&o.yyswf, &m.yyswf),
         })
     }
 }

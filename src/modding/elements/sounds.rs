@@ -29,14 +29,14 @@ pub struct AddSoundFlags {
 pub struct EditSound {
     pub name: Option<ModRef>,      // String
     pub flags: EditSoundFlags,
-    pub audio_type: Option<Option<ModRef>>,  // String
+    pub audio_type: Option<ModRef>,  // String
     pub filename: Option<ModRef>,      // String
     pub effects: Option<u32>,
     pub volume: Option<f32>,
     pub pitch: Option<f32>,
     pub audio_group: Option<ModRef>,    // Audio Group
-    pub audio_data: Option<Option<ModRef>>,  // Embedded Audio
-    pub audio_length: Option<Option<f32>>,
+    pub audio_data: Option<ModRef>,  // Embedded Audio
+    pub audio_length: Option<f32>,
 }
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -68,14 +68,14 @@ impl ModExporter<'_, '_> {
             |o, m| Ok(EditSound {
                 name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
                 flags: edit_sound_flags(&o.flags, &m.flags),
-                audio_type: edit_field_convert_option(&o.audio_type, &m.audio_type, |r| self.convert_string_ref(r))?,
+                audio_type: edit_field_convert_option(&o.audio_type, &m.audio_type, |r| self.convert_string_ref(r))?.flatten(),
                 filename: edit_field_convert(&o.file, &m.file, |r| self.convert_string_ref(r))?,
                 effects: edit_field(&o.effects, &m.effects),
                 volume: edit_field(&o.volume, &m.volume),
                 pitch: edit_field(&o.pitch, &m.pitch),
                 audio_group: edit_field_convert(&o.audio_group, &m.audio_group, |r| self.convert_audio_group_ref(r))?,
-                audio_data: edit_field_convert_option(&o.audio_file, &m.audio_file, |r| self.convert_audio_ref(r))?,
-                audio_length: edit_field(&o.audio_length, &m.audio_length),
+                audio_data: edit_field_convert_option(&o.audio_file, &m.audio_file, |r| self.convert_audio_ref(r))?.flatten(),
+                audio_length: edit_field(&o.audio_length, &m.audio_length).flatten(),
             }),
             false,
         )

@@ -39,7 +39,7 @@ pub struct AddFontGlyph {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditFont {
     pub name: Option<ModRef>, // String
-    pub display_name: Option<Option<ModRef>>,  // String
+    pub display_name: Option<ModRef>,  // String
     pub em_size: Option<f32>,
     pub bold: Option<bool>,
     pub italic: Option<bool>,
@@ -50,17 +50,17 @@ pub struct EditFont {
     pub texture: Option<ModRef>,   // Texture Page Item
     pub scale_x: Option<f32>,
     pub scale_y: Option<f32>,
-    pub ascender_offset: Option<Option<i32>>,
-    pub ascender: Option<Option<u32>>,
-    pub sdf_spread: Option<Option<u32>>,
-    pub line_height: Option<Option<u32>>,
+    pub ascender_offset: Option<i32>,
+    pub ascender: Option<u32>,
+    pub sdf_spread: Option<u32>,
+    pub line_height: Option<u32>,
     pub glyphs: EditUnorderedList<AddFontGlyph, EditFontGlyph>,
 }
 
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditFontGlyph {
-    pub character: Option<Option<char>>,
+    pub character: Option<char>,
     pub x: Option<u16>,
     pub y: Option<u16>,
     pub width: Option<u16>,
@@ -103,7 +103,7 @@ impl ModExporter<'_, '_> {
             }),
             |o, m| Ok(EditFont {
                 name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
-                display_name: edit_field_convert_option(&o.display_name, &m.display_name, |r| self.convert_string_ref(r))?,
+                display_name: edit_field_convert_option(&o.display_name, &m.display_name, |r| self.convert_string_ref(r))?.flatten(),
                 em_size: edit_field(&convert_font_size(&o.em_size), &convert_font_size(&m.em_size)),
                 bold: edit_field(&o.bold, &m.bold),
                 italic: edit_field(&o.italic, &m.italic),
@@ -114,10 +114,10 @@ impl ModExporter<'_, '_> {
                 texture: edit_field_convert(&o.texture, &m.texture, |r| self.convert_texture_ref(r))?,
                 scale_x: edit_field(&o.scale_x, &m.scale_x),
                 scale_y: edit_field(&o.scale_y, &m.scale_y),
-                ascender_offset: edit_field_option(&o.ascender_offset, &m.ascender_offset),
-                ascender: edit_field_option(&o.ascender, &m.ascender),
-                sdf_spread: edit_field_option(&o.sdf_spread, &m.sdf_spread),
-                line_height: edit_field_option(&o.line_height, &m.line_height),
+                ascender_offset: edit_field_option(&o.ascender_offset, &m.ascender_offset).flatten(),
+                ascender: edit_field_option(&o.ascender, &m.ascender).flatten(),
+                sdf_spread: edit_field_option(&o.sdf_spread, &m.sdf_spread).flatten(),
+                line_height: edit_field_option(&o.line_height, &m.line_height).flatten(),
                 glyphs: export_changes_unordered_list(&o.glyphs, &m.glyphs, add_font_glyph, edit_font_glyph, false)?,
             }),
             false,
@@ -140,7 +140,7 @@ fn add_font_glyph(i: &GMFontGlyph) -> Result<AddFontGlyph, String> {
 
 fn edit_font_glyph(o: &GMFontGlyph, m: &GMFontGlyph) -> Result<EditFontGlyph, String> {
     Ok(EditFontGlyph {
-        character: edit_field_option(&o.character, &m.character),
+        character: edit_field_option(&o.character, &m.character).flatten(),
         x: edit_field(&o.x, &m.x),
         y: edit_field(&o.y, &m.y),
         width: edit_field(&o.width, &m.width),

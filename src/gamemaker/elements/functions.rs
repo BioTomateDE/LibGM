@@ -51,9 +51,8 @@ impl GMElement for GMFunctions {
             let first_occurrence_abs_pos: i32 = reader.read_i32()?;
             let (occurrences, name_string_id): (Vec<usize>, u32) = parse_occurrence_chain(reader, first_occurrence_abs_pos, occurrence_count)?;
             
-            // verify name string id
-            if name.index != name_string_id {
-                // maybe this is also allowed to be -1 for unused functions?
+            // verify name string id. allow -1 for unused function (-1 wraps to u32::MAX)
+            if name_string_id != u32::MAX && name.index != name_string_id {
                 return Err(format!(
                     "Function #{i} with name \"{}\" specifies name string id {}; but the id of name string is actually {}",
                     reader.resolve_gm_str(name)?, name_string_id, name.index,
