@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::elements::options::{GMOptions, GMOptionsFlags};
-use crate::modding::export::{edit_field, edit_field_convert, edit_field_convert_option, flag_field, ModExporter, ModRef};
+use crate::modding::export::{edit_field, edit_field_convert, edit_field_convert_option, flag_field, ModExporter, ModRef, RootChanges};
 use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
 macro_rules! prevent_changing {
@@ -39,6 +39,22 @@ pub struct EditOptions {
     pub constants: EditUnorderedList<AddOptionsConstant, EditOptionsConstant>,
 }
 
+impl RootChanges for EditOptions {
+    fn has_changes(&self) -> bool {
+        self.flags.has_changes() ||
+        self.color_depth.is_some() ||
+        self.resolution.is_some() ||
+        self.frequency.is_some() ||
+        self.vertex_sync.is_some() ||
+        self.priority.is_some() ||
+        self.back_image.is_some() ||
+        self.front_image.is_some() ||
+        self.load_image.is_some() ||
+        self.load_alpha.is_some() ||
+        self.constants.has_changes()
+    }
+}
+
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditOptionsFlags {
@@ -72,6 +88,41 @@ pub struct EditOptionsFlags {
     pub fast_collision_compatibility: Option<bool>,
     pub disable_sandbox: Option<bool>,
     pub enable_copy_on_write: Option<bool>,
+}
+
+impl RootChanges for EditOptionsFlags {
+    fn has_changes(&self) -> bool {
+        self.start_in_fullscreen.is_some() ||
+        self.interpolate_pixels.is_some() ||
+        self.use_new_audio_format.is_some() ||
+        self.no_border.is_some() ||
+        self.show_cursor.is_some() ||
+        self.sizeable.is_some() ||
+        self.stay_on_top.is_some() ||
+        self.allow_changing_resolution.is_some() ||
+        self.no_buttons.is_some() ||
+        self.screen_key.is_some() ||
+        self.help_key.is_some() ||
+        self.quit_key.is_some() ||
+        self.save_key.is_some() ||
+        self.screenshot_key.is_some() ||
+        self.close_delay.is_some() ||
+        self.freeze.is_some() ||
+        self.show_progress.is_some() ||
+        self.load_transparent.is_some() ||
+        self.scale_progress.is_some() ||
+        self.display_errors.is_some() ||
+        self.write_errors.is_some() ||
+        self.abort_errors.is_some() ||
+        self.variable_errors.is_some() ||
+        self.creation_event_order.is_some() ||
+        self.use_front_touch.is_some() ||
+        self.use_rear_touch.is_some() ||
+        self.use_fast_collision.is_some() ||
+        self.fast_collision_compatibility.is_some() ||
+        self.disable_sandbox.is_some() ||
+        self.enable_copy_on_write.is_some()
+    }
 }
 
 #[serde_with::skip_serializing_none]
