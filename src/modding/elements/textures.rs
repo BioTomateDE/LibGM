@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::iter::zip;
 use image::DynamicImage;
 use serde::{Deserialize, Serialize};
-use crate::gamemaker::elements::embedded_textures::{GMEmbeddedTexture, GMImage};
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::modding::export::{edit_field, ModExporter, ModRef};
 use crate::modding::unordered_list::EditUnorderedList;
