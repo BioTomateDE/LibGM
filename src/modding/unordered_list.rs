@@ -2,12 +2,19 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator, IntoParallelRefIterato
 use std::cmp::min;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use crate::modding::export::RootChanges;
 use crate::utility::typename;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditUnorderedList<ADD, EDIT> {
     pub additions: Vec<ADD>,
     pub edits: HashMap<usize, EDIT>,
+}
+
+impl<ADD, EDIT> RootChanges for EditUnorderedList<ADD, EDIT> {
+    fn has_changes(&self) -> bool {
+        !self.additions.is_empty() || !self.edits.is_empty()
+    }
 }
 
 

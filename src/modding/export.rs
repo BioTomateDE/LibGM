@@ -21,9 +21,9 @@ use crate::modding::elements::sounds::{AddSound, EditSound};
 use crate::modding::elements::sprites::{AddSprite, EditSprite};
 use crate::modding::elements::textures::{AddTexturePageItem, EditTexturePageItem};
 use crate::modding::unordered_list::EditUnorderedList;
-use crate::modding::elements::variables::{AddVariable, EditVariable};
 use crate::gamemaker::deserialize::{GMData, GMRef};
 use crate::gamemaker::elements::embedded_textures::GMEmbeddedTexture;
+use crate::modding::elements::variables::ModVariable;
 
 pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_path: &Path) -> Result<(), String> {
     let stopwatch = Stopwatch::start();
@@ -57,7 +57,7 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     let (texture_page_items, images):
         (EditUnorderedList<AddTexturePageItem, EditTexturePageItem>, Vec<DynamicImage>)
         = bench_export!("Textures", mod_exporter.export_textures(original_images, modified_images))?;
-    let variables: EditUnorderedList<AddVariable, EditVariable> = bench_export!("Variables", mod_exporter.export_variables())?;
+    let variables: EditUnorderedList<ModVariable, ModVariable> = bench_export!("Variables", mod_exporter.export_variables())?;
     log::trace!("Exporting changes took {stopwatch}");
 
     let stopwatch2 = Stopwatch::start();
@@ -132,7 +132,14 @@ fn get_images(texture_pages: &[GMEmbeddedTexture]) -> Result<Vec<Option<Cow<Dyna
 }
 
 
-fn tar_write_json_file<J: Serialize>(tar: &mut tar::Builder<zstd::Encoder<File>>, name: &str, json_struct: J) -> Result<(), String> {
+fn tar_write_json_file<J: Serialize+RootChanges>(tar: &mut tar::Builder<zstd::Encoder<File>>, name: &str, json_struct: J) -> Result<(), String> {
+    let filename: String = format!("{name}.json");
+
+    if !json_struct.has_changes() {
+        log::trace!("Skipped writing json file \"{filename}\" because it contains no changes");
+        return Ok(())
+    }
+
     let filename: String = format!("{name}.json");
 
     let data: Vec<u8> = serde_json::to_vec_pretty(&json_struct)
@@ -232,28 +239,11 @@ pub fn edit_field_convert_option<GM: PartialEq, MOD>(
     }
 }
 
-// #[derive(Debug, Clone, Serialize, Deserialize)]
-// pub enum EditWrapper<A, E> {
-//     Add(A),
-//     Edit(E),
-//     None,
-// }
-
-// pub fn wrap_edit_option<G, A, E>(
-//     o: &Option<G>,
-//     m: &Option<G>,
-//     add_map: impl Fn(&G) -> Result<A, String>,
-//     edit_map: impl Fn(&G, &G) -> Result<E, String>,
-// ) -> Result<Option<EditWrapper<A, E>>, String> {
-//     Ok(match (o, m) {
-//         (None, None) => None,
-//         (None, Some(m)) => Some(EditWrapper::Add(add_map(m)?)),
-//         (Some(_), None) => Some(EditWrapper::None),
-//         (Some(o), Some(m)) => Some(EditWrapper::Edit(edit_map(o, m)?)),
-//     })
-// }
-
 pub fn convert_additions<GM, ADD>(gm_elements: &[GM], map_addition: impl Fn(&GM) -> Result<ADD, String>) -> Result<Vec<ADD>, String> {
     gm_elements.iter().map(map_addition).collect()
+}
+
+pub trait RootChanges {
+    fn has_changes(&self) -> bool;
 }
 

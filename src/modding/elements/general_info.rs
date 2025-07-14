@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::elements::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags};
-use crate::modding::export::{edit_field, edit_field_convert, flag_field, ModExporter, ModRef};
+use crate::modding::export::{edit_field, edit_field_convert, flag_field, ModExporter, ModRef, RootChanges};
 use crate::modding::ordered_list::{export_changes_ordered_list, DataChange};
 
 macro_rules! prevent_enabling {
@@ -44,6 +44,26 @@ pub struct EditGeneralInfo {
     pub flags: EditGeneralInfoFlags,
     pub function_classifications: EditFunctionClassifications,
     pub room_order: Vec<DataChange<ModRef>>,    // GMRoom reference
+}
+
+impl RootChanges for EditGeneralInfo {
+    fn has_changes(&self) -> bool {
+        self.debugger_enabled.is_some() ||
+        self.game_name.is_some() ||
+        self.file_name.is_some() ||
+        self.gamemaker_config_string.is_some() ||
+        self.game_id.is_some() ||
+        self.creation_timestamp.is_some() ||
+        self.default_window_width.is_some() ||
+        self.default_window_height.is_some() ||
+        self.default_window_title.is_some() ||
+        self.directplay_guid.is_some() ||
+        self.steam_app_id.is_some() ||
+        self.debugger_port.is_some() ||
+        self.flags.has_changes() ||
+        self.function_classifications.has_changes() ||
+        !self.room_order.is_empty()
+    }
 }
 
 #[serde_with::skip_serializing_none]
@@ -111,6 +131,28 @@ pub struct EditGeneralInfoFlags {
     /// Whether license restrictions apply
     /// Internal license management flag
     pub license_exclusions: Option<bool>,
+}
+
+impl RootChanges for EditGeneralInfoFlags {
+    fn has_changes(&self) -> bool {
+        self.fullscreen.is_some() ||
+        self.sync_vertex1.is_some() ||
+        self.sync_vertex2.is_some() ||
+        self.sync_vertex3.is_some() ||
+        self.interpolate.is_some() ||
+        self.scale.is_some() ||
+        self.show_cursor.is_some() ||
+        self.sizeable.is_some() ||
+        self.screen_key.is_some() ||
+        self.studio_version_b1.is_some() ||
+        self.studio_version_b2.is_some() ||
+        self.studio_version_b3.is_some() ||
+        self.steam_enabled.is_some() ||
+        self.local_data_enabled.is_some() ||
+        self.borderless_window.is_some() ||
+        self.javascript_mode.is_some() ||
+        self.license_exclusions.is_some()
+    }
 }
 
 
@@ -329,6 +371,72 @@ pub struct EditFunctionClassifications {
     /// Vertex buffer operations
     pub vertex_buffers: Option<bool>,
 }
+
+impl RootChanges for EditFunctionClassifications {
+    fn has_changes(&self) -> bool {
+        self.none.is_some() ||
+        self.joystick.is_some() ||
+        self.gamepad.is_some() ||
+        self.immersion.is_some() ||
+        self.screen_capture.is_some() ||
+        self.math.is_some() ||
+        self.action.is_some() ||
+        self.matrix_d3d.is_some() ||
+        self.direct3d_model_rendering.is_some() ||
+        self.data_structures.is_some() ||
+        self.file.is_some() ||
+        self.ini.is_some() ||
+        self.filename.is_some() ||
+        self.directory.is_some() ||
+        self.environment.is_some() ||
+        self.http.is_some() ||
+        self.encoding.is_some() ||
+        self.ui_dialog.is_some() ||
+        self.motion_planning.is_some() ||
+        self.shape_collision.is_some() ||
+        self.instance.is_some() ||
+        self.room.is_some() ||
+        self.game.is_some() ||
+        self.display.is_some() ||
+        self.device.is_some() ||
+        self.window.is_some() ||
+        self.draw_color.is_some() ||
+        self.texture.is_some() ||
+        self.layer.is_some() ||
+        self.string.is_some() ||
+        self.tiles.is_some() ||
+        self.surface.is_some() ||
+        self.skeleton.is_some() ||
+        self.io.is_some() ||
+        self.variables.is_some() ||
+        self.array.is_some() ||
+        self.external_call.is_some() ||
+        self.notifications.is_some() ||
+        self.time_and_date.is_some() ||
+        self.particle.is_some() ||
+        self.sprite.is_some() ||
+        self.clickable_object_handling.is_some() ||
+        self.legacy_sound.is_some() ||
+        self.audio.is_some() ||
+        self.event.is_some() ||
+        self.free_type.is_some() ||
+        self.analytics.is_some() ||
+        self.achievements.is_some() ||
+        self.cloud_saving.is_some() ||
+        self.ads.is_some() ||
+        self.os.is_some() ||
+        self.in_app_purchases.is_some() ||
+        self.facebook.is_some() ||
+        self.physics.is_some() ||
+        self.flash_anti_alias.is_some() ||
+        self.console.is_some() ||
+        self.buffer.is_some() ||
+        self.steam.is_some() ||
+        self.shaders.is_some() ||
+        self.vertex_buffers.is_some()
+    }
+}
+
 
 impl ModExporter<'_, '_> {
     pub fn export_general_info(&self) -> Result<EditGeneralInfo, String> {
