@@ -20,7 +20,7 @@ pub struct EditBackground {
     pub transparent: Option<bool>,
     pub smooth: Option<bool>,
     pub preload: Option<bool>,
-    pub texture: Option<Option<ModRef>>,    // TexturePageItem ref
+    pub texture: Option<ModRef>,    // TexturePageItem ref
     pub gms2_data: Option<ModBackgroundGMS2Data>,
 }
 
@@ -56,7 +56,7 @@ impl ModExporter<'_, '_> {
                 transparent: edit_field(&o.transparent, &m.transparent),
                 smooth: edit_field(&o.smooth, &m.smooth),
                 preload: edit_field(&o.preload, &m.preload),
-                texture: edit_field_convert_option(&o.texture, &m.texture, |r| self.convert_texture_ref(r))?,
+                texture: edit_field_convert_option(&o.texture, &m.texture, |r| self.convert_texture_ref(r))?.flatten(),
                 gms2_data: edit_field_convert_option(&o.gms2_data, &m.gms2_data, |i| Ok(convert_gms2_data(i)))?.unwrap_or(None),
             }),
             false,

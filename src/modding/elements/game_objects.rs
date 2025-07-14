@@ -43,9 +43,9 @@ pub struct AddGameObjectEventAction {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditGameObject {
     pub name: Option<ModRef>,
-    pub sprite: Option<Option<ModRef>>,
+    pub sprite: Option<ModRef>,
     pub visible: Option<bool>,
-    pub managed: Option<Option<bool>>,
+    pub managed: Option<bool>,
     pub solid: Option<bool>,
     pub depth: Option<i32>,
     pub persistent: Option<bool>,
@@ -73,7 +73,7 @@ pub struct EditGameObjectEvent {
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditGameObjectEventAction {
-    pub code: Option<Option<ModRef>>,
+    pub code: Option<ModRef>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
@@ -118,9 +118,9 @@ impl ModExporter<'_, '_> {
             }),
             |o, m| Ok(EditGameObject {
                 name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(&r))?,
-                sprite: edit_field_convert_option(&o.sprite, &m.sprite, |r| self.convert_sprite_ref(r))?,
+                sprite: edit_field_convert_option(&o.sprite, &m.sprite, |r| self.convert_sprite_ref(r))?.flatten(),
                 visible: edit_field(&o.visible, &m.visible),
-                managed: edit_field(&o.managed, &m.managed),
+                managed: edit_field(&o.managed, &m.managed).flatten(),
                 solid: edit_field(&o.solid, &m.solid),
                 depth: edit_field(&o.depth, &m.depth),
                 persistent: edit_field(&o.persistent, &m.persistent),
@@ -200,7 +200,7 @@ impl ModExporter<'_, '_> {
     
     fn edit_event_action(&self, o: &GMGameObjectEventAction, m: &GMGameObjectEventAction) -> Result<EditGameObjectEventAction, String> {
         Ok(EditGameObjectEventAction {
-            code: edit_field_convert_option(&o.code, &m.code, |r| self.convert_code_ref(r))?,
+            code: edit_field_convert_option(&o.code, &m.code, |r| self.convert_code_ref(r))?.flatten(),
         })
     }
 }

@@ -232,26 +232,26 @@ pub fn edit_field_convert_option<GM: PartialEq, MOD>(
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum EditWrapper<A, E> {
-    Add(A),
-    Edit(E),
-    None,
-}
+// #[derive(Debug, Clone, Serialize, Deserialize)]
+// pub enum EditWrapper<A, E> {
+//     Add(A),
+//     Edit(E),
+//     None,
+// }
 
-pub fn wrap_edit_option<G, A, E>(
-    o: &Option<G>,
-    m: &Option<G>,
-    add_map: impl Fn(&G) -> Result<A, String>,
-    edit_map: impl Fn(&G, &G) -> Result<E, String>,
-) -> Result<Option<EditWrapper<A, E>>, String> {
-    Ok(match (o, m) {
-        (None, None) => None,
-        (None, Some(m)) => Some(EditWrapper::Add(add_map(m)?)),
-        (Some(_), None) => Some(EditWrapper::None),
-        (Some(o), Some(m)) => Some(EditWrapper::Edit(edit_map(o, m)?)),
-    })
-}
+// pub fn wrap_edit_option<G, A, E>(
+//     o: &Option<G>,
+//     m: &Option<G>,
+//     add_map: impl Fn(&G) -> Result<A, String>,
+//     edit_map: impl Fn(&G, &G) -> Result<E, String>,
+// ) -> Result<Option<EditWrapper<A, E>>, String> {
+//     Ok(match (o, m) {
+//         (None, None) => None,
+//         (None, Some(m)) => Some(EditWrapper::Add(add_map(m)?)),
+//         (Some(_), None) => Some(EditWrapper::None),
+//         (Some(o), Some(m)) => Some(EditWrapper::Edit(edit_map(o, m)?)),
+//     })
+// }
 
 pub fn convert_additions<GM, ADD>(gm_elements: &[GM], map_addition: impl Fn(&GM) -> Result<ADD, String>) -> Result<Vec<ADD>, String> {
     gm_elements.iter().map(map_addition).collect()
