@@ -80,11 +80,13 @@ impl GMElement for GMCodes {
             let length: usize = end - start;
 
             // if bytecode15+ and the instructions pointer is known, then it's a child code entry
-            if length > 0
-                && let Some(parent_code) = codes_by_pos.get(&start)
-                && let Some(ref mut b15_info) = code.bytecode15_info {
-                b15_info.parent = Some(parent_code.clone());
-                continue
+            if length > 0 {
+                if let Some(parent_code) = codes_by_pos.get(&start) {
+                    if let Some(ref mut b15_info) = code.bytecode15_info {
+                        b15_info.parent = Some(parent_code.clone());
+                        continue;
+                    }
+                }
             }
 
             reader.cur_pos = start;

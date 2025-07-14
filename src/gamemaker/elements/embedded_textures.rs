@@ -183,11 +183,13 @@ fn read_raw_texture(reader: &mut DataReader, max_end_of_stream_pos: usize, textu
         }
         
         let data_length: usize = reader.cur_pos - start_position;
-        if let Some(expected_size) = texture_block_size && expected_size as usize != data_length {
-            return Err(format!(
-                "Texture Page Entry specified texture block size {}; actually detected length {} for PNG Image data",
-                expected_size, data_length,
-            ))
+        if let Some(expected_size) = texture_block_size {
+            if expected_size as usize != data_length {
+                return Err(format!(
+                    "Texture Page Entry specified texture block size {}; actually detected length {} for PNG Image data",
+                    expected_size, data_length,
+                ))
+            }
         }
 
         reader.cur_pos = start_position;
@@ -207,11 +209,13 @@ fn read_raw_texture(reader: &mut DataReader, max_end_of_stream_pos: usize, textu
 
         let bz2_stream_end: usize = find_end_of_bz2_stream(reader, max_end_of_stream_pos)?;
         let bz2_stream_length: usize = bz2_stream_end - start_position - header_size;
-        if let Some(expected_size) = texture_block_size && expected_size as usize != bz2_stream_length+header_size {
-            return Err(format!(
-                "Texture Page Entry specified texture block size {}; actually detected length {} for Bzip2 QOI Image data",
-                expected_size, bz2_stream_length+header_size,
-            ))
+        if let Some(expected_size) = texture_block_size {
+            if expected_size as usize != bz2_stream_length+header_size {
+                return Err(format!(
+                    "Texture Page Entry specified texture block size {}; actually detected length {} for Bzip2 QOI Image data",
+                    expected_size, bz2_stream_length+header_size,
+                ))
+            }
         }
 
         // read entire image (excluding bz2 header) to byte array
