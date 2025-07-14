@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::elements::paths::GMPath;
-use crate::export_mod::export::{ModExporter, ModRef};
-use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
+use crate::modding::export::{ModExporter, ModRef};
+use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModPath {

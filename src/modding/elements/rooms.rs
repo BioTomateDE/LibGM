@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::elements::rooms::{GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomLayer, GMRoomLayerType, GMRoomTile, GMRoomTileTexture, GMRoomView};
-use crate::export_mod::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, flag_field, ModExporter, ModRef};
-use crate::export_mod::elements::sequences::{AddSequence, EditSequence};
-use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
+use crate::modding::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, flag_field, ModExporter, ModRef};
+use crate::modding::elements::sequences::{AddSequence, EditSequence};
+use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddRoom {

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use crate::export_mod::export::{edit_field, edit_field_convert, edit_field_convert_option, ModExporter, ModRef};
-use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
+use crate::modding::export::{edit_field, edit_field_convert, edit_field_convert_option, ModExporter, ModRef};
+use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 use crate::gamemaker::elements::backgrounds::GMBackgroundGMS2Data;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
