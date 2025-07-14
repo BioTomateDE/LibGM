@@ -7,31 +7,31 @@ use image::{DynamicImage, ImageFormat};
 use serde::{Deserialize, Serialize};
 use crate::bench_export;
 use crate::utility::Stopwatch;
-use crate::export_mod::elements::backgrounds::{AddBackground, EditBackground};
-use crate::export_mod::elements::code::{AddCode, EditCode};
-use crate::export_mod::elements::fonts::{AddFont, EditFont};
-use crate::export_mod::elements::functions::{AddFunction, EditFunction};
-use crate::export_mod::elements::game_objects::{AddGameObject, EditGameObject};
-use crate::export_mod::elements::general_info::EditGeneralInfo;
-use crate::export_mod::elements::options::EditOptions;
-use crate::export_mod::elements::paths::ModPath;
-use crate::export_mod::elements::rooms::{AddRoom, EditRoom};
-use crate::export_mod::elements::scripts::ModScript;
-use crate::export_mod::elements::sounds::{AddSound, EditSound};
-use crate::export_mod::elements::sprites::{AddSprite, EditSprite};
-use crate::export_mod::elements::textures::{AddTexturePageItem, EditTexturePageItem};
-use crate::export_mod::unordered_list::EditUnorderedList;
-use crate::export_mod::elements::variables::{AddVariable, EditVariable};
+use crate::modding::elements::backgrounds::{AddBackground, EditBackground};
+use crate::modding::elements::code::{AddCode, EditCode};
+use crate::modding::elements::fonts::{AddFont, EditFont};
+use crate::modding::elements::functions::{AddFunction, EditFunction};
+use crate::modding::elements::game_objects::{AddGameObject, EditGameObject};
+use crate::modding::elements::general_info::EditGeneralInfo;
+use crate::modding::elements::options::EditOptions;
+use crate::modding::elements::paths::ModPath;
+use crate::modding::elements::rooms::{AddRoom, EditRoom};
+use crate::modding::elements::scripts::ModScript;
+use crate::modding::elements::sounds::{AddSound, EditSound};
+use crate::modding::elements::sprites::{AddSprite, EditSprite};
+use crate::modding::elements::textures::{AddTexturePageItem, EditTexturePageItem};
+use crate::modding::unordered_list::EditUnorderedList;
+use crate::modding::elements::variables::{AddVariable, EditVariable};
 use crate::gamemaker::deserialize::{GMData, GMRef};
 use crate::gamemaker::elements::embedded_textures::GMEmbeddedTexture;
 
 pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_path: &Path) -> Result<(), String> {
     let stopwatch = Stopwatch::start();
-    
+
     let original_images: Vec<Option<Cow<DynamicImage>>> = get_images(&original_data.embedded_textures.texture_pages)?;
     let modified_images: Vec<Option<Cow<DynamicImage>>> = get_images(&modified_data.embedded_textures.texture_pages)?;
     log::trace!("Getting {} dynamic images took {stopwatch}", original_images.len() + modified_images.len());
-    
+
     // initialize file and tarball
     let file = File::create(target_file_path)
         .map_err(|e| format!("Could not create archive file with path \"{}\": {e}", target_file_path.display()))?;
@@ -54,8 +54,8 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     let sounds: EditUnorderedList<AddSound, EditSound> = bench_export!("Sounds", mod_exporter.export_sounds())?;
     let sprites: EditUnorderedList<AddSprite, EditSprite> = bench_export!("Sprites", mod_exporter.export_sprites())?;
     let strings: EditUnorderedList<String, String> = bench_export!("Strings", mod_exporter.export_strings())?;
-    let (texture_page_items, images): 
-        (EditUnorderedList<AddTexturePageItem, EditTexturePageItem>, Vec<DynamicImage>) 
+    let (texture_page_items, images):
+        (EditUnorderedList<AddTexturePageItem, EditTexturePageItem>, Vec<DynamicImage>)
         = bench_export!("Textures", mod_exporter.export_textures(original_images, modified_images))?;
     let variables: EditUnorderedList<AddVariable, EditVariable> = bench_export!("Variables", mod_exporter.export_variables())?;
     log::trace!("Exporting changes took {stopwatch}");

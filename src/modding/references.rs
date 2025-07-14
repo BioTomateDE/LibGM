@@ -1,4 +1,4 @@
-use crate::export_mod::export::{ModExporter, ModRef};
+use crate::modding::export::{ModExporter, ModRef};
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::audio_groups::GMAudioGroup;
 use crate::gamemaker::elements::backgrounds::GMBackground;

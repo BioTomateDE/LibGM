@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::elements::game_objects::{GMGameObjectCollisionShape, GMGameObjectEvent, GMGameObjectEventAction, GMGameObjectEvents};
-use crate::export_mod::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, ModExporter, ModRef};
-use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
+use crate::modding::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, ModExporter, ModRef};
+use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddGameObject {

@@ -9,7 +9,7 @@
 #![warn(clippy::cargo)]
 
 mod gamemaker;
-mod export_mod;
+mod modding;
 mod utility;
 mod csharp_rng;
 
@@ -73,7 +73,7 @@ fn main_open_and_close() -> Result<(), String> {
 
 
 fn main_export_mod() -> Result<(), String> {
-    use crate::export_mod::export::{export_mod};
+    use crate::modding::export::{export_mod};
     use crate::gamemaker::deserialize::{parse_data_file, GMData};
     let args: Vec<String> = std::env::args().collect();
     let original_data_file_path = path_from_arg(args.get(1), "data_original.win");

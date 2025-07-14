@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::elements::sequence::GMAnimSpeedType;
 use crate::gamemaker::elements::sprites::{GMSpriteMaskEntry, GMSpriteNineSlice, GMSpriteNineSliceTileMode, GMSpriteSepMaskType, GMSpriteSpecial, GMSpriteType};
-use crate::export_mod::export::{edit_field, edit_field_convert, edit_field_convert_option, wrap_edit_option, EditWrapper, ModExporter, ModRef};
-use crate::export_mod::ordered_list::{export_changes_ordered_list, DataChange};
-use crate::export_mod::elements::sequences::AddSequence;
-use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
+use crate::modding::export::{edit_field, edit_field_convert, edit_field_convert_option, wrap_edit_option, EditWrapper, ModExporter, ModRef};
+use crate::modding::ordered_list::{export_changes_ordered_list, DataChange};
+use crate::modding::elements::sequences::AddSequence;
+use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddSprite {

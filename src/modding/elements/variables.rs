@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
-use crate::export_mod::elements::code::ModInstanceType;
-use crate::export_mod::export::{edit_field, edit_field_convert, wrap_edit_option, EditWrapper, ModExporter, ModRef};
-use crate::export_mod::unordered_list::{export_changes_unordered_list, EditUnorderedList};
+use crate::modding::elements::code::ModInstanceType;
+use crate::modding::export::{edit_field, edit_field_convert, wrap_edit_option, EditWrapper, ModExporter, ModRef};
+use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 use crate::gamemaker::elements::variables::GMVariableB15Data;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

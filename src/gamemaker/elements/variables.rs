@@ -123,6 +123,9 @@ impl GMElement for GMVariableB15Data {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let instance_type: GMInstanceType = parse_instance_type(reader.read_i32()? as i16)?;
         let variable_id: i32 = reader.read_i32()?;
+        if !matches!(instance_type, GMInstanceType::Local|GMInstanceType::Global|GMInstanceType::Instance(_)) {
+            log::debug!("vari {variable_id} | {instance_type}")
+        }
         Ok(GMVariableB15Data { instance_type, variable_id })
     }
 

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::elements::sequence::GMSequence;
-use crate::export_mod::export::ModExporter;
+use crate::modding::export::ModExporter;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AddSequence {
