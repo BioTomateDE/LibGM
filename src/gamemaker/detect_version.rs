@@ -146,7 +146,6 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
                     detected_version, check.chunk_name, reader.general_info.version);
                 reader.general_info.set_version_at_least(detected_version)?;
                 updated_version = true;
-                break  // potentially new checks available (required version met); restart 
             }
         }
 
