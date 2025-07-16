@@ -15,6 +15,8 @@ pub struct GMRef<T> {
 }
 
 impl<T> GMRef<T> {
+    /// Creates a new GameMaker reference with the specified index.
+    /// The fake generic type can often be omitted (if the compiler can infer it).
     pub fn new(index: u32) -> GMRef<T> {
         Self {
             index,
@@ -59,6 +61,7 @@ impl<'a, T> GMRef<T> {
 
 
 impl DataReader<'_> {
+    /// Read a standard GameMaker string reference.
     pub fn read_gm_string(&mut self) -> Result<GMRef<String>, String> {
         let occurrence_position: usize = self.read_usize()?;
         resolve_occurrence(occurrence_position, &self.string_occurrence_map, &self.chunk.name, self.cur_pos)
