@@ -10,30 +10,58 @@ use crate::gamemaker::elements::variables::GMVariable;
 use crate::gamemaker::gm_version::GMVersionReq;
 use crate::utility::format_bytes;
 
+
 pub struct DataReader<'a> {
+    /// The raw data buffer that is being parsed.
     data: &'a [u8],
+    
+    /// The current read position within the data buffer.
+    /// Reading data will be read from this position; incrementing it.
     pub cur_pos: usize,
+    
+    /// How many bytes of padding are/should be at the end of every chunk.
+    /// Only relevant in certain GameMaker versions.
+    /// Defaults to 16, but will be set to 4 or 1 if detected.
     pub chunk_padding: usize,
 
     /// Indicates whether the data is formatted using big-endian byte order.    
-    /// This applies only to certain target platforms that require big-endian encoding (e.g. PS3 or Xbox 360).
+    /// This applies only to certain target platforms that require big endian encoding (e.g. PS3 or Xbox 360).
     pub is_big_endian: bool,
 
+    /// Map of all chunks specified by `FORM`; indexed by chunk name.
+    /// Read chunks will be removed from this HashMap when calling [`DataReader::read_chunk_required`] or [`DataReader::read_chunk_optional`].
+    /// May contain unknown chunks (if there is a GameMaker update, for example).
     pub chunks: HashMap<String, GMChunk>,
+
+    /// Metadata about the currently parsed chunk of data.
+    /// This includes the chunk's name, start position, and end position within the data buffer.
+    /// When reading data, these bounds are checked to ensure the read operation stays within the chunk.    
+    /// 
+    /// **Safety Warning**: If the chunk's start or end position are set incorrectly, the program becomes memory unsafe.
     pub chunk: GMChunk,
 
-    /// Should not be read until GEN8 chunk is parsed
+    /// Contains garbage placeholders until the `GEN8` chunk is deserialized.
+    /// Use [`DataReader::unstable_get_gm_version`] in [`crate::gamemaker::deserialize::chunk`]
+    /// to get the GameMaker version before GEN8 is parsed.
     pub general_info: GMGeneralInfo,
-    /// Should only be set by `gamemaker::string`
+    
+    /// Will be set after chunk STRG is parsed (first chunk to parse).
+    /// Contains all GameMaker strings, which are needed to resolve strings while deserialization.
     pub strings: GMStrings,
 
-    /// Should only be set by `gamemaker::strings::GMStrings`
+    /// Should only be set by [`crate::gamemaker::elements::strings`].
     pub string_occurrence_map: HashMap<usize, GMRef<String>>,
-    /// Should only be set by `gamemaker::texture_page_items::GMTexturePageItems`
+
+    /// Should only be set by [`crate::gamemaker::elements::texture_page_items`].
+    /// This means that TPAG has to be parsed before any chunk with texture page item pointers.
     pub texture_page_item_occurrence_map: HashMap<usize, GMRef<GMTexturePageItem>>,
-    /// Should only be set by `gamemaker::variables::GMVariables`
+
+    /// Should only be set by [`crate::gamemaker::elements::variables`].
+    /// This means that VARI has to be parsed before CODE.
     pub variable_occurrence_map: HashMap<usize, GMRef<GMVariable>>,
-    /// Should only be set by `gamemaker::functions::GMFunctions`
+
+    /// Should only be set by [`crate::gamemaker::elements::functions`].
+    /// This means that VARI has to be parsed before CODE.
     pub function_occurrence_map: HashMap<usize, GMRef<GMFunction>>,
 }
 
@@ -42,7 +70,7 @@ impl<'a> DataReader<'a> {
         Self {
             general_info: GMGeneralInfo::empty(),
             strings: GMStrings::empty(),
-            chunks: HashMap::with_capacity(24),
+            chunks: HashMap::with_capacity(35),
             chunk: GMChunk {
                 name: "FORM".to_string(),
                 start_pos: 0,
@@ -56,7 +84,7 @@ impl<'a> DataReader<'a> {
             texture_page_item_occurrence_map: HashMap::new(),
             variable_occurrence_map: HashMap::new(),
             function_occurrence_map: HashMap::new(),
-            is_big_endian: false,   // assume little endian
+            is_big_endian: false,   // assume little endian; big endian is an edge dase
         }
     }
 
@@ -75,11 +103,12 @@ impl<'a> DataReader<'a> {
                 ))
             }
         }
-        // if chunk.start_pos and chunk.end_pos are set correctly; this should never read memory out of bounds.
+        // SAFETY: If chunk.start_pos and chunk.end_pos are set correctly; this should never read memory out of bounds.
         let slice: &[u8] = unsafe { self.data.get_unchecked(self.cur_pos..self.cur_pos + count) };
         self.cur_pos += count;
         Ok(slice)
     }
+    
     pub fn read_bytes_const<const N: usize>(&mut self) -> Result<&[u8; N], String> {
         let slice: &[u8] = self.read_bytes_dyn(N)?;
         // read_bytes_dyn is guaranteed to read N bytes so the unwrap never fails.
@@ -118,6 +147,9 @@ impl<'a> DataReader<'a> {
         }
     }
 
+    /// Read a UTF-8 character string with the specified byte length.
+    /// ___
+    /// For reading standard GameMaker string references, see [`DataReader::read_gm_string`].
     pub fn read_literal_string(&mut self, length: usize) -> Result<String, String> {
         let bytes: &[u8] = self.read_bytes_dyn(length)
             .map_err(|e| format!("Trying to read literal string with length {length} {e}"))?;
@@ -128,20 +160,24 @@ impl<'a> DataReader<'a> {
         Ok(string)
     }
 
+    /// Gets the length of the chunk that is being currently parsed.
     pub fn get_chunk_length(&self) -> usize {
         self.chunk.end_pos - self.chunk.start_pos
     }
 
+    /// Read bytes until the reader position is divisible by the specified alignment.
+    /// Ensures the read padding bytes are all zero.
     pub fn align(&mut self, alignment: usize) -> Result<(), String> {
-        while self.cur_pos & (alignment - 1) != 0 {
-            if self.cur_pos > self.chunk.end_pos {
-                return Err(format!("Trying to align reader out of chunk bounds at position {}", self.cur_pos))
+        while self.cur_pos % alignment != 0 {
+            let byte: u8 = self.read_u8()?;
+            if byte != 0 {
+                return Err(format!("Invalid padding byte while aligning to {alignment}: expected zero but got {byte}"))
             }
-            self.read_u8()?;
         }
         Ok(())
     }
 
+    /// Ensures the reader is at the specified position.
     pub fn assert_pos(&self, position: usize, pointer_name: &str) -> Result<(), String> {
         if self.cur_pos != position {
             return Err(format!(
@@ -152,6 +188,7 @@ impl<'a> DataReader<'a> {
         Ok(())
     }
 
+    /// Sets the reader position to the current chunk's start position plus the specified relative position.
     pub fn set_rel_cur_pos(&mut self, relative_position: usize) -> Result<(), String> {
         if self.chunk.start_pos + relative_position > self.chunk.end_pos {
             return Err(format!(
@@ -163,10 +200,13 @@ impl<'a> DataReader<'a> {
         Ok(())
     }
 
+    /// Gets the reader position relative to the current chunk's start position.
     pub fn get_rel_cur_pos(&self) -> usize {
         self.cur_pos - self.chunk.start_pos
     }
 
+    /// If the GameMaker version requirement is met, deserializes the element and returns it.
+    /// Otherwise, just returns [`None`].
     pub fn deserialize_if_gm_version<T: GMElement, V: Into<GMVersionReq>>(&mut self, ver_req: V) -> Result<Option<T>, String> {
         if self.general_info.is_version_at_least(ver_req) {
             Ok(Some(T::deserialize(self)?))
@@ -174,7 +214,9 @@ impl<'a> DataReader<'a> {
             Ok(None)
         }
     }
-
+    
+    /// If the Bytecode version requirement is met, deserializes the element and returns it.
+    /// Otherwise, just returns [`None`].
     pub fn deserialize_if_bytecode_version<T: GMElement>(&mut self, ver_req: u8) -> Result<Option<T>, String> {
         if self.general_info.bytecode_version >= ver_req {
             Ok(Some(T::deserialize(self)?))
@@ -183,3 +225,4 @@ impl<'a> DataReader<'a> {
         }
     }
 }
+

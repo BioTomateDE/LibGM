@@ -106,8 +106,11 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
         "MROF" => true,
         _ => return Err(format!("Invalid data file: expected root chunk to be 'FORM' but found '{root_chunk_name}'"))
     };
-    let total_data_len: usize = reader.read_usize()? + reader.cur_pos;
+    if reader.is_big_endian {
+        log::warn!("Big endian format might not work, proceed with caution");
+    }
     
+    let total_data_len: usize = reader.read_usize()? + reader.cur_pos;
     while reader.cur_pos + 8 < total_data_len { 
         let name: String = reader.read_chunk_name()?;
         let chunk_length: usize = reader.read_usize()?;
