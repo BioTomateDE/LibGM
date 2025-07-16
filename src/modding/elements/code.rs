@@ -1,5 +1,6 @@
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use crate::gamemaker::elements::code::{GMCodeBytecode15, GMCodeValue, GMCodeVariable, GMComparisonType, GMDataType, GMInstanceType, GMInstruction, GMInstructionData, GMOpcode, GMVariableType};
+use crate::gamemaker::elements::code::{GMCode, GMCodeBytecode15, GMCodeValue, GMCodeVariable, GMComparisonType, GMDataType, GMInstanceType, GMInstruction, GMInstructionData, GMOpcode, GMVariableType};
 use crate::modding::export::{convert_additions, edit_field, edit_field_convert, ModExporter, ModRef};
 use crate::modding::ordered_list::{export_changes_ordered_list, DataChange};
 use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
@@ -9,14 +10,7 @@ use crate::modding::unordered_list::{export_changes_unordered_list, EditUnordere
 pub struct AddCode {
     pub name: ModRef,  // String
     pub instructions: Vec<ModInstruction>,
-    pub bytecode15_info: Option<AddCodeBytecode15>,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AddCodeBytecode15 {
-    pub locals_count: u16,
-    pub arguments_count: u16,
-    pub local_flag: bool,
-    pub offset: usize,
+    pub bytecode15_info: Option<ModCodeBytecode15>,
 }
 
 #[serde_with::skip_serializing_none]
@@ -24,18 +18,17 @@ pub struct AddCodeBytecode15 {
 pub struct EditCode {
     pub name: Option<ModRef>,  // String
     pub instructions: Vec<DataChange<ModInstruction>>,
-    pub bytecode15_info: Option<AddCodeBytecode15>,
-}
-#[serde_with::skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EditCodeBytecode15 {
-    pub locals_count: u16,
-    pub arguments_count: u16,
-    pub weird_local_flag: bool,
-    /// TODO: vulnerable; check overflow
-    pub offset: usize,
+    pub bytecode15_info: Option<ModCodeBytecode15>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModCodeBytecode15 {
+    pub locals_count: u16,
+    pub arguments_count: u16,
+    pub local_flag: bool,
+    /// TODO check bounds when applying
+    pub offset: usize,
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModInstruction {
     pub opcode: ModOpcode,
@@ -159,21 +152,43 @@ impl ModExporter<'_, '_> {
         export_changes_unordered_list(
             &self.original_data.codes.codes,
             &self.modified_data.codes.codes,
-            |i| Ok(AddCode {
-                name: self.convert_string_ref(&i.name)?,
-                instructions: convert_additions(&i.instructions, |i| self.convert_instruction(i))?,
-                bytecode15_info: i.bytecode15_info.as_ref().map(convert_bytecode15_info),
-            }),
-            |o, m| Ok(EditCode {
-                name: edit_field_convert(&o.name, &o.name, |r| self.convert_string_ref(r))?,
-                instructions: export_changes_ordered_list(&o.instructions, &m.instructions, |r| self.convert_instruction(r))?,
-                bytecode15_info: edit_field(&o.bytecode15_info, &m.bytecode15_info).unwrap_or(None).as_ref().map(convert_bytecode15_info),
-            }),
+            |i| self.add_code(i),
+            |o, m| self.edit_code(o, m),
             false,
         )
     }
+
+    fn add_code(&self, i: &GMCode) -> Result<AddCode, String> {
+        let blocks: HashMap<u32, usize> = find_blocks(&i.instructions);
+        let mut current_address: u32 = 0;
+        let mut index: usize = 0;
+
+        Ok(AddCode {
+            name: self.convert_string_ref(&i.name)?,
+            instructions: convert_additions(&i.instructions, |instr| {
+                self.convert_instruction(instr, &blocks, &mut current_address, &mut index)
+            })?,
+            bytecode15_info: i.bytecode15_info.as_ref().map(convert_bytecode15_info),
+        })
+    }
+
+    fn edit_code(&self, o: &GMCode, m: &GMCode) -> Result<EditCode, String> {
+        let blocks: HashMap<u32, usize> = find_blocks(&m.instructions);
+        let mut current_address: u32 = 0;
+        let mut index: usize = 0;
+
+        Ok(EditCode {
+            name: edit_field_convert(&o.name, &o.name, |r| self.convert_string_ref(r))?,
+            instructions: export_changes_ordered_list(
+                &o.instructions,
+                &m.instructions,
+                |instr| self.convert_instruction(instr, &blocks, &mut current_address, &mut index),
+            )?,
+            bytecode15_info: edit_field(&o.bytecode15_info, &m.bytecode15_info).unwrap_or(None).as_ref().map(convert_bytecode15_info),
+        })
+    }
     
-    fn convert_instruction(&self, instruction: &GMInstruction) -> Result<ModInstruction, String> {
+    fn convert_instruction(&self, instruction: &GMInstruction, blocks: &HashMap<u32, usize>, address: &mut u32, index: &mut usize) -> Result<ModInstruction, String> {
         let kind: ModInstructionKind = match &instruction.kind {
             GMInstructionData::SingleType(i) => ModInstructionKind::SingleType(
                 convert_data_type(i.data_type)?,
@@ -191,7 +206,14 @@ impl ModExporter<'_, '_> {
                 if i.popenv_exit_magic {
                     ModGotoTarget::PopenvMagic
                 } else {
-                    ModGotoTarget::Offset(i.jump_offset)
+                    // convert relative byte offset to relative index offset
+                    let target_address: u32 = (*address as i32 + i.jump_offset) as u32;
+                    let target_index: usize = *blocks.get(&target_address).ok_or_else(|| format!(
+                        "Could not resolve branch target instruction with jump offset {} for \"{:?}\" instruction with code address {}",
+                        i.jump_offset, instruction.opcode, address,
+                    ))?;
+                    let target_index_rel: i32 = target_index as i32 - *index as i32;
+                    ModGotoTarget::Offset(target_index_rel)
                 }
             ),
             GMInstructionData::Pop(i) => ModInstructionKind::Pop(
@@ -252,6 +274,10 @@ impl ModExporter<'_, '_> {
             GMOpcode::Extended => ModOpcode::Extended,
         };
 
+        // increment this
+        *address += get_instruction_size(instruction);
+        *index += 1;
+
         Ok(ModInstruction {
             opcode,
             kind,
@@ -304,8 +330,8 @@ impl ModExporter<'_, '_> {
     }
 }
 
-fn convert_bytecode15_info(i: &GMCodeBytecode15) -> AddCodeBytecode15 {
-    AddCodeBytecode15 {
+fn convert_bytecode15_info(i: &GMCodeBytecode15) -> ModCodeBytecode15 {
+    ModCodeBytecode15 {
         locals_count: i.locals_count,
         arguments_count: i.arguments_count,
         local_flag: i.weird_local_flag,
@@ -340,6 +366,45 @@ fn convert_comparison_type(i: GMComparisonType) -> ModComparisonType {
         GMComparisonType::NEQ => ModComparisonType::NEQ,
         GMComparisonType::GTE => ModComparisonType::GTE,
         GMComparisonType::GT => ModComparisonType::GT,
+    }
+}
+
+/// Map instruction addresses to instruction indexes
+fn find_blocks(instructions: &[GMInstruction]) -> HashMap<u32, usize> {
+    let mut blocks: HashMap<u32, usize> = HashMap::with_capacity(instructions.len());
+    let mut current_address: u32 = 0;
+
+    for (i, instruction) in instructions.iter().enumerate() {
+        blocks.insert(current_address, i);
+        current_address += get_instruction_size(instruction);
+    }
+
+    blocks
+}
+
+
+fn get_instruction_size(instruction: &GMInstruction) -> u32 {
+    match &instruction.kind {
+        GMInstructionData::SingleType(_) => 1,
+        GMInstructionData::DoubleType(_) => 1,
+        GMInstructionData::Comparison(_) => 1,
+        GMInstructionData::Goto(_) => 1,
+        GMInstructionData::Pop(_) => 2,
+        GMInstructionData::Push(instr) => match instr.value {
+            GMCodeValue::Int16(_) => 1,
+            GMCodeValue::Int32(_) => 2,
+            GMCodeValue::Float(_) => 2,
+            GMCodeValue::Boolean(_) => 2,
+            GMCodeValue::String(_) => 2,
+            GMCodeValue::Variable(_) => 2,
+            GMCodeValue::Function(_) => 2,
+            GMCodeValue::Int64(_) => 3,
+            GMCodeValue::Double(_) => 3,
+        }
+        GMInstructionData::Call(_) => 2,
+        GMInstructionData::Break(instr) => {
+            if instr.data_type == GMDataType::Int32 { 2 } else { 1 }
+        }
     }
 }
 
