@@ -307,7 +307,7 @@ impl GMElement for GMInstruction {
                     let v: u32 = b0 as u32 | ((b1 as u32) << 8) | ((b2 as u32) << 16);      // i hate bitshifting
                     let popenv_exit_magic: bool = (v & 0x800000) != 0;
                     if popenv_exit_magic && v != 0xF00000 {
-                        return Err("\"Popenv magic doesn't work\" while parsing Goto Instruction".to_string());
+                        return Err("Popenv exit magic doesn't work while parsing Goto Instruction".to_string());
                     }
                     // "The rest is int23 signed value, so make sure" (<-- idk what this is supposed to mean)
                     let mut jump_offset: u32 = v & 0x003FFFFF;
