@@ -91,7 +91,7 @@ impl GMElement for GMFont {
 
         let ascender_offset: Option<i32> = reader.deserialize_if_bytecode_version(17)?;
         let ascender: Option<u32> = reader.deserialize_if_gm_version((2022, 2))?;
-        let sdf_spread: Option<u32> = reader.deserialize_if_gm_version((2023, 2, LTSBranch::Post2022_0))?;
+        let sdf_spread: Option<u32> = reader.deserialize_if_gm_version((2023, 2, LTSBranch::PostLTS))?;
         let line_height: Option<u32> = reader.deserialize_if_gm_version((2023, 6))?;
         let glyphs: Vec<GMFontGlyph> = reader.read_pointer_list()?;
         if reader.general_info.is_version_at_least((2024, 14)) {
@@ -137,7 +137,7 @@ impl GMElement for GMFont {
         builder.write_f32(self.scale_y);
         self.ascender_offset.serialize_if_bytecode_ver(builder, "Ascender Offset", 17)?;
         self.ascender.serialize_if_gm_ver(builder, "Ascender", (2022, 2))?;
-        self.sdf_spread.serialize_if_gm_ver(builder, "SDF Spread", (2023, 2, LTSBranch::Post2022_0))?;
+        self.sdf_spread.serialize_if_gm_ver(builder, "SDF Spread", (2023, 2, LTSBranch::PostLTS))?;
         self.line_height.serialize_if_gm_ver(builder, "Line Height", (2023, 6))?;
         builder.write_pointer_list(&self.glyphs)?;
         if builder.is_gm_version_at_least((2024, 14)) {

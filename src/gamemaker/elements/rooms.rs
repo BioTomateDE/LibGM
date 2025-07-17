@@ -885,7 +885,7 @@ impl GMElement for GMRoomLayerDataAssets {
             if !reader.general_info.is_version_at_least((2, 3, 2)) {
                 nine_slices_pointer = reader.read_usize()?;
             }
-            if reader.general_info.is_version_at_least((2023, 2, LTSBranch::Post2022_0)) {
+            if reader.general_info.is_version_at_least((2023, 2, LTSBranch::PostLTS)) {
                 particle_systems_pointer = reader.read_usize()?;
             }
             if reader.general_info.is_version_at_least((2024, 6)) {
@@ -912,7 +912,7 @@ impl GMElement for GMRoomLayerDataAssets {
                 reader.assert_pos(nine_slices_pointer, "Nine Slices")?;
                 nine_slices = reader.read_pointer_list()?;
             }
-            if reader.general_info.is_version_at_least((2023, 2, LTSBranch::Post2022_0)) {
+            if reader.general_info.is_version_at_least((2023, 2, LTSBranch::PostLTS)) {
                 reader.assert_pos(particle_systems_pointer, "Particle Systems")?;
                 particle_systems = reader.read_pointer_list()?;
             }
@@ -935,7 +935,7 @@ impl GMElement for GMRoomLayerDataAssets {
             if !builder.is_gm_version_at_least((2, 3, 2)) {
                 builder.write_pointer(&self.nine_slices)?;
             }
-            if builder.is_gm_version_at_least((2023, 2, LTSBranch::Post2022_0)) {
+            if builder.is_gm_version_at_least((2023, 2, LTSBranch::PostLTS)) {
                 builder.write_pointer(&self.particle_systems)?;
             }
             if builder.is_gm_version_at_least((2024, 6)) {
@@ -957,7 +957,7 @@ impl GMElement for GMRoomLayerDataAssets {
                 builder.resolve_pointer(&self.nine_slices)?;
                 builder.write_pointer_list(&self.nine_slices)?;
             }
-            if builder.is_gm_version_at_least((2023, 2, LTSBranch::Post2022_0)) {
+            if builder.is_gm_version_at_least((2023, 2, LTSBranch::PostLTS)) {
                 builder.resolve_pointer(&self.particle_systems)?;
                 builder.write_pointer_list(&self.particle_systems)?;
             }

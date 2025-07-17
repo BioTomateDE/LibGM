@@ -3,7 +3,7 @@ use crate::gamemaker::deserialize::{DataReader, GMChunk};
 use crate::gamemaker::elements::embedded_textures::MAGIC_BZ2_QOI_HEADER;
 use crate::gamemaker::elements::rooms::GMRoomLayerType;
 use crate::gamemaker::gm_version::{GMVersion, GMVersionReq};
-use crate::gamemaker::gm_version::LTSBranch::{Post2022_0, Pre2022_0, LTS2022_0};
+use crate::gamemaker::gm_version::LTSBranch::{PostLTS, PreLTS, LTS};
 
 /// If `check_fn` can detect multiple versions, `required_version` should be set to its _lowest_ required version
 /// whereas `target_version` should be set to the _highest_ possible version it can detect.
@@ -67,22 +67,22 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
     let saved_chunk: GMChunk = reader.chunk.clone();
     
     if reader.chunks.contains_key("TGIN") {
-        reader.general_info.set_version_at_least((2, 2, 1, Pre2022_0))?;
+        reader.general_info.set_version_at_least((2, 2, 1, PreLTS))?;
     }
     if reader.chunks.contains_key("SEQN") {
-        reader.general_info.set_version_at_least((2, 3, Pre2022_0))?;
+        reader.general_info.set_version_at_least((2, 3, PreLTS))?;
     }
     if reader.chunks.contains_key("FEDS") {
-        reader.general_info.set_version_at_least((2, 3, 6, Pre2022_0))?;
+        reader.general_info.set_version_at_least((2, 3, 6, PreLTS))?;
     }
     if reader.chunks.contains_key("FEAT") {
-        reader.general_info.set_version_at_least((2022, 8, Pre2022_0))?;      // FIXME: In UTMT it says Pre2022_0 (even though it's 2022.8???)
+        reader.general_info.set_version_at_least((2022, 8, PreLTS))?;
     }
     if reader.chunks.contains_key("PSEM") {
-        reader.general_info.set_version_at_least((2023, 2, Post2022_0))?;
+        reader.general_info.set_version_at_least((2023, 2, PostLTS))?;
     }
     if reader.chunks.contains_key("UILR") {
-        reader.general_info.set_version_at_least((2024, 13, Post2022_0))?;
+        reader.general_info.set_version_at_least((2024, 13, PostLTS))?;
     }
 
     // cv means 'check version'
@@ -96,7 +96,6 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
     let mut checks: Vec<VersionCheck> = vec![
         VersionCheck::new("ACRV", cv_acrv_2_3_1, (2, 3), (2, 3, 1)),
         VersionCheck::new("PSEM", cv_psem_2023_x, (2023, 2), (2023, 8)),
-        VersionCheck::new("SOND", cv_sond_2024_6, (2022, 2, Post2022_0), (2024, 6)),
         VersionCheck::new("TXTR", cv_txtr_2_0_6, (2, 0), (2, 0, 6)),
         VersionCheck::new("TGIN", cv_tgin_2022_9, (2, 3), (2022, 9)),
         VersionCheck::new("SPRT", cv_sprt_2_3_2, (2, 0), (2, 3, 2)),
@@ -111,9 +110,10 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
         VersionCheck::new("ROOM", cv_room_2_2_2_302, (2, 0), (2, 2, 2, 302)),
         VersionCheck::new("ROOM", cv_room_2024_2_and_2024_4, (2023, 2), (2024, 4)),
         VersionCheck::new("ROOM", cv_room_2022_1, (2, 3), (2022, 1)),
-        VersionCheck::new("FONT", cv_font_2023_6_and_2024_11, (2022, 8), (2023, 6)),  // hopefully this duplicate works as expected
+        VersionCheck::new("FONT", cv_font_2023_6_and_2024_11, (2022, 8), (2023, 6)),
         VersionCheck::new("FONT", cv_font_2023_6_and_2024_11, (2024, 6), (2024, 11)),
-        VersionCheck::new("SPRT", cv_sprt_2024_6, (2022, 2, Post2022_0), (2024, 6)),
+        VersionCheck::new("SPRT", cv_sprt_2024_6, (2022, 2, PostLTS), (2024, 6)),
+        VersionCheck::new("SOND", cv_sond_2024_6, (2022, 2, PostLTS), (2024, 6)),
         VersionCheck::new("CODE", cv_code_2023_8_and_2024_4, GMVersionReq::none(), (2024, 4)),
     ];
     
@@ -161,8 +161,8 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
         }
     }
 
-    if reader.general_info.is_version_at_least((2023, 1)) && reader.general_info.version.branch == Pre2022_0 {
-        reader.general_info.version.branch = LTS2022_0;
+    if reader.general_info.is_version_at_least((2023, 1)) && reader.general_info.version.branch == PreLTS {
+        reader.general_info.version.branch = LTS;
     }
     
     reader.cur_pos = saved_pos;
@@ -516,7 +516,7 @@ fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersio
     }
 
     reader.cur_pos = first_two_pointers[0] + 52;    // Also the LineHeight value. 48 + 4 = 52
-    if reader.general_info.is_version_at_least((2023, 2, 0, 0, Post2022_0)) {
+    if reader.general_info.is_version_at_least((2023, 2, 0, 0, PostLTS)) {
         // SDFSpread is present from 2023.2 non-LTS onward
         reader.cur_pos += 4;    // (detected by PSEM/PSYS chunk existence)
     }
@@ -934,7 +934,7 @@ fn cv_txtr_2_0_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String
 
 
 fn cv_tgin_2022_9(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
-    if reader.general_info.is_version_at_least((2023, 1, Post2022_0)) {
+    if reader.general_info.is_version_at_least((2023, 1, PostLTS)) {
         return Ok(None)
     }
     
@@ -963,7 +963,7 @@ fn cv_tgin_2022_9(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
 
 
 fn cv_tgin_2023_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
-    if reader.general_info.is_version_at_least((2023, 1, Post2022_0)) {
+    if reader.general_info.is_version_at_least((2023, 1, PostLTS)) {
         return Ok(None)
     }
 
@@ -987,7 +987,7 @@ fn cv_tgin_2023_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
     // The count can't be greater than the pointer.
     // (the list could be either "Tilesets" or "Fonts").
     if reader.read_usize()? <= pointer4 {
-        return Ok(Some((2023, 1, Post2022_0).into()))
+        return Ok(Some((2023, 1, PostLTS).into()))
     }
 
     Ok(None)

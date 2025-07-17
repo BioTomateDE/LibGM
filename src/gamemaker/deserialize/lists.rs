@@ -3,6 +3,8 @@ use crate::gamemaker::element::GMElement;
 use crate::utility::{format_bytes, typename};
 
 impl DataReader<'_> {
+    /// Reads a GameMaker simple list by calling the specified `deserializer_fn` for every element.
+    /// Simple lists consists of the element count, followed by the elements' data.
     fn read_simple_list_internal<T>(&mut self, deserializer_fn: impl Fn(&mut Self) -> Result<T, String>) -> Result<Vec<T>, String> {
         const FAILSAFE_SIZE: usize = 1_000_000;   // 1 Megabyte
         let count: usize = self.read_usize()?;
@@ -27,6 +29,7 @@ impl DataReader<'_> {
         Ok(elements)
     }
     
+    /// Read a GameMaker simple list.
     pub fn read_simple_list<T: GMElement>(&mut self) -> Result<Vec<T>, String> {
         self.read_simple_list_internal(T::deserialize)
     }

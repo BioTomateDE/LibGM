@@ -14,7 +14,8 @@ pub struct GMChunk {
 
 
 impl DataReader<'_> {
-    /// Read chunk name (4 ascii characters)
+    /// Read a GameMaker chunk name consisting of 4 ascii characters.
+    /// Accounts for endianness; reversing the read chunk name in big endian mode.
     pub fn read_chunk_name(&mut self) -> Result<String, String> {
         if self.chunk.name != "FORM" {
             return Err(format!(
@@ -34,6 +35,11 @@ impl DataReader<'_> {
         }
         if !string.is_ascii() {
             return Err(format!("Chunk name string \"{string}\" is not ascii"))
+        }
+        
+        if self.is_big_endian {
+            // chunks names are reversed in big endian
+            return Ok(string.chars().rev().collect())
         }
         Ok(string)
     }
@@ -57,6 +63,7 @@ impl DataReader<'_> {
         Ok(element)
     }
 
+    /// Potentially read padding at the end of the chunk, depending on the GameMaker version.
     fn read_chunk_padding(&mut self) -> Result<(), String> {
         if self.chunk.is_last_chunk {
             return Ok(())   // last chunk does not get padding
@@ -118,17 +125,6 @@ impl DataReader<'_> {
         self.cur_pos = saved_pos;
         self.chunk = saved_chunk;
         Ok(gm_version)
-    }
-
-    pub fn assert_chunk_name(&self, chunk_name: &str) -> Result<(), String> {
-        if self.chunk.name == chunk_name {
-            Ok(())
-        } else {
-            Err(format!(
-                "Expected chunk with name '{}'; got chunk with name '{}' (length: {})",
-                self.chunk.name, chunk_name, chunk_name.len(),
-            ))
-        }
     }
 }
 
