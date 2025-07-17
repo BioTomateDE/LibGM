@@ -56,7 +56,7 @@ impl GMChunkElement for GMGeneralInfo {
                 minor: 69420,
                 release: 69420,
                 build: 69420,
-                branch: LTSBranch::Post2022_0,
+                branch: LTSBranch::PostLTS,
             },
             default_window_width: 69420,
             default_window_height: 69420,
