@@ -116,8 +116,8 @@ impl ModExporter<'_, '_> {
                 origin_x: edit_field(&o.origin_x, &m.origin_x),
                 origin_y: edit_field(&o.origin_y, &m.origin_y),
                 textures: export_changes_ordered_list(
-                    &o.textures.iter().flatten().collect(),   // remove null entries
-                    &m.textures.iter().flatten().collect(),
+                    o.textures.iter().flatten().collect::<Vec<_>>().as_slice(),   // remove null entries
+                    m.textures.iter().flatten().collect::<Vec<_>>().as_slice(),
                     |r| self.convert_texture_ref(r)
                 )?,
                 collision_masks: export_changes_unordered_list(

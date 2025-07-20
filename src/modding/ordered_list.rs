@@ -47,7 +47,7 @@ where
     FN: Fn(&GM) -> Result<EDIT, String>,
 {
     changes: Vec<DataChange<EDIT>>,
-    modified_data: &'a Vec<GM>,
+    modified_data: &'a [GM],
     map_change: FN,
 }
 
@@ -55,7 +55,7 @@ impl<'a, GM, EDIT, FN> MyDiffEngine<'a, GM, EDIT, FN>
 where
     FN: Fn(&GM) -> Result<EDIT, String>,
 {
-    fn new(modified_data: &'a Vec<GM>, map_change: FN) -> Self {
+    fn new(modified_data: &'a [GM], map_change: FN) -> Self {
         Self {
             changes: vec![],
             modified_data,
@@ -125,8 +125,8 @@ where
 
 
 pub fn export_changes_ordered_list<GM: PartialEq + Clone, EDIT, FN>(
-    original_data: &Vec<GM>,
-    modified_data: &Vec<GM>,
+    original_data: &[GM],
+    modified_data: &[GM],
     map_change: FN,
 ) -> Result<Vec<DataChange<EDIT>>, String>
 where

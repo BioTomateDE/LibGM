@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
-use crate::gamemaker::elements::game_objects::{GMGameObjectCollisionShape, GMGameObjectEvent, GMGameObjectEventAction, GMGameObjectEvents};
+use crate::gamemaker::elements::game_objects::{GMGameObjectCollisionShape, GMGameObjectEvent, GMGameObjectEvents};
 use crate::modding::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, ModExporter, ModRef};
+use crate::modding::ordered_list::{export_changes_ordered_list, DataChange};
 use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,16 +28,7 @@ pub struct AddGameObject {
     pub kinematic: bool,
     pub physics_shape_vertices: Vec<(f32, f32)>,
     pub uses_physics_shape_vertex: bool,
-    pub events: Vec<Vec<AddGameObjectEvent>>,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AddGameObjectEvent {
-    pub subtype: u32,
-    pub actions: Vec<AddGameObjectEventAction>,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AddGameObjectEventAction {
-    pub code: Option<ModRef>,
+    pub events: Vec<Vec<ModGameObjectEvent>>,
 }
 
 #[serde_with::skip_serializing_none]
@@ -64,18 +56,14 @@ pub struct EditGameObject {
     pub kinematic: Option<bool>,
     pub physics_shape_vertices: Option<Vec<(f32, f32)>>,
     pub uses_physics_shape_vertex: Option<bool>,
-    pub events: Vec<EditUnorderedList<AddGameObjectEvent, EditGameObjectEvent>>,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EditGameObjectEvent {
-    pub subtype: Option<u32>,
-    pub actions: EditUnorderedList<AddGameObjectEventAction, EditGameObjectEventAction>,    // not sure if action order matters
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EditGameObjectEventAction {
-    pub code: Option<ModRef>,
+    pub events: Vec<Vec<DataChange<ModGameObjectEvent>>>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModGameObjectEvent {
+    pub subtype: u32,
+    pub actions: Vec<ModRef>,   // code ref
+}
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 #[repr(u32)]
 pub enum ModGameObjectCollisionShape {
@@ -145,16 +133,11 @@ impl ModExporter<'_, '_> {
         )
     }
     
-    fn add_event(&self, i: &GMGameObjectEvent) -> Result<AddGameObjectEvent, String> {
-        Ok(AddGameObjectEvent {
+    fn add_event(&self, i: &GMGameObjectEvent) -> Result<ModGameObjectEvent, String> {
+        Ok(ModGameObjectEvent {
             subtype: i.subtype,
-            actions: convert_additions(&i.actions, |i| self.add_event_action(i))?,
-        })
-    }
-    
-    fn add_event_action(&self, i: &GMGameObjectEventAction) -> Result<AddGameObjectEventAction, String> {
-        Ok(AddGameObjectEventAction {
-            code: self.convert_code_ref_opt(&i.code)?,
+            actions: convert_additions(&i.actions, |i| Ok(i.code))?
+                .into_iter().filter_map(|i| self.convert_code_ref_opt(&i).transpose()).collect::<Result<Vec<_>, String>>()?,
         })
     }
     
@@ -162,7 +145,7 @@ impl ModExporter<'_, '_> {
         &self,
         original_events: &Vec<GMGameObjectEvents>,
         modified_events: &Vec<GMGameObjectEvents>,
-    ) -> Result<Vec<EditUnorderedList<AddGameObjectEvent, EditGameObjectEvent>>, String> {
+    ) -> Result<Vec<Vec<DataChange<ModGameObjectEvent>>>, String> {
         let mut edited_events = Vec::with_capacity(modified_events.len());
         for (i, modified_event) in modified_events.iter().enumerate() {
             // outer event list (for event "types") should be the same length (always 12 or 14 or whatever).
@@ -175,33 +158,13 @@ impl ModExporter<'_, '_> {
                 continue
             }
             
-            edited_events.push(export_changes_unordered_list(
+            edited_events.push(export_changes_ordered_list(
                 original_event,
                 &modified_event.events,
-                |i| Ok(AddGameObjectEvent {
-                    subtype: i.subtype,
-                    actions: convert_additions(&i.actions, |i| self.add_event_action(i))?,
-                }),
-                |o, m| Ok(EditGameObjectEvent {
-                    subtype: edit_field(&o.subtype, &m.subtype),
-                    actions: export_changes_unordered_list(
-                        &o.actions,
-                        &m.actions,
-                        |i| self.add_event_action(i),
-                        |o, m| self.edit_event_action(o, m),
-                        false,
-                    )?,
-                }),
-                true,
+                |i| self.add_event(i),
             )?);
         }
         Ok(edited_events)
-    }
-    
-    fn edit_event_action(&self, o: &GMGameObjectEventAction, m: &GMGameObjectEventAction) -> Result<EditGameObjectEventAction, String> {
-        Ok(EditGameObjectEventAction {
-            code: edit_field_convert_option(&o.code, &m.code, |r| self.convert_code_ref(r))?.flatten(),
-        })
     }
 }
 
