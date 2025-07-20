@@ -226,14 +226,17 @@ fn read_raw_texture(reader: &mut DataReader, max_end_of_stream_pos: usize, textu
         let u16_from = if reader.is_big_endian {u16::from_be_bytes} else {u16::from_le_bytes};
         let width: u16 = u16_from((&header[4..6]).try_into().unwrap());
         let height: u16 = u16_from((&header[6..8]).try_into().unwrap());
-        let header = Bzip2QoiHeader { width, height, uncompressed_size };
+        let header = BZip2QoiHeader { width, height, uncompressed_size };
         let image: GMImage = GMImage::from_bz2_qoi(raw_image_data.to_vec(), header);
         Ok(image)
     }
     else if header.starts_with(MAGIC_QOI_HEADER) {
-        // Parse QOI
-        return Err("Raw QOI images without Bzip2 not yet implemented".to_string()); // TODO
-        // image_from_qoi(chunk.data[chunk..])
+        // Parse QOI (untested)
+        let data_size: usize = reader.read_usize()?;
+        reader.cur_pos = start_position;
+        let raw_image_data: Vec<u8> = reader.read_bytes_dyn(data_size + 12)?.to_vec();
+        let image: GMImage = GMImage::from_qoi(raw_image_data);
+        Ok(image)
     }
     else {
         let dump: String = hexdump(&header, 0, None)?;
@@ -243,7 +246,7 @@ fn read_raw_texture(reader: &mut DataReader, max_end_of_stream_pos: usize, textu
 
 
 #[derive(Debug, Clone)]
-pub struct Bzip2QoiHeader {
+pub struct BZip2QoiHeader {
     width: u16,
     height: u16,
     /// Present in 2022.5+
@@ -254,7 +257,8 @@ pub struct Bzip2QoiHeader {
 pub enum GMImage {
     DynImg(DynamicImage),
     Png(Vec<u8>),
-    Bz2Qoi(Vec<u8>, Bzip2QoiHeader),
+    Bz2Qoi(Vec<u8>, BZip2QoiHeader),
+    Qoi(Vec<u8>),
     /// Only temporarily used when parsing.
     NotYetDeserialized(usize),
 }
@@ -267,17 +271,22 @@ impl GMImage {
         Self::Png(raw_png_data)
     }
     
-    pub fn from_bz2_qoi(raw_bz2_qoi_data: Vec<u8>, header: Bzip2QoiHeader) -> Self {
+    pub fn from_bz2_qoi(raw_bz2_qoi_data: Vec<u8>, header: BZip2QoiHeader) -> Self {
         Self::Bz2Qoi(raw_bz2_qoi_data, header)
+    }
+
+    pub fn from_qoi(raw_qoi_data: Vec<u8>) -> Self {
+        Self::Qoi(raw_qoi_data)
     }
     
     pub fn to_dynamic_image(&self) -> Result<Cow<DynamicImage>, String> {
-        match self {
-            GMImage::DynImg(dyn_img) => Ok(Cow::Borrowed(dyn_img)),
-            GMImage::Png(raw_png_data) => Ok(Cow::Owned(Self::decode_png(&raw_png_data)?)),
-            GMImage::Bz2Qoi(raw_bz2_qoi_data, _) => Ok(Cow::Owned(Self::decode_bz2_qoi(&raw_bz2_qoi_data)?)),
-            GMImage::NotYetDeserialized(_) => Err("Image not deserialized".to_string())
-        }
+        Ok(match self {
+            GMImage::DynImg(dyn_img) => Cow::Borrowed(dyn_img),
+            GMImage::Png(raw_png_data) => Cow::Owned(Self::decode_png(&raw_png_data)?),
+            GMImage::Bz2Qoi(raw_bz2_qoi_data, _) => Cow::Owned(Self::decode_bz2_qoi(&raw_bz2_qoi_data)?),
+            GMImage::Qoi(raw_qoi_data) => Cow::Owned(Self::decode_qoi(&raw_qoi_data)?),
+            GMImage::NotYetDeserialized(_) => return Err("Image not deserialized".to_string()),
+        })
     }
 
     pub fn into_dynamic_image(self) -> Result<Self, String> {
@@ -285,6 +294,7 @@ impl GMImage {
             GMImage::DynImg(dyn_img) => dyn_img,
             GMImage::Png(raw_png_data) => Self::decode_png(&raw_png_data)?,
             GMImage::Bz2Qoi(raw_bz2_qoi_data, _) => Self::decode_bz2_qoi(&raw_bz2_qoi_data)?,
+            GMImage::Qoi(raw_qoi_data) => Self::decode_qoi(&raw_qoi_data)?,
             GMImage::NotYetDeserialized(_) => return Err("Image not deserialized".to_string()),
         }))
     }
@@ -300,6 +310,12 @@ impl GMImage {
         decoder.read_to_end(&mut decompressed_data)
             .map_err(|e| format!("Could not decode BZip2 data: \"{e}\""))?;
         let image = qoi::get_image_from_bytes(&decompressed_data)
+            .map_err(|e| format!("Could not decode Bzip2 QOI image: {e}"))?;
+        Ok(image)
+    }
+
+    fn decode_qoi(raw_qoi_data: &[u8]) -> Result<DynamicImage, String> {
+        let image = qoi::get_image_from_bytes(&raw_qoi_data)
             .map_err(|e| format!("Could not decode QOI image: {e}"))?;
         Ok(image)
     }
@@ -319,7 +335,8 @@ impl GMImage {
                 builder.write_u16(header.height);
                 header.uncompressed_size.serialize_if_gm_ver(builder, "Uncompressed data size", (2022, 5))?;
                 builder.write_bytes(&raw_bz2_qoi_data);
-            },
+            }
+            GMImage::Qoi(raw_qoi_data) => builder.write_bytes(raw_qoi_data),    // TODO check if crorent
             GMImage::NotYetDeserialized(_) => return Err("Image not deserialized".to_string()),
         }
         Ok(())
