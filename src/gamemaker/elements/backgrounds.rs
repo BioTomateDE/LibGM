@@ -24,8 +24,7 @@ impl GMChunkElement for GMBackgrounds {
 impl GMElement for GMBackgrounds {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let mut is_aligned: bool = true;
-        let backgrounds: Vec<GMBackground> = reader.read_pointer_list()?;
-        // let backgrounds: Vec<GMBackground> = reader.read_aligned_list_chunk(ALIGNMENT, &mut is_aligned)?;
+        let backgrounds: Vec<GMBackground> = reader.read_aligned_list_chunk(ALIGNMENT, &mut is_aligned)?;
         Ok(Self { backgrounds, is_aligned, exists: true })
     }
 

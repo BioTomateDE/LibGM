@@ -118,7 +118,6 @@ impl<'a> DataReader<'a> {
 
     /// Read unsigned 32-bit integer and convert to usize (little endian).
     /// Meant for reading positions/pointers; uses total data length as failsafe.
-    /// Automatically subtracts `chunks.abs_pos`; converting it to a relative chunk position.
     pub fn read_pointer(&mut self) -> Result<usize, String> {
         let failsafe_amount: usize = self.data.len();
         let number: usize = self.read_usize()?;
