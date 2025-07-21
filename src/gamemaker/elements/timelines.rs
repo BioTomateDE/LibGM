@@ -44,17 +44,22 @@ impl GMElement for GMTimeline {
 	fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
 		let name: GMRef<String> = reader.read_gm_string()?;
 		let moment_count: usize = reader.read_usize()?;
-		// TODO verify pointers {~~}
+		
 		let mut time_points: Vec<u32> = vec_with_capacity(moment_count)?;
+		let mut event_pointers: Vec<usize> = vec_with_capacity(moment_count)?;
+		
 		for _ in 0..moment_count {
 			time_points.push(reader.read_u32()?);
-			let _event_ptr = reader.read_usize()?;
+			event_pointers.push(reader.read_usize()?);
 		}
+		
 		let mut moments: Vec<GMTimelineMoment> = vec_with_capacity(moment_count)?;
-		for time_point in time_points {
+		for (i, time_point) in time_points.into_iter().enumerate() {
+			reader.assert_pos(event_pointers[i], "Timeline Event")?;
 			let time_event = GMGameObjectEvent::deserialize(reader)?;
 			moments.push(GMTimelineMoment { step: time_point, event: time_event });
 		}
+		
 		Ok(Self { name, moments })
 	}
 

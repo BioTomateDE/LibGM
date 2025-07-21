@@ -1,6 +1,7 @@
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::deserialize::DataReader;
 use crate::gamemaker::element::GMElement;
+use crate::gamemaker::elements::sprites::GMSpriteShapeData;
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::utility::{num_enum_from, vec_with_capacity};
@@ -85,7 +86,7 @@ impl GMElement for GMSpriteYYSWFItem {
         let item_type: i32 = reader.read_i32()?;
         let id: i32 = reader.read_i32()?;
         let item_data: GMSpriteYYSWFItemData = match item_type {
-            1 => GMSpriteYYSWFItemData::ItemShape(GMSpriteYYSWFShapeData::deserialize(reader)?),
+            1 => GMSpriteYYSWFItemData::ItemShape(GMSpriteShapeData::deserialize(reader)?),
             2 => GMSpriteYYSWFItemData::ItemBitmap(GMSpriteYYSWFBitmapData::deserialize(reader)?),
             3 => GMSpriteYYSWFItemData::ItemFont,
             4 => GMSpriteYYSWFItemData::ItemTextField,
@@ -121,7 +122,7 @@ impl GMElement for GMSpriteYYSWFItem {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum GMSpriteYYSWFItemData {
-    ItemShape(GMSpriteYYSWFShapeData),
+    ItemShape(GMSpriteShapeData<GMSpriteYYSWFSubshapeData>),
     ItemBitmap(GMSpriteYYSWFBitmapData),
     ItemFont,
     ItemTextField,
@@ -182,42 +183,14 @@ pub enum GMSpriteYYSWFGradientFillType {
     FillRadial,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMSpriteYYSWFShapeData {
-    pub min_x: f32,
-    pub max_x: f32,
-    pub min_y: f32,
-    pub max_y: f32,
-    pub style_groups: Vec<GMSpriteYYSWFStyleGroup>
-}
-impl GMElement for GMSpriteYYSWFShapeData {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let min_x: f32 = reader.read_f32()?;
-        let max_x: f32 = reader.read_f32()?;
-        let min_y: f32 = reader.read_f32()?;
-        let max_y: f32 = reader.read_f32()?;
-        let style_groups: Vec<GMSpriteYYSWFStyleGroup> = reader.read_simple_list()?;
-        Ok(GMSpriteYYSWFShapeData { min_x, max_x, min_y, max_y, style_groups })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.write_f32(self.min_x);
-        builder.write_f32(self.max_x);
-        builder.write_f32(self.min_y);
-        builder.write_f32(self.max_y);
-        builder.write_simple_list(&self.style_groups)?;
-        Ok(())
-    }
-}
-
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMSpriteYYSWFStyleGroup {
+pub struct GMSpriteYYSWFStyleGroup<T: GMElement> {
     pub fill_styles: Vec<GMSpriteYYSWFFillData>,
     pub line_styles: Vec<GMSpriteYYSWFLineStyleData>,
-    pub subshapes: Vec<GMSpriteYYSWFSubshapeData>,
+    pub subshapes: Vec<T>,
 }
-impl GMElement for GMSpriteYYSWFStyleGroup {
+impl<T: GMElement> GMElement for GMSpriteYYSWFStyleGroup<T> {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let fill_data_count: usize = reader.read_i32()?.max(0) as usize;
         let line_style_count: usize = reader.read_i32()?.max(0) as usize;
@@ -233,9 +206,9 @@ impl GMElement for GMSpriteYYSWFStyleGroup {
             line_styles.push(GMSpriteYYSWFLineStyleData::deserialize(reader)?);
         }
 
-        let mut subshapes: Vec<GMSpriteYYSWFSubshapeData> = vec_with_capacity(subshape_count)?;
+        let mut subshapes: Vec<T> = vec_with_capacity(subshape_count)?;
         for _ in 0..subshape_count {
-            subshapes.push(GMSpriteYYSWFSubshapeData::deserialize(reader)?);
+            subshapes.push(T::deserialize(reader)?);
         }
 
         Ok(GMSpriteYYSWFStyleGroup { fill_styles, line_styles, subshapes })

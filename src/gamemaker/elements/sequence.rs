@@ -386,7 +386,7 @@ impl GMElement for GMKeyframeColor {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeText {
     pub text: GMRef<String>,
-    pub wrap: bool,
+    pub line_wrapping: bool,
     pub alignment_v: i8,
     pub alignment_h: i8,
     pub font_index: i32,
@@ -394,12 +394,12 @@ pub struct GMKeyframeText {
 impl GMElement for GMKeyframeText {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let text: GMRef<String> = reader.read_gm_string()?;
-        let wrap: bool = reader.read_bool32()?;
+        let line_wrapping: bool = reader.read_bool32()?;
         let alignment: i32 = reader.read_i32()?;
         let font_index: i32 = reader.read_i32()?;
         Ok(Self {
             text,
-            wrap,
+            line_wrapping,
             alignment_v: ((alignment >> 8) & 0xff) as i8,
             alignment_h: (alignment & 0xff) as i8,
             font_index,
@@ -408,8 +408,9 @@ impl GMElement for GMKeyframeText {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         builder.write_gm_string(&self.text)?;
-        builder.write_bool32(self.wrap);
+        builder.write_bool32(self.line_wrapping);
         builder.write_i32((self.alignment_v as i32) << 8 | self.alignment_h as i32);
+        log::warn!("Writing raw Font index {} for Text Keyframe of Sequence", self.font_index);
         builder.write_i32(self.font_index);   // TODO no idea what this is but shouldn't it be a GMRef<GMFont> instead of an i32?
         Ok(())
     }
