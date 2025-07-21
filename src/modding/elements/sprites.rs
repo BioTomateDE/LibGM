@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::elements::sequence::GMAnimSpeedType;
-use crate::gamemaker::elements::sprites::{GMSpriteMaskEntry, GMSpriteNineSlice, GMSpriteNineSliceTileMode, GMSpriteSepMaskType, GMSpriteSpecial, GMSpriteType};
+use crate::gamemaker::elements::sprites::{GMSpriteMaskEntry, GMSpriteNineSlice, GMSpriteNineSliceTileMode, GMSpriteSepMaskType, GMSpriteSpecial, GMSpriteSpecialData};
 use crate::modding::export::{edit_field, edit_field_convert, edit_field_option, ModExporter, ModRef};
 use crate::modding::ordered_list::{export_changes_ordered_list, DataChange};
 use crate::modding::elements::sequences::AddSequence;
@@ -134,7 +134,7 @@ impl ModExporter<'_, '_> {
     }
     
     fn convert_specials(&self, i: &GMSpriteSpecial) -> Result<ModSpriteSpecial, String> {
-        if !matches!(i.sprite_type, GMSpriteType::Normal(_)) {
+        if !matches!(i.data, GMSpriteSpecialData::Normal) {
             return Err("Spine and SWF sprites are not supported yet for modding".to_string())   // TODO
         }
         Ok(ModSpriteSpecial {

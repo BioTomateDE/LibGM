@@ -336,7 +336,7 @@ impl GMImage {
                 header.uncompressed_size.serialize_if_gm_ver(builder, "Uncompressed data size", (2022, 5))?;
                 builder.write_bytes(&raw_bz2_qoi_data);
             }
-            GMImage::Qoi(raw_qoi_data) => builder.write_bytes(raw_qoi_data),    // TODO check if crorent
+            GMImage::Qoi(raw_qoi_data) => builder.write_bytes(raw_qoi_data),
             GMImage::NotYetDeserialized(_) => return Err("Image not deserialized".to_string()),
         }
         Ok(())
