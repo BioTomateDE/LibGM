@@ -244,11 +244,25 @@ impl GMElement for GMInstruction {
                 if b0 != 0 && !matches!(opcode, GMOpcode::Duplicate | GMOpcode::CallVariable) {
                     return Err(format!("Invalid padding {:02X} while parsing Single Type Instruction", b0));
                 }
+
                 if b2 >> 4 != 0 {
                     return Err(format!("Second type should be zero but is {0} (0x{0:02X}) for Single Type Instruction", b2 >> 4))
                 }
 
-                GMInstructionData::SingleType(GMSingleTypeInstruction { extra: b0, data_type })
+                if opcode == GMOpcode::Duplicate && b1 != 0 {
+                    return Err("Special Duplicate Instruction containing Comparison Type found! Please report this error.".to_string())
+                    // // Special dup instruction with extra parameters
+                    // let comparison_type: GMComparisonType = num_enum_from(b1)
+                    //     .map_err(|e| format!("{e} while parsing Special Duplicate Instruction"))?;
+                    //
+                    // GMInstructionData::Comparison(GMComparisonInstruction {
+                    //     comparison_type,
+                    //     type1: data_type,
+                    //     type2: data_type,
+                    // })
+                } else {
+                    GMInstructionData::SingleType(GMSingleTypeInstruction { extra: b0, data_type })
+                }
             }
 
             GMOpcode::Convert |
@@ -366,7 +380,7 @@ impl GMElement for GMInstruction {
                     read_code_value(reader, data_type)?
                 };
 
-                GMInstructionData::Push(GMPushInstruction { data_type, value })
+                GMInstructionData::Push(GMPushInstruction { value })
             }
 
             GMOpcode::Call => {
@@ -385,7 +399,7 @@ impl GMElement for GMInstruction {
             }
 
             GMOpcode::Extended => {
-                let value: i16 = b0 as i16 | ((b1 as i16) << 8);
+                let extended_kind: i16 = b0 as i16 | ((b1 as i16) << 8);
                 let data_type: GMDataType = num_enum_from(b2).map_err(|e| format!("{e} while parsing Break Instruction"))?;
                 let int_argument: Option<i32> = if data_type == GMDataType::Int32 {
                     // reader.general_info.set_version_at_least(2023, 8, 0, 0, None)?;
@@ -396,7 +410,7 @@ impl GMElement for GMInstruction {
 
                 // other set gms version stuff {~~}
 
-                GMInstructionData::Break(GMBreakInstruction { value, data_type, int_argument })
+                GMInstructionData::Break(GMBreakInstruction { extended_kind, data_type, int_argument })
             } 
        };
        
@@ -521,7 +535,9 @@ impl GMElement for GMInstruction {
                     _ => 0
                 });
 
-                builder.write_u8(instr.data_type.into());
+                let data_type: GMDataType = get_data_type_from_value(&instr.value);
+                builder.write_u8(data_type.into());
+                
                 if bytecode14 {
                     builder.write_u8(GMOpcode::Push.into());
                 } else {
@@ -559,7 +575,7 @@ impl GMElement for GMInstruction {
             }
 
             GMInstructionData::Break(instr) => {
-                builder.write_i16(instr.value);
+                builder.write_i16(instr.extended_kind);
                 builder.write_u8(instr.data_type.into());
                 builder.write_u8(self.opcode.into());
                 if instr.data_type == GMDataType::Int32 {
@@ -770,7 +786,6 @@ pub struct GMPopInstruction {
 }
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMPushInstruction {
-    pub data_type: GMDataType,
     pub value: GMCodeValue,
 }
 #[derive(Debug, Clone, PartialEq)]
@@ -781,8 +796,9 @@ pub struct GMCallInstruction {
 }
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMBreakInstruction {
-    pub value: i16,
+    pub extended_kind: i16,
     pub data_type: GMDataType,
+    /// TODO: support function references
     pub int_argument: Option<i32>,
 }
 
@@ -797,33 +813,59 @@ pub enum GMDataType {
     Boolean,
     Variable,
     String,
-    Instance, // obsolete??
-    Delete,   // these 3 types apparently exist
-    Undefined,
-    UnsignedInt,
+    // Instance, // obsolete??
+    // Delete,   // these 3 types apparently exist
+    // Undefined,
+    // UnsignedInt,
     Int16 = 0x0f,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum GMInstanceType {
-    Undefined,  // Idk
-    Instance(Option<GMRef<GMGameObject>>),      // Represents the current chunk instance.
-    Other,      // Represents the other context, which has multiple definitions based on the location used.
-    All,        // Represents all active object instances. Assignment operations can perform a loop.
-    None,       // Represents no object/instance.
-    Global,     // Used for global variables.
-    Builtin,    // Used for GML built-in variables.
-    Local,      // Used for local variables; local to their code script.
-    StackTop,   // Instance is stored in a Variable data type on the top of the stack.
-    Argument,   // Used for function argument variables in GMLv2 (GMS 2.3).
-    Static,     // Used for static variables.
+    Undefined,
+    
+    /// Represents the current chunk instance.
+    Self_(Option<GMRef<GMGameObject>>),
+    
+    /// Instance ID in the Room -100000; used when the Variable Type is [`GMVariableType::Instance`].
+    /// This doesn't exist in UTMT.
+    RoomInstance(i16),
+    
+    /// Represents the other context, which has multiple definitions based on the location used.
+    Other,
+    
+    /// Represents all active object instances. Assignment operations can perform a loop.
+    All,
+    
+    /// Represents no object/instance.
+    None,
+    
+    /// Used for global variables.
+    Global,
+    
+    /// Used for GML built-in variables.
+    Builtin,
+    
+    /// Used for local variables; local to their code script.
+    Local,
+    
+    /// Instance is stored in a Variable data type on the top of the stack.
+    StackTop,
+    
+    /// Used for function argument variables in GMLv2 (GMS 2.3).
+    Argument,
+    
+    /// Used for static variables.
+    Static,
 }
+
 impl Display for GMInstanceType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
             GMInstanceType::Undefined => write!(f, "Undefined"),
-            GMInstanceType::Instance(None) => write!(f, "Self"),
-            GMInstanceType::Instance(Some(reference)) => write!(f, "Self<{}>", reference.index),
+            GMInstanceType::Self_(None) => write!(f, "Self"),
+            GMInstanceType::Self_(Some(reference)) => write!(f, "Self<{}>", reference.index),
+            GMInstanceType::RoomInstance(instance_id) => write!(f, "RoomInstanceID<{instance_id}>"),
             GMInstanceType::Other => write!(f, "Other"),
             GMInstanceType::All => write!(f, "All"),
             GMInstanceType::None => write!(f, "None"),
@@ -837,27 +879,52 @@ impl Display for GMInstanceType {
     }
 }
 
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum GMVariableType {
-    Array = 0x00,           // Used for normal single-dimension array variables
-    StackTop = 0x80,        // Used when referencing a variable on another variable, e.g. a chain referenc
-    Normal = 0xA0,          // normal
-    Instance = 0xE0,        // used when referencing variables on room instance IDs, e.g. something like "inst_01ABCDEF.x" in GML
-    MultiPush = 0x10,       // GMS2.3+, multidimensional array with pushaf
-    MultiPushPop = 0x90,    // GMS2.3+, multidimensional array with pushaf or popaf
+    /// Used for normal single-dimension array variables
+    Array = 0x00,
+    
+    /// Used when referencing a variable on another variable, e.g. a chain referenc
+    StackTop = 0x80,
+    
+    /// normal
+    Normal = 0xA0,
+    
+    /// Used when referencing variables on room instance IDs, e.g. something like "inst_01ABCDEF.x" in GML
+    Instance = 0xE0,
+    
+    /// GMS2.3+, multidimensional array with pushaf
+    MultiPush = 0x10,
+    
+    /// GMS2.3+, multidimensional array with pushaf or popaf
+    MultiPushPop = 0x90,
 }
+
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum GMComparisonType {
+    /// "Less than" | `<`
     LT = 1,
+    
+    /// "Less than or equal to" | `<=`
     LTE = 2,
+    
+    /// "Equal to" | `==`
     EQ = 3,
+
+    /// "Not equal to" | `!=`
     NEQ = 4,
+
+    /// "Greater than or equal to" | `>=`
     GTE = 5,
+
+    /// "Greater than" | `>`
     GT = 6,
 }
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMCodeVariable {
@@ -876,7 +943,7 @@ pub enum GMCodeValue {
     Boolean(bool),
     String(GMRef<String>),
     Variable(GMCodeVariable),
-    /// Does not exist in UTMT. Added in order to support inline functions.
+    /// Does not exist in UTMT. Added in order to support inline/anonymous functions.
     Function(GMRef<GMFunction>),
 }
 
@@ -928,12 +995,12 @@ fn read_variable(reader: &mut DataReader, instance_type: GMInstanceType) -> Resu
 pub fn parse_instance_type(raw_value: i16) -> Result<GMInstanceType, String> {
     // If > 0; then game object id. If < 0, then variable instance type.
     if raw_value > 0 {
-        return Ok(GMInstanceType::Instance(Some(GMRef::new(raw_value as u32))))
+        return Ok(GMInstanceType::Self_(Some(GMRef::new(raw_value as u32))))
     }
 
     let instance_type: GMInstanceType = match raw_value {
         0 => GMInstanceType::Undefined,         // this doesn't exist in UTMT anymore but enums in C# can hold any value so idk
-        -1 => GMInstanceType::Instance(None),
+        -1 => GMInstanceType::Self_(None),
         -2 => GMInstanceType::Other,
         -3 => GMInstanceType::All,
         -4 => GMInstanceType::None,
@@ -953,8 +1020,9 @@ pub fn build_instance_type(instance_type: &GMInstanceType) -> i16 {
     // If > 0; then game object id. If < 0, then variable instance type.
     match instance_type {
         GMInstanceType::Undefined => 0,
-        GMInstanceType::Instance(None) => -1,
-        GMInstanceType::Instance(Some(game_object_ref)) => game_object_ref.index as i16,
+        GMInstanceType::Self_(None) => -1,
+        GMInstanceType::Self_(Some(game_object_ref)) => game_object_ref.index as i16,
+        GMInstanceType::RoomInstance(instance_id) => *instance_id,
         GMInstanceType::Other => -2,
         GMInstanceType::All => -3,
         GMInstanceType::None => -4,
@@ -1018,5 +1086,19 @@ fn write_function_occurrence(builder: &mut DataBuilder, gm_index: u32, occurrenc
 
     builder.function_occurrences.get_mut(gm_index as usize).unwrap().push(occurrence_position);
     Ok(())
+}
+
+
+pub fn get_data_type_from_value(code_value: &GMCodeValue) -> GMDataType {
+    match code_value {
+        GMCodeValue::Double(_) => GMDataType::Double,
+        GMCodeValue::Float(_) => GMDataType::Float,
+        GMCodeValue::Int32(_) | GMCodeValue::Function(_) => GMDataType::Int32,
+        GMCodeValue::Int64(_) => GMDataType::Int64,
+        GMCodeValue::Boolean(_) => GMDataType::Boolean,
+        GMCodeValue::Variable(_) => GMDataType::Variable,
+        GMCodeValue::String(_) => GMDataType::String,
+        GMCodeValue::Int16(_) => GMDataType::Int16,
+    }
 }
 
