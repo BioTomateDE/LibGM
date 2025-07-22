@@ -14,8 +14,8 @@ pub struct GMOptions {
     pub color_depth: u32,
     pub resolution: u32,
     pub frequency: u32,
-    pub vertex_sync: u32,
-    pub priority: u32,
+    pub vertex_sync: i32,
+    pub priority: i32,
     pub back_image: Option<GMRef<GMTexturePageItem>>,
     pub front_image: Option<GMRef<GMTexturePageItem>>,
     pub load_image: Option<GMRef<GMTexturePageItem>>,
@@ -241,8 +241,8 @@ fn parse_options_new(reader: &mut DataReader) -> Result<GMOptions, String> {
     let color_depth: u32 = reader.read_u32()?;
     let resolution: u32 = reader.read_u32()?;
     let frequency: u32 = reader.read_u32()?;
-    let vertex_sync: u32 = reader.read_u32()?;
-    let priority: u32 = reader.read_u32()?;
+    let vertex_sync: i32 = reader.read_i32()?;
+    let priority: i32 = reader.read_i32()?;
     let back_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
     let front_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
     let load_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
@@ -293,7 +293,7 @@ fn parse_options_old(reader: &mut DataReader) -> Result<GMOptions, String> {
 
     let flag_no_buttons: bool = reader.read_bool32()?;
 
-    let vertex_sync: u32 = reader.read_u32()?;
+    let vertex_sync: i32 = reader.read_i32()?;
 
     let flag_screen_key: bool = reader.read_bool32()?;
     let flag_help_key: bool = reader.read_bool32()?;
@@ -302,7 +302,7 @@ fn parse_options_old(reader: &mut DataReader) -> Result<GMOptions, String> {
     let flag_screenshot_key: bool = reader.read_bool32()?;
     let flag_close_sec: bool = reader.read_bool32()?;
 
-    let priority: u32 = reader.read_u32()?;
+    let priority: i32 = reader.read_i32()?;
 
     let flag_freeze: bool = reader.read_bool32()?;
     let flag_show_progress: bool = reader.read_bool32()?;
@@ -399,7 +399,7 @@ fn build_options_old(builder: &mut DataBuilder, options: &GMOptions) -> Result<(
 
     builder.write_bool32(options.flags.no_buttons);
 
-    builder.write_u32(options.vertex_sync);
+    builder.write_i32(options.vertex_sync);
 
     builder.write_bool32(options.flags.screen_key);
     builder.write_bool32(options.flags.help_key);
@@ -408,7 +408,7 @@ fn build_options_old(builder: &mut DataBuilder, options: &GMOptions) -> Result<(
     builder.write_bool32(options.flags.screenshot_key);
     builder.write_bool32(options.flags.close_sec);
 
-    builder.write_u32(options.priority);
+    builder.write_i32(options.priority);
 
     builder.write_bool32(options.flags.freeze);
     builder.write_bool32(options.flags.show_progress);
@@ -440,8 +440,8 @@ fn build_options_new(builder: &mut DataBuilder, options: &GMOptions) -> Result<(
     builder.write_u32(options.color_depth);
     builder.write_u32(options.resolution);
     builder.write_u32(options.frequency);
-    builder.write_u32(options.vertex_sync);
-    builder.write_u32(options.priority);
+    builder.write_i32(options.vertex_sync);
+    builder.write_i32(options.priority);
     builder.write_pointer_opt(&options.back_image)?;
     builder.write_pointer_opt(&options.front_image)?;
     builder.write_pointer_opt(&options.load_image)?;
