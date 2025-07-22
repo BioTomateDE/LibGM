@@ -15,7 +15,6 @@ mod csharp_rng;
 
 use std::path::Path;
 use std::process::exit;
-use crate::gamemaker::disassembler::disassemble_code;
 use crate::utility::Stopwatch;
 
 
@@ -56,11 +55,12 @@ fn main_open_and_close() -> Result<(), String> {
         .map_err(|e| format!("\n{e}\n↳ while parsing data file"))?;
     drop(original_data_raw);
     
-    // // sample changes
+    //// sample changes
     // let string_id = original_data.strings.strings.len();
     // original_data.strings.strings.push("Modded using AcornGM".to_string());
     // original_data.general_info.display_name = GMRef::new(string_id as u32);
     
+    //// export code disassembly
     // for code in &original_data.codes.codes {
     //     let code_name = code.name.resolve(&original_data.strings.strings)?;
     //     let assembly = disassemble_code(&original_data, code)?;
@@ -68,6 +68,17 @@ fn main_open_and_close() -> Result<(), String> {
     //     std::fs::write(format!("./gml_asm/{code_name}.txt"), assembly)
     //         .map_err(|e| format!("Could not write assembly of code \"{code_name}\": {e}"))?;
     // }
+
+    //// export strings
+    // let mut raw = String::new();
+    // for i in 0..original_data.strings.strings.len() {
+    //     let string_ref = gamemaker::deserialize::GMRef::new(i as u32);
+    //     let string = gamemaker::disassembler::format_literal_string(&original_data, string_ref)?;
+    //     raw += &string;
+    //     raw += "\n";
+    // }
+    // std::fs::write(format!("{}_strings.txt", original_data_file_path.to_str().unwrap()), raw)
+    //     .map_err(|e| format!("Could not write string: {e}"))?;
 
     log::info!("Building data file");
     let modified_data_raw: Vec<u8> = build_data_file(&original_data)
