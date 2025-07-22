@@ -47,7 +47,7 @@ pub enum ModInstructionKind {
     DoubleType(ModDataType, ModDataType),
     Comparison(ModDataType, ModDataType, ModComparisonType),
     Goto(ModGotoTarget),
-    Push(ModDataType, ModValue),
+    Push(ModValue),
     Pop(ModDataType, ModDataType, ModCodeVariable),
     Call(ModDataType, ModRef, u8),   // function ref, args count
     Break(ModDataType, i16, Option<i32>),   // TODO this will probably also be really incompatible
@@ -201,7 +201,6 @@ impl ModExporter<'_, '_> {
                 
             ),
             GMInstructionData::Push(i) => ModInstructionKind::Push(
-                convert_data_type(i.data_type)?,
                 self.convert_value(&i.value)?,
             ),
             GMInstructionData::Call(i) => ModInstructionKind::Call(
@@ -211,7 +210,7 @@ impl ModExporter<'_, '_> {
             ),
             GMInstructionData::Break(i) => ModInstructionKind::Break(
                 convert_data_type(i.data_type)?,
-                i.value,
+                i.extended_kind,
                 i.int_argument,
             ),
         };
@@ -260,7 +259,7 @@ impl ModExporter<'_, '_> {
     
     pub fn convert_instance_type(&self, i: &GMInstanceType) -> Result<ModInstanceType, String> {
         match i {
-            GMInstanceType::Instance(obj_ref) => Ok(ModInstanceType::Instance(self.convert_game_object_ref_opt(obj_ref)?)),
+            GMInstanceType::Self_(obj_ref) => Ok(ModInstanceType::Instance(self.convert_game_object_ref_opt(obj_ref)?)),
             GMInstanceType::Global => Ok(ModInstanceType::Global),
             GMInstanceType::Local => Ok(ModInstanceType::Local),
             GMInstanceType::Argument => Ok(ModInstanceType::Argument),
@@ -270,7 +269,8 @@ impl ModExporter<'_, '_> {
             GMInstanceType::None |
             GMInstanceType::Builtin |
             GMInstanceType::StackTop |
-            GMInstanceType::Static => Err(format!("Instance Type {i:?} not (yet) supported for modding"))
+            GMInstanceType::RoomInstance(_) |
+            GMInstanceType::Static => Err(format!("Instance Type {i:?} not (yet) supported for modding")),
         }
     }
 
@@ -323,10 +323,6 @@ fn convert_data_type(i: GMDataType) -> Result<ModDataType, String> {
         GMDataType::Boolean => Ok(ModDataType::Boolean),
         GMDataType::Variable => Ok(ModDataType::Variable),
         GMDataType::String => Ok(ModDataType::String),
-        GMDataType::Instance => Err("Code Data Type \"Instance\" is not (yet) supported".to_string()),
-        GMDataType::Delete => Err("Code Data Type \"Delete\" is not (yet) supported".to_string()),
-        GMDataType::Undefined => Err("Code Data Type \"Undefined\" is not (yet) supported".to_string()),
-        GMDataType::UnsignedInt => Err("Code Data Type \"UnsignedInt\" is not (yet) supported".to_string()),
         GMDataType::Int16 => Ok(ModDataType::Int16),
     }
 }

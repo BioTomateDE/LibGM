@@ -15,6 +15,7 @@ mod csharp_rng;
 
 use std::path::Path;
 use std::process::exit;
+use crate::gamemaker::disassembler::disassemble_code;
 use crate::utility::Stopwatch;
 
 
@@ -59,6 +60,14 @@ fn main_open_and_close() -> Result<(), String> {
     // let string_id = original_data.strings.strings.len();
     // original_data.strings.strings.push("Modded using AcornGM".to_string());
     // original_data.general_info.display_name = GMRef::new(string_id as u32);
+    
+    // for code in &original_data.codes.codes {
+    //     let code_name = code.name.resolve(&original_data.strings.strings)?;
+    //     let assembly = disassemble_code(&original_data, code)?;
+    //     // println!("Disassembly of \"{code_name}\": \n{}", assembly);
+    //     std::fs::write(format!("./gml_asm/{code_name}.txt"), assembly)
+    //         .map_err(|e| format!("Could not write assembly of code \"{code_name}\": {e}"))?;
+    // }
 
     log::info!("Building data file");
     let modified_data_raw: Vec<u8> = build_data_file(&original_data)
@@ -110,7 +119,7 @@ fn main() {
     biologischer_log::init(env!("CARGO_PKG_NAME"));
     log::debug!("============= LibGM v{} =============", env!("CARGO_PKG_VERSION"));
     
-    if let Err(e) = main_export_mod() {
+    if let Err(e) = main_open_and_close() {
         log::error!("{e}");
         exit(1);
     }
