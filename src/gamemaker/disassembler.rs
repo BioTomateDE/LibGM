@@ -370,7 +370,7 @@ fn function_to_string(gm_data: &GMData, function_ref: GMRef<GMFunction>) -> Resu
 }
 
 
-fn format_literal_string(gm_data: &GMData, gm_string_ref: GMRef<String>) -> Result<String, String> {
+pub fn format_literal_string(gm_data: &GMData, gm_string_ref: GMRef<String>) -> Result<String, String> {
     let string: String = gm_string_ref.resolve(&gm_data.strings.strings)?
         .replace("\\", "\\\\")
         .replace("\n", "\\n")
