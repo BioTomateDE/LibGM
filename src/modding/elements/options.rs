@@ -24,9 +24,9 @@ pub struct EditOptions {
     /// Only used in GMVersion <= 8
     pub frequency: Option<u32>,
     /// Only used in GMVersion <= 8
-    pub vertex_sync: Option<u32>,
+    pub vertex_sync: Option<i32>,
     /// Only used in GMVersion <= 8
-    pub priority: Option<u32>,
+    pub priority: Option<i32>,
     /// Only used in GMVersion <?= 8
     pub back_image: Option<ModRef>,     // TexturePageItem ref
     /// Only used in GMVersion <?= 8
