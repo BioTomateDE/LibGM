@@ -4,7 +4,6 @@ use crate::gamemaker::elements::sprites::{GMSpriteMaskEntry, GMSpriteNineSlice, 
 use crate::modding::export::{edit_field, edit_field_convert, edit_field_option, ModExporter, ModRef};
 use crate::modding::ordered_list::{export_changes_ordered_list, DataChange};
 use crate::modding::elements::sequences::AddSequence;
-use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddSprite {
@@ -44,8 +43,8 @@ pub struct EditSprite {
     pub sep_masks: Option<GMSpriteSepMaskType>,
     pub origin_x: Option<i32>,
     pub origin_y: Option<i32>,
-    pub textures: Vec<DataChange<ModRef>>,
-    pub collision_masks: EditUnorderedList<GMSpriteMaskEntry, GMSpriteMaskEntry>,
+    pub textures: Vec<DataChange<ModRef, ModRef>>,
+    pub collision_masks: Vec<DataChange<GMSpriteMaskEntry, GMSpriteMaskEntry>>,
     pub special_fields: Option<ModSpriteSpecial>,
 }
 
@@ -77,8 +76,8 @@ pub struct ModSpriteNineSlice {
 
 
 impl ModExporter<'_, '_> {
-    pub fn export_sprites(&self) -> Result<EditUnorderedList<AddSprite, EditSprite>, String> {
-        export_changes_unordered_list(
+    pub fn export_sprites(&self) -> Result<Vec<DataChange<AddSprite, EditSprite>>, String> {
+        export_changes_ordered_list(
             &self.original_data.sprites.sprites,
             &self.modified_data.sprites.sprites,
             |i| Ok(AddSprite {
@@ -118,18 +117,17 @@ impl ModExporter<'_, '_> {
                 textures: export_changes_ordered_list(
                     o.textures.iter().flatten().collect::<Vec<_>>().as_slice(),   // remove null entries
                     m.textures.iter().flatten().collect::<Vec<_>>().as_slice(),
-                    |r| self.convert_texture_ref(r)
+                    |r| self.convert_texture_ref(r),
+                    |_, r| self.convert_texture_ref(r),
                 )?,
-                collision_masks: export_changes_unordered_list(
+                collision_masks: export_changes_ordered_list(
                     &o.collision_masks,
                     &m.collision_masks,
                     |i| Ok(i.clone()),
                     |_, m| Ok(m.clone()),
-                    false,
                 )?,
                 special_fields: edit_field_option(&o.special_fields, &m.special_fields).flatten().map(|i| self.convert_specials(&i)).transpose()?,
             }),
-            false,
         )
     }
     

@@ -43,7 +43,7 @@ pub struct EditGeneralInfo {
     pub debugger_port: Option<u32>,
     pub flags: EditGeneralInfoFlags,
     pub function_classifications: EditFunctionClassifications,
-    pub room_order: Vec<DataChange<ModRef>>,    // GMRoom reference
+    pub room_order: Vec<DataChange<ModRef, ModRef>>,    // GMRoom reference
 }
 
 impl RootChanges for EditGeneralInfo {
@@ -62,7 +62,7 @@ impl RootChanges for EditGeneralInfo {
         self.debugger_port.is_some() ||
         self.flags.has_changes() ||
         self.function_classifications.has_changes() ||
-        !self.room_order.is_empty()
+        self.room_order.has_changes()
     }
 }
 
@@ -467,7 +467,12 @@ impl ModExporter<'_, '_> {
             debugger_port: edit_field(&o.debugger_port, &m.debugger_port).flatten(),
             flags: edit_flags(&o.flags, &m.flags),
             function_classifications: edit_function_classifications(&o.function_classifications, &m.function_classifications)?,
-            room_order: export_changes_ordered_list(&o.room_order, &m.room_order, |i| self.convert_room_ref(i))?,
+            room_order: export_changes_ordered_list(
+                &o.room_order,
+                &m.room_order,
+                |i| self.convert_room_ref(i),
+                |_, m| self.convert_room_ref(m),
+            )?,
         })
     }
 }

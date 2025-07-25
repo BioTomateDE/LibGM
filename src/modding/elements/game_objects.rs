@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::elements::game_objects::{GMGameObjectCollisionShape, GMGameObjectEvent, GMGameObjectEvents};
 use crate::modding::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, ModExporter, ModRef};
-use crate::modding::ordered_list::{export_changes_ordered_list, DataChange};
-use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
+use crate::modding::ordered_list::{export_changes_ordered_list, DataChange, DataChanges};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddGameObject {
@@ -28,7 +27,12 @@ pub struct AddGameObject {
     pub kinematic: bool,
     pub physics_shape_vertices: Vec<(f32, f32)>,
     pub uses_physics_shape_vertex: bool,
-    pub events: Vec<Vec<ModGameObjectEvent>>,
+    pub events: Vec<Vec<AddGameObjectEvent>>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddGameObjectEvent {
+    pub subtype: u32,
+    pub actions: Vec<ModRef>,   // code ref
 }
 
 #[serde_with::skip_serializing_none]
@@ -56,14 +60,14 @@ pub struct EditGameObject {
     pub kinematic: Option<bool>,
     pub physics_shape_vertices: Option<Vec<(f32, f32)>>,
     pub uses_physics_shape_vertex: Option<bool>,
-    pub events: Vec<Vec<DataChange<ModGameObjectEvent>>>,
+    pub events: Vec<Vec<DataChange<AddGameObjectEvent, EditGameObjectEvent>>>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EditGameObjectEvent {
+    pub subtype: Option<u32>,
+    pub actions: Vec<DataChange<ModRef, ModRef>>,   // code ref
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModGameObjectEvent {
-    pub subtype: u32,
-    pub actions: Vec<ModRef>,   // code ref
-}
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 #[repr(u32)]
 pub enum ModGameObjectCollisionShape {
@@ -73,8 +77,8 @@ pub enum ModGameObjectCollisionShape {
 }
 
 impl ModExporter<'_, '_> {
-    pub fn export_game_objects(&self) -> Result<EditUnorderedList<AddGameObject, EditGameObject>, String> {
-        export_changes_unordered_list(
+    pub fn export_game_objects(&self) -> Result<Vec<DataChange<AddGameObject, EditGameObject>>, String> {
+        export_changes_ordered_list(
             &self.original_data.game_objects.game_objects,
             &self.modified_data.game_objects.game_objects,
             |i| Ok(AddGameObject {
@@ -129,15 +133,26 @@ impl ModExporter<'_, '_> {
                 uses_physics_shape_vertex: edit_field(&o.uses_physics_shape_vertex, &m.uses_physics_shape_vertex),
                 events: self.edit_events(&o.events, &m.events)?,
             }),
-            false,
         )
     }
     
-    fn add_event(&self, i: &GMGameObjectEvent) -> Result<ModGameObjectEvent, String> {
-        Ok(ModGameObjectEvent {
+    fn add_event(&self, i: &GMGameObjectEvent) -> Result<AddGameObjectEvent, String> {
+        Ok(AddGameObjectEvent {
             subtype: i.subtype,
             actions: convert_additions(&i.actions, |i| Ok(i.code))?
                 .into_iter().filter_map(|i| self.convert_code_ref_opt(&i).transpose()).collect::<Result<Vec<_>, String>>()?,
+        })
+    }
+    
+    fn edit_event(&self, o: &GMGameObjectEvent, m: &GMGameObjectEvent) -> Result<EditGameObjectEvent, String> {
+        Ok(EditGameObjectEvent {
+            subtype: edit_field(&o.subtype, &m.subtype),
+            actions: export_changes_ordered_list(
+                &o.actions,
+                &m.actions,
+                |i| self.convert_code_ref_opt(&i.code),
+                |_, m| self.convert_code_ref_opt(&m.code),
+            )?.flatten()
         })
     }
     
@@ -145,7 +160,7 @@ impl ModExporter<'_, '_> {
         &self,
         original_events: &Vec<GMGameObjectEvents>,
         modified_events: &Vec<GMGameObjectEvents>,
-    ) -> Result<Vec<Vec<DataChange<ModGameObjectEvent>>>, String> {
+    ) -> Result<Vec<Vec<DataChange<AddGameObjectEvent, EditGameObjectEvent>>>, String> {
         let mut edited_events = Vec::with_capacity(modified_events.len());
         for (i, modified_event) in modified_events.iter().enumerate() {
             // outer event list (for event "types") should be the same length (always 12 or 14 or whatever).
@@ -162,6 +177,7 @@ impl ModExporter<'_, '_> {
                 original_event,
                 &modified_event.events,
                 |i| self.add_event(i),
+                |o, m| self.edit_event(o, m),
             )?);
         }
         Ok(edited_events)

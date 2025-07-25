@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::modding::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, edit_field_option, ModExporter, ModRef};
 use crate::modding::ordered_list::{export_changes_ordered_list, DataChange};
-use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 use crate::gamemaker::elements::fonts::{GMFontGlyph, GMFontGlyphKerning, GMFontSize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,7 +53,7 @@ pub struct EditFont {
     pub ascender: Option<u32>,
     pub sdf_spread: Option<u32>,
     pub line_height: Option<u32>,
-    pub glyphs: EditUnorderedList<AddFontGlyph, EditFontGlyph>,
+    pub glyphs: Vec<DataChange<AddFontGlyph, EditFontGlyph>>,
 }
 
 #[serde_with::skip_serializing_none]
@@ -67,7 +66,7 @@ pub struct EditFontGlyph {
     pub height: Option<u16>,
     pub shift_modifier: Option<i16>,
     pub offset: Option<i16>,
-    pub kernings: Vec<DataChange<ModKerning>>,
+    pub kernings: Vec<DataChange<ModKerning, ModKerning>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -78,8 +77,8 @@ pub struct ModKerning {
 
 
 impl ModExporter<'_, '_> {
-    pub fn export_fonts(&self) -> Result<EditUnorderedList<AddFont, EditFont>, String> {
-        export_changes_unordered_list(
+    pub fn export_fonts(&self) -> Result<Vec<DataChange<AddFont, EditFont>>, String> {
+        export_changes_ordered_list(
             &self.original_data.fonts.fonts,
             &self.modified_data.fonts.fonts,
             |i| Ok(AddFont {
@@ -118,9 +117,8 @@ impl ModExporter<'_, '_> {
                 ascender: edit_field_option(&o.ascender, &m.ascender).flatten(),
                 sdf_spread: edit_field_option(&o.sdf_spread, &m.sdf_spread).flatten(),
                 line_height: edit_field_option(&o.line_height, &m.line_height).flatten(),
-                glyphs: export_changes_unordered_list(&o.glyphs, &m.glyphs, add_font_glyph, edit_font_glyph, false)?,
+                glyphs: export_changes_ordered_list(&o.glyphs, &m.glyphs, add_font_glyph, edit_font_glyph)?,
             }),
-            false,
         )
     }
 }
@@ -147,7 +145,12 @@ fn edit_font_glyph(o: &GMFontGlyph, m: &GMFontGlyph) -> Result<EditFontGlyph, St
         height: edit_field(&o.height, &m.height),
         shift_modifier: edit_field(&o.shift_modifier, &m.shift_modifier),
         offset: edit_field(&o.offset, &m.offset),
-        kernings: export_changes_ordered_list(&o.kernings, &m.kernings, convert_font_kerning)?,
+        kernings: export_changes_ordered_list(
+            &o.kernings,
+            &m.kernings,
+            convert_font_kerning,
+            |_, m| convert_font_kerning(m),
+        )?,
     })
 }
 
