@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::modding::export::{edit_field, edit_field_convert, edit_field_convert_option, ModExporter, ModRef};
-use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 use crate::gamemaker::elements::backgrounds::GMBackgroundGMS2Data;
+use crate::modding::ordered_list::{export_changes_ordered_list, DataChange};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddBackground {
@@ -39,8 +39,8 @@ pub struct ModBackgroundGMS2Data {
 
 
 impl ModExporter<'_, '_> {
-    pub fn export_backgrounds(&self) -> Result<EditUnorderedList<AddBackground, EditBackground>, String> {
-        export_changes_unordered_list(
+    pub fn export_backgrounds(&self) -> Result<Vec<DataChange<AddBackground, EditBackground>>, String> {
+        export_changes_ordered_list(
             &self.original_data.backgrounds.backgrounds,
             &self.modified_data.backgrounds.backgrounds,
             |i| Ok(AddBackground {
@@ -59,7 +59,6 @@ impl ModExporter<'_, '_> {
                 texture: edit_field_convert_option(&o.texture, &m.texture, |r| self.convert_texture_ref(r))?.flatten(),
                 gms2_data: edit_field_convert_option(&o.gms2_data, &m.gms2_data, |i| Ok(convert_gms2_data(i)))?.unwrap_or(None),
             }),
-            false,
         )
     }
 }

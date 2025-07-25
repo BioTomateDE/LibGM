@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use crate::gamemaker::elements::rooms::{GMRoomBackground, GMRoomFlags, GMRoomGameObject, GMRoomLayer, GMRoomLayerType, GMRoomTile, GMRoomTileTexture, GMRoomView};
 use crate::modding::export::{convert_additions, edit_field, edit_field_convert, edit_field_convert_option, edit_field_option, flag_field, ModExporter, ModRef};
 use crate::modding::elements::sequences::{AddSequence, EditSequence};
-use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
+use crate::modding::ordered_list::{export_changes_ordered_list, DataChange};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddRoom {
@@ -110,7 +110,7 @@ pub struct AddRoomFlags {
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditRoom {
-    pub name: Option<ModRef>,       // string rewf
+    pub name: Option<ModRef>,       // string ref
     pub caption: Option<ModRef>,    // string ref
     pub width: Option<u32>,
     pub height: Option<u32>,
@@ -120,10 +120,10 @@ pub struct EditRoom {
     pub draw_background_color: Option<bool>,
     pub creation_code: Option<Option<ModRef>>,  // code ref
     pub flags: EditRoomFlags,
-    pub backgrounds: EditUnorderedList<AddRoomBackground, EditRoomBackground>,
-    pub views: EditUnorderedList<AddRoomView, EditRoomView>,
-    pub game_objects: EditUnorderedList<AddRoomGameObject, EditRoomGameObject>,
-    pub tiles: EditUnorderedList<AddRoomTile, EditRoomTile>,
+    pub backgrounds: Vec<DataChange<AddRoomBackground, EditRoomBackground>>,
+    pub views: Vec<DataChange<AddRoomView, EditRoomView>>,
+    pub game_objects: Vec<DataChange<AddRoomGameObject, EditRoomGameObject>>,
+    pub tiles: Vec<DataChange<AddRoomTile, EditRoomTile>>,
     pub world: Option<bool>,
     pub top: Option<u32>,
     pub left: Option<u32>,
@@ -132,8 +132,8 @@ pub struct EditRoom {
     pub gravity_x: Option<f32>,
     pub gravity_y: Option<f32>,
     pub meters_per_pixel: Option<f32>,
-    pub layers: EditUnorderedList<AddRoomLayer, EditRoomLayer>,
-    pub sequences: EditUnorderedList<AddSequence, EditSequence>,
+    pub layers: Vec<DataChange<AddRoomLayer, EditRoomLayer>>,
+    pub sequences: Vec<DataChange<AddSequence, EditSequence>>,
 }
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -235,8 +235,8 @@ pub enum ModRoomLayerType {
 
 
 impl ModExporter<'_, '_> {
-    pub fn export_rooms(&self) -> Result<EditUnorderedList<AddRoom, EditRoom>, String> {
-        export_changes_unordered_list(
+    pub fn export_rooms(&self) -> Result<Vec<DataChange<AddRoom, EditRoom>>, String> {
+        export_changes_ordered_list(
             &self.original_data.rooms.rooms,
             &self.modified_data.rooms.rooms,
             |i| Ok(AddRoom {
@@ -279,33 +279,29 @@ impl ModExporter<'_, '_> {
                 draw_background_color: edit_field(&o.draw_background_color, &m.draw_background_color),
                 creation_code: edit_field_convert_option(&o.creation_code, &m.creation_code, |r| self.convert_code_ref(r))?,
                 flags: edit_room_flags(&o.flags, &m.flags),
-                backgrounds: export_changes_unordered_list(
+                backgrounds: export_changes_ordered_list(
                     &o.backgrounds,
                     &m.backgrounds,
                     |i| self.add_room_background(i),
                     |o, m| self.edit_room_background(o, m),
-                    false,
                 )?,
-                views: export_changes_unordered_list(
+                views: export_changes_ordered_list(
                     &o.views,
                     &m.views,
                     |i| self.add_room_view(i),
                     |o, m| self.edit_room_view(o, m),
-                    false,
                 )?,
-                game_objects: export_changes_unordered_list(
+                game_objects: export_changes_ordered_list(
                     &o.game_objects,
                     &m.game_objects,
                     |i| self.add_room_game_object(i),
                     |o, m| self.edit_room_game_object(o, m),
-                    true,
                 )?,
-                tiles: export_changes_unordered_list(
+                tiles: export_changes_ordered_list(
                     &o.tiles,
                     &m.tiles,
                     |i| self.add_room_tile(i),
                     |o, m| self.edit_room_tile(o, m),
-                    true,
                 )?,
                 world: edit_field(&o.world, &m.world),
                 top: edit_field(&o.top, &m.top),
@@ -315,22 +311,19 @@ impl ModExporter<'_, '_> {
                 gravity_x: edit_field(&o.gravity_x, &m.gravity_x),
                 gravity_y: edit_field(&o.gravity_y, &m.gravity_y),
                 meters_per_pixel: edit_field(&o.meters_per_pixel, &m.meters_per_pixel),
-                layers: export_changes_unordered_list(
+                layers: export_changes_ordered_list(
                     &o.layers,
                     &m.layers,
                     |i| self.add_room_layer(i),
                     |o, m| self.edit_room_layer(o, m),
-                    false,
                 )?,
-                sequences: export_changes_unordered_list(    // TODO not sure if order matters for layer's sequences
+                sequences: export_changes_ordered_list(
                     &o.sequences,
                     &m.sequences,
                     |i| self.add_sequence(i),
                     |o, m| self.edit_sequence(o, m),
-                    false,
                 )?,
             }),
-            false,
         )
     }
 

@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::elements::sounds::GMSoundFlags;
 use crate::modding::export::{edit_field, edit_field_convert, edit_field_convert_option, flag_field, ModExporter, ModRef};
-use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
-
+use crate::modding::ordered_list::{export_changes_ordered_list, DataChange};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddSound {
@@ -50,8 +49,8 @@ pub struct EditSoundFlags {
 
 
 impl ModExporter<'_, '_> {
-    pub fn export_sounds(&self) -> Result<EditUnorderedList<AddSound, EditSound>, String> {
-        export_changes_unordered_list(
+    pub fn export_sounds(&self) -> Result<Vec<DataChange<AddSound, EditSound>>, String> {
+        export_changes_ordered_list(
             &self.original_data.sounds.sounds,
             &self.modified_data.sounds.sounds,
             |i| Ok(AddSound {
@@ -77,7 +76,6 @@ impl ModExporter<'_, '_> {
                 audio_data: edit_field_convert_option(&o.audio_file, &m.audio_file, |r| self.convert_audio_ref(r))?.flatten(),
                 audio_length: edit_field(&o.audio_length, &m.audio_length).flatten(),
             }),
-            false,
         )
     }
 }

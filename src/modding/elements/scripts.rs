@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::modding::export::{ModExporter, ModRef};
-use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
+use crate::modding::ordered_list::{export_changes_ordered_list, DataChange};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModScript {
@@ -11,8 +11,8 @@ pub struct ModScript {
 
 
 impl ModExporter<'_, '_> {
-    pub fn export_scripts(&self) -> Result<EditUnorderedList<ModScript, ModScript>, String> {
-        export_changes_unordered_list(
+    pub fn export_scripts(&self) -> Result<Vec<DataChange<ModScript, ModScript>>, String> {
+        export_changes_ordered_list(
             &self.original_data.scripts.scripts,
             &self.modified_data.scripts.scripts,
             |i| Ok(ModScript {
@@ -25,7 +25,6 @@ impl ModExporter<'_, '_> {
                 is_constructor: m.is_constructor,
                 code: self.convert_code_ref_opt(&m.code)?,
             }),
-            false,
         )
     }
 }

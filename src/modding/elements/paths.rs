@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::elements::paths::GMPath;
 use crate::modding::export::{ModExporter, ModRef};
-use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
+use crate::modding::ordered_list::{export_changes_ordered_list, DataChange};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModPath {
@@ -21,13 +21,12 @@ pub struct ModPathPoint {
 
 
 impl ModExporter<'_, '_> {
-    pub fn export_paths(&self) -> Result<EditUnorderedList<ModPath, ModPath>, String> {
-        export_changes_unordered_list(
+    pub fn export_paths(&self) -> Result<Vec<DataChange<ModPath, ModPath>>, String> {
+        export_changes_ordered_list(
             &self.original_data.paths.paths,
             &self.modified_data.paths.paths,
             |i| self.convert_path(i),
             |_, m| self.convert_path(m),    // force override all fields if path is edited (merging will not work properly)
-            false,
         )
     }
     

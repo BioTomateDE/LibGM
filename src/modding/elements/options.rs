@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::elements::options::{GMOptions, GMOptionsFlags};
 use crate::modding::export::{edit_field, edit_field_convert, edit_field_convert_option, flag_field, ModExporter, ModRef, RootChanges};
-use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
+use crate::modding::ordered_list::{export_changes_ordered_list, DataChange};
 
 macro_rules! prevent_changing {
     ($original:expr, $modified:expr, $field:ident, $name:expr) => {{
@@ -36,7 +36,7 @@ pub struct EditOptions {
     /// Only used in GMVersion <?= 8
     pub load_alpha: Option<u32>,
     /// wow, it's actually used
-    pub constants: EditUnorderedList<AddOptionsConstant, EditOptionsConstant>,
+    pub constants: Vec<DataChange<AddOptionsConstant, EditOptionsConstant>>,
 }
 
 impl RootChanges for EditOptions {
@@ -160,7 +160,7 @@ impl ModExporter<'_, '_> {
             front_image: edit_field_convert_option(&o.front_image, &m.front_image, |r| self.convert_texture_ref(r))?.unwrap_or(None),
             load_image: edit_field_convert_option(&o.load_image, &m.load_image, |r| self.convert_texture_ref(r))?.unwrap_or(None),
             load_alpha: edit_field(&o.load_alpha, &m.load_alpha),
-            constants: export_changes_unordered_list(
+            constants: export_changes_ordered_list(
                 &o.constants,
                 &m.constants,
                 |i| Ok(AddOptionsConstant {
@@ -171,7 +171,6 @@ impl ModExporter<'_, '_> {
                     name: edit_field_convert(&o.name, &m.name, |r| self.convert_string_ref(r))?,
                     value: edit_field_convert(&o.value, &m.value, |r| self.convert_string_ref(r))?,
                 }),
-                false,
             )?,
         })
     }
