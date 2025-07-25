@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 use crate::gamemaker::elements::code::{GMCodeBytecode15, GMCodeValue, GMCodeVariable, GMComparisonType, GMDataType, GMInstanceType, GMInstruction, GMInstructionData, GMOpcode, GMVariableType};
 use crate::modding::export::{convert_additions, edit_field, edit_field_convert, ModExporter, ModRef};
 use crate::modding::ordered_list::{export_changes_ordered_list, DataChange};
-use crate::modding::unordered_list::{export_changes_unordered_list, EditUnorderedList};
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,7 +22,7 @@ pub struct AddCodeBytecode15 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditCode {
     pub name: Option<ModRef>,  // String
-    pub instructions: Vec<DataChange<ModInstruction>>,
+    pub instructions: Vec<DataChange<ModInstruction, ModInstruction>>,
     pub bytecode15_info: Option<AddCodeBytecode15>,
 }
 #[serde_with::skip_serializing_none]
@@ -32,7 +31,7 @@ pub struct EditCodeBytecode15 {
     pub locals_count: u16,
     pub arguments_count: u16,
     pub weird_local_flag: bool,
-    /// TODO: vulnerable; check overflow
+    /// TODO: vulnerable; check if out of parent code bounds
     pub offset: usize,
 }
 
@@ -155,8 +154,8 @@ pub enum ModOpcode {
 
 
 impl ModExporter<'_, '_> {
-    pub fn export_codes(&self) -> Result<EditUnorderedList<AddCode, EditCode>, String> {
-        export_changes_unordered_list(
+    pub fn export_codes(&self) -> Result<Vec<DataChange<AddCode, EditCode>>, String> {
+        export_changes_ordered_list(
             &self.original_data.codes.codes,
             &self.modified_data.codes.codes,
             |i| Ok(AddCode {
@@ -166,10 +165,14 @@ impl ModExporter<'_, '_> {
             }),
             |o, m| Ok(EditCode {
                 name: edit_field_convert(&o.name, &o.name, |r| self.convert_string_ref(r))?,
-                instructions: export_changes_ordered_list(&o.instructions, &m.instructions, |r| self.convert_instruction(r))?,
+                instructions: export_changes_ordered_list(
+                    &o.instructions,
+                    &m.instructions,
+                    |i| self.convert_instruction(i),
+                    |_, m| self.convert_instruction(m),
+                )?,
                 bytecode15_info: edit_field(&o.bytecode15_info, &m.bytecode15_info).unwrap_or(None).as_ref().map(convert_bytecode15_info),
             }),
-            false,
         )
     }
     
