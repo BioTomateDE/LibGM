@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::gamemaker::deserialize::GMData;
+use crate::gamemaker::data::GMData;
 use crate::gamemaker::element::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::code::GMVariableType;
 use crate::gamemaker::gm_version::GMVersionReq;

@@ -40,7 +40,8 @@ fn path_from_arg<'a>(arg: Option<&'a String>, default: &'a str) -> &'a Path {
 
 
 fn main_open_and_close() -> Result<(), String> {
-    use crate::gamemaker::deserialize::{GMData, parse_data_file};
+    use crate::gamemaker::data::GMData;
+    use crate::gamemaker::deserialize::parse_data_file;
     use crate::gamemaker::serialize::build_data_file;
     let args: Vec<String> = std::env::args().collect();
     let original_data_file_path: &Path = path_from_arg(args.get(1), "data.win");
@@ -51,16 +52,16 @@ fn main_open_and_close() -> Result<(), String> {
         .map_err(|e| format!("{e}\n↳ while reading data file"))?;
 
     log::info!("Parsing data file");
-    let original_data: GMData = parse_data_file(&original_data_raw, false)
+    let mut original_data: GMData = parse_data_file(&original_data_raw, false)
         .map_err(|e| format!("\n{e}\n↳ while parsing data file"))?;
     drop(original_data_raw);
     
-    //// sample changes
-    // let string_id = original_data.strings.strings.len();
-    // original_data.strings.strings.push("Modded using AcornGM".to_string());
-    // original_data.general_info.display_name = GMRef::new(string_id as u32);
+    // sample changes
+    let original_name: &str = original_data.general_info.display_name.resolve(&original_data.strings.strings)?;
+    let modified_name: String = format!("{original_name} - Modded using AcornGM");
+    original_data.general_info.display_name = original_data.make_string(&modified_name);
     
-    //// export code disassembly
+    // // export code disassembly
     // for code in &original_data.codes.codes {
     //     let code_name = code.name.resolve(&original_data.strings.strings)?;
     //     let assembly = disassemble_code(&original_data, code)?;
@@ -69,7 +70,7 @@ fn main_open_and_close() -> Result<(), String> {
     //         .map_err(|e| format!("Could not write assembly of code \"{code_name}\": {e}"))?;
     // }
 
-    //// export strings
+    // // export strings
     // let mut raw = String::new();
     // for i in 0..original_data.strings.strings.len() {
     //     let string_ref = gamemaker::deserialize::GMRef::new(i as u32);
@@ -92,38 +93,38 @@ fn main_open_and_close() -> Result<(), String> {
 }
 
 
-fn main_export_mod() -> Result<(), String> {
-    use crate::modding::export::{export_mod};
-    use crate::gamemaker::deserialize::{parse_data_file, GMData};
-    let args: Vec<String> = std::env::args().collect();
-    let original_data_file_path = path_from_arg(args.get(1), "data_original.win");
-    let modified_data_file_path = path_from_arg(args.get(2), "data_modified.win");
-    let mod_data_path = path_from_arg(args.get(3), "acornmod.tar.zst");
-
-    log::info!("Loading original data file \"{}\"", original_data_file_path.display());
-    let original_data_raw: Vec<u8> = read_data_file(original_data_file_path)
-        .map_err(|e| format!("{e}\n↳ while reading original data file"))?;
-
-    log::info!("Parsing original data file");
-    let original_data: GMData = parse_data_file(&original_data_raw, false)
-        .map_err(|e| format!("{e}\n↳ while parsing original data file"))?;
-    drop(original_data_raw);
-
-    log::info!("Loading modified data file \"{}\"", modified_data_file_path.display());
-    let modified_data_raw: Vec<u8> = read_data_file(modified_data_file_path)
-        .map_err(|e| format!("{e}\n↳ while reading modified data file"))?;
-
-    log::info!("Parsing modified data file");
-    let modified_data: GMData = parse_data_file(&modified_data_raw, false)
-        .map_err(|e| format!("{e}\n↳ while parsing modified data file"))?;
-    drop(modified_data_raw);
-
-    log::info!("Extracting changes and exporting mod to file \"{}\"", mod_data_path.display());
-    export_mod(&original_data, &modified_data, mod_data_path)
-        .map_err(|e| format!("{e}\n↳ while exporting AcornGM mod"))?;
-
-    Ok(())
-}
+// fn main_export_mod() -> Result<(), String> {
+//     use crate::modding::export::{export_mod};
+//     use crate::gamemaker::deserialize::{parse_data_file, GMData};
+//     let args: Vec<String> = std::env::args().collect();
+//     let original_data_file_path = path_from_arg(args.get(1), "data_original.win");
+//     let modified_data_file_path = path_from_arg(args.get(2), "data_modified.win");
+//     let mod_data_path = path_from_arg(args.get(3), "acornmod.tar.zst");
+// 
+//     log::info!("Loading original data file \"{}\"", original_data_file_path.display());
+//     let original_data_raw: Vec<u8> = read_data_file(original_data_file_path)
+//         .map_err(|e| format!("{e}\n↳ while reading original data file"))?;
+// 
+//     log::info!("Parsing original data file");
+//     let original_data: GMData = parse_data_file(&original_data_raw, false)
+//         .map_err(|e| format!("{e}\n↳ while parsing original data file"))?;
+//     drop(original_data_raw);
+// 
+//     log::info!("Loading modified data file \"{}\"", modified_data_file_path.display());
+//     let modified_data_raw: Vec<u8> = read_data_file(modified_data_file_path)
+//         .map_err(|e| format!("{e}\n↳ while reading modified data file"))?;
+// 
+//     log::info!("Parsing modified data file");
+//     let modified_data: GMData = parse_data_file(&modified_data_raw, false)
+//         .map_err(|e| format!("{e}\n↳ while parsing modified data file"))?;
+//     drop(modified_data_raw);
+// 
+//     log::info!("Extracting changes and exporting mod to file \"{}\"", mod_data_path.display());
+//     export_mod(&original_data, &modified_data, mod_data_path)
+//         .map_err(|e| format!("{e}\n↳ while exporting AcornGM mod"))?;
+// 
+//     Ok(())
+// }
 
 
 fn main() {

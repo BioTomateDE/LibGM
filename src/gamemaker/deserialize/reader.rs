@@ -163,6 +163,10 @@ impl<'a> DataReader<'a> {
     pub fn get_chunk_length(&self) -> usize {
         self.chunk.end_pos - self.chunk.start_pos
     }
+    
+    pub fn get_data_length(&self) -> usize {
+        self.data.len()
+    }
 
     /// Read bytes until the reader position is divisible by the specified alignment.
     /// Ensures the read padding bytes are all zero.
