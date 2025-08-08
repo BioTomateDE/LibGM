@@ -7,7 +7,7 @@ mod reader;
 pub use chunk::GMChunk;
 pub use reader::DataReader;
 pub use resources::GMRef;
-
+use crate::gamemaker::data::GMData;
 use crate::utility::Stopwatch;
 use crate::gamemaker::detect_version::detect_gamemaker_version;
 use crate::gamemaker::gm_version::GMVersion;
@@ -26,9 +26,7 @@ use crate::gamemaker::elements::fonts::GMFonts;
 use crate::gamemaker::elements::functions::GMFunctions;
 use crate::gamemaker::elements::game_objects::GMGameObjects;
 use crate::gamemaker::elements::scripts::GMScripts;
-use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::variables::GMVariables;
-use crate::gamemaker::elements::general_info::GMGeneralInfo;
 use crate::gamemaker::elements::global_init::{GMGameEndScripts, GMGlobalInitScripts};
 use crate::gamemaker::elements::languages::GMLanguageInfo;
 use crate::gamemaker::elements::paths::GMPaths;
@@ -46,56 +44,6 @@ use crate::gamemaker::elements::ui_nodes::GMRootUINodes;
 use crate::gamemaker::elements::timelines::GMTimelines;
 
 
-#[derive(Debug, Clone)]
-pub struct GMData {
-    pub general_info: GMGeneralInfo,                    // GEN8
-    pub strings: GMStrings,                             // STRG
-    pub embedded_textures: GMEmbeddedTextures,          // TXTR
-    pub texture_page_items: GMTexturePageItems,         // TPAG
-    pub variables: GMVariables,                         // VARI
-    pub functions: GMFunctions,                         // FUNC
-    pub scripts: GMScripts,                             // SCPT
-    pub codes: GMCodes,                                 // CODE
-    pub fonts: GMFonts,                                 // FONT
-    pub sprites: GMSprites,                             // SPRT
-    pub game_objects: GMGameObjects,                    // OBJT
-    pub rooms: GMRooms,                                 // ROOM
-    pub backgrounds: GMBackgrounds,                     // BGND
-    pub paths: GMPaths,                                 // PATH
-    pub audios: GMEmbeddedAudios,                       // AUDO
-    pub sounds: GMSounds,                               // SOND
-    pub options: GMOptions,                             // OPTN
-    pub sequences: GMSequences,                         // SEQN
-    pub particle_systems: GMParticleSystems,            // PSYS
-    pub particle_emitters: GMParticleEmitters,          // PSEM
-    pub language_info: GMLanguageInfo,                  // LANG
-    pub extensions: GMExtensions,                       // EXTN
-    pub audio_groups: GMAudioGroups,                    // AGRP
-    pub global_init_scripts: GMGlobalInitScripts,       // GLOB
-    pub game_end_scripts: GMGameEndScripts,             // GMEN
-    pub shaders: GMShaders,                             // SHDR
-    pub root_ui_nodes: GMRootUINodes,                   // UILR
-    pub data_files: GMDataFiles,                        // DAFL
-    pub timelines: GMTimelines,							// TMLN
-    pub embedded_images: GMEmbeddedImages,              // EMBI
-    pub texture_group_infos: GMTextureGroupInfos,       // TGIN
-    pub tags: GMTags,                                   // TAGS
-    pub feature_flags: GMFeatureFlags,                  // FEAT
-    pub filter_effects: GMFilterEffects,                // FEDS
-    pub animation_curves: GMAnimationCurves,            // ACRV
-
-    /// Should not be edited; only set by `GMData::read_chunk_padding`.
-    pub chunk_padding: usize,
-    
-    /// Whether the data file is formatted as big endian.
-    /// This is only the case for certain target architectures.
-    pub is_big_endian: bool,
-
-    /// Size of the original data file; useful for approximating.
-    pub original_data_size: usize,
-}
-
-
 pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<GMData, String> {
     let stopwatch = Stopwatch::start();
     let mut reader = DataReader::new(&raw_data);
@@ -111,6 +59,13 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
     }
     
     let total_data_len: usize = reader.read_usize()? + reader.cur_pos;
+    if total_data_len != raw_data.len() {
+        return Err(format!(
+            "Specified FORM data length is {} but data is actually {} bytes long",
+            total_data_len, raw_data.len(),
+        ))
+    }
+
     while reader.cur_pos + 8 < total_data_len { 
         let name: String = reader.read_chunk_name()?;
         let chunk_length: usize = reader.read_usize()?;
@@ -144,17 +99,26 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
     
     reader.strings = reader.read_chunk_required("STRG")?;
     reader.general_info = reader.read_chunk_required("GEN8")?;
-    
-    let stopwatch2 = Stopwatch::start();
-    let old_version: GMVersion = reader.general_info.version.clone();
-    let detected_version_opt = detect_gamemaker_version(&mut reader)
-        .map_err(|e| format!("{e}\n↳ while detecting gamemaker version"))?;
-    log::trace!("Detecting GameMaker Version took {stopwatch2}");
 
-    if let Some(detected_version) = detected_version_opt {
-        log::info!("Data file specified GameMaker version {}; detected real version {}", old_version, detected_version);
+    let specified_version: GMVersion = reader.general_info.version.clone();
+    if specified_version.major >= 2 {
+        let stopwatch2 = Stopwatch::start();
+        detect_gamemaker_version(&mut reader).map_err(|e| format!("{e}\n↳ while detecting gamemaker version"))?;
+        log::trace!("Detecting GameMaker Version took {stopwatch2}");
+        log::info!(
+            "Loaded game \"{}\" with gamemaker version {} [specified: {}] and bytecode version {}",
+            reader.resolve_gm_str(reader.general_info.display_name)?,
+            reader.general_info.version,
+            specified_version,
+            reader.general_info.bytecode_version,
+        );
     } else {
-        log::info!("Data file specified GameMaker version {}", old_version);
+        log::info!(
+            "Loaded game \"{}\" with gamemaker version {} and bytecode version {}",
+            reader.resolve_gm_str(reader.general_info.display_name)?,
+            reader.general_info.version,
+            reader.general_info.bytecode_version,
+        );
     }
 
     let stopwatch2 = Stopwatch::start();
@@ -169,12 +133,11 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
     let game_objects: GMGameObjects = reader.read_chunk_required("OBJT")?;
     let rooms: GMRooms = reader.read_chunk_required("ROOM")?;
     let backgrounds: GMBackgrounds = reader.read_chunk_required("BGND")?;
-    let paths: GMPaths = reader.read_chunk_required("PATH")?;
     let audios: GMEmbeddedAudios = reader.read_chunk_required("AUDO")?;
     let sounds: GMSounds = reader.read_chunk_required("SOND")?;
-    let options: GMOptions = reader.read_chunk_required("OPTN")?;
     // some of these chunks probably aren't actually required; make them optional when issues occur
-
+    let paths: GMPaths = reader.read_chunk_optional("PATH")?;
+    let options: GMOptions = reader.read_chunk_optional("OPTN")?;
     let sequences: GMSequences = reader.read_chunk_optional("SEQN")?;
     let particle_systems: GMParticleSystems = reader.read_chunk_optional("PSYS")?;
     let particle_emitters: GMParticleEmitters = reader.read_chunk_optional("PSEM")?;

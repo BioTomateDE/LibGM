@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use crate::gamemaker::deserialize::{GMData, GMRef};
+use crate::gamemaker::data::GMData;
+use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::code::{get_data_type_from_value, GMCodeValue, GMDataType};
 use crate::gamemaker::elements::code::GMComparisonType;
 use crate::gamemaker::elements::code::GMCodeVariable;
@@ -86,7 +87,7 @@ pub fn get_instruction_size(instruction: &GMInstruction) -> u32 {
 }
 
 
-fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, resolve_goto_target: impl Fn(i32) -> Result<i32, String>) -> Result<String, String> {
+pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, resolve_goto_target: impl Fn(i32) -> Result<i32, String>) -> Result<String, String> {
     let mut line: String;
 
     match &instruction.kind {
@@ -259,7 +260,7 @@ fn opcode_to_string(opcode: GMOpcode) -> &'static str {
         GMOpcode::Return => "ret",
         GMOpcode::Exit => "exit",
         GMOpcode::PopDiscard => "popz",
-        GMOpcode::Branch => "b",
+        GMOpcode::Branch => "jmp",
         GMOpcode::BranchIf => "bt",
         GMOpcode::BranchUnless => "bf",
         GMOpcode::PushWithContext => "pushenv",
@@ -268,7 +269,7 @@ fn opcode_to_string(opcode: GMOpcode) -> &'static str {
         GMOpcode::PushLocal => "pushloc",
         GMOpcode::PushGlobal => "pushglb",
         GMOpcode::PushBuiltin => "pushbltn",
-        GMOpcode::PushImmediate => "pushi",
+        GMOpcode::PushImmediate => "pushim",
         GMOpcode::Call => "call",
         GMOpcode::CallVariable => "callv",
         GMOpcode::Extended => "break",
@@ -278,14 +279,14 @@ fn opcode_to_string(opcode: GMOpcode) -> &'static str {
 
 fn data_type_to_string(data_type: GMDataType) -> &'static str {
     match data_type {
-        GMDataType::Double => "d",
-        GMDataType::Float => "f",
-        GMDataType::Int32 => "i",
-        GMDataType::Int64 => "l",
-        GMDataType::Boolean => "b",
-        GMDataType::Variable => "v",
-        GMDataType::String => "s",
-        GMDataType::Int16 => "e",
+        GMDataType::Int16 => "i16",
+        GMDataType::Int32 => "i32",
+        GMDataType::Int64 => "i64",
+        GMDataType::Double => "f64",
+        GMDataType::Float => "f32",
+        GMDataType::Boolean => "bol",
+        GMDataType::String => "str",
+        GMDataType::Variable => "var",
     }
 }
 
