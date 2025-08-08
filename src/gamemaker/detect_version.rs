@@ -61,7 +61,7 @@ impl VersionCheck {
 }
 
 
-pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<(), String> {
     let original_version: GMVersion = reader.general_info.version.clone();
     let saved_pos: usize = reader.cur_pos;
     let saved_chunk: GMChunk = reader.chunk.clone();
@@ -167,21 +167,11 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<Option<GMVers
     
     reader.cur_pos = saved_pos;
     reader.chunk = saved_chunk;
-    let ver: &GMVersion = &reader.general_info.version;
-    if *ver == original_version {
-        return Ok(None)
-    }
-    if original_version.branch == ver.branch {
-        Ok(Some((ver.major, ver.minor, ver.release, ver.build).into()))
-    } else {
-        Ok(Some((ver.major, ver.minor, ver.release, ver.build, ver.branch).into()))
-    }
+    Ok(())
 }
 
 
 fn cv_extn_2022_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
-    let target_ver = Ok(Some((2022, 6).into()));
-
     let ext_count = reader.read_i32()?;
     if ext_count < 1 {
         return Ok(None)
@@ -222,13 +212,12 @@ fn cv_extn_2022_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
         }
     }
 
-    target_ver
+    Ok(Some((2022, 6).into()))
 }
 
 
 /// assert version >= 2022.6
 fn cv_extn_2023_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
-    let target_ver = Ok(Some((2023, 4).into()));
     let ext_count = reader.read_i32()?;
     if ext_count < 1 {
         return Ok(None)
@@ -240,7 +229,7 @@ fn cv_extn_2023_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
     // The file list pointer should be less than the option list pointer.
     // If it's not true, then "files_pointer" is actually a string pointer, so it's GM 2023.4+.
     if files_pointer > options_pointer {
-        return target_ver
+        return Ok(Some((2023, 4).into()))
     }
     Ok(None)
 }
@@ -283,8 +272,6 @@ fn cv_sond_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
 
 /// assert version >= 2024.13
 fn cv_agrp_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
-    let target_ver = Ok(Some((2024, 14).into()));
-
     // Check for new field added in 2024.14
     let audio_group_count: u32 = reader.read_u32()?;
     if audio_group_count == 0 {
@@ -324,7 +311,7 @@ fn cv_agrp_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Stri
         }
     }
 
-    target_ver
+    Ok(Some((2024, 14).into()))
 }
 
 

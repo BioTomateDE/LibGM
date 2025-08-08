@@ -411,10 +411,10 @@ impl GMElement for GMInstruction {
                 // other set gms version stuff {~~}
 
                 GMInstructionData::Break(GMBreakInstruction { extended_kind, data_type, int_argument })
-            } 
-       };
-       
-       Ok(GMInstruction { opcode, kind: instruction_data })
+            }
+        };
+
+        Ok(GMInstruction { opcode, kind: instruction_data })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
