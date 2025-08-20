@@ -215,6 +215,7 @@ pub enum GMInstructionData {
     Comparison(GMComparisonInstruction),
     Goto(GMGotoInstruction),
     Pop(GMPopInstruction),
+    PopSwap(GMPopSwapInstruction),
     Push(GMPushInstruction),
     Call(GMCallInstruction),
     Extended(GMExtendedInstruction),
@@ -356,16 +357,12 @@ impl GMElement for GMInstruction {
                 let instance_type: GMInstanceType = parse_instance_type(b0 as i16 | ((b1 as i16) << 8))?;
 
                 if type1 == GMDataType::Int16 {
-                    return Err(format!(
-                        "[Internal Error] Unhandled \"Special swap instruction\" (UndertaleModTool/Issues/#129) \
-                        occurred at absolute position {} while parsing Pop Instruction. \
-                        Please report this error to https://github.com/BioTomateDE/LibGM/issues",
-                        reader.cur_pos,
-                    ));
+                    // maybe b1 or b0 and b1 combined, idk
+                    GMInstructionData::PopSwap(GMPopSwapInstruction { size: b0 })
+                } else {
+                    let destination: GMCodeVariable = read_variable(reader, instance_type)?;
+                    GMInstructionData::Pop(GMPopInstruction { type1, type2, destination })
                 }
-
-                let destination: GMCodeVariable = read_variable(reader, instance_type)?;
-                GMInstructionData::Pop(GMPopInstruction { type1, type2, destination })
             }
 
             GMOpcode::Push |
@@ -375,17 +372,6 @@ impl GMElement for GMInstruction {
             GMOpcode::PushImmediate => {
                 let data_type: GMDataType = num_enum_from(b2).map_err(|e| format!("{e} while parsing Push Instruction"))?;
                 let val: i16 = (b0 as i16) | ((b1 as i16) << 8);
-
-                //// this was removed from utmt??? v
-                // if reader.general_info.bytecode_version <= 14 {
-                //     match data_type {
-                //         GMDataType::Int16 => opcode = GMOpcode::PushI,
-                //         GMDataType::Variable if val == -5 => opcode = GMOpcode::PushGlb,
-                //         GMDataType::Variable if val == -6 => opcode = GMOpcode::PushBltn,
-                //         GMDataType::Variable if val == -7 => opcode = GMOpcode::PushLoc,
-                //         _ => {}
-                //     }
-                // }
 
                 let value: GMCodeValue = if data_type == GMDataType::Variable {
                     let instance_type: GMInstanceType = parse_instance_type(val)?;
@@ -565,6 +551,13 @@ impl GMElement for GMInstruction {
 
                 let variable: &GMVariable = instr.destination.variable.resolve(&builder.gm_data.variables.variables)?;
                 write_variable_occurrence(builder, instr.destination.variable.index, instr_abs_pos, variable.name.index, instr.destination.variable_type)?;
+            }
+
+            GMInstructionData::PopSwap(instr) => {
+                builder.write_u8(instr.size);
+                builder.write_u8(0);
+                builder.write_u8(GMDataType::Int16.into());
+                builder.write_u8(self.opcode.into());
             }
 
             GMInstructionData::Push(instr) => {
@@ -848,6 +841,11 @@ pub struct GMPopInstruction {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct GMPopSwapInstruction {
+    pub size: u8,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMPushInstruction {
     pub value: GMCodeValue,
 }
@@ -878,10 +876,6 @@ pub enum GMDataType {
     Boolean,
     Variable,
     String,
-    // Instance, // obsolete??
-    // Delete,   // these 3 types apparently exist
-    // Undefined,
-    // UnsignedInt,
     Int16 = 0x0f,
 }
 

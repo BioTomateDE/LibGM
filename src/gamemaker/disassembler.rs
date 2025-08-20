@@ -72,6 +72,7 @@ pub fn get_instruction_size(instruction: &GMInstruction) -> u32 {
         GMInstructionData::Comparison(_) => 1,
         GMInstructionData::Goto(_) => 1,
         GMInstructionData::Pop(_) => 2,
+        GMInstructionData::PopSwap(_) => 2,
         GMInstructionData::Push(instr) => match instr.value {
             GMCodeValue::Int16(_) => 1,
             GMCodeValue::Int32(_) => 2,
@@ -99,7 +100,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, re
         GMInstructionData::Empty => {
             line = opcode.to_string();
         }
-        
+
         GMInstructionData::SingleType(instr) => {
             line = format!(
                 "{}.{}",
@@ -107,7 +108,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, re
                 data_type_to_string(instr.data_type),
             );
         }
-        
+
         GMInstructionData::Duplicate(instr) => {
             line = format!(
                 "{}.{} {}",
@@ -171,7 +172,6 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, re
         }
 
         GMInstructionData::Pop(instr) => {
-            // TODO {~~} handle special swap instruction
             line = format!(
                 "{}.{}.{} ",
                 opcode,
@@ -194,13 +194,16 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, re
             line += &variable_to_string(gm_data, &instr.destination)?;
         }
 
-        GMInstructionData::Push(instr) => {
+        GMInstructionData::PopSwap(instr) => {
             line = format!(
-                "{}.{} ",
+                "{}.{} {}",
                 opcode,
-                data_type_to_string(get_data_type_from_value(&instr.value)),
+                data_type_to_string(GMDataType::Int16),
+                instr.size,
             );
+        }
 
+        GMInstructionData::Push(instr) => {
             let string: String = match &instr.value {
                 GMCodeValue::Variable(code_variable) => {
                     let variable_string: String = variable_to_string(gm_data, &code_variable)?;
@@ -230,7 +233,12 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, re
                 GMCodeValue::Float(float) => float.to_string(),
             };
 
-            line += &string;
+            line = format!(
+                "{}.{} {}",
+                opcode,
+                data_type_to_string(get_data_type_from_value(&instr.value)),
+                string,
+            );
         }
 
         GMInstructionData::Call(instr) => {
