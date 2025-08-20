@@ -218,7 +218,9 @@ pub enum GMInstructionData {
     PopSwap(GMPopSwapInstruction),
     Push(GMPushInstruction),
     Call(GMCallInstruction),
-    Extended(GMExtendedInstruction),
+    Extended16(GMExtendedInstruction16),
+    Extended32(GMExtendedInstruction32),
+    ExtendedFunc(GMExtendedInstructionFunction),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -400,19 +402,21 @@ impl GMElement for GMInstruction {
             }
 
             GMOpcode::Extended => {
-                let extended_kind: i16 = b0 as i16 | ((b1 as i16) << 8);
+                let kind: i16 = b0 as i16 | ((b1 as i16) << 8);
                 let data_type: GMDataType = num_enum_from(b2).map_err(|e| format!("{e} while parsing Break Instruction"))?;
-                let int_argument: Option<i32> = if data_type == GMDataType::Int32 {
-                    log::debug!("67");
-                    // reader.general_info.set_version_at_least((2023, 8))?;
-                    Some(reader.read_i32()?)
+                if data_type == GMDataType::Int32 {
+                    if let Some(&function) = reader.function_occurrence_map.get(&reader.cur_pos) {
+                        reader.cur_pos += 4;    // skip next occurrence offset
+                        GMInstructionData::ExtendedFunc(GMExtendedInstructionFunction { kind, function })
+                    } else {
+                        let int_argument: i32 = reader.read_i32()?;
+                        GMInstructionData::Extended32(GMExtendedInstruction32 { kind, int_argument })
+                    }
+                } else if data_type == GMDataType::Int16 {
+                    GMInstructionData::Extended16(GMExtendedInstruction16 { kind })
                 } else {
-                    None
-                };
-
-                // other set gms version stuff {~~}
-
-                GMInstructionData::Extended(GMExtendedInstruction { extended_kind, data_type, int_argument })
+                    return Err(format!("Unexpected extended/break data type {data_type:?}"))
+                }
             }
         };
 
@@ -606,14 +610,25 @@ impl GMElement for GMInstruction {
                 write_function_occurrence(builder, instr.function.index, instr_abs_pos, function.name.index)?;
             }
 
-            GMInstructionData::Extended(instr) => {
-                builder.write_i16(instr.extended_kind);
-                builder.write_u8(instr.data_type.into());
+            GMInstructionData::Extended16(instr) => {
+                builder.write_i16(instr.kind);
+                builder.write_u8(GMDataType::Int16.into());
                 builder.write_u8(self.opcode.into());
-                if instr.data_type == GMDataType::Int32 {
-                    let int_argument: i32 = instr.int_argument.ok_or("Int argument not set but Data Type is Int32 while building Break Instruction")?;
-                    builder.write_i32(int_argument);
-                }
+            }
+
+            GMInstructionData::Extended32(instr) => {
+                builder.write_i16(instr.kind);
+                builder.write_u8(GMDataType::Int32.into());
+                builder.write_u8(self.opcode.into());
+                builder.write_i32(instr.int_argument);
+            }
+
+            GMInstructionData::ExtendedFunc(instr) => {
+                builder.write_i16(instr.kind);
+                builder.write_u8(GMDataType::Int32.into());
+                builder.write_u8(self.opcode.into());
+                let function: &GMFunction = instr.function.resolve(&builder.gm_data.functions.functions)?;
+                write_function_occurrence(builder, instr.function.index, instr_abs_pos, function.name.index)?;
             }
         }
 
@@ -858,11 +873,20 @@ pub struct GMCallInstruction {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMExtendedInstruction {
-    pub extended_kind: i16,
-    pub data_type: GMDataType,
-    /// TODO: support function references
-    pub int_argument: Option<i32>,
+pub struct GMExtendedInstruction16 {
+    pub kind: i16,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMExtendedInstruction32 {
+    pub kind: i16,
+    pub int_argument: i32,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMExtendedInstructionFunction {
+    pub kind: i16,
+    pub function: GMRef<GMFunction>,
 }
 
 
