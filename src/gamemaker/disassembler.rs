@@ -63,7 +63,11 @@ pub fn find_blocks(instructions: &[GMInstruction]) -> HashMap<u32, usize> {
 pub fn get_instruction_size(instruction: &GMInstruction) -> u32 {
     // TODO: maybe caching these sizes is faster (store in list)? but needs benchmarks
     match &instruction.kind {
+        GMInstructionData::Empty => 1,
         GMInstructionData::SingleType(_) => 1,
+        GMInstructionData::Duplicate(_) => 1,
+        GMInstructionData::DuplicateSwap(_) => 1,
+        GMInstructionData::CallVariable(_) => 1,
         GMInstructionData::DoubleType(_) => 1,
         GMInstructionData::Comparison(_) => 1,
         GMInstructionData::Goto(_) => 1,
@@ -80,7 +84,7 @@ pub fn get_instruction_size(instruction: &GMInstruction) -> u32 {
             GMCodeValue::Double(_) => 3,
         }
         GMInstructionData::Call(_) => 2,
-        GMInstructionData::Break(instr) => {
+        GMInstructionData::Extended(instr) => {
             if instr.data_type == GMDataType::Int32 { 2 } else { 1 }
         }
     }
@@ -89,24 +93,53 @@ pub fn get_instruction_size(instruction: &GMInstruction) -> u32 {
 
 pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, resolve_goto_target: impl Fn(i32) -> Result<i32, String>) -> Result<String, String> {
     let mut line: String;
+    let opcode: &str = opcode_to_string(instruction.opcode);
 
     match &instruction.kind {
+        GMInstructionData::Empty => {
+            line = opcode.to_string();
+        }
+        
         GMInstructionData::SingleType(instr) => {
             line = format!(
                 "{}.{}",
-                opcode_to_string(instruction.opcode),
+                opcode,
                 data_type_to_string(instr.data_type),
             );
-            if matches!(instruction.opcode, GMOpcode::Duplicate | GMOpcode::CallVariable) {
-                line += &format!(" {}", instr.extra);
-                // {~~} handle special dup instruction with comparison type??
-            }
+        }
+        
+        GMInstructionData::Duplicate(instr) => {
+            line = format!(
+                "{}.{} {}",
+                opcode,
+                data_type_to_string(instr.data_type),
+                instr.size,
+            );
+        }
+
+        GMInstructionData::DuplicateSwap(instr) => {
+            line = format!(
+                "{}.{} {} {}",
+                opcode,
+                data_type_to_string(instr.data_type),
+                instr.size1,
+                instr.size2,
+            );
+        }
+
+        GMInstructionData::CallVariable(instr) => {
+            line = format!(
+                "{}.{} {}",
+                opcode,
+                data_type_to_string(instr.data_type),
+                instr.argument_count,
+            );
         }
 
         GMInstructionData::DoubleType(instr) => {
             line = format!(
                 "{}.{}.{}",
-                opcode_to_string(instruction.opcode),
+                opcode,
                 data_type_to_string(instr.type1),
                 data_type_to_string(instr.type2),
             );
@@ -115,7 +148,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, re
         GMInstructionData::Comparison(instr) => {
             line = format!(
                 "{}.{}.{} {}",
-                opcode_to_string(instruction.opcode),
+                opcode,
                 data_type_to_string(instr.type1),
                 data_type_to_string(instr.type2),
                 comparison_type_to_string(instr.comparison_type),
@@ -123,25 +156,25 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, re
         }
 
         GMInstructionData::Goto(instr) => {
-            if instr.popenv_exit_magic {
+            if let Some(jump_offset) = instr.jump_offset {
                 line = format!(
-                    "{} <drop>",
-                    opcode_to_string(instruction.opcode),
+                    "{} {}",
+                    opcode,
+                    resolve_goto_target(jump_offset)?,
                 );
             } else {
                 line = format!(
-                    "{} {}",
-                    opcode_to_string(instruction.opcode),
-                    resolve_goto_target(instr.jump_offset)?,
+                    "{} <drop>",
+                    opcode,
                 );
             }
         }
 
         GMInstructionData::Pop(instr) => {
-            // {~~} handle special swap instruction
+            // TODO {~~} handle special swap instruction
             line = format!(
                 "{}.{}.{} ",
-                opcode_to_string(instruction.opcode),
+                opcode,
                 data_type_to_string(instr.type1),
                 data_type_to_string(instr.type2),
             );
@@ -164,7 +197,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, re
         GMInstructionData::Push(instr) => {
             line = format!(
                 "{}.{} ",
-                opcode_to_string(instruction.opcode),
+                opcode,
                 data_type_to_string(get_data_type_from_value(&instr.value)),
             );
 
@@ -203,14 +236,14 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, re
         GMInstructionData::Call(instr) => {
             line = format!(
                 "{}.{} {}(argc={})",
-                opcode_to_string(instruction.opcode),
+                opcode,
                 data_type_to_string(instr.data_type),
                 function_to_string(gm_data, instr.function)?,
                 instr.arguments_count,
             );
         }
 
-        GMInstructionData::Break(instr) => {
+        GMInstructionData::Extended(instr) => {
             match break_id_to_string(instr.extended_kind) {
                 Ok(extended_kind) => line = format!(
                     "{}.{}",
@@ -219,7 +252,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, re
                 ),
                 Err(_) => line = format!(
                     "{}.{} {}",
-                    opcode_to_string(instruction.opcode),
+                    opcode,
                     data_type_to_string(instr.data_type),
                     instr.extended_kind,
                 ),
@@ -261,8 +294,8 @@ fn opcode_to_string(opcode: GMOpcode) -> &'static str {
         GMOpcode::Exit => "exit",
         GMOpcode::PopDiscard => "popz",
         GMOpcode::Branch => "jmp",
-        GMOpcode::BranchIf => "bt",
-        GMOpcode::BranchUnless => "bf",
+        GMOpcode::BranchIf => "jt",
+        GMOpcode::BranchUnless => "jf",
         GMOpcode::PushWithContext => "pushenv",
         GMOpcode::PopWithContext => "popenv",
         GMOpcode::Push => "push",
@@ -271,7 +304,7 @@ fn opcode_to_string(opcode: GMOpcode) -> &'static str {
         GMOpcode::PushBuiltin => "pushbltn",
         GMOpcode::PushImmediate => "pushim",
         GMOpcode::Call => "call",
-        GMOpcode::CallVariable => "callv",
+        GMOpcode::CallVariable => "callvar",
         GMOpcode::Extended => "break",
     }
 }
