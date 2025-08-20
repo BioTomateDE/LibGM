@@ -85,9 +85,9 @@ pub fn get_instruction_size(instruction: &GMInstruction) -> u32 {
             GMCodeValue::Double(_) => 3,
         }
         GMInstructionData::Call(_) => 2,
-        GMInstructionData::Extended(instr) => {
-            if instr.data_type == GMDataType::Int32 { 2 } else { 1 }
-        }
+        GMInstructionData::Extended16(_) => 1,
+        GMInstructionData::Extended32(_) => 2,
+        GMInstructionData::ExtendedFunc(_) => 2,
     }
 }
 
@@ -251,26 +251,30 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, re
             );
         }
 
-        GMInstructionData::Extended(instr) => {
-            match break_id_to_string(instr.extended_kind) {
-                Ok(extended_kind) => line = format!(
-                    "{}.{}",
-                    extended_kind,
-                    data_type_to_string(instr.data_type),
-                ),
-                Err(_) => line = format!(
-                    "{}.{} {}",
-                    opcode,
-                    data_type_to_string(instr.data_type),
-                    instr.extended_kind,
-                ),
-            }
+        GMInstructionData::Extended16(instr) => {
+            line = format!(
+                "{}.{}",
+                extended_id_to_string(instr.kind)?,
+                data_type_to_string(GMDataType::Int16),
+            );
+        }
 
-            if let Some(integer) = instr.int_argument {
-                // TODO: support function references
-                line += &format!(" {integer}");
-            }
+        GMInstructionData::Extended32(instr) => {
+            line = format!(
+                "{}.{} {}",
+                extended_id_to_string(instr.kind)?,
+                data_type_to_string(GMDataType::Int32),
+                instr.int_argument
+            );
+        }
 
+        GMInstructionData::ExtendedFunc(instr) => {
+            line = format!(
+                "{}.{} [function]{}",
+                extended_id_to_string(instr.kind)?,
+                data_type_to_string(GMDataType::Int32),
+                function_to_string(gm_data, instr.function)?,
+            );
         }
 
     }
@@ -427,7 +431,7 @@ pub fn format_literal_string(gm_data: &GMData, gm_string_ref: GMRef<String>) -> 
 }
 
 
-fn break_id_to_string(extended_id: i16) -> Result<&'static str, String> {
+fn extended_id_to_string(extended_id: i16) -> Result<&'static str, String> {
     Ok(match extended_id {
         -1 => "chkindex",
         -2 => "pushaf",
