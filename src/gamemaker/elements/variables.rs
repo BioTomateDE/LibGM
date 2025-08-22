@@ -1,7 +1,7 @@
 ﻿use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::gamemaker::deserialize::{DataReader, GMChunk, GMRef};
 use crate::gamemaker::element::{GMChunkElement, GMElement};
-use crate::gamemaker::elements::code::{build_instance_type, parse_instance_type, GMInstanceType};
+use crate::gamemaker::elements::code::{build_instance_type, parse_instance_type, GMInstanceType, GMVariableType};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::utility::vec_with_capacity;
 
@@ -121,11 +121,9 @@ pub struct GMVariableB15Data {
 }
 impl GMElement for GMVariableB15Data {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let instance_type: GMInstanceType = parse_instance_type(reader.read_i32()? as i16)?;
+        let raw_instance_type: i16 = reader.read_i32()? as i16;
+        let instance_type: GMInstanceType = parse_instance_type(raw_instance_type, GMVariableType::Normal)?;
         let variable_id: i32 = reader.read_i32()?;
-        if !matches!(instance_type, GMInstanceType::Local|GMInstanceType::Global|GMInstanceType::Self_(_)) {
-            log::debug!("vari {variable_id} | {instance_type}")
-        }
         Ok(GMVariableB15Data { instance_type, variable_id })
     }
 

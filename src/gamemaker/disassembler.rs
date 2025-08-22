@@ -3,7 +3,7 @@ use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::code::{get_data_type_from_value, GMCodeValue, GMDataType};
 use crate::gamemaker::elements::code::GMComparisonType;
-use crate::gamemaker::elements::code::GMCodeVariable;
+use crate::gamemaker::elements::code::CodeVariable;
 use crate::gamemaker::elements::code::GMCode;
 use crate::gamemaker::elements::code::GMInstanceType;
 use crate::gamemaker::elements::code::GMInstruction;
@@ -11,6 +11,7 @@ use crate::gamemaker::elements::code::GMInstructionData;
 use crate::gamemaker::elements::code::GMOpcode;
 use crate::gamemaker::elements::code::GMVariableType;
 use crate::gamemaker::elements::functions::GMFunction;
+use crate::gamemaker::elements::game_objects::GMGameObject;
 use crate::gamemaker::elements::variables::GMVariable;
 
 pub fn disassemble_code(gm_data: &GMData, code: &GMCode) -> Result<String, String> {
@@ -179,7 +180,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, re
                 data_type_to_string(instr.type2),
             );
 
-            let dest: &GMCodeVariable = &instr.destination;
+            let dest: &CodeVariable = &instr.destination;
             if instr.type1 == GMDataType::Variable && dest.instance_type != GMInstanceType::Undefined {
                 if dest.variable_type == GMVariableType::Instance && !matches!(dest.instance_type, GMInstanceType::RoomInstance(_)) {
                     return Err(format!(
@@ -187,12 +188,14 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, re
                         (because the variable type is Instance), but actually found instance type {}",
                         dest.instance_type,
                     ))
-                }
-                line += &instance_type_to_string(&dest.instance_type)?;
+                }   // ^ probably redundant check
+                line += &instance_type_to_string(gm_data, &dest.instance_type)?;
                 line += ".";
             }
             line += &variable_to_string(gm_data, &instr.destination)?;
         }
+
+        // TODO: (global) verify var and func names (no spaces etc)
 
         GMInstructionData::PopSwap(instr) => {
             line = format!(
@@ -204,13 +207,15 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, re
         }
 
         GMInstructionData::Push(instr) => {
-            let string: String = match &instr.value {
+            let value: String = match &instr.value {
                 GMCodeValue::Variable(code_variable) => {
+                    let prefix: &str = if code_variable.is_int32 {"[variable]"} else {""};
                     let variable_string: String = variable_to_string(gm_data, &code_variable)?;
                     if code_variable.instance_type == GMInstanceType::Undefined {
-                        variable_string
+                        format!("{}{}", prefix, variable_string)
                     } else {
-                        instance_type_to_string(&code_variable.instance_type)? + "." + &variable_string
+                        let inst: String = instance_type_to_string(gm_data, &code_variable.instance_type)?;
+                        format!("{}{}.{}", prefix, inst, variable_string)
                     }
                 }
 
@@ -237,7 +242,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, re
                 "{}.{} {}",
                 opcode,
                 data_type_to_string(get_data_type_from_value(&instr.value)),
-                string,
+                value,
             );
         }
 
@@ -324,36 +329,40 @@ fn opcode_to_string(opcode: GMOpcode) -> &'static str {
 
 fn data_type_to_string(data_type: GMDataType) -> &'static str {
     match data_type {
-        GMDataType::Int16 => "i16",
-        GMDataType::Int32 => "i32",
-        GMDataType::Int64 => "i64",
-        GMDataType::Double => "f64",
-        GMDataType::Float => "f32",
-        GMDataType::Boolean => "bol",
-        GMDataType::String => "str",
-        GMDataType::Variable => "var",
+        GMDataType::Int16 => "e",
+        GMDataType::Int32 => "i",
+        GMDataType::Int64 => "l",
+        GMDataType::Double => "d",
+        GMDataType::Float => "f",
+        GMDataType::Boolean => "b",
+        GMDataType::String => "s",
+        GMDataType::Variable => "v",
     }
 }
 
 
 fn comparison_type_to_string(comparison_type: GMComparisonType) -> &'static str {
     match comparison_type {
-        GMComparisonType::LT => "LT",
-        GMComparisonType::LTE => "LTE",
-        GMComparisonType::EQ => "EQ",
-        GMComparisonType::NEQ => "NEQ",
-        GMComparisonType::GTE => "GTE",
-        GMComparisonType::GT => "GT",
+        GMComparisonType::LessThan => "LT",
+        GMComparisonType::LessOrEqual => "LTE",
+        GMComparisonType::Equal => "EQ",
+        GMComparisonType::NotEqual => "NEQ",
+        GMComparisonType::GreaterOrEqual => "GTE",
+        GMComparisonType::GreaterThan => "GT",
     }
 }
 
 
-fn instance_type_to_string(instance_type: &GMInstanceType) -> Result<String, String> {
+fn instance_type_to_string(gm_data: &GMData, instance_type: &GMInstanceType) -> Result<String, String> {
     Ok(match instance_type {
         GMInstanceType::Undefined => return Err("Did not expect Instance Type Undefined here; please report this error.".to_string()),
-        GMInstanceType::Self_(Some(obj)) => obj.index.to_string(),
+        GMInstanceType::Self_(Some(obj_ref)) => {
+            let obj: &GMGameObject = obj_ref.resolve(&gm_data.game_objects.game_objects)?;
+            let name: &String = obj.name.resolve(&gm_data.strings.strings)?;
+            format!("[object]{name}")
+        }
         GMInstanceType::Self_(None) => "self".to_string(),
-        GMInstanceType::RoomInstance(instance_id) => instance_id.to_string(),
+        GMInstanceType::RoomInstance(instance_id) => format!("[roominst]{instance_id}"),
         GMInstanceType::Other => "other".to_string(),
         GMInstanceType::All => "all".to_string(),
         GMInstanceType::None => "none".to_string(),
@@ -373,33 +382,25 @@ fn variable_type_to_string(variable_type: GMVariableType) -> &'static str {
         GMVariableType::StackTop => "stacktop",
         GMVariableType::Normal => "normal",
         GMVariableType::Instance => "instance",
-        GMVariableType::MultiPush => "arraypopaf",
-        GMVariableType::MultiPushPop => "arraypushaf",
+        GMVariableType::ArrayPushAF => "arraypushaf",
+        GMVariableType::ArrayPopAF => "arraypopaf",
     }
 }
 
 
-fn variable_to_string(gm_data: &GMData, code_variable: &GMCodeVariable) -> Result<String, String> {
+fn variable_to_string(gm_data: &GMData, code_variable: &CodeVariable) -> Result<String, String> {
     // NOTE: in utmt, it just prints null instead of throwing.
     let variable: &GMVariable = code_variable.variable.resolve(&gm_data.variables.variables)?;
     let name: &String = variable.name.resolve(&gm_data.strings.strings)?;
 
-    // Depending on the context, the instance type of this instruction could be unset (e.g. pop instructions).
-    // In that case, try to get the variable's "static" instance type instead (only bytecode 15+).
-    let mut instance_type: &GMInstanceType = &code_variable.instance_type;
-    if matches!(instance_type, GMInstanceType::Undefined) {
-        if let Some(ref b15_data) = variable.b15_data {
-            instance_type = &b15_data.instance_type;
-        }
-    }
-
     let string: String = if code_variable.variable_type == GMVariableType::Normal {
         name.clone()
     } else {
+        let instance_type: &GMInstanceType = variable.b15_data.as_ref().map_or(&GMInstanceType::Undefined, |b15| &b15.instance_type);
         format!(
             "[{}]{}.{}",
             variable_type_to_string(code_variable.variable_type),
-            instance_type_to_string(instance_type)?,
+            instance_type_to_string(gm_data, instance_type)?,
             name,
         )
     };
@@ -421,12 +422,12 @@ pub fn format_literal_string(gm_data: &GMData, gm_string_ref: GMRef<String>) -> 
         .replace("\\", "\\\\")
         .replace("\n", "\\n")
         .replace("\r", "\\r")
+        .replace("\t", "\\t")
         .replace("\"", "\\\"");
     
     Ok(format!(
-        "\"{}\"@{}",
+        "\"{}\"",
         string,
-        gm_string_ref.index,
     ))
 }
 
