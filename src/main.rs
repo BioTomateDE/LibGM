@@ -61,14 +61,14 @@ fn main_open_and_close() -> Result<(), String> {
     let modified_name: String = format!("{original_name} - Modded using AcornGM");
     original_data.general_info.display_name = original_data.make_string(&modified_name);
     
-    // // export code disassembly
-    // for code in &original_data.codes.codes {
-    //     let code_name = code.name.resolve(&original_data.strings.strings)?;
-    //     let assembly = disassemble_code(&original_data, code)?;
-    //     // println!("Disassembly of \"{code_name}\": \n{}", assembly);
-    //     std::fs::write(format!("./gml_asm/{code_name}.txt"), assembly)
-    //         .map_err(|e| format!("Could not write assembly of code \"{code_name}\": {e}"))?;
-    // }
+    // export code disassembly
+    for code in &original_data.codes.codes {
+        let code_name = code.name.resolve(&original_data.strings.strings)?;
+        let assembly = crate::gamemaker::disassembler::disassemble_code(&original_data, code)?;
+        // println!("Disassembly of \"{code_name}\": \n{}", assembly);
+        std::fs::write(format!("./gml_asm/{code_name}.txt"), assembly)
+            .map_err(|e| format!("Could not write assembly of code \"{code_name}\": {e}"))?;
+    }
 
     // // export strings
     // let mut raw = String::new();

@@ -8,3 +8,4 @@ mod printing;
 mod element;
 pub mod disassembler;
 pub mod data;
+mod assembler;

@@ -356,13 +356,13 @@ impl GMElement for GMInstruction {
                     .map_err(|e| format!("{e} for type1 while parsing Pop Type Instruction"))?;
                 let type2: GMDataType = num_enum_from(b2 >> 4).
                     map_err(|e| format!("{e} for type2 while parsing Pop Type Instruction"))?;
-                let instance_type: GMInstanceType = parse_instance_type(b0 as i16 | ((b1 as i16) << 8))?;
+                let raw_instance_type: i16 = b0 as i16 | ((b1 as i16) << 8);
 
                 if type1 == GMDataType::Int16 {
                     // maybe b1 or b0 and b1 combined, idk
                     GMInstructionData::PopSwap(GMPopSwapInstruction { size: b0 })
                 } else {
-                    let destination: GMCodeVariable = read_variable(reader, instance_type)?;
+                    let destination: CodeVariable = read_variable(reader, raw_instance_type)?;
                     GMInstructionData::Pop(GMPopInstruction { type1, type2, destination })
                 }
             }
@@ -373,18 +373,17 @@ impl GMElement for GMInstruction {
             GMOpcode::PushBuiltin |
             GMOpcode::PushImmediate => {
                 let data_type: GMDataType = num_enum_from(b2).map_err(|e| format!("{e} while parsing Push Instruction"))?;
-                let val: i16 = (b0 as i16) | ((b1 as i16) << 8);
+                let raw_instance_type: i16 = (b0 as i16) | ((b1 as i16) << 8);
 
                 let value: GMCodeValue = if data_type == GMDataType::Variable {
-                    let instance_type: GMInstanceType = parse_instance_type(val)?;
-                    let variable: GMCodeVariable = read_variable(reader, instance_type)?;
+                    let variable: CodeVariable = read_variable(reader, raw_instance_type)?;
                     GMCodeValue::Variable(variable)
                 } else {
                     read_code_value(reader, data_type)?
                 };
 
                 GMInstructionData::Push(GMPushInstruction { value })
-            }
+            },
 
             GMOpcode::Call => {
                 let data_type: GMDataType = num_enum_from(b2).map_err(|e| format!("{e} while parsing Call Instruction"))?;
@@ -852,7 +851,7 @@ pub struct GMGotoInstruction {
 pub struct GMPopInstruction {
     pub type1: GMDataType,
     pub type2: GMDataType,
-    pub destination: GMCodeVariable,
+    pub destination: CodeVariable,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -979,10 +978,10 @@ pub enum GMVariableType {
     Instance = 0xE0,
     
     /// GMS2.3+, multidimensional array with pushaf
-    MultiPush = 0x10,
+    ArrayPushAF = 0x10,
     
     /// GMS2.3+, multidimensional array with pushaf or popaf
-    MultiPushPop = 0x90,
+    ArrayPopAF = 0x90,
 }
 
 
@@ -990,31 +989,33 @@ pub enum GMVariableType {
 #[repr(u8)]
 pub enum GMComparisonType {
     /// "Less than" | `<`
-    LT = 1,
+    LessThan = 1,
     
     /// "Less than or equal to" | `<=`
-    LTE = 2,
+    LessOrEqual = 2,
     
     /// "Equal to" | `==`
-    EQ = 3,
+    Equal = 3,
 
     /// "Not equal to" | `!=`
-    NEQ = 4,
+    NotEqual = 4,
 
     /// "Greater than or equal to" | `>=`
-    GTE = 5,
+    GreaterOrEqual = 5,
 
     /// "Greater than" | `>`
-    GT = 6,
+    GreaterThan = 6,
 }
 
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMCodeVariable {
+pub struct CodeVariable {
     pub variable: GMRef<GMVariable>,
     pub variable_type: GMVariableType,
     pub instance_type: GMInstanceType,
+    pub is_int32: bool,
 }
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum GMCodeValue {
@@ -1025,7 +1026,7 @@ pub enum GMCodeValue {
     Float(f32),
     Boolean(bool),
     String(GMRef<String>),
-    Variable(GMCodeVariable),
+    Variable(CodeVariable),
     /// Does not exist in UTMT. Added in order to support inline/anonymous functions.
     Function(GMRef<GMFunction>),
 }
@@ -1036,12 +1037,23 @@ fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMC
         GMDataType::Double => reader.read_f64().map(GMCodeValue::Double),
         GMDataType::Float => reader.read_f32().map(GMCodeValue::Float),
         GMDataType::Int32 => {
-            if let Some(function) = reader.function_occurrence_map.get(&reader.cur_pos) {
+            if let Some(&function) = reader.function_occurrence_map.get(&reader.cur_pos) {
                 reader.cur_pos += 4;    // skip next occurrence offset
                 return Ok(GMCodeValue::Function(function.clone()))
             }
+
+            if let Some(&variable) = reader.variable_occurrence_map.get(&reader.cur_pos) {
+                reader.cur_pos += 4;    // skip next occurrence offset
+                return Ok(GMCodeValue::Variable(CodeVariable {
+                    variable,
+                    variable_type: GMVariableType::Normal,
+                    instance_type: GMInstanceType::Undefined,
+                    is_int32: true,
+                }))
+            }
+
             reader.read_i32().map(GMCodeValue::Int32)
-        },
+        }
         GMDataType::Int64 => reader.read_i64().map(GMCodeValue::Int64),
         GMDataType::Boolean => reader.read_bool32().map(GMCodeValue::Boolean),
         GMDataType::String => reader.read_resource_by_id().map(GMCodeValue::String),
@@ -1057,7 +1069,7 @@ fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMC
 }
 
 
-fn read_variable(reader: &mut DataReader, instance_type: GMInstanceType) -> Result<GMCodeVariable, String> {
+fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<CodeVariable, String> {
     let occurrence_position: usize = reader.cur_pos;
     let raw_value: i32 = reader.read_i32()?;
 
@@ -1065,24 +1077,30 @@ fn read_variable(reader: &mut DataReader, instance_type: GMInstanceType) -> Resu
     let variable_type: GMVariableType = num_enum_from(variable_type as u8)
         .map_err(|e| format!("{e} while parsing variable reference chain"))?;
 
+    let instance_type: GMInstanceType = parse_instance_type(raw_instance_type, variable_type)?;
+
     let variable: GMRef<GMVariable> = reader.variable_occurrence_map.get(&occurrence_position)
         .ok_or_else(|| format!(
             "Could not find {} Variable with occurrence position {} in hashmap with length {} while parsing code value",
             instance_type, occurrence_position, reader.variable_occurrence_map.len(),
         ))?.clone();
 
-    Ok(GMCodeVariable { variable, variable_type, instance_type })
+    Ok(CodeVariable { variable, variable_type, instance_type, is_int32: false })
 }
 
 
-pub fn parse_instance_type(raw_value: i16) -> Result<GMInstanceType, String> {
-    // If > 0; then game object id. If < 0, then variable instance type.
+pub fn parse_instance_type(raw_value: i16, variable_type: GMVariableType) -> Result<GMInstanceType, String> {
+    // If > 0; then game object id (or room instance id). If < 0, then variable instance type.
     if raw_value > 0 {
-        return Ok(GMInstanceType::Self_(Some(GMRef::new(raw_value as u32))))
+        return Ok(if variable_type == GMVariableType::Instance {
+            GMInstanceType::RoomInstance(raw_value)
+        } else {
+            GMInstanceType::Self_(Some(GMRef::new(raw_value as u32)))
+        });
     }
 
     let instance_type: GMInstanceType = match raw_value {
-        0 => GMInstanceType::Undefined,         // this doesn't exist in UTMT anymore but enums in C# can hold any value so idk
+        0 => GMInstanceType::Undefined,
         -1 => GMInstanceType::Self_(None),
         -2 => GMInstanceType::Other,
         -3 => GMInstanceType::All,
@@ -1174,14 +1192,16 @@ fn write_function_occurrence(builder: &mut DataBuilder, gm_index: u32, occurrenc
 
 pub fn get_data_type_from_value(code_value: &GMCodeValue) -> GMDataType {
     match code_value {
-        GMCodeValue::Double(_) => GMDataType::Double,
-        GMCodeValue::Float(_) => GMDataType::Float,
-        GMCodeValue::Int32(_) | GMCodeValue::Function(_) => GMDataType::Int32,
-        GMCodeValue::Int64(_) => GMDataType::Int64,
-        GMCodeValue::Boolean(_) => GMDataType::Boolean,
-        GMCodeValue::Variable(_) => GMDataType::Variable,
-        GMCodeValue::String(_) => GMDataType::String,
         GMCodeValue::Int16(_) => GMDataType::Int16,
+        GMCodeValue::Int32(_) => GMDataType::Int32,
+        GMCodeValue::Function(_) => GMDataType::Int32,  // functions are not a "real" gm type; they're always int32
+        GMCodeValue::Variable(var) if var.is_int32 => GMDataType::Int32,    // idk when this happens
+        GMCodeValue::Int64(_) => GMDataType::Int64,
+        GMCodeValue::Float(_) => GMDataType::Float,
+        GMCodeValue::Double(_) => GMDataType::Double,
+        GMCodeValue::Boolean(_) => GMDataType::Boolean,
+        GMCodeValue::String(_) => GMDataType::String,
+        GMCodeValue::Variable(_) => GMDataType::Variable,
     }
 }
 
