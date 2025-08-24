@@ -73,7 +73,7 @@ fn main_open_and_close() -> Result<(), String> {
     // test (dis)assembler
     let mut assemblies = Vec::with_capacity(original_data.codes.codes.len());
 
-    for code in &original_data.codes.codes {
+    for (i, code) in original_data.codes.codes.iter().enumerate() {
         if code.bytecode15_info.as_ref().map_or(false, |b15| b15.parent.is_some()) {
             continue    // code is child entry; FUCK THAT CHILD
         }
@@ -89,15 +89,19 @@ fn main_open_and_close() -> Result<(), String> {
         // println!("{code_name}");
         let locals = locals.ok_or("Couldn't find locals")?;
         let assembly = gamemaker::disassembler::disassemble_code(&original_data, code)?;
-        assemblies.push((code_name.clone(), locals.clone(), assembly));
+        assemblies.push((i, code_name.clone(), locals.clone(), assembly));
     }
 
     // println!("\n=============================\n");
-    for (i, (name, locals, assembly)) in assemblies.into_iter().enumerate() {
+    for (i, name, locals, assembly) in assemblies {
         println!("{i:<4} {name}");
         let reconstructed = gamemaker::assembler::assemble_code(&assembly, &mut original_data, &locals).map_err(|e| e.to_string())?;
         if original_data.codes.codes[i].instructions != reconstructed {
-            return Err(format!("Reconstructed instructions don't match original for {name}"))
+            return Err(format!(
+                "Reconstructed instructions don't match original for {name}:\n##{}##\n\n\n\n\n##{}##",
+                original_data.codes.codes[i].instructions.iter().map(|i| format!("{i:?}")).collect::<Vec<_>>().join("\n"),
+                reconstructed.iter().map(|i| format!("{i:?}")).collect::<Vec<_>>().join("\n"),
+            ))
         }
     }
 
