@@ -56,18 +56,49 @@ fn main_open_and_close() -> Result<(), String> {
         .map_err(|e| format!("\n{e}\n↳ while parsing data file"))?;
     drop(original_data_raw);
     
-    // sample changes
-    let original_name: &str = original_data.general_info.display_name.resolve(&original_data.strings.strings)?;
-    let modified_name: String = format!("{original_name} - Modded using AcornGM");
-    original_data.general_info.display_name = original_data.make_string(&modified_name);
+    // // sample changes
+    // let original_name: &str = original_data.general_info.display_name.resolve(&original_data.strings.strings)?;
+    // let modified_name: String = format!("{original_name} - Modded using AcornGM");
+    // original_data.general_info.display_name = original_data.make_string(&modified_name);
     
-    // export code disassembly
+    // // export code disassembly
+    // for code in &original_data.codes.codes {
+    //     let code_name = code.name.resolve(&original_data.strings.strings)?;
+    //     let assembly = crate::gamemaker::disassembler::disassemble_code(&original_data, code)?;
+    //     // println!("Disassembly of \"{code_name}\": \n{}", assembly);
+    //     std::fs::write(format!("./gml_asm/{code_name}.txt"), assembly)
+    //         .map_err(|e| format!("Could not write assembly of code \"{code_name}\": {e}"))?;
+    // }
+    
+    // test (dis)assembler
+    let mut assemblies = Vec::with_capacity(original_data.codes.codes.len());
+
     for code in &original_data.codes.codes {
+        if code.bytecode15_info.as_ref().map_or(false, |b15| b15.parent.is_some()) {
+            continue    // code is child entry; FUCK THAT CHILD
+        }
         let code_name = code.name.resolve(&original_data.strings.strings)?;
-        let assembly = crate::gamemaker::disassembler::disassemble_code(&original_data, code)?;
-        // println!("Disassembly of \"{code_name}\": \n{}", assembly);
-        std::fs::write(format!("./gml_asm/{code_name}.txt"), assembly)
-            .map_err(|e| format!("Could not write assembly of code \"{code_name}\": {e}"))?;
+        let mut locals = None;
+        for code_local in &original_data.functions.code_locals.code_locals {
+            let code_local_name = code_local.name.resolve(&original_data.strings.strings)?;
+            if *code_local_name == *code_name {
+                locals = Some(code_local);
+                break
+            }
+        }
+        // println!("{code_name}");
+        let locals = locals.ok_or("Couldn't find locals")?;
+        let assembly = gamemaker::disassembler::disassemble_code(&original_data, code)?;
+        assemblies.push((code_name.clone(), locals.clone(), assembly));
+    }
+
+    // println!("\n=============================\n");
+    for (i, (name, locals, assembly)) in assemblies.into_iter().enumerate() {
+        println!("{i:<4} {name}");
+        let reconstructed = gamemaker::assembler::assemble_code(&assembly, &mut original_data, &locals).map_err(|e| e.to_string())?;
+        if original_data.codes.codes[i].instructions != reconstructed {
+            return Err(format!("Reconstructed instructions don't match original for {name}"))
+        }
     }
 
     // // export strings
@@ -84,6 +115,7 @@ fn main_open_and_close() -> Result<(), String> {
     log::info!("Building data file");
     let modified_data_raw: Vec<u8> = build_data_file(&original_data)
         .map_err(|e| format!("\n{e}\n↳ while building data file"))?;
+    drop(original_data);
 
     log::info!("Writing data file \"{}\"", modified_data_file_path.display());
     write_data_file(modified_data_raw, modified_data_file_path)
