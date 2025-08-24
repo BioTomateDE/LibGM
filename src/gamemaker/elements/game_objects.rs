@@ -4,6 +4,7 @@ use num_enum::{TryFromPrimitive, IntoPrimitive};
 use serde::{Deserialize, Serialize};
 use crate::gamemaker::elements::code::GMCode;
 use crate::gamemaker::elements::sprites::GMSprite;
+use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::utility::num_enum_from;
@@ -165,6 +166,18 @@ impl GMElement for GMGameObjects {
             builder.write_pointer_list(&game_object.events)?;
         }
         Ok(())
+    }
+}
+
+impl GMGameObjects {
+    pub fn get_object_ref_by_name(&self, name: &str, gm_strings: &GMStrings) -> Result<GMRef<GMGameObject>, String> {
+        for (i, game_object) in self.game_objects.iter().enumerate() {
+            let object_name: &String = game_object.name.resolve(&gm_strings.strings)?;
+            if object_name == name {
+                return Ok(GMRef::new(i as u32))
+            }
+        }
+        Err(format!("Could not resolve game object with name \"{name}\""))
     }
 }
 

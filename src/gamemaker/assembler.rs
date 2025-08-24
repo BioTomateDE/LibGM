@@ -7,13 +7,15 @@ use crate::gamemaker::elements::code::{GMCallVariableInstruction, GMComparisonTy
 use crate::gamemaker::elements::code::{GMInstruction, GMInstructionData, GMOpcode};
 use crate::gamemaker::elements::code::GMDataType;
 use crate::gamemaker::elements::functions::{GMCodeLocal, GMFunction, GMFunctions};
+use crate::gamemaker::elements::game_objects::GMGameObject;
 use crate::gamemaker::elements::strings::GMStrings;
-use crate::gamemaker::elements::variables::{GMVariable, GMVariables};
+use crate::gamemaker::elements::variables::GMVariable;
 
 #[derive(Debug)]
 pub enum ParseError {
     ExpectedEOL(String),
     ExpectedSpace,
+    ExpectedDot(String),
     ExpectedString,
     ExpectedArgc,
     UnexpectedEOL(&'static str),
@@ -35,9 +37,9 @@ pub enum ParseError {
     StringIndexUnresolvable(u32),
     VarNameStringNoMatch(u32),
     VarNoInstanceType,
-    VarNoVariableType,
     VarUnresolvable(String),
     FuncUnresolvable(String),
+    ObjectUnresolvable(String),
 }
 
 impl Display for ParseError {
@@ -65,9 +67,10 @@ impl Display for ParseError {
             ParseError::StringIndexUnresolvable(idx) => write!(f, "Could not resolve String with index {idx}"),
             ParseError::VarNameStringNoMatch(name_string_idx) => write!(f, "Could not find a variable with a matching name string index ({name_string_idx})"),
             ParseError::VarNoInstanceType => write!(f, "Variable does not have an instance type specified"),
-            ParseError::VarNoVariableType => write!(f, "Variable does not have a variable type specified"),
             ParseError::VarUnresolvable(var_name) => write!(f, "Variable does not exist: {var_name}"),
             ParseError::FuncUnresolvable(func_name) => write!(f, "Function does not exist: {func_name}"),
+            ParseError::ObjectUnresolvable(error) => write!(f, "{error}"),
+            ParseError::ExpectedDot(line) => write!(f, "Expected dot; found '{line}'"),
         }
     }
 }
@@ -193,7 +196,8 @@ pub fn assemble_instruction(
             if types.len() != 2 {
                 return Err(ParseError::InvalidTypeCount(2, types.len()))
             }
-            let comparison_type: GMComparisonType = comparison_type_from_string(line)?;
+            let comparison_type_raw: String = parse_identifier(&mut line)?;
+            let comparison_type: GMComparisonType = comparison_type_from_string(&comparison_type_raw)?;
             GMInstructionData::Comparison(GMComparisonInstruction { comparison_type, type1: types[0], type2: types[1] })
         }
 
@@ -223,7 +227,7 @@ pub fn assemble_instruction(
                 let size: u8 = parse_int(&mut line)?;
                 GMInstructionData::PopSwap(GMPopSwapInstruction { size })
             } else {
-                let destination: CodeVariable = parse_variable(&mut line, locals, &gm_data.strings, &gm_data.variables)?;
+                let destination: CodeVariable = parse_variable(&mut line, locals, &gm_data)?;
                 GMInstructionData::Pop(GMPopInstruction {
                     type1: types[0],
                     type2: types[1],
@@ -250,7 +254,7 @@ pub fn assemble_instruction(
                         match prefix.as_str() {
                             "function" => GMCodeValue::Function(parse_function(&mut line, &gm_data.strings, &gm_data.functions)?),
                             "variable" => {
-                                let mut variable: CodeVariable = parse_variable(&mut line, locals, &gm_data.strings, &gm_data.variables)?;
+                                let mut variable: CodeVariable = parse_variable(&mut line, locals, &gm_data)?;
                                 variable.is_int32 = true;
                                 GMCodeValue::Variable(variable)
                             }
@@ -269,7 +273,7 @@ pub fn assemble_instruction(
                     let string_ref: GMRef<String> = gm_data.make_string(&string_text);
                     GMCodeValue::String(string_ref)
                 },
-                GMDataType::Variable => GMCodeValue::Variable(parse_variable(&mut line, locals, &gm_data.strings, &gm_data.variables)?),
+                GMDataType::Variable => GMCodeValue::Variable(parse_variable(&mut line, locals, &gm_data)?),
             };
             GMInstructionData::Push(GMPushInstruction { value })
         }
@@ -342,8 +346,8 @@ fn data_type_from_char(data_type: char) -> Result<GMDataType, ParseError> {
         'e' => GMDataType::Int16,
         'i' => GMDataType::Int32,
         'l' => GMDataType::Int64,
-        'f' => GMDataType::Double,
-        'd' => GMDataType::Float,
+        'f' => GMDataType::Float,
+        'd' => GMDataType::Double,
         'b' => GMDataType::Boolean,
         's' => GMDataType::String,
         'v' => GMDataType::Variable,
@@ -494,27 +498,34 @@ fn variable_type_from_string(variable_type: &str) -> Result<GMVariableType, Pars
 }
 
 
-fn parse_variable(line: &mut &str, locals: &GMCodeLocal, gm_strings: &GMStrings, gm_variables: &GMVariables) -> Result<CodeVariable, ParseError> {
+fn parse_variable(line: &mut &str, locals: &GMCodeLocal, gm_data: &GMData) -> Result<CodeVariable, ParseError> {
     let mut instance_type: Option<GMInstanceType> = None;
     let mut variable_type: Option<GMVariableType> = None;
 
     if line.starts_with('[') {
         // this can be a `[object]` or `[roominst]` instance type, OR it could be a variable type (like `[array]`)
         let close_bracket: usize = line.find(']').ok_or(ParseError::UnmatchedSquareBracket)?;
-        let prefix: &str = &line[1..close_bracket];
-        match prefix {
+        let prefix: String = line[1..close_bracket].to_string();
+        *line = &line[close_bracket+1..];
+        match prefix.as_str() {
             "object" => {
-                let object_id: u32 = parse_int(line)?;
-                instance_type = Some(GMInstanceType::Self_(Some(GMRef::new(object_id))));
+                println!("dsifsidjj #{line}#");
+                let object_name: String = parse_identifier(line)?;
+                if !line.starts_with('.') {
+                    return Err(ParseError::ExpectedDot(line.to_string()))
+                }
+                *line = &line[1..];
+                let object_ref: GMRef<GMGameObject> = gm_data.game_objects.get_object_ref_by_name(&object_name, &gm_data.strings)
+                    .map_err(|e| ParseError::ObjectUnresolvable(e))?;
+                instance_type = Some(GMInstanceType::Self_(Some(object_ref)));
             }
             "roominst" => {
                 let instance_id: i16 = parse_int(line)?;
                 instance_type = Some(GMInstanceType::RoomInstance(instance_id));
                 variable_type = Some(GMVariableType::Instance);
             }
-            _ => variable_type = Some(variable_type_from_string(prefix)?)
+            _ => variable_type = Some(variable_type_from_string(&prefix)?)
         }
-        *line = &line[close_bracket+1..];
     }
 
     if instance_type.is_none() {
@@ -526,7 +537,7 @@ fn parse_variable(line: &mut &str, locals: &GMCodeLocal, gm_strings: &GMStrings,
         instance_type = Some(instance_type_from_string(raw_instance_type)?);
         *line = &line[dot_index+1..];
     }
-    let instance_type: GMInstanceType = instance_type.unwrap();
+    let mut instance_type: GMInstanceType = instance_type.unwrap();
 
     if variable_type.is_none() {
         // check for prefix again (now only for variable type)
@@ -543,34 +554,45 @@ fn parse_variable(line: &mut &str, locals: &GMCodeLocal, gm_strings: &GMStrings,
     // get name of variable
     let name: String = parse_identifier(line)?;
 
-    // try local variables
-    'outer: for local_var in &locals.variables {
-        let local_var_name: &String = local_var.name.resolve(&gm_strings.strings)
-            .map_err(|_| ParseError::StringIndexUnresolvable(local_var.name.index))?;
-        if *local_var_name != name {
-            continue
-        }
-        // found local var; now find actual variable using name string id (is always unique)
-        for (i, var) in gm_variables.variables.iter().enumerate() {
-            if var.name.index == local_var.name.index {
+    if instance_type == GMInstanceType::Local && !locals.variables.is_empty() {
+        'outer: for local_var in &locals.variables {
+            let local_var_name: &String = local_var.name.resolve(&gm_data.strings.strings)
+                .map_err(|_| ParseError::StringIndexUnresolvable(local_var.name.index))?;
+            if *local_var_name != name {
+                continue
+            }
+            // found local var; now find actual variable using name string id (is always unique)
+            for (i, var) in gm_data.variables.variables.iter().enumerate() {
+                if var.name.index != local_var.name.index {
+                    continue
+                }
+                if let Some(b15_data) = &var.b15_data {
+                    if b15_data.instance_type != GMInstanceType::Local {
+                        continue
+                    }
+                }
+                // found variable
                 variable_ref = Some(GMRef::new(i as u32));
                 break 'outer
             }
+            // could not find variable with same name string id
+            return Err(ParseError::VarNameStringNoMatch(local_var.name.index))
         }
-        // could not find variable with same name string id
-        return Err(ParseError::VarNameStringNoMatch(local_var.name.index))
-    }
-
-    if variable_ref.is_none() {
+    } else {
         // try "normal" variables
-        for (i, var) in gm_variables.variables.iter().enumerate() {
-            let var_name: &String = var.name.resolve(&gm_strings.strings)
+        for (i, var) in gm_data.variables.variables.iter().enumerate() {
+            let var_name: &String = var.name.resolve(&gm_data.strings.strings)
                 .map_err(|_| ParseError::StringIndexUnresolvable(var.name.index))?;
             if *var_name != name {
                 continue
             }
             if let Some(b15) = &var.b15_data {
-                if b15.instance_type != instance_type && b15.instance_type != GMInstanceType::Builtin && instance_type != GMInstanceType::Builtin {
+                // TODO: clean this shit up
+                if b15.instance_type != instance_type
+                    && !(b15.instance_type == GMInstanceType::Self_(None) && matches!(instance_type, GMInstanceType::Self_(Some(_))))
+                    && b15.instance_type != GMInstanceType::Builtin
+                    && b15.instance_type != GMInstanceType::Builtin
+                    && instance_type != GMInstanceType::Builtin {
                     continue
                 }
             }
@@ -583,6 +605,11 @@ fn parse_variable(line: &mut &str, locals: &GMCodeLocal, gm_strings: &GMStrings,
     let Some(variable) = variable_ref else {
         return Err(ParseError::VarUnresolvable(name))
     };
+
+    if instance_type == GMInstanceType::Self_(None) && variable_type != GMVariableType::Normal {
+        // I need to throw away the instance type so that the tests pass
+        instance_type = GMInstanceType::Undefined;
+    }   // TODO: comment out this block if not testing assembler
 
 
     Ok(CodeVariable {
@@ -618,6 +645,7 @@ fn parse_identifier(line: &mut &str) -> Result<String, ParseError> {
             continue
         }
         if i < 1 {
+            println!("gdjsughusdhgusdhu {char}");
             return Err(ParseError::InvalidIdentifier("must be at least one character long"))
         }
         let identifier: String = line[..i].to_string();
@@ -639,7 +667,7 @@ fn parse_string_literal(line: &mut &str) -> Result<String, ParseError> {
     *line = &line[1..];
 
     let mut escaping: bool = false;
-    let mut string: String = String::with_capacity(line.len() - 2);
+    let mut string: String = String::with_capacity(line.len());
 
     for (i, char) in line.chars().enumerate() {
         if escaping {

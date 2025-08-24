@@ -2,6 +2,7 @@
 use crate::gamemaker::deserialize::{DataReader, GMChunk, GMRef};
 use crate::gamemaker::element::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::code::{build_instance_type, parse_instance_type, GMInstanceType, GMVariableType};
+use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::serialize::DataBuilder;
 use crate::utility::vec_with_capacity;
 
@@ -107,6 +108,19 @@ impl GMElement for GMVariables {
         Ok(())
     }
 }
+
+impl GMVariables {
+    pub fn get_variable_ref_by_name(&self, name: &str, gm_strings: &GMStrings) -> Result<GMRef<GMVariable>, String> {
+        for (i, variable) in self.variables.iter().enumerate() {
+            let variable_name: &String = variable.name.resolve(&gm_strings.strings)?;
+            if variable_name == name {
+                return Ok(GMRef::new(i as u32))
+            }
+        }
+        Err(format!("Could not resolve variable with name \"{name}\""))
+    }
+}
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMVariable {
