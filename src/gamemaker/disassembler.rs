@@ -15,30 +15,11 @@ use crate::gamemaker::elements::game_objects::GMGameObject;
 use crate::gamemaker::elements::variables::GMVariable;
 
 pub fn disassemble_code(gm_data: &GMData, code: &GMCode) -> Result<String, String> {
-    let instructions: &[GMInstruction] = &code.instructions;
-    let blocks: HashMap<u32, usize> = find_blocks(instructions);
-    let mut current_address: u32 = 0;
-    let mut current_index: usize = 0;
     let mut assembly: String = String::new();
 
-    for instruction in instructions {
-        let line: String = disassemble_instruction(
-            gm_data,
-            instruction,
-            |jump_offset| {
-                let target_address: u32 = (current_address as i32 + jump_offset) as u32;
-                let target_index: usize = *blocks.get(&target_address)
-                    .ok_or_else(|| format!(
-                        "Could not resolve branch target instruction with jump offset {} for \"{:?}\" instruction with code address {}",
-                        jump_offset, instruction.opcode, target_address,
-                    ))?;
-                let target_index_rel: i32 = target_index as i32 - current_index as i32;
-                Ok(target_index_rel)
-            }
-        )?;
+    for instruction in &code.instructions {
+        let line: String = disassemble_instruction(gm_data, instruction)?;
         assembly += &(line + "\n");
-        current_address += get_instruction_size(instruction);
-        current_index += 1;
     }
 
     Ok(assembly)
@@ -93,7 +74,7 @@ pub fn get_instruction_size(instruction: &GMInstruction) -> u32 {
 }
 
 
-pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, resolve_goto_target: impl Fn(i32) -> Result<i32, String>) -> Result<String, String> {
+pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) -> Result<String, String> {
     let mut line: String;
     let opcode: &str = opcode_to_string(instruction.opcode);
 
@@ -162,7 +143,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction, re
                 line = format!(
                     "{} {}",
                     opcode,
-                    resolve_goto_target(jump_offset)?,
+                    jump_offset,
                 );
             } else {
                 line = format!(
@@ -370,7 +351,7 @@ fn instance_type_to_string(gm_data: &GMData, instance_type: &GMInstanceType) -> 
         GMInstanceType::Builtin => "builtin".to_string(),
         GMInstanceType::Local => "local".to_string(),
         GMInstanceType::StackTop => "stacktop".to_string(),
-        GMInstanceType::Argument => "argument".to_string(),
+        GMInstanceType::Argument => "arg".to_string(),
         GMInstanceType::Static => "static".to_string(),
     })
 }
@@ -392,6 +373,9 @@ fn variable_to_string(gm_data: &GMData, code_variable: &CodeVariable) -> Result<
     // NOTE: in utmt, it just prints null instead of throwing.
     let variable: &GMVariable = code_variable.variable.resolve(&gm_data.variables.variables)?;
     let name: &String = variable.name.resolve(&gm_data.strings.strings)?;
+    if !is_valid_identifier(name) {
+        return Err(format!("Invalid variable identifier: {}", format_literal_string(gm_data, variable.name)?))
+    }
 
     let string: String = if code_variable.variable_type == GMVariableType::Normal {
         name.clone()
@@ -413,6 +397,9 @@ fn function_to_string(gm_data: &GMData, function_ref: GMRef<GMFunction>) -> Resu
     // NOTE: in utmt, it just prints null instead of throwing.
     let function: &GMFunction = function_ref.resolve(&gm_data.functions.functions)?;
     let name: &String = function.name.resolve(&gm_data.strings.strings)?;
+    if !is_valid_identifier(name) {
+        return Err(format!("Invalid function identifier: {}", format_literal_string(gm_data, function.name)?))
+    }
     Ok(name)
 }
 
@@ -447,5 +434,26 @@ fn extended_id_to_string(extended_id: i16) -> Result<&'static str, String> {
         -11 => "pushref",
         _ => return Err(format!("Unknown Break ID {extended_id}"))
     })
+}
+
+
+/// Check whether an identifier (function/variable name) is valid for assembling properly.
+/// I wanted follow official GameMaker rules
+/// (https://manual.gamemaker.io/monthly/en/GameMaker_Language/GML_Overview/Variables_And_Variable_Scope.htm#:~:text=Naming%20Rules),
+/// but since these rules do not include exceptions like `$$$$temp$$$$` or `@@This@@`
+/// and generated function names ignore the 64-character limit, I don't cling onto them.
+fn is_valid_identifier(s: &str) -> bool {
+    const SPECIALS: [char; 3] = ['_', '$', '@'];
+
+    if s.is_empty() {
+        return false
+    }
+
+    let first_char = s.chars().next().unwrap();
+    if !first_char.is_ascii_alphabetic() && !SPECIALS.contains(&first_char) {
+        return false
+    }
+
+    s.chars().all(|c| c.is_ascii_alphanumeric() || SPECIALS.contains(&c))
 }
 
