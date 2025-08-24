@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
@@ -39,9 +40,59 @@ pub enum ParseError {
     FuncUnresolvable(String),
 }
 
+impl Display for ParseError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseError::ExpectedEOL(line) => write!(f, "Expected end of line; found remaining string: {line}"),
+            ParseError::ExpectedSpace => write!(f, "Expected space"),
+            ParseError::ExpectedString => write!(f, "Expected string"),
+            ParseError::ExpectedArgc => write!(f, "Expected argument count of called function"),
+            ParseError::UnexpectedEOL(context) => write!(f, "Unexpected end of line while assembling {context}"),
+            ParseError::InvalidTypeCount(expected, actual) => write!(f, "Expected {expected} data types; found {actual}"),
+            ParseError::InvalidDataType(char) => write!(f, "Invalid data type character '{char}'"),
+            ParseError::InvalidComparisonType(cmp_type) => write!(f, "Invalid comparison type: {cmp_type}"),
+            ParseError::InvalidInstanceType(inst_type) => write!(f, "Invalid instance type: {inst_type}"),
+            ParseError::InvalidMnemonic(mnemonic) => write!(f, "Invalid opcode mnemonic: {mnemonic}"),
+            ParseError::InvalidExtendedMnemonic(mnemonic) => write!(f, "Invalid extended/break mnemonic: {mnemonic}"),
+            ParseError::InvalidPrefix(prefix) => write!(f, "Invalid square bracket prefix: {prefix}"),
+            ParseError::IntegerOutOfBounds(int_str) => write!(f, "Integer out of bounds: {int_str}"),
+            ParseError::InvalidFloat(float_str) => write!(f, "Invalid floating point number: {float_str}"),
+            ParseError::InvalidBoolean(bool_str) => write!(f, "Invalid boolean: {bool_str}"),
+            ParseError::InvalidIdentifier(reason) => write!(f, "Identifier (variable/function name) {reason}"),
+            ParseError::InvalidEscapeCharacter(char) => write!(f, "Invalid escape character '{char}'"),
+            ParseError::UnmatchedSquareBracket => write!(f, "Square bracket was never closed"),
+            ParseError::UnmatchedRoundBracket => write!(f, "Round bracket was never closed"),
+            ParseError::StringIndexUnresolvable(idx) => write!(f, "Could not resolve String with index {idx}"),
+            ParseError::VarNameStringNoMatch(name_string_idx) => write!(f, "Could not find a variable with a matching name string index ({name_string_idx})"),
+            ParseError::VarNoInstanceType => write!(f, "Variable does not have an instance type specified"),
+            ParseError::VarNoVariableType => write!(f, "Variable does not have a variable type specified"),
+            ParseError::VarUnresolvable(var_name) => write!(f, "Variable does not exist: {var_name}"),
+            ParseError::FuncUnresolvable(func_name) => write!(f, "Function does not exist: {func_name}"),
+        }
+    }
+}
+
+
+pub fn assemble_code(assembly: &str, gm_data: &mut GMData, locals: &GMCodeLocal) -> Result<Vec<GMInstruction>, String> {
+    let mut instructions: Vec<GMInstruction> = Vec::new();
+
+    for line in assembly.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue
+        }
+
+        let instruction: GMInstruction = assemble_instruction(line, gm_data, locals)
+            .map_err(|e| format!("{e}\n↳ while assembling instruction: {line}"))?;
+        instructions.push(instruction);
+    }
+
+    Ok(instructions)
+}
+
+
 pub fn assemble_instruction(
     line: &str,
-    resolve_goto_target: impl Fn(i32) -> Result<i32, ParseError>,
     gm_data: &mut GMData,
     locals: &GMCodeLocal,
 ) -> Result<GMInstruction, ParseError> {
@@ -82,6 +133,7 @@ pub fn assemble_instruction(
 
     let instruction_data: GMInstructionData = match opcode {
         GMOpcode::Exit => {
+            line = &line[4..];
             GMInstructionData::Empty
         }
 
@@ -157,8 +209,7 @@ pub fn assemble_instruction(
                 line = "";      // need to consume; otherwise error
                 None
             } else {
-                let offset_count: i32 = parse_int(&mut line)?;
-                Some(resolve_goto_target(offset_count)?)
+                Some(parse_int(&mut line)?)
             };
             GMInstructionData::Goto(GMGotoInstruction { jump_offset })
         }
@@ -194,7 +245,7 @@ pub fn assemble_instruction(
                 GMDataType::Int32 => {
                     if line.starts_with('[') {
                         let close_bracket: usize = line.find(']').ok_or(ParseError::UnmatchedSquareBracket)?;
-                        let prefix: String = line[..close_bracket].to_string();
+                        let prefix: String = line[1..close_bracket].to_string();
                         line = &line[close_bracket+1..];
                         match prefix.as_str() {
                             "function" => GMCodeValue::Function(parse_function(&mut line, &gm_data.strings, &gm_data.functions)?),
@@ -237,6 +288,7 @@ pub fn assemble_instruction(
             if !line.starts_with(')') {
                 return Err(ParseError::UnmatchedRoundBracket)
             }
+            line = &line[1..];
             GMInstructionData::Call(GMCallInstruction{
                 arguments_count,
                 data_type: types[0],
@@ -372,7 +424,7 @@ fn parse_int<T: FromStr>(line: &mut &str) -> Result<T, ParseError> {
     if slice.len() == 0 {
         return Err(ParseError::UnexpectedEOL("integer"))
     }
-    let integer: T = line.parse().map_err(|_| ParseError::IntegerOutOfBounds(slice.to_string()))?;
+    let integer: T = slice.parse().map_err(|_| ParseError::IntegerOutOfBounds(slice.to_string()))?;
     *line = &line[end..];
     Ok(integer)
 }
@@ -422,7 +474,7 @@ fn instance_type_from_string(instance_type: &str) -> Result<GMInstanceType, Pars
         "builtin" => GMInstanceType::Builtin,
         "local" => GMInstanceType::Local,
         "stacktop" => GMInstanceType::StackTop,
-        "argument" => GMInstanceType::Argument,
+        "arg" => GMInstanceType::Argument,
         "static" => GMInstanceType::Static,
         _ => return Err(ParseError::InvalidInstanceType(instance_type.to_string()))
     })
@@ -467,12 +519,14 @@ fn parse_variable(line: &mut &str, locals: &GMCodeLocal, gm_strings: &GMStrings,
 
     if instance_type.is_none() {
         // try to find first dot (for instance type; not always set)
-        if let Some(dot_index) = find_dot(line) {
-            let raw_instance_type: &str = &line[..dot_index];
-            instance_type = Some(instance_type_from_string(raw_instance_type)?);
-            *line = &line[dot_index..];
-        }
+        let Some(dot_index) = line.find('.') else {
+            return Err(ParseError::VarNoInstanceType)
+        };
+        let raw_instance_type: &str = &line[..dot_index];
+        instance_type = Some(instance_type_from_string(raw_instance_type)?);
+        *line = &line[dot_index+1..];
     }
+    let instance_type: GMInstanceType = instance_type.unwrap();
 
     if variable_type.is_none() {
         // check for prefix again (now only for variable type)
@@ -483,13 +537,7 @@ fn parse_variable(line: &mut &str, locals: &GMCodeLocal, gm_strings: &GMStrings,
             *line = &line[close_bracket+1..];
         }
     }
-
-    let Some(instance_type) = instance_type else {
-        return Err(ParseError::VarNoInstanceType)
-    };
-    let Some(variable_type) = variable_type else {
-        return Err(ParseError::VarNoVariableType)
-    };
+    let variable_type: GMVariableType = variable_type.unwrap_or(GMVariableType::Normal);
 
     let mut variable_ref: Option<GMRef<GMVariable>> = None;
     // get name of variable
@@ -522,7 +570,7 @@ fn parse_variable(line: &mut &str, locals: &GMCodeLocal, gm_strings: &GMStrings,
                 continue
             }
             if let Some(b15) = &var.b15_data {
-                if b15.instance_type != instance_type {
+                if b15.instance_type != instance_type && b15.instance_type != GMInstanceType::Builtin && instance_type != GMInstanceType::Builtin {
                     continue
                 }
             }
@@ -561,33 +609,26 @@ fn parse_function(line: &mut &str, gm_strings: &GMStrings, gm_functions: &GMFunc
 }
 
 
-fn find_dot(line: &str) -> Option<usize> {
-    for (i, char) in line.chars().enumerate() {
-        if !matches!(char, 'a'..'z' | 'A'..'Z') && !(matches!(char, '0'..'9') && i > 0) {
-            // no longer valid function/variable name; couldn't find dot
-            return None
-        }
-        if char == '.' {
-            return Some(i)
-        }
-    }
-    None    // no dot in entire string
-}
-
-
 fn parse_identifier(line: &mut &str) -> Result<String, ParseError> {
     for (i, char) in line.chars().enumerate() {
-        if matches!(char, '0'..'9') && i < 1 {
+        if matches!(char, '0'..='9') && i < 1 {
             return Err(ParseError::InvalidIdentifier("must not start with a digit"))
         }
-        if matches!(char, '0'..'9' | 'A'..'Z' | 'a'..'z') {
+        if matches!(char, '0'..='9' | 'A'..='Z' | 'a'..='z' | '_' | '@' | '$') {
             continue
         }
+        if i < 1 {
+            return Err(ParseError::InvalidIdentifier("must be at least one character long"))
+        }
         let identifier: String = line[..i].to_string();
-        *line = &line[..i];
+        *line = &line[i..];
         return Ok(identifier)
     }
-    Err(ParseError::UnexpectedEOL("identifier"))
+
+    // identifier goes to end of line
+    let identifier: String = line.to_string();
+    *line = "";   // consume line
+    Ok(identifier)
 }
 
 
