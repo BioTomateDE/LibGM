@@ -509,7 +509,6 @@ fn parse_variable(line: &mut &str, locals: &GMCodeLocal, gm_data: &GMData) -> Re
         *line = &line[close_bracket+1..];
         match prefix.as_str() {
             "object" => {
-                println!("dsifsidjj #{line}#");
                 let object_name: String = parse_identifier(line)?;
                 if !line.starts_with('.') {
                     return Err(ParseError::ExpectedDot(line.to_string()))
@@ -554,29 +553,26 @@ fn parse_variable(line: &mut &str, locals: &GMCodeLocal, gm_data: &GMData) -> Re
     // get name of variable
     let name: String = parse_identifier(line)?;
 
-    if instance_type == GMInstanceType::Local && !locals.variables.is_empty() {
-        'outer: for local_var in &locals.variables {
-            let local_var_name: &String = local_var.name.resolve(&gm_data.strings.strings)
-                .map_err(|_| ParseError::StringIndexUnresolvable(local_var.name.index))?;
-            if *local_var_name != name {
-                continue
+    // convert instance type because of some bullshit
+    let fuckass_instance_type = match instance_type {
+        GMInstanceType::Self_(Some(_)) => GMInstanceType::Self_(None),
+        GMInstanceType::Other => GMInstanceType::Self_(None),
+        GMInstanceType::Argument => GMInstanceType::Builtin,
+        GMInstanceType::Builtin => GMInstanceType::Self_(None),
+        GMInstanceType::StackTop => GMInstanceType::Self_(None),
+        _ => instance_type.clone(),
+    };
+
+    if instance_type == GMInstanceType::Local {
+        for local_var in &locals.variables {
+            let var: &GMVariable = local_var.variable.resolve(&gm_data.variables.variables)
+                .map_err(|_| ParseError::VarUnresolvable(name.to_string()))?;
+            let local_var_name: &String = var.name.resolve(&gm_data.strings.strings)
+                .map_err(|_| ParseError::StringIndexUnresolvable(var.name.index))?;
+            if *local_var_name == name {
+                variable_ref = Some(local_var.variable);
+                break
             }
-            // found local var; now find actual variable using name string id (is always unique)
-            for (i, var) in gm_data.variables.variables.iter().enumerate() {
-                if var.name.index != local_var.name.index {
-                    continue
-                }
-                if let Some(b15_data) = &var.b15_data {
-                    if b15_data.instance_type != GMInstanceType::Local {
-                        continue
-                    }
-                }
-                // found variable
-                variable_ref = Some(GMRef::new(i as u32));
-                break 'outer
-            }
-            // could not find variable with same name string id
-            return Err(ParseError::VarNameStringNoMatch(local_var.name.index))
         }
     } else {
         // try "normal" variables
@@ -586,15 +582,8 @@ fn parse_variable(line: &mut &str, locals: &GMCodeLocal, gm_data: &GMData) -> Re
             if *var_name != name {
                 continue
             }
-            if let Some(b15) = &var.b15_data {
-                // TODO: clean this shit up
-                if b15.instance_type != instance_type
-                    && !(b15.instance_type == GMInstanceType::Self_(None) && matches!(instance_type, GMInstanceType::Self_(Some(_))))
-                    && b15.instance_type != GMInstanceType::Builtin
-                    && b15.instance_type != GMInstanceType::Builtin
-                    && instance_type != GMInstanceType::Builtin {
-                    continue
-                }
+            if let Some(b15) = &var.b15_data && b15.instance_type != fuckass_instance_type {
+                continue
             }
             // found var
             variable_ref = Some(GMRef::new(i as u32));
@@ -645,7 +634,6 @@ fn parse_identifier(line: &mut &str) -> Result<String, ParseError> {
             continue
         }
         if i < 1 {
-            println!("gdjsughusdhgusdhu {char}");
             return Err(ParseError::InvalidIdentifier("must be at least one character long"))
         }
         let identifier: String = line[..i].to_string();
@@ -679,14 +667,14 @@ fn parse_string_literal(line: &mut &str) -> Result<String, ParseError> {
                 '"' => string.push('"'),
                 _ => return Err(ParseError::InvalidEscapeCharacter(char)),
             }
+            escaping = false;
         } else if char == '"' {
             *line = &line[i+1..];
             return Ok(string)
+        } else if char == '\\' {
+            escaping = true;
         } else {
             string.push(char);
-        }
-        if char == '\\' {
-            escaping = !escaping;
         }
     }
 

@@ -23,7 +23,7 @@ use crate::gamemaker::elements::extensions::GMExtensions;
 use crate::gamemaker::elements::feature_flags::GMFeatureFlags;
 use crate::gamemaker::elements::filter_effects::GMFilterEffects;
 use crate::gamemaker::elements::fonts::GMFonts;
-use crate::gamemaker::elements::functions::GMFunctions;
+use crate::gamemaker::elements::functions::{GMCodeLocals, GMFunctions};
 use crate::gamemaker::elements::game_objects::GMGameObjects;
 use crate::gamemaker::elements::scripts::GMScripts;
 use crate::gamemaker::elements::variables::GMVariables;
@@ -122,12 +122,22 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
     }
 
     let stopwatch2 = Stopwatch::start();
+    
+    let functions: GMFunctions;
+    let codes: GMCodes;
+    if check_yyc(&reader) {
+        reader.variables = GMVariables { variables: vec![], b15_header: None, exists: false };
+        functions = GMFunctions { functions: vec![], code_locals: GMCodeLocals { code_locals: vec![], exists: false }, exists: false };
+        codes = GMCodes { codes: vec![], exists: false }
+    } else {
+        reader.variables = reader.read_chunk_required("VARI")?;
+        functions = reader.read_chunk_required("FUNC")?;
+        codes = reader.read_chunk_required("CODE")?;
+    }
+
     let embedded_textures: GMEmbeddedTextures = reader.read_chunk_required("TXTR")?;
     let texture_page_items: GMTexturePageItems = reader.read_chunk_required("TPAG")?;
-    let variables: GMVariables = reader.read_chunk_required("VARI")?;   // variables and functions have to be parsed before code
-    let functions: GMFunctions = reader.read_chunk_required("FUNC")?;
     let scripts: GMScripts = reader.read_chunk_required("SCPT")?;
-    let codes: GMCodes = reader.read_chunk_required("CODE")?;
     let fonts: GMFonts = reader.read_chunk_required("FONT")?;
     let sprites: GMSprites = reader.read_chunk_required("SPRT")?;
     let game_objects: GMGameObjects = reader.read_chunk_required("OBJT")?;
@@ -170,12 +180,12 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
     let data = GMData {
         general_info: reader.general_info,
         strings: reader.strings,
+        variables: reader.variables,
+        functions,
         embedded_textures,
         texture_page_items,
-        variables,
-        functions,
-        scripts,
         codes,
+        scripts,
         fonts,
         sprites,
         game_objects,
@@ -211,5 +221,17 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
 
     log::trace!("Parsing data took {stopwatch}");
     Ok(data)
+}
+
+
+/// Check whether this data file was generated with YYC (YoYoGames Compiler).
+/// Should that be the case, the CODE, VARI and FUNC chunks will be empty (or not exist?).
+fn check_yyc(reader: &DataReader) -> bool {
+    let Some(chunk_code) = reader.chunks.get("CODE") else {return true};
+    let Some(chunk_vari) = reader.chunks.get("VARI") else {return true};
+    let Some(chunk_func) = reader.chunks.get("FUNC") else {return true};
+    chunk_code.end_pos <= chunk_code.start_pos &&
+    chunk_vari.end_pos <= chunk_vari.start_pos &&
+    chunk_func.end_pos <= chunk_func.start_pos
 }
 
