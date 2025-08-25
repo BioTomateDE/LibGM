@@ -13,12 +13,11 @@ use crate::utility::num_enum_from;
 #[derive(Debug, Clone)]
 pub struct GMCodes {
     pub codes: Vec<GMCode>,
-    pub yyc: bool,
     pub exists: bool,
 }
 impl GMChunkElement for GMCodes {
     fn empty() -> Self {
-        Self { codes: vec![], yyc: false, exists: false }
+        Self { codes: vec![], exists: false }
     }
     fn exists(&self) -> bool {
         self.exists
@@ -27,13 +26,13 @@ impl GMChunkElement for GMCodes {
 impl GMElement for GMCodes {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         if reader.get_chunk_length() == 0 {
-            return Ok(Self { codes: vec![], yyc: true, exists: true })
+            return Ok(Self { codes: vec![], exists: false })
         }
         
         let pointers: Vec<usize> = reader.read_simple_list()?;
         reader.cur_pos = match pointers.first() {
             Some(ptr) => *ptr,
-            None => return Ok(Self { codes: vec![], yyc: false, exists: true })
+            None => return Ok(Self { codes: vec![], exists: true })
         };
         let count: usize = pointers.len();
         let mut codes: Vec<GMCode> = Vec::with_capacity(count);
@@ -108,11 +107,11 @@ impl GMElement for GMCodes {
         }
         
         reader.cur_pos = last_pos;  // has to be chunk end (since instructions are stored separately in b15+)
-        Ok(GMCodes { codes, yyc: false, exists: true })
+        Ok(GMCodes { codes, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        if !self.exists || self.yyc { return Ok(()) }
+        if !self.exists { return Ok(()) }
 
         builder.write_usize(self.codes.len())?;
         let pointer_list_pos: usize = builder.len();
