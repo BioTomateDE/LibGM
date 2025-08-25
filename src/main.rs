@@ -96,13 +96,33 @@ fn main_open_and_close() -> Result<(), String> {
     for (i, name, locals, assembly) in assemblies {
         println!("{i:<4} {name}");
         let reconstructed = gamemaker::assembler::assemble_code(&assembly, &mut original_data, &locals).map_err(|e| e.to_string())?;
-        if original_data.codes.codes[i].instructions != reconstructed {
-            return Err(format!(
-                "Reconstructed instructions don't match original for {name}:\n##{}##\n\n\n\n\n##{}##",
-                original_data.codes.codes[i].instructions.iter().map(|i| format!("{i:?}")).collect::<Vec<_>>().join("\n"),
-                reconstructed.iter().map(|i| format!("{i:?}")).collect::<Vec<_>>().join("\n"),
-            ))
+        let mut err = false;
+        for (orig, recon) in original_data.codes.codes[i].instructions.iter().zip(reconstructed) {
+            if *orig != recon {
+                err = true;
+                println!("{orig:?}\n{recon:?}\n")
+            }
         }
+        if err {
+            // println!("{:?}", locals.variables.iter().map(|i| i.name.display(&original_data.strings)).collect::<Vec<_>>());
+            // println!("{:?}", locals.variables.iter().map(|i| original_data.variables.get_variable_ref_by_name(i.name.display(&original_data.strings), &original_data.strings).unwrap().index).collect::<Vec<_>>());
+            panic!()}
+        // if original_data.codes.codes[i].instructions != reconstructed {
+        //     return Err(format!(
+        //         "Reconstructed instructions don't match original for {name} ({}) [{} // {}]:\n##{}##\n\n\n\n\n##{}##",
+        //         original_data.codes.codes[i].name.resolve(&original_data.strings.strings)?,
+        //         original_data.codes.codes[i].instructions.len(),
+        //         reconstructed.len(),
+        //         original_data.codes.codes[i].instructions.iter().map(|i| format!("{i:?}")).collect::<Vec<_>>().join("\n"),
+        //         reconstructed.iter().map(|i| format!("{i:?}")).collect::<Vec<_>>().join("\n"),
+        //         // assembly,
+        //         // gamemaker::disassembler::disassemble_code(&original_data, &gamemaker::elements::code::GMCode {
+        //         //     name: gamemaker::deserialize::GMRef::new(67),
+        //         //     instructions: reconstructed,
+        //         //     bytecode15_info: None,
+        //         // })?
+        //     ))
+        // }
     }
 
     // // export strings

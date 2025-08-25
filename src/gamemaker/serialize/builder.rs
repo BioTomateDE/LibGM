@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::element::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::code::GMVariableType;
+use crate::gamemaker::elements::variables::GMVariables;
 use crate::gamemaker::gm_version::GMVersionReq;
 use crate::utility::{typename, Stopwatch};
 
@@ -16,7 +17,7 @@ pub struct DataBuilder<'a> {
     pub(super) pointer_placeholder_positions: Vec<(u32, usize)>,
     /// Maps memory addresses of GameMaker elements to their resolved data position
     pub(super) pointer_resource_positions: HashMap<usize, u32>,
-
+    
     pub function_occurrences: Vec<Vec<usize>>,
     pub variable_occurrences: Vec<Vec<(usize, GMVariableType)>>,
 }

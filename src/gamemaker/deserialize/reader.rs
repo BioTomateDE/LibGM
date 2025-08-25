@@ -6,7 +6,7 @@ use crate::gamemaker::elements::functions::GMFunction;
 use crate::gamemaker::elements::general_info::GMGeneralInfo;
 use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
-use crate::gamemaker::elements::variables::GMVariable;
+use crate::gamemaker::elements::variables::{GMVariable, GMVariables};
 use crate::gamemaker::gm_version::GMVersionReq;
 use crate::utility::format_bytes;
 
@@ -48,6 +48,9 @@ pub struct DataReader<'a> {
     /// Will be set after chunk STRG is parsed (first chunk to parse).
     /// Contains all GameMaker strings, which are needed to resolve strings while deserialization.
     pub strings: GMStrings,
+    
+    /// Needed for local code variables.
+    pub variables: GMVariables,
 
     /// Should only be set by [`crate::gamemaker::elements::strings`].
     pub string_occurrence_map: HashMap<usize, GMRef<String>>,
@@ -70,6 +73,7 @@ impl<'a> DataReader<'a> {
         Self {
             general_info: GMGeneralInfo::empty(),
             strings: GMStrings::empty(),
+            variables: GMVariables::empty(),
             chunks: HashMap::with_capacity(35),
             chunk: GMChunk {
                 name: "FORM".to_string(),
@@ -84,7 +88,7 @@ impl<'a> DataReader<'a> {
             texture_page_item_occurrence_map: HashMap::new(),
             variable_occurrence_map: HashMap::new(),
             function_occurrence_map: HashMap::new(),
-            is_big_endian: false,   // assume little endian; big endian is an edge dase
+            is_big_endian: false,   // assume little endian; big endian is an edge case
         }
     }
 
