@@ -48,9 +48,6 @@ pub struct DataReader<'a> {
     /// Will be set after chunk STRG is parsed (first chunk to parse).
     /// Contains all GameMaker strings, which are needed to resolve strings while deserialization.
     pub strings: GMStrings,
-    
-    /// Needed for local code variables.
-    pub variables: GMVariables,
 
     /// Should only be set by [`crate::gamemaker::elements::strings`].
     pub string_occurrence_map: HashMap<usize, GMRef<String>>,
@@ -73,7 +70,6 @@ impl<'a> DataReader<'a> {
         Self {
             general_info: GMGeneralInfo::empty(),
             strings: GMStrings::empty(),
-            variables: GMVariables::empty(),
             chunks: HashMap::with_capacity(35),
             chunk: GMChunk {
                 name: "FORM".to_string(),
