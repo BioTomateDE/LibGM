@@ -1204,3 +1204,16 @@ pub fn get_data_type_from_value(code_value: &GMCodeValue) -> GMDataType {
     }
 }
 
+
+/// Check whether this data file was generated with YYC (YoYoGames Compiler).
+/// Should that be the case, the CODE, VARI and FUNC chunks will be empty (or not exist?).
+/// NOTE: YYC is untested. Issues may occur.
+pub fn check_yyc(reader: &DataReader) -> bool {
+    let Some(chunk_code) = reader.chunks.get("CODE") else {return true};
+    let Some(chunk_vari) = reader.chunks.get("VARI") else {return true};
+    let Some(chunk_func) = reader.chunks.get("FUNC") else {return true};
+    chunk_code.end_pos <= chunk_code.start_pos &&
+        chunk_vari.end_pos <= chunk_vari.start_pos &&
+        chunk_func.end_pos <= chunk_func.start_pos
+}
+
