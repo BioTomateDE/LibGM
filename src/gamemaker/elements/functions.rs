@@ -174,31 +174,18 @@ impl GMElement for GMCodeLocal {
 pub struct GMCodeLocalVariable {
     /// unknown what this does
     pub weird_index: u32,
-    /// replaced `name: GMRef<String>` with a variable reference.
-    pub variable: GMRef<GMVariable>,
+    pub name: GMRef<String>,
 }
 impl GMElement for GMCodeLocalVariable {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let weird_index: u32 = reader.read_u32()?;
         let name: GMRef<String> = reader.read_gm_string()?;
-        
-        for (i, var) in reader.variables.variables.iter().enumerate() {
-            if var.name.index != name.index {
-                continue
-            }
-            if let Some(b15) = &var.b15_data && b15.instance_type != GMInstanceType::Local {
-                continue
-            }
-            return Ok(GMCodeLocalVariable { weird_index, variable: GMRef::new(i as u32) })
-        }
-        
-        Err(format!("Unable to resolve local variable with name {} (string index {}) to a variable", reader.display_gm_str(name), name.index))
+        Ok(Self { weird_index, name })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         builder.write_u32(self.weird_index);
-        let var: &GMVariable = self.variable.resolve(&builder.gm_data.variables.variables)?;
-        builder.write_gm_string(&var.name)?;
+        builder.write_gm_string(&self.name)?;
         Ok(())
     }
 }

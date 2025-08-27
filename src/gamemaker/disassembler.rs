@@ -155,28 +155,13 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
 
         GMInstructionData::Pop(instr) => {
             line = format!(
-                "{}.{}.{} ",
+                "{}.{}.{} {}",
                 opcode,
                 data_type_to_string(instr.type1),
                 data_type_to_string(instr.type2),
+                variable_to_string(gm_data, &instr.destination)?,
             );
-
-            let dest: &CodeVariable = &instr.destination;
-            if instr.type1 == GMDataType::Variable && dest.instance_type != GMInstanceType::Undefined {
-                if dest.variable_type == GMVariableType::Instance && !matches!(dest.instance_type, GMInstanceType::RoomInstance(_)) {
-                    return Err(format!(
-                        "Expected Pop instruction destination Variable's instance type to be RoomInstance\
-                        (because the variable type is Instance), but actually found instance type {}",
-                        dest.instance_type,
-                    ))
-                }   // ^ probably redundant check
-                line += &instance_type_to_string(gm_data, &dest.instance_type)?;
-                line += ".";
-            }
-            line += &variable_to_string(gm_data, &instr.destination)?;
         }
-
-        // TODO: (global) verify var and func names (no spaces etc)
 
         GMInstructionData::PopSwap(instr) => {
             line = format!(
@@ -189,28 +174,10 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
 
         GMInstructionData::Push(instr) => {
             let value: String = match &instr.value {
-                GMCodeValue::Variable(code_variable) => {
-                    let prefix: &str = if code_variable.is_int32 {"[variable]"} else {""};
-                    let variable_string: String = variable_to_string(gm_data, &code_variable)?;
-                    if code_variable.instance_type == GMInstanceType::Undefined {
-                        format!("{}{}", prefix, variable_string)
-                    } else {
-                        let inst: String = instance_type_to_string(gm_data, &code_variable.instance_type)?;
-                        format!("{}{}.{}", prefix, inst, variable_string)
-                    }
-                }
-
-                GMCodeValue::Boolean(bool) => if *bool {
-                    // in UTMT, it just doesn't append anything for booleans
-                    "true".to_string()
-                } else {
-                    "false".to_string()
-                }
-
-                GMCodeValue::Function(function_ref) => {
-                    format!("[function]{}", function_to_string(gm_data, *function_ref)?)
-                }
-
+                GMCodeValue::Variable(code_variable) => variable_to_string(gm_data, &code_variable)?,
+                GMCodeValue::Boolean(true) => "true".to_string(),
+                GMCodeValue::Boolean(false) => "false".to_string(),
+                GMCodeValue::Function(function_ref) => format!("(function){}", function_to_string(gm_data, *function_ref)?),
                 GMCodeValue::String(string_ref) => format_literal_string(gm_data, *string_ref)?,
                 GMCodeValue::Int16(integer) => integer.to_string(),
                 GMCodeValue::Int32(integer) => integer.to_string(),
@@ -334,22 +301,22 @@ fn comparison_type_to_string(comparison_type: GMComparisonType) -> &'static str 
 }
 
 
-fn instance_type_to_string(gm_data: &GMData, instance_type: &GMInstanceType) -> Result<String, String> {
+fn instance_type_to_string(gm_data: &GMData, instance_type: &GMInstanceType, variable_ref: GMRef<GMVariable>) -> Result<String, String> {
     Ok(match instance_type {
         GMInstanceType::Undefined => return Err("Did not expect Instance Type Undefined here; please report this error.".to_string()),
         GMInstanceType::Self_(Some(obj_ref)) => {
             let obj: &GMGameObject = obj_ref.resolve(&gm_data.game_objects.game_objects)?;
             let name: &String = obj.name.resolve(&gm_data.strings.strings)?;
-            format!("[object]{name}")
+            format!("self<{name}>")
         }
         GMInstanceType::Self_(None) => "self".to_string(),
-        GMInstanceType::RoomInstance(instance_id) => format!("[roominst]{instance_id}"),
+        GMInstanceType::RoomInstance(instance_id) => format!("roominst<{instance_id}>"),
         GMInstanceType::Other => "other".to_string(),
         GMInstanceType::All => "all".to_string(),
         GMInstanceType::None => "none".to_string(),
         GMInstanceType::Global => "global".to_string(),
         GMInstanceType::Builtin => "builtin".to_string(),
-        GMInstanceType::Local => "local".to_string(),
+        GMInstanceType::Local => format!("local<{}>", variable_ref.index),
         GMInstanceType::StackTop => "stacktop".to_string(),
         GMInstanceType::Argument => "arg".to_string(),
         GMInstanceType::Static => "static".to_string(),
@@ -359,37 +326,36 @@ fn instance_type_to_string(gm_data: &GMData, instance_type: &GMInstanceType) -> 
 
 fn variable_type_to_string(variable_type: GMVariableType) -> &'static str {
     match variable_type {
-        GMVariableType::Array => "array",
-        GMVariableType::StackTop => "stacktop",
-        GMVariableType::Normal => "normal",
-        GMVariableType::Instance => "instance",
-        GMVariableType::ArrayPushAF => "arraypushaf",
-        GMVariableType::ArrayPopAF => "arraypopaf",
+        GMVariableType::Array => "[array]",
+        GMVariableType::StackTop => "[stacktop]",
+        GMVariableType::Normal => "",
+        GMVariableType::Instance => "[instance]",
+        GMVariableType::ArrayPushAF => "[arraypushaf]",
+        GMVariableType::ArrayPopAF => "[arraypopaf]",
     }
 }
 
 
 fn variable_to_string(gm_data: &GMData, code_variable: &CodeVariable) -> Result<String, String> {
-    // NOTE: in utmt, it just prints null instead of throwing.
     let variable: &GMVariable = code_variable.variable.resolve(&gm_data.variables.variables)?;
     let name: &String = variable.name.resolve(&gm_data.strings.strings)?;
     if !is_valid_identifier(name) {
         return Err(format!("Invalid variable identifier: {}", format_literal_string(gm_data, variable.name)?))
     }
 
-    let string: String = if code_variable.variable_type == GMVariableType::Normal {
-        name.clone()
-    } else {
-        let instance_type: &GMInstanceType = variable.b15_data.as_ref().map_or(&GMInstanceType::Undefined, |b15| &b15.instance_type);
-        format!(
-            "[{}]{}.{}",
-            variable_type_to_string(code_variable.variable_type),
-            instance_type_to_string(gm_data, instance_type)?,
-            name,
-        )
-    };
+    let prefix: &str = if code_variable.is_int32 {"(variable)"} else {""};
 
-    Ok(string)
+    let instance_type: &GMInstanceType = if code_variable.instance_type != GMInstanceType::Undefined {
+        &code_variable.instance_type
+    } else {
+        // TODO: this will not work with b14
+        variable.b15_data.as_ref().map_or(&GMInstanceType::Undefined, |b15| &b15.instance_type)
+    };
+    let instance_type: String = instance_type_to_string(gm_data, instance_type, code_variable.variable)?;
+
+    let variable_type: &str = variable_type_to_string(code_variable.variable_type);
+
+    Ok(format!("{prefix}{variable_type}{instance_type}.{name}"))
 }
 
 

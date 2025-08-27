@@ -14,7 +14,7 @@ use crate::gamemaker::gm_version::GMVersion;
 use crate::gamemaker::elements::animation_curves::GMAnimationCurves;
 use crate::gamemaker::elements::audio_groups::GMAudioGroups;
 use crate::gamemaker::elements::backgrounds::GMBackgrounds;
-use crate::gamemaker::elements::code::GMCodes;
+use crate::gamemaker::elements::code::{check_yyc, GMCodes};
 use crate::gamemaker::elements::data_files::GMDataFiles;
 use crate::gamemaker::elements::embedded_audio::GMEmbeddedAudios;
 use crate::gamemaker::elements::embedded_images::GMEmbeddedImages;
@@ -123,14 +123,15 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
 
     let stopwatch2 = Stopwatch::start();
     
+    let variables: GMVariables;
     let functions: GMFunctions;
     let codes: GMCodes;
     if check_yyc(&reader) {
-        reader.variables = GMVariables { variables: vec![], b15_header: None, exists: false };
+        variables = GMVariables { variables: vec![], b15_header: None, exists: false };
         functions = GMFunctions { functions: vec![], code_locals: GMCodeLocals { code_locals: vec![], exists: false }, exists: false };
         codes = GMCodes { codes: vec![], exists: false }
     } else {
-        reader.variables = reader.read_chunk_required("VARI")?;
+        variables = reader.read_chunk_required("VARI")?;
         functions = reader.read_chunk_required("FUNC")?;
         codes = reader.read_chunk_required("CODE")?;
     }
@@ -180,7 +181,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
     let data = GMData {
         general_info: reader.general_info,
         strings: reader.strings,
-        variables: reader.variables,
+        variables,
         functions,
         embedded_textures,
         texture_page_items,
@@ -221,17 +222,5 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
 
     log::trace!("Parsing data took {stopwatch}");
     Ok(data)
-}
-
-
-/// Check whether this data file was generated with YYC (YoYoGames Compiler).
-/// Should that be the case, the CODE, VARI and FUNC chunks will be empty (or not exist?).
-fn check_yyc(reader: &DataReader) -> bool {
-    let Some(chunk_code) = reader.chunks.get("CODE") else {return true};
-    let Some(chunk_vari) = reader.chunks.get("VARI") else {return true};
-    let Some(chunk_func) = reader.chunks.get("FUNC") else {return true};
-    chunk_code.end_pos <= chunk_code.start_pos &&
-    chunk_vari.end_pos <= chunk_vari.start_pos &&
-    chunk_func.end_pos <= chunk_func.start_pos
 }
 
