@@ -43,6 +43,7 @@ fn main_open_and_close() -> Result<(), String> {
     use crate::gamemaker::data::GMData;
     use crate::gamemaker::deserialize::parse_data_file;
     use crate::gamemaker::serialize::build_data_file;
+
     let args: Vec<String> = std::env::args().collect();
     let original_data_file_path: &Path = path_from_arg(args.get(1), "data.win");
     let modified_data_file_path: &Path = path_from_arg(args.get(2), "data_out.win");
@@ -52,7 +53,7 @@ fn main_open_and_close() -> Result<(), String> {
         .map_err(|e| format!("{e}\n↳ while reading data file"))?;
 
     log::info!("Parsing data file");
-    let mut original_data: GMData = parse_data_file(&original_data_raw, false)
+    let original_data: GMData = parse_data_file(&original_data_raw, false)
         .map_err(|e| format!("\n{e}\n↳ while parsing data file"))?;
     drop(original_data_raw);
     
@@ -69,61 +70,6 @@ fn main_open_and_close() -> Result<(), String> {
     //     std::fs::write(format!("./gml_asm/{code_name}.txt"), assembly)
     //         .map_err(|e| format!("Could not write assembly of code \"{code_name}\": {e}"))?;
     // }
-    
-    // test (dis)assembler
-    let mut assemblies = Vec::with_capacity(original_data.codes.codes.len());
-
-    for (i, code) in original_data.codes.codes.iter().enumerate() {
-        if code.bytecode15_info.as_ref().map_or(false, |b15| b15.parent.is_some()) {
-            continue    // code is child entry; FUCK THAT CHILD
-        }
-        let code_name = code.name.resolve(&original_data.strings.strings)?;
-        let mut locals = None;
-        for code_local in &original_data.functions.code_locals.code_locals {
-            let code_local_name = code_local.name.resolve(&original_data.strings.strings)?;
-            if *code_local_name == *code_name {
-                locals = Some(code_local);
-                break
-            }
-        }
-        // println!("{code_name}");
-        let locals = locals.ok_or("Couldn't find locals")?;
-        let assembly = gamemaker::disassembler::disassemble_code(&original_data, code)?;
-        assemblies.push((i, code_name.clone(), locals.clone(), assembly));
-    }
-
-    // println!("\n=============================\n");
-    for (i, name, locals, assembly) in assemblies {
-        println!("{i:<4} {name}");
-        let reconstructed = gamemaker::assembler::assemble_code(&assembly, &mut original_data, &locals).map_err(|e| e.to_string())?;
-        let mut err = false;
-        for (orig, recon) in original_data.codes.codes[i].instructions.iter().zip(reconstructed) {
-            if *orig != recon {
-                err = true;
-                println!("{orig:?}\n{recon:?}\n")
-            }
-        }
-        if err {
-            // println!("{:?}", locals.variables.iter().map(|i| i.name.display(&original_data.strings)).collect::<Vec<_>>());
-            // println!("{:?}", locals.variables.iter().map(|i| original_data.variables.get_variable_ref_by_name(i.name.display(&original_data.strings), &original_data.strings).unwrap().index).collect::<Vec<_>>());
-            panic!()}
-        // if original_data.codes.codes[i].instructions != reconstructed {
-        //     return Err(format!(
-        //         "Reconstructed instructions don't match original for {name} ({}) [{} // {}]:\n##{}##\n\n\n\n\n##{}##",
-        //         original_data.codes.codes[i].name.resolve(&original_data.strings.strings)?,
-        //         original_data.codes.codes[i].instructions.len(),
-        //         reconstructed.len(),
-        //         original_data.codes.codes[i].instructions.iter().map(|i| format!("{i:?}")).collect::<Vec<_>>().join("\n"),
-        //         reconstructed.iter().map(|i| format!("{i:?}")).collect::<Vec<_>>().join("\n"),
-        //         // assembly,
-        //         // gamemaker::disassembler::disassemble_code(&original_data, &gamemaker::elements::code::GMCode {
-        //         //     name: gamemaker::deserialize::GMRef::new(67),
-        //         //     instructions: reconstructed,
-        //         //     bytecode15_info: None,
-        //         // })?
-        //     ))
-        // }
-    }
 
     // // export strings
     // let mut raw = String::new();

@@ -2,9 +2,9 @@ use std::fmt::{Display, Formatter};
 use std::str::{Chars, FromStr};
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
-use crate::gamemaker::elements::code::{GMCodeValue, CodeVariable, GMGotoInstruction, GMPopSwapInstruction, GMSingleTypeInstruction, GMInstanceType, GMVariableType, GMComparisonInstruction, GMPopInstruction, GMPushInstruction, GMCallInstruction, GMExtendedInstruction16, GMExtendedInstructionFunction, GMExtendedInstruction32};
+use crate::gamemaker::elements::code::{GMCodeValue, CodeVariable, GMGotoInstruction, GMPopSwapInstruction, GMSingleTypeInstruction, GMInstanceType, GMVariableType, GMComparisonInstruction, GMPopInstruction, GMPushInstruction, GMCallInstruction, GMExtendedInstruction16, GMExtendedInstructionFunc, GMExtendedInstruction32, GMEmptyInstruction};
 use crate::gamemaker::elements::code::{GMCallVariableInstruction, GMComparisonType, GMDoubleTypeInstruction, GMDuplicateInstruction, GMDuplicateSwapInstruction};
-use crate::gamemaker::elements::code::{GMInstruction, GMInstructionData, GMOpcode};
+use crate::gamemaker::elements::code::GMInstruction;
 use crate::gamemaker::elements::code::GMDataType;
 use crate::gamemaker::elements::functions::{GMCodeLocal, GMFunction, GMFunctions};
 use crate::gamemaker::elements::game_objects::GMGameObject;
@@ -81,7 +81,7 @@ impl Display for ParseError {
 }
 
 
-pub fn assemble_code(assembly: &str, gm_data: &mut GMData, locals: &GMCodeLocal) -> Result<Vec<GMInstruction>, String> {
+pub fn assemble_code(assembly: &str, gm_data: &mut GMData) -> Result<Vec<GMInstruction>, String> {
     let mut instructions: Vec<GMInstruction> = Vec::new();
 
     for line in assembly.lines() {
@@ -90,7 +90,7 @@ pub fn assemble_code(assembly: &str, gm_data: &mut GMData, locals: &GMCodeLocal)
             continue
         }
 
-        let instruction: GMInstruction = assemble_instruction(line, gm_data, locals)
+        let instruction: GMInstruction = assemble_instruction(line, gm_data)
             .map_err(|e| format!("{e}\n↳ while assembling instruction: {line}"))?;
         instructions.push(instruction);
     }
@@ -99,7 +99,7 @@ pub fn assemble_code(assembly: &str, gm_data: &mut GMData, locals: &GMCodeLocal)
 }
 
 
-pub fn assemble_instruction(line: &str, gm_data: &mut GMData, locals: &GMCodeLocal) -> Result<GMInstruction, ParseError> {
+pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<GMInstruction, ParseError> {
     let line: &mut &str = &mut line.trim();
     let mnemonic: String;
 
@@ -128,168 +128,52 @@ pub fn assemble_instruction(line: &str, gm_data: &mut GMData, locals: &GMCodeLoc
         _ => return Err(ParseError::ExpectedSpace(line.to_string()))
     }
 
-    // try extended/break mnemonic first. if it couldn't find an extended kind, parse regular opcode mnemonic.
-    let extended_kind: Option<i16> = extended_id_from_string(&mnemonic).ok();
-    let opcode: GMOpcode = if extended_kind.is_some() {
-        GMOpcode::Extended
-    } else {
-        opcode_from_string(&mnemonic)?
-    };
-
-    let instruction_data: GMInstructionData = match opcode {
-        GMOpcode::Exit => {
-            GMInstructionData::Empty
-        }
-
-        GMOpcode::Negate |
-        GMOpcode::Not |
-        GMOpcode::Return |
-        GMOpcode::PopDiscard => {
+    let instruction: GMInstruction = match mnemonic.as_str() {
+        "conv" => GMInstruction::Convert(parse_double_type(&types)?),
+        "mul" => GMInstruction::Multiply(parse_double_type(&types)?),
+        "div" => GMInstruction::Divide(parse_double_type(&types)?),
+        "rem" => GMInstruction::Remainder(parse_double_type(&types)?),
+        "mod" => GMInstruction::Modulus(parse_double_type(&types)?),
+        "add" => GMInstruction::Add(parse_double_type(&types)?),
+        "sub" => GMInstruction::Subtract(parse_double_type(&types)?),
+        "and" => GMInstruction::And(parse_double_type(&types)?),
+        "or" => GMInstruction::Or(parse_double_type(&types)?),
+        "xor" => GMInstruction::Xor(parse_double_type(&types)?),
+        "neg" => GMInstruction::Negate(parse_single_type(&types)?),
+        "not" => GMInstruction::Not(parse_single_type(&types)?),
+        "shl" => GMInstruction::ShiftLeft(parse_double_type(&types)?),
+        "shr" => GMInstruction::ShiftRight(parse_double_type(&types)?),
+        "cmp" => GMInstruction::Compare(parse_comparison(&types, line)?),
+        "pop" => GMInstruction::Pop(parse_pop(&types, line, gm_data)?),
+        "popswap" => GMInstruction::PopSwap(parse_pop_swap(&types, line)?),
+        "dup" => GMInstruction::Duplicate(parse_duplicate(&types, line)?),
+        "dupswap" => GMInstruction::DuplicateSwap(parse_duplicate_swap(&types, line)?),
+        "ret" => GMInstruction::Return(parse_single_type(&types)?),
+        "exit" => GMInstruction::Exit(GMEmptyInstruction),
+        "popz" => GMInstruction::PopDiscard(parse_single_type(&types)?),
+        "jmp" => GMInstruction::Branch(parse_goto(&types, line)?),
+        "jt" => GMInstruction::BranchIf(parse_goto(&types, line)?),
+        "jf" => GMInstruction::BranchUnless(parse_goto(&types, line)?),
+        "pushenv" => GMInstruction::PushWithContext(parse_goto(&types, line)?),
+        "popenv" => GMInstruction::PopWithContext(parse_goto(&types, line)?),
+        "push" => GMInstruction::Push(parse_push(&types, line, gm_data)?),
+        "pushloc" => GMInstruction::PushLocal(parse_push(&types, line, gm_data)?),
+        "pushglb" => GMInstruction::PushGlobal(parse_push(&types, line, gm_data)?),
+        "pushbltn" => GMInstruction::PushBuiltin(parse_push(&types, line, gm_data)?),
+        "pushim" => GMInstruction::PushImmediate(parse_push(&types, line, gm_data)?),
+        "call" => GMInstruction::Call(parse_call(&types, line, gm_data)?),
+        "callvar" => GMInstruction::CallVariable(parse_call_var(&types, line)?),
+        _ => {
+            let kind: i16 = extended_id_from_string(&mnemonic)?;
             assert_type_count(&types, 1)?;
-            GMInstructionData::SingleType(GMSingleTypeInstruction { data_type: types[0] })
-        }
-
-        GMOpcode::Duplicate => {
-            assert_type_count(&types, 1)?;
-            let size1: u8 = parse_int(line)?;
-            match consume_space(line) {
-                Ok(()) => {
-                    // dup swap instruction
-                    let size2: u8 = parse_int(line)?;
-                    GMInstructionData::DuplicateSwap(GMDuplicateSwapInstruction { data_type: types[0], size1, size2 })
-                }
-                Err(ParseError::UnexpectedEOL(_)) => {
-                    // normal dup
-                    GMInstructionData::Duplicate(GMDuplicateInstruction { data_type: types[0], size: size1 })
-                }
-                Err(e) => return Err(e)
-            }
-        }
-
-        GMOpcode::CallVariable => {
-            assert_type_count(&types, 1)?;
-            let argument_count: u8 = parse_int(line)?;
-            GMInstructionData::CallVariable(GMCallVariableInstruction { data_type: types[0], argument_count })
-        }
-
-        GMOpcode::Convert |
-        GMOpcode::Multiply |
-        GMOpcode::Divide |
-        GMOpcode::Remainder |
-        GMOpcode::Modulus |
-        GMOpcode::Add |
-        GMOpcode::Subtract |
-        GMOpcode::And |
-        GMOpcode::Or |
-        GMOpcode::Xor |
-        GMOpcode::ShiftLeft |
-        GMOpcode::ShiftRight => {
-            assert_type_count(&types, 2)?;
-            GMInstructionData::DoubleType(GMDoubleTypeInstruction { type1: types[0], type2: types[1] })
-        }
-
-        GMOpcode::Compare => {
-            assert_type_count(&types, 2)?;
-            let comparison_type_raw: String = parse_identifier(line)?;
-            let comparison_type: GMComparisonType = comparison_type_from_string(&comparison_type_raw)?;
-            GMInstructionData::Comparison(GMComparisonInstruction { comparison_type, type1: types[0], type2: types[1] })
-        }
-
-        GMOpcode::Branch |
-        GMOpcode::BranchIf |
-        GMOpcode::BranchUnless |
-        GMOpcode::PushWithContext |
-        GMOpcode::PopWithContext => {
-            assert_type_count(&types, 0)?;
-            let jump_offset: Option<i32> = if *line == "<drop>" {
-                *line = "";    // need to consume; otherwise error
-                None
-            } else {
-                Some(parse_int(line)?)
-            };
-            GMInstructionData::Goto(GMGotoInstruction { jump_offset })
-        }
-
-        GMOpcode::Pop => {
-            assert_type_count(&types, 2)?;
-            if types[0] == GMDataType::Int16 {
-                // special popswap instruction
-                let size: u8 = parse_int(line)?;
-                GMInstructionData::PopSwap(GMPopSwapInstruction { size })
-            } else {
-                let destination: CodeVariable = parse_variable(line, locals, &gm_data)?;
-                GMInstructionData::Pop(GMPopInstruction {
-                    type1: types[0],
-                    type2: types[1],
-                    destination,
-                })
-            }
-        }
-
-        GMOpcode::Push |
-        GMOpcode::PushLocal |
-        GMOpcode::PushGlobal |
-        GMOpcode::PushBuiltin |
-        GMOpcode::PushImmediate => {
-            assert_type_count(&types, 1)?;
-            let value: GMCodeValue = match types[0] {
-                GMDataType::Int16 => GMCodeValue::Int16(parse_int(line)?),
-                GMDataType::Int32 => {
-                    if let Some(type_cast) = consume_round_brackets(line)? {
-                        match type_cast.as_str() {
-                            "function" => GMCodeValue::Function(parse_function(line, &gm_data.strings, &gm_data.functions)?),
-                            "variable" => {
-                                let mut variable: CodeVariable = parse_variable(line, locals, &gm_data)?;
-                                variable.is_int32 = true;
-                                GMCodeValue::Variable(variable)
-                            }
-                            _ => return Err(ParseError::InvalidTypeCast(type_cast))
-                        }
-                    } else {
-                        GMCodeValue::Int32(parse_int(line)?)
-                    }
-                }
-                GMDataType::Int64 => GMCodeValue::Int64(parse_int(line)?),
-                GMDataType::Float => GMCodeValue::Float(parse_float(line)?),
-                GMDataType::Double => GMCodeValue::Double(parse_float(line)?),
-                GMDataType::Boolean => GMCodeValue::Boolean(parse_bool(line)?),
-                GMDataType::String => {
-                    let string_text: String = parse_string_literal(line)?;
-                    let string_ref: GMRef<String> = gm_data.make_string(&string_text);
-                    GMCodeValue::String(string_ref)
-                },
-                GMDataType::Variable => GMCodeValue::Variable(parse_variable(line, locals, &gm_data)?),
-            };
-            GMInstructionData::Push(GMPushInstruction { value })
-        }
-
-        GMOpcode::Call => {
-            assert_type_count(&types, 1)?;
-            let function: GMRef<GMFunction> = parse_function(line, &gm_data.strings, &gm_data.functions)?;
-            let argc_str: String = consume_round_brackets(line)?.ok_or(ParseError::ExpectedArgc(line.to_string()))?;
-            let arguments_count: u8 = if let Some(rest) = argc_str.strip_prefix("argc=") {
-                rest.parse().map_err(|_| ParseError::IntegerOutOfBounds(rest.to_string()))?
-            } else {
-                return Err(ParseError::ExpectedArgc(argc_str))
-            };
-            GMInstructionData::Call(GMCallInstruction{
-                arguments_count,
-                data_type: types[0],
-                function,
-            })
-        }
-
-        GMOpcode::Extended => {
-            assert_type_count(&types, 1)?;
-            let kind: i16 = extended_kind.unwrap();  // Should be [`Some`] if [`opcode`] == [`GMOpcode::Extended`]
             if line.is_empty() {
-                GMInstructionData::Extended16(GMExtendedInstruction16 { kind })
-            } else if consume_str(line, "[function]").is_some() {
+                GMInstruction::Extended16(GMExtendedInstruction16 { kind })
+            } else if consume_str(line, "(function)").is_some() {
                 let function: GMRef<GMFunction> = parse_function(line, &gm_data.strings, &gm_data.functions)?;
-                GMInstructionData::ExtendedFunc(GMExtendedInstructionFunction { kind, function })
+                GMInstruction::ExtendedFunc(GMExtendedInstructionFunc { kind, function })
             } else {
                 let int_argument: i32 = parse_int(line)?;
-                GMInstructionData::Extended32(GMExtendedInstruction32 { kind, int_argument })
+                GMInstruction::Extended32(GMExtendedInstruction32 { kind, int_argument })
             }
         }
     };
@@ -298,8 +182,115 @@ pub fn assemble_instruction(line: &str, gm_data: &mut GMData, locals: &GMCodeLoc
         return Err(ParseError::ExpectedEOL(line.to_string()))
     }
 
-    Ok(GMInstruction { opcode, kind: instruction_data })
+    Ok(instruction)
 }
+
+
+fn parse_double_type(types: &Vec<GMDataType>) -> Result<GMDoubleTypeInstruction, ParseError> {
+    assert_type_count(&types, 2)?;
+    Ok(GMDoubleTypeInstruction { type1: types[0], type2: types[1] })
+}
+
+fn parse_single_type(types: &Vec<GMDataType>) -> Result<GMSingleTypeInstruction, ParseError> {
+    assert_type_count(&types, 1)?;
+    Ok(GMSingleTypeInstruction { data_type: types[0] })
+}
+
+fn parse_comparison(types: &Vec<GMDataType>, line: &mut &str) -> Result<GMComparisonInstruction, ParseError> {
+    assert_type_count(&types, 2)?;
+    let comparison_type_raw: String = parse_identifier(line)?;
+    let comparison_type: GMComparisonType = comparison_type_from_string(&comparison_type_raw)?;
+    Ok(GMComparisonInstruction { comparison_type, type1: types[0], type2: types[1] })
+}
+
+fn parse_pop(types: &Vec<GMDataType>, line: &mut &str, gm_data: &GMData) -> Result<GMPopInstruction, ParseError> {
+    assert_type_count(&types, 2)?;
+    let destination: CodeVariable = parse_variable(line, &gm_data)?;
+    Ok(GMPopInstruction { type1: types[0], type2: types[1], destination })
+}
+
+fn parse_pop_swap(types: &Vec<GMDataType>, line: &mut &str) -> Result<GMPopSwapInstruction, ParseError> {
+    assert_type_count(&types, 0)?;
+    let size: u8 = parse_int(line)?;
+    Ok(GMPopSwapInstruction { size })
+}
+
+fn parse_duplicate(types: &Vec<GMDataType>, line: &mut &str) -> Result<GMDuplicateInstruction, ParseError> {
+    assert_type_count(&types, 1)?;
+    let size: u8 = parse_int(line)?;
+    Ok(GMDuplicateInstruction { data_type: types[0], size })
+}
+
+fn parse_duplicate_swap(types: &Vec<GMDataType>, line: &mut &str) -> Result<GMDuplicateSwapInstruction, ParseError> {
+    assert_type_count(&types, 1)?;
+    let size1: u8 = parse_int(line)?;
+    consume_space(line)?;
+    let size2: u8 = parse_int(line)?;
+    Ok(GMDuplicateSwapInstruction { data_type: types[0], size1, size2 })
+}
+
+fn parse_goto(types: &Vec<GMDataType>, line: &mut &str) -> Result<GMGotoInstruction, ParseError> {
+    assert_type_count(&types, 0)?;
+    let jump_offset: Option<i32> = if *line == "<drop>" {
+        *line = "";    // need to consume; otherwise error
+        None
+    } else {
+        Some(parse_int(line)?)
+    };
+    Ok(GMGotoInstruction { jump_offset })
+}
+
+fn parse_push(types: &Vec<GMDataType>, line: &mut &str, gm_data: &mut GMData) -> Result<GMPushInstruction, ParseError> {
+    assert_type_count(&types, 1)?;
+    let value: GMCodeValue = match types[0] {
+        GMDataType::Int16 => GMCodeValue::Int16(parse_int(line)?),
+        GMDataType::Int32 => {
+            if let Some(type_cast) = consume_round_brackets(line)? {
+                match type_cast.as_str() {
+                    "function" => GMCodeValue::Function(parse_function(line, &gm_data.strings, &gm_data.functions)?),
+                    "variable" => {
+                        let mut variable: CodeVariable = parse_variable(line, &gm_data)?;
+                        variable.is_int32 = true;
+                        GMCodeValue::Variable(variable)
+                    }
+                    _ => return Err(ParseError::InvalidTypeCast(type_cast))
+                }
+            } else {
+                GMCodeValue::Int32(parse_int(line)?)
+            }
+        }
+        GMDataType::Int64 => GMCodeValue::Int64(parse_int(line)?),
+        GMDataType::Float => GMCodeValue::Float(parse_float(line)?),
+        GMDataType::Double => GMCodeValue::Double(parse_float(line)?),
+        GMDataType::Boolean => GMCodeValue::Boolean(parse_bool(line)?),
+        GMDataType::String => {
+            let string_text: String = parse_string_literal(line)?;
+            let string_ref: GMRef<String> = gm_data.make_string(&string_text);
+            GMCodeValue::String(string_ref)
+        },
+        GMDataType::Variable => GMCodeValue::Variable(parse_variable(line, &gm_data)?),
+    };
+    Ok(GMPushInstruction { value })
+}
+
+fn parse_call(types: &Vec<GMDataType>, line: &mut &str, gm_data: &GMData) -> Result<GMCallInstruction, ParseError> {
+    assert_type_count(&types, 1)?;
+    let function: GMRef<GMFunction> = parse_function(line, &gm_data.strings, &gm_data.functions)?;
+    let argc_str: String = consume_round_brackets(line)?.ok_or(ParseError::ExpectedArgc(line.to_string()))?;
+    let arguments_count: u8 = if let Some(rest) = argc_str.strip_prefix("argc=") {
+        rest.parse().map_err(|_| ParseError::IntegerOutOfBounds(rest.to_string()))?
+    } else {
+        return Err(ParseError::ExpectedArgc(argc_str))
+    };
+    Ok(GMCallInstruction { arguments_count, data_type: types[0], function })
+}
+
+fn parse_call_var(types: &Vec<GMDataType>, line: &mut &str) -> Result<GMCallVariableInstruction, ParseError> {
+    assert_type_count(&types, 1)?;
+    let argument_count: u8 = parse_int(line)?;
+    Ok(GMCallVariableInstruction { data_type: types[0], argument_count })
+}
+
 
 
 fn assert_type_count(types: &Vec<GMDataType>, n: usize) -> Result<(), ParseError> {
@@ -412,46 +403,6 @@ fn extended_id_from_string(mnemonic: &str) -> Result<i16, ParseError> {
         "restorearef" => -9,
         "chknullish" => -10,
         "pushref" => -11,
-        _ => return Err(ParseError::InvalidExtendedMnemonic(mnemonic.to_string()))
-    })
-}
-
-
-fn opcode_from_string(mnemonic: &str) -> Result<GMOpcode, ParseError> {
-    Ok(match mnemonic {
-        "conv" => GMOpcode::Convert,
-        "mul" => GMOpcode::Multiply,
-        "div" => GMOpcode::Divide,
-        "rem" => GMOpcode::Remainder,
-        "mod" => GMOpcode::Modulus,
-        "add" => GMOpcode::Add,
-        "sub" => GMOpcode::Subtract,
-        "and" => GMOpcode::And,
-        "or" => GMOpcode::Or,
-        "xor" => GMOpcode::Xor,
-        "neg" => GMOpcode::Negate,
-        "not" => GMOpcode::Not,
-        "shl" => GMOpcode::ShiftLeft,
-        "shr" => GMOpcode::ShiftRight,
-        "cmp" => GMOpcode::Compare,
-        "pop" => GMOpcode::Pop,
-        "dup" => GMOpcode::Duplicate,
-        "ret" => GMOpcode::Return,
-        "exit" => GMOpcode::Exit,
-        "popz" => GMOpcode::PopDiscard,
-        "jmp" => GMOpcode::Branch,
-        "jt" => GMOpcode::BranchIf,
-        "jf" => GMOpcode::BranchUnless,
-        "pushenv" => GMOpcode::PushWithContext,
-        "popenv" => GMOpcode::PopWithContext,
-        "push" => GMOpcode::Push,
-        "pushloc" => GMOpcode::PushLocal,
-        "pushglb" => GMOpcode::PushGlobal,
-        "pushbltn" => GMOpcode::PushBuiltin,
-        "pushim" => GMOpcode::PushImmediate,
-        "call" => GMOpcode::Call,
-        "callvar" => GMOpcode::CallVariable,
-        "break" => GMOpcode::Extended,
         _ => return Err(ParseError::InvalidMnemonic(mnemonic.to_string()))
     })
 }
@@ -523,7 +474,7 @@ fn variable_type_from_string(variable_type: &str) -> Result<GMVariableType, Pars
 }
 
 
-fn parse_variable(line: &mut &str, locals: &GMCodeLocal, gm_data: &GMData) -> Result<CodeVariable, ParseError> {
+fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable, ParseError> {
     let mut variable_type: GMVariableType = GMVariableType::Normal;
     if let Some(variable_type_str) = consume_square_brackets(line)? {
         variable_type = variable_type_from_string(&variable_type_str)?;

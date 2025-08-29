@@ -57,13 +57,13 @@ impl DurationExt for Duration {
 
 pub(crate) type RuntimeData = HashMap<&'static str, (Duration, usize)>; // (total_time, call_count)
 
-/// how to use
-/// - import crate once_cell
-/// ```
+/// ===== How to use =====
+/// - Add crate once_cell
+/// ```ignore
 /// static RUNTIME_STATS: Lazy<Mutex<RuntimeData>> = Lazy::new(|| 
 ///     Mutex::new(HashMap::new())
 /// );
-/// ...
+/// // ...
 /// track_runtime!("my_function_name", {
 ///    // logic here
 /// });
