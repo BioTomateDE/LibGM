@@ -195,10 +195,16 @@ pub struct GMCode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMCodeBytecode15 {
+    /// The amount of local variables this code entry has.
     pub locals_count: u16,
+    /// The amount of arguments this code entry accepts.
     pub arguments_count: u16,
+    /// A flag set on certain code entries, which usually don't have locals attached to them.
     pub weird_local_flag: bool,
+    /// Offset, **in bytes**, where code should begin executing from within the bytecode of this code entry.
+    /// Should be 0 for root-level (parent) code entries, and nonzero for child code entries.
     pub offset: u32,
+    /// Parent entry of this code entry, if this is a child entry; [`None`] otherwise.
     pub parent: Option<GMRef<GMCode>>,
 }
 

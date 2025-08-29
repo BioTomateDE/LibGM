@@ -14,7 +14,7 @@ fn test_disassembler_and_assembler() {
             }
 
             let code_name = code.name.resolve(&data.strings.strings)?;
-            print!("Disassembling ({}/{}): {:<64}\r", i, data.codes.codes.len(), code_name);
+            print!("({}/{}) Disassembling: {:<64}\r", i+1, data.codes.codes.len(), code_name);
 
             let assembly: String = disassemble_code(&data, code)?;
             let reconstructed: Vec<GMInstruction> = assemble_code(&assembly, &mut data).map_err(|e| e.to_string())?;
