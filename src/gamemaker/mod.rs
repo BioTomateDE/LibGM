@@ -7,5 +7,4 @@ mod qoi;
 mod printing;
 mod element;
 pub mod data;
-pub mod disassembler;
-pub mod assembler;
+pub mod code_related;
