@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::code::{get_data_type_from_value, GMCodeValue, GMDataType};
@@ -7,8 +6,6 @@ use crate::gamemaker::elements::code::CodeVariable;
 use crate::gamemaker::elements::code::GMCode;
 use crate::gamemaker::elements::code::GMInstanceType;
 use crate::gamemaker::elements::code::GMInstruction;
-use crate::gamemaker::elements::code::GMInstructionData;
-use crate::gamemaker::elements::code::GMOpcode;
 use crate::gamemaker::elements::code::GMVariableType;
 use crate::gamemaker::elements::functions::GMFunction;
 use crate::gamemaker::elements::game_objects::GMGameObject;
@@ -26,64 +23,19 @@ pub fn disassemble_code(gm_data: &GMData, code: &GMCode) -> Result<String, Strin
 }
 
 
-pub fn find_blocks(instructions: &[GMInstruction]) -> HashMap<u32, usize> {
-    let mut blocks: HashMap<u32, usize> = HashMap::with_capacity(instructions.len());
-    let mut current_address: u32 = 0;
-
-    for (i, instruction) in instructions.iter().enumerate() {
-        blocks.insert(current_address, i);
-        current_address += get_instruction_size(instruction);
-    }
-
-    // insert end block
-    blocks.insert(current_address, instructions.len());
-
-    blocks
-}
-
-
-pub fn get_instruction_size(instruction: &GMInstruction) -> u32 {
-    // TODO: maybe caching these sizes is faster (store in list)? but needs benchmarks
-    match &instruction.kind {
-        GMInstructionData::Empty => 1,
-        GMInstructionData::SingleType(_) => 1,
-        GMInstructionData::Duplicate(_) => 1,
-        GMInstructionData::DuplicateSwap(_) => 1,
-        GMInstructionData::CallVariable(_) => 1,
-        GMInstructionData::DoubleType(_) => 1,
-        GMInstructionData::Comparison(_) => 1,
-        GMInstructionData::Goto(_) => 1,
-        GMInstructionData::Pop(_) => 2,
-        GMInstructionData::PopSwap(_) => 2,
-        GMInstructionData::Push(instr) => match instr.value {
-            GMCodeValue::Int16(_) => 1,
-            GMCodeValue::Int32(_) => 2,
-            GMCodeValue::Float(_) => 2,
-            GMCodeValue::Boolean(_) => 2,
-            GMCodeValue::String(_) => 2,
-            GMCodeValue::Variable(_) => 2,
-            GMCodeValue::Function(_) => 2,
-            GMCodeValue::Int64(_) => 3,
-            GMCodeValue::Double(_) => 3,
-        }
-        GMInstructionData::Call(_) => 2,
-        GMInstructionData::Extended16(_) => 1,
-        GMInstructionData::Extended32(_) => 2,
-        GMInstructionData::ExtendedFunc(_) => 2,
-    }
-}
-
-
 pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) -> Result<String, String> {
-    let mut line: String;
-    let opcode: &str = opcode_to_string(instruction.opcode);
+    let line: String;
+    let opcode: &str = opcode_to_string(instruction);
 
-    match &instruction.kind {
-        GMInstructionData::Empty => {
+    match &instruction {
+        GMInstruction::Exit(_) => {
             line = opcode.to_string();
         }
 
-        GMInstructionData::SingleType(instr) => {
+        GMInstruction::Negate(instr) |
+        GMInstruction::Not(instr) |
+        GMInstruction::Return(instr) |
+        GMInstruction::PopDiscard(instr) => {
             line = format!(
                 "{}.{}",
                 opcode,
@@ -91,26 +43,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
             );
         }
 
-        GMInstructionData::Duplicate(instr) => {
-            line = format!(
-                "{}.{} {}",
-                opcode,
-                data_type_to_string(instr.data_type),
-                instr.size,
-            );
-        }
-
-        GMInstructionData::DuplicateSwap(instr) => {
-            line = format!(
-                "{}.{} {} {}",
-                opcode,
-                data_type_to_string(instr.data_type),
-                instr.size1,
-                instr.size2,
-            );
-        }
-
-        GMInstructionData::CallVariable(instr) => {
+        GMInstruction::CallVariable(instr) => {
             line = format!(
                 "{}.{} {}",
                 opcode,
@@ -119,26 +52,39 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
             );
         }
 
-        GMInstructionData::DoubleType(instr) => {
+        GMInstruction::Duplicate(instr) => {
             line = format!(
-                "{}.{}.{}",
+                "{}.{} {}",
                 opcode,
-                data_type_to_string(instr.type1),
-                data_type_to_string(instr.type2),
+                data_type_to_string(instr.data_type),
+                instr.size,
             );
         }
 
-        GMInstructionData::Comparison(instr) => {
+        GMInstruction::DuplicateSwap(instr) => {
             line = format!(
-                "{}.{}.{} {}",
+                "{}.{} {} {}",
                 opcode,
-                data_type_to_string(instr.type1),
-                data_type_to_string(instr.type2),
-                comparison_type_to_string(instr.comparison_type),
+                data_type_to_string(instr.data_type),
+                instr.size1,
+                instr.size2,
+            );
+        }
+        
+        GMInstruction::PopSwap(instr) => {
+            line = format!(
+                "{} {}",
+                opcode,
+                instr.size,
             );
         }
 
-        GMInstructionData::Goto(instr) => {
+
+        GMInstruction::Branch(instr) |
+        GMInstruction::BranchIf(instr) |
+        GMInstruction::BranchUnless(instr) |
+        GMInstruction::PushWithContext(instr) |
+        GMInstruction::PopWithContext(instr) => {
             if let Some(jump_offset) = instr.jump_offset {
                 line = format!(
                     "{} {}",
@@ -153,7 +99,37 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
             }
         }
 
-        GMInstructionData::Pop(instr) => {
+        GMInstruction::Convert(instr) |
+        GMInstruction::Multiply(instr) |
+        GMInstruction::Divide(instr) |
+        GMInstruction::Remainder(instr) |
+        GMInstruction::Modulus(instr) |
+        GMInstruction::Add(instr) |
+        GMInstruction::Subtract(instr) |
+        GMInstruction::And(instr) |
+        GMInstruction::Or(instr) |
+        GMInstruction::Xor(instr) |
+        GMInstruction::ShiftLeft(instr) |
+        GMInstruction::ShiftRight(instr) => {
+            line = format!(
+                "{}.{}.{}",
+                opcode,
+                data_type_to_string(instr.type1),
+                data_type_to_string(instr.type2),
+            );
+        }
+
+        GMInstruction::Compare(instr) => {
+            line = format!(
+                "{}.{}.{} {}",
+                opcode,
+                data_type_to_string(instr.type1),
+                data_type_to_string(instr.type2),
+                comparison_type_to_string(instr.comparison_type),
+            );
+        }
+
+        GMInstruction::Pop(instr) => {
             line = format!(
                 "{}.{}.{} {}",
                 opcode,
@@ -163,16 +139,11 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
             );
         }
 
-        GMInstructionData::PopSwap(instr) => {
-            line = format!(
-                "{}.{} {}",
-                opcode,
-                data_type_to_string(GMDataType::Int16),
-                instr.size,
-            );
-        }
-
-        GMInstructionData::Push(instr) => {
+        GMInstruction::Push(instr) |
+        GMInstruction::PushLocal(instr) |
+        GMInstruction::PushGlobal(instr) |
+        GMInstruction::PushBuiltin(instr) |
+        GMInstruction::PushImmediate(instr) => {
             let value: String = match &instr.value {
                 GMCodeValue::Variable(code_variable) => variable_to_string(gm_data, &code_variable)?,
                 GMCodeValue::Boolean(true) => "true".to_string(),
@@ -194,7 +165,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
             );
         }
 
-        GMInstructionData::Call(instr) => {
+        GMInstruction::Call(instr) => {
             line = format!(
                 "{}.{} {}(argc={})",
                 opcode,
@@ -204,7 +175,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
             );
         }
 
-        GMInstructionData::Extended16(instr) => {
+        GMInstruction::Extended16(instr) => {
             line = format!(
                 "{}.{}",
                 extended_id_to_string(instr.kind)?,
@@ -212,7 +183,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
             );
         }
 
-        GMInstructionData::Extended32(instr) => {
+        GMInstruction::Extended32(instr) => {
             line = format!(
                 "{}.{} {}",
                 extended_id_to_string(instr.kind)?,
@@ -221,9 +192,9 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
             );
         }
 
-        GMInstructionData::ExtendedFunc(instr) => {
+        GMInstruction::ExtendedFunc(instr) => {
             line = format!(
-                "{}.{} [function]{}",
+                "{}.{} (function){}",
                 extended_id_to_string(instr.kind)?,
                 data_type_to_string(GMDataType::Int32),
                 function_to_string(gm_data, instr.function)?,
@@ -236,41 +207,45 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
 }
 
 
-fn opcode_to_string(opcode: GMOpcode) -> &'static str {
-    match opcode {
-        GMOpcode::Convert => "conv",
-        GMOpcode::Multiply => "mul",
-        GMOpcode::Divide => "div",
-        GMOpcode::Remainder => "rem",
-        GMOpcode::Modulus => "mod",
-        GMOpcode::Add => "add",
-        GMOpcode::Subtract => "sub",
-        GMOpcode::And => "and",
-        GMOpcode::Or => "or",
-        GMOpcode::Xor => "xor",
-        GMOpcode::Negate => "neg",
-        GMOpcode::Not => "not",
-        GMOpcode::ShiftLeft => "shl",
-        GMOpcode::ShiftRight => "shr",
-        GMOpcode::Compare => "cmp",
-        GMOpcode::Pop => "pop",
-        GMOpcode::Duplicate => "dup",
-        GMOpcode::Return => "ret",
-        GMOpcode::Exit => "exit",
-        GMOpcode::PopDiscard => "popz",
-        GMOpcode::Branch => "jmp",
-        GMOpcode::BranchIf => "jt",
-        GMOpcode::BranchUnless => "jf",
-        GMOpcode::PushWithContext => "pushenv",
-        GMOpcode::PopWithContext => "popenv",
-        GMOpcode::Push => "push",
-        GMOpcode::PushLocal => "pushloc",
-        GMOpcode::PushGlobal => "pushglb",
-        GMOpcode::PushBuiltin => "pushbltn",
-        GMOpcode::PushImmediate => "pushim",
-        GMOpcode::Call => "call",
-        GMOpcode::CallVariable => "callvar",
-        GMOpcode::Extended => "break",
+fn opcode_to_string(instruction: &GMInstruction) -> &'static str {
+    match instruction {
+        GMInstruction::Convert(_) => "conv",
+        GMInstruction::Multiply(_) => "mul",
+        GMInstruction::Divide(_) => "div",
+        GMInstruction::Remainder(_) => "rem",
+        GMInstruction::Modulus(_) => "mod",
+        GMInstruction::Add(_) => "add",
+        GMInstruction::Subtract(_) => "sub",
+        GMInstruction::And(_) => "and",
+        GMInstruction::Or(_) => "or",
+        GMInstruction::Xor(_) => "xor",
+        GMInstruction::Negate(_) => "neg",
+        GMInstruction::Not(_) => "not",
+        GMInstruction::ShiftLeft(_) => "shl",
+        GMInstruction::ShiftRight(_) => "shr",
+        GMInstruction::Compare(_) => "cmp",
+        GMInstruction::Pop(_) => "pop",
+        GMInstruction::PopSwap(_) => "popswap",
+        GMInstruction::Duplicate(_) => "dup",
+        GMInstruction::DuplicateSwap(_) => "dupswap",
+        GMInstruction::Return(_) => "ret",
+        GMInstruction::Exit(_) => "exit",
+        GMInstruction::PopDiscard(_) => "popz",
+        GMInstruction::Branch(_) => "jmp",
+        GMInstruction::BranchIf(_) => "jt",
+        GMInstruction::BranchUnless(_) => "jf",
+        GMInstruction::PushWithContext(_) => "pushenv",
+        GMInstruction::PopWithContext(_) => "popenv",
+        GMInstruction::Push(_) => "push",
+        GMInstruction::PushLocal(_) => "pushloc",
+        GMInstruction::PushGlobal(_) => "pushglb",
+        GMInstruction::PushBuiltin(_) => "pushbltn",
+        GMInstruction::PushImmediate(_) => "pushim",
+        GMInstruction::Call(_) => "call",
+        GMInstruction::CallVariable(_) => "callvar",
+        GMInstruction::Extended16(_) => "extended",     // this should never happen though
+        GMInstruction::Extended32(_) => "extended",     // this should never happen though
+        GMInstruction::ExtendedFunc(_) => "extended",   // this should never happen though
     }
 }
 
