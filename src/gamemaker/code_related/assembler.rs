@@ -6,7 +6,7 @@ use crate::gamemaker::elements::code::{GMCodeValue, CodeVariable, GMGotoInstruct
 use crate::gamemaker::elements::code::{GMCallVariableInstruction, GMComparisonType, GMDoubleTypeInstruction, GMDuplicateInstruction, GMDuplicateSwapInstruction};
 use crate::gamemaker::elements::code::GMInstruction;
 use crate::gamemaker::elements::code::GMDataType;
-use crate::gamemaker::elements::functions::{GMCodeLocal, GMFunction, GMFunctions};
+use crate::gamemaker::elements::functions::{GMFunction, GMFunctions};
 use crate::gamemaker::elements::game_objects::GMGameObject;
 use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::variables::GMVariable;

@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::element::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::code::GMVariableType;
-use crate::gamemaker::elements::variables::GMVariables;
 use crate::gamemaker::gm_version::GMVersionReq;
 use crate::utility::{typename, Stopwatch};
 
