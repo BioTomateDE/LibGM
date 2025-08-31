@@ -157,6 +157,7 @@ where
     N: TryFromPrimitive + TryFrom<I>,
 {
     match value.try_into() {
+        // raw match statements for easy debugger breakpoints
         Ok(val) => Ok(val),
         Err(_) => Err(format!(
             "Invalid {0} {1} (0x{1:0width$X})",

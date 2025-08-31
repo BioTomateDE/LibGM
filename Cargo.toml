@@ -41,6 +41,7 @@ mtpng = "0.4.1"
 tynm = "0.2.0"
 xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
 bimap = "0.6.3"
+arrayvec = "0.7.6"
 
 
 [dev-dependencies]
