@@ -1,8 +1,11 @@
 use std::fmt::{Display, Formatter};
+use std::mem::MaybeUninit;
+use std::ops::Neg;
 use std::str::{Chars, FromStr};
+use arrayvec::ArrayVec;
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
-use crate::gamemaker::elements::code::{GMCodeValue, CodeVariable, GMGotoInstruction, GMPopSwapInstruction, GMSingleTypeInstruction, GMInstanceType, GMVariableType, GMComparisonInstruction, GMPopInstruction, GMPushInstruction, GMCallInstruction, GMExtendedInstruction16, GMExtendedInstructionFunc, GMExtendedInstruction32, GMEmptyInstruction};
+use crate::gamemaker::elements::code::{GMCodeValue, CodeVariable, GMGotoInstruction, GMPopSwapInstruction, GMSingleTypeInstruction, GMInstanceType, GMVariableType, GMComparisonInstruction, GMPopInstruction, GMPushInstruction, GMCallInstruction, GMExtendedInstruction16, GMExtendedInstructionFunc, GMExtendedInstruction32, GMEmptyInstruction, GMExtendedKind};
 use crate::gamemaker::elements::code::{GMCallVariableInstruction, GMComparisonType, GMDoubleTypeInstruction, GMDuplicateInstruction, GMDuplicateSwapInstruction};
 use crate::gamemaker::elements::code::GMInstruction;
 use crate::gamemaker::elements::code::GMDataType;
@@ -12,7 +15,7 @@ use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::variables::GMVariable;
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ParseError {
     ExpectedEOL(String),
     ExpectedSpace(String),
@@ -27,13 +30,11 @@ pub enum ParseError {
     InvalidComparisonType(String),
     InvalidInstanceType(String),
     InvalidMnemonic(String),
-    InvalidExtendedMnemonic(String),
     InvalidVariableType(String),
     InvalidTypeCast(String),
     IntegerOutOfBounds(String),
     InvalidFloat(String),
     InvalidBoolean(String),
-    InvalidIdentifier(&'static str),
     InvalidEscapeCharacter(char),
     UnmatchedAngleBracket,
     UnmatchedSquareBracket,
@@ -43,6 +44,7 @@ pub enum ParseError {
     VarUnresolvable(String),
     FuncUnresolvable(String),
     ObjectUnresolvable(String),
+    TooManyTypes,
 }
 
 impl Display for ParseError {
@@ -60,12 +62,10 @@ impl Display for ParseError {
             ParseError::InvalidComparisonType(cmp_type) => write!(f, "Invalid comparison type \"{cmp_type}\""),
             ParseError::InvalidInstanceType(inst_type) => write!(f, "Invalid instance type \"{inst_type}\""),
             ParseError::InvalidMnemonic(mnemonic) => write!(f, "Invalid opcode mnemonic \"{mnemonic}\""),
-            ParseError::InvalidExtendedMnemonic(mnemonic) => write!(f, "Invalid extended/break mnemonic \"{mnemonic}\""),
             ParseError::IntegerOutOfBounds(int_str) => write!(f, "Integer out of bounds \"{int_str}\""),
             ParseError::InvalidFloat(float_str) => write!(f, "Invalid floating point number \"{float_str}\""),
             ParseError::InvalidBoolean(bool_str) => write!(f, "Invalid boolean \"{bool_str}\""),
             ParseError::InvalidTypeCast(cast) => write!(f, "Invalid Type Cast \"{cast}\""),
-            ParseError::InvalidIdentifier(reason) => write!(f, "Identifier {reason}"),
             ParseError::InvalidEscapeCharacter(char) => write!(f, "Invalid escape character '{char}'"),
             ParseError::InvalidVariableType(var_type) => write!(f, "Invalid Variable Type \"{var_type}\""),
             ParseError::UnmatchedRoundBracket => write!(f, "Round bracket '(' was never closed"),
@@ -76,6 +76,7 @@ impl Display for ParseError {
             ParseError::VarUnresolvable(var_name) => write!(f, "Variable \"{var_name}\" does not exist"),
             ParseError::FuncUnresolvable(func_name) => write!(f, "Function \"{func_name}\" does not exist"),
             ParseError::ObjectUnresolvable(error) => write!(f, "{error}"),
+            ParseError::TooManyTypes => write!(f, "Opcodes can only have a maximum of 2 types"),
         }
     }
 }
@@ -114,12 +115,12 @@ pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<GMInstru
         *line = "";
     }
 
-    // TODO: maybe smallvec or something? making a heap allocation for 3 bytes is really unnecessary
-    let mut types: Vec<GMDataType> = Vec::with_capacity(2);
+    let mut types: ArrayVec<GMDataType, 2> = ArrayVec::new();
     while line.chars().next() == Some('.') {
         consume_dot(line)?;
         let raw_type: char = consume_char(line).ok_or(ParseError::UnexpectedEOL("data type"))?;
-        types.push(data_type_from_char(raw_type)?);
+        let data_type: GMDataType = data_type_from_char(raw_type)?;
+        types.try_push(data_type).map_err(|_| ParseError::TooManyTypes)?;
     }
 
     match line.chars().next() {
@@ -164,7 +165,7 @@ pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<GMInstru
         "call" => GMInstruction::Call(parse_call(&types, line, gm_data)?),
         "callvar" => GMInstruction::CallVariable(parse_call_var(&types, line)?),
         _ => {
-            let kind: i16 = extended_id_from_string(&mnemonic)?;
+            let kind: GMExtendedKind = extended_kind_from_string(&mnemonic)?;
             assert_type_count(&types, 1)?;
             if line.is_empty() {
                 GMInstruction::Extended16(GMExtendedInstruction16 { kind })
@@ -186,50 +187,50 @@ pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<GMInstru
 }
 
 
-fn parse_double_type(types: &Vec<GMDataType>) -> Result<GMDoubleTypeInstruction, ParseError> {
+fn parse_double_type(types: &ArrayVec<GMDataType, 2>) -> Result<GMDoubleTypeInstruction, ParseError> {
     assert_type_count(&types, 2)?;
     Ok(GMDoubleTypeInstruction { type1: types[0], type2: types[1] })
 }
 
-fn parse_single_type(types: &Vec<GMDataType>) -> Result<GMSingleTypeInstruction, ParseError> {
+fn parse_single_type(types: &ArrayVec<GMDataType, 2>) -> Result<GMSingleTypeInstruction, ParseError> {
     assert_type_count(&types, 1)?;
     Ok(GMSingleTypeInstruction { data_type: types[0] })
 }
 
-fn parse_comparison(types: &Vec<GMDataType>, line: &mut &str) -> Result<GMComparisonInstruction, ParseError> {
+fn parse_comparison(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMComparisonInstruction, ParseError> {
     assert_type_count(&types, 2)?;
     let comparison_type_raw: String = parse_identifier(line)?;
     let comparison_type: GMComparisonType = comparison_type_from_string(&comparison_type_raw)?;
     Ok(GMComparisonInstruction { comparison_type, type1: types[0], type2: types[1] })
 }
 
-fn parse_pop(types: &Vec<GMDataType>, line: &mut &str, gm_data: &GMData) -> Result<GMPopInstruction, ParseError> {
+fn parse_pop(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &GMData) -> Result<GMPopInstruction, ParseError> {
     assert_type_count(&types, 2)?;
     let destination: CodeVariable = parse_variable(line, &gm_data)?;
     Ok(GMPopInstruction { type1: types[0], type2: types[1], destination })
 }
 
-fn parse_pop_swap(types: &Vec<GMDataType>, line: &mut &str) -> Result<GMPopSwapInstruction, ParseError> {
+fn parse_pop_swap(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMPopSwapInstruction, ParseError> {
     assert_type_count(&types, 0)?;
-    let size: u8 = parse_int(line)?;
+    let size: u8 = parse_uint(line)?;
     Ok(GMPopSwapInstruction { size })
 }
 
-fn parse_duplicate(types: &Vec<GMDataType>, line: &mut &str) -> Result<GMDuplicateInstruction, ParseError> {
+fn parse_duplicate(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMDuplicateInstruction, ParseError> {
     assert_type_count(&types, 1)?;
-    let size: u8 = parse_int(line)?;
+    let size: u8 = parse_uint(line)?;
     Ok(GMDuplicateInstruction { data_type: types[0], size })
 }
 
-fn parse_duplicate_swap(types: &Vec<GMDataType>, line: &mut &str) -> Result<GMDuplicateSwapInstruction, ParseError> {
+fn parse_duplicate_swap(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMDuplicateSwapInstruction, ParseError> {
     assert_type_count(&types, 1)?;
-    let size1: u8 = parse_int(line)?;
+    let size1: u8 = parse_uint(line)?;
     consume_space(line)?;
-    let size2: u8 = parse_int(line)?;
+    let size2: u8 = parse_uint(line)?;
     Ok(GMDuplicateSwapInstruction { data_type: types[0], size1, size2 })
 }
 
-fn parse_goto(types: &Vec<GMDataType>, line: &mut &str) -> Result<GMGotoInstruction, ParseError> {
+fn parse_goto(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMGotoInstruction, ParseError> {
     assert_type_count(&types, 0)?;
     let jump_offset: Option<i32> = if *line == "<drop>" {
         *line = "";    // need to consume; otherwise error
@@ -240,7 +241,7 @@ fn parse_goto(types: &Vec<GMDataType>, line: &mut &str) -> Result<GMGotoInstruct
     Ok(GMGotoInstruction { jump_offset })
 }
 
-fn parse_push(types: &Vec<GMDataType>, line: &mut &str, gm_data: &mut GMData) -> Result<GMPushInstruction, ParseError> {
+fn parse_push(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &mut GMData) -> Result<GMPushInstruction, ParseError> {
     assert_type_count(&types, 1)?;
     let value: GMCodeValue = match types[0] {
         GMDataType::Int16 => GMCodeValue::Int16(parse_int(line)?),
@@ -273,7 +274,7 @@ fn parse_push(types: &Vec<GMDataType>, line: &mut &str, gm_data: &mut GMData) ->
     Ok(GMPushInstruction { value })
 }
 
-fn parse_call(types: &Vec<GMDataType>, line: &mut &str, gm_data: &GMData) -> Result<GMCallInstruction, ParseError> {
+fn parse_call(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &GMData) -> Result<GMCallInstruction, ParseError> {
     assert_type_count(&types, 1)?;
     let function: GMRef<GMFunction> = parse_function(line, &gm_data.strings, &gm_data.functions)?;
     let argc_str: String = consume_round_brackets(line)?.ok_or(ParseError::ExpectedArgc(line.to_string()))?;
@@ -285,15 +286,15 @@ fn parse_call(types: &Vec<GMDataType>, line: &mut &str, gm_data: &GMData) -> Res
     Ok(GMCallInstruction { arguments_count, data_type: types[0], function })
 }
 
-fn parse_call_var(types: &Vec<GMDataType>, line: &mut &str) -> Result<GMCallVariableInstruction, ParseError> {
+fn parse_call_var(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMCallVariableInstruction, ParseError> {
     assert_type_count(&types, 1)?;
-    let argument_count: u8 = parse_int(line)?;
+    let argument_count: u8 = parse_uint(line)?;
     Ok(GMCallVariableInstruction { data_type: types[0], argument_count })
 }
 
 
 
-fn assert_type_count(types: &Vec<GMDataType>, n: usize) -> Result<(), ParseError> {
+fn assert_type_count(types: &ArrayVec<GMDataType, 2>, n: usize) -> Result<(), ParseError> {
     if types.len() != n {
         return Err(ParseError::InvalidTypeCount(n, types.len()))
     }
@@ -306,20 +307,6 @@ fn consume_char(line: &mut &str) -> Option<char> {
     let first_char: Option<char> = chars.next();
     *line = chars.as_str();
     first_char
-}
-
-
-fn consume_chars(line: &mut &str, count: usize) -> Result<String, ParseError> {
-    // find byte position after [`n`] characters
-    let byte_pos: usize = line
-        .char_indices()
-        .nth(count)
-        .map(|(pos, _)| pos)
-        .ok_or(ParseError::UnexpectedEOL("consuming n chars"))?;
-
-    let consumed: String = line[..byte_pos].to_string();
-    *line = &line[byte_pos..];
-    Ok(consumed)
 }
 
 
@@ -377,52 +364,58 @@ fn consume_angle_brackets(line: &mut &str) -> Result<Option<String>, ParseError>
 
 fn data_type_from_char(data_type: char) -> Result<GMDataType, ParseError> {
     Ok(match data_type {
-        'e' => GMDataType::Int16,
+        'v' => GMDataType::Variable,
         'i' => GMDataType::Int32,
+        's' => GMDataType::String,
+        'e' => GMDataType::Int16,
+        'd' => GMDataType::Double,
         'l' => GMDataType::Int64,
         'f' => GMDataType::Float,
-        'd' => GMDataType::Double,
         'b' => GMDataType::Boolean,
-        's' => GMDataType::String,
-        'v' => GMDataType::Variable,
         _ => return Err(ParseError::InvalidDataType(data_type))
     })
 }
 
 
-fn extended_id_from_string(mnemonic: &str) -> Result<i16, ParseError> {
+fn extended_kind_from_string(mnemonic: &str) -> Result<GMExtendedKind, ParseError> {
     Ok(match mnemonic {
-        "chkindex" => -1,
-        "pushaf" => -2,
-        "popaf" => -3,
-        "pushac" => -4,
-        "setowner" => -5,
-        "isstaticok" => -6,
-        "setstatic" => -7,
-        "savearef" => -8,
-        "restorearef" => -9,
-        "chknullish" => -10,
-        "pushref" => -11,
+        "chkindex" => GMExtendedKind::CheckArrayIndex,
+        "pushaf" => GMExtendedKind::PushArrayFinal,
+        "popaf" => GMExtendedKind::PopArrayFinal,
+        "pushac" => GMExtendedKind::PushArrayContainer,
+        "setowner" => GMExtendedKind::SetArrayOwner,
+        "isstaticok" => GMExtendedKind::HasStaticInitialized,
+        "setstatic" => GMExtendedKind::SetStaticInitialized,
+        "savearef" => GMExtendedKind::SaveArrayReference,
+        "restorearef" => GMExtendedKind::RestoreArrayReference,
+        "isnullish" => GMExtendedKind::IsNullishValue,
+        "pushref" => GMExtendedKind::PushReference,
         _ => return Err(ParseError::InvalidMnemonic(mnemonic.to_string()))
     })
 }
 
 
-fn parse_int<T: FromStr>(line: &mut &str) -> Result<T, ParseError> {
-    let mut end: usize = line.bytes().len();
-    for (i, char) in line.char_indices() {
-        if matches!(char, '0'..='9') || (char == '-' && i == 0) {
-            continue
-        }
-        end = i;
-        break
+fn parse_int<T: FromStr + Neg<Output = T>>(line: &mut &str) -> Result<T, ParseError> {
+    let is_negative: bool = line.starts_with('-');
+    if is_negative {
+        consume_char(line);   // consume minus sign
     }
+    let integer: T = parse_uint(line)?;
+    if is_negative {
+        Ok(-integer)
+    } else {
+        Ok(integer)
+    }
+}
 
-    let slice: &str = &line[..end];
-    if slice.is_empty() || slice == "-" {
+
+fn parse_uint<T: FromStr>(line: &mut &str) -> Result<T, ParseError> {
+    let end: usize = line.find(|c: char| !c.is_ascii_digit()).unwrap_or_else(|| line.len());
+    if end == 0 {
         return Err(ParseError::UnexpectedEOL("integer"))
     }
-    let integer: T = slice.parse().map_err(|_| ParseError::IntegerOutOfBounds(slice.to_string()))?;
+    let integer: T = line[..end].parse()
+        .map_err(|_| ParseError::IntegerOutOfBounds(line[..end].to_string()))?;
     *line = &line[end..];
     Ok(integer)
 }
@@ -450,10 +443,10 @@ fn parse_bool(line: &mut &str) -> Result<bool, ParseError> {
 
 fn comparison_type_from_string(comparison_type: &str) -> Result<GMComparisonType, ParseError> {
     Ok(match comparison_type {
-        "LT" => GMComparisonType::LessThan,
-        "LTE" => GMComparisonType::LessOrEqual,
         "EQ" => GMComparisonType::Equal,
         "NEQ" => GMComparisonType::NotEqual,
+        "LT" => GMComparisonType::LessThan,
+        "LTE" => GMComparisonType::LessOrEqual,
         "GTE" => GMComparisonType::GreaterOrEqual,
         "GT" => GMComparisonType::GreaterThan,
         _ => return Err(ParseError::InvalidComparisonType(comparison_type.to_string()))
@@ -463,9 +456,8 @@ fn comparison_type_from_string(comparison_type: &str) -> Result<GMComparisonType
 
 fn variable_type_from_string(variable_type: &str) -> Result<GMVariableType, ParseError> {
     Ok(match variable_type {
-        "array" => GMVariableType::Array,
         "stacktop" => GMVariableType::StackTop,
-        "normal" => GMVariableType::Normal,
+        "array" => GMVariableType::Array,
         "instance" => GMVariableType::Instance,
         "arraypushaf" => GMVariableType::ArrayPushAF,
         "arraypopaf" => GMVariableType::ArrayPopAF,
@@ -498,26 +490,29 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable, Par
             variable_ref = Some(GMRef::new(var_index));
             GMInstanceType::Local
         },
+        "stacktop" => GMInstanceType::StackTop,
+        "builtin" => GMInstanceType::Builtin,
+        "global" => GMInstanceType::Global,
+        "arg" => GMInstanceType::Argument,
         "other" => GMInstanceType::Other,
+        "static" => GMInstanceType::Static,
         "all" => GMInstanceType::All,
         "none" => GMInstanceType::None,
-        "global" => GMInstanceType::Global,
-        "builtin" => GMInstanceType::Builtin,
-        "stacktop" => GMInstanceType::StackTop,
-        "arg" => GMInstanceType::Argument,
-        "static" => GMInstanceType::Static,
         _ => return Err(ParseError::InvalidInstanceType(instance_type_raw.to_string()))
     };
 
-    let name: String = parse_identifier(line)?;
+    let name: String = parse_identifier(line).or_else(|err| {
+        consume_str(line, "$$$$temp$$$$").ok_or(err)?;
+        Ok("$$$$temp$$$$".to_string())
+    })?;
 
     // convert instance type because of some bullshit
     let vari_instance_type: GMInstanceType = match instance_type {
-        GMInstanceType::Self_(Some(_)) => GMInstanceType::Self_(None),
-        GMInstanceType::Other => GMInstanceType::Self_(None),
-        GMInstanceType::Argument => GMInstanceType::Builtin,
-        GMInstanceType::Builtin => GMInstanceType::Self_(None),
         GMInstanceType::StackTop => GMInstanceType::Self_(None),
+        GMInstanceType::Builtin => GMInstanceType::Self_(None),
+        GMInstanceType::Self_(Some(_)) => GMInstanceType::Self_(None),
+        GMInstanceType::Argument => GMInstanceType::Builtin,
+        GMInstanceType::Other => GMInstanceType::Self_(None),
         _ => instance_type.clone(),
     };
 
@@ -557,28 +552,40 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable, Par
 
 
 fn parse_function(line: &mut &str, gm_strings: &GMStrings, gm_functions: &GMFunctions) -> Result<GMRef<GMFunction>, ParseError> {
-    let ident: String = parse_identifier(line)?;
+    let identifier: String = parse_identifier(line).or_else(|err| {
+        // allow special functions like `@@This@@`
+        consume_str(line, "@@").ok_or_else(|| err.clone())?;
+        let identifier: String = parse_identifier(line)?;
+        consume_str(line, "@@").ok_or(err)?;
+        Ok(format!("@@{identifier}@@"))
+    })?;
 
     for (i, func) in gm_functions.functions.iter().enumerate() {
         let func_name: &String = func.name.resolve(&gm_strings.strings)
             .map_err(|_| ParseError::StringIndexUnresolvable(func.name.index))?;
-        if *func_name == ident {
+        if *func_name == identifier {
             return Ok(GMRef::new(i as u32))
         }
     }
 
-    Err(ParseError::FuncUnresolvable(ident))
+    Err(ParseError::FuncUnresolvable(identifier))
 }
 
 
-/// @ and $ are allowed because of internal gamemaker variable/function names.
 fn parse_identifier(line: &mut &str) -> Result<String, ParseError> {
+    // identifiers can't start with a digit
+    if line.starts_with(|c: char| c.is_ascii_digit()) {
+        return Err(ParseError::ExpectedIdentifier(line.to_string()))
+    }
+
     for (i, char) in line.char_indices() {
-        if matches!(char, '0'..='9') && i == 0 {
-            return Err(ParseError::InvalidIdentifier("must not start with a digit"))
-        }
-        if matches!(char, '0'..='9' | 'A'..='Z' | 'a'..='z' | '_' | '@' | '$') {
-            continue
+        // checks ordered in descending average occurrence count
+        match char {
+            'a'..='z' => continue,
+            '0'..='9' => continue,
+            'A'..='Z' => continue,
+            '_' => continue,
+            _ => (),
         }
         let identifier: String = line[..i].to_string();
         if identifier.is_empty() {
@@ -606,11 +613,11 @@ fn parse_string_literal(line: &mut &str) -> Result<String, ParseError> {
     for (i, char) in line.char_indices() {
         if escaping {
             match char {
-                'n' => string.push('\n'),
-                'r' => string.push('\r'),
-                't' => string.push('\t'),
-                '\\' => string.push('\\'),
                 '"' => string.push('"'),
+                'n' => string.push('\n'),
+                '\\' => string.push('\\'),
+                't' => string.push('\t'),
+                'r' => string.push('\r'),
                 _ => return Err(ParseError::InvalidEscapeCharacter(char)),
             }
             escaping = false;

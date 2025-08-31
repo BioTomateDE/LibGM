@@ -861,16 +861,17 @@ impl InstructionData for GMCallInstruction {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMExtendedInstruction16 {
-    pub kind: i16,
+    pub kind: GMExtendedKind,
 }
 impl InstructionData for GMExtendedInstruction16 {
     fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
         let kind: i16 = b.0 as i16 | ((b.1 as i16) << 8);
+        let kind: GMExtendedKind = num_enum_from(kind)?;
         Ok(Self { kind })
     }
 
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
-        builder.write_i16(self.kind);
+        builder.write_i16(self.kind.into());
         builder.write_u8(GMDataType::Int16.into());
         builder.write_u8(opcode);
         Ok(())
@@ -880,18 +881,19 @@ impl InstructionData for GMExtendedInstruction16 {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMExtendedInstruction32 {
-    pub kind: i16,
+    pub kind: GMExtendedKind,
     pub int_argument: i32,
 }
 impl InstructionData for GMExtendedInstruction32 {
     fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
         let kind: i16 = b.0 as i16 | ((b.1 as i16) << 8);
+        let kind: GMExtendedKind = num_enum_from(kind)?;
         let int_argument: i32 = reader.read_i32()?;
         Ok(Self { kind, int_argument })
     }
 
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
-        builder.write_i16(self.kind);
+        builder.write_i16(self.kind.into());
         builder.write_u8(GMDataType::Int16.into());
         builder.write_u8(opcode);
         builder.write_i32(self.int_argument);
@@ -902,12 +904,13 @@ impl InstructionData for GMExtendedInstruction32 {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMExtendedInstructionFunc {
-    pub kind: i16,
+    pub kind: GMExtendedKind,
     pub function: GMRef<GMFunction>,
 }
 impl InstructionData for GMExtendedInstructionFunc {
     fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
         let kind: i16 = b.0 as i16 | ((b.1 as i16) << 8);
+        let kind: GMExtendedKind = num_enum_from(kind)?;
         let function: GMRef<GMFunction> = *reader.function_occurrence_map.get(&reader.cur_pos).unwrap();
         reader.cur_pos += 4;    // skip next occurrence offset
         Ok(Self { kind, function })
@@ -915,13 +918,74 @@ impl InstructionData for GMExtendedInstructionFunc {
 
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
         let instr_pos: usize = builder.len();
-        builder.write_i16(self.kind);
+        builder.write_i16(self.kind.into());
         builder.write_u8(GMDataType::Int16.into());
         builder.write_u8(opcode);
         let function: &GMFunction = self.function.resolve(&builder.gm_data.functions.functions)?;
         write_function_occurrence(builder, self.function.index, instr_pos, function.name.index)?;
         Ok(())
     }
+}
+
+
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
+#[repr(i16)]
+pub enum GMExtendedKind {
+    /// Verifies an array index is within proper bounds, typically for multidimensional arrays.
+    CheckArrayIndex = -1,
+
+
+    /// Pops two values from the stack, those being an index and an array reference.
+    /// Then, pushes the value stored at the passed-in array at the desired index.
+    /// That is, this is used only with multidimensional arrays, for the final/last index operation.
+    PushArrayFinal = -2,
+
+
+    /// Pops three values from the stack, those being an index, an array reference, and a value.
+    /// Then, assigns the value to the array at the specified index.
+    PopArrayFinal = -3,
+
+
+    /// Pops two values from the stack, those being an array reference and an index.
+    /// Then, pushes a new array reference from the passed-in array at the desired index,
+    /// with the expectation that it will be further indexed into.
+    /// That is, this is used only with multidimensional arrays,
+    /// for all index operations from the second through the second to last.
+    PushArrayContainer = -4,
+
+    /// Sets a global variable in the VM (popped from stack), designated for
+    /// tracking the now-deprecated array copy-on-write functionality in GML.
+    /// The value used is specific to certain locations in scripts.
+    /// When array copy-on-write functionality is disabled, this extended opcode is not used.
+    SetArrayOwner = -5,
+
+    /// Pushes a boolean value to the stack, indicating whether static initialization
+    /// has already occurred for this function (true), or otherwise false.
+    HasStaticInitialized = -6,
+
+
+    /// Marks the current function to no longer be able to enter its own static initialization.
+    /// This can either occur at the beginning or end of a static block,
+    /// depending on whether "AllowReentrantStatic" is enabled by a game's developer
+    /// (enabled by default before GameMaker 2024.11; disabled by default otherwise).
+    SetStaticInitialized = -7,
+
+    /// Keeps track of an array reference temporarily. Used in multidimensional array compound assignment statements.
+    /// Presumed to be used for garbage collection purposes.
+    SaveArrayReference = -8,
+
+
+    /// Restores a previously-tracked array reference.
+    /// Used in multidimensional array compound assignment statements.
+    /// Presumed to be used for garbage collection purposes.
+    RestoreArrayReference = -9,
+
+    /// Pops a value from the stack, and pushes a boolean result.
+    /// The result is true if a "nullish" value, such as undefined or GML's pointer_null.
+    IsNullishValue = -10,
+
+    /// Pushes an asset reference to the stack, encoded in an integer. Includes asset type and index.
+    PushReference = -11,
 }
 
 

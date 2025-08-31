@@ -1,6 +1,6 @@
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
-use crate::gamemaker::elements::code::{get_data_type_from_value, GMCodeValue, GMDataType};
+use crate::gamemaker::elements::code::{get_data_type_from_value, GMCodeValue, GMDataType, GMExtendedKind};
 use crate::gamemaker::elements::code::GMComparisonType;
 use crate::gamemaker::elements::code::CodeVariable;
 use crate::gamemaker::elements::code::GMCode;
@@ -178,7 +178,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
         GMInstruction::Extended16(instr) => {
             line = format!(
                 "{}.{}",
-                extended_id_to_string(instr.kind)?,
+                extended_kind_to_string(instr.kind),
                 data_type_to_string(GMDataType::Int16),
             );
         }
@@ -186,7 +186,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
         GMInstruction::Extended32(instr) => {
             line = format!(
                 "{}.{} {}",
-                extended_id_to_string(instr.kind)?,
+                extended_kind_to_string(instr.kind),
                 data_type_to_string(GMDataType::Int32),
                 instr.int_argument
             );
@@ -195,7 +195,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
         GMInstruction::ExtendedFunc(instr) => {
             line = format!(
                 "{}.{} (function){}",
-                extended_id_to_string(instr.kind)?,
+                extended_kind_to_string(instr.kind),
                 data_type_to_string(GMDataType::Int32),
                 function_to_string(gm_data, instr.function)?,
             );
@@ -360,21 +360,20 @@ pub fn format_literal_string(gm_data: &GMData, gm_string_ref: GMRef<String>) -> 
 }
 
 
-fn extended_id_to_string(extended_id: i16) -> Result<&'static str, String> {
-    Ok(match extended_id {
-        -1 => "chkindex",
-        -2 => "pushaf",
-        -3 => "popaf",
-        -4 => "pushac",
-        -5 => "setowner",
-        -6 => "isstaticok",
-        -7 => "setstatic",
-        -8 => "savearef",
-        -9 => "restorearef",
-        -10 => "chknullish",
-        -11 => "pushref",
-        _ => return Err(format!("Unknown Break ID {extended_id}"))
-    })
+fn extended_kind_to_string(extended_kind: GMExtendedKind) -> &'static str {
+    match extended_kind {
+        GMExtendedKind::CheckArrayIndex => "chkindex",
+        GMExtendedKind::PushArrayFinal => "pushaf",
+        GMExtendedKind::PopArrayFinal => "popaf",
+        GMExtendedKind::PushArrayContainer => "pushac",
+        GMExtendedKind::SetArrayOwner => "setowner",
+        GMExtendedKind::HasStaticInitialized => "isstaticok",
+        GMExtendedKind::SetStaticInitialized => "setstatic",
+        GMExtendedKind::SaveArrayReference => "savearef",
+        GMExtendedKind::RestoreArrayReference => "restorearef",
+        GMExtendedKind::IsNullishValue => "isknullish",
+        GMExtendedKind::PushReference => "pushref",
+    }
 }
 
 
