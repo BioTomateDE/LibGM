@@ -189,7 +189,7 @@ pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<GMInstru
 
 fn parse_double_type(types: &ArrayVec<GMDataType, 2>) -> Result<GMDoubleTypeInstruction, ParseError> {
     assert_type_count(&types, 2)?;
-    Ok(GMDoubleTypeInstruction { type1: types[0], type2: types[1] })
+    Ok(GMDoubleTypeInstruction { right: types[0], left: types[1] })
 }
 
 fn parse_single_type(types: &ArrayVec<GMDataType, 2>) -> Result<GMSingleTypeInstruction, ParseError> {

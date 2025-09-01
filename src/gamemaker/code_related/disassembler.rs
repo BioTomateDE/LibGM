@@ -114,8 +114,8 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
             line = format!(
                 "{}.{}.{}",
                 opcode,
-                data_type_to_string(instr.type1),
-                data_type_to_string(instr.type2),
+                data_type_to_string(instr.right),
+                data_type_to_string(instr.left),
             );
         }
 

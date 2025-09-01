@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::env::var;
 use std::fmt::{Display, Formatter};
 use bimap::{BiHashMap, BiMap};
@@ -27,6 +29,7 @@ pub enum CodeValidationError {
     CallArgumentNotVar(VMStackItem),
     SpecialVarTypeNotInt32(GMVariableType, GMDataType),
     BranchConditionNotBool(VMStackItem),
+    PushEnvNotInt32(VMStackItem),
     StackTopNotInt32(VMStackItem),
     SetOwnerNotInt32(VMStackItem),
     Int16OutOfBounds(i32),
@@ -57,6 +60,7 @@ impl Display for CodeValidationError {
             CodeValidationError::CallArgumentNotVar(dtype) => write!(f, "Stack value popped as argument for function call has data type {dtype:?} instead of Variable"),
             CodeValidationError::SpecialVarTypeNotInt32(vtype, dtype) => write!(f, "Top data type is {dtype:?} instead of Int32 for {vtype:?} Pop instruction"),
             CodeValidationError::BranchConditionNotBool(item) => write!(f, "Top data type is {item:?} instead of Boolean for conditional Branch instruction"),
+            CodeValidationError::PushEnvNotInt32(item) => write!(f, "Expected Int32 value for PushEnv instruction but found {item:?}"),
             CodeValidationError::StackTopNotInt32(item) => write!(f, "Top data type is {item:?} instead of Int32 (with value) for stacktop variable type"),
             CodeValidationError::SetOwnerNotInt32(item) => write!(f, "Top data type is {item:?} instead of Int32 (with value) for extended SetOwner instruction"),
             CodeValidationError::Int16OutOfBounds(int32) => write!(f, "Int32 {int32} could not be converted to an Int16; out of bounds"),
@@ -87,8 +91,7 @@ pub fn validate_code(code: &GMCode, gm_data: &GMData) -> Result<(), CodeValidati
     let instruction_index: usize = *address_map.get_by_right(&instruction_address)
         .ok_or(CodeValidationError::InvalidInitialOffset(instruction_address))?;
 
-    let stack = VMStack::new();
-    validate_instructions(gm_data, &address_map, instructions, stack, instruction_index)?;
+    validate_instructions(gm_data, &address_map, instructions, &mut HashSet::new(), VMStack::new(), instruction_index)?;
     Ok(())
 }
 
@@ -97,22 +100,24 @@ fn validate_instructions(
     gm_data: &GMData,
     address_map: &BiMap<usize, u32>,
     instructions: &Vec<GMInstruction>,
+    visited_branch_targets: &mut HashSet<usize>,
     mut stack: VMStack,
     mut instruction_index: usize,
 ) -> Result<(), CodeValidationError> {
+    log::warn!("========================================");
     while instruction_index < instructions.len() {
         // TODO: clean this part up
         let instruction: &GMInstruction = instructions.get(instruction_index)
             .ok_or(CodeValidationError::CodeEndWithoutExit(instruction_index, instructions.len()))?;
         let instruction_address: u32 = *address_map.get_by_left(&instruction_index).unwrap();
-        log::debug!("{} {}", stack.items.len(), disassemble_instruction(gm_data, instruction).unwrap());
+        log::debug!("{} | {} {}", instruction_index, stack.items.len(), disassemble_instruction(gm_data, instruction).unwrap());
         instruction_index += 1;
 
         match instruction {
             GMInstruction::Convert(instr) => {
                 let item: VMStackItem = stack.pop()?;
-                item.assert_data_type(instr.type1)?;
-                stack.push_data_type(instr.type2);
+                item.assert_data_type(instr.right)?;
+                stack.push_data_type(instr.left);
             }
 
             GMInstruction::Multiply(instr) |
@@ -126,11 +131,12 @@ fn validate_instructions(
             GMInstruction::Xor(instr) |
             GMInstruction::ShiftLeft(instr) |
             GMInstruction::ShiftRight(instr) => {
-                let item1: VMStackItem = stack.pop()?;
-                let item2: VMStackItem = stack.pop()?;
-                item1.assert_data_type(instr.type1)?;
-                item2.assert_data_type(instr.type2)?;
-                stack.push_data_type(instr.type2);
+                let right: VMStackItem = stack.pop()?;
+                let left: VMStackItem = stack.pop()?;
+                right.assert_data_type(instr.right)?;
+                left.assert_data_type(instr.left)?;
+                let result_type: GMDataType = binary_operation_result_type(instruction, instr.right, instr.left);
+                stack.push_data_type(result_type);
             }
 
             GMInstruction::Negate(instr) |
@@ -230,18 +236,25 @@ fn validate_instructions(
 
             GMInstruction::Branch(instr) |
             GMInstruction::BranchIf(instr) |
-            GMInstruction::BranchUnless(instr) => {
+            GMInstruction::BranchUnless(instr) |
+            GMInstruction::PushWithContext(instr) |
+            GMInstruction::PopWithContext(instr) => {
                 let conditional: bool = matches!(instruction, GMInstruction::BranchIf(_) | GMInstruction::BranchUnless(_));
                 if conditional {
                     let item: VMStackItem = stack.pop()?;
-                    if item != VMStackItem::Boolean {
-                        return Err(CodeValidationError::BranchConditionNotBool(item))
+                    match item {
+                        // this will probably have to be extended to non literal ints too
+                        VMStackItem::Int32(Some(1)) => {}
+                        VMStackItem::Int32(Some(0)) => {}
+                        VMStackItem::Boolean => {}
+                        _ => return Err(CodeValidationError::BranchConditionNotBool(item))
+                    }
+                } else if matches!(instruction, GMInstruction::PushWithContext(_)) {
+                    let item: VMStackItem = stack.pop()?;
+                    if !matches!(item, VMStackItem::Int32(_)) {
+                        return Err(CodeValidationError::PushEnvNotInt32(item))
                     }
                 }
-
-                // if !stack.is_empty() {
-                //     return Err(CodeValidationError::BranchStackLeftover(stack))
-                // }
 
                 let branch_target_index: usize;
                 if let Some(address_offset) = instr.jump_offset {
@@ -252,21 +265,16 @@ fn validate_instructions(
                     unimplemented!("popenv exit magic not yet implemented")
                 }
 
-                if conditional {
-                    // perform branch on recursive call; skip branch in this execution
-                    validate_instructions(gm_data, address_map, instructions, stack.clone(), branch_target_index)?;
+                if !visited_branch_targets.insert(branch_target_index) {
+                    // only jump if branch target wasn't already visited
                     continue
                 }
-
-                instruction_index = branch_target_index;
-            }
-
-            GMInstruction::PushWithContext(instr) => {
-                unimplemented!("pushenv not yet supported")
-            }
-
-            GMInstruction::PopWithContext(instr) => {
-                unimplemented!("popenv not yet supported")
+                if conditional {
+                    // perform branch on recursive call; skip branch in this execution
+                    validate_instructions(gm_data, address_map, instructions, visited_branch_targets, stack.clone(), branch_target_index)?;
+                } else {
+                    instruction_index = branch_target_index;
+                }
             }
 
             GMInstruction::Push(instr) |
@@ -461,7 +469,7 @@ impl VMStack {
 
 
 #[derive(Debug, Clone, PartialEq)]
-enum VMStackItem {
+pub enum VMStackItem {
     Int32(Option<i32>),
     Int64,
     Float,
@@ -504,4 +512,40 @@ impl VMStackItem {
     }
 }
 
+
+fn binary_operation_result_type(instruction: &GMInstruction, right: GMDataType, left: GMDataType) -> GMDataType {
+    match instruction {
+        GMInstruction::Compare(_) => return GMDataType::Boolean,
+        GMInstruction::Subtract(_) |
+        GMInstruction::Divide(_) |
+        GMInstruction::Modulus(_) |
+        GMInstruction::And(_) |
+        GMInstruction::Or(_) |
+        GMInstruction::Xor(_) |
+        GMInstruction::ShiftLeft(_) |
+        GMInstruction::ShiftRight(_) => if right == GMDataType::String || left == GMDataType::String {
+            return GMDataType::Double
+        },
+        GMInstruction::Remainder(_) => if (right == GMDataType::String && left != GMDataType::Variable) || left == GMDataType::String {
+            return GMDataType::Double
+        },
+        _ => {}
+    }
+
+    // Choose whichever type has a higher bias, or if equal, the smaller numerical data type value.
+    match stack_type_bias(left).cmp(&stack_type_bias(right)) {
+        Ordering::Greater => left,
+        Ordering::Equal => if u8::from(left) < u8::from(right) {left} else {right},
+        Ordering::Less => right,
+    }
+}
+
+
+fn stack_type_bias(data_type: GMDataType) -> u8 {
+    match data_type {
+        GMDataType::Variable => 2,
+        GMDataType::Double | GMDataType::Int64 => 1,
+        _ => 0
+    }
+}
 
