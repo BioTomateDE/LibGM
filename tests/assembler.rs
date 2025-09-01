@@ -1,6 +1,6 @@
 
 #[test]
-fn test_disassembler_and_assembler() {
+fn test_disassembler_and_assembler() -> Result<(), String> {
     use libgm::gamemaker::code_related::assembler::assemble_code;
     use libgm::gamemaker::code_related::disassembler::disassemble_code;
     use libgm::gamemaker::elements::code::GMInstruction;
