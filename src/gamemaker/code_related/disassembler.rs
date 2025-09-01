@@ -1,6 +1,6 @@
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
-use crate::gamemaker::elements::code::{get_data_type_from_value, GMCodeValue, GMDataType, GMExtendedKind};
+use crate::gamemaker::elements::code::{get_data_type_from_value, GMAssetReference, GMCodeValue, GMDataType};
 use crate::gamemaker::elements::code::GMComparisonType;
 use crate::gamemaker::elements::code::CodeVariable;
 use crate::gamemaker::elements::code::GMCode;
@@ -10,6 +10,18 @@ use crate::gamemaker::elements::code::GMVariableType;
 use crate::gamemaker::elements::functions::GMFunction;
 use crate::gamemaker::elements::game_objects::GMGameObject;
 use crate::gamemaker::elements::variables::GMVariable;
+
+macro_rules! name_by_ref {
+    ($typename:ident, $reference:expr, $gm_data:expr) => {{
+        let element = $reference.resolve(&$gm_data.$typename.$typename)?;
+        let name: &String = element.name.resolve(&$gm_data.strings.strings)?;
+        if !is_valid_identifier(name) {
+            return Err(format!("Invalid {} identifier: {}", stringify!($typename), format_literal_string($gm_data, element.name)?));
+        }
+        name
+    }};
+}
+
 
 pub fn disassemble_code(gm_data: &GMData, code: &GMCode) -> Result<String, String> {
     let mut assembly: String = String::new();
@@ -175,32 +187,24 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
             );
         }
 
-        GMInstruction::Extended16(instr) => {
+        GMInstruction::CheckArrayIndex => line = opcode.to_string(),
+        GMInstruction::PushArrayFinal => line = opcode.to_string(),
+        GMInstruction::PopArrayFinal => line = opcode.to_string(),
+        GMInstruction::PushArrayContainer => line = opcode.to_string(),
+        GMInstruction::SetArrayOwner => line = opcode.to_string(),
+        GMInstruction::HasStaticInitialized => line = opcode.to_string(),
+        GMInstruction::SetStaticInitialized => line = opcode.to_string(),
+        GMInstruction::SaveArrayReference => line = opcode.to_string(),
+        GMInstruction::RestoreArrayReference => line = opcode.to_string(),
+        GMInstruction::IsNullishValue => line = opcode.to_string(),
+
+        GMInstruction::PushReference(asset_ref) => {
             line = format!(
-                "{}.{}",
-                extended_kind_to_string(instr.kind),
-                data_type_to_string(GMDataType::Int16),
+                "{} {}",
+                opcode,
+                asset_reference_to_string(gm_data, asset_ref)?,
             );
         }
-
-        GMInstruction::Extended32(instr) => {
-            line = format!(
-                "{}.{} {}",
-                extended_kind_to_string(instr.kind),
-                data_type_to_string(GMDataType::Int32),
-                instr.int_argument
-            );
-        }
-
-        GMInstruction::ExtendedFunc(instr) => {
-            line = format!(
-                "{}.{} (function){}",
-                extended_kind_to_string(instr.kind),
-                data_type_to_string(GMDataType::Int32),
-                function_to_string(gm_data, instr.function)?,
-            );
-        }
-
     }
 
     Ok(line)
@@ -243,12 +247,40 @@ fn opcode_to_string(instruction: &GMInstruction) -> &'static str {
         GMInstruction::PushImmediate(_) => "pushim",
         GMInstruction::Call(_) => "call",
         GMInstruction::CallVariable(_) => "callvar",
-        GMInstruction::Extended16(_) => "extended",     // this should never happen though
-        GMInstruction::Extended32(_) => "extended",     // this should never happen though
-        GMInstruction::ExtendedFunc(_) => "extended",   // this should never happen though
+        GMInstruction::CheckArrayIndex => "chkindex",
+        GMInstruction::PushArrayFinal => "pushaf",
+        GMInstruction::PopArrayFinal => "popaf",
+        GMInstruction::PushArrayContainer => "pushac",
+        GMInstruction::SetArrayOwner => "setowner",
+        GMInstruction::HasStaticInitialized => "isstaticok",
+        GMInstruction::SetStaticInitialized => "setstatic",
+        GMInstruction::SaveArrayReference => "savearef",
+        GMInstruction::RestoreArrayReference => "restorearef",
+        GMInstruction::IsNullishValue => "isnullish",
+        GMInstruction::PushReference(_) => "pushref",
     }
 }
 
+
+fn asset_reference_to_string(gm_data: &GMData, asset_reference: &GMAssetReference) -> Result<String, String> {
+    Ok(match asset_reference {
+        GMAssetReference::Object(gm_ref) => format!("(object){}", name_by_ref!(game_objects, gm_ref, gm_data)),
+        GMAssetReference::Sprite(gm_ref) => format!("(sprite){}", name_by_ref!(sprites, gm_ref, gm_data)),
+        GMAssetReference::Sound(gm_ref) => format!("(sound){}", name_by_ref!(sounds, gm_ref, gm_data)),
+        GMAssetReference::Room(gm_ref) => format!("(room){}", name_by_ref!(rooms, gm_ref, gm_data)),
+        GMAssetReference::Background(gm_ref) => format!("(background){}", name_by_ref!(backgrounds, gm_ref, gm_data)),
+        GMAssetReference::Path(gm_ref) => format!("(path){}", name_by_ref!(paths, gm_ref, gm_data)),
+        GMAssetReference::Script(gm_ref) => format!("(script){}", name_by_ref!(scripts, gm_ref, gm_data)),
+        GMAssetReference::Font(gm_ref) => format!("(font){}", name_by_ref!(fonts, gm_ref, gm_data)),
+        GMAssetReference::Timeline(gm_ref) => format!("(timeline){}", name_by_ref!(timelines, gm_ref, gm_data)),
+        GMAssetReference::Shader(gm_ref) => format!("(shader){}", name_by_ref!(shaders, gm_ref, gm_data)),
+        GMAssetReference::Sequence(gm_ref) => format!("(sequence){}", name_by_ref!(sequences, gm_ref, gm_data)),
+        GMAssetReference::AnimCurve(gm_ref) => format!("(animcurve){}", name_by_ref!(animation_curves, gm_ref, gm_data)),
+        GMAssetReference::ParticleSystem(gm_ref) => format!("(particlesystem){}", name_by_ref!(particle_systems, gm_ref, gm_data)),
+        GMAssetReference::RoomInstance(id) => format!("(roominstance){}", id),
+        GMAssetReference::Function(gm_ref) => format!("(function){}", function_to_string(gm_data, *gm_ref)?),
+    })
+}
 
 fn data_type_to_string(data_type: GMDataType) -> &'static str {
     match data_type {
@@ -335,10 +367,14 @@ fn variable_to_string(gm_data: &GMData, code_variable: &CodeVariable) -> Result<
 
 
 fn function_to_string(gm_data: &GMData, function_ref: GMRef<GMFunction>) -> Result<&String, String> {
-    // NOTE: in utmt, it just prints null instead of throwing.
     let function: &GMFunction = function_ref.resolve(&gm_data.functions.functions)?;
     let name: &String = function.name.resolve(&gm_data.strings.strings)?;
     if !is_valid_identifier(name) {
+        if let Some(name2) = name.strip_prefix("@@") && let Some(name3) = name2.strip_suffix("@@") {
+            if is_valid_identifier(name3) {
+                return Ok(name)
+            }
+        }
         return Err(format!("Invalid function identifier: {}", format_literal_string(gm_data, function.name)?))
     }
     Ok(name)
@@ -360,40 +396,17 @@ pub fn format_literal_string(gm_data: &GMData, gm_string_ref: GMRef<String>) -> 
 }
 
 
-fn extended_kind_to_string(extended_kind: GMExtendedKind) -> &'static str {
-    match extended_kind {
-        GMExtendedKind::CheckArrayIndex => "chkindex",
-        GMExtendedKind::PushArrayFinal => "pushaf",
-        GMExtendedKind::PopArrayFinal => "popaf",
-        GMExtendedKind::PushArrayContainer => "pushac",
-        GMExtendedKind::SetArrayOwner => "setowner",
-        GMExtendedKind::HasStaticInitialized => "isstaticok",
-        GMExtendedKind::SetStaticInitialized => "setstatic",
-        GMExtendedKind::SaveArrayReference => "savearef",
-        GMExtendedKind::RestoreArrayReference => "restorearef",
-        GMExtendedKind::IsNullishValue => "isknullish",
-        GMExtendedKind::PushReference => "pushref",
-    }
-}
-
-
-/// Check whether an identifier (function/variable name) is valid for assembling properly.
-/// I wanted follow official GameMaker rules
-/// (https://manual.gamemaker.io/monthly/en/GameMaker_Language/GML_Overview/Variables_And_Variable_Scope.htm#:~:text=Naming%20Rules),
-/// but since these rules do not include exceptions like `$$$$temp$$$$` or `@@This@@`
-/// and generated function names ignore the 64-character limit, I don't cling onto them.
+/// Check whether an identifier / asset name is valid for assembling properly.
+/// Exceptions like `$$$$temp$$$$` for variables or `@@This@@` for functions will have to be handled separately.
+/// ## Rules:
+/// - At least one character long
+/// - First character is not a digit
+/// - Letters and underscores are allowed
+/// - Only ascii characters
 fn is_valid_identifier(s: &str) -> bool {
-    const SPECIALS: [char; 3] = ['_', '$', '@'];
-
-    if s.is_empty() {
+    if !s.chars().next().map_or(false, |c| c.is_ascii_alphabetic() || c == '_') {
         return false
     }
-
-    let first_char = s.chars().next().unwrap();
-    if !first_char.is_ascii_alphabetic() && !SPECIALS.contains(&first_char) {
-        return false
-    }
-
-    s.chars().all(|c| c.is_ascii_alphanumeric() || SPECIALS.contains(&c))
+    s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 

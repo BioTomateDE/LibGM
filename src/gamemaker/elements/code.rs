@@ -5,8 +5,20 @@ use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use crate::gamemaker::elements::animation_curves::GMAnimationCurve;
+use crate::gamemaker::elements::backgrounds::GMBackground;
+use crate::gamemaker::elements::fonts::GMFont;
 use crate::gamemaker::elements::functions::GMFunction;
 use crate::gamemaker::elements::game_objects::GMGameObject;
+use crate::gamemaker::elements::particles::GMParticleSystem;
+use crate::gamemaker::elements::paths::GMPath;
+use crate::gamemaker::elements::rooms::GMRoom;
+use crate::gamemaker::elements::scripts::GMScript;
+use crate::gamemaker::elements::sequence::GMSequence;
+use crate::gamemaker::elements::shaders::GMShader;
+use crate::gamemaker::elements::sounds::GMSound;
+use crate::gamemaker::elements::sprites::GMSprite;
+use crate::gamemaker::elements::timelines::GMTimeline;
 use crate::gamemaker::serialize::DataBuilder;
 use crate::utility::num_enum_from;
 
@@ -394,14 +406,57 @@ pub enum GMInstruction {
     /// Arguments are dealt with identically to "call".
     CallVariable(GMCallVariableInstruction),
 
-    /// Performs extended operations that are not detailed anywhere.
-    Extended16(GMExtendedInstruction16),
 
-    /// Performs extended operations that are not detailed anywhere.
-    Extended32(GMExtendedInstruction32),
+    /// Verifies an array index is within proper bounds, typically for multidimensional arrays.
+    CheckArrayIndex,
 
-    /// Performs extended operations that are not detailed anywhere.
-    ExtendedFunc(GMExtendedInstructionFunc),
+    /// Pops two values from the stack, those being an index and an array reference.
+    /// Then, pushes the value stored at the passed-in array at the desired index.
+    /// That is, this is used only with multidimensional arrays, for the final/last index operation.
+    PushArrayFinal,
+
+    /// Pops three values from the stack, those being an index, an array reference, and a value.
+    /// Then, assigns the value to the array at the specified index.
+    PopArrayFinal,
+
+    /// Pops two values from the stack, those being an array reference and an index.
+    /// Then, pushes a new array reference from the passed-in array at the desired index,
+    /// with the expectation that it will be further indexed into.
+    /// That is, this is used only with multidimensional arrays,
+    /// for all index operations from the second through the second to last.
+    PushArrayContainer,
+
+    /// Sets a global variable in the VM (popped from stack), designated for
+    /// tracking the now-deprecated array copy-on-write functionality in GML.
+    /// The value used is specific to certain locations in scripts.
+    /// When array copy-on-write functionality is disabled, this extended opcode is not used.
+    SetArrayOwner,
+
+    /// Pushes a boolean value to the stack, indicating whether static initialization
+    /// has already occurred for this function (true), or otherwise false.
+    HasStaticInitialized,
+
+    /// Marks the current function to no longer be able to enter its own static initialization.
+    /// This can either occur at the beginning or end of a static block,
+    /// depending on whether "AllowReentrantStatic" is enabled by a game's developer
+    /// (enabled by default before GameMaker 2024.11; disabled by default otherwise).
+    SetStaticInitialized,
+
+    /// Keeps track of an array reference temporarily. Used in multidimensional array compound assignment statements.
+    /// Presumed to be used for garbage collection purposes.
+    SaveArrayReference,
+
+    /// Restores a previously-tracked array reference.
+    /// Used in multidimensional array compound assignment statements.
+    /// Presumed to be used for garbage collection purposes.
+    RestoreArrayReference,
+
+    /// Pops a value from the stack, and pushes a boolean result.
+    /// The result is true if a "nullish" value, such as undefined or GML's pointer_null.
+    IsNullishValue,
+
+    /// Pushes an asset reference to the stack, encoded in an integer. Includes asset type and index.
+    PushReference(GMAssetReference),
 }
 
 impl GMElement for GMInstruction {
@@ -458,14 +513,42 @@ impl GMElement for GMInstruction {
             kinds::PUSHIM => Self::PushImmediate(GMPushInstruction::parse(reader, bytes)?),
             kinds::CALL => Self::Call(GMCallInstruction::parse(reader, bytes)?),
             kinds::CALLVAR => Self::CallVariable(GMCallVariableInstruction::parse(reader, bytes)?),
-            kinds::EXTENDED if bytes.2 == 2 => {   // Int32 data type
-                if reader.function_occurrence_map.contains_key(&reader.cur_pos) {
-                    Self::ExtendedFunc(GMExtendedInstructionFunc::parse(reader, bytes)?)
-                } else {
-                    Self::Extended32(GMExtendedInstruction32::parse(reader, bytes)?)
+            kinds::EXTENDED => {
+                let data_type: GMDataType = num_enum_from(bytes.2 & 0xf)?;
+                let kind: i16 = bytes.0 as i16 | ((bytes.1 as i16) << 8);
+                match data_type {
+                    GMDataType::Int16 => {
+                        match kind {
+                            -1 => Self::CheckArrayIndex,
+                            -2 => Self::PushArrayFinal,
+                            -3 => Self::PopArrayFinal,
+                            -4 => Self::PushArrayContainer,
+                            -5 => Self::SetArrayOwner,
+                            -6 => Self::HasStaticInitialized,
+                            -7 => Self::SetStaticInitialized,
+                            -8 => Self::SaveArrayReference,
+                            -9 => Self::RestoreArrayReference,
+                            -10 => Self::IsNullishValue,
+                            _ => return Err(format!("Invalid Int16 Extended instruction kind {kind}"))
+                        }
+                    }
+                    GMDataType::Int32 => {
+                        if kind != - 11 {
+                            return Err(format!("Expected PushReference (-11) for Int32 Extended instruction, found {kind}"))
+                        }
+                        Self::PushReference(GMAssetReference::deserialize(reader)?)
+                    }
+                    _ => return Err(format!("Invalid data type for Extended instruction: {data_type:?}"))
                 }
             }
-            kinds::EXTENDED => Self::Extended16(GMExtendedInstruction16::parse(reader, bytes)?),
+            // kinds::EXTENDED if bytes.2 == 2 => {   // Int32 data type
+            //     if reader.function_occurrence_map.contains_key(&reader.cur_pos) {
+            //         Self::ExtendedFunc(GMExtendedInstructionFunc::parse(reader, bytes)?)
+            //     } else {
+            //         Self::Extended32(GMExtendedInstruction32::parse(reader, bytes)?)
+            //     }
+            // }
+            // kinds::EXTENDED => Self::Extended16(GMExtendedInstruction16::parse(reader, bytes)?),
             _ => return Err(format!("Invalid opcode {opcode} (0x{opcode:02X})"))
         })
     }
@@ -476,46 +559,66 @@ impl GMElement for GMInstruction {
             opcode = opcode_new_to_old(opcode);
         }
         match self {
-            GMInstruction::Convert(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Multiply(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Divide(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Remainder(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Modulus(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Add(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Subtract(instr) => instr.build(builder, opcode)?,
-            GMInstruction::And(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Or(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Xor(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Negate(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Not(instr) => instr.build(builder, opcode)?,
-            GMInstruction::ShiftLeft(instr) => instr.build(builder, opcode)?,
-            GMInstruction::ShiftRight(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Compare(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Pop(instr) => instr.build(builder, opcode)?,
-            GMInstruction::PopSwap(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Duplicate(instr) => instr.build(builder, opcode)?,
-            GMInstruction::DuplicateSwap(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Return(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Exit(instr) => instr.build(builder, opcode)?,
-            GMInstruction::PopDiscard(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Branch(instr) => instr.build(builder, opcode)?,
-            GMInstruction::BranchIf(instr) => instr.build(builder, opcode)?,
-            GMInstruction::BranchUnless(instr) => instr.build(builder, opcode)?,
-            GMInstruction::PushWithContext(instr) => instr.build(builder, opcode)?,
-            GMInstruction::PopWithContext(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Push(instr) => instr.build(builder, opcode)?,
-            GMInstruction::PushLocal(instr) => instr.build(builder, opcode)?,
-            GMInstruction::PushGlobal(instr) => instr.build(builder, opcode)?,
-            GMInstruction::PushBuiltin(instr) => instr.build(builder, opcode)?,
-            GMInstruction::PushImmediate(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Call(instr) => instr.build(builder, opcode)?,
-            GMInstruction::CallVariable(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Extended16(instr) => instr.build(builder, opcode)?,
-            GMInstruction::Extended32(instr) => instr.build(builder, opcode)?,
-            GMInstruction::ExtendedFunc(instr) => instr.build(builder, opcode)?,
+            Self::Convert(instr) => instr.build(builder, opcode)?,
+            Self::Multiply(instr) => instr.build(builder, opcode)?,
+            Self::Divide(instr) => instr.build(builder, opcode)?,
+            Self::Remainder(instr) => instr.build(builder, opcode)?,
+            Self::Modulus(instr) => instr.build(builder, opcode)?,
+            Self::Add(instr) => instr.build(builder, opcode)?,
+            Self::Subtract(instr) => instr.build(builder, opcode)?,
+            Self::And(instr) => instr.build(builder, opcode)?,
+            Self::Or(instr) => instr.build(builder, opcode)?,
+            Self::Xor(instr) => instr.build(builder, opcode)?,
+            Self::Negate(instr) => instr.build(builder, opcode)?,
+            Self::Not(instr) => instr.build(builder, opcode)?,
+            Self::ShiftLeft(instr) => instr.build(builder, opcode)?,
+            Self::ShiftRight(instr) => instr.build(builder, opcode)?,
+            Self::Compare(instr) => instr.build(builder, opcode)?,
+            Self::Pop(instr) => instr.build(builder, opcode)?,
+            Self::PopSwap(instr) => instr.build(builder, opcode)?,
+            Self::Duplicate(instr) => instr.build(builder, opcode)?,
+            Self::DuplicateSwap(instr) => instr.build(builder, opcode)?,
+            Self::Return(instr) => instr.build(builder, opcode)?,
+            Self::Exit(instr) => instr.build(builder, opcode)?,
+            Self::PopDiscard(instr) => instr.build(builder, opcode)?,
+            Self::Branch(instr) => instr.build(builder, opcode)?,
+            Self::BranchIf(instr) => instr.build(builder, opcode)?,
+            Self::BranchUnless(instr) => instr.build(builder, opcode)?,
+            Self::PushWithContext(instr) => instr.build(builder, opcode)?,
+            Self::PopWithContext(instr) => instr.build(builder, opcode)?,
+            Self::Push(instr) => instr.build(builder, opcode)?,
+            Self::PushLocal(instr) => instr.build(builder, opcode)?,
+            Self::PushGlobal(instr) => instr.build(builder, opcode)?,
+            Self::PushBuiltin(instr) => instr.build(builder, opcode)?,
+            Self::PushImmediate(instr) => instr.build(builder, opcode)?,
+            Self::Call(instr) => instr.build(builder, opcode)?,
+            Self::CallVariable(instr) => instr.build(builder, opcode)?,
+            Self::CheckArrayIndex => build_extended16(builder, -1),
+            Self::PushArrayFinal => build_extended16(builder, -2),
+            Self::PopArrayFinal => build_extended16(builder, -3),
+            Self::PushArrayContainer => build_extended16(builder, -4),
+            Self::SetArrayOwner => build_extended16(builder, -5),
+            Self::HasStaticInitialized => build_extended16(builder, -6),
+            Self::SetStaticInitialized  => build_extended16(builder, -7),
+            Self::SaveArrayReference => build_extended16(builder, -8),
+            Self::RestoreArrayReference => build_extended16(builder, -9),
+            Self::IsNullishValue => build_extended16(builder, -10),
+            Self::PushReference(asset_ref) => {
+                builder.write_i16(-11);
+                builder.write_u8(GMDataType::Int32.into());
+                builder.write_u8(kinds::EXTENDED.into());
+                asset_ref.serialize(builder)?
+            },
         }
         Ok(())
     }
+}
+
+
+fn build_extended16(builder: &mut DataBuilder, kind: i16) {
+    builder.write_i16(kind);
+    builder.write_u8(GMDataType::Int16.into());
+    builder.write_u8(kinds::EXTENDED.into());
 }
 
 
@@ -859,136 +962,6 @@ impl InstructionData for GMCallInstruction {
 }
 
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMExtendedInstruction16 {
-    pub kind: GMExtendedKind,
-}
-impl InstructionData for GMExtendedInstruction16 {
-    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
-        let kind: i16 = b.0 as i16 | ((b.1 as i16) << 8);
-        let kind: GMExtendedKind = num_enum_from(kind)?;
-        Ok(Self { kind })
-    }
-
-    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
-        builder.write_i16(self.kind.into());
-        builder.write_u8(GMDataType::Int16.into());
-        builder.write_u8(opcode);
-        Ok(())
-    }
-}
-
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMExtendedInstruction32 {
-    pub kind: GMExtendedKind,
-    pub int_argument: i32,
-}
-impl InstructionData for GMExtendedInstruction32 {
-    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
-        let kind: i16 = b.0 as i16 | ((b.1 as i16) << 8);
-        let kind: GMExtendedKind = num_enum_from(kind)?;
-        let int_argument: i32 = reader.read_i32()?;
-        Ok(Self { kind, int_argument })
-    }
-
-    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
-        builder.write_i16(self.kind.into());
-        builder.write_u8(GMDataType::Int16.into());
-        builder.write_u8(opcode);
-        builder.write_i32(self.int_argument);
-        Ok(())
-    }
-}
-
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMExtendedInstructionFunc {
-    pub kind: GMExtendedKind,
-    pub function: GMRef<GMFunction>,
-}
-impl InstructionData for GMExtendedInstructionFunc {
-    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
-        let kind: i16 = b.0 as i16 | ((b.1 as i16) << 8);
-        let kind: GMExtendedKind = num_enum_from(kind)?;
-        let function: GMRef<GMFunction> = *reader.function_occurrence_map.get(&reader.cur_pos).unwrap();
-        reader.cur_pos += 4;    // skip next occurrence offset
-        Ok(Self { kind, function })
-    }
-
-    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
-        let instr_pos: usize = builder.len();
-        builder.write_i16(self.kind.into());
-        builder.write_u8(GMDataType::Int16.into());
-        builder.write_u8(opcode);
-        let function: &GMFunction = self.function.resolve(&builder.gm_data.functions.functions)?;
-        write_function_occurrence(builder, self.function.index, instr_pos, function.name.index)?;
-        Ok(())
-    }
-}
-
-
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
-#[repr(i16)]
-pub enum GMExtendedKind {
-    /// Verifies an array index is within proper bounds, typically for multidimensional arrays.
-    CheckArrayIndex = -1,
-
-
-    /// Pops two values from the stack, those being an index and an array reference.
-    /// Then, pushes the value stored at the passed-in array at the desired index.
-    /// That is, this is used only with multidimensional arrays, for the final/last index operation.
-    PushArrayFinal = -2,
-
-
-    /// Pops three values from the stack, those being an index, an array reference, and a value.
-    /// Then, assigns the value to the array at the specified index.
-    PopArrayFinal = -3,
-
-
-    /// Pops two values from the stack, those being an array reference and an index.
-    /// Then, pushes a new array reference from the passed-in array at the desired index,
-    /// with the expectation that it will be further indexed into.
-    /// That is, this is used only with multidimensional arrays,
-    /// for all index operations from the second through the second to last.
-    PushArrayContainer = -4,
-
-    /// Sets a global variable in the VM (popped from stack), designated for
-    /// tracking the now-deprecated array copy-on-write functionality in GML.
-    /// The value used is specific to certain locations in scripts.
-    /// When array copy-on-write functionality is disabled, this extended opcode is not used.
-    SetArrayOwner = -5,
-
-    /// Pushes a boolean value to the stack, indicating whether static initialization
-    /// has already occurred for this function (true), or otherwise false.
-    HasStaticInitialized = -6,
-
-
-    /// Marks the current function to no longer be able to enter its own static initialization.
-    /// This can either occur at the beginning or end of a static block,
-    /// depending on whether "AllowReentrantStatic" is enabled by a game's developer
-    /// (enabled by default before GameMaker 2024.11; disabled by default otherwise).
-    SetStaticInitialized = -7,
-
-    /// Keeps track of an array reference temporarily. Used in multidimensional array compound assignment statements.
-    /// Presumed to be used for garbage collection purposes.
-    SaveArrayReference = -8,
-
-
-    /// Restores a previously-tracked array reference.
-    /// Used in multidimensional array compound assignment statements.
-    /// Presumed to be used for garbage collection purposes.
-    RestoreArrayReference = -9,
-
-    /// Pops a value from the stack, and pushes a boolean result.
-    /// The result is true if a "nullish" value, such as undefined or GML's pointer_null.
-    IsNullishValue = -10,
-
-    /// Pushes an asset reference to the stack, encoded in an integer. Includes asset type and index.
-    PushReference = -11,
-}
-
-
 fn opcode_from_instruction(instruction: &GMInstruction) -> u8 {
     match instruction {
         GMInstruction::Convert(_) => kinds::CONV,
@@ -1025,9 +998,17 @@ fn opcode_from_instruction(instruction: &GMInstruction) -> u8 {
         GMInstruction::PushImmediate(_) => kinds::PUSHIM,
         GMInstruction::Call(_) => kinds::CALL,
         GMInstruction::CallVariable(_) => kinds::CALLVAR,
-        GMInstruction::Extended16(_) => kinds::EXTENDED,
-        GMInstruction::Extended32(_) => kinds::EXTENDED,
-        GMInstruction::ExtendedFunc(_) => kinds::EXTENDED,
+        GMInstruction::CheckArrayIndex => kinds::EXTENDED,
+        GMInstruction::PushArrayFinal => kinds::EXTENDED,
+        GMInstruction::PopArrayFinal => kinds::EXTENDED,
+        GMInstruction::PushArrayContainer => kinds::EXTENDED,
+        GMInstruction::SetArrayOwner => kinds::EXTENDED,
+        GMInstruction::HasStaticInitialized => kinds::EXTENDED,
+        GMInstruction::SetStaticInitialized => kinds::EXTENDED,
+        GMInstruction::SaveArrayReference => kinds::EXTENDED,
+        GMInstruction::RestoreArrayReference => kinds::EXTENDED,
+        GMInstruction::IsNullishValue => kinds::EXTENDED,
+        GMInstruction::PushReference(_) => kinds::EXTENDED,
     }
 }
 
@@ -1098,6 +1079,84 @@ fn opcode_new_to_old(opcode: u8) -> u8 {
         0xC2 => 0xC0,
         0xC3 => 0xC0,
         _ => opcode
+    }
+}
+
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum GMAssetReference {
+    Object(GMRef<GMGameObject>),
+    Sprite(GMRef<GMSprite>),
+    Sound(GMRef<GMSound>),
+    Room(GMRef<GMRoom>),
+    Background(GMRef<GMBackground>),
+    Path(GMRef<GMPath>),
+    Script(GMRef<GMScript>),
+    Font(GMRef<GMFont>),
+    Timeline(GMRef<GMTimeline>),
+    Shader(GMRef<GMShader>),
+    Sequence(GMRef<GMSequence>),
+    AnimCurve(GMRef<GMAnimationCurve>),
+    ParticleSystem(GMRef<GMParticleSystem>),
+    RoomInstance(i32),
+    /// Not actually in GameMaker; added by me
+    Function(GMRef<GMFunction>),
+}
+
+impl GMElement for GMAssetReference {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        if let Some(func) = reader.function_occurrence_map.get(&reader.cur_pos) {
+            reader.cur_pos += 4;   // consume next occurrence offset
+            return Ok(Self::Function(*func))
+        }
+
+        let raw: i32 = reader.read_i32()?;
+        let index: u32 = (raw & 0xFFFFFF) as u32;
+        let asset_type: u8 = (raw >> 24) as u8;
+        Ok(match asset_type {
+            0 => Self::Object(GMRef::new(index)),
+            1 => Self::Sprite(GMRef::new(index)),
+            2 => Self::Sound(GMRef::new(index)),
+            3 => Self::Room(GMRef::new(index)),
+            4 => Self::Background(GMRef::new(index)),
+            5 => Self::Path(GMRef::new(index)),
+            6 => Self::Script(GMRef::new(index)),
+            7 => Self::Font(GMRef::new(index)),
+            8 => Self::Timeline(GMRef::new(index)),
+            9 => Self::Shader(GMRef::new(index)),
+            10 => Self::Sequence(GMRef::new(index)),
+            11 => Self::AnimCurve(GMRef::new(index)),
+            12 => Self::ParticleSystem(GMRef::new(index)),
+            13 => Self::RoomInstance(index as i32),
+            _ => return Err(format!("Invalid asset type {asset_type}"))
+        })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        let (index, asset_type) = match self {
+            GMAssetReference::Object(gm_ref) => (gm_ref.index, 0),
+            GMAssetReference::Sprite(gm_ref) => (gm_ref.index, 1),
+            GMAssetReference::Sound(gm_ref) => (gm_ref.index, 2),
+            GMAssetReference::Room(gm_ref) => (gm_ref.index, 3),
+            GMAssetReference::Background(gm_ref) => (gm_ref.index, 4),
+            GMAssetReference::Path(gm_ref) => (gm_ref.index, 5),
+            GMAssetReference::Script(gm_ref) => (gm_ref.index, 6),
+            GMAssetReference::Font(gm_ref) => (gm_ref.index, 7),
+            GMAssetReference::Timeline(gm_ref) => (gm_ref.index, 8),
+            GMAssetReference::Shader(gm_ref) => (gm_ref.index, 9),
+            GMAssetReference::Sequence(gm_ref) => (gm_ref.index, 10),
+            GMAssetReference::AnimCurve(gm_ref) => (gm_ref.index, 11),
+            GMAssetReference::ParticleSystem(gm_ref) => (gm_ref.index, 12),
+            GMAssetReference::RoomInstance(id) => (*id as u32, 13),
+            GMAssetReference::Function(func_ref) => {
+                let function: &GMFunction = func_ref.resolve(&builder.gm_data.functions.functions)?;
+                write_function_occurrence(builder, func_ref.index, builder.len(), function.name.index)?;
+                return Ok(())
+            }
+        };
+        let raw: u32 = (asset_type << 24) | index & 0xFFFFFF;
+        builder.write_u32(raw);
+        Ok(())
     }
 }
 

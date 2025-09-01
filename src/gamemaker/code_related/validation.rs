@@ -5,7 +5,7 @@ use std::fmt::{Display, Formatter};
 use bimap::{BiHashMap, BiMap};
 use crate::gamemaker::code_related::disassembler::disassemble_instruction;
 use crate::gamemaker::data::GMData;
-use crate::gamemaker::elements::code::{get_data_type_from_value, parse_instance_type, GMCode, GMCodeValue, GMCodes, GMDataType, GMExtendedKind, GMInstanceType, GMInstruction, GMVariableType};
+use crate::gamemaker::elements::code::{get_data_type_from_value, parse_instance_type, GMCode, GMCodeValue, GMDataType, GMInstanceType, GMInstruction, GMVariableType};
 
 #[derive(Debug)]
 pub enum CodeValidationError {
@@ -31,7 +31,7 @@ pub enum CodeValidationError {
     BranchConditionNotBool(VMStackItem),
     PushEnvNotInt32(VMStackItem),
     StackTopNotInt32(VMStackItem),
-    SetOwnerNotInt32(VMStackItem),
+    InstanceTypeNotInt32(VMStackItem),
     Int16OutOfBounds(i32),
     InvalidInt16InstanceType(i16),
     UnacceptableInstanceType(GMInstanceType),
@@ -62,7 +62,7 @@ impl Display for CodeValidationError {
             CodeValidationError::BranchConditionNotBool(item) => write!(f, "Top data type is {item:?} instead of Boolean for conditional Branch instruction"),
             CodeValidationError::PushEnvNotInt32(item) => write!(f, "Expected Int32 value for PushEnv instruction but found {item:?}"),
             CodeValidationError::StackTopNotInt32(item) => write!(f, "Top data type is {item:?} instead of Int32 (with value) for stacktop variable type"),
-            CodeValidationError::SetOwnerNotInt32(item) => write!(f, "Top data type is {item:?} instead of Int32 (with value) for extended SetOwner instruction"),
+            CodeValidationError::InstanceTypeNotInt32(item) => write!(f, "Top data type is {item:?} instead of Int32 (with value) for instance type"),
             CodeValidationError::Int16OutOfBounds(int32) => write!(f, "Int32 {int32} could not be converted to an Int16; out of bounds"),
             CodeValidationError::InvalidInt16InstanceType(int16) => write!(f, "Int16 {int16} is not a valid instance type"),
             CodeValidationError::UnacceptableInstanceType(inst) => write!(f, "Instance Type {inst} is not an instance type in this context"),
@@ -117,7 +117,16 @@ fn validate_instructions(
 
             let instruction: &GMInstruction = &instructions[instruction_index];
             let instruction_address: u32 = *address_map.get_by_left(&instruction_index).unwrap();
-            log::debug!("{} | {} {}", instruction_index, stack.items.len(), disassemble_instruction(gm_data, instruction).unwrap());
+            let _debug_stack = stack.items.iter().map(|i| match i {
+                VMStackItem::Int32(_) => 'i',
+                VMStackItem::Int64 => 'l',
+                VMStackItem::Float => 'f',
+                VMStackItem::Double => 'd',
+                VMStackItem::Boolean => 'b',
+                VMStackItem::Variable => 'v',
+                VMStackItem::String => 's',
+            }).collect::<String>();
+            log::debug!("{} | {} {} | {}", instruction_index, stack.items.len(), _debug_stack, disassemble_instruction(gm_data, instruction).unwrap());
             instruction_index += 1;
 
             match instruction {
@@ -186,7 +195,8 @@ fn validate_instructions(
                             }
                         }
                         GMVariableType::StackTop => {
-                            unimplemented!("pop stacktop")
+                            stack.pop()?.assert_data_type(GMDataType::Int32)?;  // instance type / object index
+                            stack.pop()?.assert_data_type(instr.type2)?;        // actual value
                         }
                         GMVariableType::Instance => {
                             unimplemented!("pop instance")
@@ -274,9 +284,14 @@ fn validate_instructions(
 
                     if conditional {
                         if visited_branch_targets.insert((branch_target_index, stack.clone())) {
+                            // conditional branch - never visited; add to list
                             states_to_visit.push((branch_target_index, stack.clone()));
                         }
-                    } else if !visited_branch_targets.insert((branch_target_index, stack.clone())) {
+                    } else if visited_branch_targets.insert((branch_target_index, stack.clone())) {
+                        // unconditional branch - never visited; branch now
+                        instruction_index = branch_target_index;
+                    } else {
+                        // unconditional branch - already visited; stop execution
                         break
                     }
                 }
@@ -296,7 +311,7 @@ fn validate_instructions(
                                 validate_instance_type(stack.pop()?)?;         // instance type
                             }
                             GMVariableType::StackTop => {
-                                unimplemented!("push stacktop")
+                                stack.pop()?.assert_data_type(GMDataType::Int32)?;  // instance type / object index
                             }
                             GMVariableType::Instance => unimplemented!("push Instance"),
                             GMVariableType::ArrayPushAF => unimplemented!("push ArrayPushAF"),
@@ -348,36 +363,21 @@ fn validate_instructions(
                     unimplemented!("callvar not yet implemented")
                 }
 
-                GMInstruction::Extended16(instr) => {
-                    match instr.kind {
-                        GMExtendedKind::CheckArrayIndex => unimplemented!("CheckArrayIndex not yet implemented"),
-                        GMExtendedKind::PushArrayFinal => unimplemented!("CheckArrayIndex not yet implemented"),
-                        GMExtendedKind::PopArrayFinal => unimplemented!("PopArrayFinal not yet implemented"),
-                        GMExtendedKind::PushArrayContainer => unimplemented!("PushArrayContainer not yet implemented"),
-                        GMExtendedKind::SetArrayOwner => {
-                            let item: VMStackItem = stack.pop()?;
-                            let VMStackItem::Int32(Some(int32)) = item else {
-                                return Err(CodeValidationError::SetOwnerNotInt32(item))
-                            };
-                            // todo use this int32 glovql variabe thign
-
-                        }
-                        GMExtendedKind::HasStaticInitialized => unimplemented!("HasStaticInitialized not yet implemented"),
-                        GMExtendedKind::SetStaticInitialized => unimplemented!("SetStaticInitialized not yet implemented"),
-                        GMExtendedKind::SaveArrayReference => unimplemented!("SaveArrayReference not yet implemented"),
-                        GMExtendedKind::RestoreArrayReference => unimplemented!("RestoreArrayReference not yet implemented"),
-                        GMExtendedKind::IsNullishValue => unimplemented!("IsNullishValue not yet implemented"),
-                        GMExtendedKind::PushReference => unimplemented!("PushReference not yet implemented"),
-                    }
+                GMInstruction::SetArrayOwner => {
+                    let item: VMStackItem = stack.pop()?;
+                    validate_instance_type(item)?;
                 }
 
-                GMInstruction::Extended32(instr) => {
-                    unimplemented!("extended32 not yet implemented")
-                }
-
-                GMInstruction::ExtendedFunc(instr) => {
-                    unimplemented!("extendedfunc not yet implemented")
-                }
+                GMInstruction::CheckArrayIndex => unimplemented!("CheckArrayIndex instruction"),
+                GMInstruction::PushArrayFinal => unimplemented!("PushArrayFinal instruction"),
+                GMInstruction::PopArrayFinal => unimplemented!("PopArrayFinal instruction"),
+                GMInstruction::PushArrayContainer => unimplemented!("PushArrayContainer instruction"),
+                GMInstruction::HasStaticInitialized => unimplemented!("HasStaticInitialized instruction"),
+                GMInstruction::SetStaticInitialized => unimplemented!("SetStaticInitialized instruction"),
+                GMInstruction::SaveArrayReference => unimplemented!("SaveArrayReference instruction"),
+                GMInstruction::RestoreArrayReference => unimplemented!("RestoreArrayReference instruction"),
+                GMInstruction::IsNullishValue => unimplemented!("IsNullishValue instruction"),
+                GMInstruction::PushReference(_) => unimplemented!("PushReference instruction"),
             }
         }
     }
@@ -388,7 +388,7 @@ fn validate_instructions(
 
 fn validate_instance_type(item: VMStackItem) -> Result<(), CodeValidationError> {
     let VMStackItem::Int32(Some(int32)) = item else {
-        return Err(CodeValidationError::SetOwnerNotInt32(item))
+        return Err(CodeValidationError::InstanceTypeNotInt32(item))
     };
     let int16: i16 = i16::try_from(int32).map_err(|_| CodeValidationError::Int16OutOfBounds(int32))?;
     let instance_type: GMInstanceType = parse_instance_type(int16, GMVariableType::Array)
@@ -409,9 +409,8 @@ fn generate_address_map(instructions: &[GMInstruction]) -> BiMap<usize, u32> {
         current_address += get_instruction_size(instruction);
     }
 
-    // // insert end block
-    // map.insert(current_address, instructions.len());
-
+    // insert end block
+    map.insert(instructions.len(), current_address);
     map
 }
 
@@ -430,8 +429,7 @@ fn get_instruction_size(instruction: &GMInstruction) -> u32 {
             _ => 2,
         }
         GMInstruction::Call(_) => 2,
-        GMInstruction::Extended32(_) => 2,
-        GMInstruction::ExtendedFunc(_) => 2,
+        GMInstruction::PushReference(_) => 2,
         _ => 1,
     }
 }

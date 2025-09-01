@@ -1,11 +1,10 @@
 use std::fmt::{Display, Formatter};
-use std::mem::MaybeUninit;
 use std::ops::Neg;
 use std::str::{Chars, FromStr};
 use arrayvec::ArrayVec;
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
-use crate::gamemaker::elements::code::{GMCodeValue, CodeVariable, GMGotoInstruction, GMPopSwapInstruction, GMSingleTypeInstruction, GMInstanceType, GMVariableType, GMComparisonInstruction, GMPopInstruction, GMPushInstruction, GMCallInstruction, GMExtendedInstruction16, GMExtendedInstructionFunc, GMExtendedInstruction32, GMEmptyInstruction, GMExtendedKind};
+use crate::gamemaker::elements::code::{GMCodeValue, CodeVariable, GMGotoInstruction, GMPopSwapInstruction, GMSingleTypeInstruction, GMInstanceType, GMVariableType, GMComparisonInstruction, GMPopInstruction, GMPushInstruction, GMCallInstruction, GMEmptyInstruction, GMAssetReference};
 use crate::gamemaker::elements::code::{GMCallVariableInstruction, GMComparisonType, GMDoubleTypeInstruction, GMDuplicateInstruction, GMDuplicateSwapInstruction};
 use crate::gamemaker::elements::code::GMInstruction;
 use crate::gamemaker::elements::code::GMDataType;
@@ -23,6 +22,7 @@ pub enum ParseError {
     ExpectedString(String),
     ExpectedArgc(String),
     ExpectedIdentifier(String),
+    ExpectedTypeCast(String),
     UnexpectedEOL(&'static str),
     /// `(expected, actual)`
     InvalidTypeCount(usize, usize),
@@ -43,7 +43,8 @@ pub enum ParseError {
     VarLocalInvalidIndex(String),
     VarUnresolvable(String),
     FuncUnresolvable(String),
-    ObjectUnresolvable(String),
+    GameObjectUnresolvable(String),
+    AssetUnresolvable(&'static str, String),
     TooManyTypes,
 }
 
@@ -56,6 +57,7 @@ impl Display for ParseError {
             ParseError::ExpectedString(line) => write!(f, "Expected string literal; found remaining string \"{line}\""),
             ParseError::ExpectedArgc(line) => write!(f, "Expected argument count of called function; found remaining string \"{line}\""),
             ParseError::ExpectedIdentifier(line) => write!(f, "Expected identifier; found remaining string \"{line}\""),
+            ParseError::ExpectedTypeCast(line) => write!(f, "Expected type cast; found remaining string \"{line}\""),
             ParseError::UnexpectedEOL(context) => write!(f, "Unexpected end of line while parsing {context}"),
             ParseError::InvalidTypeCount(expected, actual) => write!(f, "Expected {expected} data types for this opcode; found {actual} types"),
             ParseError::InvalidDataType(char) => write!(f, "Invalid data type character '{char}'"),
@@ -75,7 +77,8 @@ impl Display for ParseError {
             ParseError::VarLocalInvalidIndex(arg) => write!(f, "Local variable has an invalid variable index specified: \"{arg}\""),
             ParseError::VarUnresolvable(var_name) => write!(f, "Variable \"{var_name}\" does not exist"),
             ParseError::FuncUnresolvable(func_name) => write!(f, "Function \"{func_name}\" does not exist"),
-            ParseError::ObjectUnresolvable(error) => write!(f, "{error}"),
+            ParseError::GameObjectUnresolvable(obj_name) => write!(f, "Game Object \"{obj_name}\" does not exist"),
+            ParseError::AssetUnresolvable(asset_type, name) => write!(f, "Could not resolve Asset of type {asset_type} with name \"{name}\""),
             ParseError::TooManyTypes => write!(f, "Opcodes can only have a maximum of 2 types"),
         }
     }
@@ -164,19 +167,18 @@ pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<GMInstru
         "pushim" => GMInstruction::PushImmediate(parse_push(&types, line, gm_data)?),
         "call" => GMInstruction::Call(parse_call(&types, line, gm_data)?),
         "callvar" => GMInstruction::CallVariable(parse_call_var(&types, line)?),
-        _ => {
-            let kind: GMExtendedKind = extended_kind_from_string(&mnemonic)?;
-            assert_type_count(&types, 1)?;
-            if line.is_empty() {
-                GMInstruction::Extended16(GMExtendedInstruction16 { kind })
-            } else if consume_str(line, "(function)").is_some() {
-                let function: GMRef<GMFunction> = parse_function(line, &gm_data.strings, &gm_data.functions)?;
-                GMInstruction::ExtendedFunc(GMExtendedInstructionFunc { kind, function })
-            } else {
-                let int_argument: i32 = parse_int(line)?;
-                GMInstruction::Extended32(GMExtendedInstruction32 { kind, int_argument })
-            }
-        }
+        "chkindex" => GMInstruction::CheckArrayIndex,
+        "pushaf" => GMInstruction::PushArrayFinal,
+        "popaf" => GMInstruction::PopArrayFinal,
+        "pushac" => GMInstruction::PushArrayContainer,
+        "setowner" => GMInstruction::SetArrayOwner,
+        "isstaticok" => GMInstruction::HasStaticInitialized,
+        "setstatic" => GMInstruction::SetStaticInitialized,
+        "savearef" => GMInstruction::SaveArrayReference,
+        "restorearef" => GMInstruction::RestoreArrayReference,
+        "isnullish" => GMInstruction::IsNullishValue,
+        "pushref" => GMInstruction::PushReference(parse_asset_reference(gm_data, line)?),
+        _ => return Err(ParseError::InvalidMnemonic(mnemonic.to_string()))
     };
 
     if !line.is_empty() {
@@ -184,6 +186,48 @@ pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<GMInstru
     }
 
     Ok(instruction)
+}
+
+
+macro_rules! asset_by_name {
+    ($gm_data: expr, $typename: ident, $namefn: expr) => {{
+        let target_name: String = $namefn;
+        let mut found = None;
+        for (i, element) in $gm_data.$typename.$typename.iter().enumerate() {
+            let name = element.name.resolve(&$gm_data.strings.strings)
+                .map_err(|_| ParseError::StringIndexUnresolvable(element.name.index))?;
+            if *name == target_name {
+                found = Some(GMRef::new(i as u32));
+                break
+            }
+        }
+        found.ok_or(ParseError::AssetUnresolvable(stringify!($typename), target_name))?
+    }};
+}
+
+
+fn parse_asset_reference(gm_data: &GMData, line: &mut &str) -> Result<GMAssetReference, ParseError> {
+    let asset_type: String = consume_round_brackets(line)?
+        .ok_or(ParseError::ExpectedTypeCast(line.to_string()))?;
+    
+    Ok(match asset_type.as_str() {
+        "object" => GMAssetReference::Object(asset_by_name!(gm_data, game_objects, parse_identifier(line)?)),
+        "sprite" => GMAssetReference::Sprite(asset_by_name!(gm_data, sprites, parse_identifier(line)?)),
+        "sound" => GMAssetReference::Sound(asset_by_name!(gm_data, sounds, parse_identifier(line)?)),
+        "room" => GMAssetReference::Room(asset_by_name!(gm_data, rooms, parse_identifier(line)?)),
+        "background" => GMAssetReference::Background(asset_by_name!(gm_data, backgrounds, parse_identifier(line)?)),
+        "path" => GMAssetReference::Path(asset_by_name!(gm_data, paths, parse_identifier(line)?)),
+        "script" => GMAssetReference::Script(asset_by_name!(gm_data, scripts, parse_identifier(line)?)),
+        "font" => GMAssetReference::Font(asset_by_name!(gm_data, fonts, parse_identifier(line)?)),
+        "timeline" => GMAssetReference::Timeline(asset_by_name!(gm_data, timelines, parse_identifier(line)?)),
+        "shader" => GMAssetReference::Shader(asset_by_name!(gm_data, shaders, parse_identifier(line)?)),
+        "sequence" => GMAssetReference::Sequence(asset_by_name!(gm_data, sequences, parse_identifier(line)?)),
+        "animcurve" => GMAssetReference::AnimCurve(asset_by_name!(gm_data, animation_curves, parse_identifier(line)?)),
+        "particlesystem" => GMAssetReference::ParticleSystem(asset_by_name!(gm_data, particle_systems, parse_identifier(line)?)),
+        "roominstance" => GMAssetReference::RoomInstance(parse_int(line)?),
+        "function" => GMAssetReference::Function(parse_function(line, &gm_data.strings, &gm_data.functions)?),
+        _ => return Err(ParseError::InvalidTypeCast(asset_type))
+    })
 }
 
 
@@ -374,26 +418,8 @@ fn data_type_from_char(data_type: char) -> Result<GMDataType, ParseError> {
         'b' => GMDataType::Boolean,
         _ => return Err(ParseError::InvalidDataType(data_type))
     })
+
 }
-
-
-fn extended_kind_from_string(mnemonic: &str) -> Result<GMExtendedKind, ParseError> {
-    Ok(match mnemonic {
-        "chkindex" => GMExtendedKind::CheckArrayIndex,
-        "pushaf" => GMExtendedKind::PushArrayFinal,
-        "popaf" => GMExtendedKind::PopArrayFinal,
-        "pushac" => GMExtendedKind::PushArrayContainer,
-        "setowner" => GMExtendedKind::SetArrayOwner,
-        "isstaticok" => GMExtendedKind::HasStaticInitialized,
-        "setstatic" => GMExtendedKind::SetStaticInitialized,
-        "savearef" => GMExtendedKind::SaveArrayReference,
-        "restorearef" => GMExtendedKind::RestoreArrayReference,
-        "isnullish" => GMExtendedKind::IsNullishValue,
-        "pushref" => GMExtendedKind::PushReference,
-        _ => return Err(ParseError::InvalidMnemonic(mnemonic.to_string()))
-    })
-}
-
 
 fn parse_int<T: FromStr + Neg<Output = T>>(line: &mut &str) -> Result<T, ParseError> {
     let is_negative: bool = line.starts_with('-');
@@ -481,7 +507,7 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable, Par
         "self" if instance_type_arg.is_empty() => GMInstanceType::Self_(None),
         "self" => {
             let object_ref: GMRef<GMGameObject> = gm_data.game_objects.get_object_ref_by_name(&instance_type_arg, &gm_data.strings)
-                .map_err(|e| ParseError::ObjectUnresolvable(e))?;
+                .map_err(|e| ParseError::GameObjectUnresolvable(instance_type_arg))?;
             GMInstanceType::Self_(Some(object_ref))
         }
         "local" => {
