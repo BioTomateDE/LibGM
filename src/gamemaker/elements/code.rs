@@ -699,23 +699,23 @@ impl InstructionData for GMGotoInstruction {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct GMDoubleTypeInstruction {
-    pub type1: GMDataType,
-    pub type2: GMDataType,
+    pub right: GMDataType,
+    pub left: GMDataType,
 }
 impl InstructionData for GMDoubleTypeInstruction {
     fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
-        let type1: GMDataType = num_enum_from(b.2 & 0xf)?;
-        let type2: GMDataType = num_enum_from(b.2 >> 4)?;
+        let right: GMDataType = num_enum_from(b.2 & 0xf)?;
+        let left: GMDataType = num_enum_from(b.2 >> 4)?;
         if b.1 != 0 {    // might be incorrect; remove if issues
             return Err(format!("b1 should be zero but is {} for Double Type Instruction", b.1))
         }
-        Ok(Self { type1, type2 })
+        Ok(Self { right, left })
     }
 
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
         builder.write_u8(0);
         builder.write_u8(0);
-        builder.write_u8(u8::from(self.type1) | u8::from(self.type2) << 4);
+        builder.write_u8(u8::from(self.right) | u8::from(self.left) << 4);
         builder.write_u8(opcode);
         Ok(())
     }
