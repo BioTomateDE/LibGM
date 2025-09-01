@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::env::var;
 use std::fmt::{Display, Formatter};
 use bimap::{BiHashMap, BiMap};
@@ -91,7 +91,7 @@ pub fn validate_code(code: &GMCode, gm_data: &GMData) -> Result<(), CodeValidati
     let instruction_index: usize = *address_map.get_by_right(&instruction_address)
         .ok_or(CodeValidationError::InvalidInitialOffset(instruction_address))?;
 
-    validate_instructions(gm_data, &address_map, instructions, &mut HashSet::new(), VMStack::new(), instruction_index)?;
+    validate_instructions(gm_data, &address_map, instructions, instruction_index)?;
     Ok(())
 }
 
@@ -100,279 +100,284 @@ fn validate_instructions(
     gm_data: &GMData,
     address_map: &BiMap<usize, u32>,
     instructions: &Vec<GMInstruction>,
-    visited_branch_targets: &mut HashSet<usize>,
-    mut stack: VMStack,
-    mut instruction_index: usize,
+    start_index: usize,
 ) -> Result<(), CodeValidationError> {
-    log::warn!("========================================");
-    while instruction_index < instructions.len() {
-        // TODO: clean this part up
-        let instruction: &GMInstruction = instructions.get(instruction_index)
-            .ok_or(CodeValidationError::CodeEndWithoutExit(instruction_index, instructions.len()))?;
-        let instruction_address: u32 = *address_map.get_by_left(&instruction_index).unwrap();
-        log::debug!("{} | {} {}", instruction_index, stack.items.len(), disassemble_instruction(gm_data, instruction).unwrap());
-        instruction_index += 1;
+    let mut states_to_visit = Vec::new();
+    states_to_visit.push((start_index, VMStack::new()));
+    let mut visited_branch_targets = HashSet::new();
 
-        match instruction {
-            GMInstruction::Convert(instr) => {
-                let item: VMStackItem = stack.pop()?;
-                item.assert_data_type(instr.right)?;
-                stack.push_data_type(instr.left);
-            }
-
-            GMInstruction::Multiply(instr) |
-            GMInstruction::Divide(instr) |
-            GMInstruction::Remainder(instr) |
-            GMInstruction::Modulus(instr) |
-            GMInstruction::Add(instr) |
-            GMInstruction::Subtract(instr) |
-            GMInstruction::And(instr) |
-            GMInstruction::Or(instr) |
-            GMInstruction::Xor(instr) |
-            GMInstruction::ShiftLeft(instr) |
-            GMInstruction::ShiftRight(instr) => {
-                let right: VMStackItem = stack.pop()?;
-                let left: VMStackItem = stack.pop()?;
-                right.assert_data_type(instr.right)?;
-                left.assert_data_type(instr.left)?;
-                let result_type: GMDataType = binary_operation_result_type(instruction, instr.right, instr.left);
-                stack.push_data_type(result_type);
-            }
-
-            GMInstruction::Negate(instr) |
-            GMInstruction::Not(instr) => {
-                let item: VMStackItem = stack.pop()?;
-                item.assert_data_type(instr.data_type)?;
-                stack.push_data_type(instr.data_type);
-            }
-
-            GMInstruction::Compare(instr) => {
-                let item1: VMStackItem = stack.pop()?;
-                let item2: VMStackItem = stack.pop()?;
-                item1.assert_data_type(instr.type1)?;
-                item2.assert_data_type(instr.type2)?;
-                stack.push_data_type(GMDataType::Boolean);
-            }
-
-            GMInstruction::Pop(instr) => {
-                let var_type: GMVariableType = instr.destination.variable_type;
-                match var_type {
-                    GMVariableType::Normal => {
-                        if instr.type1 != GMDataType::Variable {
-                            return Err(CodeValidationError::NormalPopFirstNotVar(instr.type1))
-                        }
-                        stack.pop()?.assert_data_type(instr.type2)?;
-                    }
-                    GMVariableType::Array => {
-                        match instr.type1 {
-                            GMDataType::Variable => {
-                                stack.pop()?.assert_data_type(GMDataType::Int32)?;  // index
-                                validate_instance_type(stack.pop()?)?;         // instance type
-                                stack.pop()?.assert_data_type(instr.type2)?;        // actual value
-                            }
-                            GMDataType::Int32 => {
-                                stack.pop()?.assert_data_type(instr.type2)?;        // actual value
-                                stack.pop()?.assert_data_type(GMDataType::Int32)?;  // index
-                                validate_instance_type(stack.pop()?)?;         // instance type
-                            }
-                            _ => unimplemented!("unexpected data type 1 for pop array")
-                        }
-                    }
-                    GMVariableType::StackTop => {
-                        unimplemented!("pop stacktop")
-                    }
-                    GMVariableType::Instance => {
-                        unimplemented!("pop instance")
-                    }
-                    GMVariableType::ArrayPushAF => {
-                        unimplemented!("pop ArrayPushAF")
-                    }
-                    GMVariableType::ArrayPopAF => {
-                        unimplemented!("pop ArrayPopAF")
-                    }
+    while let Some((mut instruction_index, mut stack)) = states_to_visit.pop() {
+        loop {
+            if instruction_index == instructions.len() {
+                if !stack.is_empty() {
+                    return Err(CodeValidationError::ExitStackLeftover(stack))
                 }
+                break
             }
 
-            GMInstruction::PopSwap(instr) => {
-                unimplemented!("popswap not yet implemented")
-            }
+            let instruction: &GMInstruction = &instructions[instruction_index];
+            let instruction_address: u32 = *address_map.get_by_left(&instruction_index).unwrap();
+            log::debug!("{} | {} {}", instruction_index, stack.items.len(), disassemble_instruction(gm_data, instruction).unwrap());
+            instruction_index += 1;
 
-            GMInstruction::Duplicate(instr) => {
-                let last_index: usize = stack.len() - 1;
-                if instr.size as usize > last_index {
-                    return Err(CodeValidationError::DupSizeOutOfBounds)
+            match instruction {
+                GMInstruction::Convert(instr) => {
+                    let item: VMStackItem = stack.pop()?;
+                    item.assert_data_type(instr.right)?;
+                    stack.push_data_type(instr.left);
                 }
-                for i in (0..=instr.size).rev() {
-                    let item: &VMStackItem = &stack.items[last_index - i as usize];
+
+                GMInstruction::Multiply(instr) |
+                GMInstruction::Divide(instr) |
+                GMInstruction::Remainder(instr) |
+                GMInstruction::Modulus(instr) |
+                GMInstruction::Add(instr) |
+                GMInstruction::Subtract(instr) |
+                GMInstruction::And(instr) |
+                GMInstruction::Or(instr) |
+                GMInstruction::Xor(instr) |
+                GMInstruction::ShiftLeft(instr) |
+                GMInstruction::ShiftRight(instr) => {
+                    let right: VMStackItem = stack.pop()?;
+                    let left: VMStackItem = stack.pop()?;
+                    right.assert_data_type(instr.right)?;
+                    left.assert_data_type(instr.left)?;
+                    let result_type: GMDataType = binary_operation_result_type(instruction, instr.right, instr.left);
+                    stack.push_data_type(result_type);
+                }
+
+                GMInstruction::Negate(instr) |
+                GMInstruction::Not(instr) => {
+                    let item: VMStackItem = stack.pop()?;
                     item.assert_data_type(instr.data_type)?;
-                    stack.push(item.clone());
-                }
-            }
-
-            GMInstruction::DuplicateSwap(instr) => {
-                unimplemented!("dupswap not yet implemented")
-            }
-
-            GMInstruction::Return(instr) => {
-                let item: VMStackItem = stack.pop()?;
-                item.assert_data_type(instr.data_type)?;
-                if !stack.is_empty() {
-                    return Err(CodeValidationError::ExitStackLeftover(stack))
-                }
-                return Ok(())
-            }
-
-            GMInstruction::Exit(_) => {
-                if !stack.is_empty() {
-                    return Err(CodeValidationError::ExitStackLeftover(stack))
-                }
-                return Ok(())
-            }
-
-            GMInstruction::PopDiscard(instr) => {
-                let item: VMStackItem = stack.pop()?;
-                item.assert_data_type(instr.data_type)?;
-            }
-
-            GMInstruction::Branch(instr) |
-            GMInstruction::BranchIf(instr) |
-            GMInstruction::BranchUnless(instr) |
-            GMInstruction::PushWithContext(instr) |
-            GMInstruction::PopWithContext(instr) => {
-                let conditional: bool = matches!(instruction, GMInstruction::BranchIf(_) | GMInstruction::BranchUnless(_));
-                if conditional {
-                    let item: VMStackItem = stack.pop()?;
-                    match item {
-                        // this will probably have to be extended to non literal ints too
-                        VMStackItem::Int32(Some(1)) => {}
-                        VMStackItem::Int32(Some(0)) => {}
-                        VMStackItem::Boolean => {}
-                        _ => return Err(CodeValidationError::BranchConditionNotBool(item))
-                    }
-                } else if matches!(instruction, GMInstruction::PushWithContext(_)) {
-                    let item: VMStackItem = stack.pop()?;
-                    if !matches!(item, VMStackItem::Int32(_)) {
-                        return Err(CodeValidationError::PushEnvNotInt32(item))
-                    }
+                    stack.push_data_type(instr.data_type);
                 }
 
-                let branch_target_index: usize;
-                if let Some(address_offset) = instr.jump_offset {
-                    let address_target: u32 = (instruction_address as i32 + address_offset) as u32;
-                    branch_target_index = *address_map.get_by_right(&address_target)
-                        .ok_or(CodeValidationError::InvalidBranchTarget(address_target))?;
-                } else {
-                    unimplemented!("popenv exit magic not yet implemented")
+                GMInstruction::Compare(instr) => {
+                    let item1: VMStackItem = stack.pop()?;
+                    let item2: VMStackItem = stack.pop()?;
+                    item1.assert_data_type(instr.type1)?;
+                    item2.assert_data_type(instr.type2)?;
+                    stack.push_data_type(GMDataType::Boolean);
                 }
 
-                if !visited_branch_targets.insert(branch_target_index) {
-                    // only jump if branch target wasn't already visited
-                    continue
-                }
-                if conditional {
-                    // perform branch on recursive call; skip branch in this execution
-                    validate_instructions(gm_data, address_map, instructions, visited_branch_targets, stack.clone(), branch_target_index)?;
-                } else {
-                    instruction_index = branch_target_index;
-                }
-            }
-
-            GMInstruction::Push(instr) |
-            GMInstruction::PushLocal(instr) |
-            GMInstruction::PushGlobal(instr) |
-            GMInstruction::PushBuiltin(instr) |
-            GMInstruction::PushImmediate(instr) => {
-                let data_type: GMDataType = get_data_type_from_value(&instr.value);
-
-                if let GMCodeValue::Variable(code_var) = &instr.value {
-                    match code_var.variable_type {
-                        GMVariableType::Normal => {}
+                GMInstruction::Pop(instr) => {
+                    let var_type: GMVariableType = instr.destination.variable_type;
+                    match var_type {
+                        GMVariableType::Normal => {
+                            if instr.type1 != GMDataType::Variable {
+                                return Err(CodeValidationError::NormalPopFirstNotVar(instr.type1))
+                            }
+                            stack.pop()?.assert_data_type(instr.type2)?;
+                        }
                         GMVariableType::Array => {
-                            stack.pop()?.assert_data_type(GMDataType::Int32)?;  // index
-                            validate_instance_type(stack.pop()?)?;         // instance type
+                            match instr.type1 {
+                                GMDataType::Variable => {
+                                    stack.pop()?.assert_data_type(GMDataType::Int32)?;  // index
+                                    validate_instance_type(stack.pop()?)?;         // instance type
+                                    stack.pop()?.assert_data_type(instr.type2)?;        // actual value
+                                }
+                                GMDataType::Int32 => {
+                                    stack.pop()?.assert_data_type(instr.type2)?;        // actual value
+                                    stack.pop()?.assert_data_type(GMDataType::Int32)?;  // index
+                                    validate_instance_type(stack.pop()?)?;         // instance type
+                                }
+                                _ => unimplemented!("unexpected data type 1 for pop array")
+                            }
                         }
                         GMVariableType::StackTop => {
-                            unimplemented!("push stacktop")
+                            unimplemented!("pop stacktop")
                         }
-                        GMVariableType::Instance => unimplemented!("push Instance"),
-                        GMVariableType::ArrayPushAF => unimplemented!("push ArrayPushAF"),
-                        GMVariableType::ArrayPopAF => unimplemented!("push ArrayPopAF"),
-                    }
-                    // let var = code_var.variable.resolve(&gm_data.variables.variables)
-                    //     .map_err(|_| CodeValidationError::VariableUnresolvable(code_var.variable.index))?;
-                    // if let Some(b15) = &var.b15_data && b15.instance_type !=
-                }
-
-                if matches!(instruction, GMInstruction::PushLocal(_) | GMInstruction::PushGlobal(_) | GMInstruction::PushBuiltin(_)) {
-                    let GMCodeValue::Variable(code_variable) = &instr.value else {
-                        return Err(CodeValidationError::PushVarWrongDataType(data_type))
-                    };
-                    match (instruction, &code_variable.instance_type) {
-                        (GMInstruction::PushLocal(_), GMInstanceType::Local) => {}
-                        (GMInstruction::PushGlobal(_), GMInstanceType::Global) => {}
-                        (GMInstruction::PushBuiltin(_), GMInstanceType::Self_(None)) => {}  //idk
-                        (_, _) => return Err(CodeValidationError::PushVarWrongInstanceType(code_variable.instance_type.clone()))
+                        GMVariableType::Instance => {
+                            unimplemented!("pop instance")
+                        }
+                        GMVariableType::ArrayPushAF => {
+                            unimplemented!("pop ArrayPushAF")
+                        }
+                        GMVariableType::ArrayPopAF => {
+                            unimplemented!("pop ArrayPopAF")
+                        }
                     }
                 }
 
-                if matches!(instruction, GMInstruction::PushImmediate(_)) && data_type != GMDataType::Int16 {
-                    return Err(CodeValidationError::PushImmediateNotInt16(data_type))
+                GMInstruction::PopSwap(instr) => {
+                    unimplemented!("popswap not yet implemented")
                 }
 
-                if let GMCodeValue::Int16(val) = instr.value {
-                    stack.push(VMStackItem::from_int32(i32::from(val)));
-                } else if let GMCodeValue::Int32(val) = instr.value {
-                    stack.push(VMStackItem::from_int32(val));
-                } else {
-                    stack.push_data_type(data_type);
+                GMInstruction::Duplicate(instr) => {
+                    let last_index: usize = stack.len() - 1;
+                    if instr.size as usize > last_index {
+                        return Err(CodeValidationError::DupSizeOutOfBounds)
+                    }
+                    for i in (0..=instr.size).rev() {
+                        let item: &VMStackItem = &stack.items[last_index - i as usize];
+                        item.assert_data_type(instr.data_type)?;
+                        stack.push(item.clone());
+                    }
                 }
-            }
 
-            GMInstruction::Call(instr) => {
-                for _ in 0..instr.arguments_count {
+                GMInstruction::DuplicateSwap(instr) => {
+                    unimplemented!("dupswap not yet implemented")
+                }
+
+                GMInstruction::Return(instr) => {
                     let item: VMStackItem = stack.pop()?;
-                    if item != VMStackItem::Variable {
-                        return Err(CodeValidationError::CallArgumentNotVar(item))
+                    item.assert_data_type(instr.data_type)?;
+                    if !stack.is_empty() {
+                        return Err(CodeValidationError::ExitStackLeftover(stack))
                     }
+                    return Ok(())
                 }
-                // TODO: what does instr.data_type do??? it's always Int32
-                // TODO: return type is an assumption
-                stack.push(VMStackItem::Variable);
-            }
 
-            GMInstruction::CallVariable(instr) => {
-                unimplemented!("callvar not yet implemented")
-            }
+                GMInstruction::Exit(_) => {
+                    if !stack.is_empty() {
+                        return Err(CodeValidationError::ExitStackLeftover(stack))
+                    }
+                    return Ok(())
+                }
 
-            GMInstruction::Extended16(instr) => {
-                match instr.kind {
-                    GMExtendedKind::CheckArrayIndex => unimplemented!("CheckArrayIndex not yet implemented"),
-                    GMExtendedKind::PushArrayFinal => unimplemented!("CheckArrayIndex not yet implemented"),
-                    GMExtendedKind::PopArrayFinal => unimplemented!("PopArrayFinal not yet implemented"),
-                    GMExtendedKind::PushArrayContainer => unimplemented!("PushArrayContainer not yet implemented"),
-                    GMExtendedKind::SetArrayOwner => {
+                GMInstruction::PopDiscard(instr) => {
+                    let item: VMStackItem = stack.pop()?;
+                    item.assert_data_type(instr.data_type)?;
+                }
+
+                GMInstruction::Branch(instr) |
+                GMInstruction::BranchIf(instr) |
+                GMInstruction::BranchUnless(instr) |
+                GMInstruction::PushWithContext(instr) |
+                GMInstruction::PopWithContext(instr) => {
+                    let conditional: bool = matches!(instruction, GMInstruction::BranchIf(_) | GMInstruction::BranchUnless(_));
+                    if conditional {
                         let item: VMStackItem = stack.pop()?;
-                        let VMStackItem::Int32(Some(int32)) = item else {
-                            return Err(CodeValidationError::SetOwnerNotInt32(item))
-                        };
-                        // todo use this int32 glovql variabe thign
-
+                        match item {
+                            // this will probably have to be extended to non literal ints too
+                            VMStackItem::Int32(Some(1)) => {}
+                            VMStackItem::Int32(Some(0)) => {}
+                            VMStackItem::Boolean => {}
+                            _ => return Err(CodeValidationError::BranchConditionNotBool(item))
+                        }
+                    } else if matches!(instruction, GMInstruction::PushWithContext(_)) {
+                        let item: VMStackItem = stack.pop()?;
+                        if !matches!(item, VMStackItem::Int32(_)) {
+                            return Err(CodeValidationError::PushEnvNotInt32(item))
+                        }
                     }
-                    GMExtendedKind::HasStaticInitialized => unimplemented!("HasStaticInitialized not yet implemented"),
-                    GMExtendedKind::SetStaticInitialized => unimplemented!("SetStaticInitialized not yet implemented"),
-                    GMExtendedKind::SaveArrayReference => unimplemented!("SaveArrayReference not yet implemented"),
-                    GMExtendedKind::RestoreArrayReference => unimplemented!("RestoreArrayReference not yet implemented"),
-                    GMExtendedKind::IsNullishValue => unimplemented!("IsNullishValue not yet implemented"),
-                    GMExtendedKind::PushReference => unimplemented!("PushReference not yet implemented"),
+
+                    let branch_target_index: usize;
+                    if let Some(address_offset) = instr.jump_offset {
+                        let address_target: u32 = (instruction_address as i32 + address_offset) as u32;
+                        branch_target_index = *address_map.get_by_right(&address_target)
+                            .ok_or(CodeValidationError::InvalidBranchTarget(address_target))?;
+                    } else {
+                        unimplemented!("popenv exit magic not yet implemented")
+                    }
+
+                    if conditional {
+                        if visited_branch_targets.insert((branch_target_index, stack.clone())) {
+                            states_to_visit.push((branch_target_index, stack.clone()));
+                        }
+                    } else if !visited_branch_targets.insert((branch_target_index, stack.clone())) {
+                        break
+                    }
                 }
-            }
 
-            GMInstruction::Extended32(instr) => {
-                unimplemented!("extended32 not yet implemented")
-            }
+                GMInstruction::Push(instr) |
+                GMInstruction::PushLocal(instr) |
+                GMInstruction::PushGlobal(instr) |
+                GMInstruction::PushBuiltin(instr) |
+                GMInstruction::PushImmediate(instr) => {
+                    let data_type: GMDataType = get_data_type_from_value(&instr.value);
 
-            GMInstruction::ExtendedFunc(instr) => {
-                unimplemented!("extendedfunc not yet implemented")
+                    if let GMCodeValue::Variable(code_var) = &instr.value {
+                        match code_var.variable_type {
+                            GMVariableType::Normal => {}
+                            GMVariableType::Array => {
+                                stack.pop()?.assert_data_type(GMDataType::Int32)?;  // index
+                                validate_instance_type(stack.pop()?)?;         // instance type
+                            }
+                            GMVariableType::StackTop => {
+                                unimplemented!("push stacktop")
+                            }
+                            GMVariableType::Instance => unimplemented!("push Instance"),
+                            GMVariableType::ArrayPushAF => unimplemented!("push ArrayPushAF"),
+                            GMVariableType::ArrayPopAF => unimplemented!("push ArrayPopAF"),
+                        }
+                        // let var = code_var.variable.resolve(&gm_data.variables.variables)
+                        //     .map_err(|_| CodeValidationError::VariableUnresolvable(code_var.variable.index))?;
+                        // if let Some(b15) = &var.b15_data && b15.instance_type !=
+                    }
+
+                    if matches!(instruction, GMInstruction::PushLocal(_) | GMInstruction::PushGlobal(_) | GMInstruction::PushBuiltin(_)) {
+                        let GMCodeValue::Variable(code_variable) = &instr.value else {
+                            return Err(CodeValidationError::PushVarWrongDataType(data_type))
+                        };
+                        match (instruction, &code_variable.instance_type) {
+                            (GMInstruction::PushLocal(_), GMInstanceType::Local) => {}
+                            (GMInstruction::PushGlobal(_), GMInstanceType::Global) => {}
+                            (GMInstruction::PushBuiltin(_), GMInstanceType::Self_(None)) => {}  //idk
+                            (_, _) => return Err(CodeValidationError::PushVarWrongInstanceType(code_variable.instance_type.clone()))
+                        }
+                    }
+
+                    if matches!(instruction, GMInstruction::PushImmediate(_)) && data_type != GMDataType::Int16 {
+                        return Err(CodeValidationError::PushImmediateNotInt16(data_type))
+                    }
+
+                    if let GMCodeValue::Int16(val) = instr.value {
+                        stack.push(VMStackItem::from_int32(i32::from(val)));
+                    } else if let GMCodeValue::Int32(val) = instr.value {
+                        stack.push(VMStackItem::from_int32(val));
+                    } else {
+                        stack.push_data_type(data_type);
+                    }
+                }
+
+                GMInstruction::Call(instr) => {
+                    for _ in 0..instr.arguments_count {
+                        let item: VMStackItem = stack.pop()?;
+                        if item != VMStackItem::Variable {
+                            return Err(CodeValidationError::CallArgumentNotVar(item))
+                        }
+                    }
+                    // TODO: what does instr.data_type do??? it's always Int32
+                    // TODO: return type is an assumption
+                    stack.push(VMStackItem::Variable);
+                }
+
+                GMInstruction::CallVariable(instr) => {
+                    unimplemented!("callvar not yet implemented")
+                }
+
+                GMInstruction::Extended16(instr) => {
+                    match instr.kind {
+                        GMExtendedKind::CheckArrayIndex => unimplemented!("CheckArrayIndex not yet implemented"),
+                        GMExtendedKind::PushArrayFinal => unimplemented!("CheckArrayIndex not yet implemented"),
+                        GMExtendedKind::PopArrayFinal => unimplemented!("PopArrayFinal not yet implemented"),
+                        GMExtendedKind::PushArrayContainer => unimplemented!("PushArrayContainer not yet implemented"),
+                        GMExtendedKind::SetArrayOwner => {
+                            let item: VMStackItem = stack.pop()?;
+                            let VMStackItem::Int32(Some(int32)) = item else {
+                                return Err(CodeValidationError::SetOwnerNotInt32(item))
+                            };
+                            // todo use this int32 glovql variabe thign
+
+                        }
+                        GMExtendedKind::HasStaticInitialized => unimplemented!("HasStaticInitialized not yet implemented"),
+                        GMExtendedKind::SetStaticInitialized => unimplemented!("SetStaticInitialized not yet implemented"),
+                        GMExtendedKind::SaveArrayReference => unimplemented!("SaveArrayReference not yet implemented"),
+                        GMExtendedKind::RestoreArrayReference => unimplemented!("RestoreArrayReference not yet implemented"),
+                        GMExtendedKind::IsNullishValue => unimplemented!("IsNullishValue not yet implemented"),
+                        GMExtendedKind::PushReference => unimplemented!("PushReference not yet implemented"),
+                    }
+                }
+
+                GMInstruction::Extended32(instr) => {
+                    unimplemented!("extended32 not yet implemented")
+                }
+
+                GMInstruction::ExtendedFunc(instr) => {
+                    unimplemented!("extendedfunc not yet implemented")
+                }
             }
         }
     }
@@ -432,7 +437,7 @@ fn get_instruction_size(instruction: &GMInstruction) -> u32 {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Hash, Eq)]
 pub struct VMStack {
     items: Vec<VMStackItem>,
 }
@@ -468,7 +473,7 @@ impl VMStack {
 }
 
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash, Eq)]
 pub enum VMStackItem {
     Int32(Option<i32>),
     Int64,
