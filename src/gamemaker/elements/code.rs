@@ -441,7 +441,7 @@ impl GMElement for GMInstruction {
             kinds::CMP => Self::Compare(GMComparisonInstruction::parse(reader, bytes)?),
             kinds::POP if bytes.2 == 0x0F => Self::PopSwap(GMPopSwapInstruction::parse(reader, bytes)?),
             kinds::POP => Self::Pop(GMPopInstruction::parse(reader, bytes)?),
-            kinds::DUP if bytes.0 == 0 => Self::Duplicate(GMDuplicateInstruction::parse(reader, bytes)?),
+            kinds::DUP if bytes.1 == 0 => Self::Duplicate(GMDuplicateInstruction::parse(reader, bytes)?),
             kinds::DUP => Self::DuplicateSwap(GMDuplicateSwapInstruction::parse(reader, bytes)?),
             kinds::RET => Self::Return(GMSingleTypeInstruction::parse(reader, bytes)?),
             kinds::EXIT => Self::Exit(GMEmptyInstruction::parse(reader, bytes)?),

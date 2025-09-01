@@ -1,3 +1,4 @@
+use std::env::var;
 use std::fmt::{Display, Formatter};
 use bimap::{BiHashMap, BiMap};
 use crate::gamemaker::code_related::disassembler::disassemble_instruction;
@@ -9,6 +10,7 @@ pub enum CodeValidationError {
     CodeEndWithoutExit(usize, usize),
     PopStackEmpty,
     PeekStackEmpty,
+    DupSizeOutOfBounds,
     TypeMismatch(VMStackItem, GMDataType),
     NormalPopFirstNotVar(GMDataType),
     UnnormalPopFirstNotInt32(GMVariableType, GMDataType),
@@ -38,6 +40,7 @@ impl Display for CodeValidationError {
             CodeValidationError::CodeEndWithoutExit(a, b) => write!(f, "Code instructions ended without Exit or Return instruction ({a} >= {b})"),
             CodeValidationError::PopStackEmpty => write!(f, "Tried to pop value from empty stack"),
             CodeValidationError::PeekStackEmpty => write!(f, "Tried to peek value from empty stack"),
+            CodeValidationError::DupSizeOutOfBounds => write!(f, "Tried to duplicate more items than the stack currently holds"),
             CodeValidationError::TypeMismatch(item, dtype) => write!(f, "Stack item {item:?} does not match data type of instruction {dtype:?}"),
             CodeValidationError::NormalPopFirstNotVar(dtype) => write!(f, "Pop instruction with Normal variable type has type1 set to {dtype:?} instead of Variable"),
             CodeValidationError::UnnormalPopFirstNotInt32(vtype, dtype) => write!(f, "Pop instruction with variable type {vtype:?} has type1 set to {dtype:?} instead of Int32"),
@@ -123,8 +126,8 @@ fn validate_instructions(
             GMInstruction::Xor(instr) |
             GMInstruction::ShiftLeft(instr) |
             GMInstruction::ShiftRight(instr) => {
-                let item2: VMStackItem = stack.pop()?;
                 let item1: VMStackItem = stack.pop()?;
+                let item2: VMStackItem = stack.pop()?;
                 item1.assert_data_type(instr.type1)?;
                 item2.assert_data_type(instr.type2)?;
                 stack.push_data_type(instr.type2);
@@ -146,34 +149,40 @@ fn validate_instructions(
             }
 
             GMInstruction::Pop(instr) => {
-                match instr.destination.variable_type {
-                    GMVariableType::Normal => {}
-                    GMVariableType::StackTop => {
-                        let instance_type_item: VMStackItem = stack.pop()?;
-                        validate_stacktop(instance_type_item)?;
+                let var_type: GMVariableType = instr.destination.variable_type;
+                match var_type {
+                    GMVariableType::Normal => {
+                        if instr.type1 != GMDataType::Variable {
+                            return Err(CodeValidationError::NormalPopFirstNotVar(instr.type1))
+                        }
+                        stack.pop()?.assert_data_type(instr.type2)?;
                     }
                     GMVariableType::Array => {
-                        let array_index = stack.pop()?;
-                        array_index.assert_data_type(GMDataType::Int32)?;
+                        match instr.type1 {
+                            GMDataType::Variable => {
+                                stack.pop()?.assert_data_type(GMDataType::Int32)?;  // index
+                                validate_instance_type(stack.pop()?)?;         // instance type
+                                stack.pop()?.assert_data_type(instr.type2)?;        // actual value
+                            }
+                            GMDataType::Int32 => {
+                                stack.pop()?.assert_data_type(instr.type2)?;        // actual value
+                                stack.pop()?.assert_data_type(GMDataType::Int32)?;  // index
+                                validate_instance_type(stack.pop()?)?;         // instance type
+                            }
+                            _ => unimplemented!("unexpected data type 1 for pop array")
+                        }
                     }
-                    GMVariableType::Instance => unimplemented!("Variable Type Instance when popping not yet implemented"),
-                    GMVariableType::ArrayPushAF => unimplemented!("Variable Type ArrayPushAF when popping not yet implemented"),
-                    GMVariableType::ArrayPopAF => unimplemented!("Variable Type ArrayPopAF when popping not yet implemented"),
-                }
-
-                let item: VMStackItem = stack.pop()?;
-                // todo assumption
-                if instr.destination.variable_type == GMVariableType::Normal {
-                    if instr.type1 != GMDataType::Variable {
-                        return Err(CodeValidationError::NormalPopFirstNotVar(instr.type1))
+                    GMVariableType::StackTop => {
+                        unimplemented!("pop stacktop")
                     }
-                    item.assert_data_type(instr.type2)?;
-                } else {
-                    if instr.type1 != GMDataType::Int32 {
-                        return Err(CodeValidationError::UnnormalPopFirstNotInt32(instr.destination.variable_type, instr.type1))
+                    GMVariableType::Instance => {
+                        unimplemented!("pop instance")
                     }
-                    if instr.type2 != GMDataType::Variable {
-                        return Err(CodeValidationError::UnnormalPopSecondNotVar(instr.destination.variable_type, instr.type1))
+                    GMVariableType::ArrayPushAF => {
+                        unimplemented!("pop ArrayPushAF")
+                    }
+                    GMVariableType::ArrayPopAF => {
+                        unimplemented!("pop ArrayPopAF")
                     }
                 }
             }
@@ -183,10 +192,13 @@ fn validate_instructions(
             }
 
             GMInstruction::Duplicate(instr) => {
-                // TODO: this is an assumption. idk how dup works.
-                let item: VMStackItem = stack.peek()?.clone();
-                item.assert_data_type(instr.data_type)?;
-                for _ in 0..instr.size+1 {
+                let last_index: usize = stack.len() - 1;
+                if instr.size as usize > last_index {
+                    return Err(CodeValidationError::DupSizeOutOfBounds)
+                }
+                for i in (0..=instr.size).rev() {
+                    let item: &VMStackItem = &stack.items[last_index - i as usize];
+                    item.assert_data_type(instr.data_type)?;
                     stack.push(item.clone());
                 }
             }
@@ -264,12 +276,24 @@ fn validate_instructions(
             GMInstruction::PushImmediate(instr) => {
                 let data_type: GMDataType = get_data_type_from_value(&instr.value);
 
-                // if let GMCodeValue::Variable(code_var) = &instr.value {
-                    // validate_stacktop(code_var.variable_type)
+                if let GMCodeValue::Variable(code_var) = &instr.value {
+                    match code_var.variable_type {
+                        GMVariableType::Normal => {}
+                        GMVariableType::Array => {
+                            stack.pop()?.assert_data_type(GMDataType::Int32)?;  // index
+                            validate_instance_type(stack.pop()?)?;         // instance type
+                        }
+                        GMVariableType::StackTop => {
+                            unimplemented!("push stacktop")
+                        }
+                        GMVariableType::Instance => unimplemented!("push Instance"),
+                        GMVariableType::ArrayPushAF => unimplemented!("push ArrayPushAF"),
+                        GMVariableType::ArrayPopAF => unimplemented!("push ArrayPopAF"),
+                    }
                     // let var = code_var.variable.resolve(&gm_data.variables.variables)
                     //     .map_err(|_| CodeValidationError::VariableUnresolvable(code_var.variable.index))?;
                     // if let Some(b15) = &var.b15_data && b15.instance_type !=
-                // }
+                }
 
                 if matches!(instruction, GMInstruction::PushLocal(_) | GMInstruction::PushGlobal(_) | GMInstruction::PushBuiltin(_)) {
                     let GMCodeValue::Variable(code_variable) = &instr.value else {
@@ -349,7 +373,7 @@ fn validate_instructions(
 }
 
 
-fn validate_stacktop(item: VMStackItem) -> Result<(), CodeValidationError> {
+fn validate_instance_type(item: VMStackItem) -> Result<(), CodeValidationError> {
     let VMStackItem::Int32(Some(int32)) = item else {
         return Err(CodeValidationError::SetOwnerNotInt32(item))
     };
@@ -424,6 +448,10 @@ impl VMStack {
 
     fn peek(&self) -> Result<&VMStackItem, CodeValidationError> {
         self.items.last().ok_or(CodeValidationError::PeekStackEmpty)
+    }
+
+    fn len(&self) -> usize {
+        self.items.len()
     }
 
     fn is_empty(&self) -> bool {
