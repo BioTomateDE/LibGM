@@ -3,6 +3,7 @@ mod utility;
 mod csharp_rng;
 
 pub mod gamemaker;
+pub mod gml;
 
 pub use gamemaker::data::GMData;
 pub use gamemaker::deserialize::parse_data_file;

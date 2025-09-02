@@ -1479,6 +1479,26 @@ pub fn get_data_type_from_value(code_value: &GMCodeValue) -> GMDataType {
 }
 
 
+pub fn get_instruction_size(instruction: &GMInstruction) -> u32 {
+    match instruction {
+        GMInstruction::Pop(_) => 2,
+        GMInstruction::Push(instr) |
+        GMInstruction::PushLocal(instr) |
+        GMInstruction::PushGlobal(instr) |
+        GMInstruction::PushBuiltin(instr) |
+        GMInstruction::PushImmediate(instr) => match instr.value {
+            GMCodeValue::Int16(_) => 1,
+            GMCodeValue::Int64(_) => 3,
+            GMCodeValue::Double(_) => 3,
+            _ => 2,
+        }
+        GMInstruction::Call(_) => 2,
+        GMInstruction::PushReference(_) => 2,
+        _ => 1,
+    }
+}
+
+
 /// Check whether this data file was generated with YYC (YoYoGames Compiler).
 /// Should that be the case, the CODE, VARI and FUNC chunks will be empty (or not exist?).
 /// NOTE: YYC is untested. Issues may occur.

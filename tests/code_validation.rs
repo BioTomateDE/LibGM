@@ -1,7 +1,7 @@
 
 #[test]
 fn test_code_validation() -> Result<(), String> {
-    use libgm::gamemaker::code_related::validation::validate_code;
+    use libgm::gml::validation::validate_code;
     use libgm::__test_data_files;
 
     __test_data_files(|data| {
