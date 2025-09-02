@@ -12,6 +12,7 @@ mod gamemaker;
 mod modding;
 mod utility;
 mod csharp_rng;
+pub mod gml;
 
 use std::path::Path;
 use std::process::exit;
@@ -82,14 +83,21 @@ fn main_open_and_close() -> Result<(), String> {
     // std::fs::write(format!("{}_strings.txt", original_data_file_path.to_str().unwrap()), raw)
     //     .map_err(|e| format!("Could not write string: {e}"))?;
 
-    log::info!("Building data file");
-    let modified_data_raw: Vec<u8> = build_data_file(&original_data)
-        .map_err(|e| format!("\n{e}\n↳ while building data file"))?;
-    drop(original_data);
+    // find code blocks
+    for code in &original_data.codes.codes {
+        let name = code.name.resolve(&original_data.strings.strings)?;
+        let blocks = gml::decompiler::blocks::find_basic_blocks(&code.instructions).map_err(|e| e.to_string())?;
+        println!("{name}: \n{}\n", blocks.into_iter().map(|i| i.to_string()).collect::<Vec<_>>().join("\n"))
+    }
 
-    log::info!("Writing data file \"{}\"", modified_data_file_path.display());
-    write_data_file(modified_data_raw, modified_data_file_path)
-        .map_err(|e| format!("{e}\n↳ while writing data file"))?;
+    // log::info!("Building data file");
+    // let modified_data_raw: Vec<u8> = build_data_file(&original_data)
+    //     .map_err(|e| format!("\n{e}\n↳ while building data file"))?;
+    // drop(original_data);
+    //
+    // log::info!("Writing data file \"{}\"", modified_data_file_path.display());
+    // write_data_file(modified_data_raw, modified_data_file_path)
+    //     .map_err(|e| format!("{e}\n↳ while writing data file"))?;
 
     Ok(())
 }
