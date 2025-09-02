@@ -1,11 +1,10 @@
 use std::cmp::Ordering;
-use std::collections::{HashSet, VecDeque};
-use std::env::var;
+use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use bimap::{BiHashMap, BiMap};
-use crate::gamemaker::code_related::disassembler::disassemble_instruction;
 use crate::gamemaker::data::GMData;
-use crate::gamemaker::elements::code::{get_data_type_from_value, parse_instance_type, GMCode, GMCodeValue, GMDataType, GMInstanceType, GMInstruction, GMVariableType};
+use crate::gamemaker::elements::code::{get_data_type_from_value, get_instruction_size, parse_instance_type, GMCode, GMCodeValue, GMDataType, GMInstanceType, GMInstruction, GMVariableType};
+use crate::gml::disassembler::disassemble_instruction;
 
 #[derive(Debug)]
 pub enum CodeValidationError {
@@ -421,26 +420,6 @@ fn generate_address_map(instructions: &[GMInstruction]) -> BiMap<usize, u32> {
     // insert end block
     map.insert(instructions.len(), current_address);
     map
-}
-
-
-fn get_instruction_size(instruction: &GMInstruction) -> u32 {
-    match instruction {
-        GMInstruction::Pop(_) => 2,
-        GMInstruction::Push(instr) |
-        GMInstruction::PushLocal(instr) |
-        GMInstruction::PushGlobal(instr) |
-        GMInstruction::PushBuiltin(instr) |
-        GMInstruction::PushImmediate(instr) => match instr.value {
-            GMCodeValue::Int16(_) => 1,
-            GMCodeValue::Int64(_) => 3,
-            GMCodeValue::Double(_) => 3,
-            _ => 2,
-        }
-        GMInstruction::Call(_) => 2,
-        GMInstruction::PushReference(_) => 2,
-        _ => 1,
-    }
 }
 
 

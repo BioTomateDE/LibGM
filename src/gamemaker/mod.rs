@@ -7,4 +7,3 @@ mod qoi;
 mod printing;
 mod element;
 pub mod data;
-pub mod code_related;
