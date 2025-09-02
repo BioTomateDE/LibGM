@@ -195,8 +195,15 @@ fn validate_instructions(
                             }
                         }
                         GMVariableType::StackTop => {
-                            stack.pop()?.assert_data_type(GMDataType::Int32)?;  // instance type / object index
-                            stack.pop()?.assert_data_type(instr.type2)?;        // actual value
+                            if instr.type1 == GMDataType::Int32 {
+                                stack.pop()?.assert_data_type(instr.type2)?;
+                                stack.pop()?.assert_data_type(GMDataType::Int32)?;
+                            } else if instr.type1 == GMDataType::Variable {
+                                stack.pop()?.assert_data_type(GMDataType::Int32)?;  // instance type / object index
+                                stack.pop()?.assert_data_type(instr.type2)?;        // actual value
+                            } else {
+                                unimplemented!("didnt expect pop type1 (stacktop) to be neither var not int32")
+                            }
                         }
                         GMVariableType::Instance => {
                             unimplemented!("pop instance")
@@ -387,13 +394,15 @@ fn validate_instructions(
 
 
 fn validate_instance_type(item: VMStackItem) -> Result<(), CodeValidationError> {
-    let VMStackItem::Int32(Some(int32)) = item else {
-        return Err(CodeValidationError::InstanceTypeNotInt32(item))
+    let int32: i32 = match item {
+        VMStackItem::Int32(Some(int)) => int,
+        VMStackItem::Int32(None) => return Ok(()),
+        _ => return Err(CodeValidationError::InstanceTypeNotInt32(item))
     };
     let int16: i16 = i16::try_from(int32).map_err(|_| CodeValidationError::Int16OutOfBounds(int32))?;
     let instance_type: GMInstanceType = parse_instance_type(int16, GMVariableType::Array)
         .map_err(|_| CodeValidationError::InvalidInt16InstanceType(int16))?;
-    if matches!(instance_type, GMInstanceType::Self_(Some(_)) | GMInstanceType::RoomInstance(_) | GMInstanceType::Undefined) {
+    if matches!(instance_type, GMInstanceType::RoomInstance(_) | GMInstanceType::Undefined) {
         return Err(CodeValidationError::UnacceptableInstanceType(instance_type))
     }
     Ok(())
