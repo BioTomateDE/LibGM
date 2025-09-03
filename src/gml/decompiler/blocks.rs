@@ -103,7 +103,7 @@ pub fn find_basic_blocks(instructions: &[GMInstruction]) -> Result<Vec<BasicBloc
     let mut current_index: usize = 0;
 
     for instruction_address in nodes {
-        if instruction_address >= current_index {
+        if instruction_address > current_index {
             blocks.push(BasicBlock::new(instructions, current_index, instruction_address));
         }
         current_index = instruction_address;
