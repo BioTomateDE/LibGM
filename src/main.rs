@@ -64,11 +64,14 @@ fn main_open_and_close() -> Result<(), String> {
     // original_data.general_info.display_name = original_data.make_string(&modified_name);
     
     // // export code disassembly
+    // if !std::fs::exists("expasm").unwrap() {
+    //     std::fs::create_dir("expasm").unwrap();
+    // }
     // for code in &original_data.codes.codes {
     //     let code_name = code.name.resolve(&original_data.strings.strings)?;
-    //     let assembly = crate::gamemaker::disassembler::disassemble_code(&original_data, code)?;
+    //     let assembly = gml::disassembler::disassemble_code(&original_data, code)?;
     //     // println!("Disassembly of \"{code_name}\": \n{}", assembly);
-    //     std::fs::write(format!("./gml_asm/{code_name}.txt"), assembly)
+    //     std::fs::write(format!("expasm/{code_name}.asm"), assembly)
     //         .map_err(|e| format!("Could not write assembly of code \"{code_name}\": {e}"))?;
     // }
 

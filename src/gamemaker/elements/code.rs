@@ -382,6 +382,9 @@ pub enum GMInstruction {
     /// If a flag is encoded in this instruction, then this will always terminate the loop, and branch to the encoded address.
     PopWithContext(GMGotoInstruction),
 
+    /// PopWithContext but with PopEnvExitMagic
+    PopWithContextExit(GMPopenvExitMagicInstruction),
+
     /// Pushes a constant value onto the stack. Can vary in size depending on value type.
     Push(GMPushInstruction),
 
@@ -505,6 +508,7 @@ impl GMElement for GMInstruction {
             kinds::JT => Self::BranchIf(GMGotoInstruction::parse(reader, bytes)?),
             kinds::JF => Self::BranchUnless(GMGotoInstruction::parse(reader, bytes)?),
             kinds::PUSHENV => Self::PushWithContext(GMGotoInstruction::parse(reader, bytes)?),
+            kinds::POPENV if bytes == (0x00, 0x00, 0xF0) => Self::PopWithContextExit(GMPopenvExitMagicInstruction::parse(reader, bytes)?),
             kinds::POPENV => Self::PopWithContext(GMGotoInstruction::parse(reader, bytes)?),
             kinds::PUSH => Self::Push(GMPushInstruction::parse(reader, bytes)?),
             kinds::PUSHLOC => Self::PushLocal(GMPushInstruction::parse(reader, bytes)?),
@@ -541,14 +545,6 @@ impl GMElement for GMInstruction {
                     _ => return Err(format!("Invalid data type for Extended instruction: {data_type:?}"))
                 }
             }
-            // kinds::EXTENDED if bytes.2 == 2 => {   // Int32 data type
-            //     if reader.function_occurrence_map.contains_key(&reader.cur_pos) {
-            //         Self::ExtendedFunc(GMExtendedInstructionFunc::parse(reader, bytes)?)
-            //     } else {
-            //         Self::Extended32(GMExtendedInstruction32::parse(reader, bytes)?)
-            //     }
-            // }
-            // kinds::EXTENDED => Self::Extended16(GMExtendedInstruction16::parse(reader, bytes)?),
             _ => return Err(format!("Invalid opcode {opcode} (0x{opcode:02X})"))
         })
     }
@@ -586,6 +582,7 @@ impl GMElement for GMInstruction {
             Self::BranchUnless(instr) => instr.build(builder, opcode)?,
             Self::PushWithContext(instr) => instr.build(builder, opcode)?,
             Self::PopWithContext(instr) => instr.build(builder, opcode)?,
+            Self::PopWithContextExit(instr) => instr.build(builder, opcode)?,
             Self::Push(instr) => instr.build(builder, opcode)?,
             Self::PushLocal(instr) => instr.build(builder, opcode)?,
             Self::PushGlobal(instr) => instr.build(builder, opcode)?,
@@ -757,47 +754,52 @@ impl InstructionData for GMPopSwapInstruction {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct GMGotoInstruction {
     /// Contains the offset of where to jump. 1 = 4 bytes. Can be negative.
-    /// If [`None`], it is a "popenv exit magic" goto instruction.
-    pub jump_offset: Option<i32>,
+    pub jump_offset: i32,
 }
 impl InstructionData for GMGotoInstruction {
     fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
-        if reader.general_info.bytecode_version <= 14 {
-            let jump_offset: i32 = b.0 as i32 | ((b.1 as u32) << 8) as i32 | ((b.2 as i32) << 16);
-            if jump_offset == -1048576 {   // little endian [00 00 F0]
-                return Ok(Self { jump_offset: None })
-            }
-            return Ok(Self { jump_offset: Some(jump_offset) })
+        let mut value: u32 = (b.0 as u32) | ((b.1 as u32) << 8) | ((b.2 as u32) << 16);
+        if reader.general_info.bytecode_version > 14 && (value & 0x400000) != 0 {
+            value |= 0x800000;
         }
-
-        let v: u32 = b.0 as u32 | ((b.1 as u32) << 8) | ((b.2 as u32) << 16);      // i hate bitshifting
-        let popenv_exit_magic: bool = (v & 0x800000) != 0;
-        if popenv_exit_magic && v != 0xF00000 {
-            return Err("Popenv exit magic doesn't work while parsing Goto Instruction".to_string());
-        }
-        // "The rest is int23 signed value, so make sure" (<-- idk what this is supposed to mean)
-        let mut jump_offset: u32 = v & 0x003FFFFF;
-        if (v & 0x00C00000) != 0 {
-            jump_offset |= 0xFFC00000;
-        }
-        if popenv_exit_magic {
-            Ok(Self { jump_offset: None })
+        let jump_offset: i32 = if value & 0x800000 != 0 {
+            (value | 0xFF000000) as i32
         } else {
-            Ok(Self { jump_offset: Some(jump_offset as i32) })
-        }
+            value as i32
+        };
+        Ok(Self { jump_offset })
     }
 
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
-        if let Some(jump_offset) = self.jump_offset {
-            builder.write_i24(jump_offset & 0x7fffff);
-        } else {
-            // popenv exit magic
-            builder.write_i24(0xF00000);
+        let mut value = (self.jump_offset as u32) & 0x00FFFFFF;
+        if builder.bytecode_version() > 14 && (value & 0x800000) != 0 {
+            value &= !0x800000;
+            value |= 0x400000;
         }
+        builder.write_u8((value & 0xFF) as u8);
+        builder.write_u8(((value >> 8) & 0xFF) as u8);
+        builder.write_u8(((value >> 16) & 0xFF) as u8);
         builder.write_u8(opcode);
         Ok(())
     }
 }
+
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct GMPopenvExitMagicInstruction;
+impl InstructionData for GMPopenvExitMagicInstruction {
+    fn parse(_: &mut DataReader, _x: (u8, u8, u8)) -> Result<Self, String> {
+        Ok(Self)
+    }
+
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+        builder.write_i24(0xF00000);
+        builder.write_u8(opcode);
+        Ok(())
+    }
+}
+
+
 
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -991,6 +993,7 @@ fn opcode_from_instruction(instruction: &GMInstruction) -> u8 {
         GMInstruction::BranchUnless(_) => kinds::JF,
         GMInstruction::PushWithContext(_) => kinds::PUSHENV,
         GMInstruction::PopWithContext(_) => kinds::POPENV,
+        GMInstruction::PopWithContextExit(_) => kinds::POPENV,
         GMInstruction::Push(_) => kinds::PUSH,
         GMInstruction::PushLocal(_) => kinds::PUSHLOC,
         GMInstruction::PushGlobal(_) => kinds::PUSHGLB,

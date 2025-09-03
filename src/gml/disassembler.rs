@@ -97,20 +97,14 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
         GMInstruction::BranchUnless(instr) |
         GMInstruction::PushWithContext(instr) |
         GMInstruction::PopWithContext(instr) => {
-            if let Some(jump_offset) = instr.jump_offset {
-                line = format!(
-                    "{} {}",
-                    opcode,
-                    jump_offset,
-                );
-            } else {
-                line = format!(
-                    "{} <drop>",
-                    opcode,
-                );
-            }
+            line = format!(
+                "{} {}",
+                opcode,
+                instr.jump_offset,
+            );
         }
-
+        
+        GMInstruction::PopWithContextExit(_) => line = opcode.to_string(),
         GMInstruction::Convert(instr) |
         GMInstruction::Multiply(instr) |
         GMInstruction::Divide(instr) |
@@ -240,6 +234,7 @@ fn opcode_to_string(instruction: &GMInstruction) -> &'static str {
         GMInstruction::BranchUnless(_) => "jf",
         GMInstruction::PushWithContext(_) => "pushenv",
         GMInstruction::PopWithContext(_) => "popenv",
+        GMInstruction::PopWithContextExit(_) => "popenvexit",
         GMInstruction::Push(_) => "push",
         GMInstruction::PushLocal(_) => "pushloc",
         GMInstruction::PushGlobal(_) => "pushglb",

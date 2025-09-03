@@ -279,14 +279,9 @@ fn validate_instructions(
                         }
                     }
 
-                    let branch_target_index: usize;
-                    if let Some(address_offset) = instr.jump_offset {
-                        let address_target: u32 = (instruction_address as i32 + address_offset) as u32;
-                        branch_target_index = *address_map.get_by_right(&address_target)
-                            .ok_or(CodeValidationError::InvalidBranchTarget(address_target))?;
-                    } else {
-                        unimplemented!("popenv exit magic not yet implemented")
-                    }
+                    let address_target: u32 = (instruction_address as i32 + instr.jump_offset) as u32;
+                    let branch_target_index: usize = *address_map.get_by_right(&address_target)
+                        .ok_or(CodeValidationError::InvalidBranchTarget(address_target))?;
 
                     if conditional {
                         if visited_branch_targets.insert((branch_target_index, stack.clone())) {
@@ -301,6 +296,8 @@ fn validate_instructions(
                         break
                     }
                 }
+
+                GMInstruction::PopWithContextExit(_) => unimplemented!("popenv exit magic"),
 
                 GMInstruction::Push(instr) |
                 GMInstruction::PushLocal(instr) |
