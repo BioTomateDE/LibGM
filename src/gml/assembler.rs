@@ -4,7 +4,7 @@ use std::str::{Chars, FromStr};
 use arrayvec::ArrayVec;
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
-use crate::gamemaker::elements::code::{GMCodeValue, CodeVariable, GMGotoInstruction, GMPopSwapInstruction, GMSingleTypeInstruction, GMInstanceType, GMVariableType, GMComparisonInstruction, GMPopInstruction, GMPushInstruction, GMCallInstruction, GMEmptyInstruction, GMAssetReference};
+use crate::gamemaker::elements::code::{GMCodeValue, CodeVariable, GMGotoInstruction, GMPopSwapInstruction, GMSingleTypeInstruction, GMInstanceType, GMVariableType, GMComparisonInstruction, GMPopInstruction, GMPushInstruction, GMCallInstruction, GMEmptyInstruction, GMAssetReference, GMPopenvExitMagicInstruction};
 use crate::gamemaker::elements::code::{GMCallVariableInstruction, GMComparisonType, GMDoubleTypeInstruction, GMDuplicateInstruction, GMDuplicateSwapInstruction};
 use crate::gamemaker::elements::code::GMInstruction;
 use crate::gamemaker::elements::code::GMDataType;
@@ -160,6 +160,7 @@ pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<GMInstru
         "jf" => GMInstruction::BranchUnless(parse_goto(&types, line)?),
         "pushenv" => GMInstruction::PushWithContext(parse_goto(&types, line)?),
         "popenv" => GMInstruction::PopWithContext(parse_goto(&types, line)?),
+        "popenvexit" => GMInstruction::PopWithContextExit(GMPopenvExitMagicInstruction),
         "push" => GMInstruction::Push(parse_push(&types, line, gm_data)?),
         "pushloc" => GMInstruction::PushLocal(parse_push(&types, line, gm_data)?),
         "pushglb" => GMInstruction::PushGlobal(parse_push(&types, line, gm_data)?),
@@ -276,12 +277,7 @@ fn parse_duplicate_swap(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Res
 
 fn parse_goto(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMGotoInstruction, ParseError> {
     assert_type_count(&types, 0)?;
-    let jump_offset: Option<i32> = if *line == "<drop>" {
-        *line = "";    // need to consume; otherwise error
-        None
-    } else {
-        Some(parse_int(line)?)
-    };
+    let jump_offset: i32 = parse_int(line)?;
     Ok(GMGotoInstruction { jump_offset })
 }
 
@@ -507,7 +503,7 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable, Par
         "self" if instance_type_arg.is_empty() => GMInstanceType::Self_(None),
         "self" => {
             let object_ref: GMRef<GMGameObject> = gm_data.game_objects.get_object_ref_by_name(&instance_type_arg, &gm_data.strings)
-                .map_err(|e| ParseError::GameObjectUnresolvable(instance_type_arg))?;
+                .map_err(|_| ParseError::GameObjectUnresolvable(instance_type_arg))?;
             GMInstanceType::Self_(Some(object_ref))
         }
         "local" => {
