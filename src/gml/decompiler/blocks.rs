@@ -86,10 +86,7 @@ pub fn find_basic_blocks(instructions: &[GMInstruction]) -> Result<Vec<BasicBloc
     let mut edges: ManyToMany<usize, usize> = ManyToMany::new();
 
     for (instr, instr_address) in goto_instructions {
-        let Some(address_offset) = instr.jump_offset else {
-            unimplemented!("popenv exit magic not yet implemented")
-        };
-        let target_address: u32 = (instr_address as i32 + address_offset) as u32;
+        let target_address: u32 = (instr_address as i32 + instr.jump_offset) as u32;
         let target_index: usize = *address_map.get(&target_address)
             .ok_or(BlockError::InvalidBranchTarget(target_address))?;
         nodes.insert(target_index);
