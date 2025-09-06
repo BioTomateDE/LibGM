@@ -6,4 +6,4 @@ mod detect_version;
 mod qoi;
 mod printing;
 mod element;
-pub mod disassembler;
+pub mod data;

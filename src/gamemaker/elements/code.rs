@@ -5,20 +5,31 @@ use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use crate::gamemaker::elements::animation_curves::GMAnimationCurve;
+use crate::gamemaker::elements::backgrounds::GMBackground;
+use crate::gamemaker::elements::fonts::GMFont;
 use crate::gamemaker::elements::functions::GMFunction;
 use crate::gamemaker::elements::game_objects::GMGameObject;
+use crate::gamemaker::elements::particles::GMParticleSystem;
+use crate::gamemaker::elements::paths::GMPath;
+use crate::gamemaker::elements::rooms::GMRoom;
+use crate::gamemaker::elements::scripts::GMScript;
+use crate::gamemaker::elements::sequence::GMSequence;
+use crate::gamemaker::elements::shaders::GMShader;
+use crate::gamemaker::elements::sounds::GMSound;
+use crate::gamemaker::elements::sprites::GMSprite;
+use crate::gamemaker::elements::timelines::GMTimeline;
 use crate::gamemaker::serialize::DataBuilder;
 use crate::utility::num_enum_from;
 
 #[derive(Debug, Clone)]
 pub struct GMCodes {
     pub codes: Vec<GMCode>,
-    pub yyc: bool,
     pub exists: bool,
 }
 impl GMChunkElement for GMCodes {
     fn empty() -> Self {
-        Self { codes: vec![], yyc: false, exists: false }
+        Self { codes: vec![], exists: false }
     }
     fn exists(&self) -> bool {
         self.exists
@@ -27,13 +38,13 @@ impl GMChunkElement for GMCodes {
 impl GMElement for GMCodes {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         if reader.get_chunk_length() == 0 {
-            return Ok(Self { codes: vec![], yyc: true, exists: true })
+            return Ok(Self { codes: vec![], exists: false })
         }
         
         let pointers: Vec<usize> = reader.read_simple_list()?;
         reader.cur_pos = match pointers.first() {
             Some(ptr) => *ptr,
-            None => return Ok(Self { codes: vec![], yyc: false, exists: true })
+            None => return Ok(Self { codes: vec![], exists: true })
         };
         let count: usize = pointers.len();
         let mut codes: Vec<GMCode> = Vec::with_capacity(count);
@@ -64,7 +75,7 @@ impl GMElement for GMCodes {
                 let instructions_start_offset: i32 = reader.read_i32()?;
                 instructions_start_pos = (instructions_start_offset + reader.cur_pos as i32 - 4) as usize;
 
-                let offset: usize = reader.read_usize()?;
+                let offset: u32 = reader.read_u32()?;
                 let b15_info = GMCodeBytecode15 { locals_count, arguments_count, weird_local_flag, offset, parent: None };
                 instructions_end_pos = instructions_start_pos + code_length;
                 bytecode15_info = Some(b15_info);
@@ -108,11 +119,11 @@ impl GMElement for GMCodes {
         }
         
         reader.cur_pos = last_pos;  // has to be chunk end (since instructions are stored separately in b15+)
-        Ok(GMCodes { codes, yyc: false, exists: true })
+        Ok(GMCodes { codes, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        if !self.exists || self.yyc { return Ok(()) }
+        if !self.exists { return Ok(()) }
 
         builder.write_usize(self.codes.len())?;
         let pointer_list_pos: usize = builder.len();
@@ -178,7 +189,7 @@ impl GMElement for GMCodes {
             builder.write_u16(b15_info.arguments_count | if b15_info.weird_local_flag {0x8000} else {0});
             let instructions_start_offset: i32 = start as i32 - builder.len() as i32;
             builder.write_i32(instructions_start_offset);
-            builder.write_usize(b15_info.offset)?;
+            builder.write_u32(b15_info.offset);
         }
         
         Ok(())
@@ -196,610 +207,960 @@ pub struct GMCode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMCodeBytecode15 {
+    /// The amount of local variables this code entry has.
     pub locals_count: u16,
+    /// The amount of arguments this code entry accepts.
     pub arguments_count: u16,
+    /// A flag set on certain code entries, which usually don't have locals attached to them.
     pub weird_local_flag: bool,
-    pub offset: usize,
+    /// Offset, **in bytes**, where code should begin executing from within the bytecode of this code entry.
+    /// Should be 0 for root-level (parent) code entries, and nonzero for child code entries.
+    pub offset: u32,
+    /// Parent entry of this code entry, if this is a child entry; [`None`] otherwise.
     pub parent: Option<GMRef<GMCode>>,
 }
 
 
+// #[derive(Debug, Clone, PartialEq)]
+// pub enum GMInstructionData {
+//     Empty,
+//     SingleType(GMSingleTypeInstruction),
+//     Duplicate(GMDuplicateInstruction),
+//     DuplicateSwap(GMDuplicateSwapInstruction),
+//     CallVariable(GMCallVariableInstruction),
+//     DoubleType(GMDoubleTypeInstruction),
+//     Comparison(GMComparisonInstruction),
+//     Goto(GMGotoInstruction),
+//     Pop(GMPopInstruction),
+//     PopSwap(GMPopSwapInstruction),
+//     Push(GMPushInstruction),
+//     Call(GMCallInstruction),
+//     Extended16(GMExtendedInstruction16),
+//     Extended32(GMExtendedInstruction32),
+//     ExtendedFunc(GMExtendedInstructionFunction),
+// }
+
+// #[derive(Debug, Clone, PartialEq)]
+// pub struct GMInstruction {
+//     pub opcode: GMOpcode,
+//     pub kind: GMInstructionData,
+// }
+
+
+
+mod kinds {
+    pub const CONV: u8 = 0x07;
+    pub const MUL: u8 = 0x08;
+    pub const DIV: u8 = 0x09;
+    pub const REM: u8 = 0x0A;
+    pub const MOD: u8 = 0x0B;
+    pub const ADD: u8 = 0x0C;
+    pub const SUB: u8 = 0x0D;
+    pub const AND: u8 = 0x0E;
+    pub const OR: u8 = 0x0F;
+    pub const XOR: u8 = 0x10;
+    pub const NEG: u8 = 0x11;
+    pub const NOT: u8 = 0x12;
+    pub const SHL: u8 = 0x13;
+    pub const SHR: u8 = 0x14;
+    pub const CMP: u8 = 0x15;
+    pub const POP: u8 = 0x45;
+    pub const DUP: u8 = 0x86;
+    pub const RET: u8 = 0x9C;
+    pub const EXIT: u8 = 0x9D;
+    pub const POPZ: u8 = 0x9E;
+    pub const JMP: u8 = 0xB6;
+    pub const JT: u8 = 0xB7;
+    pub const JF: u8 = 0xB8;
+    pub const PUSHENV: u8 = 0xBA;
+    pub const POPENV: u8 = 0xBB;
+    pub const PUSH: u8 = 0xC0;
+    pub const PUSHLOC: u8 = 0xC1;
+    pub const PUSHGLB: u8 = 0xC2;
+    pub const PUSHBLTN: u8 = 0xC3;
+    pub const PUSHIM: u8 = 0x84;
+    pub const CALL: u8 = 0xD9;
+    pub const CALLVAR: u8 = 0x99;
+    pub const EXTENDED: u8 = 0xFF;
+}
+
+
+
 #[derive(Debug, Clone, PartialEq)]
-pub enum GMInstructionData {
-    SingleType(GMSingleTypeInstruction),
-    DoubleType(GMDoubleTypeInstruction),
-    Comparison(GMComparisonInstruction),
-    Goto(GMGotoInstruction),
-    Pop(GMPopInstruction),
-    Push(GMPushInstruction),
-    Call(GMCallInstruction),
-    Break(GMBreakInstruction),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMInstruction {
-    pub opcode: GMOpcode,
-    pub kind: GMInstructionData,
-}
-impl GMElement for GMInstruction {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let b0: u8 = reader.read_u8()?;
-        let b1: u8 = reader.read_u8()?;
-        let b2: u8 = reader.read_u8()?;
-        let opcode = GMOpcode::deserialize(reader)?;
-        // log::debug!("{} // {:02X} {:02X} {:02X} {:02X} // {:?}", reader.cur_pos-4, b0, b1, b2, u8::from(opcode), opcode);
-        
-        let instruction_data: GMInstructionData = match opcode {
-            GMOpcode::Negate |
-            GMOpcode::Not |
-            GMOpcode::Duplicate |
-            GMOpcode::Return |
-            GMOpcode::Exit |
-            GMOpcode::PopDiscard |
-            GMOpcode::CallVariable => {
-                let data_type: GMDataType = num_enum_from(b2 & 0xf)
-                    .map_err(|e| format!("{e} while parsing Single Type Instruction"))?;
-                
-                // Ensure basic conditions hold
-                if b0 != 0 && !matches!(opcode, GMOpcode::Duplicate | GMOpcode::CallVariable) {
-                    return Err(format!("Invalid padding {:02X} while parsing Single Type Instruction", b0));
-                }
-
-                if b2 >> 4 != 0 {
-                    return Err(format!("Second type should be zero but is {0} (0x{0:02X}) for Single Type Instruction", b2 >> 4))
-                }
-
-                if opcode == GMOpcode::Duplicate && b1 != 0 {
-                    return Err("Special Duplicate Instruction containing Comparison Type found! Please report this error.".to_string())
-                    // // Special dup instruction with extra parameters
-                    // let comparison_type: GMComparisonType = num_enum_from(b1)
-                    //     .map_err(|e| format!("{e} while parsing Special Duplicate Instruction"))?;
-                    //
-                    // GMInstructionData::Comparison(GMComparisonInstruction {
-                    //     comparison_type,
-                    //     type1: data_type,
-                    //     type2: data_type,
-                    // })
-                } else {
-                    GMInstructionData::SingleType(GMSingleTypeInstruction { extra: b0, data_type })
-                }
-            }
-
-            GMOpcode::Convert |
-            GMOpcode::Multiply |
-            GMOpcode::Divide |
-            GMOpcode::Remainder |
-            GMOpcode::Modulus |
-            GMOpcode::Add |
-            GMOpcode::Subtract |
-            GMOpcode::And |
-            GMOpcode::Or |
-            GMOpcode::Xor |
-            GMOpcode::ShiftLeft |
-            GMOpcode::ShiftRight => {
-                let type1: GMDataType = num_enum_from(b2 & 0xf)
-                    .map_err(|e| format!("{e} for type1 while parsing Double Type Instruction"))?;
-                let type2: GMDataType = num_enum_from(b2 >> 4).
-                    map_err(|e| format!("{e} for type2 while parsing Double Type Instruction"))?;
-
-                if b1 != 0 {    // might be incorrect; remove if issues
-                    return Err(format!("b1 should be zero but is {b1} (0x{b1:02X}) for Double Type Instruction"))
-                }
-
-                GMInstructionData::DoubleType(GMDoubleTypeInstruction { type1, type2 })
-            }
-
-            GMOpcode::Compare => {
-                // Parse instruction components from bytes
-                let comparison_type_raw: u8 = if reader.general_info.bytecode_version <= 14 {
-                    u8::from(opcode) - 0x10   // In bytecode 14, the comparison kind is encoded in the opcode itself
-                } else {
-                    b1
-                };
-                let comparison_type: GMComparisonType = num_enum_from(comparison_type_raw)
-                    .map_err(|e| format!("{e} while parsing Comparison Instruction"))?;
-                let type1: GMDataType = num_enum_from(b2 & 0xf)
-                    .map_err(|e| format!("{e} for type1 while parsing Double Type Instruction"))?;
-                let type2: GMDataType = num_enum_from(b2 >> 4).
-                    map_err(|e| format!("{e} for type2 while parsing Double Type Instruction"))?;
-                
-                // short circuit stuff {~~}
-                
-                GMInstructionData::Comparison(GMComparisonInstruction { comparison_type, type1, type2 })
-            }
-
-            GMOpcode::Branch |
-            GMOpcode::BranchIf |
-            GMOpcode::BranchUnless |
-            GMOpcode::PushWithContext |
-            GMOpcode::PopWithContext => {
-                if reader.general_info.bytecode_version <= 14 {
-                    let jump_offset: i32 = b0 as i32 | ((b1 as u32) << 8) as i32 | ((b2 as i32) << 16);
-                    let popenv_exit_magic: bool = jump_offset == -1048576;      // little endian [00 00 F0]
-                    GMInstructionData::Goto(GMGotoInstruction { jump_offset, popenv_exit_magic })
-                } else {
-                    let v: u32 = b0 as u32 | ((b1 as u32) << 8) | ((b2 as u32) << 16);      // i hate bitshifting
-                    let popenv_exit_magic: bool = (v & 0x800000) != 0;
-                    if popenv_exit_magic && v != 0xF00000 {
-                        return Err("Popenv exit magic doesn't work while parsing Goto Instruction".to_string());
-                    }
-                    // "The rest is int23 signed value, so make sure" (<-- idk what this is supposed to mean)
-                    let mut jump_offset: u32 = v & 0x003FFFFF;
-                    if (v & 0x00C00000) != 0 {
-                        jump_offset |= 0xFFC00000;
-                    }
-                    let jump_offset: i32 = jump_offset as i32;
-                    GMInstructionData::Goto(GMGotoInstruction { jump_offset, popenv_exit_magic })
-                }
-            }
-
-            GMOpcode::Pop => {
-                let type1: GMDataType = num_enum_from(b2 & 0xf)
-                    .map_err(|e| format!("{e} for type1 while parsing Pop Type Instruction"))?;
-                let type2: GMDataType = num_enum_from(b2 >> 4).
-                    map_err(|e| format!("{e} for type2 while parsing Pop Type Instruction"))?;
-                let instance_type: GMInstanceType = parse_instance_type(b0 as i16 | ((b1 as i16) << 8))?;
-
-                if type1 == GMDataType::Int16 {
-                    return Err(format!(
-                        "[Internal Error] Unhandled \"Special swap instruction\" (UndertaleModTool/Issues/#129) \
-                        occurred at absolute position {} while parsing Pop Instruction. \
-                        Please report this error to https://github.com/BioTomateDE/LibGM/issues",
-                        reader.cur_pos,
-                    ));
-                }
-
-                let destination: GMCodeVariable = read_variable(reader, instance_type)?;
-                GMInstructionData::Pop(GMPopInstruction { type1, type2, destination })
-            }
-
-            GMOpcode::Push |
-            GMOpcode::PushLocal |
-            GMOpcode::PushGlobal |
-            GMOpcode::PushBuiltin |
-            GMOpcode::PushImmediate => {
-                let data_type: GMDataType = num_enum_from(b2).map_err(|e| format!("{e} while parsing Push Instruction"))?;
-                let val: i16 = (b0 as i16) | ((b1 as i16) << 8);
-
-                //// this was removed from utmt??? v
-                // if reader.general_info.bytecode_version <= 14 {
-                //     match data_type {
-                //         GMDataType::Int16 => opcode = GMOpcode::PushI,
-                //         GMDataType::Variable if val == -5 => opcode = GMOpcode::PushGlb,
-                //         GMDataType::Variable if val == -6 => opcode = GMOpcode::PushBltn,
-                //         GMDataType::Variable if val == -7 => opcode = GMOpcode::PushLoc,
-                //         _ => {}
-                //     }
-                // }
-
-                let value: GMCodeValue = if data_type == GMDataType::Variable {
-                    let instance_type: GMInstanceType = parse_instance_type(val)?;
-                    let variable: GMCodeVariable = read_variable(reader, instance_type)?;
-                    GMCodeValue::Variable(variable)
-                } else {
-                    read_code_value(reader, data_type)?
-                };
-
-                GMInstructionData::Push(GMPushInstruction { value })
-            }
-
-            GMOpcode::Call => {
-                let data_type: GMDataType = num_enum_from(b2).map_err(|e| format!("{e} while parsing Call Instruction"))?;
-                let function: GMRef<GMFunction> = reader.function_occurrence_map.get(&reader.cur_pos).ok_or_else(|| format!(
-                    "Could not find any function with absolute occurrence position {} in map with length {} while parsing Call Instruction",
-                    reader.cur_pos, reader.function_occurrence_map.len(),
-                ))?.clone();
-                reader.cur_pos += 4;   // skip next occurrence offset
-                
-                GMInstructionData::Call(GMCallInstruction {
-                    arguments_count: b0,
-                    data_type,
-                    function,
-                })
-            }
-
-            GMOpcode::Extended => {
-                let extended_kind: i16 = b0 as i16 | ((b1 as i16) << 8);
-                let data_type: GMDataType = num_enum_from(b2).map_err(|e| format!("{e} while parsing Break Instruction"))?;
-                let int_argument: Option<i32> = if data_type == GMDataType::Int32 {
-                    // reader.general_info.set_version_at_least(2023, 8, 0, 0, None)?;
-                    Some(reader.read_i32()?)
-                } else {
-                    None
-                };
-
-                // other set gms version stuff {~~}
-
-                GMInstructionData::Break(GMBreakInstruction { extended_kind, data_type, int_argument })
-            } 
-       };
-       
-       Ok(GMInstruction { opcode, kind: instruction_data })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        let instr_abs_pos: usize = builder.len();
-        let bytecode14: bool = builder.bytecode_version() <= 14;
-
-        match &self.kind {
-            GMInstructionData::SingleType(instr) => {
-                let opcode_raw: u8 = if !bytecode14 { self.opcode.into() } else {
-                    match self.opcode {
-                        GMOpcode::Negate => 0x0D,
-                        GMOpcode::Not => 0x0E,
-                        GMOpcode::Duplicate => 0x82,
-                        GMOpcode::Return => 0x9D,
-                        GMOpcode::Exit => 0x9E,
-                        GMOpcode::PopDiscard => 0x9F,
-                        other => return Err(format!("Invalid Single Type Instruction opcode {other:?} while building instructions")),
-                    }
-                };
-                builder.write_u8(instr.extra);
-                builder.write_u8(0);
-                builder.write_u8(instr.data_type.into());
-                builder.write_u8(opcode_raw);
-            }
-
-            GMInstructionData::DoubleType(instr) => {
-                let opcode_raw: u8 = if !bytecode14 { self.opcode.into() } else {
-                    match self.opcode {
-                        GMOpcode::Convert => 0x03,
-                        GMOpcode::Multiply => 0x04,
-                        GMOpcode::Divide => 0x05,
-                        GMOpcode::Remainder => 0x06,
-                        GMOpcode::Modulus => 0x07,
-                        GMOpcode::Add => 0x08,
-                        GMOpcode::Subtract => 0x09,
-                        GMOpcode::And => 0x0A,
-                        GMOpcode::Or => 0x0B,
-                        GMOpcode::Xor => 0x0C,
-                        GMOpcode::ShiftLeft => 0x0F,
-                        GMOpcode::ShiftRight => 0x10,
-                        other => return Err(format!("Invalid Double Type Instruction opcode {other:?} while building instructions")),
-                    }
-                };
-                let type1: u8 = instr.type1.into();
-                let type2: u8 = instr.type2.into();
-
-                builder.write_u8(0);
-                builder.write_u8(0);
-                builder.write_u8(type1 | type2 << 4);
-                builder.write_u8(opcode_raw);
-            }
-
-            GMInstructionData::Comparison(instr) => {
-                let opcode_raw: u8 = if bytecode14 {
-                    u8::from(instr.comparison_type) + 0x10
-                } else {
-                    u8::from(self.opcode)     // always GMOpcode::Cmp
-                };
-                let type1: u8 = instr.type1.into();
-                let type2: u8 = instr.type2.into();
-
-                builder.write_u8(0);
-                builder.write_u8(instr.comparison_type.into());
-                builder.write_u8(type1 | type2 << 4);
-                builder.write_u8(opcode_raw);
-            }
-
-            GMInstructionData::Goto(instr) => {
-                let opcode_raw: u8 = if !bytecode14 { self.opcode.into() } else {
-                    match self.opcode {
-                        GMOpcode::Branch => 0xB7,
-                        GMOpcode::BranchIf => 0xB8,
-                        GMOpcode::BranchUnless => 0xB9,
-                        GMOpcode::PushWithContext => 0xBB,
-                        GMOpcode::PopWithContext => 0xBC,
-                        other => return Err(format!("Invalid Goto Instruction opcode {other:?} while building instructions")),
-                    }
-                };
-
-                if bytecode14 {
-                    builder.write_i24(instr.jump_offset);
-                } else if instr.popenv_exit_magic {
-                    builder.write_i24(0xF00000);    // idek
-                } else {
-                    // If not using popenv exit magic, encode jump offset as 23-bit signed integer
-                    builder.write_i24(instr.jump_offset & 0x7fffff);    // TODO verify that this works
-                }
-                builder.write_u8(opcode_raw);
-            }
-
-            GMInstructionData::Pop(instr) => {
-                if instr.type1 == GMDataType::Int16 {
-                    return Err("Int16 Data Type not yet supported while building Pop Instruction".to_string())
-                }
-
-                let opcode_raw: u8 = if !bytecode14 { self.opcode.into() } else {
-                    match self.opcode {
-                        GMOpcode::Pop => 0x41,
-                        other => return Err(format!("Invalid Pop Instruction opcode {other:?} while building instructions")),
-                    }
-                };
-                let type1: u8 = instr.type1.into();
-                let type2: u8 = instr.type2.into();
-
-                builder.write_i16(build_instance_type(&instr.destination.instance_type));
-                builder.write_u8(type1 | type2 << 4);
-                builder.write_u8(opcode_raw);
-
-                let variable: &GMVariable = instr.destination.variable.resolve(&builder.gm_data.variables.variables)?;
-                write_variable_occurrence(builder, instr.destination.variable.index, instr_abs_pos, variable.name.index, instr.destination.variable_type)?;
-            }
-
-            GMInstructionData::Push(instr) => {
-                // Write 16-bit integer, instance type, or empty data
-                builder.write_i16(match &instr.value {
-                    GMCodeValue::Int16(int16) => *int16,
-                    GMCodeValue::Variable(variable) => build_instance_type(&variable.instance_type),
-                    _ => 0
-                });
-
-                let data_type: GMDataType = get_data_type_from_value(&instr.value);
-                builder.write_u8(data_type.into());
-                
-                if bytecode14 {
-                    builder.write_u8(GMOpcode::Push.into());
-                } else {
-                    builder.write_u8(self.opcode.into());
-                }
-
-                match &instr.value {
-                    GMCodeValue::Int16(_) => {}     // nothing because it was already written inside the instruction
-                    GMCodeValue::Int32(int32) => builder.write_i32(*int32),
-                    GMCodeValue::Int64(int64) => builder.write_i64(*int64),
-                    GMCodeValue::Double(double) => builder.write_f64(*double),
-                    GMCodeValue::Float(float) => builder.write_f32(*float),
-                    GMCodeValue::Boolean(boolean) => builder.write_bool32(*boolean),
-                    GMCodeValue::String(string_ref) => builder.write_u32(string_ref.index),
-                    GMCodeValue::Variable(code_variable) => {
-                        let variable: &GMVariable = code_variable.variable.resolve(&builder.gm_data.variables.variables)?;
-                        write_variable_occurrence(builder, code_variable.variable.index, instr_abs_pos, variable.name.index, code_variable.variable_type)?;
-                    }
-                    GMCodeValue::Function(func_ref) => {
-                        let function: &GMFunction = func_ref.resolve(&builder.gm_data.functions.functions)?;
-                        write_function_occurrence(builder, func_ref.index, instr_abs_pos, function.name.index)?;
-                    }
-                }
-            }
-
-            GMInstructionData::Call(instr) => {
-                builder.write_u8(instr.arguments_count);
-                builder.write_u8(0);        // TODO check if writing zero is ok since b1 isn't checked or saved
-                builder.write_u8(instr.data_type.into());
-                builder.write_u8(self.opcode.into());  // v removing this (also for push instruction) might break bytecode14 but the line below is wrong too
-                // builder.write_u8(if bytecode14 { instr.opcode.into() } else { 0xDA });
-
-                let function: &GMFunction = instr.function.resolve(&builder.gm_data.functions.functions)?;
-                write_function_occurrence(builder, instr.function.index, instr_abs_pos, function.name.index)?;
-            }
-
-            GMInstructionData::Break(instr) => {
-                builder.write_i16(instr.extended_kind);
-                builder.write_u8(instr.data_type.into());
-                builder.write_u8(self.opcode.into());
-                if instr.data_type == GMDataType::Int32 {
-                    let int_argument: i32 = instr.int_argument.ok_or("Int argument not set but Data Type is Int32 while building Break Instruction")?;
-                    builder.write_i32(int_argument);
-                }
-            }
-        }
-
-        Ok(())
-    }
-}
-
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
-#[repr(u8)]
-pub enum GMOpcode {
+pub enum GMInstruction {
     /// Converts the top of the stack from one type to another.
-    Convert = 0x07,
-    
+    Convert(GMDoubleTypeInstruction),
+
     /// Pops two values from the stack, multiplies them, and pushes the result.
-    Multiply = 0x08,
+    Multiply(GMDoubleTypeInstruction),
 
     /// Pops two values from the stack, divides them, and pushes the result.
     /// The second popped value is divided by the first popped value.
-    Divide = 0x09,
-    
+    Divide(GMDoubleTypeInstruction),
+
     /// Pops two values from the stack, performs a GML `div` operation (division with remainder), and pushes the result.
     /// The second popped value is divided (with remainder) by the first popped value.
-    Remainder = 0x0A,
-    
+    Remainder(GMDoubleTypeInstruction),
+
     /// Pops two values from the stack, performs a GML `mod` operation (`%`), and pushes the result.
     /// The second popped value is modulo'd against the first popped value.
-    Modulus = 0x0B,
-    
+    Modulus(GMDoubleTypeInstruction),
+
     /// Pops two values from the stack, adds them, and pushes the result.
-    Add = 0x0C,
+    Add(GMDoubleTypeInstruction),
 
     /// Pops two values from the stack, **subtracts** them, and pushes the result.
     /// The second popped value is subtracted by the first popped value.
-    Subtract = 0x0D,
-    
+    Subtract(GMDoubleTypeInstruction),
+
     /// Pops two values from the stack, performs an **AND** operation, and pushes the result.
     /// This can be done bitwise or logically.
-    And = 0x0E,
+    And(GMDoubleTypeInstruction),
 
     /// Pops two values from the stack, performs an **OR** operation, and pushes the result.
     /// This can be done bitwise or logically.
-    Or = 0x0F,
+    Or(GMDoubleTypeInstruction),
 
     /// Pops two values from the stack, performs an **XOR** operation, and pushes the result.
     /// This can be done bitwise or logically.
-    Xor = 0x10,
+    Xor(GMDoubleTypeInstruction),
 
     /// Negates the top value of the stack (as in, multiplies it with negative one).
-    Negate = 0x11,
-    
+    Negate(GMSingleTypeInstruction),
+
     /// Performs a boolean or bitwise NOT operation on the top value of the stack (modifying it).
-    Not = 0x12,
-    
+    Not(GMSingleTypeInstruction),
+
     /// Pops two values from the stack, performs a bitwise left shift operation (`<<`), and pushes the result.
     /// The second popped value is shifted left by the first popped value.
-    ShiftLeft = 0x13,
+    ShiftLeft(GMDoubleTypeInstruction),
 
     /// Pops two values from the stack, performs a bitwise right shift operation (`>>`), and pushes the result.
     /// The second popped value is shifted right by the first popped value.
-    ShiftRight = 0x14,
-    
+    ShiftRight(GMDoubleTypeInstruction),
+
     /// Pops two values from the stack, compares them using a [`GMComparisonType`], and pushes a boolean result.
-    Compare = 0x15,
+    Compare(GMComparisonInstruction),
 
     /// Pops a value from the stack, and generally stores it in a variable, array, or otherwise.
     /// Has an alternate mode that can swap values around on the stack.
-    Pop = 0x45,
-    
+    Pop(GMPopInstruction),
+
+    /// no idea how this works
+    PopSwap(GMPopSwapInstruction),
+
     /// Duplicates values on the stack, or swaps them around ("dup swap" mode).
     /// Behavior depends on instruction parameters, both in data sizes and mode.
-    Duplicate = 0x86,
+    Duplicate(GMDuplicateInstruction),
+
+    /// no idea how this works
+    DuplicateSwap(GMDuplicateSwapInstruction),
 
     /// Pops a value from the stack, and returns from the current function/script with that value as the return value.
-    Return = 0x9C,
+    Return(GMSingleTypeInstruction),
 
     /// Returns from the current function/script/event with no return value.
-    Exit = 0x9D,
+    Exit(GMEmptyInstruction),
 
     /// Pops a value from the stack, and discards it.
-    PopDiscard = 0x9E,
-    
+    PopDiscard(GMSingleTypeInstruction),
+
     /// Branches (jumps) to another instruction in the code entry.
-    Branch = 0xB6,
-    
+    Branch(GMGotoInstruction),
+
     /// Pops a boolean/int32 value from the stack. If true/nonzero, branches (jumps) to another instruction in the code entry.
-    BranchIf = 0xB7,
+    BranchIf(GMGotoInstruction),
 
     /// Pops a boolean/int32 value from the stack. If false/zero, branches (jumps) to another instruction in the code entry.
-    BranchUnless = 0xB8,
+    BranchUnless(GMGotoInstruction),
 
     /// Pushes a `with` context, used for GML `with` statements, to the VM environment/self instance stack.
-    PushWithContext = 0xBA,
+    PushWithContext(GMGotoInstruction),
 
     /// Pops/ends a `with` context, used for GML `with` statements, from the VM environment/self instance stack.
     /// This instruction will branch to its encoded address until no longer iterating instances, where the context will finally be gone for good.
     /// If a flag is encoded in this instruction, then this will always terminate the loop, and branch to the encoded address.
-    PopWithContext = 0xBB,
-    
+    PopWithContext(GMGotoInstruction),
+
+    /// PopWithContext but with PopEnvExitMagic
+    PopWithContextExit(GMPopenvExitMagicInstruction),
+
     /// Pushes a constant value onto the stack. Can vary in size depending on value type.
-    Push = 0xC0,
+    Push(GMPushInstruction),
 
     /// Pushes a value stored in a local variable onto the stack.
-    PushLocal = 0xC1,
+    PushLocal(GMPushInstruction),
 
     /// Pushes a value stored in a global variable onto the stack.
-    PushGlobal = 0xC2,
+    PushGlobal(GMPushInstruction),
 
     /// Pushes a value stored in a GameMaker builtin variable onto the stack.
-    PushBuiltin = 0xC3,
+    PushBuiltin(GMPushInstruction),
 
     /// Pushes an immediate signed 32-bit integer value onto the stack, encoded as a signed 16-bit integer.
-    PushImmediate = 0x84,
+    PushImmediate(GMPushInstruction),
 
     /// Calls a GML script/function, using its ID. Arguments are prepared prior to this instruction, in reverse order.
     /// Argument count is encoded in this instruction. Arguments are popped off of the stack.
-    Call = 0xD9,
+    Call(GMCallInstruction),
 
     /// Pops two values off of the stack, and then calls a GML script/function using those values, representing
-    /// the "self" instance to be used when calling, as well as the reference to the function being called. 
+    /// the "self" instance to be used when calling, as well as the reference to the function being called.
     /// Arguments are dealt with identically to "call".
-    CallVariable = 0x99,
+    CallVariable(GMCallVariableInstruction),
 
-    /// Performs extended operations that are not detailed anywhere.
-    Extended = 0xFF,
+
+    /// Verifies an array index is within proper bounds, typically for multidimensional arrays.
+    CheckArrayIndex,
+
+    /// Pops two values from the stack, those being an index and an array reference.
+    /// Then, pushes the value stored at the passed-in array at the desired index.
+    /// That is, this is used only with multidimensional arrays, for the final/last index operation.
+    PushArrayFinal,
+
+    /// Pops three values from the stack, those being an index, an array reference, and a value.
+    /// Then, assigns the value to the array at the specified index.
+    PopArrayFinal,
+
+    /// Pops two values from the stack, those being an array reference and an index.
+    /// Then, pushes a new array reference from the passed-in array at the desired index,
+    /// with the expectation that it will be further indexed into.
+    /// That is, this is used only with multidimensional arrays,
+    /// for all index operations from the second through the second to last.
+    PushArrayContainer,
+
+    /// Sets a global variable in the VM (popped from stack), designated for
+    /// tracking the now-deprecated array copy-on-write functionality in GML.
+    /// The value used is specific to certain locations in scripts.
+    /// When array copy-on-write functionality is disabled, this extended opcode is not used.
+    SetArrayOwner,
+
+    /// Pushes a boolean value to the stack, indicating whether static initialization
+    /// has already occurred for this function (true), or otherwise false.
+    HasStaticInitialized,
+
+    /// Marks the current function to no longer be able to enter its own static initialization.
+    /// This can either occur at the beginning or end of a static block,
+    /// depending on whether "AllowReentrantStatic" is enabled by a game's developer
+    /// (enabled by default before GameMaker 2024.11; disabled by default otherwise).
+    SetStaticInitialized,
+
+    /// Keeps track of an array reference temporarily. Used in multidimensional array compound assignment statements.
+    /// Presumed to be used for garbage collection purposes.
+    SaveArrayReference,
+
+    /// Restores a previously-tracked array reference.
+    /// Used in multidimensional array compound assignment statements.
+    /// Presumed to be used for garbage collection purposes.
+    RestoreArrayReference,
+
+    /// Pops a value from the stack, and pushes a boolean result.
+    /// The result is true if a "nullish" value, such as undefined or GML's pointer_null.
+    IsNullishValue,
+
+    /// Pushes an asset reference to the stack, encoded in an integer. Includes asset type and index.
+    PushReference(GMAssetReference),
 }
-impl GMOpcode {
-    fn convert_bytecode14(raw_opcode: u8) -> u8 {
-        match raw_opcode {
-            0x03 => 0x07,
-            0x04 => 0x08,
-            0x05 => 0x09,
-            0x06 => 0x0A,
-            0x07 => 0x0B,
-            0x08 => 0x0C,
-            0x09 => 0x0D,
-            0x0A => 0x0E,
-            0x0B => 0x0F,
-            0x0C => 0x10,
-            0x0D => 0x11,
-            0x0E => 0x12,
-            0x0F => 0x13,
-            0x10 => 0x14,
-            0x11 | 0x12 | 0x13 | 0x14 | 0x16 => 0x15,
-            0xDA => 0xD9,
-            0x41 => 0x45,
-            0x82 => 0x86,
-            0xB7 => 0xB6,
-            0xB8 => 0xB7,
-            0xB9 => 0xB8,
-            0x9D => 0x9C,
-            0x9E => 0x9D,
-            0x9F => 0x9E,
-            0xBB => 0xBA,
-            0xBC => 0xBB,
-            _ => raw_opcode,
-        }
-    }
-}
-impl GMElement for GMOpcode {
+
+impl GMElement for GMInstruction {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let mut raw: u8 = reader.read_u8()?;
-        if reader.general_info.bytecode_version <= 14 {
-            raw = Self::convert_bytecode14(raw);
+        let mut bytes: (u8, u8, u8) = (
+            reader.read_u8()?,
+            reader.read_u8()?,
+            reader.read_u8()?,
+        );
+
+        let mut opcode: u8 = reader.read_u8()?;
+        if reader.general_info.bytecode_version < 15 {
+            if matches!(opcode, 0x10..=0x16) {
+                // this is needed to preserve the comparison type for pre bytecode 15
+                bytes.1 = opcode - 0x10;
+            }
+            opcode = opcode_old_to_new(opcode);
         }
-        Self::try_from(raw).map_err(|_| format!("Invalid Opcode 0x{raw:02X}"))
+
+        // log::debug!("{} // {:02X} {:02X} {:02X} {:02X}", reader.cur_pos-4, bytes.0, bytes.1, bytes.2, opcode);
+        
+        Ok(match opcode {
+            kinds::CONV => Self::Convert(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            kinds::MUL => Self::Multiply(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            kinds::DIV => Self::Divide(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            kinds::REM => Self::Remainder(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            kinds::MOD => Self::Modulus(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            kinds::ADD => Self::Add(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            kinds::SUB => Self::Subtract(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            kinds::AND => Self::And(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            kinds::OR => Self::Or(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            kinds::XOR => Self::Xor(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            kinds::NEG => Self::Negate(GMSingleTypeInstruction::parse(reader, bytes)?),
+            kinds::NOT => Self::Not(GMSingleTypeInstruction::parse(reader, bytes)?),
+            kinds::SHL => Self::ShiftLeft(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            kinds::SHR => Self::ShiftRight(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            kinds::CMP => Self::Compare(GMComparisonInstruction::parse(reader, bytes)?),
+            kinds::POP if bytes.2 == 0x0F => Self::PopSwap(GMPopSwapInstruction::parse(reader, bytes)?),
+            kinds::POP => Self::Pop(GMPopInstruction::parse(reader, bytes)?),
+            kinds::DUP if bytes.1 == 0 => Self::Duplicate(GMDuplicateInstruction::parse(reader, bytes)?),
+            kinds::DUP => Self::DuplicateSwap(GMDuplicateSwapInstruction::parse(reader, bytes)?),
+            kinds::RET => Self::Return(GMSingleTypeInstruction::parse(reader, bytes)?),
+            kinds::EXIT => Self::Exit(GMEmptyInstruction::parse(reader, bytes)?),
+            kinds::POPZ => Self::PopDiscard(GMSingleTypeInstruction::parse(reader, bytes)?),
+            kinds::JMP => Self::Branch(GMGotoInstruction::parse(reader, bytes)?),
+            kinds::JT => Self::BranchIf(GMGotoInstruction::parse(reader, bytes)?),
+            kinds::JF => Self::BranchUnless(GMGotoInstruction::parse(reader, bytes)?),
+            kinds::PUSHENV => Self::PushWithContext(GMGotoInstruction::parse(reader, bytes)?),
+            kinds::POPENV if bytes == (0x00, 0x00, 0xF0) => Self::PopWithContextExit(GMPopenvExitMagicInstruction::parse(reader, bytes)?),
+            kinds::POPENV => Self::PopWithContext(GMGotoInstruction::parse(reader, bytes)?),
+            kinds::PUSH => Self::Push(GMPushInstruction::parse(reader, bytes)?),
+            kinds::PUSHLOC => Self::PushLocal(GMPushInstruction::parse(reader, bytes)?),
+            kinds::PUSHGLB => Self::PushGlobal(GMPushInstruction::parse(reader, bytes)?),
+            kinds::PUSHBLTN => Self::PushBuiltin(GMPushInstruction::parse(reader, bytes)?),
+            kinds::PUSHIM => Self::PushImmediate(GMPushInstruction::parse(reader, bytes)?),
+            kinds::CALL => Self::Call(GMCallInstruction::parse(reader, bytes)?),
+            kinds::CALLVAR => Self::CallVariable(GMCallVariableInstruction::parse(reader, bytes)?),
+            kinds::EXTENDED => {
+                let data_type: GMDataType = num_enum_from(bytes.2 & 0xf)?;
+                let kind: i16 = bytes.0 as i16 | ((bytes.1 as i16) << 8);
+                match data_type {
+                    GMDataType::Int16 => {
+                        match kind {
+                            -1 => Self::CheckArrayIndex,
+                            -2 => Self::PushArrayFinal,
+                            -3 => Self::PopArrayFinal,
+                            -4 => Self::PushArrayContainer,
+                            -5 => Self::SetArrayOwner,
+                            -6 => Self::HasStaticInitialized,
+                            -7 => Self::SetStaticInitialized,
+                            -8 => Self::SaveArrayReference,
+                            -9 => Self::RestoreArrayReference,
+                            -10 => Self::IsNullishValue,
+                            _ => return Err(format!("Invalid Int16 Extended instruction kind {kind}"))
+                        }
+                    }
+                    GMDataType::Int32 => {
+                        if kind != - 11 {
+                            return Err(format!("Expected PushReference (-11) for Int32 Extended instruction, found {kind}"))
+                        }
+                        Self::PushReference(GMAssetReference::deserialize(reader)?)
+                    }
+                    _ => return Err(format!("Invalid data type for Extended instruction: {data_type:?}"))
+                }
+            }
+            _ => return Err(format!("Invalid opcode {opcode} (0x{opcode:02X})"))
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.write_u8(u8::from(*self));
+        let mut opcode: u8 = opcode_from_instruction(self);
+        if builder.bytecode_version() < 15 {
+            opcode = opcode_new_to_old(opcode);
+        }
+        match self {
+            Self::Convert(instr) => instr.build(builder, opcode)?,
+            Self::Multiply(instr) => instr.build(builder, opcode)?,
+            Self::Divide(instr) => instr.build(builder, opcode)?,
+            Self::Remainder(instr) => instr.build(builder, opcode)?,
+            Self::Modulus(instr) => instr.build(builder, opcode)?,
+            Self::Add(instr) => instr.build(builder, opcode)?,
+            Self::Subtract(instr) => instr.build(builder, opcode)?,
+            Self::And(instr) => instr.build(builder, opcode)?,
+            Self::Or(instr) => instr.build(builder, opcode)?,
+            Self::Xor(instr) => instr.build(builder, opcode)?,
+            Self::Negate(instr) => instr.build(builder, opcode)?,
+            Self::Not(instr) => instr.build(builder, opcode)?,
+            Self::ShiftLeft(instr) => instr.build(builder, opcode)?,
+            Self::ShiftRight(instr) => instr.build(builder, opcode)?,
+            Self::Compare(instr) => instr.build(builder, opcode)?,
+            Self::Pop(instr) => instr.build(builder, opcode)?,
+            Self::PopSwap(instr) => instr.build(builder, opcode)?,
+            Self::Duplicate(instr) => instr.build(builder, opcode)?,
+            Self::DuplicateSwap(instr) => instr.build(builder, opcode)?,
+            Self::Return(instr) => instr.build(builder, opcode)?,
+            Self::Exit(instr) => instr.build(builder, opcode)?,
+            Self::PopDiscard(instr) => instr.build(builder, opcode)?,
+            Self::Branch(instr) => instr.build(builder, opcode)?,
+            Self::BranchIf(instr) => instr.build(builder, opcode)?,
+            Self::BranchUnless(instr) => instr.build(builder, opcode)?,
+            Self::PushWithContext(instr) => instr.build(builder, opcode)?,
+            Self::PopWithContext(instr) => instr.build(builder, opcode)?,
+            Self::PopWithContextExit(instr) => instr.build(builder, opcode)?,
+            Self::Push(instr) => instr.build(builder, opcode)?,
+            Self::PushLocal(instr) => instr.build(builder, opcode)?,
+            Self::PushGlobal(instr) => instr.build(builder, opcode)?,
+            Self::PushBuiltin(instr) => instr.build(builder, opcode)?,
+            Self::PushImmediate(instr) => instr.build(builder, opcode)?,
+            Self::Call(instr) => instr.build(builder, opcode)?,
+            Self::CallVariable(instr) => instr.build(builder, opcode)?,
+            Self::CheckArrayIndex => build_extended16(builder, -1),
+            Self::PushArrayFinal => build_extended16(builder, -2),
+            Self::PopArrayFinal => build_extended16(builder, -3),
+            Self::PushArrayContainer => build_extended16(builder, -4),
+            Self::SetArrayOwner => build_extended16(builder, -5),
+            Self::HasStaticInitialized => build_extended16(builder, -6),
+            Self::SetStaticInitialized  => build_extended16(builder, -7),
+            Self::SaveArrayReference => build_extended16(builder, -8),
+            Self::RestoreArrayReference => build_extended16(builder, -9),
+            Self::IsNullishValue => build_extended16(builder, -10),
+            Self::PushReference(asset_ref) => {
+                builder.write_i16(-11);
+                builder.write_u8(GMDataType::Int32.into());
+                builder.write_u8(kinds::EXTENDED.into());
+                asset_ref.serialize(builder)?
+            },
+        }
+        Ok(())
+    }
+}
+
+
+fn build_extended16(builder: &mut DataBuilder, kind: i16) {
+    builder.write_i16(kind);
+    builder.write_u8(GMDataType::Int16.into());
+    builder.write_u8(kinds::EXTENDED.into());
+}
+
+
+trait InstructionData {
+    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> where Self: Sized;
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String>;
+}
+
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct GMEmptyInstruction;
+impl InstructionData for GMEmptyInstruction {
+    fn parse(_: &mut DataReader, _: (u8, u8, u8)) -> Result<Self, String> {
+        Ok(Self)
+    }
+
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+        builder.write_i24(0);
+        builder.write_u8(opcode);
+        Ok(())
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct GMSingleTypeInstruction {
+    pub data_type: GMDataType,
+}
+impl InstructionData for GMSingleTypeInstruction {
+    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+        let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
+
+        // Ensure basic conditions hold
+        if b.0 != 0 {
+            return Err(format!("Invalid padding {:02X} while parsing Single Type Instruction", b.0));
+        }
+        if b.2 >> 4 != 0 {
+            return Err(format!("Second type should be zero but is {0} (0x{0:02X}) for Single Type Instruction", b.2 >> 4))
+        }
+
+        Ok(Self { data_type })
+    }
+
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+        builder.write_u16(0);
+        builder.write_u8(self.data_type.into());
+        builder.write_u8(opcode);
         Ok(())
     }
 }
 
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct GMSingleTypeInstruction {
-    pub extra: u8,
+pub struct GMCallVariableInstruction {
     pub data_type: GMDataType,
+    pub argument_count: u8,
 }
+impl InstructionData for GMCallVariableInstruction {
+    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+        let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
+        Ok(Self { data_type, argument_count: b.1 })
+    }
+
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+        builder.write_u8(0);
+        builder.write_u8(self.argument_count);
+        builder.write_u8(self.data_type.into());
+        builder.write_u8(opcode);
+        Ok(())
+    }
+}
+
+
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct GMDuplicateInstruction {
+    pub data_type: GMDataType,
+    pub size: u8,
+}
+impl InstructionData for GMDuplicateInstruction {
+    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+        let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
+        Ok(Self { data_type, size: b.0 })
+    }
+
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+        builder.write_u8(self.size);
+        builder.write_u8(0);
+        builder.write_u8(self.data_type.into());
+        builder.write_u8(opcode);
+        Ok(())
+    }
+}
+
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct GMDuplicateSwapInstruction {
+    pub data_type: GMDataType,
+    pub size1: u8,
+    pub size2: u8,
+}
+impl InstructionData for GMDuplicateSwapInstruction {
+    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+        let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
+        Ok(Self { data_type, size1: b.0, size2: b.1 })
+    }
+
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+        builder.write_u8(self.size1);
+        builder.write_u8(self.size2);
+        builder.write_u8(self.data_type.into());
+        builder.write_u8(opcode);
+        Ok(())
+    }
+}
+
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMPopSwapInstruction {
+    pub size: u8,
+}
+impl InstructionData for GMPopSwapInstruction {
+    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+        Ok(Self { size: b.0 })
+    }
+
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+        builder.write_u8(self.size);
+        builder.write_u8(0);
+        builder.write_u8(GMDataType::Int16.into());
+        builder.write_u8(opcode);
+        Ok(())
+    }
+}
+
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct GMGotoInstruction {
+    /// Contains the offset of where to jump. 1 = 4 bytes. Can be negative.
+    pub jump_offset: i32,
+}
+impl InstructionData for GMGotoInstruction {
+    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+        let mut value: u32 = (b.0 as u32) | ((b.1 as u32) << 8) | ((b.2 as u32) << 16);
+        if reader.general_info.bytecode_version > 14 && (value & 0x400000) != 0 {
+            value |= 0x800000;
+        }
+        let jump_offset: i32 = if value & 0x800000 != 0 {
+            (value | 0xFF000000) as i32
+        } else {
+            value as i32
+        };
+        Ok(Self { jump_offset })
+    }
+
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+        let mut value = (self.jump_offset as u32) & 0x00FFFFFF;
+        if builder.bytecode_version() > 14 && (value & 0x800000) != 0 {
+            value &= !0x800000;
+            value |= 0x400000;
+        }
+        builder.write_u8((value & 0xFF) as u8);
+        builder.write_u8(((value >> 8) & 0xFF) as u8);
+        builder.write_u8(((value >> 16) & 0xFF) as u8);
+        builder.write_u8(opcode);
+        Ok(())
+    }
+}
+
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct GMPopenvExitMagicInstruction;
+impl InstructionData for GMPopenvExitMagicInstruction {
+    fn parse(_: &mut DataReader, _x: (u8, u8, u8)) -> Result<Self, String> {
+        Ok(Self)
+    }
+
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+        builder.write_i24(0xF00000);
+        builder.write_u8(opcode);
+        Ok(())
+    }
+}
+
+
+
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct GMDoubleTypeInstruction {
+    pub right: GMDataType,
+    pub left: GMDataType,
+}
+impl InstructionData for GMDoubleTypeInstruction {
+    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+        let right: GMDataType = num_enum_from(b.2 & 0xf)?;
+        let left: GMDataType = num_enum_from(b.2 >> 4)?;
+        if b.1 != 0 {    // might be incorrect; remove if issues
+            return Err(format!("b1 should be zero but is {} for Double Type Instruction", b.1))
+        }
+        Ok(Self { right, left })
+    }
+
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+        builder.write_u8(0);
+        builder.write_u8(0);
+        builder.write_u8(u8::from(self.right) | u8::from(self.left) << 4);
+        builder.write_u8(opcode);
+        Ok(())
+    }
+}
+
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct GMComparisonInstruction {
+    pub comparison_type: GMComparisonType,
     pub type1: GMDataType,
     pub type2: GMDataType,
 }
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct GMComparisonInstruction {
-    pub comparison_type: GMComparisonType,  // comparison kind
-    pub type1: GMDataType,                  // datatype of element to compare
-    pub type2: GMDataType,                  // datatype of element to compare
+impl InstructionData for GMComparisonInstruction {
+    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+        let comparison_type: GMComparisonType = num_enum_from(b.1)?;
+        let type1: GMDataType = num_enum_from(b.2 & 0xf)?;
+        let type2: GMDataType = num_enum_from(b.2 >> 4)?;
+        Ok(Self { comparison_type, type1, type2 })
+    }
+
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+        builder.write_u8(0);
+        builder.write_u8(self.comparison_type.into());
+        builder.write_u8(u8::from(self.type1) | u8::from(self.type2) << 4);
+        if builder.bytecode_version() < 15 {
+            builder.write_u8(0x10 + u8::from(self.comparison_type))
+        } else {
+            builder.write_u8(opcode);
+        }
+        Ok(())
+    }
 }
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct GMGotoInstruction {
-    pub jump_offset: i32,
-    pub popenv_exit_magic: bool,
-}
+
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMPopInstruction {
     pub type1: GMDataType,
     pub type2: GMDataType,
-    pub destination: GMCodeVariable,
+    pub destination: CodeVariable,
 }
+impl InstructionData for GMPopInstruction {
+    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+        let type1: GMDataType = num_enum_from(b.2 & 0xf)?;
+        let type2: GMDataType = num_enum_from(b.2 >> 4)?;
+        let raw_instance_type: i16 = b.0 as i16 | ((b.1 as i16) << 8);
+        let destination: CodeVariable = read_variable(reader, raw_instance_type)?;
+        Ok(Self { type1, type2, destination })
+    }
+
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+        let instr_pos: usize = builder.len();
+        builder.write_i16(build_instance_type(&self.destination.instance_type));
+        builder.write_u8(u8::from(self.type1) | u8::from(self.type2) << 4);
+        builder.write_u8(opcode);
+        let variable: &GMVariable = self.destination.variable.resolve(&builder.gm_data.variables.variables)?;
+        write_variable_occurrence(builder, self.destination.variable.index, instr_pos, variable.name.index, self.destination.variable_type)?;
+        Ok(())
+    }
+}
+
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMPushInstruction {
     pub value: GMCodeValue,
 }
+impl InstructionData for GMPushInstruction {
+    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+        let data_type: GMDataType = num_enum_from(b.2)?;
+        let raw_instance_type: i16 = (b.0 as i16) | ((b.1 as i16) << 8);
+        let value: GMCodeValue = if data_type == GMDataType::Variable {
+            GMCodeValue::Variable(read_variable(reader, raw_instance_type)?)
+        } else {
+            read_code_value(reader, data_type)?
+        };
+        Ok(Self { value })
+    }
+
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+        let instr_pos: usize = builder.len();
+        builder.write_i16(match &self.value {
+            GMCodeValue::Int16(int16) => *int16,      // should never happen tbh (popswap)
+            GMCodeValue::Variable(variable) => build_instance_type(&variable.instance_type),
+            _ => 0
+        });
+
+        let data_type: GMDataType = get_data_type_from_value(&self.value);
+        builder.write_u8(data_type.into());
+        builder.write_u8(opcode);
+
+        match &self.value {
+            GMCodeValue::Int16(_) => {}   // nothing because it was already written inside the instruction
+            GMCodeValue::Int32(int32) => builder.write_i32(*int32),
+            GMCodeValue::Int64(int64) => builder.write_i64(*int64),
+            GMCodeValue::Double(double) => builder.write_f64(*double),
+            GMCodeValue::Float(float) => builder.write_f32(*float),
+            GMCodeValue::Boolean(boolean) => builder.write_bool32(*boolean),
+            GMCodeValue::String(string_ref) => builder.write_u32(string_ref.index),
+            GMCodeValue::Variable(code_variable) => {
+                let variable: &GMVariable = code_variable.variable.resolve(&builder.gm_data.variables.variables)?;
+                write_variable_occurrence(builder, code_variable.variable.index, instr_pos, variable.name.index, code_variable.variable_type)?;
+            }
+            GMCodeValue::Function(func_ref) => {
+                let function: &GMFunction = func_ref.resolve(&builder.gm_data.functions.functions)?;
+                write_function_occurrence(builder, func_ref.index, instr_pos, function.name.index)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMCallInstruction {
     pub arguments_count: u8,
     pub data_type: GMDataType,
     pub function: GMRef<GMFunction>,
 }
+impl InstructionData for GMCallInstruction {
+    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+        let data_type: GMDataType = num_enum_from(b.2)?;
+        let function: GMRef<GMFunction> = reader.function_occurrence_map.get(&reader.cur_pos).ok_or_else(|| format!(
+            "Could not find any function with absolute occurrence position {} in map with length {} while parsing Call Instruction",
+            reader.cur_pos, reader.function_occurrence_map.len(),
+        ))?.clone();
+        reader.cur_pos += 4;   // skip next occurrence offset
+
+        Ok(GMCallInstruction { arguments_count: b.0, data_type, function })
+    }
+
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+        let instr_pos: usize = builder.len();
+        builder.write_u8(self.arguments_count);
+        builder.write_u8(0);
+        builder.write_u8(self.data_type.into());
+        builder.write_u8(opcode);
+
+        let function: &GMFunction = self.function.resolve(&builder.gm_data.functions.functions)?;
+        write_function_occurrence(builder, self.function.index, instr_pos, function.name.index)?;
+        Ok(())
+    }
+}
+
+
+fn opcode_from_instruction(instruction: &GMInstruction) -> u8 {
+    match instruction {
+        GMInstruction::Convert(_) => kinds::CONV,
+        GMInstruction::Multiply(_) => kinds::MUL,
+        GMInstruction::Divide(_) => kinds::DIV,
+        GMInstruction::Remainder(_) => kinds::REM,
+        GMInstruction::Modulus(_) => kinds::MOD,
+        GMInstruction::Add(_) => kinds::ADD,
+        GMInstruction::Subtract(_) => kinds::SUB,
+        GMInstruction::And(_) => kinds::AND,
+        GMInstruction::Or(_) => kinds::OR,
+        GMInstruction::Xor(_) => kinds::XOR,
+        GMInstruction::Negate(_) => kinds::NEG,
+        GMInstruction::Not(_) => kinds::NOT,
+        GMInstruction::ShiftLeft(_) => kinds::SHL,
+        GMInstruction::ShiftRight(_) => kinds::SHR,
+        GMInstruction::Compare(_) => kinds::CMP,
+        GMInstruction::Pop(_) => kinds::POP,
+        GMInstruction::PopSwap(_) => kinds::POP,
+        GMInstruction::Duplicate(_) => kinds::DUP,
+        GMInstruction::DuplicateSwap(_) => kinds::DUP,
+        GMInstruction::Return(_) => kinds::RET,
+        GMInstruction::Exit(_) => kinds::EXIT,
+        GMInstruction::PopDiscard(_) => kinds::POPZ,
+        GMInstruction::Branch(_) => kinds::JMP,
+        GMInstruction::BranchIf(_) => kinds::JT,
+        GMInstruction::BranchUnless(_) => kinds::JF,
+        GMInstruction::PushWithContext(_) => kinds::PUSHENV,
+        GMInstruction::PopWithContext(_) => kinds::POPENV,
+        GMInstruction::PopWithContextExit(_) => kinds::POPENV,
+        GMInstruction::Push(_) => kinds::PUSH,
+        GMInstruction::PushLocal(_) => kinds::PUSHLOC,
+        GMInstruction::PushGlobal(_) => kinds::PUSHGLB,
+        GMInstruction::PushBuiltin(_) => kinds::PUSHBLTN,
+        GMInstruction::PushImmediate(_) => kinds::PUSHIM,
+        GMInstruction::Call(_) => kinds::CALL,
+        GMInstruction::CallVariable(_) => kinds::CALLVAR,
+        GMInstruction::CheckArrayIndex => kinds::EXTENDED,
+        GMInstruction::PushArrayFinal => kinds::EXTENDED,
+        GMInstruction::PopArrayFinal => kinds::EXTENDED,
+        GMInstruction::PushArrayContainer => kinds::EXTENDED,
+        GMInstruction::SetArrayOwner => kinds::EXTENDED,
+        GMInstruction::HasStaticInitialized => kinds::EXTENDED,
+        GMInstruction::SetStaticInitialized => kinds::EXTENDED,
+        GMInstruction::SaveArrayReference => kinds::EXTENDED,
+        GMInstruction::RestoreArrayReference => kinds::EXTENDED,
+        GMInstruction::IsNullishValue => kinds::EXTENDED,
+        GMInstruction::PushReference(_) => kinds::EXTENDED,
+    }
+}
+
+
+fn opcode_old_to_new(opcode: u8) -> u8 {
+    match opcode {
+        0x03 => 0x07,
+        0x04 => 0x08,
+        0x05 => 0x09,
+        0x06 => 0x0A,
+        0x07 => 0x0B,
+        0x08 => 0x0C,
+        0x09 => 0x0D,
+        0x0A => 0x0E,
+        0x0B => 0x0F,
+        0x0C => 0x10,
+        0x0D => 0x11,
+        0x0E => 0x12,
+        0x0F => 0x13,
+        0x10 => 0x14,
+        0x11 | 0x12 | 0x13 | 0x14 | 0x16 => 0x15,
+        0x41 => 0x45,
+        0x82 => 0x86,
+        0xB7 => 0xB6,
+        0xB8 => 0xB7,
+        0xB9 => 0xB8,
+        0xBB => 0xBA,
+        0x9D => 0x9C,
+        0x9E => 0x9D,
+        0x9F => 0x9E,
+        0xBC => 0xBB,
+        0xDA => 0xD9,
+        _ => opcode
+    }
+}
+
+
+fn opcode_new_to_old(opcode: u8) -> u8 {
+    match opcode {
+        0x07 => 0x03,
+        0x08 => 0x04,
+        0x09 => 0x05,
+        0x0A => 0x06,
+        0x0B => 0x07,
+        0x0C => 0x08,
+        0x0D => 0x09,
+        0x0E => 0x0A,
+        0x0F => 0x0B,
+        0x10 => 0x0C,
+        0x11 => 0x0D,
+        0x12 => 0x0E,
+        0x13 => 0x0F,
+        0x14 => 0x10,
+        0x15 => 0,  // should be handled by GMComparisonInstruction::build
+        0x45 => 0x41,
+        0x84 => 0xC0,
+        0x86 => 0x82,
+        0x9C => 0x9D,
+        0x9D => 0x9E,
+        0x9E => 0x9F,
+        0xB6 => 0xB7,
+        0xB7 => 0xB8,
+        0xB8 => 0xB9,
+        0xBA => 0xBB,
+        0xBB => 0xBC,
+        0xD9 => 0xDA,
+        0xC1 => 0xC0,
+        0xC2 => 0xC0,
+        0xC3 => 0xC0,
+        _ => opcode
+    }
+}
+
+
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMBreakInstruction {
-    pub extended_kind: i16,
-    pub data_type: GMDataType,
-    /// TODO: support function references
-    pub int_argument: Option<i32>,
+pub enum GMAssetReference {
+    Object(GMRef<GMGameObject>),
+    Sprite(GMRef<GMSprite>),
+    Sound(GMRef<GMSound>),
+    Room(GMRef<GMRoom>),
+    Background(GMRef<GMBackground>),
+    Path(GMRef<GMPath>),
+    Script(GMRef<GMScript>),
+    Font(GMRef<GMFont>),
+    Timeline(GMRef<GMTimeline>),
+    Shader(GMRef<GMShader>),
+    Sequence(GMRef<GMSequence>),
+    AnimCurve(GMRef<GMAnimationCurve>),
+    ParticleSystem(GMRef<GMParticleSystem>),
+    RoomInstance(i32),
+    /// Not actually in GameMaker; added by me
+    Function(GMRef<GMFunction>),
+}
+
+impl GMElement for GMAssetReference {
+    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        if let Some(func) = reader.function_occurrence_map.get(&reader.cur_pos) {
+            reader.cur_pos += 4;   // consume next occurrence offset
+            return Ok(Self::Function(*func))
+        }
+
+        let raw: i32 = reader.read_i32()?;
+        let index: u32 = (raw & 0xFFFFFF) as u32;
+        let asset_type: u8 = (raw >> 24) as u8;
+        Ok(match asset_type {
+            0 => Self::Object(GMRef::new(index)),
+            1 => Self::Sprite(GMRef::new(index)),
+            2 => Self::Sound(GMRef::new(index)),
+            3 => Self::Room(GMRef::new(index)),
+            4 => Self::Background(GMRef::new(index)),
+            5 => Self::Path(GMRef::new(index)),
+            6 => Self::Script(GMRef::new(index)),
+            7 => Self::Font(GMRef::new(index)),
+            8 => Self::Timeline(GMRef::new(index)),
+            9 => Self::Shader(GMRef::new(index)),
+            10 => Self::Sequence(GMRef::new(index)),
+            11 => Self::AnimCurve(GMRef::new(index)),
+            12 => Self::ParticleSystem(GMRef::new(index)),
+            13 => Self::RoomInstance(index as i32),
+            _ => return Err(format!("Invalid asset type {asset_type}"))
+        })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        let (index, asset_type) = match self {
+            GMAssetReference::Object(gm_ref) => (gm_ref.index, 0),
+            GMAssetReference::Sprite(gm_ref) => (gm_ref.index, 1),
+            GMAssetReference::Sound(gm_ref) => (gm_ref.index, 2),
+            GMAssetReference::Room(gm_ref) => (gm_ref.index, 3),
+            GMAssetReference::Background(gm_ref) => (gm_ref.index, 4),
+            GMAssetReference::Path(gm_ref) => (gm_ref.index, 5),
+            GMAssetReference::Script(gm_ref) => (gm_ref.index, 6),
+            GMAssetReference::Font(gm_ref) => (gm_ref.index, 7),
+            GMAssetReference::Timeline(gm_ref) => (gm_ref.index, 8),
+            GMAssetReference::Shader(gm_ref) => (gm_ref.index, 9),
+            GMAssetReference::Sequence(gm_ref) => (gm_ref.index, 10),
+            GMAssetReference::AnimCurve(gm_ref) => (gm_ref.index, 11),
+            GMAssetReference::ParticleSystem(gm_ref) => (gm_ref.index, 12),
+            GMAssetReference::RoomInstance(id) => (*id as u32, 13),
+            GMAssetReference::Function(func_ref) => {
+                let function: &GMFunction = func_ref.resolve(&builder.gm_data.functions.functions)?;
+                write_function_occurrence(builder, func_ref.index, builder.len(), function.name.index)?;
+                return Ok(())
+            }
+        };
+        let raw: u32 = (asset_type << 24) | index & 0xFFFFFF;
+        builder.write_u32(raw);
+        Ok(())
+    }
 }
 
 
@@ -813,12 +1174,9 @@ pub enum GMDataType {
     Boolean,
     Variable,
     String,
-    // Instance, // obsolete??
-    // Delete,   // these 3 types apparently exist
-    // Undefined,
-    // UnsignedInt,
     Int16 = 0x0f,
 }
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum GMInstanceType {
@@ -896,10 +1254,10 @@ pub enum GMVariableType {
     Instance = 0xE0,
     
     /// GMS2.3+, multidimensional array with pushaf
-    MultiPush = 0x10,
+    ArrayPushAF = 0x10,
     
     /// GMS2.3+, multidimensional array with pushaf or popaf
-    MultiPushPop = 0x90,
+    ArrayPopAF = 0x90,
 }
 
 
@@ -907,31 +1265,33 @@ pub enum GMVariableType {
 #[repr(u8)]
 pub enum GMComparisonType {
     /// "Less than" | `<`
-    LT = 1,
+    LessThan = 1,
     
     /// "Less than or equal to" | `<=`
-    LTE = 2,
+    LessOrEqual = 2,
     
     /// "Equal to" | `==`
-    EQ = 3,
+    Equal = 3,
 
     /// "Not equal to" | `!=`
-    NEQ = 4,
+    NotEqual = 4,
 
     /// "Greater than or equal to" | `>=`
-    GTE = 5,
+    GreaterOrEqual = 5,
 
     /// "Greater than" | `>`
-    GT = 6,
+    GreaterThan = 6,
 }
 
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMCodeVariable {
+pub struct CodeVariable {
     pub variable: GMRef<GMVariable>,
     pub variable_type: GMVariableType,
     pub instance_type: GMInstanceType,
+    pub is_int32: bool,
 }
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum GMCodeValue {
@@ -942,7 +1302,7 @@ pub enum GMCodeValue {
     Float(f32),
     Boolean(bool),
     String(GMRef<String>),
-    Variable(GMCodeVariable),
+    Variable(CodeVariable),
     /// Does not exist in UTMT. Added in order to support inline/anonymous functions.
     Function(GMRef<GMFunction>),
 }
@@ -953,12 +1313,23 @@ fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMC
         GMDataType::Double => reader.read_f64().map(GMCodeValue::Double),
         GMDataType::Float => reader.read_f32().map(GMCodeValue::Float),
         GMDataType::Int32 => {
-            if let Some(function) = reader.function_occurrence_map.get(&reader.cur_pos) {
+            if let Some(&function) = reader.function_occurrence_map.get(&reader.cur_pos) {
                 reader.cur_pos += 4;    // skip next occurrence offset
                 return Ok(GMCodeValue::Function(function.clone()))
             }
+
+            if let Some(&variable) = reader.variable_occurrence_map.get(&reader.cur_pos) {
+                reader.cur_pos += 4;    // skip next occurrence offset
+                return Ok(GMCodeValue::Variable(CodeVariable {
+                    variable,
+                    variable_type: GMVariableType::Normal,
+                    instance_type: GMInstanceType::Undefined,
+                    is_int32: true,
+                }))
+            }
+
             reader.read_i32().map(GMCodeValue::Int32)
-        },
+        }
         GMDataType::Int64 => reader.read_i64().map(GMCodeValue::Int64),
         GMDataType::Boolean => reader.read_bool32().map(GMCodeValue::Boolean),
         GMDataType::String => reader.read_resource_by_id().map(GMCodeValue::String),
@@ -974,7 +1345,7 @@ fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMC
 }
 
 
-fn read_variable(reader: &mut DataReader, instance_type: GMInstanceType) -> Result<GMCodeVariable, String> {
+fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<CodeVariable, String> {
     let occurrence_position: usize = reader.cur_pos;
     let raw_value: i32 = reader.read_i32()?;
 
@@ -982,24 +1353,30 @@ fn read_variable(reader: &mut DataReader, instance_type: GMInstanceType) -> Resu
     let variable_type: GMVariableType = num_enum_from(variable_type as u8)
         .map_err(|e| format!("{e} while parsing variable reference chain"))?;
 
+    let instance_type: GMInstanceType = parse_instance_type(raw_instance_type, variable_type)?;
+
     let variable: GMRef<GMVariable> = reader.variable_occurrence_map.get(&occurrence_position)
         .ok_or_else(|| format!(
             "Could not find {} Variable with occurrence position {} in hashmap with length {} while parsing code value",
             instance_type, occurrence_position, reader.variable_occurrence_map.len(),
         ))?.clone();
 
-    Ok(GMCodeVariable { variable, variable_type, instance_type })
+    Ok(CodeVariable { variable, variable_type, instance_type, is_int32: false })
 }
 
 
-pub fn parse_instance_type(raw_value: i16) -> Result<GMInstanceType, String> {
-    // If > 0; then game object id. If < 0, then variable instance type.
+pub fn parse_instance_type(raw_value: i16, variable_type: GMVariableType) -> Result<GMInstanceType, String> {
+    // If > 0; then game object id (or room instance id). If < 0, then variable instance type.
     if raw_value > 0 {
-        return Ok(GMInstanceType::Self_(Some(GMRef::new(raw_value as u32))))
+        return Ok(if variable_type == GMVariableType::Instance {
+            GMInstanceType::RoomInstance(raw_value)
+        } else {
+            GMInstanceType::Self_(Some(GMRef::new(raw_value as u32)))
+        });
     }
 
     let instance_type: GMInstanceType = match raw_value {
-        0 => GMInstanceType::Undefined,         // this doesn't exist in UTMT anymore but enums in C# can hold any value so idk
+        0 => GMInstanceType::Undefined,
         -1 => GMInstanceType::Self_(None),
         -2 => GMInstanceType::Other,
         -3 => GMInstanceType::All,
@@ -1017,7 +1394,7 @@ pub fn parse_instance_type(raw_value: i16) -> Result<GMInstanceType, String> {
 }
 
 pub fn build_instance_type(instance_type: &GMInstanceType) -> i16 {
-    // If > 0; then game object id. If < 0, then variable instance type.
+    // If > 0; then game object id (or room instance id). If < 0, then variable instance type.
     match instance_type {
         GMInstanceType::Undefined => 0,
         GMInstanceType::Self_(None) => -1,
@@ -1091,14 +1468,49 @@ fn write_function_occurrence(builder: &mut DataBuilder, gm_index: u32, occurrenc
 
 pub fn get_data_type_from_value(code_value: &GMCodeValue) -> GMDataType {
     match code_value {
-        GMCodeValue::Double(_) => GMDataType::Double,
-        GMCodeValue::Float(_) => GMDataType::Float,
-        GMCodeValue::Int32(_) | GMCodeValue::Function(_) => GMDataType::Int32,
-        GMCodeValue::Int64(_) => GMDataType::Int64,
-        GMCodeValue::Boolean(_) => GMDataType::Boolean,
-        GMCodeValue::Variable(_) => GMDataType::Variable,
-        GMCodeValue::String(_) => GMDataType::String,
         GMCodeValue::Int16(_) => GMDataType::Int16,
+        GMCodeValue::Int32(_) => GMDataType::Int32,
+        GMCodeValue::Function(_) => GMDataType::Int32,  // functions are not a "real" gm type; they're always int32
+        GMCodeValue::Variable(var) if var.is_int32 => GMDataType::Int32,    // idk when this happens
+        GMCodeValue::Int64(_) => GMDataType::Int64,
+        GMCodeValue::Float(_) => GMDataType::Float,
+        GMCodeValue::Double(_) => GMDataType::Double,
+        GMCodeValue::Boolean(_) => GMDataType::Boolean,
+        GMCodeValue::String(_) => GMDataType::String,
+        GMCodeValue::Variable(_) => GMDataType::Variable,
     }
+}
+
+
+pub fn get_instruction_size(instruction: &GMInstruction) -> u32 {
+    match instruction {
+        GMInstruction::Pop(_) => 2,
+        GMInstruction::Push(instr) |
+        GMInstruction::PushLocal(instr) |
+        GMInstruction::PushGlobal(instr) |
+        GMInstruction::PushBuiltin(instr) |
+        GMInstruction::PushImmediate(instr) => match instr.value {
+            GMCodeValue::Int16(_) => 1,
+            GMCodeValue::Int64(_) => 3,
+            GMCodeValue::Double(_) => 3,
+            _ => 2,
+        }
+        GMInstruction::Call(_) => 2,
+        GMInstruction::PushReference(_) => 2,
+        _ => 1,
+    }
+}
+
+
+/// Check whether this data file was generated with YYC (YoYoGames Compiler).
+/// Should that be the case, the CODE, VARI and FUNC chunks will be empty (or not exist?).
+/// NOTE: YYC is untested. Issues may occur.
+pub fn check_yyc(reader: &DataReader) -> bool {
+    let Some(chunk_code) = reader.chunks.get("CODE") else {return true};
+    let Some(chunk_vari) = reader.chunks.get("VARI") else {return true};
+    let Some(chunk_func) = reader.chunks.get("FUNC") else {return true};
+    chunk_code.end_pos <= chunk_code.start_pos &&
+        chunk_vari.end_pos <= chunk_vari.start_pos &&
+        chunk_func.end_pos <= chunk_func.start_pos
 }
 

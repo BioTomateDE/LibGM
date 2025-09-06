@@ -84,7 +84,7 @@ impl<'a> DataReader<'a> {
             texture_page_item_occurrence_map: HashMap::new(),
             variable_occurrence_map: HashMap::new(),
             function_occurrence_map: HashMap::new(),
-            is_big_endian: false,   // assume little endian; big endian is an edge dase
+            is_big_endian: false,   // assume little endian; big endian is an edge case
         }
     }
 
@@ -162,6 +162,10 @@ impl<'a> DataReader<'a> {
     /// Gets the length of the chunk that is being currently parsed.
     pub fn get_chunk_length(&self) -> usize {
         self.chunk.end_pos - self.chunk.start_pos
+    }
+    
+    pub fn get_data_length(&self) -> usize {
+        self.data.len()
     }
 
     /// Read bytes until the reader position is divisible by the specified alignment.
