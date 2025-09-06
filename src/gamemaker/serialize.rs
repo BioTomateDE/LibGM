@@ -5,7 +5,7 @@ mod lists;
 mod resources;
 
 pub use builder::DataBuilder;
-use crate::gamemaker::deserialize::GMData;
+use crate::gamemaker::data::GMData;
 use crate::utility::Stopwatch;
 
 

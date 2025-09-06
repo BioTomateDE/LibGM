@@ -125,7 +125,7 @@ impl GMElement for GMShaders {
 
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMShader {
     pub name: GMRef<String>,
     pub shader_type: GMShaderType,
@@ -201,7 +201,7 @@ impl GMElement for GMShader {
 /// Possible shader types a shader can have.
 /// All console shaders (and HLSL11?) are compiled using confidential SDK tools when
 /// GMAssetCompiler builds the game (for PSVita it's psp2cgc shader compiler).
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
 #[repr(u32)]
 pub enum GMShaderType {
     GlslEs = 1,
@@ -217,7 +217,7 @@ pub enum GMShaderType {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMShaderData {
     pub data: Vec<u8>,
 }

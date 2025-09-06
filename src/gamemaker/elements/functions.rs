@@ -7,8 +7,6 @@ use crate::utility::vec_with_capacity;
 pub struct GMFunctions {
     pub functions: Vec<GMFunction>,
     pub code_locals: GMCodeLocals,
-    /// YYC, 14 < bytecode <= 16, chunk is empty but exists
-    pub is_yyc: bool,
     pub exists: bool,
 }
 
@@ -17,7 +15,6 @@ impl GMChunkElement for GMFunctions {
         Self {
             functions: vec![],
             code_locals: GMCodeLocals::empty(),
-            is_yyc: false,
             exists: false,
         }
     }
@@ -32,8 +29,7 @@ impl GMElement for GMFunctions {
             return Ok(Self {
                 functions: vec![],
                 code_locals: GMCodeLocals { code_locals: vec![], exists: false },
-                is_yyc: true,
-                exists: true,
+                exists: false,
             })
         }
 
@@ -73,11 +69,11 @@ impl GMElement for GMFunctions {
         }
 
         let code_locals: GMCodeLocals = GMCodeLocals::deserialize(reader)?;
-        Ok(GMFunctions { functions, code_locals, is_yyc: false, exists: true })
+        Ok(GMFunctions { functions, code_locals, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        if !self.exists || self.is_yyc { return Ok(()) }
+        if !self.exists { return Ok(()) }
         
         if builder.bytecode_version() >= 15 {
             builder.write_usize(self.functions.len())?;
@@ -108,6 +104,7 @@ impl GMElement for GMFunctions {
         Ok(())
     }
 }
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMFunction {
@@ -174,18 +171,18 @@ impl GMElement for GMCodeLocal {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMCodeLocalVariable {
     /// unknown what this does
-    pub index: u32,
+    pub weird_index: u32,
     pub name: GMRef<String>,
 }
 impl GMElement for GMCodeLocalVariable {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let index: u32 = reader.read_u32()?;
+        let weird_index: u32 = reader.read_u32()?;
         let name: GMRef<String> = reader.read_gm_string()?;
-        Ok(GMCodeLocalVariable { index, name })
+        Ok(Self { weird_index, name })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
-        builder.write_u32(self.index);
+        builder.write_u32(self.weird_index);
         builder.write_gm_string(&self.name)?;
         Ok(())
     }
