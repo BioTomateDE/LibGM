@@ -35,7 +35,7 @@ impl GMElement for GMTimelines {
 
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMTimeline {
 	pub name: GMRef<String>,
 	pub moments: Vec<GMTimelineMoment>,
@@ -79,7 +79,7 @@ impl GMElement for GMTimeline {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMTimelineMoment {
 	pub step: u32,
 	pub event: GMGameObjectEvent,
