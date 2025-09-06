@@ -16,25 +16,27 @@ impl Display for BlockError {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BasicBlock<'a> {
     pub instructions: &'a [GMInstruction],
     pub start_index: usize,
     pub end_index: usize,
-    /// Addresses of blocks that can jump to this block (sources)
+    pub block_index: usize,
+    /// Indexes of blocks that can jump to this block (sources)
     pub predecessors: Vec<usize>,
-    /// Addresses of blocks this block can jump to (targets)
-    pub successors: Vec<usize>,
+    /// Indexes of blocks this block can jump to (targets)
+    pub successors: Successors,
 }
 
 impl<'a> BasicBlock<'a> {
-    fn new(instructions: &'a [GMInstruction], start: usize, end: usize) -> Self {
+    fn new(instructions: &'a [GMInstruction], block_index: usize, start: usize, end: usize) -> Self {
         Self {
             instructions: &instructions[start..end],
             start_index: start,
             end_index: end,
+            block_index,
             predecessors: Vec::new(),
-            successors: Vec::new(),
+            successors: Successors::None,
         }
     }
 }
@@ -42,11 +44,29 @@ impl<'a> BasicBlock<'a> {
 impl Display for BasicBlock<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let predecessors: String = self.predecessors.iter().map(|&i| i.to_string()).collect::<Vec<_>>().join(", ");
-        let successors: String = self.successors.iter().map(|&i| i.to_string()).collect::<Vec<_>>().join(", ");
-        write!(f, "({:<3}-{:>3}) pred[{:<1}] succ[{:<1}]", self.start_index, self.end_index, predecessors, successors)
+        let successors: String = match self.successors {
+            Successors::None => "".to_string(),
+            Successors::Next => (self.start_index + 1).to_string(),
+            Successors::UnconditionalBranch(target) => target.to_string(),
+            Successors::ConditionalBranch(target) => format!("{}, {}", target.min(self.start_index + 1), target.max(self.start_index + 1)),
+        };
+        write!(f, "({:<3}-{:>3}) pred[{:<1}]  succ[{:<1}]  type:{:?}", self.start_index, self.end_index, predecessors, successors, self.classify())
     }
 }
 
+
+#[derive(Debug, Clone)]
+pub enum Successors {
+    /// No successors; block ends with `exit`/`return` instruction or is the last block.
+    None,
+    /// Normal progression, always go to the next block index.
+    Next,
+    /// Always branch to this block index.
+    UnconditionalBranch(usize),
+    /// Either progress to the next block index or branch to the specified block.
+    ConditionalBranch(usize),
+
+}
 
 
 fn generate_address_map(instructions: &[GMInstruction]) -> HashMap<u32, usize> {
@@ -109,10 +129,10 @@ pub fn find_basic_blocks(instructions: &[GMInstruction]) -> Result<Vec<BasicBloc
         current_address += get_instruction_size(instruction);
     }
 
-    // Convert nodes to sorted vec, push end node
+    // Push end node, convert nodes to sorted vec
+    nodes_set.insert(instructions.len());
     let mut nodes_list: Vec<usize> = nodes_set.into_iter().collect();
     nodes_list.sort_unstable();
-    nodes_list.push(instructions.len());
 
     // 3. Create blocks
     let mut blocks: Vec<BasicBlock> = Vec::with_capacity(nodes_list.len());
@@ -120,7 +140,7 @@ pub fn find_basic_blocks(instructions: &[GMInstruction]) -> Result<Vec<BasicBloc
 
     for instruction_address in nodes_list {
         if instruction_address > current_index {
-            blocks.push(BasicBlock::new(instructions, current_index, instruction_address));
+            blocks.push(BasicBlock::new(instructions, blocks.len(), current_index, instruction_address));
         }
         current_index = instruction_address;
     }
@@ -140,11 +160,11 @@ pub fn find_basic_blocks(instructions: &[GMInstruction]) -> Result<Vec<BasicBloc
             if target_index == instructions.len() {
                 // If instruction branches to the end of the code, insert fictional end block
                 let end_block_index: usize = blocks.len();
-                blocks[block_index].successors.push(end_block_index);
+                blocks[block_index].successors = Successors::UnconditionalBranch(end_block_index);
             } else {
                 let target_block_index: usize = get_block_index(&blocks, target_index);
                 blocks[target_block_index].predecessors.push(block_index);
-                blocks[block_index].successors.push(target_block_index);
+                blocks[block_index].successors = Successors::UnconditionalBranch(target_block_index);
             }
         }
 
@@ -161,7 +181,10 @@ pub fn find_basic_blocks(instructions: &[GMInstruction]) -> Result<Vec<BasicBloc
 
         // Insert fall through case (or normal progression for non branch instructions, i guess)
         blocks[block_index + 1].predecessors.push(block_index);
-        blocks[block_index].successors.push(block_index + 1);
+        blocks[block_index].successors = match blocks[block_index].successors {
+            Successors::UnconditionalBranch(target) => Successors::ConditionalBranch(target),
+            _ => Successors::Next
+        }
     }
 
     Ok(blocks)
