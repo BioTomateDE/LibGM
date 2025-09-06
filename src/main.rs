@@ -87,10 +87,12 @@ fn main_open_and_close() -> Result<(), String> {
     //     .map_err(|e| format!("Could not write string: {e}"))?;
 
     // find code blocks
-    for (i, code) in original_data.codes.codes[27..].iter().enumerate() {
+    for (i, code) in original_data.codes.codes[46..].iter().enumerate() {
         let name = code.name.resolve(&original_data.strings.strings)?;
         let blocks = gml::decompiler::blocks::find_basic_blocks(&code.instructions).map_err(|e| e.to_string())?;
-        println!("{i} - {name}: \n{}\n", blocks.into_iter().map(|i| i.to_string()).collect::<Vec<_>>().join("\n"));
+        println!("{i} - {name}: \n{}\n", blocks.iter().map(|i| i.to_string()).collect::<Vec<_>>().join("\n"));
+        // std::hint::black_box(blocks);
+        println!("{:?}", gml::decompiler::control_flow::idk(&blocks, 0));
         break
     }
 
