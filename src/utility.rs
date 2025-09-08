@@ -1,8 +1,9 @@
-use std::collections::HashMap;
-use std::fmt::{Display, Formatter, UpperHex};
-use std::time::{Duration, Instant};
 use cpu_time::ProcessTime;
 use num_enum::TryFromPrimitive;
+use std::collections::HashMap;
+use std::fmt::{Display, Formatter, UpperHex};
+use std::path::Path;
+use std::time::{Duration, Instant};
 
 pub struct Stopwatch {
     cpu_time: ProcessTime,
@@ -166,5 +167,13 @@ where
             width = size_of::<I>() * 2,
         )),
     }
+}
+
+
+pub fn filename_to_str(path: &Path) -> String {
+    path.file_name()
+        .and_then(|os_str| os_str.to_str())
+        .unwrap_or("<invalid filename>")
+        .to_string()
 }
 

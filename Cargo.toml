@@ -1,7 +1,7 @@
 [package]
 name = "libgm"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [profile.dev]
 #opt-level = 1    # slight optimisations in debug profile

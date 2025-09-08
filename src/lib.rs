@@ -8,8 +8,7 @@ pub mod gml;
 pub use gamemaker::data::GMData;
 pub use gamemaker::deserialize::parse_data_file;
 pub use gamemaker::serialize::build_data_file;
-
-
+use crate::utility::filename_to_str;
 
 /// This function should only be used within the `tests` or `benches` directory in LibGM.
 /// Do not use this if you are using LibGM as a dependency.
@@ -28,7 +27,13 @@ pub fn __test_data_files(test_fn: impl Fn(GMData) -> Result<(), String>) -> Resu
         }
     }
 
-    log::info!("Testing data files [{}]", data_file_paths.iter().map(|p| format!("\"{}\"", p.display())).collect::<Vec<_>>().join(", "));
+    log::info!("Testing data files [{}]",
+        data_file_paths.iter()
+        .map(|p| p.display().to_string())
+        .collect::<Vec<_>>()
+        .join(", ")
+    );
+
     for data_file_path in data_file_paths {
         let name = format!("\"{}\"", data_file_path.display());
         log::info!("Reading data file {name}");
@@ -37,7 +42,7 @@ pub fn __test_data_files(test_fn: impl Fn(GMData) -> Result<(), String>) -> Resu
         let gm_data: GMData = parse_data_file(&raw_data, false)?;
         drop(raw_data);
         log::info!("Testing data file {name}");
-        test_fn(gm_data).map_err(|e| format!("{e}\n↳ while testing data file {}", data_file_path.file_name().unwrap().display()))?;
+        test_fn(gm_data).map_err(|e| format!("{e}\n↳ while testing data file {}", filename_to_str(&data_file_path)))?;
     }
 
     log::info!("All data files passed.");
