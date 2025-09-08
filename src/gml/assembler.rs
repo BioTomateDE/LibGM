@@ -545,8 +545,10 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable, Par
             if *var_name != name {
                 continue
             }
-            if let Some(b15) = &var.b15_data && b15.instance_type != vari_instance_type {
-                continue
+            if let Some(b15) = &var.b15_data {
+                if b15.instance_type != vari_instance_type {
+                    continue
+                }
             }
             // found var
             variable_ref = Some(GMRef::new(i as u32));

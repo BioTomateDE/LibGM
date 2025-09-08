@@ -365,8 +365,8 @@ fn function_to_string(gm_data: &GMData, function_ref: GMRef<GMFunction>) -> Resu
     let function: &GMFunction = function_ref.resolve(&gm_data.functions.functions)?;
     let name: &String = function.name.resolve(&gm_data.strings.strings)?;
     if !is_valid_identifier(name) {
-        if let Some(name2) = name.strip_prefix("@@") && let Some(name3) = name2.strip_suffix("@@") {
-            if is_valid_identifier(name3) {
+        if name.starts_with("@@") && name.ends_with("@@") {
+            if is_valid_identifier(&name[2..name.len()-2]) {
                 return Ok(name)
             }
         }

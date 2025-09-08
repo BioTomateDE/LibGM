@@ -2,7 +2,7 @@ use crate::utility::{num_enum_from, vec_with_capacity};
 use crate::gamemaker::deserialize::{DataReader, GMChunk};
 use crate::gamemaker::elements::embedded_textures::MAGIC_BZ2_QOI_HEADER;
 use crate::gamemaker::elements::rooms::GMRoomLayerType;
-use crate::gamemaker::gm_version::{GMVersion, GMVersionReq};
+use crate::gamemaker::gm_version::GMVersionReq;
 use crate::gamemaker::gm_version::LTSBranch::{PostLTS, PreLTS, LTS};
 
 /// If `check_fn` can detect multiple versions, `required_version` should be set to its _lowest_ required version
@@ -34,35 +34,31 @@ fn try_check<R: Into<GMVersionReq>, T: Into<GMVersionReq>>(
     Ok(())
 }
 
+type CheckerFn = fn(&mut DataReader) -> Result<Option<GMVersionReq>, String>;
 
 #[derive(Debug, Clone)]
 struct VersionCheck {
     chunk_name: &'static str,
-    checker_fn: fn(&mut DataReader) -> Result<Option<GMVersionReq>, String>,
-    /// The (lowest) gamemaker version required for the checker to perform the detection 
+    checker_fn: CheckerFn,
+    /// The (lowest) gamemaker version required for the checker to perform the detection.
     required_version: GMVersionReq,
-    /// The (highest) gamemaker version the checker can detect
+    /// The (highest) gamemaker version the checker can detect.
     target_version: GMVersionReq,
 }
+
 impl VersionCheck {
-    fn new<R: Into<GMVersionReq>, V: Into<GMVersionReq>>(
-        chunk_name: &'static str,
-        checker_fn: fn(&mut DataReader) -> Result<Option<GMVersionReq>, String>,
-        required_version: R,
-        target_version: V,
-    ) -> Self {
+    fn new<R: Into<GMVersionReq>, V: Into<GMVersionReq>>(chunk_name: &'static str, checker_fn: CheckerFn, req: R, target: V) -> Self {
         Self {
             chunk_name,
             checker_fn,
-            required_version: required_version.into(),
-            target_version: target_version.into(),
+            required_version: req.into(),
+            target_version: target.into(),
         }
     }
 }
 
 
 pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<(), String> {
-    let original_version: GMVersion = reader.general_info.version.clone();
     let saved_pos: usize = reader.cur_pos;
     let saved_chunk: GMChunk = reader.chunk.clone();
     
@@ -118,22 +114,22 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<(), String> {
     ];
     
     loop {
-        // permanently filter out already detected versions
+        // Permanently filter out already detected versions
         checks.retain(|i| !reader.general_info.is_version_at_least(i.target_version.clone()));
 
         let mut updated_version: bool = false;
         let mut checks_to_remove: Vec<bool> = vec![false; checks.len()];
         
         for (i, check) in checks.iter().enumerate().rev() {
-            // for this iteration, filter out versions whose version requirements are not (yet) met
+            // For this iteration, filter out versions whose version requirements are not (yet) met
             if !reader.general_info.is_version_at_least(check.required_version.clone()) {
                 continue
             }
 
-            // permanently remove check; no matter if successful or not
+            // Permanently remove check; no matter if successful or not
             checks_to_remove[i] = true;
 
-            // if chunk doesn't exist; just skip the check
+            // If chunk doesn't exist; just skip the check
             let Some(chunk) = reader.chunks.get(check.chunk_name) else {continue};
             reader.chunk = chunk.clone();
             reader.cur_pos = reader.chunk.start_pos;
@@ -149,7 +145,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<(), String> {
             }
         }
 
-        // remove all performed checks
+        // Remove all performed checks
         for (i, should_remove) in checks_to_remove.into_iter().enumerate().rev() {
             if should_remove {
                 checks.remove(i);
@@ -157,7 +153,9 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<(), String> {
         }
         
         if !updated_version {
-            break   // no more checks left; stop
+            // Since it couldn't detect a higher version, there won't be any new checks
+            // available that would now fulfil the minimum version requirement.
+            break
         }
     }
 
@@ -172,7 +170,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<(), String> {
 
 
 fn cv_extn_2022_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
-    let ext_count = reader.read_i32()?;
+    let ext_count = reader.read_u32()?;
     if ext_count < 1 {
         return Ok(None)
     }
