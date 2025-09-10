@@ -74,7 +74,7 @@ impl DataReader<'_> {
             //       it will be replaced when try blocks are added to stable.
             let element: T = (|| {
                 T::deserialize_pre_padding(self)?;
-                self.assert_pos(pointer, &format!("(Pointer list) {}", typename::<T>()))?;
+                self.assert_pos(pointer, &typename::<T>())?;
                 let element = T::deserialize(self)?;
                 T::deserialize_post_padding(self, i == count-1)?;
                 Ok(element)
