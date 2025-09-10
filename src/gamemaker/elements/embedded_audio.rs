@@ -25,22 +25,7 @@ impl GMElement for GMEmbeddedAudios {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         if !self.exists { return Ok(()) }
-
-        let count: usize = self.audios.len();
-        builder.write_usize(count)?;
-        let pointer_list_start_pos: usize = builder.len();
-        for _ in 0..count {
-            builder.write_u32(0xDEADC0DE);
-        }
-
-        for (i, audio) in self.audios.iter().enumerate() {
-            builder.overwrite_usize(builder.len(), pointer_list_start_pos + 4*i)?;
-            audio.serialize(builder)?;
-            if i != count - 1 {
-                builder.align(4);
-            }
-        }
-
+        builder.write_pointer_list(&self.audios)?;
         Ok(())
     }
 }

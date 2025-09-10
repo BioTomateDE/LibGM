@@ -187,6 +187,7 @@ pub struct GMGameObject {
     pub name: GMRef<String>,
     pub sprite: Option<GMRef<GMSprite>>,
     pub visible: bool,
+    /// Introduced in 2022.5.
     pub managed: Option<bool>,
     pub solid: bool,
     pub depth: i32,

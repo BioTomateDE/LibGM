@@ -430,8 +430,8 @@ impl GMFont {
         println!("  Anti-Alias: {}", self.anti_alias);
         println!("  Range End: {}", self.range_end);
         println!("  Texture: #{}", self.texture.index);
-        println!("  Scale X: {}", self.scale_x);
-        println!("  Scale Y: {}", self.scale_y);
+        println!("  Scale X: {}", self.scale.0);
+        println!("  Scale Y: {}", self.scale.1);
         println!("  Ascender Offset: {:?}", self.ascender_offset);
         println!("  Ascender: {:?}", self.ascender);
         println!("  SDF Spread: {:?}", self.sdf_spread);

@@ -51,24 +51,63 @@ impl GMElement for GMFonts {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMFont {
+    /// The name of the font.
     pub name: GMRef<String>,
+
+    /// The display name of the font.
     pub display_name: Option<GMRef<String>>,
+
+    /// The font size in `Em`s.
+    /// In GameMaker Studio 2.3+, this is stored as f32 instead of u32.
     pub em_size: GMFontSize,
+
+    /// Whether to display the font in bold.
     pub bold: bool,
+
+    /// Whether to display the font in italics.
     pub italic: bool,
+
+    /// The start of the character range for this font.
     pub range_start: u16,
+
+    /// TODO: Currently unknown value. Possibly related to ranges? (aka normal, ascii, digits, letters)
     pub charset: u8,
+
+    /// The level of antialiasing that is applied.
+    /// GMS1 has 0-3 for different antialiasing levels.
+    /// GMS2 has 0 and 1 for disabled/enabled.
     pub anti_alias: u8,
+
+    /// The end of the character range for this font.
     pub range_end: u32,
+
+    /// The `[GMTexturePageItem]` object that contains the texture for this font.
     pub texture: GMRef<GMTexturePageItem>,
-    pub scale_x: f32,
-    pub scale_y: f32,
+
+    /// The X and Y Scale this font uses.
+    pub scale: (f32, f32),
+
+    /// The maximum offset from the baseline to the top of the font.
+    /// Exists since bytecode 17, but seems to be only get checked in GM 2022.2+.
     pub ascender_offset: Option<i32>,
+
+    /// Probably this: https://en.wikipedia.org/wiki/Ascender_(typography); but needs investigation.
+    /// Was introduced in GM 2022.2.
     pub ascender: Option<u32>,
+
+    /// A spread value that's used for SDF rendering; was introduced in GM 2023.2.
+    /// 0 means disabled.
+    /// TODO: what is spread, what is sdf?
     pub sdf_spread: Option<u32>,
+
+    /// Was introduced in GM 2023.6.
+    /// TODO: give an explanation of what this does
     pub line_height: Option<u32>,
+
+    /// The glyphs that this font uses.
     pub glyphs: Vec<GMFontGlyph>,
 }
+
 impl GMElement for GMFont {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -86,9 +125,7 @@ impl GMElement for GMFont {
         let anti_alias: u8 = reader.read_u8()?;
         let range_end: u32 = reader.read_u32()?;
         let texture: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
-        let scale_x: f32 = reader.read_f32()?;
-        let scale_y: f32 = reader.read_f32()?;
-
+        let scale: (f32, f32) = (reader.read_f32()?, reader.read_f32()?);
         let ascender_offset: Option<i32> = reader.deserialize_if_bytecode_version(17)?;
         let ascender: Option<u32> = reader.deserialize_if_gm_version((2022, 2))?;
         let sdf_spread: Option<u32> = reader.deserialize_if_gm_version((2023, 2, LTSBranch::PostLTS))?;
@@ -109,8 +146,7 @@ impl GMElement for GMFont {
             anti_alias,
             range_end,
             texture,
-            scale_x,
-            scale_y,
+            scale,
             ascender_offset,
             ascender,
             sdf_spread,
@@ -133,8 +169,8 @@ impl GMElement for GMFont {
         builder.write_u8(self.anti_alias);
         builder.write_u32(self.range_end);
         builder.write_gm_texture(&self.texture)?;
-        builder.write_f32(self.scale_x);
-        builder.write_f32(self.scale_y);
+        builder.write_f32(self.scale.0);
+        builder.write_f32(self.scale.1);
         self.ascender_offset.serialize_if_bytecode_ver(builder, "Ascender Offset", 17)?;
         self.ascender.serialize_if_gm_ver(builder, "Ascender", (2022, 2))?;
         self.sdf_spread.serialize_if_gm_ver(builder, "SDF Spread", (2023, 2, LTSBranch::PostLTS))?;
@@ -150,14 +186,30 @@ impl GMElement for GMFont {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMFontGlyph {
+    /// The character this glyph represents.
     pub character: Option<char>,
+
+    /// The x position in the [`GMFont`].`texture` where the glyph can be found.
     pub x: u16,
+
+    /// The y position in the [`GMFont`].`texture` where the glyph can be found.
     pub y: u16,
+
+    /// The width of the glyph in pixels.
     pub width: u16,
+
+    /// The height of the glyph in pixels.
     pub height: u16,
+
+    /// The number of pixels to shift right when advancing to the next character.
     pub shift_modifier: i16,
+
+    /// The number of pixels to horizontally offset the rendering of this glyph.
     pub offset: i16,
+
+    /// The kerning for each glyph.
     pub kernings: Vec<GMFontGlyphKerning>,
+
 }
 impl GMElement for GMFontGlyph {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
@@ -206,7 +258,9 @@ impl GMElement for GMFontGlyph {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMFontGlyphKerning {
+    /// The preceding character.
     pub character: char,
+    /// An amount of pixels to add to the existing [`GMFontGlyph`].`shift_modifier`.
     pub shift_modifier: i16,
 }
 impl GMElement for GMFontGlyphKerning {
