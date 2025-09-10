@@ -7,34 +7,85 @@ use crate::gamemaker::elements::rooms::GMRoom;
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::gm_version::{GMVersion, GMVersionReq, LTSBranch};
 
+
 #[derive(Debug, Clone)]
 pub struct GMGeneralInfo {
+    /// Indicates whether debugging support is disabled.
     pub is_debugger_disabled: bool,
+
+    /// The bytecode version of the data file.
     pub bytecode_version: u8,
+
     pub unknown_value: u16,
+
+    /// The file name of the runner.
     pub game_file_name: GMRef<String>,
+
+    /// Which GameMaker configuration the data file was compiled with.
     pub config: GMRef<String>,
+
+    /// The last object id of the data file.
     pub last_object_id: u32,
+
+    /// The last tile id of the data file.
     pub last_tile_id: u32,
+
+    /// The game id of the data file.
     pub game_id: u32,
+
+    /// The DirectPlay GUID of the data file.
+    /// This is always empty in GameMaker Studio.
     pub directplay_guid: uuid::Uuid,
+
+    /// The name of the game.
     pub game_name: GMRef<String>,
+
+    /// The version of the data file. For GameMaker 2 games, this will be specified as 2.0.0.0,
+    /// but `detect_version.rs` will detect the actual version later.
     pub version: GMVersion,
+
+    /// The default window width of the game window.
     pub default_window_width: u32,
+
+    /// The default window height of the game window.
     pub default_window_height: u32,
+
+    /// The info flags of the data file.
     pub flags: GMGeneralInfoFlags,
+
+    /// The CRC32 of the license used to compile the game.
     pub license_crc32: u32,
+
+    /// The MD5 of the license used to compile the game.
     pub license_md5: [u8; 16],
+
+    /// The UNIX timestamp the game was compiled.
     pub timestamp_created: DateTime<Utc>,
+
+    /// The name that gets displayed in the window.
     pub display_name: GMRef<String>,
+
+    /// Unknown/unused.
     pub active_targets: u64,
+
+    /// The function classifications of this data file.
     pub function_classifications: GMFunctionClassifications,
+
+    /// The Steam app id of the game.
     pub steam_appid: i32,
+
+    /// The port the data file exposes for the debugger.
     pub debugger_port: Option<u32>,
+
+    /// The room order of the data file.
     pub room_order: Vec<GMRef<GMRoom>>,
+
+    /// Set in GameMaker 2+ data files.
     pub gms2_info: Option<GMGeneralInfoGMS2>,
+
     pub exists: bool,
 }
+
 impl GMChunkElement for GMGeneralInfo {
     /// Should only be used as a small stub in GMReader because Rust doesn't have nullables (options are too ugly for this).
     /// ___
@@ -234,7 +285,7 @@ impl GMElement for GMGeneralInfo {
             let info_location: i32 = ((timestamp & 0xFFFF) as i32 / 7
                 + game_id.wrapping_sub(default_window_width) as i32
                 + room_order.len() as i32).abs() % 4;
-            let mut random_uid: Vec<i64> = Vec::with_capacity(4);
+            let mut random_uid = [0_i64; 4];
 
             let get_info_number = |first_random: i64, info_timestamp_offset: bool| -> i64 {
                 let mut info_number: i64 = timestamp;
@@ -256,7 +307,7 @@ impl GMElement for GMGeneralInfo {
             for i in 0..4 {
                 if i == info_location {
                     let curr: i64 = reader.read_i64()?;
-                    random_uid.push(curr);
+                    random_uid[i as usize] = curr;
 
                     if curr != get_info_number(first_expected, true) {
                         if curr != get_info_number(first_expected, false) {
@@ -277,7 +328,7 @@ impl GMElement for GMGeneralInfo {
                         return Err(format!("Unexpected random UID #3: expected {third_expected}; got {third_actual}"));
                     }
 
-                    random_uid.push(((second_actual as i64) << 32) | (third_actual as i64));
+                    random_uid[i as usize] = ((second_actual as i64) << 32) | (third_actual as i64);
                 }
             }
             let fps: f32 = reader.read_f32()?;
@@ -335,14 +386,15 @@ impl GMElement for GMGeneralInfo {
         builder.write_u32(self.game_id);
         builder.write_bytes(self.directplay_guid.to_bytes_le().as_slice());
         builder.write_gm_string(&self.game_name)?;
-        if self.version.major == 1 {
-            self.version.serialize(builder)?;
-        } else {    // yoyogames moment
-            builder.write_u32(2);
-            builder.write_u32(0);
-            builder.write_u32(0);
-            builder.write_u32(0);
-        }
+        self.version.serialize(builder)?;   // technically incorrect but idc
+        // if self.version.major == 1 {
+        //     self.version.serialize(builder)?;
+        // } else {    // yoyogames moment
+        //     builder.write_u32(2);
+        //     builder.write_u32(0);
+        //     builder.write_u32(0);
+        //     builder.write_u32(0);
+        // }
         builder.write_u32(self.default_window_width);
         builder.write_u32(self.default_window_height);
         self.flags.serialize(builder)?;
@@ -424,34 +476,71 @@ impl GMGeneralInfo {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMGeneralInfoGMS2 {
-    pub random_uid: Vec<i64>,
+    /// Unknown, some sort of checksum.
+    pub random_uid: [i64; 4],
+
+    /// The FPS of the game.
     pub fps: f32,
+
+    /// If enabled, the game runner may send requests to a GameMaker player count statistics server.
     pub allow_statistics: bool,
+
+    /// Unknown, some sort of checksum.
     pub game_guid: [u8; 16],
+
+    /// Whether the random UID's timestamp was initially offset.
     pub info_timestamp_offset: bool,
 }
 
 
 #[derive(Debug, Clone)]
 pub struct GMGeneralInfoFlags {
+    /// Start the game as fullscreen.
     pub fullscreen: bool,
+
+    /// Use synchronization to avoid tearing.
     pub sync_vertex1: bool,
+
+    /// Use synchronization to avoid tearing. (???)
     pub sync_vertex2: bool,
+
+    /// Use synchronization to avoid tearing. (???)
     pub sync_vertex3: bool,
+
+    /// Interpolate colours between pixels.
     pub interpolate: bool,
+
+    /// Keep aspect ratio during scaling.
     pub scale: bool,
+
+    /// Display mouse cursor.
     pub show_cursor: bool,
+
+    /// Allows window to be resized.
     pub sizeable: bool,
+
+    /// Allows fullscreen switching. (???)
     pub screen_key: bool,
+
     pub studio_version_b1: bool,
+
     pub studio_version_b2: bool,
+
     pub studio_version_b3: bool,
+
     pub steam_enabled: bool,
+
     pub local_data_enabled: bool,
+
+    /// Whether the game supports borderless window
     pub borderless_window: bool,
+
+    /// Tells the runner to run Javascript code
     pub javascript_mode: bool,
+
     pub license_exclusions: bool,
 }
+
 impl GMElement for GMGeneralInfoFlags {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let raw: u32 = reader.read_u32()?;
@@ -578,6 +667,7 @@ pub struct GMFunctionClassifications {
     pub shaders: bool,
     pub vertex_buffers: bool,
 }
+
 impl GMElement for GMFunctionClassifications {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let raw: u64 = reader.read_u64()?;

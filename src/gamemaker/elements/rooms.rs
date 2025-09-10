@@ -377,7 +377,7 @@ impl GMElement for GMRoomBackground {
 pub struct GMRoomTile {
     pub x: i32,
     pub y: i32,
-    pub texture: GMRoomTileTexture,
+    pub texture: Option<GMRoomTileTexture>,
     pub source_x: u32,
     pub source_y: u32,
     pub width: u32,
@@ -392,10 +392,10 @@ impl GMElement for GMRoomTile {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let x: i32 = reader.read_i32()?;
         let y: i32 = reader.read_i32()?;
-        let texture: GMRoomTileTexture = if reader.general_info.is_version_at_least((2, 0)) {
-            GMRoomTileTexture::Sprite(reader.read_resource_by_id_opt()?)
+        let texture: Option<GMRoomTileTexture> = if reader.general_info.is_version_at_least((2, 0)) {
+            reader.read_resource_by_id_opt()?.map(GMRoomTileTexture::Sprite)
         } else {
-            GMRoomTileTexture::Background(reader.read_resource_by_id_opt()?)
+            reader.read_resource_by_id_opt()?.map(GMRoomTileTexture::Background)
         };
         let source_x: u32 = reader.read_u32()?;
         let source_y: u32 = reader.read_u32()?;
@@ -406,7 +406,6 @@ impl GMElement for GMRoomTile {
         let scale_x: f32 = reader.read_f32()?;
         let scale_y: f32 = reader.read_f32()?;
         let color: u32 = reader.read_u32()?;
-
         Ok(GMRoomTile { x, y, texture, source_x, source_y, width, height, tile_depth, instance_id, scale_x, scale_y, color })
     }
 
@@ -415,16 +414,17 @@ impl GMElement for GMRoomTile {
         builder.write_i32(self.y);
         // TODO this is going to cause mod compatibility issues
         match self.texture {
-            GMRoomTileTexture::Sprite(gm_ref) => if builder.is_gm_version_at_least((2, 0)) {
-                builder.write_resource_id_opt(&gm_ref)
+            Some(GMRoomTileTexture::Sprite(sprite_ref)) => if builder.is_gm_version_at_least((2, 0)) {
+                builder.write_resource_id(&sprite_ref)
             } else {
-                return Err("Room tile texture should be a Background reference since GMS2; not a Sprite reference".to_string())
+                return Err("Room tile texture should be a Background reference before GMS2; not a Sprite reference".to_string())
             }
-            GMRoomTileTexture::Background(gm_ref) => if builder.is_gm_version_at_least((2, 0)) {
-                return Err("Room tile texture should be a Sprite reference before GMS2; not a Background reference".to_string())
+            Some(GMRoomTileTexture::Background(background_ref)) => if builder.is_gm_version_at_least((2, 0)) {
+                return Err("Room tile texture should be a Sprite reference in GMS2+; not a Background reference".to_string())
             } else {
-                builder.write_resource_id_opt(&gm_ref)
+                builder.write_resource_id(&background_ref)
             }
+            None => builder.write_u32(0)
         }
         builder.write_u32(self.source_x);
         builder.write_u32(self.source_y);
@@ -442,8 +442,8 @@ impl GMElement for GMRoomTile {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum GMRoomTileTexture {
-    Sprite(Option<GMRef<GMSprite>>),
-    Background(Option<GMRef<GMBackground>>),
+    Sprite(GMRef<GMSprite>),
+    Background(GMRef<GMBackground>),
 }
 
 

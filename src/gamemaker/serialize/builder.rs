@@ -8,7 +8,9 @@ use crate::utility::{typename, Stopwatch};
 
 #[derive(Debug, Clone)]
 pub struct DataBuilder<'a> {
+    /// The GMData to build.
     pub gm_data: &'a GMData,
+    /// The raw data being generated.
     pub raw_data: Vec<u8>,
     /// Keeps track of where padding at the end of chunks starts. Used for undoing the padding for the last chunk.
     pub padding_start_pos: usize,
@@ -16,7 +18,8 @@ pub struct DataBuilder<'a> {
     pub(super) pointer_placeholder_positions: Vec<(u32, usize)>,
     /// Maps memory addresses of GameMaker elements to their resolved data position
     pub(super) pointer_resource_positions: HashMap<usize, u32>,
-    
+
+    /// Will in
     pub function_occurrences: Vec<Vec<usize>>,
     pub variable_occurrences: Vec<Vec<(usize, GMVariableType)>>,
 }

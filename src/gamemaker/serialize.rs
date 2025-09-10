@@ -16,6 +16,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     builder.write_chunk_name("FORM")?;
     builder.write_u32(0xDEADC0DE);  // data length placeholder
 
+    builder.build_chunk("AUDO", &gm_data.audios)?;
     builder.build_chunk("GEN8", &gm_data.general_info)?;
     builder.build_chunk("OPTN", &gm_data.options)?;
     builder.build_chunk("EXTN", &gm_data.extensions)?;
@@ -37,7 +38,6 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     builder.build_chunk("FUNC", &gm_data.functions)?;
     builder.build_chunk("STRG", &gm_data.strings)?;
     builder.build_chunk("TXTR", &gm_data.embedded_textures)?;
-    builder.build_chunk("AUDO", &gm_data.audios)?;
 
     builder.build_chunk("SEQN", &gm_data.sequences)?;
     builder.build_chunk("PSYS", &gm_data.particle_systems)?;

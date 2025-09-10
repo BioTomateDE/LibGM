@@ -49,17 +49,9 @@ impl GMElement for GMStrings {
             // gamemaker does this because it's faster to access strings if you don't need to add or subtract 4 every time
             abs_pos_to_reference.insert(pointer + 4, GMRef::new(i as u32));
         }
-        
-        // padding
-        while reader.cur_pos % 0x80 != 0 {
-            let byte: u8 = reader.read_u8()?;
-            if byte != 0 {
-                return Err(format!("Invalid padding byte at the end of Chunk STRG: expected zero; got {byte} (0x{byte:2X})"))
-            }
-        }
 
+        reader.align(0x80)?;
         reader.string_occurrence_map = abs_pos_to_reference;
-        
         Ok(GMStrings { strings: strings_by_index, is_aligned, exists: true })
     }
 
@@ -84,12 +76,8 @@ impl GMElement for GMStrings {
             builder.write_literal_string(string);
             builder.write_u8(0);    // trailing null terminator byte
         }
-        
-        // padding
-        while builder.len() % 0x80 != 0 {
-            builder.write_u8(0);
-        }
-        
+
+        builder.align(0x80);
         Ok(())
     }
 }

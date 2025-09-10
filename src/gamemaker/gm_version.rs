@@ -12,10 +12,12 @@ pub enum LTSBranch {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMVersion {
+    /// If greater than 1, serialization produces "2.0.0.0" due to the flag no longer updating in `data.win`
     pub major: u32,
     pub minor: u32,
     pub release: u32,
     pub build: u32,
+    /// Different GameMaker release branches. LTS has some but not all features of equivalent newer versions.
     pub branch: LTSBranch,
 }
 
@@ -80,7 +82,7 @@ impl GMVersion {
     /// Setting a non-LTS version updates the branch accordingly.
     pub fn set_version_at_least<V: Into<GMVersionReq>>(&mut self, version_req: V) -> Result<(), String> {
         let new_ver: GMVersionReq = version_req.into();
-        if !matches!(new_ver.major, 2|2022|2023|2024) {
+        if !matches!(new_ver.major, 2|2022|2023|2024|2025) {
             return Err(format!(
                 "Tried to set GameMaker Version to {} which is not allowed for original GameMaker Version {}",
                 new_ver, self,
@@ -106,7 +108,7 @@ impl GMElement for GMVersion {
         let minor: u32 = reader.read_u32()?;
         let release: u32 = reader.read_u32()?;
         let build: u32 = reader.read_u32()?;
-        // since gen8 gm version is stuck on maximum 2.0.0.0; LTS will (initially) always be PreLTS
+        // Since the GEN8 Version is stuck on maximum 2.0.0.0; LTS will (initially) always be PreLTS
         Ok(GMVersion::new(major, minor, release, build, LTSBranch::PreLTS))
     }
 
