@@ -37,7 +37,7 @@ pub struct DataReader<'a> {
     /// This includes the chunk's name, start position, and end position within the data buffer.
     /// When reading data, these bounds are checked to ensure the read operation stays within the chunk.    
     /// 
-    /// **Safety Warning**: If the chunk's start or end position are set incorrectly, the program becomes memory unsafe.
+    /// **Safety Warning**: If the chunk's start/end positions are set incorrectly, the program becomes memory unsafe.
     pub chunk: GMChunk,
 
     /// Contains garbage placeholders until the `GEN8` chunk is deserialized.
@@ -50,6 +50,7 @@ pub struct DataReader<'a> {
     pub strings: GMStrings,
 
     /// Should only be set by [`crate::gamemaker::elements::strings`].
+    /// This means that STRG hsa to be parsed before any other chunk.
     pub string_occurrence_map: HashMap<usize, GMRef<String>>,
 
     /// Should only be set by [`crate::gamemaker::elements::texture_page_items`].
@@ -61,7 +62,7 @@ pub struct DataReader<'a> {
     pub variable_occurrence_map: HashMap<usize, GMRef<GMVariable>>,
 
     /// Should only be set by [`crate::gamemaker::elements::functions`].
-    /// This means that VARI has to be parsed before CODE.
+    /// This means that FUNC has to be parsed before CODE.
     pub function_occurrence_map: HashMap<usize, GMRef<GMFunction>>,
 }
 
@@ -88,27 +89,33 @@ impl<'a> DataReader<'a> {
         }
     }
 
+    /// Read the specified number of bytes from the data file while advancing the data position.
+    /// Returns an error when trying to read out of chunk bounds.
     pub fn read_bytes_dyn(&mut self, count: usize) -> Result<&'a [u8], String> {
-        // combined check to hopefully increase performance
-        if !(self.chunk.start_pos <= self.cur_pos && self.cur_pos+count <= self.chunk.end_pos) {
-            return if self.cur_pos < self.chunk.start_pos {
-                Err(format!(
-                    "out of lower bounds at position {} in chunk '{}' with start position {}",
-                    self.cur_pos, self.chunk.name, self.chunk.start_pos,
-                ))
-            } else {
-                Err(format!(
-                    "out of upper bounds at position {} in chunk '{}': {} > {}",
-                    self.cur_pos, self.chunk.name, self.cur_pos+count, self.chunk.end_pos,
-                ))
-            }
+        // Check lower chunk bounds
+        if self.cur_pos < self.chunk.start_pos {
+            return Err(format!(
+                "out of lower bounds at position {} in chunk '{}' with start position {}",
+                self.cur_pos, self.chunk.name, self.chunk.start_pos,
+            ))
         }
+
+        // Check upper chunk bounds
+        if self.cur_pos + count > self.chunk.end_pos {
+            return Err(format!(
+                "out of upper bounds at position {} in chunk '{}': {} > {}",
+                self.cur_pos, self.chunk.name, self.cur_pos+count, self.chunk.end_pos,
+            ))
+        }
+
         // SAFETY: If chunk.start_pos and chunk.end_pos are set correctly; this should never read memory out of bounds.
         let slice: &[u8] = unsafe { self.data.get_unchecked(self.cur_pos..self.cur_pos + count) };
         self.cur_pos += count;
         Ok(slice)
     }
-    
+
+    /// Read a constant number of bytes from the data file while advancing the data position.
+    /// Useful for reading slices with specified sizes like `[u8; 16]`.
     pub fn read_bytes_const<const N: usize>(&mut self) -> Result<&[u8; N], String> {
         let slice: &[u8] = self.read_bytes_dyn(N)?;
         // read_bytes_dyn is guaranteed to read N bytes so the unwrap never fails.
@@ -116,7 +123,7 @@ impl<'a> DataReader<'a> {
     }
 
 
-    /// Read unsigned 32-bit integer and convert to usize (little endian).
+    /// Read an unsigned 32-bit integer and convert it to usize.
     /// Meant for reading positions/pointers; uses total data length as failsafe.
     pub fn read_pointer(&mut self) -> Result<usize, String> {
         let failsafe_amount: usize = self.data.len();
@@ -133,7 +140,7 @@ impl<'a> DataReader<'a> {
 
     /// Read a 32-bit integer and convert it to a bool.
     /// ___
-    /// Returns `Err<String>` when the read number is neither 0 nor 1.
+    /// Returns an error when the read number is neither 0 nor 1.
     pub fn read_bool32(&mut self) -> Result<bool, String> {
         let number: u32 = self.read_u32()?;
         match number {
@@ -163,10 +170,6 @@ impl<'a> DataReader<'a> {
     pub fn get_chunk_length(&self) -> usize {
         self.chunk.end_pos - self.chunk.start_pos
     }
-    
-    pub fn get_data_length(&self) -> usize {
-        self.data.len()
-    }
 
     /// Read bytes until the reader position is divisible by the specified alignment.
     /// Ensures the read padding bytes are all zero.
@@ -183,6 +186,12 @@ impl<'a> DataReader<'a> {
     /// Ensures the reader is at the specified position.
     pub fn assert_pos(&self, position: usize, pointer_name: &str) -> Result<(), String> {
         if self.cur_pos != position {
+            if position == 0 {
+                return Err(format!(
+                    "{} pointer is zero at position {}! Null pointers are not yet supported.",
+                    pointer_name, self.cur_pos,
+                ))
+            }
             return Err(format!(
                 "{} pointer misaligned: expected position {} but reader is actually at {} (diff: {})",
                 pointer_name, position, self.cur_pos, position as i64 - self.cur_pos as i64,

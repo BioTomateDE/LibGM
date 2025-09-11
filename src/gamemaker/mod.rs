@@ -7,3 +7,4 @@ mod qoi;
 mod printing;
 mod element;
 pub mod data;
+mod upgrade;
