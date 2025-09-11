@@ -44,8 +44,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
 
     // Write chunks
     build_chunks!(builder, gm_data,
-        ("AUDO", audios),
-        ("GEN8", general_info),
+        ("GEN8", general_info),     // GEN8 has to be the first chunk, at least for utmt
         ("OPTN", options),
         ("EXTN", extensions),
         ("SOND", sounds),
@@ -61,11 +60,12 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
         ("ROOM", rooms),
         ("DAFL", data_files),
         ("TPAG", texture_page_items),
-        ("CODE", codes),
+        ("CODE", codes),            // CODE has to be written before VARI and FUNC
         ("VARI", variables),
         ("FUNC", functions),
         ("STRG", strings),
         ("TXTR", embedded_textures),
+        ("AUDO", audios),
         ("SEQN", sequences),
         ("PSYS", particle_systems),
         ("PSEM", particle_emitters),
