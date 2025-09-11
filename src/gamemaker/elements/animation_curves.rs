@@ -11,7 +11,7 @@ pub struct GMAnimationCurves {
 }
 
 impl GMChunkElement for GMAnimationCurves {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { animation_curves: vec![], exists: false }
     }
     fn exists(&self) -> bool {

@@ -16,7 +16,7 @@ pub struct GMTextureGroupInfos {
     pub exists: bool,
 }
 impl GMChunkElement for GMTextureGroupInfos {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { texture_group_infos: vec![], exists: false }
     }
     fn exists(&self) -> bool {

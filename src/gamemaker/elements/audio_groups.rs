@@ -8,7 +8,7 @@ pub struct GMAudioGroups {
     pub exists: bool,
 }
 impl GMChunkElement for GMAudioGroups {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { audio_groups: vec![], exists: false }
     }
     fn exists(&self) -> bool {

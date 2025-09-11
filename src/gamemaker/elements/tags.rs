@@ -10,7 +10,7 @@ pub struct GMTags {
     pub exists: bool,
 }
 impl GMChunkElement for GMTags {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { tags: vec![], asset_tags: HashMap::new(), exists: false }
     }
     fn exists(&self) -> bool {

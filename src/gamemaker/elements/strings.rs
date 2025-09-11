@@ -14,7 +14,7 @@ pub struct GMStrings {
 }
 
 impl GMChunkElement for GMStrings {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { strings: vec![], is_aligned: true, exists: false }
     }
     fn exists(&self) -> bool {

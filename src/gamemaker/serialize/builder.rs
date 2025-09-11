@@ -12,8 +12,6 @@ pub struct DataBuilder<'a> {
     pub gm_data: &'a GMData,
     /// The raw data being generated.
     pub raw_data: Vec<u8>,
-    /// Keeps track of where padding at the end of chunks starts. Used for undoing the padding for the last chunk.
-    pub padding_start_pos: usize,
     /// Pairs data positions of pointer placeholders with the memory address of the GameMaker element they're pointing to
     pub(super) pointer_placeholder_positions: Vec<(u32, usize)>,
     /// Maps memory addresses of GameMaker elements to their resolved data position
@@ -30,7 +28,6 @@ impl<'a> DataBuilder<'a> {
         Self {
             gm_data,
             raw_data: Vec::with_capacity(gm_data.original_data_size),
-            padding_start_pos: 0,   // should only cause issues if no chunks were written at all (impossible)
             pointer_placeholder_positions: Vec::new(),
             pointer_resource_positions: HashMap::new(),
             function_occurrences: vec![Vec::new(); gm_data.functions.functions.len()],
@@ -200,9 +197,10 @@ impl<'a> DataBuilder<'a> {
     /// Appends padding if required by the GameMaker version.
     /// This padding has to then be manually cut off for the last chunk in the data file.
     /// # Parameters
-    /// - `chunk_name`: 4-character chunk name (e.g., "SCPT", "ROOM").
-    /// - `element`: A serializable element implementing `GMElement + GMChunkElement`.
-    pub fn build_chunk<T: GMElement+GMChunkElement>(&mut self, chunk_name: &'static str, element: &T) -> Result<(), String> {
+    /// - `chunk_name`: 4-character chunk name (e.g. `SCPT` or `ROOM`).
+    /// - `element`: A serializable element implementing [GMElement] and [GMChunkElement].
+    /// - `is_last`: Whether this chunk is the last chunk in the data file. If true, no post padding will be written.
+    pub fn build_chunk<T: GMElement+GMChunkElement>(&mut self, chunk_name: &'static str, element: &T, is_last: bool) -> Result<(), String> {
         if !element.exists() {
             log::trace!("Skipped building chunk '{chunk_name}' because it does not exist");
             return Ok(())
@@ -216,12 +214,13 @@ impl<'a> DataBuilder<'a> {
         element.serialize(self)
             .map_err(|e| format!("{e}\n↳ while serializing chunk '{chunk_name}'"))?;
 
-        // potentially write padding
-        self.padding_start_pos = self.len();
-        let ver = &self.gm_data.general_info.version;
-        if ver.major >= 2 || (ver.major == 1 && ver.build >= 9999) {
-            while self.len() % self.gm_data.chunk_padding != 0 {
-                self.write_u8(0);
+        if !is_last {
+            // write padding in these versions, if not last chunk
+            let ver = &self.gm_data.general_info.version;
+            if ver.major >= 2 || (ver.major == 1 && ver.build >= 9999) {
+                while self.len() % self.gm_data.chunk_padding != 0 {
+                    self.write_u8(0);
+                }
             }
         }
 

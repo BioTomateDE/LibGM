@@ -25,7 +25,7 @@ pub struct GMOptions {
 }
 impl GMChunkElement for GMOptions {
     /// probably shouldn't be used other than as a stub
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self {
             is_new_format: false,
             unknown1: 69420,

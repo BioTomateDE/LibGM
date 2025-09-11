@@ -13,7 +13,7 @@ pub struct GMSounds {
 }
 
 impl GMChunkElement for GMSounds {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { sounds: vec![], exists: false }
     }
     fn exists(&self) -> bool {
