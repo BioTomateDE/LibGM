@@ -174,11 +174,8 @@ fn main_open_and_close() -> Result<(), String> {
         }
     }
     for texture_page in &mut gm_data.embedded_textures.texture_pages {
-        if texture_page.image.is_none() {
-            return Err("External Texture pages are not supported".to_string())
-        }
         texture_page.generated_mips = Some(0);
-        texture_page.texture_block_size = Some(99999999);  // will work if all texture pages are embedded
+        texture_page.texture_block_size = Some(0xDEADC0DE);  // will work if all texture pages are embedded
         let image = texture_page.image.as_ref().ok_or("External Texture pages are not supported")?;
         let image = image.to_dynamic_image()?;
         texture_page.data_2022_9 = Some(elements::embedded_textures::GMEmbeddedTexture2022_9 {

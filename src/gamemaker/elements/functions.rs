@@ -11,10 +11,10 @@ pub struct GMFunctions {
 }
 
 impl GMChunkElement for GMFunctions {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self {
             functions: vec![],
-            code_locals: GMCodeLocals::empty(),
+            code_locals: GMCodeLocals::stub(),
             exists: false,
         }
     }
@@ -118,9 +118,10 @@ pub struct GMCodeLocals {
     pub exists: bool,
 }
 impl GMChunkElement for GMCodeLocals {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { code_locals: vec![], exists: false }
     }
+
     fn exists(&self) -> bool {
         self.exists
     }
@@ -128,7 +129,7 @@ impl GMChunkElement for GMCodeLocals {
 impl GMElement for GMCodeLocals {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         if reader.general_info.bytecode_version <= 14 || reader.general_info.is_version_at_least((2024, 8)) {
-            return Ok(Self::empty())
+            return Ok(Self::stub())
         }
         let code_locals: Vec<GMCodeLocal> = reader.read_simple_list()?;
         Ok(Self { code_locals, exists: true })

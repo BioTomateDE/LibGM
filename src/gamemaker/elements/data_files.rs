@@ -10,7 +10,7 @@ pub struct GMDataFiles {
 }
 
 impl GMChunkElement for GMDataFiles {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { exists: false }
     }
     fn exists(&self) -> bool {

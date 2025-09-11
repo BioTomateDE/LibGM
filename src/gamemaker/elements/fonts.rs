@@ -12,7 +12,7 @@ pub struct GMFonts {
     pub exists: bool,
 }
 impl GMChunkElement for GMFonts {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { fonts: vec![], padding: None, exists: false }
     }
     fn exists(&self) -> bool {

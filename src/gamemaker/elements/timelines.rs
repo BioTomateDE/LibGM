@@ -12,7 +12,7 @@ pub struct GMTimelines {
 }
 
 impl GMChunkElement for GMTimelines {
-	fn empty() -> Self {
+	fn stub() -> Self {
 		Self { timelines: vec![], exists: false }
 	}
 	fn exists(&self) -> bool {

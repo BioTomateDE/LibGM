@@ -16,7 +16,7 @@ pub struct GMGameObjects {
 }
 
 impl GMChunkElement for GMGameObjects {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { game_objects: vec![], exists: false }
     }
     fn exists(&self) -> bool {

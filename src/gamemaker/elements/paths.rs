@@ -9,7 +9,7 @@ pub struct GMPaths {
 }
 
 impl GMChunkElement for GMPaths {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { paths: vec![], exists: false }
     }
     fn exists(&self) -> bool {

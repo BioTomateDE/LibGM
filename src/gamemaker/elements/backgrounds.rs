@@ -14,7 +14,7 @@ pub struct GMBackgrounds {
     pub exists: bool,
 }
 impl GMChunkElement for GMBackgrounds {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { backgrounds: vec![], is_aligned: true, exists: false }
     }
     fn exists(&self) -> bool {

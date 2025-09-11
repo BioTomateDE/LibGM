@@ -68,8 +68,8 @@ pub struct DataReader<'a> {
 impl<'a> DataReader<'a> {
     pub fn new(data: &'a [u8]) -> Self {
         Self {
-            general_info: GMGeneralInfo::empty(),
-            strings: GMStrings::empty(),
+            general_info: GMGeneralInfo::stub(),
+            strings: GMStrings::stub(),
             chunks: HashMap::with_capacity(35),
             chunk: GMChunk {
                 name: "FORM".to_string(),

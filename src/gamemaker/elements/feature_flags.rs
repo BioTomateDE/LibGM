@@ -9,7 +9,7 @@ pub struct GMFeatureFlags {
 }
 
 impl GMChunkElement for GMFeatureFlags {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { feature_flags: vec![], exists: false }
     }
     fn exists(&self) -> bool {

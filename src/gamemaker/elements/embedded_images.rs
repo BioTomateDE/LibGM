@@ -9,7 +9,8 @@ pub struct GMEmbeddedImages {
     pub exists: bool,
 }
 impl GMChunkElement for GMEmbeddedImages {
-    fn empty() -> Self {
+
+    fn stub() -> Self {
         Self { embedded_images: vec![], exists: false }
     }
     fn exists(&self) -> bool {

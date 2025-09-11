@@ -13,7 +13,7 @@ pub struct GMParticleSystems {
 }
 
 impl GMChunkElement for GMParticleSystems {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { particle_systems: vec![], exists: false }
     }
     fn exists(&self) -> bool {
@@ -80,7 +80,7 @@ pub struct GMParticleEmitters {
     pub exists: bool,
 }
 impl GMChunkElement for GMParticleEmitters {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { emitters: vec![], exists: false }
     }
     fn exists(&self) -> bool {

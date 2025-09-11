@@ -6,7 +6,33 @@ mod resources;
 
 pub use builder::DataBuilder;
 use crate::gamemaker::data::GMData;
+use crate::gamemaker::element::GMChunkElement;
 use crate::utility::Stopwatch;
+
+
+
+macro_rules! build_chunks {
+    ($builder:expr, $gm_data:expr, $(($name:literal, $field:ident)),* $(,)?) => {{
+        // First pass: check what exists
+        let mut existing_count = 0;
+        $(
+            if $gm_data.$field.exists() {
+                existing_count += 1;
+            }
+        )*
+
+        // Second pass: build chunks
+        let mut chunk_index = 0;
+        $(
+            #[allow(unused_assignments)]    // either the code is buggy or the compiler is just stupid
+            if $gm_data.$field.exists() {
+                let is_last = chunk_index == existing_count - 1;
+                $builder.build_chunk($name, &$gm_data.$field, is_last)?;
+                chunk_index += 1;
+            }
+        )*
+    }};
+}
 
 
 pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
@@ -16,48 +42,44 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
     builder.write_chunk_name("FORM")?;
     builder.write_u32(0xDEADC0DE);  // data length placeholder
 
-    builder.build_chunk("AUDO", &gm_data.audios)?;
-    builder.build_chunk("GEN8", &gm_data.general_info)?;
-    builder.build_chunk("OPTN", &gm_data.options)?;
-    builder.build_chunk("EXTN", &gm_data.extensions)?;
-    builder.build_chunk("SOND", &gm_data.sounds)?;
-    builder.build_chunk("AGRP", &gm_data.audio_groups)?;
-    builder.build_chunk("SPRT", &gm_data.sprites)?;
-    builder.build_chunk("BGND", &gm_data.backgrounds)?;
-    builder.build_chunk("PATH", &gm_data.paths)?;
-    builder.build_chunk("SCPT", &gm_data.scripts)?;
-    builder.build_chunk("SHDR", &gm_data.shaders)?;
-    builder.build_chunk("FONT", &gm_data.fonts)?;
-    builder.build_chunk("TMLN", &gm_data.timelines)?;
-    builder.build_chunk("OBJT", &gm_data.game_objects)?;
-    builder.build_chunk("ROOM", &gm_data.rooms)?;
-    builder.build_chunk("DAFL", &gm_data.data_files)?;
-    builder.build_chunk("TPAG", &gm_data.texture_page_items)?;
-    builder.build_chunk("CODE", &gm_data.codes)?;       // CODE has to be written before VARI and FUNC
-    builder.build_chunk("VARI", &gm_data.variables)?;
-    builder.build_chunk("FUNC", &gm_data.functions)?;
-    builder.build_chunk("STRG", &gm_data.strings)?;
-    builder.build_chunk("TXTR", &gm_data.embedded_textures)?;
-
-    builder.build_chunk("SEQN", &gm_data.sequences)?;
-    builder.build_chunk("PSYS", &gm_data.particle_systems)?;
-    builder.build_chunk("PSEM", &gm_data.particle_emitters)?;
-    builder.build_chunk("LANG", &gm_data.language_info)?;
-    builder.build_chunk("GLOB", &gm_data.global_init_scripts)?;
-    builder.build_chunk("GMEN", &gm_data.game_end_scripts)?;
-    builder.build_chunk("UILR", &gm_data.root_ui_nodes)?;
-    builder.build_chunk("EMBI", &gm_data.embedded_images)?;
-    builder.build_chunk("TGIN", &gm_data.texture_group_infos)?;
-    builder.build_chunk("TAGS", &gm_data.tags)?;
-    builder.build_chunk("FEAT", &gm_data.feature_flags)?;
-    builder.build_chunk("FEDS", &gm_data.filter_effects)?;
-    builder.build_chunk("ACRV", &gm_data.animation_curves)?;
-
-    // undo padding for last chunk
-    let padding_data: Vec<u8> = builder.raw_data.split_off(builder.padding_start_pos);
-    if padding_data.iter().any(|i| *i != 0) {
-        return Err("Built padding at end of the data contains non-null bytes; something went wrong internally".to_string())
-    }
+    // Write chunks
+    build_chunks!(builder, gm_data,
+        ("AUDO", audios),
+        ("GEN8", general_info),
+        ("OPTN", options),
+        ("EXTN", extensions),
+        ("SOND", sounds),
+        ("AGRP", audio_groups),
+        ("SPRT", sprites),
+        ("BGND", backgrounds),
+        ("PATH", paths),
+        ("SCPT", scripts),
+        ("SHDR", shaders),
+        ("FONT", fonts),
+        ("TMLN", timelines),
+        ("OBJT", game_objects),
+        ("ROOM", rooms),
+        ("DAFL", data_files),
+        ("TPAG", texture_page_items),
+        ("CODE", codes),
+        ("VARI", variables),
+        ("FUNC", functions),
+        ("STRG", strings),
+        ("TXTR", embedded_textures),
+        ("SEQN", sequences),
+        ("PSYS", particle_systems),
+        ("PSEM", particle_emitters),
+        ("LANG", language_info),
+        ("GLOB", global_init_scripts),
+        ("GMEN", game_end_scripts),
+        ("UILR", root_ui_nodes),
+        ("EMBI", embedded_images),
+        ("TGIN", texture_group_infos),
+        ("TAGS", tags),
+        ("FEAT", feature_flags),
+        ("FEDS", filter_effects),
+        ("ACRV", animation_curves),
+    );
 
     // resolve pointers/placeholders
     let stopwatch2 = Stopwatch::start();

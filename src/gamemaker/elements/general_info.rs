@@ -90,7 +90,7 @@ impl GMChunkElement for GMGeneralInfo {
     /// Should only be used as a small stub in GMReader because Rust doesn't have nullables (options are too ugly for this).
     /// ___
     /// **THIS VALUE SHOULD NEVER BE USED! IMMEDIATELY REPLACE IT WITH ACTUAL GEN8 WHEN PARSED.**
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self {
             is_debugger_disabled: true,
             bytecode_version: 187,

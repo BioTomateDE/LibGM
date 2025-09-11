@@ -20,7 +20,7 @@ pub struct GMRooms {
     pub exists: bool,
 }
 impl GMChunkElement for GMRooms {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { rooms: vec![], exists: false }
     }
     fn exists(&self) -> bool {
@@ -100,37 +100,33 @@ impl GMElement for GMRoom {
         let gravity_y: f32 = reader.read_f32()?;
         let meters_per_pixel: f32 = reader.read_f32()?;
 
-        let layers_ptr: usize = if reader.general_info.is_version_at_least((2, 0)) {
-            reader.read_pointer()?
-        } else { 0 };
-        let sequences_ptr: usize = if reader.general_info.is_version_at_least((2, 3)) {
-            reader.read_pointer()?
-        } else { 0 };
+        let layers_ptr: usize = reader.deserialize_if_gm_version((2, 0))?.unwrap_or(0);
+        let sequences_ptr: usize = reader.deserialize_if_gm_version((2, 3))?.unwrap_or(0);
 
-        reader.assert_pos(backgrounds_ptr, "Backgrounds")?;
+        reader.assert_pos(backgrounds_ptr, "Room Backgrounds")?;
         let backgrounds: Vec<GMRoomBackground> = reader.read_pointer_list()?;
 
-        reader.assert_pos(views_ptr, "Views")?;
+        reader.assert_pos(views_ptr, "Room Views")?;
         let views: Vec<GMRoomView> = reader.read_pointer_list()?;
 
-        reader.assert_pos(game_objects_ptr, "Game Objects")?;
+        reader.assert_pos(game_objects_ptr, "Room Game Objects")?;
         let game_objects: Vec<GMRoomGameObject> = reader.read_pointer_list()?;
 
-        reader.assert_pos(tiles_ptr, "Tiles")?;
+        reader.assert_pos(tiles_ptr, "Room Tiles")?;
         let tiles: Vec<GMRoomTile> = reader.read_pointer_list()?;
 
         let instance_creation_order_ids: Vec<i32> = if reader.general_info.is_version_at_least((2024, 13)) {
-            reader.assert_pos(instances_ptr, "Instance Creation Order IDs")?;
+            reader.assert_pos(instances_ptr, "Room Instance Creation Order IDs")?;
             reader.read_simple_list()?
         } else { Vec::new() };
 
         let layers: Vec<GMRoomLayer> = if reader.general_info.is_version_at_least((2, 0)) {
-            reader.assert_pos(layers_ptr, "Layers")?;
+            reader.assert_pos(layers_ptr, "Room Layers")?;
             reader.read_pointer_list()?
         } else { Vec::new() };
 
         let sequences: Vec<GMSequence> = if reader.general_info.is_version_at_least((2, 3)) {
-            reader.assert_pos(sequences_ptr, "Sequences")?;
+            reader.assert_pos(sequences_ptr, "Room Sequences")?;
             reader.read_pointer_list()?
         } else { Vec::new() };
 
@@ -191,9 +187,9 @@ impl GMElement for GMRoom {
         builder.write_f32(self.meters_per_pixel);
         if builder.is_gm_version_at_least((2, 0)) {
             builder.write_pointer(&self.layers)?;
-            if builder.gm_data.sequences.exists {
-                builder.write_pointer(&self.sequences)?;
-            }
+        }
+        if builder.is_gm_version_at_least((2, 3)) {
+            builder.write_pointer(&self.sequences)?;
         }
         builder.resolve_pointer(&self.backgrounds)?;
         builder.write_pointer_list(&self.backgrounds)?;
@@ -210,10 +206,10 @@ impl GMElement for GMRoom {
         if builder.is_gm_version_at_least((2, 0)) {
             builder.resolve_pointer(&self.layers)?;
             builder.write_pointer_list(&self.layers)?;
-            if builder.gm_data.sequences.exists {
-                builder.resolve_pointer(&self.sequences)?;
-                builder.write_pointer_list(&self.sequences)?;
-            }
+        }
+        if builder.is_gm_version_at_least((2, 3)) {
+            builder.resolve_pointer(&self.sequences)?;
+            builder.write_pointer_list(&self.sequences)?;
         }
         Ok(())
     }

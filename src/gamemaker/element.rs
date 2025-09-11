@@ -131,7 +131,7 @@ impl GMElement for bool {
 
 
 pub trait GMChunkElement {
-    fn empty() -> Self;
+    fn stub() -> Self;
     fn exists(&self) -> bool;
 }
 

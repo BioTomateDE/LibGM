@@ -22,7 +22,7 @@ pub struct GMEmbeddedTextures {
 }
 
 impl GMChunkElement for GMEmbeddedTextures {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { texture_pages: vec![], exists: false }
     }
     fn exists(&self) -> bool {

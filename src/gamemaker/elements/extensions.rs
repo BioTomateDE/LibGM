@@ -12,7 +12,7 @@ pub struct GMExtensions {
     pub exists: bool,
 }
 impl GMChunkElement for GMExtensions {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { extensions: vec![], product_id_data: vec![], exists: false }
     }
     fn exists(&self) -> bool {

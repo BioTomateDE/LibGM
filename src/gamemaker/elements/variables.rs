@@ -15,7 +15,7 @@ pub struct GMVariables {
 }
 
 impl GMChunkElement for GMVariables {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { variables: vec![], b15_header: None, exists: false }
     }
     fn exists(&self) -> bool {

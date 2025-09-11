@@ -12,7 +12,7 @@ pub struct GMRootUINodes {
     pub exists: bool,
 }
 impl GMChunkElement for GMRootUINodes {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { ui_root_nodes: vec![], exists: false }
     }
     fn exists(&self) -> bool {
