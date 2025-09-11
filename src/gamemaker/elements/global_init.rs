@@ -9,7 +9,7 @@ pub struct GMGlobalInitScripts {
     pub exists: bool,
 }
 impl GMChunkElement for GMGlobalInitScripts {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { global_init_scripts: vec![], exists: false }
     }
     fn exists(&self) -> bool {
@@ -36,7 +36,7 @@ pub struct GMGameEndScripts {
     pub exists: bool,
 }
 impl GMChunkElement for GMGameEndScripts {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { game_end_scripts: vec![], exists: false }
     }
     fn exists(&self) -> bool {

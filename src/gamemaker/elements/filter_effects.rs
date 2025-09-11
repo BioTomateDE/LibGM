@@ -9,7 +9,7 @@ pub struct GMFilterEffects {
 }
 
 impl GMChunkElement for GMFilterEffects {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { filter_effects: vec![], exists: false }
     }
     fn exists(&self) -> bool {

@@ -28,7 +28,7 @@ pub struct GMCodes {
     pub exists: bool,
 }
 impl GMChunkElement for GMCodes {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { codes: vec![], exists: false }
     }
     fn exists(&self) -> bool {

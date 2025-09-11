@@ -109,7 +109,7 @@ impl DataReader<'_> {
     pub fn read_chunk_optional<T: GMChunkElement + GMElement>(&mut self, chunk_name: &str) -> Result<T, String> {
         let Some(chunk) = self.chunks.remove(chunk_name) else {
             log::trace!("Skipped parsing optional chunk '{chunk_name}'");
-            return Ok(T::empty())
+            return Ok(T::stub())
         };
         let element: T = self.read_chunk_internal(chunk)
             .map_err(|e| format!("{e}\n↳ while deserializing optional chunk '{chunk_name}'"))?;

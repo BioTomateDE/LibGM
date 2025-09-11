@@ -19,7 +19,7 @@ pub struct GMSequences {
     pub exists: bool,
 }
 impl GMChunkElement for GMSequences {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { sequences: vec![], exists: false }
     }
     fn exists(&self) -> bool {
@@ -29,7 +29,7 @@ impl GMChunkElement for GMSequences {
 impl GMElement for GMSequences {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         if reader.chunk.end_pos - reader.chunk.start_pos == 0 {
-            return Ok(Self::empty())
+            return Ok(Self::stub())
         }
         reader.align(4)?;
         let version: u32 = reader.read_u32()?;

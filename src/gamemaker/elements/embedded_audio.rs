@@ -9,7 +9,7 @@ pub struct GMEmbeddedAudios {
 }
 
 impl GMChunkElement for GMEmbeddedAudios {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { audios: vec![], exists: false }
     }
     fn exists(&self) -> bool {

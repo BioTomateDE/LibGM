@@ -10,7 +10,7 @@ pub struct GMTexturePageItems {
     pub exists: bool,
 }
 impl GMChunkElement for GMTexturePageItems {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { texture_page_items: vec![], is_4_byte_aligned: false, exists: false }
     }
     fn exists(&self) -> bool {

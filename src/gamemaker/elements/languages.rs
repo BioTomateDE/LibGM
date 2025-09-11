@@ -11,7 +11,7 @@ pub struct GMLanguageInfo {
     pub exists: bool,
 }
 impl GMChunkElement for GMLanguageInfo {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self {
             unknown1: 0,
             languages: vec![],

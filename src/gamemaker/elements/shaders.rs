@@ -10,7 +10,7 @@ pub struct GMShaders {
     pub exists: bool,
 }
 impl GMChunkElement for GMShaders {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { shaders: vec![], exists: false }
     }
     fn exists(&self) -> bool {

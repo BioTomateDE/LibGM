@@ -14,7 +14,7 @@ pub struct GMSprites {
     pub exists: bool,
 }
 impl GMChunkElement for GMSprites {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { sprites: vec![], exists: false }
     }
     fn exists(&self) -> bool {

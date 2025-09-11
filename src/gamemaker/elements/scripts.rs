@@ -9,7 +9,7 @@ pub struct GMScripts {
     pub exists: bool,
 }
 impl GMChunkElement for GMScripts {
-    fn empty() -> Self {
+    fn stub() -> Self {
         Self { scripts: vec![], exists: false }
     }
     fn exists(&self) -> bool {
