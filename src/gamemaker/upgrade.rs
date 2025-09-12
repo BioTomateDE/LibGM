@@ -1,13 +1,13 @@
-﻿use crate::gamemaker::deserialize::GMRef;
+﻿use crate::gamemaker::data::GMData;
+use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::backgrounds::{GMBackground, GMBackgroundGMS2Data};
 use crate::gamemaker::elements::embedded_textures::GMEmbeddedTexture2022_9;
 use crate::gamemaker::elements::general_info::GMGeneralInfoGMS2;
-use crate::gamemaker::elements::rooms::{GMRoom, GMRoomTileTexture};
+use crate::gamemaker::elements::rooms::GMRoomTileTexture;
 use crate::gamemaker::elements::sequence::GMAnimSpeedType::FramesPerGameFrame;
-use crate::gamemaker::elements::sprites::{GMSprite, GMSpriteSepMaskType, GMSpriteSpecial, GMSpriteSpecialData};
+use crate::gamemaker::elements::sprites::{GMSprite, GMSpriteSepMaskType, GMSpriteSpecial, GMSpriteSpecialData, GMSprites};
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::gm_version::{GMVersion, LTSBranch};
-use crate::GMData;
 
 
 /// Updates GameMaker project data to version 2022.9 LTS
@@ -86,56 +86,44 @@ fn update_rooms(gm_data: &mut GMData) -> Result<(), String> {
         }
 
         // Convert background tiles to sprite tiles
-        // SAFETY: suck my balls, borrow checker
-        // TODO: kill myself
-        update_room_tiles(room, unsafe { &mut *(gm_data as *mut GMData) })?;
+        for tile in &mut room.tiles {
+            let Some(tile_texture) = &tile.texture else { continue };
+            let GMRoomTileTexture::Background(background_ref) = tile_texture else { continue };
+
+            let background = background_ref.resolve(&gm_data.backgrounds.backgrounds)?;
+            let texture: Option<&GMTexturePageItem> = background.texture
+                .map(|t| t.resolve(&gm_data.texture_page_items.texture_page_items))
+                .transpose()?;
+
+            // Find or create sprite for this background
+            let sprite_ref: GMRef<GMSprite> = find_or_create_sprite_for_background(&mut gm_data.sprites, background, texture);
+
+            // Update tile to use sprite instead of background
+            tile.texture = Some(GMRoomTileTexture::Sprite(sprite_ref));
+        }
     }
 
-    Ok(())
-}
-
-
-/// Converts background-based tiles to sprite-based tiles in a room
-fn update_room_tiles(room: &mut GMRoom, gm_data: &mut GMData) -> Result<(), String> {
-    for tile in &mut room.tiles {
-        let Some(tile_texture) = &tile.texture else { continue };
-        let GMRoomTileTexture::Background(background_ref) = tile_texture else { continue };
-
-        let background = background_ref.resolve(&gm_data.backgrounds.backgrounds)?;
-        let texture = background.texture
-            .map(|t| t.resolve(&gm_data.texture_page_items.texture_page_items))
-            .transpose()?;
-
-        // Find or create sprite for this background
-        let sprite_ref = find_or_create_sprite_for_background(
-            gm_data,
-            background,
-            texture
-        );
-
-        // Update tile to use sprite instead of background
-        tile.texture = Some(GMRoomTileTexture::Sprite(sprite_ref));
-    }
     Ok(())
 }
 
 
 /// Finds existing sprite with same name as background, or creates a new one
-fn find_or_create_sprite_for_background(gm_data: &mut GMData, background: &GMBackground, texture: Option<&GMTexturePageItem>) -> GMRef<GMSprite> {
+fn find_or_create_sprite_for_background(gm_sprites: &mut GMSprites, background: &GMBackground, texture: Option<&GMTexturePageItem>) -> GMRef<GMSprite> {
     // Try to find existing sprite with same name
-    for (i, sprite) in gm_data.sprites.sprites.iter().enumerate() {
+    for (i, sprite) in gm_sprites.sprites.iter().enumerate() {
         if sprite.name == background.name {
             return GMRef::new(i as u32);
         }
     }
 
     // Create new sprite from background
-    create_sprite_from_background(gm_data, background, texture)
+    create_sprite_from_background(gm_sprites, background, texture)
 }
 
+
 /// Creates a new sprite from background data
-fn create_sprite_from_background(gm_data: &mut GMData, background: &GMBackground, texture: Option<&GMTexturePageItem>) -> GMRef<GMSprite> {
-    let new_sprite_ref: GMRef<GMSprite> = GMRef::new(gm_data.sprites.sprites.len() as u32);
+fn create_sprite_from_background(gm_sprites: &mut GMSprites, background: &GMBackground, texture: Option<&GMTexturePageItem>) -> GMRef<GMSprite> {
+    let new_sprite_ref: GMRef<GMSprite> = GMRef::new(gm_sprites.sprites.len() as u32);
 
     let new_sprite = GMSprite {
         name: background.name,
@@ -165,7 +153,7 @@ fn create_sprite_from_background(gm_data: &mut GMData, background: &GMBackground
         }),
     };
 
-    gm_data.sprites.sprites.push(new_sprite);
+    gm_sprites.sprites.push(new_sprite);
     new_sprite_ref
 }
 
