@@ -200,3 +200,14 @@ pub fn parse_occurrence_chain(reader: &mut DataReader, first_occurrence_pos: u32
     Ok((occurrences, name_string_id))
 }
 
+
+pub fn to_vari_instance_type(instance_type: &GMInstanceType) -> GMInstanceType {
+    match instance_type {
+        GMInstanceType::StackTop => GMInstanceType::Self_(None),
+        GMInstanceType::Builtin => GMInstanceType::Self_(None),
+        GMInstanceType::Self_(Some(_)) => GMInstanceType::Self_(None),
+        GMInstanceType::Argument => GMInstanceType::Builtin,
+        GMInstanceType::Other => GMInstanceType::Self_(None),
+        _ => instance_type.clone(),
+    }
+}

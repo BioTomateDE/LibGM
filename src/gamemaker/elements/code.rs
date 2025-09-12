@@ -398,7 +398,7 @@ pub enum GMInstruction {
     PushBuiltin(GMPushInstruction),
 
     /// Pushes an immediate signed 32-bit integer value onto the stack, encoded as a signed 16-bit integer.
-    PushImmediate(GMPushInstruction),
+    PushImmediate(i16),
 
     /// Calls a GML script/function, using its ID. Arguments are prepared prior to this instruction, in reverse order.
     /// Argument count is encoded in this instruction. Arguments are popped off of the stack.
@@ -514,7 +514,7 @@ impl GMElement for GMInstruction {
             kinds::PUSHLOC => Self::PushLocal(GMPushInstruction::parse(reader, bytes)?),
             kinds::PUSHGLB => Self::PushGlobal(GMPushInstruction::parse(reader, bytes)?),
             kinds::PUSHBLTN => Self::PushBuiltin(GMPushInstruction::parse(reader, bytes)?),
-            kinds::PUSHIM => Self::PushImmediate(GMPushInstruction::parse(reader, bytes)?),
+            kinds::PUSHIM => Self::PushImmediate(bytes.0 as i16 | ((bytes.1 as i16) << 8)),
             kinds::CALL => Self::Call(GMCallInstruction::parse(reader, bytes)?),
             kinds::CALLVAR => Self::CallVariable(GMCallVariableInstruction::parse(reader, bytes)?),
             kinds::EXTENDED => {
@@ -587,7 +587,11 @@ impl GMElement for GMInstruction {
             Self::PushLocal(instr) => instr.build(builder, opcode)?,
             Self::PushGlobal(instr) => instr.build(builder, opcode)?,
             Self::PushBuiltin(instr) => instr.build(builder, opcode)?,
-            Self::PushImmediate(instr) => instr.build(builder, opcode)?,
+            Self::PushImmediate(int16) => {
+                builder.write_i16(*int16);
+                builder.write_u8(GMDataType::Int16.into());
+                builder.write_u8(opcode);
+            },
             Self::Call(instr) => instr.build(builder, opcode)?,
             Self::CallVariable(instr) => instr.build(builder, opcode)?,
             Self::CheckArrayIndex => build_extended16(builder, -1),
@@ -1488,8 +1492,7 @@ pub fn get_instruction_size(instruction: &GMInstruction) -> u32 {
         GMInstruction::Push(instr) |
         GMInstruction::PushLocal(instr) |
         GMInstruction::PushGlobal(instr) |
-        GMInstruction::PushBuiltin(instr) |
-        GMInstruction::PushImmediate(instr) => match instr.value {
+        GMInstruction::PushBuiltin(instr) => match instr.value {
             GMCodeValue::Int16(_) => 1,
             GMCodeValue::Int64(_) => 3,
             GMCodeValue::Double(_) => 3,
