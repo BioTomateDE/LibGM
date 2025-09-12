@@ -11,7 +11,7 @@ use crate::gamemaker::elements::code::GMDataType;
 use crate::gamemaker::elements::functions::{GMFunction, GMFunctions};
 use crate::gamemaker::elements::game_objects::GMGameObject;
 use crate::gamemaker::elements::strings::GMStrings;
-use crate::gamemaker::elements::variables::GMVariable;
+use crate::gamemaker::elements::variables::{to_vari_instance_type, GMVariable};
 
 
 #[derive(Debug, Clone)]
@@ -165,7 +165,7 @@ pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<GMInstru
         "pushloc" => GMInstruction::PushLocal(parse_push(&types, line, gm_data)?),
         "pushglb" => GMInstruction::PushGlobal(parse_push(&types, line, gm_data)?),
         "pushbltn" => GMInstruction::PushBuiltin(parse_push(&types, line, gm_data)?),
-        "pushim" => GMInstruction::PushImmediate(parse_push(&types, line, gm_data)?),
+        "pushim" => GMInstruction::PushImmediate(parse_push_immediate(&types, line)?),
         "call" => GMInstruction::Call(parse_call(&types, line, gm_data)?),
         "callvar" => GMInstruction::CallVariable(parse_call_var(&types, line)?),
         "chkindex" => GMInstruction::CheckArrayIndex,
@@ -312,6 +312,11 @@ fn parse_push(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &mut GM
         GMDataType::Variable => GMCodeValue::Variable(parse_variable(line, &gm_data)?),
     };
     Ok(GMPushInstruction { value })
+}
+
+fn parse_push_immediate(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<i16, ParseError> {
+    assert_type_count(&types, 0)?;
+    parse_int(line)
 }
 
 fn parse_call(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &GMData) -> Result<GMCallInstruction, ParseError> {
@@ -528,17 +533,10 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable, Par
         Ok("$$$$temp$$$$".to_string())
     })?;
 
-    // convert instance type because of some bullshit
-    let vari_instance_type: GMInstanceType = match instance_type {
-        GMInstanceType::StackTop => GMInstanceType::Self_(None),
-        GMInstanceType::Builtin => GMInstanceType::Self_(None),
-        GMInstanceType::Self_(Some(_)) => GMInstanceType::Self_(None),
-        GMInstanceType::Argument => GMInstanceType::Builtin,
-        GMInstanceType::Other => GMInstanceType::Self_(None),
-        _ => instance_type.clone(),
-    };
-
     if instance_type != GMInstanceType::Local {
+        // convert instance type because of some bullshit
+        let vari_instance_type: GMInstanceType = to_vari_instance_type(&instance_type);
+
         for (i, var) in gm_data.variables.variables.iter().enumerate() {
             let var_name: &String = var.name.resolve(&gm_data.strings.strings)
                 .map_err(|_| ParseError::StringIndexUnresolvable(var.name.index))?;

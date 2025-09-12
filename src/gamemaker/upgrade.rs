@@ -1,9 +1,12 @@
 ﻿use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::backgrounds::{GMBackground, GMBackgroundGMS2Data};
+use crate::gamemaker::elements::code::{CodeVariable, GMCallInstruction, GMCode, GMCodeBytecode15, GMCodeValue, GMDataType, GMDoubleTypeInstruction, GMInstanceType, GMInstruction, GMPushInstruction, GMSingleTypeInstruction, GMVariableType};
 use crate::gamemaker::elements::embedded_textures::GMEmbeddedTexture2022_9;
+use crate::gamemaker::elements::functions::GMFunction;
 use crate::gamemaker::elements::general_info::GMGeneralInfoGMS2;
 use crate::gamemaker::elements::rooms::GMRoomTileTexture;
+use crate::gamemaker::elements::scripts::GMScript;
 use crate::gamemaker::elements::sequence::GMAnimSpeedType::FramesPerGameFrame;
 use crate::gamemaker::elements::sprites::{GMSprite, GMSpriteSepMaskType, GMSpriteSpecial, GMSpriteSpecialData, GMSprites};
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
@@ -22,6 +25,7 @@ fn migrate_to_gm_2022_9_(mut gm_data: GMData) -> Result<GMData, String> {
     update_rooms(&mut gm_data)?;
     update_texture_pages(&mut gm_data)?;
     update_game_objects(&mut gm_data);
+    replace_instance_create_calls(&mut gm_data)?;
     Ok(gm_data)
 }
 
@@ -183,5 +187,111 @@ fn update_game_objects(gm_data: &mut GMData) {
     for obj in &mut gm_data.game_objects.game_objects {
         obj.managed = Some(false);
     }
+}
+
+
+/// Replaces all calls to the `instance_create` function with a call to the `instance_create_depth` function.
+fn replace_instance_create_calls(gm_data: &mut GMData) -> Result<(), String> {
+    let script_name: GMRef<String> = gm_data.make_string("AcornScript_instance_create");
+
+    // create the script code entry
+    let script_code_ref: GMRef<GMCode> = GMRef::new(gm_data.codes.codes.len() as u32);
+    let script_code = GMCode {
+        name: script_name,
+        instructions: vec![
+            // push.v arg.argument2
+            // pushi.e 0
+            // conv.i.v
+            // push.v arg.argument1
+            // push.v arg.argument0
+            // call.i instance_create_depth(argc=4)
+            // ret.v
+            GMInstruction::Push(GMPushInstruction {value: GMCodeValue::Variable(CodeVariable {
+                variable: gm_data.make_variable_b15("argument2", GMInstanceType::Argument)?,
+                variable_type: GMVariableType::Normal,
+                instance_type: GMInstanceType::Argument,
+                is_int32: false,
+            }) }),
+            GMInstruction::PushImmediate(0),    // depth
+            GMInstruction::Convert(GMDoubleTypeInstruction { right: GMDataType::Int32, left: GMDataType::Variable }),
+            GMInstruction::Push(GMPushInstruction {value: GMCodeValue::Variable(CodeVariable {
+                variable: gm_data.make_variable_b15("argument1", GMInstanceType::Argument)?,
+                variable_type: GMVariableType::Normal,
+                instance_type: GMInstanceType::Argument,
+                is_int32: false,
+            }) }),
+            GMInstruction::Push(GMPushInstruction {value: GMCodeValue::Variable(CodeVariable {
+                variable: gm_data.make_variable_b15("argument0", GMInstanceType::Argument)?,
+                variable_type: GMVariableType::Normal,
+                instance_type: GMInstanceType::Argument,
+                is_int32: false,
+            }) }),
+            GMInstruction::Call(GMCallInstruction {
+                arguments_count: 4,
+                data_type: GMDataType::Int32,
+                function: gm_data.make_builtin_function("instance_create_depth")?,
+            }),
+            GMInstruction::Return(GMSingleTypeInstruction { data_type: GMDataType::Variable })
+        ],
+        bytecode15_info: Some(GMCodeBytecode15 {
+            locals_count: 0,
+            arguments_count: 3,
+            weird_local_flag: false,
+            offset: 0,
+            parent: None,
+        }),
+    };
+    gm_data.codes.codes.push(script_code);
+
+    // create the matching script (TODO: idk if SCPT is even used by the runner...)
+    // let script_ref = GMRef::new(gm_data.scripts.scripts.len() as u32);
+    gm_data.scripts.scripts.push(GMScript {
+        name: script_name,
+        is_constructor: false,
+        code: Some(script_code_ref),
+    });
+
+    // create matching function
+    // let function_ref = GMRef::new(gm_data.functions.functions.len() as u32);
+    gm_data.functions.functions.push(GMFunction {
+        name: script_name,
+    });
+
+    // // iterate over all instructions of all code entries and replace calls to `instance_create`
+    // for code in &mut gm_data.codes.codes {
+    //     // Skip child code entries
+    //     if let Some(b15) = &code.bytecode15_info {
+    //         if b15.parent.is_some() {
+    //             continue
+    //         }
+    //     }
+    //
+    //     for instruction in &mut code.instructions {
+    //         let GMInstruction::Call(call_instr) = instruction
+    //         else {continue};
+    //         let called_func: &GMFunction = call_instr.function.resolve(&gm_data.functions.functions)?;
+    //         let called_func_name: &String = called_func.name.resolve(&gm_data.strings.strings)?;
+    //         if called_func_name != "instance_create" {
+    //             continue
+    //         }
+    //
+    //         if call_instr.arguments_count != 3 {
+    //             return Err(format!("Expected 3 arguments for instance_create, found {}", call_instr.arguments_count))
+    //         }
+    //
+    //         // replace called function
+    //         call_instr.function = function_ref;
+    //     }
+    // }
+
+    // replace `instance_create` function entry? maybe that fixes it?
+    for function in &mut gm_data.functions.functions  {
+        let name: &String = function.name.resolve(&gm_data.strings.strings)?;
+        if name == "instance_create" {
+            function.name = script_name;
+        }
+    }
+
+    Ok(())
 }
 

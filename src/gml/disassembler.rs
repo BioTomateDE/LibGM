@@ -148,8 +148,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
         GMInstruction::Push(instr) |
         GMInstruction::PushLocal(instr) |
         GMInstruction::PushGlobal(instr) |
-        GMInstruction::PushBuiltin(instr) |
-        GMInstruction::PushImmediate(instr) => {
+        GMInstruction::PushBuiltin(instr) => {
             let value: String = match &instr.value {
                 GMCodeValue::Variable(code_variable) => variable_to_string(gm_data, &code_variable)?,
                 GMCodeValue::Boolean(true) => "true".to_string(),
@@ -168,6 +167,14 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
                 opcode,
                 data_type_to_string(get_data_type_from_value(&instr.value)),
                 value,
+            );
+        }
+
+        GMInstruction::PushImmediate(int16) => {
+            line = format!(
+                "{} {}",
+                opcode,
+                int16,
             );
         }
 

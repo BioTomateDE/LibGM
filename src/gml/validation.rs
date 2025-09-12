@@ -190,7 +190,7 @@ fn validate_instructions(
                                     stack.pop()?.assert_data_type(GMDataType::Int32)?;  // index
                                     validate_instance_type(stack.pop()?)?;         // instance type
                                 }
-                                _ => unimplemented!("unexpected data type 1 for pop array")
+                                _ => todo!("unexpected data type 1 for pop array")
                             }
                         }
                         GMVariableType::StackTop => {
@@ -201,23 +201,23 @@ fn validate_instructions(
                                 stack.pop()?.assert_data_type(GMDataType::Int32)?;  // instance type / object index
                                 stack.pop()?.assert_data_type(instr.type2)?;        // actual value
                             } else {
-                                unimplemented!("didnt expect pop type1 (stacktop) to be neither var not int32")
+                                todo!("didnt expect pop type1 (stacktop) to be neither var not int32")
                             }
                         }
                         GMVariableType::Instance => {
-                            unimplemented!("pop instance")
+                            todo!("pop instance")
                         }
                         GMVariableType::ArrayPushAF => {
-                            unimplemented!("pop ArrayPushAF")
+                            todo!("pop ArrayPushAF")
                         }
                         GMVariableType::ArrayPopAF => {
-                            unimplemented!("pop ArrayPopAF")
+                            todo!("pop ArrayPopAF")
                         }
                     }
                 }
 
                 GMInstruction::PopSwap(instr) => {
-                    unimplemented!("popswap not yet implemented")
+                    todo!("popswap not yet implemented")
                 }
 
                 GMInstruction::Duplicate(instr) => {
@@ -233,7 +233,7 @@ fn validate_instructions(
                 }
 
                 GMInstruction::DuplicateSwap(instr) => {
-                    unimplemented!("dupswap not yet implemented")
+                    todo!("dupswap not yet implemented")
                 }
 
                 GMInstruction::Return(instr) => {
@@ -297,13 +297,12 @@ fn validate_instructions(
                     }
                 }
 
-                GMInstruction::PopWithContextExit(_) => unimplemented!("popenv exit magic"),
+                GMInstruction::PopWithContextExit(_) => todo!("popenv exit magic"),
 
                 GMInstruction::Push(instr) |
                 GMInstruction::PushLocal(instr) |
                 GMInstruction::PushGlobal(instr) |
-                GMInstruction::PushBuiltin(instr) |
-                GMInstruction::PushImmediate(instr) => {
+                GMInstruction::PushBuiltin(instr) => {
                     let data_type: GMDataType = get_data_type_from_value(&instr.value);
 
                     if let GMCodeValue::Variable(code_var) = &instr.value {
@@ -316,9 +315,9 @@ fn validate_instructions(
                             GMVariableType::StackTop => {
                                 stack.pop()?.assert_data_type(GMDataType::Int32)?;  // instance type / object index
                             }
-                            GMVariableType::Instance => unimplemented!("push Instance"),
-                            GMVariableType::ArrayPushAF => unimplemented!("push ArrayPushAF"),
-                            GMVariableType::ArrayPopAF => unimplemented!("push ArrayPopAF"),
+                            GMVariableType::Instance => todo!("push Instance"),
+                            GMVariableType::ArrayPushAF => todo!("push ArrayPushAF"),
+                            GMVariableType::ArrayPopAF => todo!("push ArrayPopAF"),
                         }
                         // let var = code_var.variable.resolve(&gm_data.variables.variables)
                         //     .map_err(|_| CodeValidationError::VariableUnresolvable(code_var.variable.index))?;
@@ -350,6 +349,10 @@ fn validate_instructions(
                     }
                 }
 
+                GMInstruction::PushImmediate(int16) => {
+                    stack.push(VMStackItem::Int32(Some(i32::from(*int16))))
+                }
+
                 GMInstruction::Call(instr) => {
                     for _ in 0..instr.arguments_count {
                         let item: VMStackItem = stack.pop()?;
@@ -363,7 +366,7 @@ fn validate_instructions(
                 }
 
                 GMInstruction::CallVariable(instr) => {
-                    unimplemented!("callvar not yet implemented")
+                    todo!("callvar not yet implemented")
                 }
 
                 GMInstruction::SetArrayOwner => {
@@ -371,16 +374,16 @@ fn validate_instructions(
                     validate_instance_type(item)?;
                 }
 
-                GMInstruction::CheckArrayIndex => unimplemented!("CheckArrayIndex instruction"),
-                GMInstruction::PushArrayFinal => unimplemented!("PushArrayFinal instruction"),
-                GMInstruction::PopArrayFinal => unimplemented!("PopArrayFinal instruction"),
-                GMInstruction::PushArrayContainer => unimplemented!("PushArrayContainer instruction"),
-                GMInstruction::HasStaticInitialized => unimplemented!("HasStaticInitialized instruction"),
-                GMInstruction::SetStaticInitialized => unimplemented!("SetStaticInitialized instruction"),
-                GMInstruction::SaveArrayReference => unimplemented!("SaveArrayReference instruction"),
-                GMInstruction::RestoreArrayReference => unimplemented!("RestoreArrayReference instruction"),
-                GMInstruction::IsNullishValue => unimplemented!("IsNullishValue instruction"),
-                GMInstruction::PushReference(_) => unimplemented!("PushReference instruction"),
+                GMInstruction::CheckArrayIndex => todo!("CheckArrayIndex instruction"),
+                GMInstruction::PushArrayFinal => todo!("PushArrayFinal instruction"),
+                GMInstruction::PopArrayFinal => todo!("PopArrayFinal instruction"),
+                GMInstruction::PushArrayContainer => todo!("PushArrayContainer instruction"),
+                GMInstruction::HasStaticInitialized => todo!("HasStaticInitialized instruction"),
+                GMInstruction::SetStaticInitialized => todo!("SetStaticInitialized instruction"),
+                GMInstruction::SaveArrayReference => todo!("SaveArrayReference instruction"),
+                GMInstruction::RestoreArrayReference => todo!("RestoreArrayReference instruction"),
+                GMInstruction::IsNullishValue => todo!("IsNullishValue instruction"),
+                GMInstruction::PushReference(_) => todo!("PushReference instruction"),
             }
         }
     }
