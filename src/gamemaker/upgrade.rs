@@ -257,34 +257,7 @@ fn replace_instance_create_calls(gm_data: &mut GMData) -> Result<(), String> {
         name: script_name,
     });
 
-    // // iterate over all instructions of all code entries and replace calls to `instance_create`
-    // for code in &mut gm_data.codes.codes {
-    //     // Skip child code entries
-    //     if let Some(b15) = &code.bytecode15_info {
-    //         if b15.parent.is_some() {
-    //             continue
-    //         }
-    //     }
-    //
-    //     for instruction in &mut code.instructions {
-    //         let GMInstruction::Call(call_instr) = instruction
-    //         else {continue};
-    //         let called_func: &GMFunction = call_instr.function.resolve(&gm_data.functions.functions)?;
-    //         let called_func_name: &String = called_func.name.resolve(&gm_data.strings.strings)?;
-    //         if called_func_name != "instance_create" {
-    //             continue
-    //         }
-    //
-    //         if call_instr.arguments_count != 3 {
-    //             return Err(format!("Expected 3 arguments for instance_create, found {}", call_instr.arguments_count))
-    //         }
-    //
-    //         // replace called function
-    //         call_instr.function = function_ref;
-    //     }
-    // }
-
-    // replace `instance_create` function entry? maybe that fixes it?
+    // replace `instance_create` function entry
     for function in &mut gm_data.functions.functions  {
         let name: &String = function.name.resolve(&gm_data.strings.strings)?;
         if name == "instance_create" {
