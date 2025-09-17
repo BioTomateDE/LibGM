@@ -189,7 +189,7 @@ impl GMData {
         let func = GMFunction {
             name: self.make_string(name),
         };
-        self.functions.functions.push(func);    // needed to shut up the borrow checker
+        self.functions.functions.push(func);    // separation needed to shut up the borrow checker
         Ok(func_ref)
     }
 }
