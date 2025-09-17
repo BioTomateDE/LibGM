@@ -1,32 +1,39 @@
 ﻿use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::backgrounds::{GMBackground, GMBackgroundGMS2Data};
-use crate::gamemaker::elements::code::{CodeVariable, GMCallInstruction, GMCode, GMCodeBytecode15, GMCodeValue, GMDataType, GMDoubleTypeInstruction, GMInstanceType, GMInstruction, GMPushInstruction, GMSingleTypeInstruction, GMVariableType};
+use crate::gamemaker::elements::code::{CodeVariable, GMCallInstruction, GMCode, GMCodeBytecode15, GMCodeValue, GMDataType, GMDoubleTypeInstruction, GMGotoInstruction, GMInstanceType, GMInstruction, GMPopInstruction, GMPushInstruction, GMSingleTypeInstruction, GMVariableType};
 use crate::gamemaker::elements::embedded_textures::GMEmbeddedTexture2022_9;
-use crate::gamemaker::elements::functions::GMFunction;
 use crate::gamemaker::elements::general_info::GMGeneralInfoGMS2;
 use crate::gamemaker::elements::rooms::GMRoomTileTexture;
 use crate::gamemaker::elements::scripts::GMScript;
 use crate::gamemaker::elements::sequence::GMAnimSpeedType::FramesPerGameFrame;
 use crate::gamemaker::elements::sprites::{GMSprite, GMSpriteSepMaskType, GMSpriteSpecial, GMSpriteSpecialData, GMSprites};
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
+use crate::gamemaker::elements::variables::GMVariable;
 use crate::gamemaker::gm_version::{GMVersion, LTSBranch};
 
 
 /// Updates GameMaker project data to version 2022.9 LTS
-pub fn migrate_to_gm_2022_9(gm_data: GMData) -> Result<GMData, String> {
-    migrate_to_gm_2022_9_(gm_data).map_err(|e| format!("{e}\n↳ upgrading to GameMaker Version 2022.9 LTS"))
+pub fn migrate_to_gm_2022_9_lts(mut gm_data: GMData) -> Result<GMData, String> {
+    do_migrate_to_gm_2022_9(&mut gm_data).map_err(|e| format!("{e}\n↳ upgrading to GameMaker Version 2022.9 LTS"))?;
+    Ok(gm_data)
 }
 
-fn migrate_to_gm_2022_9_(mut gm_data: GMData) -> Result<GMData, String> {
-    update_general_info(&mut gm_data);
-    update_backgrounds(&mut gm_data)?;
-    update_fonts(&mut gm_data);
-    update_rooms(&mut gm_data)?;
-    update_texture_pages(&mut gm_data)?;
-    update_game_objects(&mut gm_data);
-    replace_instance_create_calls(&mut gm_data)?;
-    Ok(gm_data)
+fn do_migrate_to_gm_2022_9(gm_data: &mut GMData) -> Result<(), String> {
+    update_general_info(gm_data);
+    update_backgrounds(gm_data)?;
+    update_fonts(gm_data);
+    let ported_background_sprites_offset: usize = gm_data.sprites.sprites.len();
+    update_rooms(gm_data)?;
+    update_texture_pages(gm_data)?;
+    update_game_objects(gm_data);
+    replace_instance_create(gm_data)?;
+    replace_background_funcs(gm_data, ported_background_sprites_offset)?;
+    replace_action_funcs(gm_data)?;
+    replace_joystick_funcs(gm_data)?;
+    replace_layer_funcs(gm_data)?;
+    generate_steam_stubs(gm_data)?;
+    Ok(())
 }
 
 
@@ -190,81 +197,298 @@ fn update_game_objects(gm_data: &mut GMData) {
 }
 
 
-/// Replaces all calls to the `instance_create` function with a call to the `instance_create_depth` function.
-fn replace_instance_create_calls(gm_data: &mut GMData) -> Result<(), String> {
-    let script_name: GMRef<String> = gm_data.make_string("AcornScript_instance_create");
+/// Replaces the GMS1 `instance_create` function with the GMS2 `instance_create_depth` function.
+fn replace_instance_create(gm_data: &mut GMData) -> Result<(), String> {
+    let instructions = vec![
+        generate_push_argument_var(gm_data, 2)?,
+        GMInstruction::PushImmediate(0),    // depth
+        GMInstruction::Convert(GMDoubleTypeInstruction { right: GMDataType::Int32, left: GMDataType::Variable }),
+        generate_push_argument_var(gm_data, 1)?,
+        generate_push_argument_var(gm_data, 0)?,
+        generate_call_builtin(gm_data, "instance_create_depth", 4)?,
+        GMInstruction::Return(GMSingleTypeInstruction { data_type: GMDataType::Variable })
+    ];
+    generate_script(gm_data, "instance_create", 3, instructions)
+}
 
-    // create the script code entry
-    let script_code_ref: GMRef<GMCode> = GMRef::new(gm_data.codes.codes.len() as u32);
-    let script_code = GMCode {
-        name: script_name,
-        instructions: vec![
-            // push.v arg.argument2
-            // pushi.e 0
-            // conv.i.v
-            // push.v arg.argument1
-            // push.v arg.argument0
-            // call.i instance_create_depth(argc=4)
-            // ret.v
-            GMInstruction::Push(GMPushInstruction {value: GMCodeValue::Variable(CodeVariable {
-                variable: gm_data.make_variable_b15("argument2", GMInstanceType::Argument)?,
+
+/// Replaces the GMS1 `draw_background_part_ext` function with the new GMS2 `draw_sprite_part_ext` function.
+fn replace_background_funcs(gm_data: &mut GMData, ported_background_sprites_offset: usize) -> Result<(), String> {
+    let instructions = vec![
+        generate_push_argument_var(gm_data, 10)?,
+        generate_push_argument_var(gm_data, 9)?,
+        generate_push_argument_var(gm_data, 8)?,
+        generate_push_argument_var(gm_data, 7)?,
+        generate_push_argument_var(gm_data, 6)?,
+        generate_push_argument_var(gm_data, 5)?,
+        generate_push_argument_var(gm_data, 4)?,
+        generate_push_argument_var(gm_data, 3)?,
+        generate_push_argument_var(gm_data, 2)?,
+        generate_push_argument_var(gm_data, 1)?,
+        GMInstruction::PushImmediate(0),    // animated sprite texture index
+        GMInstruction::Convert(GMDoubleTypeInstruction { right: GMDataType::Int32, left: GMDataType::Variable }),
+        generate_push_argument_var(gm_data, 0)?,
+        GMInstruction::Push(GMPushInstruction {value: GMCodeValue::Int32(ported_background_sprites_offset as i32)}),
+        GMInstruction::Add(GMDoubleTypeInstruction { right: GMDataType::Variable, left: GMDataType::Variable }),    // index of sprite
+        generate_call_builtin(gm_data, "draw_sprite_part_ext", 12)?,
+        GMInstruction::Return(GMSingleTypeInstruction { data_type: GMDataType::Variable })
+    ];
+    generate_script(gm_data, "draw_background_part_ext", 10, instructions)?;
+
+    let instructions = vec![
+        generate_push_argument_var(gm_data, 2)?,
+        generate_push_argument_var(gm_data, 1)?,
+        GMInstruction::PushImmediate(0),    // animated sprite texture index
+        GMInstruction::Convert(GMDoubleTypeInstruction { right: GMDataType::Int32, left: GMDataType::Variable }),
+        generate_push_argument_var(gm_data, 0)?,
+        GMInstruction::Push(GMPushInstruction {value: GMCodeValue::Int32(ported_background_sprites_offset as i32)}),
+        GMInstruction::Add(GMDoubleTypeInstruction { right: GMDataType::Variable, left: GMDataType::Variable }),    // index of sprite
+        generate_call_builtin(gm_data, "draw_sprite", 4)?,
+        GMInstruction::Return(GMSingleTypeInstruction { data_type: GMDataType::Variable })
+    ];
+    generate_script(gm_data, "draw_background", 3, instructions)?;
+
+    // gms1
+    generate_script(gm_data, "background_add", 3, RET_ZERO_STUB.to_vec())?;
+
+    Ok(())
+}
+
+fn replace_action_funcs(gm_data: &mut GMData) -> Result<(), String> {
+    let is_relative_var: GMRef<GMVariable> = gm_data.make_variable_b15("__action_is_relative", GMInstanceType::Global)?;
+
+    let instructions = vec![
+        generate_push_argument_var(gm_data, 0)?,
+        GMInstruction::Pop(GMPopInstruction {
+            type1: GMDataType::Variable,
+            type2: GMDataType::Variable,
+            destination: CodeVariable {
+                variable: is_relative_var,
                 variable_type: GMVariableType::Normal,
-                instance_type: GMInstanceType::Argument,
+                instance_type: GMInstanceType::Global,
                 is_int32: false,
-            }) }),
-            GMInstruction::PushImmediate(0),    // depth
-            GMInstruction::Convert(GMDoubleTypeInstruction { right: GMDataType::Int32, left: GMDataType::Variable }),
-            GMInstruction::Push(GMPushInstruction {value: GMCodeValue::Variable(CodeVariable {
-                variable: gm_data.make_variable_b15("argument1", GMInstanceType::Argument)?,
-                variable_type: GMVariableType::Normal,
-                instance_type: GMInstanceType::Argument,
+            },
+        }),
+    ];
+    generate_script(gm_data, "action_set_relative", 1, instructions)?;
+
+    let instructions = vec![
+        // if global.__action_is_relative {
+        //     x += argument0
+        //     y += argument1
+        // } else {
+        //     x = argument0
+        //     y = argument1
+        // }
+        GMInstruction::Push(GMPushInstruction { value: GMCodeValue::Variable(CodeVariable {
+            variable: is_relative_var,
+            variable_type: GMVariableType::Normal,
+            instance_type: GMInstanceType::Global,
+            is_int32: false,
+        }) }),
+        GMInstruction::BranchUnless(GMGotoInstruction { jump_offset: 15 }),   // TODO check correctness
+
+        generate_push_var(gm_data, "x", GMInstanceType::Builtin)?,
+        generate_push_argument_var(gm_data, 0)?,
+        GMInstruction::Add(GMDoubleTypeInstruction { right: GMDataType::Variable, left: GMDataType::Variable }),
+        generate_pop_builtin_var(gm_data, "x")?,
+
+        generate_push_var(gm_data, "y", GMInstanceType::Builtin)?,
+        generate_push_argument_var(gm_data, 1)?,
+        GMInstruction::Add(GMDoubleTypeInstruction { right: GMDataType::Variable, left: GMDataType::Variable }),
+        generate_pop_builtin_var(gm_data, "y")?,
+        GMInstruction::Branch(GMGotoInstruction { jump_offset: 8 }),
+
+        generate_push_argument_var(gm_data, 0)?,
+        generate_pop_builtin_var(gm_data, "x")?,
+        generate_push_argument_var(gm_data, 1)?,
+        generate_pop_builtin_var(gm_data, "y")?,
+    ];
+    generate_script(gm_data, "action_move_to", 2, instructions)?;
+
+    // TODO:
+    generate_script(gm_data, "action_move", 2, RET_ZERO_STUB.to_vec())?;
+    generate_script(gm_data, "action_move_point", 3, RET_ZERO_STUB.to_vec())?;
+    generate_script(gm_data, "action_set_motion", 2, RET_ZERO_STUB.to_vec())?;
+    generate_script(gm_data, "action_previous_room", 0, RET_ZERO_STUB.to_vec())?;
+
+    let instructions = vec![
+        generate_call_builtin(gm_data, "instance_destroy", 0)?,
+    ];
+    generate_script(gm_data, "action_kill_object", 0, instructions)?;
+
+
+    let instructions = vec![
+        generate_push_argument_var(gm_data, 0)?,
+        generate_push_argument_var(gm_data, 2)?,
+        generate_push_argument_var(gm_data, 1)?,
+        generate_call_builtin(gm_data, "instance_create", 3)?,
+    ];
+    generate_script(gm_data, "action_create_object", 3, instructions)?;
+
+
+    let instructions = vec![
+        generate_push_argument_var(gm_data, 0)?,
+        GMInstruction::PushImmediate(-1),   // Instance Type: Self
+        generate_push_argument_var(gm_data, 1)?,
+        GMInstruction::Pop(GMPopInstruction {
+            type1: GMDataType::Variable,
+            type2: GMDataType::Variable,
+            destination: CodeVariable {
+                variable: gm_data.make_variable_b15("alarm", GMInstanceType::Builtin)?,
+                variable_type: GMVariableType::Array,
+                instance_type: GMInstanceType::Self_(None),
                 is_int32: false,
-            }) }),
-            GMInstruction::Push(GMPushInstruction {value: GMCodeValue::Variable(CodeVariable {
-                variable: gm_data.make_variable_b15("argument0", GMInstanceType::Argument)?,
-                variable_type: GMVariableType::Normal,
-                instance_type: GMInstanceType::Argument,
-                is_int32: false,
-            }) }),
-            GMInstruction::Call(GMCallInstruction {
-                arguments_count: 4,
-                data_type: GMDataType::Int32,
-                function: gm_data.make_builtin_function("instance_create_depth")?,
-            }),
-            GMInstruction::Return(GMSingleTypeInstruction { data_type: GMDataType::Variable })
-        ],
+            },
+        })
+    ];
+    generate_script(gm_data, "action_set_alarm", 2, instructions)?;
+
+    let instructions = vec![
+        generate_push_argument_var(gm_data, 0)?,
+        generate_pop_builtin_var(gm_data, "gravity_direction")?,
+        generate_push_argument_var(gm_data, 1)?,
+        generate_pop_builtin_var(gm_data, "gravity")?,
+    ];
+    generate_script(gm_data, "action_set_gravity", 2, instructions)?;
+
+    let instructions = vec![
+        generate_push_argument_var(gm_data, 0)?,
+        generate_pop_builtin_var(gm_data, "hspeed")?,
+    ];
+    generate_script(gm_data, "action_set_hspeed", 1, instructions)?;
+
+    let instructions = vec![
+        generate_push_argument_var(gm_data, 0)?,
+        generate_pop_builtin_var(gm_data, "vspeed")?,
+    ];
+    generate_script(gm_data, "action_set_vspeed", 1, instructions)?;
+
+    let instructions = vec![
+        generate_push_argument_var(gm_data, 0)?,
+        generate_pop_builtin_var(gm_data, "friction")?,
+    ];
+    generate_script(gm_data, "action_set_friction", 1, instructions)?;
+
+    Ok(())
+}
+
+
+fn replace_joystick_funcs(gm_data: &mut GMData) -> Result<(), String> {
+    // TODO
+    generate_script(gm_data, "joystick_has_pov", 1, RET_ZERO_STUB.to_vec())?;
+    generate_script(gm_data, "joystick_buttons", 1, RET_ZERO_STUB.to_vec())?;
+    generate_script(gm_data, "joystick_check_button", 2, RET_ZERO_STUB.to_vec())?;
+    generate_script(gm_data, "joystick_exists", 1, RET_ZERO_STUB.to_vec())?;
+    generate_script(gm_data, "joystick_xpos", 1, RET_ZERO_STUB.to_vec())?;
+    generate_script(gm_data, "joystick_ypos", 1, RET_ZERO_STUB.to_vec())?;
+    generate_script(gm_data, "joystick_direction", 1, RET_ZERO_STUB.to_vec())?;
+    generate_script(gm_data, "joystick_pov", 1, RET_ZERO_STUB.to_vec())?;
+    Ok(())
+}
+
+
+fn replace_layer_funcs(gm_data: &mut GMData) -> Result<(), String> {
+    // TODO
+    generate_script(gm_data, "tile_layer_hide", 1, RET_ZERO_STUB.to_vec())?;
+    generate_script(gm_data, "tile_layer_show", 1, RET_ZERO_STUB.to_vec())?;
+    generate_script(gm_data, "tile_layer_shift", 3, RET_ZERO_STUB.to_vec())?;
+    Ok(())
+}
+
+
+/// Replaces the steam cloud data functions with stub functions that do nothing.
+fn generate_steam_stubs(gm_data: &mut GMData) -> Result<(), String> {
+    generate_script(gm_data, "steam_initialised", 0, RET_ZERO_STUB.to_vec())?;
+    generate_script(gm_data, "steam_file_exists", 1, RET_ZERO_STUB.to_vec())?;
+    generate_script(gm_data, "steam_file_delete", 1, RET_ZERO_STUB.to_vec())?;
+    generate_script(gm_data, "steam_file_write_file", 2, RET_ZERO_STUB.to_vec())?;
+
+    Ok(())
+}
+
+
+const RET_ZERO_STUB: &[GMInstruction] = &[
+    GMInstruction::PushImmediate(0),
+    GMInstruction::Convert(GMDoubleTypeInstruction { right: GMDataType::Int32, left: GMDataType::Variable }),
+    GMInstruction::Return(GMSingleTypeInstruction { data_type: GMDataType::Variable })
+];
+
+
+fn generate_script(gm_data: &mut GMData, name: &str, arguments_count: u16, instructions: Vec<GMInstruction>) -> Result<(), String> {
+    /// TODO: code locals (FUNC code locals and maybe `arguments`?)
+    let name_ref: GMRef<String> = gm_data.make_string(name);
+
+    let code_ref: GMRef<GMCode> = GMRef::new(gm_data.codes.codes.len() as u32);
+    let code = GMCode {
+        name: name_ref,
+        instructions,
         bytecode15_info: Some(GMCodeBytecode15 {
             locals_count: 0,
-            arguments_count: 3,
+            arguments_count,
             weird_local_flag: false,
             offset: 0,
             parent: None,
         }),
     };
-    gm_data.codes.codes.push(script_code);
+    gm_data.codes.codes.push(code);
 
-    // create the matching script (TODO: idk if SCPT is even used by the runner...)
-    // let script_ref = GMRef::new(gm_data.scripts.scripts.len() as u32);
     gm_data.scripts.scripts.push(GMScript {
-        name: script_name,
+        name: name_ref,
         is_constructor: false,
-        code: Some(script_code_ref),
+        code: Some(code_ref),
     });
-
-    // create matching function
-    // let function_ref = GMRef::new(gm_data.functions.functions.len() as u32);
-    gm_data.functions.functions.push(GMFunction {
-        name: script_name,
-    });
-
-    // replace `instance_create` function entry
-    for function in &mut gm_data.functions.functions  {
-        let name: &String = function.name.resolve(&gm_data.strings.strings)?;
-        if name == "instance_create" {
-            function.name = script_name;
-        }
-    }
 
     Ok(())
+}
+
+
+fn generate_push_argument_var(gm_data: &mut GMData, index: u8) -> Result<GMInstruction, String> {
+    let name: String = format!("argument{index}");
+    let code_variable = CodeVariable {
+        variable: gm_data.make_variable_b15(&name, GMInstanceType::Argument)?,
+        variable_type: GMVariableType::Normal,
+        instance_type: GMInstanceType::Argument,
+        is_int32: false,
+    };
+    Ok(GMInstruction::PushBuiltin(GMPushInstruction {
+        value: GMCodeValue::Variable(code_variable)
+    }))
+}
+
+
+fn generate_push_var(gm_data: &mut GMData, name: &str, instance_type: GMInstanceType) -> Result<GMInstruction, String> {
+    let code_variable = CodeVariable {
+        variable: gm_data.make_variable_b15(name, instance_type.clone())?,
+        variable_type: GMVariableType::Normal,
+        instance_type,
+        is_int32: false,
+    };
+    Ok(GMInstruction::Push(GMPushInstruction {
+        value: GMCodeValue::Variable(code_variable)
+    }))
+}
+
+
+fn generate_pop_builtin_var(gm_data: &mut GMData, name: &str) -> Result<GMInstruction, String> {
+    Ok(GMInstruction::Pop(GMPopInstruction {
+        type1: GMDataType::Variable,
+        type2: GMDataType::Variable,
+        destination: CodeVariable {
+            variable: gm_data.make_variable_b15(name, GMInstanceType::Builtin)?,
+            variable_type: GMVariableType::Normal,
+            instance_type: GMInstanceType::Self_(None),
+            is_int32: false,
+        },
+    }))
+}
+
+
+fn generate_call_builtin(gm_data: &mut GMData, function_name: &'static str, arguments_count: u8) -> Result<GMInstruction, String> {
+    Ok(GMInstruction::Call(GMCallInstruction {
+        arguments_count,
+        data_type: GMDataType::Int32,
+        function: gm_data.make_builtin_function(function_name)?,
+    }))
 }
 
