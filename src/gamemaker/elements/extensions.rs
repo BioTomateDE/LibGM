@@ -1,6 +1,7 @@
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::element::{GMChunkElement, GMElement};
+use crate::gamemaker::gm_version::GMVersion;
 use crate::gamemaker::serialize::DataBuilder;
 use crate::utility::num_enum_from;
 
@@ -23,12 +24,9 @@ impl GMElement for GMExtensions {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
         let extensions: Vec<GMExtension> = reader.read_pointer_list()?;
         
-        // Strange data for each extension, some kind of unique identifier based on
-        // the product ID for each of them
-        // NOTE: I do not know if 1773 is the earliest version which contains product IDs.
+        // Strange data for each extension, some kind of unique identifier based on the product ID for each of them
         let mut product_id_data = Vec::with_capacity(extensions.len());
-        let ver = &reader.general_info.version;
-        if ver.major >= 2 || (ver.major == 1 && ver.build >= 1773) || (ver.major == 1 && ver.build == 1539) {
+        if product_id_data_eligible(&reader.general_info.version) {
             log::debug!("Scuffed product ID data for extensions detected");
             for _ in 0..extensions.len() {
                 let bytes: [u8; 16] = reader.read_bytes_const::<16>()?.to_owned();
@@ -42,8 +40,28 @@ impl GMElement for GMExtensions {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
         if !self.exists { return Ok(()) }
         builder.write_pointer_list(&self.extensions)?;
-        for data in &self.product_id_data {
-            builder.write_bytes(data);
+
+        if !product_id_data_eligible(&builder.gm_data.general_info.version) {
+            return Ok(())
+        }
+
+        let extension_count = self.extensions.len();
+        let product_id_count = self.product_id_data.len();
+
+        if product_id_count > extension_count {
+            return Err(format!(
+                "More Product ID data than extensions: {} > {}",
+                product_id_count, extension_count,
+            ))
+        }
+        if product_id_count < extension_count {
+            log::warn!("The last {extension_count} extensions don't have any Product ID data; null bytes will be written instead");
+        }
+
+        let mut product_id_data = self.product_id_data.clone();
+        product_id_data.resize(extension_count, [0; 16]);
+        for data in product_id_data {
+            builder.write_bytes(&data);
         }
         Ok(())
     }
@@ -237,5 +255,11 @@ pub enum GMExtensionOptionKind {
     Boolean = 0,
     Number = 1,
     String = 2,
+}
+
+
+fn product_id_data_eligible(ver: &GMVersion) -> bool {
+    // NOTE: I do not know if 1773 is the earliest version which contains product IDs.
+    ver.major >= 2 || (ver.major == 1 && ver.build >= 1773) || (ver.major == 1 && ver.build == 1539)
 }
 
