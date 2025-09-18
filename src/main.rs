@@ -98,7 +98,7 @@ fn main_open_and_close() -> Result<(), String> {
     // }
 
     // upgrade gamemaker version
-    let gm_data = gamemaker::upgrade::migrate_to_gm_2022_9_lts(gm_data)?;
+    let gm_data = gamemaker::upgrade::upgrade_to_2023_lts(gm_data)?;
 
     // build data file
     log::info!("Building data file");

@@ -11,35 +11,48 @@ use crate::gamemaker::elements::sprites::{GMSprite, GMSpriteSepMaskType, GMSprit
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::elements::variables::GMVariable;
 use crate::gamemaker::gm_version::{GMVersion, LTSBranch};
-
+use crate::utility::Stopwatch;
 
 /// Updates GameMaker project data to version 2022.9 LTS
-pub fn migrate_to_gm_2022_9_lts(mut gm_data: GMData) -> Result<GMData, String> {
-    do_migrate_to_gm_2022_9(&mut gm_data).map_err(|e| format!("{e}\n↳ upgrading to GameMaker Version 2022.9 LTS"))?;
+pub fn upgrade_to_2023_lts(mut gm_data: GMData) -> Result<GMData, String> {
+    upgrade_to_2023_lts_(&mut gm_data).map_err(|e| format!("{e}\n↳ upgrading to GameMaker Version 2023 LTS"))?;
     Ok(gm_data)
 }
 
-fn do_migrate_to_gm_2022_9(gm_data: &mut GMData) -> Result<(), String> {
-    update_general_info(gm_data);
-    update_backgrounds(gm_data)?;
-    update_fonts(gm_data);
+fn upgrade_to_2023_lts_(gm_data: &mut GMData) -> Result<(), String> {
+    let stopwatch = Stopwatch::start();
     let ported_background_sprites_offset: usize = gm_data.sprites.sprites.len();
+    update_general_info(gm_data);
+    log::trace!("update_general_info took {stopwatch}");
+    update_backgrounds(gm_data)?;
+    log::trace!("update_backgrounds took {stopwatch}");
+    update_fonts(gm_data);
+    log::trace!("update_fonts took {stopwatch}");
     update_rooms(gm_data)?;
+    log::trace!("update_rooms took {stopwatch}");
     update_texture_pages(gm_data)?;
+    log::trace!("update_texture_pages took {stopwatch}");
     update_game_objects(gm_data);
+    log::trace!("update_game_objects took {stopwatch}");
     replace_instance_create(gm_data)?;
+    log::trace!("replace_instance_create took {stopwatch}");
     replace_background_funcs(gm_data, ported_background_sprites_offset)?;
+    log::trace!("replace_background_funcs took {stopwatch}");
     replace_action_funcs(gm_data)?;
+    log::trace!("replace_action_funcs took {stopwatch}");
     replace_joystick_funcs(gm_data)?;
+    log::trace!("replace_joystick_funcs took {stopwatch}");
     replace_layer_funcs(gm_data)?;
+    log::trace!("replace_layer_funcs took {stopwatch}");
     generate_steam_stubs(gm_data)?;
+    log::trace!("generate_steam_stubs took {stopwatch}");
     Ok(())
 }
 
 
 /// Updates general project information for GM 2022.9
 fn update_general_info(gm_data: &mut GMData) {
-    gm_data.general_info.version = GMVersion::new(2022, 9, 0, 0, LTSBranch::LTS);
+    gm_data.general_info.version = GMVersion::new(2023, 6, 0, 0, LTSBranch::LTS);
     gm_data.general_info.bytecode_version = 17;
     gm_data.general_info.gms2_info = Some(GMGeneralInfoGMS2 {
         random_uid: [0; 4],
