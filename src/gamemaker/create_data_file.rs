@@ -1,3 +1,5 @@
+use std::path::Path;
+use image::{DynamicImage, ImageReader};
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::element::GMChunkElement;
@@ -8,29 +10,29 @@ use crate::gamemaker::elements::code::GMCodes;
 use crate::gamemaker::elements::data_files::GMDataFiles;
 use crate::gamemaker::elements::embedded_audio::GMEmbeddedAudios;
 use crate::gamemaker::elements::embedded_images::GMEmbeddedImages;
-use crate::gamemaker::elements::embedded_textures::GMEmbeddedTextures;
+use crate::gamemaker::elements::embedded_textures::{GMEmbeddedTexture, GMEmbeddedTexture2022_9, GMEmbeddedTextures, GMImage};
 use crate::gamemaker::elements::extensions::GMExtensions;
 use crate::gamemaker::elements::feature_flags::GMFeatureFlags;
 use crate::gamemaker::elements::filter_effects::GMFilterEffects;
 use crate::gamemaker::elements::fonts::GMFonts;
 use crate::gamemaker::elements::functions::GMFunctions;
-use crate::gamemaker::elements::game_objects::GMGameObjects;
+use crate::gamemaker::elements::game_objects::{GMGameObject, GMGameObjectCollisionShape, GMGameObjects};
 use crate::gamemaker::elements::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMGeneralInfoGMS2};
 use crate::gamemaker::elements::global_init::{GMGameEndScripts, GMGlobalInitScripts};
 use crate::gamemaker::elements::languages::GMLanguageInfo;
 use crate::gamemaker::elements::options::{GMOptions, GMOptionsConstant, GMOptionsFlags};
 use crate::gamemaker::elements::particles::{GMParticleEmitters, GMParticleSystems};
 use crate::gamemaker::elements::paths::GMPaths;
-use crate::gamemaker::elements::rooms::{GMRoom, GMRoomFlags, GMRooms};
+use crate::gamemaker::elements::rooms::{GMRoom, GMRoomFlags, GMRoomGameObject, GMRooms};
 use crate::gamemaker::elements::scripts::GMScripts;
 use crate::gamemaker::elements::sequence::GMSequences;
 use crate::gamemaker::elements::shaders::GMShaders;
 use crate::gamemaker::elements::sounds::GMSounds;
-use crate::gamemaker::elements::sprites::GMSprites;
+use crate::gamemaker::elements::sprites::{GMSprite, GMSpriteSepMaskType, GMSprites};
 use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::tags::GMTags;
 use crate::gamemaker::elements::texture_group_info::GMTextureGroupInfos;
-use crate::gamemaker::elements::texture_page_items::GMTexturePageItems;
+use crate::gamemaker::elements::texture_page_items::{GMTexturePageItem, GMTexturePageItems};
 use crate::gamemaker::elements::timelines::GMTimelines;
 use crate::gamemaker::elements::ui_nodes::GMRootUINodes;
 use crate::gamemaker::elements::variables::{GMVariables, GMVariablesB15Header};
@@ -77,7 +79,7 @@ pub fn new_data_file(target_version: GMVersion, target_bytecode: u8) -> GMData {
         unknown_value: 0,
         game_file_name: data.make_string("new_acorngm_game"),
         config: data.make_string("Default"),
-        last_object_id: 100_000,
+        last_object_id: 100_001,
         last_tile_id: 10_000_000,
         game_id: 0,
         directplay_guid: uuid::Builder::from_bytes([0; 16]).into_uuid(),
@@ -252,6 +254,70 @@ pub fn new_data_file(target_version: GMVersion, target_bytecode: u8) -> GMData {
         exists: true,
     };
 
+    import_texture_page(&mut data, Path::new("/home/biotomatede/Pictures/ut_txt/dr3_placeholder1.png"));
+
+    data.texture_page_items.texture_page_items.push(GMTexturePageItem {
+        source_x: 0,
+        source_y: 0,
+        source_width: 256,
+        source_height: 256,
+        target_x: 0,
+        target_y: 0,
+        target_width: 256,
+        target_height: 256,
+        bounding_width: 0,
+        bounding_height: 0,
+        texture_page: GMRef::new(0),
+    });
+
+    let sprite = GMSprite {
+        name: data.make_string("spr_whatever"),
+        width: 256,
+        height: 256,
+        margin_left: 0,
+        margin_right: 0,
+        margin_bottom: 0,
+        margin_top: 0,
+        transparent: false,
+        smooth: true,
+        preload: true,
+        bbox_mode: 0,
+        sep_masks: GMSpriteSepMaskType::AxisAlignedRect,
+        origin_x: 0,
+        origin_y: 0,
+        textures: vec![Some(GMRef::new(0))],
+        collision_masks: vec![],
+        special_fields: None,
+    };
+    data.sprites.sprites.push(sprite);
+
+    let game_object = GMGameObject {
+        name: data.make_string("obj_whatever"),
+        sprite: Some(GMRef::new(0)),
+        visible: true,
+        managed: Some(false),
+        solid: false,
+        depth: 0,
+        persistent: false,
+        parent: None,
+        texture_mask: None,
+        uses_physics: false,
+        is_sensor: false,
+        collision_shape: GMGameObjectCollisionShape::Box,
+        density: 0.0,
+        restitution: 0.0,
+        group: 0,
+        linear_damping: 0.0,
+        angular_damping: 0.0,
+        friction: 0.0,
+        awake: false,
+        kinematic: false,
+        physics_shape_vertices: vec![],
+        uses_physics_shape_vertex: false,
+        events: vec![],
+    };
+    data.game_objects.game_objects.push(game_object);
+
     data.rooms = GMRooms {
         rooms: vec![
             GMRoom {
@@ -273,7 +339,22 @@ pub fn new_data_file(target_version: GMVersion, target_bytecode: u8) -> GMData {
                 },
                 backgrounds: vec![],
                 views: vec![],
-                game_objects: vec![],
+                game_objects: vec![
+                    GMRoomGameObject {
+                        x: 67,
+                        y: 41,
+                        object_definition: GMRef::new(0),
+                        instance_id: 100_000,
+                        creation_code: None,
+                        scale_x: 1.0,
+                        scale_y: 1.0,
+                        image_speed: Some(1.0),
+                        image_index: Some(0),
+                        color: 0,
+                        rotation: 0.0,
+                        pre_create_code: None,
+                    }
+                ],
                 tiles: vec![],
                 instance_creation_order_ids: vec![],
                 world: false,
@@ -380,4 +461,19 @@ const fn generate_font_padding() -> [u8; 512] {
     data
 }
 
+
+fn import_texture_page(gm_data: &mut GMData, image_path: &Path) {
+    let image: DynamicImage = ImageReader::open(image_path).unwrap().decode().unwrap();
+    gm_data.embedded_textures.texture_pages.push(GMEmbeddedTexture {
+        scaled: 0,
+        generated_mips: Some(0),
+        texture_block_size: Some(0xDEADC0DE),
+        data_2022_9: Some(GMEmbeddedTexture2022_9 {
+            texture_width: image.width() as i32,
+            texture_height: image.height() as i32,
+            index_in_group: 0,
+        }),
+        image: Some(GMImage::DynImg(image)),
+    });
+}
 
