@@ -35,12 +35,22 @@ impl Display for Stopwatch {
 
 
 #[macro_export]
+macro_rules! bench {
+    ($label:expr, $expr:expr) => {{
+        let stopwatch = crate::utility::Stopwatch::start();
+        let result = $expr;
+        log::trace!("{} took {}", $label, stopwatch);
+        result
+    }};
+}
+
+#[macro_export]
 macro_rules! bench_export {
     ($label:expr, $expr:expr) => {{
-        let _stopwatch = crate::utility::Stopwatch::start();
-        let _result = $expr;
-        ::log::trace!("Exporting {} took {}", $label, _stopwatch);
-        _result
+        let stopwatch = crate::utility::Stopwatch::start();
+        let result = $expr;
+        log::trace!("Exporting {} took {}", $label, stopwatch);
+        result
     }};
 }
 

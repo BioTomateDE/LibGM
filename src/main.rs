@@ -114,6 +114,25 @@ fn main_open_and_close() -> Result<(), String> {
 }
 
 
+fn main_new_data_file() -> Result<(), String> {
+    use crate::gamemaker::data::GMData;
+    use crate::gamemaker::create_data_file::new_data_file;
+    use crate::gamemaker::serialize::build_data_file;
+    use crate::gamemaker::gm_version::{GMVersion, LTSBranch};
+
+    let args: Vec<String> = std::env::args().collect();
+    let data_file_path: &Path = path_from_arg(args.get(1), "data_out.win");
+
+    let gm_data: GMData = new_data_file(GMVersion::new(2023, 6, 0, 0, LTSBranch::LTS), 17);
+    let data_raw: Vec<u8> = build_data_file(&gm_data).map_err(|e| format!("\n{e}\n↳ while building data file"))?;
+    drop(gm_data);
+
+    log::info!("Writing data file \"{}\"", data_file_path.display());
+    write_data_file(data_raw, data_file_path)?;
+    Ok(())
+}
+
+
 // fn main_export_mod() -> Result<(), String> {
 //     use crate::modding::export::{export_mod};
 //     use crate::gamemaker::deserialize::{parse_data_file, GMData};
@@ -152,7 +171,7 @@ fn main() {
     biologischer_log::init(env!("CARGO_PKG_NAME"));
     log::debug!("============= LibGM v{} =============", env!("CARGO_PKG_VERSION"));
     
-    if let Err(e) = main_open_and_close() {
+    if let Err(e) = main_new_data_file() {
         log::error!("{e}");
         exit(1);
     }

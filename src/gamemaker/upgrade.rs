@@ -1,4 +1,6 @@
-﻿use crate::gamemaker::data::GMData;
+﻿use std::collections::HashMap;
+use crate::bench;
+use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::backgrounds::{GMBackground, GMBackgroundGMS2Data};
 use crate::gamemaker::elements::code::{CodeVariable, GMCallInstruction, GMCode, GMCodeBytecode15, GMCodeValue, GMDataType, GMDoubleTypeInstruction, GMGotoInstruction, GMInstanceType, GMInstruction, GMPopInstruction, GMPushInstruction, GMSingleTypeInstruction, GMVariableType};
@@ -11,41 +13,31 @@ use crate::gamemaker::elements::sprites::{GMSprite, GMSpriteSepMaskType, GMSprit
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::elements::variables::GMVariable;
 use crate::gamemaker::gm_version::{GMVersion, LTSBranch};
-use crate::utility::Stopwatch;
 
-/// Updates GameMaker project data to version 2022.9 LTS
+
+/// Updates GameMaker data file from GMS1 to version 2023.6 LTS, bytecode 17.
 pub fn upgrade_to_2023_lts(mut gm_data: GMData) -> Result<GMData, String> {
-    upgrade_to_2023_lts_(&mut gm_data).map_err(|e| format!("{e}\n↳ upgrading to GameMaker Version 2023 LTS"))?;
+    bench!("Upgrading to 2023 LTS",
+        upgrade_to_2023_lts_(&mut gm_data)
+        .map_err(|e| format!("{e}\n↳ upgrading to GameMaker Version 2023 LTS"))?
+    );
     Ok(gm_data)
 }
 
 fn upgrade_to_2023_lts_(gm_data: &mut GMData) -> Result<(), String> {
-    let stopwatch = Stopwatch::start();
     let ported_background_sprites_offset: usize = gm_data.sprites.sprites.len();
-    update_general_info(gm_data);
-    log::trace!("update_general_info took {stopwatch}");
-    update_backgrounds(gm_data)?;
-    log::trace!("update_backgrounds took {stopwatch}");
-    update_fonts(gm_data);
-    log::trace!("update_fonts took {stopwatch}");
-    update_rooms(gm_data)?;
-    log::trace!("update_rooms took {stopwatch}");
-    update_texture_pages(gm_data)?;
-    log::trace!("update_texture_pages took {stopwatch}");
-    update_game_objects(gm_data);
-    log::trace!("update_game_objects took {stopwatch}");
-    replace_instance_create(gm_data)?;
-    log::trace!("replace_instance_create took {stopwatch}");
-    replace_background_funcs(gm_data, ported_background_sprites_offset)?;
-    log::trace!("replace_background_funcs took {stopwatch}");
-    replace_action_funcs(gm_data)?;
-    log::trace!("replace_action_funcs took {stopwatch}");
-    replace_joystick_funcs(gm_data)?;
-    log::trace!("replace_joystick_funcs took {stopwatch}");
-    replace_layer_funcs(gm_data)?;
-    log::trace!("replace_layer_funcs took {stopwatch}");
-    generate_steam_stubs(gm_data)?;
-    log::trace!("generate_steam_stubs took {stopwatch}");
+    bench!("update_general_info", update_general_info(gm_data));
+    bench!("update_backgrounds", update_backgrounds(gm_data)?);
+    bench!("update_fonts", update_fonts(gm_data));
+    bench!("update_rooms", update_rooms(gm_data)?);
+    bench!("update_texture_pages", update_texture_pages(gm_data)?);
+    bench!("update_game_objects", update_game_objects(gm_data));
+    bench!("replace_instance_create", replace_instance_create(gm_data)?);
+    bench!("replace_background_funcs", replace_background_funcs(gm_data, ported_background_sprites_offset)?);
+    bench!("replace_action_funcs", replace_action_funcs(gm_data)?);
+    bench!("replace_joystick_funcs", replace_joystick_funcs(gm_data)?);
+    bench!("replace_layer_funcs", replace_layer_funcs(gm_data)?);
+    bench!("generate_steam_stubs", generate_steam_stubs(gm_data)?);
     Ok(())
 }
 
@@ -102,6 +94,8 @@ fn update_fonts(gm_data: &mut GMData) {
 
 /// Updates room data, converting background tiles to sprite tiles
 fn update_rooms(gm_data: &mut GMData) -> Result<(), String> {
+    let mut sprites_by_name: HashMap<GMRef<String>, GMRef<GMSprite>> = HashMap::new();
+
     for room in &mut gm_data.rooms.rooms {
         // Update game objects in room
         for obj in &mut room.game_objects {
@@ -120,7 +114,11 @@ fn update_rooms(gm_data: &mut GMData) -> Result<(), String> {
                 .transpose()?;
 
             // Find or create sprite for this background
-            let sprite_ref: GMRef<GMSprite> = find_or_create_sprite_for_background(&mut gm_data.sprites, background, texture);
+            let sprite_ref: GMRef<GMSprite> = sprites_by_name.get(&background.name).copied().unwrap_or_else(|| {
+                let new_sprite_ref: GMRef<GMSprite> = GMRef::new(gm_data.sprites.sprites.len() as u32);
+                sprites_by_name.insert(background.name, new_sprite_ref);
+                create_sprite_from_background(&mut gm_data.sprites, background, texture)
+            });
 
             // Update tile to use sprite instead of background
             tile.texture = Some(GMRoomTileTexture::Sprite(sprite_ref));
@@ -128,20 +126,6 @@ fn update_rooms(gm_data: &mut GMData) -> Result<(), String> {
     }
 
     Ok(())
-}
-
-
-/// Finds existing sprite with same name as background, or creates a new one
-fn find_or_create_sprite_for_background(gm_sprites: &mut GMSprites, background: &GMBackground, texture: Option<&GMTexturePageItem>) -> GMRef<GMSprite> {
-    // Try to find existing sprite with same name
-    for (i, sprite) in gm_sprites.sprites.iter().enumerate() {
-        if sprite.name == background.name {
-            return GMRef::new(i as u32);
-        }
-    }
-
-    // Create new sprite from background
-    create_sprite_from_background(gm_sprites, background, texture)
 }
 
 
