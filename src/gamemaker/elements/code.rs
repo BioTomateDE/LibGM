@@ -221,33 +221,6 @@ pub struct GMCodeBytecode15 {
 }
 
 
-// #[derive(Debug, Clone, PartialEq)]
-// pub enum GMInstructionData {
-//     Empty,
-//     SingleType(GMSingleTypeInstruction),
-//     Duplicate(GMDuplicateInstruction),
-//     DuplicateSwap(GMDuplicateSwapInstruction),
-//     CallVariable(GMCallVariableInstruction),
-//     DoubleType(GMDoubleTypeInstruction),
-//     Comparison(GMComparisonInstruction),
-//     Goto(GMGotoInstruction),
-//     Pop(GMPopInstruction),
-//     PopSwap(GMPopSwapInstruction),
-//     Push(GMPushInstruction),
-//     Call(GMCallInstruction),
-//     Extended16(GMExtendedInstruction16),
-//     Extended32(GMExtendedInstruction32),
-//     ExtendedFunc(GMExtendedInstructionFunction),
-// }
-
-// #[derive(Debug, Clone, PartialEq)]
-// pub struct GMInstruction {
-//     pub opcode: GMOpcode,
-//     pub kind: GMInstructionData,
-// }
-
-
-
 mod kinds {
     pub const CONV: u8 = 0x07;
     pub const MUL: u8 = 0x08;

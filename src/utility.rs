@@ -54,7 +54,6 @@ macro_rules! bench_export {
     }};
 }
 
-
 pub trait DurationExt {
     fn ms(&self) -> String;
 }
@@ -187,3 +186,21 @@ pub fn filename_to_str(path: &Path) -> String {
         .to_string()
 }
 
+
+pub struct SmallMap<K, V>(Vec<(K, V)>);
+impl<K: PartialEq, V> SmallMap<K, V> {
+    pub fn new() -> Self {
+        Self { 0: vec![] }
+    }
+    pub fn insert(&mut self, key: K, value: V) {
+        self.0.push((key, value))
+    }
+    pub fn get(&self, key: &K) -> Option<&V> {
+        self.0.iter().find_map(|(k, v)| (k == key).then_some(v))
+    }
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
+// TODO: cleanup dependencies: bimap, many_to_many, arrayvec. either remove or implement yourself

@@ -413,7 +413,7 @@ const RET_ZERO_STUB: &[GMInstruction] = &[
 
 
 fn generate_script(gm_data: &mut GMData, name: &str, arguments_count: u16, instructions: Vec<GMInstruction>) -> Result<(), String> {
-    /// TODO: code locals (FUNC code locals and maybe `arguments`?)
+    // TODO: code locals (FUNC code locals and maybe `arguments`?)
     let name_ref: GMRef<String> = gm_data.make_string(name);
 
     let code_ref: GMRef<GMCode> = GMRef::new(gm_data.codes.codes.len() as u32);
