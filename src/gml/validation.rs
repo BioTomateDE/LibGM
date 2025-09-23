@@ -216,7 +216,7 @@ fn validate_instructions(
                     }
                 }
 
-                GMInstruction::PopSwap(instr) => {
+                GMInstruction::PopSwap(_instr) => {
                     todo!("popswap not yet implemented")
                 }
 
@@ -232,7 +232,7 @@ fn validate_instructions(
                     }
                 }
 
-                GMInstruction::DuplicateSwap(instr) => {
+                GMInstruction::DuplicateSwap(_instr) => {
                     todo!("dupswap not yet implemented")
                 }
 
@@ -365,7 +365,7 @@ fn validate_instructions(
                     stack.push(VMStackItem::Variable);
                 }
 
-                GMInstruction::CallVariable(instr) => {
+                GMInstruction::CallVariable(_instr) => {
                     todo!("callvar not yet implemented")
                 }
 
