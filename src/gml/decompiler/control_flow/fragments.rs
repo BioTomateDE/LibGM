@@ -8,8 +8,6 @@ use crate::utility::SmallMap;
 #[derive(Debug, Clone)]
 pub struct Fragment<'a> {
     pub base_node: BaseNode,
-    
-    pub children: Vec<NodeRef>,
 
     /// The base blocks that this fragment is composed of.
     pub blocks: Vec<NodeRef>,
@@ -25,7 +23,6 @@ impl<'a> Fragment<'a> {
     pub fn new(start_address: u32, end_address: u32, code_entry: &'a GMCode, root_scope: bool) -> Self {
         Self {
             base_node: BaseNode::new(start_address, end_address),
-            children: vec![],
             blocks: vec![],
             code_entry,
             root_scope,
@@ -63,28 +60,33 @@ pub fn find_fragments(cfg: &mut ControlFlowGraph, code_ref: GMRef<GMCode>) -> Re
         if block.start_address == current.end_address {
             if stack.is_empty() {
                 // We're done processing now. Add last block and exit loops.
-                current.children.push(NodeRef::block(i));
                 current.blocks.push(NodeRef::block(i));
                 if block.start_address != code_end_address {
                     return Err(format!("Final block starts at address {} but should start at the code's end address {}", block.start_address, code_end_address))
                 }
                 break
-            }
+            } else {
+                // We're an inner fragment - mark first block as no longer unreachable, if it is
+                // (normally always unreachable, unless there's a loop header at the first block)
+                if current.blocks[0].unreachable(cfg) {
+                    *current.blocks[0].unreachable_mut(cfg) = false;
+                    cfg.disconnect_predecessor(&current.blocks[0], 0)?;
+                }
 
-            // We're an inner fragment; remove the Exit Instruction
-            if let Some(NodeRef {node_type: NodeType::Block, index}) = current.blocks.last() {
+                // We're an inner fragment; remove the Exit Instruction
+                let Some(NodeRef {node_type: NodeType::Block, index}) = current.blocks.last() else {
+                    return Err("fragment doesn't have any blocks or last block is not a block".to_string());
+                };
                 let last_block = &mut cfg.blocks[*index];
                 match last_block.instructions.last() {
                     Some(GMInstruction::Exit(_)) => last_block.pop_last_instruction(),
                     Some(instr) => return Err(format!("Expected Exit instruction; got {instr:?}")),
                     None => unreachable!("Block doesn't have any instructions"),    // TODO: is ts possible? end block
                 }
-            } else {
-                return Err("fragment doesn't have any blocks or last block is not a block".to_string());
-            }
 
-            // Go to the fragment the next level up
-            current = stack.pop().expect("fragment stack is empty");
+                // Go to the fragment the next level up
+                current = stack.pop().expect("fragment stack is empty");
+            }
         }
 
         // Check for new fragment starting at this block
@@ -123,7 +125,12 @@ pub fn find_fragments(cfg: &mut ControlFlowGraph, code_ref: GMRef<GMCode>) -> Re
             current.successors.branch_target = Some(branch_target_node);
         }
 
-        current.children.push(NodeRef::block(i));
+        // If we're at the start of the fragment, track parent node on the block
+        if current.blocks.is_empty() {
+            cfg.blocks[i].parent = Some(NodeRef::fragment(cfg.fragments.len()));
+        }
+
+        // Add this block to our current fragment
         current.blocks.push(NodeRef::block(i));
     }
 
