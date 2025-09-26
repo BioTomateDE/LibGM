@@ -558,10 +558,10 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable, Par
         return Err(ParseError::VarUnresolvable(name))
     };
 
-    // I need to throw away the instance type so that the tests pass
-    if variable_type != GMVariableType::Normal {
-        instance_type = GMInstanceType::Undefined;
-    }   // TODO: comment out this block if not testing assembler
+    // // I need to throw away the instance type so that the tests pass
+    // if variable_type != GMVariableType::Normal {
+    //     instance_type = GMInstanceType::Undefined;
+    // }   // TODO: comment out this block if not testing assembler
 
 
     Ok(CodeVariable {
