@@ -11,14 +11,9 @@ pub struct StaticInit {
 }
 
 impl StaticInit {
-    pub fn new(head: NodeRef, start_address: u32, end_address: u32) -> Self {
+    pub fn new(start_address: u32, end_address: u32, head: NodeRef) -> Self {
         Self {
-            base_node: BaseNode {
-                start_address,
-                end_address,
-                predecessors: vec![],
-                successors: Successors::none(),
-            },
+            base_node: BaseNode::new(start_address, end_address),
             children: vec![head],
         }
     }
@@ -47,7 +42,7 @@ pub fn find_static_inits(cfg: &mut ControlFlowGraph) {
         let fall_through: NodeRef = block.successors.fall_through.clone().expect("Static Init Successor block does not have fallthrough successor");
         let branch_target: NodeRef = block.successors.branch_target.clone().expect("Static Init Successor block does not have branch successor");
 
-        let static_init = StaticInit::new(branch_target, block.end_address, fall_through.start_address(cfg));
+        let static_init = StaticInit::new(block.end_address, fall_through.start_address(cfg), branch_target);
         cfg.static_inits.push(static_init);
 
         block.pop_last_instruction();   // Pop BranchIf

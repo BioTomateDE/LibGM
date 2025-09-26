@@ -22,14 +22,9 @@ pub struct Fragment<'a> {
 }
 
 impl<'a> Fragment<'a> {
-    pub fn new(code_entry: &'a GMCode, root_scope: bool, start_address: u32, end_address: u32) -> Self {
+    pub fn new(start_address: u32, end_address: u32, code_entry: &'a GMCode, root_scope: bool) -> Self {
         Self {
-            base_node: BaseNode {
-                start_address,
-                end_address,
-                predecessors: vec![],
-                successors: Successors::none(),
-            },
+            base_node: BaseNode::new(start_address, end_address),
             children: vec![],
             blocks: vec![],
             code_entry,
@@ -60,7 +55,7 @@ pub fn find_fragments<'a>(cfg: &'a mut ControlFlowGraph<'a>, gm_data: &'a GMData
     // Build fragments, using a stack to track hierarchy
     let mut stack: Vec<Fragment> = Vec::new();
     cfg.fragments = Vec::with_capacity(child_start_offsets.len());
-    let mut current = Fragment::new(code, false, 0, code_end_address);
+    let mut current = Fragment::new(0, code_end_address, code, false);
 
     for i in 0..cfg.blocks.len() {
         let block = &mut cfg.blocks[i];
@@ -112,7 +107,7 @@ pub fn find_fragments<'a>(cfg: &'a mut ControlFlowGraph<'a>, gm_data: &'a GMData
 
             // Make our new "current" be this new fragment
             cfg.fragments.push(current);
-            current = Fragment::new(child_code, stack.len() == 1, cfg.blocks[i].start_address, branch_target_node.start_address(cfg));
+            current = Fragment::new(cfg.blocks[i].start_address, branch_target_node.start_address(cfg), child_code, stack.len() == 1);
 
             // Rewire previous block to jump to this fragment, and this fragment
             // to jump to the successor of the previous block.
