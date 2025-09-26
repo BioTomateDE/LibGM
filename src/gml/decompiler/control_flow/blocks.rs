@@ -1,21 +1,43 @@
 use crate::gamemaker::elements::code::{get_instruction_size, GMInstruction};
-use crate::gml::decompiler::control_flow_graph::{ControlFlowGraph, NodeIndex, Successors};
+use crate::gml::decompiler::control_flow::{BaseNode, ControlFlowGraph, NodeRef, Successors};
 use std::collections::{HashMap, HashSet};
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone)]
 pub struct Block<'a> {
+    pub base_node: BaseNode,
     pub instructions: &'a [GMInstruction],
-    pub start_address: u32,
-    pub end_address: u32,
-    pub block_index: usize,
-    pub predecessors: Vec<NodeIndex>,
-    pub successors: Successors,
 }
-
-
 impl<'a> Block<'a> {
+    pub fn new(instructions: &'a [GMInstruction], start_address: u32, end_address: u32) -> Self {
+        Self {
+            base_node: BaseNode {
+                start_address,
+                end_address,
+                predecessors: vec![],
+                successors: Successors::none(),
+            },
+            instructions,
+        }
+    }
+
+    pub fn pop_first_instruction(&mut self) {
+        self.instructions = &self.instructions[1..];
+    }
     pub fn pop_last_instruction(&mut self) {
         self.instructions = &self.instructions[0..self.instructions.len() - 1];
+    }
+}
+
+impl<'a> Deref for Block<'a> {
+    type Target = BaseNode;
+    fn deref(&self) -> &Self::Target {
+        &self.base_node
+    }
+}
+impl<'a> DerefMut for Block<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.base_node
     }
 }
 
@@ -85,14 +107,7 @@ pub fn find_blocks<'a>(cfg: &mut ControlFlowGraph<'a>, instructions: &'a [GMInst
     for instruction_address in nodes_list {
         if instruction_address > current_address {
             let instruction_index = address_map[&instruction_address];
-            cfg.blocks.push(Block {
-                instructions: &instructions[current_index..instruction_index],
-                start_address: current_address,
-                end_address: instruction_address,
-                block_index: cfg.blocks.len(),
-                predecessors: vec![],
-                successors: Successors::None,
-            });
+            cfg.blocks.push(Block::new(&instructions[current_index..instruction_index], current_address, instruction_address));
             current_index = instruction_index;
         }
         current_address = instruction_address;
@@ -100,14 +115,7 @@ pub fn find_blocks<'a>(cfg: &mut ControlFlowGraph<'a>, instructions: &'a [GMInst
 
     // Add end block
     let block_count = cfg.blocks.len();
-    cfg.blocks.push(Block {
-        instructions: &[],
-        start_address: code_end_address,
-        end_address: code_end_address,
-        block_index: block_count,
-        predecessors: vec![],
-        successors: Successors::None,
-    });
+    cfg.blocks.push(Block::new(&[], code_end_address, code_end_address));
 
     // 4. Populate predecessor and successor fields of blocks
     for block_index in 0..block_count {
@@ -128,21 +136,21 @@ pub fn find_blocks<'a>(cfg: &mut ControlFlowGraph<'a>, instructions: &'a [GMInst
             GMInstruction::PushWithContext(instr) |
             GMInstruction::PopWithContext(instr) => {
                 let target_address: u32 = (last_instruction_address as i32 + instr.jump_offset) as u32;
-                if target_address == code_end_address {
-                    // If instruction branches to the end of the code, insert fictional end block
-                    cfg.connect_nodes(NodeIndex::Block(block_index), NodeIndex::Block(block_count));
-                } else {
-                    let target_block_index: usize = get_block_index(&cfg.blocks, target_address);
-                    cfg.connect_nodes(NodeIndex::Block(block_index), NodeIndex::Block(target_block_index));
-                }
+                let target_block_index: usize = get_block_index(&cfg.blocks, target_address);
+
+                let predecessor = NodeRef::block(block_index);
+                let successor = NodeRef::block(target_block_index);
+
+                successor.predecessors_mut(cfg).push(predecessor.clone());
+                predecessor.successors_mut(cfg).branch_target = Some(successor);
             }
             _ => {}
         }
 
         // Only add sequential successor block if the block is not the last one
         if block_index < cfg.blocks.len() - 1 {
-            cfg.blocks[block_index + 1].predecessors.push(NodeIndex::Block(block_index));
-            cfg.blocks[block_index].successors.set_sequential_next();
+            cfg.blocks[block_index + 1].predecessors.push(NodeRef::block(block_index));
+            cfg.blocks[block_index].successors.fall_through = Some(NodeRef::block(block_index + 1));
         }
     }
 }

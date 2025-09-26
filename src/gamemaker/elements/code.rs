@@ -63,7 +63,7 @@ impl GMElement for GMCodes {
 
             if reader.general_info.bytecode_version <= 14 {
                 instructions_start_pos = reader.cur_pos;    // instructions are placed immediately after code metadata; how convenient!
-                reader.cur_pos += code_length;  // skip over them; they will get parsed in the next loop
+                reader.cur_pos += code_length;  // skip over them; they will get parsed in the next loops
                 instructions_end_pos = reader.cur_pos;
                 bytecode15_info = None;
             } else {
@@ -352,7 +352,7 @@ pub enum GMInstruction {
 
     /// Pops/ends a `with` context, used for GML `with` statements, from the VM environment/self instance stack.
     /// This instruction will branch to its encoded address until no longer iterating instances, where the context will finally be gone for good.
-    /// If a flag is encoded in this instruction, then this will always terminate the loop, and branch to the encoded address.
+    /// If a flag is encoded in this instruction, then this will always terminate the loops, and branch to the encoded address.
     PopWithContext(GMGotoInstruction),
 
     /// PopWithContext but with PopEnvExitMagic
@@ -878,7 +878,7 @@ impl InstructionData for GMPushInstruction {
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
         let instr_pos: usize = builder.len();
         builder.write_i16(match &self.value {
-            GMCodeValue::Int16(int16) => *int16,      // should never happen tbh (popswap)
+            GMCodeValue::Int16(int16) => *int16,
             GMCodeValue::Variable(variable) => build_instance_type(&variable.instance_type),
             _ => 0
         });
@@ -1169,7 +1169,7 @@ pub enum GMInstanceType {
     /// Represents the other context, which has multiple definitions based on the location used.
     Other,
     
-    /// Represents all active object instances. Assignment operations can perform a loop.
+    /// Represents all active object instances. Assignment operations can perform a loops.
     All,
     
     /// Represents no object/instance.
