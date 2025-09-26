@@ -206,6 +206,8 @@ impl NodeRef {
     delegate_to_node!(predecessors, predecessors_mut -> &mut Vec<NodeRef>);
     delegate_to_node!(successors, successors -> &Successors);
     delegate_to_node!(successors, successors_mut -> &mut Successors);
+    delegate_to_node!(unreachable, unreachable -> bool);
+    delegate_to_node!(unreachable, unreachable_mut -> &mut bool);
 
     pub const fn new(node_type: NodeType, index: usize) -> NodeRef {
         Self { node_type, index }
@@ -270,7 +272,11 @@ impl Successors {
             found = true;
         }
         if self.fall_through.as_ref() == Some(search) {
-            self.fall_through = Some(replace);
+            self.fall_through = Some(replace.clone());
+            found = true;
+        }
+        if self.catch.as_ref() == Some(search) {
+            self.catch = Some(replace);
             found = true;
         }
         if !found {
@@ -285,6 +291,9 @@ impl Successors {
         }
         if self.fall_through.as_ref() == Some(search) {
             self.fall_through = None;
+        }
+        if self.catch.as_ref() == Some(search) {
+            self.catch = None;
         }
     }
 }

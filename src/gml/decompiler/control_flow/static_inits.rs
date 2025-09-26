@@ -36,36 +36,36 @@ impl DerefMut for StaticInit {
 // TODO: remove panicking
 
 pub fn find_static_inits(cfg: &mut ControlFlowGraph) -> Result<(), String> {
-    // for i in 0..cfg.blocks.len() {
-    //     let block = &cfg.blocks[i];
-    //     let Some([GMInstruction::HasStaticInitialized, GMInstruction::BranchIf(..)]) = block.instructions.last_chunk() else {continue};
-    //     let fall_through: NodeRef = block.successors.fall_through.clone().unwrap();
-    //     let branch_target: NodeRef = block.successors.branch_target.clone().unwrap();
-    //
-    //     let static_init = StaticInit::new(block.end_address, fall_through.start_address(cfg), branch_target.clone());
-    //     cfg.static_inits.push(static_init);
-    //
-    //     let block = &mut cfg.blocks[i];
-    //     block.pop_last_instruction();   // Pop BranchIf
-    //     block.pop_last_instruction();   // Pop HasStaticInitialized
-    //
-    //     // Remove instruction from ending block, if it's the right one (changes depending on version)
-    //     let branch_block: &mut Block = fall_through.as_block_mut(cfg).expect("Static Init Fallthrough successor is not a block"); // utmt: no error
-    //     let first_instruction: &GMInstruction = branch_block.instructions.first().expect("Static Init Fall through successor block has no instructions"); // utmt: no error
-    //     if *first_instruction == GMInstruction::SetStaticInitialized {
-    //         branch_block.pop_first_instruction();
-    //     }
-    //
-    //     // Disconnect predecessors of the head and our after block
-    //     cfg
-    //
-    //     cfg.disconnect_predecessor(&branch_target, 0)?;
-    //     cfg.disconnect_predecessor(&fall_through, 1)?;
-    //     cfg.disconnect_predecessor(&fall_through, 0)?;
-    //
-    //     // Insert into control flow graph (done manually, here)
-    //     block.successors
-    // }
+    for i in 0..cfg.blocks.len() {
+        let block = &cfg.blocks[i];
+        let Some([GMInstruction::HasStaticInitialized, GMInstruction::BranchIf(..)]) = block.instructions.last_chunk() else {continue};
+        let fall_through: NodeRef = block.successors.fall_through.clone().unwrap();
+        let branch_target: NodeRef = block.successors.branch_target.clone().unwrap();
+
+        let static_init = StaticInit::new(block.end_address, fall_through.start_address(cfg), branch_target.clone());
+        cfg.static_inits.push(static_init);
+
+        let block = &mut cfg.blocks[i];
+        block.pop_last_instruction();   // Pop BranchIf
+        block.pop_last_instruction();   // Pop HasStaticInitialized
+
+        // Remove instruction from ending block, if it's the right one (changes depending on version)
+        let branch_block: &mut Block = fall_through.as_block_mut(cfg).expect("Static Init Fallthrough successor is not a block"); // utmt: no error
+        let first_instruction: &GMInstruction = branch_block.instructions.first().expect("Static Init Fall through successor block has no instructions"); // utmt: no error
+        if *first_instruction == GMInstruction::SetStaticInitialized {
+            branch_block.pop_first_instruction();
+        }
+
+        // Disconnect predecessors of the head and our after block
+        cfg
+
+        cfg.disconnect_predecessor(&branch_target, 0)?;
+        cfg.disconnect_predecessor(&fall_through, 1)?;
+        cfg.disconnect_predecessor(&fall_through, 0)?;
+
+        // Insert into control flow graph (done manually, here)
+        block.successors
+    }
     Ok(())
 }
 
