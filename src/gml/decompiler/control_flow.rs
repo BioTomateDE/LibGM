@@ -52,10 +52,38 @@ macro_rules! delegate_to_node {
 
 #[derive(Debug, Clone)]
 pub struct BaseNode {
+    /// The address of the first instruction from the original bytecode, where this node begins.
     pub start_address: u32,
+
+    /// The address of the instruction after this node ends (that is, exclusive).
     pub end_address: u32,
+
+    /// All nodes which precede this one in the control flow graph.
     pub predecessors: Vec<NodeRef>,
+
+    /// All nodes which succeed this one in the control flow graph.
     pub successors: Successors,
+
+    /// If true, this node's predecessors do not truly exist. That is,
+    /// the predecessors are only directly before this node's instructions.
+    pub unreachable: bool,
+
+    /// If disconnected from the rest of the graph, e.g. at the start of a high-level
+    /// control flow structure like a loop, this points to the enveloping structure.
+    pub parent: Option<NodeRef>,
+}
+
+impl BaseNode {
+    pub fn new(start_address: u32, end_address: u32) -> Self {
+        Self {
+            start_address,
+            end_address,
+            predecessors: vec![],
+            successors: Successors::none(),
+            unreachable: false,
+            parent: None,
+        }
+    }
 }
 
 
@@ -72,12 +100,7 @@ pub struct ControlFlowGraph<'a> {
 impl ControlFlowGraph<'_> {
     pub fn new_empty_node(&mut self, address: u32) -> NodeRef {
         let node_ref = NodeRef::new(NodeType::Empty, self.empty_nodes.len());
-        self.empty_nodes.push(BaseNode {
-            start_address: address,
-            end_address: address,
-            predecessors: vec![],
-            successors: Successors::none(),
-        });
+        self.empty_nodes.push(BaseNode::new(address, address));
         node_ref
     }
 

@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::ops::{Deref, DerefMut};
 use crate::gamemaker::elements::code::{GMGotoInstruction, GMInstruction};
 use crate::gml::decompiler::control_flow::blocks::Block;
-use crate::gml::decompiler::control_flow::{BaseNode, ControlFlowGraph, NodeRef, NodeType, Successors};
+use crate::gml::decompiler::control_flow::{BaseNode, ControlFlowGraph, NodeRef, NodeType};
 
 #[derive(Debug, Clone)]
 pub struct BaseLoop {
@@ -40,14 +40,9 @@ pub struct BaseLoop {
 }
 
 impl BaseLoop {
-    pub fn new(loop_index: usize, head: NodeRef, tail: NodeRef, after: NodeRef, start_address: u32, end_address: u32) -> Self {
+    pub fn new(start_address: u32, end_address: u32, loop_index: usize, head: NodeRef, tail: NodeRef, after: NodeRef) -> Self {
         Self {
-            base_node: BaseNode {
-                start_address,
-                end_address,
-                predecessors: vec![],
-                successors: Successors::none(),
-            },
+            base_node: BaseNode::new(start_address, end_address),
             loop_index,
             head,
             tail,
@@ -125,7 +120,7 @@ fn push_while(cfg: &mut ControlFlowGraph, i: usize, instr: &GMGotoInstruction, w
     let condition_address = (block.end_address as i32 - 1 + instr.jump_offset) as u32;
     if while_loops_found.insert(condition_address) {
         let head: NodeRef = block.successors.branch_target.clone().unwrap();
-        let while_loop = BaseLoop::new(cfg.loops.len(), head, NodeRef::block(i), NodeRef::block(i+1), condition_address, block.end_address);
+        let while_loop = BaseLoop::new(condition_address, block.end_address, cfg.loops.len(), head, NodeRef::block(i), NodeRef::block(i+1));
         cfg.loops.push(Loop::While(while_loop));
     }
 }
@@ -136,7 +131,7 @@ fn push_do_until(cfg: &mut ControlFlowGraph, i: usize) {
     let head: NodeRef = block.successors.fall_through.clone().unwrap();
     let after: NodeRef = block.successors.branch_target.clone().unwrap();
     let start_address: u32 = head.start_address(cfg);
-    let do_until_loop = BaseLoop::new(cfg.loops.len(), head, NodeRef::block(i), after, start_address, block.end_address);
+    let do_until_loop = BaseLoop::new(start_address, block.end_address, cfg.loops.len(), head, NodeRef::block(i), after);
     cfg.loops.push(Loop::DoUntil(do_until_loop));
 }
 
@@ -146,7 +141,7 @@ fn push_repeat(cfg: &mut ControlFlowGraph, i: usize) {
     let head: NodeRef = block.successors.fall_through.clone().unwrap();
     let after: NodeRef = block.successors.branch_target.clone().unwrap();
     let start_address: u32 = head.start_address(cfg);
-    let do_until_loop = BaseLoop::new(cfg.loops.len(), head, NodeRef::block(i), after, start_address, block.end_address);
+    let do_until_loop = BaseLoop::new(start_address, block.end_address, cfg.loops.len(), head, NodeRef::block(i), after);
     cfg.loops.push(Loop::DoUntil(do_until_loop));
 }
 
@@ -174,7 +169,7 @@ fn push_with(cfg: &mut ControlFlowGraph, i: usize) -> Result<(), String> {
     }
 
     let end_address: u32 = tail.start_address(cfg);
-    let mut with_loop = BaseLoop::new(cfg.loops.len(), head, tail, after, block.end_address, end_address);
+    let mut with_loop = BaseLoop::new(block.end_address, end_address, cfg.loops.len(), head, tail, after);
     with_loop.before = Some(NodeRef::block(i));
     with_loop.break_block = break_block;
     Ok(())

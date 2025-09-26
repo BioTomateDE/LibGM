@@ -9,14 +9,9 @@ pub struct Block<'a> {
     pub instructions: &'a [GMInstruction],
 }
 impl<'a> Block<'a> {
-    pub fn new(instructions: &'a [GMInstruction], start_address: u32, end_address: u32) -> Self {
+    pub fn new(start_address: u32, end_address: u32, instructions: &'a [GMInstruction]) -> Self {
         Self {
-            base_node: BaseNode {
-                start_address,
-                end_address,
-                predecessors: vec![],
-                successors: Successors::none(),
-            },
+            base_node: BaseNode::new(start_address, end_address),
             instructions,
         }
     }
@@ -107,7 +102,7 @@ pub fn find_blocks<'a>(cfg: &mut ControlFlowGraph<'a>, instructions: &'a [GMInst
     for instruction_address in nodes_list {
         if instruction_address > current_address {
             let instruction_index = address_map[&instruction_address];
-            cfg.blocks.push(Block::new(&instructions[current_index..instruction_index], current_address, instruction_address));
+            cfg.blocks.push(Block::new(current_address, instruction_address, &instructions[current_index..instruction_index]));
             current_index = instruction_index;
         }
         current_address = instruction_address;
@@ -115,7 +110,7 @@ pub fn find_blocks<'a>(cfg: &mut ControlFlowGraph<'a>, instructions: &'a [GMInst
 
     // Add end block
     let block_count = cfg.blocks.len();
-    cfg.blocks.push(Block::new(&[], code_end_address, code_end_address));
+    cfg.blocks.push(Block::new(code_end_address, code_end_address, &[]));
 
     // 4. Populate predecessor and successor fields of blocks
     for block_index in 0..block_count {
