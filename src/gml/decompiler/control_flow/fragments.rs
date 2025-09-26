@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::code::{get_instruction_size, GMCode, GMInstruction};
-use crate::gml::decompiler::control_flow::{BaseNode, ControlFlowGraph, NodeRef, NodeType, Successors};
+use crate::gml::decompiler::control_flow::{BaseNode, ControlFlowGraph, NodeRef, NodeType};
 use crate::utility::SmallMap;
 
 #[derive(Debug, Clone)]
@@ -47,9 +47,9 @@ impl<'a> DerefMut for Fragment<'a> {
 
 
 
-pub fn find_fragments<'a>(cfg: &'a mut ControlFlowGraph<'a>, gm_data: &'a GMData, code_ref: GMRef<GMCode>) -> Result<(), String> {
-    let child_start_offsets: SmallMap<u32, &GMCode> = get_child_start_offsets(gm_data, code_ref)?;
-    let code: &GMCode = code_ref.resolve(&gm_data.codes.codes)?;
+pub fn find_fragments(cfg: &mut ControlFlowGraph, code_ref: GMRef<GMCode>) -> Result<(), String> {
+    let child_start_offsets: SmallMap<u32, &GMCode> = get_child_start_offsets(cfg.context.gm_data, code_ref)?;
+    let code: &GMCode = code_ref.resolve(&cfg.context.gm_data.codes.codes)?;
     let code_end_address: u32 = get_code_end_address(&code.instructions);
 
     // Build fragments, using a stack to track hierarchy

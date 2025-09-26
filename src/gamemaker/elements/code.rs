@@ -1459,7 +1459,7 @@ pub fn get_data_type_from_value(code_value: &GMCodeValue) -> GMDataType {
 }
 
 
-pub fn get_instruction_size(instruction: &GMInstruction) -> u32 {
+pub const fn get_instruction_size(instruction: &GMInstruction) -> u32 {
     match instruction {
         GMInstruction::Pop(_) => 2,
         GMInstruction::Push(instr) |

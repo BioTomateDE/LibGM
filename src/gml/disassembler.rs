@@ -23,10 +23,10 @@ macro_rules! name_by_ref {
 }
 
 
-pub fn disassemble_code(gm_data: &GMData, code: &GMCode) -> Result<String, String> {
+pub fn disassemble_instructions(gm_data: &GMData, instructions: &[GMInstruction]) -> Result<String, String> {
     let mut assembly: String = String::new();
 
-    for instruction in &code.instructions {
+    for instruction in instructions {
         let line: String = disassemble_instruction(gm_data, instruction)?;
         assembly += &(line + "\n");
     }
