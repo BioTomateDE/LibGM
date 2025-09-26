@@ -3,6 +3,7 @@ use crate::gml::decompiler::control_flow::blocks::Block;
 use crate::gml::decompiler::control_flow::fragments::Fragment;
 use crate::gml::decompiler::control_flow::loops::Loop;
 use crate::gml::decompiler::control_flow::static_inits::StaticInit;
+use crate::gml::decompiler::decompile_context::DecompileContext;
 
 pub mod blocks;
 pub mod fragments;
@@ -89,6 +90,7 @@ impl BaseNode {
 
 #[derive(Debug, Clone)]
 pub struct ControlFlowGraph<'a> {
+    pub context: DecompileContext<'a>,
     pub empty_nodes: Vec<BaseNode>,
     pub blocks: Vec<Block<'a>>,
     pub fragments: Vec<Fragment<'a>>,
@@ -117,6 +119,14 @@ impl ControlFlowGraph<'_> {
         let old_successor: NodeRef = successors.fall_through.clone().ok_or("Fallthrough successor was not set in the first place")?;
         successors.fall_through = None;
         remove_successor(old_successor.predecessors_mut(self), node)?;
+        Ok(())
+    }
+
+    pub fn disconnect_predecessor(&mut self, node: &NodeRef, predecessor_index: usize) -> Result<(), String> {
+        let predecessors: &mut Vec<NodeRef> = node.predecessors_mut(self);
+        let old_predecessor: NodeRef = predecessors.get(predecessor_index).cloned().ok_or("Predecessor index out of range")?;
+        predecessors.remove(predecessor_index);
+        old_predecessor.successors_mut(self).remove(node);
         Ok(())
     }
 
@@ -230,13 +240,27 @@ impl NodeRef {
 
 #[derive(Debug, Clone)]
 pub struct Successors {
+    /// The next node to execute when the control flow continues sequentially.
+    /// This value is [`None`] if one of these apply:
+    /// - The node branches unconditionally (`Branch` instruction).
+    /// - The node ends in a `Exit` or `Return` instruction.
+    /// - It is the last node in the code.
     pub fall_through: Option<NodeRef>,
+
+    /// The node to jump to if the branch condition is true.
+    /// This value is [`Some`] if the node's last instruction is
+    /// either a`(Branch(If|Unless)?|(Push|Pop)WithContext)` instruction,
+    /// or a try-block, in which case this is value represents the `finally` block.
     pub branch_target: Option<NodeRef>,
+
+    /// The node that will be executed if the try-catch block failed.
+    /// This value is only [`Some`] if the node is a try-block (obviously).
+    pub catch: Option<NodeRef>,
 }
 
 impl Successors {
     pub fn none() -> Self {
-        Self { fall_through: None, branch_target: None }
+        Self { fall_through: None, branch_target: None, catch: None }
     }
 
     pub fn replace(&mut self, search: &NodeRef, replace: NodeRef) -> Result<(), String> {
