@@ -20,6 +20,7 @@ macro_rules! delegate_to_node {
                 NodeType::Empty => &mut cfg.empty_nodes[self.index].$field,
                 NodeType::Block => &mut cfg.blocks[self.index].$field,
                 NodeType::Fragment => &mut cfg.fragments[self.index].$field,
+                NodeType::StaticInit => &mut cfg.static_inits[self.index].$field,
                 NodeType::Loop => &mut cfg.loops[self.index].$field,
             }
         }
@@ -32,6 +33,7 @@ macro_rules! delegate_to_node {
                 NodeType::Empty => &cfg.empty_nodes[self.index].$field,
                 NodeType::Block => &cfg.blocks[self.index].$field,
                 NodeType::Fragment => &cfg.fragments[self.index].$field,
+                NodeType::StaticInit => &cfg.static_inits[self.index].$field,
                 NodeType::Loop => &cfg.loops[self.index].$field,
             }
         }
@@ -44,6 +46,7 @@ macro_rules! delegate_to_node {
                 NodeType::Empty => cfg.empty_nodes[self.index].$field,
                 NodeType::Block => cfg.blocks[self.index].$field,
                 NodeType::Fragment => cfg.fragments[self.index].$field,
+                NodeType::StaticInit => cfg.static_inits[self.index].$field,
                 NodeType::Loop => cfg.loops[self.index].$field,
             }
         }
@@ -122,11 +125,20 @@ impl ControlFlowGraph<'_> {
         Ok(())
     }
 
+    /// TODO: i done like this function, replace all calls to it if possible
     pub fn disconnect_predecessor(&mut self, node: &NodeRef, predecessor_index: usize) -> Result<(), String> {
         let predecessors: &mut Vec<NodeRef> = node.predecessors_mut(self);
         let old_predecessor: NodeRef = predecessors.get(predecessor_index).cloned().ok_or("Predecessor index out of range")?;
         predecessors.remove(predecessor_index);
         old_predecessor.successors_mut(self).remove(node);
+        Ok(())
+    }
+
+    pub fn disconnect_all_predecessors(&mut self, node: &NodeRef) -> Result<(), String> {
+        for pred in node.predecessors(self).clone() {
+            pred.successors_mut(self).remove(node);
+        }
+        *node.predecessors_mut(self) = vec![];
         Ok(())
     }
 
@@ -196,6 +208,7 @@ pub enum NodeType {
     Empty,
     Block,
     Fragment,
+    StaticInit,
     Loop,
 }
 
@@ -208,6 +221,8 @@ impl NodeRef {
     delegate_to_node!(successors, successors_mut -> &mut Successors);
     delegate_to_node!(unreachable, unreachable -> bool);
     delegate_to_node!(unreachable, unreachable_mut -> &mut bool);
+    delegate_to_node!(parent, parent -> &Option<NodeRef>);
+    delegate_to_node!(parent, parent_mut -> &mut Option<NodeRef>);
 
     pub const fn new(node_type: NodeType, index: usize) -> NodeRef {
         Self { node_type, index }
@@ -219,6 +234,9 @@ impl NodeRef {
 
     pub const fn fragment(index: usize) -> Self {
         NodeRef::new(NodeType::Fragment, index)
+    }
+    pub const fn static_init(index: usize) -> Self {
+        NodeRef::new(NodeType::StaticInit, index)
     }
 
     pub const fn r#loop(index: usize) -> Self {
