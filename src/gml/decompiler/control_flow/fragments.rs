@@ -43,7 +43,6 @@ impl<'a> DerefMut for Fragment<'a> {
 }
 
 
-
 pub fn find_fragments(cfg: &mut ControlFlowGraph, code_ref: GMRef<GMCode>) -> Result<(), String> {
     let child_start_offsets: SmallMap<u32, &GMCode> = get_child_start_offsets(cfg.context.gm_data, code_ref)?;
     let code: &GMCode = code_ref.resolve(&cfg.context.gm_data.codes.codes)?;
@@ -55,9 +54,9 @@ pub fn find_fragments(cfg: &mut ControlFlowGraph, code_ref: GMRef<GMCode>) -> Re
     let mut current = Fragment::new(0, code_end_address, code, false);
 
     for i in 0..cfg.blocks.len() {
-        let block = &mut cfg.blocks[i];
         // Check if our current fragment is ending at this block
-        if block.start_address == current.end_address {
+        if cfg.blocks[i].start_address == current.end_address {
+            let block = &mut cfg.blocks[i];
             if stack.is_empty() {
                 // We're done processing now. Add last block and exit loops.
                 current.blocks.push(NodeRef::block(i));
@@ -65,28 +64,24 @@ pub fn find_fragments(cfg: &mut ControlFlowGraph, code_ref: GMRef<GMCode>) -> Re
                     return Err(format!("Final block starts at address {} but should start at the code's end address {}", block.start_address, code_end_address))
                 }
                 break
-            } else {
-                // We're an inner fragment - mark first block as no longer unreachable, if it is
-                // (normally always unreachable, unless there's a loop header at the first block)
-                if current.blocks[0].unreachable(cfg) {
-                    *current.blocks[0].unreachable_mut(cfg) = false;
-                    cfg.disconnect_predecessor(&current.blocks[0], 0)?;
-                }
-
-                // We're an inner fragment; remove the Exit Instruction
-                let Some(NodeRef {node_type: NodeType::Block, index}) = current.blocks.last() else {
-                    return Err("fragment doesn't have any blocks or last block is not a block".to_string());
-                };
-                let last_block = &mut cfg.blocks[*index];
-                match last_block.instructions.last() {
-                    Some(GMInstruction::Exit(_)) => last_block.pop_last_instruction(),
-                    Some(instr) => return Err(format!("Expected Exit instruction; got {instr:?}")),
-                    None => unreachable!("Block doesn't have any instructions"),    // TODO: is ts possible? end block
-                }
-
-                // Go to the fragment the next level up
-                current = stack.pop().expect("fragment stack is empty");
             }
+
+            // Disconnect predecessor from branch instruction block
+            cfg.disconnect_all_predecessors(&current.blocks[0])?;
+
+            // We're an inner fragment; remove the Exit Instruction
+            let Some(NodeRef { node_type: NodeType::Block, index }) = current.blocks.last() else {
+                return Err("fragment doesn't have any blocks or last block is not a block".to_string());
+            };
+            let last_block = &mut cfg.blocks[*index];
+            match last_block.instructions.last() {
+                Some(GMInstruction::Exit(_)) => last_block.pop_last_instruction(),
+                Some(instr) => return Err(format!("Expected Exit instruction; got {instr:?}")),
+                None => unreachable!("Block doesn't have any instructions"),    // TODO: is ts possible? end block
+            }
+
+            // Go to the fragment the next level up
+            current = stack.pop().expect("fragment stack is empty");
         }
 
         // Check for new fragment starting at this block
@@ -141,6 +136,7 @@ pub fn find_fragments(cfg: &mut ControlFlowGraph, code_ref: GMRef<GMCode>) -> Re
     cfg.fragments.push(current);
     Ok(())
 }
+
 
 
 fn get_child_start_offsets(gm_data: &GMData, parent_code_ref: GMRef<GMCode>) -> Result<SmallMap<u32, &GMCode>, String> {
