@@ -221,7 +221,7 @@ pub struct GMCodeBytecode15 {
 }
 
 
-mod kinds {
+mod opcode {
     pub const CONV: u8 = 0x07;
     pub const MUL: u8 = 0x08;
     pub const DIV: u8 = 0x09;
@@ -455,42 +455,42 @@ impl GMElement for GMInstruction {
         // log::debug!("{} // {:02X} {:02X} {:02X} {:02X}", reader.cur_pos-4, bytes.0, bytes.1, bytes.2, opcode);
         
         Ok(match opcode {
-            kinds::CONV => Self::Convert(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            kinds::MUL => Self::Multiply(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            kinds::DIV => Self::Divide(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            kinds::REM => Self::Remainder(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            kinds::MOD => Self::Modulus(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            kinds::ADD => Self::Add(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            kinds::SUB => Self::Subtract(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            kinds::AND => Self::And(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            kinds::OR => Self::Or(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            kinds::XOR => Self::Xor(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            kinds::NEG => Self::Negate(GMSingleTypeInstruction::parse(reader, bytes)?),
-            kinds::NOT => Self::Not(GMSingleTypeInstruction::parse(reader, bytes)?),
-            kinds::SHL => Self::ShiftLeft(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            kinds::SHR => Self::ShiftRight(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            kinds::CMP => Self::Compare(GMComparisonInstruction::parse(reader, bytes)?),
-            kinds::POP if bytes.2 == 0x0F => Self::PopSwap(GMPopSwapInstruction::parse(reader, bytes)?),
-            kinds::POP => Self::Pop(GMPopInstruction::parse(reader, bytes)?),
-            kinds::DUP if bytes.1 == 0 => Self::Duplicate(GMDuplicateInstruction::parse(reader, bytes)?),
-            kinds::DUP => Self::DuplicateSwap(GMDuplicateSwapInstruction::parse(reader, bytes)?),
-            kinds::RET => Self::Return(GMSingleTypeInstruction::parse(reader, bytes)?),
-            kinds::EXIT => Self::Exit(GMEmptyInstruction::parse(reader, bytes)?),
-            kinds::POPZ => Self::PopDiscard(GMSingleTypeInstruction::parse(reader, bytes)?),
-            kinds::JMP => Self::Branch(GMGotoInstruction::parse(reader, bytes)?),
-            kinds::JT => Self::BranchIf(GMGotoInstruction::parse(reader, bytes)?),
-            kinds::JF => Self::BranchUnless(GMGotoInstruction::parse(reader, bytes)?),
-            kinds::PUSHENV => Self::PushWithContext(GMGotoInstruction::parse(reader, bytes)?),
-            kinds::POPENV if bytes == (0x00, 0x00, 0xF0) => Self::PopWithContextExit(GMPopenvExitMagicInstruction::parse(reader, bytes)?),
-            kinds::POPENV => Self::PopWithContext(GMGotoInstruction::parse(reader, bytes)?),
-            kinds::PUSH => Self::Push(GMPushInstruction::parse(reader, bytes)?),
-            kinds::PUSHLOC => Self::PushLocal(GMPushInstruction::parse(reader, bytes)?),
-            kinds::PUSHGLB => Self::PushGlobal(GMPushInstruction::parse(reader, bytes)?),
-            kinds::PUSHBLTN => Self::PushBuiltin(GMPushInstruction::parse(reader, bytes)?),
-            kinds::PUSHIM => Self::PushImmediate(bytes.0 as i16 | ((bytes.1 as i16) << 8)),
-            kinds::CALL => Self::Call(GMCallInstruction::parse(reader, bytes)?),
-            kinds::CALLVAR => Self::CallVariable(GMCallVariableInstruction::parse(reader, bytes)?),
-            kinds::EXTENDED => {
+            opcode::CONV => Self::Convert(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            opcode::MUL => Self::Multiply(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            opcode::DIV => Self::Divide(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            opcode::REM => Self::Remainder(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            opcode::MOD => Self::Modulus(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            opcode::ADD => Self::Add(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            opcode::SUB => Self::Subtract(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            opcode::AND => Self::And(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            opcode::OR => Self::Or(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            opcode::XOR => Self::Xor(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            opcode::NEG => Self::Negate(GMSingleTypeInstruction::parse(reader, bytes)?),
+            opcode::NOT => Self::Not(GMSingleTypeInstruction::parse(reader, bytes)?),
+            opcode::SHL => Self::ShiftLeft(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            opcode::SHR => Self::ShiftRight(GMDoubleTypeInstruction::parse(reader, bytes)?),
+            opcode::CMP => Self::Compare(GMComparisonInstruction::parse(reader, bytes)?),
+            opcode::POP if bytes.2 == 0x0F => Self::PopSwap(GMPopSwapInstruction::parse(reader, bytes)?),
+            opcode::POP => Self::Pop(GMPopInstruction::parse(reader, bytes)?),
+            opcode::DUP if bytes.1 == 0 => Self::Duplicate(GMDuplicateInstruction::parse(reader, bytes)?),
+            opcode::DUP => Self::DuplicateSwap(GMDuplicateSwapInstruction::parse(reader, bytes)?),
+            opcode::RET => Self::Return(GMSingleTypeInstruction::parse(reader, bytes)?),
+            opcode::EXIT => Self::Exit(GMEmptyInstruction::parse(reader, bytes)?),
+            opcode::POPZ => Self::PopDiscard(GMSingleTypeInstruction::parse(reader, bytes)?),
+            opcode::JMP => Self::Branch(GMGotoInstruction::parse(reader, bytes)?),
+            opcode::JT => Self::BranchIf(GMGotoInstruction::parse(reader, bytes)?),
+            opcode::JF => Self::BranchUnless(GMGotoInstruction::parse(reader, bytes)?),
+            opcode::PUSHENV => Self::PushWithContext(GMGotoInstruction::parse(reader, bytes)?),
+            opcode::POPENV if bytes == (0x00, 0x00, 0xF0) => Self::PopWithContextExit(GMPopenvExitMagicInstruction::parse(reader, bytes)?),
+            opcode::POPENV => Self::PopWithContext(GMGotoInstruction::parse(reader, bytes)?),
+            opcode::PUSH => Self::Push(GMPushInstruction::parse(reader, bytes)?),
+            opcode::PUSHLOC => Self::PushLocal(GMPushInstruction::parse(reader, bytes)?),
+            opcode::PUSHGLB => Self::PushGlobal(GMPushInstruction::parse(reader, bytes)?),
+            opcode::PUSHBLTN => Self::PushBuiltin(GMPushInstruction::parse(reader, bytes)?),
+            opcode::PUSHIM => Self::PushImmediate(bytes.0 as i16 | ((bytes.1 as i16) << 8)),
+            opcode::CALL => Self::Call(GMCallInstruction::parse(reader, bytes)?),
+            opcode::CALLVAR => Self::CallVariable(GMCallVariableInstruction::parse(reader, bytes)?),
+            opcode::EXTENDED => {
                 let data_type: GMDataType = num_enum_from(bytes.2 & 0xf)?;
                 let kind: i16 = bytes.0 as i16 | ((bytes.1 as i16) << 8);
                 match data_type {
@@ -580,7 +580,7 @@ impl GMElement for GMInstruction {
             Self::PushReference(asset_ref) => {
                 builder.write_i16(-11);
                 builder.write_u8(GMDataType::Int32.into());
-                builder.write_u8(kinds::EXTENDED.into());
+                builder.write_u8(opcode::EXTENDED.into());
                 asset_ref.serialize(builder)?
             },
         }
@@ -592,7 +592,7 @@ impl GMElement for GMInstruction {
 fn build_extended16(builder: &mut DataBuilder, kind: i16) {
     builder.write_i16(kind);
     builder.write_u8(GMDataType::Int16.into());
-    builder.write_u8(kinds::EXTENDED.into());
+    builder.write_u8(opcode::EXTENDED.into());
 }
 
 
@@ -943,52 +943,52 @@ impl InstructionData for GMCallInstruction {
 
 fn opcode_from_instruction(instruction: &GMInstruction) -> u8 {
     match instruction {
-        GMInstruction::Convert(_) => kinds::CONV,
-        GMInstruction::Multiply(_) => kinds::MUL,
-        GMInstruction::Divide(_) => kinds::DIV,
-        GMInstruction::Remainder(_) => kinds::REM,
-        GMInstruction::Modulus(_) => kinds::MOD,
-        GMInstruction::Add(_) => kinds::ADD,
-        GMInstruction::Subtract(_) => kinds::SUB,
-        GMInstruction::And(_) => kinds::AND,
-        GMInstruction::Or(_) => kinds::OR,
-        GMInstruction::Xor(_) => kinds::XOR,
-        GMInstruction::Negate(_) => kinds::NEG,
-        GMInstruction::Not(_) => kinds::NOT,
-        GMInstruction::ShiftLeft(_) => kinds::SHL,
-        GMInstruction::ShiftRight(_) => kinds::SHR,
-        GMInstruction::Compare(_) => kinds::CMP,
-        GMInstruction::Pop(_) => kinds::POP,
-        GMInstruction::PopSwap(_) => kinds::POP,
-        GMInstruction::Duplicate(_) => kinds::DUP,
-        GMInstruction::DuplicateSwap(_) => kinds::DUP,
-        GMInstruction::Return(_) => kinds::RET,
-        GMInstruction::Exit(_) => kinds::EXIT,
-        GMInstruction::PopDiscard(_) => kinds::POPZ,
-        GMInstruction::Branch(_) => kinds::JMP,
-        GMInstruction::BranchIf(_) => kinds::JT,
-        GMInstruction::BranchUnless(_) => kinds::JF,
-        GMInstruction::PushWithContext(_) => kinds::PUSHENV,
-        GMInstruction::PopWithContext(_) => kinds::POPENV,
-        GMInstruction::PopWithContextExit(_) => kinds::POPENV,
-        GMInstruction::Push(_) => kinds::PUSH,
-        GMInstruction::PushLocal(_) => kinds::PUSHLOC,
-        GMInstruction::PushGlobal(_) => kinds::PUSHGLB,
-        GMInstruction::PushBuiltin(_) => kinds::PUSHBLTN,
-        GMInstruction::PushImmediate(_) => kinds::PUSHIM,
-        GMInstruction::Call(_) => kinds::CALL,
-        GMInstruction::CallVariable(_) => kinds::CALLVAR,
-        GMInstruction::CheckArrayIndex => kinds::EXTENDED,
-        GMInstruction::PushArrayFinal => kinds::EXTENDED,
-        GMInstruction::PopArrayFinal => kinds::EXTENDED,
-        GMInstruction::PushArrayContainer => kinds::EXTENDED,
-        GMInstruction::SetArrayOwner => kinds::EXTENDED,
-        GMInstruction::HasStaticInitialized => kinds::EXTENDED,
-        GMInstruction::SetStaticInitialized => kinds::EXTENDED,
-        GMInstruction::SaveArrayReference => kinds::EXTENDED,
-        GMInstruction::RestoreArrayReference => kinds::EXTENDED,
-        GMInstruction::IsNullishValue => kinds::EXTENDED,
-        GMInstruction::PushReference(_) => kinds::EXTENDED,
+        GMInstruction::Convert(_) => opcode::CONV,
+        GMInstruction::Multiply(_) => opcode::MUL,
+        GMInstruction::Divide(_) => opcode::DIV,
+        GMInstruction::Remainder(_) => opcode::REM,
+        GMInstruction::Modulus(_) => opcode::MOD,
+        GMInstruction::Add(_) => opcode::ADD,
+        GMInstruction::Subtract(_) => opcode::SUB,
+        GMInstruction::And(_) => opcode::AND,
+        GMInstruction::Or(_) => opcode::OR,
+        GMInstruction::Xor(_) => opcode::XOR,
+        GMInstruction::Negate(_) => opcode::NEG,
+        GMInstruction::Not(_) => opcode::NOT,
+        GMInstruction::ShiftLeft(_) => opcode::SHL,
+        GMInstruction::ShiftRight(_) => opcode::SHR,
+        GMInstruction::Compare(_) => opcode::CMP,
+        GMInstruction::Pop(_) => opcode::POP,
+        GMInstruction::PopSwap(_) => opcode::POP,
+        GMInstruction::Duplicate(_) => opcode::DUP,
+        GMInstruction::DuplicateSwap(_) => opcode::DUP,
+        GMInstruction::Return(_) => opcode::RET,
+        GMInstruction::Exit(_) => opcode::EXIT,
+        GMInstruction::PopDiscard(_) => opcode::POPZ,
+        GMInstruction::Branch(_) => opcode::JMP,
+        GMInstruction::BranchIf(_) => opcode::JT,
+        GMInstruction::BranchUnless(_) => opcode::JF,
+        GMInstruction::PushWithContext(_) => opcode::PUSHENV,
+        GMInstruction::PopWithContext(_) => opcode::POPENV,
+        GMInstruction::PopWithContextExit(_) => opcode::POPENV,
+        GMInstruction::Push(_) => opcode::PUSH,
+        GMInstruction::PushLocal(_) => opcode::PUSHLOC,
+        GMInstruction::PushGlobal(_) => opcode::PUSHGLB,
+        GMInstruction::PushBuiltin(_) => opcode::PUSHBLTN,
+        GMInstruction::PushImmediate(_) => opcode::PUSHIM,
+        GMInstruction::Call(_) => opcode::CALL,
+        GMInstruction::CallVariable(_) => opcode::CALLVAR,
+        GMInstruction::CheckArrayIndex => opcode::EXTENDED,
+        GMInstruction::PushArrayFinal => opcode::EXTENDED,
+        GMInstruction::PopArrayFinal => opcode::EXTENDED,
+        GMInstruction::PushArrayContainer => opcode::EXTENDED,
+        GMInstruction::SetArrayOwner => opcode::EXTENDED,
+        GMInstruction::HasStaticInitialized => opcode::EXTENDED,
+        GMInstruction::SetStaticInitialized => opcode::EXTENDED,
+        GMInstruction::SaveArrayReference => opcode::EXTENDED,
+        GMInstruction::RestoreArrayReference => opcode::EXTENDED,
+        GMInstruction::IsNullishValue => opcode::EXTENDED,
+        GMInstruction::PushReference(_) => opcode::EXTENDED,
     }
 }
 

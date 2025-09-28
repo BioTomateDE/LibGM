@@ -67,11 +67,7 @@ pub struct BaseNode {
 
     /// All nodes which succeed this one in the control flow graph.
     pub successors: Successors,
-
-    /// If true, this node's predecessors do not truly exist. That is,
-    /// the predecessors are only directly before this node's instructions.
-    pub unreachable: bool,
-
+    
     /// If disconnected from the rest of the graph, e.g. at the start of a high-level
     /// control flow structure like a loop, this points to the enveloping structure.
     pub parent: Option<NodeRef>,
@@ -84,7 +80,6 @@ impl BaseNode {
             end_address,
             predecessors: vec![],
             successors: Successors::none(),
-            unreachable: false,
             parent: None,
         }
     }
@@ -219,8 +214,6 @@ impl NodeRef {
     delegate_to_node!(predecessors, predecessors_mut -> &mut Vec<NodeRef>);
     delegate_to_node!(successors, successors -> &Successors);
     delegate_to_node!(successors, successors_mut -> &mut Successors);
-    delegate_to_node!(unreachable, unreachable -> bool);
-    delegate_to_node!(unreachable, unreachable_mut -> &mut bool);
     delegate_to_node!(parent, parent -> &Option<NodeRef>);
     delegate_to_node!(parent, parent_mut -> &mut Option<NodeRef>);
 

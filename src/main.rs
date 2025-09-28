@@ -16,6 +16,7 @@ pub mod gml;
 
 use std::path::Path;
 use std::process::exit;
+use crate::gml::decompiler::decompile_to_ast;
 use crate::utility::Stopwatch;
 
 
@@ -57,6 +58,25 @@ fn main_open_and_close() -> Result<(), String> {
     let gm_data: GMData = parse_data_file(&original_data_raw, false)
         .map_err(|e| format!("\n{e}\n↳ while parsing data file"))?;
     drop(original_data_raw);
+
+    // // count instructions
+    // let mut counts = std::collections::HashMap::new();
+    // let mut all = 0;
+    // for code in &gm_data.codes.codes {
+    //     for instruction in &code.instructions {
+    //         all += 1;
+    //         let key = format!("{instruction:?}").split('(').next().unwrap().to_string();
+    //         if let Some(count) = counts.get_mut(&key) {
+    //             *count += 1;
+    //         } else {
+    //             counts.insert(key, 1);
+    //         }
+    //     }
+    // }
+    // log::info!("Total instructions: {all}");
+    // for (instr, count) in counts {
+    //     println!("{count:>7} {instr}");
+    // }
     
     // // sample changes
     // let mut gm_data = gm_data;
@@ -97,8 +117,11 @@ fn main_open_and_close() -> Result<(), String> {
     //     break
     // }
 
-    // upgrade gamemaker version
-    let gm_data = gamemaker::upgrade::upgrade_to_2023_lts(gm_data)?;
+    // // upgrade gamemaker version
+    // let gm_data = gamemaker::upgrade::upgrade_to_2023_lts(gm_data)?;
+
+    // decompile
+    decompile_to_ast(&gm_data, gamemaker::deserialize::GMRef::new(3))?;
 
     // build data file
     log::info!("Building data file");
@@ -171,7 +194,7 @@ fn main() {
     biologischer_log::init(env!("CARGO_PKG_NAME"));
     log::debug!("============= LibGM v{} =============", env!("CARGO_PKG_VERSION"));
     
-    if let Err(e) = main_new_data_file() {
+    if let Err(e) = main_open_and_close() {
         log::error!("{e}");
         exit(1);
     }
