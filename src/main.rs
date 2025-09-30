@@ -55,7 +55,7 @@ fn main_open_and_close() -> Result<(), String> {
         .map_err(|e| format!("{e}\n↳ while reading data file"))?;
 
     log::info!("Parsing data file");
-    let gm_data: GMData = parse_data_file(&original_data_raw, false)
+    let gm_data: GMData = parse_data_file(&original_data_raw)
         .map_err(|e| format!("\n{e}\n↳ while parsing data file"))?;
     drop(original_data_raw);
 

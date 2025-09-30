@@ -6,7 +6,7 @@ mod resources;
 
 pub use builder::DataBuilder;
 use crate::gamemaker::data::GMData;
-use crate::gamemaker::element::GMChunkElement;
+use crate::gamemaker::elements::GMChunkElement;
 use crate::utility::Stopwatch;
 
 

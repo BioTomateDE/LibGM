@@ -1,6 +1,6 @@
 ﻿use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::gamemaker::deserialize::{DataReader, GMChunk, GMRef};
-use crate::gamemaker::element::{GMChunkElement, GMElement};
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::code::{build_instance_type, parse_instance_type, GMInstanceType, GMVariableType};
 use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::serialize::DataBuilder;

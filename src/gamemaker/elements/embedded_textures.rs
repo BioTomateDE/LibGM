@@ -6,7 +6,7 @@ use bzip2::read::BzDecoder;
 use image::{DynamicImage, ImageFormat};use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::gamemaker::deserialize::DataReader;
 use crate::gamemaker::printing::hexdump;
-use crate::gamemaker::element::{GMChunkElement, GMElement};
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::qoi;
 
