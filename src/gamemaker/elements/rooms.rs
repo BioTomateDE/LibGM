@@ -1,6 +1,6 @@
 use std::cmp::min;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
-use crate::gamemaker::element::{GMChunkElement, GMElement};
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::elements::backgrounds::GMBackground;
 use crate::gamemaker::elements::code::GMCode;

@@ -2,7 +2,7 @@ use std::path::Path;
 use image::{DynamicImage, ImageReader};
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
-use crate::gamemaker::element::GMChunkElement;
+use crate::gamemaker::elements::GMChunkElement;
 use crate::gamemaker::elements::animation_curves::GMAnimationCurves;
 use crate::gamemaker::elements::audio_groups::GMAudioGroups;
 use crate::gamemaker::elements::backgrounds::GMBackgrounds;

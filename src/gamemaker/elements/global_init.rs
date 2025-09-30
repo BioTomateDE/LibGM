@@ -1,6 +1,6 @@
 use crate::gamemaker::elements::code::GMCode;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
-use crate::gamemaker::element::{GMChunkElement, GMElement};
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 
 #[derive(Debug, Clone)]

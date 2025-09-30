@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use crate::gamemaker::deserialize::chunk::GMChunk;
 use crate::gamemaker::deserialize::resources::GMRef;
-use crate::gamemaker::element::{GMChunkElement, GMElement};
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::functions::GMFunction;
 use crate::gamemaker::elements::general_info::GMGeneralInfo;
 use crate::gamemaker::elements::strings::GMStrings;

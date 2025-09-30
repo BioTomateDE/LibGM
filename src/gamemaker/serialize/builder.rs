@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::gamemaker::data::GMData;
-use crate::gamemaker::element::{GMChunkElement, GMElement};
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::code::GMVariableType;
 use crate::gamemaker::gm_version::GMVersionReq;
 use crate::utility::{typename, Stopwatch};
@@ -10,24 +10,36 @@ use crate::utility::{typename, Stopwatch};
 pub struct DataBuilder<'a> {
     /// The GMData to build.
     pub gm_data: &'a GMData,
+
     /// The raw data being generated.
     pub raw_data: Vec<u8>,
+
     /// Pairs data positions of pointer placeholders with the memory address of the GameMaker element they're pointing to
     pub(super) pointer_placeholder_positions: Vec<(u32, usize)>,
+
     /// Maps memory addresses of GameMaker elements to their resolved data position
     pub(super) pointer_resource_positions: HashMap<usize, u32>,
 
-    /// Will in
+    /// Tracks where each function is used throughout the game data.
+    /// Will be populated when code is built.
+    /// - Outer Vec: Indexed by Function index from `gm_data.functions.functions`
+    /// - Inner Vec: List of written positions for each occurrence
     pub function_occurrences: Vec<Vec<usize>>,
+
+    /// Tracks where each variable is used throughout the game data.
+    /// Will be populated when code is built.
+    /// - Outer Vec: Indexed by Variable index from `gm_data.variables.variables`
+    /// - Inner Vec: List of `(written_position, variable_type)` tuples for each occurrence
     pub variable_occurrences: Vec<Vec<(usize, GMVariableType)>>,
 }
 
 
 impl<'a> DataBuilder<'a> {
     pub fn new(gm_data: &'a GMData) -> Self {
+        let approximated_size: usize = (gm_data.original_data_size as f64 * 1.05) as usize;
         Self {
             gm_data,
-            raw_data: Vec::with_capacity(gm_data.original_data_size),
+            raw_data: Vec::with_capacity(approximated_size),
             pointer_placeholder_positions: Vec::new(),
             pointer_resource_positions: HashMap::new(),
             function_occurrences: vec![Vec::new(); gm_data.functions.functions.len()],
@@ -86,14 +98,14 @@ impl<'a> DataBuilder<'a> {
 
     /// Write an actual character string.
     ///
-    /// This should only be used for writing chunk names and in the `STRG` chunk.
-    /// For writing regular GameMaker string references, see [`Self::write_gm_string`].
+    /// This should only be used for literal strings in the `STRG` chunk.
+    /// For writing regular GameMaker string references, see [Self::write_gm_string].
     pub fn write_literal_string(&mut self, string: &str) {
         self.raw_data.extend_from_slice(string.as_bytes());
     }
 
     /// Write a 4 character ASCII GameMaker chunk name.
-    /// Accounts for endianness.
+    /// Accounts for endianness (chunk names in big endian are reversed).
     pub fn write_chunk_name(&mut self, name: &str) -> Result<(), String> {
         if name.len() != 4 {
             return Err(format!(
@@ -121,7 +133,7 @@ impl<'a> DataBuilder<'a> {
     /// Overwrites a 4-byte unsigned integer (`usize` truncated to `u32`) at `position`.
     ///
     /// Useful for patching fixed-size numeric values like lengths or offsets after serialization.
-    /// For writing regular pointer lists, see `write_pointer_list`.
+    /// For writing regular pointer lists, see [Self::write_pointer_list].
     pub fn overwrite_usize(&mut self, number: usize, position: usize) -> Result<(), String> {
         let number: u32 = number as u32;
         let bytes: [u8; 4] = if self.gm_data.is_big_endian {
@@ -135,7 +147,7 @@ impl<'a> DataBuilder<'a> {
     /// Overwrites a 4-byte signed integer (`i32`) at `position`.
     ///
     /// Useful for patching fixed-size numeric values like lengths or offsets after serialization.
-    /// For writing regular pointer lists, see `write_pointer_list`.
+    /// For writing regular pointer lists, see `[Self::write_pointer_list].
     pub fn overwrite_i32(&mut self, number: i32, position: usize) -> Result<(), String> {
         let bytes: [u8; 4] = if self.gm_data.is_big_endian {
             number.to_be_bytes()
@@ -148,7 +160,7 @@ impl<'a> DataBuilder<'a> {
     /// Create a placeholder pointer at the current position in the chunk and remember
     /// its data position paired with the target GameMaker element's memory address.
     ///
-    /// This will later be resolved by calling `DataBuilder::resolve_pointer`; replacing the
+    /// This will later be resolved by calling [`Self::resolve_pointer`]; replacing the
     /// pointer placeholder with the written data position of the target GameMaker element.
     /// ___
     /// This system exists because it is virtually impossible to predict which data position a GameMaker element will be written to.
@@ -163,9 +175,9 @@ impl<'a> DataBuilder<'a> {
         Ok(())
     }
 
-    /// Writes a pointer to the given `Option` value.
-    /// - If `Some`, writes a pointer to the contained value using `write_pointer`.
-    /// - If `None`, writes a null pointer (0) using `write_i32`.
+    /// Optionally writes a pointer to the given [`Option`] value.
+    /// - If [`Some`], writes a pointer to the contained value using [`Self::write_pointer`].
+    /// - If [`None`], writes a null pointer (0) using [`Self::write_i32`].
     pub fn write_pointer_opt<T>(&mut self, element: &Option<T>) -> Result<(), String> {
         if let Some(elem) = element {
             self.write_pointer(elem)?;

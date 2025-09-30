@@ -1,85 +1,31 @@
 use crate::gamemaker::serialize::DataBuilder;
 
+macro_rules! write_int_fn {
+    ($method_name:ident, $int_type:ty) => {
+        pub fn $method_name(&mut self, number: $int_type) {
+            let bytes = if self.gm_data.is_big_endian {
+                number.to_be_bytes()
+            } else {
+                number.to_le_bytes()
+            };
+            self.write_bytes(&bytes);
+        }
+    };
+}
+
 impl DataBuilder<'_> {
-    pub fn write_u64(&mut self, number: u64) {
-        self.write_bytes(&if self.gm_data.is_big_endian {
-            number.to_be_bytes()
-        } else {
-            number.to_le_bytes()
-        })
-    }
+    write_int_fn!(write_u64, u64);
+    write_int_fn!(write_u32, u32);
+    write_int_fn!(write_u16, u16);
+    write_int_fn!(write_u8, u8);
     
-    pub fn write_i64(&mut self, number: i64) {
-        self.write_bytes(&if self.gm_data.is_big_endian {
-            number.to_be_bytes()
-        } else {
-            number.to_le_bytes()
-        })
-    }
+    write_int_fn!(write_i64, i64);
+    write_int_fn!(write_i32, i32);
+    write_int_fn!(write_i16, i16);
+    write_int_fn!(write_i8, i8);
     
-    pub fn write_u32(&mut self, number: u32) {
-        self.write_bytes(&if self.gm_data.is_big_endian {
-            number.to_be_bytes()
-        } else {
-            number.to_le_bytes()
-        })
-    }
-    
-    pub fn write_i32(&mut self, number: i32) {
-        self.write_bytes(&if self.gm_data.is_big_endian {
-            number.to_be_bytes()
-        } else {
-            number.to_le_bytes()
-        })
-    }
-    
-    pub fn write_u16(&mut self, number: u16) {
-        self.write_bytes(&if self.gm_data.is_big_endian {
-            number.to_be_bytes()
-        } else {
-            number.to_le_bytes()
-        })
-    }
-    
-    pub fn write_i16(&mut self, number: i16) {
-        self.write_bytes(&if self.gm_data.is_big_endian {
-            number.to_be_bytes()
-        } else {
-            number.to_le_bytes()
-        })
-    }
-    
-    pub fn write_u8(&mut self, number: u8) {
-        self.write_bytes(&if self.gm_data.is_big_endian {
-            number.to_be_bytes()
-        } else {
-            number.to_le_bytes()
-        })
-    }
-    
-    pub fn write_i8(&mut self, number: i8) {
-        self.write_bytes(&if self.gm_data.is_big_endian {
-            number.to_be_bytes()
-        } else {
-            number.to_le_bytes()
-        })
-    }
-    
-    pub fn write_f64(&mut self, number: f64) {
-        self.write_bytes(&if self.gm_data.is_big_endian {
-            number.to_be_bytes()
-        } else {
-            number.to_le_bytes()
-        })
-    }
-    
-    pub fn write_f32(&mut self, number: f32) {
-        self.write_bytes(&if self.gm_data.is_big_endian {
-            number.to_be_bytes()
-        } else {
-            number.to_le_bytes()
-        })
-    }
+    write_int_fn!(write_f64, f64);
+    write_int_fn!(write_f32, f32);
     
     pub fn write_usize(&mut self, number: usize) -> Result<(), String> {
         let number: u32 = number.try_into().map_err(|_| format!(
@@ -90,13 +36,12 @@ impl DataBuilder<'_> {
     }
 
     pub fn write_i24(&mut self, number: i32) {
-        let masked: u32 = (number as u32) & 0x00FF_FFFF;
         let bytes: [u8; 4] = if self.gm_data.is_big_endian {
-            masked.to_be_bytes()
+            number.to_be_bytes()
         } else {
-            masked.to_le_bytes()
+            number.to_le_bytes()
         };
-        self.raw_data.extend_from_slice(&bytes[..3]);
+        self.write_bytes(&bytes[..3]);
     }
 }
 
