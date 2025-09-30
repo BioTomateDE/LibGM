@@ -2,7 +2,7 @@
 #[test]
 fn test_disassembler_and_assembler() -> Result<(), String> {
     use libgm::gml::assembler::assemble_code;
-    use libgm::gml::disassembler::disassemble_code;
+    use libgm::gml::disassembler::disassemble_instructions;
     use libgm::gamemaker::elements::code::GMInstruction;
     use libgm::__test_data_files;
 
@@ -16,7 +16,7 @@ fn test_disassembler_and_assembler() -> Result<(), String> {
             let code_name = code.name.resolve(&data.strings.strings)?;
             print!("({}/{}) Disassembling: {:<64}\r", i+1, data.codes.codes.len(), code_name);
 
-            let assembly: String = disassemble_code(&data, code)?;
+            let assembly: String = disassemble_instructions(&data, &code.instructions)?;
             let reconstructed: Vec<GMInstruction> = assemble_code(&assembly, &mut data).map_err(|e| e.to_string())?;
 
             let code = &data.codes.codes[i];
