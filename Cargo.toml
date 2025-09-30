@@ -3,6 +3,11 @@ name = "libgm"
 version = "0.1.0"
 edition = "2024"
 
+[lints.rust]
+# TODO: This is only for development. Remove this after initial release.
+dead_code = "allow"
+unused = "allow"
+
 [profile.dev]
 #opt-level = 1    # slight optimisations in debug profile
 opt-level = 0     # NO optimisations in debug profile so variables are not optimized out
@@ -11,12 +16,14 @@ debug-assertions = true
 overflow-checks = true
 
 # optimize all dependencies to max
+[profile.release.package."*"]
+opt-level = 3
 [profile.dev.package."*"]
 opt-level = 3
 
 [profile.release]
-debug = true        # debug info
-lto = true          # link time optimisation
+debug = true         # debug info
+lto = true           # link time optimisation
 #codegen-units = 1   # potentially better optimisations but build process way slower
 
 [dependencies]
@@ -43,15 +50,3 @@ xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
 bimap = "0.6.3"
 arrayvec = "0.7.6"
 many-to-many = "0.1.7"
-
-
-[dev-dependencies]
-criterion = "0.4"
-
-[[bench]]
-name = "parser"
-harness = false
-
-[[bench]]
-name = "builder"
-harness = false

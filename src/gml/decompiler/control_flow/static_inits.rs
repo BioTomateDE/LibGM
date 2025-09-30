@@ -1,8 +1,7 @@
 use std::ops::{Deref, DerefMut};
-use std::os::linux::raw::stat;
 use crate::gamemaker::elements::code::GMInstruction;
 use crate::gml::decompiler::control_flow::blocks::Block;
-use crate::gml::decompiler::control_flow::{BaseNode, ControlFlowGraph, NodeRef, Successors};
+use crate::gml::decompiler::control_flow::{BaseNode, ControlFlowGraph, NodeRef};
 
 
 #[derive(Debug, Clone)]
