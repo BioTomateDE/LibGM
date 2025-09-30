@@ -1,5 +1,5 @@
 ﻿use crate::gamemaker::deserialize::{DataReader, GMChunk, GMRef};
-use crate::gamemaker::element::{GMChunkElement, GMElement};
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::utility::vec_with_capacity;
 

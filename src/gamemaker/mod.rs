@@ -5,7 +5,6 @@ pub mod deserialize;
 mod detect_version;
 mod qoi;
 mod printing;
-mod element;
 pub mod data;
 pub mod upgrade;
 pub mod create_data_file;

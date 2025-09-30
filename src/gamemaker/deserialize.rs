@@ -10,6 +10,7 @@ pub use resources::GMRef;
 use crate::gamemaker::data::GMData;
 use crate::utility::Stopwatch;
 use crate::gamemaker::detect_version::detect_gamemaker_version;
+use crate::gamemaker::elements::GMChunkElement;
 use crate::gamemaker::gm_version::GMVersion;
 use crate::gamemaker::elements::animation_curves::GMAnimationCurves;
 use crate::gamemaker::elements::audio_groups::GMAudioGroups;
@@ -44,7 +45,7 @@ use crate::gamemaker::elements::ui_nodes::GMRootUINodes;
 use crate::gamemaker::elements::timelines::GMTimelines;
 
 
-pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<GMData, String> {
+pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
     let stopwatch = Stopwatch::start();
     let mut reader = DataReader::new(&raw_data);
 
@@ -102,9 +103,9 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
 
     let specified_version: GMVersion = reader.general_info.version.clone();
     if specified_version.major >= 2 {
-        let stopwatch2 = Stopwatch::start();
+        let stopwatch = Stopwatch::start();
         detect_gamemaker_version(&mut reader).map_err(|e| format!("{e}\n↳ while detecting gamemaker version"))?;
-        log::trace!("Detecting GameMaker Version took {stopwatch2}");
+        log::trace!("Detecting GameMaker Version took {stopwatch}");
         log::info!(
             "Loaded game \"{}\" with gamemaker version {} [specified: {}] and bytecode version {}",
             reader.resolve_gm_str(reader.general_info.display_name)?,
@@ -120,21 +121,14 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
             reader.general_info.bytecode_version,
         );
     }
-
-    let stopwatch2 = Stopwatch::start();
     
-    let variables: GMVariables;
-    let functions: GMFunctions;
-    let codes: GMCodes;
-    if check_yyc(&reader) {
-        variables = GMVariables { variables: vec![], b15_header: None, exists: false };
-        functions = GMFunctions { functions: vec![], code_locals: GMCodeLocals { code_locals: vec![], exists: false }, exists: false };
-        codes = GMCodes { codes: vec![], exists: false }
-    } else {
-        variables = reader.read_chunk_required("VARI")?;
-        functions = reader.read_chunk_required("FUNC")?;
-        codes = reader.read_chunk_required("CODE")?;
-    }
+    let (variables, functions, codes) = if check_yyc(&reader) {
+        (GMVariables::stub(), GMFunctions::stub(), GMCodes::stub())
+    } else {(
+        reader.read_chunk_required("VARI")?,
+        reader.read_chunk_required("FUNC")?,
+        reader.read_chunk_required("CODE")?,
+    )};
 
     let embedded_textures: GMEmbeddedTextures = reader.read_chunk_required("TXTR")?;
     let texture_page_items: GMTexturePageItems = reader.read_chunk_required("TPAG")?;
@@ -167,10 +161,9 @@ pub fn parse_data_file(raw_data: &Vec<u8>, allow_unread_chunks: bool) -> Result<
     let feature_flags: GMFeatureFlags = reader.read_chunk_optional("FEAT")?;
     let filter_effects: GMFilterEffects = reader.read_chunk_optional("FEDS")?;
     let animation_curves: GMAnimationCurves = reader.read_chunk_optional("ACRV")?;
-    log::trace!("Parsing chunks took {stopwatch2}");
     
     // Throw error if not all chunks read to prevent silent data loss
-    if !allow_unread_chunks && !reader.chunks.is_empty() {
+    if !reader.chunks.is_empty() {
         let chunks_str: String = reader.chunks.keys().cloned().collect::<Vec<_>>().join(", ");
         return Err(format!(
             "Not all chunks in the data file were read, which would lead to data loss when writing.\n\

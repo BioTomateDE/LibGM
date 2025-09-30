@@ -2,7 +2,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::elements::rooms::{GMRoomGameObject, GMRoomLayerEffectProperty, GMSequenceInstance, GMSpriteInstance, GMTextItemInstance};
 use crate::gamemaker::elements::ui_nodes::flex_properties::{AlignmentKind, FlexValue, GMNodeUIFlexInstanceProperties, GMNodeUIFlexProperties};
 use crate::gamemaker::deserialize::{DataReader, GMRef};
-use crate::gamemaker::element::{GMChunkElement, GMElement};
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::utility::{num_enum_from, typename_val};
 
@@ -369,7 +369,7 @@ impl GMElement for GMNodeUIEffectLayer {
 mod flex_properties {
     use num_enum::{IntoPrimitive, TryFromPrimitive};
     use crate::gamemaker::deserialize::DataReader;
-    use crate::gamemaker::element::GMElement;
+    use crate::gamemaker::elements::GMElement;
     use crate::gamemaker::serialize::DataBuilder;
     use crate::utility::num_enum_from;
 

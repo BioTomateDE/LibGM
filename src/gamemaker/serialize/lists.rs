@@ -1,9 +1,11 @@
 use crate::gamemaker::deserialize::GMRef;
-use crate::gamemaker::element::GMElement;
+use crate::gamemaker::elements::GMElement;
 use crate::gamemaker::serialize::DataBuilder;
 use crate::utility::typename;
 
 impl DataBuilder<'_> {
+    /// Write the element count as a 32-bit integer.
+    /// Then build all elements sequentially, with nothing in between.
     pub fn write_simple_list<T: GMElement>(&mut self, elements: &Vec<T>) -> Result<(), String> {
         let count: usize = elements.len();
         self.write_usize(count)?;

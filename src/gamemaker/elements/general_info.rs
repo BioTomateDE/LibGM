@@ -2,7 +2,7 @@
 use chrono::{DateTime, Utc};
 use crate::csharp_rng::CSharpRng;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
-use crate::gamemaker::element::{GMChunkElement, GMElement};
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::rooms::GMRoom;
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::gm_version::{GMVersion, GMVersionReq, LTSBranch};

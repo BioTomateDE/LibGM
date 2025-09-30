@@ -1,6 +1,6 @@
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::deserialize::DataReader;
-use crate::gamemaker::element::GMElement;
+use crate::gamemaker::elements::GMElement;
 use crate::gamemaker::elements::sprites::GMSpriteShapeData;
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;

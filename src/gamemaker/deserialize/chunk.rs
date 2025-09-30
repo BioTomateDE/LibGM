@@ -1,5 +1,5 @@
 use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::element::{GMChunkElement, GMElement};
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::gm_version::GMVersion;
 use crate::utility::Stopwatch;
 

@@ -1,7 +1,8 @@
 use std::fmt::Formatter;
 use crate::gamemaker::deserialize::DataReader;
-use crate::gamemaker::element::GMElement;
+use crate::gamemaker::elements::GMElement;
 use crate::gamemaker::serialize::DataBuilder;
+
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum LTSBranch {
@@ -83,11 +84,14 @@ impl GMVersion {
     pub fn set_version_at_least<V: Into<GMVersionReq>>(&mut self, version_req: V) -> Result<(), String> {
         let new_ver: GMVersionReq = version_req.into();
         if !matches!(new_ver.major, 2|2022|2023|2024|2025) {
-            return Err(format!(
-                "Tried to set GameMaker Version to {} which is not allowed for original GameMaker Version {}",
-                new_ver, self,
-            ))
+            let comment = if new_ver.major > 2025 && new_ver.major < 2100 {
+                format!("! If the current year is {} or greater, please contact the maintainer of this project to update the version validation.", new_ver.major)
+            } else {
+                String::new()
+            };
+            return Err(format!("Upgrading GameMaker Version from {self} to {new_ver} is not allowed{comment}"))
         }
+
         if self.is_version_at_least(new_ver.clone()) {
             return Ok(())   // only override version if new version is higher
         }
@@ -101,6 +105,7 @@ impl GMVersion {
         Ok(())
     }
 }
+
 
 impl GMElement for GMVersion {
     fn deserialize(reader: &mut DataReader) -> Result<Self, String> {

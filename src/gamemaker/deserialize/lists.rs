@@ -1,5 +1,5 @@
 use crate::gamemaker::deserialize::{DataReader, GMRef};
-use crate::gamemaker::element::GMElement;
+use crate::gamemaker::elements::GMElement;
 use crate::utility::{format_bytes, typename};
 
 impl DataReader<'_> {

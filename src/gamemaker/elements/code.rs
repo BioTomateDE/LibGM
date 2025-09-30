@@ -1,5 +1,5 @@
 ﻿use crate::gamemaker::deserialize::{DataReader, GMRef};
-use crate::gamemaker::element::{GMChunkElement, GMElement};
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::variables::GMVariable;
 use std::cmp::PartialEq;
 use std::collections::HashMap;
@@ -1486,7 +1486,7 @@ pub fn check_yyc(reader: &DataReader) -> bool {
     let Some(chunk_vari) = reader.chunks.get("VARI") else {return true};
     let Some(chunk_func) = reader.chunks.get("FUNC") else {return true};
     chunk_code.end_pos <= chunk_code.start_pos &&
-        chunk_vari.end_pos <= chunk_vari.start_pos &&
-        chunk_func.end_pos <= chunk_func.start_pos
+    chunk_vari.end_pos <= chunk_vari.start_pos &&
+    chunk_func.end_pos <= chunk_func.start_pos
 }
 

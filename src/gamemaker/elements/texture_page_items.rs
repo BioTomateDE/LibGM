@@ -1,5 +1,5 @@
 use crate::gamemaker::deserialize::{DataReader, GMRef};
-use crate::gamemaker::element::{GMChunkElement, GMElement};
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::embedded_textures::GMEmbeddedTexture;
 use crate::gamemaker::serialize::DataBuilder;
 
