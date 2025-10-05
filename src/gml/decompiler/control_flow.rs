@@ -16,12 +16,13 @@ macro_rules! delegate_to_node {
     // For methods that return mutable references
     ($field:ident, $meth:ident -> &mut $return_type:ty) => {
         pub fn $meth<'a>(&self, cfg: &'a mut ControlFlowGraph) -> &'a mut $return_type {
-            match self.node_type {
-                NodeType::Empty => &mut cfg.empty_nodes[self.index].$field,
-                NodeType::Block => &mut cfg.blocks[self.index].$field,
-                NodeType::Fragment => &mut cfg.fragments[self.index].$field,
-                NodeType::StaticInit => &mut cfg.static_inits[self.index].$field,
-                NodeType::Loop => &mut cfg.loops[self.index].$field,
+            let idx = self.index();
+            match self.node_type() {
+                NodeType::Empty => &mut cfg.empty_nodes[idx].$field,
+                NodeType::Block => &mut cfg.blocks[idx].$field,
+                NodeType::Fragment => &mut cfg.fragments[idx].$field,
+                NodeType::StaticInit => &mut cfg.static_inits[idx].$field,
+                NodeType::Loop => &mut cfg.loops[idx].$field,
             }
         }
     };
@@ -29,12 +30,13 @@ macro_rules! delegate_to_node {
     // For methods that return immutable references
     ($field:ident, $meth:ident -> &$return_type:ty) => {
         pub fn $meth<'a>(&self, cfg: &'a ControlFlowGraph) -> &'a $return_type {
-            match self.node_type {
-                NodeType::Empty => &cfg.empty_nodes[self.index].$field,
-                NodeType::Block => &cfg.blocks[self.index].$field,
-                NodeType::Fragment => &cfg.fragments[self.index].$field,
-                NodeType::StaticInit => &cfg.static_inits[self.index].$field,
-                NodeType::Loop => &cfg.loops[self.index].$field,
+            let idx = self.index();
+            match self.node_type() {
+                NodeType::Empty => &cfg.empty_nodes[idx].$field,
+                NodeType::Block => &cfg.blocks[idx].$field,
+                NodeType::Fragment => &cfg.fragments[idx].$field,
+                NodeType::StaticInit => &cfg.static_inits[idx].$field,
+                NodeType::Loop => &cfg.loops[idx].$field,
             }
         }
     };
@@ -42,12 +44,13 @@ macro_rules! delegate_to_node {
     // For methods that return values by copy
     ($field:ident, $meth:ident -> $return_type:ty) => {
         pub fn $meth(&self, cfg: &ControlFlowGraph) -> $return_type {
-            match self.node_type {
-                NodeType::Empty => cfg.empty_nodes[self.index].$field,
-                NodeType::Block => cfg.blocks[self.index].$field,
-                NodeType::Fragment => cfg.fragments[self.index].$field,
-                NodeType::StaticInit => cfg.static_inits[self.index].$field,
-                NodeType::Loop => cfg.loops[self.index].$field,
+            let idx = self.index();
+            match self.node_type() {
+                NodeType::Empty => cfg.empty_nodes[idx].$field,
+                NodeType::Block => cfg.blocks[idx].$field,
+                NodeType::Fragment => cfg.fragments[idx].$field,
+                NodeType::StaticInit => cfg.static_inits[idx].$field,
+                NodeType::Loop => cfg.loops[idx].$field,
             }
         }
     };
@@ -104,32 +107,32 @@ impl ControlFlowGraph<'_> {
         node_ref
     }
 
-    pub fn disconnect_branch_successor(&mut self, node: &NodeRef) -> Result<(), String> {
+    pub fn disconnect_branch_successor(&mut self, node: NodeRef) -> Result<(), String> {
         let successors: &mut Successors = node.successors_mut(self);
-        let old_successor: NodeRef = successors.branch_target.clone().ok_or("Branch successor was not set in the first place")?;
+        let old_successor: NodeRef = successors.branch_target.ok_or("Branch successor was not set in the first place")?;
         successors.branch_target = None;
-        remove_successor(old_successor.predecessors_mut(self), node)?;
+        remove_predecessor(old_successor.predecessors_mut(self), node)?;
         Ok(())
     }
 
-    pub fn disconnect_fallthrough_successor(&mut self, node: &NodeRef) -> Result<(), String> {
+    pub fn disconnect_fallthrough_successor(&mut self, node: NodeRef) -> Result<(), String> {
         let successors: &mut Successors = node.successors_mut(self);
-        let old_successor: NodeRef = successors.fall_through.clone().ok_or("Fallthrough successor was not set in the first place")?;
+        let old_successor: NodeRef = successors.fall_through.ok_or("Fallthrough successor was not set in the first place")?;
         successors.fall_through = None;
-        remove_successor(old_successor.predecessors_mut(self), node)?;
+        remove_predecessor(old_successor.predecessors_mut(self), node)?;
         Ok(())
     }
 
     /// TODO: i done like this function, replace all calls to it if possible
-    pub fn disconnect_predecessor(&mut self, node: &NodeRef, predecessor_index: usize) -> Result<(), String> {
+    pub fn disconnect_predecessor(&mut self, node: NodeRef, predecessor_index: usize) -> Result<(), String> {
         let predecessors: &mut Vec<NodeRef> = node.predecessors_mut(self);
-        let old_predecessor: NodeRef = predecessors.get(predecessor_index).cloned().ok_or("Predecessor index out of range")?;
+        let old_predecessor: NodeRef = *predecessors.get(predecessor_index).ok_or("Predecessor index out of range")?;
         predecessors.remove(predecessor_index);
         old_predecessor.successors_mut(self).remove(node);
         Ok(())
     }
 
-    pub fn disconnect_all_predecessors(&mut self, node: &NodeRef) -> Result<(), String> {
+    pub fn disconnect_all_predecessors(&mut self, node: NodeRef) -> Result<(), String> {
         for pred in node.predecessors(self).clone() {
             pred.successors_mut(self).remove(node);
         }
@@ -140,17 +143,17 @@ impl ControlFlowGraph<'_> {
     /// Utility function to insert a new node to the control flow graph, which is a
     /// sole predecessor of "node", and takes on all predecessors of "node" that are
     /// within a range of addresses, ending at "node"'s address.
-    pub fn insert_predecessors(&mut self, node: &NodeRef, new_predecessor: &NodeRef, start_address: u32) -> Result<(), String> {
+    pub fn insert_predecessors(&mut self, node: NodeRef, new_predecessor: NodeRef, start_address: u32) -> Result<(), String> {
         // Reroute all earlier predecessors of [node] to [new_predecessor]
         let node_start: u32 = node.start_address(self);
         let mut i: usize = 0;
 
-        while let Some(curr_pred) = node.predecessors_mut(self).get(i).cloned() {
+        while let Some(curr_pred) = node.predecessors_mut(self).get(i).copied() {
             let curr_start: u32 = curr_pred.start_address(self);
             if curr_start >= start_address && curr_start < node_start {
-                new_predecessor.predecessors_mut(self).push(curr_pred.clone());
+                new_predecessor.predecessors_mut(self).push(curr_pred);
                 let successors = curr_pred.successors_mut(self);
-                successors.replace(node, new_predecessor.clone())?;
+                successors.replace(node, new_predecessor)?;
 
                 node.predecessors_mut(self).remove(i);
                 continue
@@ -161,44 +164,66 @@ impl ControlFlowGraph<'_> {
     }
 
     pub fn insert_structure(&mut self, start: NodeRef, after: NodeRef, new_structure: NodeRef) -> Result<(), String> {
-        // TODO: check unreachable
-
         // Reroute all nodes going into [start] to instead go into [new_structure]
         let mut i: usize = 0;
-        while let Some(curr_pred) = start.predecessors_mut(self).get(i).cloned() {
-            new_structure.predecessors_mut(self).push(curr_pred.clone());
-            curr_pred.successors_mut(self).replace(&start, new_structure.clone())?;
+        while let Some(curr_pred) = start.predecessors_mut(self).get(i).copied() {
+            new_structure.predecessors_mut(self).push(curr_pred);
+            curr_pred.successors_mut(self).replace(start, new_structure)?;
             i += 1;
         }
+        start.predecessors_mut(self).clear();
 
         // TODO: parent children
 
         // Reroute predecessor at index 0 from [after] to instead come from [new_structure]
         let after_preds = after.predecessors_mut(self);
         if let Some(pred) = after_preds.first_mut() {
-            // pred.successors_mut(self).remove(&after);        // is this even needed????
             *pred = new_structure;
         } else {
-            after_preds.push(new_structure.clone());
+            after_preds.push(new_structure);
         }
 
+        new_structure.successors_mut(self).branch_target = Some(after);
         Ok(())
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct NodeRef {
-    pub node_type: NodeType,
-    pub index: usize,
-}
+#[repr(transparent)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NodeRef(u32);
+impl NodeRef {
+    const TYPE_BITS: u32 = 5;    // 5 bits = 32 variants max
+    const INDEX_BITS: u32 = 27;  // 27 bits = ~134 million nodes
+    const TYPE_MASK: u32 = 0b11111;
+    const INDEX_MASK: u32 = (1 << 27) - 1;
 
-impl Display for NodeRef {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}<{}>", self.node_type, self.index)
+    pub const fn new(node_type: NodeType, index: usize) -> Self {
+        debug_assert!(index < (1 << Self::INDEX_BITS), "Index too large");
+        let type_bits = node_type as u32 & Self::TYPE_MASK;
+        let index_bits = index as u32 & Self::INDEX_MASK;
+        Self(type_bits | (index_bits << Self::TYPE_BITS))
+    }
+    pub const fn node_type(&self) -> NodeType {
+        unsafe { std::mem::transmute((self.0 & Self::TYPE_MASK) as u8) }
+    }
+    pub const fn index(&self) -> usize {
+        ((self.0 >> Self::TYPE_BITS) & Self::INDEX_MASK) as usize
+    }
+
+    pub const fn next_sequentially(&self) -> Self {
+        Self::new(self.node_type(), self.index() + 1)
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+
+impl Display for NodeRef {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}<{}>", self.node_type(), self.index())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(u8)]
 pub enum NodeType {
     Empty,
     Block,
@@ -214,37 +239,31 @@ impl NodeRef {
     delegate_to_node!(predecessors, predecessors_mut -> &mut Vec<NodeRef>);
     delegate_to_node!(successors, successors -> &Successors);
     delegate_to_node!(successors, successors_mut -> &mut Successors);
-    delegate_to_node!(parent, parent -> &Option<NodeRef>);
+    delegate_to_node!(parent, parent -> Option<NodeRef>);
     delegate_to_node!(parent, parent_mut -> &mut Option<NodeRef>);
-
-    pub const fn new(node_type: NodeType, index: usize) -> NodeRef {
-        Self { node_type, index }
-    }
 
     pub const fn block(index: usize) -> Self {
         NodeRef::new(NodeType::Block, index)
     }
-
     pub const fn fragment(index: usize) -> Self {
         NodeRef::new(NodeType::Fragment, index)
     }
     pub const fn static_init(index: usize) -> Self {
         NodeRef::new(NodeType::StaticInit, index)
     }
-
     pub const fn r#loop(index: usize) -> Self {
         NodeRef::new(NodeType::Loop, index)
     }
 
     pub fn as_block<'c, 'd>(&self, cfg: &'c ControlFlowGraph<'d>) -> Option<&'c Block<'d>> {
-        match self.node_type {
-            NodeType::Block => Some(&cfg.blocks[self.index]),
+        match self.node_type() {
+            NodeType::Block => cfg.blocks.get(self.index()),
             _ => None,
         }
     }
     pub fn as_block_mut<'c, 'd>(&self, cfg: &'c mut ControlFlowGraph<'d>) -> Option<&'c mut Block<'d>> {
-        match self.node_type {
-            NodeType::Block => Some(&mut cfg.blocks[self.index]),
+        match self.node_type() {
+            NodeType::Block => cfg.blocks.get_mut(self.index()),
             _ => None,
         }
     }
@@ -276,17 +295,17 @@ impl Successors {
         Self { fall_through: None, branch_target: None, catch: None }
     }
 
-    pub fn replace(&mut self, search: &NodeRef, replace: NodeRef) -> Result<(), String> {
+    pub fn replace(&mut self, search: NodeRef, replace: NodeRef) -> Result<(), String> {
         let mut found: bool = false;
-        if self.branch_target.as_ref() == Some(search) {
+        if self.branch_target == Some(search) {
             self.branch_target = Some(replace.clone());
             found = true;
         }
-        if self.fall_through.as_ref() == Some(search) {
+        if self.fall_through == Some(search) {
             self.fall_through = Some(replace.clone());
             found = true;
         }
-        if self.catch.as_ref() == Some(search) {
+        if self.catch == Some(search) {
             self.catch = Some(replace);
             found = true;
         }
@@ -296,22 +315,22 @@ impl Successors {
         Ok(())
     }
 
-    pub fn remove(&mut self, search: &NodeRef) {
-        if self.branch_target.as_ref() == Some(search) {
+    pub fn remove(&mut self, search: NodeRef) {
+        if self.branch_target == Some(search) {
             self.branch_target = None;
         }
-        if self.fall_through.as_ref() == Some(search) {
+        if self.fall_through == Some(search) {
             self.fall_through = None;
         }
-        if self.catch.as_ref() == Some(search) {
+        if self.catch == Some(search) {
             self.catch = None;
         }
     }
 }
 
 
-fn remove_successor(predecessors: &mut Vec<NodeRef>, successor: &NodeRef) -> Result<(), String> {
-    let index: usize = predecessors.iter().position(|i| i == successor)
+pub fn remove_predecessor(predecessors: &mut Vec<NodeRef>, successor: NodeRef) -> Result<(), String> {
+    let index: usize = predecessors.iter().position(|&n| n == successor)
         .ok_or("Successor's predecessor was not set in the first place")?;
     predecessors.remove(index);
     Ok(())

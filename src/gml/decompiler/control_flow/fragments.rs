@@ -1,9 +1,9 @@
-use std::ops::{Deref, DerefMut};
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::code::{get_instruction_size, GMCode, GMInstruction};
-use crate::gml::decompiler::control_flow::{BaseNode, ControlFlowGraph, NodeRef, NodeType};
+use crate::gml::decompiler::control_flow::{BaseNode, ControlFlowGraph, NodeRef};
 use crate::utility::SmallMap;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone)]
 pub struct Fragment<'a> {
@@ -67,15 +67,13 @@ pub fn find_fragments(cfg: &mut ControlFlowGraph, code_ref: GMRef<GMCode>) -> Re
             }
 
             // Disconnect predecessor from branch instruction block
-            cfg.disconnect_all_predecessors(&current.blocks[0])?;
+            cfg.disconnect_all_predecessors(current.blocks[0])?;
 
             // We're an inner fragment; remove the Exit Instruction
-            let Some(NodeRef { node_type: NodeType::Block, index }) = current.blocks.last() else {
-                return Err("fragment doesn't have any blocks or last block is not a block".to_string());
-            };
-            let last_block = &mut cfg.blocks[*index];
+            let last_block: &NodeRef = current.blocks.last().ok_or("Fragment doesn't have any blocks while ending fragment")?;
+            let last_block = &mut cfg.blocks[last_block.index()];
             match last_block.instructions.last() {
-                Some(GMInstruction::Exit(_)) => last_block.pop_last_instruction(),
+                Some(GMInstruction::Exit(_)) => last_block.pop_last_instruction()?,
                 Some(instr) => return Err(format!("Expected Exit instruction; got {instr:?}")),
                 None => unreachable!("Block doesn't have any instructions"),    // TODO: is ts possible? end block
             }
@@ -95,12 +93,12 @@ pub fn find_fragments(cfg: &mut ControlFlowGraph, code_ref: GMRef<GMCode>) -> Re
             if !matches!(last_instr, GMInstruction::Branch(_)) {
                 return Err(format!("Expected unconditional branch instruction before fragment start, got {last_instr:?}"))
             }
-            let Some(branch_target_node) = previous.successors.branch_target.clone() else {
+            let Some(branch_target_node) = previous.successors.branch_target else {
                 unreachable!("Successor enum of previous block (which ends in a `Branch` instruction) is not `UnconditionalBranch`")
             };
 
             // Remove previous block's branch instruction
-            previous.pop_last_instruction();
+            previous.pop_last_instruction()?;
 
             // Make our new "current" be this new fragment
             cfg.fragments.push(current);
@@ -111,7 +109,7 @@ pub fn find_fragments(cfg: &mut ControlFlowGraph, code_ref: GMRef<GMCode>) -> Re
             let previous = &mut cfg.blocks[i - 1];
             let cur_node_idx = NodeRef::fragment(cfg.fragments.len());
             let prev_node_idx = NodeRef::block(i - 1);
-            previous.successors.branch_target = Some(cur_node_idx.clone());
+            previous.successors.branch_target = Some(cur_node_idx);
             let predecessors = branch_target_node.predecessors_mut(cfg);
             let pred_index: usize = predecessors.iter().position(|node| *node == prev_node_idx)
                 .ok_or(format!("Could not find predecessor with block index {} for branch target node", i-1))?;
