@@ -19,7 +19,7 @@ impl DataReader<'_> {
     pub fn read_chunk_name(&mut self) -> Result<String, String> {
         if self.chunk.name != "FORM" {
             return Err(format!(
-                "Reading a chunk name is only allowed in root; not in a chunk!
+                "Reading a chunk name is only allowed in FORM; not in a chunk!
                 Current chunk is called '{}' and has start position {} and end position {}",
                 self.chunk.name, self.chunk.start_pos, self.chunk.end_pos,
             ))
@@ -38,9 +38,13 @@ impl DataReader<'_> {
         }
         
         if self.is_big_endian {
-            // chunks names are reversed in big endian
-            return Ok(string.chars().rev().collect())
+            // Chunk names are reversed in big endian
+            let mut bytes = string.into_bytes();
+            bytes.reverse();
+            // SAFETY: This operation is safe because the string was already checked to be ascii.
+            return Ok(unsafe { String::from_utf8_unchecked(bytes) })
         }
+
         Ok(string)
     }
     

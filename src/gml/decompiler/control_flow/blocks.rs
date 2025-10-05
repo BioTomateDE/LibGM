@@ -26,16 +26,30 @@ impl<'a> Block<'a> {
         }
     }
 
-    pub fn pop_first_instruction(&mut self) {
-        if !self.instructions.is_empty() {
-            self.instructions = &self.instructions[1..];
-        }
+    pub fn pop_first_instruction(&mut self) -> Result<(), String> {
+        self.pop_first_instructions(1)
     }
 
-    pub fn pop_last_instruction(&mut self) {
-        if !self.instructions.is_empty() {
-            self.instructions = &self.instructions[..self.instructions.len() - 1];
+    pub fn pop_first_instructions(&mut self, count: usize) -> Result<(), String> {
+        let len = self.instructions.len();
+        if count > len {
+            return Err(format!("Tried to pop {count} first instructions from block with {len} instructions"))
         }
+        self.instructions = &self.instructions[count..];
+        Ok(())
+    }
+
+    pub fn pop_last_instruction(&mut self) -> Result<(), String> {
+        self.pop_last_instructions(1)
+    }
+
+    pub fn pop_last_instructions(&mut self, count: usize) -> Result<(), String> {
+        let len = self.instructions.len();
+        if count > len {
+            return Err(format!("Tried to pop {count} last instructions from block with {len} instructions"))
+        }
+        self.instructions = &self.instructions[..len-count];
+        Ok(())
     }
 }
 
@@ -305,7 +319,7 @@ fn connect_blocks(cfg: &mut ControlFlowGraph) -> Result<(), String> {
 /// Helper to connect a block to its fallthrough successor
 fn connect_fallthrough(cfg: &mut ControlFlowGraph, block_idx: usize) {
     let successor = NodeRef::block(block_idx + 1);
-    cfg.blocks[block_idx].successors.fall_through = Some(successor.clone());
+    cfg.blocks[block_idx].successors.fall_through = Some(successor);
     cfg.blocks[block_idx + 1].predecessors.push(NodeRef::block(block_idx));
 }
 
@@ -314,7 +328,7 @@ fn connect_fallthrough(cfg: &mut ControlFlowGraph, block_idx: usize) {
 fn connect_branch_target(cfg: &mut ControlFlowGraph, block_idx: usize, target_addr: u32) -> Result<(), String> {
     let target_idx = find_block_containing(cfg, target_addr)?;
     let successor = NodeRef::block(target_idx);
-    cfg.blocks[block_idx].successors.branch_target = Some(successor.clone());
+    cfg.blocks[block_idx].successors.branch_target = Some(successor);
     cfg.blocks[target_idx].predecessors.push(NodeRef::block(block_idx));
     Ok(())
 }
