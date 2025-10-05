@@ -30,7 +30,7 @@ impl ModExporter<'_, '_> {
         )
     }
     
-    fn convert_path(&self, i: &GMPath) -> Result<ModPath, String> {
+    fn convert_path(&self, i: &GMPath) -> Result<ModPath> {
         Ok(ModPath {
             name: self.convert_string_ref(&i.name)?,
             is_smooth: i.is_smooth,

@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use cpu_time::ProcessTime;
 use num_enum::TryFromPrimitive;
 use std::collections::HashMap;
@@ -133,35 +134,35 @@ pub fn typename_val<T>(_: &T) -> String {
 }
 
 
-pub fn vec_with_capacity<T>(count: usize) -> Result<Vec<T>, String> {
+pub fn vec_with_capacity<T>(count: usize) -> Result<Vec<T>> {
     const FAILSAFE_SIZE: usize = 1_000_000;   // 1 Megabyte
     let implied_size = size_of::<T>() * count;
     if implied_size > FAILSAFE_SIZE {
-        return Err(format!(
+        bail!(
             "Failsafe triggered while initializing list of {}: \
             Element count {} implies a total data size of {} which is larger than the failsafe size of {}",
             typename::<T>(), count, format_bytes(implied_size), format_bytes(FAILSAFE_SIZE),
-        ))
+        );
     }
     Ok(Vec::with_capacity(count))
 }
 
-pub fn hashmap_with_capacity<K, V>(count: usize) -> Result<HashMap<K, V>, String> {
+pub fn hashmap_with_capacity<K, V>(count: usize) -> Result<HashMap<K, V>> {
     const FAILSAFE_SIZE: usize = 100_000;   // 100 KB
     let implied_size = size_of::<K>() * size_of::<V>() * count;
     if implied_size > FAILSAFE_SIZE {
-        return Err(format!(
+        bail!(
             "Failsafe triggered while initializing HashMap of <{}, {}>: \
             Element count {} implies a total data size of {} which is larger than the failsafe size of {}",
             typename::<K>(), typename::<V>(), count, format_bytes(implied_size), format_bytes(FAILSAFE_SIZE),
-        ))
+        );
     }
     Ok(HashMap::with_capacity(count))
 }
 
 
 /// most readable rust function:
-pub fn num_enum_from<I, N>(value: I) -> Result<N, String>
+pub fn num_enum_from<I, N>(value: I) -> Result<N>
 where
     I: Display + UpperHex + Copy,
     N: TryFromPrimitive + TryFrom<I>,
@@ -169,12 +170,12 @@ where
     match value.try_into() {
         // raw match statements for easy debugger breakpoints
         Ok(val) => Ok(val),
-        Err(_) => Err(format!(
+        Err(_) => bail!(
             "Invalid {0} {1} (0x{1:0width$X})",
             typename::<N>(),
             value,
             width = size_of::<I>() * 2,
-        )),
+        )
     }
 }
 

@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
@@ -82,7 +83,7 @@ impl GMChunkElement for GMOptions {
     }
 }
 impl GMElement for GMOptions {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let is_new_format: bool = reader.read_u32()? == 0x80000000;
         reader.cur_pos -= 4;
         if is_new_format {
@@ -92,7 +93,7 @@ impl GMElement for GMOptions {
         }
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         if self.is_new_format {
             build_options_new(builder, self)?;
@@ -138,7 +139,7 @@ pub struct GMOptionsFlags {
     pub enable_copy_on_write: bool,
 }
 impl GMElement for GMOptionsFlags {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let raw = reader.read_u64()?;
         Ok(GMOptionsFlags {
             fullscreen: 0 != raw & 0x1,
@@ -174,7 +175,7 @@ impl GMElement for GMOptionsFlags {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let mut raw: u64 = 0;
         if self.fullscreen {raw |= 0x1};
         if self.interpolate_pixels {raw |= 0x2};
@@ -218,13 +219,13 @@ pub struct GMOptionsConstant {
     pub value: GMRef<String>,
 }
 impl GMElement for GMOptionsConstant {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let value: GMRef<String> = reader.read_gm_string()?;
         Ok(GMOptionsConstant { name, value })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         builder.write_gm_string(&self.value)?;
         Ok(())
@@ -232,21 +233,21 @@ impl GMElement for GMOptionsConstant {
 }
 
 
-fn parse_options_new(reader: &mut DataReader) -> Result<GMOptions, String> {
-    let unknown1: u32 = reader.read_u32()?;
-    let unknown2: u32 = reader.read_u32()?;
+fn parse_options_new(reader: &mut DataReader) -> Result<GMOptions> {
+    let unknown1 = reader.read_u32()?;
+    let unknown2 = reader.read_u32()?;
     let flags = GMOptionsFlags::deserialize(reader)?;
-    let window_scale: i32 = reader.read_i32()?;
-    let window_color: u32 = reader.read_u32()?;
-    let color_depth: u32 = reader.read_u32()?;
-    let resolution: u32 = reader.read_u32()?;
-    let frequency: u32 = reader.read_u32()?;
-    let vertex_sync: i32 = reader.read_i32()?;
-    let priority: i32 = reader.read_i32()?;
+    let window_scale = reader.read_i32()?;
+    let window_color = reader.read_u32()?;
+    let color_depth = reader.read_u32()?;
+    let resolution = reader.read_u32()?;
+    let frequency = reader.read_u32()?;
+    let vertex_sync = reader.read_i32()?;
+    let priority = reader.read_i32()?;
     let back_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
     let front_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
     let load_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
-    let load_alpha: u32 = reader.read_u32()?;
+    let load_alpha = reader.read_u32()?;
     let constants: Vec<GMOptionsConstant> = reader.read_simple_list()?;
 
     Ok(GMOptions {
@@ -271,56 +272,56 @@ fn parse_options_new(reader: &mut DataReader) -> Result<GMOptions, String> {
 }
 
 
-fn parse_options_old(reader: &mut DataReader) -> Result<GMOptions, String> {
-    let flag_fullscreen: bool = reader.read_bool32()?;
-    let flag_interpolate_pixels: bool = reader.read_bool32()?;
-    let flag_use_new_audio: bool = reader.read_bool32()?;
-    let flag_no_border: bool = reader.read_bool32()?;
-    let flag_show_cursor: bool = reader.read_bool32()?;
+fn parse_options_old(reader: &mut DataReader) -> Result<GMOptions> {
+    let flag_fullscreen = reader.read_bool32()?;
+    let flag_interpolate_pixels = reader.read_bool32()?;
+    let flag_use_new_audio = reader.read_bool32()?;
+    let flag_no_border = reader.read_bool32()?;
+    let flag_show_cursor = reader.read_bool32()?;
 
-    let scale: i32 = reader.read_i32()?;
+    let scale = reader.read_i32()?;
 
-    let flag_sizeable: bool = reader.read_bool32()?;
-    let flag_stay_on_top: bool = reader.read_bool32()?;
+    let flag_sizeable = reader.read_bool32()?;
+    let flag_stay_on_top = reader.read_bool32()?;
 
-    let window_color: u32 = reader.read_u32()?;
+    let window_color = reader.read_u32()?;
 
-    let flag_change_resolution: bool = reader.read_bool32()?;
+    let flag_change_resolution = reader.read_bool32()?;
 
-    let color_depth: u32 = reader.read_u32()?;
-    let resolution: u32 = reader.read_u32()?;
-    let frequency: u32 = reader.read_u32()?;
+    let color_depth = reader.read_u32()?;
+    let resolution = reader.read_u32()?;
+    let frequency = reader.read_u32()?;
 
-    let flag_no_buttons: bool = reader.read_bool32()?;
+    let flag_no_buttons = reader.read_bool32()?;
 
-    let vertex_sync: i32 = reader.read_i32()?;
+    let vertex_sync = reader.read_i32()?;
 
-    let flag_screen_key: bool = reader.read_bool32()?;
-    let flag_help_key: bool = reader.read_bool32()?;
-    let flag_quit_key: bool = reader.read_bool32()?;
-    let flag_save_key: bool = reader.read_bool32()?;
-    let flag_screenshot_key: bool = reader.read_bool32()?;
-    let flag_close_sec: bool = reader.read_bool32()?;
+    let flag_screen_key = reader.read_bool32()?;
+    let flag_help_key = reader.read_bool32()?;
+    let flag_quit_key = reader.read_bool32()?;
+    let flag_save_key = reader.read_bool32()?;
+    let flag_screenshot_key = reader.read_bool32()?;
+    let flag_close_sec = reader.read_bool32()?;
 
-    let priority: i32 = reader.read_i32()?;
+    let priority = reader.read_i32()?;
 
-    let flag_freeze: bool = reader.read_bool32()?;
-    let flag_show_progress: bool = reader.read_bool32()?;
+    let flag_freeze = reader.read_bool32()?;
+    let flag_show_progress = reader.read_bool32()?;
 
     let back_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
     let front_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
     let load_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
 
-    let flag_load_transparent: bool = reader.read_bool32()?;
+    let flag_load_transparent = reader.read_bool32()?;
 
-    let load_alpha: u32 = reader.read_u32()?;
+    let load_alpha = reader.read_u32()?;
 
-    let flag_scale_progress: bool = reader.read_bool32()?;
-    let flag_display_errors: bool = reader.read_bool32()?;
-    let flag_write_errors: bool = reader.read_bool32()?;
-    let flag_abort_errors: bool = reader.read_bool32()?;
-    let flag_variable_errors: bool = reader.read_bool32()?;
-    let flag_creation_event_order: bool = reader.read_bool32()?;
+    let flag_scale_progress = reader.read_bool32()?;
+    let flag_display_errors = reader.read_bool32()?;
+    let flag_write_errors = reader.read_bool32()?;
+    let flag_abort_errors = reader.read_bool32()?;
+    let flag_variable_errors = reader.read_bool32()?;
+    let flag_creation_event_order = reader.read_bool32()?;
 
     let constants: Vec<GMOptionsConstant> = reader.read_simple_list()?;
 
@@ -377,7 +378,7 @@ fn parse_options_old(reader: &mut DataReader) -> Result<GMOptions, String> {
 }
 
 
-fn build_options_old(builder: &mut DataBuilder, options: &GMOptions) -> Result<(), String> {
+fn build_options_old(builder: &mut DataBuilder, options: &GMOptions) -> Result<()> {
     builder.write_bool32(options.flags.fullscreen);
     builder.write_bool32(options.flags.interpolate_pixels);
     builder.write_bool32(options.flags.use_new_audio);
@@ -431,7 +432,7 @@ fn build_options_old(builder: &mut DataBuilder, options: &GMOptions) -> Result<(
 }
 
 
-fn build_options_new(builder: &mut DataBuilder, options: &GMOptions) -> Result<(), String> {
+fn build_options_new(builder: &mut DataBuilder, options: &GMOptions) -> Result<()> {
     builder.write_u32(options.unknown1);
     builder.write_u32(options.unknown2);
     options.flags.serialize(builder)?;

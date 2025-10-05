@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::deserialize::DataReader;
 use crate::gamemaker::elements::GMElement;
@@ -29,17 +30,17 @@ pub struct GMSpriteYYSWFTimeline {
     pub collision_masks: Vec<GMSpriteYYSWFCollisionMask>,
 }
 impl GMElement for GMSpriteYYSWFTimeline {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let used_items: Vec<GMSpriteYYSWFItem> = reader.read_simple_list()?;
-        let framerate: i32 = reader.read_i32()?;
-        let frames_count: usize = reader.read_usize()?;
-        let min_x: f32 = reader.read_f32()?;
-        let max_x: f32 = reader.read_f32()?;
-        let min_y: f32 = reader.read_f32()?;
-        let max_y: f32 = reader.read_f32()?;
-        let collision_masks_count: usize = reader.read_usize()?;
-        let mask_width: i32 = reader.read_i32()?;
-        let mask_height: i32 = reader.read_i32()?;
+        let framerate = reader.read_i32()?;
+        let frames_count = reader.read_usize()?;
+        let min_x = reader.read_f32()?;
+        let max_x = reader.read_f32()?;
+        let min_y = reader.read_f32()?;
+        let max_y = reader.read_f32()?;
+        let collision_masks_count = reader.read_usize()?;
+        let mask_width = reader.read_i32()?;
+        let mask_height = reader.read_i32()?;
 
         let mut frames: Vec<GMSpriteYYSWFTimelineFrame> = vec_with_capacity(frames_count)?;
         for _ in 0..frames_count {
@@ -54,7 +55,7 @@ impl GMElement for GMSpriteYYSWFTimeline {
         Ok(GMSpriteYYSWFTimeline { framerate, min_x, max_x, min_y, max_y, mask_width, mask_height, used_items, frames, collision_masks })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_simple_list(&self.used_items)?;
         builder.write_i32(self.framerate);
         builder.write_usize(self.frames.len())?;
@@ -82,24 +83,24 @@ pub struct GMSpriteYYSWFItem {
     pub item_data: GMSpriteYYSWFItemData,
 }
 impl GMElement for GMSpriteYYSWFItem {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let item_type: i32 = reader.read_i32()?;
-        let id: i32 = reader.read_i32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let item_type = reader.read_i32()?;
+        let id = reader.read_i32()?;
         let item_data: GMSpriteYYSWFItemData = match item_type {
             1 => GMSpriteYYSWFItemData::ItemShape(GMSpriteShapeData::deserialize(reader)?),
             2 => GMSpriteYYSWFItemData::ItemBitmap(GMSpriteYYSWFBitmapData::deserialize(reader)?),
             3 => GMSpriteYYSWFItemData::ItemFont,
             4 => GMSpriteYYSWFItemData::ItemTextField,
             5 => GMSpriteYYSWFItemData::ItemSprite,
-            _ => return Err(format!(
+            _ => bail!(
                 "Invalid YYSWF Item Type {0} 0x{0:08X} at position {1} while parsing Sprite YYSWF Item",
                 item_type, reader.cur_pos,
-            ))
+            )
         };
         Ok(GMSpriteYYSWFItem { id, item_data })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(match &self.item_data {
             GMSpriteYYSWFItemData::ItemShape(_) => 1,
             GMSpriteYYSWFItemData::ItemBitmap(_) => 2,
@@ -137,21 +138,21 @@ pub enum GMSpriteYYSWFFillData {
     FillBitmap(GMSpriteYYSWFBitmapFillData),
 }
 impl GMElement for GMSpriteYYSWFFillData {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let fill_type: i32 = reader.read_i32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let fill_type = reader.read_i32()?;
         let fill_data = match fill_type {
             1 => Self::FillSolid(GMSpriteYYSWFSolidFillData::deserialize(reader)?),
             2 => Self::FillGradient(GMSpriteYYSWFGradientFillData::deserialize(reader)?),
             3 => Self::FillBitmap(GMSpriteYYSWFBitmapFillData::deserialize(reader)?),
-            _ => return Err(format!(
+            _ => bail!(
                 "Invalid YYSWF Fill Type 0x{:08X} at position {} while parsing Sprite YYSWF Fill Data",
                 fill_type, reader.cur_pos,
-            )),
+            ),
         };
         Ok(fill_data)
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(match self {
             Self::FillSolid(_) => 1,
             Self::FillGradient(_) => 2,
@@ -191,7 +192,7 @@ pub struct GMSpriteYYSWFStyleGroup<T: GMElement> {
     pub subshapes: Vec<T>,
 }
 impl<T: GMElement> GMElement for GMSpriteYYSWFStyleGroup<T> {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let fill_data_count: usize = reader.read_i32()?.max(0) as usize;
         let line_style_count: usize = reader.read_i32()?.max(0) as usize;
         let subshape_count: usize = reader.read_i32()?.max(0) as usize;
@@ -214,7 +215,7 @@ impl<T: GMElement> GMElement for GMSpriteYYSWFStyleGroup<T> {
         Ok(GMSpriteYYSWFStyleGroup { fill_styles, line_styles, subshapes })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_usize(self.fill_styles.len())?;
         builder.write_usize(self.line_styles.len())?;
         builder.write_usize(self.subshapes.len())?;
@@ -239,14 +240,14 @@ pub struct GMSpriteYYSWFBitmapFillData {
     transformation_matrix: GMSpriteYYSWFMatrix33,
 }
 impl GMElement for GMSpriteYYSWFBitmapFillData {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String>{
+    fn deserialize(reader: &mut DataReader) -> Result<Self>{
         let bitmap_fill_type: GMSpriteYYSWFBitmapFillType = num_enum_from(reader.read_i32()?)?;
-        let char_id: i32 = reader.read_i32()?;
+        let char_id = reader.read_i32()?;
         let transformation_matrix = GMSpriteYYSWFMatrix33::deserialize(reader)?;
         Ok(GMSpriteYYSWFBitmapFillData { bitmap_fill_type, char_id, transformation_matrix })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(self.bitmap_fill_type.into());
         builder.write_i32(self.char_id);
         self.transformation_matrix.serialize(builder)?;
@@ -261,7 +262,7 @@ pub struct GMSpriteYYSWFMatrix33 {
     pub values: [f32; YYSWF_MATRIX33_MATRIX_SIZE],
 }
 impl GMElement for GMSpriteYYSWFMatrix33 {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let mut values = [0f32; YYSWF_MATRIX33_MATRIX_SIZE];
         for item in &mut values {
             *item = reader.read_f32()?;
@@ -269,7 +270,7 @@ impl GMElement for GMSpriteYYSWFMatrix33 {
         Ok(Self { values })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         for item in &self.values {
             builder.write_f32(*item);
         }
@@ -286,7 +287,7 @@ pub struct GMSpriteYYSWFGradientFillData {
     pub records: Vec<GMSpriteYYSWFGradientRecord>,
 }
 impl GMElement for GMSpriteYYSWFGradientFillData {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let gradient_fill_type: GMSpriteYYSWFGradientFillType = num_enum_from(reader.read_i32()?)?;
         let tpe_index: Option<i32> = reader.deserialize_if_gm_version((2022, 1))?;
         let transformation_matrix = GMSpriteYYSWFMatrix33::deserialize(reader)?;
@@ -299,7 +300,7 @@ impl GMElement for GMSpriteYYSWFGradientFillData {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(self.gradient_fill_type.into());
         self.tpe_index.serialize_if_gm_ver(builder, "TPE Index", (2022, 1))?;
         self.transformation_matrix.serialize(builder)?;
@@ -318,16 +319,16 @@ pub struct GMSpriteYYSWFGradientRecord {
     pub alpha: u8,
 }
 impl GMElement for GMSpriteYYSWFGradientRecord {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let ratio: i32 = reader.read_i32()?;
-        let red: u8 = reader.read_u8()?;
-        let green: u8 = reader.read_u8()?;
-        let blue: u8 = reader.read_u8()?;
-        let alpha: u8 = reader.read_u8()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let ratio = reader.read_i32()?;
+        let red = reader.read_u8()?;
+        let green = reader.read_u8()?;
+        let blue = reader.read_u8()?;
+        let alpha = reader.read_u8()?;
         Ok(GMSpriteYYSWFGradientRecord { ratio, red, green, blue, alpha })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(self.ratio);
         builder.write_u8(self.red);
         builder.write_u8(self.green);
@@ -346,15 +347,15 @@ pub struct GMSpriteYYSWFSolidFillData {
     pub alpha: u8,
 }
 impl GMElement for GMSpriteYYSWFSolidFillData {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let red: u8 = reader.read_u8()?;
-        let green: u8 = reader.read_u8()?;
-        let blue: u8 = reader.read_u8()?;
-        let alpha: u8 = reader.read_u8()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let red = reader.read_u8()?;
+        let green = reader.read_u8()?;
+        let blue = reader.read_u8()?;
+        let alpha = reader.read_u8()?;
         Ok(GMSpriteYYSWFSolidFillData { red, green, blue, alpha })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_u8(self.red);
         builder.write_u8(self.green);
         builder.write_u8(self.blue);
@@ -372,15 +373,15 @@ pub struct GMSpriteYYSWFLineStyleData {
     pub alpha: u8,
 }
 impl GMElement for GMSpriteYYSWFLineStyleData {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let red: u8 = reader.read_u8()?;
-        let green: u8 = reader.read_u8()?;
-        let blue: u8 = reader.read_u8()?;
-        let alpha: u8 = reader.read_u8()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let red = reader.read_u8()?;
+        let green = reader.read_u8()?;
+        let blue = reader.read_u8()?;
+        let alpha = reader.read_u8()?;
         Ok(GMSpriteYYSWFLineStyleData { red, green, blue, alpha })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_u8(self.red);
         builder.write_u8(self.green);
         builder.write_u8(self.blue);
@@ -406,20 +407,20 @@ pub struct GMSpriteYYSWFSubshapeData {
     pub line_aa_vectors: Vec<(f32, f32)>,
 }
 impl GMElement for GMSpriteYYSWFSubshapeData {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let fill_style1: i32 = reader.read_i32()?;
-        let fill_style2: i32 = reader.read_i32()?;
-        let line_style: i32 = reader.read_i32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let fill_style1 = reader.read_i32()?;
+        let fill_style2 = reader.read_i32()?;
+        let line_style = reader.read_i32()?;
 
-        let point_count: usize = reader.read_usize()?;
-        let line_count: usize = reader.read_usize()?;
+        let point_count = reader.read_usize()?;
+        let line_count = reader.read_usize()?;
         let triangle_count: usize = reader.read_usize()? * 3;
-        let line_point_count: usize = reader.read_usize()?;
+        let line_point_count = reader.read_usize()?;
         let line_triangle_count: usize = reader.read_usize()? * 3;
-        let aa_line_count: usize = reader.read_usize()?;
-        let aa_vector_count: usize = reader.read_usize()?;
-        let line_aa_line_count: usize = reader.read_usize()?;
-        let line_aa_vector_count: usize = reader.read_usize()?;
+        let aa_line_count = reader.read_usize()?;
+        let aa_vector_count = reader.read_usize()?;
+        let line_aa_line_count = reader.read_usize()?;
+        let line_aa_vector_count = reader.read_usize()?;
 
         let mut points: Vec<(f32, f32)> = vec_with_capacity(point_count)?;
         let mut lines: Vec<(i32, i32)> = vec_with_capacity(line_count)?;
@@ -475,7 +476,7 @@ impl GMElement for GMSpriteYYSWFSubshapeData {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(self.fill_style1);
         builder.write_i32(self.fill_style2);
         builder.write_i32(self.line_style);
@@ -537,13 +538,13 @@ pub struct GMSpriteYYSWFBitmapData {
     pub ver_data: GMSpriteYYSWFBitmapDataVer,
 }
 impl GMElement for GMSpriteYYSWFBitmapData {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let bitmap_type: GMSpriteYYSWFBitmapType = num_enum_from(reader.read_i32()?)?;
-        let width: i32 = reader.read_i32()?;
-        let height: i32 = reader.read_i32()?;
+        let width = reader.read_i32()?;
+        let height = reader.read_i32()?;
 
         let ver_data = if reader.general_info.is_version_at_least((2022, 1)) {
-            let tpe_index: i32 = reader.read_i32()?;
+            let tpe_index = reader.read_i32()?;
             GMSpriteYYSWFBitmapDataVer::Post2022_1(GMSpriteYYSWFBitmapDataPost2022_1 { tpe_index })
         }
         else {
@@ -565,7 +566,7 @@ impl GMElement for GMSpriteYYSWFBitmapData {
         Ok(GMSpriteYYSWFBitmapData { bitmap_type, width, height, ver_data })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(self.bitmap_type.into());
         builder.write_i32(self.width);
         builder.write_i32(self.height);
@@ -573,7 +574,7 @@ impl GMElement for GMSpriteYYSWFBitmapData {
             if let GMSpriteYYSWFBitmapDataVer::Post2022_1(ref data) = self.ver_data {
                 builder.write_i32(data.tpe_index);
             } else {
-                return Err("Sprite YYSWF Bitmap Data: TPE Index not set in Post 2022.1+".to_string())
+                bail!("Sprite YYSWF Bitmap Data: TPE Index not set in Post 2022.1+");
             }
         } else {
             if let GMSpriteYYSWFBitmapDataVer::Pre2022_1(ref data) = self.ver_data {
@@ -585,7 +586,7 @@ impl GMElement for GMSpriteYYSWFBitmapData {
                 builder.write_bytes(&data.color_palette_data);
                 builder.align(4);
             } else {
-                return Err("Sprite YYSWF Bitmap Data: version specific data not set in Pre 2022.1+".to_string())
+                bail!("Sprite YYSWF Bitmap Data: version specific data not set in Pre 2022.1+");
             }
         }
         Ok(())
@@ -634,12 +635,12 @@ pub struct GMSpriteYYSWFTimelineFrame {
     pub max_y: f32,
 }
 impl GMElement for GMSpriteYYSWFTimelineFrame {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let frame_object_count: usize = reader.read_usize()?;
-        let min_x: f32 = reader.read_f32()?;
-        let max_x: f32 = reader.read_f32()?;
-        let min_y: f32 = reader.read_f32()?;
-        let max_y: f32 = reader.read_f32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let frame_object_count = reader.read_usize()?;
+        let min_x = reader.read_f32()?;
+        let max_x = reader.read_f32()?;
+        let min_y = reader.read_f32()?;
+        let max_y = reader.read_f32()?;
         let mut frame_objects: Vec<GMSpriteYYSWFTimelineObject> = vec_with_capacity(frame_object_count)?;
         for _ in 0..frame_object_count {
             frame_objects.push(GMSpriteYYSWFTimelineObject::deserialize(reader)?);
@@ -647,7 +648,7 @@ impl GMElement for GMSpriteYYSWFTimelineFrame {
         Ok(Self { frame_objects, min_x, max_x, min_y, max_y })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_usize(self.frame_objects.len())?;
         builder.write_f32(self.min_x);
         builder.write_f32(self.max_x);
@@ -674,16 +675,16 @@ pub struct GMSpriteYYSWFTimelineObject {
     pub max_y: f32,
 }
 impl GMElement for GMSpriteYYSWFTimelineObject {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let char_id: i32 = reader.read_i32()?;
-        let char_index: i32 = reader.read_i32()?;
-        let depth: i32 = reader.read_i32()?;
-        let clipping_depth: i32 = reader.read_i32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let char_id = reader.read_i32()?;
+        let char_index = reader.read_i32()?;
+        let depth = reader.read_i32()?;
+        let clipping_depth = reader.read_i32()?;
         let color_matrix = GMSpriteYYSWFColorMatrix::deserialize(reader)?;
-        let min_x: f32 = reader.read_f32()?;
-        let max_x: f32 = reader.read_f32()?;
-        let min_y: f32 = reader.read_f32()?;
-        let max_y: f32 = reader.read_f32()?;
+        let min_x = reader.read_f32()?;
+        let max_x = reader.read_f32()?;
+        let min_y = reader.read_f32()?;
+        let max_y = reader.read_f32()?;
         let transformation_matrix = GMSpriteYYSWFMatrix33::deserialize(reader)?;
 
         Ok(GMSpriteYYSWFTimelineObject {
@@ -700,7 +701,7 @@ impl GMElement for GMSpriteYYSWFTimelineObject {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(self.char_id);
         builder.write_i32(self.char_index);
         builder.write_i32(self.depth);
@@ -723,7 +724,7 @@ pub struct GMSpriteYYSWFColorMatrix {
     pub multiply: [i32; YYSWF_COLOR_MATRIX_SIZE],
 }
 impl GMElement for GMSpriteYYSWFColorMatrix {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let mut additive = [0i32; YYSWF_COLOR_MATRIX_SIZE];
         for item in &mut additive {
             *item = reader.read_i32()?;
@@ -737,7 +738,7 @@ impl GMElement for GMSpriteYYSWFColorMatrix {
         Ok(GMSpriteYYSWFColorMatrix { additive, multiply })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         for item in &self.additive {
             builder.write_i32(*item);
         }
@@ -754,15 +755,15 @@ pub struct GMSpriteYYSWFCollisionMask {
     pub rle_data: Vec<u8>,
 }
 impl GMElement for GMSpriteYYSWFCollisionMask {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let rle_length: i32 = reader.read_i32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let rle_length = reader.read_i32()?;
         let rle_length: usize = if rle_length > 0 {rle_length as usize} else {0};
-        let rle_data: Vec<u8> = reader.read_bytes_dyn(rle_length).map_err(|e| format!("Trying to read RLE Data of Timeline {e}"))?.to_vec();
+        let rle_data: Vec<u8> = reader.read_bytes_dyn(rle_length).context("reading RLE Data of Timeline")?.to_vec();
         reader.align(4)?;    // [From UndertaleModTool] "why it's not aligned before the data is beyond my brain"
         Ok(Self { rle_data })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         // From UTMT: writing zero for empty table would probably be smart but the padding handles it automatically?
         //            but you cant even have a yyswf sprite with a null rle data???
         if self.rle_data.len() != 0 {

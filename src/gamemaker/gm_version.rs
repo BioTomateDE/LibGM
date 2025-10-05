@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use std::fmt::Formatter;
 use crate::gamemaker::deserialize::DataReader;
 use crate::gamemaker::elements::GMElement;
@@ -81,7 +82,7 @@ impl GMVersion {
     ///
     /// # Notes
     /// Setting a non-LTS version updates the branch accordingly.
-    pub fn set_version_at_least<V: Into<GMVersionReq>>(&mut self, version_req: V) -> Result<(), String> {
+    pub fn set_version_at_least<V: Into<GMVersionReq>>(&mut self, version_req: V) -> Result<()> {
         let new_ver: GMVersionReq = version_req.into();
         if !matches!(new_ver.major, 2|2022|2023|2024|2025) {
             let comment = if new_ver.major > 2025 && new_ver.major < 2100 {
@@ -89,7 +90,7 @@ impl GMVersion {
             } else {
                 String::new()
             };
-            return Err(format!("Upgrading GameMaker Version from {self} to {new_ver} is not allowed{comment}"))
+            bail!("Upgrading GameMaker Version from {self} to {new_ver} is not allowed{comment}");
         }
 
         if self.is_version_at_least(new_ver.clone()) {
@@ -108,16 +109,16 @@ impl GMVersion {
 
 
 impl GMElement for GMVersion {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let major: u32 = reader.read_u32()?;
-        let minor: u32 = reader.read_u32()?;
-        let release: u32 = reader.read_u32()?;
-        let build: u32 = reader.read_u32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let major = reader.read_u32()?;
+        let minor = reader.read_u32()?;
+        let release = reader.read_u32()?;
+        let build = reader.read_u32()?;
         // Since the GEN8 Version is stuck on maximum 2.0.0.0; LTS will (initially) always be PreLTS
         Ok(GMVersion::new(major, minor, release, build, LTSBranch::PreLTS))
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_u32(self.major);
         builder.write_u32(self.minor);
         builder.write_u32(self.release);

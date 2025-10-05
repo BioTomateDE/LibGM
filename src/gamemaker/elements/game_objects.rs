@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use num_enum::{TryFromPrimitive, IntoPrimitive};
@@ -25,70 +26,68 @@ impl GMChunkElement for GMGameObjects {
 }
 
 impl GMElement for GMGameObjects {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let pointers: Vec<usize> = reader.read_simple_list()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let pointers: Vec<u32> = reader.read_simple_list()?;
         let mut game_objects: Vec<GMGameObject> = Vec::with_capacity(pointers.len());
 
         for pointer in pointers {
-            reader.cur_pos = pointer;
+            reader.cur_pos = pointer as usize;
             let name: GMRef<String> = reader.read_gm_string()?;
-            let sprite_index: i32 = reader.read_i32()?;
+            let sprite_index = reader.read_i32()?;
             let sprite: Option<GMRef<GMSprite>> = if sprite_index == -1 {
                 None
             } else {
-                let index: u32 = sprite_index.try_into().map_err(|_| format!(
-                    "Invalid negative sprite index {} for game object's sprite \"{}\" at absolute position {}",
-                    sprite_index, reader.display_gm_str(name), reader.cur_pos,
+                let index: u32 = sprite_index.try_into().with_context(|| format!(
+                    "Negative sprite index {} for Sprite of Game Object \"{}\"",
+                    sprite_index, reader.display_gm_str(name),
                 ))?;
                 Some(GMRef::new(index))
             };
-            let visible: bool = reader.read_bool32()?;
+            let visible = reader.read_bool32()?;
             let mut managed: Option<bool> = None;
             if reader.general_info.is_version_at_least((2022, 5)) {
                 managed = Some(reader.read_bool32()?);
             }
-            let solid: bool = reader.read_bool32()?;
-            let depth: i32 = reader.read_i32()?;
-            let persistent: bool = reader.read_bool32()?;
-            let parent_id: i32 = reader.read_i32()?;
+            let solid = reader.read_bool32()?;
+            let depth = reader.read_i32()?;
+            let persistent = reader.read_bool32()?;
+            let parent_id = reader.read_i32()?;
             let parent: Option<GMRef<GMGameObject>> = match parent_id {
                 -100 => None,   // No parent
                 -1 => Some(GMRef::new(game_objects.len() as u32)),    // Parent is Self
                 _ => {
-                    let parent_id: u32 = u32::try_from(parent_id)
-                        .map_err(|_| format!("Invalid game object parent id {parent_id}"))?;
+                    let parent_id: u32 = u32::try_from(parent_id).with_context(|| format!("Invalid Game Object's Parent ID {parent_id}"))?;
                     Some(GMRef::new(parent_id))
                 },
             };
-            let sprite_index: i32 = reader.read_i32()?;
+            let sprite_index = reader.read_i32()?;
             let texture_mask: Option<GMRef<GMSprite>> = if sprite_index == -1 {
                 None
             } else {
-                let index: u32 = sprite_index.try_into().map_err(|_| format!(
-                    "Invalid negative sprite index {} for texture mask of game object \"{}\" at absolute position {}",
-                    sprite_index, reader.display_gm_str(name), reader.cur_pos,
+                let index: u32 = sprite_index.try_into().with_context(|| format!(
+                    "Negative sprite index {} for Texture Mask of Game Object \"{}\"",
+                    sprite_index, reader.display_gm_str(name),
                 ))?;
                 Some(GMRef::new(index))
             };
-            let uses_physics: bool = reader.read_bool32()?;
-            let is_sensor: bool = reader.read_bool32()?;
-            let collision_shape: GMGameObjectCollisionShape = num_enum_from(reader.read_u32()?)
-                .map_err(|e| format!("{e} while parsing Game Object"))?;
-            let density: f32 = reader.read_f32()?;
-            let restitution: f32 = reader.read_f32()?;
-            let group: u32 = reader.read_u32()?;
-            let linear_damping: f32 = reader.read_f32()?;
-            let angular_damping: f32 = reader.read_f32()?;
-            let physics_shape_vertex_count: i32 = reader.read_i32()?;
+            let uses_physics = reader.read_bool32()?;
+            let is_sensor = reader.read_bool32()?;
+            let collision_shape: GMGameObjectCollisionShape = num_enum_from(reader.read_u32()?)?;
+            let density = reader.read_f32()?;
+            let restitution = reader.read_f32()?;
+            let group = reader.read_u32()?;
+            let linear_damping = reader.read_f32()?;
+            let angular_damping = reader.read_f32()?;
+            let physics_shape_vertex_count = reader.read_i32()?;
             let uses_physics_shape_vertex: bool = physics_shape_vertex_count != -1;
             let physics_shape_vertex_count: usize = if physics_shape_vertex_count < 0 { 0 } else { physics_shape_vertex_count as usize };
-            let friction: f32 = reader.read_f32()?;
-            let awake: bool = reader.read_bool32()?;
-            let kinematic: bool = reader.read_bool32()?;
+            let friction = reader.read_f32()?;
+            let awake = reader.read_bool32()?;
+            let kinematic = reader.read_bool32()?;
             let mut physics_shape_vertices: Vec<(f32, f32)> = Vec::with_capacity(physics_shape_vertex_count);
             for _ in 0..physics_shape_vertex_count {
-                let x: f32 = reader.read_f32()?;
-                let y: f32 = reader.read_f32()?;
+                let x = reader.read_f32()?;
+                let y = reader.read_f32()?;
                 physics_shape_vertices.push((x, y));
             }
             let events: Vec<GMGameObjectEvents> = reader.read_pointer_list()?;
@@ -123,7 +122,7 @@ impl GMElement for GMGameObjects {
         Ok(Self { game_objects, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         builder.write_usize(self.game_objects.len())?;
         let pointer_list_pos: usize = builder.len();
@@ -170,14 +169,14 @@ impl GMElement for GMGameObjects {
 }
 
 impl GMGameObjects {
-    pub fn get_object_ref_by_name(&self, name: &str, gm_strings: &GMStrings) -> Result<GMRef<GMGameObject>, String> {
+    pub fn get_object_ref_by_name(&self, name: &str, gm_strings: &GMStrings) -> Result<GMRef<GMGameObject>> {
         for (i, game_object) in self.game_objects.iter().enumerate() {
             let object_name: &String = game_object.name.resolve(&gm_strings.strings)?;
             if object_name == name {
                 return Ok(GMRef::new(i as u32))
             }
         }
-        Err(format!("Could not resolve game object with name \"{name}\""))
+        bail!("Could not resolve game object with name \"{name}\"")
     }
 }
 
@@ -216,12 +215,12 @@ pub struct GMGameObjectEvents {
     pub events: Vec<GMGameObjectEvent>,
 }
 impl GMElement for GMGameObjectEvents {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let events: Vec<GMGameObjectEvent> = reader.read_pointer_list()?;
         Ok(Self { events })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_pointer_list(&self.events)
     }
 }
@@ -234,13 +233,13 @@ pub struct GMGameObjectEvent {
     pub actions: Vec<GMGameObjectEventAction>,
 }
 impl GMElement for GMGameObjectEvent {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let subtype: u32 = reader.read_u32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let subtype = reader.read_u32()?;
         let actions: Vec<GMGameObjectEventAction> = reader.read_pointer_list()?;
         Ok(Self { subtype, actions })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_u32(self.subtype);
         builder.write_pointer_list(&self.actions)?;
         Ok(())
@@ -266,21 +265,21 @@ pub struct GMGameObjectEventAction {
     pub unknown_always_zero: u32,
 }
 impl GMElement for GMGameObjectEventAction {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let lib_id: u32 = reader.read_u32()?;
-        let id: u32 = reader.read_u32()?;
-        let kind: u32 = reader.read_u32()?;
-        let use_relative: bool = reader.read_bool32()?;
-        let is_question: bool = reader.read_bool32()?;
-        let use_apply_to: bool = reader.read_bool32()?;
-        let exe_type: u32 = reader.read_u32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let lib_id = reader.read_u32()?;
+        let id = reader.read_u32()?;
+        let kind = reader.read_u32()?;
+        let use_relative = reader.read_bool32()?;
+        let is_question = reader.read_bool32()?;
+        let use_apply_to = reader.read_bool32()?;
+        let exe_type = reader.read_u32()?;
         let action_name: Option<GMRef<String>> = reader.read_gm_string_opt()?;
         let code: Option<GMRef<GMCode>> = reader.read_resource_by_id_opt()?;
-        let argument_count: u32 = reader.read_u32()?;
-        let who: i32 = reader.read_i32()?;
-        let relative: bool = reader.read_bool32()?;
-        let is_not: bool = reader.read_bool32()?;
-        let unknown_always_zero: u32 = reader.read_u32()?;
+        let argument_count = reader.read_u32()?;
+        let who = reader.read_i32()?;
+        let relative = reader.read_bool32()?;
+        let is_not = reader.read_bool32()?;
+        let unknown_always_zero = reader.read_u32()?;
 
         Ok(GMGameObjectEventAction {
             lib_id,
@@ -300,7 +299,7 @@ impl GMElement for GMGameObjectEventAction {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_u32(self.lib_id);
         builder.write_u32(self.id);
         builder.write_u32(self.kind);

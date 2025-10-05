@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
@@ -21,7 +22,7 @@ impl GMChunkElement for GMFonts {
 }
 
 impl GMElement for GMFonts {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let fonts: Vec<GMFont> = reader.read_pointer_list()?;
         
         let mut padding: Option<[u8; 512]> = None;
@@ -32,14 +33,14 @@ impl GMElement for GMFonts {
         Ok(Self { fonts, padding, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         
         builder.write_pointer_list(&self.fonts)?;
 
         if !builder.is_gm_version_at_least((2024, 14)) {
             let Some(padding) = self.padding else {
-                return Err("FONT Chunk padding not set before 2024.14 (this could've been a warning probably since there is a fallback)".to_string())
+                bail!("FONT Chunk padding not set before 2024.14 (this could've been a warning probably since there is a fallback)");
             };
             builder.write_bytes(&padding);
         }
@@ -109,21 +110,21 @@ pub struct GMFont {
 }
 
 impl GMElement for GMFont {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let display_name: Option<GMRef<String>> = reader.read_gm_string_opt()?;
-        let em_size: u32 = reader.read_u32()?;   // before GMS 2.3: int. after: float
+        let em_size = reader.read_u32()?;   // before GMS 2.3: int. after: float
         let em_size: GMFontSize = if em_size & (1 << 31) != 0 {    // since the float is always written negated, it has the first bit set.
             GMFontSize::Float(-f32::from_bits(em_size))
         } else {
             GMFontSize::Int(em_size)
         };
-        let bold: bool = reader.read_bool32()?;
-        let italic: bool = reader.read_bool32()?;
-        let range_start: u16 = reader.read_u16()?;
-        let charset: u8 = reader.read_u8()?;
-        let anti_alias: u8 = reader.read_u8()?;
-        let range_end: u32 = reader.read_u32()?;
+        let bold = reader.read_bool32()?;
+        let italic = reader.read_bool32()?;
+        let range_start = reader.read_u16()?;
+        let charset = reader.read_u8()?;
+        let anti_alias = reader.read_u8()?;
+        let range_end = reader.read_u32()?;
         let texture: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
         let scale: (f32, f32) = (reader.read_f32()?, reader.read_f32()?);
         let ascender_offset: Option<i32> = reader.deserialize_if_bytecode_version(17)?;
@@ -155,7 +156,7 @@ impl GMElement for GMFont {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         builder.write_gm_string_opt(&self.display_name)?;
         match self.em_size {
@@ -212,21 +213,21 @@ pub struct GMFontGlyph {
 
 }
 impl GMElement for GMFontGlyph {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let character: u16 = reader.read_u16()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let character = reader.read_u16()?;
         let character: Option<char> = if character == 0 { None } else {
             Some(char::from_u32(character.into()).ok_or_else(|| format!("Invalid UTF-8 character with code point {0} (0x{0:04X})", character))?)
         };
-        let x: u16 = reader.read_u16()?;
-        let y: u16 = reader.read_u16()?;
-        let width: u16 = reader.read_u16()?;
-        let height: u16 = reader.read_u16()?;
-        let shift_modifier: i16 = reader.read_i16()?;
-        let offset: i16 = reader.read_i16()?;    // potential assumption according to utmt
+        let x = reader.read_u16()?;
+        let y = reader.read_u16()?;
+        let width = reader.read_u16()?;
+        let height = reader.read_u16()?;
+        let shift_modifier = reader.read_i16()?;
+        let offset = reader.read_i16()?;    // potential assumption according to utmt
         if reader.general_info.is_version_at_least((2024, 11)) {
-            let unknown_always_zero: i16 = reader.read_i16()?;
+            let unknown_always_zero = reader.read_i16()?;
             if unknown_always_zero != 0 {
-                return Err(format!("Unknown Always Zero in Font Glyph with character {:?} has value {}", character, unknown_always_zero))
+                bail!("Unknown Always Zero in Font Glyph with character {:?} has value {}", character, unknown_always_zero);
             }
         }
         let kernings: Vec<GMFontGlyphKerning> = reader.read_simple_list_short()?;
@@ -234,7 +235,7 @@ impl GMElement for GMFontGlyph {
         Ok(GMFontGlyph { character, x, y, width, height, shift_modifier, offset, kernings })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if let Some(char) = self.character {
             let codepoint: u32 = char.into();
             builder.write_u16(codepoint as u16);
@@ -264,18 +265,18 @@ pub struct GMFontGlyphKerning {
     pub shift_modifier: i16,
 }
 impl GMElement for GMFontGlyphKerning {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let character: u16 = reader.read_u16()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let character = reader.read_u16()?;
         if character == 0 {
-            return Err("Character not set (code point is zero)".to_string())
+            bail!("Character not set (code point is zero)");
         }
         let character: char = char::from_u32(character.into())
             .ok_or_else(|| format!("Invalid UTF-8 character with code point {0} (0x{0:04X})", character))?;
-        let shift_modifier: i16 = reader.read_i16()?;
+        let shift_modifier = reader.read_i16()?;
         Ok(GMFontGlyphKerning { character, shift_modifier })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_u16(u32::from(self.character) as u16);
         builder.write_i16(self.shift_modifier);
         Ok(())

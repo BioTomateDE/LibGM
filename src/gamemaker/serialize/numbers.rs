@@ -1,12 +1,13 @@
+use crate::prelude::*;
+use crate::gamemaker::data::Endianness;
 use crate::gamemaker::serialize::DataBuilder;
 
 macro_rules! write_int_fn {
     ($method_name:ident, $int_type:ty) => {
         pub fn $method_name(&mut self, number: $int_type) {
-            let bytes = if self.gm_data.is_big_endian {
-                number.to_be_bytes()
-            } else {
-                number.to_le_bytes()
+            let bytes = match self.gm_data.endianness {
+                Endianness::Little => number.to_le_bytes(),
+                Endianness::Big => number.to_be_bytes(),
             };
             self.write_bytes(&bytes);
         }
@@ -27,7 +28,7 @@ impl DataBuilder<'_> {
     write_int_fn!(write_f64, f64);
     write_int_fn!(write_f32, f32);
     
-    pub fn write_usize(&mut self, number: usize) -> Result<(), String> {
+    pub fn write_usize(&mut self, number: usize) -> Result<()> {
         let number: u32 = number.try_into().map_err(|_| format!(
             "Number {number} (0x{number:016X}) does not fit into 32 bits while writing usize integer",
         ))?;
@@ -36,10 +37,9 @@ impl DataBuilder<'_> {
     }
 
     pub fn write_i24(&mut self, number: i32) {
-        let bytes: [u8; 4] = if self.gm_data.is_big_endian {
-            number.to_be_bytes()
-        } else {
-            number.to_le_bytes()
+        let bytes: [u8; 4] = match self.gm_data.endianness {
+            Endianness::Little => number.to_le_bytes(),
+            Endianness::Big => number.to_be_bytes(),
         };
         self.write_bytes(&bytes[..3]);
     }

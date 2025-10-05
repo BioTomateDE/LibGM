@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
@@ -18,12 +19,12 @@ impl GMChunkElement for GMPaths {
 }
 
 impl GMElement for GMPaths {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let paths: Vec<GMPath> = reader.read_pointer_list::<GMPath>()?;
         Ok(GMPaths { paths, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         builder.write_pointer_list(&self.paths)?;
         Ok(())
@@ -40,16 +41,16 @@ pub struct GMPath {
     pub points: Vec<GMPathPoint>,
 }
 impl GMElement for GMPath {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let is_smooth: bool = reader.read_bool32()?;
-        let is_closed: bool = reader.read_bool32()?;
-        let precision: u32 = reader.read_u32()?;
+        let is_smooth = reader.read_bool32()?;
+        let is_closed = reader.read_bool32()?;
+        let precision = reader.read_u32()?;
         let points: Vec<GMPathPoint> = reader.read_simple_list()?;
         Ok(GMPath { name, is_smooth, is_closed, precision, points })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         builder.write_bool32(self.is_smooth);
         builder.write_bool32(self.is_closed);
@@ -67,14 +68,14 @@ pub struct GMPathPoint {
     pub speed: f32,
 }
 impl GMElement for GMPathPoint {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let x: f32 = reader.read_f32()?;
-        let y: f32 = reader.read_f32()?;
-        let speed: f32 = reader.read_f32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let x = reader.read_f32()?;
+        let y = reader.read_f32()?;
+        let speed = reader.read_f32()?;
         Ok(GMPathPoint { x, y, speed })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_f32(self.x);
         builder.write_f32(self.y);
         builder.write_f32(self.speed);

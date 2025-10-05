@@ -1,109 +1,53 @@
+use crate::prelude::*;
 use crate::gamemaker::deserialize::reader::DataReader;
+use crate::gamemaker::data::Endianness;
+
+
+macro_rules! read_int_fn {
+    ($method:ident, $dtype:ty) => {
+        /// Read an integer from the data file while advancing the data position.
+        /// Respects the endianness setting.
+        pub fn $method(&mut self) -> Result<$dtype> {
+            let bytes = *self.read_bytes_const()
+                .map_err(|e| format!("Trying to read {} {e}", stringify!($dtype)))?;
+            Ok(match self.endianness {
+                Endianness::Little => <$dtype>::from_le_bytes(bytes),
+                Endianness::Big => <$dtype>::from_be_bytes(bytes),
+            })
+        }
+    }
+}
 
 impl DataReader<'_> {
-    pub fn read_u64(&mut self) -> Result<u64, String> {
-        let is_be: bool = self.is_big_endian;
-        let bytes: &[u8; 8] = self.read_bytes_const().map_err(|e| format!("Trying to read u64 {e}"))?;
-        Ok(if is_be {
-            u64::from_be_bytes(*bytes)
-        } else {
-            u64::from_le_bytes(*bytes)
-        })
-    }
-    
-    pub fn read_i64(&mut self) -> Result<i64, String> {
-        let is_be: bool = self.is_big_endian;
-        let bytes: &[u8; 8] = self.read_bytes_const().map_err(|e| format!("Trying to read i64 {e}"))?;
-        Ok(if is_be {
-            i64::from_be_bytes(*bytes)
-        } else {
-            i64::from_le_bytes(*bytes)
-        })
-    }
-    
-    pub fn read_u32(&mut self) -> Result<u32, String> {
-        let is_be: bool = self.is_big_endian;
-        let bytes: &[u8; 4] = self.read_bytes_const().map_err(|e| format!("Trying to read u32 {e}"))?;
-        Ok(if is_be {
-            u32::from_be_bytes(*bytes)
-        } else {
-            u32::from_le_bytes(*bytes)
-        })
-    }
-    
-    pub fn read_i32(&mut self) -> Result<i32, String> {
-        let is_be: bool = self.is_big_endian;
-        let bytes: &[u8; 4] = self.read_bytes_const().map_err(|e| format!("Trying to read i32 {e}"))?;
-        Ok(if is_be {
-            i32::from_be_bytes(*bytes)
-        } else {
-            i32::from_le_bytes(*bytes)
-        })
-    }
-    
-    pub fn read_u16(&mut self) -> Result<u16, String> {
-        let is_be: bool = self.is_big_endian;
-        let bytes: &[u8; 2] = self.read_bytes_const().map_err(|e| format!("Trying to read u16 {e}"))?;
-        Ok(if is_be {
-            u16::from_be_bytes(*bytes)
-        } else {
-            u16::from_le_bytes(*bytes)
-        })
-    }
-    
-    pub fn read_i16(&mut self) -> Result<i16, String> {
-        let is_be: bool = self.is_big_endian;
-        let bytes: &[u8; 2] = self.read_bytes_const().map_err(|e| format!("Trying to read i16 {e}"))?;
-        Ok(if is_be {
-            i16::from_be_bytes(*bytes)
-        } else {
-            i16::from_le_bytes(*bytes)
-        })
-    }
-    
-    pub fn read_u8(&mut self) -> Result<u8, String> {
-        let is_be: bool = self.is_big_endian;
-        let bytes: &[u8; 1] = self.read_bytes_const().map_err(|e| format!("Trying to read u8 {e}"))?;
-        Ok(if is_be {
-            u8::from_be_bytes(*bytes)
-        } else {
-            u8::from_le_bytes(*bytes)
-        })
-    }
-    
-    pub fn read_i8(&mut self) -> Result<i8, String> {
-        let is_be: bool = self.is_big_endian;
-        let bytes: &[u8; 1] = self.read_bytes_const().map_err(|e| format!("Trying to read i8 {e}"))?;
-        Ok(if is_be {
-            i8::from_be_bytes(*bytes)
-        } else {
-            i8::from_le_bytes(*bytes)
-        })
-    }
+    read_int_fn!(read_u64, u64);
+    read_int_fn!(read_u32, u32);
+    read_int_fn!(read_u16, u16);
+    read_int_fn!(read_u8, u8);
 
-    pub fn read_f64(&mut self) -> Result<f64, String> {
-        let is_be: bool = self.is_big_endian;
-        let bytes: &[u8; 8] = self.read_bytes_const().map_err(|e| format!("Trying to read f64 {e}"))?;
-        Ok(if is_be {
-            f64::from_be_bytes(*bytes)
-        } else {
-            f64::from_le_bytes(*bytes)
-        })
-    }
-    
-    pub fn read_f32(&mut self) -> Result<f32, String> {
-        let is_be: bool = self.is_big_endian;
-        let bytes: &[u8; 4] = self.read_bytes_const().map_err(|e| format!("Trying to read f32 {e}"))?;
-        Ok(if is_be {
-            f32::from_be_bytes(*bytes)
-        } else {
-            f32::from_le_bytes(*bytes)
-        })
-    }
+    read_int_fn!(read_i64, i64);
+    read_int_fn!(read_i32, i32);
+    read_int_fn!(read_i16, i16);
+    read_int_fn!(read_i8, i8);
 
-    pub fn read_usize(&mut self) -> Result<usize, String> {
-        let number: u32 = self.read_u32()?;
+    read_int_fn!(read_f64, f64);
+    read_int_fn!(read_f32, f32);
+
+    /// Read an unsigned 32-bit integer from the data file while advancing the data position.
+    /// The integer will be converted to a `usize` for easy use in indices.
+    pub fn read_usize(&mut self) -> Result<usize> {
+        let number = self.read_u32()?;
         Ok(number as usize)
+    }
+
+    /// Read an unsigned 32-bit integer from the data file while advancing the data position.
+    /// Returns zero if the read number is -1 or 0.
+    pub fn read_count(&mut self, purpose: &'static str) -> Result<u32> {
+        let number = self.read_i32()?;
+        match number {
+            -1 => Ok(0),
+            n if n >= 0 => Ok(n as u32),
+            _ => bail!("Negative {purpose} count {number} (0x{number:08X})"),
+        }
     }
 }
 

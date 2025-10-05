@@ -4,14 +4,15 @@ mod resources;
 mod numbers;
 mod reader;
 
+use crate::prelude::*;
 pub use chunk::GMChunk;
 pub use reader::DataReader;
 pub use resources::GMRef;
-use crate::gamemaker::data::GMData;
+use crate::gamemaker::data::{Endianness, GMData};
 use crate::utility::Stopwatch;
 use crate::gamemaker::detect_version::detect_gamemaker_version;
 use crate::gamemaker::elements::GMChunkElement;
-use crate::gamemaker::gm_version::GMVersion;
+use crate::gamemaker::gm_version::{GMVersion, LTSBranch};
 use crate::gamemaker::elements::animation_curves::GMAnimationCurves;
 use crate::gamemaker::elements::audio_groups::GMAudioGroups;
 use crate::gamemaker::elements::backgrounds::GMBackgrounds;
@@ -45,40 +46,44 @@ use crate::gamemaker::elements::ui_nodes::GMRootUINodes;
 use crate::gamemaker::elements::timelines::GMTimelines;
 
 
-pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
+pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
+    if raw_data.len() >= i32::MAX as usize {
+        bail!("Data file is bigger than 2,147,483,647 bytes which will lead to bugs in LibGM and the runner")
+    }
+
     let stopwatch = Stopwatch::start();
     let mut reader = DataReader::new(&raw_data);
 
-    let root_chunk_name: String = reader.read_chunk_name()?;
-    reader.is_big_endian = match root_chunk_name.as_str() {
-        "FORM" => false,
-        "MROF" => true,
-        _ => return Err(format!("Invalid data file: expected root chunk to be 'FORM' but found '{root_chunk_name}'"))
+    let root_chunk_name = reader.read_chunk_name()?;
+    reader.endianness = match root_chunk_name.as_str() {
+        "FORM" => Endianness::Little,
+        "MROF" => Endianness::Big,
+        _ => bail!("Invalid data file: expected root chunk to be 'FORM' but found '{root_chunk_name}'")
     };
-    if reader.is_big_endian {
+    if reader.endianness == Endianness::Big {
         log::warn!("Big endian format might not work, proceed with caution");
     }
     
     let total_data_len: usize = reader.read_usize()? + reader.cur_pos;
     if total_data_len != raw_data.len() {
-        return Err(format!(
+        bail!(
             "Specified FORM data length is {} but data is actually {} bytes long",
             total_data_len, raw_data.len(),
-        ))
+        );
     }
 
     while reader.cur_pos + 8 < total_data_len { 
-        let name: String = reader.read_chunk_name()?;
-        let chunk_length: usize = reader.read_usize()?;
+        let name = reader.read_chunk_name()?;
+        let chunk_length = reader.read_usize()?;
         let start_pos: usize = reader.cur_pos;
 
         reader.cur_pos += chunk_length;
         if reader.cur_pos > raw_data.len() {
-            return Err(format!(
+            bail!(
                 "Trying to read chunk '{}' out of data bounds: specified length {} implies chunk \
                 end position {}; which is greater than the total data length {}",
                 name, chunk_length, reader.cur_pos, raw_data.len(),
-            ))
+            );
         }
 
         let is_last_chunk: bool = reader.cur_pos == raw_data.len();
@@ -90,10 +95,10 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
         };
 
         if let Some(old_chunk) = reader.chunks.insert(name.clone(), chunk.clone()) {
-            return Err(format!(
+            bail!(
                 "Chunk '{}' is defined multiple times: old data range {}..{}; new data range {}..{}",
                 name, old_chunk.start_pos, old_chunk.end_pos, chunk.start_pos, chunk.end_pos,
-            ))
+            );
         }
     }
     log::trace!("Parsing FORM took {stopwatch}");
@@ -104,7 +109,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
     let specified_version: GMVersion = reader.general_info.version.clone();
     if specified_version.major >= 2 {
         let stopwatch = Stopwatch::start();
-        detect_gamemaker_version(&mut reader).map_err(|e| format!("{e}\n↳ while detecting gamemaker version"))?;
+        detect_gamemaker_version(&mut reader).context("detecting GameMaker version")?;
         log::trace!("Detecting GameMaker Version took {stopwatch}");
         log::info!(
             "Loaded game \"{}\" with gamemaker version {} [specified: {}] and bytecode version {}",
@@ -165,10 +170,10 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
     // Throw error if not all chunks read to prevent silent data loss
     if !reader.chunks.is_empty() {
         let chunks_str: String = reader.chunks.keys().cloned().collect::<Vec<_>>().join(", ");
-        return Err(format!(
+        bail!(
             "Not all chunks in the data file were read, which would lead to data loss when writing.\n\
             The following chunks are unknown or not supported: [{chunks_str}]"
-        ))
+        );
     }
 
     let data = GMData {
@@ -209,7 +214,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData, String> {
         animation_curves,
         
         chunk_padding: reader.chunk_padding,
-        is_big_endian: reader.is_big_endian,
+        endianness: reader.endianness,
         original_data_size: raw_data.len(),
     };
 

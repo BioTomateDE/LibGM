@@ -1,4 +1,5 @@
-﻿use crate::gamemaker::deserialize::{DataReader, GMRef};
+﻿use crate::prelude::*;
+use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::variables::GMVariable;
 use std::cmp::PartialEq;
@@ -36,14 +37,14 @@ impl GMChunkElement for GMCodes {
     }
 }
 impl GMElement for GMCodes {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         if reader.get_chunk_length() == 0 {
             return Ok(Self { codes: vec![], exists: false })
         }
         
-        let pointers: Vec<usize> = reader.read_simple_list()?;
+        let pointers: Vec<u32> = reader.read_simple_list()?;
         reader.cur_pos = match pointers.first() {
-            Some(ptr) => *ptr,
+            Some(ptr) => *ptr as usize,
             None => return Ok(Self { codes: vec![], exists: true })
         };
         let count: usize = pointers.len();
@@ -55,7 +56,7 @@ impl GMElement for GMCodes {
         for pointer in pointers {
             reader.assert_pos(pointer, "Code")?;
             let name: GMRef<String> = reader.read_gm_string()?;
-            let code_length: usize = reader.read_usize()?;
+            let code_length = reader.read_usize()?;
 
             let instructions_start_pos: usize;
             let instructions_end_pos: usize;
@@ -67,15 +68,15 @@ impl GMElement for GMCodes {
                 instructions_end_pos = reader.cur_pos;
                 bytecode15_info = None;
             } else {
-                let locals_count: u16 = reader.read_u16()?;
-                let arguments_count_raw: u16 = reader.read_u16()?;
+                let locals_count = reader.read_u16()?;
+                let arguments_count_raw = reader.read_u16()?;
                 let arguments_count: u16 = arguments_count_raw & 0x7FFF;
                 let weird_local_flag: bool = arguments_count_raw & 0x8000 != 0;
 
-                let instructions_start_offset: i32 = reader.read_i32()?;
+                let instructions_start_offset = reader.read_i32()?;
                 instructions_start_pos = (instructions_start_offset + reader.cur_pos as i32 - 4) as usize;
 
-                let offset: u32 = reader.read_u32()?;
+                let offset = reader.read_u32()?;
                 let b15_info = GMCodeBytecode15 { locals_count, arguments_count, weird_local_flag, offset, parent: None };
                 instructions_end_pos = instructions_start_pos + code_length;
                 bytecode15_info = Some(b15_info);
@@ -104,8 +105,8 @@ impl GMElement for GMCodes {
             code.instructions = Vec::with_capacity(length / 6);  // estimate; data is from deltarune 1.00
 
             while reader.cur_pos < end {
-                let instruction = GMInstruction::deserialize(reader).map_err(|e| format!(
-                    "{e}\n↳ for Instruction #{} (at absolute position {}) of Code entry \"{}\" with absolute start position {}",
+                let instruction = GMInstruction::deserialize(reader).with_context(|| format!(
+                    "for Instruction #{} (at absolute position {}) of Code entry \"{}\" with absolute start position {}",
                     code.instructions.len(), reader.cur_pos, reader.display_gm_str(code.name), start,
                 ))?;
                 code.instructions.push(instruction);
@@ -122,7 +123,7 @@ impl GMElement for GMCodes {
         Ok(GMCodes { codes, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
 
         builder.write_usize(self.codes.len())?;
@@ -142,8 +143,8 @@ impl GMElement for GMCodes {
 
                 // in bytecode 14, instructions are written immediately
                 for (i, instruction) in code.instructions.iter().enumerate() {
-                    instruction.serialize(builder).map_err(|e| format!(
-                        "{e}\n↳ while building bytecode14 code #{i} with name \"{}\"",
+                    instruction.serialize(builder).with_context(|| format!(
+                        "building bytecode14 code #{i} with name \"{}\"",
                         builder.display_gm_str(&code.name),
                     ))?;
                 }
@@ -167,8 +168,8 @@ impl GMElement for GMCodes {
             
             let start: usize = builder.len();
             for instruction in &code.instructions {
-                instruction.serialize(builder).map_err(|e| format!(
-                    "{e}\n↳ while serializing bytecode15 code #{i} with name \"{}\"",
+                instruction.serialize(builder).with_context(|| format!(
+                    "serializing bytecode15 code #{i} with name \"{}\"",
                     builder.display_gm_str(&code.name),
                 ))?;
             }
@@ -181,7 +182,7 @@ impl GMElement for GMCodes {
             let (start, end) = instructions_ranges[i];
             let length: usize = end - start;
             let b15_info: &GMCodeBytecode15 = code.bytecode15_info.as_ref()
-                .ok_or_else(|| format!("Code bytecode 15 data not set in Bytecode version {}", builder.bytecode_version()))?;
+                .with_context(|| format!("Code bytecode 15 data not set in Bytecode version {}", builder.bytecode_version()))?;
             
             builder.write_gm_string(&code.name)?;
             builder.write_usize(length)?;
@@ -436,7 +437,7 @@ pub enum GMInstruction {
 }
 
 impl GMElement for GMInstruction {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let mut bytes: (u8, u8, u8) = (
             reader.read_u8()?,
             reader.read_u8()?,
@@ -506,23 +507,23 @@ impl GMElement for GMInstruction {
                             -8 => Self::SaveArrayReference,
                             -9 => Self::RestoreArrayReference,
                             -10 => Self::IsNullishValue,
-                            _ => return Err(format!("Invalid Int16 Extended instruction kind {kind}"))
+                            _ => bail!("Invalid Int16 Extended Instruction kind {kind}")
                         }
                     }
                     GMDataType::Int32 => {
                         if kind != - 11 {
-                            return Err(format!("Expected PushReference (-11) for Int32 Extended instruction, found {kind}"))
+                            bail!("Expected PushReference (-11) for Int32 Extended instruction, found {kind}");
                         }
                         Self::PushReference(GMAssetReference::deserialize(reader)?)
                     }
-                    _ => return Err(format!("Invalid data type for Extended instruction: {data_type:?}"))
+                    _ => bail!("Invalid data type for Extended instruction: {data_type:?}")
                 }
             }
-            _ => return Err(format!("Invalid opcode {opcode} (0x{opcode:02X})"))
+            _ => bail!("Invalid opcode {opcode} (0x{opcode:02X})")
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let mut opcode: u8 = opcode_from_instruction(self);
         if builder.bytecode_version() < 15 {
             opcode = opcode_new_to_old(opcode);
@@ -597,19 +598,19 @@ fn build_extended16(builder: &mut DataBuilder, kind: i16) {
 
 
 trait InstructionData {
-    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> where Self: Sized;
-    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String>;
+    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> where Self: Sized;
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()>;
 }
 
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct GMEmptyInstruction;
 impl InstructionData for GMEmptyInstruction {
-    fn parse(_: &mut DataReader, _: (u8, u8, u8)) -> Result<Self, String> {
+    fn parse(_: &mut DataReader, _: (u8, u8, u8)) -> Result<Self> {
         Ok(Self)
     }
 
-    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
         builder.write_i24(0);
         builder.write_u8(opcode);
         Ok(())
@@ -621,21 +622,21 @@ pub struct GMSingleTypeInstruction {
     pub data_type: GMDataType,
 }
 impl InstructionData for GMSingleTypeInstruction {
-    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
         let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
 
         // Ensure basic conditions hold
         if b.0 != 0 {
-            return Err(format!("Invalid padding {:02X} while parsing Single Type Instruction", b.0));
+            bail!("Invalid padding {:02X} while parsing Single Type Instruction", b.0);
         }
         if b.2 >> 4 != 0 {
-            return Err(format!("Second type should be zero but is {0} (0x{0:02X}) for Single Type Instruction", b.2 >> 4))
+            bail!("Second type should be zero but is {0} (0x{0:02X}) for Single Type Instruction", b.2 >> 4);
         }
 
         Ok(Self { data_type })
     }
 
-    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
         builder.write_u16(0);
         builder.write_u8(self.data_type.into());
         builder.write_u8(opcode);
@@ -650,12 +651,12 @@ pub struct GMCallVariableInstruction {
     pub argument_count: u8,
 }
 impl InstructionData for GMCallVariableInstruction {
-    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
         let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
         Ok(Self { data_type, argument_count: b.1 })
     }
 
-    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
         builder.write_u8(0);
         builder.write_u8(self.argument_count);
         builder.write_u8(self.data_type.into());
@@ -672,12 +673,12 @@ pub struct GMDuplicateInstruction {
     pub size: u8,
 }
 impl InstructionData for GMDuplicateInstruction {
-    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
         let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
         Ok(Self { data_type, size: b.0 })
     }
 
-    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
         builder.write_u8(self.size);
         builder.write_u8(0);
         builder.write_u8(self.data_type.into());
@@ -694,12 +695,12 @@ pub struct GMDuplicateSwapInstruction {
     pub size2: u8,
 }
 impl InstructionData for GMDuplicateSwapInstruction {
-    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
         let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
         Ok(Self { data_type, size1: b.0, size2: b.1 })
     }
 
-    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
         builder.write_u8(self.size1);
         builder.write_u8(self.size2);
         builder.write_u8(self.data_type.into());
@@ -714,11 +715,11 @@ pub struct GMPopSwapInstruction {
     pub size: u8,
 }
 impl InstructionData for GMPopSwapInstruction {
-    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
         Ok(Self { size: b.0 })
     }
 
-    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
         builder.write_u8(self.size);
         builder.write_u8(0);
         builder.write_u8(GMDataType::Int16.into());
@@ -734,7 +735,7 @@ pub struct GMGotoInstruction {
     pub jump_offset: i32,
 }
 impl InstructionData for GMGotoInstruction {
-    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
         let mut value: u32 = (b.0 as u32) | ((b.1 as u32) << 8) | ((b.2 as u32) << 16);
         if reader.general_info.bytecode_version > 14 && (value & 0x400000) != 0 {
             value |= 0x800000;
@@ -747,7 +748,7 @@ impl InstructionData for GMGotoInstruction {
         Ok(Self { jump_offset })
     }
 
-    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
         let mut value = (self.jump_offset as u32) & 0x00FFFFFF;
         if builder.bytecode_version() > 14 && (value & 0x800000) != 0 {
             value &= !0x800000;
@@ -765,11 +766,11 @@ impl InstructionData for GMGotoInstruction {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct GMPopenvExitMagicInstruction;
 impl InstructionData for GMPopenvExitMagicInstruction {
-    fn parse(_: &mut DataReader, _x: (u8, u8, u8)) -> Result<Self, String> {
+    fn parse(_: &mut DataReader, _x: (u8, u8, u8)) -> Result<Self> {
         Ok(Self)
     }
 
-    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
         builder.write_i24(0xF00000);
         builder.write_u8(opcode);
         Ok(())
@@ -785,16 +786,16 @@ pub struct GMDoubleTypeInstruction {
     pub left: GMDataType,
 }
 impl InstructionData for GMDoubleTypeInstruction {
-    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
         let right: GMDataType = num_enum_from(b.2 & 0xf)?;
         let left: GMDataType = num_enum_from(b.2 >> 4)?;
         if b.1 != 0 {    // might be incorrect; remove if issues
-            return Err(format!("b1 should be zero but is {} for Double Type Instruction", b.1))
+            bail!("b1 should be zero but is {} for Double Type Instruction", b.1);
         }
         Ok(Self { right, left })
     }
 
-    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
         builder.write_u8(0);
         builder.write_u8(0);
         builder.write_u8(u8::from(self.right) | u8::from(self.left) << 4);
@@ -811,14 +812,14 @@ pub struct GMComparisonInstruction {
     pub type2: GMDataType,
 }
 impl InstructionData for GMComparisonInstruction {
-    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+    fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
         let comparison_type: GMComparisonType = num_enum_from(b.1)?;
         let type1: GMDataType = num_enum_from(b.2 & 0xf)?;
         let type2: GMDataType = num_enum_from(b.2 >> 4)?;
         Ok(Self { comparison_type, type1, type2 })
     }
 
-    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
         builder.write_u8(0);
         builder.write_u8(self.comparison_type.into());
         builder.write_u8(u8::from(self.type1) | u8::from(self.type2) << 4);
@@ -839,7 +840,7 @@ pub struct GMPopInstruction {
     pub destination: CodeVariable,
 }
 impl InstructionData for GMPopInstruction {
-    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
         let type1: GMDataType = num_enum_from(b.2 & 0xf)?;
         let type2: GMDataType = num_enum_from(b.2 >> 4)?;
         let raw_instance_type: i16 = b.0 as i16 | ((b.1 as i16) << 8);
@@ -847,7 +848,7 @@ impl InstructionData for GMPopInstruction {
         Ok(Self { type1, type2, destination })
     }
 
-    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
         let instr_pos: usize = builder.len();
         builder.write_i16(build_instance_type(&self.destination.instance_type));
         builder.write_u8(u8::from(self.type1) | u8::from(self.type2) << 4);
@@ -864,7 +865,7 @@ pub struct GMPushInstruction {
     pub value: GMCodeValue,
 }
 impl InstructionData for GMPushInstruction {
-    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
         let data_type: GMDataType = num_enum_from(b.2)?;
         let raw_instance_type: i16 = (b.0 as i16) | ((b.1 as i16) << 8);
         let value: GMCodeValue = if data_type == GMDataType::Variable {
@@ -875,7 +876,7 @@ impl InstructionData for GMPushInstruction {
         Ok(Self { value })
     }
 
-    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
         let instr_pos: usize = builder.len();
         builder.write_i16(match &self.value {
             GMCodeValue::Int16(int16) => *int16,
@@ -916,18 +917,19 @@ pub struct GMCallInstruction {
     pub function: GMRef<GMFunction>,
 }
 impl InstructionData for GMCallInstruction {
-    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self, String> {
+    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
         let data_type: GMDataType = num_enum_from(b.2)?;
-        let function: GMRef<GMFunction> = reader.function_occurrence_map.get(&reader.cur_pos).ok_or_else(|| format!(
+        let function: GMRef<GMFunction> = reader.function_occurrence_map.get(&(reader.cur_pos as u32)).cloned()
+            .with_context(|| format!(
             "Could not find any function with absolute occurrence position {} in map with length {} while parsing Call Instruction",
             reader.cur_pos, reader.function_occurrence_map.len(),
-        ))?.clone();
+        ))?;
         reader.cur_pos += 4;   // skip next occurrence offset
 
         Ok(GMCallInstruction { arguments_count: b.0, data_type, function })
     }
 
-    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<(), String> {
+    fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
         let instr_pos: usize = builder.len();
         builder.write_u8(self.arguments_count);
         builder.write_u8(0);
@@ -1084,13 +1086,13 @@ pub enum GMAssetReference {
 }
 
 impl GMElement for GMAssetReference {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        if let Some(func) = reader.function_occurrence_map.get(&reader.cur_pos) {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        if let Some(func) = reader.function_occurrence_map.get(&(reader.cur_pos as u32)) {
             reader.cur_pos += 4;   // consume next occurrence offset
             return Ok(Self::Function(*func))
         }
 
-        let raw: i32 = reader.read_i32()?;
+        let raw = reader.read_i32()?;
         let index: u32 = (raw & 0xFFFFFF) as u32;
         let asset_type: u8 = (raw >> 24) as u8;
         Ok(match asset_type {
@@ -1108,11 +1110,11 @@ impl GMElement for GMAssetReference {
             11 => Self::AnimCurve(GMRef::new(index)),
             12 => Self::ParticleSystem(GMRef::new(index)),
             13 => Self::RoomInstance(index as i32),
-            _ => return Err(format!("Invalid asset type {asset_type}"))
+            _ => bail!("Invalid asset type {asset_type}")
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let (index, asset_type) = match self {
             GMAssetReference::Object(gm_ref) => (gm_ref.index, 0),
             GMAssetReference::Sprite(gm_ref) => (gm_ref.index, 1),
@@ -1285,17 +1287,17 @@ pub enum GMCodeValue {
 }
 
 
-fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMCodeValue, String> {
+fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMCodeValue> {
     match data_type {
         GMDataType::Double => reader.read_f64().map(GMCodeValue::Double),
         GMDataType::Float => reader.read_f32().map(GMCodeValue::Float),
         GMDataType::Int32 => {
-            if let Some(&function) = reader.function_occurrence_map.get(&reader.cur_pos) {
+            if let Some(&function) = reader.function_occurrence_map.get(&(reader.cur_pos as u32)) {
                 reader.cur_pos += 4;    // skip next occurrence offset
                 return Ok(GMCodeValue::Function(function.clone()))
             }
 
-            if let Some(&variable) = reader.variable_occurrence_map.get(&reader.cur_pos) {
+            if let Some(&variable) = reader.variable_occurrence_map.get(&(reader.cur_pos as u32)) {
                 reader.cur_pos += 4;    // skip next occurrence offset
                 return Ok(GMCodeValue::Variable(CodeVariable {
                     variable,
@@ -1313,36 +1315,36 @@ fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMC
         GMDataType::Int16 => {
             // int16 in embedded in the instruction itself
             reader.cur_pos -= 4;
-            let number: i16 = reader.read_i16()?;
+            let number = reader.read_i16()?;
             reader.cur_pos += 2;
             Ok(GMCodeValue::Int16(number))
         }
-        other => Err(format!("Trying to read unsupported data type {other:?} while reading value in code at absolute position {}", reader.cur_pos)),
+        other => bail!("Trying to read unsupported data type {other:?} while reading value in code at absolute position {}", reader.cur_pos),
     }
 }
 
 
-fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<CodeVariable, String> {
-    let occurrence_position: usize = reader.cur_pos;
-    let raw_value: i32 = reader.read_i32()?;
+fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<CodeVariable> {
+    let occurrence_position: u32 = reader.cur_pos as u32;
+    let raw_value = reader.read_i32()?;
 
     let variable_type: i32 = (raw_value >> 24) & 0xF8;
     let variable_type: GMVariableType = num_enum_from(variable_type as u8)
-        .map_err(|e| format!("{e} while parsing variable reference chain"))?;
+        .context("parsing variable reference chain")?;
 
     let instance_type: GMInstanceType = parse_instance_type(raw_instance_type, variable_type)?;
 
-    let variable: GMRef<GMVariable> = reader.variable_occurrence_map.get(&occurrence_position)
-        .ok_or_else(|| format!(
+    let variable: GMRef<GMVariable> = reader.variable_occurrence_map.get(&occurrence_position).cloned()
+        .with_context(|| format!(
             "Could not find {} Variable with occurrence position {} in hashmap with length {} while parsing code value",
             instance_type, occurrence_position, reader.variable_occurrence_map.len(),
-        ))?.clone();
+        ))?;
 
     Ok(CodeVariable { variable, variable_type, instance_type, is_int32: false })
 }
 
 
-pub fn parse_instance_type(raw_value: i16, variable_type: GMVariableType) -> Result<GMInstanceType, String> {
+pub fn parse_instance_type(raw_value: i16, variable_type: GMVariableType) -> Result<GMInstanceType> {
     // If > 0; then game object id (or room instance id). If < 0, then variable instance type.
     if raw_value > 0 {
         return Ok(if variable_type == GMVariableType::Instance {
@@ -1364,7 +1366,7 @@ pub fn parse_instance_type(raw_value: i16, variable_type: GMVariableType) -> Res
         -9 => GMInstanceType::StackTop,
         -15 => GMInstanceType::Argument,
         -16 => GMInstanceType::Static,
-        _ => return Err(format!("Invalid instance type {raw_value} (0x{raw_value:04X})"))
+        _ => bail!("Invalid instance type {raw_value} (0x{raw_value:04X})")
     };
 
     Ok(instance_type)
@@ -1396,12 +1398,10 @@ fn write_variable_occurrence(
     occurrence_position: usize,
     name_string_id: u32,
     variable_type: GMVariableType,
-) -> Result<(), String> {
+) -> Result<()> {
     let occurrence_map_len: usize = builder.variable_occurrences.len();   // prevent double borrow on error message
-    let occurrences: &mut Vec<(usize, GMVariableType)> = builder.variable_occurrences.get_mut(gm_index as usize).ok_or_else(|| format!(
-        "Trying to get inner variable occurrences vec out of bounds while writing occurrence: {} >= {}",
-        gm_index, occurrence_map_len,
-    ))?;
+    let occurrences: &mut Vec<(usize, GMVariableType)> = builder.variable_occurrences.get_mut(gm_index as usize)
+        .with_context(|| format!("Trying to get inner variable occurrences vec out of bounds while writing occurrence: {gm_index} >= {occurrence_map_len}"))?;
 
     if let Some((last_occurrence_pos, old_variable_type)) = occurrences.last().cloned() {
         // replace last occurrence (which is name string id) with next occurrence offset
@@ -1421,12 +1421,10 @@ fn write_variable_occurrence(
 }
 
 
-fn write_function_occurrence(builder: &mut DataBuilder, gm_index: u32, occurrence_position: usize, name_string_id: u32) -> Result<(), String> {
+fn write_function_occurrence(builder: &mut DataBuilder, gm_index: u32, occurrence_position: usize, name_string_id: u32) -> Result<()> {
     let occurrence_map_len: usize = builder.function_occurrences.len();   // prevent double borrow on error message
-    let occurrences: &mut Vec<usize> = builder.function_occurrences.get_mut(gm_index as usize).ok_or_else(|| format!(
-        "Trying to get inner function occurrences vec out of bounds while writing occurrence: {} >= {}",
-        gm_index, occurrence_map_len,
-    ))?;
+    let occurrences: &mut Vec<usize> = builder.function_occurrences.get_mut(gm_index as usize)
+        .with_context(|| format!("Trying to get inner function occurrences vec out of bounds while writing occurrence: {gm_index} >= {occurrence_map_len}"))?;
 
     if let Some(last_occurrence_pos) = occurrences.last().cloned() {
         // replace last occurrence (which is name string id) with next occurrence offset

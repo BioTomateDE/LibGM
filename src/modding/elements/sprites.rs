@@ -131,7 +131,7 @@ impl ModExporter<'_, '_> {
         )
     }
     
-    fn convert_specials(&self, i: &GMSpriteSpecial) -> Result<ModSpriteSpecial, String> {
+    fn convert_specials(&self, i: &GMSpriteSpecial) -> Result<ModSpriteSpecial> {
         if !matches!(i.data, GMSpriteSpecialData::Normal) {
             return Err("Spine and SWF sprites are not supported yet for modding".to_string())   // TODO
         }

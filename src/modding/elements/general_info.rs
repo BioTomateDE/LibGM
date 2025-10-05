@@ -7,7 +7,7 @@ use crate::modding::ordered_list::{export_changes_ordered_list, DataChange};
 macro_rules! prevent_enabling {
     ($original:expr, $modified:expr, $field:ident) => {{
         if !$original.$field && $modified.$field {
-            return Err(format!(
+            bail!(
                 "Enabling function classification \"{}\" is not allowed for security reasons!\n\
                 You are only allowed to use functions that are already unlocked in the original game. \
                 If you have a good reason to enable this function classification for modding, open a GitHub issue regarding this.",
@@ -20,7 +20,7 @@ macro_rules! prevent_enabling {
 // macro_rules! prevent_changing {
 //     ($original:expr, $modified:expr, $field:ident, $name:expr) => {{
 //         if $original.$field != $modified.$field {
-//             return Err(format!("Changing general info field {} is not allowed!", $name))
+//             bail!("Changing general info field {} is not allowed!", $name);
 //         }
 //     }};
 // }
@@ -439,7 +439,7 @@ impl RootChanges for EditFunctionClassifications {
 
 
 impl ModExporter<'_, '_> {
-    pub fn export_general_info(&self) -> Result<EditGeneralInfo, String> {
+    pub fn export_general_info(&self) -> Result<EditGeneralInfo> {
         let o: &GMGeneralInfo = &self.original_data.general_info;
         let m: &GMGeneralInfo = &self.modified_data.general_info;
 
@@ -499,7 +499,7 @@ fn edit_flags(o: &GMGeneralInfoFlags, m: &GMGeneralInfoFlags) -> EditGeneralInfo
     }
 }
 
-fn edit_function_classifications(o: &GMFunctionClassifications, m: &GMFunctionClassifications) -> Result<EditFunctionClassifications, String> {
+fn edit_function_classifications(o: &GMFunctionClassifications, m: &GMFunctionClassifications) -> Result<EditFunctionClassifications> {
     prevent_enabling!(o, m, http);
     // prevent_enabling!(o, m, io);
     prevent_enabling!(o, m, external_call);

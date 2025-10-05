@@ -8,30 +8,24 @@
 #![warn(clippy::nursery)]
 #![warn(clippy::cargo)]
 
-mod gamemaker;
-mod modding;
-mod utility;
-mod csharp_rng;
-pub mod gml;
-
+use libgm::prelude::*;
 use std::path::Path;
 use std::process::exit;
-use crate::gml::decompiler::decompile_to_ast;
-use crate::utility::Stopwatch;
+use libgm::gml::decompiler::decompile_to_ast;
+use libgm::utility::Stopwatch;
 
-
-fn read_data_file(data_file_path: &Path) -> Result<Vec<u8>, String> {
+fn read_data_file(data_file_path: &Path) -> Result<Vec<u8>> {
     let stopwatch = Stopwatch::start();
     let data: Vec<u8> = std::fs::read(data_file_path)
-        .map_err(|e| format!("Could not read data file with path \"{}\": {e}", data_file_path.display()))?;
+        .with_context(|| format!("reading data file with path {:?}", data_file_path.display()))?;
     log::trace!("Reading data file took {stopwatch}");
     Ok(data)
 }
 
-fn write_data_file(data: Vec<u8>, data_file_path: &Path) -> Result<(), String> {
+fn write_data_file(data: Vec<u8>, data_file_path: &Path) -> Result<()> {
     let stopwatch = Stopwatch::start();
     std::fs::write(data_file_path, data)
-        .map_err(|e| format!("Could not write data file with path \"{}\": {e}", data_file_path.display()))?;
+        .with_context(|| format!("writing data file with path {:?}", data_file_path.display()))?;
     log::trace!("Writing data file took {stopwatch}");
     Ok(())
 }
@@ -41,22 +35,20 @@ fn path_from_arg<'a>(arg: Option<&'a String>, default: &'a str) -> &'a Path {
 }
 
 
-fn main_open_and_close() -> Result<(), String> {
-    use crate::gamemaker::data::GMData;
-    use crate::gamemaker::deserialize::parse_data_file;
-    use crate::gamemaker::serialize::build_data_file;
+fn main_open_and_close() -> Result<()> {
+    use libgm::gamemaker::data::GMData;
+    use libgm::gamemaker::deserialize::parse_data_file;
+    use libgm::gamemaker::serialize::build_data_file;
 
     let args: Vec<String> = std::env::args().collect();
     let original_data_file_path: &Path = path_from_arg(args.get(1), "data.win");
     let modified_data_file_path: &Path = path_from_arg(args.get(2), "data_out.win");
 
     log::info!("Loading data file \"{}\"", original_data_file_path.display());
-    let original_data_raw: Vec<u8> = read_data_file(original_data_file_path)
-        .map_err(|e| format!("{e}\n↳ while reading data file"))?;
+    let original_data_raw: Vec<u8> = read_data_file(original_data_file_path).context("reading data file")?;
 
     log::info!("Parsing data file");
-    let gm_data: GMData = parse_data_file(&original_data_raw)
-        .map_err(|e| format!("\n{e}\n↳ while parsing data file"))?;
+    let gm_data: GMData = parse_data_file(&original_data_raw).context("parsing data file")?;
     drop(original_data_raw);
 
     // // count instructions
@@ -93,7 +85,7 @@ fn main_open_and_close() -> Result<(), String> {
     //     let assembly = gml::disassembler::disassemble_code(&gm_data, code)?;
     //     // println!("Disassembly of \"{code_name}\": \n{}", assembly);
     //     std::fs::write(format!("expasm/{code_name}.asm"), assembly)
-    //         .map_err(|e| format!("Could not write assembly of code \"{code_name}\": {e}"))?;
+    //         .with_context(|| format!("Could not write assembly of code \"{code_name}\": {e}"))?;
     // }
     //
     // // export strings
@@ -105,7 +97,7 @@ fn main_open_and_close() -> Result<(), String> {
     //     raw += "\n";
     // }
     // std::fs::write(format!("{}_strings.txt", original_data_file_path.to_str().unwrap()), raw)
-    //     .map_err(|e| format!("Could not write string: {e}"))?;
+    //     .with_context(|| format!("Could not write string: {e}"))?;
     //
     // // find code blocks
     // for (i, code) in gm_data.codes.codes[46..].iter().enumerate() {
@@ -121,33 +113,31 @@ fn main_open_and_close() -> Result<(), String> {
     // let gm_data = gamemaker::upgrade::upgrade_to_2023_lts(gm_data)?;
 
     // decompile
-    decompile_to_ast(&gm_data, gamemaker::deserialize::GMRef::new(3))?;
+    decompile_to_ast(&gm_data, libgm::gamemaker::deserialize::GMRef::new(3))?;
 
     // build data file
     log::info!("Building data file");
-    let modified_data_raw: Vec<u8> = build_data_file(&gm_data)
-        .map_err(|e| format!("\n{e}\n↳ while building data file"))?;
+    let modified_data_raw: Vec<u8> = build_data_file(&gm_data).context("\nwhile building data file")?;
     drop(gm_data);
 
     log::info!("Writing data file \"{}\"", modified_data_file_path.display());
-    write_data_file(modified_data_raw, modified_data_file_path)
-        .map_err(|e| format!("{e}\n↳ while writing data file"))?;
+    write_data_file(modified_data_raw, modified_data_file_path).context("writing data file")?;
 
     Ok(())
 }
 
 
-fn main_new_data_file() -> Result<(), String> {
-    use crate::gamemaker::data::GMData;
-    use crate::gamemaker::create_data_file::new_data_file;
-    use crate::gamemaker::serialize::build_data_file;
-    use crate::gamemaker::gm_version::{GMVersion, LTSBranch};
+fn main_new_data_file() -> Result<()> {
+    use libgm::gamemaker::data::GMData;
+    use libgm::gamemaker::create_data_file::new_data_file;
+    use libgm::gamemaker::serialize::build_data_file;
+    use libgm::gamemaker::gm_version::{GMVersion, LTSBranch};
 
     let args: Vec<String> = std::env::args().collect();
     let data_file_path: &Path = path_from_arg(args.get(1), "data_out.win");
 
     let gm_data: GMData = new_data_file(GMVersion::new(2023, 6, 0, 0, LTSBranch::LTS), 17);
-    let data_raw: Vec<u8> = build_data_file(&gm_data).map_err(|e| format!("\n{e}\n↳ while building data file"))?;
+    let data_raw: Vec<u8> = build_data_file(&gm_data).context("building data file")?;
     drop(gm_data);
 
     log::info!("Writing data file \"{}\"", data_file_path.display());
@@ -156,7 +146,7 @@ fn main_new_data_file() -> Result<(), String> {
 }
 
 
-// fn main_export_mod() -> Result<(), String> {
+// fn main_export_mod() -> Result<()> {
 //     use crate::modding::export::{export_mod};
 //     use crate::gamemaker::deserialize::{parse_data_file, GMData};
 //     let args: Vec<String> = std::env::args().collect();
@@ -166,25 +156,25 @@ fn main_new_data_file() -> Result<(), String> {
 // 
 //     log::info!("Loading original data file \"{}\"", original_data_file_path.display());
 //     let original_data_raw: Vec<u8> = read_data_file(original_data_file_path)
-//         .map_err(|e| format!("{e}\n↳ while reading original data file"))?;
+//         .with_context(|| format!("reading original data file"))?;
 // 
 //     log::info!("Parsing original data file");
 //     let original_data: GMData = parse_data_file(&original_data_raw, false)
-//         .map_err(|e| format!("{e}\n↳ while parsing original data file"))?;
+//         .with_context(|| format!("parsing original data file"))?;
 //     drop(original_data_raw);
 // 
 //     log::info!("Loading modified data file \"{}\"", modified_data_file_path.display());
 //     let modified_data_raw: Vec<u8> = read_data_file(modified_data_file_path)
-//         .map_err(|e| format!("{e}\n↳ while reading modified data file"))?;
+//         .with_context(|| format!("reading modified data file"))?;
 // 
 //     log::info!("Parsing modified data file");
 //     let modified_data: GMData = parse_data_file(&modified_data_raw, false)
-//         .map_err(|e| format!("{e}\n↳ while parsing modified data file"))?;
+//         .with_context(|| format!("parsing modified data file"))?;
 //     drop(modified_data_raw);
 // 
 //     log::info!("Extracting changes and exporting mod to file \"{}\"", mod_data_path.display());
 //     export_mod(&original_data, &modified_data, mod_data_path)
-//         .map_err(|e| format!("{e}\n↳ while exporting AcornGM mod"))?;
+//         .with_context(|| format!("exporting AcornGM mod"))?;
 // 
 //     Ok(())
 // }
@@ -194,8 +184,8 @@ fn main() {
     biologischer_log::init(env!("CARGO_PKG_NAME"));
     log::debug!("============= LibGM v{} =============", env!("CARGO_PKG_VERSION"));
     
-    if let Err(e) = main_open_and_close() {
-        log::error!("{e}");
+    if let Err(error) = main_open_and_close() {
+        log::error!("{}", error.chain_with("↳"));
         exit(1);
     }
 

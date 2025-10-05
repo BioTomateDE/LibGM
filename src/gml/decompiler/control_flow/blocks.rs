@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::code::{
@@ -26,27 +27,27 @@ impl<'a> Block<'a> {
         }
     }
 
-    pub fn pop_first_instruction(&mut self) -> Result<(), String> {
+    pub fn pop_first_instruction(&mut self) -> Result<()> {
         self.pop_first_instructions(1)
     }
 
-    pub fn pop_first_instructions(&mut self, count: usize) -> Result<(), String> {
+    pub fn pop_first_instructions(&mut self, count: usize) -> Result<()> {
         let len = self.instructions.len();
         if count > len {
-            return Err(format!("Tried to pop {count} first instructions from block with {len} instructions"))
+            bail!("Tried to pop {count} first instructions from block with {len} instructions");
         }
         self.instructions = &self.instructions[count..];
         Ok(())
     }
 
-    pub fn pop_last_instruction(&mut self) -> Result<(), String> {
+    pub fn pop_last_instruction(&mut self) -> Result<()> {
         self.pop_last_instructions(1)
     }
 
-    pub fn pop_last_instructions(&mut self, count: usize) -> Result<(), String> {
+    pub fn pop_last_instructions(&mut self, count: usize) -> Result<()> {
         let len = self.instructions.len();
         if count > len {
-            return Err(format!("Tried to pop {count} last instructions from block with {len} instructions"))
+            bail!("Tried to pop {count} last instructions from block with {len} instructions");
         }
         self.instructions = &self.instructions[..len-count];
         Ok(())
@@ -88,7 +89,7 @@ struct BlockAnalysis {
 }
 
 
-pub fn find_blocks<'a>(cfg: &mut ControlFlowGraph<'a>, instructions: &'a [GMInstruction]) -> Result<(), String> {
+pub fn find_blocks<'a>(cfg: &mut ControlFlowGraph<'a>, instructions: &'a [GMInstruction]) -> Result<()> {
     let analysis = analyze_instructions(cfg.context.gm_data, instructions)?;
     create_blocks(cfg, instructions, analysis)?;
     connect_blocks(cfg)?;
@@ -97,7 +98,7 @@ pub fn find_blocks<'a>(cfg: &mut ControlFlowGraph<'a>, instructions: &'a [GMInst
 
 
 /// Analyze instructions to identify block boundaries and special structures
-fn analyze_instructions(gm_data: &GMData, instructions: &[GMInstruction]) -> Result<BlockAnalysis, String> {
+fn analyze_instructions(gm_data: &GMData, instructions: &[GMInstruction]) -> Result<BlockAnalysis> {
     let mut block_starts: HashSet<u32> = HashSet::new();
     let mut address_map: HashMap<u32, usize> = HashMap::with_capacity(instructions.len());
     let mut try_blocks: Vec<TryBlock> = Vec::new();
@@ -159,7 +160,7 @@ fn analyze_instructions(gm_data: &GMData, instructions: &[GMInstruction]) -> Res
 
 
 /// Extract try-catch-finally information from instruction pattern
-fn extract_try_info(gm_data: &GMData, instructions: &[GMInstruction], call_index: usize, call_addr: u32) -> Result<TryBlock, String> {
+fn extract_try_info(gm_data: &GMData, instructions: &[GMInstruction], call_index: usize, call_addr: u32) -> Result<TryBlock> {
     // Pattern: [push.i finally, conv.i.v, push.i catch, conv.i.v, call, popz.v]
     const PATTERN_SIZE: usize = 6;
     const PATTERN_START: usize = 4;
@@ -174,10 +175,10 @@ fn extract_try_info(gm_data: &GMData, instructions: &[GMInstruction], call_index
         ))?;
 
     if pattern.len() != PATTERN_SIZE {
-        return Err(format!(
+        bail!(
             "Invalid @@try_hook@@ pattern size at index {}: expected {}, got {}",
             call_index, PATTERN_SIZE, pattern.len()
-        ));
+        );
     }
 
     // Extract addresses from the pattern
@@ -207,18 +208,17 @@ fn extract_try_info(gm_data: &GMData, instructions: &[GMInstruction], call_index
         _ => {
             let actual = disassemble_instructions(gm_data, pattern)
                 .unwrap_or_else(|e| format!("<invalid: {}>", e));
-            Err(format!(
-                "Malformed @@try_hook@@ pattern at index {}: expected \
-                [push.i, conv.i.v, push.i, conv.i.v, call, popz.v], found [{}]",
-                call_index, actual
-            ))
+            bail!(
+                "Malformed @@try_hook@@ pattern at index {call_index}: expected \
+                [push.i, conv.i.v, push.i, conv.i.v, call, popz.v], found [{actual}]"
+            );
         }
     }
 }
 
 
 /// Create blocks from analyzed instruction boundaries
-fn create_blocks<'a>(cfg: &mut ControlFlowGraph<'a>, instructions: &'a [GMInstruction], analysis: BlockAnalysis) -> Result<(), String> {
+fn create_blocks<'a>(cfg: &mut ControlFlowGraph<'a>, instructions: &'a [GMInstruction], analysis: BlockAnalysis) -> Result<()> {
     // Convert to sorted vector for efficient block creation
     let mut boundaries: Vec<u32> = analysis.block_starts.into_iter().collect();
     boundaries.push(0); // Ensure we start from 0
@@ -256,7 +256,7 @@ fn create_blocks<'a>(cfg: &mut ControlFlowGraph<'a>, instructions: &'a [GMInstru
 
 
 /// Connect blocks with predecessor and successor relationships
-fn connect_blocks(cfg: &mut ControlFlowGraph) -> Result<(), String> {
+fn connect_blocks(cfg: &mut ControlFlowGraph) -> Result<()> {
     let block_count = cfg.blocks.len();
 
     for idx in 0..block_count {
@@ -325,7 +325,7 @@ fn connect_fallthrough(cfg: &mut ControlFlowGraph, block_idx: usize) {
 
 
 /// Helper to connect a block to its branch target
-fn connect_branch_target(cfg: &mut ControlFlowGraph, block_idx: usize, target_addr: u32) -> Result<(), String> {
+fn connect_branch_target(cfg: &mut ControlFlowGraph, block_idx: usize, target_addr: u32) -> Result<()> {
     let target_idx = find_block_containing(cfg, target_addr)?;
     let successor = NodeRef::block(target_idx);
     cfg.blocks[block_idx].successors.branch_target = Some(successor);
@@ -348,7 +348,7 @@ fn is_try_hook_block(block: &Block) -> bool {
 
 
 /// Find the block containing the given instruction address using binary search
-fn find_block_containing(cfg: &ControlFlowGraph, addr: u32) -> Result<usize, String> {
+fn find_block_containing(cfg: &ControlFlowGraph, addr: u32) -> Result<usize> {
     // Handle edge case: address is at the very end
     if let Some(last) = cfg.blocks.last() {
         if addr == last.end_address && !last.instructions.is_empty() {
@@ -364,12 +364,12 @@ fn find_block_containing(cfg: &ControlFlowGraph, addr: u32) -> Result<usize, Str
         } else {
             std::cmp::Ordering::Equal
         }
-    }).map_err(|_| format!("Could not find block containing address {addr}"))
+    }).ok().with_context(|| format!("Could not find block containing address {addr}"))
 }
 
 
 /// Check if a function reference is the try hook function
-fn is_try_hook(gm_data: &GMData, func_ref: GMRef<GMFunction>) -> Result<bool, String> {
+fn is_try_hook(gm_data: &GMData, func_ref: GMRef<GMFunction>) -> Result<bool> {
     let func = func_ref.resolve(&gm_data.functions.functions)?;
     let name = func.name.resolve(&gm_data.strings.strings)?;
     Ok(name == vm_constants::functions::TRY_HOOK)

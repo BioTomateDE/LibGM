@@ -14,75 +14,75 @@ use crate::gamemaker::elements::variables::GMVariable;
 
 
 impl ModExporter<'_, '_> {
-    pub fn convert_audio_ref(&self, gm_audio_ref: &GMRef<GMEmbeddedAudio>) -> Result<ModRef, String> {
+    pub fn convert_audio_ref(&self, gm_audio_ref: &GMRef<GMEmbeddedAudio>) -> Result<ModRef> {
         convert_reference(gm_audio_ref, &self.original_data.audios.audios, &self.modified_data.audios.audios)
     }
-    pub fn convert_audio_group_ref(&self, gm_audio_group_ref: &GMRef<GMAudioGroup>) -> Result<ModRef, String> {
+    pub fn convert_audio_group_ref(&self, gm_audio_group_ref: &GMRef<GMAudioGroup>) -> Result<ModRef> {
         convert_reference(gm_audio_group_ref, &self.original_data.audio_groups.audio_groups, &self.modified_data.audio_groups.audio_groups)
     }
-    pub fn convert_background_ref(&self, gm_background_ref: &GMRef<GMBackground>) -> Result<ModRef, String> {
+    pub fn convert_background_ref(&self, gm_background_ref: &GMRef<GMBackground>) -> Result<ModRef> {
         convert_reference(gm_background_ref, &self.original_data.backgrounds.backgrounds, &self.modified_data.backgrounds.backgrounds)
     }
-    pub fn convert_code_ref(&self, gm_code_ref: &GMRef<GMCode>) -> Result<ModRef, String> {
+    pub fn convert_code_ref(&self, gm_code_ref: &GMRef<GMCode>) -> Result<ModRef> {
         convert_reference(gm_code_ref, &self.original_data.codes.codes, &self.modified_data.codes.codes)
     }
-    pub fn convert_function_ref(&self, gm_function_ref: &GMRef<GMFunction>) -> Result<ModRef, String> {
+    pub fn convert_function_ref(&self, gm_function_ref: &GMRef<GMFunction>) -> Result<ModRef> {
         convert_reference(gm_function_ref, &self.original_data.functions.functions, &self.modified_data.functions.functions)
     }
     // TODO continue
-    pub fn convert_game_object_ref(&self, gm_game_object_ref: &GMRef<GMGameObject>) -> Result<ModRef, String> {
+    pub fn convert_game_object_ref(&self, gm_game_object_ref: &GMRef<GMGameObject>) -> Result<ModRef> {
         convert_reference(gm_game_object_ref, &self.original_data.game_objects.game_objects, &self.modified_data.game_objects.game_objects)
     }
-    pub fn convert_room_ref(&self, gm_room_ref: &GMRef<GMRoom>) -> Result<ModRef, String> {
+    pub fn convert_room_ref(&self, gm_room_ref: &GMRef<GMRoom>) -> Result<ModRef> {
         convert_reference(gm_room_ref, &self.original_data.rooms.rooms, &self.modified_data.rooms.rooms)
     }
-    pub fn convert_sprite_ref(&self, gm_sprite_ref: &GMRef<GMSprite>) -> Result<ModRef, String> {
+    pub fn convert_sprite_ref(&self, gm_sprite_ref: &GMRef<GMSprite>) -> Result<ModRef> {
         convert_reference(gm_sprite_ref, &self.original_data.sprites.sprites, &self.modified_data.sprites.sprites)
     }
-    pub fn convert_string_ref(&self, gm_string_ref: &GMRef<String>) -> Result<ModRef, String> {
+    pub fn convert_string_ref(&self, gm_string_ref: &GMRef<String>) -> Result<ModRef> {
         convert_reference(gm_string_ref, &self.original_data.strings.strings, &self.modified_data.strings.strings)
     }
     /// TODO make custom function for texture page items (since texture contents are not checked)
-    pub fn convert_texture_ref(&self, gm_texture_ref: &GMRef<GMTexturePageItem>) -> Result<ModRef, String> {
+    pub fn convert_texture_ref(&self, gm_texture_ref: &GMRef<GMTexturePageItem>) -> Result<ModRef> {
         convert_reference(gm_texture_ref, &self.original_data.texture_page_items.texture_page_items, &self.modified_data.texture_page_items.texture_page_items)
     }
-    pub fn convert_texture_page_ref(&self, gm_texture_page_ref: &GMRef<GMEmbeddedTexture>) -> Result<ModRef, String> {
+    pub fn convert_texture_page_ref(&self, gm_texture_page_ref: &GMRef<GMEmbeddedTexture>) -> Result<ModRef> {
         convert_reference(gm_texture_page_ref, &self.original_data.embedded_textures.texture_pages, &self.modified_data.embedded_textures.texture_pages)
     }
-    pub fn convert_variable_ref(&self, gm_variable_ref: &GMRef<GMVariable>) -> Result<ModRef, String> {
+    pub fn convert_variable_ref(&self, gm_variable_ref: &GMRef<GMVariable>) -> Result<ModRef> {
         convert_reference(gm_variable_ref, &self.original_data.variables.variables, &self.modified_data.variables.variables)
     }
 
-    pub fn convert_audio_ref_opt(&self, gm_audio_ref: &Option<GMRef<GMEmbeddedAudio>>) -> Result<Option<ModRef>, String> {
+    pub fn convert_audio_ref_opt(&self, gm_audio_ref: &Option<GMRef<GMEmbeddedAudio>>) -> Result<Option<ModRef>> {
         convert_reference_optional(gm_audio_ref, &self.original_data.audios.audios, &self.modified_data.audios.audios)
     }
-    pub fn convert_background_ref_opt(&self, gm_background_ref: &Option<GMRef<GMBackground>>) -> Result<Option<ModRef>, String> {
+    pub fn convert_background_ref_opt(&self, gm_background_ref: &Option<GMRef<GMBackground>>) -> Result<Option<ModRef>> {
         convert_reference_optional(gm_background_ref, &self.original_data.backgrounds.backgrounds, &self.modified_data.backgrounds.backgrounds)
     }
-    pub fn convert_code_ref_opt(&self, gm_code_ref: &Option<GMRef<GMCode>>) -> Result<Option<ModRef>, String> {
+    pub fn convert_code_ref_opt(&self, gm_code_ref: &Option<GMRef<GMCode>>) -> Result<Option<ModRef>> {
         convert_reference_optional(gm_code_ref, &self.original_data.codes.codes, &self.modified_data.codes.codes)
     }
-    pub fn convert_game_object_ref_opt(&self, gm_game_object_ref: &Option<GMRef<GMGameObject>>) -> Result<Option<ModRef>, String> {
+    pub fn convert_game_object_ref_opt(&self, gm_game_object_ref: &Option<GMRef<GMGameObject>>) -> Result<Option<ModRef>> {
         convert_reference_optional(gm_game_object_ref, &self.original_data.game_objects.game_objects, &self.modified_data.game_objects.game_objects)
     }
-    pub fn convert_sprite_ref_opt(&self, gm_sprite_ref: &Option<GMRef<GMSprite>>) -> Result<Option<ModRef>, String> {
+    pub fn convert_sprite_ref_opt(&self, gm_sprite_ref: &Option<GMRef<GMSprite>>) -> Result<Option<ModRef>> {
         convert_reference_optional(gm_sprite_ref, &self.original_data.sprites.sprites, &self.modified_data.sprites.sprites)
     }
-    pub fn convert_string_ref_opt(&self, gm_string_ref: &Option<GMRef<String>>) -> Result<Option<ModRef>, String> {
+    pub fn convert_string_ref_opt(&self, gm_string_ref: &Option<GMRef<String>>) -> Result<Option<ModRef>> {
         convert_reference_optional(gm_string_ref, &self.original_data.strings.strings, &self.modified_data.strings.strings)
     }
     /// TODO make custom function for texture page items (since texture contents are not checked)
-    pub fn convert_texture_ref_opt(&self, gm_texture_ref: &Option<GMRef<GMTexturePageItem>>) -> Result<Option<ModRef>, String> {
+    pub fn convert_texture_ref_opt(&self, gm_texture_ref: &Option<GMRef<GMTexturePageItem>>) -> Result<Option<ModRef>> {
         convert_reference_optional(gm_texture_ref, &self.original_data.texture_page_items.texture_page_items, &self.modified_data.texture_page_items.texture_page_items)
     }
 }
 
 
-fn convert_reference<GM>(gm_reference: &GMRef<GM>, original_list: &[GM], modified_list: &[GM]) -> Result<ModRef, String> {
+fn convert_reference<GM>(gm_reference: &GMRef<GM>, original_list: &[GM], modified_list: &[GM]) -> Result<ModRef> {
     // If reference index out of bounds in modified data; throw error.
     // This should never happen in healthy gm data; just being cautious that the mod will be fully functional.
     if gm_reference.index >= modified_list.len() as u32 {
-        return Err(format!(
+        bail!(
             "Could not resolve {} reference with GameMaker index {} in list with length {}; out of bounds",
             std::any::type_name_of_val(&gm_reference), gm_reference.index, modified_list.len(),
         ))
@@ -101,7 +101,7 @@ fn convert_reference<GM>(gm_reference: &GMRef<GM>, original_list: &[GM], modifie
 }
 
 
-fn convert_reference_optional<GM>(gm_reference_optional: &Option<GMRef<GM>>, original_list: &[GM], modified_list: &[GM]) -> Result<Option<ModRef>, String> {
+fn convert_reference_optional<GM>(gm_reference_optional: &Option<GMRef<GM>>, original_list: &[GM], modified_list: &[GM]) -> Result<Option<ModRef>> {
     match gm_reference_optional {
         Some(gm_reference) => Ok(Some(convert_reference(gm_reference, original_list, modified_list)?)),
         None => Ok(None),

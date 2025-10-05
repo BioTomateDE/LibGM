@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use std::borrow::Cow;
 use std::convert::TryInto;
 use image::{DynamicImage, ImageBuffer, Rgba};
@@ -18,13 +19,13 @@ const QOI_MASK_3: u8 = 0xe0;
 const QOI_MASK_4: u8 = 0xf0;
 
 
-pub fn get_image_from_bytes(bytes: &[u8]) -> Result<DynamicImage, String> {
+pub fn get_image_from_bytes(bytes: &[u8]) -> Result<DynamicImage> {
     let header: &[u8] = &bytes.get(..12).ok_or("Invalid QOI header (less than 12 bytes long)")?;
     
     let is_big_endian: bool = match &header[0..4] {
         b"qoif" => true,
         b"fioq" => false,
-        _ => return Err(format!("Invalid QOIF image magic [{}]", hexdump(header, 0, Some(4))?))
+        _ => bail!("Invalid QOIF image magic [{}]", hexdump(header, 0, Some(4))?)
     };
     
     let u32_from = if is_big_endian { u32::from_be_bytes } else { u32::from_le_bytes };
@@ -115,7 +116,7 @@ pub fn get_image_from_bytes(bytes: &[u8]) -> Result<DynamicImage, String> {
                 pos += 1;
             }
         } else {
-            return Err(format!("Invalid QOI opcode 0x{b1}"))
+            bail!("Invalid QOI opcode 0x{b1}");
         }
 
         let index_pos: usize = (((r ^ g ^ b ^ a) & 0x3F) << 2) as usize;

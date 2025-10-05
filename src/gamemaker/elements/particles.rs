@@ -1,4 +1,5 @@
-﻿use num_enum::{IntoPrimitive, TryFromPrimitive};
+﻿use crate::prelude::*;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::sprites::GMSprite;
@@ -22,17 +23,17 @@ impl GMChunkElement for GMParticleSystems {
 }
 
 impl GMElement for GMParticleSystems {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
-        let psys_version: u32 = reader.read_u32()?;
+        let psys_version = reader.read_u32()?;
         if psys_version != 1 {
-            return Err(format!("Invalid or unsupported PSYS version {0} (0x{0:8X})", psys_version))
+            bail!("Invalid or unsupported PSYS version {0} (0x{0:8X})", psys_version);
         }
         let particle_systems: Vec<GMParticleSystem> = reader.read_pointer_list()?;
         Ok(Self { particle_systems, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         builder.align(4);
         builder.write_u32(1);   // PSYS Version
@@ -52,17 +53,17 @@ pub struct GMParticleSystem {
     pub emitters: Vec<GMRef<GMParticleEmitter>>,
 }
 impl GMElement for GMParticleSystem {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let origin_x: i32 = reader.read_i32()?;
-        let origin_y: i32 = reader.read_i32()?;
-        let draw_order: i32 = reader.read_i32()?;
+        let origin_x = reader.read_i32()?;
+        let origin_y = reader.read_i32()?;
+        let draw_order = reader.read_i32()?;
         let global_space_particles: Option<bool> = reader.deserialize_if_gm_version((2023, 8))?;
         let emitters: Vec<GMRef<GMParticleEmitter>> = reader.read_simple_list_of_resource_ids()?;
         Ok(Self { name, origin_x, origin_y, draw_order, global_space_particles, emitters })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         builder.write_i32(self.origin_x);
         builder.write_i32(self.origin_y);
@@ -88,17 +89,17 @@ impl GMChunkElement for GMParticleEmitters {
     }
 }
 impl GMElement for GMParticleEmitters {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
-        let psem_version: u32 = reader.read_u32()?;
+        let psem_version = reader.read_u32()?;
         if psem_version != 1 {
-            return Err(format!("Invalid or unsupported PSEM version {0} (0x{0:8X})", psem_version))
+            bail!("Invalid or unsupported PSEM version {0} (0x{0:8X})", psem_version);
         }
         let emitters: Vec<GMParticleEmitter> = reader.read_pointer_list()?;
         Ok(Self { emitters, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         builder.align(4);
         builder.write_u32(1);   // PSEM Version
@@ -156,7 +157,7 @@ pub struct GMParticleEmitter {
     pub spawn_on_update_count: u32,
 }
 impl GMElement for GMParticleEmitter {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let enabled: Option<bool> = if reader.general_info.is_version_at_least((2023, 6, 0, 0)) {
             Some(reader.read_bool32()?)
@@ -168,12 +169,12 @@ impl GMElement for GMParticleEmitter {
         let emit_count: u32;
         let temp_data_2023_8: Option<TempParticleEmitter2023_8> = if reader.general_info.is_version_at_least((2023, 8, 0, 0)) {
             emit_count = reader.read_f32()? as u32;              // don't see how a float is a count but ok
-            let emit_relative: bool = reader.read_bool32()?;     // always zero
-            let delay_min: f32 = reader.read_f32()?;
-            let delay_max: f32 = reader.read_f32()?;
+            let emit_relative = reader.read_bool32()?;     // always zero
+            let delay_min = reader.read_f32()?;
+            let delay_max = reader.read_f32()?;
             let delay_unit: TimeUnit = num_enum_from(reader.read_i32()?)?;
-            let interval_min: f32 = reader.read_f32()?;
-            let interval_max: f32 = reader.read_f32()?;
+            let interval_min = reader.read_f32()?;
+            let interval_max = reader.read_f32()?;
             let interval_unit: TimeUnit = num_enum_from(reader.read_i32()?)?;
 
             Some(TempParticleEmitter2023_8 {
@@ -192,42 +193,42 @@ impl GMElement for GMParticleEmitter {
 
         let distribution: EmitterDistribution = num_enum_from(reader.read_i32()?)?;
         let shape: EmitterShape = num_enum_from(reader.read_i32()?)?;
-        let region_x: f32 = reader.read_f32()?;
-        let region_y: f32 = reader.read_f32()?;
-        let region_w: f32 = reader.read_f32()?;
-        let region_h: f32 = reader.read_f32()?;
-        let rotation: f32 = reader.read_f32()?;
+        let region_x = reader.read_f32()?;
+        let region_y = reader.read_f32()?;
+        let region_w = reader.read_f32()?;
+        let region_h = reader.read_f32()?;
+        let rotation = reader.read_f32()?;
         let sprite: GMRef<GMSprite> = reader.read_resource_by_id()?;
         let texture: EmitterTexture = num_enum_from(reader.read_i32()?)?;
-        let frame_index: f32 = reader.read_f32()?;
+        let frame_index = reader.read_f32()?;
 
         let data_2023_4: Option<GMParticleEmitter2023_4> = if reader.general_info.is_version_at_least((2023, 4, 0, 0)) {
-            let animate: bool = reader.read_bool32()?;
-            let stretch: bool = reader.read_bool32()?;
-            let is_random: bool = reader.read_bool32()?;
+            let animate = reader.read_bool32()?;
+            let stretch = reader.read_bool32()?;
+            let is_random = reader.read_bool32()?;
             Some(GMParticleEmitter2023_4 { animate, stretch, is_random })
         } else { None };
 
-        let start_color: u32 = reader.read_u32()?;
-        let mid_color: u32 = reader.read_u32()?;
-        let end_color: u32 = reader.read_u32()?;
-        let additive_blend: bool = reader.read_bool32()?;
-        let lifetime_min: f32 = reader.read_f32()?;
-        let lifetime_max: f32 = reader.read_f32()?;
-        let scale_x: f32 = reader.read_f32()?;
-        let scale_y: f32 = reader.read_f32()?;
+        let start_color = reader.read_u32()?;
+        let mid_color = reader.read_u32()?;
+        let end_color = reader.read_u32()?;
+        let additive_blend = reader.read_bool32()?;
+        let lifetime_min = reader.read_f32()?;
+        let lifetime_max = reader.read_f32()?;
+        let scale_x = reader.read_f32()?;
+        let scale_y = reader.read_f32()?;
 
         let data_2023_8: Option<GMParticleEmitter2023_8>;
         let data_pre_2023_8: Option<GMParticleEmitterPre2023_8>;
         if reader.general_info.is_version_at_least((2023, 8, 0, 0)) {
-            let size_min_x: f32 = reader.read_f32()?;
-            let size_max_x: f32 = reader.read_f32()?;
-            let size_min_y: f32 = reader.read_f32()?;
-            let size_max_y: f32 = reader.read_f32()?;
-            let size_increase_x: f32 = reader.read_f32()?;
-            let size_increase_y: f32 = reader.read_f32()?;
-            let size_wiggle_x: f32 = reader.read_f32()?;
-            let size_wiggle_y: f32 = reader.read_f32()?;
+            let size_min_x = reader.read_f32()?;
+            let size_max_x = reader.read_f32()?;
+            let size_min_y = reader.read_f32()?;
+            let size_max_y = reader.read_f32()?;
+            let size_increase_x = reader.read_f32()?;
+            let size_increase_y = reader.read_f32()?;
+            let size_wiggle_x = reader.read_f32()?;
+            let size_wiggle_y = reader.read_f32()?;
             let temp: TempParticleEmitter2023_8 = temp_data_2023_8.expect("Temp 2023.8 data not set somehow");
             data_2023_8 = Some(GMParticleEmitter2023_8 {
                 emit_relative: temp.emit_relative,
@@ -248,10 +249,10 @@ impl GMElement for GMParticleEmitter {
             });
             data_pre_2023_8 = None;
         } else {
-            let size_min: f32 = reader.read_f32()?;
-            let size_max: f32 = reader.read_f32()?;
-            let size_increase: f32 = reader.read_f32()?;
-            let size_wiggle: f32 = reader.read_f32()?;
+            let size_min = reader.read_f32()?;
+            let size_max = reader.read_f32()?;
+            let size_increase = reader.read_f32()?;
+            let size_wiggle = reader.read_f32()?;
             data_2023_8 = None;
             data_pre_2023_8 = Some(GMParticleEmitterPre2023_8 {
                 size_min,
@@ -261,26 +262,26 @@ impl GMElement for GMParticleEmitter {
             })
         };
 
-        let speed_min: f32 = reader.read_f32()?;
-        let speed_max: f32 = reader.read_f32()?;
-        let speed_increase: f32 = reader.read_f32()?;
-        let speed_wiggle: f32 = reader.read_f32()?;
-        let gravity_force: f32 = reader.read_f32()?;
-        let gravity_direction: f32 = reader.read_f32()?;
-        let direction_min: f32 = reader.read_f32()?;
-        let direction_max: f32 = reader.read_f32()?;
-        let direction_increase: f32 = reader.read_f32()?;
-        let direction_wiggle: f32 = reader.read_f32()?;
-        let orientation_min: f32 = reader.read_f32()?;
-        let orientation_max: f32 = reader.read_f32()?;
-        let orientation_increase: f32 = reader.read_f32()?;
-        let orientation_wiggle: f32 = reader.read_f32()?;
-        let orientation_relative: bool = reader.read_bool32()?;
+        let speed_min = reader.read_f32()?;
+        let speed_max = reader.read_f32()?;
+        let speed_increase = reader.read_f32()?;
+        let speed_wiggle = reader.read_f32()?;
+        let gravity_force = reader.read_f32()?;
+        let gravity_direction = reader.read_f32()?;
+        let direction_min = reader.read_f32()?;
+        let direction_max = reader.read_f32()?;
+        let direction_increase = reader.read_f32()?;
+        let direction_wiggle = reader.read_f32()?;
+        let orientation_min = reader.read_f32()?;
+        let orientation_max = reader.read_f32()?;
+        let orientation_increase = reader.read_f32()?;
+        let orientation_wiggle = reader.read_f32()?;
+        let orientation_relative = reader.read_bool32()?;
 
         let spawn_on_death: Option<GMRef<GMParticleEmitter>> = reader.read_resource_by_id_opt()?;
-        let spawn_on_death_count: u32 = reader.read_u32()?;
+        let spawn_on_death_count = reader.read_u32()?;
         let spawn_on_update: Option<GMRef<GMParticleEmitter>> = reader.read_resource_by_id_opt()?;
-        let spawn_on_update_count: u32 = reader.read_u32()?;
+        let spawn_on_update_count = reader.read_u32()?;
 
         Ok(GMParticleEmitter {
             name,
@@ -330,12 +331,12 @@ impl GMElement for GMParticleEmitter {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         self.enabled.serialize_if_gm_ver(builder, "Enabled", (2023, 6))?;
         builder.write_i32(self.mode.into());
         if builder.is_gm_version_at_least((2023, 8)) {
-            let data_2023_8: &GMParticleEmitter2023_8 = self.data_2023_8.as_ref().ok_or("2023.8 Data not set")?;
+            let data_2023_8: &GMParticleEmitter2023_8 = self.data_2023_8.as_ref().context("Particle Emitter 2023.8 Data not set")?;
             builder.write_f32(self.emit_count as f32);
             builder.write_bool32(data_2023_8.emit_relative);
             builder.write_f32(data_2023_8.delay_min);
@@ -358,7 +359,7 @@ impl GMElement for GMParticleEmitter {
         builder.write_i32(self.texture.into());
         builder.write_f32(self.frame_index);
         if builder.is_gm_version_at_least((2023, 4)) {
-            let data_2023_4: &GMParticleEmitter2023_4 = self.data_2023_4.as_ref().ok_or("2023.4 Data not set")?;
+            let data_2023_4: &GMParticleEmitter2023_4 = self.data_2023_4.as_ref().context("Particle Emitter 2023.4 Data not set")?;
             builder.write_bool32(data_2023_4.animate);
             builder.write_bool32(data_2023_4.stretch);
             builder.write_bool32(data_2023_4.is_random);
@@ -372,7 +373,7 @@ impl GMElement for GMParticleEmitter {
         builder.write_f32(self.scale_x);
         builder.write_f32(self.scale_y);
         if builder.is_gm_version_at_least((2023, 8)) {
-            let data_2023_8: &GMParticleEmitter2023_8 = self.data_2023_8.as_ref().ok_or("2023.8 Data not set")?;
+            let data_2023_8: &GMParticleEmitter2023_8 = self.data_2023_8.as_ref().context("Particle Emitter 2023.8 Data not set")?;
             builder.write_f32(data_2023_8.size_min_x);
             builder.write_f32(data_2023_8.size_max_x);
             builder.write_f32(data_2023_8.size_min_y);
@@ -382,7 +383,7 @@ impl GMElement for GMParticleEmitter {
             builder.write_f32(data_2023_8.size_wiggle_x);
             builder.write_f32(data_2023_8.size_wiggle_y);
         } else {
-            let data_pre_2023_8: &GMParticleEmitterPre2023_8 = self.data_pre_2023_8.as_ref().ok_or("Pre 2023.8 Data not set")?;
+            let data_pre_2023_8: &GMParticleEmitterPre2023_8 = self.data_pre_2023_8.as_ref().context("Particle Emitter Pre 2023.8 Data not set")?;
             builder.write_f32(data_pre_2023_8.size_min);
             builder.write_f32(data_pre_2023_8.size_max);
             builder.write_f32(data_pre_2023_8.size_increase);

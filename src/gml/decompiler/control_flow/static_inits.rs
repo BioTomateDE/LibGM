@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use std::ops::{Deref, DerefMut};
 use crate::gamemaker::elements::code::GMInstruction;
 use crate::gml::decompiler::control_flow::blocks::Block;
@@ -35,7 +36,7 @@ impl DerefMut for StaticInit {
 
 // TODO: remove panicking
 
-pub fn find_static_inits(cfg: &mut ControlFlowGraph) -> Result<(), String> {
+pub fn find_static_inits(cfg: &mut ControlFlowGraph) -> Result<()> {
     for i in 0..cfg.blocks.len() {
         let block = &cfg.blocks[i];
         let Some([GMInstruction::HasStaticInitialized, GMInstruction::BranchIf(..)]) = block.instructions.last_chunk() else {continue};

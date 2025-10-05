@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
@@ -20,17 +21,17 @@ impl GMChunkElement for GMAnimationCurves {
 }
 
 impl GMElement for GMAnimationCurves {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
-        let version: i32 = reader.read_i32()?;
+        let version = reader.read_i32()?;
         if version != 1 {
-            return Err(format!("Expected ACRV version 1 but got {version}"))
+            bail!("Expected ACRV version 1 but got {version}");
         }
         let animation_curves: Vec<GMAnimationCurve> = reader.read_pointer_list()?;
         Ok(Self { animation_curves, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         builder.align(4);
         builder.write_i32(1);  // ACRV version 1
@@ -47,14 +48,14 @@ pub struct GMAnimationCurve {
     pub channels: Vec<GMAnimationCurveChannel>,
 }
 impl GMElement for GMAnimationCurve {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let graph_type: u32 = reader.read_u32()?;
+        let graph_type = reader.read_u32()?;
         let channels: Vec<GMAnimationCurveChannel> = reader.read_simple_list()?;
         Ok(GMAnimationCurve { name, graph_type, channels })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         builder.write_u32(self.graph_type.into());
         builder.write_simple_list(&self.channels)?;
@@ -71,15 +72,15 @@ pub struct GMAnimationCurveChannel {
     pub points: Vec<GMAnimationCurveChannelPoint>,
 }
 impl GMElement for GMAnimationCurveChannel {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let curve_type: GMAnimationCurveType = num_enum_from(reader.read_u32()?)?;
-        let iterations: u32 = reader.read_u32()?;
+        let iterations = reader.read_u32()?;
         let points: Vec<GMAnimationCurveChannelPoint> = reader.read_simple_list()?;
         Ok(GMAnimationCurveChannel { name, curve_type, iterations, points })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         builder.write_u32(self.curve_type.into());
         builder.write_u32(self.iterations);
@@ -96,9 +97,9 @@ pub struct GMAnimationCurveChannelPoint {
     pub bezier_data: Option<PointBezierData>,
 }
 impl GMElement for GMAnimationCurveChannelPoint {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let x: f32 = reader.read_f32()?;
-        let y: f32 = reader.read_f32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let x = reader.read_f32()?;
+        let y = reader.read_f32()?;
         let mut bezier_data: Option<PointBezierData> = None;
         if reader.general_info.is_version_at_least((2, 3, 1)) {
             bezier_data = Some(PointBezierData::deserialize(reader)?);
@@ -108,13 +109,12 @@ impl GMElement for GMAnimationCurveChannelPoint {
         Ok(GMAnimationCurveChannelPoint { x, y, bezier_data })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_f32(self.x);
         builder.write_f32(self.y);
         
         if builder.is_gm_version_at_least((2, 3, 1)) {
-            let bezier_data: &PointBezierData = self.bezier_data.as_ref()
-                .ok_or("Animation Curve Point: Bezier data not set in 2.3.1+")?;
+            let bezier_data: &PointBezierData = self.bezier_data.as_ref().context("Animation Curve Point's Bezier data not set in 2.3.1+")?;
             bezier_data.serialize(builder)?;
         } else {
             builder.write_i32(0);
@@ -132,15 +132,15 @@ pub struct PointBezierData {
     pub y1: f32,
 }
 impl GMElement for PointBezierData {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let x0: f32 = reader.read_f32()?;
-        let y0: f32 = reader.read_f32()?;
-        let x1: f32 = reader.read_f32()?;
-        let y1: f32 = reader.read_f32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let x0 = reader.read_f32()?;
+        let y0 = reader.read_f32()?;
+        let x1 = reader.read_f32()?;
+        let y1 = reader.read_f32()?;
         Ok(Self { x0, y0, x1, y1 })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_f32(self.x0);
         builder.write_f32(self.y0);
         builder.write_f32(self.x1);

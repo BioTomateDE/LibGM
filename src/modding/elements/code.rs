@@ -176,7 +176,7 @@ impl ModExporter<'_, '_> {
         )
     }
     
-    fn convert_instruction(&self, instruction: &GMInstruction) -> Result<ModInstruction, String> {
+    fn convert_instruction(&self, instruction: &GMInstruction) -> Result<ModInstruction> {
         let kind: ModInstructionKind = match &instruction.kind {
             GMInstructionData::SingleType(i) => ModInstructionKind::SingleType(
                 convert_data_type(i.data_type)?,
@@ -260,7 +260,7 @@ impl ModExporter<'_, '_> {
         })
     }
     
-    pub fn convert_instance_type(&self, i: &GMInstanceType) -> Result<ModInstanceType, String> {
+    pub fn convert_instance_type(&self, i: &GMInstanceType) -> Result<ModInstanceType> {
         match i {
             GMInstanceType::Self_(obj_ref) => Ok(ModInstanceType::Instance(self.convert_game_object_ref_opt(obj_ref)?)),
             GMInstanceType::Global => Ok(ModInstanceType::Global),
@@ -277,7 +277,7 @@ impl ModExporter<'_, '_> {
         }
     }
 
-    fn convert_code_variable(&self, i: &GMCodeVariable) -> Result<ModCodeVariable, String> {
+    fn convert_code_variable(&self, i: &GMCodeVariable) -> Result<ModCodeVariable> {
         Ok(ModCodeVariable {
             variable: self.convert_variable_ref(&i.variable)?,
             variable_type: match i.variable_type {
@@ -292,7 +292,7 @@ impl ModExporter<'_, '_> {
         })
     }
 
-    fn convert_value(&self, val: &GMCodeValue) -> Result<ModValue, String> {
+    fn convert_value(&self, val: &GMCodeValue) -> Result<ModValue> {
         Ok(match val {
             GMCodeValue::Double(i) => ModValue::Double(*i),
             GMCodeValue::Float(i) => ModValue::Float(*i),
@@ -317,7 +317,7 @@ fn convert_bytecode15_info(i: &GMCodeBytecode15) -> AddCodeBytecode15 {
 }
 
 
-fn convert_data_type(i: GMDataType) -> Result<ModDataType, String> {
+fn convert_data_type(i: GMDataType) -> Result<ModDataType> {
     match i {
         GMDataType::Double => Ok(ModDataType::Double),
         GMDataType::Float => Ok(ModDataType::Float),

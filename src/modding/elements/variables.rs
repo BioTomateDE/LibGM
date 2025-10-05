@@ -21,7 +21,7 @@ impl ModExporter<'_, '_> {
         )
     }
     
-    fn convert_variable(&self, i: &GMVariable) -> Result<ModVariable, String> {
+    fn convert_variable(&self, i: &GMVariable) -> Result<ModVariable> {
         Ok(ModVariable {
             name: self.convert_string_ref(&i.name)?,
             instance_type: i.b15_data.as_ref().map(|i| self.convert_instance_type(&i.instance_type)).transpose()?,

@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::elements::rooms::{GMRoomGameObject, GMRoomLayerEffectProperty, GMSequenceInstance, GMSpriteInstance, GMTextItemInstance};
 use crate::gamemaker::elements::ui_nodes::flex_properties::{AlignmentKind, FlexValue, GMNodeUIFlexInstanceProperties, GMNodeUIFlexProperties};
@@ -21,7 +22,7 @@ impl GMChunkElement for GMRootUINodes {
 }
 
 impl GMElement for GMRootUINodes {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         if reader.get_chunk_length() > 4 {
             log::warn!("UI nodes are untested; issues may occur");
         }
@@ -29,7 +30,7 @@ impl GMElement for GMRootUINodes {
         Ok(Self { ui_root_nodes, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         builder.write_pointer_list(&self.ui_root_nodes)?;
         Ok(())
@@ -54,9 +55,9 @@ pub enum GMNodeUIData {
     EffectLayer(GMNodeUIEffectLayer),
 }
 impl GMElement for GMNodeUI {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let type_id: i32 = reader.read_i32()?;
-        let data_pointer: usize = reader.read_usize()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let type_id = reader.read_i32()?;
+        let data_pointer = reader.read_u32()?;
 
         let mut children: Vec<Self> = Vec::new();
         if matches!(type_id, 0|1) {    // container; Layer or FlexPanel
@@ -64,7 +65,7 @@ impl GMElement for GMNodeUI {
         } else {
             let always_zero = reader.read_i32()?;
             if always_zero != 0 {
-                return Err(format!("Expected zero for non-container UI Node's child count but got {always_zero} (0x{always_zero:08X})"))
+                bail!("Expected zero for non-container UI Node's child count but got {always_zero} (0x{always_zero:08X})");
             }
         }
 
@@ -78,13 +79,13 @@ impl GMElement for GMNodeUI {
             5 => GMNodeUIData::SpriteInstance(GMNodeUISpriteInstance::deserialize(reader)?),
             6 => GMNodeUIData::TextItemInstance(GMNodeUITextItemInstance::deserialize(reader)?),
             7 => GMNodeUIData::EffectLayer(GMNodeUIEffectLayer::deserialize(reader)?),
-            _ => return Err(format!("Unknown UI Node type {type_id}"))
+            _ => bail!("Unknown UI Node type {type_id}")
         };
         
         Ok(GMNodeUI { node, children })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let type_id: i32 = match self.node {
             GMNodeUIData::Layer(_) => 0,
             GMNodeUIData::FlexPanel(_) => 1,
@@ -102,10 +103,10 @@ impl GMElement for GMNodeUI {
             builder.write_pointer_list(&self.children)?;
         } else {
             if !self.children.is_empty() {
-                return Err(format!(
+                bail!(
                     "Expected non-container UI Node type {} to not have child nodes, but actually has {} children",
                     typename_val(&self.node), self.children.len(),
-                ))
+                )
             }
             builder.write_i32(0);
         }
@@ -133,14 +134,14 @@ pub struct GMNodeUILayer {
     pub visible: bool,
 }
 impl GMElement for GMNodeUILayer {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let draw_space: GMNodeUILayerDrawSpaceKind = num_enum_from(reader.read_i32()?)?;
-        let visible: bool = reader.read_bool32()?;
+        let visible = reader.read_bool32()?;
         Ok(Self { name, draw_space, visible })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         builder.write_i32(self.draw_space.into());
         builder.write_bool32(self.visible);
@@ -181,7 +182,7 @@ pub struct GMNodeUIFlexPanel {
     pub flex_properties: GMNodeUIFlexProperties,
 }
 impl GMElement for GMNodeUIFlexPanel {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let width = FlexValue::deserialize(reader)?;
         let height = FlexValue::deserialize(reader)?;
@@ -193,15 +194,15 @@ impl GMElement for GMNodeUIFlexPanel {
         let offset_right = FlexValue::deserialize(reader)?;
         let offset_top = FlexValue::deserialize(reader)?;
         let offset_bottom = FlexValue::deserialize(reader)?;
-        let clips_contents: bool = reader.read_bool32()?;
+        let clips_contents = reader.read_bool32()?;
         let position_type: GMNodeUIFlexPanelPositionKind = num_enum_from(reader.read_i32()?)?;
         let align_self: AlignmentKind = num_enum_from(reader.read_i32()?)?;
         let margin_left = FlexValue::deserialize(reader)?;
         let margin_right = FlexValue::deserialize(reader)?;
         let margin_top = FlexValue::deserialize(reader)?;
         let margin_bottom = FlexValue::deserialize(reader)?;
-        let flex_grow: f32 = reader.read_f32()?;
-        let flex_shrink: f32 = reader.read_f32()?;
+        let flex_grow = reader.read_f32()?;
+        let flex_shrink = reader.read_f32()?;
         let flex_properties = GMNodeUIFlexProperties::deserialize(reader)?;
         Ok(Self {
             name,
@@ -228,7 +229,7 @@ impl GMElement for GMNodeUIFlexPanel {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         self.width.serialize(builder)?;
         self.height.serialize(builder)?;
@@ -269,13 +270,13 @@ pub struct GMNodeUIGameObject {
     pub room_game_object: GMRoomGameObject,
 }
 impl GMElement for GMNodeUIGameObject {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let room_game_object = GMRoomGameObject::deserialize(reader)?;
         let flex_instance_properties = GMNodeUIFlexInstanceProperties::deserialize(reader)?;
         Ok(Self { flex_instance_properties, room_game_object })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         self.room_game_object.serialize(builder)?;
         self.flex_instance_properties.serialize(builder)?;
         Ok(())
@@ -289,13 +290,13 @@ pub struct GMNodeUISequenceInstance {
     pub sequence_instance: GMSequenceInstance,
 }
 impl GMElement for GMNodeUISequenceInstance {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let sequence_instance = GMSequenceInstance::deserialize(reader)?;
         let flex_instance_properties = GMNodeUIFlexInstanceProperties::deserialize(reader)?;
         Ok(Self { flex_instance_properties, sequence_instance })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         self.sequence_instance.serialize(builder)?;
         self.flex_instance_properties.serialize(builder)?;
         Ok(())
@@ -309,13 +310,13 @@ pub struct GMNodeUISpriteInstance {
     pub sprite_instance: GMSpriteInstance,
 }
 impl GMElement for GMNodeUISpriteInstance {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let sprite_instance = GMSpriteInstance::deserialize(reader)?;
         let flex_instance_properties = GMNodeUIFlexInstanceProperties::deserialize(reader)?;
         Ok(Self { flex_instance_properties, sprite_instance })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         self.sprite_instance.serialize(builder)?;
         self.flex_instance_properties.serialize(builder)?;
         Ok(())
@@ -329,13 +330,13 @@ pub struct GMNodeUITextItemInstance {
     pub text_item_instance: GMTextItemInstance,
 }
 impl GMElement for GMNodeUITextItemInstance {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let text_item_instance = GMTextItemInstance::deserialize(reader)?;
         let flex_instance_properties = GMNodeUIFlexInstanceProperties::deserialize(reader)?;
         Ok(Self { flex_instance_properties, text_item_instance })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         self.text_item_instance.serialize(builder)?;
         self.flex_instance_properties.serialize(builder)?;
         Ok(())
@@ -350,14 +351,14 @@ pub struct GMNodeUIEffectLayer {
     pub properties: Vec<GMRoomLayerEffectProperty>,
 }
 impl GMElement for GMNodeUIEffectLayer {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let enabled: bool = reader.read_bool32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let enabled = reader.read_bool32()?;
         let effect_type: GMRef<String> = reader.read_gm_string()?;
         let properties: Vec<GMRoomLayerEffectProperty> = reader.read_pointer_list()?;
         Ok(Self { enabled, effect_type, properties })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_bool32(self.enabled);
         builder.write_gm_string(&self.effect_type)?;
         builder.write_pointer_list(&self.properties)?;
@@ -367,11 +368,12 @@ impl GMElement for GMNodeUIEffectLayer {
 
 
 mod flex_properties {
-    use num_enum::{IntoPrimitive, TryFromPrimitive};
+    use crate::prelude::*;
     use crate::gamemaker::deserialize::DataReader;
     use crate::gamemaker::elements::GMElement;
     use crate::gamemaker::serialize::DataBuilder;
     use crate::utility::num_enum_from;
+    use num_enum::{IntoPrimitive, TryFromPrimitive};
 
     #[derive(Debug, Clone)]
     pub struct GMNodeUIFlexProperties {
@@ -389,7 +391,7 @@ mod flex_properties {
         layout_direction: LayoutDirectionKind,
     }
     impl GMElement for GMNodeUIFlexProperties {
-        fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+        fn deserialize(reader: &mut DataReader) -> Result<Self> {
             let align_items = num_enum_from(reader.read_i32()?)?;
             let flex_direction = num_enum_from(reader.read_i32()?)?;
             let flex_wrap = num_enum_from(reader.read_i32()?)?;
@@ -418,7 +420,7 @@ mod flex_properties {
             })
         }
 
-        fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
             builder.write_i32(self.align_items.into());
             builder.write_i32(self.flex_direction.into());
             builder.write_i32(self.flex_wrap.into());
@@ -442,13 +444,13 @@ mod flex_properties {
         pub unit: FlexValueUnit,
     }
     impl GMElement for FlexValue {
-        fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-            let value: f32 = reader.read_f32()?;
+        fn deserialize(reader: &mut DataReader) -> Result<Self> {
+            let value = reader.read_f32()?;
             let unit: FlexValueUnit = num_enum_from(reader.read_i32()?)?;
             Ok(Self { value, unit })
         }
 
-        fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
             builder.write_f32(self.value);
             builder.write_i32(self.unit.into());
             Ok(())
@@ -527,14 +529,14 @@ mod flex_properties {
         keep_aspect_ratio: bool,
     }
     impl GMElement for GMNodeUIFlexInstanceProperties {
-        fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-            let visible: bool = reader.read_bool32()?;
-            let anchor: i32 = reader.read_i32()?;
-            let stretch_width: bool = reader.read_bool32()?;
-            let stretch_height: bool = reader.read_bool32()?;
-            let tile_h: bool = reader.read_bool32()?;
-            let tile_v: bool = reader.read_bool32()?;
-            let keep_aspect_ratio: bool = reader.read_bool32()?;
+        fn deserialize(reader: &mut DataReader) -> Result<Self> {
+            let visible = reader.read_bool32()?;
+            let anchor = reader.read_i32()?;
+            let stretch_width = reader.read_bool32()?;
+            let stretch_height = reader.read_bool32()?;
+            let tile_h = reader.read_bool32()?;
+            let tile_v = reader.read_bool32()?;
+            let keep_aspect_ratio = reader.read_bool32()?;
             Ok(Self {
                 visible,
                 anchor,
@@ -546,7 +548,7 @@ mod flex_properties {
             })
         }
 
-        fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+        fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
             builder.write_bool32(self.visible);
             builder.write_i32(self.anchor);
             builder.write_bool32(self.stretch_width);

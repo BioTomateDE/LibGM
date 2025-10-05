@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use crate::gamemaker::elements::code::GMCode;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
@@ -17,12 +18,12 @@ impl GMChunkElement for GMGlobalInitScripts {
     }
 }
 impl GMElement for GMGlobalInitScripts {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let global_init_scripts: Vec<GMRef<GMCode>> = reader.read_simple_list_of_resource_ids()?;
         Ok(Self { global_init_scripts, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         builder.write_simple_list_of_resource_ids(&self.global_init_scripts)?;
         Ok(())
@@ -44,12 +45,12 @@ impl GMChunkElement for GMGameEndScripts {
     }
 }
 impl GMElement for GMGameEndScripts {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let game_end_scripts: Vec<GMRef<GMCode>> = reader.read_simple_list_of_resource_ids()?;
         Ok(Self { game_end_scripts, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         builder.write_simple_list_of_resource_ids(&self.game_end_scripts)?;
         Ok(())

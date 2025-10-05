@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use std::collections::HashMap;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
@@ -19,11 +20,11 @@ impl GMChunkElement for GMTags {
 }
 
 impl GMElement for GMTags {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
-        let version: i32 = reader.read_i32()?;
+        let version = reader.read_i32()?;
         if version != 1 {
-            return Err(format!("Expected TAGS version 1 but got {version}"))
+            bail!("Expected TAGS version 1 but got {version}");
         }
         let tags: Vec<GMRef<String>> = reader.read_simple_list_of_strings()?;
         let temp_asset_tags: Vec<TempAssetTags> = reader.read_pointer_list()?;
@@ -31,13 +32,13 @@ impl GMElement for GMTags {
         let mut asset_tags: HashMap<i32, Vec<GMRef<String>>> = HashMap::new();
         for temp_asset_tag in temp_asset_tags {
             if asset_tags.insert(temp_asset_tag.id, temp_asset_tag.tags).is_some() {
-                return Err(format!("Duplicate Asset ID {} while parsing Tags", temp_asset_tag.id))
+                bail!("Duplicate Asset ID {} while parsing Tags", temp_asset_tag.id);
             }
         }
         Ok(Self { tags, asset_tags, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         builder.align(4);
         builder.write_i32(1);   // TAGS version
@@ -59,13 +60,13 @@ struct TempAssetTags {
     tags: Vec<GMRef<String>>,
 }
 impl GMElement for TempAssetTags {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let id: i32 = reader.read_i32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let id = reader.read_i32()?;
         let tags: Vec<GMRef<String>> = reader.read_simple_list_of_strings()?;
         Ok(Self { id, tags })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(self.id);
         builder.write_simple_list_of_strings(&self.tags)?;
         Ok(())

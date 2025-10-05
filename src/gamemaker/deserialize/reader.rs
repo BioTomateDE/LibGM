@@ -1,4 +1,6 @@
+use crate::prelude::*;
 use std::collections::HashMap;
+use crate::gamemaker::data::Endianness;
 use crate::gamemaker::deserialize::chunk::GMChunk;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
@@ -24,9 +26,10 @@ pub struct DataReader<'a> {
     /// Defaults to 16, but will be set to 4 or 1 if detected.
     pub chunk_padding: usize,
 
-    /// Indicates whether the data is formatted using big-endian byte order.    
-    /// This applies only to certain target platforms that require big endian encoding (e.g. PS3 or Xbox 360).
-    pub is_big_endian: bool,
+    /// Indicates the data's byte endianness.
+    /// In most cases (and assumed by default), this is set to little-endian.
+    /// Big endian is an edge case for certain target platforms (e.g. PS3 or Xbox 360).
+    pub endianness: Endianness,
 
     /// Map of all chunks specified by `FORM`; indexed by chunk name.
     /// Read chunks will be removed from this HashMap when calling [`DataReader::read_chunk_required`] or [`DataReader::read_chunk_optional`].
@@ -50,20 +53,20 @@ pub struct DataReader<'a> {
     pub strings: GMStrings,
 
     /// Should only be set by [`crate::gamemaker::elements::strings`].
-    /// This means that STRG hsa to be parsed before any other chunk.
-    pub string_occurrence_map: HashMap<usize, GMRef<String>>,
+    /// This means that STRG has to be parsed before any other chunk.
+    pub string_occurrence_map: HashMap<u32, GMRef<String>>,
 
     /// Should only be set by [`crate::gamemaker::elements::texture_page_items`].
     /// This means that TPAG has to be parsed before any chunk with texture page item pointers.
-    pub texture_page_item_occurrence_map: HashMap<usize, GMRef<GMTexturePageItem>>,
+    pub texture_page_item_occurrence_map: HashMap<u32, GMRef<GMTexturePageItem>>,
 
     /// Should only be set by [`crate::gamemaker::elements::variables`].
     /// This means that VARI has to be parsed before CODE.
-    pub variable_occurrence_map: HashMap<usize, GMRef<GMVariable>>,
+    pub variable_occurrence_map: HashMap<u32, GMRef<GMVariable>>,
 
     /// Should only be set by [`crate::gamemaker::elements::functions`].
     /// This means that FUNC has to be parsed before CODE.
-    pub function_occurrence_map: HashMap<usize, GMRef<GMFunction>>,
+    pub function_occurrence_map: HashMap<u32, GMRef<GMFunction>>,
 }
 
 impl<'a> DataReader<'a> {
@@ -85,27 +88,25 @@ impl<'a> DataReader<'a> {
             texture_page_item_occurrence_map: HashMap::new(),
             variable_occurrence_map: HashMap::new(),
             function_occurrence_map: HashMap::new(),
-            is_big_endian: false,   // assume little endian; big endian is an edge case
+            endianness: Endianness::Little,   // assume little endian; big endian is an edge case
         }
     }
 
     /// Read the specified number of bytes from the data file while advancing the data position.
     /// Returns an error when trying to read out of chunk bounds.
-    pub fn read_bytes_dyn(&mut self, count: usize) -> Result<&'a [u8], String> {
-        // Check lower chunk bounds
+    pub fn read_bytes_dyn(&mut self, count: usize) -> Result<&'a [u8]> {
         if self.cur_pos < self.chunk.start_pos {
-            return Err(format!(
-                "out of lower bounds at position {} in chunk '{}' with start position {}",
-                self.cur_pos, self.chunk.name, self.chunk.start_pos,
-            ))
+            bail!(
+                "Trying to read {} bytes out of lower chunk bounds at position {} in chunk '{}' with start position {}",
+                count, self.cur_pos, self.chunk.name, self.chunk.start_pos,
+            );
         }
 
-        // Check upper chunk bounds
         if self.cur_pos + count > self.chunk.end_pos {
-            return Err(format!(
-                "out of upper bounds at position {} in chunk '{}': {} > {}",
-                self.cur_pos, self.chunk.name, self.cur_pos+count, self.chunk.end_pos,
-            ))
+            bail!(
+                "Trying to read {} bytes out of upper chunk bounds at position {} in chunk '{}' with end position {}",
+                count, self.cur_pos, self.chunk.name, self.chunk.end_pos,
+            );
         }
 
         // SAFETY: If chunk.start_pos and chunk.end_pos are set correctly; this should never read memory out of bounds.
@@ -116,51 +117,36 @@ impl<'a> DataReader<'a> {
 
     /// Read a constant number of bytes from the data file while advancing the data position.
     /// Useful for reading slices with specified sizes like `[u8; 16]`.
-    pub fn read_bytes_const<const N: usize>(&mut self) -> Result<&[u8; N], String> {
+    pub fn read_bytes_const<const N: usize>(&mut self) -> Result<&[u8; N]> {
         let slice: &[u8] = self.read_bytes_dyn(N)?;
         // read_bytes_dyn is guaranteed to read N bytes so the unwrap never fails.
         Ok(unsafe { &*(slice.as_ptr() as *const [u8; N]) })
     }
 
-
-    /// Read an unsigned 32-bit integer and convert it to usize.
-    /// Meant for reading positions/pointers; uses total data length as failsafe.
-    pub fn read_pointer(&mut self) -> Result<usize, String> {
-        let failsafe_amount: usize = self.data.len();
-        let number: usize = self.read_usize()?;
-        if number >= failsafe_amount {
-            return Err(format!(
-                "Failsafe triggered in chunk '{}' at position {} while trying to read usize \
-                (pointer) integer: Number {} ({}) is larger than the total data length of {} ({})",
-                self.chunk.name, self.cur_pos-4, number, format_bytes(number), failsafe_amount, format_bytes(failsafe_amount),
-            ))
-        }
-        Ok(number)
-    }
-
     /// Read a 32-bit integer and convert it to a bool.
     /// ___
     /// Returns an error when the read number is neither 0 nor 1.
-    pub fn read_bool32(&mut self) -> Result<bool, String> {
-        let number: u32 = self.read_u32()?;
+    pub fn read_bool32(&mut self) -> Result<bool> {
+        let number = self.read_u32()?;
         match number {
             0 => Ok(false),
             1 => Ok(true),
-            _ => Err(format!(
-                "Read invalid boolean value in chunk '{0}' at position {1}: {2} (0x{2:08X})",
-                self.chunk.name, self.cur_pos, number,
-            ))
+            _ => bail!(
+                "Read invalid boolean value {} (0x{:08X}) in chunk '{}' at position {}",
+                number, number, self.chunk.name, self.cur_pos,
+            )
         }
     }
 
     /// Read a UTF-8 character string with the specified byte length.
     /// ___
     /// For reading standard GameMaker string references, see [`DataReader::read_gm_string`].
-    pub fn read_literal_string(&mut self, length: usize) -> Result<String, String> {
-        let bytes: &[u8] = self.read_bytes_dyn(length)
-            .map_err(|e| format!("Trying to read literal string with length {length} {e}"))?;
-        let string: String = String::from_utf8(bytes.to_vec()).map_err(|e| format!(
-            "Could not parse literal string with length {} in chunk '{}' at position {}: {e}",
+    pub fn read_literal_string(&mut self, length: usize) -> Result<String> {
+        let bytes: Vec<u8> = self.read_bytes_dyn(length)
+            .with_context(|| format!("reading literal string with length {length}"))?
+            .to_vec();
+        let string: String = String::from_utf8(bytes).with_context(|| format!(
+            "parsing literal UTF-8 string with length {} in chunk '{}' at position {}",
             length, self.chunk.name, self.cur_pos,
         ))?;
         Ok(string)
@@ -173,40 +159,40 @@ impl<'a> DataReader<'a> {
 
     /// Read bytes until the reader position is divisible by the specified alignment.
     /// Ensures the read padding bytes are all zero.
-    pub fn align(&mut self, alignment: usize) -> Result<(), String> {
-        while self.cur_pos % alignment != 0 {
-            let byte: u8 = self.read_u8()?;
+    pub fn align(&mut self, alignment: u32) -> Result<()> {
+        while self.cur_pos % (alignment as usize) != 0 {
+            let byte = self.read_u8()?;
             if byte != 0 {
-                return Err(format!("Invalid padding byte while aligning to {alignment}: expected zero but got {byte}"))
+                bail!("Invalid padding byte while aligning to {alignment}: expected zero but got {byte} (0x{byte:02X})");
             }
         }
         Ok(())
     }
 
     /// Ensures the reader is at the specified position.
-    pub fn assert_pos(&self, position: usize, pointer_name: &str) -> Result<(), String> {
-        if self.cur_pos != position {
+    pub fn assert_pos(&self, position: u32, pointer_name: &str) -> Result<()> {
+        if self.cur_pos != position as usize {
             if position == 0 {
-                return Err(format!(
+                bail!(
                     "{} pointer is zero at position {}! Null pointers are not yet supported.",
                     pointer_name, self.cur_pos,
-                ))
+                )
             }
-            return Err(format!(
+            bail!(
                 "{} pointer misaligned: expected position {} but reader is actually at {} (diff: {})",
                 pointer_name, position, self.cur_pos, position as i64 - self.cur_pos as i64,
-            ))
+            )
         }
         Ok(())
     }
 
     /// Sets the reader position to the current chunk's start position plus the specified relative position.
-    pub fn set_rel_cur_pos(&mut self, relative_position: usize) -> Result<(), String> {
+    pub fn set_rel_cur_pos(&mut self, relative_position: usize) -> Result<()> {
         if self.chunk.start_pos + relative_position > self.chunk.end_pos {
-            return Err(format!(
+            bail!(
                 "Tried to set relative reader position to {} in chunk '{}' with start position {} and end position {}; out of bounds",
                 relative_position, self.chunk.name, self.chunk.start_pos, self.chunk.end_pos,
-            ))
+            )
         }
         self.cur_pos = self.chunk.start_pos + relative_position;
         Ok(())
@@ -219,7 +205,7 @@ impl<'a> DataReader<'a> {
 
     /// If the GameMaker version requirement is met, deserializes the element and returns it.
     /// Otherwise, just returns [`None`].
-    pub fn deserialize_if_gm_version<T: GMElement, V: Into<GMVersionReq>>(&mut self, ver_req: V) -> Result<Option<T>, String> {
+    pub fn deserialize_if_gm_version<T: GMElement, V: Into<GMVersionReq>>(&mut self, ver_req: V) -> Result<Option<T>> {
         if self.general_info.is_version_at_least(ver_req) {
             Ok(Some(T::deserialize(self)?))
         } else {
@@ -229,7 +215,7 @@ impl<'a> DataReader<'a> {
     
     /// If the Bytecode version requirement is met, deserializes the element and returns it.
     /// Otherwise, just returns [`None`].
-    pub fn deserialize_if_bytecode_version<T: GMElement>(&mut self, ver_req: u8) -> Result<Option<T>, String> {
+    pub fn deserialize_if_bytecode_version<T: GMElement>(&mut self, ver_req: u8) -> Result<Option<T>> {
         if self.general_info.bytecode_version >= ver_req {
             Ok(Some(T::deserialize(self)?))
         } else {

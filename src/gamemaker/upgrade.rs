@@ -1,4 +1,5 @@
-﻿use std::collections::HashMap;
+﻿use crate::prelude::*;
+use std::collections::HashMap;
 use crate::bench;
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
@@ -16,15 +17,15 @@ use crate::gamemaker::gm_version::{GMVersion, LTSBranch};
 
 
 /// Updates GameMaker data file from GMS1 to version 2023.6 LTS, bytecode 17.
-pub fn upgrade_to_2023_lts(mut gm_data: GMData) -> Result<GMData, String> {
+pub fn upgrade_to_2023_lts(mut gm_data: GMData) -> Result<GMData> {
     bench!("Upgrading to 2023 LTS",
         upgrade_to_2023_lts_(&mut gm_data)
-        .map_err(|e| format!("{e}\n↳ upgrading to GameMaker Version 2023 LTS"))?
+        .context("upgrading to GameMaker Version 2023 LTS")?
     );
     Ok(gm_data)
 }
 
-fn upgrade_to_2023_lts_(gm_data: &mut GMData) -> Result<(), String> {
+fn upgrade_to_2023_lts_(gm_data: &mut GMData) -> Result<()> {
     let ported_background_sprites_offset: usize = gm_data.sprites.sprites.len();
     bench!("update_general_info", update_general_info(gm_data));
     bench!("update_backgrounds", update_backgrounds(gm_data)?);
@@ -58,7 +59,7 @@ fn update_general_info(gm_data: &mut GMData) {
 
 
 /// Updates background resources with GMS2-specific data
-fn update_backgrounds(gm_data: &mut GMData) -> Result<(), String> {
+fn update_backgrounds(gm_data: &mut GMData) -> Result<()> {
     for background in &mut gm_data.backgrounds.backgrounds {
         let texture: GMRef<GMTexturePageItem> = background.texture.ok_or_else(|| format!(
             "Background {} doesn't have a texture page item set",
@@ -93,7 +94,7 @@ fn update_fonts(gm_data: &mut GMData) {
 
 
 /// Updates room data, converting background tiles to sprite tiles
-fn update_rooms(gm_data: &mut GMData) -> Result<(), String> {
+fn update_rooms(gm_data: &mut GMData) -> Result<()> {
     let mut sprites_by_name: HashMap<GMRef<String>, GMRef<GMSprite>> = HashMap::new();
 
     for room in &mut gm_data.rooms.rooms {
@@ -167,13 +168,13 @@ fn create_sprite_from_background(gm_sprites: &mut GMSprites, background: &GMBack
 
 
 /// Updates texture pages with GMS2 2022.9 specific data
-fn update_texture_pages(gm_data: &mut GMData) -> Result<(), String> {
+fn update_texture_pages(gm_data: &mut GMData) -> Result<()> {
     for texture_page in &mut gm_data.embedded_textures.texture_pages {
         texture_page.generated_mips = Some(0);
         // Magic value that works if all texture pages are embedded
         texture_page.texture_block_size = Some(0xDEADC0DE);
 
-        let image = texture_page.image.as_ref().ok_or("External Texture pages are not supported")?;
+        let image = texture_page.image.as_ref().context("External Texture pages are not supported")?;
         let image = image.to_dynamic_image()?;
 
         texture_page.data_2022_9 = Some(GMEmbeddedTexture2022_9 {
@@ -195,7 +196,7 @@ fn update_game_objects(gm_data: &mut GMData) {
 
 
 /// Replaces the GMS1 `instance_create` function with the GMS2 `instance_create_depth` function.
-fn replace_instance_create(gm_data: &mut GMData) -> Result<(), String> {
+fn replace_instance_create(gm_data: &mut GMData) -> Result<()> {
     let instructions = vec![
         generate_push_argument_var(gm_data, 2)?,
         GMInstruction::PushImmediate(0),    // depth
@@ -210,7 +211,7 @@ fn replace_instance_create(gm_data: &mut GMData) -> Result<(), String> {
 
 
 /// Replaces the GMS1 `draw_background_part_ext` function with the new GMS2 `draw_sprite_part_ext` function.
-fn replace_background_funcs(gm_data: &mut GMData, ported_background_sprites_offset: usize) -> Result<(), String> {
+fn replace_background_funcs(gm_data: &mut GMData, ported_background_sprites_offset: usize) -> Result<()> {
     let instructions = vec![
         generate_push_argument_var(gm_data, 10)?,
         generate_push_argument_var(gm_data, 9)?,
@@ -251,7 +252,7 @@ fn replace_background_funcs(gm_data: &mut GMData, ported_background_sprites_offs
     Ok(())
 }
 
-fn replace_action_funcs(gm_data: &mut GMData) -> Result<(), String> {
+fn replace_action_funcs(gm_data: &mut GMData) -> Result<()> {
     let is_relative_var: GMRef<GMVariable> = gm_data.make_variable_b15("__action_is_relative", GMInstanceType::Global)?;
 
     let instructions = vec![
@@ -371,7 +372,7 @@ fn replace_action_funcs(gm_data: &mut GMData) -> Result<(), String> {
 }
 
 
-fn replace_joystick_funcs(gm_data: &mut GMData) -> Result<(), String> {
+fn replace_joystick_funcs(gm_data: &mut GMData) -> Result<()> {
     // TODO
     generate_script(gm_data, "joystick_has_pov", 1, RET_ZERO_STUB.to_vec())?;
     generate_script(gm_data, "joystick_buttons", 1, RET_ZERO_STUB.to_vec())?;
@@ -385,7 +386,7 @@ fn replace_joystick_funcs(gm_data: &mut GMData) -> Result<(), String> {
 }
 
 
-fn replace_layer_funcs(gm_data: &mut GMData) -> Result<(), String> {
+fn replace_layer_funcs(gm_data: &mut GMData) -> Result<()> {
     // TODO
     generate_script(gm_data, "tile_layer_hide", 1, RET_ZERO_STUB.to_vec())?;
     generate_script(gm_data, "tile_layer_show", 1, RET_ZERO_STUB.to_vec())?;
@@ -395,7 +396,7 @@ fn replace_layer_funcs(gm_data: &mut GMData) -> Result<(), String> {
 
 
 /// Replaces the steam cloud data functions with stub functions that do nothing.
-fn generate_steam_stubs(gm_data: &mut GMData) -> Result<(), String> {
+fn generate_steam_stubs(gm_data: &mut GMData) -> Result<()> {
     generate_script(gm_data, "steam_initialised", 0, RET_ZERO_STUB.to_vec())?;
     generate_script(gm_data, "steam_file_exists", 1, RET_ZERO_STUB.to_vec())?;
     generate_script(gm_data, "steam_file_delete", 1, RET_ZERO_STUB.to_vec())?;
@@ -412,7 +413,7 @@ const RET_ZERO_STUB: &[GMInstruction] = &[
 ];
 
 
-fn generate_script(gm_data: &mut GMData, name: &str, arguments_count: u16, instructions: Vec<GMInstruction>) -> Result<(), String> {
+fn generate_script(gm_data: &mut GMData, name: &str, arguments_count: u16, instructions: Vec<GMInstruction>) -> Result<()> {
     // TODO: code locals (FUNC code locals and maybe `arguments`?)
     let name_ref: GMRef<String> = gm_data.make_string(name);
 
@@ -440,7 +441,7 @@ fn generate_script(gm_data: &mut GMData, name: &str, arguments_count: u16, instr
 }
 
 
-fn generate_push_argument_var(gm_data: &mut GMData, index: u8) -> Result<GMInstruction, String> {
+fn generate_push_argument_var(gm_data: &mut GMData, index: u8) -> Result<GMInstruction> {
     let name: String = format!("argument{index}");
     let code_variable = CodeVariable {
         variable: gm_data.make_variable_b15(&name, GMInstanceType::Argument)?,
@@ -454,7 +455,7 @@ fn generate_push_argument_var(gm_data: &mut GMData, index: u8) -> Result<GMInstr
 }
 
 
-fn generate_push_var(gm_data: &mut GMData, name: &str, instance_type: GMInstanceType) -> Result<GMInstruction, String> {
+fn generate_push_var(gm_data: &mut GMData, name: &str, instance_type: GMInstanceType) -> Result<GMInstruction> {
     let code_variable = CodeVariable {
         variable: gm_data.make_variable_b15(name, instance_type.clone())?,
         variable_type: GMVariableType::Normal,
@@ -467,7 +468,7 @@ fn generate_push_var(gm_data: &mut GMData, name: &str, instance_type: GMInstance
 }
 
 
-fn generate_pop_builtin_var(gm_data: &mut GMData, name: &str) -> Result<GMInstruction, String> {
+fn generate_pop_builtin_var(gm_data: &mut GMData, name: &str) -> Result<GMInstruction> {
     Ok(GMInstruction::Pop(GMPopInstruction {
         type1: GMDataType::Variable,
         type2: GMDataType::Variable,
@@ -481,7 +482,7 @@ fn generate_pop_builtin_var(gm_data: &mut GMData, name: &str) -> Result<GMInstru
 }
 
 
-fn generate_call_builtin(gm_data: &mut GMData, function_name: &'static str, arguments_count: u8) -> Result<GMInstruction, String> {
+fn generate_call_builtin(gm_data: &mut GMData, function_name: &'static str, arguments_count: u8) -> Result<GMInstruction> {
     Ok(GMInstruction::Call(GMCallInstruction {
         arguments_count,
         data_type: GMDataType::Int32,

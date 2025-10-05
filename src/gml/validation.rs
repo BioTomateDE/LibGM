@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
@@ -70,37 +71,31 @@ impl Display for CodeValidationError {
 }
 
 
-pub fn validate_code(code: &GMCode, gm_data: &GMData) -> Result<(), CodeValidationError> {
-    let mut instruction_address: u32 = 0;
+pub fn validate_code(code: &GMCode, gm_data: &GMData) -> Result<()> {
+    let mut start_address: u32 = 0;
     let mut instructions: &Vec<GMInstruction> = &code.instructions;
 
     if let Some(b15_info) = &code.bytecode15_info {
         if let Some(parent_ref) = b15_info.parent {
-            let parent: &GMCode = parent_ref.resolve(&gm_data.codes.codes)
-                .map_err(|_| CodeValidationError::ParentCodeUnresolvable(parent_ref.index))?;
+            let parent: &GMCode = parent_ref.resolve(&gm_data.codes.codes).context("Cannot resolve parent code")?;
             instructions = &parent.instructions;
             if b15_info.offset % 4 != 0 {
-                return Err(CodeValidationError::InvalidInitialOffset(instruction_address));
+                bail!("Invalid child code offset {start_address} (not divisible by four)");
             }
-            instruction_address = b15_info.offset / 4;
+            start_address = b15_info.offset / 4;
         }
     }
 
     let address_map: BiMap<usize, u32> = generate_address_map(instructions);
-    let instruction_index: usize = *address_map.get_by_right(&instruction_address)
-        .ok_or(CodeValidationError::InvalidInitialOffset(instruction_address))?;
+    let instruction_index: usize = *address_map.get_by_right(&start_address)
+        .with_context(|| format!("Invalid child code start address {start_address} (does not correspond to the start of an instruction)"))?;
 
     validate_instructions(gm_data, &address_map, instructions, instruction_index)?;
     Ok(())
 }
 
 
-fn validate_instructions(
-    gm_data: &GMData,
-    address_map: &BiMap<usize, u32>,
-    instructions: &Vec<GMInstruction>,
-    start_index: usize,
-) -> Result<(), CodeValidationError> {
+fn validate_instructions(gm_data: &GMData, address_map: &BiMap<usize, u32>, instructions: &Vec<GMInstruction>, start_index: usize) -> Result<()> {
     let mut states_to_visit = Vec::new();
     states_to_visit.push((start_index, VMStack::new()));
     let mut visited_branch_targets = HashSet::new();
@@ -109,7 +104,7 @@ fn validate_instructions(
         loop {
             if instruction_index == instructions.len() {
                 if !stack.is_empty() {
-                    return Err(CodeValidationError::ExitStackLeftover(stack))
+                    bail!("Reached end of code with leftover stack data: {stack:?}");
                 }
                 break
             }
@@ -174,7 +169,7 @@ fn validate_instructions(
                     match var_type {
                         GMVariableType::Normal => {
                             if instr.type1 != GMDataType::Variable {
-                                return Err(CodeValidationError::NormalPopFirstNotVar(instr.type1))
+                                bail!("Normal Pop instruction's first type is {:?} instead of Variable", instr.type1);
                             }
                             stack.pop()?.assert_data_type(instr.type2)?;
                         }
@@ -182,13 +177,13 @@ fn validate_instructions(
                             match instr.type1 {
                                 GMDataType::Variable => {
                                     stack.pop()?.assert_data_type(GMDataType::Int32)?;  // index
-                                    validate_instance_type(stack.pop()?)?;         // instance type
+                                    validate_array_instance_type(stack.pop()?)?;         // instance type
                                     stack.pop()?.assert_data_type(instr.type2)?;        // actual value
                                 }
                                 GMDataType::Int32 => {
                                     stack.pop()?.assert_data_type(instr.type2)?;        // actual value
                                     stack.pop()?.assert_data_type(GMDataType::Int32)?;  // index
-                                    validate_instance_type(stack.pop()?)?;         // instance type
+                                    validate_array_instance_type(stack.pop()?)?;         // instance type
                                 }
                                 _ => todo!("unexpected data type 1 for pop array")
                             }
@@ -223,7 +218,8 @@ fn validate_instructions(
                 GMInstruction::Duplicate(instr) => {
                     let last_index: usize = stack.len() - 1;
                     if instr.size as usize > last_index {
-                        return Err(CodeValidationError::DupSizeOutOfBounds)
+                        // TODO: instr.size != item count
+                        bail!("Tried to duplicate {} items in stack with size {}", instr.size, last_index);
                     }
                     for i in (0..=instr.size).rev() {
                         let item: &VMStackItem = &stack.items[last_index - i as usize];
@@ -240,14 +236,14 @@ fn validate_instructions(
                     let item: VMStackItem = stack.pop()?;
                     item.assert_data_type(instr.data_type)?;
                     if !stack.is_empty() {
-                        return Err(CodeValidationError::ExitStackLeftover(stack))
+                        bail!("Reached return instruction with leftover stack data: {stack:?}");
                     }
                     return Ok(())
                 }
 
                 GMInstruction::Exit(_) => {
                     if !stack.is_empty() {
-                        return Err(CodeValidationError::ExitStackLeftover(stack))
+                        bail!("Reached Exit instruction with leftover stack data: {stack:?}");
                     }
                     return Ok(())
                 }
@@ -270,18 +266,18 @@ fn validate_instructions(
                             VMStackItem::Int32(Some(1)) => {}
                             VMStackItem::Int32(Some(0)) => {}
                             VMStackItem::Boolean => {}
-                            _ => return Err(CodeValidationError::BranchConditionNotBool(item))
+                            _ => bail!("Branch condition is {item:?} instead of a bool or literal 0/1")
                         }
                     } else if matches!(instruction, GMInstruction::PushWithContext(_)) {
                         let item: VMStackItem = stack.pop()?;
                         if !matches!(item, VMStackItem::Int32(_)) {
-                            return Err(CodeValidationError::PushEnvNotInt32(item))
+                            bail!("PushEnv stack value is {item:?} instead of Int32");
                         }
                     }
 
                     let address_target: u32 = (instruction_address as i32 + instr.jump_offset) as u32;
                     let branch_target_index: usize = *address_map.get_by_right(&address_target)
-                        .ok_or(CodeValidationError::InvalidBranchTarget(address_target))?;
+                        .with_context(|| format!("Invalid branch target with address {address_target}"))?;
 
                     if conditional {
                         if visited_branch_targets.insert((branch_target_index, stack.clone())) {
@@ -310,7 +306,7 @@ fn validate_instructions(
                             GMVariableType::Normal => {}
                             GMVariableType::Array => {
                                 stack.pop()?.assert_data_type(GMDataType::Int32)?;  // index
-                                validate_instance_type(stack.pop()?)?;         // instance type
+                                validate_array_instance_type(stack.pop()?)?;         // instance type
                             }
                             GMVariableType::StackTop => {
                                 stack.pop()?.assert_data_type(GMDataType::Int32)?;  // instance type / object index
@@ -326,18 +322,14 @@ fn validate_instructions(
 
                     if matches!(instruction, GMInstruction::PushLocal(_) | GMInstruction::PushGlobal(_) | GMInstruction::PushBuiltin(_)) {
                         let GMCodeValue::Variable(code_variable) = &instr.value else {
-                            return Err(CodeValidationError::PushVarWrongDataType(data_type))
+                            bail!("Local/Global/Builtin Push instruction has data type {data_type:?} instead Variable");
                         };
                         match (instruction, &code_variable.instance_type) {
                             (GMInstruction::PushLocal(_), GMInstanceType::Local) => {}
                             (GMInstruction::PushGlobal(_), GMInstanceType::Global) => {}
-                            (GMInstruction::PushBuiltin(_), GMInstanceType::Self_(None)) => {}  //idk
-                            (_, _) => return Err(CodeValidationError::PushVarWrongInstanceType(code_variable.instance_type.clone()))
+                            (GMInstruction::PushBuiltin(_), GMInstanceType::Self_(None)) => {}  // VARI instance type
+                            (instr, inst) => bail!("{instr:?} has instance type {inst}")
                         }
-                    }
-
-                    if matches!(instruction, GMInstruction::PushImmediate(_)) && data_type != GMDataType::Int16 {
-                        return Err(CodeValidationError::PushImmediateNotInt16(data_type))
                     }
 
                     if let GMCodeValue::Int16(val) = instr.value {
@@ -357,7 +349,7 @@ fn validate_instructions(
                     for _ in 0..instr.arguments_count {
                         let item: VMStackItem = stack.pop()?;
                         if item != VMStackItem::Variable {
-                            return Err(CodeValidationError::CallArgumentNotVar(item))
+                            bail!("Function argument is {item:?} instead variable")
                         }
                     }
                     // TODO: what does instr.data_type do??? it's always Int32
@@ -371,7 +363,7 @@ fn validate_instructions(
 
                 GMInstruction::SetArrayOwner => {
                     let item: VMStackItem = stack.pop()?;
-                    validate_instance_type(item)?;
+                    validate_array_instance_type(item)?;
                 }
 
                 GMInstruction::CheckArrayIndex => todo!("CheckArrayIndex instruction"),
@@ -392,17 +384,18 @@ fn validate_instructions(
 }
 
 
-fn validate_instance_type(item: VMStackItem) -> Result<(), CodeValidationError> {
+fn validate_array_instance_type(item: VMStackItem) -> Result<()> {
     let int32: i32 = match item {
         VMStackItem::Int32(Some(int)) => int,
         VMStackItem::Int32(None) => return Ok(()),
-        _ => return Err(CodeValidationError::InstanceTypeNotInt32(item))
+        _ => bail!("Stack Value is {item:?} instead of Int32 for array Instance type")
     };
-    let int16: i16 = i16::try_from(int32).map_err(|_| CodeValidationError::Int16OutOfBounds(int32))?;
-    let instance_type: GMInstanceType = parse_instance_type(int16, GMVariableType::Array)
-        .map_err(|_| CodeValidationError::InvalidInt16InstanceType(int16))?;
+    let int16: i16 = i16::try_from(int32)
+        .with_context(|| format!("Int32 stack value {int32} does not fit into 16 bits for an array Instance Type"))?;
+    let instance_type: GMInstanceType = parse_instance_type(int16, GMVariableType::Normal)
+        .with_context(|| format!("Int16 stack value {int16} is not a valid instance type"))?;
     if matches!(instance_type, GMInstanceType::RoomInstance(_) | GMInstanceType::Undefined) {
-        return Err(CodeValidationError::UnacceptableInstanceType(instance_type))
+        bail!("Invalid instance {instance_type} for this context");
     }
     Ok(())
 }
@@ -441,12 +434,12 @@ impl VMStack {
         self.push(VMStackItem::from_data_type(data_type));
     }
 
-    fn pop(&mut self) -> Result<VMStackItem, CodeValidationError> {
-        self.items.pop().ok_or(CodeValidationError::PopStackEmpty)
+    fn pop(&mut self) -> Result<VMStackItem> {
+        self.items.pop().context("Tried to pop empty stack")
     }
 
-    fn peek(&self) -> Result<&VMStackItem, CodeValidationError> {
-        self.items.last().ok_or(CodeValidationError::PeekStackEmpty)
+    fn peek(&self) -> Result<&VMStackItem> {
+        self.items.last().context("Tried to peek empty stack")
     }
 
     fn len(&self) -> usize {
@@ -487,7 +480,7 @@ impl VMStackItem {
         Self::Int32(Some(value))
     }
 
-    fn assert_data_type(&self, data_type: GMDataType) -> Result<(), CodeValidationError> {
+    fn assert_data_type(&self, data_type: GMDataType) -> Result<()> {
         match (self, data_type) {
             (Self::Int32(_), GMDataType::Int16) => {}
             (Self::Int32(_), GMDataType::Int32) => {}
@@ -497,7 +490,7 @@ impl VMStackItem {
             (Self::Boolean, GMDataType::Boolean) => {}
             (Self::Variable, GMDataType::Variable) => {}
             (Self::String, GMDataType::String) => {}
-            (_, _) => return Err(CodeValidationError::TypeMismatch(self.clone(), data_type)) //todo
+            (_, _) => bail!("(INTERNAL) Cannot compare {self:?} with {data_type:?}") //todo
         }
         Ok(())
     }

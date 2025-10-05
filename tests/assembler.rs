@@ -1,6 +1,7 @@
+use libgm::prelude::*;
 
 #[test]
-fn test_disassembler_and_assembler() -> Result<(), String> {
+fn test_disassembler_and_assembler() -> Result<()> {
     use libgm::gml::assembler::assemble_code;
     use libgm::gml::disassembler::disassemble_instructions;
     use libgm::gamemaker::elements::code::GMInstruction;
@@ -26,7 +27,7 @@ fn test_disassembler_and_assembler() -> Result<(), String> {
                         log::error!("Original: {:?}\nRecreation: {:?}\n", original, recreation);
                     }
                 }
-                return Err("Assembler produced different instructions than the original (see logs)".to_string())
+                bail!("Assembler produced different instructions than the original (see logs)");
             }
         }
         Ok(())

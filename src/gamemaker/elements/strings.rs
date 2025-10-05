@@ -1,10 +1,11 @@
-﻿use std::collections::HashMap;
+﻿use crate::prelude::*;
+use std::collections::HashMap;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 
 
-const ALIGNMENT: usize = 4;
+const ALIGNMENT: u32 = 4;
 
 #[derive(Debug, Clone)]
 pub struct GMStrings {
@@ -23,30 +24,30 @@ impl GMChunkElement for GMStrings {
 }
 
 impl GMElement for GMStrings {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let mut is_aligned: bool = true;
-        let pointers: Vec<usize> = reader.read_simple_list()?;
+        let pointers: Vec<u32> = reader.read_simple_list()?;
 
         let mut strings_by_index: Vec<String> = Vec::with_capacity(pointers.len());
-        let mut abs_pos_to_reference: HashMap<usize, GMRef<String>> = HashMap::with_capacity(pointers.len());
+        let mut abs_pos_to_reference: HashMap<u32, GMRef<String>> = HashMap::with_capacity(pointers.len());
 
         for (i, pointer) in pointers.into_iter().enumerate() {
             if pointer % ALIGNMENT != 0 {
                 is_aligned = false;
             }
-            reader.cur_pos = pointer;
+            reader.cur_pos = pointer as usize;
             if is_aligned {
                 reader.align(ALIGNMENT)?;
             }
-            let string_length: usize = reader.read_usize()?;
+            let string_length = reader.read_usize()?;
             let string: String = reader.read_literal_string(string_length)?;
-            let byte: u8 = reader.read_u8()?;
+            let byte = reader.read_u8()?;
             if byte != 0 {
-                return Err(format!("Expected null terminator byte after string, found {byte} (0x{byte:02X})"))
+                bail!("Expected null terminator byte after string, found {byte} (0x{byte:02X})");
             }
             strings_by_index.push(string.clone());
-            // occurrence is start_position + 4 because yoyogames moment
-            // gamemaker does this because it's faster to access strings if you don't need to add or subtract 4 every time
+            // occurrence is `start_position + 4` because string refs point to the actual
+            // string data instead of the gamemaker element for faster access.
             abs_pos_to_reference.insert(pointer + 4, GMRef::new(i as u32));
         }
 
@@ -55,9 +56,9 @@ impl GMElement for GMStrings {
         Ok(GMStrings { strings: strings_by_index, is_aligned, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists {
-            return Err("Required chunk STRG does not exist".to_string())
+            bail!("Required chunk STRG does not exist");
         }
         
         builder.write_usize(self.strings.len())?;
