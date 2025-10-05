@@ -55,7 +55,7 @@ impl ModExporter<'_, '_> {
 
         for (i, texture_page_item) in modified_list.iter().enumerate() {
             let full_img: &Cow<RgbaImage> = modified_images[texture_page_item.texture_page.index as usize].as_ref()
-                .ok_or("External texture pages are not yet supported")?;    // TODO
+                .context("External texture pages are not yet supported")?;    // TODO
             let cropped_image: RgbaImage = crop_from_texture_page(full_img, texture_page_item)?;
             let bytes: &Vec<u8> = cropped_image.as_raw();
             let hash: [u8; 16] = xxhash_rust::xxh3::xxh3_128(bytes).to_le_bytes();
@@ -143,7 +143,7 @@ impl ModExporter<'_, '_> {
 }
 
 
-fn crop_from_texture_page(texture_page_img: &Cow<RgbaImage>, texture_page_item: &GMTexturePageItem) -> Result<RgbaImage, String> {
+fn crop_from_texture_page(texture_page_img: &Cow<RgbaImage>, texture_page_item: &GMTexturePageItem) -> Result<RgbaImage> {
     let source_img: &RgbaImage = texture_page_img.as_ref();
     let x: u32 = texture_page_item.source_x as u32;
     let y: u32 = texture_page_item.source_y as u32;

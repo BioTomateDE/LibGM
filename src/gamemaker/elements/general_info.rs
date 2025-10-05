@@ -1,4 +1,6 @@
-﻿use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
+﻿use crate::prelude::*;
+use crate::prelude::*;
+use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use chrono::{DateTime, Utc};
 use crate::csharp_rng::CSharpRng;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
@@ -219,25 +221,25 @@ impl GMGeneralInfo {
     pub fn is_version_at_least<V: Into<GMVersionReq>>(&self, version_req: V) -> bool {
         self.version.is_version_at_least(version_req)
     }
-    pub fn set_version_at_least<V: Into<GMVersionReq>>(&mut self, version_req: V) -> Result<(), String> {
+    pub fn set_version_at_least<V: Into<GMVersionReq>>(&mut self, version_req: V) -> Result<()> {
         self.version.set_version_at_least(version_req)
     }
 }
 
 impl GMElement for GMGeneralInfo {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let is_debugger_disabled: bool = match reader.read_u8()? {
             0 => false,
             1 => true,
-            other => return Err(format!("Invalid u8 bool {other} while reading general info \"is debugger disabled\"")),
+            other => bail!("Invalid u8 bool {other} while reading general info \"is debugger disabled\"")
         };
-        let bytecode_version: u8 = reader.read_u8()?;
-        let unknown_value: u16 = reader.read_u16()?;
+        let bytecode_version = reader.read_u8()?;
+        let unknown_value = reader.read_u16()?;
         let game_file_name: GMRef<String> = reader.read_gm_string()?;
         let config: GMRef<String> = reader.read_gm_string()?;
-        let last_object_id: u32 = reader.read_u32()?;
-        let last_tile_id: u32 = reader.read_u32()?;
-        let game_id: u32 = reader.read_u32()?;
+        let last_object_id = reader.read_u32()?;
+        let last_tile_id = reader.read_u32()?;
+        let game_id = reader.read_u32()?;
 
         let directplay_guid: [u8; 16] = *reader.read_bytes_const()
             .map_err(|e| format!("Trying to read GUID {e}"))?;
@@ -245,26 +247,26 @@ impl GMElement for GMGeneralInfo {
 
         let game_name: GMRef<String> = reader.read_gm_string()?;
         let version = GMVersion::deserialize(reader)?;
-        let default_window_width: u32 = reader.read_u32()?;
-        let default_window_height: u32 = reader.read_u32()?;
-        let flags_raw: u32 = reader.read_u32()?;
+        let default_window_width = reader.read_u32()?;
+        let default_window_height = reader.read_u32()?;
+        let flags_raw = reader.read_u32()?;
         let flags = GMGeneralInfoFlags::parse(flags_raw);
-        let license_crc32: u32 = reader.read_u32()?;
+        let license_crc32 = reader.read_u32()?;
 
         let license_md5: [u8; 16] = *reader.read_bytes_const()
             .map_err(|e| format!("Trying to read license (MD5) {e}"))?;
 
-        let timestamp_created: i64 = reader.read_i64()?;
+        let timestamp_created = reader.read_i64()?;
         let timestamp_created: DateTime<Utc> = DateTime::from_timestamp(timestamp_created, 0)
-            .ok_or_else(|| format!(
+            .with_context(|| format!(
                 "Invalid Creation Timestamp 0x{:016X} in chunk 'GEN8' at position {}",
                 timestamp_created, reader.cur_pos,
             ))?;
 
         let display_name: GMRef<String> = reader.read_gm_string()?;
-        let active_targets: u64 = reader.read_u64()?;
+        let active_targets = reader.read_u64()?;
         let function_classifications = GMFunctionClassifications::deserialize(reader)?;
-        let steam_appid: i32 = reader.read_i32()?;
+        let steam_appid = reader.read_i32()?;
         let debugger_port: Option<u32> = if bytecode_version >= 14 { Some(reader.read_u32()?) } else { None };
         let room_order: Vec<GMRef<GMRoom>> = reader.read_simple_list_of_resource_ids()?;
 
@@ -277,9 +279,9 @@ impl GMElement for GMGeneralInfo {
             let mut rng = CSharpRng::new(seed);
 
             let first_expected: i64 = ((rng.next() as i64) << 32) | (rng.next() as i64);
-            let first_actual: i64 = reader.read_i64()?;
+            let first_actual = reader.read_i64()?;
             if first_actual != first_expected {
-                return Err(format!("Unexpected random UID #1: expected {first_expected}; got {first_actual}"));
+                bail!("Unexpected random UID #1: expected {first_expected}; got {first_actual}");
             }
 
             let info_location: i32 = ((timestamp & 0xFFFF) as i32 / 7
@@ -306,34 +308,35 @@ impl GMElement for GMGeneralInfo {
 
             for i in 0..4 {
                 if i == info_location {
-                    let curr: i64 = reader.read_i64()?;
+                    let curr = reader.read_i64()?;
                     random_uid[i as usize] = curr;
 
                     if curr != get_info_number(first_expected, true) {
                         if curr != get_info_number(first_expected, false) {
-                            return Err("Unexpected random UID info".to_string());
+                            bail!("Unexpected random UID info");
                         } else {
                             info_timestamp_offset = false;
                         }
                     }
                 } else {
-                    let second_actual: u32 = reader.read_u32()?;
-                    let third_actual: u32 = reader.read_u32()?;
+                    let second_actual = reader.read_u32()?;
+                    let third_actual = reader.read_u32()?;
                     let second_expected: u32 = rng.next() as u32;
                     let third_expected: u32 = rng.next() as u32;
                     if second_actual != second_expected {
-                        return Err(format!("Unexpected random UID #2: expected {second_expected}; got {second_actual}"));
+                        bail!("Unexpected random UID #2: expected {second_expected}; got {second_actual}");
                     }
                     if third_actual != third_expected {
-                        return Err(format!("Unexpected random UID #3: expected {third_expected}; got {third_actual}"));
+                        bail!("Unexpected random UID #3: expected {third_expected}; got {third_actual}");
                     }
 
                     random_uid[i as usize] = ((second_actual as i64) << 32) | (third_actual as i64);
                 }
             }
-            let fps: f32 = reader.read_f32()?;
-            let allow_statistics: bool = reader.read_bool32()?;
-            let game_guid: [u8; 16] = reader.read_bytes_const::<16>()?.to_owned();
+            let fps = reader.read_f32()?;
+            let allow_statistics = reader.read_bool32()?;
+            let game_guid: [u8; 16] = reader.read_bytes_const::<16>().cloned()
+                .map_err(|e| format!("Trying to read Game GUID {e}"))?;
             gms2_info = Some(GMGeneralInfoGMS2 {
                 random_uid,
                 fps,
@@ -372,9 +375,9 @@ impl GMElement for GMGeneralInfo {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists {
-            return Err("General info was never deserialized".to_string())
+            bail!("General info was never deserialized");
         }
         builder.write_u8(if self.is_debugger_disabled {1} else {0});
         builder.write_u8(self.bytecode_version);
@@ -412,7 +415,7 @@ impl GMElement for GMGeneralInfo {
         }
         if builder.is_gm_version_at_least((2, 0)) {
             // Write random UID
-            let gms2_info: &GMGeneralInfoGMS2 = self.gms2_info.as_ref().ok_or("GMS2 Data not set in General Info")?;
+            let gms2_info: &GMGeneralInfoGMS2 = self.gms2_info.as_ref().context("GMS2 Data not set in General Info")?;
             let timestamp: i64 = self.timestamp_created.timestamp();
             let seed: i32 = (timestamp & 0xFFFFFFFF) as i32;
             let mut rng = CSharpRng::new(seed);
@@ -440,6 +443,7 @@ impl GMElement for GMGeneralInfo {
         Ok(())
     }
 }
+
 impl GMGeneralInfo {
     fn get_info_number(&self, first_random: i64, info_timestamp_offset: bool) -> i64 {
         let flags_raw: u32 = self.flags.build();
@@ -542,12 +546,12 @@ pub struct GMGeneralInfoFlags {
 }
 
 impl GMElement for GMGeneralInfoFlags {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let raw: u32 = reader.read_u32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let raw = reader.read_u32()?;
         Ok(Self::parse(raw))
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_u32(self.build());
         Ok(())
     }
@@ -669,8 +673,8 @@ pub struct GMFunctionClassifications {
 }
 
 impl GMElement for GMFunctionClassifications {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let raw: u64 = reader.read_u64()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let raw = reader.read_u64()?;
         Ok(GMFunctionClassifications {
             none: 0 != raw & 0x0,
             internet: 0 != raw & 0x1,
@@ -741,7 +745,7 @@ impl GMElement for GMFunctionClassifications {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let mut raw: u64 = 0;
         if self.none {raw |= 0x0};
         if self.internet {raw |= 0x1};

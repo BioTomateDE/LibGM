@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
@@ -5,7 +6,7 @@ use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::serialize::DataBuilder;
 use crate::utility::vec_with_capacity;
 
-const ALIGNMENT: usize = 8;
+const ALIGNMENT: u32 = 8;
 
 #[derive(Debug, Clone)]
 pub struct GMBackgrounds {
@@ -22,13 +23,13 @@ impl GMChunkElement for GMBackgrounds {
     }
 }
 impl GMElement for GMBackgrounds {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let mut is_aligned: bool = true;
         let backgrounds: Vec<GMBackground> = reader.read_aligned_list_chunk(ALIGNMENT, &mut is_aligned)?;
         Ok(Self { backgrounds, is_aligned, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         if self.is_aligned {
             builder.write_aligned_list_chunk(&self.backgrounds, ALIGNMENT)?;
@@ -50,18 +51,18 @@ pub struct GMBackground {
     pub gms2_data: Option<GMBackgroundGMS2Data>,
 }
 impl GMElement for GMBackground {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let transparent: bool = reader.read_bool32()?;
-        let smooth: bool = reader.read_bool32()?;
-        let preload: bool = reader.read_bool32()?;
+        let transparent = reader.read_bool32()?;
+        let smooth = reader.read_bool32()?;
+        let preload = reader.read_bool32()?;
         let texture: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
         let gms2_data: Option<GMBackgroundGMS2Data> = reader.deserialize_if_gm_version((2, 0))?;
         
         Ok(GMBackground { name, transparent, smooth, preload, texture, gms2_data })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         builder.write_bool32(self.transparent);
         builder.write_bool32(self.smooth);
@@ -93,26 +94,26 @@ pub struct GMBackgroundGMS2Data {
     pub tile_ids: Vec<u32>,
 }
 impl GMElement for GMBackgroundGMS2Data {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let unknown_always_two: u32 = reader.read_u32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let unknown_always_two = reader.read_u32()?;
         if unknown_always_two != 2 {
-            return Err(format!("Expected UnknownAlwaysTwo but got {unknown_always_two} in Background GMS2 data"))
+            bail!("Expected UnknownAlwaysTwo but got {unknown_always_two} in Background GMS2 data");
         }
-        let tile_width: u32 = reader.read_u32()?;
-        let tile_height: u32 = reader.read_u32()?;
-        let output_border_x: u32 = reader.read_u32()?;
-        let output_border_y: u32 = reader.read_u32()?;
-        let tile_columns: u32 = reader.read_u32()?;
-        let items_per_tile_count: usize = reader.read_usize()?;
+        let tile_width = reader.read_u32()?;
+        let tile_height = reader.read_u32()?;
+        let output_border_x = reader.read_u32()?;
+        let output_border_y = reader.read_u32()?;
+        let tile_columns = reader.read_u32()?;
+        let items_per_tile_count = reader.read_usize()?;
         if items_per_tile_count == 0 {
-            return Err("Items per tile count cannot be zero".to_string())
+            bail!("Items per tile count cannot be zero");
         }
-        let tile_count: usize = reader.read_usize()?;
-        let unknown_always_zero: u32 = reader.read_u32()?;
+        let tile_count = reader.read_usize()?;
+        let unknown_always_zero = reader.read_u32()?;
         if unknown_always_zero != 0 {
-            return Err(format!("Expected UnknownAlwaysZero but got {unknown_always_zero} in Background GMS2 data"))
+            bail!("Expected UnknownAlwaysZero but got {unknown_always_zero} in Background GMS2 data");
         }
-        let frame_length: i64 = reader.read_i64()?;
+        let frame_length = reader.read_i64()?;
 
         let total_tile_count: usize = tile_count * items_per_tile_count;
         let mut tile_ids: Vec<u32> = vec_with_capacity(total_tile_count)?;
@@ -132,7 +133,7 @@ impl GMElement for GMBackgroundGMS2Data {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_u32(2);       // UnknownAlwaysTwo
         builder.write_u32(self.tile_width);
         builder.write_u32(self.tile_height);
@@ -143,13 +144,13 @@ impl GMElement for GMBackgroundGMS2Data {
         let total_tile_count: usize = self.tile_ids.len();
         let items_per_tile: usize = self.items_per_tile_count;
         if items_per_tile == 0 {
-            return Err("Items per tile is zero".to_string());
+            bail!("Items per tile is zero");
         }
         if total_tile_count % items_per_tile != 0 {
-            return Err(format!(
+            bail!(
                 "Background Tiles do not add up: {} total tiles, {} items per tile leaves a remainder of {}",
                 total_tile_count, items_per_tile, total_tile_count % items_per_tile,
-            ));
+            );
         }
         let tile_count: usize = total_tile_count / items_per_tile;
         builder.write_usize(items_per_tile)?;

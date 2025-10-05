@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::animation_curves::GMAnimationCurves;
 use crate::gamemaker::elements::audio_groups::GMAudioGroups;
@@ -32,6 +33,13 @@ use crate::gamemaker::elements::texture_page_items::GMTexturePageItems;
 use crate::gamemaker::elements::timelines::GMTimelines;
 use crate::gamemaker::elements::ui_nodes::GMRootUINodes;
 use crate::gamemaker::elements::variables::{to_vari_instance_type, GMVariable, GMVariableB15Data, GMVariables};
+
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Endianness {
+    Little,
+    Big,
+}
 
 #[derive(Debug, Clone)]
 pub struct GMData {
@@ -73,10 +81,11 @@ pub struct GMData {
 
     /// Should not be edited; only set by `GMData::read_chunk_padding`.
     pub chunk_padding: usize,
-
-    /// Whether the data file is formatted as big endian.
-    /// This is only the case for certain target architectures.
-    pub is_big_endian: bool,
+    
+    /// Indicates the data's byte endianness.
+    /// In most cases (and assumed by default), this is set to little-endian.
+    /// Big endian is an edge case for certain target platforms (e.g. PS3 or Xbox 360).
+    pub endianness: Endianness,
 
     /// Size of the original data file; useful for approximating.
     pub original_data_size: usize,
@@ -101,9 +110,9 @@ impl GMData {
         GMRef::new(index as u32)
     }
 
-    pub fn make_variable_b15(&mut self, name: &str, instance_type: GMInstanceType) -> Result<GMRef<GMVariable>, String> {
+    pub fn make_variable_b15(&mut self, name: &str, instance_type: GMInstanceType) -> Result<GMRef<GMVariable>> {
         if instance_type == GMInstanceType::Local {
-            return Err("Local variables have to be unique; this function will not work".to_string())
+            bail!("Local variables have to be unique; this function will not work");
         }
         let vari_instance_type: GMInstanceType = to_vari_instance_type(&instance_type);
 
@@ -114,7 +123,7 @@ impl GMData {
             }
 
             let Some(b15) = &variable.b15_data else {
-                return Err(format!("Variable {} does not have bytecode 15 data", variable.name.display(&self.strings)))
+                bail!("Variable {} does not have bytecode 15 data", variable.name.display(&self.strings));
             };
             if b15.instance_type != vari_instance_type {
                 continue
@@ -129,7 +138,7 @@ impl GMData {
 
         // first update these scuffed ass variable counts
         let Some(b15_header) = &mut self.variables.b15_header else {
-            return Err("Variables element does not have bytecode 15 header".to_string())
+            bail!("Variables element does not have bytecode 15 header");
         };
         let mut variable_id: i32 = b15_header.var_count1 as i32;
 
@@ -164,7 +173,7 @@ impl GMData {
         Ok(variable_ref)
     }
 
-    fn find_function(&self, name: &str) -> Result<Option<GMRef<GMFunction>>, String> {
+    fn find_function(&self, name: &str) -> Result<Option<GMRef<GMFunction>>> {
         for (i, function) in self.functions.functions.iter().enumerate() {
             let func_name: &String = function.name.resolve(&self.strings.strings)?;
             if name == func_name {
@@ -174,12 +183,12 @@ impl GMData {
         Ok(None)
     }
 
-    pub fn function_by_name(&self, name: &str) -> Result<GMRef<GMFunction>, String> {
-        self.find_function(name)?.ok_or_else(|| format!("Could not find function with name \"{name}\""))
+    pub fn function_by_name(&self, name: &str) -> Result<GMRef<GMFunction>> {
+        self.find_function(name)?.with_context(|| format!("Could not find function with name \"{name}\""))
     }
 
     /// Only intended for finding (or creating if it doesn't exist) **builtin** GameMaker functions.
-    pub fn make_builtin_function(&mut self, name: &'static str) -> Result<GMRef<GMFunction>, String> {
+    pub fn make_builtin_function(&mut self, name: &'static str) -> Result<GMRef<GMFunction>> {
         if let Some(func) = self.find_function(name)? {
             return Ok(func)
         }

@@ -1,5 +1,6 @@
+use crate::prelude::*;
 use std::collections::HashMap;
-use crate::gamemaker::data::GMData;
+use crate::gamemaker::data::{Endianness, GMData};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::code::GMVariableType;
 use crate::gamemaker::gm_version::GMVersionReq;
@@ -63,8 +64,8 @@ impl<'a> DataBuilder<'a> {
     /// Pads the internal buffer with zero bytes until its length is aligned to `alignment`.
     ///
     /// This adds zero bytes until `self.len()` is a multiple of `alignment`.
-    pub fn align(&mut self, alignment: usize) {
-        while self.len() % alignment != 0 {
+    pub fn align(&mut self, alignment: u32) {
+        while self.len() % (alignment as usize) != 0 {
             self.write_u8(0);
         }
     }
@@ -77,15 +78,15 @@ impl<'a> DataBuilder<'a> {
     /// Overwrites bytes at the given position in the internal data buffer.
     ///
     /// Useful for patching data like lengths or offsets after serialization.
-    fn overwrite_bytes(&mut self, bytes: &[u8], position: usize) -> Result<(), String> {
+    fn overwrite_bytes(&mut self, bytes: &[u8], position: usize) -> Result<()> {
         if let Some(mut_slice) = self.raw_data.get_mut(position .. position+bytes.len()) {
             mut_slice.copy_from_slice(bytes);
             Ok(())
         } else {
-            Err(format!(
+            bail!(
                 "Could not overwrite {} bytes at position {} in data with length {}; out of bounds",
                 bytes.len(), position, self.raw_data.len(),
-            ))
+            );
         }
     }
 
@@ -106,26 +107,23 @@ impl<'a> DataBuilder<'a> {
 
     /// Write a 4 character ASCII GameMaker chunk name.
     /// Accounts for endianness (chunk names in big endian are reversed).
-    pub fn write_chunk_name(&mut self, name: &str) -> Result<(), String> {
+    pub fn write_chunk_name(&mut self, name: &str) -> Result<()> {
         if name.len() != 4 {
-            return Err(format!(
+            bail!(
                 "Expected chunk name '{}' to be 4 characters long; but is actually {} characters long",
                 name, name.len(),
-            ))
+            );
         }
-        
-        let err_fn = || format!(
-            "Expected chunk name '{}' to be 4 bytes long; but is actually {} bytes long",
-            name, name.as_bytes().len(),
-        );
 
-        let bytes: [u8; 4] = if self.gm_data.is_big_endian {
-            // reverse the bytes if big endian
-            name.bytes().rev().collect::<Vec<u8>>().try_into().map_err(|_| err_fn())?
-        } else {
-            name.as_bytes().try_into().map_err(|_| err_fn())?
-        };
-        
+        let mut bytes: [u8; 4] = name.as_bytes().try_into().with_context(||format!(
+            "Expected chunk name '{}' to be 4 bytes long; but it's actually {} bytes long",
+            name, name.as_bytes().len(),
+        ))?;
+
+        if self.gm_data.endianness == Endianness::Big {
+            bytes.reverse();
+        }
+
         self.write_bytes(&bytes);
         Ok(())
     }
@@ -134,12 +132,11 @@ impl<'a> DataBuilder<'a> {
     ///
     /// Useful for patching fixed-size numeric values like lengths or offsets after serialization.
     /// For writing regular pointer lists, see [Self::write_pointer_list].
-    pub fn overwrite_usize(&mut self, number: usize, position: usize) -> Result<(), String> {
+    pub fn overwrite_usize(&mut self, number: usize, position: usize) -> Result<()> {
         let number: u32 = number as u32;
-        let bytes: [u8; 4] = if self.gm_data.is_big_endian {
-            number.to_be_bytes()
-        } else {
-            number.to_le_bytes()
+        let bytes: [u8; 4] = match self.gm_data.endianness {
+            Endianness::Little => number.to_le_bytes(),
+            Endianness::Big => number.to_be_bytes(),
         };
         self.overwrite_bytes(&bytes, position)
     }
@@ -148,11 +145,10 @@ impl<'a> DataBuilder<'a> {
     ///
     /// Useful for patching fixed-size numeric values like lengths or offsets after serialization.
     /// For writing regular pointer lists, see `[Self::write_pointer_list].
-    pub fn overwrite_i32(&mut self, number: i32, position: usize) -> Result<(), String> {
-        let bytes: [u8; 4] = if self.gm_data.is_big_endian {
-            number.to_be_bytes()
-        } else {
-            number.to_le_bytes()
+    pub fn overwrite_i32(&mut self, number: i32, position: usize) -> Result<()> {
+        let bytes: [u8; 4] = match self.gm_data.endianness {
+            Endianness::Little => number.to_le_bytes(),
+            Endianness::Big => number.to_be_bytes(),
         };
         self.overwrite_bytes(&bytes, position)
     }
@@ -167,7 +163,7 @@ impl<'a> DataBuilder<'a> {
     /// Circular references and writing order would make predicting these pointer resource positions even harder.
     /// ___
     /// This function should NOT be called for `GMRef`s; use their `DataBuilder::write_gm_x()` methods instead.
-    pub fn write_pointer<T>(&mut self, element: &T) -> Result<(), String> {
+    pub fn write_pointer<T>(&mut self, element: &T) -> Result<()> {
         let memory_address: usize = element as *const _ as usize;
         let placeholder_position: u32 = self.len() as u32;  // gamemaker is 32bit anyway
         self.write_u32(0xDEADC0DE);
@@ -178,7 +174,7 @@ impl<'a> DataBuilder<'a> {
     /// Optionally writes a pointer to the given [`Option`] value.
     /// - If [`Some`], writes a pointer to the contained value using [`Self::write_pointer`].
     /// - If [`None`], writes a null pointer (0) using [`Self::write_i32`].
-    pub fn write_pointer_opt<T>(&mut self, element: &Option<T>) -> Result<(), String> {
+    pub fn write_pointer_opt<T>(&mut self, element: &Option<T>) -> Result<()> {
         if let Some(elem) = element {
             self.write_pointer(elem)?;
         } else {
@@ -190,15 +186,15 @@ impl<'a> DataBuilder<'a> {
     /// Store the written GameMaker element's data position paired with its memory address in the pointer resource pool.
     /// The element's absolute position corresponds to the data builder's current position,
     /// since this method should get called when the element is serialized.
-    pub fn resolve_pointer<T>(&mut self, element: &T) -> Result<(), String> {
+    pub fn resolve_pointer<T>(&mut self, element: &T) -> Result<()> {
         let memory_address: usize = element as *const _ as usize;
         let resource_position: u32 = self.len() as u32;
         if let Some(old_resource_pos) = self.pointer_resource_positions.insert(memory_address, resource_position) {
-            return Err(format!(
+            bail!(
                 "Pointer placeholder for {} with memory address {} already resolved \
                 to data position {}; tried to resolve again to data position {}",
                 typename::<T>(), memory_address, old_resource_pos, resource_position,
-            ))
+            );
         }
         Ok(())
     }
@@ -212,19 +208,20 @@ impl<'a> DataBuilder<'a> {
     /// - `chunk_name`: 4-character chunk name (e.g. `SCPT` or `ROOM`).
     /// - `element`: A serializable element implementing [GMElement] and [GMChunkElement].
     /// - `is_last`: Whether this chunk is the last chunk in the data file. If true, no post padding will be written.
-    pub fn build_chunk<T: GMElement+GMChunkElement>(&mut self, chunk_name: &'static str, element: &T, is_last: bool) -> Result<(), String> {
+    pub fn build_chunk<T: GMElement+GMChunkElement>(&mut self, chunk_name: &'static str, element: &T, is_last: bool) -> Result<()> {
         if !element.exists() {
             log::trace!("Skipped building chunk '{chunk_name}' because it does not exist");
             return Ok(())
         }
 
+        let ctx = || format!("serializing chunk '{chunk_name}'");
         let stopwatch = Stopwatch::start();
-        self.write_chunk_name(chunk_name)?;
+
+        self.write_chunk_name(chunk_name).with_context(ctx)?;
         self.write_u32(0xDEADC0DE);   // chunk length placeholder
         let start_pos: usize = self.len();
 
-        element.serialize(self)
-            .map_err(|e| format!("{e}\n↳ while serializing chunk '{chunk_name}'"))?;
+        element.serialize(self).with_context(ctx)?;
 
         if !is_last {
             // write padding in these versions, if not last chunk
@@ -237,7 +234,8 @@ impl<'a> DataBuilder<'a> {
         }
 
         let chunk_length: usize = self.len() - start_pos;
-        self.overwrite_usize(chunk_length, start_pos - 4)?;   // resolve chunk length placeholder
+        // resolve chunk length placeholder
+        self.overwrite_usize(chunk_length, start_pos - 4).with_context(ctx)?;
 
         log::trace!("Building chunk '{chunk_name}' took {stopwatch}");
         Ok(())

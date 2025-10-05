@@ -327,7 +327,7 @@ impl ModExporter<'_, '_> {
         )
     }
 
-    fn add_room_background(&self, i: &GMRoomBackground) -> Result<AddRoomBackground, String> {
+    fn add_room_background(&self, i: &GMRoomBackground) -> Result<AddRoomBackground> {
         Ok(AddRoomBackground {
             enabled: i.enabled,
             foreground: i.foreground,
@@ -342,7 +342,7 @@ impl ModExporter<'_, '_> {
         })
     }
     
-    fn edit_room_background(&self, o: &GMRoomBackground, m: &GMRoomBackground) -> Result<EditRoomBackground, String> {
+    fn edit_room_background(&self, o: &GMRoomBackground, m: &GMRoomBackground) -> Result<EditRoomBackground> {
         Ok(EditRoomBackground {
             enabled: edit_field(&o.enabled, &m.enabled),
             foreground: edit_field(&o.foreground, &m.foreground),
@@ -361,7 +361,7 @@ impl ModExporter<'_, '_> {
         })
     }
     
-    fn add_room_view(&self, i: &GMRoomView) -> Result<AddRoomView, String> {
+    fn add_room_view(&self, i: &GMRoomView) -> Result<AddRoomView> {
         Ok(AddRoomView {
             enabled: i.enabled,
             view_x: i.view_x,
@@ -380,7 +380,7 @@ impl ModExporter<'_, '_> {
         })
     }
     
-    fn edit_room_view(&self, o: &GMRoomView, m: &GMRoomView) -> Result<EditRoomView, String> {
+    fn edit_room_view(&self, o: &GMRoomView, m: &GMRoomView) -> Result<EditRoomView> {
         Ok(EditRoomView {
             enabled: edit_field(&o.enabled, &m.enabled),
             view_x: edit_field(&o.view_x, &m.view_x),
@@ -399,7 +399,7 @@ impl ModExporter<'_, '_> {
         })
     }
     
-    fn convert_room_tile_texture(&self, room_tile_texture: &GMRoomTileTexture) -> Result<ModRoomTileTexture, String> {
+    fn convert_room_tile_texture(&self, room_tile_texture: &GMRoomTileTexture) -> Result<ModRoomTileTexture> {
         match room_tile_texture {
             GMRoomTileTexture::Sprite(sprite) => {
                 self.convert_sprite_ref_opt(sprite).map(ModRoomTileTexture::Sprite)
@@ -410,7 +410,7 @@ impl ModExporter<'_, '_> {
         }
     }
     
-    fn add_room_tile(&self, i: &GMRoomTile) -> Result<AddRoomTile, String> {
+    fn add_room_tile(&self, i: &GMRoomTile) -> Result<AddRoomTile> {
         Ok(AddRoomTile {
             x: i.x,
             y: i.y,
@@ -426,7 +426,7 @@ impl ModExporter<'_, '_> {
         })
     }
     
-    fn edit_room_tile(&self, o: &GMRoomTile, m: &GMRoomTile) -> Result<EditRoomTile, String> {
+    fn edit_room_tile(&self, o: &GMRoomTile, m: &GMRoomTile) -> Result<EditRoomTile> {
         Ok(EditRoomTile {
             x: edit_field(&o.x, &m.x),
             y: edit_field(&o.y, &m.y),
@@ -442,7 +442,7 @@ impl ModExporter<'_, '_> {
         })
     }
     
-    fn add_room_layer(&self, i: &GMRoomLayer) -> Result<AddRoomLayer, String> {
+    fn add_room_layer(&self, i: &GMRoomLayer) -> Result<AddRoomLayer> {
         Ok(AddRoomLayer {
             layer_name: self.convert_string_ref(&i.layer_name)?,
             layer_id: i.layer_id,
@@ -456,7 +456,7 @@ impl ModExporter<'_, '_> {
         })
     }
     
-    fn edit_room_layer(&self, o: &GMRoomLayer, m: &GMRoomLayer) -> Result<EditRoomLayer, String> {
+    fn edit_room_layer(&self, o: &GMRoomLayer, m: &GMRoomLayer) -> Result<EditRoomLayer> {
         Ok(EditRoomLayer {
             layer_name: edit_field_convert(&o.layer_name, &m.layer_name, |r| self.convert_string_ref(r))?,
             layer_id: edit_field(&o.layer_id, &m.layer_id),
@@ -470,7 +470,7 @@ impl ModExporter<'_, '_> {
         })
     }
     
-    fn add_room_game_object(&self, i: &GMRoomGameObject) -> Result<AddRoomGameObject, String> {
+    fn add_room_game_object(&self, i: &GMRoomGameObject) -> Result<AddRoomGameObject> {
         Ok(AddRoomGameObject {
             x: i.x,
             y: i.y,
@@ -486,7 +486,7 @@ impl ModExporter<'_, '_> {
         })
     }
     
-    fn edit_room_game_object(&self, o: &GMRoomGameObject, m: &GMRoomGameObject) -> Result<EditRoomGameObject, String> {
+    fn edit_room_game_object(&self, o: &GMRoomGameObject, m: &GMRoomGameObject) -> Result<EditRoomGameObject> {
         Ok(EditRoomGameObject {
             x: edit_field(&o.x, &m.x),
             y: edit_field(&o.y, &m.y),
@@ -517,7 +517,7 @@ fn edit_room_flags(o: &GMRoomFlags, m: &GMRoomFlags) -> EditRoomFlags {
     }
 }
 
-fn convert_layer_type(i: &GMRoomLayerType) -> Result<ModRoomLayerType, String> {
+fn convert_layer_type(i: &GMRoomLayerType) -> Result<ModRoomLayerType> {
     Ok(match i {
         GMRoomLayerType::Path => return Err("Room Layer Type 'Path' is not supported since it seemed to be unused (report this error)".to_string()),
         GMRoomLayerType::Background => ModRoomLayerType::Background,

@@ -6,7 +6,7 @@ use crate::modding::ordered_list::{export_changes_ordered_list, DataChange};
 macro_rules! prevent_changing {
     ($original:expr, $modified:expr, $field:ident, $name:expr) => {{
         if $original.$field != $modified.$field {
-            return Err(format!("Changing options field {} is not allowed!", $name))
+            bail!("Changing options field {} is not allowed!", $name);
         }
     }};
 }
@@ -140,7 +140,7 @@ pub struct AddOptionsConstant {
 
 
 impl ModExporter<'_, '_> {
-    pub fn export_options(&self) -> Result<EditOptions, String> {
+    pub fn export_options(&self) -> Result<EditOptions> {
         let o: &GMOptions = &self.original_data.options;
         let m: &GMOptions = &self.modified_data.options;
         

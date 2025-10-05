@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::code::GMCode;
@@ -16,7 +17,7 @@ pub mod decompile_context;
 pub mod vm_constants;
 
 
-pub fn decompile_to_ast(gm_data: &GMData, code_ref: GMRef<GMCode>) -> Result<(), String> {
+pub fn decompile_to_ast(gm_data: &GMData, code_ref: GMRef<GMCode>) -> Result<()> {
     let mut cfg = ControlFlowGraph {
         context: DecompileContext { gm_data },
         empty_nodes: vec![],

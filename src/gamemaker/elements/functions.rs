@@ -1,4 +1,5 @@
-﻿use crate::gamemaker::deserialize::{DataReader, GMChunk, GMRef};
+﻿use crate::prelude::*;
+use crate::gamemaker::deserialize::{DataReader, GMChunk, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::utility::vec_with_capacity;
@@ -24,7 +25,7 @@ impl GMChunkElement for GMFunctions {
 }
 
 impl GMElement for GMFunctions {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         if reader.get_chunk_length() == 0 && reader.general_info.bytecode_version >= 15 {
             return Ok(Self {
                 functions: vec![],
@@ -43,25 +44,25 @@ impl GMElement for GMFunctions {
 
         for i in 0..functions_count {
             let name: GMRef<String> = reader.read_gm_string()?;
-            let occurrence_count: usize = reader.read_usize()?;
-            let first_occurrence_abs_pos: i32 = reader.read_i32()?;
-            let (occurrences, name_string_id): (Vec<usize>, u32) = parse_occurrence_chain(reader, first_occurrence_abs_pos, occurrence_count)?;
+            let occurrence_count = reader.read_usize()?;
+            let first_occurrence_pos = reader.read_u32()?;
+            let (occurrences, name_string_id): (Vec<u32>, u32) = parse_occurrence_chain(reader, first_occurrence_pos, occurrence_count)?;
             
             // verify name string id. allow -1 for unused function (-1 wraps to u32::MAX)
             if name_string_id != u32::MAX && name.index != name_string_id {
-                return Err(format!(
+                bail!(
                     "Function #{i} with name \"{}\" specifies name string id {}; but the id of name string is actually {}",
                     reader.resolve_gm_str(name)?, name_string_id, name.index,
-                ))
+                )
             }
             
-            for occurrence in &occurrences {
-                if let Some(old_value) = reader.function_occurrence_map.insert(*occurrence, GMRef::new(i as u32)) {
-                    return Err(format!(
+            for occurrence in occurrences {
+                if let Some(old_value) = reader.function_occurrence_map.insert(occurrence, GMRef::new(i as u32)) {
+                    bail!(
                         "Conflicting occurrence positions while parsing functions: absolute position {} \
                         was already set for function #{} with name \"{}\"; trying to set to function #{} with name \"{}\"",
                         occurrence, old_value.index, reader.display_gm_str(old_value.resolve(&functions)?.name), i, reader.display_gm_str(name),
-                    ))
+                    )
                 }
             }
 
@@ -72,7 +73,7 @@ impl GMElement for GMFunctions {
         Ok(GMFunctions { functions, code_locals, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         
         if builder.bytecode_version() >= 15 {
@@ -96,7 +97,7 @@ impl GMElement for GMFunctions {
         
         if builder.bytecode_version() >= 15 && !builder.is_gm_version_at_least((2024, 8)) {
             if !self.code_locals.exists {
-                return Err("Code Locals don't exist in bytecode version 15+".to_string())
+                bail!("Code Locals don't exist in bytecode version 15+");
             }
             self.code_locals.serialize(builder)?;
         }
@@ -127,7 +128,7 @@ impl GMChunkElement for GMCodeLocals {
     }
 }
 impl GMElement for GMCodeLocals {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         if reader.general_info.bytecode_version <= 14 || reader.general_info.is_version_at_least((2024, 8)) {
             return Ok(Self::stub())
         }
@@ -135,7 +136,7 @@ impl GMElement for GMCodeLocals {
         Ok(Self { code_locals, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         builder.write_simple_list(&self.code_locals)?;
         Ok(())
@@ -148,8 +149,8 @@ pub struct GMCodeLocal {
     pub variables: Vec<GMCodeLocalVariable>,
 }
 impl GMElement for GMCodeLocal {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let local_variables_count: usize = reader.read_usize()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let local_variables_count = reader.read_usize()?;
         let name: GMRef<String> = reader.read_gm_string()?;
         let mut variables: Vec<GMCodeLocalVariable> = vec_with_capacity(local_variables_count)?;
         for _ in 0..local_variables_count {
@@ -158,7 +159,7 @@ impl GMElement for GMCodeLocal {
         Ok(GMCodeLocal { name, variables })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_usize(self.variables.len())?;
         builder.write_gm_string(&self.name)?;
         for local_var in &self.variables {
@@ -176,13 +177,13 @@ pub struct GMCodeLocalVariable {
     pub name: GMRef<String>,
 }
 impl GMElement for GMCodeLocalVariable {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let weird_index: u32 = reader.read_u32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let weird_index = reader.read_u32()?;
         let name: GMRef<String> = reader.read_gm_string()?;
         Ok(Self { weird_index, name })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_u32(self.weird_index);
         builder.write_gm_string(&self.name)?;
         Ok(())
@@ -190,38 +191,38 @@ impl GMElement for GMCodeLocalVariable {
 }
 
 
-pub fn parse_occurrence_chain(reader: &mut DataReader, first_occurrence_pos: i32, occurrence_count: usize) -> Result<(Vec<usize>, u32), String> {
+pub fn parse_occurrence_chain(reader: &mut DataReader, first_occurrence_pos: u32, occurrence_count: usize) -> Result<(Vec<u32>, u32)> {
     if occurrence_count < 1 {
-        return Ok((vec![], first_occurrence_pos as u32));
+        return Ok((vec![], first_occurrence_pos));
     }
 
     let saved_chunk: GMChunk = reader.chunk.clone();
     let saved_position: usize = reader.cur_pos;
-    reader.chunk = reader.chunks.get("CODE").cloned().ok_or("Chunk CODE not set while parsing function occurrences")?;
+    reader.chunk = reader.chunks.get("CODE").cloned().context("Chunk CODE not set while parsing function occurrences")?;
 
-    let first_extra_offset: usize;
+    let first_extra_offset: u32;
     if reader.general_info.is_version_at_least((2, 3)) {
         first_extra_offset = 0;
     } else {
         first_extra_offset = 4;
     };
-    let mut occurrence_pos: usize = first_occurrence_pos as usize + first_extra_offset;
-    let mut occurrences: Vec<usize> = vec_with_capacity(occurrence_count)?;
-    let mut offset: i32 = first_occurrence_pos;
+    let mut occurrence_pos = first_occurrence_pos + first_extra_offset;
+    let mut occurrences: Vec<u32> = vec_with_capacity(occurrence_count)?;
+    let mut offset: i32 = 6969;   // default value will never be relevant since it returns if no occurrences
 
     for _ in 0..occurrence_count {
         occurrences.push(occurrence_pos);
-        reader.cur_pos = occurrence_pos;
-        let raw_value: i32 = reader.read_i32()?;
+        reader.cur_pos = occurrence_pos as usize;
+        let raw_value = reader.read_i32()?;
         offset = raw_value & 0x07FFFFFF;
         if offset < 1 {
-            return Err(format!(
+            bail!(
                 "Next occurrence offset is {0} (0x{0:08X}) which is negative while parsing \
                 function occurrences at position {1} (raw value is 0x{2:08X})",
                 offset, reader.cur_pos-4, raw_value,
-            ))
+            )
         }
-        occurrence_pos += offset as usize;
+        occurrence_pos += offset as u32;
     }
 
     let name_string_id: u32 = (offset & 0xFFFFFF) as u32;

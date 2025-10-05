@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use crate::gamemaker::elements::audio_groups::GMAudioGroup;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
@@ -22,12 +23,12 @@ impl GMChunkElement for GMSounds {
 }
 
 impl GMElement for GMSounds {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let sounds: Vec<GMSound> = reader.read_pointer_list()?;
         Ok(Self { sounds, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         builder.write_pointer_list(&self.sounds)?;
         Ok(())
@@ -49,21 +50,21 @@ pub struct GMSound {
     pub audio_length: Option<f32>,                   // in seconds probably
 }
 impl GMElement for GMSound {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let flags = GMSoundFlags::deserialize(reader)?;
         let audio_type: Option<GMRef<String>> = reader.read_gm_string_opt()?;
         let file: GMRef<String> = reader.read_gm_string()?;
-        let effects: u32 = reader.read_u32()?;
-        let volume: f32 = reader.read_f32()?;
-        let pitch: f32 = reader.read_f32()?;
+        let effects = reader.read_u32()?;
+        let volume = reader.read_f32()?;
+        let pitch = reader.read_f32()?;
         let mut audio_group: GMRef<GMAudioGroup> = GMRef::new(get_builtin_sound_group_id(&reader.general_info.version));
         if flags.regular && reader.general_info.bytecode_version >= 14 {
             audio_group = reader.read_resource_by_id()?;
         } else {
-            let preload: bool = reader.read_bool32()?;
+            let preload = reader.read_bool32()?;
             if !preload {
-                return Err(format!("Preload is unexpectedly set to false for sound \"{}\"; please report this error", reader.display_gm_str(name)))
+                bail!("Preload is unexpectedly set to false for sound \"{}\"; please report this error", reader.display_gm_str(name));
             }
         }
         let audio_file: Option<GMRef<GMEmbeddedAudio>> = reader.read_resource_by_id_opt()?;
@@ -71,7 +72,7 @@ impl GMElement for GMSound {
         Ok(GMSound { name, flags, audio_type, file, effects, volume, pitch, audio_group, audio_file, audio_length })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         self.flags.serialize(builder)?;
         builder.write_gm_string_opt(&self.audio_type)?;
@@ -99,8 +100,8 @@ pub struct GMSoundFlags {
     pub regular: bool,
 }
 impl GMElement for GMSoundFlags {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let raw: u32 = reader.read_u32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let raw = reader.read_u32()?;
         Ok(GMSoundFlags {
             is_embedded: 0 != raw & 0x1,
             is_compressed: 0 != raw & 0x2,
@@ -109,7 +110,7 @@ impl GMElement for GMSoundFlags {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let mut raw: u32 = 0;
 
         if self.is_embedded { raw |= 0x1 };

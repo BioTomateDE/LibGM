@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use std::collections::HashSet;
 use std::ops::{Deref, DerefMut};
 use crate::gamemaker::elements::code::{GMGotoInstruction, GMInstruction};
@@ -99,7 +100,7 @@ impl DerefMut for Loop {
 }
 
 
-pub fn find_loops<'c, 'd>(cfg: &'c mut ControlFlowGraph<'c>) -> Result<(), String> {
+pub fn find_loops<'c, 'd>(cfg: &'c mut ControlFlowGraph<'c>) -> Result<()> {
     let mut while_loops_found = HashSet::new();
     let mut loops = Vec::new();
 
@@ -169,20 +170,20 @@ fn push_repeat(cfg: &mut ControlFlowGraph, loops: &mut Vec<Loop>, idx: usize) {
 }
 
 
-fn push_with(cfg: &mut ControlFlowGraph, loops: &mut Vec<Loop>, index: usize) -> Result<(), String> {
+fn push_with(cfg: &mut ControlFlowGraph, loops: &mut Vec<Loop>, index: usize) -> Result<()> {
     let block = &cfg.blocks[index];
 
     // With loop detected - need to additionally check for break block
     let head: NodeRef = block.successors.branch_target.clone().unwrap();
-    let tail: NodeRef = block.successors.fall_through.clone().ok_or("PushEnv does not have a fallthrough successor")?;
+    let tail: NodeRef = block.successors.fall_through.clone().context("PushEnv does not have a fallthrough successor")?;
     let after: NodeRef = tail.successors(cfg).branch_target.clone()
-        .ok_or("PushEnv's fallthrough successor does not have a branch successor")?;
-    let succ_block: &Block = after.as_block(cfg).ok_or("Expected 2nd successor of PushEnv to be a block")?;
+        .context("PushEnv's fallthrough successor does not have a branch successor")?;
+    let succ_block: &Block = after.as_block(cfg).context("Expected 2nd successor of PushEnv to be a block")?;
 
     let mut break_block = None;
     if let [GMInstruction::Branch(_)] = succ_block.instructions {
         let potential_break_block = after.next_sequentially().as_block(cfg)
-            .ok_or("Expected potential break block after 2nd successor of PushEnv")?;
+            .context("Expected potential break block after 2nd successor of PushEnv")?;
         let succ_start: u32 = succ_block.successors.branch_target.clone().unwrap().start_address(cfg);
         if potential_break_block.end_address == succ_start {
             if let [GMInstruction::PopWithContextExit(_)] = potential_break_block.instructions {
@@ -202,7 +203,7 @@ fn push_with(cfg: &mut ControlFlowGraph, loops: &mut Vec<Loop>, index: usize) ->
 
 
 /// Add a new node that is branched to at the end, to keep control flow internal
-fn update_control_flow<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c mut BaseLoop, loop_node: NodeRef) -> Result<(), String> {
+fn update_control_flow<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c mut BaseLoop, loop_node: NodeRef) -> Result<()> {
     let old_after = base_loop.after.clone();
     let new_after = cfg.new_empty_node(base_loop.after.start_address(cfg));
     cfg.insert_predecessors(base_loop.after, new_after, base_loop.head.end_address(cfg))?;
@@ -219,11 +220,11 @@ fn update_control_flow<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c
 }
 
 
-fn update_while<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c mut BaseLoop, loop_node: NodeRef) -> Result<(), String> {
+fn update_while<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c mut BaseLoop, loop_node: NodeRef) -> Result<()> {
     // Get rid of jump from tail
     cfg.disconnect_branch_successor(base_loop.tail)?;
     let tail_block = base_loop.tail.as_block_mut(cfg)
-        .ok_or("Expected while loop's tail to be block")?;
+        .context("Expected while loop's tail to be block")?;
     tail_block.pop_last_instruction()?;
 
     // Find first branch location after head
@@ -231,12 +232,12 @@ fn update_while<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c mut Ba
         .predecessors(cfg)
         .iter()
         .find(|n| n.start_address(cfg) < base_loop.head.start_address(cfg) && n.node_type() != NodeType::Block)
-        .ok_or("Failed to find while loop's first branch location after head")?
+        .context("Failed to find while loop's first branch location after head")?
         .clone();
 
     let branch_block = branch_node.as_block_mut(cfg).unwrap();
     if !matches!(branch_block.instructions.last(), Some(GMInstruction::BranchUnless(_))) {
-        return Err("Expected BranchUnless for while loop's first branch location after head".to_string())
+        bail!("Expected BranchUnless for while loop's first branch location after head");
     }
 
     // Identify body node by using branch location's first target (the one that doesn't jump)
@@ -252,12 +253,12 @@ fn update_while<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c mut Ba
 }
 
 
-fn update_do_until<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c mut BaseLoop, loop_node: NodeRef) -> Result<(), String> {
+fn update_do_until<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c mut BaseLoop, loop_node: NodeRef) -> Result<()> {
     // Get rid of jumps from tail
     cfg.disconnect_branch_successor(base_loop.tail)?;
     cfg.disconnect_fallthrough_successor(base_loop.tail)?;
     let tail_block = base_loop.tail.as_block_mut(cfg)
-        .ok_or("Expected while loop's tail to be block")?;
+        .context("Expected while loop's tail to be block")?;
     tail_block.pop_last_instruction()?;
 
     update_control_flow(cfg, base_loop, loop_node)?;
@@ -265,12 +266,12 @@ fn update_do_until<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c mut
 }
 
 
-fn update_repeat<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c mut BaseLoop, loop_node: NodeRef) -> Result<(), String> {
+fn update_repeat<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c mut BaseLoop, loop_node: NodeRef) -> Result<()> {
     // Get rid of branch (and unneeded logic) from branch into Head
     // The (first) predecessor of Head should always be a Block, as it has logic
     let head_pred: NodeRef = base_loop.head.predecessors(cfg)[0].clone();
     let head_pred_block: &mut Block = head_pred.as_block_mut(cfg)
-        .ok_or("Expected repeat loop's first predecessor to be block")?;
+        .context("Expected repeat loop's first predecessor to be block")?;
     head_pred_block.pop_last_instructions(4)?;
     cfg.disconnect_fallthrough_successor(head_pred)?;
 
@@ -278,7 +279,7 @@ fn update_repeat<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c mut B
     cfg.disconnect_branch_successor(base_loop.tail)?;
     cfg.disconnect_fallthrough_successor(base_loop.tail)?;
     let tail_block = base_loop.tail.as_block_mut(cfg)
-        .ok_or("Expected repeat loop's tail to be block")?;
+        .context("Expected repeat loop's tail to be block")?;
 
     if let [.., GMInstruction::Convert(_), GMInstruction::BranchIf(_)] = tail_block.instructions {
         // We have a Convert instruction before branching at the end (older GML output)
@@ -290,7 +291,7 @@ fn update_repeat<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c mut B
 
     // Remove unneeded logic from After (should also always be a Block)
     let after_block = base_loop.after.as_block_mut(cfg)
-        .ok_or("Expected repeat loop's after to be block")?;
+        .context("Expected repeat loop's after to be block")?;
     after_block.pop_first_instruction()?;
 
     update_control_flow(cfg, base_loop, loop_node)?;
@@ -298,7 +299,7 @@ fn update_repeat<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c mut B
 }
 
 
-fn update_with<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c mut BaseLoop, loop_node: NodeRef) -> Result<(), String> {
+fn update_with<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c mut BaseLoop, loop_node: NodeRef) -> Result<()> {
     // TODO: Ensure Head is the outermost parent (not an inner block of a loop, for instance)
 
     // Add a new node that is branched to at the end, to keep control flow internal
@@ -327,7 +328,7 @@ fn update_with<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c mut Bas
 
         // Get rid of branch instruction from [old_after]
         let old_after_block = old_after.as_block_mut(cfg)
-            .ok_or("Expected with loop's old after to be block")?;
+            .context("Expected with loop's old after to be block")?;
         old_after_block.pop_last_instruction()?;
 
         // Reroute branch successor of [after] to instead go to [end_node]
@@ -370,7 +371,7 @@ fn update_with<'c, 'd>(cfg: &'c mut ControlFlowGraph<'d>, base_loop: &'c mut Bas
 
 
 impl<'d> ControlFlowGraph<'d> {
-    fn insert_with_loop(&mut self, start: NodeRef, after: NodeRef, new_structure: NodeRef) -> Result<(), String> {
+    fn insert_with_loop(&mut self, start: NodeRef, after: NodeRef, new_structure: NodeRef) -> Result<()> {
         let start_address = start.start_address(self);
 
         // Reroute all nodes going into [start] to instead go into [new_structure]

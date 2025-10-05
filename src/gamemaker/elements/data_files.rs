@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use crate::gamemaker::deserialize::DataReader;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
@@ -19,11 +20,11 @@ impl GMChunkElement for GMDataFiles {
 }
 
 impl GMElement for GMDataFiles {
-    fn deserialize(_reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(_reader: &mut DataReader) -> Result<Self> {
         Ok(Self { exists: true })
     }
 
-    fn serialize(&self, _builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, _builder: &mut DataBuilder) -> Result<()> {
         Ok(())
     }
 }

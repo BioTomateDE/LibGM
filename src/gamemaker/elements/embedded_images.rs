@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
@@ -19,16 +20,16 @@ impl GMChunkElement for GMEmbeddedImages {
 }
 
 impl GMElement for GMEmbeddedImages {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let version: i32 = reader.read_i32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let version = reader.read_i32()?;
         if version != 1 {
-            return Err(format!("Expected EMBI version 1 but got {version}"))
+            bail!("Expected EMBI version 1 but got {version}");
         }
         let embedded_images: Vec<GMEmbeddedImage> = reader.read_simple_list()?;
         Ok(Self { embedded_images, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         builder.write_i32(1);   // EMBI version
         builder.write_simple_list(&self.embedded_images)?;
@@ -43,13 +44,13 @@ pub struct GMEmbeddedImage {
     pub texture_entry: GMRef<GMTexturePageItem>,
 }
 impl GMElement for GMEmbeddedImage {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let texture_entry: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
         Ok(Self { name, texture_entry })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         builder.write_gm_texture(&self.texture_entry)?;
         Ok(())

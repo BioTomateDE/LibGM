@@ -1,3 +1,4 @@
+use crate::prelude::*;
 mod builder;
 pub mod traits;
 mod numbers;
@@ -5,7 +6,7 @@ mod lists;
 mod resources;
 
 pub use builder::DataBuilder;
-use crate::gamemaker::data::GMData;
+use crate::gamemaker::data::{Endianness, GMData};
 use crate::gamemaker::elements::GMChunkElement;
 use crate::utility::Stopwatch;
 
@@ -35,7 +36,7 @@ macro_rules! build_chunks {
 }
 
 
-pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
+pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
     let stopwatch = Stopwatch::start();
     let mut builder = DataBuilder::new(gm_data);
 
@@ -81,32 +82,30 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>, String> {
         ("ACRV", animation_curves),
     );
 
-    // resolve pointers/placeholders
+    // Resolve pointers/placeholders
+    let placeholder_count = builder.pointer_placeholder_positions.len();
+    let resource_count = builder.pointer_resource_positions.len();
     let stopwatch2 = Stopwatch::start();
-    for (placeholder_data_pos, element_mem_addr) in &builder.pointer_placeholder_positions {
-        let resource_data_pos: u32 = *builder.pointer_resource_positions.get(element_mem_addr).ok_or_else(|| format!(
+
+    for (placeholder_data_pos, element_mem_addr) in std::mem::take(&mut builder.pointer_placeholder_positions) {
+        let resource_data_pos: u32 = *builder.pointer_resource_positions.get(&element_mem_addr).ok_or_else(|| format!(
             "Could not resolve pointer placeholder with data position {} and memory address {}",
             placeholder_data_pos, element_mem_addr,
         ))?;
         // overwrite placeholder 0xDEADC0DE
-        let resource_data: [u8; 4] = if builder.gm_data.is_big_endian {
-            resource_data_pos.to_be_bytes()
-        } else {
-            resource_data_pos.to_le_bytes()
-        };
-        let mut_slice: &mut [u8] = builder.raw_data.get_mut(*placeholder_data_pos as usize .. *placeholder_data_pos as usize + 4)
-            .ok_or_else(|| format!("Could not get 4 bytes of raw data at position {} while resolving pointer placeholders", placeholder_data_pos))?;
-        mut_slice.copy_from_slice(&resource_data);
+        builder.overwrite_i32(resource_data_pos as i32, placeholder_data_pos as usize)?;
     }
-    log::trace!("Resolving {} pointer placeholders to {} resources took {stopwatch2}",
-        builder.pointer_placeholder_positions.len(),
-        builder.pointer_resource_positions.len(),
-    );
+    log::trace!("Resolving {placeholder_count} pointer placeholders to {resource_count} resources took {stopwatch2}");
 
-    // overwrite data length placeholder
+    // Overwrite data length placeholder
     builder.overwrite_usize(builder.len() - 8, 4)?;
 
     log::trace!("Building data file took {stopwatch}");
+    
+    if builder.raw_data.len() >= i32::MAX as usize {
+        bail!("Data file is bigger than 2,147,483,647 bytes which will lead to bugs in the runner")
+    }
+    
     Ok(builder.raw_data)
 }
 
