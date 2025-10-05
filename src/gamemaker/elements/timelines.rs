@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
@@ -21,12 +22,12 @@ impl GMChunkElement for GMTimelines {
 }
 
 impl GMElement for GMTimelines {
-	fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+	fn deserialize(reader: &mut DataReader) -> Result<Self> {
 		let timelines: Vec<GMTimeline> = reader.read_pointer_list()?;
 		Ok(Self { timelines, exists: true })
 	}
 
-	fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+	fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
 		if !self.exists { return Ok(()) }
 		builder.write_pointer_list(&self.timelines)?;
 		Ok(())
@@ -41,16 +42,16 @@ pub struct GMTimeline {
 	pub moments: Vec<GMTimelineMoment>,
 }
 impl GMElement for GMTimeline {
-	fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+	fn deserialize(reader: &mut DataReader) -> Result<Self> {
 		let name: GMRef<String> = reader.read_gm_string()?;
-		let moment_count: usize = reader.read_usize()?;
+		let moment_count = reader.read_usize()?;
 		
 		let mut time_points: Vec<u32> = vec_with_capacity(moment_count)?;
-		let mut event_pointers: Vec<usize> = vec_with_capacity(moment_count)?;
+		let mut event_pointers: Vec<u32> = vec_with_capacity(moment_count)?;
 		
 		for _ in 0..moment_count {
 			time_points.push(reader.read_u32()?);
-			event_pointers.push(reader.read_usize()?);
+			event_pointers.push(reader.read_u32()?);
 		}
 		
 		let mut moments: Vec<GMTimelineMoment> = vec_with_capacity(moment_count)?;
@@ -63,7 +64,7 @@ impl GMElement for GMTimeline {
 		Ok(Self { name, moments })
 	}
 
-	fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+	fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
 		builder.write_gm_string(&self.name)?;
 		builder.write_usize(self.moments.len())?;
 		for moment in &self.moments {

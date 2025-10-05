@@ -124,7 +124,7 @@ impl ModExporter<'_, '_> {
 }
 
 
-fn add_font_glyph(i: &GMFontGlyph) -> Result<AddFontGlyph, String> {
+fn add_font_glyph(i: &GMFontGlyph) -> Result<AddFontGlyph> {
     Ok(AddFontGlyph { 
         character: i.character, 
         x: i.x,
@@ -136,7 +136,7 @@ fn add_font_glyph(i: &GMFontGlyph) -> Result<AddFontGlyph, String> {
     })
 }
 
-fn edit_font_glyph(o: &GMFontGlyph, m: &GMFontGlyph) -> Result<EditFontGlyph, String> {
+fn edit_font_glyph(o: &GMFontGlyph, m: &GMFontGlyph) -> Result<EditFontGlyph> {
     Ok(EditFontGlyph {
         character: edit_field_option(&o.character, &m.character).flatten(),
         x: edit_field(&o.x, &m.x),
@@ -161,7 +161,7 @@ fn convert_font_size(i: &GMFontSize) -> f32 {
     }
 }
 
-fn convert_font_kerning(i: &GMFontGlyphKerning) -> Result<ModKerning, String> {
+fn convert_font_kerning(i: &GMFontGlyphKerning) -> Result<ModKerning> {
     Ok(ModKerning {
         character: i.character,
         shift_modifier: i.shift_modifier,

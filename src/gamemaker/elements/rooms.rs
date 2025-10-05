@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use std::cmp::min;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
@@ -28,12 +29,12 @@ impl GMChunkElement for GMRooms {
     }
 }
 impl GMElement for GMRooms {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let rooms: Vec<GMRoom> = reader.read_pointer_list()?;
         Ok(Self { rooms, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         builder.write_pointer_list(&self.rooms)?;
         Ok(())
@@ -71,37 +72,37 @@ pub struct GMRoom {
     pub sequences: Vec<GMSequence>,
 }
 impl GMElement for GMRoom {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let caption: Option<GMRef<String>> = reader.read_gm_string_opt()?;
-        let width: u32 = reader.read_u32()?;
-        let height: u32 = reader.read_u32()?;
-        let speed: u32 = reader.read_u32()?;
-        let persistent: bool = reader.read_bool32()?;
+        let width = reader.read_u32()?;
+        let height = reader.read_u32()?;
+        let speed = reader.read_u32()?;
+        let persistent = reader.read_bool32()?;
         let background_color: u32 = reader.read_u32()? | 0xFF000000;   // make alpha 255 (background color doesn't have transparency)
-        let draw_background_color: bool = reader.read_bool32()?;
+        let draw_background_color = reader.read_bool32()?;
         let creation_code: Option<GMRef<GMCode>> = reader.read_resource_by_id_opt()?;
         let flags = GMRoomFlags::deserialize(reader)?;
 
-        let backgrounds_ptr: usize = reader.read_pointer()?;
-        let views_ptr: usize = reader.read_pointer()?;
-        let game_objects_ptr: usize = reader.read_pointer()?;
-        let tiles_ptr: usize = reader.read_pointer()?;
-        let instances_ptr: usize = if reader.general_info.is_version_at_least((2024, 13)) {
-            reader.read_pointer()?
+        let backgrounds_ptr = reader.read_u32()?;
+        let views_ptr = reader.read_u32()?;
+        let game_objects_ptr = reader.read_u32()?;
+        let tiles_ptr = reader.read_u32()?;
+        let instances_ptr = if reader.general_info.is_version_at_least((2024, 13)) {
+            reader.read_u32()?
         } else { 0 };
 
-        let world: bool = reader.read_bool32()?;
-        let top: u32 = reader.read_u32()?;
-        let left: u32 = reader.read_u32()?;
-        let right: u32 = reader.read_u32()?;
-        let bottom: u32 = reader.read_u32()?;
-        let gravity_x: f32 = reader.read_f32()?;
-        let gravity_y: f32 = reader.read_f32()?;
-        let meters_per_pixel: f32 = reader.read_f32()?;
+        let world = reader.read_bool32()?;
+        let top = reader.read_u32()?;
+        let left = reader.read_u32()?;
+        let right = reader.read_u32()?;
+        let bottom = reader.read_u32()?;
+        let gravity_x = reader.read_f32()?;
+        let gravity_y = reader.read_f32()?;
+        let meters_per_pixel = reader.read_f32()?;
 
-        let layers_ptr: usize = reader.deserialize_if_gm_version((2, 0))?.unwrap_or(0);
-        let sequences_ptr: usize = reader.deserialize_if_gm_version((2, 3))?.unwrap_or(0);
+        let layers_ptr: u32 = reader.deserialize_if_gm_version((2, 0))?.unwrap_or(0);
+        let sequences_ptr: u32 = reader.deserialize_if_gm_version((2, 3))?.unwrap_or(0);
 
         reader.assert_pos(backgrounds_ptr, "Room Backgrounds")?;
         let backgrounds: Vec<GMRoomBackground> = reader.read_pointer_list()?;
@@ -159,7 +160,7 @@ impl GMElement for GMRoom {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         builder.write_gm_string_opt(&self.caption)?;
         builder.write_u32(self.width);
@@ -225,8 +226,8 @@ pub struct GMRoomFlags {
     pub is_gms2_3: bool,                    // room was made in GameMaker: Studio 2.3
 }
 impl GMElement for GMRoomFlags {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let raw: u32 = reader.read_u32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let raw = reader.read_u32()?;
         Ok(GMRoomFlags {
             enable_views: 0 != raw & 1,
             show_color: 0 != raw & 2,
@@ -236,7 +237,7 @@ impl GMElement for GMRoomFlags {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let mut raw: u32 = 0;
 
         if self.enable_views { raw |= 1 };
@@ -269,20 +270,20 @@ pub struct GMRoomView {
     pub object: Option<GMRef<GMGameObject>>,
 }
 impl GMElement for GMRoomView {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let enabled: bool = reader.read_bool32()?;
-        let view_x: i32 = reader.read_i32()?;
-        let view_y: i32 = reader.read_i32()?;
-        let view_width: i32 = reader.read_i32()?;
-        let view_height: i32 = reader.read_i32()?;
-        let port_x: i32 = reader.read_i32()?;
-        let port_y: i32 = reader.read_i32()?;
-        let port_width: i32 = reader.read_i32()?;
-        let port_height: i32 = reader.read_i32()?;
-        let border_x: u32 = reader.read_u32()?;
-        let border_y: u32 = reader.read_u32()?;
-        let speed_x: i32 = reader.read_i32()?;
-        let speed_y: i32 = reader.read_i32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let enabled = reader.read_bool32()?;
+        let view_x = reader.read_i32()?;
+        let view_y = reader.read_i32()?;
+        let view_width = reader.read_i32()?;
+        let view_height = reader.read_i32()?;
+        let port_x = reader.read_i32()?;
+        let port_y = reader.read_i32()?;
+        let port_width = reader.read_i32()?;
+        let port_height = reader.read_i32()?;
+        let border_x = reader.read_u32()?;
+        let border_y = reader.read_u32()?;
+        let speed_x = reader.read_i32()?;
+        let speed_y = reader.read_i32()?;
         let object: Option<GMRef<GMGameObject>> = reader.read_resource_by_id_opt()?;
 
         Ok(GMRoomView {
@@ -303,7 +304,7 @@ impl GMElement for GMRoomView {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_bool32(self.enabled);
         builder.write_i32(self.view_x);
         builder.write_i32(self.view_y);
@@ -337,22 +338,22 @@ pub struct GMRoomBackground {
     pub stretch: bool,
 }
 impl GMElement for GMRoomBackground {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let enabled: bool = reader.read_bool32()?;
-        let foreground: bool = reader.read_bool32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let enabled = reader.read_bool32()?;
+        let foreground = reader.read_bool32()?;
         let background_definition: Option<GMRef<GMBackground>> = reader.read_resource_by_id_opt()?;
-        let x: i32 = reader.read_i32()?;
-        let y: i32 = reader.read_i32()?;
-        let tile_x: i32 = reader.read_i32()?;    // idk if this should be an int instead of a bool
-        let tile_y: i32 = reader.read_i32()?;    // ^
-        let speed_x: i32 = reader.read_i32()?;
-        let speed_y: i32 = reader.read_i32()?;
-        let stretch: bool = reader.read_bool32()?;
+        let x = reader.read_i32()?;
+        let y = reader.read_i32()?;
+        let tile_x = reader.read_i32()?;    // idk if this should be an int instead of a bool
+        let tile_y = reader.read_i32()?;    // ^
+        let speed_x = reader.read_i32()?;
+        let speed_y = reader.read_i32()?;
+        let stretch = reader.read_bool32()?;
 
         Ok(GMRoomBackground { enabled, foreground, background_definition, x, y, tile_x, tile_y, speed_x, speed_y, stretch })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_bool32(self.enabled);
         builder.write_bool32(self.foreground);
         builder.write_resource_id_opt(&self.background_definition);
@@ -385,27 +386,27 @@ pub struct GMRoomTile {
     pub color: u32,
 }
 impl GMElement for GMRoomTile {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let x: i32 = reader.read_i32()?;
-        let y: i32 = reader.read_i32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let x = reader.read_i32()?;
+        let y = reader.read_i32()?;
         let texture: Option<GMRoomTileTexture> = if reader.general_info.is_version_at_least((2, 0)) {
             reader.read_resource_by_id_opt()?.map(GMRoomTileTexture::Sprite)
         } else {
             reader.read_resource_by_id_opt()?.map(GMRoomTileTexture::Background)
         };
-        let source_x: u32 = reader.read_u32()?;
-        let source_y: u32 = reader.read_u32()?;
-        let width: u32 = reader.read_u32()?;
-        let height: u32 = reader.read_u32()?;
-        let tile_depth: i32 = reader.read_i32()?;
-        let instance_id: u32 = reader.read_u32()?;
-        let scale_x: f32 = reader.read_f32()?;
-        let scale_y: f32 = reader.read_f32()?;
-        let color: u32 = reader.read_u32()?;
+        let source_x = reader.read_u32()?;
+        let source_y = reader.read_u32()?;
+        let width = reader.read_u32()?;
+        let height = reader.read_u32()?;
+        let tile_depth = reader.read_i32()?;
+        let instance_id = reader.read_u32()?;
+        let scale_x = reader.read_f32()?;
+        let scale_y = reader.read_f32()?;
+        let color = reader.read_u32()?;
         Ok(GMRoomTile { x, y, texture, source_x, source_y, width, height, tile_depth, instance_id, scale_x, scale_y, color })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(self.x);
         builder.write_i32(self.y);
         // TODO this is going to cause mod compatibility issues
@@ -413,10 +414,10 @@ impl GMElement for GMRoomTile {
             Some(GMRoomTileTexture::Sprite(sprite_ref)) => if builder.is_gm_version_at_least((2, 0)) {
                 builder.write_resource_id(&sprite_ref)
             } else {
-                return Err("Room tile texture should be a Background reference before GMS2; not a Sprite reference".to_string())
+                bail!("Room tile texture should be a Background reference before GMS2; not a Sprite reference");
             }
             Some(GMRoomTileTexture::Background(background_ref)) => if builder.is_gm_version_at_least((2, 0)) {
-                return Err("Room tile texture should be a Sprite reference in GMS2+; not a Background reference".to_string())
+                bail!("Room tile texture should be a Sprite reference in GMS2+; not a Background reference");
             } else {
                 builder.write_resource_id(&background_ref)
             }
@@ -458,16 +459,16 @@ pub struct GMRoomLayer {
     pub data: GMRoomLayerData,
 }
 impl GMElement for GMRoomLayer {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let layer_name: GMRef<String> = reader.read_gm_string()?;
-        let layer_id: u32 = reader.read_u32()?;
+        let layer_id = reader.read_u32()?;
         let layer_type: GMRoomLayerType = num_enum_from(reader.read_u32()?)?;
-        let layer_depth: i32 = reader.read_i32()?;
-        let x_offset: f32 = reader.read_f32()?;
-        let y_offset: f32 = reader.read_f32()?;
-        let horizontal_speed: f32 = reader.read_f32()?;
-        let vertical_speed: f32 = reader.read_f32()?;
-        let is_visible: bool = reader.read_bool32()?;
+        let layer_depth = reader.read_i32()?;
+        let x_offset = reader.read_f32()?;
+        let y_offset = reader.read_f32()?;
+        let horizontal_speed = reader.read_f32()?;
+        let vertical_speed = reader.read_f32()?;
+        let is_visible = reader.read_bool32()?;
         let effect_data_2022_1: Option<GMRoomLayer2022_1> = reader.deserialize_if_gm_version((2022, 1))?;
 
         let data: GMRoomLayerData = match layer_type {
@@ -478,7 +479,7 @@ impl GMElement for GMRoomLayer {
             GMRoomLayerType::Tiles => GMRoomLayerData::Tiles(GMRoomLayerDataTiles::deserialize(reader)?),
             GMRoomLayerType::Effect => if reader.general_info.is_version_at_least((2022, 1)) {
                 let effect_type: GMRef<String> = effect_data_2022_1.as_ref().unwrap().effect_type
-                    .ok_or("Effect Type not set for Room Layer 2022.1+ (this error could be a mistake)")?;
+                    .context("Effect Type not set for Room Layer 2022.1+ (this error could be a mistake)")?;
                 let properties: Vec<GMRoomLayerEffectProperty> = effect_data_2022_1.as_ref().unwrap().effect_properties.clone();
                 GMRoomLayerData::Effect(GMRoomLayerDataEffect { effect_type, properties })
             } else {
@@ -501,7 +502,7 @@ impl GMElement for GMRoomLayer {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.layer_name)?;
         builder.write_u32(self.layer_id);
         builder.write_u32(self.layer_type.into());
@@ -534,14 +535,14 @@ pub struct GMRoomLayer2022_1 {
     pub effect_properties: Vec<GMRoomLayerEffectProperty>,
 }
 impl GMElement for GMRoomLayer2022_1 {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let effect_enabled: bool = reader.read_bool32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let effect_enabled = reader.read_bool32()?;
         let effect_type: Option<GMRef<String>> = reader.read_gm_string_opt()?;
         let effect_properties: Vec<GMRoomLayerEffectProperty> = reader.read_simple_list()?;
         Ok(GMRoomLayer2022_1 { effect_enabled, effect_type, effect_properties })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_bool32(self.effect_enabled);
         builder.write_gm_string_opt(&self.effect_type)?;
         builder.write_simple_list(&self.effect_properties)?;
@@ -557,14 +558,14 @@ pub struct GMRoomLayerEffectProperty {
     pub value: GMRef<String>,
 }
 impl GMElement for GMRoomLayerEffectProperty {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let kind: GMRoomLayerEffectPropertyType = num_enum_from(reader.read_i32()?)?;
         let name: GMRef<String> = reader.read_gm_string()?;
         let value: GMRef<String> = reader.read_gm_string()?;
         Ok(GMRoomLayerEffectProperty { kind, name, value })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(self.kind.into());
         builder.write_gm_string(&self.name)?;
         builder.write_gm_string(&self.value)?;
@@ -610,12 +611,12 @@ pub struct GMRoomLayerDataInstances {
     pub instances: Vec<u32>,
 }
 impl GMElement for GMRoomLayerDataInstances {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let instances: Vec<u32> = reader.read_simple_list()?;
         Ok(GMRoomLayerDataInstances { instances })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_simple_list(&self.instances)?;
         Ok(())
     }
@@ -630,10 +631,10 @@ pub struct GMRoomLayerDataTiles {
     pub height: usize,
 }
 impl GMElement for GMRoomLayerDataTiles {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let background: GMRef<GMBackground> = reader.read_resource_by_id()?;
-        let width: usize = reader.read_usize()?;
-        let height: usize = reader.read_usize()?;
+        let width = reader.read_usize()?;
+        let height = reader.read_usize()?;
         let mut tile_data: Vec<u32> = vec_with_capacity(width * height)?;
 
         if reader.general_info.is_version_at_least((2024, 2)) {
@@ -649,7 +650,7 @@ impl GMElement for GMRoomLayerDataTiles {
         Ok(GMRoomLayerDataTiles { background, tile_data, width, height })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_resource_id(&self.background);
         builder.write_usize(self.width)?;
         builder.write_usize(self.height)?;
@@ -664,18 +665,18 @@ impl GMElement for GMRoomLayerDataTiles {
     }
 }
 impl GMRoomLayerDataTiles {
-    fn read_compressed_tile_data(reader: &mut DataReader, tile_data: &mut Vec<u32>) -> Result<(), String> {
+    fn read_compressed_tile_data(reader: &mut DataReader, tile_data: &mut Vec<u32>) -> Result<()> {
         let total_size: usize = tile_data.capacity();
         if total_size == 0 {
             return Ok(())
         }
 
         'outer: loop {
-            let length: u8 = reader.read_u8()?;
+            let length = reader.read_u8()?;
             if length >= 128 {
                 // repeat run
                 let run_length: u8 = (length & 0x7F) + 1;
-                let tile: u32 = reader.read_u32()?;
+                let tile = reader.read_u32()?;
                 for _ in 0..run_length {
                     tile_data.push(tile);
                     if tile_data.len() >= total_size {
@@ -685,7 +686,7 @@ impl GMRoomLayerDataTiles {
             } else {
                 // verbatim run
                 for _ in 0..length {
-                    let tile: u32 = reader.read_u32()?;
+                    let tile = reader.read_u32()?;
                     tile_data.push(tile);
                     if tile_data.len() >= total_size {
                         break 'outer
@@ -706,15 +707,15 @@ impl GMRoomLayerDataTiles {
             false   // no tiles => no padding (should never happen though?)
         };
         if has_padding {
-            let length: u8 = reader.read_u8()?;
-            let tile: u32 = reader.read_u32()?;
+            let length = reader.read_u8()?;
+            let tile = reader.read_u32()?;
 
             // sanity check: run of 2 empty tiles
             if length != 0x81 {
-                return Err(format!("Expected 0x81 for run length of compressed tile data padding; got 0x{length:02X}"))
+                bail!("Expected 0x81 for run length of compressed tile data padding; got 0x{length:02X}");
             }
             if tile != u32::MAX {
-                return Err(format!("Expected -1 for tile of compressed tile data padding; got 0x{length:02X}"))
+                bail!("Expected -1 for tile of compressed tile data padding; got 0x{length:02X}");
             }
         }
 
@@ -724,7 +725,7 @@ impl GMRoomLayerDataTiles {
         Ok(())
     }
 
-    fn build_compressed_tile_data(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn build_compressed_tile_data(&self, builder: &mut DataBuilder) -> Result<()> {
         let tile_count: usize = self.tile_data.len();
         if tile_count == 0 {
             return Ok(())
@@ -815,18 +816,17 @@ pub struct GMRoomLayerDataBackground {
     pub animation_speed_type: GMAnimSpeedType,
 }
 impl GMElement for GMRoomLayerDataBackground {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let visible: bool = reader.read_bool32()?;
-        let foreground: bool = reader.read_bool32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let visible = reader.read_bool32()?;
+        let foreground = reader.read_bool32()?;
         let sprite: Option<GMRef<GMSprite>> = reader.read_resource_by_id_opt()?;
-        let tiled_horizontally: bool = reader.read_bool32()?;
-        let tiled_vertically: bool = reader.read_bool32()?;
-        let stretch: bool = reader.read_bool32()?;
-        let color: u32 = reader.read_u32()?;
-        let first_frame: f32 = reader.read_f32()?;
-        let animation_speed: f32 = reader.read_f32()?;
-        let animation_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)
-            .map_err(|e| format!("{e} while parsing Room Background Layer"))?;
+        let tiled_horizontally = reader.read_bool32()?;
+        let tiled_vertically = reader.read_bool32()?;
+        let stretch = reader.read_bool32()?;
+        let color = reader.read_u32()?;
+        let first_frame = reader.read_f32()?;
+        let animation_speed = reader.read_f32()?;
+        let animation_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)?;
 
         Ok(GMRoomLayerDataBackground {
             visible,
@@ -842,7 +842,7 @@ impl GMElement for GMRoomLayerDataBackground {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_bool32(self.visible);
         builder.write_bool32(self.foreground);
         builder.write_resource_id_opt(&self.sprite);
@@ -868,24 +868,24 @@ pub struct GMRoomLayerDataAssets {
     pub text_items: Vec<GMTextItemInstance>,
 }
 impl GMElement for GMRoomLayerDataAssets {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let legacy_tiles_pointer: usize = reader.read_usize()?;
-        let sprites_pointer: usize = reader.read_usize()?;
-        let mut sequences_pointer: usize = 0;
-        let mut nine_slices_pointer: usize = 0;
-        let mut particle_systems_pointer: usize = 0;
-        let mut text_items_pointer: usize = 0;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let legacy_tiles_pointer = reader.read_u32()?;
+        let sprites_pointer = reader.read_u32()?;
+        let mut sequences_pointer: u32 = 0;
+        let mut nine_slices_pointer: u32 = 0;
+        let mut particle_systems_pointer: u32 = 0;
+        let mut text_items_pointer: u32 = 0;
 
         if reader.general_info.is_version_at_least((2, 3)) {
-            sequences_pointer = reader.read_usize()?;
+            sequences_pointer = reader.read_u32()?;
             if !reader.general_info.is_version_at_least((2, 3, 2)) {
-                nine_slices_pointer = reader.read_usize()?;
+                nine_slices_pointer = reader.read_u32()?;
             }
             if reader.general_info.is_version_at_least((2023, 2, LTSBranch::PostLTS)) {
-                particle_systems_pointer = reader.read_usize()?;
+                particle_systems_pointer = reader.read_u32()?;
             }
             if reader.general_info.is_version_at_least((2024, 6)) {
-                text_items_pointer = reader.read_usize()?;
+                text_items_pointer = reader.read_u32()?;
             }
         }
 
@@ -922,7 +922,7 @@ impl GMElement for GMRoomLayerDataAssets {
         Ok(GMRoomLayerDataAssets { legacy_tiles, sprites, sequences, nine_slices, particle_systems, text_items })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_pointer(&self.legacy_tiles)?;
         builder.write_pointer(&self.sprites)?;
         
@@ -973,14 +973,14 @@ pub struct GMRoomLayerDataEffect {
     pub properties: Vec<GMRoomLayerEffectProperty>,
 }
 impl GMElement for GMRoomLayerDataEffect {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         // {~~} dont serialize_old if >= 2022.1??
         let effect_type: GMRef<String> = reader.read_gm_string()?;
         let properties: Vec<GMRoomLayerEffectProperty> = reader.read_simple_list()?;
         Ok(GMRoomLayerDataEffect { effect_type, properties })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.effect_type)?;
         builder.write_simple_list(&self.properties)?;
         Ok(())
@@ -1003,23 +1003,22 @@ pub struct GMSpriteInstance {
     pub rotation: f32,
 }
 impl GMElement for GMSpriteInstance {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let sprite: GMRef<GMSprite> = reader.read_resource_by_id()?;
-        let x: i32 = reader.read_i32()?;
-        let y: i32 = reader.read_i32()?;
-        let scale_x: f32 = reader.read_f32()?;
-        let scale_y: f32 = reader.read_f32()?;
-        let color: u32 = reader.read_u32()?;
-        let animation_speed: f32 = reader.read_f32()?;
-        let animation_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)
-            .map_err(|e| format!("{e} while parsing Room Assets Layer Sprite Instance"))?;
-        let frame_index: f32 = reader.read_f32()?;
-        let rotation: f32 = reader.read_f32()?;
+        let x = reader.read_i32()?;
+        let y = reader.read_i32()?;
+        let scale_x = reader.read_f32()?;
+        let scale_y = reader.read_f32()?;
+        let color = reader.read_u32()?;
+        let animation_speed = reader.read_f32()?;
+        let animation_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)?;
+        let frame_index = reader.read_f32()?;
+        let rotation = reader.read_f32()?;
         Ok(GMSpriteInstance { name, sprite, x, y, scale_x, scale_y, color, animation_speed, animation_speed_type, frame_index, rotation })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         builder.write_resource_id(&self.sprite);
         builder.write_i32(self.x);
@@ -1051,23 +1050,22 @@ pub struct GMSequenceInstance {
     pub rotation: f32,
 }
 impl GMElement for GMSequenceInstance {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let sequence: GMRef<GMSequence> = reader.read_resource_by_id()?;
-        let x: i32 = reader.read_i32()?;
-        let y: i32 = reader.read_i32()?;
-        let scale_x: f32 = reader.read_f32()?;
-        let scale_y: f32 = reader.read_f32()?;
-        let color: u32 = reader.read_u32()?;
-        let animation_speed: f32 = reader.read_f32()?;
-        let animation_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)
-            .map_err(|e| format!("{e} while parsing Room Assets Layer Sequence Instance"))?;
-        let frame_index: f32 = reader.read_f32()?;
-        let rotation: f32 = reader.read_f32()?;
+        let x = reader.read_i32()?;
+        let y = reader.read_i32()?;
+        let scale_x = reader.read_f32()?;
+        let scale_y = reader.read_f32()?;
+        let color = reader.read_u32()?;
+        let animation_speed = reader.read_f32()?;
+        let animation_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)?;
+        let frame_index = reader.read_f32()?;
+        let rotation = reader.read_f32()?;
         Ok(GMSequenceInstance { name, sequence, x, y, scale_x, scale_y, color, animation_speed, animation_speed_type, frame_index, rotation })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         builder.write_resource_id(&self.sequence);
         builder.write_i32(self.x);
@@ -1096,19 +1094,19 @@ pub struct GMParticleSystemInstance {
     pub rotation: f32,
 }
 impl GMElement for GMParticleSystemInstance {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let particle_system: GMRef<GMParticleSystem> = reader.read_resource_by_id()?;
-        let x: i32 = reader.read_i32()?;
-        let y: i32 = reader.read_i32()?;
-        let scale_x: f32 = reader.read_f32()?;
-        let scale_y: f32 = reader.read_f32()?;
-        let color: u32 = reader.read_u32()?;
-        let rotation: f32 = reader.read_f32()?;
+        let x = reader.read_i32()?;
+        let y = reader.read_i32()?;
+        let scale_x = reader.read_f32()?;
+        let scale_y = reader.read_f32()?;
+        let color = reader.read_u32()?;
+        let rotation = reader.read_f32()?;
         Ok(GMParticleSystemInstance { name, particle_system, x, y, scale_x, scale_y, color, rotation })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         builder.write_resource_id(&self.particle_system);
         builder.write_i32(self.x);
@@ -1143,24 +1141,24 @@ pub struct GMTextItemInstance {
     pub wrap: bool,
 }
 impl GMElement for GMTextItemInstance {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let x: i32 = reader.read_i32()?;
-        let y: i32 = reader.read_i32()?;
+        let x = reader.read_i32()?;
+        let y = reader.read_i32()?;
         let font: GMRef<GMFont> = reader.read_resource_by_id()?;
-        let scale_x: f32 = reader.read_f32()?;
-        let scale_y: f32 = reader.read_f32()?;
-        let rotation: f32 = reader.read_f32()?;
-        let color: u32 = reader.read_u32()?;
-        let origin_x: f32 = reader.read_f32()?;
-        let origin_y: f32 = reader.read_f32()?;
+        let scale_x = reader.read_f32()?;
+        let scale_y = reader.read_f32()?;
+        let rotation = reader.read_f32()?;
+        let color = reader.read_u32()?;
+        let origin_x = reader.read_f32()?;
+        let origin_y = reader.read_f32()?;
         let text: GMRef<String> = reader.read_gm_string()?;
-        let alignment: i32 = reader.read_i32()?;
-        let character_spacing: f32 = reader.read_f32()?;
-        let line_spacing: f32 = reader.read_f32()?;
-        let frame_width: f32 = reader.read_f32()?;
-        let frame_height: f32 = reader.read_f32()?;
-        let wrap: bool = reader.read_bool32()?;
+        let alignment = reader.read_i32()?;
+        let character_spacing = reader.read_f32()?;
+        let line_spacing = reader.read_f32()?;
+        let frame_width = reader.read_f32()?;
+        let frame_height = reader.read_f32()?;
+        let wrap = reader.read_bool32()?;
 
         Ok(GMTextItemInstance {
             name,
@@ -1183,7 +1181,7 @@ impl GMElement for GMTextItemInstance {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         builder.write_i32(self.x);
         builder.write_i32(self.y);
@@ -1216,28 +1214,28 @@ pub struct GMRoomGameObject {
     pub scale_x: f32,
     pub scale_y: f32,
     pub image_speed: Option<f32>,
-    pub image_index: Option<usize>,
+    pub image_index: Option<u32>,
     pub color: u32,
     pub rotation: f32,
     pub pre_create_code: Option<GMRef<GMCode>>,
 }
 impl GMElement for GMRoomGameObject {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let x: i32 = reader.read_i32()?;
-        let y: i32 = reader.read_i32()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let x = reader.read_i32()?;
+        let y = reader.read_i32()?;
         let object_definition: GMRef<GMGameObject> = reader.read_resource_by_id()?;
-        let instance_id: u32 = reader.read_u32()?;
+        let instance_id = reader.read_u32()?;
         let creation_code: Option<GMRef<GMCode>> = reader.read_resource_by_id_opt()?;
-        let scale_x: f32 = reader.read_f32()?;
-        let scale_y: f32 = reader.read_f32()?;
+        let scale_x = reader.read_f32()?;
+        let scale_y = reader.read_f32()?;
         let mut image_speed: Option<f32> = None;
-        let mut image_index: Option<usize> = None;
+        let mut image_index: Option<u32> = None;
         if reader.general_info.is_version_at_least((2, 2, 2, 302)) {
             image_speed = Some(reader.read_f32()?);
-            image_index = Some(reader.read_usize()?);
+            image_index = Some(reader.read_u32()?);
         }
-        let color: u32 = reader.read_u32()?;
-        let rotation: f32 = reader.read_f32()?;   // {~~} FloatAsInt (negative zero handling stuff)
+        let color = reader.read_u32()?;
+        let rotation = reader.read_f32()?;   // {~~} FloatAsInt (negative zero handling stuff)
 
         // [From UndertaleModTool] "is that dependent on bytecode or something else?"
         let pre_create_code: Option<GMRef<GMCode>> = if reader.general_info.bytecode_version >= 16 {
@@ -1262,7 +1260,7 @@ impl GMElement for GMRoomGameObject {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(self.x);
         builder.write_i32(self.y);
         builder.write_resource_id(&self.object_definition);

@@ -46,8 +46,8 @@ impl<I, E> Ord for DataChange<I, E> {
 #[derive(Debug, Clone)]
 struct MyDiffEngine<'a, GM, I, E, FI, FE>
 where
-    FI: Fn(&GM) -> Result<I, String>,
-    FE: Fn(&GM, &GM) -> Result<E, String>,
+    FI: Fn(&GM) -> Result<I>,
+    FE: Fn(&GM, &GM) -> Result<E>,
 {
     original_data: &'a [GM],
     modified_data: &'a [GM],
@@ -58,8 +58,8 @@ where
 
 impl<'a, GM, I, E, FI, FE> MyDiffEngine<'a, GM, I, E, FI, FE>
 where
-    FI: Fn(&GM) -> Result<I, String>,
-    FE: Fn(&GM, &GM) -> Result<E, String>,
+    FI: Fn(&GM) -> Result<I>,
+    FE: Fn(&GM, &GM) -> Result<E>,
 {
     fn new(original_data: &'a [GM], modified_data: &'a [GM], map_edit: FE, map_insert: FI) -> Self {
         Self {
@@ -74,8 +74,8 @@ where
 
 impl<GM: Clone, I, E, FI, FE> diffs::Diff for MyDiffEngine<'_, GM, I, E, FI, FE>
 where
-    FI: Fn(&GM) -> Result<I, String>,
-    FE: Fn(&GM, &GM) -> Result<E, String>,
+    FI: Fn(&GM) -> Result<I>,
+    FE: Fn(&GM, &GM) -> Result<E>,
 {
     type Error = String;
 
@@ -95,7 +95,7 @@ where
         let mut insertions: Vec<I> = Vec::with_capacity(len);
         for gm_element in &self.modified_data[new_start.. new_start+len] {
             let acorn_element: I = (self.map_insert)(gm_element)
-                .map_err(|e| format!("{e}\n↳ while mapping {} insertions in list of {}s", len, typename::<GM>()))?;
+                .with_context(|| format!("mapping {} insertions in list of {}s", len, typename::<GM>()))?;
             insertions.push(acorn_element);
         }
 
@@ -112,7 +112,7 @@ where
 
     fn replace(&mut self, old_start: usize, old_len: usize, new_start: usize, new_len: usize) -> Result<(), Self::Error> {
         if old_len != new_len {
-            return Err(format!("Old length is {old_len} but new length is {new_len} while handling myers replacement; report this error"))
+            bail!("Old length is {old_len} but new length is {new_len} while handling myers replacement; report this error");
         }
 
         let old_data: &[GM] = &self.original_data[old_start .. old_start+old_len];
@@ -121,7 +121,7 @@ where
         let mut edits: Vec<E> = Vec::with_capacity(new_len);
         for (old, new) in zip(old_data, new_data) {
             let edit: E = (self.map_edit)(old, new)
-                .map_err(|e| format!("{e}\n↳ while mapping {} edits in list of {}s", new_len-new_start, typename::<GM>()))?;
+                .with_context(|| format!("mapping {} edits in list of {}s", new_len-new_start, typename::<GM>()))?;
             edits.push(edit);
         }
 
@@ -137,8 +137,8 @@ where
 
 impl<GM, I, E, FI, FE> MyDiffEngine<'_, GM, I, E, FI, FE>
 where
-    FI: Fn(&GM) -> Result<I, String>,
-    FE: Fn(&GM, &GM) -> Result<E, String>,
+    FI: Fn(&GM) -> Result<I>,
+    FE: Fn(&GM, &GM) -> Result<E>,
 {
     fn get_last_change(&mut self) -> Option<&mut DataChange<I, E>> {
         let last_index: usize = match self.changes.len().checked_sub(1) {
@@ -157,14 +157,14 @@ pub fn export_changes_ordered_list<GM: PartialEq + Clone, I, E, FI, FE>(
     map_edit: FE,
 ) -> Result<Vec<DataChange<I, E>>, String>
 where
-    FI: Fn(&GM) -> Result<I, String>,
-    FE: Fn(&GM, &GM) -> Result<E, String>,
+    FI: Fn(&GM) -> Result<I>,
+    FE: Fn(&GM, &GM) -> Result<E>,
 {
     let mut engine: MyDiffEngine<GM, I, E, FI, FE> = MyDiffEngine::new(original_data, modified_data, map_edit, map_insert);
 
     // {..} slow operation
     diffs::myers::diff(&mut engine, original_data, 0, original_data.len(), modified_data, 0, modified_data.len())
-        .map_err(|e| format!("Error while generating diffs: {e}"))?;
+        .with_context(|| format!("Error while generating diffs: {e}"))?;
 
     Ok(engine.changes)
 }
@@ -190,10 +190,10 @@ pub fn apply_changes_ordered_list<GM, I, E, FI, FE>(
     changes: &mut Vec<DataChange<I, E>>,
     map_insert: FI,
     map_edit: FE,
-) -> Result<(), String>
+) -> Result<()>
 where
-    FI: Fn(&I) -> Result<GM, String>,
-    FE: Fn(&GM, &E) -> Result<GM, String>,
+    FI: Fn(&I) -> Result<GM>,
+    FE: Fn(&GM, &E) -> Result<GM>,
 {
     changes.sort_by(|a, b| a.cmp(b));
 
@@ -211,7 +211,7 @@ where
             DataChange::Insert(index, insertions) => {
                 for (i, insertion) in insertions.iter().enumerate() {
                     if *index + i > data_list.len() {
-                        return Err(format!("Trying to insert element out of bounds: {} > {}", *index + insertions.len(), data_list.len()))?
+                        bail!("Trying to insert element out of bounds: {} > {}", *index + insertions.len(), data_list.len()))?
                     }
                     data_list.insert(*index + i, map_insert(insertion)?);
                 }
@@ -219,7 +219,7 @@ where
 
             DataChange::Delete(index, length) => {
                 if *index + *length > data_list.len() {
-                    return Err(format!("Trying to delete elements out of bounds: {} > {}", *index + *length, data_list.len()))?
+                    bail!("Trying to delete elements out of bounds: {} > {}", *index + *length, data_list.len()))?
                 }
                 data_list.drain(*index .. *index + *length);
             }

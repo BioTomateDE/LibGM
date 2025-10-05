@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
@@ -24,10 +25,10 @@ impl GMChunkElement for GMLanguageInfo {
     }
 }
 impl GMElement for GMLanguageInfo {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
-        let unknown1: u32 = reader.read_u32()?;
-        let language_count: usize = reader.read_usize()?;
-        let entry_count: usize = reader.read_usize()?;
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let unknown1 = reader.read_u32()?;
+        let language_count = reader.read_usize()?;
+        let entry_count = reader.read_usize()?;
 
         let mut entry_ids: Vec<GMRef<String>> = vec_with_capacity(entry_count)?;
         for _ in 0..entry_count {
@@ -48,7 +49,7 @@ impl GMElement for GMLanguageInfo {
         Ok(GMLanguageInfo { unknown1, languages, entry_ids, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         builder.write_u32(self.unknown1);
         builder.write_usize(self.languages.len())?;

@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use std::collections::HashMap;
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
@@ -48,47 +49,44 @@ impl<'a, T> GMRef<T> {
     /// # Errors
     /// Returns an error if `self.index` is out of bounds for the provided vector.
     ///
-    pub fn resolve(&self, elements_by_index: &'a Vec<T>) -> Result<&'a T, String> {
-        elements_by_index.get(self.index as usize)
-            .ok_or_else(|| format!(
-                "Could not resolve {} reference with index {} in list with length {}",
-                std::any::type_name::<T>(),
-                self.index,
-                elements_by_index.len(),
-            ))
+    pub fn resolve(&self, elements_by_index: &'a Vec<T>) -> Result<&'a T> {
+        elements_by_index.get(self.index as usize).with_context(|| format!(
+            "Could not resolve {} reference with index {} in list with length {}",
+            typename::<T>(), self.index, elements_by_index.len(),
+        ))
     }
 }
 
 
 impl DataReader<'_> {
     /// Read a standard GameMaker string reference.
-    pub fn read_gm_string(&mut self) -> Result<GMRef<String>, String> {
-        let occurrence_position: usize = self.read_usize()?;
+    pub fn read_gm_string(&mut self) -> Result<GMRef<String>> {
+        let occurrence_position = self.read_u32()?;
         resolve_occurrence(occurrence_position, &self.string_occurrence_map, &self.chunk.name, self.cur_pos)
     }
 
-    pub fn read_gm_texture(&mut self) -> Result<GMRef<GMTexturePageItem>, String> {
-        let occurrence_position: usize = self.read_usize()?;
+    pub fn read_gm_texture(&mut self) -> Result<GMRef<GMTexturePageItem>> {
+        let occurrence_position = self.read_u32()?;
         resolve_occurrence(occurrence_position, &self.texture_page_item_occurrence_map, &self.chunk.name, self.cur_pos)
     }
 
-    pub fn read_gm_string_opt(&mut self) -> Result<Option<GMRef<String>>, String> {
-        let occurrence_position: usize = self.read_usize()?;
+    pub fn read_gm_string_opt(&mut self) -> Result<Option<GMRef<String>>> {
+        let occurrence_position = self.read_u32()?;
         if occurrence_position == 0 {
             return Ok(None)
         }
         Ok(Some(resolve_occurrence(occurrence_position, &self.string_occurrence_map, &self.chunk.name, self.cur_pos)?))
     }
 
-    pub fn read_gm_texture_opt(&mut self) -> Result<Option<GMRef<GMTexturePageItem>>, String> {
-        let occurrence_position: usize = self.read_usize()?;
+    pub fn read_gm_texture_opt(&mut self) -> Result<Option<GMRef<GMTexturePageItem>>> {
+        let occurrence_position = self.read_u32()?;
         if occurrence_position == 0 {
             return Ok(None)
         }
         Ok(Some(resolve_occurrence(occurrence_position, &self.texture_page_item_occurrence_map, &self.chunk.name, self.cur_pos)?))
     }
 
-    pub fn resolve_gm_str(&self, string_ref: GMRef<String>) -> Result<&String, String> {
+    pub fn resolve_gm_str(&self, string_ref: GMRef<String>) -> Result<&String> {
         string_ref.resolve(&self.strings.strings)
     }
 
@@ -96,41 +94,49 @@ impl DataReader<'_> {
         string_ref.display(&self.strings)
     }
 
-    pub fn read_resource_by_id<T>(&mut self) -> Result<GMRef<T>, String> {
-        Ok(GMRef::new(self.read_u32()?))
+    pub fn read_resource_by_id<T>(&mut self) -> Result<GMRef<T>> {
+        const CTX: &str = "reaading resource by ID";
+        let number = self.read_u32().context(CTX)?;
+        self.check_resource_limit(number).context(CTX)?;
+        Ok(GMRef::new(number))
     }
 
-    pub fn read_resource_by_id_opt<T>(&mut self) -> Result<Option<GMRef<T>>, String> {
-        // TODO: either remove failsafe or also implement it in `read_resource_by_id`
-        const FAILSAFE_COUNT: u32 = 100_000;    // increase limit is not enough
-        let number: i32 = self.read_i32()?;
+    pub fn read_resource_by_id_opt<T>(&mut self) -> Result<Option<GMRef<T>>> {
+        let number = self.read_i32()?;
+        self.resource_opt_from_i32(number)
+    }
+
+    pub fn resource_opt_from_i32<T>(&mut self, number: i32) -> Result<Option<GMRef<T>>> {
+        const CTX: &str = "parsing optional resource by ID";
         if number == -1 {
             return Ok(None)
         }
-        let number: u32 = number.try_into().map_err(|_| format!(
-            "Invalid negative number {number} (0x{number:08X}) while reading optional resource by ID",
-        ))?;
-        if number > FAILSAFE_COUNT {
-            return Err(format!(
-                "Failsafe triggered in chunk '{}' at position {} \
-                while reading optional resource by ID: \
-                Number {} is larger than the failsafe count of {}",
-                self.chunk.name, self.cur_pos - 4, number, FAILSAFE_COUNT,
-            ))
-        }
+        let number: u32 = number.try_into().ok()
+            .with_context(|| format!("Invalid negative number {number} (0x{number:08X})"))
+            .context(CTX)?;
+        self.check_resource_limit(number).context(CTX)?;
         Ok(Some(GMRef::new(number)))
+    }
+
+    fn check_resource_limit(&self, number: u32) -> Result<()> {
+        // Increase limit if not enough
+        const FAILSAFE_COUNT: u32 = 500_000;
+        if number > FAILSAFE_COUNT {
+            bail!("Number {number} exceeds failsafe limit of {FAILSAFE_COUNT}");
+        }
+        Ok(())
     }
 }
 
 
-fn resolve_occurrence<T>(occurrence_position: usize, occurrence_map: &HashMap<usize, GMRef<T>>, chunk_name: &str, position: usize) -> Result<GMRef<T>, String> {
+fn resolve_occurrence<T>(occurrence_position: u32, occurrence_map: &HashMap<u32, GMRef<T>>, chunk_name: &str, position: usize) -> Result<GMRef<T>> {
     match occurrence_map.get(&occurrence_position) {
         Some(gm_ref) => Ok(gm_ref.clone()),
-        None => Err(format!(
+        None => bail!(
             "Could not read {} with absolute position {} in chunk '{}' at position {} \
             because it doesn't exist in the occurrence map (length: {})",
             typename::<T>(), occurrence_position, chunk_name, position, occurrence_map.len(),
-        ))
+        )
     }
 }
 

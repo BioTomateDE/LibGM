@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use std::fmt::{Display, Formatter};
 use std::ops::Neg;
 use std::str::{Chars, FromStr};
@@ -12,7 +13,7 @@ use crate::gamemaker::elements::functions::{GMFunction, GMFunctions};
 use crate::gamemaker::elements::game_objects::GMGameObject;
 use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::variables::{to_vari_instance_type, GMVariable};
-
+use crate::utility::typename;
 
 #[derive(Debug, Clone)]
 pub enum ParseError {
@@ -41,8 +42,7 @@ pub enum ParseError {
     UnmatchedRoundBracket,
     StringIndexUnresolvable(u32),
     VarLocalInvalidIndex(String),
-    VarUnresolvable(String),
-    FuncUnresolvable(String),
+    VarUnresolvable(String), FuncUnresolvable(String),
     GameObjectUnresolvable(String),
     AssetUnresolvable(&'static str, String),
     TooManyTypes,
@@ -51,13 +51,13 @@ pub enum ParseError {
 impl Display for ParseError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ParseError::ExpectedEOL(line) => write!(f, "Expected end of line; found remaining string \"{line}\""),
-            ParseError::ExpectedSpace(line) => write!(f, "Expected space; found remaining string \"{line}\""),
-            ParseError::ExpectedDot(line) => write!(f, "Expected dot; found remaining string \"{line}\""),
-            ParseError::ExpectedString(line) => write!(f, "Expected string literal; found remaining string \"{line}\""),
-            ParseError::ExpectedArgc(line) => write!(f, "Expected argument count of called function; found remaining string \"{line}\""),
-            ParseError::ExpectedIdentifier(line) => write!(f, "Expected identifier; found remaining string \"{line}\""),
-            ParseError::ExpectedTypeCast(line) => write!(f, "Expected type cast; found remaining string \"{line}\""),
+            ParseError::ExpectedEOL(line) => write!(f, "Expected end of line; found remaining string {line:?}"),
+            ParseError::ExpectedSpace(line) => write!(f, "Expected space; found remaining string {line:?}"),
+            ParseError::ExpectedDot(line) => write!(f, "Expected dot; found remaining string {line:?}"),
+            ParseError::ExpectedString(line) => write!(f, "Expected string literal; found remaining string {line:?}"),
+            ParseError::ExpectedArgc(line) => write!(f, "Expected argument count of called function; found remaining string {line:?}"),
+            ParseError::ExpectedIdentifier(line) => write!(f, "Expected identifier; found remaining string {line:?}"),
+            ParseError::ExpectedTypeCast(line) => write!(f, "Expected type cast; found remaining string {line:?}"),
             ParseError::UnexpectedEOL(context) => write!(f, "Unexpected end of line while parsing {context}"),
             ParseError::InvalidTypeCount(expected, actual) => write!(f, "Expected {expected} data types for this opcode; found {actual} types"),
             ParseError::InvalidDataType(char) => write!(f, "Invalid data type character '{char}'"),
@@ -85,7 +85,7 @@ impl Display for ParseError {
 }
 
 
-pub fn assemble_code(assembly: &str, gm_data: &mut GMData) -> Result<Vec<GMInstruction>, String> {
+pub fn assemble_code(assembly: &str, gm_data: &mut GMData) -> Result<Vec<GMInstruction>> {
     let mut instructions: Vec<GMInstruction> = Vec::new();
 
     for line in assembly.lines() {
@@ -95,7 +95,7 @@ pub fn assemble_code(assembly: &str, gm_data: &mut GMData) -> Result<Vec<GMInstr
         }
 
         let instruction: GMInstruction = assemble_instruction(line, gm_data)
-            .map_err(|e| format!("{e}\n↳ while assembling instruction: {line}"))?;
+            .with_context(|| format!("assembling instruction: {line}"))?;
         instructions.push(instruction);
     }
 
@@ -103,7 +103,7 @@ pub fn assemble_code(assembly: &str, gm_data: &mut GMData) -> Result<Vec<GMInstr
 }
 
 
-pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<GMInstruction, ParseError> {
+pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<GMInstruction> {
     let line: &mut &str = &mut line.trim();
     let mnemonic: String;
 
@@ -121,15 +121,15 @@ pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<GMInstru
     let mut types: ArrayVec<GMDataType, 2> = ArrayVec::new();
     while line.chars().next() == Some('.') {
         consume_dot(line)?;
-        let raw_type: char = consume_char(line).ok_or(ParseError::UnexpectedEOL("data type"))?;
+        let raw_type: char = consume_char(line).context("Unexpected EOL when trying to parse instruction data type")?;
         let data_type: GMDataType = data_type_from_char(raw_type)?;
-        types.try_push(data_type).map_err(|_| ParseError::TooManyTypes)?;
+        types.try_push(data_type).context("Opcodes can only have up to two types")?;
     }
 
     match line.chars().next() {
         Some(' ') => { consume_char(line); }
         None => {}
-        _ => return Err(ParseError::ExpectedSpace(line.to_string()))
+        _ => bail!("Expected space; found remaining string {line:?}")
     }
 
     let instruction: GMInstruction = match mnemonic.as_str() {
@@ -179,11 +179,11 @@ pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<GMInstru
         "restorearef" => GMInstruction::RestoreArrayReference,
         "isnullish" => GMInstruction::IsNullishValue,
         "pushref" => GMInstruction::PushReference(parse_asset_reference(gm_data, line)?),
-        _ => return Err(ParseError::InvalidMnemonic(mnemonic.to_string()))
+        _ => bail!("Invalid opcode mnemonic \"{mnemonic}\"")
     };
 
     if !line.is_empty() {
-        return Err(ParseError::ExpectedEOL(line.to_string()))
+        bail!("Expected end of line; found remaining string {line:?}")
     }
 
     Ok(instruction)
@@ -196,21 +196,21 @@ macro_rules! asset_by_name {
         let mut found = None;
         for (i, element) in $gm_data.$typename.$typename.iter().enumerate() {
             let name = element.name.resolve(&$gm_data.strings.strings)
-                .map_err(|_| ParseError::StringIndexUnresolvable(element.name.index))?;
+                .with_context(|| format!("Cannot resolve {} asset's name", stringify!($typename)))?;
             if *name == target_name {
                 found = Some(GMRef::new(i as u32));
                 break
             }
         }
-        found.ok_or(ParseError::AssetUnresolvable(stringify!($typename), target_name))?
+        found.with_context(|| format!("Could not resolve Asset of type {} with name \"{}\"", stringify!($typename), target_name))?
     }};
 }
 
 
-fn parse_asset_reference(gm_data: &GMData, line: &mut &str) -> Result<GMAssetReference, ParseError> {
+fn parse_asset_reference(gm_data: &GMData, line: &mut &str) -> Result<GMAssetReference> {
     let asset_type: String = consume_round_brackets(line)?
-        .ok_or(ParseError::ExpectedTypeCast(line.to_string()))?;
-    
+        .with_context(|| format!("Expected type cast with round brackets; found {line:?}"))?;
+
     Ok(match asset_type.as_str() {
         "object" => GMAssetReference::Object(asset_by_name!(gm_data, game_objects, parse_identifier(line)?)),
         "sprite" => GMAssetReference::Sprite(asset_by_name!(gm_data, sprites, parse_identifier(line)?)),
@@ -227,47 +227,47 @@ fn parse_asset_reference(gm_data: &GMData, line: &mut &str) -> Result<GMAssetRef
         "particlesystem" => GMAssetReference::ParticleSystem(asset_by_name!(gm_data, particle_systems, parse_identifier(line)?)),
         "roominstance" => GMAssetReference::RoomInstance(parse_int(line)?),
         "function" => GMAssetReference::Function(parse_function(line, &gm_data.strings, &gm_data.functions)?),
-        _ => return Err(ParseError::InvalidTypeCast(asset_type))
+        _ => bail!("Invalid Type Cast to asset type \"{asset_type}\"")
     })
 }
 
 
-fn parse_double_type(types: &ArrayVec<GMDataType, 2>) -> Result<GMDoubleTypeInstruction, ParseError> {
+fn parse_double_type(types: &ArrayVec<GMDataType, 2>) -> Result<GMDoubleTypeInstruction> {
     assert_type_count(&types, 2)?;
     Ok(GMDoubleTypeInstruction { right: types[0], left: types[1] })
 }
 
-fn parse_single_type(types: &ArrayVec<GMDataType, 2>) -> Result<GMSingleTypeInstruction, ParseError> {
+fn parse_single_type(types: &ArrayVec<GMDataType, 2>) -> Result<GMSingleTypeInstruction> {
     assert_type_count(&types, 1)?;
     Ok(GMSingleTypeInstruction { data_type: types[0] })
 }
 
-fn parse_comparison(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMComparisonInstruction, ParseError> {
+fn parse_comparison(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMComparisonInstruction> {
     assert_type_count(&types, 2)?;
     let comparison_type_raw: String = parse_identifier(line)?;
     let comparison_type: GMComparisonType = comparison_type_from_string(&comparison_type_raw)?;
     Ok(GMComparisonInstruction { comparison_type, type1: types[0], type2: types[1] })
 }
 
-fn parse_pop(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &GMData) -> Result<GMPopInstruction, ParseError> {
+fn parse_pop(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &GMData) -> Result<GMPopInstruction> {
     assert_type_count(&types, 2)?;
     let destination: CodeVariable = parse_variable(line, &gm_data)?;
     Ok(GMPopInstruction { type1: types[0], type2: types[1], destination })
 }
 
-fn parse_pop_swap(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMPopSwapInstruction, ParseError> {
+fn parse_pop_swap(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMPopSwapInstruction> {
     assert_type_count(&types, 0)?;
     let size: u8 = parse_uint(line)?;
     Ok(GMPopSwapInstruction { size })
 }
 
-fn parse_duplicate(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMDuplicateInstruction, ParseError> {
+fn parse_duplicate(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMDuplicateInstruction> {
     assert_type_count(&types, 1)?;
     let size: u8 = parse_uint(line)?;
     Ok(GMDuplicateInstruction { data_type: types[0], size })
 }
 
-fn parse_duplicate_swap(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMDuplicateSwapInstruction, ParseError> {
+fn parse_duplicate_swap(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMDuplicateSwapInstruction> {
     assert_type_count(&types, 1)?;
     let size1: u8 = parse_uint(line)?;
     consume_space(line)?;
@@ -275,13 +275,13 @@ fn parse_duplicate_swap(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Res
     Ok(GMDuplicateSwapInstruction { data_type: types[0], size1, size2 })
 }
 
-fn parse_goto(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMGotoInstruction, ParseError> {
+fn parse_goto(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMGotoInstruction> {
     assert_type_count(&types, 0)?;
     let jump_offset: i32 = parse_int(line)?;
     Ok(GMGotoInstruction { jump_offset })
 }
 
-fn parse_push(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &mut GMData) -> Result<GMPushInstruction, ParseError> {
+fn parse_push(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &mut GMData) -> Result<GMPushInstruction> {
     assert_type_count(&types, 1)?;
     let value: GMCodeValue = match types[0] {
         GMDataType::Int16 => GMCodeValue::Int16(parse_int(line)?),
@@ -294,7 +294,7 @@ fn parse_push(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &mut GM
                         variable.is_int32 = true;
                         GMCodeValue::Variable(variable)
                     }
-                    _ => return Err(ParseError::InvalidTypeCast(type_cast))
+                    _ => bail!("Invalid type cast {type_cast:?}; expected \"function\" or \"variable\"")
                 }
             } else {
                 GMCodeValue::Int32(parse_int(line)?)
@@ -314,24 +314,25 @@ fn parse_push(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &mut GM
     Ok(GMPushInstruction { value })
 }
 
-fn parse_push_immediate(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<i16, ParseError> {
+fn parse_push_immediate(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<i16> {
     assert_type_count(&types, 0)?;
     parse_int(line)
 }
 
-fn parse_call(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &GMData) -> Result<GMCallInstruction, ParseError> {
+fn parse_call(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &GMData) -> Result<GMCallInstruction> {
     assert_type_count(&types, 1)?;
     let function: GMRef<GMFunction> = parse_function(line, &gm_data.strings, &gm_data.functions)?;
-    let argc_str: String = consume_round_brackets(line)?.ok_or(ParseError::ExpectedArgc(line.to_string()))?;
-    let arguments_count: u8 = if let Some(rest) = argc_str.strip_prefix("argc=") {
-        rest.parse().map_err(|_| ParseError::IntegerOutOfBounds(rest.to_string()))?
+    let argc_str: String = consume_round_brackets(line)?
+        .with_context(|| format!("Expected round brackets with argument count for function call; found {line:?}"))?;
+    let arguments_count: u8 = if let Some(str) = argc_str.strip_prefix("argc=") {
+        str.parse().with_context(|| format!("Invalid argument count {str}"))?
     } else {
-        return Err(ParseError::ExpectedArgc(argc_str))
+        bail!("Expected \"argc=\" for function call parameters; found {line:?}");
     };
     Ok(GMCallInstruction { arguments_count, data_type: types[0], function })
 }
 
-fn parse_call_var(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMCallVariableInstruction, ParseError> {
+fn parse_call_var(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMCallVariableInstruction> {
     assert_type_count(&types, 1)?;
     let argument_count: u8 = parse_uint(line)?;
     Ok(GMCallVariableInstruction { data_type: types[0], argument_count })
@@ -339,9 +340,9 @@ fn parse_call_var(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GM
 
 
 
-fn assert_type_count(types: &ArrayVec<GMDataType, 2>, n: usize) -> Result<(), ParseError> {
+fn assert_type_count(types: &ArrayVec<GMDataType, 2>, n: usize) -> Result<()> {
     if types.len() != n {
-        return Err(ParseError::InvalidTypeCount(n, types.len()))
+        bail!("Expected {} types for this instruction; got {}", n, types.len());
     }
     Ok(())
 }
@@ -355,7 +356,7 @@ fn consume_char(line: &mut &str) -> Option<char> {
 }
 
 
-/// This function is so stupid.
+#[must_use]
 fn consume_str(line: &mut &str, string: &'static str) -> Option<()> {
     if line.starts_with(string) {
         *line = &line[string.bytes().len()..];
@@ -366,48 +367,50 @@ fn consume_str(line: &mut &str, string: &'static str) -> Option<()> {
 }
 
 
-fn consume_space(line: &mut &str) -> Result<(), ParseError> {
-    let char: char = consume_char(line).ok_or(ParseError::UnexpectedEOL("space"))?;
+fn consume_space(line: &mut &str) -> Result<()> {
+    let char: char = consume_char(line).context("Expected space, got EOL")?;
     if char != ' ' {
-        return Err(ParseError::ExpectedSpace(line.to_string()))
+        bail!("Expected space, got '{char}'");
     }
     Ok(())
 }
 
-fn consume_dot(line: &mut &str) -> Result<(), ParseError> {
-    let char: char = consume_char(line).ok_or(ParseError::UnexpectedEOL("dot"))?;
+fn consume_dot(line: &mut &str) -> Result<()> {
+    let char: char = consume_char(line).context("Expected dot, got EOL")?;
     if char != '.' {
-        return Err(ParseError::ExpectedDot(line.to_string()))
+        bail!("Expected dot, got '{char}'");
     }
     Ok(())
 }
 
 
-fn consume_brackets_template<const OPEN: char, const CLOSE: char>(line: &mut &str, err: ParseError) -> Result<Option<String>, ParseError> {
-    if !line.starts_with(OPEN) {
+fn consume_brackets(line: &mut &str, open: char, close: char) -> Result<Option<String>> {
+    if !line.starts_with(open) {
         return Ok(None)
     }
-    consume_char(line);   // consume open bracket
-    let close_bracket: usize = line.find(CLOSE).ok_or(err)?;
-    let inside: String = line[..close_bracket].to_string();
-    *line = &line[close_bracket+1..];
+    consume_char(line);
+    let close_pos = line.find(close)
+        .with_context(|| format!("'{open}' was never closed"))?;
+    let inside = line[..close_pos].to_string();
+    *line = &line[close_pos+1..];
     Ok(Some(inside))
 }
 
-fn consume_round_brackets(line: &mut &str) -> Result<Option<String>, ParseError> {
-    consume_brackets_template::<'(', ')'>(line, ParseError::UnmatchedRoundBracket)
+
+fn consume_round_brackets(line: &mut &str) -> Result<Option<String>> {
+    consume_brackets(line, '(', ')')
 }
 
-fn consume_square_brackets(line: &mut &str) -> Result<Option<String>, ParseError> {
-    consume_brackets_template::<'[', ']'>(line, ParseError::UnmatchedSquareBracket)
+fn consume_square_brackets(line: &mut &str) -> Result<Option<String>> {
+    consume_brackets(line, '[', ']')
 }
 
-fn consume_angle_brackets(line: &mut &str) -> Result<Option<String>, ParseError> {
-    consume_brackets_template::<'<', '>'>(line, ParseError::UnmatchedAngleBracket)
+fn consume_angle_brackets(line: &mut &str) -> Result<Option<String>> {
+    consume_brackets(line, '<', '>')
 }
 
 
-fn data_type_from_char(data_type: char) -> Result<GMDataType, ParseError> {
+fn data_type_from_char(data_type: char) -> Result<GMDataType> {
     Ok(match data_type {
         'v' => GMDataType::Variable,
         'i' => GMDataType::Int32,
@@ -417,12 +420,12 @@ fn data_type_from_char(data_type: char) -> Result<GMDataType, ParseError> {
         'l' => GMDataType::Int64,
         'f' => GMDataType::Float,
         'b' => GMDataType::Boolean,
-        _ => return Err(ParseError::InvalidDataType(data_type))
+        _ => bail!("Invalid data type '{data_type}'")
     })
 
 }
 
-fn parse_int<T: FromStr + Neg<Output = T>>(line: &mut &str) -> Result<T, ParseError> {
+fn parse_int<T: FromStr + Neg<Output = T>>(line: &mut &str) -> Result<T> {
     let is_negative: bool = line.starts_with('-');
     if is_negative {
         consume_char(line);   // consume minus sign
@@ -436,39 +439,38 @@ fn parse_int<T: FromStr + Neg<Output = T>>(line: &mut &str) -> Result<T, ParseEr
 }
 
 
-fn parse_uint<T: FromStr>(line: &mut &str) -> Result<T, ParseError> {
+fn parse_uint<T: FromStr>(line: &mut &str) -> Result<T> {
     let end: usize = line.find(|c: char| !c.is_ascii_digit()).unwrap_or_else(|| line.len());
     if end == 0 {
-        return Err(ParseError::UnexpectedEOL("integer"))
+        bail!("Expected integer, got {line:?}");
     }
-    let integer: T = line[..end].parse()
-        .map_err(|_| ParseError::IntegerOutOfBounds(line[..end].to_string()))?;
+    let integer: T = line[..end].parse().ok()
+        .with_context(|| format!("Integer {} is out of bounds for integer type {}", &line[..end], typename::<T>()))?;
     *line = &line[end..];
     Ok(integer)
 }
 
 
-/// this only works if the line is ONLY the float
-fn parse_float<T: FromStr>(line: &mut &str) -> Result<T, ParseError> {
-    let float: T = line.parse().map_err(|_| ParseError::InvalidFloat(line.to_string()))?;
-    *line = "";   // consume float
+/// This only works if the line is ONLY the float
+fn parse_float<T: FromStr>(line: &mut &str) -> Result<T> {
+    let float: T = line.parse().ok()
+        .with_context(|| format!("Invalid float literal {line:?}"))?;
+    *line = "";   // consume entire line
     Ok(float)
 }
 
 
-fn parse_bool(line: &mut &str) -> Result<bool, ParseError> {
+fn parse_bool(line: &mut &str) -> Result<bool> {
     let bool: String = parse_identifier(line)?;
-    if bool == "true" {
-        return Ok(true)
+    match bool.as_str() {
+        "true" => Ok(true),
+        "false" => Ok(false),
+        _ => bail!("Invalid boolean {bool:?}")
     }
-    if bool == "false" {
-        return Ok(false)
-    }
-    Err(ParseError::InvalidBoolean(bool.to_string()))
 }
 
 
-fn comparison_type_from_string(comparison_type: &str) -> Result<GMComparisonType, ParseError> {
+fn comparison_type_from_string(comparison_type: &str) -> Result<GMComparisonType> {
     Ok(match comparison_type {
         "EQ" => GMComparisonType::Equal,
         "NEQ" => GMComparisonType::NotEqual,
@@ -476,24 +478,24 @@ fn comparison_type_from_string(comparison_type: &str) -> Result<GMComparisonType
         "LTE" => GMComparisonType::LessOrEqual,
         "GTE" => GMComparisonType::GreaterOrEqual,
         "GT" => GMComparisonType::GreaterThan,
-        _ => return Err(ParseError::InvalidComparisonType(comparison_type.to_string()))
+        _ => bail!("Invalid Comparison Type {comparison_type:?}")
     })
 }
 
 
-fn variable_type_from_string(variable_type: &str) -> Result<GMVariableType, ParseError> {
+fn variable_type_from_string(variable_type: &str) -> Result<GMVariableType> {
     Ok(match variable_type {
         "stacktop" => GMVariableType::StackTop,
         "array" => GMVariableType::Array,
         "instance" => GMVariableType::Instance,
         "arraypushaf" => GMVariableType::ArrayPushAF,
         "arraypopaf" => GMVariableType::ArrayPopAF,
-        _ => return Err(ParseError::InvalidVariableType(variable_type.to_string()))
+        _ => bail!("Invalid Variable Reference Type {variable_type:?}")
     })
 }
 
 
-fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable, ParseError> {
+fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable> {
     let mut variable_type: GMVariableType = GMVariableType::Normal;
     if let Some(variable_type_str) = consume_square_brackets(line)? {
         variable_type = variable_type_from_string(&variable_type_str)?;
@@ -507,13 +509,12 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable, Par
     let mut instance_type: GMInstanceType = match instance_type_raw.as_str() {
         "self" if instance_type_arg.is_empty() => GMInstanceType::Self_(None),
         "self" => {
-            let object_ref: GMRef<GMGameObject> = gm_data.game_objects.get_object_ref_by_name(&instance_type_arg, &gm_data.strings)
-                .map_err(|_| ParseError::GameObjectUnresolvable(instance_type_arg))?;
+            let object_ref: GMRef<GMGameObject> = gm_data.game_objects.get_object_ref_by_name(&instance_type_arg, &gm_data.strings)?;
             GMInstanceType::Self_(Some(object_ref))
         }
         "local" => {
             let var_index: u32 = instance_type_arg.parse()
-                .map_err(|_| ParseError::VarLocalInvalidIndex(instance_type_arg))?;
+                .with_context(|| format!("Invalid index for local variable: {instance_type_arg:?}"))?;
             variable_ref = Some(GMRef::new(var_index));
             GMInstanceType::Local
         },
@@ -525,12 +526,12 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable, Par
         "static" => GMInstanceType::Static,
         "all" => GMInstanceType::All,
         "none" => GMInstanceType::None,
-        _ => return Err(ParseError::InvalidInstanceType(instance_type_raw.to_string()))
+        _ => bail!("Invalid Instance Type {instance_type_raw:?}")
     };
 
     let name: String = parse_identifier(line).or_else(|err| {
         consume_str(line, "$$$$temp$$$$").ok_or(err)?;
-        Ok("$$$$temp$$$$".to_string())
+        Ok::<_, Error>("$$$$temp$$$$".to_string())
     })?;
 
     if instance_type != GMInstanceType::Local {
@@ -538,8 +539,7 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable, Par
         let vari_instance_type: GMInstanceType = to_vari_instance_type(&instance_type);
 
         for (i, var) in gm_data.variables.variables.iter().enumerate() {
-            let var_name: &String = var.name.resolve(&gm_data.strings.strings)
-                .map_err(|_| ParseError::StringIndexUnresolvable(var.name.index))?;
+            let var_name: &String = var.name.resolve(&gm_data.strings.strings).context("Cannot resolve variable name")?;
             if *var_name != name {
                 continue
             }
@@ -555,7 +555,7 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable, Par
     }
 
     let Some(variable) = variable_ref else {
-        return Err(ParseError::VarUnresolvable(name))
+        bail!("Cannot resolve variable with name {name:?}");
     };
 
     // // I need to throw away the instance type so that the tests pass
@@ -573,31 +573,31 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable, Par
 }
 
 
-fn parse_function(line: &mut &str, gm_strings: &GMStrings, gm_functions: &GMFunctions) -> Result<GMRef<GMFunction>, ParseError> {
-    let identifier: String = parse_identifier(line).or_else(|err| {
+fn parse_function(line: &mut &str, gm_strings: &GMStrings, gm_functions: &GMFunctions) -> Result<GMRef<GMFunction>> {
+    let identifier: String = parse_identifier(line).or_else(|_| {
         // allow special functions like `@@This@@`
-        consume_str(line, "@@").ok_or_else(|| err.clone())?;
+        consume_str(line, "@@").context("Invalid function identifier")?;
         let identifier: String = parse_identifier(line)?;
-        consume_str(line, "@@").ok_or(err)?;
-        Ok(format!("@@{identifier}@@"))
+        consume_str(line, "@@").context("Invalid function identifier")?;
+        Ok::<_, Error>(format!("@@{identifier}@@"))
     })?;
 
     for (i, func) in gm_functions.functions.iter().enumerate() {
         let func_name: &String = func.name.resolve(&gm_strings.strings)
-            .map_err(|_| ParseError::StringIndexUnresolvable(func.name.index))?;
+            .context("Cannot resolve name string of parsed function")?;
         if *func_name == identifier {
             return Ok(GMRef::new(i as u32))
         }
     }
 
-    Err(ParseError::FuncUnresolvable(identifier))
+    bail!("Function {identifier:?} does not exist")
 }
 
 
-fn parse_identifier(line: &mut &str) -> Result<String, ParseError> {
+fn parse_identifier(line: &mut &str) -> Result<String> {
     // identifiers can't start with a digit
     if line.starts_with(|c: char| c.is_ascii_digit()) {
-        return Err(ParseError::ExpectedIdentifier(line.to_string()))
+        bail!("Expected identifier; found {line:?}");
     }
 
     for (i, char) in line.char_indices() {
@@ -611,7 +611,7 @@ fn parse_identifier(line: &mut &str) -> Result<String, ParseError> {
         }
         let identifier: String = line[..i].to_string();
         if identifier.is_empty() {
-            return Err(ParseError::ExpectedIdentifier(line.to_string()))
+            bail!("Expected identifier; found {line:?}");
         }
         *line = &line[i..];
         return Ok(identifier)
@@ -624,9 +624,9 @@ fn parse_identifier(line: &mut &str) -> Result<String, ParseError> {
 }
 
 
-fn parse_string_literal(line: &mut &str) -> Result<String, ParseError> {
+fn parse_string_literal(line: &mut &str) -> Result<String> {
     if consume_char(line) != Some('"') {
-        return Err(ParseError::ExpectedString(line.to_string()))
+        bail!("Expected string literal; found {line:?}");
     }
 
     let mut escaping: bool = false;
@@ -636,11 +636,11 @@ fn parse_string_literal(line: &mut &str) -> Result<String, ParseError> {
         if escaping {
             match char {
                 '"' => string.push('"'),
-                'n' => string.push('\n'),
                 '\\' => string.push('\\'),
+                'n' => string.push('\n'),
                 't' => string.push('\t'),
                 'r' => string.push('\r'),
-                _ => return Err(ParseError::InvalidEscapeCharacter(char)),
+                _ => bail!("Invalid escape character '{char}'"),
             }
             escaping = false;
         } else if char == '"' {
@@ -653,6 +653,6 @@ fn parse_string_literal(line: &mut &str) -> Result<String, ParseError> {
         }
     }
 
-    Err(ParseError::UnexpectedEOL("string literal"))
+    bail!("Unexpected EOL while reading string literal")
 }
 

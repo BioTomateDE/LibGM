@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use std::fmt::{Display, Formatter};
 use crate::gml::decompiler::control_flow::blocks::Block;
 use crate::gml::decompiler::control_flow::fragments::Fragment;
@@ -107,7 +108,7 @@ impl ControlFlowGraph<'_> {
         node_ref
     }
 
-    pub fn disconnect_branch_successor(&mut self, node: NodeRef) -> Result<(), String> {
+    pub fn disconnect_branch_successor(&mut self, node: NodeRef) -> Result<()> {
         let successors: &mut Successors = node.successors_mut(self);
         let old_successor: NodeRef = successors.branch_target.ok_or("Branch successor was not set in the first place")?;
         successors.branch_target = None;
@@ -115,7 +116,7 @@ impl ControlFlowGraph<'_> {
         Ok(())
     }
 
-    pub fn disconnect_fallthrough_successor(&mut self, node: NodeRef) -> Result<(), String> {
+    pub fn disconnect_fallthrough_successor(&mut self, node: NodeRef) -> Result<()> {
         let successors: &mut Successors = node.successors_mut(self);
         let old_successor: NodeRef = successors.fall_through.ok_or("Fallthrough successor was not set in the first place")?;
         successors.fall_through = None;
@@ -124,7 +125,7 @@ impl ControlFlowGraph<'_> {
     }
 
     /// TODO: i done like this function, replace all calls to it if possible
-    pub fn disconnect_predecessor(&mut self, node: NodeRef, predecessor_index: usize) -> Result<(), String> {
+    pub fn disconnect_predecessor(&mut self, node: NodeRef, predecessor_index: usize) -> Result<()> {
         let predecessors: &mut Vec<NodeRef> = node.predecessors_mut(self);
         let old_predecessor: NodeRef = *predecessors.get(predecessor_index).ok_or("Predecessor index out of range")?;
         predecessors.remove(predecessor_index);
@@ -132,7 +133,7 @@ impl ControlFlowGraph<'_> {
         Ok(())
     }
 
-    pub fn disconnect_all_predecessors(&mut self, node: NodeRef) -> Result<(), String> {
+    pub fn disconnect_all_predecessors(&mut self, node: NodeRef) -> Result<()> {
         for pred in node.predecessors(self).clone() {
             pred.successors_mut(self).remove(node);
         }
@@ -143,7 +144,7 @@ impl ControlFlowGraph<'_> {
     /// Utility function to insert a new node to the control flow graph, which is a
     /// sole predecessor of "node", and takes on all predecessors of "node" that are
     /// within a range of addresses, ending at "node"'s address.
-    pub fn insert_predecessors(&mut self, node: NodeRef, new_predecessor: NodeRef, start_address: u32) -> Result<(), String> {
+    pub fn insert_predecessors(&mut self, node: NodeRef, new_predecessor: NodeRef, start_address: u32) -> Result<()> {
         // Reroute all earlier predecessors of [node] to [new_predecessor]
         let node_start: u32 = node.start_address(self);
         let mut i: usize = 0;
@@ -163,7 +164,7 @@ impl ControlFlowGraph<'_> {
         Ok(())
     }
 
-    pub fn insert_structure(&mut self, start: NodeRef, after: NodeRef, new_structure: NodeRef) -> Result<(), String> {
+    pub fn insert_structure(&mut self, start: NodeRef, after: NodeRef, new_structure: NodeRef) -> Result<()> {
         // Reroute all nodes going into [start] to instead go into [new_structure]
         let mut i: usize = 0;
         while let Some(curr_pred) = start.predecessors_mut(self).get(i).copied() {
@@ -295,7 +296,7 @@ impl Successors {
         Self { fall_through: None, branch_target: None, catch: None }
     }
 
-    pub fn replace(&mut self, search: NodeRef, replace: NodeRef) -> Result<(), String> {
+    pub fn replace(&mut self, search: NodeRef, replace: NodeRef) -> Result<()> {
         let mut found: bool = false;
         if self.branch_target == Some(search) {
             self.branch_target = Some(replace.clone());
@@ -310,7 +311,7 @@ impl Successors {
             found = true;
         }
         if !found {
-            return Err(format!("Could not find {search} successor"))
+            bail!("Could not find {search} successor");
         }
         Ok(())
     }
@@ -329,7 +330,7 @@ impl Successors {
 }
 
 
-pub fn remove_predecessor(predecessors: &mut Vec<NodeRef>, successor: NodeRef) -> Result<(), String> {
+pub fn remove_predecessor(predecessors: &mut Vec<NodeRef>, successor: NodeRef) -> Result<()> {
     let index: usize = predecessors.iter().position(|&n| n == successor)
         .ok_or("Successor's predecessor was not set in the first place")?;
     predecessors.remove(index);

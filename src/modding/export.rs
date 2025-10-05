@@ -30,14 +30,14 @@ use crate::modding::ordered_list::DataChange;
 /// ___
 /// The generated mod file is a directory of mostly json files; bundled into a tarball and then compressed using ZStandard.
 /// The "correct" file extension would therefore be `.tar.zst` (this can be useful for debugging).
-pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_path: &Path) -> Result<(), String> {
+pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_path: &Path) -> Result<()> {
     let stopwatch = Stopwatch::start();
 
     // initialize file and tarball
     let file = File::create(target_file_path)
-        .map_err(|e| format!("Could not create archive file with path \"{}\": {e}", target_file_path.display()))?;
+        .with_context(|| format!("Could not create archive file with path \"{}\": {e}", target_file_path.display()))?;
     let zstd_encoder = zstd::Encoder::new(file, 19)
-        .map_err(|e| format!("Could not create ZStd encoder: {e}"))?;
+        .with_context(|| format!("Could not create ZStd encoder: {e}"))?;
     let mut tar = tar::Builder::new(zstd_encoder);
 
     let mod_exporter = ModExporter {original_data, modified_data};
@@ -86,7 +86,7 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
         let file_path: String = format!("textures/{i}.png");
         let mut buffer = Cursor::new(Vec::new());
         image.write_to(&mut buffer, ImageFormat::Png)
-            .map_err(|e| format!("Could not encode PNG image: {e}"))?;
+            .with_context(|| format!("Could not encode PNG image: {e}"))?;
         drop(image);
         tar_write_raw_file(&mut tar, &file_path, &buffer.into_inner())?;
     }
@@ -107,7 +107,7 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
                 }
             }
             DataChange::Delete(index, count) => {
-                return Err(format!("Deleting audios not (yet) supported: tried to delete {count} audios at index {index}"))
+                bail!("Deleting audios not (yet) supported: tried to delete {count} audios at index {index}");
             }
         }
     }
@@ -116,9 +116,9 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     let stopwatch2 = Stopwatch::start();
     // finalize
     tar.into_inner()
-        .map_err(|e| format!("Could not get inner value of tarball: {e}"))?
+        .with_context(|| format!("Could not get inner value of tarball: {e}"))?
         .finish()
-        .map_err(|e| format!("Could not finish writing tarball: {e}"))?;
+        .with_context(|| format!("Could not finish writing tarball: {e}"))?;
     log::trace!("Finalizing tarball took {stopwatch2}");
     
     log::trace!("Exporting changes and writing tarball took {stopwatch}");
@@ -126,7 +126,7 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
 }
 
 
-fn tar_write_json_file<J: Serialize+RootChanges>(tar: &mut tar::Builder<zstd::Encoder<File>>, name: &str, json_struct: J) -> Result<(), String> {
+fn tar_write_json_file<J: Serialize+RootChanges>(tar: &mut tar::Builder<zstd::Encoder<File>>, name: &str, json_struct: J) -> Result<()> {
     let filename: String = format!("{name}.json");
 
     if !json_struct.has_changes() {
@@ -137,30 +137,30 @@ fn tar_write_json_file<J: Serialize+RootChanges>(tar: &mut tar::Builder<zstd::En
     let filename: String = format!("{name}.json");
 
     let data: Vec<u8> = serde_json::to_vec_pretty(&json_struct)
-        .map_err(|e| format!("Could not serialize_old {name} changes to json: {e}"))?;
+        .with_context(|| format!("Could not serialize_old {name} changes to json: {e}"))?;
 
     let mut header = tar::Header::new_gnu();
     header.set_path(&filename)
-        .map_err(|e| format!("Could not set tar file path for json file \"{filename}\": {e}"))?;
+        .with_context(|| format!("Could not set tar file path for json file \"{filename}\": {e}"))?;
     header.set_size(data.len() as u64);
     header.set_mode(0o644);
     header.set_mtime(get_current_unix_time());
     header.set_cksum();   // has to be called last
     tar.append(&header, data.as_slice())
-        .map_err(|e| format!("Could not append json file \"{filename}\" to tarball: {e}"))?;
+        .with_context(|| format!("Could not append json file \"{filename}\" to tarball: {e}"))?;
     Ok(())
 }
 
-fn tar_write_raw_file(tar: &mut tar::Builder<zstd::Encoder<File>>, file_path: &str, data: &[u8]) -> Result<(), String> {
+fn tar_write_raw_file(tar: &mut tar::Builder<zstd::Encoder<File>>, file_path: &str, data: &[u8]) -> Result<()> {
     let mut header = tar::Header::new_gnu();
     header.set_path(&file_path)
-        .map_err(|e| format!("Could not set tar file path for raw file \"{file_path}\": {e}"))?;
+        .with_context(|| format!("Could not set tar file path for raw file \"{file_path}\": {e}"))?;
     header.set_size(data.len() as u64);
     header.set_mode(0o644);
     header.set_mtime(get_current_unix_time());
     header.set_cksum();   // has to be called last
     tar.append(&header, data)
-        .map_err(|e| format!("Could not append raw file \"{file_path}\" to tarball: {e}"))?;
+        .with_context(|| format!("Could not append raw file \"{file_path}\" to tarball: {e}"))?;
     Ok(())
 }
 
@@ -209,8 +209,8 @@ pub fn edit_field_option<T: PartialEq + Clone>(original: &Option<T>, modified: &
 pub fn edit_field_convert<GM>(
     original: &GMRef<GM>,
     modified: &GMRef<GM>,
-    converter: impl Fn(&GMRef<GM>) -> Result<ModRef, String>,
-) -> Result<Option<ModRef>, String> {
+    converter: impl Fn(&GMRef<GM>) -> Result<ModRef>,
+) -> Result<Option<ModRef>> {
     if original.index != modified.index {
         Ok(Some(converter(modified)?))
     } else {
@@ -220,7 +220,7 @@ pub fn edit_field_convert<GM>(
 pub fn edit_field_convert_option<GM: PartialEq, MOD>(
     original: &Option<GM>,
     modified: &Option<GM>,
-    converter: impl Fn(&GM) -> Result<MOD, String>,
+    converter: impl Fn(&GM) -> Result<MOD>,
 ) -> Result<Option<Option<MOD>>, String> {
     if original == modified {
         if let Some(m) = modified {
@@ -233,7 +233,7 @@ pub fn edit_field_convert_option<GM: PartialEq, MOD>(
     }
 }
 
-pub fn convert_additions<GM, ADD>(gm_elements: &[GM], map_addition: impl Fn(&GM) -> Result<ADD, String>) -> Result<Vec<ADD>, String> {
+pub fn convert_additions<GM, ADD>(gm_elements: &[GM], map_addition: impl Fn(&GM) -> Result<ADD>) -> Result<Vec<ADD>> {
     gm_elements.iter().map(map_addition).collect()
 }
 

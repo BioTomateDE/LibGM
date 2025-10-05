@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
@@ -18,12 +19,12 @@ impl GMChunkElement for GMShaders {
     }
 }
 impl GMElement for GMShaders {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         // Figure out where the starts/ends of each shader object are
-        let count: usize = reader.read_usize()?;
+        let count = reader.read_usize()?;
         let mut locations: Vec<usize> = vec_with_capacity(count + 1)?;
         for _ in 0..count {
-            let pointer: usize = reader.read_usize()?;
+            let pointer = reader.read_usize()?;
             if pointer != 0 {
                 locations.push(pointer);
             }
@@ -44,8 +45,8 @@ impl GMElement for GMShaders {
             let hlsl9_vertex: GMRef<String> = reader.read_gm_string()?;
             let hlsl9_fragment: GMRef<String> = reader.read_gm_string()?;
 
-            let hlsl11_vertex_ptr: usize = reader.read_usize()?;
-            let hlsl11_pixel_ptr: usize = reader.read_usize()?;
+            let hlsl11_vertex_ptr = reader.read_usize()?;
+            let hlsl11_pixel_ptr = reader.read_usize()?;
 
             let vertex_shader_attributes: Vec<GMRef<String>> = reader.read_simple_list_of_strings()?;
 
@@ -116,7 +117,7 @@ impl GMElement for GMShaders {
         Ok(Self { shaders, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         builder.write_pointer_list(&self.shaders)?;
         Ok(())
@@ -147,11 +148,11 @@ pub struct GMShader {
     pub vertex_shader_attributes: Vec<GMRef<String>>,
 }
 impl GMElement for GMShader {
-    fn deserialize(_: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(_: &mut DataReader) -> Result<Self> {
         unreachable!("[internal error] GMShader::deserialize is not supported; use GMShaders::deserialize instead")
     }
     
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         builder.write_u32(u32::from(self.shader_type) | 0x80000000);
         builder.write_gm_string(&self.glsl_es_vertex)?;
@@ -226,11 +227,11 @@ pub struct GMShaderData {
 fn read_shader_data(
     reader: &mut DataReader,
     entry_end: usize,
-    pad: usize,
+    pad: u32,
     this_pointer: usize,
     expected_length: usize,
     next_ptr: usize,
-) -> Result<Option<GMShaderData>, String> {
+) -> Result<Option<GMShaderData>> {
     const ERR_MSG_PREFIX: &str = "Failed to compute length of shader data: instructed to read";
     const ERR_MSG_SUFFIX: &str = "Shader data was the last in the shader, but given length was incorrectly padded.";
 
@@ -249,7 +250,7 @@ fn read_shader_data(
     }
 
     if expected_length > actual_length {
-        return Err(format!("{ERR_MSG_PREFIX} less data than expected."))
+        bail!("{ERR_MSG_PREFIX} less data than expected.");
     }
 
     if expected_length < actual_length {
@@ -258,9 +259,9 @@ fn read_shader_data(
         } else if !is_last && (reader.cur_pos + actual_length) % 8 == 0 {
             // Normal for 8-byte alignment to occur on all elements prior to the last one
         } else if is_last {
-            return Err(format!("{ERR_MSG_PREFIX} more data than expected. {ERR_MSG_SUFFIX}"))
+            bail!("{ERR_MSG_PREFIX} more data than expected. {ERR_MSG_SUFFIX}");
         } else {
-            return Err(format!("{ERR_MSG_PREFIX} more data than expected."))
+            bail!("{ERR_MSG_PREFIX} more data than expected.");
         }
     }
 
@@ -269,7 +270,7 @@ fn read_shader_data(
 }
 
 
-fn write_shader_data(builder: &mut DataBuilder, pad: usize, shader_data_opt: &Option<GMShaderData>) -> Result<(), String> {
+fn write_shader_data(builder: &mut DataBuilder, pad: u32, shader_data_opt: &Option<GMShaderData>) -> Result<()> {
     if let Some(shader_data) = shader_data_opt {
         builder.align(pad);
         builder.resolve_pointer(shader_data)?;

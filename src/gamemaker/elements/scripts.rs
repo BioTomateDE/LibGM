@@ -1,4 +1,5 @@
-﻿use crate::gamemaker::deserialize::{DataReader, GMRef};
+﻿use crate::prelude::*;
+use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::code::GMCode;
 use crate::gamemaker::serialize::DataBuilder;
@@ -17,12 +18,12 @@ impl GMChunkElement for GMScripts {
     }
 }
 impl GMElement for GMScripts {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let scripts: Vec<GMScript> = reader.read_pointer_list()?;
         Ok(Self { scripts, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists { return Ok(()) }
         builder.write_pointer_list(&self.scripts)?;
         Ok(())
@@ -37,33 +38,22 @@ pub struct GMScript {
     pub code: Option<GMRef<GMCode>>,
 }
 impl GMElement for GMScript {
-    fn deserialize(reader: &mut DataReader) -> Result<Self, String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let mut code_id: i32 = reader.read_i32()?;
-        let is_constructor: bool;
+        let mut is_constructor: bool = false;
         if code_id < -1 {
-            code_id = (code_id as u32 & 0x7FFFFFFF) as i32;
+            code_id &= 0x7FFFFFFF;
             is_constructor = true;
-        } else {
-            is_constructor = false;
-        };
-
-        let code: Option<GMRef<GMCode>> = if code_id == -1 {
-            None
-        } else {
-            let code_id = u32::try_from(code_id).map_err(|e| format!(
-                "Could not convert Code ID {code_id} (0x{code_id:08X}) to u32 for Script \"{}\": {e}", reader.display_gm_str(name),
-            ))?;
-            Some(GMRef::new(code_id))
-        };
-
+        }
+        let code: Option<GMRef<GMCode>> = reader.resource_opt_from_i32(code_id)?;
         Ok(GMScript { name, is_constructor, code })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<(), String> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         if self.is_constructor {
-            if let Some(ref gm_code_ref) = self.code {
+            if let Some(gm_code_ref) = &self.code {
                 builder.write_u32(gm_code_ref.index | 0x80000000);
             } else {
                 builder.write_i32(-1);

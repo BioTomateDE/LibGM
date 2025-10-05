@@ -136,7 +136,7 @@ impl ModExporter<'_, '_> {
         )
     }
     
-    fn add_event(&self, i: &GMGameObjectEvent) -> Result<AddGameObjectEvent, String> {
+    fn add_event(&self, i: &GMGameObjectEvent) -> Result<AddGameObjectEvent> {
         Ok(AddGameObjectEvent {
             subtype: i.subtype,
             actions: convert_additions(&i.actions, |i| Ok(i.code))?
@@ -144,7 +144,7 @@ impl ModExporter<'_, '_> {
         })
     }
     
-    fn edit_event(&self, o: &GMGameObjectEvent, m: &GMGameObjectEvent) -> Result<EditGameObjectEvent, String> {
+    fn edit_event(&self, o: &GMGameObjectEvent, m: &GMGameObjectEvent) -> Result<EditGameObjectEvent> {
         Ok(EditGameObjectEvent {
             subtype: edit_field(&o.subtype, &m.subtype),
             actions: export_changes_ordered_list(

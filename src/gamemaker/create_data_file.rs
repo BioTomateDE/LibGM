@@ -1,6 +1,6 @@
 use std::path::Path;
 use image::{DynamicImage, ImageReader};
-use crate::gamemaker::data::GMData;
+use crate::gamemaker::data::{Endianness, GMData};
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::GMChunkElement;
 use crate::gamemaker::elements::animation_curves::GMAnimationCurves;
@@ -428,7 +428,7 @@ fn stub_data() -> GMData {
         filter_effects: GMFilterEffects::stub(),
         animation_curves: GMAnimationCurves::stub(),
         chunk_padding: 0,
-        is_big_endian: false,
+        endianness: Endianness::Little,
         original_data_size: 0,
     }
 }

@@ -1,4 +1,5 @@
-﻿use std::fmt::Debug;
+﻿use crate::prelude::*;
+use std::fmt::Debug;
 use crate::utility::typename;
 use crate::gamemaker::elements::backgrounds::GMBackground;
 use crate::gamemaker::deserialize::GMRef;
@@ -15,7 +16,7 @@ use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 
 #[allow(dead_code)]
 impl GMGeneralInfo {
-    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+    pub fn print(&self, strings: &GMStrings) -> Result<()> {
         println!("General Info:");
         println!("  GMS Debugger Disabled: {}", self.is_debugger_disabled);
         println!("  Bytecode Version: {}", self.bytecode_version);
@@ -418,7 +419,7 @@ impl GMOptionsFlags {
 
 #[allow(dead_code)]
 impl GMFont {
-    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+    pub fn print(&self, strings: &GMStrings) -> Result<()> {
         println!("GMFont:");
         println!("  Name: {}", self.name.resolve(&strings.strings)?);
         println!("  Display Name: {}", resolve_str_maybe(&self.display_name, strings));
@@ -458,7 +459,7 @@ impl GMFontGlyph {
 
 #[allow(dead_code)]
 impl GMRoom {
-    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+    pub fn print(&self, strings: &GMStrings) -> Result<()> {
         println!("GMRoom:");
         println!("  Name: \"{}\"", self.name.resolve(&strings.strings)?);
         println!("  Caption: \"{}\"", resolve_str_maybe(&self.caption, strings));
@@ -512,7 +513,7 @@ impl GMRoom {
 
 #[allow(dead_code)]
 impl GMRoomLayer {
-    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+    pub fn print(&self, strings: &GMStrings) -> Result<()> {
         println!("GMRoomLayer:");
         println!("  Layer Name: {}", self.layer_name.resolve(&strings.strings)?);
         println!("  Layer ID: {}", self.layer_id);
@@ -587,7 +588,7 @@ impl GMRoomView {
 
 #[allow(dead_code)]
 impl GMSequence {
-    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+    pub fn print(&self, strings: &GMStrings) -> Result<()> {
         println!("GMSequence:");
         println!("  Name: {}", self.name.resolve(&strings.strings)?);
         println!("  Playback: {:?}", self.playback);
@@ -619,7 +620,7 @@ impl<T: Debug> GMKeyframeData<T> {
 
 #[allow(dead_code)]
 impl GMTrack {
-    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+    pub fn print(&self, strings: &GMStrings) -> Result<()> {
         println!("GMTrack:");
         println!("  Model Name: {}", self.model_name.resolve(&strings.strings)?);
         println!("  Name: {}", self.name.resolve(&strings.strings)?);
@@ -637,7 +638,7 @@ impl GMTrack {
 
 #[allow(dead_code)]
 impl GMKeyframeMoment {
-    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+    pub fn print(&self, strings: &GMStrings) -> Result<()> {
         println!("GMKeyframeMoment:");
         println!("  Internal Count: {}", self.internal_count);
         if let Some(event) = &self.event {
@@ -680,7 +681,7 @@ impl GMTexturePageItem {
 
 #[allow(dead_code)]
 impl GMBackground {
-    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+    pub fn print(&self, strings: &GMStrings) -> Result<()> {
         println!("GMBackground:");
         println!("  Name: \"{}\"", self.name.resolve(&strings.strings)?);
         println!("  Transparent: {}", self.transparent);
@@ -704,7 +705,7 @@ impl GMBackground {
 
 #[allow(dead_code)]
 impl GMSound {
-    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+    pub fn print(&self, strings: &GMStrings) -> Result<()> {
         println!("GMSound:");
         println!("  Name: \"{}\"", self.name.resolve(&strings.strings)?);
         println!("  Flags: {}", self.flags.to_string());
@@ -734,7 +735,7 @@ impl GMSoundFlags {
 
 #[allow(dead_code)]
 impl GMGameObject {
-    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+    pub fn print(&self, strings: &GMStrings) -> Result<()> {
         println!("GMGameObject:");
         println!("  Name: \"{}\"", self.name.resolve(&strings.strings)?);
         println!("  Sprite Index: {:?}", self.sprite);
@@ -765,7 +766,7 @@ impl GMGameObject {
 
 #[allow(dead_code)]
 impl GMGameObjectEvent {
-    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+    pub fn print(&self, strings: &GMStrings) -> Result<()> {
         println!("GMGameObjectEvent:");
         println!("  Subtype: {}", self.subtype);
         println!("  Actions: [{} items]", self.actions.len());
@@ -779,7 +780,7 @@ impl GMGameObjectEvent {
 
 #[allow(dead_code)]
 impl GMGameObjectEventAction {
-    pub fn print(&self, strings: &GMStrings) -> Result<(), String> {
+    pub fn print(&self, strings: &GMStrings) -> Result<()> {
         println!("GMGameObjectEventAction:");
         println!("  Lib ID: {}", self.lib_id);
         println!("  ID: {}", self.id);
@@ -804,7 +805,7 @@ impl GMGameObjectEventAction {
 
 #[allow(dead_code)]
 impl GMRoomGameObject {
-    pub fn print(&self) -> Result<(), String> {
+    pub fn print(&self) -> Result<()> {
         println!("GMRoomGameObject:");
         println!("  X: {}", self.x);
         println!("  Y: {}", self.y);
@@ -840,14 +841,14 @@ fn format_license_md5(license: &[u8; 16]) -> String {
     hex_bytes.join(" ")
 }
 
-pub fn hexdump(raw_data: &[u8], start: usize, end: Option<usize>) -> Result<String, String> {
+pub fn hexdump(raw_data: &[u8], start: usize, end: Option<usize>) -> Result<String> {
     let len: usize = raw_data.len();
     let end: usize = end.unwrap_or_else(|| len);
     if end > len {
-        return Err(format!("Specified end of hexdump is out ouf bounds: {} >= {} (start: {})", end, len, start));
+        bail!("Specified end of hexdump is out ouf bounds: {} >= {} (start: {})", end, len, start);
     }
     if start > end {
-        return Err(format!("Specified start of hexdump is greater or equal to specified end: {} >= {} (len: {})", start, end, len));
+        bail!("Specified start of hexdump is greater or equal to specified end: {} >= {} (len: {})", start, end, len);
     }
     let len: usize = end - start;
     if len < 1 {

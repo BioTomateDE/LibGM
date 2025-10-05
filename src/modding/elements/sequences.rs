@@ -25,11 +25,11 @@ pub struct EditSequence {
 }
 
 impl ModExporter<'_, '_> {
-    pub fn add_sequence(&self, i: &GMSequence) -> Result<AddSequence, String> {
+    pub fn add_sequence(&self, i: &GMSequence) -> Result<AddSequence> {
         todo!("sequences not yet implemented")
     }
 
-    pub fn edit_sequence(&self, o: &GMSequence, m: &GMSequence) -> Result<EditSequence, String> {
+    pub fn edit_sequence(&self, o: &GMSequence, m: &GMSequence) -> Result<EditSequence> {
         todo!("sequences not yet implemented")
     }
 }

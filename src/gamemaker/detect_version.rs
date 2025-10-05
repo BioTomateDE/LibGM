@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use crate::utility::{num_enum_from, vec_with_capacity};
 use crate::gamemaker::deserialize::{DataReader, GMChunk};
 use crate::gamemaker::elements::embedded_textures::MAGIC_BZ2_QOI_HEADER;
@@ -5,25 +6,21 @@ use crate::gamemaker::elements::rooms::GMRoomLayerType;
 use crate::gamemaker::gm_version::GMVersionReq;
 use crate::gamemaker::gm_version::LTSBranch::{PostLTS, PreLTS, LTS};
 
+
 /// If `check_fn` can detect multiple versions, `required_version` should be set to its _lowest_ required version
 /// whereas `target_version` should be set to the _highest_ possible version it can detect.
-fn try_check<R: Into<GMVersionReq>, T: Into<GMVersionReq>>(
+fn try_check<V: Into<GMVersionReq>>(
     reader: &mut DataReader,
     chunk_name: &str,
-    check_fn: fn(&mut DataReader) -> Result<Option<GMVersionReq>, String>,
-    required_version: R,
-    target_version: T,
-) -> Result<(), String> {
+    check_fn: fn(&mut DataReader) -> Result<Option<GMVersionReq>>,
+    target_version: V,
+) -> Result<()> {
     let target_version: GMVersionReq = target_version.into();
     if reader.general_info.is_version_at_least(target_version.clone()) {
         return Ok(())    // no need to check if already
     }
 
     if let Some(chunk) = reader.chunks.get(chunk_name) {
-        let required_version: GMVersionReq = required_version.into();
-        if !reader.general_info.is_version_at_least(required_version.clone()) {
-            return Ok(())   // could not detect version
-        }
         reader.chunk = chunk.clone();
         reader.cur_pos = chunk.start_pos;
         if let Some(version_req) = check_fn(reader)? {
@@ -34,7 +31,7 @@ fn try_check<R: Into<GMVersionReq>, T: Into<GMVersionReq>>(
     Ok(())
 }
 
-type CheckerFn = fn(&mut DataReader) -> Result<Option<GMVersionReq>, String>;
+type CheckerFn = fn(&mut DataReader) -> Result<Option<GMVersionReq>>;
 
 #[derive(Debug, Clone)]
 struct VersionCheck {
@@ -58,7 +55,7 @@ impl VersionCheck {
 }
 
 
-pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<(), String> {
+pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
     let saved_pos: usize = reader.cur_pos;
     let saved_chunk: GMChunk = reader.chunk.clone();
     
@@ -83,10 +80,10 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<(), String> {
 
     // cv means 'check version'
     if reader.general_info.bytecode_version >= 14 {
-        try_check(reader, "FUNC", cv_func_2024_8, GMVersionReq::none(), (2024, 8))?;
+        try_check(reader, "FUNC", cv_func_2024_8, (2024, 8))?;
     }
     if reader.general_info.bytecode_version >= 17 {
-        try_check(reader, "FONT", cv_font_2022_2, GMVersionReq::none(), (2022, 2))?;
+        try_check(reader, "FONT", cv_font_2022_2,(2022, 2))?;
     }
     
     let mut checks: Vec<VersionCheck> = vec![
@@ -135,7 +132,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<(), String> {
             reader.cur_pos = reader.chunk.start_pos;
             
             let detected_version_opt: Option<GMVersionReq> = (check.checker_fn)(reader)
-                .map_err(|e| format!("{e}\n↳ while trying to detect version {} in chunk '{}'", check.target_version, check.chunk_name))?;
+                .with_context(|| format!("trying to detect GameMaker Version {} in chunk '{}'", check.target_version, check.chunk_name))?;
 
             if let Some(detected_version) = detected_version_opt {
                 log::debug!("Checking for version {} in chunk '{}' successful; upgraded from version {}",
@@ -169,16 +166,16 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<(), String> {
 }
 
 
-fn cv_extn_2022_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_extn_2022_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let ext_count = reader.read_u32()?;
     if ext_count < 1 {
         return Ok(None)
     }
-    let first_ext_ptr: usize = reader.read_usize()?;
+    let first_ext_ptr = reader.read_usize()?;
     let first_ext_end_ptr: usize = if ext_count >= 2 { reader.read_usize()? } else { reader.chunk.end_pos };
     reader.cur_pos = first_ext_ptr + 12;
-    let new_pointer1: usize = reader.read_usize()?;
-    let new_pointer2: usize = reader.read_usize()?;
+    let new_pointer1 = reader.read_usize()?;
+    let new_pointer2 = reader.read_usize()?;
     if new_pointer1 != reader.cur_pos {
         return Ok(None)  // first pointer mismatch
     }
@@ -187,7 +184,7 @@ fn cv_extn_2022_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
     }
     // check ending position
     reader.cur_pos = new_pointer2;
-    let option_count: usize = reader.read_usize()?;
+    let option_count = reader.read_usize()?;
     if option_count > 0 {
         let new_offset_check: usize = reader.cur_pos + 4*(option_count-1);     // MAYBE overflow issues on 32bit arch????
         if new_offset_check >= reader.chunk.end_pos {
@@ -215,15 +212,15 @@ fn cv_extn_2022_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
 
 
 /// assert version >= 2022.6
-fn cv_extn_2023_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_extn_2023_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let ext_count = reader.read_i32()?;
     if ext_count < 1 {
         return Ok(None)
     }
     // go to first extension and skip the minimal amount of strings
     reader.cur_pos = reader.read_usize()? + 4*3;
-    let files_pointer: u32 = reader.read_u32()?;
-    let options_pointer: u32 = reader.read_u32()?;
+    let files_pointer = reader.read_u32()?;
+    let options_pointer = reader.read_u32()?;
     // The file list pointer should be less than the option list pointer.
     // If it's not true, then "files_pointer" is actually a string pointer, so it's GM 2023.4+.
     if files_pointer > options_pointer {
@@ -234,13 +231,13 @@ fn cv_extn_2023_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
 
 
 /// assert version >= 2023.2 NON_LTS
-fn cv_sond_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_sond_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2024, 6).into()));
-    let possible_sound_count: usize = reader.read_usize()?;
+    let possible_sound_count = reader.read_usize()?;
     let mut sound_pointers: Vec<u32> = Vec::with_capacity(2);
 
     for _ in 0..possible_sound_count {
-        let pointer: u32 = reader.read_u32()?;
+        let pointer = reader.read_u32()?;
         if pointer == 0 { continue }
         sound_pointers.push(pointer);
         if sound_pointers.len() >= 2 { break }
@@ -256,7 +253,7 @@ fn cv_sond_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
             // end of the sound, then this is 2024.6.
             let abs_pos: u32 = sound_pointers[0] + 4*9;
             if abs_pos % 16 != 4 {
-                return Err("Expected to be on specific alignment at this point".to_string())
+                bail!("Expected to be on specific alignment at this point");
             }
             reader.cur_pos = abs_pos as usize;
             if reader.read_u32()? != 0 {
@@ -269,9 +266,9 @@ fn cv_sond_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
 
 
 /// assert version >= 2024.13
-fn cv_agrp_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_agrp_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     // Check for new field added in 2024.14
-    let audio_group_count: u32 = reader.read_u32()?;
+    let audio_group_count = reader.read_u32()?;
     if audio_group_count == 0 {
         return Ok(None)    // No way to check when there's no audio groups
     }
@@ -314,12 +311,12 @@ fn cv_agrp_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Stri
 
 
 /// assert version >= 2023.2 NON_LTS
-fn cv_sprt_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_sprt_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2024, 6).into()));
-    let sprite_count: usize = reader.read_usize()?;
+    let sprite_count = reader.read_usize()?;
     for i in 0..sprite_count {
         reader.cur_pos = reader.chunk.start_pos + i*4 + 4;
-        let sprite_pointer: usize = reader.read_usize()?;
+        let sprite_pointer = reader.read_usize()?;
         if sprite_pointer == 0 { continue }
 
         let mut next_sprite_pointer: usize = 0;
@@ -390,7 +387,7 @@ fn cv_sprt_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
             if bbox_end_pos%16 != 0 && bbox_end_pos + (16 - bbox_end_pos%16) == reader.chunk.end_pos {
                 return target_ver   // "Bbox" mask data doesn't exactly line up, but works if rounded up to the next chunk padding
             }
-            return Err("Failed to detect mask type in 2024.6 detection".to_string())
+            bail!("Failed to detect mask type in 2024.6 detection");
         }
         
         if full_end_pos == expected_end_offset {
@@ -406,16 +403,16 @@ fn cv_sprt_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
 }
 
 
-fn cv_font_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_font_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2022, 2).into()));
-    let possible_font_count: u32 = reader.read_u32()?;
+    let possible_font_count = reader.read_u32()?;
     if possible_font_count < 1 {
         return Ok(None)
     }
 
     let mut first_font_pointer: usize = 0;
     for _ in 0..possible_font_count {
-        let pointer: usize = reader.read_usize()?;
+        let pointer = reader.read_usize()?;
         if pointer != 0 {
             first_font_pointer = pointer;
             break
@@ -426,7 +423,7 @@ fn cv_font_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
     }
 
     reader.cur_pos = first_font_pointer + 48;
-    let glyph_count: usize = reader.read_usize()?;
+    let glyph_count = reader.read_usize()?;
     if glyph_count * 4 > reader.get_chunk_length() {
         return Ok(None)
     }
@@ -437,9 +434,9 @@ fn cv_font_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
 
     let mut glyph_pointers: Vec<usize> = vec_with_capacity(glyph_count)?;
     for _ in 0..glyph_count {
-        let pointer: usize = reader.read_usize()?;
+        let pointer = reader.read_usize()?;
         if pointer == 0 {
-            return Err("One of the glyph pointers is null?".to_string())
+            bail!("One of the glyph pointers is null?");
         }
         glyph_pointers.push(pointer);
     }
@@ -448,7 +445,7 @@ fn cv_font_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
             return Ok(None)
         }
         reader.cur_pos += 14;
-        let kerning_length: u16 = reader.read_u16()?;
+        let kerning_length = reader.read_u16()?;
         reader.cur_pos += kerning_length as usize * 4;
         // from utmt: "combining read/write would apparently break" ???
     }
@@ -468,7 +465,7 @@ fn cv_font_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
 ///     it's also possible to prevent audiogroup_default from being stripped by doing
 ///         audio_group_name(audiogroup_default)
 ///     So we check for the presence of UnknownAlwaysZero as a last resort.
-fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     // explicit check because the logic is very scuffed
     if !reader.general_info.is_version_at_least((2022, 8)) {
         return Ok(None)     // version requirement (for checking 2023.6) not satisfied
@@ -506,7 +503,7 @@ fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersio
         reader.cur_pos += 4;    // (detected by PSEM/PSYS chunk existence)
     }
 
-    let glyph_count: usize = reader.read_usize()?;
+    let glyph_count = reader.read_usize()?;
     if glyph_count * 4 > first_two_pointers[1] - reader.cur_pos || glyph_count < 1 {
         return Ok(None)
     }
@@ -515,7 +512,7 @@ fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersio
     for _ in 0..glyph_count {
         let ptr = reader.read_usize()?;
         if ptr == 0 {
-            return Err("One of the glyph pointers is zero".to_string())
+            bail!("One of the glyph pointers is zero");
         }
         glyph_pointers.push(ptr);
     }
@@ -540,13 +537,13 @@ fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersio
             return Ok(Some((2023, 6).into()))   // 2023.6 succeeded; 2024.11 failed
         }
         // Discard last read, which would be of UnknownAlwaysZero
-        let kerning_count: u16 = reader.read_u16()?;
+        let kerning_count = reader.read_u16()?;
         let pointer_after_kerning_list = reader.cur_pos + 4*kerning_count as usize;
         if next_glyph_pointer != pointer_after_kerning_list {
-            return Err(
-                "There appears to be more/less values than UnknownAlwaysZero before \
-                the kerning list in GMFontGlyph; data file potentially corrupted".to_string()
-            )
+            bail!(
+                "There appears to be more/fewer values than UnknownAlwaysZero before \
+                the kerning list in GMFontGlyph; data file potentially corrupted"
+            );
         }
         return Ok(Some((2024, 11).into()))      // 2024.11 succeeded (2023.6 did too but doesn't matter)
     }
@@ -555,7 +552,7 @@ fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersio
 }
 
 
-fn cv_font_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_font_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     // Check for new padding added (and final chunk "padding" removed) in 2024.14
     let font_count = reader.read_u32()?;
     let mut last_font_position: usize = 0;
@@ -590,7 +587,7 @@ fn cv_font_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Stri
 }
 
 
-fn cv_objt_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_objt_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2022, 5).into()));
     let object_count = reader.read_u32()?;
     if object_count < 1 {
@@ -616,11 +613,11 @@ fn cv_objt_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
 }
 
 
-fn cv_room_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_room_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2022, 1).into()));
     // Iterate over all rooms until a length check is performed
 
-    let room_count: usize = reader.read_usize()?;
+    let room_count = reader.read_usize()?;
     for room_index in 0..room_count {
         // Advance to room data we're interested in (and grab pointer for next room)
         reader.set_rel_cur_pos(4*room_index + 4)?;
@@ -693,7 +690,7 @@ fn cv_room_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
 }
 
 
-fn cv_room_2_2_2_302(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_room_2_2_2_302(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     // Check the size of the first GameObject in a room
     let room_count = reader.read_usize()?;
 
@@ -727,9 +724,9 @@ fn cv_room_2_2_2_302(reader: &mut DataReader) -> Result<Option<GMVersionReq>, St
 }
 
 
-fn cv_room_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_room_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     // check for tile compression
-    let room_count: usize = reader.read_usize()?;
+    let room_count = reader.read_usize()?;
     let mut any_layers_misaligned: bool = false;
 
     for room_index in 0..room_count {
@@ -756,7 +753,7 @@ fn cv_room_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
 
             reader.cur_pos = layer_ptr + 4;
             // Get pointer into the individual layer data
-            let layer_data_ptr: usize = reader.read_usize()?;
+            let layer_data_ptr = reader.read_usize()?;
 
             // Find the offset for the end of this layer
             let next_pointer: usize = if layer_index == layer_count - 1 {
@@ -774,7 +771,7 @@ fn cv_room_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
             }
             check_next_layer_offset = true;
             reader.cur_pos += 32;
-            let effect_count: usize = reader.read_usize()?;
+            let effect_count = reader.read_usize()?;
             reader.cur_pos += 12*effect_count + 4;
 
             let tile_map_width = reader.read_usize()?;
@@ -793,7 +790,7 @@ fn cv_room_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
 }
 
 
-fn cv_func_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_func_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2024, 8).into()));
     if reader.get_chunk_length() == 0 {
         return Ok(None)
@@ -843,7 +840,7 @@ fn cv_func_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
 }
 
 
-fn cv_txtr_2022_3(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_txtr_2022_3(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2022, 3).into()));
     let texture_count = reader.read_usize()?;
     if texture_count < 1 {
@@ -866,7 +863,7 @@ fn cv_txtr_2022_3(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
 }
 
 
-fn cv_txtr_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_txtr_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2022, 5).into()));
     let texture_count = reader.read_usize()?;
     for i in 0..texture_count {
@@ -894,7 +891,7 @@ fn cv_txtr_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
 }
 
 
-fn cv_txtr_2_0_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_txtr_2_0_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let texture_count = reader.read_usize()?;
     if texture_count < 1 {
         return Ok(None)
@@ -918,14 +915,14 @@ fn cv_txtr_2_0_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String
 }
 
 
-fn cv_tgin_2022_9(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_tgin_2022_9(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     if reader.general_info.is_version_at_least((2023, 1, PostLTS)) {
         return Ok(None)
     }
     
-    let tgin_version: u32 = reader.read_u32()?;
+    let tgin_version = reader.read_u32()?;
     if tgin_version != 1 {
-        return Err(format!("Expected TGIN version 1; got {tgin_version}"))
+        bail!("Expected TGIN version 1; got {tgin_version}");
     }
     
     let tgin_count = reader.read_usize()?;
@@ -947,14 +944,14 @@ fn cv_tgin_2022_9(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
 }
 
 
-fn cv_tgin_2023_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_tgin_2023_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     if reader.general_info.is_version_at_least((2023, 1, PostLTS)) {
         return Ok(None)
     }
 
-    let tgin_version: u32 = reader.read_u32()?;
+    let tgin_version = reader.read_u32()?;
     if tgin_version != 1 {
-        return Err(format!("Expected TGIN version 1; got {tgin_version}"))
+        bail!("Expected TGIN version 1; got {tgin_version}");
     }
 
     let tgin_count = reader.read_usize()?;
@@ -979,7 +976,7 @@ fn cv_tgin_2023_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
 }
 
 
-fn cv_acrv_2_3_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_acrv_2_3_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let count = reader.read_u32()?;
     if count < 1 {
         return Ok(None)
@@ -998,15 +995,15 @@ fn cv_acrv_2_3_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String
 }
 
 
-fn cv_sprt_2_3_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
-    let pointers: Vec<usize> = reader.read_simple_list()?;
+fn cv_sprt_2_3_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
+    let pointers: Vec<u32> = reader.read_simple_list()?;
     for pointer in pointers {
         if pointer == 0 { continue }
-        reader.cur_pos = pointer + 14*4;
+        reader.cur_pos = (pointer + 14 * 4) as usize;
         if reader.read_i32()? != -1 {
             continue        // sprite is not special type
         }
-        let special_version: u32 = reader.read_u32()?;
+        let special_version = reader.read_u32()?;
         if special_version >= 3 {
             return Ok(Some((2, 3, 2).into()))
         }
@@ -1015,14 +1012,14 @@ fn cv_sprt_2_3_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String
 }
 
 
-fn cv_psem_2023_x(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
+fn cv_psem_2023_x(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let mut target_ver = None;
     reader.align(4)?;
     let psem_version = reader.read_u32()?;
     if psem_version != 1 {
-        return Err(format!("Expected PSEM version 1; got {psem_version}"))
+        bail!("Expected PSEM version 1; got {psem_version}");
     }
-    let count: u32 = reader.read_u32()?;
+    let count = reader.read_u32()?;
     if count < 11 {   // 2023.2 automatically adds eleven, later versions don't
         target_ver = Some((2023, 4).into());
     }
@@ -1034,7 +1031,7 @@ fn cv_psem_2023_x(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
             0xF8 => target_ver = Some((2023, 8).into()),
             0xD8 => target_ver = Some((2023, 6).into()),
             0xC8 => target_ver = Some((2023, 4).into()),
-            elem_size => return Err(format!("Unrecognized PSEM size {elem_size} with only one element"))
+            elem_size => bail!("Unrecognized PSEM size {elem_size} with only one element")
         }
     } else {
         let pointer1 = reader.read_u32()?;
@@ -1044,15 +1041,15 @@ fn cv_psem_2023_x(reader: &mut DataReader) -> Result<Option<GMVersionReq>, Strin
             0xC0 => target_ver = Some((2023, 6).into()),
             0xBC => target_ver = Some((2023, 4).into()),
             0xB0 => {},   // 2023.2
-            elem_size => return Err(format!("Unrecognized PSEM size {elem_size} with {count} elements"))
+            elem_size => bail!("Unrecognized PSEM size {elem_size} with {count} elements")
         }
     }
     Ok(target_ver)
 }
 
 
-fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>, String> {
-    fn get_chunk_elem_count(reader: &mut DataReader, chunk_name: &'static str) -> Result<u32, String> {
+fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
+    fn get_chunk_elem_count(reader: &mut DataReader, chunk_name: &'static str) -> Result<u32> {
         let chunk = match reader.chunks.get(chunk_name) {
             Some(c) => c,
             None => return Ok(0),
@@ -1066,7 +1063,7 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
         reader.cur_pos = saved_pos;
         Ok(count)
     }
-    fn get_chunk_elem_count_weird(reader: &mut DataReader, chunk_name: &'static str) -> Result<u32, String> {
+    fn get_chunk_elem_count_weird(reader: &mut DataReader, chunk_name: &'static str) -> Result<u32> {
         let chunk = match reader.chunks.get(chunk_name) {
             Some(c) => c,
             None => return Ok(0),
@@ -1077,7 +1074,7 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
         reader.cur_pos = chunk.start_pos;
         reader.align(4)?;
         if reader.read_u32()? != 1 {
-            return Err("Expected version 1".to_string())
+            bail!("Expected version 1");
         }
         let count = reader.read_u32()?;
         reader.chunk = saved_chunk;
@@ -1094,7 +1091,7 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
     let sequence_count = get_chunk_elem_count_weird(reader, "SEQN")?;
     let particle_system_count = get_chunk_elem_count_weird(reader, "SEQN")?;
 
-    let check_if_asset_type_2024_4 = |reader: &mut DataReader| -> Result<bool, String> {
+    let check_if_asset_type_2024_4 = |reader: &mut DataReader| -> Result<bool> {
         let int_argument = reader.read_u32()?;
         let resource_id = int_argument & 0xffffff;
         Ok(match (int_argument >> 24) as u8 {
@@ -1115,7 +1112,7 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
     let code_count = reader.read_usize()?;
     let mut code_pointers = vec_with_capacity(code_count)?;
     for _ in 0..code_count {
-        let ptr: usize = reader.read_usize()?;
+        let ptr = reader.read_usize()?;
         if ptr != 0 {
             code_pointers.push(ptr);
         }
@@ -1150,9 +1147,9 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
     } else {    // bytecode >= 15
         for code_ptr in code_pointers {
             reader.cur_pos = code_ptr + 4;  // skip name
-            let instructions_length: usize = reader.read_usize()?;
+            let instructions_length = reader.read_usize()?;
             reader.cur_pos += 4;    // skip locals and arguments count
-            let instructions_start_relative: i32 = reader.read_i32()?;
+            let instructions_start_relative = reader.read_i32()?;
             let instructions_start: usize = (reader.cur_pos as i32 - 4 + instructions_start_relative) as usize;
             let instructions_end: usize = instructions_start + instructions_length;
             reader.cur_pos = instructions_start;
