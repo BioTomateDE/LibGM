@@ -10,7 +10,6 @@ use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::elements::variables::GMVariable;
 use crate::gamemaker::gm_version::GMVersionReq;
-use crate::util::fmt::format_bytes;
 
 
 pub struct DataReader<'a> {
