@@ -8,23 +8,43 @@ edition = "2024"
 dead_code = "allow"
 unused = "allow"
 
+# For normal debugging/testing
+# - Fast compile time
+# - Usually decent runtime
+# - All debug information
 [profile.dev]
-#opt-level = 1    # slight optimisations in debug profile
-opt-level = 0     # NO optimisations in debug profile so variables are not optimized out
-debug = true
+opt-level = 0
+debug = 2
+strip = false
 debug-assertions = true
 overflow-checks = true
 
-# optimize all dependencies to max
-[profile.release.package."*"]
-opt-level = 3
-[profile.dev.package."*"]
-opt-level = 3
 
+# For debugging/testing concerning slow operations
+# - Slower compile time
+# - Fast runtime
+# - Most debug information but inspecting variables in the debugger might not work properly
 [profile.release]
-debug = true         # debug info
-lto = true           # link time optimisation
-#codegen-units = 1   # potentially better optimisations but build process way slower
+opt-level = 2   # might need tweaking
+lto = "thin"
+debug = "limited"
+strip = false
+codegen-units = 16
+incremental = true
+
+
+# For actual releases for users.
+# - Very slow compile time
+# - Fastest runtime
+# - File, line and function debug symbols
+[profile.full-release]
+inherits = "release"
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = "debuginfo"
+incremental = false
+
 
 [dependencies]
 uuid = { version = "1.16.0", features = ["serde"] }
