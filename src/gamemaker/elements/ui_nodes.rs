@@ -5,7 +5,8 @@ use crate::gamemaker::elements::ui_nodes::flex_properties::{AlignmentKind, FlexV
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
-use crate::utility::{num_enum_from, typename_val};
+use crate::util::fmt::typename_val;
+use crate::util::init::num_enum_from;
 
 #[derive(Debug, Clone)]
 pub struct GMRootUINodes {
@@ -372,7 +373,7 @@ mod flex_properties {
     use crate::gamemaker::deserialize::DataReader;
     use crate::gamemaker::elements::GMElement;
     use crate::gamemaker::serialize::DataBuilder;
-    use crate::utility::num_enum_from;
+    use crate::util::init::num_enum_from;
     use num_enum::{IntoPrimitive, TryFromPrimitive};
 
     #[derive(Debug, Clone)]

@@ -21,7 +21,7 @@ use crate::gamemaker::elements::sounds::GMSound;
 use crate::gamemaker::elements::sprites::GMSprite;
 use crate::gamemaker::elements::timelines::GMTimeline;
 use crate::gamemaker::serialize::DataBuilder;
-use crate::utility::num_enum_from;
+use crate::util::init::num_enum_from;
 
 #[derive(Debug, Clone)]
 pub struct GMCodes {

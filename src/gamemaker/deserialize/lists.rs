@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::GMElement;
-use crate::utility::{format_bytes, typename};
+use crate::util::fmt::{format_bytes, typename};
 
 impl DataReader<'_> {
     /// Reads a GameMaker simple list by calling the specified deserializer function for each element.

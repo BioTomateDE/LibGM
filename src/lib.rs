@@ -3,8 +3,7 @@ mod error;
 pub use error::*;
 
 // Internal utilities
-mod csharp_rng;
-pub mod utility;
+pub mod util;
 
 // Main modules
 pub mod gamemaker;
@@ -24,7 +23,7 @@ pub mod prelude;
 /// Do not use this if you are using LibGM as a dependency.
 #[doc(hidden)]
 pub fn __test_data_files(test_fn: impl Fn(GMData) -> Result<()>) -> Result<()> {
-    use crate::utility::filename_to_str;
+    use crate::util::fmt::filename_to_str;
     unsafe { std::env::set_var("BIO_LOG", "debug"); }
     biologischer_log::init(env!("CARGO_CRATE_NAME"));
 

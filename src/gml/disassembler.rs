@@ -1,10 +1,9 @@
 use crate::prelude::*;
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
-use crate::gamemaker::elements::code::{get_data_type_from_value, GMAssetReference, GMCodeValue, GMDataType};
+use crate::gamemaker::elements::code::{get_data_type_from_value, GMAssetReference, GMCode, GMCodeValue, GMDataType};
 use crate::gamemaker::elements::code::GMComparisonType;
 use crate::gamemaker::elements::code::CodeVariable;
-use crate::gamemaker::elements::code::GMCode;
 use crate::gamemaker::elements::code::GMInstanceType;
 use crate::gamemaker::elements::code::GMInstruction;
 use crate::gamemaker::elements::code::GMVariableType;
@@ -21,6 +20,11 @@ macro_rules! name_by_ref {
         }
         name
     }};
+}
+
+
+pub fn disassemble_code(gm_data: &GMData, code: &GMCode) -> Result<String> {
+    disassemble_instructions(gm_data, &code.instructions)
 }
 
 

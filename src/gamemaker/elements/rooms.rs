@@ -13,7 +13,7 @@ use crate::gamemaker::elements::sprites::GMSprite;
 use crate::gamemaker::gm_version::LTSBranch;
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
-use crate::utility::{num_enum_from, vec_with_capacity};
+use crate::util::init::{num_enum_from, vec_with_capacity};
 
 #[derive(Debug, Clone)]
 pub struct GMRooms {

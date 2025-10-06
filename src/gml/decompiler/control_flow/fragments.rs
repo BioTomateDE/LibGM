@@ -3,7 +3,7 @@ use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::code::{get_instruction_size, GMCode, GMInstruction};
 use crate::gml::decompiler::control_flow::{BaseNode, ControlFlowGraph, NodeRef};
-use crate::utility::SmallMap;
+use crate::util::smallmap::SmallMap;
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone)]

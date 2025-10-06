@@ -13,7 +13,7 @@ use crate::gamemaker::elements::functions::{GMFunction, GMFunctions};
 use crate::gamemaker::elements::game_objects::GMGameObject;
 use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::variables::{to_vari_instance_type, GMVariable};
-use crate::utility::typename;
+use crate::util::fmt::typename;
 
 #[derive(Debug, Clone)]
 pub enum ParseError {

@@ -2,7 +2,7 @@ use crate::prelude::*;
 use std::collections::HashMap;
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
-use crate::utility::typename;
+use crate::util::fmt::typename;
 
 
 /// GMRef has (fake) generic types to make it clearer which type it belongs to (`name: GMRef` vs `name: GMRef<String>`).

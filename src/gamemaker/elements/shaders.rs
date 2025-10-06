@@ -3,7 +3,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
-use crate::utility::{num_enum_from, vec_with_capacity};
+use crate::util::init::{num_enum_from, vec_with_capacity};
 
 #[derive(Debug, Clone)]
 pub struct GMShaders {
