@@ -2,17 +2,20 @@
 #![deny(unreachable_patterns)]
 #![deny(unused_assignments)]
 #![deny(unused_macros)]
-#![deny(clippy::all)]
 
+#![warn(clippy::all)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![warn(clippy::cargo)]
 
+// TODO: This is only for development. Remove this after initial release.
+#![allow(dead_code)]
+#![allow(unused)]
+
 use libgm::prelude::*;
 use std::path::Path;
-use std::process::exit;
-use libgm::gml::decompiler::decompile_to_ast;
-use libgm::utility::Stopwatch;
+use libgm::util::bench::Stopwatch;
+
 
 fn read_data_file(data_file_path: &Path) -> Result<Vec<u8>> {
     let stopwatch = Stopwatch::start();
@@ -41,17 +44,25 @@ fn main_open_and_close() -> Result<()> {
     use libgm::gamemaker::serialize::build_data_file;
 
     let args: Vec<String> = std::env::args().collect();
-    let original_data_file_path: &Path = path_from_arg(args.get(1), "data.win");
-    let modified_data_file_path: &Path = path_from_arg(args.get(2), "data_out.win");
+    let input_path: &Path = path_from_arg(args.get(1), "data.win");
+    let output_path: &Path = path_from_arg(args.get(2), "data_out.win");
 
-    log::info!("Loading data file \"{}\"", original_data_file_path.display());
-    let original_data_raw: Vec<u8> = read_data_file(original_data_file_path).context("reading data file")?;
+    // Read data file
+    log::info!("Loading data file \"{}\"", input_path.display());
+    let raw_data: Vec<u8> = read_data_file(input_path).context("reading data file")?;
 
     log::info!("Parsing data file");
-    let gm_data: GMData = parse_data_file(&original_data_raw).context("parsing data file")?;
-    drop(original_data_raw);
+    let gm_data: GMData = parse_data_file(&raw_data).context("parsing data file")?;
+    drop(raw_data);
 
-    // // count instructions
+    
+    // // Sample changes
+    // let mut gm_data = gm_data;
+    // let original_name: &str = gm_data.general_info.display_name.resolve(&gm_data.strings.strings)?;
+    // let modified_name: String = format!("{original_name} - Modded using AcornGM");
+    // gm_data.general_info.display_name = gm_data.make_string(&modified_name);
+    //
+    // // Count Instructions
     // let mut counts = std::collections::HashMap::new();
     // let mut all = 0;
     // for code in &gm_data.codes.codes {
@@ -69,59 +80,44 @@ fn main_open_and_close() -> Result<()> {
     // for (instr, count) in counts {
     //     println!("{count:>7} {instr}");
     // }
-    
-    // // sample changes
-    // let mut gm_data = gm_data;
-    // let original_name: &str = gm_data.general_info.display_name.resolve(&gm_data.strings.strings)?;
-    // let modified_name: String = format!("{original_name} - Modded using AcornGM");
-    // gm_data.general_info.display_name = gm_data.make_string(&modified_name);
     //
-    // // export code disassembly
+    // // Export Code Disassembly
     // if !std::fs::exists("expasm").unwrap() {
     //     std::fs::create_dir("expasm").unwrap();
     // }
     // for code in &gm_data.codes.codes {
     //     let code_name = code.name.resolve(&gm_data.strings.strings)?;
-    //     let assembly = gml::disassembler::disassemble_code(&gm_data, code)?;
+    //     let assembly = libgm::gml::disassembler::disassemble_code(&gm_data, code)?;
     //     // println!("Disassembly of \"{code_name}\": \n{}", assembly);
     //     std::fs::write(format!("expasm/{code_name}.asm"), assembly)
-    //         .with_context(|| format!("Could not write assembly of code \"{code_name}\": {e}"))?;
+    //         .with_context(|| format!("Could not write assembly of code \"{code_name}\""))?;
     // }
     //
-    // // export strings
-    // let mut raw = String::new();
+    // // Export all Strings
+    // let mut out = String::new();
     // for i in 0..gm_data.strings.strings.len() {
-    //     let string_ref = gamemaker::deserialize::GMRef::new(i as u32);
-    //     let string = gml::disassembler::format_literal_string(&gm_data, string_ref)?;
-    //     raw += &string;
-    //     raw += "\n";
+    //     let string_ref = libgm::gamemaker::deserialize::GMRef::new(i as u32);
+    //     let string = libgm::gml::disassembler::format_literal_string(&gm_data, string_ref)?;
+    //     out += &string;
+    //     out += "\n";
     // }
-    // std::fs::write(format!("{}_strings.txt", original_data_file_path.to_str().unwrap()), raw)
-    //     .with_context(|| format!("Could not write string: {e}"))?;
+    // let path_str = input_path.to_str().context("Invalid input path OS String")?;
+    // std::fs::write(format!("{path_str}_strings.txt"), out).context("Could not write string");
     //
-    // // find code blocks
-    // for (i, code) in gm_data.codes.codes[46..].iter().enumerate() {
-    //     let name = code.name.resolve(&gm_data.strings.strings)?;
-    //     let blocks = gml::decompiler::blocks::find_basic_blocks(&code.instructions).map_err(|e| e.to_string())?;
-    //     println!("{i} - {name}: \n{}\n", blocks.iter().map(|i| i.to_string()).collect::<Vec<_>>().join("\n"));
-    //     // std::hint::black_box(blocks);
-    //     println!("{:?}", gml::decompiler::control_flow::idk(&blocks, 0));
-    //     break
-    // }
+    // // Upgrade GameMaker Version
+    // let gm_data = libgm::gamemaker::upgrade::upgrade_to_2023_lts(gm_data)?;
 
-    // // upgrade gamemaker version
-    // let gm_data = gamemaker::upgrade::upgrade_to_2023_lts(gm_data)?;
+    // Decompile a specific code
+    libgm::gml::decompiler::decompile_to_ast(&gm_data, libgm::gamemaker::deserialize::GMRef::new(3))?;
 
-    // decompile
-    decompile_to_ast(&gm_data, libgm::gamemaker::deserialize::GMRef::new(3))?;
 
-    // build data file
+    // Build data file
     log::info!("Building data file");
-    let modified_data_raw: Vec<u8> = build_data_file(&gm_data).context("\nwhile building data file")?;
+    let raw_data: Vec<u8> = build_data_file(&gm_data).context("\nwhile building data file")?;
     drop(gm_data);
 
-    log::info!("Writing data file \"{}\"", modified_data_file_path.display());
-    write_data_file(modified_data_raw, modified_data_file_path).context("writing data file")?;
+    log::info!("Writing data file \"{}\"", output_path.display());
+    write_data_file(raw_data, output_path).context("writing data file")?;
 
     Ok(())
 }
@@ -145,7 +141,7 @@ fn main_new_data_file() -> Result<()> {
     Ok(())
 }
 
-
+//// Broken for now, i will work on the modding system soon™
 // fn main_export_mod() -> Result<()> {
 //     use crate::modding::export::{export_mod};
 //     use crate::gamemaker::deserialize::{parse_data_file, GMData};
@@ -186,7 +182,7 @@ fn main() {
     
     if let Err(error) = main_open_and_close() {
         log::error!("{}", error.chain_with("↳"));
-        exit(1);
+        std::process::exit(1);
     }
 
     log::info!("Done");

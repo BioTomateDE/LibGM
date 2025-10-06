@@ -120,7 +120,7 @@ fn validate_instructions(gm_data: &GMData, address_map: &BiMap<usize, u32>, inst
                 VMStackItem::Variable => 'v',
                 VMStackItem::String => 's',
             }).collect::<String>();
-            log::debug!("{} | {} {} | {}", instruction_index, stack.items.len(), _debug_stack, disassemble_instruction(gm_data, instruction).unwrap());
+            log::debug!("{} | {} {} | {}", instruction_index, stack.items.len(), _debug_stack, disassemble_instruction(gm_data, instruction)?);
             instruction_index += 1;
 
             match instruction {

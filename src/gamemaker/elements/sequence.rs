@@ -10,7 +10,7 @@ use crate::gamemaker::elements::particles::GMParticleSystem;
 use crate::gamemaker::elements::sounds::GMSound;
 use crate::gamemaker::elements::sprites::GMSprite;
 use crate::gamemaker::serialize::DataBuilder;
-use crate::utility::{hashmap_with_capacity, num_enum_from, vec_with_capacity};
+use crate::util::init::{hashmap_with_capacity, num_enum_from, vec_with_capacity};
 
 /// This struct belong to the chunk SEQN.
 /// Sprites can _also_ contain sequences (not by reference; the actual data).

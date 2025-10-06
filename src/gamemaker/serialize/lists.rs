@@ -2,7 +2,7 @@ use crate::prelude::*;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::GMElement;
 use crate::gamemaker::serialize::DataBuilder;
-use crate::utility::typename;
+use crate::util::fmt::typename;
 
 impl DataBuilder<'_> {
     /// Write the element count as a 32-bit integer.

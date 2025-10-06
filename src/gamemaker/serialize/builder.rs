@@ -4,8 +4,8 @@ use crate::gamemaker::data::{Endianness, GMData};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::code::GMVariableType;
 use crate::gamemaker::gm_version::GMVersionReq;
-use crate::utility::{typename, Stopwatch};
-
+use crate::util::bench::Stopwatch;
+use crate::util::fmt::typename;
 
 #[derive(Debug, Clone)]
 pub struct DataBuilder<'a> {

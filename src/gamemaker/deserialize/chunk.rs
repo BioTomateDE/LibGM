@@ -2,7 +2,7 @@ use crate::prelude::*;
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::gm_version::GMVersion;
-use crate::utility::Stopwatch;
+use crate::util::bench::Stopwatch;
 use crate::gamemaker::data::Endianness;
 
 #[derive(Debug, Clone)]

@@ -1,6 +1,6 @@
 ﻿use crate::prelude::*;
 use std::fmt::Debug;
-use crate::utility::typename;
+use crate::util::fmt::typename;
 use crate::gamemaker::elements::backgrounds::GMBackground;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::embedded_textures::GMEmbeddedTexture;

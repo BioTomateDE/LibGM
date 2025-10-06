@@ -5,7 +5,7 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::sprites::GMSprite;
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
-use crate::utility::num_enum_from;
+use crate::util::init::num_enum_from;
 
 #[derive(Debug, Clone)]
 pub struct GMParticleSystems {
