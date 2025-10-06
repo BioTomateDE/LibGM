@@ -6,7 +6,7 @@ mod lists;
 mod resources;
 
 pub use builder::DataBuilder;
-use crate::gamemaker::data::{Endianness, GMData};
+use crate::gamemaker::data::GMData;
 use crate::gamemaker::elements::GMChunkElement;
 use crate::util::bench::Stopwatch;
 

@@ -506,7 +506,7 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable> {
     consume_dot(line)?;
 
     let mut variable_ref: Option<GMRef<GMVariable>> = None;
-    let mut instance_type: GMInstanceType = match instance_type_raw.as_str() {
+    let instance_type: GMInstanceType = match instance_type_raw.as_str() {
         "self" if instance_type_arg.is_empty() => GMInstanceType::Self_(None),
         "self" => {
             let object_ref: GMRef<GMGameObject> = gm_data.game_objects.get_object_ref_by_name(&instance_type_arg, &gm_data.strings)?;
