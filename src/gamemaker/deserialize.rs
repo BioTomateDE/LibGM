@@ -9,7 +9,7 @@ pub use chunk::GMChunk;
 pub use reader::DataReader;
 pub use resources::GMRef;
 use crate::gamemaker::data::{Endianness, GMData};
-use crate::utility::Stopwatch;
+use crate::util::bench::Stopwatch;
 use crate::gamemaker::detect_version::detect_gamemaker_version;
 use crate::gamemaker::elements::GMChunkElement;
 use crate::gamemaker::gm_version::{GMVersion, LTSBranch};

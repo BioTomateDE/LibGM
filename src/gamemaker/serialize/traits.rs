@@ -2,7 +2,7 @@ use crate::prelude::*;
 use crate::gamemaker::elements::GMElement;
 use crate::gamemaker::gm_version::GMVersionReq;
 use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::utility::typename;
+use crate::util::fmt::typename;
 
 
 pub trait GMSerializeIfVersion {

@@ -3,11 +3,6 @@ name = "libgm"
 version = "0.1.0"
 edition = "2024"
 
-[lints.rust]
-# TODO: This is only for development. Remove this after initial release.
-dead_code = "allow"
-unused = "allow"
-
 # For normal debugging/testing
 # - Fast compile time
 # - Usually decent runtime

@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use crate::utility::{num_enum_from, vec_with_capacity};
+use crate::util::init::{num_enum_from, vec_with_capacity};
 use crate::gamemaker::deserialize::{DataReader, GMChunk};
 use crate::gamemaker::elements::embedded_textures::MAGIC_BZ2_QOI_HEADER;
 use crate::gamemaker::elements::rooms::GMRoomLayerType;

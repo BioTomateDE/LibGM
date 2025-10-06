@@ -5,7 +5,7 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::code::{build_instance_type, parse_instance_type, GMInstanceType, GMVariableType};
 use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::serialize::DataBuilder;
-use crate::utility::vec_with_capacity;
+use crate::util::init::vec_with_capacity;
 
 #[derive(Debug, Clone)]
 pub struct GMVariables {

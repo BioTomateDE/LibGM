@@ -1,8 +1,7 @@
 ﻿use crate::prelude::*;
-use crate::prelude::*;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use chrono::{DateTime, Utc};
-use crate::csharp_rng::CSharpRng;
+use crate::util::rng::CSharpRng;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::rooms::GMRoom;

@@ -4,7 +4,7 @@ use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::serialize::DataBuilder;
-use crate::utility::vec_with_capacity;
+use crate::util::init::vec_with_capacity;
 
 const ALIGNMENT: u32 = 8;
 
