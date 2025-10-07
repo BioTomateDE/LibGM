@@ -112,7 +112,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
         detect_gamemaker_version(&mut reader).context("detecting GameMaker version")?;
         log::trace!("Detecting GameMaker Version took {stopwatch}");
         log::info!(
-            "Loaded game \"{}\" with gamemaker version {} [specified: {}] and bytecode version {}",
+            "Loaded game {:?} with gamemaker version {} [specified: {}] and bytecode version {}",
             reader.resolve_gm_str(reader.general_info.display_name)?,
             reader.general_info.version,
             specified_version,
@@ -120,7 +120,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
         );
     } else {
         log::info!(
-            "Loaded game \"{}\" with gamemaker version {} and bytecode version {}",
+            "Loaded game {:?} with gamemaker version {} and bytecode version {}",
             reader.resolve_gm_str(reader.general_info.display_name)?,
             reader.general_info.version,
             reader.general_info.bytecode_version,

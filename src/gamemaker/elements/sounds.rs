@@ -64,7 +64,7 @@ impl GMElement for GMSound {
         } else {
             let preload = reader.read_bool32()?;
             if !preload {
-                bail!("Preload is unexpectedly set to false for sound \"{}\"; please report this error", reader.display_gm_str(name));
+                bail!("Preload is unexpectedly set to false for sound {:?}; please report this error", reader.display_gm_str(name));
             }
         }
         let audio_file: Option<GMRef<GMEmbeddedAudio>> = reader.read_resource_by_id_opt()?;

@@ -112,7 +112,7 @@ impl GMElement for GMSprite {
                     let swf_version = reader.read_i32()?;
                     // assert swf version is either 7 or 8
                     if !(swf_version == 7 || swf_version == 8) {
-                        bail!("Invalid SWF version {swf_version} for Sprite \"{name_str}\"");
+                        bail!("Invalid SWF version {swf_version} for Sprite {name_str:?}");
                     }
                     if swf_version == 8 {
                         textures = Self::read_texture_list(reader)?;
@@ -207,13 +207,13 @@ impl GMElement for GMSprite {
                     bail!("Vector Sprite Type not yet supported; will be implemented when UTMT stops using raw ints for this");
                 }
 
-                other => bail!("Invalid Sprite Type {other} for Sprite with name \"{name_str}\"")
+                other => bail!("Invalid Sprite Type {other} for Sprite with name {name_str:?}")
             };
 
             if sequence_offset != 0 {
                 let sequence_version = reader.read_i32()?;
                 if sequence_version != 1 {
-                    bail!("Expected SEQN version 1 but got {sequence_version} while parsing Sequence for Sprite with name \"{name_str}\"");
+                    bail!("Expected SEQN version 1 but got {sequence_version} while parsing Sequence for Sprite with name {name_str:?}");
                 }
                 sequence = Some(GMSequence::deserialize(reader)?);
             }
