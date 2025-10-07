@@ -18,30 +18,33 @@ pub use gamemaker::serialize::build_data_file;
 // Prelude for glob imports
 pub mod prelude;
 
-
 /// This function should only be used within the `tests` or `benches` directory in LibGM.
 /// Do not use this if you are using LibGM as a dependency.
 #[doc(hidden)]
 pub fn __test_data_files(test_fn: impl Fn(GMData) -> Result<()>) -> Result<()> {
     use crate::util::fmt::filename_to_str;
-    unsafe { std::env::set_var("BIO_LOG", "debug"); }
+    unsafe {
+        std::env::set_var("BIO_LOG", "debug");
+    }
     biologischer_log::init(env!("CARGO_CRATE_NAME"));
 
     let mut data_file_paths = Vec::new();
     for file in std::fs::read_dir("tests/data_files").context("reading data file folder")? {
         let path = file.context("reading file metadata")?.path();
-        let Some(ext) = path.extension() else {continue};
+        let Some(ext) = path.extension() else { continue };
         let ext: &str = ext.to_str().context("converting file extension to UTF-8")?;
         if matches!(ext, "win" | "unx" | "ios" | "droid") {
             data_file_paths.push(path);
         }
     }
 
-    log::info!("Testing data files [{}]",
-        data_file_paths.iter()
-        .map(|p| p.display().to_string())
-        .collect::<Vec<_>>()
-        .join(", ")
+    log::info!(
+        "Testing data files [{}]",
+        data_file_paths
+            .iter()
+            .map(|p| p.display().to_string())
+            .collect::<Vec<_>>()
+            .join(", ")
     );
 
     for data_file_path in data_file_paths {
@@ -58,4 +61,3 @@ pub fn __test_data_files(test_fn: impl Fn(GMData) -> Result<()>) -> Result<()> {
     log::info!("All data files passed.");
     Ok(())
 }
-

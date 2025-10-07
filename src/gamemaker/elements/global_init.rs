@@ -1,8 +1,8 @@
-use crate::prelude::*;
-use crate::gamemaker::elements::code::GMCode;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
+use crate::gamemaker::elements::code::GMCode;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
+use crate::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct GMGlobalInitScripts {
@@ -24,12 +24,13 @@ impl GMElement for GMGlobalInitScripts {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
+        if !self.exists {
+            return Ok(());
+        }
         builder.write_simple_list_of_resource_ids(&self.global_init_scripts)?;
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct GMGameEndScripts {
@@ -51,9 +52,10 @@ impl GMElement for GMGameEndScripts {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
+        if !self.exists {
+            return Ok(());
+        }
         builder.write_simple_list_of_resource_ids(&self.game_end_scripts)?;
         Ok(())
     }
 }
-

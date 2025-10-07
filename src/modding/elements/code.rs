@@ -48,7 +48,7 @@ pub enum ModInstructionKind {
     Goto(ModGotoTarget),
     Push(ModValue),
     Pop(ModDataType, ModDataType, ModCodeVariable),
-    Call(ModDataType, ModRef, u8),   // function ref, args count
+    Call(ModDataType, ModRef, u8),   // Function ref, args count
     Break(ModDataType, i16, Option<i32>),   // TODO this will probably also be really incompatible
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]

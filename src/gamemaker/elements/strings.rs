@@ -1,9 +1,8 @@
-﻿use crate::prelude::*;
-use std::collections::HashMap;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
-
+use crate::prelude::*;
+use std::collections::HashMap;
 
 const ALIGNMENT: u32 = 4;
 
@@ -46,8 +45,8 @@ impl GMElement for GMStrings {
                 bail!("Expected null terminator byte after string, found {byte} (0x{byte:02X})");
             }
             strings_by_index.push(string.clone());
-            // occurrence is `start_position + 4` because string refs point to the actual
-            // string data instead of the gamemaker element for faster access.
+            // Occurrence is `start_position + 4` because string refs point to the actual
+            // String data instead of the gamemaker element for faster access.
             abs_pos_to_reference.insert(pointer + 4, GMRef::new(i as u32));
         }
 
@@ -60,29 +59,28 @@ impl GMElement for GMStrings {
         if !self.exists {
             bail!("Required chunk STRG does not exist");
         }
-        
+
         builder.write_usize(self.strings.len())?;
         let pointer_list_start: usize = builder.len();
         for _ in 0..self.strings.len() {
             builder.write_u32(0xDEADC0DE);
         }
-        
+
         for (i, string) in self.strings.iter().enumerate() {
             if self.is_aligned {
                 builder.align(ALIGNMENT);
             }
-            builder.overwrite_usize(builder.len(), pointer_list_start + 4*i)?;
+            builder.overwrite_usize(builder.len(), pointer_list_start + 4 * i)?;
             builder.write_usize(string.len())?;
-            builder.resolve_pointer(string)?;   // gamemaker string references point to the actual string data
+            builder.resolve_pointer(string)?; // Gamemaker string references point to the actual string data
             builder.write_literal_string(string);
-            builder.write_u8(0);    // trailing null terminator byte
+            builder.write_u8(0); // Trailing null terminator byte
         }
 
         builder.align(0x80);
         Ok(())
     }
 }
-
 
 impl GMRef<String> {
     /// Tries to resolve a GameMaker string reference to the actual character string.
@@ -96,4 +94,3 @@ impl GMRef<String> {
             .unwrap_or("<invalid string reference>")
     }
 }
-

@@ -32,7 +32,7 @@ pub struct AddGameObject {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddGameObjectEvent {
     pub subtype: u32,
-    pub actions: Vec<ModRef>,   // code ref
+    pub actions: Vec<ModRef>,   // Code ref
 }
 
 #[serde_with::skip_serializing_none]
@@ -65,7 +65,7 @@ pub struct EditGameObject {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditGameObjectEvent {
     pub subtype: Option<u32>,
-    pub actions: Vec<DataChange<ModRef, ModRef>>,   // code ref
+    pub actions: Vec<DataChange<ModRef, ModRef>>,   // Code ref
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
@@ -163,8 +163,8 @@ impl ModExporter<'_, '_> {
     ) -> Result<Vec<Vec<DataChange<AddGameObjectEvent, EditGameObjectEvent>>>, String> {
         let mut edited_events = Vec::with_capacity(modified_events.len());
         for (i, modified_event) in modified_events.iter().enumerate() {
-            // outer event list (for event "types") should be the same length (always 12 or 14 or whatever).
-            // if different; probably different gamemaker version; default to empty inner event list.
+            // Outer event list (for event "types") should be the same length (always 12 or 14 or whatever).
+            // If different; probably different gamemaker version; default to empty inner event list.
             let original_event: &[GMGameObjectEvent] = match original_events.get(i) {
                 Some(i) => i.events.as_slice(),
                 None => &[],

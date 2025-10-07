@@ -2,20 +2,17 @@
 #![deny(unreachable_patterns)]
 #![deny(unused_assignments)]
 #![deny(unused_macros)]
-
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![warn(clippy::cargo)]
-
 // TODO: This is only for development. Remove this after initial release.
 #![allow(dead_code)]
 #![allow(unused)]
 
 use libgm::prelude::*;
-use std::path::Path;
 use libgm::util::bench::Stopwatch;
-
+use std::path::Path;
 
 fn read_data_file(data_file_path: &Path) -> Result<Vec<u8>> {
     let stopwatch = Stopwatch::start();
@@ -37,7 +34,6 @@ fn path_from_arg<'a>(arg: Option<&'a String>, default: &'a str) -> &'a Path {
     Path::new(arg.map_or(default, |s| s))
 }
 
-
 fn main_open_and_close() -> Result<()> {
     use libgm::gamemaker::data::GMData;
     use libgm::gamemaker::deserialize::parse_data_file;
@@ -55,7 +51,6 @@ fn main_open_and_close() -> Result<()> {
     let gm_data: GMData = parse_data_file(&raw_data).context("parsing data file")?;
     drop(raw_data);
 
-    
     // // Sample changes
     // let mut gm_data = gm_data;
     // let original_name: &str = gm_data.general_info.display_name.resolve(&gm_data.strings.strings)?;
@@ -105,11 +100,10 @@ fn main_open_and_close() -> Result<()> {
     // std::fs::write(format!("{path_str}_strings.txt"), out).context("Could not write string");
     //
     // // Upgrade GameMaker Version
-    // let gm_data = libgm::gamemaker::upgrade::upgrade_to_2023_lts(gm_data)?;
+    // Let gm_data = libgm::gamemaker::upgrade::upgrade_to_2023_lts(gm_data)?;
 
     // Decompile a specific code
     libgm::gml::decompiler::decompile_to_ast(&gm_data, libgm::gamemaker::deserialize::GMRef::new(3))?;
-
 
     // Build data file
     log::info!("Building data file");
@@ -122,12 +116,11 @@ fn main_open_and_close() -> Result<()> {
     Ok(())
 }
 
-
 fn main_new_data_file() -> Result<()> {
-    use libgm::gamemaker::data::GMData;
     use libgm::gamemaker::create_data_file::new_data_file;
-    use libgm::gamemaker::serialize::build_data_file;
+    use libgm::gamemaker::data::GMData;
     use libgm::gamemaker::gm_version::{GMVersion, LTSBranch};
+    use libgm::gamemaker::serialize::build_data_file;
 
     let args: Vec<String> = std::env::args().collect();
     let data_file_path: &Path = path_from_arg(args.get(1), "data_out.win");
@@ -167,19 +160,18 @@ fn main_new_data_file() -> Result<()> {
 //     let modified_data: GMData = parse_data_file(&modified_data_raw, false)
 //         .with_context(|| format!("parsing modified data file"))?;
 //     drop(modified_data_raw);
-// 
+//
 //     log::info!("Extracting changes and exporting mod to file {:?}", mod_data_path.display());
 //     export_mod(&original_data, &modified_data, mod_data_path)
 //         .with_context(|| format!("exporting AcornGM mod"))?;
-// 
+//
 //     Ok(())
 // }
-
 
 fn main() {
     biologischer_log::init(env!("CARGO_PKG_NAME"));
     log::debug!("============= LibGM v{} =============", env!("CARGO_PKG_VERSION"));
-    
+
     if let Err(error) = main_open_and_close() {
         log::error!("{}", error.chain_with("↳"));
         std::process::exit(1);
@@ -187,4 +179,3 @@ fn main() {
 
     log::info!("Done");
 }
-

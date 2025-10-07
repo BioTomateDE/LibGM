@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use std::fmt::Write;
+use std::str::FromStr;
 
 #[derive(thiserror::Error, Debug)]
 #[error("{context}")]
@@ -68,7 +68,6 @@ impl FromStr for Error {
     }
 }
 
-
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub trait Context<T> {
@@ -78,17 +77,11 @@ pub trait Context<T> {
 
 impl<T, E: std::error::Error + Send + Sync + 'static> Context<T> for std::result::Result<T, E> {
     fn context(self, context: impl Into<String>) -> Result<T> {
-        self.map_err(|e| Error {
-            context: context.into(),
-            source: Some(Box::new(e)),
-        })
+        self.map_err(|e| Error { context: context.into(), source: Some(Box::new(e)) })
     }
 
     fn with_context<F: FnOnce() -> String>(self, f: F) -> Result<T> {
-        self.map_err(|e| Error {
-            context: f(),
-            source: Some(Box::new(e)),
-        })
+        self.map_err(|e| Error { context: f(), source: Some(Box::new(e)) })
     }
 }
 
@@ -102,7 +95,6 @@ impl<T> Context<T> for Option<T> {
     }
 }
 
-
 #[macro_export]
 macro_rules! err {
     ($($arg:tt)*) => {
@@ -115,4 +107,3 @@ macro_rules! bail {
         return Err($crate::Error::new(format!($($arg)*)))
     };
 }
-

@@ -13,4 +13,3 @@ impl<K: PartialEq, V> SmallMap<K, V> {
         self.0.len()
     }
 }
-

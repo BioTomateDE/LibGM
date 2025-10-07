@@ -1,7 +1,7 @@
-use crate::prelude::*;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
+use crate::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct GMFilterEffects {
@@ -31,12 +31,11 @@ impl GMElement for GMFilterEffects {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.align(4);
-        builder.write_i32(1);   // FEDS version
+        builder.write_i32(1); // FEDS version
         builder.write_pointer_list(&self.filter_effects)?;
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct GMFilterEffect {
@@ -57,4 +56,3 @@ impl GMElement for GMFilterEffect {
         Ok(())
     }
 }
-

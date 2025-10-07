@@ -1,22 +1,16 @@
-mod lists;
 mod chunk;
-mod resources;
+mod lists;
 mod numbers;
 mod reader;
+mod resources;
 
-use crate::prelude::*;
-pub use chunk::GMChunk;
-pub use reader::DataReader;
-pub use resources::GMRef;
 use crate::gamemaker::data::{Endianness, GMData};
-use crate::util::bench::Stopwatch;
 use crate::gamemaker::detect_version::detect_gamemaker_version;
 use crate::gamemaker::elements::GMChunkElement;
-use crate::gamemaker::gm_version::GMVersion;
 use crate::gamemaker::elements::animation_curves::GMAnimationCurves;
 use crate::gamemaker::elements::audio_groups::GMAudioGroups;
 use crate::gamemaker::elements::backgrounds::GMBackgrounds;
-use crate::gamemaker::elements::code::{check_yyc, GMCodes};
+use crate::gamemaker::elements::code::{GMCodes, check_yyc};
 use crate::gamemaker::elements::data_files::GMDataFiles;
 use crate::gamemaker::elements::embedded_audio::GMEmbeddedAudios;
 use crate::gamemaker::elements::embedded_images::GMEmbeddedImages;
@@ -27,24 +21,29 @@ use crate::gamemaker::elements::filter_effects::GMFilterEffects;
 use crate::gamemaker::elements::fonts::GMFonts;
 use crate::gamemaker::elements::functions::GMFunctions;
 use crate::gamemaker::elements::game_objects::GMGameObjects;
-use crate::gamemaker::elements::scripts::GMScripts;
-use crate::gamemaker::elements::variables::GMVariables;
 use crate::gamemaker::elements::global_init::{GMGameEndScripts, GMGlobalInitScripts};
 use crate::gamemaker::elements::languages::GMLanguageInfo;
-use crate::gamemaker::elements::paths::GMPaths;
-use crate::gamemaker::elements::rooms::GMRooms;
-use crate::gamemaker::elements::sounds::GMSounds;
-use crate::gamemaker::elements::sprites::GMSprites;
-use crate::gamemaker::elements::texture_page_items::GMTexturePageItems;
 use crate::gamemaker::elements::options::GMOptions;
 use crate::gamemaker::elements::particles::{GMParticleEmitters, GMParticleSystems};
+use crate::gamemaker::elements::paths::GMPaths;
+use crate::gamemaker::elements::rooms::GMRooms;
+use crate::gamemaker::elements::scripts::GMScripts;
 use crate::gamemaker::elements::sequence::GMSequences;
 use crate::gamemaker::elements::shaders::GMShaders;
+use crate::gamemaker::elements::sounds::GMSounds;
+use crate::gamemaker::elements::sprites::GMSprites;
 use crate::gamemaker::elements::tags::GMTags;
 use crate::gamemaker::elements::texture_group_info::GMTextureGroupInfos;
-use crate::gamemaker::elements::ui_nodes::GMRootUINodes;
+use crate::gamemaker::elements::texture_page_items::GMTexturePageItems;
 use crate::gamemaker::elements::timelines::GMTimelines;
-
+use crate::gamemaker::elements::ui_nodes::GMRootUINodes;
+use crate::gamemaker::elements::variables::GMVariables;
+use crate::gamemaker::gm_version::GMVersion;
+use crate::prelude::*;
+use crate::util::bench::Stopwatch;
+pub use chunk::GMChunk;
+pub use reader::DataReader;
+pub use resources::GMRef;
 
 pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
     if raw_data.len() >= i32::MAX as usize {
@@ -58,21 +57,22 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
     reader.endianness = match root_chunk_name.as_str() {
         "FORM" => Endianness::Little,
         "MROF" => Endianness::Big,
-        _ => bail!("Invalid data file: expected root chunk to be 'FORM' but found '{root_chunk_name}'")
+        _ => bail!("Invalid data file: expected root chunk to be 'FORM' but found '{root_chunk_name}'"),
     };
     if reader.endianness == Endianness::Big {
         log::warn!("Big endian format might not work, proceed with caution");
     }
-    
+
     let total_data_len: usize = reader.read_usize()? + reader.cur_pos;
     if total_data_len != raw_data.len() {
         bail!(
             "Specified FORM data length is {} but data is actually {} bytes long",
-            total_data_len, raw_data.len(),
+            total_data_len,
+            raw_data.len(),
         );
     }
 
-    while reader.cur_pos + 8 < total_data_len { 
+    while reader.cur_pos + 8 < total_data_len {
         let name = reader.read_chunk_name()?;
         let chunk_length = reader.read_usize()?;
         let start_pos: usize = reader.cur_pos;
@@ -82,7 +82,10 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
             bail!(
                 "Trying to read chunk '{}' out of data bounds: specified length {} implies chunk \
                 end position {}; which is greater than the total data length {}",
-                name, chunk_length, reader.cur_pos, raw_data.len(),
+                name,
+                chunk_length,
+                reader.cur_pos,
+                raw_data.len(),
             );
         }
 
@@ -97,12 +100,16 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
         if let Some(old_chunk) = reader.chunks.insert(name.clone(), chunk.clone()) {
             bail!(
                 "Chunk '{}' is defined multiple times: old data range {}..{}; new data range {}..{}",
-                name, old_chunk.start_pos, old_chunk.end_pos, chunk.start_pos, chunk.end_pos,
+                name,
+                old_chunk.start_pos,
+                old_chunk.end_pos,
+                chunk.start_pos,
+                chunk.end_pos,
             );
         }
     }
     log::trace!("Parsing FORM took {stopwatch}");
-    
+
     reader.strings = reader.read_chunk_required("STRG")?;
     reader.general_info = reader.read_chunk_required("GEN8")?;
 
@@ -126,14 +133,16 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
             reader.general_info.bytecode_version,
         );
     }
-    
+
     let (variables, functions, codes) = if check_yyc(&reader) {
         (GMVariables::stub(), GMFunctions::stub(), GMCodes::stub())
-    } else {(
-        reader.read_chunk_required("VARI")?,
-        reader.read_chunk_required("FUNC")?,
-        reader.read_chunk_required("CODE")?,
-    )};
+    } else {
+        (
+            reader.read_chunk_required("VARI")?,
+            reader.read_chunk_required("FUNC")?,
+            reader.read_chunk_required("CODE")?,
+        )
+    };
 
     let embedded_textures: GMEmbeddedTextures = reader.read_chunk_required("TXTR")?;
     let texture_page_items: GMTexturePageItems = reader.read_chunk_required("TPAG")?;
@@ -145,7 +154,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
     let backgrounds: GMBackgrounds = reader.read_chunk_required("BGND")?;
     let audios: GMEmbeddedAudios = reader.read_chunk_required("AUDO")?;
     let sounds: GMSounds = reader.read_chunk_required("SOND")?;
-    // some of these chunks probably aren't actually required; make them optional when issues occur
+    // Some of these chunks probably aren't actually required; make them optional when issues occur
     let paths: GMPaths = reader.read_chunk_optional("PATH")?;
     let options: GMOptions = reader.read_chunk_optional("OPTN")?;
     let sequences: GMSequences = reader.read_chunk_optional("SEQN")?;
@@ -166,7 +175,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
     let feature_flags: GMFeatureFlags = reader.read_chunk_optional("FEAT")?;
     let filter_effects: GMFilterEffects = reader.read_chunk_optional("FEDS")?;
     let animation_curves: GMAnimationCurves = reader.read_chunk_optional("ACRV")?;
-    
+
     // Throw error if not all chunks read to prevent silent data loss
     if !reader.chunks.is_empty() {
         let chunks_str: String = reader.chunks.keys().cloned().collect::<Vec<_>>().join(", ");
@@ -212,7 +221,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
         feature_flags,
         filter_effects,
         animation_curves,
-        
+
         chunk_padding: reader.chunk_padding,
         endianness: reader.endianness,
         original_data_size: raw_data.len(),
@@ -221,4 +230,3 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
     log::trace!("Parsing data took {stopwatch}");
     Ok(data)
 }
-

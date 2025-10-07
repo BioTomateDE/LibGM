@@ -1,7 +1,7 @@
-use crate::prelude::*;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
+use crate::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct GMFeatureFlags {
@@ -26,10 +26,11 @@ impl GMElement for GMFeatureFlags {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
+        if !self.exists {
+            return Ok(());
+        }
         builder.align(4);
         builder.write_simple_list_of_strings(&self.feature_flags)?;
         Ok(())
     }
 }
-

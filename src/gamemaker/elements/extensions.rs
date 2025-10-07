@@ -1,10 +1,10 @@
-use crate::prelude::*;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::gm_version::GMVersion;
 use crate::gamemaker::serialize::DataBuilder;
+use crate::prelude::*;
 use crate::util::init::num_enum_from;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 #[derive(Debug, Clone)]
 pub struct GMExtensions {
@@ -24,26 +24,28 @@ impl GMChunkElement for GMExtensions {
 impl GMElement for GMExtensions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let extensions: Vec<GMExtension> = reader.read_pointer_list()?;
-        
+
         // Strange data for each extension, some kind of unique identifier based on the product ID for each of them
         let mut product_id_data = Vec::with_capacity(extensions.len());
         if product_id_data_eligible(&reader.general_info.version) {
             log::debug!("Scuffed product ID data for extensions detected");
             for _ in 0..extensions.len() {
                 let bytes: [u8; 16] = reader.read_bytes_const::<16>()?.to_owned();
-                product_id_data.push(bytes); 
+                product_id_data.push(bytes);
             }
         }
-        
+
         Ok(GMExtensions { extensions, product_id_data, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
+        if !self.exists {
+            return Ok(());
+        }
         builder.write_pointer_list(&self.extensions)?;
 
         if !product_id_data_eligible(&builder.gm_data.general_info.version) {
-            return Ok(())
+            return Ok(());
         }
 
         let extension_count = self.extensions.len();
@@ -52,11 +54,14 @@ impl GMElement for GMExtensions {
         if product_id_count > extension_count {
             bail!(
                 "More Product ID data than extensions: {} > {}",
-                product_id_count, extension_count,
+                product_id_count,
+                extension_count,
             )
         }
         if product_id_count < extension_count {
-            log::warn!("The last {extension_count} extensions don't have any Product ID data; null bytes will be written instead");
+            log::warn!(
+                "The last {extension_count} extensions don't have any Product ID data; null bytes will be written instead"
+            );
         }
 
         let mut product_id_data = self.product_id_data.clone();
@@ -67,7 +72,6 @@ impl GMElement for GMExtensions {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMExtension {
@@ -86,7 +90,9 @@ impl GMElement for GMExtension {
         let name: GMRef<String> = reader.read_gm_string()?;
         let version: Option<GMRef<String>> = if reader.general_info.is_version_at_least((2023, 4)) {
             Some(reader.read_gm_string()?)
-        } else { None };
+        } else {
+            None
+        };
         let class_name: GMRef<String> = reader.read_gm_string()?;
         let files: Vec<GMExtensionFile>;
         let mut options: Vec<GMExtensionOption> = Vec::new();
@@ -131,7 +137,6 @@ impl GMElement for GMExtension {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMExtensionFile {
     pub filename: GMRef<String>,
@@ -160,7 +165,6 @@ impl GMElement for GMExtensionFile {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMExtensionFunction {
     pub name: GMRef<String>,
@@ -174,7 +178,7 @@ impl GMElement for GMExtensionFunction {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let id = reader.read_u32()?;
-        let kind: GMExtensionKind = num_enum_from(reader.read_u32()?)?;    // assumption; UTMT uses u32
+        let kind: GMExtensionKind = num_enum_from(reader.read_u32()?)?; // Assumption; UTMT uses u32
         let return_type: GMExtensionReturnType = num_enum_from(reader.read_u32()?)?;
         let ext_name: GMRef<String> = reader.read_gm_string()?;
         let arguments: Vec<GMExtensionFunctionArg> = reader.read_simple_list()?;
@@ -192,7 +196,6 @@ impl GMElement for GMExtensionFunction {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMExtensionFunctionArg {
     pub return_type: GMExtensionReturnType,
@@ -208,7 +211,6 @@ impl GMElement for GMExtensionFunctionArg {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMExtensionOption {
@@ -231,7 +233,6 @@ impl GMElement for GMExtensionOption {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u32)]
@@ -258,9 +259,7 @@ pub enum GMExtensionOptionKind {
     String = 2,
 }
 
-
 fn product_id_data_eligible(ver: &GMVersion) -> bool {
     // NOTE: I do not know if 1773 is the earliest version which contains product IDs.
     ver.major >= 2 || (ver.major == 1 && ver.build >= 1773) || (ver.major == 1 && ver.build == 1539)
 }
-

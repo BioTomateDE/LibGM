@@ -1,8 +1,8 @@
-use crate::prelude::*;
-use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
+use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
+use crate::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct GMEmbeddedImages {
@@ -10,7 +10,6 @@ pub struct GMEmbeddedImages {
     pub exists: bool,
 }
 impl GMChunkElement for GMEmbeddedImages {
-
     fn stub() -> Self {
         Self { embedded_images: vec![], exists: false }
     }
@@ -30,13 +29,14 @@ impl GMElement for GMEmbeddedImages {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
-        builder.write_i32(1);   // EMBI version
+        if !self.exists {
+            return Ok(());
+        }
+        builder.write_i32(1); // EMBI version
         builder.write_simple_list(&self.embedded_images)?;
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct GMEmbeddedImage {
@@ -56,4 +56,3 @@ impl GMElement for GMEmbeddedImage {
         Ok(())
     }
 }
-

@@ -1,7 +1,7 @@
-use crate::prelude::*;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::GMElement;
 use crate::integrity_check;
+use crate::prelude::*;
 use crate::util::fmt::{format_bytes, typename};
 
 impl DataReader<'_> {
@@ -9,8 +9,12 @@ impl DataReader<'_> {
     ///
     /// Simple lists consist of a count followed by the elements' data in sequence.
     /// Includes a failsafe check to prevent excessive memory allocation from malformed data.
-    fn read_simple_list_internal<T>(&mut self, count: usize, deserializer_fn: impl Fn(&mut Self) -> Result<T>) -> Result<Vec<T>> {
-        integrity_check!{
+    fn read_simple_list_internal<T>(
+        &mut self,
+        count: usize,
+        deserializer_fn: impl Fn(&mut Self) -> Result<T>,
+    ) -> Result<Vec<T>> {
+        integrity_check! {
             const FAILSAFE_SIZE: usize = 1_000_000;   // 1 Megabyte
             let implied_data_size: usize = count * size_of::<T>();
             if implied_data_size > FAILSAFE_SIZE {
@@ -23,10 +27,14 @@ impl DataReader<'_> {
 
         let mut elements: Vec<T> = Vec::with_capacity(count);
         for _ in 0..count {
-            let element: T = deserializer_fn(self).with_context(|| format!(
-                "while deserializing element #{}/{} of {} simple list",
-                elements.len(), count, typename::<T>(),
-            ))?;
+            let element: T = deserializer_fn(self).with_context(|| {
+                format!(
+                    "while deserializing element #{}/{} of {} simple list",
+                    elements.len(),
+                    count,
+                    typename::<T>(),
+                )
+            })?;
             elements.push(element);
         }
         Ok(elements)
@@ -52,11 +60,10 @@ impl DataReader<'_> {
     /// Reads a simple list of resource IDs and wraps them in [`GMRef`].
     ///
     /// Each element is a 32-bit resource ID that gets resolved to a reference.
-    pub fn read_simple_list_of_resource_ids<T/*: GMElement*/>(&mut self) -> Result<Vec<GMRef<T>>> {
+    pub fn read_simple_list_of_resource_ids<T /*: GMElement*/>(&mut self) -> Result<Vec<GMRef<T>>> {
         let count = self.read_usize()?;
         self.read_simple_list_internal(count, |reader| reader.read_resource_by_id())
     }
-
 
     /// Reads a simple list of GameMaker string references.
     pub fn read_simple_list_of_strings(&mut self) -> Result<Vec<GMRef<String>>> {
@@ -71,10 +78,14 @@ impl DataReader<'_> {
 
         let mut elements: Vec<T> = Vec::with_capacity(count);
         for (i, pointer) in pointers.into_iter().enumerate() {
-            let element: T = self.read_pointer_element(pointer, i == count-1).with_context(|| format!(
-                "deserializing element #{}/{} of {} pointer list",
-                i, count, typename::<T>(),
-            ))?;
+            let element: T = self.read_pointer_element(pointer, i == count - 1).with_context(|| {
+                format!(
+                    "deserializing element #{}/{} of {} pointer list",
+                    i,
+                    count,
+                    typename::<T>(),
+                )
+            })?;
             elements.push(element);
         }
         Ok(elements)
@@ -100,13 +111,17 @@ impl DataReader<'_> {
             if *is_aligned {
                 self.align(alignment)?;
             }
-            let element: T = self.read_pointer_element(pointer, false).with_context(|| format!(
-                "deserializing element #{}/{} of {}aligned {} pointer list",
-                elements.len(), count, if *is_aligned {""} else {"un"}, typename::<T>(),
-            ))?;
+            let element: T = self.read_pointer_element(pointer, false).with_context(|| {
+                format!(
+                    "deserializing element #{}/{} of {}aligned {} pointer list",
+                    elements.len(),
+                    count,
+                    if *is_aligned { "" } else { "un" },
+                    typename::<T>(),
+                )
+            })?;
             elements.push(element);
         }
         Ok(elements)
     }
 }
-

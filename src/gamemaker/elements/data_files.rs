@@ -1,8 +1,7 @@
-use crate::prelude::*;
 use crate::gamemaker::deserialize::DataReader;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
-
+use crate::prelude::*;
 
 /// most useful gamemaker chunk:
 #[derive(Debug, Clone)]
@@ -28,4 +27,3 @@ impl GMElement for GMDataFiles {
         Ok(())
     }
 }
-

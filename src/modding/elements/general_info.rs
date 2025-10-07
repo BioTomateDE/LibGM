@@ -546,7 +546,7 @@ fn edit_function_classifications(o: &GMFunctionClassifications, m: &GMFunctionCl
         io: flag_field(o.io, m.io),
         variables: flag_field(o.variables, m.variables),
         array: flag_field(o.array, m.array),
-        external_call: None,    // never
+        external_call: None,    // Never
         notifications: flag_field(o.notification, m.notification),
         time_and_date: flag_field(o.date, m.date),
         particle: flag_field(o.particle, m.particle),

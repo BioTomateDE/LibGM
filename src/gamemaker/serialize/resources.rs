@@ -1,7 +1,7 @@
-use crate::prelude::*;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::serialize::DataBuilder;
+use crate::prelude::*;
 
 impl DataBuilder<'_> {
     /// Writes the resource ID (index) from a `GMRef`.
@@ -45,7 +45,8 @@ impl DataBuilder<'_> {
     /// # Errors
     /// Returns an error if the contained texture page item reference cannot be resolved.
     pub fn write_gm_texture(&mut self, gm_texture_ref: &GMRef<GMTexturePageItem>) -> Result<()> {
-        let resolved_texture_page_item: &GMTexturePageItem = gm_texture_ref.resolve(&self.gm_data.texture_page_items.texture_page_items)?;
+        let resolved_texture_page_item: &GMTexturePageItem =
+            gm_texture_ref.resolve(&self.gm_data.texture_page_items.texture_page_items)?;
         self.write_pointer(resolved_texture_page_item)
     }
 
@@ -68,11 +69,10 @@ impl DataBuilder<'_> {
 
     /// Tries to resolve a GameMaker string reference to the actual character string.
     /// Returns a placeholder string if resolving failed.
-    /// 
+    ///
     /// This function is meant to be used in closures where propagating errors is awkward.
     /// Otherwise, using [`DataBuilder::resolve_gm_str`] is preferred.
     pub fn display_gm_str(&self, gm_string_ref: &GMRef<String>) -> &str {
         gm_string_ref.display(&self.gm_data.strings)
     }
 }
-

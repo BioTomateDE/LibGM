@@ -110,15 +110,15 @@ pub struct AddRoomFlags {
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditRoom {
-    pub name: Option<ModRef>,       // string ref
-    pub caption: Option<ModRef>,    // string ref
+    pub name: Option<ModRef>,       // String ref
+    pub caption: Option<ModRef>,    // String ref
     pub width: Option<u32>,
     pub height: Option<u32>,
     pub speed: Option<u32>,
     pub persistent: Option<bool>,
     pub background_color: Option<u32>,
     pub draw_background_color: Option<bool>,
-    pub creation_code: Option<Option<ModRef>>,  // code ref
+    pub creation_code: Option<Option<ModRef>>,  // Code ref
     pub flags: EditRoomFlags,
     pub backgrounds: Vec<DataChange<AddRoomBackground, EditRoomBackground>>,
     pub views: Vec<DataChange<AddRoomView, EditRoomView>>,

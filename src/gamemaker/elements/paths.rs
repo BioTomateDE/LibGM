@@ -1,7 +1,7 @@
-use crate::prelude::*;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
+use crate::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct GMPaths {
@@ -25,12 +25,13 @@ impl GMElement for GMPaths {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
+        if !self.exists {
+            return Ok(());
+        }
         builder.write_pointer_list(&self.paths)?;
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMPath {
@@ -60,7 +61,6 @@ impl GMElement for GMPath {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMPathPoint {
     pub x: f32,
@@ -82,4 +82,3 @@ impl GMElement for GMPathPoint {
         Ok(())
     }
 }
-

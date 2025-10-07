@@ -1,8 +1,8 @@
-use crate::prelude::*;
-use std::collections::HashMap;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
+use crate::prelude::*;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct GMTags {
@@ -39,20 +39,22 @@ impl GMElement for GMTags {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
+        if !self.exists {
+            return Ok(());
+        }
         builder.align(4);
-        builder.write_i32(1);   // TAGS version
+        builder.write_i32(1); // TAGS version
         builder.write_simple_list_of_strings(&self.tags)?;
-        let temp_asset_tags: Vec<TempAssetTags> = self.asset_tags
+        let temp_asset_tags: Vec<TempAssetTags> = self
+            .asset_tags
             .clone()
             .into_iter()
-            .map(|(id, tags)| TempAssetTags {id, tags})
+            .map(|(id, tags)| TempAssetTags { id, tags })
             .collect();
         builder.write_pointer_list(&temp_asset_tags)?;
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone)]
 struct TempAssetTags {
@@ -72,4 +74,3 @@ impl GMElement for TempAssetTags {
         Ok(())
     }
 }
-

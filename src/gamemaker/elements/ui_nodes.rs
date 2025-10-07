@@ -1,12 +1,16 @@
-use crate::prelude::*;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
-use crate::gamemaker::elements::rooms::{GMRoomGameObject, GMRoomLayerEffectProperty, GMSequenceInstance, GMSpriteInstance, GMTextItemInstance};
-use crate::gamemaker::elements::ui_nodes::flex_properties::{AlignmentKind, FlexValue, GMNodeUIFlexInstanceProperties, GMNodeUIFlexProperties};
 use crate::gamemaker::deserialize::{DataReader, GMRef};
+use crate::gamemaker::elements::rooms::{
+    GMRoomGameObject, GMRoomLayerEffectProperty, GMSequenceInstance, GMSpriteInstance, GMTextItemInstance,
+};
+use crate::gamemaker::elements::ui_nodes::flex_properties::{
+    AlignmentKind, FlexValue, GMNodeUIFlexInstanceProperties, GMNodeUIFlexProperties,
+};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
+use crate::prelude::*;
 use crate::util::fmt::typename_val;
 use crate::util::init::num_enum_from;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 #[derive(Debug, Clone)]
 pub struct GMRootUINodes {
@@ -32,12 +36,13 @@ impl GMElement for GMRootUINodes {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
+        if !self.exists {
+            return Ok(());
+        }
         builder.write_pointer_list(&self.ui_root_nodes)?;
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct GMNodeUI {
@@ -61,17 +66,20 @@ impl GMElement for GMNodeUI {
         let data_pointer = reader.read_u32()?;
 
         let mut children: Vec<Self> = Vec::new();
-        if matches!(type_id, 0|1) {    // container; Layer or FlexPanel
+        if matches!(type_id, 0 | 1) {
+            // Container; Layer or FlexPanel
             children = reader.read_pointer_list()?;
         } else {
             let always_zero = reader.read_i32()?;
             if always_zero != 0 {
-                bail!("Expected zero for non-container UI Node's child count but got {always_zero} (0x{always_zero:08X})");
+                bail!(
+                    "Expected zero for non-container UI Node's child count but got {always_zero} (0x{always_zero:08X})"
+                );
             }
         }
 
         reader.assert_pos(data_pointer, "UI Node data")?;
-        
+
         let node: GMNodeUIData = match type_id {
             0 => GMNodeUIData::Layer(GMNodeUILayer::deserialize(reader)?),
             1 => GMNodeUIData::FlexPanel(GMNodeUIFlexPanel::deserialize(reader)?),
@@ -80,9 +88,9 @@ impl GMElement for GMNodeUI {
             5 => GMNodeUIData::SpriteInstance(GMNodeUISpriteInstance::deserialize(reader)?),
             6 => GMNodeUIData::TextItemInstance(GMNodeUITextItemInstance::deserialize(reader)?),
             7 => GMNodeUIData::EffectLayer(GMNodeUIEffectLayer::deserialize(reader)?),
-            _ => bail!("Unknown UI Node type {type_id}")
+            _ => bail!("Unknown UI Node type {type_id}"),
         };
-        
+
         Ok(GMNodeUI { node, children })
     }
 
@@ -98,20 +106,21 @@ impl GMElement for GMNodeUI {
         };
         builder.write_i32(type_id);
         builder.write_pointer(&self.node)?;
-        
-        // write children if container node
+
+        // Write children if container node
         if matches!(self.node, GMNodeUIData::Layer(_) | GMNodeUIData::FlexPanel(_)) {
             builder.write_pointer_list(&self.children)?;
         } else {
             if !self.children.is_empty() {
                 bail!(
                     "Expected non-container UI Node type {} to not have child nodes, but actually has {} children",
-                    typename_val(&self.node), self.children.len(),
+                    typename_val(&self.node),
+                    self.children.len(),
                 )
             }
             builder.write_i32(0);
         }
-        
+
         builder.resolve_pointer(&self.node)?;
         match &self.node {
             GMNodeUIData::Layer(node) => node.serialize(builder)?,
@@ -122,11 +131,10 @@ impl GMElement for GMNodeUI {
             GMNodeUIData::TextItemInstance(node) => node.serialize(builder)?,
             GMNodeUIData::EffectLayer(node) => node.serialize(builder)?,
         }
-        
+
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct GMNodeUILayer {
@@ -156,7 +164,6 @@ pub enum GMNodeUILayerDrawSpaceKind {
     GUI = 1,
     View = 2,
 }
-
 
 #[derive(Debug, Clone)]
 pub struct GMNodeUIFlexPanel {
@@ -264,7 +271,6 @@ pub enum GMNodeUIFlexPanelPositionKind {
     Absolute = 2,
 }
 
-
 #[derive(Debug, Clone)]
 pub struct GMNodeUIGameObject {
     pub flex_instance_properties: GMNodeUIFlexInstanceProperties,
@@ -283,7 +289,6 @@ impl GMElement for GMNodeUIGameObject {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct GMNodeUISequenceInstance {
@@ -304,7 +309,6 @@ impl GMElement for GMNodeUISequenceInstance {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub struct GMNodeUISpriteInstance {
     pub flex_instance_properties: GMNodeUIFlexInstanceProperties,
@@ -324,7 +328,6 @@ impl GMElement for GMNodeUISpriteInstance {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub struct GMNodeUITextItemInstance {
     pub flex_instance_properties: GMNodeUIFlexInstanceProperties,
@@ -343,7 +346,6 @@ impl GMElement for GMNodeUITextItemInstance {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct GMNodeUIEffectLayer {
@@ -367,12 +369,11 @@ impl GMElement for GMNodeUIEffectLayer {
     }
 }
 
-
 mod flex_properties {
-    use crate::prelude::*;
     use crate::gamemaker::deserialize::DataReader;
     use crate::gamemaker::elements::GMElement;
     use crate::gamemaker::serialize::DataBuilder;
+    use crate::prelude::*;
     use crate::util::init::num_enum_from;
     use num_enum::{IntoPrimitive, TryFromPrimitive};
 
@@ -438,7 +439,6 @@ mod flex_properties {
         }
     }
 
-
     #[derive(Debug, Clone)]
     pub struct FlexValue {
         pub value: f32,
@@ -457,7 +457,6 @@ mod flex_properties {
             Ok(())
         }
     }
-
 
     #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
     #[repr(i32)]
@@ -515,9 +514,8 @@ mod flex_properties {
     pub enum LayoutDirectionKind {
         Inherit = 0,
         LTR = 1,
-        RTL = 2
+        RTL = 2,
     }
-
 
     #[derive(Debug, Clone)]
     pub struct GMNodeUIFlexInstanceProperties {
@@ -561,4 +559,3 @@ mod flex_properties {
         }
     }
 }
-

@@ -1,9 +1,9 @@
-use crate::prelude::*;
-use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
+use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
+use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 
 const ALIGNMENT: u32 = 8;
@@ -30,7 +30,9 @@ impl GMElement for GMBackgrounds {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
+        if !self.exists {
+            return Ok(());
+        }
         if self.is_aligned {
             builder.write_aligned_list_chunk(&self.backgrounds, ALIGNMENT)?;
         } else {
@@ -39,7 +41,6 @@ impl GMElement for GMBackgrounds {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMBackground {
@@ -58,7 +59,7 @@ impl GMElement for GMBackground {
         let preload = reader.read_bool32()?;
         let texture: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
         let gms2_data: Option<GMBackgroundGMS2Data> = reader.deserialize_if_gm_version((2, 0))?;
-        
+
         Ok(GMBackground { name, transparent, smooth, preload, texture, gms2_data })
     }
 
@@ -72,7 +73,6 @@ impl GMElement for GMBackground {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMBackgroundGMS2Data {
@@ -134,7 +134,7 @@ impl GMElement for GMBackgroundGMS2Data {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u32(2);       // UnknownAlwaysTwo
+        builder.write_u32(2); // UnknownAlwaysTwo
         builder.write_u32(self.tile_width);
         builder.write_u32(self.tile_height);
         builder.write_u32(self.output_border_x);
@@ -149,14 +149,16 @@ impl GMElement for GMBackgroundGMS2Data {
         if total_tile_count % items_per_tile != 0 {
             bail!(
                 "Background Tiles do not add up: {} total tiles, {} items per tile leaves a remainder of {}",
-                total_tile_count, items_per_tile, total_tile_count % items_per_tile,
+                total_tile_count,
+                items_per_tile,
+                total_tile_count % items_per_tile,
             );
         }
         let tile_count: usize = total_tile_count / items_per_tile;
         builder.write_usize(items_per_tile)?;
         builder.write_usize(tile_count)?;
-        
-        builder.write_u32(0);   // UnknownAlwaysZero
+
+        builder.write_u32(0); // UnknownAlwaysZero
         builder.write_i64(self.frame_length);
         for tile_id in &self.tile_ids {
             builder.write_u32(*tile_id);
@@ -164,4 +166,3 @@ impl GMElement for GMBackgroundGMS2Data {
         Ok(())
     }
 }
-

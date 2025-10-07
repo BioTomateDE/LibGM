@@ -1,4 +1,4 @@
-pub mod disassembler;
 pub mod assembler;
-pub mod validation;
 pub mod decompiler;
+pub mod disassembler;
+pub mod validation;

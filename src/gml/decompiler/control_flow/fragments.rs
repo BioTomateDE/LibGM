@@ -1,8 +1,8 @@
-use crate::prelude::*;
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
-use crate::gamemaker::elements::code::{get_instruction_size, GMCode, GMInstruction};
+use crate::gamemaker::elements::code::{GMCode, GMInstruction, get_instruction_size};
 use crate::gml::decompiler::control_flow::{BaseNode, ControlFlowGraph, NodeRef};
+use crate::prelude::*;
 use crate::util::smallmap::SmallMap;
 use std::ops::{Deref, DerefMut};
 
@@ -43,7 +43,6 @@ impl<'a> DerefMut for Fragment<'a> {
     }
 }
 
-
 pub fn find_fragments(cfg: &mut ControlFlowGraph, code_ref: GMRef<GMCode>) -> Result<()> {
     let child_start_offsets: SmallMap<u32, &GMCode> = get_child_start_offsets(cfg.context.gm_data, code_ref)?;
     let code: &GMCode = code_ref.resolve(&cfg.context.gm_data.codes.codes)?;
@@ -62,21 +61,28 @@ pub fn find_fragments(cfg: &mut ControlFlowGraph, code_ref: GMRef<GMCode>) -> Re
                 // We're done processing now. Add last block and exit loops.
                 current.blocks.push(NodeRef::block(i));
                 if block.start_address != code_end_address {
-                    bail!("Final block starts at address {} but should start at the code's end address {}", block.start_address, code_end_address);
+                    bail!(
+                        "Final block starts at address {} but should start at the code's end address {}",
+                        block.start_address,
+                        code_end_address
+                    );
                 }
-                break
+                break;
             }
 
             // Disconnect predecessor from branch instruction block
             cfg.disconnect_all_predecessors(current.blocks[0])?;
 
             // We're an inner fragment; remove the Exit Instruction
-            let last_block: &NodeRef = current.blocks.last().context("Fragment doesn't have any blocks while ending fragment")?;
+            let last_block: &NodeRef = current
+                .blocks
+                .last()
+                .context("Fragment doesn't have any blocks while ending fragment")?;
             let last_block = &mut cfg.blocks[last_block.index()];
             match last_block.instructions.last() {
                 Some(GMInstruction::Exit(_)) => last_block.pop_last_instruction()?,
                 Some(instr) => bail!("Expected Exit instruction; got {instr:?}"),
-                None => unreachable!("Block doesn't have any instructions"),    // TODO: is ts possible? end block
+                None => unreachable!("Block doesn't have any instructions"), // TODO: is ts possible? end block
             }
 
             // Go to the fragment the next level up
@@ -95,7 +101,9 @@ pub fn find_fragments(cfg: &mut ControlFlowGraph, code_ref: GMRef<GMCode>) -> Re
                 bail!("Expected unconditional branch instruction before fragment start, got {last_instr:?}");
             }
             let Some(branch_target_node) = previous.successors.branch_target else {
-                unreachable!("Successor enum of previous block (which ends in a `Branch` instruction) is not `UnconditionalBranch`")
+                unreachable!(
+                    "Successor enum of previous block (which ends in a `Branch` instruction) is not `UnconditionalBranch`"
+                )
             };
 
             // Remove previous block's branch instruction
@@ -103,17 +111,27 @@ pub fn find_fragments(cfg: &mut ControlFlowGraph, code_ref: GMRef<GMCode>) -> Re
 
             // Make our new "current" be this new fragment
             cfg.fragments.push(current);
-            current = Fragment::new(cfg.blocks[i].start_address, branch_target_node.start_address(cfg), child_code, stack.len() == 1);
+            current = Fragment::new(
+                cfg.blocks[i].start_address,
+                branch_target_node.start_address(cfg),
+                child_code,
+                stack.len() == 1,
+            );
 
             // Rewire previous block to jump to this fragment, and this fragment
-            // to jump to the successor of the previous block.
+            // To jump to the successor of the previous block.
             let previous = &mut cfg.blocks[i - 1];
             let cur_node_idx = NodeRef::fragment(cfg.fragments.len());
             let prev_node_idx = NodeRef::block(i - 1);
             previous.successors.branch_target = Some(cur_node_idx);
             let predecessors = branch_target_node.predecessors_mut(cfg);
-            let pred_index: usize = predecessors.iter().position(|node| *node == prev_node_idx)
-                .context(format!("Could not find predecessor with block index {} for branch target node", i-1))?;
+            let pred_index: usize = predecessors
+                .iter()
+                .position(|node| *node == prev_node_idx)
+                .context(format!(
+                    "Could not find predecessor with block index {} for branch target node",
+                    i - 1
+                ))?;
             predecessors[pred_index] = cur_node_idx;
             current.predecessors.push(prev_node_idx);
             current.successors.branch_target = Some(branch_target_node);
@@ -136,25 +154,27 @@ pub fn find_fragments(cfg: &mut ControlFlowGraph, code_ref: GMRef<GMCode>) -> Re
     Ok(())
 }
 
-
-
 fn get_child_start_offsets(gm_data: &GMData, parent_code_ref: GMRef<GMCode>) -> Result<SmallMap<u32, &GMCode>> {
     let mut start_offsets = SmallMap::new();
     for code in &gm_data.codes.codes {
-        let Some(b15_info) = &code.bytecode15_info else {continue};
-        let Some(parent) = b15_info.parent else {continue};
+        let Some(b15_info) = &code.bytecode15_info else {
+            continue;
+        };
+        let Some(parent) = b15_info.parent else { continue };
         if parent != parent_code_ref {
-            continue
+            continue;
         }
 
         if b15_info.offset % 4 != 0 {
-            bail!("Child code instruction offset {} does not point to the start of an instruction", b15_info.offset);
+            bail!(
+                "Child code instruction offset {} does not point to the start of an instruction",
+                b15_info.offset
+            );
         }
         start_offsets.insert(b15_info.offset / 4, code);
     }
     Ok(start_offsets)
 }
-
 
 fn get_code_end_address(instructions: &Vec<GMInstruction>) -> u32 {
     let mut length: u32 = 0;
@@ -163,4 +183,3 @@ fn get_code_end_address(instructions: &Vec<GMInstruction>) -> u32 {
     }
     length
 }
-

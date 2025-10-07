@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use std::path::Path;
 
 pub fn format_bytes(bytes: usize) -> String {
@@ -20,6 +21,45 @@ pub fn filename_to_str(path: &Path) -> String {
         .to_string()
 }
 
+pub fn hexdump(raw_data: &[u8], range: impl std::ops::RangeBounds<usize>) -> Result<String> {
+    use std::fmt::Write;
+    use std::ops::Bound::*;
+
+    let len = raw_data.len();
+    let start = match range.start_bound() {
+        Included(&n) => n,
+        Excluded(&n) => n + 1,
+        Unbounded => 0,
+    };
+    let end = match range.end_bound() {
+        Included(&n) => n + 1,
+        Excluded(&n) => n,
+        Unbounded => len,
+    };
+
+    if start > len || end > len {
+        bail!("Range out of bounds: {}..{} for length {}", start, end, len);
+    }
+    if start > end {
+        bail!("Invalid range: start {} > end {}", start, end);
+    }
+
+    let slice = &raw_data[start..end];
+    if slice.is_empty() {
+        return Ok(String::new());
+    }
+
+    let mut string = String::with_capacity(slice.len() * 3 - 1);
+    for (i, &byte) in slice.iter().enumerate() {
+        if i > 0 {
+            string.push(' ');
+        }
+        write!(&mut string, "{:02X}", byte).unwrap();
+    }
+
+    Ok(string)
+}
+
 pub fn typename<T>() -> String {
     tynm::type_name::<T>()
 }
@@ -27,4 +67,3 @@ pub fn typename<T>() -> String {
 pub fn typename_val<T>(_: &T) -> String {
     tynm::type_name::<T>()
 }
-

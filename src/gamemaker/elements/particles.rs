@@ -1,11 +1,11 @@
-﻿use crate::prelude::*;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::deserialize::{DataReader, GMRef};
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::sprites::GMSprite;
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
+use crate::prelude::*;
 use crate::util::init::num_enum_from;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 #[derive(Debug, Clone)]
 pub struct GMParticleSystems {
@@ -34,14 +34,15 @@ impl GMElement for GMParticleSystems {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
+        if !self.exists {
+            return Ok(());
+        }
         builder.align(4);
-        builder.write_u32(1);   // PSYS Version
+        builder.write_u32(1); // PSYS Version
         builder.write_pointer_list(&self.particle_systems)?;
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMParticleSystem {
@@ -60,7 +61,14 @@ impl GMElement for GMParticleSystem {
         let draw_order = reader.read_i32()?;
         let global_space_particles: Option<bool> = reader.deserialize_if_gm_version((2023, 8))?;
         let emitters: Vec<GMRef<GMParticleEmitter>> = reader.read_simple_list_of_resource_ids()?;
-        Ok(Self { name, origin_x, origin_y, draw_order, global_space_particles, emitters })
+        Ok(Self {
+            name,
+            origin_x,
+            origin_y,
+            draw_order,
+            global_space_particles,
+            emitters,
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -68,12 +76,12 @@ impl GMElement for GMParticleSystem {
         builder.write_i32(self.origin_x);
         builder.write_i32(self.origin_y);
         builder.write_i32(self.draw_order);
-        self.global_space_particles.serialize_if_gm_ver(builder, "Global Space Particles", (2023, 8))?;
+        self.global_space_particles
+            .serialize_if_gm_ver(builder, "Global Space Particles", (2023, 8))?;
         builder.write_simple_list_of_resource_ids(&self.emitters)?;
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct GMParticleEmitters {
@@ -100,14 +108,15 @@ impl GMElement for GMParticleEmitters {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
+        if !self.exists {
+            return Ok(());
+        }
         builder.align(4);
-        builder.write_u32(1);   // PSEM Version
+        builder.write_u32(1); // PSEM Version
         builder.write_pointer_list(&self.emitters)?;
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMParticleEmitter {
@@ -167,29 +176,30 @@ impl GMElement for GMParticleEmitter {
         let mode: EmitMode = num_enum_from(reader.read_i32()?)?;
 
         let emit_count: u32;
-        let temp_data_2023_8: Option<TempParticleEmitter2023_8> = if reader.general_info.is_version_at_least((2023, 8, 0, 0)) {
-            emit_count = reader.read_f32()? as u32;              // don't see how a float is a count but ok
-            let emit_relative = reader.read_bool32()?;     // always zero
-            let delay_min = reader.read_f32()?;
-            let delay_max = reader.read_f32()?;
-            let delay_unit: TimeUnit = num_enum_from(reader.read_i32()?)?;
-            let interval_min = reader.read_f32()?;
-            let interval_max = reader.read_f32()?;
-            let interval_unit: TimeUnit = num_enum_from(reader.read_i32()?)?;
+        let temp_data_2023_8: Option<TempParticleEmitter2023_8> =
+            if reader.general_info.is_version_at_least((2023, 8, 0, 0)) {
+                emit_count = reader.read_f32()? as u32; // Don't see how a float is a count but ok
+                let emit_relative = reader.read_bool32()?; // Always zero
+                let delay_min = reader.read_f32()?;
+                let delay_max = reader.read_f32()?;
+                let delay_unit: TimeUnit = num_enum_from(reader.read_i32()?)?;
+                let interval_min = reader.read_f32()?;
+                let interval_max = reader.read_f32()?;
+                let interval_unit: TimeUnit = num_enum_from(reader.read_i32()?)?;
 
-            Some(TempParticleEmitter2023_8 {
-                emit_relative,
-                delay_min,
-                delay_max,
-                delay_unit,
-                interval_min,
-                interval_max,
-                interval_unit,
-            })
-        } else {
-            emit_count = reader.read_u32()?;
-            None
-        };
+                Some(TempParticleEmitter2023_8 {
+                    emit_relative,
+                    delay_min,
+                    delay_max,
+                    delay_unit,
+                    interval_min,
+                    interval_max,
+                    interval_unit,
+                })
+            } else {
+                emit_count = reader.read_u32()?;
+                None
+            };
 
         let distribution: EmitterDistribution = num_enum_from(reader.read_i32()?)?;
         let shape: EmitterShape = num_enum_from(reader.read_i32()?)?;
@@ -207,7 +217,9 @@ impl GMElement for GMParticleEmitter {
             let stretch = reader.read_bool32()?;
             let is_random = reader.read_bool32()?;
             Some(GMParticleEmitter2023_4 { animate, stretch, is_random })
-        } else { None };
+        } else {
+            None
+        };
 
         let start_color = reader.read_u32()?;
         let mid_color = reader.read_u32()?;
@@ -254,12 +266,7 @@ impl GMElement for GMParticleEmitter {
             let size_increase = reader.read_f32()?;
             let size_wiggle = reader.read_f32()?;
             data_2023_8 = None;
-            data_pre_2023_8 = Some(GMParticleEmitterPre2023_8 {
-                size_min,
-                size_max,
-                size_increase,
-                size_wiggle,
-            })
+            data_pre_2023_8 = Some(GMParticleEmitterPre2023_8 { size_min, size_max, size_increase, size_wiggle })
         };
 
         let speed_min = reader.read_f32()?;
@@ -336,7 +343,10 @@ impl GMElement for GMParticleEmitter {
         self.enabled.serialize_if_gm_ver(builder, "Enabled", (2023, 6))?;
         builder.write_i32(self.mode.into());
         if builder.is_gm_version_at_least((2023, 8)) {
-            let data_2023_8: &GMParticleEmitter2023_8 = self.data_2023_8.as_ref().context("Particle Emitter 2023.8 Data not set")?;
+            let data_2023_8: &GMParticleEmitter2023_8 = self
+                .data_2023_8
+                .as_ref()
+                .context("Particle Emitter 2023.8 Data not set")?;
             builder.write_f32(self.emit_count as f32);
             builder.write_bool32(data_2023_8.emit_relative);
             builder.write_f32(data_2023_8.delay_min);
@@ -359,7 +369,10 @@ impl GMElement for GMParticleEmitter {
         builder.write_i32(self.texture.into());
         builder.write_f32(self.frame_index);
         if builder.is_gm_version_at_least((2023, 4)) {
-            let data_2023_4: &GMParticleEmitter2023_4 = self.data_2023_4.as_ref().context("Particle Emitter 2023.4 Data not set")?;
+            let data_2023_4: &GMParticleEmitter2023_4 = self
+                .data_2023_4
+                .as_ref()
+                .context("Particle Emitter 2023.4 Data not set")?;
             builder.write_bool32(data_2023_4.animate);
             builder.write_bool32(data_2023_4.stretch);
             builder.write_bool32(data_2023_4.is_random);
@@ -373,7 +386,10 @@ impl GMElement for GMParticleEmitter {
         builder.write_f32(self.scale_x);
         builder.write_f32(self.scale_y);
         if builder.is_gm_version_at_least((2023, 8)) {
-            let data_2023_8: &GMParticleEmitter2023_8 = self.data_2023_8.as_ref().context("Particle Emitter 2023.8 Data not set")?;
+            let data_2023_8: &GMParticleEmitter2023_8 = self
+                .data_2023_8
+                .as_ref()
+                .context("Particle Emitter 2023.8 Data not set")?;
             builder.write_f32(data_2023_8.size_min_x);
             builder.write_f32(data_2023_8.size_max_x);
             builder.write_f32(data_2023_8.size_min_y);
@@ -383,7 +399,10 @@ impl GMElement for GMParticleEmitter {
             builder.write_f32(data_2023_8.size_wiggle_x);
             builder.write_f32(data_2023_8.size_wiggle_y);
         } else {
-            let data_pre_2023_8: &GMParticleEmitterPre2023_8 = self.data_pre_2023_8.as_ref().context("Particle Emitter Pre 2023.8 Data not set")?;
+            let data_pre_2023_8: &GMParticleEmitterPre2023_8 = self
+                .data_pre_2023_8
+                .as_ref()
+                .context("Particle Emitter Pre 2023.8 Data not set")?;
             builder.write_f32(data_pre_2023_8.size_min);
             builder.write_f32(data_pre_2023_8.size_max);
             builder.write_f32(data_pre_2023_8.size_increase);
@@ -411,7 +430,6 @@ impl GMElement for GMParticleEmitter {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMParticleEmitter2023_4 {
@@ -503,4 +521,3 @@ struct TempParticleEmitter2023_8 {
     interval_max: f32,
     interval_unit: TimeUnit,
 }
-

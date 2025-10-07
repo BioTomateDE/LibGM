@@ -1,21 +1,21 @@
-use crate::prelude::*;
-use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::data::Endianness;
-
+use crate::gamemaker::deserialize::reader::DataReader;
+use crate::prelude::*;
 
 macro_rules! read_int_fn {
     ($method:ident, $dtype:ty) => {
         /// Read an integer from the data file while advancing the data position.
         /// Respects the endianness setting.
         pub fn $method(&mut self) -> Result<$dtype> {
-            let bytes = *self.read_bytes_const()
+            let bytes = *self
+                .read_bytes_const()
                 .map_err(|e| format!("Trying to read {} {e}", stringify!($dtype)))?;
             Ok(match self.endianness {
                 Endianness::Little => <$dtype>::from_le_bytes(bytes),
                 Endianness::Big => <$dtype>::from_be_bytes(bytes),
             })
         }
-    }
+    };
 }
 
 impl DataReader<'_> {
@@ -51,4 +51,3 @@ impl DataReader<'_> {
         }
     }
 }
-

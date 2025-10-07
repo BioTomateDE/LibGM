@@ -1,10 +1,9 @@
-use crate::prelude::*;
-use std::collections::HashMap;
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::integrity_assert;
+use crate::prelude::*;
 use crate::util::fmt::typename;
-
+use std::collections::HashMap;
 
 /// GMRef has (fake) generic types to make it clearer which type it belongs to (`name: GMRef` vs `name: GMRef<String>`).
 /// It can be resolved to the data it references using the `.resolve()` method, which needs the list the elements are stored in.
@@ -12,7 +11,7 @@ use crate::util::fmt::typename;
 #[derive(Hash, PartialEq, Eq)]
 pub struct GMRef<T> {
     pub index: u32,
-    // marker needs to be here to ignore "unused generic T" error; doesn't store any data
+    // Marker needs to be here to ignore "unused generic T" error; doesn't store any data
     _marker: std::marker::PhantomData<T>,
 }
 
@@ -20,10 +19,7 @@ impl<T> GMRef<T> {
     /// Creates a new GameMaker reference with the specified index.
     /// The fake generic type can often be omitted (if the compiler can infer it).
     pub fn new(index: u32) -> GMRef<T> {
-        Self {
-            index,
-            _marker: std::marker::PhantomData,
-        }
+        Self { index, _marker: std::marker::PhantomData }
     }
 }
 
@@ -51,40 +47,63 @@ impl<'a, T> GMRef<T> {
     /// Returns an error if `self.index` is out of bounds for the provided vector.
     ///
     pub fn resolve(&self, elements_by_index: &'a Vec<T>) -> Result<&'a T> {
-        elements_by_index.get(self.index as usize).with_context(|| format!(
-            "Could not resolve {} reference with index {} in list with length {}",
-            typename::<T>(), self.index, elements_by_index.len(),
-        ))
+        elements_by_index.get(self.index as usize).with_context(|| {
+            format!(
+                "Could not resolve {} reference with index {} in list with length {}",
+                typename::<T>(),
+                self.index,
+                elements_by_index.len(),
+            )
+        })
     }
 }
-
 
 impl DataReader<'_> {
     /// Read a standard GameMaker string reference.
     pub fn read_gm_string(&mut self) -> Result<GMRef<String>> {
         let occurrence_position = self.read_u32()?;
-        resolve_occurrence(occurrence_position, &self.string_occurrence_map, &self.chunk.name, self.cur_pos)
+        resolve_occurrence(
+            occurrence_position,
+            &self.string_occurrence_map,
+            &self.chunk.name,
+            self.cur_pos,
+        )
     }
 
     pub fn read_gm_texture(&mut self) -> Result<GMRef<GMTexturePageItem>> {
         let occurrence_position = self.read_u32()?;
-        resolve_occurrence(occurrence_position, &self.texture_page_item_occurrence_map, &self.chunk.name, self.cur_pos)
+        resolve_occurrence(
+            occurrence_position,
+            &self.texture_page_item_occurrence_map,
+            &self.chunk.name,
+            self.cur_pos,
+        )
     }
 
     pub fn read_gm_string_opt(&mut self) -> Result<Option<GMRef<String>>> {
         let occurrence_position = self.read_u32()?;
         if occurrence_position == 0 {
-            return Ok(None)
+            return Ok(None);
         }
-        Ok(Some(resolve_occurrence(occurrence_position, &self.string_occurrence_map, &self.chunk.name, self.cur_pos)?))
+        Ok(Some(resolve_occurrence(
+            occurrence_position,
+            &self.string_occurrence_map,
+            &self.chunk.name,
+            self.cur_pos,
+        )?))
     }
 
     pub fn read_gm_texture_opt(&mut self) -> Result<Option<GMRef<GMTexturePageItem>>> {
         let occurrence_position = self.read_u32()?;
         if occurrence_position == 0 {
-            return Ok(None)
+            return Ok(None);
         }
-        Ok(Some(resolve_occurrence(occurrence_position, &self.texture_page_item_occurrence_map, &self.chunk.name, self.cur_pos)?))
+        Ok(Some(resolve_occurrence(
+            occurrence_position,
+            &self.texture_page_item_occurrence_map,
+            &self.chunk.name,
+            self.cur_pos,
+        )?))
     }
 
     pub fn resolve_gm_str(&self, string_ref: GMRef<String>) -> Result<&String> {
@@ -110,9 +129,11 @@ impl DataReader<'_> {
     pub fn resource_opt_from_i32<T>(&mut self, number: i32) -> Result<Option<GMRef<T>>> {
         const CTX: &str = "parsing optional resource by ID";
         if number == -1 {
-            return Ok(None)
+            return Ok(None);
         }
-        let number: u32 = number.try_into().ok()
+        let number: u32 = number
+            .try_into()
+            .ok()
             .with_context(|| format!("Invalid negative number {number} (0x{number:08X})"))
             .context(CTX)?;
         self.check_resource_limit(number).context(CTX)?;
@@ -122,7 +143,7 @@ impl DataReader<'_> {
     fn check_resource_limit(&self, number: u32) -> Result<()> {
         // Increase limit if not enough
         const FAILSAFE_COUNT: u32 = 500_000;
-        integrity_assert!{
+        integrity_assert! {
             number < FAILSAFE_COUNT,
             "Number {number} exceeds failsafe limit of {FAILSAFE_COUNT}"
         }
@@ -130,15 +151,22 @@ impl DataReader<'_> {
     }
 }
 
-
-fn resolve_occurrence<T>(occurrence_position: u32, occurrence_map: &HashMap<u32, GMRef<T>>, chunk_name: &str, position: usize) -> Result<GMRef<T>> {
+fn resolve_occurrence<T>(
+    occurrence_position: u32,
+    occurrence_map: &HashMap<u32, GMRef<T>>,
+    chunk_name: &str,
+    position: usize,
+) -> Result<GMRef<T>> {
     match occurrence_map.get(&occurrence_position) {
         Some(gm_ref) => Ok(gm_ref.clone()),
         None => bail!(
             "Could not read {} with absolute position {} in chunk '{}' at position {} \
             because it doesn't exist in the occurrence map (length: {})",
-            typename::<T>(), occurrence_position, chunk_name, position, occurrence_map.len(),
-        )
+            typename::<T>(),
+            occurrence_position,
+            chunk_name,
+            position,
+            occurrence_map.len(),
+        ),
     }
 }
-

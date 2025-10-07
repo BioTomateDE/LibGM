@@ -1,16 +1,16 @@
-use crate::prelude::*;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use std::collections::HashMap;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
-use serde::{Deserialize, Serialize};
 use crate::gamemaker::elements::animation_curves::GMAnimationCurve;
 use crate::gamemaker::elements::game_objects::GMGameObject;
 use crate::gamemaker::elements::particles::GMParticleSystem;
 use crate::gamemaker::elements::sounds::GMSound;
 use crate::gamemaker::elements::sprites::GMSprite;
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
+use crate::prelude::*;
 use crate::util::init::{hashmap_with_capacity, num_enum_from, vec_with_capacity};
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// This struct belong to the chunk SEQN.
 /// Sprites can _also_ contain sequences (not by reference; the actual data).
@@ -30,7 +30,7 @@ impl GMChunkElement for GMSequences {
 impl GMElement for GMSequences {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         if reader.chunk.end_pos - reader.chunk.start_pos == 0 {
-            return Ok(Self::stub())
+            return Ok(Self::stub());
         }
         reader.align(4)?;
         let version = reader.read_u32()?;
@@ -42,14 +42,15 @@ impl GMElement for GMSequences {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
+        if !self.exists {
+            return Ok(());
+        }
         builder.align(4);
-        builder.write_u32(1);   // SEQN Version 1
+        builder.write_u32(1); // SEQN Version 1
         builder.write_pointer_list(&self.sequences)?;
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSequence {
@@ -66,7 +67,7 @@ pub struct GMSequence {
     pub broadcast_messages: Vec<GMKeyframeData<GMBroadcastMessage>>,
     pub tracks: Vec<GMTrack>,
     pub function_ids: HashMap<i32, GMRef<String>>,
-    pub moments: Vec<GMKeyframeData<GMKeyframeMoment>>
+    pub moments: Vec<GMKeyframeData<GMKeyframeMoment>>,
 }
 impl GMElement for GMSequence {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -132,18 +133,17 @@ impl GMElement for GMSequence {
         }
         builder.write_simple_list(&self.broadcast_messages)?;
         builder.write_simple_list(&self.tracks)?;
-        
+
         builder.write_usize(self.function_ids.len())?;
         for (key, function_id) in &self.function_ids {
             builder.write_i32(*key);
             builder.write_gm_string(function_id)?;
         }
-        
+
         builder.write_simple_list(&self.moments)?;
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMTrackKeyframesData<T> {
@@ -162,7 +162,6 @@ impl<T: GMElement> GMElement for GMTrackKeyframesData<T> {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMColorTrackKeyframesData<T> {
@@ -185,7 +184,6 @@ impl<T: GMElement> GMElement for GMColorTrackKeyframesData<T> {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum GMTrackKeyframes {
     Audio(GMTrackKeyframesData<GMKeyframeAudio>),
@@ -203,7 +201,6 @@ pub enum GMTrackKeyframes {
     BroadcastMessage(GMTrackKeyframesData<GMBroadcastMessage>),
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeData<T> {
     pub key: f32,
@@ -218,7 +215,7 @@ impl<T: GMElement> GMElement for GMKeyframeData<T> {
         let length = reader.read_f32()?;
         let stretch = reader.read_bool32()?;
         let disabled = reader.read_bool32()?;
-        let count = reader.read_usize()?;    // i32 in UTMT
+        let count = reader.read_usize()?; // I32 in UTMT
         let mut channels: HashMap<i32, T> = hashmap_with_capacity(count)?;
         for _ in 0..count {
             let channel = reader.read_i32()?;
@@ -242,7 +239,6 @@ impl<T: GMElement> GMElement for GMKeyframeData<T> {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeAudio {
     pub sound: GMRef<GMSound>,
@@ -262,7 +258,6 @@ impl GMElement for GMKeyframeAudio {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeInstance {
     pub game_object: GMRef<GMGameObject>,
@@ -278,7 +273,6 @@ impl GMElement for GMKeyframeInstance {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeGraphic {
@@ -296,7 +290,6 @@ impl GMElement for GMKeyframeGraphic {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeSequence {
     pub sequence: GMRef<GMSequence>,
@@ -312,7 +305,6 @@ impl GMElement for GMKeyframeSequence {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeSpriteFrames {
@@ -330,7 +322,6 @@ impl GMElement for GMKeyframeSpriteFrames {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeBool {
     pub boolean: bool,
@@ -346,7 +337,6 @@ impl GMElement for GMKeyframeBool {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeString {
@@ -364,7 +354,6 @@ impl GMElement for GMKeyframeString {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeColor {
     pub value: f32,
@@ -380,7 +369,6 @@ impl GMElement for GMKeyframeColor {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeText {
@@ -409,12 +397,14 @@ impl GMElement for GMKeyframeText {
         builder.write_gm_string(&self.text)?;
         builder.write_bool32(self.line_wrapping);
         builder.write_i32((self.alignment_v as i32) << 8 | self.alignment_h as i32);
-        log::warn!("Writing raw Font index {} for Text Keyframe of Sequence", self.font_index);
-        builder.write_i32(self.font_index);   // TODO no idea what this is but shouldn't it be a GMRef<GMFont> instead of an i32?
+        log::warn!(
+            "Writing raw Font index {} for Text Keyframe of Sequence",
+            self.font_index
+        );
+        builder.write_i32(self.font_index); // TODO no idea what this is but shouldn't it be a GMRef<GMFont> instead of an i32?
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeParticle {
@@ -431,7 +421,6 @@ impl GMElement for GMKeyframeParticle {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMBroadcastMessage {
@@ -456,10 +445,9 @@ impl GMElement for GMBroadcastMessage {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeMoment {
-    pub internal_count: i32,    // "Should be 0 if none, 1 if there's a message?"
+    pub internal_count: i32, // "Should be 0 if none, 1 if there's a message?"
     pub event: Option<GMRef<String>>,
 }
 impl GMElement for GMKeyframeMoment {
@@ -482,7 +470,6 @@ impl GMElement for GMKeyframeMoment {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMTrack {
@@ -530,7 +517,9 @@ impl GMElement for GMTrack {
         if track_count < 0 {
             bail!(
                 "Invalid Track Track count {} while parsing Track at position {} in chunk '{}'",
-                track_count, reader.cur_pos, reader.chunk.name,
+                track_count,
+                reader.cur_pos,
+                reader.chunk.name,
             );
         }
         let track_count: usize = track_count as usize;
@@ -549,7 +538,10 @@ impl GMElement for GMTrack {
             if gm_anim_curve_string != "GMAnimCurve" {
                 bail!(
                     "Expected owned resource thingy of Track to be \"GMAnimCurve\"; but found {:?} for Track {:?} at absolute position {} in chunk '{}'",
-                    gm_anim_curve_string, reader.display_gm_str(name), reader.cur_pos, reader.chunk.name,
+                    gm_anim_curve_string,
+                    reader.display_gm_str(name),
+                    reader.cur_pos,
+                    reader.chunk.name,
                 );
             }
             if anim_curve_string.is_none() {
@@ -629,26 +621,25 @@ impl GMElement for GMTrack {
     }
 }
 
-
 #[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive, Serialize, Deserialize)]
 #[repr(u32)]
 pub enum GMSequencePlaybackType {
     Oneshot = 0,
     Loop = 1,
-    Pingpong = 2
+    Pingpong = 2,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive, Serialize, Deserialize)]
 #[repr(u32)]
 pub enum GMAnimSpeedType {
     FramesPerSecond = 0,
-    FramesPerGameFrame = 1
+    FramesPerGameFrame = 1,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
 pub enum GMTrackBuiltinName {
-    None = 0,   // no idea when/why this happens exactly
+    None = 0, // No idea when/why this happens exactly
     Gain = 5,
     Pitch = 6,
     Falloff = 7,
@@ -674,4 +665,3 @@ pub enum GMTrackTraits {
     None,
     ChildrenIgnoreOrigin,
 }
-
