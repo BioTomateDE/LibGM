@@ -4,4 +4,3 @@ use crate::gamemaker::data::GMData;
 pub struct DecompileContext<'a> {
     pub gm_data: &'a GMData,
 }
-

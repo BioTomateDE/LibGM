@@ -1,8 +1,8 @@
-use crate::prelude::*;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
+use crate::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct GMOptions {
@@ -94,7 +94,9 @@ impl GMElement for GMOptions {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
+        if !self.exists {
+            return Ok(());
+        }
         if self.is_new_format {
             build_options_new(builder, self)?;
         } else {
@@ -103,7 +105,6 @@ impl GMElement for GMOptions {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct GMOptionsFlags {
@@ -177,41 +178,100 @@ impl GMElement for GMOptionsFlags {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let mut raw: u64 = 0;
-        if self.fullscreen {raw |= 0x1};
-        if self.interpolate_pixels {raw |= 0x2};
-        if self.use_new_audio {raw |= 0x4};
-        if self.no_border {raw |= 0x8};
-        if self.show_cursor {raw |= 0x10};
-        if self.sizeable {raw |= 0x20};
-        if self.stay_on_top {raw |= 0x40};
-        if self.change_resolution {raw |= 0x80};
-        if self.no_buttons {raw |= 0x100};
-        if self.screen_key {raw |= 0x200};
-        if self.help_key {raw |= 0x400};
-        if self.quit_key {raw |= 0x800};
-        if self.save_key {raw |= 0x1000};
-        if self.screenshot_key {raw |= 0x2000};
-        if self.close_sec {raw |= 0x4000};
-        if self.freeze {raw |= 0x8000};
-        if self.show_progress {raw |= 0x10000};
-        if self.load_transparent {raw |= 0x20000};
-        if self.scale_progress {raw |= 0x40000};
-        if self.display_errors {raw |= 0x80000};
-        if self.write_errors {raw |= 0x100000};
-        if self.abort_errors {raw |= 0x200000};
-        if self.variable_errors {raw |= 0x400000};
-        if self.creation_event_order {raw |= 0x800000};
-        if self.use_front_touch {raw |= 0x1000000};
-        if self.use_rear_touch {raw |= 0x2000000};
-        if self.use_fast_collision {raw |= 0x4000000};
-        if self.fast_collision_compatibility {raw |= 0x8000000};
-        if self.disable_sandbox {raw |= 0x10000000};
-        if self.enable_copy_on_write {raw |= 0x20000000};
+        if self.fullscreen {
+            raw |= 0x1
+        };
+        if self.interpolate_pixels {
+            raw |= 0x2
+        };
+        if self.use_new_audio {
+            raw |= 0x4
+        };
+        if self.no_border {
+            raw |= 0x8
+        };
+        if self.show_cursor {
+            raw |= 0x10
+        };
+        if self.sizeable {
+            raw |= 0x20
+        };
+        if self.stay_on_top {
+            raw |= 0x40
+        };
+        if self.change_resolution {
+            raw |= 0x80
+        };
+        if self.no_buttons {
+            raw |= 0x100
+        };
+        if self.screen_key {
+            raw |= 0x200
+        };
+        if self.help_key {
+            raw |= 0x400
+        };
+        if self.quit_key {
+            raw |= 0x800
+        };
+        if self.save_key {
+            raw |= 0x1000
+        };
+        if self.screenshot_key {
+            raw |= 0x2000
+        };
+        if self.close_sec {
+            raw |= 0x4000
+        };
+        if self.freeze {
+            raw |= 0x8000
+        };
+        if self.show_progress {
+            raw |= 0x10000
+        };
+        if self.load_transparent {
+            raw |= 0x20000
+        };
+        if self.scale_progress {
+            raw |= 0x40000
+        };
+        if self.display_errors {
+            raw |= 0x80000
+        };
+        if self.write_errors {
+            raw |= 0x100000
+        };
+        if self.abort_errors {
+            raw |= 0x200000
+        };
+        if self.variable_errors {
+            raw |= 0x400000
+        };
+        if self.creation_event_order {
+            raw |= 0x800000
+        };
+        if self.use_front_touch {
+            raw |= 0x1000000
+        };
+        if self.use_rear_touch {
+            raw |= 0x2000000
+        };
+        if self.use_fast_collision {
+            raw |= 0x4000000
+        };
+        if self.fast_collision_compatibility {
+            raw |= 0x8000000
+        };
+        if self.disable_sandbox {
+            raw |= 0x10000000
+        };
+        if self.enable_copy_on_write {
+            raw |= 0x20000000
+        };
         builder.write_u64(raw);
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMOptionsConstant {
@@ -231,7 +291,6 @@ impl GMElement for GMOptionsConstant {
         Ok(())
     }
 }
-
 
 fn parse_options_new(reader: &mut DataReader) -> Result<GMOptions> {
     let unknown1 = reader.read_u32()?;
@@ -270,7 +329,6 @@ fn parse_options_new(reader: &mut DataReader) -> Result<GMOptions> {
         exists: true,
     })
 }
-
 
 fn parse_options_old(reader: &mut DataReader) -> Result<GMOptions> {
     let flag_fullscreen = reader.read_bool32()?;
@@ -327,7 +385,7 @@ fn parse_options_old(reader: &mut DataReader) -> Result<GMOptions> {
 
     Ok(GMOptions {
         is_new_format: false,
-        unknown1: 0,     // might not be best practice?
+        unknown1: 0, // Might not be best practice?
         unknown2: 0,
         flags: GMOptionsFlags {
             fullscreen: flag_fullscreen,
@@ -376,7 +434,6 @@ fn parse_options_old(reader: &mut DataReader) -> Result<GMOptions> {
         exists: true,
     })
 }
-
 
 fn build_options_old(builder: &mut DataBuilder, options: &GMOptions) -> Result<()> {
     builder.write_bool32(options.flags.fullscreen);
@@ -431,7 +488,6 @@ fn build_options_old(builder: &mut DataBuilder, options: &GMOptions) -> Result<(
     Ok(())
 }
 
-
 fn build_options_new(builder: &mut DataBuilder, options: &GMOptions) -> Result<()> {
     builder.write_u32(options.unknown1);
     builder.write_u32(options.unknown2);
@@ -450,5 +506,3 @@ fn build_options_new(builder: &mut DataBuilder, options: &GMOptions) -> Result<(
     builder.write_simple_list(&options.constants)?;
     Ok(())
 }
-
-

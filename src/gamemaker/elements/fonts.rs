@@ -1,10 +1,10 @@
-use crate::prelude::*;
-use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::gm_version::LTSBranch;
 use crate::gamemaker::serialize::DataBuilder;
+use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
+use crate::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct GMFonts {
@@ -24,23 +24,27 @@ impl GMChunkElement for GMFonts {
 impl GMElement for GMFonts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let fonts: Vec<GMFont> = reader.read_pointer_list()?;
-        
+
         let mut padding: Option<[u8; 512]> = None;
         if !reader.general_info.is_version_at_least((2024, 14)) {
             padding = Some(reader.read_bytes_const()?.clone())
         }
-        
+
         Ok(Self { fonts, padding, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
-        
+        if !self.exists {
+            return Ok(());
+        }
+
         builder.write_pointer_list(&self.fonts)?;
 
         if !builder.is_gm_version_at_least((2024, 14)) {
             let Some(padding) = self.padding else {
-                bail!("FONT Chunk padding not set before 2024.14 (this could've been a warning probably since there is a fallback)");
+                bail!(
+                    "FONT Chunk padding not set before 2024.14 (this could've been a warning probably since there is a fallback)"
+                );
             };
             builder.write_bytes(&padding);
         }
@@ -48,7 +52,6 @@ impl GMElement for GMFonts {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMFont {
@@ -113,8 +116,9 @@ impl GMElement for GMFont {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let display_name: Option<GMRef<String>> = reader.read_gm_string_opt()?;
-        let em_size = reader.read_u32()?;   // before GMS 2.3: int. after: float
-        let em_size: GMFontSize = if em_size & (1 << 31) != 0 {    // since the float is always written negated, it has the first bit set.
+        let em_size = reader.read_u32()?; // Before GMS 2.3: int. after: float
+        let em_size: GMFontSize = if em_size & (1 << 31) != 0 {
+            // Since the float is always written negated, it has the first bit set.
             GMFontSize::Float(-f32::from_bits(em_size))
         } else {
             GMFontSize::Int(em_size)
@@ -172,10 +176,13 @@ impl GMElement for GMFont {
         builder.write_gm_texture(&self.texture)?;
         builder.write_f32(self.scale.0);
         builder.write_f32(self.scale.1);
-        self.ascender_offset.serialize_if_bytecode_ver(builder, "Ascender Offset", 17)?;
+        self.ascender_offset
+            .serialize_if_bytecode_ver(builder, "Ascender Offset", 17)?;
         self.ascender.serialize_if_gm_ver(builder, "Ascender", (2022, 2))?;
-        self.sdf_spread.serialize_if_gm_ver(builder, "SDF Spread", (2023, 2, LTSBranch::PostLTS))?;
-        self.line_height.serialize_if_gm_ver(builder, "Line Height", (2023, 6))?;
+        self.sdf_spread
+            .serialize_if_gm_ver(builder, "SDF Spread", (2023, 2, LTSBranch::PostLTS))?;
+        self.line_height
+            .serialize_if_gm_ver(builder, "Line Height", (2023, 6))?;
         builder.write_pointer_list(&self.glyphs)?;
         if builder.is_gm_version_at_least((2024, 14)) {
             builder.align(4);
@@ -183,7 +190,6 @@ impl GMElement for GMFont {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMFontGlyph {
@@ -210,29 +216,46 @@ pub struct GMFontGlyph {
 
     /// The kerning for each glyph.
     pub kernings: Vec<GMFontGlyphKerning>,
-
 }
 impl GMElement for GMFontGlyph {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let character = reader.read_u16()?;
-        let character: Option<char> = if character == 0 { None } else {
-            Some(char::from_u32(character.into()).ok_or_else(|| format!("Invalid UTF-8 character with code point {0} (0x{0:04X})", character))?)
+        let character: Option<char> = if character == 0 {
+            None
+        } else {
+            Some(
+                char::from_u32(character.into())
+                    .ok_or_else(|| format!("Invalid UTF-8 character with code point {0} (0x{0:04X})", character))?,
+            )
         };
         let x = reader.read_u16()?;
         let y = reader.read_u16()?;
         let width = reader.read_u16()?;
         let height = reader.read_u16()?;
         let shift_modifier = reader.read_i16()?;
-        let offset = reader.read_i16()?;    // potential assumption according to utmt
+        let offset = reader.read_i16()?; // Potential assumption according to utmt
         if reader.general_info.is_version_at_least((2024, 11)) {
             let unknown_always_zero = reader.read_i16()?;
             if unknown_always_zero != 0 {
-                bail!("Unknown Always Zero in Font Glyph with character {:?} has value {}", character, unknown_always_zero);
+                bail!(
+                    "Unknown Always Zero in Font Glyph with character {:?} has value {}",
+                    character,
+                    unknown_always_zero
+                );
             }
         }
         let kernings: Vec<GMFontGlyphKerning> = reader.read_simple_list_short()?;
 
-        Ok(GMFontGlyph { character, x, y, width, height, shift_modifier, offset, kernings })
+        Ok(GMFontGlyph {
+            character,
+            x,
+            y,
+            width,
+            height,
+            shift_modifier,
+            offset,
+            kernings,
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -249,13 +272,12 @@ impl GMElement for GMFontGlyph {
         builder.write_i16(self.shift_modifier);
         builder.write_i16(self.offset);
         if builder.is_gm_version_at_least((2024, 11)) {
-            builder.write_u16(0);   // UnknownAlwaysZero
+            builder.write_u16(0); // UnknownAlwaysZero
         }
         builder.write_simple_list_short(&self.kernings)?;
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMFontGlyphKerning {
@@ -288,4 +310,3 @@ pub enum GMFontSize {
     Float(f32),
     Int(u32),
 }
-

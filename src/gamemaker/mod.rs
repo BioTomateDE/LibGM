@@ -1,10 +1,9 @@
-﻿pub mod elements;
-pub mod gm_version;
-pub mod serialize;
+pub mod create_data_file;
+pub mod data;
 pub mod deserialize;
 mod detect_version;
+pub mod elements;
+pub mod gm_version;
 mod qoi;
-mod printing;
-pub mod data;
+pub mod serialize;
 pub mod upgrade;
-pub mod create_data_file;

@@ -3,7 +3,7 @@ use crate::gml::decompiler::control_flow::{ControlFlowGraph, NodeRef};
 
 pub fn find_short_circuits(cfg: &mut ControlFlowGraph) {
     let pre_bytecode15: bool = cfg.context.gm_data.general_info.bytecode_version < 15;
-    
+
     // Identify and restructure short circuits
     for (i, block) in cfg.blocks.iter().enumerate() {
         let is_short_circuit: bool = match block.instructions {
@@ -16,4 +16,3 @@ pub fn find_short_circuits(cfg: &mut ControlFlowGraph) {
         }
     }
 }
-

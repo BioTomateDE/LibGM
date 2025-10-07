@@ -1,4 +1,3 @@
-use crate::prelude::*;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::animation_curves::GMAnimationCurves;
 use crate::gamemaker::elements::audio_groups::GMAudioGroups;
@@ -32,8 +31,8 @@ use crate::gamemaker::elements::texture_group_info::GMTextureGroupInfos;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItems;
 use crate::gamemaker::elements::timelines::GMTimelines;
 use crate::gamemaker::elements::ui_nodes::GMRootUINodes;
-use crate::gamemaker::elements::variables::{to_vari_instance_type, GMVariable, GMVariableB15Data, GMVariables};
-
+use crate::gamemaker::elements::variables::{GMVariable, GMVariableB15Data, GMVariables, to_vari_instance_type};
+use crate::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Endianness {
@@ -43,45 +42,45 @@ pub enum Endianness {
 
 #[derive(Debug, Clone)]
 pub struct GMData {
-    pub general_info: GMGeneralInfo,                    // GEN8
-    pub strings: GMStrings,                             // STRG
-    pub embedded_textures: GMEmbeddedTextures,          // TXTR
-    pub texture_page_items: GMTexturePageItems,         // TPAG
-    pub variables: GMVariables,                         // VARI
-    pub functions: GMFunctions,                         // FUNC
-    pub scripts: GMScripts,                             // SCPT
-    pub codes: GMCodes,                                 // CODE
-    pub fonts: GMFonts,                                 // FONT
-    pub sprites: GMSprites,                             // SPRT
-    pub game_objects: GMGameObjects,                    // OBJT
-    pub rooms: GMRooms,                                 // ROOM
-    pub backgrounds: GMBackgrounds,                     // BGND
-    pub paths: GMPaths,                                 // PATH
-    pub audios: GMEmbeddedAudios,                       // AUDO
-    pub sounds: GMSounds,                               // SOND
-    pub options: GMOptions,                             // OPTN
-    pub sequences: GMSequences,                         // SEQN
-    pub particle_systems: GMParticleSystems,            // PSYS
-    pub particle_emitters: GMParticleEmitters,          // PSEM
-    pub language_info: GMLanguageInfo,                  // LANG
-    pub extensions: GMExtensions,                       // EXTN
-    pub audio_groups: GMAudioGroups,                    // AGRP
-    pub global_init_scripts: GMGlobalInitScripts,       // GLOB
-    pub game_end_scripts: GMGameEndScripts,             // GMEN
-    pub shaders: GMShaders,                             // SHDR
-    pub root_ui_nodes: GMRootUINodes,                   // UILR
-    pub data_files: GMDataFiles,                        // DAFL
-    pub timelines: GMTimelines,							// TMLN
-    pub embedded_images: GMEmbeddedImages,              // EMBI
-    pub texture_group_infos: GMTextureGroupInfos,       // TGIN
-    pub tags: GMTags,                                   // TAGS
-    pub feature_flags: GMFeatureFlags,                  // FEAT
-    pub filter_effects: GMFilterEffects,                // FEDS
-    pub animation_curves: GMAnimationCurves,            // ACRV
+    pub general_info: GMGeneralInfo,              // GEN8
+    pub strings: GMStrings,                       // STRG
+    pub embedded_textures: GMEmbeddedTextures,    // TXTR
+    pub texture_page_items: GMTexturePageItems,   // TPAG
+    pub variables: GMVariables,                   // VARI
+    pub functions: GMFunctions,                   // FUNC
+    pub scripts: GMScripts,                       // SCPT
+    pub codes: GMCodes,                           // CODE
+    pub fonts: GMFonts,                           // FONT
+    pub sprites: GMSprites,                       // SPRT
+    pub game_objects: GMGameObjects,              // OBJT
+    pub rooms: GMRooms,                           // ROOM
+    pub backgrounds: GMBackgrounds,               // BGND
+    pub paths: GMPaths,                           // PATH
+    pub audios: GMEmbeddedAudios,                 // AUDO
+    pub sounds: GMSounds,                         // SOND
+    pub options: GMOptions,                       // OPTN
+    pub sequences: GMSequences,                   // SEQN
+    pub particle_systems: GMParticleSystems,      // PSYS
+    pub particle_emitters: GMParticleEmitters,    // PSEM
+    pub language_info: GMLanguageInfo,            // LANG
+    pub extensions: GMExtensions,                 // EXTN
+    pub audio_groups: GMAudioGroups,              // AGRP
+    pub global_init_scripts: GMGlobalInitScripts, // GLOB
+    pub game_end_scripts: GMGameEndScripts,       // GMEN
+    pub shaders: GMShaders,                       // SHDR
+    pub root_ui_nodes: GMRootUINodes,             // UILR
+    pub data_files: GMDataFiles,                  // DAFL
+    pub timelines: GMTimelines,                   // TMLN
+    pub embedded_images: GMEmbeddedImages,        // EMBI
+    pub texture_group_infos: GMTextureGroupInfos, // TGIN
+    pub tags: GMTags,                             // TAGS
+    pub feature_flags: GMFeatureFlags,            // FEAT
+    pub filter_effects: GMFilterEffects,          // FEDS
+    pub animation_curves: GMAnimationCurves,      // ACRV
 
     /// Should not be edited; only set by `GMData::read_chunk_padding`.
     pub chunk_padding: usize,
-    
+
     /// Indicates the data's byte endianness.
     /// In most cases (and assumed by default), this is set to little-endian.
     /// Big endian is an edge case for certain target platforms (e.g. PS3 or Xbox 360).
@@ -96,7 +95,7 @@ impl GMData {
         // Try to find existing string
         for (i, str) in self.strings.strings.iter().enumerate() {
             if str == string {
-                return GMRef::new(i as u32)
+                return GMRef::new(i as u32);
             }
         }
 
@@ -119,24 +118,27 @@ impl GMData {
         for (i, variable) in self.variables.variables.iter().enumerate() {
             let var_name: &String = variable.name.resolve(&self.strings.strings)?;
             if var_name != name {
-                continue
+                continue;
             }
 
             let Some(b15) = &variable.b15_data else {
-                bail!("Variable {} does not have bytecode 15 data", variable.name.display(&self.strings));
+                bail!(
+                    "Variable {} does not have bytecode 15 data",
+                    variable.name.display(&self.strings)
+                );
             };
             if b15.instance_type != vari_instance_type {
-                continue
+                continue;
             }
 
-            // found existing variable!
-            return Ok(GMRef::new(i as u32))
+            // Found existing variable!
+            return Ok(GMRef::new(i as u32));
         }
 
-        // couldn't find a variable; make a new one
+        // Couldn't find a variable; make a new one
         let new_name_string: GMRef<String> = self.make_string(name);
 
-        // first update these scuffed ass variable counts
+        // First update these scuffed ass variable counts
         let Some(b15_header) = &mut self.variables.b15_header else {
             bail!("Variables element does not have bytecode 15 header");
         };
@@ -163,7 +165,7 @@ impl GMData {
             variable_id = -6;
         }
 
-        // now actually create the variable
+        // Now actually create the variable
         let variable_ref: GMRef<GMVariable> = GMRef::new(self.variables.variables.len() as u32);
         self.variables.variables.push(GMVariable {
             name: new_name_string,
@@ -177,29 +179,27 @@ impl GMData {
         for (i, function) in self.functions.functions.iter().enumerate() {
             let func_name: &String = function.name.resolve(&self.strings.strings)?;
             if name == func_name {
-                return Ok(Some(GMRef::new(i as u32)))
+                return Ok(Some(GMRef::new(i as u32)));
             }
         }
         Ok(None)
     }
 
     pub fn function_by_name(&self, name: &str) -> Result<GMRef<GMFunction>> {
-        self.find_function(name)?.with_context(|| format!("Could not find function with name {name:?}"))
+        self.find_function(name)?
+            .with_context(|| format!("Could not find function with name {name:?}"))
     }
 
     /// Only intended for finding (or creating if it doesn't exist) **builtin** GameMaker functions.
     pub fn make_builtin_function(&mut self, name: &'static str) -> Result<GMRef<GMFunction>> {
         if let Some(func) = self.find_function(name)? {
-            return Ok(func)
+            return Ok(func);
         }
 
-        // create new function
+        // Create new function
         let func_ref = GMRef::new(self.functions.functions.len() as u32);
-        let func = GMFunction {
-            name: self.make_string(name),
-        };
-        self.functions.functions.push(func);    // separation needed to shut up the borrow checker
+        let func = GMFunction { name: self.make_string(name) };
+        self.functions.functions.push(func); // Separation needed to shut up the borrow checker
         Ok(func_ref)
     }
 }
-

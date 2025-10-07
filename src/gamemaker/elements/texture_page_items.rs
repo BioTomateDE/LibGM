@@ -1,8 +1,8 @@
-use crate::prelude::*;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::embedded_textures::GMEmbeddedTexture;
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
+use crate::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct GMTexturePageItems {
@@ -12,7 +12,11 @@ pub struct GMTexturePageItems {
 }
 impl GMChunkElement for GMTexturePageItems {
     fn stub() -> Self {
-        Self { texture_page_items: vec![], is_4_byte_aligned: false, exists: false }
+        Self {
+            texture_page_items: vec![],
+            is_4_byte_aligned: false,
+            exists: false,
+        }
     }
     fn exists(&self) -> bool {
         self.exists
@@ -21,25 +25,29 @@ impl GMChunkElement for GMTexturePageItems {
 impl GMElement for GMTexturePageItems {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let is_4_byte_aligned: bool = reader.get_chunk_length() % 4 == 0;
-        
+
         let pointers: Vec<u32> = reader.read_simple_list()?;
         let mut texture_page_items: Vec<GMTexturePageItem> = Vec::with_capacity(pointers.len());
-        
+
         for (i, pointer) in pointers.into_iter().enumerate() {
             reader.cur_pos = pointer as usize;
-            reader.texture_page_item_occurrence_map.insert(pointer, GMRef::new(i as u32));
+            reader
+                .texture_page_item_occurrence_map
+                .insert(pointer, GMRef::new(i as u32));
             texture_page_items.push(GMTexturePageItem::deserialize(reader)?);
         }
-        
+
         if is_4_byte_aligned {
-            reader.align(4)?;   // has warning instead of hard error in utmt if misaligned
+            reader.align(4)?; // Has warning instead of hard error in utmt if misaligned
         }
-        
+
         Ok(Self { texture_page_items, is_4_byte_aligned, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
+        if !self.exists {
+            return Ok(());
+        }
         builder.write_pointer_list(&self.texture_page_items)?;
         if self.is_4_byte_aligned {
             builder.align(4);
@@ -47,7 +55,6 @@ impl GMElement for GMTexturePageItems {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMTexturePageItem {
@@ -109,4 +116,3 @@ impl GMElement for GMTexturePageItem {
         Ok(())
     }
 }
-

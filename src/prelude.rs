@@ -1,6 +1,5 @@
-pub use crate::error::{Error, Result, Context};
+pub use crate::error::{Context, Error, Result};
 pub use crate::{bail, err};
-
 
 #[macro_export]
 macro_rules! integrity_check {
@@ -10,7 +9,6 @@ macro_rules! integrity_check {
         }
     }
 }
-
 
 #[macro_export]
 macro_rules! integrity_assert {
@@ -22,4 +20,3 @@ macro_rules! integrity_assert {
         }
     }
 }
-

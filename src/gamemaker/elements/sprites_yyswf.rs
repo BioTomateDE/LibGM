@@ -1,11 +1,11 @@
-use crate::prelude::*;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::deserialize::DataReader;
 use crate::gamemaker::elements::GMElement;
 use crate::gamemaker::elements::sprites::GMSpriteShapeData;
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
+use crate::prelude::*;
 use crate::util::init::{num_enum_from, vec_with_capacity};
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteTypeSWF {
@@ -14,7 +14,6 @@ pub struct GMSpriteTypeSWF {
     pub jpeg_table: Vec<u8>,
     pub timeline: GMSpriteYYSWFTimeline,
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteYYSWFTimeline {
@@ -52,7 +51,18 @@ impl GMElement for GMSpriteYYSWFTimeline {
             collision_masks.push(GMSpriteYYSWFCollisionMask::deserialize(reader)?);
         }
 
-        Ok(GMSpriteYYSWFTimeline { framerate, min_x, max_x, min_y, max_y, mask_width, mask_height, used_items, frames, collision_masks })
+        Ok(GMSpriteYYSWFTimeline {
+            framerate,
+            min_x,
+            max_x,
+            min_y,
+            max_y,
+            mask_width,
+            mask_height,
+            used_items,
+            frames,
+            collision_masks,
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -76,7 +86,6 @@ impl GMElement for GMSpriteYYSWFTimeline {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteYYSWFItem {
     pub id: i32,
@@ -94,8 +103,9 @@ impl GMElement for GMSpriteYYSWFItem {
             5 => GMSpriteYYSWFItemData::ItemSprite,
             _ => bail!(
                 "Invalid YYSWF Item Type {0} 0x{0:08X} at position {1} while parsing Sprite YYSWF Item",
-                item_type, reader.cur_pos,
-            )
+                item_type,
+                reader.cur_pos,
+            ),
         };
         Ok(GMSpriteYYSWFItem { id, item_data })
     }
@@ -120,7 +130,6 @@ impl GMElement for GMSpriteYYSWFItem {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum GMSpriteYYSWFItemData {
     ItemShape(GMSpriteShapeData<GMSpriteYYSWFSubshapeData>),
@@ -129,7 +138,6 @@ pub enum GMSpriteYYSWFItemData {
     ItemTextField,
     ItemSprite,
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum GMSpriteYYSWFFillData {
@@ -146,7 +154,8 @@ impl GMElement for GMSpriteYYSWFFillData {
             3 => Self::FillBitmap(GMSpriteYYSWFBitmapFillData::deserialize(reader)?),
             _ => bail!(
                 "Invalid YYSWF Fill Type 0x{:08X} at position {} while parsing Sprite YYSWF Fill Data",
-                fill_type, reader.cur_pos,
+                fill_type,
+                reader.cur_pos,
             ),
         };
         Ok(fill_data)
@@ -167,7 +176,6 @@ impl GMElement for GMSpriteYYSWFFillData {
     }
 }
 
-
 #[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
 pub enum GMSpriteYYSWFBitmapFillType {
@@ -183,7 +191,6 @@ pub enum GMSpriteYYSWFGradientFillType {
     FillLinear,
     FillRadial,
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteYYSWFStyleGroup<T: GMElement> {
@@ -232,7 +239,6 @@ impl<T: GMElement> GMElement for GMSpriteYYSWFStyleGroup<T> {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteYYSWFBitmapFillData {
     pub bitmap_fill_type: GMSpriteYYSWFBitmapFillType,
@@ -240,7 +246,7 @@ pub struct GMSpriteYYSWFBitmapFillData {
     transformation_matrix: GMSpriteYYSWFMatrix33,
 }
 impl GMElement for GMSpriteYYSWFBitmapFillData {
-    fn deserialize(reader: &mut DataReader) -> Result<Self>{
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let bitmap_fill_type: GMSpriteYYSWFBitmapFillType = num_enum_from(reader.read_i32()?)?;
         let char_id = reader.read_i32()?;
         let transformation_matrix = GMSpriteYYSWFMatrix33::deserialize(reader)?;
@@ -254,7 +260,6 @@ impl GMElement for GMSpriteYYSWFBitmapFillData {
         Ok(())
     }
 }
-
 
 pub const YYSWF_MATRIX33_MATRIX_SIZE: usize = 9;
 #[derive(Debug, Clone, PartialEq)]
@@ -277,7 +282,6 @@ impl GMElement for GMSpriteYYSWFMatrix33 {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteYYSWFGradientFillData {
@@ -309,7 +313,6 @@ impl GMElement for GMSpriteYYSWFGradientFillData {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteYYSWFGradientRecord {
     pub ratio: i32,
@@ -338,7 +341,6 @@ impl GMElement for GMSpriteYYSWFGradientRecord {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteYYSWFSolidFillData {
     pub red: u8,
@@ -364,7 +366,6 @@ impl GMElement for GMSpriteYYSWFSolidFillData {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteYYSWFLineStyleData {
     pub red: u8,
@@ -389,7 +390,6 @@ impl GMElement for GMSpriteYYSWFLineStyleData {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteYYSWFSubshapeData {
@@ -529,7 +529,6 @@ impl GMElement for GMSpriteYYSWFSubshapeData {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteYYSWFBitmapData {
     pub bitmap_type: GMSpriteYYSWFBitmapType,
@@ -546,21 +545,30 @@ impl GMElement for GMSpriteYYSWFBitmapData {
         let ver_data = if reader.general_info.is_version_at_least((2022, 1)) {
             let tpe_index = reader.read_i32()?;
             GMSpriteYYSWFBitmapDataVer::Post2022_1(GMSpriteYYSWFBitmapDataPost2022_1 { tpe_index })
-        }
-        else {
+        } else {
             let image_data_length: usize = reader.read_i32()?.max(0) as usize;
             let alpha_data_length: usize = reader.read_i32()?.max(0) as usize;
             let color_palette_data_length: usize = reader.read_i32()?.max(0) as usize;
 
-            let image_data: Vec<u8> = reader.read_bytes_dyn(image_data_length)
-                .map_err(|e| format!("Trying to read Image Data of Bitmap Data {e}"))?.to_vec();
-            let alpha_data: Vec<u8> = reader.read_bytes_dyn(alpha_data_length)
-                .map_err(|e| format!("Trying to read Alpha Data of Bitmap Data {e}"))?.to_vec();
-            let color_palette_data: Vec<u8> = reader.read_bytes_dyn(color_palette_data_length)
-                .map_err(|e| format!("Trying to read Color Palette Data of Bitmap Data {e}"))?.to_vec();
+            let image_data: Vec<u8> = reader
+                .read_bytes_dyn(image_data_length)
+                .map_err(|e| format!("Trying to read Image Data of Bitmap Data {e}"))?
+                .to_vec();
+            let alpha_data: Vec<u8> = reader
+                .read_bytes_dyn(alpha_data_length)
+                .map_err(|e| format!("Trying to read Alpha Data of Bitmap Data {e}"))?
+                .to_vec();
+            let color_palette_data: Vec<u8> = reader
+                .read_bytes_dyn(color_palette_data_length)
+                .map_err(|e| format!("Trying to read Color Palette Data of Bitmap Data {e}"))?
+                .to_vec();
 
             reader.align(4)?;
-            GMSpriteYYSWFBitmapDataVer::Pre2022_1(GMSpriteYYSWFBitmapDataPre2022_1 { image_data, alpha_data, color_palette_data })
+            GMSpriteYYSWFBitmapDataVer::Pre2022_1(GMSpriteYYSWFBitmapDataPre2022_1 {
+                image_data,
+                alpha_data,
+                color_palette_data,
+            })
         };
 
         Ok(GMSpriteYYSWFBitmapData { bitmap_type, width, height, ver_data })
@@ -593,7 +601,6 @@ impl GMElement for GMSpriteYYSWFBitmapData {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum GMSpriteYYSWFBitmapDataVer {
     Pre2022_1(GMSpriteYYSWFBitmapDataPre2022_1),
@@ -609,7 +616,6 @@ pub struct GMSpriteYYSWFBitmapDataPre2022_1 {
 pub struct GMSpriteYYSWFBitmapDataPost2022_1 {
     pub tpe_index: i32,
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
@@ -716,7 +722,6 @@ impl GMElement for GMSpriteYYSWFTimelineObject {
     }
 }
 
-
 pub const YYSWF_COLOR_MATRIX_SIZE: usize = 4;
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteYYSWFColorMatrix {
@@ -749,7 +754,6 @@ impl GMElement for GMSpriteYYSWFColorMatrix {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteYYSWFCollisionMask {
     pub rle_data: Vec<u8>,
@@ -757,9 +761,12 @@ pub struct GMSpriteYYSWFCollisionMask {
 impl GMElement for GMSpriteYYSWFCollisionMask {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let rle_length = reader.read_i32()?;
-        let rle_length: usize = if rle_length > 0 {rle_length as usize} else {0};
-        let rle_data: Vec<u8> = reader.read_bytes_dyn(rle_length).context("reading RLE Data of Timeline")?.to_vec();
-        reader.align(4)?;    // [From UndertaleModTool] "why it's not aligned before the data is beyond my brain"
+        let rle_length: usize = if rle_length > 0 { rle_length as usize } else { 0 };
+        let rle_data: Vec<u8> = reader
+            .read_bytes_dyn(rle_length)
+            .context("reading RLE Data of Timeline")?
+            .to_vec();
+        reader.align(4)?; // [From UndertaleModTool] "why it's not aligned before the data is beyond my brain"
         Ok(Self { rle_data })
     }
 
@@ -774,4 +781,3 @@ impl GMElement for GMSpriteYYSWFCollisionMask {
         Ok(())
     }
 }
-

@@ -11,8 +11,8 @@ use crate::utility::Stopwatch;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModTexturePageItem {
-    // texture is stored as a png; referenced by {index}.png
-    pub image: ModRef,   // image ref
+    // Texture is stored as a png; referenced by {index}.png
+    pub image: ModRef,   // Image ref
     pub target_x: u16,
     pub target_y: u16,
     pub target_width: u16,
@@ -60,10 +60,10 @@ impl ModExporter<'_, '_> {
             let bytes: &Vec<u8> = cropped_image.as_raw();
             let hash: [u8; 16] = xxhash_rust::xxh3::xxh3_128(bytes).to_le_bytes();
             if original_image_hashes.get(&hash).is_some() {
-                continue    // image already existed in original data; continue
+                continue    // Image already existed in original data; continue
             }
             
-            // image was newly added!
+            // Image was newly added!
             let new_texture_page_item = ModTexturePageItem {
                 image: ModRef::Add(textures.len() as u32),
                 target_x: i.target_x,
@@ -101,7 +101,7 @@ impl ModExporter<'_, '_> {
                 bounding_width: i.bounding_width,
                 bounding_height: i.bounding_height,
             };
-            textures.push(cropped_image);   // it will always create a new cropped image; even if the texture is also in the original
+            textures.push(cropped_image);   // It will always create a new cropped image; even if the texture is also in the original
             additions.push(add_texture_page_item);
         }
 
@@ -124,7 +124,7 @@ impl ModExporter<'_, '_> {
                 continue
             }
             
-            // it will always create a new cropped image; even if the texture is also in the original
+            // It will always create a new cropped image; even if the texture is also in the original
             let edit = EditTexturePageItem {
                 image: Some(ModRef::Add(textures.len() as u32)),
                 target_x: edit_field(&original.target_x, &modified.target_x),

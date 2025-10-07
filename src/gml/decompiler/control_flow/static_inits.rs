@@ -1,9 +1,8 @@
-use crate::prelude::*;
-use std::ops::{Deref, DerefMut};
 use crate::gamemaker::elements::code::GMInstruction;
 use crate::gml::decompiler::control_flow::blocks::Block;
 use crate::gml::decompiler::control_flow::{BaseNode, ControlFlowGraph, NodeRef};
-
+use crate::prelude::*;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone)]
 pub struct StaticInit {
@@ -13,10 +12,7 @@ pub struct StaticInit {
 
 impl StaticInit {
     pub fn new(start_address: u32, end_address: u32, head: NodeRef) -> Self {
-        Self {
-            base_node: BaseNode::new(start_address, end_address),
-            head,
-        }
+        Self { base_node: BaseNode::new(start_address, end_address), head }
     }
 }
 
@@ -33,13 +29,15 @@ impl DerefMut for StaticInit {
     }
 }
 
-
 // TODO: remove panicking
 
 pub fn find_static_inits(cfg: &mut ControlFlowGraph) -> Result<()> {
     for i in 0..cfg.blocks.len() {
         let block = &cfg.blocks[i];
-        let Some([GMInstruction::HasStaticInitialized, GMInstruction::BranchIf(..)]) = block.instructions.last_chunk() else {continue};
+        let Some([GMInstruction::HasStaticInitialized, GMInstruction::BranchIf(..)]) = block.instructions.last_chunk()
+        else {
+            continue;
+        };
         let fall_through: NodeRef = block.successors.fall_through.unwrap();
         let branch_target: NodeRef = block.successors.branch_target.unwrap();
 
@@ -47,11 +45,16 @@ pub fn find_static_inits(cfg: &mut ControlFlowGraph) -> Result<()> {
         let static_init_ref = NodeRef::static_init(cfg.static_inits.len());
         cfg.static_inits.push(static_init);
 
-        cfg.blocks[i].pop_last_instructions(2)?;   // Pop BranchIf and HasStaticInitialized
+        cfg.blocks[i].pop_last_instructions(2)?; // Pop BranchIf and HasStaticInitialized
 
         // Remove instruction from ending block, if it's the right one (changes depending on version)
-        let branch_block: &mut Block = branch_target.as_block_mut(cfg).expect("StaticInit Branch successor is not a block"); // utmt: no error
-        let first_instruction: &GMInstruction = branch_block.instructions.first().expect("StaticInit Branch successor block has no instructions"); // utmt: no error
+        let branch_block: &mut Block = branch_target
+            .as_block_mut(cfg)
+            .context("StaticInit Branch successor is not a block")?; // Utmt: no error
+        let first_instruction: &GMInstruction = branch_block
+            .instructions
+            .first()
+            .context("StaticInit Branch successor block has no instructions")?; // Utmt: no error
         if *first_instruction == GMInstruction::SetStaticInitialized {
             branch_block.pop_first_instruction()?;
         }
@@ -72,7 +75,7 @@ pub fn find_static_inits(cfg: &mut ControlFlowGraph) -> Result<()> {
         si.parent = fall_through_parent;
         *fall_through.parent_mut(cfg) = Some(static_init_ref);
 
-        // // Insert into control flow graph (done manually, here)
+        // // Insert into control flow graph (done manually, here) TODO
         // cfg.blocks[i].successors.fall_through = Some(static_init_ref);
         // cfg.static_inits[static_init_ref.index()].predecessors.push(NodeRef::block(i));
         //
@@ -85,4 +88,3 @@ pub fn find_static_inits(cfg: &mut ControlFlowGraph) -> Result<()> {
     }
     Ok(())
 }
-

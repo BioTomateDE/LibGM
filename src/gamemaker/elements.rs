@@ -1,46 +1,47 @@
-use crate::prelude::*;
 use crate::gamemaker::deserialize::DataReader;
 use crate::gamemaker::serialize::DataBuilder;
+use crate::prelude::*;
 
-pub mod code;
-pub mod backgrounds;
-pub mod audio_groups;
-pub mod data_files;
 pub mod animation_curves;
-pub mod general_info;
-pub mod strings;
-pub mod embedded_textures;
-pub mod texture_page_items;
-pub mod variables;
-pub mod scripts;
-pub mod functions;
-pub mod fonts;
-pub mod rooms;
-pub mod sequence;
-pub mod game_objects;
+pub mod audio_groups;
+pub mod backgrounds;
+pub mod code;
+pub mod data_files;
 pub mod embedded_audio;
+pub mod embedded_images;
+pub mod embedded_textures;
+pub mod extensions;
+pub mod feature_flags;
+pub mod filter_effects;
+pub mod fonts;
+pub mod functions;
+pub mod game_objects;
+pub mod general_info;
+pub mod global_init;
+pub mod languages;
+pub mod options;
+pub mod particles;
+pub mod paths;
+pub mod rooms;
+pub mod scripts;
+pub mod sequence;
+pub mod shaders;
 pub mod sounds;
 pub mod sprites;
 pub mod sprites_yyswf;
-pub mod paths;
-pub mod particles;
-pub mod options;
-pub mod global_init;
-pub mod extensions;
-pub mod languages;
-pub mod shaders;
-pub mod ui_nodes;
-pub mod timelines;
-pub mod embedded_images;
-pub mod texture_group_info;
+pub mod strings;
 pub mod tags;
-pub mod feature_flags;
-pub mod filter_effects;
-
+pub mod texture_group_info;
+pub mod texture_page_items;
+pub mod timelines;
+pub mod ui_nodes;
+pub mod variables;
 
 #[allow(unused_variables)]
 pub trait GMElement {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> where Self: Sized;
+    fn deserialize(reader: &mut DataReader) -> Result<Self>
+    where
+        Self: Sized;
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()>;
 
     fn deserialize_pre_padding(reader: &mut DataReader) -> Result<()> {
@@ -157,9 +158,7 @@ impl GMElement for bool {
     }
 }
 
-
 pub trait GMChunkElement {
     fn stub() -> Self;
     fn exists(&self) -> bool;
 }
-

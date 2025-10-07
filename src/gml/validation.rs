@@ -1,75 +1,13 @@
+use crate::gamemaker::data::GMData;
+use crate::gamemaker::elements::code::{
+    GMCode, GMCodeValue, GMDataType, GMInstanceType, GMInstruction, GMVariableType, get_data_type_from_value,
+    get_instruction_size, parse_instance_type,
+};
+use crate::gml::disassembler::disassemble_instruction;
 use crate::prelude::*;
+use bimap::{BiHashMap, BiMap};
 use std::cmp::Ordering;
 use std::collections::HashSet;
-use std::fmt::{Display, Formatter};
-use bimap::{BiHashMap, BiMap};
-use crate::gamemaker::data::GMData;
-use crate::gamemaker::elements::code::{get_data_type_from_value, get_instruction_size, parse_instance_type, GMCode, GMCodeValue, GMDataType, GMInstanceType, GMInstruction, GMVariableType};
-use crate::gml::disassembler::disassemble_instruction;
-
-#[derive(Debug)]
-pub enum CodeValidationError {
-    CodeEndWithoutExit(usize, usize),
-    PopStackEmpty,
-    PeekStackEmpty,
-    DupSizeOutOfBounds,
-    TypeMismatch(VMStackItem, GMDataType),
-    NormalPopFirstNotVar(GMDataType),
-    UnnormalPopFirstNotInt32(GMVariableType, GMDataType),
-    UnnormalPopSecondNotVar(GMVariableType, GMDataType),
-    VariableUnresolvable(u32),
-    ParentCodeUnresolvable(u32),
-    InvalidInitialOffset(u32),
-    InvalidBranchTarget(u32),
-    ExitStackLeftover(VMStack),
-    BranchStackLeftover(VMStack),
-    PushImmediateNotInt16(GMDataType),
-    PushVarWrongDataType(GMDataType),
-    PushVarWrongInstanceType(GMInstanceType),
-    CallArgumentNotVar(VMStackItem),
-    SpecialVarTypeNotInt32(GMVariableType, GMDataType),
-    BranchConditionNotBool(VMStackItem),
-    PushEnvNotInt32(VMStackItem),
-    StackTopNotInt32(VMStackItem),
-    InstanceTypeNotInt32(VMStackItem),
-    Int16OutOfBounds(i32),
-    InvalidInt16InstanceType(i16),
-    UnacceptableInstanceType(GMInstanceType),
-}
-
-impl Display for CodeValidationError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CodeValidationError::CodeEndWithoutExit(a, b) => write!(f, "Code instructions ended without Exit or Return instruction ({a} >= {b})"),
-            CodeValidationError::PopStackEmpty => write!(f, "Tried to pop value from empty stack"),
-            CodeValidationError::PeekStackEmpty => write!(f, "Tried to peek value from empty stack"),
-            CodeValidationError::DupSizeOutOfBounds => write!(f, "Tried to duplicate more items than the stack currently holds"),
-            CodeValidationError::TypeMismatch(item, dtype) => write!(f, "Stack item {item:?} does not match data type of instruction {dtype:?}"),
-            CodeValidationError::NormalPopFirstNotVar(dtype) => write!(f, "Pop instruction with Normal variable type has type1 set to {dtype:?} instead of Variable"),
-            CodeValidationError::UnnormalPopFirstNotInt32(vtype, dtype) => write!(f, "Pop instruction with variable type {vtype:?} has type1 set to {dtype:?} instead of Int32"),
-            CodeValidationError::UnnormalPopSecondNotVar(vtype, dtype) => write!(f, "Pop instruction with variable type {vtype:?} has type2 set to {dtype:?} instead of Variable"),
-            CodeValidationError::VariableUnresolvable(idx) => write!(f, "Could not resolve variable with index {idx}"),
-            CodeValidationError::ParentCodeUnresolvable(idx) => write!(f, "Could not resolve parent code with index {idx}"),
-            CodeValidationError::InvalidInitialOffset(offset) => write!(f, "Child code instruction offset {offset} does not point to the start of an instruction"),
-            CodeValidationError::InvalidBranchTarget(addr) => write!(f, "Branch instruction with target address {addr} does not point to the start of an instruction"),
-            CodeValidationError::ExitStackLeftover(stack) => write!(f, "Code exited with leftover stack data: {:?}", stack.items),
-            CodeValidationError::BranchStackLeftover(stack) => write!(f, "Code branched with leftover stack data (this is an internal issue): {:?}", stack.items),
-            CodeValidationError::PushImmediateNotInt16(dtype) => write!(f, "PushImmediate instruction's data type is {dtype:?} instead of Int16"),
-            CodeValidationError::PushVarWrongDataType(dtype) => write!(f, "Push instruction for variable (local/global/builtin) has data type {dtype:?} instead Variable"),
-            CodeValidationError::PushVarWrongInstanceType(inst) => write!(f, "Push instruction for variable (local/global/builtin) wrong instance type {inst}"),
-            CodeValidationError::CallArgumentNotVar(dtype) => write!(f, "Stack value popped as argument for function call has data type {dtype:?} instead of Variable"),
-            CodeValidationError::SpecialVarTypeNotInt32(vtype, dtype) => write!(f, "Top data type is {dtype:?} instead of Int32 for {vtype:?} Pop instruction"),
-            CodeValidationError::BranchConditionNotBool(item) => write!(f, "Top data type is {item:?} instead of Boolean for conditional Branch instruction"),
-            CodeValidationError::PushEnvNotInt32(item) => write!(f, "Expected Int32 value for PushEnv instruction but found {item:?}"),
-            CodeValidationError::StackTopNotInt32(item) => write!(f, "Top data type is {item:?} instead of Int32 (with value) for stacktop variable type"),
-            CodeValidationError::InstanceTypeNotInt32(item) => write!(f, "Top data type is {item:?} instead of Int32 (with value) for instance type"),
-            CodeValidationError::Int16OutOfBounds(int32) => write!(f, "Int32 {int32} could not be converted to an Int16; out of bounds"),
-            CodeValidationError::InvalidInt16InstanceType(int16) => write!(f, "Int16 {int16} is not a valid instance type"),
-            CodeValidationError::UnacceptableInstanceType(inst) => write!(f, "Instance Type {inst} is not an instance type in this context"),
-        }
-    }
-}
-
 
 pub fn validate_code(code: &GMCode, gm_data: &GMData) -> Result<()> {
     let mut start_address: u32 = 0;
@@ -77,7 +15,9 @@ pub fn validate_code(code: &GMCode, gm_data: &GMData) -> Result<()> {
 
     if let Some(b15_info) = &code.bytecode15_info {
         if let Some(parent_ref) = b15_info.parent {
-            let parent: &GMCode = parent_ref.resolve(&gm_data.codes.codes).context("Cannot resolve parent code")?;
+            let parent: &GMCode = parent_ref
+                .resolve(&gm_data.codes.codes)
+                .context("Cannot resolve parent code")?;
             instructions = &parent.instructions;
             if b15_info.offset % 4 != 0 {
                 bail!("Invalid child code offset {start_address} (not divisible by four)");
@@ -87,15 +27,20 @@ pub fn validate_code(code: &GMCode, gm_data: &GMData) -> Result<()> {
     }
 
     let address_map: BiMap<usize, u32> = generate_address_map(instructions);
-    let instruction_index: usize = *address_map.get_by_right(&start_address)
-        .with_context(|| format!("Invalid child code start address {start_address} (does not correspond to the start of an instruction)"))?;
+    let instruction_index: usize = *address_map.get_by_right(&start_address).with_context(|| {
+        format!("Invalid child code start address {start_address} (does not correspond to the start of an instruction)")
+    })?;
 
     validate_instructions(gm_data, &address_map, instructions, instruction_index)?;
     Ok(())
 }
 
-
-fn validate_instructions(gm_data: &GMData, address_map: &BiMap<usize, u32>, instructions: &Vec<GMInstruction>, start_index: usize) -> Result<()> {
+fn validate_instructions(
+    gm_data: &GMData,
+    address_map: &BiMap<usize, u32>,
+    instructions: &Vec<GMInstruction>,
+    start_index: usize,
+) -> Result<()> {
     let mut states_to_visit = Vec::new();
     states_to_visit.push((start_index, VMStack::new()));
     let mut visited_branch_targets = HashSet::new();
@@ -106,21 +51,31 @@ fn validate_instructions(gm_data: &GMData, address_map: &BiMap<usize, u32>, inst
                 if !stack.is_empty() {
                     bail!("Reached end of code with leftover stack data: {stack:?}");
                 }
-                break
+                break;
             }
 
             let instruction: &GMInstruction = &instructions[instruction_index];
             let instruction_address: u32 = *address_map.get_by_left(&instruction_index).unwrap();
-            let _debug_stack = stack.items.iter().map(|i| match i {
-                VMStackItem::Int32(_) => 'i',
-                VMStackItem::Int64 => 'l',
-                VMStackItem::Float => 'f',
-                VMStackItem::Double => 'd',
-                VMStackItem::Boolean => 'b',
-                VMStackItem::Variable => 'v',
-                VMStackItem::String => 's',
-            }).collect::<String>();
-            log::debug!("{} | {} {} | {}", instruction_index, stack.items.len(), _debug_stack, disassemble_instruction(gm_data, instruction)?);
+            let _debug_stack = stack
+                .items
+                .iter()
+                .map(|i| match i {
+                    VMStackItem::Int32(_) => 'i',
+                    VMStackItem::Int64 => 'l',
+                    VMStackItem::Float => 'f',
+                    VMStackItem::Double => 'd',
+                    VMStackItem::Boolean => 'b',
+                    VMStackItem::Variable => 'v',
+                    VMStackItem::String => 's',
+                })
+                .collect::<String>();
+            log::debug!(
+                "{} | {} {} | {}",
+                instruction_index,
+                stack.items.len(),
+                _debug_stack,
+                disassemble_instruction(gm_data, instruction)?
+            );
             instruction_index += 1;
 
             match instruction {
@@ -130,17 +85,17 @@ fn validate_instructions(gm_data: &GMData, address_map: &BiMap<usize, u32>, inst
                     stack.push_data_type(instr.left);
                 }
 
-                GMInstruction::Multiply(instr) |
-                GMInstruction::Divide(instr) |
-                GMInstruction::Remainder(instr) |
-                GMInstruction::Modulus(instr) |
-                GMInstruction::Add(instr) |
-                GMInstruction::Subtract(instr) |
-                GMInstruction::And(instr) |
-                GMInstruction::Or(instr) |
-                GMInstruction::Xor(instr) |
-                GMInstruction::ShiftLeft(instr) |
-                GMInstruction::ShiftRight(instr) => {
+                GMInstruction::Multiply(instr)
+                | GMInstruction::Divide(instr)
+                | GMInstruction::Remainder(instr)
+                | GMInstruction::Modulus(instr)
+                | GMInstruction::Add(instr)
+                | GMInstruction::Subtract(instr)
+                | GMInstruction::And(instr)
+                | GMInstruction::Or(instr)
+                | GMInstruction::Xor(instr)
+                | GMInstruction::ShiftLeft(instr)
+                | GMInstruction::ShiftRight(instr) => {
                     let right: VMStackItem = stack.pop()?;
                     let left: VMStackItem = stack.pop()?;
                     right.assert_data_type(instr.right)?;
@@ -149,8 +104,7 @@ fn validate_instructions(gm_data: &GMData, address_map: &BiMap<usize, u32>, inst
                     stack.push_data_type(result_type);
                 }
 
-                GMInstruction::Negate(instr) |
-                GMInstruction::Not(instr) => {
+                GMInstruction::Negate(instr) | GMInstruction::Not(instr) => {
                     let item: VMStackItem = stack.pop()?;
                     item.assert_data_type(instr.data_type)?;
                     stack.push_data_type(instr.data_type);
@@ -169,23 +123,26 @@ fn validate_instructions(gm_data: &GMData, address_map: &BiMap<usize, u32>, inst
                     match var_type {
                         GMVariableType::Normal => {
                             if instr.type1 != GMDataType::Variable {
-                                bail!("Normal Pop instruction's first type is {:?} instead of Variable", instr.type1);
+                                bail!(
+                                    "Normal Pop instruction's first type is {:?} instead of Variable",
+                                    instr.type1
+                                );
                             }
                             stack.pop()?.assert_data_type(instr.type2)?;
                         }
                         GMVariableType::Array => {
                             match instr.type1 {
                                 GMDataType::Variable => {
-                                    stack.pop()?.assert_data_type(GMDataType::Int32)?;  // index
-                                    validate_array_instance_type(stack.pop()?)?;         // instance type
-                                    stack.pop()?.assert_data_type(instr.type2)?;        // actual value
+                                    stack.pop()?.assert_data_type(GMDataType::Int32)?; // Index
+                                    validate_array_instance_type(stack.pop()?)?; // Instance type
+                                    stack.pop()?.assert_data_type(instr.type2)?; // Actual value
                                 }
                                 GMDataType::Int32 => {
-                                    stack.pop()?.assert_data_type(instr.type2)?;        // actual value
-                                    stack.pop()?.assert_data_type(GMDataType::Int32)?;  // index
-                                    validate_array_instance_type(stack.pop()?)?;         // instance type
+                                    stack.pop()?.assert_data_type(instr.type2)?; // Actual value
+                                    stack.pop()?.assert_data_type(GMDataType::Int32)?; // Index
+                                    validate_array_instance_type(stack.pop()?)?; // Instance type
                                 }
-                                _ => todo!("unexpected data type 1 for pop array")
+                                _ => todo!("unexpected data type 1 for pop array"),
                             }
                         }
                         GMVariableType::StackTop => {
@@ -193,8 +150,8 @@ fn validate_instructions(gm_data: &GMData, address_map: &BiMap<usize, u32>, inst
                                 stack.pop()?.assert_data_type(instr.type2)?;
                                 stack.pop()?.assert_data_type(GMDataType::Int32)?;
                             } else if instr.type1 == GMDataType::Variable {
-                                stack.pop()?.assert_data_type(GMDataType::Int32)?;  // instance type / object index
-                                stack.pop()?.assert_data_type(instr.type2)?;        // actual value
+                                stack.pop()?.assert_data_type(GMDataType::Int32)?; // Instance type / object index
+                                stack.pop()?.assert_data_type(instr.type2)?; // Actual value
                             } else {
                                 todo!("didnt expect pop type1 (stacktop) to be neither var not int32")
                             }
@@ -219,7 +176,11 @@ fn validate_instructions(gm_data: &GMData, address_map: &BiMap<usize, u32>, inst
                     let last_index: usize = stack.len() - 1;
                     if instr.size as usize > last_index {
                         // TODO: instr.size != item count
-                        bail!("Tried to duplicate {} items in stack with size {}", instr.size, last_index);
+                        bail!(
+                            "Tried to duplicate {} items in stack with size {}",
+                            instr.size,
+                            last_index
+                        );
                     }
                     for i in (0..=instr.size).rev() {
                         let item: &VMStackItem = &stack.items[last_index - i as usize];
@@ -238,14 +199,14 @@ fn validate_instructions(gm_data: &GMData, address_map: &BiMap<usize, u32>, inst
                     if !stack.is_empty() {
                         bail!("Reached return instruction with leftover stack data: {stack:?}");
                     }
-                    return Ok(())
+                    return Ok(());
                 }
 
                 GMInstruction::Exit(_) => {
                     if !stack.is_empty() {
                         bail!("Reached Exit instruction with leftover stack data: {stack:?}");
                     }
-                    return Ok(())
+                    return Ok(());
                 }
 
                 GMInstruction::PopDiscard(instr) => {
@@ -253,20 +214,21 @@ fn validate_instructions(gm_data: &GMData, address_map: &BiMap<usize, u32>, inst
                     item.assert_data_type(instr.data_type)?;
                 }
 
-                GMInstruction::Branch(instr) |
-                GMInstruction::BranchIf(instr) |
-                GMInstruction::BranchUnless(instr) |
-                GMInstruction::PushWithContext(instr) |
-                GMInstruction::PopWithContext(instr) => {
-                    let conditional: bool = matches!(instruction, GMInstruction::BranchIf(_) | GMInstruction::BranchUnless(_));
+                GMInstruction::Branch(instr)
+                | GMInstruction::BranchIf(instr)
+                | GMInstruction::BranchUnless(instr)
+                | GMInstruction::PushWithContext(instr)
+                | GMInstruction::PopWithContext(instr) => {
+                    let conditional: bool =
+                        matches!(instruction, GMInstruction::BranchIf(_) | GMInstruction::BranchUnless(_));
                     if conditional {
                         let item: VMStackItem = stack.pop()?;
                         match item {
-                            // this will probably have to be extended to non literal ints too
+                            // This will probably have to be extended to non literal ints too
                             VMStackItem::Int32(Some(1)) => {}
                             VMStackItem::Int32(Some(0)) => {}
                             VMStackItem::Boolean => {}
-                            _ => bail!("Branch condition is {item:?} instead of a bool or literal 0/1")
+                            _ => bail!("Branch condition is {item:?} instead of a bool or literal 0/1"),
                         }
                     } else if matches!(instruction, GMInstruction::PushWithContext(_)) {
                         let item: VMStackItem = stack.pop()?;
@@ -276,40 +238,41 @@ fn validate_instructions(gm_data: &GMData, address_map: &BiMap<usize, u32>, inst
                     }
 
                     let address_target: u32 = (instruction_address as i32 + instr.jump_offset) as u32;
-                    let branch_target_index: usize = *address_map.get_by_right(&address_target)
+                    let branch_target_index: usize = *address_map
+                        .get_by_right(&address_target)
                         .with_context(|| format!("Invalid branch target with address {address_target}"))?;
 
                     if conditional {
                         if visited_branch_targets.insert((branch_target_index, stack.clone())) {
-                            // conditional branch - never visited; add to list
+                            // Conditional branch - never visited; add to list
                             states_to_visit.push((branch_target_index, stack.clone()));
                         }
                     } else if visited_branch_targets.insert((branch_target_index, stack.clone())) {
-                        // unconditional branch - never visited; branch now
+                        // Unconditional branch - never visited; branch now
                         instruction_index = branch_target_index;
                     } else {
-                        // unconditional branch - already visited; stop execution
-                        break
+                        // Unconditional branch - already visited; stop execution
+                        break;
                     }
                 }
 
                 GMInstruction::PopWithContextExit(_) => todo!("popenv exit magic"),
 
-                GMInstruction::Push(instr) |
-                GMInstruction::PushLocal(instr) |
-                GMInstruction::PushGlobal(instr) |
-                GMInstruction::PushBuiltin(instr) => {
+                GMInstruction::Push(instr)
+                | GMInstruction::PushLocal(instr)
+                | GMInstruction::PushGlobal(instr)
+                | GMInstruction::PushBuiltin(instr) => {
                     let data_type: GMDataType = get_data_type_from_value(&instr.value);
 
                     if let GMCodeValue::Variable(code_var) = &instr.value {
                         match code_var.variable_type {
                             GMVariableType::Normal => {}
                             GMVariableType::Array => {
-                                stack.pop()?.assert_data_type(GMDataType::Int32)?;  // index
-                                validate_array_instance_type(stack.pop()?)?;         // instance type
+                                stack.pop()?.assert_data_type(GMDataType::Int32)?; // Index
+                                validate_array_instance_type(stack.pop()?)?; // Instance type
                             }
                             GMVariableType::StackTop => {
-                                stack.pop()?.assert_data_type(GMDataType::Int32)?;  // instance type / object index
+                                stack.pop()?.assert_data_type(GMDataType::Int32)?; // Instance type / object index
                             }
                             GMVariableType::Instance => todo!("push Instance"),
                             GMVariableType::ArrayPushAF => todo!("push ArrayPushAF"),
@@ -320,15 +283,18 @@ fn validate_instructions(gm_data: &GMData, address_map: &BiMap<usize, u32>, inst
                         // if let Some(b15) = &var.b15_data && b15.instance_type !=
                     }
 
-                    if matches!(instruction, GMInstruction::PushLocal(_) | GMInstruction::PushGlobal(_) | GMInstruction::PushBuiltin(_)) {
+                    if matches!(
+                        instruction,
+                        GMInstruction::PushLocal(_) | GMInstruction::PushGlobal(_) | GMInstruction::PushBuiltin(_)
+                    ) {
                         let GMCodeValue::Variable(code_variable) = &instr.value else {
                             bail!("Local/Global/Builtin Push instruction has data type {data_type:?} instead Variable");
                         };
                         match (instruction, &code_variable.instance_type) {
                             (GMInstruction::PushLocal(_), GMInstanceType::Local) => {}
                             (GMInstruction::PushGlobal(_), GMInstanceType::Global) => {}
-                            (GMInstruction::PushBuiltin(_), GMInstanceType::Self_(None)) => {}  // VARI instance type
-                            (instr, inst) => bail!("{instr:?} has instance type {inst}")
+                            (GMInstruction::PushBuiltin(_), GMInstanceType::Self_(None)) => {} // VARI instance type
+                            (instr, inst) => bail!("{instr:?} has instance type {inst}"),
                         }
                     }
 
@@ -341,9 +307,7 @@ fn validate_instructions(gm_data: &GMData, address_map: &BiMap<usize, u32>, inst
                     }
                 }
 
-                GMInstruction::PushImmediate(int16) => {
-                    stack.push(VMStackItem::Int32(Some(i32::from(*int16))))
-                }
+                GMInstruction::PushImmediate(int16) => stack.push(VMStackItem::Int32(Some(i32::from(*int16)))),
 
                 GMInstruction::Call(instr) => {
                     for _ in 0..instr.arguments_count {
@@ -383,23 +347,24 @@ fn validate_instructions(gm_data: &GMData, address_map: &BiMap<usize, u32>, inst
     Ok(())
 }
 
-
 fn validate_array_instance_type(item: VMStackItem) -> Result<()> {
     let int32: i32 = match item {
         VMStackItem::Int32(Some(int)) => int,
         VMStackItem::Int32(None) => return Ok(()),
-        _ => bail!("Stack Value is {item:?} instead of Int32 for array Instance type")
+        _ => bail!("Stack Value is {item:?} instead of Int32 for array Instance type"),
     };
     let int16: i16 = i16::try_from(int32)
         .with_context(|| format!("Int32 stack value {int32} does not fit into 16 bits for an array Instance Type"))?;
     let instance_type: GMInstanceType = parse_instance_type(int16, GMVariableType::Normal)
         .with_context(|| format!("Int16 stack value {int16} is not a valid instance type"))?;
-    if matches!(instance_type, GMInstanceType::RoomInstance(_) | GMInstanceType::Undefined) {
+    if matches!(
+        instance_type,
+        GMInstanceType::RoomInstance(_) | GMInstanceType::Undefined
+    ) {
         bail!("Invalid instance {instance_type} for this context");
     }
     Ok(())
 }
-
 
 fn generate_address_map(instructions: &[GMInstruction]) -> BiMap<usize, u32> {
     let mut map: BiHashMap<usize, u32> = BiMap::with_capacity(instructions.len());
@@ -410,11 +375,10 @@ fn generate_address_map(instructions: &[GMInstruction]) -> BiMap<usize, u32> {
         current_address += get_instruction_size(instruction);
     }
 
-    // insert end block
+    // Insert end block
     map.insert(instructions.len(), current_address);
     map
 }
-
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
 pub struct VMStack {
@@ -450,7 +414,6 @@ impl VMStack {
         self.items.is_empty()
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
 pub enum VMStackItem {
@@ -490,46 +453,53 @@ impl VMStackItem {
             (Self::Boolean, GMDataType::Boolean) => {}
             (Self::Variable, GMDataType::Variable) => {}
             (Self::String, GMDataType::String) => {}
-            (_, _) => bail!("(INTERNAL) Cannot compare {self:?} with {data_type:?}") //todo
+            (_, _) => bail!("(INTERNAL) Cannot compare {self:?} with {data_type:?}"), //todo
         }
         Ok(())
     }
 }
 
-
 fn binary_operation_result_type(instruction: &GMInstruction, right: GMDataType, left: GMDataType) -> GMDataType {
     match instruction {
         GMInstruction::Compare(_) => return GMDataType::Boolean,
-        GMInstruction::Subtract(_) |
-        GMInstruction::Divide(_) |
-        GMInstruction::Modulus(_) |
-        GMInstruction::And(_) |
-        GMInstruction::Or(_) |
-        GMInstruction::Xor(_) |
-        GMInstruction::ShiftLeft(_) |
-        GMInstruction::ShiftRight(_) => if right == GMDataType::String || left == GMDataType::String {
-            return GMDataType::Double
-        },
-        GMInstruction::Remainder(_) => if (right == GMDataType::String && left != GMDataType::Variable) || left == GMDataType::String {
-            return GMDataType::Double
-        },
+        GMInstruction::Subtract(_)
+        | GMInstruction::Divide(_)
+        | GMInstruction::Modulus(_)
+        | GMInstruction::And(_)
+        | GMInstruction::Or(_)
+        | GMInstruction::Xor(_)
+        | GMInstruction::ShiftLeft(_)
+        | GMInstruction::ShiftRight(_) => {
+            if right == GMDataType::String || left == GMDataType::String {
+                return GMDataType::Double;
+            }
+        }
+        GMInstruction::Remainder(_) => {
+            if (right == GMDataType::String && left != GMDataType::Variable) || left == GMDataType::String {
+                return GMDataType::Double;
+            }
+        }
         _ => {}
     }
 
     // Choose whichever type has a higher bias, or if equal, the smaller numerical data type value.
     match stack_type_bias(left).cmp(&stack_type_bias(right)) {
         Ordering::Greater => left,
-        Ordering::Equal => if u8::from(left) < u8::from(right) {left} else {right},
+        Ordering::Equal => {
+            if u8::from(left) < u8::from(right) {
+                left
+            } else {
+                right
+            }
+        }
         Ordering::Less => right,
     }
 }
-
 
 fn stack_type_bias(data_type: GMDataType) -> u8 {
     match data_type {
         GMDataType::Variable => 2,
         GMDataType::Double | GMDataType::Int64 => 1,
-        _ => 0
+        _ => 0,
     }
 }
-

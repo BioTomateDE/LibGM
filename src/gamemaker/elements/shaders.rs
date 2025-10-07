@@ -1,9 +1,9 @@
-use crate::prelude::*;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
+use crate::prelude::*;
 use crate::util::init::{num_enum_from, vec_with_capacity};
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 #[derive(Debug, Clone)]
 pub struct GMShaders {
@@ -33,7 +33,9 @@ impl GMElement for GMShaders {
 
         let mut shaders: Vec<GMShader> = Vec::with_capacity(count);
         for win in locations.windows(2) {
-            let [pointer, entry_end] = win else { unreachable!("Iterator window size somehow not 2") };
+            let [pointer, entry_end] = win else {
+                unreachable!("Iterator window size somehow not 2")
+            };
             reader.cur_pos = *pointer;
             let name: GMRef<String> = reader.read_gm_string()?;
             let shader_type: GMShaderType = num_enum_from(reader.read_u32()? & 0x7FFFFFFF)?;
@@ -83,14 +85,46 @@ impl GMElement for GMShaders {
                 }
             }
 
-            let hlsl11_vertex_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 8, hlsl11_vertex_ptr, 0, hlsl11_pixel_ptr)?;
-            let hlsl11_pixel_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 8, hlsl11_pixel_ptr, 0, pssl_vertex_ptr)?;
-            let pssl_vertex_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 8, pssl_vertex_ptr, pssl_vertex_len, pssl_pixel_ptr)?;
-            let pssl_pixel_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 8, pssl_pixel_ptr, pssl_pixel_len, cg_psvita_vertex_ptr)?;
-            let cg_psvita_vertex_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 8, cg_psvita_vertex_ptr, cg_psvita_vertex_len, cg_psvita_pixel_ptr)?;
-            let cg_psvita_pixel_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 8, cg_psvita_pixel_ptr, cg_psvita_pixel_len, cg_ps3_vertex_ptr)?;
-            let cg_ps3_vertex_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 16, cg_ps3_vertex_ptr, cg_ps3_vertex_len, cg_ps3_pixel_ptr)?;
-            let cg_ps3_pixel_data: Option<GMShaderData> = read_shader_data(reader, *entry_end, 16, cg_ps3_pixel_ptr, cg_ps3_pixel_len, 0)?;
+            let hlsl11_vertex_data: Option<GMShaderData> =
+                read_shader_data(reader, *entry_end, 8, hlsl11_vertex_ptr, 0, hlsl11_pixel_ptr)?;
+            let hlsl11_pixel_data: Option<GMShaderData> =
+                read_shader_data(reader, *entry_end, 8, hlsl11_pixel_ptr, 0, pssl_vertex_ptr)?;
+            let pssl_vertex_data: Option<GMShaderData> =
+                read_shader_data(reader, *entry_end, 8, pssl_vertex_ptr, pssl_vertex_len, pssl_pixel_ptr)?;
+            let pssl_pixel_data: Option<GMShaderData> = read_shader_data(
+                reader,
+                *entry_end,
+                8,
+                pssl_pixel_ptr,
+                pssl_pixel_len,
+                cg_psvita_vertex_ptr,
+            )?;
+            let cg_psvita_vertex_data: Option<GMShaderData> = read_shader_data(
+                reader,
+                *entry_end,
+                8,
+                cg_psvita_vertex_ptr,
+                cg_psvita_vertex_len,
+                cg_psvita_pixel_ptr,
+            )?;
+            let cg_psvita_pixel_data: Option<GMShaderData> = read_shader_data(
+                reader,
+                *entry_end,
+                8,
+                cg_psvita_pixel_ptr,
+                cg_psvita_pixel_len,
+                cg_ps3_vertex_ptr,
+            )?;
+            let cg_ps3_vertex_data: Option<GMShaderData> = read_shader_data(
+                reader,
+                *entry_end,
+                16,
+                cg_ps3_vertex_ptr,
+                cg_ps3_vertex_len,
+                cg_ps3_pixel_ptr,
+            )?;
+            let cg_ps3_pixel_data: Option<GMShaderData> =
+                read_shader_data(reader, *entry_end, 16, cg_ps3_pixel_ptr, cg_ps3_pixel_len, 0)?;
 
             shaders.push(GMShader {
                 name,
@@ -118,13 +152,13 @@ impl GMElement for GMShaders {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
+        if !self.exists {
+            return Ok(());
+        }
         builder.write_pointer_list(&self.shaders)?;
         Ok(())
     }
 }
-
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMShader {
@@ -151,7 +185,7 @@ impl GMElement for GMShader {
     fn deserialize(_: &mut DataReader) -> Result<Self> {
         unreachable!("[internal error] GMShader::deserialize is not supported; use GMShaders::deserialize instead")
     }
-    
+
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
         builder.write_u32(u32::from(self.shader_type) | 0x80000000);
@@ -184,7 +218,7 @@ impl GMElement for GMShader {
                 builder.write_usize(self.cg_ps3_pixel_data.as_ref().map_or(0, |i| i.data.len()))?;
             }
         }
-        
+
         write_shader_data(builder, 8, &self.hlsl11_vertex_data)?;
         write_shader_data(builder, 8, &self.hlsl11_pixel_data)?;
         write_shader_data(builder, 8, &self.pssl_vertex_data)?;
@@ -197,7 +231,6 @@ impl GMElement for GMShader {
         Ok(())
     }
 }
-
 
 /// Possible shader types a shader can have.
 /// All console shaders (and HLSL11?) are compiled using confidential SDK tools when
@@ -217,12 +250,10 @@ pub enum GMShaderType {
     CgPs3 = 7,
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMShaderData {
     pub data: Vec<u8>,
 }
-
 
 fn read_shader_data(
     reader: &mut DataReader,
@@ -236,7 +267,7 @@ fn read_shader_data(
     const ERR_MSG_SUFFIX: &str = "Shader data was the last in the shader, but given length was incorrectly padded.";
 
     if this_pointer == 0 {
-        return Ok(None)
+        return Ok(None);
     }
 
     reader.align(pad)?;
@@ -246,7 +277,7 @@ fn read_shader_data(
 
     if expected_length == 0 {
         let data: Vec<u8> = reader.read_bytes_dyn(actual_length)?.to_vec();
-        return Ok(Some(GMShaderData { data }))
+        return Ok(Some(GMShaderData { data }));
     }
 
     if expected_length > actual_length {
@@ -269,7 +300,6 @@ fn read_shader_data(
     Ok(Some(GMShaderData { data }))
 }
 
-
 fn write_shader_data(builder: &mut DataBuilder, pad: u32, shader_data_opt: &Option<GMShaderData>) -> Result<()> {
     if let Some(shader_data) = shader_data_opt {
         builder.align(pad);
@@ -278,4 +308,3 @@ fn write_shader_data(builder: &mut DataBuilder, pad: u32, shader_data_opt: &Opti
     }
     Ok(())
 }
-

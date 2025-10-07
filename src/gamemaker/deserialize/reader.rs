@@ -1,25 +1,25 @@
-use crate::prelude::*;
-use std::collections::HashMap;
 use crate::gamemaker::data::Endianness;
 use crate::gamemaker::deserialize::chunk::GMChunk;
 use crate::gamemaker::deserialize::resources::GMRef;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::elements::functions::GMFunction;
 use crate::gamemaker::elements::general_info::GMGeneralInfo;
 use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::elements::variables::GMVariable;
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::gm_version::GMVersionReq;
+use crate::prelude::*;
 use crate::{integrity_assert, integrity_check};
+use std::collections::HashMap;
 
 pub struct DataReader<'a> {
     /// The raw data buffer that is being parsed.
     data: &'a [u8],
-    
+
     /// The current read position within the data buffer.
     /// Reading data will be read from this position; incrementing it.
     pub cur_pos: usize,
-    
+
     /// How many bytes of padding are/should be at the end of every chunk.
     /// Only relevant in certain GameMaker versions.
     /// Defaults to 16, but will be set to 4 or 1 if detected.
@@ -38,7 +38,7 @@ pub struct DataReader<'a> {
     /// Metadata about the currently parsed chunk of data.
     /// This includes the chunk's name, start position, and end position within the data buffer.
     /// When reading data, these bounds are checked to ensure the read operation stays within the chunk.    
-    /// 
+    ///
     /// **Safety Warning**: If the chunk's start/end positions are set incorrectly, the program becomes memory unsafe.
     pub chunk: GMChunk,
 
@@ -46,7 +46,7 @@ pub struct DataReader<'a> {
     /// Use [`DataReader::unstable_get_gm_version`] in [`crate::gamemaker::deserialize::chunk`]
     /// to get the GameMaker version before GEN8 is parsed.
     pub general_info: GMGeneralInfo,
-    
+
     /// Will be set after chunk STRG is parsed (first chunk to parse).
     /// Contains all GameMaker strings, which are needed to resolve strings while deserialization.
     pub strings: GMStrings,
@@ -82,12 +82,12 @@ impl<'a> DataReader<'a> {
             },
             data,
             cur_pos: 0,
-            chunk_padding: 16,    // default padding value (if used) is 16
+            chunk_padding: 16, // Default padding value (if used) is 16
             string_occurrence_map: HashMap::new(),
             texture_page_item_occurrence_map: HashMap::new(),
             variable_occurrence_map: HashMap::new(),
             function_occurrence_map: HashMap::new(),
-            endianness: Endianness::Little,   // assume little endian; big endian is an edge case
+            endianness: Endianness::Little, // Assume little endian; big endian is an edge case
         }
     }
 
@@ -97,14 +97,20 @@ impl<'a> DataReader<'a> {
         if self.cur_pos < self.chunk.start_pos {
             bail!(
                 "Trying to read {} bytes out of lower chunk bounds at position {} in chunk '{}' with start position {}",
-                count, self.cur_pos, self.chunk.name, self.chunk.start_pos,
+                count,
+                self.cur_pos,
+                self.chunk.name,
+                self.chunk.start_pos,
             );
         }
 
         if self.cur_pos + count > self.chunk.end_pos {
             bail!(
                 "Trying to read {} bytes out of upper chunk bounds at position {} in chunk '{}' with end position {}",
-                count, self.cur_pos, self.chunk.name, self.chunk.end_pos,
+                count,
+                self.cur_pos,
+                self.chunk.name,
+                self.chunk.end_pos,
             );
         }
 
@@ -118,7 +124,7 @@ impl<'a> DataReader<'a> {
     /// Useful for reading slices with specified sizes like `[u8; 16]`.
     pub fn read_bytes_const<const N: usize>(&mut self) -> Result<&[u8; N]> {
         let slice: &[u8] = self.read_bytes_dyn(N)?;
-        // read_bytes_dyn is guaranteed to read N bytes so the unwrap never fails.
+        // Read_bytes_dyn is guaranteed to read N bytes so the unwrap never fails.
         Ok(unsafe { &*(slice.as_ptr() as *const [u8; N]) })
     }
 
@@ -132,8 +138,11 @@ impl<'a> DataReader<'a> {
             1 => Ok(true),
             _ => bail!(
                 "Read invalid boolean value {} (0x{:08X}) in chunk '{}' at position {}",
-                number, number, self.chunk.name, self.cur_pos,
-            )
+                number,
+                number,
+                self.chunk.name,
+                self.cur_pos,
+            ),
         }
     }
 
@@ -141,13 +150,16 @@ impl<'a> DataReader<'a> {
     /// ___
     /// For reading standard GameMaker string references, see [`DataReader::read_gm_string`].
     pub fn read_literal_string(&mut self, length: usize) -> Result<String> {
-        let bytes: Vec<u8> = self.read_bytes_dyn(length)
+        let bytes: Vec<u8> = self
+            .read_bytes_dyn(length)
             .with_context(|| format!("reading literal string with length {length}"))?
             .to_vec();
-        let string: String = String::from_utf8(bytes).with_context(|| format!(
-            "parsing literal UTF-8 string with length {} in chunk '{}' at position {}",
-            length, self.chunk.name, self.cur_pos,
-        ))?;
+        let string: String = String::from_utf8(bytes).with_context(|| {
+            format!(
+                "parsing literal UTF-8 string with length {} in chunk '{}' at position {}",
+                length, self.chunk.name, self.cur_pos,
+            )
+        })?;
         Ok(string)
     }
 
@@ -161,17 +173,17 @@ impl<'a> DataReader<'a> {
     pub fn align(&mut self, alignment: u32) -> Result<()> {
         while self.cur_pos % (alignment as usize) != 0 {
             let byte = self.read_u8()?;
-            integrity_assert!{
+            integrity_assert! {
                 byte == 0,
                 "Invalid padding byte while aligning to {alignment}: expected zero but got {byte} (0x{byte:02X})"
             }
         }
         Ok(())
     }
-    
+
     /// Ensures the reader is at the specified position.
     pub fn assert_pos(&self, position: u32, pointer_name: &str) -> Result<()> {
-        integrity_check!{
+        integrity_check! {
             if self.cur_pos != position as usize {
                 if position == 0 {
                     bail!(
@@ -193,7 +205,10 @@ impl<'a> DataReader<'a> {
         if self.chunk.start_pos + relative_position > self.chunk.end_pos {
             bail!(
                 "Tried to set relative reader position to {} in chunk '{}' with start position {} and end position {}; out of bounds",
-                relative_position, self.chunk.name, self.chunk.start_pos, self.chunk.end_pos,
+                relative_position,
+                self.chunk.name,
+                self.chunk.start_pos,
+                self.chunk.end_pos,
             )
         }
         self.cur_pos = self.chunk.start_pos + relative_position;
@@ -214,7 +229,7 @@ impl<'a> DataReader<'a> {
             Ok(None)
         }
     }
-    
+
     /// If the Bytecode version requirement is met, deserializes the element and returns it.
     /// Otherwise, just returns [`None`].
     pub fn deserialize_if_bytecode_version<T: GMElement>(&mut self, ver_req: u8) -> Result<Option<T>> {
@@ -225,4 +240,3 @@ impl<'a> DataReader<'a> {
         }
     }
 }
-

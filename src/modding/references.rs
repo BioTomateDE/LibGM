@@ -85,17 +85,17 @@ fn convert_reference<GM>(gm_reference: &GMRef<GM>, original_list: &[GM], modifie
         bail!(
             "Could not resolve {} reference with GameMaker index {} in list with length {}; out of bounds",
             std::any::type_name_of_val(&gm_reference), gm_reference.index, modified_list.len(),
-        ))
+        );
     }
 
     let original_length: u32 = original_list.len() as u32;
     if gm_reference.index >= original_length {
         // If reference index exists (isn't out of bounds) in modified data but not in original data,
-        // then the element was newly added --> "Add" reference
+        // Then the element was newly added --> "Add" reference
         Ok(ModRef::Add(gm_reference.index - original_length))
     } else {
         // If reference index exists in original data (and modified data; assumes unordered lists never remove elements),
-        // then the element is a reference to the gamemaker data the mod will later be loaded in.
+        // Then the element is a reference to the gamemaker data the mod will later be loaded in.
         Ok(ModRef::Data(gm_reference.index))
     }
 }

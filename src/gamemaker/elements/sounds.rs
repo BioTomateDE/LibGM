@@ -1,11 +1,11 @@
-use crate::prelude::*;
-use crate::gamemaker::elements::audio_groups::GMAudioGroup;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
+use crate::gamemaker::elements::audio_groups::GMAudioGroup;
 use crate::gamemaker::elements::embedded_audio::GMEmbeddedAudio;
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::gm_version::GMVersion;
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
+use crate::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct GMSounds {
@@ -29,25 +29,26 @@ impl GMElement for GMSounds {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
+        if !self.exists {
+            return Ok(());
+        }
         builder.write_pointer_list(&self.sounds)?;
         Ok(())
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSound {
-    pub name: GMRef<String>,                         // e.g. "abc_123_a"
-    pub flags: GMSoundFlags,                         // e.g. Regular
-    pub audio_type: Option<GMRef<String>>,           // e.g. ".mp3"
-    pub file: GMRef<String>,                         // e.g. "abc_123_a.ogg"; doesn't have to actually be a real file in game files (rather embedded audio)
-    pub effects: u32,                                // idk; always zero
-    pub volume: f32,                                 // e.g. 0.69
-    pub pitch: f32,                                  // e.g. 4.20
-    pub audio_group: GMRef<GMAudioGroup>,            // Bytecode14+
-    pub audio_file: Option<GMRef<GMEmbeddedAudio>>,  // e.g. UndertaleEmbeddedAudio#17
-    pub audio_length: Option<f32>,                   // in seconds probably
+    pub name: GMRef<String>,                        // E.g. "abc_123_a"
+    pub flags: GMSoundFlags,                        // E.g. Regular
+    pub audio_type: Option<GMRef<String>>,          // E.g. ".mp3"
+    pub file: GMRef<String>, // e.g. "abc_123_a.ogg"; doesn't have to actually be a real file in game files (rather embedded audio)
+    pub effects: u32,        // Idk; always zero
+    pub volume: f32,         // E.g. 0.69
+    pub pitch: f32,          // E.g. 4.20
+    pub audio_group: GMRef<GMAudioGroup>, // Bytecode14+
+    pub audio_file: Option<GMRef<GMEmbeddedAudio>>, // E.g. UndertaleEmbeddedAudio#17
+    pub audio_length: Option<f32>, // In seconds probably
 }
 impl GMElement for GMSound {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -64,12 +65,26 @@ impl GMElement for GMSound {
         } else {
             let preload = reader.read_bool32()?;
             if !preload {
-                bail!("Preload is unexpectedly set to false for sound {:?}; please report this error", reader.display_gm_str(name));
+                bail!(
+                    "Preload is unexpectedly set to false for sound {:?}; please report this error",
+                    reader.display_gm_str(name)
+                );
             }
         }
         let audio_file: Option<GMRef<GMEmbeddedAudio>> = reader.read_resource_by_id_opt()?;
         let audio_length: Option<f32> = reader.deserialize_if_gm_version((2024, 6))?;
-        Ok(GMSound { name, flags, audio_type, file, effects, volume, pitch, audio_group, audio_file, audio_length })
+        Ok(GMSound {
+            name,
+            flags,
+            audio_type,
+            file,
+            effects,
+            volume,
+            pitch,
+            audio_group,
+            audio_file,
+            audio_length,
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -83,14 +98,14 @@ impl GMElement for GMSound {
         if self.flags.regular && builder.bytecode_version() >= 14 {
             builder.write_resource_id(&self.audio_group);
         } else {
-            builder.write_bool32(true);   // Preload   
+            builder.write_bool32(true); // Preload   
         }
         builder.write_resource_id_opt(&self.audio_file);
-        self.audio_length.serialize_if_gm_ver(builder, "Audio Length", (2024, 6))?;
+        self.audio_length
+            .serialize_if_gm_ver(builder, "Audio Length", (2024, 6))?;
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSoundFlags {
@@ -105,7 +120,7 @@ impl GMElement for GMSoundFlags {
         Ok(GMSoundFlags {
             is_embedded: 0 != raw & 0x1,
             is_compressed: 0 != raw & 0x2,
-            is_decompressed_on_load: 3 == raw & 0x3,    // maybe??? UndertaleModTool doesn't know either
+            is_decompressed_on_load: 3 == raw & 0x3, // Maybe??? UndertaleModTool doesn't know either
             regular: 0 != raw & 0x64,
         })
     }
@@ -113,19 +128,26 @@ impl GMElement for GMSoundFlags {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let mut raw: u32 = 0;
 
-        if self.is_embedded { raw |= 0x1 };
-        if self.is_compressed { raw |= 0x2 };
-        if self.is_decompressed_on_load { raw |= 0x3 };
-        if self.regular { raw |= 0x64 };
+        if self.is_embedded {
+            raw |= 0x1
+        };
+        if self.is_compressed {
+            raw |= 0x2
+        };
+        if self.is_decompressed_on_load {
+            raw |= 0x3
+        };
+        if self.regular {
+            raw |= 0x64
+        };
 
         builder.write_u32(raw);
         Ok(())
     }
 }
 
-
 fn get_builtin_sound_group_id(gm_version: &GMVersion) -> u32 {
-    let is_ver = |i| gm_version.is_version_at_least(i);  // small closure for concision
+    let is_ver = |i| gm_version.is_version_at_least(i); // Small closure for concision
     // ver >= 1.0.0.1250 || (ver >= 1.0.0.161 && ver < 1.0.0.1000)
     if is_ver((1, 0, 0, 1250)) || is_ver((1, 0, 0, 161)) && !is_ver((1, 0, 0, 1000)) {
         0
@@ -133,4 +155,3 @@ fn get_builtin_sound_group_id(gm_version: &GMVersion) -> u32 {
         1
     }
 }
-

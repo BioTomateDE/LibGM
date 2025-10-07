@@ -7,7 +7,7 @@ pub struct CSharpRng {
 impl CSharpRng {
     pub fn new(seed: i32) -> Self {
         let mut num_array: [i32; 56] = [0; 56];
-        let mut num1: i32 = 161803398_i32.wrapping_sub(if seed == i32::MIN {i32::MAX} else {seed.abs()});
+        let mut num1: i32 = 161803398_i32.wrapping_sub(if seed == i32::MIN { i32::MAX } else { seed.abs() });
         num_array[55] = num1;
         let mut num2: i32 = 1;
         let mut index1: usize = 0;
@@ -38,11 +38,7 @@ impl CSharpRng {
             }
         }
 
-        Self {
-            seed_array: num_array,
-            inext: 0,
-            inextp: 21,
-        }
+        Self { seed_array: num_array, inext: 0, inextp: 21 }
     }
 
     pub fn next(&mut self) -> i32 {
@@ -67,4 +63,3 @@ impl CSharpRng {
         num
     }
 }
-

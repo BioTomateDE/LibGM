@@ -12,10 +12,10 @@ pub struct AddSequence {
     // pub origin_x: i32,
     // pub origin_y: i32,
     // pub volume: f32,
-    // pub broadcast_messages: Vec<ModRef>,    // String ref
+    // Pub broadcast_messages: Vec<ModRef>,    // String ref
     // pub tracks: Vec<GMTrack>,
     // pub function_ids: HashMap<i32, GMRef<String>>,
-    // pub moments: Vec<GMKeyframeMoment>
+    // Pub moments: Vec<GMKeyframeMoment>
 }
 
 #[serde_with::skip_serializing_none]

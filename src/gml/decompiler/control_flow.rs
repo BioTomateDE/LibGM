@@ -1,17 +1,16 @@
-use crate::prelude::*;
-use std::fmt::{Display, Formatter};
 use crate::gml::decompiler::control_flow::blocks::Block;
 use crate::gml::decompiler::control_flow::fragments::Fragment;
 use crate::gml::decompiler::control_flow::loops::Loop;
 use crate::gml::decompiler::control_flow::static_inits::StaticInit;
 use crate::gml::decompiler::decompile_context::DecompileContext;
+use crate::prelude::*;
+use std::fmt::{Display, Formatter};
 
 pub mod blocks;
 pub mod fragments;
 pub mod loops;
 pub mod short_circuits;
 pub mod static_inits;
-
 
 macro_rules! delegate_to_node {
     // For methods that return mutable references
@@ -57,7 +56,6 @@ macro_rules! delegate_to_node {
     };
 }
 
-
 #[derive(Debug, Clone)]
 pub struct BaseNode {
     /// The address of the first instruction from the original bytecode, where this node begins.
@@ -71,7 +69,7 @@ pub struct BaseNode {
 
     /// All nodes which succeed this one in the control flow graph.
     pub successors: Successors,
-    
+
     /// If disconnected from the rest of the graph, e.g. at the start of a high-level
     /// control flow structure like a loop, this points to the enveloping structure.
     pub parent: Option<NodeRef>,
@@ -88,7 +86,6 @@ impl BaseNode {
         }
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct ControlFlowGraph<'a> {
@@ -110,7 +107,9 @@ impl ControlFlowGraph<'_> {
 
     pub fn disconnect_branch_successor(&mut self, node: NodeRef) -> Result<()> {
         let successors: &mut Successors = node.successors_mut(self);
-        let old_successor: NodeRef = successors.branch_target.ok_or("Branch successor was not set in the first place")?;
+        let old_successor: NodeRef = successors
+            .branch_target
+            .ok_or("Branch successor was not set in the first place")?;
         successors.branch_target = None;
         remove_predecessor(old_successor.predecessors_mut(self), node)?;
         Ok(())
@@ -118,16 +117,20 @@ impl ControlFlowGraph<'_> {
 
     pub fn disconnect_fallthrough_successor(&mut self, node: NodeRef) -> Result<()> {
         let successors: &mut Successors = node.successors_mut(self);
-        let old_successor: NodeRef = successors.fall_through.ok_or("Fallthrough successor was not set in the first place")?;
+        let old_successor: NodeRef = successors
+            .fall_through
+            .ok_or("Fallthrough successor was not set in the first place")?;
         successors.fall_through = None;
         remove_predecessor(old_successor.predecessors_mut(self), node)?;
         Ok(())
     }
 
-    /// TODO: i done like this function, replace all calls to it if possible
+    /// TODO: i dont like this function, replace all calls to it if possible
     pub fn disconnect_predecessor(&mut self, node: NodeRef, predecessor_index: usize) -> Result<()> {
         let predecessors: &mut Vec<NodeRef> = node.predecessors_mut(self);
-        let old_predecessor: NodeRef = *predecessors.get(predecessor_index).ok_or("Predecessor index out of range")?;
+        let old_predecessor: NodeRef = *predecessors
+            .get(predecessor_index)
+            .ok_or("Predecessor index out of range")?;
         predecessors.remove(predecessor_index);
         old_predecessor.successors_mut(self).remove(node);
         Ok(())
@@ -157,7 +160,7 @@ impl ControlFlowGraph<'_> {
                 successors.replace(node, new_predecessor)?;
 
                 node.predecessors_mut(self).remove(i);
-                continue
+                continue;
             }
             i += 1;
         }
@@ -193,8 +196,8 @@ impl ControlFlowGraph<'_> {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct NodeRef(u32);
 impl NodeRef {
-    const TYPE_BITS: u32 = 5;    // 5 bits = 32 variants max
-    const INDEX_BITS: u32 = 27;  // 27 bits = ~134 million nodes
+    const TYPE_BITS: u32 = 5; // 5 bits = 32 variants max
+    const INDEX_BITS: u32 = 27; // 27 bits = ~134 million nodes
     const TYPE_MASK: u32 = 0b11111;
     const INDEX_MASK: u32 = (1 << 27) - 1;
 
@@ -215,7 +218,6 @@ impl NodeRef {
         Self::new(self.node_type(), self.index() + 1)
     }
 }
-
 
 impl Display for NodeRef {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -269,7 +271,6 @@ impl NodeRef {
         }
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct Successors {
@@ -329,11 +330,11 @@ impl Successors {
     }
 }
 
-
 pub fn remove_predecessor(predecessors: &mut Vec<NodeRef>, successor: NodeRef) -> Result<()> {
-    let index: usize = predecessors.iter().position(|&n| n == successor)
+    let index: usize = predecessors
+        .iter()
+        .position(|&n| n == successor)
         .ok_or("Successor's predecessor was not set in the first place")?;
     predecessors.remove(index);
     Ok(())
 }
-
