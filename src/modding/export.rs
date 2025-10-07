@@ -33,7 +33,7 @@ use crate::modding::ordered_list::DataChange;
 pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_path: &Path) -> Result<()> {
     let stopwatch = Stopwatch::start();
 
-    // initialize file and tarball
+    // Initialize file and tarball
     let file = File::create(target_file_path)
         .with_context(|| format!("Could not create archive file with path {:?}: {e}", target_file_path.display()))?;
     let zstd_encoder = zstd::Encoder::new(file, 19)
@@ -79,7 +79,7 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     tar_write_json_file(&mut tar, "variables", variables)?;
     log::trace!("Writing json files took {stopwatch2}");
 
-    // export textures into textures/{i}.png
+    // Export textures into textures/{i}.png
     let stopwatch2 = Stopwatch::start();
     let image_count = images.len();
     for (i, image) in images.into_iter().enumerate() {
@@ -114,7 +114,7 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
     log::trace!("Writing audio files took {stopwatch2}");
 
     let stopwatch2 = Stopwatch::start();
-    // finalize
+    // Finalize
     tar.into_inner()
         .with_context(|| format!("Could not get inner value of tarball: {e}"))?
         .finish()
@@ -145,7 +145,7 @@ fn tar_write_json_file<J: Serialize+RootChanges>(tar: &mut tar::Builder<zstd::En
     header.set_size(data.len() as u64);
     header.set_mode(0o644);
     header.set_mtime(get_current_unix_time());
-    header.set_cksum();   // has to be called last
+    header.set_cksum();   // Has to be called last
     tar.append(&header, data.as_slice())
         .with_context(|| format!("Could not append json file {filename:?} to tarball: {e}"))?;
     Ok(())
@@ -158,7 +158,7 @@ fn tar_write_raw_file(tar: &mut tar::Builder<zstd::Encoder<File>>, file_path: &s
     header.set_size(data.len() as u64);
     header.set_mode(0o644);
     header.set_mtime(get_current_unix_time());
-    header.set_cksum();   // has to be called last
+    header.set_cksum();   // Has to be called last
     tar.append(&header, data)
         .with_context(|| format!("Could not append raw file {file_path:?} to tarball: {e}"))?;
     Ok(())
@@ -174,8 +174,8 @@ fn get_current_unix_time() -> u64 {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ModRef {
-    Data(u32),    // index in gamemaker data list; assumes element also exists in the data it will be loaded in
-    Add(u32),     // element is being added by this mod; index of this mod's addition list
+    Data(u32),    // Index in gamemaker data list; assumes element also exists in the data it will be loaded in
+    Add(u32),     // Element is being added by this mod; index of this mod's addition list
 }
 
 pub struct ModExporter<'o, 'm> {

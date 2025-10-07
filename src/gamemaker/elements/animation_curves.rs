@@ -1,9 +1,9 @@
-use crate::prelude::*;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
+use crate::prelude::*;
 use crate::util::init::num_enum_from;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 #[derive(Debug, Clone)]
 pub struct GMAnimationCurves {
@@ -32,14 +32,15 @@ impl GMElement for GMAnimationCurves {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
+        if !self.exists {
+            return Ok(());
+        }
         builder.align(4);
-        builder.write_i32(1);  // ACRV version 1
+        builder.write_i32(1); // ACRV version 1
         builder.write_pointer_list(&self.animation_curves)?;
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMAnimationCurve {
@@ -62,7 +63,6 @@ impl GMElement for GMAnimationCurve {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMAnimationCurveChannel {
@@ -89,11 +89,10 @@ impl GMElement for GMAnimationCurveChannel {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMAnimationCurveChannelPoint {
     pub x: f32,
-    pub y: f32,     // aka Value
+    pub y: f32, // Aka Value
     pub bezier_data: Option<PointBezierData>,
 }
 impl GMElement for GMAnimationCurveChannelPoint {
@@ -112,9 +111,12 @@ impl GMElement for GMAnimationCurveChannelPoint {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_f32(self.x);
         builder.write_f32(self.y);
-        
+
         if builder.is_gm_version_at_least((2, 3, 1)) {
-            let bezier_data: &PointBezierData = self.bezier_data.as_ref().context("Animation Curve Point's Bezier data not set in 2.3.1+")?;
+            let bezier_data: &PointBezierData = self
+                .bezier_data
+                .as_ref()
+                .context("Animation Curve Point's Bezier data not set in 2.3.1+")?;
             bezier_data.serialize(builder)?;
         } else {
             builder.write_i32(0);
@@ -122,7 +124,6 @@ impl GMElement for GMAnimationCurveChannelPoint {
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PointBezierData {
@@ -149,7 +150,6 @@ impl GMElement for PointBezierData {
     }
 }
 
-
 #[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u32)]
 pub enum GMAnimationCurveType {
@@ -157,4 +157,3 @@ pub enum GMAnimationCurveType {
     Smooth = 1,
     Bezier = 2,
 }
-

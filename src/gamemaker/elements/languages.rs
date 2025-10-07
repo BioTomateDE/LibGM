@@ -1,7 +1,7 @@
-use crate::prelude::*;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
+use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -50,7 +50,9 @@ impl GMElement for GMLanguageInfo {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
+        if !self.exists {
+            return Ok(());
+        }
         builder.write_u32(self.unknown1);
         builder.write_usize(self.languages.len())?;
         builder.write_usize(self.entry_ids.len())?;
@@ -68,11 +70,9 @@ impl GMElement for GMLanguageInfo {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMLanguageData {
     pub name: GMRef<String>,
     pub region: GMRef<String>,
     pub entries: Vec<GMRef<String>>,
 }
-

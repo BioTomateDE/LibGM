@@ -1,10 +1,10 @@
-﻿use crate::prelude::*;
-use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::gamemaker::deserialize::{DataReader, GMChunk, GMRef};
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::elements::code::{build_instance_type, parse_instance_type, GMInstanceType, GMVariableType};
+use crate::gamemaker::elements::code::{GMInstanceType, GMVariableType, build_instance_type, parse_instance_type};
 use crate::gamemaker::elements::strings::GMStrings;
+use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
+use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
+use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 
 #[derive(Debug, Clone)]
@@ -27,44 +27,59 @@ impl GMChunkElement for GMVariables {
 impl GMElement for GMVariables {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         if reader.get_chunk_length() == 0 {
-            return Ok(Self { variables: vec![], b15_header: None, exists: true })
+            return Ok(Self { variables: vec![], b15_header: None, exists: true });
         }
-        let variables_length: usize = if reader.general_info.bytecode_version >= 15 { 20 } else { 12 };
+        let variables_length: usize = if reader.general_info.bytecode_version >= 15 {
+            20
+        } else {
+            12
+        };
         let variable_count: usize = reader.get_chunk_length() / variables_length;
         let b15_header: Option<GMVariablesB15Header> = reader.deserialize_if_bytecode_version(15)?;
 
         let mut occurrence_infos: Vec<(usize, u32)> = Vec::with_capacity(variable_count);
         let mut variables: Vec<GMVariable> = Vec::with_capacity(variable_count);
 
-        // parse variables
+        // Parse variables
         while reader.cur_pos + variables_length <= reader.chunk.end_pos {
             let name: GMRef<String> = reader.read_gm_string()?;
 
             let b15_data: Option<GMVariableB15Data> = reader.deserialize_if_bytecode_version(15)?;
 
             let occurrence_count = reader.read_i32()?;
-            let occurrence_count: usize = if occurrence_count < 0 { 0 } else { occurrence_count as usize };
+            let occurrence_count: usize = if occurrence_count < 0 {
+                0
+            } else {
+                occurrence_count as usize
+            };
             let first_occurrence_pos = reader.read_u32()?;
             occurrence_infos.push((occurrence_count, first_occurrence_pos));
 
             variables.push(GMVariable { name, b15_data });
         }
-        
-        // resolve occurrences
+
+        // Resolve occurrences
         let saved_chunk: GMChunk = reader.chunk.clone();
         let saved_position: usize = reader.cur_pos;
-        reader.chunk = reader.chunks.get("CODE").cloned().context("Chunk CODE not set while parsing variable occurrences")?;
-        
+        reader.chunk = reader
+            .chunks
+            .get("CODE")
+            .cloned()
+            .context("Chunk CODE not set while parsing variable occurrences")?;
+
         for (i, (occurrence_count, first_occurrence_pos)) in occurrence_infos.into_iter().enumerate() {
             let name: GMRef<String> = variables[i].name;
-            let (occurrences, name_string_id): (Vec<u32>, u32) = parse_occurrence_chain(reader, first_occurrence_pos, occurrence_count)?;
-            
-            // verify name string id. unused variables (`prototype`, `@@array@@` and all 
+            let (occurrences, name_string_id): (Vec<u32>, u32) =
+                parse_occurrence_chain(reader, first_occurrence_pos, occurrence_count)?;
+
+            // Verify name string id. unused variables (`prototype`, `@@array@@` and all
             // `arguments` in ut) have a name string id of -1 which wraps around to u32::MAX.
             if name_string_id != u32::MAX && name.index != name_string_id {
                 bail!(
                     "Variable #{i} with name {:?} specifies name string id {}; but the id of name string is actually {}",
-                    reader.resolve_gm_str(name)?, name_string_id, name.index,
+                    reader.resolve_gm_str(name)?,
+                    name_string_id,
+                    name.index,
                 );
             }
 
@@ -89,14 +104,23 @@ impl GMElement for GMVariables {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists { return Ok(()) }
-        self.b15_header.serialize_if_bytecode_ver(builder, "Scuffed bytecode 15 fields", 15)?;
+        if !self.exists {
+            return Ok(());
+        }
+        self.b15_header
+            .serialize_if_bytecode_ver(builder, "Scuffed bytecode 15 fields", 15)?;
         for (i, variable) in self.variables.iter().enumerate() {
             builder.write_gm_string(&variable.name)?;
-            variable.b15_data.serialize_if_bytecode_ver(builder, "Bytecode 15 data", 15)?;
-            
-            let occurrences = builder.variable_occurrences.get(i)
-                .ok_or_else(|| format!("Could not resolve variable occurrence with index {i} in list with length {}", builder.function_occurrences.len()))?;
+            variable
+                .b15_data
+                .serialize_if_bytecode_ver(builder, "Bytecode 15 data", 15)?;
+
+            let occurrences = builder.variable_occurrences.get(i).ok_or_else(|| {
+                format!(
+                    "Could not resolve variable occurrence with index {i} in list with length {}",
+                    builder.function_occurrences.len()
+                )
+            })?;
             let occurrence_count: usize = occurrences.len();
             let first_occurrence: i32 = match occurrences.first() {
                 Some((occurrence, _)) => *occurrence as i32,
@@ -114,13 +138,12 @@ impl GMVariables {
         for (i, variable) in self.variables.iter().enumerate() {
             let variable_name: &String = variable.name.resolve(&gm_strings.strings)?;
             if variable_name == name {
-                return Ok(GMRef::new(i as u32))
+                return Ok(GMRef::new(i as u32));
             }
         }
         bail!("Could not resolve variable with name {name:?}");
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMVariable {
@@ -156,7 +179,7 @@ pub struct GMVariablesB15Header {
 }
 impl GMElement for GMVariablesB15Header {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        // nobody knows what the fuck these values mean
+        // Nobody knows what the fuck these values mean
         // TODO remember to increment these when a variable is added by a mod
         let var_count1 = reader.read_usize()?;
         let var_count2 = reader.read_usize()?;
@@ -172,15 +195,18 @@ impl GMElement for GMVariablesB15Header {
     }
 }
 
-
-pub fn parse_occurrence_chain(reader: &mut DataReader, first_occurrence_pos: u32, occurrence_count: usize) -> Result<(Vec<u32>, u32)> {
+pub fn parse_occurrence_chain(
+    reader: &mut DataReader,
+    first_occurrence_pos: u32,
+    occurrence_count: usize,
+) -> Result<(Vec<u32>, u32)> {
     if occurrence_count < 1 {
         return Ok((vec![], first_occurrence_pos));
     }
-    
+
     let mut occurrence_pos: u32 = first_occurrence_pos + 4;
     let mut occurrences: Vec<u32> = vec_with_capacity(occurrence_count)?;
-    let mut offset: i32 = 6969;   // default value will never be relevant since it returns if no occurrences
+    let mut offset: i32 = 6969; // Default value will never be relevant since it returns if no occurrences
 
     for _ in 0..occurrence_count {
         occurrences.push(occurrence_pos);
@@ -191,16 +217,17 @@ pub fn parse_occurrence_chain(reader: &mut DataReader, first_occurrence_pos: u32
             bail!(
                 "Next occurrence offset is {0} (0x{0:08X}) which is negative while parsing \
                 variable occurrences at position {1} (raw value is 0x{2:08X})",
-                offset, reader.cur_pos-4, raw_value,
+                offset,
+                reader.cur_pos - 4,
+                raw_value,
             );
         }
-        occurrence_pos += offset as u32;   // might overflow on last occurrence (name string id) but doesn't matter
+        occurrence_pos += offset as u32; // Might overflow on last occurrence (name string id) but doesn't matter
     }
 
     let name_string_id: u32 = (offset & 0xFFFFFF) as u32;
     Ok((occurrences, name_string_id))
 }
-
 
 pub fn to_vari_instance_type(instance_type: &GMInstanceType) -> GMInstanceType {
     match instance_type {

@@ -62,7 +62,7 @@ pub struct ModSpriteSpecial {
     /// Special Version 3
     pub nine_slice: Option<ModSpriteNineSlice>,
     // /// SWF
-    // pub yyswf: Option<GMSpriteTypeSWF>,   // just reuse the gm struct; im not touching yyswf with a 3m pole
+    // Pub yyswf: Option<GMSpriteTypeSWF>,   // just reuse the gm struct; im not touching yyswf with a 3m pole
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModSpriteNineSlice {
@@ -115,7 +115,7 @@ impl ModExporter<'_, '_> {
                 origin_x: edit_field(&o.origin_x, &m.origin_x),
                 origin_y: edit_field(&o.origin_y, &m.origin_y),
                 textures: export_changes_ordered_list(
-                    o.textures.iter().flatten().collect::<Vec<_>>().as_slice(),   // remove null entries
+                    o.textures.iter().flatten().collect::<Vec<_>>().as_slice(),   // Remove null entries
                     m.textures.iter().flatten().collect::<Vec<_>>().as_slice(),
                     |r| self.convert_texture_ref(r),
                     |_, r| self.convert_texture_ref(r),

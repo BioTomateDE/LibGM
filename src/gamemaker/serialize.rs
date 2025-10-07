@@ -1,16 +1,14 @@
 use crate::prelude::*;
 mod builder;
-pub mod traits;
-mod numbers;
 mod lists;
+mod numbers;
 mod resources;
+pub mod traits;
 
-pub use builder::DataBuilder;
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::elements::GMChunkElement;
 use crate::util::bench::Stopwatch;
-
-
+pub use builder::DataBuilder;
 
 macro_rules! build_chunks {
     ($builder:expr, $gm_data:expr, $(($name:literal, $field:ident)),* $(,)?) => {{
@@ -25,7 +23,7 @@ macro_rules! build_chunks {
         // Second pass: build chunks
         let mut chunk_index = 0;
         $(
-            #[allow(unused_assignments)]    // either the code is buggy or the compiler is just stupid
+            #[allow(unused_assignments)]    // Either the code is buggy or the compiler is just stupid
             if $gm_data.$field.exists() {
                 let is_last = chunk_index == existing_count - 1;
                 $builder.build_chunk($name, &$gm_data.$field, is_last)?;
@@ -35,17 +33,18 @@ macro_rules! build_chunks {
     }};
 }
 
-
 pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
     let stopwatch = Stopwatch::start();
     let mut builder = DataBuilder::new(gm_data);
 
     builder.write_chunk_name("FORM")?;
-    builder.write_u32(0xDEADC0DE);  // data length placeholder
+    builder.write_u32(0xDEADC0DE); // Data length placeholder
 
     // Write chunks
-    build_chunks!(builder, gm_data,
-        ("GEN8", general_info),     // GEN8 has to be the first chunk, at least for utmt
+    build_chunks!(
+        builder,
+        gm_data,
+        ("GEN8", general_info), // GEN8 has to be the first chunk, at least for utmt
         ("OPTN", options),
         ("EXTN", extensions),
         ("SOND", sounds),
@@ -61,7 +60,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
         ("ROOM", rooms),
         ("DAFL", data_files),
         ("TPAG", texture_page_items),
-        ("CODE", codes),            // CODE has to be written before VARI and FUNC
+        ("CODE", codes), // CODE has to be written before VARI and FUNC
         ("VARI", variables),
         ("FUNC", functions),
         ("STRG", strings),
@@ -88,11 +87,16 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
     let stopwatch2 = Stopwatch::start();
 
     for (placeholder_data_pos, element_mem_addr) in std::mem::take(&mut builder.pointer_placeholder_positions) {
-        let resource_data_pos: u32 = *builder.pointer_resource_positions.get(&element_mem_addr).ok_or_else(|| format!(
-            "Could not resolve pointer placeholder with data position {} and memory address {}",
-            placeholder_data_pos, element_mem_addr,
-        ))?;
-        // overwrite placeholder 0xDEADC0DE
+        let resource_data_pos: u32 = *builder
+            .pointer_resource_positions
+            .get(&element_mem_addr)
+            .ok_or_else(|| {
+                format!(
+                    "Could not resolve pointer placeholder with data position {} and memory address {}",
+                    placeholder_data_pos, element_mem_addr,
+                )
+            })?;
+        // Overwrite placeholder 0xDEADC0DE
         builder.overwrite_i32(resource_data_pos as i32, placeholder_data_pos as usize)?;
     }
     log::trace!("Resolving {placeholder_count} pointer placeholders to {resource_count} resources took {stopwatch2}");
@@ -101,11 +105,10 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
     builder.overwrite_usize(builder.len() - 8, 4)?;
 
     log::trace!("Building data file took {stopwatch}");
-    
+
     if builder.raw_data.len() >= i32::MAX as usize {
         bail!("Data file is bigger than 2,147,483,647 bytes which will lead to bugs in the runner")
     }
-    
+
     Ok(builder.raw_data)
 }
-

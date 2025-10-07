@@ -1,32 +1,34 @@
-use crate::prelude::*;
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
-use crate::gamemaker::elements::code::{get_data_type_from_value, GMAssetReference, GMCode, GMCodeValue, GMDataType};
-use crate::gamemaker::elements::code::GMComparisonType;
 use crate::gamemaker::elements::code::CodeVariable;
+use crate::gamemaker::elements::code::GMComparisonType;
 use crate::gamemaker::elements::code::GMInstanceType;
 use crate::gamemaker::elements::code::GMInstruction;
 use crate::gamemaker::elements::code::GMVariableType;
+use crate::gamemaker::elements::code::{GMAssetReference, GMCode, GMCodeValue, GMDataType, get_data_type_from_value};
 use crate::gamemaker::elements::functions::GMFunction;
 use crate::gamemaker::elements::game_objects::GMGameObject;
 use crate::gamemaker::elements::variables::GMVariable;
+use crate::prelude::*;
 
 macro_rules! name_by_ref {
     ($typename:ident, $reference:expr, $gm_data:expr) => {{
         let element = $reference.resolve(&$gm_data.$typename.$typename)?;
         let name: &String = element.name.resolve(&$gm_data.strings.strings)?;
         if !is_valid_identifier(name) {
-            bail!("Invalid {} identifier: {}", stringify!($typename), format_literal_string($gm_data, element.name)?);
+            bail!(
+                "Invalid {} identifier: {}",
+                stringify!($typename),
+                format_literal_string($gm_data, element.name)?
+            );
         }
         name
     }};
 }
 
-
 pub fn disassemble_code(gm_data: &GMData, code: &GMCode) -> Result<String> {
     disassemble_instructions(gm_data, &code.instructions)
 }
-
 
 pub fn disassemble_instructions(gm_data: &GMData, instructions: &[GMInstruction]) -> Result<String> {
     let mut assembly: String = String::new();
@@ -39,7 +41,6 @@ pub fn disassemble_instructions(gm_data: &GMData, instructions: &[GMInstruction]
     Ok(assembly)
 }
 
-
 pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) -> Result<String> {
     let line: String;
     let opcode: &str = opcode_to_string(instruction);
@@ -49,15 +50,11 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
             line = opcode.to_string();
         }
 
-        GMInstruction::Negate(instr) |
-        GMInstruction::Not(instr) |
-        GMInstruction::Return(instr) |
-        GMInstruction::PopDiscard(instr) => {
-            line = format!(
-                "{}.{}",
-                opcode,
-                data_type_to_string(instr.data_type),
-            );
+        GMInstruction::Negate(instr)
+        | GMInstruction::Not(instr)
+        | GMInstruction::Return(instr)
+        | GMInstruction::PopDiscard(instr) => {
+            line = format!("{}.{}", opcode, data_type_to_string(instr.data_type),);
         }
 
         GMInstruction::CallVariable(instr) => {
@@ -70,12 +67,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
         }
 
         GMInstruction::Duplicate(instr) => {
-            line = format!(
-                "{}.{} {}",
-                opcode,
-                data_type_to_string(instr.data_type),
-                instr.size,
-            );
+            line = format!("{}.{} {}", opcode, data_type_to_string(instr.data_type), instr.size,);
         }
 
         GMInstruction::DuplicateSwap(instr) => {
@@ -87,41 +79,32 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
                 instr.size2,
             );
         }
-        
+
         GMInstruction::PopSwap(instr) => {
-            line = format!(
-                "{} {}",
-                opcode,
-                instr.size,
-            );
+            line = format!("{} {}", opcode, instr.size,);
         }
 
-
-        GMInstruction::Branch(instr) |
-        GMInstruction::BranchIf(instr) |
-        GMInstruction::BranchUnless(instr) |
-        GMInstruction::PushWithContext(instr) |
-        GMInstruction::PopWithContext(instr) => {
-            line = format!(
-                "{} {}",
-                opcode,
-                instr.jump_offset,
-            );
+        GMInstruction::Branch(instr)
+        | GMInstruction::BranchIf(instr)
+        | GMInstruction::BranchUnless(instr)
+        | GMInstruction::PushWithContext(instr)
+        | GMInstruction::PopWithContext(instr) => {
+            line = format!("{} {}", opcode, instr.jump_offset,);
         }
-        
+
         GMInstruction::PopWithContextExit(_) => line = opcode.to_string(),
-        GMInstruction::Convert(instr) |
-        GMInstruction::Multiply(instr) |
-        GMInstruction::Divide(instr) |
-        GMInstruction::Remainder(instr) |
-        GMInstruction::Modulus(instr) |
-        GMInstruction::Add(instr) |
-        GMInstruction::Subtract(instr) |
-        GMInstruction::And(instr) |
-        GMInstruction::Or(instr) |
-        GMInstruction::Xor(instr) |
-        GMInstruction::ShiftLeft(instr) |
-        GMInstruction::ShiftRight(instr) => {
+        GMInstruction::Convert(instr)
+        | GMInstruction::Multiply(instr)
+        | GMInstruction::Divide(instr)
+        | GMInstruction::Remainder(instr)
+        | GMInstruction::Modulus(instr)
+        | GMInstruction::Add(instr)
+        | GMInstruction::Subtract(instr)
+        | GMInstruction::And(instr)
+        | GMInstruction::Or(instr)
+        | GMInstruction::Xor(instr)
+        | GMInstruction::ShiftLeft(instr)
+        | GMInstruction::ShiftRight(instr) => {
             line = format!(
                 "{}.{}.{}",
                 opcode,
@@ -150,15 +133,17 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
             );
         }
 
-        GMInstruction::Push(instr) |
-        GMInstruction::PushLocal(instr) |
-        GMInstruction::PushGlobal(instr) |
-        GMInstruction::PushBuiltin(instr) => {
+        GMInstruction::Push(instr)
+        | GMInstruction::PushLocal(instr)
+        | GMInstruction::PushGlobal(instr)
+        | GMInstruction::PushBuiltin(instr) => {
             let value: String = match &instr.value {
                 GMCodeValue::Variable(code_variable) => variable_to_string(gm_data, &code_variable)?,
                 GMCodeValue::Boolean(true) => "true".to_string(),
                 GMCodeValue::Boolean(false) => "false".to_string(),
-                GMCodeValue::Function(function_ref) => format!("(function){}", function_to_string(gm_data, *function_ref)?),
+                GMCodeValue::Function(function_ref) => {
+                    format!("(function){}", function_to_string(gm_data, *function_ref)?)
+                }
                 GMCodeValue::String(string_ref) => format_literal_string(gm_data, *string_ref)?,
                 GMCodeValue::Int16(integer) => integer.to_string(),
                 GMCodeValue::Int32(integer) => integer.to_string(),
@@ -176,11 +161,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
         }
 
         GMInstruction::PushImmediate(int16) => {
-            line = format!(
-                "{} {}",
-                opcode,
-                int16,
-            );
+            line = format!("{} {}", opcode, int16,);
         }
 
         GMInstruction::Call(instr) => {
@@ -204,17 +185,12 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
         GMInstruction::IsNullishValue => line = opcode.to_string(),
 
         GMInstruction::PushReference(asset_ref) => {
-            line = format!(
-                "{} {}",
-                opcode,
-                asset_reference_to_string(gm_data, asset_ref)?,
-            );
+            line = format!("{} {}", opcode, asset_reference_to_string(gm_data, asset_ref)?,);
         }
     }
 
     Ok(line)
 }
-
 
 fn opcode_to_string(instruction: &GMInstruction) -> &'static str {
     match instruction {
@@ -267,7 +243,6 @@ fn opcode_to_string(instruction: &GMInstruction) -> &'static str {
     }
 }
 
-
 fn asset_reference_to_string(gm_data: &GMData, asset_reference: &GMAssetReference) -> Result<String> {
     Ok(match asset_reference {
         GMAssetReference::Object(gm_ref) => format!("(object){}", name_by_ref!(game_objects, gm_ref, gm_data)),
@@ -281,8 +256,12 @@ fn asset_reference_to_string(gm_data: &GMData, asset_reference: &GMAssetReferenc
         GMAssetReference::Timeline(gm_ref) => format!("(timeline){}", name_by_ref!(timelines, gm_ref, gm_data)),
         GMAssetReference::Shader(gm_ref) => format!("(shader){}", name_by_ref!(shaders, gm_ref, gm_data)),
         GMAssetReference::Sequence(gm_ref) => format!("(sequence){}", name_by_ref!(sequences, gm_ref, gm_data)),
-        GMAssetReference::AnimCurve(gm_ref) => format!("(animcurve){}", name_by_ref!(animation_curves, gm_ref, gm_data)),
-        GMAssetReference::ParticleSystem(gm_ref) => format!("(particlesystem){}", name_by_ref!(particle_systems, gm_ref, gm_data)),
+        GMAssetReference::AnimCurve(gm_ref) => {
+            format!("(animcurve){}", name_by_ref!(animation_curves, gm_ref, gm_data))
+        }
+        GMAssetReference::ParticleSystem(gm_ref) => {
+            format!("(particlesystem){}", name_by_ref!(particle_systems, gm_ref, gm_data))
+        }
         GMAssetReference::RoomInstance(id) => format!("(roominstance){}", id),
         GMAssetReference::Function(gm_ref) => format!("(function){}", function_to_string(gm_data, *gm_ref)?),
     })
@@ -301,7 +280,6 @@ fn data_type_to_string(data_type: GMDataType) -> &'static str {
     }
 }
 
-
 fn comparison_type_to_string(comparison_type: GMComparisonType) -> &'static str {
     match comparison_type {
         GMComparisonType::LessThan => "LT",
@@ -313,8 +291,11 @@ fn comparison_type_to_string(comparison_type: GMComparisonType) -> &'static str 
     }
 }
 
-
-fn instance_type_to_string(gm_data: &GMData, instance_type: &GMInstanceType, variable_ref: GMRef<GMVariable>) -> Result<String> {
+fn instance_type_to_string(
+    gm_data: &GMData,
+    instance_type: &GMInstanceType,
+    variable_ref: GMRef<GMVariable>,
+) -> Result<String> {
     Ok(match instance_type {
         GMInstanceType::Undefined => bail!("Did not expect Instance Type Undefined here; please report this error"),
         GMInstanceType::Self_(Some(obj_ref)) => {
@@ -336,7 +317,6 @@ fn instance_type_to_string(gm_data: &GMData, instance_type: &GMInstanceType, var
     })
 }
 
-
 fn variable_type_to_string(variable_type: GMVariableType) -> &'static str {
     match variable_type {
         GMVariableType::Array => "[array]",
@@ -348,21 +328,26 @@ fn variable_type_to_string(variable_type: GMVariableType) -> &'static str {
     }
 }
 
-
 fn variable_to_string(gm_data: &GMData, code_variable: &CodeVariable) -> Result<String> {
     let variable: &GMVariable = code_variable.variable.resolve(&gm_data.variables.variables)?;
     let name: &String = variable.name.resolve(&gm_data.strings.strings)?;
     if !is_valid_identifier(name) {
-        bail!("Invalid variable identifier: {:?}", variable.name.display(&gm_data.strings));
+        bail!(
+            "Invalid variable identifier: {:?}",
+            variable.name.display(&gm_data.strings)
+        );
     }
 
-    let prefix: &str = if code_variable.is_int32 {"(variable)"} else {""};
+    let prefix: &str = if code_variable.is_int32 { "(variable)" } else { "" };
 
     let instance_type: &GMInstanceType = if code_variable.instance_type != GMInstanceType::Undefined {
         &code_variable.instance_type
     } else {
         // TODO: this will not work with b14
-        variable.b15_data.as_ref().map_or(&GMInstanceType::Undefined, |b15| &b15.instance_type)
+        variable
+            .b15_data
+            .as_ref()
+            .map_or(&GMInstanceType::Undefined, |b15| &b15.instance_type)
     };
     let instance_type: String = instance_type_to_string(gm_data, instance_type, code_variable.variable)?;
 
@@ -371,24 +356,26 @@ fn variable_to_string(gm_data: &GMData, code_variable: &CodeVariable) -> Result<
     Ok(format!("{prefix}{variable_type}{instance_type}.{name}"))
 }
 
-
 fn function_to_string(gm_data: &GMData, function_ref: GMRef<GMFunction>) -> Result<&String> {
     let function: &GMFunction = function_ref.resolve(&gm_data.functions.functions)?;
     let name: &String = function.name.resolve(&gm_data.strings.strings)?;
     if !is_valid_identifier(name) {
         if name.starts_with("@@") && name.ends_with("@@") {
-            if is_valid_identifier(&name[2..name.len()-2]) {
-                return Ok(name)
+            if is_valid_identifier(&name[2..name.len() - 2]) {
+                return Ok(name);
             }
         }
-        bail!("Invalid function identifier: {:?}", function.name.display(&gm_data.strings));
+        bail!(
+            "Invalid function identifier: {:?}",
+            function.name.display(&gm_data.strings)
+        );
     }
     Ok(name)
 }
 
-
 pub fn format_literal_string(gm_data: &GMData, gm_string_ref: GMRef<String>) -> Result<String> {
-    let string: String = gm_string_ref.resolve(&gm_data.strings.strings)?
+    let string: String = gm_string_ref
+        .resolve(&gm_data.strings.strings)?
         .replace("\\", "\\\\")
         .replace("\n", "\\n")
         .replace("\r", "\\r")
@@ -396,7 +383,6 @@ pub fn format_literal_string(gm_data: &GMData, gm_string_ref: GMRef<String>) -> 
         .replace("\"", "\\\"");
     Ok(format!("\"{string}\""))
 }
-
 
 /// Check whether an identifier / asset name is valid for assembling properly.
 /// Exceptions like `$$$$temp$$$$` for variables or `@@This@@` for functions will have to be handled separately.
@@ -407,8 +393,7 @@ pub fn format_literal_string(gm_data: &GMData, gm_string_ref: GMRef<String>) -> 
 /// - Only ascii characters
 fn is_valid_identifier(s: &str) -> bool {
     if !s.chars().next().map_or(false, |c| c.is_ascii_alphabetic() || c == '_') {
-        return false
+        return false;
     }
     s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
-

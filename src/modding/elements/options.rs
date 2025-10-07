@@ -15,8 +15,8 @@ macro_rules! prevent_changing {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditOptions {
     pub flags: EditOptionsFlags,
-    // pub window_scale: Option<i32>,           // removed because legacy/unused
-    // pub window_color: Option<RgbaColor>,     // removed because legacy/unused
+    // Pub window_scale: Option<i32>,           // removed because legacy/unused
+    // Pub window_color: Option<RgbaColor>,     // removed because legacy/unused
     /// Only used in GMVersion <= 8
     pub color_depth: Option<u32>,
     /// Only used in GMVersion <= 8

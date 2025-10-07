@@ -1,5 +1,3 @@
-use std::path::Path;
-use image::{DynamicImage, ImageReader};
 use crate::gamemaker::data::{Endianness, GMData};
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::GMChunkElement;
@@ -10,14 +8,18 @@ use crate::gamemaker::elements::code::GMCodes;
 use crate::gamemaker::elements::data_files::GMDataFiles;
 use crate::gamemaker::elements::embedded_audio::GMEmbeddedAudios;
 use crate::gamemaker::elements::embedded_images::GMEmbeddedImages;
-use crate::gamemaker::elements::embedded_textures::{GMEmbeddedTexture, GMEmbeddedTexture2022_9, GMEmbeddedTextures, GMImage};
+use crate::gamemaker::elements::embedded_textures::{
+    GMEmbeddedTexture, GMEmbeddedTexture2022_9, GMEmbeddedTextures, GMImage,
+};
 use crate::gamemaker::elements::extensions::GMExtensions;
 use crate::gamemaker::elements::feature_flags::GMFeatureFlags;
 use crate::gamemaker::elements::filter_effects::GMFilterEffects;
 use crate::gamemaker::elements::fonts::GMFonts;
 use crate::gamemaker::elements::functions::GMFunctions;
 use crate::gamemaker::elements::game_objects::{GMGameObject, GMGameObjectCollisionShape, GMGameObjects};
-use crate::gamemaker::elements::general_info::{GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMGeneralInfoGMS2};
+use crate::gamemaker::elements::general_info::{
+    GMFunctionClassifications, GMGeneralInfo, GMGeneralInfoFlags, GMGeneralInfoGMS2,
+};
 use crate::gamemaker::elements::global_init::{GMGameEndScripts, GMGlobalInitScripts};
 use crate::gamemaker::elements::languages::GMLanguageInfo;
 use crate::gamemaker::elements::options::{GMOptions, GMOptionsConstant, GMOptionsFlags};
@@ -37,7 +39,8 @@ use crate::gamemaker::elements::timelines::GMTimelines;
 use crate::gamemaker::elements::ui_nodes::GMRootUINodes;
 use crate::gamemaker::elements::variables::{GMVariables, GMVariablesB15Header};
 use crate::gamemaker::gm_version::{GMVersion, LTSBranch};
-
+use image::{DynamicImage, ImageReader};
+use std::path::Path;
 
 /// TODO: make use of the `target_version` (more). Right now, it's just building for 2023 LTS.
 pub fn new_data_file(target_version: GMVersion, target_bytecode: u8) -> GMData {
@@ -65,11 +68,11 @@ pub fn new_data_file(target_version: GMVersion, target_bytecode: u8) -> GMData {
     data.embedded_textures.exists = true;
     data.language_info.exists = true;
 
-    data.chunk_padding = 16;    // just to be safe i guess
+    data.chunk_padding = 16; // Just to be safe i guess
 
     data.strings = GMStrings {
         strings: vec![],
-        is_aligned: true,   // just to be safe i guess
+        is_aligned: true, // Just to be safe i guess
         exists: true,
     };
 
@@ -118,7 +121,6 @@ pub fn new_data_file(target_version: GMVersion, target_bytecode: u8) -> GMData {
         display_name: data.make_string("New AcornGM Game"),
         active_targets: 0,
         function_classifications: GMFunctionClassifications {
-            none: true,
             internet: false,
             joystick: false,
             gamepad: true,
@@ -196,7 +198,9 @@ pub fn new_data_file(target_version: GMVersion, target_bytecode: u8) -> GMData {
                 game_guid: [0u8; 16],
                 info_timestamp_offset: false,
             })
-        } else { None },
+        } else {
+            None
+        },
         exists: true,
     };
 
@@ -248,13 +252,22 @@ pub fn new_data_file(target_version: GMVersion, target_bytecode: u8) -> GMData {
         load_image: None,
         load_alpha: 0,
         constants: vec![
-            GMOptionsConstant { name: data.make_string("@@SleepMargin"), value: data.make_string("0") },
-            GMOptionsConstant { name: data.make_string("@@DrawColour"), value: data.make_string("4294967295") },
+            GMOptionsConstant {
+                name: data.make_string("@@SleepMargin"),
+                value: data.make_string("0"),
+            },
+            GMOptionsConstant {
+                name: data.make_string("@@DrawColour"),
+                value: data.make_string("4294967295"),
+            },
         ],
         exists: true,
     };
 
-    import_texture_page(&mut data, Path::new("/home/biotomatede/Pictures/ut_txt/dr3_placeholder1.png"));
+    import_texture_page(
+        &mut data,
+        Path::new("/home/biotomatede/Pictures/ut_txt/dr3_placeholder1.png"),
+    );
 
     data.texture_page_items.texture_page_items.push(GMTexturePageItem {
         source_x: 0,
@@ -319,56 +332,52 @@ pub fn new_data_file(target_version: GMVersion, target_bytecode: u8) -> GMData {
     data.game_objects.game_objects.push(game_object);
 
     data.rooms = GMRooms {
-        rooms: vec![
-            GMRoom {
-                name: data.make_string("Room1"),
-                caption: None,
-                width: 800,
-                height: 600,
-                speed: 0,
-                persistent: false,
-                background_color: 0,
-                draw_background_color: false,
+        rooms: vec![GMRoom {
+            name: data.make_string("Room1"),
+            caption: None,
+            width: 800,
+            height: 600,
+            speed: 0,
+            persistent: false,
+            background_color: 0,
+            draw_background_color: false,
+            creation_code: None,
+            flags: GMRoomFlags {
+                enable_views: false,
+                show_color: false,
+                dont_clear_display_buffer: false,
+                is_gms2: true,
+                is_gms2_3: true,
+            },
+            backgrounds: vec![],
+            views: vec![],
+            game_objects: vec![GMRoomGameObject {
+                x: 67,
+                y: 41,
+                object_definition: GMRef::new(0),
+                instance_id: 100_000,
                 creation_code: None,
-                flags: GMRoomFlags {
-                    enable_views: false,
-                    show_color: false,
-                    dont_clear_display_buffer: false,
-                    is_gms2: true,
-                    is_gms2_3: true,
-                },
-                backgrounds: vec![],
-                views: vec![],
-                game_objects: vec![
-                    GMRoomGameObject {
-                        x: 67,
-                        y: 41,
-                        object_definition: GMRef::new(0),
-                        instance_id: 100_000,
-                        creation_code: None,
-                        scale_x: 1.0,
-                        scale_y: 1.0,
-                        image_speed: Some(1.0),
-                        image_index: Some(0),
-                        color: 0,
-                        rotation: 0.0,
-                        pre_create_code: None,
-                    }
-                ],
-                tiles: vec![],
-                instance_creation_order_ids: vec![],
-                world: false,
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                gravity_x: 0.0,
-                gravity_y: 0.0,
-                meters_per_pixel: 0.0,
-                layers: vec![], // TODO?
-                sequences: vec![],
-            }
-        ],
+                scale_x: 1.0,
+                scale_y: 1.0,
+                image_speed: Some(1.0),
+                image_index: Some(0),
+                color: 0,
+                rotation: 0.0,
+                pre_create_code: None,
+            }],
+            tiles: vec![],
+            instance_creation_order_ids: vec![],
+            world: false,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            gravity_x: 0.0,
+            gravity_y: 0.0,
+            meters_per_pixel: 0.0,
+            layers: vec![], // TODO?
+            sequences: vec![],
+        }],
         exists: true,
     };
 
@@ -379,16 +388,11 @@ pub fn new_data_file(target_version: GMVersion, target_bytecode: u8) -> GMData {
         exists: true,
     };
 
-    data.variables.b15_header = Some(GMVariablesB15Header {
-        var_count1: 0,
-        var_count2: 0,
-        max_local_var_count: 0,
-    });
+    data.variables.b15_header = Some(GMVariablesB15Header { var_count1: 0, var_count2: 0, max_local_var_count: 0 });
     data.fonts.padding = Some(generate_font_padding());
 
     data
 }
-
 
 fn stub_data() -> GMData {
     GMData {
@@ -433,7 +437,6 @@ fn stub_data() -> GMData {
     }
 }
 
-
 const fn generate_font_padding() -> [u8; 512] {
     let mut data = [0u8; 512];
     let mut i = 0u16;
@@ -461,7 +464,6 @@ const fn generate_font_padding() -> [u8; 512] {
     data
 }
 
-
 fn import_texture_page(gm_data: &mut GMData, image_path: &Path) {
     let image: DynamicImage = ImageReader::open(image_path).unwrap().decode().unwrap();
     gm_data.embedded_textures.texture_pages.push(GMEmbeddedTexture {
@@ -476,4 +478,3 @@ fn import_texture_page(gm_data: &mut GMData, image_path: &Path) {
         image: Some(GMImage::DynImg(image)),
     });
 }
-
