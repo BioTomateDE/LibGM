@@ -35,7 +35,7 @@ pub fn export_mod(original_data: &GMData, modified_data: &GMData, target_file_pa
 
     // initialize file and tarball
     let file = File::create(target_file_path)
-        .with_context(|| format!("Could not create archive file with path \"{}\": {e}", target_file_path.display()))?;
+        .with_context(|| format!("Could not create archive file with path {:?}: {e}", target_file_path.display()))?;
     let zstd_encoder = zstd::Encoder::new(file, 19)
         .with_context(|| format!("Could not create ZStd encoder: {e}"))?;
     let mut tar = tar::Builder::new(zstd_encoder);
@@ -130,7 +130,7 @@ fn tar_write_json_file<J: Serialize+RootChanges>(tar: &mut tar::Builder<zstd::En
     let filename: String = format!("{name}.json");
 
     if !json_struct.has_changes() {
-        log::trace!("Skipped writing json file \"{filename}\" because it contains no changes");
+        log::trace!("Skipped writing json file {filename:?} because it contains no changes");
         return Ok(())
     }
 
@@ -141,26 +141,26 @@ fn tar_write_json_file<J: Serialize+RootChanges>(tar: &mut tar::Builder<zstd::En
 
     let mut header = tar::Header::new_gnu();
     header.set_path(&filename)
-        .with_context(|| format!("Could not set tar file path for json file \"{filename}\": {e}"))?;
+        .with_context(|| format!("Could not set tar file path for json file {filename:?}: {e}"))?;
     header.set_size(data.len() as u64);
     header.set_mode(0o644);
     header.set_mtime(get_current_unix_time());
     header.set_cksum();   // has to be called last
     tar.append(&header, data.as_slice())
-        .with_context(|| format!("Could not append json file \"{filename}\" to tarball: {e}"))?;
+        .with_context(|| format!("Could not append json file {filename:?} to tarball: {e}"))?;
     Ok(())
 }
 
 fn tar_write_raw_file(tar: &mut tar::Builder<zstd::Encoder<File>>, file_path: &str, data: &[u8]) -> Result<()> {
     let mut header = tar::Header::new_gnu();
     header.set_path(&file_path)
-        .with_context(|| format!("Could not set tar file path for raw file \"{file_path}\": {e}"))?;
+        .with_context(|| format!("Could not set tar file path for raw file {file_path:?}: {e}"))?;
     header.set_size(data.len() as u64);
     header.set_mode(0o644);
     header.set_mtime(get_current_unix_time());
     header.set_cksum();   // has to be called last
     tar.append(&header, data)
-        .with_context(|| format!("Could not append raw file \"{file_path}\" to tarball: {e}"))?;
+        .with_context(|| format!("Could not append raw file {file_path:?} to tarball: {e}"))?;
     Ok(())
 }
 

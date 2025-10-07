@@ -48,7 +48,7 @@ fn main_open_and_close() -> Result<()> {
     let output_path: &Path = path_from_arg(args.get(2), "data_out.win");
 
     // Read data file
-    log::info!("Loading data file \"{}\"", input_path.display());
+    log::info!("Loading data file {:?}", input_path.display());
     let raw_data: Vec<u8> = read_data_file(input_path).context("reading data file")?;
 
     log::info!("Parsing data file");
@@ -88,9 +88,9 @@ fn main_open_and_close() -> Result<()> {
     // for code in &gm_data.codes.codes {
     //     let code_name = code.name.resolve(&gm_data.strings.strings)?;
     //     let assembly = libgm::gml::disassembler::disassemble_code(&gm_data, code)?;
-    //     // println!("Disassembly of \"{code_name}\": \n{}", assembly);
+    //     // println!("Disassembly of {code_name:?}: \n{}", assembly);
     //     std::fs::write(format!("expasm/{code_name}.asm"), assembly)
-    //         .with_context(|| format!("Could not write assembly of code \"{code_name}\""))?;
+    //         .with_context(|| format!("Could not write assembly of code {code_name:?}"))?;
     // }
     //
     // // Export all Strings
@@ -116,7 +116,7 @@ fn main_open_and_close() -> Result<()> {
     let raw_data: Vec<u8> = build_data_file(&gm_data).context("\nwhile building data file")?;
     drop(gm_data);
 
-    log::info!("Writing data file \"{}\"", output_path.display());
+    log::info!("Writing data file {:?}", output_path.display());
     write_data_file(raw_data, output_path).context("writing data file")?;
 
     Ok(())
@@ -136,7 +136,7 @@ fn main_new_data_file() -> Result<()> {
     let data_raw: Vec<u8> = build_data_file(&gm_data).context("building data file")?;
     drop(gm_data);
 
-    log::info!("Writing data file \"{}\"", data_file_path.display());
+    log::info!("Writing data file {:?}", data_file_path.display());
     write_data_file(data_raw, data_file_path)?;
     Ok(())
 }
@@ -149,26 +149,26 @@ fn main_new_data_file() -> Result<()> {
 //     let original_data_file_path = path_from_arg(args.get(1), "data_original.win");
 //     let modified_data_file_path = path_from_arg(args.get(2), "data_modified.win");
 //     let mod_data_path = path_from_arg(args.get(3), "acornmod.tar.zst");
-// 
-//     log::info!("Loading original data file \"{}\"", original_data_file_path.display());
+//
+//     log::info!("Loading original data file {:?}", original_data_file_path.display());
 //     let original_data_raw: Vec<u8> = read_data_file(original_data_file_path)
 //         .with_context(|| format!("reading original data file"))?;
-// 
+//
 //     log::info!("Parsing original data file");
 //     let original_data: GMData = parse_data_file(&original_data_raw, false)
 //         .with_context(|| format!("parsing original data file"))?;
 //     drop(original_data_raw);
-// 
-//     log::info!("Loading modified data file \"{}\"", modified_data_file_path.display());
+//
+//     log::info!("Loading modified data file {:?}", modified_data_file_path.display());
 //     let modified_data_raw: Vec<u8> = read_data_file(modified_data_file_path)
 //         .with_context(|| format!("reading modified data file"))?;
-// 
+//
 //     log::info!("Parsing modified data file");
 //     let modified_data: GMData = parse_data_file(&modified_data_raw, false)
 //         .with_context(|| format!("parsing modified data file"))?;
 //     drop(modified_data_raw);
 // 
-//     log::info!("Extracting changes and exporting mod to file \"{}\"", mod_data_path.display());
+//     log::info!("Extracting changes and exporting mod to file {:?}", mod_data_path.display());
 //     export_mod(&original_data, &modified_data, mod_data_path)
 //         .with_context(|| format!("exporting AcornGM mod"))?;
 // 

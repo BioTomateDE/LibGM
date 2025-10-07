@@ -624,7 +624,7 @@ impl GMElement for GMRoomLayerDataInstances {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMRoomLayerDataTiles {
-    pub background: GMRef<GMBackground>,
+    pub background: Option<GMRef<GMBackground>>,
     /// Flattened 2D Array. Access using `tile_data[row + width * col]`.
     pub tile_data: Vec<u32>,
     pub width: usize,
@@ -632,7 +632,7 @@ pub struct GMRoomLayerDataTiles {
 }
 impl GMElement for GMRoomLayerDataTiles {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let background: GMRef<GMBackground> = reader.read_resource_by_id()?;
+        let background: Option<GMRef<GMBackground>> = reader.read_resource_by_id_opt()?;
         let width = reader.read_usize()?;
         let height = reader.read_usize()?;
         let mut tile_data: Vec<u32> = vec_with_capacity(width * height)?;
@@ -651,7 +651,7 @@ impl GMElement for GMRoomLayerDataTiles {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_resource_id(&self.background);
+        builder.write_resource_id_opt(&self.background);
         builder.write_usize(self.width)?;
         builder.write_usize(self.height)?;
         if builder.is_gm_version_at_least((2024, 2)) {
@@ -991,7 +991,7 @@ impl GMElement for GMRoomLayerDataEffect {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteInstance {
     pub name: GMRef<String>,
-    pub sprite: GMRef<GMSprite>,
+    pub sprite: Option<GMRef<GMSprite>>,
     pub x: i32,
     pub y: i32,
     pub scale_x: f32,
@@ -1005,7 +1005,7 @@ pub struct GMSpriteInstance {
 impl GMElement for GMSpriteInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let sprite: GMRef<GMSprite> = reader.read_resource_by_id()?;
+        let sprite: Option<GMRef<GMSprite>> = reader.read_resource_by_id_opt()?;
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
         let scale_x = reader.read_f32()?;
@@ -1020,7 +1020,7 @@ impl GMElement for GMSpriteInstance {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name)?;
-        builder.write_resource_id(&self.sprite);
+        builder.write_resource_id_opt(&self.sprite);
         builder.write_i32(self.x);
         builder.write_i32(self.y);
         builder.write_f32(self.scale_x);

@@ -2,6 +2,7 @@ use crate::prelude::*;
 use std::collections::HashMap;
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
+use crate::integrity_assert;
 use crate::util::fmt::typename;
 
 
@@ -121,8 +122,9 @@ impl DataReader<'_> {
     fn check_resource_limit(&self, number: u32) -> Result<()> {
         // Increase limit if not enough
         const FAILSAFE_COUNT: u32 = 500_000;
-        if number > FAILSAFE_COUNT {
-            bail!("Number {number} exceeds failsafe limit of {FAILSAFE_COUNT}");
+        integrity_assert!{
+            number < FAILSAFE_COUNT,
+            "Number {number} exceeds failsafe limit of {FAILSAFE_COUNT}"
         }
         Ok(())
     }

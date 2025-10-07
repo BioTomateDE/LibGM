@@ -35,6 +35,7 @@ impl DataReader<'_> {
     /// Read an unsigned 32-bit integer from the data file while advancing the data position.
     /// The integer will be converted to a `usize` for easy use in indices.
     pub fn read_usize(&mut self) -> Result<usize> {
+        // TODO: migrate lots of usize to u32 for performance
         let number = self.read_u32()?;
         Ok(number as usize)
     }

@@ -10,7 +10,7 @@ use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::elements::variables::GMVariable;
 use crate::gamemaker::gm_version::GMVersionReq;
-
+use crate::{integrity_assert, integrity_check};
 
 pub struct DataReader<'a> {
     /// The raw data buffer that is being parsed.
@@ -161,26 +161,29 @@ impl<'a> DataReader<'a> {
     pub fn align(&mut self, alignment: u32) -> Result<()> {
         while self.cur_pos % (alignment as usize) != 0 {
             let byte = self.read_u8()?;
-            if byte != 0 {
-                bail!("Invalid padding byte while aligning to {alignment}: expected zero but got {byte} (0x{byte:02X})");
+            integrity_assert!{
+                byte == 0,
+                "Invalid padding byte while aligning to {alignment}: expected zero but got {byte} (0x{byte:02X})"
             }
         }
         Ok(())
     }
-
+    
     /// Ensures the reader is at the specified position.
     pub fn assert_pos(&self, position: u32, pointer_name: &str) -> Result<()> {
-        if self.cur_pos != position as usize {
-            if position == 0 {
+        integrity_check!{
+            if self.cur_pos != position as usize {
+                if position == 0 {
+                    bail!(
+                        "{} pointer is zero at position {}! Null pointers are not yet supported.",
+                        pointer_name, self.cur_pos,
+                    )
+                }
                 bail!(
-                    "{} pointer is zero at position {}! Null pointers are not yet supported.",
-                    pointer_name, self.cur_pos,
+                    "{} pointer misaligned: expected position {} but reader is actually at {} (diff: {})",
+                    pointer_name, position, self.cur_pos, position as i64 - self.cur_pos as i64,
                 )
             }
-            bail!(
-                "{} pointer misaligned: expected position {} but reader is actually at {} (diff: {})",
-                pointer_name, position, self.cur_pos, position as i64 - self.cur_pos as i64,
-            )
         }
         Ok(())
     }

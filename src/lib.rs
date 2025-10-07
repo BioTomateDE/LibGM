@@ -45,7 +45,7 @@ pub fn __test_data_files(test_fn: impl Fn(GMData) -> Result<()>) -> Result<()> {
     );
 
     for data_file_path in data_file_paths {
-        let name = format!("\"{}\"", data_file_path.display());
+        let name = format!("{:?}", data_file_path.display());
         log::info!("Reading data file {name}");
         let raw_data: Vec<u8> = std::fs::read(&data_file_path).context("reading data file")?;
         log::info!("Parsing data file {name}");

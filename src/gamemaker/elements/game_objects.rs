@@ -38,7 +38,7 @@ impl GMElement for GMGameObjects {
                 None
             } else {
                 let index: u32 = sprite_index.try_into().with_context(|| format!(
-                    "Negative sprite index {} for Sprite of Game Object \"{}\"",
+                    "Negative sprite index {} for Sprite of Game Object {:?}",
                     sprite_index, reader.display_gm_str(name),
                 ))?;
                 Some(GMRef::new(index))
@@ -65,7 +65,7 @@ impl GMElement for GMGameObjects {
                 None
             } else {
                 let index: u32 = sprite_index.try_into().with_context(|| format!(
-                    "Negative sprite index {} for Texture Mask of Game Object \"{}\"",
+                    "Negative sprite index {} for Texture Mask of Game Object {:?}",
                     sprite_index, reader.display_gm_str(name),
                 ))?;
                 Some(GMRef::new(index))
@@ -176,7 +176,7 @@ impl GMGameObjects {
                 return Ok(GMRef::new(i as u32))
             }
         }
-        bail!("Could not resolve game object with name \"{name}\"")
+        bail!("Could not resolve game object with name {name:?}")
     }
 }
 

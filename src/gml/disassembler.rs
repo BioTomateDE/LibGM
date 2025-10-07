@@ -185,9 +185,8 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
 
         GMInstruction::Call(instr) => {
             line = format!(
-                "{}.{} {}(argc={})",
+                "{} {}(argc={})",
                 opcode,
-                data_type_to_string(instr.data_type),
                 function_to_string(gm_data, instr.function)?,
                 instr.arguments_count,
             );
@@ -354,7 +353,7 @@ fn variable_to_string(gm_data: &GMData, code_variable: &CodeVariable) -> Result<
     let variable: &GMVariable = code_variable.variable.resolve(&gm_data.variables.variables)?;
     let name: &String = variable.name.resolve(&gm_data.strings.strings)?;
     if !is_valid_identifier(name) {
-        bail!("Invalid variable identifier: {}", format_literal_string(gm_data, variable.name)?);
+        bail!("Invalid variable identifier: {:?}", variable.name.display(&gm_data.strings));
     }
 
     let prefix: &str = if code_variable.is_int32 {"(variable)"} else {""};
@@ -382,7 +381,7 @@ fn function_to_string(gm_data: &GMData, function_ref: GMRef<GMFunction>) -> Resu
                 return Ok(name)
             }
         }
-        bail!("Invalid function identifier: {}", format_literal_string(gm_data, function.name)?);
+        bail!("Invalid function identifier: {:?}", function.name.display(&gm_data.strings));
     }
     Ok(name)
 }
@@ -395,11 +394,7 @@ pub fn format_literal_string(gm_data: &GMData, gm_string_ref: GMRef<String>) -> 
         .replace("\r", "\\r")
         .replace("\t", "\\t")
         .replace("\"", "\\\"");
-    
-    Ok(format!(
-        "\"{}\"",
-        string,
-    ))
+    Ok(format!("\"{string}\""))
 }
 
 

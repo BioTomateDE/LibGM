@@ -8,11 +8,11 @@ macro_rules! prevent_enabling {
     ($original:expr, $modified:expr, $field:ident) => {{
         if !$original.$field && $modified.$field {
             bail!(
-                "Enabling function classification \"{}\" is not allowed for security reasons!\n\
+                "Enabling function classification {:?} is not allowed for security reasons!\n\
                 You are only allowed to use functions that are already unlocked in the original game. \
                 If you have a good reason to enable this function classification for modding, open a GitHub issue regarding this.",
                 stringify!($field),
-            ))
+            );
         }
     }};
 }
