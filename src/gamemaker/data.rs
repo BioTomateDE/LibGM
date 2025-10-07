@@ -184,7 +184,7 @@ impl GMData {
     }
 
     pub fn function_by_name(&self, name: &str) -> Result<GMRef<GMFunction>> {
-        self.find_function(name)?.with_context(|| format!("Could not find function with name \"{name}\""))
+        self.find_function(name)?.with_context(|| format!("Could not find function with name {name:?}"))
     }
 
     /// Only intended for finding (or creating if it doesn't exist) **builtin** GameMaker functions.

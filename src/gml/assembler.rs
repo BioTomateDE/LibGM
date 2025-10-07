@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use std::fmt::{Display, Formatter};
 use std::ops::Neg;
 use std::str::{Chars, FromStr};
 use arrayvec::ArrayVec;
@@ -14,75 +13,6 @@ use crate::gamemaker::elements::game_objects::GMGameObject;
 use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::variables::{to_vari_instance_type, GMVariable};
 use crate::util::fmt::typename;
-
-#[derive(Debug, Clone)]
-pub enum ParseError {
-    ExpectedEOL(String),
-    ExpectedSpace(String),
-    ExpectedDot(String),
-    ExpectedString(String),
-    ExpectedArgc(String),
-    ExpectedIdentifier(String),
-    ExpectedTypeCast(String),
-    UnexpectedEOL(&'static str),
-    /// `(expected, actual)`
-    InvalidTypeCount(usize, usize),
-    InvalidDataType(char),
-    InvalidComparisonType(String),
-    InvalidInstanceType(String),
-    InvalidMnemonic(String),
-    InvalidVariableType(String),
-    InvalidTypeCast(String),
-    IntegerOutOfBounds(String),
-    InvalidFloat(String),
-    InvalidBoolean(String),
-    InvalidEscapeCharacter(char),
-    UnmatchedAngleBracket,
-    UnmatchedSquareBracket,
-    UnmatchedRoundBracket,
-    StringIndexUnresolvable(u32),
-    VarLocalInvalidIndex(String),
-    VarUnresolvable(String), FuncUnresolvable(String),
-    GameObjectUnresolvable(String),
-    AssetUnresolvable(&'static str, String),
-    TooManyTypes,
-}
-
-impl Display for ParseError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ParseError::ExpectedEOL(line) => write!(f, "Expected end of line; found remaining string {line:?}"),
-            ParseError::ExpectedSpace(line) => write!(f, "Expected space; found remaining string {line:?}"),
-            ParseError::ExpectedDot(line) => write!(f, "Expected dot; found remaining string {line:?}"),
-            ParseError::ExpectedString(line) => write!(f, "Expected string literal; found remaining string {line:?}"),
-            ParseError::ExpectedArgc(line) => write!(f, "Expected argument count of called function; found remaining string {line:?}"),
-            ParseError::ExpectedIdentifier(line) => write!(f, "Expected identifier; found remaining string {line:?}"),
-            ParseError::ExpectedTypeCast(line) => write!(f, "Expected type cast; found remaining string {line:?}"),
-            ParseError::UnexpectedEOL(context) => write!(f, "Unexpected end of line while parsing {context}"),
-            ParseError::InvalidTypeCount(expected, actual) => write!(f, "Expected {expected} data types for this opcode; found {actual} types"),
-            ParseError::InvalidDataType(char) => write!(f, "Invalid data type character '{char}'"),
-            ParseError::InvalidComparisonType(cmp_type) => write!(f, "Invalid comparison type \"{cmp_type}\""),
-            ParseError::InvalidInstanceType(inst_type) => write!(f, "Invalid instance type \"{inst_type}\""),
-            ParseError::InvalidMnemonic(mnemonic) => write!(f, "Invalid opcode mnemonic \"{mnemonic}\""),
-            ParseError::IntegerOutOfBounds(int_str) => write!(f, "Integer out of bounds \"{int_str}\""),
-            ParseError::InvalidFloat(float_str) => write!(f, "Invalid floating point number \"{float_str}\""),
-            ParseError::InvalidBoolean(bool_str) => write!(f, "Invalid boolean \"{bool_str}\""),
-            ParseError::InvalidTypeCast(cast) => write!(f, "Invalid Type Cast \"{cast}\""),
-            ParseError::InvalidEscapeCharacter(char) => write!(f, "Invalid escape character '{char}'"),
-            ParseError::InvalidVariableType(var_type) => write!(f, "Invalid Variable Type \"{var_type}\""),
-            ParseError::UnmatchedRoundBracket => write!(f, "Round bracket '(' was never closed"),
-            ParseError::UnmatchedSquareBracket => write!(f, "Square bracket '[' was never closed"),
-            ParseError::UnmatchedAngleBracket => write!(f, "Angle bracket '<' was never closed"),
-            ParseError::StringIndexUnresolvable(idx) => write!(f, "Could not resolve String with index {idx}"),
-            ParseError::VarLocalInvalidIndex(arg) => write!(f, "Local variable has an invalid variable index specified: \"{arg}\""),
-            ParseError::VarUnresolvable(var_name) => write!(f, "Variable \"{var_name}\" does not exist"),
-            ParseError::FuncUnresolvable(func_name) => write!(f, "Function \"{func_name}\" does not exist"),
-            ParseError::GameObjectUnresolvable(obj_name) => write!(f, "Game Object \"{obj_name}\" does not exist"),
-            ParseError::AssetUnresolvable(asset_type, name) => write!(f, "Could not resolve Asset of type {asset_type} with name \"{name}\""),
-            ParseError::TooManyTypes => write!(f, "Opcodes can only have a maximum of 2 types"),
-        }
-    }
-}
 
 
 pub fn assemble_code(assembly: &str, gm_data: &mut GMData) -> Result<Vec<GMInstruction>> {
@@ -179,7 +109,7 @@ pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<GMInstru
         "restorearef" => GMInstruction::RestoreArrayReference,
         "isnullish" => GMInstruction::IsNullishValue,
         "pushref" => GMInstruction::PushReference(parse_asset_reference(gm_data, line)?),
-        _ => bail!("Invalid opcode mnemonic \"{mnemonic}\"")
+        _ => bail!("Invalid opcode mnemonic {mnemonic:?}")
     };
 
     if !line.is_empty() {
@@ -202,7 +132,7 @@ macro_rules! asset_by_name {
                 break
             }
         }
-        found.with_context(|| format!("Could not resolve Asset of type {} with name \"{}\"", stringify!($typename), target_name))?
+        found.with_context(|| format!("Could not resolve Asset of type {} with name {:?}", stringify!($typename), target_name))?
     }};
 }
 
@@ -227,7 +157,7 @@ fn parse_asset_reference(gm_data: &GMData, line: &mut &str) -> Result<GMAssetRef
         "particlesystem" => GMAssetReference::ParticleSystem(asset_by_name!(gm_data, particle_systems, parse_identifier(line)?)),
         "roominstance" => GMAssetReference::RoomInstance(parse_int(line)?),
         "function" => GMAssetReference::Function(parse_function(line, &gm_data.strings, &gm_data.functions)?),
-        _ => bail!("Invalid Type Cast to asset type \"{asset_type}\"")
+        _ => bail!("Invalid Type Cast to asset type {asset_type:?}")
     })
 }
 
@@ -320,7 +250,7 @@ fn parse_push_immediate(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Res
 }
 
 fn parse_call(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &GMData) -> Result<GMCallInstruction> {
-    assert_type_count(&types, 1)?;
+    assert_type_count(&types, 0)?;
     let function: GMRef<GMFunction> = parse_function(line, &gm_data.strings, &gm_data.functions)?;
     let argc_str: String = consume_round_brackets(line)?
         .with_context(|| format!("Expected round brackets with argument count for function call; found {line:?}"))?;
@@ -329,7 +259,7 @@ fn parse_call(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &GMData
     } else {
         bail!("Expected \"argc=\" for function call parameters; found {line:?}");
     };
-    Ok(GMCallInstruction { arguments_count, data_type: types[0], function })
+    Ok(GMCallInstruction { arguments_count, function })
 }
 
 fn parse_call_var(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMCallVariableInstruction> {
@@ -624,6 +554,7 @@ fn parse_identifier(line: &mut &str) -> Result<String> {
 }
 
 
+/// Assumes the entire rest of the line is the string literal/
 fn parse_string_literal(line: &mut &str) -> Result<String> {
     if consume_char(line) != Some('"') {
         bail!("Expected string literal; found {line:?}");

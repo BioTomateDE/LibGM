@@ -63,7 +63,7 @@ impl GMElement for GMVariables {
             // `arguments` in ut) have a name string id of -1 which wraps around to u32::MAX.
             if name_string_id != u32::MAX && name.index != name_string_id {
                 bail!(
-                    "Variable #{i} with name \"{}\" specifies name string id {}; but the id of name string is actually {}",
+                    "Variable #{i} with name {:?} specifies name string id {}; but the id of name string is actually {}",
                     reader.resolve_gm_str(name)?, name_string_id, name.index,
                 );
             }
@@ -72,7 +72,7 @@ impl GMElement for GMVariables {
                 if let Some(old_value) = reader.variable_occurrence_map.insert(occurrence, GMRef::new(i as u32)) {
                     bail!(
                         "Conflicting occurrence positions while parsing variables: absolute position {} was already \
-                        set for variable #{} with name \"{}\"; trying to set to variable #{i} with name \"{}\"",
+                        set for variable #{} with name {:?}; trying to set to variable #{i} with name {:?}",
                         occurrence,
                         old_value.index,
                         reader.resolve_gm_str(old_value.resolve(&variables)?.name)?,
@@ -117,7 +117,7 @@ impl GMVariables {
                 return Ok(GMRef::new(i as u32))
             }
         }
-        bail!("Could not resolve variable with name \"{name}\"");
+        bail!("Could not resolve variable with name {name:?}");
     }
 }
 

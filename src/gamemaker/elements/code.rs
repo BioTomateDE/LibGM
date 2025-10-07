@@ -21,13 +21,16 @@ use crate::gamemaker::elements::sounds::GMSound;
 use crate::gamemaker::elements::sprites::GMSprite;
 use crate::gamemaker::elements::timelines::GMTimeline;
 use crate::gamemaker::serialize::DataBuilder;
+use crate::integrity_assert;
 use crate::util::init::num_enum_from;
+
 
 #[derive(Debug, Clone)]
 pub struct GMCodes {
     pub codes: Vec<GMCode>,
     pub exists: bool,
 }
+
 impl GMChunkElement for GMCodes {
     fn stub() -> Self {
         Self { codes: vec![], exists: false }
@@ -36,6 +39,7 @@ impl GMChunkElement for GMCodes {
         self.exists
     }
 }
+
 impl GMElement for GMCodes {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         if reader.get_chunk_length() == 0 {
@@ -102,21 +106,25 @@ impl GMElement for GMCodes {
             }
 
             reader.cur_pos = start;
-            code.instructions = Vec::with_capacity(length / 6);  // estimate; data is from deltarune 1.00
-
-            while reader.cur_pos < end {
-                let instruction = GMInstruction::deserialize(reader).with_context(|| format!(
-                    "for Instruction #{} (at absolute position {}) of Code entry \"{}\" with absolute start position {}",
-                    code.instructions.len(), reader.cur_pos, reader.display_gm_str(code.name), start,
-                ))?;
-                code.instructions.push(instruction);
-            }
-            code.instructions.shrink_to_fit();
+            // Estimated Size: https://discord.com/channels/566861759210586112/568625491876118528/1424403240258371615
+            code.instructions = Vec::with_capacity(length / 5);
 
             if length > 0 {
                 // Update information to mark this entry as the root (if we have at least 1 instruction)
                 codes_by_pos.insert(start, GMRef::new(i as u32));
             }
+
+            while reader.cur_pos < end {
+                let instruction = GMInstruction::deserialize(reader).with_context(|| format!(
+                    "parsing Instruction #{} at position {}",
+                    code.instructions.len(), reader.cur_pos,
+                )).with_context(|| format!(
+                    "parsing Code entry {:?} at position {}",
+                    reader.display_gm_str(code.name), start
+                ))?;
+                code.instructions.push(instruction);
+            }
+            code.instructions.shrink_to_fit();
         }
         
         reader.cur_pos = last_pos;  // has to be chunk end (since instructions are stored separately in b15+)
@@ -144,7 +152,7 @@ impl GMElement for GMCodes {
                 // in bytecode 14, instructions are written immediately
                 for (i, instruction) in code.instructions.iter().enumerate() {
                     instruction.serialize(builder).with_context(|| format!(
-                        "building bytecode14 code #{i} with name \"{}\"",
+                        "building bytecode14 code #{i} with name {:?}",
                         builder.display_gm_str(&code.name),
                     ))?;
                 }
@@ -169,7 +177,7 @@ impl GMElement for GMCodes {
             let start: usize = builder.len();
             for instruction in &code.instructions {
                 instruction.serialize(builder).with_context(|| format!(
-                    "serializing bytecode15 code #{i} with name \"{}\"",
+                    "serializing bytecode15 code #{i} with name {:?}",
                     builder.display_gm_str(&code.name),
                 ))?;
             }
@@ -456,69 +464,42 @@ impl GMElement for GMInstruction {
         // log::debug!("{} // {:02X} {:02X} {:02X} {:02X}", reader.cur_pos-4, bytes.0, bytes.1, bytes.2, opcode);
         
         Ok(match opcode {
-            opcode::CONV => Self::Convert(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            opcode::MUL => Self::Multiply(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            opcode::DIV => Self::Divide(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            opcode::REM => Self::Remainder(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            opcode::MOD => Self::Modulus(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            opcode::ADD => Self::Add(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            opcode::SUB => Self::Subtract(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            opcode::AND => Self::And(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            opcode::OR => Self::Or(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            opcode::XOR => Self::Xor(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            opcode::NEG => Self::Negate(GMSingleTypeInstruction::parse(reader, bytes)?),
-            opcode::NOT => Self::Not(GMSingleTypeInstruction::parse(reader, bytes)?),
-            opcode::SHL => Self::ShiftLeft(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            opcode::SHR => Self::ShiftRight(GMDoubleTypeInstruction::parse(reader, bytes)?),
-            opcode::CMP => Self::Compare(GMComparisonInstruction::parse(reader, bytes)?),
-            opcode::POP if bytes.2 == 0x0F => Self::PopSwap(GMPopSwapInstruction::parse(reader, bytes)?),
-            opcode::POP => Self::Pop(GMPopInstruction::parse(reader, bytes)?),
-            opcode::DUP if bytes.1 == 0 => Self::Duplicate(GMDuplicateInstruction::parse(reader, bytes)?),
-            opcode::DUP => Self::DuplicateSwap(GMDuplicateSwapInstruction::parse(reader, bytes)?),
-            opcode::RET => Self::Return(GMSingleTypeInstruction::parse(reader, bytes)?),
-            opcode::EXIT => Self::Exit(GMEmptyInstruction::parse(reader, bytes)?),
-            opcode::POPZ => Self::PopDiscard(GMSingleTypeInstruction::parse(reader, bytes)?),
-            opcode::JMP => Self::Branch(GMGotoInstruction::parse(reader, bytes)?),
-            opcode::JT => Self::BranchIf(GMGotoInstruction::parse(reader, bytes)?),
-            opcode::JF => Self::BranchUnless(GMGotoInstruction::parse(reader, bytes)?),
-            opcode::PUSHENV => Self::PushWithContext(GMGotoInstruction::parse(reader, bytes)?),
-            opcode::POPENV if bytes == (0x00, 0x00, 0xF0) => Self::PopWithContextExit(GMPopenvExitMagicInstruction::parse(reader, bytes)?),
-            opcode::POPENV => Self::PopWithContext(GMGotoInstruction::parse(reader, bytes)?),
-            opcode::PUSH => Self::Push(GMPushInstruction::parse(reader, bytes)?),
-            opcode::PUSHLOC => Self::PushLocal(GMPushInstruction::parse(reader, bytes)?),
-            opcode::PUSHGLB => Self::PushGlobal(GMPushInstruction::parse(reader, bytes)?),
-            opcode::PUSHBLTN => Self::PushBuiltin(GMPushInstruction::parse(reader, bytes)?),
+            opcode::CONV => Self::Convert(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Convert Instruction")?),
+            opcode::MUL => Self::Multiply(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Multiply Instruction")?),
+            opcode::DIV => Self::Divide(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Divide Instruction")?),
+            opcode::REM => Self::Remainder(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Remainder Instruction")?),
+            opcode::MOD => Self::Modulus(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Modulus Instruction")?),
+            opcode::ADD => Self::Add(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Add Instruction")?),
+            opcode::SUB => Self::Subtract(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Subtract Instruction")?),
+            opcode::AND => Self::And(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing And Instruction")?),
+            opcode::OR => Self::Or(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Or Instruction")?),
+            opcode::XOR => Self::Xor(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Xor Instruction")?),
+            opcode::NEG => Self::Negate(GMSingleTypeInstruction::parse(reader, bytes).context("parsing Negate Instruction")?),
+            opcode::NOT => Self::Not(GMSingleTypeInstruction::parse(reader, bytes).context("parsing Not Instruction")?),
+            opcode::SHL => Self::ShiftLeft(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing ShiftLeft Instruction")?),
+            opcode::SHR => Self::ShiftRight(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing ShiftRight Instruction")?),
+            opcode::CMP => Self::Compare(GMComparisonInstruction::parse(reader, bytes).context("parsing Compare Instruction")?),
+            opcode::POP if bytes.2 == 0x0F => Self::PopSwap(GMPopSwapInstruction::parse(reader, bytes).context("parsing PopSwap Instruction")?),
+            opcode::POP => Self::Pop(GMPopInstruction::parse(reader, bytes).context("parsing Pop Instruction")?),
+            opcode::DUP if bytes.1 == 0 => Self::Duplicate(GMDuplicateInstruction::parse(reader, bytes).context("parsing Duplicate Instruction")?),
+            opcode::DUP => Self::DuplicateSwap(GMDuplicateSwapInstruction::parse(reader, bytes).context("parsing DuplicateSwap Instruction")?),
+            opcode::RET => Self::Return(GMSingleTypeInstruction::parse(reader, bytes).context("parsing Return Instruction")?),
+            opcode::EXIT => Self::Exit(GMEmptyInstruction::parse(reader, bytes).context("parsing Exit Instruction")?),
+            opcode::POPZ => Self::PopDiscard(GMSingleTypeInstruction::parse(reader, bytes).context("parsing PopDiscard Instruction")?),
+            opcode::JMP => Self::Branch(GMGotoInstruction::parse(reader, bytes).context("parsing Branch Instruction")?),
+            opcode::JT => Self::BranchIf(GMGotoInstruction::parse(reader, bytes).context("parsing BranchIf Instruction")?),
+            opcode::JF => Self::BranchUnless(GMGotoInstruction::parse(reader, bytes).context("parsing BranchUnless Instruction")?),
+            opcode::PUSHENV => Self::PushWithContext(GMGotoInstruction::parse(reader, bytes).context("parsing PushWithContext Instruction")?),
+            opcode::POPENV if bytes == (0x00, 0x00, 0xF0) => Self::PopWithContextExit(GMPopenvExitMagicInstruction::parse(reader, bytes).context("parsing PopEnvExitMagic Instruction")?),
+            opcode::POPENV => Self::PopWithContext(GMGotoInstruction::parse(reader, bytes).context("parsing PopWithContext Instruction")?),
+            opcode::PUSH => Self::Push(GMPushInstruction::parse(reader, bytes).context("parsing Push Instruction")?),
+            opcode::PUSHLOC => Self::PushLocal(GMPushInstruction::parse(reader, bytes).context("parsing PushLocal Instruction")?),
+            opcode::PUSHGLB => Self::PushGlobal(GMPushInstruction::parse(reader, bytes).context("parsing PushGlobal Instruction")?),
+            opcode::PUSHBLTN => Self::PushBuiltin(GMPushInstruction::parse(reader, bytes).context("parsing PushBuiltin Instruction")?),
             opcode::PUSHIM => Self::PushImmediate(bytes.0 as i16 | ((bytes.1 as i16) << 8)),
-            opcode::CALL => Self::Call(GMCallInstruction::parse(reader, bytes)?),
-            opcode::CALLVAR => Self::CallVariable(GMCallVariableInstruction::parse(reader, bytes)?),
-            opcode::EXTENDED => {
-                let data_type: GMDataType = num_enum_from(bytes.2 & 0xf)?;
-                let kind: i16 = bytes.0 as i16 | ((bytes.1 as i16) << 8);
-                match data_type {
-                    GMDataType::Int16 => {
-                        match kind {
-                            -1 => Self::CheckArrayIndex,
-                            -2 => Self::PushArrayFinal,
-                            -3 => Self::PopArrayFinal,
-                            -4 => Self::PushArrayContainer,
-                            -5 => Self::SetArrayOwner,
-                            -6 => Self::HasStaticInitialized,
-                            -7 => Self::SetStaticInitialized,
-                            -8 => Self::SaveArrayReference,
-                            -9 => Self::RestoreArrayReference,
-                            -10 => Self::IsNullishValue,
-                            _ => bail!("Invalid Int16 Extended Instruction kind {kind}")
-                        }
-                    }
-                    GMDataType::Int32 => {
-                        if kind != - 11 {
-                            bail!("Expected PushReference (-11) for Int32 Extended instruction, found {kind}");
-                        }
-                        Self::PushReference(GMAssetReference::deserialize(reader)?)
-                    }
-                    _ => bail!("Invalid data type for Extended instruction: {data_type:?}")
-                }
-            }
+            opcode::CALL => Self::Call(GMCallInstruction::parse(reader, bytes).context("parsing Call Instruction")?),
+            opcode::CALLVAR => Self::CallVariable(GMCallVariableInstruction::parse(reader, bytes).context("parsing CallVariable Instruction")?),
+            opcode::EXTENDED => parse_extended(reader, bytes).context("parsing Extended Instruction")?,
             _ => bail!("Invalid opcode {opcode} (0x{opcode:02X})")
         })
     }
@@ -590,6 +571,37 @@ impl GMElement for GMInstruction {
 }
 
 
+fn parse_extended(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<GMInstruction> {
+    let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
+    let kind: i16 = b.0 as i16 | ((b.1 as i16) << 8);
+    let instruction = match data_type {
+        GMDataType::Int16 => {
+            match kind {
+                -1 => GMInstruction::CheckArrayIndex,
+                -2 => GMInstruction::PushArrayFinal,
+                -3 => GMInstruction::PopArrayFinal,
+                -4 => GMInstruction::PushArrayContainer,
+                -5 => GMInstruction::SetArrayOwner,
+                -6 => GMInstruction::HasStaticInitialized,
+                -7 => GMInstruction::SetStaticInitialized,
+                -8 => GMInstruction::SaveArrayReference,
+                -9 => GMInstruction::RestoreArrayReference,
+                -10 => GMInstruction::IsNullishValue,
+                _ => bail!("Invalid Int16 Extended Instruction kind {kind}")
+            }
+        }
+        GMDataType::Int32 => {
+            if kind != - 11 {
+                bail!("Expected PushReference (-11) for Int32 Extended instruction, found {kind}");
+            }
+            GMInstruction::PushReference(GMAssetReference::deserialize(reader)?)
+        }
+        _ => bail!("Invalid data type for Extended instruction: {data_type:?}")
+    };
+    Ok(instruction)
+}
+
+
 fn build_extended16(builder: &mut DataBuilder, kind: i16) {
     builder.write_i16(kind);
     builder.write_u8(GMDataType::Int16.into());
@@ -597,9 +609,34 @@ fn build_extended16(builder: &mut DataBuilder, kind: i16) {
 }
 
 
+
 trait InstructionData {
     fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> where Self: Sized;
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()>;
+}
+
+
+fn assert_zero(value: u8, purpose: &'static str) -> Result<()> {
+    integrity_assert!{
+        value == 0,
+        "Expected Instruction {purpose} to be zero but is actually {value} (0x{value:02X})"
+    }
+    Ok(())
+}
+fn assert_zero_b0(byte: u8) -> Result<()> {
+    assert_zero(byte, "byte #0")
+}
+fn assert_zero_b1(byte: u8) -> Result<()> {
+    assert_zero(byte, "byte #1")
+}
+fn assert_zero_b2(byte: u8) -> Result<()> {
+    assert_zero(byte, "byte #2")
+}
+fn assert_zero_type1(byte: u8) -> Result<()> {
+    assert_zero(byte & 0xF, "data type 1 (in byte #2)")
+}
+fn assert_zero_type2(byte: u8) -> Result<()> {
+    assert_zero(byte >> 4, "data type 2 (in byte #2)")
 }
 
 
@@ -623,16 +660,10 @@ pub struct GMSingleTypeInstruction {
 }
 impl InstructionData for GMSingleTypeInstruction {
     fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
+        assert_zero_b0(b.0)?;
+        assert_zero_b1(b.1)?;
+        assert_zero_type2(b.2)?;
         let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
-
-        // Ensure basic conditions hold
-        if b.0 != 0 {
-            bail!("Invalid padding {:02X} while parsing Single Type Instruction", b.0);
-        }
-        if b.2 >> 4 != 0 {
-            bail!("Second type should be zero but is {0} (0x{0:02X}) for Single Type Instruction", b.2 >> 4);
-        }
-
         Ok(Self { data_type })
     }
 
@@ -653,7 +684,9 @@ pub struct GMCallVariableInstruction {
 impl InstructionData for GMCallVariableInstruction {
     fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
         let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
-        Ok(Self { data_type, argument_count: b.1 })
+        assert_zero_b1(b.1)?;
+        assert_zero_type2(b.2)?;
+        Ok(Self { data_type, argument_count: b.0 })
     }
 
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
@@ -675,6 +708,8 @@ pub struct GMDuplicateInstruction {
 impl InstructionData for GMDuplicateInstruction {
     fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
         let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
+        assert_zero_b1(b.1)?;
+        assert_zero_type2(b.2)?;
         Ok(Self { data_type, size: b.0 })
     }
 
@@ -697,6 +732,7 @@ pub struct GMDuplicateSwapInstruction {
 impl InstructionData for GMDuplicateSwapInstruction {
     fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
         let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
+        assert_zero_type2(b.2)?;
         Ok(Self { data_type, size1: b.0, size2: b.1 })
     }
 
@@ -716,6 +752,7 @@ pub struct GMPopSwapInstruction {
 }
 impl InstructionData for GMPopSwapInstruction {
     fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
+        assert_zero_b1(b.1)?;
         Ok(Self { size: b.0 })
     }
 
@@ -789,9 +826,8 @@ impl InstructionData for GMDoubleTypeInstruction {
     fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
         let right: GMDataType = num_enum_from(b.2 & 0xf)?;
         let left: GMDataType = num_enum_from(b.2 >> 4)?;
-        if b.1 != 0 {    // might be incorrect; remove if issues
-            bail!("b1 should be zero but is {} for Double Type Instruction", b.1);
-        }
+        assert_zero_b0(b.0)?;
+        assert_zero_b1(b.1)?;
         Ok(Self { right, left })
     }
 
@@ -816,6 +852,7 @@ impl InstructionData for GMComparisonInstruction {
         let comparison_type: GMComparisonType = num_enum_from(b.1)?;
         let type1: GMDataType = num_enum_from(b.2 & 0xf)?;
         let type2: GMDataType = num_enum_from(b.2 >> 4)?;
+        assert_zero_b0(b.0)?;
         Ok(Self { comparison_type, type1, type2 })
     }
 
@@ -913,12 +950,16 @@ impl InstructionData for GMPushInstruction {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMCallInstruction {
     pub arguments_count: u8,
-    pub data_type: GMDataType,
     pub function: GMRef<GMFunction>,
 }
 impl InstructionData for GMCallInstruction {
     fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
         let data_type: GMDataType = num_enum_from(b.2)?;
+        integrity_assert!{
+            data_type == GMDataType::Int32,
+            "Expected Call Instrution's data type to be Int32, but it's actually {data_type:?}"
+        }
+
         let function: GMRef<GMFunction> = reader.function_occurrence_map.get(&(reader.cur_pos as u32)).cloned()
             .with_context(|| format!(
             "Could not find any function with absolute occurrence position {} in map with length {} while parsing Call Instruction",
@@ -926,14 +967,16 @@ impl InstructionData for GMCallInstruction {
         ))?;
         reader.cur_pos += 4;   // skip next occurrence offset
 
-        Ok(GMCallInstruction { arguments_count: b.0, data_type, function })
+        assert_zero_b1(b.1)?;
+
+        Ok(GMCallInstruction { arguments_count: b.0, function })
     }
 
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
         let instr_pos: usize = builder.len();
         builder.write_u8(self.arguments_count);
         builder.write_u8(0);
-        builder.write_u8(self.data_type.into());
+        builder.write_u8(GMDataType::Int32.into());
         builder.write_u8(opcode);
 
         let function: &GMFunction = self.function.resolve(&builder.gm_data.functions.functions)?;

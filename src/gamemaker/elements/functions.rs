@@ -51,7 +51,7 @@ impl GMElement for GMFunctions {
             // verify name string id. allow -1 for unused function (-1 wraps to u32::MAX)
             if name_string_id != u32::MAX && name.index != name_string_id {
                 bail!(
-                    "Function #{i} with name \"{}\" specifies name string id {}; but the id of name string is actually {}",
+                    "Function #{i} with name {:?} specifies name string id {}; but the id of name string is actually {}",
                     reader.resolve_gm_str(name)?, name_string_id, name.index,
                 )
             }
@@ -60,7 +60,7 @@ impl GMElement for GMFunctions {
                 if let Some(old_value) = reader.function_occurrence_map.insert(occurrence, GMRef::new(i as u32)) {
                     bail!(
                         "Conflicting occurrence positions while parsing functions: absolute position {} \
-                        was already set for function #{} with name \"{}\"; trying to set to function #{} with name \"{}\"",
+                        was already set for function #{} with name {:?}; trying to set to function #{} with name {:?}",
                         occurrence, old_value.index, reader.display_gm_str(old_value.resolve(&functions)?.name), i, reader.display_gm_str(name),
                     )
                 }

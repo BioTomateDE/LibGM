@@ -461,8 +461,8 @@ impl GMFontGlyph {
 impl GMRoom {
     pub fn print(&self, strings: &GMStrings) -> Result<()> {
         println!("GMRoom:");
-        println!("  Name: \"{}\"", self.name.resolve(&strings.strings)?);
-        println!("  Caption: \"{}\"", resolve_str_maybe(&self.caption, strings));
+        println!("  Name: {:?}", self.name.resolve(&strings.strings)?);
+        println!("  Caption: {:?}", resolve_str_maybe(&self.caption, strings));
         println!("  Dimensions: {}x{}", self.width, self.height);
         println!("  Speed: {}", self.speed);
         println!("  Persistent: {}", self.persistent);
@@ -683,7 +683,7 @@ impl GMTexturePageItem {
 impl GMBackground {
     pub fn print(&self, strings: &GMStrings) -> Result<()> {
         println!("GMBackground:");
-        println!("  Name: \"{}\"", self.name.resolve(&strings.strings)?);
+        println!("  Name: {:?}", self.name.resolve(&strings.strings)?);
         println!("  Transparent: {}", self.transparent);
         println!("  Smooth: {}", self.smooth);
         println!("  Preload: {}", self.preload);
@@ -707,10 +707,10 @@ impl GMBackground {
 impl GMSound {
     pub fn print(&self, strings: &GMStrings) -> Result<()> {
         println!("GMSound:");
-        println!("  Name: \"{}\"", self.name.resolve(&strings.strings)?);
+        println!("  Name: {:?}", self.name.resolve(&strings.strings)?);
         println!("  Flags: {}", self.flags.to_string());
-        println!("  Audio Type: \"{}\"", resolve_str_maybe(&self.audio_type, strings));
-        println!("  File: \"{}\"", self.file.resolve(&strings.strings)?);
+        println!("  Audio Type: {:?}", resolve_str_maybe(&self.audio_type, strings));
+        println!("  File: {:?}", self.file.resolve(&strings.strings)?);
         println!("  Effects: {}", self.effects);
         println!("  Volume: {}", self.volume);
         println!("  Pitch: {}", self.pitch);
@@ -737,7 +737,7 @@ impl GMSoundFlags {
 impl GMGameObject {
     pub fn print(&self, strings: &GMStrings) -> Result<()> {
         println!("GMGameObject:");
-        println!("  Name: \"{}\"", self.name.resolve(&strings.strings)?);
+        println!("  Name: {:?}", self.name.resolve(&strings.strings)?);
         println!("  Sprite Index: {:?}", self.sprite);
         println!("  Visible: {}", self.visible);
         println!("  Managed: {:?}", self.managed);

@@ -548,7 +548,7 @@ impl GMElement for GMTrack {
             let gm_anim_curve_string: &String = reader.resolve_gm_str(gm_anim_curve_str_ref)?;
             if gm_anim_curve_string != "GMAnimCurve" {
                 bail!(
-                    "Expected owned resource thingy of Track to be \"GMAnimCurve\"; but found \"{}\" for Track \"{}\" at absolute position {} in chunk '{}'",
+                    "Expected owned resource thingy of Track to be \"GMAnimCurve\"; but found {:?} for Track {:?} at absolute position {} in chunk '{}'",
                     gm_anim_curve_string, reader.display_gm_str(name), reader.cur_pos, reader.chunk.name,
                 );
             }
@@ -576,7 +576,7 @@ impl GMElement for GMTrack {
             "GMColourTrack" | "GMRealTrack" => GMTrackKeyframes::Color(GMColorTrackKeyframesData::deserialize(reader)?),
             "GMTextTrack" => GMTrackKeyframes::Text(GMTrackKeyframesData::deserialize(reader)?),
             "GMParticleTrack" => GMTrackKeyframes::Particle(GMTrackKeyframesData::deserialize(reader)?),
-            other => bail!("Invalid Model Name \"{other}\" while parsing Track"),
+            other => bail!("Invalid Model Name {other:?} while parsing Track"),
         };
 
         Ok(GMTrack {

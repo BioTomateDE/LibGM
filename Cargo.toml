@@ -3,6 +3,9 @@ name = "libgm"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+no-integrity-checks = []
+
 # For normal debugging/testing
 # - Fast compile time
 # - Usually decent runtime

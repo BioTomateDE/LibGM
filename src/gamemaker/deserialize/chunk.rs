@@ -4,6 +4,7 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::gm_version::GMVersion;
 use crate::util::bench::Stopwatch;
 use crate::gamemaker::data::Endianness;
+use crate::integrity_assert;
 
 #[derive(Debug, Clone)]
 pub struct GMChunk {
@@ -18,12 +19,11 @@ impl DataReader<'_> {
     /// Read a GameMaker chunk name consisting of 4 ascii characters.
     /// Accounts for endianness; reversing the read chunk name in big endian mode.
     pub fn read_chunk_name(&mut self) -> Result<String> {
-        if self.chunk.name != "FORM" {
-            bail!(
-                "Reading a chunk name is only allowed in FORM; not in a chunk!
-                Current chunk is called '{}' and has start position {} and end position {}",
-                self.chunk.name, self.chunk.start_pos, self.chunk.end_pos,
-            );
+        integrity_assert!{
+            self.chunk.name == "FORM",
+            "Reading a chunk name is only allowed in FORM; not in a chunk!
+            Current chunk is called '{}' and has start position {} and end position {}",
+            self.chunk.name, self.chunk.start_pos, self.chunk.end_pos,
         }
 
         let string: String = self.read_literal_string(4)
@@ -34,11 +34,12 @@ impl DataReader<'_> {
             })?;
 
         if string.len() != 4 {
-            bail!("Chunk name string \"{string}\" has length {} (chunk names need to be 4 characters long)", string.len());
+            bail!("Chunk name string {string:?} has size {}", string.len());
         }
 
-        if !string.is_ascii() {
-            bail!("Chunk name string \"{string}\" is not ASCII");
+        integrity_assert!{
+            string.bytes().all(|b| matches!(b, b'A'..=b'Z' | b'0'..=b'9')),
+            "Chunk name {string:?} contains invalid characters"
         }
 
         // Chunk names are reversed in big endian
@@ -60,11 +61,10 @@ impl DataReader<'_> {
         let element = T::deserialize(self)?;
         self.read_chunk_padding()?;
 
-        if self.cur_pos != self.chunk.end_pos {
-            bail!(
-                "Misaligned chunk '{}': expected chunk end position {} but reader is actually at position {} (diff: {})",
-                self.chunk.name, self.chunk.end_pos, self.cur_pos, self.chunk.end_pos as i64 - self.cur_pos as i64,
-            )
+        integrity_assert! {
+            self.cur_pos == self.chunk.end_pos,
+            "Misaligned chunk '{}': expected chunk end position {} but reader is actually at position {} (diff: {})",
+            self.chunk.name, self.chunk.end_pos, self.cur_pos, self.chunk.end_pos as i64 - self.cur_pos as i64,
         }
 
         log::trace!("Parsing chunk '{}' took {stopwatch}", self.chunk.name);
