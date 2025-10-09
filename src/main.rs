@@ -103,15 +103,20 @@ fn main_open_and_close() -> Result<()> {
     // Let gm_data = libgm::gamemaker::upgrade::upgrade_to_2023_lts(gm_data)?;
 
     // Decompile a specific code
-    libgm::gml::decompiler::decompile_to_ast(&gm_data, libgm::gamemaker::deserialize::GMRef::new(3))?;
+    let code_count = gm_data.codes.codes.len();
+    for i in 0..code_count {
+        let code_ref = libgm::gamemaker::deserialize::GMRef::new(i as u32);
+        log::debug!("({i}/{code_count}) Decompiling {:?}", code_ref.resolve(&gm_data.codes.codes)?.name.display(&gm_data.strings));
+        libgm::gml::decompiler::decompile_to_ast(&gm_data, code_ref)?;
+    }
 
-    // Build data file
-    log::info!("Building data file");
-    let raw_data: Vec<u8> = build_data_file(&gm_data).context("\nwhile building data file")?;
-    drop(gm_data);
-
-    log::info!("Writing data file {:?}", output_path.display());
-    write_data_file(raw_data, output_path).context("writing data file")?;
+    // // Build data file
+    // log::info!("Building data file");
+    // let raw_data: Vec<u8> = build_data_file(&gm_data).context("\nwhile building data file")?;
+    // drop(gm_data);
+    //
+    // log::info!("Writing data file {:?}", output_path.display());
+    // write_data_file(raw_data, output_path).context("writing data file")?;
 
     Ok(())
 }

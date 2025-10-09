@@ -28,23 +28,23 @@ pub fn decompile_to_ast(gm_data: &GMData, code_ref: GMRef<GMCode>) -> Result<()>
 
     let code = code_ref.resolve(&gm_data.codes.codes)?;
     find_blocks(&mut cfg, &code.instructions)?;
-    for i in &cfg.blocks {
-        println!(
-            "{:>3}..{:<3} ({} | {})  {}",
-            i.start_address,
-            i.end_address,
-            i.instructions
-                .first()
-                .map_or("///".to_string(), |x| disassemble_instruction(gm_data, x)
-                    .unwrap_or("<?>".to_string())),
-            i.instructions
-                .last()
-                .map_or("///".to_string(), |x| disassemble_instruction(gm_data, x)
-                    .unwrap_or("<?>".to_string())),
-            i.instructions.len(),
-        )
-    }
-    // std::process::exit(67);
+    // for i in &cfg.blocks {
+    //     println!(
+    //         "{:>3}..{:<3} ({} | {})  {}",
+    //         i.start_address,
+    //         i.end_address,
+    //         i.instructions
+    //             .first()
+    //             .map_or("///".to_string(), |x| disassemble_instruction(gm_data, x)
+    //                 .unwrap_or("<?>".to_string())),
+    //         i.instructions
+    //             .last()
+    //             .map_or("///".to_string(), |x| disassemble_instruction(gm_data, x)
+    //                 .unwrap_or("<?>".to_string())),
+    //         i.instructions.len(),
+    //     )
+    // }
+    // // std::process::exit(67);
 
     find_fragments(&mut cfg, code_ref)?;
     find_static_inits(&mut cfg)?;
