@@ -113,7 +113,7 @@ pub fn find_loops<'c, 'd>(cfg: &'c mut ControlFlowGraph<'c>) -> Result<()> {
 
         // Check last instruction (where branches are located)
         match last_instruction {
-            GMInstruction::Branch(instr) => push_while(cfg, &mut loops, &mut while_loops_found, idx, instr),
+            GMInstruction::Branch(instr) if instr.jump_offset < 0 => push_while(cfg, &mut loops, &mut while_loops_found, idx, instr),
             GMInstruction::BranchUnless(instr) if instr.jump_offset < 0 => push_do_until(cfg, &mut loops, idx),
             GMInstruction::BranchIf(instr) if instr.jump_offset < 0 => push_repeat(cfg, &mut loops, idx),
             GMInstruction::PushWithContext(_) => push_with(cfg, &mut loops, idx)?,
@@ -205,9 +205,9 @@ fn push_with(cfg: &mut ControlFlowGraph, loops: &mut Vec<Loop>, index: usize) ->
         .context("PushEnv does not have a fallthrough successor")?;
     let after: NodeRef = tail
         .successors(cfg)
-        .branch_target
+        .fall_through
         .clone()
-        .context("PushEnv's fallthrough successor does not have a branch successor")?;
+        .context("PushEnv's fallthrough successor does not have a fallthrough successor")?;
     let succ_block: &Block = after
         .as_block(cfg)
         .context("Expected 2nd successor of PushEnv to be a block")?;
@@ -269,11 +269,13 @@ fn update_while<'c, 'd>(
     tail_block.pop_last_instruction()?;
 
     // Find first branch location after head
+
+    log::debug!("{:?}", base_loop.after.predecessors_mut(cfg));
     let branch_node: NodeRef = base_loop
         .after
         .predecessors(cfg)
         .iter()
-        .find(|n| n.start_address(cfg) < base_loop.head.start_address(cfg) && n.node_type() != NodeType::Block)
+        .find(|pred| pred.node_type() == NodeType::Block && pred.start_address(cfg) >= base_loop.head.start_address(cfg))
         .context("Failed to find while loop's first branch location after head")?
         .clone();
 

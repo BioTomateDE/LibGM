@@ -4,7 +4,7 @@ use crate::gml::decompiler::control_flow::loops::Loop;
 use crate::gml::decompiler::control_flow::static_inits::StaticInit;
 use crate::gml::decompiler::decompile_context::DecompileContext;
 use crate::prelude::*;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 pub mod blocks;
 pub mod fragments;
@@ -193,7 +193,7 @@ impl ControlFlowGraph<'_> {
 }
 
 #[repr(transparent)]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct NodeRef(u32);
 impl NodeRef {
     const TYPE_BITS: u32 = 5; // 5 bits = 32 variants max
@@ -222,6 +222,11 @@ impl NodeRef {
 impl Display for NodeRef {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}<{}>", self.node_type(), self.index())
+    }
+}
+impl Debug for NodeRef {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self}")
     }
 }
 
