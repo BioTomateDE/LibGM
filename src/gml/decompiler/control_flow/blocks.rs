@@ -78,10 +78,9 @@ struct BlockAnalysis {
 pub fn find_blocks<'c, 'd>(ctx: &'c mut DecompileContext<'d>, instructions: &'d [GMInstruction]) -> Result<()> {
     let analysis = analyze_instructions(ctx.gm_data, instructions)?;
     let mut blocks = create_blocks(instructions, analysis)?;
-    connect_blocks(ctx, &mut blocks)?;
-    ctx.nodes.extend_from_slice(&blocks);
     ctx.blocks = (0..blocks.len()).map(|i| NodeRef::from(i)).collect();
-    // ctx.blocks = &blocks;
+    ctx.nodes = blocks;
+    connect_blocks(ctx)?;
     Ok(())
 }
 
@@ -233,18 +232,17 @@ fn create_blocks(instructions: &[GMInstruction], analysis: BlockAnalysis) -> Res
 }
 
 /// Connect blocks with predecessor and successor relationships
-fn connect_blocks(ctx: &DecompileContext, blocks: &mut Vec<Node>) -> Result<()> {
-    let block_count = blocks.len();
+fn connect_blocks(ctx: &mut DecompileContext) -> Result<()> {
+    let block_count = ctx.blocks.len();
     for idx in 0..block_count {
-        let node = &blocks[idx];
-        let NodeData::Block(block) = &node.data else {
-            unreachable!("Node in blocks Vec is not a Block")
-        };
+        let node = ctx.blocks[idx];
+        let end_address = node.node(ctx).end_address;
+        let block = node.block_mut(ctx);
 
         // Empty blocks can only fall through
         if block.instructions.is_empty() {
             if idx + 1 < block_count {
-                connect_fallthrough(ctx, blocks, idx);
+                connect_fallthrough(ctx, idx);
             }
             continue;
         }
@@ -257,8 +255,8 @@ fn connect_blocks(ctx: &DecompileContext, blocks: &mut Vec<Node>) -> Result<()> 
 
             // Unconditional branch
             GMInstruction::Branch(instr) => {
-                let target_addr = compute_branch_target(node.end_address - 1, instr.jump_offset);
-                connect_branch_target(ctx, blocks, idx, target_addr)?;
+                let target_addr = compute_branch_target(end_address - 1, instr.jump_offset);
+                connect_branch_target(ctx, idx, target_addr)?;
             }
 
             // Conditional branches have both target and fallthrough
@@ -266,10 +264,10 @@ fn connect_blocks(ctx: &DecompileContext, blocks: &mut Vec<Node>) -> Result<()> 
             | GMInstruction::BranchUnless(instr)
             | GMInstruction::PushWithContext(instr)
             | GMInstruction::PopWithContext(instr) => {
-                let target_addr = compute_branch_target(node.end_address - 1, instr.jump_offset);
-                connect_branch_target(ctx, blocks, idx, target_addr)?;
-                if idx + 1 < blocks.len() {
-                    connect_fallthrough(ctx, blocks, idx);
+                let target_addr = compute_branch_target(end_address - 1, instr.jump_offset);
+                connect_branch_target(ctx, idx, target_addr)?;
+                if idx + 1 < ctx.blocks.len() {
+                    connect_fallthrough(ctx, idx);
                 }
             }
 
@@ -278,14 +276,14 @@ fn connect_blocks(ctx: &DecompileContext, blocks: &mut Vec<Node>) -> Result<()> 
                 // This would need access to try_blocks from analysis
                 // For now, assuming try blocks are handled separately
                 if idx + 1 < block_count {
-                    connect_fallthrough(ctx, blocks, idx);
+                    connect_fallthrough(ctx, idx);
                 }
             }
 
             // Default: fall through to next block
             _ => {
                 if idx + 1 < block_count {
-                    connect_fallthrough(ctx, blocks, idx);
+                    connect_fallthrough(ctx, idx);
                 }
             }
         }
@@ -295,22 +293,22 @@ fn connect_blocks(ctx: &DecompileContext, blocks: &mut Vec<Node>) -> Result<()> 
 }
 
 /// Helper to connect a block to its fallthrough successor
-fn connect_fallthrough(ctx: &DecompileContext, blocks: &mut Vec<Node>, block_idx: usize) {
+fn connect_fallthrough(ctx: &mut DecompileContext, block_idx: usize) {
+    let predecessor = ctx.blocks[block_idx];
     let successor = ctx.blocks[block_idx + 1];
-    blocks[block_idx].successors.fall_through = Some(successor);
-    blocks[block_idx + 1].predecessors.push(ctx.blocks[block_idx]);
+    ctx.blocks[block_idx].node_mut(ctx).successors.fall_through = Some(successor);
+    ctx.blocks[block_idx + 1].node_mut(ctx).predecessors.push(predecessor);
 }
 
 /// Helper to connect a block to its branch target
 fn connect_branch_target(
-    ctx: &DecompileContext,
-    blocks: &mut Vec<Node>,
+    ctx: &mut DecompileContext,
     block_idx: usize,
     target_addr: u32,
 ) -> Result<()> {
-    let target_idx = find_block_containing(blocks, target_addr)?;
-    blocks[block_idx].successors.branch_target = Some(ctx.blocks[target_idx]);
-    blocks[target_idx].predecessors.push(ctx.blocks[block_idx]);
+    let target_idx = find_block_containing(ctx, target_addr)?;
+    ctx.blocks[block_idx].node_mut(ctx).successors.branch_target = Some(target_idx.into());
+    ctx.blocks[target_idx].node_mut(ctx).predecessors.push(block_idx.into());
     Ok(())
 }
 
@@ -325,16 +323,17 @@ fn is_try_hook_block(block: &Block) -> bool {
 }
 
 /// Find the block containing the given instruction address using binary search
-fn find_block_containing(blocks: &mut Vec<Node>, addr: u32) -> Result<usize> {
+fn find_block_containing(ctx: &DecompileContext, addr: u32) -> Result<usize> {
     // Handle edge case: address is at the very end
-    if let Some(last) = blocks.last() {
-        if addr == last.end_address && !last.block().instructions.is_empty() {
-            return Ok(blocks.len() - 1);
+    if let Some(last) = ctx.blocks.last() {
+        if addr == last.node(ctx).end_address && !last.block(ctx).instructions.is_empty() {
+            return Ok(ctx.blocks.len() - 1);
         }
     }
 
-    blocks
-        .binary_search_by(|block| {
+    ctx.blocks
+        .binary_search_by(|node| {
+            let block = node.node(ctx);
             if addr < block.start_address {
                 std::cmp::Ordering::Greater
             } else if addr >= block.end_address {
