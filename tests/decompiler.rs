@@ -1,7 +1,7 @@
 use libgm::prelude::*;
 
 #[test]
-fn test_decompiler() -> Result<()> {
+fn test_decompiler() {
     use libgm::__test_data_files;
     use libgm::gamemaker::deserialize::GMRef;
     use libgm::gml::decompiler::decompile_to_ast;

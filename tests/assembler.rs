@@ -1,7 +1,7 @@
 use libgm::prelude::*;
 
 #[test]
-fn test_disassembler_and_assembler() -> Result<()> {
+fn test_disassembler_and_assembler() {
     use libgm::__test_data_files;
     use libgm::gamemaker::elements::code::GMInstruction;
     use libgm::gml::assembler::assemble_code;

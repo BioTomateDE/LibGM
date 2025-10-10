@@ -1,7 +1,7 @@
 use libgm::prelude::*;
 
 #[test]
-fn test_code_validation() -> Result<()> {
+fn test_code_validation() {
     use libgm::__test_data_files;
     use libgm::gml::validation::validate_code;
 
