@@ -1,8 +1,7 @@
-use std::fmt::Write;
+use std::fmt::{Display, Formatter, Write};
 use std::str::FromStr;
 
 #[derive(thiserror::Error, Debug)]
-#[error("{context}")]
 pub struct Error {
     context: String,
     #[source]
@@ -46,6 +45,12 @@ impl Error {
 
     pub fn chain(&self) -> String {
         self.chain_with(">")
+    }
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.chain())
     }
 }
 

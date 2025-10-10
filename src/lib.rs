@@ -21,7 +21,13 @@ pub mod prelude;
 /// This function should only be used within the `tests` or `benches` directory in LibGM.
 /// Do not use this if you are using LibGM as a dependency.
 #[doc(hidden)]
-pub fn __test_data_files(test_fn: impl Fn(GMData) -> Result<()>) -> Result<()> {
+pub fn __test_data_files(test_fn: impl Fn(GMData) -> Result<()>) {
+    if let Err(error) = test_data_files(test_fn) {
+        panic!("{}", error.chain())
+    }
+}
+
+fn test_data_files(test_fn: impl Fn(GMData) -> Result<()>) -> Result<()> {
     use crate::util::fmt::filename_to_str;
     unsafe {
         std::env::set_var("BIO_LOG", "debug");
