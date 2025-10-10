@@ -5,25 +5,28 @@ use crate::gamemaker::elements::code::{
     get_instruction_size,
 };
 use crate::gamemaker::elements::functions::GMFunction;
-use crate::gml::decompiler::control_flow::{BaseNode, ControlFlowGraph, NodeRef};
+use crate::gml::decompiler::control_flow::node::{Node, NodeData};
+use crate::gml::decompiler::control_flow::node_ref::NodeRef;
+use crate::gml::decompiler::decompile_context::DecompileContext;
 use crate::gml::decompiler::vm_constants;
 use crate::gml::disassembler::disassemble_instructions;
 use crate::prelude::*;
 use std::collections::{HashMap, HashSet};
-use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone)]
-pub struct Block<'a> {
-    pub base_node: BaseNode,
-    pub instructions: &'a [GMInstruction],
+pub struct Block<'d> {
+    pub instructions: &'d [GMInstruction],
 }
 
-impl<'a> Block<'a> {
-    pub fn new(address: u32) -> Self {
-        Self {
-            base_node: BaseNode::new(address, address),
-            instructions: &[],
-        }
+impl<'d> Block<'d> {
+    // pub fn new_empty(address: u32) -> Node<'d> {
+    //     let mut node = Node::new_empty(address);
+    //     node.data = NodeData::Block(Block { node: &node, instructions: &[] });
+    //     node
+    // }
+
+    pub fn new(start: u32, end: u32, instructions: &'d [GMInstruction]) -> Node<'d> {
+        Node::new(start, end, NodeData::Block(Block { instructions }))
     }
 
     pub fn pop_first_instruction(&mut self) -> Result<()> {
@@ -53,19 +56,6 @@ impl<'a> Block<'a> {
     }
 }
 
-impl<'a> Deref for Block<'a> {
-    type Target = BaseNode;
-    fn deref(&self) -> &Self::Target {
-        &self.base_node
-    }
-}
-
-impl<'a> DerefMut for Block<'a> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.base_node
-    }
-}
-
 /// Information about a try-catch-finally block
 struct TryBlock {
     end_address: u32,
@@ -85,10 +75,13 @@ struct BlockAnalysis {
     code_size: u32,
 }
 
-pub fn find_blocks<'a>(cfg: &mut ControlFlowGraph<'a>, instructions: &'a [GMInstruction]) -> Result<()> {
-    let analysis = analyze_instructions(cfg.context.gm_data, instructions)?;
-    create_blocks(cfg, instructions, analysis)?;
-    connect_blocks(cfg)?;
+pub fn find_blocks<'c, 'd>(ctx: &'c mut DecompileContext<'d>, instructions: &'d [GMInstruction]) -> Result<()> {
+    let analysis = analyze_instructions(ctx.gm_data, instructions)?;
+    let mut blocks = create_blocks(instructions, analysis)?;
+    connect_blocks(ctx, &mut blocks)?;
+    ctx.nodes.extend_from_slice(&blocks);
+    ctx.blocks = (0..blocks.len()).map(|i| NodeRef::from(i)).collect();
+    // ctx.blocks = &blocks;
     Ok(())
 }
 
@@ -171,7 +164,7 @@ fn extract_try_info(
             "Invalid @@try_hook@@ pattern size at index {}: expected {}, got {}",
             call_index,
             PATTERN_SIZE,
-            pattern.len()
+            pattern.len(),
         );
     }
 
@@ -192,7 +185,7 @@ fn extract_try_info(
             })
         }
         _ => {
-            let actual = disassemble_instructions(gm_data, pattern).unwrap_or_else(|e| format!("<invalid: {}>", e));
+            let actual = disassemble_instructions(gm_data, pattern).unwrap_or_else(|e| format!("<invalid: {e}>"));
             bail!(
                 "Malformed @@try_hook@@ pattern at index {call_index}: expected \
                 [push.i, conv.i.v, push.i, conv.i.v, call, popz.v], found [{actual}]"
@@ -202,11 +195,7 @@ fn extract_try_info(
 }
 
 /// Create blocks from analyzed instruction boundaries
-fn create_blocks<'a>(
-    cfg: &mut ControlFlowGraph<'a>,
-    instructions: &'a [GMInstruction],
-    analysis: BlockAnalysis,
-) -> Result<()> {
+fn create_blocks(instructions: &[GMInstruction], analysis: BlockAnalysis) -> Result<Vec<Node>> {
     // Convert to sorted vector for efficient block creation
     let mut boundaries: Vec<u32> = analysis.block_starts.into_iter().collect();
     boundaries.push(0); // Ensure we start from 0
@@ -215,48 +204,47 @@ fn create_blocks<'a>(
     boundaries.dedup();
 
     // Preallocate blocks
-    cfg.blocks = Vec::with_capacity(boundaries.len() - 1);
+    let mut blocks = Vec::with_capacity(boundaries.len() - 1);
 
     // Create blocks between consecutive boundaries
     for window in boundaries.windows(2) {
         let start = window[0];
         let end = window[1];
 
-        let mut block = Block::new(start);
-        block.end_address = end;
-
         // Map addresses to instruction slice
         let start_idx = *analysis
             .address_map
             .get(&start)
-            .ok_or_else(|| format!("Missing address mapping for {}", start))?;
+            .ok_or_else(|| format!("Missing address mapping for {start}"))?;
         let end_idx = *analysis
             .address_map
             .get(&end)
-            .ok_or_else(|| format!("Missing address mapping for {}", end))?;
+            .ok_or_else(|| format!("Missing address mapping for {end}"))?;
 
-        block.instructions = &instructions[start_idx..end_idx];
-        cfg.blocks.push(block);
+        let block = Block::new(start, end, &instructions[start_idx..end_idx]);
+        blocks.push(block);
     }
 
     // Store try blocks in cfg if needed
     // (Assuming cfg has a field for this, otherwise pass them to connect_blocks)
     // ^ TODO
 
-    Ok(())
+    Ok(blocks)
 }
 
 /// Connect blocks with predecessor and successor relationships
-fn connect_blocks(cfg: &mut ControlFlowGraph) -> Result<()> {
-    let block_count = cfg.blocks.len();
-
+fn connect_blocks(ctx: &DecompileContext, blocks: &mut Vec<Node>) -> Result<()> {
+    let block_count = blocks.len();
     for idx in 0..block_count {
-        let block = &cfg.blocks[idx];
+        let node = &blocks[idx];
+        let NodeData::Block(block) = &node.data else {
+            unreachable!("Node in blocks Vec is not a Block")
+        };
 
         // Empty blocks can only fall through
         if block.instructions.is_empty() {
             if idx + 1 < block_count {
-                connect_fallthrough(cfg, idx);
+                connect_fallthrough(ctx, blocks, idx);
             }
             continue;
         }
@@ -268,36 +256,36 @@ fn connect_blocks(cfg: &mut ControlFlowGraph) -> Result<()> {
             GMInstruction::Exit(_) | GMInstruction::Return(_) => {}
 
             // Unconditional branch
-            GMInstruction::Branch(b) => {
-                let target_addr = compute_branch_target(block.end_address - 1, b.jump_offset);
-                connect_branch_target(cfg, idx, target_addr)?;
+            GMInstruction::Branch(instr) => {
+                let target_addr = compute_branch_target(node.end_address - 1, instr.jump_offset);
+                connect_branch_target(ctx, blocks, idx, target_addr)?;
             }
 
             // Conditional branches have both target and fallthrough
-            GMInstruction::BranchIf(b)
-            | GMInstruction::BranchUnless(b)
-            | GMInstruction::PushWithContext(b)
-            | GMInstruction::PopWithContext(b) => {
-                let target_addr = compute_branch_target(block.end_address - 1, b.jump_offset);
-                connect_branch_target(cfg, idx, target_addr)?;
-                if idx + 1 < block_count {
-                    connect_fallthrough(cfg, idx);
+            GMInstruction::BranchIf(instr)
+            | GMInstruction::BranchUnless(instr)
+            | GMInstruction::PushWithContext(instr)
+            | GMInstruction::PopWithContext(instr) => {
+                let target_addr = compute_branch_target(node.end_address - 1, instr.jump_offset);
+                connect_branch_target(ctx, blocks, idx, target_addr)?;
+                if idx + 1 < blocks.len() {
+                    connect_fallthrough(ctx, blocks, idx);
                 }
             }
 
             // Try hook pattern (simplified detection)
-            GMInstruction::PopDiscard(_) if is_try_hook_block(&cfg.blocks[idx]) => {
+            GMInstruction::PopDiscard(_) if is_try_hook_block(block) => {
                 // This would need access to try_blocks from analysis
                 // For now, assuming try blocks are handled separately
                 if idx + 1 < block_count {
-                    connect_fallthrough(cfg, idx);
+                    connect_fallthrough(ctx, blocks, idx);
                 }
             }
 
             // Default: fall through to next block
             _ => {
                 if idx + 1 < block_count {
-                    connect_fallthrough(cfg, idx);
+                    connect_fallthrough(ctx, blocks, idx);
                 }
             }
         }
@@ -307,18 +295,22 @@ fn connect_blocks(cfg: &mut ControlFlowGraph) -> Result<()> {
 }
 
 /// Helper to connect a block to its fallthrough successor
-fn connect_fallthrough(cfg: &mut ControlFlowGraph, block_idx: usize) {
-    let successor = NodeRef::block(block_idx + 1);
-    cfg.blocks[block_idx].successors.fall_through = Some(successor);
-    cfg.blocks[block_idx + 1].predecessors.push(NodeRef::block(block_idx));
+fn connect_fallthrough(ctx: &DecompileContext, blocks: &mut Vec<Node>, block_idx: usize) {
+    let successor = ctx.blocks[block_idx + 1];
+    blocks[block_idx].successors.fall_through = Some(successor);
+    blocks[block_idx + 1].predecessors.push(ctx.blocks[block_idx]);
 }
 
 /// Helper to connect a block to its branch target
-fn connect_branch_target(cfg: &mut ControlFlowGraph, block_idx: usize, target_addr: u32) -> Result<()> {
-    let target_idx = find_block_containing(cfg, target_addr)?;
-    let successor = NodeRef::block(target_idx);
-    cfg.blocks[block_idx].successors.branch_target = Some(successor);
-    cfg.blocks[target_idx].predecessors.push(NodeRef::block(block_idx));
+fn connect_branch_target(
+    ctx: &DecompileContext,
+    blocks: &mut Vec<Node>,
+    block_idx: usize,
+    target_addr: u32,
+) -> Result<()> {
+    let target_idx = find_block_containing(blocks, target_addr)?;
+    blocks[block_idx].successors.branch_target = Some(ctx.blocks[target_idx]);
+    blocks[target_idx].predecessors.push(ctx.blocks[block_idx]);
     Ok(())
 }
 
@@ -333,15 +325,15 @@ fn is_try_hook_block(block: &Block) -> bool {
 }
 
 /// Find the block containing the given instruction address using binary search
-fn find_block_containing(cfg: &ControlFlowGraph, addr: u32) -> Result<usize> {
+fn find_block_containing(blocks: &mut Vec<Node>, addr: u32) -> Result<usize> {
     // Handle edge case: address is at the very end
-    if let Some(last) = cfg.blocks.last() {
-        if addr == last.end_address && !last.instructions.is_empty() {
-            return Ok(cfg.blocks.len() - 1);
+    if let Some(last) = blocks.last() {
+        if addr == last.end_address && !last.block().instructions.is_empty() {
+            return Ok(blocks.len() - 1);
         }
     }
 
-    cfg.blocks
+    blocks
         .binary_search_by(|block| {
             if addr < block.start_address {
                 std::cmp::Ordering::Greater
