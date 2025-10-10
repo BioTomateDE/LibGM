@@ -1,33 +1,29 @@
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::code::GMCode;
-use crate::gml::decompiler::control_flow::ControlFlowGraph;
 use crate::gml::decompiler::control_flow::blocks::find_blocks;
 use crate::gml::decompiler::control_flow::fragments::find_fragments;
 use crate::gml::decompiler::control_flow::loops::find_loops;
 use crate::gml::decompiler::control_flow::short_circuits::find_short_circuits;
 use crate::gml::decompiler::control_flow::static_inits::find_static_inits;
 use crate::gml::decompiler::decompile_context::DecompileContext;
-use crate::gml::disassembler::disassemble_instruction;
 use crate::prelude::*;
 
+mod accessors;
 pub mod control_flow;
 pub mod decompile_context;
 pub mod vm_constants;
 
 pub fn decompile_to_ast(gm_data: &GMData, code_ref: GMRef<GMCode>) -> Result<()> {
-    let mut cfg = ControlFlowGraph {
-        context: DecompileContext { gm_data },
-        empty_nodes: vec![],
+    let mut ctx = DecompileContext {
+        gm_data,
+        nodes: vec![],
         blocks: vec![],
-        fragments: vec![],
-        static_inits: vec![],
         short_circuit_blocks: vec![],
-        loops: vec![],
     };
 
     let code = code_ref.resolve(&gm_data.codes.codes)?;
-    find_blocks(&mut cfg, &code.instructions)?;
+    find_blocks(&mut ctx, &code.instructions)?;
     // for i in &cfg.blocks {
     //     println!(
     //         "{:>3}..{:<3} ({} | {})  {}",
@@ -46,10 +42,10 @@ pub fn decompile_to_ast(gm_data: &GMData, code_ref: GMRef<GMCode>) -> Result<()>
     // }
     // // std::process::exit(67);
 
-    find_fragments(&mut cfg, code_ref)?;
-    find_static_inits(&mut cfg)?;
-    find_short_circuits(&mut cfg);
-    find_loops(&mut cfg)?;
+    find_fragments(&mut ctx, code_ref)?;
+    find_static_inits(&mut ctx)?;
+    find_short_circuits(&mut ctx);
+    find_loops(&mut ctx)?;
 
     Ok(())
 }
