@@ -245,17 +245,33 @@ fn opcode_to_string(instruction: &GMInstruction) -> &'static str {
 
 fn asset_reference_to_string(gm_data: &GMData, asset_reference: &GMAssetReference) -> Result<String> {
     Ok(match asset_reference {
-        GMAssetReference::Object(gm_ref) => format!("(object){}", name_by_ref!(game_objects, gm_ref, gm_data)),
-        GMAssetReference::Sprite(gm_ref) => format!("(sprite){}", name_by_ref!(sprites, gm_ref, gm_data)),
-        GMAssetReference::Sound(gm_ref) => format!("(sound){}", name_by_ref!(sounds, gm_ref, gm_data)),
+        GMAssetReference::Object(gm_ref) => {
+            format!("(object){}", name_by_ref!(game_objects, gm_ref, gm_data))
+        }
+        GMAssetReference::Sprite(gm_ref) => {
+            format!("(sprite){}", name_by_ref!(sprites, gm_ref, gm_data))
+        }
+        GMAssetReference::Sound(gm_ref) => {
+            format!("(sound){}", name_by_ref!(sounds, gm_ref, gm_data))
+        }
         GMAssetReference::Room(gm_ref) => format!("(room){}", name_by_ref!(rooms, gm_ref, gm_data)),
-        GMAssetReference::Background(gm_ref) => format!("(background){}", name_by_ref!(backgrounds, gm_ref, gm_data)),
+        GMAssetReference::Background(gm_ref) => {
+            format!("(background){}", name_by_ref!(backgrounds, gm_ref, gm_data))
+        }
         GMAssetReference::Path(gm_ref) => format!("(path){}", name_by_ref!(paths, gm_ref, gm_data)),
-        GMAssetReference::Script(gm_ref) => format!("(script){}", name_by_ref!(scripts, gm_ref, gm_data)),
+        GMAssetReference::Script(gm_ref) => {
+            format!("(script){}", name_by_ref!(scripts, gm_ref, gm_data))
+        }
         GMAssetReference::Font(gm_ref) => format!("(font){}", name_by_ref!(fonts, gm_ref, gm_data)),
-        GMAssetReference::Timeline(gm_ref) => format!("(timeline){}", name_by_ref!(timelines, gm_ref, gm_data)),
-        GMAssetReference::Shader(gm_ref) => format!("(shader){}", name_by_ref!(shaders, gm_ref, gm_data)),
-        GMAssetReference::Sequence(gm_ref) => format!("(sequence){}", name_by_ref!(sequences, gm_ref, gm_data)),
+        GMAssetReference::Timeline(gm_ref) => {
+            format!("(timeline){}", name_by_ref!(timelines, gm_ref, gm_data))
+        }
+        GMAssetReference::Shader(gm_ref) => {
+            format!("(shader){}", name_by_ref!(shaders, gm_ref, gm_data))
+        }
+        GMAssetReference::Sequence(gm_ref) => {
+            format!("(sequence){}", name_by_ref!(sequences, gm_ref, gm_data))
+        }
         GMAssetReference::AnimCurve(gm_ref) => {
             format!("(animcurve){}", name_by_ref!(animation_curves, gm_ref, gm_data))
         }
@@ -263,7 +279,9 @@ fn asset_reference_to_string(gm_data: &GMData, asset_reference: &GMAssetReferenc
             format!("(particlesystem){}", name_by_ref!(particle_systems, gm_ref, gm_data))
         }
         GMAssetReference::RoomInstance(id) => format!("(roominstance){}", id),
-        GMAssetReference::Function(gm_ref) => format!("(function){}", function_to_string(gm_data, *gm_ref)?),
+        GMAssetReference::Function(gm_ref) => {
+            format!("(function){}", function_to_string(gm_data, *gm_ref)?)
+        }
     })
 }
 
@@ -297,7 +315,9 @@ fn instance_type_to_string(
     variable_ref: GMRef<GMVariable>,
 ) -> Result<String> {
     Ok(match instance_type {
-        GMInstanceType::Undefined => bail!("Did not expect Instance Type Undefined here; please report this error"),
+        GMInstanceType::Undefined => {
+            bail!("Did not expect Instance Type Undefined here; please report this error")
+        }
         GMInstanceType::Self_(Some(obj_ref)) => {
             let obj: &GMGameObject = obj_ref.resolve(&gm_data.game_objects.game_objects)?;
             let name: &String = obj.name.resolve(&gm_data.strings.strings)?;

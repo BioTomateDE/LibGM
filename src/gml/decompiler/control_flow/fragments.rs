@@ -143,7 +143,9 @@ fn get_child_start_offsets(gm_data: &GMData, parent_code_ref: GMRef<GMCode>) -> 
         let Some(b15_info) = &code.bytecode15_info else {
             continue;
         };
-        let Some(parent) = b15_info.parent else { continue };
+        let Some(parent) = b15_info.parent else {
+            continue;
+        };
         if parent != parent_code_ref {
             continue;
         }

@@ -73,22 +73,20 @@ pub enum LoopType {
     With,
 }
 
-pub fn find_loops<'c, 'd>(ctx: &'c mut DecompileContext<'c>) -> Result<()> {
-    let mut while_loops_found = HashSet::new();
+pub fn find_loops(ctx: &mut DecompileContext) -> Result<()> {
+    let mut whiles = HashSet::new();
     let start_idx = ctx.nodes.len() as u32;
 
     // Search for different loops types based on instruction patterns
     // Do this in reverse order, because we want to find the ends of loops first
     for block in ctx.blocks.clone().into_iter().rev() {
-        let Some(last_instruction) = block.node(ctx).block().instructions.last() else {
+        let Some(last_instruction) = block.block(ctx).instructions.last() else {
             continue;
         };
 
         // Check last instruction (where branches are located)
         match last_instruction {
-            GMInstruction::Branch(instr) if instr.jump_offset < 0 => {
-                push_while(ctx, &mut while_loops_found, block, instr)
-            }
+            GMInstruction::Branch(instr) if instr.jump_offset < 0 => push_while(ctx, &mut whiles, block, instr),
             GMInstruction::BranchUnless(instr) if instr.jump_offset < 0 => push_do_until(ctx, block),
             GMInstruction::BranchIf(instr) if instr.jump_offset < 0 => push_repeat(ctx, block),
             GMInstruction::PushWithContext(_) => push_with(ctx, block)?,
@@ -110,36 +108,31 @@ pub fn find_loops<'c, 'd>(ctx: &'c mut DecompileContext<'c>) -> Result<()> {
     Ok(())
 }
 
-fn push_while(
-    ctx: &mut DecompileContext,
-    while_loops_found: &mut HashSet<u32>,
-    block: NodeRef,
-    instr: &GMGotoInstruction,
-) {
+fn push_while(ctx: &mut DecompileContext, whiles: &mut HashSet<u32>, block: NodeRef, instr: &GMGotoInstruction) {
     // While loop detected - only add if this is the first time we see it (in reverse)
     // If not done only once, then this misfires on "continue" statements
     let condition_address = (block.node(ctx).end_address as i32 - 1 + instr.jump_offset) as u32;
-    if while_loops_found.insert(condition_address) {
-        let head: NodeRef = block.node(ctx).successors.branch_target.clone().unwrap();
-        let while_loop = Loop::new(
-            LoopType::While,
-            condition_address,
-            block.node(ctx).end_address,
-            head,
-            block,
-            block.next_sequentially(),
-        );
-        ctx.nodes.push(while_loop);
+    if !whiles.insert(condition_address) {
+        return;
     }
+
+    let head: NodeRef = block.node(ctx).successors.branch_target.unwrap();
+    ctx.nodes.push(Loop::new(
+        LoopType::While,
+        condition_address,
+        block.node(ctx).end_address,
+        head,
+        block,
+        block.next_sequentially(),
+    ));
 }
 
 fn push_do_until(ctx: &mut DecompileContext, block: NodeRef) {
     let head: NodeRef = block.node(ctx).successors.fall_through.unwrap();
     let after: NodeRef = block.node(ctx).successors.branch_target.unwrap();
-    let start_address: u32 = head.node(ctx).start_address;
     ctx.nodes.push(Loop::new(
         LoopType::DoUntil,
-        start_address,
+        head.node(ctx).start_address,
         block.node(ctx).end_address,
         head,
         block,
@@ -150,21 +143,19 @@ fn push_do_until(ctx: &mut DecompileContext, block: NodeRef) {
 fn push_repeat(ctx: &mut DecompileContext, block: NodeRef) {
     let head: NodeRef = block.node(ctx).successors.fall_through.unwrap();
     let after: NodeRef = block.node(ctx).successors.branch_target.unwrap();
-    let start_address: u32 = head.node(ctx).start_address;
-    let repeat_loop = Loop::new(
+    ctx.nodes.push(Loop::new(
         LoopType::Repeat,
-        start_address,
+        head.node(ctx).start_address,
         block.node(ctx).end_address,
         head,
         block,
         after,
-    );
-    ctx.nodes.push(repeat_loop);
+    ));
 }
 
 fn push_with(ctx: &mut DecompileContext, block: NodeRef) -> Result<()> {
     // With loop detected - need to additionally check for break block
-    let head: NodeRef = block.node(ctx).successors.branch_target.clone().unwrap();
+    let head: NodeRef = block.node(ctx).successors.branch_target.unwrap();
     let tail: NodeRef = block
         .node(ctx)
         .successors
@@ -205,7 +196,7 @@ fn push_with(ctx: &mut DecompileContext, block: NodeRef) -> Result<()> {
 
     let end_address: u32 = tail.node(ctx).start_address;
     let mut with_loop = Loop::new(
-        LoopType::While,
+        LoopType::With,
         block.node(ctx).end_address,
         end_address,
         head,

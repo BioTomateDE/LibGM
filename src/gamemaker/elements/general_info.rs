@@ -228,7 +228,9 @@ impl GMElement for GMGeneralInfo {
         let is_debugger_disabled: bool = match reader.read_u8()? {
             0 => false,
             1 => true,
-            other => bail!("Invalid u8 bool {other} while reading general info \"is debugger disabled\""),
+            other => {
+                bail!("Invalid u8 bool {other} while reading general info \"is debugger disabled\"")
+            }
         };
         let bytecode_version = reader.read_u8()?;
         let unknown_value = reader.read_u16()?;

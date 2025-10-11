@@ -21,7 +21,7 @@ fn test_decompiler() {
                 data.codes.codes.len(),
                 code_name
             );
-            decompile_to_ast(&data, GMRef::new(i as u32))?;
+            decompile_to_ast(&data, GMRef::new(i as u32)).with_context(|| format!("decompiling {code_name}"))?;
         }
         Ok(())
     })
