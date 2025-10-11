@@ -114,7 +114,9 @@ fn update_rooms(gm_data: &mut GMData) -> Result<()> {
 
         // Convert background tiles to sprite tiles
         for tile in &mut room.tiles {
-            let Some(tile_texture) = &tile.texture else { continue };
+            let Some(tile_texture) = &tile.texture else {
+                continue;
+            };
             let GMRoomTileTexture::Background(background_ref) = tile_texture else {
                 continue;
             };

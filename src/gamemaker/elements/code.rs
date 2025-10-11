@@ -48,7 +48,9 @@ impl GMElement for GMCodes {
         let pointers: Vec<u32> = reader.read_simple_list()?;
         reader.cur_pos = match pointers.first() {
             Some(ptr) => *ptr as usize,
-            None => return Ok(Self { codes: vec![], exists: true }),
+            None => {
+                return Ok(Self { codes: vec![], exists: true });
+            }
         };
         let count: usize = pointers.len();
         let mut codes: Vec<GMCode> = Vec::with_capacity(count);

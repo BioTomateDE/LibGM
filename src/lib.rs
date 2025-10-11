@@ -37,7 +37,9 @@ fn test_data_files(test_fn: impl Fn(GMData) -> Result<()>) -> Result<()> {
     let mut data_file_paths = Vec::new();
     for file in std::fs::read_dir("tests/data_files").context("reading data file folder")? {
         let path = file.context("reading file metadata")?.path();
-        let Some(ext) = path.extension() else { continue };
+        let Some(ext) = path.extension() else {
+            continue;
+        };
         let ext: &str = ext.to_str().context("converting file extension to UTF-8")?;
         if matches!(ext, "win" | "unx" | "ios" | "droid") {
             data_file_paths.push(path);

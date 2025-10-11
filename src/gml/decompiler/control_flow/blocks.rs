@@ -301,11 +301,7 @@ fn connect_fallthrough(ctx: &mut DecompileContext, block_idx: usize) {
 }
 
 /// Helper to connect a block to its branch target
-fn connect_branch_target(
-    ctx: &mut DecompileContext,
-    block_idx: usize,
-    target_addr: u32,
-) -> Result<()> {
+fn connect_branch_target(ctx: &mut DecompileContext, block_idx: usize, target_addr: u32) -> Result<()> {
     let target_idx = find_block_containing(ctx, target_addr)?;
     ctx.blocks[block_idx].node_mut(ctx).successors.branch_target = Some(target_idx.into());
     ctx.blocks[target_idx].node_mut(ctx).predecessors.push(block_idx.into());

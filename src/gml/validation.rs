@@ -294,7 +294,7 @@ fn validate_instructions(
                             (GMInstruction::PushLocal(_), GMInstanceType::Local) => {}
                             (GMInstruction::PushGlobal(_), GMInstanceType::Global) => {}
                             (GMInstruction::PushBuiltin(_), GMInstanceType::Self_(None)) => {} // VARI instance type
-                            (instr, inst) => bail!("{instr:?} has instance type {inst}"),   // TODO: opcode
+                            (instr, inst) => bail!("{instr:?} has instance type {inst}"),      // TODO: opcode
                         }
                     }
 

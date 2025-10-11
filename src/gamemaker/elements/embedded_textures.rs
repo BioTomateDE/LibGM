@@ -39,7 +39,9 @@ impl GMElement for GMEmbeddedTextures {
             // Find next element start position
             let mut max_end_of_stream_pos = reader.chunk.end_pos;
             for texture_page in &texture_pages[i + 1..] {
-                let Some(ref img) = texture_page.image else { continue };
+                let Some(ref img) = texture_page.image else {
+                    continue;
+                };
                 let GMImage::NotYetDeserialized(blob_pos) = img else {
                     bail!("GMImage enum variant is somehow not `NotYetDeserialized`");
                 };

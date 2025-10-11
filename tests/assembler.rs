@@ -14,7 +14,7 @@ fn test_disassembler_and_assembler() {
                 continue; // Code is child entry; skip
             }
 
-            let code_name = code.name.resolve(&data.strings.strings)?;
+            let code_name = code.name.resolve(&data.strings.strings)?.clone();
             print!(
                 "({}/{}) Disassembling: {:<64}\r",
                 i + 1,
@@ -22,14 +22,26 @@ fn test_disassembler_and_assembler() {
                 code_name
             );
 
-            let assembly: String = disassemble_code(&data, &code)?;
-            let reconstructed: Vec<GMInstruction> = assemble_code(&assembly, &mut data).map_err(|e| e.to_string())?;
+            let assembly: String =
+                disassemble_code(&data, &code).with_context(|| format!("disassembling {code_name:?}"))?;
+
+            let reconstructed: Vec<GMInstruction> =
+                assemble_code(&assembly, &mut data).with_context(|| format!("assembling {code_name:?}"))?;
 
             let code = &data.codes.codes[i];
             if code.instructions != reconstructed {
-                for (original, recreation) in code.instructions.iter().zip(reconstructed) {
-                    if *original != recreation {
-                        log::error!("Original: {:?}\nRecreation: {:?}\n", original, recreation);
+                let ori_len = code.instructions.len();
+                let rec_len = reconstructed.len();
+
+                if rec_len != ori_len {
+                    let diff = rec_len.abs_diff(ori_len);
+                    let comparison = if rec_len > ori_len { "more" } else { "fewer" };
+                    log::error!("Reconstructed code has {diff} {comparison} instructions than the original");
+                }
+
+                for (original, recreation) in code.instructions.iter().zip(&reconstructed) {
+                    if original != recreation {
+                        log::error!("Original: {original:?}\nRecreation: {recreation:?}\n");
                     }
                 }
                 bail!("Assembler produced different instructions than the original (see logs)");
