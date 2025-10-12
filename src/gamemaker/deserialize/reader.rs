@@ -11,6 +11,7 @@ use crate::gamemaker::gm_version::GMVersionReq;
 use crate::prelude::*;
 use crate::{integrity_assert, integrity_check};
 use std::collections::HashMap;
+use crate::util::smallmap::SmallMap;
 
 pub struct DataReader<'a> {
     /// The raw data buffer that is being parsed.
@@ -33,7 +34,7 @@ pub struct DataReader<'a> {
     /// Map of all chunks specified by `FORM`; indexed by chunk name.
     /// Read chunks will be removed from this HashMap when calling [`DataReader::read_chunk_required`] or [`DataReader::read_chunk_optional`].
     /// May contain unknown chunks (if there is a GameMaker update, for example).
-    pub chunks: HashMap<String, GMChunk>,
+    pub chunks: SmallMap<String, GMChunk>,
 
     /// Metadata about the currently parsed chunk of data.
     /// This includes the chunk's name, start position, and end position within the data buffer.
@@ -73,7 +74,7 @@ impl<'a> DataReader<'a> {
         Self {
             general_info: GMGeneralInfo::stub(),
             strings: GMStrings::stub(),
-            chunks: HashMap::with_capacity(35),
+            chunks: SmallMap::with_capacity(35),
             chunk: GMChunk {
                 name: "FORM".to_string(),
                 start_pos: 0,

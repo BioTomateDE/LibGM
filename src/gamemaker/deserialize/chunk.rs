@@ -102,7 +102,7 @@ impl DataReader<'_> {
     pub fn read_chunk_required<T: GMChunkElement + GMElement>(&mut self, chunk_name: &str) -> Result<T> {
         let chunk: GMChunk = self.chunks.get(chunk_name).cloned().ok_or_else(|| {
             format!(
-                "Required chunk '{}' not found in chunk hashmap with length {}",
+                "Required chunk '{}' not found in chunk table with length {}",
                 chunk_name,
                 self.chunks.len(),
             )
