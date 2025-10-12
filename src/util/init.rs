@@ -12,7 +12,10 @@ pub fn vec_with_capacity<T>(count: u32) -> Result<Vec<T>> {
     if implied_size > FAILSAFE_SIZE {
         bail!(
             "{} count {} implies data size {} which exceeeds failsafe size {}",
-            typename::<T>(), count, format_bytes(implied_size), format_bytes(FAILSAFE_SIZE),
+            typename::<T>(),
+            count,
+            format_bytes(implied_size),
+            format_bytes(FAILSAFE_SIZE),
         );
     }
     Ok(Vec::with_capacity(count))

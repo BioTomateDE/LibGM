@@ -77,7 +77,7 @@ struct BlockAnalysis {
 
 pub fn find_blocks<'c, 'd>(ctx: &'c mut DecompileContext<'d>, instructions: &'d [GMInstruction]) -> Result<()> {
     let analysis = analyze_instructions(ctx.gm_data, instructions)?;
-    let mut blocks = create_blocks(instructions, analysis)?;
+    let blocks = create_blocks(instructions, analysis)?;
     ctx.blocks = (0..blocks.len()).map(|i| NodeRef::from(i)).collect();
     ctx.nodes = blocks;
     connect_blocks(ctx)?;

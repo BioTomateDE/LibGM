@@ -1,8 +1,8 @@
+use crate::gamemaker::data::Endianness;
 use crate::prelude::*;
 use crate::util::fmt::hexdump;
 use image::{DynamicImage, ImageBuffer, Rgba};
 use std::convert::TryInto;
-use crate::gamemaker::data::Endianness;
 
 const QOI_INDEX: u8 = 0x00;
 const QOI_RUN_8: u8 = 0x40;

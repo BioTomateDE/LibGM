@@ -687,12 +687,6 @@ fn assert_zero_b0(byte: u8) -> Result<()> {
 fn assert_zero_b1(byte: u8) -> Result<()> {
     assert_zero(byte, "byte #1")
 }
-fn assert_zero_b2(byte: u8) -> Result<()> {
-    assert_zero(byte, "byte #2")
-}
-fn assert_zero_type1(byte: u8) -> Result<()> {
-    assert_zero(byte & 0xF, "data type 1 (in byte #2)")
-}
 fn assert_zero_type2(byte: u8) -> Result<()> {
     assert_zero(byte >> 4, "data type 2 (in byte #2)")
 }
@@ -1020,7 +1014,7 @@ impl InstructionData for GMCallInstruction {
 
         let function: GMRef<GMFunction> = reader
             .function_occurrence_map
-            .get(&(reader.cur_pos as u32))
+            .get(&(reader.cur_pos))
             .cloned()
             .with_context(|| {
                 format!(
@@ -1190,7 +1184,7 @@ pub enum GMAssetReference {
 
 impl GMElement for GMAssetReference {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        if let Some(func) = reader.function_occurrence_map.get(&(reader.cur_pos as u32)) {
+        if let Some(func) = reader.function_occurrence_map.get(&reader.cur_pos) {
             reader.cur_pos += 4; // Consume next occurrence offset
             return Ok(Self::Function(*func));
         }
@@ -1388,12 +1382,12 @@ fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMC
         GMDataType::Double => reader.read_f64().map(GMCodeValue::Double),
         GMDataType::Float => reader.read_f32().map(GMCodeValue::Float),
         GMDataType::Int32 => {
-            if let Some(&function) = reader.function_occurrence_map.get(&(reader.cur_pos as u32)) {
+            if let Some(&function) = reader.function_occurrence_map.get(&reader.cur_pos) {
                 reader.cur_pos += 4; // Skip next occurrence offset
                 return Ok(GMCodeValue::Function(function.clone()));
             }
 
-            if let Some(&variable) = reader.variable_occurrence_map.get(&(reader.cur_pos as u32)) {
+            if let Some(&variable) = reader.variable_occurrence_map.get(&reader.cur_pos) {
                 reader.cur_pos += 4; // Skip next occurrence offset
                 return Ok(GMCodeValue::Variable(CodeVariable {
                     variable,
@@ -1423,7 +1417,7 @@ fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMC
 }
 
 fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<CodeVariable> {
-    let occurrence_position: u32 = reader.cur_pos as u32;
+    let occurrence_position: u32 = reader.cur_pos;
     let raw_value = reader.read_i32()?;
 
     let variable_type: i32 = (raw_value >> 24) & 0xF8;
