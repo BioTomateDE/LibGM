@@ -18,12 +18,12 @@ pub struct DataReader<'a> {
 
     /// The current read position within the data buffer.
     /// Reading data will be read from this position; incrementing it.
-    pub cur_pos: usize,
+    pub cur_pos: u32,
 
     /// How many bytes of padding are/should be at the end of every chunk.
     /// Only relevant in certain GameMaker versions.
     /// Defaults to 16, but will be set to 4 or 1 if detected.
-    pub chunk_padding: usize,
+    pub chunk_padding: u32,
 
     /// Indicates the data's byte endianness.
     /// In most cases (and assumed by default), this is set to little-endian.
@@ -77,7 +77,7 @@ impl<'a> DataReader<'a> {
             chunk: GMChunk {
                 name: "FORM".to_string(),
                 start_pos: 0,
-                end_pos: data.len(),
+                end_pos: data.len() as u32,
                 is_last_chunk: true,
             },
             data,
@@ -93,7 +93,7 @@ impl<'a> DataReader<'a> {
 
     /// Read the specified number of bytes from the data file while advancing the data position.
     /// Returns an error when trying to read out of chunk bounds.
-    pub fn read_bytes_dyn(&mut self, count: usize) -> Result<&'a [u8]> {
+    pub fn read_bytes_dyn(&mut self, count: u32) -> Result<&'a [u8]> {
         if self.cur_pos < self.chunk.start_pos {
             bail!(
                 "Trying to read {} bytes out of lower chunk bounds at position {} in chunk '{}' with start position {}",
@@ -115,7 +115,9 @@ impl<'a> DataReader<'a> {
         }
 
         // SAFETY: If chunk.start_pos and chunk.end_pos are set correctly; this should never read memory out of bounds.
-        let slice: &[u8] = unsafe { self.data.get_unchecked(self.cur_pos..self.cur_pos + count) };
+        let start = self.cur_pos as usize;
+        let end = (self.cur_pos + count) as usize;
+        let slice: &[u8] = unsafe { self.data.get_unchecked(start..end) };
         self.cur_pos += count;
         Ok(slice)
     }
@@ -123,8 +125,8 @@ impl<'a> DataReader<'a> {
     /// Read a constant number of bytes from the data file while advancing the data position.
     /// Useful for reading slices with specified sizes like `[u8; 16]`.
     pub fn read_bytes_const<const N: usize>(&mut self) -> Result<&[u8; N]> {
-        let slice: &[u8] = self.read_bytes_dyn(N)?;
-        // Read_bytes_dyn is guaranteed to read N bytes so the unwrap never fails.
+        let slice: &[u8] = self.read_bytes_dyn(N as u32)?;
+        // SAFETY: read_bytes_dyn is guaranteed to read exact N bytes.
         Ok(unsafe { &*(slice.as_ptr() as *const [u8; N]) })
     }
 
@@ -149,7 +151,7 @@ impl<'a> DataReader<'a> {
     /// Read a UTF-8 character string with the specified byte length.
     /// ___
     /// For reading standard GameMaker string references, see [`DataReader::read_gm_string`].
-    pub fn read_literal_string(&mut self, length: usize) -> Result<String> {
+    pub fn read_literal_string(&mut self, length: u32) -> Result<String> {
         let bytes: Vec<u8> = self
             .read_bytes_dyn(length)
             .with_context(|| format!("reading literal string with length {length}"))?
@@ -164,14 +166,14 @@ impl<'a> DataReader<'a> {
     }
 
     /// Gets the length of the chunk that is being currently parsed.
-    pub fn get_chunk_length(&self) -> usize {
+    pub fn get_chunk_length(&self) -> u32 {
         self.chunk.end_pos - self.chunk.start_pos
     }
 
     /// Read bytes until the reader position is divisible by the specified alignment.
     /// Ensures the read padding bytes are all zero.
     pub fn align(&mut self, alignment: u32) -> Result<()> {
-        while self.cur_pos % (alignment as usize) != 0 {
+        while self.cur_pos % alignment != 0 {
             let byte = self.read_u8()?;
             integrity_assert! {
                 byte == 0,
@@ -184,7 +186,7 @@ impl<'a> DataReader<'a> {
     /// Ensures the reader is at the specified position.
     pub fn assert_pos(&self, position: u32, pointer_name: &str) -> Result<()> {
         integrity_check! {
-            if self.cur_pos != position as usize {
+            if self.cur_pos != position {
                 if position == 0 {
                     bail!(
                         "{} pointer is zero at position {}! Null pointers are not yet supported.",
@@ -201,7 +203,7 @@ impl<'a> DataReader<'a> {
     }
 
     /// Sets the reader position to the current chunk's start position plus the specified relative position.
-    pub fn set_rel_cur_pos(&mut self, relative_position: usize) -> Result<()> {
+    pub fn set_rel_cur_pos(&mut self, relative_position: u32) -> Result<()> {
         if self.chunk.start_pos + relative_position > self.chunk.end_pos {
             bail!(
                 "Tried to set relative reader position to {} in chunk '{}' with start position {} and end position {}; out of bounds",
@@ -216,7 +218,7 @@ impl<'a> DataReader<'a> {
     }
 
     /// Gets the reader position relative to the current chunk's start position.
-    pub fn get_rel_cur_pos(&self) -> usize {
+    pub fn get_rel_cur_pos(&self) -> u32 {
         self.cur_pos - self.chunk.start_pos
     }
 

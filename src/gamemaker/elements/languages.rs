@@ -27,8 +27,8 @@ impl GMChunkElement for GMLanguageInfo {
 impl GMElement for GMLanguageInfo {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let unknown1 = reader.read_u32()?;
-        let language_count = reader.read_usize()?;
-        let entry_count = reader.read_usize()?;
+        let language_count = reader.read_u32()?;
+        let entry_count = reader.read_u32()?;
 
         let mut entry_ids: Vec<GMRef<String>> = vec_with_capacity(entry_count)?;
         for _ in 0..entry_count {
@@ -39,7 +39,7 @@ impl GMElement for GMLanguageInfo {
         for _ in 0..language_count {
             let name: GMRef<String> = reader.read_gm_string()?;
             let region: GMRef<String> = reader.read_gm_string()?;
-            let mut entries: Vec<GMRef<String>> = Vec::with_capacity(entry_count);
+            let mut entries: Vec<GMRef<String>> = Vec::with_capacity(entry_count as usize);
             for _ in 0..entry_count {
                 entries.push(reader.read_gm_string()?);
             }

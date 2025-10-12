@@ -87,7 +87,7 @@ pub struct GMBackgroundGMS2Data {
     /// The amount of columns this tileset has.
     pub tile_columns: u32,
     /// The number of frames of the tileset animation.
-    pub items_per_tile_count: usize,
+    pub items_per_tile_count: u32,
     /// The time for each frame in microseconds.
     pub frame_length: i64,
     /// All tile ids of this tileset.
@@ -104,18 +104,18 @@ impl GMElement for GMBackgroundGMS2Data {
         let output_border_x = reader.read_u32()?;
         let output_border_y = reader.read_u32()?;
         let tile_columns = reader.read_u32()?;
-        let items_per_tile_count = reader.read_usize()?;
+        let items_per_tile_count = reader.read_u32()?;
         if items_per_tile_count == 0 {
             bail!("Items per tile count cannot be zero");
         }
-        let tile_count = reader.read_usize()?;
+        let tile_count = reader.read_u32()?;
         let unknown_always_zero = reader.read_u32()?;
         if unknown_always_zero != 0 {
             bail!("Expected UnknownAlwaysZero but got {unknown_always_zero} in Background GMS2 data");
         }
         let frame_length = reader.read_i64()?;
 
-        let total_tile_count: usize = tile_count * items_per_tile_count;
+        let total_tile_count = tile_count * items_per_tile_count;
         let mut tile_ids: Vec<u32> = vec_with_capacity(total_tile_count)?;
         for _ in 0..total_tile_count {
             tile_ids.push(reader.read_u32()?);
@@ -142,7 +142,7 @@ impl GMElement for GMBackgroundGMS2Data {
         builder.write_u32(self.tile_columns);
 
         let total_tile_count: usize = self.tile_ids.len();
-        let items_per_tile: usize = self.items_per_tile_count;
+        let items_per_tile = self.items_per_tile_count as usize;
         if items_per_tile == 0 {
             bail!("Items per tile is zero");
         }

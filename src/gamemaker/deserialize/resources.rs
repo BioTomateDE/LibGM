@@ -155,7 +155,7 @@ fn resolve_occurrence<T>(
     occurrence_position: u32,
     occurrence_map: &HashMap<u32, GMRef<T>>,
     chunk_name: &str,
-    position: usize,
+    position: u32,
 ) -> Result<GMRef<T>> {
     match occurrence_map.get(&occurrence_position) {
         Some(gm_ref) => Ok(gm_ref.clone()),

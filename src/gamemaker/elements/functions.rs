@@ -34,17 +34,17 @@ impl GMElement for GMFunctions {
             });
         }
 
-        let functions_count: usize = if reader.general_info.bytecode_version <= 14 {
+        let functions_count = if reader.general_info.bytecode_version <= 14 {
             reader.get_chunk_length() / 12
         } else {
-            reader.read_usize()?
+            reader.read_u32()?
         };
 
         let mut functions: Vec<GMFunction> = vec_with_capacity(functions_count)?;
 
         for i in 0..functions_count {
             let name: GMRef<String> = reader.read_gm_string()?;
-            let occurrence_count = reader.read_usize()?;
+            let occurrence_count = reader.read_u32()?;
             let first_occurrence_pos = reader.read_u32()?;
             let (occurrences, name_string_id): (Vec<u32>, u32) =
                 parse_occurrence_chain(reader, first_occurrence_pos, occurrence_count)?;
@@ -163,7 +163,7 @@ pub struct GMCodeLocal {
 }
 impl GMElement for GMCodeLocal {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let local_variables_count = reader.read_usize()?;
+        let local_variables_count = reader.read_u32()?;
         let name: GMRef<String> = reader.read_gm_string()?;
         let mut variables: Vec<GMCodeLocalVariable> = vec_with_capacity(local_variables_count)?;
         for _ in 0..local_variables_count {
@@ -205,14 +205,14 @@ impl GMElement for GMCodeLocalVariable {
 pub fn parse_occurrence_chain(
     reader: &mut DataReader,
     first_occurrence_pos: u32,
-    occurrence_count: usize,
+    occurrence_count: u32,
 ) -> Result<(Vec<u32>, u32)> {
     if occurrence_count < 1 {
         return Ok((vec![], first_occurrence_pos));
     }
 
     let saved_chunk: GMChunk = reader.chunk.clone();
-    let saved_position: usize = reader.cur_pos;
+    let saved_position = reader.cur_pos;
     reader.chunk = reader
         .chunks
         .get("CODE")
@@ -231,7 +231,7 @@ pub fn parse_occurrence_chain(
 
     for _ in 0..occurrence_count {
         occurrences.push(occurrence_pos);
-        reader.cur_pos = occurrence_pos as usize;
+        reader.cur_pos = occurrence_pos;
         let raw_value = reader.read_i32()?;
         offset = raw_value & 0x07FFFFFF;
         if offset < 1 {

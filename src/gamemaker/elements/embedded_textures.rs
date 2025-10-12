@@ -42,10 +42,10 @@ impl GMElement for GMEmbeddedTextures {
                 let Some(ref img) = texture_page.image else {
                     continue;
                 };
-                let GMImage::NotYetDeserialized(blob_pos) = img else {
+                let &GMImage::NotYetDeserialized(blob_pos) = img else {
                     bail!("GMImage enum variant is somehow not `NotYetDeserialized`");
                 };
-                max_end_of_stream_pos = *blob_pos as usize;
+                max_end_of_stream_pos = blob_pos;
                 break;
             }
 
@@ -56,7 +56,7 @@ impl GMElement for GMEmbeddedTextures {
             let GMImage::NotYetDeserialized(blob_position) = gm_image else {
                 bail!("GMImage enum variant is somehow not `NotYetDeserialized`");
             };
-            reader.cur_pos = *blob_position as usize;
+            reader.cur_pos = *blob_position;
             *gm_image = read_raw_texture(reader, max_end_of_stream_pos, texture_page.texture_block_size)?;
         }
 
@@ -186,11 +186,11 @@ impl GMElement for GMEmbeddedTexture2022_9 {
 
 fn read_raw_texture(
     reader: &mut DataReader,
-    max_end_of_stream_pos: usize,
+    max_end_of_stream_pos: u32,
     texture_block_size: Option<u32>,
 ) -> Result<GMImage> {
     reader.align(0x80)?;
-    let start_position: usize = reader.cur_pos;
+    let start_position = reader.cur_pos;
     let header: [u8; 8] = reader.read_bytes_const().cloned().map_err(|e| {
         format!("Trying to read headers {e} at position {start_position} while parsing images of texture pages")
     })?;
@@ -200,16 +200,16 @@ fn read_raw_texture(
         loop {
             let len: u32 = read_u32_be(reader, "Trying to read PNG chunk length")?;
             let r#type: u32 = read_u32_be(reader, "Trying to read PNG chunk type")?;
-            reader.cur_pos += len as usize + 4;
+            reader.cur_pos += len + 4;
             if r#type == 0x49454E44 {
                 // "IEND"
                 break;
             }
         }
 
-        let data_length: usize = reader.cur_pos - start_position;
+        let data_length = reader.cur_pos - start_position;
         if let Some(expected_size) = texture_block_size {
-            if expected_size as usize != data_length {
+            if expected_size != data_length {
                 bail!(
                     "Texture Page Entry specified texture block size {}; actually detected length {} for PNG Image data",
                     expected_size,
@@ -227,17 +227,17 @@ fn read_raw_texture(
         Ok(image)
     } else if header.starts_with(MAGIC_BZ2_QOI_HEADER) {
         // Parse QOI + BZip2
-        let mut header_size: usize = 8;
+        let mut header_size = 8;
         let mut uncompressed_size = None;
         if reader.general_info.is_version_at_least((2022, 5)) {
             uncompressed_size = Some(reader.read_u32()?);
             header_size = 12;
         }
 
-        let bz2_stream_end: usize = find_end_of_bz2_stream(reader, max_end_of_stream_pos)?;
-        let bz2_stream_length: usize = bz2_stream_end - start_position - header_size;
+        let bz2_stream_end = find_end_of_bz2_stream(reader, max_end_of_stream_pos)?;
+        let bz2_stream_length = bz2_stream_end - start_position - header_size;
         if let Some(expected_size) = texture_block_size {
-            if expected_size as usize != bz2_stream_length + header_size {
+            if expected_size != bz2_stream_length + header_size {
                 bail!(
                     "Texture Page Entry specified texture block size {}; actually detected length {} for Bzip2 QOI Image data",
                     expected_size,
@@ -263,7 +263,7 @@ fn read_raw_texture(
         Ok(image)
     } else if header.starts_with(MAGIC_QOI_HEADER) {
         // Parse QOI (untested)
-        let data_size = reader.read_usize()?;
+        let data_size = reader.read_u32()?;
         reader.cur_pos = start_position;
         let raw_image_data: Vec<u8> = reader
             .read_bytes_dyn(data_size + 12)
@@ -390,14 +390,14 @@ impl PartialEq for GMImage {
     }
 }
 
-fn find_end_of_bz2_stream(reader: &mut DataReader, max_end_of_stream_pos: usize) -> Result<usize> {
-    const MAX_CHUNK_SIZE: usize = 256;
+fn find_end_of_bz2_stream(reader: &mut DataReader, max_end_of_stream_pos: u32) -> Result<u32> {
+    const MAX_CHUNK_SIZE: u32 = 256;
     // Read backwards from the max end of stream position, in up to 256-byte chunks.
     // We want to find the end of nonzero data.
 
-    let stream_start_position: usize = reader.cur_pos;
-    let mut chunk_start_position: usize = max(stream_start_position, max_end_of_stream_pos - MAX_CHUNK_SIZE);
-    let chunk_size: usize = max_end_of_stream_pos - chunk_start_position;
+    let stream_start_position = reader.cur_pos;
+    let mut chunk_start_position = max(stream_start_position, max_end_of_stream_pos - MAX_CHUNK_SIZE);
+    let chunk_size = max_end_of_stream_pos - chunk_start_position;
     loop {
         reader.cur_pos = chunk_start_position;
         let chunk_data: &[u8] = reader
@@ -406,15 +406,15 @@ fn find_end_of_bz2_stream(reader: &mut DataReader, max_end_of_stream_pos: usize)
         reader.cur_pos += chunk_size;
 
         // Find first nonzero byte at end of stream
-        let mut position: isize = chunk_size as isize - 1;
+        let mut position = chunk_size as i32 - 1;
         while position >= 0 && chunk_data[position as usize] == 0 {
             position -= 1;
         }
 
         // If we're at nonzero data, then invoke search for footer magic
         if position >= 0 && chunk_data[position as usize] != 0 {
-            let end_data_position: isize = chunk_start_position as isize + position + 1;
-            return Ok(find_end_of_bz2_search(reader, end_data_position as usize)?);
+            let end_data_position = chunk_start_position + position as u32 + 1;
+            return Ok(find_end_of_bz2_search(reader, end_data_position)?);
         }
 
         // Move backwards to next chunk
@@ -425,32 +425,32 @@ fn find_end_of_bz2_stream(reader: &mut DataReader, max_end_of_stream_pos: usize)
     }
 }
 
-fn find_end_of_bz2_search(reader: &mut DataReader, end_data_position: usize) -> Result<usize> {
+fn find_end_of_bz2_search(reader: &mut DataReader, end_data_position: u32) -> Result<u32> {
     const MAGIC_BZ2_FOOTER: [u8; 6] = [0x17, 0x72, 0x45, 0x38, 0x50, 0x90];
-    const BUFFER_LENGTH: usize = 16;
+    const BUFFER_LENGTH: u32 = 16;
 
-    let start_position: usize = end_data_position - BUFFER_LENGTH;
+    let start_position = end_data_position - BUFFER_LENGTH;
     if start_position >= reader.chunk.end_pos {
         bail!("Start position out of bounds while searching for end of BZip2 stream");
     }
 
     // Read 16 bytes from the end of the BZ2 stream
     reader.cur_pos = start_position;
-    let data: [u8; BUFFER_LENGTH] = reader
+    let data: [u8; BUFFER_LENGTH as usize] = reader
         .read_bytes_const()
         .cloned()
         .map_err(|e| format!("Trying to read Bzip2 stream data {e}"))?;
     // FIXME: if this read fails due to overflow; implement saturating logic like in utmt
 
     // Start searching for magic, bit by bit (it is not always byte-aligned)
-    let mut search_start_position: isize = BUFFER_LENGTH as isize - 1;
+    let mut search_start_position = BUFFER_LENGTH as i32 - 1;
     let mut search_start_bit_position: u8 = 0;
 
     while search_start_position >= 0 {
         // Perform search starting from the current search start position
         let mut found_match: bool = false;
         let mut bit_position: u8 = search_start_bit_position;
-        let mut search_position: isize = search_start_position;
+        let mut search_position: i32 = search_start_position;
         let mut magic_bit_position: i32 = 0;
         let mut magic_position: isize = MAGIC_BZ2_FOOTER.len() as isize - 1;
 
@@ -489,8 +489,8 @@ fn find_end_of_bz2_search(reader: &mut DataReader, end_data_position: usize) -> 
         }
 
         if found_match {
-            const FOOTER_BYTE_LENGTH: usize = 10;
-            let mut end_of_bz2_stream_position = (search_position + FOOTER_BYTE_LENGTH as isize) as usize;
+            const FOOTER_BYTE_LENGTH: u32 = 10;
+            let mut end_of_bz2_stream_position = (search_position + FOOTER_BYTE_LENGTH as i32) as u32;
 
             if bit_position != 7 {
                 // BZip2 footer started partway through a byte, and so it will end partway through the last byte.

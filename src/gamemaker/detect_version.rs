@@ -64,7 +64,7 @@ impl VersionCheck {
 }
 
 pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
-    let saved_pos: usize = reader.cur_pos;
+    let saved_pos = reader.cur_pos;
     let saved_chunk: GMChunk = reader.chunk.clone();
 
     if reader.chunks.contains_key("TGIN") {
@@ -188,15 +188,15 @@ fn cv_extn_2022_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     if ext_count < 1 {
         return Ok(None);
     }
-    let first_ext_ptr = reader.read_usize()?;
-    let first_ext_end_ptr: usize = if ext_count >= 2 {
-        reader.read_usize()?
+    let first_ext_ptr = reader.read_u32()?;
+    let first_ext_end_ptr = if ext_count >= 2 {
+        reader.read_u32()?
     } else {
         reader.chunk.end_pos
     };
     reader.cur_pos = first_ext_ptr + 12;
-    let new_pointer1 = reader.read_usize()?;
-    let new_pointer2 = reader.read_usize()?;
+    let new_pointer1 = reader.read_u32()?;
+    let new_pointer2 = reader.read_u32()?;
     if new_pointer1 != reader.cur_pos {
         return Ok(None); // First pointer mismatch
     }
@@ -205,14 +205,14 @@ fn cv_extn_2022_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     }
     // Check ending position
     reader.cur_pos = new_pointer2;
-    let option_count = reader.read_usize()?;
+    let option_count = reader.read_u32()?;
     if option_count > 0 {
-        let new_offset_check: usize = reader.cur_pos + 4 * (option_count - 1); // MAYBE overflow issues on 32bit arch????
+        let new_offset_check = reader.cur_pos + 4 * (option_count - 1); // MAYBE overflow issues on 32bit arch????
         if new_offset_check >= reader.chunk.end_pos {
             return Ok(None); // Option count would place us out of bounds
         }
         reader.cur_pos += 4 * (option_count - 1);
-        let new_offset_check: usize = reader.read_usize()? + 12; // Jump past last option
+        let new_offset_check = reader.read_u32()? + 12; // Jump past last option
         if new_offset_check >= reader.chunk.end_pos {
             return Ok(None); // Pointer list element would place us out of bounds
         }
@@ -238,7 +238,7 @@ fn cv_extn_2023_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         return Ok(None);
     }
     // Go to first extension and skip the minimal amount of strings
-    reader.cur_pos = reader.read_usize()? + 4 * 3;
+    reader.cur_pos = reader.read_u32()? + 4 * 3;
     let files_pointer = reader.read_u32()?;
     let options_pointer = reader.read_u32()?;
     // The file list pointer should be less than the option list pointer.
@@ -252,7 +252,7 @@ fn cv_extn_2023_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
 /// assert version >= 2023.2 NON_LTS
 fn cv_sond_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2024, 6).into()));
-    let possible_sound_count = reader.read_usize()?;
+    let possible_sound_count = reader.read_u32()?;
     let mut sound_pointers: Vec<u32> = Vec::with_capacity(2);
 
     for _ in 0..possible_sound_count {
@@ -278,7 +278,7 @@ fn cv_sond_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
             if abs_pos % 16 != 4 {
                 bail!("Expected to be on specific alignment at this point");
             }
-            reader.cur_pos = abs_pos as usize;
+            reader.cur_pos = abs_pos;
             if reader.read_u32()? != 0 {
                 return target_ver;
             }
@@ -319,7 +319,7 @@ fn cv_agrp_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     if position2 == 0 {
         // Only one group
         // Look for non-null bytes in the 4 bytes after the audio group name (and within bounds of the chunk)
-        reader.cur_pos = position1 as usize + 4;
+        reader.cur_pos = position1 + 4;
         if reader.cur_pos + 4 > reader.chunk.end_pos {
             return Ok(None); // New field can't fit in remaining space
         }
@@ -340,17 +340,17 @@ fn cv_agrp_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
 /// assert version >= 2023.2 NON_LTS
 fn cv_sprt_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2024, 6).into()));
-    let sprite_count = reader.read_usize()?;
+    let sprite_count = reader.read_u32()?;
     for i in 0..sprite_count {
         reader.cur_pos = reader.chunk.start_pos + i * 4 + 4;
-        let sprite_pointer = reader.read_usize()?;
+        let sprite_pointer = reader.read_u32()?;
         if sprite_pointer == 0 {
             continue;
         }
 
-        let mut next_sprite_pointer: usize = 0;
+        let mut next_sprite_pointer = 0;
         for _ in i + 1..sprite_count {
-            let pointer = reader.read_usize()?;
+            let pointer = reader.read_u32()?;
             if pointer != 0 {
                 next_sprite_pointer = pointer;
                 break;
@@ -384,26 +384,26 @@ fn cv_sprt_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
             // 0 <=> GMSpriteType::Normal
             continue; // We can't determine anything from this sprite
         }
-        let sequence_offset = reader.read_usize()?;
-        let nine_slice_offset = reader.read_usize()?;
-        let texture_count = reader.read_usize()?;
+        let sequence_offset = reader.read_u32()?;
+        let nine_slice_offset = reader.read_u32()?;
+        let texture_count = reader.read_u32()?;
         reader.cur_pos += texture_count * 4; // Skip past texture pointers
-        let mask_count = reader.read_usize()?;
+        let mask_count = reader.read_u32()?;
         if mask_count == 0 {
             continue; // We can't determine anything from this sprite
         }
-        let mut full_length: usize = ((width + 7) / 8 * height * mask_count as u32) as usize;
+        let mut full_length = (width + 7) / 8 * height * mask_count;
         if full_length % 4 != 0 {
             full_length += 4 - full_length % 4; // Idk
         }
-        let mut bbox_length: usize = ((bbox_width + 7) / 8 * bbox_height * mask_count as u32) as usize;
+        let mut bbox_length = (bbox_width + 7) / 8 * bbox_height * mask_count;
         if bbox_length % 4 != 0 {
             bbox_length += 4 - bbox_length % 4; // Idk
         }
 
         let full_end_pos = reader.cur_pos + full_length;
         let bbox_end_pos = reader.cur_pos + bbox_length;
-        let expected_end_offset: usize;
+        let expected_end_offset;
         if sequence_offset != 0 {
             expected_end_offset = sequence_offset;
         } else if nine_slice_offset != 0 {
@@ -440,9 +440,9 @@ fn cv_font_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         return Ok(None);
     }
 
-    let mut first_font_pointer: usize = 0;
+    let mut first_font_pointer = 0;
     for _ in 0..possible_font_count {
-        let pointer = reader.read_usize()?;
+        let pointer = reader.read_u32()?;
         if pointer != 0 {
             first_font_pointer = pointer;
             break;
@@ -453,7 +453,7 @@ fn cv_font_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     }
 
     reader.cur_pos = first_font_pointer + 48;
-    let glyph_count = reader.read_usize()?;
+    let glyph_count = reader.read_u32()?;
     if glyph_count * 4 > reader.get_chunk_length() {
         return Ok(None);
     }
@@ -462,9 +462,9 @@ fn cv_font_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         return target_ver; // UTMT also assumes that it is 2022.2; even if there are no glyphs
     }
 
-    let mut glyph_pointers: Vec<usize> = vec_with_capacity(glyph_count)?;
+    let mut glyph_pointers: Vec<u32> = vec_with_capacity(glyph_count)?;
     for _ in 0..glyph_count {
-        let pointer = reader.read_usize()?;
+        let pointer = reader.read_u32()?;
         if pointer == 0 {
             bail!("One of the glyph pointers is null?");
         }
@@ -476,7 +476,7 @@ fn cv_font_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         }
         reader.cur_pos += 14;
         let kerning_length = reader.read_u16()?;
-        reader.cur_pos += kerning_length as usize * 4;
+        reader.cur_pos += kerning_length as u32 * 4;
         // From utmt: "combining read/write would apparently break" ???
     }
 
@@ -506,9 +506,9 @@ fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersio
     }
 
     let possible_font_count = reader.read_i32()?;
-    let mut first_two_pointers: Vec<usize> = Vec::with_capacity(2);
+    let mut first_two_pointers: Vec<u32> = Vec::with_capacity(2);
     for _ in 0..possible_font_count {
-        let ptr = reader.read_usize()?;
+        let ptr = reader.read_u32()?;
         if ptr == 0 {
             continue;
         }
@@ -531,14 +531,14 @@ fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersio
         reader.cur_pos += 4; // (detected by PSEM/PSYS chunk existence)
     }
 
-    let glyph_count = reader.read_usize()?;
+    let glyph_count = reader.read_u32()?;
     if glyph_count * 4 > first_two_pointers[1] - reader.cur_pos || glyph_count < 1 {
         return Ok(None);
     }
 
-    let mut glyph_pointers: Vec<usize> = vec_with_capacity(glyph_count)?;
+    let mut glyph_pointers: Vec<u32> = vec_with_capacity(glyph_count)?;
     for _ in 0..glyph_count {
-        let ptr = reader.read_usize()?;
+        let ptr = reader.read_u32()?;
         if ptr == 0 {
             bail!("One of the glyph pointers is zero");
         }
@@ -562,7 +562,7 @@ fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersio
         // And hopefully the last thing in a glyph is the kerning list
         // Note that we're actually skipping all items of the Glyph.Kerning SimpleList here;
         // 4 is supposed to be the size of a GlyphKerning object
-        let pointer_after_kerning_list = reader.cur_pos + 4 * kerning_count as usize;
+        let pointer_after_kerning_list = reader.cur_pos + 4 * kerning_count as u32;
         // If we don't land on the next glyph/font after skipping the Kerning list,
         // KerningLength is probably bogus and UnknownAlwaysZero may be present
         if next_glyph_pointer == pointer_after_kerning_list {
@@ -570,7 +570,7 @@ fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersio
         }
         // Discard last read, which would be of UnknownAlwaysZero
         let kerning_count = reader.read_u16()?;
-        let pointer_after_kerning_list = reader.cur_pos + 4 * kerning_count as usize;
+        let pointer_after_kerning_list = reader.cur_pos + 4 * kerning_count as u32;
         if next_glyph_pointer != pointer_after_kerning_list {
             bail!(
                 "There appears to be more/fewer values than UnknownAlwaysZero before \
@@ -586,9 +586,9 @@ fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersio
 fn cv_font_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     // Check for new padding added (and final chunk "padding" removed) in 2024.14
     let font_count = reader.read_u32()?;
-    let mut last_font_position: usize = 0;
+    let mut last_font_position = 0;
     for _ in 0..font_count {
-        let ptr = reader.read_usize()?;
+        let ptr = reader.read_u32()?;
         if ptr != 0 {
             last_font_position = ptr;
         }
@@ -599,13 +599,13 @@ fn cv_font_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         reader.cur_pos = last_font_position + 56;
 
         // Advance to last glyph in pointer list
-        let glyph_count = reader.read_usize()?;
+        let glyph_count = reader.read_u32()?;
         reader.cur_pos += (glyph_count - 1) * 4;
-        reader.cur_pos = reader.read_usize()? + 16;
+        reader.cur_pos = reader.read_u32()? + 16;
 
         // Advance past kerning
         let kerning_count = reader.read_u16()?;
-        reader.cur_pos += kerning_count as usize * 4;
+        reader.cur_pos += kerning_count as u32 * 4;
     }
 
     // Check for the final chunk padding being missing
@@ -623,9 +623,9 @@ fn cv_objt_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     if object_count < 1 {
         return Ok(None); // No objects; nothing to detect
     }
-    let first_object_pointer = reader.read_usize()?;
+    let first_object_pointer = reader.read_u32()?;
     reader.cur_pos = first_object_pointer + 64;
-    let vertex_count = reader.read_usize()?;
+    let vertex_count = reader.read_u32()?;
 
     if reader.cur_pos + 12 + 8 * vertex_count >= reader.chunk.end_pos {
         return target_ver; // Bounds check on vertex data "failed" => 2022.5
@@ -634,7 +634,7 @@ fn cv_objt_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     reader.cur_pos += 12 + 8 * vertex_count;
     if reader.read_u32()? == 15 {
         // !! 15 has to equal variant count of GMGameObjectEventType enum !!
-        let sub_event_pointer = reader.read_usize()?;
+        let sub_event_pointer = reader.read_u32()?;
         if reader.cur_pos + 56 == sub_event_pointer {
             return Ok(None); // Subevent pointer check "succeeded" (Should start right after the list) => not 2022.5
         }
@@ -647,16 +647,16 @@ fn cv_room_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2022, 1).into()));
     // Iterate over all rooms until a length check is performed
 
-    let room_count = reader.read_usize()?;
+    let room_count = reader.read_u32()?;
     for room_index in 0..room_count {
         // Advance to room data we're interested in (and grab pointer for next room)
         reader.set_rel_cur_pos(4 * room_index + 4)?;
-        let room_pointer = reader.read_usize()?;
+        let room_pointer = reader.read_u32()?;
         reader.cur_pos = room_pointer + 22 * 4;
 
         // Get the pointer for this room's layer list, as well as pointer to sequence list
-        let layer_list_pointer = reader.read_usize()?;
-        let sequence_pointer = reader.read_usize()?;
+        let layer_list_pointer = reader.read_u32()?;
+        let sequence_pointer = reader.read_u32()?;
         reader.cur_pos = layer_list_pointer;
         let layer_count = reader.read_i32()?;
         if layer_count < 1 {
@@ -664,13 +664,13 @@ fn cv_room_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         }
 
         // Get pointer into the individual layer data (plus 8 bytes) for the first layer in the room
-        let jump_pointer = reader.read_usize()? + 8;
+        let jump_pointer = reader.read_u32()? + 8;
 
         // Find the offset for the end of this layer
         let next_pointer = if layer_count == 1 {
             sequence_pointer
         } else {
-            reader.read_usize()? // Pointer to next element in the layer list
+            reader.read_u32()? // Pointer to next element in the layer list
         };
 
         // Actually perform the length checks, depending on layer data
@@ -689,29 +689,29 @@ fn cv_room_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
             }
             GMRoomLayerType::Instances => {
                 reader.cur_pos += 6 * 4;
-                let instance_count = reader.read_usize()?;
+                let instance_count = reader.read_u32()?;
                 if next_pointer - reader.cur_pos != instance_count * 4 {
                     return target_ver;
                 }
             }
             GMRoomLayerType::Assets => {
                 reader.cur_pos += 6 * 4;
-                let tile_pointer = reader.read_usize()?;
+                let tile_pointer = reader.read_u32()?;
                 if tile_pointer != reader.cur_pos + 8 && tile_pointer != reader.cur_pos + 12 {
                     return target_ver;
                 }
             }
             GMRoomLayerType::Tiles => {
                 reader.cur_pos += 6 * 4;
-                let tile_map_width = reader.read_usize()?;
-                let tile_map_height = reader.read_usize()?;
+                let tile_map_width = reader.read_u32()?;
+                let tile_map_height = reader.read_u32()?;
                 if next_pointer - reader.cur_pos != (tile_map_width * tile_map_height * 4) {
                     return target_ver;
                 }
             }
             GMRoomLayerType::Effect => {
                 reader.cur_pos += 7 * 4;
-                let property_count = reader.read_usize()?;
+                let property_count = reader.read_u32()?;
                 if next_pointer - reader.cur_pos != (property_count * 3 * 4) {
                     return target_ver;
                 }
@@ -725,28 +725,28 @@ fn cv_room_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
 
 fn cv_room_2_2_2_302(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     // Check the size of the first GameObject in a room
-    let room_count = reader.read_usize()?;
+    let room_count = reader.read_u32()?;
 
     for room_index in 0..room_count {
         // Advance to room data we're interested in (and grab pointer for next room)
         reader.set_rel_cur_pos(4 * room_index + 4)?;
-        let room_pointer = reader.read_usize()?;
+        let room_pointer = reader.read_u32()?;
         reader.cur_pos = room_pointer + 12 * 4;
 
         // Get the pointer for this room's object list, as well as pointer to tile list
-        let object_list_pointer = reader.read_usize()?;
-        let tile_list_pointer = reader.read_usize()?;
+        let object_list_pointer = reader.read_u32()?;
+        let tile_list_pointer = reader.read_u32()?;
         reader.cur_pos = object_list_pointer;
-        let object_count = reader.read_usize()?;
+        let object_count = reader.read_u32()?;
         if object_count < 1 {
             continue; // No objects => nothing to detect; go to next room
         }
 
-        let pointer1 = reader.read_usize()?;
+        let pointer1 = reader.read_u32()?;
         let pointer2 = if object_count == 1 {
             tile_list_pointer // Tile list starts right after, so it works as an alternate
         } else {
-            reader.read_usize()?
+            reader.read_u32()?
         };
         if pointer2 - pointer1 == 48 {
             return Ok(Some((2, 2, 2, 302).into()));
@@ -758,20 +758,20 @@ fn cv_room_2_2_2_302(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
 
 fn cv_room_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     // Check for tile compression
-    let room_count = reader.read_usize()?;
+    let room_count = reader.read_u32()?;
     let mut any_layers_misaligned: bool = false;
 
     for room_index in 0..room_count {
         // Advance to room data we're interested in (and grab pointer for next room)
         reader.set_rel_cur_pos(4 * room_index + 4)?;
-        let room_pointer = reader.read_usize()?;
+        let room_pointer = reader.read_u32()?;
         reader.cur_pos = room_pointer + 22 * 4;
 
         // Get the pointer for this room's layer list, as well as pointer to sequence list
-        let layer_list_ptr = reader.read_usize()?;
-        let sequence_ptr = reader.read_usize()?;
+        let layer_list_ptr = reader.read_u32()?;
+        let sequence_ptr = reader.read_u32()?;
         reader.cur_pos = layer_list_ptr;
-        let layer_count = reader.read_usize()?;
+        let layer_count = reader.read_u32()?;
         if layer_count < 1 {
             continue; // No layers to detect; go to next room
         }
@@ -785,13 +785,13 @@ fn cv_room_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
 
             reader.cur_pos = layer_ptr + 4;
             // Get pointer into the individual layer data
-            let layer_data_ptr = reader.read_usize()?;
+            let layer_data_ptr = reader.read_u32()?;
 
             // Find the offset for the end of this layer
-            let next_pointer: usize = if layer_index == layer_count - 1 {
+            let next_pointer = if layer_index == layer_count - 1 {
                 sequence_ptr
             } else {
-                reader.read_usize()? // Pointer to next element in the layer list
+                reader.read_u32()? // Pointer to next element in the layer list
             };
 
             // Actually perform the length checks
@@ -803,11 +803,11 @@ fn cv_room_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
             }
             check_next_layer_offset = true;
             reader.cur_pos += 32;
-            let effect_count = reader.read_usize()?;
+            let effect_count = reader.read_u32()?;
             reader.cur_pos += 12 * effect_count + 4;
 
-            let tile_map_width = reader.read_usize()?;
-            let tile_map_height = reader.read_usize()?;
+            let tile_map_width = reader.read_u32()?;
+            let tile_map_height = reader.read_u32()?;
             if next_pointer - reader.cur_pos != (tile_map_width * tile_map_height * 4) {
                 return if any_layers_misaligned {
                     Ok(Some((2024, 2).into()))
@@ -828,7 +828,7 @@ fn cv_func_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     }
 
     // The CodeLocals list was removed in 2024.8, so we check if Functions is the only thing in here.
-    let function_count = reader.read_usize()?;
+    let function_count = reader.read_u32()?;
     // Skip over the (Simple)List
     // (3*4 is the size of a GMFunction object)
     reader.cur_pos += function_count * 3 * 4;
@@ -861,7 +861,7 @@ fn cv_func_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     if let Some(chunk_code) = reader.chunks.get("CODE") {
         reader.chunk = chunk_code.clone();
         reader.cur_pos = chunk_code.start_pos;
-        let code_count = reader.read_usize()?;
+        let code_count = reader.read_u32()?;
         if code_count < 1 {
             return Ok(None);
         }
@@ -872,7 +872,7 @@ fn cv_func_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
 
 fn cv_txtr_2022_3(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2022, 3).into()));
-    let texture_count = reader.read_usize()?;
+    let texture_count = reader.read_u32()?;
     if texture_count < 1 {
         return Ok(None); // Can't detect if there are no texture pages
     }
@@ -883,8 +883,8 @@ fn cv_txtr_2022_3(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
             return target_ver;
         }
     } else {
-        let pointer1 = reader.read_usize()?;
-        let pointer2 = reader.read_usize()?;
+        let pointer1 = reader.read_u32()?;
+        let pointer2 = reader.read_u32()?;
         if pointer1 + 16 == pointer2 {
             return target_ver;
         }
@@ -895,12 +895,12 @@ fn cv_txtr_2022_3(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
 
 fn cv_txtr_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2022, 5).into()));
-    let texture_count = reader.read_usize()?;
+    let texture_count = reader.read_u32()?;
     for i in 0..texture_count {
         // Go to each texture, and then to each texture's data
         reader.cur_pos = 4 * i + 4;
-        reader.cur_pos = reader.read_usize()? + 12; // Go to texture; at an offset
-        reader.cur_pos = reader.read_usize()?; // Go to texture data
+        reader.cur_pos = reader.read_u32()? + 12; // Go to texture; at an offset
+        reader.cur_pos = reader.read_u32()?; // Go to texture data
         let header: &[u8; 4] = reader.read_bytes_const()?;
         if header != MAGIC_BZ2_QOI_HEADER {
             continue; // Nothing useful, check the next texture
@@ -922,13 +922,13 @@ fn cv_txtr_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
 }
 
 fn cv_txtr_2_0_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
-    let texture_count = reader.read_usize()?;
+    let texture_count = reader.read_u32()?;
     if texture_count < 1 {
         return Ok(None);
     }
     if texture_count == 1 {
         // Go to the first texture pointer (+ minimal texture entry size)
-        reader.cur_pos = reader.read_usize()? + 8;
+        reader.cur_pos = reader.read_u32()? + 8;
         if reader.read_u32()? == 0 {
             return Ok(None); // If there is a zero instead of texture data pointer; it's not 2.0.6
         }
@@ -955,13 +955,13 @@ fn cv_tgin_2022_9(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         bail!("Expected TGIN version 1; got {tgin_version}");
     }
 
-    let tgin_count = reader.read_usize()?;
+    let tgin_count = reader.read_u32()?;
     if tgin_count < 1 {
         return Ok(None);
     }
-    let pointer1 = reader.read_usize()?;
+    let pointer1 = reader.read_u32()?;
     let pointer2 = if tgin_count >= 2 {
-        reader.read_usize()?
+        reader.read_u32()?
     } else {
         reader.chunk.end_pos
     };
@@ -969,7 +969,7 @@ fn cv_tgin_2022_9(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
 
     // Check to see if the pointer located at this address points within this object
     // If not, then we know we're using a new format!
-    let ptr = reader.read_usize()?;
+    let ptr = reader.read_u32()?;
     if ptr < pointer1 || ptr >= pointer2 {
         return Ok(Some((2022, 9).into()));
     }
@@ -987,21 +987,21 @@ fn cv_tgin_2023_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         bail!("Expected TGIN version 1; got {tgin_version}");
     }
 
-    let tgin_count = reader.read_usize()?;
+    let tgin_count = reader.read_u32()?;
     if tgin_count < 1 {
         return Ok(None);
     }
-    let pointer1 = reader.read_usize()?;
+    let pointer1 = reader.read_u32()?;
 
     // Go to the 4th list pointer of the first TGIN entry.
     // (either to "Fonts" or "SpineTextures" depending on the version)
     reader.cur_pos = pointer1 + 16 + 4 * 3;
-    let pointer4 = reader.read_usize()?;
+    let pointer4 = reader.read_u32()?;
 
     // If there's a "TexturePages" count instead of the 5th list pointer.
     // The count can't be greater than the pointer.
     // (the list could be either "Tilesets" or "Fonts").
-    if reader.read_usize()? <= pointer4 {
+    if reader.read_u32()? <= pointer4 {
         return Ok(Some((2023, 1, PostLTS).into()));
     }
 
@@ -1015,7 +1015,7 @@ fn cv_acrv_2_3_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     }
 
     // Go to the first "point"
-    reader.cur_pos = reader.read_usize()? + 8;
+    reader.cur_pos = reader.read_u32()? + 8;
     for _ in 0..2 {
         if reader.read_u32()? != 0 {
             // In 2.3 an int with the value of 0 would be set here, it cannot be version 2.3 if this value isn't 0
@@ -1032,7 +1032,7 @@ fn cv_sprt_2_3_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         if pointer == 0 {
             continue;
         }
-        reader.cur_pos = (pointer + 14 * 4) as usize;
+        reader.cur_pos = pointer + 14 * 4;
         if reader.read_i32()? != -1 {
             continue; // Sprite is not special type
         }
@@ -1141,10 +1141,10 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
         })
     };
 
-    let code_count = reader.read_usize()?;
+    let code_count = reader.read_u32()?;
     let mut code_pointers = vec_with_capacity(code_count)?;
     for _ in 0..code_count {
-        let ptr = reader.read_usize()?;
+        let ptr = reader.read_u32()?;
         if ptr != 0 {
             code_pointers.push(ptr);
         }
@@ -1154,7 +1154,7 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
     if reader.general_info.bytecode_version <= 14 {
         for code_ptr in code_pointers {
             reader.cur_pos = code_ptr + 4;
-            let length = reader.read_usize()?;
+            let length = reader.read_u32()?;
             let end = reader.cur_pos + length;
             while reader.cur_pos < end {
                 let first_word = reader.read_u32()?;
@@ -1185,11 +1185,11 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
         // Bytecode >= 15
         for code_ptr in code_pointers {
             reader.cur_pos = code_ptr + 4; // Skip name
-            let instructions_length = reader.read_usize()?;
+            let instructions_length = reader.read_u32()?;
             reader.cur_pos += 4; // Skip locals and arguments count
             let instructions_start_relative = reader.read_i32()?;
-            let instructions_start: usize = (reader.cur_pos as i32 - 4 + instructions_start_relative) as usize;
-            let instructions_end: usize = instructions_start + instructions_length;
+            let instructions_start = (reader.cur_pos as i32 - 4 + instructions_start_relative) as u32;
+            let instructions_end = instructions_start + instructions_length;
             reader.cur_pos = instructions_start;
 
             while reader.cur_pos < instructions_end {

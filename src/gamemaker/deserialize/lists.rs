@@ -11,12 +11,12 @@ impl DataReader<'_> {
     /// Includes a failsafe check to prevent excessive memory allocation from malformed data.
     fn read_simple_list_internal<T>(
         &mut self,
-        count: usize,
+        count: u32,
         deserializer_fn: impl Fn(&mut Self) -> Result<T>,
     ) -> Result<Vec<T>> {
         integrity_check! {
             const FAILSAFE_SIZE: usize = 1_000_000;   // 1 Megabyte
-            let implied_data_size: usize = count * size_of::<T>();
+            let implied_data_size: usize = count as usize * size_of::<T>();
             if implied_data_size > FAILSAFE_SIZE {
                 bail!(
                     "{} count {} implies data size {} which exceeeds failsafe size {}",
@@ -25,7 +25,7 @@ impl DataReader<'_> {
             }
         }
 
-        let mut elements: Vec<T> = Vec::with_capacity(count);
+        let mut elements: Vec<T> = Vec::with_capacity(count as usize);
         for _ in 0..count {
             let element: T = deserializer_fn(self).with_context(|| {
                 format!(
@@ -44,7 +44,7 @@ impl DataReader<'_> {
     ///
     /// The list format is: `[count: u32][element_0][element_1]...[element_n]`
     pub fn read_simple_list<T: GMElement>(&mut self) -> Result<Vec<T>> {
-        let count = self.read_usize()?;
+        let count = self.read_u32()?;
         self.read_simple_list_internal(count, T::deserialize)
     }
 
@@ -54,20 +54,20 @@ impl DataReader<'_> {
     /// Uses a smaller failsafe limit appropriate for short lists.
     pub fn read_simple_list_short<T: GMElement>(&mut self) -> Result<Vec<T>> {
         let count = self.read_u16()?;
-        self.read_simple_list_internal(count as usize, T::deserialize)
+        self.read_simple_list_internal(count as u32, T::deserialize)
     }
 
     /// Reads a simple list of resource IDs and wraps them in [`GMRef`].
     ///
     /// Each element is a 32-bit resource ID that gets resolved to a reference.
     pub fn read_simple_list_of_resource_ids<T /*: GMElement*/>(&mut self) -> Result<Vec<GMRef<T>>> {
-        let count = self.read_usize()?;
+        let count = self.read_u32()?;
         self.read_simple_list_internal(count, |reader| reader.read_resource_by_id())
     }
 
     /// Reads a simple list of GameMaker string references.
     pub fn read_simple_list_of_strings(&mut self) -> Result<Vec<GMRef<String>>> {
-        let count = self.read_usize()?;
+        let count = self.read_u32()?;
         self.read_simple_list_internal(count, |reader| reader.read_gm_string())
     }
 

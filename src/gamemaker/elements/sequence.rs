@@ -90,7 +90,7 @@ impl GMElement for GMSequence {
         let broadcast_messages: Vec<GMKeyframeData<GMBroadcastMessage>> = reader.read_simple_list()?;
         let tracks: Vec<GMTrack> = reader.read_simple_list()?;
 
-        let function_id_count = reader.read_usize()?;
+        let function_id_count = reader.read_u32()?;
         let mut function_ids: HashMap<i32, GMRef<String>> = hashmap_with_capacity(function_id_count)?;
         for _ in 0..function_id_count {
             let key = reader.read_i32()?;
@@ -215,7 +215,7 @@ impl<T: GMElement> GMElement for GMKeyframeData<T> {
         let length = reader.read_f32()?;
         let stretch = reader.read_bool32()?;
         let disabled = reader.read_bool32()?;
-        let count = reader.read_usize()?; // I32 in UTMT
+        let count = reader.read_u32()?; // I32 in UTMT
         let mut channels: HashMap<i32, T> = hashmap_with_capacity(count)?;
         for _ in 0..count {
             let channel = reader.read_i32()?;
@@ -428,7 +428,7 @@ pub struct GMBroadcastMessage {
 }
 impl GMElement for GMBroadcastMessage {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let count = reader.read_usize()?;
+        let count = reader.read_u32()?;
         let mut messages: Vec<GMRef<String>> = vec_with_capacity(count)?;
         for _ in 0..count {
             messages.push(reader.read_gm_string()?);
@@ -492,37 +492,9 @@ impl GMElement for GMTrack {
         let traits: GMTrackTraits = num_enum_from(reader.read_i32()?)?;
         let is_creation_track = reader.read_bool32()?;
 
-        let mut tag_count: i32 = reader.read_i32()?;
-        if tag_count == -1 {
-            tag_count = 0;
-        }
-        if tag_count < 0 {
-            bail!("Negative Track Tag count {tag_count}");
-        }
-        let tag_count: usize = tag_count as usize;
-
-        let mut owned_resources_count: i32 = reader.read_i32()?;
-        if owned_resources_count == -1 {
-            owned_resources_count = 0;
-        }
-        if owned_resources_count < 0 {
-            bail!("Negative Track Owned Resources count {owned_resources_count}");
-        }
-        let owned_resources_count: usize = owned_resources_count as usize;
-
-        let mut track_count: i32 = reader.read_i32()?;
-        if track_count == -1 {
-            track_count = 0;
-        }
-        if track_count < 0 {
-            bail!(
-                "Invalid Track Track count {} while parsing Track at position {} in chunk '{}'",
-                track_count,
-                reader.cur_pos,
-                reader.chunk.name,
-            );
-        }
-        let track_count: usize = track_count as usize;
+        let tag_count = reader.read_count("Track Tag")?;
+        let owned_resources_count = reader.read_count("Track Owned Resource")?;
+        let track_count = reader.read_count("Track")?;
 
         let mut tags: Vec<i32> = vec_with_capacity(tag_count)?;
         for _ in 0..tag_count {
@@ -530,27 +502,25 @@ impl GMElement for GMTrack {
         }
 
         let mut anim_curve_string: Option<GMRef<String>> = None;
-
         let mut owned_resources: Vec<GMAnimationCurve> = vec_with_capacity(owned_resources_count)?;
+
         for _ in 0..owned_resources_count {
-            let gm_anim_curve_str_ref: GMRef<String> = reader.read_gm_string()?;
-            let gm_anim_curve_string: &String = reader.resolve_gm_str(gm_anim_curve_str_ref)?;
-            if gm_anim_curve_string != "GMAnimCurve" {
+            let animcurve_str_ref: GMRef<String> = reader.read_gm_string()?;
+            let animcurve_str: &String = reader.resolve_gm_str(animcurve_str_ref)?;
+            if animcurve_str != "GMAnimCurve" {
                 bail!(
-                    "Expected owned resource thingy of Track to be \"GMAnimCurve\"; but found {:?} for Track {:?} at absolute position {} in chunk '{}'",
-                    gm_anim_curve_string,
+                    "Expected owned resource thingy of Track to be \"GMAnimCurve\"; but found {:?} for Track {:?}",
+                    animcurve_str,
                     reader.display_gm_str(name),
-                    reader.cur_pos,
-                    reader.chunk.name,
                 );
             }
             if anim_curve_string.is_none() {
-                anim_curve_string = Some(gm_anim_curve_str_ref);
+                anim_curve_string = Some(animcurve_str_ref);
             }
             owned_resources.push(GMAnimationCurve::deserialize(reader)?);
         }
 
-        let mut sub_tracks: Vec<GMTrack> = Vec::with_capacity(track_count);
+        let mut sub_tracks: Vec<GMTrack> = vec_with_capacity(track_count)?;
         for _ in 0..track_count {
             sub_tracks.push(Self::deserialize(reader)?);
         }

@@ -30,7 +30,7 @@ impl GMElement for GMTexturePageItems {
         let mut texture_page_items: Vec<GMTexturePageItem> = Vec::with_capacity(pointers.len());
 
         for (i, pointer) in pointers.into_iter().enumerate() {
-            reader.cur_pos = pointer as usize;
+            reader.cur_pos = pointer;
             reader
                 .texture_page_item_occurrence_map
                 .insert(pointer, GMRef::new(i as u32));

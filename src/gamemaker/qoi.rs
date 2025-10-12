@@ -2,6 +2,7 @@ use crate::prelude::*;
 use crate::util::fmt::hexdump;
 use image::{DynamicImage, ImageBuffer, Rgba};
 use std::convert::TryInto;
+use crate::gamemaker::data::Endianness;
 
 const QOI_INDEX: u8 = 0x00;
 const QOI_RUN_8: u8 = 0x40;
@@ -17,28 +18,26 @@ const QOI_MASK_4: u8 = 0xf0;
 pub fn get_image_from_bytes(bytes: &[u8]) -> Result<DynamicImage> {
     let header: &[u8] = &bytes.get(..12).ok_or("Invalid QOI header (less than 12 bytes long)")?;
 
-    let is_big_endian: bool = match &header[0..4] {
-        b"qoif" => true,
-        b"fioq" => false,
+    let endianness: Endianness = match &header[0..4] {
+        b"qoif" => Endianness::Big,
+        b"fioq" => Endianness::Little,
         _ => bail!("Invalid QOIF image magic [{}]", hexdump(header, 0..4)?),
     };
 
-    let u32_from = if is_big_endian {
-        u32::from_be_bytes
-    } else {
-        u32::from_le_bytes
+    let u16_from = match endianness {
+        Endianness::Little => u16::from_le_bytes,
+        Endianness::Big => u16::from_be_bytes,
     };
-    let u16_from = if is_big_endian {
-        u16::from_be_bytes
-    } else {
-        u16::from_le_bytes
+    let u32_from = match endianness {
+        Endianness::Little => u32::from_le_bytes,
+        Endianness::Big => u32::from_be_bytes,
     };
 
     let width: usize = u16_from(header[4..6].try_into().unwrap()) as usize;
     let height: usize = u16_from(header[6..8].try_into().unwrap()) as usize;
     let length: usize = u32_from(header[8..12].try_into().unwrap()) as usize;
 
-    let pixel_data: &[u8] = &bytes
+    let pixel_data: &[u8] = bytes
         .get(12..12 + length)
         .ok_or("Specified QOI data length out of bounds")?;
 
@@ -118,7 +117,7 @@ pub fn get_image_from_bytes(bytes: &[u8]) -> Result<DynamicImage> {
             bail!("Invalid QOI opcode 0x{b1}");
         }
 
-        let index_pos: usize = (((r ^ g ^ b ^ a) & 0x3F) << 2) as usize;
+        let index_pos = (((r ^ g ^ b ^ a) & 0x3F) << 2) as usize;
         index[index_pos + 0] = r;
         index[index_pos + 1] = g;
         index[index_pos + 2] = b;
