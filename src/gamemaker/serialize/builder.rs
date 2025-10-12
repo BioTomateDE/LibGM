@@ -244,7 +244,7 @@ impl<'a> DataBuilder<'a> {
             // Write padding in these versions, if not last chunk
             let ver = &self.gm_data.general_info.version;
             if ver.major >= 2 || (ver.major == 1 && ver.build >= 9999) {
-                while self.len() % self.gm_data.chunk_padding != 0 {
+                while self.len() as u32 % self.gm_data.chunk_padding != 0 {
                     self.write_u8(0);
                 }
             }

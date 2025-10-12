@@ -21,22 +21,20 @@ impl GMChunkElement for GMShaders {
 impl GMElement for GMShaders {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         // Figure out where the starts/ends of each shader object are
-        let count = reader.read_usize()?;
-        let mut locations: Vec<usize> = vec_with_capacity(count + 1)?;
+        let count = reader.read_u32()?;
+        let mut locations: Vec<u32> = vec_with_capacity(count + 1)?;
         for _ in 0..count {
-            let pointer = reader.read_usize()?;
+            let pointer = reader.read_u32()?;
             if pointer != 0 {
                 locations.push(pointer);
             }
         }
         locations.push(reader.chunk.end_pos);
 
-        let mut shaders: Vec<GMShader> = Vec::with_capacity(count);
+        let mut shaders: Vec<GMShader> = vec_with_capacity(count)?;
         for win in locations.windows(2) {
-            let [pointer, entry_end] = win else {
-                unreachable!("Iterator window size somehow not 2")
-            };
-            reader.cur_pos = *pointer;
+            let [pointer, entry_end] = *win else { unreachable!() };
+            reader.cur_pos = pointer;
             let name: GMRef<String> = reader.read_gm_string()?;
             let shader_type: GMShaderType = num_enum_from(reader.read_u32()? & 0x7FFFFFFF)?;
 
@@ -47,53 +45,53 @@ impl GMElement for GMShaders {
             let hlsl9_vertex: GMRef<String> = reader.read_gm_string()?;
             let hlsl9_fragment: GMRef<String> = reader.read_gm_string()?;
 
-            let hlsl11_vertex_ptr = reader.read_usize()?;
-            let hlsl11_pixel_ptr = reader.read_usize()?;
+            let hlsl11_vertex_ptr = reader.read_u32()?;
+            let hlsl11_pixel_ptr = reader.read_u32()?;
 
             let vertex_shader_attributes: Vec<GMRef<String>> = reader.read_simple_list_of_strings()?;
 
             let mut version: i32 = 2;
-            let mut pssl_vertex_ptr: usize = 0;
-            let mut pssl_vertex_len: usize = 0;
-            let mut pssl_pixel_ptr: usize = 0;
-            let mut pssl_pixel_len: usize = 0;
-            let mut cg_psvita_vertex_ptr: usize = 0;
-            let mut cg_psvita_vertex_len: usize = 0;
-            let mut cg_psvita_pixel_ptr: usize = 0;
-            let mut cg_psvita_pixel_len: usize = 0;
-            let mut cg_ps3_vertex_ptr: usize = 0;
-            let mut cg_ps3_vertex_len: usize = 0;
-            let mut cg_ps3_pixel_ptr: usize = 0;
-            let mut cg_ps3_pixel_len: usize = 0;
+            let mut pssl_vertex_ptr = 0;
+            let mut pssl_vertex_len = 0;
+            let mut pssl_pixel_ptr = 0;
+            let mut pssl_pixel_len = 0;
+            let mut cg_psvita_vertex_ptr = 0;
+            let mut cg_psvita_vertex_len = 0;
+            let mut cg_psvita_pixel_ptr = 0;
+            let mut cg_psvita_pixel_len = 0;
+            let mut cg_ps3_vertex_ptr = 0;
+            let mut cg_ps3_vertex_len = 0;
+            let mut cg_ps3_pixel_ptr = 0;
+            let mut cg_ps3_pixel_len = 0;
 
             if reader.general_info.bytecode_version > 13 {
                 version = reader.read_i32()?;
-                pssl_vertex_ptr = reader.read_usize()?;
-                pssl_vertex_len = reader.read_usize()?;
-                pssl_pixel_ptr = reader.read_usize()?;
-                pssl_pixel_len = reader.read_usize()?;
-                cg_psvita_vertex_ptr = reader.read_usize()?;
-                cg_psvita_vertex_len = reader.read_usize()?;
-                cg_psvita_pixel_ptr = reader.read_usize()?;
-                cg_psvita_pixel_len = reader.read_usize()?;
+                pssl_vertex_ptr = reader.read_u32()?;
+                pssl_vertex_len = reader.read_u32()?;
+                pssl_pixel_ptr = reader.read_u32()?;
+                pssl_pixel_len = reader.read_u32()?;
+                cg_psvita_vertex_ptr = reader.read_u32()?;
+                cg_psvita_vertex_len = reader.read_u32()?;
+                cg_psvita_pixel_ptr = reader.read_u32()?;
+                cg_psvita_pixel_len = reader.read_u32()?;
 
                 if version >= 2 {
-                    cg_ps3_vertex_ptr = reader.read_usize()?;
-                    cg_ps3_vertex_len = reader.read_usize()?;
-                    cg_ps3_pixel_ptr = reader.read_usize()?;
-                    cg_ps3_pixel_len = reader.read_usize()?;
+                    cg_ps3_vertex_ptr = reader.read_u32()?;
+                    cg_ps3_vertex_len = reader.read_u32()?;
+                    cg_ps3_pixel_ptr = reader.read_u32()?;
+                    cg_ps3_pixel_len = reader.read_u32()?;
                 }
             }
 
             let hlsl11_vertex_data: Option<GMShaderData> =
-                read_shader_data(reader, *entry_end, 8, hlsl11_vertex_ptr, 0, hlsl11_pixel_ptr)?;
+                read_shader_data(reader, entry_end, 8, hlsl11_vertex_ptr, 0, hlsl11_pixel_ptr)?;
             let hlsl11_pixel_data: Option<GMShaderData> =
-                read_shader_data(reader, *entry_end, 8, hlsl11_pixel_ptr, 0, pssl_vertex_ptr)?;
+                read_shader_data(reader, entry_end, 8, hlsl11_pixel_ptr, 0, pssl_vertex_ptr)?;
             let pssl_vertex_data: Option<GMShaderData> =
-                read_shader_data(reader, *entry_end, 8, pssl_vertex_ptr, pssl_vertex_len, pssl_pixel_ptr)?;
+                read_shader_data(reader, entry_end, 8, pssl_vertex_ptr, pssl_vertex_len, pssl_pixel_ptr)?;
             let pssl_pixel_data: Option<GMShaderData> = read_shader_data(
                 reader,
-                *entry_end,
+                entry_end,
                 8,
                 pssl_pixel_ptr,
                 pssl_pixel_len,
@@ -101,7 +99,7 @@ impl GMElement for GMShaders {
             )?;
             let cg_psvita_vertex_data: Option<GMShaderData> = read_shader_data(
                 reader,
-                *entry_end,
+                entry_end,
                 8,
                 cg_psvita_vertex_ptr,
                 cg_psvita_vertex_len,
@@ -109,7 +107,7 @@ impl GMElement for GMShaders {
             )?;
             let cg_psvita_pixel_data: Option<GMShaderData> = read_shader_data(
                 reader,
-                *entry_end,
+                entry_end,
                 8,
                 cg_psvita_pixel_ptr,
                 cg_psvita_pixel_len,
@@ -117,14 +115,14 @@ impl GMElement for GMShaders {
             )?;
             let cg_ps3_vertex_data: Option<GMShaderData> = read_shader_data(
                 reader,
-                *entry_end,
+                entry_end,
                 16,
                 cg_ps3_vertex_ptr,
                 cg_ps3_vertex_len,
                 cg_ps3_pixel_ptr,
             )?;
             let cg_ps3_pixel_data: Option<GMShaderData> =
-                read_shader_data(reader, *entry_end, 16, cg_ps3_pixel_ptr, cg_ps3_pixel_len, 0)?;
+                read_shader_data(reader, entry_end, 16, cg_ps3_pixel_ptr, cg_ps3_pixel_len, 0)?;
 
             shaders.push(GMShader {
                 name,
@@ -257,11 +255,11 @@ pub struct GMShaderData {
 
 fn read_shader_data(
     reader: &mut DataReader,
-    entry_end: usize,
+    entry_end: u32,
     pad: u32,
-    this_pointer: usize,
-    expected_length: usize,
-    next_ptr: usize,
+    this_pointer: u32,
+    expected_length: u32,
+    next_ptr: u32,
 ) -> Result<Option<GMShaderData>> {
     const ERR_MSG_PREFIX: &str = "Failed to compute length of shader data: instructed to read";
     const ERR_MSG_SUFFIX: &str = "Shader data was the last in the shader, but given length was incorrectly padded.";
@@ -271,8 +269,8 @@ fn read_shader_data(
     }
 
     reader.align(pad)?;
-    let next: usize = if next_ptr == 0 { entry_end } else { next_ptr };
-    let actual_length: usize = next - reader.cur_pos;
+    let next = if next_ptr == 0 { entry_end } else { next_ptr };
+    let actual_length = next - reader.cur_pos;
     let is_last: bool = next_ptr == 0;
 
     if expected_length == 0 {

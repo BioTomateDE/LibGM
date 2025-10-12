@@ -29,15 +29,15 @@ impl GMElement for GMVariables {
         if reader.get_chunk_length() == 0 {
             return Ok(Self { variables: vec![], b15_header: None, exists: true });
         }
-        let variables_length: usize = if reader.general_info.bytecode_version >= 15 {
+        let variables_length = if reader.general_info.bytecode_version >= 15 {
             20
         } else {
             12
         };
-        let variable_count: usize = reader.get_chunk_length() / variables_length;
+        let variable_count = (reader.get_chunk_length() / variables_length) as usize;
         let b15_header: Option<GMVariablesB15Header> = reader.deserialize_if_bytecode_version(15)?;
 
-        let mut occurrence_infos: Vec<(usize, u32)> = Vec::with_capacity(variable_count);
+        let mut occurrence_infos: Vec<(u32, u32)> = Vec::with_capacity(variable_count);
         let mut variables: Vec<GMVariable> = Vec::with_capacity(variable_count);
 
         // Parse variables
@@ -46,12 +46,7 @@ impl GMElement for GMVariables {
 
             let b15_data: Option<GMVariableB15Data> = reader.deserialize_if_bytecode_version(15)?;
 
-            let occurrence_count = reader.read_i32()?;
-            let occurrence_count: usize = if occurrence_count < 0 {
-                0
-            } else {
-                occurrence_count as usize
-            };
+            let occurrence_count = reader.read_count("Variable occurrence")?;
             let first_occurrence_pos = reader.read_u32()?;
             occurrence_infos.push((occurrence_count, first_occurrence_pos));
 
@@ -60,7 +55,7 @@ impl GMElement for GMVariables {
 
         // Resolve occurrences
         let saved_chunk: GMChunk = reader.chunk.clone();
-        let saved_position: usize = reader.cur_pos;
+        let saved_position = reader.cur_pos;
         reader.chunk = reader
             .chunks
             .get("CODE")
@@ -173,24 +168,24 @@ impl GMElement for GMVariableB15Data {
 
 #[derive(Debug, Clone)]
 pub struct GMVariablesB15Header {
-    pub var_count1: usize,
-    pub var_count2: usize,
-    pub max_local_var_count: usize,
+    pub var_count1: u32,
+    pub var_count2: u32,
+    pub max_local_var_count: u32,
 }
 impl GMElement for GMVariablesB15Header {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         // Nobody knows what the fuck these values mean
         // TODO remember to increment these when a variable is added by a mod
-        let var_count1 = reader.read_usize()?;
-        let var_count2 = reader.read_usize()?;
-        let max_local_var_count = reader.read_usize()?;
+        let var_count1 = reader.read_u32()?;
+        let var_count2 = reader.read_u32()?;
+        let max_local_var_count = reader.read_u32()?;
         Ok(GMVariablesB15Header { var_count1, var_count2, max_local_var_count })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_usize(self.var_count1)?;
-        builder.write_usize(self.var_count2)?;
-        builder.write_usize(self.max_local_var_count)?;
+        builder.write_u32(self.var_count1);
+        builder.write_u32(self.var_count2);
+        builder.write_u32(self.max_local_var_count);
         Ok(())
     }
 }
@@ -198,7 +193,7 @@ impl GMElement for GMVariablesB15Header {
 pub fn parse_occurrence_chain(
     reader: &mut DataReader,
     first_occurrence_pos: u32,
-    occurrence_count: usize,
+    occurrence_count: u32,
 ) -> Result<(Vec<u32>, u32)> {
     if occurrence_count < 1 {
         return Ok((vec![], first_occurrence_pos));
@@ -210,7 +205,7 @@ pub fn parse_occurrence_chain(
 
     for _ in 0..occurrence_count {
         occurrences.push(occurrence_pos);
-        reader.cur_pos = occurrence_pos as usize;
+        reader.cur_pos = occurrence_pos;
         let raw_value = reader.read_i32()?;
         offset = raw_value & 0x07FFFFFF;
         if offset < 1 {

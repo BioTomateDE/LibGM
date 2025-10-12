@@ -39,7 +39,7 @@ pub struct GMEmbeddedAudio {
 }
 impl GMElement for GMEmbeddedAudio {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let audio_data_length = reader.read_usize()?;
+        let audio_data_length = reader.read_u32()?;
         let audio_data: Vec<u8> = reader.read_bytes_dyn(audio_data_length)?.to_vec();
         Ok(Self { audio_data })
     }

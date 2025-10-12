@@ -18,7 +18,7 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::integrity_assert;
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
+use crate::util::init::{num_enum_from, vec_with_capacity};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::cmp::PartialEq;
 use std::collections::HashMap;
@@ -47,24 +47,24 @@ impl GMElement for GMCodes {
 
         let pointers: Vec<u32> = reader.read_simple_list()?;
         reader.cur_pos = match pointers.first() {
-            Some(ptr) => *ptr as usize,
+            Some(&ptr) => ptr,
             None => {
                 return Ok(Self { codes: vec![], exists: true });
             }
         };
         let count: usize = pointers.len();
         let mut codes: Vec<GMCode> = Vec::with_capacity(count);
-        let mut instructions_ranges: Vec<(usize, usize)> = Vec::with_capacity(count);
-        let mut codes_by_pos: HashMap<usize, GMRef<GMCode>> = HashMap::new();
-        let mut last_pos: usize = reader.cur_pos;
+        let mut instructions_ranges: Vec<(u32, u32)> = Vec::with_capacity(count);
+        let mut codes_by_pos: HashMap<u32, GMRef<GMCode>> = HashMap::new();
+        let mut last_pos = reader.cur_pos;
 
         for pointer in pointers {
             reader.assert_pos(pointer, "Code")?;
             let name: GMRef<String> = reader.read_gm_string()?;
-            let code_length = reader.read_usize()?;
+            let code_length = reader.read_u32()?;
 
-            let instructions_start_pos: usize;
-            let instructions_end_pos: usize;
+            let instructions_start_pos;
+            let instructions_end_pos;
             let bytecode15_info: Option<GMCodeBytecode15>;
 
             if reader.general_info.bytecode_version <= 14 {
@@ -79,7 +79,7 @@ impl GMElement for GMCodes {
                 let weird_local_flag: bool = arguments_count_raw & 0x8000 != 0;
 
                 let instructions_start_offset = reader.read_i32()?;
-                instructions_start_pos = (instructions_start_offset + reader.cur_pos as i32 - 4) as usize;
+                instructions_start_pos = (instructions_start_offset + reader.cur_pos as i32 - 4) as u32;
 
                 let offset = reader.read_u32()?;
                 let b15_info = GMCodeBytecode15 {
@@ -100,7 +100,7 @@ impl GMElement for GMCodes {
 
         for (i, (start, end)) in instructions_ranges.into_iter().enumerate() {
             let code: &mut GMCode = &mut codes[i];
-            let length: usize = end - start;
+            let length = end - start;
 
             // If bytecode15+ and the instructions pointer is known, then it's a child code entry
             if length > 0 {
@@ -114,7 +114,7 @@ impl GMElement for GMCodes {
 
             reader.cur_pos = start;
             // Estimated Size: https://discord.com/channels/566861759210586112/568625491876118528/1424403240258371615
-            code.instructions = Vec::with_capacity(length / 5);
+            code.instructions = vec_with_capacity(length / 5)?;
 
             if length > 0 {
                 // Update information to mark this entry as the root (if we have at least 1 instruction)

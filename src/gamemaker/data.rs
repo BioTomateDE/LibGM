@@ -79,7 +79,7 @@ pub struct GMData {
     pub animation_curves: GMAnimationCurves,      // ACRV
 
     /// Should not be edited; only set by `GMData::read_chunk_padding`.
-    pub chunk_padding: usize,
+    pub chunk_padding: u32,
 
     /// Indicates the data's byte endianness.
     /// In most cases (and assumed by default), this is set to little-endian.
@@ -104,9 +104,9 @@ impl GMData {
     }
 
     pub fn make_unique_string(&mut self, string: String) -> GMRef<String> {
-        let index: usize = self.strings.strings.len();
+        let index = self.strings.strings.len() as u32;
         self.strings.strings.push(string);
-        GMRef::new(index as u32)
+        GMRef::new(index)
     }
 
     pub fn make_variable_b15(&mut self, name: &str, instance_type: GMInstanceType) -> Result<GMRef<GMVariable>> {

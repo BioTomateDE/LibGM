@@ -48,8 +48,7 @@ fn main_open_and_close() -> Result<()> {
     let raw_data: Vec<u8> = read_data_file(input_path).context("reading data file")?;
 
     log::info!("Parsing data file");
-    let gm_data: GMData = parse_data_file(&raw_data).context("parsing data file")?;
-    drop(raw_data);
+    let gm_data: GMData = parse_data_file(raw_data).context("parsing data file")?;
 
     // // Sample changes
     // let mut gm_data = gm_data;

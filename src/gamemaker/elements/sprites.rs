@@ -99,11 +99,11 @@ impl GMElement for GMSprite {
                     // Normal
                     textures = Self::read_texture_list(reader)?;
                     // Read mask data
-                    let mut mask_width = width as usize;
-                    let mut mask_height = height as usize;
+                    let mut mask_width = width;
+                    let mut mask_height = height;
                     if reader.general_info.is_version_at_least((2024, 6, 0, 0)) {
-                        mask_width = (margin_right - margin_left + 1) as usize;
-                        mask_height = (margin_bottom - margin_top + 1) as usize;
+                        mask_width = (margin_right - margin_left + 1) as u32;
+                        mask_height = (margin_bottom - margin_top + 1) as u32;
                     }
                     collision_masks = read_mask_data(reader, mask_width, mask_height)?;
                     GMSpriteSpecialData::Normal
@@ -123,7 +123,7 @@ impl GMElement for GMSprite {
 
                     // Read YYSWF
                     reader.align(4)?;
-                    let jpeg_len: usize = (reader.read_i32()? & (!i32::MIN)) as usize;
+                    let jpeg_len = (reader.read_i32()? & i32::MAX) as u32;
                     let yyswf_version = reader.read_i32()?;
                     if !matches!(yyswf_version, 7 | 8) {
                         bail!("Expected YYSWF Version 7 or 8 but got {yyswf_version}");
@@ -152,9 +152,9 @@ impl GMElement for GMSprite {
                         }
                     }
 
-                    let json_length = reader.read_usize()?;
-                    let atlas_length = reader.read_usize()?;
-                    let texture_thing = reader.read_usize()?; // In spine version 1: size of texture data in bytes. Post v1: texture count.
+                    let json_length = reader.read_u32()?;
+                    let atlas_length = reader.read_u32()?;
+                    let texture_thing = reader.read_u32()?; // In spine version 1: size of texture data in bytes. Post v1: texture count.
                     let mut spine_textures: Vec<GMSpriteSpineTextureEntry> = Vec::new();
                     let spine_json: String;
                     let spine_atlas: String;
@@ -181,7 +181,7 @@ impl GMElement for GMSprite {
                             spine_json = GMSpriteTypeSpine::read_weird_string(reader, json_length)?;
                             spine_atlas = GMSpriteTypeSpine::read_weird_string(reader, atlas_length)?;
 
-                            spine_textures.reserve(texture_thing);
+                            spine_textures = vec_with_capacity(texture_thing)?;
                             for _ in 0..texture_thing {
                                 spine_textures.push(GMSpriteSpineTextureEntry::deserialize(reader)?);
                             }
@@ -246,11 +246,11 @@ impl GMElement for GMSprite {
             // Read into `textures`
             textures = Self::read_texture_list(reader)?;
             // Read mask data
-            let mut mask_width = width as usize;
-            let mut mask_height = height as usize;
+            let mut mask_width = width;
+            let mut mask_height = height;
             if reader.general_info.is_version_at_least((2024, 6)) {
-                mask_width = (margin_right - margin_left + 1) as usize;
-                mask_height = (margin_bottom - margin_top + 1) as usize;
+                mask_width = (margin_right - margin_left + 1) as u32;
+                mask_height = (margin_bottom - margin_top + 1) as u32;
             }
             collision_masks = read_mask_data(reader, mask_width, mask_height)?;
         }
@@ -431,8 +431,8 @@ impl GMElement for GMSprite {
 
 impl GMSprite {
     fn read_texture_list(reader: &mut DataReader) -> Result<Vec<Option<GMRef<GMTexturePageItem>>>> {
-        let count = reader.read_usize()?;
-        let mut textures: Vec<Option<GMRef<GMTexturePageItem>>> = Vec::with_capacity(count);
+        let count = reader.read_u32()?;
+        let mut textures: Vec<Option<GMRef<GMTexturePageItem>>> = vec_with_capacity(count)?;
         for _ in 0..count {
             textures.push(reader.read_gm_texture_opt()?);
         }
@@ -518,7 +518,7 @@ impl GMSpriteTypeSpine {
         }
     }
 
-    fn read_weird_string(reader: &mut DataReader, size: usize) -> Result<String> {
+    fn read_weird_string(reader: &mut DataReader, size: u32) -> Result<String> {
         let mut blob: Vec<u8> = reader.read_bytes_dyn(size)?.to_vec();
         Self::decode_spine_blob(&mut blob);
         let string: String =
@@ -547,7 +547,7 @@ impl GMElement for GMSpriteSpineTextureEntry {
             let texture_entry_length = reader.read_u32()?;
             GMSpriteSpineTextureEntryData::Post2023_1(texture_entry_length)
         } else {
-            let size = reader.read_usize()?;
+            let size = reader.read_u32()?;
             let texture_blob: Vec<u8> = reader.read_bytes_dyn(size)?.to_vec();
             GMSpriteSpineTextureEntryData::Pre2023_1(texture_blob)
         };
@@ -693,16 +693,16 @@ pub enum GMSpriteSepMaskType {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GMSpriteMaskEntry {
     pub data: Vec<u8>,
-    pub width: usize,
-    pub height: usize,
+    pub width: u32,
+    pub height: u32,
 }
 
-fn read_mask_data(reader: &mut DataReader, mask_width: usize, mask_height: usize) -> Result<Vec<GMSpriteMaskEntry>> {
-    let mask_count = reader.read_usize()?;
+fn read_mask_data(reader: &mut DataReader, mask_width: u32, mask_height: u32) -> Result<Vec<GMSpriteMaskEntry>> {
+    let mask_count = reader.read_u32()?;
     let mut collision_masks: Vec<GMSpriteMaskEntry> = vec_with_capacity(mask_count)?;
 
-    let len: usize = (mask_width + 7) / 8 * mask_height;
-    let mut total: usize = 0;
+    let len = (mask_width + 7) / 8 * mask_height;
+    let mut total = 0;
 
     for _ in 0..mask_count {
         let data: Vec<u8> = reader
@@ -725,7 +725,7 @@ fn read_mask_data(reader: &mut DataReader, mask_width: usize, mask_height: usize
         total += 1;
     }
 
-    let expected_size: usize = calculate_mask_data_size(mask_width, mask_height, mask_count);
+    let expected_size = calculate_mask_data_size(mask_width, mask_height, mask_count);
     if total != expected_size {
         bail!(
             "Mask data size is incorrect for Mask at position {}: Expected: {}; Actual: {}",
@@ -738,9 +738,9 @@ fn read_mask_data(reader: &mut DataReader, mask_width: usize, mask_height: usize
     Ok(collision_masks)
 }
 
-fn calculate_mask_data_size(width: usize, height: usize, mask_count: usize) -> usize {
-    let rounded_width: usize = (width + 7) / 8 * 8; // Round to multiple of 8
-    let data_bits: usize = rounded_width * height * mask_count;
-    let data_bytes: usize = ((data_bits + 31) / 32 * 32) / 8; // Round to multiple of 4 bytes
+fn calculate_mask_data_size(width: u32, height: u32, mask_count: u32) -> u32 {
+    let rounded_width = (width + 7) / 8 * 8; // Round to multiple of 8
+    let data_bits = rounded_width * height * mask_count;
+    let data_bytes = ((data_bits + 31) / 32 * 32) / 8; // Round to multiple of 4 bytes
     data_bytes
 }

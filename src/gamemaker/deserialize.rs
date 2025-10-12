@@ -45,7 +45,11 @@ pub use chunk::GMChunk;
 pub use reader::DataReader;
 pub use resources::GMRef;
 
-pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
+
+/// Parse a GameMaker data file (`data.win`, `game.unx`, etc).
+pub fn parse_data_file<T: AsRef<[u8]>>(raw_data: T) -> Result<GMData> {
+    // Length assertion
+    let raw_data: &[u8] = raw_data.as_ref();
     if raw_data.len() >= i32::MAX as usize {
         bail!("Data file is bigger than 2,147,483,647 bytes which will lead to bugs in LibGM and the runner")
     }
@@ -53,6 +57,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
     let stopwatch = Stopwatch::start();
     let mut reader = DataReader::new(&raw_data);
 
+    // Read root chunk and set endianness
     let root_chunk_name = reader.read_chunk_name()?;
     reader.endianness = match root_chunk_name.as_str() {
         "FORM" => Endianness::Little,
@@ -63,8 +68,9 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
         log::warn!("Big endian format might not work, proceed with caution");
     }
 
-    let total_data_len: usize = reader.read_usize()? + reader.cur_pos;
-    if total_data_len != raw_data.len() {
+    // Length assertion
+    let total_data_len = reader.read_u32()? + reader.cur_pos;
+    if total_data_len as usize != raw_data.len() {
         bail!(
             "Specified FORM data length is {} but data is actually {} bytes long",
             total_data_len,
@@ -72,13 +78,14 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
         );
     }
 
+    // Read chunks into HashMap (FORM)
     while reader.cur_pos + 8 < total_data_len {
         let name = reader.read_chunk_name()?;
-        let chunk_length = reader.read_usize()?;
-        let start_pos: usize = reader.cur_pos;
+        let chunk_length = reader.read_u32()?;
+        let start_pos = reader.cur_pos;
 
         reader.cur_pos += chunk_length;
-        if reader.cur_pos > raw_data.len() {
+        if reader.cur_pos as usize > raw_data.len() {
             bail!(
                 "Trying to read chunk '{}' out of data bounds: specified length {} implies chunk \
                 end position {}; which is greater than the total data length {}",
@@ -89,7 +96,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
             );
         }
 
-        let is_last_chunk: bool = reader.cur_pos == raw_data.len();
+        let is_last_chunk: bool = reader.cur_pos as usize == raw_data.len();
         let chunk = GMChunk {
             name: name.clone(),
             start_pos,
@@ -110,9 +117,15 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
     }
     log::trace!("Parsing FORM took {stopwatch}");
 
+    // Strings and General Info need to be parsed before anything else
     reader.strings = reader.read_chunk_required("STRG")?;
     reader.general_info = reader.read_chunk_required("GEN8")?;
 
+    // Games made in GameMaker Studio 2 no longer store their actual version.
+    // They only store `2.0.0.0`. In that case, the version needs to be detected
+    // using assertions that can only be true in new versions.
+    // Note that games which never use new features might be incorrectly detected
+    // as an older version.
     let specified_version: GMVersion = reader.general_info.version.clone();
     if specified_version.major >= 2 {
         let stopwatch = Stopwatch::start();
@@ -134,6 +147,7 @@ pub fn parse_data_file(raw_data: &Vec<u8>) -> Result<GMData> {
         );
     }
 
+    // This code is ugly
     let (variables, functions, codes) = if check_yyc(&reader) {
         (GMVariables::stub(), GMFunctions::stub(), GMCodes::stub())
     } else {

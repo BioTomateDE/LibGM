@@ -31,7 +31,7 @@ impl GMElement for GMGameObjects {
         let mut game_objects: Vec<GMGameObject> = Vec::with_capacity(pointers.len());
 
         for pointer in pointers {
-            reader.cur_pos = pointer as usize;
+            reader.cur_pos = pointer;
             let name: GMRef<String> = reader.read_gm_string()?;
             let sprite_index = reader.read_i32()?;
             let sprite: Option<GMRef<GMSprite>> = if sprite_index == -1 {

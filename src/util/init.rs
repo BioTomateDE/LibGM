@@ -4,36 +4,38 @@ use num_enum::TryFromPrimitive;
 use std::collections::HashMap;
 use std::fmt::{Display, UpperHex};
 
-pub fn vec_with_capacity<T>(count: usize) -> Result<Vec<T>> {
+pub fn vec_with_capacity<T>(count: u32) -> Result<Vec<T>> {
     const FAILSAFE_SIZE: usize = 1_000_000; // 1 Megabyte
+    let count = count as usize;
+
     let implied_size = size_of::<T>() * count;
     if implied_size > FAILSAFE_SIZE {
         bail!(
-            "Failsafe triggered while initializing list of {}: \
-            Element count {} implies a total data size of {} which is larger than the failsafe size of {}",
-            typename::<T>(),
-            count,
-            format_bytes(implied_size),
-            format_bytes(FAILSAFE_SIZE),
+            "{} count {} implies data size {} which exceeeds failsafe size {}",
+            typename::<T>(), count, format_bytes(implied_size), format_bytes(FAILSAFE_SIZE),
         );
     }
     Ok(Vec::with_capacity(count))
 }
 
-pub fn hashmap_with_capacity<K, V>(count: usize) -> Result<HashMap<K, V>> {
+pub fn hashmap_with_capacity<K, V>(count: u32) -> Result<HashMap<K, V>> {
     const FAILSAFE_SIZE: usize = 100_000; // 100 KB
-    let implied_size = size_of::<K>() * size_of::<V>() * count;
-    if implied_size > FAILSAFE_SIZE {
+    let count = count as usize;
+
+    let entry_size = size_of::<(K, V)>() + size_of::<usize>() * 3;
+    let estimated_size = entry_size * count;
+
+    if estimated_size > FAILSAFE_SIZE {
         bail!(
-            "Failsafe triggered while initializing HashMap of <{}, {}>: \
-            Element count {} implies a total data size of {} which is larger than the failsafe size of {}",
-            typename::<K>(),
-            typename::<V>(),
+            "HashMap<{}, {}> with capacity {} would use ~{} which exceeds failsafe size {}",
+            std::any::type_name::<K>(),
+            std::any::type_name::<V>(),
             count,
-            format_bytes(implied_size),
-            format_bytes(FAILSAFE_SIZE),
+            format_bytes(estimated_size),
+            format_bytes(FAILSAFE_SIZE)
         );
     }
+
     Ok(HashMap::with_capacity(count))
 }
 

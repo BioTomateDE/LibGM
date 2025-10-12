@@ -9,8 +9,8 @@ use crate::util::bench::Stopwatch;
 #[derive(Debug, Clone)]
 pub struct GMChunk {
     pub name: String,
-    pub start_pos: usize,
-    pub end_pos: usize,
+    pub start_pos: u32,
+    pub end_pos: u32,
     pub is_last_chunk: bool,
 }
 
@@ -133,7 +133,7 @@ impl DataReader<'_> {
 
     fn unstable_get_gm_version(&mut self) -> Result<GMVersion> {
         const CTX: &str = "trying to unstable read GameMaker Version";
-        let saved_pos: usize = self.cur_pos;
+        let saved_pos = self.cur_pos;
         let saved_chunk: GMChunk = self.chunk.clone();
         self.chunk = self
             .chunks

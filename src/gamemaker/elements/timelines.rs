@@ -43,7 +43,7 @@ pub struct GMTimeline {
 impl GMElement for GMTimeline {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let moment_count = reader.read_usize()?;
+        let moment_count = reader.read_u32()?;
 
         let mut time_points: Vec<u32> = vec_with_capacity(moment_count)?;
         let mut event_pointers: Vec<u32> = vec_with_capacity(moment_count)?;

@@ -32,12 +32,12 @@ impl GMElement for GMSpriteYYSWFTimeline {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let used_items: Vec<GMSpriteYYSWFItem> = reader.read_simple_list()?;
         let framerate = reader.read_i32()?;
-        let frames_count = reader.read_usize()?;
+        let frames_count = reader.read_u32()?;
         let min_x = reader.read_f32()?;
         let max_x = reader.read_f32()?;
         let min_y = reader.read_f32()?;
         let max_y = reader.read_f32()?;
-        let collision_masks_count = reader.read_usize()?;
+        let collision_masks_count = reader.read_u32()?;
         let mask_width = reader.read_i32()?;
         let mask_height = reader.read_i32()?;
 
@@ -200,9 +200,9 @@ pub struct GMSpriteYYSWFStyleGroup<T: GMElement> {
 }
 impl<T: GMElement> GMElement for GMSpriteYYSWFStyleGroup<T> {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let fill_data_count: usize = reader.read_i32()?.max(0) as usize;
-        let line_style_count: usize = reader.read_i32()?.max(0) as usize;
-        let subshape_count: usize = reader.read_i32()?.max(0) as usize;
+        let fill_data_count = reader.read_count("YYSWF Style Group Fill Data")?;
+        let line_style_count = reader.read_count("YYSWF Style Group Line Style")?;
+        let subshape_count = reader.read_count("YYSWF Style Group Subshape")?;
 
         let mut fill_styles: Vec<GMSpriteYYSWFFillData> = vec_with_capacity(fill_data_count)?;
         for _ in 0..fill_data_count {
@@ -412,15 +412,15 @@ impl GMElement for GMSpriteYYSWFSubshapeData {
         let fill_style2 = reader.read_i32()?;
         let line_style = reader.read_i32()?;
 
-        let point_count = reader.read_usize()?;
-        let line_count = reader.read_usize()?;
-        let triangle_count: usize = reader.read_usize()? * 3;
-        let line_point_count = reader.read_usize()?;
-        let line_triangle_count: usize = reader.read_usize()? * 3;
-        let aa_line_count = reader.read_usize()?;
-        let aa_vector_count = reader.read_usize()?;
-        let line_aa_line_count = reader.read_usize()?;
-        let line_aa_vector_count = reader.read_usize()?;
+        let point_count = reader.read_u32()?;
+        let line_count = reader.read_u32()?;
+        let triangle_count = reader.read_u32()? * 3;
+        let line_point_count = reader.read_u32()?;
+        let line_triangle_count = reader.read_u32()? * 3;
+        let aa_line_count = reader.read_u32()?;
+        let aa_vector_count = reader.read_u32()?;
+        let line_aa_line_count = reader.read_u32()?;
+        let line_aa_vector_count = reader.read_u32()?;
 
         let mut points: Vec<(f32, f32)> = vec_with_capacity(point_count)?;
         let mut lines: Vec<(i32, i32)> = vec_with_capacity(line_count)?;
@@ -546,9 +546,9 @@ impl GMElement for GMSpriteYYSWFBitmapData {
             let tpe_index = reader.read_i32()?;
             GMSpriteYYSWFBitmapDataVer::Post2022_1(GMSpriteYYSWFBitmapDataPost2022_1 { tpe_index })
         } else {
-            let image_data_length: usize = reader.read_i32()?.max(0) as usize;
-            let alpha_data_length: usize = reader.read_i32()?.max(0) as usize;
-            let color_palette_data_length: usize = reader.read_i32()?.max(0) as usize;
+            let image_data_length = reader.read_count("YYSWF Bitmap Image Data")?;
+            let alpha_data_length = reader.read_count("YYSWF Bitmap Alpha Data")?;
+            let color_palette_data_length = reader.read_count("YYSWF Bitmap Color Palette Data")?;
 
             let image_data: Vec<u8> = reader
                 .read_bytes_dyn(image_data_length)
@@ -642,7 +642,7 @@ pub struct GMSpriteYYSWFTimelineFrame {
 }
 impl GMElement for GMSpriteYYSWFTimelineFrame {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let frame_object_count = reader.read_usize()?;
+        let frame_object_count = reader.read_u32()?;
         let min_x = reader.read_f32()?;
         let max_x = reader.read_f32()?;
         let min_y = reader.read_f32()?;
@@ -760,8 +760,7 @@ pub struct GMSpriteYYSWFCollisionMask {
 }
 impl GMElement for GMSpriteYYSWFCollisionMask {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let rle_length = reader.read_i32()?;
-        let rle_length: usize = if rle_length > 0 { rle_length as usize } else { 0 };
+        let rle_length = reader.read_count("YYSWF Collision Mask RLE Data")?;
         let rle_data: Vec<u8> = reader
             .read_bytes_dyn(rle_length)
             .context("reading RLE Data of Timeline")?

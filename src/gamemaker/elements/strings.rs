@@ -34,11 +34,11 @@ impl GMElement for GMStrings {
             if pointer % ALIGNMENT != 0 {
                 is_aligned = false;
             }
-            reader.cur_pos = pointer as usize;
+            reader.cur_pos = pointer;
             if is_aligned {
                 reader.align(ALIGNMENT)?;
             }
-            let string_length = reader.read_usize()?;
+            let string_length = reader.read_u32()?;
             let string: String = reader.read_literal_string(string_length)?;
             let byte = reader.read_u8()?;
             if byte != 0 {

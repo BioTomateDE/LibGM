@@ -673,14 +673,14 @@ pub struct GMRoomLayerDataTiles {
     pub background: Option<GMRef<GMBackground>>,
     /// Flattened 2D Array. Access using `tile_data[row + width * col]`.
     pub tile_data: Vec<u32>,
-    pub width: usize,
-    pub height: usize,
+    pub width: u32,
+    pub height: u32,
 }
 impl GMElement for GMRoomLayerDataTiles {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let background: Option<GMRef<GMBackground>> = reader.read_resource_by_id_opt()?;
-        let width = reader.read_usize()?;
-        let height = reader.read_usize()?;
+        let width = reader.read_u32()?;
+        let height = reader.read_u32()?;
         let mut tile_data: Vec<u32> = vec_with_capacity(width * height)?;
 
         if reader.general_info.is_version_at_least((2024, 2)) {
@@ -698,8 +698,8 @@ impl GMElement for GMRoomLayerDataTiles {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_resource_id_opt(&self.background);
-        builder.write_usize(self.width)?;
-        builder.write_usize(self.height)?;
+        builder.write_u32(self.width);
+        builder.write_u32(self.height);
         if builder.is_gm_version_at_least((2024, 2)) {
             self.build_compressed_tile_data(builder)?;
         } else {
