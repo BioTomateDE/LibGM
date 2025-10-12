@@ -4,7 +4,6 @@ mod numbers;
 mod reader;
 mod resources;
 
-use std::collections::HashMap;
 use crate::gamemaker::data::{Endianness, GMData};
 use crate::gamemaker::detect_version::detect_gamemaker_version;
 use crate::gamemaker::elements::GMChunkElement;
@@ -40,13 +39,12 @@ use crate::gamemaker::elements::timelines::GMTimelines;
 use crate::gamemaker::elements::ui_nodes::GMRootUINodes;
 use crate::gamemaker::elements::variables::GMVariables;
 use crate::gamemaker::gm_version::GMVersion;
+use crate::integrity_assert;
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
 pub use chunk::GMChunk;
 pub use reader::DataReader;
 pub use resources::GMRef;
-use crate::integrity_assert;
-
 
 /// Parse a GameMaker data file (`data.win`, `game.unx`, etc).
 pub fn parse_data_file<T: AsRef<[u8]>>(raw_data: T) -> Result<GMData> {
@@ -106,7 +104,7 @@ pub fn parse_data_file<T: AsRef<[u8]>>(raw_data: T) -> Result<GMData> {
             is_last_chunk,
         };
 
-        integrity_assert!{
+        integrity_assert! {
             !reader.chunks.contains_key(&name),
             "Chunk {name:?} is defined multiple times"
         }

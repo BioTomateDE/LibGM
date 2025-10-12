@@ -9,9 +9,9 @@ use crate::gamemaker::elements::variables::GMVariable;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::gm_version::GMVersionReq;
 use crate::prelude::*;
+use crate::util::smallmap::SmallMap;
 use crate::{integrity_assert, integrity_check};
 use std::collections::HashMap;
-use crate::util::smallmap::SmallMap;
 
 pub struct DataReader<'a> {
     /// The raw data buffer that is being parsed.

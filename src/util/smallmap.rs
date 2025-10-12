@@ -28,7 +28,9 @@ impl<K: PartialEq, V> SmallMap<K, V> {
         K: Borrow<Q>,
         Q: PartialEq,
     {
-        self.0.iter_mut().find_map(|(k, v)| ((&*k).borrow() == key).then_some(v))
+        self.0
+            .iter_mut()
+            .find_map(|(k, v)| ((&*k).borrow() == key).then_some(v))
     }
 
     pub fn contains_key<Q: ?Sized>(&self, key: &Q) -> bool
