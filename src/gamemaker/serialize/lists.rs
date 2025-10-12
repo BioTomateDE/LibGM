@@ -84,7 +84,6 @@ impl DataBuilder<'_> {
 
     /// UndertaleAlignUpdatedListChunk; used for BGND and STRG.
     /// Assumes `chunk.is_aligned`.
-    /// TODO: copypasted ass function
     pub fn write_aligned_list_chunk<T: GMElement>(&mut self, elements: &Vec<T>, alignment: u32) -> Result<()> {
         let count: usize = elements.len();
         let ctx = || {
