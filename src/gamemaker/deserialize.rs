@@ -4,6 +4,7 @@ mod numbers;
 mod reader;
 mod resources;
 
+use std::collections::HashMap;
 use crate::gamemaker::data::{Endianness, GMData};
 use crate::gamemaker::detect_version::detect_gamemaker_version;
 use crate::gamemaker::elements::GMChunkElement;
@@ -44,6 +45,7 @@ use crate::util::bench::Stopwatch;
 pub use chunk::GMChunk;
 pub use reader::DataReader;
 pub use resources::GMRef;
+use crate::integrity_assert;
 
 
 /// Parse a GameMaker data file (`data.win`, `game.unx`, etc).
@@ -104,16 +106,11 @@ pub fn parse_data_file<T: AsRef<[u8]>>(raw_data: T) -> Result<GMData> {
             is_last_chunk,
         };
 
-        if let Some(old_chunk) = reader.chunks.insert(name.clone(), chunk.clone()) {
-            bail!(
-                "Chunk '{}' is defined multiple times: old data range {}..{}; new data range {}..{}",
-                name,
-                old_chunk.start_pos,
-                old_chunk.end_pos,
-                chunk.start_pos,
-                chunk.end_pos,
-            );
+        integrity_assert!{
+            !reader.chunks.contains_key(&name),
+            "Chunk {name:?} is defined multiple times"
         }
+        reader.chunks.insert(name, chunk);
     }
     log::trace!("Parsing FORM took {stopwatch}");
 
@@ -192,7 +189,7 @@ pub fn parse_data_file<T: AsRef<[u8]>>(raw_data: T) -> Result<GMData> {
 
     // Throw error if not all chunks read to prevent silent data loss
     if !reader.chunks.is_empty() {
-        let chunks_str: String = reader.chunks.keys().cloned().collect::<Vec<_>>().join(", ");
+        let chunks_str: String = reader.chunks.into_keys().join(", ");
         bail!(
             "Not all chunks in the data file were read, which would lead to data loss when writing.\n\
             The following chunks are unknown or not supported: [{chunks_str}]"
