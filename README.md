@@ -2,7 +2,7 @@
 
 A Rust port of UndertaleModLib. Originally intended to provide a modding system for GameMaker data files.
 
-However for now, the focus has shifted to just plagarising Underanalyzer.
+However for now, the focus has shifted to just plagarizing Underanalyzer.
 
 ## Features
 - **Deserialization** of GameMaker data files
@@ -23,9 +23,14 @@ Now you can use these function exposed by LibGM:
 - `decompile_to_ast()` (not finished)
 
 ## Credits
-Huge thanks to the Underminers Team; without [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool) this project would've been impossible. I also want to thank the people in the Underminers Discord who helped me along the way, especially [@colinator27](https://github.com/colinator27).
+Huge thanks to the Underminers Team; without [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool) this project would've been impossible.
+I also want to thank the people in the Underminers Discord who helped me along the way, especially [@colinator27](https://github.com/colinator27).
 
-## Licence
-This project is licenced under [GPL v3](https://www.gnu.org/licenses/gpl-3.0.en.html) (free).
+## Licencing
+This project contains code under multiple licenses:
+- **GPL v3**: Most code in this project
+- **MPL 2.0**: All files in `/src/gml/` containing the MPL 2.0 headers
 
-A separate commercial licence is also available (contact [latuskati+licence@gmail.com](mailto:latuskati+licence@gmail.com)).
+**MPL 2.0 Notice**: Some components in `/src/gml/` are ported from 
+[Underanalyzer](https://https://github.com/UnderminersTeam/Underanalyzer)
+and remain under MPL 2.0. These files contain MPL 2.0 headers identifying them.

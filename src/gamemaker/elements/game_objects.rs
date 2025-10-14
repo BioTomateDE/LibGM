@@ -154,9 +154,9 @@ impl GMElement for GMGameObjects {
             builder.write_i32(game_object.depth);
             builder.write_bool32(game_object.persistent);
             match game_object.parent {
-                None => builder.write_i32(-100), // No Parent
+                None => builder.write_i32(-100),                                     // No Parent
                 Some(obj_ref) if obj_ref.index == i as u32 => builder.write_i32(-1), // Parent is Self
-                Some(obj_ref) => builder.write_resource_id(&obj_ref), // Normal Parent
+                Some(obj_ref) => builder.write_resource_id(&obj_ref),                // Normal Parent
             }
             builder.write_resource_id_opt(&game_object.texture_mask);
             builder.write_bool32(game_object.uses_physics);
