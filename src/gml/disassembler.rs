@@ -169,7 +169,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
                 "{} {}(argc={})",
                 opcode,
                 function_to_string(gm_data, instr.function)?,
-                instr.arguments_count,
+                instr.argument_count,
             );
         }
 

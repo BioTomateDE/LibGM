@@ -356,7 +356,7 @@ fn update_with(ctx: &mut DecompileContext, loop_node: NodeRef) -> Result<()> {
         // Reroute everything going into [break_block] to instead go into [new_after]
         for pred in std::mem::take(&mut break_block.node_mut(ctx).predecessors) {
             new_after.node_mut(ctx).predecessors.push(pred);
-            pred.node_mut(ctx).successors.replace(break_block, new_after)?;
+            pred.node_mut(ctx).successors.replace(break_block, new_after);
         }
 
         // Disconnect [break_block] completely (and use the node after it as our new end location)
@@ -390,7 +390,7 @@ fn update_with(ctx: &mut DecompileContext, loop_node: NodeRef) -> Result<()> {
     for (i, pred) in tail.node(ctx).predecessors.clone().into_iter().enumerate().rev() {
         if pred.node(ctx).start_address < loop_node.node(ctx).start_address {
             tail.node_mut(ctx).predecessors.remove(i);
-            pred.node_mut(ctx).successors.remove(tail);
+            pred.node_mut(ctx).successors.remove(tail)?;
         }
     }
 
@@ -413,7 +413,7 @@ impl<'d> DecompileContext<'d> {
                 continue;
             }
             new_structure.node_mut(self).predecessors.push(pred);
-            pred.node_mut(self).successors.replace(start, new_structure)?;
+            pred.node_mut(self).successors.replace(start, new_structure);
         }
 
         // TODO: parent children

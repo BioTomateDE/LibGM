@@ -51,13 +51,13 @@ impl<'d> DecompileContext<'d> {
             .get(predecessor_index)
             .ok_or("Predecessor index out of range")?;
         predecessors.remove(predecessor_index);
-        old_predecessor.node_mut(self).successors.remove(node);
+        old_predecessor.node_mut(self).successors.remove(node)?;
         Ok(())
     }
 
     pub fn disconnect_all_predecessors(&mut self, node: NodeRef) -> Result<()> {
         for pred in node.node(self).predecessors.clone() {
-            pred.node_mut(self).successors.remove(node);
+            pred.node_mut(self).successors.remove(node)?;
         }
         node.node_mut(self).predecessors = vec![];
         Ok(())
@@ -76,7 +76,7 @@ impl<'d> DecompileContext<'d> {
             if curr_start >= start_address && curr_start < node_start {
                 new_predecessor.node_mut(self).predecessors.push(curr_pred);
                 let successors = &mut curr_pred.node_mut(self).successors;
-                successors.replace(node, new_predecessor)?;
+                successors.replace(node, new_predecessor);
 
                 node.node_mut(self).predecessors.remove(i);
                 continue;
@@ -91,7 +91,7 @@ impl<'d> DecompileContext<'d> {
         let mut i: usize = 0;
         while let Some(curr_pred) = start.node(self).predecessors.get(i).copied() {
             new_structure.node_mut(self).predecessors.push(curr_pred);
-            curr_pred.node_mut(self).successors.replace(start, new_structure)?;
+            curr_pred.node_mut(self).successors.replace(start, new_structure);
             i += 1;
         }
         start.node_mut(self).predecessors.clear();

@@ -476,7 +476,7 @@ impl GMElement for GMInstruction {
             opcode = opcode_old_to_new(opcode);
         }
 
-        // Log::debug!("{} // {:02X} {:02X} {:02X} {:02X}", reader.cur_pos-4, bytes.0, bytes.1, bytes.2, opcode);
+        // log::debug!("{} // {:02X} {:02X} {:02X} {:02X}", reader.cur_pos-4, bytes.0, bytes.1, bytes.2, opcode);
 
         Ok(match opcode {
             opcode::CONV => {
@@ -713,8 +713,8 @@ impl InstructionData for GMSingleTypeInstruction {
     fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
         assert_zero_b0(b.0)?;
         assert_zero_b1(b.1)?;
-        assert_zero_type2(b.2)?;
         let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
+        assert_zero_type2(b.2)?;
         Ok(Self { data_type })
     }
 
@@ -733,10 +733,11 @@ pub struct GMCallVariableInstruction {
 }
 impl InstructionData for GMCallVariableInstruction {
     fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
-        let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
+        let argument_count: u8 = b.0;
         assert_zero_b1(b.1)?;
+        let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
         assert_zero_type2(b.2)?;
-        Ok(Self { data_type, argument_count: b.0 })
+        Ok(Self { data_type, argument_count })
     }
 
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
@@ -755,10 +756,11 @@ pub struct GMDuplicateInstruction {
 }
 impl InstructionData for GMDuplicateInstruction {
     fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
-        let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
+        let size: u8 = b.0;
         assert_zero_b1(b.1)?;
+        let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
         assert_zero_type2(b.2)?;
-        Ok(Self { data_type, size: b.0 })
+        Ok(Self { data_type, size })
     }
 
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
@@ -778,9 +780,11 @@ pub struct GMDuplicateSwapInstruction {
 }
 impl InstructionData for GMDuplicateSwapInstruction {
     fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
+        let size1: u8 = b.0;
+        let size2: u8 = b.1;
         let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
         assert_zero_type2(b.2)?;
-        Ok(Self { data_type, size1: b.0, size2: b.1 })
+        Ok(Self { data_type, size1, size2 })
     }
 
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
@@ -798,14 +802,15 @@ pub struct GMPopSwapInstruction {
 }
 impl InstructionData for GMPopSwapInstruction {
     fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
+        let size: u8 = b.0;
         assert_zero_b1(b.1)?;
-        Ok(Self { size: b.0 })
+        Ok(Self { size })
     }
 
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
         builder.write_u8(self.size);
         builder.write_u8(0);
-        builder.write_u8(GMDataType::Int16.into());
+        builder.write_u8(u8::from(GMDataType::Int16) | u8::from(GMDataType::Variable) << 4);
         builder.write_u8(opcode);
         Ok(())
     }
@@ -865,16 +870,15 @@ pub struct GMDoubleTypeInstruction {
 }
 impl InstructionData for GMDoubleTypeInstruction {
     fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
-        let right: GMDataType = num_enum_from(b.2 & 0xf)?;
-        let left: GMDataType = num_enum_from(b.2 >> 4)?;
         assert_zero_b0(b.0)?;
         assert_zero_b1(b.1)?;
+        let right: GMDataType = num_enum_from(b.2 & 0xf)?;
+        let left: GMDataType = num_enum_from(b.2 >> 4)?;
         Ok(Self { right, left })
     }
 
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
-        builder.write_u8(0);
-        builder.write_u8(0);
+        builder.write_u16(0);
         builder.write_u8(u8::from(self.right) | u8::from(self.left) << 4);
         builder.write_u8(opcode);
         Ok(())
@@ -889,10 +893,10 @@ pub struct GMComparisonInstruction {
 }
 impl InstructionData for GMComparisonInstruction {
     fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
+        assert_zero_b0(b.0)?;
         let comparison_type: GMComparisonType = num_enum_from(b.1)?;
         let type1: GMDataType = num_enum_from(b.2 & 0xf)?;
         let type2: GMDataType = num_enum_from(b.2 >> 4)?;
-        assert_zero_b0(b.0)?;
         Ok(Self { comparison_type, type1, type2 })
     }
 
@@ -917,9 +921,9 @@ pub struct GMPopInstruction {
 }
 impl InstructionData for GMPopInstruction {
     fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
+        let raw_instance_type: i16 = b.0 as i16 | ((b.1 as i16) << 8);
         let type1: GMDataType = num_enum_from(b.2 & 0xf)?;
         let type2: GMDataType = num_enum_from(b.2 >> 4)?;
-        let raw_instance_type: i16 = b.0 as i16 | ((b.1 as i16) << 8);
         let destination: CodeVariable = read_variable(reader, raw_instance_type)?;
         Ok(Self { type1, type2, destination })
     }
@@ -948,10 +952,11 @@ impl InstructionData for GMPopInstruction {
 pub struct GMPushInstruction {
     pub value: GMCodeValue,
 }
+/// TODO: separate PushGlobal, PushLocal, PushBuiltin from Push
 impl InstructionData for GMPushInstruction {
     fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
-        let data_type: GMDataType = num_enum_from(b.2)?;
         let raw_instance_type: i16 = (b.0 as i16) | ((b.1 as i16) << 8);
+        let data_type: GMDataType = num_enum_from(b.2)?;
         let value: GMCodeValue = if data_type == GMDataType::Variable {
             GMCodeValue::Variable(read_variable(reader, raw_instance_type)?)
         } else {
@@ -1001,11 +1006,13 @@ impl InstructionData for GMPushInstruction {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMCallInstruction {
-    pub arguments_count: u8,
+    pub argument_count: u8,
     pub function: GMRef<GMFunction>,
 }
 impl InstructionData for GMCallInstruction {
     fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
+        let argument_count: u8 = b.0;
+        assert_zero_b1(b.1)?;
         let data_type: GMDataType = num_enum_from(b.2)?;
         integrity_assert! {
             data_type == GMDataType::Int32,
@@ -1025,14 +1032,12 @@ impl InstructionData for GMCallInstruction {
             })?;
         reader.cur_pos += 4; // Skip next occurrence offset
 
-        assert_zero_b1(b.1)?;
-
-        Ok(GMCallInstruction { arguments_count: b.0, function })
+        Ok(GMCallInstruction { argument_count, function })
     }
 
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
         let instr_pos: usize = builder.len();
-        builder.write_u8(self.arguments_count);
+        builder.write_u8(self.argument_count);
         builder.write_u8(0);
         builder.write_u8(GMDataType::Int32.into());
         builder.write_u8(opcode);
@@ -1594,7 +1599,7 @@ pub fn check_yyc(reader: &DataReader) -> bool {
     let Some(chunk_func) = reader.chunks.get("FUNC") else {
         return true;
     };
-    chunk_code.end_pos <= chunk_code.start_pos
-        && chunk_vari.end_pos <= chunk_vari.start_pos
-        && chunk_func.end_pos <= chunk_func.start_pos
+    chunk_code.end_pos == chunk_code.start_pos
+        && chunk_vari.end_pos == chunk_vari.start_pos
+        && chunk_func.end_pos == chunk_func.start_pos
 }

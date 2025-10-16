@@ -270,12 +270,12 @@ fn parse_call(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &GMData
     let function: GMRef<GMFunction> = parse_function(line, &gm_data.strings, &gm_data.functions)?;
     let argc_str: String = consume_round_brackets(line)?
         .with_context(|| format!("Expected round brackets with argument count for function call; found {line:?}"))?;
-    let arguments_count: u8 = if let Some(str) = argc_str.strip_prefix("argc=") {
+    let argument_count: u8 = if let Some(str) = argc_str.strip_prefix("argc=") {
         str.parse().with_context(|| format!("Invalid argument count {str}"))?
     } else {
         bail!("Expected \"argc=\" for function call parameters; found {line:?}");
     };
-    Ok(GMCallInstruction { arguments_count, function })
+    Ok(GMCallInstruction { argument_count, function })
 }
 
 fn parse_call_var(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMCallVariableInstruction> {
@@ -329,7 +329,7 @@ fn consume_brackets(line: &mut &str, open: char, close: char) -> Result<Option<S
         return Ok(None);
     }
     consume_char(line);
-    let close_pos = line.find(close).with_context(|| format!("'{open}' was never closed"))?;
+    let close_pos = line.find(close).ok_or_else(|| format!("'{open}' was never closed"))?;
     let inside = line[..close_pos].to_string();
     *line = &line[close_pos + 1..];
     Ok(Some(inside))

@@ -26,35 +26,35 @@ impl Successors {
         Self { fall_through: None, branch_target: None, catch: None }
     }
 
-    pub fn replace(&mut self, search: NodeRef, replace: NodeRef) -> Result<()> {
-        let mut found: bool = false;
+    pub fn replace(&mut self, search: NodeRef, replace: NodeRef) {
         if self.branch_target == Some(search) {
             self.branch_target = Some(replace);
-            found = true;
         }
         if self.fall_through == Some(search) {
             self.fall_through = Some(replace);
-            found = true;
         }
         if self.catch == Some(search) {
             self.catch = Some(replace);
+        }
+    }
+
+    pub fn remove(&mut self, search: NodeRef) -> Result<()> {
+        let mut found: bool = false;
+        if self.branch_target == Some(search) {
+            self.branch_target = None;
+            found = true;
+        }
+        if self.fall_through == Some(search) {
+            self.fall_through = None;
+            found = true;
+        }
+        if self.catch == Some(search) {
+            self.catch = None;
             found = true;
         }
         if !found {
             bail!("Could not find {search} successor");
         }
         Ok(())
-    }
-
-    pub fn remove(&mut self, search: NodeRef) {
-        if self.branch_target == Some(search) {
-            self.branch_target = None;
-        }
-        if self.fall_through == Some(search) {
-            self.fall_through = None;
-        }
-        if self.catch == Some(search) {
-            self.catch = None;
-        }
     }
 }

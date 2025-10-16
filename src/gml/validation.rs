@@ -310,7 +310,7 @@ fn validate_instructions(
                 GMInstruction::PushImmediate(int16) => stack.push(VMStackItem::Int32(Some(i32::from(*int16)))),
 
                 GMInstruction::Call(instr) => {
-                    for _ in 0..instr.arguments_count {
+                    for _ in 0..instr.argument_count {
                         let item: VMStackItem = stack.pop()?;
                         if item != VMStackItem::Variable {
                             bail!("Function argument is {item:?} instead variable")
