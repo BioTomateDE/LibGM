@@ -2,6 +2,7 @@ use std::fmt::{Display, Formatter, Write};
 use std::str::FromStr;
 
 #[derive(thiserror::Error, Debug)]
+#[error("{context}")]
 pub struct Error {
     context: String,
     #[source]
@@ -27,11 +28,11 @@ impl Error {
     }
 
     pub fn chain_with(&self, arrow: &str) -> String {
-        let mut chain = vec![&self.context as &dyn std::fmt::Display];
+        let mut chain = vec![&self.context as &dyn Display];
         let mut source = self.source.as_ref().map(|e| e.as_ref() as &dyn std::error::Error);
 
         while let Some(err) = source {
-            chain.push(err as &dyn std::fmt::Display);
+            chain.push(err as &dyn Display);
             source = err.source();
         }
         chain.reverse();
@@ -45,12 +46,6 @@ impl Error {
 
     pub fn chain(&self) -> String {
         self.chain_with(">")
-    }
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.chain())
     }
 }
 

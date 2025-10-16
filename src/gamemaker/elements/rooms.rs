@@ -237,33 +237,21 @@ impl GMElement for GMRoomFlags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let raw = reader.read_u32()?;
         Ok(GMRoomFlags {
-            enable_views: 0 != raw & 1,
-            show_color: 0 != raw & 2,
-            dont_clear_display_buffer: 0 != raw & 4,
-            is_gms2: 0 != raw & 131072,
-            is_gms2_3: 0 != raw & 65536,
+            enable_views: 0 != raw & 0x1,
+            show_color: 0 != raw & 0x2,
+            dont_clear_display_buffer: 0 != raw & 0x4,
+            is_gms2: 0 != raw & 0x20000,
+            is_gms2_3: 0 != raw & 0x10000,
         })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let mut raw: u32 = 0;
-
-        if self.enable_views {
-            raw |= 1
-        };
-        if self.show_color {
-            raw |= 2
-        };
-        if self.dont_clear_display_buffer {
-            raw |= 4
-        };
-        if self.is_gms2 {
-            raw |= 131072
-        };
-        if self.is_gms2_3 {
-            raw |= 1365536
-        };
-
+        raw |= self.enable_views as u32 * 0x1;
+        raw |= self.show_color as u32 * 0x2;
+        raw |= self.dont_clear_display_buffer as u32 * 0x4;
+        raw |= self.is_gms2 as u32 * 0x20000;
+        raw |= self.is_gms2_3 as u32 * 0x10000;
         builder.write_u32(raw);
         Ok(())
     }

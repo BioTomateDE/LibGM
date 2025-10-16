@@ -126,21 +126,20 @@ pub fn parse_data_file<T: AsRef<[u8]>>(raw_data: T) -> Result<GMData> {
         let stopwatch = Stopwatch::start();
         detect_gamemaker_version(&mut reader).context("detecting GameMaker version")?;
         log::trace!("Detecting GameMaker Version took {stopwatch}");
-        log::info!(
-            "Loaded game {:?} with gamemaker version {} [specified: {}] and bytecode version {}",
-            reader.resolve_gm_str(reader.general_info.display_name)?,
-            reader.general_info.version,
-            specified_version,
-            reader.general_info.bytecode_version,
-        );
-    } else {
-        log::info!(
-            "Loaded game {:?} with gamemaker version {} and bytecode version {}",
-            reader.resolve_gm_str(reader.general_info.display_name)?,
-            reader.general_info.version,
-            reader.general_info.bytecode_version,
-        );
     }
+
+    let version_info = if specified_version.major >= 2 {
+        format!("{} [specified: {}]", reader.general_info.version, specified_version)
+    } else {
+        format!("{}", reader.general_info.version)
+    };
+
+    log::info!(
+        "Loaded game {:?} with GameMaker Version {} and bytecode version {}",
+        reader.resolve_gm_str(reader.general_info.display_name)?,
+        version_info,
+        reader.general_info.bytecode_version,
+    );
 
     // This code is ugly
     let (variables, functions, codes) = if check_yyc(&reader) {
