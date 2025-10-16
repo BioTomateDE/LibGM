@@ -8,10 +8,11 @@ use crate::util::init::vec_with_capacity;
 
 const ALIGNMENT: u32 = 8;
 
+/// See [GMBackground].
 #[derive(Debug, Clone)]
 pub struct GMBackgrounds {
     pub backgrounds: Vec<GMBackground>,
-    pub is_aligned: bool,
+    is_aligned: bool,
     pub exists: bool,
 }
 impl GMChunkElement for GMBackgrounds {
@@ -42,13 +43,24 @@ impl GMElement for GMBackgrounds {
     }
 }
 
+/// A background or tileset entry in a data file.
+/// ___
+/// For GameMaker Studio 2, this will only ever be a tileset.
+/// For GameMaker Studio 1, this is usually a background,
+/// but is sometimes repurposed as use for a tileset as well.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMBackground {
+    /// The name of the background.
     pub name: GMRef<String>,
+    /// Whether the background should be transparent.
     pub transparent: bool,
+    /// Whether the background should get smoothed.
     pub smooth: bool,
+    /// Whether to preload the background.
     pub preload: bool,
+    /// The [GMTexturePageItem] this background uses.
     pub texture: Option<GMRef<GMTexturePageItem>>,
+    /// Only set in GMS 2.0+.
     pub gms2_data: Option<GMBackgroundGMS2Data>,
 }
 impl GMElement for GMBackground {

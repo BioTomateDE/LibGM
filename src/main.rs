@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use libgm::prelude::*;
 use libgm::util::bench::Stopwatch;
 use std::path::Path;

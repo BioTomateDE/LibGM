@@ -230,10 +230,14 @@ impl GMElement for GMCodes {
     }
 }
 
+/// A code entry in a data file.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMCode {
+    /// The name of the code entry.
     pub name: GMRef<String>,
+    /// A list of bytecode instructions this code entry has.
     pub instructions: Vec<GMInstruction>,
+    /// Set in bytecode 15+.
     pub bytecode15_info: Option<GMCodeBytecode15>,
 }
 

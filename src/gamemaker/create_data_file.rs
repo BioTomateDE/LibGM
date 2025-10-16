@@ -471,8 +471,8 @@ fn import_texture_page(gm_data: &mut GMData, image_path: &Path) {
         generated_mips: Some(0),
         texture_block_size: Some(0xDEADC0DE),
         data_2022_9: Some(GMEmbeddedTexture2022_9 {
-            texture_width: image.width() as i32,
-            texture_height: image.height() as i32,
+            texture_width: image.width(),
+            texture_height: image.height(),
             index_in_group: 0,
         }),
         image: Some(GMImage::DynImg(image)),

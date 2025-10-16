@@ -3,11 +3,16 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
 
+/// Audio Groups allow you to manage a set sound entries easier.
+/// You can use these for memory management, volume control and more.
+/// ___
+/// Audio Groups are only available to use in the regular audio system.
 #[derive(Debug, Clone)]
 pub struct GMAudioGroups {
     pub audio_groups: Vec<GMAudioGroup>,
     pub exists: bool,
 }
+
 impl GMChunkElement for GMAudioGroups {
     fn stub() -> Self {
         Self { audio_groups: vec![], exists: false }
@@ -33,7 +38,13 @@ impl GMElement for GMAudioGroups {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMAudioGroup {
+    /// The name of the audio group.
+    /// This is how the audio group is referenced from code.
     pub name: GMRef<String>,
+
+    /// Relative path (from the main data file) to the audio group file, in GameMaker 2024.14 and above.
+    /// ___
+    /// Prior to 2024.14, audio groups were all numerically assigned filenames and all in the root directory.
     pub path: Option<GMRef<String>>,
 }
 impl GMElement for GMAudioGroup {

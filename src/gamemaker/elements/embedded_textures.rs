@@ -37,7 +37,7 @@ impl GMElement for GMEmbeddedTextures {
         let mut texture_pages: Vec<GMEmbeddedTexture> = reader.read_pointer_list()?;
         for i in 0..texture_pages.len() {
             // Find next element start position
-            let mut max_end_of_stream_pos = reader.chunk.end_pos;
+            let mut max_stream_end_pos = reader.chunk.end_pos;
             for texture_page in &texture_pages[i + 1..] {
                 let Some(ref img) = texture_page.image else {
                     continue;
@@ -45,7 +45,7 @@ impl GMElement for GMEmbeddedTextures {
                 let &GMImage::NotYetDeserialized(blob_pos) = img else {
                     bail!("GMImage enum variant is somehow not `NotYetDeserialized`");
                 };
-                max_end_of_stream_pos = blob_pos;
+                max_stream_end_pos = blob_pos;
                 break;
             }
 
@@ -57,7 +57,7 @@ impl GMElement for GMEmbeddedTextures {
                 bail!("GMImage enum variant is somehow not `NotYetDeserialized`");
             };
             reader.cur_pos = *blob_position;
-            *gm_image = read_raw_texture(reader, max_end_of_stream_pos, texture_page.texture_block_size)?;
+            *gm_image = read_raw_texture(reader, max_stream_end_pos, texture_page.texture_block_size)?;
         }
 
         reader.align(4)?;
@@ -103,15 +103,14 @@ impl GMElement for GMEmbeddedTextures {
         }
 
         for (i, texture_page) in self.texture_pages.iter().enumerate() {
-            if let Some(ref img) = texture_page.image {
-                builder.align(0x80);
-                builder.resolve_pointer(&texture_page.image)?;
-                let start_pos: usize = builder.len();
-                img.serialize(builder)?;
-                if builder.is_gm_version_at_least((2022, 3)) {
-                    let length: usize = builder.len() - start_pos;
-                    builder.overwrite_usize(length, texture_block_size_placeholders[i])?
-                }
+            let Some(img) = &texture_page.image else { continue };
+            builder.align(0x80);
+            builder.resolve_pointer(&texture_page.image)?;
+            let start_pos: usize = builder.len();
+            img.serialize(builder)?;
+            if builder.is_gm_version_at_least((2022, 3)) {
+                let length: usize = builder.len() - start_pos;
+                builder.overwrite_usize(length, texture_block_size_placeholders[i])?
             }
         }
 
@@ -120,18 +119,26 @@ impl GMElement for GMEmbeddedTextures {
     }
 }
 
+/// An embedded texture entry in the data file.
 #[derive(Debug, Clone, PartialEq)]
-#[repr(C)] // Need explicit layout so memory addresses for gm pointers don't collide
+#[repr(C)] // Needs explicit layout so memory addresses for gm pointers don't collide
 pub struct GMEmbeddedTexture {
     /// not sure what `scaled` actually is
     pub scaled: u32,
-    /// The amount of generated mipmap levels. Present in 2.0.6+
+
+    /// The amount of generated MipMap levels. Present in 2.0.6+
     pub generated_mips: Option<u32>,
-    /// Size of the texture attached to this texture page in bytes. Present in 2022.3+
+
+    /// Size of the texture attached to this texture page in bytes.
+    /// Present in 2022.3+, as long as the texture is not external.
     pub texture_block_size: Option<u32>,
+
     pub data_2022_9: Option<GMEmbeddedTexture2022_9>,
+
+    /// The texture data in the embedded image.
     pub image: Option<GMImage>,
 }
+
 impl GMElement for GMEmbeddedTexture {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let scaled = reader.read_u32()?;
@@ -141,7 +148,7 @@ impl GMElement for GMEmbeddedTexture {
 
         let texture_data_start_pos = reader.read_u32()?;
         let image: Option<GMImage> = if texture_data_start_pos == 0 {
-            None // Texture_data_start_pos is zero if the texture is "external"
+            None // external texture if texture_data_start_pos is zero
         } else {
             Some(GMImage::NotYetDeserialized(texture_data_start_pos))
         };
@@ -164,117 +171,124 @@ impl GMElement for GMEmbeddedTexture {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMEmbeddedTexture2022_9 {
-    pub texture_width: i32,
-    pub texture_height: i32,
-    pub index_in_group: i32,
+    /// Width of the texture.
+    pub texture_width: u32,
+    /// Height of the texture.
+    pub texture_height: u32,
+    /// Index of the texture in the texture group.
+    pub index_in_group: u32,
 }
+
 impl GMElement for GMEmbeddedTexture2022_9 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let texture_width = reader.read_i32()?;
-        let texture_height = reader.read_i32()?;
-        let index_in_group = reader.read_i32()?;
+        let texture_width = reader.read_u32()?;
+        let texture_height = reader.read_u32()?;
+        let index_in_group = reader.read_u32()?;
         Ok(Self { texture_width, texture_height, index_in_group })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(self.texture_width);
-        builder.write_i32(self.texture_height);
-        builder.write_i32(self.index_in_group);
+        builder.write_u32(self.texture_width);
+        builder.write_u32(self.texture_height);
+        builder.write_u32(self.index_in_group);
         Ok(())
     }
 }
 
 fn read_raw_texture(
     reader: &mut DataReader,
-    max_end_of_stream_pos: u32,
+    max_stream_end_pos: u32,
     texture_block_size: Option<u32>,
 ) -> Result<GMImage> {
     reader.align(0x80)?;
-    let start_position = reader.cur_pos;
-    let header: [u8; 8] = reader.read_bytes_const().cloned().map_err(|e| {
-        format!("Trying to read headers {e} at position {start_position} while parsing images of texture pages")
-    })?;
+    let header: [u8; 8] = *reader.read_bytes_const().context("reading image header")?;
 
-    if header == MAGIC_PNG_HEADER {
-        // Parse PNG
-        loop {
-            let len: u32 = read_u32_be(reader, "Trying to read PNG chunk length")?;
-            let r#type: u32 = read_u32_be(reader, "Trying to read PNG chunk type")?;
-            reader.cur_pos += len + 4;
-            if r#type == 0x49454E44 {
-                // "IEND"
-                break;
-            }
-        }
-
-        let data_length = reader.cur_pos - start_position;
-        if let Some(expected_size) = texture_block_size {
-            if expected_size != data_length {
-                bail!(
-                    "Texture Page Entry specified texture block size {}; actually detected length {} for PNG Image data",
-                    expected_size,
-                    data_length,
-                );
-            }
-        }
-
-        reader.cur_pos = start_position;
-        let bytes: &[u8] = reader
-            .read_bytes_dyn(data_length)
-            .map_err(|e| format!("Trying to read PNG image data {e}"))?;
-        // Png image size checks {~~}
-        let image = GMImage::from_png(bytes.to_vec());
-        Ok(image)
+    let (image, data_length) = if header == MAGIC_PNG_HEADER {
+        read_png(reader)?
     } else if header.starts_with(MAGIC_BZ2_QOI_HEADER) {
-        // Parse QOI + BZip2
-        let mut header_size = 8;
-        let mut uncompressed_size = None;
-        if reader.general_info.is_version_at_least((2022, 5)) {
-            uncompressed_size = Some(reader.read_u32()?);
-            header_size = 12;
-        }
-
-        let bz2_stream_end = find_end_of_bz2_stream(reader, max_end_of_stream_pos)?;
-        let bz2_stream_length = bz2_stream_end - start_position - header_size;
-        if let Some(expected_size) = texture_block_size {
-            if expected_size != bz2_stream_length + header_size {
-                bail!(
-                    "Texture Page Entry specified texture block size {}; actually detected length {} for Bzip2 QOI Image data",
-                    expected_size,
-                    bz2_stream_length + header_size,
-                );
-            }
-        }
-
-        // Read entire image (excluding bz2 header) to byte array
-        reader.cur_pos = start_position + header_size;
-        let raw_image_data: &[u8] = reader
-            .read_bytes_dyn(bz2_stream_length)
-            .map_err(|e| format!("Trying to read Bzip2 Stream of Bz2 Qoi Image {e}"))?;
-
-        let u16_from = match reader.endianness {
-            Endianness::Little => u16::from_le_bytes,
-            Endianness::Big => u16::from_be_bytes,
-        };
-        let width: u16 = u16_from((&header[4..6]).try_into().unwrap());
-        let height: u16 = u16_from((&header[6..8]).try_into().unwrap());
-        let header = BZip2QoiHeader { width, height, uncompressed_size };
-        let image: GMImage = GMImage::from_bz2_qoi(raw_image_data.to_vec(), header);
-        Ok(image)
+        read_bz2_qoi(reader, &header, max_stream_end_pos)?
     } else if header.starts_with(MAGIC_QOI_HEADER) {
-        // Parse QOI (untested)
-        let data_size = reader.read_u32()?;
-        reader.cur_pos = start_position;
-        let raw_image_data: Vec<u8> = reader
-            .read_bytes_dyn(data_size + 12)
-            .map_err(|e| format!("Trying to read raw image data {e}"))?
-            .to_vec();
-        let image: GMImage = GMImage::from_qoi(raw_image_data);
-        Ok(image)
+        read_qoi(reader)?
     } else {
         let dump: String = hexdump(&header, ..)?;
-        bail!("Invalid image header [{dump}] while parsing texture at position {start_position} in chunk 'TXTR'");
+        bail!("Invalid image header [{dump}]");
+    };
+
+    if let Some(expected_size) = texture_block_size {
+        if expected_size != data_length {
+            bail!(
+                "Texture Page Entry specified texture block size {expected_size}; \
+                actually read image with length {data_length}"
+            );
+        }
     }
+
+    Ok(image)
+}
+
+fn read_png(reader: &mut DataReader) -> Result<(GMImage, u32)> {
+    let start_position = reader.cur_pos - 8;
+    loop {
+        let length: u32 = reader
+            .read_bytes_const()
+            .cloned()
+            .map(u32::from_be_bytes)
+            .context("reading PNG chunk length")?;
+        let chunk_type: [u8; 4] = reader.read_bytes_const().cloned().context("reading PNG chunk type")?;
+        reader.cur_pos += length + 4;
+        if &chunk_type == b"IEND" {
+            break;
+        }
+    }
+
+    let data_length = reader.cur_pos - start_position;
+    reader.cur_pos = start_position;
+    let bytes: &[u8] = reader.read_bytes_dyn(data_length).context("reading PNG image data")?;
+    // Png image size checks {~~}
+    let image = GMImage::from_png(bytes.to_vec());
+    Ok((image, data_length))
+}
+
+fn read_bz2_qoi(reader: &mut DataReader, header: &[u8; 8], max_end_of_stream_pos: u32) -> Result<(GMImage, u32)> {
+    let start_position = reader.cur_pos - 8;
+    let mut header_size = 8;
+    let mut uncompressed_size = None;
+    if reader.general_info.is_version_at_least((2022, 5)) {
+        uncompressed_size = Some(reader.read_u32()?);
+        header_size = 12;
+    }
+
+    let bz2_stream_end = find_end_of_bz2_stream(reader, max_end_of_stream_pos)?;
+    let bz2_stream_length = bz2_stream_end - start_position - header_size;
+    let data_length = bz2_stream_length + header_size;
+
+    // Read entire image (excluding bz2 header) to byte array
+    reader.cur_pos = start_position + header_size;
+    let raw_image_data: &[u8] = reader
+        .read_bytes_dyn(bz2_stream_length)
+        .context("reading BZip2 Stream of BZip2 QOI Image")?;
+
+    let u16_from = match reader.endianness {
+        Endianness::Little => u16::from_le_bytes,
+        Endianness::Big => u16::from_be_bytes,
+    };
+    let width: u16 = u16_from((&header[4..6]).try_into().unwrap());
+    let height: u16 = u16_from((&header[6..8]).try_into().unwrap());
+    let header = BZip2QoiHeader { width, height, uncompressed_size };
+    let image: GMImage = GMImage::from_bz2_qoi(raw_image_data.to_vec(), header);
+    Ok((image, data_length))
+}
+
+fn read_qoi(reader: &mut DataReader) -> Result<(GMImage, u32)> {
+    let start_position = reader.cur_pos - 8;
+    let data_length = reader.read_u32()?;
+    reader.cur_pos = start_position;
+    let raw_image_data: Vec<u8> = reader
+        .read_bytes_dyn(data_length + 12)
+        .context("reading QOI Image data")?
+        .to_vec();
+    let image: GMImage = GMImage::from_qoi(raw_image_data);
+    Ok((image, data_length))
 }
 
 #[derive(Debug, Clone)]
@@ -285,6 +299,7 @@ pub struct BZip2QoiHeader {
     uncompressed_size: Option<u32>,
 }
 
+/// **This is not an actual GMElement!**
 #[derive(Debug, Clone)]
 pub enum GMImage {
     DynImg(DynamicImage),
@@ -294,6 +309,7 @@ pub enum GMImage {
     /// Only temporarily used when parsing.
     NotYetDeserialized(u32),
 }
+
 impl GMImage {
     pub fn from_dynamic_image(dyn_img: DynamicImage) -> Self {
         Self::DynImg(dyn_img)
@@ -386,7 +402,7 @@ impl PartialEq for GMImage {
             Ok(dyn_img) => dyn_img,
             Err(_) => return false,
         };
-        img1.eq(&img2)
+        img1 == img2
     }
 }
 
@@ -402,7 +418,7 @@ fn find_end_of_bz2_stream(reader: &mut DataReader, max_end_of_stream_pos: u32) -
         reader.cur_pos = chunk_start_position;
         let chunk_data: &[u8] = reader
             .read_bytes_dyn(chunk_size)
-            .map_err(|e| format!("Trying to read BZip2 stream chunk {e}"))?;
+            .context("reading BZip2 stream chunk")?;
         reader.cur_pos += chunk_size;
 
         // Find first nonzero byte at end of stream
@@ -439,8 +455,8 @@ fn find_end_of_bz2_search(reader: &mut DataReader, end_data_position: u32) -> Re
     let data: [u8; BUFFER_LENGTH as usize] = reader
         .read_bytes_const()
         .cloned()
-        .map_err(|e| format!("Trying to read Bzip2 stream data {e}"))?;
-    // FIXME: if this read fails due to overflow; implement saturating logic like in utmt
+        .context("reading BZip2 stream data")?;
+    // If this read fails due to overflow; implement saturating logic like in utmt
 
     // Start searching for magic, bit by bit (it is not always byte-aligned)
     let mut search_start_position = BUFFER_LENGTH as i32 - 1;
@@ -510,12 +526,4 @@ fn find_end_of_bz2_search(reader: &mut DataReader, end_data_position: u32) -> Re
     }
 
     bail!("Failed to find BZip2 footer magic");
-}
-
-fn read_u32_be(reader: &mut DataReader, context: &str) -> Result<u32> {
-    Ok(reader
-        .read_bytes_const()
-        .cloned()
-        .map(u32::from_be_bytes)
-        .map_err(|e| format!("{context} {e}"))?)
 }

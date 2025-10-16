@@ -5,6 +5,7 @@ use crate::prelude::*;
 use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
+/// GMS 2.3+
 #[derive(Debug, Clone)]
 pub struct GMAnimationCurves {
     pub animation_curves: Vec<GMAnimationCurve>,
@@ -42,9 +43,12 @@ impl GMElement for GMAnimationCurves {
     }
 }
 
+/// An animation curve entry in a data file.
+/// These were introduced in GameMaker 2.3.0.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMAnimationCurve {
     pub name: GMRef<String>,
+    /// TODO: migrate to an enum
     pub graph_type: u32,
     pub channels: Vec<GMAnimationCurveChannel>,
 }
@@ -150,10 +154,14 @@ impl GMElement for PointBezierData {
     }
 }
 
+/// The curve type determines how points flow to each other in a channel.
 #[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u32)]
 pub enum GMAnimationCurveType {
+    /// Creates a linear progression between points.
     Linear = 0,
+    /// Creates a smooth progression between points using catmull-rom spline interpolation.
     Smooth = 1,
+    /// Creates a smooth curve defined by bezier control points.
     Bezier = 2,
 }
