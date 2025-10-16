@@ -33,8 +33,10 @@ impl GMElement for GMEmbeddedAudios {
     }
 }
 
+/// An embedded audio entry in a data file.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMEmbeddedAudio {
+    /// The raw WAV audio data of the embedded audio entry.
     pub audio_data: Vec<u8>,
 }
 impl GMElement for GMEmbeddedAudio {

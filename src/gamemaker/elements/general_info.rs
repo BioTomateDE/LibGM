@@ -240,9 +240,7 @@ impl GMElement for GMGeneralInfo {
         let last_tile_id = reader.read_u32()?;
         let game_id = reader.read_u32()?;
 
-        let directplay_guid: [u8; 16] = *reader
-            .read_bytes_const()
-            .map_err(|e| format!("Trying to read GUID {e}"))?;
+        let directplay_guid: [u8; 16] = *reader.read_bytes_const().context("reading GUID")?;
         let directplay_guid: uuid::Uuid = uuid::Builder::from_bytes_le(directplay_guid).into_uuid();
 
         let game_name: GMRef<String> = reader.read_gm_string()?;
@@ -253,9 +251,7 @@ impl GMElement for GMGeneralInfo {
         let flags = GMGeneralInfoFlags::parse(flags_raw);
         let license_crc32 = reader.read_u32()?;
 
-        let license_md5: [u8; 16] = *reader
-            .read_bytes_const()
-            .map_err(|e| format!("Trying to read license (MD5) {e}"))?;
+        let license_md5: [u8; 16] = *reader.read_bytes_const().context("reading license (MD5)")?;
 
         let timestamp_created = reader.read_i64()?;
         let timestamp_created: DateTime<Utc> = DateTime::from_timestamp(timestamp_created, 0).with_context(|| {
@@ -343,10 +339,7 @@ impl GMElement for GMGeneralInfo {
             }
             let fps = reader.read_f32()?;
             let allow_statistics = reader.read_bool32()?;
-            let game_guid: [u8; 16] = reader
-                .read_bytes_const::<16>()
-                .cloned()
-                .map_err(|e| format!("Trying to read Game GUID {e}"))?;
+            let game_guid: [u8; 16] = reader.read_bytes_const::<16>().cloned().context("reading Game GUID")?;
             gms2_info = Some(GMGeneralInfoGMS2 {
                 random_uid,
                 fps,

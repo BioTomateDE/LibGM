@@ -4,11 +4,13 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
 
+/// GMS2+
 #[derive(Debug, Clone)]
 pub struct GMEmbeddedImages {
     pub embedded_images: Vec<GMEmbeddedImage>,
     pub exists: bool,
 }
+
 impl GMChunkElement for GMEmbeddedImages {
     fn stub() -> Self {
         Self { embedded_images: vec![], exists: false }
@@ -38,11 +40,14 @@ impl GMElement for GMEmbeddedImages {
     }
 }
 
+/// An embedded image entry in a GameMaker data file. This is GMS2 only.<br/>
+/// Not to be confused with the other "embedded" resources, this is a bit different.
 #[derive(Debug, Clone)]
 pub struct GMEmbeddedImage {
     pub name: GMRef<String>,
     pub texture_entry: GMRef<GMTexturePageItem>,
 }
+
 impl GMElement for GMEmbeddedImage {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;

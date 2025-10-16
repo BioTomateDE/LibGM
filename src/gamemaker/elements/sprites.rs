@@ -130,7 +130,7 @@ impl GMElement for GMSprite {
                     }
                     let jpeg_table: Vec<u8> = reader
                         .read_bytes_dyn(jpeg_len)
-                        .map_err(|e| format!("Trying to read YYSWF JPEG Table {e}"))?
+                        .context("reading YYSWF JPEG Table")?
                         .to_vec();
                     reader.align(4)?;
                     let timeline = GMSpriteYYSWFTimeline::deserialize(reader)?;
@@ -705,10 +705,7 @@ fn read_mask_data(reader: &mut DataReader, mask_width: u32, mask_height: u32) ->
     let mut total = 0;
 
     for _ in 0..mask_count {
-        let data: Vec<u8> = reader
-            .read_bytes_dyn(len)
-            .map_err(|e| format!("Trying to read Mask Data {e}"))?
-            .to_vec();
+        let data: Vec<u8> = reader.read_bytes_dyn(len).context("reading Mask Data")?.to_vec();
         collision_masks.push(GMSpriteMaskEntry { data, width: mask_width, height: mask_height });
         total += len;
     }

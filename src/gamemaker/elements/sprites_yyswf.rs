@@ -552,15 +552,15 @@ impl GMElement for GMSpriteYYSWFBitmapData {
 
             let image_data: Vec<u8> = reader
                 .read_bytes_dyn(image_data_length)
-                .map_err(|e| format!("Trying to read Image Data of Bitmap Data {e}"))?
+                .context("reading Image Data of Bitmap Data")?
                 .to_vec();
             let alpha_data: Vec<u8> = reader
                 .read_bytes_dyn(alpha_data_length)
-                .map_err(|e| format!("Trying to read Alpha Data of Bitmap Data {e}"))?
+                .context("reading Alpha Data of Bitmap Data")?
                 .to_vec();
             let color_palette_data: Vec<u8> = reader
                 .read_bytes_dyn(color_palette_data_length)
-                .map_err(|e| format!("Trying to read Color Palette Data of Bitmap Data {e}"))?
+                .context("reading Color Palette Data of Bitmap Data")?
                 .to_vec();
 
             reader.align(4)?;

@@ -196,8 +196,8 @@ fn update_texture_pages(gm_data: &mut GMData) -> Result<()> {
         let image = image.to_dynamic_image()?;
 
         texture_page.data_2022_9 = Some(GMEmbeddedTexture2022_9 {
-            texture_width: image.width() as i32,
-            texture_height: image.height() as i32,
+            texture_width: image.width(),
+            texture_height: image.height(),
             index_in_group: 0,
         });
     }

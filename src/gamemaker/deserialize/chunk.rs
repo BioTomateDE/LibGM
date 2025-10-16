@@ -25,21 +25,18 @@ impl DataReader<'_> {
             self.chunk.name, self.chunk.start_pos, self.chunk.end_pos,
         }
 
-        let string: String = self.read_literal_string(4).map_err(|e| {
-            if self.cur_pos == 4 {
-                "Invalid data.win file; data doesn't start with 'FORM' string".to_string()
-            } else {
-                format!("Could not parse chunk name at position {}: {e}", self.cur_pos)
-            }
-        })?;
+        let string: String = match self.read_literal_string(4) {
+            Ok(str) => str,
+            Err(e) if self.cur_pos == 4 => bail!("Invalid data.win file; data doesn't start with 'FORM' string"),
+            Err(e) => Err(e).context("parsing chunk name")?,
+        };
 
         if string.len() != 4 {
             bail!("Chunk name string {string:?} has size {}", string.len());
         }
 
-        integrity_assert! {
-            string.bytes().all(|b| matches!(b, b'A'..=b'Z' | b'0'..=b'9')),
-            "Chunk name {string:?} contains invalid characters"
+        if !string.bytes().all(|b| matches!(b, b'A'..=b'Z' | b'0'..=b'9')) {
+            bail!("Chunk name {string:?} contains invalid characters")
         }
 
         // Chunk names are reversed in big endian
@@ -61,10 +58,14 @@ impl DataReader<'_> {
         let element = T::deserialize(self)?;
         self.read_chunk_padding()?;
 
-        integrity_assert! {
-            self.cur_pos == self.chunk.end_pos,
-            "Misaligned chunk '{}': expected chunk end position {} but reader is actually at position {} (diff: {})",
-            self.chunk.name, self.chunk.end_pos, self.cur_pos, self.chunk.end_pos as i64 - self.cur_pos as i64,
+        if self.cur_pos != self.chunk.end_pos {
+            bail!(
+                "Misaligned chunk '{}': expected chunk end position {} but reader is actually at position {} (diff: {})",
+                self.chunk.name,
+                self.chunk.end_pos,
+                self.cur_pos,
+                self.chunk.end_pos as i64 - self.cur_pos as i64,
+            )
         }
 
         log::trace!("Parsing chunk '{}' took {stopwatch}", self.chunk.name);
@@ -73,16 +74,21 @@ impl DataReader<'_> {
 
     /// Potentially read padding at the end of the chunk, depending on the GameMaker version.
     fn read_chunk_padding(&mut self) -> Result<()> {
+        // Last chunk does not get padding
         if self.chunk.is_last_chunk {
-            return Ok(()); // Last chunk does not get padding
+            return Ok(());
         }
+
         let ver: GMVersion = if self.general_info.exists {
             self.general_info.version.clone()
         } else {
             self.unstable_get_gm_version()? // only happens before chunk GEN8 is read (STRG)
         };
-        if !(ver.major >= 2 || (ver.major == 1 && ver.minor >= 9999)) {
-            return Ok(()); // No padding before these versions
+
+        // Padding only for GMS2+ and 1.9999+
+        let padding_elegible = ver.major >= 2 || (ver.major == 1 && ver.minor >= 9999);
+        if !padding_elegible {
+            return Ok(());
         }
 
         while self.cur_pos % self.chunk_padding != 0 {
@@ -90,13 +96,16 @@ impl DataReader<'_> {
             if byte == 0 {
                 continue;
             }
-            // Byte is not zero => padding is incorrect
+
+            // Byte is not zero => Padding is incorrect
             self.cur_pos -= 1; // Undo reading incorrect padding byte
             self.chunk_padding = if self.cur_pos % 4 == 0 { 4 } else { 1 };
             log::debug!("Set chunk padding to {}", self.chunk_padding);
             return Ok(());
         }
-        Ok(()) // Padding was already set correctly
+
+        // Padding was already set correctly
+        Ok(())
     }
 
     pub fn read_chunk_required<T: GMChunkElement + GMElement>(&mut self, chunk_name: &str) -> Result<T> {
