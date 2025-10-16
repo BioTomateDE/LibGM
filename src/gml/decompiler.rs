@@ -25,7 +25,7 @@ pub fn decompile_to_ast(gm_data: &GMData, code_ref: GMRef<GMCode>) -> Result<()>
     };
 
     let code = code_ref.resolve(&gm_data.codes.codes)?;
-    find_blocks(&mut ctx, &code.instructions)?;
+    find_blocks(&mut ctx, &code.instructions).context("finding blocks")?;
     // for i in &cfg.blocks {
     //     println!(
     //         "{:>3}..{:<3} ({} | {})  {}",
@@ -44,10 +44,10 @@ pub fn decompile_to_ast(gm_data: &GMData, code_ref: GMRef<GMCode>) -> Result<()>
     // }
     // // std::process::exit(67);
 
-    find_fragments(&mut ctx, code_ref)?;
-    find_static_inits(&mut ctx)?;
+    find_fragments(&mut ctx, code_ref).context("finding fragments")?;
+    find_static_inits(&mut ctx).context("finding static inits")?;
     find_short_circuits(&mut ctx);
-    find_loops(&mut ctx)?;
+    find_loops(&mut ctx).context("finding loops")?;
 
     Ok(())
 }

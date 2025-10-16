@@ -2,13 +2,27 @@ use crate::gamemaker::deserialize::DataReader;
 use crate::gamemaker::elements::GMElement;
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
-use std::fmt::Formatter;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum LTSBranch {
     PreLTS,
     LTS,
     PostLTS,
+}
+
+impl Display for LTSBranch {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::PreLTS => "PreLTS",
+                Self::LTS => "LTS",
+                Self::PostLTS => "PostLTS",
+            }
+        )
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -28,17 +42,12 @@ impl GMVersion {
     }
 }
 
-impl std::fmt::Display for GMVersion {
+impl Display for GMVersion {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let branch_str = match self.branch {
-            LTSBranch::PreLTS => "PreLTS",
-            LTSBranch::LTS => "LTS",
-            LTSBranch::PostLTS => "PostLTS",
-        };
         write!(
             f,
-            "{}.{}.{}.{} ({branch_str})",
-            self.major, self.minor, self.release, self.build
+            "{}.{}.{}.{} ({})",
+            self.major, self.minor, self.release, self.build, self.branch
         )
     }
 }
@@ -201,7 +210,7 @@ impl From<(u32, u32, u32, u32, LTSBranch)> for GMVersionReq {
     }
 }
 
-impl std::fmt::Display for GMVersionReq {
+impl Display for GMVersionReq {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let lts_str = if self.non_lts { " (Non LTS)" } else { "" };
         write!(

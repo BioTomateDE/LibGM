@@ -91,7 +91,7 @@ pub fn find_loops(ctx: &mut DecompileContext) -> Result<()> {
             GMInstruction::Branch(instr) if instr.jump_offset < 0 => push_while(ctx, &mut whiles, block, instr),
             GMInstruction::BranchUnless(instr) if instr.jump_offset < 0 => push_do_until(ctx, block),
             GMInstruction::BranchIf(instr) if instr.jump_offset < 0 => push_repeat(ctx, block),
-            GMInstruction::PushWithContext(_) => push_with(ctx, block)?,
+            GMInstruction::PushWithContext(_) => push_with(ctx, block).context("pushing With Loop")?,
             _ => {}
         }
     }
@@ -100,10 +100,10 @@ pub fn find_loops(ctx: &mut DecompileContext) -> Result<()> {
     for idx in start_idx..end_idx {
         let node = NodeRef::from(idx);
         match node.r#loop(ctx).loop_type {
-            LoopType::While => update_while(ctx, node)?,
-            LoopType::DoUntil => update_do_until(ctx, node)?,
-            LoopType::Repeat => update_repeat(ctx, node)?,
-            LoopType::With => update_with(ctx, node)?,
+            LoopType::While => update_while(ctx, node).context("updating WhileLoop Node")?,
+            LoopType::DoUntil => update_do_until(ctx, node).context("updating DoUntilLoop Node")?,
+            LoopType::Repeat => update_repeat(ctx, node).context("updating RepeatLoop Node")?,
+            LoopType::With => update_with(ctx, node).context("updating WithLoop Node")?,
         }
     }
 
@@ -348,8 +348,10 @@ fn update_with(ctx: &mut DecompileContext, loop_node: NodeRef) -> Result<()> {
     loop_node.loop_mut(ctx).after = new_after;
 
     // Get rid of jumps from [tail]
-    ctx.disconnect_branch_successor(tail)?;
-    ctx.disconnect_fallthrough_successor(tail)?;
+    ctx.disconnect_branch_successor(tail)
+        .context("disconnecting Tail successor")?;
+    ctx.disconnect_fallthrough_successor(tail)
+        .context("disconnecting Tail successor")?;
 
     let mut end_node = after;
     if let Some(break_block) = break_block {
@@ -373,16 +375,20 @@ fn update_with(ctx: &mut DecompileContext, loop_node: NodeRef) -> Result<()> {
         // Reroute branch successor of [after] to instead go to [end_node]
         let after_successors = &mut after.node_mut(ctx).successors;
         after_successors.branch_target = Some(end_node);
-        ctx.disconnect_branch_successor(after)?;
+        ctx.disconnect_branch_successor(after)
+            .context("disconnecting After successor")?;
         end_node.node_mut(ctx).predecessors.push(after);
     }
 
     // Insert structure into graph. Don't reroute backwards branches to [head] though (as other loop headers could be there)
-    ctx.insert_with_loop(head, end_node, loop_node)?;
+    ctx.insert_with_loop(head, end_node, loop_node)
+        .context("inserting into graph")?;
 
     // Redirect [before] into this loop
-    ctx.disconnect_fallthrough_successor(before)?;
-    ctx.disconnect_branch_successor(before)?;
+    ctx.disconnect_fallthrough_successor(before)
+        .context("disconnecting Before successor")?;
+    ctx.disconnect_branch_successor(before)
+        .context("disconnecting Before successor")?;
     before.node_mut(ctx).successors.fall_through = Some(loop_node);
     loop_node.node_mut(ctx).predecessors.push(before);
 
@@ -390,7 +396,10 @@ fn update_with(ctx: &mut DecompileContext, loop_node: NodeRef) -> Result<()> {
     for (i, pred) in tail.node(ctx).predecessors.clone().into_iter().enumerate().rev() {
         if pred.node(ctx).start_address < loop_node.node(ctx).start_address {
             tail.node_mut(ctx).predecessors.remove(i);
-            pred.node_mut(ctx).successors.remove(tail)?;
+            pred.node_mut(ctx)
+                .successors
+                .remove(tail)
+                .context("removing Tail from Predecessor's successors")?;
         }
     }
 

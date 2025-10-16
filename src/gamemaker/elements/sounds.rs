@@ -39,16 +39,16 @@ impl GMElement for GMSounds {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSound {
-    pub name: GMRef<String>,                        // E.g. "abc_123_a"
-    pub flags: GMSoundFlags,                        // E.g. Regular
-    pub audio_type: Option<GMRef<String>>,          // E.g. ".mp3"
-    pub file: GMRef<String>, // e.g. "abc_123_a.ogg"; doesn't have to actually be a real file in game files (rather embedded audio)
-    pub effects: u32,        // Idk; always zero
-    pub volume: f32,         // E.g. 0.69
-    pub pitch: f32,          // E.g. 4.20
-    pub audio_group: GMRef<GMAudioGroup>, // Bytecode14+
-    pub audio_file: Option<GMRef<GMEmbeddedAudio>>, // E.g. UndertaleEmbeddedAudio#17
-    pub audio_length: Option<f32>, // In seconds probably
+    pub name: GMRef<String>,
+    pub flags: GMSoundFlags,
+    pub audio_type: Option<GMRef<String>>,
+    pub file: GMRef<String>,
+    pub effects: u32,
+    pub volume: f32,
+    pub pitch: f32,
+    pub audio_group: GMRef<GMAudioGroup>,
+    pub audio_file: Option<GMRef<GMEmbeddedAudio>>,
+    pub audio_length: Option<f32>,
 }
 impl GMElement for GMSound {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -127,27 +127,17 @@ impl GMElement for GMSoundFlags {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let mut raw: u32 = 0;
-
-        if self.is_embedded {
-            raw |= 0x1
-        };
-        if self.is_compressed {
-            raw |= 0x2
-        };
-        if self.is_decompressed_on_load {
-            raw |= 0x3
-        };
-        if self.regular {
-            raw |= 0x64
-        };
-
+        raw |= self.is_embedded as u32 * 0x1;
+        raw |= self.is_compressed as u32 * 0x2;
+        raw |= self.is_decompressed_on_load as u32 * 0x3;
+        raw |= self.regular as u32 * 0x64;
         builder.write_u32(raw);
         Ok(())
     }
 }
 
 fn get_builtin_sound_group_id(gm_version: &GMVersion) -> u32 {
-    let is_ver = |i| gm_version.is_version_at_least(i); // Small closure for concision
+    let is_ver = |req| gm_version.is_version_at_least(req); // Small closure for concision
     // ver >= 1.0.0.1250 || (ver >= 1.0.0.161 && ver < 1.0.0.1000)
     if is_ver((1, 0, 0, 1250)) || is_ver((1, 0, 0, 161)) && !is_ver((1, 0, 0, 1000)) {
         0
