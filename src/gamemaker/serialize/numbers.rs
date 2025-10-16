@@ -30,7 +30,7 @@ impl DataBuilder<'_> {
 
     pub fn write_usize(&mut self, number: usize) -> Result<()> {
         let number: u32 = number.try_into().map_err(|_| {
-            format!("Number {number} (0x{number:016X}) does not fit into 32 bits while writing usize integer",)
+            format!("Number {number} (0x{number:016X}) does not fit into 32 bits while writing usize integer")
         })?;
         self.write_u32(number);
         Ok(())

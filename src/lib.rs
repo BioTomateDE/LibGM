@@ -1,3 +1,15 @@
+// TODO: This is only for development. Remove this after initial release.
+#![allow(dead_code)]
+#![allow(unused)]
+#![deny(unused_must_use)]
+#![deny(unreachable_patterns)]
+#![deny(unused_assignments)]
+#![deny(unused_macros)]
+#![warn(clippy::all)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
+#![warn(clippy::cargo)]
+
 // Core error handling
 mod error;
 pub use error::*;

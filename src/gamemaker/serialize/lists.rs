@@ -86,7 +86,13 @@ impl DataBuilder<'_> {
     /// Assumes `chunk.is_aligned`.
     pub fn write_aligned_list_chunk<T: GMElement>(&mut self, elements: &Vec<T>, alignment: u32) -> Result<()> {
         let count: usize = elements.len();
-        let ctx = || format!("building aligned chunk pointer list of {} with {} elements", typename::<T>(), count);
+        let ctx = || {
+            format!(
+                "building aligned chunk pointer list of {} with {} elements",
+                typename::<T>(),
+                count
+            )
+        };
 
         self.write_usize(count).with_context(ctx)?;
         let pointer_list_start_pos: usize = self.len();

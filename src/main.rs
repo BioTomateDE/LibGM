@@ -1,15 +1,3 @@
-#![deny(unused_must_use)]
-#![deny(unreachable_patterns)]
-#![deny(unused_assignments)]
-#![deny(unused_macros)]
-#![warn(clippy::all)]
-#![warn(clippy::pedantic)]
-#![warn(clippy::nursery)]
-#![warn(clippy::cargo)]
-// TODO: This is only for development. Remove this after initial release.
-#![allow(dead_code)]
-#![allow(unused)]
-
 use libgm::prelude::*;
 use libgm::util::bench::Stopwatch;
 use std::path::Path;
