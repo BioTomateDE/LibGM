@@ -28,9 +28,6 @@ impl GMElement for GMAudioGroups {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.write_pointer_list(&self.audio_groups)?;
         Ok(())
     }

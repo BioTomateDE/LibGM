@@ -54,19 +54,19 @@ pub struct DataReader<'a> {
 
     /// Should only be set by [`crate::gamemaker::elements::strings`].
     /// This means that STRG has to be parsed before any other chunk.
-    pub string_occurrence_map: HashMap<u32, GMRef<String>>,
+    pub string_occurrences: HashMap<u32, GMRef<String>>,
 
     /// Should only be set by [`crate::gamemaker::elements::texture_page_items`].
     /// This means that TPAG has to be parsed before any chunk with texture page item pointers.
-    pub texture_page_item_occurrence_map: HashMap<u32, GMRef<GMTexturePageItem>>,
+    pub texture_page_item_occurrences: HashMap<u32, GMRef<GMTexturePageItem>>,
 
     /// Should only be set by [`crate::gamemaker::elements::variables`].
     /// This means that VARI has to be parsed before CODE.
-    pub variable_occurrence_map: HashMap<u32, GMRef<GMVariable>>,
+    pub variable_occurrences: HashMap<u32, GMRef<GMVariable>>,
 
     /// Should only be set by [`crate::gamemaker::elements::functions`].
     /// This means that FUNC has to be parsed before CODE.
-    pub function_occurrence_map: HashMap<u32, GMRef<GMFunction>>,
+    pub function_occurrences: HashMap<u32, GMRef<GMFunction>>,
 }
 
 impl<'a> DataReader<'a> {
@@ -84,10 +84,10 @@ impl<'a> DataReader<'a> {
             data,
             cur_pos: 0,
             chunk_padding: 16, // Default padding value (if used) is 16
-            string_occurrence_map: HashMap::new(),
-            texture_page_item_occurrence_map: HashMap::new(),
-            variable_occurrence_map: HashMap::new(),
-            function_occurrence_map: HashMap::new(),
+            string_occurrences: HashMap::new(),
+            texture_page_item_occurrences: HashMap::new(),
+            variable_occurrences: HashMap::new(),
+            function_occurrences: HashMap::new(),
             endianness: Endianness::Little, // Assume little endian; big endian is an edge case
         }
     }

@@ -60,9 +60,9 @@ impl GMElement for GMFunctions {
             }
 
             for occurrence in occurrences {
-                if let Some(old_value) = reader.function_occurrence_map.insert(occurrence, GMRef::new(i as u32)) {
+                if let Some(old_value) = reader.function_occurrences.insert(occurrence, GMRef::new(i)) {
                     bail!(
-                        "Conflicting occurrence positions while parsing functions: absolute position {} \
+                        "Conflicting occurrence positions while parsing functions: Position {} \
                         was already set for function #{} with name {:?}; trying to set to function #{} with name {:?}",
                         occurrence,
                         old_value.index,
@@ -81,10 +81,6 @@ impl GMElement for GMFunctions {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
-
         if builder.bytecode_version() >= 15 {
             builder.write_usize(self.functions.len())?;
         }
@@ -148,9 +144,6 @@ impl GMElement for GMCodeLocals {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.write_simple_list(&self.code_locals)?;
         Ok(())
     }

@@ -1,3 +1,4 @@
+use crate::gamemaker::data::Endianness;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
@@ -9,12 +10,12 @@ use crate::prelude::*;
 #[derive(Debug, Clone)]
 pub struct GMFonts {
     pub fonts: Vec<GMFont>,
-    pub padding: Option<[u8; 512]>,
     pub exists: bool,
 }
+
 impl GMChunkElement for GMFonts {
     fn stub() -> Self {
-        Self { fonts: vec![], padding: None, exists: false }
+        Self { fonts: vec![], exists: false }
     }
     fn exists(&self) -> bool {
         self.exists
@@ -27,30 +28,57 @@ impl GMElement for GMFonts {
 
         let mut padding: Option<[u8; 512]> = None;
         if !reader.general_info.is_version_at_least((2024, 14)) {
-            padding = Some(reader.read_bytes_const()?.clone())
+            let endik = reader.endianness;
+            let padding: &[u8; 512] = reader.read_bytes_const().context("Reading FONT padding")?;
+            verify_padding(padding, endik)?;
         }
 
-        Ok(Self { fonts, padding, exists: true })
+        Ok(Self { fonts, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
-
         builder.write_pointer_list(&self.fonts)?;
-
         if !builder.is_gm_version_at_least((2024, 14)) {
-            let Some(padding) = self.padding else {
-                bail!(
-                    "FONT Chunk padding not set before 2024.14 (this could've been a warning probably since there is a fallback)"
-                );
-            };
+            let padding: [u8; 256] = generate_padding(builder.gm_data.endianness);
             builder.write_bytes(&padding);
         }
 
         Ok(())
     }
+}
+
+fn verify_padding(padding: &[u8; 512], endianness: Endianness) -> Result<()> {
+    padding.iter().enumerate().try_for_each(|(i, &byte)| {
+        let expected = match i {
+            0..=255 if i % 2 == 1 => 0,
+            0..=255 => (i / 2) as u8,
+            256..512 if i % 2 == 1 => 0,
+            _ => 63,
+        };
+
+        if byte == expected {
+            Ok(())
+        } else {
+            bail!("Invalid FONT padding at byte #{i}: expected 0x{expected:02X}, got 0x{byte:02X}")
+        }
+    })
+}
+
+const fn generate_padding(endianness: Endianness) -> [u8; 256] {
+    let mut padding = [0u8; 256];
+    let mut i = 0;
+
+    while i < 256 {
+        padding[i] = if i % 2 == 1 { 0 } else { (i / 2) as u8 };
+        i += 1;
+    }
+
+    while i < 512 {
+        padding[i] = if i % 2 == 1 { 0 } else { 63 };
+        i += 1;
+    }
+
+    padding
 }
 
 #[derive(Debug, Clone, PartialEq)]

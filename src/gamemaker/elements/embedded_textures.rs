@@ -65,9 +65,6 @@ impl GMElement for GMEmbeddedTextures {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.write_usize(self.texture_pages.len())?;
         let pointer_list_start_pos: usize = builder.len();
         for _ in 0..self.texture_pages.len() {
@@ -468,7 +465,7 @@ fn find_end_of_bz2_search(reader: &mut DataReader, end_data_position: u32) -> Re
         let mut bit_position: u8 = search_start_bit_position;
         let mut search_position: i32 = search_start_position;
         let mut magic_bit_position: i32 = 0;
-        let mut magic_position: isize = MAGIC_BZ2_FOOTER.len() as isize - 1;
+        let mut magic_position = MAGIC_BZ2_FOOTER.len() as i8 - 1;
 
         while search_position >= 0 {
             // Get bits at search position and corresponding magic position

@@ -116,11 +116,6 @@ pub fn parse_data_file<T: AsRef<[u8]>>(raw_data: T) -> Result<GMData> {
     reader.strings = reader.read_chunk_required("STRG")?;
     reader.general_info = reader.read_chunk_required("GEN8")?;
 
-    // Games made in GameMaker Studio 2 no longer store their actual version.
-    // They only store `2.0.0.0`. In that case, the version needs to be detected
-    // using assertions that can only be true in new versions.
-    // Note that games which never use new features might be incorrectly detected
-    // as an older version.
     let specified_version: GMVersion = reader.general_info.version.clone();
     if specified_version.major >= 2 {
         let stopwatch = Stopwatch::start();
@@ -128,16 +123,10 @@ pub fn parse_data_file<T: AsRef<[u8]>>(raw_data: T) -> Result<GMData> {
         log::trace!("Detecting GameMaker Version took {stopwatch}");
     }
 
-    let version_info = if specified_version.major >= 2 {
-        format!("{} [specified: {}]", reader.general_info.version, specified_version)
-    } else {
-        format!("{}", reader.general_info.version)
-    };
-
     log::info!(
-        "Loaded game {:?} with GameMaker Version {} and bytecode version {}",
+        "Loading {:?} (GM {}, Bytecode {})",
         reader.resolve_gm_str(reader.general_info.display_name)?,
-        version_info,
+        reader.general_info.version,
         reader.general_info.bytecode_version,
     );
 

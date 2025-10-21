@@ -24,9 +24,6 @@ impl GMElement for GMGlobalInitScripts {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.write_simple_list_of_resource_ids(&self.global_init_scripts)?;
         Ok(())
     }
@@ -52,9 +49,6 @@ impl GMElement for GMGameEndScripts {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.write_simple_list_of_resource_ids(&self.game_end_scripts)?;
         Ok(())
     }

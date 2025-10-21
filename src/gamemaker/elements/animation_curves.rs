@@ -33,9 +33,6 @@ impl GMElement for GMAnimationCurves {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.align(4);
         builder.write_i32(1); // ACRV version 1
         builder.write_pointer_list(&self.animation_curves)?;

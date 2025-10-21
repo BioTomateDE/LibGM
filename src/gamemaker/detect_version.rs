@@ -63,6 +63,11 @@ impl VersionCheck {
     }
 }
 
+/// Games made in GameMaker Studio 2 no longer store their actual version.
+/// They only store `2.0.0.0`. In that case, the version needs to be detected
+/// using assertions that can only be true in new versions.
+/// Note that games which never use new features might be incorrectly detected
+/// as an older version.
 pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
     let saved_pos = reader.cur_pos;
     let saved_chunk: GMChunk = reader.chunk.clone();

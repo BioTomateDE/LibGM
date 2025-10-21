@@ -39,9 +39,6 @@ impl GMElement for GMTags {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.align(4);
         builder.write_i32(1); // TAGS version
         builder.write_simple_list_of_strings(&self.tags)?;

@@ -31,9 +31,6 @@ impl GMElement for GMEmbeddedImages {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.write_i32(1); // EMBI version
         builder.write_simple_list(&self.embedded_images)?;
         Ok(())

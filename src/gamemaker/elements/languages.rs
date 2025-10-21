@@ -50,9 +50,6 @@ impl GMElement for GMLanguageInfo {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.write_u32(self.unknown1);
         builder.write_usize(self.languages.len())?;
         builder.write_usize(self.entry_ids.len())?;

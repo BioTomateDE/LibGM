@@ -42,9 +42,6 @@ impl GMElement for GMSequences {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.align(4);
         builder.write_u32(1); // SEQN Version 1
         builder.write_pointer_list(&self.sequences)?;

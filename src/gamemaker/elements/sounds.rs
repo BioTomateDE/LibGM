@@ -29,9 +29,6 @@ impl GMElement for GMSounds {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.write_pointer_list(&self.sounds)?;
         Ok(())
     }

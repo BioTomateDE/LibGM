@@ -32,7 +32,7 @@ impl GMElement for GMTexturePageItems {
         for (i, pointer) in pointers.into_iter().enumerate() {
             reader.cur_pos = pointer;
             reader
-                .texture_page_item_occurrence_map
+                .texture_page_item_occurrences
                 .insert(pointer, GMRef::new(i as u32));
             texture_page_items.push(GMTexturePageItem::deserialize(reader)?);
         }
@@ -45,9 +45,6 @@ impl GMElement for GMTexturePageItems {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.write_pointer_list(&self.texture_page_items)?;
         if self.is_4_byte_aligned {
             builder.align(4);

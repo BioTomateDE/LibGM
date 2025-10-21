@@ -18,6 +18,7 @@ impl DataReader<'_> {
     /// Read a GameMaker chunk name consisting of 4 ascii characters.
     /// Accounts for endianness; reversing the read chunk name in big endian mode.
     pub fn read_chunk_name(&mut self) -> Result<String> {
+        // This can only happen if this code is malformed.
         integrity_assert! {
             self.chunk.name == "FORM",
             "Reading a chunk name is only allowed in FORM; not in a chunk!

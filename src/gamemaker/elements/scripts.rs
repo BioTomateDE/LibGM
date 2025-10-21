@@ -9,6 +9,7 @@ pub struct GMScripts {
     pub scripts: Vec<GMScript>,
     pub exists: bool,
 }
+
 impl GMChunkElement for GMScripts {
     fn stub() -> Self {
         Self { scripts: vec![], exists: false }
@@ -17,6 +18,7 @@ impl GMChunkElement for GMScripts {
         self.exists
     }
 }
+
 impl GMElement for GMScripts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let scripts: Vec<GMScript> = reader.read_pointer_list()?;
@@ -24,9 +26,6 @@ impl GMElement for GMScripts {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.write_pointer_list(&self.scripts)?;
         Ok(())
     }
