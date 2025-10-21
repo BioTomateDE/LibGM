@@ -62,22 +62,12 @@ impl DataReader<'_> {
     /// Read a standard GameMaker string reference.
     pub fn read_gm_string(&mut self) -> Result<GMRef<String>> {
         let occurrence_position = self.read_u32()?;
-        resolve_occurrence(
-            occurrence_position,
-            &self.string_occurrence_map,
-            &self.chunk.name,
-            self.cur_pos,
-        )
+        self.resolve_occurrence(occurrence_position, &self.string_occurrences)
     }
 
     pub fn read_gm_texture(&mut self) -> Result<GMRef<GMTexturePageItem>> {
         let occurrence_position = self.read_u32()?;
-        resolve_occurrence(
-            occurrence_position,
-            &self.texture_page_item_occurrence_map,
-            &self.chunk.name,
-            self.cur_pos,
-        )
+        self.resolve_occurrence(occurrence_position, &self.texture_page_item_occurrences)
     }
 
     pub fn read_gm_string_opt(&mut self) -> Result<Option<GMRef<String>>> {
@@ -85,12 +75,9 @@ impl DataReader<'_> {
         if occurrence_position == 0 {
             return Ok(None);
         }
-        Ok(Some(resolve_occurrence(
-            occurrence_position,
-            &self.string_occurrence_map,
-            &self.chunk.name,
-            self.cur_pos,
-        )?))
+        Ok(Some(
+            self.resolve_occurrence(occurrence_position, &self.string_occurrences)?,
+        ))
     }
 
     pub fn read_gm_texture_opt(&mut self) -> Result<Option<GMRef<GMTexturePageItem>>> {
@@ -98,12 +85,29 @@ impl DataReader<'_> {
         if occurrence_position == 0 {
             return Ok(None);
         }
-        Ok(Some(resolve_occurrence(
+        Ok(Some(self.resolve_occurrence(
             occurrence_position,
-            &self.texture_page_item_occurrence_map,
-            &self.chunk.name,
-            self.cur_pos,
+            &self.texture_page_item_occurrences,
         )?))
+    }
+
+    fn resolve_occurrence<T>(
+        &self,
+        occurrence_position: u32,
+        occurrence_map: &HashMap<u32, GMRef<T>>,
+    ) -> Result<GMRef<T>> {
+        match occurrence_map.get(&occurrence_position) {
+            Some(gm_ref) => Ok(*gm_ref),
+            None => bail!(
+                "Could not read {} with position {} in chunk '{}' at position {} \
+                because it doesn't exist in the occurrence map with {} items",
+                typename::<T>(),
+                occurrence_position,
+                self.chunk.name,
+                self.cur_pos - 4,
+                occurrence_map.len(),
+            ),
+        }
     }
 
     pub fn resolve_gm_str(&self, string_ref: GMRef<String>) -> Result<&String> {
@@ -148,25 +152,5 @@ impl DataReader<'_> {
             "Number {number} exceeds failsafe limit of {FAILSAFE_COUNT}"
         }
         Ok(())
-    }
-}
-
-fn resolve_occurrence<T>(
-    occurrence_position: u32,
-    occurrence_map: &HashMap<u32, GMRef<T>>,
-    chunk_name: &str,
-    position: u32,
-) -> Result<GMRef<T>> {
-    match occurrence_map.get(&occurrence_position) {
-        Some(gm_ref) => Ok(gm_ref.clone()),
-        None => bail!(
-            "Could not read {} with absolute position {} in chunk '{}' at position {} \
-            because it doesn't exist in the occurrence map (length: {})",
-            typename::<T>(),
-            occurrence_position,
-            chunk_name,
-            position,
-            occurrence_map.len(),
-        ),
     }
 }

@@ -29,9 +29,6 @@ impl GMElement for GMSprites {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.write_pointer_list(&self.sprites)?;
         Ok(())
     }
@@ -89,7 +86,7 @@ impl GMElement for GMSprite {
 
             let playback_speed = reader.read_f32()?;
             let playback_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)?;
-            // both of these seem to be not an offset but instead an absolute position (see UndertaleModLib/Models/UndertaleSprite.cs@507)
+            // both of these seem to be not an offset but instead a position (see UndertaleModLib/Models/UndertaleSprite.cs@507)
             let sequence_offset: i32 = if special_version >= 2 { reader.read_i32()? } else { 0 };
             let nine_slice_offset: i32 = if special_version >= 3 { reader.read_i32()? } else { 0 };
             // {~~} set gms version to at least 2.3.2 if nine slice offset

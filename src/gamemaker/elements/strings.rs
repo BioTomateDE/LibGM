@@ -51,7 +51,7 @@ impl GMElement for GMStrings {
         }
 
         reader.align(0x80)?;
-        reader.string_occurrence_map = abs_pos_to_reference;
+        reader.string_occurrences = abs_pos_to_reference;
         Ok(GMStrings { strings: strings_by_index, is_aligned, exists: true })
     }
 

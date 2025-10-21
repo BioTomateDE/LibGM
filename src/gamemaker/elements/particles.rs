@@ -34,9 +34,6 @@ impl GMElement for GMParticleSystems {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.align(4);
         builder.write_u32(1); // PSYS Version
         builder.write_pointer_list(&self.particle_systems)?;
@@ -108,9 +105,6 @@ impl GMElement for GMParticleEmitters {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.align(4);
         builder.write_u32(1); // PSEM Version
         builder.write_pointer_list(&self.emitters)?;

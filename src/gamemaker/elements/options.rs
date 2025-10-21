@@ -94,9 +94,6 @@ impl GMElement for GMOptions {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         if self.is_new_format {
             build_options_new(builder, self)?;
         } else {
@@ -222,7 +219,7 @@ impl GMElement for GMOptionsConstant {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let value: GMRef<String> = reader.read_gm_string()?;
-        Ok(GMOptionsConstant { name, value })
+        Ok(Self { name, value })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

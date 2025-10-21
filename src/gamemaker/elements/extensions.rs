@@ -28,7 +28,6 @@ impl GMElement for GMExtensions {
         // Strange data for each extension, some kind of unique identifier based on the product ID for each of them
         let mut product_id_data = Vec::with_capacity(extensions.len());
         if product_id_data_eligible(&reader.general_info.version) {
-            log::debug!("Scuffed product ID data for extensions detected");
             for _ in 0..extensions.len() {
                 let bytes: [u8; 16] = reader.read_bytes_const::<16>()?.to_owned();
                 product_id_data.push(bytes);
@@ -39,9 +38,6 @@ impl GMElement for GMExtensions {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.write_pointer_list(&self.extensions)?;
 
         if !product_id_data_eligible(&builder.gm_data.general_info.version) {
@@ -218,6 +214,7 @@ pub struct GMExtensionOption {
     pub value: GMRef<String>,
     pub kind: GMExtensionOptionKind,
 }
+
 impl GMElement for GMExtensionOption {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -259,7 +256,7 @@ pub enum GMExtensionOptionKind {
     String = 2,
 }
 
-fn product_id_data_eligible(ver: &GMVersion) -> bool {
+const fn product_id_data_eligible(ver: &GMVersion) -> bool {
     // NOTE: I do not know if 1773 is the earliest version which contains product IDs.
     ver.major >= 2 || (ver.major == 1 && ver.build >= 1773) || (ver.major == 1 && ver.build == 1539)
 }

@@ -134,9 +134,6 @@ impl GMElement for GMGameObjects {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.write_usize(self.game_objects.len())?;
         let pointer_list_pos: usize = builder.len();
         for _ in 0..self.game_objects.len() {

@@ -52,7 +52,7 @@ fn test_data_files(test_fn: impl Fn(GMData) -> Result<()>) -> Result<()> {
         let Some(ext) = path.extension() else {
             continue;
         };
-        let ext: &str = ext.to_str().context("converting file extension to UTF-8")?;
+        let ext = ext.to_str().context("converting file extension to UTF-8")?;
         if matches!(ext, "win" | "unx" | "ios" | "droid") {
             data_file_paths.push(path);
         }

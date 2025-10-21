@@ -31,9 +31,6 @@ impl GMElement for GMBackgrounds {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         if self.is_aligned {
             builder.write_aligned_list_chunk(&self.backgrounds, ALIGNMENT)?;
         } else {

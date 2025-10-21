@@ -147,10 +147,6 @@ impl GMElement for GMCodes {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
-
         builder.write_usize(self.codes.len())?;
         let pointer_list_pos: usize = builder.len();
         for _ in 0..self.codes.len() {
@@ -1024,14 +1020,14 @@ impl InstructionData for GMCallInstruction {
         }
 
         let function: GMRef<GMFunction> = reader
-            .function_occurrence_map
+            .function_occurrences
             .get(&(reader.cur_pos))
             .cloned()
             .with_context(|| {
                 format!(
                     "Could not find any function with absolute occurrence position {} in map with length {} while parsing Call Instruction",
                     reader.cur_pos,
-                    reader.function_occurrence_map.len(),
+                    reader.function_occurrences.len(),
                 )
             })?;
         reader.cur_pos += 4; // Skip next occurrence offset
@@ -1193,7 +1189,7 @@ pub enum GMAssetReference {
 
 impl GMElement for GMAssetReference {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        if let Some(func) = reader.function_occurrence_map.get(&reader.cur_pos) {
+        if let Some(func) = reader.function_occurrences.get(&reader.cur_pos) {
             reader.cur_pos += 4; // Consume next occurrence offset
             return Ok(Self::Function(*func));
         }
@@ -1391,12 +1387,12 @@ fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMC
         GMDataType::Double => reader.read_f64().map(GMCodeValue::Double),
         GMDataType::Float => reader.read_f32().map(GMCodeValue::Float),
         GMDataType::Int32 => {
-            if let Some(&function) = reader.function_occurrence_map.get(&reader.cur_pos) {
+            if let Some(&function) = reader.function_occurrences.get(&reader.cur_pos) {
                 reader.cur_pos += 4; // Skip next occurrence offset
                 return Ok(GMCodeValue::Function(function.clone()));
             }
 
-            if let Some(&variable) = reader.variable_occurrence_map.get(&reader.cur_pos) {
+            if let Some(&variable) = reader.variable_occurrences.get(&reader.cur_pos) {
                 reader.cur_pos += 4; // Skip next occurrence offset
                 return Ok(GMCodeValue::Variable(CodeVariable {
                     variable,
@@ -1435,12 +1431,12 @@ fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<Code
 
     let instance_type: GMInstanceType = parse_instance_type(raw_instance_type, variable_type)?;
 
-    let variable: GMRef<GMVariable> = reader.variable_occurrence_map.get(&occurrence_position).cloned().with_context(|| {
+    let variable: GMRef<GMVariable> = reader.variable_occurrences.get(&occurrence_position).cloned().with_context(|| {
         format!(
             "Could not find {} Variable with occurrence position {} in hashmap with length {} while parsing code value",
             instance_type,
             occurrence_position,
-            reader.variable_occurrence_map.len(),
+            reader.variable_occurrences.len(),
         )
     })?;
 

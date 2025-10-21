@@ -79,9 +79,9 @@ impl GMElement for GMVariables {
             }
 
             for occurrence in occurrences {
-                if let Some(old_value) = reader.variable_occurrence_map.insert(occurrence, GMRef::new(i as u32)) {
+                if let Some(old_value) = reader.variable_occurrences.insert(occurrence, GMRef::new(i as u32)) {
                     bail!(
-                        "Conflicting occurrence positions while parsing variables: absolute position {} was already \
+                        "Conflicting occurrence positions while parsing variables: Position {} was already \
                         set for variable #{} with name {:?}; trying to set to variable #{i} with name {:?}",
                         occurrence,
                         old_value.index,
@@ -99,9 +99,6 @@ impl GMElement for GMVariables {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         self.b15_header
             .serialize_if_bytecode_ver(builder, "Scuffed bytecode 15 fields", 15)?;
         for (i, variable) in self.variables.iter().enumerate() {

@@ -114,7 +114,7 @@ pub fn get_image_from_bytes(bytes: &[u8]) -> Result<DynamicImage> {
                 pos += 1;
             }
         } else {
-            bail!("Invalid QOI opcode 0x{b1}");
+            bail!("Invalid QOI opcode {b1} (0x{b1:02X})");
         }
 
         let index_pos = (((r ^ g ^ b ^ a) & 0x3F) << 2) as usize;

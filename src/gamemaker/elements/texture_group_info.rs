@@ -36,9 +36,6 @@ impl GMElement for GMTextureGroupInfos {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.write_i32(1); // TGIN version
         builder.write_pointer_list(&self.texture_group_infos)?;
         Ok(())

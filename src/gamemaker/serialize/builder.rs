@@ -190,7 +190,7 @@ impl<'a> DataBuilder<'a> {
     }
 
     /// Store the written GameMaker element's data position paired with its memory address in the pointer resource pool.
-    /// The element's absolute position corresponds to the data builder's current position,
+    /// The element's position corresponds to the data builder's current position,
     /// since this method should get called when the element is serialized.
     pub fn resolve_pointer<T>(&mut self, element: &T) -> Result<()> {
         let memory_address: usize = element as *const _ as usize;

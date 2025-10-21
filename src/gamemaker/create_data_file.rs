@@ -264,6 +264,7 @@ pub fn new_data_file(target_version: GMVersion, target_bytecode: u8) -> GMData {
         exists: true,
     };
 
+    // pls ignore this xd
     import_texture_page(
         &mut data,
         Path::new("/home/biotomatede/Pictures/ut_txt/dr3_placeholder1.png"),
@@ -389,7 +390,6 @@ pub fn new_data_file(target_version: GMVersion, target_bytecode: u8) -> GMData {
     };
 
     data.variables.b15_header = Some(GMVariablesB15Header { var_count1: 0, var_count2: 0, max_local_var_count: 0 });
-    data.fonts.padding = Some(generate_font_padding());
 
     data
 }
@@ -435,33 +435,6 @@ fn stub_data() -> GMData {
         endianness: Endianness::Little,
         original_data_size: 0,
     }
-}
-
-const fn generate_font_padding() -> [u8; 512] {
-    let mut data = [0u8; 512];
-    let mut i = 0u16;
-    let mut idx = 0;
-
-    // First 128 values: 0..128 as u16 little-endian
-    while i < 0x80 {
-        let bytes = i.to_le_bytes();
-        data[idx] = bytes[0];
-        data[idx + 1] = bytes[1];
-        i += 1;
-        idx += 2;
-    }
-
-    // Next 128 values: all 0x3f as u16 little-endian
-    let value_bytes = 0x3fu16.to_le_bytes();
-    let mut count = 0;
-    while count < 0x80 {
-        data[idx] = value_bytes[0];
-        data[idx + 1] = value_bytes[1];
-        count += 1;
-        idx += 2;
-    }
-
-    data
 }
 
 fn import_texture_page(gm_data: &mut GMData, image_path: &Path) {

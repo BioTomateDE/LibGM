@@ -36,9 +36,6 @@ impl GMElement for GMRootUINodes {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            return Ok(());
-        }
         builder.write_pointer_list(&self.ui_root_nodes)?;
         Ok(())
     }

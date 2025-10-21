@@ -4,30 +4,34 @@ use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
 use std::fmt::{Display, Formatter};
 
+/// Different GameMaker release branches. LTS has some but not all features of equivalent newer versions.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum LTSBranch {
+    /// Before LTS was even introduced (`major < 2022`).
     PreLTS,
+
+    /// Long-Term Support branch. YoyoGames updates minor bugfixes here, but doesn't make breaking changes.
     LTS,
+
+    /// New Version but not the Long-Term Support branch.
+    /// YoyoGames introduces all new features here, some of which may break your project.
     PostLTS,
 }
 
 impl Display for LTSBranch {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::PreLTS => "PreLTS",
-                Self::LTS => "LTS",
-                Self::PostLTS => "PostLTS",
-            }
-        )
+        let string = match self {
+            Self::PreLTS => "PreLTS",
+            Self::LTS => "LTS",
+            Self::PostLTS => "PostLTS",
+        };
+        write!(f, "{string}")
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMVersion {
-    /// If greater than 1, serialization produces "2.0.0.0" due to the flag no longer updating in `data.win`
+    /// If greater than 1, serialization produces "2.0.0.0" due to the flag no longer updating in `data.win`.
     pub major: u32,
     pub minor: u32,
     pub release: u32,
@@ -44,11 +48,18 @@ impl GMVersion {
 
 impl Display for GMVersion {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}.{}.{}.{} ({})",
-            self.major, self.minor, self.release, self.build, self.branch
-        )
+        write!(f, "{}", self.major)?;
+        match (self.minor, self.release, self.build) {
+            (0, 0, 0) => {}
+            (minor, 0, 0) => write!(f, ".{}", minor)?,
+            (minor, release, 0) => write!(f, ".{}.{}", minor, release)?,
+            (minor, release, build) => write!(f, ".{}.{}.{}", minor, release, build)?,
+        }
+
+        if self.minor >= 2022 {
+            write!(f, " ({})", self.branch)?;
+        }
+        Ok(())
     }
 }
 
@@ -141,12 +152,15 @@ impl GMElement for GMVersion {
     }
 }
 
+/// A GameMaker Version Requirement for checking if the game's version is equal to or higher than x.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMVersionReq {
     pub major: u32,
     pub minor: u32,
     pub release: u32,
     pub build: u32,
+    /// Only makes sense for `major >= 2022` since LTS didn't exist before.
+    /// If [true], the version's branch has to be [`LTSBranch::PostLTS`].
     pub non_lts: bool,
 }
 
