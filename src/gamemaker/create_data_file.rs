@@ -119,7 +119,6 @@ pub fn new_data_file(target_version: GMVersion, target_bytecode: u8) -> GMData {
         license_md5: [0; 16],
         timestamp_created: chrono::offset::Utc::now(),
         display_name: data.make_string("New AcornGM Game"),
-        active_targets: 0,
         function_classifications: GMFunctionClassifications {
             internet: false,
             joystick: false,
