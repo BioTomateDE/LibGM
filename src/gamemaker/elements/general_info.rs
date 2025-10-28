@@ -1,13 +1,14 @@
+use crate::gamemaker::data::Endianness;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::rooms::GMRoom;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::gm_version::{GMVersion, GMVersionReq, LTSBranch};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
+use crate::integrity_assert;
 use crate::prelude::*;
 use crate::util::rng::CSharpRng;
 use chrono::{DateTime, Utc};
-use crate::gamemaker::data::Endianness;
 
 #[derive(Debug, Clone)]
 pub struct GMGeneralInfo {
@@ -66,9 +67,6 @@ pub struct GMGeneralInfo {
     /// The name that gets displayed in the window.
     pub display_name: GMRef<String>,
 
-    /// Unknown/unused.
-    pub active_targets: u64,
-
     /// The function classifications of this data file.
     pub function_classifications: GMFunctionClassifications,
 
@@ -94,48 +92,47 @@ impl GMChunkElement for GMGeneralInfo {
     fn stub() -> Self {
         Self {
             is_debugger_disabled: true,
-            bytecode_version: 187,
-            unknown_value: 187,
-            game_file_name: GMRef::new(69420),
-            config: GMRef::new(69420),
-            last_object_id: 69420,
-            last_tile_id: 69420,
-            game_id: 69420,
+            bytecode_version: 15,
+            unknown_value: 0,
+            game_file_name: GMRef::new(13371337),
+            config: GMRef::new(13371337),
+            last_object_id: 100000,
+            last_tile_id: 10000000,
+            game_id: 13371337,
             directplay_guid: Default::default(),
-            game_name: GMRef::new(69420),
+            game_name: GMRef::new(13371337),
             version: GMVersion {
-                major: 69420,
-                minor: 69420,
-                release: 69420,
-                build: 69420,
-                branch: LTSBranch::PostLTS,
+                major: 1,
+                minor: 0,
+                release: 0,
+                build: 1337,
+                branch: LTSBranch::PreLTS,
             },
-            default_window_width: 69420,
-            default_window_height: 69420,
+            default_window_width: 1024,
+            default_window_height: 768,
             flags: GMGeneralInfoFlags {
                 fullscreen: false,
                 sync_vertex1: false,
                 sync_vertex2: false,
                 sync_vertex3: false,
-                interpolate: false,
-                scale: false,
-                show_cursor: false,
+                interpolate: true,
+                scale: true,
+                show_cursor: true,
                 sizeable: false,
-                screen_key: false,
+                screen_key: true,
                 studio_version_b1: false,
                 studio_version_b2: false,
-                studio_version_b3: false,
+                studio_version_b3: true,
                 steam_enabled: false,
                 local_data_enabled: false,
                 borderless_window: false,
                 javascript_mode: false,
                 license_exclusions: false,
             },
-            license_crc32: 69420,
-            license_md5: [6, 9, 4, 2, 0, 6, 9, 4, 2, 0, 6, 9, 4, 2, 0, 0],
+            license_crc32: 13371337,
+            license_md5: [0; 16],
             timestamp_created: Default::default(),
-            display_name: GMRef::new(69420),
-            active_targets: 69420,
+            display_name: GMRef::new(13371337),
             function_classifications: GMFunctionClassifications {
                 internet: false,
                 joystick: false,
@@ -203,8 +200,8 @@ impl GMChunkElement for GMGeneralInfo {
                 shaders: false,
                 vertex_buffers: false,
             },
-            steam_appid: 69420,
-            debugger_port: None,
+            steam_appid: 0,
+            debugger_port: Some(6502), // krzys-h wrote this idk
             room_order: vec![],
             gms2_info: None,
             exists: false,
@@ -244,7 +241,7 @@ impl GMElement for GMGeneralInfo {
         let directplay_guid: [u8; 16] = *reader.read_bytes_const().context("reading GUID")?;
         let uuid_parser = match reader.endianness {
             Endianness::Little => uuid::Builder::from_bytes_le,
-            Endianness::Big => uuid::Builder::from_bytes,
+            Endianness::Big => uuid::Builder::from_bytes, // unconfirmed
         };
         let directplay_guid: uuid::Uuid = uuid_parser(directplay_guid).into_uuid();
 
@@ -255,7 +252,6 @@ impl GMElement for GMGeneralInfo {
         let flags_raw = reader.read_u32()?;
         let flags = GMGeneralInfoFlags::parse(flags_raw);
         let license_crc32 = reader.read_u32()?;
-
         let license_md5: [u8; 16] = *reader.read_bytes_const().context("reading license (MD5)")?;
 
         let timestamp_created = reader.read_i64()?;
@@ -268,6 +264,10 @@ impl GMElement for GMGeneralInfo {
 
         let display_name: GMRef<String> = reader.read_gm_string()?;
         let active_targets = reader.read_u64()?;
+        integrity_assert! {
+            active_targets == 0,
+            "Active Targets is {0} (0x{0:016X}) instead of zero", active_targets
+        }
         let function_classifications = GMFunctionClassifications::deserialize(reader)?;
         let steam_appid = reader.read_i32()?;
         let debugger_port: Option<u32> = if bytecode_version >= 14 {
@@ -373,7 +373,6 @@ impl GMElement for GMGeneralInfo {
             license_md5,
             timestamp_created,
             display_name,
-            active_targets,
             function_classifications,
             steam_appid,
             debugger_port,
@@ -413,7 +412,7 @@ impl GMElement for GMGeneralInfo {
         builder.write_bytes(&self.license_md5);
         builder.write_i64(self.timestamp_created.timestamp());
         builder.write_gm_string(&self.display_name)?;
-        builder.write_u64(self.active_targets);
+        builder.write_u64(0); // "Active targets"
         self.function_classifications.serialize(builder)?;
         builder.write_i32(self.steam_appid);
         self.debugger_port
