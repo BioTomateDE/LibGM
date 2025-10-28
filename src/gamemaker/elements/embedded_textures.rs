@@ -354,12 +354,12 @@ impl GMImage {
         decoder
             .read_to_end(&mut decompressed_data)
             .context("Could not decode Bzip2 stream for BzQoi image")?;
-        let image = qoi::get_image_from_bytes(&decompressed_data).context("Could not decode Qoi image")?;
+        let image = qoi::deserialize(&decompressed_data).context("Could not decode Qoi image")?;
         Ok(image)
     }
 
     fn decode_qoi(raw_qoi_data: &[u8]) -> Result<DynamicImage> {
-        let image = qoi::get_image_from_bytes(&raw_qoi_data).context("Could not decode Qoi image")?;
+        let image = qoi::deserialize(&raw_qoi_data).context("Could not decode Qoi image")?;
         Ok(image)
     }
 

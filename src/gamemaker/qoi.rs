@@ -15,7 +15,7 @@ const QOI_MASK_2: u8 = 0xc0;
 const QOI_MASK_3: u8 = 0xe0;
 const QOI_MASK_4: u8 = 0xf0;
 
-pub fn get_image_from_bytes(bytes: &[u8]) -> Result<DynamicImage> {
+pub fn deserialize(bytes: &[u8]) -> Result<DynamicImage> {
     let header: &[u8] = &bytes.get(..12).ok_or("Invalid QOI header (less than 12 bytes long)")?;
 
     let endianness: Endianness = match &header[0..4] {
