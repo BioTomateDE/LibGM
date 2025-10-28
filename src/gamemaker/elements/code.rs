@@ -465,9 +465,13 @@ pub enum GMInstruction {
 
 impl GMElement for GMInstruction {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let mut bytes: (u8, u8, u8) = (reader.read_u8()?, reader.read_u8()?, reader.read_u8()?);
+        let word = reader.read_u32()?;
+        let mut opcode = ((word & 0xFF000000) >> 24) as u8;
+        let b2 = ((word & 0x00FF0000) >> 16) as u8;
+        let b1 = ((word & 0x0000FF00) >> 8) as u8;
+        let b0 = ((word & 0x000000FF) >> 0) as u8;
+        let mut bytes = (b0, b1, b2);
 
-        let mut opcode: u8 = reader.read_u8()?;
         if reader.general_info.bytecode_version < 15 {
             if matches!(opcode, 0x10..=0x16) {
                 // This is needed to preserve the comparison type for pre bytecode 15

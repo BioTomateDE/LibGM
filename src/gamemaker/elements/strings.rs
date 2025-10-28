@@ -3,6 +3,7 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
 use std::collections::HashMap;
+use crate::gamemaker::data::Endianness;
 
 const ALIGNMENT: u32 = 4;
 
@@ -24,16 +25,13 @@ impl GMChunkElement for GMStrings {
 
 impl GMElement for GMStrings {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let mut is_aligned: bool = true;
         let pointers: Vec<u32> = reader.read_simple_list()?;
+        let is_aligned: bool = pointers.iter().all(|&p| p % ALIGNMENT == 0);;
 
         let mut strings_by_index: Vec<String> = Vec::with_capacity(pointers.len());
         let mut abs_pos_to_reference: HashMap<u32, GMRef<String>> = HashMap::with_capacity(pointers.len());
 
         for (i, pointer) in pointers.into_iter().enumerate() {
-            if pointer % ALIGNMENT != 0 {
-                is_aligned = false;
-            }
             reader.cur_pos = pointer;
             if is_aligned {
                 reader.align(ALIGNMENT)?;

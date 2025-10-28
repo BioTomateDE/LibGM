@@ -68,8 +68,8 @@ impl GMElement for GMVariables {
                 parse_occurrence_chain(reader, first_occurrence_pos, occurrence_count)?;
 
             // Verify name string id. unused variables (`prototype`, `@@array@@` and all
-            // `arguments` in ut) have a name string id of -1 which wraps around to u32::MAX.
-            if name_string_id != u32::MAX && name.index != name_string_id {
+            // `arguments` in ut) have a name string id of -1.
+            if name_string_id as i32 != -1 && name.index != name_string_id {
                 bail!(
                     "Variable #{i} with name {:?} specifies name string id {}; but the id of name string is actually {}",
                     reader.resolve_gm_str(name)?,

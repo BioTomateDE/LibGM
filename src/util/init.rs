@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::fmt::{Display, UpperHex};
 
 pub fn vec_with_capacity<T>(count: u32) -> Result<Vec<T>> {
-    const FAILSAFE_SIZE: usize = 1_000_000; // 1 Megabyte
+    const FAILSAFE_SIZE: usize = 10_000_000; // 10MB
     let count = count as usize;
 
     let implied_size = size_of::<T>() * count;

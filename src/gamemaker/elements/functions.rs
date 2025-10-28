@@ -49,8 +49,8 @@ impl GMElement for GMFunctions {
             let (occurrences, name_string_id): (Vec<u32>, u32) =
                 parse_occurrence_chain(reader, first_occurrence_pos, occurrence_count)?;
 
-            // verify name string id. allow -1 for unused function (-1 wraps to u32::MAX)
-            if name_string_id != u32::MAX && name.index != name_string_id {
+            // verify name string id. allow -1 for unused function
+            if name_string_id as i32 != -1 && name.index != name_string_id {
                 bail!(
                     "Function #{i} with name {:?} specifies name string id {}; but the id of name string is actually {}",
                     reader.resolve_gm_str(name)?,
@@ -125,6 +125,7 @@ pub struct GMCodeLocals {
     pub code_locals: Vec<GMCodeLocal>,
     pub exists: bool,
 }
+
 impl GMChunkElement for GMCodeLocals {
     fn stub() -> Self {
         Self { code_locals: vec![], exists: false }
@@ -134,6 +135,7 @@ impl GMChunkElement for GMCodeLocals {
         self.exists
     }
 }
+
 impl GMElement for GMCodeLocals {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         if reader.general_info.bytecode_version <= 14 || reader.general_info.is_version_at_least((2024, 8)) {

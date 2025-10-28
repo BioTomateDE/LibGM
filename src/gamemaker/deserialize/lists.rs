@@ -3,6 +3,7 @@ use crate::gamemaker::elements::GMElement;
 use crate::integrity_check;
 use crate::prelude::*;
 use crate::util::fmt::{format_bytes, typename};
+use crate::util::init::vec_with_capacity;
 
 impl DataReader<'_> {
     /// Reads a GameMaker simple list by calling the specified deserializer function for each element.
@@ -14,22 +15,11 @@ impl DataReader<'_> {
         count: u32,
         deserializer_fn: impl Fn(&mut Self) -> Result<T>,
     ) -> Result<Vec<T>> {
-        integrity_check! {
-            const FAILSAFE_SIZE: usize = 1_000_000;   // 1 Megabyte
-            let implied_data_size: usize = count as usize * size_of::<T>();
-            if implied_data_size > FAILSAFE_SIZE {
-                bail!(
-                    "{} count {} implies data size {} which exceeeds failsafe size {}",
-                    typename::<T>(), count, format_bytes(implied_data_size), format_bytes(FAILSAFE_SIZE),
-                )
-            }
-        }
-
-        let mut elements: Vec<T> = Vec::with_capacity(count as usize);
+        let mut elements: Vec<T> = vec_with_capacity(count).context("reading simple list")?;
         for _ in 0..count {
             let element: T = deserializer_fn(self).with_context(|| {
                 format!(
-                    "while deserializing element #{}/{} of {} simple list",
+                    "deserializing element #{}/{} of {} simple list",
                     elements.len(),
                     count,
                     typename::<T>(),

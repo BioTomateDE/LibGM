@@ -119,7 +119,7 @@ impl DataReader<'_> {
     }
 
     pub fn read_resource_by_id<T>(&mut self) -> Result<GMRef<T>> {
-        const CTX: &str = "reaading resource by ID";
+        const CTX: &str = "reading resource by ID";
         let number = self.read_u32().context(CTX)?;
         self.check_resource_limit(number).context(CTX)?;
         Ok(GMRef::new(number))

@@ -28,9 +28,9 @@ impl GMElement for GMFonts {
 
         let mut padding: Option<[u8; 512]> = None;
         if !reader.general_info.is_version_at_least((2024, 14)) {
-            let endik = reader.endianness;
+            let endianness = reader.endianness;
             let padding: &[u8; 512] = reader.read_bytes_const().context("Reading FONT padding")?;
-            verify_padding(padding, endik)?;
+            verify_padding(padding, endianness)?;
         }
 
         Ok(Self { fonts, exists: true })
@@ -50,10 +50,10 @@ impl GMElement for GMFonts {
 fn verify_padding(padding: &[u8; 512], endianness: Endianness) -> Result<()> {
     padding.iter().enumerate().try_for_each(|(i, &byte)| {
         let expected = match i {
-            0..=255 if i % 2 == 1 => 0,
-            0..=255 => (i / 2) as u8,
-            256..512 if i % 2 == 1 => 0,
-            _ => 63,
+            0..=255 if i % 2 == 0 => (i / 2) as u8,
+            0..=255 => 0,
+            256..512 if i % 2 == 0 => 63,
+            _ => 0,
         };
 
         if byte == expected {
@@ -69,12 +69,18 @@ const fn generate_padding(endianness: Endianness) -> [u8; 256] {
     let mut i = 0;
 
     while i < 256 {
-        padding[i] = if i % 2 == 1 { 0 } else { (i / 2) as u8 };
+        padding[i] = match i % 2 == 0 {
+            true => (i / 2) as u8,
+            false => 0,
+        };
         i += 1;
     }
 
     while i < 512 {
-        padding[i] = if i % 2 == 1 { 0 } else { 63 };
+        padding[i] = match i % 2 == 0 {
+            true => 63,
+            false => 0,
+        };
         i += 1;
     }
 
