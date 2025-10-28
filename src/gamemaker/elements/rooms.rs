@@ -86,11 +86,7 @@ impl GMElement for GMRoom {
         let views_ptr = reader.read_u32()?;
         let game_objects_ptr = reader.read_u32()?;
         let tiles_ptr = reader.read_u32()?;
-        let instances_ptr = if reader.general_info.is_version_at_least((2024, 13)) {
-            reader.read_u32()?
-        } else {
-            0
-        };
+        let instances_ptr = reader.deserialize_if_gm_version((2024, 13))?.unwrap_or(0);
 
         let world = reader.read_bool32()?;
         let top = reader.read_u32()?;
@@ -745,7 +741,7 @@ impl GMRoomLayerDataTiles {
             if length != 0x81 {
                 bail!("Expected 0x81 for run length of compressed tile data padding; got 0x{length:02X}");
             }
-            if tile != u32::MAX {
+            if tile as i32 != -1 {
                 bail!("Expected -1 for tile of compressed tile data padding; got 0x{length:02X}");
             }
         }

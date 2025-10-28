@@ -327,7 +327,6 @@ pub fn new_data_file(target_version: GMVersion, target_bytecode: u8) -> GMData {
         awake: false,
         kinematic: false,
         physics_shape_vertices: vec![],
-        uses_physics_shape_vertex: false,
         events: vec![],
     };
     data.game_objects.game_objects.push(game_object);

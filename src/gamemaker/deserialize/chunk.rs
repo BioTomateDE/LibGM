@@ -59,14 +59,13 @@ impl DataReader<'_> {
         let element = T::deserialize(self)?;
         self.read_chunk_padding()?;
 
-        if self.cur_pos != self.chunk.end_pos {
-            bail!(
-                "Misaligned chunk '{}': expected chunk end position {} but reader is actually at position {} (diff: {})",
-                self.chunk.name,
-                self.chunk.end_pos,
-                self.cur_pos,
-                self.chunk.end_pos as i64 - self.cur_pos as i64,
-            )
+        integrity_assert! {
+            self.cur_pos == self.chunk.end_pos,
+            "Misaligned chunk '{}': expected chunk end position {} but reader is actually at position {} (diff: {})",
+            self.chunk.name,
+            self.chunk.end_pos,
+            self.cur_pos,
+            self.chunk.end_pos as i64 - self.cur_pos as i64,
         }
 
         log::trace!("Parsing chunk '{}' took {stopwatch}", self.chunk.name);

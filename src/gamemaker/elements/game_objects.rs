@@ -86,7 +86,6 @@ impl GMElement for GMGameObjects {
             let linear_damping = reader.read_f32()?;
             let angular_damping = reader.read_f32()?;
             let physics_shape_vertex_count = reader.read_i32()?;
-            let uses_physics_shape_vertex: bool = physics_shape_vertex_count != -1;
             let physics_shape_vertex_count: usize = if physics_shape_vertex_count < 0 {
                 0
             } else {
@@ -125,7 +124,6 @@ impl GMElement for GMGameObjects {
                 awake,
                 kinematic,
                 physics_shape_vertices,
-                uses_physics_shape_vertex,
                 events,
             });
         }
@@ -192,29 +190,49 @@ impl GMGameObjects {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMGameObject {
+    /// The name of the game object.
     pub name: GMRef<String>,
+    /// The sprite this game object uses.
     pub sprite: Option<GMRef<GMSprite>>,
+    /// Whether the game object is visible.
     pub visible: bool,
     /// Introduced in 2022.5.
     pub managed: Option<bool>,
+    /// Whether the game object is solid.
     pub solid: bool,
+    /// The depth level of the game object.
     pub depth: i32,
+    /// Whether the game object is persistent.
     pub persistent: bool,
+    /// The parent game object this is inheriting from.
     pub parent: Option<GMRef<GMGameObject>>,
+    /// The texture mask this game object is using.
     pub texture_mask: Option<GMRef<GMSprite>>,
+    /// Whether this object uses GameMaker physics.
     pub uses_physics: bool,
+    /// Whether this game object should act as a sensor fixture.
     pub is_sensor: bool,
+    /// The collision shape the game object should use.
     pub collision_shape: GMGameObjectCollisionShape,
+    /// The physics density of the game object.
     pub density: f32,
+    /// The physics restitution of the game object.
     pub restitution: f32,
+    /// The physics collision group this game object belongs to.
     pub group: u32,
+    /// The physics linear damping this game object uses.
     pub linear_damping: f32,
+    /// The physics angular damping this game object uses.
     pub angular_damping: f32,
+    /// The physics friction this game object uses.
     pub friction: f32,
+    /// Whether this game object should start awake in the physics simulation.
     pub awake: bool,
+    /// Whether this game object is kinematic.
     pub kinematic: bool,
+    /// The vertices used for a [GMGameObjectCollisionShape::Custom].
     pub physics_shape_vertices: Vec<(f32, f32)>,
-    pub uses_physics_shape_vertex: bool,
+    /// All the events that this game object has.
     pub events: Vec<GMGameObjectEvents>,
 }
 

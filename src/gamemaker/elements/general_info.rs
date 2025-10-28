@@ -7,6 +7,7 @@ use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
 use crate::util::rng::CSharpRng;
 use chrono::{DateTime, Utc};
+use crate::gamemaker::data::Endianness;
 
 #[derive(Debug, Clone)]
 pub struct GMGeneralInfo {
@@ -241,7 +242,11 @@ impl GMElement for GMGeneralInfo {
         let game_id = reader.read_u32()?;
 
         let directplay_guid: [u8; 16] = *reader.read_bytes_const().context("reading GUID")?;
-        let directplay_guid: uuid::Uuid = uuid::Builder::from_bytes_le(directplay_guid).into_uuid();
+        let uuid_parser = match reader.endianness {
+            Endianness::Little => uuid::Builder::from_bytes_le,
+            Endianness::Big => uuid::Builder::from_bytes,
+        };
+        let directplay_guid: uuid::Uuid = uuid_parser(directplay_guid).into_uuid();
 
         let game_name: GMRef<String> = reader.read_gm_string()?;
         let version = GMVersion::deserialize(reader)?;
