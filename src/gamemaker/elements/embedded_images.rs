@@ -4,7 +4,8 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
 
-/// GMS2+
+/// The embedded images of the data file. This is used to store built-in particle sprites,
+/// every time you use `part_sprite` functions.
 #[derive(Debug, Clone)]
 pub struct GMEmbeddedImages {
     pub embedded_images: Vec<GMEmbeddedImage>,

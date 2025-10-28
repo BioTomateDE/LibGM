@@ -15,6 +15,7 @@ use crate::gamemaker::elements::functions::{GMFunction, GMFunctions};
 use crate::gamemaker::elements::game_objects::GMGameObjects;
 use crate::gamemaker::elements::general_info::GMGeneralInfo;
 use crate::gamemaker::elements::global_init::{GMGameEndScripts, GMGlobalInitScripts};
+use crate::gamemaker::elements::GMChunkElement;
 use crate::gamemaker::elements::languages::GMLanguageInfo;
 use crate::gamemaker::elements::options::GMOptions;
 use crate::gamemaker::elements::particles::{GMParticleEmitters, GMParticleSystems};
@@ -88,6 +89,51 @@ pub struct GMData {
 
     /// Size of the original data file; useful for approximating.
     pub original_data_size: usize,
+}
+
+impl GMData {
+    pub fn new() -> Self {
+        Self {
+            general_info: GMGeneralInfo::stub(),
+            strings: GMStrings::stub(),
+            embedded_textures: GMEmbeddedTextures::stub(),
+            texture_page_items: GMTexturePageItems::stub(),
+            variables: GMVariables::stub(),
+            functions: GMFunctions::stub(),
+            scripts: GMScripts::stub(),
+            codes: GMCodes::stub(),
+            fonts: GMFonts::stub(),
+            sprites: GMSprites::stub(),
+            game_objects: GMGameObjects::stub(),
+            rooms: GMRooms::stub(),
+            backgrounds: GMBackgrounds::stub(),
+            paths: GMPaths::stub(),
+            audios: GMEmbeddedAudios::stub(),
+            sounds: GMSounds::stub(),
+            options: GMOptions::stub(),
+            sequences: GMSequences::stub(),
+            particle_systems: GMParticleSystems::stub(),
+            particle_emitters: GMParticleEmitters::stub(),
+            language_info: GMLanguageInfo::stub(),
+            extensions: GMExtensions::stub(),
+            audio_groups: GMAudioGroups::stub(),
+            global_init_scripts: GMGlobalInitScripts::stub(),
+            game_end_scripts: GMGameEndScripts::stub(),
+            shaders: GMShaders::stub(),
+            root_ui_nodes: GMRootUINodes::stub(),
+            data_files: GMDataFiles::stub(),
+            timelines: GMTimelines::stub(),
+            embedded_images: GMEmbeddedImages::stub(),
+            texture_group_infos: GMTextureGroupInfos::stub(),
+            tags: GMTags::stub(),
+            feature_flags: GMFeatureFlags::stub(),
+            filter_effects: GMFilterEffects::stub(),
+            animation_curves: GMAnimationCurves::stub(),
+            chunk_padding: 16,
+            endianness: Endianness::Little,
+            original_data_size: 0,
+        }
+    }
 }
 
 impl GMData {
