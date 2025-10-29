@@ -1,4 +1,5 @@
 use crate::gamemaker::deserialize::GMRef;
+use crate::gamemaker::elements::GMChunkElement;
 use crate::gamemaker::elements::animation_curves::GMAnimationCurves;
 use crate::gamemaker::elements::audio_groups::GMAudioGroups;
 use crate::gamemaker::elements::backgrounds::GMBackgrounds;
@@ -15,7 +16,6 @@ use crate::gamemaker::elements::functions::{GMFunction, GMFunctions};
 use crate::gamemaker::elements::game_objects::GMGameObjects;
 use crate::gamemaker::elements::general_info::GMGeneralInfo;
 use crate::gamemaker::elements::global_init::{GMGameEndScripts, GMGlobalInitScripts};
-use crate::gamemaker::elements::GMChunkElement;
 use crate::gamemaker::elements::languages::GMLanguageInfo;
 use crate::gamemaker::elements::options::GMOptions;
 use crate::gamemaker::elements::particles::{GMParticleEmitters, GMParticleSystems};

@@ -270,7 +270,7 @@ fn parse_call(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &GMData
     let function: GMRef<GMFunction> = parse_function(line, &gm_data.strings, &gm_data.functions)?;
     let argc_str: String = consume_round_brackets(line)?
         .with_context(|| format!("Expected round brackets with argument count for function call; found {line:?}"))?;
-    let argument_count: u8 = if let Some(str) = argc_str.strip_prefix("argc=") {
+    let argument_count: u16 = if let Some(str) = argc_str.strip_prefix("argc=") {
         str.parse().with_context(|| format!("Invalid argument count {str}"))?
     } else {
         bail!("Expected \"argc=\" for function call parameters; found {line:?}");
@@ -280,7 +280,7 @@ fn parse_call(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &GMData
 
 fn parse_call_var(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMCallVariableInstruction> {
     assert_type_count(&types, 1)?;
-    let argument_count: u8 = parse_uint(line)?;
+    let argument_count: u16 = parse_uint(line)?;
     Ok(GMCallVariableInstruction { data_type: types[0], argument_count })
 }
 

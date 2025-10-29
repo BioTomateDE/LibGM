@@ -495,7 +495,7 @@ fn generate_pop_builtin_var(gm_data: &mut GMData, name: &str) -> Result<GMInstru
 fn generate_call_builtin(
     gm_data: &mut GMData,
     function_name: &'static str,
-    argument_count: u8,
+    argument_count: u16,
 ) -> Result<GMInstruction> {
     Ok(GMInstruction::Call(GMCallInstruction {
         argument_count,
