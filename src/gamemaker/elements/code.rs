@@ -733,20 +733,18 @@ impl InstructionData for GMSingleTypeInstruction {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct GMCallVariableInstruction {
     pub data_type: GMDataType,
-    pub argument_count: u8,
+    pub argument_count: u16,
 }
 impl InstructionData for GMCallVariableInstruction {
     fn parse(_: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
-        let argument_count: u8 = b.0;
-        assert_zero_b1(b.1)?;
+        let argument_count: u16 = (b.0 as u16) | (b.1 as u16) << 8;
         let data_type: GMDataType = num_enum_from(b.2 & 0xf)?;
         assert_zero_type2(b.2)?;
         Ok(Self { data_type, argument_count })
     }
 
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
-        builder.write_u8(0);
-        builder.write_u8(self.argument_count);
+        builder.write_u16(self.argument_count);
         builder.write_u8(self.data_type.into());
         builder.write_u8(opcode);
         Ok(())
@@ -1010,13 +1008,12 @@ impl InstructionData for GMPushInstruction {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMCallInstruction {
-    pub argument_count: u8,
+    pub argument_count: u16,
     pub function: GMRef<GMFunction>,
 }
 impl InstructionData for GMCallInstruction {
     fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self> {
-        let argument_count: u8 = b.0;
-        assert_zero_b1(b.1)?;
+        let argument_count: u16 = (b.0 as u16) | (b.1 as u16) << 8;
         let data_type: GMDataType = num_enum_from(b.2)?;
         integrity_assert! {
             data_type == GMDataType::Int32,
@@ -1041,8 +1038,7 @@ impl InstructionData for GMCallInstruction {
 
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()> {
         let instr_pos: usize = builder.len();
-        builder.write_u8(self.argument_count);
-        builder.write_u8(0);
+        builder.write_u16(self.argument_count);
         builder.write_u8(GMDataType::Int32.into());
         builder.write_u8(opcode);
 
@@ -1557,7 +1553,7 @@ fn write_function_occurrence(
     Ok(())
 }
 
-pub fn get_data_type_from_value(code_value: &GMCodeValue) -> GMDataType {
+pub const fn get_data_type_from_value(code_value: &GMCodeValue) -> GMDataType {
     match code_value {
         GMCodeValue::Int16(_) => GMDataType::Int16,
         GMCodeValue::Int32(_) => GMDataType::Int32,

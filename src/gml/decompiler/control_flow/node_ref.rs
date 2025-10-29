@@ -4,8 +4,9 @@ use std::fmt::{Debug, Display, Formatter};
 
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq)]
+/// TODO: tell rustc that this will never be u32::MAX for Option optimisation
 pub struct NodeRef {
-    index: u32,
+    pub index: u32,
 }
 
 impl NodeRef {

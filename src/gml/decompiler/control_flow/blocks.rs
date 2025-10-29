@@ -1,5 +1,3 @@
-// This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
-// If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::code::{
@@ -11,8 +9,10 @@ use crate::gml::decompiler::control_flow::node::{Node, NodeData};
 use crate::gml::decompiler::control_flow::node_ref::NodeRef;
 use crate::gml::decompiler::decompile_context::DecompileContext;
 use crate::gml::decompiler::vm_constants;
-use crate::gml::disassembler::disassemble_instructions;
+use crate::gml::disassembler::{disassemble_instruction, disassemble_instructions};
 use crate::prelude::*;
+use crate::util::smallmap::SmallMap;
+use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone)]
@@ -21,12 +21,6 @@ pub struct Block<'d> {
 }
 
 impl<'d> Block<'d> {
-    // pub fn new_empty(address: u32) -> Node<'d> {
-    //     let mut node = Node::new_empty(address);
-    //     node.data = NodeData::Block(Block { node: &node, instructions: &[] });
-    //     node
-    // }
-
     pub fn new(start: u32, end: u32, instructions: &'d [GMInstruction]) -> Node<'d> {
         Node::new(start, end, NodeData::Block(Block { instructions }))
     }
@@ -60,7 +54,6 @@ impl<'d> Block<'d> {
 
 /// Information about a try-catch-finally block
 struct TryBlock {
-    end_address: u32,
     finally_address: u32,
     catch_address: Option<u32>,
 }
@@ -68,39 +61,39 @@ struct TryBlock {
 /// Result of analyzing instructions for block boundaries
 struct BlockAnalysis {
     /// Set of addresses where blocks should start
-    block_starts: HashSet<u32>,
-    /// Map from instruction address to instruction index
-    address_map: HashMap<u32, usize>,
+    block_starts: Vec<u32>,
     /// Information about try-catch-finally blocks
-    try_blocks: Vec<TryBlock>,
+    try_blocks: SmallMap<u32, TryBlock>,
     /// Total size of all instructions
     code_size: u32,
 }
 
 pub fn find_blocks<'c, 'd>(ctx: &'c mut DecompileContext<'d>, instructions: &'d [GMInstruction]) -> Result<()> {
-    let analysis = analyze_instructions(ctx.gm_data, instructions)?;
-    let blocks = create_blocks(instructions, analysis)?;
-    ctx.blocks = (0..blocks.len()).map(|i| NodeRef::from(i)).collect();
+    if instructions.is_empty() {
+        return Ok(());
+    }
+    let mut analysis = analyze_instructions(ctx.gm_data, instructions)?;
+    let blocks = create_blocks(instructions, analysis.block_starts, analysis.code_size)?;
+    // This only works if the node list is empty before.
+    ctx.blocks = (0..blocks.len()).map(NodeRef::from).collect();
     ctx.nodes = blocks;
-    connect_blocks(ctx)?;
+    connect_blocks(ctx, analysis.try_blocks)?;
     Ok(())
 }
 
 /// Analyze instructions to identify block boundaries and special structures
 fn analyze_instructions(gm_data: &GMData, instructions: &[GMInstruction]) -> Result<BlockAnalysis> {
-    let mut block_starts: HashSet<u32> = HashSet::new();
-    let mut address_map: HashMap<u32, usize> = HashMap::with_capacity(instructions.len());
-    let mut try_blocks: Vec<TryBlock> = Vec::new();
+    let mut block_starts: Vec<u32> = Vec::new();
+    let mut try_blocks: SmallMap<u32, TryBlock> = SmallMap::new();
     let mut addr: u32 = 0;
 
     for (i, instr) in instructions.iter().enumerate() {
-        address_map.insert(addr, i);
         let size = get_instruction_size(instr);
 
         match instr {
             // Terminal instructions - next instruction starts a new block
             GMInstruction::Exit(_) | GMInstruction::Return(_) => {
-                block_starts.insert(addr + size);
+                block_starts.push(addr + size);
             }
 
             // Branch instructions - both target and fallthrough start new blocks
@@ -110,8 +103,8 @@ fn analyze_instructions(gm_data: &GMData, instructions: &[GMInstruction]) -> Res
             | GMInstruction::PushWithContext(b)
             | GMInstruction::PopWithContext(b) => {
                 let target = (addr as i32 + b.jump_offset) as u32;
-                block_starts.insert(target);
-                block_starts.insert(addr + size);
+                block_starts.push(target);
+                block_starts.push(addr + size);
             }
 
             // Try hook pattern detection
@@ -119,15 +112,13 @@ fn analyze_instructions(gm_data: &GMData, instructions: &[GMInstruction]) -> Res
                 let try_info = extract_try_info(gm_data, instructions, i, addr)?;
 
                 // Mark block boundaries for try structure
-                block_starts.insert(try_info.finally_address);
+                block_starts.push(addr - 6); // Start of pattern
+                block_starts.push(addr + 3); // End of pattern
+                block_starts.push(try_info.finally_address);
                 if let Some(catch_addr) = try_info.catch_address {
-                    block_starts.insert(catch_addr);
+                    block_starts.push(catch_addr);
                 }
-                block_starts.insert(addr + size); // After popz.v
-                block_starts.insert(addr - 24); // Start of pattern
-                block_starts.insert(addr + 12); // End of pattern
-
-                try_blocks.push(try_info);
+                try_blocks.insert(addr + 3, try_info);
             }
 
             _ => {}
@@ -136,10 +127,7 @@ fn analyze_instructions(gm_data: &GMData, instructions: &[GMInstruction]) -> Res
         addr += size;
     }
 
-    // Add final address for the end block
-    address_map.insert(addr, instructions.len());
-
-    Ok(BlockAnalysis { block_starts, address_map, try_blocks, code_size: addr })
+    Ok(BlockAnalysis { block_starts, try_blocks, code_size: addr })
 }
 
 /// Extract try-catch-finally information from instruction pattern
@@ -149,44 +137,34 @@ fn extract_try_info(
     call_index: usize,
     call_addr: u32,
 ) -> Result<TryBlock> {
-    // Pattern: [push.i finally, conv.i.v, push.i catch, conv.i.v, call, popz.v]
-    const PATTERN_SIZE: usize = 6;
-    const PATTERN_START: usize = 4;
-
-    let start = call_index.saturating_sub(PATTERN_START);
-    let end = call_index + 2; // Include popz.v
-
-    let pattern = instructions
-        .get(start..end)
-        .ok_or_else(|| format!("@@try_hook@@ pattern extends beyond bounds at index {}", call_index))?;
-
-    if pattern.len() != PATTERN_SIZE {
-        bail!(
-            "Invalid @@try_hook@@ pattern size at index {}: expected {}, got {}",
-            call_index,
-            PATTERN_SIZE,
-            pattern.len(),
-        );
-    }
+    const ERR: &str = "@@try_hook@@ pattern out of bounds";
+    let start = call_index.checked_sub(4).ok_or(ERR)?;
+    let end = call_index + 2;
+    let pattern = instructions.get(start..end).ok_or(ERR)?;
 
     // Extract addresses from the pattern
-    match pattern {
+    match *pattern {
         [
             GMInstruction::Push(GMPushInstruction { value: GMCodeValue::Int32(finally) }),
-            GMInstruction::Convert(GMDoubleTypeInstruction { right: GMDataType::Int32, left: GMDataType::Int32 }),
+            GMInstruction::Convert(GMDoubleTypeInstruction { right: GMDataType::Int32, left: GMDataType::Variable }),
             GMInstruction::Push(GMPushInstruction { value: GMCodeValue::Int32(catch) }),
-            GMInstruction::Convert(GMDoubleTypeInstruction { right: GMDataType::Int32, left: GMDataType::Int32 }),
+            GMInstruction::Convert(GMDoubleTypeInstruction { right: GMDataType::Int32, left: GMDataType::Variable }),
             GMInstruction::Call(_),
             GMInstruction::PopDiscard(GMSingleTypeInstruction { data_type: GMDataType::Variable }),
-        ] => {
-            Ok(TryBlock {
-                end_address: call_addr + 12, // After popz.v
-                finally_address: *finally as u32,
-                catch_address: if *catch != -1 { Some(*catch as u32) } else { None },
-            })
-        }
+        ] => Ok(TryBlock {
+            finally_address: convert_address(finally)?,
+            catch_address: if catch != -1 {
+                Some(convert_address(catch)?)
+            } else {
+                None
+            },
+        }),
         _ => {
-            let actual = disassemble_instructions(gm_data, pattern).unwrap_or_else(|e| format!("<invalid: {e}>"));
+            let actual = pattern
+                .iter()
+                .map(|i| disassemble_instruction(gm_data, i).unwrap_or_else(|e| format!("<invalid: {e}>")))
+                .collect::<Vec<_>>()
+                .join(", ");
             bail!(
                 "Malformed @@try_hook@@ pattern at index {call_index}: expected \
                 [push.i, conv.i.v, push.i, conv.i.v, call, popz.v], found [{actual}]"
@@ -195,61 +173,62 @@ fn extract_try_info(
     }
 }
 
+/// Converts from a tryhook target address (in bytes) to a LibGM address (in bytes / 4)
+fn convert_address(address: i32) -> Result<u32> {
+    let address = address as u32;
+    if address % 4 != 0 {
+        bail!("Address is not divisible by four: {address}")
+    }
+    Ok(address / 4)
+}
+
 /// Create blocks from analyzed instruction boundaries
-fn create_blocks(instructions: &[GMInstruction], analysis: BlockAnalysis) -> Result<Vec<Node>> {
-    // Convert to sorted vector for efficient block creation
-    let mut boundaries: Vec<u32> = analysis.block_starts.into_iter().collect();
-    boundaries.push(0); // Ensure we start from 0
-    boundaries.push(analysis.code_size);
+fn create_blocks(instructions: &[GMInstruction], block_starts: Vec<u32>, code_size: u32) -> Result<Vec<Node>> {
+    let mut boundaries: Vec<u32> = block_starts;
+    boundaries.push(code_size);
     boundaries.sort_unstable();
     boundaries.dedup();
 
-    // Preallocate blocks
     let mut blocks = Vec::with_capacity(boundaries.len() - 1);
+    let mut prev_addr = 0;
+    let mut prev_index = 0;
+    let mut curr_addr = 0;
+    let mut curr_index = 0;
 
-    // Create blocks between consecutive boundaries
-    for window in boundaries.windows(2) {
-        let start = window[0];
-        let end = window[1];
+    for address in boundaries {
+        if address == 0 {
+            continue;
+        }
+        // Resolve address to instruction index
+        loop {
+            let instr = instructions
+                .get(curr_index)
+                .ok_or("Instruction out of bounds while creating blocks")?;
+            curr_addr += get_instruction_size(instr);
+            curr_index += 1;
+            if curr_addr == address {
+                break;
+            }
+        }
 
-        // Map addresses to instruction slice
-        let start_idx = *analysis
-            .address_map
-            .get(&start)
-            .ok_or_else(|| format!("Missing address mapping for {start}"))?;
-        let end_idx = *analysis
-            .address_map
-            .get(&end)
-            .ok_or_else(|| format!("Missing address mapping for {end}"))?;
-
-        let block = Block::new(start, end, &instructions[start_idx..end_idx]);
+        let block = Block::new(prev_addr, curr_addr, &instructions[prev_index..curr_index]);
         blocks.push(block);
+        prev_index = curr_index;
+        prev_addr = curr_addr;
     }
-
-    // Store try blocks in cfg if needed
-    // (Assuming cfg has a field for this, otherwise pass them to connect_blocks)
-    // ^ TODO
 
     Ok(blocks)
 }
 
 /// Connect blocks with predecessor and successor relationships
-fn connect_blocks(ctx: &mut DecompileContext) -> Result<()> {
+fn connect_blocks(ctx: &mut DecompileContext, try_blocks: SmallMap<u32, TryBlock>) -> Result<()> {
     let block_count = ctx.blocks.len();
     for idx in 0..block_count {
-        let node = ctx.blocks[idx];
+        let node = ctx.blocks[idx]; // TODO: Potential unoptimized bounds check?
         let end_address = node.node(ctx).end_address;
         let block = node.block_mut(ctx);
-
-        // Empty blocks can only fall through
-        if block.instructions.is_empty() {
-            if idx + 1 < block_count {
-                connect_fallthrough(ctx, idx);
-            }
-            continue;
-        }
-
-        let last_instr = block.instructions.last().unwrap();
+        let is_last_block = idx == block_count - 1;
+        let last_instr = block.instructions.last().expect("Block is somehow empty");
 
         match last_instr {
             // Terminal instructions have no successors
@@ -257,8 +236,8 @@ fn connect_blocks(ctx: &mut DecompileContext) -> Result<()> {
 
             // Unconditional branch
             GMInstruction::Branch(instr) => {
-                let target_addr = compute_branch_target(end_address - 1, instr.jump_offset);
-                connect_branch_target(ctx, idx, target_addr)?;
+                let target_addr = end_address as i32 - 1 + instr.jump_offset;
+                connect_branch_target(ctx, idx, target_addr as u32)?;
             }
 
             // Conditional branches have both target and fallthrough
@@ -266,28 +245,27 @@ fn connect_blocks(ctx: &mut DecompileContext) -> Result<()> {
             | GMInstruction::BranchUnless(instr)
             | GMInstruction::PushWithContext(instr)
             | GMInstruction::PopWithContext(instr) => {
-                let target_addr = compute_branch_target(end_address - 1, instr.jump_offset);
-                connect_branch_target(ctx, idx, target_addr)?;
-                if idx + 1 < ctx.blocks.len() {
+                let target_addr = end_address as i32 - 1 + instr.jump_offset;
+                connect_branch_target(ctx, idx, target_addr as u32)?;
+                if !is_last_block {
                     connect_fallthrough(ctx, idx);
                 }
             }
 
-            // Try hook pattern (simplified detection)
-            GMInstruction::PopDiscard(_) if is_try_hook_block(block) => {
-                // This would need access to try_blocks from analysis
-                // For now, assuming try blocks are handled separately
-                if idx + 1 < block_count {
+            GMInstruction::PopDiscard(_) if try_blocks.contains_key(&end_address) => {
+                let try_block = try_blocks.get(&end_address).unwrap();
+                if !is_last_block {
                     connect_fallthrough(ctx, idx);
+                }
+                connect_branch_target(ctx, idx, try_block.finally_address)?;
+                if let Some(catch_addr) = try_block.catch_address {
+                    connect_catch_target(ctx, idx, catch_addr)?;
                 }
             }
 
+            _ if is_last_block => {}
             // Default: fall through to next block
-            _ => {
-                if idx + 1 < block_count {
-                    connect_fallthrough(ctx, idx);
-                }
-            }
+            _ => connect_fallthrough(ctx, idx),
         }
     }
 
@@ -305,19 +283,23 @@ fn connect_fallthrough(ctx: &mut DecompileContext, block_idx: usize) {
 /// Helper to connect a block to its branch target
 fn connect_branch_target(ctx: &mut DecompileContext, block_idx: usize, target_addr: u32) -> Result<()> {
     let target_idx = find_block_containing(ctx, target_addr)?;
-    ctx.blocks[block_idx].node_mut(ctx).successors.branch_target = Some(target_idx.into());
-    ctx.blocks[target_idx].node_mut(ctx).predecessors.push(block_idx.into());
+    ctx.blocks[block_idx].node_mut(ctx).successors.branch_target = Some(NodeRef::from(target_idx));
+    ctx.blocks[target_idx]
+        .node_mut(ctx)
+        .predecessors
+        .push(NodeRef::from(block_idx));
     Ok(())
 }
 
-/// Compute the target address of a branch instruction
-fn compute_branch_target(instr_addr: u32, offset: i32) -> u32 {
-    (instr_addr as i32 + offset) as u32
-}
-
-/// Check if a block is a try hook pattern
-fn is_try_hook_block(block: &Block) -> bool {
-    block.instructions.len() == 6 && matches!(block.instructions.get(4), Some(GMInstruction::Call(_)))
+/// Helper to connect a block to its catch target (only @@try_hook@@)
+fn connect_catch_target(ctx: &mut DecompileContext, block_idx: usize, target_addr: u32) -> Result<()> {
+    let target_idx = find_block_containing(ctx, target_addr)?;
+    ctx.blocks[block_idx].node_mut(ctx).successors.catch = Some(NodeRef::from(target_idx));
+    ctx.blocks[target_idx]
+        .node_mut(ctx)
+        .predecessors
+        .push(NodeRef::from(block_idx));
+    Ok(())
 }
 
 /// Find the block containing the given instruction address using binary search
@@ -333,18 +315,18 @@ fn find_block_containing(ctx: &DecompileContext, addr: u32) -> Result<usize> {
         .binary_search_by(|node| {
             let block = node.node(ctx);
             if addr < block.start_address {
-                std::cmp::Ordering::Greater
+                Ordering::Greater
             } else if addr >= block.end_address {
-                std::cmp::Ordering::Less
+                Ordering::Less
             } else {
-                std::cmp::Ordering::Equal
+                Ordering::Equal
             }
         })
         .ok()
         .with_context(|| format!("Could not find block containing address {addr}"))
 }
 
-/// Check if a function reference is the try hook function
+/// Check if a function reference is the `@@try_hook@@` function
 fn is_try_hook(gm_data: &GMData, func_ref: GMRef<GMFunction>) -> Result<bool> {
     let func = func_ref.resolve(&gm_data.functions.functions)?;
     let name = func.name.resolve(&gm_data.strings.strings)?;
