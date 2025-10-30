@@ -984,7 +984,6 @@ impl InstructionData for GMPushInstruction {
             GMCodeValue::Int32(int32) => builder.write_i32(*int32),
             GMCodeValue::Int64(int64) => builder.write_i64(*int64),
             GMCodeValue::Double(double) => builder.write_f64(*double),
-            GMCodeValue::Float(float) => builder.write_f32(*float),
             GMCodeValue::Boolean(boolean) => builder.write_bool32(*boolean),
             GMCodeValue::String(string_ref) => builder.write_u32(string_ref.index),
             GMCodeValue::Variable(code_variable) => {
@@ -1247,14 +1246,39 @@ impl GMElement for GMAssetReference {
 #[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum GMDataType {
-    Double,
-    Float,
-    Int32,
-    Int64,
-    Boolean,
-    Variable,
-    String,
-    Int16 = 0x0f,
+    /// 64-bit floating point number.
+    /// - Size on VM Stack: 8 bytes.
+    Double = 0,
+
+    /// Does not really exist for some reason?
+    // Float = 1,
+
+    /// 32-bit signed integer.
+    /// - Size on VM Stack: 4 bytes.
+    Int32 = 2,
+
+    /// 64-bit signed integer.
+    /// - Size on VM Stack: 8 bytes.
+    Int64 = 3,
+
+    /// Boolean, represented as 1 or 0, with a 32-bit integer.
+    /// - Size on VM Stack: 4 bytes (for some reason).
+    Boolean = 4,
+
+    /// Dynamic type representing any GML value.
+    /// Externally known as a structure called `RValue`.
+    /// - Size on VM Stack: 16 bytes.
+    Variable = 5,
+
+    /// String, represented as a 32-bit ID.
+    /// - Size on VM Stack: 4 bytes.
+    String = 6,
+
+    /// 16-bit signed integer.
+    /// - Size on VM Stack: 4 bytes.
+    /// > **Note**: `Int16` is not a valid data type on the VM Stack.
+    /// It is immediately converted to `Int32` and is thus 4 bytes wide.
+    Int16 = 15,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1271,7 +1295,7 @@ pub enum GMInstanceType {
     /// Represents the other context, which has multiple definitions based on the location used.
     Other,
 
-    /// Represents all active object instances. Assignment operations can perform a loops.
+    /// Represents all active object instances. Assignment operations can perform a loop.
     All,
 
     /// Represents no object/instance.
@@ -1374,7 +1398,6 @@ pub enum GMCodeValue {
     Int32(i32),
     Int64(i64),
     Double(f64),
-    Float(f32),
     Boolean(bool),
     String(GMRef<String>),
     Variable(CodeVariable),
@@ -1385,7 +1408,6 @@ pub enum GMCodeValue {
 fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMCodeValue> {
     match data_type {
         GMDataType::Double => reader.read_f64().map(GMCodeValue::Double),
-        GMDataType::Float => reader.read_f32().map(GMCodeValue::Float),
         GMDataType::Int32 => {
             if let Some(&function) = reader.function_occurrences.get(&reader.cur_pos) {
                 reader.cur_pos += 4; // Skip next occurrence offset
@@ -1560,7 +1582,6 @@ pub const fn get_data_type_from_value(code_value: &GMCodeValue) -> GMDataType {
         GMCodeValue::Function(_) => GMDataType::Int32, // Functions are not a "real" gm type; they're always int32
         GMCodeValue::Variable(var) if var.is_int32 => GMDataType::Int32, // Idk when this happens
         GMCodeValue::Int64(_) => GMDataType::Int64,
-        GMCodeValue::Float(_) => GMDataType::Float,
         GMCodeValue::Double(_) => GMDataType::Double,
         GMCodeValue::Boolean(_) => GMDataType::Boolean,
         GMCodeValue::String(_) => GMDataType::String,

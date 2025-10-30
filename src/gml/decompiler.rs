@@ -44,41 +44,39 @@ pub fn decompile_to_ast(gm_data: &GMData, code_ref: GMRef<GMCode>) -> Result<()>
     // }
     // // std::process::exit(67);
 
-    // let gamename = std::env::var("FUCKING_GAMENAME").unwrap();
-    // let path = format!(
-    //     "/home/biotomatede/temp/LibGM/{}/{}",
-    //     gamename,
-    //     code.name.display(&gm_data.strings)
-    // );
-    // std::fs::create_dir(format!("/home/biotomatede/temp/LibGM/{gamename}")).ok();
-    // let mut s = String::new();
-    // for (i, noderef) in ctx.blocks.iter().enumerate() {
-    //     let n = noderef.node(&ctx);
-    //     s.push_str(&format!("NODE {i} {{\n"));
-    //     s.push_str(&format!("  Start: {}\n", n.start_address / 4));
-    //     s.push_str(&format!("  End: {}\n", n.end_address / 4));
-    //     s.push_str(&format!(
-    //         "  Predecessors: {}\n",
-    //         n.predecessors
-    //             .iter()
-    //             .map(|i| i.index.to_string())
-    //             .collect::<Vec<_>>()
-    //             .join(", ")
-    //     ));
-    //     let mut succ = vec![];
-    //     if let Some(n) = n.successors.branch_target {
-    //         succ.push(n);
-    //     }
-    //     if let Some(n) = n.successors.fall_through {
-    //         succ.push(n);
-    //     }
-    //     s.push_str(&format!(
-    //         "  Successors: {}\n",
-    //         succ.iter().map(|i| i.index.to_string()).collect::<Vec<_>>().join(", ")
-    //     ));
-    //     s.push_str("}\n\n");
-    // }
-    // std::fs::write(path, s).ok();
+    let gamename = std::env::var("FUCKING_GAMENAME").unwrap();
+    let path = format!(
+        "/home/biotomatede/temp/LibGM/{}/{}",
+        gamename,
+        code.name.display(&gm_data.strings)
+    );
+    std::fs::create_dir(format!("/home/biotomatede/temp/LibGM/{gamename}")).ok();
+    let mut s = String::new();
+    for (i, noderef) in ctx.blocks.iter().enumerate() {
+        let n = noderef.node(&ctx);
+        let p = &n.predecessors;
+        let mut succ = vec![];
+        if let Some(n) = n.successors.branch_target {
+            succ.push(n);
+        }
+        if let Some(n) = n.successors.fall_through {
+            succ.push(n);
+        }
+
+        s.push_str(&format!("NODE {i} {{\n"));
+        s.push_str(&format!("  Start: {}\n", n.start_address / 4));
+        s.push_str(&format!("  End: {}\n", n.end_address / 4));
+        s.push_str(&format!(
+            "  Predecessors: {}\n",
+            p.iter().map(|i| i.index.to_string()).collect::<Vec<_>>().join(", ")
+        ));
+        s.push_str(&format!(
+            "  Successors: {}\n",
+            succ.iter().map(|i| i.index.to_string()).collect::<Vec<_>>().join(", ")
+        ));
+        s.push_str("}\n\n");
+    }
+    std::fs::write(path, s).ok();
 
     // find_fragments(&mut ctx, code_ref).context("finding fragments")?;
     // find_static_inits(&mut ctx).context("finding static inits")?;

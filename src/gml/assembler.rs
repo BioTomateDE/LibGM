@@ -247,7 +247,6 @@ fn parse_push(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &mut GM
             }
         }
         GMDataType::Int64 => GMCodeValue::Int64(parse_int(line)?),
-        GMDataType::Float => GMCodeValue::Float(parse_float(line)?),
         GMDataType::Double => GMCodeValue::Double(parse_float(line)?),
         GMDataType::Boolean => GMCodeValue::Boolean(parse_bool(line)?),
         GMDataType::String => {
@@ -355,7 +354,6 @@ fn data_type_from_char(data_type: char) -> Result<GMDataType> {
         'e' => GMDataType::Int16,
         'd' => GMDataType::Double,
         'l' => GMDataType::Int64,
-        'f' => GMDataType::Float,
         'b' => GMDataType::Boolean,
         _ => bail!("Invalid data type '{data_type}'"),
     })
