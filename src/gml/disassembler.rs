@@ -35,7 +35,8 @@ pub fn disassemble_instructions(gm_data: &GMData, instructions: &[GMInstruction]
 
     for instruction in instructions {
         let line: String = disassemble_instruction(gm_data, instruction)?;
-        assembly += &(line + "\n");
+        assembly += &line;
+        assembly += "\n";
     }
 
     Ok(assembly)
@@ -149,7 +150,6 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
                 GMCodeValue::Int32(integer) => integer.to_string(),
                 GMCodeValue::Int64(integer) => integer.to_string(),
                 GMCodeValue::Double(float) => float.to_string(),
-                GMCodeValue::Float(float) => float.to_string(),
             };
 
             line = format!(
@@ -192,7 +192,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
     Ok(line)
 }
 
-fn opcode_to_string(instruction: &GMInstruction) -> &'static str {
+const fn opcode_to_string(instruction: &GMInstruction) -> &'static str {
     match instruction {
         GMInstruction::Convert(_) => "conv",
         GMInstruction::Multiply(_) => "mul",
@@ -285,20 +285,19 @@ fn asset_reference_to_string(gm_data: &GMData, asset_reference: &GMAssetReferenc
     })
 }
 
-fn data_type_to_string(data_type: GMDataType) -> &'static str {
+const fn data_type_to_string(data_type: GMDataType) -> &'static str {
     match data_type {
         GMDataType::Int16 => "e",
         GMDataType::Int32 => "i",
         GMDataType::Int64 => "l",
         GMDataType::Double => "d",
-        GMDataType::Float => "f",
         GMDataType::Boolean => "b",
         GMDataType::String => "s",
         GMDataType::Variable => "v",
     }
 }
 
-fn comparison_type_to_string(comparison_type: GMComparisonType) -> &'static str {
+const fn comparison_type_to_string(comparison_type: GMComparisonType) -> &'static str {
     match comparison_type {
         GMComparisonType::LessThan => "LT",
         GMComparisonType::LessOrEqual => "LTE",
@@ -337,7 +336,7 @@ fn instance_type_to_string(
     })
 }
 
-fn variable_type_to_string(variable_type: GMVariableType) -> &'static str {
+const fn variable_type_to_string(variable_type: GMVariableType) -> &'static str {
     match variable_type {
         GMVariableType::Array => "[array]",
         GMVariableType::StackTop => "[stacktop]",
@@ -351,7 +350,7 @@ fn variable_type_to_string(variable_type: GMVariableType) -> &'static str {
 fn variable_to_string(gm_data: &GMData, code_variable: &CodeVariable) -> Result<String> {
     let variable: &GMVariable = code_variable.variable.resolve(&gm_data.variables.variables)?;
     let name: &String = variable.name.resolve(&gm_data.strings.strings)?;
-    if !is_valid_identifier(name) {
+    if !is_valid_identifier(name) && name != "$$$$temp$$$$" {
         bail!(
             "Invalid variable identifier: {:?}",
             variable.name.display(&gm_data.strings)
@@ -380,15 +379,15 @@ fn function_to_string(gm_data: &GMData, function_ref: GMRef<GMFunction>) -> Resu
     let function: &GMFunction = function_ref.resolve(&gm_data.functions.functions)?;
     let name: &String = function.name.resolve(&gm_data.strings.strings)?;
     if !is_valid_identifier(name) {
-        if name.starts_with("@@") && name.ends_with("@@") {
-            if is_valid_identifier(&name[2..name.len() - 2]) {
-                return Ok(name);
-            }
+        let is_special =
+            name.starts_with("@@") && name.ends_with("@@") && is_valid_identifier(&name[2..name.len() - 2]);
+
+        if !is_special {
+            bail!(
+                "Invalid function identifier: {:?}",
+                function.name.display(&gm_data.strings)
+            );
         }
-        bail!(
-            "Invalid function identifier: {:?}",
-            function.name.display(&gm_data.strings)
-        );
     }
     Ok(name)
 }
@@ -412,8 +411,7 @@ pub fn format_literal_string(gm_data: &GMData, gm_string_ref: GMRef<String>) -> 
 /// - Letters and underscores are allowed
 /// - Only ascii characters
 fn is_valid_identifier(s: &str) -> bool {
-    if !s.chars().next().map_or(false, |c| c.is_ascii_alphabetic() || c == '_') {
-        return false;
-    }
-    s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+    let mut chars = s.chars();
+    chars.next().map_or(false, |c| c.is_ascii_alphabetic() || c == '_')
+        && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
 }

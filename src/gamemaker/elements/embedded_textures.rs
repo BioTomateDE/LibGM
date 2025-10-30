@@ -100,7 +100,9 @@ impl GMElement for GMEmbeddedTextures {
         }
 
         for (i, texture_page) in self.texture_pages.iter().enumerate() {
-            let Some(img) = &texture_page.image else { continue };
+            let Some(img) = &texture_page.image else {
+                continue;
+            };
             builder.align(0x80);
             builder.resolve_pointer(&texture_page.image)?;
             let start_pos: usize = builder.len();

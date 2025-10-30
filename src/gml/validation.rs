@@ -431,7 +431,6 @@ impl VMStackItem {
         match data_type {
             GMDataType::Int32 | GMDataType::Int16 => Self::Int32(None),
             GMDataType::Int64 => Self::Int64,
-            GMDataType::Float => Self::Float,
             GMDataType::Double => Self::Double,
             GMDataType::Boolean => Self::Boolean,
             GMDataType::Variable => Self::Variable,
@@ -448,7 +447,6 @@ impl VMStackItem {
             (Self::Int32(_), GMDataType::Int16) => {}
             (Self::Int32(_), GMDataType::Int32) => {}
             (Self::Int64, GMDataType::Int64) => {}
-            (Self::Float, GMDataType::Float) => {}
             (Self::Double, GMDataType::Double) => {}
             (Self::Boolean, GMDataType::Boolean) => {}
             (Self::Variable, GMDataType::Variable) => {}

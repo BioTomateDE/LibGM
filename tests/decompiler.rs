@@ -22,6 +22,10 @@ fn test_decompiler() {
                 code_name
             );
 
+            if code.instructions.is_empty() {
+                continue;
+            }
+
             let game = if data.general_info.version.major == 1 {
                 "Undertale"
             } else if data.general_info.version.major == 2022 {
@@ -38,6 +42,7 @@ fn test_decompiler() {
                 "DeltaruneLauncher"
             };
             unsafe { std::env::set_var("FUCKING_GAMENAME", game) }
+            // TODO remove debug
             decompile_to_ast(&data, GMRef::new(i as u32)).with_context(|| format!("decompiling {code_name}"))?;
         }
         Ok(())

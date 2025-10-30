@@ -28,7 +28,9 @@ impl DataReader<'_> {
 
         let string: String = match self.read_literal_string(4) {
             Ok(str) => str,
-            Err(e) if self.cur_pos == 4 => bail!("Invalid data.win file; data doesn't start with 'FORM' string"),
+            Err(e) if self.cur_pos == 4 => {
+                bail!("Invalid data.win file; data doesn't start with 'FORM' string")
+            }
             Err(e) => Err(e).context("parsing chunk name")?,
         };
 
