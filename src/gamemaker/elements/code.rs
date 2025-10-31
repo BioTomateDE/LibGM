@@ -668,10 +668,8 @@ fn build_extended16(builder: &mut DataBuilder, kind: i16) {
     builder.write_u8(opcode::EXTENDED.into());
 }
 
-trait InstructionData {
-    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self>
-    where
-        Self: Sized;
+trait InstructionData: Sized {
+    fn parse(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<Self>;
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()>;
 }
 
@@ -851,7 +849,7 @@ impl InstructionData for GMGotoInstruction {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct GMPopenvExitMagicInstruction;
 impl InstructionData for GMPopenvExitMagicInstruction {
-    fn parse(_: &mut DataReader, _x: (u8, u8, u8)) -> Result<Self> {
+    fn parse(_: &mut DataReader, _: (u8, u8, u8)) -> Result<Self> {
         Ok(Self)
     }
 
@@ -972,8 +970,7 @@ impl InstructionData for GMPushInstruction {
             _ => 0,
         });
 
-        let data_type: GMDataType = get_data_type_from_value(&self.value);
-        builder.write_u8(data_type.into());
+        builder.write_u8(self.value.data_type().into());
         builder.write_u8(opcode);
 
         match &self.value {
@@ -1402,6 +1399,22 @@ pub enum GMCodeValue {
     Function(GMRef<GMFunction>),
 }
 
+impl GMCodeValue {
+    pub const fn data_type(&self) -> GMDataType {
+        match self {
+            GMCodeValue::Int16(_) => GMDataType::Int16,
+            GMCodeValue::Int32(_) => GMDataType::Int32,
+            GMCodeValue::Function(_) => GMDataType::Int32, // Functions are not a "real" gm type; they're always int32
+            GMCodeValue::Variable(var) if var.is_int32 => GMDataType::Int32, // no idea when this happens
+            GMCodeValue::Int64(_) => GMDataType::Int64,
+            GMCodeValue::Double(_) => GMDataType::Double,
+            GMCodeValue::Boolean(_) => GMDataType::Boolean,
+            GMCodeValue::String(_) => GMDataType::String,
+            GMCodeValue::Variable(_) => GMDataType::Variable,
+        }
+    }
+}
+
 fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMCodeValue> {
     match data_type {
         GMDataType::Double => reader.read_f64().map(GMCodeValue::Double),
@@ -1570,20 +1583,6 @@ fn write_function_occurrence(
         .unwrap()
         .push(occurrence_position);
     Ok(())
-}
-
-pub const fn get_data_type_from_value(code_value: &GMCodeValue) -> GMDataType {
-    match code_value {
-        GMCodeValue::Int16(_) => GMDataType::Int16,
-        GMCodeValue::Int32(_) => GMDataType::Int32,
-        GMCodeValue::Function(_) => GMDataType::Int32, // Functions are not a "real" gm type; they're always int32
-        GMCodeValue::Variable(var) if var.is_int32 => GMDataType::Int32, // Idk when this happens
-        GMCodeValue::Int64(_) => GMDataType::Int64,
-        GMCodeValue::Double(_) => GMDataType::Double,
-        GMCodeValue::Boolean(_) => GMDataType::Boolean,
-        GMCodeValue::String(_) => GMDataType::String,
-        GMCodeValue::Variable(_) => GMDataType::Variable,
-    }
 }
 
 pub const fn get_instruction_size(instruction: &GMInstruction) -> u32 {

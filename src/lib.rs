@@ -15,7 +15,6 @@ pub mod util;
 // Main modules
 pub mod gamemaker;
 pub mod gml;
-mod modding;
 
 // Convenience re-exports
 pub use gamemaker::data::GMData;

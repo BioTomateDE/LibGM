@@ -91,7 +91,6 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
         reader.general_info.set_version_at_least((2024, 13, PostLTS))?;
     }
 
-    // Cv means 'check version'
     if reader.general_info.bytecode_version >= 14 {
         try_check(reader, "FUNC", cv_func_2024_8, (2024, 8))?;
     }
@@ -188,6 +187,8 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
     Ok(())
 }
 
+// NOTE: `CV` stands for "Check Version".
+
 fn cv_extn_2022_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let ext_count = reader.read_u32()?;
     if ext_count < 1 {
@@ -236,7 +237,6 @@ fn cv_extn_2022_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     Ok(Some((2022, 6).into()))
 }
 
-/// assert version >= 2022.6
 fn cv_extn_2023_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let ext_count = reader.read_i32()?;
     if ext_count < 1 {
@@ -292,7 +292,6 @@ fn cv_sond_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     Ok(None)
 }
 
-/// assert version >= 2024.13
 fn cv_agrp_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     // Check for new field added in 2024.14
     let audio_group_count = reader.read_u32()?;
@@ -342,7 +341,6 @@ fn cv_agrp_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     Ok(Some((2024, 14).into()))
 }
 
-/// assert version >= 2023.2 NON_LTS
 fn cv_sprt_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2024, 6).into()));
     let sprite_count = reader.read_u32()?;
@@ -427,7 +425,7 @@ fn cv_sprt_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         }
 
         if full_end_pos == expected_end_offset {
-            log::warn!("full_end_pos == expected_end_offset while detecting SPRT_2024.6; may lead to false positives");
+            log::warn!("full_end_pos == expected_end_offset while detecting SPRT_2024.6; may lead to false negatives");
             return Ok(None); // "Full" mask data is valid   (TODO no idea why it returns here tbh; check if there is bug in utmt pls)
         }
         if bbox_end_pos == expected_end_offset {
@@ -1086,52 +1084,37 @@ fn cv_psem_2023_x(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
 }
 
 fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
-    fn get_chunk_elem_count(reader: &mut DataReader, chunk_name: &'static str) -> Result<u32> {
-        let chunk = match reader.chunks.get(chunk_name) {
-            Some(c) => c,
-            None => return Ok(0),
+    let chunk_code = reader.chunk.clone();
+
+    fn get_chunk_elem_count(reader: &mut DataReader, chunk_name: &'static str, gms2: bool) -> Result<u32> {
+        let Some(chunk) = reader.chunks.get(chunk_name) else {
+            return Ok(0);
         };
-        let saved_chunk = reader.chunk.clone();
-        let saved_pos = reader.cur_pos;
+
         reader.chunk = chunk.clone();
         reader.cur_pos = chunk.start_pos;
-        let count = reader.read_u32()?;
-        reader.chunk = saved_chunk;
-        reader.cur_pos = saved_pos;
-        Ok(count)
-    }
-    fn get_chunk_elem_count_weird(reader: &mut DataReader, chunk_name: &'static str) -> Result<u32> {
-        let chunk = match reader.chunks.get(chunk_name) {
-            Some(c) => c,
-            None => return Ok(0),
-        };
-        let saved_chunk = reader.chunk.clone();
-        let saved_pos = reader.cur_pos;
-        reader.chunk = chunk.clone();
-        reader.cur_pos = chunk.start_pos;
-        reader.align(4)?;
-        if reader.read_u32()? != 1 {
-            bail!("Expected version 1");
+        if gms2 {
+            reader.align(4)?;
+            reader.read_u32()?; // GMS2 chunk version (always 1)
         }
         let count = reader.read_u32()?;
-        reader.chunk = saved_chunk;
-        reader.cur_pos = saved_pos;
         Ok(count)
     }
 
-    let background_count = get_chunk_elem_count(reader, "BGND")?;
-    let path_count = get_chunk_elem_count(reader, "PATH")?;
-    let script_count = get_chunk_elem_count(reader, "SCPT")?;
-    let font_count = get_chunk_elem_count(reader, "FONT")?;
-    let timeline_count = get_chunk_elem_count(reader, "TMLN")?;
-    let shader_count = get_chunk_elem_count(reader, "SHDR")?;
-    let sequence_count = get_chunk_elem_count_weird(reader, "SEQN")?;
-    let particle_system_count = get_chunk_elem_count_weird(reader, "SEQN")?;
+    let background_count = get_chunk_elem_count(reader, "BGND", false)?;
+    let path_count = get_chunk_elem_count(reader, "PATH", false)?;
+    let script_count = get_chunk_elem_count(reader, "SCPT", false)?;
+    let font_count = get_chunk_elem_count(reader, "FONT", false)?;
+    let timeline_count = get_chunk_elem_count(reader, "TMLN", false)?;
+    let shader_count = get_chunk_elem_count(reader, "SHDR", false)?;
+    let sequence_count = get_chunk_elem_count(reader, "SEQN", true)?;
+    let particle_system_count = get_chunk_elem_count(reader, "SEQN", true)?;
 
-    let check_if_asset_type_2024_4 = |reader: &mut DataReader| -> Result<bool> {
+    let is_asset_type_2024_4 = |reader: &mut DataReader| -> Result<bool> {
         let int_argument = reader.read_u32()?;
         let resource_id = int_argument & 0xffffff;
-        Ok(match (int_argument >> 24) as u8 {
+        let resource_type = (int_argument >> 24) as u8;
+        Ok(match resource_type {
             4 => resource_id >= background_count,
             5 => resource_id >= path_count,
             6 => resource_id >= script_count,
@@ -1145,6 +1128,9 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
             _ => false,
         })
     };
+
+    reader.cur_pos = chunk_code.start_pos;
+    reader.chunk = chunk_code;
 
     let code_count = reader.read_u32()?;
     let mut code_pointers = vec_with_capacity(code_count)?;
@@ -1178,8 +1164,9 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
                 } // Break instruction
                 if type1 == 2 {
                     // If type1 is int32
-                    if check_if_asset_type_2024_4(reader)? {
-                        return Ok(Some((2024, 4).into())); //  return immediately if highest detectable version (2024.4) is found
+                    if is_asset_type_2024_4(reader)? {
+                        // Return immediately if highest detectable version (2024.4) is found
+                        return Ok(Some((2024, 4).into()));
                     } else {
                         detected_2023_8 = true;
                     }
@@ -1198,9 +1185,9 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
             reader.cur_pos = instructions_start;
 
             while reader.cur_pos < instructions_end {
-                let first_word = reader.read_u32()?;
-                let opcode = (first_word >> 24) as u8;
-                let type1 = ((first_word & 0x00FF0000) >> 16) as u8;
+                let word = reader.read_u32()?;
+                let opcode = (word >> 24) as u8;
+                let type1 = ((word & 0x00FF0000) >> 16) as u8;
                 if matches!(opcode, 0x45 | 0xD9) {
                     // Pop, call
                     reader.cur_pos += 4;
@@ -1214,7 +1201,7 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
                 } // Break instruction
                 if type1 == 2 {
                     // If type1 is int32
-                    if check_if_asset_type_2024_4(reader)? {
+                    if is_asset_type_2024_4(reader)? {
                         return Ok(Some((2024, 4).into())); // Return immediately if highest detectable version (2024.4) is found
                     } else {
                         detected_2023_8 = true;
