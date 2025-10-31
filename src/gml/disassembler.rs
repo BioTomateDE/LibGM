@@ -5,7 +5,7 @@ use crate::gamemaker::elements::code::GMComparisonType;
 use crate::gamemaker::elements::code::GMInstanceType;
 use crate::gamemaker::elements::code::GMInstruction;
 use crate::gamemaker::elements::code::GMVariableType;
-use crate::gamemaker::elements::code::{GMAssetReference, GMCode, GMCodeValue, GMDataType, get_data_type_from_value};
+use crate::gamemaker::elements::code::{GMAssetReference, GMCode, GMCodeValue, GMDataType};
 use crate::gamemaker::elements::functions::GMFunction;
 use crate::gamemaker::elements::game_objects::GMGameObject;
 use crate::gamemaker::elements::variables::GMVariable;
@@ -152,12 +152,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
                 GMCodeValue::Double(float) => float.to_string(),
             };
 
-            line = format!(
-                "{}.{} {}",
-                opcode,
-                data_type_to_string(get_data_type_from_value(&instr.value)),
-                value,
-            );
+            line = format!("{}.{} {}", opcode, data_type_to_string(instr.value.data_type()), value,);
         }
 
         GMInstruction::PushImmediate(int16) => {

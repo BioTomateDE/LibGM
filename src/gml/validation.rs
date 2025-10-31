@@ -1,7 +1,7 @@
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::elements::code::{
-    GMCode, GMCodeValue, GMDataType, GMInstanceType, GMInstruction, GMVariableType, get_data_type_from_value,
-    get_instruction_size, parse_instance_type,
+    GMCode, GMCodeValue, GMDataType, GMInstanceType, GMInstruction, GMVariableType, get_instruction_size,
+    parse_instance_type,
 };
 use crate::gml::disassembler::disassemble_instruction;
 use crate::prelude::*;
@@ -262,7 +262,7 @@ fn validate_instructions(
                 | GMInstruction::PushLocal(instr)
                 | GMInstruction::PushGlobal(instr)
                 | GMInstruction::PushBuiltin(instr) => {
-                    let data_type: GMDataType = get_data_type_from_value(&instr.value);
+                    let data_type: GMDataType = instr.value.data_type();
 
                     if let GMCodeValue::Variable(code_var) = &instr.value {
                         match code_var.variable_type {

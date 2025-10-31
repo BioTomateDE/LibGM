@@ -31,8 +31,8 @@ pub fn hashmap_with_capacity<K, V>(count: u32) -> Result<HashMap<K, V>> {
     if estimated_size > FAILSAFE_SIZE {
         bail!(
             "HashMap<{}, {}> with capacity {} would use ~{} which exceeds failsafe size {}",
-            std::any::type_name::<K>(),
-            std::any::type_name::<V>(),
+            typename::<K>(),
+            typename::<V>(),
             count,
             format_bytes(estimated_size),
             format_bytes(FAILSAFE_SIZE)

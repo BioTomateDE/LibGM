@@ -48,7 +48,7 @@ impl<'a> DataBuilder<'a> {
     }
 
     /// The current length (aka. "position") of the internal buffer.
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.raw_data.len()
     }
 
@@ -56,7 +56,7 @@ impl<'a> DataBuilder<'a> {
         self.gm_data.general_info.version.is_version_at_least(version_req)
     }
 
-    pub fn bytecode_version(&self) -> u8 {
+    pub const fn bytecode_version(&self) -> u8 {
         self.gm_data.general_info.bytecode_version
     }
 
