@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter, Write};
+use std::fmt::{Display, Write};
 use std::str::FromStr;
 
 #[derive(thiserror::Error, Debug)]

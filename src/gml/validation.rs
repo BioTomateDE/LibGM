@@ -402,10 +402,6 @@ impl VMStack {
         self.items.pop().context("Tried to pop empty stack")
     }
 
-    fn peek(&self) -> Result<&VMStackItem> {
-        self.items.last().context("Tried to peek empty stack")
-    }
-
     fn len(&self) -> usize {
         self.items.len()
     }

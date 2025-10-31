@@ -38,21 +38,51 @@ pub mod ui_nodes;
 pub mod variables;
 
 #[allow(unused_variables)]
-pub trait GMElement {
-    fn deserialize(reader: &mut DataReader) -> Result<Self>
-    where
-        Self: Sized;
+pub trait GMElement: Sized {
+    /// Deserializes this element from the current position of the reader.
+    ///
+    /// Implementations should read the exact binary representation of this element
+    /// and return a fully constructed instance.
+    fn deserialize(reader: &mut DataReader) -> Result<Self>;
+
+    /// Serializes this element to the current position of the builder.
+    ///
+    /// Implementations should write the exact binary representation of this element
+    /// in the format expected by the GameMaker runtime.
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()>;
 
+    /// Handles padding bytes that may appear before this element in pointer lists.
+    ///
+    /// This is called before [`GMElement::deserialize`] when reading from structured data.
+    /// The default implementation does nothing - override if your element requires
+    /// alignment padding in specific contexts.
     fn deserialize_pre_padding(reader: &mut DataReader) -> Result<()> {
         Ok(())
     }
+
+    /// Writes padding bytes that may be required before this element in pointer lists.
+    ///
+    /// This is called before [`GMElement::serialize`] when writing to structured data.
+    /// The default implementation does nothing - override if your element requires
+    /// alignment padding in specific contexts.
     fn serialize_pre_padding(&self, builder: &mut DataBuilder) -> Result<()> {
         Ok(())
     }
+
+    /// Handles padding bytes that may appear after this element in pointer lists.
+    ///
+    /// This is called after [`GMElement::deserialize`] when reading from structured data.
+    /// The `is_last` parameter indicates if this is the final element in a list,
+    /// which may affect padding requirements.
     fn deserialize_post_padding(reader: &mut DataReader, is_last: bool) -> Result<()> {
         Ok(())
     }
+
+    /// Writes padding bytes that may be required after this element in pointer lists.
+    ///
+    /// This is called after [`GMElement::serialize`] when writing to structured data.
+    /// The `is_last` parameter indicates if this is the final element in a list,
+    /// which may affect padding requirements.
     fn serialize_post_padding(&self, builder: &mut DataBuilder, is_last: bool) -> Result<()> {
         Ok(())
     }
@@ -158,7 +188,17 @@ impl GMElement for bool {
     }
 }
 
-pub trait GMChunkElement {
-    fn stub() -> Self;
+pub trait GMChunkElement: Default {
+    /// Returns `true` if this chunk is present in the data file.
+    ///
+    /// This differs from simply checking if the chunk is empty:
+    /// - A list chunk may exist and contain zero elements.
+    ///   > Chunk name + chunk length (four) + element count (zero).
+    /// - A chunk may exist but contain no data.
+    ///   > Chunk name + chunk length (zero).
+    /// - A chunk may be absent entirely from the file format.
+    ///   > Completely gone.
+    ///
+    /// Use this to distinguish between "present but empty" and "not present at all".
     fn exists(&self) -> bool;
 }

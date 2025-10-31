@@ -7,16 +7,13 @@ use crate::prelude::*;
 use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMParticleSystems {
     pub particle_systems: Vec<GMParticleSystem>,
     pub exists: bool,
 }
 
 impl GMChunkElement for GMParticleSystems {
-    fn stub() -> Self {
-        Self { particle_systems: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }
@@ -80,15 +77,12 @@ impl GMElement for GMParticleSystem {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMParticleEmitters {
     pub emitters: Vec<GMParticleEmitter>,
     pub exists: bool,
 }
 impl GMChunkElement for GMParticleEmitters {
-    fn stub() -> Self {
-        Self { emitters: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

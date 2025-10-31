@@ -1,32 +1,33 @@
 use crate::gamemaker::data::Endianness;
 use crate::gamemaker::deserialize::chunk::GMChunk;
 use crate::gamemaker::deserialize::resources::GMRef;
+use crate::gamemaker::elements::GMElement;
 use crate::gamemaker::elements::functions::GMFunction;
 use crate::gamemaker::elements::general_info::GMGeneralInfo;
 use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::elements::variables::GMVariable;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::gm_version::GMVersionReq;
 use crate::prelude::*;
 use crate::util::smallmap::SmallMap;
 use crate::{integrity_assert, integrity_check};
 use std::collections::HashMap;
 
+#[derive(Debug)]
 pub struct DataReader<'a> {
-    /// The raw data buffer that is being parsed.
+    /// The raw data buffer belonging to the GameMaker data file which is currently being parsed.
     data: &'a [u8],
 
     /// The current read position within the data buffer.
     /// Reading data will be read from this position; incrementing it.
     pub cur_pos: u32,
 
-    /// How many bytes of padding are/should be at the end of every chunk.
+    /// How many null bytes of padding should be at the end of every chunk (except the last one).
     /// Only relevant in certain GameMaker versions.
     /// Defaults to 16, but will be set to 4 or 1 if detected.
     pub chunk_padding: u32,
 
-    /// Indicates the data's byte endianness.
+    /// Indicates the data file's byte endianness.
     /// In most cases (and assumed by default), this is set to little-endian.
     /// Big endian is an edge case for certain target platforms (e.g. PS3 or Xbox 360).
     pub endianness: Endianness,
@@ -43,52 +44,58 @@ pub struct DataReader<'a> {
     /// **Safety Warning**: If the chunk's start/end positions are set incorrectly, the program becomes memory unsafe.
     pub chunk: GMChunk,
 
+    /// General info about this data file. Includes game name, GameMaker Version and Bytecode Version.
     /// Contains garbage placeholders until the `GEN8` chunk is deserialized.
-    /// Use [`DataReader::unstable_get_gm_version`] in [`crate::gamemaker::deserialize::chunk`]
-    /// to get the GameMaker version before GEN8 is parsed.
+    /// Use [`DataReader::unstable_get_gm_version`] to get the GameMaker version before `GEN8` is parsed.
     pub general_info: GMGeneralInfo,
 
-    /// Will be set after chunk STRG is parsed (first chunk to parse).
+    /// Will be set after chunk `STRG` is parsed (first chunk to parse).
     /// Contains all GameMaker strings, which are needed to resolve strings while deserialization.
     pub strings: GMStrings,
 
     /// Should only be set by [`crate::gamemaker::elements::strings`].
-    /// This means that STRG has to be parsed before any other chunk.
+    /// This means that `STRG` has to be parsed before any other chunk.
     pub string_occurrences: HashMap<u32, GMRef<String>>,
 
     /// Should only be set by [`crate::gamemaker::elements::texture_page_items`].
-    /// This means that TPAG has to be parsed before any chunk with texture page item pointers.
+    /// This means that `TPAG` has to be parsed before any chunk with texture page item pointers.
     pub texture_page_item_occurrences: HashMap<u32, GMRef<GMTexturePageItem>>,
 
     /// Should only be set by [`crate::gamemaker::elements::variables`].
-    /// This means that VARI has to be parsed before CODE.
+    /// This means that `VARI` has to be parsed before `CODE`.
     pub variable_occurrences: HashMap<u32, GMRef<GMVariable>>,
 
     /// Should only be set by [`crate::gamemaker::elements::functions`].
-    /// This means that FUNC has to be parsed before CODE.
+    /// This means that `FUNC` has to be parsed before `CODE`.
     pub function_occurrences: HashMap<u32, GMRef<GMFunction>>,
 }
+
+/// The number of all known GameMaker chunks (excluding debug chunks).
+const CHUNK_COUNT: usize = 35;
 
 impl<'a> DataReader<'a> {
     pub fn new(data: &'a [u8]) -> Self {
         Self {
-            general_info: GMGeneralInfo::stub(),
-            strings: GMStrings::stub(),
-            chunks: SmallMap::with_capacity(35),
+            data,
+            cur_pos: 0,
+            // The default padding value is 16, if used.
+            chunk_padding: 16,
+            // Assume little endian; big endian is an edge case.
+            endianness: Endianness::Little,
             chunk: GMChunk {
                 name: "FORM".to_string(),
                 start_pos: 0,
                 end_pos: data.len() as u32,
                 is_last_chunk: true,
             },
-            data,
-            cur_pos: 0,
-            chunk_padding: 16, // Default padding value (if used) is 16
+            // Just a stub, will not be read until GEN8 is parsed.
+            general_info: Default::default(),
+            strings: Default::default(),
+            chunks: SmallMap::with_capacity(CHUNK_COUNT),
             string_occurrences: HashMap::new(),
             texture_page_item_occurrences: HashMap::new(),
             variable_occurrences: HashMap::new(),
             function_occurrences: HashMap::new(),
-            endianness: Endianness::Little, // Assume little endian; big endian is an edge case
         }
     }
 

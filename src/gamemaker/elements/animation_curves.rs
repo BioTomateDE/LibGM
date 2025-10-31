@@ -6,16 +6,13 @@ use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 /// GMS 2.3+
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMAnimationCurves {
     pub animation_curves: Vec<GMAnimationCurve>,
     pub exists: bool,
 }
 
 impl GMChunkElement for GMAnimationCurves {
-    fn stub() -> Self {
-        Self { animation_curves: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

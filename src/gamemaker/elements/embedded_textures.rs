@@ -17,16 +17,13 @@ pub const MAGIC_PNG_HEADER: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A,
 pub const MAGIC_BZ2_QOI_HEADER: &[u8; 4] = b"2zoq";
 pub const MAGIC_QOI_HEADER: &[u8; 4] = b"fioq";
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMEmbeddedTextures {
     pub texture_pages: Vec<GMEmbeddedTexture>,
     pub exists: bool,
 }
 
 impl GMChunkElement for GMEmbeddedTextures {
-    fn stub() -> Self {
-        Self { texture_pages: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

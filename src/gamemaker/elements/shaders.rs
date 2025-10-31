@@ -5,15 +5,12 @@ use crate::prelude::*;
 use crate::util::init::{num_enum_from, vec_with_capacity};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMShaders {
     pub shaders: Vec<GMShader>,
     pub exists: bool,
 }
 impl GMChunkElement for GMShaders {
-    fn stub() -> Self {
-        Self { shaders: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

@@ -4,7 +4,7 @@ use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMFunctions {
     pub functions: Vec<GMFunction>,
     pub code_locals: GMCodeLocals,
@@ -12,13 +12,6 @@ pub struct GMFunctions {
 }
 
 impl GMChunkElement for GMFunctions {
-    fn stub() -> Self {
-        Self {
-            functions: vec![],
-            code_locals: GMCodeLocals::stub(),
-            exists: false,
-        }
-    }
     fn exists(&self) -> bool {
         self.exists
     }
@@ -76,7 +69,12 @@ impl GMElement for GMFunctions {
             functions.push(GMFunction { name });
         }
 
-        let code_locals: GMCodeLocals = GMCodeLocals::deserialize(reader)?;
+        let code_locals: GMCodeLocals;
+        if reader.general_info.bytecode_version <= 14 || reader.general_info.is_version_at_least((2024, 8)) {
+            code_locals = Default::default();
+        } else {
+            code_locals = GMCodeLocals::deserialize(reader)?;
+        }
         Ok(GMFunctions { functions, code_locals, exists: true })
     }
 
@@ -120,17 +118,13 @@ pub struct GMFunction {
     pub name: GMRef<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMCodeLocals {
     pub code_locals: Vec<GMCodeLocal>,
     pub exists: bool,
 }
 
 impl GMChunkElement for GMCodeLocals {
-    fn stub() -> Self {
-        Self { code_locals: vec![], exists: false }
-    }
-
     fn exists(&self) -> bool {
         self.exists
     }
@@ -138,9 +132,6 @@ impl GMChunkElement for GMCodeLocals {
 
 impl GMElement for GMCodeLocals {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        if reader.general_info.bytecode_version <= 14 || reader.general_info.is_version_at_least((2024, 8)) {
-            return Ok(Self::stub());
-        }
         let code_locals: Vec<GMCodeLocal> = reader.read_simple_list()?;
         Ok(Self { code_locals, exists: true })
     }

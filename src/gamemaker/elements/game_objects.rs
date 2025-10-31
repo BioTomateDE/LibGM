@@ -10,16 +10,13 @@ use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMGameObjects {
     pub game_objects: Vec<GMGameObject>,
     pub exists: bool,
 }
 
 impl GMChunkElement for GMGameObjects {
-    fn stub() -> Self {
-        Self { game_objects: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

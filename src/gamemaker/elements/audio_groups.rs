@@ -7,16 +7,13 @@ use crate::prelude::*;
 /// You can use these for memory management, volume control and more.
 /// ___
 /// Audio Groups are only available to use in the regular audio system.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMAudioGroups {
     pub audio_groups: Vec<GMAudioGroup>,
     pub exists: bool,
 }
 
 impl GMChunkElement for GMAudioGroups {
-    fn stub() -> Self {
-        Self { audio_groups: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

@@ -3,16 +3,13 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMPaths {
     pub paths: Vec<GMPath>,
     pub exists: bool,
 }
 
 impl GMChunkElement for GMPaths {
-    fn stub() -> Self {
-        Self { paths: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

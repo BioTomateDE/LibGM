@@ -1,4 +1,3 @@
-use crate::gamemaker::data::Endianness;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
@@ -7,16 +6,13 @@ use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMFonts {
     pub fonts: Vec<GMFont>,
     pub exists: bool,
 }
 
 impl GMChunkElement for GMFonts {
-    fn stub() -> Self {
-        Self { fonts: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }
@@ -26,11 +22,9 @@ impl GMElement for GMFonts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let fonts: Vec<GMFont> = reader.read_pointer_list()?;
 
-        let mut padding: Option<[u8; 512]> = None;
         if !reader.general_info.is_version_at_least((2024, 14)) {
-            let endianness = reader.endianness;
             let padding: &[u8; 512] = reader.read_bytes_const().context("Reading FONT padding")?;
-            verify_padding(padding, endianness)?;
+            verify_padding(padding)?;
         }
 
         Ok(Self { fonts, exists: true })
@@ -39,7 +33,7 @@ impl GMElement for GMFonts {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_pointer_list(&self.fonts)?;
         if !builder.is_gm_version_at_least((2024, 14)) {
-            let padding: [u8; 256] = generate_padding(builder.gm_data.endianness);
+            let padding: [u8; 256] = generate_padding();
             builder.write_bytes(&padding);
         }
 
@@ -47,7 +41,7 @@ impl GMElement for GMFonts {
     }
 }
 
-fn verify_padding(padding: &[u8; 512], endianness: Endianness) -> Result<()> {
+fn verify_padding(padding: &[u8; 512]) -> Result<()> {
     padding.iter().enumerate().try_for_each(|(i, &byte)| {
         let expected = match i {
             0..=255 if i % 2 == 0 => (i / 2) as u8,
@@ -64,7 +58,7 @@ fn verify_padding(padding: &[u8; 512], endianness: Endianness) -> Result<()> {
     })
 }
 
-const fn generate_padding(endianness: Endianness) -> [u8; 256] {
+const fn generate_padding() -> [u8; 256] {
     let mut padding = [0u8; 256];
     let mut i = 0;
 

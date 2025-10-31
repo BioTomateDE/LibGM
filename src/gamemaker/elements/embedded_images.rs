@@ -6,16 +6,13 @@ use crate::prelude::*;
 
 /// The embedded images of the data file. This is used to store built-in particle sprites,
 /// every time you use `part_sprite` functions.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMEmbeddedImages {
     pub embedded_images: Vec<GMEmbeddedImage>,
     pub exists: bool,
 }
 
 impl GMChunkElement for GMEmbeddedImages {
-    fn stub() -> Self {
-        Self { embedded_images: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

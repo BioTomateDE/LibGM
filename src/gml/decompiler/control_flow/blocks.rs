@@ -9,11 +9,10 @@ use crate::gml::decompiler::control_flow::node::{Node, NodeData};
 use crate::gml::decompiler::control_flow::node_ref::NodeRef;
 use crate::gml::decompiler::decompile_context::DecompileContext;
 use crate::gml::decompiler::vm_constants;
-use crate::gml::disassembler::{disassemble_instruction, disassemble_instructions};
+use crate::gml::disassembler::disassemble_instruction;
 use crate::prelude::*;
 use crate::util::smallmap::SmallMap;
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone)]
 pub struct Block<'d> {
@@ -72,7 +71,7 @@ pub fn find_blocks<'c, 'd>(ctx: &'c mut DecompileContext<'d>, instructions: &'d 
     if instructions.is_empty() {
         return Ok(());
     }
-    let mut analysis = analyze_instructions(ctx.gm_data, instructions)?;
+    let analysis = analyze_instructions(ctx.gm_data, instructions)?;
     let blocks = create_blocks(instructions, analysis.block_starts, analysis.code_size)?;
     // This only works if the node list is empty before.
     ctx.blocks = (0..blocks.len()).map(NodeRef::from).collect();
@@ -109,7 +108,7 @@ fn analyze_instructions(gm_data: &GMData, instructions: &[GMInstruction]) -> Res
 
             // Try hook pattern detection
             GMInstruction::Call(call) if is_try_hook(gm_data, call.function)? => {
-                let try_info = extract_try_info(gm_data, instructions, i, addr)?;
+                let try_info = extract_try_info(gm_data, instructions, i)?;
 
                 // Mark block boundaries for try structure
                 block_starts.push(addr - 6); // Start of pattern
@@ -131,12 +130,7 @@ fn analyze_instructions(gm_data: &GMData, instructions: &[GMInstruction]) -> Res
 }
 
 /// Extract try-catch-finally information from instruction pattern
-fn extract_try_info(
-    gm_data: &GMData,
-    instructions: &[GMInstruction],
-    call_index: usize,
-    call_addr: u32,
-) -> Result<TryBlock> {
+fn extract_try_info(gm_data: &GMData, instructions: &[GMInstruction], call_index: usize) -> Result<TryBlock> {
     const ERR: &str = "@@try_hook@@ pattern out of bounds";
     let start = call_index.checked_sub(4).ok_or(ERR)?;
     let end = call_index + 2;

@@ -3,27 +3,22 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
 
-/// most useful gamemaker chunk:
-#[derive(Debug, Clone)]
-pub struct GMDataFiles {
-    pub exists: bool,
-}
+#[derive(Debug, Clone, Default)]
+pub struct GMDataFiles;
 
 impl GMChunkElement for GMDataFiles {
-    fn stub() -> Self {
-        Self { exists: false }
-    }
+    /// This chunk is completely useless and should never be serialized.
     fn exists(&self) -> bool {
-        self.exists
+        false
     }
 }
 
 impl GMElement for GMDataFiles {
-    fn deserialize(_reader: &mut DataReader) -> Result<Self> {
-        Ok(Self { exists: true })
+    fn deserialize(_: &mut DataReader) -> Result<Self> {
+        Ok(Self)
     }
 
-    fn serialize(&self, _builder: &mut DataBuilder) -> Result<()> {
+    fn serialize(&self, _: &mut DataBuilder) -> Result<()> {
         Ok(())
     }
 }

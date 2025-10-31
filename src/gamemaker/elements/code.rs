@@ -24,16 +24,13 @@ use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMCodes {
     pub codes: Vec<GMCode>,
     pub exists: bool,
 }
 
 impl GMChunkElement for GMCodes {
-    fn stub() -> Self {
-        Self { codes: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }
@@ -1610,17 +1607,36 @@ pub const fn get_instruction_size(instruction: &GMInstruction) -> u32 {
 /// Check whether this data file was generated with YYC (YoYoGames Compiler).
 /// Should that be the case, the CODE, VARI and FUNC chunks will be empty (or not exist?).
 /// NOTE: YYC is untested. Issues may occur.
-pub fn check_yyc(reader: &DataReader) -> bool {
-    let Some(chunk_code) = reader.chunks.get("CODE") else {
-        return true;
+pub(crate) fn check_yyc(reader: &DataReader) -> Result<bool> {
+    // If the CODE chunk doesn't exist; the data file was compiled with YYC.
+    let Some(code) = reader.chunks.get("CODE") else {
+        return Ok(true);
     };
-    let Some(chunk_vari) = reader.chunks.get("VARI") else {
-        return true;
-    };
-    let Some(chunk_func) = reader.chunks.get("FUNC") else {
-        return true;
-    };
-    chunk_code.end_pos == chunk_code.start_pos
-        && chunk_vari.end_pos == chunk_vari.start_pos
-        && chunk_func.end_pos == chunk_func.start_pos
+
+    let vari = reader.chunks.get("VARI").ok_or("Chunk CODE exists but VARI doesn't")?;
+
+    let func = reader
+        .chunks
+        .get("FUNC")
+        .ok_or("Chunk CODE and VARI exist but FUNC doesn't")?;
+
+    // If the CODE chunk exists but is completely empty,
+    // the data file was compiled with YYC before bytecode 17.
+    if !code.is_empty() {
+        return Ok(false);
+    }
+
+    if reader.general_info.bytecode_version > 16 {
+        bail!("Empty, but existant CODE chunk before bytecode 17");
+    }
+
+    if !vari.is_empty() {
+        bail!("Chunk CODE is empty but VARI is not");
+    }
+
+    if !func.is_empty() {
+        bail!("Chunk CODE and VARI are empty but FUNC is not");
+    }
+
+    Ok(true)
 }

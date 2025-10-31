@@ -14,23 +14,20 @@ use std::collections::HashMap;
 
 /// This struct belong to the chunk SEQN.
 /// Sprites can _also_ contain sequences (not by reference; the actual data).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMSequences {
     pub sequences: Vec<GMSequence>,
     pub exists: bool,
 }
 impl GMChunkElement for GMSequences {
-    fn stub() -> Self {
-        Self { sequences: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }
 }
 impl GMElement for GMSequences {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        if reader.chunk.end_pos - reader.chunk.start_pos == 0 {
-            return Ok(Self::stub());
+        if reader.get_chunk_length() == 0 {
+            return Ok(Self::default());
         }
         reader.align(4)?;
         let version = reader.read_u32()?;

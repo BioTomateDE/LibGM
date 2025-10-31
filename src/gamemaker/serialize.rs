@@ -58,7 +58,6 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
         ("TMLN", timelines),
         ("OBJT", game_objects),
         ("ROOM", rooms),
-        ("DAFL", data_files),
         ("TPAG", texture_page_items),
         ("CODE", codes), // CODE has to be written before VARI and FUNC
         ("VARI", variables),

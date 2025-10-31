@@ -12,13 +12,15 @@ const ALIGNMENT: u32 = 8;
 #[derive(Debug, Clone)]
 pub struct GMBackgrounds {
     pub backgrounds: Vec<GMBackground>,
-    is_aligned: bool,
+    pub is_aligned: bool,
     pub exists: bool,
 }
-impl GMChunkElement for GMBackgrounds {
-    fn stub() -> Self {
+impl Default for GMBackgrounds {
+    fn default() -> Self {
         Self { backgrounds: vec![], is_aligned: true, exists: false }
     }
+}
+impl GMChunkElement for GMBackgrounds {
     fn exists(&self) -> bool {
         self.exists
     }

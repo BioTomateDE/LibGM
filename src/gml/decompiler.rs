@@ -4,10 +4,6 @@ use crate::gamemaker::data::GMData;
 use crate::gamemaker::deserialize::GMRef;
 use crate::gamemaker::elements::code::GMCode;
 use crate::gml::decompiler::control_flow::blocks::find_blocks;
-use crate::gml::decompiler::control_flow::fragments::find_fragments;
-use crate::gml::decompiler::control_flow::loops::find_loops;
-use crate::gml::decompiler::control_flow::short_circuits::find_short_circuits;
-use crate::gml::decompiler::control_flow::static_inits::find_static_inits;
 use crate::gml::decompiler::decompile_context::DecompileContext;
 use crate::prelude::*;
 

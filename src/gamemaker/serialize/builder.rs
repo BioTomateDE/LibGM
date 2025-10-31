@@ -7,9 +7,9 @@ use crate::util::bench::Stopwatch;
 use crate::util::fmt::typename;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DataBuilder<'a> {
-    /// The GMData to build.
+    /// The [GMData] to serialize.
     pub gm_data: &'a GMData,
 
     /// The raw data being generated.

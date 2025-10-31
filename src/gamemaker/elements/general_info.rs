@@ -85,11 +85,12 @@ pub struct GMGeneralInfo {
     pub exists: bool,
 }
 
-impl GMChunkElement for GMGeneralInfo {
-    /// Should only be used as a small stub in GMReader because Rust doesn't have nullables (options are too ugly for this).
+impl Default for GMGeneralInfo {
+    /// Should only be used as a small stub in [DataReader] because
+    /// Rust doesn't have nullables ([Option]s are too ugly for this).
     /// ___
-    /// **THIS VALUE SHOULD NEVER BE USED! IMMEDIATELY REPLACE IT WITH ACTUAL GEN8 WHEN PARSED.**
-    fn stub() -> Self {
+    /// **THIS VALUE SHOULD NEVER BE USED! IMMEDIATELY REPLACE IT WITH ACTUAL `GEN8` WHEN PARSED.**
+    fn default() -> Self {
         Self {
             is_debugger_disabled: true,
             bytecode_version: 15,
@@ -201,12 +202,15 @@ impl GMChunkElement for GMGeneralInfo {
                 vertex_buffers: false,
             },
             steam_appid: 0,
-            debugger_port: Some(6502), // krzys-h wrote this idk
+            debugger_port: None,
             room_order: vec![],
             gms2_info: None,
             exists: false,
         }
     }
+}
+
+impl GMChunkElement for GMGeneralInfo {
     fn exists(&self) -> bool {
         self.exists
     }

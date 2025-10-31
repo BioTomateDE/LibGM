@@ -4,16 +4,13 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMScripts {
     pub scripts: Vec<GMScript>,
     pub exists: bool,
 }
 
 impl GMChunkElement for GMScripts {
-    fn stub() -> Self {
-        Self { scripts: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

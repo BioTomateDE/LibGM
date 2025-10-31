@@ -15,15 +15,12 @@ use crate::util::init::{num_enum_from, vec_with_capacity};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::cmp::min;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMRooms {
     pub rooms: Vec<GMRoom>,
     pub exists: bool,
 }
 impl GMChunkElement for GMRooms {
-    fn stub() -> Self {
-        Self { rooms: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }
