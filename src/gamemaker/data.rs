@@ -1,10 +1,8 @@
 use crate::gamemaker::deserialize::GMRef;
-use crate::gamemaker::elements::GMChunkElement;
 use crate::gamemaker::elements::animation_curves::GMAnimationCurves;
 use crate::gamemaker::elements::audio_groups::GMAudioGroups;
 use crate::gamemaker::elements::backgrounds::GMBackgrounds;
 use crate::gamemaker::elements::code::{GMCodes, GMInstanceType};
-use crate::gamemaker::elements::data_files::GMDataFiles;
 use crate::gamemaker::elements::embedded_audio::GMEmbeddedAudios;
 use crate::gamemaker::elements::embedded_images::GMEmbeddedImages;
 use crate::gamemaker::elements::embedded_textures::GMEmbeddedTextures;
@@ -35,9 +33,23 @@ use crate::gamemaker::elements::ui_nodes::GMRootUINodes;
 use crate::gamemaker::elements::variables::{GMVariable, GMVariableB15Data, GMVariables, to_vari_instance_type};
 use crate::prelude::*;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Byte order (endianness) for integers and chunk names in data files.
+///
+/// Most modern platforms use little-endian, which is the default.
+/// Big-endian support exists for legacy platforms and may be deprecated.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Endianness {
+    /// Little-endian byte order (reversed bytes).
+    ///
+    /// This is the standard for x86/x64 architectures and most modern platforms.
+    /// All new projects should use this format.
+    #[default]
     Little,
+
+    /// Big-endian byte order (forward bytes).
+    ///
+    /// Supported for legacy compatibility with older platforms like PlayStation 3.
+    /// This format is not thoroughly tested and may be removed in future versions.
     Big,
 }
 
@@ -70,7 +82,6 @@ pub struct GMData {
     pub game_end_scripts: GMGameEndScripts,       // GMEN
     pub shaders: GMShaders,                       // SHDR
     pub root_ui_nodes: GMRootUINodes,             // UILR
-    pub data_files: GMDataFiles,                  // DAFL
     pub timelines: GMTimelines,                   // TMLN
     pub embedded_images: GMEmbeddedImages,        // EMBI
     pub texture_group_infos: GMTextureGroupInfos, // TGIN
@@ -79,56 +90,63 @@ pub struct GMData {
     pub filter_effects: GMFilterEffects,          // FEDS
     pub animation_curves: GMAnimationCurves,      // ACRV
 
-    /// Should not be edited; only set by `GMData::read_chunk_padding`.
+    /// Indicates the number of padding bytes (null bytes) between chunks.
+    /// Note that the last chunk does not get padding.
+    /// This padding is influenced by the data file's GameMaker Version, as well as target platform/architecture.
     pub chunk_padding: u32,
 
     /// Indicates the data's byte endianness.
+    /// This affects byte order of integers and chunk names.
     /// In most cases (and assumed by default), this is set to little-endian.
-    /// Big endian is an edge case for certain target platforms (e.g. PS3 or Xbox 360).
+    /// Big-endian is an edge case for certain target platforms (e.g. PS3 or Xbox 360)
+    /// and its support may be removed in the future.
     pub endianness: Endianness,
 
-    /// Size of the original data file; useful for approximating.
+    /// The size of the original data file; useful for
+    /// approximating the size of the modified data file.
+    /// This is a micro optimisation. This field's value
+    /// can be initialized to zero without any problems.
     pub original_data_size: usize,
 }
 
-impl GMData {
-    pub fn new() -> Self {
+impl Default for GMData {
+    fn default() -> Self {
         Self {
-            general_info: GMGeneralInfo::stub(),
-            strings: GMStrings::stub(),
-            embedded_textures: GMEmbeddedTextures::stub(),
-            texture_page_items: GMTexturePageItems::stub(),
-            variables: GMVariables::stub(),
-            functions: GMFunctions::stub(),
-            scripts: GMScripts::stub(),
-            codes: GMCodes::stub(),
-            fonts: GMFonts::stub(),
-            sprites: GMSprites::stub(),
-            game_objects: GMGameObjects::stub(),
-            rooms: GMRooms::stub(),
-            backgrounds: GMBackgrounds::stub(),
-            paths: GMPaths::stub(),
-            audios: GMEmbeddedAudios::stub(),
-            sounds: GMSounds::stub(),
-            options: GMOptions::stub(),
-            sequences: GMSequences::stub(),
-            particle_systems: GMParticleSystems::stub(),
-            particle_emitters: GMParticleEmitters::stub(),
-            language_info: GMLanguageInfo::stub(),
-            extensions: GMExtensions::stub(),
-            audio_groups: GMAudioGroups::stub(),
-            global_init_scripts: GMGlobalInitScripts::stub(),
-            game_end_scripts: GMGameEndScripts::stub(),
-            shaders: GMShaders::stub(),
-            root_ui_nodes: GMRootUINodes::stub(),
-            data_files: GMDataFiles::stub(),
-            timelines: GMTimelines::stub(),
-            embedded_images: GMEmbeddedImages::stub(),
-            texture_group_infos: GMTextureGroupInfos::stub(),
-            tags: GMTags::stub(),
-            feature_flags: GMFeatureFlags::stub(),
-            filter_effects: GMFilterEffects::stub(),
-            animation_curves: GMAnimationCurves::stub(),
+            general_info: Default::default(),
+            strings: Default::default(),
+            embedded_textures: Default::default(),
+            texture_page_items: Default::default(),
+            variables: Default::default(),
+            functions: Default::default(),
+            scripts: Default::default(),
+            codes: Default::default(),
+            fonts: Default::default(),
+            sprites: Default::default(),
+            game_objects: Default::default(),
+            rooms: Default::default(),
+            backgrounds: Default::default(),
+            paths: Default::default(),
+            audios: Default::default(),
+            sounds: Default::default(),
+            options: Default::default(),
+            sequences: Default::default(),
+            particle_systems: Default::default(),
+            particle_emitters: Default::default(),
+            language_info: Default::default(),
+            extensions: Default::default(),
+            audio_groups: Default::default(),
+            global_init_scripts: Default::default(),
+            game_end_scripts: Default::default(),
+            shaders: Default::default(),
+            root_ui_nodes: Default::default(),
+            timelines: Default::default(),
+            embedded_images: Default::default(),
+            texture_group_infos: Default::default(),
+            tags: Default::default(),
+            feature_flags: Default::default(),
+            filter_effects: Default::default(),
+            animation_curves: Default::default(),
+            // Use 16 chunk padding by default for compatibility.
             chunk_padding: 16,
             endianness: Endianness::Little,
             original_data_size: 0,

@@ -6,7 +6,6 @@ mod resources;
 
 use crate::gamemaker::data::{Endianness, GMData};
 use crate::gamemaker::detect_version::detect_gamemaker_version;
-use crate::gamemaker::elements::GMChunkElement;
 use crate::gamemaker::elements::animation_curves::GMAnimationCurves;
 use crate::gamemaker::elements::audio_groups::GMAudioGroups;
 use crate::gamemaker::elements::backgrounds::GMBackgrounds;
@@ -130,15 +129,17 @@ pub fn parse_data_file<T: AsRef<[u8]>>(raw_data: T) -> Result<GMData> {
         reader.general_info.bytecode_version,
     );
 
-    // This code is ugly
-    let (variables, functions, codes) = if check_yyc(&reader) {
-        (GMVariables::stub(), GMFunctions::stub(), GMCodes::stub())
+    let is_yyc: bool = check_yyc(&reader)?;
+    let (variables, functions, codes): (GMVariables, GMFunctions, GMCodes);
+    if is_yyc {
+        variables = Default::default();
+        functions = Default::default();
+        codes = Default::default();
     } else {
-        (
-            reader.read_chunk_required("VARI")?,
-            reader.read_chunk_required("FUNC")?,
-            reader.read_chunk_required("CODE")?,
-        )
+        // Variables and functions have to be deserialized before code.
+        variables = reader.read_chunk_required("VARI")?;
+        functions = reader.read_chunk_required("FUNC")?;
+        codes = reader.read_chunk_required("CODE")?;
     };
 
     let embedded_textures: GMEmbeddedTextures = reader.read_chunk_required("TXTR")?;
@@ -164,7 +165,6 @@ pub fn parse_data_file<T: AsRef<[u8]>>(raw_data: T) -> Result<GMData> {
     let game_end_scripts: GMGameEndScripts = reader.read_chunk_optional("GMEN")?;
     let shaders: GMShaders = reader.read_chunk_optional("SHDR")?;
     let root_ui_nodes: GMRootUINodes = reader.read_chunk_optional("UILR")?;
-    let data_files: GMDataFiles = reader.read_chunk_optional("DAFL")?;
     let timelines: GMTimelines = reader.read_chunk_optional("TMLN")?;
     let embedded_images: GMEmbeddedImages = reader.read_chunk_optional("EMBI")?;
     let texture_group_infos: GMTextureGroupInfos = reader.read_chunk_optional("TGIN")?;
@@ -172,6 +172,9 @@ pub fn parse_data_file<T: AsRef<[u8]>>(raw_data: T) -> Result<GMData> {
     let feature_flags: GMFeatureFlags = reader.read_chunk_optional("FEAT")?;
     let filter_effects: GMFilterEffects = reader.read_chunk_optional("FEDS")?;
     let animation_curves: GMAnimationCurves = reader.read_chunk_optional("ACRV")?;
+
+    // This chunk is so useless that it is perfectly safe to throw it away.
+    let _: GMDataFiles = reader.read_chunk_optional("DAFL")?;
 
     // Throw error if not all chunks read to prevent silent data loss
     if !reader.chunks.is_empty() {
@@ -210,7 +213,6 @@ pub fn parse_data_file<T: AsRef<[u8]>>(raw_data: T) -> Result<GMData> {
         game_end_scripts,
         shaders,
         root_ui_nodes,
-        data_files,
         timelines,
         embedded_images,
         texture_group_infos,

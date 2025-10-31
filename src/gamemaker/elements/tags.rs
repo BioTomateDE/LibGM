@@ -4,16 +4,13 @@ use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMTags {
     pub tags: Vec<GMRef<String>>,
     pub asset_tags: HashMap<i32, Vec<GMRef<String>>>,
     pub exists: bool,
 }
 impl GMChunkElement for GMTags {
-    fn stub() -> Self {
-        Self { tags: vec![], asset_tags: HashMap::new(), exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

@@ -6,7 +6,7 @@ use crate::prelude::*;
 use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMExtensions {
     pub extensions: Vec<GMExtension>,
     /// only set in gms2 (and some scuffed gms1 versions)
@@ -14,9 +14,6 @@ pub struct GMExtensions {
     pub exists: bool,
 }
 impl GMChunkElement for GMExtensions {
-    fn stub() -> Self {
-        Self { extensions: vec![], product_id_data: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

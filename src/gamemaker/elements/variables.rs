@@ -7,18 +7,16 @@ use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMVariables {
     /// List of all variables; mixing global, local and self.
     pub variables: Vec<GMVariable>,
+    /// Set in bytecode 15 and above.
     pub b15_header: Option<GMVariablesB15Header>,
     pub exists: bool,
 }
 
 impl GMChunkElement for GMVariables {
-    fn stub() -> Self {
-        Self { variables: vec![], b15_header: None, exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

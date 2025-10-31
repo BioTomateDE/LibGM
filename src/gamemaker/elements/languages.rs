@@ -4,7 +4,7 @@ use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMLanguageInfo {
     pub unknown1: u32,
     pub languages: Vec<GMLanguageData>,
@@ -12,14 +12,6 @@ pub struct GMLanguageInfo {
     pub exists: bool,
 }
 impl GMChunkElement for GMLanguageInfo {
-    fn stub() -> Self {
-        Self {
-            unknown1: 0,
-            languages: vec![],
-            entry_ids: vec![],
-            exists: false,
-        }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

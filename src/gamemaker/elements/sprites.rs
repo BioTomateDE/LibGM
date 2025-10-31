@@ -9,15 +9,12 @@ use crate::util::init::{num_enum_from, vec_with_capacity};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMSprites {
     pub sprites: Vec<GMSprite>,
     pub exists: bool,
 }
 impl GMChunkElement for GMSprites {
-    fn stub() -> Self {
-        Self { sprites: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

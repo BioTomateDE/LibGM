@@ -11,15 +11,12 @@ use crate::prelude::*;
 use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMTextureGroupInfos {
     pub texture_group_infos: Vec<GMTextureGroupInfo>,
     pub exists: bool,
 }
 impl GMChunkElement for GMTextureGroupInfos {
-    fn stub() -> Self {
-        Self { texture_group_infos: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

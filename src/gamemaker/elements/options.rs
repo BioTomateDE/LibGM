@@ -4,7 +4,7 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMOptions {
     pub is_new_format: bool,
     pub unknown1: u32,
@@ -25,59 +25,6 @@ pub struct GMOptions {
     pub exists: bool,
 }
 impl GMChunkElement for GMOptions {
-    /// probably shouldn't be used other than as a stub
-    fn stub() -> Self {
-        Self {
-            is_new_format: false,
-            unknown1: 69420,
-            unknown2: 69420,
-            flags: GMOptionsFlags {
-                fullscreen: false,
-                interpolate_pixels: false,
-                use_new_audio: false,
-                no_border: false,
-                show_cursor: false,
-                sizeable: false,
-                stay_on_top: false,
-                change_resolution: false,
-                no_buttons: false,
-                screen_key: false,
-                help_key: false,
-                quit_key: false,
-                save_key: false,
-                screenshot_key: false,
-                close_sec: false,
-                freeze: false,
-                show_progress: false,
-                load_transparent: false,
-                scale_progress: false,
-                display_errors: false,
-                write_errors: false,
-                abort_errors: false,
-                variable_errors: false,
-                creation_event_order: false,
-                use_front_touch: false,
-                use_rear_touch: false,
-                use_fast_collision: false,
-                fast_collision_compatibility: false,
-                disable_sandbox: false,
-                enable_copy_on_write: false,
-            },
-            window_scale: 69420,
-            window_color: 69420,
-            color_depth: 69420,
-            resolution: 69420,
-            frequency: 69420,
-            vertex_sync: 69420,
-            priority: 69420,
-            back_image: None,
-            front_image: None,
-            load_image: None,
-            load_alpha: 69420,
-            constants: vec![],
-            exists: false,
-        }
-    }
     fn exists(&self) -> bool {
         self.exists
     }
@@ -103,7 +50,7 @@ impl GMElement for GMOptions {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMOptionsFlags {
     pub fullscreen: bool,
     pub interpolate_pixels: bool,
@@ -136,6 +83,7 @@ pub struct GMOptionsFlags {
     pub disable_sandbox: bool,
     pub enable_copy_on_write: bool,
 }
+
 impl GMElement for GMOptionsFlags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let raw = reader.read_u64()?;

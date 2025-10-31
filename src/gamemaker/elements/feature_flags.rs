@@ -3,16 +3,13 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMFeatureFlags {
     pub feature_flags: Vec<GMRef<String>>,
     pub exists: bool,
 }
 
 impl GMChunkElement for GMFeatureFlags {
-    fn stub() -> Self {
-        Self { feature_flags: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

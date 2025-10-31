@@ -113,24 +113,6 @@ fn main_open_and_close() -> Result<()> {
     Ok(())
 }
 
-fn main_new_data_file() -> Result<()> {
-    use libgm::gamemaker::create_data_file::new_data_file;
-    use libgm::gamemaker::data::GMData;
-    use libgm::gamemaker::gm_version::{GMVersion, LTSBranch};
-    use libgm::gamemaker::serialize::build_data_file;
-
-    let args: Vec<String> = std::env::args().collect();
-    let data_file_path: &Path = path_from_arg(args.get(1), "data_out.win");
-
-    let gm_data: GMData = new_data_file(GMVersion::new(2023, 6, 0, 0, LTSBranch::LTS), 17);
-    let data_raw: Vec<u8> = build_data_file(&gm_data).context("building data file")?;
-    drop(gm_data);
-
-    log::info!("Writing data file {:?}", data_file_path.display());
-    write_data_file(data_raw, data_file_path)?;
-    Ok(())
-}
-
 //// Broken for now, i will work on the modding system soon™
 // fn main_export_mod() -> Result<()> {
 //     use crate::modding::export::{export_mod};

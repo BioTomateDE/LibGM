@@ -5,16 +5,13 @@ use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMTimelines {
     pub timelines: Vec<GMTimeline>,
     pub exists: bool,
 }
 
 impl GMChunkElement for GMTimelines {
-    fn stub() -> Self {
-        Self { timelines: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

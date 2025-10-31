@@ -4,15 +4,12 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMGlobalInitScripts {
     pub global_init_scripts: Vec<GMRef<GMCode>>,
     pub exists: bool,
 }
 impl GMChunkElement for GMGlobalInitScripts {
-    fn stub() -> Self {
-        Self { global_init_scripts: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }
@@ -29,15 +26,12 @@ impl GMElement for GMGlobalInitScripts {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMGameEndScripts {
     pub game_end_scripts: Vec<GMRef<GMCode>>,
     pub exists: bool,
 }
 impl GMChunkElement for GMGameEndScripts {
-    fn stub() -> Self {
-        Self { game_end_scripts: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

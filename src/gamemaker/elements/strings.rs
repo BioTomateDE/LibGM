@@ -1,4 +1,3 @@
-use crate::gamemaker::data::Endianness;
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
@@ -14,10 +13,18 @@ pub struct GMStrings {
     pub exists: bool,
 }
 
-impl GMChunkElement for GMStrings {
-    fn stub() -> Self {
-        Self { strings: vec![], is_aligned: true, exists: false }
+impl Default for GMStrings {
+    fn default() -> Self {
+        Self {
+            strings: vec![],
+            // Align by default for compatibility
+            is_aligned: true,
+            exists: false,
+        }
     }
+}
+
+impl GMChunkElement for GMStrings {
     fn exists(&self) -> bool {
         self.exists
     }

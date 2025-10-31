@@ -1,5 +1,6 @@
 use std::borrow::Borrow;
 
+#[derive(Debug)]
 pub struct SmallMap<K, V>(Vec<(K, V)>);
 
 impl<K: PartialEq, V> SmallMap<K, V> {

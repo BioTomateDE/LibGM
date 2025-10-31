@@ -1,8 +1,7 @@
 use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::GMElement;
-use crate::integrity_check;
 use crate::prelude::*;
-use crate::util::fmt::{format_bytes, typename};
+use crate::util::fmt::typename;
 use crate::util::init::vec_with_capacity;
 
 impl DataReader<'_> {

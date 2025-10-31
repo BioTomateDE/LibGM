@@ -14,11 +14,17 @@ pub struct GMChunk {
     pub is_last_chunk: bool,
 }
 
+impl GMChunk {
+    pub fn is_empty(&self) -> bool {
+        self.start_pos == self.end_pos
+    }
+}
+
 impl DataReader<'_> {
     /// Read a GameMaker chunk name consisting of 4 ascii characters.
     /// Accounts for endianness; reversing the read chunk name in big endian mode.
     pub fn read_chunk_name(&mut self) -> Result<String> {
-        // This can only happen if this code is malformed.
+        // This can only happen if the source code of this project is buggy.
         integrity_assert! {
             self.chunk.name == "FORM",
             "Reading a chunk name is only allowed in FORM; not in a chunk!
@@ -28,7 +34,7 @@ impl DataReader<'_> {
 
         let string: String = match self.read_literal_string(4) {
             Ok(str) => str,
-            Err(e) if self.cur_pos == 4 => {
+            Err(_) if self.cur_pos == 4 => {
                 bail!("Invalid data.win file; data doesn't start with 'FORM' string")
             }
             Err(e) => Err(e).context("parsing chunk name")?,
@@ -131,10 +137,10 @@ impl DataReader<'_> {
         Ok(element)
     }
 
-    pub fn read_chunk_optional<T: GMChunkElement + GMElement>(&mut self, chunk_name: &str) -> Result<T> {
+    pub fn read_chunk_optional<T: GMChunkElement + GMElement>(&mut self, chunk_name: &'static str) -> Result<T> {
         let Some(chunk) = self.chunks.remove(chunk_name) else {
             log::trace!("Skipped parsing optional chunk '{chunk_name}'");
-            return Ok(T::stub());
+            return Ok(T::default());
         };
         let element: T = self
             .read_chunk_internal(chunk)

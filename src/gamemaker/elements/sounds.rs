@@ -7,16 +7,13 @@ use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMSounds {
     pub sounds: Vec<GMSound>,
     pub exists: bool,
 }
 
 impl GMChunkElement for GMSounds {
-    fn stub() -> Self {
-        Self { sounds: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

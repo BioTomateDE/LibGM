@@ -12,15 +12,12 @@ use crate::util::fmt::typename_val;
 use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMRootUINodes {
     pub ui_root_nodes: Vec<GMNodeUI>,
     pub exists: bool,
 }
 impl GMChunkElement for GMRootUINodes {
-    fn stub() -> Self {
-        Self { ui_root_nodes: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }

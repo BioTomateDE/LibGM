@@ -3,16 +3,13 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GMEmbeddedAudios {
     pub audios: Vec<GMEmbeddedAudio>,
     pub exists: bool,
 }
 
 impl GMChunkElement for GMEmbeddedAudios {
-    fn stub() -> Self {
-        Self { audios: vec![], exists: false }
-    }
     fn exists(&self) -> bool {
         self.exists
     }
