@@ -263,7 +263,7 @@ impl GMData {
         // Create new function
         let func_ref = GMRef::new(self.functions.functions.len() as u32);
         let func = GMFunction { name: self.make_string(name) };
-        self.functions.functions.push(func); // Separation needed to shut up the borrow checker
+        self.functions.functions.push(func);
         Ok(func_ref)
     }
 }

@@ -37,7 +37,7 @@ use crate::gamemaker::elements::texture_page_items::GMTexturePageItems;
 use crate::gamemaker::elements::timelines::GMTimelines;
 use crate::gamemaker::elements::ui_nodes::GMRootUINodes;
 use crate::gamemaker::elements::variables::GMVariables;
-use crate::gamemaker::gm_version::GMVersion;
+use crate::gamemaker::gm_version::{GMVersion, LTSBranch};
 use crate::integrity_assert;
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
@@ -109,14 +109,13 @@ pub fn parse_data_file<T: AsRef<[u8]>>(raw_data: T) -> Result<GMData> {
         }
         reader.chunks.insert(name, chunk);
     }
-    log::trace!("Parsing FORM took {stopwatch}");
 
     // Strings and General Info need to be parsed before anything else
     reader.strings = reader.read_chunk_required("STRG")?;
     reader.general_info = reader.read_chunk_required("GEN8")?;
 
     let specified_version: GMVersion = reader.general_info.version.clone();
-    if specified_version.major >= 2 {
+    if specified_version == GMVersion::new(2, 0, 0, 0, LTSBranch::PreLTS) {
         let stopwatch = Stopwatch::start();
         detect_gamemaker_version(&mut reader).context("detecting GameMaker version")?;
         log::trace!("Detecting GameMaker Version took {stopwatch}");

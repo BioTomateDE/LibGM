@@ -124,12 +124,6 @@ pub struct GMCodeLocals {
     pub exists: bool,
 }
 
-impl GMChunkElement for GMCodeLocals {
-    fn exists(&self) -> bool {
-        self.exists
-    }
-}
-
 impl GMElement for GMCodeLocals {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let code_locals: Vec<GMCodeLocal> = reader.read_simple_list()?;

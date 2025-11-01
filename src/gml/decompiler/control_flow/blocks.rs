@@ -177,7 +177,7 @@ fn convert_address(address: i32) -> Result<u32> {
 }
 
 /// Create blocks from analyzed instruction boundaries
-fn create_blocks(instructions: &[GMInstruction], block_starts: Vec<u32>, code_size: u32) -> Result<Vec<Node>> {
+fn create_blocks(instructions: &'_ [GMInstruction], block_starts: Vec<u32>, code_size: u32) -> Result<Vec<Node<'_>>> {
     let mut boundaries: Vec<u32> = block_starts;
     boundaries.push(code_size);
     boundaries.sort_unstable();

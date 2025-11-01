@@ -2,6 +2,7 @@ use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
+use crate::util::assert::assert_int;
 
 #[derive(Debug, Clone, Default)]
 pub struct GMFilterEffects {
@@ -18,10 +19,7 @@ impl GMChunkElement for GMFilterEffects {
 impl GMElement for GMFilterEffects {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
-        let version = reader.read_i32()?;
-        if version != 1 {
-            bail!("Expected FEDS version 1 but got {version}");
-        }
+        assert_int("FEDS Version", 1, reader.read_u32()?)?;
         let filter_effects: Vec<GMFilterEffect> = reader.read_pointer_list()?;
         Ok(Self { filter_effects, exists: true })
     }

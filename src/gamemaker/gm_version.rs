@@ -41,7 +41,7 @@ pub struct GMVersion {
 }
 
 impl GMVersion {
-    pub fn new(major: u32, minor: u32, release: u32, build: u32, branch: LTSBranch) -> Self {
+    pub const fn new(major: u32, minor: u32, release: u32, build: u32, branch: LTSBranch) -> Self {
         Self { major, minor, release, build, branch }
     }
 }
@@ -107,7 +107,7 @@ impl GMVersion {
     /// Setting a non-LTS version updates the branch accordingly.
     pub fn set_version_at_least<V: Into<GMVersionReq>>(&mut self, version_req: V) -> Result<()> {
         let new_ver: GMVersionReq = version_req.into();
-        if !matches!(new_ver.major, 2 | 2022 | 2023 | 2024 | 2025) {
+        if !matches!(new_ver.major, 2 | 2022..=2025) {
             let comment = if new_ver.major > 2025 && new_ver.major < 2100 {
                 format!(
                     "! If the current year is {} or greater, please contact the maintainer of this project to update the version validation.",

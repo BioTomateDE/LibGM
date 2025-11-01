@@ -18,7 +18,7 @@ impl DataReader<'_> {
         for _ in 0..count {
             let element: T = deserializer_fn(self).with_context(|| {
                 format!(
-                    "deserializing element #{}/{} of {} simple list",
+                    "deserializing element {}/{} of {} simple list",
                     elements.len(),
                     count,
                     typename::<T>(),
@@ -69,7 +69,7 @@ impl DataReader<'_> {
         for (i, pointer) in pointers.into_iter().enumerate() {
             let element: T = self.read_pointer_element(pointer, i == count - 1).with_context(|| {
                 format!(
-                    "deserializing element #{}/{} of {} pointer list",
+                    "deserializing element {}/{} of {} pointer list",
                     i,
                     count,
                     typename::<T>(),
@@ -102,7 +102,7 @@ impl DataReader<'_> {
             }
             let element: T = self.read_pointer_element(pointer, false).with_context(|| {
                 format!(
-                    "deserializing element #{}/{} of {}aligned {} pointer list",
+                    "deserializing element {}/{} of {}aligned {} pointer list",
                     elements.len(),
                     count,
                     if *is_aligned { "" } else { "un" },

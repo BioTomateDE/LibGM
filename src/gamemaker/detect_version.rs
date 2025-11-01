@@ -4,6 +4,7 @@ use crate::gamemaker::elements::rooms::GMRoomLayerType;
 use crate::gamemaker::gm_version::GMVersionReq;
 use crate::gamemaker::gm_version::LTSBranch::{LTS, PostLTS, PreLTS};
 use crate::prelude::*;
+use crate::util::assert::assert_int;
 use crate::util::init::{num_enum_from, vec_with_capacity};
 
 /// If `check_fn` can detect multiple versions, `required_version` should be set to its _lowest_ required version
@@ -27,7 +28,7 @@ fn try_check<V: Into<GMVersionReq>>(
                 "Manually checking for version {} in chunk '{}' successful; upgraded from version {}",
                 version_req,
                 chunk_name,
-                reader.general_info.version
+                reader.general_info.version,
             );
             reader.general_info.set_version_at_least(version_req.clone())?;
         }
@@ -37,7 +38,6 @@ fn try_check<V: Into<GMVersionReq>>(
 
 type CheckerFn = fn(&mut DataReader) -> Result<Option<GMVersionReq>>;
 
-#[derive(Debug, Clone)]
 struct VersionCheck {
     chunk_name: &'static str,
     checker_fn: CheckerFn,
@@ -49,13 +49,13 @@ struct VersionCheck {
 
 impl VersionCheck {
     fn new<R: Into<GMVersionReq>, V: Into<GMVersionReq>>(
-        chunk_name: &'static str,
+        chunk: &'static str,
         checker_fn: CheckerFn,
         req: R,
         target: V,
     ) -> Self {
         Self {
-            chunk_name,
+            chunk_name: chunk,
             checker_fn,
             required_version: req.into(),
             target_version: target.into(),
@@ -99,27 +99,27 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
     }
 
     let mut checks: Vec<VersionCheck> = vec![
-        VersionCheck::new("ACRV", cv_acrv_2_3_1, (2, 3), (2, 3, 1)),
-        VersionCheck::new("PSEM", cv_psem_2023_x, (2023, 2), (2023, 8)),
-        VersionCheck::new("TXTR", cv_txtr_2_0_6, (2, 0), (2, 0, 6)),
-        VersionCheck::new("TGIN", cv_tgin_2022_9, (2, 3), (2022, 9)),
-        VersionCheck::new("SPRT", cv_sprt_2_3_2, (2, 0), (2, 3, 2)),
-        VersionCheck::new("OBJT", cv_objt_2022_5, (2, 3), (2022, 5)),
-        VersionCheck::new("TGIN", cv_tgin_2023_1, (2022, 9), (2023, 1)),
-        VersionCheck::new("EXTN", cv_extn_2023_4, (2022, 6), (2023, 4)),
-        VersionCheck::new("AGRP", cv_agrp_2024_14, (2024, 13), (2024, 14)),
-        VersionCheck::new("FONT", cv_font_2024_14, (2024, 13), (2024, 14)),
-        VersionCheck::new("TXTR", cv_txtr_2022_3, (2, 3), (2022, 3)),
-        VersionCheck::new("TXTR", cv_txtr_2022_5, (2022, 3), (2022, 5)),
-        VersionCheck::new("EXTN", cv_extn_2022_6, (2, 3), (2022, 6)),
-        VersionCheck::new("ROOM", cv_room_2_2_2_302, (2, 0), (2, 2, 2, 302)),
-        VersionCheck::new("ROOM", cv_room_2024_2_and_2024_4, (2023, 2), (2024, 4)),
-        VersionCheck::new("ROOM", cv_room_2022_1, (2, 3), (2022, 1)),
-        VersionCheck::new("FONT", cv_font_2023_6_and_2024_11, (2022, 8), (2023, 6)),
-        VersionCheck::new("FONT", cv_font_2023_6_and_2024_11, (2024, 6), (2024, 11)),
-        VersionCheck::new("SPRT", cv_sprt_2024_6, (2022, 2, PostLTS), (2024, 6)),
-        VersionCheck::new("SOND", cv_sond_2024_6, (2022, 2, PostLTS), (2024, 6)),
         VersionCheck::new("CODE", cv_code_2023_8_and_2024_4, GMVersionReq::none(), (2024, 4)),
+        VersionCheck::new("SOND", cv_sond_2024_6, (2022, 2, PostLTS), (2024, 6)),
+        VersionCheck::new("SPRT", cv_sprt_2024_6, (2022, 2, PostLTS), (2024, 6)),
+        VersionCheck::new("FONT", cv_font_2023_6_and_2024_11, (2024, 6), (2024, 11)),
+        VersionCheck::new("FONT", cv_font_2023_6_and_2024_11, (2022, 8), (2023, 6)),
+        VersionCheck::new("ROOM", cv_room_2022_1, (2, 3), (2022, 1)),
+        VersionCheck::new("ROOM", cv_room_2024_2_and_2024_4, (2023, 2), (2024, 4)),
+        VersionCheck::new("ROOM", cv_room_2_2_2_302, (2, 0), (2, 2, 2, 302)),
+        VersionCheck::new("EXTN", cv_extn_2022_6, (2, 3), (2022, 6)),
+        VersionCheck::new("TXTR", cv_txtr_2022_5, (2022, 3), (2022, 5)),
+        VersionCheck::new("TXTR", cv_txtr_2022_3, (2, 3), (2022, 3)),
+        VersionCheck::new("FONT", cv_font_2024_14, (2024, 13), (2024, 14)),
+        VersionCheck::new("AGRP", cv_agrp_2024_14, (2024, 13), (2024, 14)),
+        VersionCheck::new("EXTN", cv_extn_2023_4, (2022, 6), (2023, 4)),
+        VersionCheck::new("TGIN", cv_tgin_2023_1, (2022, 9), (2023, 1)),
+        VersionCheck::new("OBJT", cv_objt_2022_5, (2, 3), (2022, 5)),
+        VersionCheck::new("SPRT", cv_sprt_2_3_2, (2, 0), (2, 3, 2)),
+        VersionCheck::new("TGIN", cv_tgin_2022_9, (2, 3), (2022, 9)),
+        VersionCheck::new("TXTR", cv_txtr_2_0_6, (2, 0), (2, 0, 6)),
+        VersionCheck::new("PSEM", cv_psem_2023_x, (2023, 2), (2023, 8)),
+        VersionCheck::new("ACRV", cv_acrv_2_3_1, (2, 3), (2, 3, 1)),
     ];
 
     loop {
@@ -129,7 +129,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
         let mut updated_version: bool = false;
         let mut checks_to_remove: Vec<bool> = vec![false; checks.len()];
 
-        for (i, check) in checks.iter().enumerate().rev() {
+        for (i, check) in checks.iter().enumerate() {
             // For this iteration, filter out versions whose version requirements are not (yet) met
             if !reader.general_info.is_version_at_least(check.required_version.clone()) {
                 continue;
@@ -148,7 +148,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
             let detected_version_opt: Option<GMVersionReq> = (check.checker_fn)(reader).with_context(|| {
                 format!(
                     "trying to detect GameMaker Version {} in chunk '{}'",
-                    check.target_version, check.chunk_name
+                    check.target_version, check.chunk_name,
                 )
             })?;
 
@@ -157,7 +157,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
                     "Checking for version {} in chunk '{}' successful; upgraded from version {}",
                     detected_version,
                     check.chunk_name,
-                    reader.general_info.version
+                    reader.general_info.version,
                 );
                 reader.general_info.set_version_at_least(detected_version)?;
                 updated_version = true;
@@ -254,7 +254,6 @@ fn cv_extn_2023_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     Ok(None)
 }
 
-/// assert version >= 2023.2 NON_LTS
 fn cv_sond_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2024, 6).into()));
     let possible_sound_count = reader.read_u32()?;
@@ -376,11 +375,11 @@ fn cv_sprt_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         reader.cur_pos += 28;
         if reader.read_i32()? != -1 {
             // Not special type
-            continue; // Or return?
+            continue;
         }
         let special_version = reader.read_u32()?;
         if special_version != 3 {
-            continue; // Or return?
+            continue;
         }
         let sprite_type = reader.read_u32()?;
         if sprite_type != 0 {
@@ -953,10 +952,7 @@ fn cv_tgin_2022_9(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         return Ok(None);
     }
 
-    let tgin_version = reader.read_u32()?;
-    if tgin_version != 1 {
-        bail!("Expected TGIN version 1; got {tgin_version}");
-    }
+    assert_int("TGIN Version", 1, reader.read_u32()?)?;
 
     let tgin_count = reader.read_u32()?;
     if tgin_count < 1 {
@@ -985,10 +981,7 @@ fn cv_tgin_2023_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         return Ok(None);
     }
 
-    let tgin_version = reader.read_u32()?;
-    if tgin_version != 1 {
-        bail!("Expected TGIN version 1; got {tgin_version}");
-    }
+    assert_int("TGIN Version", 1, reader.read_u32()?)?;
 
     let tgin_count = reader.read_u32()?;
     if tgin_count < 1 {
@@ -1050,10 +1043,7 @@ fn cv_sprt_2_3_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
 fn cv_psem_2023_x(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let mut target_ver = None;
     reader.align(4)?;
-    let psem_version = reader.read_u32()?;
-    if psem_version != 1 {
-        bail!("Expected PSEM version 1; got {psem_version}");
-    }
+    assert_int("PSEM Version", 1, reader.read_u32()?)?;
     let count = reader.read_u32()?;
     if count < 11 {
         // 2023.2 automatically adds eleven, later versions don't

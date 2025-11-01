@@ -1,36 +1,47 @@
-> This crate is part of a bigger project: [AcornGM](https://github.com/BioTomateDE/AcornGM)
+# LibGM
+A tool for unpacking, decompiling and modding 
+GameMaker games such as Undertale or Deltarune.
 
-A Rust port of UndertaleModLib. Originally intended to provide a modding system for GameMaker data files.
+This is effectively a Rust port of 
+[UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool)
+(specifically UndertaleModLib and [Underanalyzer](https://github.com/UnderminersTeam/Underanalyzer)).
 
-However for now, the focus has shifted to just plagarizing Underanalyzer.
+# Benefits of this Rust port
+- Runtime for parsing and building is ~8x faster than UndertaleModLib.
+- Thorough documentation and clean code (half todo).
+- Strict data integrity checks (can be disabled if unwanted).
+- It's Rust, c'mon.
 
-## Features
-- **Deserialization** of GameMaker data files
-- **Serialization** of GameMaker data files
-- **Exporting** AcornGM mods by finding changes between two data files
-- **Applying** AcornGM mods to a GameMaker game
+# Disadvantages / TODOs
+- No GUI yet, only a Rust library.
+- Null pointers are not yet supported.
+- Decompiler and compiler not nearly done.
 
-## How to use as a dependency
+# How to use as a dependency
 Add this line in the `[dependencies]` section of your `Cargo.toml` file:
 ```toml
 libgm = { git = "https://github.com/BioTomateDE/LibGM" }
 ```
+
+*This crate will also be added to [crates.io](https://https://crates.io/) when it is finished.*
+
 Now you can use these function exposed by LibGM:
 - `parse_data_file()`
 - `build_data_file()`
-- `export_mod()` (currently unavailable)
-- `apply_mod()`  (not yet implemented)
-- `decompile_to_ast()` (not finished)
+- `decompile_to_ast()` (WIP)
 
-## Credits
-Huge thanks to the Underminers Team; without [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool) this project would've been impossible.
-I also want to thank the people in the Underminers Discord who helped me along the way, especially [@colinator27](https://github.com/colinator27).
+# Credits
+Huge thanks to the Underminers Team!
+Without UndertaleModTool, this project would've been impossible.
+I also want to thank the people in the Underminers Discord Server
+who helped me along the way, especially [@colinator27](https://github.com/colinator27).
 
-## Licencing
-This project contains code under multiple licenses:
-- **GPL v3**: Most code in this project
-- **MPL 2.0**: All files in `/src/gml/` containing the MPL 2.0 headers
+# Licencing
+This project is licenced under the
+[GNU Public Licence v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html)
+(GPL-3).
 
-**MPL 2.0 Notice**: Some components in `/src/gml/` are ported from 
-[Underanalyzer](https://https://github.com/UnderminersTeam/Underanalyzer)
-and remain under MPL 2.0. These files contain MPL 2.0 headers identifying them.
+# Contributing
+All contributions are welcome!
+Whether that's a pull request, a feature you would like to see added, a bug you found; 
+just create an Issue/PR in this repo.

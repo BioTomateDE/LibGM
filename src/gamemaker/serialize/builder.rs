@@ -1,6 +1,6 @@
 use crate::gamemaker::data::{Endianness, GMData};
+use crate::gamemaker::elements::GMChunkElement;
 use crate::gamemaker::elements::code::GMVariableType;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::gm_version::GMVersionReq;
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
@@ -95,7 +95,11 @@ impl<'a> DataBuilder<'a> {
     /// - If `true`, write `1_i32`.
     /// - If `false`, write `0_i32`.
     pub fn write_bool32(&mut self, boolean: bool) {
-        self.write_u32(if boolean { 1 } else { 0 });
+        let int: i32 = match boolean {
+            true => 1,
+            false => 0,
+        };
+        self.write_i32(int);
     }
 
     /// Write an actual character string.
@@ -103,7 +107,7 @@ impl<'a> DataBuilder<'a> {
     /// This should only be used for literal strings in the `STRG` chunk.
     /// For writing regular GameMaker string references, see [Self::write_gm_string].
     pub fn write_literal_string(&mut self, string: &str) {
-        self.raw_data.extend_from_slice(string.as_bytes());
+        self.write_bytes(string.as_bytes());
     }
 
     /// Write a 4 character ASCII GameMaker chunk name.
@@ -220,7 +224,7 @@ impl<'a> DataBuilder<'a> {
     /// - `chunk_name`: 4-character chunk name (e.g. `SCPT` or `ROOM`).
     /// - `element`: A serializable element implementing [GMElement] and [GMChunkElement].
     /// - `is_last`: Whether this chunk is the last chunk in the data file. If true, no post padding will be written.
-    pub fn build_chunk<T: GMElement + GMChunkElement>(
+    pub fn build_chunk<T: GMChunkElement>(
         &mut self,
         chunk_name: &'static str,
         element: &T,
@@ -244,9 +248,7 @@ impl<'a> DataBuilder<'a> {
             // Write padding in these versions, if not last chunk
             let ver = &self.gm_data.general_info.version;
             if ver.major >= 2 || (ver.major == 1 && ver.build >= 9999) {
-                while self.len() as u32 % self.gm_data.chunk_padding != 0 {
-                    self.write_u8(0);
-                }
+                self.align(self.gm_data.chunk_padding);
             }
         }
 

@@ -188,7 +188,8 @@ impl GMElement for bool {
     }
 }
 
-pub trait GMChunkElement: Default {
+/// All chunk elements should implement this trait.
+pub trait GMChunkElement: GMElement + Default {
     /// Returns `true` if this chunk is present in the data file.
     ///
     /// This differs from simply checking if the chunk is empty:

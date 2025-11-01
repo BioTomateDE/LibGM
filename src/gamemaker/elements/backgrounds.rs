@@ -4,6 +4,7 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
+use crate::util::assert::assert_int;
 use crate::util::init::vec_with_capacity;
 
 const ALIGNMENT: u32 = 8;
@@ -107,9 +108,7 @@ pub struct GMBackgroundGMS2Data {
 impl GMElement for GMBackgroundGMS2Data {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let unknown_always_two = reader.read_u32()?;
-        if unknown_always_two != 2 {
-            bail!("Expected UnknownAlwaysTwo but got {unknown_always_two} in Background GMS2 data");
-        }
+        assert_int("Unknown Always Two", 2, unknown_always_two)?;
         let tile_width = reader.read_u32()?;
         let tile_height = reader.read_u32()?;
         let output_border_x = reader.read_u32()?;
@@ -121,9 +120,7 @@ impl GMElement for GMBackgroundGMS2Data {
         }
         let tile_count = reader.read_u32()?;
         let unknown_always_zero = reader.read_u32()?;
-        if unknown_always_zero != 0 {
-            bail!("Expected UnknownAlwaysZero but got {unknown_always_zero} in Background GMS2 data");
-        }
+        assert_int("Unknown Always Zero", 0, unknown_always_zero)?;
         let frame_length = reader.read_i64()?;
 
         let total_tile_count = tile_count * items_per_tile_count;

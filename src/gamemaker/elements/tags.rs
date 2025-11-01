@@ -2,6 +2,7 @@ use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
+use crate::util::assert::assert_int;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Default)]
@@ -19,10 +20,7 @@ impl GMChunkElement for GMTags {
 impl GMElement for GMTags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
-        let version = reader.read_i32()?;
-        if version != 1 {
-            bail!("Expected TAGS version 1 but got {version}");
-        }
+        assert_int("TAGS Version", 1, reader.read_u32()?)?;
         let tags: Vec<GMRef<String>> = reader.read_simple_list_of_strings()?;
         let temp_asset_tags: Vec<TempAssetTags> = reader.read_pointer_list()?;
 

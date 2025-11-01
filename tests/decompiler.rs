@@ -1,12 +1,11 @@
+use libgm::gamemaker::deserialize::GMRef;
+use libgm::gml::decompiler::decompile_to_ast;
 use libgm::prelude::*;
+use libgm::test::test_data_files;
 
 #[test]
 fn test_decompiler() {
-    use libgm::__test_data_files;
-    use libgm::gamemaker::deserialize::GMRef;
-    use libgm::gml::decompiler::decompile_to_ast;
-
-    __test_data_files(|data| {
+    test_data_files(|data| {
         for (i, code) in data.codes.codes.iter().enumerate() {
             if let Some(b15) = &code.bytecode15_info {
                 if b15.parent.is_some() {

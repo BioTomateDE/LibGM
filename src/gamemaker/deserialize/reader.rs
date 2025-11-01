@@ -122,9 +122,14 @@ impl<'a> DataReader<'a> {
             );
         }
 
-        // SAFETY: If chunk.start_pos and chunk.end_pos are set correctly; this should never read memory out of bounds.
+        // SAFETY: If chunk.start_pos and chunk.end_pos are set correctly, this should never read memory out of bounds.
         let start = self.cur_pos as usize;
-        let end = (self.cur_pos + count) as usize;
+        let end = self
+            .cur_pos
+            .checked_add(count)
+            .ok_or("Trying to read out of u32 bounds")?;
+        let end = end as usize;
+
         let slice: &[u8] = unsafe { self.data.get_unchecked(start..end) };
         self.cur_pos += count;
         Ok(slice)

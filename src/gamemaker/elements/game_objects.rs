@@ -9,6 +9,7 @@ use crate::prelude::*;
 use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
+use crate::util::assert::assert_bool;
 
 #[derive(Debug, Clone, Default)]
 pub struct GMGameObjects {
@@ -273,11 +274,10 @@ pub struct GMGameObjectEventAction {
     pub id: u32,
     pub kind: u32,
     pub use_relative: bool,
-    pub is_question: bool,
     pub use_apply_to: bool,
     pub exe_type: u32,
     pub action_name: Option<GMRef<String>>,
-    pub code: Option<GMRef<GMCode>>,
+    pub code: GMRef<GMCode>,
     pub argument_count: u32,
     pub who: i32,
     pub relative: bool,
@@ -291,10 +291,11 @@ impl GMElement for GMGameObjectEventAction {
         let kind = reader.read_u32()?;
         let use_relative = reader.read_bool32()?;
         let is_question = reader.read_bool32()?;
+        assert_bool("Is Question", false, is_question)?;
         let use_apply_to = reader.read_bool32()?;
         let exe_type = reader.read_u32()?;
         let action_name: Option<GMRef<String>> = reader.read_gm_string_opt()?;
-        let code: Option<GMRef<GMCode>> = reader.read_resource_by_id_opt()?;
+        let code: GMRef<GMCode> = reader.read_resource_by_id()?;
         let argument_count = reader.read_u32()?;
         let who = reader.read_i32()?;
         let relative = reader.read_bool32()?;
@@ -306,7 +307,6 @@ impl GMElement for GMGameObjectEventAction {
             id,
             kind,
             use_relative,
-            is_question,
             use_apply_to,
             exe_type,
             action_name,
@@ -324,11 +324,11 @@ impl GMElement for GMGameObjectEventAction {
         builder.write_u32(self.id);
         builder.write_u32(self.kind);
         builder.write_bool32(self.use_relative);
-        builder.write_bool32(self.is_question);
+        builder.write_bool32(false); // Is Question
         builder.write_bool32(self.use_apply_to);
         builder.write_u32(self.exe_type);
         builder.write_gm_string_opt(&self.action_name)?;
-        builder.write_resource_id_opt(&self.code);
+        builder.write_resource_id(&self.code);
         builder.write_u32(self.argument_count);
         builder.write_i32(self.who);
         builder.write_bool32(self.relative);
