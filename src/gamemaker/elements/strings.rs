@@ -2,6 +2,7 @@ use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
+use crate::util::assert::assert_int;
 use std::collections::HashMap;
 
 const ALIGNMENT: u32 = 4;
@@ -46,9 +47,7 @@ impl GMElement for GMStrings {
             let string_length = reader.read_u32()?;
             let string: String = reader.read_literal_string(string_length)?;
             let byte = reader.read_u8()?;
-            if byte != 0 {
-                bail!("Expected null terminator byte after string, found {byte} (0x{byte:02X})");
-            }
+            assert_int("Null terminator byte after string", 0, byte)?;
             strings_by_index.push(string.clone());
             // Occurrence is `start_position + 4` because string refs point to the actual
             // String data instead of the gamemaker element for faster access.

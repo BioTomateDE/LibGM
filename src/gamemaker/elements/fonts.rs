@@ -5,6 +5,7 @@ use crate::gamemaker::gm_version::LTSBranch;
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
+use crate::util::assert::assert_int;
 
 #[derive(Debug, Clone, Default)]
 pub struct GMFonts {
@@ -264,13 +265,7 @@ impl GMElement for GMFontGlyph {
         let offset = reader.read_i16()?; // Potential assumption according to utmt
         if reader.general_info.is_version_at_least((2024, 11)) {
             let unknown_always_zero = reader.read_i16()?;
-            if unknown_always_zero != 0 {
-                bail!(
-                    "Unknown Always Zero in Font Glyph with character {:?} has value {}",
-                    character,
-                    unknown_always_zero
-                );
-            }
+            assert_int("Unknown Always Zero", 0, unknown_always_zero)?;
         }
         let kernings: Vec<GMFontGlyphKerning> = reader.read_simple_list_short()?;
 

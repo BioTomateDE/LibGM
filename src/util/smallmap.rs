@@ -4,7 +4,7 @@ use std::borrow::Borrow;
 pub struct SmallMap<K, V>(Vec<(K, V)>);
 
 impl<K: PartialEq, V> SmallMap<K, V> {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self(Vec::new())
     }
 
@@ -71,11 +71,11 @@ impl<K: PartialEq, V> SmallMap<K, V> {
         self.0.into_iter().map(|(_, v)| v).collect()
     }
 
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.0.len()
     }
 
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 

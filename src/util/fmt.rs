@@ -14,11 +14,14 @@ pub fn format_bytes(bytes: usize) -> String {
     format!("{:.1} {}", size, UNITS[unit_idx])
 }
 
-pub fn filename_to_str(path: &Path) -> String {
-    path.file_name()
-        .and_then(|os_str| os_str.to_str())
-        .unwrap_or("<invalid filename>")
-        .to_string()
+pub fn filename_to_str(path: &Path) -> Result<String> {
+    let filename: String = path
+        .file_name()
+        .ok_or("Path does not have a filename")?
+        .to_str()
+        .ok_or("Filename is an invalid UTF-8 string")?
+        .to_string();
+    Ok(filename)
 }
 
 pub fn hexdump(raw_data: &[u8], range: impl std::ops::RangeBounds<usize>) -> Result<String> {
@@ -61,9 +64,5 @@ pub fn hexdump(raw_data: &[u8], range: impl std::ops::RangeBounds<usize>) -> Res
 }
 
 pub fn typename<T>() -> String {
-    tynm::type_name::<T>()
-}
-
-pub fn typename_val<T>(_: &T) -> String {
     tynm::type_name::<T>()
 }

@@ -16,12 +16,12 @@ const QOI_MASK_3: u8 = 0xe0;
 const QOI_MASK_4: u8 = 0xf0;
 
 pub fn deserialize(bytes: &[u8]) -> Result<DynamicImage> {
-    let header: &[u8] = &bytes.get(..12).ok_or("Invalid QOI header (less than 12 bytes long)")?;
+    let header: &[u8] = bytes.get(..12).ok_or("Invalid QOI header (less than 12 bytes long)")?;
 
-    let endianness: Endianness = match &header[0..4] {
+    let endianness: Endianness = match &header[..4] {
         b"qoif" => Endianness::Big,
         b"fioq" => Endianness::Little,
-        _ => bail!("Invalid QOIF image magic [{}]", hexdump(header, 0..4)?),
+        _ => bail!("Invalid QOIF image magic [{}]", hexdump(header, ..4)?),
     };
 
     let u16_from = match endianness {
@@ -33,9 +33,9 @@ pub fn deserialize(bytes: &[u8]) -> Result<DynamicImage> {
         Endianness::Big => u32::from_be_bytes,
     };
 
-    let width: usize = u16_from(header[4..6].try_into().unwrap()) as usize;
-    let height: usize = u16_from(header[6..8].try_into().unwrap()) as usize;
-    let length: usize = u32_from(header[8..12].try_into().unwrap()) as usize;
+    let width = u16_from(header[4..6].try_into().unwrap()) as u32;
+    let height = u16_from(header[6..8].try_into().unwrap()) as u32;
+    let length = u32_from(header[8..12].try_into().unwrap()) as usize;
 
     let pixel_data: &[u8] = bytes
         .get(12..12 + length)
@@ -49,7 +49,7 @@ pub fn deserialize(bytes: &[u8]) -> Result<DynamicImage> {
     let mut a: u8 = 255;
     let mut index: [u8; 256] = [0; 64 * 4];
 
-    let mut img = ImageBuffer::new(width as u32, height as u32);
+    let mut img = ImageBuffer::new(width, height);
     for (_x, _y, pixel) in img.enumerate_pixels_mut() {
         if run > 0 {
             run -= 1;
@@ -78,7 +78,7 @@ pub fn deserialize(bytes: &[u8]) -> Result<DynamicImage> {
             run = (((b1 & 0x1F) as i32) << 8 | b2 as i32) + 32;
         } else if (b1 & QOI_MASK_2) == QOI_DIFF_8 {
             r = r.wrapping_add(((b1 as i32 & 0x30) << 26 >> 30) as u8);
-            g = g.wrapping_add(((b1 as i32 & 0x_C) << 28 >> 30) as u8);
+            g = g.wrapping_add(((b1 as i32 & 0x0C) << 28 >> 30) as u8);
             b = b.wrapping_add(((b1 as i32 & 0x_3) << 30 >> 30) as u8);
         } else if (b1 & QOI_MASK_3) == QOI_DIFF_16 {
             let b2: u8 = pixel_data[pos];
@@ -92,7 +92,7 @@ pub fn deserialize(bytes: &[u8]) -> Result<DynamicImage> {
             let b3: i32 = pixel_data[pos + 1] as i32;
             pos += 2;
             let merged: i32 = ((b1 as i32) << 16) | (b2 << 8) | b3;
-            r = r.wrapping_add(((merged & 0x_F8000) << 12 >> 27) as u8);
+            r = r.wrapping_add(((merged & 0x0F8000) << 12 >> 27) as u8);
             g = g.wrapping_add(((merged & 0x007C00) << 17 >> 27) as u8);
             b = b.wrapping_add(((merged & 0x0003E0) << 22 >> 27) as u8);
             a = a.wrapping_add(((merged & 0x00001F) << 27 >> 27) as u8);

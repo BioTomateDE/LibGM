@@ -18,6 +18,7 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::integrity_assert;
 use crate::prelude::*;
+use crate::util::assert::assert_int;
 use crate::util::init::{num_enum_from, vec_with_capacity};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::cmp::PartialEq;
@@ -673,21 +674,14 @@ trait InstructionData: Sized {
     fn build(&self, builder: &mut DataBuilder, opcode: u8) -> Result<()>;
 }
 
-fn assert_zero(value: u8, purpose: &'static str) -> Result<()> {
-    integrity_assert! {
-        value == 0,
-        "Expected Instruction {purpose} to be zero but is actually {value} (0x{value:02X})"
-    }
-    Ok(())
-}
 fn assert_zero_b0(byte: u8) -> Result<()> {
-    assert_zero(byte, "byte #0")
+    assert_int("Instruction byte #0", 0, byte)
 }
 fn assert_zero_b1(byte: u8) -> Result<()> {
-    assert_zero(byte, "byte #1")
+    assert_int("Instruction byte #1", 0, byte)
 }
 fn assert_zero_type2(byte: u8) -> Result<()> {
-    assert_zero(byte >> 4, "data type 2 (in byte #2)")
+    assert_int("Instruction data type 2 (in byte #2)", 0, byte >> 4)
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

@@ -8,7 +8,7 @@ pub fn vec_with_capacity<T>(count: u32) -> Result<Vec<T>> {
     const FAILSAFE_SIZE: usize = 10_000_000; // 10MB
     let count = count as usize;
 
-    let implied_size = size_of::<T>() * count;
+    let implied_size = size_of::<T>().saturating_mul(count);
     if implied_size > FAILSAFE_SIZE {
         bail!(
             "{} count {} implies data size {} which exceeeds failsafe size {}",
@@ -26,7 +26,7 @@ pub fn hashmap_with_capacity<K, V>(count: u32) -> Result<HashMap<K, V>> {
     let count = count as usize;
 
     let entry_size = size_of::<(K, V)>() + size_of::<usize>() * 3;
-    let estimated_size = entry_size * count;
+    let estimated_size = entry_size.saturating_mul(count);
 
     if estimated_size > FAILSAFE_SIZE {
         bail!(
@@ -35,7 +35,7 @@ pub fn hashmap_with_capacity<K, V>(count: u32) -> Result<HashMap<K, V>> {
             typename::<V>(),
             count,
             format_bytes(estimated_size),
-            format_bytes(FAILSAFE_SIZE)
+            format_bytes(FAILSAFE_SIZE),
         );
     }
 

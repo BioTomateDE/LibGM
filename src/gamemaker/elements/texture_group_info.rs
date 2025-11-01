@@ -8,6 +8,7 @@ use crate::gamemaker::gm_version::LTSBranch;
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
+use crate::util::assert::assert_int;
 use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
@@ -24,10 +25,7 @@ impl GMChunkElement for GMTextureGroupInfos {
 
 impl GMElement for GMTextureGroupInfos {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let version = reader.read_i32()?;
-        if version != 1 {
-            bail!("Expected TGIN version 1 but got {version}");
-        }
+        assert_int("TGIN Version", 1, reader.read_u32()?)?;
         let texture_group_infos: Vec<GMTextureGroupInfo> = reader.read_pointer_list()?;
         Ok(Self { texture_group_infos, exists: true })
     }

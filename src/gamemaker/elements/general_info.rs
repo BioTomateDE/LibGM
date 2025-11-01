@@ -5,8 +5,8 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::gm_version::{GMVersion, GMVersionReq, LTSBranch};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
-use crate::integrity_assert;
 use crate::prelude::*;
+use crate::util::assert::assert_int;
 use crate::util::rng::CSharpRng;
 use chrono::{DateTime, Utc};
 
@@ -268,10 +268,7 @@ impl GMElement for GMGeneralInfo {
 
         let display_name: GMRef<String> = reader.read_gm_string()?;
         let active_targets = reader.read_u64()?;
-        integrity_assert! {
-            active_targets == 0,
-            "Active Targets is {0} (0x{0:016X}) instead of zero", active_targets
-        }
+        assert_int("Active Targets", 0, active_targets)?;
         let function_classifications = GMFunctionClassifications::deserialize(reader)?;
         let steam_appid = reader.read_i32()?;
         let debugger_port: Option<u32> = if bytecode_version >= 14 {

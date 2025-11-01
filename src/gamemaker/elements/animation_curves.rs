@@ -2,6 +2,7 @@ use crate::gamemaker::deserialize::{DataReader, GMRef};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
+use crate::util::assert::assert_int;
 use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
@@ -21,10 +22,7 @@ impl GMChunkElement for GMAnimationCurves {
 impl GMElement for GMAnimationCurves {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
-        let version = reader.read_i32()?;
-        if version != 1 {
-            bail!("Expected ACRV version 1 but got {version}");
-        }
+        assert_int("ACRV Version", 1, reader.read_u32()?)?;
         let animation_curves: Vec<GMAnimationCurve> = reader.read_pointer_list()?;
         Ok(Self { animation_curves, exists: true })
     }

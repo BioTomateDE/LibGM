@@ -3,6 +3,7 @@ use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
+use crate::util::assert::assert_int;
 
 /// The embedded images of the data file. This is used to store built-in particle sprites,
 /// every time you use `part_sprite` functions.
@@ -20,10 +21,7 @@ impl GMChunkElement for GMEmbeddedImages {
 
 impl GMElement for GMEmbeddedImages {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let version = reader.read_i32()?;
-        if version != 1 {
-            bail!("Expected EMBI version 1 but got {version}");
-        }
+        assert_int("EMBI Version", 1, reader.read_u32()?)?;
         let embedded_images: Vec<GMEmbeddedImage> = reader.read_simple_list()?;
         Ok(Self { embedded_images, exists: true })
     }

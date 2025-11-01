@@ -559,7 +559,7 @@ fn parse_identifier(line: &mut &str) -> Result<String> {
     Ok(identifier)
 }
 
-/// Assumes the entire rest of the line is the string literal/
+/// Assumes the entire rest of the line is the string literal
 fn parse_string_literal(line: &mut &str) -> Result<String> {
     if consume_char(line) != Some('"') {
         bail!("Expected string literal; found {line:?}");

@@ -323,7 +323,7 @@ impl GMImage {
         Self::Qoi(raw_qoi_data)
     }
 
-    pub fn to_dynamic_image(&self) -> Result<Cow<DynamicImage>> {
+    pub fn to_dynamic_image(&'_ self) -> Result<Cow<'_, DynamicImage>> {
         Ok(match self {
             GMImage::DynImg(dyn_img) => Cow::Borrowed(dyn_img),
             GMImage::Png(raw_png_data) => Cow::Owned(Self::decode_png(&raw_png_data)?),

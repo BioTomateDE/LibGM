@@ -8,7 +8,7 @@ use crate::gamemaker::elements::ui_nodes::flex_properties::{
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
-use crate::util::fmt::typename_val;
+use crate::util::assert::assert_int;
 use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
@@ -25,7 +25,7 @@ impl GMChunkElement for GMRootUINodes {
 
 impl GMElement for GMRootUINodes {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        if reader.get_chunk_length() > 4 {
+        if !reader.chunk.is_empty() {
             log::warn!("UI nodes are untested; issues may occur");
         }
         let ui_root_nodes: Vec<GMNodeUI> = reader.read_pointer_list()?;
@@ -44,16 +44,6 @@ pub struct GMNodeUI {
     pub children: Vec<Self>,
 }
 
-#[derive(Debug, Clone)]
-pub enum GMNodeUIData {
-    Layer(GMNodeUILayer),
-    FlexPanel(GMNodeUIFlexPanel),
-    GameObject(GMNodeUIGameObject),
-    SequenceInstance(GMNodeUISequenceInstance),
-    SpriteInstance(GMNodeUISpriteInstance),
-    TextItemInstance(GMNodeUITextItemInstance),
-    EffectLayer(GMNodeUIEffectLayer),
-}
 impl GMElement for GMNodeUI {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let type_id = reader.read_i32()?;
@@ -64,12 +54,8 @@ impl GMElement for GMNodeUI {
             // Container; Layer or FlexPanel
             children = reader.read_pointer_list()?;
         } else {
-            let always_zero = reader.read_i32()?;
-            if always_zero != 0 {
-                bail!(
-                    "Expected zero for non-container UI Node's child count but got {always_zero} (0x{always_zero:08X})"
-                );
-            }
+            let child_count = reader.read_u32()?;
+            assert_int("Non-container UI Node's child count", 0, child_count)?;
         }
 
         reader.assert_pos(data_pointer, "UI Node data")?;
@@ -108,7 +94,7 @@ impl GMElement for GMNodeUI {
             if !self.children.is_empty() {
                 bail!(
                     "Expected non-container UI Node type {} to not have child nodes, but actually has {} children",
-                    typename_val(&self.node),
+                    self.node.variant_name(),
                     self.children.len(),
                 )
             }
@@ -127,6 +113,30 @@ impl GMElement for GMNodeUI {
         }
 
         Ok(())
+    }
+}
+#[derive(Debug, Clone)]
+pub enum GMNodeUIData {
+    Layer(GMNodeUILayer),
+    FlexPanel(GMNodeUIFlexPanel),
+    GameObject(GMNodeUIGameObject),
+    SequenceInstance(GMNodeUISequenceInstance),
+    SpriteInstance(GMNodeUISpriteInstance),
+    TextItemInstance(GMNodeUITextItemInstance),
+    EffectLayer(GMNodeUIEffectLayer),
+}
+
+impl GMNodeUIData {
+    fn variant_name(&self) -> &'static str {
+        match self {
+            GMNodeUIData::Layer(_) => "Layer",
+            GMNodeUIData::FlexPanel(_) => "FlexPanel",
+            GMNodeUIData::GameObject(_) => "GameObject",
+            GMNodeUIData::SequenceInstance(_) => "SequenceInstance",
+            GMNodeUIData::SpriteInstance(_) => "SpriteInstance",
+            GMNodeUIData::TextItemInstance(_) => "TextItemInstance",
+            GMNodeUIData::EffectLayer(_) => "EffectLayer",
+        }
     }
 }
 

@@ -30,7 +30,8 @@ impl GMElement for GMShaders {
 
         let mut shaders: Vec<GMShader> = vec_with_capacity(count)?;
         for win in locations.windows(2) {
-            let [pointer, entry_end] = *win else { unreachable!() };
+            let pointer = win[0];
+            let entry_end = win[1];
             reader.cur_pos = pointer;
             let name: GMRef<String> = reader.read_gm_string()?;
             let shader_type: GMShaderType = num_enum_from(reader.read_u32()? & 0x7FFFFFFF)?;

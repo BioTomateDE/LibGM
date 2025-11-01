@@ -4,6 +4,7 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
+use crate::util::assert::assert_int;
 use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
@@ -22,10 +23,7 @@ impl GMChunkElement for GMParticleSystems {
 impl GMElement for GMParticleSystems {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
-        let psys_version = reader.read_u32()?;
-        if psys_version != 1 {
-            bail!("Invalid or unsupported PSYS version {0} (0x{0:8X})", psys_version);
-        }
+        assert_int("PSYS Version", 1, reader.read_u32()?)?;
         let particle_systems: Vec<GMParticleSystem> = reader.read_pointer_list()?;
         Ok(Self { particle_systems, exists: true })
     }
@@ -90,10 +88,7 @@ impl GMChunkElement for GMParticleEmitters {
 impl GMElement for GMParticleEmitters {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
-        let psem_version = reader.read_u32()?;
-        if psem_version != 1 {
-            bail!("Invalid or unsupported PSEM version {0} (0x{0:8X})", psem_version);
-        }
+        assert_int("PSEM Version", 1, reader.read_u32()?)?;
         let emitters: Vec<GMParticleEmitter> = reader.read_pointer_list()?;
         Ok(Self { emitters, exists: true })
     }

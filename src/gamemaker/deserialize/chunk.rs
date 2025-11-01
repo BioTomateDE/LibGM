@@ -4,6 +4,7 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::gm_version::GMVersion;
 use crate::integrity_assert;
 use crate::prelude::*;
+use crate::util::assert::assert_int;
 use crate::util::bench::Stopwatch;
 
 #[derive(Debug, Clone)]
@@ -40,10 +41,7 @@ impl DataReader<'_> {
             Err(e) => Err(e).context("parsing chunk name")?,
         };
 
-        if string.len() != 4 {
-            bail!("Chunk name string {string:?} has size {}", string.len());
-        }
-
+        assert_int("Size of chunk name string", 4, string.len())?;
         if !string.bytes().all(|b| matches!(b, b'A'..=b'Z' | b'0'..=b'9')) {
             bail!("Chunk name {string:?} contains invalid characters")
         }
@@ -59,7 +57,7 @@ impl DataReader<'_> {
         Ok(string)
     }
 
-    fn read_chunk_internal<T: GMChunkElement + GMElement>(&mut self, chunk: GMChunk) -> Result<T> {
+    fn read_chunk<T: GMChunkElement>(&mut self, chunk: GMChunk) -> Result<T> {
         let stopwatch = Stopwatch::start();
         self.cur_pos = chunk.start_pos;
         self.chunk = chunk;
@@ -116,7 +114,7 @@ impl DataReader<'_> {
         Ok(())
     }
 
-    pub fn read_chunk_required<T: GMChunkElement + GMElement>(&mut self, chunk_name: &str) -> Result<T> {
+    pub fn read_chunk_required<T: GMChunkElement>(&mut self, chunk_name: &str) -> Result<T> {
         let chunk: GMChunk = self.chunks.get(chunk_name).cloned().ok_or_else(|| {
             format!(
                 "Required chunk '{}' not found in chunk table with length {}",
@@ -126,7 +124,7 @@ impl DataReader<'_> {
         })?;
 
         let element: T = self
-            .read_chunk_internal(chunk)
+            .read_chunk(chunk)
             .with_context(|| format!("deserializing required chunk '{chunk_name}'"))?;
 
         // Remove the chunk only after chunk parsing completes.
@@ -137,13 +135,12 @@ impl DataReader<'_> {
         Ok(element)
     }
 
-    pub fn read_chunk_optional<T: GMChunkElement + GMElement>(&mut self, chunk_name: &'static str) -> Result<T> {
+    pub fn read_chunk_optional<T: GMChunkElement>(&mut self, chunk_name: &'static str) -> Result<T> {
         let Some(chunk) = self.chunks.remove(chunk_name) else {
-            log::trace!("Skipped parsing optional chunk '{chunk_name}'");
             return Ok(T::default());
         };
         let element: T = self
-            .read_chunk_internal(chunk)
+            .read_chunk(chunk)
             .with_context(|| format!("deserializing optional chunk '{chunk_name}'"))?;
         Ok(element)
     }

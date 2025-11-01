@@ -7,6 +7,7 @@ use crate::gamemaker::elements::sprites::GMSprite;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::DataBuilder;
 use crate::prelude::*;
+use crate::util::assert::assert_int;
 use crate::util::init::{hashmap_with_capacity, num_enum_from, vec_with_capacity};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
@@ -30,10 +31,7 @@ impl GMElement for GMSequences {
             return Ok(Self::default());
         }
         reader.align(4)?;
-        let version = reader.read_u32()?;
-        if version != 1 {
-            bail!("Expected SEQN version 1; got {version}");
-        }
+        assert_int("SEQN Version", 1, reader.read_u32()?)?;
         let sequences: Vec<GMSequence> = reader.read_pointer_list()?;
         Ok(Self { sequences, exists: true })
     }

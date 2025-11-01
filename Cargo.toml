@@ -1,7 +1,14 @@
 [package]
 name = "libgm"
 version = "0.1.0"
+authors = ["BioTomateDE <latus.kati@gmail.com>"]
 edition = "2024"
+description = "A tool for modding, decompiling and unpacking GameMaker games"
+readme = "README.md"
+repository = "https://github.com/BioTomateDE/LibGM"
+license = "GPL-3"
+keywords = ["gamemaker", "gml", "decompiler", "modding", "undertale"]
+categories = ["parsing", "game-development", "encoding"]
 
 [features]
 no-integrity-checks = []
@@ -45,29 +52,17 @@ incremental = false
 
 
 [dependencies]
-uuid = { version = "1.16.0", features = ["serde"] }
-chrono = { version = "0.4.40", features = ["serde"] }
-num_enum = "0.7"
-image = { version = "0.25.6", features = ["png", "rayon"] }
-bzip2 = "0.5.2"
-biologischer-log = { git = "https://github.com/BioTomateDE/rust-biologischer-log.git" }
-log = "0.4"
-serde = { version = "1.0.219", features = ["derive"] }
-cpu-time = "1.0.0"
-colored = "3.0.0"
-tynm = "0.2.0"
-bimap = "0.6.3"
 arrayvec = "0.7.6"
-thiserror = "2.0.17"
+biologischer-log = { git = "https://github.com/BioTomateDE/rust-biologischer-log.git" }
+bzip2 = "0.5.2"
+chrono = "0.4.42"
+colored = "3.0.0"
+cpu-time = "1.0.0"
 enum-as-inner = "0.6.1"
-
-## mod export dependencies (currently unused)
-#zstd = "0.13.3"
-#tar = "0.4.44"
-#mtpng = "0.4.1"
-#serde_json = "1.0.140"
-#serde_with = "3.12.0"
-#diffs = "0.5.1"
-#rayon = "1.10.0"
-#png = "0.17.16"
-#xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
+image = "0.25.8"
+log = "0.4.28"
+num_enum = "0.7.5"
+serde = { version = "1.0.228", features = ["derive"] }
+thiserror = "2.0.17"
+tynm = "0.2.0"
+uuid = "1.18.1"
