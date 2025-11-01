@@ -45,3 +45,7 @@ This project is licenced under the
 All contributions are welcome!
 Whether that's a pull request, a feature you would like to see added, a bug you found; 
 just create an Issue/PR in this repo.
+
+- Everything related to GameMaker is located in `src/gamemaker/`.
+- Everything related to GML Decompilation is located in `src/gml/decompiler/`.
+- Everything related to GML Compilation will be located in `src/gml/compiler/` (not started yet).
