@@ -25,6 +25,7 @@ impl DerefMut for GMPaths {
 }
 
 impl GMChunkElement for GMPaths {
+    const NAME: &'static str = "PATH";
     fn exists(&self) -> bool {
         self.exists
     }

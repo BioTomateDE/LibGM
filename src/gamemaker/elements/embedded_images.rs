@@ -29,6 +29,7 @@ impl DerefMut for GMEmbeddedImages {
 }
 
 impl GMChunkElement for GMEmbeddedImages {
+    const NAME: &'static str = "EMBI";
     fn exists(&self) -> bool {
         self.exists
     }

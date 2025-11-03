@@ -98,11 +98,10 @@ impl DataReader<'_> {
         match occurrence_map.get(&occurrence_position) {
             Some(gm_ref) => Ok(*gm_ref),
             None => bail!(
-                "Could not read {} with position {} in chunk '{}' at position {} \
+                "Could not read {} with occurrence position {} at pointer position {} \
                 because it doesn't exist in the occurrence map with {} items",
                 typename::<T>(),
                 occurrence_position,
-                self.chunk.name,
                 self.cur_pos - 4,
                 occurrence_map.len(),
             ),

@@ -33,6 +33,7 @@ impl DerefMut for GMGameObjects {
 }
 
 impl GMChunkElement for GMGameObjects {
+    const NAME: &'static str = "OBJT";
     fn exists(&self) -> bool {
         self.exists
     }

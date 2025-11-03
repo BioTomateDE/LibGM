@@ -57,40 +57,40 @@ pub enum Endianness {
 
 #[derive(Debug, Clone)]
 pub struct GMData {
-    pub general_info: GMGeneralInfo,              // GEN8
-    pub strings: GMStrings,                       // STRG
-    pub embedded_textures: GMEmbeddedTextures,    // TXTR
-    pub texture_page_items: GMTexturePageItems,   // TPAG
-    pub variables: GMVariables,                   // VARI
-    pub functions: GMFunctions,                   // FUNC
-    pub scripts: GMScripts,                       // SCPT
-    pub codes: GMCodes,                           // CODE
-    pub fonts: GMFonts,                           // FONT
-    pub sprites: GMSprites,                       // SPRT
-    pub game_objects: GMGameObjects,              // OBJT
-    pub rooms: GMRooms,                           // ROOM
-    pub backgrounds: GMBackgrounds,               // BGND
-    pub paths: GMPaths,                           // PATH
-    pub audios: GMEmbeddedAudios,                 // AUDO
-    pub sounds: GMSounds,                         // SOND
-    pub options: GMOptions,                       // OPTN
-    pub sequences: GMSequences,                   // SEQN
-    pub particle_systems: GMParticleSystems,      // PSYS
-    pub particle_emitters: GMParticleEmitters,    // PSEM
-    pub language_info: GMLanguageInfo,            // LANG
-    pub extensions: GMExtensions,                 // EXTN
+    pub animation_curves: GMAnimationCurves,      // ACRV
     pub audio_groups: GMAudioGroups,              // AGRP
-    pub global_init_scripts: GMGlobalInitScripts, // GLOB
-    pub game_end_scripts: GMGameEndScripts,       // GMEN
-    pub shaders: GMShaders,                       // SHDR
-    pub root_ui_nodes: GMRootUINodes,             // UILR
-    pub timelines: GMTimelines,                   // TMLN
+    pub audios: GMEmbeddedAudios,                 // AUDO
+    pub backgrounds: GMBackgrounds,               // BGND
+    pub codes: GMCodes,                           // CODE
     pub embedded_images: GMEmbeddedImages,        // EMBI
-    pub texture_group_infos: GMTextureGroupInfos, // TGIN
-    pub tags: GMTags,                             // TAGS
+    pub extensions: GMExtensions,                 // EXTN
     pub feature_flags: GMFeatureFlags,            // FEAT
     pub filter_effects: GMFilterEffects,          // FEDS
-    pub animation_curves: GMAnimationCurves,      // ACRV
+    pub fonts: GMFonts,                           // FONT
+    pub functions: GMFunctions,                   // FUNC
+    pub game_end_scripts: GMGameEndScripts,       // GMEN
+    pub game_objects: GMGameObjects,              // OBJT
+    pub general_info: GMGeneralInfo,              // GEN8
+    pub global_init_scripts: GMGlobalInitScripts, // GLOB
+    pub language_info: GMLanguageInfo,            // LANG
+    pub options: GMOptions,                       // OPTN
+    pub particle_emitters: GMParticleEmitters,    // PSEM
+    pub particle_systems: GMParticleSystems,      // PSYS
+    pub paths: GMPaths,                           // PATH
+    pub rooms: GMRooms,                           // ROOM
+    pub root_ui_nodes: GMRootUINodes,             // UILR
+    pub scripts: GMScripts,                       // SCPT
+    pub sequences: GMSequences,                   // SEQN
+    pub shaders: GMShaders,                       // SHDR
+    pub sounds: GMSounds,                         // SOND
+    pub sprites: GMSprites,                       // SPRT
+    pub strings: GMStrings,                       // STRG
+    pub tags: GMTags,                             // TAGS
+    pub texture_group_infos: GMTextureGroupInfos, // TGIN
+    pub texture_page_items: GMTexturePageItems,   // TPAG
+    pub timelines: GMTimelines,                   // TMLN
+    pub embedded_textures: GMEmbeddedTextures,    // TXTR
+    pub variables: GMVariables,                   // VARI
 
     /// Indicates the number of padding bytes (null bytes) between chunks.
     /// Note that the last chunk does not get padding.
@@ -114,40 +114,41 @@ pub struct GMData {
 impl Default for GMData {
     fn default() -> Self {
         Self {
-            general_info: Default::default(),
-            strings: Default::default(),
-            embedded_textures: Default::default(),
-            texture_page_items: Default::default(),
-            variables: Default::default(),
-            functions: Default::default(),
-            scripts: Default::default(),
-            codes: Default::default(),
-            fonts: Default::default(),
-            sprites: Default::default(),
-            game_objects: Default::default(),
-            rooms: Default::default(),
-            backgrounds: Default::default(),
-            paths: Default::default(),
-            audios: Default::default(),
-            sounds: Default::default(),
-            options: Default::default(),
-            sequences: Default::default(),
-            particle_systems: Default::default(),
-            particle_emitters: Default::default(),
-            language_info: Default::default(),
-            extensions: Default::default(),
-            audio_groups: Default::default(),
-            global_init_scripts: Default::default(),
-            game_end_scripts: Default::default(),
-            shaders: Default::default(),
-            root_ui_nodes: Default::default(),
-            timelines: Default::default(),
-            embedded_images: Default::default(),
-            texture_group_infos: Default::default(),
-            tags: Default::default(),
-            feature_flags: Default::default(),
-            filter_effects: Default::default(),
-            animation_curves: Default::default(),
+            animation_curves: GMAnimationCurves::default(),
+            audio_groups: GMAudioGroups::default(),
+            audios: GMEmbeddedAudios::default(),
+            backgrounds: GMBackgrounds::default(),
+            codes: GMCodes::default(),
+            embedded_images: GMEmbeddedImages::default(),
+            extensions: GMExtensions::default(),
+            feature_flags: GMFeatureFlags::default(),
+            filter_effects: GMFilterEffects::default(),
+            fonts: GMFonts::default(),
+            functions: GMFunctions::default(),
+            game_end_scripts: GMGameEndScripts::default(),
+            game_objects: GMGameObjects::default(),
+            general_info: GMGeneralInfo::default(),
+            global_init_scripts: GMGlobalInitScripts::default(),
+            language_info: GMLanguageInfo::default(),
+            options: GMOptions::default(),
+            particle_emitters: GMParticleEmitters::default(),
+            particle_systems: GMParticleSystems::default(),
+            paths: GMPaths::default(),
+            rooms: GMRooms::default(),
+            root_ui_nodes: GMRootUINodes::default(),
+            scripts: GMScripts::default(),
+            sequences: GMSequences::default(),
+            shaders: GMShaders::default(),
+            sounds: GMSounds::default(),
+            sprites: GMSprites::default(),
+            strings: GMStrings::default(),
+            tags: GMTags::default(),
+            texture_group_infos: GMTextureGroupInfos::default(),
+            texture_page_items: GMTexturePageItems::default(),
+            timelines: GMTimelines::default(),
+            embedded_textures: GMEmbeddedTextures::default(),
+            variables: GMVariables::default(),
+
             // Use 16 chunk padding by default for compatibility.
             chunk_padding: 16,
             endianness: Endianness::Little,
@@ -157,25 +158,7 @@ impl Default for GMData {
 }
 
 impl GMData {
-    pub fn make_string(&mut self, string: &str) -> GMRef<String> {
-        // Try to find existing string
-        for (i, str) in self.strings.iter().enumerate() {
-            if str == string {
-                return GMRef::new(i as u32);
-            }
-        }
-
-        // Make new string
-        self.make_unique_string(string.to_string())
-    }
-
-    pub fn make_unique_string(&mut self, string: String) -> GMRef<String> {
-        let index = self.strings.len() as u32;
-        self.strings.push(string);
-        GMRef::new(index)
-    }
-
-    // TODO: make this work for bytecode 14. also docs
+    // TODO: make this work for bytecode 14. also docs. also vari_instance_type is wrong/buggy?
     pub fn make_variable_b15(&mut self, name: &str, instance_type: GMInstanceType) -> Result<GMRef<GMVariable>> {
         if instance_type == GMInstanceType::Local {
             bail!("Local variables have to be unique; this function will not work");
@@ -203,7 +186,7 @@ impl GMData {
         }
 
         // Couldn't find a variable; make a new one
-        let new_name_string: GMRef<String> = self.make_string(name);
+        let new_name_string: GMRef<String> = self.strings.make(name);
 
         // First update these scuffed ass variable counts
         let Some(b15_header) = &mut self.variables.b15_header else {

@@ -28,6 +28,8 @@ impl DerefMut for GMFunctions {
 }
 
 impl GMChunkElement for GMFunctions {
+    const NAME: &'static str = "FUNC";
+
     fn exists(&self) -> bool {
         self.exists
     }

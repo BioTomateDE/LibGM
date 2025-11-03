@@ -1,4 +1,3 @@
-use std::ops::{Deref, DerefMut};
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::sequence::{GMAnimSpeedType, GMSequence};
@@ -10,6 +9,7 @@ use crate::prelude::*;
 use crate::util::init::{num_enum_from, vec_with_capacity};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMSprites {
@@ -31,6 +31,7 @@ impl DerefMut for GMSprites {
 }
 
 impl GMChunkElement for GMSprites {
+    const NAME: &'static str = "SPRT";
     fn exists(&self) -> bool {
         self.exists
     }

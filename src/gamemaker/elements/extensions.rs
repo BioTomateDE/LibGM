@@ -30,6 +30,7 @@ impl DerefMut for GMExtensions {
 }
 
 impl GMChunkElement for GMExtensions {
+    const NAME: &'static str = "EXTN";
     fn exists(&self) -> bool {
         self.exists
     }

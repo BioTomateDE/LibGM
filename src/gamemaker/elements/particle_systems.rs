@@ -28,6 +28,7 @@ impl DerefMut for GMParticleSystems {
 }
 
 impl GMChunkElement for GMParticleSystems {
+    const NAME: &'static str = "PSYS";
     fn exists(&self) -> bool {
         self.exists
     }

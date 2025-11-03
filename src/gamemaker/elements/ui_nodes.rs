@@ -1,4 +1,3 @@
-use std::ops::{Deref, DerefMut};
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::rooms::{
@@ -13,6 +12,7 @@ use crate::prelude::*;
 use crate::util::assert::assert_int;
 use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMRootUINodes {
@@ -34,6 +34,7 @@ impl DerefMut for GMRootUINodes {
 }
 
 impl GMChunkElement for GMRootUINodes {
+    const NAME: &'static str = "UILR";
     fn exists(&self) -> bool {
         self.exists
     }

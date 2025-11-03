@@ -26,6 +26,7 @@ impl DerefMut for GMFilterEffects {
 }
 
 impl GMChunkElement for GMFilterEffects {
+    const NAME: &'static str = "FEDS";
     fn exists(&self) -> bool {
         self.exists
     }

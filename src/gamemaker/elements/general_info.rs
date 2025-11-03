@@ -3,7 +3,7 @@ use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::rooms::GMRoom;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::gm_version::{GMVersion, GMVersionReq, LTSBranch};
+use crate::gamemaker::gm_version::{GMVersion, GMVersionReq};
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
@@ -94,7 +94,7 @@ impl Default for GMGeneralInfo {
     fn default() -> Self {
         Self {
             is_debugger_disabled: true,
-            bytecode_version: 15,
+            bytecode_version: 67,
             unknown_value: 0,
             game_file_name: GMRef::new(13371337),
             config: GMRef::new(13371337),
@@ -103,15 +103,9 @@ impl Default for GMGeneralInfo {
             game_id: 13371337,
             directplay_guid: Default::default(),
             game_name: GMRef::new(13371337),
-            version: GMVersion {
-                major: 1,
-                minor: 0,
-                release: 0,
-                build: 1337,
-                branch: LTSBranch::PreLTS,
-            },
-            default_window_width: 1024,
-            default_window_height: 768,
+            version: GMVersion::stub(),
+            default_window_width: 13371337,
+            default_window_height: 13371337,
             flags: GMGeneralInfoFlags {
                 fullscreen: false,
                 sync_vertex1: false,
@@ -212,6 +206,7 @@ impl Default for GMGeneralInfo {
 }
 
 impl GMChunkElement for GMGeneralInfo {
+    const NAME: &'static str = "GEN8";
     fn exists(&self) -> bool {
         self.exists
     }

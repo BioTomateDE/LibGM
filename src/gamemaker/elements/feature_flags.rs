@@ -25,6 +25,7 @@ impl DerefMut for GMFeatureFlags {
 }
 
 impl GMChunkElement for GMFeatureFlags {
+    const NAME: &'static str = "FEAT";
     fn exists(&self) -> bool {
         self.exists
     }

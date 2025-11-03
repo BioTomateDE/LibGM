@@ -39,6 +39,7 @@ impl DerefMut for GMBackgrounds {
 }
 
 impl GMChunkElement for GMBackgrounds {
+    const NAME: &'static str = "BGND";
     fn exists(&self) -> bool {
         self.exists
     }

@@ -28,6 +28,7 @@ impl DerefMut for GMLanguageInfo {
 }
 
 impl GMChunkElement for GMLanguageInfo {
+    const NAME: &'static str = "LANG";
     fn exists(&self) -> bool {
         self.exists
     }

@@ -27,6 +27,7 @@ pub struct GMOptions {
 }
 
 impl GMChunkElement for GMOptions {
+    const NAME: &'static str = "OPTN";
     fn exists(&self) -> bool {
         self.exists
     }

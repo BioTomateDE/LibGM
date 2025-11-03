@@ -39,6 +39,7 @@ impl DerefMut for GMEmbeddedTextures {
 }
 
 impl GMChunkElement for GMEmbeddedTextures {
+    const NAME: &'static str = "TXTR";
     fn exists(&self) -> bool {
         self.exists
     }

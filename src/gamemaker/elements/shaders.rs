@@ -1,4 +1,3 @@
-use std::ops::{Deref, DerefMut};
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
@@ -6,6 +5,7 @@ use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::init::{num_enum_from, vec_with_capacity};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMShaders {
@@ -27,6 +27,7 @@ impl DerefMut for GMShaders {
 }
 
 impl GMChunkElement for GMShaders {
+    const NAME: &'static str = "SHDR";
     fn exists(&self) -> bool {
         self.exists
     }

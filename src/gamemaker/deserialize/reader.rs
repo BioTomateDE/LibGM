@@ -7,7 +7,7 @@ use crate::gamemaker::elements::general_info::GMGeneralInfo;
 use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::elements::variables::GMVariable;
-use crate::gamemaker::gm_version::GMVersionReq;
+use crate::gamemaker::gm_version::{GMVersion, GMVersionReq};
 use crate::prelude::*;
 use crate::util::assert::integrity_check;
 use crate::util::smallmap::SmallMap;
@@ -22,6 +22,10 @@ pub(crate) struct DataReader<'a> {
     /// Reading data will be read from this position; incrementing it.
     pub cur_pos: u32,
 
+    /// The GameMaker version specified by GEN8.
+    /// The "actual" version will be detected later and stored in `general_info.version`.
+    pub specified_version: GMVersion,
+
     /// How many null bytes of padding should be at the end of every chunk (except the last one).
     /// Only relevant in certain GameMaker versions.
     /// Defaults to 16, but will be set to 4 or 1 if detected.
@@ -33,7 +37,7 @@ pub(crate) struct DataReader<'a> {
     pub endianness: Endianness,
 
     /// Map of all chunks specified by `FORM`; indexed by chunk name.
-    /// Read chunks will be removed from this HashMap when calling [`DataReader::read_chunk_required`] or [`DataReader::read_chunk_optional`].
+    /// Read chunks will be removed from this HashMap when calling [`DataReader::read_chunk_required`] or [`DataReader::read_chunk`].
     /// May contain unknown chunks (if there is a GameMaker update, for example).
     pub chunks: SmallMap<String, GMChunk>,
 
@@ -78,22 +82,15 @@ impl<'a> DataReader<'a> {
         // Memory Safety Assertion. This should've been verfied before, though.
         let end_pos: u32 = data.len().try_into().expect("Data length out of u32 bounds");
 
-        // This chunk is kind of irrelevant.
-        let chunk = GMChunk {
-            name: "FORM".to_string(),
-            start_pos: 0,
-            end_pos,
-            is_last_chunk: true,
-        };
-
         Self {
             data,
             cur_pos: 0,
             // The default padding value is 16, if used.
+            specified_version: GMVersion::stub(),
             chunk_padding: 16,
             // Assume little endian; big endian is an edge case.
             endianness: Endianness::Little,
-            chunk,
+            chunk: GMChunk { start_pos: 0, end_pos, is_last_chunk: true },
             // Just a stub, will not be read until GEN8 is parsed.
             general_info: Default::default(),
             strings: Default::default(),
@@ -117,10 +114,9 @@ impl<'a> DataReader<'a> {
         // Lower chunk bounds check
         if start < self.chunk.start_pos {
             bail!(
-                "Trying to read {} bytes out of lower chunk bounds at position {} in chunk '{}' with start position {}",
+                "Trying to read {} bytes out of lower chunk bounds at position {} with start position {}",
                 count,
                 self.cur_pos,
-                self.chunk.name,
                 self.chunk.start_pos,
             );
         }
@@ -128,10 +124,9 @@ impl<'a> DataReader<'a> {
         // Upper chunk bounds check
         if end > self.chunk.end_pos {
             bail!(
-                "Trying to read {} bytes out of upper chunk bounds at position {} in chunk '{}' with end position {}",
+                "Trying to read {} bytes out of upper chunk bounds at position {} with end position {}",
                 count,
                 self.cur_pos,
-                self.chunk.name,
                 self.chunk.end_pos,
             );
         }
@@ -169,11 +164,8 @@ impl<'a> DataReader<'a> {
         match number {
             0 => Ok(false),
             1 => Ok(true),
-            _ => bail!(
-                "Read invalid boolean value {} (0x{:08X}) in chunk '{}' at position {}",
-                number,
-                number,
-                self.chunk.name,
+            n => bail!(
+                "Read invalid boolean value {n} (0x{n:08X}) at position {}",
                 self.cur_pos,
             ),
         }
@@ -189,8 +181,9 @@ impl<'a> DataReader<'a> {
             .to_vec();
         let string: String = String::from_utf8(bytes).with_context(|| {
             format!(
-                "parsing literal UTF-8 string with length {} in chunk '{}' at position {}",
-                length, self.chunk.name, self.cur_pos,
+                "parsing literal UTF-8 string with length {} at position {}",
+                length,
+                self.cur_pos - length,
             )
         })?;
         Ok(string)
@@ -237,9 +230,8 @@ impl<'a> DataReader<'a> {
     pub fn set_rel_cur_pos(&mut self, relative_position: u32) -> Result<()> {
         if self.chunk.start_pos + relative_position > self.chunk.end_pos {
             bail!(
-                "Tried to set relative reader position to {} in chunk '{}' with start position {} and end position {}; out of bounds",
+                "Tried to set relative reader position to {} with start position {} and end position {}; out of bounds",
                 relative_position,
-                self.chunk.name,
                 self.chunk.start_pos,
                 self.chunk.end_pos,
             )

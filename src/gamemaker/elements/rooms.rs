@@ -37,6 +37,7 @@ impl DerefMut for GMRooms {
 }
 
 impl GMChunkElement for GMRooms {
+    const NAME: &'static str = "ROOM";
     fn exists(&self) -> bool {
         self.exists
     }

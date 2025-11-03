@@ -8,7 +8,6 @@ use crate::util::bench::Stopwatch;
 
 #[derive(Debug, Clone)]
 pub(crate) struct GMChunk {
-    pub name: String,
     pub start_pos: u32,
     pub end_pos: u32,
     pub is_last_chunk: bool,
@@ -24,14 +23,6 @@ impl DataReader<'_> {
     /// Read a GameMaker chunk name consisting of 4 ascii characters.
     /// Accounts for endianness; reversing the read chunk name in big endian mode.
     pub fn read_chunk_name(&mut self) -> Result<String> {
-        // This can only happen if the source code of this project is buggy.
-        integrity_assert! {
-            self.chunk.name == "FORM",
-            "Reading a chunk name is only allowed in FORM; not in a chunk!
-            Current chunk is called '{}' and has start position {} and end position {}",
-            self.chunk.name, self.chunk.start_pos, self.chunk.end_pos,
-        }
-
         let string: String = match self.read_literal_string(4) {
             Ok(str) => str,
             Err(_) if self.cur_pos == 4 => {
@@ -56,24 +47,29 @@ impl DataReader<'_> {
         Ok(string)
     }
 
-    fn read_chunk<T: GMChunkElement>(&mut self, chunk: GMChunk) -> Result<T> {
+    pub(crate) fn read_chunk<T: GMChunkElement>(&mut self) -> Result<T> {
+        let Some(chunk) = self.chunks.remove(T::NAME) else {
+            return Ok(T::default());
+        };
+
+        let ctx = || format!("deserializing chunk '{}'", T::NAME);
         let stopwatch = Stopwatch::start();
         self.cur_pos = chunk.start_pos;
         self.chunk = chunk;
 
-        let element = T::deserialize(self)?;
-        self.read_chunk_padding()?;
+        let element = T::deserialize(self).with_context(ctx)?;
+        self.read_chunk_padding().with_context(ctx)?;
 
         integrity_assert! {
             self.cur_pos == self.chunk.end_pos,
             "Misaligned chunk '{}': expected chunk end position {} but reader is actually at position {} (diff: {})",
-            self.chunk.name,
+            T::NAME,
             self.chunk.end_pos,
             self.cur_pos,
             self.chunk.end_pos as i64 - self.cur_pos as i64,
         }
 
-        log::trace!("Parsing chunk '{}' took {stopwatch}", self.chunk.name);
+        log::trace!("Parsing chunk '{}' took {stopwatch}", T::NAME);
         Ok(element)
     }
 
@@ -84,13 +80,8 @@ impl DataReader<'_> {
             return Ok(());
         }
 
-        let ver: GMVersion = if self.general_info.exists {
-            self.general_info.version.clone()
-        } else {
-            self.unstable_get_gm_version()? // only happens before chunk GEN8 is read (STRG)
-        };
-
         // Padding only for GMS2+ and 1.9999+
+        let ver: &GMVersion = &self.specified_version;
         let padding_elegible = ver.major >= 2 || (ver.major == 1 && ver.minor >= 9999);
         if !padding_elegible {
             return Ok(());
@@ -113,39 +104,12 @@ impl DataReader<'_> {
         Ok(())
     }
 
-    pub fn read_chunk_required<T: GMChunkElement>(&mut self, chunk_name: &str) -> Result<T> {
-        let chunk: GMChunk = self.chunks.get(chunk_name).cloned().ok_or_else(|| {
-            format!(
-                "Required chunk '{}' not found in chunk table with length {}",
-                chunk_name,
-                self.chunks.len(),
-            )
-        })?;
-
-        let element: T = self
-            .read_chunk(chunk)
-            .with_context(|| format!("deserializing required chunk '{chunk_name}'"))?;
-
-        // Remove the chunk only after chunk parsing completes.
-        // Removing it earlier (e.g. when reading GEN8) would prevent
-        // the padding handling from finding the GEN8 chunk in the map,
-        // Since the real GEN8 info is only set after this function returns.
-        self.chunks.remove(chunk_name);
-        Ok(element)
-    }
-
-    pub fn read_chunk_optional<T: GMChunkElement>(&mut self, chunk_name: &'static str) -> Result<T> {
-        let Some(chunk) = self.chunks.remove(chunk_name) else {
-            return Ok(T::default());
-        };
-        let element: T = self
-            .read_chunk(chunk)
-            .with_context(|| format!("deserializing optional chunk '{chunk_name}'"))?;
-        Ok(element)
-    }
-
-    fn unstable_get_gm_version(&mut self) -> Result<GMVersion> {
-        const CTX: &str = "trying to unstable read GameMaker Version";
+    /// Reads the specified GameMaker version in the GEN8 chunk.
+    /// This only works if the GEN8 chunk still exists in the chunk map.
+    ///
+    /// This function should be called **after** parsing FORM but **before** reading any chunks.
+    pub fn read_gen8_version(&mut self) -> Result<GMVersion> {
+        const CTX: &str = "trying to read GEN8 GameMaker Version";
         let saved_pos = self.cur_pos;
         let saved_chunk: GMChunk = self.chunk.clone();
         self.chunk = self
