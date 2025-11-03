@@ -5,6 +5,7 @@ use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::assert::assert_int;
 use std::collections::HashMap;
+use std::ops::{Deref, DerefMut};
 
 const ALIGNMENT: u32 = 4;
 
@@ -23,6 +24,19 @@ impl Default for GMStrings {
             is_aligned: true,
             exists: false,
         }
+    }
+}
+
+impl Deref for GMStrings {
+    type Target = Vec<String>;
+    fn deref(&self) -> &Self::Target {
+        &self.strings
+    }
+}
+
+impl DerefMut for GMStrings {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.strings
     }
 }
 

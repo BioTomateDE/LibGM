@@ -39,6 +39,8 @@ pub fn assemble_code(assembly: &str, gm_data: &mut GMData) -> Result<Vec<GMInstr
     Ok(instructions)
 }
 
+type DataTypes = ArrayVec<GMDataType, 2>;
+
 pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<GMInstruction> {
     let line: &mut &str = &mut line.trim();
     let mnemonic: String;
@@ -54,7 +56,7 @@ pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<GMInstru
         *line = "";
     }
 
-    let mut types: ArrayVec<GMDataType, 2> = ArrayVec::new();
+    let mut types: DataTypes = ArrayVec::new();
     while line.chars().next() == Some('.') {
         consume_dot(line)?;
         let raw_type: char = consume_char(line).context("Unexpected EOL when trying to parse instruction data type")?;
@@ -136,7 +138,7 @@ macro_rules! asset_by_name {
         for (i, element) in $gm_data.$typename.$typename.iter().enumerate() {
             let name = element
                 .name
-                .resolve(&$gm_data.strings.strings)
+                .resolve(&$gm_data.strings)
                 .with_context(|| format!("Cannot resolve {} asset's name", stringify!($typename)))?;
             if *name == target_name {
                 found = Some(GMRef::new(i as u32));
@@ -179,42 +181,42 @@ fn parse_asset_reference(gm_data: &GMData, line: &mut &str) -> Result<GMAssetRef
     })
 }
 
-fn parse_double_type(types: &ArrayVec<GMDataType, 2>) -> Result<GMDoubleTypeInstruction> {
+fn parse_double_type(types: &DataTypes) -> Result<GMDoubleTypeInstruction> {
     assert_type_count(&types, 2)?;
     Ok(GMDoubleTypeInstruction { right: types[0], left: types[1] })
 }
 
-fn parse_single_type(types: &ArrayVec<GMDataType, 2>) -> Result<GMSingleTypeInstruction> {
+fn parse_single_type(types: &DataTypes) -> Result<GMSingleTypeInstruction> {
     assert_type_count(&types, 1)?;
     Ok(GMSingleTypeInstruction { data_type: types[0] })
 }
 
-fn parse_comparison(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMComparisonInstruction> {
+fn parse_comparison(types: &DataTypes, line: &mut &str) -> Result<GMComparisonInstruction> {
     assert_type_count(&types, 2)?;
     let comparison_type_raw: String = parse_identifier(line)?;
     let comparison_type: GMComparisonType = comparison_type_from_string(&comparison_type_raw)?;
     Ok(GMComparisonInstruction { comparison_type, type1: types[0], type2: types[1] })
 }
 
-fn parse_pop(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &GMData) -> Result<GMPopInstruction> {
+fn parse_pop(types: &DataTypes, line: &mut &str, gm_data: &GMData) -> Result<GMPopInstruction> {
     assert_type_count(&types, 2)?;
     let destination: CodeVariable = parse_variable(line, &gm_data)?;
     Ok(GMPopInstruction { type1: types[0], type2: types[1], destination })
 }
 
-fn parse_pop_swap(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMPopSwapInstruction> {
+fn parse_pop_swap(types: &DataTypes, line: &mut &str) -> Result<GMPopSwapInstruction> {
     assert_type_count(&types, 0)?;
     let size: u8 = parse_uint(line)?;
     Ok(GMPopSwapInstruction { size })
 }
 
-fn parse_duplicate(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMDuplicateInstruction> {
+fn parse_duplicate(types: &DataTypes, line: &mut &str) -> Result<GMDuplicateInstruction> {
     assert_type_count(&types, 1)?;
     let size: u8 = parse_uint(line)?;
     Ok(GMDuplicateInstruction { data_type: types[0], size })
 }
 
-fn parse_duplicate_swap(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMDuplicateSwapInstruction> {
+fn parse_duplicate_swap(types: &DataTypes, line: &mut &str) -> Result<GMDuplicateSwapInstruction> {
     assert_type_count(&types, 1)?;
     let size1: u8 = parse_uint(line)?;
     consume_space(line)?;
@@ -222,13 +224,13 @@ fn parse_duplicate_swap(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Res
     Ok(GMDuplicateSwapInstruction { data_type: types[0], size1, size2 })
 }
 
-fn parse_goto(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMGotoInstruction> {
+fn parse_goto(types: &DataTypes, line: &mut &str) -> Result<GMGotoInstruction> {
     assert_type_count(&types, 0)?;
     let jump_offset: i32 = parse_int(line)?;
     Ok(GMGotoInstruction { jump_offset })
 }
 
-fn parse_push(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &mut GMData) -> Result<GMPushInstruction> {
+fn parse_push(types: &DataTypes, line: &mut &str, gm_data: &mut GMData) -> Result<GMPushInstruction> {
     assert_type_count(&types, 1)?;
     let value: GMCodeValue = match types[0] {
         GMDataType::Int16 => GMCodeValue::Int16(parse_int(line)?),
@@ -260,12 +262,12 @@ fn parse_push(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &mut GM
     Ok(GMPushInstruction { value })
 }
 
-fn parse_push_immediate(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<i16> {
+fn parse_push_immediate(types: &DataTypes, line: &mut &str) -> Result<i16> {
     assert_type_count(&types, 0)?;
     parse_int(line)
 }
 
-fn parse_call(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &GMData) -> Result<GMCallInstruction> {
+fn parse_call(types: &DataTypes, line: &mut &str, gm_data: &GMData) -> Result<GMCallInstruction> {
     assert_type_count(&types, 0)?;
     let function: GMRef<GMFunction> = parse_function(line, &gm_data.strings, &gm_data.functions)?;
     let argc_str: String = consume_round_brackets(line)?
@@ -278,13 +280,13 @@ fn parse_call(types: &ArrayVec<GMDataType, 2>, line: &mut &str, gm_data: &GMData
     Ok(GMCallInstruction { argument_count, function })
 }
 
-fn parse_call_var(types: &ArrayVec<GMDataType, 2>, line: &mut &str) -> Result<GMCallVariableInstruction> {
+fn parse_call_var(types: &DataTypes, line: &mut &str) -> Result<GMCallVariableInstruction> {
     assert_type_count(&types, 1)?;
     let argument_count: u16 = parse_uint(line)?;
     Ok(GMCallVariableInstruction { data_type: types[0], argument_count })
 }
 
-fn assert_type_count(types: &ArrayVec<GMDataType, 2>, n: usize) -> Result<()> {
+fn assert_type_count(types: &DataTypes, n: usize) -> Result<()> {
     if types.len() != n {
         bail!("Expected {} types for this instruction; got {}", n, types.len());
     }
@@ -420,7 +422,7 @@ fn variable_type_from_string(variable_type: &str) -> Result<GMVariableType> {
     Ok(match variable_type {
         "stacktop" => GMVariableType::StackTop,
         "array" => GMVariableType::Array,
-        "instance" => GMVariableType::Instance,
+        "roominstance" => GMVariableType::Instance,
         "arraypushaf" => GMVariableType::ArrayPushAF,
         "arraypopaf" => GMVariableType::ArrayPopAF,
         _ => bail!("Invalid Variable Reference Type {variable_type:?}"),
@@ -438,7 +440,7 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable> {
     consume_dot(line)?;
 
     let mut variable_ref: Option<GMRef<GMVariable>> = None;
-    let instance_type: GMInstanceType = match instance_type_raw.as_str() {
+    let mut instance_type: GMInstanceType = match instance_type_raw.as_str() {
         "self" if instance_type_arg.is_empty() => GMInstanceType::Self_(None),
         "self" => {
             let object_ref: GMRef<GMGameObject> = gm_data
@@ -452,6 +454,13 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable> {
                 .with_context(|| format!("Invalid index for local variable: {instance_type_arg:?}"))?;
             variable_ref = Some(GMRef::new(var_index));
             GMInstanceType::Local
+        }
+        "roominstance" => {
+            variable_type = GMVariableType::Instance;
+            let instance_id: i16 = instance_type_arg
+                .parse()
+                .with_context(|| format!("Invalid Room Instance ID: {instance_type_arg:?}"))?;
+            GMInstanceType::RoomInstance(instance_id)
         }
         "stacktop" => GMInstanceType::StackTop,
         "builtin" => GMInstanceType::Builtin,
@@ -473,10 +482,10 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable> {
         // Convert instance type because of some bullshit
         let vari_instance_type: GMInstanceType = to_vari_instance_type(&instance_type);
 
-        for (i, var) in gm_data.variables.variables.iter().enumerate() {
+        for (i, var) in gm_data.variables.iter().enumerate() {
             let var_name: &String = var
                 .name
-                .resolve(&gm_data.strings.strings)
+                .resolve(&gm_data.strings)
                 .context("Cannot resolve variable name")?;
             if *var_name != name {
                 continue;
@@ -496,10 +505,10 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable> {
         bail!("Cannot resolve variable with name {name:?}");
     };
 
-    // // I need to throw away the instance type so that the tests pass
-    // if variable_type != GMVariableType::Normal {
-    //     instance_type = GMInstanceType::Undefined;
-    // }   // TODO: comment out this block if not testing assembler
+    // I need to throw away the instance type so that the tests pass
+    if variable_type != GMVariableType::Normal && variable_type != GMVariableType::Instance {
+        instance_type = GMInstanceType::Undefined;
+    } // TODO: comment out this block if not testing assembler
 
     Ok(CodeVariable {
         variable,

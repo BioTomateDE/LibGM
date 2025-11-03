@@ -4,6 +4,7 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMLanguageInfo {
@@ -12,11 +13,26 @@ pub struct GMLanguageInfo {
     pub entry_ids: Vec<GMRef<String>>,
     pub exists: bool,
 }
+
+impl Deref for GMLanguageInfo {
+    type Target = Vec<GMLanguageData>;
+    fn deref(&self) -> &Self::Target {
+        &self.languages
+    }
+}
+
+impl DerefMut for GMLanguageInfo {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.languages
+    }
+}
+
 impl GMChunkElement for GMLanguageInfo {
     fn exists(&self) -> bool {
         self.exists
     }
 }
+
 impl GMElement for GMLanguageInfo {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let unknown1 = reader.read_u32()?;

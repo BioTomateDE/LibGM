@@ -5,7 +5,7 @@ use crate::gamemaker::elements::backgrounds::GMBackground;
 use crate::gamemaker::elements::fonts::GMFont;
 use crate::gamemaker::elements::functions::GMFunction;
 use crate::gamemaker::elements::game_objects::GMGameObject;
-use crate::gamemaker::elements::particles::GMParticleSystem;
+use crate::gamemaker::elements::particle_systems::GMParticleSystem;
 use crate::gamemaker::elements::paths::GMPath;
 use crate::gamemaker::elements::rooms::GMRoom;
 use crate::gamemaker::elements::scripts::GMScript;
@@ -24,11 +24,25 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMCodes {
     pub codes: Vec<GMCode>,
     pub exists: bool,
+}
+
+impl Deref for GMCodes {
+    type Target = Vec<GMCode>;
+    fn deref(&self) -> &Self::Target {
+        &self.codes
+    }
+}
+
+impl DerefMut for GMCodes {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.codes
+    }
 }
 
 impl GMChunkElement for GMCodes {
@@ -926,7 +940,7 @@ impl InstructionData for GMPopInstruction {
         let variable: &GMVariable = self
             .destination
             .variable
-            .resolve(&builder.gm_data.variables.variables)?;
+            .resolve(&builder.gm_data.variables)?;
         write_variable_occurrence(
             builder,
             self.destination.variable.index,
@@ -974,7 +988,7 @@ impl InstructionData for GMPushInstruction {
             GMCodeValue::Boolean(boolean) => builder.write_bool32(*boolean),
             GMCodeValue::String(string_ref) => builder.write_u32(string_ref.index),
             GMCodeValue::Variable(code_variable) => {
-                let variable: &GMVariable = code_variable.variable.resolve(&builder.gm_data.variables.variables)?;
+                let variable: &GMVariable = code_variable.variable.resolve(&builder.gm_data.variables)?;
                 write_variable_occurrence(
                     builder,
                     code_variable.variable.index,
@@ -984,7 +998,7 @@ impl InstructionData for GMPushInstruction {
                 )?;
             }
             GMCodeValue::Function(func_ref) => {
-                let function: &GMFunction = func_ref.resolve(&builder.gm_data.functions.functions)?;
+                let function: &GMFunction = func_ref.resolve(&builder.gm_data.functions)?;
                 write_function_occurrence(builder, func_ref.index, instr_pos, function.name.index)?;
             }
         }
@@ -1028,7 +1042,7 @@ impl InstructionData for GMCallInstruction {
         builder.write_u8(GMDataType::Int32.into());
         builder.write_u8(opcode);
 
-        let function: &GMFunction = self.function.resolve(&builder.gm_data.functions.functions)?;
+        let function: &GMFunction = self.function.resolve(&builder.gm_data.functions)?;
         write_function_occurrence(builder, self.function.index, instr_pos, function.name.index)?;
         Ok(())
     }
@@ -1219,7 +1233,7 @@ impl GMElement for GMAssetReference {
             GMAssetReference::ParticleSystem(gm_ref) => (gm_ref.index, 12),
             GMAssetReference::RoomInstance(id) => (*id as u32, 13),
             GMAssetReference::Function(func_ref) => {
-                let function: &GMFunction = func_ref.resolve(&builder.gm_data.functions.functions)?;
+                let function: &GMFunction = func_ref.resolve(&builder.gm_data.functions)?;
                 write_function_occurrence(builder, func_ref.index, builder.len(), function.name.index)?;
                 return Ok(());
             }

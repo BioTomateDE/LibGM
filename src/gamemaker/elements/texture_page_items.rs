@@ -1,3 +1,4 @@
+use std::ops::{Deref, DerefMut};
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::embedded_textures::GMEmbeddedTexture;
@@ -10,11 +11,26 @@ pub struct GMTexturePageItems {
     pub texture_page_items: Vec<GMTexturePageItem>,
     pub exists: bool,
 }
+
+impl Deref for GMTexturePageItems {
+    type Target = Vec<GMTexturePageItem>;
+    fn deref(&self) -> &Self::Target {
+        &self.texture_page_items
+    }
+}
+
+impl DerefMut for GMTexturePageItems {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.texture_page_items
+    }
+}
+
 impl GMChunkElement for GMTexturePageItems {
     fn exists(&self) -> bool {
         self.exists
     }
 }
+
 impl GMElement for GMTexturePageItems {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
@@ -53,6 +69,7 @@ pub struct GMTexturePageItem {
     pub bounding_height: u16,
     pub texture_page: GMRef<GMEmbeddedTexture>,
 }
+
 impl GMElement for GMTexturePageItem {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let source_x = reader.read_u16()?;

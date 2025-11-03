@@ -48,14 +48,7 @@ impl GMVersion {
 
 impl Display for GMVersion {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.major)?;
-        match (self.minor, self.release, self.build) {
-            (0, 0, 0) => {}
-            (minor, 0, 0) => write!(f, ".{}", minor)?,
-            (minor, release, 0) => write!(f, ".{}.{}", minor, release)?,
-            (minor, release, build) => write!(f, ".{}.{}.{}", minor, release, build)?,
-        }
-
+        write_version(f, self.major, self.minor, self.release, self.build)?;
         if self.minor >= 2022 {
             write!(f, " ({})", self.branch)?;
         }
@@ -76,7 +69,7 @@ impl GMVersion {
     /// `true` if `self` is greater than or equal to `version_req`.
     pub fn is_version_at_least<V: Into<GMVersionReq>>(&self, version_req: V) -> bool {
         let ver: GMVersionReq = version_req.into();
-        if ver.non_lts && self.branch < LTSBranch::PostLTS {
+        if ver.post_lts && self.branch < LTSBranch::PostLTS {
             return false;
         }
         if self.major != ver.major {
@@ -126,7 +119,7 @@ impl GMVersion {
         self.minor = new_ver.minor;
         self.release = new_ver.release;
         self.build = new_ver.build;
-        if new_ver.non_lts {
+        if new_ver.post_lts {
             self.branch = LTSBranch::PostLTS;
         }
         Ok(())
@@ -161,30 +154,30 @@ pub struct GMVersionReq {
     pub build: u32,
     /// Only makes sense for `major >= 2022` since LTS didn't exist before.
     /// If [true], the version's branch has to be [`LTSBranch::PostLTS`].
-    pub non_lts: bool,
+    pub post_lts: bool,
 }
 
 impl GMVersionReq {
     pub fn none() -> Self {
-        Self { major: 0, minor: 0, release: 0, build: 0, non_lts: false }
+        Self { major: 0, minor: 0, release: 0, build: 0, post_lts: false }
     }
 }
 
 impl From<(u32, u32)> for GMVersionReq {
     fn from((major, minor): (u32, u32)) -> Self {
-        Self { major, minor, release: 0, build: 0, non_lts: false }
+        Self { major, minor, release: 0, build: 0, post_lts: false }
     }
 }
 
 impl From<(u32, u32, u32)> for GMVersionReq {
     fn from((major, minor, release): (u32, u32, u32)) -> Self {
-        Self { major, minor, release, build: 0, non_lts: false }
+        Self { major, minor, release, build: 0, post_lts: false }
     }
 }
 
 impl From<(u32, u32, u32, u32)> for GMVersionReq {
     fn from((major, minor, release, build): (u32, u32, u32, u32)) -> Self {
-        Self { major, minor, release, build, non_lts: false }
+        Self { major, minor, release, build, post_lts: false }
     }
 }
 
@@ -195,7 +188,7 @@ impl From<(u32, u32, LTSBranch)> for GMVersionReq {
             minor,
             release: 0,
             build: 0,
-            non_lts: matches!(lts, LTSBranch::PostLTS),
+            post_lts: matches!(lts, LTSBranch::PostLTS),
         }
     }
 }
@@ -207,7 +200,7 @@ impl From<(u32, u32, u32, LTSBranch)> for GMVersionReq {
             minor,
             release,
             build: 0,
-            non_lts: matches!(lts, LTSBranch::PostLTS),
+            post_lts: matches!(lts, LTSBranch::PostLTS),
         }
     }
 }
@@ -219,18 +212,27 @@ impl From<(u32, u32, u32, u32, LTSBranch)> for GMVersionReq {
             minor,
             release,
             build,
-            non_lts: matches!(lts, LTSBranch::PostLTS),
+            post_lts: matches!(lts, LTSBranch::PostLTS),
         }
     }
 }
 
 impl Display for GMVersionReq {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let lts_str = if self.non_lts { " (Non LTS)" } else { "" };
-        write!(
-            f,
-            "{}.{}.{}.{}{lts_str}",
-            self.major, self.minor, self.release, self.build
-        )
+        write_version(f, self.major, self.minor, self.release, self.build)?;
+        if self.post_lts {
+            write!(f, " (Post LTS)")?;
+        }
+        Ok(())
+    }
+}
+
+fn write_version(f: &mut Formatter<'_>, major: u32, minor: u32, release: u32, build: u32) -> std::fmt::Result {
+    write!(f, "{}", major)?;
+    match (minor, release, build) {
+        (0, 0, 0) => Ok(()),
+        (minor, 0, 0) => write!(f, ".{}", minor),
+        (minor, release, 0) => write!(f, ".{}.{}", minor, release),
+        (minor, release, build) => write!(f, ".{}.{}.{}", minor, release, build),
     }
 }

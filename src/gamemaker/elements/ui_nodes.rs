@@ -1,3 +1,4 @@
+use std::ops::{Deref, DerefMut};
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::rooms::{
@@ -18,6 +19,20 @@ pub struct GMRootUINodes {
     pub ui_root_nodes: Vec<GMNodeUI>,
     pub exists: bool,
 }
+
+impl Deref for GMRootUINodes {
+    type Target = Vec<GMNodeUI>;
+    fn deref(&self) -> &Self::Target {
+        &self.ui_root_nodes
+    }
+}
+
+impl DerefMut for GMRootUINodes {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.ui_root_nodes
+    }
+}
+
 impl GMChunkElement for GMRootUINodes {
     fn exists(&self) -> bool {
         self.exists
@@ -147,6 +162,7 @@ pub struct GMNodeUILayer {
     pub draw_space: GMNodeUILayerDrawSpaceKind,
     pub visible: bool,
 }
+
 impl GMElement for GMNodeUILayer {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -194,6 +210,7 @@ pub struct GMNodeUIFlexPanel {
     pub flex_shrink: f32,
     pub flex_properties: GMNodeUIFlexProperties,
 }
+
 impl GMElement for GMNodeUIFlexPanel {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -281,6 +298,7 @@ pub struct GMNodeUIGameObject {
     pub flex_instance_properties: GMNodeUIFlexInstanceProperties,
     pub room_game_object: GMRoomGameObject,
 }
+
 impl GMElement for GMNodeUIGameObject {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let room_game_object = GMRoomGameObject::deserialize(reader)?;
@@ -300,6 +318,7 @@ pub struct GMNodeUISequenceInstance {
     pub flex_instance_properties: GMNodeUIFlexInstanceProperties,
     pub sequence_instance: GMSequenceInstance,
 }
+
 impl GMElement for GMNodeUISequenceInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let sequence_instance = GMSequenceInstance::deserialize(reader)?;
@@ -319,6 +338,7 @@ pub struct GMNodeUISpriteInstance {
     pub flex_instance_properties: GMNodeUIFlexInstanceProperties,
     pub sprite_instance: GMSpriteInstance,
 }
+
 impl GMElement for GMNodeUISpriteInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let sprite_instance = GMSpriteInstance::deserialize(reader)?;
@@ -338,6 +358,7 @@ pub struct GMNodeUITextItemInstance {
     pub flex_instance_properties: GMNodeUIFlexInstanceProperties,
     pub text_item_instance: GMTextItemInstance,
 }
+
 impl GMElement for GMNodeUITextItemInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let text_item_instance = GMTextItemInstance::deserialize(reader)?;
@@ -358,6 +379,7 @@ pub struct GMNodeUIEffectLayer {
     pub effect_type: GMRef<String>,
     pub properties: Vec<GMRoomLayerEffectProperty>,
 }
+
 impl GMElement for GMNodeUIEffectLayer {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let enabled = reader.read_bool32()?;

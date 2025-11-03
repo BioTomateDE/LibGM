@@ -15,12 +15,14 @@ pub mod feature_flags;
 pub mod filter_effects;
 pub mod fonts;
 pub mod functions;
+pub mod game_end;
 pub mod game_objects;
 pub mod general_info;
 pub mod global_init;
 pub mod languages;
 pub mod options;
-pub mod particles;
+pub mod particle_emitters;
+pub mod particle_systems;
 pub mod paths;
 pub mod rooms;
 pub mod scripts;
@@ -99,6 +101,7 @@ impl GMElement for u8 {
         Ok(())
     }
 }
+
 impl GMElement for i8 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_i8()
@@ -108,6 +111,7 @@ impl GMElement for i8 {
         Ok(())
     }
 }
+
 impl GMElement for u16 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_u16()
@@ -117,6 +121,7 @@ impl GMElement for u16 {
         Ok(())
     }
 }
+
 impl GMElement for i16 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_i16()
@@ -126,6 +131,7 @@ impl GMElement for i16 {
         Ok(())
     }
 }
+
 impl GMElement for u32 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_u32()
@@ -135,6 +141,7 @@ impl GMElement for u32 {
         Ok(())
     }
 }
+
 impl GMElement for i32 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_i32()
@@ -144,6 +151,7 @@ impl GMElement for i32 {
         Ok(())
     }
 }
+
 impl GMElement for u64 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_u64()
@@ -153,6 +161,7 @@ impl GMElement for u64 {
         Ok(())
     }
 }
+
 impl GMElement for i64 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_i64()
@@ -162,6 +171,7 @@ impl GMElement for i64 {
         Ok(())
     }
 }
+
 impl GMElement for f32 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_f32()
@@ -171,6 +181,7 @@ impl GMElement for f32 {
         Ok(())
     }
 }
+
 impl GMElement for f64 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_f64()
@@ -180,6 +191,7 @@ impl GMElement for f64 {
         Ok(())
     }
 }
+
 impl GMElement for bool {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_bool32()

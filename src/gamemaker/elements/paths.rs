@@ -3,11 +3,25 @@ use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMPaths {
     pub paths: Vec<GMPath>,
     pub exists: bool,
+}
+
+impl Deref for GMPaths {
+    type Target = Vec<GMPath>;
+    fn deref(&self) -> &Self::Target {
+        &self.paths
+    }
+}
+
+impl DerefMut for GMPaths {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.paths
+    }
 }
 
 impl GMChunkElement for GMPaths {
@@ -36,6 +50,7 @@ pub struct GMPath {
     pub precision: u32,
     pub points: Vec<GMPathPoint>,
 }
+
 impl GMElement for GMPath {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -62,6 +77,7 @@ pub struct GMPathPoint {
     pub y: f32,
     pub speed: f32,
 }
+
 impl GMElement for GMPathPoint {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let x = reader.read_f32()?;

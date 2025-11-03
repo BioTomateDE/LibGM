@@ -18,7 +18,7 @@ pub fn test_data_files(test_fn: impl Fn(GMData) -> Result<()>) {
 
     if let Err(error) = run(test_fn) {
         println!();
-        panic!("{}", error.chain())
+        panic!("{}", error.chain());
     }
 }
 

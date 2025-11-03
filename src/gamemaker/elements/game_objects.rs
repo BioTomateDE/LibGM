@@ -11,11 +11,25 @@ use crate::util::assert::assert_bool;
 use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMGameObjects {
     pub game_objects: Vec<GMGameObject>,
     pub exists: bool,
+}
+
+impl Deref for GMGameObjects {
+    type Target = Vec<GMGameObject>;
+    fn deref(&self) -> &Self::Target {
+        &self.game_objects
+    }
+}
+
+impl DerefMut for GMGameObjects {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.game_objects
+    }
 }
 
 impl GMChunkElement for GMGameObjects {
@@ -239,6 +253,7 @@ pub struct GMGameObject {
 pub struct GMGameObjectEvents {
     pub events: Vec<GMGameObjectEvent>,
 }
+
 impl GMElement for GMGameObjectEvents {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let events: Vec<GMGameObjectEvent> = reader.read_pointer_list()?;
@@ -255,6 +270,7 @@ pub struct GMGameObjectEvent {
     pub subtype: u32,
     pub actions: Vec<GMGameObjectEventAction>,
 }
+
 impl GMElement for GMGameObjectEvent {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let subtype = reader.read_u32()?;
@@ -285,6 +301,7 @@ pub struct GMGameObjectEventAction {
     pub is_not: bool,
     pub unknown_always_zero: u32,
 }
+
 impl GMElement for GMGameObjectEventAction {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let lib_id = reader.read_u32()?;

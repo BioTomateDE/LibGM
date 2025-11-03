@@ -6,6 +6,7 @@ use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMExtensions {
@@ -14,11 +15,26 @@ pub struct GMExtensions {
     pub product_id_data: Vec<[u8; 16]>,
     pub exists: bool,
 }
+
+impl Deref for GMExtensions {
+    type Target = Vec<GMExtension>;
+    fn deref(&self) -> &Self::Target {
+        &self.extensions
+    }
+}
+
+impl DerefMut for GMExtensions {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.extensions
+    }
+}
+
 impl GMChunkElement for GMExtensions {
     fn exists(&self) -> bool {
         self.exists
     }
 }
+
 impl GMElement for GMExtensions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let extensions: Vec<GMExtension> = reader.read_pointer_list()?;
@@ -78,6 +94,7 @@ pub struct GMExtension {
     /// Present in 2022.6+
     pub options: Vec<GMExtensionOption>,
 }
+
 impl GMElement for GMExtension {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let folder_name: GMRef<String> = reader.read_gm_string()?;
@@ -139,6 +156,7 @@ pub struct GMExtensionFile {
     pub kind: GMExtensionKind,
     pub functions: Vec<GMExtensionFunction>,
 }
+
 impl GMElement for GMExtensionFile {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let filename: GMRef<String> = reader.read_gm_string()?;
@@ -168,6 +186,7 @@ pub struct GMExtensionFunction {
     pub ext_name: GMRef<String>,
     pub arguments: Vec<GMExtensionFunctionArg>,
 }
+
 impl GMElement for GMExtensionFunction {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -194,6 +213,7 @@ impl GMElement for GMExtensionFunction {
 pub struct GMExtensionFunctionArg {
     pub return_type: GMExtensionReturnType,
 }
+
 impl GMElement for GMExtensionFunctionArg {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let return_type: GMExtensionReturnType = num_enum_from(reader.read_u32()?)?;

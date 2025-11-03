@@ -1,3 +1,4 @@
+use std::ops::{Deref, DerefMut};
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
@@ -11,11 +12,26 @@ pub struct GMShaders {
     pub shaders: Vec<GMShader>,
     pub exists: bool,
 }
+
+impl Deref for GMShaders {
+    type Target = Vec<GMShader>;
+    fn deref(&self) -> &Self::Target {
+        &self.shaders
+    }
+}
+
+impl DerefMut for GMShaders {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.shaders
+    }
+}
+
 impl GMChunkElement for GMShaders {
     fn exists(&self) -> bool {
         self.exists
     }
 }
+
 impl GMElement for GMShaders {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         // Figure out where the starts/ends of each shader object are
@@ -175,6 +191,7 @@ pub struct GMShader {
     pub cg_ps3_pixel_data: Option<GMShaderData>,
     pub vertex_shader_attributes: Vec<GMRef<String>>,
 }
+
 impl GMElement for GMShader {
     fn deserialize(_: &mut DataReader) -> Result<Self> {
         unreachable!("[internal error] GMShader::deserialize is not supported; use GMShaders::deserialize instead")

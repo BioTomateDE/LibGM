@@ -25,7 +25,7 @@ impl DataBuilder<'_> {
     /// # Errors
     /// Returns an error if the contained string reference cannot be resolved.
     pub fn write_gm_string(&mut self, gm_string_ref: &GMRef<String>) -> Result<()> {
-        let resolved_string: &String = gm_string_ref.resolve(&self.gm_data.strings.strings)?;
+        let resolved_string: &String = gm_string_ref.resolve(&self.gm_data.strings)?;
         self.write_pointer(resolved_string)?;
         Ok(())
     }
@@ -46,7 +46,7 @@ impl DataBuilder<'_> {
     /// Returns an error if the contained texture page item reference cannot be resolved.
     pub fn write_gm_texture(&mut self, gm_texture_ref: &GMRef<GMTexturePageItem>) -> Result<()> {
         let resolved_texture_page_item: &GMTexturePageItem =
-            gm_texture_ref.resolve(&self.gm_data.texture_page_items.texture_page_items)?;
+            gm_texture_ref.resolve(&self.gm_data.texture_page_items)?;
         self.write_pointer(resolved_texture_page_item)
     }
 
@@ -64,7 +64,7 @@ impl DataBuilder<'_> {
     /// Resolves a GameMaker string reference to the actual character string.
     /// Returns an error if the reference index is out of bounds.
     pub fn resolve_gm_str(&self, gm_string_ref: &GMRef<String>) -> Result<&String> {
-        gm_string_ref.resolve(&self.gm_data.strings.strings)
+        gm_string_ref.resolve(&self.gm_data.strings)
     }
 
     /// Tries to resolve a GameMaker string reference to the actual character string.

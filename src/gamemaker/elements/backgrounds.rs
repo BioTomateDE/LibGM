@@ -7,6 +7,7 @@ use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
 use crate::util::assert::assert_int;
 use crate::util::init::vec_with_capacity;
+use std::ops::{Deref, DerefMut};
 
 const ALIGNMENT: u32 = 8;
 
@@ -17,16 +18,32 @@ pub struct GMBackgrounds {
     pub is_aligned: bool,
     pub exists: bool,
 }
+
 impl Default for GMBackgrounds {
     fn default() -> Self {
         Self { backgrounds: vec![], is_aligned: true, exists: false }
     }
 }
+
+impl Deref for GMBackgrounds {
+    type Target = Vec<GMBackground>;
+    fn deref(&self) -> &Self::Target {
+        &self.backgrounds
+    }
+}
+
+impl DerefMut for GMBackgrounds {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.backgrounds
+    }
+}
+
 impl GMChunkElement for GMBackgrounds {
     fn exists(&self) -> bool {
         self.exists
     }
 }
+
 impl GMElement for GMBackgrounds {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let mut is_aligned: bool = true;
@@ -64,6 +81,7 @@ pub struct GMBackground {
     /// Only set in GMS 2.0+.
     pub gms2_data: Option<GMBackgroundGMS2Data>,
 }
+
 impl GMElement for GMBackground {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -106,6 +124,7 @@ pub struct GMBackgroundGMS2Data {
     /// All tile ids of this tileset.
     pub tile_ids: Vec<u32>,
 }
+
 impl GMElement for GMBackgroundGMS2Data {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let unknown_always_two = reader.read_u32()?;

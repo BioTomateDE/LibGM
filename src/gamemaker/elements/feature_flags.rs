@@ -3,11 +3,25 @@ use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMFeatureFlags {
     pub feature_flags: Vec<GMRef<String>>,
     pub exists: bool,
+}
+
+impl Deref for GMFeatureFlags {
+    type Target = Vec<GMRef<String>>;
+    fn deref(&self) -> &Self::Target {
+        &self.feature_flags
+    }
+}
+
+impl DerefMut for GMFeatureFlags {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.feature_flags
+    }
 }
 
 impl GMChunkElement for GMFeatureFlags {

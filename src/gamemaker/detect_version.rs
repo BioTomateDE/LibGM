@@ -26,10 +26,10 @@ fn try_check<V: Into<GMVersionReq>>(
         reader.cur_pos = chunk.start_pos;
         if let Some(version_req) = check_fn(reader)? {
             log::debug!(
-                "Manually checking for version {} in chunk '{}' successful; upgraded from version {}",
+                "Upgraded Version from {} to {} using manual check in chunk '{}'",
+                reader.general_info.version,
                 version_req,
                 chunk_name,
-                reader.general_info.version,
             );
             reader.general_info.set_version_at_least(version_req.clone())?;
         }
@@ -155,10 +155,10 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
 
             if let Some(detected_version) = detected_version_opt {
                 log::debug!(
-                    "Checking for version {} in chunk '{}' successful; upgraded from version {}",
+                    "Upgraded Version from {} to {} using manual check in chunk '{}'",
+                    reader.general_info.version,
                     detected_version,
                     check.chunk_name,
-                    reader.general_info.version,
                 );
                 reader.general_info.set_version_at_least(detected_version)?;
                 updated_version = true;

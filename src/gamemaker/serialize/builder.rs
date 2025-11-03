@@ -42,8 +42,8 @@ impl<'a> DataBuilder<'a> {
             raw_data: Vec::with_capacity(approximated_size),
             pointer_placeholder_positions: Vec::new(),
             pointer_resource_positions: HashMap::new(),
-            function_occurrences: vec![Vec::new(); gm_data.functions.functions.len()],
-            variable_occurrences: vec![Vec::new(); gm_data.variables.variables.len()],
+            function_occurrences: vec![Vec::new(); gm_data.functions.len()],
+            variable_occurrences: vec![Vec::new(); gm_data.variables.len()],
         }
     }
 

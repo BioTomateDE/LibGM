@@ -1,3 +1,4 @@
+use std::ops::{Deref, DerefMut};
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::audio_groups::GMAudioGroup;
@@ -12,6 +13,19 @@ use crate::prelude::*;
 pub struct GMSounds {
     pub sounds: Vec<GMSound>,
     pub exists: bool,
+}
+
+impl Deref for GMSounds {
+    type Target = Vec<GMSound>;
+    fn deref(&self) -> &Self::Target {
+        &self.sounds
+    }
+}
+
+impl DerefMut for GMSounds {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.sounds
+    }
 }
 
 impl GMChunkElement for GMSounds {
@@ -45,6 +59,7 @@ pub struct GMSound {
     pub audio_file: Option<GMRef<GMEmbeddedAudio>>,
     pub audio_length: Option<f32>,
 }
+
 impl GMElement for GMSound {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -109,6 +124,7 @@ pub struct GMSoundFlags {
     pub is_decompressed_on_load: bool,
     pub regular: bool,
 }
+
 impl GMElement for GMSoundFlags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let raw = reader.read_u32()?;

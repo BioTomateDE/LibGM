@@ -5,12 +5,26 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMFunctions {
     pub functions: Vec<GMFunction>,
     pub code_locals: GMCodeLocals,
     pub exists: bool,
+}
+
+impl Deref for GMFunctions {
+    type Target = Vec<GMFunction>;
+    fn deref(&self) -> &Self::Target {
+        &self.functions
+    }
+}
+
+impl DerefMut for GMFunctions {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.functions
+    }
 }
 
 impl GMChunkElement for GMFunctions {
@@ -143,6 +157,7 @@ pub struct GMCodeLocal {
     pub name: GMRef<String>,
     pub variables: Vec<GMCodeLocalVariable>,
 }
+
 impl GMElement for GMCodeLocal {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let local_variables_count = reader.read_u32()?;
@@ -170,6 +185,7 @@ pub struct GMCodeLocalVariable {
     pub weird_index: u32,
     pub name: GMRef<String>,
 }
+
 impl GMElement for GMCodeLocalVariable {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let weird_index = reader.read_u32()?;

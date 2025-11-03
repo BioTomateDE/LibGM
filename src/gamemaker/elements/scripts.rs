@@ -1,3 +1,4 @@
+use std::ops::{Deref, DerefMut};
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::code::GMCode;
@@ -9,6 +10,19 @@ use crate::prelude::*;
 pub struct GMScripts {
     pub scripts: Vec<GMScript>,
     pub exists: bool,
+}
+
+impl Deref for GMScripts {
+    type Target = Vec<GMScript>;
+    fn deref(&self) -> &Self::Target {
+        &self.scripts
+    }
+}
+
+impl DerefMut for GMScripts {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.scripts
+    }
 }
 
 impl GMChunkElement for GMScripts {
@@ -35,6 +49,7 @@ pub struct GMScript {
     pub is_constructor: bool,
     pub code: Option<GMRef<GMCode>>,
 }
+
 impl GMElement for GMScript {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;

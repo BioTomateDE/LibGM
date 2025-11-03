@@ -2,11 +2,25 @@ use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMEmbeddedAudios {
     pub audios: Vec<GMEmbeddedAudio>,
     pub exists: bool,
+}
+
+impl Deref for GMEmbeddedAudios {
+    type Target = Vec<GMEmbeddedAudio>;
+    fn deref(&self) -> &Self::Target {
+        &self.audios
+    }
+}
+
+impl DerefMut for GMEmbeddedAudios {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.audios
+    }
 }
 
 impl GMChunkElement for GMEmbeddedAudios {
@@ -33,6 +47,7 @@ pub struct GMEmbeddedAudio {
     /// The raw WAV audio data of the embedded audio entry.
     pub audio_data: Vec<u8>,
 }
+
 impl GMElement for GMEmbeddedAudio {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let audio_data_length = reader.read_u32()?;
