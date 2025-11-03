@@ -1,12 +1,12 @@
-use crate::gamemaker::deserialize::DataReader;
-use crate::gamemaker::serialize::DataBuilder;
+use crate::gamemaker::deserialize::reader::DataReader;
+use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 
 pub mod animation_curves;
 pub mod audio_groups;
 pub mod backgrounds;
 pub mod code;
-pub mod data_files;
+pub(crate) mod data_files;
 pub mod embedded_audio;
 pub mod embedded_images;
 pub mod embedded_textures;
@@ -38,7 +38,9 @@ pub mod ui_nodes;
 pub mod variables;
 
 #[allow(unused_variables)]
-pub trait GMElement: Sized {
+/// All GameMaker elements that can be deserialized
+/// from a data file should implement this trait.
+pub(crate) trait GMElement: Sized {
     /// Deserializes this element from the current position of the reader.
     ///
     /// Implementations should read the exact binary representation of this element
@@ -189,7 +191,7 @@ impl GMElement for bool {
 }
 
 /// All chunk elements should implement this trait.
-pub trait GMChunkElement: GMElement + Default {
+pub(crate) trait GMChunkElement: GMElement + Default {
     /// Returns `true` if this chunk is present in the data file.
     ///
     /// This differs from simply checking if the chunk is empty:

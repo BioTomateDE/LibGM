@@ -4,7 +4,7 @@ use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::fmt::typename;
 
-pub trait GMSerializeIfVersion {
+pub(crate) trait GMSerializeIfVersion {
     fn serialize_if_gm_ver<V: Into<GMVersionReq>>(
         &self,
         builder: &mut DataBuilder,

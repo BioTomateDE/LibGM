@@ -1,5 +1,5 @@
 use crate::gamemaker::data::GMData;
-use crate::gamemaker::deserialize::GMRef;
+use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::code::CodeVariable;
 use crate::gamemaker::elements::code::GMComparisonType;
 use crate::gamemaker::elements::code::GMInstanceType;
@@ -387,7 +387,7 @@ fn function_to_string(gm_data: &GMData, function_ref: GMRef<GMFunction>) -> Resu
     Ok(name)
 }
 
-pub fn format_literal_string(gm_data: &GMData, gm_string_ref: GMRef<String>) -> Result<String> {
+pub(super) fn format_literal_string(gm_data: &GMData, gm_string_ref: GMRef<String>) -> Result<String> {
     let string: String = gm_string_ref
         .resolve(&gm_data.strings.strings)?
         .replace("\\", "\\\\")

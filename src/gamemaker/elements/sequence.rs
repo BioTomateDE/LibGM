@@ -1,11 +1,12 @@
-use crate::gamemaker::deserialize::{DataReader, GMRef};
+use crate::gamemaker::deserialize::reader::DataReader;
+use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::animation_curves::GMAnimationCurve;
 use crate::gamemaker::elements::game_objects::GMGameObject;
 use crate::gamemaker::elements::particles::GMParticleSystem;
 use crate::gamemaker::elements::sounds::GMSound;
 use crate::gamemaker::elements::sprites::GMSprite;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::serialize::DataBuilder;
+use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::assert::assert_int;
 use crate::util::init::{hashmap_with_capacity, num_enum_from, vec_with_capacity};

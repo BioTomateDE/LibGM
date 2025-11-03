@@ -1,5 +1,6 @@
 use crate::gamemaker::data::GMData;
-use crate::gamemaker::deserialize::GMRef;
+
+use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::code::GMDataType;
 use crate::gamemaker::elements::code::GMInstruction;
 use crate::gamemaker::elements::code::{

@@ -1,4 +1,4 @@
-use libgm::gamemaker::deserialize::GMRef;
+use libgm::gamemaker::deserialize::resources::GMRef;
 use libgm::gml::decompiler::decompile_to_ast;
 use libgm::prelude::*;
 use libgm::test::test_data_files;

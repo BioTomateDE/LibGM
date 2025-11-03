@@ -1,4 +1,5 @@
-use crate::gamemaker::deserialize::{DataReader, GMChunk};
+use crate::gamemaker::deserialize::chunk::GMChunk;
+use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::elements::embedded_textures::MAGIC_BZ2_QOI_HEADER;
 use crate::gamemaker::elements::rooms::GMRoomLayerType;
 use crate::gamemaker::gm_version::GMVersionReq;

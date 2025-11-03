@@ -1,11 +1,12 @@
-use crate::gamemaker::deserialize::{DataReader, GMRef};
+use crate::gamemaker::deserialize::reader::DataReader;
+use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::backgrounds::GMBackground;
 use crate::gamemaker::elements::embedded_textures::GMEmbeddedTexture;
 use crate::gamemaker::elements::fonts::GMFont;
 use crate::gamemaker::elements::sprites::GMSprite;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::gm_version::LTSBranch;
-use crate::gamemaker::serialize::DataBuilder;
+use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
 use crate::util::assert::assert_int;

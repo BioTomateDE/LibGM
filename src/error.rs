@@ -95,15 +95,10 @@ impl<T> Context<T> for Option<T> {
     }
 }
 
-#[macro_export]
-macro_rules! err {
-    ($($arg:tt)*) => {
-        $crate::Error::new(format!($($arg)*))
-    };
-}
-#[macro_export]
 macro_rules! bail {
     ($($arg:tt)*) => {
-        return Err($crate::Error::new(format!($($arg)*)))
+        return Err($crate::error::Error::new(format!($($arg)*)))
     };
 }
+
+pub(crate) use bail;

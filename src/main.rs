@@ -1,5 +1,6 @@
 #![allow(unused)]
 
+use libgm::gamemaker::deserialize::resources::GMRef;
 use libgm::prelude::*;
 use libgm::util::bench::Stopwatch;
 use std::path::Path;
@@ -40,61 +41,10 @@ fn main_open_and_close() -> Result<()> {
     log::info!("Parsing data file");
     let gm_data: GMData = parse_data_file(raw_data).context("parsing data file")?;
 
-    // // Sample changes
-    // let mut gm_data = gm_data;
-    // let original_name: &str = gm_data.general_info.display_name.resolve(&gm_data.strings.strings)?;
-    // let modified_name: String = format!("{original_name} - Modded using AcornGM");
-    // gm_data.general_info.display_name = gm_data.make_string(&modified_name);
-    //
-    // // Count Instructions
-    // let mut counts = std::collections::HashMap::new();
-    // let mut all = 0;
-    // for code in &gm_data.codes.codes {
-    //     for instruction in &code.instructions {
-    //         all += 1;
-    //         let key = format!("{instruction:?}").split('(').next().unwrap().to_string();
-    //         if let Some(count) = counts.get_mut(&key) {
-    //             *count += 1;
-    //         } else {
-    //             counts.insert(key, 1);
-    //         }
-    //     }
-    // }
-    // log::info!("Total instructions: {all}");
-    // for (instr, count) in counts {
-    //     println!("{count:>7} {instr}");
-    // }
-    //
-    // // Export Code Disassembly
-    // if !std::fs::exists("expasm").unwrap() {
-    //     std::fs::create_dir("expasm").unwrap();
-    // }
-    // for code in &gm_data.codes.codes {
-    //     let code_name = code.name.resolve(&gm_data.strings.strings)?;
-    //     let assembly = libgm::gml::disassembler::disassemble_code(&gm_data, code)?;
-    //     // println!("Disassembly of {code_name:?}: \n{}", assembly);
-    //     std::fs::write(format!("expasm/{code_name}.asm"), assembly)
-    //         .with_context(|| format!("Could not write assembly of code {code_name:?}"))?;
-    // }
-    //
-    // // Export all Strings
-    // let mut out = String::new();
-    // for i in 0..gm_data.strings.strings.len() {
-    //     let string_ref = libgm::gamemaker::deserialize::GMRef::new(i as u32);
-    //     let string = libgm::gml::disassembler::format_literal_string(&gm_data, string_ref)?;
-    //     out += &string;
-    //     out += "\n";
-    // }
-    // let path_str = input_path.to_str().context("Invalid input path OS String")?;
-    // std::fs::write(format!("{path_str}_strings.txt"), out).context("Could not write string");
-    //
-    // // Upgrade GameMaker Version
-    // Let gm_data = libgm::gamemaker::upgrade::upgrade_to_2023_lts(gm_data)?;
-
     // Decompile a specific code
     let code_count = gm_data.codes.codes.len();
     for i in 0..code_count {
-        let code_ref = libgm::gamemaker::deserialize::GMRef::new(i as u32);
+        let code_ref = GMRef::new(i as u32);
         log::debug!(
             "({i}/{code_count}) Decompiling {:?}",
             code_ref.resolve(&gm_data.codes.codes)?.name.display(&gm_data.strings)

@@ -8,7 +8,7 @@ use crate::util::fmt::typename;
 use std::collections::HashMap;
 
 #[derive(Debug)]
-pub struct DataBuilder<'a> {
+pub(crate) struct DataBuilder<'a> {
     /// The [GMData] to serialize.
     pub gm_data: &'a GMData,
 

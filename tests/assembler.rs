@@ -49,7 +49,7 @@ fn test_assembler() {
                 }
             }
 
-            bail!("Assembler produced different instructions than the original (see logs)");
+            return Err("Assembler produced different instructions than the original (see logs)".into());
         }
         Ok(())
     })

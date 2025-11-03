@@ -1,7 +1,6 @@
 use crate::prelude::*;
 use std::fmt::{Display, UpperHex};
 
-#[macro_export]
 macro_rules! integrity_check {
     {$($tt:tt)*} => {
         #[cfg(not(feature = "no-integrity-checks"))] {
@@ -10,16 +9,17 @@ macro_rules! integrity_check {
     }
 }
 
-#[macro_export]
 macro_rules! integrity_assert {
     {$condition:expr, $($arg:tt)*} => {
         #[cfg(not(feature = "no-integrity-checks"))] {
             if !$condition {
-                return Err($crate::Error::new(format!($($arg)*)))
+                bail!($($arg)*)
             }
         }
     }
 }
+
+pub(crate) use {integrity_assert, integrity_check};
 
 pub fn assert_int<I: UpperHex + PartialEq + Display>(description: &'static str, expected: I, actual: I) -> Result<()> {
     integrity_assert! {

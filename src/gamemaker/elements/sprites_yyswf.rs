@@ -1,7 +1,7 @@
-use crate::gamemaker::deserialize::DataReader;
+use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::elements::GMElement;
 use crate::gamemaker::elements::sprites::GMSpriteShapeData;
-use crate::gamemaker::serialize::DataBuilder;
+use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
 use crate::util::init::{num_enum_from, vec_with_capacity};
@@ -193,7 +193,7 @@ pub enum GMSpriteYYSWFGradientFillType {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMSpriteYYSWFStyleGroup<T: GMElement> {
+pub struct GMSpriteYYSWFStyleGroup<T> {
     pub fill_styles: Vec<GMSpriteYYSWFFillData>,
     pub line_styles: Vec<GMSpriteYYSWFLineStyleData>,
     pub subshapes: Vec<T>,

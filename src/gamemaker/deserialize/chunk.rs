@@ -2,13 +2,12 @@ use crate::gamemaker::data::Endianness;
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::gm_version::GMVersion;
-use crate::integrity_assert;
 use crate::prelude::*;
 use crate::util::assert::assert_int;
 use crate::util::bench::Stopwatch;
 
 #[derive(Debug, Clone)]
-pub struct GMChunk {
+pub(crate) struct GMChunk {
     pub name: String,
     pub start_pos: u32,
     pub end_pos: u32,

@@ -1,4 +1,5 @@
-use crate::gamemaker::deserialize::{DataReader, GMRef};
+use crate::gamemaker::deserialize::reader::DataReader;
+use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::rooms::{
     GMRoomGameObject, GMRoomLayerEffectProperty, GMSequenceInstance, GMSpriteInstance, GMTextItemInstance,
 };
@@ -6,7 +7,7 @@ use crate::gamemaker::elements::ui_nodes::flex_properties::{
     AlignmentKind, FlexValue, GMNodeUIFlexInstanceProperties, GMNodeUIFlexProperties,
 };
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::serialize::DataBuilder;
+use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::assert::assert_int;
 use crate::util::init::num_enum_from;
@@ -374,9 +375,10 @@ impl GMElement for GMNodeUIEffectLayer {
 }
 
 mod flex_properties {
-    use crate::gamemaker::deserialize::DataReader;
+
+    use crate::gamemaker::deserialize::reader::DataReader;
     use crate::gamemaker::elements::GMElement;
-    use crate::gamemaker::serialize::DataBuilder;
+    use crate::gamemaker::serialize::builder::DataBuilder;
     use crate::prelude::*;
     use crate::util::init::num_enum_from;
     use num_enum::{IntoPrimitive, TryFromPrimitive};

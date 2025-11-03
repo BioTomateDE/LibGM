@@ -1,6 +1,6 @@
-use crate::gamemaker::deserialize::GMRef;
+use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::GMElement;
-use crate::gamemaker::serialize::DataBuilder;
+use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::fmt::typename;
 

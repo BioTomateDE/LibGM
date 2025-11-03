@@ -1,4 +1,4 @@
-use crate::gamemaker::deserialize::GMRef;
+use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::animation_curves::GMAnimationCurves;
 use crate::gamemaker::elements::audio_groups::GMAudioGroups;
 use crate::gamemaker::elements::backgrounds::GMBackgrounds;
@@ -173,6 +173,7 @@ impl GMData {
         GMRef::new(index)
     }
 
+    // TODO: make this work for bytecode 14. also docs
     pub fn make_variable_b15(&mut self, name: &str, instance_type: GMInstanceType) -> Result<GMRef<GMVariable>> {
         if instance_type == GMInstanceType::Local {
             bail!("Local variables have to be unique; this function will not work");
@@ -252,18 +253,5 @@ impl GMData {
     pub fn function_by_name(&self, name: &str) -> Result<GMRef<GMFunction>> {
         self.find_function(name)?
             .with_context(|| format!("Could not find function with name {name:?}"))
-    }
-
-    /// Only intended for finding (or creating if it doesn't exist) **builtin** GameMaker functions.
-    pub fn make_builtin_function(&mut self, name: &'static str) -> Result<GMRef<GMFunction>> {
-        if let Some(func) = self.find_function(name)? {
-            return Ok(func);
-        }
-
-        // Create new function
-        let func_ref = GMRef::new(self.functions.functions.len() as u32);
-        let func = GMFunction { name: self.make_string(name) };
-        self.functions.functions.push(func);
-        Ok(func_ref)
     }
 }

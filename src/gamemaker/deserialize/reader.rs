@@ -9,12 +9,12 @@ use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::elements::variables::GMVariable;
 use crate::gamemaker::gm_version::GMVersionReq;
 use crate::prelude::*;
+use crate::util::assert::integrity_check;
 use crate::util::smallmap::SmallMap;
-use crate::{integrity_assert, integrity_check};
 use std::collections::HashMap;
 
 #[derive(Debug)]
-pub struct DataReader<'a> {
+pub(crate) struct DataReader<'a> {
     /// The raw data buffer belonging to the GameMaker data file which is currently being parsed.
     data: &'a [u8],
 
@@ -75,6 +75,17 @@ const CHUNK_COUNT: usize = 35;
 
 impl<'a> DataReader<'a> {
     pub fn new(data: &'a [u8]) -> Self {
+        // Memory Safety Assertion. This should've been verfied before, though.
+        let end_pos: u32 = data.len().try_into().expect("Data length out of u32 bounds");
+
+        // This chunk is kind of irrelevant.
+        let chunk = GMChunk {
+            name: "FORM".to_string(),
+            start_pos: 0,
+            end_pos,
+            is_last_chunk: true,
+        };
+
         Self {
             data,
             cur_pos: 0,
@@ -82,12 +93,7 @@ impl<'a> DataReader<'a> {
             chunk_padding: 16,
             // Assume little endian; big endian is an edge case.
             endianness: Endianness::Little,
-            chunk: GMChunk {
-                name: "FORM".to_string(),
-                start_pos: 0,
-                end_pos: data.len() as u32,
-                is_last_chunk: true,
-            },
+            chunk,
             // Just a stub, will not be read until GEN8 is parsed.
             general_info: Default::default(),
             strings: Default::default(),
@@ -102,7 +108,14 @@ impl<'a> DataReader<'a> {
     /// Read the specified number of bytes from the data file while advancing the data position.
     /// Returns an error when trying to read out of chunk bounds.
     pub fn read_bytes_dyn(&mut self, count: u32) -> Result<&'a [u8]> {
-        if self.cur_pos < self.chunk.start_pos {
+        let start: u32 = self.cur_pos;
+        let end: u32 = self
+            .cur_pos
+            .checked_add(count)
+            .ok_or("Trying to read out of u32 bounds")?;
+
+        // Lower chunk bounds check
+        if start < self.chunk.start_pos {
             bail!(
                 "Trying to read {} bytes out of lower chunk bounds at position {} in chunk '{}' with start position {}",
                 count,
@@ -112,7 +125,8 @@ impl<'a> DataReader<'a> {
             );
         }
 
-        if self.cur_pos + count > self.chunk.end_pos {
+        // Upper chunk bounds check
+        if end > self.chunk.end_pos {
             bail!(
                 "Trying to read {} bytes out of upper chunk bounds at position {} in chunk '{}' with end position {}",
                 count,
@@ -122,14 +136,13 @@ impl<'a> DataReader<'a> {
             );
         }
 
-        // SAFETY: If chunk.start_pos and chunk.end_pos are set correctly, this should never read memory out of bounds.
-        let start = self.cur_pos as usize;
-        let end = self
-            .cur_pos
-            .checked_add(count)
-            .ok_or("Trying to read out of u32 bounds")?;
-        let end = end as usize;
+        #[cfg(not(any(target_pointer_width = "32", target_pointer_width = "64")))]
+        compile_error!("Cannot safely convert u32 to usize on this platform (target pointer width not 32 or 64)");
 
+        // SAFETY: If chunk.end_pos is set correctly, this should never read memory out of bounds.
+
+        let start = start as usize;
+        let end = end as usize;
         let slice: &[u8] = unsafe { self.data.get_unchecked(start..end) };
         self.cur_pos += count;
         Ok(slice)
@@ -137,9 +150,14 @@ impl<'a> DataReader<'a> {
 
     /// Read a constant number of bytes from the data file while advancing the data position.
     /// Useful for reading slices with specified sizes like `[u8; 16]`.
+    ///
+    /// **Safety Note:** `N` must be less than `u32::MAX`.
+    ///
+    /// (TODO: Implement const assertion when rust supports it.)
     pub fn read_bytes_const<const N: usize>(&mut self) -> Result<&[u8; N]> {
         let slice: &[u8] = self.read_bytes_dyn(N as u32)?;
         // SAFETY: read_bytes_dyn is guaranteed to read exact N bytes.
+        // > EXCEPTION: This produces undefined behavior is if N > u32::MAX.
         Ok(unsafe { &*(slice.as_ptr() as *const [u8; N]) })
     }
 
