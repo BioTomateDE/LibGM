@@ -1,3 +1,4 @@
+use std::ops::{Deref, DerefMut};
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::sequence::{GMAnimSpeedType, GMSequence};
@@ -15,11 +16,26 @@ pub struct GMSprites {
     pub sprites: Vec<GMSprite>,
     pub exists: bool,
 }
+
+impl Deref for GMSprites {
+    type Target = Vec<GMSprite>;
+    fn deref(&self) -> &Self::Target {
+        &self.sprites
+    }
+}
+
+impl DerefMut for GMSprites {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.sprites
+    }
+}
+
 impl GMChunkElement for GMSprites {
     fn exists(&self) -> bool {
         self.exists
     }
 }
+
 impl GMElement for GMSprites {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let sprites: Vec<GMSprite> = reader.read_pointer_list()?;
@@ -52,6 +68,7 @@ pub struct GMSprite {
     pub collision_masks: Vec<GMSpriteMaskEntry>,
     pub special_fields: Option<GMSpriteSpecial>,
 }
+
 impl GMElement for GMSprite {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -534,6 +551,7 @@ pub struct GMSpriteSpineTextureEntry {
     pub page_height: u32,
     pub data: GMSpriteSpineTextureEntryData,
 }
+
 impl GMElement for GMSpriteSpineTextureEntry {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let page_width = reader.read_u32()?;
@@ -621,6 +639,7 @@ pub struct GMSpriteNineSlice {
     pub enabled: bool,
     pub tile_modes: [GMSpriteNineSliceTileMode; 5],
 }
+
 impl GMElement for GMSpriteNineSlice {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let left = reader.read_i32()?;

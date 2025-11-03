@@ -42,12 +42,12 @@ fn main_open_and_close() -> Result<()> {
     let gm_data: GMData = parse_data_file(raw_data).context("parsing data file")?;
 
     // Decompile a specific code
-    let code_count = gm_data.codes.codes.len();
+    let code_count = gm_data.codes.len();
     for i in 0..code_count {
         let code_ref = GMRef::new(i as u32);
         log::debug!(
             "({i}/{code_count}) Decompiling {:?}",
-            code_ref.resolve(&gm_data.codes.codes)?.name.display(&gm_data.strings)
+            code_ref.resolve(&gm_data.codes)?.name.display(&gm_data.strings)
         );
         libgm::gml::decompiler::decompile_to_ast(&gm_data, code_ref)?;
     }

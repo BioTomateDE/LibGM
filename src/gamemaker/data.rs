@@ -11,12 +11,14 @@ use crate::gamemaker::elements::feature_flags::GMFeatureFlags;
 use crate::gamemaker::elements::filter_effects::GMFilterEffects;
 use crate::gamemaker::elements::fonts::GMFonts;
 use crate::gamemaker::elements::functions::{GMFunction, GMFunctions};
+use crate::gamemaker::elements::game_end::GMGameEndScripts;
 use crate::gamemaker::elements::game_objects::GMGameObjects;
 use crate::gamemaker::elements::general_info::GMGeneralInfo;
-use crate::gamemaker::elements::global_init::{GMGameEndScripts, GMGlobalInitScripts};
+use crate::gamemaker::elements::global_init::GMGlobalInitScripts;
 use crate::gamemaker::elements::languages::GMLanguageInfo;
 use crate::gamemaker::elements::options::GMOptions;
-use crate::gamemaker::elements::particles::{GMParticleEmitters, GMParticleSystems};
+use crate::gamemaker::elements::particle_emitters::GMParticleEmitters;
+use crate::gamemaker::elements::particle_systems::GMParticleSystems;
 use crate::gamemaker::elements::paths::GMPaths;
 use crate::gamemaker::elements::rooms::GMRooms;
 use crate::gamemaker::elements::scripts::GMScripts;
@@ -157,7 +159,7 @@ impl Default for GMData {
 impl GMData {
     pub fn make_string(&mut self, string: &str) -> GMRef<String> {
         // Try to find existing string
-        for (i, str) in self.strings.strings.iter().enumerate() {
+        for (i, str) in self.strings.iter().enumerate() {
             if str == string {
                 return GMRef::new(i as u32);
             }
@@ -168,8 +170,8 @@ impl GMData {
     }
 
     pub fn make_unique_string(&mut self, string: String) -> GMRef<String> {
-        let index = self.strings.strings.len() as u32;
-        self.strings.strings.push(string);
+        let index = self.strings.len() as u32;
+        self.strings.push(string);
         GMRef::new(index)
     }
 
@@ -180,8 +182,8 @@ impl GMData {
         }
         let vari_instance_type: GMInstanceType = to_vari_instance_type(&instance_type);
 
-        for (i, variable) in self.variables.variables.iter().enumerate() {
-            let var_name: &String = variable.name.resolve(&self.strings.strings)?;
+        for (i, variable) in self.variables.iter().enumerate() {
+            let var_name: &String = variable.name.resolve(&self.strings)?;
             if var_name != name {
                 continue;
             }
@@ -231,8 +233,8 @@ impl GMData {
         }
 
         // Now actually create the variable
-        let variable_ref: GMRef<GMVariable> = GMRef::new(self.variables.variables.len() as u32);
-        self.variables.variables.push(GMVariable {
+        let variable_ref: GMRef<GMVariable> = GMRef::new(self.variables.len() as u32);
+        self.variables.push(GMVariable {
             name: new_name_string,
             b15_data: Some(GMVariableB15Data { instance_type, variable_id }),
         });
@@ -241,8 +243,8 @@ impl GMData {
     }
 
     fn find_function(&self, name: &str) -> Result<Option<GMRef<GMFunction>>> {
-        for (i, function) in self.functions.functions.iter().enumerate() {
-            let func_name: &String = function.name.resolve(&self.strings.strings)?;
+        for (i, function) in self.functions.iter().enumerate() {
+            let func_name: &String = function.name.resolve(&self.strings)?;
             if name == func_name {
                 return Ok(Some(GMRef::new(i as u32)));
             }

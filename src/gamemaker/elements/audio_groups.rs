@@ -3,6 +3,7 @@ use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
+use std::ops::{Deref, DerefMut};
 
 /// Audio Groups allow you to manage a set sound entries easier.
 /// You can use these for memory management, volume control and more.
@@ -14,11 +15,25 @@ pub struct GMAudioGroups {
     pub exists: bool,
 }
 
+impl Deref for GMAudioGroups {
+    type Target = Vec<GMAudioGroup>;
+    fn deref(&self) -> &Self::Target {
+        &self.audio_groups
+    }
+}
+
+impl DerefMut for GMAudioGroups {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.audio_groups
+    }
+}
+
 impl GMChunkElement for GMAudioGroups {
     fn exists(&self) -> bool {
         self.exists
     }
 }
+
 impl GMElement for GMAudioGroups {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let audio_groups: Vec<GMAudioGroup> = reader.read_pointer_list()?;
@@ -42,6 +57,7 @@ pub struct GMAudioGroup {
     /// Prior to 2024.14, audio groups were all numerically assigned filenames and all in the root directory.
     pub path: Option<GMRef<String>>,
 }
+
 impl GMElement for GMAudioGroup {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;

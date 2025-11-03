@@ -2,7 +2,7 @@ use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::animation_curves::GMAnimationCurve;
 use crate::gamemaker::elements::game_objects::GMGameObject;
-use crate::gamemaker::elements::particles::GMParticleSystem;
+use crate::gamemaker::elements::particle_systems::GMParticleSystem;
 use crate::gamemaker::elements::sounds::GMSound;
 use crate::gamemaker::elements::sprites::GMSprite;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
@@ -13,6 +13,7 @@ use crate::util::init::{hashmap_with_capacity, num_enum_from, vec_with_capacity}
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::ops::{Deref, DerefMut};
 
 /// This struct belong to the chunk SEQN.
 /// Sprites can _also_ contain sequences (not by reference; the actual data).
@@ -21,11 +22,26 @@ pub struct GMSequences {
     pub sequences: Vec<GMSequence>,
     pub exists: bool,
 }
+
+impl Deref for GMSequences {
+    type Target = Vec<GMSequence>;
+    fn deref(&self) -> &Self::Target {
+        &self.sequences
+    }
+}
+
+impl DerefMut for GMSequences {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.sequences
+    }
+}
+
 impl GMChunkElement for GMSequences {
     fn exists(&self) -> bool {
         self.exists
     }
 }
+
 impl GMElement for GMSequences {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         if reader.get_chunk_length() == 0 {
@@ -62,6 +78,7 @@ pub struct GMSequence {
     pub function_ids: HashMap<i32, GMRef<String>>,
     pub moments: Vec<GMKeyframeData<GMKeyframeMoment>>,
 }
+
 impl GMElement for GMSequence {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -237,6 +254,7 @@ pub struct GMKeyframeAudio {
     pub sound: GMRef<GMSound>,
     pub mode: i32,
 }
+
 impl GMElement for GMKeyframeAudio {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let sound: GMRef<GMSound> = reader.read_resource_by_id()?;
@@ -255,6 +273,7 @@ impl GMElement for GMKeyframeAudio {
 pub struct GMKeyframeInstance {
     pub game_object: GMRef<GMGameObject>,
 }
+
 impl GMElement for GMKeyframeInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let game_object: GMRef<GMGameObject> = reader.read_resource_by_id()?;
@@ -271,6 +290,7 @@ impl GMElement for GMKeyframeInstance {
 pub struct GMKeyframeGraphic {
     pub sprite: GMRef<GMSprite>,
 }
+
 impl GMElement for GMKeyframeGraphic {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let sprite: GMRef<GMSprite> = reader.read_resource_by_id()?;
@@ -287,6 +307,7 @@ impl GMElement for GMKeyframeGraphic {
 pub struct GMKeyframeSequence {
     pub sequence: GMRef<GMSequence>,
 }
+
 impl GMElement for GMKeyframeSequence {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let sequence: GMRef<GMSequence> = reader.read_resource_by_id()?;
@@ -303,6 +324,7 @@ impl GMElement for GMKeyframeSequence {
 pub struct GMKeyframeSpriteFrames {
     pub value: i32,
 }
+
 impl GMElement for GMKeyframeSpriteFrames {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let value = reader.read_i32()?;
@@ -319,6 +341,7 @@ impl GMElement for GMKeyframeSpriteFrames {
 pub struct GMKeyframeBool {
     pub boolean: bool,
 }
+
 impl GMElement for GMKeyframeBool {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let boolean = reader.read_bool32()?;
@@ -335,6 +358,7 @@ impl GMElement for GMKeyframeBool {
 pub struct GMKeyframeString {
     pub string: GMRef<String>,
 }
+
 impl GMElement for GMKeyframeString {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let string: GMRef<String> = reader.read_gm_string()?;
@@ -351,6 +375,7 @@ impl GMElement for GMKeyframeString {
 pub struct GMKeyframeColor {
     pub value: f32,
 }
+
 impl GMElement for GMKeyframeColor {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let value = reader.read_f32()?;
@@ -371,6 +396,7 @@ pub struct GMKeyframeText {
     pub alignment_h: i8,
     pub font_index: i32,
 }
+
 impl GMElement for GMKeyframeText {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let text: GMRef<String> = reader.read_gm_string()?;
@@ -403,6 +429,7 @@ impl GMElement for GMKeyframeText {
 pub struct GMKeyframeParticle {
     pub particle: GMRef<GMParticleSystem>,
 }
+
 impl GMElement for GMKeyframeParticle {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let particle: GMRef<GMParticleSystem> = reader.read_resource_by_id()?;
@@ -419,6 +446,7 @@ impl GMElement for GMKeyframeParticle {
 pub struct GMBroadcastMessage {
     pub messages: Vec<GMRef<String>>,
 }
+
 impl GMElement for GMBroadcastMessage {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let count = reader.read_u32()?;
@@ -443,6 +471,7 @@ pub struct GMKeyframeMoment {
     pub internal_count: i32, // "Should be 0 if none, 1 if there's a message?"
     pub event: Option<GMRef<String>>,
 }
+
 impl GMElement for GMKeyframeMoment {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let internal_count = reader.read_i32()?;
@@ -477,6 +506,7 @@ pub struct GMTrack {
     pub owned_resources: Vec<GMAnimationCurve>,
     pub anim_curve_string: Option<GMRef<String>>,
 }
+
 impl GMElement for GMTrack {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let model_name: GMRef<String> = reader.read_gm_string()?;

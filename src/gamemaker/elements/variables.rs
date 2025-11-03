@@ -1,3 +1,4 @@
+use std::ops::{Deref, DerefMut};
 use crate::gamemaker::deserialize::chunk::GMChunk;
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
@@ -16,6 +17,19 @@ pub struct GMVariables {
     /// Set in bytecode 15 and above.
     pub b15_header: Option<GMVariablesB15Header>,
     pub exists: bool,
+}
+
+impl Deref for GMVariables {
+    type Target = Vec<GMVariable>;
+    fn deref(&self) -> &Self::Target {
+        &self.variables
+    }
+}
+
+impl DerefMut for GMVariables {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.variables
+    }
 }
 
 impl GMChunkElement for GMVariables {
@@ -148,6 +162,7 @@ pub struct GMVariableB15Data {
     pub instance_type: GMInstanceType,
     pub variable_id: i32,
 }
+
 impl GMElement for GMVariableB15Data {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let raw_instance_type: i16 = reader.read_i32()? as i16;
@@ -169,6 +184,7 @@ pub struct GMVariablesB15Header {
     pub var_count2: u32,
     pub max_local_var_count: u32,
 }
+
 impl GMElement for GMVariablesB15Header {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         // Nobody knows what the fuck these values mean
@@ -226,6 +242,7 @@ pub fn to_vari_instance_type(instance_type: &GMInstanceType) -> GMInstanceType {
         GMInstanceType::StackTop => GMInstanceType::Self_(None),
         GMInstanceType::Builtin => GMInstanceType::Self_(None),
         GMInstanceType::Self_(Some(_)) => GMInstanceType::Self_(None),
+        GMInstanceType::RoomInstance(_) => GMInstanceType::Self_(None),
         GMInstanceType::Argument => GMInstanceType::Builtin,
         GMInstanceType::Other => GMInstanceType::Self_(None),
         _ => instance_type.clone(),

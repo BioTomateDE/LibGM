@@ -5,6 +5,7 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::assert::assert_int;
+use std::ops::{Deref, DerefMut};
 
 /// The embedded images of the data file. This is used to store built-in particle sprites,
 /// every time you use `part_sprite` functions.
@@ -12,6 +13,19 @@ use crate::util::assert::assert_int;
 pub struct GMEmbeddedImages {
     pub embedded_images: Vec<GMEmbeddedImage>,
     pub exists: bool,
+}
+
+impl Deref for GMEmbeddedImages {
+    type Target = Vec<GMEmbeddedImage>;
+    fn deref(&self) -> &Self::Target {
+        &self.embedded_images
+    }
+}
+
+impl DerefMut for GMEmbeddedImages {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.embedded_images
+    }
 }
 
 impl GMChunkElement for GMEmbeddedImages {

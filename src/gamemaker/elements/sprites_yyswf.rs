@@ -28,6 +28,7 @@ pub struct GMSpriteYYSWFTimeline {
     pub frames: Vec<GMSpriteYYSWFTimelineFrame>,
     pub collision_masks: Vec<GMSpriteYYSWFCollisionMask>,
 }
+
 impl GMElement for GMSpriteYYSWFTimeline {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let used_items: Vec<GMSpriteYYSWFItem> = reader.read_simple_list()?;
@@ -91,6 +92,7 @@ pub struct GMSpriteYYSWFItem {
     pub id: i32,
     pub item_data: GMSpriteYYSWFItemData,
 }
+
 impl GMElement for GMSpriteYYSWFItem {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let item_type = reader.read_i32()?;
@@ -145,6 +147,7 @@ pub enum GMSpriteYYSWFFillData {
     FillGradient(GMSpriteYYSWFGradientFillData),
     FillBitmap(GMSpriteYYSWFBitmapFillData),
 }
+
 impl GMElement for GMSpriteYYSWFFillData {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let fill_type = reader.read_i32()?;
@@ -245,6 +248,7 @@ pub struct GMSpriteYYSWFBitmapFillData {
     pub char_id: i32,
     transformation_matrix: GMSpriteYYSWFMatrix33,
 }
+
 impl GMElement for GMSpriteYYSWFBitmapFillData {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let bitmap_fill_type: GMSpriteYYSWFBitmapFillType = num_enum_from(reader.read_i32()?)?;
@@ -266,6 +270,7 @@ pub const YYSWF_MATRIX33_MATRIX_SIZE: usize = 9;
 pub struct GMSpriteYYSWFMatrix33 {
     pub values: [f32; YYSWF_MATRIX33_MATRIX_SIZE],
 }
+
 impl GMElement for GMSpriteYYSWFMatrix33 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let mut values = [0f32; YYSWF_MATRIX33_MATRIX_SIZE];
@@ -290,6 +295,7 @@ pub struct GMSpriteYYSWFGradientFillData {
     pub transformation_matrix: GMSpriteYYSWFMatrix33,
     pub records: Vec<GMSpriteYYSWFGradientRecord>,
 }
+
 impl GMElement for GMSpriteYYSWFGradientFillData {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let gradient_fill_type: GMSpriteYYSWFGradientFillType = num_enum_from(reader.read_i32()?)?;
@@ -321,6 +327,7 @@ pub struct GMSpriteYYSWFGradientRecord {
     pub blue: u8,
     pub alpha: u8,
 }
+
 impl GMElement for GMSpriteYYSWFGradientRecord {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let ratio = reader.read_i32()?;
@@ -348,6 +355,7 @@ pub struct GMSpriteYYSWFSolidFillData {
     pub blue: u8,
     pub alpha: u8,
 }
+
 impl GMElement for GMSpriteYYSWFSolidFillData {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let red = reader.read_u8()?;
@@ -373,6 +381,7 @@ pub struct GMSpriteYYSWFLineStyleData {
     pub blue: u8,
     pub alpha: u8,
 }
+
 impl GMElement for GMSpriteYYSWFLineStyleData {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let red = reader.read_u8()?;
@@ -406,6 +415,7 @@ pub struct GMSpriteYYSWFSubshapeData {
     pub line_aa_lines: Vec<(i32, i32)>,
     pub line_aa_vectors: Vec<(f32, f32)>,
 }
+
 impl GMElement for GMSpriteYYSWFSubshapeData {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let fill_style1 = reader.read_i32()?;
@@ -536,6 +546,7 @@ pub struct GMSpriteYYSWFBitmapData {
     pub height: i32,
     pub ver_data: GMSpriteYYSWFBitmapDataVer,
 }
+
 impl GMElement for GMSpriteYYSWFBitmapData {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let bitmap_type: GMSpriteYYSWFBitmapType = num_enum_from(reader.read_i32()?)?;
@@ -640,6 +651,7 @@ pub struct GMSpriteYYSWFTimelineFrame {
     pub min_y: f32,
     pub max_y: f32,
 }
+
 impl GMElement for GMSpriteYYSWFTimelineFrame {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let frame_object_count = reader.read_u32()?;
@@ -680,6 +692,7 @@ pub struct GMSpriteYYSWFTimelineObject {
     pub min_y: f32,
     pub max_y: f32,
 }
+
 impl GMElement for GMSpriteYYSWFTimelineObject {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let char_id = reader.read_i32()?;
@@ -728,6 +741,7 @@ pub struct GMSpriteYYSWFColorMatrix {
     pub additive: [i32; YYSWF_COLOR_MATRIX_SIZE],
     pub multiply: [i32; YYSWF_COLOR_MATRIX_SIZE],
 }
+
 impl GMElement for GMSpriteYYSWFColorMatrix {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let mut additive = [0i32; YYSWF_COLOR_MATRIX_SIZE];
@@ -758,6 +772,7 @@ impl GMElement for GMSpriteYYSWFColorMatrix {
 pub struct GMSpriteYYSWFCollisionMask {
     pub rle_data: Vec<u8>,
 }
+
 impl GMElement for GMSpriteYYSWFCollisionMask {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let rle_length = reader.read_count("YYSWF Collision Mask RLE Data")?;

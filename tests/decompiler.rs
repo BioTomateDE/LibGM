@@ -6,18 +6,18 @@ use libgm::test::test_data_files;
 #[test]
 fn test_decompiler() {
     test_data_files(|data| {
-        for (i, code) in data.codes.codes.iter().enumerate() {
+        for (i, code) in data.codes.iter().enumerate() {
             if let Some(b15) = &code.bytecode15_info {
                 if b15.parent.is_some() {
                     continue;
                 }
             }
 
-            let code_name = code.name.resolve(&data.strings.strings)?;
+            let code_name = code.name.resolve(&data.strings)?;
             print!(
                 "({}/{}) Decompiling: {:<64}\n",
                 i + 1,
-                data.codes.codes.len(),
+                data.codes.len(),
                 code_name
             );
 
@@ -29,13 +29,13 @@ fn test_decompiler() {
                 "Undertale"
             } else if data.general_info.version.major == 2022 {
                 "DeltaruneDemo"
-            } else if data.strings.strings.iter().any(|i| i == "DELTARUNE Chapter 1") {
+            } else if data.strings.iter().any(|i| i == "DELTARUNE Chapter 1") {
                 "Chapter1"
-            } else if data.strings.strings.iter().any(|i| i == "DELTARUNE Chapter 2") {
+            } else if data.strings.iter().any(|i| i == "DELTARUNE Chapter 2") {
                 "Chapter2"
-            } else if data.strings.strings.iter().any(|i| i == "DELTARUNE Chapter 3") {
+            } else if data.strings.iter().any(|i| i == "DELTARUNE Chapter 3") {
                 "Chapter3"
-            } else if data.strings.strings.iter().any(|i| i == "DELTARUNE Chapter 4") {
+            } else if data.strings.iter().any(|i| i == "DELTARUNE Chapter 4") {
                 "Chapter4"
             } else {
                 "DeltaruneLauncher"

@@ -25,11 +25,13 @@ pub struct GMOptions {
     pub constants: Vec<GMOptionsConstant>,
     pub exists: bool,
 }
+
 impl GMChunkElement for GMOptions {
     fn exists(&self) -> bool {
         self.exists
     }
 }
+
 impl GMElement for GMOptions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let is_new_format: bool = reader.read_u32()? == 0x80000000;
@@ -164,6 +166,7 @@ pub struct GMOptionsConstant {
     pub name: GMRef<String>,
     pub value: GMRef<String>,
 }
+
 impl GMElement for GMOptionsConstant {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;

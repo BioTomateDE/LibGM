@@ -3,14 +3,15 @@ use libgm::gml::assembler::assemble_code;
 use libgm::gml::disassembler::disassemble_code;
 use libgm::prelude::*;
 use libgm::test::test_data_files;
+use std::io::Write;
 
 #[test]
 fn test_assembler() {
     test_data_files(|mut data| {
-        let count = data.codes.codes.len();
+        let count = data.codes.len();
 
         for i in 0..count {
-            let code = &data.codes.codes[i];
+            let code = &data.codes[i];
 
             // Skip child code entries.
             if let Some(b15) = &code.bytecode15_info {
@@ -19,8 +20,9 @@ fn test_assembler() {
                 }
             }
 
-            let code_name = code.name.resolve(&data.strings.strings)?.clone();
-            print!("({}/{}) Disassembling: {:<64}\r", i + 1, count, code_name);
+            let code_name = code.name.resolve(&data.strings)?.clone();
+            print!("\x1B[2K\r({i}/{count}) Disassembling {code_name}");
+            std::io::stdout().flush().unwrap();
 
             let assembly: String =
                 disassemble_code(&data, code).with_context(|| format!("disassembling {code_name:?}"))?;
@@ -28,7 +30,7 @@ fn test_assembler() {
             let reconstructed: Vec<GMInstruction> =
                 assemble_code(&assembly, &mut data).with_context(|| format!("assembling {code_name:?}"))?;
 
-            let code = &data.codes.codes[i];
+            let code = &data.codes[i];
             if code.instructions == reconstructed {
                 continue;
             }
@@ -40,12 +42,12 @@ fn test_assembler() {
             if recr_len != orig_len {
                 let diff = recr_len.abs_diff(orig_len);
                 let comparison = if recr_len > orig_len { "more" } else { "fewer" };
-                log::error!("Reconstructed code has {diff} {comparison} instructions than the original");
+                println!("Reconstructed code has {diff} {comparison} instructions than the original");
             }
 
             for (original, recreation) in code.instructions.iter().zip(&reconstructed) {
                 if original != recreation {
-                    log::error!("Original: {original:?}\nRecreation: {recreation:?}\n");
+                    println!("Original: {original:?}\nRecreation: {recreation:?}\n");
                 }
             }
 

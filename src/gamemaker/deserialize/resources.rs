@@ -110,7 +110,7 @@ impl DataReader<'_> {
     }
 
     pub fn resolve_gm_str(&self, string_ref: GMRef<String>) -> Result<&String> {
-        string_ref.resolve(&self.strings.strings)
+        string_ref.resolve(&self.strings)
     }
 
     pub fn display_gm_str(&self, string_ref: GMRef<String>) -> &str {

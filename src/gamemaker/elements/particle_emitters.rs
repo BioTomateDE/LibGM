@@ -1,100 +1,49 @@
+use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::sprites::GMSprite;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
 use crate::util::assert::assert_int;
 use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-
-#[derive(Debug, Clone, Default)]
-pub struct GMParticleSystems {
-    pub particle_systems: Vec<GMParticleSystem>,
-    pub exists: bool,
-}
-
-impl GMChunkElement for GMParticleSystems {
-    fn exists(&self) -> bool {
-        self.exists
-    }
-}
-
-impl GMElement for GMParticleSystems {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        reader.align(4)?;
-        assert_int("PSYS Version", 1, reader.read_u32()?)?;
-        let particle_systems: Vec<GMParticleSystem> = reader.read_pointer_list()?;
-        Ok(Self { particle_systems, exists: true })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.align(4);
-        builder.write_u32(1); // PSYS Version
-        builder.write_pointer_list(&self.particle_systems)?;
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMParticleSystem {
-    pub name: GMRef<String>,
-    pub origin_x: i32,
-    pub origin_y: i32,
-    pub draw_order: i32,
-    pub global_space_particles: Option<bool>,
-    pub emitters: Vec<GMRef<GMParticleEmitter>>,
-}
-impl GMElement for GMParticleSystem {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
-        let origin_x = reader.read_i32()?;
-        let origin_y = reader.read_i32()?;
-        let draw_order = reader.read_i32()?;
-        let global_space_particles: Option<bool> = reader.deserialize_if_gm_version((2023, 8))?;
-        let emitters: Vec<GMRef<GMParticleEmitter>> = reader.read_simple_list_of_resource_ids()?;
-        Ok(Self {
-            name,
-            origin_x,
-            origin_y,
-            draw_order,
-            global_space_particles,
-            emitters,
-        })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
-        builder.write_i32(self.origin_x);
-        builder.write_i32(self.origin_y);
-        builder.write_i32(self.draw_order);
-        self.global_space_particles
-            .serialize_if_gm_ver(builder, "Global Space Particles", (2023, 8))?;
-        builder.write_simple_list_of_resource_ids(&self.emitters)?;
-        Ok(())
-    }
-}
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMParticleEmitters {
     pub emitters: Vec<GMParticleEmitter>,
     pub exists: bool,
 }
+
+impl Deref for GMParticleEmitters {
+    type Target = Vec<GMParticleEmitter>;
+    fn deref(&self) -> &Self::Target {
+        &self.emitters
+    }
+}
+
+impl DerefMut for GMParticleEmitters {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.emitters
+    }
+}
+
 impl GMChunkElement for GMParticleEmitters {
     fn exists(&self) -> bool {
         self.exists
     }
 }
+
 impl GMElement for GMParticleEmitters {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+    fn deserialize(reader: &mut DataReader) -> crate::error::Result<Self> {
         reader.align(4)?;
         assert_int("PSEM Version", 1, reader.read_u32()?)?;
         let emitters: Vec<GMParticleEmitter> = reader.read_pointer_list()?;
         Ok(Self { emitters, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+    fn serialize(&self, builder: &mut DataBuilder) -> crate::error::Result<()> {
         builder.align(4);
         builder.write_u32(1); // PSEM Version
         builder.write_pointer_list(&self.emitters)?;
@@ -149,8 +98,9 @@ pub struct GMParticleEmitter {
     pub spawn_on_update: Option<GMRef<Self>>,
     pub spawn_on_update_count: u32,
 }
+
 impl GMElement for GMParticleEmitter {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+    fn deserialize(reader: &mut DataReader) -> crate::error::Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let enabled: Option<bool> = if reader.general_info.is_version_at_least((2023, 6, 0, 0)) {
             Some(reader.read_bool32()?)
@@ -322,7 +272,7 @@ impl GMElement for GMParticleEmitter {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+    fn serialize(&self, builder: &mut DataBuilder) -> crate::error::Result<()> {
         builder.write_gm_string(&self.name)?;
         self.enabled.serialize_if_gm_ver(builder, "Enabled", (2023, 6))?;
         builder.write_i32(self.mode.into());

@@ -7,11 +7,25 @@ use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
 use crate::util::assert::assert_int;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMFonts {
     pub fonts: Vec<GMFont>,
     pub exists: bool,
+}
+
+impl Deref for GMFonts {
+    type Target = Vec<GMFont>;
+    fn deref(&self) -> &Self::Target {
+        &self.fonts
+    }
+}
+
+impl DerefMut for GMFonts {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.fonts
+    }
 }
 
 impl GMChunkElement for GMFonts {
@@ -247,6 +261,7 @@ pub struct GMFontGlyph {
     /// The kerning for each glyph.
     pub kernings: Vec<GMFontGlyphKerning>,
 }
+
 impl GMElement for GMFontGlyph {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let character = reader.read_u16()?;
@@ -310,6 +325,7 @@ pub struct GMFontGlyphKerning {
     /// An amount of pixels to add to the existing [`GMFontGlyph`].`shift_modifier`.
     pub shift_modifier: i16,
 }
+
 impl GMElement for GMFontGlyphKerning {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let character = reader.read_u16()?;

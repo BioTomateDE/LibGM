@@ -1,3 +1,4 @@
+use std::ops::{Deref, DerefMut};
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::game_objects::GMGameObjectEvent;
@@ -10,6 +11,19 @@ use crate::util::init::vec_with_capacity;
 pub struct GMTimelines {
     pub timelines: Vec<GMTimeline>,
     pub exists: bool,
+}
+
+impl Deref for GMTimelines {
+    type Target = Vec<GMTimeline>;
+    fn deref(&self) -> &Self::Target {
+        &self.timelines
+    }
+}
+
+impl DerefMut for GMTimelines {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.timelines
+    }
 }
 
 impl GMChunkElement for GMTimelines {
@@ -35,6 +49,7 @@ pub struct GMTimeline {
     pub name: GMRef<String>,
     pub moments: Vec<GMTimelineMoment>,
 }
+
 impl GMElement for GMTimeline {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;

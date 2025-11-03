@@ -20,7 +20,7 @@ pub fn decompile_to_ast(gm_data: &GMData, code_ref: GMRef<GMCode>) -> Result<()>
         short_circuit_blocks: vec![],
     };
 
-    let code = code_ref.resolve(&gm_data.codes.codes)?;
+    let code = code_ref.resolve(&gm_data.codes)?;
     find_blocks(&mut ctx, &code.instructions).context("finding blocks")?;
     // for i in &cfg.blocks {
     //     println!(

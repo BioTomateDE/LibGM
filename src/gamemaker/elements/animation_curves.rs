@@ -6,12 +6,26 @@ use crate::prelude::*;
 use crate::util::assert::assert_int;
 use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use std::ops::{Deref, DerefMut};
 
 /// GMS 2.3+
 #[derive(Debug, Clone, Default)]
 pub struct GMAnimationCurves {
     pub animation_curves: Vec<GMAnimationCurve>,
     pub exists: bool,
+}
+
+impl Deref for GMAnimationCurves {
+    type Target = Vec<GMAnimationCurve>;
+    fn deref(&self) -> &Self::Target {
+        &self.animation_curves
+    }
+}
+
+impl DerefMut for GMAnimationCurves {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.animation_curves
+    }
 }
 
 impl GMChunkElement for GMAnimationCurves {
@@ -45,6 +59,7 @@ pub struct GMAnimationCurve {
     pub graph_type: u32,
     pub channels: Vec<GMAnimationCurveChannel>,
 }
+
 impl GMElement for GMAnimationCurve {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -68,6 +83,7 @@ pub struct GMAnimationCurveChannel {
     pub iterations: u32,
     pub points: Vec<GMAnimationCurveChannelPoint>,
 }
+
 impl GMElement for GMAnimationCurveChannel {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -92,6 +108,7 @@ pub struct GMAnimationCurveChannelPoint {
     pub y: f32, // Aka Value
     pub bezier_data: Option<PointBezierData>,
 }
+
 impl GMElement for GMAnimationCurveChannelPoint {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let x = reader.read_f32()?;
@@ -129,6 +146,7 @@ pub struct PointBezierData {
     pub x1: f32,
     pub y1: f32,
 }
+
 impl GMElement for PointBezierData {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let x0 = reader.read_f32()?;

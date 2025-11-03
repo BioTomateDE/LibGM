@@ -13,8 +13,8 @@ use crate::prelude::*;
 
 macro_rules! name_by_ref {
     ($typename:ident, $reference:expr, $gm_data:expr) => {{
-        let element = $reference.resolve(&$gm_data.$typename.$typename)?;
-        let name: &String = element.name.resolve(&$gm_data.strings.strings)?;
+        let element = $reference.resolve(&$gm_data.$typename)?;
+        let name: &String = element.name.resolve(&$gm_data.strings)?;
         if !is_valid_identifier(name) {
             bail!(
                 "Invalid {} identifier: {}",
@@ -313,12 +313,12 @@ fn instance_type_to_string(
             bail!("Did not expect Instance Type Undefined here; please report this error")
         }
         GMInstanceType::Self_(Some(obj_ref)) => {
-            let obj: &GMGameObject = obj_ref.resolve(&gm_data.game_objects.game_objects)?;
-            let name: &String = obj.name.resolve(&gm_data.strings.strings)?;
+            let obj: &GMGameObject = obj_ref.resolve(&gm_data.game_objects)?;
+            let name: &String = obj.name.resolve(&gm_data.strings)?;
             format!("self<{name}>")
         }
         GMInstanceType::Self_(None) => "self".to_string(),
-        GMInstanceType::RoomInstance(instance_id) => format!("roominst<{instance_id}>"),
+        GMInstanceType::RoomInstance(instance_id) => format!("roominstance<{instance_id}>"),
         GMInstanceType::Other => "other".to_string(),
         GMInstanceType::All => "all".to_string(),
         GMInstanceType::None => "none".to_string(),
@@ -336,15 +336,15 @@ const fn variable_type_to_string(variable_type: GMVariableType) -> &'static str 
         GMVariableType::Array => "[array]",
         GMVariableType::StackTop => "[stacktop]",
         GMVariableType::Normal => "",
-        GMVariableType::Instance => "[instance]",
+        GMVariableType::Instance => "",
         GMVariableType::ArrayPushAF => "[arraypushaf]",
         GMVariableType::ArrayPopAF => "[arraypopaf]",
     }
 }
 
 fn variable_to_string(gm_data: &GMData, code_variable: &CodeVariable) -> Result<String> {
-    let variable: &GMVariable = code_variable.variable.resolve(&gm_data.variables.variables)?;
-    let name: &String = variable.name.resolve(&gm_data.strings.strings)?;
+    let variable: &GMVariable = code_variable.variable.resolve(&gm_data.variables)?;
+    let name: &String = variable.name.resolve(&gm_data.strings)?;
     if !is_valid_identifier(name) && name != "$$$$temp$$$$" {
         bail!(
             "Invalid variable identifier: {:?}",
@@ -371,8 +371,8 @@ fn variable_to_string(gm_data: &GMData, code_variable: &CodeVariable) -> Result<
 }
 
 fn function_to_string(gm_data: &GMData, function_ref: GMRef<GMFunction>) -> Result<&String> {
-    let function: &GMFunction = function_ref.resolve(&gm_data.functions.functions)?;
-    let name: &String = function.name.resolve(&gm_data.strings.strings)?;
+    let function: &GMFunction = function_ref.resolve(&gm_data.functions)?;
+    let name: &String = function.name.resolve(&gm_data.strings)?;
     if !is_valid_identifier(name) {
         let is_special =
             name.starts_with("@@") && name.ends_with("@@") && is_valid_identifier(&name[2..name.len() - 2]);
@@ -389,7 +389,7 @@ fn function_to_string(gm_data: &GMData, function_ref: GMRef<GMFunction>) -> Resu
 
 pub(super) fn format_literal_string(gm_data: &GMData, gm_string_ref: GMRef<String>) -> Result<String> {
     let string: String = gm_string_ref
-        .resolve(&gm_data.strings.strings)?
+        .resolve(&gm_data.strings)?
         .replace("\\", "\\\\")
         .replace("\n", "\\n")
         .replace("\r", "\\r")

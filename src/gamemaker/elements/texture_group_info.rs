@@ -1,3 +1,4 @@
+use std::ops::{Deref, DerefMut};
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::backgrounds::GMBackground;
@@ -18,6 +19,20 @@ pub struct GMTextureGroupInfos {
     pub texture_group_infos: Vec<GMTextureGroupInfo>,
     pub exists: bool,
 }
+
+impl Deref for GMTextureGroupInfos {
+    type Target = Vec<GMTextureGroupInfo>;
+    fn deref(&self) -> &Self::Target {
+        &self.texture_group_infos
+    }
+}
+
+impl DerefMut for GMTextureGroupInfos {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.texture_group_infos
+    }
+}
+
 impl GMChunkElement for GMTextureGroupInfos {
     fn exists(&self) -> bool {
         self.exists
@@ -48,6 +63,7 @@ pub struct GMTextureGroupInfo {
     pub tilesets: Vec<GMRef<GMBackground>>,
     pub data_2022_9: Option<GMTextureGroupInfo2022_9>,
 }
+
 impl GMElement for GMTextureGroupInfo {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -132,6 +148,7 @@ pub struct GMTextureGroupInfo2022_9 {
     pub extension: GMRef<String>,
     pub load_type: GMTextureGroupInfoLoadType,
 }
+
 impl GMElement for GMTextureGroupInfo2022_9 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let directory: GMRef<String> = reader.read_gm_string()?;

@@ -5,6 +5,7 @@ use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::assert::assert_int;
 use std::collections::HashMap;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMTags {
@@ -12,6 +13,20 @@ pub struct GMTags {
     pub asset_tags: HashMap<i32, Vec<GMRef<String>>>,
     pub exists: bool,
 }
+
+impl Deref for GMTags {
+    type Target = Vec<GMRef<String>>;
+    fn deref(&self) -> &Self::Target {
+        &self.tags
+    }
+}
+
+impl DerefMut for GMTags {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.tags
+    }
+}
+
 impl GMChunkElement for GMTags {
     fn exists(&self) -> bool {
         self.exists
@@ -54,6 +69,7 @@ struct TempAssetTags {
     id: i32,
     tags: Vec<GMRef<String>>,
 }
+
 impl GMElement for TempAssetTags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let id = reader.read_i32()?;

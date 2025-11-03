@@ -4,7 +4,7 @@ use crate::gamemaker::elements::backgrounds::GMBackground;
 use crate::gamemaker::elements::code::GMCode;
 use crate::gamemaker::elements::fonts::GMFont;
 use crate::gamemaker::elements::game_objects::GMGameObject;
-use crate::gamemaker::elements::particles::GMParticleSystem;
+use crate::gamemaker::elements::particle_systems::GMParticleSystem;
 use crate::gamemaker::elements::sequence::{GMAnimSpeedType, GMSequence};
 use crate::gamemaker::elements::sprites::GMSprite;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
@@ -15,17 +15,33 @@ use crate::prelude::*;
 use crate::util::init::{num_enum_from, vec_with_capacity};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::cmp::min;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMRooms {
     pub rooms: Vec<GMRoom>,
     pub exists: bool,
 }
+
+impl Deref for GMRooms {
+    type Target = Vec<GMRoom>;
+    fn deref(&self) -> &Self::Target {
+        &self.rooms
+    }
+}
+
+impl DerefMut for GMRooms {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.rooms
+    }
+}
+
 impl GMChunkElement for GMRooms {
     fn exists(&self) -> bool {
         self.exists
     }
 }
+
 impl GMElement for GMRooms {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let rooms: Vec<GMRoom> = reader.read_pointer_list()?;
@@ -67,6 +83,7 @@ pub struct GMRoom {
     pub layers: Vec<GMRoomLayer>,
     pub sequences: Vec<GMSequence>,
 }
+
 impl GMElement for GMRoom {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -224,6 +241,7 @@ pub struct GMRoomFlags {
     pub is_gms2: bool,                   // Room was made in GameMaker: Studio 2
     pub is_gms2_3: bool,                 // Room was made in GameMaker: Studio 2.3
 }
+
 impl GMElement for GMRoomFlags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let raw = reader.read_u32()?;
@@ -265,6 +283,7 @@ pub struct GMRoomView {
     pub speed_y: i32,
     pub object: Option<GMRef<GMGameObject>>,
 }
+
 impl GMElement for GMRoomView {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let enabled = reader.read_bool32()?;
@@ -332,6 +351,7 @@ pub struct GMRoomBackground {
     pub speed_y: i32,
     pub stretch: bool,
 }
+
 impl GMElement for GMRoomBackground {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let enabled = reader.read_bool32()?;
@@ -389,6 +409,7 @@ pub struct GMRoomTile {
     pub scale_y: f32,
     pub color: u32,
 }
+
 impl GMElement for GMRoomTile {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let x = reader.read_i32()?;
@@ -477,6 +498,7 @@ pub struct GMRoomLayer {
     pub effect_data_2022_1: Option<GMRoomLayer2022_1>,
     pub data: GMRoomLayerData,
 }
+
 impl GMElement for GMRoomLayer {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let layer_name: GMRef<String> = reader.read_gm_string()?;
@@ -561,6 +583,7 @@ pub struct GMRoomLayer2022_1 {
     pub effect_type: Option<GMRef<String>>,
     pub effect_properties: Vec<GMRoomLayerEffectProperty>,
 }
+
 impl GMElement for GMRoomLayer2022_1 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let effect_enabled = reader.read_bool32()?;
@@ -583,6 +606,7 @@ pub struct GMRoomLayerEffectProperty {
     pub name: GMRef<String>,
     pub value: GMRef<String>,
 }
+
 impl GMElement for GMRoomLayerEffectProperty {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let kind: GMRoomLayerEffectPropertyType = num_enum_from(reader.read_i32()?)?;
@@ -635,6 +659,7 @@ pub enum GMRoomLayerData {
 pub struct GMRoomLayerDataInstances {
     pub instances: Vec<u32>,
 }
+
 impl GMElement for GMRoomLayerDataInstances {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let instances: Vec<u32> = reader.read_simple_list()?;
@@ -655,6 +680,7 @@ pub struct GMRoomLayerDataTiles {
     pub width: u32,
     pub height: u32,
 }
+
 impl GMElement for GMRoomLayerDataTiles {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let background: Option<GMRef<GMBackground>> = reader.read_resource_by_id_opt()?;
@@ -839,6 +865,7 @@ pub struct GMRoomLayerDataBackground {
     pub animation_speed: f32,
     pub animation_speed_type: GMAnimSpeedType,
 }
+
 impl GMElement for GMRoomLayerDataBackground {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let visible = reader.read_bool32()?;
@@ -890,6 +917,7 @@ pub struct GMRoomLayerDataAssets {
     pub particle_systems: Vec<GMParticleSystemInstance>,
     pub text_items: Vec<GMTextItemInstance>,
 }
+
 impl GMElement for GMRoomLayerDataAssets {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let legacy_tiles_pointer = reader.read_u32()?;
@@ -1000,6 +1028,7 @@ pub struct GMRoomLayerDataEffect {
     pub effect_type: GMRef<String>,
     pub properties: Vec<GMRoomLayerEffectProperty>,
 }
+
 impl GMElement for GMRoomLayerDataEffect {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         // {~~} dont serialize_old if >= 2022.1??
@@ -1029,6 +1058,7 @@ pub struct GMSpriteInstance {
     pub frame_index: f32,
     pub rotation: f32,
 }
+
 impl GMElement for GMSpriteInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -1087,6 +1117,7 @@ pub struct GMSequenceInstance {
     pub frame_index: f32,
     pub rotation: f32,
 }
+
 impl GMElement for GMSequenceInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -1142,6 +1173,7 @@ pub struct GMParticleSystemInstance {
     pub color: u32,
     pub rotation: f32,
 }
+
 impl GMElement for GMParticleSystemInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -1197,6 +1229,7 @@ pub struct GMTextItemInstance {
     pub frame_height: f32,
     pub wrap: bool,
 }
+
 impl GMElement for GMTextItemInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -1275,6 +1308,7 @@ pub struct GMRoomGameObject {
     pub rotation: f32,
     pub pre_create_code: Option<GMRef<GMCode>>,
 }
+
 impl GMElement for GMRoomGameObject {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let x = reader.read_i32()?;

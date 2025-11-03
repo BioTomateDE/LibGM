@@ -33,7 +33,7 @@ impl<'d> Fragment<'d> {
 
 pub fn find_fragments(ctx: &mut DecompileContext, code_ref: GMRef<GMCode>) -> Result<()> {
     let child_start_offsets: SmallMap<u32, &GMCode> = get_child_start_offsets(ctx.gm_data, code_ref)?;
-    let code: &GMCode = code_ref.resolve(&ctx.gm_data.codes.codes)?;
+    let code: &GMCode = code_ref.resolve(&ctx.gm_data.codes)?;
     let code_end_address: u32 = get_code_end_address(&code.instructions);
 
     // Build fragments, using a stack to track hierarchy
@@ -141,7 +141,7 @@ pub fn find_fragments(ctx: &mut DecompileContext, code_ref: GMRef<GMCode>) -> Re
 
 fn get_child_start_offsets(gm_data: &GMData, parent_code_ref: GMRef<GMCode>) -> Result<SmallMap<u32, &GMCode>> {
     let mut start_offsets = SmallMap::new();
-    for code in &gm_data.codes.codes {
+    for code in gm_data.codes.iter() {
         let Some(b15_info) = &code.bytecode15_info else {
             continue;
         };

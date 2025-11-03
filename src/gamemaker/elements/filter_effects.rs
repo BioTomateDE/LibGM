@@ -4,11 +4,25 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::assert::assert_int;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMFilterEffects {
     pub filter_effects: Vec<GMFilterEffect>,
     pub exists: bool,
+}
+
+impl Deref for GMFilterEffects {
+    type Target = Vec<GMFilterEffect>;
+    fn deref(&self) -> &Self::Target {
+        &self.filter_effects
+    }
+}
+
+impl DerefMut for GMFilterEffects {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.filter_effects
+    }
 }
 
 impl GMChunkElement for GMFilterEffects {

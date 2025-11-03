@@ -13,6 +13,7 @@ use image::{DynamicImage, ImageFormat};
 use std::borrow::Cow;
 use std::cmp::max;
 use std::io::{Cursor, Read};
+use std::ops::{Deref, DerefMut};
 
 pub(crate) const MAGIC_PNG_HEADER: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 pub(crate) const MAGIC_BZ2_QOI_HEADER: &[u8; 4] = b"2zoq";
@@ -22,6 +23,19 @@ pub(crate) const MAGIC_QOI_HEADER: &[u8; 4] = b"fioq";
 pub struct GMEmbeddedTextures {
     pub texture_pages: Vec<GMEmbeddedTexture>,
     pub exists: bool,
+}
+
+impl Deref for GMEmbeddedTextures {
+    type Target = Vec<GMEmbeddedTexture>;
+    fn deref(&self) -> &Self::Target {
+        &self.texture_pages
+    }
+}
+
+impl DerefMut for GMEmbeddedTextures {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.texture_pages
+    }
 }
 
 impl GMChunkElement for GMEmbeddedTextures {
