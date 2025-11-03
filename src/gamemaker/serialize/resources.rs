@@ -1,6 +1,6 @@
-use crate::gamemaker::deserialize::GMRef;
+use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
-use crate::gamemaker::serialize::DataBuilder;
+use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 
 impl DataBuilder<'_> {

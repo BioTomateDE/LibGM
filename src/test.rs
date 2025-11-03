@@ -1,6 +1,8 @@
+use crate::error::Context;
+use crate::gamemaker::data::GMData;
+use crate::gamemaker::deserialize::parse_data_file;
 use crate::prelude::*;
 use crate::util::fmt::filename_to_str;
-use crate::{GMData, parse_data_file};
 use std::fs::ReadDir;
 use std::path::PathBuf;
 

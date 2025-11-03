@@ -1,4 +1,5 @@
-use crate::gamemaker::deserialize::{DataReader, GMRef};
+use crate::gamemaker::deserialize::reader::DataReader;
+use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::GMElement;
 use crate::prelude::*;
 use crate::util::fmt::typename;

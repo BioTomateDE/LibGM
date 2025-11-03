@@ -1,15 +1,16 @@
-use crate::gamemaker::deserialize::{DataReader, GMRef};
+use crate::gamemaker::deserialize::reader::DataReader;
+use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::code::GMCode;
 use crate::gamemaker::elements::sprites::GMSprite;
 use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::serialize::DataBuilder;
+use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
+use crate::util::assert::assert_bool;
 use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
-use crate::util::assert::assert_bool;
 
 #[derive(Debug, Clone, Default)]
 pub struct GMGameObjects {

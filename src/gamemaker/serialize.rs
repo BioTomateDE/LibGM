@@ -1,5 +1,5 @@
 use crate::prelude::*;
-mod builder;
+pub(crate) mod builder;
 mod lists;
 mod numbers;
 mod resources;
@@ -8,7 +8,7 @@ pub mod traits;
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::elements::GMChunkElement;
 use crate::util::bench::Stopwatch;
-pub use builder::DataBuilder;
+use builder::DataBuilder;
 
 macro_rules! build_chunks {
     ($builder:expr, $gm_data:expr, $(($name:literal, $field:ident)),* $(,)?) => {{

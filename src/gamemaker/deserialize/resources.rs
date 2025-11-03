@@ -1,6 +1,5 @@
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
-use crate::integrity_assert;
 use crate::prelude::*;
 use crate::util::fmt::typename;
 use std::collections::HashMap;

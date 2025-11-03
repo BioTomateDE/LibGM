@@ -1,4 +1,5 @@
-use crate::gamemaker::deserialize::{DataReader, GMRef};
+use crate::gamemaker::deserialize::reader::DataReader;
+use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::animation_curves::GMAnimationCurve;
 use crate::gamemaker::elements::backgrounds::GMBackground;
 use crate::gamemaker::elements::fonts::GMFont;
@@ -15,8 +16,7 @@ use crate::gamemaker::elements::sprites::GMSprite;
 use crate::gamemaker::elements::timelines::GMTimeline;
 use crate::gamemaker::elements::variables::GMVariable;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::serialize::DataBuilder;
-use crate::integrity_assert;
+use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::assert::assert_int;
 use crate::util::init::{num_enum_from, vec_with_capacity};
@@ -137,7 +137,6 @@ impl GMElement for GMCodes {
                     })?;
                 code.instructions.push(instruction);
             }
-            code.instructions.shrink_to_fit();
         }
 
         reader.cur_pos = last_pos; // has to be chunk end (since instructions are stored separately in b15+)
@@ -1469,7 +1468,7 @@ fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<Code
     Ok(CodeVariable { variable, variable_type, instance_type, is_int32: false })
 }
 
-pub fn parse_instance_type(raw_value: i16, variable_type: GMVariableType) -> Result<GMInstanceType> {
+pub(crate) fn parse_instance_type(raw_value: i16, variable_type: GMVariableType) -> Result<GMInstanceType> {
     // If > 0; then game object id (or room instance id). If < 0, then variable instance type.
     if raw_value > 0 {
         return Ok(if variable_type == GMVariableType::Instance {
@@ -1497,7 +1496,7 @@ pub fn parse_instance_type(raw_value: i16, variable_type: GMVariableType) -> Res
     Ok(instance_type)
 }
 
-pub fn build_instance_type(instance_type: &GMInstanceType) -> i16 {
+pub(crate) fn build_instance_type(instance_type: &GMInstanceType) -> i16 {
     // If > 0; then game object id (or room instance id). If < 0, then variable instance type.
     match instance_type {
         GMInstanceType::Undefined => 0,
@@ -1579,6 +1578,8 @@ fn write_function_occurrence(
     Ok(())
 }
 
+/// Gets the instruction size in "GameMaker units" (1 = 4 bytes).
+/// This size includes extra data like integers, floats, variable references, etc.
 pub const fn get_instruction_size(instruction: &GMInstruction) -> u32 {
     match instruction {
         GMInstruction::Pop(_) => 2,

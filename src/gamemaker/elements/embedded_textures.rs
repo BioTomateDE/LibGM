@@ -1,8 +1,9 @@
 use crate::gamemaker::data::Endianness;
-use crate::gamemaker::deserialize::DataReader;
+
+use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::qoi;
-use crate::gamemaker::serialize::DataBuilder;
+use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
 use crate::util::fmt::hexdump;
@@ -13,9 +14,9 @@ use std::borrow::Cow;
 use std::cmp::max;
 use std::io::{Cursor, Read};
 
-pub const MAGIC_PNG_HEADER: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-pub const MAGIC_BZ2_QOI_HEADER: &[u8; 4] = b"2zoq";
-pub const MAGIC_QOI_HEADER: &[u8; 4] = b"fioq";
+pub(crate) const MAGIC_PNG_HEADER: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+pub(crate) const MAGIC_BZ2_QOI_HEADER: &[u8; 4] = b"2zoq";
+pub(crate) const MAGIC_QOI_HEADER: &[u8; 4] = b"fioq";
 
 #[derive(Debug, Clone, Default)]
 pub struct GMEmbeddedTextures {
@@ -311,15 +312,15 @@ impl GMImage {
         Self::DynImg(dyn_img)
     }
 
-    pub fn from_png(raw_png_data: Vec<u8>) -> Self {
+    pub(crate) fn from_png(raw_png_data: Vec<u8>) -> Self {
         Self::Png(raw_png_data)
     }
 
-    pub fn from_bz2_qoi(raw_bz2_qoi_data: Vec<u8>, header: BZip2QoiHeader) -> Self {
+    pub(crate) fn from_bz2_qoi(raw_bz2_qoi_data: Vec<u8>, header: BZip2QoiHeader) -> Self {
         Self::Bz2Qoi(raw_bz2_qoi_data, header)
     }
 
-    pub fn from_qoi(raw_qoi_data: Vec<u8>) -> Self {
+    pub(crate) fn from_qoi(raw_qoi_data: Vec<u8>) -> Self {
         Self::Qoi(raw_qoi_data)
     }
 
@@ -362,7 +363,7 @@ impl GMImage {
         Ok(image)
     }
 
-    pub fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         match self {
             GMImage::DynImg(dyn_img) => {
                 let mut png_data: Vec<u8> = Vec::new();

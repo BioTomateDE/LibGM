@@ -1,9 +1,10 @@
-use crate::gamemaker::deserialize::{DataReader, GMRef};
+use crate::gamemaker::deserialize::reader::DataReader;
+use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::sequence::{GMAnimSpeedType, GMSequence};
 use crate::gamemaker::elements::sprites_yyswf::{GMSpriteTypeSWF, GMSpriteYYSWFStyleGroup, GMSpriteYYSWFTimeline};
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::serialize::DataBuilder;
+use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::init::{num_enum_from, vec_with_capacity};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
@@ -579,7 +580,7 @@ pub enum GMSpriteSpineTextureEntryData {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMSpriteShapeData<T: GMElement> {
+pub struct GMSpriteShapeData<T> {
     pub min_x: f32,
     pub max_x: f32,
     pub min_y: f32,

@@ -1,5 +1,5 @@
 use crate::gamemaker::data::Endianness;
-use crate::gamemaker::serialize::DataBuilder;
+use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 
 macro_rules! write_int_fn {

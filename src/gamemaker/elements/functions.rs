@@ -1,6 +1,8 @@
-use crate::gamemaker::deserialize::{DataReader, GMChunk, GMRef};
+use crate::gamemaker::deserialize::chunk::GMChunk;
+use crate::gamemaker::deserialize::reader::DataReader;
+use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::serialize::DataBuilder;
+use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 
@@ -182,7 +184,7 @@ impl GMElement for GMCodeLocalVariable {
     }
 }
 
-pub fn parse_occurrence_chain(
+fn parse_occurrence_chain(
     reader: &mut DataReader,
     first_occurrence_pos: u32,
     occurrence_count: u32,

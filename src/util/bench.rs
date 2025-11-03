@@ -41,13 +41,3 @@ impl Display for Stopwatch {
         )
     }
 }
-
-#[macro_export]
-macro_rules! bench {
-    ($label:expr, $expr:expr) => {{
-        let stopwatch = crate::util::bench::Stopwatch::start();
-        let result = $expr;
-        log::trace!("{} took {}", $label, stopwatch);
-        result
-    }};
-}

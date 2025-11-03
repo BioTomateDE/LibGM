@@ -1,10 +1,12 @@
-mod chunk;
+pub(crate) mod chunk;
 mod lists;
 mod numbers;
-mod reader;
-mod resources;
+pub(crate) mod reader;
+pub mod resources;
 
 use crate::gamemaker::data::{Endianness, GMData};
+use crate::gamemaker::deserialize::chunk::GMChunk;
+use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::detect_version::detect_gamemaker_version;
 use crate::gamemaker::elements::animation_curves::GMAnimationCurves;
 use crate::gamemaker::elements::audio_groups::GMAudioGroups;
@@ -38,12 +40,8 @@ use crate::gamemaker::elements::timelines::GMTimelines;
 use crate::gamemaker::elements::ui_nodes::GMRootUINodes;
 use crate::gamemaker::elements::variables::GMVariables;
 use crate::gamemaker::gm_version::{GMVersion, LTSBranch};
-use crate::integrity_assert;
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
-pub use chunk::GMChunk;
-pub use reader::DataReader;
-pub use resources::GMRef;
 
 /// Parse a GameMaker data file (`data.win`, `game.unx`, etc).
 pub fn parse_data_file<T: AsRef<[u8]>>(raw_data: T) -> Result<GMData> {

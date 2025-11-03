@@ -1,5 +1,4 @@
 //! Contains constant values used by the GameMaker VM.
-//!
 pub mod functions {
     // Function names used for try...catch...finally statements
     pub const TRY_HOOK: &str = "@@try_hook@@";
