@@ -28,6 +28,7 @@ impl DerefMut for GMTags {
 }
 
 impl GMChunkElement for GMTags {
+    const NAME: &'static str = "TAGS";
     fn exists(&self) -> bool {
         self.exists
     }

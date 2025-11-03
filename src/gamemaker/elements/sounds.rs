@@ -1,4 +1,3 @@
-use std::ops::{Deref, DerefMut};
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::audio_groups::GMAudioGroup;
@@ -8,6 +7,7 @@ use crate::gamemaker::gm_version::GMVersion;
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMSounds {
@@ -29,6 +29,7 @@ impl DerefMut for GMSounds {
 }
 
 impl GMChunkElement for GMSounds {
+    const NAME: &'static str = "SOND";
     fn exists(&self) -> bool {
         self.exists
     }

@@ -1,10 +1,10 @@
-use std::ops::{Deref, DerefMut};
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::embedded_textures::GMEmbeddedTexture;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMTexturePageItems {
@@ -26,6 +26,7 @@ impl DerefMut for GMTexturePageItems {
 }
 
 impl GMChunkElement for GMTexturePageItems {
+    const NAME: &'static str = "TPAG";
     fn exists(&self) -> bool {
         self.exists
     }

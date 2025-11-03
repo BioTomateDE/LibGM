@@ -29,6 +29,8 @@ impl DerefMut for GMAnimationCurves {
 }
 
 impl GMChunkElement for GMAnimationCurves {
+    const NAME: &'static str = "ACRV";
+
     fn exists(&self) -> bool {
         self.exists
     }

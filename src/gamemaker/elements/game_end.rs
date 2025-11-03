@@ -25,6 +25,7 @@ impl DerefMut for GMGameEndScripts {
 }
 
 impl GMChunkElement for GMGameEndScripts {
+    const NAME: &'static str = "GMEN";
     fn exists(&self) -> bool {
         self.exists
     }

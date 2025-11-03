@@ -1,9 +1,9 @@
-use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::sprites::GMSprite;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
+use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
 use crate::util::assert::assert_int;
 use crate::util::init::num_enum_from;
@@ -30,6 +30,7 @@ impl DerefMut for GMParticleEmitters {
 }
 
 impl GMChunkElement for GMParticleEmitters {
+    const NAME: &'static str = "PSEM";
     fn exists(&self) -> bool {
         self.exists
     }

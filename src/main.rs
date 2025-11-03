@@ -41,6 +41,21 @@ fn main_open_and_close() -> Result<()> {
     log::info!("Parsing data file");
     let gm_data: GMData = parse_data_file(raw_data).context("parsing data file")?;
 
+    // Export Code Disassembly
+    if !std::fs::exists("expasm").unwrap() {
+        std::fs::create_dir("expasm").unwrap();
+    }
+    for code in &gm_data.codes.codes {
+        if code.instructions.is_empty() {
+            continue;
+        }
+        let code_name = code.name.resolve(&gm_data.strings.strings)?;
+        let assembly = libgm::gml::disassembler::disassemble_code(&gm_data, code)?;
+        // println!("Disassembly of {code_name:?}: \n{}", assembly);
+        std::fs::write(format!("expasm/{code_name}.asm"), assembly)
+            .with_context(|| format!("Could not write assembly of code {code_name:?}"))?;
+    }
+
     // Decompile a specific code
     let code_count = gm_data.codes.len();
     for i in 0..code_count {

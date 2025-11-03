@@ -1,4 +1,3 @@
-use std::ops::{Deref, DerefMut};
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::game_objects::GMGameObjectEvent;
@@ -6,6 +5,7 @@ use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMTimelines {
@@ -27,6 +27,7 @@ impl DerefMut for GMTimelines {
 }
 
 impl GMChunkElement for GMTimelines {
+    const NAME: &'static str = "TMLN";
     fn exists(&self) -> bool {
         self.exists
     }

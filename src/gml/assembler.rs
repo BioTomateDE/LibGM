@@ -253,9 +253,9 @@ fn parse_push(types: &DataTypes, line: &mut &str, gm_data: &mut GMData) -> Resul
         GMDataType::Double => GMCodeValue::Double(parse_float(line)?),
         GMDataType::Boolean => GMCodeValue::Boolean(parse_bool(line)?),
         GMDataType::String => {
-            let string_text: String = parse_string_literal(line)?;
-            let string_ref: GMRef<String> = gm_data.make_string(&string_text);
-            GMCodeValue::String(string_ref)
+            let string: String = parse_string_literal(line)?;
+            let string: GMRef<String> = gm_data.strings.make(&string);
+            GMCodeValue::String(string)
         }
         GMDataType::Variable => GMCodeValue::Variable(parse_variable(line, &gm_data)?),
     };

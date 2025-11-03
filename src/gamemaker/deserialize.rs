@@ -84,24 +84,19 @@ pub fn parse_data_file<T: AsRef<[u8]>>(raw_data: T) -> Result<GMData> {
         let start_pos = reader.cur_pos;
 
         reader.cur_pos += chunk_length;
-        if reader.cur_pos as usize > raw_data.len() {
+        if reader.cur_pos > total_data_len {
             bail!(
                 "Trying to read chunk '{}' out of data bounds: specified length {} implies chunk \
                 end position {}; which is greater than the total data length {}",
                 name,
                 chunk_length,
                 reader.cur_pos,
-                raw_data.len(),
+                total_data_len,
             );
         }
 
-        let is_last_chunk: bool = reader.cur_pos as usize == raw_data.len();
-        let chunk = GMChunk {
-            name: name.clone(),
-            start_pos,
-            end_pos: reader.cur_pos,
-            is_last_chunk,
-        };
+        let is_last_chunk: bool = reader.cur_pos == total_data_len;
+        let chunk = GMChunk { start_pos, end_pos: reader.cur_pos, is_last_chunk };
 
         integrity_assert! {
             !reader.chunks.contains_key(&name),
@@ -110,12 +105,27 @@ pub fn parse_data_file<T: AsRef<[u8]>>(raw_data: T) -> Result<GMData> {
         reader.chunks.insert(name, chunk);
     }
 
-    // Strings and General Info need to be parsed before anything else
-    reader.strings = reader.read_chunk_required("STRG")?;
-    reader.general_info = reader.read_chunk_required("GEN8")?;
+    // Properly initialize GEN8 version before reading chunks.
+    reader.specified_version = reader.read_gen8_version()?;
 
-    let specified_version: GMVersion = reader.general_info.version.clone();
-    if specified_version == GMVersion::new(2, 0, 0, 0, LTSBranch::PreLTS) {
+    // The following chunk read order is required:
+    // Required: STRG → GEN8 → all others
+    //
+    // Then (in any order):
+    // • [FUNC, VARI] → CODE
+    // • TPAG → [BGND, EMBI, FONT, OPTN, SPRT]
+
+    reader.strings = reader.read_chunk()?;
+    if reader.strings.is_empty() {
+        bail!("STRG chunk does not exist or is empty");
+    }
+    reader.general_info = reader.read_chunk()?;
+    if !reader.general_info.exists {
+        bail!("GEN8 chunk does not exist");
+    }
+
+    const GMS2: GMVersion = GMVersion::new(2, 0, 0, 0, LTSBranch::PreLTS);
+    if reader.specified_version == GMS2 {
         let stopwatch = Stopwatch::start();
         detect_gamemaker_version(&mut reader).context("detecting GameMaker version")?;
         log::trace!("Detecting GameMaker Version took {stopwatch}");
@@ -128,52 +138,56 @@ pub fn parse_data_file<T: AsRef<[u8]>>(raw_data: T) -> Result<GMData> {
         reader.general_info.bytecode_version,
     );
 
-    let is_yyc: bool = check_yyc(&reader)?;
-    let (variables, functions, codes): (GMVariables, GMFunctions, GMCodes);
-    if is_yyc {
-        variables = Default::default();
-        functions = Default::default();
-        codes = Default::default();
-    } else {
-        // Variables and functions have to be deserialized before code.
-        variables = reader.read_chunk_required("VARI")?;
-        functions = reader.read_chunk_required("FUNC")?;
-        codes = reader.read_chunk_required("CODE")?;
-    };
+    let is_yyc: bool = check_yyc(&reader).context("Checking YYC")?;
+    let mut variables = GMVariables::default();
+    let mut functions = GMFunctions::default();
+    let mut codes = GMCodes::default();
 
-    let embedded_textures: GMEmbeddedTextures = reader.read_chunk_required("TXTR")?;
-    let texture_page_items: GMTexturePageItems = reader.read_chunk_required("TPAG")?;
-    let scripts: GMScripts = reader.read_chunk_required("SCPT")?;
-    let fonts: GMFonts = reader.read_chunk_required("FONT")?;
-    let sprites: GMSprites = reader.read_chunk_required("SPRT")?;
-    let game_objects: GMGameObjects = reader.read_chunk_required("OBJT")?;
-    let rooms: GMRooms = reader.read_chunk_required("ROOM")?;
-    let backgrounds: GMBackgrounds = reader.read_chunk_required("BGND")?;
-    let audios: GMEmbeddedAudios = reader.read_chunk_required("AUDO")?;
-    let sounds: GMSounds = reader.read_chunk_required("SOND")?;
-    // Some of these chunks probably aren't actually required; make them optional when issues occur
-    let paths: GMPaths = reader.read_chunk_optional("PATH")?;
-    let options: GMOptions = reader.read_chunk_optional("OPTN")?;
-    let sequences: GMSequences = reader.read_chunk_optional("SEQN")?;
-    let particle_systems: GMParticleSystems = reader.read_chunk_optional("PSYS")?;
-    let particle_emitters: GMParticleEmitters = reader.read_chunk_optional("PSEM")?;
-    let language_info: GMLanguageInfo = reader.read_chunk_optional("LANG")?;
-    let extensions: GMExtensions = reader.read_chunk_optional("EXTN")?;
-    let audio_groups: GMAudioGroups = reader.read_chunk_optional("AGRP")?;
-    let global_init_scripts: GMGlobalInitScripts = reader.read_chunk_optional("GLOB")?;
-    let game_end_scripts: GMGameEndScripts = reader.read_chunk_optional("GMEN")?;
-    let shaders: GMShaders = reader.read_chunk_optional("SHDR")?;
-    let root_ui_nodes: GMRootUINodes = reader.read_chunk_optional("UILR")?;
-    let timelines: GMTimelines = reader.read_chunk_optional("TMLN")?;
-    let embedded_images: GMEmbeddedImages = reader.read_chunk_optional("EMBI")?;
-    let texture_group_infos: GMTextureGroupInfos = reader.read_chunk_optional("TGIN")?;
-    let tags: GMTags = reader.read_chunk_optional("TAGS")?;
-    let feature_flags: GMFeatureFlags = reader.read_chunk_optional("FEAT")?;
-    let filter_effects: GMFilterEffects = reader.read_chunk_optional("FEDS")?;
-    let animation_curves: GMAnimationCurves = reader.read_chunk_optional("ACRV")?;
+    let texture_page_items: GMTexturePageItems = reader.read_chunk()?;
+
+    let mut stopwatch2 = Stopwatch::start();
+    if !is_yyc {
+        variables = reader.read_chunk()?;
+        functions = reader.read_chunk()?;
+        stopwatch2 = Stopwatch::start();
+        // TODO: builder pattern for parser:
+        // - opt out of any integrity check (separated)
+        // - enable threaded chunk reading (implement ts)
+        codes = reader.read_chunk()?;
+    }
+
+    let embedded_textures: GMEmbeddedTextures = reader.read_chunk()?;
+    let scripts: GMScripts = reader.read_chunk()?;
+    let fonts: GMFonts = reader.read_chunk()?;
+    let sprites: GMSprites = reader.read_chunk()?;
+    let game_objects: GMGameObjects = reader.read_chunk()?;
+    let rooms: GMRooms = reader.read_chunk()?;
+    let backgrounds: GMBackgrounds = reader.read_chunk()?;
+    let audios: GMEmbeddedAudios = reader.read_chunk()?;
+    let sounds: GMSounds = reader.read_chunk()?;
+    let paths: GMPaths = reader.read_chunk()?;
+    let options: GMOptions = reader.read_chunk()?;
+    let sequences: GMSequences = reader.read_chunk()?;
+    let particle_systems: GMParticleSystems = reader.read_chunk()?;
+    let particle_emitters: GMParticleEmitters = reader.read_chunk()?;
+    let language_info: GMLanguageInfo = reader.read_chunk()?;
+    let extensions: GMExtensions = reader.read_chunk()?;
+    let audio_groups: GMAudioGroups = reader.read_chunk()?;
+    let global_init_scripts: GMGlobalInitScripts = reader.read_chunk()?;
+    let game_end_scripts: GMGameEndScripts = reader.read_chunk()?;
+    let shaders: GMShaders = reader.read_chunk()?;
+    let root_ui_nodes: GMRootUINodes = reader.read_chunk()?;
+    let timelines: GMTimelines = reader.read_chunk()?;
+    let embedded_images: GMEmbeddedImages = reader.read_chunk()?;
+    let texture_group_infos: GMTextureGroupInfos = reader.read_chunk()?;
+    let tags: GMTags = reader.read_chunk()?;
+    let feature_flags: GMFeatureFlags = reader.read_chunk()?;
+    let filter_effects: GMFilterEffects = reader.read_chunk()?;
+    let animation_curves: GMAnimationCurves = reader.read_chunk()?;
+    log::trace!("Reading independent chunks took {stopwatch2}");
 
     // This chunk is so useless that it is perfectly safe to throw it away.
-    let _: GMDataFiles = reader.read_chunk_optional("DAFL")?;
+    let _: GMDataFiles = reader.read_chunk()?;
 
     // Throw error if not all chunks read to prevent silent data loss
     if !reader.chunks.is_empty() {

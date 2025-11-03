@@ -1,4 +1,3 @@
-use std::ops::{Deref, DerefMut};
 use crate::gamemaker::deserialize::chunk::GMChunk;
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
@@ -9,6 +8,7 @@ use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMVariables {
@@ -33,6 +33,7 @@ impl DerefMut for GMVariables {
 }
 
 impl GMChunkElement for GMVariables {
+    const NAME: &'static str = "VARI";
     fn exists(&self) -> bool {
         self.exists
     }

@@ -37,6 +37,7 @@ impl DerefMut for GMSequences {
 }
 
 impl GMChunkElement for GMSequences {
+    const NAME: &'static str = "SEQN";
     fn exists(&self) -> bool {
         self.exists
     }

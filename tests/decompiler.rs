@@ -14,12 +14,7 @@ fn test_decompiler() {
             }
 
             let code_name = code.name.resolve(&data.strings)?;
-            print!(
-                "({}/{}) Decompiling: {:<64}\n",
-                i + 1,
-                data.codes.len(),
-                code_name
-            );
+            print!("({}/{}) Decompiling: {:<64}\n", i + 1, data.codes.len(), code_name);
 
             if code.instructions.is_empty() {
                 continue;

@@ -204,6 +204,9 @@ impl GMElement for bool {
 
 /// All chunk elements should implement this trait.
 pub(crate) trait GMChunkElement: GMElement + Default {
+    /// The four character GameMaker chunk name (GEN8, STRG, VARI, etc.).
+    const NAME: &'static str;
+
     /// Returns `true` if this chunk is present in the data file.
     ///
     /// This differs from simply checking if the chunk is empty:

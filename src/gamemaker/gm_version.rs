@@ -44,6 +44,12 @@ impl GMVersion {
     pub const fn new(major: u32, minor: u32, release: u32, build: u32, branch: LTSBranch) -> Self {
         Self { major, minor, release, build, branch }
     }
+
+    /// Creates a temporary placeholder [`GMVersion`] to avoid [`Option`]s.
+    /// Make sure to never read this value before properly initialized (overwritten)!
+    pub const fn stub() -> Self {
+        Self::new(13371337, 13371337, 13371337, 13371337, LTSBranch::PreLTS)
+    }
 }
 
 impl Display for GMVersion {

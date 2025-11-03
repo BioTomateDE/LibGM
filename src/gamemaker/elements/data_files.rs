@@ -7,6 +7,7 @@ use crate::prelude::*;
 pub struct GMDataFiles;
 
 impl GMChunkElement for GMDataFiles {
+    const NAME: &'static str = "DAFL";
     /// This chunk is completely useless and should never be serialized.
     fn exists(&self) -> bool {
         false

@@ -29,6 +29,7 @@ impl DerefMut for GMAudioGroups {
 }
 
 impl GMChunkElement for GMAudioGroups {
+    const NAME: &'static str = "AGRP";
     fn exists(&self) -> bool {
         self.exists
     }

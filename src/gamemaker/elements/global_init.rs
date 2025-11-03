@@ -26,6 +26,7 @@ impl DerefMut for GMGlobalInitScripts {
 }
 
 impl GMChunkElement for GMGlobalInitScripts {
+    const NAME: &'static str = "GLOB";
     fn exists(&self) -> bool {
         self.exists
     }

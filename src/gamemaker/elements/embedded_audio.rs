@@ -24,6 +24,7 @@ impl DerefMut for GMEmbeddedAudios {
 }
 
 impl GMChunkElement for GMEmbeddedAudios {
+    const NAME: &'static str = "AUDO";
     fn exists(&self) -> bool {
         self.exists
     }

@@ -16,6 +16,94 @@ pub struct GMStrings {
     pub exists: bool,
 }
 
+impl GMStrings {
+    /// Looks up a string in the string table by exact match.
+    ///
+    /// # Returns
+    /// - `Some(GMRef<String>)` if the string exists in the table
+    /// - `None` if the string is not found
+    ///
+    /// # Note
+    /// Performs a linear search through all strings.
+    pub fn find(&self, target: &str) -> Option<GMRef<String>> {
+        self.find_by(|s| s == target)
+    }
+
+    /// Finds a string using a custom predicate function.
+    ///
+    /// # Returns
+    /// - `Some(GMRef<String>)` if a string matching the predicate exists in the table
+    /// - `None` if a matching string is not found
+    ///
+    /// # Examples
+    /// ```
+    /// // Case-insensitive search
+    /// table.find_by(|s| s.eq_ignore_ascii_case("HELLO"));
+    ///
+    /// // Prefix search
+    /// table.find_by(|s| s.starts_with("prefix"));
+    /// ```
+    ///
+    /// # Note
+    /// Performs a linear search through all strings.
+    pub fn find_by<P: Fn(&str) -> bool>(&self, predicate: P) -> Option<GMRef<String>> {
+        self.strings
+            .iter()
+            .enumerate()
+            .find(|(_, string)| predicate(string))
+            .map(|(i, _)| GMRef::new(i as u32))
+    }
+
+    /// Gets or creates a string in the string table.
+    ///
+    /// If the string already exists in the table, returns the existing reference.
+    /// Otherwise, adds the string to the table and returns a new reference.
+    ///
+    /// # Examples
+    /// ```
+    /// let ref1 = gm_data.make_string("hello");
+    /// let ref2 = gm_data.make_string("hello");
+    /// assert_eq!(ref1, ref2); // Same reference for equal strings
+    /// ```
+    ///
+    /// # Note
+    /// If you need the string reference to be unique, use [`GMStrings::make_unique`] instead.
+    pub fn make(&mut self, target: &str) -> GMRef<String> {
+        if let Some(string_ref) = self.find(target) {
+            return string_ref;
+        }
+        self.make_unique(target.to_string())
+    }
+
+    /// Adds a new string to the table, guaranteeing uniqueness.
+    ///
+    /// This is useful for variable and function names, which
+    /// use String IDs as identification and thereforce need
+    /// unique string references.
+    ///
+    /// This method always creates a new entry in the string table
+    /// without checking for duplicates. The string is assumed to
+    /// not already exist in the table.
+    ///
+    /// # Note
+    /// For most use cases, prefer [`make`] which handles deduplication
+    /// automatically. Use this method only when you need to force
+    /// a new entry or know the string is unique.
+    ///
+    /// # Examples
+    /// ```
+    /// // Force adding a duplicate as a separate entry
+    /// let ref1 = gm_data.make("hello");
+    /// let ref2 = gm_data.make_unique("hello".to_string());
+    /// assert_ne!(ref1, ref2); // Different references despite equal content
+    /// ```
+    pub fn make_unique(&mut self, string: String) -> GMRef<String> {
+        let index = self.strings.len();
+        self.strings.push(string);
+        GMRef::new(index as u32)
+    }
+}
+
 impl Default for GMStrings {
     fn default() -> Self {
         Self {
@@ -41,6 +129,7 @@ impl DerefMut for GMStrings {
 }
 
 impl GMChunkElement for GMStrings {
+    const NAME: &'static str = "STRG";
     fn exists(&self) -> bool {
         self.exists
     }
@@ -102,11 +191,26 @@ impl GMElement for GMStrings {
 }
 
 impl GMRef<String> {
-    /// Tries to resolve a GameMaker string reference to the actual character string.
-    /// Returns a placeholder string if resolving failed.
+    /// Resolves this string reference for display purposes.
     ///
-    /// This function is meant to be used in closures where propagating errors is awkward.
-    /// Otherwise, using [`GMRef::resolve`] is preferred.
+    /// Returns the actual string if the reference is valid, or a placeholder
+    /// string (`"<invalid string reference>"`) if the reference is invalid.
+    ///
+    /// # When to use
+    /// - In logging, debugging, or UI contexts where you always want to show something
+    /// - In closures or contexts where error propagation is impractical
+    ///
+    /// # When not to use
+    /// - For logic that needs to handle invalid references properly
+    /// - When you need to distinguish between valid and invalid references
+    ///
+    /// **Prefer [`GMRef::resolve`] for proper error handling.**
+    ///
+    /// # Examples
+    /// ```
+    /// // Safe for display, even with potentially invalid references
+    /// println!("Message: {}", string_ref.display(&gm_data.strings));
+    /// ```
     pub fn display<'a>(&self, gm_strings: &'a GMStrings) -> &'a str {
         self.resolve(&gm_strings.strings)
             .map(|i| i.as_str())

@@ -46,6 +46,7 @@ impl DerefMut for GMCodes {
 }
 
 impl GMChunkElement for GMCodes {
+    const NAME: &'static str = "CODE";
     fn exists(&self) -> bool {
         self.exists
     }
@@ -937,10 +938,7 @@ impl InstructionData for GMPopInstruction {
         builder.write_i16(build_instance_type(&self.destination.instance_type));
         builder.write_u8(u8::from(self.type1) | u8::from(self.type2) << 4);
         builder.write_u8(opcode);
-        let variable: &GMVariable = self
-            .destination
-            .variable
-            .resolve(&builder.gm_data.variables)?;
+        let variable: &GMVariable = self.destination.variable.resolve(&builder.gm_data.variables)?;
         write_variable_occurrence(
             builder,
             self.destination.variable.index,

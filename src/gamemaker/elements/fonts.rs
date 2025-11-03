@@ -29,6 +29,7 @@ impl DerefMut for GMFonts {
 }
 
 impl GMChunkElement for GMFonts {
+    const NAME: &'static str = "FONT";
     fn exists(&self) -> bool {
         self.exists
     }
