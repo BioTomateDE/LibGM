@@ -1,3 +1,5 @@
+// why are you going through my ancient ass commits
+
 #![deny(unused_must_use)]
 #![deny(unreachable_patterns)]
 #![warn(clippy::pedantic)]
