@@ -44,7 +44,6 @@ impl<'a, T> GMRef<T> {
     ///
     /// # Errors
     /// Returns an error if `self.index` is out of bounds for the provided vector.
-    ///
     pub fn resolve(&self, elements_by_index: &'a Vec<T>) -> Result<&'a T> {
         elements_by_index.get(self.index as usize).with_context(|| {
             format!(

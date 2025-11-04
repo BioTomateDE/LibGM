@@ -86,7 +86,7 @@ impl GMStrings {
     /// not already exist in the table.
     ///
     /// # Note
-    /// For most use cases, prefer [`make`] which handles deduplication
+    /// For most use cases, prefer [`GMStrings::make`] which handles deduplication
     /// automatically. Use this method only when you need to force
     /// a new entry or know the string is unique.
     ///

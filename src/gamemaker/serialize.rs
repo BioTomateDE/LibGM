@@ -3,7 +3,7 @@ pub(crate) mod builder;
 mod lists;
 mod numbers;
 mod resources;
-pub mod traits;
+pub(crate) mod traits;
 
 use crate::gamemaker::data::GMData;
 use crate::gamemaker::elements::GMChunkElement;

@@ -245,8 +245,15 @@ impl<'a> DataReader<'a> {
         self.cur_pos - self.chunk.start_pos
     }
 
-    /// If the GameMaker version requirement is met, deserializes the element and returns it.
-    /// Otherwise, just returns [`None`].
+    /// Deserializes an element if the GameMaker version meets the requirement (`>=`).
+    ///
+    /// This is useful for handling format changes across different GameMaker versions
+    /// where certain chunks or fields were added, removed, or modified.
+    ///
+    /// # Returns
+    /// - `Ok(Some(T))` if the version requirement is met and deserialization succeeds
+    /// - `Ok(None)` if the version requirement is not met
+    /// - `Err(_)` if the version requirement is met but deserialization fails
     pub fn deserialize_if_gm_version<T: GMElement, V: Into<GMVersionReq>>(&mut self, ver_req: V) -> Result<Option<T>> {
         if self.general_info.is_version_at_least(ver_req) {
             Ok(Some(T::deserialize(self)?))
@@ -255,8 +262,15 @@ impl<'a> DataReader<'a> {
         }
     }
 
-    /// If the Bytecode version requirement is met, deserializes the element and returns it.
-    /// Otherwise, just returns [`None`].
+    /// Deserializes an element if the bytecode version meets the requirement (`>=`).
+    ///
+    /// Bytecode version is separate from the GameMaker IDE version and tracks
+    /// changes to the virtual machine instruction format.
+    ///
+    /// # Returns
+    /// - `Ok(Some(T))` if the bytecode version requirement is met and deserialization succeeds
+    /// - `Ok(None)` if the bytecode version requirement is not met
+    /// - `Err(_)` if the bytecode version requirement is met but deserialization fails
     pub fn deserialize_if_bytecode_version<T: GMElement>(&mut self, ver_req: u8) -> Result<Option<T>> {
         if self.general_info.bytecode_version >= ver_req {
             Ok(Some(T::deserialize(self)?))
