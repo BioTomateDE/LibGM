@@ -87,10 +87,10 @@ pub struct GMGeneralInfo {
 }
 
 impl Default for GMGeneralInfo {
-    /// Should only be used as a small stub in [DataReader] because
-    /// Rust doesn't have nullables ([Option]s are too ugly for this).
-    /// ___
-    /// **THIS VALUE SHOULD NEVER BE USED! IMMEDIATELY REPLACE IT WITH ACTUAL `GEN8` WHEN PARSED.**
+    /// Should only be used as a small stub in `DataReader` because
+    /// Rust doesn't have nullables ([`Option`]s are too ugly for this).
+    /// ___________
+    /// **This value should never be used!** Immediately replace it with actual `GEN8` when parsed.
     fn default() -> Self {
         Self {
             is_debugger_disabled: true,

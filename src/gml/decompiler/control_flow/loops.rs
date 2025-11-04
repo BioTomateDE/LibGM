@@ -14,7 +14,7 @@ pub struct Loop {
     pub loop_type: LoopType,
 
     /// The node before this loop; usually a block with [GMInstruction::PushWithContext] after it.
-    /// *This is only set for [Loop::With].*
+    /// *This is only set for [LoopType::With].*
     pub before: Option<NodeRef>,
 
     /// The top loop point of the loop. This is where the loop condition begins to be evaluated.
@@ -30,14 +30,14 @@ pub struct Loop {
     pub body: Option<NodeRef>,
 
     /// If [Some], this is a special block jumped to from within the with statement for "break" statements.
-    /// *This is only set for [Loop::With].*
+    /// *This is only set for [LoopType::With].*
     pub break_block: Option<NodeRef>,
 
     /// If [Some], then it was detected that this while loop must be written as a for loop.
     /// This can occur when "continue" statements are used within the loop, which otherwise
     /// could not be written using normal if/else statements.
     /// This points to the start of the "incrementing" code of the for loop.
-    /// *This is only set for [Loop::While].*
+    /// *This is only set for [LoopType::While].*
     pub for_loop_incrementor: Option<NodeRef>,
 }
 

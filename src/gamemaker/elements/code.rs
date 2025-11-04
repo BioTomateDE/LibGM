@@ -1284,17 +1284,18 @@ pub enum GMDataType {
 pub enum GMInstanceType {
     Undefined,
 
-    /// Represents the current chunk instance.
+    /// Represents the current `self` instance.
     Self_(Option<GMRef<GMGameObject>>),
 
     /// Instance ID in the Room -100000; used when the Variable Type is [`GMVariableType::Instance`].
     /// This doesn't exist in UTMT.
     RoomInstance(i16),
 
-    /// Represents the other context, which has multiple definitions based on the location used.
+    /// Represents the `other` context, which has multiple definitions based on the location used.
     Other,
 
-    /// Represents all active object instances. Assignment operations can perform a loop.
+    /// Represents all active object instances.
+    /// Assignment operations can perform a loop.
     All,
 
     /// Represents no object/instance.
@@ -1312,7 +1313,7 @@ pub enum GMInstanceType {
     /// Instance is stored in a Variable data type on the top of the stack.
     StackTop,
 
-    /// Used for function argument variables in GMLv2 (GMS 2.3).
+    /// Used for function argument variables in GMS 2.3+.
     Argument,
 
     /// Used for static variables.
@@ -1530,18 +1531,19 @@ pub(crate) fn build_instance_type(instance_type: &GMInstanceType) -> i16 {
 fn write_variable_occurrence(
     builder: &mut DataBuilder,
     gm_index: u32,
-    occurrence_position: usize,
+    occurrence_pos: usize,
     name_string_id: u32,
     variable_type: GMVariableType,
 ) -> Result<()> {
-    let occurrence_map_len: usize = builder.variable_occurrences.len(); // Prevent double borrow on error message
-    let occurrences: &mut Vec<(usize, GMVariableType)> = builder.variable_occurrences.get_mut(gm_index as usize).with_context(|| {
-        format!("Trying to get inner variable occurrences vec out of bounds while writing occurrence: {gm_index} >= {occurrence_map_len}")
-    })?;
+    let len: usize = builder.variable_occurrences.len();
+    let occurrences: &mut Vec<(usize, GMVariableType)> = builder
+        .variable_occurrences
+        .get_mut(gm_index as usize)
+        .with_context(|| format!("Invalid Variable GMRef while writing occurrence: {gm_index} >= {len}"))?;
 
-    if let Some((last_occurrence_pos, old_variable_type)) = occurrences.last().cloned() {
-        // Replace last occurrence (which is name string id) with next occurrence offset
-        let occurrence_offset: i32 = occurrence_position as i32 - last_occurrence_pos as i32;
+    if let Some(&(last_occurrence_pos, old_variable_type)) = occurrences.last() {
+        // Replace last occurrence with next occurrence offset
+        let occurrence_offset: i32 = occurrence_pos as i32 - last_occurrence_pos as i32;
         let occurrence_offset_full: i32 =
             occurrence_offset & 0x07FFFFFF | (((u8::from(old_variable_type) & 0xF8) as i32) << 24);
         builder.overwrite_i32(occurrence_offset_full, last_occurrence_pos + 4)?;
@@ -1557,24 +1559,25 @@ fn write_variable_occurrence(
         .variable_occurrences
         .get_mut(gm_index as usize)
         .unwrap()
-        .push((occurrence_position, variable_type));
+        .push((occurrence_pos, variable_type));
     Ok(())
 }
 
 fn write_function_occurrence(
     builder: &mut DataBuilder,
     gm_index: u32,
-    occurrence_position: usize,
+    occurrence_pos: usize,
     name_string_id: u32,
 ) -> Result<()> {
-    let occurrence_map_len: usize = builder.function_occurrences.len(); // Prevent double borrow on error message
-    let occurrences: &mut Vec<usize> = builder.function_occurrences.get_mut(gm_index as usize).with_context(|| {
-        format!("Trying to get inner function occurrences vec out of bounds while writing occurrence: {gm_index} >= {occurrence_map_len}")
-    })?;
+    let len: usize = builder.function_occurrences.len();
+    let occurrences: &mut Vec<usize> = builder
+        .function_occurrences
+        .get_mut(gm_index as usize)
+        .with_context(|| format!("Invalid Function GMRef while writing occurrence: {gm_index} >= {len}"))?;
 
     if let Some(last_occurrence_pos) = occurrences.last().cloned() {
-        // Replace last occurrence (which is name string id) with next occurrence offset
-        let occurrence_offset: i32 = occurrence_position as i32 - last_occurrence_pos as i32;
+        // Replace last occurrence with next occurrence offset
+        let occurrence_offset: i32 = occurrence_pos as i32 - last_occurrence_pos as i32;
         builder.overwrite_i32(occurrence_offset & 0x07FFFFFF, last_occurrence_pos + 4)?;
     }
 
@@ -1586,7 +1589,7 @@ fn write_function_occurrence(
         .function_occurrences
         .get_mut(gm_index as usize)
         .unwrap()
-        .push(occurrence_position);
+        .push(occurrence_pos);
     Ok(())
 }
 

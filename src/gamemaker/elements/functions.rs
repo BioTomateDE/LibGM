@@ -37,14 +37,6 @@ impl GMChunkElement for GMFunctions {
 
 impl GMElement for GMFunctions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        if reader.get_chunk_length() == 0 && reader.general_info.bytecode_version >= 15 {
-            return Ok(Self {
-                functions: vec![],
-                code_locals: GMCodeLocals { code_locals: vec![], exists: false },
-                exists: false,
-            });
-        }
-
         let functions_count = if reader.general_info.bytecode_version <= 14 {
             reader.get_chunk_length() / 12
         } else {
@@ -88,10 +80,10 @@ impl GMElement for GMFunctions {
         }
 
         let code_locals: GMCodeLocals;
-        if reader.general_info.bytecode_version <= 14 || reader.general_info.is_version_at_least((2024, 8)) {
-            code_locals = Default::default();
-        } else {
+        if reader.general_info.bytecode_version >= 15 && !reader.general_info.is_version_at_least((2024, 8)) {
             code_locals = GMCodeLocals::deserialize(reader)?;
+        } else {
+            code_locals = Default::default();
         }
         Ok(GMFunctions { functions, code_locals, exists: true })
     }
@@ -105,13 +97,16 @@ impl GMElement for GMFunctions {
             let occurrences: &Vec<usize> = builder.function_occurrences.get(i).ok_or_else(|| {
                 format!(
                     "Could not resolve function occurrence with index {i} in list with length {}",
-                    builder.function_occurrences.len()
+                    builder.function_occurrences.len(),
                 )
             })?;
             let occurrence_count: usize = occurrences.len();
+
+            // Before GM 2.3, the first occurrence points to the instruction rather than the next offset
+            let gm2_3: bool = builder.is_gm_version_at_least((2, 3));
             let first_occurrence: i32 = match occurrences.first() {
-                Some(occurrence) if builder.is_gm_version_at_least((2, 3)) => *occurrence as i32 + 4,
-                Some(occurrence) => *occurrence as i32, // Before gm 2.3, the first occurrence points to the instruction rather than the next offset
+                Some(&occurrence) if gm2_3 => occurrence as i32 + 4,
+                Some(&occurrence) => occurrence as i32,
                 None => -1,
             };
 

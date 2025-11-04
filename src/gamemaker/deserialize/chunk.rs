@@ -47,7 +47,7 @@ impl DataReader<'_> {
         Ok(string)
     }
 
-    pub(crate) fn read_chunk<T: GMChunkElement>(&mut self) -> Result<T> {
+    pub fn read_chunk<T: GMChunkElement>(&mut self) -> Result<T> {
         let Some(chunk) = self.chunks.remove(T::NAME) else {
             return Ok(T::default());
         };

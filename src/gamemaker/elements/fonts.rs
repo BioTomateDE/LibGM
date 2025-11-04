@@ -140,7 +140,7 @@ pub struct GMFont {
     /// Exists since bytecode 17, but seems to be only get checked in GM 2022.2+.
     pub ascender_offset: Option<i32>,
 
-    /// Probably this: https://en.wikipedia.org/wiki/Ascender_(typography); but needs investigation.
+    /// Probably this: <https://en.wikipedia.org/wiki/Ascender_(typography)>; but needs investigation.
     /// Was introduced in GM 2022.2.
     pub ascender: Option<u32>,
 

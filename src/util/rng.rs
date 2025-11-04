@@ -1,5 +1,5 @@
 //! Implementation of .NET's Random algorithm based on Knuth's subtractive method
-//! Reference: https://github.com/dotnet/runtime/blob/main/src/libraries/System.Private.CoreLib/src/System/Random.cs
+//! Reference: <https://github.com/dotnet/runtime/blob/main/src/libraries/System.Private.CoreLib/src/System/Random.cs>
 
 pub struct CSharpRng {
     seed_array: [i32; 56],
