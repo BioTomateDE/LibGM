@@ -1,5 +1,6 @@
 #![allow(unused)]
 
+use libgm::gamemaker::deserialize::DataFileParser;
 use libgm::gamemaker::deserialize::resources::GMRef;
 use libgm::prelude::*;
 use libgm::util::bench::Stopwatch;
@@ -39,7 +40,10 @@ fn main_open_and_close() -> Result<()> {
     let raw_data: Vec<u8> = read_data_file(input_path).context("reading data file")?;
 
     log::info!("Parsing data file");
-    let gm_data: GMData = parse_data_file(raw_data).context("parsing data file")?;
+    let gm_data: GMData = DataFileParser::new()
+        .allow_unknown_chunks(true)
+        .parse(raw_data)
+        .context("parsing data file")?;
 
     // Export Code Disassembly
     if !std::fs::exists("expasm").unwrap() {

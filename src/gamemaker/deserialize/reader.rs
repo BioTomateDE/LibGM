@@ -85,8 +85,8 @@ impl<'a> DataReader<'a> {
         Self {
             data,
             cur_pos: 0,
-            // The default padding value is 16, if used.
             specified_version: GMVersion::stub(),
+            // The default padding value is 16, if used.
             chunk_padding: 16,
             // Assume little endian; big endian is an edge case.
             endianness: Endianness::Little,
