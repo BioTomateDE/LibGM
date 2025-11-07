@@ -35,11 +35,10 @@ impl DataReader<'_> {
     /// Read an unsigned 32-bit integer from the data file while advancing the data position.
     /// Returns zero if the read number is -1 or 0.
     pub fn read_count(&mut self, purpose: &'static str) -> Result<u32> {
-        let number = self.read_i32()?;
-        match number {
+        match self.read_i32()? {
             -1 => Ok(0),
             n if n >= 0 => Ok(n as u32),
-            _ => bail!("Negative {purpose} count {number} (0x{number:08X})"),
+            n => bail!("Negative {purpose} count {n} (0x{n:08X})"),
         }
     }
 }

@@ -11,7 +11,6 @@ use crate::prelude::*;
 use crate::util::assert::assert_int;
 use crate::util::init::{hashmap_with_capacity, num_enum_from, vec_with_capacity};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 
@@ -615,7 +614,7 @@ impl GMElement for GMTrack {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u32)]
 pub enum GMSequencePlaybackType {
     Oneshot = 0,
@@ -623,7 +622,7 @@ pub enum GMSequencePlaybackType {
     Pingpong = 2,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u32)]
 pub enum GMAnimSpeedType {
     FramesPerSecond = 0,

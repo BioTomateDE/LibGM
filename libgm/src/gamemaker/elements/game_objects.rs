@@ -10,7 +10,6 @@ use crate::prelude::*;
 use crate::util::assert::assert_bool;
 use crate::util::init::num_enum_from;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use serde::{Deserialize, Serialize};
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
@@ -357,7 +356,7 @@ impl GMElement for GMGameObjectEventAction {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u32)]
 pub enum GMGameObjectCollisionShape {
     Circle = 0,

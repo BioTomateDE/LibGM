@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use std::path::Path;
 
 pub fn format_bytes(bytes: usize) -> String {
     const UNITS: [&str; 6] = ["B", "KB", "MB", "GB", "TB", "PB"];
@@ -12,16 +11,6 @@ pub fn format_bytes(bytes: usize) -> String {
     }
 
     format!("{:.1} {}", size, UNITS[unit_idx])
-}
-
-pub fn filename_to_str(path: &Path) -> Result<String> {
-    let filename: String = path
-        .file_name()
-        .ok_or("Path does not have a filename")?
-        .to_str()
-        .ok_or("Filename is an invalid UTF-8 string")?
-        .to_string();
-    Ok(filename)
 }
 
 pub fn hexdump(raw_data: &[u8], range: impl std::ops::RangeBounds<usize>) -> Result<String> {
