@@ -108,7 +108,7 @@ pub struct GMData {
     /// approximating the size of the modified data file.
     /// This is a micro optimisation. This field's value
     /// can be initialized to zero without any problems.
-    pub original_data_size: usize,
+    pub original_data_size: u32,
 }
 
 impl Default for GMData {

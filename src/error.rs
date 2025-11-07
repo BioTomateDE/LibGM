@@ -10,7 +10,7 @@ pub struct Error {
 }
 
 impl Error {
-    pub fn new(context: String) -> Self {
+    pub const fn new(context: String) -> Self {
         Self { context, source: None }
     }
 

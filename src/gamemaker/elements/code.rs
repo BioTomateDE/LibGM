@@ -1249,9 +1249,8 @@ pub enum GMDataType {
     /// - Size on VM Stack: 8 bytes.
     Double = 0,
 
-    /// Does not really exist for some reason?
+    // /// Does not really exist for some reason?
     // Float = 1,
-
     /// 32-bit signed integer.
     /// - Size on VM Stack: 4 bytes.
     Int32 = 2,
@@ -1276,7 +1275,7 @@ pub enum GMDataType {
     /// 16-bit signed integer.
     /// - Size on VM Stack: 4 bytes.
     /// > **Note**: `Int16` is not a valid data type on the VM Stack.
-    /// It is immediately converted to `Int32` and is thus 4 bytes wide.
+    /// It is immediately converted to `Int32` when pushing and is thus 4 bytes wide.
     Int16 = 15,
 }
 
