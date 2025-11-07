@@ -61,11 +61,6 @@ impl DataBuilder<'_> {
         Ok(())
     }
 
-    /// Resolves a GameMaker string reference to the actual character string.
-    /// Returns an error if the reference index is out of bounds.
-    pub fn resolve_gm_str(&self, gm_string_ref: &GMRef<String>) -> Result<&String> {
-        gm_string_ref.resolve(&self.gm_data.strings)
-    }
 
     /// Tries to resolve a GameMaker string reference to the actual character string.
     /// Returns a placeholder string if resolving failed.
