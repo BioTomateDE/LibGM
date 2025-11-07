@@ -65,41 +65,13 @@ impl GMStrings {
     /// let ref2 = gm_data.make_string("hello");
     /// assert_eq!(ref1, ref2); // Same reference for equal strings
     /// ```
-    ///
-    /// # Note
-    /// If you need the string reference to be unique, use [`GMStrings::make_unique`] instead.
     pub fn make(&mut self, target: &str) -> GMRef<String> {
         if let Some(string_ref) = self.find(target) {
             return string_ref;
         }
-        self.make_unique(target.to_string())
-    }
 
-    /// Adds a new string to the table, guaranteeing uniqueness.
-    ///
-    /// This is useful for variable and function names, which
-    /// use String IDs as identification and thereforce need
-    /// unique string references.
-    ///
-    /// This method always creates a new entry in the string table
-    /// without checking for duplicates. The string is assumed to
-    /// not already exist in the table.
-    ///
-    /// # Note
-    /// For most use cases, prefer [`GMStrings::make`] which handles deduplication
-    /// automatically. Use this method only when you need to force
-    /// a new entry or know the string is unique.
-    ///
-    /// # Examples
-    /// ```
-    /// // Force adding a duplicate as a separate entry
-    /// let ref1 = gm_data.make("hello");
-    /// let ref2 = gm_data.make_unique("hello".to_string());
-    /// assert_ne!(ref1, ref2); // Different references despite equal content
-    /// ```
-    pub fn make_unique(&mut self, string: String) -> GMRef<String> {
         let index = self.strings.len();
-        self.strings.push(string);
+        self.strings.push(target.to_string());
         GMRef::new(index as u32)
     }
 }
