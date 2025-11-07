@@ -102,6 +102,11 @@ impl<'a> DataReader<'a> {
         }
     }
 
+    /// The size / byte length of the data file.
+    pub const fn size(&self) -> u32 {
+        self.data.len() as u32
+    }
+
     /// Read the specified number of bytes from the data file while advancing the data position.
     /// Returns an error when trying to read out of chunk bounds.
     pub fn read_bytes_dyn(&mut self, count: u32) -> Result<&'a [u8]> {
@@ -190,7 +195,7 @@ impl<'a> DataReader<'a> {
     }
 
     /// Gets the length of the chunk that is being currently parsed.
-    pub fn get_chunk_length(&self) -> u32 {
+    pub const fn get_chunk_length(&self) -> u32 {
         self.chunk.end_pos - self.chunk.start_pos
     }
 
@@ -227,22 +232,28 @@ impl<'a> DataReader<'a> {
     }
 
     /// Sets the reader position to the current chunk's start position plus the specified relative position.
-    pub fn set_rel_cur_pos(&mut self, relative_position: u32) -> Result<()> {
-        if self.chunk.start_pos + relative_position > self.chunk.end_pos {
-            bail!(
-                "Tried to set relative reader position to {} with start position {} and end position {}; out of bounds",
-                relative_position,
-                self.chunk.start_pos,
-                self.chunk.end_pos,
+    pub fn set_rel_cur_pos(&mut self, relative_pos: u32) -> Result<()> {
+        let start = self.chunk.start_pos;
+        let end = self.chunk.end_pos;
+        let pos = start.checked_add(relative_pos).ok_or_else(|| {
+            format!(
+                "Relative position {} would overflow from start position {}",
+                relative_pos, start,
             )
-        }
-        self.cur_pos = self.chunk.start_pos + relative_position;
-        Ok(())
-    }
+        })?;
 
-    /// Gets the reader position relative to the current chunk's start position.
-    pub fn get_rel_cur_pos(&self) -> u32 {
-        self.cur_pos - self.chunk.start_pos
+        if pos > end {
+            bail!(
+                "Position {} (start {} + relative {}) exceeds chunk end position {}",
+                pos,
+                start,
+                relative_pos,
+                end,
+            );
+        }
+
+        self.cur_pos = pos;
+        Ok(())
     }
 
     /// Deserializes an element if the GameMaker version meets the requirement (`>=`).

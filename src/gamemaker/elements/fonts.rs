@@ -50,7 +50,7 @@ impl GMElement for GMFonts {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_pointer_list(&self.fonts)?;
         if !builder.is_gm_version_at_least((2024, 14)) {
-            let padding: [u8; 256] = generate_padding();
+            let padding: [u8; 512] = generate_padding();
             builder.write_bytes(&padding);
         }
 
@@ -75,8 +75,8 @@ fn verify_padding(padding: &[u8; 512]) -> Result<()> {
     })
 }
 
-const fn generate_padding() -> [u8; 256] {
-    let mut padding = [0u8; 256];
+const fn generate_padding() -> [u8; 512] {
+    let mut padding = [0u8; 512];
     let mut i = 0;
 
     while i < 256 {

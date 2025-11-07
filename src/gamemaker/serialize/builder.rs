@@ -7,6 +7,14 @@ use crate::util::bench::Stopwatch;
 use crate::util::fmt::typename;
 use std::collections::HashMap;
 
+// The Default value should never be read.
+// This can only happen if there are zero existant chunks, though.
+#[derive(Debug, Default)]
+pub(crate) struct LastChunk {
+    pub length_pos: usize,
+    pub padding_start_pos: usize,
+}
+
 #[derive(Debug)]
 pub(crate) struct DataBuilder<'a> {
     /// The [GMData] to serialize.
@@ -32,6 +40,8 @@ pub(crate) struct DataBuilder<'a> {
     /// - Outer Vec: Indexed by Variable index from `gm_data.variables.variables`
     /// - Inner Vec: List of `(written_position, variable_type)` tuples for each occurrence
     pub variable_occurrences: Vec<Vec<(usize, GMVariableType)>>,
+
+    pub last_chunk: LastChunk,
 }
 
 impl<'a> DataBuilder<'a> {
@@ -44,6 +54,7 @@ impl<'a> DataBuilder<'a> {
             pointer_resource_positions: HashMap::new(),
             function_occurrences: vec![Vec::new(); gm_data.functions.len()],
             variable_occurrences: vec![Vec::new(); gm_data.variables.len()],
+            last_chunk: LastChunk::default(),
         }
     }
 
@@ -197,7 +208,7 @@ impl<'a> DataBuilder<'a> {
     /// The element's position corresponds to the data builder's current position,
     /// since this method should get called when the element is serialized.
     pub fn resolve_pointer<T>(&mut self, element: &T) -> Result<()> {
-        let memory_address: usize = element as *const _ as usize;
+        let memory_address: usize = element as *const T as usize;
         let resource_position: u32 = self.len() as u32;
         if let Some(old_resource_pos) = self
             .pointer_resource_positions
@@ -215,48 +226,45 @@ impl<'a> DataBuilder<'a> {
         Ok(())
     }
 
-    /// Writes a GameMaker data chunk with the given 4-character name.
+    /// Writes a GameMaker data chunk.
     /// Skips the chunk if the element does not exist.
     ///
     /// Appends padding if required by the GameMaker version.
     /// This padding has to then be manually cut off for the last chunk in the data file.
-    /// # Parameters
-    /// - `chunk_name`: 4-character chunk name (e.g. `SCPT` or `ROOM`).
-    /// - `element`: A serializable element implementing [GMElement] and [GMChunkElement].
-    /// - `is_last`: Whether this chunk is the last chunk in the data file. If true, no post padding will be written.
-    pub fn build_chunk<T: GMChunkElement>(
-        &mut self,
-        chunk_name: &'static str,
-        element: &T,
-        is_last: bool,
-    ) -> Result<()> {
+    pub fn build_chunk<T: GMChunkElement>(&mut self, element: &T) -> Result<()> {
+        let name: &str = T::NAME;
         if !element.exists() {
-            log::trace!("Skipped building chunk '{chunk_name}' because it does not exist");
             return Ok(());
         }
 
-        let ctx = || format!("serializing chunk '{chunk_name}'");
         let stopwatch = Stopwatch::start();
 
-        self.write_chunk_name(chunk_name).with_context(ctx)?;
+        self.write_chunk_name(name).expect("Constant chunk name is invalid");
         self.write_u32(0xDEADC0DE); // Chunk length placeholder
         let start_pos: usize = self.len();
+        let length_pos = start_pos - 4;
 
-        element.serialize(self).with_context(ctx)?;
+        element
+            .serialize(self)
+            .with_context(|| format!("serializing chunk '{name}'"))?;
 
-        if !is_last {
-            // Write padding in these versions, if not last chunk
-            let ver = &self.gm_data.general_info.version;
-            if ver.major >= 2 || (ver.major == 1 && ver.build >= 9999) {
-                self.align(self.gm_data.chunk_padding);
-            }
+        // Write padding in these versions
+        let padding_start_pos = self.len();
+        let ver = &self.gm_data.general_info.version;
+        if ver.major >= 2 || (ver.major == 1 && ver.build >= 9999) {
+            self.align(self.gm_data.chunk_padding);
         }
 
-        let chunk_length: usize = self.len() - start_pos;
-        // Resolve chunk length placeholder
-        self.overwrite_usize(chunk_length, start_pos - 4).with_context(ctx)?;
+        // Since the padding should not get written for the last chunk,
+        // set the `last_chunk` field to potentially remove the padding later.
+        self.last_chunk = LastChunk { length_pos, padding_start_pos };
 
-        log::trace!("Building chunk '{chunk_name}' took {stopwatch}");
+        // Resolve chunk length placeholder
+        let chunk_length: usize = self.len() - start_pos;
+        self.overwrite_usize(chunk_length, length_pos)
+            .expect("Chunk length overwrite position out of bounds");
+
+        log::trace!("Building chunk '{name}' took {stopwatch}");
         Ok(())
     }
 }

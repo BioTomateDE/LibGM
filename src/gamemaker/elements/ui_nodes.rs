@@ -42,7 +42,7 @@ impl GMChunkElement for GMRootUINodes {
 
 impl GMElement for GMRootUINodes {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        if !reader.chunk.is_empty() {
+        if reader.get_chunk_length() > 4 {
             log::warn!("UI nodes are untested; issues may occur");
         }
         let ui_root_nodes: Vec<GMNodeUI> = reader.read_pointer_list()?;

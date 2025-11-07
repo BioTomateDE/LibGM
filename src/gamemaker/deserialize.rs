@@ -44,8 +44,39 @@ use crate::gamemaker::elements::variables::GMVariables;
 use crate::gamemaker::gm_version::{GMVersion, LTSBranch};
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
+use std::path::Path;
 
-pub struct DataFileParser {
+const TOO_BIG: &str = "Data file is bigger than 2,147,483,646 bytes which will lead to bugs in LibGM and the runner";
+
+pub struct DataParser {
+    options: ParserOptions,
+}
+
+pub(crate) struct ParserOptions {
+    pub verify_alignment: bool,
+    pub verify_constants: bool,
+    pub allow_unknown_chunks: bool,
+    pub parallel_processing: bool,
+}
+
+impl Default for DataParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DataParser {
+    pub const fn new() -> Self {
+        Self {
+            options: ParserOptions {
+                verify_alignment: true,
+                verify_constants: true,
+                allow_unknown_chunks: false,
+                parallel_processing: false,
+            },
+        }
+    }
+
     /// When enabled, verifies that all pointer offsets and data structures
     /// are properly aligned according to their type requirements.
     ///
@@ -56,7 +87,10 @@ pub struct DataFileParser {
     /// (e.g. a port to a niche platform), but you want to try to parse it anyway.
     ///
     /// > Default: **true**
-    verify_alignment: bool,
+    pub const fn verify_alignment(mut self, enabled: bool) -> Self {
+        self.options.verify_alignment = enabled;
+        self
+    }
 
     /// When enabled, validates that known constant values in the data format
     /// match their expected values (e.g., reserved fields that should be zero
@@ -65,7 +99,10 @@ pub struct DataFileParser {
     /// This provides additional validation against data corruption or version mismatches.
     ///
     /// > Default: **true**
-    verify_constants: bool,
+    pub const fn verify_constants(mut self, enabled: bool) -> Self {
+        self.options.verify_constants = enabled;
+        self
+    }
 
     /// When **disabled**, requires that all data chunks in the file are processed during parsing.
     ///
@@ -74,110 +111,23 @@ pub struct DataFileParser {
     /// remain unread after parsing completes, an error will be returned.
     ///
     /// > Default: **false**
-    allow_unknown_chunks: bool,
+    pub const fn allow_unknown_chunks(mut self, enabled: bool) -> Self {
+        self.options.allow_unknown_chunks = enabled;
+        self
+    }
 
     /// When enabled, processes independent chunks in parallel using multiple threads.
     /// # Experimental.
     ///
     /// > Default: **false**
-    parallel_processing: bool,
-}
-
-impl Default for DataFileParser {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl DataFileParser {
-    pub const fn new() -> Self {
-        Self {
-            verify_alignment: true,
-            verify_constants: true,
-            allow_unknown_chunks: false,
-            parallel_processing: false,
-        }
-    }
-
-    pub const fn verify_alignment(mut self, enabled: bool) -> Self {
-        self.verify_alignment = enabled;
-        self
-    }
-
-    pub const fn verify_constants(mut self, enabled: bool) -> Self {
-        self.verify_constants = enabled;
-        self
-    }
-
-    pub const fn allow_unknown_chunks(mut self, enabled: bool) -> Self {
-        self.allow_unknown_chunks = enabled;
-        self
-    }
-
     pub const unsafe fn parallel_processing(mut self, enabled: bool) -> Self {
-        self.parallel_processing = enabled;
+        self.options.parallel_processing = enabled;
         self
     }
 
-    /// Parse a GameMaker data file (`data.win`, `game.unx`, etc).
-    pub fn parse<B: AsRef<[u8]>>(self, raw_data: B) -> Result<GMData> {
-        // Length assertion
-        let raw_data: &[u8] = raw_data.as_ref();
-        if raw_data.len() >= i32::MAX as usize {
-            bail!("Data file is bigger than 2,147,483,646 bytes which will lead to bugs in LibGM and the runner")
-        }
-
+    fn parse(&self, raw_data: impl AsRef<[u8]>) -> Result<GMData> {
         let stopwatch = Stopwatch::start();
-        let mut reader = DataReader::new(&raw_data);
-
-        // Read root chunk and set endianness
-        let root_chunk_name = reader.read_chunk_name()?;
-        reader.endianness = match root_chunk_name.as_str() {
-            "FORM" => Endianness::Little,
-            "MROF" => Endianness::Big,
-            _ => bail!("Invalid data file: expected root chunk to be 'FORM' but found '{root_chunk_name}'"),
-        };
-        if reader.endianness == Endianness::Big {
-            log::warn!("Big endian format might not work, proceed with caution");
-        }
-
-        // Length assertion
-        let total_data_len = reader.read_u32()? + reader.cur_pos;
-        if total_data_len as usize != raw_data.len() {
-            bail!(
-                "Specified FORM data length is {} but data is actually {} bytes long",
-                total_data_len,
-                raw_data.len(),
-            );
-        }
-
-        // Read chunks into HashMap (FORM)
-        while reader.cur_pos + 8 < total_data_len {
-            let name = reader.read_chunk_name()?;
-            let chunk_length = reader.read_u32()?;
-            let start_pos = reader.cur_pos;
-
-            reader.cur_pos += chunk_length;
-            if reader.cur_pos > total_data_len {
-                bail!(
-                    "Trying to read chunk '{}' out of data bounds: specified length {} implies chunk \
-                    end position {}; which is greater than the total data length {}",
-                    name,
-                    chunk_length,
-                    reader.cur_pos,
-                    total_data_len,
-                );
-            }
-
-            let is_last_chunk: bool = reader.cur_pos == total_data_len;
-            let chunk = GMChunk { start_pos, end_pos: reader.cur_pos, is_last_chunk };
-
-            integrity_assert! {
-                !reader.chunks.contains_key(&name),
-                "Chunk {name:?} is defined multiple times"
-            }
-            reader.chunks.insert(name, chunk);
-        }
+        let mut reader: DataReader = parse_form(raw_data.as_ref())?;
 
         // Properly initialize GEN8 version before reading chunks.
         reader.specified_version = reader.read_gen8_version()?;
@@ -273,7 +223,7 @@ impl DataFileParser {
                 These unknown chunks will be lost when rebuilding data.",
             );
 
-            if self.allow_unknown_chunks {
+            if self.options.allow_unknown_chunks {
                 log::warn!("{message}");
             } else {
                 bail!("{message}");
@@ -281,51 +231,130 @@ impl DataFileParser {
         }
 
         let data = GMData {
-            general_info: reader.general_info,
-            strings: reader.strings,
-            variables,
-            functions,
-            embedded_textures,
-            texture_page_items,
-            codes,
-            scripts,
-            fonts,
-            sprites,
-            game_objects,
-            rooms,
-            backgrounds,
-            paths,
-            audios,
-            sounds,
-            options,
-            sequences,
-            particle_systems,
-            particle_emitters,
-            language_info,
-            extensions,
-            audio_groups,
-            global_init_scripts,
-            game_end_scripts,
-            shaders,
-            root_ui_nodes,
-            timelines,
-            embedded_images,
-            texture_group_infos,
-            tags,
-            feature_flags,
-            filter_effects,
-            animation_curves,
-
             chunk_padding: reader.chunk_padding,
             endianness: reader.endianness,
-            original_data_size: raw_data.len(),
+            original_data_size: reader.size(),
+
+            general_info: reader.general_info,
+            strings: reader.strings,
+
+            animation_curves,
+            audio_groups,
+            audios,
+            backgrounds,
+            codes,
+            embedded_images,
+            extensions,
+            feature_flags,
+            filter_effects,
+            fonts,
+            functions,
+            game_end_scripts,
+            global_init_scripts,
+            language_info,
+            options,
+            particle_emitters,
+            particle_systems,
+            paths,
+            rooms,
+            root_ui_nodes,
+            scripts,
+            sequences,
+            shaders,
+            sounds,
+            sprites,
+            tags,
+            texture_group_infos,
+            texture_page_items,
+            timelines,
+            embedded_textures,
+            game_objects,
+            variables,
         };
 
         log::trace!("Parsing data took {stopwatch}");
         Ok(data)
     }
+
+    ///todo docstrings
+    pub fn parse_bytes(&self, raw_data: impl AsRef<[u8]>) -> Result<GMData> {
+        self.parse(raw_data).context("parsing GameMaker data")
+    }
+
+    /// Parse a GameMaker data file (`data.win`, `game.unx`, etc).
+    pub fn parse_file(&self, data_file_path: impl AsRef<Path>) -> Result<GMData> {
+        let path = data_file_path.as_ref();
+
+        let meta = std::fs::metadata(path).with_context(|| format!("reading metadata of data file {path:?}"))?;
+        if meta.len() >= i32::MAX as u64 {
+            bail!("{TOO_BIG}");
+        }
+
+        let stopwatch = Stopwatch::start();
+        let raw_data: Vec<u8> = std::fs::read(path).with_context(|| format!("reading data file {path:?}"))?;
+        log::trace!("Reading data file took {stopwatch}");
+
+        self.parse(raw_data)
+            .with_context(|| format!("parsing GameMaker data file {path:?}"))
+    }
 }
 
-pub fn parse_data_file<T: AsRef<[u8]>>(raw_data: T) -> Result<GMData> {
-    DataFileParser::new().parse(raw_data)
+fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
+    // Length assertion
+    let raw_data: &[u8] = raw_data.as_ref();
+    if raw_data.len() >= i32::MAX as usize {
+        bail!("{TOO_BIG}");
+    }
+
+    let mut reader = DataReader::new(&raw_data);
+
+    // Read root chunk and set endianness
+    let root_chunk_name = reader.read_chunk_name()?;
+    reader.endianness = match root_chunk_name.as_str() {
+        "FORM" => Endianness::Little,
+        "MROF" => Endianness::Big,
+        _ => bail!("Invalid data file: expected root chunk to be 'FORM' but found '{root_chunk_name}'"),
+    };
+    if reader.endianness == Endianness::Big {
+        log::warn!("Big endian format might not work, proceed with caution");
+    }
+
+    // Length assertion
+    let total_data_len = reader.read_u32()? + reader.cur_pos;
+    if total_data_len as usize != raw_data.len() {
+        bail!(
+            "Specified FORM data length is {} but data is actually {} bytes long",
+            total_data_len,
+            raw_data.len(),
+        );
+    }
+
+    // Read chunks into HashMap (FORM)
+    while reader.cur_pos + 8 < total_data_len {
+        let name = reader.read_chunk_name()?;
+        let chunk_length = reader.read_u32()?;
+        let start_pos = reader.cur_pos;
+
+        reader.cur_pos = reader.cur_pos.checked_add(chunk_length)
+            .filter(|&pos| pos <= total_data_len)
+            .ok_or_else(|| format!(
+                "Chunk '{name}' out of bounds: specified length {chunk_length} would exceed total length {total_data_len}"
+            ))?;
+
+        let is_last_chunk: bool = reader.cur_pos == total_data_len;
+        let chunk = GMChunk { start_pos, end_pos: reader.cur_pos, is_last_chunk };
+
+        integrity_assert! {
+            !reader.chunks.contains_key(&name),
+            "Chunk '{name}' is defined multiple times"
+        }
+        reader.chunks.insert(name, chunk);
+    }
+
+    Ok(reader)
+}
+
+/// Parse a GameMaker data file (`data.win`, `game.unx`, etc.) with default settings.
+pub fn parse_data_file(data_file_path: impl AsRef<Path>) -> Result<GMData> {
+    DataParser::new().parse_file(data_file_path)
 }

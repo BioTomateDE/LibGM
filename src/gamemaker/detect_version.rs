@@ -155,7 +155,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
 
             if let Some(detected_version) = detected_version_opt {
                 log::debug!(
-                    "Upgraded Version from {} to {} using manual check in chunk '{}'",
+                    "Upgraded Version from {} to {} using check in chunk '{}'",
                     reader.general_info.version,
                     detected_version,
                     check.chunk_name,
@@ -174,7 +174,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
 
         if !updated_version {
             // Since it couldn't detect a higher version, there won't be any new checks
-            // Available that would now fulfil the minimum version requirement.
+            // available that would now fulfil the minimum version requirement.
             break;
         }
     }

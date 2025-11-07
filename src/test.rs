@@ -51,8 +51,8 @@ fn run(test_fn: impl Fn(GMData) -> Result<()>) -> Result<()> {
         let filename = filename_to_str(&data_file_path)?;
         log::info!("Testing data file {filename}");
 
-        let raw_data: Vec<u8> = std::fs::read(&data_file_path).context("reading data file")?;
-        let gm_data: GMData = parse_data_file(raw_data).with_context(|| format!("parsing data file {filename}"))?;
+        let gm_data: GMData =
+            parse_data_file(&data_file_path).with_context(|| format!("parsing data file {filename}"))?;
         test_fn(gm_data).with_context(|| format!("testing data file {filename}"))?;
     }
 
