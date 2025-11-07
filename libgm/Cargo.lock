@@ -85,16 +85,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "biologischer-log"
-version = "4.2.1"
-source = "git+https://github.com/BioTomateDE/rust-biologischer-log.git#ced9664e9bde9846b30437e4765c360689ca7aa5"
-dependencies = [
- "chrono",
- "colored",
- "log",
-]
-
-[[package]]
 name = "bit_field"
 version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -568,7 +558,6 @@ name = "libgm"
 version = "0.1.0"
 dependencies = [
  "arrayvec",
- "biologischer-log",
  "bzip2",
  "chrono",
  "colored",
@@ -577,7 +566,6 @@ dependencies = [
  "image",
  "log",
  "num_enum",
- "serde",
  "thiserror 2.0.17",
  "tynm",
  "uuid",
@@ -962,7 +950,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e"
 dependencies = [
  "serde_core",
- "serde_derive",
 ]
 
 [[package]]

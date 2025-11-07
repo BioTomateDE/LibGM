@@ -178,7 +178,7 @@ impl GMElement for GMCodes {
                 for (i, instruction) in code.instructions.iter().enumerate() {
                     instruction.serialize(builder).with_context(|| {
                         format!(
-                            "building bytecode14 code #{i} with name {:?}",
+                            "serializing code #{i} with name {:?}",
                             builder.display_gm_str(&code.name),
                         )
                     })?;
@@ -205,7 +205,7 @@ impl GMElement for GMCodes {
             for instruction in &code.instructions {
                 instruction.serialize(builder).with_context(|| {
                     format!(
-                        "serializing bytecode15 code #{i} with name {:?}",
+                        "serializing code #{i} with name {:?}",
                         builder.display_gm_str(&code.name),
                     )
                 })?;

@@ -8,7 +8,6 @@ use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::init::{num_enum_from, vec_with_capacity};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use serde::{Deserialize, Serialize};
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
@@ -670,7 +669,7 @@ impl GMElement for GMSpriteNineSlice {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
 pub enum GMSpriteNineSliceTileMode {
     Stretch = 0,
@@ -697,7 +696,7 @@ pub struct GMSpriteSpecial {
     pub yyswf: Option<GMSpriteTypeSWF>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u32)]
 pub enum GMSpriteSepMaskType {
     AxisAlignedRect = 0,
@@ -705,7 +704,7 @@ pub enum GMSpriteSepMaskType {
     RotatedRect = 2,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteMaskEntry {
     pub data: Vec<u8>,
     pub width: u32,

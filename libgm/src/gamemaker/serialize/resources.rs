@@ -61,7 +61,6 @@ impl DataBuilder<'_> {
         Ok(())
     }
 
-
     /// Tries to resolve a GameMaker string reference to the actual character string.
     /// Returns a placeholder string if resolving failed.
     ///
