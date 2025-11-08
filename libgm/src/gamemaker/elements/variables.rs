@@ -41,22 +41,18 @@ impl GMChunkElement for GMVariables {
 
 impl GMElement for GMVariables {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        if reader.get_chunk_length() == 0 {
-            return Ok(Self { variables: vec![], b15_header: None, exists: true });
-        }
-        let variables_length = if reader.general_info.bytecode_version >= 15 {
-            20
-        } else {
-            12
-        };
-        let variable_count = (reader.get_chunk_length() / variables_length) as usize;
         let b15_header: Option<GMVariablesB15Header> = reader.deserialize_if_bytecode_version(15)?;
+        let variable_size = match b15_header {
+            Some(_) => 20,
+            None => 12,
+        };
+        let variable_count = (reader.get_chunk_length() / variable_size) as usize;
 
         let mut occurrence_infos: Vec<(u32, u32)> = Vec::with_capacity(variable_count);
         let mut variables: Vec<GMVariable> = Vec::with_capacity(variable_count);
 
         // Parse variables
-        while reader.cur_pos + variables_length <= reader.chunk.end_pos {
+        while reader.cur_pos + variable_size <= reader.chunk.end_pos {
             let name: GMRef<String> = reader.read_gm_string()?;
 
             let b15_data: Option<GMVariableB15Data> = reader.deserialize_if_bytecode_version(15)?;
@@ -82,8 +78,9 @@ impl GMElement for GMVariables {
             let (occurrences, name_string_id): (Vec<u32>, u32) =
                 parse_occurrence_chain(reader, first_occurrence_pos, occurrence_count)?;
 
-            // Verify name string id. unused variables (`prototype`, `@@array@@` and all
-            // `arguments` in ut) have a name string id of -1.
+            // Verify name string id.
+            // Unused variables (`prototype`, `@@array@@` and all `arguments` in Undertale)
+            // have a name string id of -1.
             if name_string_id as i32 != -1 && name.index != name_string_id {
                 bail!(
                     "Variable #{i} with name {:?} specifies name string id {}; but the id of name string is actually {}",

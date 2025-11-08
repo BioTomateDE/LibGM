@@ -10,6 +10,7 @@ pub struct Error {
 }
 
 impl Error {
+    #[cold]
     pub const fn new(context: String) -> Self {
         Self { context, source: None }
     }
@@ -50,12 +51,14 @@ impl Error {
 }
 
 impl From<String> for Error {
+    #[cold]
     fn from(context: String) -> Self {
         Self { context, source: None }
     }
 }
 
 impl From<&str> for Error {
+    #[cold]
     fn from(context: &str) -> Self {
         Self { context: context.to_string(), source: None }
     }
@@ -63,6 +66,7 @@ impl From<&str> for Error {
 
 impl FromStr for Error {
     type Err = ();
+    #[cold]
     fn from_str(string: &str) -> std::result::Result<Self, Self::Err> {
         Ok(Self { context: string.to_string(), source: None })
     }
