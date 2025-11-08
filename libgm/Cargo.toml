@@ -16,7 +16,7 @@ no-integrity-checks = []
 
 [dependencies]
 arrayvec = "0.7.6"
-bzip2 = "0.5.2"
+bzip2 = "0.6.1"
 chrono = "0.4.42"
 colored = "3.0.0"
 cpu-time = "1.0.0"
