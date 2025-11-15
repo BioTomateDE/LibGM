@@ -5,14 +5,14 @@ use libgm::prelude::*;
 
 pub fn test_decompiler(data: &GMData) -> Result<()> {
     for (i, code) in data.codes.iter().enumerate() {
-        if let Some(b15) = &code.bytecode15_info {
-            if b15.parent.is_some() {
-                continue;
-            }
+        if let Some(b15) = &code.bytecode15_info
+            && b15.parent.is_some()
+        {
+            continue;
         }
 
         let code_name = code.name.resolve(&data.strings)?;
-        print!("({}/{}) Decompiling: {:<64}\n", i + 1, data.codes.len(), code_name);
+        println!("({}/{}) Decompiling: {:<64}", i + 1, data.codes.len(), code_name);
 
         if code.instructions.is_empty() {
             continue;
@@ -35,7 +35,7 @@ pub fn test_decompiler(data: &GMData) -> Result<()> {
         };
         unsafe { std::env::set_var("FUCKING_GAMENAME", game) }
         // TODO remove debug
-        decompile_to_ast(&data, GMRef::new(i as u32)).with_context(|| format!("decompiling {code_name}"))?;
+        decompile_to_ast(data, GMRef::new(i as u32)).with_context(|| format!("decompiling {code_name}"))?;
     }
     Ok(())
 }

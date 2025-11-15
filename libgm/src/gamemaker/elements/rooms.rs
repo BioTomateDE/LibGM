@@ -12,6 +12,7 @@ use crate::gamemaker::gm_version::LTSBranch;
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
+use crate::util::bitfield::bitfield_struct;
 use crate::util::init::{num_enum_from, vec_with_capacity};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::cmp::min;
@@ -234,36 +235,26 @@ impl GMElement for GMRoom {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMRoomFlags {
-    pub enable_views: bool,              // Views are enabled
-    pub show_color: bool,                // Meaning uncertain
-    pub dont_clear_display_buffer: bool, // Don't clear display buffer
-    pub is_gms2: bool,                   // Room was made in GameMaker: Studio 2
-    pub is_gms2_3: bool,                 // Room was made in GameMaker: Studio 2.3
-}
+bitfield_struct! {
+    /// Certain flags a room can have.
+    GMRoomFlags : u32 {
+        /// Whether the room has Views enabled.
+        enable_views: 0,
 
-impl GMElement for GMRoomFlags {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let raw = reader.read_u32()?;
-        Ok(GMRoomFlags {
-            enable_views: 0 != raw & 0x1,
-            show_color: 0 != raw & 0x2,
-            dont_clear_display_buffer: 0 != raw & 0x4,
-            is_gms2: 0 != raw & 0x20000,
-            is_gms2_3: 0 != raw & 0x10000,
-        })
-    }
+        /// TODO not exactly sure, probably similar to [`GMRoom::draw_background_color`]?
+        show_color: 1,
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        let mut raw: u32 = 0;
-        raw |= self.enable_views as u32 * 0x1;
-        raw |= self.show_color as u32 * 0x2;
-        raw |= self.dont_clear_display_buffer as u32 * 0x4;
-        raw |= self.is_gms2 as u32 * 0x20000;
-        raw |= self.is_gms2_3 as u32 * 0x10000;
-        builder.write_u32(raw);
-        Ok(())
+        /// Whether the room should not clear the display buffer.
+        dont_clear_display_buffer: 2,
+
+        /// Whether the room was made in GameMaker Studio 2 or above.
+        is_gm2: 17,
+
+        /// Whether the room was made in GameMaker Studio 2.3 or above.
+        is_gm2_3: 16,
+
+        /// Whether the room was made in GameMaker 2024.13 or above.
+        is_gm_2024_13: 18,
     }
 }
 

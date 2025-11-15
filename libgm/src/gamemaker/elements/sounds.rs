@@ -7,6 +7,8 @@ use crate::gamemaker::gm_version::GMVersion;
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
+use crate::util::assert::assert_bool;
+use crate::util::bitfield::bitfield_struct;
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
@@ -49,15 +51,63 @@ impl GMElement for GMSounds {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSound {
+    /// The name of the sound entry.
+    /// This name is used when referencing this entry from code.
     pub name: GMRef<String>,
+
+    /// The flags the sound entry uses.
+    /// These effectively control different options of this sound.
+    ///
+    /// For more information, see [`GMSoundFlags`].
     pub flags: GMSoundFlags,
+
+    /// The file format of the audio entry.
+    /// This includes the `.` from the file extension.
+    /// Possible values are:
+    /// - `.wav`
+    /// - `.mp3`
+    /// - `.ogg`
     pub audio_type: Option<GMRef<String>>,
+
+    /// The original file name of the audio entry.
+    /// This is the full filename how it was loaded in the project.
+    /// This will be used if the sound effect is streamed from disk to find the sound file.
+    ///
+    /// This is used if the [`GMSoundFlags::is_embedded`] flag is set.
     pub file: GMRef<String>,
+
+    /// A pre-`GameMaker Studio` way of having certain effects on a sound effect.
+    /// Although the exact way this works is unknown, the following values are possible:
+    /// - Chorus
+    /// - Echo
+    /// - Flanger
+    /// - Gargle
+    /// - Reverb
+    /// These can be combined with each other, apparently.
+    /// Discussion here: <https://discord.com/channels/566861759210586112/568950566122946580/957318910066196500>
     pub effects: u32,
+
+    /// The volume the audio entry is played at.
+    ///
+    /// Valid Range: `0.0` - `1.0`.
     pub volume: f32,
+
+    /// The pitch change of the audio entry (maybe? more research needed).
     pub pitch: f32,
+
+    /// The audio group this audio entry belongs to.
+    /// These can only be used with the regular audio system.
+    /// This is used if the [`GMSoundFlags::regular`] flag is set.
+    /// For more information, see [`GMAudioGroup`].
     pub audio_group: GMRef<GMAudioGroup>,
+
+    /// The reference to the `[GMEmbeddedAudio]` audio file.
+    /// This is used if the [`GMSoundFlags::is_embedded`] flag is set.
     pub audio_file: Option<GMRef<GMEmbeddedAudio>>,
+
+    /// The precomputeed length of the sound's audio data.
+    /// Introduced in GameMaker 2024.6.
+    /// TODO: which unit
     pub audio_length: Option<f32>,
 }
 
@@ -70,20 +120,19 @@ impl GMElement for GMSound {
         let effects = reader.read_u32()?;
         let volume = reader.read_f32()?;
         let pitch = reader.read_f32()?;
-        let mut audio_group: GMRef<GMAudioGroup> = GMRef::new(get_builtin_sound_group_id(&reader.general_info.version));
+        let audio_group: GMRef<GMAudioGroup>;
+
         if flags.regular && reader.general_info.bytecode_version >= 14 {
             audio_group = reader.read_resource_by_id()?;
         } else {
             let preload = reader.read_bool32()?;
-            if !preload {
-                bail!(
-                    "Preload is unexpectedly set to false for sound {:?}; please report this error",
-                    reader.display_gm_str(name)
-                );
-            }
+            assert_bool("Preload", true, preload)?;
+            audio_group = GMRef::new(get_builtin_sound_group_id(&reader.general_info.version));
         }
+
         let audio_file: Option<GMRef<GMEmbeddedAudio>> = reader.read_resource_by_id_opt()?;
         let audio_length: Option<f32> = reader.deserialize_if_gm_version((2024, 6))?;
+
         Ok(GMSound {
             name,
             flags,
@@ -109,7 +158,7 @@ impl GMElement for GMSound {
         if self.flags.regular && builder.bytecode_version() >= 14 {
             builder.write_resource_id(&self.audio_group);
         } else {
-            builder.write_bool32(true); // Preload   
+            builder.write_bool32(true); // Preload
         }
         builder.write_resource_id_opt(&self.audio_file);
         self.audio_length
@@ -118,33 +167,27 @@ impl GMElement for GMSound {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMSoundFlags {
-    pub is_embedded: bool,
-    pub is_compressed: bool,
-    pub is_decompressed_on_load: bool,
-    pub regular: bool,
-}
+bitfield_struct! {
+    /// Audio entry flags a sound entry can use.
+    GMSoundFlags : u32 {
+        /// Whether the sound is embedded into the data file.
+        /// This should ideally be used for sound effects, but not for music.
+        /// The GameMaker documentation also calls this "not streamed"
+        /// (or "from memory") for when the flag is present, or "streamed" when it isn't.
+        is_embedded: 0,
 
-impl GMElement for GMSoundFlags {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let raw = reader.read_u32()?;
-        Ok(GMSoundFlags {
-            is_embedded: 0 != raw & 0x1,
-            is_compressed: 0 != raw & 0x2,
-            is_decompressed_on_load: 3 == raw & 0x3, // Maybe??? UndertaleModTool doesn't know either
-            regular: 0 != raw & 0x64,
-        })
-    }
+        /// Whether the sound is compressed.
+        /// When a sound is compressed it will take smaller memory/disk space.
+        /// However, this is at the cost of needing to decompress it when it needs to be played,
+        /// which means slightly higher CPU usage.
+        ///
+        /// TODO: how is it compressed? and when is this flag even set
+        is_compressed: 1,
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        let mut raw: u32 = 0;
-        raw |= self.is_embedded as u32 * 0x1;
-        raw |= self.is_compressed as u32 * 0x2;
-        raw |= self.is_decompressed_on_load as u32 * 0x3;
-        raw |= self.regular as u32 * 0x64;
-        builder.write_u32(raw);
-        Ok(())
+        /// Whether this sound uses the "new audio system".
+        /// This is default for everything post `GameMaker Studio`.
+        /// The legacy sound system was used in pre `GameMaker 8`.
+        regular: 6,
     }
 }
 
