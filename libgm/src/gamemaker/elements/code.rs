@@ -104,7 +104,7 @@ impl GMElement for GMCodes {
                 };
                 instructions_end_pos = instructions_start_pos + code_length;
                 bytecode15_info = Some(b15_info);
-            };
+            }
 
             codes.push(GMCode { name, instructions: vec![], bytecode15_info });
             instructions_ranges.push((instructions_start_pos, instructions_end_pos));
@@ -116,13 +116,12 @@ impl GMElement for GMCodes {
             let length = end - start;
 
             // If bytecode15+ and the instructions pointer is known, then it's a child code entry
-            if length > 0 {
-                if let Some(parent_code) = codes_by_pos.get(&start) {
-                    if let Some(ref mut b15_info) = code.bytecode15_info {
-                        b15_info.parent = Some(parent_code.clone());
-                        continue;
-                    }
-                }
+            if length > 0
+                && let Some(parent_code) = codes_by_pos.get(&start)
+                && let Some(b15_info) = &mut code.bytecode15_info
+            {
+                b15_info.parent = Some(*parent_code);
+                continue;
             }
 
             reader.cur_pos = start;

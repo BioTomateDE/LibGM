@@ -1,9 +1,4 @@
 [workspace]
-members = [
-    "libgm",
-    "libgm-cli",
-]
-resolver = "3"
-
-# Default member for `cargo run`
+members = ["libgm", "libgm-cli"]
+resolver = "3"                   # Default member for `cargo run`
 default-members = ["libgm-cli"]

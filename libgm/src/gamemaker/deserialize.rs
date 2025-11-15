@@ -44,6 +44,7 @@ use crate::gamemaker::elements::variables::GMVariables;
 use crate::gamemaker::gm_version::{GMVersion, LTSBranch};
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
+use crate::util::smallmap::SmallMap;
 use std::path::Path;
 
 const TOO_BIG: &str = "Data file is bigger than 2,147,483,646 bytes which will lead to bugs in LibGM and the runner";
@@ -66,6 +67,7 @@ impl Default for DataParser {
 }
 
 impl DataParser {
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             options: ParserOptions {
@@ -87,6 +89,7 @@ impl DataParser {
     /// (e.g. a port to a niche platform), but you want to try to parse it anyway.
     ///
     /// > Default: **true**
+    #[must_use]
     pub const fn verify_alignment(mut self, enabled: bool) -> Self {
         self.options.verify_alignment = enabled;
         self
@@ -99,6 +102,7 @@ impl DataParser {
     /// This provides additional validation against data corruption or version mismatches.
     ///
     /// > Default: **true**
+    #[must_use]
     pub const fn verify_constants(mut self, enabled: bool) -> Self {
         self.options.verify_constants = enabled;
         self
@@ -111,6 +115,7 @@ impl DataParser {
     /// remain unread after parsing completes, an error will be returned.
     ///
     /// > Default: **false**
+    #[must_use]
     pub const fn allow_unknown_chunks(mut self, enabled: bool) -> Self {
         self.options.allow_unknown_chunks = enabled;
         self
@@ -211,24 +216,7 @@ impl DataParser {
 
         log::trace!("Reading independent chunks took {stopwatch2}");
 
-        // Verify all data chunks were processed to prevent data loss
-        if !reader.chunks.is_empty() {
-            let unprocessed_chunks: Vec<String> = reader.chunks.keys().cloned().collect();
-            let chunks_list = unprocessed_chunks.join(", ");
-            let count: usize = unprocessed_chunks.len();
-            let noun: &str = if count == 1 { "chunk" } else { "chunks" };
-
-            let message = format!(
-                "{count} unprocessed {noun} detected: {chunks_list}\n\
-                These unknown chunks will be lost when rebuilding data.",
-            );
-
-            if self.options.allow_unknown_chunks {
-                log::warn!("{message}");
-            } else {
-                bail!("{message}");
-            }
-        }
+        handle_unread_chunks(&reader.chunks, self.options.allow_unknown_chunks)?;
 
         let data = GMData {
             chunk_padding: reader.chunk_padding,
@@ -281,7 +269,7 @@ impl DataParser {
         self.parse(raw_data).context("parsing GameMaker data")
     }
 
-    /// Parse a GameMaker data file (`data.win`, `game.unx`, etc).
+    /// Parse a `GameMaker` data file (`data.win`, `game.unx`, etc).
     pub fn parse_file(&self, data_file_path: impl AsRef<Path>) -> Result<GMData> {
         let path = data_file_path.as_ref();
 
@@ -301,12 +289,11 @@ impl DataParser {
 
 fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
     // Length assertion
-    let raw_data: &[u8] = raw_data.as_ref();
     if raw_data.len() >= i32::MAX as usize {
         bail!("{TOO_BIG}");
     }
 
-    let mut reader = DataReader::new(&raw_data);
+    let mut reader = DataReader::new(raw_data);
 
     // Read root chunk and set endianness
     let root_chunk_name = reader.read_chunk_name()?;
@@ -354,7 +341,31 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
     Ok(reader)
 }
 
-/// Parse a GameMaker data file (`data.win`, `game.unx`, etc.) with default settings.
+/// Verify all data chunks were processed to prevent data loss
+fn handle_unread_chunks(chunks: &SmallMap<String, GMChunk>, allow_unknown_chunks: bool) -> Result<()> {
+    if chunks.is_empty() {
+        return Ok(());
+    }
+
+    let unprocessed_chunks: Vec<String> = chunks.keys().cloned().collect();
+    let chunks_list = unprocessed_chunks.join(", ");
+    let count: usize = unprocessed_chunks.len();
+    let noun: &str = if count == 1 { "chunk" } else { "chunks" };
+
+    let message = format!(
+        "{count} unprocessed {noun} detected: {chunks_list}\n\
+        These unknown chunks will be lost when rebuilding data.",
+    );
+
+    if allow_unknown_chunks {
+        log::warn!("{message}");
+        Ok(())
+    } else {
+        bail!("{message}");
+    }
+}
+
+/// Parse a `GameMaker` data file (`data.win`, `game.unx`, etc.) with default settings.
 pub fn parse_data_file(data_file_path: impl AsRef<Path>) -> Result<GMData> {
     DataParser::new().parse_file(data_file_path)
 }

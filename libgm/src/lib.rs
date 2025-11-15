@@ -4,6 +4,9 @@
 #![deny(unreachable_patterns)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_possible_truncation)]
 
 mod error;
 mod util;

@@ -19,65 +19,60 @@ impl<K: PartialEq, V> SmallMap<K, V> {
 
     #[inline]
     pub fn insert(&mut self, key: K, value: V) {
-        self.0.push((key, value))
+        self.0.push((key, value));
     }
 
     #[inline]
     #[must_use]
-    pub fn get<Q: ?Sized>(&self, key: &Q) -> Option<&V>
+    pub fn get<Q>(&self, key: &Q) -> Option<&V>
     where
         K: Borrow<Q>,
-        Q: PartialEq,
+        Q: ?Sized + PartialEq,
     {
         self.0.iter().find_map(|(k, v)| (k.borrow() == key).then_some(v))
     }
 
     #[inline]
     #[must_use]
-    pub fn get_mut<Q: ?Sized>(&mut self, key: &Q) -> Option<&mut V>
+    pub fn get_mut<Q>(&mut self, key: &Q) -> Option<&mut V>
     where
         K: Borrow<Q>,
-        Q: PartialEq,
+        Q: ?Sized + PartialEq,
     {
-        self.0
-            .iter_mut()
-            .find_map(|(k, v)| ((&*k).borrow() == key).then_some(v))
+        self.0.iter_mut().find_map(|(k, v)| ((*k).borrow() == key).then_some(v))
     }
 
     #[inline]
     #[must_use]
-    pub fn contains_key<Q: ?Sized>(&self, key: &Q) -> bool
+    pub fn contains_key<Q>(&self, key: &Q) -> bool
     where
         K: Borrow<Q>,
-        Q: PartialEq,
+        Q: ?Sized + PartialEq,
     {
         self.0.iter().any(|(k, _)| k.borrow() == key)
     }
 
     #[inline]
-    pub fn remove<Q: ?Sized>(&mut self, key: &Q) -> Option<V>
+    pub fn remove<Q>(&mut self, key: &Q) -> Option<V>
     where
         K: Borrow<Q>,
-        Q: PartialEq,
+        Q: ?Sized + PartialEq,
     {
         let pos = self.0.iter().position(|(k, _)| k.borrow() == key)?;
         Some(self.0.remove(pos).1)
     }
 
     #[inline]
-    #[must_use]
     pub fn keys(&self) -> impl Iterator<Item = &K> {
         self.0.iter().map(|(k, _)| k)
     }
 
     #[inline]
-    #[must_use]
     pub fn values(&self) -> impl Iterator<Item = &V> {
         self.0.iter().map(|(_, v)| v)
     }
 
     #[inline]
-    #[must_use]
     pub fn values_mut(&mut self) -> impl Iterator<Item = &mut V> {
         self.0.iter_mut().map(|(_, v)| v)
     }
@@ -111,13 +106,11 @@ impl<K: PartialEq, V> SmallMap<K, V> {
     }
 
     #[inline]
-    #[must_use]
     pub fn iter(&self) -> impl Iterator<Item = (&K, &V)> {
         self.0.iter().map(|(k, v)| (k, v))
     }
 
     #[inline]
-    #[must_use]
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (&K, &mut V)> {
         self.0.iter_mut().map(|(k, v)| (&*k, v))
     }

@@ -139,7 +139,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
         | GMInstruction::PushGlobal(instr)
         | GMInstruction::PushBuiltin(instr) => {
             let value: String = match &instr.value {
-                GMCodeValue::Variable(code_variable) => variable_to_string(gm_data, &code_variable)?,
+                GMCodeValue::Variable(code_variable) => variable_to_string(gm_data, code_variable)?,
                 GMCodeValue::Boolean(true) => "true".to_string(),
                 GMCodeValue::Boolean(false) => "false".to_string(),
                 GMCodeValue::Function(function_ref) => {
@@ -156,7 +156,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
         }
 
         GMInstruction::PushImmediate(int16) => {
-            line = format!("{} {}", opcode, int16,);
+            line = format!("{opcode} {int16}");
         }
 
         GMInstruction::Call(instr) => {
@@ -168,16 +168,18 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
             );
         }
 
-        GMInstruction::CheckArrayIndex => line = opcode.to_string(),
-        GMInstruction::PushArrayFinal => line = opcode.to_string(),
-        GMInstruction::PopArrayFinal => line = opcode.to_string(),
-        GMInstruction::PushArrayContainer => line = opcode.to_string(),
-        GMInstruction::SetArrayOwner => line = opcode.to_string(),
-        GMInstruction::HasStaticInitialized => line = opcode.to_string(),
-        GMInstruction::SetStaticInitialized => line = opcode.to_string(),
-        GMInstruction::SaveArrayReference => line = opcode.to_string(),
-        GMInstruction::RestoreArrayReference => line = opcode.to_string(),
-        GMInstruction::IsNullishValue => line = opcode.to_string(),
+        GMInstruction::CheckArrayIndex
+        | GMInstruction::PushArrayFinal
+        | GMInstruction::PopArrayFinal
+        | GMInstruction::PushArrayContainer
+        | GMInstruction::SetArrayOwner
+        | GMInstruction::HasStaticInitialized
+        | GMInstruction::SetStaticInitialized
+        | GMInstruction::SaveArrayReference
+        | GMInstruction::RestoreArrayReference
+        | GMInstruction::IsNullishValue => {
+            line = opcode.to_string();
+        }
 
         GMInstruction::PushReference(asset_ref) => {
             line = format!("{} {}", opcode, asset_reference_to_string(gm_data, asset_ref)?,);

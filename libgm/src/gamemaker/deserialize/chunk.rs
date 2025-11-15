@@ -7,20 +7,26 @@ use crate::util::assert::assert_int;
 use crate::util::bench::Stopwatch;
 
 #[derive(Debug, Clone)]
-pub(crate) struct GMChunk {
+pub struct GMChunk {
     pub start_pos: u32,
     pub end_pos: u32,
     pub is_last_chunk: bool,
 }
 
 impl GMChunk {
-    pub fn is_empty(&self) -> bool {
-        self.start_pos == self.end_pos
+    #[must_use]
+    pub const fn length(&self) -> u32 {
+        self.end_pos - self.start_pos
+    }
+
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.length() == 0
     }
 }
 
 impl DataReader<'_> {
-    /// Read a GameMaker chunk name consisting of 4 ascii characters.
+    /// Read a `GameMaker` chunk name consisting of 4 ascii characters.
     /// Accounts for endianness; reversing the read chunk name in big endian mode.
     pub fn read_chunk_name(&mut self) -> Result<String> {
         let string: String = match self.read_literal_string(4) {
@@ -73,7 +79,7 @@ impl DataReader<'_> {
         Ok(element)
     }
 
-    /// Potentially read padding at the end of the chunk, depending on the GameMaker version.
+    /// Potentially read padding at the end of the chunk, depending on the `GameMaker` version.
     fn read_chunk_padding(&mut self) -> Result<()> {
         // Last chunk does not get padding
         if self.chunk.is_last_chunk {
@@ -87,7 +93,7 @@ impl DataReader<'_> {
             return Ok(());
         }
 
-        while self.cur_pos % self.chunk_padding != 0 {
+        while !self.cur_pos.is_multiple_of(self.chunk_padding) {
             let byte: u8 = self.read_u8().context("reading chunk padding")?;
             if byte == 0 {
                 continue;
@@ -104,7 +110,7 @@ impl DataReader<'_> {
         Ok(())
     }
 
-    /// Reads the specified GameMaker version in the GEN8 chunk.
+    /// Reads the specified `GameMaker` version in the GEN8 chunk.
     /// This only works if the GEN8 chunk still exists in the chunk map.
     ///
     /// This function should be called **after** parsing FORM but **before** reading any chunks.
