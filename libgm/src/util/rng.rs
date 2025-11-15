@@ -7,7 +7,7 @@ pub struct CSharpRng {
     inextp: u8,
 }
 
-/// MSEED is based on an approximation of the golden ratio (theta):
+/// MSEED is based on an approximation of the golden ratio (phi):
 /// MSEED ≈ φ * 10^8
 const MSEED: i32 = 161_803_398;
 
@@ -25,8 +25,7 @@ impl CSharpRng {
         while i < 55 {
             index1 += 21;
             if index1 >= 55 {
-                index1 -= 55;
-            }
+                index1 -= 55; }
             seed_array[index1] = num2;
             num2 = num1.wrapping_sub(num2);
             if num2 < 0 {

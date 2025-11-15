@@ -4,10 +4,11 @@ use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
+use crate::util::bitfield::bitfield_struct;
 
 #[derive(Debug, Clone, Default)]
 pub struct GMOptions {
-    pub is_new_format: bool,
+    is_new_format: bool,
     pub unknown1: u32,
     pub unknown2: u32,
     pub flags: GMOptionsFlags,
@@ -54,111 +55,61 @@ impl GMElement for GMOptions {
     }
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct GMOptionsFlags {
-    pub fullscreen: bool,
-    pub interpolate_pixels: bool,
-    pub use_new_audio: bool,
-    pub no_border: bool,
-    pub show_cursor: bool,
-    pub sizeable: bool,
-    pub stay_on_top: bool,
-    pub change_resolution: bool,
-    pub no_buttons: bool,
-    pub screen_key: bool,
-    pub help_key: bool,
-    pub quit_key: bool,
-    pub save_key: bool,
-    pub screenshot_key: bool,
-    pub close_sec: bool,
-    pub freeze: bool,
-    pub show_progress: bool,
-    pub load_transparent: bool,
-    pub scale_progress: bool,
-    pub display_errors: bool,
-    pub write_errors: bool,
-    pub abort_errors: bool,
-    pub variable_errors: bool,
-    pub creation_event_order: bool,
-    pub use_front_touch: bool,
-    pub use_rear_touch: bool,
-    pub use_fast_collision: bool,
-    pub fast_collision_compatibility: bool,
-    pub disable_sandbox: bool,
-    pub enable_copy_on_write: bool,
-}
+bitfield_struct! {
+    /// General options/flags for the game.
+    GMOptionsFlags : u64 {
+        /// If the game should start in fullscreen.
+        fullscreen: 0,
 
-impl GMElement for GMOptionsFlags {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let raw = reader.read_u64()?;
-        Ok(GMOptionsFlags {
-            fullscreen: 0 != raw & 0x1,
-            interpolate_pixels: 0 != raw & 0x2,
-            use_new_audio: 0 != raw & 0x4,
-            no_border: 0 != raw & 0x8,
-            show_cursor: 0 != raw & 0x10,
-            sizeable: 0 != raw & 0x20,
-            stay_on_top: 0 != raw & 0x40,
-            change_resolution: 0 != raw & 0x80,
-            no_buttons: 0 != raw & 0x100,
-            screen_key: 0 != raw & 0x200,
-            help_key: 0 != raw & 0x400,
-            quit_key: 0 != raw & 0x800,
-            save_key: 0 != raw & 0x1000,
-            screenshot_key: 0 != raw & 0x2000,
-            close_sec: 0 != raw & 0x4000,
-            freeze: 0 != raw & 0x8000,
-            show_progress: 0 != raw & 0x10000,
-            load_transparent: 0 != raw & 0x20000,
-            scale_progress: 0 != raw & 0x40000,
-            display_errors: 0 != raw & 0x80000,
-            write_errors: 0 != raw & 0x100000,
-            abort_errors: 0 != raw & 0x200000,
-            variable_errors: 0 != raw & 0x400000,
-            creation_event_order: 0 != raw & 0x800000,
-            use_front_touch: 0 != raw & 0x1000000,
-            use_rear_touch: 0 != raw & 0x2000000,
-            use_fast_collision: 0 != raw & 0x4000000,
-            fast_collision_compatibility: 0 != raw & 0x8000000,
-            disable_sandbox: 0 != raw & 0x10000000,
-            enable_copy_on_write: 0 != raw & 0x20000000,
-        })
-    }
+        /// If pixels should be interpolated.
+        interpolate_pixels: 1,
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        let mut raw: u64 = 0;
-        raw |= self.fullscreen as u64 * 0x1;
-        raw |= self.interpolate_pixels as u64 * 0x2;
-        raw |= self.use_new_audio as u64 * 0x4;
-        raw |= self.no_border as u64 * 0x8;
-        raw |= self.show_cursor as u64 * 0x10;
-        raw |= self.sizeable as u64 * 0x20;
-        raw |= self.stay_on_top as u64 * 0x40;
-        raw |= self.change_resolution as u64 * 0x80;
-        raw |= self.no_buttons as u64 * 0x100;
-        raw |= self.screen_key as u64 * 0x200;
-        raw |= self.help_key as u64 * 0x400;
-        raw |= self.quit_key as u64 * 0x800;
-        raw |= self.save_key as u64 * 0x1000;
-        raw |= self.screenshot_key as u64 * 0x2000;
-        raw |= self.close_sec as u64 * 0x4000;
-        raw |= self.freeze as u64 * 0x8000;
-        raw |= self.show_progress as u64 * 0x10000;
-        raw |= self.load_transparent as u64 * 0x20000;
-        raw |= self.scale_progress as u64 * 0x40000;
-        raw |= self.display_errors as u64 * 0x80000;
-        raw |= self.write_errors as u64 * 0x100000;
-        raw |= self.abort_errors as u64 * 0x200000;
-        raw |= self.variable_errors as u64 * 0x400000;
-        raw |= self.creation_event_order as u64 * 0x800000;
-        raw |= self.use_front_touch as u64 * 0x1000000;
-        raw |= self.use_rear_touch as u64 * 0x2000000;
-        raw |= self.use_fast_collision as u64 * 0x4000000;
-        raw |= self.fast_collision_compatibility as u64 * 0x8000000;
-        raw |= self.disable_sandbox as u64 * 0x10000000;
-        raw |= self.enable_copy_on_write as u64 * 0x20000000;
-        builder.write_u64(raw);
-        Ok(())
+        /// If the new audio format should be used.
+        use_new_audio: 2,
+
+        /// If borderless window should be used.
+        no_border: 3,
+
+        /// If the mouse cursor should be shown.
+        show_cursor: 4,
+
+        /// If the window should be resizable.
+        sizeable: 5,
+
+        /// If the window should stay on top.
+        stay_on_top: 6,
+
+        /// If the resolution can be changed.
+        change_resolution: 7,
+
+        no_buttons: 8,
+        screen_key: 9,
+        help_key: 10,
+        quit_key: 11,
+        save_key: 12,
+        screenshot_key: 13,
+        close_sec: 14,
+        freeze: 15,
+        show_progress: 16,
+        load_transparent: 17,
+        scale_progress: 18,
+        display_errors: 19,
+        write_errors: 20,
+        abort_errors: 21,
+        variable_errors: 22,
+        creation_event_order: 23,
+        use_front_touch: 24,
+        use_rear_touch: 25,
+        use_fast_collision: 26,
+        fast_collision_compatibility: 27,
+        disable_sandbox: 28,
+        enable_copy_on_write: 29,
+        legacy_json_parsing: 30,
+        legacy_number_conversion: 31,
+        legacy_other_behavior: 32,
+        audio_error_behavior: 33,
+        allow_instance_change: 34,
+        legacy_primitive_drawing: 35,
     }
 }
 
@@ -302,12 +253,7 @@ fn parse_options_old(reader: &mut DataReader) -> Result<GMOptions> {
             abort_errors: flag_abort_errors,
             variable_errors: flag_variable_errors,
             creation_event_order: flag_creation_event_order,
-            use_front_touch: false,
-            use_rear_touch: false,
-            use_fast_collision: false,
-            fast_collision_compatibility: false,
-            disable_sandbox: false,
-            enable_copy_on_write: false,
+            ..Default::default()
         },
         window_scale: scale,
         window_color,

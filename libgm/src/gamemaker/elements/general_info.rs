@@ -8,6 +8,7 @@ use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::prelude::*;
 use crate::util::assert::assert_int;
+use crate::util::bitfield::bitfield_struct;
 use crate::util::rng::CSharpRng;
 use chrono::{DateTime, Utc};
 
@@ -106,96 +107,12 @@ impl Default for GMGeneralInfo {
             version: GMVersion::stub(),
             default_window_width: 13371337,
             default_window_height: 13371337,
-            flags: GMGeneralInfoFlags {
-                fullscreen: false,
-                sync_vertex1: false,
-                sync_vertex2: false,
-                sync_vertex3: false,
-                interpolate: true,
-                scale: true,
-                show_cursor: true,
-                sizeable: false,
-                screen_key: true,
-                studio_version_b1: false,
-                studio_version_b2: false,
-                studio_version_b3: true,
-                steam_enabled: false,
-                local_data_enabled: false,
-                borderless_window: false,
-                javascript_mode: false,
-                license_exclusions: false,
-            },
+            flags: GMGeneralInfoFlags::default(),
             license_crc32: 13371337,
             license_md5: [0; 16],
             timestamp_created: Default::default(),
             display_name: GMRef::new(13371337),
-            function_classifications: GMFunctionClassifications {
-                internet: false,
-                joystick: false,
-                gamepad: false,
-                immersion: false,
-                screengrab: false,
-                math: false,
-                action: false,
-                matrix_d3d: false,
-                d3dmodel: false,
-                data_structures: false,
-                file: false,
-                ini: false,
-                filename: false,
-                directory: false,
-                environment: false,
-                unused1: false,
-                http: false,
-                encoding: false,
-                uidialog: false,
-                motion_planning: false,
-                shape_collision: false,
-                instance: false,
-                room: false,
-                game: false,
-                display: false,
-                device: false,
-                window: false,
-                draw_color: false,
-                texture: false,
-                layer: false,
-                string: false,
-                tiles: false,
-                surface: false,
-                skeleton: false,
-                io: false,
-                variables: false,
-                array: false,
-                external_call: false,
-                notification: false,
-                date: false,
-                particle: false,
-                sprite: false,
-                clickable: false,
-                legacy_sound: false,
-                audio: false,
-                event: false,
-                unused2: false,
-                free_type: false,
-                analytics: false,
-                unused3: false,
-                unused4: false,
-                achievement: false,
-                cloud_saving: false,
-                ads: false,
-                os: false,
-                iap: false,
-                facebook: false,
-                physics: false,
-                flash_aa: false,
-                console: false,
-                buffer: false,
-                steam: false,
-                unused5: false,
-                shaders: false,
-                vertex_buffers: false,
-            },
+            function_classifications: GMFunctionClassifications::default(),
             steam_appid: 0,
             debugger_port: None,
             room_order: vec![],
@@ -502,320 +419,117 @@ pub struct GMGeneralInfoGMS2 {
     pub info_timestamp_offset: bool,
 }
 
-#[derive(Debug, Clone)]
-pub struct GMGeneralInfoFlags {
-    /// Start the game as fullscreen.
-    pub fullscreen: bool,
+bitfield_struct! {
+    /// Contains general information flags for `GameMaker` games.
+    GMGeneralInfoFlags : u32 {
+        /// Start the game as fullscreen.
+        fullscreen: 0,
 
-    /// Use synchronization to avoid tearing.
-    pub sync_vertex1: bool,
+        /// Use synchronization to avoid tearing.
+        sync_vertex1: 1,
 
-    /// Use synchronization to avoid tearing. (???)
-    pub sync_vertex2: bool,
+        /// Use synchronization to avoid tearing. (???)
+        sync_vertex2: 2,
 
-    /// Use synchronization to avoid tearing. (???)
-    pub sync_vertex3: bool,
+        /// Use synchronization to avoid tearing. (???)
+        sync_vertex3: 8,
 
-    /// Interpolate colours between pixels.
-    pub interpolate: bool,
+        /// Interpolate colours between pixels.
+        interpolate: 3,
 
-    /// Keep aspect ratio during scaling.
-    pub scale: bool,
+        /// Keep aspect ratio during scaling.
+        scale: 4,
 
-    /// Display mouse cursor.
-    pub show_cursor: bool,
+        /// Display mouse cursor.
+        show_cursor: 5,
 
-    /// Allows window to be resized.
-    pub sizeable: bool,
+        /// Allows window to be resized.
+        sizeable: 6,
 
-    /// Allows fullscreen switching. (???)
-    pub screen_key: bool,
+        /// Allows fullscreen switching. (???)
+        screen_key: 7,
 
-    pub studio_version_b1: bool,
+        studio_version_b1: 9,
 
-    pub studio_version_b2: bool,
+        studio_version_b2: 10,
 
-    pub studio_version_b3: bool,
+        studio_version_b3: 11,
 
-    pub steam_enabled: bool,
+        steam_enabled: 12,
 
-    pub local_data_enabled: bool,
+        local_data_enabled: 13,
 
-    /// Whether the game supports borderless window
-    pub borderless_window: bool,
+        /// Whether the game supports borderless window
+        borderless_window: 14,
 
-    /// Tells the runner to run Javascript code
-    pub javascript_mode: bool,
+        /// Tells the runner to run Javascript code
+        javascript_mode: 15,
 
-    pub license_exclusions: bool,
-}
-
-impl GMElement for GMGeneralInfoFlags {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let raw = reader.read_u32()?;
-        Ok(Self::parse(raw))
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u32(self.build());
-        Ok(())
+        license_exclusions: 16,
     }
 }
 
-impl GMGeneralInfoFlags {
-    fn parse(raw: u32) -> Self {
-        Self {
-            fullscreen: 0 != raw & 0x0001,
-            sync_vertex1: 0 != raw & 0x0002,
-            sync_vertex2: 0 != raw & 0x0004,
-            sync_vertex3: 0 != raw & 0x0100,
-            interpolate: 0 != raw & 0x0008,
-            scale: 0 != raw & 0x0010,
-            show_cursor: 0 != raw & 0x0020,
-            sizeable: 0 != raw & 0x0040,
-            screen_key: 0 != raw & 0x0080,
-            studio_version_b1: 0 != raw & 0x0200,
-            studio_version_b2: 0 != raw & 0x0400,
-            studio_version_b3: 0 != raw & 0x0800,
-            steam_enabled: 0 != raw & 0x1000,
-            local_data_enabled: 0 != raw & 0x2000,
-            borderless_window: 0 != raw & 0x4000,
-            javascript_mode: 0 != raw & 0x8000,
-            license_exclusions: 0 != raw & 0x10000,
-        }
-    }
-    fn build(&self) -> u32 {
-        let mut raw: u32 = 0;
-        raw |= self.fullscreen as u32 * 0x0001;
-        raw |= self.sync_vertex1 as u32 * 0x0002;
-        raw |= self.sync_vertex2 as u32 * 0x0004;
-        raw |= self.sync_vertex3 as u32 * 0x0100;
-        raw |= self.interpolate as u32 * 0x0008;
-        raw |= self.scale as u32 * 0x0010;
-        raw |= self.show_cursor as u32 * 0x0020;
-        raw |= self.sizeable as u32 * 0x0040;
-        raw |= self.screen_key as u32 * 0x0080;
-        raw |= self.studio_version_b1 as u32 * 0x0200;
-        raw |= self.studio_version_b2 as u32 * 0x0400;
-        raw |= self.studio_version_b3 as u32 * 0x0800;
-        raw |= self.steam_enabled as u32 * 0x1000;
-        raw |= self.local_data_enabled as u32 * 0x2000;
-        raw |= self.borderless_window as u32 * 0x4000;
-        raw |= self.javascript_mode as u32 * 0x8000;
-        raw |= self.license_exclusions as u32 * 0x10000;
-        raw
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct GMFunctionClassifications {
-    pub internet: bool,
-    pub joystick: bool,
-    pub gamepad: bool,
-    pub immersion: bool,
-    pub screengrab: bool,
-    pub math: bool,
-    pub action: bool,
-    pub matrix_d3d: bool,
-    pub d3dmodel: bool,
-    pub data_structures: bool,
-    pub file: bool,
-    pub ini: bool,
-    pub filename: bool,
-    pub directory: bool,
-    pub environment: bool,
-    pub unused1: bool,
-    pub http: bool,
-    pub encoding: bool,
-    pub uidialog: bool,
-    pub motion_planning: bool,
-    pub shape_collision: bool,
-    pub instance: bool,
-    pub room: bool,
-    pub game: bool,
-    pub display: bool,
-    pub device: bool,
-    pub window: bool,
-    pub draw_color: bool,
-    pub texture: bool,
-    pub layer: bool,
-    pub string: bool,
-    pub tiles: bool,
-    pub surface: bool,
-    pub skeleton: bool,
-    pub io: bool,
-    pub variables: bool,
-    pub array: bool,
-    pub external_call: bool,
-    pub notification: bool,
-    pub date: bool,
-    pub particle: bool,
-    pub sprite: bool,
-    pub clickable: bool,
-    pub legacy_sound: bool,
-    pub audio: bool,
-    pub event: bool,
-    pub unused2: bool,
-    pub free_type: bool,
-    pub analytics: bool,
-    pub unused3: bool,
-    pub unused4: bool,
-    pub achievement: bool,
-    pub cloud_saving: bool,
-    pub ads: bool,
-    pub os: bool,
-    pub iap: bool,
-    pub facebook: bool,
-    pub physics: bool,
-    pub flash_aa: bool,
-    pub console: bool,
-    pub buffer: bool,
-    pub steam: bool,
-    pub unused5: bool,
-    pub shaders: bool,
-    pub vertex_buffers: bool,
-}
-
-impl GMElement for GMFunctionClassifications {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let raw = reader.read_u64()?;
-        Ok(GMFunctionClassifications {
-            internet: 0 != raw & 0x1,
-            joystick: 0 != raw & 0x2,
-            gamepad: 0 != raw & 0x4,
-            immersion: 0 != raw & 0x8,
-            screengrab: 0 != raw & 0x10,
-            math: 0 != raw & 0x20,
-            action: 0 != raw & 0x40,
-            matrix_d3d: 0 != raw & 0x80,
-            d3dmodel: 0 != raw & 0x100,
-            data_structures: 0 != raw & 0x200,
-            file: 0 != raw & 0x400,
-            ini: 0 != raw & 0x800,
-            filename: 0 != raw & 0x1000,
-            directory: 0 != raw & 0x2000,
-            environment: 0 != raw & 0x4000,
-            unused1: 0 != raw & 0x8000,
-            http: 0 != raw & 0x10000,
-            encoding: 0 != raw & 0x20000,
-            uidialog: 0 != raw & 0x40000,
-            motion_planning: 0 != raw & 0x80000,
-            shape_collision: 0 != raw & 0x100000,
-            instance: 0 != raw & 0x200000,
-            room: 0 != raw & 0x400000,
-            game: 0 != raw & 0x800000,
-            display: 0 != raw & 0x1000000,
-            device: 0 != raw & 0x2000000,
-            window: 0 != raw & 0x4000000,
-            draw_color: 0 != raw & 0x8000000,
-            texture: 0 != raw & 0x10000000,
-            layer: 0 != raw & 0x20000000,
-            string: 0 != raw & 0x40000000,
-            tiles: 0 != raw & 0x80000000,
-            surface: 0 != raw & 0x100000000,
-            skeleton: 0 != raw & 0x200000000,
-            io: 0 != raw & 0x400000000,
-            variables: 0 != raw & 0x800000000,
-            array: 0 != raw & 0x1000000000,
-            external_call: 0 != raw & 0x2000000000,
-            notification: 0 != raw & 0x4000000000,
-            date: 0 != raw & 0x8000000000,
-            particle: 0 != raw & 0x10000000000,
-            sprite: 0 != raw & 0x20000000000,
-            clickable: 0 != raw & 0x40000000000,
-            legacy_sound: 0 != raw & 0x80000000000,
-            audio: 0 != raw & 0x100000000000,
-            event: 0 != raw & 0x200000000000,
-            unused2: 0 != raw & 0x400000000000,
-            free_type: 0 != raw & 0x800000000000,
-            analytics: 0 != raw & 0x1000000000000,
-            unused3: 0 != raw & 0x2000000000000,
-            unused4: 0 != raw & 0x4000000000000,
-            achievement: 0 != raw & 0x8000000000000,
-            cloud_saving: 0 != raw & 0x10000000000000,
-            ads: 0 != raw & 0x20000000000000,
-            os: 0 != raw & 0x40000000000000,
-            iap: 0 != raw & 0x80000000000000,
-            facebook: 0 != raw & 0x100000000000000,
-            physics: 0 != raw & 0x200000000000000,
-            flash_aa: 0 != raw & 0x400000000000000,
-            console: 0 != raw & 0x800000000000000,
-            buffer: 0 != raw & 0x1000000000000000,
-            steam: 0 != raw & 0x2000000000000000,
-            unused5: 0 != raw & 0x2010000000000000,
-            shaders: 0 != raw & 0x4000000000000000,
-            vertex_buffers: 0 != raw & 0x8000000000000000,
-        })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        let mut raw: u64 = 0;
-        raw |= self.internet as u64 * 0x1;
-        raw |= self.joystick as u64 * 0x2;
-        raw |= self.gamepad as u64 * 0x4;
-        raw |= self.immersion as u64 * 0x8;
-        raw |= self.screengrab as u64 * 0x10;
-        raw |= self.math as u64 * 0x20;
-        raw |= self.action as u64 * 0x40;
-        raw |= self.matrix_d3d as u64 * 0x80;
-        raw |= self.d3dmodel as u64 * 0x100;
-        raw |= self.data_structures as u64 * 0x200;
-        raw |= self.file as u64 * 0x400;
-        raw |= self.ini as u64 * 0x800;
-        raw |= self.filename as u64 * 0x1000;
-        raw |= self.directory as u64 * 0x2000;
-        raw |= self.environment as u64 * 0x4000;
-        raw |= self.unused1 as u64 * 0x8000;
-        raw |= self.http as u64 * 0x10000;
-        raw |= self.encoding as u64 * 0x20000;
-        raw |= self.uidialog as u64 * 0x40000;
-        raw |= self.motion_planning as u64 * 0x80000;
-        raw |= self.shape_collision as u64 * 0x100000;
-        raw |= self.instance as u64 * 0x200000;
-        raw |= self.room as u64 * 0x400000;
-        raw |= self.game as u64 * 0x800000;
-        raw |= self.display as u64 * 0x1000000;
-        raw |= self.device as u64 * 0x2000000;
-        raw |= self.window as u64 * 0x4000000;
-        raw |= self.draw_color as u64 * 0x8000000;
-        raw |= self.texture as u64 * 0x10000000;
-        raw |= self.layer as u64 * 0x20000000;
-        raw |= self.string as u64 * 0x40000000;
-        raw |= self.tiles as u64 * 0x80000000;
-        raw |= self.surface as u64 * 0x100000000;
-        raw |= self.skeleton as u64 * 0x200000000;
-        raw |= self.io as u64 * 0x400000000;
-        raw |= self.variables as u64 * 0x800000000;
-        raw |= self.array as u64 * 0x1000000000;
-        raw |= self.external_call as u64 * 0x2000000000;
-        raw |= self.notification as u64 * 0x4000000000;
-        raw |= self.date as u64 * 0x8000000000;
-        raw |= self.particle as u64 * 0x10000000000;
-        raw |= self.sprite as u64 * 0x20000000000;
-        raw |= self.clickable as u64 * 0x40000000000;
-        raw |= self.legacy_sound as u64 * 0x80000000000;
-        raw |= self.audio as u64 * 0x100000000000;
-        raw |= self.event as u64 * 0x200000000000;
-        raw |= self.unused2 as u64 * 0x400000000000;
-        raw |= self.free_type as u64 * 0x800000000000;
-        raw |= self.analytics as u64 * 0x1000000000000;
-        raw |= self.unused3 as u64 * 0x2000000000000;
-        raw |= self.unused4 as u64 * 0x4000000000000;
-        raw |= self.achievement as u64 * 0x8000000000000;
-        raw |= self.cloud_saving as u64 * 0x10000000000000;
-        raw |= self.ads as u64 * 0x20000000000000;
-        raw |= self.os as u64 * 0x40000000000000;
-        raw |= self.iap as u64 * 0x80000000000000;
-        raw |= self.facebook as u64 * 0x100000000000000;
-        raw |= self.physics as u64 * 0x200000000000000;
-        raw |= self.flash_aa as u64 * 0x400000000000000;
-        raw |= self.console as u64 * 0x800000000000000;
-        raw |= self.buffer as u64 * 0x1000000000000000;
-        raw |= self.steam as u64 * 0x2000000000000000;
-        raw |= self.unused5 as u64 * 0x2010000000000000;
-        raw |= self.shaders as u64 * 0x4000000000000000;
-        raw |= self.vertex_buffers as u64 * 0x8000000000000000;
-        builder.write_u64(raw);
-        Ok(())
+bitfield_struct! {
+    GMFunctionClassifications : u64 {
+        internet: 0,
+        joystick: 1,
+        gamepad: 2,
+        immersion: 3,
+        screengrab: 4,
+        math: 5,
+        action: 6,
+        matrix_d3d: 7,
+        d3d_model: 8,
+        data_structures: 9,
+        file: 10,
+        ini: 11,
+        filename: 12,
+        directory: 13,
+        environment: 14,
+        http: 16,
+        encoding: 17,
+        ui_dialog: 18,
+        motion_planning: 19,
+        shape_collision: 20,
+        instance: 21,
+        room: 22,
+        game: 23,
+        display: 24,
+        device: 25,
+        window: 26,
+        draw_color: 27,
+        texture: 28,
+        layer: 29,
+        string: 30,
+        tiles: 31,
+        surface: 32,
+        skeleton: 33,
+        io: 34,
+        variables: 35,
+        array: 36,
+        external_call: 37,
+        notification: 38,
+        date: 39,
+        particle: 40,
+        sprite: 41,
+        clickable: 42,
+        legacy_sound: 43,
+        audio: 44,
+        event: 45,
+        free_type: 47,
+        analytics: 48,
+        achievement: 51,
+        cloud_saving: 52,
+        ads: 53,
+        os: 54,
+        in_app_purchases: 55,
+        facebook: 56,
+        physics: 57,
+        flash_aa: 58,
+        console: 59,
+        buffer: 60,
+        steam: 61,
+        shaders: 62,
+        vertex_buffers: 63,
     }
 }

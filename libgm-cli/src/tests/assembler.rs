@@ -12,17 +12,17 @@ pub fn test_assembler(data: &mut GMData) -> Result<()> {
         let code = &data.codes[i];
 
         // Skip child code entries.
-        if let Some(b15) = &code.bytecode15_info {
-            if b15.parent.is_some() {
-                continue;
-            }
+        if let Some(b15) = &code.bytecode15_info
+            && b15.parent.is_some()
+        {
+            continue;
         }
 
         let code_name = code.name.resolve(&data.strings)?.clone();
         print!("\x1B[2K\r({i}/{count}) Disassembling {code_name}");
         std::io::stdout().flush().unwrap();
 
-        let assembly: String = disassemble_code(&data, code).with_context(|| format!("disassembling {code_name:?}"))?;
+        let assembly: String = disassemble_code(data, code).with_context(|| format!("disassembling {code_name:?}"))?;
 
         let reconstructed: Vec<GMInstruction> =
             assemble_code(&assembly, data).with_context(|| format!("assembling {code_name:?}"))?;
