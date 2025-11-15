@@ -1,5 +1,6 @@
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
+use crate::gamemaker::deserialize::resources::resource_opt_from_i32;
 use crate::gamemaker::elements::code::GMCode;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
@@ -60,7 +61,7 @@ impl GMElement for GMScript {
             code_id &= 0x7FFFFFFF;
             is_constructor = true;
         }
-        let code: Option<GMRef<GMCode>> = reader.resource_opt_from_i32(code_id)?;
+        let code: Option<GMRef<GMCode>> = resource_opt_from_i32(code_id)?;
         Ok(GMScript { name, is_constructor, code })
     }
 

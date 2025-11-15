@@ -17,6 +17,7 @@ use crate::gamemaker::elements::timelines::GMTimeline;
 use crate::gamemaker::elements::variables::GMVariable;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
+use crate::gml::opcodes;
 use crate::prelude::*;
 use crate::util::assert::assert_int;
 use crate::util::init::{num_enum_from, vec_with_capacity};
@@ -263,42 +264,6 @@ pub struct GMCodeBytecode15 {
     pub parent: Option<GMRef<GMCode>>,
 }
 
-mod opcode {
-    pub const CONV: u8 = 0x07;
-    pub const MUL: u8 = 0x08;
-    pub const DIV: u8 = 0x09;
-    pub const REM: u8 = 0x0A;
-    pub const MOD: u8 = 0x0B;
-    pub const ADD: u8 = 0x0C;
-    pub const SUB: u8 = 0x0D;
-    pub const AND: u8 = 0x0E;
-    pub const OR: u8 = 0x0F;
-    pub const XOR: u8 = 0x10;
-    pub const NEG: u8 = 0x11;
-    pub const NOT: u8 = 0x12;
-    pub const SHL: u8 = 0x13;
-    pub const SHR: u8 = 0x14;
-    pub const CMP: u8 = 0x15;
-    pub const POP: u8 = 0x45;
-    pub const DUP: u8 = 0x86;
-    pub const RET: u8 = 0x9C;
-    pub const EXIT: u8 = 0x9D;
-    pub const POPZ: u8 = 0x9E;
-    pub const JMP: u8 = 0xB6;
-    pub const JT: u8 = 0xB7;
-    pub const JF: u8 = 0xB8;
-    pub const PUSHENV: u8 = 0xBA;
-    pub const POPENV: u8 = 0xBB;
-    pub const PUSH: u8 = 0xC0;
-    pub const PUSHLOC: u8 = 0xC1;
-    pub const PUSHGLB: u8 = 0xC2;
-    pub const PUSHBLTN: u8 = 0xC3;
-    pub const PUSHIM: u8 = 0x84;
-    pub const CALL: u8 = 0xD9;
-    pub const CALLVAR: u8 = 0x99;
-    pub const EXTENDED: u8 = 0xFF;
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum GMInstruction {
     /// Converts the top of the stack from one type to another.
@@ -488,96 +453,106 @@ impl GMElement for GMInstruction {
                 // This is needed to preserve the comparison type for pre bytecode 15
                 bytes.1 = opcode - 0x10;
             }
-            opcode = opcode_old_to_new(opcode);
+            opcode = opcodes::old_to_new(opcode);
         }
 
         // log::debug!("{} // {:02X} {:02X} {:02X} {:02X}", reader.cur_pos-4, bytes.0, bytes.1, bytes.2, opcode);
 
         Ok(match opcode {
-            opcode::CONV => {
+            opcodes::CONV => {
                 Self::Convert(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Convert Instruction")?)
             }
-            opcode::MUL => {
+            opcodes::MUL => {
                 Self::Multiply(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Multiply Instruction")?)
             }
-            opcode::DIV => {
+            opcodes::DIV => {
                 Self::Divide(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Divide Instruction")?)
             }
-            opcode::REM => {
+            opcodes::REM => {
                 Self::Remainder(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Remainder Instruction")?)
             }
-            opcode::MOD => {
+            opcodes::MOD => {
                 Self::Modulus(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Modulus Instruction")?)
             }
-            opcode::ADD => Self::Add(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Add Instruction")?),
-            opcode::SUB => {
+            opcodes::ADD => {
+                Self::Add(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Add Instruction")?)
+            }
+            opcodes::SUB => {
                 Self::Subtract(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Subtract Instruction")?)
             }
-            opcode::AND => Self::And(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing And Instruction")?),
-            opcode::OR => Self::Or(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Or Instruction")?),
-            opcode::XOR => Self::Xor(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Xor Instruction")?),
-            opcode::NEG => {
+            opcodes::AND => {
+                Self::And(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing And Instruction")?)
+            }
+            opcodes::OR => Self::Or(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Or Instruction")?),
+            opcodes::XOR => {
+                Self::Xor(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing Xor Instruction")?)
+            }
+            opcodes::NEG => {
                 Self::Negate(GMSingleTypeInstruction::parse(reader, bytes).context("parsing Negate Instruction")?)
             }
-            opcode::NOT => Self::Not(GMSingleTypeInstruction::parse(reader, bytes).context("parsing Not Instruction")?),
-            opcode::SHL => {
+            opcodes::NOT => {
+                Self::Not(GMSingleTypeInstruction::parse(reader, bytes).context("parsing Not Instruction")?)
+            }
+            opcodes::SHL => {
                 Self::ShiftLeft(GMDoubleTypeInstruction::parse(reader, bytes).context("parsing ShiftLeft Instruction")?)
             }
-            opcode::SHR => Self::ShiftRight(
+            opcodes::SHR => Self::ShiftRight(
                 GMDoubleTypeInstruction::parse(reader, bytes).context("parsing ShiftRight Instruction")?,
             ),
-            opcode::CMP => {
+            opcodes::CMP => {
                 Self::Compare(GMComparisonInstruction::parse(reader, bytes).context("parsing Compare Instruction")?)
             }
-            opcode::POP if bytes.2 == 0x0F => {
+            opcodes::POP if bytes.2 == 0x0F => {
                 Self::PopSwap(GMPopSwapInstruction::parse(reader, bytes).context("parsing PopSwap Instruction")?)
             }
-            opcode::POP => Self::Pop(GMPopInstruction::parse(reader, bytes).context("parsing Pop Instruction")?),
-            opcode::DUP if bytes.1 == 0 => {
+            opcodes::POP => Self::Pop(GMPopInstruction::parse(reader, bytes).context("parsing Pop Instruction")?),
+            opcodes::DUP if bytes.1 == 0 => {
                 Self::Duplicate(GMDuplicateInstruction::parse(reader, bytes).context("parsing Duplicate Instruction")?)
             }
-            opcode::DUP => Self::DuplicateSwap(
+            opcodes::DUP => Self::DuplicateSwap(
                 GMDuplicateSwapInstruction::parse(reader, bytes).context("parsing DuplicateSwap Instruction")?,
             ),
-            opcode::RET => {
+            opcodes::RET => {
                 Self::Return(GMSingleTypeInstruction::parse(reader, bytes).context("parsing Return Instruction")?)
             }
-            opcode::EXIT => Self::Exit(GMEmptyInstruction::parse(reader, bytes).context("parsing Exit Instruction")?),
-            opcode::POPZ => Self::PopDiscard(
+            opcodes::EXIT => Self::Exit(GMEmptyInstruction::parse(reader, bytes).context("parsing Exit Instruction")?),
+            opcodes::POPZ => Self::PopDiscard(
                 GMSingleTypeInstruction::parse(reader, bytes).context("parsing PopDiscard Instruction")?,
             ),
-            opcode::JMP => Self::Branch(GMGotoInstruction::parse(reader, bytes).context("parsing Branch Instruction")?),
-            opcode::JT => {
+            opcodes::JMP => {
+                Self::Branch(GMGotoInstruction::parse(reader, bytes).context("parsing Branch Instruction")?)
+            }
+            opcodes::JT => {
                 Self::BranchIf(GMGotoInstruction::parse(reader, bytes).context("parsing BranchIf Instruction")?)
             }
-            opcode::JF => {
+            opcodes::JF => {
                 Self::BranchUnless(GMGotoInstruction::parse(reader, bytes).context("parsing BranchUnless Instruction")?)
             }
-            opcode::PUSHENV => Self::PushWithContext(
+            opcodes::PUSHENV => Self::PushWithContext(
                 GMGotoInstruction::parse(reader, bytes).context("parsing PushWithContext Instruction")?,
             ),
-            opcode::POPENV if bytes == (0x00, 0x00, 0xF0) => Self::PopWithContextExit(
+            opcodes::POPENV if bytes == (0x00, 0x00, 0xF0) => Self::PopWithContextExit(
                 GMPopenvExitMagicInstruction::parse(reader, bytes).context("parsing PopEnvExitMagic Instruction")?,
             ),
-            opcode::POPENV => Self::PopWithContext(
+            opcodes::POPENV => Self::PopWithContext(
                 GMGotoInstruction::parse(reader, bytes).context("parsing PopWithContext Instruction")?,
             ),
-            opcode::PUSH => Self::Push(GMPushInstruction::parse(reader, bytes).context("parsing Push Instruction")?),
-            opcode::PUSHLOC => {
+            opcodes::PUSH => Self::Push(GMPushInstruction::parse(reader, bytes).context("parsing Push Instruction")?),
+            opcodes::PUSHLOC => {
                 Self::PushLocal(GMPushInstruction::parse(reader, bytes).context("parsing PushLocal Instruction")?)
             }
-            opcode::PUSHGLB => {
+            opcodes::PUSHGLB => {
                 Self::PushGlobal(GMPushInstruction::parse(reader, bytes).context("parsing PushGlobal Instruction")?)
             }
-            opcode::PUSHBLTN => {
+            opcodes::PUSHBLTN => {
                 Self::PushBuiltin(GMPushInstruction::parse(reader, bytes).context("parsing PushBuiltin Instruction")?)
             }
-            opcode::PUSHIM => Self::PushImmediate(bytes.0 as i16 | ((bytes.1 as i16) << 8)),
-            opcode::CALL => Self::Call(GMCallInstruction::parse(reader, bytes).context("parsing Call Instruction")?),
-            opcode::CALLVAR => Self::CallVariable(
+            opcodes::PUSHIM => Self::PushImmediate(bytes.0 as i16 | ((bytes.1 as i16) << 8)),
+            opcodes::CALL => Self::Call(GMCallInstruction::parse(reader, bytes).context("parsing Call Instruction")?),
+            opcodes::CALLVAR => Self::CallVariable(
                 GMCallVariableInstruction::parse(reader, bytes).context("parsing CallVariable Instruction")?,
             ),
-            opcode::EXTENDED => parse_extended(reader, bytes).context("parsing Extended Instruction")?,
+            opcodes::EXTENDED => parse_extended(reader, bytes).context("parsing Extended Instruction")?,
             _ => bail!("Invalid opcode {opcode} (0x{opcode:02X})"),
         })
     }
@@ -585,7 +560,7 @@ impl GMElement for GMInstruction {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let mut opcode: u8 = opcode_from_instruction(self);
         if builder.bytecode_version() < 15 {
-            opcode = opcode_new_to_old(opcode);
+            opcode = opcodes::new_to_old(opcode);
         }
         match self {
             Self::Convert(instr) => instr.build(builder, opcode)?,
@@ -640,7 +615,7 @@ impl GMElement for GMInstruction {
             Self::PushReference(asset_ref) => {
                 builder.write_i16(-11);
                 builder.write_u8(GMDataType::Int32.into());
-                builder.write_u8(opcode::EXTENDED.into());
+                builder.write_u8(opcodes::EXTENDED);
                 asset_ref.serialize(builder)?
             }
         }
@@ -679,7 +654,7 @@ fn parse_extended(reader: &mut DataReader, b: (u8, u8, u8)) -> Result<GMInstruct
 fn build_extended16(builder: &mut DataBuilder, kind: i16) {
     builder.write_i16(kind);
     builder.write_u8(GMDataType::Int16.into());
-    builder.write_u8(opcode::EXTENDED.into());
+    builder.write_u8(opcodes::EXTENDED.into());
 }
 
 trait InstructionData: Sized {
@@ -1047,120 +1022,52 @@ impl InstructionData for GMCallInstruction {
 
 fn opcode_from_instruction(instruction: &GMInstruction) -> u8 {
     match instruction {
-        GMInstruction::Convert(_) => opcode::CONV,
-        GMInstruction::Multiply(_) => opcode::MUL,
-        GMInstruction::Divide(_) => opcode::DIV,
-        GMInstruction::Remainder(_) => opcode::REM,
-        GMInstruction::Modulus(_) => opcode::MOD,
-        GMInstruction::Add(_) => opcode::ADD,
-        GMInstruction::Subtract(_) => opcode::SUB,
-        GMInstruction::And(_) => opcode::AND,
-        GMInstruction::Or(_) => opcode::OR,
-        GMInstruction::Xor(_) => opcode::XOR,
-        GMInstruction::Negate(_) => opcode::NEG,
-        GMInstruction::Not(_) => opcode::NOT,
-        GMInstruction::ShiftLeft(_) => opcode::SHL,
-        GMInstruction::ShiftRight(_) => opcode::SHR,
-        GMInstruction::Compare(_) => opcode::CMP,
-        GMInstruction::Pop(_) => opcode::POP,
-        GMInstruction::PopSwap(_) => opcode::POP,
-        GMInstruction::Duplicate(_) => opcode::DUP,
-        GMInstruction::DuplicateSwap(_) => opcode::DUP,
-        GMInstruction::Return(_) => opcode::RET,
-        GMInstruction::Exit(_) => opcode::EXIT,
-        GMInstruction::PopDiscard(_) => opcode::POPZ,
-        GMInstruction::Branch(_) => opcode::JMP,
-        GMInstruction::BranchIf(_) => opcode::JT,
-        GMInstruction::BranchUnless(_) => opcode::JF,
-        GMInstruction::PushWithContext(_) => opcode::PUSHENV,
-        GMInstruction::PopWithContext(_) => opcode::POPENV,
-        GMInstruction::PopWithContextExit(_) => opcode::POPENV,
-        GMInstruction::Push(_) => opcode::PUSH,
-        GMInstruction::PushLocal(_) => opcode::PUSHLOC,
-        GMInstruction::PushGlobal(_) => opcode::PUSHGLB,
-        GMInstruction::PushBuiltin(_) => opcode::PUSHBLTN,
-        GMInstruction::PushImmediate(_) => opcode::PUSHIM,
-        GMInstruction::Call(_) => opcode::CALL,
-        GMInstruction::CallVariable(_) => opcode::CALLVAR,
-        GMInstruction::CheckArrayIndex => opcode::EXTENDED,
-        GMInstruction::PushArrayFinal => opcode::EXTENDED,
-        GMInstruction::PopArrayFinal => opcode::EXTENDED,
-        GMInstruction::PushArrayContainer => opcode::EXTENDED,
-        GMInstruction::SetArrayOwner => opcode::EXTENDED,
-        GMInstruction::HasStaticInitialized => opcode::EXTENDED,
-        GMInstruction::SetStaticInitialized => opcode::EXTENDED,
-        GMInstruction::SaveArrayReference => opcode::EXTENDED,
-        GMInstruction::RestoreArrayReference => opcode::EXTENDED,
-        GMInstruction::IsNullishValue => opcode::EXTENDED,
-        GMInstruction::PushReference(_) => opcode::EXTENDED,
-    }
-}
-
-fn opcode_old_to_new(opcode: u8) -> u8 {
-    match opcode {
-        0x03 => 0x07,
-        0x04 => 0x08,
-        0x05 => 0x09,
-        0x06 => 0x0A,
-        0x07 => 0x0B,
-        0x08 => 0x0C,
-        0x09 => 0x0D,
-        0x0A => 0x0E,
-        0x0B => 0x0F,
-        0x0C => 0x10,
-        0x0D => 0x11,
-        0x0E => 0x12,
-        0x0F => 0x13,
-        0x10 => 0x14,
-        0x11 | 0x12 | 0x13 | 0x14 | 0x16 => 0x15,
-        0x41 => 0x45,
-        0x82 => 0x86,
-        0xB7 => 0xB6,
-        0xB8 => 0xB7,
-        0xB9 => 0xB8,
-        0xBB => 0xBA,
-        0x9D => 0x9C,
-        0x9E => 0x9D,
-        0x9F => 0x9E,
-        0xBC => 0xBB,
-        0xDA => 0xD9,
-        _ => opcode,
-    }
-}
-
-fn opcode_new_to_old(opcode: u8) -> u8 {
-    match opcode {
-        0x07 => 0x03,
-        0x08 => 0x04,
-        0x09 => 0x05,
-        0x0A => 0x06,
-        0x0B => 0x07,
-        0x0C => 0x08,
-        0x0D => 0x09,
-        0x0E => 0x0A,
-        0x0F => 0x0B,
-        0x10 => 0x0C,
-        0x11 => 0x0D,
-        0x12 => 0x0E,
-        0x13 => 0x0F,
-        0x14 => 0x10,
-        0x15 => 0, // Should be handled by GMComparisonInstruction::build
-        0x45 => 0x41,
-        0x84 => 0xC0,
-        0x86 => 0x82,
-        0x9C => 0x9D,
-        0x9D => 0x9E,
-        0x9E => 0x9F,
-        0xB6 => 0xB7,
-        0xB7 => 0xB8,
-        0xB8 => 0xB9,
-        0xBA => 0xBB,
-        0xBB => 0xBC,
-        0xD9 => 0xDA,
-        0xC1 => 0xC0,
-        0xC2 => 0xC0,
-        0xC3 => 0xC0,
-        _ => opcode,
+        GMInstruction::Convert(_) => opcodes::CONV,
+        GMInstruction::Multiply(_) => opcodes::MUL,
+        GMInstruction::Divide(_) => opcodes::DIV,
+        GMInstruction::Remainder(_) => opcodes::REM,
+        GMInstruction::Modulus(_) => opcodes::MOD,
+        GMInstruction::Add(_) => opcodes::ADD,
+        GMInstruction::Subtract(_) => opcodes::SUB,
+        GMInstruction::And(_) => opcodes::AND,
+        GMInstruction::Or(_) => opcodes::OR,
+        GMInstruction::Xor(_) => opcodes::XOR,
+        GMInstruction::Negate(_) => opcodes::NEG,
+        GMInstruction::Not(_) => opcodes::NOT,
+        GMInstruction::ShiftLeft(_) => opcodes::SHL,
+        GMInstruction::ShiftRight(_) => opcodes::SHR,
+        GMInstruction::Compare(_) => opcodes::CMP,
+        GMInstruction::Pop(_) => opcodes::POP,
+        GMInstruction::PopSwap(_) => opcodes::POP,
+        GMInstruction::Duplicate(_) => opcodes::DUP,
+        GMInstruction::DuplicateSwap(_) => opcodes::DUP,
+        GMInstruction::Return(_) => opcodes::RET,
+        GMInstruction::Exit(_) => opcodes::EXIT,
+        GMInstruction::PopDiscard(_) => opcodes::POPZ,
+        GMInstruction::Branch(_) => opcodes::JMP,
+        GMInstruction::BranchIf(_) => opcodes::JT,
+        GMInstruction::BranchUnless(_) => opcodes::JF,
+        GMInstruction::PushWithContext(_) => opcodes::PUSHENV,
+        GMInstruction::PopWithContext(_) => opcodes::POPENV,
+        GMInstruction::PopWithContextExit(_) => opcodes::POPENV,
+        GMInstruction::Push(_) => opcodes::PUSH,
+        GMInstruction::PushLocal(_) => opcodes::PUSHLOC,
+        GMInstruction::PushGlobal(_) => opcodes::PUSHGLB,
+        GMInstruction::PushBuiltin(_) => opcodes::PUSHBLTN,
+        GMInstruction::PushImmediate(_) => opcodes::PUSHIM,
+        GMInstruction::Call(_) => opcodes::CALL,
+        GMInstruction::CallVariable(_) => opcodes::CALLVAR,
+        GMInstruction::CheckArrayIndex => opcodes::EXTENDED,
+        GMInstruction::PushArrayFinal => opcodes::EXTENDED,
+        GMInstruction::PopArrayFinal => opcodes::EXTENDED,
+        GMInstruction::PushArrayContainer => opcodes::EXTENDED,
+        GMInstruction::SetArrayOwner => opcodes::EXTENDED,
+        GMInstruction::HasStaticInitialized => opcodes::EXTENDED,
+        GMInstruction::SetStaticInitialized => opcodes::EXTENDED,
+        GMInstruction::SaveArrayReference => opcodes::EXTENDED,
+        GMInstruction::RestoreArrayReference => opcodes::EXTENDED,
+        GMInstruction::IsNullishValue => opcodes::EXTENDED,
+        GMInstruction::PushReference(_) => opcodes::EXTENDED,
     }
 }
 
@@ -1321,19 +1228,19 @@ pub enum GMInstanceType {
 impl Display for GMInstanceType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
-            GMInstanceType::Undefined => write!(f, "Undefined"),
-            GMInstanceType::Self_(None) => write!(f, "Self"),
-            GMInstanceType::Self_(Some(reference)) => write!(f, "Self<{}>", reference.index),
-            GMInstanceType::RoomInstance(instance_id) => write!(f, "RoomInstanceID<{instance_id}>"),
-            GMInstanceType::Other => write!(f, "Other"),
-            GMInstanceType::All => write!(f, "All"),
-            GMInstanceType::None => write!(f, "None"),
-            GMInstanceType::Global => write!(f, "Global"),
-            GMInstanceType::Builtin => write!(f, "Builtin"),
-            GMInstanceType::Local => write!(f, "Local"),
-            GMInstanceType::StackTop => write!(f, "StackTop"),
-            GMInstanceType::Argument => write!(f, "Argument"),
-            GMInstanceType::Static => write!(f, "Static"),
+            Self::Undefined => write!(f, "Undefined"),
+            Self::Self_(None) => write!(f, "Self"),
+            Self::Self_(Some(reference)) => write!(f, "Self<{}>", reference.index),
+            Self::RoomInstance(instance_id) => write!(f, "RoomInstanceID<{instance_id}>"),
+            Self::Other => write!(f, "Other"),
+            Self::All => write!(f, "All"),
+            Self::None => write!(f, "None"),
+            Self::Global => write!(f, "Global"),
+            Self::Builtin => write!(f, "Builtin"),
+            Self::Local => write!(f, "Local"),
+            Self::StackTop => write!(f, "StackTop"),
+            Self::Argument => write!(f, "Argument"),
+            Self::Static => write!(f, "Static"),
         }
     }
 }
@@ -1350,7 +1257,7 @@ pub enum GMVariableType {
     /// normal
     Normal = 0xA0,
 
-    /// Used when referencing variables on room instance IDs, e.g. something like "inst_01ABCDEF.x" in GML
+    /// Used when referencing variables on room instance IDs, e.g. something like `inst_01ABCDEF.x` in GML
     Instance = 0xE0,
 
     /// GMS2.3+, multidimensional array with pushaf
@@ -1406,15 +1313,15 @@ pub enum GMCodeValue {
 impl GMCodeValue {
     pub const fn data_type(&self) -> GMDataType {
         match self {
-            GMCodeValue::Int16(_) => GMDataType::Int16,
-            GMCodeValue::Int32(_) => GMDataType::Int32,
-            GMCodeValue::Function(_) => GMDataType::Int32, // Functions are not a "real" gm type; they're always int32
-            GMCodeValue::Variable(var) if var.is_int32 => GMDataType::Int32, // no idea when this happens
-            GMCodeValue::Int64(_) => GMDataType::Int64,
-            GMCodeValue::Double(_) => GMDataType::Double,
-            GMCodeValue::Boolean(_) => GMDataType::Boolean,
-            GMCodeValue::String(_) => GMDataType::String,
-            GMCodeValue::Variable(_) => GMDataType::Variable,
+            Self::Int16(_) => GMDataType::Int16,
+            Self::Int32(_) => GMDataType::Int32,
+            Self::Function(_) => GMDataType::Int32, // Functions are not a "real" gm type; they're always int32
+            Self::Variable(var) if var.is_int32 => GMDataType::Int32, // no idea when this happens
+            Self::Int64(_) => GMDataType::Int64,
+            Self::Double(_) => GMDataType::Double,
+            Self::Boolean(_) => GMDataType::Boolean,
+            Self::String(_) => GMDataType::String,
+            Self::Variable(_) => GMDataType::Variable,
         }
     }
 }
@@ -1450,10 +1357,7 @@ fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMC
             reader.cur_pos += 2;
             Ok(GMCodeValue::Int16(number))
         }
-        other => bail!(
-            "Trying to read unsupported data type {other:?} while reading value in code at absolute position {}",
-            reader.cur_pos
-        ),
+        GMDataType::Variable => unreachable!("Use read_variable instead"),
     }
 }
 
@@ -1461,7 +1365,7 @@ fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<Code
     let occurrence_position: u32 = reader.cur_pos;
     let raw_value = reader.read_i32()?;
 
-    let variable_type: i32 = (raw_value >> 24) & 0xF8;
+    let variable_type = (raw_value >> 24) & 0xF8;
     let variable_type: GMVariableType =
         num_enum_from(variable_type as u8).context("parsing variable reference chain")?;
 
@@ -1507,7 +1411,8 @@ pub(crate) fn parse_instance_type(raw_value: i16, variable_type: GMVariableType)
     Ok(instance_type)
 }
 
-pub(crate) fn build_instance_type(instance_type: &GMInstanceType) -> i16 {
+#[must_use]
+pub(crate) const fn build_instance_type(instance_type: &GMInstanceType) -> i16 {
     // If > 0; then game object id (or room instance id). If < 0, then variable instance type.
     match instance_type {
         GMInstanceType::Undefined => 0,
