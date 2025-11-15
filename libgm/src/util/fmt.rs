@@ -46,7 +46,7 @@ pub fn hexdump(raw_data: &[u8], range: impl std::ops::RangeBounds<usize>) -> Res
         if i > 0 {
             string.push(' ');
         }
-        write!(&mut string, "{:02X}", byte).unwrap();
+        write!(&mut string, "{byte:02X}").unwrap();
     }
 
     Ok(string)

@@ -17,7 +17,7 @@ fn try_check<V: Into<GMVersionReq>>(
     target_version: V,
 ) -> Result<()> {
     let target_version: GMVersionReq = target_version.into();
-    if reader.general_info.is_version_at_least(target_version.clone()) {
+    if reader.general_info.is_version_at_least(target_version) {
         return Ok(()); // No need to check if already
     }
 
@@ -31,7 +31,7 @@ fn try_check<V: Into<GMVersionReq>>(
                 version_req,
                 chunk_name,
             );
-            reader.general_info.set_version_at_least(version_req.clone())?;
+            reader.general_info.set_version_at_least(version_req)?;
         }
     }
     Ok(())
@@ -64,7 +64,7 @@ impl VersionCheck {
     }
 }
 
-/// Games made in GameMaker Studio 2 no longer store their actual version.
+/// Games made in `GameMaker Studio 2` no longer store their actual version.
 /// They only store `2.0.0.0`. In that case, the version needs to be detected
 /// using assertions that can only be true in new versions.
 /// Note that games which never use new features might be incorrectly detected
@@ -400,7 +400,7 @@ fn cv_sprt_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
             full_length += 4 - full_length % 4; // Idk
         }
         let mut bbox_length = (bbox_width + 7) / 8 * bbox_height * mask_count;
-        if bbox_length % 4 != 0 {
+        if !bbox_length.is_multiple_of(4) {
             bbox_length += 4 - bbox_length % 4; // Idk
         }
 
@@ -488,14 +488,9 @@ fn cv_font_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
 
 /// We already know whether the version is more or less than 2022.8 due to the FEAT chunk being present.
 /// Taking advantage of that, this is basically the same as the 2022.2 check, but it:
-/// - Checks for the LineHeight value instead of Ascender (added in 2023.6)
-///     PSEM (2023.2) is not used, as it would return a false negative on LTS (2022.9+ equivalent with no particles).
-/// - Checks for UnknownAlwaysZero in Glyphs (added in 2024.11)
-///     It's possible for the null pointer check planted in UTPointerList deserialisation to not be triggered:
-///     for example, if SDF is enabled for any fonts, the shaders related to SDF will not be stripped;
-///     it's also possible to prevent audiogroup_default from being stripped by doing
-///         audio_group_name(audiogroup_default)
-///     So we check for the presence of UnknownAlwaysZero as a last resort.
+/// - Checks for the `LineHeight` value instead of `Ascender` (added in 2023.6)
+/// > `PSEM` (2023.2) is not used, as it would return a false negative on LTS (2022.9+ equivalent with no particles).
+/// - Checks for `UnknownAlwaysZero` in Glyphs (added in 2024.11)
 fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     // Explicit check because the logic is very scuffed
     if !reader.general_info.is_version_at_least((2022, 8)) {
@@ -520,7 +515,7 @@ fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersio
             break;
         }
     }
-    if first_two_pointers.len() < 1 {
+    if first_two_pointers.is_empty() {
         return Ok(None); // Nothing to detect
     }
     if first_two_pointers.len() == 1 {
@@ -575,7 +570,7 @@ fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersio
         let kerning_count = reader.read_u16()?;
         let pointer_after_kerning_list = reader.cur_pos + 4 * kerning_count as u32;
         if next_glyph_pointer != pointer_after_kerning_list {
-            bail!(
+            log::warn!(
                 "There appears to be more/fewer values than UnknownAlwaysZero before \
                 the kerning list in GMFontGlyph; data file potentially corrupted"
             );

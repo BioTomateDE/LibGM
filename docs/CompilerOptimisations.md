@@ -14,7 +14,7 @@ The numbers represent the optimisations levels the user will be able to choose f
     - Usage of `PushImmediate` when possible
       - Converts int pushes within -32768 and 32767
       - Saves space (4 bytes)
-   - Evaluate constant expressions
+    - Evaluate constant expressions
        - Precompute mathematical expressions like `6 * 7 - 41` --> `1`
        - Floats will maybe cause issues??? they should be standardized on every platform though, right?
        - Loop unrolling (hard to implement though)
