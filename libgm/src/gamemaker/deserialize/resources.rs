@@ -118,36 +118,36 @@ impl DataReader<'_> {
     pub fn read_resource_by_id<T>(&mut self) -> Result<GMRef<T>> {
         const CTX: &str = "reading resource by ID";
         let number = self.read_u32().context(CTX)?;
-        self.check_resource_limit(number).context(CTX)?;
+        check_resource_limit(number).context(CTX)?;
         Ok(GMRef::new(number))
     }
 
     pub fn read_resource_by_id_opt<T>(&mut self) -> Result<Option<GMRef<T>>> {
         let number = self.read_i32()?;
-        self.resource_opt_from_i32(number)
+        resource_opt_from_i32(number)
     }
+}
 
-    pub fn resource_opt_from_i32<T>(&mut self, number: i32) -> Result<Option<GMRef<T>>> {
-        const CTX: &str = "parsing optional resource by ID";
-        if number == -1 {
-            return Ok(None);
-        }
-        let number: u32 = number
-            .try_into()
-            .ok()
-            .with_context(|| format!("Invalid negative number {number} (0x{number:08X})"))
-            .context(CTX)?;
-        self.check_resource_limit(number).context(CTX)?;
-        Ok(Some(GMRef::new(number)))
+pub fn resource_opt_from_i32<T>(number: i32) -> Result<Option<GMRef<T>>> {
+    const CTX: &str = "parsing optional resource by ID";
+    if number == -1 {
+        return Ok(None);
     }
+    let number: u32 = number
+        .try_into()
+        .ok()
+        .with_context(|| format!("Invalid negative number {number} (0x{number:08X})"))
+        .context(CTX)?;
+    check_resource_limit(number).context(CTX)?;
+    Ok(Some(GMRef::new(number)))
+}
 
-    fn check_resource_limit(&self, number: u32) -> Result<()> {
-        // Increase limit if not enough
-        const FAILSAFE_COUNT: u32 = 500_000;
-        integrity_assert! {
-            number < FAILSAFE_COUNT,
-            "Number {number} exceeds failsafe limit of {FAILSAFE_COUNT}"
-        }
-        Ok(())
+fn check_resource_limit(number: u32) -> Result<()> {
+    // Increase limit if not enough
+    const FAILSAFE_COUNT: u32 = 500_000;
+    integrity_assert! {
+        number < FAILSAFE_COUNT,
+        "Number {number} exceeds failsafe limit of {FAILSAFE_COUNT}"
     }
+    Ok(())
 }

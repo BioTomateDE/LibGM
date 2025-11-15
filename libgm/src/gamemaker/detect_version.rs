@@ -1,5 +1,6 @@
 use crate::gamemaker::deserialize::chunk::GMChunk;
 use crate::gamemaker::deserialize::reader::DataReader;
+use crate::gamemaker::elements::code::GMDataType;
 use crate::gamemaker::elements::embedded_textures::MAGIC_BZ2_QOI_HEADER;
 use crate::gamemaker::elements::rooms::GMRoomLayerType;
 use crate::gamemaker::gm_version::GMVersionReq;
@@ -395,11 +396,11 @@ fn cv_sprt_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         if mask_count == 0 {
             continue; // We can't determine anything from this sprite
         }
-        let mut full_length = (width + 7) / 8 * height * mask_count;
+        let mut full_length = width.div_ceil(8) * height * mask_count;
         if full_length % 4 != 0 {
             full_length += 4 - full_length % 4; // Idk
         }
-        let mut bbox_length = (bbox_width + 7) / 8 * bbox_height * mask_count;
+        let mut bbox_length = bbox_width.div_ceil(8) * bbox_height * mask_count;
         if !bbox_length.is_multiple_of(4) {
             bbox_length += 4 - bbox_length % 4; // Idk
         }
@@ -415,10 +416,10 @@ fn cv_sprt_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
             expected_end_offset = next_sprite_pointer;
         } else {
             // Use chunk length, and be lenient with it (due to chunk padding)
-            if full_end_pos % 16 != 0 && full_end_pos + (16 - full_end_pos % 16) == reader.chunk.end_pos {
+            if !full_end_pos.is_multiple_of(16) && full_end_pos + (16 - full_end_pos % 16) == reader.chunk.end_pos {
                 return Ok(None); // "Full" mask data doesn't exactly line up, but works if rounded up to the next chunk padding
             }
-            if bbox_end_pos % 16 != 0 && bbox_end_pos + (16 - bbox_end_pos % 16) == reader.chunk.end_pos {
+            if !bbox_end_pos.is_multiple_of(16) && bbox_end_pos + (16 - bbox_end_pos % 16) == reader.chunk.end_pos {
                 return target_ver; // "Bbox" mask data doesn't exactly line up, but works if rounded up to the next chunk padding
             }
             bail!("Failed to detect mask type in 2024.6 detection");
@@ -479,7 +480,7 @@ fn cv_font_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         }
         reader.cur_pos += 14;
         let kerning_length = reader.read_u16()?;
-        reader.cur_pos += kerning_length as u32 * 4;
+        reader.cur_pos += u32::from(kerning_length) * 4;
         // From utmt: "combining read/write would apparently break" ???
     }
 
@@ -560,7 +561,7 @@ fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersio
         // And hopefully the last thing in a glyph is the kerning list
         // Note that we're actually skipping all items of the Glyph.Kerning SimpleList here;
         // 4 is supposed to be the size of a GlyphKerning object
-        let pointer_after_kerning_list = reader.cur_pos + 4 * kerning_count as u32;
+        let pointer_after_kerning_list = reader.cur_pos + 4 * u32::from(kerning_count);
         // If we don't land on the next glyph/font after skipping the Kerning list,
         // KerningLength is probably bogus and UnknownAlwaysZero may be present
         if next_glyph_pointer == pointer_after_kerning_list {
@@ -568,7 +569,7 @@ fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersio
         }
         // Discard last read, which would be of UnknownAlwaysZero
         let kerning_count = reader.read_u16()?;
-        let pointer_after_kerning_list = reader.cur_pos + 4 * kerning_count as u32;
+        let pointer_after_kerning_list = reader.cur_pos + 4 * u32::from(kerning_count);
         if next_glyph_pointer != pointer_after_kerning_list {
             log::warn!(
                 "There appears to be more/fewer values than UnknownAlwaysZero before \
@@ -603,7 +604,7 @@ fn cv_font_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
 
         // Advance past kerning
         let kerning_count = reader.read_u16()?;
-        reader.cur_pos += kerning_count as u32 * 4;
+        reader.cur_pos += u32::from(kerning_count) * 4;
     }
 
     // Check for the final chunk padding being missing
@@ -1070,8 +1071,6 @@ fn cv_psem_2023_x(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
 }
 
 fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
-    let chunk_code = reader.chunk.clone();
-
     fn get_chunk_elem_count(reader: &mut DataReader, chunk_name: &'static str, gms2: bool) -> Result<u32> {
         let Some(chunk) = reader.chunks.get(chunk_name) else {
             return Ok(0);
@@ -1087,6 +1086,7 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
         Ok(count)
     }
 
+    let chunk_code = reader.chunk.clone();
     let background_count = get_chunk_elem_count(reader, "BGND", false)?;
     let path_count = get_chunk_elem_count(reader, "PATH", false)?;
     let script_count = get_chunk_elem_count(reader, "SCPT", false)?;
@@ -1096,11 +1096,10 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
     let sequence_count = get_chunk_elem_count(reader, "SEQN", true)?;
     let particle_system_count = get_chunk_elem_count(reader, "SEQN", true)?;
 
-    let is_asset_type_2024_4 = |reader: &mut DataReader| -> Result<bool> {
-        let int_argument = reader.read_u32()?;
+    let is_asset_type_2024_4 = |int_argument: u32| -> bool {
         let resource_id = int_argument & 0xffffff;
         let resource_type = (int_argument >> 24) as u8;
-        Ok(match resource_type {
+        match resource_type {
             4 => resource_id >= background_count,
             5 => resource_id >= path_count,
             6 => resource_id >= script_count,
@@ -1112,7 +1111,7 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
             // case 12 used to be animcurves, but now is unused (so would actually mean earlier than 2024.4)
             13 => resource_id >= particle_system_count,
             _ => false,
-        })
+        }
     };
 
     reader.cur_pos = chunk_code.start_pos;
@@ -1148,14 +1147,13 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
                 if opcode != 0xFF {
                     continue;
                 } // Break instruction
-                if type1 == 2 {
-                    // If type1 is int32
-                    if is_asset_type_2024_4(reader)? {
+                if type1 == GMDataType::Int32.into() {
+                    let int_argument = reader.read_u32()?;
+                    if is_asset_type_2024_4(int_argument) {
                         // Return immediately if highest detectable version (2024.4) is found
                         return Ok(Some((2024, 4).into()));
-                    } else {
-                        detected_2023_8 = true;
                     }
+                    detected_2023_8 = true;
                 }
             }
         }
@@ -1178,20 +1176,20 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
                     // Pop, call
                     reader.cur_pos += 4;
                 }
-                if matches!(opcode, 0xC0 | 0xC1 | 0xC2 | 0xC3) && type1 != 0x0f {
+                if matches!(opcode, 0xC0..0xC4) && type1 != 0x0f {
                     // Push variants; account for int16
                     reader.cur_pos += 4;
                 }
                 if opcode != 0xFF {
                     continue;
                 } // Break instruction
-                if type1 == 2 {
-                    // If type1 is int32
-                    if is_asset_type_2024_4(reader)? {
-                        return Ok(Some((2024, 4).into())); // Return immediately if highest detectable version (2024.4) is found
-                    } else {
-                        detected_2023_8 = true;
+                if type1 == GMDataType::Int32.into() {
+                    let int_argument = reader.read_u32()?;
+                    if is_asset_type_2024_4(int_argument) {
+                        // Return immediately if highest detectable version (2024.4) is found
+                        return Ok(Some((2024, 4).into()));
                     }
+                    detected_2023_8 = true;
                 }
             }
         }
