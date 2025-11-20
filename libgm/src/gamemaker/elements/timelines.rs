@@ -1,5 +1,4 @@
 use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::game_objects::GMGameObjectEvent;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;

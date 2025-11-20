@@ -1,8 +1,8 @@
 use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::deserialize::resources::resource_opt_from_i32;
 use crate::gamemaker::elements::code::GMCode;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
+use crate::gamemaker::reference::GMRef;
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use std::ops::{Deref, DerefMut};

@@ -1,6 +1,6 @@
-use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::strings::StringPlaceholder;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
+use crate::gamemaker::reference::GMRef;
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 

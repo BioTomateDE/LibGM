@@ -1,6 +1,5 @@
 use crate::gamemaker::deserialize::chunk::GMChunk;
 use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
@@ -63,7 +62,7 @@ impl GMElement for GMFunctions {
             //}
 
             for occurrence in occurrences {
-                if let Some(old_value) = reader.function_occurrences.insert(occurrence, GMRef::new(i)) {
+                if let Some(old_value) = reader.function_occurrences.insert(occurrence, i.into()) {
                     bail!(
                         "Conflicting occurrence positions while parsing functions: Position {} \
                         was already set for function #{} with name {:?}; trying to set to function #{} with name {:?}",

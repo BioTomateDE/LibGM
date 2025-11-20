@@ -1,7 +1,7 @@
 use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::embedded_textures::GMEmbeddedTexture;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
+use crate::gamemaker::reference::GMRef;
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use std::ops::{Deref, DerefMut};
@@ -39,9 +39,7 @@ impl GMElement for GMTexturePageItems {
 
         for (i, pointer) in pointers.into_iter().enumerate() {
             reader.cur_pos = pointer;
-            reader
-                .texture_page_item_occurrences
-                .insert(pointer, GMRef::new(i as u32));
+            reader.texture_page_item_occurrences.insert(pointer, i.into());
             texture_page_items.push(GMTexturePageItem::deserialize(reader)?);
         }
 
@@ -84,7 +82,7 @@ impl GMElement for GMTexturePageItem {
         let bounding_width = reader.read_u16()?;
         let bounding_height = reader.read_u16()?;
         let texture_page_id = reader.read_u16()?;
-        let texture_page: GMRef<GMEmbeddedTexture> = GMRef::new(texture_page_id.into());
+        let texture_page: GMRef<GMEmbeddedTexture> = u32::from(texture_page_id).into();
 
         Ok(GMTexturePageItem {
             source_x,

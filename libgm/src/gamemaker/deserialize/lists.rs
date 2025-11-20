@@ -1,6 +1,6 @@
 use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::GMElement;
+use crate::gamemaker::reference::GMRef;
 use crate::prelude::*;
 use crate::util::fmt::typename;
 use crate::util::init::vec_with_capacity;
@@ -50,15 +50,15 @@ impl DataReader<'_> {
     /// Reads a simple list of resource IDs and wraps them in [`GMRef`].
     ///
     /// Each element is a 32-bit resource ID that gets resolved to a reference.
-    pub fn read_simple_list_of_resource_ids<T /*: GMElement*/>(&mut self) -> Result<Vec<GMRef<T>>> {
+    pub fn read_simple_list_of_resource_ids<T>(&mut self) -> Result<Vec<GMRef<T>>> {
         let count = self.read_u32()?;
-        self.read_simple_list_internal(count, |reader| reader.read_resource_by_id())
+        self.read_simple_list_internal(count, Self::read_resource_by_id)
     }
 
     /// Reads a simple list of GameMaker string references.
     pub fn read_simple_list_of_strings(&mut self) -> Result<Vec<String>> {
         let count = self.read_u32()?;
-        self.read_simple_list_internal(count, |reader| reader.read_gm_string())
+        self.read_simple_list_internal(count, Self::read_gm_string)
     }
 
     pub fn read_pointer_list<T: GMElement>(&mut self) -> Result<Vec<T>> {

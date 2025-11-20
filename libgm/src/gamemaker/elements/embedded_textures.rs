@@ -1,5 +1,4 @@
 use crate::gamemaker::data::Endianness;
-
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::qoi;

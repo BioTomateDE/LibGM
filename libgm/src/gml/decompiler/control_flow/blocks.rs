@@ -1,11 +1,11 @@
 use crate::gamemaker::data::GMData;
 
-use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::code::{
     GMCodeValue, GMDataType, GMDoubleTypeInstruction, GMInstruction, GMPushInstruction, GMSingleTypeInstruction,
     get_instruction_size,
 };
 use crate::gamemaker::elements::functions::GMFunction;
+use crate::gamemaker::reference::GMRef;
 use crate::gml::decompiler::control_flow::node::{Node, NodeData};
 use crate::gml::decompiler::control_flow::node_ref::NodeRef;
 use crate::gml::decompiler::decompile_context::DecompileContext;
