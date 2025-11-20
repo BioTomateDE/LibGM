@@ -28,7 +28,7 @@ impl<T: GMElement> GMSerializeIfVersion for Option<T> {
         }
         let element: &T = self.as_ref().ok_or_else(|| {
             format!(
-                "Field '{}' of {} is not set in data with GameMaker version {} but needs to be set since GameMaker version {}",
+                "Field '{}' of {} is not set in data with `GameMaker` version {} but needs to be set since `GameMaker` version {}",
                 field_name,
                 typename::<T>(),
                 builder.gm_data.general_info.version,

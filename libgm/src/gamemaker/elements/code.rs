@@ -360,7 +360,7 @@ pub enum GMInstruction {
     /// Pushes a value stored in a global variable onto the stack.
     PushGlobal(GMPushInstruction),
 
-    /// Pushes a value stored in a GameMaker builtin variable onto the stack.
+    /// Pushes a value stored in a `GameMaker` builtin variable onto the stack.
     PushBuiltin(GMPushInstruction),
 
     /// Pushes an immediate signed 32-bit integer value onto the stack, encoded as a signed 16-bit integer.
@@ -407,7 +407,7 @@ pub enum GMInstruction {
     /// Marks the current function to no longer be able to enter its own static initialization.
     /// This can either occur at the beginning or end of a static block,
     /// depending on whether "AllowReentrantStatic" is enabled by a game's developer
-    /// (enabled by default before GameMaker 2024.11; disabled by default otherwise).
+    /// (enabled by default before `GameMaker` 2024.11; disabled by default otherwise).
     SetStaticInitialized,
 
     /// Keeps track of an array reference temporarily. Used in multidimensional array compound assignment statements.

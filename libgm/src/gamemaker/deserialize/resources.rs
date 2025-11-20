@@ -11,7 +11,7 @@ impl DataReader<'_> {
     pub fn read_gm_string(&mut self) -> Result<String> {
         let occurrence_position = self.read_u32()?;
         self.read_gm_str(occurrence_position)
-            .context("reading optional GameMaker String reference")
+            .context("reading optional `GameMaker` String reference")
     }
 
     pub fn read_gm_string_opt(&mut self) -> Result<Option<String>> {
@@ -22,7 +22,7 @@ impl DataReader<'_> {
 
         let string = self
             .read_gm_str(occurrence_position)
-            .context("reading optional GameMaker String reference")?;
+            .context("reading optional `GameMaker` String reference")?;
 
         Ok(Some(string))
     }
@@ -34,8 +34,8 @@ impl DataReader<'_> {
         self.cur_pos = occurrence_position - 4;
         self.chunk = self.string_chunk.clone();
 
-        let length = self.read_u32().context("reading GameMaker String length")?;
-        let string = self.read_literal_string(length).context("reading GameMaker String")?;
+        let length = self.read_u32().context("reading `GameMaker` String length")?;
+        let string = self.read_literal_string(length).context("reading `GameMaker` String")?;
 
         self.cur_pos = saved_pos;
         self.chunk = saved_chunk;

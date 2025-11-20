@@ -149,7 +149,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
 
             let detected_version_opt: Option<GMVersionReq> = (check.checker_fn)(reader).with_context(|| {
                 format!(
-                    "trying to detect GameMaker Version {} in chunk '{}'",
+                    "trying to detect `GameMaker` Version {} in chunk '{}'",
                     check.target_version, check.chunk_name,
                 )
             })?;

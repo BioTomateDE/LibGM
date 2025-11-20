@@ -154,8 +154,8 @@ impl DataParser {
         const GMS2: GMVersion = GMVersion::new(2, 0, 0, 0, LTSBranch::PreLTS);
         if reader.specified_version == GMS2 {
             let stopwatch = Stopwatch::start();
-            detect_gamemaker_version(&mut reader).context("detecting GameMaker version")?;
-            log::trace!("Detecting GameMaker Version took {stopwatch}");
+            detect_gamemaker_version(&mut reader).context("detecting `GameMaker` version")?;
+            log::trace!("Detecting `GameMaker` Version took {stopwatch}");
         }
 
         log::info!(
@@ -264,7 +264,7 @@ impl DataParser {
 
     ///todo docstrings
     pub fn parse_bytes(&self, raw_data: impl AsRef<[u8]>) -> Result<GMData> {
-        self.parse(raw_data).context("parsing GameMaker data")
+        self.parse(raw_data).context("parsing `GameMaker` data")
     }
 
     /// Parse a `GameMaker` data file (`data.win`, `game.unx`, etc).
@@ -281,7 +281,7 @@ impl DataParser {
         log::trace!("Reading data file took {stopwatch}");
 
         self.parse(raw_data)
-            .with_context(|| format!("parsing GameMaker data file {path:?}"))
+            .with_context(|| format!("parsing `GameMaker` data file {path:?}"))
     }
 }
 

@@ -113,7 +113,7 @@ impl DataReader<'_> {
     ///
     /// This function should be called **after** parsing FORM but **before** reading any chunks.
     pub fn read_gen8_version(&mut self) -> Result<GMVersion> {
-        const CTX: &str = "trying to read GEN8 GameMaker Version";
+        const CTX: &str = "trying to read GEN8 `GameMaker` Version";
         let saved_pos = self.cur_pos;
         let saved_chunk: GMChunk = self.chunk.clone();
         self.chunk = self
@@ -122,7 +122,7 @@ impl DataReader<'_> {
             .cloned()
             .context("Chunk GEN8 does not exist")
             .context(CTX)?;
-        self.cur_pos = self.chunk.start_pos + 44; // Skip to GEN8 GameMaker version
+        self.cur_pos = self.chunk.start_pos + 44; // Skip to GEN8 `GameMaker` version
         let gm_version = GMVersion::deserialize(self).context(CTX)?;
         self.cur_pos = saved_pos;
         self.chunk = saved_chunk;

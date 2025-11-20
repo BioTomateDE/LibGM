@@ -9,7 +9,7 @@ use crate::util::fmt::typename;
 /// This means that removing or inserting elements in the middle of the list will shift all their `GMRef`s; breaking them.
 #[derive(Hash, PartialEq, Eq)]
 pub struct GMRef<T> {
-    /// The GameMaker ID / Index of this resource in the corresponding element vector.
+    /// The `GameMaker` ID / Index of this resource in the corresponding element vector.
     pub index: u32,
 
     /// Marker needs to be here to ignore "unused generic T" error; doesn't store any data
