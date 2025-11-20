@@ -52,7 +52,7 @@ pub struct GMAudioGroup {
     /// This is how the audio group is referenced from code.
     pub name: String,
 
-    /// Relative path (from the main data file) to the audio group file, in GameMaker 2024.14 and above.
+    /// Relative path (from the main data file) to the audio group file, in `GameMaker` 2024.14 and above.
     /// ___
     /// Prior to 2024.14, audio groups were all numerically assigned filenames and all in the root directory.
     pub path: Option<String>,

@@ -1,7 +1,7 @@
 # LibGM
 
-A tool for unpacking, decompiling and modding GameMaker games such as Undertale
-or Deltarune.
+A tool for unpacking, decompiling and modding `GameMaker` games such as
+Undertale or Deltarune.
 
 This is effectively a Rust port of
 [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool)
@@ -24,7 +24,7 @@ This is effectively a Rust port of
     Invalid GMSpriteSepMaskType 67 (0x00000043)
     ↳ while deserializing element 273/4437 of GMSprite pointer list
     ↳ while deserializing chunk 'SPRT'
-    ↳ while parsing GameMaker data file "data.win"
+    ↳ while parsing `GameMaker` data file "data.win"
     ```
 - Configurable lenient options for trying to parse half-broken data files.
 
@@ -98,7 +98,7 @@ This project is licenced under the
 All contributions are welcome! Whether that's a pull request, a feature you
 would like to see added, a bug you found; just create an Issue/PR in this repo.
 
-- Everything related to GameMaker is located in `src/libgm/gamemaker/`.
+- Everything related to `GameMaker` is located in `src/libgm/gamemaker/`.
 - Everything related to GML Decompilation is located in
   `src/libgm/gml/decompiler/`.
 - Everything related to GML Compilation will be located in

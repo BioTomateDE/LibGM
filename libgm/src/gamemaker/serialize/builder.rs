@@ -24,10 +24,10 @@ pub struct DataBuilder<'a> {
     /// The raw data being generated.
     pub raw_data: Vec<u8>,
 
-    /// Pairs data positions of pointer placeholders with the memory address of the GameMaker element they're pointing to
+    /// Pairs data positions of pointer placeholders with the memory address of the `GameMaker` element they're pointing to
     pub(super) pointer_placeholder_positions: Vec<(u32, usize)>,
 
-    /// Maps memory addresses of GameMaker elements to their resolved data position
+    /// Maps memory addresses of `GameMaker` elements to their resolved data position
     pub(super) pointer_resource_positions: HashMap<usize, u32>,
 
     /// Tracks where each function is used throughout the game data.
@@ -106,7 +106,7 @@ impl<'a> DataBuilder<'a> {
         }
     }
 
-    /// Write a GameMaker boolean as a 32-bit integer.
+    /// Write a `GameMaker` boolean as a 32-bit integer.
     /// - If `true`, write `1_i32`.
     /// - If `false`, write `0_i32`.
     pub fn write_bool32(&mut self, boolean: bool) {
@@ -120,12 +120,12 @@ impl<'a> DataBuilder<'a> {
     /// Write an actual character string.
     ///
     /// This should only be used for literal strings in the `STRG` chunk.
-    /// For writing regular GameMaker string references, see [Self::write_gm_string].
+    /// For writing regular `GameMaker` string references, see [Self::write_gm_string].
     pub fn write_literal_string(&mut self, string: &str) {
         self.write_bytes(string.as_bytes());
     }
 
-    /// Write a 4 character ASCII GameMaker chunk name.
+    /// Write a 4 character ASCII `GameMaker` chunk name.
     /// Accounts for endianness (chunk names in big endian are reversed).
     pub fn write_chunk_name(&mut self, name: &str) -> Result<()> {
         if name.len() != 4 {
@@ -178,12 +178,12 @@ impl<'a> DataBuilder<'a> {
     }
 
     /// Create a placeholder pointer at the current position in the chunk and remember
-    /// its data position paired with the target GameMaker element's memory address.
+    /// its data position paired with the target `GameMaker` element's memory address.
     ///
     /// This will later be resolved by calling [`Self::resolve_pointer`]; replacing the
-    /// pointer placeholder with the written data position of the target GameMaker element.
+    /// pointer placeholder with the written data position of the target `GameMaker` element.
     /// ___
-    /// This system exists because it is virtually impossible to predict which data position a GameMaker element will be written to.
+    /// This system exists because it is virtually impossible to predict which data position a `GameMaker` element will be written to.
     /// Circular references and writing order would make predicting these pointer resource positions even harder.
     /// ___
     /// This function should NOT be called for `GMRef`s; use their `DataBuilder::write_gm_x()` methods instead.
@@ -208,7 +208,7 @@ impl<'a> DataBuilder<'a> {
         Ok(())
     }
 
-    /// Store the written GameMaker element's data position paired with its memory address in the pointer resource pool.
+    /// Store the written `GameMaker` element's data position paired with its memory address in the pointer resource pool.
     /// The element's position corresponds to the data builder's current position,
     /// since this method should get called when the element is serialized.
     pub fn resolve_pointer<T>(&mut self, element: &T) -> Result<()> {
@@ -230,10 +230,10 @@ impl<'a> DataBuilder<'a> {
         Ok(())
     }
 
-    /// Writes a GameMaker data chunk.
+    /// Writes a `GameMaker` data chunk.
     /// Skips the chunk if the element does not exist.
     ///
-    /// Appends padding if required by the GameMaker version.
+    /// Appends padding if required by the `GameMaker` version.
     /// This padding has to then be manually cut off for the last chunk in the data file.
     pub fn build_chunk<T: GMChunkElement>(&mut self, element: &T) -> Result<()> {
         let name: &str = T::NAME;
