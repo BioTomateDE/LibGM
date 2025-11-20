@@ -1,6 +1,5 @@
 use crate::gamemaker::deserialize::chunk::GMChunk;
 use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::code::{GMInstanceType, GMVariableType, build_instance_type, parse_instance_type};
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
@@ -89,7 +88,7 @@ impl GMElement for GMVariables {
             //  }
 
             for occurrence in occurrences {
-                if let Some(old_value) = reader.variable_occurrences.insert(occurrence, GMRef::new(i as u32)) {
+                if let Some(old_value) = reader.variable_occurrences.insert(occurrence, i.into()) {
                     bail!(
                         "Conflicting occurrence positions while parsing variables: Position {} was already \
                         set for variable #{} with name {:?}; trying to set to variable #{i} with name {:?}",

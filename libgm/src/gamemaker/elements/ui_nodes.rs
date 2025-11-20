@@ -1,9 +1,7 @@
+use self::flex_properties::{AlignmentKind, FlexValue, GMNodeUIFlexInstanceProperties, GMNodeUIFlexProperties};
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::elements::rooms::{
     GMRoomGameObject, GMRoomLayerEffectProperty, GMSequenceInstance, GMSpriteInstance, GMTextItemInstance,
-};
-use crate::gamemaker::elements::ui_nodes::flex_properties::{
-    AlignmentKind, FlexValue, GMNodeUIFlexInstanceProperties, GMNodeUIFlexProperties,
 };
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;

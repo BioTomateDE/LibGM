@@ -1,6 +1,5 @@
 use crate::gamemaker::data::GMData;
 
-use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::code::GMDataType;
 use crate::gamemaker::elements::code::GMInstruction;
 use crate::gamemaker::elements::code::{
@@ -15,6 +14,7 @@ use crate::gamemaker::elements::code::{
 use crate::gamemaker::elements::functions::{GMFunction, GMFunctions};
 use crate::gamemaker::elements::game_objects::GMGameObject;
 use crate::gamemaker::elements::variables::{GMVariable, to_vari_instance_type};
+use crate::gamemaker::reference::GMRef;
 use crate::prelude::*;
 use crate::util::fmt::typename;
 use arrayvec::ArrayVec;
@@ -136,7 +136,7 @@ macro_rules! asset_by_name {
         let mut found = None;
         for (i, element) in $gm_data.$typename.$typename.iter().enumerate() {
             if element.name == target_name {
-                found = Some(GMRef::new(i as u32));
+                found = Some(i.into());
                 break;
             }
         }

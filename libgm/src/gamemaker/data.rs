@@ -1,4 +1,3 @@
-use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::animation_curves::GMAnimationCurves;
 use crate::gamemaker::elements::audio_groups::GMAudioGroups;
 use crate::gamemaker::elements::backgrounds::GMBackgrounds;
@@ -32,6 +31,7 @@ use crate::gamemaker::elements::texture_page_items::GMTexturePageItems;
 use crate::gamemaker::elements::timelines::GMTimelines;
 use crate::gamemaker::elements::ui_nodes::GMRootUINodes;
 use crate::gamemaker::elements::variables::{GMVariable, GMVariableB15Data, GMVariables, to_vari_instance_type};
+use crate::gamemaker::reference::GMRef;
 use crate::prelude::*;
 
 /// Byte order (endianness) for integers and chunk names in data files.

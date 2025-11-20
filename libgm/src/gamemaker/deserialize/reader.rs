@@ -1,13 +1,12 @@
 use crate::gamemaker::data::Endianness;
 use crate::gamemaker::deserialize::chunk::GMChunk;
-use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::GMElement;
 use crate::gamemaker::elements::functions::GMFunction;
 use crate::gamemaker::elements::general_info::GMGeneralInfo;
-use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::elements::variables::GMVariable;
 use crate::gamemaker::gm_version::{GMVersion, GMVersionReq};
+use crate::gamemaker::reference::GMRef;
 use crate::prelude::*;
 use crate::util::assert::integrity_check;
 use crate::util::smallmap::SmallMap;

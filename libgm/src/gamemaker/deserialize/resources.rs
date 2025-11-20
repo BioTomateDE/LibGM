@@ -1,60 +1,10 @@
 use crate::gamemaker::deserialize::reader::DataReader;
+use crate::gamemaker::elements::GMElement;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
+use crate::gamemaker::reference::GMRef;
 use crate::prelude::*;
 use crate::util::fmt::typename;
 use std::collections::HashMap;
-
-/// GMRef has (fake) generic types to make it clearer which type it belongs to (`name: GMRef` vs `name: String`).
-/// It can be resolved to the data it references using the `.resolve()` method, which needs the list the elements are stored in.
-/// This means that removing or inserting elements in the middle of the list will shift all their `GMRef`s; breaking them.
-#[derive(Hash, PartialEq, Eq)]
-pub struct GMRef<T> {
-    pub index: u32,
-    /// Marker needs to be here to ignore "unused generic T" error; doesn't store any data
-    _marker: std::marker::PhantomData<T>,
-}
-
-impl<T> GMRef<T> {
-    /// Creates a new `GameMaker` reference with the specified index.
-    /// The fake generic type can often be omitted (if the compiler can infer it).
-    pub const fn new(index: u32) -> Self {
-        Self { index, _marker: std::marker::PhantomData }
-    }
-}
-
-impl<T> Clone for GMRef<T> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-impl<T> Copy for GMRef<T> {}
-impl<T> std::fmt::Debug for GMRef<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "GMRef<{}#{}>", typename::<T>(), self.index)
-    }
-}
-
-impl<'a, T> GMRef<T> {
-    /// Attempts to resolve this reference to an element in the given list by its index.
-    ///
-    /// Returns a reference to the element if the index is valid, or an error string if out of bounds.
-    ///
-    /// # Parameters
-    /// - `elements_by_index`: A vector of elements indexed by `self.index`.
-    ///
-    /// # Errors
-    /// Returns an error if `self.index` is out of bounds for the provided vector.
-    pub fn resolve(&self, elements_by_index: &'a [T]) -> Result<&'a T> {
-        elements_by_index.get(self.index as usize).with_context(|| {
-            format!(
-                "Could not resolve {} reference with index {} in list with length {}",
-                typename::<T>(),
-                self.index,
-                elements_by_index.len(),
-            )
-        })
-    }
-}
 
 impl DataReader<'_> {
     /// Read a standard `GameMaker` string reference.
@@ -85,11 +35,7 @@ impl DataReader<'_> {
         self.chunk = self.string_chunk.clone();
 
         let length = self.read_u32().context("reading GameMaker String length")?;
-        // let bytes = self
-        //     .read_bytes_dyn(string_length)
-        //     .context("reading GameMaker String bytes")?;
-        // let string = String::from_utf8(bytes.to_vec()).context("validating GameMaker UTF-8 String")?;
-        let string = self.read_literal_string(length)?;
+        let string = self.read_literal_string(length).context("reading GameMaker String")?;
 
         self.cur_pos = saved_pos;
         self.chunk = saved_chunk;
@@ -113,7 +59,7 @@ impl DataReader<'_> {
         )?))
     }
 
-    fn resolve_occurrence<T>(
+    fn resolve_occurrence<T: GMElement>(
         &self,
         occurrence_position: u32,
         occurrence_map: &HashMap<u32, GMRef<T>>,

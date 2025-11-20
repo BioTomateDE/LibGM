@@ -1,5 +1,4 @@
 use libgm::gamemaker::data::GMData;
-use libgm::gamemaker::deserialize::resources::GMRef;
 use libgm::gml::decompiler::decompile_to_ast;
 use libgm::prelude::*;
 
@@ -18,7 +17,7 @@ pub fn test_decompiler(data: &GMData) -> Result<()> {
             continue;
         }
 
-        decompile_to_ast(data, GMRef::new(i as u32)).with_context(|| format!("decompiling {name}"))?;
+        decompile_to_ast(data, i.into()).with_context(|| format!("decompiling {name}"))?;
     }
     Ok(())
 }

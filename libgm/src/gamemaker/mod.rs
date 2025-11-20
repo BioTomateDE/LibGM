@@ -4,4 +4,5 @@ mod detect_version;
 pub mod elements;
 pub mod gm_version;
 mod qoi;
+pub mod reference;
 pub mod serialize;

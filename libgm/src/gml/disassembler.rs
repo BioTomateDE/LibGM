@@ -1,5 +1,4 @@
 use crate::gamemaker::data::GMData;
-use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::code::CodeVariable;
 use crate::gamemaker::elements::code::GMComparisonType;
 use crate::gamemaker::elements::code::GMInstanceType;
@@ -9,6 +8,7 @@ use crate::gamemaker::elements::code::{GMAssetReference, GMCode, GMCodeValue, GM
 use crate::gamemaker::elements::functions::GMFunction;
 use crate::gamemaker::elements::game_objects::GMGameObject;
 use crate::gamemaker::elements::variables::GMVariable;
+use crate::gamemaker::reference::GMRef;
 use crate::prelude::*;
 
 macro_rules! name_by_ref {
