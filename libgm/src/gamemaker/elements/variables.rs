@@ -2,7 +2,6 @@ use crate::gamemaker::deserialize::chunk::GMChunk;
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::code::{GMInstanceType, GMVariableType, build_instance_type, parse_instance_type};
-use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
@@ -53,7 +52,7 @@ impl GMElement for GMVariables {
 
         // Parse variables
         while reader.cur_pos + variable_size <= reader.chunk.end_pos {
-            let name: GMRef<String> = reader.read_gm_string()?;
+            let name: String = reader.read_gm_string()?;
 
             let b15_data: Option<GMVariableB15Data> = reader.deserialize_if_bytecode_version(15)?;
 
@@ -74,21 +73,20 @@ impl GMElement for GMVariables {
             .context("Chunk CODE not set while parsing variable occurrences")?;
 
         for (i, (occurrence_count, first_occurrence_pos)) in occurrence_infos.into_iter().enumerate() {
-            let name: GMRef<String> = variables[i].name;
             let (occurrences, name_string_id): (Vec<u32>, u32) =
                 parse_occurrence_chain(reader, first_occurrence_pos, occurrence_count)?;
 
-            // Verify name string id.
-            // Unused variables (`prototype`, `@@array@@` and all `arguments` in Undertale)
-            // have a name string id of -1.
-            if name_string_id as i32 != -1 && name.index != name_string_id {
-                bail!(
-                    "Variable #{i} with name {:?} specifies name string id {}; but the id of name string is actually {}",
-                    reader.resolve_gm_str(name)?,
-                    name_string_id,
-                    name.index,
-                );
-            }
+            //  // Verify name string id.
+            //  // Unused variables (`prototype`, `@@array@@` and all `arguments` in Undertale)
+            //  // have a name string id of -1.
+            //  if name_string_id as i32 != -1 && name.index != name_string_id {
+            //      bail!(
+            //          "Variable #{i} with name {:?} specifies name string id {}; but the id of name string is actually {}",
+            //          reader.resolve_gm_str(name)?,
+            //          name_string_id,
+            //          name.index,
+            //      );
+            //  }
 
             for occurrence in occurrences {
                 if let Some(old_value) = reader.variable_occurrences.insert(occurrence, GMRef::new(i as u32)) {
@@ -97,8 +95,8 @@ impl GMElement for GMVariables {
                         set for variable #{} with name {:?}; trying to set to variable #{i} with name {:?}",
                         occurrence,
                         old_value.index,
-                        reader.resolve_gm_str(old_value.resolve(&variables)?.name)?,
-                        reader.resolve_gm_str(variables[i].name)?,
+                        old_value.resolve(&variables)?.name,
+                        variables[i].name,
                     );
                 }
             }
@@ -114,7 +112,7 @@ impl GMElement for GMVariables {
         self.b15_header
             .serialize_if_bytecode_ver(builder, "Scuffed bytecode 15 fields", 15)?;
         for (i, variable) in self.variables.iter().enumerate() {
-            builder.write_gm_string(&variable.name)?;
+            builder.write_gm_string(&variable.name);
             variable
                 .b15_data
                 .serialize_if_bytecode_ver(builder, "Bytecode 15 data", 15)?;
@@ -137,21 +135,9 @@ impl GMElement for GMVariables {
     }
 }
 
-impl GMVariables {
-    pub fn get_variable_ref_by_name(&self, name: &str, gm_strings: &GMStrings) -> Result<GMRef<GMVariable>> {
-        for (i, variable) in self.variables.iter().enumerate() {
-            let variable_name: &String = variable.name.resolve(&gm_strings.strings)?;
-            if variable_name == name {
-                return Ok(GMRef::new(i as u32));
-            }
-        }
-        bail!("Could not resolve variable with name {name:?}");
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMVariable {
-    pub name: GMRef<String>,
+    pub name: String,
     pub b15_data: Option<GMVariableB15Data>,
 }
 

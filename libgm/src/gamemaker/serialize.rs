@@ -7,6 +7,7 @@ mod resources;
 pub(crate) mod traits;
 
 use crate::gamemaker::data::GMData;
+use crate::gamemaker::elements::strings::GMStrings;
 use crate::util::bench::Stopwatch;
 use builder::DataBuilder;
 
@@ -16,7 +17,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
 
     builder.write_chunk_name("FORM")?;
     // Write Data length placeholder
-    builder.write_u32(0xDEADC0DE);
+    builder.write_u32(0xDEAD_C0DE);
 
     // GEN8 has to be the first chunk, at least for utmt (?).
     // CODE has to be written before VARI and FUNC.
@@ -38,7 +39,6 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
     builder.build_chunk(&gm_data.codes)?;
     builder.build_chunk(&gm_data.variables)?;
     builder.build_chunk(&gm_data.functions)?;
-    builder.build_chunk(&gm_data.strings)?;
     builder.build_chunk(&gm_data.embedded_textures)?;
     builder.build_chunk(&gm_data.audios)?;
     builder.build_chunk(&gm_data.sequences)?;
@@ -55,9 +55,13 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
     builder.build_chunk(&gm_data.filter_effects)?;
     builder.build_chunk(&gm_data.animation_curves)?;
 
+    builder.build_chunk(&GMStrings)?;
+
     // Remove potential padding from last chunk
-    builder.raw_data.truncate(builder.last_chunk.padding_start_pos);
-    builder.overwrite_usize(builder.last_chunk.padding_start_pos, builder.last_chunk.length_pos)?;
+    let last = &builder.last_chunk;
+    let chunk_length = last.padding_start_pos - last.length_pos - 4;
+    builder.raw_data.truncate(last.padding_start_pos);
+    builder.overwrite_usize(chunk_length, last.length_pos)?;
 
     // Resolve pointers/placeholders
     let placeholder_count = builder.pointer_placeholder_positions.len();

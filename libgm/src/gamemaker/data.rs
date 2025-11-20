@@ -26,7 +26,6 @@ use crate::gamemaker::elements::sequence::GMSequences;
 use crate::gamemaker::elements::shaders::GMShaders;
 use crate::gamemaker::elements::sounds::GMSounds;
 use crate::gamemaker::elements::sprites::GMSprites;
-use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::tags::GMTags;
 use crate::gamemaker::elements::texture_group_info::GMTextureGroupInfos;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItems;
@@ -84,7 +83,6 @@ pub struct GMData {
     pub shaders: GMShaders,                       // SHDR
     pub sounds: GMSounds,                         // SOND
     pub sprites: GMSprites,                       // SPRT
-    pub strings: GMStrings,                       // STRG
     pub tags: GMTags,                             // TAGS
     pub texture_group_infos: GMTextureGroupInfos, // TGIN
     pub texture_page_items: GMTexturePageItems,   // TPAG
@@ -141,7 +139,6 @@ impl Default for GMData {
             shaders: GMShaders::default(),
             sounds: GMSounds::default(),
             sprites: GMSprites::default(),
-            strings: GMStrings::default(),
             tags: GMTags::default(),
             texture_group_infos: GMTextureGroupInfos::default(),
             texture_page_items: GMTexturePageItems::default(),
@@ -159,23 +156,19 @@ impl Default for GMData {
 
 impl GMData {
     // TODO: make this work for bytecode 14. also docs. also vari_instance_type is wrong/buggy?
-    pub fn make_variable_b15(&mut self, name: &str, instance_type: GMInstanceType) -> Result<GMRef<GMVariable>> {
+    pub fn make_variable_b15(&mut self, name: String, instance_type: GMInstanceType) -> Result<GMRef<GMVariable>> {
         if instance_type == GMInstanceType::Local {
             bail!("Local variables have to be unique; this function will not work");
         }
         let vari_instance_type: GMInstanceType = to_vari_instance_type(&instance_type);
 
         for (i, variable) in self.variables.iter().enumerate() {
-            let var_name: &String = variable.name.resolve(&self.strings)?;
-            if var_name != name {
+            if variable.name != name {
                 continue;
             }
 
             let Some(b15) = &variable.b15_data else {
-                bail!(
-                    "Variable {} does not have bytecode 15 data",
-                    variable.name.display(&self.strings)
-                );
+                bail!("Variable {} does not have bytecode 15 data", variable.name);
             };
             if b15.instance_type != vari_instance_type {
                 continue;
@@ -186,7 +179,6 @@ impl GMData {
         }
 
         // Couldn't find a variable; make a new one
-        let new_name_string: GMRef<String> = self.strings.make(name);
 
         // First update these scuffed ass variable counts
         let Some(b15_header) = &mut self.variables.b15_header else {
@@ -198,7 +190,8 @@ impl GMData {
             if instance_type != GMInstanceType::Builtin {
                 b15_header.var_count1 += 1;
                 b15_header.var_count2 += 1;
-                variable_id = new_name_string.index as i32;
+                //variable_id = new_name_string.index as i32;
+                variable_id = 67;
             }
         } else if self.general_info.bytecode_version >= 16 {
             // this condition is only suggested by utmt; not confirmed (original: `!DifferentVarCounts`)
@@ -218,7 +211,7 @@ impl GMData {
         // Now actually create the variable
         let variable_ref: GMRef<GMVariable> = GMRef::new(self.variables.len() as u32);
         self.variables.push(GMVariable {
-            name: new_name_string,
+            name,
             b15_data: Some(GMVariableB15Data { instance_type, variable_id }),
         });
 
@@ -227,8 +220,7 @@ impl GMData {
 
     fn find_function(&self, name: &str) -> Result<Option<GMRef<GMFunction>>> {
         for (i, function) in self.functions.iter().enumerate() {
-            let func_name: &String = function.name.resolve(&self.strings)?;
-            if name == func_name {
+            if name == function.name {
                 return Ok(Some(GMRef::new(i as u32)));
             }
         }

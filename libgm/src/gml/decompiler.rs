@@ -41,11 +41,7 @@ pub fn decompile_to_ast(gm_data: &GMData, code_ref: GMRef<GMCode>) -> Result<()>
     // // std::process::exit(67);
 
     let gamename = std::env::var("FUCKING_GAMENAME").unwrap();
-    let path = format!(
-        "/home/biotomatede/temp/LibGM/{}/{}",
-        gamename,
-        code.name.display(&gm_data.strings)
-    );
+    let path = format!("/home/biotomatede/temp/LibGM/{}/{}", gamename, code.name);
     std::fs::create_dir(format!("/home/biotomatede/temp/LibGM/{gamename}")).ok();
     let mut s = String::new();
     for (i, noderef) in ctx.blocks.iter().enumerate() {

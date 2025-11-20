@@ -1,160 +1,87 @@
 use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::assert::assert_int;
-use std::collections::HashMap;
-use std::ops::{Deref, DerefMut};
 
 const ALIGNMENT: u32 = 4;
 
-#[derive(Debug, Clone)]
-pub struct GMStrings {
-    pub strings: Vec<String>,
-    pub is_aligned: bool,
-    pub exists: bool,
-}
-
-impl GMStrings {
-    /// Looks up a string in the string table by exact match.
-    ///
-    /// # Returns
-    /// - `Some(GMRef<String>)` if the string exists in the table
-    /// - `None` if the string is not found
-    ///
-    /// # Note
-    /// Performs a linear search through all strings.
-    pub fn find(&self, target: &str) -> Option<GMRef<String>> {
-        self.find_by(|s| s == target)
-    }
-
-    /// Finds a string using a custom predicate function.
-    ///
-    /// # Returns
-    /// - `Some(GMRef<String>)` if a string matching the predicate exists in the table
-    /// - `None` if a matching string is not found
-    ///
-    /// # Examples
-    /// ```
-    /// // Case-insensitive search
-    /// table.find_by(|s| s.eq_ignore_ascii_case("HELLO"));
-    ///
-    /// // Prefix search
-    /// table.find_by(|s| s.starts_with("prefix"));
-    /// ```
-    ///
-    /// # Note
-    /// Performs a linear search through all strings.
-    pub fn find_by<P: Fn(&str) -> bool>(&self, predicate: P) -> Option<GMRef<String>> {
-        self.strings
-            .iter()
-            .enumerate()
-            .find(|(_, string)| predicate(string))
-            .map(|(i, _)| GMRef::new(i as u32))
-    }
-
-    /// Gets or creates a string in the string table.
-    ///
-    /// If the string already exists in the table, returns the existing reference.
-    /// Otherwise, adds the string to the table and returns a new reference.
-    ///
-    /// # Examples
-    /// ```
-    /// let ref1 = gm_data.make_string("hello");
-    /// let ref2 = gm_data.make_string("hello");
-    /// assert_eq!(ref1, ref2); // Same reference for equal strings
-    /// ```
-    pub fn make(&mut self, target: &str) -> GMRef<String> {
-        if let Some(string_ref) = self.find(target) {
-            return string_ref;
-        }
-
-        let index = self.strings.len();
-        self.strings.push(target.to_string());
-        GMRef::new(index as u32)
-    }
-}
-
-impl Default for GMStrings {
-    fn default() -> Self {
-        Self {
-            strings: vec![],
-            // Align by default for compatibility
-            is_aligned: true,
-            exists: false,
-        }
-    }
-}
-
-impl Deref for GMStrings {
-    type Target = Vec<String>;
-    fn deref(&self) -> &Self::Target {
-        &self.strings
-    }
-}
-
-impl DerefMut for GMStrings {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.strings
-    }
-}
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct GMStrings;
 
 impl GMChunkElement for GMStrings {
     const NAME: &'static str = "STRG";
     fn exists(&self) -> bool {
-        self.exists
+        true
     }
 }
 
 impl GMElement for GMStrings {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
-        let is_aligned: bool = pointers.iter().all(|&p| p % ALIGNMENT == 0);
+        let is_aligned: bool = pointers.iter().all(|&p| p.is_multiple_of(ALIGNMENT));
 
-        let mut strings_by_index: Vec<String> = Vec::with_capacity(pointers.len());
-        let mut abs_pos_to_reference: HashMap<u32, GMRef<String>> = HashMap::with_capacity(pointers.len());
+        let mut strings: Vec<String> = Vec::with_capacity(pointers.len());
 
-        for (i, pointer) in pointers.into_iter().enumerate() {
-            reader.cur_pos = pointer;
+        for pointer in pointers {
             if is_aligned {
                 reader.align(ALIGNMENT)?;
             }
+            reader.assert_pos(pointer, "String")?;
             let string_length = reader.read_u32()?;
             let string: String = reader.read_literal_string(string_length)?;
             let byte = reader.read_u8()?;
             assert_int("Null terminator byte after string", 0, byte)?;
-            strings_by_index.push(string.clone());
-            // Occurrence is `start_position + 4` because string refs point to the actual
-            // String data instead of the gamemaker element for faster access.
-            abs_pos_to_reference.insert(pointer + 4, GMRef::new(i as u32));
+            strings.push(string.clone());
         }
 
         reader.align(0x80)?;
-        reader.string_occurrences = abs_pos_to_reference;
-        Ok(GMStrings { strings: strings_by_index, is_aligned, exists: true })
+        reader.strings = strings;
+        Ok(Self)
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            bail!("Required chunk STRG does not exist");
-        }
+        let mut strings = std::mem::take(&mut builder.string_placeholders);
+        strings.sort_unstable_by(|a, b| a.string.cmp(&b.string));
+        let count = count_unique_strings(&strings);
 
-        builder.write_usize(self.strings.len())?;
+        // Prepare Pointer List
+        builder.write_usize(count)?;
         let pointer_list_start: usize = builder.len();
-        for _ in 0..self.strings.len() {
-            builder.write_u32(0xDEADC0DE);
+        for _ in 0..count {
+            builder.write_u32(0xDEAD_C0DE);
         }
 
-        for (i, string) in self.strings.iter().enumerate() {
-            if self.is_aligned {
-                builder.align(ALIGNMENT);
+        let mut string = None;
+        let mut string_position = 0xDEAD_C0DE;
+        let mut index = 0;
+
+        for placeholder in strings {
+            // For identical strings, just write the the position/id again (since they're sorted).
+            if string.as_ref() == Some(&placeholder.string) {
+                overwrite_placeholder(builder, &placeholder, string_position, index)?;
+                continue;
             }
-            builder.overwrite_usize(builder.len(), pointer_list_start + 4 * i)?;
-            builder.write_usize(string.len())?;
-            builder.resolve_pointer(string)?; // Gamemaker string references point to the actual string data
-            builder.write_literal_string(string);
-            builder.write_u8(0); // Trailing null terminator byte
+
+            // Write String
+
+            builder.align(ALIGNMENT);
+
+            let list_pointer = builder.len();
+            let list_placeholder_pos = pointer_list_start + index * 4;
+            builder.overwrite_usize(list_pointer, list_placeholder_pos)?;
+
+            builder.write_usize(placeholder.string.len())?;
+
+            string_position = builder.len();
+            builder.write_literal_string(&placeholder.string);
+
+            // Trailing null terminator byte
+            builder.write_u8(0);
+
+            overwrite_placeholder(builder, &placeholder, string_position, index)?;
+            index += 1;
+            string = Some(placeholder.string);
         }
 
         builder.align(0x80);
@@ -162,30 +89,42 @@ impl GMElement for GMStrings {
     }
 }
 
-impl GMRef<String> {
-    /// Resolves this string reference for display purposes.
-    ///
-    /// Returns the actual string if the reference is valid, or a placeholder
-    /// string (`"<invalid string reference>"`) if the reference is invalid.
-    ///
-    /// # When to use
-    /// - In logging, debugging, or UI contexts where you always want to show something
-    /// - In closures or contexts where error propagation is impractical
-    ///
-    /// # When not to use
-    /// - For logic that needs to handle invalid references properly
-    /// - When you need to distinguish between valid and invalid references
-    ///
-    /// **Prefer [`GMRef::resolve`] for proper error handling.**
-    ///
-    /// # Examples
-    /// ```
-    /// // Safe for display, even with potentially invalid references
-    /// println!("Message: {}", string_ref.display(&gm_data.strings));
-    /// ```
-    pub fn display<'a>(&self, gm_strings: &'a GMStrings) -> &'a str {
-        self.resolve(&gm_strings.strings)
-            .map(|i| i.as_str())
-            .unwrap_or("<invalid string reference>")
+/// Used when building data file
+#[derive(Debug)]
+pub struct StringPlaceholder {
+    pub placeholder_position: u32,
+    pub string: String,
+
+    /// Whether to write the String ID/Index instead of a pointer.
+    pub write_id: bool,
+}
+
+fn count_unique_strings(sorted_vec: &[StringPlaceholder]) -> usize {
+    if sorted_vec.is_empty() {
+        return 0;
     }
+
+    let mut count = 1;
+    let mut prev = &sorted_vec[0].string;
+
+    for item in &sorted_vec[1..] {
+        if &item.string != prev {
+            count += 1;
+            prev = &item.string;
+        }
+    }
+
+    count
+}
+
+fn overwrite_placeholder(
+    builder: &mut DataBuilder,
+    placeholder: &StringPlaceholder,
+    string_position: usize,
+    index: usize,
+) -> Result<()> {
+    let placeholder_position = placeholder.placeholder_position as usize;
+    let number = if placeholder.write_id { index } else { string_position };
+    builder.overwrite_usize(number, placeholder_position)?;
+    Ok(())
 }

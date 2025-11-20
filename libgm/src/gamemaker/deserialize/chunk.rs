@@ -6,11 +6,10 @@ use crate::prelude::*;
 use crate::util::assert::assert_int;
 use crate::util::bench::Stopwatch;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMChunk {
     pub start_pos: u32,
     pub end_pos: u32,
-    pub is_last_chunk: bool,
 }
 
 impl GMChunk {
@@ -64,7 +63,11 @@ impl DataReader<'_> {
         self.chunk = chunk;
 
         let element = T::deserialize(self).with_context(ctx)?;
-        self.read_chunk_padding().with_context(ctx)?;
+
+        // Last chunk does not get padding
+        if T::NAME != self.last_chunk {
+            self.read_chunk_padding().with_context(ctx)?;
+        }
 
         integrity_assert! {
             self.cur_pos == self.chunk.end_pos,
@@ -81,11 +84,6 @@ impl DataReader<'_> {
 
     /// Potentially read padding at the end of the chunk, depending on the `GameMaker` version.
     fn read_chunk_padding(&mut self) -> Result<()> {
-        // Last chunk does not get padding
-        if self.chunk.is_last_chunk {
-            return Ok(());
-        }
-
         // Padding only for GMS2+ and 1.9999+
         let ver: &GMVersion = &self.specified_version;
         let padding_elegible = ver.major >= 2 || (ver.major == 1 && ver.minor >= 9999);

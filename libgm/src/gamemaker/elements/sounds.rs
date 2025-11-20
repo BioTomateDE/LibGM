@@ -53,7 +53,7 @@ impl GMElement for GMSounds {
 pub struct GMSound {
     /// The name of the sound entry.
     /// This name is used when referencing this entry from code.
-    pub name: GMRef<String>,
+    pub name: String,
 
     /// The flags the sound entry uses.
     /// These effectively control different options of this sound.
@@ -67,14 +67,14 @@ pub struct GMSound {
     /// - `.wav`
     /// - `.mp3`
     /// - `.ogg`
-    pub audio_type: Option<GMRef<String>>,
+    pub audio_type: Option<String>,
 
     /// The original file name of the audio entry.
     /// This is the full filename how it was loaded in the project.
     /// This will be used if the sound effect is streamed from disk to find the sound file.
     ///
     /// This is used if the [`GMSoundFlags::is_embedded`] flag is set.
-    pub file: GMRef<String>,
+    pub file: String,
 
     /// A pre-`GameMaker Studio` way of having certain effects on a sound effect.
     /// Although the exact way this works is unknown, the following values are possible:
@@ -106,17 +106,17 @@ pub struct GMSound {
     pub audio_file: Option<GMRef<GMEmbeddedAudio>>,
 
     /// The precomputeed length of the sound's audio data.
-    /// Introduced in GameMaker 2024.6.
+    /// Introduced in `GameMaker` 2024.6.
     /// TODO: which unit
     pub audio_length: Option<f32>,
 }
 
 impl GMElement for GMSound {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let flags = GMSoundFlags::deserialize(reader)?;
-        let audio_type: Option<GMRef<String>> = reader.read_gm_string_opt()?;
-        let file: GMRef<String> = reader.read_gm_string()?;
+        let audio_type: Option<String> = reader.read_gm_string_opt()?;
+        let file: String = reader.read_gm_string()?;
         let effects = reader.read_u32()?;
         let volume = reader.read_f32()?;
         let pitch = reader.read_f32()?;
@@ -133,7 +133,7 @@ impl GMElement for GMSound {
         let audio_file: Option<GMRef<GMEmbeddedAudio>> = reader.read_resource_by_id_opt()?;
         let audio_length: Option<f32> = reader.deserialize_if_gm_version((2024, 6))?;
 
-        Ok(GMSound {
+        Ok(Self {
             name,
             flags,
             audio_type,
@@ -148,15 +148,15 @@ impl GMElement for GMSound {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         self.flags.serialize(builder)?;
-        builder.write_gm_string_opt(&self.audio_type)?;
-        builder.write_gm_string(&self.file)?;
+        builder.write_gm_string_opt(&self.audio_type);
+        builder.write_gm_string(&self.file);
         builder.write_u32(self.effects);
         builder.write_f32(self.volume);
         builder.write_f32(self.pitch);
         if self.flags.regular && builder.bytecode_version() >= 14 {
-            builder.write_resource_id(&self.audio_group);
+            builder.write_resource_id(self.audio_group);
         } else {
             builder.write_bool32(true); // Preload
         }
@@ -172,7 +172,7 @@ bitfield_struct! {
     GMSoundFlags : u32 {
         /// Whether the sound is embedded into the data file.
         /// This should ideally be used for sound effects, but not for music.
-        /// The GameMaker documentation also calls this "not streamed"
+        /// The `GameMaker` documentation also calls this "not streamed"
         /// (or "from memory") for when the flag is present, or "streamed" when it isn't.
         is_embedded: 0,
 

@@ -56,7 +56,7 @@ impl GMElement for GMAnimationCurves {
 /// These were introduced in GameMaker 2.3.0.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMAnimationCurve {
-    pub name: GMRef<String>,
+    pub name: String,
     /// TODO: migrate to an enum
     pub graph_type: u32,
     pub channels: Vec<GMAnimationCurveChannel>,
@@ -64,14 +64,14 @@ pub struct GMAnimationCurve {
 
 impl GMElement for GMAnimationCurve {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name = reader.read_gm_string()?;
         let graph_type = reader.read_u32()?;
         let channels: Vec<GMAnimationCurveChannel> = reader.read_simple_list()?;
         Ok(GMAnimationCurve { name, graph_type, channels })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         builder.write_u32(self.graph_type.into());
         builder.write_simple_list(&self.channels)?;
         Ok(())
@@ -80,7 +80,7 @@ impl GMElement for GMAnimationCurve {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMAnimationCurveChannel {
-    pub name: GMRef<String>,
+    pub name: String,
     pub curve_type: GMAnimationCurveType,
     pub iterations: u32,
     pub points: Vec<GMAnimationCurveChannelPoint>,
@@ -88,7 +88,7 @@ pub struct GMAnimationCurveChannel {
 
 impl GMElement for GMAnimationCurveChannel {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name = reader.read_gm_string()?;
         let curve_type: GMAnimationCurveType = num_enum_from(reader.read_u32()?)?;
         let iterations = reader.read_u32()?;
         let points: Vec<GMAnimationCurveChannelPoint> = reader.read_simple_list()?;
@@ -96,7 +96,7 @@ impl GMElement for GMAnimationCurveChannel {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         builder.write_u32(self.curve_type.into());
         builder.write_u32(self.iterations);
         builder.write_simple_list(&self.points)?;

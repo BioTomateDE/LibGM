@@ -5,7 +5,7 @@ use libgm::gml::disassembler::disassemble_code;
 use libgm::prelude::*;
 use std::io::Write;
 
-pub fn test_assembler(data: &mut GMData) -> Result<()> {
+pub fn test_assembler(data: &GMData) -> Result<()> {
     let count = data.codes.len();
 
     for i in 0..count {
@@ -18,14 +18,14 @@ pub fn test_assembler(data: &mut GMData) -> Result<()> {
             continue;
         }
 
-        let code_name = code.name.resolve(&data.strings)?.clone();
-        print!("\x1B[2K\r({i}/{count}) Disassembling {code_name}");
+        let name = &code.name;
+        print!("\x1B[2K\r({i}/{count}) Disassembling {name}");
         std::io::stdout().flush().unwrap();
 
-        let assembly: String = disassemble_code(data, code).with_context(|| format!("disassembling {code_name:?}"))?;
+        let assembly: String = disassemble_code(data, code).with_context(|| format!("disassembling {name:?}"))?;
 
         let reconstructed: Vec<GMInstruction> =
-            assemble_code(&assembly, data).with_context(|| format!("assembling {code_name:?}"))?;
+            assemble_code(&assembly, data).with_context(|| format!("assembling {name:?}"))?;
 
         let code = &data.codes[i];
         if code.instructions == reconstructed {

@@ -23,6 +23,11 @@ impl<K: PartialEq, V> SmallMap<K, V> {
     }
 
     #[inline]
+    pub fn insert_popular(&mut self, key: K, value: V) {
+        self.0.insert(0, (key, value));
+    }
+
+    #[inline]
     #[must_use]
     pub fn get<Q>(&self, key: &Q) -> Option<&V>
     where

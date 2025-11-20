@@ -1,4 +1,5 @@
 use crate::gamemaker::deserialize::resources::GMRef;
+use crate::gamemaker::elements::strings::StringPlaceholder;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
@@ -7,7 +8,7 @@ impl DataBuilder<'_> {
     /// Writes the resource ID (index) from a `GMRef`.
     /// # Parameters
     /// - `resource`: The resource reference whose index to write.
-    pub fn write_resource_id<T>(&mut self, resource: &GMRef<T>) {
+    pub fn write_resource_id<T>(&mut self, resource: GMRef<T>) {
         self.write_u32(resource.index);
     }
 
@@ -21,24 +22,29 @@ impl DataBuilder<'_> {
         }
     }
 
+    fn _write_gm_string(&mut self, string: String, write_id: bool) {
+        let placeholder_position = self.len() as u32;
+        let placeholder = StringPlaceholder { string, placeholder_position, write_id };
+        self.string_placeholders.push(placeholder);
+        self.write_u32(0xDEAD_C0DE);
+    }
+
     /// Writes a GameMaker string reference as a pointer placeholder.
-    /// # Errors
-    /// Returns an error if the contained string reference cannot be resolved.
-    pub fn write_gm_string(&mut self, gm_string_ref: &GMRef<String>) -> Result<()> {
-        let resolved_string: &String = gm_string_ref.resolve(&self.gm_data.strings)?;
-        self.write_pointer(resolved_string)?;
-        Ok(())
+    pub fn write_gm_string(&mut self, string: &str) {
+        self._write_gm_string(string.to_string(), false);
     }
 
     /// Writes an optional GameMaker string reference as a pointer placeholder, or zero if the reference is `None`.
-    /// # Errors
-    /// Returns an error if the contained string reference cannot be resolved.
-    pub fn write_gm_string_opt(&mut self, gm_string_ref_opt: &Option<GMRef<String>>) -> Result<()> {
-        match gm_string_ref_opt {
-            Some(string_ref) => self.write_gm_string(string_ref)?,
+    pub fn write_gm_string_opt(&mut self, string_opt: &Option<String>) {
+        match string_opt {
+            Some(string) => self.write_gm_string(string),
             None => self.write_u32(0),
         }
-        Ok(())
+    }
+
+    /// Writes a GameMaker string reference as a String ID/Index.
+    pub fn write_gm_string_id(&mut self, string: String) {
+        self._write_gm_string(string, true);
     }
 
     /// Writes a GameMaker texture page item reference as a pointer placeholder.
@@ -59,14 +65,5 @@ impl DataBuilder<'_> {
             None => self.write_u32(0),
         }
         Ok(())
-    }
-
-    /// Tries to resolve a GameMaker string reference to the actual character string.
-    /// Returns a placeholder string if resolving failed.
-    ///
-    /// This function is meant to be used in closures where propagating errors is awkward.
-    /// Otherwise, using [`DataBuilder::resolve_gm_str`] is preferred.
-    pub fn display_gm_str(&self, gm_string_ref: &GMRef<String>) -> &str {
-        gm_string_ref.display(&self.gm_data.strings)
     }
 }

@@ -59,8 +59,8 @@ impl GMElement for GMRooms {
 #[derive(Debug, Clone, PartialEq)]
 #[repr(C)] // Need explicit layout so memory addresses for gm pointers don't collide
 pub struct GMRoom {
-    pub name: GMRef<String>,
-    pub caption: Option<GMRef<String>>,
+    pub name: String,
+    pub caption: Option<String>,
     pub width: u32,
     pub height: u32,
     pub speed: u32,
@@ -88,13 +88,13 @@ pub struct GMRoom {
 
 impl GMElement for GMRoom {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
-        let caption: Option<GMRef<String>> = reader.read_gm_string_opt()?;
+        let name: String = reader.read_gm_string()?;
+        let caption: Option<String> = reader.read_gm_string_opt()?;
         let width = reader.read_u32()?;
         let height = reader.read_u32()?;
         let speed = reader.read_u32()?;
         let persistent = reader.read_bool32()?;
-        let background_color: u32 = reader.read_u32()? | 0xFF000000; // make alpha 255 (background color doesn't have transparency)
+        let background_color: u32 = reader.read_u32()? ^ 0xFF_00_00_00; // make alpha 255 (background color doesn't have transparency)
         let draw_background_color = reader.read_bool32()?;
         let creation_code: Option<GMRef<GMCode>> = reader.read_resource_by_id_opt()?;
         let flags = GMRoomFlags::deserialize(reader)?;
@@ -180,8 +180,8 @@ impl GMElement for GMRoom {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
-        builder.write_gm_string_opt(&self.caption)?;
+        builder.write_gm_string(&self.name);
+        builder.write_gm_string_opt(&self.caption);
         builder.write_u32(self.width);
         builder.write_u32(self.height);
         builder.write_u32(self.speed);
@@ -443,7 +443,7 @@ impl GMElement for GMRoomTile {
         match self.texture {
             Some(GMRoomTileTexture::Sprite(sprite_ref)) => {
                 if builder.is_gm_version_at_least((2, 0)) {
-                    builder.write_resource_id(&sprite_ref)
+                    builder.write_resource_id(sprite_ref)
                 } else {
                     bail!("Room tile texture should be a Background reference before GMS2; not a Sprite reference");
                 }
@@ -451,9 +451,8 @@ impl GMElement for GMRoomTile {
             Some(GMRoomTileTexture::Background(background_ref)) => {
                 if builder.is_gm_version_at_least((2, 0)) {
                     bail!("Room tile texture should be a Sprite reference in GMS2+; not a Background reference");
-                } else {
-                    builder.write_resource_id(&background_ref)
                 }
+                builder.write_resource_id(background_ref)
             }
             None => builder.write_u32(0),
         }
@@ -478,7 +477,7 @@ pub enum GMRoomTileTexture {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMRoomLayer {
-    pub layer_name: GMRef<String>,
+    pub layer_name: String,
     pub layer_id: u32,
     pub layer_type: GMRoomLayerType,
     pub layer_depth: i32,
@@ -493,7 +492,7 @@ pub struct GMRoomLayer {
 
 impl GMElement for GMRoomLayer {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let layer_name: GMRef<String> = reader.read_gm_string()?;
+        let layer_name: String = reader.read_gm_string()?;
         let layer_id = reader.read_u32()?;
         let layer_type: GMRoomLayerType = num_enum_from(reader.read_u32()?)?;
         let layer_depth = reader.read_i32()?;
@@ -512,13 +511,12 @@ impl GMElement for GMRoomLayer {
             GMRoomLayerType::Tiles => GMRoomLayerData::Tiles(GMRoomLayerDataTiles::deserialize(reader)?),
             GMRoomLayerType::Effect => {
                 if reader.general_info.is_version_at_least((2022, 1)) {
-                    let effect_type: GMRef<String> = effect_data_2022_1
-                        .as_ref()
-                        .unwrap()
+                    let effect_data = effect_data_2022_1.as_ref().unwrap();
+                    let effect_type = effect_data
                         .effect_type
-                        .context("Effect Type not set for Room Layer 2022.1+ (this error could be a mistake)")?;
-                    let properties: Vec<GMRoomLayerEffectProperty> =
-                        effect_data_2022_1.as_ref().unwrap().effect_properties.clone();
+                        .clone()
+                        .ok_or("Effect Type not set for Room Layer 2022.1+ (this error could be a mistake)")?;
+                    let properties: Vec<GMRoomLayerEffectProperty> = effect_data.effect_properties.clone();
                     GMRoomLayerData::Effect(GMRoomLayerDataEffect { effect_type, properties })
                 } else {
                     GMRoomLayerData::Effect(GMRoomLayerDataEffect::deserialize(reader)?)
@@ -542,7 +540,7 @@ impl GMElement for GMRoomLayer {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.layer_name)?;
+        builder.write_gm_string(&self.layer_name);
         builder.write_u32(self.layer_id);
         builder.write_u32(self.layer_type.into());
         builder.write_i32(self.layer_depth);
@@ -572,21 +570,21 @@ impl GMElement for GMRoomLayer {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMRoomLayer2022_1 {
     pub effect_enabled: bool,
-    pub effect_type: Option<GMRef<String>>,
+    pub effect_type: Option<String>,
     pub effect_properties: Vec<GMRoomLayerEffectProperty>,
 }
 
 impl GMElement for GMRoomLayer2022_1 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let effect_enabled = reader.read_bool32()?;
-        let effect_type: Option<GMRef<String>> = reader.read_gm_string_opt()?;
+        let effect_type: Option<String> = reader.read_gm_string_opt()?;
         let effect_properties: Vec<GMRoomLayerEffectProperty> = reader.read_simple_list()?;
         Ok(GMRoomLayer2022_1 { effect_enabled, effect_type, effect_properties })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_bool32(self.effect_enabled);
-        builder.write_gm_string_opt(&self.effect_type)?;
+        builder.write_gm_string_opt(&self.effect_type);
         builder.write_simple_list(&self.effect_properties)?;
         Ok(())
     }
@@ -595,22 +593,22 @@ impl GMElement for GMRoomLayer2022_1 {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMRoomLayerEffectProperty {
     pub kind: GMRoomLayerEffectPropertyType,
-    pub name: GMRef<String>,
-    pub value: GMRef<String>,
+    pub name: String,
+    pub value: String,
 }
 
 impl GMElement for GMRoomLayerEffectProperty {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let kind: GMRoomLayerEffectPropertyType = num_enum_from(reader.read_i32()?)?;
-        let name: GMRef<String> = reader.read_gm_string()?;
-        let value: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
+        let value: String = reader.read_gm_string()?;
         Ok(GMRoomLayerEffectProperty { kind, name, value })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(self.kind.into());
-        builder.write_gm_string(&self.name)?;
-        builder.write_gm_string(&self.value)?;
+        builder.write_gm_string(&self.name);
+        builder.write_gm_string(&self.value);
         Ok(())
     }
 }
@@ -1017,20 +1015,20 @@ impl GMElement for GMRoomLayerDataAssets {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMRoomLayerDataEffect {
-    pub effect_type: GMRef<String>,
+    pub effect_type: String,
     pub properties: Vec<GMRoomLayerEffectProperty>,
 }
 
 impl GMElement for GMRoomLayerDataEffect {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         // {~~} dont serialize_old if >= 2022.1??
-        let effect_type: GMRef<String> = reader.read_gm_string()?;
+        let effect_type: String = reader.read_gm_string()?;
         let properties: Vec<GMRoomLayerEffectProperty> = reader.read_simple_list()?;
         Ok(GMRoomLayerDataEffect { effect_type, properties })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.effect_type)?;
+        builder.write_gm_string(&self.effect_type);
         builder.write_simple_list(&self.properties)?;
         Ok(())
     }
@@ -1038,7 +1036,7 @@ impl GMElement for GMRoomLayerDataEffect {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteInstance {
-    pub name: GMRef<String>,
+    pub name: String,
     pub sprite: Option<GMRef<GMSprite>>,
     pub x: i32,
     pub y: i32,
@@ -1053,7 +1051,7 @@ pub struct GMSpriteInstance {
 
 impl GMElement for GMSpriteInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let sprite: Option<GMRef<GMSprite>> = reader.read_resource_by_id_opt()?;
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
@@ -1080,7 +1078,7 @@ impl GMElement for GMSpriteInstance {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         builder.write_resource_id_opt(&self.sprite);
         builder.write_i32(self.x);
         builder.write_i32(self.y);
@@ -1097,7 +1095,7 @@ impl GMElement for GMSpriteInstance {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSequenceInstance {
-    pub name: GMRef<String>,
+    pub name: String,
     pub sequence: GMRef<GMSequence>,
     pub x: i32,
     pub y: i32,
@@ -1112,7 +1110,7 @@ pub struct GMSequenceInstance {
 
 impl GMElement for GMSequenceInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let sequence: GMRef<GMSequence> = reader.read_resource_by_id()?;
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
@@ -1139,8 +1137,8 @@ impl GMElement for GMSequenceInstance {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
-        builder.write_resource_id(&self.sequence);
+        builder.write_gm_string(&self.name);
+        builder.write_resource_id(self.sequence);
         builder.write_i32(self.x);
         builder.write_i32(self.y);
         builder.write_f32(self.scale_x);
@@ -1156,7 +1154,7 @@ impl GMElement for GMSequenceInstance {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMParticleSystemInstance {
-    pub name: GMRef<String>,
+    pub name: String,
     pub particle_system: GMRef<GMParticleSystem>,
     pub x: i32,
     pub y: i32,
@@ -1168,7 +1166,7 @@ pub struct GMParticleSystemInstance {
 
 impl GMElement for GMParticleSystemInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let particle_system: GMRef<GMParticleSystem> = reader.read_resource_by_id()?;
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
@@ -1189,8 +1187,8 @@ impl GMElement for GMParticleSystemInstance {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
-        builder.write_resource_id(&self.particle_system);
+        builder.write_gm_string(&self.name);
+        builder.write_resource_id(self.particle_system);
         builder.write_i32(self.x);
         builder.write_i32(self.y);
         builder.write_f32(self.scale_x);
@@ -1203,7 +1201,7 @@ impl GMElement for GMParticleSystemInstance {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMTextItemInstance {
-    pub name: GMRef<String>,
+    pub name: String,
     pub x: i32,
     pub y: i32,
     pub font: GMRef<GMFont>,
@@ -1213,7 +1211,7 @@ pub struct GMTextItemInstance {
     pub color: u32,
     pub origin_x: f32,
     pub origin_y: f32,
-    pub text: GMRef<String>,
+    pub text: String,
     pub alignment: i32,
     pub character_spacing: f32,
     pub line_spacing: f32,
@@ -1224,7 +1222,7 @@ pub struct GMTextItemInstance {
 
 impl GMElement for GMTextItemInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
         let font: GMRef<GMFont> = reader.read_resource_by_id()?;
@@ -1234,7 +1232,7 @@ impl GMElement for GMTextItemInstance {
         let color = reader.read_u32()?;
         let origin_x = reader.read_f32()?;
         let origin_y = reader.read_f32()?;
-        let text: GMRef<String> = reader.read_gm_string()?;
+        let text: String = reader.read_gm_string()?;
         let alignment = reader.read_i32()?;
         let character_spacing = reader.read_f32()?;
         let line_spacing = reader.read_f32()?;
@@ -1264,17 +1262,17 @@ impl GMElement for GMTextItemInstance {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         builder.write_i32(self.x);
         builder.write_i32(self.y);
-        builder.write_resource_id(&self.font);
+        builder.write_resource_id(self.font);
         builder.write_f32(self.scale_x);
         builder.write_f32(self.scale_y);
         builder.write_f32(self.rotation);
         builder.write_u32(self.color);
         builder.write_f32(self.origin_x);
         builder.write_f32(self.origin_y);
-        builder.write_gm_string(&self.text)?;
+        builder.write_gm_string(&self.text);
         builder.write_i32(self.alignment);
         builder.write_f32(self.character_spacing);
         builder.write_f32(self.line_spacing);
@@ -1345,7 +1343,7 @@ impl GMElement for GMRoomGameObject {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(self.x);
         builder.write_i32(self.y);
-        builder.write_resource_id(&self.object_definition);
+        builder.write_resource_id(self.object_definition);
         builder.write_u32(self.instance_id);
         builder.write_resource_id_opt(&self.creation_code);
         builder.write_f32(self.scale_x);

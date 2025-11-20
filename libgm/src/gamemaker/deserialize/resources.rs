@@ -4,20 +4,20 @@ use crate::prelude::*;
 use crate::util::fmt::typename;
 use std::collections::HashMap;
 
-/// GMRef has (fake) generic types to make it clearer which type it belongs to (`name: GMRef` vs `name: GMRef<String>`).
+/// GMRef has (fake) generic types to make it clearer which type it belongs to (`name: GMRef` vs `name: String`).
 /// It can be resolved to the data it references using the `.resolve()` method, which needs the list the elements are stored in.
 /// This means that removing or inserting elements in the middle of the list will shift all their `GMRef`s; breaking them.
 #[derive(Hash, PartialEq, Eq)]
 pub struct GMRef<T> {
     pub index: u32,
-    // Marker needs to be here to ignore "unused generic T" error; doesn't store any data
+    /// Marker needs to be here to ignore "unused generic T" error; doesn't store any data
     _marker: std::marker::PhantomData<T>,
 }
 
 impl<T> GMRef<T> {
-    /// Creates a new GameMaker reference with the specified index.
+    /// Creates a new `GameMaker` reference with the specified index.
     /// The fake generic type can often be omitted (if the compiler can infer it).
-    pub fn new(index: u32) -> GMRef<T> {
+    pub const fn new(index: u32) -> Self {
         Self { index, _marker: std::marker::PhantomData }
     }
 }
@@ -44,7 +44,7 @@ impl<'a, T> GMRef<T> {
     ///
     /// # Errors
     /// Returns an error if `self.index` is out of bounds for the provided vector.
-    pub fn resolve(&self, elements_by_index: &'a Vec<T>) -> Result<&'a T> {
+    pub fn resolve(&self, elements_by_index: &'a [T]) -> Result<&'a T> {
         elements_by_index.get(self.index as usize).with_context(|| {
             format!(
                 "Could not resolve {} reference with index {} in list with length {}",
@@ -57,25 +57,49 @@ impl<'a, T> GMRef<T> {
 }
 
 impl DataReader<'_> {
-    /// Read a standard GameMaker string reference.
-    pub fn read_gm_string(&mut self) -> Result<GMRef<String>> {
+    /// Read a standard `GameMaker` string reference.
+    pub fn read_gm_string(&mut self) -> Result<String> {
         let occurrence_position = self.read_u32()?;
-        self.resolve_occurrence(occurrence_position, &self.string_occurrences)
+        self.read_gm_str(occurrence_position)
+            .context("reading optional GameMaker String reference")
+    }
+
+    pub fn read_gm_string_opt(&mut self) -> Result<Option<String>> {
+        let occurrence_position = self.read_u32()?;
+        if occurrence_position == 0 {
+            return Ok(None);
+        }
+
+        let string = self
+            .read_gm_str(occurrence_position)
+            .context("reading optional GameMaker String reference")?;
+
+        Ok(Some(string))
+    }
+
+    fn read_gm_str(&mut self, occurrence_position: u32) -> Result<String> {
+        let saved_pos = self.cur_pos;
+        let saved_chunk = self.chunk.clone();
+
+        self.cur_pos = occurrence_position - 4;
+        self.chunk = self.string_chunk.clone();
+
+        let length = self.read_u32().context("reading GameMaker String length")?;
+        // let bytes = self
+        //     .read_bytes_dyn(string_length)
+        //     .context("reading GameMaker String bytes")?;
+        // let string = String::from_utf8(bytes.to_vec()).context("validating GameMaker UTF-8 String")?;
+        let string = self.read_literal_string(length)?;
+
+        self.cur_pos = saved_pos;
+        self.chunk = saved_chunk;
+
+        Ok(string)
     }
 
     pub fn read_gm_texture(&mut self) -> Result<GMRef<GMTexturePageItem>> {
         let occurrence_position = self.read_u32()?;
         self.resolve_occurrence(occurrence_position, &self.texture_page_item_occurrences)
-    }
-
-    pub fn read_gm_string_opt(&mut self) -> Result<Option<GMRef<String>>> {
-        let occurrence_position = self.read_u32()?;
-        if occurrence_position == 0 {
-            return Ok(None);
-        }
-        Ok(Some(
-            self.resolve_occurrence(occurrence_position, &self.string_occurrences)?,
-        ))
     }
 
     pub fn read_gm_texture_opt(&mut self) -> Result<Option<GMRef<GMTexturePageItem>>> {
@@ -105,14 +129,6 @@ impl DataReader<'_> {
                 occurrence_map.len(),
             ),
         }
-    }
-
-    pub fn resolve_gm_str(&self, string_ref: GMRef<String>) -> Result<&String> {
-        string_ref.resolve(&self.strings)
-    }
-
-    pub fn display_gm_str(&self, string_ref: GMRef<String>) -> &str {
-        string_ref.display(&self.strings)
     }
 
     pub fn read_resource_by_id<T>(&mut self) -> Result<GMRef<T>> {

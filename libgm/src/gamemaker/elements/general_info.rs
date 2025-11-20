@@ -23,10 +23,10 @@ pub struct GMGeneralInfo {
     pub unknown_value: u16,
 
     /// The file name of the runner.
-    pub game_file_name: GMRef<String>,
+    pub game_file_name: String,
 
     /// Which GameMaker configuration the data file was compiled with.
-    pub config: GMRef<String>,
+    pub config: String,
 
     /// The last object id of the data file.
     pub last_object_id: u32,
@@ -42,7 +42,7 @@ pub struct GMGeneralInfo {
     pub directplay_guid: uuid::Uuid,
 
     /// The name of the game.
-    pub game_name: GMRef<String>,
+    pub game_name: String,
 
     /// The version of the data file. For GameMaker 2 games, this will be specified as 2.0.0.0,
     /// but `detect_version.rs` will detect the actual version later.
@@ -67,7 +67,7 @@ pub struct GMGeneralInfo {
     pub timestamp_created: DateTime<Utc>,
 
     /// The name that gets displayed in the window.
-    pub display_name: GMRef<String>,
+    pub display_name: String,
 
     /// The function classifications of this data file.
     pub function_classifications: GMFunctionClassifications,
@@ -97,21 +97,21 @@ impl Default for GMGeneralInfo {
             is_debugger_disabled: true,
             bytecode_version: 67,
             unknown_value: 0,
-            game_file_name: GMRef::new(13371337),
-            config: GMRef::new(13371337),
-            last_object_id: 100000,
-            last_tile_id: 10000000,
-            game_id: 13371337,
+            game_file_name: "".to_string(),
+            config: "".to_string(),
+            last_object_id: 100_000,
+            last_tile_id: 10_000_000,
+            game_id: 1337,
             directplay_guid: Default::default(),
-            game_name: GMRef::new(13371337),
+            game_name: "".to_string(),
             version: GMVersion::stub(),
-            default_window_width: 13371337,
-            default_window_height: 13371337,
+            default_window_width: 1337,
+            default_window_height: 1337,
             flags: GMGeneralInfoFlags::default(),
-            license_crc32: 13371337,
+            license_crc32: 1337,
             license_md5: [0; 16],
             timestamp_created: Default::default(),
-            display_name: GMRef::new(13371337),
+            display_name: "".to_string(),
             function_classifications: GMFunctionClassifications::default(),
             steam_appid: 0,
             debugger_port: None,
@@ -149,8 +149,8 @@ impl GMElement for GMGeneralInfo {
         };
         let bytecode_version = reader.read_u8()?;
         let unknown_value = reader.read_u16()?;
-        let game_file_name: GMRef<String> = reader.read_gm_string()?;
-        let config: GMRef<String> = reader.read_gm_string()?;
+        let game_file_name: String = reader.read_gm_string()?;
+        let config: String = reader.read_gm_string()?;
         let last_object_id = reader.read_u32()?;
         let last_tile_id = reader.read_u32()?;
         let game_id = reader.read_u32()?;
@@ -162,7 +162,7 @@ impl GMElement for GMGeneralInfo {
         };
         let directplay_guid: uuid::Uuid = uuid_parser(directplay_guid).into_uuid();
 
-        let game_name: GMRef<String> = reader.read_gm_string()?;
+        let game_name: String = reader.read_gm_string()?;
         let version = GMVersion::deserialize(reader)?;
         let default_window_width = reader.read_u32()?;
         let default_window_height = reader.read_u32()?;
@@ -179,7 +179,7 @@ impl GMElement for GMGeneralInfo {
             )
         })?;
 
-        let display_name: GMRef<String> = reader.read_gm_string()?;
+        let display_name: String = reader.read_gm_string()?;
         let active_targets = reader.read_u64()?;
         assert_int("Active Targets", 0, active_targets)?;
         let function_classifications = GMFunctionClassifications::deserialize(reader)?;
@@ -303,13 +303,13 @@ impl GMElement for GMGeneralInfo {
         builder.write_u8(if self.is_debugger_disabled { 1 } else { 0 });
         builder.write_u8(self.bytecode_version);
         builder.write_u16(self.unknown_value);
-        builder.write_gm_string(&self.game_file_name)?;
-        builder.write_gm_string(&self.config)?;
+        builder.write_gm_string(&self.game_file_name);
+        builder.write_gm_string(&self.config);
         builder.write_u32(self.last_object_id);
         builder.write_u32(self.last_tile_id);
         builder.write_u32(self.game_id);
         builder.write_bytes(self.directplay_guid.to_bytes_le().as_slice());
-        builder.write_gm_string(&self.game_name)?;
+        builder.write_gm_string(&self.game_name);
         self.version.serialize(builder)?; // Technically incorrect but idc
         // if self.version.major == 1 {
         //     self.version.serialize(builder)?;
@@ -325,7 +325,7 @@ impl GMElement for GMGeneralInfo {
         builder.write_u32(self.license_crc32);
         builder.write_bytes(&self.license_md5);
         builder.write_i64(self.timestamp_created.timestamp());
-        builder.write_gm_string(&self.display_name)?;
+        builder.write_gm_string(&self.display_name);
         builder.write_u64(0); // "Active targets"
         self.function_classifications.serialize(builder)?;
         builder.write_i32(self.steam_appid);
@@ -333,7 +333,7 @@ impl GMElement for GMGeneralInfo {
             .serialize_if_bytecode_ver(builder, "Debugger Port", 14)?;
         builder.write_usize(self.room_order.len())?;
         for room_ref in &self.room_order {
-            builder.write_resource_id(room_ref);
+            builder.write_resource_id(*room_ref);
         }
         if builder.is_gm_version_at_least((2, 0)) {
             // Write random UID

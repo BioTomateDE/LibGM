@@ -53,19 +53,19 @@ impl GMElement for GMEmbeddedImages {
 /// Not to be confused with the other "embedded" resources, this is a bit different.
 #[derive(Debug, Clone)]
 pub struct GMEmbeddedImage {
-    pub name: GMRef<String>,
+    pub name: String,
     pub texture_entry: GMRef<GMTexturePageItem>,
 }
 
 impl GMElement for GMEmbeddedImage {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let texture_entry: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
         Ok(Self { name, texture_entry })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         builder.write_gm_texture(&self.texture_entry)?;
         Ok(())
     }

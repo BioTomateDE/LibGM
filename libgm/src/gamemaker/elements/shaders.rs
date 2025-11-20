@@ -51,20 +51,20 @@ impl GMElement for GMShaders {
             let pointer = win[0];
             let entry_end = win[1];
             reader.cur_pos = pointer;
-            let name: GMRef<String> = reader.read_gm_string()?;
+            let name: String = reader.read_gm_string()?;
             let shader_type: GMShaderType = num_enum_from(reader.read_u32()? & 0x7FFFFFFF)?;
 
-            let glsl_es_vertex: GMRef<String> = reader.read_gm_string()?;
-            let glsl_es_fragment: GMRef<String> = reader.read_gm_string()?;
-            let glsl_vertex: GMRef<String> = reader.read_gm_string()?;
-            let glsl_fragment: GMRef<String> = reader.read_gm_string()?;
-            let hlsl9_vertex: GMRef<String> = reader.read_gm_string()?;
-            let hlsl9_fragment: GMRef<String> = reader.read_gm_string()?;
+            let glsl_es_vertex: String = reader.read_gm_string()?;
+            let glsl_es_fragment: String = reader.read_gm_string()?;
+            let glsl_vertex: String = reader.read_gm_string()?;
+            let glsl_fragment: String = reader.read_gm_string()?;
+            let hlsl9_vertex: String = reader.read_gm_string()?;
+            let hlsl9_fragment: String = reader.read_gm_string()?;
 
             let hlsl11_vertex_ptr = reader.read_u32()?;
             let hlsl11_pixel_ptr = reader.read_u32()?;
 
-            let vertex_shader_attributes: Vec<GMRef<String>> = reader.read_simple_list_of_strings()?;
+            let vertex_shader_attributes: Vec<String> = reader.read_simple_list_of_strings()?;
 
             let mut version: i32 = 2;
             let mut pssl_vertex_ptr = 0;
@@ -173,14 +173,14 @@ impl GMElement for GMShaders {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMShader {
-    pub name: GMRef<String>,
+    pub name: String,
     pub shader_type: GMShaderType,
-    pub glsl_es_vertex: GMRef<String>,
-    pub glsl_es_fragment: GMRef<String>,
-    pub glsl_vertex: GMRef<String>,
-    pub glsl_fragment: GMRef<String>,
-    pub hlsl9_vertex: GMRef<String>,
-    pub hlsl9_fragment: GMRef<String>,
+    pub glsl_es_vertex: String,
+    pub glsl_es_fragment: String,
+    pub glsl_vertex: String,
+    pub glsl_fragment: String,
+    pub hlsl9_vertex: String,
+    pub hlsl9_fragment: String,
     pub version: i32,
     pub hlsl11_vertex_data: Option<GMShaderData>,
     pub hlsl11_pixel_data: Option<GMShaderData>,
@@ -190,7 +190,7 @@ pub struct GMShader {
     pub cg_psvita_pixel_data: Option<GMShaderData>,
     pub cg_ps3_vertex_data: Option<GMShaderData>,
     pub cg_ps3_pixel_data: Option<GMShaderData>,
-    pub vertex_shader_attributes: Vec<GMRef<String>>,
+    pub vertex_shader_attributes: Vec<String>,
 }
 
 impl GMElement for GMShader {
@@ -199,14 +199,14 @@ impl GMElement for GMShader {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         builder.write_u32(u32::from(self.shader_type) | 0x80000000);
-        builder.write_gm_string(&self.glsl_es_vertex)?;
-        builder.write_gm_string(&self.glsl_es_fragment)?;
-        builder.write_gm_string(&self.glsl_vertex)?;
-        builder.write_gm_string(&self.glsl_fragment)?;
-        builder.write_gm_string(&self.hlsl9_vertex)?;
-        builder.write_gm_string(&self.hlsl9_fragment)?;
+        builder.write_gm_string(&self.glsl_es_vertex);
+        builder.write_gm_string(&self.glsl_es_fragment);
+        builder.write_gm_string(&self.glsl_vertex);
+        builder.write_gm_string(&self.glsl_fragment);
+        builder.write_gm_string(&self.hlsl9_vertex);
+        builder.write_gm_string(&self.hlsl9_fragment);
 
         builder.write_pointer_opt(&self.hlsl11_vertex_data)?;
         builder.write_pointer_opt(&self.hlsl11_pixel_data)?;

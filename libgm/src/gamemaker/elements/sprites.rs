@@ -50,7 +50,7 @@ impl GMElement for GMSprites {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSprite {
-    pub name: GMRef<String>,
+    pub name: String,
     pub width: u32,
     pub height: u32,
     pub margin_left: i32,
@@ -71,8 +71,7 @@ pub struct GMSprite {
 
 impl GMElement for GMSprite {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
-        let name_str: String = reader.display_gm_str(name).to_string();
+        let name: String = reader.read_gm_string()?;
         let width = reader.read_u32()?;
         let height = reader.read_u32()?;
         let margin_left = reader.read_i32()?;
@@ -127,7 +126,7 @@ impl GMElement for GMSprite {
                     let swf_version = reader.read_i32()?;
                     // Assert swf version is either 7 or 8
                     if !(swf_version == 7 || swf_version == 8) {
-                        bail!("Invalid SWF version {swf_version} for Sprite {name_str:?}");
+                        bail!("Invalid SWF version {swf_version} for Sprite {name:?}");
                     }
                     if swf_version == 8 {
                         textures = Self::read_texture_list(reader)?;
@@ -227,14 +226,14 @@ impl GMElement for GMSprite {
                     );
                 }
 
-                other => bail!("Invalid Sprite Type {other} for Sprite with name {name_str:?}"),
+                other => bail!("Invalid Sprite Type {other} for Sprite {name:?}"),
             };
 
             if sequence_offset != 0 {
                 let sequence_version = reader.read_i32()?;
                 if sequence_version != 1 {
                     bail!(
-                        "Expected SEQN version 1 but got {sequence_version} while parsing Sequence for Sprite with name {name_str:?}"
+                        "Expected SEQN version 1 but got {sequence_version} while parsing Sequence for Sprite {name:?}"
                     );
                 }
                 sequence = Some(GMSequence::deserialize(reader)?);
@@ -289,7 +288,7 @@ impl GMElement for GMSprite {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         builder.write_u32(self.width);
         builder.write_u32(self.height);
         builder.write_i32(self.margin_left);

@@ -51,18 +51,18 @@ impl GMElement for GMAudioGroups {
 pub struct GMAudioGroup {
     /// The name of the audio group.
     /// This is how the audio group is referenced from code.
-    pub name: GMRef<String>,
+    pub name: String,
 
     /// Relative path (from the main data file) to the audio group file, in GameMaker 2024.14 and above.
     /// ___
     /// Prior to 2024.14, audio groups were all numerically assigned filenames and all in the root directory.
-    pub path: Option<GMRef<String>>,
+    pub path: Option<String>,
 }
 
 impl GMElement for GMAudioGroup {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
-        let path: Option<GMRef<String>> = if reader.general_info.is_version_at_least((2024, 14)) {
+        let name: String = reader.read_gm_string()?;
+        let path: Option<String> = if reader.general_info.is_version_at_least((2024, 14)) {
             Some(reader.read_gm_string()?)
         } else {
             None
@@ -71,9 +71,10 @@ impl GMElement for GMAudioGroup {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         if builder.is_gm_version_at_least((2024, 14)) {
-            builder.write_gm_string(&self.path.context("Audio Group Path not set for 2024.14+")?)?;
+            let path = self.path.as_ref().ok_or("Audio Group Path not set for 2024.14+")?;
+            builder.write_gm_string(path);
         }
         Ok(())
     }

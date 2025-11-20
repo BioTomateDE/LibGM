@@ -1,6 +1,7 @@
 use crate::gamemaker::data::{Endianness, GMData};
 use crate::gamemaker::elements::GMChunkElement;
 use crate::gamemaker::elements::code::GMVariableType;
+use crate::gamemaker::elements::strings::StringPlaceholder;
 use crate::gamemaker::gm_version::GMVersionReq;
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
@@ -10,14 +11,14 @@ use std::collections::HashMap;
 // The Default value should never be read.
 // This can only happen if there are zero existant chunks, though.
 #[derive(Debug, Default)]
-pub(crate) struct LastChunk {
+pub struct LastChunk {
     pub length_pos: usize,
     pub padding_start_pos: usize,
 }
 
 #[derive(Debug)]
-pub(crate) struct DataBuilder<'a> {
-    /// The [GMData] to serialize.
+pub struct DataBuilder<'a> {
+    /// The [`GMData`] to serialize.
     pub gm_data: &'a GMData,
 
     /// The raw data being generated.
@@ -41,6 +42,8 @@ pub(crate) struct DataBuilder<'a> {
     /// - Inner Vec: List of `(written_position, variable_type)` tuples for each occurrence
     pub variable_occurrences: Vec<Vec<(usize, GMVariableType)>>,
 
+    pub string_placeholders: Vec<StringPlaceholder>,
+
     pub last_chunk: LastChunk,
 }
 
@@ -54,6 +57,7 @@ impl<'a> DataBuilder<'a> {
             pointer_resource_positions: HashMap::new(),
             function_occurrences: vec![Vec::new(); gm_data.functions.len()],
             variable_occurrences: vec![Vec::new(); gm_data.variables.len()],
+            string_placeholders: Vec::new(),
             last_chunk: LastChunk::default(),
         }
     }
@@ -186,7 +190,7 @@ impl<'a> DataBuilder<'a> {
     pub fn write_pointer<T>(&mut self, element: &T) -> Result<()> {
         let memory_address: usize = element as *const _ as usize;
         let placeholder_position: u32 = self.len() as u32; // Gamemaker is 32bit anyway
-        self.write_u32(0xDEADC0DE);
+        self.write_u32(0xDEAD_C0DE);
         self.pointer_placeholder_positions
             .push((placeholder_position, memory_address));
         Ok(())

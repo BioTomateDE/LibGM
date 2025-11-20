@@ -63,7 +63,7 @@ impl GMElement for GMSequences {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSequence {
-    pub name: GMRef<String>,
+    pub name: String,
     pub playback: GMSequencePlaybackType,
     pub playback_speed: f32,
     pub playback_speed_type: GMAnimSpeedType,
@@ -75,13 +75,13 @@ pub struct GMSequence {
     pub height: Option<f32>,
     pub broadcast_messages: Vec<GMKeyframeData<GMBroadcastMessage>>,
     pub tracks: Vec<GMTrack>,
-    pub function_ids: HashMap<i32, GMRef<String>>,
+    pub function_ids: HashMap<i32, String>,
     pub moments: Vec<GMKeyframeData<GMKeyframeMoment>>,
 }
 
 impl GMElement for GMSequence {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let playback: GMSequencePlaybackType = num_enum_from(reader.read_u32()?)?;
         let playback_speed = reader.read_f32()?;
         let playback_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)?;
@@ -101,10 +101,10 @@ impl GMElement for GMSequence {
         let tracks: Vec<GMTrack> = reader.read_simple_list()?;
 
         let function_id_count = reader.read_u32()?;
-        let mut function_ids: HashMap<i32, GMRef<String>> = hashmap_with_capacity(function_id_count)?;
+        let mut function_ids: HashMap<i32, String> = hashmap_with_capacity(function_id_count)?;
         for _ in 0..function_id_count {
             let key = reader.read_i32()?;
-            let function_id: GMRef<String> = reader.read_gm_string()?;
+            let function_id: String = reader.read_gm_string()?;
             function_ids.insert(key, function_id);
         }
 
@@ -129,7 +129,7 @@ impl GMElement for GMSequence {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         builder.write_u32(self.playback.into());
         builder.write_f32(self.playback_speed);
         builder.write_u32(self.playback_speed_type.into());
@@ -147,7 +147,7 @@ impl GMElement for GMSequence {
         builder.write_usize(self.function_ids.len())?;
         for (key, function_id) in &self.function_ids {
             builder.write_i32(*key);
-            builder.write_gm_string(function_id)?;
+            builder.write_gm_string(function_id);
         }
 
         builder.write_simple_list(&self.moments)?;
@@ -263,7 +263,7 @@ impl GMElement for GMKeyframeAudio {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_resource_id(&self.sound);
+        builder.write_resource_id(self.sound);
         builder.write_i32(self.mode);
         Ok(())
     }
@@ -281,7 +281,7 @@ impl GMElement for GMKeyframeInstance {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_resource_id(&self.game_object);
+        builder.write_resource_id(self.game_object);
         Ok(())
     }
 }
@@ -298,7 +298,7 @@ impl GMElement for GMKeyframeGraphic {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_resource_id(&self.sprite);
+        builder.write_resource_id(self.sprite);
         Ok(())
     }
 }
@@ -315,7 +315,7 @@ impl GMElement for GMKeyframeSequence {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_resource_id(&self.sequence);
+        builder.write_resource_id(self.sequence);
         Ok(())
     }
 }
@@ -356,17 +356,17 @@ impl GMElement for GMKeyframeBool {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeString {
-    pub string: GMRef<String>,
+    pub string: String,
 }
 
 impl GMElement for GMKeyframeString {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let string: GMRef<String> = reader.read_gm_string()?;
+        let string: String = reader.read_gm_string()?;
         Ok(Self { string })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.string)?;
+        builder.write_gm_string(&self.string);
         Ok(())
     }
 }
@@ -390,7 +390,7 @@ impl GMElement for GMKeyframeColor {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeText {
-    pub text: GMRef<String>,
+    pub text: String,
     pub line_wrapping: bool,
     pub alignment_v: i8,
     pub alignment_h: i8,
@@ -399,7 +399,7 @@ pub struct GMKeyframeText {
 
 impl GMElement for GMKeyframeText {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let text: GMRef<String> = reader.read_gm_string()?;
+        let text: String = reader.read_gm_string()?;
         let line_wrapping = reader.read_bool32()?;
         let alignment = reader.read_i32()?;
         let font_index = reader.read_i32()?;
@@ -413,7 +413,7 @@ impl GMElement for GMKeyframeText {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.text)?;
+        builder.write_gm_string(&self.text);
         builder.write_bool32(self.line_wrapping);
         builder.write_i32((self.alignment_v as i32) << 8 | self.alignment_h as i32);
         log::warn!(
@@ -437,20 +437,20 @@ impl GMElement for GMKeyframeParticle {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_resource_id(&self.particle);
+        builder.write_resource_id(self.particle);
         Ok(())
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMBroadcastMessage {
-    pub messages: Vec<GMRef<String>>,
+    pub messages: Vec<String>,
 }
 
 impl GMElement for GMBroadcastMessage {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let count = reader.read_u32()?;
-        let mut messages: Vec<GMRef<String>> = vec_with_capacity(count)?;
+        let mut messages: Vec<String> = vec_with_capacity(count)?;
         for _ in 0..count {
             messages.push(reader.read_gm_string()?);
         }
@@ -460,7 +460,7 @@ impl GMElement for GMBroadcastMessage {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_usize(self.messages.len())?;
         for message in &self.messages {
-            builder.write_gm_string(message)?;
+            builder.write_gm_string(message);
         }
         Ok(())
     }
@@ -469,13 +469,13 @@ impl GMElement for GMBroadcastMessage {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMKeyframeMoment {
     pub internal_count: i32, // "Should be 0 if none, 1 if there's a message?"
-    pub event: Option<GMRef<String>>,
+    pub event: Option<String>,
 }
 
 impl GMElement for GMKeyframeMoment {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let internal_count = reader.read_i32()?;
-        let event: Option<GMRef<String>> = if internal_count > 0 {
+        let event: Option<String> = if internal_count > 0 {
             Some(reader.read_gm_string()?)
         } else {
             None
@@ -486,7 +486,7 @@ impl GMElement for GMKeyframeMoment {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(self.internal_count);
         if let Some(ref event) = self.event {
-            builder.write_gm_string(event)?;
+            builder.write_gm_string(event);
         }
         // FIXME: maybe there should be null written if event string not set?
         Ok(())
@@ -495,8 +495,8 @@ impl GMElement for GMKeyframeMoment {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMTrack {
-    pub model_name: GMRef<String>,
-    pub name: GMRef<String>,
+    pub model_name: String,
+    pub name: String,
     pub builtin_name: GMTrackBuiltinName,
     pub traits: GMTrackTraits,
     pub is_creation_track: bool,
@@ -504,13 +504,12 @@ pub struct GMTrack {
     pub sub_tracks: Vec<GMTrack>,
     pub keyframes: GMTrackKeyframes,
     pub owned_resources: Vec<GMAnimationCurve>,
-    pub anim_curve_string: Option<GMRef<String>>,
 }
 
 impl GMElement for GMTrack {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let model_name: GMRef<String> = reader.read_gm_string()?;
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let model_name: String = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let builtin_name: GMTrackBuiltinName = num_enum_from(reader.read_i32()?)?;
         let traits: GMTrackTraits = num_enum_from(reader.read_i32()?)?;
         let is_creation_track = reader.read_bool32()?;
@@ -524,21 +523,16 @@ impl GMElement for GMTrack {
             tags.push(reader.read_i32()?);
         }
 
-        let mut anim_curve_string: Option<GMRef<String>> = None;
         let mut owned_resources: Vec<GMAnimationCurve> = vec_with_capacity(owned_resources_count)?;
 
         for _ in 0..owned_resources_count {
-            let animcurve_str_ref: GMRef<String> = reader.read_gm_string()?;
-            let animcurve_str: &String = reader.resolve_gm_str(animcurve_str_ref)?;
+            let animcurve_str: String = reader.read_gm_string()?;
             if animcurve_str != "GMAnimCurve" {
                 bail!(
                     "Expected owned resource thingy of Track to be \"GMAnimCurve\"; but found {:?} for Track {:?}",
                     animcurve_str,
-                    reader.display_gm_str(name),
+                    name,
                 );
-            }
-            if anim_curve_string.is_none() {
-                anim_curve_string = Some(animcurve_str_ref);
             }
             owned_resources.push(GMAnimationCurve::deserialize(reader)?);
         }
@@ -548,7 +542,7 @@ impl GMElement for GMTrack {
             sub_tracks.push(Self::deserialize(reader)?);
         }
 
-        let keyframes = match reader.resolve_gm_str(model_name)?.as_str() {
+        let keyframes = match model_name.as_str() {
             "GMAudioTrack" => GMTrackKeyframes::Audio(GMTrackKeyframesData::deserialize(reader)?),
             "GMInstanceTrack" => GMTrackKeyframes::Instance(GMTrackKeyframesData::deserialize(reader)?),
             "GMGraphicTrack" => GMTrackKeyframes::Graphic(GMTrackKeyframesData::deserialize(reader)?),
@@ -574,13 +568,12 @@ impl GMElement for GMTrack {
             sub_tracks,
             keyframes,
             owned_resources,
-            anim_curve_string,
         })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.model_name)?;
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.model_name);
+        builder.write_gm_string(&self.name);
         builder.write_i32(self.builtin_name.into());
         builder.write_i32(self.traits.into());
         builder.write_bool32(self.is_creation_track);
@@ -591,7 +584,7 @@ impl GMElement for GMTrack {
             builder.write_i32(*tag);
         }
         for animation_curve in &self.owned_resources {
-            builder.write_gm_string(&animation_curve.name)?;
+            builder.write_gm_string(&"GMAnimCurve".to_string());
             animation_curve.serialize(builder)?;
         }
         for track in &self.sub_tracks {

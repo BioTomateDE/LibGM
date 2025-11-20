@@ -70,7 +70,7 @@ impl GMElement for GMBackgrounds {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMBackground {
     /// The name of the background.
-    pub name: GMRef<String>,
+    pub name: String,
     /// Whether the background should be transparent.
     pub transparent: bool,
     /// Whether the background should get smoothed.
@@ -85,7 +85,7 @@ pub struct GMBackground {
 
 impl GMElement for GMBackground {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let transparent = reader.read_bool32()?;
         let smooth = reader.read_bool32()?;
         let preload = reader.read_bool32()?;
@@ -96,7 +96,7 @@ impl GMElement for GMBackground {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         builder.write_bool32(self.transparent);
         builder.write_bool32(self.smooth);
         builder.write_bool32(self.preload);

@@ -10,7 +10,7 @@ use std::ops::{Deref, DerefMut};
 pub struct GMLanguageInfo {
     pub unknown1: u32,
     pub languages: Vec<GMLanguageData>,
-    pub entry_ids: Vec<GMRef<String>>,
+    pub entry_ids: Vec<String>,
     pub exists: bool,
 }
 
@@ -40,16 +40,16 @@ impl GMElement for GMLanguageInfo {
         let language_count = reader.read_u32()?;
         let entry_count = reader.read_u32()?;
 
-        let mut entry_ids: Vec<GMRef<String>> = vec_with_capacity(entry_count)?;
+        let mut entry_ids: Vec<String> = vec_with_capacity(entry_count)?;
         for _ in 0..entry_count {
             entry_ids.push(reader.read_gm_string()?);
         }
 
         let mut languages: Vec<GMLanguageData> = vec_with_capacity(language_count)?;
         for _ in 0..language_count {
-            let name: GMRef<String> = reader.read_gm_string()?;
-            let region: GMRef<String> = reader.read_gm_string()?;
-            let mut entries: Vec<GMRef<String>> = Vec::with_capacity(entry_count as usize);
+            let name: String = reader.read_gm_string()?;
+            let region: String = reader.read_gm_string()?;
+            let mut entries: Vec<String> = Vec::with_capacity(entry_count as usize);
             for _ in 0..entry_count {
                 entries.push(reader.read_gm_string()?);
             }
@@ -64,13 +64,13 @@ impl GMElement for GMLanguageInfo {
         builder.write_usize(self.languages.len())?;
         builder.write_usize(self.entry_ids.len())?;
         for entry in &self.entry_ids {
-            builder.write_gm_string(entry)?;
+            builder.write_gm_string(entry);
         }
         for language in &self.languages {
-            builder.write_gm_string(&language.name)?;
-            builder.write_gm_string(&language.region)?;
+            builder.write_gm_string(&language.name);
+            builder.write_gm_string(&language.region);
             for entry in &language.entries {
-                builder.write_gm_string(entry)?;
+                builder.write_gm_string(entry);
             }
         }
         Ok(())
@@ -79,7 +79,7 @@ impl GMElement for GMLanguageInfo {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMLanguageData {
-    pub name: GMRef<String>,
-    pub region: GMRef<String>,
-    pub entries: Vec<GMRef<String>>,
+    pub name: String,
+    pub region: String,
+    pub entries: Vec<String>,
 }

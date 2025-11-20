@@ -48,18 +48,27 @@ pub(crate) struct DataReader<'a> {
     /// **Safety Warning**: If the chunk's start/end positions are set incorrectly, the program becomes memory unsafe.
     pub chunk: GMChunk,
 
+    /// The name of the last chunk in the data file.
+    /// Is properly initialized after parsing `FORM`.
+    pub last_chunk: String,
+
     /// General info about this data file. Includes game name, GameMaker Version and Bytecode Version.
     /// Contains garbage placeholders until the `GEN8` chunk is deserialized.
     /// Use [`DataReader::unstable_get_gm_version`] to get the GameMaker version before `GEN8` is parsed.
     pub general_info: GMGeneralInfo,
 
     /// Will be set after chunk `STRG` is parsed (first chunk to parse).
-    /// Contains all GameMaker strings, which are needed to resolve strings while deserialization.
-    pub strings: GMStrings,
+    /// Contains all GameMaker strings by ID (aka index)
+    /// Needed for String references in Push Instructions.
+    pub strings: Vec<String>,
+
+    /// Chunk `STRG`.
+    /// Is properly initialized after parsing `FORM`.
+    pub string_chunk: GMChunk,
 
     /// Should only be set by [`crate::gamemaker::elements::strings`].
     /// This means that `STRG` has to be parsed before any other chunk.
-    pub string_occurrences: HashMap<u32, GMRef<String>>,
+    pub string_occurrences: HashMap<u32, String>,
 
     /// Should only be set by [`crate::gamemaker::elements::texture_page_items`].
     /// This means that `TPAG` has to be parsed before any chunk with texture page item pointers.
@@ -90,10 +99,12 @@ impl<'a> DataReader<'a> {
             chunk_padding: 16,
             // Assume little endian; big endian is an edge case.
             endianness: Endianness::Little,
-            chunk: GMChunk { start_pos: 0, end_pos, is_last_chunk: true },
+            chunk: GMChunk { start_pos: 0, end_pos },
+            last_chunk: String::new(),
             // Just a stub, will not be read until GEN8 is parsed.
             general_info: Default::default(),
             strings: Default::default(),
+            string_chunk: GMChunk::default(),
             chunks: SmallMap::with_capacity(CHUNK_COUNT),
             string_occurrences: HashMap::new(),
             texture_page_item_occurrences: HashMap::new(),

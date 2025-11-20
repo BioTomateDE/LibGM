@@ -52,7 +52,7 @@ impl GMElement for GMParticleSystems {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMParticleSystem {
-    pub name: GMRef<String>,
+    pub name: String,
     pub origin_x: i32,
     pub origin_y: i32,
     pub draw_order: i32,
@@ -62,7 +62,7 @@ pub struct GMParticleSystem {
 
 impl GMElement for GMParticleSystem {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let origin_x = reader.read_i32()?;
         let origin_y = reader.read_i32()?;
         let draw_order = reader.read_i32()?;
@@ -79,7 +79,7 @@ impl GMElement for GMParticleSystem {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         builder.write_i32(self.origin_x);
         builder.write_i32(self.origin_y);
         builder.write_i32(self.draw_order);

@@ -7,12 +7,12 @@ use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMFeatureFlags {
-    pub feature_flags: Vec<GMRef<String>>,
+    pub feature_flags: Vec<String>,
     pub exists: bool,
 }
 
 impl Deref for GMFeatureFlags {
-    type Target = Vec<GMRef<String>>;
+    type Target = Vec<String>;
     fn deref(&self) -> &Self::Target {
         &self.feature_flags
     }
@@ -34,7 +34,7 @@ impl GMChunkElement for GMFeatureFlags {
 impl GMElement for GMFeatureFlags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
-        let feature_flags: Vec<GMRef<String>> = reader.read_simple_list_of_strings()?;
+        let feature_flags: Vec<String> = reader.read_simple_list_of_strings()?;
         Ok(Self { feature_flags, exists: true })
     }
 
