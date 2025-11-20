@@ -50,20 +50,20 @@ impl GMElement for GMFilterEffects {
 
 #[derive(Debug, Clone)]
 pub struct GMFilterEffect {
-    pub name: GMRef<String>,
-    pub value: GMRef<String>,
+    pub name: String,
+    pub value: String,
 }
 
 impl GMElement for GMFilterEffect {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
-        let value: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
+        let value: String = reader.read_gm_string()?;
         Ok(Self { name, value })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
-        builder.write_gm_string(&self.value)?;
+        builder.write_gm_string(&self.name);
+        builder.write_gm_string(&self.value);
         Ok(())
     }
 }

@@ -35,6 +35,7 @@ use crate::gamemaker::elements::sequence::GMSequences;
 use crate::gamemaker::elements::shaders::GMShaders;
 use crate::gamemaker::elements::sounds::GMSounds;
 use crate::gamemaker::elements::sprites::GMSprites;
+use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::tags::GMTags;
 use crate::gamemaker::elements::texture_group_info::GMTextureGroupInfos;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItems;
@@ -138,16 +139,13 @@ impl DataParser {
         reader.specified_version = reader.read_gen8_version()?;
 
         // The following chunk read order is required:
-        // Required: STRG → GEN8 → all others
+        // Required: GEN8 --> all others
         //
         // Then (in any order):
-        // • [FUNC, VARI] → CODE
-        // • TPAG → [BGND, EMBI, FONT, OPTN, SPRT]
+        // • [FUNC, VARI, STRG] --> CODE
+        // • TPAG --> [BGND, EMBI, FONT, OPTN, SPRT]
 
-        reader.strings = reader.read_chunk()?;
-        if reader.strings.is_empty() {
-            bail!("STRG chunk does not exist or is empty");
-        }
+        reader.string_chunk = reader.chunks.get("STRG").cloned().ok_or("Chunk STRG does not exist")?;
         reader.general_info = reader.read_chunk()?;
         if !reader.general_info.exists {
             bail!("GEN8 chunk does not exist");
@@ -162,7 +160,7 @@ impl DataParser {
 
         log::info!(
             "Loading {:?} (GM {}, Bytecode {})",
-            reader.resolve_gm_str(reader.general_info.display_name)?,
+            reader.general_info.display_name,
             reader.general_info.version,
             reader.general_info.bytecode_version,
         );
@@ -176,8 +174,9 @@ impl DataParser {
 
         let mut stopwatch2 = Stopwatch::start();
         if !is_yyc {
-            variables = reader.read_chunk()?;
-            functions = reader.read_chunk()?;
+            reader.read_chunk::<GMStrings>()?; // Set `reader.strings`
+            variables = reader.read_chunk()?; // Set `reader.variable_occurrences`
+            functions = reader.read_chunk()?; // Set `reader.function_occurrences`
             stopwatch2 = Stopwatch::start();
             codes = reader.read_chunk()?;
         }
@@ -224,7 +223,6 @@ impl DataParser {
             original_data_size: reader.size(),
 
             general_info: reader.general_info,
-            strings: reader.strings,
 
             animation_curves,
             audio_groups,
@@ -328,8 +326,10 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
                 "Chunk '{name}' out of bounds: specified length {chunk_length} would exceed total length {total_data_len}"
             ))?;
 
-        let is_last_chunk: bool = reader.cur_pos == total_data_len;
-        let chunk = GMChunk { start_pos, end_pos: reader.cur_pos, is_last_chunk };
+        if reader.cur_pos == total_data_len {
+            reader.last_chunk.clone_from(&name);
+        }
+        let chunk = GMChunk { start_pos, end_pos: reader.cur_pos };
 
         integrity_assert! {
             !reader.chunks.contains_key(&name),

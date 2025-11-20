@@ -31,7 +31,7 @@ pub mod shaders;
 pub mod sounds;
 pub mod sprites;
 pub mod sprites_yyswf;
-pub mod strings;
+pub(crate) mod strings;
 pub mod tags;
 pub mod texture_group_info;
 pub mod texture_page_items;

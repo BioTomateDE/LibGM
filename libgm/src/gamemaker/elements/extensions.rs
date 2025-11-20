@@ -86,11 +86,11 @@ impl GMElement for GMExtensions {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMExtension {
-    pub folder_name: GMRef<String>,
-    pub name: GMRef<String>,
+    pub folder_name: String,
+    pub name: String,
     /// Present in 2023.4+
-    pub version: Option<GMRef<String>>,
-    pub class_name: GMRef<String>,
+    pub version: Option<String>,
+    pub class_name: String,
     pub files: Vec<GMExtensionFile>,
     /// Present in 2022.6+
     pub options: Vec<GMExtensionOption>,
@@ -98,14 +98,14 @@ pub struct GMExtension {
 
 impl GMElement for GMExtension {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let folder_name: GMRef<String> = reader.read_gm_string()?;
-        let name: GMRef<String> = reader.read_gm_string()?;
-        let version: Option<GMRef<String>> = if reader.general_info.is_version_at_least((2023, 4)) {
+        let folder_name: String = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
+        let version: Option<String> = if reader.general_info.is_version_at_least((2023, 4)) {
             Some(reader.read_gm_string()?)
         } else {
             None
         };
-        let class_name: GMRef<String> = reader.read_gm_string()?;
+        let class_name: String = reader.read_gm_string()?;
         let files: Vec<GMExtensionFile>;
         let mut options: Vec<GMExtensionOption> = Vec::new();
 
@@ -126,13 +126,13 @@ impl GMElement for GMExtension {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.folder_name)?;
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.folder_name);
+        builder.write_gm_string(&self.name);
         if builder.is_gm_version_at_least((2023, 4)) {
-            let version: GMRef<String> = self.version.context("Extension Version not set in 2023.4+")?;
-            builder.write_gm_string(&version)?;
+            let version = self.version.as_ref().ok_or("Extension Version not set in 2023.4+")?;
+            builder.write_gm_string(&version);
         }
-        builder.write_gm_string(&self.class_name)?;
+        builder.write_gm_string(&self.class_name);
         if builder.is_gm_version_at_least((2022, 6)) {
             builder.write_pointer(&self.files)?;
             builder.write_pointer(&self.options)?;
@@ -151,27 +151,27 @@ impl GMElement for GMExtension {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMExtensionFile {
-    pub filename: GMRef<String>,
-    pub cleanup_script: GMRef<String>,
-    pub init_script: GMRef<String>,
+    pub filename: String,
+    pub cleanup_script: String,
+    pub init_script: String,
     pub kind: GMExtensionKind,
     pub functions: Vec<GMExtensionFunction>,
 }
 
 impl GMElement for GMExtensionFile {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let filename: GMRef<String> = reader.read_gm_string()?;
-        let cleanup_script: GMRef<String> = reader.read_gm_string()?;
-        let init_script: GMRef<String> = reader.read_gm_string()?;
+        let filename: String = reader.read_gm_string()?;
+        let cleanup_script: String = reader.read_gm_string()?;
+        let init_script: String = reader.read_gm_string()?;
         let kind: GMExtensionKind = num_enum_from(reader.read_u32()?)?;
         let functions: Vec<GMExtensionFunction> = reader.read_pointer_list()?;
         Ok(Self { filename, cleanup_script, init_script, kind, functions })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.filename)?;
-        builder.write_gm_string(&self.cleanup_script)?;
-        builder.write_gm_string(&self.init_script)?;
+        builder.write_gm_string(&self.filename);
+        builder.write_gm_string(&self.cleanup_script);
+        builder.write_gm_string(&self.init_script);
         builder.write_u32(self.kind.into());
         builder.write_pointer_list(&self.functions)?;
         Ok(())
@@ -180,31 +180,31 @@ impl GMElement for GMExtensionFile {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMExtensionFunction {
-    pub name: GMRef<String>,
+    pub name: String,
     pub id: u32,
     pub kind: GMExtensionKind,
     pub return_type: GMExtensionReturnType,
-    pub ext_name: GMRef<String>,
+    pub ext_name: String,
     pub arguments: Vec<GMExtensionFunctionArg>,
 }
 
 impl GMElement for GMExtensionFunction {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let id = reader.read_u32()?;
         let kind: GMExtensionKind = num_enum_from(reader.read_u32()?)?; // Assumption; UTMT uses u32
         let return_type: GMExtensionReturnType = num_enum_from(reader.read_u32()?)?;
-        let ext_name: GMRef<String> = reader.read_gm_string()?;
+        let ext_name: String = reader.read_gm_string()?;
         let arguments: Vec<GMExtensionFunctionArg> = reader.read_simple_list()?;
         Ok(Self { name, id, kind, return_type, ext_name, arguments })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         builder.write_u32(self.id);
         builder.write_u32(self.kind.into());
         builder.write_u32(self.return_type.into());
-        builder.write_gm_string(&self.ext_name)?;
+        builder.write_gm_string(&self.ext_name);
         builder.write_simple_list(&self.arguments)?;
         Ok(())
     }
@@ -229,22 +229,22 @@ impl GMElement for GMExtensionFunctionArg {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMExtensionOption {
-    pub name: GMRef<String>,
-    pub value: GMRef<String>,
+    pub name: String,
+    pub value: String,
     pub kind: GMExtensionOptionKind,
 }
 
 impl GMElement for GMExtensionOption {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
-        let value: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
+        let value: String = reader.read_gm_string()?;
         let kind: GMExtensionOptionKind = num_enum_from(reader.read_u32()?)?;
         Ok(GMExtensionOption { name, value, kind })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
-        builder.write_gm_string(&self.value)?;
+        builder.write_gm_string(&self.name);
+        builder.write_gm_string(&self.value);
         builder.write_u32(self.kind.into());
         Ok(())
     }

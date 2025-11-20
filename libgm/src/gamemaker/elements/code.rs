@@ -74,7 +74,7 @@ impl GMElement for GMCodes {
 
         for pointer in pointers {
             reader.assert_pos(pointer, "Code")?;
-            let name: GMRef<String> = reader.read_gm_string()?;
+            let name: String = reader.read_gm_string()?;
             let code_length = reader.read_u32()?;
 
             let instructions_start_pos;
@@ -143,13 +143,7 @@ impl GMElement for GMCodes {
                             reader.cur_pos,
                         )
                     })
-                    .with_context(|| {
-                        format!(
-                            "parsing Code entry {:?} at position {}",
-                            reader.display_gm_str(code.name),
-                            start
-                        )
-                    })?;
+                    .with_context(|| format!("parsing Code entry {:?} at position {}", code.name, start))?;
                 code.instructions.push(instruction);
             }
         }
@@ -169,19 +163,16 @@ impl GMElement for GMCodes {
         if builder.bytecode_version() <= 14 {
             for (i, code) in self.codes.iter().enumerate() {
                 builder.overwrite_usize(builder.len(), pointer_list_pos + 4 * i)?;
-                builder.write_gm_string(&code.name)?;
+                builder.write_gm_string(&code.name);
                 let length_placeholder_pos: usize = builder.len();
                 builder.write_u32(0xDEADC0DE);
                 let start: usize = builder.len();
 
                 // In bytecode 14, instructions are written immediately
                 for (i, instruction) in code.instructions.iter().enumerate() {
-                    instruction.serialize(builder).with_context(|| {
-                        format!(
-                            "serializing code #{i} with name {:?}",
-                            builder.display_gm_str(&code.name),
-                        )
-                    })?;
+                    instruction
+                        .serialize(builder)
+                        .with_context(|| format!("serializing code #{i} with name {:?}", code.name,))?;
                 }
 
                 let code_length: usize = builder.len() - start;
@@ -203,12 +194,9 @@ impl GMElement for GMCodes {
 
             let start: usize = builder.len();
             for instruction in &code.instructions {
-                instruction.serialize(builder).with_context(|| {
-                    format!(
-                        "serializing code #{i} with name {:?}",
-                        builder.display_gm_str(&code.name),
-                    )
-                })?;
+                instruction
+                    .serialize(builder)
+                    .with_context(|| format!("serializing code #{i} with name {:?}", code.name))?;
             }
             let end: usize = builder.len();
             instructions_ranges.push((start, end));
@@ -225,7 +213,7 @@ impl GMElement for GMCodes {
                 )
             })?;
 
-            builder.write_gm_string(&code.name)?;
+            builder.write_gm_string(&code.name);
             builder.write_usize(length)?;
             builder.write_u16(b15_info.locals_count);
             builder.write_u16(b15_info.arguments_count | if b15_info.weird_local_flag { 0x8000 } else { 0 });
@@ -242,7 +230,7 @@ impl GMElement for GMCodes {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMCode {
     /// The name of the code entry.
-    pub name: GMRef<String>,
+    pub name: String,
     /// A list of bytecode instructions this code entry has.
     pub instructions: Vec<GMInstruction>,
     /// Set in bytecode 15+.
@@ -917,7 +905,8 @@ impl InstructionData for GMPopInstruction {
             builder,
             self.destination.variable.index,
             instr_pos,
-            variable.name.index,
+            /*variable.name.index,*/
+            67,
             self.destination.variable_type,
         )?;
         Ok(())
@@ -958,20 +947,21 @@ impl InstructionData for GMPushInstruction {
             GMCodeValue::Int64(int64) => builder.write_i64(*int64),
             GMCodeValue::Double(double) => builder.write_f64(*double),
             GMCodeValue::Boolean(boolean) => builder.write_bool32(*boolean),
-            GMCodeValue::String(string_ref) => builder.write_u32(string_ref.index),
+            GMCodeValue::String(string) => builder.write_gm_string_id(string.clone()),
             GMCodeValue::Variable(code_variable) => {
                 let variable: &GMVariable = code_variable.variable.resolve(&builder.gm_data.variables)?;
                 write_variable_occurrence(
                     builder,
                     code_variable.variable.index,
                     instr_pos,
-                    variable.name.index,
+                    //variable.name.index,
+                    67,
                     code_variable.variable_type,
                 )?;
             }
             GMCodeValue::Function(func_ref) => {
                 let function: &GMFunction = func_ref.resolve(&builder.gm_data.functions)?;
-                write_function_occurrence(builder, func_ref.index, instr_pos, function.name.index)?;
+                write_function_occurrence(builder, func_ref.index, instr_pos, /*function.name.index*/ 67)?;
             }
         }
         Ok(())
@@ -1015,7 +1005,7 @@ impl InstructionData for GMCallInstruction {
         builder.write_u8(opcode);
 
         let function: &GMFunction = self.function.resolve(&builder.gm_data.functions)?;
-        write_function_occurrence(builder, self.function.index, instr_pos, function.name.index)?;
+        write_function_occurrence(builder, self.function.index, instr_pos, /*function.name.index*/ 67)?;
         Ok(())
     }
 }
@@ -1138,7 +1128,7 @@ impl GMElement for GMAssetReference {
             GMAssetReference::RoomInstance(id) => (*id as u32, 13),
             GMAssetReference::Function(func_ref) => {
                 let function: &GMFunction = func_ref.resolve(&builder.gm_data.functions)?;
-                write_function_occurrence(builder, func_ref.index, builder.len(), function.name.index)?;
+                write_function_occurrence(builder, func_ref.index, builder.len(), /*function.name.index*/ 67)?;
                 return Ok(());
             }
         };
@@ -1304,7 +1294,7 @@ pub enum GMCodeValue {
     Int64(i64),
     Double(f64),
     Boolean(bool),
-    String(GMRef<String>),
+    String(String),
     Variable(CodeVariable),
     /// Does not exist in UTMT. Added in order to support inline/anonymous functions.
     Function(GMRef<GMFunction>),
@@ -1349,7 +1339,15 @@ fn read_code_value(reader: &mut DataReader, data_type: GMDataType) -> Result<GMC
         }
         GMDataType::Int64 => reader.read_i64().map(GMCodeValue::Int64),
         GMDataType::Boolean => reader.read_bool32().map(GMCodeValue::Boolean),
-        GMDataType::String => reader.read_resource_by_id().map(GMCodeValue::String),
+        GMDataType::String => {
+            let index = reader.read_u32()? as usize;
+            let len = reader.strings.len();
+            let string = reader
+                .strings
+                .get(index)
+                .ok_or_else(|| format!("String ID is out of range: {index} >= {len}"))?;
+            Ok(GMCodeValue::String(string.clone()))
+        }
         GMDataType::Int16 => {
             // Int16 in embedded in the instruction itself
             reader.cur_pos -= 4;

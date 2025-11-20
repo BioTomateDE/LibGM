@@ -45,7 +45,7 @@ impl GMElement for GMPaths {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMPath {
-    pub name: GMRef<String>,
+    pub name: String,
     pub is_smooth: bool,
     pub is_closed: bool,
     pub precision: u32,
@@ -54,7 +54,7 @@ pub struct GMPath {
 
 impl GMElement for GMPath {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let is_smooth = reader.read_bool32()?;
         let is_closed = reader.read_bool32()?;
         let precision = reader.read_u32()?;
@@ -63,7 +63,7 @@ impl GMElement for GMPath {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         builder.write_bool32(self.is_smooth);
         builder.write_bool32(self.is_closed);
         builder.write_u32(self.precision);

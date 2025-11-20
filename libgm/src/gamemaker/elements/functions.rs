@@ -46,21 +46,21 @@ impl GMElement for GMFunctions {
         let mut functions: Vec<GMFunction> = vec_with_capacity(functions_count)?;
 
         for i in 0..functions_count {
-            let name: GMRef<String> = reader.read_gm_string()?;
+            let name: String = reader.read_gm_string()?;
             let occurrence_count = reader.read_u32()?;
             let first_occurrence_pos = reader.read_u32()?;
             let (occurrences, name_string_id): (Vec<u32>, u32) =
                 parse_occurrence_chain(reader, first_occurrence_pos, occurrence_count)?;
 
-            // verify name string id. allow -1 for unused function
-            if name_string_id as i32 != -1 && name.index != name_string_id {
-                bail!(
-                    "Function #{i} with name {:?} specifies name string id {}; but the id of name string is actually {}",
-                    reader.resolve_gm_str(name)?,
-                    name_string_id,
-                    name.index,
-                )
-            }
+            //// verify name string id. allow -1 for unused function
+            //if name_string_id as i32 != -1 && name.index != name_string_id {
+            //    bail!(
+            //        "Function #{i} with name {:?} specifies name string id {}; but the id of name string is actually {}",
+            //        name,
+            //        name_string_id,
+            //        name.index,
+            //    )
+            //}
 
             for occurrence in occurrences {
                 if let Some(old_value) = reader.function_occurrences.insert(occurrence, GMRef::new(i)) {
@@ -69,9 +69,9 @@ impl GMElement for GMFunctions {
                         was already set for function #{} with name {:?}; trying to set to function #{} with name {:?}",
                         occurrence,
                         old_value.index,
-                        reader.display_gm_str(old_value.resolve(&functions)?.name),
+                        old_value.resolve(&functions)?.name,
                         i,
-                        reader.display_gm_str(name),
+                        name,
                     )
                 }
             }
@@ -110,7 +110,7 @@ impl GMElement for GMFunctions {
                 None => -1,
             };
 
-            builder.write_gm_string(&function.name)?;
+            builder.write_gm_string(&function.name);
             builder.write_usize(occurrence_count)?;
             builder.write_i32(first_occurrence);
         }
@@ -128,7 +128,7 @@ impl GMElement for GMFunctions {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMFunction {
-    pub name: GMRef<String>,
+    pub name: String,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -151,14 +151,14 @@ impl GMElement for GMCodeLocals {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMCodeLocal {
-    pub name: GMRef<String>,
+    pub name: String,
     pub variables: Vec<GMCodeLocalVariable>,
 }
 
 impl GMElement for GMCodeLocal {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let local_variables_count = reader.read_u32()?;
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let mut variables: Vec<GMCodeLocalVariable> = vec_with_capacity(local_variables_count)?;
         for _ in 0..local_variables_count {
             variables.push(GMCodeLocalVariable::deserialize(reader)?);
@@ -168,7 +168,7 @@ impl GMElement for GMCodeLocal {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_usize(self.variables.len())?;
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         for local_var in &self.variables {
             local_var.serialize(builder)?;
         }
@@ -180,19 +180,19 @@ impl GMElement for GMCodeLocal {
 pub struct GMCodeLocalVariable {
     /// unknown what this does
     pub weird_index: u32,
-    pub name: GMRef<String>,
+    pub name: String,
 }
 
 impl GMElement for GMCodeLocalVariable {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let weird_index = reader.read_u32()?;
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         Ok(Self { weird_index, name })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_u32(self.weird_index);
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         Ok(())
     }
 }

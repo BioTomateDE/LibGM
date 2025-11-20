@@ -54,7 +54,7 @@ impl GMElement for GMParticleEmitters {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMParticleEmitter {
-    pub name: GMRef<String>,
+    pub name: String,
     pub enabled: Option<bool>,
     pub mode: EmitMode,
     pub emit_count: u32,
@@ -102,7 +102,7 @@ pub struct GMParticleEmitter {
 
 impl GMElement for GMParticleEmitter {
     fn deserialize(reader: &mut DataReader) -> crate::error::Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let enabled: Option<bool> = if reader.general_info.is_version_at_least((2023, 6, 0, 0)) {
             Some(reader.read_bool32()?)
         } else {
@@ -274,7 +274,7 @@ impl GMElement for GMParticleEmitter {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> crate::error::Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         self.enabled.serialize_if_gm_ver(builder, "Enabled", (2023, 6))?;
         builder.write_i32(self.mode.into());
         if builder.is_gm_version_at_least((2023, 8)) {
@@ -300,7 +300,7 @@ impl GMElement for GMParticleEmitter {
         builder.write_f32(self.region_w);
         builder.write_f32(self.region_h);
         builder.write_f32(self.rotation);
-        builder.write_resource_id(&self.sprite);
+        builder.write_resource_id(self.sprite);
         builder.write_i32(self.texture.into());
         builder.write_f32(self.frame_index);
         if builder.is_gm_version_at_least((2023, 4)) {

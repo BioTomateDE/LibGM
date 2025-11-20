@@ -14,15 +14,10 @@ use crate::prelude::*;
 macro_rules! name_by_ref {
     ($typename:ident, $reference:expr, $gm_data:expr) => {{
         let element = $reference.resolve(&$gm_data.$typename)?;
-        let name: &String = element.name.resolve(&$gm_data.strings)?;
-        if !is_valid_identifier(name) {
-            bail!(
-                "Invalid {} identifier: {}",
-                stringify!($typename),
-                format_literal_string($gm_data, element.name)?
-            );
+        if !is_valid_identifier(&element.name) {
+            bail!("Invalid {} identifier: {:?}", stringify!($typename), element.name);
         }
-        name
+        &element.name
     }};
 }
 
@@ -145,7 +140,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
                 GMCodeValue::Function(function_ref) => {
                     format!("(function){}", function_to_string(gm_data, *function_ref)?)
                 }
-                GMCodeValue::String(string_ref) => format_literal_string(gm_data, *string_ref)?,
+                GMCodeValue::String(string) => format_literal_string(string.clone())?,
                 GMCodeValue::Int16(integer) => integer.to_string(),
                 GMCodeValue::Int32(integer) => integer.to_string(),
                 GMCodeValue::Int64(integer) => integer.to_string(),
@@ -316,8 +311,7 @@ fn instance_type_to_string(
         }
         GMInstanceType::Self_(Some(obj_ref)) => {
             let obj: &GMGameObject = obj_ref.resolve(&gm_data.game_objects)?;
-            let name: &String = obj.name.resolve(&gm_data.strings)?;
-            format!("self<{name}>")
+            format!("self<{}>", obj.name)
         }
         GMInstanceType::Self_(None) => "self".to_string(),
         GMInstanceType::RoomInstance(instance_id) => format!("roominstance<{instance_id}>"),
@@ -346,12 +340,9 @@ const fn variable_type_to_string(variable_type: GMVariableType) -> &'static str 
 
 fn variable_to_string(gm_data: &GMData, code_variable: &CodeVariable) -> Result<String> {
     let variable: &GMVariable = code_variable.variable.resolve(&gm_data.variables)?;
-    let name: &String = variable.name.resolve(&gm_data.strings)?;
+    let name = &variable.name;
     if !is_valid_identifier(name) && name != "$$$$temp$$$$" {
-        bail!(
-            "Invalid variable identifier: {:?}",
-            variable.name.display(&gm_data.strings)
-        );
+        bail!("Invalid variable identifier {name:?}");
     }
 
     let prefix: &str = if code_variable.is_int32 { "(variable)" } else { "" };
@@ -374,24 +365,20 @@ fn variable_to_string(gm_data: &GMData, code_variable: &CodeVariable) -> Result<
 
 fn function_to_string(gm_data: &GMData, function_ref: GMRef<GMFunction>) -> Result<&String> {
     let function: &GMFunction = function_ref.resolve(&gm_data.functions)?;
-    let name: &String = function.name.resolve(&gm_data.strings)?;
+    let name = &function.name;
     if !is_valid_identifier(name) {
         let is_special =
             name.starts_with("@@") && name.ends_with("@@") && is_valid_identifier(&name[2..name.len() - 2]);
 
         if !is_special {
-            bail!(
-                "Invalid function identifier: {:?}",
-                function.name.display(&gm_data.strings)
-            );
+            bail!("Invalid function identifier: {name:?}");
         }
     }
     Ok(name)
 }
 
-pub(super) fn format_literal_string(gm_data: &GMData, gm_string_ref: GMRef<String>) -> Result<String> {
-    let string: String = gm_string_ref
-        .resolve(&gm_data.strings)?
+pub(super) fn format_literal_string(string: String) -> Result<String> {
+    let string: String = string
         .replace("\\", "\\\\")
         .replace("\n", "\\n")
         .replace("\r", "\\r")

@@ -25,7 +25,8 @@ impl CSharpRng {
         while i < 55 {
             index1 += 21;
             if index1 >= 55 {
-                index1 -= 55; }
+                index1 -= 55;
+            }
             seed_array[index1] = num2;
             num2 = num1.wrapping_sub(num2);
             if num2 < 0 {

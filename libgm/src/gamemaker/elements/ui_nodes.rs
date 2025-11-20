@@ -1,5 +1,4 @@
 use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::rooms::{
     GMRoomGameObject, GMRoomLayerEffectProperty, GMSequenceInstance, GMSpriteInstance, GMTextItemInstance,
 };
@@ -159,21 +158,21 @@ impl GMNodeUIData {
 
 #[derive(Debug, Clone)]
 pub struct GMNodeUILayer {
-    pub name: GMRef<String>,
+    pub name: String,
     pub draw_space: GMNodeUILayerDrawSpaceKind,
     pub visible: bool,
 }
 
 impl GMElement for GMNodeUILayer {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let draw_space: GMNodeUILayerDrawSpaceKind = num_enum_from(reader.read_i32()?)?;
         let visible = reader.read_bool32()?;
         Ok(Self { name, draw_space, visible })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         builder.write_i32(self.draw_space.into());
         builder.write_bool32(self.visible);
         Ok(())
@@ -189,7 +188,7 @@ pub enum GMNodeUILayerDrawSpaceKind {
 
 #[derive(Debug, Clone)]
 pub struct GMNodeUIFlexPanel {
-    pub name: GMRef<String>,
+    pub name: String,
     pub width: FlexValue,
     pub height: FlexValue,
     pub minimum_width: FlexValue,
@@ -214,7 +213,7 @@ pub struct GMNodeUIFlexPanel {
 
 impl GMElement for GMNodeUIFlexPanel {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let width = FlexValue::deserialize(reader)?;
         let height = FlexValue::deserialize(reader)?;
         let minimum_width = FlexValue::deserialize(reader)?;
@@ -261,7 +260,7 @@ impl GMElement for GMNodeUIFlexPanel {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         self.width.serialize(builder)?;
         self.height.serialize(builder)?;
         self.minimum_width.serialize(builder)?;
@@ -377,21 +376,21 @@ impl GMElement for GMNodeUITextItemInstance {
 #[derive(Debug, Clone)]
 pub struct GMNodeUIEffectLayer {
     pub enabled: bool,
-    pub effect_type: GMRef<String>,
+    pub effect_type: String,
     pub properties: Vec<GMRoomLayerEffectProperty>,
 }
 
 impl GMElement for GMNodeUIEffectLayer {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let enabled = reader.read_bool32()?;
-        let effect_type: GMRef<String> = reader.read_gm_string()?;
+        let effect_type: String = reader.read_gm_string()?;
         let properties: Vec<GMRoomLayerEffectProperty> = reader.read_pointer_list()?;
         Ok(Self { enabled, effect_type, properties })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_bool32(self.enabled);
-        builder.write_gm_string(&self.effect_type)?;
+        builder.write_gm_string(&self.effect_type);
         builder.write_pointer_list(&self.properties)?;
         Ok(())
     }

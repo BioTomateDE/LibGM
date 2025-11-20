@@ -11,31 +11,14 @@ pub fn test_decompiler(data: &GMData) -> Result<()> {
             continue;
         }
 
-        let code_name = code.name.resolve(&data.strings)?;
-        println!("({}/{}) Decompiling: {:<64}", i + 1, data.codes.len(), code_name);
+        let name = &code.name;
+        println!("({}/{}) Decompiling: {:<64}", i + 1, data.codes.len(), name);
 
         if code.instructions.is_empty() {
             continue;
         }
 
-        let game = if data.general_info.version.major == 1 {
-            "Undertale"
-        } else if data.general_info.version.major == 2022 {
-            "DeltaruneDemo"
-        } else if data.strings.iter().any(|i| i == "DELTARUNE Chapter 1") {
-            "Chapter1"
-        } else if data.strings.iter().any(|i| i == "DELTARUNE Chapter 2") {
-            "Chapter2"
-        } else if data.strings.iter().any(|i| i == "DELTARUNE Chapter 3") {
-            "Chapter3"
-        } else if data.strings.iter().any(|i| i == "DELTARUNE Chapter 4") {
-            "Chapter4"
-        } else {
-            "DeltaruneLauncher"
-        };
-        unsafe { std::env::set_var("FUCKING_GAMENAME", game) }
-        // TODO remove debug
-        decompile_to_ast(data, GMRef::new(i as u32)).with_context(|| format!("decompiling {code_name}"))?;
+        decompile_to_ast(data, GMRef::new(i as u32)).with_context(|| format!("decompiling {name}"))?;
     }
     Ok(())
 }

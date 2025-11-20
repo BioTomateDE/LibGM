@@ -47,14 +47,14 @@ impl GMElement for GMScripts {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMScript {
-    pub name: GMRef<String>,
+    pub name: String,
     pub is_constructor: bool,
     pub code: Option<GMRef<GMCode>>,
 }
 
 impl GMElement for GMScript {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let mut code_id: i32 = reader.read_i32()?;
         let mut is_constructor: bool = false;
         if code_id < -1 {
@@ -66,7 +66,7 @@ impl GMElement for GMScript {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         if self.is_constructor {
             if let Some(gm_code_ref) = &self.code {
                 builder.write_u32(gm_code_ref.index | 0x80000000);

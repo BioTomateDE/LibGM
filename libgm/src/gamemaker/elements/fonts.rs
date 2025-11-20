@@ -101,10 +101,10 @@ const fn generate_padding() -> [u8; 512] {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMFont {
     /// The name of the font.
-    pub name: GMRef<String>,
+    pub name: String,
 
     /// The display name of the font.
-    pub display_name: Option<GMRef<String>>,
+    pub display_name: Option<String>,
 
     /// The font size in `Em`s.
     /// In GameMaker Studio 2.3+, this is stored as f32 instead of u32.
@@ -159,8 +159,8 @@ pub struct GMFont {
 
 impl GMElement for GMFont {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
-        let display_name: Option<GMRef<String>> = reader.read_gm_string_opt()?;
+        let name: String = reader.read_gm_string()?;
+        let display_name: Option<String> = reader.read_gm_string_opt()?;
         let em_size = reader.read_u32()?; // Before GMS 2.3: int. after: float
         let em_size: GMFontSize = if em_size & (1 << 31) != 0 {
             // Since the float is always written negated, it has the first bit set.
@@ -206,8 +206,8 @@ impl GMElement for GMFont {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
-        builder.write_gm_string_opt(&self.display_name)?;
+        builder.write_gm_string(&self.name);
+        builder.write_gm_string_opt(&self.display_name);
         match self.em_size {
             GMFontSize::Float(value) => builder.write_f32(-value),
             GMFontSize::Int(value) => builder.write_u32(value),

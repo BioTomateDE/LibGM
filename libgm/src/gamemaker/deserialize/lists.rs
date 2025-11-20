@@ -56,7 +56,7 @@ impl DataReader<'_> {
     }
 
     /// Reads a simple list of GameMaker string references.
-    pub fn read_simple_list_of_strings(&mut self) -> Result<Vec<GMRef<String>>> {
+    pub fn read_simple_list_of_strings(&mut self) -> Result<Vec<String>> {
         let count = self.read_u32()?;
         self.read_simple_list_internal(count, |reader| reader.read_gm_string())
     }

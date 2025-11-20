@@ -14,7 +14,6 @@ use crate::gamemaker::elements::code::{
 };
 use crate::gamemaker::elements::functions::{GMFunction, GMFunctions};
 use crate::gamemaker::elements::game_objects::GMGameObject;
-use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::variables::{GMVariable, to_vari_instance_type};
 use crate::prelude::*;
 use crate::util::fmt::typename;
@@ -22,7 +21,7 @@ use arrayvec::ArrayVec;
 use std::ops::Neg;
 use std::str::{Chars, FromStr};
 
-pub fn assemble_code(assembly: &str, gm_data: &mut GMData) -> Result<Vec<GMInstruction>> {
+pub fn assemble_code(assembly: &str, gm_data: &GMData) -> Result<Vec<GMInstruction>> {
     let mut instructions: Vec<GMInstruction> = Vec::new();
 
     for line in assembly.lines() {
@@ -41,7 +40,7 @@ pub fn assemble_code(assembly: &str, gm_data: &mut GMData) -> Result<Vec<GMInstr
 
 type DataTypes = ArrayVec<GMDataType, 2>;
 
-pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<GMInstruction> {
+pub fn assemble_instruction(line: &str, gm_data: &GMData) -> Result<GMInstruction> {
     let line: &mut &str = &mut line.trim();
     let mnemonic: String;
 
@@ -52,12 +51,12 @@ pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<GMInstru
         *line = tail;
     } else {
         // Opcode takes up entire line
-        mnemonic = line.to_string();
+        mnemonic = (*line).to_string();
         *line = "";
     }
 
     let mut types: DataTypes = ArrayVec::new();
-    while line.chars().next() == Some('.') {
+    while line.starts_with('.') {
         consume_dot(line)?;
         let raw_type: char = consume_char(line).context("Unexpected EOL when trying to parse instruction data type")?;
         let data_type: GMDataType = data_type_from_char(raw_type)?;
@@ -136,16 +135,12 @@ macro_rules! asset_by_name {
         let target_name: String = $namefn;
         let mut found = None;
         for (i, element) in $gm_data.$typename.$typename.iter().enumerate() {
-            let name = element
-                .name
-                .resolve(&$gm_data.strings)
-                .with_context(|| format!("Cannot resolve {} asset's name", stringify!($typename)))?;
-            if *name == target_name {
+            if element.name == target_name {
                 found = Some(GMRef::new(i as u32));
                 break;
             }
         }
-        found.with_context(|| {
+        found.ok_or_else(|| {
             format!(
                 "Could not resolve Asset of type {} with name {:?}",
                 stringify!($typename),
@@ -176,48 +171,48 @@ fn parse_asset_reference(gm_data: &GMData, line: &mut &str) -> Result<GMAssetRef
             GMAssetReference::ParticleSystem(asset_by_name!(gm_data, particle_systems, parse_identifier(line)?))
         }
         "roominstance" => GMAssetReference::RoomInstance(parse_int(line)?),
-        "function" => GMAssetReference::Function(parse_function(line, &gm_data.strings, &gm_data.functions)?),
+        "function" => GMAssetReference::Function(parse_function(line, &gm_data.functions)?),
         _ => bail!("Invalid Type Cast to asset type {asset_type:?}"),
     })
 }
 
 fn parse_double_type(types: &DataTypes) -> Result<GMDoubleTypeInstruction> {
-    assert_type_count(&types, 2)?;
+    assert_type_count(types, 2)?;
     Ok(GMDoubleTypeInstruction { right: types[0], left: types[1] })
 }
 
 fn parse_single_type(types: &DataTypes) -> Result<GMSingleTypeInstruction> {
-    assert_type_count(&types, 1)?;
+    assert_type_count(types, 1)?;
     Ok(GMSingleTypeInstruction { data_type: types[0] })
 }
 
 fn parse_comparison(types: &DataTypes, line: &mut &str) -> Result<GMComparisonInstruction> {
-    assert_type_count(&types, 2)?;
+    assert_type_count(types, 2)?;
     let comparison_type_raw: String = parse_identifier(line)?;
     let comparison_type: GMComparisonType = comparison_type_from_string(&comparison_type_raw)?;
     Ok(GMComparisonInstruction { comparison_type, type1: types[0], type2: types[1] })
 }
 
 fn parse_pop(types: &DataTypes, line: &mut &str, gm_data: &GMData) -> Result<GMPopInstruction> {
-    assert_type_count(&types, 2)?;
+    assert_type_count(types, 2)?;
     let destination: CodeVariable = parse_variable(line, &gm_data)?;
     Ok(GMPopInstruction { type1: types[0], type2: types[1], destination })
 }
 
 fn parse_pop_swap(types: &DataTypes, line: &mut &str) -> Result<GMPopSwapInstruction> {
-    assert_type_count(&types, 0)?;
+    assert_type_count(types, 0)?;
     let size: u8 = parse_uint(line)?;
     Ok(GMPopSwapInstruction { size })
 }
 
 fn parse_duplicate(types: &DataTypes, line: &mut &str) -> Result<GMDuplicateInstruction> {
-    assert_type_count(&types, 1)?;
+    assert_type_count(types, 1)?;
     let size: u8 = parse_uint(line)?;
     Ok(GMDuplicateInstruction { data_type: types[0], size })
 }
 
 fn parse_duplicate_swap(types: &DataTypes, line: &mut &str) -> Result<GMDuplicateSwapInstruction> {
-    assert_type_count(&types, 1)?;
+    assert_type_count(types, 1)?;
     let size1: u8 = parse_uint(line)?;
     consume_space(line)?;
     let size2: u8 = parse_uint(line)?;
@@ -225,21 +220,21 @@ fn parse_duplicate_swap(types: &DataTypes, line: &mut &str) -> Result<GMDuplicat
 }
 
 fn parse_goto(types: &DataTypes, line: &mut &str) -> Result<GMGotoInstruction> {
-    assert_type_count(&types, 0)?;
+    assert_type_count(types, 0)?;
     let jump_offset: i32 = parse_int(line)?;
     Ok(GMGotoInstruction { jump_offset })
 }
 
-fn parse_push(types: &DataTypes, line: &mut &str, gm_data: &mut GMData) -> Result<GMPushInstruction> {
-    assert_type_count(&types, 1)?;
+fn parse_push(types: &DataTypes, line: &mut &str, gm_data: &GMData) -> Result<GMPushInstruction> {
+    assert_type_count(types, 1)?;
     let value: GMCodeValue = match types[0] {
         GMDataType::Int16 => GMCodeValue::Int16(parse_int(line)?),
         GMDataType::Int32 => {
             if let Some(type_cast) = consume_round_brackets(line)? {
                 match type_cast.as_str() {
-                    "function" => GMCodeValue::Function(parse_function(line, &gm_data.strings, &gm_data.functions)?),
+                    "function" => GMCodeValue::Function(parse_function(line, &gm_data.functions)?),
                     "variable" => {
-                        let mut variable: CodeVariable = parse_variable(line, &gm_data)?;
+                        let mut variable: CodeVariable = parse_variable(line, gm_data)?;
                         variable.is_int32 = true;
                         GMCodeValue::Variable(variable)
                     }
@@ -254,22 +249,21 @@ fn parse_push(types: &DataTypes, line: &mut &str, gm_data: &mut GMData) -> Resul
         GMDataType::Boolean => GMCodeValue::Boolean(parse_bool(line)?),
         GMDataType::String => {
             let string: String = parse_string_literal(line)?;
-            let string: GMRef<String> = gm_data.strings.make(&string);
             GMCodeValue::String(string)
         }
-        GMDataType::Variable => GMCodeValue::Variable(parse_variable(line, &gm_data)?),
+        GMDataType::Variable => GMCodeValue::Variable(parse_variable(line, gm_data)?),
     };
     Ok(GMPushInstruction { value })
 }
 
 fn parse_push_immediate(types: &DataTypes, line: &mut &str) -> Result<i16> {
-    assert_type_count(&types, 0)?;
+    assert_type_count(types, 0)?;
     parse_int(line)
 }
 
 fn parse_call(types: &DataTypes, line: &mut &str, gm_data: &GMData) -> Result<GMCallInstruction> {
-    assert_type_count(&types, 0)?;
-    let function: GMRef<GMFunction> = parse_function(line, &gm_data.strings, &gm_data.functions)?;
+    assert_type_count(types, 0)?;
+    let function: GMRef<GMFunction> = parse_function(line, &gm_data.functions)?;
     let argc_str: String = consume_round_brackets(line)?
         .with_context(|| format!("Expected round brackets with argument count for function call; found {line:?}"))?;
     let argument_count: u16 = if let Some(str) = argc_str.strip_prefix("argc=") {
@@ -281,7 +275,7 @@ fn parse_call(types: &DataTypes, line: &mut &str, gm_data: &GMData) -> Result<GM
 }
 
 fn parse_call_var(types: &DataTypes, line: &mut &str) -> Result<GMCallVariableInstruction> {
-    assert_type_count(&types, 1)?;
+    assert_type_count(types, 1)?;
     let argument_count: u16 = parse_uint(line)?;
     Ok(GMCallVariableInstruction { data_type: types[0], argument_count })
 }
@@ -303,7 +297,7 @@ fn consume_char(line: &mut &str) -> Option<char> {
 #[must_use]
 fn consume_str(line: &mut &str, string: &'static str) -> Option<()> {
     if line.starts_with(string) {
-        *line = &line[string.bytes().len()..];
+        *line = &line[string.len()..];
         Some(())
     } else {
         None
@@ -372,7 +366,7 @@ fn parse_int<T: FromStr + Neg<Output = T>>(line: &mut &str) -> Result<T> {
 }
 
 fn parse_uint<T: FromStr>(line: &mut &str) -> Result<T> {
-    let end: usize = line.find(|c: char| !c.is_ascii_digit()).unwrap_or_else(|| line.len());
+    let end: usize = line.find(|c: char| !c.is_ascii_digit()).unwrap_or(line.len());
     if end == 0 {
         bail!("Expected integer, got {line:?}");
     }
@@ -443,9 +437,7 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable> {
     let mut instance_type: GMInstanceType = match instance_type_raw.as_str() {
         "self" if instance_type_arg.is_empty() => GMInstanceType::Self_(None),
         "self" => {
-            let object_ref: GMRef<GMGameObject> = gm_data
-                .game_objects
-                .get_object_ref_by_name(&instance_type_arg, &gm_data.strings)?;
+            let object_ref: GMRef<GMGameObject> = gm_data.game_objects.get_ref_by_name(&instance_type_arg)?;
             GMInstanceType::Self_(Some(object_ref))
         }
         "local" => {
@@ -483,17 +475,13 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable> {
         let vari_instance_type: GMInstanceType = to_vari_instance_type(&instance_type);
 
         for (i, var) in gm_data.variables.iter().enumerate() {
-            let var_name: &String = var
-                .name
-                .resolve(&gm_data.strings)
-                .context("Cannot resolve variable name")?;
-            if *var_name != name {
+            if var.name != name {
                 continue;
             }
-            if let Some(b15) = &var.b15_data {
-                if b15.instance_type != vari_instance_type {
-                    continue;
-                }
+            if let Some(b15) = &var.b15_data
+                && b15.instance_type != vari_instance_type
+            {
+                continue;
             }
             // Found var
             variable_ref = Some(GMRef::new(i as u32));
@@ -518,7 +506,7 @@ fn parse_variable(line: &mut &str, gm_data: &GMData) -> Result<CodeVariable> {
     })
 }
 
-fn parse_function(line: &mut &str, gm_strings: &GMStrings, gm_functions: &GMFunctions) -> Result<GMRef<GMFunction>> {
+fn parse_function(line: &mut &str, gm_functions: &GMFunctions) -> Result<GMRef<GMFunction>> {
     let identifier: String = parse_identifier(line).or_else(|_| {
         // Allow special functions like `@@This@@`
         consume_str(line, "@@").context("Invalid function identifier")?;
@@ -528,11 +516,7 @@ fn parse_function(line: &mut &str, gm_strings: &GMStrings, gm_functions: &GMFunc
     })?;
 
     for (i, func) in gm_functions.functions.iter().enumerate() {
-        let func_name: &String = func
-            .name
-            .resolve(&gm_strings.strings)
-            .context("Cannot resolve name string of parsed function")?;
-        if *func_name == identifier {
+        if func.name == identifier {
             return Ok(GMRef::new(i as u32));
         }
     }
@@ -564,7 +548,7 @@ fn parse_identifier(line: &mut &str) -> Result<String> {
     }
 
     // Identifier goes to end of line
-    let identifier: String = line.to_string();
+    let identifier: String = (*line).to_string();
     *line = ""; // Consume line
     Ok(identifier)
 }
@@ -576,7 +560,7 @@ fn parse_string_literal(line: &mut &str) -> Result<String> {
     }
 
     let mut escaping: bool = false;
-    let mut string: String = String::with_capacity(line.bytes().len());
+    let mut string: String = String::with_capacity(line.len());
 
     for (i, char) in line.char_indices() {
         if escaping {

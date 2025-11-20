@@ -13,7 +13,7 @@ impl DataBuilder<'_> {
 
         self.write_usize(count).with_context(ctx)?;
         for element in elements {
-            element.serialize(self).with_context(ctx)?
+            element.serialize(self).with_context(ctx)?;
         }
         Ok(())
     }
@@ -21,18 +21,15 @@ impl DataBuilder<'_> {
     pub fn write_simple_list_of_resource_ids<T>(&mut self, elements: &Vec<GMRef<T>>) -> Result<()> {
         self.write_usize(elements.len())?;
         for gm_ref in elements {
-            self.write_resource_id(gm_ref);
+            self.write_resource_id(*gm_ref);
         }
         Ok(())
     }
 
-    pub fn write_simple_list_of_strings(&mut self, elements: &Vec<GMRef<String>>) -> Result<()> {
-        let count: usize = elements.len();
-        let ctx = || format!("building Simple List of String with {count} elements");
-
-        self.write_usize(count).with_context(ctx)?;
-        for gm_string_ref in elements {
-            self.write_gm_string(gm_string_ref).with_context(ctx)?;
+    pub fn write_simple_list_of_strings(&mut self, elements: &Vec<String>) -> Result<()> {
+        self.write_usize(elements.len())?;
+        for string in elements {
+            self.write_gm_string(string);
         }
         Ok(())
     }
@@ -61,14 +58,14 @@ impl DataBuilder<'_> {
         Ok(())
     }
 
-    pub fn write_pointer_list<T: GMElement>(&mut self, elements: &Vec<T>) -> Result<()> {
+    pub fn write_pointer_list<T: GMElement>(&mut self, elements: &[T]) -> Result<()> {
         let count: usize = elements.len();
         let ctx = || format!("building pointer list of {} with {} elements", typename::<T>(), count,);
 
         self.write_usize(count).with_context(ctx)?;
         let pointer_list_start_pos: usize = self.len();
         for _ in 0..count {
-            self.write_u32(0xDEADC0DE);
+            self.write_u32(0xDEAD_C0DE);
         }
 
         for (i, element) in elements.iter().enumerate() {
@@ -82,9 +79,9 @@ impl DataBuilder<'_> {
         Ok(())
     }
 
-    /// UndertaleAlignUpdatedListChunk; used for BGND and STRG.
+    /// `UndertaleAlignUpdatedListChunk`; used for BGND and STRG (not really for STRG).
     /// Assumes `chunk.is_aligned`.
-    pub fn write_aligned_list_chunk<T: GMElement>(&mut self, elements: &Vec<T>, alignment: u32) -> Result<()> {
+    pub fn write_aligned_list_chunk<T: GMElement>(&mut self, elements: &[T], alignment: u32) -> Result<()> {
         let count: usize = elements.len();
         let ctx = || {
             format!(

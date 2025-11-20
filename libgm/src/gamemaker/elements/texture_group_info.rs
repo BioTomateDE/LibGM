@@ -56,7 +56,7 @@ impl GMElement for GMTextureGroupInfos {
 
 #[derive(Debug, Clone)]
 pub struct GMTextureGroupInfo {
-    pub name: GMRef<String>,
+    pub name: String,
     pub texture_pages: Vec<GMRef<GMEmbeddedTexture>>,
     pub sprites: Vec<GMRef<GMSprite>>,
     pub spine_sprites: Vec<GMRef<GMSprite>>,
@@ -67,7 +67,7 @@ pub struct GMTextureGroupInfo {
 
 impl GMElement for GMTextureGroupInfo {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let data_2022_9: Option<GMTextureGroupInfo2022_9> = reader.deserialize_if_gm_version((2022, 9))?;
         let texture_pages_ptr = reader.read_u32()?;
         let sprites_ptr = reader.read_u32()?;
@@ -111,7 +111,7 @@ impl GMElement for GMTextureGroupInfo {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         self.data_2022_9
             .serialize_if_gm_ver(builder, "Directory, Extension, LoadType", (2022, 9))?;
         builder.write_pointer(&self.texture_pages)?;
@@ -145,22 +145,22 @@ impl GMElement for GMTextureGroupInfo {
 
 #[derive(Debug, Clone)]
 pub struct GMTextureGroupInfo2022_9 {
-    pub directory: GMRef<String>,
-    pub extension: GMRef<String>,
+    pub directory: String,
+    pub extension: String,
     pub load_type: GMTextureGroupInfoLoadType,
 }
 
 impl GMElement for GMTextureGroupInfo2022_9 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let directory: GMRef<String> = reader.read_gm_string()?;
-        let extension: GMRef<String> = reader.read_gm_string()?;
+        let directory: String = reader.read_gm_string()?;
+        let extension: String = reader.read_gm_string()?;
         let load_type: GMTextureGroupInfoLoadType = num_enum_from(reader.read_i32()?)?;
         Ok(Self { directory, extension, load_type })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.directory)?;
-        builder.write_gm_string(&self.extension)?;
+        builder.write_gm_string(&self.directory);
+        builder.write_gm_string(&self.extension);
         builder.write_i32(self.load_type.into());
         Ok(())
     }

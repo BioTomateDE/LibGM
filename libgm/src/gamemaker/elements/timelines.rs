@@ -47,13 +47,13 @@ impl GMElement for GMTimelines {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMTimeline {
-    pub name: GMRef<String>,
+    pub name: String,
     pub moments: Vec<GMTimelineMoment>,
 }
 
 impl GMElement for GMTimeline {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: GMRef<String> = reader.read_gm_string()?;
+        let name: String = reader.read_gm_string()?;
         let moment_count = reader.read_u32()?;
 
         let mut time_points: Vec<u32> = vec_with_capacity(moment_count)?;
@@ -75,7 +75,7 @@ impl GMElement for GMTimeline {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name)?;
+        builder.write_gm_string(&self.name);
         builder.write_usize(self.moments.len())?;
         for moment in &self.moments {
             builder.write_u32(moment.step);

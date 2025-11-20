@@ -2,7 +2,6 @@ use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::deserialize::resources::GMRef;
 use crate::gamemaker::elements::code::GMCode;
 use crate::gamemaker::elements::sprites::GMSprite;
-use crate::gamemaker::elements::strings::GMStrings;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
@@ -16,6 +15,17 @@ use std::ops::{Deref, DerefMut};
 pub struct GMGameObjects {
     pub game_objects: Vec<GMGameObject>,
     pub exists: bool,
+}
+
+impl GMGameObjects {
+    pub fn get_ref_by_name(&self, name: &str) -> Result<GMRef<GMGameObject>> {
+        for (i, obj) in self.game_objects.iter().enumerate() {
+            if obj.name == name {
+                return Ok(GMRef::new(i as u32));
+            }
+        }
+        Err(format!("Could not find Game Object with name {name:?}").into())
+    }
 }
 
 impl Deref for GMGameObjects {
@@ -45,7 +55,7 @@ impl GMElement for GMGameObjects {
 
         for pointer in pointers {
             reader.cur_pos = pointer;
-            let name: GMRef<String> = reader.read_gm_string()?;
+            let name: String = reader.read_gm_string()?;
             let sprite_index = reader.read_i32()?;
             let sprite: Option<GMRef<GMSprite>> = if sprite_index == -1 {
                 None
@@ -53,8 +63,7 @@ impl GMElement for GMGameObjects {
                 let index: u32 = sprite_index.try_into().with_context(|| {
                     format!(
                         "Negative sprite index {} for Sprite of Game Object {:?}",
-                        sprite_index,
-                        reader.display_gm_str(name),
+                        sprite_index, name,
                     )
                 })?;
                 Some(GMRef::new(index))
@@ -84,8 +93,7 @@ impl GMElement for GMGameObjects {
                 let index: u32 = sprite_index.try_into().with_context(|| {
                     format!(
                         "Negative sprite index {} for Texture Mask of Game Object {:?}",
-                        sprite_index,
-                        reader.display_gm_str(name),
+                        sprite_index, name,
                     )
                 })?;
                 Some(GMRef::new(index))
@@ -154,7 +162,7 @@ impl GMElement for GMGameObjects {
         for (i, game_object) in self.game_objects.iter().enumerate() {
             builder.overwrite_usize(builder.len(), pointer_list_pos + 4 * i)?;
 
-            builder.write_gm_string(&game_object.name)?;
+            builder.write_gm_string(&game_object.name);
             builder.write_resource_id_opt(&game_object.sprite);
             builder.write_bool32(game_object.visible);
             game_object.managed.serialize_if_gm_ver(builder, "Managed", (2022, 5))?;
@@ -164,7 +172,7 @@ impl GMElement for GMGameObjects {
             match game_object.parent {
                 None => builder.write_i32(-100),                                     // No Parent
                 Some(obj_ref) if obj_ref.index == i as u32 => builder.write_i32(-1), // Parent is Self
-                Some(obj_ref) => builder.write_resource_id(&obj_ref),                // Normal Parent
+                Some(obj_ref) => builder.write_resource_id(obj_ref),                 // Normal Parent
             }
             builder.write_resource_id_opt(&game_object.texture_mask);
             builder.write_bool32(game_object.uses_physics);
@@ -189,22 +197,10 @@ impl GMElement for GMGameObjects {
     }
 }
 
-impl GMGameObjects {
-    pub fn get_object_ref_by_name(&self, name: &str, gm_strings: &GMStrings) -> Result<GMRef<GMGameObject>> {
-        for (i, game_object) in self.game_objects.iter().enumerate() {
-            let object_name: &String = game_object.name.resolve(&gm_strings.strings)?;
-            if object_name == name {
-                return Ok(GMRef::new(i as u32));
-            }
-        }
-        bail!("Could not resolve game object with name {name:?}")
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMGameObject {
     /// The name of the game object.
-    pub name: GMRef<String>,
+    pub name: String,
     /// The sprite this game object uses.
     pub sprite: Option<GMRef<GMSprite>>,
     /// Whether the game object is visible.
@@ -293,7 +289,7 @@ pub struct GMGameObjectEventAction {
     pub use_relative: bool,
     pub use_apply_to: bool,
     pub exe_type: u32,
-    pub action_name: Option<GMRef<String>>,
+    pub action_name: Option<String>,
     pub code: GMRef<GMCode>,
     pub argument_count: u32,
     pub who: i32,
@@ -312,7 +308,7 @@ impl GMElement for GMGameObjectEventAction {
         assert_bool("Is Question", false, is_question)?;
         let use_apply_to = reader.read_bool32()?;
         let exe_type = reader.read_u32()?;
-        let action_name: Option<GMRef<String>> = reader.read_gm_string_opt()?;
+        let action_name: Option<String> = reader.read_gm_string_opt()?;
         let code: GMRef<GMCode> = reader.read_resource_by_id()?;
         let argument_count = reader.read_u32()?;
         let who = reader.read_i32()?;
@@ -345,8 +341,8 @@ impl GMElement for GMGameObjectEventAction {
         builder.write_bool32(false); // Is Question
         builder.write_bool32(self.use_apply_to);
         builder.write_u32(self.exe_type);
-        builder.write_gm_string_opt(&self.action_name)?;
-        builder.write_resource_id(&self.code);
+        builder.write_gm_string_opt(&self.action_name);
+        builder.write_resource_id(self.code);
         builder.write_u32(self.argument_count);
         builder.write_i32(self.who);
         builder.write_bool32(self.relative);

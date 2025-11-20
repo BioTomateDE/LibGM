@@ -324,6 +324,5 @@ fn find_block_containing(ctx: &DecompileContext, addr: u32) -> Result<usize> {
 /// Check if a function reference is the `@@try_hook@@` function
 fn is_try_hook(gm_data: &GMData, func_ref: GMRef<GMFunction>) -> Result<bool> {
     let func = func_ref.resolve(&gm_data.functions.functions)?;
-    let name = func.name.resolve(&gm_data.strings.strings)?;
-    Ok(name == vm_constants::functions::TRY_HOOK)
+    Ok(func.name == vm_constants::functions::TRY_HOOK)
 }
