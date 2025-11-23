@@ -1,10 +1,10 @@
 use crate::gamemaker::deserialize::chunk::GMChunk;
 use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::code::GMDataType;
 use crate::gamemaker::elements::embedded_textures::MAGIC_BZ2_QOI_HEADER;
 use crate::gamemaker::elements::rooms::GMRoomLayerType;
 use crate::gamemaker::gm_version::GMVersionReq;
 use crate::gamemaker::gm_version::LTSBranch::{LTS, PostLTS, PreLTS};
+use crate::gml::instructions::GMDataType;
 use crate::prelude::*;
 use crate::util::assert::assert_int;
 use crate::util::init::{num_enum_from, vec_with_capacity};
@@ -75,22 +75,32 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
     let saved_chunk: GMChunk = reader.chunk.clone();
 
     if reader.chunks.contains_key("TGIN") {
-        reader.general_info.set_version_at_least((2, 2, 1, PreLTS))?;
+        reader
+            .general_info
+            .set_version_at_least((2, 2, 1, PreLTS))?;
     }
     if reader.chunks.contains_key("SEQN") {
         reader.general_info.set_version_at_least((2, 3, PreLTS))?;
     }
     if reader.chunks.contains_key("FEDS") {
-        reader.general_info.set_version_at_least((2, 3, 6, PreLTS))?;
+        reader
+            .general_info
+            .set_version_at_least((2, 3, 6, PreLTS))?;
     }
     if reader.chunks.contains_key("FEAT") {
-        reader.general_info.set_version_at_least((2022, 8, PreLTS))?;
+        reader
+            .general_info
+            .set_version_at_least((2022, 8, PreLTS))?;
     }
     if reader.chunks.contains_key("PSEM") {
-        reader.general_info.set_version_at_least((2023, 2, PostLTS))?;
+        reader
+            .general_info
+            .set_version_at_least((2023, 2, PostLTS))?;
     }
     if reader.chunks.contains_key("UILR") {
-        reader.general_info.set_version_at_least((2024, 13, PostLTS))?;
+        reader
+            .general_info
+            .set_version_at_least((2024, 13, PostLTS))?;
     }
 
     if reader.general_info.bytecode_version >= 14 {
@@ -101,13 +111,43 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
     }
 
     let mut checks: Vec<VersionCheck> = vec![
-        VersionCheck::new("CODE", cv_code_2023_8_and_2024_4, GMVersionReq::none(), (2024, 4)),
-        VersionCheck::new("SOND", cv_sond_2024_6, (2022, 2, PostLTS), (2024, 6)),
-        VersionCheck::new("SPRT", cv_sprt_2024_6, (2022, 2, PostLTS), (2024, 6)),
-        VersionCheck::new("FONT", cv_font_2023_6_and_2024_11, (2024, 6), (2024, 11)),
-        VersionCheck::new("FONT", cv_font_2023_6_and_2024_11, (2022, 8), (2023, 6)),
+        VersionCheck::new(
+            "CODE",
+            cv_code_2023_8_and_2024_4,
+            GMVersionReq::none(),
+            (2024, 4),
+        ),
+        VersionCheck::new(
+            "SOND",
+            cv_sond_2024_6,
+            (2022, 2, PostLTS),
+            (2024, 6),
+        ),
+        VersionCheck::new(
+            "SPRT",
+            cv_sprt_2024_6,
+            (2022, 2, PostLTS),
+            (2024, 6),
+        ),
+        VersionCheck::new(
+            "FONT",
+            cv_font_2023_6_and_2024_11,
+            (2024, 6),
+            (2024, 11),
+        ),
+        VersionCheck::new(
+            "FONT",
+            cv_font_2023_6_and_2024_11,
+            (2022, 8),
+            (2023, 6),
+        ),
         VersionCheck::new("ROOM", cv_room_2022_1, (2, 3), (2022, 1)),
-        VersionCheck::new("ROOM", cv_room_2024_2_and_2024_4, (2023, 2), (2024, 4)),
+        VersionCheck::new(
+            "ROOM",
+            cv_room_2024_2_and_2024_4,
+            (2023, 2),
+            (2024, 4),
+        ),
         VersionCheck::new("ROOM", cv_room_2_2_2_302, (2, 0), (2, 2, 2, 302)),
         VersionCheck::new("EXTN", cv_extn_2022_6, (2, 3), (2022, 6)),
         VersionCheck::new("TXTR", cv_txtr_2022_5, (2022, 3), (2022, 5)),
@@ -126,14 +166,21 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
 
     loop {
         // Permanently filter out already detected versions
-        checks.retain(|i| !reader.general_info.is_version_at_least(i.target_version.clone()));
+        checks.retain(|i| {
+            !reader
+                .general_info
+                .is_version_at_least(i.target_version.clone())
+        });
 
         let mut updated_version: bool = false;
         let mut checks_to_remove: Vec<bool> = vec![false; checks.len()];
 
         for (i, check) in checks.iter().enumerate() {
             // For this iteration, filter out versions whose version requirements are not (yet) met
-            if !reader.general_info.is_version_at_least(check.required_version.clone()) {
+            if !reader
+                .general_info
+                .is_version_at_least(check.required_version.clone())
+            {
                 continue;
             }
 
@@ -147,12 +194,13 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
             reader.chunk = chunk.clone();
             reader.cur_pos = reader.chunk.start_pos;
 
-            let detected_version_opt: Option<GMVersionReq> = (check.checker_fn)(reader).with_context(|| {
-                format!(
-                    "trying to detect `GameMaker` Version {} in chunk '{}'",
-                    check.target_version, check.chunk_name,
-                )
-            })?;
+            let detected_version_opt: Option<GMVersionReq> =
+                (check.checker_fn)(reader).with_context(|| {
+                    format!(
+                        "trying to detect `GameMaker` Version {} in chunk '{}'",
+                        check.target_version, check.chunk_name,
+                    )
+                })?;
 
             if let Some(detected_version) = detected_version_opt {
                 log::debug!(
@@ -167,7 +215,8 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
         }
 
         // Remove all performed checks
-        for (i, should_remove) in checks_to_remove.into_iter().enumerate().rev() {
+        for (i, should_remove) in checks_to_remove.into_iter().enumerate().rev()
+        {
             if should_remove {
                 checks.remove(i);
             }
@@ -180,7 +229,9 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
         }
     }
 
-    if reader.general_info.is_version_at_least((2023, 1)) && reader.general_info.version.branch == PreLTS {
+    if reader.general_info.is_version_at_least((2023, 1))
+        && reader.general_info.version.branch == PreLTS
+    {
         reader.general_info.version.branch = LTS;
     }
 
@@ -416,17 +467,25 @@ fn cv_sprt_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
             expected_end_offset = next_sprite_pointer;
         } else {
             // Use chunk length, and be lenient with it (due to chunk padding)
-            if !full_end_pos.is_multiple_of(16) && full_end_pos + (16 - full_end_pos % 16) == reader.chunk.end_pos {
+            if !full_end_pos.is_multiple_of(16)
+                && full_end_pos + (16 - full_end_pos % 16)
+                    == reader.chunk.end_pos
+            {
                 return Ok(None); // "Full" mask data doesn't exactly line up, but works if rounded up to the next chunk padding
             }
-            if !bbox_end_pos.is_multiple_of(16) && bbox_end_pos + (16 - bbox_end_pos % 16) == reader.chunk.end_pos {
+            if !bbox_end_pos.is_multiple_of(16)
+                && bbox_end_pos + (16 - bbox_end_pos % 16)
+                    == reader.chunk.end_pos
+            {
                 return target_ver; // "Bbox" mask data doesn't exactly line up, but works if rounded up to the next chunk padding
             }
             bail!("Failed to detect mask type in 2024.6 detection");
         }
 
         if full_end_pos == expected_end_offset {
-            log::warn!("full_end_pos == expected_end_offset while detecting SPRT_2024.6; may lead to false negatives");
+            log::warn!(
+                "full_end_pos == expected_end_offset while detecting SPRT_2024.6; may lead to false negatives"
+            );
             return Ok(None); // "Full" mask data is valid   (TODO no idea why it returns here tbh; check if there is bug in utmt pls)
         }
         if bbox_end_pos == expected_end_offset {
@@ -462,7 +521,9 @@ fn cv_font_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         return Ok(None);
     }
     if glyph_count == 0 {
-        log::warn!("Glyph count is zero while detecting FONT_2022.2; may lead to false positives");
+        log::warn!(
+            "Glyph count is zero while detecting FONT_2022.2; may lead to false positives"
+        );
         return target_ver; // UTMT also assumes that it is 2022.2; even if there are no glyphs
     }
 
@@ -492,12 +553,16 @@ fn cv_font_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
 /// - Checks for the `LineHeight` value instead of `Ascender` (added in 2023.6)
 /// > `PSEM` (2023.2) is not used, as it would return a false negative on LTS (2022.9+ equivalent with no particles).
 /// - Checks for `UnknownAlwaysZero` in Glyphs (added in 2024.11)
-fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
+fn cv_font_2023_6_and_2024_11(
+    reader: &mut DataReader,
+) -> Result<Option<GMVersionReq>> {
     // Explicit check because the logic is very scuffed
     if !reader.general_info.is_version_at_least((2022, 8)) {
         return Ok(None); // Version requirement (for checking 2023.6) not satisfied
     }
-    if reader.general_info.is_version_at_least((2023, 6)) && !reader.general_info.is_version_at_least((2024, 6)) {
+    if reader.general_info.is_version_at_least((2023, 6))
+        && !reader.general_info.is_version_at_least((2024, 6))
+    {
         return Ok(None); // 2023.6 already detected; but 2024.6 not yet detected
     }
     if reader.general_info.is_version_at_least((2024, 11)) {
@@ -525,13 +590,18 @@ fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersio
     }
 
     reader.cur_pos = first_two_pointers[0] + 52; // Also the LineHeight value. 48 + 4 = 52
-    if reader.general_info.is_version_at_least((2023, 2, 0, 0, PostLTS)) {
+    if reader
+        .general_info
+        .is_version_at_least((2023, 2, 0, 0, PostLTS))
+    {
         // SDFSpread is present from 2023.2 non-LTS onward
         reader.cur_pos += 4; // (detected by PSEM/PSYS chunk existence)
     }
 
     let glyph_count = reader.read_u32()?;
-    if glyph_count * 4 > first_two_pointers[1] - reader.cur_pos || glyph_count < 1 {
+    if glyph_count * 4 > first_two_pointers[1] - reader.cur_pos
+        || glyph_count < 1
+    {
         return Ok(None);
     }
 
@@ -561,7 +631,8 @@ fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersio
         // And hopefully the last thing in a glyph is the kerning list
         // Note that we're actually skipping all items of the Glyph.Kerning SimpleList here;
         // 4 is supposed to be the size of a GlyphKerning object
-        let pointer_after_kerning_list = reader.cur_pos + 4 * u32::from(kerning_count);
+        let pointer_after_kerning_list =
+            reader.cur_pos + 4 * u32::from(kerning_count);
         // If we don't land on the next glyph/font after skipping the Kerning list,
         // KerningLength is probably bogus and UnknownAlwaysZero may be present
         if next_glyph_pointer == pointer_after_kerning_list {
@@ -569,7 +640,8 @@ fn cv_font_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersio
         }
         // Discard last read, which would be of UnknownAlwaysZero
         let kerning_count = reader.read_u16()?;
-        let pointer_after_kerning_list = reader.cur_pos + 4 * u32::from(kerning_count);
+        let pointer_after_kerning_list =
+            reader.cur_pos + 4 * u32::from(kerning_count);
         if next_glyph_pointer != pointer_after_kerning_list {
             log::warn!(
                 "There appears to be more/fewer values than UnknownAlwaysZero before \
@@ -696,7 +768,9 @@ fn cv_room_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
             GMRoomLayerType::Assets => {
                 reader.cur_pos += 6 * 4;
                 let tile_pointer = reader.read_u32()?;
-                if tile_pointer != reader.cur_pos + 8 && tile_pointer != reader.cur_pos + 12 {
+                if tile_pointer != reader.cur_pos + 8
+                    && tile_pointer != reader.cur_pos + 12
+                {
                     return target_ver;
                 }
             }
@@ -704,7 +778,9 @@ fn cv_room_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
                 reader.cur_pos += 6 * 4;
                 let tile_map_width = reader.read_u32()?;
                 let tile_map_height = reader.read_u32()?;
-                if next_pointer - reader.cur_pos != (tile_map_width * tile_map_height * 4) {
+                if next_pointer - reader.cur_pos
+                    != (tile_map_width * tile_map_height * 4)
+                {
                     return target_ver;
                 }
             }
@@ -755,7 +831,9 @@ fn cv_room_2_2_2_302(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     Ok(None)
 }
 
-fn cv_room_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
+fn cv_room_2024_2_and_2024_4(
+    reader: &mut DataReader,
+) -> Result<Option<GMVersionReq>> {
     // Check for tile compression
     let room_count = reader.read_u32()?;
     let mut any_layers_misaligned: bool = false;
@@ -795,7 +873,8 @@ fn cv_room_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
 
             // Actually perform the length checks
             reader.cur_pos = layer_data_ptr + 8;
-            let layer_type: GMRoomLayerType = num_enum_from(reader.read_u32()?)?;
+            let layer_type: GMRoomLayerType =
+                num_enum_from(reader.read_u32()?)?;
             if layer_type != GMRoomLayerType::Tiles {
                 check_next_layer_offset = false;
                 continue;
@@ -807,7 +886,9 @@ fn cv_room_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
 
             let tile_map_width = reader.read_u32()?;
             let tile_map_height = reader.read_u32()?;
-            if next_pointer - reader.cur_pos != (tile_map_width * tile_map_height * 4) {
+            if next_pointer - reader.cur_pos
+                != (tile_map_width * tile_map_height * 4)
+            {
                 return if any_layers_misaligned {
                     Ok(Some((2024, 2).into()))
                 } else {
@@ -910,7 +991,9 @@ fn cv_txtr_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
             return target_ver;
         }
         reader.cur_pos += 1;
-        if *reader.read_bytes_const::<6>()? != [0x31, 0x41, 0x59, 0x26, 0x53, 0x59] {
+        if *reader.read_bytes_const::<6>()?
+            != [0x31, 0x41, 0x59, 0x26, 0x53, 0x59]
+        {
             // Digits of pi (block header)
             return target_ver;
         }
@@ -1054,7 +1137,9 @@ fn cv_psem_2023_x(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
             0xF8 => target_ver = Some((2023, 8).into()),
             0xD8 => target_ver = Some((2023, 6).into()),
             0xC8 => target_ver = Some((2023, 4).into()),
-            elem_size => bail!("Unrecognized PSEM size {elem_size} with only one element"),
+            elem_size => bail!(
+                "Unrecognized PSEM size {elem_size} with only one element"
+            ),
         }
     } else {
         let pointer1 = reader.read_u32()?;
@@ -1064,14 +1149,22 @@ fn cv_psem_2023_x(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
             0xC0 => target_ver = Some((2023, 6).into()),
             0xBC => target_ver = Some((2023, 4).into()),
             0xB0 => {} // 2023.2
-            elem_size => bail!("Unrecognized PSEM size {elem_size} with {count} elements"),
+            elem_size => bail!(
+                "Unrecognized PSEM size {elem_size} with {count} elements"
+            ),
         }
     }
     Ok(target_ver)
 }
 
-fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
-    fn get_chunk_elem_count(reader: &mut DataReader, chunk_name: &'static str, gms2: bool) -> Result<u32> {
+fn cv_code_2023_8_and_2024_4(
+    reader: &mut DataReader,
+) -> Result<Option<GMVersionReq>> {
+    fn get_chunk_elem_count(
+        reader: &mut DataReader,
+        chunk_name: &'static str,
+        gms2: bool,
+    ) -> Result<u32> {
         let Some(chunk) = reader.chunks.get(chunk_name) else {
             return Ok(0);
         };
@@ -1140,7 +1233,8 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
                     // Pop, call
                     reader.cur_pos += 4;
                 }
-                if matches!(opcode, 0xC0 | 0xC1 | 0xC2 | 0xC3) && type1 != 0x0f {
+                if matches!(opcode, 0xC0 | 0xC1 | 0xC2 | 0xC3) && type1 != 0x0f
+                {
                     // Push variants; account for int16
                     reader.cur_pos += 4;
                 }
@@ -1164,7 +1258,9 @@ fn cv_code_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion
             let instructions_length = reader.read_u32()?;
             reader.cur_pos += 4; // Skip locals and arguments count
             let instructions_start_relative = reader.read_i32()?;
-            let instructions_start = (reader.cur_pos as i32 - 4 + instructions_start_relative) as u32;
+            let instructions_start = (reader.cur_pos as i32 - 4
+                + instructions_start_relative)
+                as u32;
             let instructions_end = instructions_start + instructions_length;
             reader.cur_pos = instructions_start;
 

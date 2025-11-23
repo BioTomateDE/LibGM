@@ -1,7 +1,7 @@
 use crate::gamemaker::elements::animation_curves::GMAnimationCurves;
 use crate::gamemaker::elements::audio_groups::GMAudioGroups;
 use crate::gamemaker::elements::backgrounds::GMBackgrounds;
-use crate::gamemaker::elements::code::{GMCodes, GMInstanceType};
+use crate::gamemaker::elements::code::GMCodes;
 use crate::gamemaker::elements::embedded_audio::GMEmbeddedAudios;
 use crate::gamemaker::elements::embedded_images::GMEmbeddedImages;
 use crate::gamemaker::elements::embedded_textures::GMEmbeddedTextures;
@@ -30,8 +30,9 @@ use crate::gamemaker::elements::texture_group_info::GMTextureGroupInfos;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItems;
 use crate::gamemaker::elements::timelines::GMTimelines;
 use crate::gamemaker::elements::ui_nodes::GMRootUINodes;
-use crate::gamemaker::elements::variables::{GMVariable, GMVariableB15Data, GMVariables, to_vari_instance_type};
+use crate::gamemaker::elements::variables::{GMVariable, GMVariableB15Data, GMVariables};
 use crate::gamemaker::reference::GMRef;
+use crate::gml::instructions::GMInstanceType;
 use crate::prelude::*;
 
 /// Byte order (endianness) for integers and chunk names in data files.
@@ -156,11 +157,15 @@ impl Default for GMData {
 
 impl GMData {
     // TODO: make this work for bytecode 14. also docs. also vari_instance_type is wrong/buggy?
-    pub fn make_variable_b15(&mut self, name: String, instance_type: GMInstanceType) -> Result<GMRef<GMVariable>> {
+    pub fn make_variable_b15(
+        &mut self,
+        name: String,
+        instance_type: GMInstanceType,
+    ) -> Result<GMRef<GMVariable>> {
         if instance_type == GMInstanceType::Local {
             bail!("Local variables have to be unique; this function will not work");
         }
-        let vari_instance_type: GMInstanceType = to_vari_instance_type(&instance_type);
+        let vari_instance_type = instance_type.as_vari();
 
         for (i, variable) in self.variables.iter().enumerate() {
             if variable.name != name {

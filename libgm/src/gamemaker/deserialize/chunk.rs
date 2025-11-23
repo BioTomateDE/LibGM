@@ -99,7 +99,7 @@ impl DataReader<'_> {
 
             // Byte is not zero => Padding is incorrect
             self.cur_pos -= 1; // Undo reading incorrect padding byte
-            self.chunk_padding = if self.cur_pos % 4 == 0 { 4 } else { 1 };
+            self.chunk_padding = if self.cur_pos.is_multiple_of(4) { 4 } else { 1 };
             log::debug!("Set chunk padding to {}", self.chunk_padding);
             return Ok(());
         }
