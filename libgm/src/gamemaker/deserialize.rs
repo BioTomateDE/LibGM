@@ -145,7 +145,11 @@ impl DataParser {
         // • [FUNC, VARI, STRG] --> CODE
         // • TPAG --> [BGND, EMBI, FONT, OPTN, SPRT]
 
-        reader.string_chunk = reader.chunks.get("STRG").cloned().ok_or("Chunk STRG does not exist")?;
+        reader.string_chunk = reader
+            .chunks
+            .get("STRG")
+            .cloned()
+            .ok_or("Chunk STRG does not exist")?;
         reader.general_info = reader.read_chunk()?;
         if !reader.general_info.exists {
             bail!("GEN8 chunk does not exist");
@@ -154,7 +158,8 @@ impl DataParser {
         const GMS2: GMVersion = GMVersion::new(2, 0, 0, 0, LTSBranch::PreLTS);
         if reader.specified_version == GMS2 {
             let stopwatch = Stopwatch::start();
-            detect_gamemaker_version(&mut reader).context("detecting `GameMaker` version")?;
+            detect_gamemaker_version(&mut reader)
+                .context("detecting `GameMaker` version")?;
             log::trace!("Detecting `GameMaker` Version took {stopwatch}");
         }
 
@@ -215,7 +220,10 @@ impl DataParser {
 
         log::trace!("Reading independent chunks took {stopwatch2}");
 
-        handle_unread_chunks(&reader.chunks, self.options.allow_unknown_chunks)?;
+        handle_unread_chunks(
+            &reader.chunks,
+            self.options.allow_unknown_chunks,
+        )?;
 
         let data = GMData {
             chunk_padding: reader.chunk_padding,
@@ -264,24 +272,30 @@ impl DataParser {
 
     ///todo docstrings
     pub fn parse_bytes(&self, raw_data: impl AsRef<[u8]>) -> Result<GMData> {
-        self.parse(raw_data).context("parsing `GameMaker` data")
+        self.parse(raw_data).context("parsing GameMaker data")
     }
 
     /// Parse a `GameMaker` data file (`data.win`, `game.unx`, etc).
-    pub fn parse_file(&self, data_file_path: impl AsRef<Path>) -> Result<GMData> {
+    pub fn parse_file(
+        &self,
+        data_file_path: impl AsRef<Path>,
+    ) -> Result<GMData> {
         let path = data_file_path.as_ref();
 
-        let meta = std::fs::metadata(path).with_context(|| format!("reading metadata of data file {path:?}"))?;
+        let meta = std::fs::metadata(path).with_context(|| {
+            format!("reading metadata of data file {path:?}")
+        })?;
         if meta.len() >= i32::MAX as u64 {
             bail!("{TOO_BIG}");
         }
 
         let stopwatch = Stopwatch::start();
-        let raw_data: Vec<u8> = std::fs::read(path).with_context(|| format!("reading data file {path:?}"))?;
+        let raw_data: Vec<u8> = std::fs::read(path)
+            .with_context(|| format!("reading data file {path:?}"))?;
         log::trace!("Reading data file took {stopwatch}");
 
         self.parse(raw_data)
-            .with_context(|| format!("parsing `GameMaker` data file {path:?}"))
+            .with_context(|| format!("parsing GameMaker data file {path:?}"))
     }
 }
 
@@ -298,7 +312,9 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
     reader.endianness = match root_chunk_name.as_str() {
         "FORM" => Endianness::Little,
         "MROF" => Endianness::Big,
-        _ => bail!("Invalid data file: expected root chunk to be 'FORM' but found '{root_chunk_name}'"),
+        _ => bail!(
+            "Invalid data file: expected root chunk to be 'FORM' but found '{root_chunk_name}'"
+        ),
     };
     if reader.endianness == Endianness::Big {
         log::warn!("Big endian format might not work, proceed with caution");
@@ -342,7 +358,10 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
 }
 
 /// Verify all data chunks were processed to prevent data loss
-fn handle_unread_chunks(chunks: &SmallMap<String, GMChunk>, allow_unknown_chunks: bool) -> Result<()> {
+fn handle_unread_chunks(
+    chunks: &SmallMap<String, GMChunk>,
+    allow_unknown_chunks: bool,
+) -> Result<()> {
     if chunks.is_empty() {
         return Ok(());
     }

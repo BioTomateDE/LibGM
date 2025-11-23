@@ -1,10 +1,10 @@
 use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::code::GMCode;
 use crate::gamemaker::elements::sprites::GMSprite;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::reference::GMRef;
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
+use crate::gml::instructions::GMCode;
 use crate::prelude::*;
 use crate::util::assert::assert_bool;
 use crate::util::init::num_enum_from;
@@ -115,7 +115,8 @@ impl GMElement for GMGameObjects {
             let friction = reader.read_f32()?;
             let awake = reader.read_bool32()?;
             let kinematic = reader.read_bool32()?;
-            let mut physics_shape_vertices: Vec<(f32, f32)> = Vec::with_capacity(physics_shape_vertex_count);
+            let mut physics_shape_vertices: Vec<(f32, f32)> =
+                Vec::with_capacity(physics_shape_vertex_count);
             for _ in 0..physics_shape_vertex_count {
                 let x = reader.read_f32()?;
                 let y = reader.read_f32()?;
@@ -165,14 +166,16 @@ impl GMElement for GMGameObjects {
             builder.write_gm_string(&game_object.name);
             builder.write_resource_id_opt(&game_object.sprite);
             builder.write_bool32(game_object.visible);
-            game_object.managed.serialize_if_gm_ver(builder, "Managed", (2022, 5))?;
+            game_object
+                .managed
+                .serialize_if_gm_ver(builder, "Managed", (2022, 5))?;
             builder.write_bool32(game_object.solid);
             builder.write_i32(game_object.depth);
             builder.write_bool32(game_object.persistent);
             match game_object.parent {
-                None => builder.write_i32(-100),                                     // No Parent
+                None => builder.write_i32(-100), // No Parent
                 Some(obj_ref) if obj_ref.index == i as u32 => builder.write_i32(-1), // Parent is Self
-                Some(obj_ref) => builder.write_resource_id(obj_ref),                 // Normal Parent
+                Some(obj_ref) => builder.write_resource_id(obj_ref), // Normal Parent
             }
             builder.write_resource_id_opt(&game_object.texture_mask);
             builder.write_bool32(game_object.uses_physics);

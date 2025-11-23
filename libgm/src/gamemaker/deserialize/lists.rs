@@ -6,14 +6,14 @@ use crate::util::fmt::typename;
 use crate::util::init::vec_with_capacity;
 
 impl DataReader<'_> {
-    /// Reads a `GameMaker` simple list by calling the specified deserializer function for each element.
+    /// Reads a GameMaker simple list by calling the specified deserializer function for each element.
     ///
     /// Simple lists consist of a count followed by the elements' data in sequence.
     /// Includes a failsafe check to prevent excessive memory allocation from malformed data.
     fn read_simple_list_internal<T>(
         &mut self,
         count: u32,
-        deserializer_fn: impl Fn(&mut Self) -> Result<T>,
+        deserializer_fn: fn(&mut Self) -> Result<T>,
     ) -> Result<Vec<T>> {
         let mut elements: Vec<T> = vec_with_capacity(count).context("reading simple list")?;
         for _ in 0..count {
@@ -30,7 +30,7 @@ impl DataReader<'_> {
         Ok(elements)
     }
 
-    /// Reads a `GameMaker` simple list with a 32-bit count prefix.
+    /// Reads a GameMaker simple list with a 32-bit count prefix.
     ///
     /// The list format is: `[count: u32][element_0][element_1]...[element_n]`
     pub fn read_simple_list<T: GMElement>(&mut self) -> Result<Vec<T>> {
@@ -38,13 +38,13 @@ impl DataReader<'_> {
         self.read_simple_list_internal(count, T::deserialize)
     }
 
-    /// Reads a `GameMaker` simple list with a 16-bit count prefix.
+    /// Reads a GameMaker simple list with a 16-bit count prefix.
     ///
     /// The list format is: `[count: u16][element_0][element_1]...[element_n]`
     /// Uses a smaller failsafe limit appropriate for short lists.
     pub fn read_simple_list_short<T: GMElement>(&mut self) -> Result<Vec<T>> {
         let count = self.read_u16()?;
-        self.read_simple_list_internal(count as u32, T::deserialize)
+        self.read_simple_list_internal(u32::from(count), T::deserialize)
     }
 
     /// Reads a simple list of resource IDs and wraps them in [`GMRef`].

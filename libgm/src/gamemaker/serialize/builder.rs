@@ -1,8 +1,8 @@
 use crate::gamemaker::data::{Endianness, GMData};
 use crate::gamemaker::elements::GMChunkElement;
-use crate::gamemaker::elements::code::GMVariableType;
 use crate::gamemaker::elements::strings::StringPlaceholder;
 use crate::gamemaker::gm_version::GMVersionReq;
+use crate::gml::instructions::GMVariableType;
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
 use crate::util::fmt::typename;
@@ -68,7 +68,10 @@ impl<'a> DataBuilder<'a> {
     }
 
     pub fn is_gm_version_at_least<V: Into<GMVersionReq>>(&self, version_req: V) -> bool {
-        self.gm_data.general_info.version.is_version_at_least(version_req)
+        self.gm_data
+            .general_info
+            .version
+            .is_version_at_least(version_req)
     }
 
     pub const fn bytecode_version(&self) -> u8 {
@@ -243,7 +246,8 @@ impl<'a> DataBuilder<'a> {
 
         let stopwatch = Stopwatch::start();
 
-        self.write_chunk_name(name).expect("Constant chunk name is invalid");
+        self.write_chunk_name(name)
+            .expect("Constant chunk name is invalid");
         self.write_u32(0xDEADC0DE); // Chunk length placeholder
         let start_pos: usize = self.len();
         let length_pos = start_pos - 4;

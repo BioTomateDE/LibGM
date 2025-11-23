@@ -1,3 +1,5 @@
+use crate::gml::instructions::GMInstruction;
+
 pub const CONV: u8 = 0x07;
 pub const MUL: u8 = 0x08;
 pub const DIV: u8 = 0x09;
@@ -32,10 +34,60 @@ pub const CALL: u8 = 0xD9;
 pub const CALLVAR: u8 = 0x99;
 pub const EXTENDED: u8 = 0xFF;
 
-//mod old {
-//    //! The (different) opcodes before bytecode 15
-//    pub const CONV: u8 = 0x03;
-//}
+impl GMInstruction {
+    /// Get the opcode of this Instruction.
+    #[must_use]
+    pub(crate) const fn opcode(&self) -> u8 {
+        match self {
+            GMInstruction::Convert { .. } => CONV,
+            GMInstruction::Multiply { .. } => MUL,
+            GMInstruction::Divide { .. } => DIV,
+            GMInstruction::Remainder { .. } => REM,
+            GMInstruction::Modulus { .. } => MOD,
+            GMInstruction::Add { .. } => ADD,
+            GMInstruction::Subtract { .. } => SUB,
+            GMInstruction::And { .. } => AND,
+            GMInstruction::Or { .. } => OR,
+            GMInstruction::Xor { .. } => XOR,
+            GMInstruction::Negate { .. } => NEG,
+            GMInstruction::Not { .. } => NOT,
+            GMInstruction::ShiftLeft { .. } => SHL,
+            GMInstruction::ShiftRight { .. } => SHR,
+            GMInstruction::Compare { .. } => CMP,
+            GMInstruction::Pop { .. } => POP,
+            GMInstruction::PopSwap { .. } => POP,
+            GMInstruction::Duplicate { .. } => DUP,
+            GMInstruction::DuplicateSwap { .. } => DUP,
+            GMInstruction::Return { .. } => RET,
+            GMInstruction::Exit { .. } => EXIT,
+            GMInstruction::PopDiscard { .. } => POPZ,
+            GMInstruction::Branch { .. } => JMP,
+            GMInstruction::BranchIf { .. } => JT,
+            GMInstruction::BranchUnless { .. } => JF,
+            GMInstruction::PushWithContext { .. } => PUSHENV,
+            GMInstruction::PopWithContext { .. } => POPENV,
+            GMInstruction::PopWithContextExit { .. } => POPENV,
+            GMInstruction::Push { .. } => PUSH,
+            GMInstruction::PushLocal { .. } => PUSHLOC,
+            GMInstruction::PushGlobal { .. } => PUSHGLB,
+            GMInstruction::PushBuiltin { .. } => PUSHBLTN,
+            GMInstruction::PushImmediate { .. } => PUSHIM,
+            GMInstruction::Call { .. } => CALL,
+            GMInstruction::CallVariable { .. } => CALLVAR,
+            GMInstruction::CheckArrayIndex => EXTENDED,
+            GMInstruction::PushArrayFinal => EXTENDED,
+            GMInstruction::PopArrayFinal => EXTENDED,
+            GMInstruction::PushArrayContainer => EXTENDED,
+            GMInstruction::SetArrayOwner => EXTENDED,
+            GMInstruction::HasStaticInitialized => EXTENDED,
+            GMInstruction::SetStaticInitialized => EXTENDED,
+            GMInstruction::SaveArrayReference => EXTENDED,
+            GMInstruction::RestoreArrayReference => EXTENDED,
+            GMInstruction::IsNullishValue => EXTENDED,
+            GMInstruction::PushReference { .. } => EXTENDED,
+        }
+    }
+}
 
 /// Convert old bytecode14 opcodes to new bytecode15+ opcodes
 #[must_use]
@@ -85,7 +137,7 @@ pub const fn new_to_old(opcode: u8) -> u8 {
         // All mathematical operations are shifted by 4
         MUL..=SHR => opcode - 4,
 
-        // Comparison Type should be handled by GMComparisonInstruction::build
+        // Comparison Type should be handled by `build_comparison`
         CMP => 0,
 
         // Pop and Dup are shifted by 4
@@ -110,4 +162,18 @@ pub const fn new_to_old(opcode: u8) -> u8 {
 
         _ => opcode,
     }
+}
+
+pub mod extended {
+    pub const CHKINDEX: i16 = -1;
+    pub const PUSHAF: i16 = -2;
+    pub const POPAF: i16 = -3;
+    pub const PUSHAC: i16 = -4;
+    pub const SETOWNER: i16 = -5;
+    pub const ISSTATICOK: i16 = -6;
+    pub const SETSTATIC: i16 = -7;
+    pub const SAVEAREF: i16 = -8;
+    pub const RESTOREAREF: i16 = -9;
+    pub const ISNULLISH: i16 = -10;
+    pub const PUSHREF: i16 = -11;
 }

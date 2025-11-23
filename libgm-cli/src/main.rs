@@ -1,7 +1,6 @@
 mod tests;
 
 use crate::tests::assembler::test_assembler;
-use crate::tests::decompiler::test_decompiler;
 use clap::{Parser, ValueEnum};
 use libgm::gamemaker::data::GMData;
 use libgm::gamemaker::deserialize::parse_data_file;
@@ -32,12 +31,12 @@ struct Args {
 enum Test {
     Builder,
     Assembler,
-    Decompiler,
 }
 
 fn listdir(dir: &Path) -> Result<Vec<PathBuf>> {
     let mut data_file_paths: Vec<PathBuf> = Vec::new();
-    let dir: ReadDir = std::fs::read_dir(dir).context("reading data file folder")?;
+    let dir: ReadDir =
+        std::fs::read_dir(dir).context("reading data file folder")?;
 
     for entry in dir {
         let path = entry.context("reading directory entry metadata")?.path();
@@ -63,9 +62,11 @@ fn run(mut args: Args) -> Result<()> {
 
     let mut files = Vec::new();
     for path in args.files {
-        let metadata = std::fs::metadata(&path).with_context(|| format!("reading metadata of {path:?}"))?;
+        let metadata = std::fs::metadata(&path)
+            .with_context(|| format!("reading metadata of {path:?}"))?;
         if metadata.is_dir() {
-            let dir_files = listdir(&path).with_context(|| format!("reading entries of dir {path:?}"))?;
+            let dir_files = listdir(&path)
+                .with_context(|| format!("reading entries of dir {path:?}"))?;
             files.extend(dir_files);
         } else {
             files.push(path);
@@ -88,9 +89,6 @@ fn run(mut args: Args) -> Result<()> {
                 }
                 Test::Assembler => {
                     test_assembler(&mut data)?;
-                }
-                Test::Decompiler => {
-                    test_decompiler(&data)?;
                 }
             }
         }

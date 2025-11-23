@@ -24,7 +24,7 @@ This is effectively a Rust port of
     Invalid GMSpriteSepMaskType 67 (0x00000043)
     ↳ while deserializing element 273/4437 of GMSprite pointer list
     ↳ while deserializing chunk 'SPRT'
-    ↳ while parsing `GameMaker` data file "data.win"
+    ↳ while parsing GameMaker data file "data.win"
     ```
 - Configurable lenient options for trying to parse half-broken data files.
 
