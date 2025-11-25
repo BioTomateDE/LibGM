@@ -1,10 +1,9 @@
 mod tests;
 
-use crate::tests::assembler::test_assembler;
 use clap::{Parser, ValueEnum};
 use libgm::gamemaker::data::GMData;
-use libgm::gamemaker::deserialize::parse_data_file;
-use libgm::gamemaker::serialize::{build_data_file, write_data_file};
+use libgm::gamemaker::deserialize::read_data_file;
+use libgm::gamemaker::serialize::write_data_file;
 use libgm::prelude::*;
 use std::fs::ReadDir;
 use std::path::{Path, PathBuf};
@@ -27,26 +26,34 @@ struct Args {
     tests: Vec<Test>,
 }
 
-#[derive(ValueEnum, Debug, Clone, Copy)]
+#[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
 enum Test {
+    All,
     Builder,
+    Reparse,
     Assembler,
 }
 
 fn listdir(dir: &Path) -> Result<Vec<PathBuf>> {
     let mut data_file_paths: Vec<PathBuf> = Vec::new();
-    let dir: ReadDir =
-        std::fs::read_dir(dir).context("reading data file folder")?;
+    let dir: ReadDir = std::fs::read_dir(dir)
+        .map_err(|e| e.to_string())
+        .context("reading data file folder")?;
 
     for entry in dir {
-        let path = entry.context("reading directory entry metadata")?.path();
+        let path = entry
+            .map_err(|e| e.to_string())
+            .context("reading directory entry metadata")?
+            .path();
         if !path.is_file() {
             continue;
         }
         let Some(ext) = path.extension() else {
             continue;
         };
-        let ext = ext.to_str().context("converting file extension to UTF-8")?;
+        let ext = ext
+            .to_str()
+            .ok_or("Invalid File extension UTF-8 String {ext:?}")?;
         if matches!(ext, "win" | "unx" | "ios" | "droid") {
             data_file_paths.push(path);
         }
@@ -60,9 +67,16 @@ fn run(mut args: Args) -> Result<()> {
         args.files.push(PathBuf::from("data.win"));
     }
 
+    // Very clunky test deduplication
+    args.tests.dedup();
+    if args.tests.contains(&Test::All) {
+        args.tests = vec![Test::All];
+    }
+
     let mut files = Vec::new();
     for path in args.files {
         let metadata = std::fs::metadata(&path)
+            .map_err(|e| e.to_string())
             .with_context(|| format!("reading metadata of {path:?}"))?;
         if metadata.is_dir() {
             let dir_files = listdir(&path)
@@ -75,22 +89,13 @@ fn run(mut args: Args) -> Result<()> {
 
     for data_file in files {
         log::info!("Parsing data file {data_file:?}");
-        let mut data: GMData = parse_data_file(data_file)?;
+        let data: GMData = read_data_file(data_file)?;
+
+        tests::perform(&data, &args.tests)?;
 
         if let Some(out_file) = &args.out {
             log::info!("Building data file {out_file:?}");
             write_data_file(&data, out_file)?;
-        }
-
-        for test in &args.tests {
-            match test {
-                Test::Builder => {
-                    build_data_file(&data)?;
-                }
-                Test::Assembler => {
-                    test_assembler(&mut data)?;
-                }
-            }
         }
     }
 

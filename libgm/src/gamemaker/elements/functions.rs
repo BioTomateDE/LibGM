@@ -42,14 +42,19 @@ impl GMElement for GMFunctions {
             reader.read_u32()?
         };
 
-        let mut functions: Vec<GMFunction> = vec_with_capacity(functions_count)?;
+        let mut functions: Vec<GMFunction> =
+            vec_with_capacity(functions_count)?;
 
         for i in 0..functions_count {
             let name: String = reader.read_gm_string()?;
             let occurrence_count = reader.read_u32()?;
             let first_occurrence_pos = reader.read_u32()?;
             let (occurrences, name_string_id): (Vec<u32>, u32) =
-                parse_occurrence_chain(reader, first_occurrence_pos, occurrence_count)?;
+                parse_occurrence_chain(
+                    reader,
+                    first_occurrence_pos,
+                    occurrence_count,
+                )?;
 
             //// verify name string id. allow -1 for unused function
             //if name_string_id as i32 != -1 && name.index != name_string_id {
@@ -62,7 +67,9 @@ impl GMElement for GMFunctions {
             //}
 
             for occurrence in occurrences {
-                if let Some(old_value) = reader.function_occurrences.insert(occurrence, i.into()) {
+                if let Some(old_value) =
+                    reader.function_occurrences.insert(occurrence, i.into())
+                {
                     bail!(
                         "Conflicting occurrence positions while parsing functions: Position {} \
                         was already set for function #{} with name {:?}; trying to set to function #{} with name {:?}",
@@ -79,7 +86,9 @@ impl GMElement for GMFunctions {
         }
 
         let code_locals: GMCodeLocals;
-        if reader.general_info.bytecode_version >= 15 && !reader.general_info.is_version_at_least((2024, 8)) {
+        if reader.general_info.bytecode_version >= 15
+            && !reader.general_info.is_version_at_least((2024, 8))
+        {
             code_locals = GMCodeLocals::deserialize(reader)?;
         } else {
             code_locals = Default::default();
@@ -114,7 +123,9 @@ impl GMElement for GMFunctions {
             builder.write_i32(first_occurrence);
         }
 
-        if builder.bytecode_version() >= 15 && !builder.is_gm_version_at_least((2024, 8)) {
+        if builder.bytecode_version() >= 15
+            && !builder.is_gm_version_at_least((2024, 8))
+        {
             if !self.code_locals.exists {
                 bail!("Code Locals don't exist in bytecode version 15+");
             }
@@ -158,7 +169,8 @@ impl GMElement for GMCodeLocal {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let local_variables_count = reader.read_u32()?;
         let name: String = reader.read_gm_string()?;
-        let mut variables: Vec<GMCodeLocalVariable> = vec_with_capacity(local_variables_count)?;
+        let mut variables: Vec<GMCodeLocalVariable> =
+            vec_with_capacity(local_variables_count)?;
         for _ in 0..local_variables_count {
             variables.push(GMCodeLocalVariable::deserialize(reader)?);
         }
@@ -211,7 +223,7 @@ fn parse_occurrence_chain(
         .chunks
         .get("CODE")
         .cloned()
-        .context("Chunk CODE not set while parsing function occurrences")?;
+        .ok_or("Chunk CODE not set while parsing function occurrences")?;
 
     let first_extra_offset: u32;
     if reader.general_info.is_version_at_least((2, 3)) {

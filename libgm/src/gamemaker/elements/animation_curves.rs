@@ -39,7 +39,8 @@ impl GMElement for GMAnimationCurves {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
         assert_int("ACRV Version", 1, reader.read_u32()?)?;
-        let animation_curves: Vec<GMAnimationCurve> = reader.read_pointer_list()?;
+        let animation_curves: Vec<GMAnimationCurve> =
+            reader.read_pointer_list()?;
         Ok(Self { animation_curves, exists: true })
     }
 
@@ -65,7 +66,8 @@ impl GMElement for GMAnimationCurve {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name = reader.read_gm_string()?;
         let graph_type = reader.read_u32()?;
-        let channels: Vec<GMAnimationCurveChannel> = reader.read_simple_list()?;
+        let channels: Vec<GMAnimationCurveChannel> =
+            reader.read_simple_list()?;
         Ok(GMAnimationCurve { name, graph_type, channels })
     }
 
@@ -88,9 +90,11 @@ pub struct GMAnimationCurveChannel {
 impl GMElement for GMAnimationCurveChannel {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name = reader.read_gm_string()?;
-        let curve_type: GMAnimationCurveType = num_enum_from(reader.read_u32()?)?;
+        let curve_type: GMAnimationCurveType =
+            num_enum_from(reader.read_u32()?)?;
         let iterations = reader.read_u32()?;
-        let points: Vec<GMAnimationCurveChannelPoint> = reader.read_simple_list()?;
+        let points: Vec<GMAnimationCurveChannelPoint> =
+            reader.read_simple_list()?;
         Ok(GMAnimationCurveChannel { name, curve_type, iterations, points })
     }
 
@@ -128,10 +132,10 @@ impl GMElement for GMAnimationCurveChannelPoint {
         builder.write_f32(self.y);
 
         if builder.is_gm_version_at_least((2, 3, 1)) {
-            let bezier_data: &PointBezierData = self
-                .bezier_data
-                .as_ref()
-                .context("Animation Curve Point's Bezier data not set in 2.3.1+")?;
+            let bezier_data: &PointBezierData =
+                self.bezier_data.as_ref().ok_or(
+                    "Animation Curve Point's Bezier data not set in 2.3.1+",
+                )?;
             bezier_data.serialize(builder)?;
         } else {
             builder.write_i32(0);

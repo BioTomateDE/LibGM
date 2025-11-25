@@ -282,15 +282,18 @@ impl DataParser {
     ) -> Result<GMData> {
         let path = data_file_path.as_ref();
 
-        let meta = std::fs::metadata(path).with_context(|| {
-            format!("reading metadata of data file {path:?}")
-        })?;
+        let meta = std::fs::metadata(path)
+            .map_err(|e| e.to_string())
+            .with_context(|| {
+                format!("reading metadata of data file {path:?}")
+            })?;
         if meta.len() >= i32::MAX as u64 {
             bail!("{TOO_BIG}");
         }
 
         let stopwatch = Stopwatch::start();
         let raw_data: Vec<u8> = std::fs::read(path)
+            .map_err(|e| e.to_string())
             .with_context(|| format!("reading data file {path:?}"))?;
         log::trace!("Reading data file took {stopwatch}");
 
@@ -384,7 +387,12 @@ fn handle_unread_chunks(
     }
 }
 
+/// Parse a `GameMaker` data file (stored in a buffer) with default settings.
+pub fn read_data_bytes(raw_data: impl AsRef<[u8]>) -> Result<GMData> {
+    DataParser::new().parse_bytes(raw_data)
+}
+
 /// Parse a `GameMaker` data file (`data.win`, `game.unx`, etc.) with default settings.
-pub fn parse_data_file(data_file_path: impl AsRef<Path>) -> Result<GMData> {
+pub fn read_data_file(data_file_path: impl AsRef<Path>) -> Result<GMData> {
     DataParser::new().parse_file(data_file_path)
 }

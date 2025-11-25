@@ -73,7 +73,7 @@ impl GMElement for GMVariables {
         let saved_chunk: GMChunk = reader.chunk.clone();
         let saved_position = reader.cur_pos;
         reader.chunk =
-            reader.chunks.get("CODE").cloned().context(
+            reader.chunks.get("CODE").cloned().ok_or(
                 "Chunk CODE not set while parsing variable occurrences",
             )?;
 

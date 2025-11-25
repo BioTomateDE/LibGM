@@ -9,7 +9,9 @@ use crate::gamemaker::reference::GMRef;
 use crate::gamemaker::serialize::builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::assert::assert_int;
-use crate::util::init::{hashmap_with_capacity, num_enum_from, vec_with_capacity};
+use crate::util::init::{
+    hashmap_with_capacity, num_enum_from, vec_with_capacity,
+};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
@@ -82,9 +84,11 @@ pub struct GMSequence {
 impl GMElement for GMSequence {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: String = reader.read_gm_string()?;
-        let playback: GMSequencePlaybackType = num_enum_from(reader.read_u32()?)?;
+        let playback: GMSequencePlaybackType =
+            num_enum_from(reader.read_u32()?)?;
         let playback_speed = reader.read_f32()?;
-        let playback_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)?;
+        let playback_speed_type: GMAnimSpeedType =
+            num_enum_from(reader.read_u32()?)?;
         let length = reader.read_f32()?;
         let origin_x = reader.read_i32()?;
         let origin_y = reader.read_i32()?;
@@ -97,18 +101,21 @@ impl GMElement for GMSequence {
             height = Some(reader.read_f32()?);
         }
 
-        let broadcast_messages: Vec<GMKeyframeData<GMBroadcastMessage>> = reader.read_simple_list()?;
+        let broadcast_messages: Vec<GMKeyframeData<GMBroadcastMessage>> =
+            reader.read_simple_list()?;
         let tracks: Vec<GMTrack> = reader.read_simple_list()?;
 
         let function_id_count = reader.read_u32()?;
-        let mut function_ids: HashMap<i32, String> = hashmap_with_capacity(function_id_count)?;
+        let mut function_ids: HashMap<i32, String> =
+            hashmap_with_capacity(function_id_count)?;
         for _ in 0..function_id_count {
             let key = reader.read_i32()?;
             let function_id: String = reader.read_gm_string()?;
             function_ids.insert(key, function_id);
         }
 
-        let moments: Vec<GMKeyframeData<GMKeyframeMoment>> = reader.read_simple_list()?;
+        let moments: Vec<GMKeyframeData<GMKeyframeMoment>> =
+            reader.read_simple_list()?;
 
         Ok(GMSequence {
             name,
@@ -138,8 +145,12 @@ impl GMElement for GMSequence {
         builder.write_i32(self.origin_y);
         builder.write_f32(self.volume);
         if builder.is_gm_version_at_least((2024, 13)) {
-            builder.write_f32(self.width.context("Sequence width not set in 2024.13+")?);
-            builder.write_f32(self.height.context("Sequence height not set in 2024.13+")?);
+            builder.write_f32(
+                self.width.ok_or("Sequence width not set in 2024.13+")?,
+            );
+            builder.write_f32(
+                self.height.ok_or("Sequence height not set in 2024.13+")?,
+            );
         }
         builder.write_simple_list(&self.broadcast_messages)?;
         builder.write_simple_list(&self.tracks)?;
@@ -415,7 +426,9 @@ impl GMElement for GMKeyframeText {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.text);
         builder.write_bool32(self.line_wrapping);
-        builder.write_i32((self.alignment_v as i32) << 8 | self.alignment_h as i32);
+        builder.write_i32(
+            (self.alignment_v as i32) << 8 | self.alignment_h as i32,
+        );
         log::warn!(
             "Writing raw Font index {} for Text Keyframe of Sequence",
             self.font_index
@@ -510,12 +523,14 @@ impl GMElement for GMTrack {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let model_name: String = reader.read_gm_string()?;
         let name: String = reader.read_gm_string()?;
-        let builtin_name: GMTrackBuiltinName = num_enum_from(reader.read_i32()?)?;
+        let builtin_name: GMTrackBuiltinName =
+            num_enum_from(reader.read_i32()?)?;
         let traits: GMTrackTraits = num_enum_from(reader.read_i32()?)?;
         let is_creation_track = reader.read_bool32()?;
 
         let tag_count = reader.read_count("Track Tag")?;
-        let owned_resources_count = reader.read_count("Track Owned Resource")?;
+        let owned_resources_count =
+            reader.read_count("Track Owned Resource")?;
         let track_count = reader.read_count("Track")?;
 
         let mut tags: Vec<i32> = vec_with_capacity(tag_count)?;
@@ -523,7 +538,8 @@ impl GMElement for GMTrack {
             tags.push(reader.read_i32()?);
         }
 
-        let mut owned_resources: Vec<GMAnimationCurve> = vec_with_capacity(owned_resources_count)?;
+        let mut owned_resources: Vec<GMAnimationCurve> =
+            vec_with_capacity(owned_resources_count)?;
 
         for _ in 0..owned_resources_count {
             let animcurve_str: String = reader.read_gm_string()?;
@@ -543,18 +559,38 @@ impl GMElement for GMTrack {
         }
 
         let keyframes = match model_name.as_str() {
-            "GMAudioTrack" => GMTrackKeyframes::Audio(GMTrackKeyframesData::deserialize(reader)?),
-            "GMInstanceTrack" => GMTrackKeyframes::Instance(GMTrackKeyframesData::deserialize(reader)?),
-            "GMGraphicTrack" => GMTrackKeyframes::Graphic(GMTrackKeyframesData::deserialize(reader)?),
-            "GMSequenceTrack" => GMTrackKeyframes::Sequence(GMTrackKeyframesData::deserialize(reader)?),
-            "GMSpriteFramesTrack" => GMTrackKeyframes::SpriteFrames(GMTrackKeyframesData::deserialize(reader)?),
+            "GMAudioTrack" => GMTrackKeyframes::Audio(
+                GMTrackKeyframesData::deserialize(reader)?,
+            ),
+            "GMInstanceTrack" => GMTrackKeyframes::Instance(
+                GMTrackKeyframesData::deserialize(reader)?,
+            ),
+            "GMGraphicTrack" => GMTrackKeyframes::Graphic(
+                GMTrackKeyframesData::deserialize(reader)?,
+            ),
+            "GMSequenceTrack" => GMTrackKeyframes::Sequence(
+                GMTrackKeyframesData::deserialize(reader)?,
+            ),
+            "GMSpriteFramesTrack" => GMTrackKeyframes::SpriteFrames(
+                GMTrackKeyframesData::deserialize(reader)?,
+            ),
             "GMAssetTrack" => bail!("Asset Track not yet supported"),
-            "GMBoolTrack" => GMTrackKeyframes::Bool(GMTrackKeyframesData::deserialize(reader)?),
-            "GMStringTrack" => GMTrackKeyframes::String(GMTrackKeyframesData::deserialize(reader)?),
+            "GMBoolTrack" => GMTrackKeyframes::Bool(
+                GMTrackKeyframesData::deserialize(reader)?,
+            ),
+            "GMStringTrack" => GMTrackKeyframes::String(
+                GMTrackKeyframesData::deserialize(reader)?,
+            ),
             "GMIntTrack" => bail!("Int Track not yet supported"),
-            "GMColourTrack" | "GMRealTrack" => GMTrackKeyframes::Color(GMColorTrackKeyframesData::deserialize(reader)?),
-            "GMTextTrack" => GMTrackKeyframes::Text(GMTrackKeyframesData::deserialize(reader)?),
-            "GMParticleTrack" => GMTrackKeyframes::Particle(GMTrackKeyframesData::deserialize(reader)?),
+            "GMColourTrack" | "GMRealTrack" => GMTrackKeyframes::Color(
+                GMColorTrackKeyframesData::deserialize(reader)?,
+            ),
+            "GMTextTrack" => GMTrackKeyframes::Text(
+                GMTrackKeyframesData::deserialize(reader)?,
+            ),
+            "GMParticleTrack" => GMTrackKeyframes::Particle(
+                GMTrackKeyframesData::deserialize(reader)?,
+            ),
             other => bail!("Invalid Model Name {other:?} while parsing Track"),
         };
 

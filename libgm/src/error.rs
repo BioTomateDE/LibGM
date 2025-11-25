@@ -1,46 +1,22 @@
-use std::fmt::{Display, Write};
+use std::fmt::Display;
 use std::str::FromStr;
 
-#[derive(thiserror::Error, Debug)]
-#[error("{context}")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Error {
-    context: String,
-    #[source]
-    source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    message: String,
+    context: Vec<String>,
 }
 
 impl Error {
     #[cold]
-    pub const fn new(context: String) -> Self {
-        Self { context, source: None }
-    }
-
-    pub fn chain_vec(&self) -> Vec<String> {
-        let mut chain = vec![self.context.clone()];
-
-        let mut source = self.source.as_ref().map(|e| e.as_ref() as &dyn std::error::Error);
-        while let Some(err) = source {
-            chain.push(format!("{}", err));
-            source = err.source();
-        }
-
-        chain.reverse();
-        chain
+    pub const fn new(message: String) -> Self {
+        Self { message, context: Vec::new() }
     }
 
     pub fn chain_with(&self, arrow: &str) -> String {
-        let mut chain = vec![&self.context as &dyn Display];
-        let mut source = self.source.as_ref().map(|e| e.as_ref() as &dyn std::error::Error);
-
-        while let Some(err) = source {
-            chain.push(err as &dyn Display);
-            source = err.source();
-        }
-        chain.reverse();
-
-        let mut output = format!("{}", chain[0]);
-        for context in &chain[1..] {
-            write!(&mut output, "\n{arrow} while {context}").unwrap();
+        let mut output = format!("{}", self.message);
+        for context in &self.context {
+            output += &format!("\n{arrow} while {context}");
         }
         output
     }
@@ -48,27 +24,37 @@ impl Error {
     pub fn chain(&self) -> String {
         self.chain_with(">")
     }
+
+    pub fn chain_pretty(&self) -> String {
+        self.chain_with("↳")
+    }
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.message)
+    }
 }
 
 impl From<String> for Error {
     #[cold]
-    fn from(context: String) -> Self {
-        Self { context, source: None }
+    fn from(message: String) -> Self {
+        Self::new(message)
     }
 }
 
 impl From<&str> for Error {
     #[cold]
-    fn from(context: &str) -> Self {
-        Self { context: context.to_string(), source: None }
+    fn from(message: &str) -> Self {
+        Self::new(message.to_string())
     }
 }
 
 impl FromStr for Error {
     type Err = ();
     #[cold]
-    fn from_str(string: &str) -> std::result::Result<Self, Self::Err> {
-        Ok(Self { context: string.to_string(), source: None })
+    fn from_str(message: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(Self::new(message.to_string()))
     }
 }
 
@@ -76,26 +62,42 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 pub trait Context<T> {
     fn context(self, context: impl Into<String>) -> Result<T>;
-    fn with_context<F: FnOnce() -> String>(self, f: F) -> Result<T>;
+    fn with_context(self, f: impl FnOnce() -> String) -> Result<T>;
 }
 
-impl<T, E: std::error::Error + Send + Sync + 'static> Context<T> for std::result::Result<T, E> {
+impl<T> Context<T> for Result<T> {
     fn context(self, context: impl Into<String>) -> Result<T> {
-        self.map_err(|e| Error { context: context.into(), source: Some(Box::new(e)) })
+        self.map_err(|e| {
+            let mut error = e.clone();
+            error.context.push(context.into());
+            error
+        })
     }
 
-    fn with_context<F: FnOnce() -> String>(self, f: F) -> Result<T> {
-        self.map_err(|e| Error { context: f(), source: Some(Box::new(e)) })
+    fn with_context(self, f: impl FnOnce() -> String) -> Result<T> {
+        self.map_err(|e| {
+            let mut error = e.clone();
+            error.context.push(f().into());
+            error
+        })
     }
 }
 
-impl<T> Context<T> for Option<T> {
+impl<T, S: Into<String>> Context<T> for std::result::Result<T, S> {
     fn context(self, context: impl Into<String>) -> Result<T> {
-        self.ok_or_else(|| Error::new(context.into()))
+        self.map_err(|string| {
+            let mut error = Error::new(string.into());
+            error.context.push(context.into());
+            error
+        })
     }
 
-    fn with_context<F: FnOnce() -> String>(self, f: F) -> Result<T> {
-        self.ok_or_else(|| Error::new(f()))
+    fn with_context(self, f: impl FnOnce() -> String) -> Result<T> {
+        self.map_err(|string| {
+            let mut error = Error::new(string.into());
+            error.context.push(f().into());
+            error
+        })
     }
 }
 

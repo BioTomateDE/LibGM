@@ -72,13 +72,14 @@ impl<T> GMRef<T> {
     /// # Errors
     /// Returns an error if `self.index` is out of bounds for the provided vector.
     pub fn resolve<'a>(&self, elements_by_index: &'a Vec<T>) -> Result<&'a T> {
-        elements_by_index.get(self.index as usize).with_context(|| {
+        let element = elements_by_index.get(self.index as usize).ok_or_else(|| {
             format!(
                 "Could not resolve {} reference with index {} in list with length {}",
                 typename::<T>(),
                 self.index,
                 elements_by_index.len(),
             )
-        })
+        })?;
+        Ok(element)
     }
 }

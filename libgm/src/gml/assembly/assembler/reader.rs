@@ -64,7 +64,8 @@ impl<'a> Reader<'a> {
     }
 
     pub fn consume_space(&mut self) -> Result<()> {
-        let char: char = self.consume_char().ok_or("Expected space, got EOL")?;
+        let char: char =
+            self.consume_char().ok_or("Expected space, got EOL")?;
         if char != ' ' {
             bail!("Expected space, got '{char}'");
         }
@@ -79,18 +80,24 @@ impl<'a> Reader<'a> {
         Ok(())
     }
 
-    fn consume_brackets(&mut self, open: char, close: char) -> Result<Option<&str>> {
+    fn consume_brackets(
+        &mut self,
+        open: char,
+        close: char,
+    ) -> Result<Option<&str>> {
         if !self.line.starts_with(open) {
             return Ok(None);
         }
-        self.consume_char();
 
         let close_pos = self
             .line
             .find(close)
             .ok_or_else(|| format!("'{open}' was never closed"))?;
 
-        let inside = self.consume_to(close_pos + 1);
+        let line = self.line;
+        self.line = &self.line[close_pos + 1..];
+        let inside = &line[1..close_pos];
+
         Ok(Some(inside))
     }
 
@@ -108,16 +115,13 @@ impl<'a> Reader<'a> {
 
     pub fn parse_identifier(&mut self) -> Result<&str> {
         // Identifiers can't start with a digit
-        if self.peek_char().map_or(false, |c| c.is_ascii_digit()) {
+        if self.peek_char().is_some_and(|c| c.is_ascii_digit()) {
             bail!("Expected identifier; found {:?}", self.line);
         }
 
         for (i, char) in self.line.char_indices() {
             match char {
-                'a'..='z' => continue,
-                '0'..='9' => continue,
-                'A'..='Z' => continue,
-                '_' => continue,
+                'a'..='z' | '0'..='9' | 'A'..='Z' | '_' => continue,
                 _ => {}
             }
 
@@ -164,6 +168,7 @@ impl<'a> Reader<'a> {
         Ok(integer)
     }
 
+    #[must_use]
     fn find_non_digit(&self) -> usize {
         for (index, character) in self.line.as_bytes().iter().enumerate() {
             match character {

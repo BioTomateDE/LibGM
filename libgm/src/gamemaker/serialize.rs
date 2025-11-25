@@ -68,7 +68,9 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
     let resource_count = builder.pointer_resource_positions.len();
     let stopwatch2 = Stopwatch::start();
 
-    for (placeholder_data_pos, element_mem_addr) in std::mem::take(&mut builder.pointer_placeholder_positions) {
+    for (placeholder_data_pos, element_mem_addr) in
+        std::mem::take(&mut builder.pointer_placeholder_positions)
+    {
         let resource_data_pos: u32 = *builder
             .pointer_resource_positions
             .get(&element_mem_addr)
@@ -79,9 +81,14 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
                 )
             })?;
         // Overwrite placeholder 0xDEADC0DE
-        builder.overwrite_i32(resource_data_pos as i32, placeholder_data_pos as usize)?;
+        builder.overwrite_i32(
+            resource_data_pos as i32,
+            placeholder_data_pos as usize,
+        )?;
     }
-    log::trace!("Resolving {placeholder_count} pointer placeholders to {resource_count} resources took {stopwatch2}");
+    log::trace!(
+        "Resolving {placeholder_count} pointer placeholders to {resource_count} resources took {stopwatch2}"
+    );
 
     // Overwrite data length placeholder
     builder.overwrite_usize(builder.len() - 8, 4)?;
@@ -89,16 +96,21 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
     log::trace!("Building data file took {stopwatch}");
 
     if builder.raw_data.len() >= i32::MAX as usize {
-        bail!("Data file is bigger than 2,147,483,646 bytes which will lead to bugs in the runner")
+        bail!(
+            "Data file is bigger than 2,147,483,646 bytes which will lead to bugs in the runner"
+        )
     }
 
     Ok(builder.raw_data)
 }
 
 pub fn write_data_file(gm_data: &GMData, path: impl AsRef<Path>) -> Result<()> {
-    let raw_data: Vec<u8> = build_data_file(gm_data).context("building data")?;
+    let raw_data: Vec<u8> =
+        build_data_file(gm_data).context("building data")?;
     let stopwatch = Stopwatch::start();
-    std::fs::write(path, raw_data).context("writing data file")?;
+    std::fs::write(path, raw_data)
+        .map_err(|e| e.to_string())
+        .context("writing data file")?;
     log::trace!("Writing data file took {stopwatch}");
     Ok(())
 }
