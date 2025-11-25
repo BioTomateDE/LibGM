@@ -20,6 +20,7 @@ pub fn test_assembler(data: &GMData) -> Result<()> {
         let name = &code.name;
         print!("\x1B[2K\r({i}/{count}) Disassembling {name}");
         std::io::stdout().flush().unwrap();
+        //print!("\r({i}/{count}) Disassembling and reassembling {name:<100?}");
 
         let assembly: String = disassemble_code(data, code)
             .with_context(|| format!("disassembling {name:?}"))?;
@@ -44,13 +45,17 @@ pub fn test_assembler(data: &GMData) -> Result<()> {
             );
         }
 
-        for (original, recreation) in
-            code.instructions.iter().zip(&reconstructed)
+        let lines: Vec<&str> = assembly.split("\n").collect();
+
+        for (index, (original, recreation)) in
+            code.instructions.iter().zip(&reconstructed).enumerate()
         {
             if original != recreation {
-                println!(
-                    "Original: {original:?}\nRecreation: {recreation:?}\n"
-                );
+                let line = lines[index];
+                println!("Original: {original:?}");
+                println!("Recreation: {recreation:?}");
+                println!("Assembly: {line}");
+                println!();
             }
         }
 
@@ -58,6 +63,6 @@ pub fn test_assembler(data: &GMData) -> Result<()> {
             "Assembler produced different instructions than the original (see logs)".into(),
         );
     }
-
+    println!();
     Ok(())
 }

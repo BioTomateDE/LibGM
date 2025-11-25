@@ -49,7 +49,8 @@ pub struct DataBuilder<'a> {
 
 impl<'a> DataBuilder<'a> {
     pub fn new(gm_data: &'a GMData) -> Self {
-        let approximated_size: usize = (gm_data.original_data_size as f64 * 1.05) as usize;
+        let approximated_size: usize =
+            (gm_data.original_data_size as f64 * 1.05) as usize;
         Self {
             gm_data,
             raw_data: Vec::with_capacity(approximated_size),
@@ -67,7 +68,10 @@ impl<'a> DataBuilder<'a> {
         self.raw_data.len()
     }
 
-    pub fn is_gm_version_at_least<V: Into<GMVersionReq>>(&self, version_req: V) -> bool {
+    pub fn is_gm_version_at_least<V: Into<GMVersionReq>>(
+        &self,
+        version_req: V,
+    ) -> bool {
         self.gm_data
             .general_info
             .version
@@ -96,7 +100,9 @@ impl<'a> DataBuilder<'a> {
     ///
     /// Useful for patching data like lengths or offsets after serialization.
     fn overwrite_bytes(&mut self, bytes: &[u8], position: usize) -> Result<()> {
-        if let Some(mut_slice) = self.raw_data.get_mut(position..position + bytes.len()) {
+        if let Some(mut_slice) =
+            self.raw_data.get_mut(position..position + bytes.len())
+        {
             mut_slice.copy_from_slice(bytes);
             Ok(())
         } else {
@@ -139,7 +145,7 @@ impl<'a> DataBuilder<'a> {
             );
         }
 
-        let mut bytes: [u8; 4] = name.as_bytes().try_into().with_context(|| {
+        let mut bytes: [u8; 4] = name.as_bytes().try_into().map_err(|_| {
             format!(
                 "Expected chunk name '{}' to be 4 bytes long; but it's actually {} bytes long",
                 name,
@@ -159,7 +165,11 @@ impl<'a> DataBuilder<'a> {
     ///
     /// Useful for patching fixed-size numeric values like lengths or offsets after serialization.
     /// For writing regular pointer lists, see [Self::write_pointer_list].
-    pub fn overwrite_usize(&mut self, number: usize, position: usize) -> Result<()> {
+    pub fn overwrite_usize(
+        &mut self,
+        number: usize,
+        position: usize,
+    ) -> Result<()> {
         let number: u32 = number as u32;
         let bytes: [u8; 4] = match self.gm_data.endianness {
             Endianness::Little => number.to_le_bytes(),
@@ -172,7 +182,11 @@ impl<'a> DataBuilder<'a> {
     ///
     /// Useful for patching fixed-size numeric values like lengths or offsets after serialization.
     /// For writing regular pointer lists, see `[Self::write_pointer_list].
-    pub fn overwrite_i32(&mut self, number: i32, position: usize) -> Result<()> {
+    pub fn overwrite_i32(
+        &mut self,
+        number: i32,
+        position: usize,
+    ) -> Result<()> {
         let bytes: [u8; 4] = match self.gm_data.endianness {
             Endianness::Little => number.to_le_bytes(),
             Endianness::Big => number.to_be_bytes(),
@@ -238,7 +252,10 @@ impl<'a> DataBuilder<'a> {
     ///
     /// Appends padding if required by the `GameMaker` version.
     /// This padding has to then be manually cut off for the last chunk in the data file.
-    pub fn build_chunk<T: GMChunkElement>(&mut self, element: &T) -> Result<()> {
+    pub fn build_chunk<T: GMChunkElement>(
+        &mut self,
+        element: &T,
+    ) -> Result<()> {
         let name: &str = T::NAME;
         if !element.exists() {
             return Ok(());

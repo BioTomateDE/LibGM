@@ -1,6 +1,8 @@
 use crate::gamemaker::deserialize::reader::DataReader;
 use crate::gamemaker::elements::sequence::{GMAnimSpeedType, GMSequence};
-use crate::gamemaker::elements::sprites_yyswf::{GMSpriteTypeSWF, GMSpriteYYSWFStyleGroup, GMSpriteYYSWFTimeline};
+use crate::gamemaker::elements::sprites_yyswf::{
+    GMSpriteTypeSWF, GMSpriteYYSWFStyleGroup, GMSpriteYYSWFTimeline,
+};
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
 use crate::gamemaker::elements::{GMChunkElement, GMElement};
 use crate::gamemaker::reference::GMRef;
@@ -90,7 +92,9 @@ impl GMElement for GMSprite {
         let mut special_fields: Option<GMSpriteSpecial> = None;
 
         // Combination of these conditions may be incorrect
-        if reader.read_i32()? == -1 && reader.general_info.is_version_at_least((2, 0)) {
+        if reader.read_i32()? == -1
+            && reader.general_info.is_version_at_least((2, 0))
+        {
             let special_version = reader.read_u32()?;
             let special_sprite_type = reader.read_u32()?;
 
@@ -99,10 +103,19 @@ impl GMElement for GMSprite {
             let yyswf: Option<GMSpriteTypeSWF> = None;
 
             let playback_speed = reader.read_f32()?;
-            let playback_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)?;
+            let playback_speed_type: GMAnimSpeedType =
+                num_enum_from(reader.read_u32()?)?;
             // both of these seem to be not an offset but instead a position (see UndertaleModLib/Models/UndertaleSprite.cs@507)
-            let sequence_offset: i32 = if special_version >= 2 { reader.read_i32()? } else { 0 };
-            let nine_slice_offset: i32 = if special_version >= 3 { reader.read_i32()? } else { 0 };
+            let sequence_offset: i32 = if special_version >= 2 {
+                reader.read_i32()?
+            } else {
+                0
+            };
+            let nine_slice_offset: i32 = if special_version >= 3 {
+                reader.read_i32()?
+            } else {
+                0
+            };
             // {~~} set gms version to at least 2.3.2 if nine slice offset
 
             let special_data: GMSpriteSpecialData = match &special_sprite_type {
@@ -112,11 +125,13 @@ impl GMElement for GMSprite {
                     // Read mask data
                     let mut mask_width = width;
                     let mut mask_height = height;
-                    if reader.general_info.is_version_at_least((2024, 6, 0, 0)) {
+                    if reader.general_info.is_version_at_least((2024, 6, 0, 0))
+                    {
                         mask_width = (margin_right - margin_left + 1) as u32;
                         mask_height = (margin_bottom - margin_top + 1) as u32;
                     }
-                    collision_masks = read_mask_data(reader, mask_width, mask_height)?;
+                    collision_masks =
+                        read_mask_data(reader, mask_width, mask_height)?;
                     GMSpriteSpecialData::Normal
                 }
 
@@ -126,7 +141,9 @@ impl GMElement for GMSprite {
                     let swf_version = reader.read_i32()?;
                     // Assert swf version is either 7 or 8
                     if !(swf_version == 7 || swf_version == 8) {
-                        bail!("Invalid SWF version {swf_version} for Sprite {name:?}");
+                        bail!(
+                            "Invalid SWF version {swf_version} for Sprite {name:?}"
+                        );
                     }
                     if swf_version == 8 {
                         textures = Self::read_texture_list(reader)?;
@@ -137,7 +154,9 @@ impl GMElement for GMSprite {
                     let jpeg_len = (reader.read_i32()? & i32::MAX) as u32;
                     let yyswf_version = reader.read_i32()?;
                     if !matches!(yyswf_version, 7 | 8) {
-                        bail!("Expected YYSWF Version 7 or 8 but got {yyswf_version}");
+                        bail!(
+                            "Expected YYSWF Version 7 or 8 but got {yyswf_version}"
+                        );
                     }
                     let jpeg_table: Vec<u8> = reader
                         .read_bytes_dyn(jpeg_len)
@@ -145,7 +164,12 @@ impl GMElement for GMSprite {
                         .to_vec();
                     reader.align(4)?;
                     let timeline = GMSpriteYYSWFTimeline::deserialize(reader)?;
-                    GMSpriteSpecialData::SWF(GMSpriteTypeSWF { swf_version, yyswf_version, jpeg_table, timeline })
+                    GMSpriteSpecialData::SWF(GMSpriteTypeSWF {
+                        swf_version,
+                        yyswf_version,
+                        jpeg_table,
+                        timeline,
+                    })
                 }
 
                 2 => {
@@ -159,14 +183,17 @@ impl GMElement for GMSprite {
                     if spine_version >= 3 {
                         let spine_cache_version = reader.read_i32()?;
                         if spine_cache_version != 1 {
-                            bail!("Expected Spine Cache Version 1 but got {spine_cache_version} for Special Sprite");
+                            bail!(
+                                "Expected Spine Cache Version 1 but got {spine_cache_version} for Special Sprite"
+                            );
                         }
                     }
 
                     let json_length = reader.read_u32()?;
                     let atlas_length = reader.read_u32()?;
                     let texture_thing = reader.read_u32()?; // In spine version 1: size of texture data in bytes. Post v1: texture count.
-                    let mut spine_textures: Vec<GMSpriteSpineTextureEntry> = Vec::new();
+                    let mut spine_textures: Vec<GMSpriteSpineTextureEntry> =
+                        Vec::new();
                     let spine_json: String;
                     let spine_atlas: String;
 
@@ -178,26 +205,47 @@ impl GMElement for GMSprite {
                             let page_width = reader.read_u32()?;
                             let page_height = reader.read_u32()?;
 
-                            spine_json = GMSpriteTypeSpine::read_weird_string(reader, json_length)?;
-                            spine_atlas = GMSpriteTypeSpine::read_weird_string(reader, atlas_length)?;
-                            let texture_blob: Vec<u8> = reader.read_bytes_dyn(texture_thing)?.to_vec();
+                            spine_json = GMSpriteTypeSpine::read_weird_string(
+                                reader,
+                                json_length,
+                            )?;
+                            spine_atlas = GMSpriteTypeSpine::read_weird_string(
+                                reader,
+                                atlas_length,
+                            )?;
+                            let texture_blob: Vec<u8> =
+                                reader.read_bytes_dyn(texture_thing)?.to_vec();
 
                             spine_textures.push(GMSpriteSpineTextureEntry {
                                 page_width,
                                 page_height,
-                                data: GMSpriteSpineTextureEntryData::Pre2023_1(texture_blob),
+                                data: GMSpriteSpineTextureEntryData::Pre2023_1(
+                                    texture_blob,
+                                ),
                             })
                         }
                         2 | 3 => {
-                            spine_json = GMSpriteTypeSpine::read_weird_string(reader, json_length)?;
-                            spine_atlas = GMSpriteTypeSpine::read_weird_string(reader, atlas_length)?;
+                            spine_json = GMSpriteTypeSpine::read_weird_string(
+                                reader,
+                                json_length,
+                            )?;
+                            spine_atlas = GMSpriteTypeSpine::read_weird_string(
+                                reader,
+                                atlas_length,
+                            )?;
 
                             spine_textures = vec_with_capacity(texture_thing)?;
                             for _ in 0..texture_thing {
-                                spine_textures.push(GMSpriteSpineTextureEntry::deserialize(reader)?);
+                                spine_textures.push(
+                                    GMSpriteSpineTextureEntry::deserialize(
+                                        reader,
+                                    )?,
+                                );
                             }
                         }
-                        _ => bail!("Expected Spine Version 1, 2 or 3 but got {spine_version} for Special Sprite"),
+                        _ => bail!(
+                            "Expected Spine Version 1, 2 or 3 but got {spine_version} for Special Sprite"
+                        ),
                     }
 
                     GMSpriteSpecialData::Spine(GMSpriteTypeSpine {
@@ -226,7 +274,9 @@ impl GMElement for GMSprite {
                     );
                 }
 
-                other => bail!("Invalid Sprite Type {other} for Sprite {name:?}"),
+                other => {
+                    bail!("Invalid Sprite Type {other} for Sprite {name:?}")
+                }
             };
 
             if sequence_offset != 0 {
@@ -308,7 +358,8 @@ impl GMElement for GMSprite {
             return Ok(());
         }
 
-        let special_fields: &GMSpriteSpecial = self.special_fields.as_ref().unwrap();
+        let special_fields: &GMSpriteSpecial =
+            self.special_fields.as_ref().unwrap();
         builder.write_i32(-1);
         builder.write_u32(special_fields.special_version);
         builder.write_u32(match special_fields.data {
@@ -355,8 +406,10 @@ impl GMElement for GMSprite {
             }
             GMSpriteSpecialData::Spine(spine) => {
                 builder.align(4);
-                let json_blob: Vec<u8> = GMSpriteTypeSpine::build_weird_string(&spine.json);
-                let atlas_blob: Vec<u8> = GMSpriteTypeSpine::build_weird_string(&spine.atlas);
+                let json_blob: Vec<u8> =
+                    GMSpriteTypeSpine::build_weird_string(&spine.json);
+                let atlas_blob: Vec<u8> =
+                    GMSpriteTypeSpine::build_weird_string(&spine.atlas);
                 if builder.is_gm_version_at_least((2023, 1)) {
                     builder.write_simple_list(&spine.textures)?;
                 }
@@ -372,9 +425,14 @@ impl GMElement for GMSprite {
                         let atlas: &GMSpriteSpineTextureEntry = spine
                             .textures
                             .first()
-                            .context("Spine Sprite's texture list empty in Spine Version 1")?;
-                        let GMSpriteSpineTextureEntryData::Pre2023_1(ref texture_blob) = atlas.data else {
-                            bail!("Expected Pre2023_1 texture data in Sprite Spine Version 1 but got Post2023_1");
+                            .ok_or("Spine Sprite's texture list empty in Spine Version 1")?;
+                        let GMSpriteSpineTextureEntryData::Pre2023_1(
+                            ref texture_blob,
+                        ) = atlas.data
+                        else {
+                            bail!(
+                                "Expected Pre2023_1 texture data in Sprite Spine Version 1 but got Post2023_1"
+                            );
                         };
                         builder.write_usize(texture_blob.len())?;
                         builder.write_u32(atlas.page_width);
@@ -406,13 +464,17 @@ impl GMElement for GMSprite {
                             }
                         }
                     }
-                    other => bail!("Invalid Sprite Spine Version {other}; should be 1, 2 or 3"),
+                    other => bail!(
+                        "Invalid Sprite Spine Version {other}; should be 1, 2 or 3"
+                    ),
                 }
             }
         }
 
         if builder.is_gm_version_at_least((2, 0)) {
-            if special_fields.special_version >= 2 && matches!(special_fields.data, GMSpriteSpecialData::Normal) {
+            if special_fields.special_version >= 2
+                && matches!(special_fields.data, GMSpriteSpecialData::Normal)
+            {
                 if let Some(ref sequence) = special_fields.sequence {
                     builder.resolve_pointer(&special_fields.sequence)?;
                     builder.write_u32(1); // SEQN version
@@ -441,9 +503,12 @@ impl GMElement for GMSprite {
 }
 
 impl GMSprite {
-    fn read_texture_list(reader: &mut DataReader) -> Result<Vec<Option<GMRef<GMTexturePageItem>>>> {
+    fn read_texture_list(
+        reader: &mut DataReader,
+    ) -> Result<Vec<Option<GMRef<GMTexturePageItem>>>> {
         let count = reader.read_u32()?;
-        let mut textures: Vec<Option<GMRef<GMTexturePageItem>>> = vec_with_capacity(count)?;
+        let mut textures: Vec<Option<GMRef<GMTexturePageItem>>> =
+            vec_with_capacity(count)?;
         for _ in 0..count {
             textures.push(reader.read_gm_texture_opt()?);
         }
@@ -461,7 +526,11 @@ impl GMSprite {
         Ok(())
     }
 
-    fn build_mask_data(&self, builder: &mut DataBuilder, masks: &Vec<GMSpriteMaskEntry>) -> Result<()> {
+    fn build_mask_data(
+        &self,
+        builder: &mut DataBuilder,
+        masks: &Vec<GMSpriteMaskEntry>,
+    ) -> Result<()> {
         builder.write_usize(masks.len())?;
         let mut total: usize = 0;
 
@@ -487,7 +556,9 @@ impl GMSprite {
         let data_bits = rounded_width * height * masks.len() as u32;
         let data_bytes = (data_bits + 31) / 32 * 32 / 8; // Round to multiple of 4 bytes
         if total != data_bytes as usize {
-            bail!("Invalid mask data for Sprite: expected {data_bytes} bytes; got {total} bytes");
+            bail!(
+                "Invalid mask data for Sprite: expected {data_bytes} bytes; got {total} bytes"
+            );
         }
         Ok(())
     }
@@ -532,8 +603,9 @@ impl GMSpriteTypeSpine {
     fn read_weird_string(reader: &mut DataReader, size: u32) -> Result<String> {
         let mut blob: Vec<u8> = reader.read_bytes_dyn(size)?.to_vec();
         Self::decode_spine_blob(&mut blob);
-        let string: String =
-            String::from_utf8(blob).context("Could not read UTF-8 String while reading weird Sprite Spine data")?;
+        let string: String = String::from_utf8(blob)
+            .map_err(|e| e.to_string())
+            .context("reading weird UTF-8 String for Spine data")?;
         Ok(string)
     }
 
@@ -570,17 +642,26 @@ impl GMElement for GMSpriteSpineTextureEntry {
         builder.write_u32(self.page_width);
         builder.write_u32(self.page_height);
         if builder.is_gm_version_at_least((2023, 1)) {
-            if let GMSpriteSpineTextureEntryData::Post2023_1(texture_entry_length) = self.data {
+            if let GMSpriteSpineTextureEntryData::Post2023_1(
+                texture_entry_length,
+            ) = self.data
+            {
                 builder.write_u32(texture_entry_length);
             } else {
-                bail!("Expected Post2023_1 Spine Texture Entry data but got Pre2023_1 for some reason");
+                bail!(
+                    "Expected Post2023_1 Spine Texture Entry data but got Pre2023_1 for some reason"
+                );
             };
         } else {
-            if let GMSpriteSpineTextureEntryData::Pre2023_1(ref texture_blob) = self.data {
+            if let GMSpriteSpineTextureEntryData::Pre2023_1(ref texture_blob) =
+                self.data
+            {
                 builder.write_usize(texture_blob.len())?;
                 builder.write_bytes(texture_blob);
             } else {
-                bail!("Expected Pre2023_1 Spine Texture Entry data but got Post2023_1 for some reason");
+                bail!(
+                    "Expected Pre2023_1 Spine Texture Entry data but got Post2023_1 for some reason"
+                );
             };
         }
         Ok(())
@@ -610,7 +691,8 @@ impl<T: GMElement> GMElement for GMSpriteShapeData<T> {
         let max_x = reader.read_f32()?;
         let min_y = reader.read_f32()?;
         let max_y = reader.read_f32()?;
-        let style_groups: Vec<GMSpriteYYSWFStyleGroup<T>> = reader.read_simple_list()?;
+        let style_groups: Vec<GMSpriteYYSWFStyleGroup<T>> =
+            reader.read_simple_list()?;
         Ok(GMSpriteShapeData { min_x, max_x, min_y, max_y, style_groups })
     }
 
@@ -647,7 +729,8 @@ impl GMElement for GMSpriteNineSlice {
         let bottom = reader.read_i32()?;
         let enabled = reader.read_bool32()?;
 
-        let mut tile_modes: [GMSpriteNineSliceTileMode; 5] = [GMSpriteNineSliceTileMode::Stretch; 5]; // Ignore default value
+        let mut tile_modes: [GMSpriteNineSliceTileMode; 5] =
+            [GMSpriteNineSliceTileMode::Stretch; 5]; // Ignore default value
         for tile_mode in &mut tile_modes {
             *tile_mode = num_enum_from(reader.read_i32()?)?;
         }
@@ -710,16 +793,28 @@ pub struct GMSpriteMaskEntry {
     pub height: u32,
 }
 
-fn read_mask_data(reader: &mut DataReader, mask_width: u32, mask_height: u32) -> Result<Vec<GMSpriteMaskEntry>> {
+fn read_mask_data(
+    reader: &mut DataReader,
+    mask_width: u32,
+    mask_height: u32,
+) -> Result<Vec<GMSpriteMaskEntry>> {
     let mask_count = reader.read_u32()?;
-    let mut collision_masks: Vec<GMSpriteMaskEntry> = vec_with_capacity(mask_count)?;
+    let mut collision_masks: Vec<GMSpriteMaskEntry> =
+        vec_with_capacity(mask_count)?;
 
     let len = (mask_width + 7) / 8 * mask_height;
     let mut total = 0;
 
     for _ in 0..mask_count {
-        let data: Vec<u8> = reader.read_bytes_dyn(len).context("reading Mask Data")?.to_vec();
-        collision_masks.push(GMSpriteMaskEntry { data, width: mask_width, height: mask_height });
+        let data: Vec<u8> = reader
+            .read_bytes_dyn(len)
+            .context("reading Mask Data")?
+            .to_vec();
+        collision_masks.push(GMSpriteMaskEntry {
+            data,
+            width: mask_width,
+            height: mask_height,
+        });
         total += len;
     }
 
@@ -735,7 +830,8 @@ fn read_mask_data(reader: &mut DataReader, mask_width: u32, mask_height: u32) ->
         total += 1;
     }
 
-    let expected_size = calculate_mask_data_size(mask_width, mask_height, mask_count);
+    let expected_size =
+        calculate_mask_data_size(mask_width, mask_height, mask_count);
     if total != expected_size {
         bail!(
             "Mask data size is incorrect for Mask at position {}: Expected: {}; Actual: {}",

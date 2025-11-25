@@ -34,8 +34,12 @@ impl DataReader<'_> {
         self.cur_pos = occurrence_position - 4;
         self.chunk = self.string_chunk.clone();
 
-        let length = self.read_u32().context("reading `GameMaker` String length")?;
-        let string = self.read_literal_string(length).context("reading `GameMaker` String")?;
+        let length = self
+            .read_u32()
+            .context("reading `GameMaker` String length")?;
+        let string = self
+            .read_literal_string(length)
+            .context("reading `GameMaker` String")?;
 
         self.cur_pos = saved_pos;
         self.chunk = saved_chunk;
@@ -45,10 +49,15 @@ impl DataReader<'_> {
 
     pub fn read_gm_texture(&mut self) -> Result<GMRef<GMTexturePageItem>> {
         let occurrence_position = self.read_u32()?;
-        self.resolve_occurrence(occurrence_position, &self.texture_page_item_occurrences)
+        self.resolve_occurrence(
+            occurrence_position,
+            &self.texture_page_item_occurrences,
+        )
     }
 
-    pub fn read_gm_texture_opt(&mut self) -> Result<Option<GMRef<GMTexturePageItem>>> {
+    pub fn read_gm_texture_opt(
+        &mut self,
+    ) -> Result<Option<GMRef<GMTexturePageItem>>> {
         let occurrence_position = self.read_u32()?;
         if occurrence_position == 0 {
             return Ok(None);
@@ -91,16 +100,11 @@ impl DataReader<'_> {
 }
 
 pub fn resource_opt_from_i32<T>(number: i32) -> Result<Option<GMRef<T>>> {
-    const CTX: &str = "parsing optional resource by ID";
     if number == -1 {
         return Ok(None);
     }
-    let number: u32 = number
-        .try_into()
-        .ok()
-        .with_context(|| format!("Invalid negative number {number} (0x{number:08X})"))
-        .context(CTX)?;
-    check_resource_limit(number).context(CTX)?;
+    let number = number as u32;
+    check_resource_limit(number).context("parsing optional resource by id")?;
     Ok(Some(GMRef::new(number)))
 }
 

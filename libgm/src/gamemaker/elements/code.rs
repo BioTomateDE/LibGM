@@ -147,7 +147,7 @@ impl GMElement for GMCodes {
         }
 
         reader.cur_pos = last_pos; // has to be chunk end (since instructions are stored separately in b15+)
-        Ok(GMCodes { codes, exists: true })
+        Ok(Self { codes, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -164,7 +164,7 @@ impl GMElement for GMCodes {
                     .overwrite_usize(builder.len(), pointer_list_pos + 4 * i)?;
                 builder.write_gm_string(&code.name);
                 let length_placeholder_pos: usize = builder.len();
-                builder.write_u32(0xDEADC0DE);
+                builder.write_u32(0xDEAD_C0DE);
                 let start: usize = builder.len();
 
                 // In bytecode 14, instructions are written immediately
@@ -190,9 +190,8 @@ impl GMElement for GMCodes {
         for (i, code) in self.codes.iter().enumerate() {
             if code.bytecode15_info.as_ref().unwrap().parent.is_some() {
                 // If this is a child code entry, don't write instructions; just repeat last pointer
-                instructions_ranges
-                    .push(instructions_ranges.last().unwrap().clone());
-                // ^ this unwrap will fail if the first entry is a child entry (which is invalid anyway)
+                instructions_ranges.push(*instructions_ranges.last().unwrap());
+                // ^ TODO: this unwrap will fail if the first entry is a child entry (which is invalid but still)
                 continue;
             }
 
@@ -211,7 +210,7 @@ impl GMElement for GMCodes {
             let (start, end) = instructions_ranges[i];
             let length: usize = end - start;
             let b15_info: &GMCodeBytecode15 =
-                code.bytecode15_info.as_ref().with_context(|| {
+                code.bytecode15_info.as_ref().ok_or_else(|| {
                     format!(
                         "Code bytecode 15 data not set in Bytecode version {}",
                         builder.bytecode_version()
@@ -417,129 +416,129 @@ impl GMElement for GMInstruction {
 
         match self {
             &Self::Convert { from, to } => {
-                build_double_type(builder, opcode, from, to)
+                build_double_type(builder, opcode, from, to);
             }
             &Self::Multiply { multiplicand, multiplier } => {
-                build_double_type(builder, opcode, multiplier, multiplicand)
+                build_double_type(builder, opcode, multiplier, multiplicand);
             }
             &Self::Divide { dividend, divisor } => {
-                build_double_type(builder, opcode, divisor, dividend)
+                build_double_type(builder, opcode, divisor, dividend);
             }
             &Self::Remainder { dividend, divisor } => {
-                build_double_type(builder, opcode, divisor, dividend)
+                build_double_type(builder, opcode, divisor, dividend);
             }
             &Self::Modulus { dividend, divisor } => {
-                build_double_type(builder, opcode, divisor, dividend)
+                build_double_type(builder, opcode, divisor, dividend);
             }
             &Self::Add { augend, addend } => {
-                build_double_type(builder, opcode, addend, augend)
+                build_double_type(builder, opcode, addend, augend);
             }
             &Self::Subtract { minuend, subtrahend } => {
-                build_double_type(builder, opcode, subtrahend, minuend)
+                build_double_type(builder, opcode, subtrahend, minuend);
             }
             &Self::And { lhs, rhs }
             | &Self::Or { lhs, rhs }
             | &Self::Xor { lhs, rhs } => {
-                build_double_type(builder, opcode, rhs, lhs)
+                build_double_type(builder, opcode, rhs, lhs);
             }
             &Self::Negate { data_type } | &Self::Not { data_type } => {
-                build_single_type(builder, opcode, data_type)
+                build_single_type(builder, opcode, data_type);
             }
             &Self::ShiftLeft { value, shift_amount } => {
-                build_double_type(builder, opcode, shift_amount, value)
+                build_double_type(builder, opcode, shift_amount, value);
             }
             &Self::ShiftRight { value, shift_amount } => {
-                build_double_type(builder, opcode, shift_amount, value)
+                build_double_type(builder, opcode, shift_amount, value);
             }
             &Self::Compare { lhs, rhs, comparison_type } => {
-                build_comparison(builder, opcode, rhs, lhs, comparison_type)
+                build_comparison(builder, opcode, rhs, lhs, comparison_type);
             }
             Self::Pop { variable, type1, type2 } => {
-                build_pop(builder, opcode, variable, *type1, *type2)?
+                build_pop(builder, opcode, variable, *type1, *type2)?;
             }
             &Self::PopSwap { is_array } => {
-                build_popswap(builder, opcode, is_array)
+                build_popswap(builder, opcode, is_array);
             }
             &Self::Duplicate { data_type, size } => {
-                build_duplicate(builder, opcode, data_type, size)
+                build_duplicate(builder, opcode, data_type, size);
             }
             &Self::DuplicateSwap { data_type, size1, size2 } => {
-                build_dupswap(builder, opcode, data_type, size1, size2)
+                build_dupswap(builder, opcode, data_type, size1, size2);
             }
             Self::Return => {
-                build_single_type(builder, opcode, GMDataType::Variable)
+                build_single_type(builder, opcode, GMDataType::Variable);
             }
             Self::Exit => build_single_type(builder, opcode, GMDataType::Int32),
             &Self::PopDiscard { data_type } => {
-                build_single_type(builder, opcode, data_type)
+                build_single_type(builder, opcode, data_type);
             }
             &Self::Branch { jump_offset } => {
-                build_branch(builder, opcode, jump_offset)
+                build_branch(builder, opcode, jump_offset);
             }
             &Self::BranchIf { jump_offset } => {
-                build_branch(builder, opcode, jump_offset)
+                build_branch(builder, opcode, jump_offset);
             }
             &Self::BranchUnless { jump_offset } => {
-                build_branch(builder, opcode, jump_offset)
+                build_branch(builder, opcode, jump_offset);
             }
             &Self::PushWithContext { jump_offset } => {
-                build_branch(builder, opcode, jump_offset)
+                build_branch(builder, opcode, jump_offset);
             }
             &Self::PopWithContext { jump_offset } => {
-                build_branch(builder, opcode, jump_offset)
+                build_branch(builder, opcode, jump_offset);
             }
             Self::PopWithContextExit => build_popenv_exit(builder, opcode),
             Self::Push { value } => build_push(builder, opcode, &value)?,
             Self::PushLocal { variable } => {
-                build_pushvar(builder, opcode, &variable)?
+                build_pushvar(builder, opcode, &variable)?;
             }
             Self::PushGlobal { variable } => {
-                build_pushvar(builder, opcode, &variable)?
+                build_pushvar(builder, opcode, &variable)?;
             }
             Self::PushBuiltin { variable } => {
-                build_pushvar(builder, opcode, &variable)?
+                build_pushvar(builder, opcode, &variable)?;
             }
             &Self::PushImmediate { integer } => {
-                build_pushim(builder, opcode, integer)
+                build_pushim(builder, opcode, integer);
             }
             &Self::Call { function, argument_count } => {
-                build_call(builder, opcode, function, argument_count)?
+                build_call(builder, opcode, function, argument_count)?;
             }
             &Self::CallVariable { argument_count } => {
-                build_callvar(builder, opcode, argument_count)
+                build_callvar(builder, opcode, argument_count);
             }
             Self::CheckArrayIndex => {
-                build_extended16(builder, opcodes::extended::CHKINDEX)
+                build_extended16(builder, opcodes::extended::CHKINDEX);
             }
             Self::PushArrayFinal => {
-                build_extended16(builder, opcodes::extended::PUSHAF)
+                build_extended16(builder, opcodes::extended::PUSHAF);
             }
             Self::PopArrayFinal => {
-                build_extended16(builder, opcodes::extended::POPAF)
+                build_extended16(builder, opcodes::extended::POPAF);
             }
             Self::PushArrayContainer => {
-                build_extended16(builder, opcodes::extended::PUSHAC)
+                build_extended16(builder, opcodes::extended::PUSHAC);
             }
             Self::SetArrayOwner => {
-                build_extended16(builder, opcodes::extended::SETOWNER)
+                build_extended16(builder, opcodes::extended::SETOWNER);
             }
             Self::HasStaticInitialized => {
-                build_extended16(builder, opcodes::extended::ISSTATICOK)
+                build_extended16(builder, opcodes::extended::ISSTATICOK);
             }
             Self::SetStaticInitialized => {
-                build_extended16(builder, opcodes::extended::SETSTATIC)
+                build_extended16(builder, opcodes::extended::SETSTATIC);
             }
             Self::SaveArrayReference => {
-                build_extended16(builder, opcodes::extended::SAVEAREF)
+                build_extended16(builder, opcodes::extended::SAVEAREF);
             }
             Self::RestoreArrayReference => {
-                build_extended16(builder, opcodes::extended::RESTOREAREF)
+                build_extended16(builder, opcodes::extended::RESTOREAREF);
             }
             Self::IsNullishValue => {
-                build_extended16(builder, opcodes::extended::ISNULLISH)
+                build_extended16(builder, opcodes::extended::ISNULLISH);
             }
             Self::PushReference { asset_reference } => {
-                build_pushref(builder, &asset_reference)?
+                build_pushref(builder, &asset_reference)?;
             }
         }
         Ok(())
@@ -561,10 +560,6 @@ fn assert_zero_b0(b: [u8; 3]) -> Result<()> {
 
 fn assert_zero_b1(b: [u8; 3]) -> Result<()> {
     assert_int("Instruction byte #1", 0, b[1])
-}
-
-fn assert_zero_b2(b: [u8; 3]) -> Result<()> {
-    assert_int("Instruction byte #2", 0, b[2])
 }
 
 fn assert_zero_type2(b: [u8; 3]) -> Result<()> {
@@ -592,13 +587,6 @@ fn get_u16(b: [u8; 3]) -> u16 {
     let b0 = u16::from(b[0]);
     let b1 = u16::from(b[1]);
     b0 | (b1 << 8)
-}
-
-fn parse_empty(b: [u8; 3]) -> Result<()> {
-    assert_zero_b0(b)?;
-    assert_zero_b1(b)?;
-    assert_zero_b2(b)?;
-    Ok(())
 }
 
 fn parse_single_type(b: [u8; 3]) -> Result<GMDataType> {
@@ -745,11 +733,10 @@ fn parse_call(b: [u8; 3], reader: &mut DataReader) -> Result<GMInstruction> {
     assert_zero_type2(b)?;
     assert_type(GMDataType::Int32, data_type)?;
 
-    let function: GMRef<GMFunction> = reader
+    let function: GMRef<GMFunction> = *reader
         .function_occurrences
         .get(&(reader.cur_pos))
-        .cloned()
-        .with_context(|| {
+        .ok_or_else(|| {
             format!(
                 "Could not find any function with absolute occurrence position {} in map with length {} while parsing Call Instruction",
                 reader.cur_pos,
@@ -803,11 +790,6 @@ fn parse_extended(
     };
 
     Ok(instruction)
-}
-
-fn build_empty(builder: &mut DataBuilder, opcode: u8) {
-    builder.write_i24(0);
-    builder.write_u8(opcode);
 }
 
 fn build_single_type(
@@ -948,25 +930,25 @@ fn build_push(
             builder.write_gm_string_id(string.clone())
         }
         GMCodeValue::Variable(code_variable) => {
-            let variable: &GMVariable =
-                code_variable.variable.resolve(&builder.gm_data.variables)?;
+            //let variable: &GMVariable =
+            code_variable.variable.resolve(&builder.gm_data.variables)?;
             write_variable_occurrence(
                 builder,
                 code_variable.variable.index,
                 instr_pos,
                 //variable.name.index,
-                67,
+                0x6767_6767,
                 code_variable.variable_type,
             )?;
         }
         GMCodeValue::Function(func_ref) => {
-            let function: &GMFunction =
-                func_ref.resolve(&builder.gm_data.functions)?;
+            //let function: &GMFunction =
+            func_ref.resolve(&builder.gm_data.functions)?;
             write_function_occurrence(
                 builder,
                 func_ref.index,
                 instr_pos,
-                /*function.name.index*/ 67,
+                /*function.name.index*/ 0x6767_6767,
             )?;
         }
     }
@@ -1048,7 +1030,7 @@ impl GMElement for GMAssetReference {
             return Ok(Self::Function(*func));
         }
 
-        let raw = reader.read_i32()?;
+        let raw = reader.read_u32()?;
         let index: u32 = (raw & 0xFF_FFFF) as u32;
         let asset_type: u8 = (raw >> 24) as u8;
 
@@ -1073,28 +1055,28 @@ impl GMElement for GMAssetReference {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let (index, asset_type) = match self {
-            GMAssetReference::Object(gm_ref) => (gm_ref.index, 0),
-            GMAssetReference::Sprite(gm_ref) => (gm_ref.index, 1),
-            GMAssetReference::Sound(gm_ref) => (gm_ref.index, 2),
-            GMAssetReference::Room(gm_ref) => (gm_ref.index, 3),
-            GMAssetReference::Background(gm_ref) => (gm_ref.index, 4),
-            GMAssetReference::Path(gm_ref) => (gm_ref.index, 5),
-            GMAssetReference::Script(gm_ref) => (gm_ref.index, 6),
-            GMAssetReference::Font(gm_ref) => (gm_ref.index, 7),
-            GMAssetReference::Timeline(gm_ref) => (gm_ref.index, 8),
-            GMAssetReference::Shader(gm_ref) => (gm_ref.index, 9),
-            GMAssetReference::Sequence(gm_ref) => (gm_ref.index, 10),
-            GMAssetReference::AnimCurve(gm_ref) => (gm_ref.index, 11),
-            GMAssetReference::ParticleSystem(gm_ref) => (gm_ref.index, 12),
-            GMAssetReference::RoomInstance(id) => (*id as u32, 13),
-            GMAssetReference::Function(func_ref) => {
-                let function: &GMFunction =
-                    func_ref.resolve(&builder.gm_data.functions)?;
+            Self::Object(gm_ref) => (gm_ref.index, 0),
+            Self::Sprite(gm_ref) => (gm_ref.index, 1),
+            Self::Sound(gm_ref) => (gm_ref.index, 2),
+            Self::Room(gm_ref) => (gm_ref.index, 3),
+            Self::Background(gm_ref) => (gm_ref.index, 4),
+            Self::Path(gm_ref) => (gm_ref.index, 5),
+            Self::Script(gm_ref) => (gm_ref.index, 6),
+            Self::Font(gm_ref) => (gm_ref.index, 7),
+            Self::Timeline(gm_ref) => (gm_ref.index, 8),
+            Self::Shader(gm_ref) => (gm_ref.index, 9),
+            Self::Sequence(gm_ref) => (gm_ref.index, 10),
+            Self::AnimCurve(gm_ref) => (gm_ref.index, 11),
+            Self::ParticleSystem(gm_ref) => (gm_ref.index, 12),
+            Self::RoomInstance(id) => (*id as u32, 13),
+            Self::Function(func_ref) => {
+                //let function: &GMFunction =
+                func_ref.resolve(&builder.gm_data.functions)?;
                 write_function_occurrence(
                     builder,
                     func_ref.index,
                     builder.len(),
-                    /*function.name.index*/ 67,
+                    /*function.name.index*/ 0x6767_6767,
                 )?;
                 return Ok(());
             }
@@ -1106,61 +1088,12 @@ impl GMElement for GMAssetReference {
     }
 }
 
-fn read_code_value(
-    reader: &mut DataReader,
-    data_type: GMDataType,
-) -> Result<GMCodeValue> {
-    match data_type {
-        GMDataType::Double => reader.read_f64().map(GMCodeValue::Double),
-        GMDataType::Int32 => {
-            if let Some(&function) =
-                reader.function_occurrences.get(&reader.cur_pos)
-            {
-                reader.cur_pos += 4; // Skip next occurrence offset
-                return Ok(GMCodeValue::Function(function.clone()));
-            }
-
-            if let Some(&variable) =
-                reader.variable_occurrences.get(&reader.cur_pos)
-            {
-                reader.cur_pos += 4; // Skip next occurrence offset
-                return Ok(GMCodeValue::Variable(CodeVariable {
-                    variable,
-                    variable_type: GMVariableType::Normal,
-                    instance_type: GMInstanceType::Undefined,
-                    is_int32: true,
-                }));
-            }
-
-            reader.read_i32().map(GMCodeValue::Int32)
-        }
-        GMDataType::Int64 => reader.read_i64().map(GMCodeValue::Int64),
-        GMDataType::Boolean => reader.read_bool32().map(GMCodeValue::Boolean),
-        GMDataType::String => {
-            let index = reader.read_u32()? as usize;
-            let len = reader.strings.len();
-            let string = reader.strings.get(index).ok_or_else(|| {
-                format!("String ID is out of range: {index} >= {len}")
-            })?;
-            Ok(GMCodeValue::String(string.clone()))
-        }
-        GMDataType::Int16 => {
-            // Int16 in embedded in the instruction itself
-            reader.cur_pos -= 4;
-            let number = reader.read_i16()?;
-            reader.cur_pos += 2;
-            Ok(GMCodeValue::Int16(number))
-        }
-        GMDataType::Variable => unreachable!("Use read_variable instead"),
-    }
-}
-
 fn read_variable(
     reader: &mut DataReader,
     raw_instance_type: i16,
 ) -> Result<CodeVariable> {
     let occurrence_position: u32 = reader.cur_pos;
-    let raw_value = reader.read_i32()?;
+    let raw_value = reader.read_u32()?;
 
     let variable_type = (raw_value >> 24) & 0xF8;
     let variable_type: GMVariableType = num_enum_from(variable_type as u8)
@@ -1169,7 +1102,7 @@ fn read_variable(
     let instance_type: GMInstanceType =
         parse_instance_type(raw_instance_type, variable_type)?;
 
-    let variable: GMRef<GMVariable> = reader.variable_occurrences.get(&occurrence_position).cloned().with_context(|| {
+    let variable: GMRef<GMVariable> = *reader.variable_occurrences.get(&occurrence_position).ok_or_else(|| {
         format!(
             "Could not find {} Variable with occurrence position {} in hashmap with length {} while parsing code value",
             instance_type,
@@ -1252,7 +1185,7 @@ fn write_variable_occurrence(
     let occurrences: &mut Vec<(usize, GMVariableType)> = builder
         .variable_occurrences
         .get_mut(gm_index as usize)
-        .with_context(|| {
+        .ok_or_else(|| {
             format!("Invalid Variable GMRef while writing occurrence: {gm_index} >= {len}")
         })?;
 
@@ -1262,7 +1195,7 @@ fn write_variable_occurrence(
         let occurrence_offset: i32 =
             occurrence_pos as i32 - last_occurrence_pos as i32;
         let occurrence_offset_full: i32 = occurrence_offset & 0x07FF_FFFF
-            | (((u8::from(old_variable_type) & 0xF8) as i32) << 24);
+            | (i32::from(u8::from(old_variable_type) & 0xF8) << 24);
         builder
             .overwrite_i32(occurrence_offset_full, last_occurrence_pos + 4)?;
     }
@@ -1272,7 +1205,7 @@ fn write_variable_occurrence(
     // Hopefully, writing the name string id instead of -1 for unused variables will be fine.
     builder.write_u32(
         name_string_id & 0x07FF_FFFF
-            | (((u8::from(variable_type) & 0xF8) as u32) << 24),
+            | (u32::from(u8::from(variable_type) & 0xF8) << 24),
     );
 
     // Fuckass borrow checker
@@ -1294,11 +1227,11 @@ fn write_function_occurrence(
     let occurrences: &mut Vec<usize> = builder
         .function_occurrences
         .get_mut(gm_index as usize)
-        .with_context(|| {
+        .ok_or_else(|| {
             format!("Invalid Function GMRef while writing occurrence: {gm_index} >= {len}")
         })?;
 
-    if let Some(last_occurrence_pos) = occurrences.last().cloned() {
+    if let Some(&last_occurrence_pos) = occurrences.last() {
         // Replace last occurrence with next occurrence offset
         let occurrence_offset: i32 =
             occurrence_pos as i32 - last_occurrence_pos as i32;
@@ -1320,8 +1253,9 @@ fn write_function_occurrence(
     Ok(())
 }
 
-/// Check whether this data file was generated with YYC (YoYoGames Compiler).
-/// Should that be the case, the CODE, VARI and FUNC chunks will be empty (or not exist?).
+/// Check whether this data file was generated with `YYC` (`YoYoGames Compiler`).
+/// Should that be the case, the `CODE`, `VARI` and `FUNC` chunks will be empty
+/// (or not exist, depending on the bytecode version).
 /// NOTE: YYC is untested. Issues may occur.
 pub(crate) fn check_yyc(reader: &DataReader) -> Result<bool> {
     // If the CODE chunk doesn't exist; the data file was compiled with YYC.

@@ -7,7 +7,7 @@ use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
 use crate::gml::instructions::GMCode;
 use crate::prelude::*;
 use crate::util::assert::assert_bool;
-use crate::util::init::num_enum_from;
+use crate::util::init::{num_enum_from, vec_with_capacity};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::ops::{Deref, DerefMut};
 
@@ -51,23 +51,16 @@ impl GMChunkElement for GMGameObjects {
 impl GMElement for GMGameObjects {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
-        let mut game_objects: Vec<GMGameObject> = Vec::with_capacity(pointers.len());
+        let mut game_objects: Vec<GMGameObject> =
+            Vec::with_capacity(pointers.len());
 
         for pointer in pointers {
-            reader.cur_pos = pointer;
+            reader.assert_pos(pointer, "Game Object")?;
+
             let name: String = reader.read_gm_string()?;
-            let sprite_index = reader.read_i32()?;
-            let sprite: Option<GMRef<GMSprite>> = if sprite_index == -1 {
-                None
-            } else {
-                let index: u32 = sprite_index.try_into().with_context(|| {
-                    format!(
-                        "Negative sprite index {} for Sprite of Game Object {:?}",
-                        sprite_index, name,
-                    )
-                })?;
-                Some(GMRef::new(index))
-            };
+            let sprite: Option<GMRef<GMSprite>> =
+                reader.read_resource_by_id_opt()?;
+
             let visible = reader.read_bool32()?;
             let mut managed: Option<bool> = None;
             if reader.general_info.is_version_at_least((2022, 5)) {
@@ -76,47 +69,33 @@ impl GMElement for GMGameObjects {
             let solid = reader.read_bool32()?;
             let depth = reader.read_i32()?;
             let persistent = reader.read_bool32()?;
+
             let parent_id = reader.read_i32()?;
             let parent: Option<GMRef<GMGameObject>> = match parent_id {
-                -100 => None,                                      // No parent
-                -1 => Some(GMRef::new(game_objects.len() as u32)), // Parent is Self
-                _ => {
-                    let parent_id: u32 = u32::try_from(parent_id)
-                        .with_context(|| format!("Invalid Game Object's Parent ID {parent_id}"))?;
-                    Some(GMRef::new(parent_id))
-                }
+                -100 => None,                          // No parent
+                -1 => Some(game_objects.len().into()), // Parent is Self
+                _ => Some(GMRef::new(parent_id as u32)),
             };
-            let sprite_index = reader.read_i32()?;
-            let texture_mask: Option<GMRef<GMSprite>> = if sprite_index == -1 {
-                None
-            } else {
-                let index: u32 = sprite_index.try_into().with_context(|| {
-                    format!(
-                        "Negative sprite index {} for Texture Mask of Game Object {:?}",
-                        sprite_index, name,
-                    )
-                })?;
-                Some(GMRef::new(index))
-            };
+
+            let texture_mask: Option<GMRef<GMSprite>> =
+                reader.read_resource_by_id_opt()?;
+
             let uses_physics = reader.read_bool32()?;
             let is_sensor = reader.read_bool32()?;
-            let collision_shape: GMGameObjectCollisionShape = num_enum_from(reader.read_u32()?)?;
+            let collision_shape: GMGameObjectCollisionShape =
+                num_enum_from(reader.read_u32()?)?;
             let density = reader.read_f32()?;
             let restitution = reader.read_f32()?;
             let group = reader.read_u32()?;
             let linear_damping = reader.read_f32()?;
             let angular_damping = reader.read_f32()?;
-            let physics_shape_vertex_count = reader.read_i32()?;
-            let physics_shape_vertex_count: usize = if physics_shape_vertex_count < 0 {
-                0
-            } else {
-                physics_shape_vertex_count as usize
-            };
+            let physics_shape_vertex_count =
+                reader.read_count("Physics Shape Vertex Count")?;
             let friction = reader.read_f32()?;
             let awake = reader.read_bool32()?;
             let kinematic = reader.read_bool32()?;
             let mut physics_shape_vertices: Vec<(f32, f32)> =
-                Vec::with_capacity(physics_shape_vertex_count);
+                vec_with_capacity(physics_shape_vertex_count)?;
             for _ in 0..physics_shape_vertex_count {
                 let x = reader.read_f32()?;
                 let y = reader.read_f32()?;
@@ -166,15 +145,19 @@ impl GMElement for GMGameObjects {
             builder.write_gm_string(&game_object.name);
             builder.write_resource_id_opt(&game_object.sprite);
             builder.write_bool32(game_object.visible);
-            game_object
-                .managed
-                .serialize_if_gm_ver(builder, "Managed", (2022, 5))?;
+            game_object.managed.serialize_if_gm_ver(
+                builder,
+                "Managed",
+                (2022, 5),
+            )?;
             builder.write_bool32(game_object.solid);
             builder.write_i32(game_object.depth);
             builder.write_bool32(game_object.persistent);
             match game_object.parent {
                 None => builder.write_i32(-100), // No Parent
-                Some(obj_ref) if obj_ref.index == i as u32 => builder.write_i32(-1), // Parent is Self
+                Some(obj_ref) if obj_ref.index == i as u32 => {
+                    builder.write_i32(-1);
+                } // Parent is Self
                 Some(obj_ref) => builder.write_resource_id(obj_ref), // Normal Parent
             }
             builder.write_resource_id_opt(&game_object.texture_mask);
@@ -242,7 +225,7 @@ pub struct GMGameObject {
     pub awake: bool,
     /// Whether this game object is kinematic.
     pub kinematic: bool,
-    /// The vertices used for a [GMGameObjectCollisionShape::Custom].
+    /// The vertices used for a [`GMGameObjectCollisionShape::Custom`].
     pub physics_shape_vertices: Vec<(f32, f32)>,
     /// All the events that this game object has.
     pub events: Vec<GMGameObjectEvents>,
@@ -273,7 +256,8 @@ pub struct GMGameObjectEvent {
 impl GMElement for GMGameObjectEvent {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let subtype = reader.read_u32()?;
-        let actions: Vec<GMGameObjectEventAction> = reader.read_pointer_list()?;
+        let actions: Vec<GMGameObjectEventAction> =
+            reader.read_pointer_list()?;
         Ok(Self { subtype, actions })
     }
 
@@ -319,7 +303,7 @@ impl GMElement for GMGameObjectEventAction {
         let is_not = reader.read_bool32()?;
         let unknown_always_zero = reader.read_u32()?;
 
-        Ok(GMGameObjectEventAction {
+        Ok(Self {
             lib_id,
             id,
             kind,

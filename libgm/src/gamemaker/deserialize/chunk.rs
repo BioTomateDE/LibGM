@@ -31,13 +31,18 @@ impl DataReader<'_> {
         let string: String = match self.read_literal_string(4) {
             Ok(str) => str,
             Err(_) if self.cur_pos == 4 => {
-                bail!("Invalid data.win file; data doesn't start with 'FORM' string")
+                bail!(
+                    "Invalid data.win file; data doesn't start with 'FORM' string"
+                )
             }
             Err(e) => Err(e).context("parsing chunk name")?,
         };
 
         assert_int("Size of chunk name string", 4, string.len())?;
-        if !string.bytes().all(|b| matches!(b, b'A'..=b'Z' | b'0'..=b'9')) {
+        if !string
+            .bytes()
+            .all(|b| matches!(b, b'A'..=b'Z' | b'0'..=b'9'))
+        {
             bail!("Chunk name {string:?} contains invalid characters")
         }
 
@@ -86,7 +91,8 @@ impl DataReader<'_> {
     fn read_chunk_padding(&mut self) -> Result<()> {
         // Padding only for GMS2+ and 1.9999+
         let ver: &GMVersion = &self.specified_version;
-        let padding_elegible = ver.major >= 2 || (ver.major == 1 && ver.minor >= 9999);
+        let padding_elegible =
+            ver.major >= 2 || (ver.major == 1 && ver.minor >= 9999);
         if !padding_elegible {
             return Ok(());
         }
@@ -99,7 +105,8 @@ impl DataReader<'_> {
 
             // Byte is not zero => Padding is incorrect
             self.cur_pos -= 1; // Undo reading incorrect padding byte
-            self.chunk_padding = if self.cur_pos.is_multiple_of(4) { 4 } else { 1 };
+            self.chunk_padding =
+                if self.cur_pos.is_multiple_of(4) { 4 } else { 1 };
             log::debug!("Set chunk padding to {}", self.chunk_padding);
             return Ok(());
         }
@@ -120,7 +127,7 @@ impl DataReader<'_> {
             .chunks
             .get("GEN8")
             .cloned()
-            .context("Chunk GEN8 does not exist")
+            .ok_or("Chunk GEN8 does not exist")
             .context(CTX)?;
         self.cur_pos = self.chunk.start_pos + 44; // Skip to GEN8 `GameMaker` version
         let gm_version = GMVersion::deserialize(self).context(CTX)?;

@@ -30,7 +30,9 @@ use crate::gamemaker::elements::texture_group_info::GMTextureGroupInfos;
 use crate::gamemaker::elements::texture_page_items::GMTexturePageItems;
 use crate::gamemaker::elements::timelines::GMTimelines;
 use crate::gamemaker::elements::ui_nodes::GMRootUINodes;
-use crate::gamemaker::elements::variables::{GMVariable, GMVariableB15Data, GMVariables};
+use crate::gamemaker::elements::variables::{
+    GMVariable, GMVariableB15Data, GMVariables,
+};
 use crate::gamemaker::reference::GMRef;
 use crate::gml::instructions::GMInstanceType;
 use crate::prelude::*;
@@ -57,39 +59,39 @@ pub enum Endianness {
 
 #[derive(Debug, Clone)]
 pub struct GMData {
-    pub animation_curves: GMAnimationCurves,      // ACRV
-    pub audio_groups: GMAudioGroups,              // AGRP
-    pub audios: GMEmbeddedAudios,                 // AUDO
-    pub backgrounds: GMBackgrounds,               // BGND
-    pub codes: GMCodes,                           // CODE
-    pub embedded_images: GMEmbeddedImages,        // EMBI
-    pub extensions: GMExtensions,                 // EXTN
-    pub feature_flags: GMFeatureFlags,            // FEAT
-    pub filter_effects: GMFilterEffects,          // FEDS
-    pub fonts: GMFonts,                           // FONT
-    pub functions: GMFunctions,                   // FUNC
-    pub game_end_scripts: GMGameEndScripts,       // GMEN
-    pub game_objects: GMGameObjects,              // OBJT
-    pub general_info: GMGeneralInfo,              // GEN8
+    pub animation_curves: GMAnimationCurves, // ACRV
+    pub audio_groups: GMAudioGroups,         // AGRP
+    pub audios: GMEmbeddedAudios,            // AUDO
+    pub backgrounds: GMBackgrounds,          // BGND
+    pub codes: GMCodes,                      // CODE
+    pub embedded_images: GMEmbeddedImages,   // EMBI
+    pub extensions: GMExtensions,            // EXTN
+    pub feature_flags: GMFeatureFlags,       // FEAT
+    pub filter_effects: GMFilterEffects,     // FEDS
+    pub fonts: GMFonts,                      // FONT
+    pub functions: GMFunctions,              // FUNC
+    pub game_end_scripts: GMGameEndScripts,  // GMEN
+    pub game_objects: GMGameObjects,         // OBJT
+    pub general_info: GMGeneralInfo,         // GEN8
     pub global_init_scripts: GMGlobalInitScripts, // GLOB
-    pub language_info: GMLanguageInfo,            // LANG
-    pub options: GMOptions,                       // OPTN
-    pub particle_emitters: GMParticleEmitters,    // PSEM
-    pub particle_systems: GMParticleSystems,      // PSYS
-    pub paths: GMPaths,                           // PATH
-    pub rooms: GMRooms,                           // ROOM
-    pub root_ui_nodes: GMRootUINodes,             // UILR
-    pub scripts: GMScripts,                       // SCPT
-    pub sequences: GMSequences,                   // SEQN
-    pub shaders: GMShaders,                       // SHDR
-    pub sounds: GMSounds,                         // SOND
-    pub sprites: GMSprites,                       // SPRT
-    pub tags: GMTags,                             // TAGS
+    pub language_info: GMLanguageInfo,       // LANG
+    pub options: GMOptions,                  // OPTN
+    pub particle_emitters: GMParticleEmitters, // PSEM
+    pub particle_systems: GMParticleSystems, // PSYS
+    pub paths: GMPaths,                      // PATH
+    pub rooms: GMRooms,                      // ROOM
+    pub root_ui_nodes: GMRootUINodes,        // UILR
+    pub scripts: GMScripts,                  // SCPT
+    pub sequences: GMSequences,              // SEQN
+    pub shaders: GMShaders,                  // SHDR
+    pub sounds: GMSounds,                    // SOND
+    pub sprites: GMSprites,                  // SPRT
+    pub tags: GMTags,                        // TAGS
     pub texture_group_infos: GMTextureGroupInfos, // TGIN
-    pub texture_page_items: GMTexturePageItems,   // TPAG
-    pub timelines: GMTimelines,                   // TMLN
-    pub embedded_textures: GMEmbeddedTextures,    // TXTR
-    pub variables: GMVariables,                   // VARI
+    pub texture_page_items: GMTexturePageItems, // TPAG
+    pub timelines: GMTimelines,              // TMLN
+    pub embedded_textures: GMEmbeddedTextures, // TXTR
+    pub variables: GMVariables,              // VARI
 
     /// Indicates the number of padding bytes (null bytes) between chunks.
     /// Note that the last chunk does not get padding.
@@ -163,7 +165,9 @@ impl GMData {
         instance_type: GMInstanceType,
     ) -> Result<GMRef<GMVariable>> {
         if instance_type == GMInstanceType::Local {
-            bail!("Local variables have to be unique; this function will not work");
+            bail!(
+                "Local variables have to be unique; this function will not work"
+            );
         }
         let vari_instance_type = instance_type.as_vari();
 
@@ -173,7 +177,10 @@ impl GMData {
             }
 
             let Some(b15) = &variable.b15_data else {
-                bail!("Variable {} does not have bytecode 15 data", variable.name);
+                bail!(
+                    "Variable {} does not have bytecode 15 data",
+                    variable.name
+                );
             };
             if b15.instance_type != vari_instance_type {
                 continue;
@@ -214,7 +221,8 @@ impl GMData {
         }
 
         // Now actually create the variable
-        let variable_ref: GMRef<GMVariable> = GMRef::new(self.variables.len() as u32);
+        let variable_ref: GMRef<GMVariable> =
+            GMRef::new(self.variables.len() as u32);
         self.variables.push(GMVariable {
             name,
             b15_data: Some(GMVariableB15Data { instance_type, variable_id }),
@@ -233,7 +241,9 @@ impl GMData {
     }
 
     pub fn function_by_name(&self, name: &str) -> Result<GMRef<GMFunction>> {
-        self.find_function(name)?
-            .with_context(|| format!("Could not find function with name {name:?}"))
+        let function = self.find_function(name)?.ok_or_else(|| {
+            format!("Could not find function with name {name:?}")
+        })?;
+        Ok(function)
     }
 }

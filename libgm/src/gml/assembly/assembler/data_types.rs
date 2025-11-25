@@ -37,7 +37,7 @@ impl DataTypes {
             bail!("An Instruction can only have 0-2 data types");
         }
         if self.0.is_some() {
-            self.1 = Some(data_type)
+            self.1 = Some(data_type);
         } else {
             self.0 = Some(data_type);
         }
@@ -58,15 +58,15 @@ impl Index<u8> for DataTypes {
 }
 
 impl GMDataType {
-    pub(super) fn from_char(data_type: char) -> Result<GMDataType> {
+    pub(super) fn from_char(data_type: char) -> Result<Self> {
         Ok(match data_type {
-            'v' => GMDataType::Variable,
-            'i' => GMDataType::Int32,
-            's' => GMDataType::String,
-            'e' => GMDataType::Int16,
-            'd' => GMDataType::Double,
-            'l' => GMDataType::Int64,
-            'b' => GMDataType::Boolean,
+            'v' => Self::Variable,
+            'i' => Self::Int32,
+            's' => Self::String,
+            'e' => Self::Int16,
+            'd' => Self::Double,
+            'l' => Self::Int64,
+            'b' => Self::Boolean,
             _ => bail!("Invalid data type '{data_type}'"),
         })
     }

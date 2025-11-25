@@ -4,8 +4,8 @@ use crate::gamemaker::elements::game_objects::GMGameObject;
 use crate::gamemaker::elements::variables::GMVariable;
 use crate::gamemaker::reference::GMRef;
 use crate::gml::instructions::{
-    CodeVariable, GMAssetReference, GMCode, GMCodeValue, GMComparisonType, GMDataType,
-    GMInstanceType, GMInstruction, GMVariableType,
+    CodeVariable, GMAssetReference, GMCode, GMCodeValue, GMComparisonType,
+    GMDataType, GMInstanceType, GMInstruction, GMVariableType,
 };
 use crate::prelude::*;
 use crate::util::fmt::typename;
@@ -29,7 +29,10 @@ pub fn disassemble_instructions(
     Ok(assembly)
 }
 
-pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) -> Result<String> {
+pub fn disassemble_instruction(
+    gm_data: &GMData,
+    instruction: &GMInstruction,
+) -> Result<String> {
     let line: String;
     let opcode: &str = opcode_to_string(instruction);
 
@@ -62,7 +65,12 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
         }
 
         GMInstruction::Duplicate { data_type, size } => {
-            line = format!("{}.{} {}", opcode, data_type_to_string(*data_type), size);
+            line = format!(
+                "{}.{} {}",
+                opcode,
+                data_type_to_string(*data_type),
+                size
+            );
         }
 
         GMInstruction::DuplicateSwap { data_type, size1, size2 } => {
@@ -114,6 +122,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
         }
 
         GMInstruction::Pop { variable, type1, type2 } => {
+            // TODO: find the instance type of the variable
             line = format!(
                 "{}.{}.{} {}",
                 opcode,
@@ -125,13 +134,20 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
 
         GMInstruction::Push { value } => {
             let literal: String = match value {
-                GMCodeValue::Variable(code_variable) => variable_to_string(gm_data, code_variable)?,
+                GMCodeValue::Variable(code_variable) => {
+                    variable_to_string(gm_data, code_variable)?
+                }
                 GMCodeValue::Boolean(true) => "true".to_string(),
                 GMCodeValue::Boolean(false) => "false".to_string(),
                 GMCodeValue::Function(function_ref) => {
-                    format!("(function){}", function_to_string(gm_data, *function_ref)?)
+                    format!(
+                        "(function){}",
+                        function_to_string(gm_data, *function_ref)?
+                    )
                 }
-                GMCodeValue::String(string) => format_literal_string(string.clone())?,
+                GMCodeValue::String(string) => {
+                    format_literal_string(string.clone())?
+                }
                 GMCodeValue::Int16(integer) => integer.to_string(),
                 GMCodeValue::Int32(integer) => integer.to_string(),
                 GMCodeValue::Int64(integer) => integer.to_string(),
@@ -148,7 +164,11 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
         GMInstruction::PushLocal { variable }
         | GMInstruction::PushGlobal { variable }
         | GMInstruction::PushBuiltin { variable } => {
-            line = format!("{} {}", opcode, variable_to_string(gm_data, variable)?);
+            line = format!(
+                "{} {}",
+                opcode,
+                variable_to_string(gm_data, variable)?
+            );
         }
 
         GMInstruction::PushImmediate { integer } => {
@@ -246,48 +266,66 @@ fn asset_get_name<T>(
     Ok(name)
 }
 
-fn asset_reference_to_string(gm_data: &GMData, asset_ref: &GMAssetReference) -> Result<String> {
+fn asset_reference_to_string(
+    gm_data: &GMData,
+    asset_ref: &GMAssetReference,
+) -> Result<String> {
     Ok(match asset_ref {
         &GMAssetReference::Object(gm_ref) => {
-            "(object)".to_string() + asset_get_name(&gm_data.game_objects, gm_ref, |x| &x.name)?
+            "(object)".to_string()
+                + asset_get_name(&gm_data.game_objects, gm_ref, |x| &x.name)?
         }
         &GMAssetReference::Sprite(gm_ref) => {
-            "(sprite)".to_string() + asset_get_name(&gm_data.sprites, gm_ref, |x| &x.name)?
+            "(sprite)".to_string()
+                + asset_get_name(&gm_data.sprites, gm_ref, |x| &x.name)?
         }
         &GMAssetReference::Sound(gm_ref) => {
-            "(sound)".to_string() + asset_get_name(&gm_data.sounds, gm_ref, |x| &x.name)?
+            "(sound)".to_string()
+                + asset_get_name(&gm_data.sounds, gm_ref, |x| &x.name)?
         }
         &GMAssetReference::Room(gm_ref) => {
-            "(sprite)".to_string() + asset_get_name(&gm_data.rooms, gm_ref, |x| &x.name)?
+            "(sprite)".to_string()
+                + asset_get_name(&gm_data.rooms, gm_ref, |x| &x.name)?
         }
         &GMAssetReference::Background(gm_ref) => {
-            "(background)".to_string() + asset_get_name(&gm_data.backgrounds, gm_ref, |x| &x.name)?
+            "(background)".to_string()
+                + asset_get_name(&gm_data.backgrounds, gm_ref, |x| &x.name)?
         }
         &GMAssetReference::Path(gm_ref) => {
-            "(path)".to_string() + asset_get_name(&gm_data.paths, gm_ref, |x| &x.name)?
+            "(path)".to_string()
+                + asset_get_name(&gm_data.paths, gm_ref, |x| &x.name)?
         }
         &GMAssetReference::Script(gm_ref) => {
-            "(script)".to_string() + asset_get_name(&gm_data.scripts, gm_ref, |x| &x.name)?
+            "(script)".to_string()
+                + asset_get_name(&gm_data.scripts, gm_ref, |x| &x.name)?
         }
         &GMAssetReference::Font(gm_ref) => {
-            "(font)".to_string() + asset_get_name(&gm_data.fonts, gm_ref, |x| &x.name)?
+            "(font)".to_string()
+                + asset_get_name(&gm_data.fonts, gm_ref, |x| &x.name)?
         }
         &GMAssetReference::Timeline(gm_ref) => {
-            "(timeline)".to_string() + asset_get_name(&gm_data.timelines, gm_ref, |x| &x.name)?
+            "(timeline)".to_string()
+                + asset_get_name(&gm_data.timelines, gm_ref, |x| &x.name)?
         }
         &GMAssetReference::Shader(gm_ref) => {
-            "(shader)".to_string() + asset_get_name(&gm_data.shaders, gm_ref, |x| &x.name)?
+            "(shader)".to_string()
+                + asset_get_name(&gm_data.shaders, gm_ref, |x| &x.name)?
         }
         &GMAssetReference::Sequence(gm_ref) => {
-            "(sequence)".to_string() + asset_get_name(&gm_data.sequences, gm_ref, |x| &x.name)?
+            "(sequence)".to_string()
+                + asset_get_name(&gm_data.sequences, gm_ref, |x| &x.name)?
         }
         &GMAssetReference::AnimCurve(gm_ref) => {
             "(animcurve)".to_string()
-                + asset_get_name(&gm_data.animation_curves, gm_ref, |x| &x.name)?
+                + asset_get_name(&gm_data.animation_curves, gm_ref, |x| {
+                    &x.name
+                })?
         }
         &GMAssetReference::ParticleSystem(gm_ref) => {
             "(particlesys".to_string()
-                + asset_get_name(&gm_data.particle_systems, gm_ref, |x| &x.name)?
+                + asset_get_name(&gm_data.particle_systems, gm_ref, |x| {
+                    &x.name
+                })?
         }
         GMAssetReference::RoomInstance(id) => format!("(roominstance){}", id),
         GMAssetReference::Function(gm_ref) => {
@@ -310,7 +348,9 @@ const fn data_type_to_string(data_type: GMDataType) -> &'static str {
 }
 
 #[must_use]
-const fn comparison_type_to_string(comparison_type: GMComparisonType) -> &'static str {
+const fn comparison_type_to_string(
+    comparison_type: GMComparisonType,
+) -> &'static str {
     match comparison_type {
         GMComparisonType::LessThan => "LT",
         GMComparisonType::LessOrEqual => "LTE",
@@ -328,14 +368,18 @@ fn instance_type_to_string(
 ) -> Result<String> {
     Ok(match instance_type {
         GMInstanceType::Undefined => {
-            unreachable!("Did not expect Instance Type Undefined here; please report this error")
+            unreachable!(
+                "Did not expect Instance Type Undefined here; please report this error"
+            )
         }
         GMInstanceType::Self_(Some(obj_ref)) => {
             let obj: &GMGameObject = obj_ref.resolve(&gm_data.game_objects)?;
             format!("self<{}>", obj.name)
         }
         GMInstanceType::Self_(None) => "self".to_string(),
-        GMInstanceType::RoomInstance(instance_id) => format!("roominstance<{instance_id}>"),
+        GMInstanceType::RoomInstance(instance_id) => {
+            format!("roominstance<{instance_id}>")
+        }
         GMInstanceType::Other => "other".to_string(),
         GMInstanceType::All => "all".to_string(),
         GMInstanceType::None => "none".to_string(),
@@ -348,7 +392,9 @@ fn instance_type_to_string(
     })
 }
 
-const fn variable_type_to_string(variable_type: GMVariableType) -> &'static str {
+const fn variable_type_to_string(
+    variable_type: GMVariableType,
+) -> &'static str {
     match variable_type {
         GMVariableType::Array => "[array]",
         GMVariableType::StackTop => "[stacktop]",
@@ -359,8 +405,12 @@ const fn variable_type_to_string(variable_type: GMVariableType) -> &'static str 
     }
 }
 
-fn variable_to_string(gm_data: &GMData, code_variable: &CodeVariable) -> Result<String> {
-    let variable: &GMVariable = code_variable.variable.resolve(&gm_data.variables)?;
+fn variable_to_string(
+    gm_data: &GMData,
+    code_variable: &CodeVariable,
+) -> Result<String> {
+    let variable: &GMVariable =
+        code_variable.variable.resolve(&gm_data.variables)?;
     let name = &variable.name;
     if !is_valid_identifier(name) && name != "$$$$temp$$$$" {
         bail!("Invalid variable identifier {name:?}");
@@ -372,25 +422,32 @@ fn variable_to_string(gm_data: &GMData, code_variable: &CodeVariable) -> Result<
         ""
     };
 
-    let instance_type: &GMInstanceType = if code_variable.instance_type != GMInstanceType::Undefined
-    {
-        &code_variable.instance_type
-    } else {
-        // TODO: this will not work with b14
-        variable
-            .b15_data
-            .as_ref()
-            .map_or(&GMInstanceType::Undefined, |b15| &b15.instance_type)
-    };
-    let instance_type: String =
-        instance_type_to_string(gm_data, instance_type, code_variable.variable)?;
+    let instance_type: &GMInstanceType =
+        if code_variable.instance_type != GMInstanceType::Undefined {
+            &code_variable.instance_type
+        } else {
+            // TODO: this will not work with b14
+            variable
+                .b15_data
+                .as_ref()
+                .map_or(&GMInstanceType::Undefined, |b15| &b15.instance_type)
+        };
+    let instance_type: String = instance_type_to_string(
+        gm_data,
+        instance_type,
+        code_variable.variable,
+    )?;
 
-    let variable_type: &str = variable_type_to_string(code_variable.variable_type);
+    let variable_type: &str =
+        variable_type_to_string(code_variable.variable_type);
 
     Ok(format!("{prefix}{variable_type}{instance_type}.{name}"))
 }
 
-fn function_to_string(gm_data: &GMData, function_ref: GMRef<GMFunction>) -> Result<&String> {
+fn function_to_string(
+    gm_data: &GMData,
+    function_ref: GMRef<GMFunction>,
+) -> Result<&String> {
     let function: &GMFunction = function_ref.resolve(&gm_data.functions)?;
     let name = &function.name;
     if !is_valid_identifier(name) {

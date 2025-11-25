@@ -11,6 +11,7 @@ use crate::prelude::*;
 use crate::util::assert::integrity_check;
 use crate::util::smallmap::SmallMap;
 use std::collections::HashMap;
+use std::fmt::Display;
 
 #[derive(Debug)]
 pub(crate) struct DataReader<'a> {
@@ -88,7 +89,10 @@ const CHUNK_COUNT: usize = 35;
 impl<'a> DataReader<'a> {
     pub fn new(data: &'a [u8]) -> Self {
         // Memory Safety Assertion. This should've been verfied before, though.
-        let end_pos: u32 = data.len().try_into().expect("Data length out of u32 bounds");
+        let end_pos: u32 = data
+            .len()
+            .try_into()
+            .expect("Data length out of u32 bounds");
 
         Self {
             data,
@@ -146,8 +150,13 @@ impl<'a> DataReader<'a> {
             );
         }
 
-        #[cfg(not(any(target_pointer_width = "32", target_pointer_width = "64")))]
-        compile_error!("Cannot safely convert u32 to usize on this platform (target pointer width not 32 or 64)");
+        #[cfg(not(any(
+            target_pointer_width = "32",
+            target_pointer_width = "64"
+        )))]
+        compile_error!(
+            "Cannot safely convert u32 to usize on this platform (target pointer width not 32 or 64)"
+        );
 
         // SAFETY: If chunk.end_pos is set correctly, this should never read memory out of bounds.
 
@@ -192,15 +201,21 @@ impl<'a> DataReader<'a> {
     pub fn read_literal_string(&mut self, length: u32) -> Result<String> {
         let bytes: Vec<u8> = self
             .read_bytes_dyn(length)
-            .with_context(|| format!("reading literal string with length {length}"))?
+            .with_context(|| {
+                format!("reading literal string with length {length}")
+            })?
             .to_vec();
-        let string: String = String::from_utf8(bytes).with_context(|| {
+
+        let string: String = String::from_utf8(bytes)
+            .map_err(|e| e.to_string())
+              .with_context(|| {
             format!(
                 "parsing literal UTF-8 string with length {} at position {}",
                 length,
                 self.cur_pos - length,
             )
         })?;
+
         Ok(string)
     }
 
@@ -275,7 +290,10 @@ impl<'a> DataReader<'a> {
     /// - `Ok(Some(T))` if the version requirement is met and deserialization succeeds
     /// - `Ok(None)` if the version requirement is not met
     /// - `Err(_)` if the version requirement is met but deserialization fails
-    pub fn deserialize_if_gm_version<T: GMElement, V: Into<GMVersionReq>>(&mut self, ver_req: V) -> Result<Option<T>> {
+    pub fn deserialize_if_gm_version<T: GMElement, V: Into<GMVersionReq>>(
+        &mut self,
+        ver_req: V,
+    ) -> Result<Option<T>> {
         if self.general_info.is_version_at_least(ver_req) {
             Ok(Some(T::deserialize(self)?))
         } else {
@@ -292,7 +310,10 @@ impl<'a> DataReader<'a> {
     /// - `Ok(Some(T))` if the bytecode version requirement is met and deserialization succeeds
     /// - `Ok(None)` if the bytecode version requirement is not met
     /// - `Err(_)` if the bytecode version requirement is met but deserialization fails
-    pub fn deserialize_if_bytecode_version<T: GMElement>(&mut self, ver_req: u8) -> Result<Option<T>> {
+    pub fn deserialize_if_bytecode_version<T: GMElement>(
+        &mut self,
+        ver_req: u8,
+    ) -> Result<Option<T>> {
         if self.general_info.bytecode_version >= ver_req {
             Ok(Some(T::deserialize(self)?))
         } else {
