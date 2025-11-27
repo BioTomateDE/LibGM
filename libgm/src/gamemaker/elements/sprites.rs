@@ -521,7 +521,7 @@ impl GMSprite {
     ) -> Result<()> {
         builder.write_usize(texture_list.len())?;
         for texture_page_item_ref_opt in texture_list {
-            builder.write_gm_texture_opt(texture_page_item_ref_opt)?;
+            builder.write_gm_texture_opt(*texture_page_item_ref_opt)?;
         }
         Ok(())
     }

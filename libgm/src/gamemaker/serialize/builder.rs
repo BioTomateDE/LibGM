@@ -265,7 +265,7 @@ impl<'a> DataBuilder<'a> {
 
         self.write_chunk_name(name)
             .expect("Constant chunk name is invalid");
-        self.write_u32(0xDEADC0DE); // Chunk length placeholder
+        self.write_u32(0xDEAD_C0DE); // Chunk length placeholder
         let start_pos: usize = self.len();
         let length_pos = start_pos - 4;
 

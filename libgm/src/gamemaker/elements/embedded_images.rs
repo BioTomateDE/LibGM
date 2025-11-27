@@ -38,7 +38,8 @@ impl GMChunkElement for GMEmbeddedImages {
 impl GMElement for GMEmbeddedImages {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         assert_int("EMBI Version", 1, reader.read_u32()?)?;
-        let embedded_images: Vec<GMEmbeddedImage> = reader.read_simple_list()?;
+        let embedded_images: Vec<GMEmbeddedImage> =
+            reader.read_simple_list()?;
         Ok(Self { embedded_images, exists: true })
     }
 
@@ -60,13 +61,14 @@ pub struct GMEmbeddedImage {
 impl GMElement for GMEmbeddedImage {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: String = reader.read_gm_string()?;
-        let texture_entry: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
+        let texture_entry: GMRef<GMTexturePageItem> =
+            reader.read_gm_texture()?;
         Ok(Self { name, texture_entry })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name);
-        builder.write_gm_texture(&self.texture_entry)?;
+        builder.write_gm_texture(self.texture_entry)?;
         Ok(())
     }
 }

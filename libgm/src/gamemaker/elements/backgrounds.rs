@@ -11,7 +11,7 @@ use std::ops::{Deref, DerefMut};
 
 const ALIGNMENT: u32 = 8;
 
-/// See [GMBackground].
+/// See [`GMBackground`].
 #[derive(Debug, Clone)]
 pub struct GMBackgrounds {
     pub backgrounds: Vec<GMBackground>,
@@ -48,7 +48,8 @@ impl GMChunkElement for GMBackgrounds {
 impl GMElement for GMBackgrounds {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let mut is_aligned: bool = true;
-        let backgrounds: Vec<GMBackground> = reader.read_aligned_list_chunk(ALIGNMENT, &mut is_aligned)?;
+        let backgrounds: Vec<GMBackground> =
+            reader.read_aligned_list_chunk(ALIGNMENT, &mut is_aligned)?;
         Ok(Self { backgrounds, is_aligned, exists: true })
     }
 
@@ -77,7 +78,7 @@ pub struct GMBackground {
     pub smooth: bool,
     /// Whether to preload the background.
     pub preload: bool,
-    /// The [GMTexturePageItem] this background uses.
+    /// The [`GMTexturePageItem`] this background uses.
     pub texture: Option<GMRef<GMTexturePageItem>>,
     /// Only set in GMS 2.0+.
     pub gms2_data: Option<GMBackgroundGMS2Data>,
@@ -89,10 +90,12 @@ impl GMElement for GMBackground {
         let transparent = reader.read_bool32()?;
         let smooth = reader.read_bool32()?;
         let preload = reader.read_bool32()?;
-        let texture: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
-        let gms2_data: Option<GMBackgroundGMS2Data> = reader.deserialize_if_gm_version((2, 0))?;
+        let texture: Option<GMRef<GMTexturePageItem>> =
+            reader.read_gm_texture_opt()?;
+        let gms2_data: Option<GMBackgroundGMS2Data> =
+            reader.deserialize_if_gm_version((2, 0))?;
 
-        Ok(GMBackground { name, transparent, smooth, preload, texture, gms2_data })
+        Ok(Self { name, transparent, smooth, preload, texture, gms2_data })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -100,13 +103,14 @@ impl GMElement for GMBackground {
         builder.write_bool32(self.transparent);
         builder.write_bool32(self.smooth);
         builder.write_bool32(self.preload);
-        builder.write_gm_texture_opt(&self.texture)?;
-        self.gms2_data.serialize_if_gm_ver(builder, "GMS2 data", (2, 0))?;
+        builder.write_gm_texture_opt(self.texture)?;
+        self.gms2_data
+            .serialize_if_gm_ver(builder, "GMS2 data", (2, 0))?;
         Ok(())
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMBackgroundGMS2Data {
     /// The width of a tile in this tileset.
     pub tile_width: u32,

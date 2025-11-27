@@ -16,7 +16,9 @@ const QOI_MASK_3: u8 = 0xe0;
 const QOI_MASK_4: u8 = 0xf0;
 
 pub fn deserialize(bytes: &[u8]) -> Result<DynamicImage> {
-    let header: &[u8] = bytes.get(..12).ok_or("Invalid QOI header (less than 12 bytes long)")?;
+    let header: &[u8] = bytes
+        .get(..12)
+        .ok_or("Invalid QOI header (less than 12 bytes long)")?;
 
     let endianness: Endianness = match &header[..4] {
         b"qoif" => Endianness::Big,
@@ -92,10 +94,10 @@ pub fn deserialize(bytes: &[u8]) -> Result<DynamicImage> {
             let b3: i32 = pixel_data[pos + 1] as i32;
             pos += 2;
             let merged: i32 = ((b1 as i32) << 16) | (b2 << 8) | b3;
-            r = r.wrapping_add(((merged & 0x0F8000) << 12 >> 27) as u8);
-            g = g.wrapping_add(((merged & 0x007C00) << 17 >> 27) as u8);
-            b = b.wrapping_add(((merged & 0x0003E0) << 22 >> 27) as u8);
-            a = a.wrapping_add(((merged & 0x00001F) << 27 >> 27) as u8);
+            r = r.wrapping_add(((merged & 0x0F_8000) << 12 >> 27) as u8);
+            g = g.wrapping_add(((merged & 0x00_7C00) << 17 >> 27) as u8);
+            b = b.wrapping_add(((merged & 0x00_03E0) << 22 >> 27) as u8);
+            a = a.wrapping_add(((merged & 0x00_001F) << 27 >> 27) as u8);
         } else if (b1 & QOI_MASK_4) == QOI_COLOR {
             if (b1 & 8) != 0 {
                 r = pixel_data[pos];

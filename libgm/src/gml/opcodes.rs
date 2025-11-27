@@ -39,52 +39,51 @@ impl GMInstruction {
     #[must_use]
     pub(crate) const fn opcode(&self) -> u8 {
         match self {
-            GMInstruction::Convert { .. } => CONV,
-            GMInstruction::Multiply { .. } => MUL,
-            GMInstruction::Divide { .. } => DIV,
-            GMInstruction::Remainder { .. } => REM,
-            GMInstruction::Modulus { .. } => MOD,
-            GMInstruction::Add { .. } => ADD,
-            GMInstruction::Subtract { .. } => SUB,
-            GMInstruction::And { .. } => AND,
-            GMInstruction::Or { .. } => OR,
-            GMInstruction::Xor { .. } => XOR,
-            GMInstruction::Negate { .. } => NEG,
-            GMInstruction::Not { .. } => NOT,
-            GMInstruction::ShiftLeft { .. } => SHL,
-            GMInstruction::ShiftRight { .. } => SHR,
-            GMInstruction::Compare { .. } => CMP,
-            GMInstruction::Pop { .. } => POP,
-            GMInstruction::PopSwap { .. } => POP,
-            GMInstruction::Duplicate { .. } => DUP,
-            GMInstruction::DuplicateSwap { .. } => DUP,
-            GMInstruction::Return { .. } => RET,
-            GMInstruction::Exit { .. } => EXIT,
-            GMInstruction::PopDiscard { .. } => POPZ,
-            GMInstruction::Branch { .. } => JMP,
-            GMInstruction::BranchIf { .. } => JT,
-            GMInstruction::BranchUnless { .. } => JF,
-            GMInstruction::PushWithContext { .. } => PUSHENV,
-            GMInstruction::PopWithContext { .. } => POPENV,
-            GMInstruction::PopWithContextExit { .. } => POPENV,
-            GMInstruction::Push { .. } => PUSH,
-            GMInstruction::PushLocal { .. } => PUSHLOC,
-            GMInstruction::PushGlobal { .. } => PUSHGLB,
-            GMInstruction::PushBuiltin { .. } => PUSHBLTN,
-            GMInstruction::PushImmediate { .. } => PUSHIM,
-            GMInstruction::Call { .. } => CALL,
-            GMInstruction::CallVariable { .. } => CALLVAR,
-            GMInstruction::CheckArrayIndex => EXTENDED,
-            GMInstruction::PushArrayFinal => EXTENDED,
-            GMInstruction::PopArrayFinal => EXTENDED,
-            GMInstruction::PushArrayContainer => EXTENDED,
-            GMInstruction::SetArrayOwner => EXTENDED,
-            GMInstruction::HasStaticInitialized => EXTENDED,
-            GMInstruction::SetStaticInitialized => EXTENDED,
-            GMInstruction::SaveArrayReference => EXTENDED,
-            GMInstruction::RestoreArrayReference => EXTENDED,
-            GMInstruction::IsNullishValue => EXTENDED,
-            GMInstruction::PushReference { .. } => EXTENDED,
+            Self::Convert { .. } => CONV,
+            Self::Multiply { .. } => MUL,
+            Self::Divide { .. } => DIV,
+            Self::Remainder { .. } => REM,
+            Self::Modulus { .. } => MOD,
+            Self::Add { .. } => ADD,
+            Self::Subtract { .. } => SUB,
+            Self::And { .. } => AND,
+            Self::Or { .. } => OR,
+            Self::Xor { .. } => XOR,
+            Self::Negate { .. } => NEG,
+            Self::Not { .. } => NOT,
+            Self::ShiftLeft { .. } => SHL,
+            Self::ShiftRight { .. } => SHR,
+            Self::Compare { .. } => CMP,
+            Self::Pop { .. } | Self::PopSwap { .. } => POP,
+            Self::Duplicate { .. } | Self::DuplicateSwap { .. } => DUP,
+            Self::Return { .. } => RET,
+            Self::Exit { .. } => EXIT,
+            Self::PopDiscard { .. } => POPZ,
+            Self::Branch { .. } => JMP,
+            Self::BranchIf { .. } => JT,
+            Self::BranchUnless { .. } => JF,
+            Self::PushWithContext { .. } => PUSHENV,
+            Self::PopWithContext { .. } | Self::PopWithContextExit { .. } => {
+                POPENV
+            }
+            Self::Push { .. } => PUSH,
+            Self::PushLocal { .. } => PUSHLOC,
+            Self::PushGlobal { .. } => PUSHGLB,
+            Self::PushBuiltin { .. } => PUSHBLTN,
+            Self::PushImmediate { .. } => PUSHIM,
+            Self::Call { .. } => CALL,
+            Self::CallVariable { .. } => CALLVAR,
+            Self::CheckArrayIndex
+            | Self::PushArrayFinal
+            | Self::PopArrayFinal
+            | Self::PushArrayContainer
+            | Self::SetArrayOwner
+            | Self::HasStaticInitialized
+            | Self::SetStaticInitialized
+            | Self::SaveArrayReference
+            | Self::RestoreArrayReference
+            | Self::IsNullishValue
+            | Self::PushReference { .. } => EXTENDED,
         }
     }
 }

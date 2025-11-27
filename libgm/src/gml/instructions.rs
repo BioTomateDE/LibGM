@@ -4,10 +4,12 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::gamemaker::{
     elements::{
-        animation_curves::GMAnimationCurve, backgrounds::GMBackground, fonts::GMFont,
-        functions::GMFunction, game_objects::GMGameObject, particle_systems::GMParticleSystem,
-        paths::GMPath, rooms::GMRoom, scripts::GMScript, sequence::GMSequence, shaders::GMShader,
-        sounds::GMSound, sprites::GMSprite, timelines::GMTimeline, variables::GMVariable,
+        animation_curves::GMAnimationCurve, backgrounds::GMBackground,
+        fonts::GMFont, functions::GMFunction, game_objects::GMGameObject,
+        particle_systems::GMParticleSystem, paths::GMPath, rooms::GMRoom,
+        scripts::GMScript, sequence::GMSequence, shaders::GMShader,
+        sounds::GMSound, sprites::GMSprite, timelines::GMTimeline,
+        variables::GMVariable,
     },
     reference::GMRef,
 };
@@ -285,7 +287,9 @@ impl GMInstruction {
                     | GMCodeValue::String(_)
                     | GMCodeValue::Boolean(_),
             } => 8,
-            GMInstruction::Push { value: GMCodeValue::Int64(_) | GMCodeValue::Double(_) } => 12,
+            GMInstruction::Push {
+                value: GMCodeValue::Int64(_) | GMCodeValue::Double(_),
+            } => 12,
             GMInstruction::Call { .. } => 8,
             GMInstruction::PushReference { .. } => 8,
             _ => 4,
@@ -313,7 +317,9 @@ pub enum GMAssetReference {
     Function(GMRef<GMFunction>),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(
+    Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive,
+)]
 #[repr(u8)]
 pub enum GMDataType {
     /// 64-bit floating point number.
@@ -347,21 +353,19 @@ pub enum GMDataType {
     /// 16-bit signed integer.
     /// - Size on VM Stack: 4 bytes.
     /// > **Note**: `Int16` is not a valid data type on the VM Stack.
+    ///
     /// It is immediately converted to `Int32` when pushing and is thus 4 bytes wide.
     Int16 = 15,
 }
 
 impl GMDataType {
     /// The size of a value of this data type on the VM Stack, in bytes.
+    #[must_use]
     pub const fn size(self) -> u8 {
         match self {
-            GMDataType::Int16 => 4,
-            GMDataType::Int32 => 4,
-            GMDataType::Int64 => 8,
-            GMDataType::Double => 8,
-            GMDataType::Boolean => 4,
-            GMDataType::String => 4,
-            GMDataType::Variable => 16,
+            Self::Int16 | Self::Int32 | Self::Boolean | Self::String => 4,
+            Self::Int64 | Self::Double => 8,
+            Self::Variable => 16,
         }
     }
 }
@@ -411,8 +415,12 @@ impl Display for GMInstanceType {
         match self {
             Self::Undefined => write!(f, "Undefined"),
             Self::Self_(None) => write!(f, "Self"),
-            Self::Self_(Some(reference)) => write!(f, "Self<{}>", reference.index),
-            Self::RoomInstance(instance_id) => write!(f, "RoomInstanceID<{instance_id}>"),
+            Self::Self_(Some(reference)) => {
+                write!(f, "Self<{}>", reference.index)
+            }
+            Self::RoomInstance(instance_id) => {
+                write!(f, "RoomInstanceID<{instance_id}>")
+            }
             Self::Other => write!(f, "Other"),
             Self::All => write!(f, "All"),
             Self::None => write!(f, "None"),
@@ -436,16 +444,18 @@ impl GMInstanceType {
         match self {
             Self::StackTop => Self::Self_(None),
             Self::Builtin => Self::Self_(None),
+            Self::Other => Self::Self_(None),
             Self::Self_(Some(_)) => Self::Self_(None),
             Self::RoomInstance(_) => Self::Self_(None),
             Self::Argument => Self::Builtin,
-            Self::Other => Self::Self_(None),
             _ => self.clone(),
         }
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(
+    Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive,
+)]
 #[repr(u8)]
 pub enum GMVariableType {
     /// Used for normal single-dimension array variables.
@@ -467,7 +477,9 @@ pub enum GMVariableType {
     ArrayPopAF = 0x90,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(
+    Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive,
+)]
 #[repr(u8)]
 pub enum GMComparisonType {
     /// "Less than" | `<`

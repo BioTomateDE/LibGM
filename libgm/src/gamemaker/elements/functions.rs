@@ -239,7 +239,7 @@ fn parse_occurrence_chain(
         occurrences.push(occurrence_pos);
         reader.cur_pos = occurrence_pos;
         let raw_value = reader.read_i32()?;
-        offset = raw_value & 0x07FFFFFF;
+        offset = raw_value & 0x07FF_FFFF;
         if offset < 1 {
             bail!(
                 "Next occurrence offset is {0} (0x{0:08X}) which is negative while parsing \
@@ -252,7 +252,7 @@ fn parse_occurrence_chain(
         occurrence_pos += offset as u32;
     }
 
-    let name_string_id: u32 = (offset & 0xFFFFFF) as u32;
+    let name_string_id: u32 = (offset & 0xFF_FFFF) as u32;
     reader.chunk = saved_chunk;
     reader.cur_pos = saved_position;
     Ok((occurrences, name_string_id))

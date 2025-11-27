@@ -129,7 +129,7 @@ impl DataBuilder<'_> {
         self.write_usize(count).with_context(ctx)?;
         let pointer_list_start_pos: usize = self.len();
         for _ in 0..count {
-            self.write_u32(0xDEADC0DE);
+            self.write_u32(0xDEAD_C0DE);
         }
 
         for (i, element) in elements.iter().enumerate() {

@@ -171,7 +171,9 @@ impl GMElement for PointBezierData {
 }
 
 /// The curve type determines how points flow to each other in a channel.
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive, IntoPrimitive,
+)]
 #[repr(u32)]
 pub enum GMAnimationCurveType {
     /// Creates a linear progression between points.
