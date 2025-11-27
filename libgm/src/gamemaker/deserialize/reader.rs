@@ -11,10 +11,9 @@ use crate::prelude::*;
 use crate::util::assert::integrity_check;
 use crate::util::smallmap::SmallMap;
 use std::collections::HashMap;
-use std::fmt::Display;
 
 #[derive(Debug)]
-pub(crate) struct DataReader<'a> {
+pub struct DataReader<'a> {
     /// The raw data buffer belonging to the `GameMaker` data file which is currently being parsed.
     data: &'a [u8],
 
@@ -37,7 +36,7 @@ pub(crate) struct DataReader<'a> {
     pub endianness: Endianness,
 
     /// Map of all chunks specified by `FORM`; indexed by chunk name.
-    /// Read chunks will be removed from this HashMap when calling [`DataReader::read_chunk_required`] or [`DataReader::read_chunk`].
+    /// Read chunks will be removed from this `HashMap` when calling [`DataReader::read_chunk_required`] or [`DataReader::read_chunk`].
     /// May contain unknown chunks (if there is a `GameMaker` update, for example).
     pub chunks: SmallMap<String, GMChunk>,
 
@@ -65,10 +64,6 @@ pub(crate) struct DataReader<'a> {
     /// Chunk `STRG`.
     /// Is properly initialized after parsing `FORM`.
     pub string_chunk: GMChunk,
-
-    /// Should only be set by [`crate::gamemaker::elements::strings`].
-    /// This means that `STRG` has to be parsed before any other chunk.
-    pub string_occurrences: HashMap<u32, String>,
 
     /// Should only be set by [`crate::gamemaker::elements::texture_page_items`].
     /// This means that `TPAG` has to be parsed before any chunk with texture page item pointers.
@@ -105,11 +100,10 @@ impl<'a> DataReader<'a> {
             chunk: GMChunk { start_pos: 0, end_pos },
             last_chunk: String::new(),
             // Just a stub, will not be read until GEN8 is parsed.
-            general_info: Default::default(),
-            strings: Default::default(),
+            general_info: GMGeneralInfo::default(),
+            strings: vec![],
             string_chunk: GMChunk::default(),
             chunks: SmallMap::with_capacity(CHUNK_COUNT),
-            string_occurrences: HashMap::new(),
             texture_page_item_occurrences: HashMap::new(),
             variable_occurrences: HashMap::new(),
             function_occurrences: HashMap::new(),
@@ -227,7 +221,7 @@ impl<'a> DataReader<'a> {
     /// Read bytes until the reader position is divisible by the specified alignment.
     /// Ensures the read padding bytes are all zero.
     pub fn align(&mut self, alignment: u32) -> Result<()> {
-        while self.cur_pos % alignment != 0 {
+        while !self.cur_pos.is_multiple_of(alignment) {
             let byte = self.read_u8()?;
             integrity_assert! {
                 byte == 0,
@@ -262,18 +256,15 @@ impl<'a> DataReader<'a> {
         let end = self.chunk.end_pos;
         let pos = start.checked_add(relative_pos).ok_or_else(|| {
             format!(
-                "Relative position {} would overflow from start position {}",
-                relative_pos, start,
+                "Relative position {relative_pos} would 
+                overflow from start position {start}"
             )
         })?;
 
         if pos > end {
             bail!(
-                "Position {} (start {} + relative {}) exceeds chunk end position {}",
-                pos,
-                start,
-                relative_pos,
-                end,
+                "Position {pos} (start {start} + relative {relative_pos})
+                exceeds chunk end position {end}"
             );
         }
 

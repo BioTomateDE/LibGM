@@ -5,6 +5,7 @@ use crate::gamemaker::elements::rooms::GMRoomLayerType;
 use crate::gamemaker::gm_version::GMVersionReq;
 use crate::gamemaker::gm_version::LTSBranch::{LTS, PostLTS, PreLTS};
 use crate::gml::instructions::GMDataType;
+use crate::gml::opcodes;
 use crate::prelude::*;
 use crate::util::assert::assert_int;
 use crate::util::init::{num_enum_from, vec_with_capacity};
@@ -106,6 +107,9 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
     if reader.general_info.bytecode_version >= 14 {
         try_check(reader, "FUNC", cv_func_2024_8, (2024, 8))?;
     }
+    if reader.general_info.bytecode_version >= 15 {
+        try_check(reader, "CODE", cv_code_2023_8_and_2024_4, (2024, 4))?;
+    }
     if reader.general_info.bytecode_version >= 17 {
         try_check(reader, "FONT", cv_font_2022_2, (2022, 2))?;
     }
@@ -197,7 +201,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
             let detected_version_opt: Option<GMVersionReq> =
                 (check.checker_fn)(reader).with_context(|| {
                     format!(
-                        "trying to detect `GameMaker` Version {} in chunk '{}'",
+                        "trying to detect GameMaker Version {} in chunk '{}'",
                         check.target_version, check.chunk_name,
                     )
                 })?;
@@ -1220,73 +1224,44 @@ fn cv_code_2023_8_and_2024_4(
     }
     let mut detected_2023_8: bool = false;
 
-    if reader.general_info.bytecode_version <= 14 {
-        for code_ptr in code_pointers {
-            reader.cur_pos = code_ptr + 4;
-            let length = reader.read_u32()?;
-            let end = reader.cur_pos + length;
-            while reader.cur_pos < end {
-                let first_word = reader.read_u32()?;
-                let opcode = (first_word >> 24) as u8;
-                let type1 = ((first_word & 0x00FF0000) >> 16) as u8;
-                if matches!(opcode, 0x41 | 0xDA) {
-                    // Pop, call
-                    reader.cur_pos += 4;
-                }
-                if matches!(opcode, 0xC0 | 0xC1 | 0xC2 | 0xC3) && type1 != 0x0f
-                {
-                    // Push variants; account for int16
-                    reader.cur_pos += 4;
-                }
-                if opcode != 0xFF {
-                    continue;
-                } // Break instruction
-                if type1 == GMDataType::Int32.into() {
-                    let int_argument = reader.read_u32()?;
-                    if is_asset_type_2024_4(int_argument) {
-                        // Return immediately if highest detectable version (2024.4) is found
-                        return Ok(Some((2024, 4).into()));
-                    }
-                    detected_2023_8 = true;
-                }
-            }
-        }
-    } else {
-        // Bytecode >= 15
-        for code_ptr in code_pointers {
-            reader.cur_pos = code_ptr + 4; // Skip name
-            let instructions_length = reader.read_u32()?;
-            reader.cur_pos += 4; // Skip locals and arguments count
-            let instructions_start_relative = reader.read_i32()?;
-            let instructions_start = (reader.cur_pos as i32 - 4
-                + instructions_start_relative)
-                as u32;
-            let instructions_end = instructions_start + instructions_length;
-            reader.cur_pos = instructions_start;
+    for code_ptr in code_pointers {
+        reader.cur_pos = code_ptr + 4; // Skip name
+        let instructions_length = reader.read_u32()?;
+        reader.cur_pos += 4; // Skip locals and arguments count
+        let instructions_start_relative = reader.read_i32()?;
+        let instructions_start =
+            (reader.cur_pos as i32 - 4 + instructions_start_relative) as u32;
+        let instructions_end = instructions_start + instructions_length;
+        reader.cur_pos = instructions_start;
 
-            while reader.cur_pos < instructions_end {
-                let word = reader.read_u32()?;
-                let opcode = (word >> 24) as u8;
-                let type1 = ((word & 0x00FF0000) >> 16) as u8;
-                if matches!(opcode, 0x45 | 0xD9) {
-                    // Pop, call
+        while reader.cur_pos < instructions_end {
+            let word = reader.read_u32()?;
+            let opcode = (word >> 24) as u8;
+            let type1 = ((word & 0x00FF_0000) >> 16) as u8;
+
+            if matches!(opcode, opcodes::POP | opcodes::CALL) {
+                reader.cur_pos += 4;
+            }
+
+            if matches!(opcode, 0xC0..0xC4) {
+                // Push variants; account for int16
+                if type1 != GMDataType::Int16.into() {
                     reader.cur_pos += 4;
                 }
-                if matches!(opcode, 0xC0..0xC4) && type1 != 0x0f {
-                    // Push variants; account for int16
-                    reader.cur_pos += 4;
+                continue;
+            }
+
+            if opcode != opcodes::EXTENDED {
+                continue;
+            }
+
+            if type1 == GMDataType::Int32.into() {
+                let int_argument = reader.read_u32()?;
+                if is_asset_type_2024_4(int_argument) {
+                    // Return immediately if highest detectable version (2024.4) is found
+                    return Ok(Some((2024, 4).into()));
                 }
-                if opcode != 0xFF {
-                    continue;
-                } // Break instruction
-                if type1 == GMDataType::Int32.into() {
-                    let int_argument = reader.read_u32()?;
-                    if is_asset_type_2024_4(int_argument) {
-                        // Return immediately if highest detectable version (2024.4) is found
-                        return Ok(Some((2024, 4).into()));
-                    }
-                    detected_2023_8 = true;
-                }
+                detected_2023_8 = true;
             }
         }
     }

@@ -40,7 +40,8 @@ impl GMElement for GMFonts {
         let fonts: Vec<GMFont> = reader.read_pointer_list()?;
 
         if !reader.general_info.is_version_at_least((2024, 14)) {
-            let padding: &[u8; 512] = reader.read_bytes_const().context("Reading FONT padding")?;
+            let padding: &[u8; 512] =
+                reader.read_bytes_const().context("Reading FONT padding")?;
             verify_padding(padding)?;
         }
 
@@ -176,10 +177,14 @@ impl GMElement for GMFont {
         let range_end = reader.read_u32()?;
         let texture: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
         let scale: (f32, f32) = (reader.read_f32()?, reader.read_f32()?);
-        let ascender_offset: Option<i32> = reader.deserialize_if_bytecode_version(17)?;
-        let ascender: Option<u32> = reader.deserialize_if_gm_version((2022, 2))?;
-        let sdf_spread: Option<u32> = reader.deserialize_if_gm_version((2023, 2, LTSBranch::PostLTS))?;
-        let line_height: Option<u32> = reader.deserialize_if_gm_version((2023, 6))?;
+        let ascender_offset: Option<i32> =
+            reader.deserialize_if_bytecode_version(17)?;
+        let ascender: Option<u32> =
+            reader.deserialize_if_gm_version((2022, 2))?;
+        let sdf_spread: Option<u32> =
+            reader.deserialize_if_gm_version((2023, 2, LTSBranch::PostLTS))?;
+        let line_height: Option<u32> =
+            reader.deserialize_if_gm_version((2023, 6))?;
         let glyphs: Vec<GMFontGlyph> = reader.read_pointer_list()?;
         if reader.general_info.is_version_at_least((2024, 14)) {
             reader.align(4)?;
@@ -218,16 +223,26 @@ impl GMElement for GMFont {
         builder.write_u8(self.charset);
         builder.write_u8(self.anti_alias);
         builder.write_u32(self.range_end);
-        builder.write_gm_texture(&self.texture)?;
+        builder.write_gm_texture(self.texture)?;
         builder.write_f32(self.scale.0);
         builder.write_f32(self.scale.1);
-        self.ascender_offset
-            .serialize_if_bytecode_ver(builder, "Ascender Offset", 17)?;
-        self.ascender.serialize_if_gm_ver(builder, "Ascender", (2022, 2))?;
-        self.sdf_spread
-            .serialize_if_gm_ver(builder, "SDF Spread", (2023, 2, LTSBranch::PostLTS))?;
-        self.line_height
-            .serialize_if_gm_ver(builder, "Line Height", (2023, 6))?;
+        self.ascender_offset.serialize_if_bytecode_ver(
+            builder,
+            "Ascender Offset",
+            17,
+        )?;
+        self.ascender
+            .serialize_if_gm_ver(builder, "Ascender", (2022, 2))?;
+        self.sdf_spread.serialize_if_gm_ver(
+            builder,
+            "SDF Spread",
+            (2023, 2, LTSBranch::PostLTS),
+        )?;
+        self.line_height.serialize_if_gm_ver(
+            builder,
+            "Line Height",
+            (2023, 6),
+        )?;
         builder.write_pointer_list(&self.glyphs)?;
         if builder.is_gm_version_at_least((2024, 14)) {
             builder.align(4);
@@ -269,10 +284,12 @@ impl GMElement for GMFontGlyph {
         let character: Option<char> = if character == 0 {
             None
         } else {
-            Some(
-                char::from_u32(character.into())
-                    .ok_or_else(|| format!("Invalid UTF-8 character with code point {0} (0x{0:04X})", character))?,
-            )
+            Some(char::from_u32(character.into()).ok_or_else(|| {
+                format!(
+                    "Invalid UTF-8 character with code point {0} (0x{0:04X})",
+                    character
+                )
+            })?)
         };
         let x = reader.read_u16()?;
         let y = reader.read_u16()?;
@@ -284,7 +301,8 @@ impl GMElement for GMFontGlyph {
             let unknown_always_zero = reader.read_i16()?;
             assert_int("Unknown Always Zero", 0, unknown_always_zero)?;
         }
-        let kernings: Vec<GMFontGlyphKerning> = reader.read_simple_list_short()?;
+        let kernings: Vec<GMFontGlyphKerning> =
+            reader.read_simple_list_short()?;
 
         Ok(GMFontGlyph {
             character,
@@ -333,8 +351,13 @@ impl GMElement for GMFontGlyphKerning {
         if character == 0 {
             bail!("Character not set (code point is zero)");
         }
-        let character: char = char::from_u32(character.into())
-            .ok_or_else(|| format!("Invalid UTF-8 character with code point {0} (0x{0:04X})", character))?;
+        let character: char =
+            char::from_u32(character.into()).ok_or_else(|| {
+                format!(
+                    "Invalid UTF-8 character with code point {0} (0x{0:04X})",
+                    character
+                )
+            })?;
         let shift_modifier = reader.read_i16()?;
         Ok(GMFontGlyphKerning { character, shift_modifier })
     }

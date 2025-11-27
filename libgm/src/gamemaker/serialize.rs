@@ -80,7 +80,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
                     placeholder_data_pos, element_mem_addr,
                 )
             })?;
-        // Overwrite placeholder 0xDEADC0DE
+        // Overwrite placeholder 0xDEAD_C0DE
         builder.overwrite_i32(
             resource_data_pos as i32,
             placeholder_data_pos as usize,

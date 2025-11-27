@@ -55,11 +55,11 @@ pub struct GMSound {
     /// This name is used when referencing this entry from code.
     pub name: String,
 
-    /// The flags the sound entry uses.
-    /// These effectively control different options of this sound.
-    ///
-    /// For more information, see [`GMSoundFlags`].
-    pub flags: GMSoundFlags,
+    /// Whether this sound uses the new audio system (post GM8).
+    pub flag_regular: bool,
+
+    /// Whether this audio data is compressed?? TODO: more reasearch
+    pub flag_compressed: bool,
 
     /// The file format of the audio entry.
     /// This includes the `.` from the file extension.
@@ -83,6 +83,7 @@ pub struct GMSound {
     /// - Flanger
     /// - Gargle
     /// - Reverb
+    ///
     /// These can be combined with each other, apparently.
     /// Discussion here: <https://discord.com/channels/566861759210586112/568950566122946580/957318910066196500>
     pub effects: u32,
@@ -114,28 +115,51 @@ pub struct GMSound {
 impl GMElement for GMSound {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: String = reader.read_gm_string()?;
-        let flags = GMSoundFlags::deserialize(reader)?;
+
+        let flags = reader.read_u32()?;
+        let flag_requires_audio = flags & 1 == 1;
+        let flag_compressed = (flags >> 1) & 1 == 1;
+        let flag_regular = flags >> 5 == 3;
+
         let audio_type: Option<String> = reader.read_gm_string_opt()?;
         let file: String = reader.read_gm_string()?;
         let effects = reader.read_u32()?;
         let volume = reader.read_f32()?;
         let pitch = reader.read_f32()?;
-        let audio_group: GMRef<GMAudioGroup>;
 
-        if flags.regular && reader.general_info.bytecode_version >= 14 {
+        let audio_group: GMRef<GMAudioGroup>;
+        if flag_regular && reader.general_info.bytecode_version >= 14 {
             audio_group = reader.read_resource_by_id()?;
         } else {
             let preload = reader.read_bool32()?;
             assert_bool("Preload", true, preload)?;
-            audio_group = GMRef::new(get_builtin_sound_group_id(&reader.general_info.version));
+            audio_group = GMRef::new(get_builtin_sound_group_id(
+                &reader.general_info.version,
+            ));
         }
 
-        let audio_file: Option<GMRef<GMEmbeddedAudio>> = reader.read_resource_by_id_opt()?;
-        let audio_length: Option<f32> = reader.deserialize_if_gm_version((2024, 6))?;
+        let audio_file: Option<GMRef<GMEmbeddedAudio>> =
+            reader.read_resource_by_id_opt()?;
+
+        if audio_file.is_some() != flag_requires_audio {
+            bail!(
+                "Sound Flag bit 0 is {} but audio file is {}",
+                if flag_requires_audio { "set" } else { "unset" },
+                if audio_file.is_some() {
+                    "present"
+                } else {
+                    "missing"
+                }
+            )
+        }
+
+        let audio_length: Option<f32> =
+            reader.deserialize_if_gm_version((2024, 6))?;
 
         Ok(Self {
             name,
-            flags,
+            flag_regular,
+            flag_compressed,
             audio_type,
             file,
             effects,
@@ -149,52 +173,45 @@ impl GMElement for GMSound {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name);
-        self.flags.serialize(builder)?;
+
+        let mut flags = 0;
+        if self.audio_file.is_some() {
+            flags |= 1;
+        }
+        if self.flag_compressed {
+            flags |= 2;
+        }
+        if self.flag_regular {
+            flags |= 100; // i dont fucking know
+        }
+
+        builder.write_u32(flags);
         builder.write_gm_string_opt(&self.audio_type);
         builder.write_gm_string(&self.file);
         builder.write_u32(self.effects);
         builder.write_f32(self.volume);
         builder.write_f32(self.pitch);
-        if self.flags.regular && builder.bytecode_version() >= 14 {
+        if self.flag_regular && builder.bytecode_version() >= 14 {
             builder.write_resource_id(self.audio_group);
         } else {
             builder.write_bool32(true); // Preload
         }
         builder.write_resource_id_opt(&self.audio_file);
-        self.audio_length
-            .serialize_if_gm_ver(builder, "Audio Length", (2024, 6))?;
+        self.audio_length.serialize_if_gm_ver(
+            builder,
+            "Audio Length",
+            (2024, 6),
+        )?;
         Ok(())
-    }
-}
-
-bitfield_struct! {
-    /// Audio entry flags a sound entry can use.
-    GMSoundFlags : u32 {
-        /// Whether the sound is embedded into the data file.
-        /// This should ideally be used for sound effects, but not for music.
-        /// The `GameMaker` documentation also calls this "not streamed"
-        /// (or "from memory") for when the flag is present, or "streamed" when it isn't.
-        is_embedded: 0,
-
-        /// Whether the sound is compressed.
-        /// When a sound is compressed it will take smaller memory/disk space.
-        /// However, this is at the cost of needing to decompress it when it needs to be played,
-        /// which means slightly higher CPU usage.
-        ///
-        /// TODO: how is it compressed? and when is this flag even set
-        is_compressed: 1,
-
-        /// Whether this sound uses the "new audio system".
-        /// This is default for everything post `GameMaker Studio`.
-        /// The legacy sound system was used in pre `GameMaker 8`.
-        regular: 6,
     }
 }
 
 fn get_builtin_sound_group_id(gm_version: &GMVersion) -> u32 {
     let is_ver = |req| gm_version.is_version_at_least(req); // Small closure for concision
     // ver >= 1.0.0.1250 || (ver >= 1.0.0.161 && ver < 1.0.0.1000)
-    if is_ver((1, 0, 0, 1250)) || is_ver((1, 0, 0, 161)) && !is_ver((1, 0, 0, 1000)) {
+    if is_ver((1, 0, 0, 1250))
+        || is_ver((1, 0, 0, 161)) && !is_ver((1, 0, 0, 1000))
+    {
         0
     } else {
         1

@@ -16,9 +16,9 @@
 // No need to put the same `Errors` header everywhere.
 #![allow(clippy::missing_errors_doc)]
 //
-// Reinterpreting signed integers into unsigned
-// integers is the intended behavior.
+// Reinterpreting the bits is the intended behavior.
 #![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::cast_sign_loss)]
 //
 // I sometimes need more than 3 bools in a struct???
 // This lint is only relevant for people
@@ -33,8 +33,6 @@
 // since data files are only allowed to be
 // smaller than 2 GB (`i32` limit).
 #![allow(clippy::cast_possible_truncation)]
-
-//#![allow(clippy::cast_precision_loss)]
 
 mod error;
 mod util;

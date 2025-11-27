@@ -136,7 +136,7 @@ impl GMElement for GMGameObjects {
         builder.write_usize(self.game_objects.len())?;
         let pointer_list_pos: usize = builder.len();
         for _ in 0..self.game_objects.len() {
-            builder.write_u32(0xDEADC0DE);
+            builder.write_u32(0xDEAD_C0DE);
         }
 
         for (i, game_object) in self.game_objects.iter().enumerate() {

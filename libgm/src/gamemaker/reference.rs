@@ -1,6 +1,5 @@
 use std::usize;
 
-use crate::gamemaker::elements::GMElement;
 use crate::prelude::*;
 use crate::util::fmt::typename;
 

@@ -90,7 +90,7 @@ impl GMElement for GMEmbeddedTextures {
         builder.write_usize(self.texture_pages.len())?;
         let pointer_list_start_pos: usize = builder.len();
         for _ in 0..self.texture_pages.len() {
-            builder.write_u32(0xDEADC0DE);
+            builder.write_u32(0xDEAD_C0DE);
         }
 
         let mut texture_block_size_placeholders: Vec<usize> =

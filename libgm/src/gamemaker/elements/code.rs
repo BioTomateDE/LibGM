@@ -761,12 +761,12 @@ fn parse_extended(
     reader: &mut DataReader,
     b: [u8; 3],
 ) -> Result<GMInstruction> {
+    use GMDataType::{Int16, Int32};
+    use opcodes::extended::*;
+
     let kind = get_u16(b) as i16;
     let data_type: GMDataType = num_enum_from(b[2] & 0xf)?;
     assert_zero_type2(b)?;
-
-    use GMDataType::{Int16, Int32};
-    use opcodes::extended::*;
 
     let instruction = match (data_type, kind) {
         (Int16, CHKINDEX) => GMInstruction::CheckArrayIndex,
@@ -822,7 +822,7 @@ fn build_comparison(
 ) {
     let mut comparison_type = u8::from(comparison_type);
     if builder.bytecode_version() < 15 {
-        opcode = 0x10 + u8::from(comparison_type);
+        opcode = 0x10 + comparison_type;
         comparison_type = 0;
     }
     builder.write_u8(0);
@@ -868,7 +868,10 @@ fn build_duplicate(
     data_type: GMDataType,
     size: u8,
 ) {
-    build_dupswap(builder, opcode, data_type, size, 0);
+    builder.write_u8(size);
+    builder.write_u8(0);
+    builder.write_u8(data_type.into());
+    builder.write_u8(opcode);
 }
 
 fn build_dupswap(
@@ -879,7 +882,7 @@ fn build_dupswap(
     size2: u8,
 ) {
     builder.write_u8(size1);
-    builder.write_u8(size2);
+    builder.write_u8((size2 << 3) | 0x80);
     builder.write_u8(data_type.into());
     builder.write_u8(opcode);
 }
@@ -927,7 +930,7 @@ fn build_push(
         GMCodeValue::Double(double) => builder.write_f64(*double),
         GMCodeValue::Boolean(boolean) => builder.write_bool32(*boolean),
         GMCodeValue::String(string) => {
-            builder.write_gm_string_id(string.clone())
+            builder.write_gm_string_id(string.clone());
         }
         GMCodeValue::Variable(code_variable) => {
             //let variable: &GMVariable =
@@ -961,7 +964,7 @@ fn build_pushvar(
     variable: &CodeVariable,
 ) -> Result<()> {
     let instr_pos = builder.len();
-    builder.write_i16(0);
+    builder.write_i16(build_instance_type(&variable.instance_type));
     builder.write_u8(GMDataType::Variable.into());
     builder.write_u8(opcode);
 

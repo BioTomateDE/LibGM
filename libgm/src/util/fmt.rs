@@ -1,7 +1,11 @@
+use std::ops::RangeBounds;
+
 use crate::prelude::*;
 
 pub fn format_bytes(bytes: usize) -> String {
     const UNITS: [&str; 6] = ["B", "KB", "MB", "GB", "TB", "PB"];
+
+    #[allow(clippy::cast_precision_loss)]
     let mut size = bytes as f64;
     let mut unit_idx = 0;
 
@@ -13,8 +17,12 @@ pub fn format_bytes(bytes: usize) -> String {
     format!("{:.1} {}", size, UNITS[unit_idx])
 }
 
-pub fn hexdump(raw_data: &[u8], range: impl std::ops::RangeBounds<usize>) -> Result<String> {
+pub fn hexdump(
+    raw_data: &[u8],
+    range: impl RangeBounds<usize>,
+) -> Result<String> {
     use std::fmt::Write;
+    #[allow(clippy::enum_glob_use)]
     use std::ops::Bound::*;
 
     let len = raw_data.len();
@@ -52,6 +60,10 @@ pub fn hexdump(raw_data: &[u8], range: impl std::ops::RangeBounds<usize>) -> Res
     Ok(string)
 }
 
+/// Gets the name of the type without path.
+/// Standard type name: `std::option::Option<libgm::gamemaker::elements::sprites::GMSprite>`
+/// This type name: `Option<GMSprite>`
 pub fn typename<T>() -> String {
+    // Hopefully this can be made `const` soon
     tynm::type_name::<T>()
 }
