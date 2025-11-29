@@ -1,11 +1,16 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
-use crate::util::assert::assert_int;
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, Clone, Default)]
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMChunkElement, GMElement},
+        serialize::builder::DataBuilder,
+    },
+    prelude::*,
+    util::assert::assert_int,
+};
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMFilterEffects {
     pub filter_effects: Vec<GMFilterEffect>,
     pub exists: bool,
@@ -47,7 +52,7 @@ impl GMElement for GMFilterEffects {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMFilterEffect {
     pub name: String,
     pub value: String,

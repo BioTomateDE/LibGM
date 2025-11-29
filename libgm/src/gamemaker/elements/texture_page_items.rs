@@ -1,12 +1,16 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::embedded_textures::GMEmbeddedTexture;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::reference::GMRef;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, Clone, Default)]
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMChunkElement, GMElement, embedded_textures::GMEmbeddedTexture},
+        reference::GMRef,
+        serialize::builder::DataBuilder,
+    },
+    prelude::*,
+};
+
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMTexturePageItems {
     pub texture_page_items: Vec<GMTexturePageItem>,
     pub exists: bool,
@@ -39,7 +43,9 @@ impl GMElement for GMTexturePageItems {
 
         for (i, pointer) in pointers.into_iter().enumerate() {
             reader.cur_pos = pointer;
-            reader.texture_page_item_occurrences.insert(pointer, i.into());
+            reader
+                .texture_page_item_occurrences
+                .insert(pointer, i.into());
             texture_page_items.push(GMTexturePageItem::deserialize(reader)?);
         }
 
@@ -54,7 +60,7 @@ impl GMElement for GMTexturePageItems {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMTexturePageItem {
     pub source_x: u16,
     pub source_y: u16,

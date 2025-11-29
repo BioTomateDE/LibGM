@@ -1,6 +1,7 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
+use crate::{
+    gamemaker::{deserialize::reader::DataReader, serialize::builder::DataBuilder},
+    prelude::*,
+};
 
 pub mod animation_curves;
 pub mod audio_groups;

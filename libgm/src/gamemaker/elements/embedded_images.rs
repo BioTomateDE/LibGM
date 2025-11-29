@@ -1,15 +1,19 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::reference::GMRef;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
-use crate::util::assert::assert_int;
 use std::ops::{Deref, DerefMut};
+
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMChunkElement, GMElement, texture_page_items::GMTexturePageItem},
+        reference::GMRef,
+        serialize::builder::DataBuilder,
+    },
+    prelude::*,
+    util::assert::assert_int,
+};
 
 /// The embedded images of the data file. This is used to store built-in particle sprites,
 /// every time you use `part_sprite` functions.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMEmbeddedImages {
     pub embedded_images: Vec<GMEmbeddedImage>,
     pub exists: bool,
@@ -38,8 +42,7 @@ impl GMChunkElement for GMEmbeddedImages {
 impl GMElement for GMEmbeddedImages {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         assert_int("EMBI Version", 1, reader.read_u32()?)?;
-        let embedded_images: Vec<GMEmbeddedImage> =
-            reader.read_simple_list()?;
+        let embedded_images: Vec<GMEmbeddedImage> = reader.read_simple_list()?;
         Ok(Self { embedded_images, exists: true })
     }
 
@@ -52,7 +55,7 @@ impl GMElement for GMEmbeddedImages {
 
 /// An embedded image entry in a `GameMaker` data file. This is GMS2 only.<br/>
 /// Not to be confused with the other "embedded" resources, this is a bit different.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMEmbeddedImage {
     pub name: String,
     pub texture_entry: GMRef<GMTexturePageItem>,
@@ -61,8 +64,7 @@ pub struct GMEmbeddedImage {
 impl GMElement for GMEmbeddedImage {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: String = reader.read_gm_string()?;
-        let texture_entry: GMRef<GMTexturePageItem> =
-            reader.read_gm_texture()?;
+        let texture_entry: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
         Ok(Self { name, texture_entry })
     }
 

@@ -4,12 +4,10 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::gamemaker::{
     elements::{
-        animation_curves::GMAnimationCurve, backgrounds::GMBackground,
-        fonts::GMFont, functions::GMFunction, game_objects::GMGameObject,
-        particle_systems::GMParticleSystem, paths::GMPath, rooms::GMRoom,
-        scripts::GMScript, sequence::GMSequence, shaders::GMShader,
-        sounds::GMSound, sprites::GMSprite, timelines::GMTimeline,
-        variables::GMVariable,
+        animation_curves::GMAnimationCurve, backgrounds::GMBackground, fonts::GMFont,
+        functions::GMFunction, game_objects::GMGameObject, particle_systems::GMParticleSystem,
+        paths::GMPath, rooms::GMRoom, scripts::GMScript, sequence::GMSequence, shaders::GMShader,
+        sounds::GMSound, sprites::GMSprite, timelines::GMTimeline, variables::GMVariable,
     },
     reference::GMRef,
 };
@@ -317,9 +315,7 @@ pub enum GMAssetReference {
     Function(GMRef<GMFunction>),
 }
 
-#[derive(
-    Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive,
-)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum GMDataType {
     /// 64-bit floating point number.
@@ -417,10 +413,10 @@ impl Display for GMInstanceType {
             Self::Self_(None) => write!(f, "Self"),
             Self::Self_(Some(reference)) => {
                 write!(f, "Self<{}>", reference.index)
-            }
+            },
             Self::RoomInstance(instance_id) => {
                 write!(f, "RoomInstanceID<{instance_id}>")
-            }
+            },
             Self::Other => write!(f, "Other"),
             Self::All => write!(f, "All"),
             Self::None => write!(f, "None"),
@@ -453,9 +449,7 @@ impl GMInstanceType {
     }
 }
 
-#[derive(
-    Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive,
-)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum GMVariableType {
     /// Used for normal single-dimension array variables.
@@ -477,9 +471,7 @@ pub enum GMVariableType {
     ArrayPopAF = 0x90,
 }
 
-#[derive(
-    Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive,
-)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum GMComparisonType {
     /// "Less than" | `<`

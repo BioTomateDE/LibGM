@@ -1,7 +1,10 @@
+use std::{
+    fmt::{Display, Formatter},
+    time::{Duration, Instant},
+};
+
 use colored::Colorize;
 use cpu_time::ProcessTime;
-use std::fmt::{Display, Formatter};
-use std::time::{Duration, Instant};
 
 pub trait DurFmt {
     fn ms(&self) -> String;
@@ -18,7 +21,10 @@ pub struct Stopwatch {
 }
 impl Stopwatch {
     pub fn start() -> Self {
-        Self { cpu_time: ProcessTime::now(), real_time: Instant::now() }
+        Self {
+            cpu_time: ProcessTime::now(),
+            real_time: Instant::now(),
+        }
     }
     pub fn elapsed_real(&self) -> Duration {
         self.real_time.elapsed()

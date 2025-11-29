@@ -1,12 +1,15 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::reference::GMRef;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
-use crate::util::bitfield::bitfield_struct;
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMChunkElement, GMElement, texture_page_items::GMTexturePageItem},
+        reference::GMRef,
+        serialize::builder::DataBuilder,
+    },
+    prelude::*,
+    util::bitfield::bitfield_struct,
+};
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMOptions {
     is_new_format: bool,
     pub unknown1: u32,
@@ -113,7 +116,7 @@ bitfield_struct! {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMOptionsConstant {
     pub name: String,
     pub value: String,

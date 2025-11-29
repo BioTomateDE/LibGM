@@ -1,27 +1,30 @@
 mod data_types;
 mod reader;
 
-use std::fmt::Display;
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
-use crate::gamemaker::data::GMData;
-use crate::gamemaker::elements::functions::{GMFunction, GMFunctions};
-use crate::gamemaker::elements::game_objects::GMGameObject;
-use crate::gamemaker::elements::variables::GMVariable;
-use crate::gamemaker::reference::GMRef;
-use crate::gml::assembly::assembler::data_types::DataTypes;
-use crate::gml::assembly::assembler::reader::Reader;
-use crate::gml::instructions::{
-    CodeVariable, GMAssetReference, GMCodeValue, GMComparisonType, GMDataType,
-    GMInstanceType, GMInstruction, GMVariableType,
+use crate::{
+    gamemaker::{
+        data::GMData,
+        elements::{
+            functions::{GMFunction, GMFunctions},
+            game_objects::GMGameObject,
+            variables::GMVariable,
+        },
+        reference::GMRef,
+    },
+    gml::{
+        assembly::assembler::{data_types::DataTypes, reader::Reader},
+        instructions::{
+            CodeVariable, GMAssetReference, GMCodeValue, GMComparisonType, GMDataType,
+            GMInstanceType, GMInstruction, GMVariableType,
+        },
+    },
+    prelude::*,
+    util::fmt::typename,
 };
-use crate::prelude::*;
-use crate::util::fmt::typename;
 
-pub fn assemble_code(
-    assembly: &str,
-    gm_data: &GMData,
-) -> Result<Vec<GMInstruction>> {
+pub fn assemble_code(assembly: &str, gm_data: &GMData) -> Result<Vec<GMInstruction>> {
     let mut instructions: Vec<GMInstruction> = Vec::new();
 
     for line in assembly.lines() {
@@ -38,10 +41,7 @@ pub fn assemble_code(
     Ok(instructions)
 }
 
-pub fn assemble_instruction(
-    line: &str,
-    gm_data: &GMData,
-) -> Result<GMInstruction> {
+pub fn assemble_instruction(line: &str, gm_data: &GMData) -> Result<GMInstruction> {
     let mut reader = Reader::new(line.trim());
     let mnemonic: String;
 
@@ -57,9 +57,9 @@ pub fn assemble_instruction(
     let mut types = DataTypes::new();
     while reader.starts_with(".") {
         reader.consume_dot()?;
-        let raw_type: char = reader.consume_char().ok_or(
-            "Unexpected EOL when trying to parse instruction data type",
-        )?;
+        let raw_type: char = reader
+            .consume_char()
+            .ok_or("Unexpected EOL when trying to parse instruction data type")?;
         let data_type = GMDataType::from_char(raw_type)?;
         types.push(data_type)?;
     }
@@ -67,13 +67,12 @@ pub fn assemble_instruction(
     match reader.peek_char() {
         Some(' ') => {
             reader.consume_space()?;
-        }
-        None => {}
+        },
+        None => {},
         _ => bail!("Expected space; found remaining string {line:?}"),
     }
 
-    let instruction =
-        parse_instruction(&mut reader, &mnemonic, types, gm_data)?;
+    let instruction = parse_instruction(&mut reader, &mnemonic, types, gm_data)?;
 
     if !reader.is_empty() {
         bail!(
@@ -95,151 +94,152 @@ fn parse_instruction(
         "conv" => {
             types.assert_count(2, mnemonic)?;
             GMInstruction::Convert { from: types[0], to: types[1] }
-        }
+        },
         "mul" => {
             types.assert_count(2, mnemonic)?;
             GMInstruction::Multiply {
                 multiplicand: types[1],
                 multiplier: types[0],
             }
-        }
+        },
         "div" => {
             types.assert_count(2, mnemonic)?;
             GMInstruction::Divide { dividend: types[1], divisor: types[0] }
-        }
+        },
         "rem" => {
             types.assert_count(2, mnemonic)?;
             GMInstruction::Remainder { dividend: types[1], divisor: types[0] }
-        }
+        },
         "mod" => {
             types.assert_count(2, mnemonic)?;
             GMInstruction::Modulus { dividend: types[1], divisor: types[0] }
-        }
+        },
         "add" => {
             types.assert_count(2, mnemonic)?;
             GMInstruction::Add { augend: types[1], addend: types[0] }
-        }
+        },
         "sub" => {
             types.assert_count(2, mnemonic)?;
             GMInstruction::Subtract { minuend: types[1], subtrahend: types[0] }
-        }
+        },
         "and" => {
             types.assert_count(2, mnemonic)?;
             GMInstruction::And { lhs: types[1], rhs: types[0] }
-        }
+        },
         "or" => {
             types.assert_count(2, mnemonic)?;
             GMInstruction::Or { lhs: types[1], rhs: types[0] }
-        }
+        },
         "xor" => {
             types.assert_count(2, mnemonic)?;
             GMInstruction::Xor { lhs: types[1], rhs: types[0] }
-        }
+        },
         "neg" => {
             types.assert_count(1, mnemonic)?;
             GMInstruction::Negate { data_type: types[0] }
-        }
+        },
         "not" => {
             types.assert_count(1, mnemonic)?;
             GMInstruction::Not { data_type: types[0] }
-        }
+        },
         "shl" => {
             types.assert_count(2, mnemonic)?;
             GMInstruction::ShiftLeft { value: types[1], shift_amount: types[0] }
-        }
+        },
         "shr" => {
             types.assert_count(2, mnemonic)?;
-            GMInstruction::ShiftRight {
-                value: types[1],
-                shift_amount: types[0],
-            }
-        }
+            GMInstruction::ShiftRight { value: types[1], shift_amount: types[0] }
+        },
         "cmp" => parse_comparison(types, reader)?,
         "pop" => {
             types.assert_count(2, mnemonic)?;
             let variable: CodeVariable = parse_variable(reader, gm_data)?;
-            GMInstruction::Pop { type1: types[0], type2: types[1], variable }
-        }
+            GMInstruction::Pop {
+                type1: types[0],
+                type2: types[1],
+                variable,
+            }
+        },
         "popswap" => {
             types.assert_count(0, mnemonic)?;
             GMInstruction::PopSwap { is_array: false }
-        }
+        },
         "popswaparr" => {
             types.assert_count(0, mnemonic)?;
             GMInstruction::PopSwap { is_array: true }
-        }
+        },
         "dup" => parse_duplicate(types, reader)?,
         "dupswap" => parse_duplicate_swap(types, reader)?,
         "ret" => {
             types.assert_count(0, mnemonic)?;
             GMInstruction::Return
-        }
+        },
         "exit" => {
             types.assert_count(0, mnemonic)?;
             GMInstruction::Exit
-        }
+        },
         "popz" => {
             types.assert_count(1, mnemonic)?;
             GMInstruction::PopDiscard { data_type: types[0] }
-        }
+        },
         "jmp" => {
             types.assert_count(0, mnemonic)?;
             let jump_offset: i32 = reader.parse_int()?;
             GMInstruction::Branch { jump_offset }
-        }
+        },
         "jt" => {
             types.assert_count(0, mnemonic)?;
             let jump_offset: i32 = reader.parse_int()?;
             GMInstruction::BranchIf { jump_offset }
-        }
+        },
         "jf" => {
             types.assert_count(0, mnemonic)?;
             let jump_offset: i32 = reader.parse_int()?;
             GMInstruction::BranchUnless { jump_offset }
-        }
+        },
         "pushenv" => {
             types.assert_count(0, mnemonic)?;
             let jump_offset: i32 = reader.parse_int()?;
             GMInstruction::PushWithContext { jump_offset }
-        }
+        },
         "popenv" => {
             types.assert_count(0, mnemonic)?;
             let jump_offset: i32 = reader.parse_int()?;
             GMInstruction::PopWithContext { jump_offset }
-        }
+        },
         "popenvexit" => {
             types.assert_count(0, mnemonic)?;
             GMInstruction::PopWithContextExit
-        }
-        "push" => {
-            GMInstruction::Push { value: parse_push(types, reader, gm_data)? }
-        }
+        },
+        "push" => GMInstruction::Push {
+            value: parse_push(types, reader, gm_data)?,
+        },
         "pushloc" => {
             types.assert_count(0, mnemonic)?;
             let variable = parse_variable(reader, gm_data)?;
             GMInstruction::PushLocal { variable }
-        }
+        },
         "pushglb" => {
             types.assert_count(0, mnemonic)?;
             let variable = parse_variable(reader, gm_data)?;
             GMInstruction::PushGlobal { variable }
-        }
+        },
         "pushbltn" => {
             types.assert_count(0, mnemonic)?;
             let variable = parse_variable(reader, gm_data)?;
             GMInstruction::PushBuiltin { variable }
-        }
+        },
         "pushim" => {
             types.assert_count(0, mnemonic)?;
             let integer: i16 = reader.parse_int()?;
             GMInstruction::PushImmediate { integer }
-        }
+        },
         "call" => parse_call(types, reader, gm_data)?,
         "callvar" => {
             types.assert_count(0, mnemonic)?;
             let argument_count: u16 = reader.parse_uint()?;
             GMInstruction::CallVariable { argument_count }
-        }
+        },
         "chkindex" => GMInstruction::CheckArrayIndex,
         "pushaf" => GMInstruction::PushArrayFinal,
         "popaf" => GMInstruction::PopArrayFinal,
@@ -254,7 +254,7 @@ fn parse_instruction(
             types.assert_count(0, mnemonic)?;
             let asset_reference = parse_asset_reference(reader, gm_data)?;
             GMInstruction::PushReference { asset_reference }
-        }
+        },
         _ => bail!("Invalid opcode mnemonic {mnemonic:?}"),
     };
 
@@ -281,14 +281,11 @@ fn asset_by_name<T>(
     );
 }
 
-fn parse_asset_reference(
-    reader: &mut Reader,
-    gm_data: &GMData,
-) -> Result<GMAssetReference> {
+fn parse_asset_reference(reader: &mut Reader, gm_data: &GMData) -> Result<GMAssetReference> {
     let line = reader.line;
-    let asset_type = reader.consume_round_brackets()?.ok_or_else(|| {
-        format!("Expected asset type within round brackets; found {line:?}")
-    })?;
+    let asset_type = reader
+        .consume_round_brackets()?
+        .ok_or_else(|| format!("Expected asset type within round brackets; found {line:?}"))?;
 
     // This can probably be made cleaner
     #[rustfmt::skip]
@@ -314,10 +311,7 @@ fn parse_asset_reference(
     Ok(asset_reference)
 }
 
-fn parse_comparison(
-    types: DataTypes,
-    reader: &mut Reader,
-) -> Result<GMInstruction> {
+fn parse_comparison(types: DataTypes, reader: &mut Reader) -> Result<GMInstruction> {
     types.assert_count(2, "cmp")?;
     let comparison_type: &str = reader.parse_identifier()?;
     let comparison_type = match comparison_type {
@@ -329,28 +323,20 @@ fn parse_comparison(
         "GT" => GMComparisonType::GreaterThan,
         _ => bail!("Invalid Comparison Type {comparison_type:?}"),
     };
-    Ok(
-        GMInstruction::Compare {
-            lhs: types[1],
-            rhs: types[0],
-            comparison_type,
-        },
-    )
+    Ok(GMInstruction::Compare {
+        lhs: types[1],
+        rhs: types[0],
+        comparison_type,
+    })
 }
 
-fn parse_duplicate(
-    types: DataTypes,
-    reader: &mut Reader,
-) -> Result<GMInstruction> {
+fn parse_duplicate(types: DataTypes, reader: &mut Reader) -> Result<GMInstruction> {
     types.assert_count(1, "dup")?;
     let size: u8 = reader.parse_uint()?;
     Ok(GMInstruction::Duplicate { data_type: types[0], size })
 }
 
-fn parse_duplicate_swap(
-    types: DataTypes,
-    reader: &mut Reader,
-) -> Result<GMInstruction> {
+fn parse_duplicate_swap(types: DataTypes, reader: &mut Reader) -> Result<GMInstruction> {
     types.assert_count(1, "dupswap")?;
     let size1: u8 = reader.parse_uint()?;
     reader.consume_space()?;
@@ -358,11 +344,7 @@ fn parse_duplicate_swap(
     Ok(GMInstruction::DuplicateSwap { data_type: types[0], size1, size2 })
 }
 
-fn parse_push(
-    types: DataTypes,
-    reader: &mut Reader,
-    gm_data: &GMData,
-) -> Result<GMCodeValue> {
+fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result<GMCodeValue> {
     types.assert_count(1, "push")?;
 
     let value: GMCodeValue = match types[0] {
@@ -370,16 +352,14 @@ fn parse_push(
         GMDataType::Int32 => {
             if let Some(type_cast) = reader.consume_round_brackets()? {
                 match type_cast {
-                    "function" => GMCodeValue::Function(parse_function(
-                        reader,
-                        &gm_data.functions,
-                    )?),
+                    "function" => {
+                        GMCodeValue::Function(parse_function(reader, &gm_data.functions)?)
+                    },
                     "variable" => {
-                        let mut variable: CodeVariable =
-                            parse_variable(reader, gm_data)?;
+                        let mut variable: CodeVariable = parse_variable(reader, gm_data)?;
                         variable.is_int32 = true;
                         GMCodeValue::Variable(variable)
-                    }
+                    },
                     _ => bail!(
                         "Invalid type cast {type_cast:?}; expected \"function\" or \"variable\""
                     ),
@@ -387,7 +367,7 @@ fn parse_push(
             } else {
                 GMCodeValue::Int32(parse_int(reader.clear())?)
             }
-        }
+        },
         GMDataType::Int64 => GMCodeValue::Int64(parse_int(reader.clear())?),
         GMDataType::Double => {
             let line: &str = reader.clear();
@@ -396,7 +376,7 @@ fn parse_push(
                 .ok()
                 .ok_or_else(|| "Invalid float literal {line:?}")?;
             GMCodeValue::Double(float)
-        }
+        },
         GMDataType::Boolean => {
             let line: &str = reader.clear();
             let bool: bool = match line {
@@ -405,34 +385,26 @@ fn parse_push(
                 _ => bail!("Invalid boolean {line:?}"),
             };
             GMCodeValue::Boolean(bool)
-        }
+        },
         GMDataType::String => {
             let string: String = parse_string_literal(reader)?;
             GMCodeValue::String(string)
-        }
-        GMDataType::Variable => {
-            GMCodeValue::Variable(parse_variable(reader, gm_data)?)
-        }
+        },
+        GMDataType::Variable => GMCodeValue::Variable(parse_variable(reader, gm_data)?),
     };
     Ok(value)
 }
 
-fn parse_call(
-    types: DataTypes,
-    reader: &mut Reader,
-    gm_data: &GMData,
-) -> Result<GMInstruction> {
+fn parse_call(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result<GMInstruction> {
     types.assert_count(0, "call")?;
-    let function: GMRef<GMFunction> =
-        parse_function(reader, &gm_data.functions)?;
+    let function: GMRef<GMFunction> = parse_function(reader, &gm_data.functions)?;
 
     let line = reader.line;
     let argc_str: &str = reader.consume_round_brackets()?.ok_or_else(|| {
         format!("Expected round brackets with argument count for function call; found {line:?}",)
     })?;
 
-    let argument_count: u16 = if let Some(str) = argc_str.strip_prefix("argc=")
-    {
+    let argument_count: u16 = if let Some(str) = argc_str.strip_prefix("argc=") {
         str.parse()
             .ok()
             .ok_or_else(|| format!("Invalid argument count {str}"))?
@@ -458,10 +430,7 @@ impl GMVariableType {
     }
 }
 
-fn parse_variable(
-    reader: &mut Reader,
-    gm_data: &GMData,
-) -> Result<CodeVariable> {
+fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable> {
     let mut variable_type = GMVariableType::Normal;
     if let Some(variable_type_str) = reader.consume_square_brackets()? {
         variable_type = GMVariableType::from_string(variable_type_str)?;
@@ -481,17 +450,17 @@ fn parse_variable(
             let object_ref: GMRef<GMGameObject> =
                 gm_data.game_objects.get_ref_by_name(&instance_type_arg)?;
             GMInstanceType::Self_(Some(object_ref))
-        }
+        },
         "local" => {
             let var_index: u32 = parse_int(&instance_type_arg)?;
             variable_ref = Some(GMRef::new(var_index));
             GMInstanceType::Local
-        }
+        },
         "roominstance" => {
             variable_type = GMVariableType::Instance;
             let instance_id: i16 = parse_int(&instance_type_arg)?;
             GMInstanceType::RoomInstance(instance_id)
-        }
+        },
         "stacktop" => GMInstanceType::StackTop,
         "builtin" => GMInstanceType::Builtin,
         "global" => GMInstanceType::Global,
@@ -530,9 +499,7 @@ fn parse_variable(
 
     // I need to throw away the instance type so that the tests pass
     let mut instance_type = instance_type;
-    if variable_type != GMVariableType::Normal
-        && variable_type != GMVariableType::Instance
-    {
+    if variable_type != GMVariableType::Normal && variable_type != GMVariableType::Instance {
         instance_type = GMInstanceType::Undefined;
     } // TODO: comment out this block if not testing assembler
 
@@ -553,10 +520,7 @@ fn parse_variable_identifier<'a>(reader: &'a mut Reader) -> Result<&'a str> {
     }
 }
 
-fn parse_function(
-    reader: &mut Reader,
-    gm_functions: &GMFunctions,
-) -> Result<GMRef<GMFunction>> {
+fn parse_function(reader: &mut Reader, gm_functions: &GMFunctions) -> Result<GMRef<GMFunction>> {
     let identifier = parse_function_identifier(reader)?;
 
     for (i, func) in gm_functions.iter().enumerate() {
@@ -597,7 +561,7 @@ where
         Ok(int) => Ok(int),
         Err(err) => {
             bail!("Invalid {} Integer {}: {}", typename::<T>(), string, err);
-        }
+        },
     }
 }
 

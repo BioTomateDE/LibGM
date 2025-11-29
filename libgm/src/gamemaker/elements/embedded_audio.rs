@@ -1,10 +1,15 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, Clone, Default)]
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMChunkElement, GMElement},
+        serialize::builder::DataBuilder,
+    },
+    prelude::*,
+};
+
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMEmbeddedAudios {
     pub audios: Vec<GMEmbeddedAudio>,
     pub exists: bool,
@@ -52,8 +57,7 @@ pub struct GMEmbeddedAudio {
 impl GMElement for GMEmbeddedAudio {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let audio_data_length = reader.read_u32()?;
-        let audio_data: Vec<u8> =
-            reader.read_bytes_dyn(audio_data_length)?.to_vec();
+        let audio_data: Vec<u8> = reader.read_bytes_dyn(audio_data_length)?.to_vec();
         Ok(Self { audio_data })
     }
 
@@ -63,21 +67,14 @@ impl GMElement for GMEmbeddedAudio {
         Ok(())
     }
 
-    fn deserialize_post_padding(
-        reader: &mut DataReader,
-        is_last: bool,
-    ) -> Result<()> {
+    fn deserialize_post_padding(reader: &mut DataReader, is_last: bool) -> Result<()> {
         if !is_last {
             reader.align(4)?;
         }
         Ok(())
     }
 
-    fn serialize_post_padding(
-        &self,
-        builder: &mut DataBuilder,
-        is_last: bool,
-    ) -> Result<()> {
+    fn serialize_post_padding(&self, builder: &mut DataBuilder, is_last: bool) -> Result<()> {
         if !is_last {
             builder.align(4);
         }

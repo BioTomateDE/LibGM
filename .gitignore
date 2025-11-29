@@ -1,3 +1,11 @@
 /target
-data.win
-data_out.win
+
+*.win
+*.unx
+*.droid
+*.ios
+
+*.win1
+*.win.bak
+*.unx1
+*.unx.bak

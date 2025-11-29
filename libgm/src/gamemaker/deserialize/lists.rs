@@ -1,9 +1,8 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::GMElement;
-use crate::gamemaker::reference::GMRef;
-use crate::prelude::*;
-use crate::util::fmt::typename;
-use crate::util::init::vec_with_capacity;
+use crate::{
+    gamemaker::{deserialize::reader::DataReader, elements::GMElement, reference::GMRef},
+    prelude::*,
+    util::{fmt::typename, init::vec_with_capacity},
+};
 
 impl DataReader<'_> {
     /// Reads a GameMaker simple list by calling the specified deserializer function for each element.
@@ -68,14 +67,16 @@ impl DataReader<'_> {
 
         let mut elements: Vec<T> = Vec::with_capacity(count);
         for (i, pointer) in pointers.into_iter().enumerate() {
-            let element: T = self.read_pointer_element(pointer, i == count - 1).with_context(|| {
-                format!(
-                    "deserializing element {}/{} of {} pointer list",
-                    i,
-                    count,
-                    typename::<T>(),
-                )
-            })?;
+            let element: T = self
+                .read_pointer_element(pointer, i == count - 1)
+                .with_context(|| {
+                    format!(
+                        "deserializing element {}/{} of {} pointer list",
+                        i,
+                        count,
+                        typename::<T>(),
+                    )
+                })?;
             elements.push(element);
         }
         Ok(elements)
@@ -91,7 +92,11 @@ impl DataReader<'_> {
 
     /// Called `UndertaleAlignUpdatedListChunk` in UTMT.
     /// Used for BGND and STRG.
-    pub fn read_aligned_list_chunk<T: GMElement>(&mut self, alignment: u32, is_aligned: &mut bool) -> Result<Vec<T>> {
+    pub fn read_aligned_list_chunk<T: GMElement>(
+        &mut self,
+        alignment: u32,
+        is_aligned: &mut bool,
+    ) -> Result<Vec<T>> {
         let pointers: Vec<u32> = self.read_simple_list()?;
         let count = pointers.len();
         let mut elements: Vec<T> = Vec::with_capacity(count);

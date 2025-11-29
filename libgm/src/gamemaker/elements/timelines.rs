@@ -1,12 +1,16 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::game_objects::GMGameObjectEvent;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
-use crate::util::init::vec_with_capacity;
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, Clone, Default)]
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMChunkElement, GMElement, game_objects::GMGameObjectEvent},
+        serialize::builder::DataBuilder,
+    },
+    prelude::*,
+    util::init::vec_with_capacity,
+};
+
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMTimelines {
     pub timelines: Vec<GMTimeline>,
     pub exists: bool,

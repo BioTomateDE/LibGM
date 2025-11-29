@@ -1,12 +1,16 @@
-use crate::gamemaker::deserialize::chunk::GMChunk;
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
-use crate::util::init::vec_with_capacity;
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, Clone, Default)]
+use crate::{
+    gamemaker::{
+        deserialize::{chunk::GMChunk, reader::DataReader},
+        elements::{GMChunkElement, GMElement},
+        serialize::builder::DataBuilder,
+    },
+    prelude::*,
+    util::init::vec_with_capacity,
+};
+
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMFunctions {
     pub functions: Vec<GMFunction>,
     pub code_locals: GMCodeLocals,
@@ -42,19 +46,16 @@ impl GMElement for GMFunctions {
             reader.read_u32()?
         };
 
-        let mut functions: Vec<GMFunction> =
-            vec_with_capacity(functions_count)?;
+        let mut functions: Vec<GMFunction> = vec_with_capacity(functions_count)?;
 
         for i in 0..functions_count {
             let name: String = reader.read_gm_string()?;
             let occurrence_count = reader.read_u32()?;
             let first_occurrence_pos = reader.read_u32()?;
-            let (occurrences, name_string_id): (Vec<u32>, u32) =
-                parse_occurrence_chain(
-                    reader,
-                    first_occurrence_pos,
-                    occurrence_count,
-                )?;
+            let (occurrences, _name_string_id): (Vec<u32>, u32) =
+                parse_occurrence_chain(reader, first_occurrence_pos, occurrence_count)?;
+
+            // TODO: deal with the name string id somehow (also in VARI)
 
             //// verify name string id. allow -1 for unused function
             //if name_string_id as i32 != -1 && name.index != name_string_id {
@@ -67,9 +68,7 @@ impl GMElement for GMFunctions {
             //}
 
             for occurrence in occurrences {
-                if let Some(old_value) =
-                    reader.function_occurrences.insert(occurrence, i.into())
-                {
+                if let Some(old_value) = reader.function_occurrences.insert(occurrence, i.into()) {
                     bail!(
                         "Conflicting occurrence positions while parsing functions: Position {} \
                         was already set for function #{} with name {:?}; trying to set to function #{} with name {:?}",
@@ -123,9 +122,7 @@ impl GMElement for GMFunctions {
             builder.write_i32(first_occurrence);
         }
 
-        if builder.bytecode_version() >= 15
-            && !builder.is_gm_version_at_least((2024, 8))
-        {
+        if builder.bytecode_version() >= 15 && !builder.is_gm_version_at_least((2024, 8)) {
             if !self.code_locals.exists {
                 bail!("Code Locals don't exist in bytecode version 15+");
             }
@@ -141,7 +138,7 @@ pub struct GMFunction {
     pub name: String,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMCodeLocals {
     pub code_locals: Vec<GMCodeLocal>,
     pub exists: bool,
@@ -169,8 +166,7 @@ impl GMElement for GMCodeLocal {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let local_variables_count = reader.read_u32()?;
         let name: String = reader.read_gm_string()?;
-        let mut variables: Vec<GMCodeLocalVariable> =
-            vec_with_capacity(local_variables_count)?;
+        let mut variables: Vec<GMCodeLocalVariable> = vec_with_capacity(local_variables_count)?;
         for _ in 0..local_variables_count {
             variables.push(GMCodeLocalVariable::deserialize(reader)?);
         }

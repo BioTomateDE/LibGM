@@ -4,51 +4,57 @@ mod numbers;
 pub(crate) mod reader;
 pub mod resources;
 
-use crate::gamemaker::data::{Endianness, GMData};
-use crate::gamemaker::deserialize::chunk::GMChunk;
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::detect_version::detect_gamemaker_version;
-use crate::gamemaker::elements::animation_curves::GMAnimationCurves;
-use crate::gamemaker::elements::audio_groups::GMAudioGroups;
-use crate::gamemaker::elements::backgrounds::GMBackgrounds;
-use crate::gamemaker::elements::code::{GMCodes, check_yyc};
-use crate::gamemaker::elements::data_files::GMDataFiles;
-use crate::gamemaker::elements::embedded_audio::GMEmbeddedAudios;
-use crate::gamemaker::elements::embedded_images::GMEmbeddedImages;
-use crate::gamemaker::elements::embedded_textures::GMEmbeddedTextures;
-use crate::gamemaker::elements::extensions::GMExtensions;
-use crate::gamemaker::elements::feature_flags::GMFeatureFlags;
-use crate::gamemaker::elements::filter_effects::GMFilterEffects;
-use crate::gamemaker::elements::fonts::GMFonts;
-use crate::gamemaker::elements::functions::GMFunctions;
-use crate::gamemaker::elements::game_end::GMGameEndScripts;
-use crate::gamemaker::elements::game_objects::GMGameObjects;
-use crate::gamemaker::elements::global_init::GMGlobalInitScripts;
-use crate::gamemaker::elements::languages::GMLanguageInfo;
-use crate::gamemaker::elements::options::GMOptions;
-use crate::gamemaker::elements::particle_emitters::GMParticleEmitters;
-use crate::gamemaker::elements::particle_systems::GMParticleSystems;
-use crate::gamemaker::elements::paths::GMPaths;
-use crate::gamemaker::elements::rooms::GMRooms;
-use crate::gamemaker::elements::scripts::GMScripts;
-use crate::gamemaker::elements::sequence::GMSequences;
-use crate::gamemaker::elements::shaders::GMShaders;
-use crate::gamemaker::elements::sounds::GMSounds;
-use crate::gamemaker::elements::sprites::GMSprites;
-use crate::gamemaker::elements::strings::GMStrings;
-use crate::gamemaker::elements::tags::GMTags;
-use crate::gamemaker::elements::texture_group_info::GMTextureGroupInfos;
-use crate::gamemaker::elements::texture_page_items::GMTexturePageItems;
-use crate::gamemaker::elements::timelines::GMTimelines;
-use crate::gamemaker::elements::ui_nodes::GMRootUINodes;
-use crate::gamemaker::elements::variables::GMVariables;
-use crate::gamemaker::gm_version::{GMVersion, LTSBranch};
-use crate::prelude::*;
-use crate::util::bench::Stopwatch;
-use crate::util::smallmap::SmallMap;
 use std::path::Path;
 
-const TOO_BIG: &str = "Data file is bigger than 2,147,483,646 bytes which will lead to bugs in LibGM and the runner";
+use crate::{
+    gamemaker::{
+        data::{Endianness, GMData},
+        deserialize::{chunk::GMChunk, reader::DataReader},
+        elements::{
+            animation_curves::GMAnimationCurves,
+            audio_groups::GMAudioGroups,
+            backgrounds::GMBackgrounds,
+            code::{GMCodes, check_yyc},
+            data_files::GMDataFiles,
+            embedded_audio::GMEmbeddedAudios,
+            embedded_images::GMEmbeddedImages,
+            embedded_textures::GMEmbeddedTextures,
+            extensions::GMExtensions,
+            feature_flags::GMFeatureFlags,
+            filter_effects::GMFilterEffects,
+            fonts::GMFonts,
+            functions::GMFunctions,
+            game_end::GMGameEndScripts,
+            game_objects::GMGameObjects,
+            global_init::GMGlobalInitScripts,
+            languages::GMLanguageInfo,
+            options::GMOptions,
+            particle_emitters::GMParticleEmitters,
+            particle_systems::GMParticleSystems,
+            paths::GMPaths,
+            rooms::GMRooms,
+            scripts::GMScripts,
+            sequence::GMSequences,
+            shaders::GMShaders,
+            sounds::GMSounds,
+            sprites::GMSprites,
+            strings::GMStrings,
+            tags::GMTags,
+            texture_group_info::GMTextureGroupInfos,
+            texture_page_items::GMTexturePageItems,
+            timelines::GMTimelines,
+            ui_nodes::GMRootUINodes,
+            variables::GMVariables,
+        },
+        gm_version::{GMVersion, LTSBranch},
+        version_detection::detect_gamemaker_version,
+    },
+    prelude::*,
+    util::{bench::Stopwatch, smallmap::SmallMap},
+};
+
+const TOO_BIG: &str =
+    "Data file is bigger than 2,147,483,646 bytes which will lead to bugs in LibGM and the runner";
 
 pub struct DataParser {
     options: ParserOptions,
@@ -158,8 +164,7 @@ impl DataParser {
         const GMS2: GMVersion = GMVersion::new(2, 0, 0, 0, LTSBranch::PreLTS);
         if reader.specified_version == GMS2 {
             let stopwatch = Stopwatch::start();
-            detect_gamemaker_version(&mut reader)
-                .context("detecting `GameMaker` version")?;
+            detect_gamemaker_version(&mut reader).context("detecting `GameMaker` version")?;
             log::trace!("Detecting `GameMaker` Version took {stopwatch}");
         }
 
@@ -220,10 +225,11 @@ impl DataParser {
 
         log::trace!("Reading independent chunks took {stopwatch2}");
 
-        handle_unread_chunks(
-            &reader.chunks,
-            self.options.allow_unknown_chunks,
-        )?;
+        if !options.exists {
+            bail!("Required chunk OPTN does not exist");
+        }
+
+        handle_unread_chunks(&reader.chunks, self.options.allow_unknown_chunks)?;
 
         let data = GMData {
             chunk_padding: reader.chunk_padding,
@@ -276,17 +282,12 @@ impl DataParser {
     }
 
     /// Parse a `GameMaker` data file (`data.win`, `game.unx`, etc).
-    pub fn parse_file(
-        &self,
-        data_file_path: impl AsRef<Path>,
-    ) -> Result<GMData> {
+    pub fn parse_file(&self, data_file_path: impl AsRef<Path>) -> Result<GMData> {
         let path = data_file_path.as_ref();
 
         let meta = std::fs::metadata(path)
             .map_err(|e| e.to_string())
-            .with_context(|| {
-                format!("reading metadata of data file {path:?}")
-            })?;
+            .with_context(|| format!("reading metadata of data file {path:?}"))?;
         if meta.len() >= i32::MAX as u64 {
             bail!("{TOO_BIG}");
         }
@@ -350,10 +351,10 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
         }
         let chunk = GMChunk { start_pos, end_pos: reader.cur_pos };
 
-        integrity_assert! {
-            !reader.chunks.contains_key(&name),
-            "Chunk '{name}' is defined multiple times"
+        if reader.chunks.contains_key(&name) {
+            bail!("Chunk '{name}' is defined multiple times");
         }
+
         reader.chunks.insert(name, chunk);
     }
 

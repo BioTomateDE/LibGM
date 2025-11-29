@@ -1,24 +1,35 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::backgrounds::GMBackground;
-use crate::gamemaker::elements::fonts::GMFont;
-use crate::gamemaker::elements::game_objects::GMGameObject;
-use crate::gamemaker::elements::particle_systems::GMParticleSystem;
-use crate::gamemaker::elements::sequence::{GMAnimSpeedType, GMSequence};
-use crate::gamemaker::elements::sprites::GMSprite;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::gm_version::LTSBranch;
-use crate::gamemaker::reference::GMRef;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
-use crate::gml::instructions::GMCode;
-use crate::prelude::*;
-use crate::util::bitfield::bitfield_struct;
-use crate::util::init::{num_enum_from, vec_with_capacity};
-use num_enum::{IntoPrimitive, TryFromPrimitive};
-use std::cmp::min;
-use std::ops::{Deref, DerefMut};
+use std::{
+    cmp::min,
+    ops::{Deref, DerefMut},
+};
 
-#[derive(Debug, Clone, Default)]
+use macros::num_enum;
+
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{
+            GMChunkElement, GMElement,
+            backgrounds::GMBackground,
+            fonts::GMFont,
+            game_objects::GMGameObject,
+            particle_systems::GMParticleSystem,
+            sequence::{GMAnimSpeedType, GMSequence},
+            sprites::GMSprite,
+        },
+        gm_version::LTSBranch,
+        reference::GMRef,
+        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+    },
+    gml::instructions::GMCode,
+    prelude::*,
+    util::{
+        bitfield::bitfield_struct,
+        init::{num_enum_from, vec_with_capacity},
+    },
+};
+
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMRooms {
     pub rooms: Vec<GMRoom>,
     pub exists: bool,
@@ -94,7 +105,10 @@ impl GMElement for GMRoom {
         let height = reader.read_u32()?;
         let speed = reader.read_u32()?;
         let persistent = reader.read_bool32()?;
-        let background_color: u32 = reader.read_u32()? ^ 0xFF_00_00_00; // make alpha 255 (background color doesn't have transparency)
+
+        // make alpha 255 (background color doesn't have transparency)
+        let background_color: u32 = reader.read_u32()? ^ 0xFF00_0000;
+
         let draw_background_color = reader.read_bool32()?;
         let creation_code: Option<GMRef<GMCode>> = reader.read_resource_by_id_opt()?;
         let flags = GMRoomFlags::deserialize(reader)?;
@@ -187,7 +201,10 @@ impl GMElement for GMRoom {
         builder.write_u32(self.height);
         builder.write_u32(self.speed);
         builder.write_bool32(self.persistent);
-        builder.write_u32(self.background_color ^ 0xFF000000); // remove alpha (background color doesn't have alpha)
+
+        // remove alpha (background color doesn't have alpha)
+        builder.write_u32(self.background_color ^ 0xFF00_0000);
+
         builder.write_bool32(self.draw_background_color);
         builder.write_resource_id_opt(&self.creation_code);
         self.flags.serialize(builder)?;
@@ -195,9 +212,11 @@ impl GMElement for GMRoom {
         builder.write_pointer(&self.views)?;
         builder.write_pointer(&self.game_objects)?;
         builder.write_pointer(&self.tiles)?;
+
         if builder.is_gm_version_at_least((2024, 13)) {
             builder.write_pointer(&self.instance_creation_order_ids)?;
         }
+
         builder.write_bool32(self.world);
         builder.write_u32(self.top);
         builder.write_u32(self.left);
@@ -206,12 +225,15 @@ impl GMElement for GMRoom {
         builder.write_f32(self.gravity_x);
         builder.write_f32(self.gravity_y);
         builder.write_f32(self.meters_per_pixel);
+
         if builder.is_gm_version_at_least((2, 0)) {
             builder.write_pointer(&self.layers)?;
         }
+
         if builder.is_gm_version_at_least((2, 3)) {
             builder.write_pointer(&self.sequences)?;
         }
+
         builder.resolve_pointer(&self.backgrounds)?;
         builder.write_pointer_list(&self.backgrounds)?;
         builder.resolve_pointer(&self.views)?;
@@ -220,18 +242,22 @@ impl GMElement for GMRoom {
         builder.write_pointer_list(&self.game_objects)?;
         builder.resolve_pointer(&self.tiles)?;
         builder.write_pointer_list(&self.tiles)?;
+
         if builder.is_gm_version_at_least((2024, 13)) {
             builder.resolve_pointer(&self.instance_creation_order_ids)?;
             builder.write_pointer_list(&self.instance_creation_order_ids)?;
         }
+
         if builder.is_gm_version_at_least((2, 0)) {
             builder.resolve_pointer(&self.layers)?;
             builder.write_pointer_list(&self.layers)?;
         }
+
         if builder.is_gm_version_at_least((2, 3)) {
             builder.resolve_pointer(&self.sequences)?;
             builder.write_pointer_list(&self.sequences)?;
         }
+
         Ok(())
     }
 }
@@ -456,7 +482,7 @@ impl GMElement for GMRoomTile {
                         "Room tile texture should be a Background reference before GMS2; not a Sprite reference"
                     );
                 }
-            }
+            },
             Some(GMRoomTileTexture::Background(background_ref)) => {
                 if builder.is_gm_version_at_least((2, 0)) {
                     bail!(
@@ -464,7 +490,7 @@ impl GMElement for GMRoomTile {
                     );
                 }
                 builder.write_resource_id(background_ref)
-            }
+            },
             None => builder.write_u32(0),
         }
         builder.write_u32(self.source_x);
@@ -505,7 +531,7 @@ impl GMElement for GMRoomLayer {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let layer_name: String = reader.read_gm_string()?;
         let layer_id = reader.read_u32()?;
-        let layer_type: GMRoomLayerType = num_enum_from(reader.read_u32()?)?;
+        let layer_type: GMRoomLayerType = num_enum_from(reader.read_i32()?)?;
         let layer_depth = reader.read_i32()?;
         let x_offset = reader.read_f32()?;
         let y_offset = reader.read_f32()?;
@@ -519,16 +545,16 @@ impl GMElement for GMRoomLayer {
             GMRoomLayerType::Path | GMRoomLayerType::Path2 => GMRoomLayerData::None,
             GMRoomLayerType::Background => {
                 GMRoomLayerData::Background(GMRoomLayerDataBackground::deserialize(reader)?)
-            }
+            },
             GMRoomLayerType::Instances => {
                 GMRoomLayerData::Instances(GMRoomLayerDataInstances::deserialize(reader)?)
-            }
+            },
             GMRoomLayerType::Assets => {
                 GMRoomLayerData::Assets(GMRoomLayerDataAssets::deserialize(reader)?)
-            }
+            },
             GMRoomLayerType::Tiles => {
                 GMRoomLayerData::Tiles(GMRoomLayerDataTiles::deserialize(reader)?)
-            }
+            },
             GMRoomLayerType::Effect => {
                 if reader.general_info.is_version_at_least((2022, 1)) {
                     let effect_data = effect_data_2022_1.as_ref().unwrap();
@@ -542,7 +568,7 @@ impl GMElement for GMRoomLayer {
                 } else {
                     GMRoomLayerData::Effect(GMRoomLayerDataEffect::deserialize(reader)?)
                 }
-            }
+            },
         };
 
         Ok(GMRoomLayer {
@@ -563,7 +589,7 @@ impl GMElement for GMRoomLayer {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.layer_name);
         builder.write_u32(self.layer_id);
-        builder.write_u32(self.layer_type.into());
+        builder.write_i32(self.layer_type.into());
         builder.write_i32(self.layer_depth);
         builder.write_f32(self.x_offset);
         builder.write_f32(self.y_offset);
@@ -573,7 +599,7 @@ impl GMElement for GMRoomLayer {
         self.effect_data_2022_1
             .serialize_if_gm_ver(builder, "Effect Data", (2022, 1))?;
         match &self.data {
-            GMRoomLayerData::None => {}
+            GMRoomLayerData::None => {},
             GMRoomLayerData::Instances(data) => data.serialize(builder)?,
             GMRoomLayerData::Tiles(data) => data.serialize(builder)?,
             GMRoomLayerData::Background(data) => data.serialize(builder)?,
@@ -582,7 +608,7 @@ impl GMElement for GMRoomLayer {
                 if !builder.is_gm_version_at_least((2022, 1)) {
                     data.serialize(builder)?
                 }
-            }
+            },
         }
         Ok(())
     }
@@ -600,7 +626,11 @@ impl GMElement for GMRoomLayer2022_1 {
         let effect_enabled = reader.read_bool32()?;
         let effect_type: Option<String> = reader.read_gm_string_opt()?;
         let effect_properties: Vec<GMRoomLayerEffectProperty> = reader.read_simple_list()?;
-        Ok(GMRoomLayer2022_1 { effect_enabled, effect_type, effect_properties })
+        Ok(Self {
+            effect_enabled,
+            effect_type,
+            effect_properties,
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -611,7 +641,7 @@ impl GMElement for GMRoomLayer2022_1 {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMRoomLayerEffectProperty {
     pub kind: GMRoomLayerEffectPropertyType,
     pub name: String,
@@ -623,7 +653,7 @@ impl GMElement for GMRoomLayerEffectProperty {
         let kind: GMRoomLayerEffectPropertyType = num_enum_from(reader.read_i32()?)?;
         let name: String = reader.read_gm_string()?;
         let value: String = reader.read_gm_string()?;
-        Ok(GMRoomLayerEffectProperty { kind, name, value })
+        Ok(Self { kind, name, value })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -634,16 +664,14 @@ impl GMElement for GMRoomLayerEffectProperty {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
-#[repr(i32)]
+#[num_enum(i32)]
 pub enum GMRoomLayerEffectPropertyType {
     Real = 0,
     Color = 1,
     Sampler = 2,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
-#[repr(u32)]
+#[num_enum(i32)]
 pub enum GMRoomLayerType {
     /// unused?
     Path = 0,
@@ -674,7 +702,7 @@ pub struct GMRoomLayerDataInstances {
 impl GMElement for GMRoomLayerDataInstances {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let instances: Vec<u32> = reader.read_simple_list()?;
-        Ok(GMRoomLayerDataInstances { instances })
+        Ok(Self { instances })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -709,7 +737,7 @@ impl GMElement for GMRoomLayerDataTiles {
             }
         }
 
-        Ok(GMRoomLayerDataTiles { background, tile_data, width, height })
+        Ok(Self { background, tile_data, width, height })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -898,9 +926,9 @@ impl GMElement for GMRoomLayerDataBackground {
         let color = reader.read_u32()?;
         let first_frame = reader.read_f32()?;
         let animation_speed = reader.read_f32()?;
-        let animation_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)?;
+        let animation_speed_type: GMAnimSpeedType = num_enum_from(reader.read_i32()?)?;
 
-        Ok(GMRoomLayerDataBackground {
+        Ok(Self {
             visible,
             foreground,
             sprite,
@@ -924,7 +952,7 @@ impl GMElement for GMRoomLayerDataBackground {
         builder.write_u32(self.color);
         builder.write_f32(self.first_frame);
         builder.write_f32(self.animation_speed);
-        builder.write_u32(self.animation_speed_type.into());
+        builder.write_i32(self.animation_speed_type.into());
         Ok(())
     }
 }
@@ -997,7 +1025,7 @@ impl GMElement for GMRoomLayerDataAssets {
             }
         }
 
-        Ok(GMRoomLayerDataAssets {
+        Ok(Self {
             legacy_tiles,
             sprites,
             sequences,
@@ -1061,7 +1089,7 @@ impl GMElement for GMRoomLayerDataEffect {
         // {~~} dont serialize_old if >= 2022.1??
         let effect_type: String = reader.read_gm_string()?;
         let properties: Vec<GMRoomLayerEffectProperty> = reader.read_simple_list()?;
-        Ok(GMRoomLayerDataEffect { effect_type, properties })
+        Ok(Self { effect_type, properties })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -1096,10 +1124,10 @@ impl GMElement for GMSpriteInstance {
         let scale_y = reader.read_f32()?;
         let color = reader.read_u32()?;
         let animation_speed = reader.read_f32()?;
-        let animation_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)?;
+        let animation_speed_type: GMAnimSpeedType = num_enum_from(reader.read_i32()?)?;
         let frame_index = reader.read_f32()?;
         let rotation = reader.read_f32()?;
-        Ok(GMSpriteInstance {
+        Ok(Self {
             name,
             sprite,
             x,
@@ -1123,7 +1151,7 @@ impl GMElement for GMSpriteInstance {
         builder.write_f32(self.scale_y);
         builder.write_u32(self.color);
         builder.write_f32(self.animation_speed);
-        builder.write_u32(self.animation_speed_type.into());
+        builder.write_i32(self.animation_speed_type.into());
         builder.write_f32(self.frame_index);
         builder.write_f32(self.rotation);
         Ok(())
@@ -1155,10 +1183,10 @@ impl GMElement for GMSequenceInstance {
         let scale_y = reader.read_f32()?;
         let color = reader.read_u32()?;
         let animation_speed = reader.read_f32()?;
-        let animation_speed_type: GMAnimSpeedType = num_enum_from(reader.read_u32()?)?;
+        let animation_speed_type: GMAnimSpeedType = num_enum_from(reader.read_i32()?)?;
         let frame_index = reader.read_f32()?;
         let rotation = reader.read_f32()?;
-        Ok(GMSequenceInstance {
+        Ok(Self {
             name,
             sequence,
             x,
@@ -1182,7 +1210,7 @@ impl GMElement for GMSequenceInstance {
         builder.write_f32(self.scale_y);
         builder.write_u32(self.color);
         builder.write_f32(self.animation_speed);
-        builder.write_u32(self.animation_speed_type.into());
+        builder.write_i32(self.animation_speed_type.into());
         builder.write_f32(self.frame_index);
         builder.write_f32(self.rotation);
         Ok(())
@@ -1211,7 +1239,7 @@ impl GMElement for GMParticleSystemInstance {
         let scale_y = reader.read_f32()?;
         let color = reader.read_u32()?;
         let rotation = reader.read_f32()?;
-        Ok(GMParticleSystemInstance {
+        Ok(Self {
             name,
             particle_system,
             x,
@@ -1277,7 +1305,7 @@ impl GMElement for GMTextItemInstance {
         let frame_height = reader.read_f32()?;
         let wrap = reader.read_bool32()?;
 
-        Ok(GMTextItemInstance {
+        Ok(Self {
             name,
             x,
             y,
@@ -1361,7 +1389,7 @@ impl GMElement for GMRoomGameObject {
             None
         };
 
-        Ok(GMRoomGameObject {
+        Ok(Self {
             x,
             y,
             object_definition,
@@ -1393,7 +1421,7 @@ impl GMElement for GMRoomGameObject {
         builder.write_f32(self.rotation);
         if builder.bytecode_version() >= 16 {
             builder.write_resource_id_opt(&self.pre_create_code);
-        };
+        }
         Ok(())
     }
 }

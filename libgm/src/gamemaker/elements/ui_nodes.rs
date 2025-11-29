@@ -1,17 +1,27 @@
-use self::flex_properties::{AlignmentKind, FlexValue, GMNodeUIFlexInstanceProperties, GMNodeUIFlexProperties};
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::rooms::{
-    GMRoomGameObject, GMRoomLayerEffectProperty, GMSequenceInstance, GMSpriteInstance, GMTextItemInstance,
-};
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
-use crate::util::assert::assert_int;
-use crate::util::init::num_enum_from;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, Clone, Default)]
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+
+use self::flex_properties::{
+    AlignmentKind, FlexValue, GMNodeUIFlexInstanceProperties, GMNodeUIFlexProperties,
+};
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{
+            GMChunkElement, GMElement,
+            rooms::{
+                GMRoomGameObject, GMRoomLayerEffectProperty, GMSequenceInstance, GMSpriteInstance,
+                GMTextItemInstance,
+            },
+        },
+        serialize::builder::DataBuilder,
+    },
+    prelude::*,
+    util::{assert::assert_int, init::num_enum_from},
+};
+
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMRootUINodes {
     pub ui_root_nodes: Vec<GMNodeUI>,
     pub exists: bool,
@@ -52,7 +62,7 @@ impl GMElement for GMRootUINodes {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMNodeUI {
     pub node: GMNodeUIData,
     pub children: Vec<Self>,
@@ -102,7 +112,10 @@ impl GMElement for GMNodeUI {
         builder.write_pointer(&self.node)?;
 
         // Write children if container node
-        if matches!(self.node, GMNodeUIData::Layer(_) | GMNodeUIData::FlexPanel(_)) {
+        if matches!(
+            self.node,
+            GMNodeUIData::Layer(_) | GMNodeUIData::FlexPanel(_)
+        ) {
             builder.write_pointer_list(&self.children)?;
         } else {
             if !self.children.is_empty() {
@@ -129,7 +142,7 @@ impl GMElement for GMNodeUI {
         Ok(())
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum GMNodeUIData {
     Layer(GMNodeUILayer),
     FlexPanel(GMNodeUIFlexPanel),
@@ -154,7 +167,7 @@ impl GMNodeUIData {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMNodeUILayer {
     pub name: String,
     pub draw_space: GMNodeUILayerDrawSpaceKind,
@@ -177,14 +190,14 @@ impl GMElement for GMNodeUILayer {
     }
 }
 
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
 #[repr(i32)]
 pub enum GMNodeUILayerDrawSpaceKind {
     GUI = 1,
     View = 2,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMNodeUIFlexPanel {
     pub name: String,
     pub width: FlexValue,
@@ -283,7 +296,7 @@ impl GMElement for GMNodeUIFlexPanel {
     }
 }
 
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
 #[repr(i32)]
 pub enum GMNodeUIFlexPanelPositionKind {
     Static = 0,
@@ -291,7 +304,7 @@ pub enum GMNodeUIFlexPanelPositionKind {
     Absolute = 2,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMNodeUIGameObject {
     pub flex_instance_properties: GMNodeUIFlexInstanceProperties,
     pub room_game_object: GMRoomGameObject,
@@ -301,7 +314,10 @@ impl GMElement for GMNodeUIGameObject {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let room_game_object = GMRoomGameObject::deserialize(reader)?;
         let flex_instance_properties = GMNodeUIFlexInstanceProperties::deserialize(reader)?;
-        Ok(Self { flex_instance_properties, room_game_object })
+        Ok(Self {
+            flex_instance_properties,
+            room_game_object,
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -311,7 +327,7 @@ impl GMElement for GMNodeUIGameObject {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMNodeUISequenceInstance {
     pub flex_instance_properties: GMNodeUIFlexInstanceProperties,
     pub sequence_instance: GMSequenceInstance,
@@ -321,7 +337,10 @@ impl GMElement for GMNodeUISequenceInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let sequence_instance = GMSequenceInstance::deserialize(reader)?;
         let flex_instance_properties = GMNodeUIFlexInstanceProperties::deserialize(reader)?;
-        Ok(Self { flex_instance_properties, sequence_instance })
+        Ok(Self {
+            flex_instance_properties,
+            sequence_instance,
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -331,7 +350,7 @@ impl GMElement for GMNodeUISequenceInstance {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMNodeUISpriteInstance {
     pub flex_instance_properties: GMNodeUIFlexInstanceProperties,
     pub sprite_instance: GMSpriteInstance,
@@ -341,7 +360,10 @@ impl GMElement for GMNodeUISpriteInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let sprite_instance = GMSpriteInstance::deserialize(reader)?;
         let flex_instance_properties = GMNodeUIFlexInstanceProperties::deserialize(reader)?;
-        Ok(Self { flex_instance_properties, sprite_instance })
+        Ok(Self {
+            flex_instance_properties,
+            sprite_instance,
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -351,7 +373,7 @@ impl GMElement for GMNodeUISpriteInstance {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMNodeUITextItemInstance {
     pub flex_instance_properties: GMNodeUIFlexInstanceProperties,
     pub text_item_instance: GMTextItemInstance,
@@ -361,7 +383,10 @@ impl GMElement for GMNodeUITextItemInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let text_item_instance = GMTextItemInstance::deserialize(reader)?;
         let flex_instance_properties = GMNodeUIFlexInstanceProperties::deserialize(reader)?;
-        Ok(Self { flex_instance_properties, text_item_instance })
+        Ok(Self {
+            flex_instance_properties,
+            text_item_instance,
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -371,7 +396,7 @@ impl GMElement for GMNodeUITextItemInstance {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMNodeUIEffectLayer {
     pub enabled: bool,
     pub effect_type: String,
@@ -395,15 +420,17 @@ impl GMElement for GMNodeUIEffectLayer {
 }
 
 mod flex_properties {
-
-    use crate::gamemaker::deserialize::reader::DataReader;
-    use crate::gamemaker::elements::GMElement;
-    use crate::gamemaker::serialize::builder::DataBuilder;
-    use crate::prelude::*;
-    use crate::util::init::num_enum_from;
     use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-    #[derive(Debug, Clone)]
+    use crate::{
+        gamemaker::{
+            deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
+        },
+        prelude::*,
+        util::init::num_enum_from,
+    };
+
+    #[derive(Debug, Clone, PartialEq)]
     pub struct GMNodeUIFlexProperties {
         align_items: AlignmentKind,
         flex_direction: FlexDirectionKind,
@@ -418,6 +445,7 @@ mod flex_properties {
         justify_content: JustifyKind,
         layout_direction: LayoutDirectionKind,
     }
+
     impl GMElement for GMNodeUIFlexProperties {
         fn deserialize(reader: &mut DataReader) -> Result<Self> {
             let align_items = num_enum_from(reader.read_i32()?)?;
@@ -465,11 +493,12 @@ mod flex_properties {
         }
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     pub struct FlexValue {
         pub value: f32,
         pub unit: FlexValueUnit,
     }
+
     impl GMElement for FlexValue {
         fn deserialize(reader: &mut DataReader) -> Result<Self> {
             let value = reader.read_f32()?;
@@ -484,7 +513,7 @@ mod flex_properties {
         }
     }
 
-    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
     #[repr(i32)]
     pub enum FlexValueUnit {
         Undefined = 0,
@@ -493,7 +522,7 @@ mod flex_properties {
         Auto = 3,
     }
 
-    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
     #[repr(i32)]
     pub enum AlignmentKind {
         Auto = 0,
@@ -507,7 +536,7 @@ mod flex_properties {
         SpaceEvenly = 8,
     }
 
-    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
     #[repr(i32)]
     pub enum FlexDirectionKind {
         Column = 0,
@@ -516,7 +545,7 @@ mod flex_properties {
         RowReverse = 3,
     }
 
-    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
     #[repr(i32)]
     pub enum WrapKind {
         NoWrap = 0,
@@ -524,7 +553,7 @@ mod flex_properties {
         WrapReverse = 2,
     }
 
-    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
     #[repr(i32)]
     pub enum JustifyKind {
         FlexStart = 0,
@@ -535,7 +564,7 @@ mod flex_properties {
         SpaceEvenly = 5,
     }
 
-    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
     #[repr(i32)]
     pub enum LayoutDirectionKind {
         Inherit = 0,
@@ -543,7 +572,7 @@ mod flex_properties {
         RTL = 2,
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     pub struct GMNodeUIFlexInstanceProperties {
         visible: bool,
         anchor: i32,

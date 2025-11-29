@@ -1,16 +1,45 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::deserialize::resources::resource_opt_from_i32;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::reference::GMRef;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::gml::instructions::GMCode;
-use crate::prelude::*;
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, Clone, Default)]
+use crate::{
+    gamemaker::{
+        deserialize::{reader::DataReader, resources::resource_opt_from_i32},
+        elements::{GMChunkElement, GMElement},
+        reference::GMRef,
+        serialize::builder::DataBuilder,
+    },
+    gml::instructions::GMCode,
+    prelude::*,
+};
+
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMScripts {
     pub scripts: Vec<GMScript>,
     pub exists: bool,
+}
+
+impl GMScripts {
+    fn index_by_name(&self, name: &str) -> Result<usize> {
+        for (i, script) in self.scripts.iter().enumerate() {
+            if script.name == name {
+                return Ok(i);
+            }
+        }
+
+        bail!("Could not find script with name {name:?}");
+    }
+
+    pub fn ref_by_name(&self, name: &str) -> Result<GMRef<GMScript>> {
+        self.index_by_name(name).map(GMRef::from)
+    }
+
+    pub fn by_name(&self, name: &str) -> Result<&GMScript> {
+        self.index_by_name(name).map(|index| &self.scripts[index])
+    }
+
+    pub fn by_name_mut(&mut self, name: &str) -> Result<&mut GMScript> {
+        self.index_by_name(name)
+            .map(|index| &mut self.scripts[index])
+    }
 }
 
 impl Deref for GMScripts {

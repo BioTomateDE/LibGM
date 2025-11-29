@@ -1,12 +1,18 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
-use crate::util::init::{num_enum_from, vec_with_capacity};
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, Clone, Default)]
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMChunkElement, GMElement},
+        serialize::builder::DataBuilder,
+    },
+    prelude::*,
+    util::init::{num_enum_from, vec_with_capacity},
+};
+
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMShaders {
     pub shaders: Vec<GMShader>,
     pub exists: bool,
@@ -102,8 +108,14 @@ impl GMElement for GMShaders {
                 read_shader_data(reader, entry_end, 8, hlsl11_vertex_ptr, 0, hlsl11_pixel_ptr)?;
             let hlsl11_pixel_data: Option<GMShaderData> =
                 read_shader_data(reader, entry_end, 8, hlsl11_pixel_ptr, 0, pssl_vertex_ptr)?;
-            let pssl_vertex_data: Option<GMShaderData> =
-                read_shader_data(reader, entry_end, 8, pssl_vertex_ptr, pssl_vertex_len, pssl_pixel_ptr)?;
+            let pssl_vertex_data: Option<GMShaderData> = read_shader_data(
+                reader,
+                entry_end,
+                8,
+                pssl_vertex_ptr,
+                pssl_vertex_len,
+                pssl_pixel_ptr,
+            )?;
             let pssl_pixel_data: Option<GMShaderData> = read_shader_data(
                 reader,
                 entry_end,
@@ -194,7 +206,9 @@ pub struct GMShader {
 
 impl GMElement for GMShader {
     fn deserialize(_: &mut DataReader) -> Result<Self> {
-        unreachable!("[internal error] GMShader::deserialize is not supported; use GMShaders::deserialize instead")
+        unreachable!(
+            "[internal error] GMShader::deserialize is not supported; use GMShaders::deserialize instead"
+        )
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -219,12 +233,21 @@ impl GMElement for GMShader {
             builder.write_pointer_opt(&self.pssl_pixel_data)?;
             builder.write_usize(self.pssl_pixel_data.as_ref().map_or(0, |i| i.data.len()))?;
             builder.write_pointer_opt(&self.cg_psvita_vertex_data)?;
-            builder.write_usize(self.cg_psvita_vertex_data.as_ref().map_or(0, |i| i.data.len()))?;
+            builder.write_usize(
+                self.cg_psvita_vertex_data
+                    .as_ref()
+                    .map_or(0, |i| i.data.len()),
+            )?;
             builder.write_pointer_opt(&self.cg_psvita_pixel_data)?;
-            builder.write_usize(self.cg_psvita_pixel_data.as_ref().map_or(0, |i| i.data.len()))?;
+            builder.write_usize(
+                self.cg_psvita_pixel_data
+                    .as_ref()
+                    .map_or(0, |i| i.data.len()),
+            )?;
             if self.version >= 2 {
                 builder.write_pointer_opt(&self.cg_ps3_vertex_data)?;
-                builder.write_usize(self.cg_ps3_vertex_data.as_ref().map_or(0, |i| i.data.len()))?;
+                builder
+                    .write_usize(self.cg_ps3_vertex_data.as_ref().map_or(0, |i| i.data.len()))?;
                 builder.write_pointer_opt(&self.cg_ps3_pixel_data)?;
                 builder.write_usize(self.cg_ps3_pixel_data.as_ref().map_or(0, |i| i.data.len()))?;
             }
@@ -275,7 +298,8 @@ fn read_shader_data(
     next_ptr: u32,
 ) -> Result<Option<GMShaderData>> {
     const ERR_MSG_PREFIX: &str = "Failed to compute length of shader data: instructed to read";
-    const ERR_MSG_SUFFIX: &str = "Shader data was the last in the shader, but given length was incorrectly padded.";
+    const ERR_MSG_SUFFIX: &str =
+        "Shader data was the last in the shader, but given length was incorrectly padded.";
 
     if this_pointer == 0 {
         return Ok(None);
@@ -311,7 +335,11 @@ fn read_shader_data(
     Ok(Some(GMShaderData { data }))
 }
 
-fn write_shader_data(builder: &mut DataBuilder, pad: u32, shader_data_opt: &Option<GMShaderData>) -> Result<()> {
+fn write_shader_data(
+    builder: &mut DataBuilder,
+    pad: u32,
+    shader_data_opt: &Option<GMShaderData>,
+) -> Result<()> {
     if let Some(shader_data) = shader_data_opt {
         builder.align(pad);
         builder.resolve_pointer(shader_data)?;

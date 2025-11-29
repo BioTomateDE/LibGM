@@ -1,8 +1,13 @@
-use libgm::gamemaker::data::GMData;
-use libgm::gml::assembly::{assemble_code, disassemble_code};
-use libgm::gml::instructions::GMInstruction;
-use libgm::prelude::*;
 use std::io::Write;
+
+use libgm::{
+    gamemaker::data::GMData,
+    gml::{
+        assembly::{assemble_code, disassemble_code},
+        instructions::GMInstruction,
+    },
+    prelude::*,
+};
 
 pub fn test_assembler(data: &GMData) -> Result<()> {
     let count = data.codes.len();
@@ -22,11 +27,11 @@ pub fn test_assembler(data: &GMData) -> Result<()> {
         std::io::stdout().flush().unwrap();
         //print!("\r({i}/{count}) Disassembling and reassembling {name:<100?}");
 
-        let assembly: String = disassemble_code(data, code)
-            .with_context(|| format!("disassembling {name:?}"))?;
+        let assembly: String =
+            disassemble_code(data, code).with_context(|| format!("disassembling {name:?}"))?;
 
-        let reconstructed: Vec<GMInstruction> = assemble_code(&assembly, data)
-            .with_context(|| format!("assembling {name:?}"))?;
+        let reconstructed: Vec<GMInstruction> =
+            assemble_code(&assembly, data).with_context(|| format!("assembling {name:?}"))?;
 
         let code = &data.codes[i];
         if code.instructions == reconstructed {
@@ -40,9 +45,7 @@ pub fn test_assembler(data: &GMData) -> Result<()> {
         if recr_len != orig_len {
             let diff = recr_len.abs_diff(orig_len);
             let comparison = if recr_len > orig_len { "more" } else { "fewer" };
-            println!(
-                "Reconstructed code has {diff} {comparison} instructions than the original"
-            );
+            println!("Reconstructed code has {diff} {comparison} instructions than the original");
         }
 
         let lines: Vec<&str> = assembly.split("\n").collect();

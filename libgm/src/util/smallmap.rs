@@ -34,7 +34,9 @@ impl<K: PartialEq, V> SmallMap<K, V> {
         K: Borrow<Q>,
         Q: ?Sized + PartialEq,
     {
-        self.0.iter().find_map(|(k, v)| (k.borrow() == key).then_some(v))
+        self.0
+            .iter()
+            .find_map(|(k, v)| (k.borrow() == key).then_some(v))
     }
 
     #[inline]
@@ -44,7 +46,9 @@ impl<K: PartialEq, V> SmallMap<K, V> {
         K: Borrow<Q>,
         Q: ?Sized + PartialEq,
     {
-        self.0.iter_mut().find_map(|(k, v)| ((*k).borrow() == key).then_some(v))
+        self.0
+            .iter_mut()
+            .find_map(|(k, v)| ((*k).borrow() == key).then_some(v))
     }
 
     #[inline]

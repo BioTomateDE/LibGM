@@ -1,6 +1,7 @@
-use crate::gamemaker::data::Endianness;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
+use crate::{
+    gamemaker::{data::Endianness, serialize::builder::DataBuilder},
+    prelude::*,
+};
 
 macro_rules! write_int_fn {
     ($method_name:ident, $int_type:ty) => {
@@ -34,13 +35,5 @@ impl DataBuilder<'_> {
         })?;
         self.write_u32(number);
         Ok(())
-    }
-
-    pub fn write_i24(&mut self, number: i32) {
-        let bytes: [u8; 4] = match self.gm_data.endianness {
-            Endianness::Little => number.to_le_bytes(),
-            Endianness::Big => number.to_be_bytes(),
-        };
-        self.write_bytes(&bytes[..3]);
     }
 }

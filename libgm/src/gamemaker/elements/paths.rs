@@ -1,10 +1,15 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, Clone, Default)]
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMChunkElement, GMElement},
+        serialize::builder::DataBuilder,
+    },
+    prelude::*,
+};
+
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMPaths {
     pub paths: Vec<GMPath>,
     pub exists: bool,
@@ -32,8 +37,8 @@ impl GMChunkElement for GMPaths {
 
 impl GMElement for GMPaths {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let paths: Vec<GMPath> = reader.read_pointer_list::<GMPath>()?;
-        Ok(GMPaths { paths, exists: true })
+        let paths: Vec<GMPath> = reader.read_pointer_list()?;
+        Ok(Self { paths, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -58,7 +63,13 @@ impl GMElement for GMPath {
         let is_closed = reader.read_bool32()?;
         let precision = reader.read_u32()?;
         let points: Vec<GMPathPoint> = reader.read_simple_list()?;
-        Ok(GMPath { name, is_smooth, is_closed, precision, points })
+        Ok(Self {
+            name,
+            is_smooth,
+            is_closed,
+            precision,
+            points,
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -83,7 +94,7 @@ impl GMElement for GMPathPoint {
         let x = reader.read_f32()?;
         let y = reader.read_f32()?;
         let speed = reader.read_f32()?;
-        Ok(GMPathPoint { x, y, speed })
+        Ok(Self { x, y, speed })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

@@ -1,14 +1,17 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::particle_emitters::GMParticleEmitter;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::reference::GMRef;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
-use crate::prelude::*;
-use crate::util::assert::assert_int;
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, Clone, Default)]
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMChunkElement, GMElement, particle_emitters::GMParticleEmitter},
+        reference::GMRef,
+        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+    },
+    prelude::*,
+    util::assert::assert_int,
+};
+
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMParticleSystems {
     pub particle_systems: Vec<GMParticleSystem>,
     pub exists: bool,
@@ -83,8 +86,11 @@ impl GMElement for GMParticleSystem {
         builder.write_i32(self.origin_x);
         builder.write_i32(self.origin_y);
         builder.write_i32(self.draw_order);
-        self.global_space_particles
-            .serialize_if_gm_ver(builder, "Global Space Particles", (2023, 8))?;
+        self.global_space_particles.serialize_if_gm_ver(
+            builder,
+            "Global Space Particles",
+            (2023, 8),
+        )?;
         builder.write_simple_list_of_resource_ids(&self.emitters)?;
         Ok(())
     }

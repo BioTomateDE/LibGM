@@ -10,20 +10,15 @@ license = "GPL-3"
 keywords = ["gamemaker", "gml", "decompiler", "modding", "undertale"]
 categories = ["parsing", "game-development", "encoding"]
 
-[features]
-# todo remove ts
-no-integrity-checks = []
-
 [dependencies]
-arrayvec = "0.7.6"
+macros = { path = "../macros" }
+
 bzip2 = "0.6.1"
 chrono = "0.4.42"
 colored = "3.0.0"
 cpu-time = "1.0.0"
-enum-as-inner = "0.6.1"
-image = "0.25.8"
+image = "0.25.9"
 log = "0.4.28"
 num_enum = "0.7.5"
-thiserror = "2.0.17"
 tynm = "0.2.0"
 uuid = "1.18.1"

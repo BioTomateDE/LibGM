@@ -1,11 +1,19 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::GMElement;
-use crate::gamemaker::elements::sprites::GMSpriteShapeData;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
-use crate::prelude::*;
-use crate::util::init::{num_enum_from, vec_with_capacity};
+//! I literally have no idea what this is.
+//! I Copied this from UndertaleModTool in 2025-04-01.
+//! No idea what YYSWF is.
+//! Fuck this file.
+
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMElement, sprites::GMSpriteShapeData},
+        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+    },
+    prelude::*,
+    util::init::{num_enum_from, vec_with_capacity},
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSpriteTypeSWF {
@@ -31,6 +39,7 @@ pub struct GMSpriteYYSWFTimeline {
 
 impl GMElement for GMSpriteYYSWFTimeline {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        log::warn!("I have no idead what YYSWF is, prepare for bugs");
         let used_items: Vec<GMSpriteYYSWFItem> = reader.read_simple_list()?;
         let framerate = reader.read_i32()?;
         let frames_count = reader.read_u32()?;
@@ -47,7 +56,8 @@ impl GMElement for GMSpriteYYSWFTimeline {
             frames.push(GMSpriteYYSWFTimelineFrame::deserialize(reader)?);
         }
 
-        let mut collision_masks: Vec<GMSpriteYYSWFCollisionMask> = vec_with_capacity(collision_masks_count)?;
+        let mut collision_masks: Vec<GMSpriteYYSWFCollisionMask> =
+            vec_with_capacity(collision_masks_count)?;
         for _ in 0..collision_masks_count {
             collision_masks.push(GMSpriteYYSWFCollisionMask::deserialize(reader)?);
         }
@@ -124,9 +134,9 @@ impl GMElement for GMSpriteYYSWFItem {
         match &self.item_data {
             GMSpriteYYSWFItemData::ItemShape(shape_data) => shape_data.serialize(builder)?,
             GMSpriteYYSWFItemData::ItemBitmap(bitmap_data) => bitmap_data.serialize(builder)?,
-            GMSpriteYYSWFItemData::ItemFont => {}
-            GMSpriteYYSWFItemData::ItemTextField => {}
-            GMSpriteYYSWFItemData::ItemSprite => {}
+            GMSpriteYYSWFItemData::ItemFont => {},
+            GMSpriteYYSWFItemData::ItemTextField => {},
+            GMSpriteYYSWFItemData::ItemSprite => {},
         }
         Ok(())
     }
@@ -254,7 +264,11 @@ impl GMElement for GMSpriteYYSWFBitmapFillData {
         let bitmap_fill_type: GMSpriteYYSWFBitmapFillType = num_enum_from(reader.read_i32()?)?;
         let char_id = reader.read_i32()?;
         let transformation_matrix = GMSpriteYYSWFMatrix33::deserialize(reader)?;
-        Ok(GMSpriteYYSWFBitmapFillData { bitmap_fill_type, char_id, transformation_matrix })
+        Ok(GMSpriteYYSWFBitmapFillData {
+            bitmap_fill_type,
+            char_id,
+            transformation_matrix,
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -312,7 +326,8 @@ impl GMElement for GMSpriteYYSWFGradientFillData {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(self.gradient_fill_type.into());
-        self.tpe_index.serialize_if_gm_ver(builder, "TPE Index", (2022, 1))?;
+        self.tpe_index
+            .serialize_if_gm_ver(builder, "TPE Index", (2022, 1))?;
         self.transformation_matrix.serialize(builder)?;
         builder.write_simple_list(&self.records)?;
         Ok(())
@@ -659,11 +674,18 @@ impl GMElement for GMSpriteYYSWFTimelineFrame {
         let max_x = reader.read_f32()?;
         let min_y = reader.read_f32()?;
         let max_y = reader.read_f32()?;
-        let mut frame_objects: Vec<GMSpriteYYSWFTimelineObject> = vec_with_capacity(frame_object_count)?;
+        let mut frame_objects: Vec<GMSpriteYYSWFTimelineObject> =
+            vec_with_capacity(frame_object_count)?;
         for _ in 0..frame_object_count {
             frame_objects.push(GMSpriteYYSWFTimelineObject::deserialize(reader)?);
         }
-        Ok(Self { frame_objects, min_x, max_x, min_y, max_y })
+        Ok(Self {
+            frame_objects,
+            min_x,
+            max_x,
+            min_y,
+            max_y,
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
