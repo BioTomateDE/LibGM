@@ -1,9 +1,14 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
-use crate::util::init::vec_with_capacity;
 use std::ops::{Deref, DerefMut};
+
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMChunkElement, GMElement},
+        serialize::builder::DataBuilder,
+    },
+    prelude::*,
+    util::init::vec_with_capacity,
+};
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMLanguageInfo {
@@ -55,7 +60,12 @@ impl GMElement for GMLanguageInfo {
             languages.push(GMLanguageData { name, region, entries });
         }
 
-        Ok(GMLanguageInfo { unknown1, languages, entry_ids, exists: true })
+        Ok(GMLanguageInfo {
+            unknown1,
+            languages,
+            entry_ids,
+            exists: true,
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -76,7 +86,7 @@ impl GMElement for GMLanguageInfo {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMLanguageData {
     pub name: String,
     pub region: String,

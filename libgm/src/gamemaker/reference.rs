@@ -1,7 +1,6 @@
 use std::usize;
 
-use crate::prelude::*;
-use crate::util::fmt::typename;
+use crate::{prelude::*, util::fmt::typename};
 
 /// GMRef has (fake) generic types to make it clearer which type it belongs to (`name: GMRef` vs `name: String`).
 /// It can be resolved to the data it references using the `.resolve()` method, which needs the list the elements are stored in.
@@ -70,7 +69,7 @@ impl<T> GMRef<T> {
     ///
     /// # Errors
     /// Returns an error if `self.index` is out of bounds for the provided vector.
-    pub fn resolve<'a>(&self, elements_by_index: &'a Vec<T>) -> Result<&'a T> {
+    pub fn resolve(self, elements_by_index: &Vec<T>) -> Result<&T> {
         let element = elements_by_index.get(self.index as usize).ok_or_else(|| {
             format!(
                 "Could not resolve {} reference with index {} in list with length {}",
@@ -79,6 +78,30 @@ impl<T> GMRef<T> {
                 elements_by_index.len(),
             )
         })?;
+        Ok(element)
+    }
+
+    /// Attempts to resolve this reference to an element in the given list by its index.
+    ///
+    /// Returns a reference to the element if the index is valid, or an error string if out of bounds.
+    ///
+    /// # Parameters
+    /// - `elements_by_index`: A vector of elements indexed by `self.index`.
+    ///
+    /// # Errors
+    /// Returns an error if `self.index` is out of bounds for the provided vector.
+    pub fn resolve_mut(self, elements_by_index: &mut Vec<T>) -> Result<&mut T> {
+        let length = elements_by_index.len();
+        let element = elements_by_index
+            .get_mut(self.index as usize)
+            .ok_or_else(|| {
+                format!(
+                    "Could not resolve {} reference with index {} in list with length {}",
+                    typename::<T>(),
+                    self.index,
+                    length,
+                )
+            })?;
         Ok(element)
     }
 }

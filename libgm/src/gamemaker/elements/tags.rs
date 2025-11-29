@@ -1,13 +1,19 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
+use std::{
+    collections::HashMap,
+    ops::{Deref, DerefMut},
+};
 
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
-use crate::util::assert::assert_int;
-use std::collections::HashMap;
-use std::ops::{Deref, DerefMut};
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMChunkElement, GMElement},
+        serialize::builder::DataBuilder,
+    },
+    prelude::*,
+    util::assert::assert_int,
+};
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMTags {
     pub tags: Vec<String>,
     pub asset_tags: HashMap<i32, Vec<String>>,
@@ -43,8 +49,14 @@ impl GMElement for GMTags {
 
         let mut asset_tags: HashMap<i32, Vec<String>> = HashMap::new();
         for temp_asset_tag in temp_asset_tags {
-            if asset_tags.insert(temp_asset_tag.id, temp_asset_tag.tags).is_some() {
-                bail!("Duplicate Asset ID {} while parsing Tags", temp_asset_tag.id);
+            if asset_tags
+                .insert(temp_asset_tag.id, temp_asset_tag.tags)
+                .is_some()
+            {
+                bail!(
+                    "Duplicate Asset ID {} while parsing Tags",
+                    temp_asset_tag.id
+                );
             }
         }
         Ok(Self { tags, asset_tags, exists: true })

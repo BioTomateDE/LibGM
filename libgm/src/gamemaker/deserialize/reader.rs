@@ -1,16 +1,19 @@
-use crate::gamemaker::data::Endianness;
-use crate::gamemaker::deserialize::chunk::GMChunk;
-use crate::gamemaker::elements::GMElement;
-use crate::gamemaker::elements::functions::GMFunction;
-use crate::gamemaker::elements::general_info::GMGeneralInfo;
-use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
-use crate::gamemaker::elements::variables::GMVariable;
-use crate::gamemaker::gm_version::{GMVersion, GMVersionReq};
-use crate::gamemaker::reference::GMRef;
-use crate::prelude::*;
-use crate::util::assert::integrity_check;
-use crate::util::smallmap::SmallMap;
 use std::collections::HashMap;
+
+use crate::{
+    gamemaker::{
+        data::Endianness,
+        deserialize::chunk::GMChunk,
+        elements::{
+            GMElement, functions::GMFunction, general_info::GMGeneralInfo,
+            texture_page_items::GMTexturePageItem, variables::GMVariable,
+        },
+        gm_version::{GMVersion, GMVersionReq},
+        reference::GMRef,
+    },
+    prelude::*,
+    util::{assert::assert_int, smallmap::SmallMap},
+};
 
 #[derive(Debug)]
 pub struct DataReader<'a> {
@@ -144,10 +147,7 @@ impl<'a> DataReader<'a> {
             );
         }
 
-        #[cfg(not(any(
-            target_pointer_width = "32",
-            target_pointer_width = "64"
-        )))]
+        #[cfg(not(any(target_pointer_width = "32", target_pointer_width = "64")))]
         compile_error!(
             "Cannot safely convert u32 to usize on this platform (target pointer width not 32 or 64)"
         );
@@ -195,20 +195,18 @@ impl<'a> DataReader<'a> {
     pub fn read_literal_string(&mut self, length: u32) -> Result<String> {
         let bytes: Vec<u8> = self
             .read_bytes_dyn(length)
-            .with_context(|| {
-                format!("reading literal string with length {length}")
-            })?
+            .with_context(|| format!("reading literal string with length {length}"))?
             .to_vec();
 
         let string: String = String::from_utf8(bytes)
             .map_err(|e| e.to_string())
-              .with_context(|| {
-            format!(
-                "parsing literal UTF-8 string with length {} at position {}",
-                length,
-                self.cur_pos - length,
-            )
-        })?;
+            .with_context(|| {
+                format!(
+                    "parsing literal UTF-8 string with length {} at position {}",
+                    length,
+                    self.cur_pos - length,
+                )
+            })?;
 
         Ok(string)
     }
@@ -223,29 +221,29 @@ impl<'a> DataReader<'a> {
     pub fn align(&mut self, alignment: u32) -> Result<()> {
         while !self.cur_pos.is_multiple_of(alignment) {
             let byte = self.read_u8()?;
-            integrity_assert! {
-                byte == 0,
-                "Invalid padding byte while aligning to {alignment}: expected zero but got {byte} (0x{byte:02X})"
-            }
+            assert_int("Padding Byte", 0, byte)
+                .with_context(|| format!("aligning reader to {alignment}"))?;
         }
         Ok(())
     }
 
     /// Ensures the reader is at the specified position.
     pub fn assert_pos(&self, position: u32, pointer_name: &str) -> Result<()> {
-        integrity_check! {
-            if self.cur_pos != position {
-                if position == 0 {
-                    bail!(
-                        "{} pointer is zero at position {}! Null pointers are not yet supported.",
-                        pointer_name, self.cur_pos,
-                    )
-                }
+        if self.cur_pos != position {
+            if position == 0 {
                 bail!(
-                    "{} pointer misaligned: expected position {} but reader is actually at {} (diff: {})",
-                    pointer_name, position, self.cur_pos, position as i64 - self.cur_pos as i64,
+                    "{} pointer is zero at position {}! Null pointers are not yet supported.",
+                    pointer_name,
+                    self.cur_pos,
                 )
             }
+            bail!(
+                "{} pointer misaligned: expected position {} but reader is actually at {} (diff: {})",
+                pointer_name,
+                position,
+                self.cur_pos,
+                position as i64 - self.cur_pos as i64,
+            )
         }
         Ok(())
     }

@@ -1,8 +1,11 @@
-use crate::gamemaker::elements::strings::StringPlaceholder;
-use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
-use crate::gamemaker::reference::GMRef;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
+use crate::{
+    gamemaker::{
+        elements::{strings::StringPlaceholder, texture_page_items::GMTexturePageItem},
+        reference::GMRef,
+        serialize::builder::DataBuilder,
+    },
+    prelude::*,
+};
 
 impl DataBuilder<'_> {
     /// Writes the resource ID (index) from a `GMRef`.
@@ -24,8 +27,7 @@ impl DataBuilder<'_> {
 
     fn write_gm_string_internal(&mut self, string: String, write_id: bool) {
         let placeholder_position = self.len() as u32;
-        let placeholder =
-            StringPlaceholder { placeholder_position, string, write_id };
+        let placeholder = StringPlaceholder { placeholder_position, string, write_id };
         self.string_placeholders.push(placeholder);
         self.write_u32(0xDEAD_C0DE);
     }
@@ -51,10 +53,7 @@ impl DataBuilder<'_> {
     /// Writes a `GameMaker` texture page item reference as a pointer placeholder.
     /// # Errors
     /// Returns an error if the contained texture page item reference cannot be resolved.
-    pub fn write_gm_texture(
-        &mut self,
-        gm_texture_ref: GMRef<GMTexturePageItem>,
-    ) -> Result<()> {
+    pub fn write_gm_texture(&mut self, gm_texture_ref: GMRef<GMTexturePageItem>) -> Result<()> {
         let resolved_texture_page_item: &GMTexturePageItem =
             gm_texture_ref.resolve(&self.gm_data.texture_page_items)?;
         self.write_pointer(resolved_texture_page_item)

@@ -1,18 +1,22 @@
-use crate::gamemaker::elements::GMElement;
-use crate::gamemaker::gm_version::GMVersionReq;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
-use crate::util::fmt::typename;
+use crate::{
+    gamemaker::{elements::GMElement, gm_version::GMVersionReq, serialize::builder::DataBuilder},
+    prelude::*,
+    util::fmt::typename,
+};
 
-pub(crate) trait GMSerializeIfVersion {
+pub trait GMSerializeIfVersion {
     fn serialize_if_gm_ver<V: Into<GMVersionReq>>(
         &self,
         builder: &mut DataBuilder,
         field_name: &'static str,
         ver_req: V,
     ) -> Result<()>;
-    fn serialize_if_bytecode_ver(&self, builder: &mut DataBuilder, field_name: &'static str, ver_req: u8)
-    -> Result<()>;
+    fn serialize_if_bytecode_ver(
+        &self,
+        builder: &mut DataBuilder,
+        field_name: &'static str,
+        ver_req: u8,
+    ) -> Result<()>;
 }
 
 impl<T: GMElement> GMSerializeIfVersion for Option<T> {

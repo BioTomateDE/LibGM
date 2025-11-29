@@ -1,41 +1,44 @@
-use crate::gamemaker::elements::animation_curves::GMAnimationCurves;
-use crate::gamemaker::elements::audio_groups::GMAudioGroups;
-use crate::gamemaker::elements::backgrounds::GMBackgrounds;
-use crate::gamemaker::elements::code::GMCodes;
-use crate::gamemaker::elements::embedded_audio::GMEmbeddedAudios;
-use crate::gamemaker::elements::embedded_images::GMEmbeddedImages;
-use crate::gamemaker::elements::embedded_textures::GMEmbeddedTextures;
-use crate::gamemaker::elements::extensions::GMExtensions;
-use crate::gamemaker::elements::feature_flags::GMFeatureFlags;
-use crate::gamemaker::elements::filter_effects::GMFilterEffects;
-use crate::gamemaker::elements::fonts::GMFonts;
-use crate::gamemaker::elements::functions::{GMFunction, GMFunctions};
-use crate::gamemaker::elements::game_end::GMGameEndScripts;
-use crate::gamemaker::elements::game_objects::GMGameObjects;
-use crate::gamemaker::elements::general_info::GMGeneralInfo;
-use crate::gamemaker::elements::global_init::GMGlobalInitScripts;
-use crate::gamemaker::elements::languages::GMLanguageInfo;
-use crate::gamemaker::elements::options::GMOptions;
-use crate::gamemaker::elements::particle_emitters::GMParticleEmitters;
-use crate::gamemaker::elements::particle_systems::GMParticleSystems;
-use crate::gamemaker::elements::paths::GMPaths;
-use crate::gamemaker::elements::rooms::GMRooms;
-use crate::gamemaker::elements::scripts::GMScripts;
-use crate::gamemaker::elements::sequence::GMSequences;
-use crate::gamemaker::elements::shaders::GMShaders;
-use crate::gamemaker::elements::sounds::GMSounds;
-use crate::gamemaker::elements::sprites::GMSprites;
-use crate::gamemaker::elements::tags::GMTags;
-use crate::gamemaker::elements::texture_group_info::GMTextureGroupInfos;
-use crate::gamemaker::elements::texture_page_items::GMTexturePageItems;
-use crate::gamemaker::elements::timelines::GMTimelines;
-use crate::gamemaker::elements::ui_nodes::GMRootUINodes;
-use crate::gamemaker::elements::variables::{
-    GMVariable, GMVariableB15Data, GMVariables,
+use crate::{
+    gamemaker::{
+        elements::{
+            animation_curves::GMAnimationCurves,
+            audio_groups::GMAudioGroups,
+            backgrounds::GMBackgrounds,
+            code::GMCodes,
+            embedded_audio::GMEmbeddedAudios,
+            embedded_images::GMEmbeddedImages,
+            embedded_textures::GMEmbeddedTextures,
+            extensions::GMExtensions,
+            feature_flags::GMFeatureFlags,
+            filter_effects::GMFilterEffects,
+            fonts::GMFonts,
+            functions::{GMFunction, GMFunctions},
+            game_end::GMGameEndScripts,
+            game_objects::GMGameObjects,
+            general_info::GMGeneralInfo,
+            global_init::GMGlobalInitScripts,
+            languages::GMLanguageInfo,
+            options::GMOptions,
+            particle_emitters::GMParticleEmitters,
+            particle_systems::GMParticleSystems,
+            paths::GMPaths,
+            rooms::GMRooms,
+            scripts::GMScripts,
+            sequence::GMSequences,
+            shaders::GMShaders,
+            sounds::GMSounds,
+            sprites::GMSprites,
+            tags::GMTags,
+            texture_group_info::GMTextureGroupInfos,
+            texture_page_items::GMTexturePageItems,
+            timelines::GMTimelines,
+            ui_nodes::GMRootUINodes,
+            variables::GMVariables,
+        },
+        reference::GMRef,
+    },
+    prelude::*,
 };
-use crate::gamemaker::reference::GMRef;
-use crate::gml::instructions::GMInstanceType;
-use crate::prelude::*;
 
 /// Byte order (endianness) for integers and chunk names in data files.
 ///
@@ -57,41 +60,41 @@ pub enum Endianness {
     Big,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMData {
-    pub animation_curves: GMAnimationCurves, // ACRV
-    pub audio_groups: GMAudioGroups,         // AGRP
-    pub audios: GMEmbeddedAudios,            // AUDO
-    pub backgrounds: GMBackgrounds,          // BGND
-    pub codes: GMCodes,                      // CODE
-    pub embedded_images: GMEmbeddedImages,   // EMBI
-    pub extensions: GMExtensions,            // EXTN
-    pub feature_flags: GMFeatureFlags,       // FEAT
-    pub filter_effects: GMFilterEffects,     // FEDS
-    pub fonts: GMFonts,                      // FONT
-    pub functions: GMFunctions,              // FUNC
-    pub game_end_scripts: GMGameEndScripts,  // GMEN
-    pub game_objects: GMGameObjects,         // OBJT
-    pub general_info: GMGeneralInfo,         // GEN8
+    pub animation_curves: GMAnimationCurves,      // ACRV
+    pub audio_groups: GMAudioGroups,              // AGRP
+    pub audios: GMEmbeddedAudios,                 // AUDO
+    pub backgrounds: GMBackgrounds,               // BGND
+    pub codes: GMCodes,                           // CODE
+    pub embedded_images: GMEmbeddedImages,        // EMBI
+    pub extensions: GMExtensions,                 // EXTN
+    pub feature_flags: GMFeatureFlags,            // FEAT
+    pub filter_effects: GMFilterEffects,          // FEDS
+    pub fonts: GMFonts,                           // FONT
+    pub functions: GMFunctions,                   // FUNC
+    pub game_end_scripts: GMGameEndScripts,       // GMEN
+    pub game_objects: GMGameObjects,              // OBJT
+    pub general_info: GMGeneralInfo,              // GEN8
     pub global_init_scripts: GMGlobalInitScripts, // GLOB
-    pub language_info: GMLanguageInfo,       // LANG
-    pub options: GMOptions,                  // OPTN
-    pub particle_emitters: GMParticleEmitters, // PSEM
-    pub particle_systems: GMParticleSystems, // PSYS
-    pub paths: GMPaths,                      // PATH
-    pub rooms: GMRooms,                      // ROOM
-    pub root_ui_nodes: GMRootUINodes,        // UILR
-    pub scripts: GMScripts,                  // SCPT
-    pub sequences: GMSequences,              // SEQN
-    pub shaders: GMShaders,                  // SHDR
-    pub sounds: GMSounds,                    // SOND
-    pub sprites: GMSprites,                  // SPRT
-    pub tags: GMTags,                        // TAGS
+    pub language_info: GMLanguageInfo,            // LANG
+    pub options: GMOptions,                       // OPTN
+    pub particle_emitters: GMParticleEmitters,    // PSEM
+    pub particle_systems: GMParticleSystems,      // PSYS
+    pub paths: GMPaths,                           // PATH
+    pub rooms: GMRooms,                           // ROOM
+    pub root_ui_nodes: GMRootUINodes,             // UILR
+    pub scripts: GMScripts,                       // SCPT
+    pub sequences: GMSequences,                   // SEQN
+    pub shaders: GMShaders,                       // SHDR
+    pub sounds: GMSounds,                         // SOND
+    pub sprites: GMSprites,                       // SPRT
+    pub tags: GMTags,                             // TAGS
     pub texture_group_infos: GMTextureGroupInfos, // TGIN
-    pub texture_page_items: GMTexturePageItems, // TPAG
-    pub timelines: GMTimelines,              // TMLN
-    pub embedded_textures: GMEmbeddedTextures, // TXTR
-    pub variables: GMVariables,              // VARI
+    pub texture_page_items: GMTexturePageItems,   // TPAG
+    pub timelines: GMTimelines,                   // TMLN
+    pub embedded_textures: GMEmbeddedTextures,    // TXTR
+    pub variables: GMVariables,                   // VARI
 
     /// Indicates the number of padding bytes (null bytes) between chunks.
     /// Note that the last chunk does not get padding.
@@ -158,79 +161,6 @@ impl Default for GMData {
 }
 
 impl GMData {
-    // TODO: make this work for bytecode 14. also docs. also vari_instance_type is wrong/buggy?
-    pub fn make_variable_b15(
-        &mut self,
-        name: String,
-        instance_type: GMInstanceType,
-    ) -> Result<GMRef<GMVariable>> {
-        if instance_type == GMInstanceType::Local {
-            bail!(
-                "Local variables have to be unique; this function will not work"
-            );
-        }
-        let vari_instance_type = instance_type.as_vari();
-
-        for (i, variable) in self.variables.iter().enumerate() {
-            if variable.name != name {
-                continue;
-            }
-
-            let Some(b15) = &variable.b15_data else {
-                bail!(
-                    "Variable {} does not have bytecode 15 data",
-                    variable.name
-                );
-            };
-            if b15.instance_type != vari_instance_type {
-                continue;
-            }
-
-            // Found existing variable!
-            return Ok(GMRef::new(i as u32));
-        }
-
-        // Couldn't find a variable; make a new one
-
-        // First update these scuffed ass variable counts
-        let Some(b15_header) = &mut self.variables.b15_header else {
-            bail!("Variables element does not have bytecode 15 header");
-        };
-        let mut variable_id: i32 = b15_header.var_count1 as i32;
-
-        if self.general_info.is_version_at_least((2, 3)) {
-            if instance_type != GMInstanceType::Builtin {
-                b15_header.var_count1 += 1;
-                b15_header.var_count2 += 1;
-                //variable_id = new_name_string.index as i32;
-                variable_id = 67;
-            }
-        } else if self.general_info.bytecode_version >= 16 {
-            // this condition is only suggested by utmt; not confirmed (original: `!DifferentVarCounts`)
-            b15_header.var_count1 += 1;
-            b15_header.var_count2 += 1;
-        } else if matches!(vari_instance_type, GMInstanceType::Self_(_)) {
-            variable_id = b15_header.var_count2 as i32;
-            b15_header.var_count2 += 1;
-        } else if vari_instance_type == GMInstanceType::Global {
-            b15_header.var_count1 += 1;
-        }
-
-        if instance_type == GMInstanceType::Builtin {
-            variable_id = -6;
-        }
-
-        // Now actually create the variable
-        let variable_ref: GMRef<GMVariable> =
-            GMRef::new(self.variables.len() as u32);
-        self.variables.push(GMVariable {
-            name,
-            b15_data: Some(GMVariableB15Data { instance_type, variable_id }),
-        });
-
-        Ok(variable_ref)
-    }
-
     fn find_function(&self, name: &str) -> Result<Option<GMRef<GMFunction>>> {
         for (i, function) in self.functions.iter().enumerate() {
             if name == function.name {
@@ -241,9 +171,9 @@ impl GMData {
     }
 
     pub fn function_by_name(&self, name: &str) -> Result<GMRef<GMFunction>> {
-        let function = self.find_function(name)?.ok_or_else(|| {
-            format!("Could not find function with name {name:?}")
-        })?;
+        let function = self
+            .find_function(name)?
+            .ok_or_else(|| format!("Could not find function with name {name:?}"))?;
         Ok(function)
     }
 }

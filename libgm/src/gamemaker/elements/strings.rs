@@ -1,8 +1,12 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
-use crate::util::assert::assert_int;
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMChunkElement, GMElement},
+        serialize::builder::DataBuilder,
+    },
+    prelude::*,
+    util::assert::assert_int,
+};
 
 const ALIGNMENT: u32 = 4;
 
@@ -59,7 +63,7 @@ impl GMElement for GMStrings {
         for placeholder in strings {
             // For identical strings, just write the the position/id again (since they're sorted).
             if string.as_ref() == Some(&placeholder.string) {
-                overwrite_placeholder(builder, &placeholder, string_position, index)?;
+                overwrite_placeholder(builder, &placeholder, string_position, index - 1)?;
                 continue;
             }
 
@@ -124,7 +128,11 @@ fn overwrite_placeholder(
     index: usize,
 ) -> Result<()> {
     let placeholder_position = placeholder.placeholder_position as usize;
-    let number = if placeholder.write_id { index } else { string_position };
+    let number = if placeholder.write_id {
+        index
+    } else {
+        string_position
+    };
     builder.overwrite_usize(number, placeholder_position)?;
     Ok(())
 }

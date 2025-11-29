@@ -1,14 +1,19 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
 use std::ops::{Deref, DerefMut};
+
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMChunkElement, GMElement},
+        serialize::builder::DataBuilder,
+    },
+    prelude::*,
+};
 
 /// Audio Groups allow you to manage a set sound entries easier.
 /// You can use these for memory management, volume control and more.
 /// ___
 /// Audio Groups are only available to use in the regular audio system.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMAudioGroups {
     pub audio_groups: Vec<GMAudioGroup>,
     pub exists: bool,
@@ -72,7 +77,10 @@ impl GMElement for GMAudioGroup {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name);
         if builder.is_gm_version_at_least((2024, 14)) {
-            let path = self.path.as_ref().ok_or("Audio Group Path not set for 2024.14+")?;
+            let path = self
+                .path
+                .as_ref()
+                .ok_or("Audio Group Path not set for 2024.14+")?;
             builder.write_gm_string(path);
         }
         Ok(())

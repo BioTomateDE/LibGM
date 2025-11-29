@@ -17,10 +17,7 @@ pub fn format_bytes(bytes: usize) -> String {
     format!("{:.1} {}", size, UNITS[unit_idx])
 }
 
-pub fn hexdump(
-    raw_data: &[u8],
-    range: impl RangeBounds<usize>,
-) -> Result<String> {
+pub fn hexdump(raw_data: &[u8], range: impl RangeBounds<usize>) -> Result<String> {
     use std::fmt::Write;
     #[allow(clippy::enum_glob_use)]
     use std::ops::Bound::*;

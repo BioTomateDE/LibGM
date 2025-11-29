@@ -1,11 +1,14 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::GMElement;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
 use std::fmt::{Display, Formatter};
 
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
+    },
+    prelude::*,
+};
+
 /// Different `GameMaker` release branches. LTS has some but not all features of equivalent newer versions.
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
 pub enum LTSBranch {
     /// Before LTS was even introduced (`major < 2022`).
     PreLTS,
@@ -29,7 +32,7 @@ impl Display for LTSBranch {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMVersion {
     /// If greater than 1, serialization produces "2.0.0.0" due to the flag no longer updating in `data.win`.
     pub major: u32,
@@ -42,13 +45,7 @@ pub struct GMVersion {
 
 impl GMVersion {
     #[must_use]
-    pub const fn new(
-        major: u32,
-        minor: u32,
-        release: u32,
-        build: u32,
-        branch: LTSBranch,
-    ) -> Self {
+    pub const fn new(major: u32, minor: u32, release: u32, build: u32, branch: LTSBranch) -> Self {
         Self { major, minor, release, build, branch }
     }
 
@@ -81,10 +78,8 @@ impl GMVersion {
     ///
     /// # Returns
     /// `true` if `self` is greater than or equal to `version_req`.
-    pub fn is_version_at_least<V: Into<GMVersionReq>>(
-        &self,
-        version_req: V,
-    ) -> bool {
+    #[must_use]
+    pub fn is_version_at_least<V: Into<GMVersionReq>>(&self, version_req: V) -> bool {
         let ver: GMVersionReq = version_req.into();
         if ver.post_lts && self.branch < LTSBranch::PostLTS {
             return false;
@@ -115,23 +110,19 @@ impl GMVersion {
     ///
     /// # Notes
     /// Setting a non-LTS version updates the branch accordingly.
-    pub fn set_version_at_least<V: Into<GMVersionReq>>(
-        &mut self,
-        version_req: V,
-    ) -> Result<()> {
+    pub fn set_version_at_least<V: Into<GMVersionReq>>(&mut self, version_req: V) -> Result<()> {
         let new_ver: GMVersionReq = version_req.into();
         if !matches!(new_ver.major, 2 | 2022..=2025) {
             let comment = if new_ver.major > 2025 && new_ver.major < 2100 {
                 format!(
-                    "! If the current year is {} or greater, please contact the maintainer of this project to update the version validation.",
+                    "! If the current year is {} or greater, please contact the \
+                    maintainer of this project to update the version validation.",
                     new_ver.major
                 )
             } else {
                 String::new()
             };
-            bail!(
-                "Upgrading `GameMaker` Version from {self} to {new_ver} is not allowed{comment}"
-            );
+            bail!("Upgrading `GameMaker` Version from {self} to {new_ver} is not allowed{comment}");
         }
 
         if self.is_version_at_least(new_ver.clone()) {
@@ -186,26 +177,47 @@ pub struct GMVersionReq {
 }
 
 impl GMVersionReq {
-    pub fn none() -> Self {
-        Self { major: 0, minor: 0, release: 0, build: 0, post_lts: false }
+    #[must_use]
+    pub const fn new(major: u32, minor: u32, release: u32, build: u32, post_lts: bool) -> Self {
+        Self { major, minor, release, build, post_lts }
     }
+
+    pub const NONE: Self = Self::new(0, 0, 0, 0, false);
 }
 
 impl From<(u32, u32)> for GMVersionReq {
     fn from((major, minor): (u32, u32)) -> Self {
-        Self { major, minor, release: 0, build: 0, post_lts: false }
+        Self {
+            major,
+            minor,
+            release: 0,
+            build: 0,
+            post_lts: false,
+        }
     }
 }
 
 impl From<(u32, u32, u32)> for GMVersionReq {
     fn from((major, minor, release): (u32, u32, u32)) -> Self {
-        Self { major, minor, release, build: 0, post_lts: false }
+        Self {
+            major,
+            minor,
+            release,
+            build: 0,
+            post_lts: false,
+        }
     }
 }
 
 impl From<(u32, u32, u32, u32)> for GMVersionReq {
     fn from((major, minor, release, build): (u32, u32, u32, u32)) -> Self {
-        Self { major, minor, release, build, post_lts: false }
+        Self {
+            major,
+            minor,
+            release,
+            build,
+            post_lts: false,
+        }
     }
 }
 
@@ -234,9 +246,7 @@ impl From<(u32, u32, u32, LTSBranch)> for GMVersionReq {
 }
 
 impl From<(u32, u32, u32, u32, LTSBranch)> for GMVersionReq {
-    fn from(
-        (major, minor, release, build, lts): (u32, u32, u32, u32, LTSBranch),
-    ) -> Self {
+    fn from((major, minor, release, build, lts): (u32, u32, u32, u32, LTSBranch)) -> Self {
         Self {
             major,
             minor,
@@ -271,6 +281,6 @@ fn write_version(
         (minor, release, 0) => write!(f, ".{}.{}", minor, release),
         (minor, release, build) => {
             write!(f, ".{}.{}.{}", minor, release, build)
-        }
+        },
     }
 }

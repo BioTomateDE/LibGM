@@ -1,18 +1,20 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::reference::GMRef;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
-use crate::prelude::*;
-use crate::util::assert::assert_int;
-use crate::util::init::vec_with_capacity;
 use std::ops::{Deref, DerefMut};
+
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMChunkElement, GMElement, texture_page_items::GMTexturePageItem},
+        reference::GMRef,
+        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+    },
+    prelude::*,
+    util::{assert::assert_int, init::vec_with_capacity},
+};
 
 const ALIGNMENT: u32 = 8;
 
 /// See [`GMBackground`].
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMBackgrounds {
     pub backgrounds: Vec<GMBackground>,
     pub is_aligned: bool,
@@ -21,7 +23,11 @@ pub struct GMBackgrounds {
 
 impl Default for GMBackgrounds {
     fn default() -> Self {
-        Self { backgrounds: vec![], is_aligned: true, exists: false }
+        Self {
+            backgrounds: vec![],
+            is_aligned: true,
+            exists: false,
+        }
     }
 }
 
@@ -68,7 +74,7 @@ impl GMElement for GMBackgrounds {
 /// For `GameMaker` Studio 2, this will only ever be a tileset.
 /// For `GameMaker` Studio 1, this is usually a background,
 /// but is sometimes repurposed as use for a tileset as well.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMBackground {
     /// The name of the background.
     pub name: String,
@@ -90,12 +96,17 @@ impl GMElement for GMBackground {
         let transparent = reader.read_bool32()?;
         let smooth = reader.read_bool32()?;
         let preload = reader.read_bool32()?;
-        let texture: Option<GMRef<GMTexturePageItem>> =
-            reader.read_gm_texture_opt()?;
-        let gms2_data: Option<GMBackgroundGMS2Data> =
-            reader.deserialize_if_gm_version((2, 0))?;
+        let texture: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
+        let gms2_data: Option<GMBackgroundGMS2Data> = reader.deserialize_if_gm_version((2, 0))?;
 
-        Ok(Self { name, transparent, smooth, preload, texture, gms2_data })
+        Ok(Self {
+            name,
+            transparent,
+            smooth,
+            preload,
+            texture,
+            gms2_data,
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -154,7 +165,7 @@ impl GMElement for GMBackgroundGMS2Data {
             tile_ids.push(reader.read_u32()?);
         }
 
-        Ok(GMBackgroundGMS2Data {
+        Ok(Self {
             tile_width,
             tile_height,
             output_border_x,
@@ -176,17 +187,21 @@ impl GMElement for GMBackgroundGMS2Data {
 
         let total_tile_count: usize = self.tile_ids.len();
         let items_per_tile = self.items_per_tile_count as usize;
+
         if items_per_tile == 0 {
             bail!("Items per tile is zero");
         }
-        if total_tile_count % items_per_tile != 0 {
+
+        if !total_tile_count.is_multiple_of(items_per_tile) {
             bail!(
-                "Background Tiles do not add up: {} total tiles, {} items per tile leaves a remainder of {}",
+                "Background Tiles do not add up: {} total tiles, \
+                {} items per tile leaves a remainder of {}",
                 total_tile_count,
                 items_per_tile,
                 total_tile_count % items_per_tile,
             );
         }
+
         let tile_count: usize = total_tile_count / items_per_tile;
         builder.write_usize(items_per_tile)?;
         builder.write_usize(tile_count)?;

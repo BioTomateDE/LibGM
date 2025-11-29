@@ -1,17 +1,21 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::GMElement;
-use crate::gamemaker::elements::texture_page_items::GMTexturePageItem;
-use crate::gamemaker::reference::GMRef;
-use crate::prelude::*;
-use crate::util::fmt::typename;
 use std::collections::HashMap;
+
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMElement, texture_page_items::GMTexturePageItem},
+        reference::GMRef,
+    },
+    prelude::*,
+    util::fmt::typename,
+};
 
 impl DataReader<'_> {
     /// Read a standard `GameMaker` string reference.
     pub fn read_gm_string(&mut self) -> Result<String> {
         let occurrence_position = self.read_u32()?;
         self.read_gm_str(occurrence_position)
-            .context("reading optional `GameMaker` String reference")
+            .context("reading GameMaker String reference")
     }
 
     pub fn read_gm_string_opt(&mut self) -> Result<Option<String>> {
@@ -22,7 +26,7 @@ impl DataReader<'_> {
 
         let string = self
             .read_gm_str(occurrence_position)
-            .context("reading optional `GameMaker` String reference")?;
+            .context("reading optional GameMaker String reference")?;
 
         Ok(Some(string))
     }
@@ -34,12 +38,11 @@ impl DataReader<'_> {
         self.cur_pos = occurrence_position - 4;
         self.chunk = self.string_chunk.clone();
 
-        let length = self
-            .read_u32()
-            .context("reading `GameMaker` String length")?;
+        let length = self.read_u32().context("reading GameMaker String length")?;
+
         let string = self
             .read_literal_string(length)
-            .context("reading `GameMaker` String")?;
+            .context("reading GameMaker String")?;
 
         self.cur_pos = saved_pos;
         self.chunk = saved_chunk;
@@ -49,15 +52,10 @@ impl DataReader<'_> {
 
     pub fn read_gm_texture(&mut self) -> Result<GMRef<GMTexturePageItem>> {
         let occurrence_position = self.read_u32()?;
-        self.resolve_occurrence(
-            occurrence_position,
-            &self.texture_page_item_occurrences,
-        )
+        self.resolve_occurrence(occurrence_position, &self.texture_page_item_occurrences)
     }
 
-    pub fn read_gm_texture_opt(
-        &mut self,
-    ) -> Result<Option<GMRef<GMTexturePageItem>>> {
+    pub fn read_gm_texture_opt(&mut self) -> Result<Option<GMRef<GMTexturePageItem>>> {
         let occurrence_position = self.read_u32()?;
         if occurrence_position == 0 {
             return Ok(None);
@@ -111,9 +109,8 @@ pub fn resource_opt_from_i32<T>(number: i32) -> Result<Option<GMRef<T>>> {
 fn check_resource_limit(number: u32) -> Result<()> {
     // Increase limit if not enough
     const FAILSAFE_COUNT: u32 = 500_000;
-    integrity_assert! {
-        number < FAILSAFE_COUNT,
-        "Number {number} exceeds failsafe limit of {FAILSAFE_COUNT}"
+    if number > FAILSAFE_COUNT {
+        bail!("Number {number} exceeds failsafe limit of {FAILSAFE_COUNT}");
     }
     Ok(())
 }

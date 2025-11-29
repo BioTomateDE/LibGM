@@ -1,15 +1,20 @@
-use crate::prelude::*;
-use std::path::Path;
 pub(crate) mod builder;
+mod chunk;
 mod lists;
 mod numbers;
+mod pointers;
 mod resources;
 pub(crate) mod traits;
 
-use crate::gamemaker::data::GMData;
-use crate::gamemaker::elements::strings::GMStrings;
-use crate::util::bench::Stopwatch;
+use std::path::Path;
+
 use builder::DataBuilder;
+
+use crate::{
+    gamemaker::{data::GMData, elements::strings::GMStrings},
+    prelude::*,
+    util::bench::Stopwatch,
+};
 
 pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
     let stopwatch = Stopwatch::start();
@@ -21,6 +26,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
 
     // GEN8 has to be the first chunk, at least for utmt (?).
     // CODE has to be written before VARI and FUNC.
+
     builder.build_chunk(&gm_data.general_info)?;
     builder.build_chunk(&gm_data.options)?;
     builder.build_chunk(&gm_data.extensions)?;
@@ -57,56 +63,26 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
 
     builder.build_chunk(&GMStrings)?;
 
-    // Remove potential padding from last chunk
-    let last = &builder.last_chunk;
-    let chunk_length = last.padding_start_pos - last.length_pos - 4;
-    builder.raw_data.truncate(last.padding_start_pos);
-    builder.overwrite_usize(chunk_length, last.length_pos)?;
+    builder.remove_last_chunk_padding();
 
-    // Resolve pointers/placeholders
-    let placeholder_count = builder.pointer_placeholder_positions.len();
-    let resource_count = builder.pointer_resource_positions.len();
-    let stopwatch2 = Stopwatch::start();
-
-    for (placeholder_data_pos, element_mem_addr) in
-        std::mem::take(&mut builder.pointer_placeholder_positions)
-    {
-        let resource_data_pos: u32 = *builder
-            .pointer_resource_positions
-            .get(&element_mem_addr)
-            .ok_or_else(|| {
-                format!(
-                    "Could not resolve pointer placeholder with data position {} and memory address {}",
-                    placeholder_data_pos, element_mem_addr,
-                )
-            })?;
-        // Overwrite placeholder 0xDEAD_C0DE
-        builder.overwrite_i32(
-            resource_data_pos as i32,
-            placeholder_data_pos as usize,
-        )?;
-    }
-    log::trace!(
-        "Resolving {placeholder_count} pointer placeholders to {resource_count} resources took {stopwatch2}"
-    );
+    builder.connect_pointer_placeholders()?;
 
     // Overwrite data length placeholder
     builder.overwrite_usize(builder.len() - 8, 4)?;
 
     log::trace!("Building data file took {stopwatch}");
 
-    if builder.raw_data.len() >= i32::MAX as usize {
-        bail!(
-            "Data file is bigger than 2,147,483,646 bytes which will lead to bugs in the runner"
-        )
+    let raw_data: Vec<u8> = builder.finish();
+
+    if raw_data.len() >= i32::MAX as usize {
+        bail!("Data file is bigger than 2,147,483,646 bytes which will lead to bugs in the runner")
     }
 
-    Ok(builder.raw_data)
+    Ok(raw_data)
 }
 
 pub fn write_data_file(gm_data: &GMData, path: impl AsRef<Path>) -> Result<()> {
-    let raw_data: Vec<u8> =
-        build_data_file(gm_data).context("building data")?;
+    let raw_data: Vec<u8> = build_data_file(gm_data).context("building data")?;
     let stopwatch = Stopwatch::start();
     std::fs::write(path, raw_data)
         .map_err(|e| e.to_string())

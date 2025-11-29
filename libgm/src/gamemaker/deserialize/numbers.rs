@@ -1,6 +1,7 @@
-use crate::gamemaker::data::Endianness;
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::prelude::*;
+use crate::{
+    gamemaker::{data::Endianness, deserialize::reader::DataReader},
+    prelude::*,
+};
 
 macro_rules! read_int_fn {
     ($method:ident, $dtype:ty) => {

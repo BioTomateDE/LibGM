@@ -1,8 +1,9 @@
-use crate::{prelude::*, util::fmt::typename};
 use std::{
     ops::Neg,
     str::{Chars, FromStr},
 };
+
+use crate::{prelude::*, util::fmt::typename};
 
 #[derive(Debug, Clone)]
 pub struct Reader<'a> {
@@ -64,8 +65,7 @@ impl<'a> Reader<'a> {
     }
 
     pub fn consume_space(&mut self) -> Result<()> {
-        let char: char =
-            self.consume_char().ok_or("Expected space, got EOL")?;
+        let char: char = self.consume_char().ok_or("Expected space, got EOL")?;
         if char != ' ' {
             bail!("Expected space, got '{char}'");
         }
@@ -80,11 +80,7 @@ impl<'a> Reader<'a> {
         Ok(())
     }
 
-    fn consume_brackets(
-        &mut self,
-        open: char,
-        close: char,
-    ) -> Result<Option<&str>> {
+    fn consume_brackets(&mut self, open: char, close: char) -> Result<Option<&str>> {
         if !self.line.starts_with(open) {
             return Ok(None);
         }
@@ -122,7 +118,7 @@ impl<'a> Reader<'a> {
         for (i, char) in self.line.char_indices() {
             match char {
                 'a'..='z' | '0'..='9' | 'A'..='Z' | '_' => continue,
-                _ => {}
+                _ => {},
             }
 
             if i == 0 {
@@ -172,7 +168,7 @@ impl<'a> Reader<'a> {
     fn find_non_digit(&self) -> usize {
         for (index, character) in self.line.as_bytes().iter().enumerate() {
             match character {
-                b'0'..=b'9' => {}
+                b'0'..=b'9' => {},
                 _ => return index,
             }
         }

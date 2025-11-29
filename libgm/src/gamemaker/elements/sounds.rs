@@ -1,17 +1,20 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::audio_groups::GMAudioGroup;
-use crate::gamemaker::elements::embedded_audio::GMEmbeddedAudio;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::gm_version::GMVersion;
-use crate::gamemaker::reference::GMRef;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
-use crate::prelude::*;
-use crate::util::assert::assert_bool;
-use crate::util::bitfield::bitfield_struct;
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, Clone, Default)]
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{
+            GMChunkElement, GMElement, audio_groups::GMAudioGroup, embedded_audio::GMEmbeddedAudio,
+        },
+        gm_version::GMVersion,
+        reference::GMRef,
+        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+    },
+    prelude::*,
+    util::assert::assert_bool,
+};
+
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMSounds {
     pub sounds: Vec<GMSound>,
     pub exists: bool,
@@ -55,11 +58,12 @@ pub struct GMSound {
     /// This name is used when referencing this entry from code.
     pub name: String,
 
+    /// The raw flags of this sound.
+    /// WARNING: This field is unstable and may be removed inthe future.
+    pub flags: u32,
+
     /// Whether this sound uses the new audio system (post GM8).
     pub flag_regular: bool,
-
-    /// Whether this audio data is compressed?? TODO: more reasearch
-    pub flag_compressed: bool,
 
     /// The file format of the audio entry.
     /// This includes the `.` from the file extension.
@@ -117,9 +121,7 @@ impl GMElement for GMSound {
         let name: String = reader.read_gm_string()?;
 
         let flags = reader.read_u32()?;
-        let flag_requires_audio = flags & 1 == 1;
-        let flag_compressed = (flags >> 1) & 1 == 1;
-        let flag_regular = flags >> 5 == 3;
+        let flag_regular = (flags >> 5) & 1 == 1;
 
         let audio_type: Option<String> = reader.read_gm_string_opt()?;
         let file: String = reader.read_gm_string()?;
@@ -133,33 +135,16 @@ impl GMElement for GMSound {
         } else {
             let preload = reader.read_bool32()?;
             assert_bool("Preload", true, preload)?;
-            audio_group = GMRef::new(get_builtin_sound_group_id(
-                &reader.general_info.version,
-            ));
+            audio_group = GMRef::new(get_builtin_sound_group_id(&reader.general_info.version));
         }
 
-        let audio_file: Option<GMRef<GMEmbeddedAudio>> =
-            reader.read_resource_by_id_opt()?;
-
-        if audio_file.is_some() != flag_requires_audio {
-            bail!(
-                "Sound Flag bit 0 is {} but audio file is {}",
-                if flag_requires_audio { "set" } else { "unset" },
-                if audio_file.is_some() {
-                    "present"
-                } else {
-                    "missing"
-                }
-            )
-        }
-
-        let audio_length: Option<f32> =
-            reader.deserialize_if_gm_version((2024, 6))?;
+        let audio_file: Option<GMRef<GMEmbeddedAudio>> = reader.read_resource_by_id_opt()?;
+        let audio_length: Option<f32> = reader.deserialize_if_gm_version((2024, 6))?;
 
         Ok(Self {
             name,
+            flags,
             flag_regular,
-            flag_compressed,
             audio_type,
             file,
             effects,
@@ -173,19 +158,7 @@ impl GMElement for GMSound {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name);
-
-        let mut flags = 0;
-        if self.audio_file.is_some() {
-            flags |= 1;
-        }
-        if self.flag_compressed {
-            flags |= 2;
-        }
-        if self.flag_regular {
-            flags |= 100; // i dont fucking know
-        }
-
-        builder.write_u32(flags);
+        builder.write_u32(self.flags);
         builder.write_gm_string_opt(&self.audio_type);
         builder.write_gm_string(&self.file);
         builder.write_u32(self.effects);
@@ -197,11 +170,8 @@ impl GMElement for GMSound {
             builder.write_bool32(true); // Preload
         }
         builder.write_resource_id_opt(&self.audio_file);
-        self.audio_length.serialize_if_gm_ver(
-            builder,
-            "Audio Length",
-            (2024, 6),
-        )?;
+        self.audio_length
+            .serialize_if_gm_ver(builder, "Audio Length", (2024, 6))?;
         Ok(())
     }
 }
@@ -209,9 +179,7 @@ impl GMElement for GMSound {
 fn get_builtin_sound_group_id(gm_version: &GMVersion) -> u32 {
     let is_ver = |req| gm_version.is_version_at_least(req); // Small closure for concision
     // ver >= 1.0.0.1250 || (ver >= 1.0.0.161 && ver < 1.0.0.1000)
-    if is_ver((1, 0, 0, 1250))
-        || is_ver((1, 0, 0, 161)) && !is_ver((1, 0, 0, 1000))
-    {
+    if is_ver((1, 0, 0, 1250)) || is_ver((1, 0, 0, 161)) && !is_ver((1, 0, 0, 1000)) {
         0
     } else {
         1

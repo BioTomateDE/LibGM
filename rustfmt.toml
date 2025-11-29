@@ -1,3 +1,22 @@
+# Note: This needs the nightly channel to work
+#
+# To format this workspace correctly:
+# 1. `rustup toolchain install nightly`
+# 2. `rustup component add rustfmt --toolchain nightly`
+# 3. `cargo +nightly fmt --all`
+#
+# If you want to quickly format the workspace
+# without installing nightly, you can comment
+# out the "Nightly Options" temporarily.
+
+
+# Stable Options
 newline_style = "Unix"
-struct_lit_width = 60
-max_width = 80
+struct_lit_width = 40
+use_field_init_shorthand = true
+match_block_trailing_comma = true
+
+# Nightly Options
+imports_granularity = "Crate"
+group_imports = "StdExternalCrate"
+hex_literal_case = "Upper"

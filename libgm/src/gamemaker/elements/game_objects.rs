@@ -1,17 +1,23 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::sprites::GMSprite;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::reference::GMRef;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
-use crate::gml::instructions::GMCode;
-use crate::prelude::*;
-use crate::util::assert::assert_bool;
-use crate::util::init::{num_enum_from, vec_with_capacity};
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, Clone, Default)]
+use macros::num_enum;
+
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMChunkElement, GMElement, sprites::GMSprite},
+        reference::GMRef,
+        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+    },
+    gml::instructions::GMCode,
+    prelude::*,
+    util::{
+        assert::assert_bool,
+        init::{num_enum_from, vec_with_capacity},
+    },
+};
+
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMGameObjects {
     pub game_objects: Vec<GMGameObject>,
     pub exists: bool,
@@ -51,15 +57,13 @@ impl GMChunkElement for GMGameObjects {
 impl GMElement for GMGameObjects {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
-        let mut game_objects: Vec<GMGameObject> =
-            Vec::with_capacity(pointers.len());
+        let mut game_objects: Vec<GMGameObject> = Vec::with_capacity(pointers.len());
 
         for pointer in pointers {
             reader.assert_pos(pointer, "Game Object")?;
 
             let name: String = reader.read_gm_string()?;
-            let sprite: Option<GMRef<GMSprite>> =
-                reader.read_resource_by_id_opt()?;
+            let sprite: Option<GMRef<GMSprite>> = reader.read_resource_by_id_opt()?;
 
             let visible = reader.read_bool32()?;
             let mut managed: Option<bool> = None;
@@ -77,20 +81,17 @@ impl GMElement for GMGameObjects {
                 _ => Some(GMRef::new(parent_id as u32)),
             };
 
-            let texture_mask: Option<GMRef<GMSprite>> =
-                reader.read_resource_by_id_opt()?;
+            let texture_mask: Option<GMRef<GMSprite>> = reader.read_resource_by_id_opt()?;
 
             let uses_physics = reader.read_bool32()?;
             let is_sensor = reader.read_bool32()?;
-            let collision_shape: GMGameObjectCollisionShape =
-                num_enum_from(reader.read_u32()?)?;
+            let collision_shape: GMGameObjectCollisionShape = num_enum_from(reader.read_i32()?)?;
             let density = reader.read_f32()?;
             let restitution = reader.read_f32()?;
             let group = reader.read_u32()?;
             let linear_damping = reader.read_f32()?;
             let angular_damping = reader.read_f32()?;
-            let physics_shape_vertex_count =
-                reader.read_count("Physics Shape Vertex Count")?;
+            let physics_shape_vertex_count = reader.read_count("Physics Shape Vertex Count")?;
             let friction = reader.read_f32()?;
             let awake = reader.read_bool32()?;
             let kinematic = reader.read_bool32()?;
@@ -145,11 +146,9 @@ impl GMElement for GMGameObjects {
             builder.write_gm_string(&game_object.name);
             builder.write_resource_id_opt(&game_object.sprite);
             builder.write_bool32(game_object.visible);
-            game_object.managed.serialize_if_gm_ver(
-                builder,
-                "Managed",
-                (2022, 5),
-            )?;
+            game_object
+                .managed
+                .serialize_if_gm_ver(builder, "Managed", (2022, 5))?;
             builder.write_bool32(game_object.solid);
             builder.write_i32(game_object.depth);
             builder.write_bool32(game_object.persistent);
@@ -157,13 +156,13 @@ impl GMElement for GMGameObjects {
                 None => builder.write_i32(-100), // No Parent
                 Some(obj_ref) if obj_ref.index == i as u32 => {
                     builder.write_i32(-1);
-                } // Parent is Self
+                }, // Parent is Self
                 Some(obj_ref) => builder.write_resource_id(obj_ref), // Normal Parent
             }
             builder.write_resource_id_opt(&game_object.texture_mask);
             builder.write_bool32(game_object.uses_physics);
             builder.write_bool32(game_object.is_sensor);
-            builder.write_u32(game_object.collision_shape.into());
+            builder.write_i32(game_object.collision_shape.into());
             builder.write_f32(game_object.density);
             builder.write_f32(game_object.restitution);
             builder.write_u32(game_object.group);
@@ -256,8 +255,7 @@ pub struct GMGameObjectEvent {
 impl GMElement for GMGameObjectEvent {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let subtype = reader.read_u32()?;
-        let actions: Vec<GMGameObjectEventAction> =
-            reader.read_pointer_list()?;
+        let actions: Vec<GMGameObjectEventAction> = reader.read_pointer_list()?;
         Ok(Self { subtype, actions })
     }
 
@@ -339,8 +337,7 @@ impl GMElement for GMGameObjectEventAction {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
-#[repr(u32)]
+#[num_enum(i32)]
 pub enum GMGameObjectCollisionShape {
     Circle = 0,
     Box = 1,

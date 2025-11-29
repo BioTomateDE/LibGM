@@ -1,13 +1,19 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::gm_version::GMVersion;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
-use crate::util::init::num_enum_from;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, Clone, Default)]
+use macros::num_enum;
+
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMChunkElement, GMElement},
+        gm_version::GMVersion,
+        serialize::builder::DataBuilder,
+    },
+    prelude::*,
+    util::init::num_enum_from,
+};
+
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMExtensions {
     pub extensions: Vec<GMExtension>,
     /// only set in gms2 (and some scuffed gms1 versions)
@@ -48,7 +54,11 @@ impl GMElement for GMExtensions {
             }
         }
 
-        Ok(GMExtensions { extensions, product_id_data, exists: true })
+        Ok(Self {
+            extensions,
+            product_id_data,
+            exists: true,
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -106,7 +116,7 @@ impl GMElement for GMExtension {
         };
         let class_name: String = reader.read_gm_string()?;
         let files: Vec<GMExtensionFile>;
-        let mut options: Vec<GMExtensionOption> = Vec::new();
+        let options: Vec<GMExtensionOption>;
 
         if reader.general_info.is_version_at_least((2022, 6)) {
             let files_ptr = reader.read_u32()?;
@@ -119,17 +129,28 @@ impl GMElement for GMExtension {
             options = reader.read_pointer_list()?;
         } else {
             files = reader.read_pointer_list()?;
+            options = Vec::new();
         }
 
-        Ok(Self { folder_name, name, version, class_name, files, options })
+        Ok(Self {
+            folder_name,
+            name,
+            version,
+            class_name,
+            files,
+            options,
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.folder_name);
         builder.write_gm_string(&self.name);
         if builder.is_gm_version_at_least((2023, 4)) {
-            let version = self.version.as_ref().ok_or("Extension Version not set in 2023.4+")?;
-            builder.write_gm_string(&version);
+            let version = self
+                .version
+                .as_ref()
+                .ok_or("Extension Version not set in 2023.4+")?;
+            builder.write_gm_string(version);
         }
         builder.write_gm_string(&self.class_name);
         if builder.is_gm_version_at_least((2022, 6)) {
@@ -162,16 +183,22 @@ impl GMElement for GMExtensionFile {
         let filename: String = reader.read_gm_string()?;
         let cleanup_script: String = reader.read_gm_string()?;
         let init_script: String = reader.read_gm_string()?;
-        let kind: GMExtensionKind = num_enum_from(reader.read_u32()?)?;
+        let kind: GMExtensionKind = num_enum_from(reader.read_i32()?)?;
         let functions: Vec<GMExtensionFunction> = reader.read_pointer_list()?;
-        Ok(Self { filename, cleanup_script, init_script, kind, functions })
+        Ok(Self {
+            filename,
+            cleanup_script,
+            init_script,
+            kind,
+            functions,
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.filename);
         builder.write_gm_string(&self.cleanup_script);
         builder.write_gm_string(&self.init_script);
-        builder.write_u32(self.kind.into());
+        builder.write_i32(self.kind.into());
         builder.write_pointer_list(&self.functions)?;
         Ok(())
     }
@@ -191,18 +218,25 @@ impl GMElement for GMExtensionFunction {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: String = reader.read_gm_string()?;
         let id = reader.read_u32()?;
-        let kind: GMExtensionKind = num_enum_from(reader.read_u32()?)?; // Assumption; UTMT uses u32
-        let return_type: GMExtensionReturnType = num_enum_from(reader.read_u32()?)?;
+        let kind: GMExtensionKind = num_enum_from(reader.read_i32()?)?; // Assumption; UTMT uses u32
+        let return_type: GMExtensionReturnType = num_enum_from(reader.read_i32()?)?;
         let ext_name: String = reader.read_gm_string()?;
         let arguments: Vec<GMExtensionFunctionArg> = reader.read_simple_list()?;
-        Ok(Self { name, id, kind, return_type, ext_name, arguments })
+        Ok(Self {
+            name,
+            id,
+            kind,
+            return_type,
+            ext_name,
+            arguments,
+        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name);
         builder.write_u32(self.id);
-        builder.write_u32(self.kind.into());
-        builder.write_u32(self.return_type.into());
+        builder.write_i32(self.kind.into());
+        builder.write_i32(self.return_type.into());
         builder.write_gm_string(&self.ext_name);
         builder.write_simple_list(&self.arguments)?;
         Ok(())
@@ -216,12 +250,12 @@ pub struct GMExtensionFunctionArg {
 
 impl GMElement for GMExtensionFunctionArg {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let return_type: GMExtensionReturnType = num_enum_from(reader.read_u32()?)?;
+        let return_type: GMExtensionReturnType = num_enum_from(reader.read_i32()?)?;
         Ok(Self { return_type })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u32(self.return_type.into());
+        builder.write_i32(self.return_type.into());
         Ok(())
     }
 }
@@ -237,20 +271,19 @@ impl GMElement for GMExtensionOption {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: String = reader.read_gm_string()?;
         let value: String = reader.read_gm_string()?;
-        let kind: GMExtensionOptionKind = num_enum_from(reader.read_u32()?)?;
+        let kind: GMExtensionOptionKind = num_enum_from(reader.read_i32()?)?;
         Ok(GMExtensionOption { name, value, kind })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name);
         builder.write_gm_string(&self.value);
-        builder.write_u32(self.kind.into());
+        builder.write_i32(self.kind.into());
         Ok(())
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
-#[repr(u32)]
+#[num_enum(i32)]
 pub enum GMExtensionKind {
     Dll = 1,
     GML = 2,
@@ -259,21 +292,20 @@ pub enum GMExtensionKind {
     JavaScript = 5,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
-#[repr(u32)]
+#[num_enum(i32)]
 pub enum GMExtensionReturnType {
     String = 1,
     Double = 2,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
-#[repr(u32)]
+#[num_enum(i32)]
 pub enum GMExtensionOptionKind {
     Boolean = 0,
     Number = 1,
     String = 2,
 }
 
+#[must_use]
 const fn product_id_data_eligible(ver: &GMVersion) -> bool {
     // NOTE: I do not know if 1773 is the earliest version which contains product IDs.
     ver.major >= 2 || (ver.major == 1 && ver.build >= 1773) || (ver.major == 1 && ver.build == 1539)

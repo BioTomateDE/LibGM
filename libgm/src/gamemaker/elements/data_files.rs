@@ -1,7 +1,11 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMChunkElement, GMElement},
+        serialize::builder::DataBuilder,
+    },
+    prelude::*,
+};
 
 #[derive(Debug, Clone, Default)]
 pub struct GMDataFiles;

@@ -13,7 +13,11 @@ const MSEED: i32 = 161_803_398;
 
 impl CSharpRng {
     pub const fn new(seed: i32) -> Self {
-        let seed = if seed == i32::MIN { i32::MAX } else { seed.abs() };
+        let seed = if seed == i32::MIN {
+            i32::MAX
+        } else {
+            seed.abs()
+        };
         let mut num1 = MSEED.wrapping_sub(seed);
         let mut num2: i32 = 1;
         let mut index1: usize = 0;

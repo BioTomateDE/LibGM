@@ -1,16 +1,13 @@
-use crate::gamemaker::elements::GMElement;
-use crate::gamemaker::reference::GMRef;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::prelude::*;
-use crate::util::fmt::typename;
+use crate::{
+    gamemaker::{elements::GMElement, reference::GMRef, serialize::builder::DataBuilder},
+    prelude::*,
+    util::fmt::typename,
+};
 
 impl DataBuilder<'_> {
     /// Write the element count as a 32-bit integer.
     /// Then build all elements sequentially, with nothing in between.
-    pub fn write_simple_list<T: GMElement>(
-        &mut self,
-        elements: &Vec<T>,
-    ) -> Result<()> {
+    pub fn write_simple_list<T: GMElement>(&mut self, elements: &Vec<T>) -> Result<()> {
         let count: usize = elements.len();
         let ctx = || {
             format!(
@@ -27,10 +24,7 @@ impl DataBuilder<'_> {
         Ok(())
     }
 
-    pub fn write_simple_list_of_resource_ids<T>(
-        &mut self,
-        elements: &Vec<GMRef<T>>,
-    ) -> Result<()> {
+    pub fn write_simple_list_of_resource_ids<T>(&mut self, elements: &Vec<GMRef<T>>) -> Result<()> {
         self.write_usize(elements.len())?;
         for gm_ref in elements {
             self.write_resource_id(*gm_ref);
@@ -38,10 +32,7 @@ impl DataBuilder<'_> {
         Ok(())
     }
 
-    pub fn write_simple_list_of_strings(
-        &mut self,
-        elements: &Vec<String>,
-    ) -> Result<()> {
+    pub fn write_simple_list_of_strings(&mut self, elements: &Vec<String>) -> Result<()> {
         self.write_usize(elements.len())?;
         for string in elements {
             self.write_gm_string(string);
@@ -49,10 +40,7 @@ impl DataBuilder<'_> {
         Ok(())
     }
 
-    pub fn write_simple_list_short<T: GMElement>(
-        &mut self,
-        elements: &Vec<T>,
-    ) -> Result<()> {
+    pub fn write_simple_list_short<T: GMElement>(&mut self, elements: &Vec<T>) -> Result<()> {
         let count: usize = elements.len();
         let ctx = || {
             format!(
@@ -75,10 +63,7 @@ impl DataBuilder<'_> {
         Ok(())
     }
 
-    pub fn write_pointer_list<T: GMElement>(
-        &mut self,
-        elements: &[T],
-    ) -> Result<()> {
+    pub fn write_pointer_list<T: GMElement>(&mut self, elements: &[T]) -> Result<()> {
         let count: usize = elements.len();
         let ctx = || {
             format!(
@@ -97,11 +82,8 @@ impl DataBuilder<'_> {
         for (i, element) in elements.iter().enumerate() {
             element.serialize_pre_padding(self).with_context(ctx)?;
             let resolved_pointer_pos: usize = self.len();
-            self.overwrite_usize(
-                resolved_pointer_pos,
-                pointer_list_start_pos + 4 * i,
-            )
-            .with_context(ctx)?;
+            self.overwrite_usize(resolved_pointer_pos, pointer_list_start_pos + 4 * i)
+                .with_context(ctx)?;
             element.serialize(self).with_context(ctx)?;
             element
                 .serialize_post_padding(self, i == count - 1)
@@ -135,11 +117,8 @@ impl DataBuilder<'_> {
         for (i, element) in elements.iter().enumerate() {
             self.align(alignment);
             let resolved_pointer_pos: usize = self.len();
-            self.overwrite_usize(
-                resolved_pointer_pos,
-                pointer_list_start_pos + 4 * i,
-            )
-            .with_context(ctx)?;
+            self.overwrite_usize(resolved_pointer_pos, pointer_list_start_pos + 4 * i)
+                .with_context(ctx)?;
             element.serialize(self).with_context(ctx)?;
         }
         Ok(())

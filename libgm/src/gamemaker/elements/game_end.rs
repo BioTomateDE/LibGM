@@ -1,11 +1,16 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::reference::GMRef;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::gml::instructions::GMCode;
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, Clone, Default)]
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{GMChunkElement, GMElement},
+        reference::GMRef,
+        serialize::builder::DataBuilder,
+    },
+    gml::instructions::GMCode,
+};
+
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMGameEndScripts {
     pub game_end_scripts: Vec<GMRef<GMCode>>,
     pub exists: bool,

@@ -63,9 +63,7 @@ impl GMInstruction {
             Self::BranchIf { .. } => JT,
             Self::BranchUnless { .. } => JF,
             Self::PushWithContext { .. } => PUSHENV,
-            Self::PopWithContext { .. } | Self::PopWithContextExit { .. } => {
-                POPENV
-            }
+            Self::PopWithContext { .. } | Self::PopWithContextExit { .. } => POPENV,
             Self::Push { .. } => PUSH,
             Self::PushLocal { .. } => PUSHLOC,
             Self::PushGlobal { .. } => PUSHGLB,

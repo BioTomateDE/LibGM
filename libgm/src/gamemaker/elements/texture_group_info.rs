@@ -1,20 +1,23 @@
-use crate::gamemaker::deserialize::reader::DataReader;
-use crate::gamemaker::elements::backgrounds::GMBackground;
-use crate::gamemaker::elements::embedded_textures::GMEmbeddedTexture;
-use crate::gamemaker::elements::fonts::GMFont;
-use crate::gamemaker::elements::sprites::GMSprite;
-use crate::gamemaker::elements::{GMChunkElement, GMElement};
-use crate::gamemaker::gm_version::LTSBranch;
-use crate::gamemaker::reference::GMRef;
-use crate::gamemaker::serialize::builder::DataBuilder;
-use crate::gamemaker::serialize::traits::GMSerializeIfVersion;
-use crate::prelude::*;
-use crate::util::assert::assert_int;
-use crate::util::init::num_enum_from;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, Clone, Default)]
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+
+use crate::{
+    gamemaker::{
+        deserialize::reader::DataReader,
+        elements::{
+            GMChunkElement, GMElement, backgrounds::GMBackground,
+            embedded_textures::GMEmbeddedTexture, fonts::GMFont, sprites::GMSprite,
+        },
+        gm_version::LTSBranch,
+        reference::GMRef,
+        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+    },
+    prelude::*,
+    util::{assert::assert_int, init::num_enum_from},
+};
+
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMTextureGroupInfos {
     pub texture_group_infos: Vec<GMTextureGroupInfo>,
     pub exists: bool,
@@ -54,7 +57,7 @@ impl GMElement for GMTextureGroupInfos {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMTextureGroupInfo {
     pub name: String,
     pub texture_pages: Vec<GMRef<GMEmbeddedTexture>>,
@@ -68,25 +71,34 @@ pub struct GMTextureGroupInfo {
 impl GMElement for GMTextureGroupInfo {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: String = reader.read_gm_string()?;
-        let data_2022_9: Option<GMTextureGroupInfo2022_9> = reader.deserialize_if_gm_version((2022, 9))?;
+        let data_2022_9: Option<GMTextureGroupInfo2022_9> =
+            reader.deserialize_if_gm_version((2022, 9))?;
         let texture_pages_ptr = reader.read_u32()?;
         let sprites_ptr = reader.read_u32()?;
-        let spine_sprites_ptr = if !reader.general_info.is_version_at_least((2023, 1, LTSBranch::PostLTS)) {
-            reader.read_u32()?
-        } else {
-            0
-        };
+        let spine_sprites_ptr =
+            if !reader
+                .general_info
+                .is_version_at_least((2023, 1, LTSBranch::PostLTS))
+            {
+                reader.read_u32()?
+            } else {
+                0
+            };
         let fonts_ptr = reader.read_u32()?;
         let tilesets_ptr = reader.read_u32()?;
 
         reader.assert_pos(texture_pages_ptr, "Texture Pages")?;
-        let texture_pages: Vec<GMRef<GMEmbeddedTexture>> = reader.read_simple_list_of_resource_ids()?;
+        let texture_pages: Vec<GMRef<GMEmbeddedTexture>> =
+            reader.read_simple_list_of_resource_ids()?;
 
         reader.assert_pos(sprites_ptr, "Sprites")?;
         let sprites: Vec<GMRef<GMSprite>> = reader.read_simple_list_of_resource_ids()?;
 
         let spine_sprites: Vec<GMRef<GMSprite>> =
-            if !reader.general_info.is_version_at_least((2023, 1, LTSBranch::PostLTS)) {
+            if !reader
+                .general_info
+                .is_version_at_least((2023, 1, LTSBranch::PostLTS))
+            {
                 reader.assert_pos(spine_sprites_ptr, "Spine Sprites")?;
                 reader.read_simple_list_of_resource_ids()?
             } else {
@@ -112,8 +124,11 @@ impl GMElement for GMTextureGroupInfo {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name);
-        self.data_2022_9
-            .serialize_if_gm_ver(builder, "Directory, Extension, LoadType", (2022, 9))?;
+        self.data_2022_9.serialize_if_gm_ver(
+            builder,
+            "Directory, Extension, LoadType",
+            (2022, 9),
+        )?;
         builder.write_pointer(&self.texture_pages)?;
         builder.write_pointer(&self.sprites)?;
         if !builder.is_gm_version_at_least((2023, 1, LTSBranch::PostLTS)) {
@@ -143,7 +158,7 @@ impl GMElement for GMTextureGroupInfo {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMTextureGroupInfo2022_9 {
     pub directory: String,
     pub extension: String,
@@ -166,7 +181,7 @@ impl GMElement for GMTextureGroupInfo2022_9 {
     }
 }
 
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
 #[repr(i32)]
 pub enum GMTextureGroupInfoLoadType {
     /// The texture data is located inside this file.

@@ -1,19 +1,19 @@
-use crate::gamemaker::data::Endianness;
-use crate::prelude::*;
-use crate::util::fmt::hexdump;
-use image::{DynamicImage, ImageBuffer, Rgba};
 use std::convert::TryInto;
+
+use image::{DynamicImage, ImageBuffer, Rgba};
+
+use crate::{gamemaker::data::Endianness, prelude::*, util::fmt::hexdump};
 
 const QOI_INDEX: u8 = 0x00;
 const QOI_RUN_8: u8 = 0x40;
 const QOI_RUN_16: u8 = 0x60;
 const QOI_DIFF_8: u8 = 0x80;
-const QOI_DIFF_16: u8 = 0xc0;
-const QOI_DIFF_24: u8 = 0xe0;
-const QOI_COLOR: u8 = 0xf0;
-const QOI_MASK_2: u8 = 0xc0;
-const QOI_MASK_3: u8 = 0xe0;
-const QOI_MASK_4: u8 = 0xf0;
+const QOI_DIFF_16: u8 = 0xC0;
+const QOI_DIFF_24: u8 = 0xE0;
+const QOI_COLOR: u8 = 0xF0;
+const QOI_MASK_2: u8 = 0xC0;
+const QOI_MASK_3: u8 = 0xE0;
+const QOI_MASK_4: u8 = 0xF0;
 
 pub fn deserialize(bytes: &[u8]) -> Result<DynamicImage> {
     let header: &[u8] = bytes
