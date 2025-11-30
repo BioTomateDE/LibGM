@@ -199,7 +199,7 @@ impl GMElement for GMVariables {
         reader.chunk = saved_chunk;
         reader.cur_pos = saved_position;
 
-        Ok(GMVariables { variables, b15_header, exists: true })
+        Ok(Self { variables, b15_header, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -247,17 +247,17 @@ impl GMElement for GMVariableB15Data {
         let instance_type: GMInstanceType =
             parse_instance_type(raw_instance_type, GMVariableType::Normal)?;
         let variable_id = reader.read_i32()?;
-        Ok(GMVariableB15Data { instance_type, variable_id })
+        Ok(Self { instance_type, variable_id })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(build_instance_type(&self.instance_type) as i32);
+        builder.write_i32(i32::from(build_instance_type(&self.instance_type)));
         builder.write_i32(self.variable_id);
         Ok(())
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMVariablesB15Header {
     pub var_count1: u32,
     pub var_count2: u32,
@@ -271,7 +271,7 @@ impl GMElement for GMVariablesB15Header {
         let var_count1 = reader.read_u32()?;
         let var_count2 = reader.read_u32()?;
         let max_local_var_count = reader.read_u32()?;
-        Ok(GMVariablesB15Header {
+        Ok(Self {
             var_count1,
             var_count2,
             max_local_var_count,

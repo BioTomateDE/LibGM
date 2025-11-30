@@ -9,7 +9,7 @@ use crate::{
     prelude::*,
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMEmbeddedAudios {
     pub audios: Vec<GMEmbeddedAudio>,
     pub exists: bool,

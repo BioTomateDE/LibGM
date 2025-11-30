@@ -186,7 +186,7 @@ pub enum GMInstruction {
     /// If a flag is encoded in this instruction, then this will always terminate the loops, and branch to the encoded address.
     PopWithContext { jump_offset: i32 },
 
-    /// PopWithContext but with PopEnvExitMagic
+    /// `PopWithContext` but with `PopEnvExitMagic`
     PopWithContextExit,
 
     /// Pushes a constant value onto the stack. Can vary in size depending on value type.
@@ -248,7 +248,7 @@ pub enum GMInstruction {
 
     /// Marks the current function to no longer be able to enter its own static initialization.
     /// This can either occur at the beginning or end of a static block,
-    /// depending on whether "AllowReentrantStatic" is enabled by a game's developer
+    /// depending on whether "`AllowReentrantStatic`" is enabled by a game's developer
     /// (enabled by default before `GameMaker` 2024.11; disabled by default otherwise).
     SetStaticInitialized,
 
@@ -262,7 +262,7 @@ pub enum GMInstruction {
     RestoreArrayReference,
 
     /// Pops a value from the stack, and pushes a boolean result.
-    /// The result is true if a "nullish" value, such as undefined or GML's pointer_null.
+    /// The result is true if a "nullish" value, such as undefined or GML's `pointer_null`.
     IsNullishValue,
 
     /// Pushes an asset reference to the stack, encoded in an integer. Includes asset type and index.
@@ -272,24 +272,25 @@ pub enum GMInstruction {
 impl GMInstruction {
     /// Gets the instruction size in bytes.
     /// This size includes extra data like integers, floats, variable references, etc.
+    #[must_use] 
     pub const fn size(&self) -> u32 {
         match self {
-            GMInstruction::Pop { .. }
-            | GMInstruction::PushLocal { .. }
-            | GMInstruction::PushGlobal { .. }
-            | GMInstruction::PushBuiltin { .. } => 8,
-            GMInstruction::Push {
+            Self::Pop { .. }
+            | Self::PushLocal { .. }
+            | Self::PushGlobal { .. }
+            | Self::PushBuiltin { .. } => 8,
+            Self::Push {
                 value:
                     GMCodeValue::Int32(_)
                     | GMCodeValue::Function(_)
                     | GMCodeValue::String(_)
                     | GMCodeValue::Boolean(_),
             } => 8,
-            GMInstruction::Push {
+            Self::Push {
                 value: GMCodeValue::Int64(_) | GMCodeValue::Double(_),
             } => 12,
-            GMInstruction::Call { .. } => 8,
-            GMInstruction::PushReference { .. } => 8,
+            Self::Call { .. } => 8,
+            Self::PushReference { .. } => 8,
             _ => 4,
         }
     }
@@ -517,6 +518,7 @@ pub enum GMCodeValue {
 }
 
 impl GMCodeValue {
+    #[must_use] 
     pub const fn data_type(&self) -> GMDataType {
         match self {
             Self::Int16(_) => GMDataType::Int16,

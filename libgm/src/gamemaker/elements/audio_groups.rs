@@ -51,7 +51,7 @@ impl GMElement for GMAudioGroups {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMAudioGroup {
     /// The name of the audio group.
     /// This is how the audio group is referenced from code.

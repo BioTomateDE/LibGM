@@ -82,7 +82,7 @@ impl DataReader<'_> {
                 T::NAME,
                 self.chunk.end_pos,
                 self.cur_pos,
-                self.chunk.end_pos as i64 - self.cur_pos as i64,
+                i64::from(self.chunk.end_pos) - i64::from(self.cur_pos),
             );
         }
 

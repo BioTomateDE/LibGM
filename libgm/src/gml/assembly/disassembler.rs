@@ -202,15 +202,15 @@ const fn opcode_to_string(instruction: &GMInstruction) -> &'static str {
         GMInstruction::PopSwap { is_array: true } => "popswaparr",
         GMInstruction::Duplicate { .. } => "dup",
         GMInstruction::DuplicateSwap { .. } => "dupswap",
-        GMInstruction::Return { .. } => "ret",
-        GMInstruction::Exit { .. } => "exit",
+        GMInstruction::Return => "ret",
+        GMInstruction::Exit => "exit",
         GMInstruction::PopDiscard { .. } => "popz",
         GMInstruction::Branch { .. } => "jmp",
         GMInstruction::BranchIf { .. } => "jt",
         GMInstruction::BranchUnless { .. } => "jf",
         GMInstruction::PushWithContext { .. } => "pushenv",
         GMInstruction::PopWithContext { .. } => "popenv",
-        GMInstruction::PopWithContextExit { .. } => "popenvexit",
+        GMInstruction::PopWithContextExit => "popenvexit",
         GMInstruction::Push { .. } => "push",
         GMInstruction::PushLocal { .. } => "pushloc",
         GMInstruction::PushGlobal { .. } => "pushglb",
@@ -292,7 +292,7 @@ fn asset_reference_to_string(gm_data: &GMData, asset_ref: &GMAssetReference) -> 
             "(particlesys".to_string()
                 + asset_get_name(&gm_data.particle_systems, gm_ref, |x| &x.name)?
         },
-        GMAssetReference::RoomInstance(id) => format!("(roominstance){}", id),
+        GMAssetReference::RoomInstance(id) => format!("(roominstance){id}"),
         GMAssetReference::Function(gm_ref) => {
             format!("(function){}", function_to_string(gm_data, *gm_ref)?)
         },
@@ -377,15 +377,14 @@ fn variable_to_string(gm_data: &GMData, code_variable: &CodeVariable) -> Result<
         ""
     };
 
-    let instance_type: &GMInstanceType = if code_variable.instance_type != GMInstanceType::Undefined
-    {
-        &code_variable.instance_type
-    } else {
+    let instance_type: &GMInstanceType = if code_variable.instance_type == GMInstanceType::Undefined {
         // TODO: this will not work with b14
         variable
             .b15_data
             .as_ref()
             .map_or(&GMInstanceType::Undefined, |b15| &b15.instance_type)
+    } else {
+        &code_variable.instance_type
     };
     let instance_type: String =
         instance_type_to_string(gm_data, instance_type, code_variable.variable)?;
@@ -412,11 +411,11 @@ fn function_to_string(gm_data: &GMData, function_ref: GMRef<GMFunction>) -> Resu
 
 pub(super) fn format_literal_string(string: String) -> Result<String> {
     let string: String = string
-        .replace("\\", "\\\\")
-        .replace("\n", "\\n")
-        .replace("\r", "\\r")
-        .replace("\t", "\\t")
-        .replace("\"", "\\\"");
+        .replace('\\', "\\\\")
+        .replace('\n', "\\n")
+        .replace('\r', "\\r")
+        .replace('\t', "\\t")
+        .replace('"', "\\\"");
     Ok(format!("\"{string}\""))
 }
 
@@ -431,6 +430,6 @@ fn is_valid_identifier(s: &str) -> bool {
     let mut chars = s.chars();
     chars
         .next()
-        .map_or(false, |c| c.is_ascii_alphabetic() || c == '_')
+        .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
         && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
 }

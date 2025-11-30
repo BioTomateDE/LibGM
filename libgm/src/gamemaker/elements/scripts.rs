@@ -91,7 +91,7 @@ impl GMElement for GMScript {
             is_constructor = true;
         }
         let code: Option<GMRef<GMCode>> = resource_opt_from_i32(code_id)?;
-        Ok(GMScript { name, is_constructor, code })
+        Ok(Self { name, is_constructor, code })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

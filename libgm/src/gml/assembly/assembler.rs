@@ -374,7 +374,7 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
             let float: f64 = line
                 .parse()
                 .ok()
-                .ok_or_else(|| "Invalid float literal {line:?}")?;
+                .ok_or("Invalid float literal {line:?}")?;
             GMCodeValue::Double(float)
         },
         GMDataType::Boolean => {
@@ -540,14 +540,13 @@ fn parse_function_identifier(reader: &mut Reader) -> Result<String> {
     };
 
     // Try special @@identifier@@ syntax
-    if reader.consume_str("@@").is_some() {
-        if let Ok(ident) = reader.parse_identifier() {
+    if reader.consume_str("@@").is_some()
+        && let Ok(ident) = reader.parse_identifier() {
             let ident = ident.to_string();
             if reader.consume_str("@@").is_some() {
                 return Ok(format!("@@{ident}@@"));
             }
         }
-    }
 
     // If neither works, return the original parse error
     Err(error)

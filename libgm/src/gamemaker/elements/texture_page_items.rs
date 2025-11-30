@@ -10,7 +10,7 @@ use crate::{
     prelude::*,
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMTexturePageItems {
     pub texture_page_items: Vec<GMTexturePageItem>,
     pub exists: bool,
@@ -90,7 +90,7 @@ impl GMElement for GMTexturePageItem {
         let texture_page_id = reader.read_u16()?;
         let texture_page: GMRef<GMEmbeddedTexture> = u32::from(texture_page_id).into();
 
-        Ok(GMTexturePageItem {
+        Ok(Self {
             source_x,
             source_y,
             source_width,

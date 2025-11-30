@@ -262,7 +262,7 @@ impl GMElement for GMInstruction {
         let mut opcode = ((word & 0xFF00_0000) >> 24) as u8;
         let b2 = ((word & 0x00FF_0000) >> 16) as u8;
         let b1 = ((word & 0x0000_FF00) >> 8) as u8;
-        let b0 = ((word & 0x0000_00FF) >> 0) as u8;
+        let b0 = ((word & 0x0000_00FF)) as u8;
         let mut b = [b0, b1, b2];
 
         if reader.general_info.bytecode_version < 15 {
@@ -475,15 +475,15 @@ impl GMElement for GMInstruction {
                 build_branch(builder, opcode, jump_offset);
             },
             Self::PopWithContextExit => build_popenv_exit(builder, opcode),
-            Self::Push { value } => build_push(builder, opcode, &value)?,
+            Self::Push { value } => build_push(builder, opcode, value)?,
             Self::PushLocal { variable } => {
-                build_pushvar(builder, opcode, &variable)?;
+                build_pushvar(builder, opcode, variable)?;
             },
             Self::PushGlobal { variable } => {
-                build_pushvar(builder, opcode, &variable)?;
+                build_pushvar(builder, opcode, variable)?;
             },
             Self::PushBuiltin { variable } => {
-                build_pushvar(builder, opcode, &variable)?;
+                build_pushvar(builder, opcode, variable)?;
             },
             &Self::PushImmediate { integer } => {
                 build_pushim(builder, opcode, integer);
@@ -525,7 +525,7 @@ impl GMElement for GMInstruction {
                 build_extended16(builder, opcodes::extended::ISNULLISH);
             },
             Self::PushReference { asset_reference } => {
-                build_pushref(builder, &asset_reference)?;
+                build_pushref(builder, asset_reference)?;
             },
         }
         Ok(())
@@ -655,7 +655,7 @@ fn parse_push(b: [u8; 3], reader: &mut DataReader) -> Result<GMCodeValue> {
         GMDataType::Int32 => {
             if let Some(&function) = reader.function_occurrences.get(&reader.cur_pos) {
                 reader.cur_pos += 4; // Skip next occurrence offset
-                return Ok(GMCodeValue::Function(function.clone()));
+                return Ok(GMCodeValue::Function(function));
             }
 
             if let Some(&variable) = reader.variable_occurrences.get(&reader.cur_pos) {
@@ -736,7 +736,7 @@ fn parse_callvar(b: [u8; 3]) -> Result<u16> {
 
 fn parse_extended(reader: &mut DataReader, b: [u8; 3]) -> Result<GMInstruction> {
     use GMDataType::{Int16, Int32};
-    use opcodes::extended::*;
+    use opcodes::extended::{CHKINDEX, PUSHAF, POPAF, PUSHAC, SETOWNER, ISSTATICOK, SETSTATIC, SAVEAREF, RESTOREAREF, ISNULLISH, PUSHREF};
 
     let kind = get_u16(b) as i16;
     let data_type: GMDataType = num_enum_from(b[2] & 0xF)?;
@@ -977,7 +977,7 @@ impl GMElement for GMAssetReference {
         }
 
         let raw = reader.read_u32()?;
-        let index: u32 = (raw & 0xFF_FFFF) as u32;
+        let index: u32 = (raw & 0xFF_FFFF);
         let asset_type: u8 = (raw >> 24) as u8;
 
         Ok(match asset_type {

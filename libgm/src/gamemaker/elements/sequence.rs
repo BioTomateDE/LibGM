@@ -120,7 +120,7 @@ impl GMElement for GMSequence {
 
         let moments: Vec<GMKeyframeData<GMKeyframeMoment>> = reader.read_simple_list()?;
 
-        Ok(GMSequence {
+        Ok(Self {
             name,
             playback,
             playback_speed,
@@ -330,7 +330,7 @@ impl GMElement for GMKeyframeSequence {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMKeyframeSpriteFrames {
     pub value: i32,
 }
@@ -347,7 +347,7 @@ impl GMElement for GMKeyframeSpriteFrames {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMKeyframeBool {
     pub boolean: bool,
 }
@@ -364,7 +364,7 @@ impl GMElement for GMKeyframeBool {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMKeyframeString {
     pub string: String,
 }
@@ -398,7 +398,7 @@ impl GMElement for GMKeyframeColor {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMKeyframeText {
     pub text: String,
     pub line_wrapping: bool,
@@ -425,7 +425,7 @@ impl GMElement for GMKeyframeText {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.text);
         builder.write_bool32(self.line_wrapping);
-        builder.write_i32((self.alignment_v as i32) << 8 | self.alignment_h as i32);
+        builder.write_i32(i32::from(self.alignment_v) << 8 | i32::from(self.alignment_h));
         log::warn!(
             "Writing raw Font index {} for Text Keyframe of Sequence",
             self.font_index
@@ -452,7 +452,7 @@ impl GMElement for GMKeyframeParticle {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMBroadcastMessage {
     pub messages: Vec<String>,
 }
@@ -476,7 +476,7 @@ impl GMElement for GMBroadcastMessage {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMKeyframeMoment {
     pub internal_count: i32, // "Should be 0 if none, 1 if there's a message?"
     pub event: Option<String>,
@@ -547,7 +547,7 @@ impl GMElement for GMTrack {
             owned_resources.push(GMAnimationCurve::deserialize(reader)?);
         }
 
-        let mut sub_tracks: Vec<GMTrack> = vec_with_capacity(track_count)?;
+        let mut sub_tracks: Vec<Self> = vec_with_capacity(track_count)?;
         for _ in 0..track_count {
             sub_tracks.push(Self::deserialize(reader)?);
         }
@@ -580,7 +580,7 @@ impl GMElement for GMTrack {
             other => bail!("Invalid Model Name {other:?} while parsing Track"),
         };
 
-        Ok(GMTrack {
+        Ok(Self {
             model_name,
             name,
             builtin_name,
@@ -606,7 +606,7 @@ impl GMElement for GMTrack {
             builder.write_i32(*tag);
         }
         for animation_curve in &self.owned_resources {
-            builder.write_gm_string(&"GMAnimCurve".to_string());
+            builder.write_gm_string("GMAnimCurve");
             animation_curve.serialize(builder)?;
         }
         for track in &self.sub_tracks {

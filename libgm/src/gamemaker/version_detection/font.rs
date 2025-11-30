@@ -120,7 +120,7 @@ pub fn check_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVers
     }
 
     // let mut detecting_2024_11_failed: bool = false;
-    for (i, glyph_pointer) in glyph_pointers.iter().enumerate() {
+    if let Some((i, glyph_pointer)) = glyph_pointers.iter().enumerate().next() {
         if reader.cur_pos != *glyph_pointer {
             return Ok(None);
         }

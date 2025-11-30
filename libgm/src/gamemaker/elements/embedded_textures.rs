@@ -24,7 +24,7 @@ pub(crate) const MAGIC_PNG_HEADER: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A
 pub(crate) const MAGIC_BZ2_QOI_HEADER: &[u8; 4] = b"2zoq";
 pub(crate) const MAGIC_QOI_HEADER: &[u8; 4] = b"fioq";
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMEmbeddedTextures {
     pub texture_pages: Vec<GMEmbeddedTexture>,
     pub exists: bool,
@@ -132,7 +132,7 @@ impl GMElement for GMEmbeddedTextures {
             img.serialize(builder)?;
             if builder.is_gm_version_at_least((2022, 3)) {
                 let length: usize = builder.len() - start_pos;
-                builder.overwrite_usize(length, texture_block_size_placeholders[i])?
+                builder.overwrite_usize(length, texture_block_size_placeholders[i])?;
             }
         }
 
@@ -148,7 +148,7 @@ pub struct GMEmbeddedTexture {
     /// not sure what `scaled` actually is
     pub scaled: u32,
 
-    /// The amount of generated MipMap levels. Present in 2.0.6+
+    /// The amount of generated `MipMap` levels. Present in 2.0.6+
     pub generated_mips: Option<u32>,
 
     /// Size of the texture attached to this texture page in bytes.
@@ -176,7 +176,7 @@ impl GMElement for GMEmbeddedTexture {
             Some(GMImage::NotYetDeserialized(texture_data_start_pos))
         };
 
-        Ok(GMEmbeddedTexture {
+        Ok(Self {
             scaled,
             generated_mips,
             texture_block_size,
@@ -241,14 +241,13 @@ fn read_raw_texture(
         bail!("Invalid image header [{dump}]");
     };
 
-    if let Some(expected_size) = texture_block_size {
-        if expected_size != data_length {
+    if let Some(expected_size) = texture_block_size
+        && expected_size != data_length {
             bail!(
                 "Texture Page Entry specified texture block size {expected_size}; \
                 actually read image with length {data_length}"
             );
         }
-    }
 
     Ok(image)
 }
@@ -335,7 +334,7 @@ pub struct BZip2QoiHeader {
     uncompressed_size: Option<u32>,
 }
 
-/// **This is not an actual GMElement!**
+/// **This is not an actual `GMElement`!**
 /// TODO: make this unmatchable for lib users
 #[non_exhaustive]
 #[derive(Debug, Clone)]
@@ -352,41 +351,42 @@ pub enum GMImage {
 }
 
 impl GMImage {
-    pub fn from_dynamic_image(dyn_img: DynamicImage) -> Self {
+    #[must_use] 
+    pub const fn from_dynamic_image(dyn_img: DynamicImage) -> Self {
         Self::DynImg(dyn_img)
     }
 
-    pub(crate) fn from_png(raw_png_data: Vec<u8>) -> Self {
+    pub(crate) const fn from_png(raw_png_data: Vec<u8>) -> Self {
         Self::Png(raw_png_data)
     }
 
-    pub(crate) fn from_bz2_qoi(raw_bz2_qoi_data: Vec<u8>, header: BZip2QoiHeader) -> Self {
+    pub(crate) const fn from_bz2_qoi(raw_bz2_qoi_data: Vec<u8>, header: BZip2QoiHeader) -> Self {
         Self::Bz2Qoi(raw_bz2_qoi_data, header)
     }
 
-    pub(crate) fn from_qoi(raw_qoi_data: Vec<u8>) -> Self {
+    pub(crate) const fn from_qoi(raw_qoi_data: Vec<u8>) -> Self {
         Self::Qoi(raw_qoi_data)
     }
 
     pub fn to_dynamic_image(&'_ self) -> Result<Cow<'_, DynamicImage>> {
         Ok(match self {
-            GMImage::DynImg(dyn_img) => Cow::Borrowed(dyn_img),
-            GMImage::Png(raw_png_data) => Cow::Owned(Self::decode_png(&raw_png_data)?),
-            GMImage::Bz2Qoi(raw_bz2_qoi_data, _) => {
-                Cow::Owned(Self::decode_bz2_qoi(&raw_bz2_qoi_data)?)
+            Self::DynImg(dyn_img) => Cow::Borrowed(dyn_img),
+            Self::Png(raw_png_data) => Cow::Owned(Self::decode_png(raw_png_data)?),
+            Self::Bz2Qoi(raw_bz2_qoi_data, _) => {
+                Cow::Owned(Self::decode_bz2_qoi(raw_bz2_qoi_data)?)
             },
-            GMImage::Qoi(raw_qoi_data) => Cow::Owned(Self::decode_qoi(&raw_qoi_data)?),
-            GMImage::NotYetDeserialized(_) => bail!("Image not deserialized"),
+            Self::Qoi(raw_qoi_data) => Cow::Owned(Self::decode_qoi(raw_qoi_data)?),
+            Self::NotYetDeserialized(_) => bail!("Image not deserialized"),
         })
     }
 
     pub fn into_dynamic_image(self) -> Result<Self> {
-        Ok(GMImage::DynImg(match self {
-            GMImage::DynImg(dyn_img) => dyn_img,
-            GMImage::Png(raw_png_data) => Self::decode_png(&raw_png_data)?,
-            GMImage::Bz2Qoi(raw_bz2_qoi_data, _) => Self::decode_bz2_qoi(&raw_bz2_qoi_data)?,
-            GMImage::Qoi(raw_qoi_data) => Self::decode_qoi(&raw_qoi_data)?,
-            GMImage::NotYetDeserialized(_) => bail!("Image not deserialized"),
+        Ok(Self::DynImg(match self {
+            Self::DynImg(dyn_img) => dyn_img,
+            Self::Png(raw_png_data) => Self::decode_png(&raw_png_data)?,
+            Self::Bz2Qoi(raw_bz2_qoi_data, _) => Self::decode_bz2_qoi(&raw_bz2_qoi_data)?,
+            Self::Qoi(raw_qoi_data) => Self::decode_qoi(&raw_qoi_data)?,
+            Self::NotYetDeserialized(_) => bail!("Image not deserialized"),
         }))
     }
 
@@ -408,13 +408,13 @@ impl GMImage {
     }
 
     fn decode_qoi(raw_qoi_data: &[u8]) -> Result<DynamicImage> {
-        let image = qoi::deserialize(&raw_qoi_data).context("decoding QOI Image")?;
+        let image = qoi::deserialize(raw_qoi_data).context("decoding QOI Image")?;
         Ok(image)
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         match self {
-            GMImage::DynImg(dyn_img) => {
+            Self::DynImg(dyn_img) => {
                 let mut png_data: Vec<u8> = Vec::new();
                 dyn_img
                     .write_to(&mut Cursor::new(&mut png_data), ImageFormat::Png)
@@ -422,8 +422,8 @@ impl GMImage {
                     .context("encoding PNG Image")?;
                 builder.write_bytes(&png_data);
             },
-            GMImage::Png(raw_png_data) => builder.write_bytes(&raw_png_data),
-            GMImage::Bz2Qoi(raw_bz2_qoi_data, header) => {
+            Self::Png(raw_png_data) => builder.write_bytes(raw_png_data),
+            Self::Bz2Qoi(raw_bz2_qoi_data, header) => {
                 builder.write_bytes(MAGIC_BZ2_QOI_HEADER);
                 builder.write_u16(header.width);
                 builder.write_u16(header.height);
@@ -432,10 +432,10 @@ impl GMImage {
                     "Uncompressed data size",
                     (2022, 5),
                 )?;
-                builder.write_bytes(&raw_bz2_qoi_data);
+                builder.write_bytes(raw_bz2_qoi_data);
             },
-            GMImage::Qoi(raw_qoi_data) => builder.write_bytes(raw_qoi_data),
-            GMImage::NotYetDeserialized(_) => bail!("Image not deserialized"),
+            Self::Qoi(raw_qoi_data) => builder.write_bytes(raw_qoi_data),
+            Self::NotYetDeserialized(_) => bail!("Image not deserialized"),
         }
         Ok(())
     }
@@ -483,7 +483,7 @@ fn find_end_of_bz2_stream(reader: &mut DataReader, max_end_of_stream_pos: u32) -
         // If we're at nonzero data, then invoke search for footer magic
         if position >= 0 && chunk_data[position as usize] != 0 {
             let end_data_position = chunk_start_position + position as u32 + 1;
-            return Ok(find_end_of_bz2_search(reader, end_data_position)?);
+            return find_end_of_bz2_search(reader, end_data_position);
         }
 
         // Move backwards to next chunk

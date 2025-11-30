@@ -132,6 +132,7 @@ impl DataParser {
     /// # Experimental.
     ///
     /// > Default: **false**
+    #[must_use] 
     pub const unsafe fn parallel_processing(mut self, enabled: bool) -> Self {
         self.options.parallel_processing = enabled;
         self

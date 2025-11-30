@@ -127,10 +127,7 @@ impl<'a> DataBuilder<'a> {
     /// - If `true`, write `1_i32`.
     /// - If `false`, write `0_i32`.
     pub fn write_bool32(&mut self, boolean: bool) {
-        let int: i32 = match boolean {
-            true => 1,
-            false => 0,
-        };
+        let int: i32 = if boolean { 1 } else { 0 };
         self.write_i32(int);
     }
 

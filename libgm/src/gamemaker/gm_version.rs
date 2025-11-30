@@ -13,11 +13,11 @@ pub enum LTSBranch {
     /// Before LTS was even introduced (`major < 2022`).
     PreLTS,
 
-    /// Long-Term Support branch. YoyoGames updates minor bugfixes here, but doesn't make breaking changes.
+    /// Long-Term Support branch. `YoyoGames` updates minor bugfixes here, but doesn't make breaking changes.
     LTS,
 
     /// New Version but not the Long-Term Support branch.
-    /// YoyoGames introduces all new features here, some of which may break your project.
+    /// `YoyoGames` introduces all new features here, some of which may break your project.
     PostLTS,
 }
 
@@ -146,7 +146,7 @@ impl GMElement for GMVersion {
         let release = reader.read_u32()?;
         let build = reader.read_u32()?;
         // Since the GEN8 Version is stuck on maximum 2.0.0.0; LTS will (initially) always be PreLTS
-        Ok(GMVersion::new(
+        Ok(Self::new(
             major,
             minor,
             release,
@@ -165,7 +165,7 @@ impl GMElement for GMVersion {
 }
 
 /// A `GameMaker` Version Requirement for checking if the game's version is equal to or higher than x.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMVersionReq {
     pub major: u32,
     pub minor: u32,
@@ -274,13 +274,13 @@ fn write_version(
     release: u32,
     build: u32,
 ) -> std::fmt::Result {
-    write!(f, "{}", major)?;
+    write!(f, "{major}")?;
     match (minor, release, build) {
         (0, 0, 0) => Ok(()),
-        (minor, 0, 0) => write!(f, ".{}", minor),
-        (minor, release, 0) => write!(f, ".{}.{}", minor, release),
+        (minor, 0, 0) => write!(f, ".{minor}"),
+        (minor, release, 0) => write!(f, ".{minor}.{release}"),
         (minor, release, build) => {
-            write!(f, ".{}.{}.{}", minor, release, build)
+            write!(f, ".{minor}.{release}.{build}")
         },
     }
 }
