@@ -2,6 +2,12 @@
 name = "libgm-cli"
 version = "0.1.0"
 edition = "2024"
+description = "A simple command line interface for interacting with LibGM"
+license = "GPL-3"
+repository = "https://github.com/BioTomateDE/LibGM"
+readme = "../README.md"
+keywords = ["cli", "gamemaker"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 clap = { version = "4.5.51", features = ["derive"] }
