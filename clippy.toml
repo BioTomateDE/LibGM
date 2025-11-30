@@ -1,32 +1,6 @@
-allowed = [
-  # Reading data can always fail (e.g. trying to read out of bounds).
-  # Almost all parser related functions have to read 
-  # data at some point down the call hierarchy.
-  # Putting the same `Errors` header everywhere is meaningless.
-  "missing_errors_doc",
+# This `clippy.toml` configuration file is half-deprecated by Rust.
+#
+# The lint groups and exceptions are defined in `libgm/src/lib.rs`.
+# Only special options that are not available in `Cargo.toml` (?) are configured here.
 
-  # "Cast from usize to u32 can truncate".
-  # This is irrelevant because all `usize`s are
-  # related to element count or data length.
-  # If either of those is out of `u32` bounds,
-  # the data reading/parsing will fail anyway
-  # since data files are only allowed to be
-  # smaller than 2 GB (`i32` limit).
-  "cast_possible_truncation",
-
-  # Reinterpreting the bits when using `as`-casts 
-  # is the intended behavior.
-  # When trying to "safely convert" between signed and 
-  # unsigned integers, use `try_from` instead.
-  "cast_sign_loss",
-  "cast_possible_wrap",
-
-  # I sometimes need more than 3 bools in a struct???
-  # This lint is only relevant for people 
-  # who have never heard of an enum.
-  "struct_excessive_bools",
-
-  # This is a stylistic preference of mine.
-  # I may change this in the future.
-  "useless_let_if_seq",
-]
+doc-valid-idents = ["GameMaker", "YoYoGames", ".."]

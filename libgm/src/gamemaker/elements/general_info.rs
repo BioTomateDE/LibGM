@@ -10,7 +10,7 @@ use crate::{
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
     prelude::*,
-    util::{assert::assert_int, bitfield::bitfield_struct, rng::CSharpRng},
+    util::{assert::assert_int, bitfield::bitfield_struct, rng::DotnetRng},
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -190,7 +190,7 @@ impl GMElement for GMGeneralInfo {
             let timestamp: i64 = timestamp_created.timestamp();
             let mut info_timestamp_offset: bool = true;
             let seed: i32 = (timestamp & 0xFFFFFFFF) as i32;
-            let mut rng = CSharpRng::new(seed);
+            let mut rng = DotnetRng::new(seed);
 
             let first_expected: i64 = ((rng.next() as i64) << 32) | (rng.next() as i64);
             let first_actual = reader.read_i64()?;
@@ -342,7 +342,7 @@ impl GMElement for GMGeneralInfo {
                 .ok_or("GMS2 Data not set in General Info")?;
             let timestamp: i64 = self.timestamp_created.timestamp();
             let seed: i32 = (timestamp & 0xFFFF_FFFF) as i32;
-            let mut rng = CSharpRng::new(seed);
+            let mut rng = DotnetRng::new(seed);
             let first_random: i64 = ((rng.next() as i64) << 32) | rng.next() as i64;
             let info_number = self.get_info_number(first_random, gms2_info.info_timestamp_offset);
             let info_location: i32 = ((timestamp & 0xFFFF) as i32 / 7

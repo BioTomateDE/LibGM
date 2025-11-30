@@ -9,6 +9,7 @@ use cpu_time::ProcessTime;
 pub trait DurFmt {
     fn ms(&self) -> String;
 }
+
 impl DurFmt for Duration {
     fn ms(&self) -> String {
         format!("{:.2} ms", self.as_secs_f64() * 1000.0)
@@ -19,20 +20,25 @@ pub struct Stopwatch {
     cpu_time: ProcessTime,
     real_time: Instant,
 }
+
 impl Stopwatch {
+    #[must_use]
     pub fn start() -> Self {
         Self {
             cpu_time: ProcessTime::now(),
             real_time: Instant::now(),
         }
     }
+
     pub fn elapsed_real(&self) -> Duration {
         self.real_time.elapsed()
     }
+
     pub fn elapsed_cpu(&self) -> Duration {
         self.cpu_time.elapsed()
     }
 }
+
 impl Display for Stopwatch {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let real: Duration = self.elapsed_real();
@@ -43,7 +49,7 @@ impl Display for Stopwatch {
             real.ms().bright_magenta(),
             "(cpu:".dimmed(),
             cpu.ms().magenta(),
-            ")".dimmed()
+            ")".dimmed(),
         )
     }
 }
