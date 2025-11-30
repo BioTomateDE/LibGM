@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use uuid::Uuid;
 
 use crate::{
     gamemaker::{
@@ -103,7 +104,7 @@ impl Default for GMGeneralInfo {
             last_object_id: 100_000,
             last_tile_id: 10_000_000,
             game_id: 1337,
-            directplay_guid: Default::default(),
+            directplay_guid: Uuid::default(),
             game_name: String::new(),
             version: GMVersion::stub(),
             default_window_width: 1337,
@@ -111,7 +112,7 @@ impl Default for GMGeneralInfo {
             flags: GMGeneralInfoFlags::default(),
             license_crc32: 1337,
             license_md5: [0; 16],
-            timestamp_created: Default::default(),
+            timestamp_created: DateTime::default(),
             display_name: String::new(),
             function_classifications: GMFunctionClassifications::default(),
             steam_appid: 0,
@@ -189,7 +190,7 @@ impl GMElement for GMGeneralInfo {
             // Parse and verify UUID
             let timestamp: i64 = timestamp_created.timestamp();
             let mut info_timestamp_offset: bool = true;
-            let seed: i32 = (timestamp & 0xFFFFFFFF) as i32;
+            let seed: i32 = (timestamp & 0xFFFF_FFFF) as i32;
             let mut rng = DotnetRng::new(seed);
 
             let first_expected: i64 = (i64::from(rng.next()) << 32) | i64::from(rng.next());
@@ -249,7 +250,8 @@ impl GMElement for GMGeneralInfo {
                         );
                     }
 
-                    random_uid[i as usize] = (i64::from(second_actual) << 32) | i64::from(third_actual);
+                    random_uid[i as usize] =
+                        (i64::from(second_actual) << 32) | i64::from(third_actual);
                 }
             }
             let fps = reader.read_f32()?;
@@ -392,10 +394,10 @@ impl GMGeneralInfo {
     const fn uid_bitmush(info_number: i64) -> i64 {
         let mut temp: u64 = info_number as u64;
         temp = (temp << 56 & 0xFF00_0000_0000_0000)
-            | (temp >> 08 & 0x00FF_0000_0000_0000)
+            | (temp >> 8 & 0x00FF_0000_0000_0000)
             | (temp << 32 & 0x0000_FF00_0000_0000)
             | (temp >> 16 & 0x0000_00FF_0000_0000)
-            | (temp << 08 & 0x0000_0000_FF00_0000)
+            | (temp << 8 & 0x0000_0000_FF00_0000)
             | (temp >> 24 & 0x0000_0000_00FF_0000)
             | (temp >> 16 & 0x0000_0000_0000_FF00)
             | (temp >> 32 & 0x0000_0000_0000_00FF);

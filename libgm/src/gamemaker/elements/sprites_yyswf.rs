@@ -39,7 +39,7 @@ pub struct GMSpriteYYSWFTimeline {
 
 impl GMElement for GMSpriteYYSWFTimeline {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        log::warn!("I have no idead what YYSWF is, prepare for bugs");
+        log::warn!("I have no idea what YYSWF is, prepare for bugs");
         let used_items: Vec<GMSpriteYYSWFItem> = reader.read_simple_list()?;
         let framerate = reader.read_i32()?;
         let frames_count = reader.read_u32()?;
@@ -134,9 +134,9 @@ impl GMElement for GMSpriteYYSWFItem {
         match &self.item_data {
             GMSpriteYYSWFItemData::ItemShape(shape_data) => shape_data.serialize(builder)?,
             GMSpriteYYSWFItemData::ItemBitmap(bitmap_data) => bitmap_data.serialize(builder)?,
-            GMSpriteYYSWFItemData::ItemFont => {},
-            GMSpriteYYSWFItemData::ItemTextField => {},
-            GMSpriteYYSWFItemData::ItemSprite => {},
+            GMSpriteYYSWFItemData::ItemFont
+            | GMSpriteYYSWFItemData::ItemTextField
+            | GMSpriteYYSWFItemData::ItemSprite => {},
         }
         Ok(())
     }
@@ -554,7 +554,7 @@ impl GMElement for GMSpriteYYSWFSubshapeData {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMSpriteYYSWFBitmapData {
     pub bitmap_type: GMSpriteYYSWFBitmapType,
     pub width: i32,
@@ -625,7 +625,7 @@ impl GMElement for GMSpriteYYSWFBitmapData {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GMSpriteYYSWFBitmapDataVer {
     Pre2022_1(GMSpriteYYSWFBitmapDataPre2022_1),
     Post2022_1(GMSpriteYYSWFBitmapDataPost2022_1),

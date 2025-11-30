@@ -132,7 +132,7 @@ impl DataParser {
     /// # Experimental.
     ///
     /// > Default: **false**
-    #[must_use] 
+    #[must_use]
     pub const unsafe fn parallel_processing(mut self, enabled: bool) -> Self {
         self.options.parallel_processing = enabled;
         self
@@ -162,7 +162,9 @@ impl DataParser {
             bail!("GEN8 chunk does not exist");
         }
 
+        #[allow(clippy::items_after_statements)]
         const GMS2: GMVersion = GMVersion::new(2, 0, 0, 0, LTSBranch::PreLTS);
+
         if reader.specified_version == GMS2 {
             let stopwatch = Stopwatch::start();
             detect_gamemaker_version(&mut reader).context("detecting `GameMaker` version")?;

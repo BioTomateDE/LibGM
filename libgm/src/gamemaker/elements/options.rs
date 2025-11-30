@@ -39,7 +39,7 @@ impl GMChunkElement for GMOptions {
 
 impl GMElement for GMOptions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let is_new_format: bool = reader.read_u32()? == 0x80000000;
+        let is_new_format: bool = reader.read_u32()? == 0x8000_0000;
         reader.cur_pos -= 4;
         if is_new_format {
             parse_options_new(reader)
@@ -52,7 +52,7 @@ impl GMElement for GMOptions {
         if self.is_new_format {
             build_options_new(builder, self)?;
         } else {
-            build_options_old(builder, self)?;
+            build_options_old(builder, self);
         }
         Ok(())
     }
@@ -274,7 +274,7 @@ fn parse_options_old(reader: &mut DataReader) -> Result<GMOptions> {
     })
 }
 
-fn build_options_old(builder: &mut DataBuilder, options: &GMOptions) -> Result<()> {
+fn build_options_old(builder: &mut DataBuilder, options: &GMOptions) {
     builder.write_bool32(options.flags.fullscreen);
     builder.write_bool32(options.flags.interpolate_pixels);
     builder.write_bool32(options.flags.use_new_audio);
@@ -310,9 +310,9 @@ fn build_options_old(builder: &mut DataBuilder, options: &GMOptions) -> Result<(
     builder.write_bool32(options.flags.freeze);
     builder.write_bool32(options.flags.show_progress);
 
-    builder.write_pointer_opt(&options.back_image)?;
-    builder.write_pointer_opt(&options.front_image)?;
-    builder.write_pointer_opt(&options.load_image)?;
+    builder.write_pointer_opt(&options.back_image);
+    builder.write_pointer_opt(&options.front_image);
+    builder.write_pointer_opt(&options.load_image);
 
     builder.write_bool32(options.flags.load_transparent);
 
@@ -324,7 +324,6 @@ fn build_options_old(builder: &mut DataBuilder, options: &GMOptions) -> Result<(
     builder.write_bool32(options.flags.abort_errors);
     builder.write_bool32(options.flags.variable_errors);
     builder.write_bool32(options.flags.creation_event_order);
-    Ok(())
 }
 
 fn build_options_new(builder: &mut DataBuilder, options: &GMOptions) -> Result<()> {
@@ -338,9 +337,9 @@ fn build_options_new(builder: &mut DataBuilder, options: &GMOptions) -> Result<(
     builder.write_u32(options.frequency);
     builder.write_i32(options.vertex_sync);
     builder.write_i32(options.priority);
-    builder.write_pointer_opt(&options.back_image)?;
-    builder.write_pointer_opt(&options.front_image)?;
-    builder.write_pointer_opt(&options.load_image)?;
+    builder.write_pointer_opt(&options.back_image);
+    builder.write_pointer_opt(&options.front_image);
+    builder.write_pointer_opt(&options.load_image);
     builder.write_u32(options.load_alpha);
     builder.write_simple_list(&options.constants)?;
     Ok(())

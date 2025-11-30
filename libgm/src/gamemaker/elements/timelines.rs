@@ -82,7 +82,7 @@ impl GMElement for GMTimeline {
         builder.write_usize(self.moments.len())?;
         for moment in &self.moments {
             builder.write_u32(moment.step);
-            builder.write_pointer(&moment.event)?;
+            builder.write_pointer(&moment.event);
         }
         for moment in &self.moments {
             builder.resolve_pointer(&moment.event)?;

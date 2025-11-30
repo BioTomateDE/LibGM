@@ -272,25 +272,20 @@ pub enum GMInstruction {
 impl GMInstruction {
     /// Gets the instruction size in bytes.
     /// This size includes extra data like integers, floats, variable references, etc.
-    #[must_use] 
+    #[must_use]
     pub const fn size(&self) -> u32 {
         match self {
+            Self::Push { value } => match value {
+                GMCodeValue::Int16(_) => 4,
+                GMCodeValue::Int64(_) | GMCodeValue::Double(_) => 12,
+                _ => 8,
+            },
             Self::Pop { .. }
             | Self::PushLocal { .. }
             | Self::PushGlobal { .. }
-            | Self::PushBuiltin { .. } => 8,
-            Self::Push {
-                value:
-                    GMCodeValue::Int32(_)
-                    | GMCodeValue::Function(_)
-                    | GMCodeValue::String(_)
-                    | GMCodeValue::Boolean(_),
-            } => 8,
-            Self::Push {
-                value: GMCodeValue::Int64(_) | GMCodeValue::Double(_),
-            } => 12,
-            Self::Call { .. } => 8,
-            Self::PushReference { .. } => 8,
+            | Self::PushBuiltin { .. }
+            | Self::Call { .. }
+            | Self::PushReference { .. } => 8,
             _ => 4,
         }
     }
@@ -367,7 +362,7 @@ impl GMDataType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum GMInstanceType {
     Undefined,
 
@@ -437,15 +432,15 @@ impl GMInstanceType {
     /// it would be if it was in the 'VARI' chunk (`GMVariable.instance_type`)
     /// instead of in an instruction (`CodeVariable.instance_type`).
     #[must_use]
-    pub(crate) fn as_vari(&self) -> Self {
+    pub(crate) const fn as_vari(self) -> Self {
         match self {
-            Self::StackTop => Self::Self_(None),
-            Self::Builtin => Self::Self_(None),
-            Self::Other => Self::Self_(None),
-            Self::Self_(Some(_)) => Self::Self_(None),
-            Self::RoomInstance(_) => Self::Self_(None),
+            Self::StackTop
+            | Self::Builtin
+            | Self::Other
+            | Self::Self_(Some(_))
+            | Self::RoomInstance(_) => Self::Self_(None),
             Self::Argument => Self::Builtin,
-            _ => self.clone(),
+            _ => self,
         }
     }
 }
@@ -518,12 +513,11 @@ pub enum GMCodeValue {
 }
 
 impl GMCodeValue {
-    #[must_use] 
+    #[must_use]
     pub const fn data_type(&self) -> GMDataType {
         match self {
             Self::Int16(_) => GMDataType::Int16,
-            Self::Int32(_) => GMDataType::Int32,
-            Self::Function(_) => GMDataType::Int32, // Functions are not a "real" gm type; they're always int32
+            Self::Int32(_) | Self::Function(_) => GMDataType::Int32, // Functions are not a "real" gm type; they're always int32
             Self::Variable(var) if var.is_int32 => GMDataType::Int32, // no idea when this happens
             Self::Int64(_) => GMDataType::Int64,
             Self::Double(_) => GMDataType::Double,

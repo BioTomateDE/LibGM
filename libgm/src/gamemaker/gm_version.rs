@@ -146,13 +146,7 @@ impl GMElement for GMVersion {
         let release = reader.read_u32()?;
         let build = reader.read_u32()?;
         // Since the GEN8 Version is stuck on maximum 2.0.0.0; LTS will (initially) always be PreLTS
-        Ok(Self::new(
-            major,
-            minor,
-            release,
-            build,
-            LTSBranch::PreLTS,
-        ))
+        Ok(Self::new(major, minor, release, build, LTSBranch::PreLTS))
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -178,11 +172,12 @@ pub struct GMVersionReq {
 
 impl GMVersionReq {
     #[must_use]
-    pub const fn new(major: u32, minor: u32, release: u32, build: u32, post_lts: bool) -> Self {
+    pub const fn new(major: u32, minor: u32, release: u32, build: u32, lts: LTSBranch) -> Self {
+        let post_lts: bool = matches!(lts, LTSBranch::PostLTS);
         Self { major, minor, release, build, post_lts }
     }
 
-    pub const NONE: Self = Self::new(0, 0, 0, 0, false);
+    pub const NONE: Self = Self::new(0, 0, 0, 0, LTSBranch::PreLTS);
 }
 
 impl From<(u32, u32)> for GMVersionReq {

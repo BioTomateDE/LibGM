@@ -78,7 +78,8 @@ impl GMElement for GMTextureGroupInfo {
         let spine_sprites_ptr =
             if reader
                 .general_info
-                .is_version_at_least((2023, 1, LTSBranch::PostLTS)) {
+                .is_version_at_least((2023, 1, LTSBranch::PostLTS))
+            {
                 0
             } else {
                 reader.read_u32()?
@@ -96,7 +97,8 @@ impl GMElement for GMTextureGroupInfo {
         let spine_sprites: Vec<GMRef<GMSprite>> =
             if reader
                 .general_info
-                .is_version_at_least((2023, 1, LTSBranch::PostLTS)) {
+                .is_version_at_least((2023, 1, LTSBranch::PostLTS))
+            {
                 Vec::new()
             } else {
                 reader.assert_pos(spine_sprites_ptr, "Spine Sprites")?;
@@ -127,13 +129,13 @@ impl GMElement for GMTextureGroupInfo {
             "Directory, Extension, LoadType",
             (2022, 9),
         )?;
-        builder.write_pointer(&self.texture_pages)?;
-        builder.write_pointer(&self.sprites)?;
+        builder.write_pointer(&self.texture_pages);
+        builder.write_pointer(&self.sprites);
         if !builder.is_gm_version_at_least((2023, 1, LTSBranch::PostLTS)) {
-            builder.write_pointer(&self.spine_sprites)?;
+            builder.write_pointer(&self.spine_sprites);
         }
-        builder.write_pointer(&self.fonts)?;
-        builder.write_pointer(&self.tilesets)?;
+        builder.write_pointer(&self.fonts);
+        builder.write_pointer(&self.tilesets);
 
         builder.resolve_pointer(&self.texture_pages)?;
         builder.write_simple_list_of_resource_ids(&self.texture_pages)?;
@@ -156,7 +158,7 @@ impl GMElement for GMTextureGroupInfo {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMTextureGroupInfo2022_9 {
     pub directory: String,
     pub extension: String,

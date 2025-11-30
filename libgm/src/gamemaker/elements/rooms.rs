@@ -206,15 +206,15 @@ impl GMElement for GMRoom {
         builder.write_u32(self.background_color ^ 0xFF00_0000);
 
         builder.write_bool32(self.draw_background_color);
-        builder.write_resource_id_opt(&self.creation_code);
+        builder.write_resource_id_opt(self.creation_code);
         self.flags.serialize(builder)?;
-        builder.write_pointer(&self.backgrounds)?;
-        builder.write_pointer(&self.views)?;
-        builder.write_pointer(&self.game_objects)?;
-        builder.write_pointer(&self.tiles)?;
+        builder.write_pointer(&self.backgrounds);
+        builder.write_pointer(&self.views);
+        builder.write_pointer(&self.game_objects);
+        builder.write_pointer(&self.tiles);
 
         if builder.is_gm_version_at_least((2024, 13)) {
-            builder.write_pointer(&self.instance_creation_order_ids)?;
+            builder.write_pointer(&self.instance_creation_order_ids);
         }
 
         builder.write_bool32(self.world);
@@ -227,11 +227,11 @@ impl GMElement for GMRoom {
         builder.write_f32(self.meters_per_pixel);
 
         if builder.is_gm_version_at_least((2, 0)) {
-            builder.write_pointer(&self.layers)?;
+            builder.write_pointer(&self.layers);
         }
 
         if builder.is_gm_version_at_least((2, 3)) {
-            builder.write_pointer(&self.sequences)?;
+            builder.write_pointer(&self.sequences);
         }
 
         builder.resolve_pointer(&self.backgrounds)?;
@@ -352,7 +352,7 @@ impl GMElement for GMRoomView {
         builder.write_u32(self.border_y);
         builder.write_i32(self.speed_x);
         builder.write_i32(self.speed_y);
-        builder.write_resource_id_opt(&self.object);
+        builder.write_resource_id_opt(self.object);
         Ok(())
     }
 }
@@ -402,7 +402,7 @@ impl GMElement for GMRoomBackground {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_bool32(self.enabled);
         builder.write_bool32(self.foreground);
-        builder.write_resource_id_opt(&self.background_definition);
+        builder.write_resource_id_opt(self.background_definition);
         builder.write_i32(self.x);
         builder.write_i32(self.y);
         builder.write_i32(self.tile_x);
@@ -741,11 +741,11 @@ impl GMElement for GMRoomLayerDataTiles {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_resource_id_opt(&self.background);
+        builder.write_resource_id_opt(self.background);
         builder.write_u32(self.width);
         builder.write_u32(self.height);
         if builder.is_gm_version_at_least((2024, 2)) {
-            self.build_compressed_tile_data(builder)?;
+            self.build_compressed_tile_data(builder);
         } else {
             for id in &self.tile_data {
                 builder.write_u32(*id);
@@ -817,10 +817,10 @@ impl GMRoomLayerDataTiles {
         Ok(())
     }
 
-    fn build_compressed_tile_data(&self, builder: &mut DataBuilder) -> Result<()> {
+    fn build_compressed_tile_data(&self, builder: &mut DataBuilder) {
         let tile_count: usize = self.tile_data.len();
         if tile_count == 0 {
-            return Ok(());
+            return;
         }
 
         // Perform run-length encoding using process identical to GameMaker's logic.
@@ -897,7 +897,6 @@ impl GMRoomLayerDataTiles {
         if builder.is_gm_version_at_least((2024, 4)) {
             builder.align(4);
         }
-        Ok(())
     }
 }
 
@@ -945,7 +944,7 @@ impl GMElement for GMRoomLayerDataBackground {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_bool32(self.visible);
         builder.write_bool32(self.foreground);
-        builder.write_resource_id_opt(&self.sprite);
+        builder.write_resource_id_opt(self.sprite);
         builder.write_bool32(self.tiled_horizontally);
         builder.write_bool32(self.tiled_vertically);
         builder.write_bool32(self.stretch);
@@ -1036,19 +1035,19 @@ impl GMElement for GMRoomLayerDataAssets {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer(&self.legacy_tiles)?;
-        builder.write_pointer(&self.sprites)?;
+        builder.write_pointer(&self.legacy_tiles);
+        builder.write_pointer(&self.sprites);
 
         if builder.is_gm_version_at_least((2, 3)) {
-            builder.write_pointer(&self.sequences)?;
+            builder.write_pointer(&self.sequences);
             if !builder.is_gm_version_at_least((2, 3, 2)) {
-                builder.write_pointer(&self.nine_slices)?;
+                builder.write_pointer(&self.nine_slices);
             }
             if builder.is_gm_version_at_least((2023, 2, LTSBranch::PostLTS)) {
-                builder.write_pointer(&self.particle_systems)?;
+                builder.write_pointer(&self.particle_systems);
             }
             if builder.is_gm_version_at_least((2024, 6)) {
-                builder.write_pointer(&self.text_items)?;
+                builder.write_pointer(&self.text_items);
             }
         }
         builder.resolve_pointer(&self.legacy_tiles)?;
@@ -1144,7 +1143,7 @@ impl GMElement for GMSpriteInstance {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name);
-        builder.write_resource_id_opt(&self.sprite);
+        builder.write_resource_id_opt(self.sprite);
         builder.write_i32(self.x);
         builder.write_i32(self.y);
         builder.write_f32(self.scale_x);
@@ -1410,7 +1409,7 @@ impl GMElement for GMRoomGameObject {
         builder.write_i32(self.y);
         builder.write_resource_id(self.object_definition);
         builder.write_u32(self.instance_id);
-        builder.write_resource_id_opt(&self.creation_code);
+        builder.write_resource_id_opt(self.creation_code);
         builder.write_f32(self.scale_x);
         builder.write_f32(self.scale_y);
         self.image_speed
@@ -1420,7 +1419,7 @@ impl GMElement for GMRoomGameObject {
         builder.write_u32(self.color);
         builder.write_f32(self.rotation);
         if builder.bytecode_version() >= 16 {
-            builder.write_resource_id_opt(&self.pre_create_code);
+            builder.write_resource_id_opt(self.pre_create_code);
         }
         Ok(())
     }

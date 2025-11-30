@@ -21,6 +21,7 @@ use crate::{
         },
     },
     prelude::*,
+    util::smallmap::SmallMap,
 };
 
 /// If `check_fn` can detect multiple versions, `required_version` should be set to its _lowest_ required version
@@ -85,56 +86,27 @@ impl VersionCheck {
     }
 }
 
-/// Games made in `GameMaker Studio 2` no longer store their actual version.
-/// They only store `2.0.0.0`. In that case, the version needs to be detected
-/// using assertions that can only be true in new versions.
-/// Note that games which never use new features might be incorrectly detected
-/// as an older version.
-pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
-    // TODO:  clean up ts function
-    let saved_pos = reader.cur_pos;
-    let saved_chunk: GMChunk = reader.chunk.clone();
+fn upgrade_by_chunk_existance(chunks: &SmallMap<String, GMChunk>) -> Option<GMVersionReq> {
+    const UPGRADES: [(&str, GMVersionReq); 6] = [
+        ("UILR", GMVersionReq::new(2024, 13, 0, 0, PostLTS)),
+        ("PSEM", GMVersionReq::new(2023, 13, 0, 0, PostLTS)),
+        ("FEAT", GMVersionReq::new(2022, 8, 0, 0, PreLTS)),
+        ("FEDS", GMVersionReq::new(2, 3, 6, 0, PreLTS)),
+        ("SEQN", GMVersionReq::new(2, 3, 0, 0, PreLTS)),
+        ("TGIN", GMVersionReq::new(2, 2, 1, 0, PreLTS)),
+    ];
 
-    if reader.chunks.contains_key("TGIN") {
-        reader
-            .general_info
-            .set_version_at_least((2, 2, 1, PreLTS))?;
+    for (chunk_name, version) in UPGRADES {
+        if chunks.contains_key(chunk_name) {
+            return Some(version);
+        }
     }
-    if reader.chunks.contains_key("SEQN") {
-        reader.general_info.set_version_at_least((2, 3, PreLTS))?;
-    }
-    if reader.chunks.contains_key("FEDS") {
-        reader
-            .general_info
-            .set_version_at_least((2, 3, 6, PreLTS))?;
-    }
-    if reader.chunks.contains_key("FEAT") {
-        reader
-            .general_info
-            .set_version_at_least((2022, 8, PreLTS))?;
-    }
-    if reader.chunks.contains_key("PSEM") {
-        reader
-            .general_info
-            .set_version_at_least((2023, 2, PostLTS))?;
-    }
-    if reader.chunks.contains_key("UILR") {
-        reader
-            .general_info
-            .set_version_at_least((2024, 13, PostLTS))?;
-    }
+    None
+}
 
-    if reader.general_info.bytecode_version >= 14 {
-        try_check(reader, "FUNC", func::check_2024_8, (2024, 8))?;
-    }
-    if reader.general_info.bytecode_version >= 15 {
-        try_check(reader, "CODE", code::check_2023_8_and_2024_4, (2024, 4))?;
-    }
-    if reader.general_info.bytecode_version >= 17 {
-        try_check(reader, "FONT", font::check_2022_2, (2022, 2))?;
-    }
-
-    let mut checks: Vec<VersionCheck> = vec![
+/// The `Into` trait is still not const unfortunately.
+fn create_version_checks() -> Vec<VersionCheck> {
+    vec![
         VersionCheck::new("SOND", sond::check_2024_6, (2022, 2, PostLTS), (2024, 6)),
         VersionCheck::new("SPRT", sprt::check_2024_6, (2022, 2, PostLTS), (2024, 6)),
         VersionCheck::new(
@@ -160,7 +132,34 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
         VersionCheck::new("TXTR", txtr::check_2_0_6, (2, 0), (2, 0, 6)),
         VersionCheck::new("PSEM", psem::check_2023_x, (2023, 2), (2023, 8)),
         VersionCheck::new("ACRV", acrv::check_2_3_1, (2, 3), (2, 3, 1)),
-    ];
+    ]
+}
+
+/// Games made in `GameMaker Studio 2` no longer store their actual version.
+/// They only store `2.0.0.0`. In that case, the version needs to be detected
+/// using assertions that can only be true in new versions.
+/// Note that games which never use new features might be incorrectly detected
+/// as an older version.
+pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
+    // TODO:  clean up ts function
+    let saved_pos = reader.cur_pos;
+    let saved_chunk: GMChunk = reader.chunk.clone();
+
+    if let Some(version) = upgrade_by_chunk_existance(&reader.chunks) {
+        reader.general_info.set_version_at_least(version)?;
+    }
+
+    if reader.general_info.bytecode_version >= 14 {
+        try_check(reader, "FUNC", func::check_2024_8, (2024, 8))?;
+    }
+    if reader.general_info.bytecode_version >= 15 {
+        try_check(reader, "CODE", code::check_2023_8_and_2024_4, (2024, 4))?;
+    }
+    if reader.general_info.bytecode_version >= 17 {
+        try_check(reader, "FONT", font::check_2022_2, (2022, 2))?;
+    }
+
+    let mut checks: Vec<VersionCheck> = create_version_checks();
 
     loop {
         // Permanently filter out already detected versions

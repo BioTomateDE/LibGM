@@ -20,7 +20,7 @@ impl DataBuilder<'_> {
     /// ___
     /// This function should NOT be called for `GameMaker References by ID`;
     /// use their `DataBuilder::write_gm_x()` methods instead.
-    pub fn write_pointer<T>(&mut self, element: &T) -> Result<()> {
+    pub fn write_pointer<T>(&mut self, element: &T) {
         let raw_pointer: *const T = std::ptr::from_ref(element);
         let memory_address = raw_pointer as usize;
 
@@ -29,19 +29,17 @@ impl DataBuilder<'_> {
         self.write_u32(0xDEAD_C0DE);
         self.pointer_placeholder_positions
             .push((placeholder_position, memory_address));
-        Ok(())
     }
 
     /// Optionally writes a pointer to the given [`Option`] value.
     /// - If [`Some`], writes a pointer to the contained value using [`Self::write_pointer`].
     /// - If [`None`], writes a null pointer (0) using [`Self::write_i32`].
-    pub fn write_pointer_opt<T>(&mut self, element: &Option<T>) -> Result<()> {
+    pub fn write_pointer_opt<T>(&mut self, element: &Option<T>) {
         if let Some(elem) = element {
-            self.write_pointer(elem)?;
+            self.write_pointer(elem);
         } else {
             self.write_i32(0);
         }
-        Ok(())
     }
 
     /// Store the written `GameMaker` element's data position paired with its memory address in the pointer resource pool.

@@ -37,7 +37,6 @@ impl GMCodes {
                 return Ok(i);
             }
         }
-
         bail!("Could not find code entry with name {name:?}");
     }
 
@@ -262,7 +261,7 @@ impl GMElement for GMInstruction {
         let mut opcode = ((word & 0xFF00_0000) >> 24) as u8;
         let b2 = ((word & 0x00FF_0000) >> 16) as u8;
         let b1 = ((word & 0x0000_FF00) >> 8) as u8;
-        let b0 = ((word & 0x0000_00FF)) as u8;
+        let b0 = (word & 0x0000_00FF) as u8;
         let mut b = [b0, b1, b2];
 
         if reader.general_info.bytecode_version < 15 {
@@ -404,39 +403,27 @@ impl GMElement for GMInstruction {
         }
 
         match self {
-            &Self::Convert { from, to } => {
-                build_double_type(builder, opcode, from, to);
-            },
-            &Self::Multiply { multiplicand, multiplier } => {
-                build_double_type(builder, opcode, multiplier, multiplicand);
-            },
-            &Self::Divide { dividend, divisor } => {
-                build_double_type(builder, opcode, divisor, dividend);
-            },
-            &Self::Remainder { dividend, divisor } => {
-                build_double_type(builder, opcode, divisor, dividend);
-            },
-            &Self::Modulus { dividend, divisor } => {
-                build_double_type(builder, opcode, divisor, dividend);
-            },
-            &Self::Add { augend, addend } => {
-                build_double_type(builder, opcode, addend, augend);
-            },
-            &Self::Subtract { minuend, subtrahend } => {
-                build_double_type(builder, opcode, subtrahend, minuend);
-            },
-            &Self::And { lhs, rhs } | &Self::Or { lhs, rhs } | &Self::Xor { lhs, rhs } => {
-                build_double_type(builder, opcode, rhs, lhs);
-            },
-            &Self::Negate { data_type } | &Self::Not { data_type } => {
+            &Self::Negate { data_type }
+            | &Self::Not { data_type }
+            | &Self::PopDiscard { data_type } => {
                 build_single_type(builder, opcode, data_type);
             },
-            &Self::ShiftLeft { value, shift_amount } => {
-                build_double_type(builder, opcode, shift_amount, value);
+
+            &Self::Convert { from: type1, to: type2 }
+            | &Self::Multiply { multiplicand: type2, multiplier: type1 }
+            | &Self::Divide { dividend: type2, divisor: type1 }
+            | &Self::Remainder { dividend: type2, divisor: type1 }
+            | &Self::Modulus { dividend: type2, divisor: type1 }
+            | &Self::Add { augend: type2, addend: type1 }
+            | &Self::Subtract { minuend: type2, subtrahend: type1 }
+            | &Self::And { lhs: type2, rhs: type1 }
+            | &Self::Or { lhs: type2, rhs: type1 }
+            | &Self::Xor { lhs: type2, rhs: type1 }
+            | &Self::ShiftLeft { value: type2, shift_amount: type1 }
+            | &Self::ShiftRight { value: type2, shift_amount: type1 } => {
+                build_double_type(builder, opcode, type1, type2);
             },
-            &Self::ShiftRight { value, shift_amount } => {
-                build_double_type(builder, opcode, shift_amount, value);
-            },
+
             &Self::Compare { lhs, rhs, comparison_type } => {
                 build_comparison(builder, opcode, rhs, lhs, comparison_type);
             },
@@ -456,33 +443,19 @@ impl GMElement for GMInstruction {
                 build_single_type(builder, opcode, GMDataType::Variable);
             },
             Self::Exit => build_single_type(builder, opcode, GMDataType::Int32),
-            &Self::PopDiscard { data_type } => {
-                build_single_type(builder, opcode, data_type);
-            },
-            &Self::Branch { jump_offset } => {
-                build_branch(builder, opcode, jump_offset);
-            },
-            &Self::BranchIf { jump_offset } => {
-                build_branch(builder, opcode, jump_offset);
-            },
-            &Self::BranchUnless { jump_offset } => {
-                build_branch(builder, opcode, jump_offset);
-            },
-            &Self::PushWithContext { jump_offset } => {
-                build_branch(builder, opcode, jump_offset);
-            },
-            &Self::PopWithContext { jump_offset } => {
+
+            &Self::Branch { jump_offset }
+            | &Self::BranchIf { jump_offset }
+            | &Self::BranchUnless { jump_offset }
+            | &Self::PushWithContext { jump_offset }
+            | &Self::PopWithContext { jump_offset } => {
                 build_branch(builder, opcode, jump_offset);
             },
             Self::PopWithContextExit => build_popenv_exit(builder, opcode),
             Self::Push { value } => build_push(builder, opcode, value)?,
-            Self::PushLocal { variable } => {
-                build_pushvar(builder, opcode, variable)?;
-            },
-            Self::PushGlobal { variable } => {
-                build_pushvar(builder, opcode, variable)?;
-            },
-            Self::PushBuiltin { variable } => {
+            Self::PushLocal { variable }
+            | Self::PushGlobal { variable }
+            | Self::PushBuiltin { variable } => {
                 build_pushvar(builder, opcode, variable)?;
             },
             &Self::PushImmediate { integer } => {
@@ -736,7 +709,10 @@ fn parse_callvar(b: [u8; 3]) -> Result<u16> {
 
 fn parse_extended(reader: &mut DataReader, b: [u8; 3]) -> Result<GMInstruction> {
     use GMDataType::{Int16, Int32};
-    use opcodes::extended::{CHKINDEX, PUSHAF, POPAF, PUSHAC, SETOWNER, ISSTATICOK, SETSTATIC, SAVEAREF, RESTOREAREF, ISNULLISH, PUSHREF};
+    use opcodes::extended::{
+        CHKINDEX, ISNULLISH, ISSTATICOK, POPAF, PUSHAC, PUSHAF, PUSHREF, RESTOREAREF, SAVEAREF,
+        SETOWNER, SETSTATIC,
+    };
 
     let kind = get_u16(b) as i16;
     let data_type: GMDataType = num_enum_from(b[2] & 0xF)?;
@@ -802,7 +778,7 @@ fn build_pop(
     type2: GMDataType,
 ) -> Result<()> {
     let instr_pos: usize = builder.len();
-    builder.write_i16(build_instance_type(&variable.instance_type));
+    builder.write_i16(build_instance_type(variable.instance_type));
     builder.write_u8(u8::from(type1) | u8::from(type2) << 4);
     builder.write_u8(opcode);
     //let variable: &GMVariable = variable.variable.resolve(&builder.gm_data.variables)?;
@@ -866,7 +842,7 @@ fn build_push(builder: &mut DataBuilder, opcode: u8, value: &GMCodeValue) -> Res
     let instr_pos: usize = builder.len();
     builder.write_i16(match value {
         GMCodeValue::Int16(int16) => *int16,
-        GMCodeValue::Variable(variable) => build_instance_type(&variable.instance_type),
+        GMCodeValue::Variable(variable) => build_instance_type(variable.instance_type),
         _ => 0,
     });
 
@@ -910,7 +886,7 @@ fn build_push(builder: &mut DataBuilder, opcode: u8, value: &GMCodeValue) -> Res
 
 fn build_pushvar(builder: &mut DataBuilder, opcode: u8, variable: &CodeVariable) -> Result<()> {
     let instr_pos = builder.len();
-    builder.write_i16(build_instance_type(&variable.instance_type));
+    builder.write_i16(build_instance_type(variable.instance_type));
     builder.write_u8(GMDataType::Variable.into());
     builder.write_u8(opcode);
 
@@ -977,7 +953,7 @@ impl GMElement for GMAssetReference {
         }
 
         let raw = reader.read_u32()?;
-        let index: u32 = (raw & 0xFF_FFFF);
+        let index: u32 = raw & 0xFF_FFFF;
         let asset_type: u8 = (raw >> 24) as u8;
 
         Ok(match asset_type {
@@ -1093,13 +1069,13 @@ pub(crate) fn parse_instance_type(
 }
 
 #[must_use]
-pub(crate) const fn build_instance_type(instance_type: &GMInstanceType) -> i16 {
+pub(crate) const fn build_instance_type(instance_type: GMInstanceType) -> i16 {
     // If > 0; then game object id (or room instance id). If < 0, then variable instance type.
     match instance_type {
         GMInstanceType::Undefined => 0,
         GMInstanceType::Self_(None) => -1,
         GMInstanceType::Self_(Some(game_object_ref)) => game_object_ref.index as i16,
-        GMInstanceType::RoomInstance(instance_id) => *instance_id,
+        GMInstanceType::RoomInstance(instance_id) => instance_id,
         GMInstanceType::Other => -2,
         GMInstanceType::All => -3,
         GMInstanceType::None => -4,

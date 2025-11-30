@@ -12,7 +12,7 @@ use crate::{
     util::init::{num_enum_from, vec_with_capacity},
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMShaders {
     pub shaders: Vec<GMShader>,
     pub exists: bool,
@@ -57,7 +57,7 @@ impl GMElement for GMShaders {
             let entry_end = win[1];
             reader.cur_pos = pointer;
             let name: String = reader.read_gm_string()?;
-            let shader_type: GMShaderType = num_enum_from(reader.read_u32()? & 0x7FFFFFFF)?;
+            let shader_type: GMShaderType = num_enum_from(reader.read_u32()? & 0x7FFF_FFFF)?;
 
             let glsl_es_vertex: String = reader.read_gm_string()?;
             let glsl_es_fragment: String = reader.read_gm_string()?;
@@ -182,7 +182,7 @@ impl GMElement for GMShaders {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMShader {
     pub name: String,
     pub shader_type: GMShaderType,
@@ -213,7 +213,7 @@ impl GMElement for GMShader {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name);
-        builder.write_u32(u32::from(self.shader_type) | 0x80000000);
+        builder.write_u32(u32::from(self.shader_type) | 0x8000_0000);
         builder.write_gm_string(&self.glsl_es_vertex);
         builder.write_gm_string(&self.glsl_es_fragment);
         builder.write_gm_string(&self.glsl_vertex);
@@ -221,34 +221,34 @@ impl GMElement for GMShader {
         builder.write_gm_string(&self.hlsl9_vertex);
         builder.write_gm_string(&self.hlsl9_fragment);
 
-        builder.write_pointer_opt(&self.hlsl11_vertex_data)?;
-        builder.write_pointer_opt(&self.hlsl11_pixel_data)?;
+        builder.write_pointer_opt(&self.hlsl11_vertex_data);
+        builder.write_pointer_opt(&self.hlsl11_pixel_data);
 
         builder.write_simple_list_of_strings(&self.vertex_shader_attributes)?;
 
         if builder.bytecode_version() > 13 {
             builder.write_i32(self.version);
-            builder.write_pointer_opt(&self.pssl_vertex_data)?;
+            builder.write_pointer_opt(&self.pssl_vertex_data);
             builder.write_usize(self.pssl_vertex_data.as_ref().map_or(0, |i| i.data.len()))?;
-            builder.write_pointer_opt(&self.pssl_pixel_data)?;
+            builder.write_pointer_opt(&self.pssl_pixel_data);
             builder.write_usize(self.pssl_pixel_data.as_ref().map_or(0, |i| i.data.len()))?;
-            builder.write_pointer_opt(&self.cg_psvita_vertex_data)?;
+            builder.write_pointer_opt(&self.cg_psvita_vertex_data);
             builder.write_usize(
                 self.cg_psvita_vertex_data
                     .as_ref()
                     .map_or(0, |i| i.data.len()),
             )?;
-            builder.write_pointer_opt(&self.cg_psvita_pixel_data)?;
+            builder.write_pointer_opt(&self.cg_psvita_pixel_data);
             builder.write_usize(
                 self.cg_psvita_pixel_data
                     .as_ref()
                     .map_or(0, |i| i.data.len()),
             )?;
             if self.version >= 2 {
-                builder.write_pointer_opt(&self.cg_ps3_vertex_data)?;
+                builder.write_pointer_opt(&self.cg_ps3_vertex_data);
                 builder
                     .write_usize(self.cg_ps3_vertex_data.as_ref().map_or(0, |i| i.data.len()))?;
-                builder.write_pointer_opt(&self.cg_ps3_pixel_data)?;
+                builder.write_pointer_opt(&self.cg_ps3_pixel_data);
                 builder.write_usize(self.cg_ps3_pixel_data.as_ref().map_or(0, |i| i.data.len()))?;
             }
         }

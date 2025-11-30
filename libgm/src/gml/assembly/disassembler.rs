@@ -32,10 +32,9 @@ pub fn disassemble_instructions(
 }
 
 pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) -> Result<String> {
-    let line: String;
     let opcode: &str = opcode_to_string(instruction);
 
-    match &instruction {
+    let line: String = match &instruction {
         GMInstruction::Exit
         | GMInstruction::Return
         | GMInstruction::PopSwap { .. }
@@ -49,32 +48,30 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
         | GMInstruction::SetStaticInitialized
         | GMInstruction::SaveArrayReference
         | GMInstruction::RestoreArrayReference
-        | GMInstruction::IsNullishValue => {
-            line = opcode.to_string();
-        },
+        | GMInstruction::IsNullishValue => opcode.to_string(),
 
         GMInstruction::Negate { data_type }
         | GMInstruction::Not { data_type }
         | GMInstruction::PopDiscard { data_type } => {
-            line = format!("{}.{}", opcode, data_type_to_string(*data_type));
+            format!("{}.{}", opcode, data_type_to_string(*data_type))
         },
 
         GMInstruction::CallVariable { argument_count } => {
-            line = format!("{opcode} {argument_count}");
+            format!("{opcode} {argument_count}")
         },
 
         GMInstruction::Duplicate { data_type, size } => {
-            line = format!("{}.{} {}", opcode, data_type_to_string(*data_type), size);
+            format!("{}.{} {}", opcode, data_type_to_string(*data_type), size)
         },
 
         GMInstruction::DuplicateSwap { data_type, size1, size2 } => {
-            line = format!(
+            format!(
                 "{}.{} {} {}",
                 opcode,
                 data_type_to_string(*data_type),
                 size1,
                 size2,
-            );
+            )
         },
 
         GMInstruction::Branch { jump_offset }
@@ -82,7 +79,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
         | GMInstruction::BranchUnless { jump_offset }
         | GMInstruction::PushWithContext { jump_offset }
         | GMInstruction::PopWithContext { jump_offset } => {
-            line = format!("{opcode} {jump_offset}");
+            format!("{opcode} {jump_offset}")
         },
 
         GMInstruction::Convert { from: type1, to: type2 }
@@ -97,33 +94,33 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
         | GMInstruction::Xor { lhs: type2, rhs: type1 }
         | GMInstruction::ShiftLeft { value: type2, shift_amount: type1 }
         | GMInstruction::ShiftRight { value: type2, shift_amount: type1 } => {
-            line = format!(
+            format!(
                 "{}.{}.{}",
                 opcode,
                 data_type_to_string(*type1),
                 data_type_to_string(*type2),
-            );
+            )
         },
 
         GMInstruction::Compare { lhs, rhs, comparison_type } => {
-            line = format!(
+            format!(
                 "{}.{}.{} {}",
                 opcode,
                 data_type_to_string(*rhs),
                 data_type_to_string(*lhs),
                 comparison_type_to_string(*comparison_type),
-            );
+            )
         },
 
         GMInstruction::Pop { variable, type1, type2 } => {
             // TODO: find the instance type of the variable
-            line = format!(
+            format!(
                 "{}.{}.{} {}",
                 opcode,
                 data_type_to_string(*type1),
                 data_type_to_string(*type2),
                 variable_to_string(gm_data, variable)?,
-            );
+            )
         },
 
         GMInstruction::Push { value } => {
@@ -134,47 +131,47 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
                 GMCodeValue::Function(function_ref) => {
                     format!("(function){}", function_to_string(gm_data, *function_ref)?)
                 },
-                GMCodeValue::String(string) => format_literal_string(string.clone())?,
+                GMCodeValue::String(string) => format_literal_string(string),
                 GMCodeValue::Int16(integer) => integer.to_string(),
                 GMCodeValue::Int32(integer) => integer.to_string(),
                 GMCodeValue::Int64(integer) => integer.to_string(),
                 GMCodeValue::Double(float) => float.to_string(),
             };
 
-            line = format!(
+            format!(
                 "{}.{} {}",
                 opcode,
                 data_type_to_string(value.data_type()),
                 literal,
-            );
+            )
         },
         GMInstruction::PushLocal { variable }
         | GMInstruction::PushGlobal { variable }
         | GMInstruction::PushBuiltin { variable } => {
-            line = format!("{} {}", opcode, variable_to_string(gm_data, variable)?);
+            format!("{} {}", opcode, variable_to_string(gm_data, variable)?)
         },
 
         GMInstruction::PushImmediate { integer } => {
-            line = format!("{opcode} {integer}");
+            format!("{opcode} {integer}")
         },
 
         GMInstruction::Call { function, argument_count } => {
-            line = format!(
+            format!(
                 "{} {}(argc={})",
                 opcode,
                 function_to_string(gm_data, *function)?,
                 argument_count,
-            );
+            )
         },
 
         GMInstruction::PushReference { asset_reference } => {
-            line = format!(
+            format!(
                 "{} {}",
                 opcode,
                 asset_reference_to_string(gm_data, asset_reference)?,
-            );
+            )
         },
-    }
+    };
 
     Ok(line)
 }
@@ -326,7 +323,7 @@ const fn comparison_type_to_string(comparison_type: GMComparisonType) -> &'stati
 
 fn instance_type_to_string(
     gm_data: &GMData,
-    instance_type: &GMInstanceType,
+    instance_type: GMInstanceType,
     variable_ref: GMRef<GMVariable>,
 ) -> Result<String> {
     Ok(match instance_type {
@@ -357,8 +354,7 @@ const fn variable_type_to_string(variable_type: GMVariableType) -> &'static str 
     match variable_type {
         GMVariableType::Array => "[array]",
         GMVariableType::StackTop => "[stacktop]",
-        GMVariableType::Normal => "",
-        GMVariableType::Instance => "",
+        GMVariableType::Normal | GMVariableType::Instance => "",
         GMVariableType::ArrayPushAF => "[arraypushaf]",
         GMVariableType::ArrayPopAF => "[arraypopaf]",
     }
@@ -377,14 +373,15 @@ fn variable_to_string(gm_data: &GMData, code_variable: &CodeVariable) -> Result<
         ""
     };
 
-    let instance_type: &GMInstanceType = if code_variable.instance_type == GMInstanceType::Undefined {
+    let instance_type: GMInstanceType = if code_variable.instance_type == GMInstanceType::Undefined
+    {
         // TODO: this will not work with b14
         variable
             .b15_data
             .as_ref()
-            .map_or(&GMInstanceType::Undefined, |b15| &b15.instance_type)
+            .map_or(GMInstanceType::Undefined, |b15| b15.instance_type)
     } else {
-        &code_variable.instance_type
+        code_variable.instance_type
     };
     let instance_type: String =
         instance_type_to_string(gm_data, instance_type, code_variable.variable)?;
@@ -409,14 +406,14 @@ fn function_to_string(gm_data: &GMData, function_ref: GMRef<GMFunction>) -> Resu
     Ok(name)
 }
 
-pub(super) fn format_literal_string(string: String) -> Result<String> {
+fn format_literal_string(string: &str) -> String {
     let string: String = string
         .replace('\\', "\\\\")
         .replace('\n', "\\n")
         .replace('\r', "\\r")
         .replace('\t', "\\t")
         .replace('"', "\\\"");
-    Ok(format!("\"{string}\""))
+    format!("\"{string}\"")
 }
 
 /// Check whether an identifier / asset name is valid for assembling properly.

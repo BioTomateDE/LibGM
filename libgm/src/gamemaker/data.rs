@@ -1,43 +1,15 @@
-use crate::{
-    gamemaker::{
-        elements::{
-            animation_curves::GMAnimationCurves,
-            audio_groups::GMAudioGroups,
-            backgrounds::GMBackgrounds,
-            code::GMCodes,
-            embedded_audio::GMEmbeddedAudios,
-            embedded_images::GMEmbeddedImages,
-            embedded_textures::GMEmbeddedTextures,
-            extensions::GMExtensions,
-            feature_flags::GMFeatureFlags,
-            filter_effects::GMFilterEffects,
-            fonts::GMFonts,
-            functions::{GMFunction, GMFunctions},
-            game_end::GMGameEndScripts,
-            game_objects::GMGameObjects,
-            general_info::GMGeneralInfo,
-            global_init::GMGlobalInitScripts,
-            languages::GMLanguageInfo,
-            options::GMOptions,
-            particle_emitters::GMParticleEmitters,
-            particle_systems::GMParticleSystems,
-            paths::GMPaths,
-            rooms::GMRooms,
-            scripts::GMScripts,
-            sequence::GMSequences,
-            shaders::GMShaders,
-            sounds::GMSounds,
-            sprites::GMSprites,
-            tags::GMTags,
-            texture_group_info::GMTextureGroupInfos,
-            texture_page_items::GMTexturePageItems,
-            timelines::GMTimelines,
-            ui_nodes::GMRootUINodes,
-            variables::GMVariables,
-        },
-        reference::GMRef,
-    },
-    prelude::*,
+use crate::gamemaker::elements::{
+    animation_curves::GMAnimationCurves, audio_groups::GMAudioGroups, backgrounds::GMBackgrounds,
+    code::GMCodes, embedded_audio::GMEmbeddedAudios, embedded_images::GMEmbeddedImages,
+    embedded_textures::GMEmbeddedTextures, extensions::GMExtensions, feature_flags::GMFeatureFlags,
+    filter_effects::GMFilterEffects, fonts::GMFonts, functions::GMFunctions,
+    game_end::GMGameEndScripts, game_objects::GMGameObjects, general_info::GMGeneralInfo,
+    global_init::GMGlobalInitScripts, languages::GMLanguageInfo, options::GMOptions,
+    particle_emitters::GMParticleEmitters, particle_systems::GMParticleSystems, paths::GMPaths,
+    rooms::GMRooms, scripts::GMScripts, sequence::GMSequences, shaders::GMShaders,
+    sounds::GMSounds, sprites::GMSprites, tags::GMTags, texture_group_info::GMTextureGroupInfos,
+    texture_page_items::GMTexturePageItems, timelines::GMTimelines, ui_nodes::GMRootUINodes,
+    variables::GMVariables,
 };
 
 /// Byte order (endianness) for integers and chunk names in data files.
@@ -157,23 +129,5 @@ impl Default for GMData {
             endianness: Endianness::Little,
             original_data_size: 0,
         }
-    }
-}
-
-impl GMData {
-    fn find_function(&self, name: &str) -> Result<Option<GMRef<GMFunction>>> {
-        for (i, function) in self.functions.iter().enumerate() {
-            if name == function.name {
-                return Ok(Some(GMRef::new(i as u32)));
-            }
-        }
-        Ok(None)
-    }
-
-    pub fn function_by_name(&self, name: &str) -> Result<GMRef<GMFunction>> {
-        let function = self
-            .find_function(name)?
-            .ok_or_else(|| format!("Could not find function with name {name:?}"))?;
-        Ok(function)
     }
 }
