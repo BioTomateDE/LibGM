@@ -18,7 +18,7 @@ impl DataBuilder<'_> {
     /// Writes the resource ID if present; writes -1 if `None`.
     /// # Parameters
     /// - `resource`: Optional resource reference to write.
-    pub fn write_resource_id_opt<T>(&mut self, resource: &Option<GMRef<T>>) {
+    pub fn write_resource_id_opt<T>(&mut self, resource: Option<GMRef<T>>) {
         match resource {
             Some(gm_ref) => self.write_u32(gm_ref.index),
             None => self.write_i32(-1),
@@ -56,7 +56,8 @@ impl DataBuilder<'_> {
     pub fn write_gm_texture(&mut self, gm_texture_ref: GMRef<GMTexturePageItem>) -> Result<()> {
         let resolved_texture_page_item: &GMTexturePageItem =
             gm_texture_ref.resolve(&self.gm_data.texture_page_items)?;
-        self.write_pointer(resolved_texture_page_item)
+        self.write_pointer(resolved_texture_page_item);
+        Ok(())
     }
 
     /// Writes an optional `GameMaker` texture page item reference as a pointer placeholder, or zero if the reference is `None`.

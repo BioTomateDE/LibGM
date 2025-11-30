@@ -41,14 +41,30 @@
 #![allow(clippy::cast_sign_loss)]
 #![allow(clippy::cast_possible_wrap)]
 //
+// I want to escape paths just like I escape normal strings.
+// This Debug formatting may change in the future and may not be
+// clickable in the console, but I want to make sure the path is
+// properly escaped.
+#![allow(clippy::unnecessary_debug_formatting)]
+//
 // I sometimes need more than 3 bools in a struct???
 // This lint is only relevant for people
 // who have never heard of an enum.
 #![allow(clippy::struct_excessive_bools)]
 //
+// I store `Option<T>`, so passing `Option<&T>` instead of `&Option<T>`
+// would require me to use `.as_ref()` every single time.
+#![allow(clippy::ref_option)]
+//
 // This is a stylistic preference of mine.
 // I may change this in the future.
 #![allow(clippy::useless_let_if_seq)]
+#![allow(clippy::needless_late_init)]
+//
+// I currently don't care about long functions.
+// Usually, they are `deserialize` or `serialize` functions,
+// which would be unclean to split up.
+#![allow(clippy::too_many_lines)]
 
 mod error;
 mod util;

@@ -144,7 +144,7 @@ impl GMElement for GMGameObjects {
             builder.overwrite_usize(builder.len(), pointer_list_pos + 4 * i)?;
 
             builder.write_gm_string(&game_object.name);
-            builder.write_resource_id_opt(&game_object.sprite);
+            builder.write_resource_id_opt(game_object.sprite);
             builder.write_bool32(game_object.visible);
             game_object
                 .managed
@@ -159,7 +159,7 @@ impl GMElement for GMGameObjects {
                 }, // Parent is Self
                 Some(obj_ref) => builder.write_resource_id(obj_ref), // Normal Parent
             }
-            builder.write_resource_id_opt(&game_object.texture_mask);
+            builder.write_resource_id_opt(game_object.texture_mask);
             builder.write_bool32(game_object.uses_physics);
             builder.write_bool32(game_object.is_sensor);
             builder.write_i32(game_object.collision_shape.into());

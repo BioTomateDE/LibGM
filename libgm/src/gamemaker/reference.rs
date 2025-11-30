@@ -1,5 +1,3 @@
-use std::usize;
-
 use crate::{prelude::*, util::fmt::typename};
 
 /// `GMRef` has (fake) generic types to make it clearer which type it belongs to (`name: GMRef` vs `name: String`).
@@ -24,26 +22,26 @@ impl<T> Clone for GMRef<T> {
 }
 
 impl<T> From<u32> for GMRef<T> {
-    fn from(value: u32) -> Self {
-        Self::new(value)
+    fn from(index: u32) -> Self {
+        Self::new(index)
     }
 }
 
 impl<T> From<usize> for GMRef<T> {
-    fn from(value: usize) -> Self {
-        Self::new(value as u32)
+    fn from(index: usize) -> Self {
+        Self::new(index as u32)
     }
 }
 
 impl<T> From<GMRef<T>> for u32 {
-    fn from(val: GMRef<T>) -> Self {
-        val.index
+    fn from(gm_ref: GMRef<T>) -> Self {
+        gm_ref.index
     }
 }
 
 impl<T> From<GMRef<T>> for usize {
-    fn from(val: GMRef<T>) -> Self {
-        val.index as usize
+    fn from(gm_ref: GMRef<T>) -> Self {
+        gm_ref.index as Self
     }
 }
 
@@ -53,6 +51,7 @@ impl<T> std::fmt::Debug for GMRef<T> {
     }
 }
 
+#[allow(clippy::ptr_arg)]
 impl<T> GMRef<T> {
     /// Creates a new `GameMaker` reference with the specified index.
     /// The fake generic type can often be omitted (if the compiler can infer it).

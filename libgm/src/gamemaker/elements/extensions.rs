@@ -13,7 +13,7 @@ use crate::{
     util::init::num_enum_from,
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMExtensions {
     pub extensions: Vec<GMExtension>,
     /// only set in gms2 (and some scuffed gms1 versions)
@@ -93,7 +93,7 @@ impl GMElement for GMExtensions {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMExtension {
     pub folder_name: String,
     pub name: String,
@@ -154,8 +154,8 @@ impl GMElement for GMExtension {
         }
         builder.write_gm_string(&self.class_name);
         if builder.is_gm_version_at_least((2022, 6)) {
-            builder.write_pointer(&self.files)?;
-            builder.write_pointer(&self.options)?;
+            builder.write_pointer(&self.files);
+            builder.write_pointer(&self.options);
 
             builder.resolve_pointer(&self.files)?;
             builder.write_pointer_list(&self.files)?;
@@ -169,7 +169,7 @@ impl GMElement for GMExtension {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMExtensionFile {
     pub filename: String,
     pub cleanup_script: String,
@@ -204,7 +204,7 @@ impl GMElement for GMExtensionFile {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMExtensionFunction {
     pub name: String,
     pub id: u32,

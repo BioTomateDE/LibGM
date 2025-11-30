@@ -355,14 +355,14 @@ impl GMElement for GMSprite {
             builder.write_i32(special_fields.playback_speed_type.into());
             if special_fields.special_version >= 2 {
                 if special_fields.sequence.is_some() {
-                    builder.write_pointer(&special_fields.sequence)?;
+                    builder.write_pointer(&special_fields.sequence);
                 } else {
                     builder.write_u32(0);
                 }
             }
             if special_fields.special_version >= 3 {
                 if special_fields.nine_slice.is_some() {
-                    builder.write_pointer(&special_fields.nine_slice)?;
+                    builder.write_pointer(&special_fields.nine_slice);
                 } else {
                     builder.write_u32(0);
                 }
@@ -545,7 +545,7 @@ pub enum GMSpriteSpecialData {
     Spine(GMSpriteTypeSpine),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMSpriteTypeSpine {
     pub version: i32,
     pub textures: Vec<GMSpriteSpineTextureEntry>,

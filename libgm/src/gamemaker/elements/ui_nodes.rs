@@ -109,7 +109,7 @@ impl GMElement for GMNodeUI {
             GMNodeUIData::EffectLayer(_) => 7,
         };
         builder.write_i32(type_id);
-        builder.write_pointer(&self.node)?;
+        builder.write_pointer(&self.node);
 
         // Write children if container node
         if matches!(
@@ -167,7 +167,7 @@ impl GMNodeUIData {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMNodeUILayer {
     pub name: String,
     pub draw_space: GMNodeUILayerDrawSpaceKind,
@@ -568,8 +568,8 @@ mod flex_properties {
     #[repr(i32)]
     pub enum LayoutDirectionKind {
         Inherit = 0,
-        LTR = 1,
-        RTL = 2,
+        LeftToRight = 1,
+        RightToLeft = 2,
     }
 
     #[derive(Debug, Clone, PartialEq, Eq)]

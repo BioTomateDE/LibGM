@@ -4,17 +4,43 @@ use crate::{
     gamemaker::{
         deserialize::{chunk::GMChunk, reader::DataReader},
         elements::{GMChunkElement, GMElement},
+        reference::GMRef,
         serialize::builder::DataBuilder,
     },
     prelude::*,
     util::init::vec_with_capacity,
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMFunctions {
     pub functions: Vec<GMFunction>,
     pub code_locals: GMCodeLocals,
     pub exists: bool,
+}
+
+impl GMFunctions {
+    fn index_by_name(&self, name: &str) -> Result<usize> {
+        for (i, function) in self.functions.iter().enumerate() {
+            if function.name == name {
+                return Ok(i);
+            }
+        }
+        bail!("Could not find function with name {name:?}");
+    }
+
+    pub fn ref_by_name(&self, name: &str) -> Result<GMRef<GMFunction>> {
+        self.index_by_name(name).map(GMRef::from)
+    }
+
+    pub fn by_name(&self, name: &str) -> Result<&GMFunction> {
+        self.index_by_name(name).map(|index| &self.functions[index])
+    }
+
+    /// Pretty useless. Just create a new function instead.
+    pub fn by_name_mut(&mut self, name: &str) -> Result<&mut GMFunction> {
+        self.index_by_name(name)
+            .map(|index| &mut self.functions[index])
+    }
 }
 
 impl Deref for GMFunctions {
@@ -84,14 +110,14 @@ impl GMElement for GMFunctions {
             functions.push(GMFunction { name });
         }
 
-        let code_locals: GMCodeLocals;
-        if reader.general_info.bytecode_version >= 15
+        let code_locals: GMCodeLocals = if reader.general_info.bytecode_version >= 15
             && !reader.general_info.is_version_at_least((2024, 8))
         {
-            code_locals = GMCodeLocals::deserialize(reader)?;
+            GMCodeLocals::deserialize(reader)?
         } else {
-            code_locals = Default::default();
-        }
+            GMCodeLocals::default()
+        };
+
         Ok(Self { functions, code_locals, exists: true })
     }
 
@@ -138,7 +164,7 @@ pub struct GMFunction {
     pub name: String,
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMCodeLocals {
     pub code_locals: Vec<GMCodeLocal>,
     pub exists: bool,
@@ -156,7 +182,7 @@ impl GMElement for GMCodeLocals {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMCodeLocal {
     pub name: String,
     pub variables: Vec<GMCodeLocalVariable>,

@@ -116,7 +116,7 @@ impl GMElement for GMEmbeddedTextures {
             )?;
 
             if texture_page.image.is_some() {
-                builder.write_pointer(&texture_page.image)?;
+                builder.write_pointer(&texture_page.image);
             } else {
                 builder.write_u32(0); // External texture
             }
@@ -242,12 +242,13 @@ fn read_raw_texture(
     };
 
     if let Some(expected_size) = texture_block_size
-        && expected_size != data_length {
-            bail!(
-                "Texture Page Entry specified texture block size {expected_size}; \
+        && expected_size != data_length
+    {
+        bail!(
+            "Texture Page Entry specified texture block size {expected_size}; \
                 actually read image with length {data_length}"
-            );
-        }
+        );
+    }
 
     Ok(image)
 }
@@ -280,6 +281,10 @@ fn read_png(reader: &mut DataReader) -> Result<(GMImage, u32)> {
     Ok((image, data_length))
 }
 
+// Regarding `header: &[u8; 8]`:
+// On 64-bit targets, the header is the same size as a pointer.
+// On 32-bit targets, passing by value would not fit in a word.
+#[allow(clippy::trivially_copy_pass_by_ref)]
 fn read_bz2_qoi(
     reader: &mut DataReader,
     header: &[u8; 8],
@@ -351,7 +356,7 @@ pub enum GMImage {
 }
 
 impl GMImage {
-    #[must_use] 
+    #[must_use]
     pub const fn from_dynamic_image(dyn_img: DynamicImage) -> Self {
         Self::DynImg(dyn_img)
     }

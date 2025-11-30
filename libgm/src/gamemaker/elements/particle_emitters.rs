@@ -294,7 +294,12 @@ impl GMElement for GMParticleEmitter {
                 .data_2023_8
                 .as_ref()
                 .ok_or("Particle Emitter 2023.8 Data not set")?;
+
+            // Lmao, even clippy says storing natural numbers as floats is dumb.
+            // What am I supposed to do, though? I'm just the janitor.
+            #[allow(clippy::cast_precision_loss)]
             builder.write_f32(self.emit_count as f32);
+
             builder.write_bool32(data_2023_8.emit_relative);
             builder.write_f32(data_2023_8.delay_min);
             builder.write_f32(data_2023_8.delay_max);
@@ -370,9 +375,9 @@ impl GMElement for GMParticleEmitter {
         builder.write_f32(self.orientation_increase);
         builder.write_f32(self.orientation_wiggle);
         builder.write_bool32(self.orientation_relative);
-        builder.write_resource_id_opt(&self.spawn_on_death);
+        builder.write_resource_id_opt(self.spawn_on_death);
         builder.write_u32(self.spawn_on_death_count);
-        builder.write_resource_id_opt(&self.spawn_on_update);
+        builder.write_resource_id_opt(self.spawn_on_update);
         builder.write_u32(self.spawn_on_update_count);
         Ok(())
     }

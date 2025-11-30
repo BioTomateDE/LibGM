@@ -67,7 +67,7 @@ fn verify_padding(padding: &[u8; 512]) -> Result<()> {
             0..=255 if i % 2 == 0 => (i / 2) as u8,
             0..=255 => 0,
             256..512 if i % 2 == 0 => 63,
-            _ => 0,
+            _ => unreachable!("i is always < 512"),
         };
 
         if byte == expected {
@@ -272,9 +272,7 @@ impl GMElement for GMFontGlyph {
             None
         } else {
             Some(char::from_u32(character.into()).ok_or_else(|| {
-                format!(
-                    "Invalid UTF-8 character with code point {character} (0x{character:04X})"
-                )
+                format!("Invalid UTF-8 character with code point {character} (0x{character:04X})")
             })?)
         };
         let x = reader.read_u16()?;
@@ -337,9 +335,7 @@ impl GMElement for GMFontGlyphKerning {
             bail!("Character not set (code point is zero)");
         }
         let character: char = char::from_u32(character.into()).ok_or_else(|| {
-            format!(
-                "Invalid UTF-8 character with code point {character} (0x{character:04X})"
-            )
+            format!("Invalid UTF-8 character with code point {character} (0x{character:04X})")
         })?;
         let shift_modifier = reader.read_i16()?;
         Ok(Self { character, shift_modifier })

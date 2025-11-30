@@ -169,7 +169,7 @@ impl GMElement for GMSound {
         } else {
             builder.write_bool32(true); // Preload
         }
-        builder.write_resource_id_opt(&self.audio_file);
+        builder.write_resource_id_opt(self.audio_file);
         self.audio_length
             .serialize_if_gm_ver(builder, "Audio Length", (2024, 6))?;
         Ok(())

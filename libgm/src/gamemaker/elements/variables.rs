@@ -44,7 +44,7 @@ impl GMVariables {
         let vari_instance_type = if instance_type == GMInstanceType::Builtin {
             GMInstanceType::Self_(None)
         } else {
-            instance_type.clone()
+            instance_type
         };
 
         for (i, variable) in self.variables.iter().enumerate() {
@@ -251,7 +251,7 @@ impl GMElement for GMVariableB15Data {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(i32::from(build_instance_type(&self.instance_type)));
+        builder.write_i32(i32::from(build_instance_type(self.instance_type)));
         builder.write_i32(self.variable_id);
         Ok(())
     }
