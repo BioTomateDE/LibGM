@@ -53,7 +53,7 @@ impl GMElement for GMEmbeddedImages {
     }
 }
 
-/// An embedded image entry in a GameMaker data file. This is GMS2 only.<br/>
+/// An embedded image entry in a `GameMaker` data file. This is GMS2 only.<br/>
 /// Not to be confused with the other "embedded" resources, this is a bit different.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMEmbeddedImage {

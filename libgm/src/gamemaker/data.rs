@@ -98,7 +98,7 @@ pub struct GMData {
 
     /// Indicates the number of padding bytes (null bytes) between chunks.
     /// Note that the last chunk does not get padding.
-    /// This padding is influenced by the data file's GameMaker Version, as well as target platform/architecture.
+    /// This padding is influenced by the data file's `GameMaker` Version, as well as target platform/architecture.
     pub chunk_padding: u32,
 
     /// Indicates the data's byte endianness.

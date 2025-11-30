@@ -10,7 +10,7 @@ use crate::{
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
     prelude::*,
-    util::{assert::assert_int, bitfield::bitfield_struct, rng::DotnetRng},
+    util::{assert::assert_int, bitfield::bitfield_struct, rng::CSharpRng},
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -26,7 +26,7 @@ pub struct GMGeneralInfo {
     /// The file name of the runner.
     pub game_file_name: String,
 
-    /// Which GameMaker configuration the data file was compiled with.
+    /// Which `GameMaker` configuration the data file was compiled with.
     pub config: String,
 
     /// The last object id of the data file.
@@ -39,13 +39,13 @@ pub struct GMGeneralInfo {
     pub game_id: u32,
 
     /// The `DirectPlay` GUID of the data file.
-    /// This is always empty in GameMaker Studio.
+    /// This is always empty in `GameMaker` Studio.
     pub directplay_guid: uuid::Uuid,
 
     /// The name of the game.
     pub game_name: String,
 
-    /// The version of the data file. For GameMaker 2 games, this will be specified as 2.0.0.0,
+    /// The version of the data file. For `GameMaker` 2 games, this will be specified as 2.0.0.0,
     /// but `detect_version.rs` will detect the actual version later.
     pub version: GMVersion,
 
@@ -82,7 +82,7 @@ pub struct GMGeneralInfo {
     /// The room order of the data file.
     pub room_order: Vec<GMRef<GMRoom>>,
 
-    /// Set in GameMaker 2+ data files.
+    /// Set in `GameMaker` 2+ data files.
     pub gms2_info: Option<GMGeneralInfoGMS2>,
 
     pub exists: bool,
@@ -189,8 +189,8 @@ impl GMElement for GMGeneralInfo {
             // Parse and verify UUID
             let timestamp: i64 = timestamp_created.timestamp();
             let mut info_timestamp_offset: bool = true;
-            let seed: i32 = (timestamp & 0xFFFF_FFFF) as i32;
-            let mut rng = DotnetRng::new(seed);
+            let seed: i32 = (timestamp & 0xFFFFFFFF) as i32;
+            let mut rng = CSharpRng::new(seed);
 
             let first_expected: i64 = ((rng.next() as i64) << 32) | (rng.next() as i64);
             let first_actual = reader.read_i64()?;
@@ -297,9 +297,8 @@ impl GMElement for GMGeneralInfo {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists {
-            bail!("General info is a required chunk");
+            bail!("General info was never deserialized");
         }
-
         builder.write_u8(self.is_debugger_disabled.into());
         builder.write_u8(self.bytecode_version);
         builder.write_u16(self.unknown_value);
@@ -308,9 +307,8 @@ impl GMElement for GMGeneralInfo {
         builder.write_u32(self.last_object_id);
         builder.write_u32(self.last_tile_id);
         builder.write_u32(self.game_id);
-        builder.write_bytes(&self.directplay_guid.to_bytes_le());
+        builder.write_bytes(self.directplay_guid.to_bytes_le().as_slice());
         builder.write_gm_string(&self.game_name);
-
         self.version.serialize(builder)?; // Technically incorrect but idc
         // if self.version.major == 1 {
         //     self.version.serialize(builder)?;
@@ -320,7 +318,6 @@ impl GMElement for GMGeneralInfo {
         //     builder.write_u32(0);
         //     builder.write_u32(0);
         // }
-
         builder.write_u32(self.default_window_width);
         builder.write_u32(self.default_window_height);
         self.flags.serialize(builder)?;
@@ -337,14 +334,33 @@ impl GMElement for GMGeneralInfo {
         for room_ref in &self.room_order {
             builder.write_resource_id(*room_ref);
         }
-
         if builder.is_gm_version_at_least((2, 0)) {
+            // Write random UID
             let gms2_info: &GMGeneralInfoGMS2 = self
                 .gms2_info
                 .as_ref()
                 .ok_or("GMS2 Data not set in General Info")?;
-
-            self.write_random_uid(builder, gms2_info);
+            let timestamp: i64 = self.timestamp_created.timestamp();
+            let seed: i32 = (timestamp & 0xFFFF_FFFF) as i32;
+            let mut rng = CSharpRng::new(seed);
+            let first_random: i64 = ((rng.next() as i64) << 32) | rng.next() as i64;
+            let info_number = self.get_info_number(first_random, gms2_info.info_timestamp_offset);
+            let info_location: i32 = ((timestamp & 0xFFFF) as i32 / 7
+                + self.game_id.wrapping_sub(self.default_window_width) as i32
+                + self.room_order.len() as i32)
+                .abs()
+                % 4;
+            builder.write_i64(first_random);
+            for i in 0..4 {
+                if i == info_location {
+                    builder.write_i64(info_number);
+                } else {
+                    let first: u32 = rng.next() as u32;
+                    let second: u32 = rng.next() as u32;
+                    builder.write_u32(first);
+                    builder.write_u32(second);
+                }
+            }
 
             builder.write_f32(gms2_info.fps);
             builder.write_bool32(gms2_info.allow_statistics);
@@ -355,63 +371,35 @@ impl GMElement for GMGeneralInfo {
 }
 
 impl GMGeneralInfo {
-    fn write_random_uid(&self, builder: &mut DataBuilder, gms2_info: &GMGeneralInfoGMS2) {
-        let timestamp: i64 = self.timestamp_created.timestamp();
-        let seed: i32 = (timestamp & 0xFFFF_FFFF) as i32;
-        let mut rng = DotnetRng::new(seed);
-
-        let first_random: i64 = ((rng.next() as i64) << 32) | rng.next() as i64;
-        let info_number = self.get_info_number(first_random, gms2_info.info_timestamp_offset);
-        let info_location: i32 = ((timestamp & 0xFFFF) as i32 / 7
-            + self.game_id.wrapping_sub(self.default_window_width) as i32
-            + self.room_order.len() as i32)
-            .abs()
-            % 4;
-
-        builder.write_i64(first_random);
-        for i in 0..4 {
-            if i == info_location {
-                builder.write_i64(info_number);
-            } else {
-                let first: u32 = rng.next() as u32;
-                let second: u32 = rng.next() as u32;
-                builder.write_u32(first);
-                builder.write_u32(second);
-            }
-        }
-    }
-
-    #[must_use]
-    const fn get_info_number(&self, first_random: i64, info_timestamp_offset: bool) -> i64 {
+    fn get_info_number(&self, first_random: i64, info_timestamp_offset: bool) -> i64 {
         let flags_raw: u32 = self.flags.build();
-        let mut num: i64 = self.timestamp_created.timestamp();
+        let mut info_number: i64 = self.timestamp_created.timestamp();
         if info_timestamp_offset {
-            num -= 1000;
+            info_number -= 1000;
         }
-        num = Self::uid_bitmush(num);
-        num ^= first_random;
-        num = !num;
-        num ^= ((self.game_id as i64) << 32) | (self.game_id as i64);
-        num ^= (self.default_window_width as i64 + flags_raw as i64) << 48
+        info_number = Self::uid_bitmush(info_number);
+        info_number ^= first_random;
+        info_number = !info_number;
+        info_number ^= ((self.game_id as i64) << 32) | (self.game_id as i64);
+        info_number ^= (self.default_window_width as i64 + flags_raw as i64) << 48
             | (self.default_window_height as i64 + flags_raw as i64) << 32
             | (self.default_window_height as i64 + flags_raw as i64) << 16
             | (self.default_window_width as i64 + flags_raw as i64);
-        num ^= self.bytecode_version as i64;
-        num
+        info_number ^= self.bytecode_version as i64;
+        info_number
     }
 
-    #[must_use]
-    const fn uid_bitmush(info_number: i64) -> i64 {
-        let num = info_number as u64;
-        let num = (num << 56 & 0xFF00_0000_0000_0000)
-            | (num >> 8 & 0x00FF_0000_0000_0000)
-            | (num << 32 & 0x0000_FF00_0000_0000)
-            | (num >> 16 & 0x0000_00FF_0000_0000)
-            | (num << 8 & 0x0000_0000_FF00_0000)
-            | (num >> 24 & 0x0000_0000_00FF_0000)
-            | (num >> 16 & 0x0000_0000_0000_FF00)
-            | (num >> 32 & 0x0000_0000_0000_00FF);
-        num as i64
+    fn uid_bitmush(info_number: i64) -> i64 {
+        let mut temp: u64 = info_number as u64;
+        temp = (temp << 56 & 0xFF00_0000_0000_0000)
+            | (temp >> 08 & 0x00FF_0000_0000_0000)
+            | (temp << 32 & 0x0000_FF00_0000_0000)
+            | (temp >> 16 & 0x0000_00FF_0000_0000)
+            | (temp << 08 & 0x0000_0000_FF00_0000)
+            | (temp >> 24 & 0x0000_0000_00FF_0000)
+            | (temp >> 16 & 0x0000_0000_0000_FF00)
+            | (temp >> 32 & 0x0000_0000_0000_00FF);
+        temp as i64
     }
 }
 
@@ -423,7 +411,7 @@ pub struct GMGeneralInfoGMS2 {
     /// The FPS of the game.
     pub fps: f32,
 
-    /// If enabled, the game runner may send requests to a GameMaker player count statistics server.
+    /// If enabled, the game runner may send requests to a `GameMaker` player count statistics server.
     pub allow_statistics: bool,
 
     /// Unknown, some sort of checksum.
@@ -434,7 +422,7 @@ pub struct GMGeneralInfoGMS2 {
 }
 
 bitfield_struct! {
-    /// Contains general information flags for GameMaker games.
+    /// Contains general information flags for `GameMaker` games.
     GMGeneralInfoFlags : u32 {
         /// Start the game as fullscreen.
         fullscreen: 0,

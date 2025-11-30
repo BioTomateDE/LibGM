@@ -7,7 +7,7 @@ use crate::{
     prelude::*,
 };
 
-/// Different GameMaker release branches. LTS has some but not all features of equivalent newer versions.
+/// Different `GameMaker` release branches. LTS has some but not all features of equivalent newer versions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
 pub enum LTSBranch {
     /// Before LTS was even introduced (`major < 2022`).
@@ -39,7 +39,7 @@ pub struct GMVersion {
     pub minor: u32,
     pub release: u32,
     pub build: u32,
-    /// Different GameMaker release branches. LTS has some but not all features of equivalent newer versions.
+    /// Different `GameMaker` release branches. LTS has some but not all features of equivalent newer versions.
     pub branch: LTSBranch,
 }
 
@@ -122,7 +122,7 @@ impl GMVersion {
             } else {
                 String::new()
             };
-            bail!("Upgrading GameMaker Version from {self} to {new_ver} is not allowed{comment}");
+            bail!("Upgrading `GameMaker` Version from {self} to {new_ver} is not allowed{comment}");
         }
 
         if self.is_version_at_least(new_ver.clone()) {
@@ -164,7 +164,7 @@ impl GMElement for GMVersion {
     }
 }
 
-/// A GameMaker Version Requirement for checking if the game's version is equal to or higher than x.
+/// A `GameMaker` Version Requirement for checking if the game's version is equal to or higher than x.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMVersionReq {
     pub major: u32,

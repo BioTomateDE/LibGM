@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-use macros::num_enum;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::gamemaker::{
     elements::{
@@ -11,7 +11,6 @@ use crate::gamemaker::{
     },
     reference::GMRef,
 };
-use crate::prelude::*;
 
 /// A code entry in a data file.
 #[derive(Debug, Clone, PartialEq)]
@@ -134,8 +133,7 @@ pub enum GMInstruction {
     /// Has an alternate mode that can swap values around on the stack.
     /// TODO: type1 and type2 are bad names and are probably redundant values
     Pop {
-        variable_ref: GMRef<GMVariable>,
-        variable_type: GMVariableType,
+        variable: CodeVariable,
         type1: GMDataType,
         type2: GMDataType,
     },
@@ -188,31 +186,20 @@ pub enum GMInstruction {
     /// If a flag is encoded in this instruction, then this will always terminate the loops, and branch to the encoded address.
     PopWithContext { jump_offset: i32 },
 
-    /// [`Self::PopWithContext`] but with `PopEnvExitMagic`.
-    /// This is used in when the [`Self::Exit` or [`Self::Return`]
-    /// instruction is used within a `while loop`.
+    /// PopWithContext but with PopEnvExitMagic
     PopWithContextExit,
 
     /// Pushes a constant value onto the stack. Can vary in size depending on value type.
     Push { value: GMCodeValue },
 
     /// Pushes a value stored in a local variable onto the stack.
-    PushLocal {
-        variable_ref: GMRef<GMVariable>,
-        variable_type: GMVariableType,
-    },
+    PushLocal { variable: CodeVariable },
 
     /// Pushes a value stored in a global variable onto the stack.
-    PushGlobal {
-        variable_ref: GMRef<GMVariable>,
-        variable_type: GMVariableType,
-    },
+    PushGlobal { variable: CodeVariable },
 
-    /// Pushes a value stored in a GameMaker builtin variable onto the stack.
-    PushBuiltin {
-        variable_ref: GMRef<GMVariable>,
-        variable_type: GMVariableType,
-    },
+    /// Pushes a value stored in a `GameMaker` builtin variable onto the stack.
+    PushBuiltin { variable: CodeVariable },
 
     /// Pushes an immediate signed 32-bit integer value onto the stack, encoded as a signed 16-bit integer.
     PushImmediate { integer: i16 },
@@ -261,8 +248,8 @@ pub enum GMInstruction {
 
     /// Marks the current function to no longer be able to enter its own static initialization.
     /// This can either occur at the beginning or end of a static block,
-    /// depending on whether `AllowReentrantStatic` is enabled by a game's developer
-    /// (enabled by default before GameMaker 2024.11; disabled by default otherwise).
+    /// depending on whether "AllowReentrantStatic" is enabled by a game's developer
+    /// (enabled by default before `GameMaker` 2024.11; disabled by default otherwise).
     SetStaticInitialized,
 
     /// Keeps track of an array reference temporarily. Used in multidimensional array compound assignment statements.
@@ -275,7 +262,7 @@ pub enum GMInstruction {
     RestoreArrayReference,
 
     /// Pops a value from the stack, and pushes a boolean result.
-    /// The result is true if a "nullish" value, such as undefined or GML's `pointer_null`.
+    /// The result is true if a "nullish" value, such as undefined or GML's pointer_null.
     IsNullishValue,
 
     /// Pushes an asset reference to the stack, encoded in an integer. Includes asset type and index.
@@ -285,26 +272,24 @@ pub enum GMInstruction {
 impl GMInstruction {
     /// Gets the instruction size in bytes.
     /// This size includes extra data like integers, floats, variable references, etc.
-    #[must_use]
     pub const fn size(&self) -> u32 {
         match self {
-            Self::Push { value } => match value {
-                GMCodeValue::Int16(_) => 4,
-                GMCodeValue::Int32(_)
-                | GMCodeValue::Boolean(_)
-                | GMCodeValue::String(_)
-                | GMCodeValue::Variable { .. }
-                | GMCodeValue::Function { .. } => 8,
-                GMCodeValue::Int64(_) | GMCodeValue::Double(_) => 12,
-            },
-
-            Self::Pop { .. }
-            | Self::PushLocal { .. }
-            | Self::PushGlobal { .. }
-            | Self::PushBuiltin { .. }
-            | Self::Call { .. }
-            | Self::PushReference { .. } => 8,
-
+            GMInstruction::Pop { .. }
+            | GMInstruction::PushLocal { .. }
+            | GMInstruction::PushGlobal { .. }
+            | GMInstruction::PushBuiltin { .. } => 8,
+            GMInstruction::Push {
+                value:
+                    GMCodeValue::Int32(_)
+                    | GMCodeValue::Function(_)
+                    | GMCodeValue::String(_)
+                    | GMCodeValue::Boolean(_),
+            } => 8,
+            GMInstruction::Push {
+                value: GMCodeValue::Int64(_) | GMCodeValue::Double(_),
+            } => 12,
+            GMInstruction::Call { .. } => 8,
+            GMInstruction::PushReference { .. } => 8,
             _ => 4,
         }
     }
@@ -330,7 +315,8 @@ pub enum GMAssetReference {
     Function(GMRef<GMFunction>),
 }
 
-#[num_enum(u8)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[repr(u8)]
 pub enum GMDataType {
     /// 64-bit floating point number.
     /// - Size on VM Stack: 8 bytes.
@@ -380,89 +366,16 @@ impl GMDataType {
     }
 }
 
-#[num_enum(i32)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum GMInstanceType {
-    /// Represents the current `self` instance.
-    Self_ = -1,
-
-    /// Used for global variables.
-    Global = -5,
-
-    /// Used for GML built-in variables.
-    Builtin = -6,
-
-    /// Used for local variables; local to their code script.
-    Local = -7,
-
-    /// Used for static variables.
-    Static = -16,
-}
-
-impl Display for GMInstanceType {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let string = match self {
-            Self::Self_ => "Self",
-            Self::Global => "Global",
-            Self::Builtin => "Builtin",
-            Self::Local => "Local",
-            Self::Static => "Static",
-        };
-        write!(f, "{string}")
-    }
-}
-
-impl TryFrom<GMVariableType> for GMInstanceType {
-    type Error = Error;
-
-    fn try_from(variable_type: GMVariableType) -> Result<Self> {
-        let instance_type = match variable_type {
-            GMVariableType::GameObject(_) => Self::Self_,
-            GMVariableType::Self_ => Self::Self_,
-            GMVariableType::Other => {
-                bail!("Other Variable/Instance Type is not valid for VARI")
-            },
-            GMVariableType::All => {
-                bail!("All Variable/Instance Type is not valid for VARI")
-            },
-            GMVariableType::None => {
-                bail!("None Variable/Instance Type is not valid for VARI")
-            },
-            GMVariableType::Global => Self::Global,
-            GMVariableType::Builtin => Self::Builtin,
-            GMVariableType::Local => Self::Local,
-            GMVariableType::Argument => {
-                bail!("Argument Variable/Instance Type is not valid for VARI")
-            },
-            GMVariableType::Static => Self::Static,
-            GMVariableType::StackTopInstance => {
-                bail!("StackTop Variable/Instance Type is not valid for VARI")
-            },
-            GMVariableType::StackTopChain => {
-                bail!("StackTopChain is a reference type, not an instance type")
-            },
-            GMVariableType::Array => bail!("Array is a reference type, not an instance type"),
-            GMVariableType::Instance(_) => {
-                bail!("Instance is a reference type, not an instance type")
-            },
-            GMVariableType::ArrayPushAF => {
-                bail!("ArrayPushAF is a reference type, not an instance type")
-            },
-            GMVariableType::ArrayPopAF => {
-                bail!("ArrayPopAF is a reference type, not an instance type")
-            },
-        };
-        Ok(instance_type)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum GMVariableType {
-    /// Used for game objects that typically only have one instance.
-    /// Uses the first instance it finds?
-    GameObject(GMRef<GMGameObject>),
+    Undefined,
 
     /// Represents the current `self` instance.
-    Self_,
+    Self_(Option<GMRef<GMGameObject>>),
+
+    /// Instance ID in the Room -100000; used when the Variable Type is [`GMVariableType::Instance`].
+    /// This doesn't exist in UTMT.
+    RoomInstance(i16),
 
     /// Represents the `other` context, which has multiple definitions based on the location used.
     Other,
@@ -483,32 +396,83 @@ pub enum GMVariableType {
     /// Used for local variables; local to their code script.
     Local,
 
+    /// Instance is stored in a Variable data type on the top of the stack.
+    StackTop,
+
     /// Used for function argument variables in GMS 2.3+.
     Argument,
 
     /// Used for static variables.
     Static,
-
-    /// Instance is stored in a Variable data type on the top of the stack.
-    StackTopInstance,
-
-    /// Used when referencing a variable on another variable, e.g. a chain reference.
-    StackTopChain,
-
-    /// Used for normal single-dimension array variables.
-    Array,
-
-    /// Used when referencing variables on room instance IDs, e.g. something like `inst_01ABCDEF.x` in GML.
-    Instance(i16),
-
-    /// GMS2.3+, multidimensional array with pushaf.
-    ArrayPushAF,
-
-    /// GMS2.3+, multidimensional array with pushaf or popaf.
-    ArrayPopAF,
 }
 
-#[num_enum(u8)]
+impl Display for GMInstanceType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Undefined => write!(f, "Undefined"),
+            Self::Self_(None) => write!(f, "Self"),
+            Self::Self_(Some(reference)) => {
+                write!(f, "Self<{}>", reference.index)
+            },
+            Self::RoomInstance(instance_id) => {
+                write!(f, "RoomInstanceID<{instance_id}>")
+            },
+            Self::Other => write!(f, "Other"),
+            Self::All => write!(f, "All"),
+            Self::None => write!(f, "None"),
+            Self::Global => write!(f, "Global"),
+            Self::Builtin => write!(f, "Builtin"),
+            Self::Local => write!(f, "Local"),
+            Self::StackTop => write!(f, "StackTop"),
+            Self::Argument => write!(f, "Argument"),
+            Self::Static => write!(f, "Static"),
+        }
+    }
+}
+
+impl GMInstanceType {
+    /// Convert an instance type to the "VARI version".
+    /// In other words, convert the instance type to what
+    /// it would be if it was in the 'VARI' chunk (`GMVariable.instance_type`)
+    /// instead of in an instruction (`CodeVariable.instance_type`).
+    #[must_use]
+    pub(crate) fn as_vari(&self) -> Self {
+        match self {
+            Self::StackTop => Self::Self_(None),
+            Self::Builtin => Self::Self_(None),
+            Self::Other => Self::Self_(None),
+            Self::Self_(Some(_)) => Self::Self_(None),
+            Self::RoomInstance(_) => Self::Self_(None),
+            Self::Argument => Self::Builtin,
+            _ => self.clone(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[repr(u8)]
+pub enum GMVariableType {
+    /// Used for normal single-dimension array variables.
+    Array = 0x00,
+
+    /// Used when referencing a variable on another variable, e.g. a chain reference.
+    StackTop = 0x80,
+
+    /// Normal variable access.
+    Normal = 0xA0,
+
+    /// Used when referencing variables on room instance IDs, e.g. something like `inst_01ABCDEF.x` in GML.
+    Instance = 0xE0,
+
+    /// GMS2.3+, multidimensional array with pushaf.
+    ArrayPushAF = 0x10,
+
+    /// GMS2.3+, multidimensional array with pushaf or popaf.
+    ArrayPopAF = 0x90,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
+#[repr(u8)]
 pub enum GMComparisonType {
     /// "Less than" | `<`
     LessThan = 1,
@@ -530,6 +494,16 @@ pub enum GMComparisonType {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct CodeVariable {
+    pub variable: GMRef<GMVariable>,
+    pub variable_type: GMVariableType,
+    pub instance_type: GMInstanceType,
+
+    /// TODO: when does this happen?
+    pub is_int32: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum GMCodeValue {
     Int16(i16),
     Int32(i32),
@@ -537,13 +511,9 @@ pub enum GMCodeValue {
     Double(f64),
     Boolean(bool),
     String(String),
-    Variable {
-        variable_ref: GMRef<GMVariable>,
-        variable_type: GMVariableType,
-    },
-    Function {
-        function_ref: GMRef<GMFunction>,
-    },
+    Variable(CodeVariable),
+    /// Does not exist in UTMT. Added in order to support inline/anonymous functions.
+    Function(GMRef<GMFunction>),
 }
 
 impl GMCodeValue {
@@ -551,12 +521,13 @@ impl GMCodeValue {
         match self {
             Self::Int16(_) => GMDataType::Int16,
             Self::Int32(_) => GMDataType::Int32,
-            Self::Function { .. } => GMDataType::Int32, // Functions are not a "real" gm type; they're always int32
+            Self::Function(_) => GMDataType::Int32, // Functions are not a "real" gm type; they're always int32
+            Self::Variable(var) if var.is_int32 => GMDataType::Int32, // no idea when this happens
             Self::Int64(_) => GMDataType::Int64,
             Self::Double(_) => GMDataType::Double,
             Self::Boolean(_) => GMDataType::Boolean,
             Self::String(_) => GMDataType::String,
-            Self::Variable { .. } => GMDataType::Variable,
+            Self::Variable(_) => GMDataType::Variable,
         }
     }
 }
