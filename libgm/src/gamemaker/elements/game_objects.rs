@@ -202,7 +202,7 @@ pub struct GMGameObject {
     pub parent: Option<GMRef<GMGameObject>>,
     /// The texture mask this game object is using.
     pub texture_mask: Option<GMRef<GMSprite>>,
-    /// Whether this object uses GameMaker physics.
+    /// Whether this object uses `GameMaker` physics.
     pub uses_physics: bool,
     /// Whether this game object should act as a sensor fixture.
     pub is_sensor: bool,

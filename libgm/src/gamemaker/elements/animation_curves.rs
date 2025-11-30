@@ -57,7 +57,7 @@ impl GMElement for GMAnimationCurves {
 }
 
 /// An animation curve entry in a data file.
-/// These were introduced in GameMaker 2.3.0.
+/// These were introduced in `GameMaker` 2.3.0.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMAnimationCurve {
     pub name: String,

@@ -16,8 +16,8 @@ use crate::{
     gml::{
         assembly::assembler::{data_types::DataTypes, reader::Reader},
         instructions::{
-            GMAssetReference, GMCodeValue, GMComparisonType, GMDataType, GMInstanceType,
-            GMInstruction, GMVariableType,
+            CodeVariable, GMAssetReference, GMCodeValue, GMComparisonType, GMDataType,
+            GMInstanceType, GMInstruction, GMVariableType,
         },
     },
     prelude::*,
@@ -153,12 +153,11 @@ fn parse_instruction(
         "cmp" => parse_comparison(types, reader)?,
         "pop" => {
             types.assert_count(2, mnemonic)?;
-            let (variable_ref, variable_type) = parse_variable(reader, gm_data)?;
+            let variable: CodeVariable = parse_variable(reader, gm_data)?;
             GMInstruction::Pop {
-                variable_ref,
-                variable_type,
                 type1: types[0],
                 type2: types[1],
+                variable,
             }
         },
         "popswap" => {
@@ -217,18 +216,18 @@ fn parse_instruction(
         },
         "pushloc" => {
             types.assert_count(0, mnemonic)?;
-            let (variable_ref, variable_type) = parse_variable(reader, gm_data)?;
-            GMInstruction::PushLocal { variable_ref, variable_type }
+            let variable = parse_variable(reader, gm_data)?;
+            GMInstruction::PushLocal { variable }
         },
         "pushglb" => {
             types.assert_count(0, mnemonic)?;
-            let (variable_ref, variable_type) = parse_variable(reader, gm_data)?;
-            GMInstruction::PushGlobal { variable_ref, variable_type }
+            let variable = parse_variable(reader, gm_data)?;
+            GMInstruction::PushGlobal { variable }
         },
         "pushbltn" => {
             types.assert_count(0, mnemonic)?;
-            let (variable_ref, variable_type) = parse_variable(reader, gm_data)?;
-            GMInstruction::PushBuiltin { variable_ref, variable_type }
+            let variable = parse_variable(reader, gm_data)?;
+            GMInstruction::PushBuiltin { variable }
         },
         "pushim" => {
             types.assert_count(0, mnemonic)?;
@@ -354,11 +353,15 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
             if let Some(type_cast) = reader.consume_round_brackets()? {
                 match type_cast {
                     "function" => {
-                        let function_ref = parse_function(reader, &gm_data.functions)?;
-                        GMCodeValue::Function { function_ref }
+                        GMCodeValue::Function(parse_function(reader, &gm_data.functions)?)
+                    },
+                    "variable" => {
+                        let mut variable: CodeVariable = parse_variable(reader, gm_data)?;
+                        variable.is_int32 = true;
+                        GMCodeValue::Variable(variable)
                     },
                     _ => bail!(
-                        "Invalid type cast {type_cast:?}; expected \"function\" or \"variable\" (not right now lowkey)"
+                        "Invalid type cast {type_cast:?}; expected \"function\" or \"variable\""
                     ),
                 }
             } else {
@@ -387,10 +390,7 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
             let string: String = parse_string_literal(reader)?;
             GMCodeValue::String(string)
         },
-        GMDataType::Variable => {
-            let (variable_ref, variable_type) = parse_variable(reader, gm_data)?;
-            GMCodeValue::Variable { variable_ref, variable_type }
-        },
+        GMDataType::Variable => GMCodeValue::Variable(parse_variable(reader, gm_data)?),
     };
     Ok(value)
 }
@@ -417,52 +417,73 @@ fn parse_call(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
     Ok(GMInstruction::Call { function, argument_count })
 }
 
-fn parse_variable(
-    reader: &mut Reader,
-    gm_data: &GMData,
-) -> Result<(GMRef<GMVariable>, GMVariableType)> {
-    let variable_type = reader.parse_identifier()?.to_string();
-    let argument = reader.consume_angle_brackets()?.unwrap_or("");
+impl GMVariableType {
+    fn from_string(variable_type: &str) -> Result<Self> {
+        Ok(match variable_type {
+            "stacktop" => Self::StackTop,
+            "array" => Self::Array,
+            "roominstance" => Self::Instance,
+            "arraypushaf" => Self::ArrayPushAF,
+            "arraypopaf" => Self::ArrayPopAF,
+            _ => bail!("Invalid Variable Reference Type {variable_type:?}"),
+        })
+    }
+}
 
-    let variable_type = match variable_type.as_str() {
-        "gameobject" => {
-            let object_ref: GMRef<GMGameObject> = gm_data.game_objects.get_ref_by_name(argument)?;
-            GMVariableType::GameObject(object_ref)
+fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable> {
+    let mut variable_type = GMVariableType::Normal;
+    if let Some(variable_type_str) = reader.consume_square_brackets()? {
+        variable_type = GMVariableType::from_string(variable_type_str)?;
+    }
+
+    let instance_type_raw = reader.parse_identifier()?.to_string();
+    let instance_type_arg = reader
+        .consume_angle_brackets()?
+        .unwrap_or_default()
+        .to_string();
+    reader.consume_dot()?;
+
+    let mut variable_ref: Option<GMRef<GMVariable>> = None;
+    let instance_type: GMInstanceType = match instance_type_raw.as_str() {
+        "self" if instance_type_arg.is_empty() => GMInstanceType::Self_(None),
+        "self" => {
+            let object_ref: GMRef<GMGameObject> =
+                gm_data.game_objects.get_ref_by_name(&instance_type_arg)?;
+            GMInstanceType::Self_(Some(object_ref))
         },
-        "self" => GMVariableType::Self_,
-        "other" => GMVariableType::Other,
-        "all" => GMVariableType::All,
-        "none" => GMVariableType::None,
-        "global" => GMVariableType::Global,
-        "builtin" => GMVariableType::Builtin,
-        "local" => GMVariableType::Local,
-        "argument" => GMVariableType::Argument,
-        "static" => GMVariableType::Static,
-        "stacktopinstance" => GMVariableType::StackTopInstance,
-        "stacktopchain" => GMVariableType::StackTopChain,
-        "array" => GMVariableType::Array,
-        "instance" => {
-            let int16 = parse_int(argument)?;
-            GMVariableType::Instance(int16)
+        "local" => {
+            let var_index: u32 = parse_int(&instance_type_arg)?;
+            variable_ref = Some(GMRef::new(var_index));
+            GMInstanceType::Local
         },
-        "arraypushaf" => GMVariableType::ArrayPushAF,
-        "arraypopaf" => GMVariableType::ArrayPopAF,
-        _ => bail!("Invalid Variable Type {variable_type:?}"),
+        "roominstance" => {
+            variable_type = GMVariableType::Instance;
+            let instance_id: i16 = parse_int(&instance_type_arg)?;
+            GMInstanceType::RoomInstance(instance_id)
+        },
+        "stacktop" => GMInstanceType::StackTop,
+        "builtin" => GMInstanceType::Builtin,
+        "global" => GMInstanceType::Global,
+        "arg" => GMInstanceType::Argument,
+        "other" => GMInstanceType::Other,
+        "static" => GMInstanceType::Static,
+        "all" => GMInstanceType::All,
+        "none" => GMInstanceType::None,
+        _ => bail!("Invalid Instance Type {instance_type_raw:?}"),
     };
 
-    let instance_type = GMInstanceType::try_from(variable_type).unwrap_or(GMInstanceType::Self_);
-    println!("{instance_type}");
-    reader.consume_dot()?;
     let name: &str = parse_variable_identifier(reader)?;
-    let mut variable_ref = None;
 
     if instance_type != GMInstanceType::Local {
+        // Convert instance type because of some bullshit
+        let vari_instance_type: GMInstanceType = instance_type.as_vari();
+
         for (i, var) in gm_data.variables.iter().enumerate() {
             if var.name != name {
                 continue;
             }
             if let Some(b15) = &var.b15_data
-                && b15.instance_type != instance_type
+                && b15.instance_type != vari_instance_type
             {
                 continue;
             }
@@ -470,14 +491,24 @@ fn parse_variable(
             variable_ref = Some(GMRef::new(i as u32));
             break;
         }
-    } else {
-        panic!("local {name}")
     }
 
-    let variable_ref =
-        variable_ref.ok_or_else(|| format!("Cannot resolve variable with name {name:?}"))?;
+    let Some(variable) = variable_ref else {
+        bail!("Cannot resolve variable with name {name:?}");
+    };
 
-    Ok((variable_ref, variable_type))
+    // I need to throw away the instance type so that the tests pass
+    let mut instance_type = instance_type;
+    if variable_type != GMVariableType::Normal && variable_type != GMVariableType::Instance {
+        instance_type = GMInstanceType::Undefined;
+    } // TODO: comment out this block if not testing assembler
+
+    Ok(CodeVariable {
+        variable,
+        variable_type,
+        instance_type,
+        is_int32: false, // This has to be modified afterward, if necessary
+    })
 }
 
 fn parse_variable_identifier<'a>(reader: &'a mut Reader) -> Result<&'a str> {

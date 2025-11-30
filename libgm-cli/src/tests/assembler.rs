@@ -23,10 +23,9 @@ pub fn test_assembler(data: &GMData) -> Result<()> {
         }
 
         let name = &code.name;
-        //print!("\x1B[2K\r({i}/{count}) Disassembling {name}");
-        //std::io::stdout().flush().unwrap();
-        //
-        println!("({i}/{count}) Disassembling {name:?}");
+        print!("\x1B[2K\r({i}/{count}) Disassembling {name}");
+        std::io::stdout().flush().unwrap();
+        //print!("\r({i}/{count}) Disassembling and reassembling {name:<100?}");
 
         let assembly: String =
             disassemble_code(data, code).with_context(|| format!("disassembling {name:?}"))?;

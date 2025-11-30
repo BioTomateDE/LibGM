@@ -12,8 +12,8 @@ use crate::{
     },
     gml::{
         instructions::{
-            GMAssetReference, GMCode, GMCodeBytecode15, GMCodeValue, GMComparisonType, GMDataType,
-            GMInstruction, GMVariableType,
+            CodeVariable, GMAssetReference, GMCode, GMCodeBytecode15, GMCodeValue,
+            GMComparisonType, GMDataType, GMInstanceType, GMInstruction, GMVariableType,
         },
         opcodes,
     },
@@ -366,19 +366,19 @@ impl GMElement for GMInstruction {
                 Self::Push { value }
             },
             opcodes::PUSHLOC => {
-                let (variable_ref, variable_type) =
+                let variable =
                     parse_push_var(b, reader).context("parsing PushLocal Instruction")?;
-                Self::PushLocal { variable_ref, variable_type }
+                Self::PushLocal { variable }
             },
             opcodes::PUSHGLB => {
-                let (variable_ref, variable_type) =
+                let variable =
                     parse_push_var(b, reader).context("parsing PushGlobal Instruction")?;
-                Self::PushGlobal { variable_ref, variable_type }
+                Self::PushGlobal { variable }
             },
             opcodes::PUSHBLTN => {
-                let (variable_ref, variable_type) =
+                let variable =
                     parse_push_var(b, reader).context("parsing PushBuiltin Instruction")?;
-                Self::PushBuiltin { variable_ref, variable_type }
+                Self::PushBuiltin { variable }
             },
             opcodes::PUSHIM => {
                 let integer = parse_pushim(b).context("parsing PushImmediate Instruction")?;
@@ -440,25 +440,8 @@ impl GMElement for GMInstruction {
             &Self::Compare { lhs, rhs, comparison_type } => {
                 build_comparison(builder, opcode, rhs, lhs, comparison_type);
             },
-            &Self::Pop {
-                variable_ref,
-                variable_type,
-                type1,
-                type2,
-            } => {
-                let instr_pos: usize = builder.len();
-                builder.write_i16(build_instance_type(variable_type));
-                builder.write_u8(u8::from(type1) | u8::from(type2) << 4);
-                builder.write_u8(opcode);
-                //let variable: &GMVariable = variable.variable.resolve(&builder.gm_data.variables)?;
-                write_variable_occurrence(
-                    builder,
-                    variable_ref.index,
-                    instr_pos,
-                    /*variable.name.index,*/
-                    0xDEAD_C0DE,
-                    variable_type,
-                )?;
+            Self::Pop { variable, type1, type2 } => {
+                build_pop(builder, opcode, variable, *type1, *type2)?;
             },
             &Self::PopSwap { is_array } => {
                 build_popswap(builder, opcode, is_array);
@@ -493,14 +476,14 @@ impl GMElement for GMInstruction {
             },
             Self::PopWithContextExit => build_popenv_exit(builder, opcode),
             Self::Push { value } => build_push(builder, opcode, &value)?,
-            &Self::PushLocal { variable_ref, variable_type } => {
-                build_pushvar(builder, opcode, variable_ref, variable_type)?;
+            Self::PushLocal { variable } => {
+                build_pushvar(builder, opcode, &variable)?;
             },
-            &Self::PushGlobal { variable_ref, variable_type } => {
-                build_pushvar(builder, opcode, variable_ref, variable_type)?;
+            Self::PushGlobal { variable } => {
+                build_pushvar(builder, opcode, &variable)?;
             },
-            &Self::PushBuiltin { variable_ref, variable_type } => {
-                build_pushvar(builder, opcode, variable_ref, variable_type)?;
+            Self::PushBuiltin { variable } => {
+                build_pushvar(builder, opcode, &variable)?;
             },
             &Self::PushImmediate { integer } => {
                 build_pushim(builder, opcode, integer);
@@ -631,13 +614,8 @@ fn parse_pop(b: [u8; 3], reader: &mut DataReader) -> Result<GMInstruction> {
         return Ok(GMInstruction::PopSwap { is_array });
     }
 
-    let (variable_ref, variable_type) = read_variable(reader, raw_instance_type)?;
-    Ok(GMInstruction::Pop {
-        variable_ref,
-        variable_type,
-        type1,
-        type2,
-    })
+    let variable: CodeVariable = read_variable(reader, raw_instance_type)?;
+    Ok(GMInstruction::Pop { variable, type1, type2 })
 }
 
 fn parse_duplicate(b: [u8; 3]) -> Result<GMInstruction> {
@@ -675,17 +653,19 @@ fn parse_push(b: [u8; 3], reader: &mut DataReader) -> Result<GMCodeValue> {
     match data_type {
         GMDataType::Int16 => Ok(GMCodeValue::Int16(int16)),
         GMDataType::Int32 => {
-            if let Some(&function_ref) = reader.function_occurrences.get(&reader.cur_pos) {
+            if let Some(&function) = reader.function_occurrences.get(&reader.cur_pos) {
                 reader.cur_pos += 4; // Skip next occurrence offset
-                return Ok(GMCodeValue::Function { function_ref });
+                return Ok(GMCodeValue::Function(function.clone()));
             }
 
-            if let Some(&_variable) = reader.variable_occurrences.get(&reader.cur_pos) {
+            if let Some(&variable) = reader.variable_occurrences.get(&reader.cur_pos) {
                 reader.cur_pos += 4; // Skip next occurrence offset
-                bail!(
-                    "Found implicit Int32 variable reference at {}! Please report this message",
-                    reader.cur_pos
-                );
+                return Ok(GMCodeValue::Variable(CodeVariable {
+                    variable,
+                    variable_type: GMVariableType::Normal,
+                    instance_type: GMInstanceType::Undefined,
+                    is_int32: true,
+                }));
             }
 
             reader.read_i32().map(GMCodeValue::Int32)
@@ -702,17 +682,11 @@ fn parse_push(b: [u8; 3], reader: &mut DataReader) -> Result<GMCodeValue> {
                 .ok_or_else(|| format!("String ID is out of range: {index} >= {len}"))?;
             Ok(GMCodeValue::String(string.clone()))
         },
-        GMDataType::Variable => {
-            let (variable_ref, variable_type) = read_variable(reader, int16)?;
-            Ok(GMCodeValue::Variable { variable_ref, variable_type })
-        },
+        GMDataType::Variable => read_variable(reader, int16).map(GMCodeValue::Variable),
     }
 }
 
-fn parse_push_var(
-    b: [u8; 3],
-    reader: &mut DataReader,
-) -> Result<(GMRef<GMVariable>, GMVariableType)> {
+fn parse_push_var(b: [u8; 3], reader: &mut DataReader) -> Result<CodeVariable> {
     let raw_instance_type = get_u16(b) as i16;
     let data_type: GMDataType = get_type1(b)?;
     assert_zero_type2(b)?;
@@ -820,6 +794,29 @@ fn build_comparison(
     builder.write_u8(opcode);
 }
 
+fn build_pop(
+    builder: &mut DataBuilder,
+    opcode: u8,
+    variable: &CodeVariable,
+    type1: GMDataType,
+    type2: GMDataType,
+) -> Result<()> {
+    let instr_pos: usize = builder.len();
+    builder.write_i16(build_instance_type(&variable.instance_type));
+    builder.write_u8(u8::from(type1) | u8::from(type2) << 4);
+    builder.write_u8(opcode);
+    //let variable: &GMVariable = variable.variable.resolve(&builder.gm_data.variables)?;
+    write_variable_occurrence(
+        builder,
+        variable.variable.index,
+        instr_pos,
+        /*variable.name.index,*/
+        0xDEAD_C0DE,
+        variable.variable_type,
+    )?;
+    Ok(())
+}
+
 fn build_popswap(builder: &mut DataBuilder, opcode: u8, array: bool) {
     builder.write_i16(if array { 6 } else { 5 });
     builder.write_u8(u8::from(GMDataType::Int32) | u8::from(GMDataType::Variable) << 4);
@@ -868,8 +865,8 @@ fn build_popenv_exit(builder: &mut DataBuilder, opcode: u8) {
 fn build_push(builder: &mut DataBuilder, opcode: u8, value: &GMCodeValue) -> Result<()> {
     let instr_pos: usize = builder.len();
     builder.write_i16(match value {
-        &GMCodeValue::Int16(int16) => int16,
-        &GMCodeValue::Variable { variable_type, .. } => build_instance_type(variable_type),
+        GMCodeValue::Int16(int16) => *int16,
+        GMCodeValue::Variable(variable) => build_instance_type(&variable.instance_type),
         _ => 0,
     });
 
@@ -878,26 +875,31 @@ fn build_push(builder: &mut DataBuilder, opcode: u8, value: &GMCodeValue) -> Res
 
     match value {
         GMCodeValue::Int16(_) => {}, // Nothing because it was already written inside the instruction
-        &GMCodeValue::Int32(int32) => builder.write_i32(int32),
-        &GMCodeValue::Int64(int64) => builder.write_i64(int64),
-        &GMCodeValue::Double(double) => builder.write_f64(double),
-        &GMCodeValue::Boolean(boolean) => builder.write_bool32(boolean),
+        GMCodeValue::Int32(int32) => builder.write_i32(*int32),
+        GMCodeValue::Int64(int64) => builder.write_i64(*int64),
+        GMCodeValue::Double(double) => builder.write_f64(*double),
+        GMCodeValue::Boolean(boolean) => builder.write_bool32(*boolean),
         GMCodeValue::String(string) => {
             builder.write_gm_string_id(string.clone());
         },
-        &GMCodeValue::Variable { variable_ref, variable_type } => {
+        GMCodeValue::Variable(code_variable) => {
+            //let variable: &GMVariable =
+            code_variable.variable.resolve(&builder.gm_data.variables)?;
             write_variable_occurrence(
                 builder,
-                variable_ref.index,
+                code_variable.variable.index,
                 instr_pos,
+                //variable.name.index,
                 0x6767_6767,
-                variable_type,
+                code_variable.variable_type,
             )?;
         },
-        &GMCodeValue::Function { function_ref } => {
+        GMCodeValue::Function(func_ref) => {
+            //let function: &GMFunction =
+            func_ref.resolve(&builder.gm_data.functions)?;
             write_function_occurrence(
                 builder,
-                function_ref.index,
+                func_ref.index,
                 instr_pos,
                 /*function.name.index*/ 0x6767_6767,
             )?;
@@ -906,23 +908,18 @@ fn build_push(builder: &mut DataBuilder, opcode: u8, value: &GMCodeValue) -> Res
     Ok(())
 }
 
-fn build_pushvar(
-    builder: &mut DataBuilder,
-    opcode: u8,
-    variable_ref: GMRef<GMVariable>,
-    variable_type: GMVariableType,
-) -> Result<()> {
+fn build_pushvar(builder: &mut DataBuilder, opcode: u8, variable: &CodeVariable) -> Result<()> {
     let instr_pos = builder.len();
-    builder.write_i16(build_instance_type(variable_type));
+    builder.write_i16(build_instance_type(&variable.instance_type));
     builder.write_u8(GMDataType::Variable.into());
     builder.write_u8(opcode);
 
     write_variable_occurrence(
         builder,
-        variable_ref.index,
+        variable.variable.index,
         instr_pos,
         0xDEAD_C0DE,
-        variable_type,
+        variable.variable_type,
     )?;
     Ok(())
 }
@@ -1037,93 +1034,81 @@ impl GMElement for GMAssetReference {
     }
 }
 
-fn read_variable(
-    reader: &mut DataReader,
-    raw_instance_type: i16,
-) -> Result<(GMRef<GMVariable>, GMVariableType)> {
+fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<CodeVariable> {
     let occurrence_position: u32 = reader.cur_pos;
     let raw_value = reader.read_u32()?;
-    let variable_type = (raw_value >> 24) & 0xF8;
 
-    let variable_type = match variable_type {
-        0x00 => GMVariableType::Array,
-        0x80 => GMVariableType::StackTopChain,
-        0xA0 => parse_instance_type(raw_instance_type)?,
-        0xE0 => GMVariableType::Instance(raw_instance_type),
-        0x10 => GMVariableType::ArrayPushAF,
-        0x90 => GMVariableType::ArrayPopAF,
-        _ => bail!("Invalid Variable Type 0x{variable_type:02X}"),
-    };
+    let variable_type = (raw_value >> 24) & 0xF8;
+    let variable_type: GMVariableType =
+        num_enum_from(variable_type as u8).context("parsing variable reference chain")?;
+
+    let instance_type: GMInstanceType = parse_instance_type(raw_instance_type, variable_type)?;
 
     let variable: GMRef<GMVariable> = *reader.variable_occurrences.get(&occurrence_position).ok_or_else(|| {
         format!(
-            "Could not find variable with occurrence position {} in hashmap with length {} while parsing code value",
+            "Could not find {} Variable with occurrence position {} in hashmap with length {} while parsing code value",
+            instance_type,
             occurrence_position,
             reader.variable_occurrences.len(),
         )
     })?;
 
-    Ok((variable, variable_type))
-}
-
-pub fn parse_instance_type(raw_value: i16) -> Result<GMVariableType> {
-    Ok(match raw_value {
-        -1 => GMVariableType::Self_,
-        -2 => GMVariableType::Other,
-        -3 => GMVariableType::All,
-        -4 => GMVariableType::None,
-        -5 => GMVariableType::Global,
-        -6 => GMVariableType::Builtin,
-        -7 => GMVariableType::Local,
-        -9 => GMVariableType::StackTopInstance,
-        -15 => GMVariableType::Argument,
-        -16 => GMVariableType::Static,
-        n if n > 0 => GMVariableType::GameObject(GMRef::new(n as u32)),
-        _ => bail!("Invalid instance type {raw_value} (0x{raw_value:04X})"),
+    Ok(CodeVariable {
+        variable,
+        variable_type,
+        instance_type,
+        is_int32: false,
     })
 }
 
-#[must_use]
-pub(crate) const fn build_instance_type(variable_type: GMVariableType) -> i16 {
-    match variable_type {
-        GMVariableType::Self_ => -1,
-        GMVariableType::GameObject(game_object_ref) => game_object_ref.index as i16,
-        GMVariableType::Instance(instance_id) => instance_id,
-        GMVariableType::Other => -2,
-        GMVariableType::All => -3,
-        GMVariableType::None => -4,
-        GMVariableType::Global => -5,
-        GMVariableType::Builtin => -6,
-        GMVariableType::Local => -7,
-        GMVariableType::StackTopInstance => -9,
-        GMVariableType::Argument => -15,
-        GMVariableType::Static => -16,
-        GMVariableType::StackTopChain
-        | GMVariableType::Array
-        | GMVariableType::ArrayPushAF
-        | GMVariableType::ArrayPopAF => 0,
+pub(crate) fn parse_instance_type(
+    raw_value: i16,
+    variable_type: GMVariableType,
+) -> Result<GMInstanceType> {
+    // If > 0; then game object id (or room instance id). If < 0, then variable instance type.
+    if raw_value > 0 {
+        return Ok(if variable_type == GMVariableType::Instance {
+            GMInstanceType::RoomInstance(raw_value)
+        } else {
+            GMInstanceType::Self_(Some(GMRef::new(raw_value as u32)))
+        });
     }
+
+    let instance_type: GMInstanceType = match raw_value {
+        0 => GMInstanceType::Undefined,
+        -1 => GMInstanceType::Self_(None),
+        -2 => GMInstanceType::Other,
+        -3 => GMInstanceType::All,
+        -4 => GMInstanceType::None,
+        -5 => GMInstanceType::Global,
+        -6 => GMInstanceType::Builtin,
+        -7 => GMInstanceType::Local,
+        -9 => GMInstanceType::StackTop,
+        -15 => GMInstanceType::Argument,
+        -16 => GMInstanceType::Static,
+        _ => bail!("Invalid instance type {raw_value} (0x{raw_value:04X})"),
+    };
+
+    Ok(instance_type)
 }
 
 #[must_use]
-pub(crate) const fn build_variable_type(variable_type: GMVariableType) -> u8 {
-    match variable_type {
-        GMVariableType::GameObject(_) => 0xA0,
-        GMVariableType::Self_ => 0xA0,
-        GMVariableType::Other => 0xA0,
-        GMVariableType::All => 0xA0,
-        GMVariableType::None => 0xA0,
-        GMVariableType::Global => 0xA0,
-        GMVariableType::Builtin => 0xA0,
-        GMVariableType::Local => 0xA0,
-        GMVariableType::Argument => 0xA0,
-        GMVariableType::Static => 0xA0,
-        GMVariableType::StackTopInstance => 0xA0,
-        GMVariableType::StackTopChain => 0x80,
-        GMVariableType::Array => 0x00,
-        GMVariableType::Instance(_) => 0xE0,
-        GMVariableType::ArrayPushAF => 0x10,
-        GMVariableType::ArrayPopAF => 0x90,
+pub(crate) const fn build_instance_type(instance_type: &GMInstanceType) -> i16 {
+    // If > 0; then game object id (or room instance id). If < 0, then variable instance type.
+    match instance_type {
+        GMInstanceType::Undefined => 0,
+        GMInstanceType::Self_(None) => -1,
+        GMInstanceType::Self_(Some(game_object_ref)) => game_object_ref.index as i16,
+        GMInstanceType::RoomInstance(instance_id) => *instance_id,
+        GMInstanceType::Other => -2,
+        GMInstanceType::All => -3,
+        GMInstanceType::None => -4,
+        GMInstanceType::Global => -5,
+        GMInstanceType::Builtin => -6,
+        GMInstanceType::Local => -7,
+        GMInstanceType::StackTop => -9,
+        GMInstanceType::Argument => -15,
+        GMInstanceType::Static => -16,
     }
 }
 
@@ -1145,8 +1130,8 @@ fn write_variable_occurrence(
     if let Some(&(last_occurrence_pos, old_variable_type)) = occurrences.last() {
         // Replace last occurrence with next occurrence offset
         let occurrence_offset: i32 = occurrence_pos as i32 - last_occurrence_pos as i32;
-        let occurrence_offset_full: i32 = occurrence_offset & 0x07FF_FFFF
-            | (i32::from(build_variable_type(old_variable_type) & 0xF8) << 24);
+        let occurrence_offset_full: i32 =
+            occurrence_offset & 0x07FF_FFFF | (i32::from(u8::from(old_variable_type) & 0xF8) << 24);
         builder.overwrite_i32(occurrence_offset_full, last_occurrence_pos + 4)?;
     }
 
@@ -1154,7 +1139,7 @@ fn write_variable_occurrence(
     // Otherwise, it will be overwritten later by the code above.
     // Hopefully, writing the name string id instead of -1 for unused variables will be fine.
     builder.write_u32(
-        name_string_id & 0x07FF_FFFF | (u32::from(build_variable_type(variable_type) & 0xF8) << 24),
+        name_string_id & 0x07FF_FFFF | (u32::from(u8::from(variable_type) & 0xF8) << 24),
     );
 
     // Fuckass borrow checker
