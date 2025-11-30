@@ -3,4 +3,13 @@
 # The lint groups and exceptions are defined in `libgm/src/lib.rs`.
 # Only special options that are not available in `Cargo.toml` (?) are configured here.
 
-doc-valid-idents = ["GameMaker", "YoYoGames", ".."]
+doc-valid-idents = [
+  "GameMaker",
+  "YoYoGames",
+  "UndertaleModTool",
+  "UndertaleModLib",
+  "Underanalzyer",
+  "PlayStation",
+  "PSVita",
+  "..",
+]
