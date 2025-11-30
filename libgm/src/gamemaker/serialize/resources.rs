@@ -32,12 +32,12 @@ impl DataBuilder<'_> {
         self.write_u32(0xDEAD_C0DE);
     }
 
-    /// Writes a `GameMaker` string reference as a pointer placeholder.
+    /// Writes a GameMaker string reference as a pointer placeholder.
     pub fn write_gm_string(&mut self, string: &str) {
         self.write_gm_string_internal(string.to_string(), false);
     }
 
-    /// Writes an optional `GameMaker` string reference as a pointer placeholder, or zero if the reference is `None`.
+    /// Writes an optional GameMaker string reference as a pointer placeholder, or zero if the reference is `None`.
     pub fn write_gm_string_opt(&mut self, string_opt: &Option<String>) {
         match string_opt {
             Some(string) => self.write_gm_string(string),
@@ -45,12 +45,12 @@ impl DataBuilder<'_> {
         }
     }
 
-    /// Writes a `GameMaker` string reference as a String ID/Index.
+    /// Writes a GameMaker string reference as a String ID/Index.
     pub fn write_gm_string_id(&mut self, string: String) {
         self.write_gm_string_internal(string, true);
     }
 
-    /// Writes a `GameMaker` texture page item reference as a pointer placeholder.
+    /// Writes a GameMaker texture page item reference as a pointer placeholder.
     /// # Errors
     /// Returns an error if the contained texture page item reference cannot be resolved.
     pub fn write_gm_texture(&mut self, gm_texture_ref: GMRef<GMTexturePageItem>) -> Result<()> {
@@ -59,7 +59,7 @@ impl DataBuilder<'_> {
         self.write_pointer(resolved_texture_page_item)
     }
 
-    /// Writes an optional `GameMaker` texture page item reference as a pointer placeholder, or zero if the reference is `None`.
+    /// Writes an optional GameMaker texture page item reference as a pointer placeholder, or zero if the reference is `None`.
     /// # Errors
     /// Returns an error if the contained texture page item reference cannot be resolved.
     pub fn write_gm_texture_opt(

@@ -1,18 +1,20 @@
 [package]
 name = "libgm"
 version = "0.1.0"
-authors = ["BioTomateDE <latus.kati@gmail.com>"]
+authors = ["BioTomateDE <latuskati+cratesio@gmail.com>"]
 edition = "2024"
-description = "A tool for modding, decompiling and unpacking `GameMaker` games"
+description = "A tool for modding, decompiling and unpacking GameMaker games"
 readme = "../README.md"
 repository = "https://github.com/BioTomateDE/LibGM"
 license = "GPL-3"
-keywords = ["gamemaker", "gml", "decompiler", "modding", "undertale"]
-categories = ["parsing", "game-development", "encoding"]
+keywords = ["gamemaker", "gml", "datamining", "modding", "undertale"]
+categories = ["parser-implementations", "game-development", "encoding"]
 
 [dependencies]
+# Workspace Dependencies
 macros = { path = "../macros" }
 
+# Crates.io Dependencies
 bzip2 = "0.6.1"
 chrono = "0.4.42"
 colored = "3.0.0"
