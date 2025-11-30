@@ -39,7 +39,7 @@ impl GMChunkElement for GMOptions {
 
 impl GMElement for GMOptions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let is_new_format: bool = reader.read_u32()? == 0x80000000;
+        let is_new_format: bool = reader.read_u32()? == 0x8000_0000;
         reader.cur_pos -= 4;
         if is_new_format {
             parse_options_new(reader)

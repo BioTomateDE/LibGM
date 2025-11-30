@@ -111,7 +111,7 @@ pub struct GMSound {
     pub audio_file: Option<GMRef<GMEmbeddedAudio>>,
 
     /// The precomputeed length of the sound's audio data.
-    /// Introduced in `GameMaker` 2024.6.
+    /// Introduced in GameMaker 2024.6.
     /// TODO: which unit
     pub audio_length: Option<f32>,
 }

@@ -87,7 +87,7 @@ impl GMElement for GMScript {
         let mut code_id: i32 = reader.read_i32()?;
         let mut is_constructor: bool = false;
         if code_id < -1 {
-            code_id &= 0x7FFFFFFF;
+            code_id &= 0x7FFF_FFFF;
             is_constructor = true;
         }
         let code: Option<GMRef<GMCode>> = resource_opt_from_i32(code_id)?;
@@ -98,7 +98,7 @@ impl GMElement for GMScript {
         builder.write_gm_string(&self.name);
         if self.is_constructor {
             if let Some(gm_code_ref) = &self.code {
-                builder.write_u32(gm_code_ref.index | 0x80000000);
+                builder.write_u32(gm_code_ref.index | 0x8000_0000);
             } else {
                 builder.write_i32(-1);
             }

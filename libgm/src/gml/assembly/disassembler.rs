@@ -1,12 +1,12 @@
 use crate::{
     gamemaker::{
         data::GMData,
-        elements::{functions::GMFunction, game_objects::GMGameObject, variables::GMVariable},
+        elements::{functions::GMFunction, variables::GMVariable},
         reference::GMRef,
     },
     gml::instructions::{
-        CodeVariable, GMAssetReference, GMCode, GMCodeValue, GMComparisonType, GMDataType,
-        GMInstanceType, GMInstruction, GMVariableType,
+        GMAssetReference, GMCode, GMCodeValue, GMComparisonType, GMDataType, GMInstruction,
+        GMVariableType,
     },
     prelude::*,
     util::fmt::typename,
@@ -35,7 +35,7 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
     let line: String;
     let opcode: &str = opcode_to_string(instruction);
 
-    match &instruction {
+    match instruction {
         GMInstruction::Exit
         | GMInstruction::Return
         | GMInstruction::PopSwap { .. }
@@ -115,24 +115,30 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
             );
         },
 
-        GMInstruction::Pop { variable, type1, type2 } => {
-            // TODO: find the instance type of the variable
+        &GMInstruction::Pop {
+            variable_ref,
+            variable_type,
+            type1,
+            type2,
+        } => {
             line = format!(
                 "{}.{}.{} {}",
                 opcode,
-                data_type_to_string(*type1),
-                data_type_to_string(*type2),
-                variable_to_string(gm_data, variable)?,
+                data_type_to_string(type1),
+                data_type_to_string(type2),
+                variable_to_string(variable_ref, variable_type, gm_data)?,
             );
         },
 
         GMInstruction::Push { value } => {
             let literal: String = match value {
-                GMCodeValue::Variable(code_variable) => variable_to_string(gm_data, code_variable)?,
+                &GMCodeValue::Variable { variable_ref, variable_type } => {
+                    variable_to_string(variable_ref, variable_type, gm_data)?
+                },
                 GMCodeValue::Boolean(true) => "true".to_string(),
                 GMCodeValue::Boolean(false) => "false".to_string(),
-                GMCodeValue::Function(function_ref) => {
-                    format!("(function){}", function_to_string(gm_data, *function_ref)?)
+                &GMCodeValue::Function { function_ref } => {
+                    format!("(function){}", function_to_string(gm_data, function_ref)?)
                 },
                 GMCodeValue::String(string) => format_literal_string(string.clone())?,
                 GMCodeValue::Int16(integer) => integer.to_string(),
@@ -148,10 +154,14 @@ pub fn disassemble_instruction(gm_data: &GMData, instruction: &GMInstruction) ->
                 literal,
             );
         },
-        GMInstruction::PushLocal { variable }
-        | GMInstruction::PushGlobal { variable }
-        | GMInstruction::PushBuiltin { variable } => {
-            line = format!("{} {}", opcode, variable_to_string(gm_data, variable)?);
+        GMInstruction::PushLocal { variable_ref, variable_type }
+        | GMInstruction::PushGlobal { variable_ref, variable_type }
+        | GMInstruction::PushBuiltin { variable_ref, variable_type } => {
+            line = format!(
+                "{} {}",
+                opcode,
+                variable_to_string(*variable_ref, *variable_type, gm_data)?
+            );
         },
 
         GMInstruction::PushImmediate { integer } => {
@@ -324,75 +334,44 @@ const fn comparison_type_to_string(comparison_type: GMComparisonType) -> &'stati
     }
 }
 
-fn instance_type_to_string(
-    gm_data: &GMData,
-    instance_type: &GMInstanceType,
-    variable_ref: GMRef<GMVariable>,
-) -> Result<String> {
-    Ok(match instance_type {
-        GMInstanceType::Undefined => {
-            unreachable!("Did not expect Instance Type Undefined here; please report this error")
-        },
-        GMInstanceType::Self_(Some(obj_ref)) => {
-            let obj: &GMGameObject = obj_ref.resolve(&gm_data.game_objects)?;
-            format!("self<{}>", obj.name)
-        },
-        GMInstanceType::Self_(None) => "self".to_string(),
-        GMInstanceType::RoomInstance(instance_id) => {
-            format!("roominstance<{instance_id}>")
-        },
-        GMInstanceType::Other => "other".to_string(),
-        GMInstanceType::All => "all".to_string(),
-        GMInstanceType::None => "none".to_string(),
-        GMInstanceType::Global => "global".to_string(),
-        GMInstanceType::Builtin => "builtin".to_string(),
-        GMInstanceType::Local => format!("local<{}>", variable_ref.index),
-        GMInstanceType::StackTop => "stacktop".to_string(),
-        GMInstanceType::Argument => "arg".to_string(),
-        GMInstanceType::Static => "static".to_string(),
+fn variable_type_to_string(variable_type: GMVariableType, gm_data: &GMData) -> Result<String> {
+    Ok(match variable_type {
+        GMVariableType::GameObject(game_object_ref) => format!(
+            "gameobject<{}>",
+            game_object_ref.resolve(&gm_data.game_objects)?.name
+        ),
+        GMVariableType::Self_ => "self".to_string(),
+        GMVariableType::Other => "other".to_string(),
+        GMVariableType::All => "all".to_string(),
+        GMVariableType::None => "none".to_string(),
+        GMVariableType::Global => "global".to_string(),
+        GMVariableType::Builtin => "builtin".to_string(),
+        GMVariableType::Local => "local".to_string(),
+        GMVariableType::Argument => "argument".to_string(),
+        GMVariableType::Static => "static".to_string(),
+        GMVariableType::StackTopInstance => "stacktopinstance".to_string(),
+        GMVariableType::StackTopChain => "stacktopchain".to_string(),
+        GMVariableType::Array => "array".to_string(),
+        GMVariableType::Instance(int16) => format!("instance<{int16}>"),
+        GMVariableType::ArrayPushAF => "arraypushaf".to_string(),
+        GMVariableType::ArrayPopAF => "arraypopaf".to_string(),
     })
 }
 
-const fn variable_type_to_string(variable_type: GMVariableType) -> &'static str {
-    match variable_type {
-        GMVariableType::Array => "[array]",
-        GMVariableType::StackTop => "[stacktop]",
-        GMVariableType::Normal => "",
-        GMVariableType::Instance => "",
-        GMVariableType::ArrayPushAF => "[arraypushaf]",
-        GMVariableType::ArrayPopAF => "[arraypopaf]",
-    }
-}
-
-fn variable_to_string(gm_data: &GMData, code_variable: &CodeVariable) -> Result<String> {
-    let variable: &GMVariable = code_variable.variable.resolve(&gm_data.variables)?;
+fn variable_to_string(
+    variable_ref: GMRef<GMVariable>,
+    variable_type: GMVariableType,
+    gm_data: &GMData,
+) -> Result<String> {
+    let variable: &GMVariable = variable_ref.resolve(&gm_data.variables)?;
     let name = &variable.name;
     if !is_valid_identifier(name) && name != "$$$$temp$$$$" {
         bail!("Invalid variable identifier {name:?}");
     }
 
-    let prefix: &str = if code_variable.is_int32 {
-        "(variable)"
-    } else {
-        ""
-    };
+    let variable_type: String = variable_type_to_string(variable_type, gm_data)?;
 
-    let instance_type: &GMInstanceType = if code_variable.instance_type != GMInstanceType::Undefined
-    {
-        &code_variable.instance_type
-    } else {
-        // TODO: this will not work with b14
-        variable
-            .b15_data
-            .as_ref()
-            .map_or(&GMInstanceType::Undefined, |b15| &b15.instance_type)
-    };
-    let instance_type: String =
-        instance_type_to_string(gm_data, instance_type, code_variable.variable)?;
-
-    let variable_type: &str = variable_type_to_string(code_variable.variable_type);
-
-    Ok(format!("{prefix}{variable_type}{instance_type}.{name}"))
+    Ok(format!("{variable_type}.{name}"))
 }
 
 fn function_to_string(gm_data: &GMData, function_ref: GMRef<GMFunction>) -> Result<&String> {

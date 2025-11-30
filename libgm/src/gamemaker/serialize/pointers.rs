@@ -8,13 +8,13 @@ use crate::{
 
 impl DataBuilder<'_> {
     /// Create a placeholder pointer at the current position in the chunk and remember
-    /// its data position paired with the target `GameMaker` element's memory address.
+    /// its data position paired with the target GameMaker element's memory address.
     ///
     /// This will later be resolved by calling [`Self::resolve_pointer`]; replacing the
-    /// pointer placeholder with the written data position of the target `GameMaker` element.
+    /// pointer placeholder with the written data position of the target GameMaker element.
     /// ___
     /// This system exists because it is virtually impossible to
-    /// predict which data position a `GameMaker` element will be written to.
+    /// predict which data position a GameMaker element will be written to.
     /// Circular references and writing order would make
     /// predicting these pointer resource positions even harder.
     /// ___
@@ -44,7 +44,7 @@ impl DataBuilder<'_> {
         Ok(())
     }
 
-    /// Store the written `GameMaker` element's data position paired with its memory address in the pointer resource pool.
+    /// Store the written GameMaker element's data position paired with its memory address in the pointer resource pool.
     /// The element's position corresponds to the data builder's current position,
     /// since this method should get called when the element is serialized.
     pub fn resolve_pointer<T>(&mut self, element: &T) -> Result<()> {

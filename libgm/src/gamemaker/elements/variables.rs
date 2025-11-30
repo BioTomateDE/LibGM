@@ -3,17 +3,13 @@ use std::ops::{Deref, DerefMut};
 use crate::{
     gamemaker::{
         deserialize::{chunk::GMChunk, reader::DataReader},
-        elements::{
-            GMChunkElement, GMElement,
-            code::{build_instance_type, parse_instance_type},
-            general_info::GMGeneralInfo,
-        },
+        elements::{GMChunkElement, GMElement, general_info::GMGeneralInfo},
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
-    gml::instructions::{GMInstanceType, GMVariableType},
+    gml::instructions::GMInstanceType,
     prelude::*,
-    util::init::vec_with_capacity,
+    util::init::{num_enum_from, vec_with_capacity},
 };
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -42,9 +38,9 @@ impl GMVariables {
         }
 
         let vari_instance_type = if instance_type == GMInstanceType::Builtin {
-            GMInstanceType::Self_(None)
+            GMInstanceType::Self_
         } else {
-            instance_type.clone()
+            instance_type
         };
 
         for (i, variable) in self.variables.iter().enumerate() {
@@ -78,7 +74,7 @@ impl GMVariables {
                 // this condition is only suggested by utmt; not confirmed (original: `!DifferentVarCounts`)
                 b15_header.var_count1 += 1;
                 b15_header.var_count2 += 1;
-            } else if matches!(instance_type, GMInstanceType::Self_(_)) {
+            } else if instance_type == GMInstanceType::Self_ {
                 //variable_id = b15_header.var_count2 as i32;
                 b15_header.var_count2 += 1;
             } else if instance_type == GMInstanceType::Global {
@@ -243,15 +239,14 @@ pub struct GMVariableB15Data {
 
 impl GMElement for GMVariableB15Data {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let raw_instance_type: i16 = reader.read_i32()? as i16;
-        let instance_type: GMInstanceType =
-            parse_instance_type(raw_instance_type, GMVariableType::Normal)?;
+        let instance_type = reader.read_i32()?;
+        let instance_type: GMInstanceType = num_enum_from(instance_type)?;
         let variable_id = reader.read_i32()?;
         Ok(GMVariableB15Data { instance_type, variable_id })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(build_instance_type(&self.instance_type) as i32);
+        builder.write_i32(self.instance_type.into());
         builder.write_i32(self.variable_id);
         Ok(())
     }

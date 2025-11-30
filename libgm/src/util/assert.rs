@@ -2,7 +2,7 @@ use std::fmt::{Display, UpperHex};
 
 use crate::{gml::instructions::GMDataType, prelude::*};
 
-pub fn assert_int<I: UpperHex + PartialEq + Display>(
+pub fn assert_int<I: Copy + Eq + Display + UpperHex>(
     description: &'static str,
     expected: I,
     actual: I,

@@ -1,7 +1,7 @@
 //! Implementation of .NET's Random algorithm based on Knuth's subtractive method
 //! Reference: <https://github.com/dotnet/runtime/blob/main/src/libraries/System.Private.CoreLib/src/System/Random.cs>
 
-pub struct CSharpRng {
+pub struct DotnetRng {
     seed_array: [i32; 56],
     inext: u8,
     inextp: u8,
@@ -11,7 +11,8 @@ pub struct CSharpRng {
 /// MSEED ≈ φ * 10^8
 const MSEED: i32 = 161_803_398;
 
-impl CSharpRng {
+impl DotnetRng {
+    #[must_use]
     pub const fn new(seed: i32) -> Self {
         let seed = if seed == i32::MIN {
             i32::MAX
@@ -94,3 +95,4 @@ impl CSharpRng {
         num
     }
 }
+

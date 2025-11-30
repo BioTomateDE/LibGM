@@ -57,7 +57,7 @@ impl GMElement for GMShaders {
             let entry_end = win[1];
             reader.cur_pos = pointer;
             let name: String = reader.read_gm_string()?;
-            let shader_type: GMShaderType = num_enum_from(reader.read_u32()? & 0x7FFFFFFF)?;
+            let shader_type: GMShaderType = num_enum_from(reader.read_u32()? & 0x7FFF_FFFF)?;
 
             let glsl_es_vertex: String = reader.read_gm_string()?;
             let glsl_es_fragment: String = reader.read_gm_string()?;

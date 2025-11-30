@@ -11,7 +11,7 @@ use crate::{
 };
 
 impl DataReader<'_> {
-    /// Read a standard `GameMaker` string reference.
+    /// Read a standard GameMaker string reference.
     pub fn read_gm_string(&mut self) -> Result<String> {
         let occurrence_position = self.read_u32()?;
         self.read_gm_str(occurrence_position)

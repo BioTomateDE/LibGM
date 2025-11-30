@@ -1,4 +1,4 @@
-use std::{fmt::Display, str::FromStr};
+use std::fmt::Display;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Error {
@@ -8,22 +8,27 @@ pub struct Error {
 
 impl Error {
     #[cold]
+    #[must_use]
     pub const fn new(message: String) -> Self {
         Self { message, context: Vec::new() }
     }
 
+    #[must_use]
     pub fn chain_with(&self, arrow: &str) -> String {
-        let mut output = format!("{}", self.message);
+        use std::fmt::Write;
+        let mut output = self.message.clone();
         for context in &self.context {
-            output += &format!("\n{arrow} while {context}");
+            write!(output, "\n{arrow} while {context}").unwrap();
         }
         output
     }
 
+    #[must_use]
     pub fn chain(&self) -> String {
         self.chain_with(">")
     }
 
+    #[must_use]
     pub fn chain_pretty(&self) -> String {
         self.chain_with("↳")
     }
@@ -49,14 +54,8 @@ impl From<&str> for Error {
     }
 }
 
-impl FromStr for Error {
-    type Err = ();
-    #[cold]
-    fn from_str(message: &str) -> std::result::Result<Self, Self::Err> {
-        Ok(Self::new(message.to_string()))
-    }
-}
-
+/// Convenience type alias for [`std::fmt::Result`] with [`crate::error::Error`] as the error type.
+/// This type is also exported in `libgm::prelude`.
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub trait Context<T> {
@@ -65,19 +64,17 @@ pub trait Context<T> {
 }
 
 impl<T> Context<T> for Result<T> {
-    fn context(self, context: impl Into<String>) -> Result<T> {
-        self.map_err(|e| {
-            let mut error = e.clone();
-            error.context.push(context.into());
-            error
+    fn context(self, context: impl Into<String>) -> Self {
+        self.map_err(|mut err| {
+            err.context.push(context.into());
+            err
         })
     }
 
-    fn with_context(self, f: impl FnOnce() -> String) -> Result<T> {
-        self.map_err(|e| {
-            let mut error = e.clone();
-            error.context.push(f().into());
-            error
+    fn with_context(self, f: impl FnOnce() -> String) -> Self {
+        self.map_err(|mut err| {
+            err.context.push(f());
+            err
         })
     }
 }
@@ -85,17 +82,17 @@ impl<T> Context<T> for Result<T> {
 impl<T, S: Into<String>> Context<T> for std::result::Result<T, S> {
     fn context(self, context: impl Into<String>) -> Result<T> {
         self.map_err(|string| {
-            let mut error = Error::new(string.into());
-            error.context.push(context.into());
-            error
+            let mut err = Error::new(string.into());
+            err.context.push(context.into());
+            err
         })
     }
 
     fn with_context(self, f: impl FnOnce() -> String) -> Result<T> {
         self.map_err(|string| {
-            let mut error = Error::new(string.into());
-            error.context.push(f().into());
-            error
+            let mut err = Error::new(string.into());
+            err.context.push(f());
+            err
         })
     }
 }

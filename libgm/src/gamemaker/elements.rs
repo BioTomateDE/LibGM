@@ -41,7 +41,7 @@ pub mod ui_nodes;
 pub mod variables;
 
 #[allow(unused_variables)]
-/// All `GameMaker` elements that can be deserialized
+/// All GameMaker elements that can be deserialized
 /// from a data file should implement this trait.
 pub(crate) trait GMElement: Sized {
     /// Deserializes this element from the current position of the reader.
@@ -53,7 +53,7 @@ pub(crate) trait GMElement: Sized {
     /// Serializes this element to the current position of the builder.
     ///
     /// Implementations should write the exact binary representation of this element
-    /// in the format expected by the `GameMaker` runtime.
+    /// in the format expected by the GameMaker runtime.
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()>;
 
     /// Handles padding bytes that may appear before this element in pointer lists.
@@ -205,7 +205,7 @@ impl GMElement for bool {
 
 /// All chunk elements should implement this trait.
 pub(crate) trait GMChunkElement: GMElement + Default {
-    /// The four character `GameMaker` chunk name (GEN8, STRG, VARI, etc.).
+    /// The four character GameMaker chunk name (GEN8, STRG, VARI, etc.).
     const NAME: &'static str;
 
     /// Returns `true` if this chunk is present in the data file.
