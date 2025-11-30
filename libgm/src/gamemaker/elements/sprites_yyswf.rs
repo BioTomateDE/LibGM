@@ -62,7 +62,7 @@ impl GMElement for GMSpriteYYSWFTimeline {
             collision_masks.push(GMSpriteYYSWFCollisionMask::deserialize(reader)?);
         }
 
-        Ok(GMSpriteYYSWFTimeline {
+        Ok(Self {
             framerate,
             min_x,
             max_x,
@@ -119,7 +119,7 @@ impl GMElement for GMSpriteYYSWFItem {
                 reader.cur_pos,
             ),
         };
-        Ok(GMSpriteYYSWFItem { id, item_data })
+        Ok(Self { id, item_data })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -189,7 +189,7 @@ impl GMElement for GMSpriteYYSWFFillData {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
 pub enum GMSpriteYYSWFBitmapFillType {
     FillRepeat,
@@ -198,7 +198,7 @@ pub enum GMSpriteYYSWFBitmapFillType {
     FillClampPoint,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
 pub enum GMSpriteYYSWFGradientFillType {
     FillLinear,
@@ -232,7 +232,7 @@ impl<T: GMElement> GMElement for GMSpriteYYSWFStyleGroup<T> {
             subshapes.push(T::deserialize(reader)?);
         }
 
-        Ok(GMSpriteYYSWFStyleGroup { fill_styles, line_styles, subshapes })
+        Ok(Self { fill_styles, line_styles, subshapes })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -264,7 +264,7 @@ impl GMElement for GMSpriteYYSWFBitmapFillData {
         let bitmap_fill_type: GMSpriteYYSWFBitmapFillType = num_enum_from(reader.read_i32()?)?;
         let char_id = reader.read_i32()?;
         let transformation_matrix = GMSpriteYYSWFMatrix33::deserialize(reader)?;
-        Ok(GMSpriteYYSWFBitmapFillData {
+        Ok(Self {
             bitmap_fill_type,
             char_id,
             transformation_matrix,
@@ -316,7 +316,7 @@ impl GMElement for GMSpriteYYSWFGradientFillData {
         let tpe_index: Option<i32> = reader.deserialize_if_gm_version((2022, 1))?;
         let transformation_matrix = GMSpriteYYSWFMatrix33::deserialize(reader)?;
         let records: Vec<GMSpriteYYSWFGradientRecord> = reader.read_simple_list()?;
-        Ok(GMSpriteYYSWFGradientFillData {
+        Ok(Self {
             tpe_index,
             gradient_fill_type,
             transformation_matrix,
@@ -334,7 +334,7 @@ impl GMElement for GMSpriteYYSWFGradientFillData {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMSpriteYYSWFGradientRecord {
     pub ratio: i32,
     pub red: u8,
@@ -350,7 +350,7 @@ impl GMElement for GMSpriteYYSWFGradientRecord {
         let green = reader.read_u8()?;
         let blue = reader.read_u8()?;
         let alpha = reader.read_u8()?;
-        Ok(GMSpriteYYSWFGradientRecord { ratio, red, green, blue, alpha })
+        Ok(Self { ratio, red, green, blue, alpha })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -363,7 +363,7 @@ impl GMElement for GMSpriteYYSWFGradientRecord {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMSpriteYYSWFSolidFillData {
     pub red: u8,
     pub green: u8,
@@ -377,7 +377,7 @@ impl GMElement for GMSpriteYYSWFSolidFillData {
         let green = reader.read_u8()?;
         let blue = reader.read_u8()?;
         let alpha = reader.read_u8()?;
-        Ok(GMSpriteYYSWFSolidFillData { red, green, blue, alpha })
+        Ok(Self { red, green, blue, alpha })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -389,7 +389,7 @@ impl GMElement for GMSpriteYYSWFSolidFillData {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMSpriteYYSWFLineStyleData {
     pub red: u8,
     pub green: u8,
@@ -403,7 +403,7 @@ impl GMElement for GMSpriteYYSWFLineStyleData {
         let green = reader.read_u8()?;
         let blue = reader.read_u8()?;
         let alpha = reader.read_u8()?;
-        Ok(GMSpriteYYSWFLineStyleData { red, green, blue, alpha })
+        Ok(Self { red, green, blue, alpha })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -485,7 +485,7 @@ impl GMElement for GMSpriteYYSWFSubshapeData {
             line_aa_vectors.push((reader.read_f32()?, reader.read_f32()?));
         }
 
-        Ok(GMSpriteYYSWFSubshapeData {
+        Ok(Self {
             fill_style1,
             fill_style2,
             line_style,
@@ -597,7 +597,7 @@ impl GMElement for GMSpriteYYSWFBitmapData {
             })
         };
 
-        Ok(GMSpriteYYSWFBitmapData { bitmap_type, width, height, ver_data })
+        Ok(Self { bitmap_type, width, height, ver_data })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -610,18 +610,16 @@ impl GMElement for GMSpriteYYSWFBitmapData {
             } else {
                 bail!("Sprite YYSWF Bitmap Data: TPE Index not set in Post 2022.1+");
             }
+        } else if let GMSpriteYYSWFBitmapDataVer::Pre2022_1(ref data) = self.ver_data {
+            builder.write_usize(data.image_data.len())?;
+            builder.write_usize(data.alpha_data.len())?;
+            builder.write_usize(data.color_palette_data.len())?;
+            builder.write_bytes(&data.image_data);
+            builder.write_bytes(&data.alpha_data);
+            builder.write_bytes(&data.color_palette_data);
+            builder.align(4);
         } else {
-            if let GMSpriteYYSWFBitmapDataVer::Pre2022_1(ref data) = self.ver_data {
-                builder.write_usize(data.image_data.len())?;
-                builder.write_usize(data.alpha_data.len())?;
-                builder.write_usize(data.color_palette_data.len())?;
-                builder.write_bytes(&data.image_data);
-                builder.write_bytes(&data.alpha_data);
-                builder.write_bytes(&data.color_palette_data);
-                builder.align(4);
-            } else {
-                bail!("Sprite YYSWF Bitmap Data: version specific data not set in Pre 2022.1+");
-            }
+            bail!("Sprite YYSWF Bitmap Data: version specific data not set in Pre 2022.1+");
         }
         Ok(())
     }
@@ -632,18 +630,18 @@ pub enum GMSpriteYYSWFBitmapDataVer {
     Pre2022_1(GMSpriteYYSWFBitmapDataPre2022_1),
     Post2022_1(GMSpriteYYSWFBitmapDataPost2022_1),
 }
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMSpriteYYSWFBitmapDataPre2022_1 {
     pub image_data: Vec<u8>,
     pub alpha_data: Vec<u8>,
     pub color_palette_data: Vec<u8>,
 }
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMSpriteYYSWFBitmapDataPost2022_1 {
     pub tpe_index: i32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive, IntoPrimitive)]
 #[repr(i32)]
 pub enum GMSpriteYYSWFBitmapType {
     TypeJPEGNoHeader,
@@ -728,7 +726,7 @@ impl GMElement for GMSpriteYYSWFTimelineObject {
         let max_y = reader.read_f32()?;
         let transformation_matrix = GMSpriteYYSWFMatrix33::deserialize(reader)?;
 
-        Ok(GMSpriteYYSWFTimelineObject {
+        Ok(Self {
             char_id,
             char_index,
             depth,
@@ -758,7 +756,7 @@ impl GMElement for GMSpriteYYSWFTimelineObject {
 }
 
 pub const YYSWF_COLOR_MATRIX_SIZE: usize = 4;
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMSpriteYYSWFColorMatrix {
     pub additive: [i32; YYSWF_COLOR_MATRIX_SIZE],
     pub multiply: [i32; YYSWF_COLOR_MATRIX_SIZE],
@@ -776,7 +774,7 @@ impl GMElement for GMSpriteYYSWFColorMatrix {
             *item = reader.read_i32()?;
         }
 
-        Ok(GMSpriteYYSWFColorMatrix { additive, multiply })
+        Ok(Self { additive, multiply })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -790,7 +788,7 @@ impl GMElement for GMSpriteYYSWFColorMatrix {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMSpriteYYSWFCollisionMask {
     pub rle_data: Vec<u8>,
 }
@@ -809,7 +807,7 @@ impl GMElement for GMSpriteYYSWFCollisionMask {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         // From UTMT: writing zero for empty table would probably be smart but the padding handles it automatically?
         //            but you cant even have a yyswf sprite with a null rle data???
-        if self.rle_data.len() != 0 {
+        if !self.rle_data.is_empty() {
             builder.write_usize(self.rle_data.len())?;
             builder.write_bytes(&self.rle_data);
         }

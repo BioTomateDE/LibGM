@@ -76,13 +76,12 @@ impl GMElement for GMTextureGroupInfo {
         let texture_pages_ptr = reader.read_u32()?;
         let sprites_ptr = reader.read_u32()?;
         let spine_sprites_ptr =
-            if !reader
+            if reader
                 .general_info
-                .is_version_at_least((2023, 1, LTSBranch::PostLTS))
-            {
-                reader.read_u32()?
-            } else {
+                .is_version_at_least((2023, 1, LTSBranch::PostLTS)) {
                 0
+            } else {
+                reader.read_u32()?
             };
         let fonts_ptr = reader.read_u32()?;
         let tilesets_ptr = reader.read_u32()?;
@@ -95,14 +94,13 @@ impl GMElement for GMTextureGroupInfo {
         let sprites: Vec<GMRef<GMSprite>> = reader.read_simple_list_of_resource_ids()?;
 
         let spine_sprites: Vec<GMRef<GMSprite>> =
-            if !reader
+            if reader
                 .general_info
-                .is_version_at_least((2023, 1, LTSBranch::PostLTS))
-            {
+                .is_version_at_least((2023, 1, LTSBranch::PostLTS)) {
+                Vec::new()
+            } else {
                 reader.assert_pos(spine_sprites_ptr, "Spine Sprites")?;
                 reader.read_simple_list_of_resource_ids()?
-            } else {
-                Vec::new()
             };
 
         reader.assert_pos(fonts_ptr, "Fonts")?;
@@ -181,7 +179,7 @@ impl GMElement for GMTextureGroupInfo2022_9 {
     }
 }
 
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
+#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, Eq)]
 #[repr(i32)]
 pub enum GMTextureGroupInfoLoadType {
     /// The texture data is located inside this file.

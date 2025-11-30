@@ -171,7 +171,7 @@ impl<'a> DataReader<'a> {
         let slice: &[u8] = self.read_bytes_dyn(N as u32)?;
         // SAFETY: read_bytes_dyn is guaranteed to read exact N bytes.
         // > EXCEPTION: This produces undefined behavior is if N > u32::MAX.
-        Ok(unsafe { &*(slice.as_ptr() as *const [u8; N]) })
+        Ok(unsafe { &*slice.as_ptr().cast::<[u8; N]>() })
     }
 
     /// Read a 32-bit integer and convert it to a bool.
@@ -242,7 +242,7 @@ impl<'a> DataReader<'a> {
                 pointer_name,
                 position,
                 self.cur_pos,
-                position as i64 - self.cur_pos as i64,
+                i64::from(position) - i64::from(self.cur_pos),
             )
         }
         Ok(())

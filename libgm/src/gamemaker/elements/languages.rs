@@ -10,7 +10,7 @@ use crate::{
     util::init::vec_with_capacity,
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMLanguageInfo {
     pub unknown1: u32,
     pub languages: Vec<GMLanguageData>,
@@ -60,7 +60,7 @@ impl GMElement for GMLanguageInfo {
             languages.push(GMLanguageData { name, region, entries });
         }
 
-        Ok(GMLanguageInfo {
+        Ok(Self {
             unknown1,
             languages,
             entry_ids,

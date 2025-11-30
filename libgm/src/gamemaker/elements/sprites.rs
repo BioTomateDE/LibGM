@@ -213,7 +213,7 @@ impl GMElement for GMSprite {
                                 page_width,
                                 page_height,
                                 data: GMSpriteSpineTextureEntryData::Pre2023_1(texture_blob),
-                            })
+                            });
                         },
                         2 | 3 => {
                             spine_json = GMSpriteTypeSpine::read_weird_string(reader, json_length)?;
@@ -590,7 +590,7 @@ impl GMSpriteTypeSpine {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMSpriteSpineTextureEntry {
     pub page_width: u32,
     pub page_height: u32,

@@ -165,7 +165,7 @@ impl GMElement for GMRoom {
             Vec::new()
         };
 
-        Ok(GMRoom {
+        Ok(Self {
             name,
             caption,
             width,
@@ -320,7 +320,7 @@ impl GMElement for GMRoomView {
         let speed_y = reader.read_i32()?;
         let object: Option<GMRef<GMGameObject>> = reader.read_resource_by_id_opt()?;
 
-        Ok(GMRoomView {
+        Ok(Self {
             enabled,
             view_x,
             view_y,
@@ -357,7 +357,7 @@ impl GMElement for GMRoomView {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMRoomBackground {
     pub enabled: bool,
     pub foreground: bool,
@@ -385,7 +385,7 @@ impl GMElement for GMRoomBackground {
         let speed_y = reader.read_i32()?;
         let stretch = reader.read_bool32()?;
 
-        Ok(GMRoomBackground {
+        Ok(Self {
             enabled,
             foreground,
             background_definition,
@@ -453,7 +453,7 @@ impl GMElement for GMRoomTile {
         let scale_x = reader.read_f32()?;
         let scale_y = reader.read_f32()?;
         let color = reader.read_u32()?;
-        Ok(GMRoomTile {
+        Ok(Self {
             x,
             y,
             texture,
@@ -476,7 +476,7 @@ impl GMElement for GMRoomTile {
         match self.texture {
             Some(GMRoomTileTexture::Sprite(sprite_ref)) => {
                 if builder.is_gm_version_at_least((2, 0)) {
-                    builder.write_resource_id(sprite_ref)
+                    builder.write_resource_id(sprite_ref);
                 } else {
                     bail!(
                         "Room tile texture should be a Background reference before GMS2; not a Sprite reference"
@@ -489,7 +489,7 @@ impl GMElement for GMRoomTile {
                         "Room tile texture should be a Sprite reference in GMS2+; not a Background reference"
                     );
                 }
-                builder.write_resource_id(background_ref)
+                builder.write_resource_id(background_ref);
             },
             None => builder.write_u32(0),
         }
@@ -571,7 +571,7 @@ impl GMElement for GMRoomLayer {
             },
         };
 
-        Ok(GMRoomLayer {
+        Ok(Self {
             layer_name,
             layer_id,
             layer_type,
@@ -606,7 +606,7 @@ impl GMElement for GMRoomLayer {
             GMRoomLayerData::Assets(data) => data.serialize(builder)?,
             GMRoomLayerData::Effect(data) => {
                 if !builder.is_gm_version_at_least((2022, 1)) {
-                    data.serialize(builder)?
+                    data.serialize(builder)?;
                 }
             },
         }
@@ -614,7 +614,7 @@ impl GMElement for GMRoomLayer {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMRoomLayer2022_1 {
     pub effect_enabled: bool,
     pub effect_type: Option<String>,
@@ -694,7 +694,7 @@ pub enum GMRoomLayerData {
     Effect(GMRoomLayerDataEffect),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMRoomLayerDataInstances {
     pub instances: Vec<u32>,
 }
@@ -711,7 +711,7 @@ impl GMElement for GMRoomLayerDataInstances {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMRoomLayerDataTiles {
     pub background: Option<GMRef<GMBackground>>,
     /// Flattened 2D Array. Access using `tile_data[row + width * col]`.
@@ -1078,7 +1078,7 @@ impl GMElement for GMRoomLayerDataAssets {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMRoomLayerDataEffect {
     pub effect_type: String,
     pub properties: Vec<GMRoomLayerEffectProperty>,

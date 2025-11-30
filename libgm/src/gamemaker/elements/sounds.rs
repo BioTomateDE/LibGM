@@ -179,9 +179,5 @@ impl GMElement for GMSound {
 fn get_builtin_sound_group_id(gm_version: &GMVersion) -> u32 {
     let is_ver = |req| gm_version.is_version_at_least(req); // Small closure for concision
     // ver >= 1.0.0.1250 || (ver >= 1.0.0.161 && ver < 1.0.0.1000)
-    if is_ver((1, 0, 0, 1250)) || is_ver((1, 0, 0, 161)) && !is_ver((1, 0, 0, 1000)) {
-        0
-    } else {
-        1
-    }
+    u32::from(!(is_ver((1, 0, 0, 1250)) || is_ver((1, 0, 0, 161)) && !is_ver((1, 0, 0, 1000))))
 }

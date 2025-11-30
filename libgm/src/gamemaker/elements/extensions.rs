@@ -243,7 +243,7 @@ impl GMElement for GMExtensionFunction {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMExtensionFunctionArg {
     pub return_type: GMExtensionReturnType,
 }
@@ -260,7 +260,7 @@ impl GMElement for GMExtensionFunctionArg {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMExtensionOption {
     pub name: String,
     pub value: String,
@@ -272,7 +272,7 @@ impl GMElement for GMExtensionOption {
         let name: String = reader.read_gm_string()?;
         let value: String = reader.read_gm_string()?;
         let kind: GMExtensionOptionKind = num_enum_from(reader.read_i32()?)?;
-        Ok(GMExtensionOption { name, value, kind })
+        Ok(Self { name, value, kind })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

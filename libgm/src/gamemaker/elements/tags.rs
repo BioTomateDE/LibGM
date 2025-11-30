@@ -13,7 +13,7 @@ use crate::{
     util::assert::assert_int,
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMTags {
     pub tags: Vec<String>,
     pub asset_tags: HashMap<i32, Vec<String>>,

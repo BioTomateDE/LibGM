@@ -83,18 +83,12 @@ const fn generate_padding() -> [u8; 512] {
     let mut i = 0;
 
     while i < 256 {
-        padding[i] = match i % 2 == 0 {
-            true => (i / 2) as u8,
-            false => 0,
-        };
+        padding[i] = if i % 2 == 0 { (i / 2) as u8 } else { 0 };
         i += 1;
     }
 
     while i < 512 {
-        padding[i] = match i % 2 == 0 {
-            true => 63,
-            false => 0,
-        };
+        padding[i] = if i % 2 == 0 { 63 } else { 0 };
         i += 1;
     }
 
@@ -244,7 +238,7 @@ impl GMElement for GMFont {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMFontGlyph {
     /// The character this glyph represents.
     pub character: Option<char>,
@@ -279,8 +273,7 @@ impl GMElement for GMFontGlyph {
         } else {
             Some(char::from_u32(character.into()).ok_or_else(|| {
                 format!(
-                    "Invalid UTF-8 character with code point {0} (0x{0:04X})",
-                    character
+                    "Invalid UTF-8 character with code point {character} (0x{character:04X})"
                 )
             })?)
         };
@@ -345,8 +338,7 @@ impl GMElement for GMFontGlyphKerning {
         }
         let character: char = char::from_u32(character.into()).ok_or_else(|| {
             format!(
-                "Invalid UTF-8 character with code point {0} (0x{0:04X})",
-                character
+                "Invalid UTF-8 character with code point {character} (0x{character:04X})"
             )
         })?;
         let shift_modifier = reader.read_i16()?;

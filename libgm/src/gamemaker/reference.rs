@@ -2,7 +2,8 @@ use std::usize;
 
 use crate::{prelude::*, util::fmt::typename};
 
-/// GMRef has (fake) generic types to make it clearer which type it belongs to (`name: GMRef` vs `name: String`).
+/// `GMRef` has (fake) generic types to make it clearer which type it belongs to (`name: GMRef` vs `name: String`).
+///
 /// It can be resolved to the data it references using the `.resolve()` method, which needs the list the elements are stored in.
 /// This means that removing or inserting elements in the middle of the list will shift all their `GMRef`s; breaking them.
 #[derive(Hash, PartialEq, Eq)]
@@ -34,15 +35,15 @@ impl<T> From<usize> for GMRef<T> {
     }
 }
 
-impl<T> Into<u32> for GMRef<T> {
-    fn into(self) -> u32 {
-        self.index
+impl<T> From<GMRef<T>> for u32 {
+    fn from(val: GMRef<T>) -> Self {
+        val.index
     }
 }
 
-impl<T> Into<usize> for GMRef<T> {
-    fn into(self) -> usize {
-        self.index as usize
+impl<T> From<GMRef<T>> for usize {
+    fn from(val: GMRef<T>) -> Self {
+        val.index as usize
     }
 }
 

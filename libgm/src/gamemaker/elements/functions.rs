@@ -92,7 +92,7 @@ impl GMElement for GMFunctions {
         } else {
             code_locals = Default::default();
         }
-        Ok(GMFunctions { functions, code_locals, exists: true })
+        Ok(Self { functions, code_locals, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -133,7 +133,7 @@ impl GMElement for GMFunctions {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMFunction {
     pub name: String,
 }
@@ -170,7 +170,7 @@ impl GMElement for GMCodeLocal {
         for _ in 0..local_variables_count {
             variables.push(GMCodeLocalVariable::deserialize(reader)?);
         }
-        Ok(GMCodeLocal { name, variables })
+        Ok(Self { name, variables })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -183,7 +183,7 @@ impl GMElement for GMCodeLocal {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMCodeLocalVariable {
     /// unknown what this does
     pub weird_index: u32,
@@ -226,7 +226,7 @@ fn parse_occurrence_chain(
         first_extra_offset = 0;
     } else {
         first_extra_offset = 4;
-    };
+    }
     let mut occurrence_pos = first_occurrence_pos + first_extra_offset;
     let mut occurrences: Vec<u32> = vec_with_capacity(occurrence_count)?;
     let mut offset: i32 = 6969; // Default value will never be relevant since it returns if no occurrences

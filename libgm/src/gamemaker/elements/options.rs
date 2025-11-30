@@ -9,7 +9,7 @@ use crate::{
     util::bitfield::bitfield_struct,
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMOptions {
     is_new_format: bool,
     pub unknown1: u32,

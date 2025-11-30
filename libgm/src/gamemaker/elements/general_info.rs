@@ -98,13 +98,13 @@ impl Default for GMGeneralInfo {
             is_debugger_disabled: true,
             bytecode_version: 67,
             unknown_value: 0,
-            game_file_name: "".to_string(),
-            config: "".to_string(),
+            game_file_name: String::new(),
+            config: String::new(),
             last_object_id: 100_000,
             last_tile_id: 10_000_000,
             game_id: 1337,
             directplay_guid: Default::default(),
-            game_name: "".to_string(),
+            game_name: String::new(),
             version: GMVersion::stub(),
             default_window_width: 1337,
             default_window_height: 1337,
@@ -112,7 +112,7 @@ impl Default for GMGeneralInfo {
             license_crc32: 1337,
             license_md5: [0; 16],
             timestamp_created: Default::default(),
-            display_name: "".to_string(),
+            display_name: String::new(),
             function_classifications: GMFunctionClassifications::default(),
             steam_appid: 0,
             debugger_port: None,
@@ -192,7 +192,7 @@ impl GMElement for GMGeneralInfo {
             let seed: i32 = (timestamp & 0xFFFFFFFF) as i32;
             let mut rng = DotnetRng::new(seed);
 
-            let first_expected: i64 = ((rng.next() as i64) << 32) | (rng.next() as i64);
+            let first_expected: i64 = (i64::from(rng.next()) << 32) | i64::from(rng.next());
             let first_actual = reader.read_i64()?;
             if first_actual != first_expected {
                 bail!("Unexpected random UID #1: expected {first_expected}; got {first_actual}");
@@ -213,12 +213,12 @@ impl GMElement for GMGeneralInfo {
                 info_number = Self::uid_bitmush(info_number);
                 info_number ^= first_random;
                 info_number = !info_number;
-                info_number ^= ((game_id as i64) << 32) | (game_id as i64);
-                info_number ^= (default_window_width as i64 + flags_raw as i64) << 48
-                    | (default_window_height as i64 + flags_raw as i64) << 32
-                    | (default_window_height as i64 + flags_raw as i64) << 16
-                    | (default_window_width as i64 + flags_raw as i64);
-                info_number ^= bytecode_version as i64;
+                info_number ^= (i64::from(game_id) << 32) | i64::from(game_id);
+                info_number ^= (i64::from(default_window_width) + i64::from(flags_raw)) << 48
+                    | (i64::from(default_window_height) + i64::from(flags_raw)) << 32
+                    | (i64::from(default_window_height) + i64::from(flags_raw)) << 16
+                    | (i64::from(default_window_width) + i64::from(flags_raw));
+                info_number ^= i64::from(bytecode_version);
                 info_number
             };
 
@@ -249,7 +249,7 @@ impl GMElement for GMGeneralInfo {
                         );
                     }
 
-                    random_uid[i as usize] = ((second_actual as i64) << 32) | (third_actual as i64);
+                    random_uid[i as usize] = (i64::from(second_actual) << 32) | i64::from(third_actual);
                 }
             }
             let fps = reader.read_f32()?;
@@ -264,10 +264,10 @@ impl GMElement for GMGeneralInfo {
                 allow_statistics,
                 game_guid,
                 info_timestamp_offset,
-            })
+            });
         }
 
-        Ok(GMGeneralInfo {
+        Ok(Self {
             is_debugger_disabled,
             bytecode_version,
             unknown_value,
@@ -343,7 +343,7 @@ impl GMElement for GMGeneralInfo {
             let timestamp: i64 = self.timestamp_created.timestamp();
             let seed: i32 = (timestamp & 0xFFFF_FFFF) as i32;
             let mut rng = DotnetRng::new(seed);
-            let first_random: i64 = ((rng.next() as i64) << 32) | rng.next() as i64;
+            let first_random: i64 = (i64::from(rng.next()) << 32) | i64::from(rng.next());
             let info_number = self.get_info_number(first_random, gms2_info.info_timestamp_offset);
             let info_location: i32 = ((timestamp & 0xFFFF) as i32 / 7
                 + self.game_id.wrapping_sub(self.default_window_width) as i32
@@ -380,16 +380,16 @@ impl GMGeneralInfo {
         info_number = Self::uid_bitmush(info_number);
         info_number ^= first_random;
         info_number = !info_number;
-        info_number ^= ((self.game_id as i64) << 32) | (self.game_id as i64);
-        info_number ^= (self.default_window_width as i64 + flags_raw as i64) << 48
-            | (self.default_window_height as i64 + flags_raw as i64) << 32
-            | (self.default_window_height as i64 + flags_raw as i64) << 16
-            | (self.default_window_width as i64 + flags_raw as i64);
-        info_number ^= self.bytecode_version as i64;
+        info_number ^= (i64::from(self.game_id) << 32) | i64::from(self.game_id);
+        info_number ^= (i64::from(self.default_window_width) + i64::from(flags_raw)) << 48
+            | (i64::from(self.default_window_height) + i64::from(flags_raw)) << 32
+            | (i64::from(self.default_window_height) + i64::from(flags_raw)) << 16
+            | (i64::from(self.default_window_width) + i64::from(flags_raw));
+        info_number ^= i64::from(self.bytecode_version);
         info_number
     }
 
-    fn uid_bitmush(info_number: i64) -> i64 {
+    const fn uid_bitmush(info_number: i64) -> i64 {
         let mut temp: u64 = info_number as u64;
         temp = (temp << 56 & 0xFF00_0000_0000_0000)
             | (temp >> 08 & 0x00FF_0000_0000_0000)

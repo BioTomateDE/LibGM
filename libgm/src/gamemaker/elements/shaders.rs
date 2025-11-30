@@ -268,8 +268,8 @@ impl GMElement for GMShader {
 
 /// Possible shader types a shader can have.
 /// All console shaders (and HLSL11?) are compiled using confidential SDK tools when
-/// GMAssetCompiler builds the game (for PSVita it's psp2cgc shader compiler).
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
+/// `GMAssetCompiler` builds the game (for PSVita it's psp2cgc shader compiler).
+#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, Eq)]
 #[repr(u32)]
 pub enum GMShaderType {
     GlslEs = 1,
@@ -284,7 +284,7 @@ pub enum GMShaderType {
     CgPs3 = 7,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMShaderData {
     pub data: Vec<u8>,
 }
@@ -320,9 +320,9 @@ fn read_shader_data(
     }
 
     if expected_length < actual_length {
-        if is_last && (reader.cur_pos + actual_length) % 16 == 0 {
+        if is_last && (reader.cur_pos + actual_length).is_multiple_of(16) {
             // Normal for the last element due to chunk padding, just trust the system
-        } else if !is_last && (reader.cur_pos + actual_length) % 8 == 0 {
+        } else if !is_last && (reader.cur_pos + actual_length).is_multiple_of(8) {
             // Normal for 8-byte alignment to occur on all elements prior to the last one
         } else if is_last {
             bail!("{ERR_MSG_PREFIX} more data than expected. {ERR_MSG_SUFFIX}");

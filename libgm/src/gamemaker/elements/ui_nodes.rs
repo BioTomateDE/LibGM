@@ -95,7 +95,7 @@ impl GMElement for GMNodeUI {
             _ => bail!("Unknown UI Node type {type_id}"),
         };
 
-        Ok(GMNodeUI { node, children })
+        Ok(Self { node, children })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -154,15 +154,15 @@ pub enum GMNodeUIData {
 }
 
 impl GMNodeUIData {
-    fn variant_name(&self) -> &'static str {
+    const fn variant_name(&self) -> &'static str {
         match self {
-            GMNodeUIData::Layer(_) => "Layer",
-            GMNodeUIData::FlexPanel(_) => "FlexPanel",
-            GMNodeUIData::GameObject(_) => "GameObject",
-            GMNodeUIData::SequenceInstance(_) => "SequenceInstance",
-            GMNodeUIData::SpriteInstance(_) => "SpriteInstance",
-            GMNodeUIData::TextItemInstance(_) => "TextItemInstance",
-            GMNodeUIData::EffectLayer(_) => "EffectLayer",
+            Self::Layer(_) => "Layer",
+            Self::FlexPanel(_) => "FlexPanel",
+            Self::GameObject(_) => "GameObject",
+            Self::SequenceInstance(_) => "SequenceInstance",
+            Self::SpriteInstance(_) => "SpriteInstance",
+            Self::TextItemInstance(_) => "TextItemInstance",
+            Self::EffectLayer(_) => "EffectLayer",
         }
     }
 }
@@ -190,7 +190,7 @@ impl GMElement for GMNodeUILayer {
     }
 }
 
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
+#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, Eq)]
 #[repr(i32)]
 pub enum GMNodeUILayerDrawSpaceKind {
     GUI = 1,
@@ -296,7 +296,7 @@ impl GMElement for GMNodeUIFlexPanel {
     }
 }
 
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
+#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, Eq)]
 #[repr(i32)]
 pub enum GMNodeUIFlexPanelPositionKind {
     Static = 0,
@@ -396,7 +396,7 @@ impl GMElement for GMNodeUITextItemInstance {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMNodeUIEffectLayer {
     pub enabled: bool,
     pub effect_type: String,
@@ -513,7 +513,7 @@ mod flex_properties {
         }
     }
 
-    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
+    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, Eq)]
     #[repr(i32)]
     pub enum FlexValueUnit {
         Undefined = 0,
@@ -522,7 +522,7 @@ mod flex_properties {
         Auto = 3,
     }
 
-    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
+    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, Eq)]
     #[repr(i32)]
     pub enum AlignmentKind {
         Auto = 0,
@@ -536,7 +536,7 @@ mod flex_properties {
         SpaceEvenly = 8,
     }
 
-    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
+    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, Eq)]
     #[repr(i32)]
     pub enum FlexDirectionKind {
         Column = 0,
@@ -545,7 +545,7 @@ mod flex_properties {
         RowReverse = 3,
     }
 
-    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
+    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, Eq)]
     #[repr(i32)]
     pub enum WrapKind {
         NoWrap = 0,
@@ -553,7 +553,7 @@ mod flex_properties {
         WrapReverse = 2,
     }
 
-    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
+    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, Eq)]
     #[repr(i32)]
     pub enum JustifyKind {
         FlexStart = 0,
@@ -564,7 +564,7 @@ mod flex_properties {
         SpaceEvenly = 5,
     }
 
-    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq)]
+    #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, Eq)]
     #[repr(i32)]
     pub enum LayoutDirectionKind {
         Inherit = 0,
@@ -572,7 +572,7 @@ mod flex_properties {
         RTL = 2,
     }
 
-    #[derive(Debug, Clone, PartialEq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     pub struct GMNodeUIFlexInstanceProperties {
         visible: bool,
         anchor: i32,

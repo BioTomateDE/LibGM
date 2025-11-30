@@ -71,12 +71,12 @@ impl GMElement for GMAnimationCurve {
         let name = reader.read_gm_string()?;
         let graph_type = reader.read_u32()?;
         let channels: Vec<GMAnimationCurveChannel> = reader.read_simple_list()?;
-        Ok(GMAnimationCurve { name, graph_type, channels })
+        Ok(Self { name, graph_type, channels })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name);
-        builder.write_u32(self.graph_type.into());
+        builder.write_u32(self.graph_type);
         builder.write_simple_list(&self.channels)?;
         Ok(())
     }
@@ -96,7 +96,7 @@ impl GMElement for GMAnimationCurveChannel {
         let curve_type: GMAnimationCurveType = num_enum_from(reader.read_i32()?)?;
         let iterations = reader.read_u32()?;
         let points: Vec<GMAnimationCurveChannelPoint> = reader.read_simple_list()?;
-        Ok(GMAnimationCurveChannel { name, curve_type, iterations, points })
+        Ok(Self { name, curve_type, iterations, points })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -124,8 +124,8 @@ impl GMElement for GMAnimationCurveChannelPoint {
             bezier_data = Some(PointBezierData::deserialize(reader)?);
         } else {
             reader.cur_pos += 4;
-        };
-        Ok(GMAnimationCurveChannelPoint { x, y, bezier_data })
+        }
+        Ok(Self { x, y, bezier_data })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
