@@ -1,12 +1,10 @@
-use std::ops::{Deref, DerefMut};
-
-use macros::num_enum;
+use macros::{list_chunk, num_enum};
 
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
         elements::{
-            GMChunkElement, GMElement,
+            GMElement,
             sequence::{GMAnimSpeedType, GMSequence},
             sprites_yyswf::{GMSpriteTypeSWF, GMSpriteYYSWFStyleGroup, GMSpriteYYSWFTimeline},
             texture_page_items::GMTexturePageItem,
@@ -21,30 +19,10 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[list_chunk("SPRT")]
 pub struct GMSprites {
     pub sprites: Vec<GMSprite>,
     pub exists: bool,
-}
-
-impl Deref for GMSprites {
-    type Target = Vec<GMSprite>;
-    fn deref(&self) -> &Self::Target {
-        &self.sprites
-    }
-}
-
-impl DerefMut for GMSprites {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.sprites
-    }
-}
-
-impl GMChunkElement for GMSprites {
-    const NAME: &'static str = "SPRT";
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMSprites {

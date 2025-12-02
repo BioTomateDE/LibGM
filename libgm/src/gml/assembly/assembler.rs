@@ -449,7 +449,7 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
         "self" if instance_type_arg.is_empty() => GMInstanceType::Self_(None),
         "self" => {
             let object_ref: GMRef<GMGameObject> =
-                gm_data.game_objects.get_ref_by_name(&instance_type_arg)?;
+                gm_data.game_objects.ref_by_name(&instance_type_arg)?;
             GMInstanceType::Self_(Some(object_ref))
         },
         "local" => {

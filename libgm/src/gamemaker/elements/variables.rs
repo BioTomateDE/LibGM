@@ -1,10 +1,10 @@
-use std::ops::{Deref, DerefMut};
+use macros::list_chunk;
 
 use crate::{
     gamemaker::{
         deserialize::{chunk::GMChunk, reader::DataReader},
         elements::{
-            GMChunkElement, GMElement,
+            GMElement,
             code::{build_instance_type, parse_instance_type},
             general_info::GMGeneralInfo,
         },
@@ -16,7 +16,7 @@ use crate::{
     util::init::vec_with_capacity,
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[list_chunk("VARI")]
 pub struct GMVariables {
     /// List of all variables; mixing global, local and self.
     pub variables: Vec<GMVariable>,
@@ -104,26 +104,6 @@ impl GMVariables {
         self.variables.push(variable);
 
         Ok(variable_ref)
-    }
-}
-
-impl Deref for GMVariables {
-    type Target = Vec<GMVariable>;
-    fn deref(&self) -> &Self::Target {
-        &self.variables
-    }
-}
-
-impl DerefMut for GMVariables {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.variables
-    }
-}
-
-impl GMChunkElement for GMVariables {
-    const NAME: &'static str = "VARI";
-    fn exists(&self) -> bool {
-        self.exists
     }
 }
 

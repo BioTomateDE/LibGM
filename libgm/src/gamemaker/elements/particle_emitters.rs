@@ -1,12 +1,10 @@
-use std::ops::{Deref, DerefMut};
-
-use macros::num_enum;
+use macros::{list_chunk, num_enum};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement, sprites::GMSprite},
+        elements::{GMElement, sprites::GMSprite},
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
@@ -14,30 +12,10 @@ use crate::{
     util::{assert::assert_int, init::num_enum_from},
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[list_chunk("PSEM")]
 pub struct GMParticleEmitters {
     pub emitters: Vec<GMParticleEmitter>,
     pub exists: bool,
-}
-
-impl Deref for GMParticleEmitters {
-    type Target = Vec<GMParticleEmitter>;
-    fn deref(&self) -> &Self::Target {
-        &self.emitters
-    }
-}
-
-impl DerefMut for GMParticleEmitters {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.emitters
-    }
-}
-
-impl GMChunkElement for GMParticleEmitters {
-    const NAME: &'static str = "PSEM";
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMParticleEmitters {

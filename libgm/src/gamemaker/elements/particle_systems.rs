@@ -1,9 +1,9 @@
-use std::ops::{Deref, DerefMut};
+use macros::list_chunk;
 
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement, particle_emitters::GMParticleEmitter},
+        elements::{GMElement, particle_emitters::GMParticleEmitter},
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
@@ -11,30 +11,10 @@ use crate::{
     util::assert::assert_int,
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[list_chunk("PSYS")]
 pub struct GMParticleSystems {
     pub particle_systems: Vec<GMParticleSystem>,
     pub exists: bool,
-}
-
-impl Deref for GMParticleSystems {
-    type Target = Vec<GMParticleSystem>;
-    fn deref(&self) -> &Self::Target {
-        &self.particle_systems
-    }
-}
-
-impl DerefMut for GMParticleSystems {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.particle_systems
-    }
-}
-
-impl GMChunkElement for GMParticleSystems {
-    const NAME: &'static str = "PSYS";
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMParticleSystems {

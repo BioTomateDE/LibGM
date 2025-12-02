@@ -1,9 +1,9 @@
-use std::ops::{Deref, DerefMut};
+use macros::list_chunk;
 
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement, texture_page_items::GMTexturePageItem},
+        elements::{GMElement, texture_page_items::GMTexturePageItem},
         gm_version::LTSBranch,
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
@@ -12,30 +12,10 @@ use crate::{
     util::assert::assert_int,
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[list_chunk("FONT")]
 pub struct GMFonts {
     pub fonts: Vec<GMFont>,
     pub exists: bool,
-}
-
-impl Deref for GMFonts {
-    type Target = Vec<GMFont>;
-    fn deref(&self) -> &Self::Target {
-        &self.fonts
-    }
-}
-
-impl DerefMut for GMFonts {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.fonts
-    }
-}
-
-impl GMChunkElement for GMFonts {
-    const NAME: &'static str = "FONT";
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMFonts {
@@ -64,10 +44,9 @@ impl GMElement for GMFonts {
 fn verify_padding(padding: &[u8; 512]) -> Result<()> {
     padding.iter().enumerate().try_for_each(|(i, &byte)| {
         let expected = match i {
-            0..=255 if i % 2 == 0 => (i / 2) as u8,
-            0..=255 => 0,
+            0..256 if i % 2 == 0 => (i / 2) as u8,
             256..512 if i % 2 == 0 => 63,
-            _ => unreachable!("i is always < 512"),
+            _ => 0,
         };
 
         if byte == expected {

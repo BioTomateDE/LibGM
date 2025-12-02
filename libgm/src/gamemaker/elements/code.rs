@@ -1,12 +1,11 @@
-use std::{
-    collections::HashMap,
-    ops::{Deref, DerefMut},
-};
+use std::collections::HashMap;
+
+use macros::list_chunk;
 
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement, functions::GMFunction, variables::GMVariable},
+        elements::{GMElement, functions::GMFunction, variables::GMVariable},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
@@ -24,53 +23,10 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[list_chunk("CODE")]
 pub struct GMCodes {
     pub codes: Vec<GMCode>,
     pub exists: bool,
-}
-
-impl GMCodes {
-    fn index_by_name(&self, name: &str) -> Result<usize> {
-        for (i, code) in self.codes.iter().enumerate() {
-            if code.name == name {
-                return Ok(i);
-            }
-        }
-        bail!("Could not find code entry with name {name:?}");
-    }
-
-    pub fn ref_by_name(&self, name: &str) -> Result<GMRef<GMCode>> {
-        self.index_by_name(name).map(GMRef::from)
-    }
-
-    pub fn by_name(&self, name: &str) -> Result<&GMCode> {
-        self.index_by_name(name).map(|index| &self.codes[index])
-    }
-
-    pub fn by_name_mut(&mut self, name: &str) -> Result<&mut GMCode> {
-        self.index_by_name(name).map(|index| &mut self.codes[index])
-    }
-}
-
-impl Deref for GMCodes {
-    type Target = Vec<GMCode>;
-    fn deref(&self) -> &Self::Target {
-        &self.codes
-    }
-}
-
-impl DerefMut for GMCodes {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.codes
-    }
-}
-
-impl GMChunkElement for GMCodes {
-    const NAME: &'static str = "CODE";
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMCodes {

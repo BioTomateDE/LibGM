@@ -1,17 +1,13 @@
-use std::{
-    collections::HashMap,
-    ops::{Deref, DerefMut},
-};
+use std::collections::HashMap;
 
-use macros::num_enum;
+use macros::{list_chunk, num_enum};
 
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
         elements::{
-            GMChunkElement, GMElement, animation_curves::GMAnimationCurve,
-            game_objects::GMGameObject, particle_systems::GMParticleSystem, sounds::GMSound,
-            sprites::GMSprite,
+            GMElement, animation_curves::GMAnimationCurve, game_objects::GMGameObject,
+            particle_systems::GMParticleSystem, sounds::GMSound, sprites::GMSprite,
         },
         reference::GMRef,
         serialize::builder::DataBuilder,
@@ -25,30 +21,10 @@ use crate::{
 
 /// This struct belong to the chunk SEQN.
 /// Sprites can _also_ contain sequences (not by reference; the actual data).
-#[derive(Debug, Clone, Default, PartialEq)]
+#[list_chunk("SEQN")]
 pub struct GMSequences {
     pub sequences: Vec<GMSequence>,
     pub exists: bool,
-}
-
-impl Deref for GMSequences {
-    type Target = Vec<GMSequence>;
-    fn deref(&self) -> &Self::Target {
-        &self.sequences
-    }
-}
-
-impl DerefMut for GMSequences {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.sequences
-    }
-}
-
-impl GMChunkElement for GMSequences {
-    const NAME: &'static str = "SEQN";
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMSequences {

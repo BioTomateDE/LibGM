@@ -1,67 +1,21 @@
-use std::ops::{Deref, DerefMut};
+use macros::list_chunk;
 
 use crate::{
     gamemaker::{
         deserialize::{chunk::GMChunk, reader::DataReader},
-        elements::{GMChunkElement, GMElement},
-        reference::GMRef,
+        elements::GMElement,
         serialize::builder::DataBuilder,
     },
     prelude::*,
     util::init::vec_with_capacity,
 };
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[list_chunk("FUNC")]
+#[derive(Eq)]
 pub struct GMFunctions {
     pub functions: Vec<GMFunction>,
     pub code_locals: GMCodeLocals,
     pub exists: bool,
-}
-
-impl GMFunctions {
-    fn index_by_name(&self, name: &str) -> Result<usize> {
-        for (i, function) in self.functions.iter().enumerate() {
-            if function.name == name {
-                return Ok(i);
-            }
-        }
-        bail!("Could not find function with name {name:?}");
-    }
-
-    pub fn ref_by_name(&self, name: &str) -> Result<GMRef<GMFunction>> {
-        self.index_by_name(name).map(GMRef::from)
-    }
-
-    pub fn by_name(&self, name: &str) -> Result<&GMFunction> {
-        self.index_by_name(name).map(|index| &self.functions[index])
-    }
-
-    /// Pretty useless. Just create a new function instead.
-    pub fn by_name_mut(&mut self, name: &str) -> Result<&mut GMFunction> {
-        self.index_by_name(name)
-            .map(|index| &mut self.functions[index])
-    }
-}
-
-impl Deref for GMFunctions {
-    type Target = Vec<GMFunction>;
-    fn deref(&self) -> &Self::Target {
-        &self.functions
-    }
-}
-
-impl DerefMut for GMFunctions {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.functions
-    }
-}
-
-impl GMChunkElement for GMFunctions {
-    const NAME: &'static str = "FUNC";
-
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMFunctions {

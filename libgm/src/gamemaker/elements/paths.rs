@@ -1,38 +1,16 @@
-use std::ops::{Deref, DerefMut};
+use macros::list_chunk;
 
 use crate::{
     gamemaker::{
-        deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement},
-        serialize::builder::DataBuilder,
+        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
     },
     prelude::*,
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[list_chunk("PATH")]
 pub struct GMPaths {
     pub paths: Vec<GMPath>,
     pub exists: bool,
-}
-
-impl Deref for GMPaths {
-    type Target = Vec<GMPath>;
-    fn deref(&self) -> &Self::Target {
-        &self.paths
-    }
-}
-
-impl DerefMut for GMPaths {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.paths
-    }
-}
-
-impl GMChunkElement for GMPaths {
-    const NAME: &'static str = "PATH";
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMPaths {

@@ -1,10 +1,8 @@
-use std::ops::{Deref, DerefMut};
+use macros::list_chunk;
 
 use crate::{
     gamemaker::{
-        deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement},
-        serialize::builder::DataBuilder,
+        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
     },
     prelude::*,
 };
@@ -13,30 +11,11 @@ use crate::{
 /// You can use these for memory management, volume control and more.
 /// ___
 /// Audio Groups are only available to use in the regular audio system.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[list_chunk("AGRP")]
+#[derive(Eq)]
 pub struct GMAudioGroups {
     pub audio_groups: Vec<GMAudioGroup>,
     pub exists: bool,
-}
-
-impl Deref for GMAudioGroups {
-    type Target = Vec<GMAudioGroup>;
-    fn deref(&self) -> &Self::Target {
-        &self.audio_groups
-    }
-}
-
-impl DerefMut for GMAudioGroups {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.audio_groups
-    }
-}
-
-impl GMChunkElement for GMAudioGroups {
-    const NAME: &'static str = "AGRP";
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMAudioGroups {
