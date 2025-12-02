@@ -13,7 +13,7 @@ pub enum Action {
 impl Action {
     pub fn perform(self, data: &mut GMData) -> Result<()> {
         match self {
-            Self::EnableDebug => enable_debug(data),
+            Self::EnableDebug => enable_debug(data).context("enabling debug mode"),
         }
     }
 }
