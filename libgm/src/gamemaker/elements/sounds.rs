@@ -3,9 +3,7 @@ use macros::list_chunk;
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
-        elements::{
-            GMChunkElement, GMElement, audio_groups::GMAudioGroup, embedded_audio::GMEmbeddedAudio,
-        },
+        elements::{GMElement, audio_groups::GMAudioGroup, embedded_audio::GMEmbeddedAudio},
         gm_version::GMVersion,
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
