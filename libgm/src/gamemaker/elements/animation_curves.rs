@@ -1,43 +1,18 @@
-use std::ops::{Deref, DerefMut};
-
-use macros::num_enum;
+use macros::{list_chunk, num_enum};
 
 use crate::{
     gamemaker::{
-        deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement},
-        serialize::builder::DataBuilder,
+        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
     },
     prelude::*,
     util::{assert::assert_int, init::num_enum_from},
 };
 
 /// GMS 2.3+
-#[derive(Debug, Clone, Default, PartialEq)]
+#[list_chunk("ACRV")]
 pub struct GMAnimationCurves {
     pub animation_curves: Vec<GMAnimationCurve>,
     pub exists: bool,
-}
-
-impl Deref for GMAnimationCurves {
-    type Target = Vec<GMAnimationCurve>;
-    fn deref(&self) -> &Self::Target {
-        &self.animation_curves
-    }
-}
-
-impl DerefMut for GMAnimationCurves {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.animation_curves
-    }
-}
-
-impl GMChunkElement for GMAnimationCurves {
-    const NAME: &'static str = "ACRV";
-
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMAnimationCurves {

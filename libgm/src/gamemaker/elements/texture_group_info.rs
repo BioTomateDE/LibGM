@@ -1,13 +1,12 @@
-use std::ops::{Deref, DerefMut};
-
+use macros::list_chunk;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
         elements::{
-            GMChunkElement, GMElement, backgrounds::GMBackground,
-            embedded_textures::GMEmbeddedTexture, fonts::GMFont, sprites::GMSprite,
+            GMElement, backgrounds::GMBackground, embedded_textures::GMEmbeddedTexture,
+            fonts::GMFont, sprites::GMSprite,
         },
         gm_version::LTSBranch,
         reference::GMRef,
@@ -17,30 +16,10 @@ use crate::{
     util::{assert::assert_int, init::num_enum_from},
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[list_chunk("TGIN")]
 pub struct GMTextureGroupInfos {
     pub texture_group_infos: Vec<GMTextureGroupInfo>,
     pub exists: bool,
-}
-
-impl Deref for GMTextureGroupInfos {
-    type Target = Vec<GMTextureGroupInfo>;
-    fn deref(&self) -> &Self::Target {
-        &self.texture_group_infos
-    }
-}
-
-impl DerefMut for GMTextureGroupInfos {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.texture_group_infos
-    }
-}
-
-impl GMChunkElement for GMTextureGroupInfos {
-    const NAME: &'static str = "TGIN";
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMTextureGroupInfos {

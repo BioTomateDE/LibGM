@@ -1,9 +1,9 @@
-use std::ops::{Deref, DerefMut};
+use macros::list_chunk;
 
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement, texture_page_items::GMTexturePageItem},
+        elements::{GMElement, texture_page_items::GMTexturePageItem},
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
@@ -14,41 +14,11 @@ use crate::{
 const ALIGNMENT: u32 = 8;
 
 /// See [`GMBackground`].
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[list_chunk("BGND")]
+#[derive(Eq)]
 pub struct GMBackgrounds {
     pub backgrounds: Vec<GMBackground>,
-    pub is_aligned: bool,
     pub exists: bool,
-}
-
-impl Default for GMBackgrounds {
-    fn default() -> Self {
-        Self {
-            backgrounds: vec![],
-            is_aligned: true,
-            exists: false,
-        }
-    }
-}
-
-impl Deref for GMBackgrounds {
-    type Target = Vec<GMBackground>;
-    fn deref(&self) -> &Self::Target {
-        &self.backgrounds
-    }
-}
-
-impl DerefMut for GMBackgrounds {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.backgrounds
-    }
-}
-
-impl GMChunkElement for GMBackgrounds {
-    const NAME: &'static str = "BGND";
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMBackgrounds {
@@ -56,15 +26,11 @@ impl GMElement for GMBackgrounds {
         let mut is_aligned: bool = true;
         let backgrounds: Vec<GMBackground> =
             reader.read_aligned_list_chunk(ALIGNMENT, &mut is_aligned)?;
-        Ok(Self { backgrounds, is_aligned, exists: true })
+        Ok(Self { backgrounds, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if self.is_aligned {
-            builder.write_aligned_list_chunk(&self.backgrounds, ALIGNMENT)?;
-        } else {
-            builder.write_pointer_list(&self.backgrounds)?;
-        }
+        builder.write_pointer_list(&self.backgrounds)?;
         Ok(())
     }
 }
@@ -117,6 +83,11 @@ impl GMElement for GMBackground {
         builder.write_gm_texture_opt(self.texture)?;
         self.gms2_data
             .serialize_if_gm_ver(builder, "GMS2 data", (2, 0))?;
+        Ok(())
+    }
+
+    fn serialize_pre_padding(&self, builder: &mut DataBuilder) -> Result<()> {
+        builder.align(ALIGNMENT);
         Ok(())
     }
 }

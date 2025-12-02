@@ -1,41 +1,19 @@
-use std::ops::{Deref, DerefMut};
-
+use macros::list_chunk;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::{
     gamemaker::{
-        deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement},
-        serialize::builder::DataBuilder,
+        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
     },
     prelude::*,
     util::init::{num_enum_from, vec_with_capacity},
 };
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[list_chunk("SHDR")]
+#[derive(Eq)]
 pub struct GMShaders {
     pub shaders: Vec<GMShader>,
     pub exists: bool,
-}
-
-impl Deref for GMShaders {
-    type Target = Vec<GMShader>;
-    fn deref(&self) -> &Self::Target {
-        &self.shaders
-    }
-}
-
-impl DerefMut for GMShaders {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.shaders
-    }
-}
-
-impl GMChunkElement for GMShaders {
-    const NAME: &'static str = "SHDR";
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMShaders {

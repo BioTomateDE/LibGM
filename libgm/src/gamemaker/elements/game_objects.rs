@@ -1,11 +1,9 @@
-use std::ops::{Deref, DerefMut};
-
-use macros::num_enum;
+use macros::{list_chunk, num_enum};
 
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement, sprites::GMSprite},
+        elements::{GMElement, sprites::GMSprite},
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
@@ -17,41 +15,10 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[list_chunk("OBJT")]
 pub struct GMGameObjects {
     pub game_objects: Vec<GMGameObject>,
     pub exists: bool,
-}
-
-impl GMGameObjects {
-    pub fn get_ref_by_name(&self, name: &str) -> Result<GMRef<GMGameObject>> {
-        for (i, obj) in self.game_objects.iter().enumerate() {
-            if obj.name == name {
-                return Ok(GMRef::new(i as u32));
-            }
-        }
-        Err(format!("Could not find Game Object with name {name:?}").into())
-    }
-}
-
-impl Deref for GMGameObjects {
-    type Target = Vec<GMGameObject>;
-    fn deref(&self) -> &Self::Target {
-        &self.game_objects
-    }
-}
-
-impl DerefMut for GMGameObjects {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.game_objects
-    }
-}
-
-impl GMChunkElement for GMGameObjects {
-    const NAME: &'static str = "OBJT";
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMGameObjects {

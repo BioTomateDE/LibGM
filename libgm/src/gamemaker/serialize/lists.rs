@@ -91,36 +91,4 @@ impl DataBuilder<'_> {
         }
         Ok(())
     }
-
-    /// `UndertaleAlignUpdatedListChunk`; used for BGND and STRG (not really for STRG).
-    /// Assumes `chunk.is_aligned`.
-    pub fn write_aligned_list_chunk<T: GMElement>(
-        &mut self,
-        elements: &[T],
-        alignment: u32,
-    ) -> Result<()> {
-        let count: usize = elements.len();
-        let ctx = || {
-            format!(
-                "building aligned chunk pointer list of {} with {} elements",
-                typename::<T>(),
-                count
-            )
-        };
-
-        self.write_usize(count).with_context(ctx)?;
-        let pointer_list_start_pos: usize = self.len();
-        for _ in 0..count {
-            self.write_u32(0xDEAD_C0DE);
-        }
-
-        for (i, element) in elements.iter().enumerate() {
-            self.align(alignment);
-            let resolved_pointer_pos: usize = self.len();
-            self.overwrite_usize(resolved_pointer_pos, pointer_list_start_pos + 4 * i)
-                .with_context(ctx)?;
-            element.serialize(self).with_context(ctx)?;
-        }
-        Ok(())
-    }
 }

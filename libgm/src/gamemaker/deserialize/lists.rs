@@ -91,7 +91,7 @@ impl DataReader<'_> {
     }
 
     /// Called `UndertaleAlignUpdatedListChunk` in UTMT.
-    /// Used for BGND and STRG.
+    /// Used for BGND (and STRG).
     pub fn read_aligned_list_chunk<T: GMElement>(
         &mut self,
         alignment: u32,

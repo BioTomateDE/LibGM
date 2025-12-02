@@ -1,4 +1,4 @@
-use std::ops::{Deref, DerefMut};
+use macros::list_chunk;
 
 use crate::{
     gamemaker::{
@@ -14,30 +14,10 @@ use crate::{
     util::assert::assert_bool,
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[list_chunk("SOND")]
 pub struct GMSounds {
     pub sounds: Vec<GMSound>,
     pub exists: bool,
-}
-
-impl Deref for GMSounds {
-    type Target = Vec<GMSound>;
-    fn deref(&self) -> &Self::Target {
-        &self.sounds
-    }
-}
-
-impl DerefMut for GMSounds {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.sounds
-    }
-}
-
-impl GMChunkElement for GMSounds {
-    const NAME: &'static str = "SOND";
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMSounds {

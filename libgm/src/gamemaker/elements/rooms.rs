@@ -1,15 +1,12 @@
-use std::{
-    cmp::min,
-    ops::{Deref, DerefMut},
-};
+use std::cmp::min;
 
-use macros::num_enum;
+use macros::{list_chunk, num_enum};
 
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
         elements::{
-            GMChunkElement, GMElement,
+            GMElement,
             backgrounds::GMBackground,
             fonts::GMFont,
             game_objects::GMGameObject,
@@ -29,30 +26,10 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[list_chunk("ROOM")]
 pub struct GMRooms {
     pub rooms: Vec<GMRoom>,
     pub exists: bool,
-}
-
-impl Deref for GMRooms {
-    type Target = Vec<GMRoom>;
-    fn deref(&self) -> &Self::Target {
-        &self.rooms
-    }
-}
-
-impl DerefMut for GMRooms {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.rooms
-    }
-}
-
-impl GMChunkElement for GMRooms {
-    const NAME: &'static str = "ROOM";
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMRooms {

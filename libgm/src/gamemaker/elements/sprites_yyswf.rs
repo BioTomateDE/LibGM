@@ -3,6 +3,7 @@
 //! No idea what YYSWF is.
 //! Fuck this file.
 
+use macros::num_enum;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::{
@@ -198,8 +199,7 @@ pub enum GMSpriteYYSWFBitmapFillType {
     FillClampPoint,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive, IntoPrimitive)]
-#[repr(i32)]
+#[num_enum(i32)]
 pub enum GMSpriteYYSWFGradientFillType {
     FillLinear,
     FillRadial,
@@ -641,8 +641,7 @@ pub struct GMSpriteYYSWFBitmapDataPost2022_1 {
     pub tpe_index: i32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive, IntoPrimitive)]
-#[repr(i32)]
+#[num_enum(i32)]
 pub enum GMSpriteYYSWFBitmapType {
     TypeJPEGNoHeader,
     TypeJPEG,

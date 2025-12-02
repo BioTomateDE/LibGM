@@ -1,39 +1,18 @@
-use std::ops::{Deref, DerefMut};
+use macros::list_chunk;
 
 use crate::{
     gamemaker::{
-        deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement},
-        serialize::builder::DataBuilder,
+        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
     },
     prelude::*,
     util::assert::assert_int,
 };
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[list_chunk("FEDS")]
+#[derive(Eq)]
 pub struct GMFilterEffects {
     pub filter_effects: Vec<GMFilterEffect>,
     pub exists: bool,
-}
-
-impl Deref for GMFilterEffects {
-    type Target = Vec<GMFilterEffect>;
-    fn deref(&self) -> &Self::Target {
-        &self.filter_effects
-    }
-}
-
-impl DerefMut for GMFilterEffects {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.filter_effects
-    }
-}
-
-impl GMChunkElement for GMFilterEffects {
-    const NAME: &'static str = "FEDS";
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMFilterEffects {

@@ -1,9 +1,9 @@
-use std::ops::{Deref, DerefMut};
+use macros::list_chunk;
 
 use crate::{
     gamemaker::{
         deserialize::{reader::DataReader, resources::resource_opt_from_i32},
-        elements::{GMChunkElement, GMElement},
+        elements::GMElement,
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
@@ -11,55 +11,10 @@ use crate::{
     prelude::*,
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[list_chunk("SCPT")]
 pub struct GMScripts {
     pub scripts: Vec<GMScript>,
     pub exists: bool,
-}
-
-impl GMScripts {
-    fn index_by_name(&self, name: &str) -> Result<usize> {
-        for (i, script) in self.scripts.iter().enumerate() {
-            if script.name == name {
-                return Ok(i);
-            }
-        }
-
-        bail!("Could not find script with name {name:?}");
-    }
-
-    pub fn ref_by_name(&self, name: &str) -> Result<GMRef<GMScript>> {
-        self.index_by_name(name).map(GMRef::from)
-    }
-
-    pub fn by_name(&self, name: &str) -> Result<&GMScript> {
-        self.index_by_name(name).map(|index| &self.scripts[index])
-    }
-
-    pub fn by_name_mut(&mut self, name: &str) -> Result<&mut GMScript> {
-        self.index_by_name(name)
-            .map(|index| &mut self.scripts[index])
-    }
-}
-
-impl Deref for GMScripts {
-    type Target = Vec<GMScript>;
-    fn deref(&self) -> &Self::Target {
-        &self.scripts
-    }
-}
-
-impl DerefMut for GMScripts {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.scripts
-    }
-}
-
-impl GMChunkElement for GMScripts {
-    const NAME: &'static str = "SCPT";
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMScripts {

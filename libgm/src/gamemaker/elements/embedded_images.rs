@@ -1,9 +1,9 @@
-use std::ops::{Deref, DerefMut};
+use macros::list_chunk;
 
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement, texture_page_items::GMTexturePageItem},
+        elements::{GMElement, texture_page_items::GMTexturePageItem},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
@@ -13,30 +13,11 @@ use crate::{
 
 /// The embedded images of the data file. This is used to store built-in particle sprites,
 /// every time you use `part_sprite` functions.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[list_chunk("EMBI")]
+#[derive(Eq)]
 pub struct GMEmbeddedImages {
     pub embedded_images: Vec<GMEmbeddedImage>,
     pub exists: bool,
-}
-
-impl Deref for GMEmbeddedImages {
-    type Target = Vec<GMEmbeddedImage>;
-    fn deref(&self) -> &Self::Target {
-        &self.embedded_images
-    }
-}
-
-impl DerefMut for GMEmbeddedImages {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.embedded_images
-    }
-}
-
-impl GMChunkElement for GMEmbeddedImages {
-    const NAME: &'static str = "EMBI";
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMEmbeddedImages {
@@ -53,7 +34,7 @@ impl GMElement for GMEmbeddedImages {
     }
 }
 
-/// An embedded image entry in a `GameMaker` data file. This is GMS2 only.<br/>
+/// An embedded image entry in a `GameMaker` data file. This is GMS2 only.
 /// Not to be confused with the other "embedded" resources, this is a bit different.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMEmbeddedImage {
