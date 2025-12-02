@@ -41,12 +41,6 @@
 #![allow(clippy::cast_sign_loss)]
 #![allow(clippy::cast_possible_wrap)]
 //
-// I want to escape paths just like I escape normal strings.
-// This Debug formatting may change in the future and may not be
-// clickable in the console, but I want to make sure the path is
-// properly escaped.
-#![allow(clippy::unnecessary_debug_formatting)]
-//
 // I sometimes need more than 3 bools in a struct???
 // This lint is only relevant for people
 // who have never heard of an enum.
