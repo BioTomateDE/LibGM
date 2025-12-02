@@ -10,13 +10,14 @@ pub fn assert_int<I: Copy + Eq + Display + UpperHex>(
     if expected == actual {
         return Ok(());
     }
+
+    let width = size_of::<I>() * 2;
     bail!(
-        "Expected {:?} to be {} but it is actually {} (0x{:0width$X})",
+        "Expected {} to be {} but it is actually {} (0x{:0width$X})",
         description,
         expected,
         actual,
         actual,
-        width = size_of::<I>() * 2,
     );
 }
 
@@ -24,7 +25,8 @@ pub fn assert_bool(description: &'static str, expected: bool, actual: bool) -> R
     if expected == actual {
         return Ok(());
     }
-    bail!("Expected {description:?} to be {expected} but it is actually {actual}");
+
+    bail!("Expected {description} to be {expected} but it is actually {actual}");
 }
 
 pub fn assert_data_type(
@@ -35,5 +37,6 @@ pub fn assert_data_type(
     if expected == actual {
         return Ok(());
     }
+
     bail!("Expected {description} Data Type to be {expected:?} but it is actually {actual:?}");
 }

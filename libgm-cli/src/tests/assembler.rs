@@ -37,7 +37,7 @@ pub fn test_assembler(data: &GMData) -> Result<()> {
 
         let start_dis = Instant::now();
         let assembly: String =
-            disassemble_code(data, code).with_context(|| format!("disassembling {name:?}"))?;
+            disassemble_code(code, data).with_context(|| format!("disassembling {name:?}"))?;
         let end_dis = Instant::now();
 
         let start_ass = Instant::now();
@@ -135,7 +135,7 @@ fn print_statistics(benchmarks: Vec<Benchmark>) {
     );
     println!(
         "Slowest assembly: {} took {:.3?}",
-        slowest_ass.code_name, slowest_ass.disassembler_time,
+        slowest_ass.code_name, slowest_ass.assembler_time,
     );
     println!();
 }

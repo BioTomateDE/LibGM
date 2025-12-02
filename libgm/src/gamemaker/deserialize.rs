@@ -53,7 +53,7 @@ use crate::{
     util::{bench::Stopwatch, smallmap::SmallMap},
 };
 
-const TOO_BIG: &str =
+const ERR_TOO_BIG: &str =
     "Data file is bigger than 2,147,483,646 bytes which will lead to bugs in LibGM and the runner";
 
 pub struct DataParser {
@@ -290,26 +290,27 @@ impl DataParser {
 
         let meta = std::fs::metadata(path)
             .map_err(|e| e.to_string())
-            .with_context(|| format!("reading metadata of data file {path:?}"))?;
+            .with_context(|| format!("reading metadata of data file {}", path.display()))?;
+
         if meta.len() >= i32::MAX as u64 {
-            bail!("{TOO_BIG}");
+            bail!("{ERR_TOO_BIG}");
         }
 
         let stopwatch = Stopwatch::start();
         let raw_data: Vec<u8> = std::fs::read(path)
             .map_err(|e| e.to_string())
-            .with_context(|| format!("reading data file {path:?}"))?;
+            .with_context(|| format!("reading data file {}", path.display()))?;
         log::trace!("Reading data file took {stopwatch}");
 
         self.parse(raw_data)
-            .with_context(|| format!("parsing GameMaker data file {path:?}"))
+            .with_context(|| format!("parsing GameMaker data file {}", path.display()))
     }
 }
 
 fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
     // Length assertion
     if raw_data.len() >= i32::MAX as usize {
-        bail!("{TOO_BIG}");
+        bail!("{ERR_TOO_BIG}");
     }
 
     let mut reader = DataReader::new(raw_data);
