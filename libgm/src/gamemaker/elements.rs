@@ -1,5 +1,7 @@
 use crate::{
-    gamemaker::{deserialize::reader::DataReader, serialize::builder::DataBuilder},
+    gamemaker::{
+        chunk::ChunkName, deserialize::reader::DataReader, serialize::builder::DataBuilder,
+    },
     prelude::*,
 };
 
@@ -206,7 +208,7 @@ impl GMElement for bool {
 /// All chunk elements should implement this trait.
 pub(crate) trait GMChunkElement: GMElement + Default {
     /// The four character `GameMaker` chunk name (GEN8, STRG, VARI, etc.).
-    const NAME: &'static str;
+    const NAME: ChunkName;
 
     /// Returns `true` if this chunk is present in the data file.
     ///

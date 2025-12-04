@@ -1,12 +1,13 @@
 use crate::{
     gamemaker::{
+        chunk::ChunkName,
         data::Endianness,
         deserialize::reader::DataReader,
         elements::{GMChunkElement, GMElement},
         gm_version::GMVersion,
     },
     prelude::*,
-    util::{assert::assert_int, bench::Stopwatch},
+    util::{bench::Stopwatch, smallmap::SmallMap},
 };
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -27,35 +28,80 @@ impl GMChunk {
     }
 }
 
+#[derive(Debug)]
+pub struct Chunks(SmallMap<ChunkName, GMChunk>);
+
+/// The number of all known GameMaker chunks (excluding debug chunks).
+const KNOWN_CHUNK_COUNT: usize = 35;
+
+impl Chunks {
+    #[inline]
+    #[must_use]
+    pub fn new() -> Self {
+        Self(SmallMap::with_capacity(KNOWN_CHUNK_COUNT))
+    }
+
+    #[inline]
+    #[must_use]
+    pub const fn count(&self) -> usize {
+        self.0.len()
+    }
+
+    #[inline]
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    #[inline]
+    pub fn push(&mut self, name: ChunkName, chunk: GMChunk) -> Result<()> {
+        if self.0.contains_key(&name) {
+            bail!("Chunk {name:?} is defined multiple times");
+        }
+        self.0.insert(name, chunk);
+        Ok(())
+    }
+
+    pub fn contains(&self, name: &'static str) -> bool {
+        self.0.contains_key(&ChunkName::new(name))
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn get(&self, name: &'static str) -> Option<GMChunk> {
+        self.get_by_chunkname(ChunkName::new(name))
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn get_by_chunkname(&self, name: ChunkName) -> Option<GMChunk> {
+        self.0.get(&name).cloned()
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn remove(&mut self, name: ChunkName) -> Option<GMChunk> {
+        self.0.remove(&name)
+    }
+
+    #[inline]
+    pub fn chunk_names(&self) -> impl Iterator<Item = ChunkName> {
+        self.0.keys().copied()
+    }
+}
+
 impl DataReader<'_> {
     /// Read a `GameMaker` chunk name consisting of 4 ascii characters.
     /// Accounts for endianness; reversing the read chunk name in big endian mode.
-    pub fn read_chunk_name(&mut self) -> Result<String> {
-        let string: String = match self.read_literal_string(4) {
-            Ok(str) => str,
-            Err(_) if self.cur_pos == 4 => {
-                bail!("Invalid data.win file; data doesn't start with 'FORM' string")
-            },
-            Err(e) => Err(e).context("parsing chunk name")?,
-        };
+    pub fn read_chunk_name(&mut self) -> Result<ChunkName> {
+        let mut bytes: [u8; 4] = self.read_bytes_const().cloned()?;
 
-        assert_int("Size of chunk name string", 4, string.len())?;
-        if !string
-            .bytes()
-            .all(|b| matches!(b, b'A'..=b'Z' | b'0'..=b'9'))
-        {
-            bail!("Chunk name {string:?} contains invalid characters")
-        }
-
-        // Chunk names are reversed in big endian
         if self.endianness == Endianness::Big {
-            let mut bytes = string.into_bytes();
             bytes.reverse();
-            // SAFETY: This operation is safe because the string was already checked to be ascii.
-            return Ok(unsafe { String::from_utf8_unchecked(bytes) });
         }
 
-        Ok(string)
+        let chunk_name = ChunkName::from_bytes(bytes)?;
+        Ok(chunk_name)
     }
 
     pub fn read_chunk<T: GMChunkElement>(&mut self) -> Result<T> {
@@ -127,7 +173,6 @@ impl DataReader<'_> {
         self.chunk = self
             .chunks
             .get("GEN8")
-            .cloned()
             .ok_or("Chunk GEN8 does not exist")
             .context(CTX)?;
         self.cur_pos = self.chunk.start_pos + 44; // Skip to GEN8 `GameMaker` version

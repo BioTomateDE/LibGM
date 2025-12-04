@@ -26,7 +26,7 @@ pub fn list_chunk(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
 
         impl crate::gamemaker::elements::GMChunkElement for #chunk_type {
-            const NAME: &str = #chunk_name;
+            const NAME: crate::gamemaker::chunk::ChunkName = crate::gamemaker::chunk::ChunkName::new(#chunk_name);
             fn exists(&self) -> bool {
                 self.exists
             }
@@ -86,22 +86,20 @@ fn extract_fields(input: &DeriveInput) -> Vec<&syn::Field> {
         panic!("Expected struct (not enum or union)");
     };
 
-    match &struct_data.fields {
-        Fields::Named(fields_named) => fields_named.named.iter().collect::<Vec<_>>(),
-        Fields::Unnamed(fields_unnamed) => fields_unnamed.unnamed.iter().collect::<Vec<_>>(),
-        Fields::Unit => Vec::new(),
-    }
+    let Fields::Named(fields) = &struct_data.fields else {
+        panic!("Expected named struct fields (not unnamed or unit)");
+    };
+
+    fields.named.iter().collect()
 }
 
 fn find_vec_fields(fields: Vec<&syn::Field>) -> Vec<(&Ident, &syn::Type)> {
     let mut vec_fields = Vec::new();
 
     for field in fields {
-        if let Some(ident) = &field.ident
-            && is_vec_type(&field.ty)
-        {
-            let inner_type =
-                extract_vec_inner_type(&field.ty).expect("Cannot extract Vec inner type");
+        let ident = field.ident.as_ref().expect("Field identifer not set");
+        if is_vec_type(&field.ty) {
+            let inner_type = extract_vec_inner_type(&field.ty);
             vec_fields.push((ident, inner_type));
         }
     }
@@ -123,14 +121,14 @@ fn is_vec_type(ty: &syn::Type) -> bool {
     }
 }
 
-fn extract_vec_inner_type(ty: &syn::Type) -> Option<&syn::Type> {
+fn extract_vec_inner_type(ty: &syn::Type) -> &syn::Type {
     if let syn::Type::Path(type_path) = ty
         && let Some(segment) = type_path.path.segments.last()
         && let syn::PathArguments::AngleBracketed(args) = &segment.arguments
         && let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first()
     {
-        Some(inner_ty)
+        inner_ty
     } else {
-        None
+        panic!("Cannot extract inner type of Vec");
     }
 }

@@ -2,6 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::{
     gamemaker::{
+        chunk::ChunkName,
         deserialize::reader::DataReader,
         elements::{GMChunkElement, GMElement},
         serialize::builder::DataBuilder,
@@ -29,7 +30,7 @@ impl DerefMut for GMEmbeddedAudios {
 }
 
 impl GMChunkElement for GMEmbeddedAudios {
-    const NAME: &'static str = "AUDO";
+    const NAME: ChunkName = ChunkName::new("AUDO");
     fn exists(&self) -> bool {
         self.exists
     }

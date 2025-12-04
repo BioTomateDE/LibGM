@@ -198,7 +198,6 @@ fn parse_occurrence_chain(
     reader.chunk = reader
         .chunks
         .get("CODE")
-        .cloned()
         .ok_or("Chunk CODE not set while parsing function occurrences")?;
 
     let first_extra_offset: u32;

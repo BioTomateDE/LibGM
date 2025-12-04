@@ -43,7 +43,6 @@ pub fn check_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let Some(chunk_code) = reader.chunks.get("CODE") else {
         return Ok(None);
     };
-
     reader.chunk = chunk_code.clone();
     reader.cur_pos = chunk_code.start_pos;
     let code_count = reader.read_u32()?;

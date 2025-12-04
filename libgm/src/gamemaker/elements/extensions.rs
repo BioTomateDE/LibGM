@@ -4,6 +4,7 @@ use macros::num_enum;
 
 use crate::{
     gamemaker::{
+        chunk::ChunkName,
         deserialize::reader::DataReader,
         elements::{GMChunkElement, GMElement},
         gm_version::GMVersion,
@@ -35,7 +36,7 @@ impl DerefMut for GMExtensions {
 }
 
 impl GMChunkElement for GMExtensions {
-    const NAME: &'static str = "EXTN";
+    const NAME: ChunkName = ChunkName::new("EXTN");
     fn exists(&self) -> bool {
         self.exists
     }

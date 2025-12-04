@@ -1,5 +1,6 @@
 use crate::{
     gamemaker::{
+        chunk::ChunkName,
         deserialize::reader::DataReader,
         elements::{GMChunkElement, GMElement, texture_page_items::GMTexturePageItem},
         reference::GMRef,
@@ -31,7 +32,7 @@ pub struct GMOptions {
 }
 
 impl GMChunkElement for GMOptions {
-    const NAME: &'static str = "OPTN";
+    const NAME: ChunkName = ChunkName::new("OPTN");
     fn exists(&self) -> bool {
         self.exists
     }

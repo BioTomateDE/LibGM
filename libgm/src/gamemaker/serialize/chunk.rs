@@ -1,5 +1,6 @@
 use crate::{
     gamemaker::{
+        chunk::ChunkName,
         data::Endianness,
         elements::GMChunkElement,
         serialize::builder::{DataBuilder, LastChunk},
@@ -11,29 +12,14 @@ use crate::{
 impl DataBuilder<'_> {
     /// Write a 4 character ASCII `GameMaker` chunk name.
     /// Accounts for endianness (chunk names in big endian are reversed).
-    pub fn write_chunk_name(&mut self, name: &str) -> Result<()> {
-        if name.len() != 4 {
-            bail!(
-                "Expected chunk name '{}' to be 4 characters long; but is actually {} characters long",
-                name,
-                name.chars().count(),
-            );
-        }
-
-        let mut bytes: [u8; 4] = name.as_bytes().try_into().map_err(|_| {
-            format!(
-                "Expected chunk name '{}' to be 4 bytes long; but it's actually {} bytes long",
-                name,
-                name.len(),
-            )
-        })?;
+    pub fn write_chunk_name(&mut self, name: ChunkName) {
+        let mut bytes = name.as_bytes();
 
         if self.gm_data.endianness == Endianness::Big {
             bytes.reverse();
         }
 
         self.write_bytes(&bytes);
-        Ok(())
     }
 
     /// Writes a `GameMaker` data chunk.
@@ -42,15 +28,14 @@ impl DataBuilder<'_> {
     /// Appends padding if required by the `GameMaker` version.
     /// This padding has to then be manually cut off for the last chunk in the data file.
     pub fn build_chunk<T: GMChunkElement>(&mut self, element: &T) -> Result<()> {
-        let name: &str = T::NAME;
+        let name: ChunkName = T::NAME;
         if !element.exists() {
             return Ok(());
         }
 
         let stopwatch = Stopwatch::start();
 
-        self.write_chunk_name(name)
-            .expect("Constant chunk name is invalid");
+        self.write_chunk_name(name);
         self.write_u32(0xDEAD_C0DE); // Chunk length placeholder
         let start_pos: usize = self.len();
         let length_pos = start_pos - 4;

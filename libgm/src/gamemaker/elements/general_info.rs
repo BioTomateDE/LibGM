@@ -3,6 +3,7 @@ use uuid::Uuid;
 
 use crate::{
     gamemaker::{
+        chunk::ChunkName,
         data::Endianness,
         deserialize::reader::DataReader,
         elements::{GMChunkElement, GMElement, rooms::GMRoom},
@@ -125,7 +126,7 @@ impl Default for GMGeneralInfo {
 }
 
 impl GMChunkElement for GMGeneralInfo {
-    const NAME: &'static str = "GEN8";
+    const NAME: ChunkName = ChunkName::new("GEN8");
     fn exists(&self) -> bool {
         self.exists
     }

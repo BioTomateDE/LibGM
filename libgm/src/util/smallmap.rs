@@ -3,6 +3,12 @@ use std::borrow::Borrow;
 #[derive(Debug, Clone)]
 pub struct SmallMap<K, V>(Vec<(K, V)>);
 
+impl<K, V> Default for SmallMap<K, V> {
+    fn default() -> Self {
+        Self(vec![])
+    }
+}
+
 #[allow(unused)]
 impl<K: PartialEq, V> SmallMap<K, V> {
     #[inline]

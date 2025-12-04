@@ -10,6 +10,7 @@ use image::{self, DynamicImage, ImageFormat};
 
 use crate::{
     gamemaker::{
+        chunk::ChunkName,
         data::Endianness,
         deserialize::reader::DataReader,
         elements::{GMChunkElement, GMElement},
@@ -44,7 +45,7 @@ impl DerefMut for GMEmbeddedTextures {
 }
 
 impl GMChunkElement for GMEmbeddedTextures {
-    const NAME: &'static str = "TXTR";
+    const NAME: ChunkName = ChunkName::new("TXTR");
     fn exists(&self) -> bool {
         self.exists
     }

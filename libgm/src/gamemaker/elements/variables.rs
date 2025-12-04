@@ -139,7 +139,6 @@ impl GMElement for GMVariables {
         reader.chunk = reader
             .chunks
             .get("CODE")
-            .cloned()
             .ok_or("Chunk CODE not set while parsing variable occurrences")?;
 
         for (i, (occurrence_count, first_occurrence_pos)) in

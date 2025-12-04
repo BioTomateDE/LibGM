@@ -2,8 +2,9 @@ use std::collections::HashMap;
 
 use crate::{
     gamemaker::{
+        chunk::ChunkName,
         data::Endianness,
-        deserialize::chunk::GMChunk,
+        deserialize::chunk::{Chunks, GMChunk},
         elements::{
             GMElement, functions::GMFunction, general_info::GMGeneralInfo,
             texture_page_items::GMTexturePageItem, variables::GMVariable,
@@ -12,7 +13,7 @@ use crate::{
         reference::GMRef,
     },
     prelude::*,
-    util::{assert::assert_int, smallmap::SmallMap},
+    util::assert::assert_int,
 };
 
 #[derive(Debug)]
@@ -41,7 +42,7 @@ pub struct DataReader<'a> {
     /// Map of all chunks specified by `FORM`; indexed by chunk name.
     /// Read chunks will be removed from this `HashMap` when calling [`DataReader::read_chunk_required`] or [`DataReader::read_chunk`].
     /// May contain unknown chunks (if there is a `GameMaker` update, for example).
-    pub chunks: SmallMap<String, GMChunk>,
+    pub chunks: Chunks,
 
     /// Metadata about the currently parsed chunk of data.
     /// This includes the chunk's name, start position, and end position within the data buffer.
@@ -52,7 +53,7 @@ pub struct DataReader<'a> {
 
     /// The name of the last chunk in the data file.
     /// Is properly initialized after parsing `FORM`.
-    pub last_chunk: String,
+    pub last_chunk: ChunkName,
 
     /// General info about this data file. Includes game name, `GameMaker` Version and Bytecode Version.
     /// Contains garbage placeholders until the `GEN8` chunk is deserialized.
@@ -81,9 +82,6 @@ pub struct DataReader<'a> {
     pub function_occurrences: HashMap<u32, GMRef<GMFunction>>,
 }
 
-/// The number of all known `GameMaker` chunks (excluding debug chunks).
-const CHUNK_COUNT: usize = 35;
-
 impl<'a> DataReader<'a> {
     pub fn new(data: &'a [u8]) -> Self {
         // Memory Safety Assertion. This should've been verfied before, though.
@@ -101,12 +99,12 @@ impl<'a> DataReader<'a> {
             // Assume little endian; big endian is an edge case.
             endianness: Endianness::Little,
             chunk: GMChunk { start_pos: 0, end_pos },
-            last_chunk: String::new(),
+            last_chunk: ChunkName::new("XXXX"),
             // Just a stub, will not be read until GEN8 is parsed.
             general_info: GMGeneralInfo::default(),
             strings: vec![],
             string_chunk: GMChunk::default(),
-            chunks: SmallMap::with_capacity(CHUNK_COUNT),
+            chunks: Chunks::new(),
             texture_page_item_occurrences: HashMap::new(),
             variable_occurrences: HashMap::new(),
             function_occurrences: HashMap::new(),
