@@ -91,7 +91,7 @@ impl Chunks {
 }
 
 impl DataReader<'_> {
-    /// Read a `GameMaker` chunk name consisting of 4 ascii characters.
+    /// Read a GameMaker chunk name consisting of 4 ascii characters.
     /// Accounts for endianness; reversing the read chunk name in big endian mode.
     pub fn read_chunk_name(&mut self) -> Result<ChunkName> {
         let mut bytes: [u8; 4] = self.read_bytes_const().cloned()?;
@@ -136,7 +136,7 @@ impl DataReader<'_> {
         Ok(element)
     }
 
-    /// Potentially read padding at the end of the chunk, depending on the `GameMaker` version.
+    /// Potentially read padding at the end of the chunk, depending on the GameMaker version.
     fn read_chunk_padding(&mut self) -> Result<()> {
         // Padding only for GMS2+ and 1.9999+
         let ver: &GMVersion = &self.specified_version;
@@ -162,12 +162,12 @@ impl DataReader<'_> {
         Ok(())
     }
 
-    /// Reads the specified `GameMaker` version in the GEN8 chunk.
+    /// Reads the specified GameMaker version in the GEN8 chunk.
     /// This only works if the GEN8 chunk still exists in the chunk map.
     ///
     /// This function should be called **after** parsing FORM but **before** reading any chunks.
     pub fn read_gen8_version(&mut self) -> Result<GMVersion> {
-        const CTX: &str = "trying to read GEN8 `GameMaker` Version";
+        const CTX: &str = "trying to read GEN8 GameMaker Version";
         let saved_pos = self.cur_pos;
         let saved_chunk: GMChunk = self.chunk.clone();
         self.chunk = self
@@ -175,7 +175,7 @@ impl DataReader<'_> {
             .get("GEN8")
             .ok_or("Chunk GEN8 does not exist")
             .context(CTX)?;
-        self.cur_pos = self.chunk.start_pos + 44; // Skip to GEN8 `GameMaker` version
+        self.cur_pos = self.chunk.start_pos + 44; // Skip to GEN8 GameMaker version
         let gm_version = GMVersion::deserialize(self).context(CTX)?;
         self.cur_pos = saved_pos;
         self.chunk = saved_chunk;

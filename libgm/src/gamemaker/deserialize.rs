@@ -169,8 +169,8 @@ impl DataParser {
 
         if reader.specified_version == GMS2 {
             let stopwatch = Stopwatch::start();
-            detect_gamemaker_version(&mut reader).context("detecting `GameMaker` version")?;
-            log::trace!("Detecting `GameMaker` Version took {stopwatch}");
+            detect_gamemaker_version(&mut reader).context("detecting GameMaker version")?;
+            log::trace!("Detecting GameMaker Version took {stopwatch}");
         }
 
         log::info!(
@@ -286,7 +286,7 @@ impl DataParser {
         self.parse(raw_data).context("parsing GameMaker data")
     }
 
-    /// Parse a `GameMaker` data file (`data.win`, `game.unx`, etc).
+    /// Parse a GameMaker data file (`data.win`, `game.unx`, etc).
     pub fn parse_file(&self, data_file_path: impl AsRef<Path>) -> Result<GMData> {
         let path = data_file_path.as_ref();
 
@@ -397,12 +397,12 @@ fn handle_unread_chunks(chunks: &Chunks, allow_unknown_chunks: bool) -> Result<(
     }
 }
 
-/// Parse a `GameMaker` data file (stored in a buffer) with default settings.
+/// Parse a GameMaker data file (stored in a buffer) with default settings.
 pub fn read_data_bytes(raw_data: impl AsRef<[u8]>) -> Result<GMData> {
     DataParser::new().parse_bytes(raw_data)
 }
 
-/// Parse a `GameMaker` data file (`data.win`, `game.unx`, etc.) with default settings.
+/// Parse a GameMaker data file (`data.win`, `game.unx`, etc.) with default settings.
 pub fn read_data_file(data_file_path: impl AsRef<Path>) -> Result<GMData> {
     DataParser::new().parse_file(data_file_path)
 }

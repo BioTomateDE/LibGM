@@ -18,19 +18,19 @@ use crate::{
 
 #[derive(Debug)]
 pub struct DataReader<'a> {
-    /// The raw data buffer belonging to the `GameMaker` data file which is currently being parsed.
+    /// The raw data buffer belonging to the GameMaker data file which is currently being parsed.
     data: &'a [u8],
 
     /// The current read position within the data buffer.
     /// Reading data will be read from this position; incrementing it.
     pub cur_pos: u32,
 
-    /// The `GameMaker` version specified by GEN8.
+    /// The GameMaker version specified by GEN8.
     /// The "actual" version will be detected later and stored in `general_info.version`.
     pub specified_version: GMVersion,
 
     /// How many null bytes of padding should be at the end of every chunk (except the last one).
-    /// Only relevant in certain `GameMaker` versions.
+    /// Only relevant in certain GameMaker versions.
     /// Defaults to 16, but will be set to 4 or 1 if detected.
     pub chunk_padding: u32,
 
@@ -41,7 +41,7 @@ pub struct DataReader<'a> {
 
     /// Map of all chunks specified by `FORM`; indexed by chunk name.
     /// Read chunks will be removed from this `HashMap` when calling [`DataReader::read_chunk_required`] or [`DataReader::read_chunk`].
-    /// May contain unknown chunks (if there is a `GameMaker` update, for example).
+    /// May contain unknown chunks (if there is a GameMaker update, for example).
     pub chunks: Chunks,
 
     /// Metadata about the currently parsed chunk of data.
@@ -55,13 +55,13 @@ pub struct DataReader<'a> {
     /// Is properly initialized after parsing `FORM`.
     pub last_chunk: ChunkName,
 
-    /// General info about this data file. Includes game name, `GameMaker` Version and Bytecode Version.
+    /// General info about this data file. Includes game name, GameMaker Version and Bytecode Version.
     /// Contains garbage placeholders until the `GEN8` chunk is deserialized.
-    /// Use [`DataReader::unstable_get_gm_version`] to get the `GameMaker` version before `GEN8` is parsed.
+    /// Use [`DataReader::unstable_get_gm_version`] to get the GameMaker version before `GEN8` is parsed.
     pub general_info: GMGeneralInfo,
 
     /// Will be set after chunk `STRG` is parsed (first chunk to parse).
-    /// Contains all `GameMaker` strings by ID (aka index)
+    /// Contains all GameMaker strings by ID (aka index)
     /// Needed for String references in Push Instructions.
     pub strings: Vec<String>,
 
@@ -189,7 +189,7 @@ impl<'a> DataReader<'a> {
 
     /// Read a UTF-8 character string with the specified byte length.
     /// ___
-    /// For reading standard `GameMaker` string references, see [`DataReader::read_gm_string`].
+    /// For reading standard GameMaker string references, see [`DataReader::read_gm_string`].
     pub fn read_literal_string(&mut self, length: u32) -> Result<String> {
         let bytes: Vec<u8> = self
             .read_bytes_dyn(length)
@@ -268,9 +268,9 @@ impl<'a> DataReader<'a> {
         Ok(())
     }
 
-    /// Deserializes an element if the `GameMaker` version meets the requirement (`>=`).
+    /// Deserializes an element if the GameMaker version meets the requirement (`>=`).
     ///
-    /// This is useful for handling format changes across different `GameMaker` versions
+    /// This is useful for handling format changes across different GameMaker versions
     /// where certain chunks or fields were added, removed, or modified.
     ///
     /// # Returns
@@ -290,7 +290,7 @@ impl<'a> DataReader<'a> {
 
     /// Deserializes an element if the bytecode version meets the requirement (`>=`).
     ///
-    /// Bytecode version is separate from the `GameMaker` IDE version and tracks
+    /// Bytecode version is separate from the GameMaker IDE version and tracks
     /// changes to the virtual machine instruction format.
     ///
     /// # Returns

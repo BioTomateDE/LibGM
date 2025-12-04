@@ -37,8 +37,8 @@ impl GMElement for GMBackgrounds {
 
 /// A background or tileset entry in a data file.
 /// ___
-/// For `GameMaker` Studio 2, this will only ever be a tileset.
-/// For `GameMaker` Studio 1, this is usually a background,
+/// For GameMaker Studio 2, this will only ever be a tileset.
+/// For GameMaker Studio 1, this is usually a background,
 /// but is sometimes repurposed as use for a tileset as well.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMBackground {
