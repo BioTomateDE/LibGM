@@ -11,7 +11,7 @@ use std::path::Path;
 use builder::DataBuilder;
 
 use crate::{
-    gamemaker::{data::GMData, elements::strings::GMStrings},
+    gamemaker::{chunk::ChunkName, data::GMData, elements::strings::GMStrings},
     prelude::*,
     util::bench::Stopwatch,
 };
@@ -20,7 +20,7 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
     let stopwatch = Stopwatch::start();
     let mut builder = DataBuilder::new(gm_data);
 
-    builder.write_chunk_name("FORM")?;
+    builder.write_chunk_name(ChunkName::new("FORM"));
     // Write Data length placeholder
     builder.write_u32(0xDEAD_C0DE);
 

@@ -1,5 +1,6 @@
 use crate::{
     gamemaker::{
+        chunk::ChunkName,
         deserialize::reader::DataReader,
         elements::{GMChunkElement, GMElement},
         serialize::builder::DataBuilder,
@@ -11,7 +12,7 @@ use crate::{
 pub struct GMDataFiles;
 
 impl GMChunkElement for GMDataFiles {
-    const NAME: &'static str = "DAFL";
+    const NAME: ChunkName = ChunkName::new("DAFL");
     /// This chunk is completely useless and should never be serialized.
     fn exists(&self) -> bool {
         false

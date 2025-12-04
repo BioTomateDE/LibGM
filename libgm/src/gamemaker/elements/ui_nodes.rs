@@ -7,6 +7,7 @@ use self::flex_properties::{
 };
 use crate::{
     gamemaker::{
+        chunk::ChunkName,
         deserialize::reader::DataReader,
         elements::{
             GMChunkElement, GMElement,
@@ -41,7 +42,7 @@ impl DerefMut for GMRootUINodes {
 }
 
 impl GMChunkElement for GMRootUINodes {
-    const NAME: &'static str = "UILR";
+    const NAME: ChunkName = ChunkName::new("UILR");
     fn exists(&self) -> bool {
         self.exists
     }

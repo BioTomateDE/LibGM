@@ -1,5 +1,6 @@
 use crate::{
     gamemaker::{
+        chunk::ChunkName,
         deserialize::reader::DataReader,
         elements::{GMChunkElement, GMElement},
         serialize::builder::DataBuilder,
@@ -14,7 +15,7 @@ const ALIGNMENT: u32 = 4;
 pub struct GMStrings;
 
 impl GMChunkElement for GMStrings {
-    const NAME: &'static str = "STRG";
+    const NAME: ChunkName = ChunkName::new("STRG");
     fn exists(&self) -> bool {
         true
     }

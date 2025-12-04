@@ -2,6 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::{
     gamemaker::{
+        chunk::ChunkName,
         deserialize::reader::DataReader,
         elements::{GMChunkElement, GMElement},
         reference::GMRef,
@@ -30,7 +31,7 @@ impl DerefMut for GMGameEndScripts {
 }
 
 impl GMChunkElement for GMGameEndScripts {
-    const NAME: &'static str = "GMEN";
+    const NAME: ChunkName = ChunkName::new("GMEN");
     fn exists(&self) -> bool {
         self.exists
     }

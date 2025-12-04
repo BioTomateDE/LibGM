@@ -9,7 +9,10 @@ use std::path::Path;
 use crate::{
     gamemaker::{
         data::{Endianness, GMData},
-        deserialize::{chunk::GMChunk, reader::DataReader},
+        deserialize::{
+            chunk::{Chunks, GMChunk},
+            reader::DataReader,
+        },
         elements::{
             animation_curves::GMAnimationCurves,
             audio_groups::GMAudioGroups,
@@ -50,7 +53,7 @@ use crate::{
         version_detection::detect_gamemaker_version,
     },
     prelude::*,
-    util::{bench::Stopwatch, smallmap::SmallMap},
+    util::bench::Stopwatch,
 };
 
 const ERR_TOO_BIG: &str =
@@ -155,7 +158,6 @@ impl DataParser {
         reader.string_chunk = reader
             .chunks
             .get("STRG")
-            .cloned()
             .ok_or("Chunk STRG does not exist")?;
         reader.general_info = reader.read_chunk()?;
         if !reader.general_info.exists {
@@ -350,37 +352,40 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
                 "Chunk '{name}' out of bounds: specified length {chunk_length} would exceed total length {total_data_len}"
             ))?;
 
-        if reader.cur_pos == total_data_len {
+        let end_pos = reader.cur_pos;
+        if end_pos == total_data_len {
             reader.last_chunk.clone_from(&name);
         }
-        let chunk = GMChunk { start_pos, end_pos: reader.cur_pos };
 
-        if reader.chunks.contains_key(&name) {
-            bail!("Chunk '{name}' is defined multiple times");
-        }
-
-        reader.chunks.insert(name, chunk);
+        let chunk = GMChunk { start_pos, end_pos };
+        reader.chunks.push(name, chunk)?;
     }
 
     Ok(reader)
 }
 
 /// Verify all data chunks were processed to prevent data loss
-fn handle_unread_chunks(
-    chunks: &SmallMap<String, GMChunk>,
-    allow_unknown_chunks: bool,
-) -> Result<()> {
+fn handle_unread_chunks(chunks: &Chunks, allow_unknown_chunks: bool) -> Result<()> {
     if chunks.is_empty() {
         return Ok(());
     }
 
-    let unprocessed_chunks: Vec<String> = chunks.keys().cloned().collect();
-    let chunks_list = unprocessed_chunks.join(", ");
-    let count: usize = unprocessed_chunks.len();
+    let count: usize = chunks.count();
+
+    let mut buffer = String::with_capacity(count * 6);
+    for chunk_name in chunks.chunk_names() {
+        buffer.push_str(chunk_name.as_str());
+        buffer.push_str(", ");
+    }
+
+    // Remove last trailing comma and space
+    buffer.pop();
+    buffer.pop();
+
     let noun: &str = if count == 1 { "chunk" } else { "chunks" };
 
     let message = format!(
-        "{count} unprocessed {noun} detected: {chunks_list}\n\
+        "{count} unprocessed {noun} detected: {buffer}\n\
         These unknown chunks will be lost when rebuilding data.",
     );
 

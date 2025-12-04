@@ -2,6 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::{
     gamemaker::{
+        chunk::ChunkName,
         deserialize::reader::DataReader,
         elements::{GMChunkElement, GMElement, embedded_textures::GMEmbeddedTexture},
         reference::GMRef,
@@ -30,7 +31,7 @@ impl DerefMut for GMTexturePageItems {
 }
 
 impl GMChunkElement for GMTexturePageItems {
-    const NAME: &'static str = "TPAG";
+    const NAME: ChunkName = ChunkName::new("TPAG");
     fn exists(&self) -> bool {
         self.exists
     }
