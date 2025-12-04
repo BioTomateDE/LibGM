@@ -83,7 +83,7 @@ pub struct GMFont {
     pub display_name: Option<String>,
 
     /// The font size in `Em`s.
-    /// In `GameMaker` Studio 2.3+, this is stored as f32 instead of u32.
+    /// In GameMaker Studio 2.3+, this is stored as f32 instead of u32.
     pub em_size: GMFontSize,
 
     /// Whether to display the font in bold.

@@ -10,7 +10,7 @@ use crate::{
 };
 
 impl DataBuilder<'_> {
-    /// Write a 4 character ASCII `GameMaker` chunk name.
+    /// Write a 4 character ASCII GameMaker chunk name.
     /// Accounts for endianness (chunk names in big endian are reversed).
     pub fn write_chunk_name(&mut self, name: ChunkName) {
         let mut bytes = name.as_bytes();
@@ -22,10 +22,10 @@ impl DataBuilder<'_> {
         self.write_bytes(&bytes);
     }
 
-    /// Writes a `GameMaker` data chunk.
+    /// Writes a GameMaker data chunk.
     /// Skips the chunk if the element does not exist.
     ///
-    /// Appends padding if required by the `GameMaker` version.
+    /// Appends padding if required by the GameMaker version.
     /// This padding has to then be manually cut off for the last chunk in the data file.
     pub fn build_chunk<T: GMChunkElement>(&mut self, element: &T) -> Result<()> {
         let name: ChunkName = T::NAME;

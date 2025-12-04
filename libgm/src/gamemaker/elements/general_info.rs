@@ -28,7 +28,7 @@ pub struct GMGeneralInfo {
     /// The file name of the runner.
     pub game_file_name: String,
 
-    /// Which `GameMaker` configuration the data file was compiled with.
+    /// Which GameMaker configuration the data file was compiled with.
     pub config: String,
 
     /// The last object id of the data file.
@@ -41,13 +41,13 @@ pub struct GMGeneralInfo {
     pub game_id: u32,
 
     /// The `DirectPlay` GUID of the data file.
-    /// This is always empty in `GameMaker` Studio.
+    /// This is always empty in GameMaker Studio.
     pub directplay_guid: uuid::Uuid,
 
     /// The name of the game.
     pub game_name: String,
 
-    /// The version of the data file. For `GameMaker` 2 games, this will be specified as 2.0.0.0,
+    /// The version of the data file. For GameMaker 2 games, this will be specified as 2.0.0.0,
     /// but `detect_version.rs` will detect the actual version later.
     pub version: GMVersion,
 
@@ -84,7 +84,7 @@ pub struct GMGeneralInfo {
     /// The room order of the data file.
     pub room_order: Vec<GMRef<GMRoom>>,
 
-    /// Set in `GameMaker` 2+ data files.
+    /// Set in GameMaker 2+ data files.
     pub gms2_info: Option<GMGeneralInfoGMS2>,
 
     pub exists: bool,
@@ -414,7 +414,7 @@ pub struct GMGeneralInfoGMS2 {
     /// The FPS of the game.
     pub fps: f32,
 
-    /// If enabled, the game runner may send requests to a `GameMaker` player count statistics server.
+    /// If enabled, the game runner may send requests to a GameMaker player count statistics server.
     pub allow_statistics: bool,
 
     /// Unknown, some sort of checksum.
@@ -425,7 +425,7 @@ pub struct GMGeneralInfoGMS2 {
 }
 
 bitfield_struct! {
-    /// Contains general information flags for `GameMaker` games.
+    /// Contains general information flags for GameMaker games.
     GMGeneralInfoFlags : u32 {
         /// Start the game as fullscreen.
         fullscreen: 0,
