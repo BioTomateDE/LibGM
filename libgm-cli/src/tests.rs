@@ -1,4 +1,4 @@
-pub mod assembler;
+mod assembler;
 
 use clap::ValueEnum;
 use libgm::{
@@ -12,6 +12,7 @@ pub enum Test {
     Builder,
     Reparse,
     Assembler,
+    NameValidation,
 }
 
 pub fn perform(data: &GMData, tests: &[Test]) -> Result<()> {
@@ -21,7 +22,7 @@ pub fn perform(data: &GMData, tests: &[Test]) -> Result<()> {
         match test {
             Test::All => {
                 // Perform all (other) tests.
-                let all_tests = vec![Test::Reparse, Test::Assembler];
+                let all_tests = vec![Test::NameValidation, Test::Reparse, Test::Assembler];
                 perform(data, &all_tests)?;
             },
             Test::Builder => {
@@ -35,7 +36,11 @@ pub fn perform(data: &GMData, tests: &[Test]) -> Result<()> {
             },
             Test::Assembler => {
                 log::info!("Performing Assembler Test");
-                assembler::test_assembler(data)?;
+                assembler::test(data)?;
+            },
+            Test::NameValidation => {
+                log::info!("Performing Name Validation Test");
+                data.validate_names()?;
             },
         }
     }

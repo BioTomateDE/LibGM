@@ -1,6 +1,6 @@
 use std::cmp::min;
 
-use macros::{list_chunk, num_enum};
+use macros::{named_list_chunk, num_enum};
 
 use crate::{
     gamemaker::{
@@ -26,7 +26,7 @@ use crate::{
     },
 };
 
-#[list_chunk("ROOM")]
+#[named_list_chunk("ROOM")]
 pub struct GMRooms {
     pub rooms: Vec<GMRoom>,
     pub exists: bool,

@@ -1,39 +1,16 @@
-use std::ops::{Deref, DerefMut};
+use macros::list_chunk;
 
 use crate::{
     gamemaker::{
-        chunk::ChunkName,
-        deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement},
-        serialize::builder::DataBuilder,
+        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
     },
     prelude::*,
 };
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[list_chunk("FEAT")]
 pub struct GMFeatureFlags {
     pub feature_flags: Vec<String>,
     pub exists: bool,
-}
-
-impl Deref for GMFeatureFlags {
-    type Target = Vec<String>;
-    fn deref(&self) -> &Self::Target {
-        &self.feature_flags
-    }
-}
-
-impl DerefMut for GMFeatureFlags {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.feature_flags
-    }
-}
-
-impl GMChunkElement for GMFeatureFlags {
-    const NAME: ChunkName = ChunkName::new("FEAT");
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMFeatureFlags {

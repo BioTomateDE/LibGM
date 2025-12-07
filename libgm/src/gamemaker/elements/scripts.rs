@@ -1,4 +1,4 @@
-use macros::list_chunk;
+use macros::named_list_chunk;
 
 use crate::{
     gamemaker::{
@@ -11,7 +11,7 @@ use crate::{
     prelude::*,
 };
 
-#[list_chunk("SCPT")]
+#[named_list_chunk("SCPT")]
 pub struct GMScripts {
     pub scripts: Vec<GMScript>,
     pub exists: bool,

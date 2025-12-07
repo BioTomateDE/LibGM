@@ -1,4 +1,4 @@
-use macros::list_chunk;
+use macros::named_list_chunk;
 
 use crate::{
     gamemaker::{
@@ -7,7 +7,7 @@ use crate::{
     prelude::*,
 };
 
-#[list_chunk("PATH")]
+#[named_list_chunk("PATH")]
 pub struct GMPaths {
     pub paths: Vec<GMPath>,
     pub exists: bool,

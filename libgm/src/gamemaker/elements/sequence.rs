@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use macros::{list_chunk, num_enum};
+use macros::{named_list_chunk, num_enum};
 
 use crate::{
     gamemaker::{
@@ -21,7 +21,7 @@ use crate::{
 
 /// This struct belong to the chunk SEQN.
 /// Sprites can _also_ contain sequences (not by reference; the actual data).
-#[list_chunk("SEQN")]
+#[named_list_chunk("SEQN")]
 pub struct GMSequences {
     pub sequences: Vec<GMSequence>,
     pub exists: bool,

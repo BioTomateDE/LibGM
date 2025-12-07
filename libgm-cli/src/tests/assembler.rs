@@ -12,7 +12,7 @@ use libgm::{
     prelude::*,
 };
 
-pub fn test_assembler(data: &GMData) -> Result<()> {
+pub fn test(data: &GMData) -> Result<()> {
     let count = data.codes.len();
 
     let mut benchmarks: Vec<Benchmark> = Vec::with_capacity(count);

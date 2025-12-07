@@ -1,4 +1,4 @@
-use macros::list_chunk;
+use macros::named_list_chunk;
 
 use crate::{
     gamemaker::{
@@ -11,7 +11,7 @@ use crate::{
     util::assert::assert_int,
 };
 
-#[list_chunk("PSYS")]
+#[named_list_chunk("PSYS")]
 pub struct GMParticleSystems {
     pub particle_systems: Vec<GMParticleSystem>,
     pub exists: bool,

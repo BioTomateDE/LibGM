@@ -4,7 +4,7 @@ use crate::{
     gamemaker::{
         chunk::ChunkName,
         deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement},
+        elements::{GMChunk, GMElement},
         serialize::builder::DataBuilder,
     },
     prelude::*,
@@ -32,7 +32,7 @@ impl DerefMut for GMLanguageInfo {
     }
 }
 
-impl GMChunkElement for GMLanguageInfo {
+impl GMChunk for GMLanguageInfo {
     const NAME: ChunkName = ChunkName::new("LANG");
     fn exists(&self) -> bool {
         self.exists

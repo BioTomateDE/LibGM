@@ -1,4 +1,4 @@
-use macros::list_chunk;
+use macros::named_list_chunk;
 
 use crate::{
     gamemaker::{
@@ -8,7 +8,7 @@ use crate::{
     util::assert::assert_int,
 };
 
-#[list_chunk("FEDS")]
+#[named_list_chunk("FEDS")]
 #[derive(Eq)]
 pub struct GMFilterEffects {
     pub filter_effects: Vec<GMFilterEffect>,

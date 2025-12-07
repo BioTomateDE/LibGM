@@ -1,9 +1,9 @@
-use macros::{list_chunk, num_enum};
+use macros::{named_list_chunk, num_enum};
 
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
-        elements::{GMElement, sprites::GMSprite},
+        elements::{GMElement, element_stub, sprites::GMSprite},
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
@@ -15,7 +15,7 @@ use crate::{
     },
 };
 
-#[list_chunk("OBJT")]
+#[named_list_chunk("OBJT")]
 pub struct GMGameObjects {
     pub game_objects: Vec<GMGameObject>,
     pub exists: bool,
@@ -196,6 +196,7 @@ pub struct GMGameObject {
     /// All the events that this game object has.
     pub events: Vec<GMGameObjectEvents>,
 }
+element_stub!(GMGameObject);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMGameObjectEvents {

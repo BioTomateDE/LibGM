@@ -1,7 +1,10 @@
 use crate::{
     gamemaker::{
         data::GMData,
-        elements::{functions::GMFunction, game_objects::GMGameObject, variables::GMVariable},
+        elements::{
+            GMListChunk, GMNamedElement, functions::GMFunction, game_objects::GMGameObject,
+            variables::GMVariable,
+        },
         reference::GMRef,
     },
     gml::instructions::{
@@ -303,20 +306,21 @@ impl GMVariableType {
 }
 
 #[inline]
-fn asset_get_name<T>(
-    gm_elements: &Vec<T>,
+fn asset_get_name<'a, T: GMNamedElement + 'a, C: GMListChunk<Element = T> + 'a>(
+    chunk: &'a C,
     gm_ref: GMRef<T>,
-    get_name: impl FnOnce(&T) -> &String,
-) -> Result<&String> {
-    let element: &T = gm_ref
-        .resolve(gm_elements)
-        .context("resolving asset reference for PushReference Instruction")?;
+) -> Result<&'a String> {
+    const CTX: &str = "resolving asset reference for PushReference Instruction";
 
-    let name: &String = get_name(element);
+    let element: &'a T = chunk.by_ref(gm_ref).context(CTX)?;
 
-    if !is_valid_identifier(name) {
-        bail!("Invalid {} identifier: {:?}", typename::<T>(), name)
-    }
+    element
+        .validate_name()
+        .with_context(|| format!("validating name of {}", typename::<T>()))
+        .context(CTX)?;
+
+    let name: &'a String = element.name();
+
     Ok(name)
 }
 
@@ -330,91 +334,83 @@ fn write_asset_reference(
             write!(
                 string,
                 "(object){}",
-                asset_get_name(&gm_data.game_objects, gm_ref, |x| &x.name)?
+                asset_get_name(&gm_data.game_objects, gm_ref)?
             );
         },
         GMAssetReference::Sprite(gm_ref) => {
             write!(
                 string,
                 "(sprite){}",
-                asset_get_name(&gm_data.sprites, gm_ref, |x| &x.name)?
+                asset_get_name(&gm_data.sprites, gm_ref)?
             );
         },
         GMAssetReference::Sound(gm_ref) => {
             write!(
                 string,
                 "(sound){}",
-                asset_get_name(&gm_data.sounds, gm_ref, |x| &x.name)?
+                asset_get_name(&gm_data.sounds, gm_ref)?
             );
         },
         GMAssetReference::Room(gm_ref) => {
             write!(
                 string,
                 "(sprite){}",
-                asset_get_name(&gm_data.rooms, gm_ref, |x| &x.name)?
+                asset_get_name(&gm_data.rooms, gm_ref)?
             );
         },
         GMAssetReference::Background(gm_ref) => {
             write!(
                 string,
                 "(background){}",
-                asset_get_name(&gm_data.backgrounds, gm_ref, |x| &x.name)?
+                asset_get_name(&gm_data.backgrounds, gm_ref)?
             );
         },
         GMAssetReference::Path(gm_ref) => {
-            write!(
-                string,
-                "(path){}",
-                asset_get_name(&gm_data.paths, gm_ref, |x| &x.name)?
-            );
+            write!(string, "(path){}", asset_get_name(&gm_data.paths, gm_ref)?);
         },
         GMAssetReference::Script(gm_ref) => {
             write!(
                 string,
                 "(script){}",
-                asset_get_name(&gm_data.scripts, gm_ref, |x| &x.name)?
+                asset_get_name(&gm_data.scripts, gm_ref)?
             );
         },
         GMAssetReference::Font(gm_ref) => {
-            write!(
-                string,
-                "(font){}",
-                asset_get_name(&gm_data.fonts, gm_ref, |x| &x.name)?
-            );
+            write!(string, "(font){}", asset_get_name(&gm_data.fonts, gm_ref)?);
         },
         GMAssetReference::Timeline(gm_ref) => {
             write!(
                 string,
                 "(timeline){}",
-                asset_get_name(&gm_data.timelines, gm_ref, |x| &x.name)?
+                asset_get_name(&gm_data.timelines, gm_ref)?
             );
         },
         GMAssetReference::Shader(gm_ref) => {
             write!(
                 string,
                 "(shader){}",
-                asset_get_name(&gm_data.shaders, gm_ref, |x| &x.name)?
+                asset_get_name(&gm_data.shaders, gm_ref)?
             );
         },
         GMAssetReference::Sequence(gm_ref) => {
             write!(
                 string,
                 "(sequence){}",
-                asset_get_name(&gm_data.sequences, gm_ref, |x| &x.name)?
+                asset_get_name(&gm_data.sequences, gm_ref)?
             );
         },
         GMAssetReference::AnimCurve(gm_ref) => {
             write!(
                 string,
                 "(animcurve){}",
-                asset_get_name(&gm_data.animation_curves, gm_ref, |x| &x.name)?
+                asset_get_name(&gm_data.animation_curves, gm_ref)?
             );
         },
         GMAssetReference::ParticleSystem(gm_ref) => {
             write!(
                 string,
                 "(particlesys){}",
-                asset_get_name(&gm_data.particle_systems, gm_ref, |x| &x.name)?
+                asset_get_name(&gm_data.particle_systems, gm_ref)?
             );
         },
         GMAssetReference::RoomInstance(id) => {
@@ -443,7 +439,7 @@ fn write_instance_type(
             unreachable!("Did not expect Instance Type Undefined here; please report this error")
         },
         GMInstanceType::Self_(Some(obj_ref)) => {
-            let obj: &GMGameObject = obj_ref.resolve(&gm_data.game_objects)?;
+            let obj: &GMGameObject = gm_data.game_objects.by_ref(obj_ref)?;
             write!(string, "self<{}>", obj.name);
         },
         GMInstanceType::Self_(None) => write!(string, "self"),
@@ -469,12 +465,11 @@ fn write_variable(
     buffer: &mut String,
     gm_data: &GMData,
 ) -> Result<()> {
-    let variable: &GMVariable = code_variable.variable.resolve(&gm_data.variables)?;
+    let variable: &GMVariable = gm_data.variables.by_ref(code_variable.variable)?;
+    variable
+        .validate_name()
+        .context("validating variable identifier")?;
     let name = &variable.name;
-
-    if !is_valid_identifier(name) && name != "$$$$temp$$$$" {
-        bail!("Invalid variable identifier {name:?}");
-    }
 
     if code_variable.is_int32 {
         write!(buffer, "(variable)");
@@ -500,17 +495,11 @@ fn write_variable(
 }
 
 fn resolve_function_name(function_ref: GMRef<GMFunction>, gm_data: &GMData) -> Result<&String> {
-    let function: &GMFunction = function_ref.resolve(&gm_data.functions)?;
+    let function: &GMFunction = gm_data.functions.by_ref(function_ref)?;
+    function
+        .validate_name()
+        .context("validating function identifier")?;
     let name = &function.name;
-    if !is_valid_identifier(name) {
-        let is_special = name.starts_with("@@")
-            && name.ends_with("@@")
-            && is_valid_identifier(&name[2..name.len() - 2]);
-
-        if !is_special {
-            bail!("Invalid function identifier: {name:?}");
-        }
-    }
     Ok(name)
 }
 
@@ -541,19 +530,4 @@ fn write_literal_string(string_lit: &str, buffer: &mut String) {
     }
 
     buffer.push('"');
-}
-
-/// Check whether an identifier / asset name is valid for assembling properly.
-/// Exceptions like `$$$$temp$$$$` for variables or `@@This@@` for functions will have to be handled separately.
-/// ## Rules:
-/// - At least one character long
-/// - First character is not a digit
-/// - Letters and underscores are allowed
-/// - Only ascii characters
-fn is_valid_identifier(s: &str) -> bool {
-    let mut chars = s.chars();
-    chars
-        .next()
-        .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
-        && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
 }

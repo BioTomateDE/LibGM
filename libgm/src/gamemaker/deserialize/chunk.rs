@@ -3,7 +3,7 @@ use crate::{
         chunk::ChunkName,
         data::Endianness,
         deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement},
+        elements::{GMChunk, GMElement},
         gm_version::GMVersion,
     },
     prelude::*,
@@ -11,12 +11,12 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct GMChunk {
+pub struct ChunkBounds {
     pub start_pos: u32,
     pub end_pos: u32,
 }
 
-impl GMChunk {
+impl ChunkBounds {
     #[must_use]
     pub const fn length(&self) -> u32 {
         self.end_pos - self.start_pos
@@ -28,11 +28,11 @@ impl GMChunk {
     }
 }
 
-#[derive(Debug)]
-pub struct Chunks(SmallMap<ChunkName, GMChunk>);
-
 /// The number of all known GameMaker chunks (excluding debug chunks).
 const KNOWN_CHUNK_COUNT: usize = 35;
+
+#[derive(Debug, Default)]
+pub struct Chunks(SmallMap<ChunkName, ChunkBounds>);
 
 impl Chunks {
     #[inline]
@@ -54,7 +54,7 @@ impl Chunks {
     }
 
     #[inline]
-    pub fn push(&mut self, name: ChunkName, chunk: GMChunk) -> Result<()> {
+    pub fn push(&mut self, name: ChunkName, chunk: ChunkBounds) -> Result<()> {
         if self.0.contains_key(&name) {
             bail!("Chunk {name:?} is defined multiple times");
         }
@@ -68,19 +68,19 @@ impl Chunks {
 
     #[inline]
     #[must_use]
-    pub fn get(&self, name: &'static str) -> Option<GMChunk> {
+    pub fn get(&self, name: &'static str) -> Option<ChunkBounds> {
         self.get_by_chunkname(ChunkName::new(name))
     }
 
     #[inline]
     #[must_use]
-    pub fn get_by_chunkname(&self, name: ChunkName) -> Option<GMChunk> {
+    pub fn get_by_chunkname(&self, name: ChunkName) -> Option<ChunkBounds> {
         self.0.get(&name).cloned()
     }
 
     #[inline]
     #[must_use]
-    pub fn remove(&mut self, name: ChunkName) -> Option<GMChunk> {
+    pub fn remove(&mut self, name: ChunkName) -> Option<ChunkBounds> {
         self.0.remove(&name)
     }
 
@@ -104,7 +104,7 @@ impl DataReader<'_> {
         Ok(chunk_name)
     }
 
-    pub fn read_chunk<T: GMChunkElement>(&mut self) -> Result<T> {
+    pub fn read_chunk<T: GMChunk>(&mut self) -> Result<T> {
         let Some(chunk) = self.chunks.remove(T::NAME) else {
             return Ok(T::default());
         };
@@ -169,7 +169,7 @@ impl DataReader<'_> {
     pub fn read_gen8_version(&mut self) -> Result<GMVersion> {
         const CTX: &str = "trying to read GEN8 GameMaker Version";
         let saved_pos = self.cur_pos;
-        let saved_chunk: GMChunk = self.chunk.clone();
+        let saved_chunk: ChunkBounds = self.chunk.clone();
         self.chunk = self
             .chunks
             .get("GEN8")

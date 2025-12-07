@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use macros::list_chunk;
+use macros::named_list_chunk;
 
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
-        elements::{GMElement, functions::GMFunction, variables::GMVariable},
+        elements::{GMElement, element_stub, functions::GMFunction, variables::GMVariable},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
@@ -23,11 +23,13 @@ use crate::{
     },
 };
 
-#[list_chunk("CODE")]
+#[named_list_chunk("CODE")]
 pub struct GMCodes {
     pub codes: Vec<GMCode>,
     pub exists: bool,
 }
+
+element_stub!(GMCode);
 
 impl GMElement for GMCodes {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -737,13 +739,12 @@ fn build_pop(
     builder.write_i16(build_instance_type(variable.instance_type));
     builder.write_u8(u8::from(type1) | u8::from(type2) << 4);
     builder.write_u8(opcode);
-    //let variable: &GMVariable = variable.variable.resolve(&builder.gm_data.variables)?;
     write_variable_occurrence(
         builder,
         variable.variable.index,
         instr_pos,
         /*variable.name.index,*/
-        0xDEAD_C0DE,
+        0x6767_6767,
         variable.variable_type,
     )?;
     Ok(())
@@ -815,8 +816,6 @@ fn build_push(builder: &mut DataBuilder, opcode: u8, value: &GMCodeValue) -> Res
             builder.write_gm_string_id(string.clone());
         },
         GMCodeValue::Variable(code_variable) => {
-            //let variable: &GMVariable =
-            code_variable.variable.resolve(&builder.gm_data.variables)?;
             write_variable_occurrence(
                 builder,
                 code_variable.variable.index,
@@ -827,8 +826,6 @@ fn build_push(builder: &mut DataBuilder, opcode: u8, value: &GMCodeValue) -> Res
             )?;
         },
         GMCodeValue::Function(func_ref) => {
-            //let function: &GMFunction =
-            func_ref.resolve(&builder.gm_data.functions)?;
             write_function_occurrence(
                 builder,
                 func_ref.index,
@@ -948,8 +945,6 @@ impl GMElement for GMAssetReference {
             Self::ParticleSystem(gm_ref) => (gm_ref.index, 12),
             Self::RoomInstance(id) => (*id as u32, 13),
             Self::Function(func_ref) => {
-                //let function: &GMFunction =
-                func_ref.resolve(&builder.gm_data.functions)?;
                 write_function_occurrence(
                     builder,
                     func_ref.index,

@@ -1,5 +1,6 @@
-use crate::{prelude::*, util::fmt::hexdump};
 use std::fmt::Display;
+
+use crate::{prelude::*, util::fmt::hexdump};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct ChunkName {

@@ -54,9 +54,8 @@ impl DataBuilder<'_> {
     /// # Errors
     /// Returns an error if the contained texture page item reference cannot be resolved.
     pub fn write_gm_texture(&mut self, gm_texture_ref: GMRef<GMTexturePageItem>) -> Result<()> {
-        let resolved_texture_page_item: &GMTexturePageItem =
-            gm_texture_ref.resolve(&self.gm_data.texture_page_items)?;
-        self.write_pointer(resolved_texture_page_item);
+        let elem: &GMTexturePageItem = self.gm_data.texture_page_items.by_ref(gm_texture_ref)?;
+        self.write_pointer(elem);
         Ok(())
     }
 

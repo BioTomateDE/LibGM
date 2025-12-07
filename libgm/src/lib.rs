@@ -19,11 +19,27 @@
 #![warn(clippy::style)]
 #![warn(clippy::pedantic)]
 //
+// I sometimes need more than 3 bools in a struct???
+// This lint is only relevant for people
+// who have never heard of an enum.
+#![allow(clippy::struct_excessive_bools)]
+//
 // Reading data can always fail (e.g. trying to read out of bounds).
 // Almost all parser related functions have to read
 // data at some point down the call hierarchy.
 // Putting the same `Errors` header everywhere is meaningless.
 #![allow(clippy::missing_errors_doc)]
+//
+// I store `Option<T>`, so passing `Option<&T>` instead of `&Option<T>`
+// would require me to use `.as_ref()` every single time.
+#![allow(clippy::ref_option)]
+//
+// Reinterpreting the bits when using `as`-casts
+// is the intended behavior.
+// When trying to "safely convert" between signed and
+// unsigned integers, use `try_from` instead.
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_possible_wrap)]
 //
 // "Cast from usize to u32 can truncate".
 // This is irrelevant because all `usize`s are
@@ -34,21 +50,9 @@
 // smaller than 2 GB (`i32` limit).
 #![allow(clippy::cast_possible_truncation)]
 //
-// Reinterpreting the bits when using `as`-casts
-// is the intended behavior.
-// When trying to "safely convert" between signed and
-// unsigned integers, use `try_from` instead.
-#![allow(clippy::cast_sign_loss)]
-#![allow(clippy::cast_possible_wrap)]
-//
-// I sometimes need more than 3 bools in a struct???
-// This lint is only relevant for people
-// who have never heard of an enum.
-#![allow(clippy::struct_excessive_bools)]
-//
-// I store `Option<T>`, so passing `Option<&T>` instead of `&Option<T>`
-// would require me to use `.as_ref()` every single time.
-#![allow(clippy::ref_option)]
+// YoYoGames may add a float field to some element in the future.
+// This would break existing `Eq` structs.
+#![allow(clippy::derive_partial_eq_without_eq)]
 //
 // This is a stylistic preference of mine.
 // I may change this in the future.

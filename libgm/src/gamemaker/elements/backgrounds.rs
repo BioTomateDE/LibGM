@@ -1,4 +1,4 @@
-use macros::list_chunk;
+use macros::named_list_chunk;
 
 use crate::{
     gamemaker::{
@@ -14,8 +14,7 @@ use crate::{
 const ALIGNMENT: u32 = 8;
 
 /// See [`GMBackground`].
-#[list_chunk("BGND")]
-#[derive(Eq)]
+#[named_list_chunk("BGND")]
 pub struct GMBackgrounds {
     pub backgrounds: Vec<GMBackground>,
     pub exists: bool,

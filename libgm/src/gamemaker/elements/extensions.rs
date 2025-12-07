@@ -6,7 +6,7 @@ use crate::{
     gamemaker::{
         chunk::ChunkName,
         deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement},
+        elements::{GMChunk, GMElement},
         gm_version::GMVersion,
         serialize::builder::DataBuilder,
     },
@@ -35,7 +35,7 @@ impl DerefMut for GMExtensions {
     }
 }
 
-impl GMChunkElement for GMExtensions {
+impl GMChunk for GMExtensions {
     const NAME: ChunkName = ChunkName::new("EXTN");
     fn exists(&self) -> bool {
         self.exists

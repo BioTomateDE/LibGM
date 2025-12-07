@@ -1,8 +1,7 @@
 mod data_types;
 mod reader;
 
-use std::{fmt::Display, str::FromStr};
-
+use crate::gamemaker::elements::GMNamedListChunk;
 use crate::{
     gamemaker::{
         data::GMData,
@@ -23,6 +22,7 @@ use crate::{
     prelude::*,
     util::fmt::typename,
 };
+use std::{fmt::Display, str::FromStr};
 
 pub fn assemble_code(assembly: &str, gm_data: &GMData) -> Result<Vec<GMInstruction>> {
     let mut instructions: Vec<GMInstruction> = Vec::new();
@@ -261,27 +261,6 @@ fn parse_instruction(
     Ok(instruction)
 }
 
-#[allow(clippy::ptr_arg)]
-fn asset_by_name<T>(
-    reader: &mut Reader,
-    elements: &Vec<T>,
-    get_name: impl Fn(&T) -> &String,
-) -> Result<GMRef<T>> {
-    let target_name: &str = reader.parse_identifier()?;
-
-    for (i, element) in elements.iter().enumerate() {
-        if get_name(element) == target_name {
-            return Ok(GMRef::from(i));
-        }
-    }
-
-    bail!(
-        "Could not resolve Asset of type {} with name {:?}",
-        stringify!(T),
-        target_name,
-    );
-}
-
 fn parse_asset_reference(reader: &mut Reader, gm_data: &GMData) -> Result<GMAssetReference> {
     let line = reader.line;
     let asset_type = reader
@@ -291,19 +270,19 @@ fn parse_asset_reference(reader: &mut Reader, gm_data: &GMData) -> Result<GMAsse
     // This can probably be made cleaner
     #[rustfmt::skip]
     let asset_reference = match asset_type {
-        "object" => GMAssetReference::Object(asset_by_name(reader, &gm_data.game_objects, |x| &x.name)?),
-        "sprite" => GMAssetReference::Sprite(asset_by_name(reader, &gm_data.sprites, |x| &x.name)?),
-        "sound" => GMAssetReference::Sound(asset_by_name(reader, &gm_data.sounds, |x| &x.name)?),
-        "room" => GMAssetReference::Room(asset_by_name(reader, &gm_data.rooms, |x| &x.name)?),
-        "background" => GMAssetReference::Background(asset_by_name(reader, &gm_data.backgrounds, |x| &x.name)?),
-        "path" => GMAssetReference::Path(asset_by_name(reader, &gm_data.paths, |x| &x.name)?),
-        "script" => GMAssetReference::Script(asset_by_name(reader, &gm_data.scripts, |x| &x.name)?),
-        "font" => GMAssetReference::Font(asset_by_name(reader, &gm_data.fonts, |x| &x.name)?),
-        "timeline" => GMAssetReference::Timeline(asset_by_name(reader, &gm_data.timelines, |x| &x.name)?),
-        "shader" => GMAssetReference::Shader(asset_by_name(reader, &gm_data.shaders, |x| &x.name)?),
-        "sequence" => GMAssetReference::Sequence(asset_by_name(reader, &gm_data.sequences, |x| &x.name)?),
-        "animcurve" => GMAssetReference::AnimCurve(asset_by_name(reader, &gm_data.animation_curves, |x| &x.name)?), 
-        "particlesystem" => GMAssetReference::ParticleSystem(asset_by_name(reader, &gm_data.particle_systems, |x| &x.name)?),
+        "object" => GMAssetReference::Object(gm_data.game_objects.ref_by_name(reader.parse_identifier()?)?),
+        "sprite" => GMAssetReference::Sprite(gm_data.sprites.ref_by_name(reader.parse_identifier()?)?),
+        "sound" => GMAssetReference::Sound(gm_data.sounds.ref_by_name(reader.parse_identifier()?)?),
+        "room" => GMAssetReference::Room(gm_data.rooms.ref_by_name(reader.parse_identifier()?)?),
+        "background" => GMAssetReference::Background(gm_data.backgrounds.ref_by_name(reader.parse_identifier()?)?),
+        "path" => GMAssetReference::Path(gm_data.paths.ref_by_name(reader.parse_identifier()?)?),
+        "script" => GMAssetReference::Script(gm_data.scripts.ref_by_name(reader.parse_identifier()?)?),
+        "font" => GMAssetReference::Font(gm_data.fonts.ref_by_name(reader.parse_identifier()?)?),
+        "timeline" => GMAssetReference::Timeline(gm_data.timelines.ref_by_name(reader.parse_identifier()?)?),
+        "shader" => GMAssetReference::Shader(gm_data.shaders.ref_by_name(reader.parse_identifier()?)?),
+        "sequence" => GMAssetReference::Sequence(gm_data.sequences.ref_by_name(reader.parse_identifier()?)?),
+        "animcurve" => GMAssetReference::AnimCurve(gm_data.animation_curves.ref_by_name(reader.parse_identifier()?)?),
+        "particlesystem" => GMAssetReference::ParticleSystem(gm_data.particle_systems.ref_by_name(reader.parse_identifier()?)?),
         "roominstance" => GMAssetReference::RoomInstance(reader.parse_int()?),
         "function" => GMAssetReference::Function(parse_function(reader, &gm_data.functions)?),
         _ => bail!("Invalid Type Cast to asset type {asset_type:?}"),
@@ -513,8 +492,8 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
 }
 
 fn parse_variable_identifier<'a>(reader: &'a mut Reader) -> Result<&'a str> {
-    // TODO: This path can be marked as cold
     if reader.consume_str("$$$$temp$$$$").is_some() {
+        cold_path();
         Ok("$$$$temp$$$$")
     } else {
         reader.parse_identifier()

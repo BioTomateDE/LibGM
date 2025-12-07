@@ -1,5 +1,4 @@
-use std::fmt::Display;
-use std::fmt::Write;
+use std::fmt::{Display, Write};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Error {
