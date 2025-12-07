@@ -16,12 +16,12 @@ pub struct GMGameEndScripts {
 
 impl GMElement for GMGameEndScripts {
     fn deserialize(reader: &mut DataReader) -> crate::error::Result<Self> {
-        let game_end_scripts: Vec<GMRef<GMCode>> = reader.read_simple_list_of_resource_ids()?;
+        let game_end_scripts: Vec<GMRef<GMCode>> = reader.read_simple_list()?;
         Ok(Self { game_end_scripts, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> crate::error::Result<()> {
-        builder.write_simple_list_of_resource_ids(&self.game_end_scripts)?;
+        builder.write_simple_list(&self.game_end_scripts)?;
         Ok(())
     }
 }

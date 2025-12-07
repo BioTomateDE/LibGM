@@ -164,10 +164,8 @@ impl DataParser {
             bail!("GEN8 chunk does not exist");
         }
 
-        #[allow(clippy::items_after_statements)]
-        const GMS2: GMVersion = GMVersion::new(2, 0, 0, 0, LTSBranch::PreLTS);
-
-        if reader.specified_version == GMS2 {
+        let gms2 = GMVersion::new(2, 0, 0, 0, LTSBranch::PreLTS);
+        if reader.specified_version == gms2 {
             let stopwatch = Stopwatch::start();
             detect_gamemaker_version(&mut reader).context("detecting GameMaker version")?;
             log::trace!("Detecting GameMaker Version took {stopwatch}");

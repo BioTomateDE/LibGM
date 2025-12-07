@@ -1,22 +1,22 @@
 use crate::{
-    gamemaker::{deserialize::reader::DataReader, elements::GMElement, reference::GMRef},
+    gamemaker::{deserialize::reader::DataReader, elements::GMElement},
     prelude::*,
     util::{fmt::typename, init::vec_with_capacity},
 };
 
 impl DataReader<'_> {
-    /// Reads a GameMaker simple list by calling the specified deserializer function for each element.
+    /// Reads a GameMaker simple list with a 32-bit count prefix.
     ///
     /// Simple lists consist of a count followed by the elements' data in sequence.
     /// Includes a failsafe check to prevent excessive memory allocation from malformed data.
-    fn read_simple_list_internal<T>(
-        &mut self,
-        count: u32,
-        deserializer_fn: fn(&mut Self) -> Result<T>,
-    ) -> Result<Vec<T>> {
+    ///
+    /// The list format is: `[count: u32][element_0][element_1]...[element_n]`
+    pub fn read_simple_list<T: GMElement>(&mut self) -> Result<Vec<T>> {
+        let count = self.read_u32()?;
         let mut elements: Vec<T> = vec_with_capacity(count).context("reading simple list")?;
+
         for _ in 0..count {
-            let element: T = deserializer_fn(self).with_context(|| {
+            let element = T::deserialize(self).with_context(|| {
                 format!(
                     "deserializing element {}/{} of {} simple list",
                     elements.len(),
@@ -26,42 +26,37 @@ impl DataReader<'_> {
             })?;
             elements.push(element);
         }
-        Ok(elements)
-    }
 
-    /// Reads a GameMaker simple list with a 32-bit count prefix.
-    ///
-    /// The list format is: `[count: u32][element_0][element_1]...[element_n]`
-    pub fn read_simple_list<T: GMElement>(&mut self) -> Result<Vec<T>> {
-        let count = self.read_u32()?;
-        self.read_simple_list_internal(count, T::deserialize)
+        Ok(elements)
     }
 
     /// Reads a GameMaker simple list with a 16-bit count prefix.
     ///
-    /// The list format is: `[count: u16][element_0][element_1]...[element_n]`
-    /// Uses a smaller failsafe limit appropriate for short lists.
-    pub fn read_simple_list_short<T: GMElement>(&mut self) -> Result<Vec<T>> {
-        let count = self.read_u16()?;
-        self.read_simple_list_internal(u32::from(count), T::deserialize)
-    }
-
-    /// Reads a simple list of resource IDs and wraps them in [`GMRef`].
+    /// Simple lists consist of a count followed by the elements' data in sequence.
+    /// Includes a failsafe check to prevent excessive memory allocation from malformed data.
     ///
-    /// Each element is a 32-bit resource ID that gets resolved to a reference.
-    pub fn read_simple_list_of_resource_ids<T>(&mut self) -> Result<Vec<GMRef<T>>> {
-        let count = self.read_u32()?;
-        self.read_simple_list_internal(count, Self::read_resource_by_id)
-    }
+    /// The list format is: `[count: u16][element_0][element_1]...[element_n]`
+    pub fn read_simple_list_short<T: GMElement>(&mut self) -> Result<Vec<T>> {
+        let count = u32::from(self.read_u16()?);
+        let mut elements: Vec<T> = vec_with_capacity(count).context("reading short simple list")?;
 
-    /// Reads a simple list of GameMaker string references.
-    pub fn read_simple_list_of_strings(&mut self) -> Result<Vec<String>> {
-        let count = self.read_u32()?;
-        self.read_simple_list_internal(count, Self::read_gm_string)
+        for _ in 0..count {
+            let element = T::deserialize(self).with_context(|| {
+                format!(
+                    "deserializing element {}/{} of {} short simple list",
+                    elements.len(),
+                    count,
+                    typename::<T>(),
+                )
+            })?;
+            elements.push(element);
+        }
+
+        Ok(elements)
     }
 
     pub fn read_pointer_list<T: GMElement>(&mut self) -> Result<Vec<T>> {
-        // TODO implement 2024.11+ null pointers (unused asset removal)
+        // TODO(important): implement 2024.11+ null pointers (unused asset removal)
         let pointers: Vec<u32> = self.read_simple_list()?;
         let count = pointers.len();
 
@@ -84,13 +79,35 @@ impl DataReader<'_> {
 
     fn read_pointer_element<T: GMElement>(&mut self, pointer: u32, is_last: bool) -> Result<T> {
         T::deserialize_pre_padding(self)?;
-        self.assert_pos(pointer, &typename::<T>())?;
+
+        // Manually assert position
+        if self.cur_pos != pointer {
+            let name = typename::<T>();
+
+            if pointer == 0 {
+                bail!(
+                    "{} pointer is zero at position {}! Null pointers are not yet supported",
+                    name,
+                    self.cur_pos,
+                )
+            }
+
+            bail!(
+                "{} pointer misaligned: expected position {} but reader is actually at {} (diff: {})",
+                name,
+                pointer,
+                self.cur_pos,
+                i64::from(pointer) - i64::from(self.cur_pos),
+            )
+        }
+
         let element = T::deserialize(self)?;
         T::deserialize_post_padding(self, is_last)?;
+
         Ok(element)
     }
 
-    /// Called `UndertaleAlignUpdatedListChunk` in UTMT.
+    /// This is called `UndertaleAlignUpdatedListChunk` in UTMT.
     /// Used for BGND (and STRG).
     pub fn read_aligned_list_chunk<T: GMElement>(
         &mut self,

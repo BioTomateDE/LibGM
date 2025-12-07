@@ -43,19 +43,22 @@ fn listdir(dir: &Path) -> Result<Vec<PathBuf>> {
         .context("reading data file folder")?;
 
     for entry in dir {
-        let path = entry
+        let entry = entry
             .map_err(|e| e.to_string())
-            .context("reading directory entry metadata")?
-            .path();
+            .context("reading directory entry metadata")?;
+
+        let path = entry.path();
         if !path.is_file() {
             continue;
         }
         let Some(ext) = path.extension() else {
             continue;
         };
+
         let ext = ext
             .to_str()
             .ok_or("Invalid File extension UTF-8 String {ext:?}")?;
+
         if matches!(ext, "win" | "unx" | "ios" | "droid") {
             data_file_paths.push(path);
         }
@@ -64,56 +67,57 @@ fn listdir(dir: &Path) -> Result<Vec<PathBuf>> {
     Ok(data_file_paths)
 }
 
-fn run(mut args: Args) -> Result<()> {
-    if args.files.is_empty() {
-        args.files.push(PathBuf::from("data.win"));
-    }
+fn get_data_files(input_files: &[PathBuf]) -> Result<Vec<PathBuf>> {
+    let mut files: Vec<PathBuf> = Vec::new();
 
-    // Very clunky test deduplication
-    args.tests.dedup();
-    if args.tests.contains(&Test::All) {
-        args.tests = vec![Test::All];
-    }
-
-    let mut files = Vec::new();
-    for path in args.files {
-        let metadata = std::fs::metadata(&path)
+    for path in input_files {
+        let metadata = std::fs::metadata(path)
             .map_err(|e| e.to_string())
             .with_context(|| format!("reading metadata of {path:?}"))?;
+
         if metadata.is_dir() {
             let dir_files =
-                listdir(&path).with_context(|| format!("reading entries of dir {path:?}"))?;
+                listdir(path).with_context(|| format!("reading entries of dir {path:?}"))?;
             files.extend(dir_files);
         } else {
-            files.push(path);
+            files.push(path.to_path_buf());
         }
     }
 
+    Ok(files)
+}
+
+fn run(mut args: Args) -> Result<()> {
+    if args.files.is_empty() {
+        args.files = vec![PathBuf::from("data.win")];
+    }
+
+    let tests: Vec<Test> = tests::deduplicate(args.tests);
+
+    let files: Vec<PathBuf> = get_data_files(&args.files)?;
+
     for data_file in files {
-        log::info!("Parsing data file {data_file:?}");
+        log::info!("Parsing data file {}", data_file.display());
         let mut data: GMData = read_data_file(data_file)?;
 
-        tests::perform(&data, &args.tests)?;
+        tests::perform(&data, &tests)?;
+
+        for action in &args.actions {
+            action.perform(&mut data)?;
+        }
 
         if let Some(out_file) = &args.out {
-            for action in &args.actions {
-                action.perform(&mut data)?;
-            }
-
-            log::info!("Building data file {out_file:?}");
+            log::info!("Building data file {}", out_file.display());
             write_data_file(&data, out_file)?;
+
+            diff(&data, read_data_file(out_file)?);
         }
     }
 
     Ok(())
 }
 
-fn diff() -> Result<()> {
-    let a = Path::new("data.win");
-    let a = read_data_file(a)?;
-    let b = Path::new("game.unx");
-    let b = read_data_file(b)?;
-
+fn diff(a: &GMData, b: GMData) {
     dbg!(size_of::<GMData>());
     dbg!(a.animation_curves == b.animation_curves);
     dbg!(a.audio_groups == b.audio_groups);
@@ -148,7 +152,6 @@ fn diff() -> Result<()> {
     dbg!(a.timelines == b.timelines);
     dbg!(a.embedded_textures == b.embedded_textures);
     dbg!(a.variables == b.variables);
-    Ok(())
 }
 
 fn main() {

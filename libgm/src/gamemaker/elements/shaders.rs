@@ -46,7 +46,7 @@ impl GMElement for GMShaders {
             let hlsl11_vertex_ptr = reader.read_u32()?;
             let hlsl11_pixel_ptr = reader.read_u32()?;
 
-            let vertex_shader_attributes: Vec<String> = reader.read_simple_list_of_strings()?;
+            let vertex_shader_attributes: Vec<String> = reader.read_simple_list()?;
 
             let mut version: i32 = 2;
             let mut pssl_vertex_ptr = 0;
@@ -201,7 +201,7 @@ impl GMElement for GMShader {
         builder.write_pointer_opt(&self.hlsl11_vertex_data);
         builder.write_pointer_opt(&self.hlsl11_pixel_data);
 
-        builder.write_simple_list_of_strings(&self.vertex_shader_attributes)?;
+        builder.write_simple_list(&self.vertex_shader_attributes)?;
 
         if builder.bytecode_version() > 13 {
             builder.write_i32(self.version);

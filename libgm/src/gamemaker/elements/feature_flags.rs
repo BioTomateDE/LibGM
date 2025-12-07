@@ -16,13 +16,13 @@ pub struct GMFeatureFlags {
 impl GMElement for GMFeatureFlags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
-        let feature_flags: Vec<String> = reader.read_simple_list_of_strings()?;
+        let feature_flags: Vec<String> = reader.read_simple_list()?;
         Ok(Self { feature_flags, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.align(4);
-        builder.write_simple_list_of_strings(&self.feature_flags)?;
+        builder.write_simple_list(&self.feature_flags)?;
         Ok(())
     }
 }

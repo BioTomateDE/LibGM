@@ -15,6 +15,25 @@ pub enum Test {
     NameValidation,
 }
 
+const ALL_TESTS: &[Test] = &[Test::Reparse, Test::Assembler, Test::NameValidation];
+
+pub fn deduplicate(mut tests: Vec<Test>) -> Vec<Test> {
+    if tests.contains(&Test::All) {
+        return ALL_TESTS.to_vec();
+    }
+
+    tests.dedup();
+
+    if tests.contains(&Test::Reparse) {
+        let builder_index = tests.iter().position(|&t| t == Test::Builder);
+        if let Some(index) = builder_index {
+            tests.remove(index);
+        }
+    }
+
+    tests
+}
+
 pub fn perform(data: &GMData, tests: &[Test]) -> Result<()> {
     println!();
 
