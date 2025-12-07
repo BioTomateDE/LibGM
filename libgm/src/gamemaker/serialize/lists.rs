@@ -1,5 +1,5 @@
 use crate::{
-    gamemaker::{elements::GMElement, reference::GMRef, serialize::builder::DataBuilder},
+    gamemaker::{elements::GMElement, serialize::builder::DataBuilder},
     prelude::*,
     util::fmt::typename,
 };
@@ -20,22 +20,6 @@ impl DataBuilder<'_> {
         self.write_usize(count).with_context(ctx)?;
         for element in elements {
             element.serialize(self).with_context(ctx)?;
-        }
-        Ok(())
-    }
-
-    pub fn write_simple_list_of_resource_ids<T>(&mut self, elements: &Vec<GMRef<T>>) -> Result<()> {
-        self.write_usize(elements.len())?;
-        for gm_ref in elements {
-            self.write_resource_id(*gm_ref);
-        }
-        Ok(())
-    }
-
-    pub fn write_simple_list_of_strings(&mut self, elements: &Vec<String>) -> Result<()> {
-        self.write_usize(elements.len())?;
-        for string in elements {
-            self.write_gm_string(string);
         }
         Ok(())
     }

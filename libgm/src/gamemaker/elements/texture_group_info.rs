@@ -87,11 +87,10 @@ impl GMElement for GMTextureGroupInfo {
         let tilesets_ptr = reader.read_u32()?;
 
         reader.assert_pos(texture_pages_ptr, "Texture Pages")?;
-        let texture_pages: Vec<GMRef<GMEmbeddedTexture>> =
-            reader.read_simple_list_of_resource_ids()?;
+        let texture_pages: Vec<GMRef<GMEmbeddedTexture>> = reader.read_simple_list()?;
 
         reader.assert_pos(sprites_ptr, "Sprites")?;
-        let sprites: Vec<GMRef<GMSprite>> = reader.read_simple_list_of_resource_ids()?;
+        let sprites: Vec<GMRef<GMSprite>> = reader.read_simple_list()?;
 
         let spine_sprites: Vec<GMRef<GMSprite>> =
             if reader
@@ -101,14 +100,14 @@ impl GMElement for GMTextureGroupInfo {
                 Vec::new()
             } else {
                 reader.assert_pos(spine_sprites_ptr, "Spine Sprites")?;
-                reader.read_simple_list_of_resource_ids()?
+                reader.read_simple_list()?
             };
 
         reader.assert_pos(fonts_ptr, "Fonts")?;
-        let fonts: Vec<GMRef<GMFont>> = reader.read_simple_list_of_resource_ids()?;
+        let fonts: Vec<GMRef<GMFont>> = reader.read_simple_list()?;
 
         reader.assert_pos(tilesets_ptr, "Tilesets")?;
-        let tilesets: Vec<GMRef<GMBackground>> = reader.read_simple_list_of_resource_ids()?;
+        let tilesets: Vec<GMRef<GMBackground>> = reader.read_simple_list()?;
 
         Ok(Self {
             name,
@@ -137,21 +136,21 @@ impl GMElement for GMTextureGroupInfo {
         builder.write_pointer(&self.tilesets);
 
         builder.resolve_pointer(&self.texture_pages)?;
-        builder.write_simple_list_of_resource_ids(&self.texture_pages)?;
+        builder.write_simple_list(&self.texture_pages)?;
 
         builder.resolve_pointer(&self.sprites)?;
-        builder.write_simple_list_of_resource_ids(&self.sprites)?;
+        builder.write_simple_list(&self.sprites)?;
 
         if !builder.is_gm_version_at_least((2023, 1, LTSBranch::PostLTS)) {
             builder.resolve_pointer(&self.spine_sprites)?;
-            builder.write_simple_list_of_resource_ids(&self.spine_sprites)?;
+            builder.write_simple_list(&self.spine_sprites)?;
         }
 
         builder.resolve_pointer(&self.fonts)?;
-        builder.write_simple_list_of_resource_ids(&self.fonts)?;
+        builder.write_simple_list(&self.fonts)?;
 
         builder.resolve_pointer(&self.tilesets)?;
-        builder.write_simple_list_of_resource_ids(&self.tilesets)?;
+        builder.write_simple_list(&self.tilesets)?;
 
         Ok(())
     }

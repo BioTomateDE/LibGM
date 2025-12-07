@@ -37,7 +37,7 @@ impl ChunkName {
         if !valid {
             let hexdump = hexdump(&bytes, ..).unwrap();
             bail!(
-                "Expected chunk name >{hexdump}< to only \
+                "Expected chunk name [{hexdump}] to only \
                 consist of uppercase ASCII letters and digits"
             );
         }

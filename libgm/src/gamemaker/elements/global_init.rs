@@ -17,12 +17,12 @@ pub struct GMGlobalInitScripts {
 
 impl GMElement for GMGlobalInitScripts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let global_init_scripts: Vec<GMRef<GMCode>> = reader.read_simple_list_of_resource_ids()?;
+        let global_init_scripts: Vec<GMRef<GMCode>> = reader.read_simple_list()?;
         Ok(Self { global_init_scripts, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_simple_list_of_resource_ids(&self.global_init_scripts)?;
+        builder.write_simple_list(&self.global_init_scripts)?;
         Ok(())
     }
 }

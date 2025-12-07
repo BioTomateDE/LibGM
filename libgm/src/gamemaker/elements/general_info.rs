@@ -7,7 +7,7 @@ use crate::{
         data::Endianness,
         deserialize::reader::DataReader,
         elements::{GMChunk, GMElement, rooms::GMRoom},
-        gm_version::{GMVersion, GMVersionReq},
+        gm_version::{GMVersion, GMVersionReq, LTSBranch},
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
@@ -184,7 +184,7 @@ impl GMElement for GMGeneralInfo {
         let function_classifications = GMFunctionClassifications::deserialize(reader)?;
         let steam_appid = reader.read_i32()?;
         let debugger_port: Option<u32> = reader.deserialize_if_bytecode_version(14)?;
-        let room_order: Vec<GMRef<GMRoom>> = reader.read_simple_list_of_resource_ids()?;
+        let room_order: Vec<GMRef<GMRoom>> = reader.read_simple_list()?;
 
         let mut gms2_info: Option<GMGeneralInfoGMS2> = None;
         if version.major >= 2 {
@@ -300,8 +300,9 @@ impl GMElement for GMGeneralInfo {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists {
-            bail!("General info was never deserialized");
+            bail!("General info is a required chunk");
         }
+
         builder.write_u8(self.is_debugger_disabled.into());
         builder.write_u8(self.bytecode_version);
         builder.write_u16(self.unknown_value);
@@ -312,15 +313,14 @@ impl GMElement for GMGeneralInfo {
         builder.write_u32(self.game_id);
         builder.write_bytes(self.directplay_guid.to_bytes_le().as_slice());
         builder.write_gm_string(&self.game_name);
-        self.version.serialize(builder)?; // Technically incorrect but idc
-        // if self.version.major == 1 {
-        //     self.version.serialize(builder)?;
-        // } else {    // Yoyogames moment
-        //     builder.write_u32(2);
-        //     builder.write_u32(0);
-        //     builder.write_u32(0);
-        //     builder.write_u32(0);
-        // }
+
+        let version = if self.version.major == 1 {
+            &self.version
+        } else {
+            &GMVersion::new(2, 0, 0, 0, LTSBranch::PreLTS)
+        };
+        version.serialize(builder)?;
+
         builder.write_u32(self.default_window_width);
         builder.write_u32(self.default_window_height);
         self.flags.serialize(builder)?;
@@ -333,10 +333,9 @@ impl GMElement for GMGeneralInfo {
         builder.write_i32(self.steam_appid);
         self.debugger_port
             .serialize_if_bytecode_ver(builder, "Debugger Port", 14)?;
-        builder.write_usize(self.room_order.len())?;
-        for room_ref in &self.room_order {
-            builder.write_resource_id(*room_ref);
-        }
+
+        builder.write_simple_list(&self.room_order)?;
+
         if builder.is_gm_version_at_least((2, 0)) {
             // Write random UID
             let gms2_info: &GMGeneralInfoGMS2 = self

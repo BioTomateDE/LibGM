@@ -228,13 +228,6 @@ impl<'a> DataReader<'a> {
     /// Ensures the reader is at the specified position.
     pub fn assert_pos(&self, position: u32, pointer_name: &str) -> Result<()> {
         if self.cur_pos != position {
-            if position == 0 {
-                bail!(
-                    "{} pointer is zero at position {}! Null pointers are not yet supported.",
-                    pointer_name,
-                    self.cur_pos,
-                )
-            }
             bail!(
                 "{} pointer misaligned: expected position {} but reader is actually at {} (diff: {})",
                 pointer_name,

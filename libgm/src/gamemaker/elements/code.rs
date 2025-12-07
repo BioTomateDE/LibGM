@@ -1117,6 +1117,14 @@ fn write_function_occurrence(
 pub(crate) fn check_yyc(reader: &DataReader) -> Result<bool> {
     // If the CODE chunk doesn't exist; the data file was compiled with YYC.
     let Some(code) = reader.chunks.get("CODE") else {
+        if reader.chunks.contains("VARI") {
+            bail!("Chunk VARI exists but CODE doesn't");
+        }
+
+        if reader.chunks.contains("FUNC") {
+            bail!("Chunk FUNC exists but CODE and VARI don't");
+        }
+
         return Ok(true);
     };
 
@@ -1137,7 +1145,7 @@ pub(crate) fn check_yyc(reader: &DataReader) -> Result<bool> {
     }
 
     if reader.general_info.bytecode_version > 16 {
-        bail!("Empty, but existant CODE chunk before bytecode 17");
+        log::warn!("Empty, but existant CODE chunk after bytecode 16");
     }
 
     if !vari.is_empty() {

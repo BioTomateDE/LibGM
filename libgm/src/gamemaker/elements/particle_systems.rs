@@ -50,7 +50,7 @@ impl GMElement for GMParticleSystem {
         let origin_y = reader.read_i32()?;
         let draw_order = reader.read_i32()?;
         let global_space_particles: Option<bool> = reader.deserialize_if_gm_version((2023, 8))?;
-        let emitters: Vec<GMRef<GMParticleEmitter>> = reader.read_simple_list_of_resource_ids()?;
+        let emitters: Vec<GMRef<GMParticleEmitter>> = reader.read_simple_list()?;
         Ok(Self {
             name,
             origin_x,
@@ -71,7 +71,7 @@ impl GMElement for GMParticleSystem {
             "Global Space Particles",
             (2023, 8),
         )?;
-        builder.write_simple_list_of_resource_ids(&self.emitters)?;
+        builder.write_simple_list(&self.emitters)?;
         Ok(())
     }
 }

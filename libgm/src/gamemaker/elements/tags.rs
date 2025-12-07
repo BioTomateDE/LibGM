@@ -21,7 +21,7 @@ impl GMElement for GMTags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
         assert_int("TAGS Version", 1, reader.read_u32()?)?;
-        let tags: Vec<String> = reader.read_simple_list_of_strings()?;
+        let tags: Vec<String> = reader.read_simple_list()?;
         let temp_asset_tags: Vec<TempAssetTags> = reader.read_pointer_list()?;
 
         let mut asset_tags: HashMap<i32, Vec<String>> = HashMap::new();
@@ -42,7 +42,7 @@ impl GMElement for GMTags {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.align(4);
         builder.write_i32(1); // TAGS version
-        builder.write_simple_list_of_strings(&self.tags)?;
+        builder.write_simple_list(&self.tags)?;
         let temp_asset_tags: Vec<TempAssetTags> = self
             .asset_tags
             .clone()
@@ -63,13 +63,13 @@ struct TempAssetTags {
 impl GMElement for TempAssetTags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let id = reader.read_i32()?;
-        let tags: Vec<String> = reader.read_simple_list_of_strings()?;
+        let tags: Vec<String> = reader.read_simple_list()?;
         Ok(Self { id, tags })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(self.id);
-        builder.write_simple_list_of_strings(&self.tags)?;
+        builder.write_simple_list(&self.tags)?;
         Ok(())
     }
 }
