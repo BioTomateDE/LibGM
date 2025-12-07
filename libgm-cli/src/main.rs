@@ -109,49 +109,10 @@ fn run(mut args: Args) -> Result<()> {
         if let Some(out_file) = &args.out {
             log::info!("Building data file {}", out_file.display());
             write_data_file(&data, out_file)?;
-
-            diff(&data, read_data_file(out_file)?);
         }
     }
 
     Ok(())
-}
-
-fn diff(a: &GMData, b: GMData) {
-    dbg!(size_of::<GMData>());
-    dbg!(a.animation_curves == b.animation_curves);
-    dbg!(a.audio_groups == b.audio_groups);
-    dbg!(a.audios == b.audios);
-    dbg!(a.backgrounds == b.backgrounds);
-    dbg!(a.codes == b.codes);
-    dbg!(a.embedded_images == b.embedded_images);
-    dbg!(a.extensions == b.extensions);
-    dbg!(a.feature_flags == b.feature_flags);
-    dbg!(a.filter_effects == b.filter_effects);
-    dbg!(a.fonts == b.fonts);
-    dbg!(a.functions == b.functions);
-    dbg!(a.game_end_scripts == b.game_end_scripts);
-    dbg!(a.game_objects == b.game_objects);
-    dbg!(a.general_info == b.general_info);
-    dbg!(a.global_init_scripts == b.global_init_scripts);
-    dbg!(a.language_info == b.language_info);
-    dbg!(a.options == b.options);
-    dbg!(a.particle_emitters == b.particle_emitters);
-    dbg!(a.particle_systems == b.particle_systems);
-    dbg!(a.paths == b.paths);
-    dbg!(a.rooms == b.rooms);
-    dbg!(a.root_ui_nodes == b.root_ui_nodes);
-    dbg!(a.scripts == b.scripts);
-    dbg!(a.sequences == b.sequences);
-    dbg!(a.shaders == b.shaders);
-    dbg!(a.sounds == b.sounds);
-    dbg!(a.sprites == b.sprites);
-    dbg!(a.tags == b.tags);
-    dbg!(a.texture_group_infos == b.texture_group_infos);
-    dbg!(a.texture_page_items == b.texture_page_items);
-    dbg!(a.timelines == b.timelines);
-    dbg!(a.embedded_textures == b.embedded_textures);
-    dbg!(a.variables == b.variables);
 }
 
 fn main() {

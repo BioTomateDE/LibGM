@@ -152,8 +152,8 @@ impl DataParser {
         // Required: GEN8 --> all others
         //
         // Then (in any order):
-        // • [FUNC, VARI, STRG] --> CODE
-        // • TPAG --> [BGND, EMBI, FONT, OPTN, SPRT]
+        // * [FUNC, VARI, STRG] --> CODE
+        // * TPAG --> [BGND, EMBI, FONT, OPTN, SPRT]
 
         reader.string_chunk = reader
             .chunks
@@ -186,7 +186,9 @@ impl DataParser {
         let texture_page_items: GMTexturePageItems = reader.read_chunk()?;
 
         let mut stopwatch2 = Stopwatch::start();
-        if !is_yyc {
+        if is_yyc {
+            log::warn!("YYC is untested, issues may occur");
+        } else {
             reader.read_chunk::<GMStrings>()?; // Set `reader.strings`
             variables = reader.read_chunk()?; // Set `reader.variable_occurrences`
             functions = reader.read_chunk()?; // Set `reader.function_occurrences`

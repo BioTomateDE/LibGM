@@ -45,6 +45,9 @@ pub struct GMParticleSystem {
 
 impl GMElement for GMParticleSystem {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        if reader.chunk.length() > 4 {
+            log::warn!("Particle systems are not tested");
+        }
         let name: String = reader.read_gm_string()?;
         let origin_x = reader.read_i32()?;
         let origin_y = reader.read_i32()?;

@@ -304,8 +304,8 @@ impl GMElement for GMSprite {
         builder.write_u32(self.height);
         builder.write_i32(self.margin_left);
         builder.write_i32(self.margin_right);
-        builder.write_i32(self.margin_top);
         builder.write_i32(self.margin_bottom);
+        builder.write_i32(self.margin_top);
         builder.write_bool32(self.transparent);
         builder.write_bool32(self.smooth);
         builder.write_bool32(self.preload);

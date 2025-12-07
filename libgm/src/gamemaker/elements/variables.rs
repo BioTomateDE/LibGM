@@ -28,6 +28,7 @@ pub struct GMVariables {
 }
 
 impl GMVariables {
+    // This method is still buggy, use with caution.
     // TODO: make this work for bytecode 14. also docs. also vari_instance_type is wrong/buggy?
     pub fn make(
         &mut self,

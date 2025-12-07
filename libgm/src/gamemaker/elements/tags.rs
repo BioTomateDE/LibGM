@@ -45,9 +45,8 @@ impl GMElement for GMTags {
         builder.write_simple_list(&self.tags)?;
         let temp_asset_tags: Vec<TempAssetTags> = self
             .asset_tags
-            .clone()
-            .into_iter()
-            .map(|(id, tags)| TempAssetTags { id, tags })
+            .iter()
+            .map(|(&id, tags)| TempAssetTags { id, tags: tags.clone() })
             .collect();
         builder.write_pointer_list(&temp_asset_tags)?;
         Ok(())
