@@ -172,8 +172,10 @@ impl GMElement for GMCodes {
         for (i, code) in self.codes.iter().enumerate() {
             if code.bytecode15_info.as_ref().unwrap().parent.is_some() {
                 // If this is a child code entry, don't write instructions; just repeat last pointer
-                instructions_ranges.push(*instructions_ranges.last().unwrap());
-                // ^ TODO: this unwrap will fail if the first entry is a child entry (which is invalid but still)
+                let prev_range = instructions_ranges
+                    .last()
+                    .ok_or("First code entry is a child code entry")?;
+                instructions_ranges.push(*prev_range);
                 continue;
             }
 

@@ -319,8 +319,9 @@ pub struct BZip2QoiHeader {
     uncompressed_size: Option<u32>,
 }
 
-/// **This is not an actual `GMElement`!**
-/// TODO: make this unmatchable for lib users
+/// The variants of this enum are considered library internal.
+/// They may change in semver patch versions.
+/// You are only meant to use the attached methods.
 #[non_exhaustive]
 #[derive(Debug, Clone)]
 pub enum GMImage {

@@ -295,7 +295,7 @@ pub trait GMNamedListChunk: GMListChunk<Element: GMNamedElement> {
 
 pub(crate) fn validate_names<T: GMNamedListChunk>(chunk: &T) -> Result<()> {
     let elements = chunk.elements();
-    let mut seen: HashMap<String, usize> = HashMap::new();
+    let mut seen: HashMap<&String, usize> = HashMap::new();
 
     for (i, item) in elements.iter().enumerate() {
         let name = item.name();
@@ -308,8 +308,7 @@ pub(crate) fn validate_names<T: GMNamedListChunk>(chunk: &T) -> Result<()> {
             )
         })?;
 
-        // TODO: avoid name cloning
-        let Some(first_index) = seen.insert(name.clone(), i) else {
+        let Some(first_index) = seen.insert(name, i) else {
             continue;
         };
 

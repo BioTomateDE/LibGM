@@ -36,6 +36,7 @@ impl GMElement for GMAnimationCurves {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMAnimationCurve {
     pub name: String,
+    /// This field may change in the future.
     /// TODO: migrate to an enum
     pub graph_type: u32,
     pub channels: Vec<GMAnimationCurveChannel>,

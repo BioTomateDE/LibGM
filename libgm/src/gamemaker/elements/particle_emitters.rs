@@ -20,6 +20,9 @@ pub struct GMParticleEmitters {
 
 impl GMElement for GMParticleEmitters {
     fn deserialize(reader: &mut DataReader) -> crate::error::Result<Self> {
+        if reader.chunk.length() > 4 {
+            log::warn!("Particle emitters are not tested");
+        }
         reader.align(4)?;
         assert_int("PSEM Version", 1, reader.read_u32()?)?;
         let emitters: Vec<GMParticleEmitter> = reader.read_pointer_list()?;

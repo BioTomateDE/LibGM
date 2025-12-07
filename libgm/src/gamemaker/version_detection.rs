@@ -145,7 +145,6 @@ fn create_version_checks() -> Vec<VersionCheck> {
 /// Note that games which never use new features might be incorrectly detected
 /// as an older version.
 pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
-    // TODO:  clean up ts function
     let saved_pos = reader.cur_pos;
     let saved_chunk: ChunkBounds = reader.chunk.clone();
 
