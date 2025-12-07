@@ -1,12 +1,13 @@
-use macros::list_chunk;
+use macros::named_list_chunk;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
         elements::{
-            GMElement, backgrounds::GMBackground, embedded_textures::GMEmbeddedTexture,
-            fonts::GMFont, sprites::GMSprite,
+            GMElement, GMNamedElement, backgrounds::GMBackground,
+            embedded_textures::GMEmbeddedTexture, fonts::GMFont, sprites::GMSprite,
+            validate_identifier,
         },
         gm_version::LTSBranch,
         reference::GMRef,
@@ -16,7 +17,7 @@ use crate::{
     util::{assert::assert_int, init::num_enum_from},
 };
 
-#[list_chunk("TGIN")]
+#[named_list_chunk("TGIN", name_exception)]
 pub struct GMTextureGroupInfos {
     pub texture_group_infos: Vec<GMTextureGroupInfo>,
     pub exists: bool,
@@ -45,6 +46,25 @@ pub struct GMTextureGroupInfo {
     pub fonts: Vec<GMRef<GMFont>>,
     pub tilesets: Vec<GMRef<GMBackground>>,
     pub data_2022_9: Option<GMTextureGroupInfo2022_9>,
+}
+
+impl GMNamedElement for GMTextureGroupInfo {
+    fn name(&self) -> &String {
+        &self.name
+    }
+
+    fn name_mut(&mut self) -> &mut String {
+        &mut self.name
+    }
+
+    fn validate_name(&self) -> Result<()> {
+        // Allow ".png" inside the identifier
+        let name = &self.name;
+        for part in name.split_terminator(".png") {
+            validate_identifier(part)?;
+        }
+        Ok(())
+    }
 }
 
 impl GMElement for GMTextureGroupInfo {

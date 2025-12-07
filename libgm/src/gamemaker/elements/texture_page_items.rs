@@ -1,40 +1,19 @@
-use std::ops::{Deref, DerefMut};
+use macros::list_chunk;
 
 use crate::{
     gamemaker::{
-        chunk::ChunkName,
         deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement, embedded_textures::GMEmbeddedTexture},
+        elements::{GMElement, embedded_textures::GMEmbeddedTexture},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
     prelude::*,
 };
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[list_chunk("TPAG")]
 pub struct GMTexturePageItems {
     pub texture_page_items: Vec<GMTexturePageItem>,
     pub exists: bool,
-}
-
-impl Deref for GMTexturePageItems {
-    type Target = Vec<GMTexturePageItem>;
-    fn deref(&self) -> &Self::Target {
-        &self.texture_page_items
-    }
-}
-
-impl DerefMut for GMTexturePageItems {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.texture_page_items
-    }
-}
-
-impl GMChunkElement for GMTexturePageItems {
-    const NAME: ChunkName = ChunkName::new("TPAG");
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMTexturePageItems {

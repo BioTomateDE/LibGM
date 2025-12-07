@@ -2,7 +2,7 @@ use crate::{
     gamemaker::{
         chunk::ChunkName,
         data::Endianness,
-        elements::GMChunkElement,
+        elements::GMChunk,
         serialize::builder::{DataBuilder, LastChunk},
     },
     prelude::*,
@@ -27,7 +27,7 @@ impl DataBuilder<'_> {
     ///
     /// Appends padding if required by the GameMaker version.
     /// This padding has to then be manually cut off for the last chunk in the data file.
-    pub fn build_chunk<T: GMChunkElement>(&mut self, element: &T) -> Result<()> {
+    pub fn build_chunk<T: GMChunk>(&mut self, element: &T) -> Result<()> {
         let name: ChunkName = T::NAME;
         if !element.exists() {
             return Ok(());

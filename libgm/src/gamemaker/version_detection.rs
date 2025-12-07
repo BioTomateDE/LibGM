@@ -16,7 +16,7 @@ use crate::{
     gamemaker::{
         chunk::ChunkName,
         deserialize::{
-            chunk::{Chunks, GMChunk},
+            chunk::{ChunkBounds, Chunks},
             reader::DataReader,
         },
         gm_version::{
@@ -147,7 +147,7 @@ fn create_version_checks() -> Vec<VersionCheck> {
 pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
     // TODO:  clean up ts function
     let saved_pos = reader.cur_pos;
-    let saved_chunk: GMChunk = reader.chunk.clone();
+    let saved_chunk: ChunkBounds = reader.chunk.clone();
 
     if let Some(version) = upgrade_by_chunk_existance(&reader.chunks) {
         reader.general_info.set_version_at_least(version)?;

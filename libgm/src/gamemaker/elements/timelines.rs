@@ -1,40 +1,19 @@
-use std::ops::{Deref, DerefMut};
+use macros::named_list_chunk;
 
 use crate::{
     gamemaker::{
-        chunk::ChunkName,
         deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement, game_objects::GMGameObjectEvent},
+        elements::{GMElement, game_objects::GMGameObjectEvent},
         serialize::builder::DataBuilder,
     },
     prelude::*,
     util::init::vec_with_capacity,
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[named_list_chunk("TMLN")]
 pub struct GMTimelines {
     pub timelines: Vec<GMTimeline>,
     pub exists: bool,
-}
-
-impl Deref for GMTimelines {
-    type Target = Vec<GMTimeline>;
-    fn deref(&self) -> &Self::Target {
-        &self.timelines
-    }
-}
-
-impl DerefMut for GMTimelines {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.timelines
-    }
-}
-
-impl GMChunkElement for GMTimelines {
-    const NAME: ChunkName = ChunkName::new("TMLN");
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMTimelines {

@@ -1,4 +1,4 @@
-use macros::{list_chunk, num_enum};
+use macros::{named_list_chunk, num_enum};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::{
@@ -12,7 +12,7 @@ use crate::{
     util::{assert::assert_int, init::num_enum_from},
 };
 
-#[list_chunk("PSEM")]
+#[named_list_chunk("PSEM")]
 pub struct GMParticleEmitters {
     pub emitters: Vec<GMParticleEmitter>,
     pub exists: bool,

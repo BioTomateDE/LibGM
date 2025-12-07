@@ -1,17 +1,16 @@
-use macros::list_chunk;
+use macros::named_list_chunk;
 
 use crate::{
     gamemaker::{
-        deserialize::{chunk::GMChunk, reader::DataReader},
-        elements::GMElement,
+        deserialize::{chunk::ChunkBounds, reader::DataReader},
+        elements::{GMElement, element_stub},
         serialize::builder::DataBuilder,
     },
     prelude::*,
     util::init::vec_with_capacity,
 };
 
-#[list_chunk("FUNC")]
-#[derive(Eq)]
+#[named_list_chunk("FUNC")]
 pub struct GMFunctions {
     pub functions: Vec<GMFunction>,
     pub code_locals: GMCodeLocals,
@@ -48,13 +47,13 @@ impl GMElement for GMFunctions {
             //}
 
             for occurrence in occurrences {
-                if let Some(old_value) = reader.function_occurrences.insert(occurrence, i.into()) {
+                if let Some(old_func) = reader.function_occurrences.insert(occurrence, i.into()) {
                     bail!(
                         "Conflicting occurrence positions while parsing functions: Position {} \
                         was already set for function #{} with name {:?}; trying to set to function #{} with name {:?}",
                         occurrence,
-                        old_value.index,
-                        old_value.resolve(&functions)?.name,
+                        old_func.index,
+                        functions[old_func.index as usize].name,
                         i,
                         name,
                     )
@@ -117,6 +116,7 @@ impl GMElement for GMFunctions {
 pub struct GMFunction {
     pub name: String,
 }
+element_stub!(GMFunction);
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMCodeLocals {
@@ -193,7 +193,7 @@ fn parse_occurrence_chain(
         return Ok((vec![], first_occurrence_pos));
     }
 
-    let saved_chunk: GMChunk = reader.chunk.clone();
+    let saved_chunk: ChunkBounds = reader.chunk.clone();
     let saved_position = reader.cur_pos;
     reader.chunk = reader
         .chunks

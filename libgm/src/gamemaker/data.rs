@@ -1,21 +1,25 @@
-use crate::gamemaker::elements::{
-    animation_curves::GMAnimationCurves, audio_groups::GMAudioGroups, backgrounds::GMBackgrounds,
-    code::GMCodes, embedded_audio::GMEmbeddedAudios, embedded_images::GMEmbeddedImages,
-    embedded_textures::GMEmbeddedTextures, extensions::GMExtensions, feature_flags::GMFeatureFlags,
-    filter_effects::GMFilterEffects, fonts::GMFonts, functions::GMFunctions,
-    game_end::GMGameEndScripts, game_objects::GMGameObjects, general_info::GMGeneralInfo,
-    global_init::GMGlobalInitScripts, languages::GMLanguageInfo, options::GMOptions,
-    particle_emitters::GMParticleEmitters, particle_systems::GMParticleSystems, paths::GMPaths,
-    rooms::GMRooms, scripts::GMScripts, sequence::GMSequences, shaders::GMShaders,
-    sounds::GMSounds, sprites::GMSprites, tags::GMTags, texture_group_info::GMTextureGroupInfos,
-    texture_page_items::GMTexturePageItems, timelines::GMTimelines, ui_nodes::GMRootUINodes,
-    variables::GMVariables,
+use crate::{
+    gamemaker::elements::{
+        animation_curves::GMAnimationCurves, audio_groups::GMAudioGroups,
+        backgrounds::GMBackgrounds, code::GMCodes, embedded_audio::GMEmbeddedAudios,
+        embedded_images::GMEmbeddedImages, embedded_textures::GMEmbeddedTextures,
+        extensions::GMExtensions, feature_flags::GMFeatureFlags, filter_effects::GMFilterEffects,
+        fonts::GMFonts, functions::GMFunctions, game_end::GMGameEndScripts,
+        game_objects::GMGameObjects, general_info::GMGeneralInfo, global_init::GMGlobalInitScripts,
+        languages::GMLanguageInfo, options::GMOptions, particle_emitters::GMParticleEmitters,
+        particle_systems::GMParticleSystems, paths::GMPaths, rooms::GMRooms, scripts::GMScripts,
+        sequence::GMSequences, shaders::GMShaders, sounds::GMSounds, sprites::GMSprites,
+        tags::GMTags, texture_group_info::GMTextureGroupInfos,
+        texture_page_items::GMTexturePageItems, timelines::GMTimelines, ui_nodes::GMRootUINodes,
+        validate_names, variables::GMVariables,
+    },
+    prelude::*,
 };
 
 /// Byte order (endianness) for integers and chunk names in data files.
 ///
 /// Most modern platforms use little-endian, which is the default.
-/// Big-endian support exists for legacy platforms and may be deprecated.
+/// Big-endian support exists for legacy platforms and **may be deprecated**.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Endianness {
     /// Little-endian byte order (reversed bytes).
@@ -71,20 +75,20 @@ pub struct GMData {
     /// Indicates the number of padding bytes (null bytes) between chunks.
     /// Note that the last chunk does not get padding.
     /// This padding is influenced by the data file's GameMaker Version, as well as target platform/architecture.
-    pub chunk_padding: u32,
+    pub(crate) chunk_padding: u32,
 
     /// Indicates the data's byte endianness.
     /// This affects byte order of integers and chunk names.
     /// In most cases (and assumed by default), this is set to little-endian.
     /// Big-endian is an edge case for certain target platforms (e.g. PS3 or Xbox 360)
     /// and its support may be removed in the future.
-    pub endianness: Endianness,
+    pub(crate) endianness: Endianness,
 
     /// The size of the original data file; useful for
     /// approximating the size of the modified data file.
     /// This is a micro optimisation. This field's value
     /// can be initialized to zero without any problems.
-    pub original_data_size: u32,
+    pub(crate) original_data_size: u32,
 }
 
 impl Default for GMData {
@@ -129,5 +133,32 @@ impl Default for GMData {
             endianness: Endianness::Little,
             original_data_size: 0,
         }
+    }
+}
+
+impl GMData {
+    /// Validate all names of all named root elements.
+    /// This checks for duplicates as well as name charset.
+    pub fn validate_names(&self) -> Result<()> {
+        validate_names(&self.animation_curves)?;
+        validate_names(&self.audio_groups)?;
+        validate_names(&self.backgrounds)?;
+        validate_names(&self.codes)?;
+        validate_names(&self.embedded_images)?;
+        validate_names(&self.filter_effects)?;
+        validate_names(&self.fonts)?;
+        validate_names(&self.functions)?;
+        validate_names(&self.game_objects)?;
+        validate_names(&self.particle_emitters)?;
+        validate_names(&self.particle_systems)?;
+        validate_names(&self.paths)?;
+        validate_names(&self.rooms)?;
+        validate_names(&self.scripts)?;
+        validate_names(&self.sequences)?;
+        validate_names(&self.shaders)?;
+        validate_names(&self.sounds)?;
+        validate_names(&self.sprites)?;
+        validate_names(&self.texture_group_infos)?;
+        Ok(())
     }
 }

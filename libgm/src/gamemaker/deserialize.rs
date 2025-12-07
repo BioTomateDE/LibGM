@@ -10,7 +10,7 @@ use crate::{
     gamemaker::{
         data::{Endianness, GMData},
         deserialize::{
-            chunk::{Chunks, GMChunk},
+            chunk::{ChunkBounds, Chunks},
             reader::DataReader,
         },
         elements::{
@@ -357,7 +357,7 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
             reader.last_chunk.clone_from(&name);
         }
 
-        let chunk = GMChunk { start_pos, end_pos };
+        let chunk = ChunkBounds { start_pos, end_pos };
         reader.chunks.push(name, chunk)?;
     }
 

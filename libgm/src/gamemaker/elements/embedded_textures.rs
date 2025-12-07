@@ -2,18 +2,17 @@ use std::{
     borrow::Cow,
     cmp::max,
     io::{Cursor, Read},
-    ops::{Deref, DerefMut},
 };
 
 use bzip2::read::BzDecoder;
 use image::{self, DynamicImage, ImageFormat};
+use macros::list_chunk;
 
 use crate::{
     gamemaker::{
-        chunk::ChunkName,
         data::Endianness,
         deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement},
+        elements::GMElement,
         qoi,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
@@ -25,30 +24,10 @@ pub(crate) const MAGIC_PNG_HEADER: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A
 pub(crate) const MAGIC_BZ2_QOI_HEADER: &[u8; 4] = b"2zoq";
 pub(crate) const MAGIC_QOI_HEADER: &[u8; 4] = b"fioq";
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[list_chunk("TXTR")]
 pub struct GMEmbeddedTextures {
     pub texture_pages: Vec<GMEmbeddedTexture>,
     pub exists: bool,
-}
-
-impl Deref for GMEmbeddedTextures {
-    type Target = Vec<GMEmbeddedTexture>;
-    fn deref(&self) -> &Self::Target {
-        &self.texture_pages
-    }
-}
-
-impl DerefMut for GMEmbeddedTextures {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.texture_pages
-    }
-}
-
-impl GMChunkElement for GMEmbeddedTextures {
-    const NAME: ChunkName = ChunkName::new("TXTR");
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMEmbeddedTextures {

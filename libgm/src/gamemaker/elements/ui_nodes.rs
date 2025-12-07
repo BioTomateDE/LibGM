@@ -1,5 +1,4 @@
-use std::ops::{Deref, DerefMut};
-
+use macros::list_chunk;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use self::flex_properties::{
@@ -7,10 +6,9 @@ use self::flex_properties::{
 };
 use crate::{
     gamemaker::{
-        chunk::ChunkName,
         deserialize::reader::DataReader,
         elements::{
-            GMChunkElement, GMElement,
+            GMElement,
             rooms::{
                 GMRoomGameObject, GMRoomLayerEffectProperty, GMSequenceInstance, GMSpriteInstance,
                 GMTextItemInstance,
@@ -22,30 +20,10 @@ use crate::{
     util::{assert::assert_int, init::num_enum_from},
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[list_chunk("UILR")]
 pub struct GMRootUINodes {
     pub ui_root_nodes: Vec<GMNodeUI>,
     pub exists: bool,
-}
-
-impl Deref for GMRootUINodes {
-    type Target = Vec<GMNodeUI>;
-    fn deref(&self) -> &Self::Target {
-        &self.ui_root_nodes
-    }
-}
-
-impl DerefMut for GMRootUINodes {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.ui_root_nodes
-    }
-}
-
-impl GMChunkElement for GMRootUINodes {
-    const NAME: ChunkName = ChunkName::new("UILR");
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMRootUINodes {

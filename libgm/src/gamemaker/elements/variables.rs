@@ -2,11 +2,13 @@ use macros::list_chunk;
 
 use crate::{
     gamemaker::{
-        deserialize::{chunk::GMChunk, reader::DataReader},
+        deserialize::{chunk::ChunkBounds, reader::DataReader},
         elements::{
-            GMElement,
+            GMElement, GMNamedElement,
             code::{build_instance_type, parse_instance_type},
+            element_stub,
             general_info::GMGeneralInfo,
+            validate_identifier,
         },
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
@@ -134,7 +136,7 @@ impl GMElement for GMVariables {
         }
 
         // Resolve occurrences
-        let saved_chunk: GMChunk = reader.chunk.clone();
+        let saved_chunk: ChunkBounds = reader.chunk.clone();
         let saved_position = reader.cur_pos;
         reader.chunk = reader
             .chunks
@@ -155,20 +157,20 @@ impl GMElement for GMVariables {
             //  if name_string_id as i32 != -1 && name.index != name_string_id {
             //      bail!(
             //          "Variable #{i} with name {:?} specifies name string id {}; but the id of name string is actually {}",
-            //          reader.resolve_gm_str(name)?,
+            //          name,
             //          name_string_id,
             //          name.index,
             //      );
             //  }
 
             for occurrence in occurrences {
-                if let Some(old_value) = reader.variable_occurrences.insert(occurrence, i.into()) {
+                if let Some(old_var) = reader.variable_occurrences.insert(occurrence, i.into()) {
                     bail!(
                         "Conflicting occurrence positions while parsing variables: Position {} was already \
                         set for variable #{} with name {:?}; trying to set to variable #{i} with name {:?}",
                         occurrence,
-                        old_value.index,
-                        old_value.resolve(&variables)?.name,
+                        old_var.index,
+                        variables[old_var.index as usize].name,
                         variables[i].name,
                     );
                 }
@@ -212,6 +214,24 @@ impl GMElement for GMVariables {
 pub struct GMVariable {
     pub name: String,
     pub b15_data: Option<GMVariableB15Data>,
+}
+
+element_stub!(GMVariable);
+impl GMNamedElement for GMVariable {
+    fn name(&self) -> &String {
+        &self.name
+    }
+
+    fn name_mut(&mut self) -> &mut String {
+        &mut self.name
+    }
+
+    fn validate_name(&self) -> Result<()> {
+        if unlikely(self.name == "$$$$temp$$$$") {
+            return Ok(());
+        }
+        validate_identifier(&self.name)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

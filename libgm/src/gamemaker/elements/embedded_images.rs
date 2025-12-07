@@ -1,9 +1,11 @@
-use macros::list_chunk;
+use macros::named_list_chunk;
 
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
-        elements::{GMElement, texture_page_items::GMTexturePageItem},
+        elements::{
+            GMElement, GMNamedElement, texture_page_items::GMTexturePageItem, validate_identifier,
+        },
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
@@ -11,10 +13,10 @@ use crate::{
     util::assert::assert_int,
 };
 
-/// The embedded images of the data file. This is used to store built-in particle sprites,
+/// The embedded images of the data file.
+/// This is used to store built-in particle sprites,
 /// every time you use `part_sprite` functions.
-#[list_chunk("EMBI")]
-#[derive(Eq)]
+#[named_list_chunk("EMBI", name_exception)]
 pub struct GMEmbeddedImages {
     pub embedded_images: Vec<GMEmbeddedImage>,
     pub exists: bool,
@@ -40,6 +42,25 @@ impl GMElement for GMEmbeddedImages {
 pub struct GMEmbeddedImage {
     pub name: String,
     pub texture_entry: GMRef<GMTexturePageItem>,
+}
+
+impl GMNamedElement for GMEmbeddedImage {
+    fn name(&self) -> &String {
+        &self.name
+    }
+
+    fn name_mut(&mut self) -> &mut String {
+        &mut self.name
+    }
+
+    fn validate_name(&self) -> Result<()> {
+        let name = &self.name;
+        let ident = name.strip_suffix(".png");
+        let Some(ident) = ident else {
+            bail!("Embedded Image name {name:?} does not end in \".png\"");
+        };
+        validate_identifier(ident)
+    }
 }
 
 impl GMElement for GMEmbeddedImage {

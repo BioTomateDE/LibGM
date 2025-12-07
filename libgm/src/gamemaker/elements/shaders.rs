@@ -1,4 +1,4 @@
-use macros::list_chunk;
+use macros::named_list_chunk;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::{
@@ -9,8 +9,7 @@ use crate::{
     util::init::{num_enum_from, vec_with_capacity},
 };
 
-#[list_chunk("SHDR")]
-#[derive(Eq)]
+#[named_list_chunk("SHDR")]
 pub struct GMShaders {
     pub shaders: Vec<GMShader>,
     pub exists: bool,

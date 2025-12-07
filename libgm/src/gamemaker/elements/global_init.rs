@@ -1,41 +1,18 @@
-use std::ops::{Deref, DerefMut};
+use macros::list_chunk;
 
 use crate::{
     gamemaker::{
-        chunk::ChunkName,
-        deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement},
-        reference::GMRef,
+        deserialize::reader::DataReader, elements::GMElement, reference::GMRef,
         serialize::builder::DataBuilder,
     },
     gml::instructions::GMCode,
     prelude::*,
 };
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[list_chunk("GLOB")]
 pub struct GMGlobalInitScripts {
     pub global_init_scripts: Vec<GMRef<GMCode>>,
     pub exists: bool,
-}
-
-impl Deref for GMGlobalInitScripts {
-    type Target = Vec<GMRef<GMCode>>;
-    fn deref(&self) -> &Self::Target {
-        &self.global_init_scripts
-    }
-}
-
-impl DerefMut for GMGlobalInitScripts {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.global_init_scripts
-    }
-}
-
-impl GMChunkElement for GMGlobalInitScripts {
-    const NAME: ChunkName = ChunkName::new("GLOB");
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMGlobalInitScripts {

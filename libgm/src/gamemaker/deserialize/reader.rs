@@ -4,7 +4,7 @@ use crate::{
     gamemaker::{
         chunk::ChunkName,
         data::Endianness,
-        deserialize::chunk::{Chunks, GMChunk},
+        deserialize::chunk::{ChunkBounds, Chunks},
         elements::{
             GMElement, functions::GMFunction, general_info::GMGeneralInfo,
             texture_page_items::GMTexturePageItem, variables::GMVariable,
@@ -49,7 +49,7 @@ pub struct DataReader<'a> {
     /// When reading data, these bounds are checked to ensure the read operation stays within the chunk.    
     ///
     /// **Safety Warning**: If the chunk's start/end positions are set incorrectly, the program becomes memory unsafe.
-    pub chunk: GMChunk,
+    pub chunk: ChunkBounds,
 
     /// The name of the last chunk in the data file.
     /// Is properly initialized after parsing `FORM`.
@@ -67,7 +67,7 @@ pub struct DataReader<'a> {
 
     /// Chunk `STRG`.
     /// Is properly initialized after parsing `FORM`.
-    pub string_chunk: GMChunk,
+    pub string_chunk: ChunkBounds,
 
     /// Should only be set by [`crate::gamemaker::elements::texture_page_items`].
     /// This means that `TPAG` has to be parsed before any chunk with texture page item pointers.
@@ -98,12 +98,12 @@ impl<'a> DataReader<'a> {
             chunk_padding: 16,
             // Assume little endian; big endian is an edge case.
             endianness: Endianness::Little,
-            chunk: GMChunk { start_pos: 0, end_pos },
+            chunk: ChunkBounds { start_pos: 0, end_pos },
             last_chunk: ChunkName::new("XXXX"),
             // Just a stub, will not be read until GEN8 is parsed.
             general_info: GMGeneralInfo::default(),
             strings: vec![],
-            string_chunk: GMChunk::default(),
+            string_chunk: ChunkBounds::default(),
             chunks: Chunks::new(),
             texture_page_item_occurrences: HashMap::new(),
             variable_occurrences: HashMap::new(),

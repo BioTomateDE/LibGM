@@ -2,7 +2,7 @@ use crate::{
     gamemaker::{
         chunk::ChunkName,
         deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement},
+        elements::{GMChunk, GMElement},
         serialize::builder::DataBuilder,
     },
     prelude::*,
@@ -14,7 +14,7 @@ const ALIGNMENT: u32 = 4;
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct GMStrings;
 
-impl GMChunkElement for GMStrings {
+impl GMChunk for GMStrings {
     const NAME: ChunkName = ChunkName::new("STRG");
     fn exists(&self) -> bool {
         true

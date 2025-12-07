@@ -1,4 +1,4 @@
-use macros::list_chunk;
+use macros::named_list_chunk;
 
 use crate::{
     gamemaker::{
@@ -12,7 +12,7 @@ use crate::{
     util::assert::assert_bool,
 };
 
-#[list_chunk("SOND")]
+#[named_list_chunk("SOND")]
 pub struct GMSounds {
     pub sounds: Vec<GMSound>,
     pub exists: bool,

@@ -1,39 +1,16 @@
-use std::ops::{Deref, DerefMut};
+use macros::list_chunk;
 
 use crate::{
     gamemaker::{
-        chunk::ChunkName,
-        deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement},
-        serialize::builder::DataBuilder,
+        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
     },
     prelude::*,
 };
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[list_chunk("AUDO")]
 pub struct GMEmbeddedAudios {
     pub audios: Vec<GMEmbeddedAudio>,
     pub exists: bool,
-}
-
-impl Deref for GMEmbeddedAudios {
-    type Target = Vec<GMEmbeddedAudio>;
-    fn deref(&self) -> &Self::Target {
-        &self.audios
-    }
-}
-
-impl DerefMut for GMEmbeddedAudios {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.audios
-    }
-}
-
-impl GMChunkElement for GMEmbeddedAudios {
-    const NAME: ChunkName = ChunkName::new("AUDO");
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMEmbeddedAudios {

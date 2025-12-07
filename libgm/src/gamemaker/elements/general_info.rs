@@ -6,7 +6,7 @@ use crate::{
         chunk::ChunkName,
         data::Endianness,
         deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement, rooms::GMRoom},
+        elements::{GMChunk, GMElement, rooms::GMRoom},
         gm_version::{GMVersion, GMVersionReq},
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
@@ -125,7 +125,7 @@ impl Default for GMGeneralInfo {
     }
 }
 
-impl GMChunkElement for GMGeneralInfo {
+impl GMChunk for GMGeneralInfo {
     const NAME: ChunkName = ChunkName::new("GEN8");
     fn exists(&self) -> bool {
         self.exists

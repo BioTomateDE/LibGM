@@ -1,4 +1,4 @@
-use macros::list_chunk;
+use macros::named_list_chunk;
 
 use crate::{
     gamemaker::{
@@ -12,7 +12,7 @@ use crate::{
     util::assert::assert_int,
 };
 
-#[list_chunk("FONT")]
+#[named_list_chunk("FONT")]
 pub struct GMFonts {
     pub fonts: Vec<GMFont>,
     pub exists: bool,

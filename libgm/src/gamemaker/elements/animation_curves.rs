@@ -1,4 +1,4 @@
-use macros::{list_chunk, num_enum};
+use macros::{named_list_chunk, num_enum};
 
 use crate::{
     gamemaker::{
@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// GMS 2.3+
-#[list_chunk("ACRV")]
+#[named_list_chunk("ACRV")]
 pub struct GMAnimationCurves {
     pub animation_curves: Vec<GMAnimationCurve>,
     pub exists: bool,

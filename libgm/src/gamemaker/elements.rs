@@ -1,8 +1,12 @@
+use std::collections::HashMap;
+
 use crate::{
     gamemaker::{
-        chunk::ChunkName, deserialize::reader::DataReader, serialize::builder::DataBuilder,
+        chunk::ChunkName, deserialize::reader::DataReader, reference::GMRef,
+        serialize::builder::DataBuilder,
     },
     prelude::*,
+    util::fmt::typename,
 };
 
 pub mod animation_curves;
@@ -42,10 +46,10 @@ pub mod timelines;
 pub mod ui_nodes;
 pub mod variables;
 
-#[allow(unused_variables)]
 /// All GameMaker elements that can be deserialized
 /// from a data file should implement this trait.
-pub(crate) trait GMElement: Sized {
+#[allow(unused_variables)]
+pub trait GMElement: Sized {
     /// Deserializes this element from the current position of the reader.
     ///
     /// Implementations should read the exact binary representation of this element
@@ -205,8 +209,52 @@ impl GMElement for bool {
     }
 }
 
+impl GMElement for String {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        reader.read_gm_string()
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+        builder.write_gm_string(self);
+        Ok(())
+    }
+}
+
+impl GMElement for Option<String> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        reader.read_gm_string_opt()
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+        builder.write_gm_string_opt(self);
+        Ok(())
+    }
+}
+
+impl<T> GMElement for GMRef<T> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        reader.read_resource_by_id()
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+        builder.write_resource_id(*self);
+        Ok(())
+    }
+}
+
+impl<T> GMElement for Option<GMRef<T>> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        reader.read_resource_by_id_opt()
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+        builder.write_resource_id_opt(*self);
+        Ok(())
+    }
+}
+
 /// All chunk elements should implement this trait.
-pub(crate) trait GMChunkElement: GMElement + Default {
+pub trait GMChunk: GMElement + Default {
     /// The four character GameMaker chunk name (GEN8, STRG, VARI, etc.).
     const NAME: ChunkName;
 
@@ -223,3 +271,140 @@ pub(crate) trait GMChunkElement: GMElement + Default {
     /// Use this to distinguish between "present but empty" and "not present at all".
     fn exists(&self) -> bool;
 }
+
+pub trait GMListChunk: GMChunk {
+    type Element: GMElement;
+
+    fn elements(&self) -> &Vec<Self::Element>;
+    fn elements_mut(&mut self) -> &mut Vec<Self::Element>;
+
+    fn by_ref(&self, gm_ref: GMRef<Self::Element>) -> Result<&Self::Element> {
+        gm_ref.resolve(self.elements())
+    }
+
+    fn by_ref_mut(&mut self, gm_ref: GMRef<Self::Element>) -> Result<&mut Self::Element> {
+        gm_ref.resolve_mut(self.elements_mut())
+    }
+}
+
+pub trait GMNamedListChunk: GMListChunk<Element: GMNamedElement> {
+    fn ref_by_name(&self, name: &str) -> Result<GMRef<Self::Element>>;
+    fn by_name(&self, name: &str) -> Result<&Self::Element>;
+    fn by_name_mut(&mut self, name: &str) -> Result<&mut Self::Element>;
+}
+
+pub(crate) fn validate_names<T: GMNamedListChunk>(chunk: &T) -> Result<()> {
+    let elements = chunk.elements();
+    let mut seen: HashMap<String, usize> = HashMap::new();
+
+    for (i, item) in elements.iter().enumerate() {
+        let name = item.name();
+
+        item.validate_name().with_context(|| {
+            format!(
+                "validating {} with name {:?}",
+                typename::<T::Element>(),
+                name,
+            )
+        })?;
+
+        // TODO: avoid name cloning
+        let Some(first_index) = seen.insert(name.clone(), i) else {
+            continue;
+        };
+
+        bail!(
+            "There are multiple {} with the same name ({:?}): \
+            First at index {} and now at index {}",
+            typename::<T::Element>(),
+            name,
+            first_index,
+            i,
+        );
+    }
+    Ok(())
+}
+
+#[allow(unused_variables)]
+pub trait GMNamedElement: GMElement {
+    /// The name of this element.
+    #[must_use]
+    fn name(&self) -> &String;
+
+    /// A mutable reference to the name of this element.
+    #[must_use]
+    fn name_mut(&mut self) -> &mut String;
+
+    /// Whether the name of this element is valid.
+    /// This method respects this element type's specific rules.
+    /// For generic identifier validation, see [`validate_identifier`].
+    fn validate_name(&self) -> Result<()> {
+        validate_identifier(self.name())
+    }
+}
+
+/// Generic check whether an identifier / asset name is valid.
+/// Some element types might have different rules.
+/// These should be defined in [`GMNamedElement::validate_name`].
+///
+/// ## Rules:
+/// - At least one character long
+/// - First character is not a digit
+/// - Letters and underscores are allowed
+/// - Only ascii characters
+/// - Special `@@MyIdentifier@@` syntax covered
+pub(crate) fn validate_identifier(name: &str) -> Result<()> {
+    let orig_name = name;
+    let mut name = name;
+
+    // i hate this function
+    if name.len() > 4 && name.starts_with("@@") && name.ends_with("@@") {
+        cold_path();
+        name = &name[2..name.len() - 2];
+    }
+
+    let mut chars = name.chars();
+    let first_char = chars.next().ok_or("Identifier is empty")?;
+
+    if !matches!(first_char, 'a'..='z' | '_' | 'A'..='Z') {
+        if first_char.is_ascii_digit() {
+            bail!("Identifier {orig_name:?} starts with a digit ({first_char})");
+        }
+        bail!("Identifer {orig_name:?} starts with invalid character {first_char:?}");
+    }
+
+    for ch in chars {
+        if !matches!(ch, 'a'..='z'| '0'..='9' | '_' | 'A'..='Z') {
+            bail!("Identifer {orig_name:?} contains invalid character {ch:?}");
+        }
+    }
+
+    Ok(())
+}
+
+macro_rules! element_stub {
+    ($type:ty) => {
+        impl $crate::gamemaker::elements::GMElement for $type {
+            fn deserialize(
+                _: &mut $crate::gamemaker::deserialize::reader::DataReader,
+            ) -> Result<Self> {
+                unimplemented!(
+                    "Using {0}::deserialize is not supported, use {0}s::deserialize instead",
+                    stringify!($type),
+                );
+            }
+
+            fn serialize(
+                &self,
+                _: &mut $crate::gamemaker::serialize::builder::DataBuilder,
+            ) -> Result<()> {
+                unimplemented!(
+                    "Using {0}::serialize is not supported, use {0}s::serialize instead",
+                    stringify!($type),
+                );
+            }
+        }
+    };
+}
+
+pub(crate) use element_stub;

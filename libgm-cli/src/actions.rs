@@ -1,4 +1,5 @@
 use clap::ValueEnum;
+use libgm::gamemaker::elements::GMNamedListChunk;
 use libgm::{
     gamemaker::{data::GMData, elements::scripts::GMScript, reference::GMRef},
     gml::{assembly::assemble_code, instructions::GMCode},
@@ -21,7 +22,7 @@ impl Action {
 fn enable_debug(data: &mut GMData) -> Result<()> {
     log::info!("Enabling Debug");
 
-    if !data.general_info.game_name.starts_with("UNDERTALE") {
+    if data.general_info.game_name != "UNDERTALE" {
         return Err("Only Undertale is supported as of now".into());
     }
 
@@ -33,7 +34,7 @@ fn enable_debug(data: &mut GMData) -> Result<()> {
 
     let script: &GMScript = data.scripts.by_name("SCR_GAMESTART")?;
     let code: GMRef<GMCode> = script.code.ok_or("Script does not have a code entry set")?;
-    let code: &mut GMCode = code.resolve_mut(&mut data.codes)?;
+    let code: &mut GMCode = data.codes.by_ref_mut(code)?;
     code.instructions.extend(instructions);
 
     Ok(())

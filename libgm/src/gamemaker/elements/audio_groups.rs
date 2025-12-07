@@ -1,4 +1,4 @@
-use macros::list_chunk;
+use macros::named_list_chunk;
 
 use crate::{
     gamemaker::{
@@ -11,8 +11,7 @@ use crate::{
 /// You can use these for memory management, volume control and more.
 /// ___
 /// Audio Groups are only available to use in the regular audio system.
-#[list_chunk("AGRP")]
-#[derive(Eq)]
+#[named_list_chunk("AGRP")]
 pub struct GMAudioGroups {
     pub audio_groups: Vec<GMAudioGroup>,
     pub exists: bool,

@@ -1,44 +1,20 @@
-use std::{
-    collections::HashMap,
-    ops::{Deref, DerefMut},
-};
+use std::collections::HashMap;
+
+use macros::list_chunk;
 
 use crate::{
     gamemaker::{
-        chunk::ChunkName,
-        deserialize::reader::DataReader,
-        elements::{GMChunkElement, GMElement},
-        serialize::builder::DataBuilder,
+        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
     },
     prelude::*,
     util::assert::assert_int,
 };
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[list_chunk("TAGS")]
 pub struct GMTags {
     pub tags: Vec<String>,
     pub asset_tags: HashMap<i32, Vec<String>>,
     pub exists: bool,
-}
-
-impl Deref for GMTags {
-    type Target = Vec<String>;
-    fn deref(&self) -> &Self::Target {
-        &self.tags
-    }
-}
-
-impl DerefMut for GMTags {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.tags
-    }
-}
-
-impl GMChunkElement for GMTags {
-    const NAME: ChunkName = ChunkName::new("TAGS");
-    fn exists(&self) -> bool {
-        self.exists
-    }
 }
 
 impl GMElement for GMTags {

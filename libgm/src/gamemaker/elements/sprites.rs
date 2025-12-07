@@ -1,4 +1,4 @@
-use macros::{list_chunk, num_enum};
+use macros::{named_list_chunk, num_enum};
 
 use crate::{
     gamemaker::{
@@ -19,7 +19,7 @@ use crate::{
     },
 };
 
-#[list_chunk("SPRT")]
+#[named_list_chunk("SPRT")]
 pub struct GMSprites {
     pub sprites: Vec<GMSprite>,
     pub exists: bool,

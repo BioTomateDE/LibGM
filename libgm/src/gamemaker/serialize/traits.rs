@@ -11,6 +11,7 @@ pub trait GMSerializeIfVersion {
         field_name: &'static str,
         ver_req: V,
     ) -> Result<()>;
+
     fn serialize_if_bytecode_ver(
         &self,
         builder: &mut DataBuilder,
@@ -32,7 +33,8 @@ impl<T: GMElement> GMSerializeIfVersion for Option<T> {
         }
         let element: &T = self.as_ref().ok_or_else(|| {
             format!(
-                "Field '{}' of {} is not set in data with GameMaker version {} but needs to be set since GameMaker version {}",
+                "Field '{}' of {} is not set in data with GameMaker version {} \
+                but needs to be set since GameMaker version {}",
                 field_name,
                 typename::<T>(),
                 builder.gm_data.general_info.version,
@@ -53,7 +55,8 @@ impl<T: GMElement> GMSerializeIfVersion for Option<T> {
         }
         let element: &T = self.as_ref().ok_or_else(|| {
             format!(
-                "Field '{}' of {} is not set in data with Bytecode version {} but needs to be set since Bytecode version {}",
+                "Field '{}' of {} is not set in data with Bytecode version {}
+                but needs to be set since Bytecode version {}",
                 field_name,
                 typename::<T>(),
                 builder.gm_data.general_info.bytecode_version,
