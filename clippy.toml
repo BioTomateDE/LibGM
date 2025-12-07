@@ -4,12 +4,26 @@
 # Only special options that are not available in `Cargo.toml` (?) are configured here.
 
 doc-valid-idents = [
+  # Official terms
   "GameMaker",
   "YoYoGames",
+
+  # Tools
   "UndertaleModTool",
   "UndertaleModLib",
   "Underanalzyer",
+  "LibGM",
+
+  # Platform names
   "PlayStation",
   "PSVita",
+
+  # Relevant users
+  "BioTomateDE",
+  "colinator27",
+  "OceanBagel",
+  "krzys-h",
+
+  # Include the default idents as well
   "..",
 ]

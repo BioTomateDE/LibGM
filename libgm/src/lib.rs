@@ -1,4 +1,62 @@
-//! todo: actual docstring
+//! **A data parsing and building library for GameMaker data files (`data.win`).**
+//!
+//! This library provides structs and functions to handle GameMaker game assets
+//! in a meaningful way.
+//!
+//! ## Disclaimer
+//! I, BioTomateDE, wrote this project myself. It is effectively my first Rust project ever.
+//! While I have been working on this project for almost a year now (😭), I'm still
+//! not the best Rust programmer.
+//!
+//! This library is still in testing stages
+//! ([SemVer](https://semver.org/) major 0)
+//! and may have issues.
+//! Please report them to the attached GitHub repository.
+//!
+//! If you have any questions or concerns about my code
+//! or documentation, please contact me via either:
+//! - Discord DM: `@farming.simulator`
+//! - [GitHub Issue](https://github.com/BioTomateDE/LibGM/issues/new)
+//! - [Email](mailto:latuskati+cratesio@gmail.com?subject=%5BLibGM%5D%20Your%20code%20is%20fucking%20stupid%2C%20explain%20ts%20plz)
+//!
+//! ## Panicking
+//! This library *should* **never panic**.
+//! All malformed data files are caught into `LibGM`'s custom error type.
+//! However, since this library is not mature yet, there might still be a few bugs.
+//! For GUI applications, I would definitely recommend to **set a
+//! [panic hook](https://doc.rust-lang.org/std/panic/fn.set_hook.html)**
+//! before calling any data parsing/building functions, just to be safe.
+//!
+//!
+//! ## Missing features
+//! The following features are not yet supported by `LibGM`:
+//! - **Null pointers**.
+//!   These typically occur in newer games compiled with `GMAC` (GameMaker Asset Compiler),
+//!   which may null out pointers to unused elements.
+//!   See [Issue#2](https://github.com/BioTomateDE/LibGM/issues/2) for more information.
+//! - Special Vector Sprites
+//! - Only partial pre-bytecode 15 support
+//! - Only partial/untested big endian support
+//!
+//! Some things in this library are **not** considered "breaking changes" and may be
+//! modified in `SemVer` patch updates. These could bring unwanted change of behavior
+//! to your program if you don't have a `Cargo.lock` set/commited.
+//! Some of these things include:
+//! - All log messages (using the [`log`](https://crates.io/crates/log) crate), including:
+//!   - Timing
+//!   - Code Origin/Location
+//!   - Message string
+//! - All error contents:
+//!   - Error message string
+//!   - Context chain
+//! - All structs and enums marked with `#[non_exhaustive]`
+//!
+//!
+//! Please note that this project is effectively a Rust port of
+//! [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool)
+//! (UndertaleModLib, to be exact).
+//! Most of the GameMaker elements' docstrings and struct field (names) are taken from there.
+//!
 
 // These `must_use`s and unreachable patterns are usually
 // critical and indicate a serious logical flaw.
