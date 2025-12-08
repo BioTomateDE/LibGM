@@ -28,7 +28,7 @@ pub fn check_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
 
     reader.cur_pos = first_font_pointer + 48;
     let glyph_count = reader.read_u32()?;
-    if glyph_count * 4 > reader.get_chunk_length() {
+    if glyph_count * 4 > reader.chunk.length() {
         return Ok(None);
     }
     if glyph_count == 0 {

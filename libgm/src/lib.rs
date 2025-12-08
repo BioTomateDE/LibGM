@@ -57,6 +57,7 @@
 //! (UndertaleModLib, to be exact).
 //! Most of the GameMaker elements' docstrings and struct field (names) are taken from there.
 //!
+//!
 
 // These `must_use`s and unreachable patterns are usually
 // critical and indicate a serious logical flaw.

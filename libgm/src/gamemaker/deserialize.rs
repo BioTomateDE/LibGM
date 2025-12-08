@@ -10,7 +10,7 @@ use crate::{
     gamemaker::{
         data::{Endianness, GMData},
         deserialize::{
-            chunk::{ChunkBounds, Chunks},
+            chunk::{ChunkBounds, ChunkMap},
             reader::DataReader,
         },
         elements::{
@@ -59,33 +59,29 @@ use crate::{
 const ERR_TOO_BIG: &str =
     "Data file is bigger than 2,147,483,646 bytes which will lead to bugs in LibGM and the runner";
 
-pub struct DataParser {
-    options: ParserOptions,
-}
-
-pub(crate) struct ParserOptions {
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ParsingOptions {
     pub verify_alignment: bool,
     pub verify_constants: bool,
     pub allow_unknown_chunks: bool,
     pub parallel_processing: bool,
 }
 
-impl Default for DataParser {
+impl Default for ParsingOptions {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DataParser {
+impl ParsingOptions {
+    #[inline]
     #[must_use]
     pub const fn new() -> Self {
         Self {
-            options: ParserOptions {
-                verify_alignment: true,
-                verify_constants: true,
-                allow_unknown_chunks: false,
-                parallel_processing: false,
-            },
+            verify_alignment: true,
+            verify_constants: true,
+            allow_unknown_chunks: false,
+            parallel_processing: false,
         }
     }
 
@@ -99,9 +95,10 @@ impl DataParser {
     /// (e.g. a port to a niche platform), but you want to try to parse it anyway.
     ///
     /// > Default: **true**
+    #[inline]
     #[must_use]
     pub const fn verify_alignment(mut self, enabled: bool) -> Self {
-        self.options.verify_alignment = enabled;
+        self.verify_alignment = enabled;
         self
     }
 
@@ -112,9 +109,10 @@ impl DataParser {
     /// This provides additional validation against data corruption or version mismatches.
     ///
     /// > Default: **true**
+    #[inline]
     #[must_use]
     pub const fn verify_constants(mut self, enabled: bool) -> Self {
-        self.options.verify_constants = enabled;
+        self.verify_constants = enabled;
         self
     }
 
@@ -125,9 +123,10 @@ impl DataParser {
     /// remain unread after parsing completes, an error will be returned.
     ///
     /// > Default: **false**
+    #[inline]
     #[must_use]
     pub const fn allow_unknown_chunks(mut self, enabled: bool) -> Self {
-        self.options.allow_unknown_chunks = enabled;
+        self.allow_unknown_chunks = enabled;
         self
     }
 
@@ -135,15 +134,17 @@ impl DataParser {
     /// # Experimental.
     ///
     /// > Default: **false**
+    #[inline]
     #[must_use]
     pub const unsafe fn parallel_processing(mut self, enabled: bool) -> Self {
-        self.options.parallel_processing = enabled;
+        self.parallel_processing = enabled;
         self
     }
 
-    fn parse(&self, raw_data: impl AsRef<[u8]>) -> Result<GMData> {
+    fn parse(&self, raw_data: &[u8]) -> Result<GMData> {
         let stopwatch = Stopwatch::start();
-        let mut reader: DataReader = parse_form(raw_data.as_ref())?;
+        let mut reader: DataReader = parse_form(raw_data)?;
+        reader.options = self.clone();
 
         // Properly initialize GEN8 version before reading chunks.
         reader.specified_version = reader.read_gen8_version()?;
@@ -234,7 +235,7 @@ impl DataParser {
             bail!("Required chunk OPTN does not exist");
         }
 
-        handle_unread_chunks(&reader.chunks, self.options.allow_unknown_chunks)?;
+        handle_unread_chunks(&reader.chunks, self.allow_unknown_chunks)?;
 
         let data = GMData {
             chunk_padding: reader.chunk_padding,
@@ -283,7 +284,8 @@ impl DataParser {
 
     ///todo docstrings
     pub fn parse_bytes(&self, raw_data: impl AsRef<[u8]>) -> Result<GMData> {
-        self.parse(raw_data).context("parsing GameMaker data")
+        self.parse(raw_data.as_ref())
+            .context("parsing GameMaker data")
     }
 
     /// Parse a GameMaker data file (`data.win`, `game.unx`, etc).
@@ -302,13 +304,14 @@ impl DataParser {
         let raw_data: Vec<u8> = std::fs::read(path)
             .map_err(|e| e.to_string())
             .with_context(|| format!("reading data file {}", path.display()))?;
-        log::trace!("Reading data file took {stopwatch}");
+        log::trace!("Reading data file bytes took {stopwatch}");
 
-        self.parse(raw_data)
+        self.parse(&raw_data)
             .with_context(|| format!("parsing GameMaker data file {}", path.display()))
     }
 }
 
+/// This can later be reused for audiogroup files.
 fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
     // Length assertion
     if raw_data.len() >= i32::MAX as usize {
@@ -322,16 +325,15 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
     reader.endianness = match root_chunk_name.as_str() {
         "FORM" => Endianness::Little,
         "MROF" => Endianness::Big,
-        _ => bail!(
-            "Invalid data file: expected root chunk to be 'FORM' but found '{root_chunk_name}'"
-        ),
+        _ => bail!("Expected root chunk to be 'FORM' but found '{root_chunk_name}'"),
     };
     if reader.endianness == Endianness::Big {
         log::warn!("Big endian format might not work, proceed with caution");
     }
 
     // Length assertion
-    let total_data_len = reader.read_u32()? + reader.cur_pos;
+    let remaining_data_len = reader.read_u32()?;
+    let total_data_len = remaining_data_len + reader.cur_pos;
     if total_data_len as usize != raw_data.len() {
         bail!(
             "Specified FORM data length is {} but data is actually {} bytes long",
@@ -346,6 +348,8 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
         let chunk_length = reader.read_u32()?;
         let start_pos = reader.cur_pos;
 
+        // Skip `chunk_length` bytes; moving to the end of the chunk.
+        // Additional checks for integer overflows.
         reader.cur_pos = reader.cur_pos.checked_add(chunk_length)
             .filter(|&pos| pos <= total_data_len)
             .ok_or_else(|| format!(
@@ -353,19 +357,17 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
             ))?;
 
         let end_pos = reader.cur_pos;
-        if end_pos == total_data_len {
-            reader.last_chunk.clone_from(&name);
-        }
+        reader.last_chunk = name;
 
-        let chunk = ChunkBounds { start_pos, end_pos };
-        reader.chunks.push(name, chunk)?;
+        let chunk_bounds = ChunkBounds { start_pos, end_pos };
+        reader.chunks.push(name, chunk_bounds)?;
     }
 
     Ok(reader)
 }
 
 /// Verify all data chunks were processed to prevent data loss
-fn handle_unread_chunks(chunks: &Chunks, allow_unknown_chunks: bool) -> Result<()> {
+fn handle_unread_chunks(chunks: &ChunkMap, allow_unknown: bool) -> Result<()> {
     if chunks.is_empty() {
         return Ok(());
     }
@@ -389,7 +391,7 @@ fn handle_unread_chunks(chunks: &Chunks, allow_unknown_chunks: bool) -> Result<(
         These unknown chunks will be lost when rebuilding data.",
     );
 
-    if allow_unknown_chunks {
+    if allow_unknown {
         log::warn!("{message}");
         Ok(())
     } else {
@@ -398,11 +400,11 @@ fn handle_unread_chunks(chunks: &Chunks, allow_unknown_chunks: bool) -> Result<(
 }
 
 /// Parse a GameMaker data file (stored in a buffer) with default settings.
-pub fn read_data_bytes(raw_data: impl AsRef<[u8]>) -> Result<GMData> {
-    DataParser::new().parse_bytes(raw_data)
+pub fn parse_bytes(raw_data: impl AsRef<[u8]>) -> Result<GMData> {
+    ParsingOptions::new().parse_bytes(raw_data)
 }
 
 /// Parse a GameMaker data file (`data.win`, `game.unx`, etc.) with default settings.
-pub fn read_data_file(data_file_path: impl AsRef<Path>) -> Result<GMData> {
-    DataParser::new().parse_file(data_file_path)
+pub fn parse_file(data_file_path: impl AsRef<Path>) -> Result<GMData> {
+    ParsingOptions::new().parse_file(data_file_path)
 }

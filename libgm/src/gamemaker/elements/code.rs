@@ -33,22 +33,23 @@ element_stub!(GMCode);
 
 impl GMElement for GMCodes {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        if reader.get_chunk_length() == 0 {
+        // This can happen with YYC/
+        if reader.chunk.is_empty() {
             return Ok(Self { codes: vec![], exists: false });
         }
 
         let pointers: Vec<u32> = reader.read_simple_list()?;
-        reader.cur_pos = match pointers.first() {
-            Some(&ptr) => ptr,
-            None => {
-                return Ok(Self { codes: vec![], exists: true });
-            },
-        };
         let count: usize = pointers.len();
-        let mut codes: Vec<GMCode> = Vec::with_capacity(count);
+
+        let Some(&first_pos) = pointers.first() else {
+            return Ok(Self { codes: vec![], exists: true });
+        };
+        reader.cur_pos = first_pos;
+
+        let mut codes: Vec<GMCode> = vec_with_capacity(count as u32)?;
         let mut instructions_ranges: Vec<(u32, u32)> = Vec::with_capacity(count);
         let mut codes_by_pos: HashMap<u32, GMRef<GMCode>> = HashMap::new();
-        let mut last_pos = reader.cur_pos;
+        let mut last_code_entry_pos = reader.cur_pos;
 
         for pointer in pointers {
             reader.assert_pos(pointer, "Code")?;
@@ -70,11 +71,18 @@ impl GMElement for GMCodes {
                 let arguments_count: u16 = arguments_count_raw & 0x7FFF;
                 let weird_local_flag: bool = arguments_count_raw & 0x8000 != 0;
 
+                let position = reader.cur_pos;
                 let instructions_start_offset = reader.read_i32()?;
-                instructions_start_pos =
-                    (instructions_start_offset + reader.cur_pos as i32 - 4) as u32;
+                instructions_start_pos = position
+                    .checked_add_signed(instructions_start_offset)
+                    .ok_or("Instruction start position overflowed")?;
 
                 let offset = reader.read_u32()?;
+
+                instructions_end_pos = instructions_start_pos
+                    .checked_add(code_length)
+                    .ok_or("Instruction end position overflowed")?;
+
                 let b15_info = GMCodeBytecode15 {
                     locals_count,
                     arguments_count,
@@ -82,7 +90,6 @@ impl GMElement for GMCodes {
                     offset,
                     parent: None,
                 };
-                instructions_end_pos = instructions_start_pos + code_length;
                 bytecode15_info = Some(b15_info);
             }
 
@@ -91,8 +98,9 @@ impl GMElement for GMCodes {
                 instructions: vec![],
                 bytecode15_info,
             });
+
             instructions_ranges.push((instructions_start_pos, instructions_end_pos));
-            last_pos = reader.cur_pos;
+            last_code_entry_pos = reader.cur_pos;
         }
 
         for (i, (start, end)) in instructions_ranges.into_iter().enumerate() {
@@ -114,7 +122,7 @@ impl GMElement for GMCodes {
 
             if length > 0 {
                 // Update information to mark this entry as the root (if we have at least 1 instruction)
-                codes_by_pos.insert(start, GMRef::new(i as u32));
+                codes_by_pos.insert(start, i.into());
             }
 
             while reader.cur_pos < end {
@@ -133,7 +141,9 @@ impl GMElement for GMCodes {
             }
         }
 
-        reader.cur_pos = last_pos; // has to be chunk end (since instructions are stored separately in b15+)
+        reader.cur_pos = last_code_entry_pos;
+        // Set pos to to the supposed chunk end (since instructions are stored separately in b15+)
+
         Ok(Self { codes, exists: true })
     }
 
@@ -530,8 +540,8 @@ fn parse_comparison(b: [u8; 3]) -> Result<GMInstruction> {
 
 fn parse_pop(b: [u8; 3], reader: &mut DataReader) -> Result<GMInstruction> {
     let raw_instance_type = get_u16(b) as i16;
-    let type1: GMDataType = num_enum_from(b[2] & 0xF)?;
-    let type2: GMDataType = num_enum_from(b[2] >> 4)?;
+    let type1: GMDataType = get_type1(b)?;
+    let type2: GMDataType = get_type2(b)?;
 
     if type1 == GMDataType::Int16 {
         // PopSwap instruction

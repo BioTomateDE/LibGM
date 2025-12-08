@@ -118,7 +118,7 @@ impl GMElement for GMVariables {
             Some(_) => 20,
             None => 12,
         };
-        let variable_count = (reader.get_chunk_length() / variable_size) as usize;
+        let variable_count = (reader.chunk.length() / variable_size) as usize;
 
         let mut occurrence_infos: Vec<(u32, u32)> = Vec::with_capacity(variable_count);
         let mut variables: Vec<GMVariable> = Vec::with_capacity(variable_count);

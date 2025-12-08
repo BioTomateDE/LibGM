@@ -44,8 +44,8 @@ impl GMElement for GMFonts {
 fn verify_padding(padding: &[u8; 512]) -> Result<()> {
     padding.iter().enumerate().try_for_each(|(i, &byte)| {
         let expected = match i {
-            0..256 if i % 2 == 0 => (i / 2) as u8,
-            256..512 if i % 2 == 0 => 63,
+            0..256 if i & 1 == 0 => (i >> 1) as u8,
+            256..512 if i & 1 == 0 => 63,
             _ => 0,
         };
 
@@ -57,17 +57,18 @@ fn verify_padding(padding: &[u8; 512]) -> Result<()> {
     })
 }
 
+#[must_use]
 const fn generate_padding() -> [u8; 512] {
     let mut padding = [0u8; 512];
     let mut i = 0;
 
     while i < 256 {
-        padding[i] = if i % 2 == 0 { (i / 2) as u8 } else { 0 };
+        padding[i] = if i & 1 == 0 { (i >> 1) as u8 } else { 0 };
         i += 1;
     }
 
     while i < 512 {
-        padding[i] = if i % 2 == 0 { 63 } else { 0 };
+        padding[i] = if i & 1 == 0 { 63 } else { 0 };
         i += 1;
     }
 

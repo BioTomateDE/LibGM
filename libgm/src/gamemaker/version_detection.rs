@@ -16,7 +16,7 @@ use crate::{
     gamemaker::{
         chunk::ChunkName,
         deserialize::{
-            chunk::{ChunkBounds, Chunks},
+            chunk::{ChunkBounds, ChunkMap},
             reader::DataReader,
         },
         gm_version::{
@@ -90,7 +90,7 @@ impl VersionCheck {
     }
 }
 
-fn upgrade_by_chunk_existance(chunks: &Chunks) -> Option<GMVersionReq> {
+fn upgrade_by_chunk_existance(chunks: &ChunkMap) -> Option<GMVersionReq> {
     const UPGRADES: [(&str, GMVersionReq); 6] = [
         ("UILR", GMVersionReq::new(2024, 13, 0, 0, PostLTS)),
         ("PSEM", GMVersionReq::new(2023, 13, 0, 0, PostLTS)),

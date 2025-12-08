@@ -5,7 +5,7 @@ use crate::{
 
 pub fn check_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2024, 8).into()));
-    if reader.get_chunk_length() == 0 {
+    if reader.chunk.is_empty() {
         return Ok(None);
     }
 

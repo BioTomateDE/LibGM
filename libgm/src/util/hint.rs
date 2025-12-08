@@ -11,6 +11,7 @@ pub const fn unlikely(b: bool) -> bool {
     b
 }
 
+#[allow(dead_code)] // remove this later if never used ig
 #[inline]
 #[must_use]
 pub const fn likely(b: bool) -> bool {

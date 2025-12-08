@@ -2,7 +2,7 @@ mod assembler;
 
 use clap::ValueEnum;
 use libgm::{
-    gamemaker::{data::GMData, deserialize::read_data_bytes, serialize::build_data_file},
+    gamemaker::{data::GMData, deserialize::parse_bytes, serialize::build_bytes},
     prelude::*,
 };
 
@@ -46,12 +46,12 @@ pub fn perform(data: &GMData, tests: &[Test]) -> Result<()> {
             },
             Test::Builder => {
                 log::info!("Performing Builder Test");
-                build_data_file(data)?;
+                build_bytes(data)?;
             },
             Test::Reparse => {
                 log::info!("Performing Reparse Test");
-                let raw: Vec<u8> = build_data_file(data)?;
-                read_data_bytes(raw)?;
+                let raw: Vec<u8> = build_bytes(data)?;
+                parse_bytes(raw)?;
             },
             Test::Assembler => {
                 log::info!("Performing Assembler Test");

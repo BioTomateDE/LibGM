@@ -32,9 +32,9 @@ impl ChunkBounds {
 const KNOWN_CHUNK_COUNT: usize = 35;
 
 #[derive(Debug, Default)]
-pub struct Chunks(SmallMap<ChunkName, ChunkBounds>);
+pub struct ChunkMap(SmallMap<ChunkName, ChunkBounds>);
 
-impl Chunks {
+impl ChunkMap {
     #[inline]
     #[must_use]
     pub fn new() -> Self {
