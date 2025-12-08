@@ -29,7 +29,7 @@ pub struct GMSequences {
 
 impl GMElement for GMSequences {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        if reader.get_chunk_length() == 0 {
+        if reader.chunk.is_empty() {
             return Ok(Self::default());
         }
         reader.align(4)?;

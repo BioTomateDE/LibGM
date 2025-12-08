@@ -16,7 +16,7 @@ use crate::{
     util::bench::Stopwatch,
 };
 
-pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
+pub fn build_bytes(gm_data: &GMData) -> Result<Vec<u8>> {
     let stopwatch = Stopwatch::start();
     let mut builder = DataBuilder::new(gm_data);
 
@@ -81,8 +81,8 @@ pub fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>> {
     Ok(raw_data)
 }
 
-pub fn write_data_file(gm_data: &GMData, path: impl AsRef<Path>) -> Result<()> {
-    let raw_data: Vec<u8> = build_data_file(gm_data).context("building data")?;
+pub fn build_file(gm_data: &GMData, path: impl AsRef<Path>) -> Result<()> {
+    let raw_data: Vec<u8> = build_bytes(gm_data).context("building data")?;
     let stopwatch = Stopwatch::start();
     std::fs::write(path, raw_data)
         .map_err(|e| e.to_string())

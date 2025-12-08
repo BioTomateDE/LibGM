@@ -224,7 +224,7 @@ impl GMElement for GMGeneralInfo {
                 info_number
             };
 
-            for i in 0..4 {
+            for i in 0i32..4 {
                 if i == info_location {
                     let curr = reader.read_i64()?;
                     random_uid[i as usize] = curr;

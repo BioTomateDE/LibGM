@@ -20,7 +20,7 @@ pub struct GMFunctions {
 impl GMElement for GMFunctions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let functions_count = if reader.general_info.bytecode_version <= 14 {
-            reader.get_chunk_length() / 12
+            reader.chunk.length() / 12
         } else {
             reader.read_u32()?
         };

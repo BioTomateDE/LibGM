@@ -8,7 +8,7 @@ use std::{
 
 use clap::Parser;
 use libgm::{
-    gamemaker::{data::GMData, deserialize::read_data_file, serialize::write_data_file},
+    gamemaker::{data::GMData, deserialize::parse_file, serialize::build_file},
     prelude::*,
 };
 
@@ -98,7 +98,7 @@ fn run(mut args: Args) -> Result<()> {
 
     for data_file in files {
         log::info!("Parsing data file {}", data_file.display());
-        let mut data: GMData = read_data_file(data_file)?;
+        let mut data: GMData = parse_file(data_file)?;
 
         tests::perform(&data, &tests)?;
 
@@ -108,7 +108,7 @@ fn run(mut args: Args) -> Result<()> {
 
         if let Some(out_file) = &args.out {
             log::info!("Building data file {}", out_file.display());
-            write_data_file(&data, out_file)?;
+            build_file(&data, out_file)?;
         }
     }
 

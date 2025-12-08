@@ -4,7 +4,10 @@ use crate::{
     gamemaker::{
         chunk::ChunkName,
         data::Endianness,
-        deserialize::chunk::{ChunkBounds, Chunks},
+        deserialize::{
+            ParsingOptions,
+            chunk::{ChunkBounds, ChunkMap},
+        },
         elements::{
             GMElement, functions::GMFunction, general_info::GMGeneralInfo,
             texture_page_items::GMTexturePageItem, variables::GMVariable,
@@ -42,7 +45,7 @@ pub struct DataReader<'a> {
     /// Map of all chunks specified by `FORM`; indexed by chunk name.
     /// Read chunks will be removed from this `HashMap` when calling [`DataReader::read_chunk_required`] or [`DataReader::read_chunk`].
     /// May contain unknown chunks (if there is a GameMaker update, for example).
-    pub chunks: Chunks,
+    pub chunks: ChunkMap,
 
     /// Metadata about the currently parsed chunk of data.
     /// This includes the chunk's name, start position, and end position within the data buffer.
@@ -68,6 +71,9 @@ pub struct DataReader<'a> {
     /// Chunk `STRG`.
     /// Is properly initialized after parsing `FORM`.
     pub string_chunk: ChunkBounds,
+
+    // Properly initialized after parsing `FORM`.
+    pub options: ParsingOptions,
 
     /// Should only be set by [`crate::gamemaker::elements::texture_page_items`].
     /// This means that `TPAG` has to be parsed before any chunk with texture page item pointers.
@@ -99,12 +105,13 @@ impl<'a> DataReader<'a> {
             // Assume little endian; big endian is an edge case.
             endianness: Endianness::Little,
             chunk: ChunkBounds { start_pos: 0, end_pos },
+            chunks: ChunkMap::new(),
             last_chunk: ChunkName::new("XXXX"),
             // Just a stub, will not be read until GEN8 is parsed.
             general_info: GMGeneralInfo::default(),
             strings: vec![],
             string_chunk: ChunkBounds::default(),
-            chunks: Chunks::new(),
+            options: ParsingOptions::default(),
             texture_page_item_occurrences: HashMap::new(),
             variable_occurrences: HashMap::new(),
             function_occurrences: HashMap::new(),
@@ -207,11 +214,6 @@ impl<'a> DataReader<'a> {
             })?;
 
         Ok(string)
-    }
-
-    /// Gets the length of the chunk that is being currently parsed.
-    pub const fn get_chunk_length(&self) -> u32 {
-        self.chunk.end_pos - self.chunk.start_pos
     }
 
     /// Read bytes until the reader position is divisible by the specified alignment.

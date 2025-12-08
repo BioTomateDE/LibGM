@@ -115,21 +115,29 @@ impl GMElement for GMBackgroundGMS2Data {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let unknown_always_two = reader.read_u32()?;
         assert_int("Unknown Always Two", 2, unknown_always_two)?;
+
         let tile_width = reader.read_u32()?;
         let tile_height = reader.read_u32()?;
         let output_border_x = reader.read_u32()?;
         let output_border_y = reader.read_u32()?;
         let tile_columns = reader.read_u32()?;
+
         let items_per_tile_count = reader.read_u32()?;
         if items_per_tile_count == 0 {
             bail!("Items per tile count cannot be zero");
         }
+
         let tile_count = reader.read_u32()?;
+
         let unknown_always_zero = reader.read_u32()?;
         assert_int("Unknown Always Zero", 0, unknown_always_zero)?;
+
         let frame_length = reader.read_i64()?;
 
-        let total_tile_count = tile_count * items_per_tile_count;
+        let total_tile_count = tile_count
+            .checked_mul(items_per_tile_count)
+            .ok_or("Total Tile count multiplication overflowed")?;
+
         let mut tile_ids: Vec<u32> = vec_with_capacity(total_tile_count)?;
         for _ in 0..total_tile_count {
             tile_ids.push(reader.read_u32()?);
@@ -159,7 +167,7 @@ impl GMElement for GMBackgroundGMS2Data {
         let items_per_tile = self.items_per_tile_count as usize;
 
         if items_per_tile == 0 {
-            bail!("Items per tile is zero");
+            bail!("Items per tile cannot be zero");
         }
 
         if !total_tile_count.is_multiple_of(items_per_tile) {
