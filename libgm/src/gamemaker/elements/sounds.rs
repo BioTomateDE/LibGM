@@ -37,7 +37,7 @@ pub struct GMSound {
     pub name: String,
 
     /// The raw flags of this sound.
-    /// WARNING: This field is unstable and may be removed inthe future.
+    /// WARNING: This field is unstable and may be removed in the future.
     pub flags: u32,
 
     /// Whether this sound uses the new audio system (post GM8).
