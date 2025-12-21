@@ -41,7 +41,7 @@ fn try_check<V: Into<GMVersionReq>>(
         return Ok(()); // No need to check if already
     }
 
-    if let Some(chunk) = reader.chunks.get_by_chunkname(chunk_name) {
+    if let Some(chunk) = reader.chunks.get_by_name(chunk_name) {
         reader.chunk = chunk.clone();
         reader.cur_pos = chunk.start_pos;
         if let Some(version_req) = check_fn(reader)? {
@@ -188,7 +188,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
             checks_to_remove[i] = true;
 
             // If chunk doesn't exist; just skip the check
-            let Some(chunk) = reader.chunks.get_by_chunkname(check.chunk_name) else {
+            let Some(chunk) = reader.chunks.get_by_name(check.chunk_name) else {
                 continue;
             };
 
