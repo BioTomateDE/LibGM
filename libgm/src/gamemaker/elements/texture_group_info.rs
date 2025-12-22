@@ -14,7 +14,7 @@ use crate::{
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
     prelude::*,
-    util::{assert::assert_int, init::num_enum_from},
+    util::init::num_enum_from,
 };
 
 #[named_list_chunk("TGIN", name_exception)]
@@ -25,7 +25,7 @@ pub struct GMTextureGroupInfos {
 
 impl GMElement for GMTextureGroupInfos {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        assert_int("TGIN Version", 1, reader.read_u32()?)?;
+        reader.read_gms2_chunk_version("TGIN Version")?;
         let texture_group_infos: Vec<GMTextureGroupInfo> = reader.read_pointer_list()?;
         Ok(Self { texture_group_infos, exists: true })
     }

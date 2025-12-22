@@ -165,7 +165,7 @@ pub struct GMGameObject {
     /// Whether the game object is persistent.
     pub persistent: bool,
     /// The parent game object this is inheriting from.
-    pub parent: Option<GMRef<GMGameObject>>,
+    pub parent: Option<GMRef<Self>>,
     /// The texture mask this game object is using.
     pub texture_mask: Option<GMRef<GMSprite>>,
     /// Whether this object uses GameMaker physics.

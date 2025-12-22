@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-use num_enum::{IntoPrimitive, TryFromPrimitive};
+use macros::num_enum;
 
 use crate::gamemaker::{
     elements::{
@@ -48,86 +48,83 @@ pub struct ModernData {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Instruction {
     /// Converts the top of the stack from one type to another.
-    Convert { from: GMDataType, to: GMDataType },
+    Convert { from: DataType, to: DataType },
 
     /// Pops two values from the stack, multiplies them, and pushes the result.
     //TODO: make sure these lhs rhs are labelled correctly
     Multiply {
-        multiplicand: GMDataType,
-        multiplier: GMDataType,
+        multiplicand: DataType,
+        multiplier: DataType,
     },
 
     /// Pops two values from the stack, divides them, and pushes the result.
     /// The second popped value is divided by the first popped value.
     Divide {
-        dividend: GMDataType,
-        divisor: GMDataType,
+        dividend: DataType,
+        divisor: DataType,
     },
 
     /// Pops two values from the stack, performs a GML `div` operation (division with remainder), and pushes the result.
     /// The second popped value is divided (with remainder) by the first popped value.
     Remainder {
-        dividend: GMDataType,
-        divisor: GMDataType,
+        dividend: DataType,
+        divisor: DataType,
     },
 
     /// Pops two values from the stack, performs a GML `mod` operation (`%`), and pushes the result.
     /// The second popped value is modulo'd against the first popped value.
     Modulus {
-        dividend: GMDataType,
-        divisor: GMDataType,
+        dividend: DataType,
+        divisor: DataType,
     },
 
     /// Pops two values from the stack, adds them, and pushes the result.
-    Add {
-        augend: GMDataType,
-        addend: GMDataType,
-    },
+    Add { augend: DataType, addend: DataType },
 
     /// Pops two values from the stack, **subtracts** them, and pushes the result.
     /// The second popped value is subtracted by the first popped value.
     Subtract {
-        minuend: GMDataType,
-        subtrahend: GMDataType,
+        minuend: DataType,
+        subtrahend: DataType,
     },
 
     /// Pops two values from the stack, performs an **AND** operation, and pushes the result.
     /// This can be done bitwise or logically.
-    And { lhs: GMDataType, rhs: GMDataType },
+    And { lhs: DataType, rhs: DataType },
 
     /// Pops two values from the stack, performs an **OR** operation, and pushes the result.
     /// This can be done bitwise or logically.
-    Or { lhs: GMDataType, rhs: GMDataType },
+    Or { lhs: DataType, rhs: DataType },
 
     /// Pops two values from the stack, performs an **XOR** operation, and pushes the result.
     /// This can be done bitwise or logically.
-    Xor { lhs: GMDataType, rhs: GMDataType },
+    Xor { lhs: DataType, rhs: DataType },
 
     /// Negates the top value of the stack (as in, multiplies it with negative one).
-    Negate { data_type: GMDataType },
+    Negate { data_type: DataType },
 
     /// Performs a boolean or bitwise NOT operation on the top value of the stack (modifying it).
-    Not { data_type: GMDataType },
+    Not { data_type: DataType },
 
     /// Pops two values from the stack, performs a bitwise left shift operation (`<<`), and pushes the result.
     /// The second popped value is shifted left by the first popped value.
     ShiftLeft {
-        value: GMDataType,
-        shift_amount: GMDataType,
+        value: DataType,
+        shift_amount: DataType,
     },
 
     /// Pops two values from the stack, performs a bitwise right shift operation (`>>`), and pushes the result.
     /// The second popped value is shifted right by the first popped value.
     ShiftRight {
-        value: GMDataType,
-        shift_amount: GMDataType,
+        value: DataType,
+        shift_amount: DataType,
     },
 
-    /// Pops two values from the stack, compares them using a [`GMComparisonType`], and pushes a boolean result.
+    /// Pops two values from the stack, compares them using a [`ComparisonType`], and pushes a boolean result.
     Compare {
-        lhs: GMDataType,
-        rhs: GMDataType,
-        comparison_type: GMComparisonType,
+        lhs: DataType,
+        rhs: DataType,
+        comparison_type: ComparisonType,
     },
 
     /// Pops a value from the stack, and generally stores it in a variable, array, or otherwise.
@@ -135,8 +132,8 @@ pub enum Instruction {
     /// TODO(weak): type1 and type2 are bad names and are probably redundant values
     Pop {
         variable: CodeVariable,
-        type1: GMDataType,
-        type2: GMDataType,
+        type1: DataType,
+        type2: DataType,
     },
 
     /// Swaps values around on the stack
@@ -146,7 +143,7 @@ pub enum Instruction {
     ///
     /// The specified `size` is the total size of all
     /// elements that should be duplicated.
-    Duplicate { data_type: GMDataType, size: u8 },
+    Duplicate { data_type: DataType, size: u8 },
 
     /// Swaps values around on the stack.
     ///
@@ -155,7 +152,7 @@ pub enum Instruction {
     /// Afterwards, the "bottom stack" is pushed.
     /// And lastly, the "top stack" is pushed.
     DuplicateSwap {
-        data_type: GMDataType,
+        data_type: DataType,
         size1: u8,
         size2: u8,
     },
@@ -168,7 +165,7 @@ pub enum Instruction {
     Exit,
 
     /// Pops a value from the stack, and discards it.
-    PopDiscard { data_type: GMDataType },
+    PopDiscard { data_type: DataType },
 
     /// Branches (jumps) to another instruction in the code entry.
     Branch { jump_offset: i32 },
@@ -312,9 +309,8 @@ pub enum GMAssetReference {
     Function(GMRef<GMFunction>),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
-#[repr(u8)]
-pub enum GMDataType {
+#[num_enum(u8)]
+pub enum DataType {
     /// 64-bit floating point number.
     /// - Size on VM Stack: 8 bytes.
     Double = 0,
@@ -351,7 +347,7 @@ pub enum GMDataType {
     Int16 = 15,
 }
 
-impl GMDataType {
+impl DataType {
     /// The size of a value of this data type on the VM Stack, in bytes.
     #[must_use]
     pub const fn size(self) -> u8 {
@@ -364,13 +360,14 @@ impl GMDataType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum GMInstanceType {
+pub enum InstanceType {
     Undefined,
 
     /// Represents the current `self` instance.
+    // TODO: remove the static obj thingy from thjis
     Self_(Option<GMRef<GMGameObject>>),
 
-    /// Instance ID in the Room -100000; used when the Variable Type is [`GMVariableType::Instance`].
+    /// Instance ID in the Room -100000; used when the Variable Type is [`VariableType::Instance`].
     /// This doesn't exist in UTMT.
     RoomInstance(i16),
 
@@ -403,7 +400,7 @@ pub enum GMInstanceType {
     Static,
 }
 
-impl Display for GMInstanceType {
+impl Display for InstanceType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Undefined => write!(f, "Undefined"),
@@ -427,7 +424,7 @@ impl Display for GMInstanceType {
     }
 }
 
-impl GMInstanceType {
+impl InstanceType {
     /// Convert an instance type to the "VARI version".
     /// In other words, convert the instance type to what
     /// it would be if it was in the 'VARI' chunk (`GMVariable.instance_type`)
@@ -446,9 +443,8 @@ impl GMInstanceType {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
-#[repr(u8)]
-pub enum GMVariableType {
+#[num_enum(u8)]
+pub enum VariableType {
     /// Used for normal single-dimension array variables.
     Array = 0x00,
 
@@ -468,9 +464,8 @@ pub enum GMVariableType {
     ArrayPopAF = 0x90,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, TryFromPrimitive, IntoPrimitive)]
-#[repr(u8)]
-pub enum GMComparisonType {
+#[num_enum(u8)]
+pub enum ComparisonType {
     /// "Less than" | `<`
     LessThan = 1,
 
@@ -493,8 +488,8 @@ pub enum GMComparisonType {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CodeVariable {
     pub variable: GMRef<GMVariable>,
-    pub variable_type: GMVariableType,
-    pub instance_type: GMInstanceType,
+    pub variable_type: VariableType,
+    pub instance_type: InstanceType,
 
     /// TODO: when does this happen?
     pub is_int32: bool,
@@ -515,16 +510,16 @@ pub enum PushValue {
 
 impl PushValue {
     #[must_use]
-    pub const fn data_type(&self) -> GMDataType {
+    pub const fn data_type(&self) -> DataType {
         match self {
-            Self::Int16(_) => GMDataType::Int16,
-            Self::Int32(_) | Self::Function(_) => GMDataType::Int32, // Functions are not a "real" gm type; they're always int32
-            Self::Variable(var) if var.is_int32 => GMDataType::Int32, // no idea when this happens
-            Self::Int64(_) => GMDataType::Int64,
-            Self::Double(_) => GMDataType::Double,
-            Self::Boolean(_) => GMDataType::Boolean,
-            Self::String(_) => GMDataType::String,
-            Self::Variable(_) => GMDataType::Variable,
+            Self::Int16(_) => DataType::Int16,
+            Self::Int32(_) | Self::Function(_) => DataType::Int32, // Functions are not a "real" gm type; they're always int32
+            Self::Variable(var) if var.is_int32 => DataType::Int32, // no idea when this happens
+            Self::Int64(_) => DataType::Int64,
+            Self::Double(_) => DataType::Double,
+            Self::Boolean(_) => DataType::Boolean,
+            Self::String(_) => DataType::String,
+            Self::Variable(_) => DataType::Variable,
         }
     }
 }

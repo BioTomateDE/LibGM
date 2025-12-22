@@ -1,11 +1,11 @@
 use std::fmt::{Display, UpperHex};
 
-use crate::{gml::instruction::GMDataType, prelude::*};
+use crate::prelude::*;
 
-pub fn assert_int<I: Copy + Eq + Display + UpperHex>(
-    description: &'static str,
-    expected: I,
+pub fn int<I: Copy + Eq + Display + UpperHex>(
     actual: I,
+    expected: I,
+    description: &'static str,
 ) -> Result<()> {
     if expected == actual {
         return Ok(());
@@ -21,22 +21,4 @@ pub fn assert_int<I: Copy + Eq + Display + UpperHex>(
     );
 }
 
-pub fn assert_bool(description: &'static str, expected: bool, actual: bool) -> Result<()> {
-    if expected == actual {
-        return Ok(());
-    }
-
-    bail!("Expected {description} to be {expected} but it is actually {actual}");
-}
-
-pub fn assert_data_type(
-    description: &'static str,
-    expected: GMDataType,
-    actual: GMDataType,
-) -> Result<()> {
-    if expected == actual {
-        return Ok(());
-    }
-
-    bail!("Expected {description} Data Type to be {expected:?} but it is actually {actual:?}");
-}
+// More stuff available in `DataReader::assert_x`

@@ -21,7 +21,7 @@ pub struct Track {
     pub traits: Traits,
     pub is_creation_track: bool,
     pub tags: Vec<i32>,
-    pub sub_tracks: Vec<Track>,
+    pub sub_tracks: Vec<Self>,
     pub keyframes: Keyframes,
     pub owned_resources: Vec<GMAnimationCurve>,
 }

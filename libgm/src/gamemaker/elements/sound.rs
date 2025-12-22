@@ -9,7 +9,6 @@ use crate::{
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
     prelude::*,
-    util::assert::assert_bool,
 };
 
 #[named_list_chunk("SOND")]
@@ -111,8 +110,8 @@ impl GMElement for GMSound {
         if flag_regular && reader.general_info.wad_version >= 14 {
             audio_group = reader.read_resource_by_id()?;
         } else {
-            let preload = reader.read_bool32()?;
-            assert_bool("Preload", true, preload)?;
+            let preload = reader.read_bool32().context("reading preload")?;
+            reader.assert_bool(preload, true, "Preload")?;
             audio_group = GMRef::new(get_builtin_sound_group_id(&reader.general_info.version));
         }
 

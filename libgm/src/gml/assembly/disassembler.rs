@@ -8,8 +8,8 @@ use crate::{
         reference::GMRef,
     },
     gml::instruction::{
-        CodeVariable, GMAssetReference, GMCode, GMComparisonType, GMDataType, GMInstanceType,
-        GMVariableType, Instruction, PushValue,
+        CodeVariable, ComparisonType, DataType, GMAssetReference, GMCode, InstanceType,
+        Instruction, PushValue, VariableType,
     },
     prelude::*,
     util::fmt::typename,
@@ -229,7 +229,7 @@ impl Instruction {
     }
 }
 
-impl GMDataType {
+impl DataType {
     #[must_use]
     const fn to_str(self) -> &'static str {
         match self {
@@ -244,7 +244,7 @@ impl GMDataType {
     }
 }
 
-impl GMComparisonType {
+impl ComparisonType {
     #[must_use]
     const fn to_str(self) -> &'static str {
         match self {
@@ -258,7 +258,7 @@ impl GMComparisonType {
     }
 }
 
-impl GMVariableType {
+impl VariableType {
     #[must_use]
     const fn to_str(self) -> &'static str {
         match self {
@@ -426,32 +426,32 @@ fn write_asset_reference(
 }
 
 fn write_instance_type(
-    instance_type: GMInstanceType,
+    instance_type: InstanceType,
     buffer: &mut String,
     variable_ref: GMRef<GMVariable>,
     gm_data: &GMData,
 ) -> Result<()> {
     match instance_type {
-        GMInstanceType::Undefined => {
+        InstanceType::Undefined => {
             bail!("Did not expect Instance Type Undefined here; please report this error");
         },
-        GMInstanceType::Self_(Some(obj_ref)) => {
+        InstanceType::Self_(Some(obj_ref)) => {
             let obj: &GMGameObject = gm_data.game_objects.by_ref(obj_ref)?;
             write!(buffer, "self<{}>", obj.name);
         },
-        GMInstanceType::Self_(None) => write!(buffer, "self"),
-        GMInstanceType::RoomInstance(instance_id) => {
+        InstanceType::Self_(None) => write!(buffer, "self"),
+        InstanceType::RoomInstance(instance_id) => {
             write!(buffer, "roominstance<{instance_id}>");
         },
-        GMInstanceType::Other => write!(buffer, "other"),
-        GMInstanceType::All => write!(buffer, "all"),
-        GMInstanceType::None => write!(buffer, "none"),
-        GMInstanceType::Global => write!(buffer, "global"),
-        GMInstanceType::Builtin => write!(buffer, "builtin"),
-        GMInstanceType::Local => write!(buffer, "local<{}>", variable_ref.index),
-        GMInstanceType::StackTop => write!(buffer, "stacktop"),
-        GMInstanceType::Argument => write!(buffer, "arg"),
-        GMInstanceType::Static => write!(buffer, "static"),
+        InstanceType::Other => write!(buffer, "other"),
+        InstanceType::All => write!(buffer, "all"),
+        InstanceType::None => write!(buffer, "none"),
+        InstanceType::Global => write!(buffer, "global"),
+        InstanceType::Builtin => write!(buffer, "builtin"),
+        InstanceType::Local => write!(buffer, "local<{}>", variable_ref.index),
+        InstanceType::StackTop => write!(buffer, "stacktop"),
+        InstanceType::Argument => write!(buffer, "arg"),
+        InstanceType::Static => write!(buffer, "static"),
     }
 
     Ok(())
@@ -474,13 +474,12 @@ fn write_variable(
 
     write!(buffer, "{}", code_variable.variable_type.to_str());
 
-    let instance_type: GMInstanceType = if code_variable.instance_type == GMInstanceType::Undefined
-    {
+    let instance_type: InstanceType = if code_variable.instance_type == InstanceType::Undefined {
         // TODO: this will not work with WAD <= 14
         variable
             .modern_data
             .as_ref()
-            .map_or(GMInstanceType::Undefined, |data| data.instance_type)
+            .map_or(InstanceType::Undefined, |data| data.instance_type)
     } else {
         code_variable.instance_type
     };

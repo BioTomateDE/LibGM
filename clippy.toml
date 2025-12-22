@@ -4,9 +4,13 @@
 # Only special options that are not available in `Cargo.toml` (?) are configured here.
 
 doc-valid-idents = [
-  # Official terms
+  # Programming terms
+  "SemVer",
+
+  # Official GM related terms
   "GameMaker",
   "YoYoGames",
+  "YoYo",
 
   # Tools
   "UndertaleModTool",
@@ -27,3 +31,7 @@ doc-valid-idents = [
   # Include the default idents as well
   "..",
 ]
+
+# These crates are currently used by multiple dependencies
+# but under different versions. Not much I can do about this.
+allowed-duplicate-crates = ["zune-core", "zune-jpeg"]

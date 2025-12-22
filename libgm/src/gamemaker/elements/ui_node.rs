@@ -20,7 +20,7 @@ use crate::{
         deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
     },
     prelude::*,
-    util::assert::assert_int,
+    util::assert,
 };
 
 #[list_chunk("UILR")]
@@ -61,7 +61,7 @@ impl GMElement for UINode {
             children = reader.read_pointer_list()?;
         } else {
             let child_count = reader.read_u32()?;
-            assert_int("Non-container UI Node's child count", 0, child_count)?;
+            assert::int(child_count, 0, "Non-container UI Node's child count")?;
         }
 
         reader.assert_pos(data_pointer, "UI Node data")?;

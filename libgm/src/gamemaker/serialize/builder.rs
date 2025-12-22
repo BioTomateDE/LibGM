@@ -6,7 +6,7 @@ use crate::{
         elements::string::StringPlaceholder,
         gm_version::GMVersionReq,
     },
-    gml::instruction::GMVariableType,
+    gml::instruction::VariableType,
     prelude::*,
 };
 
@@ -42,7 +42,7 @@ pub struct DataBuilder<'a> {
     /// Will be populated when code is built.
     /// - Outer Vec: Indexed by Variable index from `gm_data.variables.variables`
     /// - Inner Vec: List of `(written_position, variable_type)` tuples for each occurrence
-    pub variable_occurrences: Vec<Vec<(usize, GMVariableType)>>,
+    pub variable_occurrences: Vec<Vec<(usize, VariableType)>>,
 
     pub string_placeholders: Vec<StringPlaceholder>,
 

@@ -8,7 +8,6 @@ use crate::{
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
     prelude::*,
-    util::assert::assert_int,
 };
 
 #[named_list_chunk("PSYS")]
@@ -20,7 +19,7 @@ pub struct GMParticleSystems {
 impl GMElement for GMParticleSystems {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
-        assert_int("PSYS Version", 1, reader.read_u32()?)?;
+        reader.read_gms2_chunk_version("PSYS Version")?;
         let particle_systems: Vec<GMParticleSystem> = reader.read_pointer_list()?;
         Ok(Self { particle_systems, exists: true })
     }

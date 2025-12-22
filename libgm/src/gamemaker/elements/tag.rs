@@ -7,7 +7,6 @@ use crate::{
         deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
     },
     prelude::*,
-    util::assert::assert_int,
 };
 
 #[list_chunk("TAGS")]
@@ -20,7 +19,7 @@ pub struct GMTags {
 impl GMElement for GMTags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
-        assert_int("TAGS Version", 1, reader.read_u32()?)?;
+        reader.read_gms2_chunk_version("TAGS Version")?;
         let tags: Vec<String> = reader.read_simple_list()?;
         let temp_asset_tags: Vec<TempAssetTags> = reader.read_pointer_list()?;
 

@@ -348,7 +348,7 @@ pub struct GMImage(Img);
 impl GMImage {
     #[must_use]
     pub const fn from_dynamic_image(dyn_img: DynamicImage) -> Self {
-        GMImage(Img::Dyn(dyn_img))
+        Self(Img::Dyn(dyn_img))
     }
 
     const fn from_png(raw_png_data: Vec<u8>) -> Self {

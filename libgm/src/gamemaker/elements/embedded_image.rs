@@ -10,7 +10,6 @@ use crate::{
         serialize::builder::DataBuilder,
     },
     prelude::*,
-    util::assert::assert_int,
 };
 
 /// The embedded images of the data file.
@@ -24,7 +23,7 @@ pub struct GMEmbeddedImages {
 
 impl GMElement for GMEmbeddedImages {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        assert_int("EMBI Version", 1, reader.read_u32()?)?;
+        reader.read_gms2_chunk_version("EMBI Version")?;
         let embedded_images: Vec<GMEmbeddedImage> = reader.read_simple_list()?;
         Ok(Self { embedded_images, exists: true })
     }

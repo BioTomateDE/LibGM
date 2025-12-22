@@ -16,7 +16,7 @@ use crate::{
         reference::GMRef,
     },
     prelude::*,
-    util::assert::assert_int,
+    util::assert,
 };
 
 #[derive(Debug)]
@@ -72,7 +72,8 @@ pub struct DataReader<'a> {
     /// Is properly initialized after parsing `FORM`.
     pub string_chunk: ChunkBounds,
 
-    // Properly initialized after parsing `FORM`.
+    /// Contains parsing options (wow!).
+    /// Properly initialized after parsing `FORM`.
     pub options: ParsingOptions,
 
     /// Should only be set by [`crate::gamemaker::elements::texture_page_item`].
@@ -90,7 +91,7 @@ pub struct DataReader<'a> {
 
 impl<'a> DataReader<'a> {
     pub fn new(data: &'a [u8]) -> Self {
-        // Memory Safety Assertion. This should've been verfied before, though.
+        // Memory Safety Assertion. This should've been verified before, though.
         let end_pos: u32 = data
             .len()
             .try_into()
@@ -151,11 +152,6 @@ impl<'a> DataReader<'a> {
                 self.chunk.end_pos,
             );
         }
-
-        #[cfg(not(any(target_pointer_width = "32", target_pointer_width = "64")))]
-        compile_error!(
-            "Cannot safely convert u32 to usize on this platform (target pointer width not 32 or 64)"
-        );
 
         // SAFETY: If chunk.end_pos is set correctly, this should never read memory out of bounds.
 
@@ -221,22 +217,8 @@ impl<'a> DataReader<'a> {
     pub fn align(&mut self, alignment: u32) -> Result<()> {
         while !self.cur_pos.is_multiple_of(alignment) {
             let byte = self.read_u8()?;
-            assert_int("Padding Byte", 0, byte)
+            assert::int(byte, 0, "Padding Byte")
                 .with_context(|| format!("aligning reader to {alignment}"))?;
-        }
-        Ok(())
-    }
-
-    /// Ensures the reader is at the specified position.
-    pub fn assert_pos(&self, position: u32, pointer_name: &str) -> Result<()> {
-        if self.cur_pos != position {
-            bail!(
-                "{} pointer misaligned: expected position {} but reader is actually at {} (diff: {})",
-                pointer_name,
-                position,
-                self.cur_pos,
-                i64::from(position) - i64::from(self.cur_pos),
-            )
         }
         Ok(())
     }
