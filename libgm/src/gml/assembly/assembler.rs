@@ -1,28 +1,29 @@
 mod data_types;
 mod reader;
 
-use crate::gamemaker::elements::GMNamedListChunk;
+use std::{fmt::Display, str::FromStr};
+
 use crate::{
     gamemaker::{
         data::GMData,
         elements::{
-            functions::{GMFunction, GMFunctions},
-            game_objects::GMGameObject,
-            variables::GMVariable,
+            GMNamedListChunk,
+            function::{GMFunction, GMFunctions},
+            game_object::GMGameObject,
+            variable::GMVariable,
         },
         reference::GMRef,
     },
     gml::{
         assembly::assembler::{data_types::DataTypes, reader::Reader},
         instructions::{
-            CodeVariable, GMAssetReference, GMCodeValue, GMComparisonType, GMDataType,
-            GMInstanceType, GMInstruction, GMVariableType,
+            CodeVariable, GMAssetReference, GMComparisonType, GMDataType, GMInstanceType,
+            GMInstruction, GMVariableType, PushValue,
         },
     },
     prelude::*,
     util::fmt::typename,
 };
-use std::{fmt::Display, str::FromStr};
 
 pub fn assemble_code(assembly: &str, gm_data: &GMData) -> Result<Vec<GMInstruction>> {
     let mut instructions: Vec<GMInstruction> = Vec::new();
@@ -267,7 +268,7 @@ fn parse_asset_reference(reader: &mut Reader, gm_data: &GMData) -> Result<GMAsse
         .consume_round_brackets()?
         .ok_or_else(|| format!("Expected asset type within round brackets; found {line:?}"))?;
 
-    // This can probably be made cleaner
+    // TODO: This can probably be made cleaner
     #[rustfmt::skip]
     let asset_reference = match asset_type {
         "object" => GMAssetReference::Object(gm_data.game_objects.ref_by_name(reader.parse_identifier()?)?),
@@ -324,38 +325,36 @@ fn parse_duplicate_swap(types: DataTypes, reader: &mut Reader) -> Result<GMInstr
     Ok(GMInstruction::DuplicateSwap { data_type: types[0], size1, size2 })
 }
 
-fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result<GMCodeValue> {
+fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result<PushValue> {
     types.assert_count(1, "push")?;
 
-    let value: GMCodeValue = match types[0] {
-        GMDataType::Int16 => GMCodeValue::Int16(parse_int(reader.clear())?),
+    let value: PushValue = match types[0] {
+        GMDataType::Int16 => PushValue::Int16(parse_int(reader.clear())?),
         GMDataType::Int32 => {
             if let Some(type_cast) = reader.consume_round_brackets()? {
                 match type_cast {
-                    "function" => {
-                        GMCodeValue::Function(parse_function(reader, &gm_data.functions)?)
-                    },
+                    "function" => PushValue::Function(parse_function(reader, &gm_data.functions)?),
                     "variable" => {
                         let mut variable: CodeVariable = parse_variable(reader, gm_data)?;
                         variable.is_int32 = true;
-                        GMCodeValue::Variable(variable)
+                        PushValue::Variable(variable)
                     },
                     _ => bail!(
                         "Invalid type cast {type_cast:?}; expected \"function\" or \"variable\""
                     ),
                 }
             } else {
-                GMCodeValue::Int32(parse_int(reader.clear())?)
+                PushValue::Int32(parse_int(reader.clear())?)
             }
         },
-        GMDataType::Int64 => GMCodeValue::Int64(parse_int(reader.clear())?),
+        GMDataType::Int64 => PushValue::Int64(parse_int(reader.clear())?),
         GMDataType::Double => {
             let line: &str = reader.clear();
             let float: f64 = line
                 .parse()
                 .ok()
                 .ok_or_else(|| format!("Invalid float literal {line:?}"))?;
-            GMCodeValue::Double(float)
+            PushValue::Double(float)
         },
         GMDataType::Boolean => {
             let line: &str = reader.clear();
@@ -364,13 +363,13 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
                 "false" => false,
                 _ => bail!("Invalid boolean {line:?}"),
             };
-            GMCodeValue::Boolean(bool)
+            PushValue::Boolean(bool)
         },
         GMDataType::String => {
             let string: String = parse_string_literal(reader)?;
-            GMCodeValue::String(string)
+            PushValue::String(string)
         },
-        GMDataType::Variable => GMCodeValue::Variable(parse_variable(reader, gm_data)?),
+        GMDataType::Variable => PushValue::Variable(parse_variable(reader, gm_data)?),
     };
     Ok(value)
 }

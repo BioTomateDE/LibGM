@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
-        elements::{GMElement, texture_page_items::GMTexturePageItem},
+        elements::{GMElement, texture_page_item::GMTexturePageItem},
         reference::GMRef,
     },
     prelude::*,

@@ -4,10 +4,10 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::gamemaker::{
     elements::{
-        animation_curves::GMAnimationCurve, backgrounds::GMBackground, fonts::GMFont,
-        functions::GMFunction, game_objects::GMGameObject, particle_systems::GMParticleSystem,
-        paths::GMPath, rooms::GMRoom, scripts::GMScript, sequence::GMSequence, shaders::GMShader,
-        sounds::GMSound, sprites::GMSprite, timelines::GMTimeline, variables::GMVariable,
+        animation_curve::GMAnimationCurve, background::GMBackground, font::GMFont,
+        function::GMFunction, game_object::GMGameObject, particle_system::GMParticleSystem,
+        path::GMPath, room::GMRoom, script::GMScript, sequence::GMSequence, shader::GMShader,
+        sound::GMSound, sprite::GMSprite, timeline::GMTimeline, variable::GMVariable,
     },
     reference::GMRef,
 };
@@ -190,7 +190,7 @@ pub enum GMInstruction {
     PopWithContextExit,
 
     /// Pushes a constant value onto the stack. Can vary in size depending on value type.
-    Push { value: GMCodeValue },
+    Push { value: PushValue },
 
     /// Pushes a value stored in a local variable onto the stack.
     PushLocal { variable: CodeVariable },
@@ -276,8 +276,8 @@ impl GMInstruction {
     pub const fn size(&self) -> u32 {
         match self {
             Self::Push { value } => match value {
-                GMCodeValue::Int16(_) => 4,
-                GMCodeValue::Int64(_) | GMCodeValue::Double(_) => 12,
+                PushValue::Int16(_) => 4,
+                PushValue::Int64(_) | PushValue::Double(_) => 12,
                 _ => 8,
             },
             Self::Pop { .. }
@@ -500,7 +500,7 @@ pub struct CodeVariable {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum GMCodeValue {
+pub enum PushValue {
     Int16(i16),
     Int32(i32),
     Int64(i64),
@@ -512,7 +512,7 @@ pub enum GMCodeValue {
     Function(GMRef<GMFunction>),
 }
 
-impl GMCodeValue {
+impl PushValue {
     #[must_use]
     pub const fn data_type(&self) -> GMDataType {
         match self {

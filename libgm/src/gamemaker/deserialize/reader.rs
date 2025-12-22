@@ -9,8 +9,8 @@ use crate::{
             chunk::{ChunkBounds, ChunkMap},
         },
         elements::{
-            GMElement, functions::GMFunction, general_info::GMGeneralInfo,
-            texture_page_items::GMTexturePageItem, variables::GMVariable,
+            GMElement, function::GMFunction, general_info::GMGeneralInfo,
+            texture_page_item::GMTexturePageItem, variable::GMVariable,
         },
         gm_version::{GMVersion, GMVersionReq},
         reference::GMRef,
@@ -75,15 +75,15 @@ pub struct DataReader<'a> {
     // Properly initialized after parsing `FORM`.
     pub options: ParsingOptions,
 
-    /// Should only be set by [`crate::gamemaker::elements::texture_page_items`].
+    /// Should only be set by [`crate::gamemaker::elements::texture_page_item`].
     /// This means that `TPAG` has to be parsed before any chunk with texture page item pointers.
     pub texture_page_item_occurrences: HashMap<u32, GMRef<GMTexturePageItem>>,
 
-    /// Should only be set by [`crate::gamemaker::elements::variables`].
+    /// Should only be set by [`crate::gamemaker::elements::variable`].
     /// This means that `VARI` has to be parsed before `CODE`.
     pub variable_occurrences: HashMap<u32, GMRef<GMVariable>>,
 
-    /// Should only be set by [`crate::gamemaker::elements::functions`].
+    /// Should only be set by [`crate::gamemaker::elements::function`].
     /// This means that `FUNC` has to be parsed before `CODE`.
     pub function_occurrences: HashMap<u32, GMRef<GMFunction>>,
 }

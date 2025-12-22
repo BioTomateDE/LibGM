@@ -79,7 +79,7 @@ pub fn named_list_chunk(attr: TokenStream, item: TokenStream) -> TokenStream {
         #name_impl
 
         impl crate::gamemaker::elements::GMNamedListChunk for #chunk_type {
-            fn ref_by_name(&self, name: &str) -> crate::error::Result<crate::gamemaker::reference::GMRef<#elem_type>> {
+            fn ref_by_name(&self, name: &str) -> Result<crate::gamemaker::reference::GMRef<#elem_type>> {
                 for (i, element) in self.#elems_field.iter().enumerate() {
                     if element.name == name {
                         return Ok(i.into());
@@ -95,11 +95,11 @@ pub fn named_list_chunk(attr: TokenStream, item: TokenStream) -> TokenStream {
                 return Err(error_message.into());
             }
 
-            fn by_name(&self, name: &str) -> crate::error::Result<&#elem_type> {
+            fn by_name(&self, name: &str) -> Result<&#elem_type> {
                 self.ref_by_name(name).map(|gmref| &self.#elems_field[gmref.index as usize])
             }
 
-            fn by_name_mut(&mut self, name: &str) -> crate::error::Result<&mut #elem_type> {
+            fn by_name_mut(&mut self, name: &str) -> Result<&mut #elem_type> {
                 self.ref_by_name(name).map(|gmref| &mut self.#elems_field[gmref.index as usize])
             }
         }

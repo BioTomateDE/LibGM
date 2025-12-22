@@ -121,6 +121,11 @@ impl DataReader<'_> {
     }
 
     pub fn read_chunk<T: GMChunk>(&mut self) -> Result<T> {
+        // If the chunk doesn't exist, return the `default` stub.
+        // This will also set `exists` to false.
+        //
+        // The chunk metadata is removed from the struct so
+        // that unread chunks can easily be detected later.
         let Some(chunk) = self.chunks.remove_name(T::NAME) else {
             return Ok(T::default());
         };
@@ -156,8 +161,8 @@ impl DataReader<'_> {
     fn read_chunk_padding(&mut self) -> Result<()> {
         // Padding only for GMS2+ and 1.9999+
         let ver: &GMVersion = &self.specified_version;
-        let padding_elegible = ver.major >= 2 || (ver.major == 1 && ver.minor >= 9999);
-        if !padding_elegible {
+        let padding_eligible = ver.major >= 2 || (ver.major == 1 && ver.minor >= 9999);
+        if !padding_eligible {
             return Ok(());
         }
 
