@@ -108,7 +108,7 @@ impl GMElement for GMSound {
         let pitch = reader.read_f32()?;
 
         let audio_group: GMRef<GMAudioGroup>;
-        if flag_regular && reader.general_info.bytecode_version >= 14 {
+        if flag_regular && reader.general_info.wad_version >= 14 {
             audio_group = reader.read_resource_by_id()?;
         } else {
             let preload = reader.read_bool32()?;
@@ -142,7 +142,7 @@ impl GMElement for GMSound {
         builder.write_u32(self.effects);
         builder.write_f32(self.volume);
         builder.write_f32(self.pitch);
-        if self.flag_regular && builder.bytecode_version() >= 14 {
+        if self.flag_regular && builder.wad_version() >= 14 {
             builder.write_resource_id(self.audio_group);
         } else {
             builder.write_bool32(true); // Preload

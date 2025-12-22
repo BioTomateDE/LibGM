@@ -13,7 +13,7 @@ use crate::{
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
-    gml::instructions::{GMInstanceType, GMVariableType},
+    gml::instruction::{GMInstanceType, GMVariableType},
     prelude::*,
     util::init::vec_with_capacity,
 };
@@ -22,24 +22,20 @@ use crate::{
 pub struct GMVariables {
     /// List of all variables; mixing global, local and self.
     pub variables: Vec<GMVariable>,
-    /// Set in bytecode 15 and above.
-    pub b15_header: Option<GMVariablesB15Header>,
+    /// Set in WAD 15 and above.
+    pub modern_header: Option<ModernHeader>,
     pub exists: bool,
 }
 
 impl GMVariables {
     // This method is still buggy, use with caution.
-    // TODO: make this work for bytecode 14. also docs. also vari_instance_type is wrong/buggy?
+    // TODO: make this work for WAD<=14. also docs. also vari_instance_type is wrong/buggy?
     pub fn make(
         &mut self,
         name: &str,
         instance_type: GMInstanceType,
         general_info: &GMGeneralInfo,
     ) -> Result<GMRef<GMVariable>> {
-        // if general_info.bytecode_version < 15 {
-        //     bail!("Bytecode 14 (and below) not yet supported");
-        // }
-
         if instance_type == GMInstanceType::Local {
             bail!("Local variables have to be unique; this function will not work");
         }
@@ -55,8 +51,8 @@ impl GMVariables {
                 continue;
             }
 
-            if let Some(b15) = &variable.b15_data
-                && b15.instance_type != vari_instance_type
+            if let Some(data) = &variable.modern_data
+                && data.instance_type != vari_instance_type
             {
                 continue;
             }
@@ -68,37 +64,29 @@ impl GMVariables {
         // Couldn't find a variable; make a new one
 
         // First update these scuffed ass variable counts
-        if let Some(b15_header) = &mut self.b15_header {
-            //let mut variable_id: i32 = b15_header.var_count1 as i32;
-
+        if let Some(header) = &mut self.modern_header {
             if general_info.is_version_at_least((2, 3)) {
                 if instance_type != GMInstanceType::Builtin {
-                    b15_header.var_count1 += 1;
-                    b15_header.var_count2 += 1;
-                    //variable_id = new_name_string.index as i32;
+                    header.var_count1 += 1;
+                    header.var_count2 += 1;
                 }
-            } else if general_info.bytecode_version >= 16 {
+            } else if general_info.wad_version >= 16 {
                 // this condition is only suggested by utmt; not confirmed (original: `!DifferentVarCounts`)
-                b15_header.var_count1 += 1;
-                b15_header.var_count2 += 1;
+                header.var_count1 += 1;
+                header.var_count2 += 1;
             } else if matches!(instance_type, GMInstanceType::Self_(_)) {
-                //variable_id = b15_header.var_count2 as i32;
-                b15_header.var_count2 += 1;
+                header.var_count2 += 1;
             } else if instance_type == GMInstanceType::Global {
-                b15_header.var_count1 += 1;
+                header.var_count1 += 1;
             }
         }
-
-        // if instance_type_VARI == GMInstanceType::Builtin {
-        //     variable_id = -6;
-        // }
 
         // Now actually create the variable
         let variable_ref: GMRef<GMVariable> = self.variables.len().into();
 
         let variable = GMVariable {
             name: name.to_string(),
-            b15_data: Some(GMVariableB15Data {
+            modern_data: Some(ModernData {
                 instance_type: vari_instance_type,
                 variable_id: 0x6767,
             }),
@@ -112,9 +100,8 @@ impl GMVariables {
 
 impl GMElement for GMVariables {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let b15_header: Option<GMVariablesB15Header> =
-            reader.deserialize_if_bytecode_version(15)?;
-        let variable_size = match b15_header {
+        let modern_header: Option<ModernHeader> = reader.deserialize_if_wad_version(15)?;
+        let variable_size = match modern_header {
             Some(_) => 20,
             None => 12,
         };
@@ -127,13 +114,13 @@ impl GMElement for GMVariables {
         while reader.cur_pos + variable_size <= reader.chunk.end_pos {
             let name: String = reader.read_gm_string()?;
 
-            let b15_data: Option<GMVariableB15Data> = reader.deserialize_if_bytecode_version(15)?;
+            let modern_data: Option<ModernData> = reader.deserialize_if_wad_version(15)?;
 
             let occurrence_count = reader.read_count("Variable occurrence")?;
             let first_occurrence_pos = reader.read_u32()?;
             occurrence_infos.push((occurrence_count, first_occurrence_pos));
 
-            variables.push(GMVariable { name, b15_data });
+            variables.push(GMVariable { name, modern_data });
         }
 
         // Resolve occurrences
@@ -181,17 +168,17 @@ impl GMElement for GMVariables {
         reader.chunk = saved_chunk;
         reader.cur_pos = saved_position;
 
-        Ok(Self { variables, b15_header, exists: true })
+        Ok(Self { variables, modern_header, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        self.b15_header
-            .serialize_if_bytecode_ver(builder, "Scuffed bytecode 15 fields", 15)?;
+        self.modern_header
+            .serialize_if_wad_ver(builder, "Scuffed WAD 15+ fields", 15)?;
         for (i, variable) in self.variables.iter().enumerate() {
             builder.write_gm_string(&variable.name);
             variable
-                .b15_data
-                .serialize_if_bytecode_ver(builder, "Bytecode 15 data", 15)?;
+                .modern_data
+                .serialize_if_wad_ver(builder, "WAD 15 data", 15)?;
 
             let occurrences = builder.variable_occurrences.get(i).ok_or_else(|| {
                 format!(
@@ -214,7 +201,7 @@ impl GMElement for GMVariables {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMVariable {
     pub name: String,
-    pub b15_data: Option<GMVariableB15Data>,
+    pub modern_data: Option<ModernData>,
 }
 
 element_stub!(GMVariable);
@@ -236,12 +223,12 @@ impl GMNamedElement for GMVariable {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMVariableB15Data {
+pub struct ModernData {
     pub instance_type: GMInstanceType,
     pub variable_id: i32,
 }
 
-impl GMElement for GMVariableB15Data {
+impl GMElement for ModernData {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let raw_instance_type: i16 = reader.read_i32()? as i16;
         let instance_type: GMInstanceType =
@@ -258,13 +245,13 @@ impl GMElement for GMVariableB15Data {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GMVariablesB15Header {
+pub struct ModernHeader {
     pub var_count1: u32,
     pub var_count2: u32,
     pub max_local_var_count: u32,
 }
 
-impl GMElement for GMVariablesB15Header {
+impl GMElement for ModernHeader {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         // Nobody knows what the fuck these values mean
         let var_count1 = reader.read_u32()?;

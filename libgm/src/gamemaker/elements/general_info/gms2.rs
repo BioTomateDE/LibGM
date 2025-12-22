@@ -140,7 +140,7 @@ impl GMGeneralInfo {
             | (i64::from(self.default_window_height) + i64::from(flags_raw)) << 32
             | (i64::from(self.default_window_height) + i64::from(flags_raw)) << 16
             | (i64::from(self.default_window_width) + i64::from(flags_raw));
-        info_number ^= i64::from(self.bytecode_version);
+        info_number ^= i64::from(self.wad_version);
         info_number
     }
 

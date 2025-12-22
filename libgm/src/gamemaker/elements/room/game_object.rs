@@ -5,7 +5,7 @@ use crate::{
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
-    gml::instructions::GMCode,
+    gml::instruction::GMCode,
     prelude::*,
 };
 
@@ -43,8 +43,8 @@ impl GMElement for GameObject {
         let color = reader.read_u32()?;
         let rotation = reader.read_f32()?; // {~~} FloatAsInt (negative zero handling stuff)
 
-        // [From UndertaleModTool] "is that dependent on bytecode or something else?"
-        let pre_create_code: Option<GMRef<GMCode>> = if reader.general_info.bytecode_version >= 16 {
+        // [From UndertaleModTool] "is that dependent on WAD or something else?"
+        let pre_create_code: Option<GMRef<GMCode>> = if reader.general_info.wad_version >= 16 {
             reader.read_resource_by_id_opt()?
         } else {
             None
@@ -80,7 +80,7 @@ impl GMElement for GameObject {
             .serialize_if_gm_ver(builder, "Image Index", (2, 2, 2, 302))?;
         builder.write_u32(self.color);
         builder.write_f32(self.rotation);
-        if builder.bytecode_version() >= 16 {
+        if builder.wad_version() >= 16 {
             builder.write_resource_id_opt(self.pre_create_code);
         }
         Ok(())

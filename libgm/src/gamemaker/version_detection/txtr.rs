@@ -1,6 +1,6 @@
 use crate::{
     gamemaker::{
-        deserialize::reader::DataReader, elements::embedded_texture::MAGIC_BZ2_QOI_HEADER,
+        deserialize::reader::DataReader, elements::embedded_texture::BZ2_QOI_HEADER,
         gm_version::GMVersionReq,
     },
     prelude::*,
@@ -38,7 +38,7 @@ pub fn check_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         reader.cur_pos = reader.read_u32()? + 12; // Go to texture; at an offset
         reader.cur_pos = reader.read_u32()?; // Go to texture data
         let header: &[u8; 4] = reader.read_bytes_const()?;
-        if header != MAGIC_BZ2_QOI_HEADER {
+        if header != BZ2_QOI_HEADER {
             continue; // Nothing useful, check the next texture
         }
         reader.cur_pos += 4; // Skip width/height

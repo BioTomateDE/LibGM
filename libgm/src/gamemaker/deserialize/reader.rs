@@ -58,7 +58,7 @@ pub struct DataReader<'a> {
     /// Is properly initialized after parsing `FORM`.
     pub last_chunk: ChunkName,
 
-    /// General info about this data file. Includes game name, GameMaker Version and Bytecode Version.
+    /// General info about this data file. Includes game name, GameMaker Version and WAD Version.
     /// Contains garbage placeholders until the `GEN8` chunk is deserialized.
     /// Use [`DataReader::unstable_get_gm_version`] to get the GameMaker version before `GEN8` is parsed.
     pub general_info: GMGeneralInfo,
@@ -283,20 +283,14 @@ impl<'a> DataReader<'a> {
         }
     }
 
-    /// Deserializes an element if the bytecode version meets the requirement (`>=`).
-    ///
-    /// Bytecode version is separate from the GameMaker IDE version and tracks
-    /// changes to the virtual machine instruction format.
+    /// Deserializes an element if the WAD version meets the requirement (`>=`).
     ///
     /// # Returns
-    /// - `Ok(Some(T))` if the bytecode version requirement is met and deserialization succeeds
-    /// - `Ok(None)` if the bytecode version requirement is not met
-    /// - `Err(_)` if the bytecode version requirement is met but deserialization fails
-    pub fn deserialize_if_bytecode_version<T: GMElement>(
-        &mut self,
-        ver_req: u8,
-    ) -> Result<Option<T>> {
-        if self.general_info.bytecode_version >= ver_req {
+    /// - `Ok(Some(T))` if the WAD version requirement is met and deserialization succeeds
+    /// - `Ok(None)` if the WAD version requirement is not met
+    /// - `Err(_)` if the WAD version requirement is met but deserialization fails
+    pub fn deserialize_if_wad_version<T: GMElement>(&mut self, ver_req: u8) -> Result<Option<T>> {
+        if self.general_info.wad_version >= ver_req {
             Ok(Some(T::deserialize(self)?))
         } else {
             Ok(None)

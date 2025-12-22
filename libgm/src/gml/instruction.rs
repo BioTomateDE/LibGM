@@ -18,15 +18,16 @@ pub struct GMCode {
     /// The name of the code entry.
     pub name: String,
 
-    /// A list of bytecode instructions this code entry has.
-    pub instructions: Vec<GMInstruction>,
+    /// A list of VM instructions this code entry has.
+    pub instructions: Vec<Instruction>,
 
-    /// Set in bytecode 15+.
-    pub bytecode15_info: Option<GMCodeBytecode15>,
+    /// Set in WAD15+.
+    pub modern_data: Option<ModernData>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMCodeBytecode15 {
+/// Set in WAD15.
+pub struct ModernData {
     /// The amount of local variables this code entry has.
     pub locals_count: u16,
 
@@ -45,7 +46,7 @@ pub struct GMCodeBytecode15 {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum GMInstruction {
+pub enum Instruction {
     /// Converts the top of the stack from one type to another.
     Convert { from: GMDataType, to: GMDataType },
 
@@ -269,7 +270,7 @@ pub enum GMInstruction {
     PushReference { asset_reference: GMAssetReference },
 }
 
-impl GMInstruction {
+impl Instruction {
     /// Gets the instruction size in bytes.
     /// This size includes extra data like integers, floats, variable references, etc.
     #[must_use]

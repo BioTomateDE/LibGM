@@ -22,7 +22,7 @@ pub struct GMFunctions {
 
 impl GMElement for GMFunctions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let functions_count = if reader.general_info.bytecode_version <= 14 {
+        let functions_count = if reader.general_info.wad_version <= 14 {
             reader.chunk.length() / 12
         } else {
             reader.read_u32()?
@@ -66,7 +66,7 @@ impl GMElement for GMFunctions {
             functions.push(GMFunction { name });
         }
 
-        let code_locals: GMCodeLocals = if reader.general_info.bytecode_version >= 15
+        let code_locals: GMCodeLocals = if reader.general_info.wad_version >= 15
             && !reader.general_info.is_version_at_least((2024, 8))
         {
             GMCodeLocals::deserialize(reader)?
@@ -78,7 +78,7 @@ impl GMElement for GMFunctions {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if builder.bytecode_version() >= 15 {
+        if builder.wad_version() >= 15 {
             builder.write_usize(self.functions.len())?;
         }
 
@@ -104,9 +104,9 @@ impl GMElement for GMFunctions {
             builder.write_i32(first_occurrence);
         }
 
-        if builder.bytecode_version() >= 15 && !builder.is_gm_version_at_least((2024, 8)) {
+        if builder.wad_version() >= 15 && !builder.is_gm_version_at_least((2024, 8)) {
             if !self.code_locals.exists {
-                bail!("Code Locals don't exist in bytecode version 15+");
+                bail!("Code Locals don't exist in WAD version 15+");
             }
             self.code_locals.serialize(builder)?;
         }
