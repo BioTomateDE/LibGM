@@ -22,7 +22,7 @@ pub struct GMParticleEmitters {
 
 impl GMElement for GMParticleEmitters {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        if reader.chunk.length() > 4 {
+        if reader.chunk.length() > 8 {
             log::warn!("Particle emitters are not tested");
         }
         reader.align(4)?;

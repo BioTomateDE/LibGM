@@ -2,7 +2,7 @@ use std::convert::TryInto;
 
 use image::{DynamicImage, ImageBuffer, Rgba};
 
-use crate::{gamemaker::data::Endianness, prelude::*, util::fmt::hexdump};
+use crate::{gamemaker::data::Endianness, prelude::*, util::fmt::hexdump_range};
 
 const QOI_INDEX: u8 = 0x00;
 const QOI_RUN_8: u8 = 0x40;
@@ -23,7 +23,7 @@ pub fn deserialize(bytes: &[u8]) -> Result<DynamicImage> {
     let endianness: Endianness = match &header[..4] {
         b"qoif" => Endianness::Big,
         b"fioq" => Endianness::Little,
-        _ => bail!("Invalid QOIF image magic [{}]", hexdump(header, ..4)?),
+        _ => bail!("Invalid QOIF image magic [{}]", hexdump_range(header, ..4)?),
     };
 
     let u16_from = match endianness {

@@ -267,7 +267,6 @@ pub struct GMVariablesB15Header {
 impl GMElement for GMVariablesB15Header {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         // Nobody knows what the fuck these values mean
-        // TODO remember to increment these when a variable is added by a mod
         let var_count1 = reader.read_u32()?;
         let var_count2 = reader.read_u32()?;
         let max_local_var_count = reader.read_u32()?;

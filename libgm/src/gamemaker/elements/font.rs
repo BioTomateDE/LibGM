@@ -100,7 +100,7 @@ pub struct GMFont {
     /// The start of the character range for this font.
     pub range_start: u16,
 
-    /// TODO: Currently unknown value.
+    /// TODO(doc): Currently unknown value.
     /// Possibly related to ranges? (aka normal, ascii, digits, letters)
     pub charset: u8,
 
@@ -131,11 +131,11 @@ pub struct GMFont {
 
     /// A spread value that's used for SDF rendering; was introduced in GM 2023.2.
     /// 0 means disabled.
-    /// TODO: what is spread, what is sdf?
+    /// TODO(doc): what is spread, what is sdf?
     pub sdf_spread: Option<u32>,
 
     /// Was introduced in GM 2023.6.
-    /// TODO: give an explanation of what this does
+    /// TODO(doc): give an explanation of what this does
     pub line_height: Option<u32>,
 
     /// The glyphs that this font uses.

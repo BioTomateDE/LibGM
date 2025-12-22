@@ -230,7 +230,7 @@ impl GMElement for GMSprite {
                     //     bail!("Expected Sprite Special Vector shape version to be 3 but got {vector_version}");
                     // }
                     // let vector_shape: GMSpriteShapeData<> = GMSpriteShapeData::deserialize(reader)?;
-                    // TODO: implement vector eventually
+                    // TODO(weak): implement vector eventually
                     bail!(
                         "Vector Sprite Type not yet supported; will be implemented when UTMT stops using raw ints for this"
                     );
