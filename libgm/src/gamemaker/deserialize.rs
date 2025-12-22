@@ -1,8 +1,8 @@
-pub(crate) mod chunk;
+pub(super) mod chunk;
 mod lists;
 mod numbers;
 pub(crate) mod reader;
-pub mod resources;
+pub(super) mod resources;
 
 use std::path::Path;
 
@@ -173,10 +173,10 @@ impl ParsingOptions {
         }
 
         log::info!(
-            "Loading {:?} (GM {}, Bytecode {})",
+            "Loading {:?} (GM {}, WAD {})",
             reader.general_info.display_name,
             reader.general_info.version,
-            reader.general_info.bytecode_version,
+            reader.general_info.wad_version,
         );
 
         let is_yyc: bool = check_yyc(&reader).context("Checking YYC")?;

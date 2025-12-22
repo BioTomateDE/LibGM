@@ -5,7 +5,7 @@ use libgm::{
         elements::{GMNamedListChunk, script::GMScript},
         reference::GMRef,
     },
-    gml::{assembly::assemble_code, instructions::GMCode},
+    gml::{assembly::assemble_code, instruction::GMCode},
     prelude::*,
 };
 

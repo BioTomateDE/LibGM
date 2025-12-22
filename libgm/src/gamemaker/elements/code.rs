@@ -10,9 +10,9 @@ use crate::{
         serialize::builder::DataBuilder,
     },
     gml::{
-        instructions::{
-            CodeVariable, GMAssetReference, GMCode, GMCodeBytecode15, GMComparisonType, GMDataType,
-            GMInstanceType, GMInstruction, GMVariableType, PushValue,
+        instruction::{
+            CodeVariable, GMAssetReference, GMCode, GMComparisonType, GMDataType, GMInstanceType,
+            GMVariableType, Instruction, ModernData, PushValue,
         },
         opcodes,
     },
@@ -58,13 +58,13 @@ impl GMElement for GMCodes {
 
             let instructions_start_pos;
             let instructions_end_pos;
-            let bytecode15_info: Option<GMCodeBytecode15>;
+            let modern_data: Option<ModernData>;
 
-            if reader.general_info.bytecode_version <= 14 {
+            if reader.general_info.wad_version <= 14 {
                 instructions_start_pos = reader.cur_pos; // Instructions are placed immediately after code metadata; how convenient!
                 reader.cur_pos += code_length; // Skip over them; they will get parsed in the next loops
                 instructions_end_pos = reader.cur_pos;
-                bytecode15_info = None;
+                modern_data = None;
             } else {
                 let locals_count = reader.read_u16()?;
                 let arguments_count_raw = reader.read_u16()?;
@@ -83,21 +83,17 @@ impl GMElement for GMCodes {
                     .checked_add(code_length)
                     .ok_or("Instruction end position overflowed")?;
 
-                let b15_info = GMCodeBytecode15 {
+                let data = ModernData {
                     locals_count,
                     arguments_count,
                     weird_local_flag,
                     offset,
                     parent: None,
                 };
-                bytecode15_info = Some(b15_info);
+                modern_data = Some(data);
             }
 
-            codes.push(GMCode {
-                name,
-                instructions: vec![],
-                bytecode15_info,
-            });
+            codes.push(GMCode { name, instructions: vec![], modern_data });
 
             instructions_ranges.push((instructions_start_pos, instructions_end_pos));
             last_code_entry_pos = reader.cur_pos;
@@ -107,12 +103,12 @@ impl GMElement for GMCodes {
             let code: &mut GMCode = &mut codes[i];
             let length = end - start;
 
-            // If bytecode15+ and the instructions pointer is known, then it's a child code entry
+            // If WAD15+ and the instructions pointer is known, then it's a child code entry
             if length > 0
                 && let Some(parent_code) = codes_by_pos.get(&start)
-                && let Some(b15_info) = &mut code.bytecode15_info
+                && let Some(data) = &mut code.modern_data
             {
-                b15_info.parent = Some(*parent_code);
+                data.parent = Some(*parent_code);
                 continue;
             }
 
@@ -126,7 +122,7 @@ impl GMElement for GMCodes {
             }
 
             while reader.cur_pos < end {
-                let instruction = GMInstruction::deserialize(reader)
+                let instruction = Instruction::deserialize(reader)
                     .with_context(|| {
                         format!(
                             "parsing Instruction #{} at position {}",
@@ -142,7 +138,7 @@ impl GMElement for GMCodes {
         }
 
         reader.cur_pos = last_code_entry_pos;
-        // Set pos to to the supposed chunk end (since instructions are stored separately in b15+)
+        // Set pos to the supposed chunk end (since instructions are stored separately in WAD15+)
 
         Ok(Self { codes, exists: true })
     }
@@ -154,8 +150,8 @@ impl GMElement for GMCodes {
             builder.write_u32(0xDEAD_C0DE);
         }
 
-        // Bytecode 14 my beloved
-        if builder.bytecode_version() <= 14 {
+        // WAD <= 14 my beloved
+        if builder.wad_version() <= 14 {
             for (i, code) in self.codes.iter().enumerate() {
                 builder.overwrite_usize(builder.len(), pointer_list_pos + 4 * i)?;
                 builder.write_gm_string(&code.name);
@@ -163,7 +159,7 @@ impl GMElement for GMCodes {
                 builder.write_u32(0xDEAD_C0DE);
                 let start: usize = builder.len();
 
-                // In bytecode 14, instructions are written immediately
+                // In WAD <= 14, instructions are written immediately
                 for (i, instruction) in code.instructions.iter().enumerate() {
                     instruction.serialize(builder).with_context(|| {
                         format!("serializing code #{i} with name {:?}", code.name,)
@@ -176,11 +172,11 @@ impl GMElement for GMCodes {
             return Ok(());
         }
 
-        // In bytecode 15, the codes' instructions are written before the codes metadata
+        // In WAD 15+, the codes' instructions are written before the codes metadata
         let mut instructions_ranges: Vec<(usize, usize)> = Vec::with_capacity(self.codes.len());
 
         for (i, code) in self.codes.iter().enumerate() {
-            if code.bytecode15_info.as_ref().unwrap().parent.is_some() {
+            if code.modern_data.as_ref().unwrap().parent.is_some() {
                 // If this is a child code entry, don't write instructions; just repeat last pointer
                 let prev_range = instructions_ranges
                     .last()
@@ -203,29 +199,28 @@ impl GMElement for GMCodes {
             builder.overwrite_usize(builder.len(), pointer_list_pos + 4 * i)?;
             let (start, end) = instructions_ranges[i];
             let length: usize = end - start;
-            let b15_info: &GMCodeBytecode15 = code.bytecode15_info.as_ref().ok_or_else(|| {
+            let data: &ModernData = code.modern_data.as_ref().ok_or_else(|| {
                 format!(
-                    "Code bytecode 15 data not set in Bytecode version {}",
-                    builder.bytecode_version()
+                    "Code WAD15+ data not set in WAD version {}",
+                    builder.wad_version()
                 )
             })?;
 
             builder.write_gm_string(&code.name);
             builder.write_usize(length)?;
-            builder.write_u16(b15_info.locals_count);
-            builder.write_u16(
-                b15_info.arguments_count | if b15_info.weird_local_flag { 0x8000 } else { 0 },
-            );
+            builder.write_u16(data.locals_count);
+            builder
+                .write_u16(data.arguments_count | if data.weird_local_flag { 0x8000 } else { 0 });
             let instructions_start_offset: i32 = start as i32 - builder.len() as i32;
             builder.write_i32(instructions_start_offset);
-            builder.write_u32(b15_info.offset);
+            builder.write_u32(data.offset);
         }
 
         Ok(())
     }
 }
 
-impl GMElement for GMInstruction {
+impl GMElement for Instruction {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let word = reader.read_u32()?;
         let mut opcode = ((word & 0xFF00_0000) >> 24) as u8;
@@ -234,9 +229,9 @@ impl GMElement for GMInstruction {
         let b0 = (word & 0x0000_00FF) as u8;
         let mut b = [b0, b1, b2];
 
-        if reader.general_info.bytecode_version < 15 {
+        if reader.general_info.wad_version < 15 {
             if matches!(opcode, 0x10..=0x16) {
-                // This is needed to preserve the comparison type for pre bytecode 15
+                // This is needed to preserve the comparison type for pre WAD 15
                 assert_zero_b1(b)?;
                 b[1] = opcode - 0x10;
             }
@@ -368,7 +363,7 @@ impl GMElement for GMInstruction {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let mut opcode: u8 = self.opcode();
-        if builder.bytecode_version() < 15 {
+        if builder.wad_version() < 15 {
             opcode = opcodes::new_to_old(opcode);
         }
 
@@ -530,15 +525,15 @@ fn parse_double_type(b: [u8; 3]) -> Result<[GMDataType; 2]> {
     Ok([right, left])
 }
 
-fn parse_comparison(b: [u8; 3]) -> Result<GMInstruction> {
+fn parse_comparison(b: [u8; 3]) -> Result<Instruction> {
     assert_zero_b0(b)?;
     let comparison_type: GMComparisonType = num_enum_from(b[1])?;
     let rhs = get_type1(b)?;
     let lhs = get_type2(b)?;
-    Ok(GMInstruction::Compare { lhs, rhs, comparison_type })
+    Ok(Instruction::Compare { lhs, rhs, comparison_type })
 }
 
-fn parse_pop(b: [u8; 3], reader: &mut DataReader) -> Result<GMInstruction> {
+fn parse_pop(b: [u8; 3], reader: &mut DataReader) -> Result<Instruction> {
     let raw_instance_type = get_u16(b) as i16;
     let type1: GMDataType = get_type1(b)?;
     let type2: GMDataType = get_type2(b)?;
@@ -554,31 +549,31 @@ fn parse_pop(b: [u8; 3], reader: &mut DataReader) -> Result<GMInstruction> {
                 "Expected 5 or 6 for \"instance type\" (aka SwapExtra) of PopSwap Instruction, got {n}"
             ),
         };
-        return Ok(GMInstruction::PopSwap { is_array });
+        return Ok(Instruction::PopSwap { is_array });
     }
 
     let variable: CodeVariable = read_variable(reader, raw_instance_type)?;
-    Ok(GMInstruction::Pop { variable, type1, type2 })
+    Ok(Instruction::Pop { variable, type1, type2 })
 }
 
-fn parse_duplicate(b: [u8; 3]) -> Result<GMInstruction> {
+fn parse_duplicate(b: [u8; 3]) -> Result<Instruction> {
     let size: u8 = b[0];
     let mut size2: u8 = b[1];
     let data_type = get_type1(b)?;
     assert_zero_type2(b)?;
 
     if size2 == 0 {
-        return Ok(GMInstruction::Duplicate { data_type, size });
+        return Ok(Instruction::Duplicate { data_type, size });
     }
 
     // Duplicate Swap Instruction
     size2 = (size2 & 0x7F) >> 3;
-    Ok(GMInstruction::DuplicateSwap { data_type, size1: size, size2 })
+    Ok(Instruction::DuplicateSwap { data_type, size1: size, size2 })
 }
 
 fn parse_branch(b: [u8; 3], reader: &DataReader) -> i32 {
     let mut value: u32 = get_u24(b);
-    if reader.general_info.bytecode_version > 14 && (value & 0x40_0000) != 0 {
+    if reader.general_info.wad_version > 14 && (value & 0x40_0000) != 0 {
         value |= 0x80_0000;
     }
     if value & 0x80_0000 != 0 {
@@ -647,7 +642,7 @@ fn parse_pushim(b: [u8; 3]) -> Result<i16> {
     Ok(integer)
 }
 
-fn parse_call(b: [u8; 3], reader: &mut DataReader) -> Result<GMInstruction> {
+fn parse_call(b: [u8; 3], reader: &mut DataReader) -> Result<Instruction> {
     let argument_count: u16 = get_u16(b);
     let data_type: GMDataType = get_type1(b)?;
     assert_zero_type2(b)?;
@@ -665,7 +660,7 @@ fn parse_call(b: [u8; 3], reader: &mut DataReader) -> Result<GMInstruction> {
         })?;
     reader.cur_pos += 4; // Skip next occurrence offset
 
-    Ok(GMInstruction::Call { function, argument_count })
+    Ok(Instruction::Call { function, argument_count })
 }
 
 fn parse_callvar(b: [u8; 3]) -> Result<u16> {
@@ -677,7 +672,7 @@ fn parse_callvar(b: [u8; 3]) -> Result<u16> {
     Ok(argument_count)
 }
 
-fn parse_extended(reader: &mut DataReader, b: [u8; 3]) -> Result<GMInstruction> {
+fn parse_extended(reader: &mut DataReader, b: [u8; 3]) -> Result<Instruction> {
     use GMDataType::{Int16, Int32};
     use opcodes::extended::{
         CHKINDEX, ISNULLISH, ISSTATICOK, POPAF, PUSHAC, PUSHAF, PUSHREF, RESTOREAREF, SAVEAREF,
@@ -689,20 +684,20 @@ fn parse_extended(reader: &mut DataReader, b: [u8; 3]) -> Result<GMInstruction> 
     assert_zero_type2(b)?;
 
     let instruction = match (data_type, kind) {
-        (Int16, CHKINDEX) => GMInstruction::CheckArrayIndex,
-        (Int16, PUSHAF) => GMInstruction::PushArrayFinal,
-        (Int16, POPAF) => GMInstruction::PopArrayFinal,
-        (Int16, PUSHAC) => GMInstruction::PushArrayContainer,
-        (Int16, SETOWNER) => GMInstruction::SetArrayOwner,
-        (Int16, ISSTATICOK) => GMInstruction::HasStaticInitialized,
-        (Int16, SETSTATIC) => GMInstruction::SetStaticInitialized,
-        (Int16, SAVEAREF) => GMInstruction::SaveArrayReference,
-        (Int16, RESTOREAREF) => GMInstruction::RestoreArrayReference,
-        (Int16, ISNULLISH) => GMInstruction::IsNullishValue,
+        (Int16, CHKINDEX) => Instruction::CheckArrayIndex,
+        (Int16, PUSHAF) => Instruction::PushArrayFinal,
+        (Int16, POPAF) => Instruction::PopArrayFinal,
+        (Int16, PUSHAC) => Instruction::PushArrayContainer,
+        (Int16, SETOWNER) => Instruction::SetArrayOwner,
+        (Int16, ISSTATICOK) => Instruction::HasStaticInitialized,
+        (Int16, SETSTATIC) => Instruction::SetStaticInitialized,
+        (Int16, SAVEAREF) => Instruction::SaveArrayReference,
+        (Int16, RESTOREAREF) => Instruction::RestoreArrayReference,
+        (Int16, ISNULLISH) => Instruction::IsNullishValue,
         (Int32, PUSHREF) => {
             let asset_reference = GMAssetReference::deserialize(reader)
                 .context("parsing PushReference Extended Instruction")?;
-            GMInstruction::PushReference { asset_reference }
+            Instruction::PushReference { asset_reference }
         },
         _ => bail!("Invalid Extended Instruction with data type {data_type:?} and kind {kind}"),
     };
@@ -730,7 +725,7 @@ fn build_comparison(
     comparison_type: GMComparisonType,
 ) {
     let mut comparison_type = u8::from(comparison_type);
-    if builder.bytecode_version() < 15 {
+    if builder.wad_version() < 15 {
         opcode = 0x10 + comparison_type;
         comparison_type = 0;
     }
@@ -790,7 +785,7 @@ fn build_dupswap(
 
 fn build_branch(builder: &mut DataBuilder, opcode: u8, jump_offset: i32) {
     let mut value = (jump_offset as u32) & 0x00FF_FFFF;
-    if builder.bytecode_version() > 14 && (value & 0x80_0000) != 0 {
+    if builder.wad_version() > 14 && (value & 0x80_0000) != 0 {
         value &= !0x80_0000;
         value |= 0x40_0000;
     }
@@ -1124,7 +1119,7 @@ fn write_function_occurrence(
 
 /// Check whether this data file was generated with `YYC` (`YoYoGames Compiler`).
 /// Should that be the case, the `CODE`, `VARI` and `FUNC` chunks will be empty
-/// (or not exist, depending on the bytecode version).
+/// (or not exist, depending on the WAD version).
 /// NOTE: YYC is untested. Issues may occur.
 pub(crate) fn check_yyc(reader: &DataReader) -> Result<bool> {
     // If the CODE chunk doesn't exist; the data file was compiled with YYC.
@@ -1151,13 +1146,13 @@ pub(crate) fn check_yyc(reader: &DataReader) -> Result<bool> {
         .ok_or("Chunk CODE and VARI exist but FUNC doesn't")?;
 
     // If the CODE chunk exists but is completely empty,
-    // the data file was compiled with YYC before bytecode 17.
+    // the data file was compiled with YYC before WAD 17.
     if !code.is_empty() {
         return Ok(false);
     }
 
-    if reader.general_info.bytecode_version > 16 {
-        log::warn!("Empty, but existant CODE chunk after bytecode 16");
+    if reader.general_info.wad_version > 16 {
+        log::warn!("Empty, but existent CODE chunk after WAD 16");
     }
 
     if !vari.is_empty() {

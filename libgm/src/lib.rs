@@ -24,9 +24,8 @@
 //! All malformed data files are caught into `LibGM`'s custom error type.
 //! However, since this library is not mature yet, there might still be a few bugs.
 //! For GUI applications, I would definitely recommend to **set a
-//! [panic hook](https://doc.rust-lang.org/std/panic/fn.set_hook.html)**
+//! [panic catcher](https://doc.rust-lang.org/std/panic/fn.catch_unwind.html)**
 //! before calling any data parsing/building functions, just to be safe.
-//!
 //!
 //! ## Missing features
 //! The following features are not yet supported by `LibGM`:
@@ -35,7 +34,7 @@
 //!   which may null out pointers to unused elements.
 //!   See [Issue#2](https://github.com/BioTomateDE/LibGM/issues/2) for more information.
 //! - Special Vector Sprites
-//! - Only partial pre-bytecode 15 support
+//! - Only partial pre WAD version 15 support
 //! - Only partial/untested big endian support
 //!
 //! Some things in this library are **not** considered "breaking changes" and may be
@@ -51,6 +50,11 @@
 //!   - Context chain
 //! - All structs and enums marked with `#[non_exhaustive]`
 //!
+//! There might be some other struct fields or type names
+//! with docstrings saying "this may change in the future".
+//! These changes will still require a SemVer minor increment, though.
+//! In other words, they are definitely version-safe to use,
+//! but they might be renamed or removed soon.
 //!
 //! Please note that this project is effectively a Rust port of
 //! [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool)
@@ -129,3 +133,10 @@ mod util;
 pub mod gamemaker;
 pub mod gml;
 pub mod prelude;
+
+// Convenience re-exports
+pub use error::{Error, Result};
+pub use gamemaker::{
+    deserialize::{parse_bytes, parse_file},
+    serialize::{build_bytes, build_file},
+};

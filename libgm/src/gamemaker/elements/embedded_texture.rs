@@ -20,9 +20,9 @@ use crate::{
     util::fmt::hexdump,
 };
 
-pub(crate) const MAGIC_PNG_HEADER: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-pub(crate) const MAGIC_BZ2_QOI_HEADER: &[u8; 4] = b"2zoq";
-pub(crate) const MAGIC_QOI_HEADER: &[u8; 4] = b"fioq";
+pub(crate) const PNG_HEADER: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+pub(crate) const BZ2_QOI_HEADER: &[u8; 4] = b"2zoq";
+pub(crate) const QOI_HEADER: &[u8; 4] = b"fioq";
 
 #[list_chunk("TXTR")]
 pub struct GMEmbeddedTextures {
@@ -200,11 +200,12 @@ fn read_raw_texture(
     reader.align(0x80)?;
     let header: [u8; 8] = *reader.read_bytes_const().context("reading image header")?;
 
-    let (image, data_length) = if header == MAGIC_PNG_HEADER {
+    let (image, data_length) = if header == PNG_HEADER {
         read_png(reader)?
-    } else if header.starts_with(MAGIC_BZ2_QOI_HEADER) {
+    } else if header.starts_with(BZ2_QOI_HEADER) {
         read_bz2_qoi(reader, &header, max_stream_end_pos)?
-    } else if header.starts_with(MAGIC_QOI_HEADER) {
+    } else if header.starts_with(QOI_HEADER) {
+        // this is not gonna detect it for big endian
         read_qoi(reader)?
     } else {
         let dump: String = hexdump(&header);
@@ -393,7 +394,7 @@ impl GMImage {
             },
             Img::Png(raw_png_data) => builder.write_bytes(raw_png_data),
             Img::Bz2Qoi(raw_bz2_qoi_data, header) => {
-                builder.write_bytes(MAGIC_BZ2_QOI_HEADER);
+                builder.write_bytes(BZ2_QOI_HEADER);
                 builder.write_u16(header.width);
                 builder.write_u16(header.height);
                 header.uncompressed_size.serialize_if_gm_ver(

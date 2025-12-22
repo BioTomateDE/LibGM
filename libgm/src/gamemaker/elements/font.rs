@@ -122,7 +122,7 @@ pub struct GMFont {
     pub scale_y: f32,
 
     /// The maximum offset from the baseline to the top of the font.
-    /// Exists since bytecode 17, but seems to be only get checked in GM 2022.2+.
+    /// Exists since WAD 17, but seems to be only get checked in GM 2022.2+.
     pub ascender_offset: Option<i32>,
 
     /// Probably this: <https://en.wikipedia.org/wiki/Ascender_(typography)>; but needs investigation.
@@ -162,7 +162,7 @@ impl GMElement for GMFont {
         let texture: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
         let scale_x: f32 = reader.read_f32()?;
         let scale_y: f32 = reader.read_f32()?;
-        let ascender_offset: Option<i32> = reader.deserialize_if_bytecode_version(17)?;
+        let ascender_offset: Option<i32> = reader.deserialize_if_wad_version(17)?;
         let ascender: Option<u32> = reader.deserialize_if_gm_version((2022, 2))?;
         let sdf_spread: Option<u32> =
             reader.deserialize_if_gm_version((2023, 2, LTSBranch::PostLTS))?;
@@ -210,7 +210,7 @@ impl GMElement for GMFont {
         builder.write_f32(self.scale_x);
         builder.write_f32(self.scale_y);
         self.ascender_offset
-            .serialize_if_bytecode_ver(builder, "Ascender Offset", 17)?;
+            .serialize_if_wad_ver(builder, "Ascender Offset", 17)?;
         self.ascender
             .serialize_if_gm_ver(builder, "Ascender", (2022, 2))?;
         self.sdf_spread.serialize_if_gm_ver(

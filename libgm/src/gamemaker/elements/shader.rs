@@ -62,7 +62,7 @@ impl GMElement for GMShaders {
             let mut cg_ps3_pixel_ptr = 0;
             let mut cg_ps3_pixel_len = 0;
 
-            if reader.general_info.bytecode_version > 13 {
+            if reader.general_info.wad_version > 13 {
                 version = reader.read_i32()?;
                 pssl_vertex_ptr = reader.read_u32()?;
                 pssl_vertex_len = reader.read_u32()?;
@@ -201,7 +201,7 @@ impl GMElement for GMShader {
 
         builder.write_simple_list(&self.vertex_shader_attributes)?;
 
-        if builder.bytecode_version() > 13 {
+        if builder.wad_version() > 13 {
             builder.write_i32(self.version);
             builder.write_pointer_opt(&self.pssl_vertex_data);
             builder.write_usize(self.pssl_vertex_data.as_ref().map_or(0, |i| i.data.len()))?;

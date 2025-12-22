@@ -7,9 +7,9 @@ use crate::{
         },
         reference::GMRef,
     },
-    gml::instructions::{
+    gml::instruction::{
         CodeVariable, GMAssetReference, GMCode, GMComparisonType, GMDataType, GMInstanceType,
-        GMInstruction, GMVariableType, PushValue,
+        GMVariableType, Instruction, PushValue,
     },
     prelude::*,
     util::fmt::typename,
@@ -27,10 +27,7 @@ pub fn disassemble_code(code: &GMCode, gm_data: &GMData) -> Result<String> {
     disassemble_instructions(&code.instructions, gm_data)
 }
 
-pub fn disassemble_instructions(
-    instructions: &[GMInstruction],
-    gm_data: &GMData,
-) -> Result<String> {
+pub fn disassemble_instructions(instructions: &[Instruction], gm_data: &GMData) -> Result<String> {
     let mut assembly: String = String::new();
 
     for instruction in instructions {
@@ -41,52 +38,52 @@ pub fn disassemble_instructions(
     Ok(assembly)
 }
 
-pub fn disassemble_instruction(instruction: &GMInstruction, gm_data: &GMData) -> Result<String> {
+pub fn disassemble_instruction(instruction: &Instruction, gm_data: &GMData) -> Result<String> {
     let mut buffer = String::new();
     disassemble_instr(instruction, &mut buffer, gm_data)?;
     Ok(buffer)
 }
 
 fn disassemble_instr(
-    instruction: &GMInstruction,
+    instruction: &Instruction,
     buffer: &mut String,
     gm_data: &GMData,
 ) -> Result<()> {
     let mnemonic: &str = instruction.mnemonic();
 
     match instruction {
-        GMInstruction::Exit
-        | GMInstruction::Return
-        | GMInstruction::PopSwap { .. }
-        | GMInstruction::PopWithContextExit
-        | GMInstruction::CheckArrayIndex
-        | GMInstruction::PushArrayFinal
-        | GMInstruction::PopArrayFinal
-        | GMInstruction::PushArrayContainer
-        | GMInstruction::SetArrayOwner
-        | GMInstruction::HasStaticInitialized
-        | GMInstruction::SetStaticInitialized
-        | GMInstruction::SaveArrayReference
-        | GMInstruction::RestoreArrayReference
-        | GMInstruction::IsNullishValue => {
+        Instruction::Exit
+        | Instruction::Return
+        | Instruction::PopSwap { .. }
+        | Instruction::PopWithContextExit
+        | Instruction::CheckArrayIndex
+        | Instruction::PushArrayFinal
+        | Instruction::PopArrayFinal
+        | Instruction::PushArrayContainer
+        | Instruction::SetArrayOwner
+        | Instruction::HasStaticInitialized
+        | Instruction::SetStaticInitialized
+        | Instruction::SaveArrayReference
+        | Instruction::RestoreArrayReference
+        | Instruction::IsNullishValue => {
             write!(buffer, "{mnemonic}");
         },
 
-        GMInstruction::Negate { data_type }
-        | GMInstruction::Not { data_type }
-        | GMInstruction::PopDiscard { data_type } => {
+        Instruction::Negate { data_type }
+        | Instruction::Not { data_type }
+        | Instruction::PopDiscard { data_type } => {
             write!(buffer, "{}.{}", mnemonic, data_type.to_str());
         },
 
-        GMInstruction::CallVariable { argument_count } => {
+        Instruction::CallVariable { argument_count } => {
             write!(buffer, "{mnemonic} {argument_count}");
         },
 
-        GMInstruction::Duplicate { data_type, size } => {
+        Instruction::Duplicate { data_type, size } => {
             write!(buffer, "{}.{} {}", mnemonic, data_type.to_str(), size,);
         },
 
-        GMInstruction::DuplicateSwap { data_type, size1, size2 } => {
+        Instruction::DuplicateSwap { data_type, size1, size2 } => {
             write!(
                 buffer,
                 "{}.{} {} {}",
@@ -97,30 +94,30 @@ fn disassemble_instr(
             );
         },
 
-        GMInstruction::Branch { jump_offset }
-        | GMInstruction::BranchIf { jump_offset }
-        | GMInstruction::BranchUnless { jump_offset }
-        | GMInstruction::PushWithContext { jump_offset }
-        | GMInstruction::PopWithContext { jump_offset } => {
+        Instruction::Branch { jump_offset }
+        | Instruction::BranchIf { jump_offset }
+        | Instruction::BranchUnless { jump_offset }
+        | Instruction::PushWithContext { jump_offset }
+        | Instruction::PopWithContext { jump_offset } => {
             write!(buffer, "{mnemonic} {jump_offset}");
         },
 
-        GMInstruction::Convert { from: type1, to: type2 }
-        | GMInstruction::Multiply { multiplicand: type2, multiplier: type1 }
-        | GMInstruction::Divide { dividend: type2, divisor: type1 }
-        | GMInstruction::Remainder { dividend: type2, divisor: type1 }
-        | GMInstruction::Modulus { dividend: type2, divisor: type1 }
-        | GMInstruction::Add { augend: type2, addend: type1 }
-        | GMInstruction::Subtract { minuend: type2, subtrahend: type1 }
-        | GMInstruction::And { lhs: type2, rhs: type1 }
-        | GMInstruction::Or { lhs: type2, rhs: type1 }
-        | GMInstruction::Xor { lhs: type2, rhs: type1 }
-        | GMInstruction::ShiftLeft { value: type2, shift_amount: type1 }
-        | GMInstruction::ShiftRight { value: type2, shift_amount: type1 } => {
+        Instruction::Convert { from: type1, to: type2 }
+        | Instruction::Multiply { multiplicand: type2, multiplier: type1 }
+        | Instruction::Divide { dividend: type2, divisor: type1 }
+        | Instruction::Remainder { dividend: type2, divisor: type1 }
+        | Instruction::Modulus { dividend: type2, divisor: type1 }
+        | Instruction::Add { augend: type2, addend: type1 }
+        | Instruction::Subtract { minuend: type2, subtrahend: type1 }
+        | Instruction::And { lhs: type2, rhs: type1 }
+        | Instruction::Or { lhs: type2, rhs: type1 }
+        | Instruction::Xor { lhs: type2, rhs: type1 }
+        | Instruction::ShiftLeft { value: type2, shift_amount: type1 }
+        | Instruction::ShiftRight { value: type2, shift_amount: type1 } => {
             write!(buffer, "{}.{}.{}", mnemonic, type1.to_str(), type2.to_str());
         },
 
-        GMInstruction::Compare { lhs, rhs, comparison_type } => {
+        Instruction::Compare { lhs, rhs, comparison_type } => {
             write!(
                 buffer,
                 "{}.{}.{} {}",
@@ -131,7 +128,7 @@ fn disassemble_instr(
             );
         },
 
-        GMInstruction::Pop { variable, type1, type2 } => {
+        Instruction::Pop { variable, type1, type2 } => {
             // TODO: find the instance type of the variable? idek
             write!(
                 buffer,
@@ -143,22 +140,22 @@ fn disassemble_instr(
             write_variable(variable, buffer, gm_data)?;
         },
 
-        GMInstruction::Push { value } => {
+        Instruction::Push { value } => {
             write!(buffer, "{}.{} ", mnemonic, value.data_type().to_str());
             write_push_instruction(value, buffer, gm_data)?;
         },
-        GMInstruction::PushLocal { variable }
-        | GMInstruction::PushGlobal { variable }
-        | GMInstruction::PushBuiltin { variable } => {
+        Instruction::PushLocal { variable }
+        | Instruction::PushGlobal { variable }
+        | Instruction::PushBuiltin { variable } => {
             write!(buffer, "{mnemonic} ");
             write_variable(variable, buffer, gm_data)?;
         },
 
-        GMInstruction::PushImmediate { integer } => {
+        Instruction::PushImmediate { integer } => {
             write!(buffer, "{mnemonic} {integer}");
         },
 
-        &GMInstruction::Call { function, argument_count } => {
+        &Instruction::Call { function, argument_count } => {
             write!(
                 buffer,
                 "{} {}(argc={})",
@@ -168,7 +165,7 @@ fn disassemble_instr(
             );
         },
 
-        GMInstruction::PushReference { asset_reference } => {
+        Instruction::PushReference { asset_reference } => {
             write!(buffer, "{mnemonic} ");
             write_asset_reference(asset_reference, buffer, gm_data)?;
         },
@@ -177,7 +174,7 @@ fn disassemble_instr(
     Ok(())
 }
 
-impl GMInstruction {
+impl Instruction {
     #[must_use]
     const fn mnemonic(&self) -> &'static str {
         match self {
@@ -479,11 +476,11 @@ fn write_variable(
 
     let instance_type: GMInstanceType = if code_variable.instance_type == GMInstanceType::Undefined
     {
-        // TODO: this will not work with b14
+        // TODO: this will not work with WAD <= 14
         variable
-            .b15_data
+            .modern_data
             .as_ref()
-            .map_or(GMInstanceType::Undefined, |b15| b15.instance_type)
+            .map_or(GMInstanceType::Undefined, |data| data.instance_type)
     } else {
         code_variable.instance_type
     };

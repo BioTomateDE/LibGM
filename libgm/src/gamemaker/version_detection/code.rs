@@ -1,6 +1,6 @@
 use crate::{
     gamemaker::{deserialize::reader::DataReader, gm_version::GMVersionReq},
-    gml::{instructions::GMDataType, opcodes},
+    gml::{instruction::GMDataType, opcodes},
     prelude::*,
     util::init::vec_with_capacity,
 };

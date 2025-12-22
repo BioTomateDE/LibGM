@@ -159,13 +159,13 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
         reader.general_info.set_version_at_least(version)?;
     }
 
-    if reader.general_info.bytecode_version >= 14 {
+    if reader.general_info.wad_version >= 14 {
         try_check(reader, "FUNC", func::check_2024_8, (2024, 8))?;
     }
-    if reader.general_info.bytecode_version >= 15 {
+    if reader.general_info.wad_version >= 15 {
         try_check(reader, "CODE", code::check_2023_8_and_2024_4, (2024, 4))?;
     }
-    if reader.general_info.bytecode_version >= 17 {
+    if reader.general_info.wad_version >= 17 {
         try_check(reader, "FONT", font::check_2022_2, (2022, 2))?;
     }
 

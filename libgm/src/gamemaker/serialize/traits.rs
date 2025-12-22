@@ -12,7 +12,7 @@ pub trait GMSerializeIfVersion {
         ver_req: V,
     ) -> Result<()>;
 
-    fn serialize_if_bytecode_ver(
+    fn serialize_if_wad_ver(
         &self,
         builder: &mut DataBuilder,
         field_name: &'static str,
@@ -46,22 +46,22 @@ impl<T: GMElement> GMSerializeIfVersion for Option<T> {
         element.serialize(builder)
     }
 
-    fn serialize_if_bytecode_ver(
+    fn serialize_if_wad_ver(
         &self,
         builder: &mut DataBuilder,
         field_name: &'static str,
         ver_req: u8,
     ) -> Result<()> {
-        if builder.bytecode_version() < ver_req {
+        if builder.wad_version() < ver_req {
             return Ok(()); // Don't serialize if version requirement not met
         }
         let element: &T = self.as_ref().ok_or_else(|| {
             format!(
-                "Field '{}' of {} is not set in data with Bytecode version {}
-                but needs to be set since Bytecode version {}",
+                "Field '{}' of {} is not set in data with WAD version {}
+                but needs to be set since WAD version {}",
                 field_name,
                 typename::<T>(),
-                builder.gm_data.general_info.bytecode_version,
+                builder.gm_data.general_info.wad_version,
                 ver_req,
             )
         })?;

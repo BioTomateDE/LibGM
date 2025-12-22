@@ -1,6 +1,6 @@
 use std::fmt::{Display, UpperHex};
 
-use crate::{gml::instructions::GMDataType, prelude::*};
+use crate::{gml::instruction::GMDataType, prelude::*};
 
 pub fn assert_int<I: Copy + Eq + Display + UpperHex>(
     description: &'static str,

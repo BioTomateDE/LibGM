@@ -1,6 +1,6 @@
 use std::ops::Index;
 
-use crate::{gml::instructions::GMDataType, prelude::*};
+use crate::{gml::instruction::GMDataType, prelude::*};
 
 #[derive(Debug, Clone, Copy)]
 pub struct DataTypes(Option<GMDataType>, Option<GMDataType>);

@@ -27,10 +27,28 @@ pub struct GMGeneralInfo {
     /// Indicates whether debugging support is disabled.
     pub is_debugger_disabled: bool,
 
-    /// The bytecode version of the data file.
-    /// TODO: rename this to WAD everywhere
-    pub bytecode_version: u8,
+    /// The WAD version of the data file.
+    /// WAD stands for "Where's All the Data".
+    ///
+    /// This field is also known as "**bytecode** version".
+    ///
+    /// Technically, this is the version of the data file format.
+    /// However, since YoYoGames does not update this version
+    /// specification anymore, it has become worthless past ~16.
+    /// Since they also don't update the GameMaker Studio version
+    /// (`version`), GameMaker unpacking tools have to resort to
+    /// version detection (which sucks).
+    /// This can detect the approximate Studio version this
+    /// game's data file was made in. Since studio versions
+    /// are something official that does get incremented (finally!),
+    /// this [`GMVersion`] is used in place of the WAD version
+    /// in modern version/feature detection.
+    ///
+    /// ___
+    /// See `version` for less information.
+    pub wad_version: u8,
 
+    /// Who knows. Probably redundant in GMS2.
     pub unknown_value: u16,
 
     /// The file name of the runner.
@@ -39,13 +57,13 @@ pub struct GMGeneralInfo {
     /// Which GameMaker configuration the data file was compiled with.
     pub config: String,
 
-    /// The last object id of the data file.
+    /// The last game object ID of the data file.
     pub last_object_id: u32,
 
-    /// The last tile id of the data file.
+    /// The last tile ID of the data file.
     pub last_tile_id: u32,
 
-    /// The game id of the data file.
+    /// The game id of the data file, whatever that may mean.
     pub game_id: u32,
 
     /// The `DirectPlay` GUID of the data file.
@@ -55,8 +73,29 @@ pub struct GMGeneralInfo {
     /// The name of the game.
     pub game_name: String,
 
-    /// The version of the data file. For GameMaker 2 games, this will be specified as 2.0.0.0,
+    /// The GameMaker Studio Version this game's data file was made in.
+    /// For GameMaker 2 games, this will be specified as 2.0.0.0,
     /// but `detect_version.rs` will detect the actual version later.
+    ///
+    /// Technically, this is the studio version; not the
+    /// data file version. However, YoYoGames. *YoYoGames........*
+    ///
+    /// Note that this does not have to correspond to the actual studio version.
+    /// This can be due to multiple reasons:
+    /// * The data file does not use a specific newer feature,
+    ///   resulting in a **lower** detected version.
+    /// * There is a bug in the version detection logic (oopsies),
+    ///   resulting in a **higher** detected version (false positive).
+    /// * Fucking LTS.
+    ///   For some reason, they added a BREAKING FEATURE
+    ///   to a LONG TERM SUPPORT branch.
+    ///   This means that tools like this have to differentiate
+    ///   between LTS-pre-this-feature and LTS-post-this-feature.
+    ///   As a result, some games made in 2022.0 LTS may be shown
+    ///   as 2023.6 instead.
+    ///
+    /// ___
+    /// See `wad_version` for more information.
     pub version: GMVersion,
 
     /// The default window width of the game window.
@@ -74,19 +113,21 @@ pub struct GMGeneralInfo {
     /// The MD5 of the license used to compile the game.
     pub license_md5: [u8; 16],
 
-    /// The UNIX timestamp the game was compiled.
+    /// The timestamp the game was compiled at.
     pub timestamp_created: DateTime<Utc>,
 
-    /// The name that gets displayed in the window.
+    /// The name that gets displayed in the window title.
     pub display_name: String,
 
     /// The function classifications of this data file.
     pub function_classifications: FunctionClassifications,
 
-    /// The Steam app id of the game.
+    /// The Steam app ID of the game.
+    /// This may be zero.
     pub steam_appid: i32,
 
     /// The port the data file exposes for the debugger.
+    /// Only set in WAD14+.
     pub debugger_port: Option<u32>,
 
     /// The room order of the data file.
@@ -102,11 +143,12 @@ impl Default for GMGeneralInfo {
     /// Should only be used as a small stub in `DataReader` because
     /// Rust doesn't have nullables ([`Option`]s are too ugly for this).
     /// ___________
-    /// **This value should never be used!** Immediately replace it with actual `GEN8` when parsed.
+    /// **This value should never be used!**
+    /// Immediately replace it with actual `GEN8` when parsed.
     fn default() -> Self {
         Self {
             is_debugger_disabled: true,
-            bytecode_version: 67,
+            wad_version: 67,
             unknown_value: 0,
             game_file_name: String::new(),
             config: String::new(),
@@ -158,7 +200,7 @@ impl GMElement for GMGeneralInfo {
                 bail!("Invalid u8 bool {other} while reading general info \"is debugger disabled\"")
             },
         };
-        let bytecode_version = reader.read_u8()?;
+        let wad_version = reader.read_u8()?;
         let unknown_value = reader.read_u16()?;
         let game_file_name: String = reader.read_gm_string()?;
         let config: String = reader.read_gm_string()?;
@@ -191,12 +233,12 @@ impl GMElement for GMGeneralInfo {
         assert_int("Active Targets", 0, active_targets)?;
         let function_classifications = FunctionClassifications::deserialize(reader)?;
         let steam_appid = reader.read_i32()?;
-        let debugger_port: Option<u32> = reader.deserialize_if_bytecode_version(14)?;
+        let debugger_port: Option<u32> = reader.deserialize_if_wad_version(14)?;
         let room_order: Vec<GMRef<GMRoom>> = reader.read_simple_list()?;
 
         let mut general_info = Self {
             is_debugger_disabled,
-            bytecode_version,
+            wad_version,
             unknown_value,
             game_file_name,
             config,
@@ -235,7 +277,7 @@ impl GMElement for GMGeneralInfo {
         }
 
         builder.write_u8(self.is_debugger_disabled.into());
-        builder.write_u8(self.bytecode_version);
+        builder.write_u8(self.wad_version);
         builder.write_u16(self.unknown_value);
         builder.write_gm_string(&self.game_file_name);
         builder.write_gm_string(&self.config);
@@ -263,7 +305,7 @@ impl GMElement for GMGeneralInfo {
         self.function_classifications.serialize(builder)?;
         builder.write_i32(self.steam_appid);
         self.debugger_port
-            .serialize_if_bytecode_ver(builder, "Debugger Port", 14)?;
+            .serialize_if_wad_ver(builder, "Debugger Port", 14)?;
 
         builder.write_simple_list(&self.room_order)?;
 

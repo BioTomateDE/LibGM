@@ -7,7 +7,7 @@ use libgm::{
     gamemaker::data::GMData,
     gml::{
         assembly::{assemble_code, disassemble_code},
-        instructions::GMInstruction,
+        instruction::Instruction,
     },
     prelude::*,
 };
@@ -22,8 +22,8 @@ pub fn test(data: &GMData) -> Result<()> {
         let name = &code.name;
 
         // Skip child code entries.
-        if let Some(b15) = &code.bytecode15_info
-            && b15.parent.is_some()
+        if let Some(data) = &code.modern_data
+            && data.parent.is_some()
         {
             continue;
         }
@@ -41,7 +41,7 @@ pub fn test(data: &GMData) -> Result<()> {
         let end_dis = Instant::now();
 
         let start_ass = Instant::now();
-        let reconstructed: Vec<GMInstruction> =
+        let reconstructed: Vec<Instruction> =
             assemble_code(&assembly, data).with_context(|| format!("assembling {name:?}"))?;
         let end_ass = Instant::now();
 

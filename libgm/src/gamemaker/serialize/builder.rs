@@ -6,7 +6,7 @@ use crate::{
         elements::string::StringPlaceholder,
         gm_version::GMVersionReq,
     },
-    gml::instructions::GMVariableType,
+    gml::instruction::GMVariableType,
     prelude::*,
 };
 
@@ -84,8 +84,8 @@ impl<'a> DataBuilder<'a> {
     }
 
     #[must_use]
-    pub const fn bytecode_version(&self) -> u8 {
-        self.gm_data.general_info.bytecode_version
+    pub const fn wad_version(&self) -> u8 {
+        self.gm_data.general_info.wad_version
     }
 
     /// Pads the internal buffer with zero bytes until its length is aligned to `alignment`.
