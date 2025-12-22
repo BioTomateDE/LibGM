@@ -1,6 +1,6 @@
 use crate::{
     gamemaker::{
-        deserialize::reader::DataReader, elements::embedded_textures::MAGIC_BZ2_QOI_HEADER,
+        deserialize::reader::DataReader, elements::embedded_texture::MAGIC_BZ2_QOI_HEADER,
         gm_version::GMVersionReq,
     },
     prelude::*,

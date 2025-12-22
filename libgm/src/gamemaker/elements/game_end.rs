@@ -6,6 +6,7 @@ use crate::{
         serialize::builder::DataBuilder,
     },
     gml::instructions::GMCode,
+    prelude::*,
 };
 
 #[list_chunk("GMEN")]
@@ -15,12 +16,12 @@ pub struct GMGameEndScripts {
 }
 
 impl GMElement for GMGameEndScripts {
-    fn deserialize(reader: &mut DataReader) -> crate::error::Result<Self> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let game_end_scripts: Vec<GMRef<GMCode>> = reader.read_simple_list()?;
         Ok(Self { game_end_scripts, exists: true })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> crate::error::Result<()> {
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_simple_list(&self.game_end_scripts)?;
         Ok(())
     }

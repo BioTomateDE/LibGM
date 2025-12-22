@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     gamemaker::{
         data::{Endianness, GMData},
-        elements::strings::StringPlaceholder,
+        elements::string::StringPlaceholder,
         gm_version::GMVersionReq,
     },
     gml::instructions::GMVariableType,

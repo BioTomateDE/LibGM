@@ -5,14 +5,14 @@ use macros::named_list_chunk;
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
-        elements::{GMElement, element_stub, functions::GMFunction, variables::GMVariable},
+        elements::{GMElement, element_stub, function::GMFunction, variable::GMVariable},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
     gml::{
         instructions::{
-            CodeVariable, GMAssetReference, GMCode, GMCodeBytecode15, GMCodeValue,
-            GMComparisonType, GMDataType, GMInstanceType, GMInstruction, GMVariableType,
+            CodeVariable, GMAssetReference, GMCode, GMCodeBytecode15, GMComparisonType, GMDataType,
+            GMInstanceType, GMInstruction, GMVariableType, PushValue,
         },
         opcodes,
     },
@@ -588,22 +588,22 @@ fn parse_branch(b: [u8; 3], reader: &DataReader) -> i32 {
     }
 }
 
-fn parse_push(b: [u8; 3], reader: &mut DataReader) -> Result<GMCodeValue> {
+fn parse_push(b: [u8; 3], reader: &mut DataReader) -> Result<PushValue> {
     let int16 = get_u16(b) as i16;
     let data_type = get_type1(b)?;
     assert_zero_type2(b)?;
 
     match data_type {
-        GMDataType::Int16 => Ok(GMCodeValue::Int16(int16)),
+        GMDataType::Int16 => Ok(PushValue::Int16(int16)),
         GMDataType::Int32 => {
             if let Some(&function) = reader.function_occurrences.get(&reader.cur_pos) {
                 reader.cur_pos += 4; // Skip next occurrence offset
-                return Ok(GMCodeValue::Function(function));
+                return Ok(PushValue::Function(function));
             }
 
             if let Some(&variable) = reader.variable_occurrences.get(&reader.cur_pos) {
                 reader.cur_pos += 4; // Skip next occurrence offset
-                return Ok(GMCodeValue::Variable(CodeVariable {
+                return Ok(PushValue::Variable(CodeVariable {
                     variable,
                     variable_type: GMVariableType::Normal,
                     instance_type: GMInstanceType::Undefined,
@@ -611,11 +611,11 @@ fn parse_push(b: [u8; 3], reader: &mut DataReader) -> Result<GMCodeValue> {
                 }));
             }
 
-            reader.read_i32().map(GMCodeValue::Int32)
+            reader.read_i32().map(PushValue::Int32)
         },
-        GMDataType::Int64 => reader.read_i64().map(GMCodeValue::Int64),
-        GMDataType::Double => reader.read_f64().map(GMCodeValue::Double),
-        GMDataType::Boolean => reader.read_bool32().map(GMCodeValue::Boolean),
+        GMDataType::Int64 => reader.read_i64().map(PushValue::Int64),
+        GMDataType::Double => reader.read_f64().map(PushValue::Double),
+        GMDataType::Boolean => reader.read_bool32().map(PushValue::Boolean),
         GMDataType::String => {
             let index = reader.read_u32()? as usize;
             let len = reader.strings.len();
@@ -623,9 +623,9 @@ fn parse_push(b: [u8; 3], reader: &mut DataReader) -> Result<GMCodeValue> {
                 .strings
                 .get(index)
                 .ok_or_else(|| format!("String ID is out of range: {index} >= {len}"))?;
-            Ok(GMCodeValue::String(string.clone()))
+            Ok(PushValue::String(string.clone()))
         },
-        GMDataType::Variable => read_variable(reader, int16).map(GMCodeValue::Variable),
+        GMDataType::Variable => read_variable(reader, int16).map(PushValue::Variable),
     }
 }
 
@@ -807,11 +807,11 @@ fn build_popenv_exit(builder: &mut DataBuilder, opcode: u8) {
     builder.write_u8(opcode);
 }
 
-fn build_push(builder: &mut DataBuilder, opcode: u8, value: &GMCodeValue) -> Result<()> {
+fn build_push(builder: &mut DataBuilder, opcode: u8, value: &PushValue) -> Result<()> {
     let instr_pos: usize = builder.len();
     builder.write_i16(match value {
-        GMCodeValue::Int16(int16) => *int16,
-        GMCodeValue::Variable(variable) => build_instance_type(variable.instance_type),
+        PushValue::Int16(int16) => *int16,
+        PushValue::Variable(variable) => build_instance_type(variable.instance_type),
         _ => 0,
     });
 
@@ -819,15 +819,15 @@ fn build_push(builder: &mut DataBuilder, opcode: u8, value: &GMCodeValue) -> Res
     builder.write_u8(opcode);
 
     match value {
-        GMCodeValue::Int16(_) => {}, // Nothing because it was already written inside the instruction
-        GMCodeValue::Int32(int32) => builder.write_i32(*int32),
-        GMCodeValue::Int64(int64) => builder.write_i64(*int64),
-        GMCodeValue::Double(double) => builder.write_f64(*double),
-        GMCodeValue::Boolean(boolean) => builder.write_bool32(*boolean),
-        GMCodeValue::String(string) => {
+        PushValue::Int16(_) => {}, // Nothing because it was already written inside the instruction
+        PushValue::Int32(int32) => builder.write_i32(*int32),
+        PushValue::Int64(int64) => builder.write_i64(*int64),
+        PushValue::Double(double) => builder.write_f64(*double),
+        PushValue::Boolean(boolean) => builder.write_bool32(*boolean),
+        PushValue::String(string) => {
             builder.write_gm_string_id(string.clone());
         },
-        GMCodeValue::Variable(code_variable) => {
+        PushValue::Variable(code_variable) => {
             write_variable_occurrence(
                 builder,
                 code_variable.variable.index,
@@ -837,7 +837,7 @@ fn build_push(builder: &mut DataBuilder, opcode: u8, value: &GMCodeValue) -> Res
                 code_variable.variable_type,
             )?;
         },
-        GMCodeValue::Function(func_ref) => {
+        PushValue::Function(func_ref) => {
             write_function_occurrence(
                 builder,
                 func_ref.index,

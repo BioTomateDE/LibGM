@@ -1,13 +1,13 @@
 # Rust's huge target folder should not be commited
 /target
 
-# Exclude GameMaker data file extensions
+# Exclude GameMaker data file extension
 *.win
 *.unx
 *.droid
 *.ios
 
-# These are some file extensions I sometimes use
+# These are some file extension I sometimes use
 # in development for GameMaker data files
 *.win1
 *.win.bak
