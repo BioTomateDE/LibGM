@@ -131,7 +131,7 @@ pub enum GMInstruction {
 
     /// Pops a value from the stack, and generally stores it in a variable, array, or otherwise.
     /// Has an alternate mode that can swap values around on the stack.
-    /// TODO: type1 and type2 are bad names and are probably redundant values
+    /// TODO(weak): type1 and type2 are bad names and are probably redundant values
     Pop {
         variable: CodeVariable,
         type1: GMDataType,
@@ -214,7 +214,7 @@ pub enum GMInstruction {
     /// Pops two values off of the stack, and then calls a GML script/function using those values, representing
     /// the "self" instance to be used when calling, as well as the reference to the function being called.
     /// Arguments are dealt with identically to "call".
-    /// TODO: got rid of datatype, its probably always `variable` right?
+    /// TODO(weak): got rid of datatype, its probably always `variable` right?
     CallVariable { argument_count: u16 },
 
     /// Verifies an array index is within proper bounds, typically for multidimensional arrays.

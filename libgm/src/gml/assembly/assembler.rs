@@ -47,7 +47,6 @@ pub fn assemble_instruction(line: &str, gm_data: &GMData) -> Result<GMInstructio
     let mnemonic: String;
 
     let opcode_end: Option<usize> = reader.line.find(['.', ' ']);
-
     if let Some(index) = opcode_end {
         mnemonic = reader.consume_to(index).to_string();
     } else {
@@ -268,7 +267,7 @@ fn parse_asset_reference(reader: &mut Reader, gm_data: &GMData) -> Result<GMAsse
         .consume_round_brackets()?
         .ok_or_else(|| format!("Expected asset type within round brackets; found {line:?}"))?;
 
-    // TODO: This can probably be made cleaner
+    // TODO(style): This can probably be made cleaner
     #[rustfmt::skip]
     let asset_reference = match asset_type {
         "object" => GMAssetReference::Object(gm_data.game_objects.ref_by_name(reader.parse_identifier()?)?),

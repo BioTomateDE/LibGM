@@ -61,7 +61,6 @@ impl GMElement for Tile {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(self.x);
         builder.write_i32(self.y);
-        // TODO this is going to cause mod compatibility issues
         match self.texture {
             Some(Texture::Sprite(sprite_ref)) => {
                 if builder.is_gm_version_at_least((2, 0)) {

@@ -207,7 +207,7 @@ fn read_raw_texture(
     } else if header.starts_with(MAGIC_QOI_HEADER) {
         read_qoi(reader)?
     } else {
-        let dump: String = hexdump(&header, ..)?;
+        let dump: String = hexdump(&header);
         bail!("Invalid image header [{dump}]");
     };
 
@@ -409,10 +409,16 @@ impl GMImage {
     }
 }
 
-// TODO: this is terrible
+// TODO(weak): this is still kind of ass
 impl PartialEq for GMImage {
     fn eq(&self, other: &Self) -> bool {
-        self.to_dynamic_image().unwrap() == other.to_dynamic_image().unwrap()
+        let Ok(img1) = self.to_dynamic_image() else {
+            return false;
+        };
+        let Ok(img2) = other.to_dynamic_image() else {
+            return false;
+        };
+        img1 == img2
     }
 }
 
