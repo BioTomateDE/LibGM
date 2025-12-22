@@ -6,7 +6,7 @@ use crate::{
         serialize::builder::DataBuilder,
     },
     prelude::*,
-    util::assert::assert_int,
+    util::assert,
 };
 
 const ALIGNMENT: u32 = 4;
@@ -36,7 +36,7 @@ impl GMElement for GMStrings {
             let string_length = reader.read_u32()?;
             let string: String = reader.read_literal_string(string_length)?;
             let byte = reader.read_u8()?;
-            assert_int("Null terminator byte after string", 0, byte)?;
+            assert::int(byte, 0, "Null terminator byte after string")?;
             strings.push(string.clone());
         }
 

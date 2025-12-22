@@ -11,10 +11,7 @@ use crate::{
         deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
     },
     prelude::*,
-    util::{
-        assert::assert_int,
-        init::{hashmap_with_capacity, num_enum_from},
-    },
+    util::init::{hashmap_with_capacity, num_enum_from},
 };
 
 /// This struct belong to the chunk SEQN.
@@ -31,7 +28,7 @@ impl GMElement for GMSequences {
             return Ok(Self::default());
         }
         reader.align(4)?;
-        assert_int("SEQN Version", 1, reader.read_u32()?)?;
+        reader.read_gms2_chunk_version("SEQN Version")?;
         let sequences: Vec<GMSequence> = reader.read_pointer_list()?;
         Ok(Self { sequences, exists: true })
     }

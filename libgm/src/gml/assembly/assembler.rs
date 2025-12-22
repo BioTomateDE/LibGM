@@ -17,8 +17,8 @@ use crate::{
     gml::{
         assembly::assembler::{data_types::DataTypes, reader::Reader},
         instruction::{
-            CodeVariable, GMAssetReference, GMComparisonType, GMDataType, GMInstanceType,
-            GMVariableType, Instruction, PushValue,
+            CodeVariable, ComparisonType, DataType, GMAssetReference, InstanceType, Instruction,
+            PushValue, VariableType,
         },
     },
     prelude::*,
@@ -60,7 +60,7 @@ pub fn assemble_instruction(line: &str, gm_data: &GMData) -> Result<Instruction>
         let raw_type: char = reader
             .consume_char()
             .ok_or("Unexpected EOL when trying to parse instruction data type")?;
-        let data_type = GMDataType::from_char(raw_type)?;
+        let data_type = DataType::from_char(raw_type)?;
         types.push(data_type)?;
     }
 
@@ -295,12 +295,12 @@ fn parse_comparison(types: DataTypes, reader: &mut Reader) -> Result<Instruction
     types.assert_count(2, "cmp")?;
     let comparison_type: &str = reader.parse_identifier()?;
     let comparison_type = match comparison_type {
-        "EQ" => GMComparisonType::Equal,
-        "NEQ" => GMComparisonType::NotEqual,
-        "LT" => GMComparisonType::LessThan,
-        "LTE" => GMComparisonType::LessOrEqual,
-        "GTE" => GMComparisonType::GreaterOrEqual,
-        "GT" => GMComparisonType::GreaterThan,
+        "EQ" => ComparisonType::Equal,
+        "NEQ" => ComparisonType::NotEqual,
+        "LT" => ComparisonType::LessThan,
+        "LTE" => ComparisonType::LessOrEqual,
+        "GTE" => ComparisonType::GreaterOrEqual,
+        "GT" => ComparisonType::GreaterThan,
         _ => bail!("Invalid Comparison Type {comparison_type:?}"),
     };
     Ok(Instruction::Compare {
@@ -328,8 +328,8 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
     types.assert_count(1, "push")?;
 
     let value: PushValue = match types[0] {
-        GMDataType::Int16 => PushValue::Int16(parse_int(reader.clear())?),
-        GMDataType::Int32 => {
+        DataType::Int16 => PushValue::Int16(parse_int(reader.clear())?),
+        DataType::Int32 => {
             if let Some(type_cast) = reader.consume_round_brackets()? {
                 match type_cast {
                     "function" => PushValue::Function(parse_function(reader, &gm_data.functions)?),
@@ -346,8 +346,8 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
                 PushValue::Int32(parse_int(reader.clear())?)
             }
         },
-        GMDataType::Int64 => PushValue::Int64(parse_int(reader.clear())?),
-        GMDataType::Double => {
+        DataType::Int64 => PushValue::Int64(parse_int(reader.clear())?),
+        DataType::Double => {
             let line: &str = reader.clear();
             let float: f64 = line
                 .parse()
@@ -355,7 +355,7 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
                 .ok_or_else(|| format!("Invalid float literal {line:?}"))?;
             PushValue::Double(float)
         },
-        GMDataType::Boolean => {
+        DataType::Boolean => {
             let line: &str = reader.clear();
             let bool: bool = match line {
                 "true" => true,
@@ -364,11 +364,11 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
             };
             PushValue::Boolean(bool)
         },
-        GMDataType::String => {
+        DataType::String => {
             let string: String = parse_string_literal(reader)?;
             PushValue::String(string)
         },
-        GMDataType::Variable => PushValue::Variable(parse_variable(reader, gm_data)?),
+        DataType::Variable => PushValue::Variable(parse_variable(reader, gm_data)?),
     };
     Ok(value)
 }
@@ -395,7 +395,7 @@ fn parse_call(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
     Ok(Instruction::Call { function, argument_count })
 }
 
-impl GMVariableType {
+impl VariableType {
     fn from_string(variable_type: &str) -> Result<Self> {
         Ok(match variable_type {
             "stacktop" => Self::StackTop,
@@ -409,9 +409,9 @@ impl GMVariableType {
 }
 
 fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable> {
-    let mut variable_type = GMVariableType::Normal;
+    let mut variable_type = VariableType::Normal;
     if let Some(variable_type_str) = reader.consume_square_brackets()? {
-        variable_type = GMVariableType::from_string(variable_type_str)?;
+        variable_type = VariableType::from_string(variable_type_str)?;
     }
 
     let instance_type_raw = reader.parse_identifier()?.to_string();
@@ -422,39 +422,39 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
     reader.consume_dot()?;
 
     let mut variable_ref: Option<GMRef<GMVariable>> = None;
-    let instance_type: GMInstanceType = match instance_type_raw.as_str() {
-        "self" if instance_type_arg.is_empty() => GMInstanceType::Self_(None),
+    let instance_type: InstanceType = match instance_type_raw.as_str() {
+        "self" if instance_type_arg.is_empty() => InstanceType::Self_(None),
         "self" => {
             let object_ref: GMRef<GMGameObject> =
                 gm_data.game_objects.ref_by_name(&instance_type_arg)?;
-            GMInstanceType::Self_(Some(object_ref))
+            InstanceType::Self_(Some(object_ref))
         },
         "local" => {
             let var_index: u32 = parse_int(&instance_type_arg)?;
             variable_ref = Some(GMRef::new(var_index));
-            GMInstanceType::Local
+            InstanceType::Local
         },
         "roominstance" => {
-            variable_type = GMVariableType::Instance;
+            variable_type = VariableType::Instance;
             let instance_id: i16 = parse_int(&instance_type_arg)?;
-            GMInstanceType::RoomInstance(instance_id)
+            InstanceType::RoomInstance(instance_id)
         },
-        "stacktop" => GMInstanceType::StackTop,
-        "builtin" => GMInstanceType::Builtin,
-        "global" => GMInstanceType::Global,
-        "arg" => GMInstanceType::Argument,
-        "other" => GMInstanceType::Other,
-        "static" => GMInstanceType::Static,
-        "all" => GMInstanceType::All,
-        "none" => GMInstanceType::None,
+        "stacktop" => InstanceType::StackTop,
+        "builtin" => InstanceType::Builtin,
+        "global" => InstanceType::Global,
+        "arg" => InstanceType::Argument,
+        "other" => InstanceType::Other,
+        "static" => InstanceType::Static,
+        "all" => InstanceType::All,
+        "none" => InstanceType::None,
         _ => bail!("Invalid Instance Type {instance_type_raw:?}"),
     };
 
     let name: &str = parse_variable_identifier(reader)?;
 
-    if instance_type != GMInstanceType::Local {
+    if instance_type != InstanceType::Local {
         // Convert instance type because of some bullshit
-        let vari_instance_type: GMInstanceType = instance_type.as_vari();
+        let vari_instance_type: InstanceType = instance_type.as_vari();
 
         for (i, var) in gm_data.variables.iter().enumerate() {
             if var.name != name {
@@ -477,8 +477,8 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
 
     // I need to throw away the instance type so that the tests pass
     let mut instance_type = instance_type;
-    if variable_type != GMVariableType::Normal && variable_type != GMVariableType::Instance {
-        instance_type = GMInstanceType::Undefined;
+    if variable_type != VariableType::Normal && variable_type != VariableType::Instance {
+        instance_type = InstanceType::Undefined;
     } // TODO: comment out this block if not testing assembler
 
     Ok(CodeVariable {

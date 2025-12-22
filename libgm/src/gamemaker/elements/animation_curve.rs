@@ -8,7 +8,6 @@ use crate::{
         deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
     },
     prelude::*,
-    util::assert::assert_int,
 };
 
 /// GMS 2.3+
@@ -21,7 +20,8 @@ pub struct GMAnimationCurves {
 impl GMElement for GMAnimationCurves {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
-        assert_int("ACRV Version", 1, reader.read_u32()?)?;
+        reader.read_gms2_chunk_version("ACRV Version")?;
+
         let animation_curves: Vec<GMAnimationCurve> = reader.read_pointer_list()?;
         Ok(Self { animation_curves, exists: true })
     }

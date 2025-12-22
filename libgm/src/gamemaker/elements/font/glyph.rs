@@ -5,7 +5,6 @@ use crate::{
         serialize::builder::DataBuilder,
     },
     prelude::*,
-    util::assert::assert_int,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,7 +52,7 @@ impl GMElement for Glyph {
         let offset = reader.read_i16()?; // Potential assumption according to utmt
         if reader.general_info.is_version_at_least((2024, 11)) {
             let unknown_always_zero = reader.read_i16()?;
-            assert_int("Unknown Always Zero", 0, unknown_always_zero)?;
+            reader.assert_int(unknown_always_zero, 0, "Unknown Always Zero")?;
         }
         let kernings: Vec<Kerning> = reader.read_simple_list_short()?;
 

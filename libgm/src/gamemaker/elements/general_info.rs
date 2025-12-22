@@ -19,7 +19,6 @@ use crate::{
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
     prelude::*,
-    util::assert::assert_int,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -230,7 +229,7 @@ impl GMElement for GMGeneralInfo {
 
         let display_name: String = reader.read_gm_string()?;
         let active_targets = reader.read_u64()?;
-        assert_int("Active Targets", 0, active_targets)?;
+        reader.assert_int(active_targets, 0, "Active Targets")?;
         let function_classifications = FunctionClassifications::deserialize(reader)?;
         let steam_appid = reader.read_i32()?;
         let debugger_port: Option<u32> = reader.deserialize_if_wad_version(14)?;

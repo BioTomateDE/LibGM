@@ -1,13 +1,12 @@
 use crate::{
     gamemaker::{deserialize::reader::DataReader, gm_version::GMVersionReq},
     prelude::*,
-    util::assert::assert_int,
 };
 
 pub fn check_2023_x(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let mut target_ver = None;
     reader.align(4)?;
-    assert_int("PSEM Version", 1, reader.read_u32()?)?;
+    reader.read_gms2_chunk_version("PSEM Version")?;
     let count = reader.read_u32()?;
     if count < 11 {
         // 2023.2 automatically adds eleven, later versions don't

@@ -127,9 +127,18 @@
 // which would be unclean to split up.
 #![allow(clippy::too_many_lines)]
 
+// Const assertion for soundness
+const _: () = assert!(
+    size_of::<usize>() >= size_of::<u32>(),
+    "Cannot safely convert from u32 to usize on this platform. \
+    Since GameMaker data files are 32-bit, this library will not function properly."
+);
+
+// Private modules
 mod error;
 mod util;
 
+// Public modules
 pub mod gamemaker;
 pub mod gml;
 pub mod prelude;

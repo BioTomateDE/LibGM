@@ -8,10 +8,7 @@ use crate::{
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
     prelude::*,
-    util::{
-        assert::{assert_bool, assert_int},
-        init::num_enum_from,
-    },
+    util::init::num_enum_from,
 };
 
 #[named_list_chunk("PSEM")]
@@ -26,7 +23,7 @@ impl GMElement for GMParticleEmitters {
             log::warn!("Particle emitters are not tested");
         }
         reader.align(4)?;
-        assert_int("PSEM Version", 1, reader.read_u32()?)?;
+        reader.read_gms2_chunk_version("PSEM Version")?;
         let emitters: Vec<GMParticleEmitter> = reader.read_pointer_list()?;
         Ok(Self { emitters, exists: true })
     }
@@ -105,7 +102,7 @@ impl GMElement for GMParticleEmitter {
             // For some reason, it's stored as a float here???
             emit_count = reader.read_f32()? as u32;
             let emit_relative = reader.read_bool32()?;
-            assert_bool("Emit Relative", false, emit_relative)?;
+            reader.assert_bool(emit_relative, false, "Emit Relative")?;
             let delay_min = reader.read_f32()?;
             let delay_max = reader.read_f32()?;
             let delay_unit: TimeUnit = num_enum_from(reader.read_i32()?)?;

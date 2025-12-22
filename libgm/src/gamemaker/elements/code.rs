@@ -11,16 +11,13 @@ use crate::{
     },
     gml::{
         instruction::{
-            CodeVariable, GMAssetReference, GMCode, GMComparisonType, GMDataType, GMInstanceType,
-            GMVariableType, Instruction, ModernData, PushValue,
+            CodeVariable, ComparisonType, DataType, GMAssetReference, GMCode, InstanceType,
+            Instruction, ModernData, PushValue, VariableType,
         },
         opcodes,
     },
     prelude::*,
-    util::{
-        assert::{assert_data_type, assert_int},
-        init::{num_enum_from, vec_with_capacity},
-    },
+    util::init::{num_enum_from, vec_with_capacity},
 };
 
 #[named_list_chunk("CODE")]
@@ -232,7 +229,7 @@ impl GMElement for Instruction {
         if reader.general_info.wad_version < 15 {
             if matches!(opcode, 0x10..=0x16) {
                 // This is needed to preserve the comparison type for pre WAD 15
-                assert_zero_b1(b)?;
+                reader.assert_zero_b1(b)?;
                 b[1] = opcode - 0x10;
             }
             opcode = opcodes::old_to_new(opcode);
@@ -242,121 +239,165 @@ impl GMElement for Instruction {
 
         Ok(match opcode {
             opcodes::CONV => {
-                let types = parse_double_type(b).context("parsing Convert Instruction")?;
+                let types = reader
+                    .parse_double_type(b)
+                    .context("parsing Convert Instruction")?;
                 Self::Convert { from: types[0], to: types[1] }
             },
             opcodes::MUL => {
-                let types = parse_double_type(b).context("parsing Multiply Instruction")?;
+                let types = reader
+                    .parse_double_type(b)
+                    .context("parsing Multiply Instruction")?;
                 Self::Multiply {
                     multiplicand: types[1],
                     multiplier: types[0],
                 }
             },
             opcodes::DIV => {
-                let types = parse_double_type(b).context("parsing Divide Instruction")?;
+                let types = reader
+                    .parse_double_type(b)
+                    .context("parsing Divide Instruction")?;
                 Self::Divide { dividend: types[1], divisor: types[0] }
             },
             opcodes::REM => {
-                let types = parse_double_type(b).context("parsing Remainder Instruction")?;
+                let types = reader
+                    .parse_double_type(b)
+                    .context("parsing Remainder Instruction")?;
                 Self::Remainder { dividend: types[1], divisor: types[0] }
             },
             opcodes::MOD => {
-                let types = parse_double_type(b).context("parsing Modulus Instruction")?;
+                let types = reader
+                    .parse_double_type(b)
+                    .context("parsing Modulus Instruction")?;
                 Self::Modulus { dividend: types[1], divisor: types[0] }
             },
             opcodes::ADD => {
-                let types = parse_double_type(b).context("parsing Add Instruction")?;
+                let types = reader
+                    .parse_double_type(b)
+                    .context("parsing Add Instruction")?;
                 Self::Add { augend: types[1], addend: types[0] }
             },
             opcodes::SUB => {
-                let types = parse_double_type(b).context("parsing Subtract Instruction")?;
+                let types = reader
+                    .parse_double_type(b)
+                    .context("parsing Subtract Instruction")?;
                 Self::Subtract { minuend: types[1], subtrahend: types[0] }
             },
             opcodes::AND => {
-                let types = parse_double_type(b).context("parsing And Instruction")?;
+                let types = reader
+                    .parse_double_type(b)
+                    .context("parsing And Instruction")?;
                 Self::And { lhs: types[1], rhs: types[0] }
             },
             opcodes::OR => {
-                let types = parse_double_type(b).context("parsing Or Instruction")?;
+                let types = reader
+                    .parse_double_type(b)
+                    .context("parsing Or Instruction")?;
                 Self::Or { lhs: types[1], rhs: types[0] }
             },
             opcodes::XOR => {
-                let types = parse_double_type(b).context("parsing Xor Instruction")?;
+                let types = reader
+                    .parse_double_type(b)
+                    .context("parsing Xor Instruction")?;
                 Self::Xor { lhs: types[1], rhs: types[0] }
             },
             opcodes::NEG => {
-                let data_type = parse_single_type(b).context("parsing Negate Instruction")?;
+                let data_type = reader
+                    .parse_single_type(b)
+                    .context("parsing Negate Instruction")?;
                 Self::Negate { data_type }
             },
             opcodes::NOT => {
-                let data_type = parse_single_type(b).context("parsing Not Instruction")?;
+                let data_type = reader
+                    .parse_single_type(b)
+                    .context("parsing Not Instruction")?;
                 Self::Not { data_type }
             },
             opcodes::SHL => {
-                let types = parse_double_type(b).context("parsing ShiftLeft instruction")?;
+                let types = reader
+                    .parse_double_type(b)
+                    .context("parsing ShiftLeft instruction")?;
                 Self::ShiftLeft { value: types[1], shift_amount: types[0] }
             },
             opcodes::SHR => {
-                let types = parse_double_type(b).context("parsing ShiftRight Instruction")?;
+                let types = reader
+                    .parse_double_type(b)
+                    .context("parsing ShiftRight Instruction")?;
                 Self::ShiftRight { value: types[1], shift_amount: types[0] }
             },
-            opcodes::CMP => parse_comparison(b).context("parsing Comparison Instruction")?,
-            opcodes::POP => parse_pop(b, reader).context("parsing Pop Instruction")?,
-            opcodes::DUP => parse_duplicate(b).context("parsing Duplicate Instruction")?,
+            opcodes::CMP => reader
+                .parse_comparison(b)
+                .context("parsing Comparison Instruction")?,
+            opcodes::POP => reader.parse_pop(b).context("parsing Pop Instruction")?,
+            opcodes::DUP => reader
+                .parse_duplicate(b)
+                .context("parsing Duplicate Instruction")?,
             opcodes::RET => {
                 let ctx = "parsing Return Instruction";
-                let data_type = parse_single_type(b).context(ctx)?;
-                assert_type(GMDataType::Variable, data_type).context(ctx)?;
+                let data_type = reader.parse_single_type(b).context(ctx)?;
+                reader
+                    .assert_type(DataType::Variable, data_type)
+                    .context(ctx)?;
                 Self::Return
             },
             opcodes::EXIT => {
                 let ctx = "parsing Exit Instruction";
-                let data_type = parse_single_type(b).context(ctx)?;
-                assert_type(GMDataType::Int32, data_type).context(ctx)?;
+                let data_type = reader.parse_single_type(b).context(ctx)?;
+                reader
+                    .assert_type(DataType::Int32, data_type)
+                    .context(ctx)?;
                 Self::Exit
             },
             opcodes::POPZ => {
-                let data_type = parse_single_type(b).context("parsing PopDiscard Instruction")?;
+                let data_type = reader
+                    .parse_single_type(b)
+                    .context("parsing PopDiscard Instruction")?;
                 Self::PopDiscard { data_type }
             },
-            opcodes::JMP => Self::Branch { jump_offset: parse_branch(b, reader) },
-            opcodes::JT => Self::BranchIf { jump_offset: parse_branch(b, reader) },
-            opcodes::JF => Self::BranchUnless { jump_offset: parse_branch(b, reader) },
-            opcodes::PUSHENV => Self::PushWithContext { jump_offset: parse_branch(b, reader) },
+            opcodes::JMP => Self::Branch { jump_offset: reader.parse_branch(b) },
+            opcodes::JT => Self::BranchIf { jump_offset: reader.parse_branch(b) },
+            opcodes::JF => Self::BranchUnless { jump_offset: reader.parse_branch(b) },
+            opcodes::PUSHENV => Self::PushWithContext { jump_offset: reader.parse_branch(b) },
             opcodes::POPENV if b == [0x00, 0x00, 0xF0] => Self::PopWithContextExit,
-            opcodes::POPENV => Self::PopWithContext { jump_offset: parse_branch(b, reader) },
+            opcodes::POPENV => Self::PopWithContext { jump_offset: reader.parse_branch(b) },
             opcodes::PUSH => {
-                let value = parse_push(b, reader).context("parsing Push Instruction")?;
+                let value = reader.parse_push(b).context("parsing Push Instruction")?;
                 Self::Push { value }
             },
             opcodes::PUSHLOC => {
-                let variable =
-                    parse_push_var(b, reader).context("parsing PushLocal Instruction")?;
+                let variable = reader
+                    .parse_push_var(b)
+                    .context("parsing PushLocal Instruction")?;
                 Self::PushLocal { variable }
             },
             opcodes::PUSHGLB => {
-                let variable =
-                    parse_push_var(b, reader).context("parsing PushGlobal Instruction")?;
+                let variable = reader
+                    .parse_push_var(b)
+                    .context("parsing PushGlobal Instruction")?;
                 Self::PushGlobal { variable }
             },
             opcodes::PUSHBLTN => {
-                let variable =
-                    parse_push_var(b, reader).context("parsing PushBuiltin Instruction")?;
+                let variable = reader
+                    .parse_push_var(b)
+                    .context("parsing PushBuiltin Instruction")?;
                 Self::PushBuiltin { variable }
             },
             opcodes::PUSHIM => {
-                let integer = parse_pushim(b).context("parsing PushImmediate Instruction")?;
+                let integer = reader
+                    .parse_pushim(b)
+                    .context("parsing PushImmediate Instruction")?;
                 Self::PushImmediate { integer }
             },
-            opcodes::CALL => parse_call(b, reader).context("parsing Call Instruction")?,
+            opcodes::CALL => reader.parse_call(b).context("parsing Call Instruction")?,
             opcodes::CALLVAR => {
-                let argument_count =
-                    parse_callvar(b).context("parsing CallVariable Instruction")?;
+                let argument_count = reader
+                    .parse_callvar(b)
+                    .context("parsing CallVariable Instruction")?;
                 Self::CallVariable { argument_count }
             },
-            opcodes::EXTENDED => {
-                parse_extended(reader, b).context("parsing Extended Instruction")?
-            },
+            opcodes::EXTENDED => reader
+                .parse_extended(b)
+                .context("parsing Extended Instruction")?,
             _ => bail!("Invalid Instruction Opcode {opcode} (0x{opcode:02X})"),
         })
     }
@@ -405,9 +446,9 @@ impl GMElement for Instruction {
                 build_dupswap(builder, opcode, data_type, size1, size2);
             },
             Self::Return => {
-                build_single_type(builder, opcode, GMDataType::Variable);
+                build_single_type(builder, opcode, DataType::Variable);
             },
-            Self::Exit => build_single_type(builder, opcode, GMDataType::Int32),
+            Self::Exit => build_single_type(builder, opcode, DataType::Int32),
 
             &Self::Branch { jump_offset }
             | &Self::BranchIf { jump_offset }
@@ -470,27 +511,11 @@ impl GMElement for Instruction {
     }
 }
 
-fn assert_type(expected: GMDataType, actual: GMDataType) -> Result<()> {
-    assert_data_type("Instruction", expected, actual)
-}
-
-fn assert_zero_b0(b: [u8; 3]) -> Result<()> {
-    assert_int("Instruction byte #0", 0, b[0])
-}
-
-fn assert_zero_b1(b: [u8; 3]) -> Result<()> {
-    assert_int("Instruction byte #1", 0, b[1])
-}
-
-fn assert_zero_type2(b: [u8; 3]) -> Result<()> {
-    assert_int("Instruction data type 2 (in byte #2)", 0, b[2] >> 4)
-}
-
-fn get_type1(b: [u8; 3]) -> Result<GMDataType> {
+fn get_type1(b: [u8; 3]) -> Result<DataType> {
     num_enum_from(b[2] & 0xF)
 }
 
-fn get_type2(b: [u8; 3]) -> Result<GMDataType> {
+fn get_type2(b: [u8; 3]) -> Result<DataType> {
     num_enum_from(b[2] >> 4)
 }
 
@@ -509,209 +534,224 @@ fn get_u16(b: [u8; 3]) -> u16 {
     b0 | (b1 << 8)
 }
 
-fn parse_single_type(b: [u8; 3]) -> Result<GMDataType> {
-    assert_zero_b0(b)?;
-    assert_zero_b1(b)?;
-    let data_type = get_type1(b)?;
-    assert_zero_type2(b)?;
-    Ok(data_type)
-}
+impl DataReader<'_> {
+    fn assert_type(&self, actual: DataType, expected: DataType) -> Result<()> {
+        self.assert_data_type(actual, expected, "Instruction")
+    }
 
-fn parse_double_type(b: [u8; 3]) -> Result<[GMDataType; 2]> {
-    assert_zero_b0(b)?;
-    assert_zero_b1(b)?;
-    let right = get_type1(b)?;
-    let left = get_type2(b)?;
-    Ok([right, left])
-}
+    fn assert_zero_b0(&self, b: [u8; 3]) -> Result<()> {
+        self.assert_int(b[0], 0, "Instruction byte #0")
+    }
 
-fn parse_comparison(b: [u8; 3]) -> Result<Instruction> {
-    assert_zero_b0(b)?;
-    let comparison_type: GMComparisonType = num_enum_from(b[1])?;
-    let rhs = get_type1(b)?;
-    let lhs = get_type2(b)?;
-    Ok(Instruction::Compare { lhs, rhs, comparison_type })
-}
+    fn assert_zero_b1(&self, b: [u8; 3]) -> Result<()> {
+        self.assert_int(b[1], 0, "Instruction byte #1")
+    }
 
-fn parse_pop(b: [u8; 3], reader: &mut DataReader) -> Result<Instruction> {
-    let raw_instance_type = get_u16(b) as i16;
-    let type1: GMDataType = get_type1(b)?;
-    let type2: GMDataType = get_type2(b)?;
+    fn assert_zero_type2(&self, b: [u8; 3]) -> Result<()> {
+        self.assert_int(b[2] >> 4, 0, "Instruction data type 2 (in byte #2)")
+    }
 
-    if type1 == GMDataType::Int16 {
-        // PopSwap instruction
-        assert_type(GMDataType::Variable, type2)?;
+    fn parse_single_type(&self, b: [u8; 3]) -> Result<DataType> {
+        self.assert_zero_b0(b)?;
+        self.assert_zero_b1(b)?;
+        let data_type = get_type1(b)?;
+        self.assert_zero_type2(b)?;
+        Ok(data_type)
+    }
 
-        let is_array = match raw_instance_type {
-            5 => false,
-            6 => true,
-            n => bail!(
-                "Expected 5 or 6 for \"instance type\" (aka SwapExtra) of PopSwap Instruction, got {n}"
-            ),
+    fn parse_double_type(&self, b: [u8; 3]) -> Result<[DataType; 2]> {
+        self.assert_zero_b0(b)?;
+        self.assert_zero_b1(b)?;
+        let right = get_type1(b)?;
+        let left = get_type2(b)?;
+        Ok([right, left])
+    }
+
+    fn parse_comparison(&self, b: [u8; 3]) -> Result<Instruction> {
+        self.assert_zero_b0(b)?;
+        let comparison_type: ComparisonType = num_enum_from(b[1])?;
+        let rhs = get_type1(b)?;
+        let lhs = get_type2(b)?;
+        Ok(Instruction::Compare { lhs, rhs, comparison_type })
+    }
+
+    fn parse_pop(&mut self, b: [u8; 3]) -> Result<Instruction> {
+        let raw_instance_type = get_u16(b) as i16;
+        let type1: DataType = get_type1(b)?;
+        let type2: DataType = get_type2(b)?;
+
+        if type1 == DataType::Int16 {
+            // PopSwap instruction
+            self.assert_type(DataType::Variable, type2)?;
+
+            let is_array = match raw_instance_type {
+                5 => false,
+                6 => true,
+                n => bail!(
+                    "Expected 5 or 6 for \"instance type\" (aka SwapExtra) of PopSwap Instruction, got {n}"
+                ),
+            };
+            return Ok(Instruction::PopSwap { is_array });
+        }
+
+        let variable: CodeVariable = read_variable(self, raw_instance_type)?;
+        Ok(Instruction::Pop { variable, type1, type2 })
+    }
+
+    fn parse_duplicate(&self, b: [u8; 3]) -> Result<Instruction> {
+        let size: u8 = b[0];
+        let mut size2: u8 = b[1];
+        let data_type = get_type1(b)?;
+        self.assert_zero_type2(b)?;
+
+        if size2 == 0 {
+            return Ok(Instruction::Duplicate { data_type, size });
+        }
+
+        // Duplicate Swap Instruction
+        size2 = (size2 & 0x7F) >> 3;
+        Ok(Instruction::DuplicateSwap { data_type, size1: size, size2 })
+    }
+
+    fn parse_branch(&self, b: [u8; 3]) -> i32 {
+        let mut value: u32 = get_u24(b);
+        if self.general_info.wad_version > 14 && (value & 0x40_0000) != 0 {
+            value |= 0x80_0000;
+        }
+        if value & 0x80_0000 != 0 {
+            (value | 0xFF00_0000) as i32
+        } else {
+            value as i32
+        }
+    }
+
+    fn parse_push(&mut self, b: [u8; 3]) -> Result<PushValue> {
+        let int16 = get_u16(b) as i16;
+        let data_type = get_type1(b)?;
+        self.assert_zero_type2(b)?;
+
+        match data_type {
+            DataType::Int16 => Ok(PushValue::Int16(int16)),
+            DataType::Int32 => {
+                if let Some(&function) = self.function_occurrences.get(&self.cur_pos) {
+                    self.cur_pos += 4; // Skip next occurrence offset
+                    return Ok(PushValue::Function(function));
+                }
+
+                if let Some(&variable) = self.variable_occurrences.get(&self.cur_pos) {
+                    self.cur_pos += 4; // Skip next occurrence offset
+                    return Ok(PushValue::Variable(CodeVariable {
+                        variable,
+                        variable_type: VariableType::Normal,
+                        instance_type: InstanceType::Undefined,
+                        is_int32: true,
+                    }));
+                }
+
+                self.read_i32().map(PushValue::Int32)
+            },
+            DataType::Int64 => self.read_i64().map(PushValue::Int64),
+            DataType::Double => self.read_f64().map(PushValue::Double),
+            DataType::Boolean => self.read_bool32().map(PushValue::Boolean),
+            DataType::String => {
+                let index = self.read_u32()? as usize;
+                let len = self.strings.len();
+                let string = self
+                    .strings
+                    .get(index)
+                    .ok_or_else(|| format!("String ID is out of range: {index} >= {len}"))?;
+                Ok(PushValue::String(string.clone()))
+            },
+            DataType::Variable => read_variable(self, int16).map(PushValue::Variable),
+        }
+    }
+
+    fn parse_push_var(&mut self, b: [u8; 3]) -> Result<CodeVariable> {
+        let raw_instance_type = get_u16(b) as i16;
+        let data_type: DataType = get_type1(b)?;
+        self.assert_zero_type2(b)?;
+        self.assert_type(DataType::Variable, data_type)?;
+
+        read_variable(self, raw_instance_type)
+    }
+
+    fn parse_pushim(&self, b: [u8; 3]) -> Result<i16> {
+        let integer = get_u16(b) as i16;
+        let data_type = get_type1(b)?;
+        self.assert_zero_type2(b)?;
+        self.assert_type(DataType::Int16, data_type)?;
+
+        Ok(integer)
+    }
+
+    fn parse_call(&mut self, b: [u8; 3]) -> Result<Instruction> {
+        let argument_count: u16 = get_u16(b);
+        let data_type: DataType = get_type1(b)?;
+        self.assert_zero_type2(b)?;
+        self.assert_type(DataType::Int32, data_type)?;
+
+        let function: GMRef<GMFunction> = *self
+            .function_occurrences
+            .get(&(self.cur_pos))
+            .ok_or_else(|| {
+                format!(
+                    "Could not find any function with absolute occurrence position {} in map with length {} while parsing Call Instruction",
+                    self.cur_pos,
+                    self.function_occurrences.len(),
+                )
+            })?;
+        self.cur_pos += 4; // Skip next occurrence offset
+
+        Ok(Instruction::Call { function, argument_count })
+    }
+
+    fn parse_callvar(&self, b: [u8; 3]) -> Result<u16> {
+        let argument_count: u16 = get_u16(b);
+        let data_type: DataType = get_type1(b)?;
+        self.assert_zero_type2(b)?;
+        self.assert_type(DataType::Variable, data_type)?;
+
+        Ok(argument_count)
+    }
+
+    fn parse_extended(&mut self, b: [u8; 3]) -> Result<Instruction> {
+        use DataType::{Int16, Int32};
+        use opcodes::extended::*;
+
+        let kind = get_u16(b) as i16;
+        let data_type: DataType = num_enum_from(b[2] & 0xF)?;
+        self.assert_zero_type2(b)?;
+
+        let instruction = match (data_type, kind) {
+            (Int16, CHKINDEX) => Instruction::CheckArrayIndex,
+            (Int16, PUSHAF) => Instruction::PushArrayFinal,
+            (Int16, POPAF) => Instruction::PopArrayFinal,
+            (Int16, PUSHAC) => Instruction::PushArrayContainer,
+            (Int16, SETOWNER) => Instruction::SetArrayOwner,
+            (Int16, ISSTATICOK) => Instruction::HasStaticInitialized,
+            (Int16, SETSTATIC) => Instruction::SetStaticInitialized,
+            (Int16, SAVEAREF) => Instruction::SaveArrayReference,
+            (Int16, RESTOREAREF) => Instruction::RestoreArrayReference,
+            (Int16, ISNULLISH) => Instruction::IsNullishValue,
+            (Int32, PUSHREF) => {
+                let asset_reference = GMAssetReference::deserialize(self)
+                    .context("parsing PushReference Extended Instruction")?;
+                Instruction::PushReference { asset_reference }
+            },
+            _ => bail!("Invalid Extended Instruction with data type {data_type:?} and kind {kind}"),
         };
-        return Ok(Instruction::PopSwap { is_array });
-    }
 
-    let variable: CodeVariable = read_variable(reader, raw_instance_type)?;
-    Ok(Instruction::Pop { variable, type1, type2 })
-}
-
-fn parse_duplicate(b: [u8; 3]) -> Result<Instruction> {
-    let size: u8 = b[0];
-    let mut size2: u8 = b[1];
-    let data_type = get_type1(b)?;
-    assert_zero_type2(b)?;
-
-    if size2 == 0 {
-        return Ok(Instruction::Duplicate { data_type, size });
-    }
-
-    // Duplicate Swap Instruction
-    size2 = (size2 & 0x7F) >> 3;
-    Ok(Instruction::DuplicateSwap { data_type, size1: size, size2 })
-}
-
-fn parse_branch(b: [u8; 3], reader: &DataReader) -> i32 {
-    let mut value: u32 = get_u24(b);
-    if reader.general_info.wad_version > 14 && (value & 0x40_0000) != 0 {
-        value |= 0x80_0000;
-    }
-    if value & 0x80_0000 != 0 {
-        (value | 0xFF00_0000) as i32
-    } else {
-        value as i32
+        Ok(instruction)
     }
 }
 
-fn parse_push(b: [u8; 3], reader: &mut DataReader) -> Result<PushValue> {
-    let int16 = get_u16(b) as i16;
-    let data_type = get_type1(b)?;
-    assert_zero_type2(b)?;
-
-    match data_type {
-        GMDataType::Int16 => Ok(PushValue::Int16(int16)),
-        GMDataType::Int32 => {
-            if let Some(&function) = reader.function_occurrences.get(&reader.cur_pos) {
-                reader.cur_pos += 4; // Skip next occurrence offset
-                return Ok(PushValue::Function(function));
-            }
-
-            if let Some(&variable) = reader.variable_occurrences.get(&reader.cur_pos) {
-                reader.cur_pos += 4; // Skip next occurrence offset
-                return Ok(PushValue::Variable(CodeVariable {
-                    variable,
-                    variable_type: GMVariableType::Normal,
-                    instance_type: GMInstanceType::Undefined,
-                    is_int32: true,
-                }));
-            }
-
-            reader.read_i32().map(PushValue::Int32)
-        },
-        GMDataType::Int64 => reader.read_i64().map(PushValue::Int64),
-        GMDataType::Double => reader.read_f64().map(PushValue::Double),
-        GMDataType::Boolean => reader.read_bool32().map(PushValue::Boolean),
-        GMDataType::String => {
-            let index = reader.read_u32()? as usize;
-            let len = reader.strings.len();
-            let string = reader
-                .strings
-                .get(index)
-                .ok_or_else(|| format!("String ID is out of range: {index} >= {len}"))?;
-            Ok(PushValue::String(string.clone()))
-        },
-        GMDataType::Variable => read_variable(reader, int16).map(PushValue::Variable),
-    }
-}
-
-fn parse_push_var(b: [u8; 3], reader: &mut DataReader) -> Result<CodeVariable> {
-    let raw_instance_type = get_u16(b) as i16;
-    let data_type: GMDataType = get_type1(b)?;
-    assert_zero_type2(b)?;
-    assert_type(GMDataType::Variable, data_type)?;
-
-    read_variable(reader, raw_instance_type)
-}
-
-fn parse_pushim(b: [u8; 3]) -> Result<i16> {
-    let integer = get_u16(b) as i16;
-    let data_type = get_type1(b)?;
-    assert_zero_type2(b)?;
-    assert_type(GMDataType::Int16, data_type)?;
-
-    Ok(integer)
-}
-
-fn parse_call(b: [u8; 3], reader: &mut DataReader) -> Result<Instruction> {
-    let argument_count: u16 = get_u16(b);
-    let data_type: GMDataType = get_type1(b)?;
-    assert_zero_type2(b)?;
-    assert_type(GMDataType::Int32, data_type)?;
-
-    let function: GMRef<GMFunction> = *reader
-        .function_occurrences
-        .get(&(reader.cur_pos))
-        .ok_or_else(|| {
-            format!(
-                "Could not find any function with absolute occurrence position {} in map with length {} while parsing Call Instruction",
-                reader.cur_pos,
-                reader.function_occurrences.len(),
-            )
-        })?;
-    reader.cur_pos += 4; // Skip next occurrence offset
-
-    Ok(Instruction::Call { function, argument_count })
-}
-
-fn parse_callvar(b: [u8; 3]) -> Result<u16> {
-    let argument_count: u16 = get_u16(b);
-    let data_type: GMDataType = get_type1(b)?;
-    assert_zero_type2(b)?;
-    assert_type(GMDataType::Variable, data_type)?;
-
-    Ok(argument_count)
-}
-
-fn parse_extended(reader: &mut DataReader, b: [u8; 3]) -> Result<Instruction> {
-    use GMDataType::{Int16, Int32};
-    use opcodes::extended::{
-        CHKINDEX, ISNULLISH, ISSTATICOK, POPAF, PUSHAC, PUSHAF, PUSHREF, RESTOREAREF, SAVEAREF,
-        SETOWNER, SETSTATIC,
-    };
-
-    let kind = get_u16(b) as i16;
-    let data_type: GMDataType = num_enum_from(b[2] & 0xF)?;
-    assert_zero_type2(b)?;
-
-    let instruction = match (data_type, kind) {
-        (Int16, CHKINDEX) => Instruction::CheckArrayIndex,
-        (Int16, PUSHAF) => Instruction::PushArrayFinal,
-        (Int16, POPAF) => Instruction::PopArrayFinal,
-        (Int16, PUSHAC) => Instruction::PushArrayContainer,
-        (Int16, SETOWNER) => Instruction::SetArrayOwner,
-        (Int16, ISSTATICOK) => Instruction::HasStaticInitialized,
-        (Int16, SETSTATIC) => Instruction::SetStaticInitialized,
-        (Int16, SAVEAREF) => Instruction::SaveArrayReference,
-        (Int16, RESTOREAREF) => Instruction::RestoreArrayReference,
-        (Int16, ISNULLISH) => Instruction::IsNullishValue,
-        (Int32, PUSHREF) => {
-            let asset_reference = GMAssetReference::deserialize(reader)
-                .context("parsing PushReference Extended Instruction")?;
-            Instruction::PushReference { asset_reference }
-        },
-        _ => bail!("Invalid Extended Instruction with data type {data_type:?} and kind {kind}"),
-    };
-
-    Ok(instruction)
-}
-
-fn build_single_type(builder: &mut DataBuilder, opcode: u8, data_type: GMDataType) {
+fn build_single_type(builder: &mut DataBuilder, opcode: u8, data_type: DataType) {
     builder.write_u16(0);
     builder.write_u8(data_type.into());
     builder.write_u8(opcode);
 }
 
-fn build_double_type(builder: &mut DataBuilder, opcode: u8, type1: GMDataType, type2: GMDataType) {
+fn build_double_type(builder: &mut DataBuilder, opcode: u8, type1: DataType, type2: DataType) {
     builder.write_u16(0);
     builder.write_u8(u8::from(type1) | u8::from(type2) << 4);
     builder.write_u8(opcode);
@@ -720,9 +760,9 @@ fn build_double_type(builder: &mut DataBuilder, opcode: u8, type1: GMDataType, t
 fn build_comparison(
     builder: &mut DataBuilder,
     mut opcode: u8,
-    type1: GMDataType,
-    type2: GMDataType,
-    comparison_type: GMComparisonType,
+    type1: DataType,
+    type2: DataType,
+    comparison_type: ComparisonType,
 ) {
     let mut comparison_type = u8::from(comparison_type);
     if builder.wad_version() < 15 {
@@ -739,8 +779,8 @@ fn build_pop(
     builder: &mut DataBuilder,
     opcode: u8,
     variable: &CodeVariable,
-    type1: GMDataType,
-    type2: GMDataType,
+    type1: DataType,
+    type2: DataType,
 ) -> Result<()> {
     let instr_pos: usize = builder.len();
     builder.write_i16(build_instance_type(variable.instance_type));
@@ -759,24 +799,18 @@ fn build_pop(
 
 fn build_popswap(builder: &mut DataBuilder, opcode: u8, array: bool) {
     builder.write_i16(if array { 6 } else { 5 });
-    builder.write_u8(u8::from(GMDataType::Int32) | u8::from(GMDataType::Variable) << 4);
+    builder.write_u8(u8::from(DataType::Int32) | u8::from(DataType::Variable) << 4);
     builder.write_u8(opcode);
 }
 
-fn build_duplicate(builder: &mut DataBuilder, opcode: u8, data_type: GMDataType, size: u8) {
+fn build_duplicate(builder: &mut DataBuilder, opcode: u8, data_type: DataType, size: u8) {
     builder.write_u8(size);
     builder.write_u8(0);
     builder.write_u8(data_type.into());
     builder.write_u8(opcode);
 }
 
-fn build_dupswap(
-    builder: &mut DataBuilder,
-    opcode: u8,
-    data_type: GMDataType,
-    size1: u8,
-    size2: u8,
-) {
+fn build_dupswap(builder: &mut DataBuilder, opcode: u8, data_type: DataType, size1: u8, size2: u8) {
     builder.write_u8(size1);
     builder.write_u8((size2 << 3) | 0x80);
     builder.write_u8(data_type.into());
@@ -847,7 +881,7 @@ fn build_push(builder: &mut DataBuilder, opcode: u8, value: &PushValue) -> Resul
 fn build_pushvar(builder: &mut DataBuilder, opcode: u8, variable: &CodeVariable) -> Result<()> {
     let instr_pos = builder.len();
     builder.write_i16(build_instance_type(variable.instance_type));
-    builder.write_u8(GMDataType::Variable.into());
+    builder.write_u8(DataType::Variable.into());
     builder.write_u8(opcode);
 
     write_variable_occurrence(
@@ -862,7 +896,7 @@ fn build_pushvar(builder: &mut DataBuilder, opcode: u8, variable: &CodeVariable)
 
 fn build_pushim(builder: &mut DataBuilder, opcode: u8, integer: i16) {
     builder.write_i16(integer);
-    builder.write_u8(GMDataType::Int16.into());
+    builder.write_u8(DataType::Int16.into());
     builder.write_u8(opcode);
 }
 
@@ -874,7 +908,7 @@ fn build_call(
 ) -> Result<()> {
     let instr_pos: usize = builder.len();
     builder.write_u16(argument_count);
-    builder.write_u8(GMDataType::Int32.into());
+    builder.write_u8(DataType::Int32.into());
     builder.write_u8(opcode);
 
     write_function_occurrence(
@@ -888,19 +922,19 @@ fn build_call(
 
 fn build_callvar(builder: &mut DataBuilder, opcode: u8, argument_count: u16) {
     builder.write_u16(argument_count);
-    builder.write_u8(GMDataType::Variable.into());
+    builder.write_u8(DataType::Variable.into());
     builder.write_u8(opcode);
 }
 
 fn build_extended16(builder: &mut DataBuilder, extended_kind: i16) {
     builder.write_i16(extended_kind);
-    builder.write_u8(GMDataType::Int16.into());
+    builder.write_u8(DataType::Int16.into());
     builder.write_u8(opcodes::EXTENDED);
 }
 
 fn build_pushref(builder: &mut DataBuilder, asset_reference: &GMAssetReference) -> Result<()> {
     builder.write_i16(opcodes::extended::PUSHREF);
-    builder.write_u8(GMDataType::Int32.into());
+    builder.write_u8(DataType::Int32.into());
     builder.write_u8(opcodes::EXTENDED);
     asset_reference.serialize(builder)
 }
@@ -973,10 +1007,10 @@ fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<Code
     let raw_value = reader.read_u32()?;
 
     let variable_type = (raw_value >> 24) & 0xF8;
-    let variable_type: GMVariableType =
+    let variable_type: VariableType =
         num_enum_from(variable_type as u8).context("parsing variable reference chain")?;
 
-    let instance_type: GMInstanceType = parse_instance_type(raw_instance_type, variable_type)?;
+    let instance_type: InstanceType = parse_instance_type(raw_instance_type, variable_type)?;
 
     let variable: GMRef<GMVariable> = *reader.variable_occurrences.get(&occurrence_position).ok_or_else(|| {
         format!(
@@ -997,29 +1031,29 @@ fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<Code
 
 pub(crate) fn parse_instance_type(
     raw_value: i16,
-    variable_type: GMVariableType,
-) -> Result<GMInstanceType> {
+    variable_type: VariableType,
+) -> Result<InstanceType> {
     // If > 0; then game object id (or room instance id). If < 0, then variable instance type.
     if raw_value > 0 {
-        return Ok(if variable_type == GMVariableType::Instance {
-            GMInstanceType::RoomInstance(raw_value)
+        return Ok(if variable_type == VariableType::Instance {
+            InstanceType::RoomInstance(raw_value)
         } else {
-            GMInstanceType::Self_(Some(GMRef::new(raw_value as u32)))
+            InstanceType::Self_(Some(GMRef::new(raw_value as u32)))
         });
     }
 
-    let instance_type: GMInstanceType = match raw_value {
-        0 => GMInstanceType::Undefined,
-        -1 => GMInstanceType::Self_(None),
-        -2 => GMInstanceType::Other,
-        -3 => GMInstanceType::All,
-        -4 => GMInstanceType::None,
-        -5 => GMInstanceType::Global,
-        -6 => GMInstanceType::Builtin,
-        -7 => GMInstanceType::Local,
-        -9 => GMInstanceType::StackTop,
-        -15 => GMInstanceType::Argument,
-        -16 => GMInstanceType::Static,
+    let instance_type: InstanceType = match raw_value {
+        0 => InstanceType::Undefined,
+        -1 => InstanceType::Self_(None),
+        -2 => InstanceType::Other,
+        -3 => InstanceType::All,
+        -4 => InstanceType::None,
+        -5 => InstanceType::Global,
+        -6 => InstanceType::Builtin,
+        -7 => InstanceType::Local,
+        -9 => InstanceType::StackTop,
+        -15 => InstanceType::Argument,
+        -16 => InstanceType::Static,
         _ => bail!("Invalid instance type {raw_value} (0x{raw_value:04X})"),
     };
 
@@ -1027,22 +1061,22 @@ pub(crate) fn parse_instance_type(
 }
 
 #[must_use]
-pub(crate) const fn build_instance_type(instance_type: GMInstanceType) -> i16 {
+pub(crate) const fn build_instance_type(instance_type: InstanceType) -> i16 {
     // If > 0; then game object id (or room instance id). If < 0, then variable instance type.
     match instance_type {
-        GMInstanceType::Undefined => 0,
-        GMInstanceType::Self_(None) => -1,
-        GMInstanceType::Self_(Some(game_object_ref)) => game_object_ref.index as i16,
-        GMInstanceType::RoomInstance(instance_id) => instance_id,
-        GMInstanceType::Other => -2,
-        GMInstanceType::All => -3,
-        GMInstanceType::None => -4,
-        GMInstanceType::Global => -5,
-        GMInstanceType::Builtin => -6,
-        GMInstanceType::Local => -7,
-        GMInstanceType::StackTop => -9,
-        GMInstanceType::Argument => -15,
-        GMInstanceType::Static => -16,
+        InstanceType::Undefined => 0,
+        InstanceType::Self_(None) => -1,
+        InstanceType::Self_(Some(game_object_ref)) => game_object_ref.index as i16,
+        InstanceType::RoomInstance(instance_id) => instance_id,
+        InstanceType::Other => -2,
+        InstanceType::All => -3,
+        InstanceType::None => -4,
+        InstanceType::Global => -5,
+        InstanceType::Builtin => -6,
+        InstanceType::Local => -7,
+        InstanceType::StackTop => -9,
+        InstanceType::Argument => -15,
+        InstanceType::Static => -16,
     }
 }
 
@@ -1051,10 +1085,10 @@ fn write_variable_occurrence(
     gm_index: u32,
     occurrence_pos: usize,
     name_string_id: u32,
-    variable_type: GMVariableType,
+    variable_type: VariableType,
 ) -> Result<()> {
     let len: usize = builder.variable_occurrences.len();
-    let occurrences: &mut Vec<(usize, GMVariableType)> = builder
+    let occurrences: &mut Vec<(usize, VariableType)> = builder
         .variable_occurrences
         .get_mut(gm_index as usize)
         .ok_or_else(|| {

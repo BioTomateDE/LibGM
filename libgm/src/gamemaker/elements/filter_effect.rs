@@ -5,7 +5,6 @@ use crate::{
         deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
     },
     prelude::*,
-    util::assert::assert_int,
 };
 
 #[named_list_chunk("FEDS")]
@@ -17,7 +16,7 @@ pub struct GMFilterEffects {
 impl GMElement for GMFilterEffects {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
-        assert_int("FEDS Version", 1, reader.read_u32()?)?;
+        reader.read_gms2_chunk_version("FEDS Version")?;
         let filter_effects: Vec<GMFilterEffect> = reader.read_pointer_list()?;
         Ok(Self { filter_effects, exists: true })
     }

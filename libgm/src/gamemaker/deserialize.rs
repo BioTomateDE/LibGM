@@ -1,4 +1,5 @@
 pub(super) mod chunk;
+mod integrity;
 mod lists;
 mod numbers;
 pub(crate) mod reader;
@@ -174,7 +175,7 @@ impl ParsingOptions {
 
         log::info!(
             "Loading {:?} (GM {}, WAD {})",
-            reader.general_info.display_name,
+            reader.general_info.game_name,
             reader.general_info.version,
             reader.general_info.wad_version,
         );

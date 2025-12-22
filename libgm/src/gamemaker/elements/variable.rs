@@ -13,7 +13,7 @@ use crate::{
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
-    gml::instruction::{GMInstanceType, GMVariableType},
+    gml::instruction::{InstanceType, VariableType},
     prelude::*,
     util::init::vec_with_capacity,
 };
@@ -33,15 +33,15 @@ impl GMVariables {
     pub fn make(
         &mut self,
         name: &str,
-        instance_type: GMInstanceType,
+        instance_type: InstanceType,
         general_info: &GMGeneralInfo,
     ) -> Result<GMRef<GMVariable>> {
-        if instance_type == GMInstanceType::Local {
+        if instance_type == InstanceType::Local {
             bail!("Local variables have to be unique; this function will not work");
         }
 
-        let vari_instance_type = if instance_type == GMInstanceType::Builtin {
-            GMInstanceType::Self_(None)
+        let vari_instance_type = if instance_type == InstanceType::Builtin {
+            InstanceType::Self_(None)
         } else {
             instance_type
         };
@@ -66,7 +66,7 @@ impl GMVariables {
         // First update these scuffed ass variable counts
         if let Some(header) = &mut self.modern_header {
             if general_info.is_version_at_least((2, 3)) {
-                if instance_type != GMInstanceType::Builtin {
+                if instance_type != InstanceType::Builtin {
                     header.var_count1 += 1;
                     header.var_count2 += 1;
                 }
@@ -74,9 +74,9 @@ impl GMVariables {
                 // this condition is only suggested by utmt; not confirmed (original: `!DifferentVarCounts`)
                 header.var_count1 += 1;
                 header.var_count2 += 1;
-            } else if matches!(instance_type, GMInstanceType::Self_(_)) {
+            } else if matches!(instance_type, InstanceType::Self_(_)) {
                 header.var_count2 += 1;
-            } else if instance_type == GMInstanceType::Global {
+            } else if instance_type == InstanceType::Global {
                 header.var_count1 += 1;
             }
         }
@@ -224,15 +224,15 @@ impl GMNamedElement for GMVariable {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ModernData {
-    pub instance_type: GMInstanceType,
+    pub instance_type: InstanceType,
     pub variable_id: i32,
 }
 
 impl GMElement for ModernData {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let raw_instance_type: i16 = reader.read_i32()? as i16;
-        let instance_type: GMInstanceType =
-            parse_instance_type(raw_instance_type, GMVariableType::Normal)?;
+        let instance_type: InstanceType =
+            parse_instance_type(raw_instance_type, VariableType::Normal)?;
         let variable_id = reader.read_i32()?;
         Ok(Self { instance_type, variable_id })
     }

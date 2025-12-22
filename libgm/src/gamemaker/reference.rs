@@ -20,12 +20,12 @@ pub struct GMRef<T> {
     _marker: std::marker::PhantomData<T>,
 }
 
+impl<T> Copy for GMRef<T> {}
 impl<T> Clone for GMRef<T> {
     fn clone(&self) -> Self {
-        Self::new(self.index)
+        *self
     }
 }
-impl<T> Copy for GMRef<T> {}
 
 impl<T> PartialEq for GMRef<T> {
     fn eq(&self, other: &Self) -> bool {

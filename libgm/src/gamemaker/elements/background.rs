@@ -8,7 +8,7 @@ use crate::{
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
     prelude::*,
-    util::{assert::assert_int, init::vec_with_capacity},
+    util::init::vec_with_capacity,
 };
 
 const ALIGNMENT: u32 = 8;
@@ -114,7 +114,7 @@ pub struct GMBackgroundGMS2Data {
 impl GMElement for GMBackgroundGMS2Data {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let unknown_always_two = reader.read_u32()?;
-        assert_int("Unknown Always Two", 2, unknown_always_two)?;
+        reader.assert_int(unknown_always_two, 2, "Unknown Always Two")?;
 
         let tile_width = reader.read_u32()?;
         let tile_height = reader.read_u32()?;
@@ -130,7 +130,7 @@ impl GMElement for GMBackgroundGMS2Data {
         let tile_count = reader.read_u32()?;
 
         let unknown_always_zero = reader.read_u32()?;
-        assert_int("Unknown Always Zero", 0, unknown_always_zero)?;
+        reader.assert_int(unknown_always_zero, 0, "Unknown Always Zero")?;
 
         let frame_length = reader.read_i64()?;
 

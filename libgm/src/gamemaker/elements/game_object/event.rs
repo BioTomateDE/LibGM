@@ -5,7 +5,6 @@ use crate::{
     },
     gml::instruction::GMCode,
     prelude::*,
-    util::assert::{assert_bool, assert_int},
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -70,7 +69,7 @@ impl GMElement for Action {
         let kind = reader.read_u32()?;
         let use_relative = reader.read_bool32()?;
         let is_question = reader.read_bool32()?;
-        assert_bool("Is Question", false, is_question)?;
+        reader.assert_bool(is_question, false, "Is Question")?;
         let use_apply_to = reader.read_bool32()?;
         let exe_type = reader.read_u32()?;
         let action_name: Option<String> = reader.read_gm_string_opt()?;
@@ -80,9 +79,10 @@ impl GMElement for Action {
         let relative = reader.read_bool32()?;
         let is_not = reader.read_bool32()?;
         let unknown_always_zero = reader.read_u32()?;
-        assert_int("Unknown always zero", 0, unknown_always_zero)?;
+        reader.assert_int(unknown_always_zero, 0, "Unknown always zero")?;
 
         Ok(Self {
+            code,
             lib_id,
             id,
             kind,
@@ -90,7 +90,6 @@ impl GMElement for Action {
             use_apply_to,
             exe_type,
             action_name,
-            code,
             argument_count,
             who,
             relative,

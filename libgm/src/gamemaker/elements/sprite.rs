@@ -18,7 +18,7 @@ use crate::{
     },
     prelude::*,
     util::{
-        assert::assert_int,
+        assert,
         init::{num_enum_from, vec_with_capacity},
     },
 };
@@ -511,7 +511,7 @@ impl GMSprite {
         let data_bits = rounded_width * height * count;
         let data_bits = data_bits.next_multiple_of(32); // Align to 32 bits
         let data_bytes = (data_bits / 8) as usize;
-        assert_int("Sprite Mask Data Size", data_bytes, written_bytes)?;
+        assert::int(written_bytes, data_bytes, "Sprite Mask Data Size")?;
 
         Ok(())
     }
@@ -578,7 +578,7 @@ fn read_mask_data(
 
     let actual_size = reader.cur_pos - start;
     let expected_size = calculate_mask_data_size(width, height, mask_count);
-    assert_int("Sprite Mask Data Size", expected_size, actual_size)?;
+    reader.assert_int(actual_size, expected_size, "Sprite Mask Data Size")?;
 
     Ok(collision_masks)
 }

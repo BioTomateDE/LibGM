@@ -39,8 +39,8 @@ impl GMElement for Data {
 
 #[num_enum(i32)]
 pub enum FillType {
-    FillRepeat,
-    FillClamp,
-    FillRepeatPoint,
-    FillClampPoint,
+    Repeat,
+    Clamp,
+    RepeatPoint,
+    ClampPoint,
 }
