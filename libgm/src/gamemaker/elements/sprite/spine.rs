@@ -13,13 +13,13 @@ pub struct Data {
 }
 
 impl Data {
+    // For reference: <https://github.com/UnderminersTeam/UndertaleModTool/commit/0dab19b91ed673520a2708aa9ea2bc7539dafb0c>
     fn decode_spine_blob(blob: &mut Vec<u8>) {
         // don't ask me, ask Nikita Krapivin (or don't)
         let mut k: u32 = 42;
         for byte in blob {
-            // If this panics in debug profile, replace with wrapping operations
-            *byte -= k as u8;
-            k *= k + 1;
+            *byte = byte.wrapping_sub(k as u8);
+            k = k.wrapping_mul(k + 1);
         }
     }
 
@@ -27,9 +27,8 @@ impl Data {
         // don't ask me, ask Nikita Krapivin (or don't)
         let mut k: u32 = 42;
         for byte in blob {
-            // If this panics in debug profile, replace with wrapping operations
-            *byte += k as u8;
-            k *= k + 1;
+            *byte = byte.wrapping_add(k as u8);
+            k = k.wrapping_mul(k + 1);
         }
     }
 
