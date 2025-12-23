@@ -2,8 +2,6 @@ mod file;
 pub mod function;
 pub mod option;
 
-use std::ops::{Deref, DerefMut};
-
 pub use file::File;
 pub use function::Function;
 use macros::num_enum;
@@ -25,19 +23,6 @@ pub struct GMExtensions {
     /// Set in GMS2+ (and some scuffed GMS1 versions)
     pub product_id_data: Vec<[u8; 16]>,
     pub exists: bool,
-}
-
-impl Deref for GMExtensions {
-    type Target = Vec<GMExtension>;
-    fn deref(&self) -> &Self::Target {
-        &self.extensions
-    }
-}
-
-impl DerefMut for GMExtensions {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.extensions
-    }
 }
 
 impl GMChunk for GMExtensions {
