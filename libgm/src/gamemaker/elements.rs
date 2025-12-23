@@ -274,7 +274,9 @@ pub trait GMChunk: GMElement + Default {
 pub trait GMListChunk: GMChunk {
     type Element: GMElement;
 
+    #[must_use]
     fn elements(&self) -> &Vec<Self::Element>;
+    #[must_use]
     fn elements_mut(&mut self) -> &mut Vec<Self::Element>;
 
     fn by_ref(&self, gm_ref: GMRef<Self::Element>) -> Result<&Self::Element> {
@@ -284,6 +286,18 @@ pub trait GMListChunk: GMChunk {
     fn by_ref_mut(&mut self, gm_ref: GMRef<Self::Element>) -> Result<&mut Self::Element> {
         gm_ref.resolve_mut(self.elements_mut())
     }
+
+    fn push(&mut self, element: Self::Element) {
+        self.elements_mut().push(element);
+    }
+    #[must_use]
+    fn len(&self) -> usize {
+        self.elements().len()
+    }
+
+    fn iter(&self) -> core::slice::Iter<'_, Self::Element>;
+    fn iter_mut(&mut self) -> core::slice::IterMut<'_, Self::Element>;
+    fn into_iter(self) -> std::vec::IntoIter<Self::Element>;
 }
 
 pub trait GMNamedListChunk: GMListChunk<Element: GMNamedElement> {
@@ -293,6 +307,7 @@ pub trait GMNamedListChunk: GMListChunk<Element: GMNamedElement> {
 }
 
 pub(crate) fn validate_names<T: GMNamedListChunk>(chunk: &T) -> Result<()> {
+    // TODO: this can probably be optimised or something
     let elements = chunk.elements();
     let mut seen: HashMap<&String, usize> = HashMap::new();
 
@@ -368,12 +383,12 @@ pub(crate) fn validate_identifier(name: &str) -> Result<()> {
         if first_char.is_ascii_digit() {
             bail!("Identifier {orig_name:?} starts with a digit ({first_char})");
         }
-        bail!("Identifer {orig_name:?} starts with invalid character {first_char:?}");
+        bail!("Identifier {orig_name:?} starts with invalid character {first_char:?}");
     }
 
     for ch in chars {
         if !matches!(ch, 'a'..='z'| '0'..='9' | '_' | 'A'..='Z') {
-            bail!("Identifer {orig_name:?} contains invalid character {ch:?}");
+            bail!("Identifier {orig_name:?} contains invalid character {ch:?}");
         }
     }
 
