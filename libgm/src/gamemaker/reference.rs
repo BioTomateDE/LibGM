@@ -1,23 +1,42 @@
+use std::{
+    fmt::{Debug, Formatter},
+    hash::{Hash, Hasher},
+};
+
 use crate::{prelude::*, util::fmt::typename};
 
-/// `GMRef` has (fake) generic types to make it clearer which type it belongs to (`name: GMRef` vs `name: String`).
+/// `GMRef` has (fake) generic types to make it clearer which type
+/// it belongs to (`name: GMRef` vs `name: String`).
 ///
-/// It can be resolved to the data it references using the `.resolve()` method, which needs the list the elements are stored in.
-/// This means that removing or inserting elements in the middle of the list will shift all their `GMRef`s; breaking them.
-#[derive(Hash, PartialEq, Eq)]
+/// It can be resolved to the data it references using the `.resolve()` method,
+/// which needs the list the elements are stored in.
+/// This means that removing or inserting elements in the middle of
+/// the list will shift all their `GMRef`s; breaking them.
 pub struct GMRef<T> {
     /// The GameMaker ID / Index of this resource in the corresponding element vector.
     pub index: u32,
 
-    /// Marker needs to be here to ignore "unused generic T" error; doesn't store any data
+    /// Marker needs to be here to ignore "unused generic T" error; doesn't store any data.
     _marker: std::marker::PhantomData<T>,
 }
 
 impl<T> Copy for GMRef<T> {}
-
 impl<T> Clone for GMRef<T> {
     fn clone(&self) -> Self {
         *self
+    }
+}
+
+impl<T> PartialEq for GMRef<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index
+    }
+}
+impl<T> Eq for GMRef<T> {}
+
+impl<T> Hash for GMRef<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.index.hash(state);
     }
 }
 
@@ -45,13 +64,12 @@ impl<T> From<GMRef<T>> for usize {
     }
 }
 
-impl<T> std::fmt::Debug for GMRef<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<T> Debug for GMRef<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "GMRef<{}#{}>", typename::<T>(), self.index)
     }
 }
 
-#[allow(clippy::ptr_arg)]
 impl<T> GMRef<T> {
     /// Creates a new GameMaker reference with the specified index.
     /// The fake generic type can often be omitted (if the compiler can infer it).
@@ -69,7 +87,7 @@ impl<T> GMRef<T> {
     ///
     /// # Errors
     /// Returns an error if `self.index` is out of bounds for the provided vector.
-    pub fn resolve(self, elements_by_index: &Vec<T>) -> Result<&T> {
+    pub fn resolve(self, elements_by_index: &[T]) -> Result<&T> {
         let element = elements_by_index.get(self.index as usize).ok_or_else(|| {
             format!(
                 "Could not resolve {} reference with index {} in list with length {}",
@@ -90,7 +108,7 @@ impl<T> GMRef<T> {
     ///
     /// # Errors
     /// Returns an error if `self.index` is out of bounds for the provided vector.
-    pub fn resolve_mut(self, elements_by_index: &mut Vec<T>) -> Result<&mut T> {
+    pub fn resolve_mut(self, elements_by_index: &mut [T]) -> Result<&mut T> {
         let length = elements_by_index.len();
         let element = elements_by_index
             .get_mut(self.index as usize)

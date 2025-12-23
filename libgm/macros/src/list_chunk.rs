@@ -3,7 +3,7 @@ use quote::quote;
 use syn::{DeriveInput, Error, Fields, Ident, LitStr, parse_macro_input};
 
 pub fn list_chunk(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let chunk_struct = syn::parse_macro_input!(item as syn::DeriveInput);
+    let chunk_struct = syn::parse_macro_input!(item as DeriveInput);
 
     let (elems_field, elem_type) = match find_vec_field(&chunk_struct) {
         Ok((n, t)) => (n, t),
@@ -17,16 +17,43 @@ pub fn list_chunk(attr: TokenStream, item: TokenStream) -> TokenStream {
         #[derive(Debug, Clone, Default, PartialEq)]
         #chunk_struct
 
-        impl std::ops::Deref for #chunk_type {
-            type Target = Vec<#elem_type>;
-            fn deref(&self) -> &Self::Target {
-                &self.#elems_field
+        impl IntoIterator for #chunk_type {
+            type Item = #elem_type;
+            type IntoIter = std::vec::IntoIter<#elem_type>;
+
+            fn into_iter(self) -> Self::IntoIter {
+                self.#elems_field.into_iter()
             }
         }
 
-        impl std::ops::DerefMut for #chunk_type {
-            fn deref_mut(&mut self) -> &mut Self::Target {
-                &mut self.#elems_field
+        impl<'a> IntoIterator for &'a #chunk_type {
+            type Item = &'a #elem_type;
+            type IntoIter = core::slice::Iter<'a, #elem_type>;
+
+            fn into_iter(self) -> Self::IntoIter {
+                self.#elems_field.iter()
+            }
+        }
+
+        impl<'a> IntoIterator for &'a mut #chunk_type {
+            type Item = &'a mut #elem_type;
+            type IntoIter = core::slice::IterMut<'a, #elem_type>;
+
+            fn into_iter(self) -> Self::IntoIter {
+                self.#elems_field.iter_mut()
+            }
+        }
+
+        impl std::ops::Index<usize> for #chunk_type {
+            type Output = #elem_type;
+            fn index(&self, index: usize) -> &Self::Output {
+                &self.#elems_field[index]
+            }
+        }
+
+        impl std::ops::IndexMut<usize> for #chunk_type {
+            fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+                &mut self.#elems_field[index]
             }
         }
 
@@ -47,6 +74,18 @@ pub fn list_chunk(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             fn elements_mut(&mut self) -> &mut Vec<#elem_type> {
                 &mut self.#elems_field
+            }
+
+            fn iter(&self) -> core::slice::Iter<'_, Self::Element> {
+                self.#elems_field.iter()
+            }
+
+            fn iter_mut(&mut self) -> core::slice::IterMut<'_, Self::Element> {
+                self.#elems_field.iter_mut()
+            }
+
+            fn into_iter(self) -> std::vec::IntoIter<Self::Element> {
+                self.#elems_field.into_iter()
             }
         }
     }.into()
@@ -89,7 +128,7 @@ fn find_vec_fields(fields: Vec<&syn::Field>) -> syn::Result<Vec<(Ident, syn::Typ
 
     for field in fields {
         // This should never fail since the fields were already verified to be named.
-        let ident = field.ident.as_ref().expect("Field identifer not set");
+        let ident = field.ident.as_ref().expect("Field identifier not set");
 
         if !is_vec_type(&field.ty) {
             continue;

@@ -22,5 +22,5 @@ cpu-time = "1.0.0" # Benchmarking
 image = "0.25.9"   # Decoding and encoding images
 log = "0.4.28"     # Logging
 num_enum = "0.7.5" # Primitive number enums
-tynm = "0.2.0"     # Typename without path
+tynm = "0.2.0"     # Typename without path | TODO: compile-time alternative?
 uuid = "1.18.1"    # Game UUID

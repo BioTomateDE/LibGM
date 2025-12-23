@@ -17,7 +17,7 @@ pub fn vec_with_capacity<T>(count: u32) -> Result<Vec<T>> {
     let implied_size = size_of::<T>().saturating_mul(count);
     if implied_size > FAILSAFE_SIZE {
         bail!(
-            "{} count {} implies data size {} which exceeeds failsafe size {}",
+            "{} count {} implies data size {} which exceeds failsafe size {}",
             typename::<T>(),
             count,
             format_bytes(implied_size),

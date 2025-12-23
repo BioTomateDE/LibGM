@@ -11,7 +11,7 @@ use std::path::Path;
 use builder::DataBuilder;
 
 use crate::{
-    gamemaker::{chunk::ChunkName, data::GMData, elements::strings::GMStrings},
+    gamemaker::{chunk::ChunkName, data::GMData, elements::string::GMStrings},
     prelude::*,
     util::bench::Stopwatch,
 };

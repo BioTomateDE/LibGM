@@ -9,42 +9,41 @@ use crate::{
     util::fmt::typename,
 };
 
-pub mod animation_curves;
-pub mod audio_groups;
-pub mod backgrounds;
+pub mod animation_curve;
+pub mod audio_group;
+pub mod background;
 pub mod code;
-pub(crate) mod data_files;
+pub(crate) mod data_file;
 pub mod embedded_audio;
-pub mod embedded_images;
-pub mod embedded_textures;
-pub mod extensions;
-pub mod feature_flags;
-pub mod filter_effects;
-pub mod fonts;
-pub mod functions;
+pub mod embedded_image;
+pub mod embedded_texture;
+pub mod extension;
+pub mod feature_flag;
+pub mod filter_effect;
+pub mod font;
+pub mod function;
 pub mod game_end;
-pub mod game_objects;
+pub mod game_object;
 pub mod general_info;
 pub mod global_init;
-pub mod languages;
+pub mod language;
 pub mod options;
-pub mod particle_emitters;
-pub mod particle_systems;
-pub mod paths;
-pub mod rooms;
-pub mod scripts;
+pub mod particle_emitter;
+pub mod particle_system;
+pub mod path;
+pub mod room;
+pub mod script;
 pub mod sequence;
-pub mod shaders;
-pub mod sounds;
-pub mod sprites;
-pub mod sprites_yyswf;
-pub(crate) mod strings;
-pub mod tags;
+pub mod shader;
+pub mod sound;
+pub mod sprite;
+pub(crate) mod string;
+pub mod tag;
 pub mod texture_group_info;
-pub mod texture_page_items;
-pub mod timelines;
-pub mod ui_nodes;
-pub mod variables;
+pub mod texture_page_item;
+pub mod timeline;
+pub mod ui_node;
+pub mod variable;
 
 /// All GameMaker elements that can be deserialized
 /// from a data file should implement this trait.
@@ -275,7 +274,9 @@ pub trait GMChunk: GMElement + Default {
 pub trait GMListChunk: GMChunk {
     type Element: GMElement;
 
+    #[must_use]
     fn elements(&self) -> &Vec<Self::Element>;
+    #[must_use]
     fn elements_mut(&mut self) -> &mut Vec<Self::Element>;
 
     fn by_ref(&self, gm_ref: GMRef<Self::Element>) -> Result<&Self::Element> {
@@ -285,6 +286,18 @@ pub trait GMListChunk: GMChunk {
     fn by_ref_mut(&mut self, gm_ref: GMRef<Self::Element>) -> Result<&mut Self::Element> {
         gm_ref.resolve_mut(self.elements_mut())
     }
+
+    fn push(&mut self, element: Self::Element) {
+        self.elements_mut().push(element);
+    }
+    #[must_use]
+    fn len(&self) -> usize {
+        self.elements().len()
+    }
+
+    fn iter(&self) -> core::slice::Iter<'_, Self::Element>;
+    fn iter_mut(&mut self) -> core::slice::IterMut<'_, Self::Element>;
+    fn into_iter(self) -> std::vec::IntoIter<Self::Element>;
 }
 
 pub trait GMNamedListChunk: GMListChunk<Element: GMNamedElement> {
@@ -294,6 +307,7 @@ pub trait GMNamedListChunk: GMListChunk<Element: GMNamedElement> {
 }
 
 pub(crate) fn validate_names<T: GMNamedListChunk>(chunk: &T) -> Result<()> {
+    // TODO: this can probably be optimised or something
     let elements = chunk.elements();
     let mut seen: HashMap<&String, usize> = HashMap::new();
 
@@ -369,12 +383,12 @@ pub(crate) fn validate_identifier(name: &str) -> Result<()> {
         if first_char.is_ascii_digit() {
             bail!("Identifier {orig_name:?} starts with a digit ({first_char})");
         }
-        bail!("Identifer {orig_name:?} starts with invalid character {first_char:?}");
+        bail!("Identifier {orig_name:?} starts with invalid character {first_char:?}");
     }
 
     for ch in chars {
         if !matches!(ch, 'a'..='z'| '0'..='9' | '_' | 'A'..='Z') {
-            bail!("Identifer {orig_name:?} contains invalid character {ch:?}");
+            bail!("Identifier {orig_name:?} contains invalid character {ch:?}");
         }
     }
 
