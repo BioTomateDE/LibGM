@@ -149,7 +149,7 @@ pub enum Instruction {
     ///
     /// First, elements with a total size of `size1` are popped into a temporary "top stack".
     /// Then, elements with a total size of `size2` are popped into a temporary "bottom stack".
-    /// Afterwards, the "bottom stack" is pushed.
+    /// Afterward, the "bottom stack" is pushed.
     /// And lastly, the "top stack" is pushed.
     DuplicateSwap {
         data_type: DataType,

@@ -56,7 +56,7 @@ pub fn test(data: &GMData) -> Result<()> {
             continue;
         }
 
-        // Assembler (or dissassembler) failed; produced different instructions.
+        // Assembler (or disassembler) failed; produced different instructions.
         let orig_len = code.instructions.len();
         let recr_len = reconstructed.len();
 

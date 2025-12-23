@@ -44,9 +44,9 @@ impl GMElement for GMSequences {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSequence {
     pub name: String,
-    pub playback: GMSequencePlaybackType,
+    pub playback: PlaybackType,
     pub playback_speed: f32,
-    pub playback_speed_type: GMAnimSpeedType,
+    pub playback_speed_type: SpeedType,
     pub length: f32,
     pub origin_x: i32,
     pub origin_y: i32,
@@ -62,9 +62,9 @@ pub struct GMSequence {
 impl GMElement for GMSequence {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: String = reader.read_gm_string()?;
-        let playback: GMSequencePlaybackType = num_enum_from(reader.read_i32()?)?;
+        let playback: PlaybackType = num_enum_from(reader.read_i32()?)?;
         let playback_speed = reader.read_f32()?;
-        let playback_speed_type: GMAnimSpeedType = num_enum_from(reader.read_i32()?)?;
+        let playback_speed_type: SpeedType = num_enum_from(reader.read_i32()?)?;
         let length = reader.read_f32()?;
         let origin_x = reader.read_i32()?;
         let origin_y = reader.read_i32()?;
@@ -137,14 +137,14 @@ impl GMElement for GMSequence {
 }
 
 #[num_enum(i32)]
-pub enum GMSequencePlaybackType {
+pub enum PlaybackType {
     Oneshot = 0,
     Loop = 1,
-    Pingpong = 2,
+    PingPong = 2,
 }
 
 #[num_enum(i32)]
-pub enum GMAnimSpeedType {
+pub enum SpeedType {
     FramesPerSecond = 0,
     FramesPerGameFrame = 1,
 }

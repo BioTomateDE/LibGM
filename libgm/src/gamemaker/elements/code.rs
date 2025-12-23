@@ -716,6 +716,7 @@ impl DataReader<'_> {
 
     fn parse_extended(&mut self, b: [u8; 3]) -> Result<Instruction> {
         use DataType::{Int16, Int32};
+        #[allow(clippy::wildcard_imports)]
         use opcodes::extended::*;
 
         let kind = get_u16(b) as i16;

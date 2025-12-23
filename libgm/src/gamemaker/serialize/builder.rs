@@ -11,7 +11,7 @@ use crate::{
 };
 
 // The Default value should never be read.
-// This can only happen if there are zero existant chunks, though.
+// This can only happen if there are zero existent chunks, though.
 #[derive(Debug, Clone, Default)]
 pub struct LastChunk {
     pub length_pos: usize,
