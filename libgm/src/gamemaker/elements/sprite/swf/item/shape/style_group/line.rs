@@ -4,6 +4,7 @@ use crate::{
     },
     prelude::*,
 };
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Data {
     pub red: u8,

@@ -65,7 +65,7 @@ impl DataBuilder<'_> {
     }
 
     /// Remove potential padding from the chunk written last
-    /// since the the data file's last chunk does not get padding.
+    /// since the data file's last chunk does not get padding.
     pub fn remove_last_chunk_padding(&mut self) {
         let last = self.last_chunk.clone();
         let chunk_length = last.padding_start_pos - last.length_pos - 4;

@@ -85,7 +85,7 @@ impl DataBuilder<'_> {
             let resource_data_pos: u32 = *resources.get(&element_mem_addr).ok_or_else(|| {
                 format!(
                     "Could not resolve pointer placeholder with data position \
-                {placeholder_data_pos} and memory address {element_mem_addr}"
+                    {placeholder_data_pos} and memory address {element_mem_addr}"
                 )
             })?;
 

@@ -62,7 +62,7 @@ impl GMElement for GMStrings {
         let mut index = 0;
 
         for placeholder in strings {
-            // For identical strings, just write the the position/id again (since they're sorted).
+            // For identical strings, just write the position/id again (since they're sorted).
             if string.as_ref() == Some(&placeholder.string) {
                 overwrite_placeholder(builder, &placeholder, string_position, index - 1)?;
                 continue;

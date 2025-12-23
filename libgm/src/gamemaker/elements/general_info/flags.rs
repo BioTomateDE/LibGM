@@ -43,7 +43,7 @@ bitfield_struct! {
         /// Whether the game supports borderless window
         borderless_window: 14,
 
-        /// Tells the runner to run Javascript code
+        /// Tells the runner to run JavaScript code
         javascript_mode: 15,
 
         license_exclusions: 16,

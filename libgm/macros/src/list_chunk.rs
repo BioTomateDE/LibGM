@@ -128,7 +128,7 @@ fn find_vec_fields(fields: Vec<&syn::Field>) -> syn::Result<Vec<(Ident, syn::Typ
 
     for field in fields {
         // This should never fail since the fields were already verified to be named.
-        let ident = field.ident.as_ref().expect("Field identifer not set");
+        let ident = field.ident.as_ref().expect("Field identifier not set");
 
         if !is_vec_type(&field.ty) {
             continue;

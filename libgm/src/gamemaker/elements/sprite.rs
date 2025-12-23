@@ -10,7 +10,7 @@ use crate::{
         deserialize::reader::DataReader,
         elements::{
             GMElement,
-            sequence::{GMAnimSpeedType, GMSequence},
+            sequence::{GMSequence, SpeedType},
             texture_page_item::GMTexturePageItem,
         },
         reference::GMRef,
@@ -92,7 +92,7 @@ impl GMElement for GMSprite {
             let swf: Option<swf::Data> = None;
 
             let playback_speed = reader.read_f32()?;
-            let playback_speed_type: GMAnimSpeedType = num_enum_from(reader.read_i32()?)?;
+            let playback_speed_type: SpeedType = num_enum_from(reader.read_i32()?)?;
             // both of these seem to be not an offset but instead a position (see UndertaleModLib/Models/UndertaleSprite.cs:507)
             let sequence_offset: i32 = if special_version >= 2 {
                 reader.read_i32()?
@@ -525,7 +525,7 @@ pub struct Special {
     /// GMS 2
     pub playback_speed: f32,
     /// GMS 2
-    pub playback_speed_type: GMAnimSpeedType,
+    pub playback_speed_type: SpeedType,
     /// Special Version 2
     pub sequence: Option<GMSequence>,
     /// Special Version 3

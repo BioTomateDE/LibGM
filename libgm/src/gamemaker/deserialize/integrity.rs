@@ -45,8 +45,8 @@ impl DataReader<'_> {
 
         let width = size_of::<I>() * 2;
         let msg = format!(
-            "Expected {} to be {} but it is actually {} (0x{:0width$X})",
-            description, expected, actual, actual,
+            "Expected {description} to be {expected} but it \
+            is actually {actual} (0x{actual:0width$X})",
         );
         self.handle_invalid_constant(msg)
     }
@@ -62,8 +62,8 @@ impl DataReader<'_> {
         }
 
         let msg = format!(
-            "Expected {} to be {} but it is actually {}",
-            description, expected, actual,
+            "Expected {description} to be {expected} \
+            but it is actually {actual}",
         );
         self.handle_invalid_constant(msg)
     }
@@ -79,8 +79,8 @@ impl DataReader<'_> {
         }
 
         let msg = format!(
-            "Expected {} Data Type to be {:?} but it is actually {:?}",
-            description, expected, actual,
+            "Expected {description} Data Type to be \
+            {expected:?} but it is actually {actual:?}"
         );
         self.handle_invalid_constant(msg)
     }

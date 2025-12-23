@@ -1,7 +1,7 @@
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
-        elements::{GMElement, sequence::GMAnimSpeedType, sprite::GMSprite},
+        elements::{GMElement, sequence::SpeedType, sprite::GMSprite},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
@@ -20,7 +20,7 @@ pub struct Background {
     pub color: u32,
     pub first_frame: f32,
     pub animation_speed: f32,
-    pub animation_speed_type: GMAnimSpeedType,
+    pub animation_speed_type: SpeedType,
 }
 
 impl GMElement for Background {
@@ -34,7 +34,7 @@ impl GMElement for Background {
         let color = reader.read_u32()?;
         let first_frame = reader.read_f32()?;
         let animation_speed = reader.read_f32()?;
-        let animation_speed_type: GMAnimSpeedType = num_enum_from(reader.read_i32()?)?;
+        let animation_speed_type: SpeedType = num_enum_from(reader.read_i32()?)?;
 
         Ok(Self {
             visible,

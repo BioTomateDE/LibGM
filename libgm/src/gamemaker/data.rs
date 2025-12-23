@@ -85,7 +85,7 @@ pub struct GMData {
 
     /// The size of the original data file; useful for
     /// approximating the size of the modified data file.
-    /// This is a micro optimisation. This field's value
+    /// This is a micro optimization. This field's value
     /// can be initialized to zero without any problems.
     pub(crate) original_data_size: u32,
 }

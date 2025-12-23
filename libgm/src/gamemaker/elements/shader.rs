@@ -243,7 +243,7 @@ impl GMElement for GMShader {
 
 /// Possible shader types a shader can have.
 /// All console shaders (and HLSL11?) are compiled using confidential SDK tools when
-/// `GMAssetCompiler` builds the game (for PSVita it's psp2cgc shader compiler).
+/// `GMAssetCompiler` builds the game (for PSVita it's `psp2cgc` shader compiler).
 #[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, Eq)]
 #[repr(u32)]
 pub enum GMShaderType {

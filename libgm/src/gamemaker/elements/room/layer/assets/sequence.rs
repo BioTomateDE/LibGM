@@ -3,7 +3,7 @@ use crate::{
         deserialize::reader::DataReader,
         elements::{
             GMElement,
-            sequence::{GMAnimSpeedType, GMSequence},
+            sequence::{GMSequence, SpeedType},
         },
         reference::GMRef,
         serialize::builder::DataBuilder,
@@ -22,7 +22,7 @@ pub struct SequenceInstance {
     pub scale_y: f32,
     pub color: u32,
     pub animation_speed: f32,
-    pub animation_speed_type: GMAnimSpeedType,
+    pub animation_speed_type: SpeedType,
     pub frame_index: f32,
     pub rotation: f32,
 }
@@ -37,7 +37,7 @@ impl GMElement for SequenceInstance {
         let scale_y = reader.read_f32()?;
         let color = reader.read_u32()?;
         let animation_speed = reader.read_f32()?;
-        let animation_speed_type: GMAnimSpeedType = num_enum_from(reader.read_i32()?)?;
+        let animation_speed_type: SpeedType = num_enum_from(reader.read_i32()?)?;
         let frame_index = reader.read_f32()?;
         let rotation = reader.read_f32()?;
         Ok(Self {
