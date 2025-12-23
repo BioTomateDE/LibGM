@@ -35,6 +35,10 @@ pub fn deduplicate(mut tests: Vec<Test>) -> Vec<Test> {
 }
 
 pub fn perform(data: &GMData, tests: &[Test]) -> Result<()> {
+    if tests.is_empty() {
+        return Ok(());
+    }
+
     println!();
 
     for test in tests {
