@@ -1,6 +1,6 @@
 use env_logger::{Builder, Env};
 use log::{Level, Record};
-use colored::Colorize as _;
+use colored::{Color, Colorize as _};
 use std::io::Write;
 
 pub fn init() {
@@ -9,9 +9,10 @@ pub fn init() {
     builder.parse_env(get_env());
 
     builder.format(|f, record| {
-        let level = color_level(record.level());
+        let color = color_by_level(record.level());
+        let level = level_to_str(record.level()).color(color);
         let target = format_target(record);
-        let message = record.args();
+        let message = record.args().to_string().color(color);
 
         if let Some(target) = target {
             writeln!(f, "[{level} @ {target}] {message}")
@@ -51,13 +52,22 @@ fn format_target(record: &Record) -> Option<String> {
     Some(target.dimmed().to_string())
 }
 
-fn color_level(level: Level) -> String {
+fn color_by_level(level: Level) -> Color {
     match level {
-        Level::Trace => "TRACE".magenta(),
-        Level::Debug => "DEBUG".blue(),
-        Level::Info => "INFO".green(),
-        Level::Warn => "WARN".yellow(),
-        Level::Error => "ERROR".red(),
+        Level::Trace => Color::Magenta,
+        Level::Debug => Color::Blue,
+        Level::Info => Color::Green,
+        Level::Warn => Color::Yellow,
+        Level::Error => Color::Red,
     }
-    .to_string()
+}
+
+fn level_to_str(level: Level) -> &'static str {
+    match level {
+        Level::Trace => "TRACE",
+        Level::Debug => "DEBUG",
+        Level::Info => "INFO",
+        Level::Warn => "WARN",
+        Level::Error => "ERROR",
+    }
 }

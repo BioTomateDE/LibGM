@@ -164,7 +164,7 @@ impl GMElement for GMExtension {
 }
 
 #[num_enum(i32)]
-pub enum GMExtensionKind {
+pub enum Kind {
     Dll = 1,
     GML = 2,
     ActionLib = 3,

@@ -3,7 +3,7 @@ use crate::{
         deserialize::reader::DataReader,
         elements::{
             GMElement,
-            extension::{GMExtensionKind, function::Function},
+            extension::{Kind, function::Function},
         },
         serialize::builder::DataBuilder,
     },
@@ -16,7 +16,7 @@ pub struct File {
     pub filename: String,
     pub cleanup_script: String,
     pub init_script: String,
-    pub kind: GMExtensionKind,
+    pub kind: Kind,
     pub functions: Vec<Function>,
 }
 
@@ -25,7 +25,7 @@ impl GMElement for File {
         let filename: String = reader.read_gm_string()?;
         let cleanup_script: String = reader.read_gm_string()?;
         let init_script: String = reader.read_gm_string()?;
-        let kind: GMExtensionKind = num_enum_from(reader.read_i32()?)?;
+        let kind: Kind = num_enum_from(reader.read_i32()?)?;
         let functions: Vec<Function> = reader.read_pointer_list()?;
         Ok(Self {
             filename,
