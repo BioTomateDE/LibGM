@@ -4,7 +4,7 @@ use crate::{
         data::Endianness,
         deserialize::reader::DataReader,
         elements::{GMChunk, GMElement},
-        gm_version::GMVersion,
+        version::GMVersion,
     },
     prelude::*,
     util::bench::Stopwatch,

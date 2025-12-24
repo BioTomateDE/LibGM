@@ -50,7 +50,7 @@ use crate::{
             ui_node::GMRootUINodes,
             variable::GMVariables,
         },
-        gm_version::{GMVersion, LTSBranch},
+        version::{GMVersion, LTSBranch},
         version_detection::detect_gamemaker_version,
     },
     prelude::*,
@@ -186,7 +186,7 @@ impl ParsingOptions {
         let mut variables = GMVariables::default();
         let mut functions = GMFunctions::default();
         let mut codes = GMCodes::default();
-        
+
         let mut stopwatch2 = Stopwatch::start();
         if is_yyc {
             log::warn!("YYC is untested, issues may occur");

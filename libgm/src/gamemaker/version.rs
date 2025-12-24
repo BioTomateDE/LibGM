@@ -60,7 +60,7 @@ impl GMVersion {
 impl Display for GMVersion {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write_version(f, self.major, self.minor, self.release, self.build)?;
-        if self.minor >= 2022 {
+        if self.major >= 2022 {
             write!(f, " ({})", self.branch)?;
         }
         Ok(())

@@ -285,20 +285,17 @@ fn parse_occurrence_chain(
     let mut occurrences: Vec<u32> = vec_with_capacity(occurrence_count)?;
     let mut offset: i32 = 6969; // Default value will never be relevant since it returns if no occurrences
 
-    for _ in 0..occurrence_count {
+    for i in 0..occurrence_count {
+        if offset < 1 {
+            bail!(
+                "Next occurrence offset is {offset} (0x{offset:08X}) which is \
+                not positive for variable occurrence {i}/{occurrence_count}"
+            );
+        }
         occurrences.push(occurrence_pos);
         reader.cur_pos = occurrence_pos;
         let raw_value = reader.read_i32()?;
         offset = raw_value & 0x07FF_FFFF;
-        if offset < 1 {
-            bail!(
-                "Next occurrence offset is {0} (0x{0:08X}) which is negative while parsing \
-                variable occurrences at position {1} (raw value is 0x{2:08X})",
-                offset,
-                reader.cur_pos - 4,
-                raw_value,
-            );
-        }
         occurrence_pos += offset as u32; // Might overflow on last occurrence (name string id) but doesn't matter
     }
 

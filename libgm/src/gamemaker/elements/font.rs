@@ -9,7 +9,7 @@ use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
         elements::{GMElement, texture_page_item::GMTexturePageItem},
-        gm_version::LTSBranch,
+        version::LTSBranch,
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
@@ -27,8 +27,11 @@ impl GMElement for GMFonts {
         let fonts: Vec<GMFont> = reader.read_pointer_list()?;
 
         if !reader.general_info.is_version_at_least((2024, 14)) {
+            let verify: bool = reader.options.verify_constants;
             let padding: &[u8; 512] = reader.read_bytes_const().context("Reading FONT padding")?;
-            verify_padding(padding)?;
+            if verify {
+                verify_padding(padding)?;
+            }
         }
 
         Ok(Self { fonts, exists: true })

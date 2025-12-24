@@ -11,7 +11,7 @@ use crate::{
     },
     gml::{
         instruction::{
-            CodeVariable, ComparisonType, DataType, GMAssetReference, GMCode, InstanceType,
+            CodeVariable, ComparisonType, DataType, AssetReference, GMCode, InstanceType,
             Instruction, ModernData, PushValue, VariableType,
         },
         opcodes,
@@ -735,7 +735,7 @@ impl DataReader<'_> {
             (Int16, RESTOREAREF) => Instruction::RestoreArrayReference,
             (Int16, ISNULLISH) => Instruction::IsNullishValue,
             (Int32, PUSHREF) => {
-                let asset_reference = GMAssetReference::deserialize(self)
+                let asset_reference = AssetReference::deserialize(self)
                     .context("parsing PushReference Extended Instruction")?;
                 Instruction::PushReference { asset_reference }
             },
@@ -933,14 +933,14 @@ fn build_extended16(builder: &mut DataBuilder, extended_kind: i16) {
     builder.write_u8(opcodes::EXTENDED);
 }
 
-fn build_pushref(builder: &mut DataBuilder, asset_reference: &GMAssetReference) -> Result<()> {
+fn build_pushref(builder: &mut DataBuilder, asset_reference: &AssetReference) -> Result<()> {
     builder.write_i16(opcodes::extended::PUSHREF);
     builder.write_u8(DataType::Int32.into());
     builder.write_u8(opcodes::EXTENDED);
     asset_reference.serialize(builder)
 }
 
-impl GMElement for GMAssetReference {
+impl GMElement for AssetReference {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         if let Some(func) = reader.function_occurrences.get(&reader.cur_pos) {
             reader.cur_pos += 4; // Consume next occurrence offset

@@ -12,7 +12,7 @@ use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
         elements::{GMElement, room::tile::Tile},
-        gm_version::LTSBranch,
+        version::LTSBranch,
         serialize::builder::DataBuilder,
     },
     prelude::*,

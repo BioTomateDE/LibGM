@@ -264,7 +264,7 @@ pub enum Instruction {
     IsNullishValue,
 
     /// Pushes an asset reference to the stack, encoded in an integer. Includes asset type and index.
-    PushReference { asset_reference: GMAssetReference },
+    PushReference { asset_reference: AssetReference },
 }
 
 impl Instruction {
@@ -290,7 +290,7 @@ impl Instruction {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum GMAssetReference {
+pub enum AssetReference {
     Object(GMRef<GMGameObject>),
     Sprite(GMRef<GMSprite>),
     Sound(GMRef<GMSound>),

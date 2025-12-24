@@ -4,7 +4,7 @@ use crate::{
     gamemaker::{
         data::{Endianness, GMData},
         elements::string::StringPlaceholder,
-        gm_version::GMVersionReq,
+        version::GMVersionReq,
     },
     gml::instruction::VariableType,
     prelude::*,

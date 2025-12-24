@@ -73,6 +73,6 @@ impl GMElement for Record {
 
 #[num_enum(i32)]
 pub enum FillType {
-    FillLinear,
-    FillRadial,
+    Linear,
+    Radial,
 }

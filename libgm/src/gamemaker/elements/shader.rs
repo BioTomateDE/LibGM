@@ -1,5 +1,4 @@
-use macros::named_list_chunk;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
+use macros::{named_list_chunk, num_enum};
 
 use crate::{
     gamemaker::{
@@ -34,7 +33,7 @@ impl GMElement for GMShaders {
             let entry_end = win[1];
             reader.cur_pos = pointer;
             let name: String = reader.read_gm_string()?;
-            let shader_type: GMShaderType = num_enum_from(reader.read_u32()? & 0x7FFF_FFFF)?;
+            let shader_type: Type = num_enum_from(reader.read_u32()? & 0x7FFF_FFFF)?;
 
             let glsl_es_vertex: String = reader.read_gm_string()?;
             let glsl_es_fragment: String = reader.read_gm_string()?;
@@ -162,7 +161,7 @@ impl GMElement for GMShaders {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMShader {
     pub name: String,
-    pub shader_type: GMShaderType,
+    pub shader_type: Type,
     pub glsl_es_vertex: String,
     pub glsl_es_fragment: String,
     pub glsl_vertex: String,
@@ -244,9 +243,8 @@ impl GMElement for GMShader {
 /// Possible shader types a shader can have.
 /// All console shaders (and HLSL11?) are compiled using confidential SDK tools when
 /// `GMAssetCompiler` builds the game (for PSVita it's `psp2cgc` shader compiler).
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, Eq)]
-#[repr(u32)]
-pub enum GMShaderType {
+#[num_enum(u32)]
+pub enum Type {
     GlslEs = 1,
     GLSL = 2,
     HLSL9 = 3,

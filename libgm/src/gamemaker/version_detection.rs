@@ -19,7 +19,7 @@ use crate::{
             chunk::{ChunkBounds, ChunkMap},
             reader::DataReader,
         },
-        gm_version::{
+        version::{
             GMVersionReq,
             LTSBranch::{LTS, PostLTS, PreLTS},
         },
@@ -109,7 +109,9 @@ fn upgrade_by_chunk_existence(chunks: &ChunkMap) -> Option<GMVersionReq> {
 
     for (chunk_name, version) in UPGRADES {
         if chunks.contains(chunk_name) {
-            log::debug!("Existence of chunk '{chunk_name}' implies a Version of at least {version}");
+            log::debug!(
+                "Existence of chunk '{chunk_name}' implies a Version of at least {version}"
+            );
             return Some(version);
         }
     }

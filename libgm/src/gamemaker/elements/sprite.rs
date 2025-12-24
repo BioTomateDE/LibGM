@@ -54,11 +54,11 @@ pub struct GMSprite {
     pub smooth: bool,
     pub preload: bool,
     pub bbox_mode: i32,
-    pub sep_masks: GMSpriteSepMaskType,
+    pub sep_masks: SepMaskType,
     pub origin_x: i32,
     pub origin_y: i32,
     pub textures: Vec<Option<GMRef<GMTexturePageItem>>>,
-    pub collision_masks: Vec<GMSpriteMaskEntry>,
+    pub collision_masks: Vec<MaskEntry>,
     pub special_fields: Option<Special>,
 }
 
@@ -75,11 +75,11 @@ impl GMElement for GMSprite {
         let smooth = reader.read_bool32()?;
         let preload = reader.read_bool32()?;
         let bbox_mode = reader.read_i32()?;
-        let sep_masks: GMSpriteSepMaskType = num_enum_from(reader.read_i32()?)?;
+        let sep_masks: SepMaskType = num_enum_from(reader.read_i32()?)?;
         let origin_x = reader.read_i32()?;
         let origin_y = reader.read_i32()?;
         let mut textures: Vec<Option<GMRef<GMTexturePageItem>>> = Vec::new();
-        let mut collision_masks: Vec<GMSpriteMaskEntry> = Vec::new();
+        let mut collision_masks: Vec<MaskEntry> = Vec::new();
         let mut special_fields: Option<Special> = None;
 
         // Combination of these conditions may be incorrect
@@ -484,7 +484,7 @@ impl GMSprite {
     fn build_mask_data(
         &self,
         builder: &mut DataBuilder,
-        masks: &Vec<GMSpriteMaskEntry>,
+        masks: &Vec<MaskEntry>,
     ) -> Result<()> {
         let count = masks.len() as u32;
         builder.write_u32(count);
@@ -542,14 +542,14 @@ pub enum SpecialData {
 }
 
 #[num_enum(i32)]
-pub enum GMSpriteSepMaskType {
+pub enum SepMaskType {
     AxisAlignedRect = 0,
     Precise = 1,
     RotatedRect = 2,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GMSpriteMaskEntry {
+pub struct MaskEntry {
     pub data: Vec<u8>,
     pub width: u32,
     pub height: u32,
@@ -559,9 +559,9 @@ fn read_mask_data(
     reader: &mut DataReader,
     width: u32,
     height: u32,
-) -> Result<Vec<GMSpriteMaskEntry>> {
+) -> Result<Vec<MaskEntry>> {
     let mask_count = reader.read_u32()?;
-    let mut collision_masks: Vec<GMSpriteMaskEntry> = vec_with_capacity(mask_count)?;
+    let mut collision_masks: Vec<MaskEntry> = vec_with_capacity(mask_count)?;
 
     let length = width.div_ceil(8) * height;
     let start = reader.cur_pos;
@@ -571,7 +571,7 @@ fn read_mask_data(
             .read_bytes_dyn(length)
             .context("reading Mask Data")?
             .to_vec();
-        collision_masks.push(GMSpriteMaskEntry { data, width, height });
+        collision_masks.push(MaskEntry { data, width, height });
     }
 
     reader.align(4)?;

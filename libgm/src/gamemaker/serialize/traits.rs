@@ -1,5 +1,5 @@
 use crate::{
-    gamemaker::{elements::GMElement, gm_version::GMVersionReq, serialize::builder::DataBuilder},
+    gamemaker::{elements::GMElement, version::GMVersionReq, serialize::builder::DataBuilder},
     prelude::*,
     util::fmt::typename,
 };

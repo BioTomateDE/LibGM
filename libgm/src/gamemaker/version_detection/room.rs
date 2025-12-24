@@ -1,6 +1,6 @@
 use crate::{
     gamemaker::{
-        deserialize::reader::DataReader, elements::room::layer::Type, gm_version::GMVersionReq,
+        deserialize::reader::DataReader, elements::room::layer::Type, version::GMVersionReq,
     },
     prelude::*,
     util::init::num_enum_from,

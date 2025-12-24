@@ -52,7 +52,7 @@ pub struct GMBackground {
     /// The [`GMTexturePageItem`] this background uses.
     pub texture: Option<GMRef<GMTexturePageItem>>,
     /// Only set in GMS 2.0+.
-    pub gms2_data: Option<GMBackgroundGMS2Data>,
+    pub gms2_data: Option<GMS2Data>,
 }
 
 impl GMElement for GMBackground {
@@ -62,7 +62,7 @@ impl GMElement for GMBackground {
         let smooth = reader.read_bool32()?;
         let preload = reader.read_bool32()?;
         let texture: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
-        let gms2_data: Option<GMBackgroundGMS2Data> = reader.deserialize_if_gm_version((2, 0))?;
+        let gms2_data: Option<GMS2Data> = reader.deserialize_if_gm_version((2, 0))?;
 
         Ok(Self {
             name,
@@ -92,7 +92,7 @@ impl GMElement for GMBackground {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GMBackgroundGMS2Data {
+pub struct GMS2Data {
     /// The width of a tile in this tileset.
     pub tile_width: u32,
     /// The height of a tile in this tileset.
@@ -111,7 +111,7 @@ pub struct GMBackgroundGMS2Data {
     pub tile_ids: Vec<u32>,
 }
 
-impl GMElement for GMBackgroundGMS2Data {
+impl GMElement for GMS2Data {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let unknown_always_two = reader.read_u32()?;
         reader.assert_int(unknown_always_two, 2, "Unknown Always Two")?;
