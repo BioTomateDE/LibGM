@@ -88,7 +88,10 @@ impl ChunkMap {
         self.get_by_name(ChunkName::new(name))
     }
 
-    #[must_use]
+    pub fn remove(&mut self, name: &'static str) -> Option<ChunkBounds> {
+        self.remove_name(ChunkName::new(name))
+    }
+
     pub fn remove_name(&mut self, chunk_name: ChunkName) -> Option<ChunkBounds> {
         for i in 0..self.count() {
             let name = &self.0[i].0;
@@ -161,7 +164,7 @@ impl DataReader<'_> {
     fn read_chunk_padding(&mut self) -> Result<()> {
         // Padding only for GMS2+ and 1.9999+
         let ver: &GMVersion = &self.specified_version;
-        let padding_eligible = ver.major >= 2 || (ver.major == 1 && ver.minor >= 9999);
+        let padding_eligible = ver.major >= 2 || (ver.major == 1 && ver.build >= 9999);
         if !padding_eligible {
             return Ok(());
         }
