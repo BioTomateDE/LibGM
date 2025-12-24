@@ -10,7 +10,11 @@ keywords = ["cli", "gamemaker"]
 categories = ["command-line-utilities"]
 
 [dependencies]
-clap = { version = "4.5.51", features = ["derive"] }
+# Workspace dependencies
 libgm = { path = "../libgm" }
+
+# Crates.io dependencies
+clap = { version = "4.5.51", features = ["derive"] }
 log = "0.4.28"
 env_logger = "0.11.8"
+colored = "3.0.0"
