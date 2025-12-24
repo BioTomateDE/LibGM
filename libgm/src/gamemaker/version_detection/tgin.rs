@@ -1,7 +1,7 @@
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
-        gm_version::{GMVersionReq, LTSBranch::PostLTS},
+        version::{GMVersionReq, LTSBranch::PostLTS},
     },
     prelude::*,
 };

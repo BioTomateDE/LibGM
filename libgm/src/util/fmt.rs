@@ -60,14 +60,13 @@ pub fn hexdump_range(raw_data: &[u8], range: impl RangeBounds<usize>) -> Result<
     Ok(hexdump(slice))
 }
 
-// /// Gets the name of the type without path.
-// /// Standard type name: `std::option::Option<libgm::gamemaker::elements::sprites::GMSprite>`
-// /// This type name: `Option<GMSprite>`
-// pub fn typename<T>() -> String {
-//     // Hopefully this can be made `const` soon
-//     tynm::type_name::<T>()
-// }
-
+/// This function should only ever be called when an error has already occurred.
+///
+/// It basically just gets the typename in a slightly more readable manner.
 pub fn typename<T>() -> &'static str {
-    std::any::type_name::<T>()
+    let ty = std::any::type_name::<T>();
+    if let Some(index) = ty.find("GM") {
+        return &ty[index..];
+    }
+    ty.strip_prefix("libgm::gamemaker::elements::").unwrap_or(ty)
 }

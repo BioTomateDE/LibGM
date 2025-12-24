@@ -121,7 +121,13 @@ fn main() {
 
     let args = Args::parse();
     if let Err(error) = run(args) {
-        log::error!("{}", error.chain_pretty());
+        let chain_fn = if cfg!(target_os = "windows") {
+            // Windows is ass and usually can't display these arrows correctly
+            Error::chain
+        } else {
+            Error::chain_pretty
+        };
+        log::error!("{}", chain_fn(&error));
         std::process::exit(1);
     }
 

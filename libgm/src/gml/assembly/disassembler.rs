@@ -8,7 +8,7 @@ use crate::{
         reference::GMRef,
     },
     gml::instruction::{
-        CodeVariable, ComparisonType, DataType, GMAssetReference, GMCode, InstanceType,
+        CodeVariable, ComparisonType, DataType, AssetReference, GMCode, InstanceType,
         Instruction, PushValue, VariableType,
     },
     prelude::*,
@@ -326,94 +326,94 @@ fn asset_get_name<'a, T: GMNamedElement + 'a, C: GMListChunk<Element = T> + 'a>(
 }
 
 fn write_asset_reference(
-    asset_ref: &GMAssetReference,
+    asset_ref: &AssetReference,
     buffer: &mut String,
     gm_data: &GMData,
 ) -> Result<()> {
     match *asset_ref {
-        GMAssetReference::Object(gm_ref) => {
+        AssetReference::Object(gm_ref) => {
             write!(
                 buffer,
                 "(object){}",
                 asset_get_name(&gm_data.game_objects, gm_ref)?
             );
         },
-        GMAssetReference::Sprite(gm_ref) => {
+        AssetReference::Sprite(gm_ref) => {
             write!(
                 buffer,
                 "(sprite){}",
                 asset_get_name(&gm_data.sprites, gm_ref)?
             );
         },
-        GMAssetReference::Sound(gm_ref) => {
+        AssetReference::Sound(gm_ref) => {
             write!(
                 buffer,
                 "(sound){}",
                 asset_get_name(&gm_data.sounds, gm_ref)?
             );
         },
-        GMAssetReference::Room(gm_ref) => {
+        AssetReference::Room(gm_ref) => {
             write!(buffer, "(room){}", asset_get_name(&gm_data.rooms, gm_ref)?);
         },
-        GMAssetReference::Background(gm_ref) => {
+        AssetReference::Background(gm_ref) => {
             write!(
                 buffer,
                 "(background){}",
                 asset_get_name(&gm_data.backgrounds, gm_ref)?
             );
         },
-        GMAssetReference::Path(gm_ref) => {
+        AssetReference::Path(gm_ref) => {
             write!(buffer, "(path){}", asset_get_name(&gm_data.paths, gm_ref)?);
         },
-        GMAssetReference::Script(gm_ref) => {
+        AssetReference::Script(gm_ref) => {
             write!(
                 buffer,
                 "(script){}",
                 asset_get_name(&gm_data.scripts, gm_ref)?
             );
         },
-        GMAssetReference::Font(gm_ref) => {
+        AssetReference::Font(gm_ref) => {
             write!(buffer, "(font){}", asset_get_name(&gm_data.fonts, gm_ref)?);
         },
-        GMAssetReference::Timeline(gm_ref) => {
+        AssetReference::Timeline(gm_ref) => {
             write!(
                 buffer,
                 "(timeline){}",
                 asset_get_name(&gm_data.timelines, gm_ref)?
             );
         },
-        GMAssetReference::Shader(gm_ref) => {
+        AssetReference::Shader(gm_ref) => {
             write!(
                 buffer,
                 "(shader){}",
                 asset_get_name(&gm_data.shaders, gm_ref)?
             );
         },
-        GMAssetReference::Sequence(gm_ref) => {
+        AssetReference::Sequence(gm_ref) => {
             write!(
                 buffer,
                 "(sequence){}",
                 asset_get_name(&gm_data.sequences, gm_ref)?
             );
         },
-        GMAssetReference::AnimCurve(gm_ref) => {
+        AssetReference::AnimCurve(gm_ref) => {
             write!(
                 buffer,
                 "(animcurve){}",
                 asset_get_name(&gm_data.animation_curves, gm_ref)?
             );
         },
-        GMAssetReference::ParticleSystem(gm_ref) => {
+        AssetReference::ParticleSystem(gm_ref) => {
             write!(
                 buffer,
                 "(particlesystem){}",
                 asset_get_name(&gm_data.particle_systems, gm_ref)?
             );
         },
-        GMAssetReference::RoomInstance(id) => {
+        AssetReference::RoomInstance(id) => {
             write!(buffer, "(roominstance){id}");
         },
-        GMAssetReference::Function(gm_ref) => {
+        AssetReference::Function(gm_ref) => {
             write!(
                 buffer,
                 "(function){}",

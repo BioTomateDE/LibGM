@@ -9,7 +9,7 @@ use crate::{
             embedded_texture::GMEmbeddedTexture, font::GMFont, sprite::GMSprite,
             validate_identifier,
         },
-        gm_version::LTSBranch,
+        version::LTSBranch,
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },

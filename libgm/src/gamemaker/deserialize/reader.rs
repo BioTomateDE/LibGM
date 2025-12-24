@@ -12,7 +12,7 @@ use crate::{
             GMElement, function::GMFunction, general_info::GMGeneralInfo,
             texture_page_item::GMTexturePageItem, variable::GMVariable,
         },
-        gm_version::{GMVersion, GMVersionReq},
+        version::{GMVersion, GMVersionReq},
         reference::GMRef,
     },
     prelude::*,

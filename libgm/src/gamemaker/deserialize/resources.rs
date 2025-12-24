@@ -35,7 +35,9 @@ impl DataReader<'_> {
         let saved_pos = self.cur_pos;
         let saved_chunk = self.chunk.clone();
 
-        self.cur_pos = occurrence_position - 4;
+        self.cur_pos = occurrence_position
+            .checked_sub(4)
+            .ok_or_else(|| format!("Occurrence position {occurrence_position} is too low"))?;
         self.chunk = self.string_chunk.clone();
 
         let length = self.read_u32().context("reading GameMaker String length")?;

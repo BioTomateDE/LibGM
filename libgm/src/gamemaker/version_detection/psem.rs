@@ -1,5 +1,5 @@
 use crate::{
-    gamemaker::{deserialize::reader::DataReader, gm_version::GMVersionReq},
+    gamemaker::{deserialize::reader::DataReader, version::GMVersionReq},
     prelude::*,
 };
 

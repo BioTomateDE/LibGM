@@ -50,8 +50,8 @@ impl GMElement for GMTimeline {
         let mut moments: Vec<Moment> = vec_with_capacity(moment_count)?;
         for (i, time_point) in time_points.into_iter().enumerate() {
             reader.assert_pos(event_pointers[i], "Timeline Event")?;
-            let time_event = game_object::Event::deserialize(reader)?;
-            moments.push(Moment { step: time_point, event: time_event });
+            let actions = reader.read_pointer_list()?;
+            moments.push(Moment { time_point, actions });
         }
 
         Ok(Self { name, moments })
@@ -61,12 +61,12 @@ impl GMElement for GMTimeline {
         builder.write_gm_string(&self.name);
         builder.write_usize(self.moments.len())?;
         for moment in &self.moments {
-            builder.write_u32(moment.step);
-            builder.write_pointer(&moment.event);
+            builder.write_u32(moment.time_point);
+            builder.write_pointer(&moment.actions);
         }
         for moment in &self.moments {
-            builder.resolve_pointer(&moment.event)?;
-            moment.event.serialize(builder)?;
+            builder.resolve_pointer(&moment.actions)?;
+            builder.write_pointer_list(&moment.actions)?;
         }
         Ok(())
     }
@@ -74,6 +74,9 @@ impl GMElement for GMTimeline {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Moment {
-    pub step: u32,
-    pub event: game_object::Event,
+    /// After how many steps this moment gets executed.
+    pub time_point: u32,
+
+    /// The actions that get executed at this moment (aka. event).
+    pub actions: Vec<game_object::event::Action>,
 }

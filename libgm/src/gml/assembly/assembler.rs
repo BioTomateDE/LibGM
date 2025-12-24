@@ -17,7 +17,7 @@ use crate::{
     gml::{
         assembly::assembler::{data_types::DataTypes, reader::Reader},
         instruction::{
-            CodeVariable, ComparisonType, DataType, GMAssetReference, InstanceType, Instruction,
+            CodeVariable, ComparisonType, DataType, AssetReference, InstanceType, Instruction,
             PushValue, VariableType,
         },
     },
@@ -261,7 +261,7 @@ fn parse_instruction(
     Ok(instruction)
 }
 
-fn parse_asset_reference(reader: &mut Reader, gm_data: &GMData) -> Result<GMAssetReference> {
+fn parse_asset_reference(reader: &mut Reader, gm_data: &GMData) -> Result<AssetReference> {
     let line = reader.line;
     let asset_type = reader
         .consume_round_brackets()?
@@ -270,21 +270,21 @@ fn parse_asset_reference(reader: &mut Reader, gm_data: &GMData) -> Result<GMAsse
     // TODO(style): This can probably be made cleaner
     #[rustfmt::skip]
     let asset_reference = match asset_type {
-        "object" => GMAssetReference::Object(gm_data.game_objects.ref_by_name(reader.parse_identifier()?)?),
-        "sprite" => GMAssetReference::Sprite(gm_data.sprites.ref_by_name(reader.parse_identifier()?)?),
-        "sound" => GMAssetReference::Sound(gm_data.sounds.ref_by_name(reader.parse_identifier()?)?),
-        "room" => GMAssetReference::Room(gm_data.rooms.ref_by_name(reader.parse_identifier()?)?),
-        "background" => GMAssetReference::Background(gm_data.backgrounds.ref_by_name(reader.parse_identifier()?)?),
-        "path" => GMAssetReference::Path(gm_data.paths.ref_by_name(reader.parse_identifier()?)?),
-        "script" => GMAssetReference::Script(gm_data.scripts.ref_by_name(reader.parse_identifier()?)?),
-        "font" => GMAssetReference::Font(gm_data.fonts.ref_by_name(reader.parse_identifier()?)?),
-        "timeline" => GMAssetReference::Timeline(gm_data.timelines.ref_by_name(reader.parse_identifier()?)?),
-        "shader" => GMAssetReference::Shader(gm_data.shaders.ref_by_name(reader.parse_identifier()?)?),
-        "sequence" => GMAssetReference::Sequence(gm_data.sequences.ref_by_name(reader.parse_identifier()?)?),
-        "animcurve" => GMAssetReference::AnimCurve(gm_data.animation_curves.ref_by_name(reader.parse_identifier()?)?),
-        "particlesystem" => GMAssetReference::ParticleSystem(gm_data.particle_systems.ref_by_name(reader.parse_identifier()?)?),
-        "roominstance" => GMAssetReference::RoomInstance(reader.parse_int()?),
-        "function" => GMAssetReference::Function(parse_function(reader, &gm_data.functions)?),
+        "object" => AssetReference::Object(gm_data.game_objects.ref_by_name(reader.parse_identifier()?)?),
+        "sprite" => AssetReference::Sprite(gm_data.sprites.ref_by_name(reader.parse_identifier()?)?),
+        "sound" => AssetReference::Sound(gm_data.sounds.ref_by_name(reader.parse_identifier()?)?),
+        "room" => AssetReference::Room(gm_data.rooms.ref_by_name(reader.parse_identifier()?)?),
+        "background" => AssetReference::Background(gm_data.backgrounds.ref_by_name(reader.parse_identifier()?)?),
+        "path" => AssetReference::Path(gm_data.paths.ref_by_name(reader.parse_identifier()?)?),
+        "script" => AssetReference::Script(gm_data.scripts.ref_by_name(reader.parse_identifier()?)?),
+        "font" => AssetReference::Font(gm_data.fonts.ref_by_name(reader.parse_identifier()?)?),
+        "timeline" => AssetReference::Timeline(gm_data.timelines.ref_by_name(reader.parse_identifier()?)?),
+        "shader" => AssetReference::Shader(gm_data.shaders.ref_by_name(reader.parse_identifier()?)?),
+        "sequence" => AssetReference::Sequence(gm_data.sequences.ref_by_name(reader.parse_identifier()?)?),
+        "animcurve" => AssetReference::AnimCurve(gm_data.animation_curves.ref_by_name(reader.parse_identifier()?)?),
+        "particlesystem" => AssetReference::ParticleSystem(gm_data.particle_systems.ref_by_name(reader.parse_identifier()?)?),
+        "roominstance" => AssetReference::RoomInstance(reader.parse_int()?),
+        "function" => AssetReference::Function(parse_function(reader, &gm_data.functions)?),
         _ => bail!("Invalid Type Cast to asset type {asset_type:?}"),
     };
 
