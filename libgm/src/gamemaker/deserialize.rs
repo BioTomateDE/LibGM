@@ -180,16 +180,18 @@ impl ParsingOptions {
             reader.general_info.wad_version,
         );
 
+        let texture_page_items: GMTexturePageItems = reader.read_chunk()?;
+
         let is_yyc: bool = check_yyc(&reader).context("Checking YYC")?;
         let mut variables = GMVariables::default();
         let mut functions = GMFunctions::default();
         let mut codes = GMCodes::default();
-
-        let texture_page_items: GMTexturePageItems = reader.read_chunk()?;
-
+        
         let mut stopwatch2 = Stopwatch::start();
         if is_yyc {
             log::warn!("YYC is untested, issues may occur");
+            // Need to remove STRG to not throw "unread chunk" error
+            reader.chunks.remove("STRG");
         } else {
             reader.read_chunk::<GMStrings>()?; // Set `reader.strings`
             variables = reader.read_chunk()?; // Set `reader.variable_occurrences`
