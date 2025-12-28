@@ -12,8 +12,8 @@ use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
         elements::{GMElement, room::tile::Tile},
-        version::LTSBranch,
         serialize::builder::DataBuilder,
+        version::LTSBranch,
     },
     prelude::*,
 };

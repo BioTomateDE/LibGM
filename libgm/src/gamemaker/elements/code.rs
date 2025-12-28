@@ -11,7 +11,7 @@ use crate::{
     },
     gml::{
         instruction::{
-            CodeVariable, ComparisonType, DataType, AssetReference, GMCode, InstanceType,
+            AssetReference, CodeVariable, ComparisonType, DataType, GMCode, InstanceType,
             Instruction, ModernData, PushValue, VariableType,
         },
         opcodes,

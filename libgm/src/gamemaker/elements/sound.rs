@@ -4,9 +4,9 @@ use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
         elements::{GMElement, audio_group::GMAudioGroup, embedded_audio::GMEmbeddedAudio},
-        version::GMVersion,
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        version::GMVersion,
     },
     prelude::*,
 };

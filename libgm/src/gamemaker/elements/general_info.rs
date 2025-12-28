@@ -14,9 +14,9 @@ use crate::{
         data::Endianness,
         deserialize::reader::DataReader,
         elements::{GMChunk, GMElement, room::GMRoom},
-        version::{GMVersion, GMVersionReq, LTSBranch},
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        version::{GMVersion, GMVersionReq, LTSBranch},
     },
     prelude::*,
 };

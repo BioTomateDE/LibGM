@@ -111,8 +111,16 @@ pub fn resource_opt_from_i32<T>(number: i32) -> Result<Option<GMRef<T>>> {
 fn check_resource_limit(number: u32) -> Result<()> {
     // Increase limit if not enough
     const FAILSAFE_COUNT: u32 = 500_000;
-    if number > FAILSAFE_COUNT {
-        bail!("Number {number} exceeds failsafe limit of {FAILSAFE_COUNT}");
+    if number < FAILSAFE_COUNT {
+        return Ok(());
     }
-    Ok(())
+
+    let signed = number as i32;
+    if signed < 0 {
+        bail!(
+            "Resource ID {number} (presumably {signed} as signed integer) exceeds failsafe limit of {FAILSAFE_COUNT}"
+        );
+    } else {
+        bail!("Resource ID {number} exceeds failsafe limit of {FAILSAFE_COUNT}");
+    }
 }

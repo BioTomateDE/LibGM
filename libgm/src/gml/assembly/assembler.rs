@@ -17,7 +17,7 @@ use crate::{
     gml::{
         assembly::assembler::{data_types::DataTypes, reader::Reader},
         instruction::{
-            CodeVariable, ComparisonType, DataType, AssetReference, InstanceType, Instruction,
+            AssetReference, CodeVariable, ComparisonType, DataType, InstanceType, Instruction,
             PushValue, VariableType,
         },
     },
