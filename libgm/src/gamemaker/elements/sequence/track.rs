@@ -10,19 +10,39 @@ use crate::{
         serialize::builder::DataBuilder,
     },
     prelude::*,
-    util::init::{num_enum_from, vec_with_capacity},
+    util::{
+        bitfield::bitfield_struct,
+        init::{num_enum_from, vec_with_capacity},
+    },
 };
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Track {
+    /// Name for the type/model of track, such as "GMGroupTrack", "GMInstanceTrack", "GMRealTrack", etc.
     pub model_name: String,
+
+    /// Name of the track. Can be user-assigned or the name of a property or asset.
     pub name: String,
+
+    /// Builtin name for the track, representing the type of property, or 0 if not applicable.
     pub builtin_name: BuiltinName,
-    pub traits: Traits,
+
+    /// Traits for the track.
+    pub flags: Flags,
+
+    /// Whether the track is a creation track (whatever that means).
     pub is_creation_track: bool,
+
+    /// Tags for the track (which might not be used?).
     pub tags: Vec<i32>,
+
+    /// List of sub-tracks of this track.
     pub sub_tracks: Vec<Self>,
+
+    /// Keyframe store of this track.
     pub keyframes: Keyframes,
+
+    /// Owned resources of this track (such as animation curves).
     pub owned_resources: Vec<GMAnimationCurve>,
 }
 
@@ -30,15 +50,10 @@ impl GMElement for Track {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         // TODO: fix issue in delivery_the-boys-night-out-2.win
         // len:2, modelname:1, name:0, builtinname:0, traits:-1
-
-        let a = reader.read_bytes_dyn(32)?;
-        reader.cur_pos -= 32;
-        dbg!(crate::util::fmt::hexdump(&a));
-
         let model_name: String = reader.read_gm_string()?;
         let name: String = reader.read_gm_string()?;
         let builtin_name: BuiltinName = num_enum_from(reader.read_i32()?)?;
-        let traits: Traits = num_enum_from(reader.read_i32()?)?;
+        let flags = Flags::deserialize(reader)?;
         let is_creation_track = reader.read_bool32()?;
 
         let tag_count = reader.read_count("Track Tag")?;
@@ -80,19 +95,22 @@ impl GMElement for Track {
             "GMBoolTrack" => Keyframes::Bool(keyframe::Data::deserialize(reader)?),
             "GMStringTrack" => Keyframes::String(keyframe::Data::deserialize(reader)?),
             "GMIntTrack" => bail!("Int Track not yet supported"),
-            "GMColourTrack" | "GMRealTrack" => {
+            "GMColourTrack" => {
                 Keyframes::Color(keyframe::color::KeyframesData::deserialize(reader)?)
+            },
+            "GMRealTrack" => {
+                Keyframes::Real(keyframe::color::KeyframesData::deserialize(reader)?)
             },
             "GMTextTrack" => Keyframes::Text(keyframe::Data::deserialize(reader)?),
             "GMParticleTrack" => Keyframes::Particle(keyframe::Data::deserialize(reader)?),
-            other => bail!("Invalid Model Name {other:?} while parsing Track"),
+            _ => bail!("Invalid Track Model Name {model_name:?}"),
         };
 
         Ok(Self {
             model_name,
             name,
             builtin_name,
-            traits,
+            flags,
             is_creation_track,
             tags,
             sub_tracks,
@@ -105,7 +123,7 @@ impl GMElement for Track {
         builder.write_gm_string(&self.model_name);
         builder.write_gm_string(&self.name);
         builder.write_i32(self.builtin_name.into());
-        builder.write_i32(self.traits.into());
+        self.flags.serialize(builder)?;
         builder.write_bool32(self.is_creation_track);
         builder.write_usize(self.tags.len())?;
         builder.write_usize(self.owned_resources.len())?;
@@ -129,6 +147,7 @@ impl GMElement for Track {
             Keyframes::Bool(k) => k.serialize(builder)?,
             Keyframes::String(k) => k.serialize(builder)?,
             Keyframes::Color(k) => k.serialize(builder)?,
+            Keyframes::Real(k) => k.serialize(builder)?,
             Keyframes::Text(k) => k.serialize(builder)?,
             Keyframes::Particle(k) => k.serialize(builder)?,
             Keyframes::BroadcastMessage(k) => k.serialize(builder)?,
@@ -160,8 +179,8 @@ pub enum BuiltinName {
     ParagraphSpacing = 23,
 }
 
-#[num_enum(i32)]
-pub enum Traits {
-    None,
-    ChildrenIgnoreOrigin,
+bitfield_struct! {
+    Flags: i32 {
+        children_ignore_origin: 0,
+    }
 }

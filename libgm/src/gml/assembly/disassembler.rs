@@ -8,8 +8,8 @@ use crate::{
         reference::GMRef,
     },
     gml::instruction::{
-        CodeVariable, ComparisonType, DataType, AssetReference, GMCode, InstanceType,
-        Instruction, PushValue, VariableType,
+        AssetReference, CodeVariable, ComparisonType, DataType, GMCode, InstanceType, Instruction,
+        PushValue, VariableType,
     },
     prelude::*,
     util::fmt::typename,

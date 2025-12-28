@@ -39,7 +39,7 @@ impl GMElement for GMParticleEmitters {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMParticleEmitter {
     pub name: String,
-    pub enabled: Option<bool>,
+    pub enabled: bool,
     pub mode: EmitMode,
     pub emit_count: u32,
 
@@ -53,7 +53,7 @@ pub struct GMParticleEmitter {
     pub region_w: f32,
     pub region_h: f32,
     pub rotation: f32,
-    pub sprite: GMRef<GMSprite>,
+    pub sprite: Option<GMRef<GMSprite>>,
     pub texture: EmitterTexture,
     pub frame_index: f32,
     pub data_2023_4: Option<Data2023_4>,
@@ -89,10 +89,10 @@ pub struct GMParticleEmitter {
 impl GMElement for GMParticleEmitter {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: String = reader.read_gm_string()?;
-        let enabled: Option<bool> = if reader.general_info.is_version_at_least((2023, 6)) {
-            Some(reader.read_bool32()?)
+        let enabled: bool = if reader.general_info.is_version_at_least((2023, 6)) {
+            reader.read_bool32()?
         } else {
-            None
+            true
         };
         let mode: EmitMode = num_enum_from(reader.read_i32()?)?;
 
@@ -100,6 +100,8 @@ impl GMElement for GMParticleEmitter {
         let data_2023_8: Option<Data2023_8> = if reader.general_info.is_version_at_least((2023, 8))
         {
             // For some reason, it's stored as a float here???
+            // You could add extra validation here
+            // (like disallowing NaN, Infinity, fractional numbers, negative numbers)
             emit_count = reader.read_f32()? as u32;
             let emit_relative = reader.read_bool32()?;
             reader.assert_bool(emit_relative, false, "Emit Relative")?;
@@ -132,7 +134,7 @@ impl GMElement for GMParticleEmitter {
         let region_w = reader.read_f32()?;
         let region_h = reader.read_f32()?;
         let rotation = reader.read_f32()?;
-        let sprite: GMRef<GMSprite> = reader.read_resource_by_id()?;
+        let sprite: Option<GMRef<GMSprite>> = reader.read_resource_by_id_opt()?;
         let texture: EmitterTexture = num_enum_from(reader.read_i32()?)?;
         let frame_index = reader.read_f32()?;
         let data_2023_4: Option<Data2023_4> = reader.deserialize_if_gm_version((2023, 4))?;
@@ -240,9 +242,11 @@ impl GMElement for GMParticleEmitter {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name);
-        self.enabled
-            .serialize_if_gm_ver(builder, "Enabled", (2023, 6))?;
-        builder.write_i32(self.mode.into());
+        if builder.is_gm_version_at_least((2023, 6)) {
+            builder.write_bool32(self.enabled);
+        } else if !self.enabled {
+            log::warn!("Cannot disable particle emitters before 2023.6");
+        }
 
         if builder.is_gm_version_at_least((2023, 8)) {
             let SizeDataEtc::Post2023_8(data) = &self.size_data_etc else {
@@ -272,7 +276,7 @@ impl GMElement for GMParticleEmitter {
         builder.write_f32(self.region_w);
         builder.write_f32(self.region_h);
         builder.write_f32(self.rotation);
-        builder.write_resource_id(self.sprite);
+        builder.write_resource_id_opt(self.sprite);
         builder.write_i32(self.texture.into());
         builder.write_f32(self.frame_index);
         self.data_2023_4

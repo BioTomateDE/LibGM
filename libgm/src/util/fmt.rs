@@ -68,5 +68,6 @@ pub fn typename<T>() -> &'static str {
     if let Some(index) = ty.find("GM") {
         return &ty[index..];
     }
-    ty.strip_prefix("libgm::gamemaker::elements::").unwrap_or(ty)
+    ty.strip_prefix("libgm::gamemaker::elements::")
+        .unwrap_or(ty)
 }

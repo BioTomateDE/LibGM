@@ -9,9 +9,9 @@ use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
         elements::{GMElement, texture_page_item::GMTexturePageItem},
-        version::LTSBranch,
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        version::LTSBranch,
     },
     prelude::*,
 };

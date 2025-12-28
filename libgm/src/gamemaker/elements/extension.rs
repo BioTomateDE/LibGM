@@ -11,8 +11,8 @@ use crate::{
         chunk::ChunkName,
         deserialize::reader::DataReader,
         elements::{GMChunk, GMElement},
-        version::GMVersion,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        version::GMVersion,
     },
     prelude::*,
 };

@@ -481,11 +481,7 @@ impl GMSprite {
         Ok(())
     }
 
-    fn build_mask_data(
-        &self,
-        builder: &mut DataBuilder,
-        masks: &Vec<MaskEntry>,
-    ) -> Result<()> {
+    fn build_mask_data(&self, builder: &mut DataBuilder, masks: &Vec<MaskEntry>) -> Result<()> {
         let count = masks.len() as u32;
         builder.write_u32(count);
 
@@ -555,11 +551,7 @@ pub struct MaskEntry {
     pub height: u32,
 }
 
-fn read_mask_data(
-    reader: &mut DataReader,
-    width: u32,
-    height: u32,
-) -> Result<Vec<MaskEntry>> {
+fn read_mask_data(reader: &mut DataReader, width: u32, height: u32) -> Result<Vec<MaskEntry>> {
     let mask_count = reader.read_u32()?;
     let mut collision_masks: Vec<MaskEntry> = vec_with_capacity(mask_count)?;
 

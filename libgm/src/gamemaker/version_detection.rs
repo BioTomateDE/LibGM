@@ -100,7 +100,7 @@ impl VersionCheck {
 fn upgrade_by_chunk_existence(chunks: &ChunkMap) -> Option<GMVersionReq> {
     const UPGRADES: [(&str, GMVersionReq); 6] = [
         ("UILR", GMVersionReq::new(2024, 13, 0, 0, PostLTS)),
-        ("PSEM", GMVersionReq::new(2023, 13, 0, 0, PostLTS)),
+        ("PSEM", GMVersionReq::new(2023, 2, 0, 0, PostLTS)),
         ("FEAT", GMVersionReq::new(2022, 8, 0, 0, PreLTS)),
         ("FEDS", GMVersionReq::new(2, 3, 6, 0, PreLTS)),
         ("SEQN", GMVersionReq::new(2, 3, 0, 0, PreLTS)),

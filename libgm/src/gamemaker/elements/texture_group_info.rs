@@ -1,5 +1,4 @@
-use macros::named_list_chunk;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
+use macros::{named_list_chunk, num_enum};
 
 use crate::{
     gamemaker::{
@@ -9,9 +8,9 @@ use crate::{
             embedded_texture::GMEmbeddedTexture, font::GMFont, sprite::GMSprite,
             validate_identifier,
         },
-        version::LTSBranch,
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        version::LTSBranch,
     },
     prelude::*,
     util::init::num_enum_from,
@@ -178,8 +177,7 @@ impl GMElement for Data2022_9 {
     }
 }
 
-#[derive(Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, Eq)]
-#[repr(i32)]
+#[num_enum(i32)]
 pub enum LoadType {
     /// The texture data is located inside this file.
     InFile = 0,

@@ -11,8 +11,6 @@ mod sprite_frames;
 mod string;
 mod text;
 
-use std::collections::HashMap;
-
 pub use audio::Audio;
 pub use bool::Bool;
 pub use broadcast::BroadcastMessage;
@@ -31,7 +29,7 @@ use crate::{
         deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
     },
     prelude::*,
-    util::init::hashmap_with_capacity,
+    util::fmt::typename,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -45,38 +43,43 @@ pub enum Keyframes {
     // Asset(Data<Asset>),
     String(Data<String>),
     // Int(Data<Int>),
-    Color(color::KeyframesData<Color>),
+    Color(color::KeyframesData),
+    Real(color::KeyframesData),
     Text(Data<Text>),
     Particle(Data<Particle>),
     BroadcastMessage(Data<BroadcastMessage>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Data<T> {
+pub struct Data<T: GMElement> {
     pub keyframes: Vec<Keyframe<T>>,
 }
 
 impl<T: GMElement> GMElement for Data<T> {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
-        let keyframes: Vec<Keyframe<T>> = reader.read_simple_list()?;
+        let keyframes: Vec<Keyframe<T>> = reader
+            .read_simple_list()
+            .with_context(|| format!("deserializing {} keyframes", typename::<T>()))?;
         Ok(Self { keyframes })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.align(4);
-        builder.write_simple_list(&self.keyframes)?;
+        builder
+            .write_simple_list(&self.keyframes)
+            .with_context(|| format!("serializing {} keyframes", typename::<T>()))?;
         Ok(())
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Keyframe<T> {
+pub struct Keyframe<T: GMElement> {
     pub key: f32,
     pub length: f32,
     pub stretch: bool,
     pub disabled: bool,
-    pub channels: HashMap<i32, T>,
+    pub channels: Vec<Channel<T>>,
 }
 impl<T: GMElement> GMElement for Keyframe<T> {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -84,13 +87,7 @@ impl<T: GMElement> GMElement for Keyframe<T> {
         let length = reader.read_f32()?;
         let stretch = reader.read_bool32()?;
         let disabled = reader.read_bool32()?;
-        let count = reader.read_u32()?; // I32 in UTMT
-        let mut channels: HashMap<i32, T> = hashmap_with_capacity(count)?;
-        for _ in 0..count {
-            let channel = reader.read_i32()?;
-            let keyframe: T = T::deserialize(reader)?;
-            channels.insert(channel, keyframe);
-        }
+        let channels: Vec<Channel<T>> = reader.read_simple_list()?;
         Ok(Self { key, length, stretch, disabled, channels })
     }
 
@@ -99,11 +96,30 @@ impl<T: GMElement> GMElement for Keyframe<T> {
         builder.write_f32(self.length);
         builder.write_bool32(self.stretch);
         builder.write_bool32(self.disabled);
-        builder.write_usize(self.channels.len())?;
-        for (channel, keyframe) in &self.channels {
-            builder.write_i32(*channel);
-            keyframe.serialize(builder)?;
-        }
+        builder.write_simple_list(&self.channels)?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Channel<T: GMElement> {
+    pub id: i32,
+    pub value: T,
+}
+
+impl<T: GMElement> GMElement for Channel<T> {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let id = reader.read_i32()?;
+        let value = T::deserialize(reader)
+            .with_context(|| format!("deserializing {} channel", typename::<T>()))?;
+        Ok(Self { id, value })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+        builder.write_i32(self.id);
+        self.value
+            .serialize(builder)
+            .with_context(|| format!("serializing {} channel", typename::<T>()))?;
         Ok(())
     }
 }
