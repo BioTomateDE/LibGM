@@ -1,3 +1,8 @@
+//! The prelude contains commonly used items when working with LibGM.
+//! This includes error types, a result alias, traits and more.
+//! You can import it by using `use libgm::prelude::*;`.
+
+pub(crate) use crate::{error::bail, util::hint::*};
 pub use crate::{
     error::{Context, Error, Result},
     gamemaker::{
@@ -6,8 +11,3 @@ pub use crate::{
         reference::GMRef,
     },
 };
-pub(crate) use crate::{
-    error::{bail, err},
-    util::hint::*,
-};
-

@@ -32,6 +32,30 @@ impl GMChunk for GMExtensions {
     }
 }
 
+impl GMListChunk for GMExtensions {
+    type Element = GMExtension;
+
+    fn elements(&self) -> &Vec<Self::Element> {
+        &self.extensions
+    }
+
+    fn elements_mut(&mut self) -> &mut Vec<Self::Element> {
+        &mut self.extensions
+    }
+
+    fn iter(&self) -> core::slice::Iter<'_, Self::Element> {
+        self.extensions.iter()
+    }
+
+    fn iter_mut(&mut self) -> core::slice::IterMut<'_, Self::Element> {
+        self.extensions.iter_mut()
+    }
+
+    fn into_iter(self) -> std::vec::IntoIter<Self::Element> {
+        self.extensions.into_iter()
+    }
+}
+
 impl GMElement for GMExtensions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let extensions: Vec<GMExtension> = reader.read_pointer_list()?;

@@ -1,3 +1,5 @@
+//! Contains GameMaker IDE Version types and abstractions to check and set versions.
+
 use std::fmt::{Display, Formatter};
 
 use crate::{
@@ -13,11 +15,13 @@ pub enum LTSBranch {
     /// Before LTS was even introduced (`major < 2022`).
     PreLTS,
 
-    /// Long-Term Support branch. `YoyoGames` updates minor bugfixes here, but doesn't make breaking changes.
+    /// Long-Term Support branch.
+    /// YoYoGames updates minor bugfixes here, but doesn't make breaking changes
+    /// (except in 2023.6?).
     LTS,
 
     /// New Version but not the Long-Term Support branch.
-    /// `YoyoGames` introduces all new features here, some of which may break your project.
+    /// YoYo Games introduces all new features here, some of which may break your project.
     PostLTS,
 }
 
@@ -33,6 +37,17 @@ impl Display for LTSBranch {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// A GameMaker Studio Version.
+///
+/// Theoretically, this is only the version of the IDE this game was made in.
+/// However, this version struct is also used for file format purposes in this library.
+/// This is because it is more accurate than the `WAD Version` in `GMGeneralInfo`,
+/// which is no longer updated (stuck since WAD 17).
+///
+/// This version struct is also not updated by YoYo Games since GM:S 2 and its
+/// raw `GEN8` version is stuck on `2.0.0.0`.
+/// This library uses version detection to detect the approximate GameMaker version
+/// so that the file format can be deserialized properly.
 pub struct GMVersion {
     /// If greater than 1, serialization produces "2.0.0.0" due to the flag no longer updating in `data.win`.
     pub major: u32,

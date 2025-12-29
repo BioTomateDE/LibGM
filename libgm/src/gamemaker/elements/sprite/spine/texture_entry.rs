@@ -51,7 +51,7 @@ impl GMElement for TextureEntry {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Data {
     /// Texture blob raw data.
-    /// > implementing [`serde::Serialize`] for this probably isn't the best idea
+    /// > implementing `serde::Serialize` for this probably isn't the best idea
     Pre2023_1(Vec<u8>),
     /// Texture entry count.
     Post2023_1(u32),

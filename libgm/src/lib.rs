@@ -3,6 +3,8 @@
 //! This library provides structs and functions to handle GameMaker game assets
 //! in a meaningful way.
 //!
+//! For more information on the GameMaker specifics, check out the [`gamemaker`] module.
+//!
 //! ## Disclaimer
 //! I, BioTomateDE, wrote this project myself. It is effectively my first Rust project ever.
 //! While I have been working on this project for almost a year now (😭), I'm still
@@ -37,6 +39,7 @@
 //! - Only partial pre WAD version 15 support
 //! - Only partial/untested big endian support
 //!
+//! ## Breaking changes
 //! Some things in this library are **not** considered "breaking changes" and may be
 //! modified in `SemVer` patch updates. These could bring unwanted change of behavior
 //! to your program if you don't have a `Cargo.lock` set/commited.
@@ -54,8 +57,9 @@
 //! with docstrings saying "this may change in the future".
 //! These changes will still require a SemVer minor increment, though.
 //! In other words, they are definitely version-safe to use,
-//! but they might be renamed or removed soon.
+//! but they might be renamed or reworked soon.
 //!
+//! ## Credits
 //! Please note that this project is effectively a Rust port of
 //! [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool)
 //! (UndertaleModLib, to be exact).
@@ -135,10 +139,10 @@ const _: () = assert!(
 );
 
 // Private modules
-mod error;
 mod util;
 
 // Public modules
+pub mod error;
 pub mod gamemaker;
 pub mod gml;
 pub mod prelude;

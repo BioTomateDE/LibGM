@@ -12,7 +12,7 @@ use crate::gamemaker::{
     reference::GMRef,
 };
 
-/// A code entry in a data file.
+/// A code entry in a GameMaker data file.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMCode {
     /// The name of the code entry.
@@ -21,12 +21,12 @@ pub struct GMCode {
     /// A list of VM instructions this code entry has.
     pub instructions: Vec<Instruction>,
 
-    /// Set in WAD15+.
+    /// Set in WAD 15+.
     pub modern_data: Option<ModernData>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-/// Set in WAD15.
+/// Extra data for code entries; in WAD 15+.
 pub struct ModernData {
     /// The amount of local variables this code entry has.
     pub locals_count: u16,
@@ -51,7 +51,6 @@ pub enum Instruction {
     Convert { from: DataType, to: DataType },
 
     /// Pops two values from the stack, multiplies them, and pushes the result.
-    //TODO: make sure these lhs rhs are labelled correctly
     Multiply {
         multiplicand: DataType,
         multiplier: DataType,
@@ -290,6 +289,8 @@ impl Instruction {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// A modern (2023.something) reference to game assets.
+/// Used with the `PushReference` (`pushref`) instruction.
 pub enum AssetReference {
     Object(GMRef<GMGameObject>),
     Sprite(GMRef<GMSprite>),
@@ -310,6 +311,7 @@ pub enum AssetReference {
 }
 
 #[num_enum(u8)]
+/// A primitive data type used in instructions.
 pub enum DataType {
     /// 64-bit floating point number.
     /// - Size on VM Stack: 8 bytes.
@@ -360,6 +362,7 @@ impl DataType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+/// Uhhh
 pub enum InstanceType {
     Undefined,
 
@@ -444,6 +447,7 @@ impl InstanceType {
 }
 
 #[num_enum(u8)]
+/// How a variable is supposed to be used in an instruction.
 pub enum VariableType {
     /// Used for normal single-dimension array variables.
     Array = 0x00,
@@ -465,6 +469,8 @@ pub enum VariableType {
 }
 
 #[num_enum(u8)]
+/// How to compare values.
+/// Used in the `Comparison` instruction (`cmp`).
 pub enum ComparisonType {
     /// "Less than" | `<`
     LessThan = 1,
@@ -486,6 +492,8 @@ pub enum ComparisonType {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// A variable reference in an instruction.
+/// Contains the actual variable ref as well as instance type and variable type.
 pub struct CodeVariable {
     pub variable: GMRef<GMVariable>,
     pub variable_type: VariableType,
@@ -496,6 +504,7 @@ pub struct CodeVariable {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// A value to push to the stack. Used in `Push` instructions.
 pub enum PushValue {
     Int16(i16),
     Int32(i32),

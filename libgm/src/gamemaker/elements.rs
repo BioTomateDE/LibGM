@@ -1,3 +1,6 @@
+//! This is THE module. All GameMaker elements are contained in these submodules.
+//! There are some traits as well which can help you with dynamic programming.
+
 use std::collections::HashMap;
 
 use crate::{
@@ -271,11 +274,14 @@ pub trait GMChunk: GMElement + Default {
     fn exists(&self) -> bool;
 }
 
+/// All chunk elements that represent a collection of elements should implement this trait.
+/// The only exceptions are `GEN8` and `OPTN`.
 pub trait GMListChunk: GMChunk {
     type Element: GMElement;
 
     #[must_use]
     fn elements(&self) -> &Vec<Self::Element>;
+
     #[must_use]
     fn elements_mut(&mut self) -> &mut Vec<Self::Element>;
 
@@ -290,6 +296,7 @@ pub trait GMListChunk: GMChunk {
     fn push(&mut self, element: Self::Element) {
         self.elements_mut().push(element);
     }
+
     #[must_use]
     fn len(&self) -> usize {
         self.elements().len()
@@ -305,6 +312,7 @@ pub trait GMListChunk: GMChunk {
     fn into_iter(self) -> std::vec::IntoIter<Self::Element>;
 }
 
+/// All chunk elements that represent a collection of elements **with a unique name** should implement this trait.
 pub trait GMNamedListChunk: GMListChunk<Element: GMNamedElement> {
     fn ref_by_name(&self, name: &str) -> Result<GMRef<Self::Element>>;
     fn by_name(&self, name: &str) -> Result<&Self::Element>;
@@ -344,6 +352,7 @@ pub(crate) fn validate_names<T: GMNamedListChunk>(chunk: &T) -> Result<()> {
 }
 
 #[allow(unused_variables)]
+/// All GameMaker elements with a unique name (to the list they're contained in) should implement this trait.
 pub trait GMNamedElement: GMElement {
     /// The name of this element.
     #[must_use]
@@ -355,7 +364,6 @@ pub trait GMNamedElement: GMElement {
 
     /// Whether the name of this element is valid.
     /// This method respects this element type's specific rules.
-    /// For generic identifier validation, see [`validate_identifier`].
     fn validate_name(&self) -> Result<()> {
         validate_identifier(self.name())
     }

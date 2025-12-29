@@ -1,3 +1,7 @@
+//! Functions related to building GameMaker data files.
+//!
+//! Some of these functions are also re-exported at the crate root.
+
 pub(crate) mod builder;
 mod chunk;
 mod lists;

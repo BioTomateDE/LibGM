@@ -37,7 +37,7 @@ pub struct GMSound {
 
     /// The flags of this sound.
     /// This field is a bit unstable and may be changed in the future.
-    pub flags: GMSoundFlags,
+    pub flags: Flags,
 
     /// The file format of the audio entry.
     /// This includes the `.` from the file extension.
@@ -51,7 +51,7 @@ pub struct GMSound {
     /// This is the full filename how it was loaded in the project.
     /// This will be used if the sound effect is streamed from disk to find the sound file.
     ///
-    /// This is used if the [`GMSoundFlags::is_embedded`] flag is not set.
+    /// This is used if the `Flags.embedded` flag is not set.
     pub file: String,
 
     /// A pre-`GameMaker Studio` way of having certain effects on a sound effect.
@@ -76,12 +76,12 @@ pub struct GMSound {
 
     /// The audio group this audio entry belongs to.
     /// These can only be used with the regular audio system.
-    /// This is used if the [`GMSoundFlags::regular`] flag is set.
+    /// This is used if the `Flags.regular` flag is set (always set for now).
     /// For more information, see [`GMAudioGroup`].
     pub audio_group: GMRef<GMAudioGroup>,
 
-    /// The reference to the `[GMEmbeddedAudio]` audio file.
-    /// This is used if the [`GMSoundFlags::is_embedded`] flag is set.
+    /// The reference to the [`GMEmbeddedAudio`] audio file.
+    /// This is used if the `Flags.embedded` flag is set.
     pub audio_file: Option<GMRef<GMEmbeddedAudio>>,
 
     /// The precomputed length of the sound's audio data.
@@ -94,7 +94,7 @@ impl GMElement for GMSound {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: String = reader.read_gm_string()?;
 
-        let flags = GMSoundFlags::deserialize(reader)?;
+        let flags = Flags::deserialize(reader)?;
 
         let audio_type: Option<String> = reader.read_gm_string_opt()?;
         let audio_type = match audio_type.as_deref() {
@@ -197,12 +197,12 @@ pub enum AudioType {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 /// The `regular` flag may be added later to support GM8.
-pub struct GMSoundFlags {
+pub struct Flags {
     pub embedded: bool,
     pub compressed: bool,
 }
 
-impl GMElement for GMSoundFlags {
+impl GMElement for Flags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let raw = reader.read_u32()?;
         Ok(match raw {
