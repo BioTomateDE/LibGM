@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{
     gamemaker::elements::{
         animation_curve::GMAnimationCurves, audio_group::GMAudioGroups, background::GMBackgrounds,
@@ -71,12 +73,25 @@ pub struct GMData {
     pub embedded_textures: GMEmbeddedTextures,    // TXTR
     pub variables: GMVariables,                   // VARI
 
+    /// The directory in which this data file is located.
+    ///
+    /// This can be used to find, read and edit the following:
+    /// * Audio group files (e.g. `audiogroup1.dat`)
+    /// * External sound files (e.g. `mus_st_him.ogg`)
+    /// * JSON language files
+    ///
+    /// If you do not want these files to be available,
+    /// you set this to `None` after parsing.
+    pub location: Option<PathBuf>,
+
     /// Indicates the number of padding bytes (null bytes) between chunks.
+    ///
     /// Note that the last chunk does not get padding.
     /// This padding is influenced by the data file's GameMaker Version, as well as target platform/architecture.
     pub(crate) chunk_padding: u32,
 
     /// Indicates the data's byte endianness.
+    ///
     /// This affects byte order of integers and chunk names.
     /// In most cases (and assumed by default), this is set to little-endian.
     /// Big-endian is an edge case for certain target platforms (e.g. PS3 or Xbox 360)
@@ -85,6 +100,7 @@ pub struct GMData {
 
     /// The size of the original data file; useful for
     /// approximating the size of the modified data file.
+    ///
     /// This is a micro optimization. This field's value
     /// can be initialized to zero without any problems.
     pub(crate) original_data_size: u32,
@@ -127,6 +143,7 @@ impl Default for GMData {
             embedded_textures: GMEmbeddedTextures::default(),
             variables: GMVariables::default(),
 
+            location: None,
             // Use 16 chunk padding by default for compatibility.
             chunk_padding: 16,
             endianness: Endianness::Little,

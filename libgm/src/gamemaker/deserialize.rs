@@ -239,14 +239,9 @@ impl ParsingOptions {
         }
 
         handle_unread_chunks(&reader.chunks, self.allow_unknown_chunks)?;
+        let original_data_size = reader.size();
 
         let data = GMData {
-            chunk_padding: reader.chunk_padding,
-            endianness: reader.endianness,
-            original_data_size: reader.size(),
-
-            general_info: reader.general_info,
-
             animation_curves,
             audio_groups,
             audios,
@@ -259,6 +254,7 @@ impl ParsingOptions {
             fonts,
             functions,
             game_end_scripts,
+            general_info: reader.general_info,
             global_init_scripts,
             language_info,
             options,
@@ -279,6 +275,11 @@ impl ParsingOptions {
             embedded_textures,
             game_objects,
             variables,
+
+            location: None,
+            chunk_padding: reader.chunk_padding,
+            endianness: reader.endianness,
+            original_data_size,
         };
 
         log::trace!("Parsing data took {stopwatch}");
@@ -288,7 +289,7 @@ impl ParsingOptions {
     ///todo docstrings
     pub fn parse_bytes(&self, raw_data: impl AsRef<[u8]>) -> Result<GMData> {
         self.parse(raw_data.as_ref())
-            .context("parsing GameMaker data")
+            .context("parsing GameMaker data bytes")
     }
 
     /// Parse a GameMaker data file (`data.win`, `game.unx`, etc).
@@ -309,8 +310,12 @@ impl ParsingOptions {
             .with_context(|| format!("reading data file {}", path.display()))?;
         log::trace!("Reading data file bytes took {stopwatch}");
 
-        self.parse(&raw_data)
-            .with_context(|| format!("parsing GameMaker data file {}", path.display()))
+        let mut gm_data = self
+            .parse(&raw_data)
+            .with_context(|| format!("parsing GameMaker data file {}", path.display()))?;
+
+        gm_data.location = Some(path.to_path_buf());
+        Ok(gm_data)
     }
 }
 
