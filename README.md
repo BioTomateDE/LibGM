@@ -5,15 +5,14 @@ or Deltarune.
 
 This is effectively a Rust port of
 [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool)
-(specifically UndertaleModLib and
-[Underanalyzer](https://github.com/UnderminersTeam/Underanalyzer)).
+(specifically UndertaleModLib).
 
 ## Benefits of this Rust port
 
 - Runtime for parsing and building is ~8x faster than UndertaleModLib.
   - This can be further accelerated with the upcoming threaded chunk reading
     feature (opt-in).
-- Thorough documentation on docs.rs (half todo).
+- Thorough documentation on docs.rs.
 - Clean and maintainable library code.
 - Helpful error messages:
   - No `NullReferenceException`, ever
@@ -24,18 +23,19 @@ This is effectively a Rust port of
     ```
     sprite::swf::item::shape::style_group::fill::gradient::Record count 1065353216 implies data size 8.5 GB which exceeds failsafe size 10.0 MB
     ↳ while reading simple list
-    ↳ while deserializing element 1/2 of sprite::swf::item::shape::style_group::StyleGroup<libgm::gamemaker::elements::sprite::swf::item::subshape::Data> simple list
+    ↳ while deserializing element 1/2 of sprite::swf::item::shape::style_group::StyleGroup<sprite::swf::item::subshape::Data> simple list
     ↳ while deserializing element 0/1 of sprite::swf::item::Item simple list
     ↳ while deserializing element 3/60 of GMSprite pointer list
     ↳ while deserializing chunk 'SPRT'
-    ↳ while parsing GameMaker data file ./gm48_datafiles/a-loop_detective.win   
+    ↳ while parsing GameMaker data file ./gm48_datafiles/a-loop_detective.win
     ```
 - Configurable lenient options for trying to parse half-broken data files.
 
 ## Disadvantages / TODOs
 
 - Null pointers are not yet supported.
-- GML Decompiler and Compiler not yet implemented (help would be greatly appreciated!)
+- GML Decompiler and Compiler not yet implemented (help would be greatly
+  appreciated!)
 - No GUI yet, only a Rust library.
 
 ## How to use as a dependency
@@ -46,18 +46,17 @@ Add this line in the `[dependencies]` section of your `Cargo.toml` file:
 libgm = { git = "https://github.com/BioTomateDE/LibGM" }
 ```
 
-_This crate will also be added to [crates.io](https://https://crates.io/) when
-it is finished._
+_This crate is also available on [`crates.io`](https://crates.io/crates/libgm)._
 
 Now you can use these functions exposed by LibGM:
 
-- `parse_data_file(data_file_path: impl AsRef<Path>) -> Result<GMData>`
-- `fn build_data_file(gm_data: &GMData) -> Result<Vec<u8>>`
-- `write_data_file(gm_data: &GMData, path: impl AsRef<Path>) -> Result<()>`
-- `decompile_to_ast()` (WIP)
+- `parse_file(data_file_path: impl AsRef<Path>) -> Result<GMData>`
+- `parse_bytes(raw_data: impl AsRef<[u8]>) -> Result<GMData>`
+- `build_data(gm_data: &GMData, path: impl AsRef<Path>) -> Result<()>`
+- `build_bytes(gm_data: &GMData) -> Result<Vec<u8>>`
 
 If you need more control over how the data file should be read, you can also use
-the `DataParser` struct to modify parsing options:
+the `DataParserOptions` struct to modify parsing options:
 
 ```rust
 // Create a parser with custom options
@@ -72,7 +71,7 @@ for path in data_files {
 }
 
 // Parse from a byte vector
-let raw_data: Vec<u8> = read_from_zip(zip_file, "game/assets/game.unx")?;
+let raw_data: Vec<u8> = read_from_zip(zip_file, "Undertale/assets/game.unx")?;
 let data: GMData = parser.parse_bytes(raw_data)?;
 
 // Parse from a byte slice reference
@@ -103,4 +102,6 @@ All contributions are welcome! Whether that's a pull request, a feature you
 would like to see added, a bug you found; just create an Issue/PR in this repo.
 
 - Everything related to GameMaker is located in `src/libgm/gamemaker/`.
-- There is a basic CLI to interact with LibGM. Its code is located in `src/libgm-cli/`.
+- There is a basic CLI to interact with LibGM. Its code is located in
+  `src/libgm-cli/`.
+

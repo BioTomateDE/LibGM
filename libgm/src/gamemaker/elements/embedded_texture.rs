@@ -385,9 +385,9 @@ impl GMImage {
     pub fn convert_to_dynamic_image(&mut self) -> Result<()> {
         let dyn_img = match &self.0 {
             Img::Dyn(_) => return Ok(()),
-            Img::Png(raw) => Img::decode_png(&raw)?,
-            Img::Bz2Qoi(raw, _) => Img::decode_bz2_qoi(&raw)?,
-            Img::Qoi(raw) => Img::decode_qoi(&raw)?,
+            Img::Png(raw) => Img::decode_png(raw)?,
+            Img::Bz2Qoi(raw, _) => Img::decode_bz2_qoi(raw)?,
+            Img::Qoi(raw) => Img::decode_qoi(raw)?,
         };
         *self = Self(Img::Dyn(dyn_img));
         Ok(())
