@@ -43,7 +43,6 @@ pub struct Timeline {
 
 impl GMElement for Timeline {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        log::warn!("I have no idea what YYSWF is, prepare for bugs");
         let used_items: Vec<Item> = reader.read_simple_list()?;
         let framerate = reader.read_i32()?;
         let frames_count = reader.read_u32()?;

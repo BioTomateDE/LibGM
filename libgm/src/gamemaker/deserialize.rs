@@ -286,13 +286,17 @@ impl ParsingOptions {
         Ok(data)
     }
 
-    ///todo docstrings
+    /// Parse a GameMaker data file (stored in memory) with default options.
+    ///
+    /// For more information on the data file format, see [`crate::gamemaker`].
     pub fn parse_bytes(&self, raw_data: impl AsRef<[u8]>) -> Result<GMData> {
         self.parse(raw_data.as_ref())
             .context("parsing GameMaker data bytes")
     }
 
-    /// Parse a GameMaker data file (`data.win`, `game.unx`, etc).
+    /// Parse a GameMaker data file (stored on disk) with default options.
+    ///
+    /// For more information on the data file format, see [`crate::gamemaker`].
     pub fn parse_file(&self, data_file_path: impl AsRef<Path>) -> Result<GMData> {
         let path = data_file_path.as_ref();
 
@@ -407,12 +411,16 @@ fn handle_unread_chunks(chunks: &ChunkMap, allow_unknown: bool) -> Result<()> {
     }
 }
 
-/// Parse a GameMaker data file (stored in a buffer) with default settings.
+/// Parse a GameMaker data file (stored in memory) with default options.
+///
+/// For more information on the data file format, see [`crate::gamemaker`].
 pub fn parse_bytes(raw_data: impl AsRef<[u8]>) -> Result<GMData> {
     ParsingOptions::new().parse_bytes(raw_data)
 }
 
-/// Parse a GameMaker data file (`data.win`, `game.unx`, etc.) with default settings.
+/// Parse a GameMaker data file (stored on disk) with default options.
+///
+/// For more information on the data file format, see [`crate::gamemaker`].
 pub fn parse_file(data_file_path: impl AsRef<Path>) -> Result<GMData> {
     ParsingOptions::new().parse_file(data_file_path)
 }

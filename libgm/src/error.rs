@@ -112,6 +112,14 @@ impl<T, S: Into<String>> Context<T> for std::result::Result<T, S> {
     }
 }
 
+/// Create a new [`Result::Err`] with format arguments.
+/// This is a simple alias for `Err(Error::new(format!(...)))`.
+macro_rules! err {
+    ($($arg:tt)*) => {
+        Err($crate::error::Error::new(format!($($arg)*)))
+    };
+}
+
 /// Perform an early return with the specified formatted message.
 /// This is a simple alias for `return Err(Error::new(format!(...));`.
 macro_rules! bail {
@@ -120,4 +128,4 @@ macro_rules! bail {
     };
 }
 
-pub(crate) use bail;
+pub(crate) use {bail, err};

@@ -26,10 +26,10 @@ pub struct DataBuilder<'a> {
     /// The raw data being generated.
     raw_data: Vec<u8>,
 
-    /// Pairs data positions of pointer placeholders with the memory address of the GameMaker element they're pointing to
+    /// Pairs data positions of pointer placeholders with the memory address of the GameMaker element they're pointing to.
     pub(super) pointer_placeholder_positions: Vec<(u32, usize)>,
 
-    /// Maps memory addresses of GameMaker elements to their resolved data position
+    /// Maps memory addresses of GameMaker elements to their resolved data position.
     pub(super) pointer_resource_positions: HashMap<usize, u32>,
 
     /// Tracks where each function is used throughout the game data.
