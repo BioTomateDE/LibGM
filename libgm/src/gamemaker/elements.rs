@@ -295,6 +295,11 @@ pub trait GMListChunk: GMChunk {
         self.elements().len()
     }
 
+    #[must_use]
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     fn iter(&self) -> core::slice::Iter<'_, Self::Element>;
     fn iter_mut(&mut self) -> core::slice::IterMut<'_, Self::Element>;
     fn into_iter(self) -> std::vec::IntoIter<Self::Element>;

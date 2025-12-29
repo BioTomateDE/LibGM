@@ -18,7 +18,7 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Track {
-    /// Name for the type/model of track, such as "GMGroupTrack", "GMInstanceTrack", "GMRealTrack", etc.
+    /// Name for the type/model of track, such as `GMGroupTrack`, `GMInstanceTrack`, `GMRealTrack`, etc.
     pub model_name: String,
 
     /// Name of the track. Can be user-assigned or the name of a property or asset.
@@ -98,9 +98,7 @@ impl GMElement for Track {
             "GMColourTrack" => {
                 Keyframes::Color(keyframe::color::KeyframesData::deserialize(reader)?)
             },
-            "GMRealTrack" => {
-                Keyframes::Real(keyframe::color::KeyframesData::deserialize(reader)?)
-            },
+            "GMRealTrack" => Keyframes::Real(keyframe::color::KeyframesData::deserialize(reader)?),
             "GMTextTrack" => Keyframes::Text(keyframe::Data::deserialize(reader)?),
             "GMParticleTrack" => Keyframes::Particle(keyframe::Data::deserialize(reader)?),
             _ => bail!("Invalid Track Model Name {model_name:?}"),
@@ -146,8 +144,7 @@ impl GMElement for Track {
             Keyframes::SpriteFrames(k) => k.serialize(builder)?,
             Keyframes::Bool(k) => k.serialize(builder)?,
             Keyframes::String(k) => k.serialize(builder)?,
-            Keyframes::Color(k) => k.serialize(builder)?,
-            Keyframes::Real(k) => k.serialize(builder)?,
+            Keyframes::Color(k) | Keyframes::Real(k) => k.serialize(builder)?,
             Keyframes::Text(k) => k.serialize(builder)?,
             Keyframes::Particle(k) => k.serialize(builder)?,
             Keyframes::BroadcastMessage(k) => k.serialize(builder)?,
