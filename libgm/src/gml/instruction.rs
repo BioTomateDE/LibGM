@@ -364,10 +364,11 @@ impl DataType {
 #[derive(Debug, Clone, Copy, PartialEq)]
 /// Uhhh
 pub enum InstanceType {
+    /// TODO: this will be deprecated soon(tm)
     Undefined,
 
     /// Represents the current `self` instance.
-    // TODO: remove the static obj thingy from thjis
+    /// TODO: change static object reference to other variant
     Self_(Option<GMRef<GMGameObject>>),
 
     /// Instance ID in the Room -100000; used when the Variable Type is [`VariableType::Instance`].
