@@ -126,6 +126,8 @@ impl<'a> DataReader<'a> {
 
     /// Read the specified number of bytes from the data file while advancing the data position.
     /// Returns an error when trying to read out of chunk bounds.
+    ///
+    /// This is the core data reading abstraction. All other methods build up on this.
     pub fn read_bytes_dyn(&mut self, count: u32) -> Result<&'a [u8]> {
         let start: u32 = self.cur_pos;
         let end: u32 = self
@@ -168,7 +170,9 @@ impl<'a> DataReader<'a> {
     /// **Safety Note:** `N` must be less than `u32::MAX`.
     /// The const assertion should guarantee this, though.
     pub fn read_bytes_const<const N: usize>(&mut self) -> Result<&[u8; N]> {
-        const { check_n_in_bounds::<N>() };
+        const {
+            assert!(N < u32::MAX as usize);
+        }
         let slice: &[u8] = self.read_bytes_dyn(N as u32)?;
         // SAFETY: read_bytes_dyn is guaranteed to read exact N bytes.
         // > EXCEPTION: This produces undefined behavior is if N > u32::MAX.
@@ -278,8 +282,4 @@ impl<'a> DataReader<'a> {
             Ok(None)
         }
     }
-}
-
-const fn check_n_in_bounds<const N: usize>() {
-    assert!(N < u32::MAX as usize);
 }

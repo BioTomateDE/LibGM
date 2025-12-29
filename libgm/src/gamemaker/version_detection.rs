@@ -186,7 +186,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
         let mut checks_to_remove: Vec<bool> = vec![false; checks.len()];
 
         for (i, check) in checks.iter().enumerate() {
-            // For this iteration, filter out versions whose version requirements are not (yet) met
+            // For this iteration, filter out versions whose version requirements are not met yet
             if !reader
                 .general_info
                 .is_version_at_least(check.required_version.clone())

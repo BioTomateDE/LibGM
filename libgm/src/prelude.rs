@@ -1,4 +1,3 @@
-pub(crate) use crate::{error::bail, util::hint::*};
 pub use crate::{
     error::{Context, Error, Result},
     gamemaker::{
@@ -7,3 +6,8 @@ pub use crate::{
         reference::GMRef,
     },
 };
+pub(crate) use crate::{
+    error::{bail, err},
+    util::hint::*,
+};
+

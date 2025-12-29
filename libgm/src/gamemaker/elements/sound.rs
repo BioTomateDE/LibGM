@@ -98,11 +98,18 @@ impl GMElement for GMSound {
 
         let audio_type: Option<String> = reader.read_gm_string_opt()?;
         let audio_type = match audio_type.as_deref() {
+            Some("") | None => AudioType::Unknown,
             Some(".wav") => AudioType::Wav,
             Some(".ogg") => AudioType::Ogg,
             Some(".mp3") => AudioType::Mp3,
-            Some(other) => bail!("Invalid or unknown audio type {other:?}"),
-            None => AudioType::Unknown,
+            Some(other) => {
+                let msg = format!("Invalid or unknown audio type {other:?}");
+                if reader.options.verify_constants {
+                    bail!("{msg}");
+                }
+                log::warn!("{msg}");
+                AudioType::Unknown
+            },
         };
 
         let file: String = reader.read_gm_string()?;
@@ -202,7 +209,8 @@ impl GMElement for GMSoundFlags {
             100 => Self { embedded: false, compressed: false },
             101 => Self { embedded: true, compressed: false },
             102 => Self { embedded: false, compressed: true },
-            _ => bail!("Invalid/Unknown sound flags {raw}, please report ts error"),
+            103 => Self { embedded: true, compressed: true },
+            _ => bail!("Invalid/Unknown sound flags {raw}, please report this error"),
         })
     }
 
