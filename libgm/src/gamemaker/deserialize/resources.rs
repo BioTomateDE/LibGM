@@ -116,11 +116,10 @@ fn check_resource_limit(number: u32) -> Result<()> {
     }
 
     let signed = number as i32;
-    if signed < 0 {
-        bail!(
-            "Resource ID {number} (presumably {signed} as signed integer) exceeds failsafe limit of {FAILSAFE_COUNT}"
-        );
+    let comment = if signed < 0 {
+        format!(" (presumably {signed} as signed integer)")
     } else {
-        bail!("Resource ID {number} exceeds failsafe limit of {FAILSAFE_COUNT}");
-    }
+        String::new()
+    };
+    bail!("Resource ID {number}{comment} exceeds failsafe limit of {FAILSAFE_COUNT}");
 }

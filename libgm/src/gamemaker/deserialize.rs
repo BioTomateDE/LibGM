@@ -137,9 +137,9 @@ impl ParsingOptions {
     /// > Default: **false**
     #[inline]
     #[must_use]
-    pub const unsafe fn parallel_processing(mut self, enabled: bool) -> Self {
+    pub fn parallel_processing(mut self, enabled: bool) -> Self {
         self.parallel_processing = enabled;
-        self
+        todo!("Not yet implemented")
     }
 
     fn parse(&self, raw_data: &[u8]) -> Result<GMData> {
