@@ -1,4 +1,11 @@
+mod flags;
+mod function_classifications;
+mod gms2;
+
 use chrono::{DateTime, Utc};
+pub use flags::Flags;
+pub use function_classifications::FunctionClassifications;
+pub use gms2::GMS2Data;
 use uuid::Uuid;
 
 use crate::{
@@ -6,13 +13,12 @@ use crate::{
         chunk::ChunkName,
         data::Endianness,
         deserialize::reader::DataReader,
-        elements::{GMChunk, GMElement, rooms::GMRoom},
-        gm_version::{GMVersion, GMVersionReq, LTSBranch},
+        elements::{GMChunk, GMElement, room::GMRoom},
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        version::{GMVersion, GMVersionReq, LTSBranch},
     },
     prelude::*,
-    util::{assert::assert_int, bitfield::bitfield_struct, rng::DotnetRng},
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -20,9 +26,28 @@ pub struct GMGeneralInfo {
     /// Indicates whether debugging support is disabled.
     pub is_debugger_disabled: bool,
 
-    /// The bytecode version of the data file.
-    pub bytecode_version: u8,
+    /// The WAD version of the data file.
+    /// WAD stands for "Where's All the Data".
+    ///
+    /// This field is also known as "**bytecode** version".
+    ///
+    /// Technically, this is the version of the data file format.
+    /// However, since YoYoGames does not update this version
+    /// specification anymore, it has become worthless past ~16.
+    /// Since they also don't update the GameMaker Studio version
+    /// (`version`), GameMaker unpacking tools have to resort to
+    /// version detection (which sucks).
+    /// This can detect the approximate Studio version this
+    /// game's data file was made in. Since studio versions
+    /// are something official that does get incremented (finally!),
+    /// this [`GMVersion`] is used in place of the WAD version
+    /// in modern version/feature detection.
+    ///
+    /// ___
+    /// See `version` for less information.
+    pub wad_version: u8,
 
+    /// Who knows. Probably redundant in GMS2.
     pub unknown_value: u16,
 
     /// The file name of the runner.
@@ -31,24 +56,45 @@ pub struct GMGeneralInfo {
     /// Which GameMaker configuration the data file was compiled with.
     pub config: String,
 
-    /// The last object id of the data file.
+    /// The last game object ID of the data file.
     pub last_object_id: u32,
 
-    /// The last tile id of the data file.
+    /// The last tile ID of the data file.
     pub last_tile_id: u32,
 
-    /// The game id of the data file.
+    /// The game id of the data file, whatever that may mean.
     pub game_id: u32,
 
     /// The `DirectPlay` GUID of the data file.
     /// This is always empty in GameMaker Studio.
-    pub directplay_guid: uuid::Uuid,
+    pub directplay_guid: Uuid,
 
     /// The name of the game.
     pub game_name: String,
 
-    /// The version of the data file. For GameMaker 2 games, this will be specified as 2.0.0.0,
+    /// The GameMaker Studio Version this game's data file was made in.
+    /// For GameMaker 2 games, this will be specified as 2.0.0.0,
     /// but `detect_version.rs` will detect the actual version later.
+    ///
+    /// Technically, this is the studio version; not the
+    /// data file version. However, YoYoGames. *YoYoGames........*
+    ///
+    /// Note that this does not have to correspond to the actual studio version.
+    /// This can be due to multiple reasons:
+    /// * The data file does not use a specific newer feature,
+    ///   resulting in a **lower** detected version.
+    /// * There is a bug in the version detection logic (oopsies),
+    ///   resulting in a **higher** detected version (false positive).
+    /// * Fucking LTS.
+    ///   For some reason, they added a BREAKING FEATURE
+    ///   to a LONG TERM SUPPORT branch.
+    ///   This means that tools like this have to differentiate
+    ///   between LTS-pre-this-feature and LTS-post-this-feature.
+    ///   As a result, some games made in 2022.0 LTS may be shown
+    ///   as 2023.6 instead.
+    ///
+    /// ___
+    /// See `wad_version` for more information.
     pub version: GMVersion,
 
     /// The default window width of the game window.
@@ -58,7 +104,7 @@ pub struct GMGeneralInfo {
     pub default_window_height: u32,
 
     /// The info flags of the data file.
-    pub flags: GMGeneralInfoFlags,
+    pub flags: Flags,
 
     /// The CRC32 of the license used to compile the game.
     pub license_crc32: u32,
@@ -66,26 +112,28 @@ pub struct GMGeneralInfo {
     /// The MD5 of the license used to compile the game.
     pub license_md5: [u8; 16],
 
-    /// The UNIX timestamp the game was compiled.
+    /// The timestamp the game was compiled at.
     pub timestamp_created: DateTime<Utc>,
 
-    /// The name that gets displayed in the window.
+    /// The name that gets displayed in the window title.
     pub display_name: String,
 
     /// The function classifications of this data file.
-    pub function_classifications: GMFunctionClassifications,
+    pub function_classifications: FunctionClassifications,
 
-    /// The Steam app id of the game.
+    /// The Steam app ID of the game.
+    /// This may be zero.
     pub steam_appid: i32,
 
     /// The port the data file exposes for the debugger.
+    /// Only set in WAD14+.
     pub debugger_port: Option<u32>,
 
     /// The room order of the data file.
     pub room_order: Vec<GMRef<GMRoom>>,
 
     /// Set in GameMaker 2+ data files.
-    pub gms2_info: Option<GMGeneralInfoGMS2>,
+    pub gms2_data: Option<GMS2Data>,
 
     pub exists: bool,
 }
@@ -94,11 +142,12 @@ impl Default for GMGeneralInfo {
     /// Should only be used as a small stub in `DataReader` because
     /// Rust doesn't have nullables ([`Option`]s are too ugly for this).
     /// ___________
-    /// **This value should never be used!** Immediately replace it with actual `GEN8` when parsed.
+    /// **This value should never be used!**
+    /// Immediately replace it with actual `GEN8` when parsed.
     fn default() -> Self {
         Self {
             is_debugger_disabled: true,
-            bytecode_version: 67,
+            wad_version: 67,
             unknown_value: 0,
             game_file_name: String::new(),
             config: String::new(),
@@ -110,16 +159,16 @@ impl Default for GMGeneralInfo {
             version: GMVersion::stub(),
             default_window_width: 1337,
             default_window_height: 1337,
-            flags: GMGeneralInfoFlags::default(),
+            flags: Flags::default(),
             license_crc32: 1337,
             license_md5: [0; 16],
             timestamp_created: DateTime::default(),
             display_name: String::new(),
-            function_classifications: GMFunctionClassifications::default(),
+            function_classifications: FunctionClassifications::default(),
             steam_appid: 0,
             debugger_port: None,
             room_order: vec![],
-            gms2_info: None,
+            gms2_data: None,
             exists: false,
         }
     }
@@ -150,7 +199,7 @@ impl GMElement for GMGeneralInfo {
                 bail!("Invalid u8 bool {other} while reading general info \"is debugger disabled\"")
             },
         };
-        let bytecode_version = reader.read_u8()?;
+        let wad_version = reader.read_u8()?;
         let unknown_value = reader.read_u16()?;
         let game_file_name: String = reader.read_gm_string()?;
         let config: String = reader.read_gm_string()?;
@@ -163,14 +212,14 @@ impl GMElement for GMGeneralInfo {
             Endianness::Little => uuid::Builder::from_bytes_le,
             Endianness::Big => uuid::Builder::from_bytes, // unconfirmed
         };
-        let directplay_guid: uuid::Uuid = uuid_parser(directplay_guid).into_uuid();
+        let directplay_guid: Uuid = uuid_parser(directplay_guid).into_uuid();
 
         let game_name: String = reader.read_gm_string()?;
         let version = GMVersion::deserialize(reader)?;
         let default_window_width = reader.read_u32()?;
         let default_window_height = reader.read_u32()?;
         let flags_raw = reader.read_u32()?;
-        let flags = GMGeneralInfoFlags::parse(flags_raw);
+        let flags = Flags::parse(flags_raw);
         let license_crc32 = reader.read_u32()?;
         let license_md5: [u8; 16] = *reader.read_bytes_const().context("reading license (MD5)")?;
 
@@ -180,99 +229,15 @@ impl GMElement for GMGeneralInfo {
 
         let display_name: String = reader.read_gm_string()?;
         let active_targets = reader.read_u64()?;
-        assert_int("Active Targets", 0, active_targets)?;
-        let function_classifications = GMFunctionClassifications::deserialize(reader)?;
+        reader.assert_int(active_targets, 0, "Active Targets")?;
+        let function_classifications = FunctionClassifications::deserialize(reader)?;
         let steam_appid = reader.read_i32()?;
-        let debugger_port: Option<u32> = reader.deserialize_if_bytecode_version(14)?;
+        let debugger_port: Option<u32> = reader.deserialize_if_wad_version(14)?;
         let room_order: Vec<GMRef<GMRoom>> = reader.read_simple_list()?;
 
-        let mut gms2_info: Option<GMGeneralInfoGMS2> = None;
-        if version.major >= 2 {
-            // Parse and verify UUID
-            let timestamp: i64 = timestamp_created.timestamp();
-            let mut info_timestamp_offset: bool = true;
-            let seed: i32 = (timestamp & 0xFFFF_FFFF) as i32;
-            let mut rng = DotnetRng::new(seed);
-
-            let first_expected: i64 = (i64::from(rng.next()) << 32) | i64::from(rng.next());
-            let first_actual = reader.read_i64()?;
-            if first_actual != first_expected {
-                bail!("Unexpected random UID #1: expected {first_expected}; got {first_actual}");
-            }
-
-            let info_location: i32 = ((timestamp & 0xFFFF) as i32 / 7
-                + game_id.wrapping_sub(default_window_width) as i32
-                + room_order.len() as i32)
-                .abs()
-                % 4;
-            let mut random_uid = [0_i64; 4];
-
-            let get_info_number = |first_random: i64, info_timestamp_offset: bool| -> i64 {
-                let mut info_number: i64 = timestamp;
-                if info_timestamp_offset {
-                    info_number -= 1000;
-                }
-                info_number = Self::uid_bitmush(info_number);
-                info_number ^= first_random;
-                info_number = !info_number;
-                info_number ^= (i64::from(game_id) << 32) | i64::from(game_id);
-                info_number ^= (i64::from(default_window_width) + i64::from(flags_raw)) << 48
-                    | (i64::from(default_window_height) + i64::from(flags_raw)) << 32
-                    | (i64::from(default_window_height) + i64::from(flags_raw)) << 16
-                    | (i64::from(default_window_width) + i64::from(flags_raw));
-                info_number ^= i64::from(bytecode_version);
-                info_number
-            };
-
-            for i in 0i32..4 {
-                if i == info_location {
-                    let curr = reader.read_i64()?;
-                    random_uid[i as usize] = curr;
-
-                    if curr != get_info_number(first_expected, true) {
-                        if curr != get_info_number(first_expected, false) {
-                            bail!("Unexpected random UID info");
-                        }
-                        info_timestamp_offset = false;
-                    }
-                } else {
-                    let second_actual = reader.read_u32()?;
-                    let third_actual = reader.read_u32()?;
-                    let second_expected: u32 = rng.next() as u32;
-                    let third_expected: u32 = rng.next() as u32;
-                    if second_actual != second_expected {
-                        bail!(
-                            "Unexpected random UID #2: expected {second_expected}; got {second_actual}"
-                        );
-                    }
-                    if third_actual != third_expected {
-                        bail!(
-                            "Unexpected random UID #3: expected {third_expected}; got {third_actual}"
-                        );
-                    }
-
-                    random_uid[i as usize] =
-                        (i64::from(second_actual) << 32) | i64::from(third_actual);
-                }
-            }
-            let fps = reader.read_f32()?;
-            let allow_statistics = reader.read_bool32()?;
-            let game_guid: [u8; 16] = reader
-                .read_bytes_const::<16>()
-                .cloned()
-                .context("reading Game GUID")?;
-            gms2_info = Some(GMGeneralInfoGMS2 {
-                random_uid,
-                fps,
-                allow_statistics,
-                game_guid,
-                info_timestamp_offset,
-            });
-        }
-
-        Ok(Self {
+        let mut general_info = Self {
             is_debugger_disabled,
-            bytecode_version,
+            wad_version,
             unknown_value,
             game_file_name,
             config,
@@ -293,9 +258,16 @@ impl GMElement for GMGeneralInfo {
             steam_appid,
             debugger_port,
             room_order,
-            gms2_info,
+            gms2_data: None,
             exists: true,
-        })
+        };
+
+        if general_info.version.major >= 2 {
+            let gms2 = general_info.read_gms2_data(reader)?;
+            general_info.gms2_data = Some(gms2);
+        }
+
+        Ok(general_info)
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -304,7 +276,7 @@ impl GMElement for GMGeneralInfo {
         }
 
         builder.write_u8(self.is_debugger_disabled.into());
-        builder.write_u8(self.bytecode_version);
+        builder.write_u8(self.wad_version);
         builder.write_u16(self.unknown_value);
         builder.write_gm_string(&self.game_file_name);
         builder.write_gm_string(&self.config);
@@ -332,208 +304,13 @@ impl GMElement for GMGeneralInfo {
         self.function_classifications.serialize(builder)?;
         builder.write_i32(self.steam_appid);
         self.debugger_port
-            .serialize_if_bytecode_ver(builder, "Debugger Port", 14)?;
+            .serialize_if_wad_ver(builder, "Debugger Port", 14)?;
 
         builder.write_simple_list(&self.room_order)?;
 
         if builder.is_gm_version_at_least((2, 0)) {
-            // Write random UID
-            let gms2_info: &GMGeneralInfoGMS2 = self
-                .gms2_info
-                .as_ref()
-                .ok_or("GMS2 Data not set in General Info")?;
-            let timestamp: i64 = self.timestamp_created.timestamp();
-            let seed: i32 = (timestamp & 0xFFFF_FFFF) as i32;
-            let mut rng = DotnetRng::new(seed);
-            let first_random: i64 = (i64::from(rng.next()) << 32) | i64::from(rng.next());
-            let info_number = self.get_info_number(first_random, gms2_info.info_timestamp_offset);
-            let info_location: i32 = ((timestamp & 0xFFFF) as i32 / 7
-                + self.game_id.wrapping_sub(self.default_window_width) as i32
-                + self.room_order.len() as i32)
-                .abs()
-                % 4;
-            builder.write_i64(first_random);
-            for i in 0..4 {
-                if i == info_location {
-                    builder.write_i64(info_number);
-                } else {
-                    let first: u32 = rng.next() as u32;
-                    let second: u32 = rng.next() as u32;
-                    builder.write_u32(first);
-                    builder.write_u32(second);
-                }
-            }
-
-            builder.write_f32(gms2_info.fps);
-            builder.write_bool32(gms2_info.allow_statistics);
-            builder.write_bytes(&gms2_info.game_guid);
+            self.write_gms2_data(builder)?;
         }
         Ok(())
-    }
-}
-
-impl GMGeneralInfo {
-    fn get_info_number(&self, first_random: i64, info_timestamp_offset: bool) -> i64 {
-        let flags_raw: u32 = self.flags.build();
-        let mut info_number: i64 = self.timestamp_created.timestamp();
-        if info_timestamp_offset {
-            info_number -= 1000;
-        }
-        info_number = Self::uid_bitmush(info_number);
-        info_number ^= first_random;
-        info_number = !info_number;
-        info_number ^= (i64::from(self.game_id) << 32) | i64::from(self.game_id);
-        info_number ^= (i64::from(self.default_window_width) + i64::from(flags_raw)) << 48
-            | (i64::from(self.default_window_height) + i64::from(flags_raw)) << 32
-            | (i64::from(self.default_window_height) + i64::from(flags_raw)) << 16
-            | (i64::from(self.default_window_width) + i64::from(flags_raw));
-        info_number ^= i64::from(self.bytecode_version);
-        info_number
-    }
-
-    const fn uid_bitmush(info_number: i64) -> i64 {
-        let mut temp: u64 = info_number as u64;
-        temp = (temp << 56 & 0xFF00_0000_0000_0000)
-            | (temp >> 8 & 0x00FF_0000_0000_0000)
-            | (temp << 32 & 0x0000_FF00_0000_0000)
-            | (temp >> 16 & 0x0000_00FF_0000_0000)
-            | (temp << 8 & 0x0000_0000_FF00_0000)
-            | (temp >> 24 & 0x0000_0000_00FF_0000)
-            | (temp >> 16 & 0x0000_0000_0000_FF00)
-            | (temp >> 32 & 0x0000_0000_0000_00FF);
-        temp as i64
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMGeneralInfoGMS2 {
-    /// Unknown, some sort of checksum.
-    pub random_uid: [i64; 4],
-
-    /// The FPS of the game.
-    pub fps: f32,
-
-    /// If enabled, the game runner may send requests to a GameMaker player count statistics server.
-    pub allow_statistics: bool,
-
-    /// Unknown, some sort of checksum.
-    pub game_guid: [u8; 16],
-
-    /// Whether the random UID's timestamp was initially offset.
-    pub info_timestamp_offset: bool,
-}
-
-bitfield_struct! {
-    /// Contains general information flags for GameMaker games.
-    GMGeneralInfoFlags : u32 {
-        /// Start the game as fullscreen.
-        fullscreen: 0,
-
-        /// Use synchronization to avoid tearing.
-        sync_vertex1: 1,
-
-        /// Use synchronization to avoid tearing. (???)
-        sync_vertex2: 2,
-
-        /// Use synchronization to avoid tearing. (???)
-        sync_vertex3: 8,
-
-        /// Interpolate colours between pixels.
-        interpolate: 3,
-
-        /// Keep aspect ratio during scaling.
-        scale: 4,
-
-        /// Display mouse cursor.
-        show_cursor: 5,
-
-        /// Allows window to be resized.
-        sizeable: 6,
-
-        /// Allows fullscreen switching. (???)
-        screen_key: 7,
-
-        studio_version_b1: 9,
-
-        studio_version_b2: 10,
-
-        studio_version_b3: 11,
-
-        steam_enabled: 12,
-
-        local_data_enabled: 13,
-
-        /// Whether the game supports borderless window
-        borderless_window: 14,
-
-        /// Tells the runner to run Javascript code
-        javascript_mode: 15,
-
-        license_exclusions: 16,
-    }
-}
-
-bitfield_struct! {
-    GMFunctionClassifications : u64 {
-        internet: 0,
-        joystick: 1,
-        gamepad: 2,
-        immersion: 3,
-        screengrab: 4,
-        math: 5,
-        action: 6,
-        matrix_d3d: 7,
-        d3d_model: 8,
-        data_structures: 9,
-        file: 10,
-        ini: 11,
-        filename: 12,
-        directory: 13,
-        environment: 14,
-        http: 16,
-        encoding: 17,
-        ui_dialog: 18,
-        motion_planning: 19,
-        shape_collision: 20,
-        instance: 21,
-        room: 22,
-        game: 23,
-        display: 24,
-        device: 25,
-        window: 26,
-        draw_color: 27,
-        texture: 28,
-        layer: 29,
-        string: 30,
-        tiles: 31,
-        surface: 32,
-        skeleton: 33,
-        io: 34,
-        variables: 35,
-        array: 36,
-        external_call: 37,
-        notification: 38,
-        date: 39,
-        particle: 40,
-        sprite: 41,
-        clickable: 42,
-        legacy_sound: 43,
-        audio: 44,
-        event: 45,
-        free_type: 47,
-        analytics: 48,
-        achievement: 51,
-        cloud_saving: 52,
-        ads: 53,
-        os: 54,
-        in_app_purchases: 55,
-        facebook: 56,
-        physics: 57,
-        flash_aa: 58,
-        console: 59,
-        buffer: 60,
-        steam: 61,
-        shaders: 62,
-        vertex_buffers: 63,
     }
 }

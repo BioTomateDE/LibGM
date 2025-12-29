@@ -1,4 +1,4 @@
-use crate::gml::instructions::GMInstruction;
+use crate::gml::instruction::Instruction;
 
 pub const CONV: u8 = 0x07;
 pub const MUL: u8 = 0x08;
@@ -34,7 +34,7 @@ pub const CALL: u8 = 0xD9;
 pub const CALLVAR: u8 = 0x99;
 pub const EXTENDED: u8 = 0xFF;
 
-impl GMInstruction {
+impl Instruction {
     /// Get the opcode of this Instruction.
     #[must_use]
     pub(crate) const fn opcode(&self) -> u8 {
@@ -86,7 +86,7 @@ impl GMInstruction {
     }
 }
 
-/// Convert old bytecode14 opcodes to new bytecode15+ opcodes
+/// Convert old WAD14 opcodes to new WAD15+ opcodes
 #[must_use]
 pub const fn old_to_new(opcode: u8) -> u8 {
     match opcode {
@@ -124,7 +124,7 @@ pub const fn old_to_new(opcode: u8) -> u8 {
     }
 }
 
-/// Convert new bytecode15+ opcodes to old bytecode14 opcodes
+/// Convert new WAD15+ opcodes to old WAD14 opcodes
 #[must_use]
 pub const fn new_to_old(opcode: u8) -> u8 {
     match opcode {

@@ -2,14 +2,14 @@ use crate::{
     gamemaker::{
         data::GMData,
         elements::{
-            GMListChunk, GMNamedElement, functions::GMFunction, game_objects::GMGameObject,
-            variables::GMVariable,
+            GMListChunk, GMNamedElement, function::GMFunction, game_object::GMGameObject,
+            variable::GMVariable,
         },
         reference::GMRef,
     },
-    gml::instructions::{
-        CodeVariable, GMAssetReference, GMCode, GMCodeValue, GMComparisonType, GMDataType,
-        GMInstanceType, GMInstruction, GMVariableType,
+    gml::instruction::{
+        AssetReference, CodeVariable, ComparisonType, DataType, GMCode, InstanceType, Instruction,
+        PushValue, VariableType,
     },
     prelude::*,
     util::fmt::typename,
@@ -27,10 +27,7 @@ pub fn disassemble_code(code: &GMCode, gm_data: &GMData) -> Result<String> {
     disassemble_instructions(&code.instructions, gm_data)
 }
 
-pub fn disassemble_instructions(
-    instructions: &[GMInstruction],
-    gm_data: &GMData,
-) -> Result<String> {
+pub fn disassemble_instructions(instructions: &[Instruction], gm_data: &GMData) -> Result<String> {
     let mut assembly: String = String::new();
 
     for instruction in instructions {
@@ -41,54 +38,54 @@ pub fn disassemble_instructions(
     Ok(assembly)
 }
 
-pub fn disassemble_instruction(instruction: &GMInstruction, gm_data: &GMData) -> Result<String> {
-    let mut string = String::new();
-    disassemble_instr(instruction, &mut string, gm_data)?;
-    Ok(string)
+pub fn disassemble_instruction(instruction: &Instruction, gm_data: &GMData) -> Result<String> {
+    let mut buffer = String::new();
+    disassemble_instr(instruction, &mut buffer, gm_data)?;
+    Ok(buffer)
 }
 
 fn disassemble_instr(
-    instruction: &GMInstruction,
-    string: &mut String,
+    instruction: &Instruction,
+    buffer: &mut String,
     gm_data: &GMData,
 ) -> Result<()> {
     let mnemonic: &str = instruction.mnemonic();
 
     match instruction {
-        GMInstruction::Exit
-        | GMInstruction::Return
-        | GMInstruction::PopSwap { .. }
-        | GMInstruction::PopWithContextExit
-        | GMInstruction::CheckArrayIndex
-        | GMInstruction::PushArrayFinal
-        | GMInstruction::PopArrayFinal
-        | GMInstruction::PushArrayContainer
-        | GMInstruction::SetArrayOwner
-        | GMInstruction::HasStaticInitialized
-        | GMInstruction::SetStaticInitialized
-        | GMInstruction::SaveArrayReference
-        | GMInstruction::RestoreArrayReference
-        | GMInstruction::IsNullishValue => {
-            write!(string, "{mnemonic}");
+        Instruction::Exit
+        | Instruction::Return
+        | Instruction::PopSwap { .. }
+        | Instruction::PopWithContextExit
+        | Instruction::CheckArrayIndex
+        | Instruction::PushArrayFinal
+        | Instruction::PopArrayFinal
+        | Instruction::PushArrayContainer
+        | Instruction::SetArrayOwner
+        | Instruction::HasStaticInitialized
+        | Instruction::SetStaticInitialized
+        | Instruction::SaveArrayReference
+        | Instruction::RestoreArrayReference
+        | Instruction::IsNullishValue => {
+            write!(buffer, "{mnemonic}");
         },
 
-        GMInstruction::Negate { data_type }
-        | GMInstruction::Not { data_type }
-        | GMInstruction::PopDiscard { data_type } => {
-            write!(string, "{}.{}", mnemonic, data_type.to_str());
+        Instruction::Negate { data_type }
+        | Instruction::Not { data_type }
+        | Instruction::PopDiscard { data_type } => {
+            write!(buffer, "{}.{}", mnemonic, data_type.to_str());
         },
 
-        GMInstruction::CallVariable { argument_count } => {
-            write!(string, "{mnemonic} {argument_count}");
+        Instruction::CallVariable { argument_count } => {
+            write!(buffer, "{mnemonic} {argument_count}");
         },
 
-        GMInstruction::Duplicate { data_type, size } => {
-            write!(string, "{}.{} {}", mnemonic, data_type.to_str(), size,);
+        Instruction::Duplicate { data_type, size } => {
+            write!(buffer, "{}.{} {}", mnemonic, data_type.to_str(), size,);
         },
 
-        GMInstruction::DuplicateSwap { data_type, size1, size2 } => {
+        Instruction::DuplicateSwap { data_type, size1, size2 } => {
             write!(
-                string,
+                buffer,
                 "{}.{} {} {}",
                 mnemonic,
                 data_type.to_str(),
@@ -97,32 +94,32 @@ fn disassemble_instr(
             );
         },
 
-        GMInstruction::Branch { jump_offset }
-        | GMInstruction::BranchIf { jump_offset }
-        | GMInstruction::BranchUnless { jump_offset }
-        | GMInstruction::PushWithContext { jump_offset }
-        | GMInstruction::PopWithContext { jump_offset } => {
-            write!(string, "{mnemonic} {jump_offset}");
+        Instruction::Branch { jump_offset }
+        | Instruction::BranchIf { jump_offset }
+        | Instruction::BranchUnless { jump_offset }
+        | Instruction::PushWithContext { jump_offset }
+        | Instruction::PopWithContext { jump_offset } => {
+            write!(buffer, "{mnemonic} {jump_offset}");
         },
 
-        GMInstruction::Convert { from: type1, to: type2 }
-        | GMInstruction::Multiply { multiplicand: type2, multiplier: type1 }
-        | GMInstruction::Divide { dividend: type2, divisor: type1 }
-        | GMInstruction::Remainder { dividend: type2, divisor: type1 }
-        | GMInstruction::Modulus { dividend: type2, divisor: type1 }
-        | GMInstruction::Add { augend: type2, addend: type1 }
-        | GMInstruction::Subtract { minuend: type2, subtrahend: type1 }
-        | GMInstruction::And { lhs: type2, rhs: type1 }
-        | GMInstruction::Or { lhs: type2, rhs: type1 }
-        | GMInstruction::Xor { lhs: type2, rhs: type1 }
-        | GMInstruction::ShiftLeft { value: type2, shift_amount: type1 }
-        | GMInstruction::ShiftRight { value: type2, shift_amount: type1 } => {
-            write!(string, "{}.{}.{}", mnemonic, type1.to_str(), type2.to_str());
+        Instruction::Convert { from: type1, to: type2 }
+        | Instruction::Multiply { multiplicand: type2, multiplier: type1 }
+        | Instruction::Divide { dividend: type2, divisor: type1 }
+        | Instruction::Remainder { dividend: type2, divisor: type1 }
+        | Instruction::Modulus { dividend: type2, divisor: type1 }
+        | Instruction::Add { augend: type2, addend: type1 }
+        | Instruction::Subtract { minuend: type2, subtrahend: type1 }
+        | Instruction::And { lhs: type2, rhs: type1 }
+        | Instruction::Or { lhs: type2, rhs: type1 }
+        | Instruction::Xor { lhs: type2, rhs: type1 }
+        | Instruction::ShiftLeft { value: type2, shift_amount: type1 }
+        | Instruction::ShiftRight { value: type2, shift_amount: type1 } => {
+            write!(buffer, "{}.{}.{}", mnemonic, type1.to_str(), type2.to_str());
         },
 
-        GMInstruction::Compare { lhs, rhs, comparison_type } => {
+        Instruction::Compare { lhs, rhs, comparison_type } => {
             write!(
-                string,
+                buffer,
                 "{}.{}.{} {}",
                 mnemonic,
                 rhs.to_str(),
@@ -131,67 +128,36 @@ fn disassemble_instr(
             );
         },
 
-        GMInstruction::Pop { variable, type1, type2 } => {
-            // TODO: find the instance type of the variable
+        Instruction::Pop { variable, type1, type2 } => {
+            // TODO: find the instance type of the variable? idek
             write!(
-                string,
+                buffer,
                 "{}.{}.{} ",
                 mnemonic,
                 type1.to_str(),
                 type2.to_str()
             );
-            write_variable(variable, string, gm_data)?;
+            write_variable(variable, buffer, gm_data)?;
         },
 
-        GMInstruction::Push { value } => {
-            write!(string, "{}.{} ", mnemonic, value.data_type().to_str());
-
-            match value {
-                GMCodeValue::Variable(code_variable) => {
-                    write_variable(code_variable, string, gm_data)?;
-                },
-                GMCodeValue::Boolean(true) => {
-                    write!(string, "true");
-                },
-                GMCodeValue::Boolean(false) => {
-                    write!(string, "false");
-                },
-                GMCodeValue::Function(function_ref) => {
-                    write!(
-                        string,
-                        "(function){}",
-                        resolve_function_name(*function_ref, gm_data)?
-                    );
-                }, // TODO  rename  string
-                GMCodeValue::String(string2) => write_literal_string(string2, string),
-                GMCodeValue::Int16(integer) => {
-                    write!(string, "{integer}");
-                },
-                GMCodeValue::Int32(integer) => {
-                    write!(string, "{integer}");
-                },
-                GMCodeValue::Int64(integer) => {
-                    write!(string, "{integer}");
-                },
-                GMCodeValue::Double(float) => {
-                    write!(string, "{float}");
-                },
-            }
+        Instruction::Push { value } => {
+            write!(buffer, "{}.{} ", mnemonic, value.data_type().to_str());
+            write_push_instruction(value, buffer, gm_data)?;
         },
-        GMInstruction::PushLocal { variable }
-        | GMInstruction::PushGlobal { variable }
-        | GMInstruction::PushBuiltin { variable } => {
-            write!(string, "{mnemonic} ");
-            write_variable(variable, string, gm_data)?;
+        Instruction::PushLocal { variable }
+        | Instruction::PushGlobal { variable }
+        | Instruction::PushBuiltin { variable } => {
+            write!(buffer, "{mnemonic} ");
+            write_variable(variable, buffer, gm_data)?;
         },
 
-        GMInstruction::PushImmediate { integer } => {
-            write!(string, "{mnemonic} {integer}");
+        Instruction::PushImmediate { integer } => {
+            write!(buffer, "{mnemonic} {integer}");
         },
 
-        &GMInstruction::Call { function, argument_count } => {
+        &Instruction::Call { function, argument_count } => {
             write!(
-                string,
+                buffer,
                 "{} {}(argc={})",
                 mnemonic,
                 resolve_function_name(function, gm_data)?,
@@ -199,16 +165,16 @@ fn disassemble_instr(
             );
         },
 
-        GMInstruction::PushReference { asset_reference } => {
-            write!(string, "{mnemonic} ");
-            write_asset_reference(asset_reference, string, gm_data)?;
+        Instruction::PushReference { asset_reference } => {
+            write!(buffer, "{mnemonic} ");
+            write_asset_reference(asset_reference, buffer, gm_data)?;
         },
     }
 
     Ok(())
 }
 
-impl GMInstruction {
+impl Instruction {
     #[must_use]
     const fn mnemonic(&self) -> &'static str {
         match self {
@@ -263,7 +229,7 @@ impl GMInstruction {
     }
 }
 
-impl GMDataType {
+impl DataType {
     #[must_use]
     const fn to_str(self) -> &'static str {
         match self {
@@ -278,7 +244,7 @@ impl GMDataType {
     }
 }
 
-impl GMComparisonType {
+impl ComparisonType {
     #[must_use]
     const fn to_str(self) -> &'static str {
         match self {
@@ -292,7 +258,7 @@ impl GMComparisonType {
     }
 }
 
-impl GMVariableType {
+impl VariableType {
     #[must_use]
     const fn to_str(self) -> &'static str {
         match self {
@@ -303,6 +269,41 @@ impl GMVariableType {
             Self::ArrayPopAF => "[arraypopaf]",
         }
     }
+}
+
+fn write_push_instruction(value: &PushValue, buffer: &mut String, gm_data: &GMData) -> Result<()> {
+    match value {
+        PushValue::Variable(code_variable) => {
+            write_variable(code_variable, buffer, gm_data)?;
+        },
+        PushValue::Boolean(true) => {
+            write!(buffer, "true");
+        },
+        PushValue::Boolean(false) => {
+            write!(buffer, "false");
+        },
+        PushValue::Function(function_ref) => {
+            write!(
+                buffer,
+                "(function){}",
+                resolve_function_name(*function_ref, gm_data)?
+            );
+        },
+        PushValue::String(string) => write_literal_string(string, buffer),
+        PushValue::Int16(integer) => {
+            write!(buffer, "{integer}");
+        },
+        PushValue::Int32(integer) => {
+            write!(buffer, "{integer}");
+        },
+        PushValue::Int64(integer) => {
+            write!(buffer, "{integer}");
+        },
+        PushValue::Double(float) => {
+            write!(buffer, "{float}");
+        },
+    }
+    Ok(())
 }
 
 #[inline]
@@ -325,100 +326,96 @@ fn asset_get_name<'a, T: GMNamedElement + 'a, C: GMListChunk<Element = T> + 'a>(
 }
 
 fn write_asset_reference(
-    asset_ref: &GMAssetReference,
-    string: &mut String,
+    asset_ref: &AssetReference,
+    buffer: &mut String,
     gm_data: &GMData,
 ) -> Result<()> {
     match *asset_ref {
-        GMAssetReference::Object(gm_ref) => {
+        AssetReference::Object(gm_ref) => {
             write!(
-                string,
+                buffer,
                 "(object){}",
                 asset_get_name(&gm_data.game_objects, gm_ref)?
             );
         },
-        GMAssetReference::Sprite(gm_ref) => {
+        AssetReference::Sprite(gm_ref) => {
             write!(
-                string,
+                buffer,
                 "(sprite){}",
                 asset_get_name(&gm_data.sprites, gm_ref)?
             );
         },
-        GMAssetReference::Sound(gm_ref) => {
+        AssetReference::Sound(gm_ref) => {
             write!(
-                string,
+                buffer,
                 "(sound){}",
                 asset_get_name(&gm_data.sounds, gm_ref)?
             );
         },
-        GMAssetReference::Room(gm_ref) => {
-            write!(
-                string,
-                "(sprite){}",
-                asset_get_name(&gm_data.rooms, gm_ref)?
-            );
+        AssetReference::Room(gm_ref) => {
+            write!(buffer, "(room){}", asset_get_name(&gm_data.rooms, gm_ref)?);
         },
-        GMAssetReference::Background(gm_ref) => {
+        AssetReference::Background(gm_ref) => {
             write!(
-                string,
+                buffer,
                 "(background){}",
                 asset_get_name(&gm_data.backgrounds, gm_ref)?
             );
         },
-        GMAssetReference::Path(gm_ref) => {
-            write!(string, "(path){}", asset_get_name(&gm_data.paths, gm_ref)?);
+        AssetReference::Path(gm_ref) => {
+            write!(buffer, "(path){}", asset_get_name(&gm_data.paths, gm_ref)?);
         },
-        GMAssetReference::Script(gm_ref) => {
+        AssetReference::Script(gm_ref) => {
             write!(
-                string,
+                buffer,
                 "(script){}",
                 asset_get_name(&gm_data.scripts, gm_ref)?
             );
         },
-        GMAssetReference::Font(gm_ref) => {
-            write!(string, "(font){}", asset_get_name(&gm_data.fonts, gm_ref)?);
+        AssetReference::Font(gm_ref) => {
+            write!(buffer, "(font){}", asset_get_name(&gm_data.fonts, gm_ref)?);
         },
-        GMAssetReference::Timeline(gm_ref) => {
+        AssetReference::Timeline(gm_ref) => {
             write!(
-                string,
+                buffer,
                 "(timeline){}",
                 asset_get_name(&gm_data.timelines, gm_ref)?
             );
         },
-        GMAssetReference::Shader(gm_ref) => {
+        AssetReference::Shader(gm_ref) => {
             write!(
-                string,
+                buffer,
                 "(shader){}",
                 asset_get_name(&gm_data.shaders, gm_ref)?
             );
         },
-        GMAssetReference::Sequence(gm_ref) => {
+        AssetReference::Sequence(gm_ref) => {
             write!(
-                string,
+                buffer,
                 "(sequence){}",
                 asset_get_name(&gm_data.sequences, gm_ref)?
             );
         },
-        GMAssetReference::AnimCurve(gm_ref) => {
+        AssetReference::AnimCurve(gm_ref) => {
             write!(
-                string,
+                buffer,
                 "(animcurve){}",
                 asset_get_name(&gm_data.animation_curves, gm_ref)?
             );
         },
-        GMAssetReference::ParticleSystem(gm_ref) => {
+        AssetReference::ParticleSystem(gm_ref) => {
             write!(
-                string,
-                "(particlesys){}",
+                buffer,
+                "(particlesystem){}",
                 asset_get_name(&gm_data.particle_systems, gm_ref)?
             );
         },
-        GMAssetReference::RoomInstance(id) => {
-            write!(string, "(roominstance){id}");
+        AssetReference::RoomInstance(id) => {
+            write!(buffer, "(roominstance){id}");
         },
-        GMAssetReference::Function(gm_ref) => {
+        AssetReference::Function(gm_ref) => {
             write!(
-                string,
+                buffer,
                 "(function){}",
                 resolve_function_name(gm_ref, gm_data)?
             );
@@ -429,32 +426,32 @@ fn write_asset_reference(
 }
 
 fn write_instance_type(
-    instance_type: GMInstanceType,
-    string: &mut String,
+    instance_type: InstanceType,
+    buffer: &mut String,
     variable_ref: GMRef<GMVariable>,
     gm_data: &GMData,
 ) -> Result<()> {
     match instance_type {
-        GMInstanceType::Undefined => {
-            unreachable!("Did not expect Instance Type Undefined here; please report this error")
+        InstanceType::Undefined => {
+            bail!("Did not expect Instance Type Undefined here; please report this error");
         },
-        GMInstanceType::Self_(Some(obj_ref)) => {
+        InstanceType::Self_(Some(obj_ref)) => {
             let obj: &GMGameObject = gm_data.game_objects.by_ref(obj_ref)?;
-            write!(string, "self<{}>", obj.name);
+            write!(buffer, "self<{}>", obj.name);
         },
-        GMInstanceType::Self_(None) => write!(string, "self"),
-        GMInstanceType::RoomInstance(instance_id) => {
-            write!(string, "roominstance<{instance_id}>");
+        InstanceType::Self_(None) => write!(buffer, "self"),
+        InstanceType::RoomInstance(instance_id) => {
+            write!(buffer, "roominstance<{instance_id}>");
         },
-        GMInstanceType::Other => write!(string, "other"),
-        GMInstanceType::All => write!(string, "all"),
-        GMInstanceType::None => write!(string, "none"),
-        GMInstanceType::Global => write!(string, "global"),
-        GMInstanceType::Builtin => write!(string, "builtin"),
-        GMInstanceType::Local => write!(string, "local<{}>", variable_ref.index),
-        GMInstanceType::StackTop => write!(string, "stacktop"),
-        GMInstanceType::Argument => write!(string, "arg"),
-        GMInstanceType::Static => write!(string, "static"),
+        InstanceType::Other => write!(buffer, "other"),
+        InstanceType::All => write!(buffer, "all"),
+        InstanceType::None => write!(buffer, "none"),
+        InstanceType::Global => write!(buffer, "global"),
+        InstanceType::Builtin => write!(buffer, "builtin"),
+        InstanceType::Local => write!(buffer, "local<{}>", variable_ref.index),
+        InstanceType::StackTop => write!(buffer, "stacktop"),
+        InstanceType::Argument => write!(buffer, "arg"),
+        InstanceType::Static => write!(buffer, "static"),
     }
 
     Ok(())
@@ -477,13 +474,12 @@ fn write_variable(
 
     write!(buffer, "{}", code_variable.variable_type.to_str());
 
-    let instance_type: GMInstanceType = if code_variable.instance_type == GMInstanceType::Undefined
-    {
-        // TODO: this will not work with b14
+    let instance_type: InstanceType = if code_variable.instance_type == InstanceType::Undefined {
+        // TODO: this will not work with WAD <= 14
         variable
-            .b15_data
+            .modern_data
             .as_ref()
-            .map_or(GMInstanceType::Undefined, |b15| b15.instance_type)
+            .map_or(InstanceType::Undefined, |data| data.instance_type)
     } else {
         code_variable.instance_type
     };

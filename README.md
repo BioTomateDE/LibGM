@@ -17,22 +17,26 @@ This is effectively a Rust port of
 - Clean and maintainable library code.
 - Helpful error messages:
   - No `NullReferenceException`, ever
-  - No useless stack traces over 30 lines long
+  - No meaningless stack traces over 50 lines long
+  - Still more information than just "Reading out of bounds"
   - Strict data integrity checks catch errors earlier, making debugging easier
-  - Example trace printed out using `.chain()`:
+  - Example trace printed out using `.chain_pretty()`:
     ```
-    Invalid GMSpriteSepMaskType 67 (0x00000043)
-    ↳ while deserializing element 273/4437 of GMSprite pointer list
+    sprite::swf::item::shape::style_group::fill::gradient::Record count 1065353216 implies data size 8.5 GB which exceeds failsafe size 10.0 MB
+    ↳ while reading simple list
+    ↳ while deserializing element 1/2 of sprite::swf::item::shape::style_group::StyleGroup<libgm::gamemaker::elements::sprite::swf::item::subshape::Data> simple list
+    ↳ while deserializing element 0/1 of sprite::swf::item::Item simple list
+    ↳ while deserializing element 3/60 of GMSprite pointer list
     ↳ while deserializing chunk 'SPRT'
-    ↳ while parsing GameMaker data file "data.win"
+    ↳ while parsing GameMaker data file ./gm48_datafiles/a-loop_detective.win   
     ```
 - Configurable lenient options for trying to parse half-broken data files.
 
 ## Disadvantages / TODOs
 
-- No GUI yet, only a Rust library.
 - Null pointers are not yet supported.
-- Decompiler and compiler not nearly done.
+- GML Decompiler and Compiler not yet implemented (help would be greatly appreciated!)
+- No GUI yet, only a Rust library.
 
 ## How to use as a dependency
 
@@ -57,9 +61,9 @@ the `DataParser` struct to modify parsing options:
 
 ```rust
 // Create a parser with custom options
-let parser = DataParser::new()
+let parser = DataParserOptions::new()
     .verify_alignment(false)
-    .parallel_processing(true);
+    .allow_unread_chunks(true);
 
 // Parse multiple files
 for path in data_files {
@@ -68,7 +72,7 @@ for path in data_files {
 }
 
 // Parse from a byte vector
-let raw_data: Vec<u8> = read_from_zip(zip_file, "env/game.unx")?;
+let raw_data: Vec<u8> = read_from_zip(zip_file, "game/assets/game.unx")?;
 let data: GMData = parser.parse_bytes(raw_data)?;
 
 // Parse from a byte slice reference
@@ -76,7 +80,7 @@ let byte_slice: &[u8] = &[0x46, 0x4F, 0x52, 0x4D, /* ... */];
 let data: GMData = parser.parse_bytes(byte_slice)?;
 
 // You can also parse directly from borrowed data
-let buffer: Vec<u8> = std::fs::read("game.win")?;
+let buffer: Vec<u8> = std::fs::read("./data.win")?;
 let data: GMData = parser.parse_bytes(&buffer)?;
 // buffer is still accessible here since we passed a reference
 ```
@@ -99,7 +103,4 @@ All contributions are welcome! Whether that's a pull request, a feature you
 would like to see added, a bug you found; just create an Issue/PR in this repo.
 
 - Everything related to GameMaker is located in `src/libgm/gamemaker/`.
-- Everything related to GML Decompilation is located in
-  `src/libgm/gml/decompiler/`.
-- Everything related to GML Compilation will be located in
-  `src/libgm/gml/compiler/` (not started yet).
+- There is a basic CLI to interact with LibGM. Its code is located in `src/libgm-cli/`.

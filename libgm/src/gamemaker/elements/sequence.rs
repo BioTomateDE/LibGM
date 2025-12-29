@@ -1,22 +1,17 @@
+pub mod track;
+
 use std::collections::HashMap;
 
 use macros::{named_list_chunk, num_enum};
+pub use track::Track;
+use track::keyframe::{self, BroadcastMessage, Moment};
 
 use crate::{
     gamemaker::{
-        deserialize::reader::DataReader,
-        elements::{
-            GMElement, animation_curves::GMAnimationCurve, game_objects::GMGameObject,
-            particle_systems::GMParticleSystem, sounds::GMSound, sprites::GMSprite,
-        },
-        reference::GMRef,
-        serialize::builder::DataBuilder,
+        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
     },
     prelude::*,
-    util::{
-        assert::assert_int,
-        init::{hashmap_with_capacity, num_enum_from, vec_with_capacity},
-    },
+    util::init::{hashmap_with_capacity, num_enum_from},
 };
 
 /// This struct belong to the chunk SEQN.
@@ -33,7 +28,7 @@ impl GMElement for GMSequences {
             return Ok(Self::default());
         }
         reader.align(4)?;
-        assert_int("SEQN Version", 1, reader.read_u32()?)?;
+        reader.read_gms2_chunk_version("SEQN Version")?;
         let sequences: Vec<GMSequence> = reader.read_pointer_list()?;
         Ok(Self { sequences, exists: true })
     }
@@ -49,27 +44,27 @@ impl GMElement for GMSequences {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSequence {
     pub name: String,
-    pub playback: GMSequencePlaybackType,
+    pub playback: PlaybackType,
     pub playback_speed: f32,
-    pub playback_speed_type: GMAnimSpeedType,
+    pub playback_speed_type: SpeedType,
     pub length: f32,
     pub origin_x: i32,
     pub origin_y: i32,
     pub volume: f32,
     pub width: Option<f32>,
     pub height: Option<f32>,
-    pub broadcast_messages: Vec<GMKeyframeData<GMBroadcastMessage>>,
-    pub tracks: Vec<GMTrack>,
+    pub broadcast_messages: Vec<keyframe::Data<BroadcastMessage>>,
+    pub tracks: Vec<Track>,
     pub function_ids: HashMap<i32, String>,
-    pub moments: Vec<GMKeyframeData<GMKeyframeMoment>>,
+    pub moments: Vec<keyframe::Data<Moment>>,
 }
 
 impl GMElement for GMSequence {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: String = reader.read_gm_string()?;
-        let playback: GMSequencePlaybackType = num_enum_from(reader.read_i32()?)?;
+        let playback: PlaybackType = num_enum_from(reader.read_i32()?)?;
         let playback_speed = reader.read_f32()?;
-        let playback_speed_type: GMAnimSpeedType = num_enum_from(reader.read_i32()?)?;
+        let playback_speed_type: SpeedType = num_enum_from(reader.read_i32()?)?;
         let length = reader.read_f32()?;
         let origin_x = reader.read_i32()?;
         let origin_y = reader.read_i32()?;
@@ -82,9 +77,9 @@ impl GMElement for GMSequence {
             height = Some(reader.read_f32()?);
         }
 
-        let broadcast_messages: Vec<GMKeyframeData<GMBroadcastMessage>> =
+        let broadcast_messages: Vec<keyframe::Data<BroadcastMessage>> =
             reader.read_simple_list()?;
-        let tracks: Vec<GMTrack> = reader.read_simple_list()?;
+        let tracks: Vec<Track> = reader.read_simple_list()?;
 
         let function_id_count = reader.read_u32()?;
         let mut function_ids: HashMap<i32, String> = hashmap_with_capacity(function_id_count)?;
@@ -94,7 +89,7 @@ impl GMElement for GMSequence {
             function_ids.insert(key, function_id);
         }
 
-        let moments: Vec<GMKeyframeData<GMKeyframeMoment>> = reader.read_simple_list()?;
+        let moments: Vec<keyframe::Data<Moment>> = reader.read_simple_list()?;
 
         Ok(Self {
             name,
@@ -141,507 +136,15 @@ impl GMElement for GMSequence {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMTrackKeyframesData<T> {
-    pub keyframes: Vec<GMKeyframeData<T>>,
-}
-impl<T: GMElement> GMElement for GMTrackKeyframesData<T> {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        reader.align(4)?;
-        let keyframes: Vec<GMKeyframeData<T>> = reader.read_simple_list()?;
-        Ok(Self { keyframes })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.align(4);
-        builder.write_simple_list(&self.keyframes)?;
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMColorTrackKeyframesData<T> {
-    pub interpolation: i32,
-    pub keyframes: Vec<GMKeyframeData<T>>,
-}
-impl<T: GMElement> GMElement for GMColorTrackKeyframesData<T> {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        reader.align(4)?;
-        let interpolation = reader.read_i32()?;
-        let keyframes: Vec<GMKeyframeData<T>> = reader.read_simple_list()?;
-        Ok(Self { interpolation, keyframes })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.align(4);
-        builder.write_i32(self.interpolation);
-        builder.write_simple_list(&self.keyframes)?;
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum GMTrackKeyframes {
-    Audio(GMTrackKeyframesData<GMKeyframeAudio>),
-    Instance(GMTrackKeyframesData<GMKeyframeInstance>),
-    Graphic(GMTrackKeyframesData<GMKeyframeGraphic>),
-    Sequence(GMTrackKeyframesData<GMKeyframeSequence>),
-    SpriteFrames(GMTrackKeyframesData<GMKeyframeSpriteFrames>),
-    Bool(GMTrackKeyframesData<GMKeyframeBool>),
-    // Asset(GMKeyframes<GMKeyframeAsset>),
-    String(GMTrackKeyframesData<GMKeyframeString>),
-    // Int(GMKeyframes<GMKeyframeInt>),
-    Color(GMColorTrackKeyframesData<GMKeyframeColor>),
-    Text(GMTrackKeyframesData<GMKeyframeText>),
-    Particle(GMTrackKeyframesData<GMKeyframeParticle>),
-    BroadcastMessage(GMTrackKeyframesData<GMBroadcastMessage>),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMKeyframeData<T> {
-    pub key: f32,
-    pub length: f32,
-    pub stretch: bool,
-    pub disabled: bool,
-    pub channels: HashMap<i32, T>,
-}
-impl<T: GMElement> GMElement for GMKeyframeData<T> {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let key = reader.read_f32()?;
-        let length = reader.read_f32()?;
-        let stretch = reader.read_bool32()?;
-        let disabled = reader.read_bool32()?;
-        let count = reader.read_u32()?; // I32 in UTMT
-        let mut channels: HashMap<i32, T> = hashmap_with_capacity(count)?;
-        for _ in 0..count {
-            let channel = reader.read_i32()?;
-            let keyframe: T = T::deserialize(reader)?;
-            channels.insert(channel, keyframe);
-        }
-        Ok(Self { key, length, stretch, disabled, channels })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_f32(self.key);
-        builder.write_f32(self.length);
-        builder.write_bool32(self.stretch);
-        builder.write_bool32(self.disabled);
-        builder.write_usize(self.channels.len())?;
-        for (channel, keyframe) in &self.channels {
-            builder.write_i32(*channel);
-            keyframe.serialize(builder)?;
-        }
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMKeyframeAudio {
-    pub sound: GMRef<GMSound>,
-    pub mode: i32,
-}
-
-impl GMElement for GMKeyframeAudio {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let sound: GMRef<GMSound> = reader.read_resource_by_id()?;
-        let mode = reader.read_i32()?;
-        Ok(Self { sound, mode })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_resource_id(self.sound);
-        builder.write_i32(self.mode);
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMKeyframeInstance {
-    pub game_object: GMRef<GMGameObject>,
-}
-
-impl GMElement for GMKeyframeInstance {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let game_object: GMRef<GMGameObject> = reader.read_resource_by_id()?;
-        Ok(Self { game_object })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_resource_id(self.game_object);
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMKeyframeGraphic {
-    pub sprite: GMRef<GMSprite>,
-}
-
-impl GMElement for GMKeyframeGraphic {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let sprite: GMRef<GMSprite> = reader.read_resource_by_id()?;
-        Ok(Self { sprite })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_resource_id(self.sprite);
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMKeyframeSequence {
-    pub sequence: GMRef<GMSequence>,
-}
-
-impl GMElement for GMKeyframeSequence {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let sequence: GMRef<GMSequence> = reader.read_resource_by_id()?;
-        Ok(Self { sequence })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_resource_id(self.sequence);
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GMKeyframeSpriteFrames {
-    pub value: i32,
-}
-
-impl GMElement for GMKeyframeSpriteFrames {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let value = reader.read_i32()?;
-        Ok(Self { value })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(self.value);
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GMKeyframeBool {
-    pub boolean: bool,
-}
-
-impl GMElement for GMKeyframeBool {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let boolean = reader.read_bool32()?;
-        Ok(Self { boolean })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_bool32(self.boolean);
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GMKeyframeString {
-    pub string: String,
-}
-
-impl GMElement for GMKeyframeString {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let string: String = reader.read_gm_string()?;
-        Ok(Self { string })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.string);
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMKeyframeColor {
-    pub value: f32,
-}
-
-impl GMElement for GMKeyframeColor {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let value = reader.read_f32()?;
-        Ok(Self { value })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_f32(self.value);
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GMKeyframeText {
-    pub text: String,
-    pub line_wrapping: bool,
-    pub alignment_v: i8,
-    pub alignment_h: i8,
-    pub font_index: i32,
-}
-
-impl GMElement for GMKeyframeText {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let text: String = reader.read_gm_string()?;
-        let line_wrapping = reader.read_bool32()?;
-        let alignment = reader.read_i32()?;
-        let font_index = reader.read_i32()?;
-        Ok(Self {
-            text,
-            line_wrapping,
-            alignment_v: ((alignment >> 8) & 0xFF) as i8,
-            alignment_h: (alignment & 0xFF) as i8,
-            font_index,
-        })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.text);
-        builder.write_bool32(self.line_wrapping);
-        builder.write_i32(i32::from(self.alignment_v) << 8 | i32::from(self.alignment_h));
-        log::warn!(
-            "Writing raw Font index {} for Text Keyframe of Sequence",
-            self.font_index
-        );
-        builder.write_i32(self.font_index); // TODO no idea what this is but shouldn't it be a GMRef<GMFont> instead of an i32?
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMKeyframeParticle {
-    pub particle: GMRef<GMParticleSystem>,
-}
-
-impl GMElement for GMKeyframeParticle {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let particle: GMRef<GMParticleSystem> = reader.read_resource_by_id()?;
-        Ok(Self { particle })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_resource_id(self.particle);
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GMBroadcastMessage {
-    pub messages: Vec<String>,
-}
-
-impl GMElement for GMBroadcastMessage {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let count = reader.read_u32()?;
-        let mut messages: Vec<String> = vec_with_capacity(count)?;
-        for _ in 0..count {
-            messages.push(reader.read_gm_string()?);
-        }
-        Ok(Self { messages })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_usize(self.messages.len())?;
-        for message in &self.messages {
-            builder.write_gm_string(message);
-        }
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GMKeyframeMoment {
-    pub internal_count: i32, // "Should be 0 if none, 1 if there's a message?"
-    pub event: Option<String>,
-}
-
-impl GMElement for GMKeyframeMoment {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let internal_count = reader.read_i32()?;
-        let event: Option<String> = if internal_count > 0 {
-            Some(reader.read_gm_string()?)
-        } else {
-            None
-        };
-        Ok(Self { internal_count, event })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(self.internal_count);
-        if let Some(ref event) = self.event {
-            builder.write_gm_string(event);
-        }
-        // FIXME: maybe there should be null written if event string not set?
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMTrack {
-    pub model_name: String,
-    pub name: String,
-    pub builtin_name: GMTrackBuiltinName,
-    pub traits: GMTrackTraits,
-    pub is_creation_track: bool,
-    pub tags: Vec<i32>,
-    pub sub_tracks: Vec<GMTrack>,
-    pub keyframes: GMTrackKeyframes,
-    pub owned_resources: Vec<GMAnimationCurve>,
-}
-
-impl GMElement for GMTrack {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let model_name: String = reader.read_gm_string()?;
-        let name: String = reader.read_gm_string()?;
-        let builtin_name: GMTrackBuiltinName = num_enum_from(reader.read_i32()?)?;
-        let traits: GMTrackTraits = num_enum_from(reader.read_i32()?)?;
-        let is_creation_track = reader.read_bool32()?;
-
-        let tag_count = reader.read_count("Track Tag")?;
-        let owned_resources_count = reader.read_count("Track Owned Resource")?;
-        let track_count = reader.read_count("Track")?;
-
-        let mut tags: Vec<i32> = vec_with_capacity(tag_count)?;
-        for _ in 0..tag_count {
-            tags.push(reader.read_i32()?);
-        }
-
-        let mut owned_resources: Vec<GMAnimationCurve> = vec_with_capacity(owned_resources_count)?;
-
-        for _ in 0..owned_resources_count {
-            let animcurve_str: String = reader.read_gm_string()?;
-            if animcurve_str != "GMAnimCurve" {
-                bail!(
-                    "Expected owned resource thingy of Track to be \"GMAnimCurve\"; but found {:?} for Track {:?}",
-                    animcurve_str,
-                    name,
-                );
-            }
-            owned_resources.push(GMAnimationCurve::deserialize(reader)?);
-        }
-
-        let mut sub_tracks: Vec<Self> = vec_with_capacity(track_count)?;
-        for _ in 0..track_count {
-            sub_tracks.push(Self::deserialize(reader)?);
-        }
-
-        let keyframes = match model_name.as_str() {
-            "GMAudioTrack" => GMTrackKeyframes::Audio(GMTrackKeyframesData::deserialize(reader)?),
-            "GMInstanceTrack" => {
-                GMTrackKeyframes::Instance(GMTrackKeyframesData::deserialize(reader)?)
-            },
-            "GMGraphicTrack" => {
-                GMTrackKeyframes::Graphic(GMTrackKeyframesData::deserialize(reader)?)
-            },
-            "GMSequenceTrack" => {
-                GMTrackKeyframes::Sequence(GMTrackKeyframesData::deserialize(reader)?)
-            },
-            "GMSpriteFramesTrack" => {
-                GMTrackKeyframes::SpriteFrames(GMTrackKeyframesData::deserialize(reader)?)
-            },
-            "GMAssetTrack" => bail!("Asset Track not yet supported"),
-            "GMBoolTrack" => GMTrackKeyframes::Bool(GMTrackKeyframesData::deserialize(reader)?),
-            "GMStringTrack" => GMTrackKeyframes::String(GMTrackKeyframesData::deserialize(reader)?),
-            "GMIntTrack" => bail!("Int Track not yet supported"),
-            "GMColourTrack" | "GMRealTrack" => {
-                GMTrackKeyframes::Color(GMColorTrackKeyframesData::deserialize(reader)?)
-            },
-            "GMTextTrack" => GMTrackKeyframes::Text(GMTrackKeyframesData::deserialize(reader)?),
-            "GMParticleTrack" => {
-                GMTrackKeyframes::Particle(GMTrackKeyframesData::deserialize(reader)?)
-            },
-            other => bail!("Invalid Model Name {other:?} while parsing Track"),
-        };
-
-        Ok(Self {
-            model_name,
-            name,
-            builtin_name,
-            traits,
-            is_creation_track,
-            tags,
-            sub_tracks,
-            keyframes,
-            owned_resources,
-        })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.model_name);
-        builder.write_gm_string(&self.name);
-        builder.write_i32(self.builtin_name.into());
-        builder.write_i32(self.traits.into());
-        builder.write_bool32(self.is_creation_track);
-        builder.write_usize(self.tags.len())?;
-        builder.write_usize(self.owned_resources.len())?;
-        builder.write_usize(self.sub_tracks.len())?;
-        for tag in &self.tags {
-            builder.write_i32(*tag);
-        }
-        for animation_curve in &self.owned_resources {
-            builder.write_gm_string("GMAnimCurve");
-            animation_curve.serialize(builder)?;
-        }
-        for track in &self.sub_tracks {
-            track.serialize(builder)?;
-        }
-        match &self.keyframes {
-            GMTrackKeyframes::Audio(k) => k.serialize(builder)?,
-            GMTrackKeyframes::Instance(k) => k.serialize(builder)?,
-            GMTrackKeyframes::Graphic(k) => k.serialize(builder)?,
-            GMTrackKeyframes::Sequence(k) => k.serialize(builder)?,
-            GMTrackKeyframes::SpriteFrames(k) => k.serialize(builder)?,
-            GMTrackKeyframes::Bool(k) => k.serialize(builder)?,
-            GMTrackKeyframes::String(k) => k.serialize(builder)?,
-            GMTrackKeyframes::Color(k) => k.serialize(builder)?,
-            GMTrackKeyframes::Text(k) => k.serialize(builder)?,
-            GMTrackKeyframes::Particle(k) => k.serialize(builder)?,
-            GMTrackKeyframes::BroadcastMessage(k) => k.serialize(builder)?,
-        }
-        Ok(())
-    }
-}
-
 #[num_enum(i32)]
-pub enum GMSequencePlaybackType {
+pub enum PlaybackType {
     Oneshot = 0,
     Loop = 1,
-    Pingpong = 2,
+    PingPong = 2,
 }
 
 #[num_enum(i32)]
-pub enum GMAnimSpeedType {
+pub enum SpeedType {
     FramesPerSecond = 0,
     FramesPerGameFrame = 1,
-}
-
-#[num_enum(i32)]
-pub enum GMTrackBuiltinName {
-    None = 0, // No idea when/why this happens exactly
-    Gain = 5,
-    Pitch = 6,
-    Falloff = 7,
-    RotationOrImageAngle = 8,
-    BlendAdd = 9,
-    BlendMultiplyOrImageBlend = 10,
-    Mask = 12,
-    Subject = 13,
-    Position = 14,
-    Scale = 15,
-    Origin = 16,
-    ImageSpeed = 17,
-    ImageIndex = 18,
-    FrameSize = 20,
-    CharacterSpacing = 21,
-    LineSpacing = 22,
-    ParagraphSpacing = 23,
-}
-
-#[num_enum(i32)]
-pub enum GMTrackTraits {
-    None,
-    ChildrenIgnoreOrigin,
 }

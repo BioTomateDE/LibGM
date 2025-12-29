@@ -1,6 +1,6 @@
 use crate::{
     gamemaker::{
-        elements::{strings::StringPlaceholder, texture_page_items::GMTexturePageItem},
+        elements::{string::StringPlaceholder, texture_page_item::GMTexturePageItem},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },

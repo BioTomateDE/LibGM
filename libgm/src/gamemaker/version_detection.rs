@@ -19,7 +19,7 @@ use crate::{
             chunk::{ChunkBounds, ChunkMap},
             reader::DataReader,
         },
-        gm_version::{
+        version::{
             GMVersionReq,
             LTSBranch::{LTS, PostLTS, PreLTS},
         },
@@ -41,19 +41,26 @@ fn try_check<V: Into<GMVersionReq>>(
         return Ok(()); // No need to check if already
     }
 
-    if let Some(chunk) = reader.chunks.get_by_chunkname(chunk_name) {
-        reader.chunk = chunk.clone();
-        reader.cur_pos = chunk.start_pos;
-        if let Some(version_req) = check_fn(reader)? {
-            log::debug!(
-                "Upgraded Version from {} to {} using manual check in chunk '{}'",
-                reader.general_info.version,
-                version_req,
-                chunk_name,
-            );
-            reader.general_info.set_version_at_least(version_req)?;
-        }
+    let Some(chunk) = reader.chunks.get_by_name(chunk_name) else {
+        return Ok(());
+    };
+    reader.chunk = chunk.clone();
+    reader.cur_pos = chunk.start_pos;
+
+    let Some(version_req) = check_fn(reader)? else {
+        return Ok(());
+    };
+    if reader.general_info.is_version_at_least(version_req.clone()) {
+        return Ok(());
     }
+    log::debug!(
+        "Upgraded Version from {} to {} using manual check in chunk '{}'",
+        reader.general_info.version,
+        version_req,
+        chunk_name,
+    );
+    reader.general_info.set_version_at_least(version_req)?;
+
     Ok(())
 }
 
@@ -63,7 +70,7 @@ struct VersionCheck {
     /// The 4 letter name of the chunk where the check is performed.
     chunk_name: ChunkName,
 
-    // The function that performs the check.
+    /// The function that performs the check.
     checker_fn: CheckerFn,
 
     /// The (lowest) gamemaker version required for
@@ -90,10 +97,10 @@ impl VersionCheck {
     }
 }
 
-fn upgrade_by_chunk_existance(chunks: &ChunkMap) -> Option<GMVersionReq> {
+fn upgrade_by_chunk_existence(chunks: &ChunkMap) -> Option<GMVersionReq> {
     const UPGRADES: [(&str, GMVersionReq); 6] = [
         ("UILR", GMVersionReq::new(2024, 13, 0, 0, PostLTS)),
-        ("PSEM", GMVersionReq::new(2023, 13, 0, 0, PostLTS)),
+        ("PSEM", GMVersionReq::new(2023, 2, 0, 0, PostLTS)),
         ("FEAT", GMVersionReq::new(2022, 8, 0, 0, PreLTS)),
         ("FEDS", GMVersionReq::new(2, 3, 6, 0, PreLTS)),
         ("SEQN", GMVersionReq::new(2, 3, 0, 0, PreLTS)),
@@ -102,13 +109,16 @@ fn upgrade_by_chunk_existance(chunks: &ChunkMap) -> Option<GMVersionReq> {
 
     for (chunk_name, version) in UPGRADES {
         if chunks.contains(chunk_name) {
+            log::debug!(
+                "Existence of chunk '{chunk_name}' implies a Version of at least {version}"
+            );
             return Some(version);
         }
     }
     None
 }
 
-/// The `Into` trait is still not const unfortunately.
+/// TODO(const-hack): The `Into` trait is still not const unfortunately.
 fn create_version_checks() -> Vec<VersionCheck> {
     vec![
         VersionCheck::new("SOND", sond::check_2024_6, (2022, 2, PostLTS), (2024, 6)),
@@ -148,17 +158,17 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
     let saved_pos = reader.cur_pos;
     let saved_chunk: ChunkBounds = reader.chunk.clone();
 
-    if let Some(version) = upgrade_by_chunk_existance(&reader.chunks) {
+    if let Some(version) = upgrade_by_chunk_existence(&reader.chunks) {
         reader.general_info.set_version_at_least(version)?;
     }
 
-    if reader.general_info.bytecode_version >= 14 {
+    if reader.general_info.wad_version >= 14 {
         try_check(reader, "FUNC", func::check_2024_8, (2024, 8))?;
     }
-    if reader.general_info.bytecode_version >= 15 {
+    if reader.general_info.wad_version >= 15 {
         try_check(reader, "CODE", code::check_2023_8_and_2024_4, (2024, 4))?;
     }
-    if reader.general_info.bytecode_version >= 17 {
+    if reader.general_info.wad_version >= 17 {
         try_check(reader, "FONT", font::check_2022_2, (2022, 2))?;
     }
 
@@ -188,7 +198,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
             checks_to_remove[i] = true;
 
             // If chunk doesn't exist; just skip the check
-            let Some(chunk) = reader.chunks.get_by_chunkname(check.chunk_name) else {
+            let Some(chunk) = reader.chunks.get_by_name(check.chunk_name) else {
                 continue;
             };
 

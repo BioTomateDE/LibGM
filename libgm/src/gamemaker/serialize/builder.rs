@@ -3,15 +3,15 @@ use std::collections::HashMap;
 use crate::{
     gamemaker::{
         data::{Endianness, GMData},
-        elements::strings::StringPlaceholder,
-        gm_version::GMVersionReq,
+        elements::string::StringPlaceholder,
+        version::GMVersionReq,
     },
-    gml::instructions::GMVariableType,
+    gml::instruction::VariableType,
     prelude::*,
 };
 
 // The Default value should never be read.
-// This can only happen if there are zero existant chunks, though.
+// This can only happen if there are zero existent chunks, though.
 #[derive(Debug, Clone, Default)]
 pub struct LastChunk {
     pub length_pos: usize,
@@ -42,7 +42,7 @@ pub struct DataBuilder<'a> {
     /// Will be populated when code is built.
     /// - Outer Vec: Indexed by Variable index from `gm_data.variables.variables`
     /// - Inner Vec: List of `(written_position, variable_type)` tuples for each occurrence
-    pub variable_occurrences: Vec<Vec<(usize, GMVariableType)>>,
+    pub variable_occurrences: Vec<Vec<(usize, VariableType)>>,
 
     pub string_placeholders: Vec<StringPlaceholder>,
 
@@ -84,8 +84,8 @@ impl<'a> DataBuilder<'a> {
     }
 
     #[must_use]
-    pub const fn bytecode_version(&self) -> u8 {
-        self.gm_data.general_info.bytecode_version
+    pub const fn wad_version(&self) -> u8 {
+        self.gm_data.general_info.wad_version
     }
 
     /// Pads the internal buffer with zero bytes until its length is aligned to `alignment`.

@@ -1,6 +1,9 @@
-use std::fmt::{Display, Write};
+use std::fmt::{Display, Formatter, Write};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// A LibGM error.
+/// Contains an error message as well as a context chain.
+///
+#[derive(Debug, Clone)]
 pub struct Error {
     message: String,
     context: Vec<String>,
@@ -56,7 +59,7 @@ impl Error {
 }
 
 impl Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.message)
     }
 }
@@ -75,7 +78,7 @@ impl From<&str> for Error {
     }
 }
 
-/// Convenience type alias of [`std::result::Result`] with error type [`crate::error::Error`].
+/// Convenience type alias of [`std::result::Result`] with error type [`Error`].
 ///
 /// This type alias is also re-exported in `libgm::prelude`.
 pub type Result<T> = std::result::Result<T, Error>;
@@ -110,7 +113,7 @@ impl<T, S: Into<String>> Context<T> for std::result::Result<T, S> {
 }
 
 /// Perform an early return with the specified formatted message.
-/// This is a simple alias for `return Err(Error::new(format!(...))`.
+/// This is a simple alias for `return Err(Error::new(format!(...));`.
 macro_rules! bail {
     ($($arg:tt)*) => {
         return Err($crate::error::Error::new(format!($($arg)*)))

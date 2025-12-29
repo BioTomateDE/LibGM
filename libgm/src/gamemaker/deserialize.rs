@@ -1,8 +1,9 @@
-pub(crate) mod chunk;
+pub(super) mod chunk;
+mod integrity;
 mod lists;
 mod numbers;
 pub(crate) mod reader;
-pub mod resources;
+pub(super) mod resources;
 
 use std::path::Path;
 
@@ -14,42 +15,42 @@ use crate::{
             reader::DataReader,
         },
         elements::{
-            animation_curves::GMAnimationCurves,
-            audio_groups::GMAudioGroups,
-            backgrounds::GMBackgrounds,
+            animation_curve::GMAnimationCurves,
+            audio_group::GMAudioGroups,
+            background::GMBackgrounds,
             code::{GMCodes, check_yyc},
-            data_files::GMDataFiles,
+            data_file::GMDataFiles,
             embedded_audio::GMEmbeddedAudios,
-            embedded_images::GMEmbeddedImages,
-            embedded_textures::GMEmbeddedTextures,
-            extensions::GMExtensions,
-            feature_flags::GMFeatureFlags,
-            filter_effects::GMFilterEffects,
-            fonts::GMFonts,
-            functions::GMFunctions,
+            embedded_image::GMEmbeddedImages,
+            embedded_texture::GMEmbeddedTextures,
+            extension::GMExtensions,
+            feature_flag::GMFeatureFlags,
+            filter_effect::GMFilterEffects,
+            font::GMFonts,
+            function::GMFunctions,
             game_end::GMGameEndScripts,
-            game_objects::GMGameObjects,
+            game_object::GMGameObjects,
             global_init::GMGlobalInitScripts,
-            languages::GMLanguageInfo,
+            language::GMLanguageInfo,
             options::GMOptions,
-            particle_emitters::GMParticleEmitters,
-            particle_systems::GMParticleSystems,
-            paths::GMPaths,
-            rooms::GMRooms,
-            scripts::GMScripts,
+            particle_emitter::GMParticleEmitters,
+            particle_system::GMParticleSystems,
+            path::GMPaths,
+            room::GMRooms,
+            script::GMScripts,
             sequence::GMSequences,
-            shaders::GMShaders,
-            sounds::GMSounds,
-            sprites::GMSprites,
-            strings::GMStrings,
-            tags::GMTags,
+            shader::GMShaders,
+            sound::GMSounds,
+            sprite::GMSprites,
+            string::GMStrings,
+            tag::GMTags,
             texture_group_info::GMTextureGroupInfos,
-            texture_page_items::GMTexturePageItems,
-            timelines::GMTimelines,
-            ui_nodes::GMRootUINodes,
-            variables::GMVariables,
+            texture_page_item::GMTexturePageItems,
+            timeline::GMTimelines,
+            ui_node::GMRootUINodes,
+            variable::GMVariables,
         },
-        gm_version::{GMVersion, LTSBranch},
+        version::{GMVersion, LTSBranch},
         version_detection::detect_gamemaker_version,
     },
     prelude::*,
@@ -173,22 +174,24 @@ impl ParsingOptions {
         }
 
         log::info!(
-            "Loading {:?} (GM {}, Bytecode {})",
-            reader.general_info.display_name,
+            "Loading {:?} (GM {}, WAD {})",
+            reader.general_info.game_name,
             reader.general_info.version,
-            reader.general_info.bytecode_version,
+            reader.general_info.wad_version,
         );
+
+        let texture_page_items: GMTexturePageItems = reader.read_chunk()?;
 
         let is_yyc: bool = check_yyc(&reader).context("Checking YYC")?;
         let mut variables = GMVariables::default();
         let mut functions = GMFunctions::default();
         let mut codes = GMCodes::default();
 
-        let texture_page_items: GMTexturePageItems = reader.read_chunk()?;
-
         let mut stopwatch2 = Stopwatch::start();
         if is_yyc {
             log::warn!("YYC is untested, issues may occur");
+            // Need to remove STRG to not throw "unread chunk" error
+            reader.chunks.remove("STRG");
         } else {
             reader.read_chunk::<GMStrings>()?; // Set `reader.strings`
             variables = reader.read_chunk()?; // Set `reader.variable_occurrences`

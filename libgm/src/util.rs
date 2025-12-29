@@ -5,4 +5,3 @@ pub mod fmt;
 pub mod hint;
 pub mod init;
 pub mod rng;
-pub mod smallmap;

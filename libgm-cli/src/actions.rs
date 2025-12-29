@@ -1,8 +1,11 @@
 use clap::ValueEnum;
-use libgm::gamemaker::elements::GMNamedListChunk;
 use libgm::{
-    gamemaker::{data::GMData, elements::scripts::GMScript, reference::GMRef},
-    gml::{assembly::assemble_code, instructions::GMCode},
+    gamemaker::{
+        data::GMData,
+        elements::{GMNamedListChunk, script::GMScript},
+        reference::GMRef,
+    },
+    gml::{assembly::assemble_code, instruction::GMCode},
     prelude::*,
 };
 

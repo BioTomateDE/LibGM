@@ -1,10 +1,9 @@
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
-        gm_version::{GMVersionReq, LTSBranch::PostLTS},
+        version::{GMVersionReq, LTSBranch::PostLTS},
     },
     prelude::*,
-    util::assert::assert_int,
 };
 
 pub fn check_2022_9(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
@@ -12,8 +11,7 @@ pub fn check_2022_9(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         return Ok(None);
     }
 
-    assert_int("TGIN Version", 1, reader.read_u32()?)?;
-
+    reader.read_gms2_chunk_version("TGIN Version")?;
     let tgin_count = reader.read_u32()?;
     if tgin_count < 1 {
         return Ok(None);
@@ -41,7 +39,7 @@ pub fn check_2023_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         return Ok(None);
     }
 
-    assert_int("TGIN Version", 1, reader.read_u32()?)?;
+    reader.read_gms2_chunk_version("TGIN Version")?;
 
     let tgin_count = reader.read_u32()?;
     if tgin_count < 1 {

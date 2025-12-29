@@ -17,10 +17,25 @@ pub fn format_bytes(bytes: usize) -> String {
     format!("{:.1} {}", size, UNITS[unit_idx])
 }
 
-pub fn hexdump(raw_data: &[u8], range: impl RangeBounds<usize>) -> Result<String> {
-    use std::fmt::Write;
-    #[allow(clippy::enum_glob_use)]
-    use std::ops::Bound::*;
+pub fn hexdump(raw_data: &[u8]) -> String {
+    if raw_data.is_empty() {
+        return String::new();
+    }
+
+    let mut buffer = String::with_capacity(raw_data.len() * 3);
+    for byte in raw_data {
+        use std::fmt::Write as _;
+        write!(&mut buffer, "{byte:02X} ").unwrap();
+    }
+
+    // Pop last space character.
+    buffer.pop();
+
+    buffer
+}
+
+pub fn hexdump_range(raw_data: &[u8], range: impl RangeBounds<usize>) -> Result<String> {
+    use std::ops::Bound::{Excluded, Included, Unbounded};
 
     let len = raw_data.len();
     let start = match range.start_bound() {
@@ -35,32 +50,24 @@ pub fn hexdump(raw_data: &[u8], range: impl RangeBounds<usize>) -> Result<String
     };
 
     if start > len || end > len {
-        bail!("Range out of bounds: {}..{} for length {}", start, end, len);
+        bail!("Range out of bounds: {start}..{end} for length {len}");
     }
     if start > end {
-        bail!("Invalid range: start {} > end {}", start, end);
+        bail!("Invalid range: start {start} > end {end}");
     }
 
-    let slice = &raw_data[start..end];
-    if slice.is_empty() {
-        return Ok(String::new());
-    }
-
-    let mut string = String::with_capacity(slice.len() * 3 - 1);
-    for (i, &byte) in slice.iter().enumerate() {
-        if i > 0 {
-            string.push(' ');
-        }
-        write!(&mut string, "{byte:02X}").unwrap();
-    }
-
-    Ok(string)
+    let slice: &[u8] = &raw_data[start..end];
+    Ok(hexdump(slice))
 }
 
-/// Gets the name of the type without path.
-/// Standard type name: `std::option::Option<libgm::gamemaker::elements::sprites::GMSprite>`
-/// This type name: `Option<GMSprite>`
-pub fn typename<T>() -> String {
-    // Hopefully this can be made `const` soon
-    tynm::type_name::<T>()
+/// This function should only ever be called when an error has already occurred.
+///
+/// It basically just gets the typename in a slightly more readable manner.
+pub fn typename<T>() -> &'static str {
+    let ty = std::any::type_name::<T>();
+    if let Some(index) = ty.find("GM") {
+        return &ty[index..];
+    }
+    ty.strip_prefix("libgm::gamemaker::elements::")
+        .unwrap_or(ty)
 }

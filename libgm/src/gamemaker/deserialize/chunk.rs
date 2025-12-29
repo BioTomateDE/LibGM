@@ -4,10 +4,10 @@ use crate::{
         data::Endianness,
         deserialize::reader::DataReader,
         elements::{GMChunk, GMElement},
-        gm_version::GMVersion,
+        version::GMVersion,
     },
     prelude::*,
-    util::{bench::Stopwatch, smallmap::SmallMap},
+    util::bench::Stopwatch,
 };
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -32,61 +32,80 @@ impl ChunkBounds {
 const KNOWN_CHUNK_COUNT: usize = 35;
 
 #[derive(Debug, Default)]
-pub struct ChunkMap(SmallMap<ChunkName, ChunkBounds>);
+pub struct ChunkMap(Vec<(ChunkName, ChunkBounds)>);
 
 impl ChunkMap {
-    #[inline]
     #[must_use]
     pub fn new() -> Self {
-        Self(SmallMap::with_capacity(KNOWN_CHUNK_COUNT))
+        Self(Vec::with_capacity(KNOWN_CHUNK_COUNT))
     }
 
-    #[inline]
     #[must_use]
     pub const fn count(&self) -> usize {
         self.0.len()
     }
 
-    #[inline]
     #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
-    #[inline]
+    #[must_use]
+    pub fn contains_name(&self, chunk_name: ChunkName) -> bool {
+        for (name, _) in &self.0 {
+            if *name == chunk_name {
+                return true;
+            }
+        }
+        false
+    }
+
+    #[must_use]
+    pub fn contains(&self, name: &'static str) -> bool {
+        self.contains_name(ChunkName::new(name))
+    }
+
     pub fn push(&mut self, name: ChunkName, chunk: ChunkBounds) -> Result<()> {
-        if self.0.contains_key(&name) {
+        if unlikely(self.contains_name(name)) {
             bail!("Chunk {name:?} is defined multiple times");
         }
-        self.0.insert(name, chunk);
+        self.0.push((name, chunk));
         Ok(())
     }
 
-    pub fn contains(&self, name: &'static str) -> bool {
-        self.0.contains_key(&ChunkName::new(name))
+    #[must_use]
+    pub fn get_by_name(&self, chunk_name: ChunkName) -> Option<ChunkBounds> {
+        for (name, bounds) in &self.0 {
+            if *name == chunk_name {
+                return Some(bounds.clone());
+            }
+        }
+        None
     }
 
-    #[inline]
     #[must_use]
     pub fn get(&self, name: &'static str) -> Option<ChunkBounds> {
-        self.get_by_chunkname(ChunkName::new(name))
+        self.get_by_name(ChunkName::new(name))
     }
 
-    #[inline]
-    #[must_use]
-    pub fn get_by_chunkname(&self, name: ChunkName) -> Option<ChunkBounds> {
-        self.0.get(&name).cloned()
+    pub fn remove(&mut self, name: &'static str) -> Option<ChunkBounds> {
+        self.remove_name(ChunkName::new(name))
     }
 
-    #[inline]
-    #[must_use]
-    pub fn remove(&mut self, name: ChunkName) -> Option<ChunkBounds> {
-        self.0.remove(&name)
+    pub fn remove_name(&mut self, chunk_name: ChunkName) -> Option<ChunkBounds> {
+        for i in 0..self.count() {
+            let name = &self.0[i].0;
+            if *name == chunk_name {
+                let bounds = self.0.remove(i).1;
+                return Some(bounds);
+            }
+        }
+        None
     }
 
     #[inline]
     pub fn chunk_names(&self) -> impl Iterator<Item = ChunkName> {
-        self.0.keys().copied()
+        self.0.iter().map(|(name, _)| *name)
     }
 }
 
@@ -105,7 +124,12 @@ impl DataReader<'_> {
     }
 
     pub fn read_chunk<T: GMChunk>(&mut self) -> Result<T> {
-        let Some(chunk) = self.chunks.remove(T::NAME) else {
+        // If the chunk doesn't exist, return the `default` stub.
+        // This will also set `exists` to false.
+        //
+        // The chunk metadata is removed from the struct so
+        // that unread chunks can easily be detected later.
+        let Some(chunk) = self.chunks.remove_name(T::NAME) else {
             return Ok(T::default());
         };
 
@@ -140,8 +164,8 @@ impl DataReader<'_> {
     fn read_chunk_padding(&mut self) -> Result<()> {
         // Padding only for GMS2+ and 1.9999+
         let ver: &GMVersion = &self.specified_version;
-        let padding_elegible = ver.major >= 2 || (ver.major == 1 && ver.minor >= 9999);
-        if !padding_elegible {
+        let padding_eligible = ver.major >= 2 || (ver.major == 1 && ver.build >= 9999);
+        if !padding_eligible {
             return Ok(());
         }
 
