@@ -1,3 +1,5 @@
+//! The full GameMaker data struct, containing all information from a data file.
+
 use std::path::PathBuf;
 
 use crate::{
@@ -17,11 +19,11 @@ use crate::{
     prelude::*,
 };
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 /// Byte order (endianness) for integers and chunk names in data files.
 ///
 /// Most modern platforms use little-endian, which is the default.
 /// Big-endian support exists for legacy platforms and **may be deprecated**.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Endianness {
     /// Little-endian byte order (reversed bytes).
     ///
@@ -38,6 +40,7 @@ pub enum Endianness {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// The full GameMaker data struct, containing all information from a data file.
 pub struct GMData {
     pub animation_curves: GMAnimationCurves,      // ACRV
     pub audio_groups: GMAudioGroups,              // AGRP
@@ -175,6 +178,17 @@ impl GMData {
         validate_names(&self.sounds)?;
         validate_names(&self.sprites)?;
         validate_names(&self.texture_group_infos)?;
+        Ok(())
+    }
+
+    /// Deserializes all embedded texture pages, turning them into `DynamicImage`s.
+    pub fn deserialize_textures(&mut self) -> Result<()> {
+        for texture_page in &mut self.embedded_textures {
+            let Some(image) = &mut texture_page.image else {
+                continue;
+            };
+            image.convert_to_dynamic_image()?;
+        }
         Ok(())
     }
 }

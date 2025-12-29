@@ -1,3 +1,5 @@
+//! Contains the `GMRef` type which is used to refer to other GameMaker elements.
+
 use std::{
     fmt::{Debug, Formatter},
     hash::{Hash, Hasher},
@@ -5,16 +7,22 @@ use std::{
 
 use crate::{prelude::*, util::fmt::typename};
 
-/// `GMRef` has (fake) generic types to make it clearer which type
-/// it belongs to (`name: GMRef` vs `name: String`).
+/// A reference to another GameMaker element.
+///
+/// This is typically a Reference by ID in the data file format,
+/// but is also used for texture page items (which are pointers).
+///
+/// `[GMRef]` has (fake) generic types to make it clearer which type it belongs to.
+/// * Example without: `pub texture_mask: GMRef`
+/// * Example with: `pub texture_mask: GMRef<GMSprite>`
 ///
 /// It can be resolved to the data it references using the `.resolve()` method,
-/// which needs the list the elements are stored in.
+/// which needs the vector the elements are stored in.
 /// This means that removing or inserting elements in the middle of
 /// the list will shift all their `GMRef`s; breaking them.
 pub struct GMRef<T> {
     /// The GameMaker ID / Index of this resource in the corresponding element vector.
-    pub index: u32,
+    pub(crate) index: u32,
 
     /// Marker needs to be here to ignore "unused generic T" error; doesn't store any data.
     _marker: std::marker::PhantomData<T>,

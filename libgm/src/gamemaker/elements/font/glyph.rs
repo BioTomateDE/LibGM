@@ -12,10 +12,10 @@ pub struct Glyph {
     /// The character this glyph represents.
     pub character: Option<char>,
 
-    /// The x position in the [`GMFont`].`texture` where the glyph can be found.
+    /// The x position in the `GMFont.texture` where the glyph can be found.
     pub x: u16,
 
-    /// The y position in the [`GMFont`].`texture` where the glyph can be found.
+    /// The y position in the `GMFont.texture` where the glyph can be found.
     pub y: u16,
 
     /// The width of the glyph in pixels.

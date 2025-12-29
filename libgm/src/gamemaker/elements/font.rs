@@ -115,7 +115,7 @@ pub struct GMFont {
     /// The end of the character range for this font.
     pub range_end: u32,
 
-    /// The `[GMTexturePageItem]` object that contains the texture for this font.
+    /// The [`GMTexturePageItem`] element that contains the texture for this font.
     pub texture: GMRef<GMTexturePageItem>,
 
     /// The X Scale this font uses.

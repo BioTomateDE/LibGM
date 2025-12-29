@@ -1,3 +1,7 @@
+//! Functions and builder structs related to parsing GameMaker data files.
+//!
+//! Some of these functions are also re-exported at the crate root.
+
 pub(super) mod chunk;
 mod integrity;
 mod lists;

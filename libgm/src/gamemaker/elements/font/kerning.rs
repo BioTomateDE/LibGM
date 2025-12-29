@@ -9,7 +9,7 @@ use crate::{
 pub struct Kerning {
     /// The preceding character.
     pub character: char,
-    /// An amount of pixels to add to the existing [`GMFontGlyph`].`shift_modifier`.
+    /// An amount of pixels to add to the existing `Glyph.shift_modifier`.
     pub shift_modifier: i16,
 }
 

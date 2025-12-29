@@ -1,4 +1,4 @@
-//! This module contains everything related to parsing and building of GameMaker data files.
+//! Everything related to parsing and building of GameMaker data files.
 //!
 //! GameMaker is a Game Engine created by YoYoGames.
 //! You will see the abbreviations "GM" and "YY" a lot.
@@ -10,28 +10,30 @@
 //! # Distinction between data file and runner
 //!
 //! A compiled GameMaker game consists of two main components:
-//! - The data file
-//! - The runner
+//! * The data file
+//! * The runner
 //!
 //! The data file (typically named `data.xxx` or `game.xxx`)
 //! contains all the game's static resources in a binary format.
-//! Common file extensions include `.win`, `.unx`, `.droid`, and `.ios`,
+//! Common file extensions include `.win`, `.unx`, `.droid`, and `.ios`
+//! for their respective platforms,
 //! though YoYoGames sometimes uses `.win` for console targets as well.
 //!
 //! This data file stores virtually all game content, including:
-//! - Textures and sprite data
-//! - Audio files
-//! - Room game objects
-//! - GML bytecode (unless YYC)
-//! - Other game assets and configuration
+//! * Textures and sprite data
+//! * Audio files
+//! * Rooms
+//! * Game objects
+//! * GML bytecode (unless YYC)
+//! * Other game assets and configuration
 //!
 //! **This library (LibGM) provides tools to parse and modify these GameMaker data files.**
 //!
 //! The runner is the executable program that loads and runs the data file. It handles:
-//! - Input processing (keyboard, mouse, controllers)
-//! - Video and audio output
-//! - Game state management
-//! - Real-time game execution
+//! * Input processing (keyboard, mouse, controllers)
+//! * Video and audio output
+//! * Game state management
+//! * Real-time game execution
 //!
 //! The runner is a reusable\* executable that can run any
 //! GameMaker game built for the same version.
@@ -97,10 +99,10 @@
 //! > and it would unnecessarily make things more complicated.
 //!
 //! Chunks are structured similar to FORM:
-//! - Chunk name [4 bytes]
-//! - Chunk length (excluding this header) [4 bytes]
-//! - Chunk data [n bytes]
-//! - Potentially chunk padding (nullbytes), depending on the platform and version.
+//! * Chunk name [4 bytes]
+//! * Chunk length (excluding this header) [4 bytes]
+//! * Chunk data [n bytes]
+//! * Potentially chunk padding (nullbytes), depending on the platform and version.
 //!
 //! Most chunks are of "pointer list type"; UndertaleModLib calls them `UndertaleListChunk`.
 //! To understand what that means, we first need to look at list structures in data files.
@@ -108,32 +110,32 @@
 //! # Lists
 //!
 //! There are two common list types:
-//! - Simple lists
-//! - Pointer lists
+//! * Simple lists
+//! * Pointer lists
 //!
 //! Simple lists have the following structure:
-//! - Element count [4 bytes]
-//! - Element #1 [n bytes]
-//! - Element #2 [n bytes]
-//! - ...
-//! - Element #count-1 [n bytes]
-//! - Element #count [n bytes]
+//! * Element count [4 bytes]
+//! * Element #1 [n bytes]
+//! * Element #2 [n bytes]
+//! * ...
+//! * Element #count-1 [n bytes]
+//! * Element #count [n bytes]
 //!
 //! In other words, they store their element count, followed by the element data.
 //! Simple indeed. (TODO: are the element sizes always the same?)
 //!
 //! Pointer lists have the following structure:
-//! - Element count [4 bytes]
-//! - Pointer to element #1 [4 bytes]
-//! - Pointer to element #2 [4 bytes]
-//! - ...
-//! - Pointer to element #count-1 [4 bytes]
-//! - Pointer to element #count [4 bytes]
-//! - Element #1 [n bytes]
-//! - Element #2 [n bytes]
-//! - ...
-//! - Element #count-1 [n bytes]
-//! - Element #count [n bytes]
+//! * Element count [4 bytes]
+//! * Pointer to element #1 [4 bytes]
+//! * Pointer to element #2 [4 bytes]
+//! * ...
+//! * Pointer to element #count-1 [4 bytes]
+//! * Pointer to element #count [4 bytes]
+//! * Element #1 [n bytes]
+//! * Element #2 [n bytes]
+//! * ...
+//! * Element #count-1 [n bytes]
+//! * Element #count [n bytes]
 //!
 //! In other words, they store their element count, a list of 32-bit pointers to
 //! the corresponding element data and then their actual elements' data.
