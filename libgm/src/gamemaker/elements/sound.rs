@@ -35,12 +35,9 @@ pub struct GMSound {
     /// This name is used when referencing this entry from code.
     pub name: String,
 
-    /// The raw flags of this sound.
-    /// WARNING: This field is unstable and may be removed in the future.
-    pub flags: u32,
-
-    /// Whether this sound uses the new audio system (post GM8).
-    pub flag_regular: bool,
+    /// The flags of this sound.
+    /// This field is a bit unstable and may be changed in the future.
+    pub flags: GMSoundFlags,
 
     /// The file format of the audio entry.
     /// This includes the `.` from the file extension.
@@ -48,13 +45,13 @@ pub struct GMSound {
     /// - `.wav`
     /// - `.mp3`
     /// - `.ogg`
-    pub audio_type: Option<String>,
+    pub audio_type: AudioType,
 
     /// The original file name of the audio entry.
     /// This is the full filename how it was loaded in the project.
     /// This will be used if the sound effect is streamed from disk to find the sound file.
     ///
-    /// This is used if the [`GMSoundFlags::is_embedded`] flag is set.
+    /// This is used if the [`GMSoundFlags::is_embedded`] flag is not set.
     pub file: String,
 
     /// A pre-`GameMaker Studio` way of having certain effects on a sound effect.
@@ -97,17 +94,25 @@ impl GMElement for GMSound {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: String = reader.read_gm_string()?;
 
-        let flags = reader.read_u32()?;
-        let flag_regular = (flags >> 5) & 1 == 1;
+        let flags = GMSoundFlags::deserialize(reader)?;
 
         let audio_type: Option<String> = reader.read_gm_string_opt()?;
+        let audio_type = match audio_type.as_deref() {
+            Some(".wav") => AudioType::Wav,
+            Some(".ogg") => AudioType::Ogg,
+            Some(".mp3") => AudioType::Mp3,
+            Some(other) => bail!("Invalid or unknown audio type {other:?}"),
+            None => AudioType::Unknown,
+        };
+
         let file: String = reader.read_gm_string()?;
         let effects = reader.read_u32()?;
         let volume = reader.read_f32()?;
         let pitch = reader.read_f32()?;
 
         let audio_group: GMRef<GMAudioGroup>;
-        if flag_regular && reader.general_info.wad_version >= 14 {
+        if reader.general_info.wad_version >= 14 {
+            // Only if flags.regular (doesn't exist for now)
             audio_group = reader.read_resource_by_id()?;
         } else {
             let preload = reader.read_bool32().context("reading preload")?;
@@ -121,7 +126,6 @@ impl GMElement for GMSound {
         Ok(Self {
             name,
             flags,
-            flag_regular,
             audio_type,
             file,
             effects,
@@ -135,13 +139,23 @@ impl GMElement for GMSound {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name);
-        builder.write_u32(self.flags);
-        builder.write_gm_string_opt(&self.audio_type);
+        self.flags.serialize(builder)?;
+
+        let audio_type = match self.audio_type {
+            AudioType::Unknown => None,
+            AudioType::Wav => Some(".wav"),
+            AudioType::Ogg => Some(".ogg"),
+            AudioType::Mp3 => Some(".mp3"),
+        };
+        let audio_type = audio_type.map(String::from);
+
+        builder.write_gm_string_opt(&audio_type);
         builder.write_gm_string(&self.file);
         builder.write_u32(self.effects);
         builder.write_f32(self.volume);
         builder.write_f32(self.pitch);
-        if self.flag_regular && builder.wad_version() >= 14 {
+        if builder.wad_version() >= 14 {
+            // Only if flags.regular (not stored for now)
             builder.write_resource_id(self.audio_group);
         } else {
             builder.write_bool32(true); // Preload
@@ -153,8 +167,54 @@ impl GMElement for GMSound {
     }
 }
 
+#[allow(clippy::bool_to_int_with_if)] // Lol this is a coincidence
+/// The exact versions may be inaccurate.
 fn get_builtin_sound_group_id(gm_version: &GMVersion) -> u32 {
-    let is_ver = |req| gm_version.is_version_at_least(req); // Small closure for concision
     // ver >= 1.0.0.1250 || (ver >= 1.0.0.161 && ver < 1.0.0.1000)
-    u32::from(!(is_ver((1, 0, 0, 1250)) || is_ver((1, 0, 0, 161)) && !is_ver((1, 0, 0, 1000))))
+    let is_ver = |build| gm_version.is_version_at_least((1, 0, 0, build));
+    if is_ver(1250) || is_ver(161) && !is_ver(1000) {
+        0
+    } else {
+        1
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AudioType {
+    Unknown,
+    Wav,
+    Ogg,
+    Mp3,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+/// The `regular` flag may be added later to support GM8.
+pub struct GMSoundFlags {
+    pub embedded: bool,
+    pub compressed: bool,
+}
+
+impl GMElement for GMSoundFlags {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let raw = reader.read_u32()?;
+        Ok(match raw {
+            100 => Self { embedded: false, compressed: false },
+            101 => Self { embedded: true, compressed: false },
+            102 => Self { embedded: false, compressed: true },
+            _ => bail!("Invalid/Unknown sound flags {raw}, please report ts error"),
+        })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+        let mut raw = 100;
+        if self.embedded {
+            raw |= 1;
+        }
+        if self.compressed {
+            raw |= 2;
+        }
+        builder.write_u32(raw);
+        Ok(())
+    }
 }
