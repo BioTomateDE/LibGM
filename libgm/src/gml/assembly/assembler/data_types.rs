@@ -1,9 +1,9 @@
 use std::ops::Index;
 
-use crate::{gml::instructions::GMDataType, prelude::*};
+use crate::{gml::instruction::DataType, prelude::*};
 
 #[derive(Debug, Clone, Copy)]
-pub struct DataTypes(Option<GMDataType>, Option<GMDataType>);
+pub struct DataTypes(Option<DataType>, Option<DataType>);
 
 impl DataTypes {
     #[must_use]
@@ -32,7 +32,7 @@ impl DataTypes {
         Ok(())
     }
 
-    pub fn push(&mut self, data_type: GMDataType) -> Result<()> {
+    pub fn push(&mut self, data_type: DataType) -> Result<()> {
         if self.1.is_some() {
             bail!("An Instruction can only have 0-2 data types");
         }
@@ -47,7 +47,7 @@ impl DataTypes {
 
 /// Indexing is only meant to be used after validating the type count.
 impl Index<u8> for DataTypes {
-    type Output = GMDataType;
+    type Output = DataType;
     fn index(&self, index: u8) -> &Self::Output {
         match index {
             0 => self.0.as_ref().unwrap(),
@@ -57,7 +57,7 @@ impl Index<u8> for DataTypes {
     }
 }
 
-impl GMDataType {
+impl DataType {
     pub(super) fn from_char(data_type: char) -> Result<Self> {
         Ok(match data_type {
             'v' => Self::Variable,

@@ -1,3 +1,3 @@
 pub mod assembly;
-pub mod instructions;
+pub mod instruction;
 pub(crate) mod opcodes;

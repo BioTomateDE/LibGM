@@ -1,6 +1,6 @@
 use crate::{
     gamemaker::{
-        deserialize::reader::DataReader, elements::rooms::GMRoomLayerType, gm_version::GMVersionReq,
+        deserialize::reader::DataReader, elements::room::layer::Type, version::GMVersionReq,
     },
     prelude::*,
     util::init::num_enum_from,
@@ -39,32 +39,32 @@ pub fn check_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         // Actually perform the length checks, depending on layer data
         reader.cur_pos = jump_pointer;
         let layer_type = reader.read_i32()?;
-        let Ok(layer_type) = GMRoomLayerType::try_from(layer_type) else {
+        let Ok(layer_type) = Type::try_from(layer_type) else {
             continue;
         };
 
         match layer_type {
-            GMRoomLayerType::Path | GMRoomLayerType::Path2 => continue,
-            GMRoomLayerType::Background => {
+            Type::Path | Type::Path2 => continue,
+            Type::Background => {
                 if next_pointer - reader.cur_pos > 16 * 4 {
                     return target_ver;
                 }
             },
-            GMRoomLayerType::Instances => {
+            Type::Instances => {
                 reader.cur_pos += 6 * 4;
                 let instance_count = reader.read_u32()?;
                 if next_pointer - reader.cur_pos != instance_count * 4 {
                     return target_ver;
                 }
             },
-            GMRoomLayerType::Assets => {
+            Type::Assets => {
                 reader.cur_pos += 6 * 4;
                 let tile_pointer = reader.read_u32()?;
                 if tile_pointer != reader.cur_pos + 8 && tile_pointer != reader.cur_pos + 12 {
                     return target_ver;
                 }
             },
-            GMRoomLayerType::Tiles => {
+            Type::Tiles => {
                 reader.cur_pos += 6 * 4;
                 let tile_map_width = reader.read_u32()?;
                 let tile_map_height = reader.read_u32()?;
@@ -72,7 +72,7 @@ pub fn check_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
                     return target_ver;
                 }
             },
-            GMRoomLayerType::Effect => {
+            Type::Effect => {
                 reader.cur_pos += 7 * 4;
                 let property_count = reader.read_u32()?;
                 if next_pointer - reader.cur_pos != (property_count * 3 * 4) {
@@ -159,8 +159,8 @@ pub fn check_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
 
             // Actually perform the length checks
             reader.cur_pos = layer_data_ptr + 8;
-            let layer_type: GMRoomLayerType = num_enum_from(reader.read_i32()?)?;
-            if layer_type != GMRoomLayerType::Tiles {
+            let layer_type: Type = num_enum_from(reader.read_i32()?)?;
+            if layer_type != Type::Tiles {
                 check_next_layer_offset = false;
                 continue;
             }

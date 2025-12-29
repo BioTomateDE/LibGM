@@ -1,4 +1,5 @@
 mod actions;
+mod logging;
 mod tests;
 
 use std::{
@@ -18,8 +19,8 @@ use crate::{actions::Action, tests::Test};
 #[derive(Parser, Debug)]
 struct Args {
     /// The GameMaker data file(s) to load (comma separated)
-    /// Default: ./data.win
-    #[arg(short, long, value_delimiter = ',')]
+    /// | Default: ./data.win
+    #[arg(value_delimiter = ',')]
     files: Vec<PathBuf>,
 
     /// The path of the output data file to build.
@@ -27,7 +28,7 @@ struct Args {
     #[arg(short, long)]
     out: Option<PathBuf>,
 
-    /// The tests to execute.
+    /// The tests to execute
     #[arg(short, long, value_delimiter = ',')]
     tests: Vec<Test>,
 
@@ -116,14 +117,17 @@ fn run(mut args: Args) -> Result<()> {
 }
 
 fn main() {
-    unsafe {
-        std::env::set_var("RUST_LOG", "trace");
-    }
-    pretty_env_logger::init();
+    logging::init();
 
     let args = Args::parse();
     if let Err(error) = run(args) {
-        log::error!("{}", error.chain_pretty());
+        let chain_fn = if cfg!(target_os = "windows") {
+            // Windows is ass and usually can't display these arrows correctly
+            Error::chain
+        } else {
+            Error::chain_pretty
+        };
+        log::error!("{}", chain_fn(&error));
         std::process::exit(1);
     }
 

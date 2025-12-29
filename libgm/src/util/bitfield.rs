@@ -18,12 +18,12 @@ macro_rules! bitfield_struct {
         }
 
         impl crate::gamemaker::elements::GMElement for $name {
-            fn deserialize(reader: &mut crate::gamemaker::deserialize::reader::DataReader) -> Result<Self> {
+            fn deserialize(reader: &mut crate::gamemaker::deserialize::reader::DataReader) -> crate::error::Result<Self> {
                 let raw = <$int>::deserialize(reader)?;
                 Ok(Self::parse(raw))
             }
 
-            fn serialize(&self, builder: &mut crate::gamemaker::serialize::builder::DataBuilder) -> Result<()> {
+            fn serialize(&self, builder: &mut crate::gamemaker::serialize::builder::DataBuilder) -> crate::error::Result<()> {
                 self.build().serialize(builder)
             }
         }

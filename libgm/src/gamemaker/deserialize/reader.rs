@@ -9,14 +9,14 @@ use crate::{
             chunk::{ChunkBounds, ChunkMap},
         },
         elements::{
-            GMElement, functions::GMFunction, general_info::GMGeneralInfo,
-            texture_page_items::GMTexturePageItem, variables::GMVariable,
+            GMElement, function::GMFunction, general_info::GMGeneralInfo,
+            texture_page_item::GMTexturePageItem, variable::GMVariable,
         },
-        gm_version::{GMVersion, GMVersionReq},
         reference::GMRef,
+        version::{GMVersion, GMVersionReq},
     },
     prelude::*,
-    util::assert::assert_int,
+    util::assert,
 };
 
 #[derive(Debug)]
@@ -58,7 +58,7 @@ pub struct DataReader<'a> {
     /// Is properly initialized after parsing `FORM`.
     pub last_chunk: ChunkName,
 
-    /// General info about this data file. Includes game name, GameMaker Version and Bytecode Version.
+    /// General info about this data file. Includes game name, GameMaker Version and WAD Version.
     /// Contains garbage placeholders until the `GEN8` chunk is deserialized.
     /// Use [`DataReader::unstable_get_gm_version`] to get the GameMaker version before `GEN8` is parsed.
     pub general_info: GMGeneralInfo,
@@ -72,25 +72,26 @@ pub struct DataReader<'a> {
     /// Is properly initialized after parsing `FORM`.
     pub string_chunk: ChunkBounds,
 
-    // Properly initialized after parsing `FORM`.
+    /// Contains parsing options (wow!).
+    /// Properly initialized after parsing `FORM`.
     pub options: ParsingOptions,
 
-    /// Should only be set by [`crate::gamemaker::elements::texture_page_items`].
+    /// Should only be set by [`crate::gamemaker::elements::texture_page_item`].
     /// This means that `TPAG` has to be parsed before any chunk with texture page item pointers.
     pub texture_page_item_occurrences: HashMap<u32, GMRef<GMTexturePageItem>>,
 
-    /// Should only be set by [`crate::gamemaker::elements::variables`].
+    /// Should only be set by [`crate::gamemaker::elements::variable`].
     /// This means that `VARI` has to be parsed before `CODE`.
     pub variable_occurrences: HashMap<u32, GMRef<GMVariable>>,
 
-    /// Should only be set by [`crate::gamemaker::elements::functions`].
+    /// Should only be set by [`crate::gamemaker::elements::function`].
     /// This means that `FUNC` has to be parsed before `CODE`.
     pub function_occurrences: HashMap<u32, GMRef<GMFunction>>,
 }
 
 impl<'a> DataReader<'a> {
     pub fn new(data: &'a [u8]) -> Self {
-        // Memory Safety Assertion. This should've been verfied before, though.
+        // Memory Safety Assertion. This should've been verified before, though.
         let end_pos: u32 = data
             .len()
             .try_into()
@@ -152,11 +153,6 @@ impl<'a> DataReader<'a> {
             );
         }
 
-        #[cfg(not(any(target_pointer_width = "32", target_pointer_width = "64")))]
-        compile_error!(
-            "Cannot safely convert u32 to usize on this platform (target pointer width not 32 or 64)"
-        );
-
         // SAFETY: If chunk.end_pos is set correctly, this should never read memory out of bounds.
 
         let start = start as usize;
@@ -189,7 +185,7 @@ impl<'a> DataReader<'a> {
             1 => Ok(true),
             n => bail!(
                 "Read invalid boolean value {n} (0x{n:08X}) at position {}",
-                self.cur_pos,
+                self.cur_pos - 4,
             ),
         }
     }
@@ -221,22 +217,8 @@ impl<'a> DataReader<'a> {
     pub fn align(&mut self, alignment: u32) -> Result<()> {
         while !self.cur_pos.is_multiple_of(alignment) {
             let byte = self.read_u8()?;
-            assert_int("Padding Byte", 0, byte)
+            assert::int(byte, 0, "Padding Byte")
                 .with_context(|| format!("aligning reader to {alignment}"))?;
-        }
-        Ok(())
-    }
-
-    /// Ensures the reader is at the specified position.
-    pub fn assert_pos(&self, position: u32, pointer_name: &str) -> Result<()> {
-        if self.cur_pos != position {
-            bail!(
-                "{} pointer misaligned: expected position {} but reader is actually at {} (diff: {})",
-                pointer_name,
-                position,
-                self.cur_pos,
-                i64::from(position) - i64::from(self.cur_pos),
-            )
         }
         Ok(())
     }
@@ -283,20 +265,14 @@ impl<'a> DataReader<'a> {
         }
     }
 
-    /// Deserializes an element if the bytecode version meets the requirement (`>=`).
-    ///
-    /// Bytecode version is separate from the GameMaker IDE version and tracks
-    /// changes to the virtual machine instruction format.
+    /// Deserializes an element if the WAD version meets the requirement (`>=`).
     ///
     /// # Returns
-    /// - `Ok(Some(T))` if the bytecode version requirement is met and deserialization succeeds
-    /// - `Ok(None)` if the bytecode version requirement is not met
-    /// - `Err(_)` if the bytecode version requirement is met but deserialization fails
-    pub fn deserialize_if_bytecode_version<T: GMElement>(
-        &mut self,
-        ver_req: u8,
-    ) -> Result<Option<T>> {
-        if self.general_info.bytecode_version >= ver_req {
+    /// - `Ok(Some(T))` if the WAD version requirement is met and deserialization succeeds
+    /// - `Ok(None)` if the WAD version requirement is not met
+    /// - `Err(_)` if the WAD version requirement is met but deserialization fails
+    pub fn deserialize_if_wad_version<T: GMElement>(&mut self, ver_req: u8) -> Result<Option<T>> {
+        if self.general_info.wad_version >= ver_req {
             Ok(Some(T::deserialize(self)?))
         } else {
             Ok(None)

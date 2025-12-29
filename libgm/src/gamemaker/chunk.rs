@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt::{Display, Formatter};
 
 use crate::{prelude::*, util::fmt::hexdump};
 
@@ -16,7 +16,7 @@ impl ChunkName {
 
         let bytes = name.as_bytes();
 
-        // FIXME(const-hack): Iterators are not const stable.
+        // TODO(const-hack): Iterators are not const stable.
         let mut i = 0;
         while i < 4 {
             assert!(
@@ -26,7 +26,7 @@ impl ChunkName {
             i += 1;
         }
 
-        // FIXME(const-hack): `try_into` is not const stable.
+        // TODO(const-hack): `try_into` is not const stable.
         let bytes: [u8; 4] = [bytes[0], bytes[1], bytes[2], bytes[3]];
         Self { bytes }
     }
@@ -35,7 +35,7 @@ impl ChunkName {
     pub fn from_bytes(bytes: [u8; 4]) -> Result<Self> {
         let valid: bool = bytes.iter().all(|&byte| validate_char(byte));
         if !valid {
-            let hexdump = hexdump(&bytes, ..).unwrap();
+            let hexdump = hexdump(&bytes);
             bail!(
                 "Expected chunk name [{hexdump}] to only \
                 consist of uppercase ASCII letters and digits"
@@ -59,13 +59,13 @@ impl ChunkName {
 }
 
 impl Display for ChunkName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_str())
     }
 }
 
 impl std::fmt::Debug for ChunkName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "'{self}'")
     }
 }

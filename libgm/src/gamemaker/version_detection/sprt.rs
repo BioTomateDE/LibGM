@@ -1,5 +1,5 @@
 use crate::{
-    gamemaker::{deserialize::reader::DataReader, gm_version::GMVersionReq},
+    gamemaker::{deserialize::reader::DataReader, version::GMVersionReq},
     prelude::*,
 };
 
@@ -112,7 +112,8 @@ pub fn check_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
             log::warn!(
                 "full_end_pos == expected_end_offset while detecting SPRT_2024.6; may lead to false negatives"
             );
-            return Ok(None); // "Full" mask data is valid   (TODO no idea why it returns here tbh; check if there is bug in utmt pls)
+            return Ok(None); // "Full" mask data is valid   
+            // (TODO no idea why it returns here tbh; check if there is bug in utmt pls)
         }
         if bbox_end_pos == expected_end_offset {
             return target_ver; // "Bbox" mask data is valid

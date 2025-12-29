@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
-        elements::{GMElement, texture_page_items::GMTexturePageItem},
+        elements::{GMElement, texture_page_item::GMTexturePageItem},
         reference::GMRef,
     },
     prelude::*,
@@ -35,7 +35,9 @@ impl DataReader<'_> {
         let saved_pos = self.cur_pos;
         let saved_chunk = self.chunk.clone();
 
-        self.cur_pos = occurrence_position - 4;
+        self.cur_pos = occurrence_position
+            .checked_sub(4)
+            .ok_or_else(|| format!("Occurrence position {occurrence_position} is too low"))?;
         self.chunk = self.string_chunk.clone();
 
         let length = self.read_u32().context("reading GameMaker String length")?;
@@ -109,8 +111,16 @@ pub fn resource_opt_from_i32<T>(number: i32) -> Result<Option<GMRef<T>>> {
 fn check_resource_limit(number: u32) -> Result<()> {
     // Increase limit if not enough
     const FAILSAFE_COUNT: u32 = 500_000;
-    if number > FAILSAFE_COUNT {
-        bail!("Number {number} exceeds failsafe limit of {FAILSAFE_COUNT}");
+    if number < FAILSAFE_COUNT {
+        return Ok(());
     }
-    Ok(())
+
+    let signed = number as i32;
+    if signed < 0 {
+        bail!(
+            "Resource ID {number} (presumably {signed} as signed integer) exceeds failsafe limit of {FAILSAFE_COUNT}"
+        );
+    } else {
+        bail!("Resource ID {number} exceeds failsafe limit of {FAILSAFE_COUNT}");
+    }
 }
