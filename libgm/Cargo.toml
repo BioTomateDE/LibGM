@@ -6,7 +6,7 @@ edition = "2024"
 description = "A tool for modding, unpacking and decompiling GameMaker games"
 readme = "../README.md"
 repository = "https://github.com/BioTomateDE/LibGM"
-license = "GPL-3-or-later"
+license = "GPL-3"
 keywords = ["gamemaker", "gml", "decompiler", "modding", "undertale"]
 categories = ["parser-implementations", "game-development", "encoding"]
 
