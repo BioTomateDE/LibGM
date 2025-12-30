@@ -733,8 +733,8 @@ dependencies = [
  "colored",
  "cpu-time",
  "image",
+ "libgm-macros",
  "log",
- "macros",
  "num_enum",
  "tynm",
  "uuid",
@@ -752,6 +752,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "libgm-macros"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "log"
 version = "0.4.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -764,14 +772,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fae87c125b03c1d2c0150c90365d7d6bcc53fb73a9acaef207d2d065860f062"
 dependencies = [
  "imgref",
-]
-
-[[package]]
-name = "macros"
-version = "0.1.0"
-dependencies = [
- "quote",
- "syn",
 ]
 
 [[package]]

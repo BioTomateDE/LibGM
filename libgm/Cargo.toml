@@ -12,7 +12,7 @@ categories = ["parser-implementations", "game-development", "encoding"]
 
 [dependencies]
 # Workspace dependencies
-macros = { path = "./macros", version = "0.1.0" }
+macros = { package = "libgm-macros", path = "../macros", version = "0.1.0" }
 
 # Crates.io dependencies
 bzip2 = "0.6.1"    # BZip2+QOI encoded images
