@@ -5,7 +5,7 @@ edition = "2024"
 description = "Internal attribute macros for LibGM"
 readme = false
 repository = "https://github.com/BioTomateDE/LibGM/"
-license = "GPL-3"
+license = "GPL-3-or-later"
 keywords = ["proc-macro", "num-enum"]
 categories = ["development-tools"]
 
