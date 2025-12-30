@@ -1,3 +1,7 @@
+[![GitHub](https://img.shields.io/docsrs/libgm)](https://github.com/BioTomateDE/LibGM)
+[![Crates.io](https://img.shields.io/crates/v/libgm)](https://crates.io/crates/libgm)
+[![Documentation](https://img.shields.io/docsrs/libgm)](https://docs.rs/libgm)
+
 # LibGM
 
 A tool for unpacking, decompiling and modding GameMaker games such as Undertale
@@ -43,10 +47,14 @@ This is effectively a Rust port of
 Add this line in the `[dependencies]` section of your `Cargo.toml` file:
 
 ```toml
-libgm = { git = "https://github.com/BioTomateDE/LibGM" }
+libgm = "0.1.1"
 ```
 
-_This crate is also available on [`crates.io`](https://crates.io/crates/libgm)._
+Or if you want bleeding edge:
+
+```toml
+libgm = { git = "https://github.com/BioTomateDE/LibGM" }
+```
 
 Now you can use these functions exposed by LibGM:
 
@@ -101,7 +109,6 @@ This project is licenced under the
 All contributions are welcome! Whether that's a pull request, a feature you
 would like to see added, a bug you found; just create an Issue/PR in this repo.
 
-- Everything related to GameMaker is located in `src/libgm/gamemaker/`.
+- Everything related to GameMaker is located in `libgm/src/gamemaker/`.
 - There is a basic CLI to interact with LibGM. Its code is located in
-  `src/libgm-cli/`.
-
+  `libgm-cli/src/`.
