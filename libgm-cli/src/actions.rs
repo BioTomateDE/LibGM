@@ -12,12 +12,14 @@ use libgm::{
 #[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {
     EnableDebug,
+    DeserializeTextures,
 }
 
 impl Action {
     pub fn perform(self, data: &mut GMData) -> Result<()> {
         match self {
             Self::EnableDebug => enable_debug(data).context("enabling debug mode"),
+            Self::DeserializeTextures => data.deserialize_textures(),
         }
     }
 }

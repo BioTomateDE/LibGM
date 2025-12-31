@@ -187,7 +187,9 @@ impl GMData {
             let Some(image) = &mut texture_page.image else {
                 continue;
             };
-            image.convert_to_dynamic_image()?;
+            image
+                .convert_to_dynamic_image()
+                .context("deserializing all embedded texture pages")?;
         }
         Ok(())
     }
