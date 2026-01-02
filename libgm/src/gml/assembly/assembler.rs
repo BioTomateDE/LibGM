@@ -423,21 +423,21 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
 
     let mut variable_ref: Option<GMRef<GMVariable>> = None;
     let instance_type: InstanceType = match instance_type_raw.as_str() {
-        "self" if instance_type_arg.is_empty() => InstanceType::Self_(None),
-        "self" => {
+        "self" => InstanceType::Self_,
+        "object" => {
             let object_ref: GMRef<GMGameObject> =
                 gm_data.game_objects.ref_by_name(&instance_type_arg)?;
-            InstanceType::Self_(Some(object_ref))
-        },
-        "local" => {
-            let var_index: u32 = parse_int(&instance_type_arg)?;
-            variable_ref = Some(GMRef::new(var_index));
-            InstanceType::Local
+            InstanceType::GameObject(object_ref)
         },
         "roominstance" => {
             variable_type = VariableType::Instance;
             let instance_id: i16 = parse_int(&instance_type_arg)?;
             InstanceType::RoomInstance(instance_id)
+        },
+        "local" => {
+            let var_index: u32 = parse_int(&instance_type_arg)?;
+            variable_ref = Some(GMRef::new(var_index));
+            InstanceType::Local
         },
         "stacktop" => InstanceType::StackTop,
         "builtin" => InstanceType::Builtin,
@@ -474,12 +474,6 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
     let Some(variable) = variable_ref else {
         bail!("Cannot resolve variable with name {name:?}");
     };
-
-    // I need to throw away the instance type so that the tests pass
-    let mut instance_type = instance_type;
-    if variable_type != VariableType::Normal && variable_type != VariableType::Instance {
-        instance_type = InstanceType::Undefined;
-    } // TODO: comment out this block if not testing assembler
 
     Ok(CodeVariable {
         variable,

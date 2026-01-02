@@ -638,12 +638,12 @@ impl DataReader<'_> {
                     return Ok(PushValue::Function(function));
                 }
 
-                if let Some(&variable) = self.variable_occurrences.get(&self.cur_pos) {
+                if let Some(&(variable, _)) = self.variable_occurrences.get(&self.cur_pos) {
                     self.cur_pos += 4; // Skip next occurrence offset
                     return Ok(PushValue::Variable(CodeVariable {
                         variable,
                         variable_type: VariableType::Normal,
-                        instance_type: InstanceType::Undefined,
+                        instance_type: InstanceType::Self_,
                         is_int32: true,
                     }));
                 }
@@ -1007,20 +1007,23 @@ fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<Code
     let occurrence_position: u32 = reader.cur_pos;
     let raw_value = reader.read_u32()?;
 
+    let (variable, vari_instance_type): (GMRef<GMVariable>, InstanceType) = *reader
+        .variable_occurrences
+        .get(&occurrence_position)
+        .ok_or_else(|| {
+            format!("Could not find variable with occurrence position {occurrence_position}")
+        })?;
+
     let variable_type = (raw_value >> 24) & 0xF8;
     let variable_type: VariableType =
         num_enum_from(variable_type as u8).context("parsing variable reference chain")?;
 
-    let instance_type: InstanceType = parse_instance_type(raw_instance_type, variable_type)?;
-
-    let variable: GMRef<GMVariable> = *reader.variable_occurrences.get(&occurrence_position).ok_or_else(|| {
-        format!(
-            "Could not find {} Variable with occurrence position {} in hashmap with length {} while parsing code value",
-            instance_type,
-            occurrence_position,
-            reader.variable_occurrences.len(),
-        )
-    })?;
+    let instance_type: InstanceType =
+        if matches!(variable_type, VariableType::Normal | VariableType::Instance) {
+            parse_instance_type(raw_instance_type, variable_type)?
+        } else {
+            vari_instance_type
+        };
 
     Ok(CodeVariable {
         variable,
@@ -1039,13 +1042,12 @@ pub(crate) fn parse_instance_type(
         return Ok(if variable_type == VariableType::Instance {
             InstanceType::RoomInstance(raw_value)
         } else {
-            InstanceType::Self_(Some(GMRef::new(raw_value as u32)))
+            InstanceType::GameObject(GMRef::new(raw_value as u32))
         });
     }
 
     let instance_type: InstanceType = match raw_value {
-        0 => InstanceType::Undefined,
-        -1 => InstanceType::Self_(None),
+        -1 => InstanceType::Self_,
         -2 => InstanceType::Other,
         -3 => InstanceType::All,
         -4 => InstanceType::None,
@@ -1065,9 +1067,8 @@ pub(crate) fn parse_instance_type(
 pub(crate) const fn build_instance_type(instance_type: InstanceType) -> i16 {
     // If > 0; then game object id (or room instance id). If < 0, then variable instance type.
     match instance_type {
-        InstanceType::Undefined => 0,
-        InstanceType::Self_(None) => -1,
-        InstanceType::Self_(Some(game_object_ref)) => game_object_ref.index as i16,
+        InstanceType::Self_ => -1,
+        InstanceType::GameObject(game_object_ref) => game_object_ref.index as i16,
         InstanceType::RoomInstance(instance_id) => instance_id,
         InstanceType::Other => -2,
         InstanceType::All => -3,

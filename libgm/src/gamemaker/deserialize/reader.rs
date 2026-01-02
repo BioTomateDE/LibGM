@@ -15,6 +15,7 @@ use crate::{
         reference::GMRef,
         version::{GMVersion, GMVersionReq},
     },
+    gml::instruction::InstanceType,
     prelude::*,
     util::assert,
 };
@@ -82,7 +83,7 @@ pub struct DataReader<'a> {
 
     /// Should only be set by [`crate::gamemaker::elements::variable`].
     /// This means that `VARI` has to be parsed before `CODE`.
-    pub variable_occurrences: HashMap<u32, GMRef<GMVariable>>,
+    pub variable_occurrences: HashMap<u32, (GMRef<GMVariable>, InstanceType)>,
 
     /// Should only be set by [`crate::gamemaker::elements::function`].
     /// This means that `FUNC` has to be parsed before `CODE`.

@@ -4,3 +4,7 @@ resolver = "3"
 
 # Default member for `cargo run`
 default-members = ["libgm-cli"]
+
+
+[profile.release]
+overflow-checks = true

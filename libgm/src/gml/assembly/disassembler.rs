@@ -432,23 +432,21 @@ fn write_instance_type(
     gm_data: &GMData,
 ) -> Result<()> {
     match instance_type {
-        InstanceType::Undefined => {
-            bail!("Did not expect Instance Type Undefined here; please report this error");
-        },
-        InstanceType::Self_(Some(obj_ref)) => {
+        InstanceType::Self_ => write!(buffer, "self"),
+        InstanceType::GameObject(obj_ref) => {
             let obj: &GMGameObject = gm_data.game_objects.by_ref(obj_ref)?;
-            write!(buffer, "self<{}>", obj.name);
+            obj.validate_name().context("validating game object name")?;
+            write!(buffer, "object<{}>", obj.name);
         },
-        InstanceType::Self_(None) => write!(buffer, "self"),
         InstanceType::RoomInstance(instance_id) => {
             write!(buffer, "roominstance<{instance_id}>");
         },
+        InstanceType::Local => write!(buffer, "local<{}>", variable_ref.index),
         InstanceType::Other => write!(buffer, "other"),
         InstanceType::All => write!(buffer, "all"),
         InstanceType::None => write!(buffer, "none"),
         InstanceType::Global => write!(buffer, "global"),
         InstanceType::Builtin => write!(buffer, "builtin"),
-        InstanceType::Local => write!(buffer, "local<{}>", variable_ref.index),
         InstanceType::StackTop => write!(buffer, "stacktop"),
         InstanceType::Argument => write!(buffer, "arg"),
         InstanceType::Static => write!(buffer, "static"),
@@ -471,20 +469,13 @@ fn write_variable(
     if code_variable.is_int32 {
         write!(buffer, "(variable)");
     }
-
     write!(buffer, "{}", code_variable.variable_type.to_str());
-
-    let instance_type: InstanceType = if code_variable.instance_type == InstanceType::Undefined {
-        // TODO: this will not work with WAD <= 14
-        variable
-            .modern_data
-            .as_ref()
-            .map_or(InstanceType::Undefined, |data| data.instance_type)
-    } else {
-        code_variable.instance_type
-    };
-
-    write_instance_type(instance_type, buffer, code_variable.variable, gm_data)?;
+    write_instance_type(
+        code_variable.instance_type,
+        buffer,
+        code_variable.variable,
+        gm_data,
+    )?;
     write!(buffer, ".{name}");
 
     Ok(())
