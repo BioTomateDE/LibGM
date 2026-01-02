@@ -44,7 +44,7 @@ impl GMElement for Tiles {
         builder.write_resource_id_opt(self.background);
         builder.write_u32(self.width);
         builder.write_u32(self.height);
-        if builder.is_gm_version_at_least((2024, 2)) {
+        if builder.is_version_at_least((2024, 2)) {
             self.build_compressed_tile_data(builder);
         } else {
             for id in &self.tile_data {
@@ -194,7 +194,7 @@ impl Tiles {
             last_tile = curr_tile;
         }
 
-        if builder.is_gm_version_at_least((2024, 4)) {
+        if builder.is_version_at_least((2024, 4)) {
             builder.align(4);
         }
     }

@@ -97,10 +97,7 @@ pub fn check_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVers
     }
 
     reader.cur_pos = first_two_pointers[0] + 52; // Also the LineHeight value. 48 + 4 = 52
-    if reader
-        .general_info
-        .is_version_at_least((2023, 2, 0, 0, PostLTS))
-    {
+    if reader.general_info.is_version_at_least((2023, 2, PostLTS)) {
         // SDFSpread is present from 2023.2 non-LTS onward
         reader.cur_pos += 4; // (detected by PSEM/PSYS chunk existence)
     }

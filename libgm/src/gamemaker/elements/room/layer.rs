@@ -104,7 +104,7 @@ impl GMElement for Layer {
             Data::Background(data) => data.serialize(builder)?,
             Data::Assets(data) => data.serialize(builder)?,
             Data::Effect(data) => {
-                if !builder.is_gm_version_at_least((2022, 1)) {
+                if !builder.is_version_at_least((2022, 1)) {
                     data.serialize(builder)?;
                 }
             },

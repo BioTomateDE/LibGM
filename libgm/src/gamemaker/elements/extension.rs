@@ -171,7 +171,7 @@ impl GMElement for GMExtension {
         self.version
             .serialize_if_gm_ver(builder, "Version", (2023, 4))?;
         builder.write_gm_string(&self.class_name);
-        if builder.is_gm_version_at_least((2022, 6)) {
+        if builder.is_version_at_least((2022, 6)) {
             builder.write_pointer(&self.files);
             builder.write_pointer(&self.options);
 

@@ -102,7 +102,7 @@ impl GMElement for GMEmbeddedTextures {
                 "Generated Mipmap levels",
                 (2, 0, 6),
             )?;
-            if builder.is_gm_version_at_least((2022, 3)) {
+            if builder.is_version_at_least((2022, 3)) {
                 texture_block_size_placeholders[i] = builder.len();
                 // Placeholder for texture block size. will not be overwritten if external
                 builder.write_u32(
@@ -132,7 +132,7 @@ impl GMElement for GMEmbeddedTextures {
             builder.resolve_pointer(&texture_page.image)?;
             let start_pos: usize = builder.len();
             img.serialize(builder)?;
-            if builder.is_gm_version_at_least((2022, 3)) {
+            if builder.is_version_at_least((2022, 3)) {
                 let length: usize = builder.len() - start_pos;
                 builder.overwrite_usize(length, texture_block_size_placeholders[i])?;
             }

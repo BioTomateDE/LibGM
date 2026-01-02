@@ -90,6 +90,7 @@ impl<'a> Reader<'a> {
             .find(close)
             .ok_or_else(|| format!("'{open}' was never closed"))?;
 
+        // Manual slicing because of Rust's borrow rules
         let line = self.line;
         self.line = &self.line[close_pos + 1..];
         let inside = &line[1..close_pos];
@@ -121,6 +122,7 @@ impl<'a> Reader<'a> {
                 _ => {},
             }
 
+            // Identifiers cannot be empty
             if i == 0 {
                 bail!("Expected identifier; found {:?}", self.line);
             }

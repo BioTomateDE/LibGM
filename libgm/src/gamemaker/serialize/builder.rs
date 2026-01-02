@@ -76,11 +76,8 @@ impl<'a> DataBuilder<'a> {
     }
 
     #[must_use]
-    pub fn is_gm_version_at_least<V: Into<GMVersionReq>>(&self, version_req: V) -> bool {
-        self.gm_data
-            .general_info
-            .version
-            .is_version_at_least(version_req)
+    pub fn is_version_at_least(&self, req: impl Into<GMVersionReq>) -> bool {
+        self.gm_data.general_info.is_version_at_least(req)
     }
 
     #[must_use]

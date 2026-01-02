@@ -30,7 +30,7 @@ impl<T: GMElement> GMSerializeIfVersion for Option<T> {
         ver_req: V,
     ) -> Result<()> {
         let ver_req: GMVersionReq = ver_req.into();
-        if !builder.is_gm_version_at_least(ver_req.clone()) {
+        if !builder.is_version_at_least(ver_req.clone()) {
             return Ok(()); // Don't serialize if version requirement not met
         }
         let element: &T = self.as_ref().ok_or_else(|| {

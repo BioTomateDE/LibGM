@@ -29,37 +29,50 @@ use crate::{
 
 /// If `check_fn` can detect multiple versions, `required_version` should be set to its _lowest_ required version
 /// whereas `target_version` should be set to the _highest_ possible version it can detect.
-fn try_check<V: Into<GMVersionReq>>(
+fn try_check(
     reader: &mut DataReader,
     chunk: &'static str,
     check_fn: fn(&mut DataReader) -> Result<Option<GMVersionReq>>,
-    target_version: V,
+    target_version: impl Into<GMVersionReq>,
 ) -> Result<()> {
     let chunk_name = ChunkName::new(chunk);
-    let target_version: GMVersionReq = target_version.into();
-    if reader.general_info.is_version_at_least(target_version) {
-        return Ok(()); // No need to check if already
+    let target_version = target_version.into();
+
+    // Return if highest possible detected version is already fulfilled.
+    if reader.general_info.version >= target_version {
+        return Ok(());
     }
 
+    // Return if the chunk does not exist.
     let Some(chunk) = reader.chunks.get_by_name(chunk_name) else {
         return Ok(());
     };
+
     reader.chunk = chunk.clone();
     reader.cur_pos = chunk.start_pos;
 
-    let Some(version_req) = check_fn(reader)? else {
+    // Detect the version.
+    let version_req_opt = check_fn(reader).with_context(|| {
+        format!("manually detecting GameMaker Version {target_version} in chunk {chunk_name:?}")
+    })?;
+
+    // Return if no version could be detected.
+    let Some(version_req) = version_req_opt else {
         return Ok(());
     };
-    if reader.general_info.is_version_at_least(version_req.clone()) {
+
+    // Return if the detected version is already fulfilled.
+    if reader.general_info.version >= version_req {
         return Ok(());
     }
+
     log::debug!(
         "Upgraded Version from {} to {} using manual check in chunk '{}'",
         reader.general_info.version,
         version_req,
         chunk_name,
     );
-    reader.general_info.set_version_at_least(version_req)?;
+    reader.general_info.set_version(version_req);
 
     Ok(())
 }
@@ -159,7 +172,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
     let saved_chunk: ChunkBounds = reader.chunk.clone();
 
     if let Some(version) = upgrade_by_chunk_existence(&reader.chunks) {
-        reader.general_info.set_version_at_least(version)?;
+        reader.general_info.set_version(version);
     }
 
     if reader.general_info.wad_version >= 14 {
@@ -176,21 +189,14 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
 
     loop {
         // Permanently filter out already detected versions
-        checks.retain(|i| {
-            !reader
-                .general_info
-                .is_version_at_least(i.target_version.clone())
-        });
+        checks.retain(|check| reader.general_info.version < check.target_version);
 
         let mut updated_version: bool = false;
         let mut checks_to_remove: Vec<bool> = vec![false; checks.len()];
 
         for (i, check) in checks.iter().enumerate() {
             // For this iteration, filter out versions whose version requirements are not met yet
-            if !reader
-                .general_info
-                .is_version_at_least(check.required_version.clone())
-            {
+            if reader.general_info.version < check.required_version {
                 continue;
             }
 
@@ -208,19 +214,21 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
             let detected_version_opt: Option<GMVersionReq> = (check.checker_fn)(reader)
                 .with_context(|| {
                     format!(
-                        "trying to detect GameMaker Version {} in chunk '{}'",
+                        "detecting GameMaker Version {} in chunk '{}'",
                         check.target_version, check.chunk_name,
                     )
                 })?;
 
-            if let Some(detected_version) = detected_version_opt {
+            if let Some(detected_version) = detected_version_opt
+                && reader.general_info.version < detected_version
+            {
                 log::debug!(
                     "Upgraded Version from {} to {} using check in chunk '{}'",
                     reader.general_info.version,
                     detected_version,
                     check.chunk_name,
                 );
-                reader.general_info.set_version_at_least(detected_version)?;
+                reader.general_info.set_version(detected_version);
                 updated_version = true;
             }
         }

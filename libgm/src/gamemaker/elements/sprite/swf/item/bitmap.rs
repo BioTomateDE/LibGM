@@ -72,7 +72,7 @@ impl GMElement for Data {
         builder.write_i32(self.bitmap_type.into());
         builder.write_i32(self.width);
         builder.write_i32(self.height);
-        if builder.is_gm_version_at_least((2022, 1)) {
+        if builder.is_version_at_least((2022, 1)) {
             if let VersionData::Post2022_1(ref data) = self.ver_data {
                 builder.write_i32(data.tpe_index);
             } else {

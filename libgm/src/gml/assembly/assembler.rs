@@ -25,7 +25,7 @@ use crate::{
     util::fmt::typename,
 };
 
-pub fn assemble_code(assembly: &str, gm_data: &GMData) -> Result<Vec<Instruction>> {
+pub fn assemble_instructions(assembly: &str, gm_data: &GMData) -> Result<Vec<Instruction>> {
     let mut instructions: Vec<Instruction> = Vec::new();
 
     for line in assembly.lines() {
