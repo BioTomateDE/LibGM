@@ -41,7 +41,7 @@ impl GMVariables {
         }
 
         let vari_instance_type = if instance_type == InstanceType::Builtin {
-            InstanceType::Self_(None)
+            InstanceType::Self_
         } else {
             instance_type
         };
@@ -74,7 +74,10 @@ impl GMVariables {
                 // this condition is only suggested by utmt; not confirmed (original: `!DifferentVarCounts`)
                 header.var_count1 += 1;
                 header.var_count2 += 1;
-            } else if matches!(instance_type, InstanceType::Self_(_)) {
+            } else if matches!(
+                instance_type,
+                InstanceType::Self_ | InstanceType::GameObject(_)
+            ) {
                 header.var_count2 += 1;
             } else if instance_type == InstanceType::Global {
                 header.var_count1 += 1;
@@ -151,14 +154,27 @@ impl GMElement for GMVariables {
             //      );
             //  }
 
+            // TODO: this code is extremely ugly.
+            // the hashmaps are probably also slow.
+            // refactor this entire thing
             for occurrence in occurrences {
-                if let Some(old_var) = reader.variable_occurrences.insert(occurrence, i.into()) {
+                let var_ref: GMRef<GMVariable> = i.into();
+                // fallback value is never read in wad < 15
+                let instance_type = variables[i]
+                    .modern_data
+                    .as_ref()
+                    .map_or(InstanceType::Self_, |d| d.instance_type.clone());
+
+                if let Some(old_var) = reader
+                    .variable_occurrences
+                    .insert(occurrence, (var_ref, instance_type))
+                {
                     bail!(
                         "Conflicting occurrence positions while parsing variables: Position {} was already \
                         set for variable #{} with name {:?}; trying to set to variable #{i} with name {:?}",
                         occurrence,
-                        old_var.index,
-                        variables[old_var.index as usize].name,
+                        old_var.0.index,
+                        variables[old_var.0.index as usize].name,
                         variables[i].name,
                     );
                 }

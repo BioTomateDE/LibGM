@@ -364,12 +364,12 @@ impl DataType {
 #[derive(Debug, Clone, Copy, PartialEq)]
 /// Uhhh
 pub enum InstanceType {
-    /// TODO: this will be deprecated soon(tm)
-    Undefined,
-
     /// Represents the current `self` instance.
-    /// TODO: change static object reference to other variant
-    Self_(Option<GMRef<GMGameObject>>),
+    Self_,
+
+    /// Represents the first (?) instance of an object.
+    /// This is typically an object that should only have one instance.
+    GameObject(GMRef<GMGameObject>),
 
     /// Instance ID in the Room -100000; used when the Variable Type is [`VariableType::Instance`].
     /// This doesn't exist in UTMT.
@@ -405,12 +405,11 @@ pub enum InstanceType {
 }
 
 impl Display for InstanceType {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
-            Self::Undefined => write!(f, "Undefined"),
-            Self::Self_(None) => write!(f, "Self"),
-            Self::Self_(Some(reference)) => {
-                write!(f, "Self<{}>", reference.index)
+            Self::Self_ => write!(f, "Self"),
+            Self::GameObject(reference) => {
+                write!(f, "GameObject<{}>", reference.index)
             },
             Self::RoomInstance(instance_id) => {
                 write!(f, "RoomInstanceID<{instance_id}>")
@@ -436,11 +435,11 @@ impl InstanceType {
     #[must_use]
     pub(crate) const fn as_vari(self) -> Self {
         match self {
-            Self::StackTop
-            | Self::Builtin
+            Self::GameObject(_)
+            | Self::RoomInstance(_)
             | Self::Other
-            | Self::Self_(Some(_))
-            | Self::RoomInstance(_) => Self::Self_(None),
+            | Self::Builtin
+            | Self::StackTop => Self::Self_,
             Self::Argument => Self::Builtin,
             _ => self,
         }
