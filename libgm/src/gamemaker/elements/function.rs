@@ -92,7 +92,7 @@ impl GMElement for GMFunctions {
             let occurrence_count: usize = occurrences.len();
 
             // Before GM 2.3, the first occurrence points to the instruction rather than the next offset
-            let gm2_3: bool = builder.is_gm_version_at_least((2, 3));
+            let gm2_3: bool = builder.is_version_at_least((2, 3));
             let first_occurrence: i32 = match occurrences.first() {
                 Some(&occurrence) if gm2_3 => occurrence as i32 + 4,
                 Some(&occurrence) => occurrence as i32,
@@ -104,7 +104,7 @@ impl GMElement for GMFunctions {
             builder.write_i32(first_occurrence);
         }
 
-        if builder.wad_version() >= 15 && !builder.is_gm_version_at_least((2024, 8)) {
+        if builder.wad_version() >= 15 && !builder.is_version_at_least((2024, 8)) {
             if !self.code_locals.exists {
                 bail!("Code Locals don't exist in WAD version 15+");
             }

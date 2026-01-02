@@ -1,6 +1,9 @@
 //! Contains GameMaker IDE Version types and abstractions to check and set versions.
 
-use std::fmt::{Display, Formatter};
+use std::{
+    cmp::Ordering,
+    fmt::{Display, Formatter},
+};
 
 use crate::{
     gamemaker::{
@@ -26,17 +29,17 @@ pub enum LTSBranch {
 }
 
 impl Display for LTSBranch {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         let string = match self {
             Self::PreLTS => "PreLTS",
             Self::LTS => "LTS",
             Self::PostLTS => "PostLTS",
         };
-        write!(f, "{string}")
+        f.write_str(string)
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 /// A GameMaker Studio Version.
 ///
 /// Theoretically, this is only the version of the IDE this game was made in.
@@ -83,35 +86,45 @@ impl Display for GMVersion {
 }
 
 impl GMVersion {
+    // TODO(const): Make these functions `const` when Into, PartialEq and PartialOrd are const-stable.
+
     /// Checks if the current version is at least the specified version.
     ///
     /// Compares major, minor, release, and build numbers in sequence,
     /// and also considers the branch for non-LTS versions.
     ///
     /// # Parameters
-    /// - `version_req`: The version requirement to compare against (convertible into `GMVersionReq`).
+    /// - `version_req`: The version requirement to compare against (convertible into [`GMVersionReq`]).
     ///
     /// # Returns
     /// `true` if `self` is greater than or equal to `version_req`.
+    ///
+    /// # Notes
+    /// You can also compare `GMVersion` against other `GMVersion`s or `GMVersionReq`s directly.
+    /// Example:
+    /// ```no_run]
+    /// let version_requirement: GMVersionReq = (2023, 6).into();
+    /// if gm_data.general_info.version < version_requirement {
+    ///     // ...
+    /// }
+    /// ```
     #[must_use]
-    pub fn is_version_at_least<V: Into<GMVersionReq>>(&self, version_req: V) -> bool {
-        let ver: GMVersionReq = version_req.into();
-        if ver.post_lts && self.branch < LTSBranch::PostLTS {
-            return false;
+    pub fn is_version_at_least(&self, version_req: impl Into<GMVersionReq>) -> bool {
+        self >= &version_req.into()
+    }
+
+    pub fn set_version(&mut self, req: impl Into<GMVersionReq>) {
+        let new = req.into();
+        self.major = new.major;
+        self.minor = new.minor;
+        self.release = new.release;
+        self.build = new.build;
+        if new.post_lts {
+            self.branch = LTSBranch::PostLTS;
+        } else if new.major >= 2022 {
+            // TODO: is this correct?
+            self.branch = LTSBranch::LTS;
         }
-        if self.major != ver.major {
-            return self.major > ver.major;
-        }
-        if self.minor != ver.minor {
-            return self.minor > ver.minor;
-        }
-        if self.release != ver.release {
-            return self.release > ver.release;
-        }
-        if self.build != ver.build {
-            return self.build > ver.build;
-        }
-        true // The version is exactly what was supplied.
     }
 
     /// Sets the version to at least the specified version.
@@ -125,10 +138,10 @@ impl GMVersion {
     ///
     /// # Notes
     /// Setting a non-LTS version updates the branch accordingly.
-    pub fn set_version_at_least<V: Into<GMVersionReq>>(&mut self, version_req: V) -> Result<()> {
-        let new_ver: GMVersionReq = version_req.into();
-        if !matches!(new_ver.major, 2 | 2022..=2025) {
-            let comment = if new_ver.major > 2025 && new_ver.major < 2100 {
+    pub fn set_version_at_least(&mut self, req: impl Into<GMVersionReq>) -> Result<()> {
+        let new_ver: GMVersionReq = req.into();
+        if !matches!(new_ver.major, 2 | 2022..=2026) {
+            let comment = if new_ver.major > 2026 && new_ver.major < 2100 {
                 format!(
                     "! If the current year is {} or greater, please contact the \
                     maintainer of this project to update the version validation.",
@@ -140,17 +153,47 @@ impl GMVersion {
             bail!("Upgrading GameMaker Version from {self} to {new_ver} is not allowed{comment}");
         }
 
-        if self.is_version_at_least(new_ver.clone()) {
-            return Ok(()); // Only override version if new version is higher
-        }
-        self.major = new_ver.major;
-        self.minor = new_ver.minor;
-        self.release = new_ver.release;
-        self.build = new_ver.build;
-        if new_ver.post_lts {
-            self.branch = LTSBranch::PostLTS;
+        if *self < new_ver {
+            self.set_version(new_ver);
         }
         Ok(())
+    }
+}
+
+impl PartialEq<GMVersionReq> for GMVersion {
+    fn eq(&self, req: &GMVersionReq) -> bool {
+        if req.post_lts {
+            return self.branch == LTSBranch::PostLTS;
+        }
+
+        self.major == req.major
+            && self.minor == req.minor
+            && self.release == req.release
+            && self.build == req.build
+    }
+}
+
+impl PartialOrd<GMVersionReq> for GMVersion {
+    fn partial_cmp(&self, req: &GMVersionReq) -> Option<Ordering> {
+        if req.post_lts && self.branch < LTSBranch::PostLTS {
+            return Some(Ordering::Less);
+        }
+
+        macro_rules! cmp {
+            ($part:ident) => {
+                match self.$part.cmp(&req.$part) {
+                    Ordering::Equal => {},
+                    other => return Some(other),
+                }
+            };
+        }
+
+        cmp!(major);
+        cmp!(minor);
+        cmp!(release);
+        cmp!(build);
+
+        Some(Ordering::Equal)
     }
 }
 
@@ -268,7 +311,7 @@ impl From<(u32, u32, u32, u32, LTSBranch)> for GMVersionReq {
 }
 
 impl Display for GMVersionReq {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write_version(f, self.major, self.minor, self.release, self.build)?;
         if self.post_lts {
             write!(f, " (Post LTS)")?;
@@ -278,7 +321,7 @@ impl Display for GMVersionReq {
 }
 
 fn write_version(
-    f: &mut Formatter<'_>,
+    f: &mut Formatter,
     major: u32,
     minor: u32,
     release: u32,

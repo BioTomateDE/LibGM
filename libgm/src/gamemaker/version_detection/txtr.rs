@@ -51,7 +51,7 @@ pub fn check_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
             // Digits of pi (block header)
             return target_ver;
         }
-        return Ok(None); // If first bzip2+qoi texture page version check was unsuccessful, don't bother with other ones
+        break; // If first bzip2+qoi texture page version check was unsuccessful, don't bother with other ones
     }
 
     Ok(None)

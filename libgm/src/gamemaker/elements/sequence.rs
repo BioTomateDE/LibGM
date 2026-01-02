@@ -118,7 +118,7 @@ impl GMElement for GMSequence {
         builder.write_i32(self.origin_x);
         builder.write_i32(self.origin_y);
         builder.write_f32(self.volume);
-        if builder.is_gm_version_at_least((2024, 13)) {
+        if builder.is_version_at_least((2024, 13)) {
             builder.write_f32(self.width.ok_or("Sequence width not set in 2024.13+")?);
             builder.write_f32(self.height.ok_or("Sequence height not set in 2024.13+")?);
         }

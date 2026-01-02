@@ -30,7 +30,7 @@ impl GMElement for TextureEntry {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_u32(self.page_width);
         builder.write_u32(self.page_height);
-        if builder.is_gm_version_at_least((2023, 1)) {
+        if builder.is_version_at_least((2023, 1)) {
             if let Data::Post2023_1(texture_entry_length) = self.data {
                 builder.write_u32(texture_entry_length);
             } else {

@@ -100,15 +100,15 @@ impl GMElement for Assets {
         builder.write_pointer(&self.legacy_tiles);
         builder.write_pointer(&self.sprites);
 
-        if builder.is_gm_version_at_least((2, 3)) {
+        if builder.is_version_at_least((2, 3)) {
             builder.write_pointer(&self.sequences);
-            if !builder.is_gm_version_at_least((2, 3, 2)) {
+            if !builder.is_version_at_least((2, 3, 2)) {
                 builder.write_pointer(&self.nine_slices);
             }
-            if builder.is_gm_version_at_least((2023, 2, LTSBranch::PostLTS)) {
+            if builder.is_version_at_least((2023, 2, LTSBranch::PostLTS)) {
                 builder.write_pointer(&self.particle_systems);
             }
-            if builder.is_gm_version_at_least((2024, 6)) {
+            if builder.is_version_at_least((2024, 6)) {
                 builder.write_pointer(&self.text_items);
             }
         }
@@ -118,19 +118,19 @@ impl GMElement for Assets {
         builder.resolve_pointer(&self.sprites)?;
         builder.write_pointer_list(&self.sprites)?;
 
-        if builder.is_gm_version_at_least((2, 3)) {
+        if builder.is_version_at_least((2, 3)) {
             builder.resolve_pointer(&self.sequences)?;
             builder.write_pointer_list(&self.sequences)?;
 
-            if !builder.is_gm_version_at_least((2, 3, 2)) {
+            if !builder.is_version_at_least((2, 3, 2)) {
                 builder.resolve_pointer(&self.nine_slices)?;
                 builder.write_pointer_list(&self.nine_slices)?;
             }
-            if builder.is_gm_version_at_least((2023, 2, LTSBranch::PostLTS)) {
+            if builder.is_version_at_least((2023, 2, LTSBranch::PostLTS)) {
                 builder.resolve_pointer(&self.particle_systems)?;
                 builder.write_pointer_list(&self.particle_systems)?;
             }
-            if builder.is_gm_version_at_least((2024, 6)) {
+            if builder.is_version_at_least((2024, 6)) {
                 builder.resolve_pointer(&self.text_items)?;
                 builder.write_pointer_list(&self.text_items)?;
             }

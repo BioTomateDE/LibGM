@@ -80,7 +80,7 @@ fn disassemble_instr(
         },
 
         Instruction::Duplicate { data_type, size } => {
-            write!(buffer, "{}.{} {}", mnemonic, data_type.to_str(), size,);
+            write!(buffer, "{}.{} {}", mnemonic, data_type.to_str(), size);
         },
 
         Instruction::DuplicateSwap { data_type, size1, size2 } => {
@@ -135,7 +135,7 @@ fn disassemble_instr(
                 "{}.{}.{} ",
                 mnemonic,
                 type1.to_str(),
-                type2.to_str()
+                type2.to_str(),
             );
             write_variable(variable, buffer, gm_data)?;
         },

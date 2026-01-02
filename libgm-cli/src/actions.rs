@@ -5,7 +5,7 @@ use libgm::{
         elements::{GMNamedListChunk, script::GMScript},
         reference::GMRef,
     },
-    gml::{assembly::assemble_code, instruction::GMCode},
+    gml::{assembly::assemble_instructions, instruction::GMCode},
     prelude::*,
 };
 
@@ -35,7 +35,7 @@ fn enable_debug(data: &mut GMData) -> Result<()> {
         pushim 1
         pop.v.v global.debug
     "#;
-    let instructions = assemble_code(assembly, data)?;
+    let instructions = assemble_instructions(assembly, data)?;
 
     let script: &GMScript = data.scripts.by_name("SCR_GAMESTART")?;
     let code: GMRef<GMCode> = script.code.ok_or("Script does not have a code entry set")?;

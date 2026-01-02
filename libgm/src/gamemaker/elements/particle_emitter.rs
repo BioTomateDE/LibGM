@@ -242,13 +242,13 @@ impl GMElement for GMParticleEmitter {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name);
-        if builder.is_gm_version_at_least((2023, 6)) {
+        if builder.is_version_at_least((2023, 6)) {
             builder.write_bool32(self.enabled);
         } else if !self.enabled {
             log::warn!("Cannot disable particle emitters before 2023.6");
         }
 
-        if builder.is_gm_version_at_least((2023, 8)) {
+        if builder.is_version_at_least((2023, 8)) {
             let SizeDataEtc::Post2023_8(data) = &self.size_data_etc else {
                 bail!("Expected >= 2023.8 data, got < 2023.8 data");
             };
@@ -289,7 +289,7 @@ impl GMElement for GMParticleEmitter {
         builder.write_f32(self.lifetime_max);
         builder.write_f32(self.scale_x);
         builder.write_f32(self.scale_y);
-        if builder.is_gm_version_at_least((2023, 8)) {
+        if builder.is_version_at_least((2023, 8)) {
             let SizeDataEtc::Post2023_8(data) = &self.size_data_etc else {
                 bail!("Expected >= 2023.8 data, got < 2023.8 data");
             };

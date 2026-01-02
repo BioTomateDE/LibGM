@@ -70,7 +70,7 @@ impl GMElement for Point {
         builder.write_f32(self.x);
         builder.write_f32(self.y);
 
-        if builder.is_gm_version_at_least((2, 3, 1)) {
+        if builder.is_version_at_least((2, 3, 1)) {
             let bezier_data: &PointBezierData = self
                 .bezier_data
                 .as_ref()

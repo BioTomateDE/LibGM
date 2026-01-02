@@ -127,7 +127,7 @@ impl GMElement for GMTextureGroupInfo {
         )?;
         builder.write_pointer(&self.texture_pages);
         builder.write_pointer(&self.sprites);
-        if !builder.is_gm_version_at_least((2023, 1, LTSBranch::PostLTS)) {
+        if !builder.is_version_at_least((2023, 1, LTSBranch::PostLTS)) {
             builder.write_pointer(&self.spine_sprites);
         }
         builder.write_pointer(&self.fonts);
@@ -139,7 +139,7 @@ impl GMElement for GMTextureGroupInfo {
         builder.resolve_pointer(&self.sprites)?;
         builder.write_simple_list(&self.sprites)?;
 
-        if !builder.is_gm_version_at_least((2023, 1, LTSBranch::PostLTS)) {
+        if !builder.is_version_at_least((2023, 1, LTSBranch::PostLTS)) {
             builder.resolve_pointer(&self.spine_sprites)?;
             builder.write_simple_list(&self.spine_sprites)?;
         }

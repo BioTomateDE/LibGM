@@ -182,11 +182,18 @@ impl GMChunk for GMGeneralInfo {
 }
 
 impl GMGeneralInfo {
-    pub fn is_version_at_least<V: Into<GMVersionReq>>(&self, version_req: V) -> bool {
-        self.version.is_version_at_least(version_req)
+    #[must_use]
+    /// Docstring available in [`GMVersion::is_version_at_least`]
+    pub fn is_version_at_least(&self, req: impl Into<GMVersionReq>) -> bool {
+        self.version.is_version_at_least(req)
     }
-    pub fn set_version_at_least<V: Into<GMVersionReq>>(&mut self, version_req: V) -> Result<()> {
-        self.version.set_version_at_least(version_req)
+
+    pub fn set_version_at_least(&mut self, req: impl Into<GMVersionReq>) -> Result<()> {
+        self.version.set_version_at_least(req)
+    }
+
+    pub fn set_version(&mut self, req: impl Into<GMVersionReq>) {
+        self.version.set_version(req);
     }
 }
 
@@ -308,7 +315,7 @@ impl GMElement for GMGeneralInfo {
 
         builder.write_simple_list(&self.room_order)?;
 
-        if builder.is_gm_version_at_least((2, 0)) {
+        if builder.is_version_at_least((2, 0)) {
             self.write_gms2_data(builder)?;
         }
         Ok(())

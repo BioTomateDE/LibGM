@@ -63,7 +63,7 @@ impl GMElement for Tile {
         builder.write_i32(self.y);
         match self.texture {
             Some(Texture::Sprite(sprite_ref)) => {
-                if builder.is_gm_version_at_least((2, 0)) {
+                if builder.is_version_at_least((2, 0)) {
                     builder.write_resource_id(sprite_ref);
                 } else {
                     bail!(
@@ -72,7 +72,7 @@ impl GMElement for Tile {
                 }
             },
             Some(Texture::Background(background_ref)) => {
-                if builder.is_gm_version_at_least((2, 0)) {
+                if builder.is_version_at_least((2, 0)) {
                     bail!(
                         "Room tile texture should be a Sprite reference in GMS2+; not a Background reference"
                     );

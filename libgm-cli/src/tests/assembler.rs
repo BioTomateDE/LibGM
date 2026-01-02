@@ -6,7 +6,7 @@ use std::{
 use libgm::{
     gamemaker::data::GMData,
     gml::{
-        assembly::{assemble_code, disassemble_code},
+        assembly::{assemble_instructions, disassemble_code},
         instruction::Instruction,
     },
     prelude::*,
@@ -41,8 +41,8 @@ pub fn test(data: &GMData) -> Result<()> {
         let end_dis = Instant::now();
 
         let start_ass = Instant::now();
-        let reconstructed: Vec<Instruction> =
-            assemble_code(&assembly, data).with_context(|| format!("assembling {name:?}"))?;
+        let reconstructed: Vec<Instruction> = assemble_instructions(&assembly, data)
+            .with_context(|| format!("assembling {name:?}"))?;
         let end_ass = Instant::now();
 
         benchmarks.push(Benchmark {
@@ -57,6 +57,7 @@ pub fn test(data: &GMData) -> Result<()> {
         }
 
         // Assembler (or disassembler) failed; produced different instructions.
+        println!();
         let orig_len = code.instructions.len();
         let recr_len = reconstructed.len();
 

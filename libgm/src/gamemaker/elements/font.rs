@@ -39,7 +39,7 @@ impl GMElement for GMFonts {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_pointer_list(&self.fonts)?;
-        if !builder.is_gm_version_at_least((2024, 14)) {
+        if !builder.is_version_at_least((2024, 14)) {
             let padding: [u8; 512] = generate_padding();
             builder.write_bytes(&padding);
         }
@@ -224,7 +224,7 @@ impl GMElement for GMFont {
         self.line_height
             .serialize_if_gm_ver(builder, "Line Height", (2023, 6))?;
         builder.write_pointer_list(&self.glyphs)?;
-        if builder.is_gm_version_at_least((2024, 14)) {
+        if builder.is_version_at_least((2024, 14)) {
             builder.align(4);
         }
         Ok(())
