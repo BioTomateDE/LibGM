@@ -17,6 +17,7 @@ pub enum Test {
 
 const ALL_TESTS: &[Test] = &[Test::Reparse, Test::Assembler, Test::NameValidation];
 
+#[must_use]
 pub fn deduplicate(mut tests: Vec<Test>) -> Vec<Test> {
     if tests.contains(&Test::All) {
         return ALL_TESTS.to_vec();
@@ -44,9 +45,8 @@ pub fn perform(data: &GMData, tests: &[Test]) -> Result<()> {
     for test in tests {
         match test {
             Test::All => {
-                // Perform all (other) tests.
-                let all_tests = vec![Test::NameValidation, Test::Reparse, Test::Assembler];
-                perform(data, &all_tests)?;
+                // (Unreachable as of now)
+                perform(data, ALL_TESTS)?;
             },
             Test::Builder => {
                 log::info!("Performing Builder Test");
