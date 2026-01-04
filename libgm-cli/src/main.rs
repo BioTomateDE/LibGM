@@ -1,4 +1,4 @@
-mod action;
+mod actions;
 mod cli;
 mod dir;
 mod logging;
