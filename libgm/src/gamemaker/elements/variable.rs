@@ -163,7 +163,7 @@ impl GMElement for GMVariables {
                 let instance_type = variables[i]
                     .modern_data
                     .as_ref()
-                    .map_or(InstanceType::Self_, |d| d.instance_type.clone());
+                    .map_or(InstanceType::Self_, |d| d.instance_type);
 
                 if let Some(old_var) = reader
                     .variable_occurrences
