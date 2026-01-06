@@ -142,6 +142,7 @@ const _: () = assert!(
 mod util;
 
 // Public modules
+pub mod actions;
 pub mod error;
 pub mod gamemaker;
 pub mod gml;

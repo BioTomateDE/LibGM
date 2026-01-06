@@ -5,7 +5,6 @@ use std::{
 };
 
 // TODO: allow serialization to PNG, QOI or BzQoi in GMImage
-
 use bzip2::read::BzDecoder;
 use image::{self, DynamicImage, ImageFormat};
 use macros::list_chunk;
