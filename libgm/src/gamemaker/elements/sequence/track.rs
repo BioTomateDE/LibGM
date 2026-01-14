@@ -48,8 +48,6 @@ pub struct Track {
 
 impl GMElement for Track {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        // TODO: fix issue in delivery_the-boys-night-out-2.win
-        // len:2, modelname:1, name:0, builtinname:0, traits:-1
         let model_name: String = reader.read_gm_string()?;
         let name: String = reader.read_gm_string()?;
         let builtin_name: BuiltinName = num_enum_from(reader.read_i32()?)?;

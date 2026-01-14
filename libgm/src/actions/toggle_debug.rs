@@ -32,7 +32,6 @@ pub fn toggle_debug(data: &mut GMData, enable: bool) -> Result<()> {
     }
 
     if display_name == "DELTARUNE Chapter 1" {
-        // TODO: introduce try_by_name because of this (cold path is bad)
         return if data.game_objects.by_name("obj_event_manager").is_ok() {
             deltarune::toggle(data, enable)
         } else if gen8.version.is_version_at_least((2, 3)) {

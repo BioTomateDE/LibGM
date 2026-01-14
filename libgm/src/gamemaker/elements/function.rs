@@ -38,6 +38,8 @@ impl GMElement for GMFunctions {
                 parse_occurrence_chain(reader, first_occurrence_pos, occurrence_count)?;
 
             // TODO: deal with the name string id somehow (also in VARI)
+            // are name string ids relevant in any gamemaker version?
+            // otherwise just write whatever lol
 
             //// verify name string id. allow -1 for unused function
             //if name_string_id as i32 != -1 && name.index != name_string_id {

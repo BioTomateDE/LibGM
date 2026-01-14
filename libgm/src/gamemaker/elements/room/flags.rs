@@ -6,7 +6,7 @@ bitfield_struct! {
         /// Whether the room has Views enabled.
         enable_views: 0,
 
-        /// TODO not exactly sure, probably similar to `GMRoom.draw_background_color`?
+        /// TODO(doc) not exactly sure, probably similar to `GMRoom.draw_background_color`?
         show_color: 1,
 
         /// Whether the room should not clear the display buffer.

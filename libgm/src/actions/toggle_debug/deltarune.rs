@@ -23,7 +23,8 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     let code = data.codes.by_ref(code_ref)?;
 
     log::warn!("This is untested, undefined behavior could occur!");
-    bail!("TODO: modifying control flow is hard :c");
+    bail!("modifying control flow is hard :c");
+    // TODO: implement
 
     for i in 0..code.instructions.len() {
         let instr = &code.instructions[i];
