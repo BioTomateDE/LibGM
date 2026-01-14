@@ -319,7 +319,10 @@ pub trait GMNamedListChunk: GMListChunk<Element: GMNamedElement> {
     fn by_name_mut(&mut self, name: &str) -> Result<&mut Self::Element>;
 }
 
-pub(crate) fn validate_names<T: GMNamedListChunk>(chunk: &T) -> Result<()> {
+/// Validates all names of the root elements in this chunk.
+///
+/// This checks for duplicates as well as names not following the proper charset.
+pub fn validate_names<T: GMNamedListChunk>(chunk: &T) -> Result<()> {
     // TODO(perf): this can probably be optimised or something
     let elements = chunk.elements();
     let mut seen: HashMap<&String, usize> = HashMap::new();

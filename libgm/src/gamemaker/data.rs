@@ -156,7 +156,7 @@ impl Default for GMData {
 }
 
 impl GMData {
-    /// Validate all names of all named root elements.
+    /// Validates all names of all named root elements.
     /// This checks for duplicates as well as name charset.
     pub fn validate_names(&self) -> Result<()> {
         validate_names(&self.animation_curves)?;
@@ -181,7 +181,9 @@ impl GMData {
         Ok(())
     }
 
-    /// Deserializes all embedded texture pages, turning them into `DynamicImage`s.
+    /// Deserializes all embedded texture pages, turning them into [`DynamicImage`]s.
+    ///
+    /// [`DynamicImage`]: image::DynamicImage
     pub fn deserialize_textures(&mut self) -> Result<()> {
         for texture_page in &mut self.embedded_textures {
             let Some(image) = &mut texture_page.image else {
