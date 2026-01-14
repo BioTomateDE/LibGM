@@ -143,7 +143,8 @@ impl ParsingOptions {
     #[must_use]
     pub fn parallel_processing(mut self, enabled: bool) -> Self {
         self.parallel_processing = enabled;
-        todo!("Not yet implemented")
+        todo!("Not yet implemented");
+        // TODO: implement
     }
 
     fn parse(&self, raw_data: &[u8]) -> Result<GMData> {
