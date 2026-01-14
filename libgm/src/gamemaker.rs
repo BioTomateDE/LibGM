@@ -43,7 +43,7 @@
 //! the game contained within it.
 //!
 //! # VM vs YYC
-//! You may have noticed exceptions in brackets regarding bytecode while reading.
+//! You may have noticed some stars regarding bytecode while reading.
 //! This is because YoYoGames has created `YYC` (TODO: abbreviation meaning missing).
 //! When exporting their game, game developers can choose between regular VM output or YYC output.
 //!

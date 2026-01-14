@@ -1,7 +1,27 @@
-//! **A data parsing and building library for GameMaker data files (`data.win`).**
+//! A data parsing and building library for GameMaker data files (`data.win`).
 //!
 //! This library provides structs and functions to handle GameMaker game assets
 //! in a meaningful way.
+//!
+//! ## Usage
+//! For most purposes, using `parse_file` and `build_file` is enough.
+//!
+//! ```
+//! use libgm::gamemaker::{elements::game_object::GMGameObject, data::GMData};
+//!
+//! // Load data file
+//! let mut data: GMData = libgm::parse_file("./data.win").unwrap();
+//! println!("Loaded {}", data.general_info.display_name);
+//!
+//! // Modify data file
+//! let obj: &mut GMGameObject = data.game_objects.by_name_mut("obj_time").unwrap();
+//! obj.visible = true;
+//!
+//! // Write data file
+//! libgm::build_file("./modified_data.win").unwrap();
+//! ```
+//!
+//! If you need more control, you can use `parse_bytes`, `build_bytes` or `ParsingOptions`.
 //!
 //! For more information on the GameMaker specifics, check out the [`gamemaker`] module.
 //!
@@ -19,14 +39,14 @@
 //!
 //! ## Panicking
 //! This library *should* **never panic**.
-//! All malformed data files are caught into `LibGM`'s custom error type.
+//! All malformed data files are caught into LibGM's custom error type.
 //! However, since this library is not mature yet, there might still be a few bugs.
 //! For GUI applications, I would definitely recommend to **set a
 //! [panic catcher](https://doc.rust-lang.org/std/panic/fn.catch_unwind.html)**
 //! before calling any data parsing/building functions, just to be safe.
 //!
 //! ## Missing features
-//! The following features are not yet supported by `LibGM`:
+//! The following features are not yet supported by LibGM:
 //! - **Null pointers**.
 //!   These typically occur in newer games compiled with `GMAC` (GameMaker Asset Compiler),
 //!   which may null out pointers to unused elements.
