@@ -65,7 +65,7 @@ pub fn hexdump_range(raw_data: &[u8], range: impl RangeBounds<usize>) -> Result<
 ///
 /// It basically just gets the typename in a slightly more readable manner.
 pub fn typename<T>() -> &'static str {
-    // TODO(typename): When Rust adds support for handling typenames at compile time, use that.
+    // TODO: When Rust adds support for handling typenames at compile time, use that.
     let ty = std::any::type_name::<T>();
     if let Some(index) = ty.find("GM")
         && !ty.contains('<')

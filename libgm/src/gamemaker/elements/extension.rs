@@ -194,9 +194,6 @@ pub enum Kind {
     ActionLib = 3,
     Generic = 4,
     JavaScript = 5,
-    // /// TODO wgat it is
-    // /// Found in <https://gm48.net/game-jams/delivery/games/deliver-this-ye-blackguards>
-    // Unknown1 = 11,
 }
 
 #[must_use]

@@ -36,7 +36,9 @@ impl GMElement for Text {
             "Writing raw Font index {} for Text Keyframe of Sequence",
             self.font_index
         );
-        builder.write_i32(self.font_index); // TODO no idea what this is but shouldn't it be a GMRef<GMFont> instead of an i32?
+
+        // TODO: no idea what this is but shouldn't it be a GMRef<GMFont> instead of an i32?
+        builder.write_i32(self.font_index);
         Ok(())
     }
 }
