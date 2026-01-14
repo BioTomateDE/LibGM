@@ -231,7 +231,7 @@ impl GMNamedElement for GMVariable {
     }
 
     fn validate_name(&self) -> Result<()> {
-        if unlikely(self.name == "$$$$temp$$$$") {
+        if self.name == "$$$$temp$$$$" {
             return Ok(());
         }
         validate_identifier(&self.name)

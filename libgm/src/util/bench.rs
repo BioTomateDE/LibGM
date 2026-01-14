@@ -21,8 +21,8 @@ impl Stopwatch {
 
 impl Display for Stopwatch {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let elapsed = self.elapsed();
-        let millis: f32 = elapsed.as_secs_f32() * 1000.0;
+        let dur = self.elapsed();
+        let millis: f32 = dur.as_secs_f32() * 1000.0;
         write!(f, "{millis:.2} ms")
     }
 }

@@ -154,3 +154,8 @@ pub use gamemaker::{
     deserialize::{parse_bytes, parse_file},
     serialize::{build_bytes, build_file},
 };
+
+// TODO(decl-macros) when Rust finally drops Macros 2.0:
+// * Migrate all `macro_rules!` to `macro`s.
+// * Export `bail!` macro as well as other useful macros to library users.
+// Reference: https://github.com/rust-lang/rust/issues/39412

@@ -66,7 +66,7 @@ impl ChunkMap {
     }
 
     pub fn push(&mut self, name: ChunkName, chunk: ChunkBounds) -> Result<()> {
-        if unlikely(self.contains_name(name)) {
+        if self.contains_name(name) {
             bail!("Chunk {name:?} is defined multiple times");
         }
         self.0.push((name, chunk));

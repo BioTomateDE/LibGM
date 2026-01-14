@@ -385,7 +385,6 @@ pub(crate) fn validate_identifier(name: &str) -> Result<()> {
 
     // i hate this function
     if name.len() > 4 && name.starts_with("@@") && name.ends_with("@@") {
-        cold_path();
         name = &name[2..name.len() - 2];
     }
 
