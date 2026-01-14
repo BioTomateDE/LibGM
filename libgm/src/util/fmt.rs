@@ -14,7 +14,8 @@ pub fn format_bytes(bytes: usize) -> String {
         unit_idx += 1;
     }
 
-    format!("{:.1} {}", size, UNITS[unit_idx])
+    let unit = UNITS[unit_idx];
+    format!("{size:.2} {unit}")
 }
 
 pub fn hexdump(raw_data: &[u8]) -> String {
@@ -24,8 +25,8 @@ pub fn hexdump(raw_data: &[u8]) -> String {
 
     let mut buffer = String::with_capacity(raw_data.len() * 3);
     for byte in raw_data {
-        use std::fmt::Write as _;
-        write!(&mut buffer, "{byte:02X} ").unwrap();
+        use std::fmt::Write;
+        let _ = write!(&mut buffer, "{byte:02X} ");
     }
 
     // Pop last space character.
@@ -64,8 +65,11 @@ pub fn hexdump_range(raw_data: &[u8], range: impl RangeBounds<usize>) -> Result<
 ///
 /// It basically just gets the typename in a slightly more readable manner.
 pub fn typename<T>() -> &'static str {
+    // TODO(typename): When Rust adds support for handling typenames at compile time, use that.
     let ty = std::any::type_name::<T>();
-    if let Some(index) = ty.find("GM") {
+    if let Some(index) = ty.find("GM")
+        && !ty.contains('<')
+    {
         return &ty[index..];
     }
     ty.strip_prefix("libgm::gamemaker::elements::")

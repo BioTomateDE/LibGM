@@ -2,7 +2,7 @@
 //! This includes error types, a result alias, traits and more.
 //! You can import it by using `use libgm::prelude::*;`.
 
-pub(crate) use crate::{error::bail, util::hint::*};
+pub(crate) use crate::error::bail;
 pub use crate::{
     error::{Context, Error, Result},
     gamemaker::{

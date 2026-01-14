@@ -12,7 +12,6 @@ pub struct Error {
 }
 
 impl Error {
-    #[cold]
     #[must_use]
     pub const fn new(message: String) -> Self {
         Self { message, context: Vec::new() }
@@ -67,14 +66,12 @@ impl Display for Error {
 }
 
 impl From<String> for Error {
-    #[cold]
     fn from(message: String) -> Self {
         Self::new(message)
     }
 }
 
 impl From<&str> for Error {
-    #[cold]
     fn from(message: &str) -> Self {
         Self::new(message.to_string())
     }

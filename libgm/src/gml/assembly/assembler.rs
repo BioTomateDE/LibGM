@@ -485,7 +485,6 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
 
 fn parse_variable_identifier<'a>(reader: &'a mut Reader) -> Result<&'a str> {
     if reader.consume_str("$$$$temp$$$$").is_some() {
-        cold_path();
         Ok("$$$$temp$$$$")
     } else {
         reader.parse_identifier()
