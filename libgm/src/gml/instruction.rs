@@ -211,7 +211,6 @@ pub enum Instruction {
     /// Pops two values off of the stack, and then calls a GML script/function using those values, representing
     /// the "self" instance to be used when calling, as well as the reference to the function being called.
     /// Arguments are dealt with identically to "call".
-    /// TODO(weak): got rid of datatype, its probably always `variable` right?
     CallVariable { argument_count: u16 },
 
     /// Verifies an array index is within proper bounds, typically for multidimensional arrays.

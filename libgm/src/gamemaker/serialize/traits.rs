@@ -20,7 +20,7 @@ pub trait GMSerializeIfVersion {
     ) -> Result<()>;
 }
 
-/// TODO: these trait are kind of ass, move them to [`DataBuilder`].
+/// TODO: these traits are kind of ass, move them to [`DataBuilder`].
 ///       maybe like `builder.write_if_ver(element, (2023, 6), "")?;`
 impl<T: GMElement> GMSerializeIfVersion for Option<T> {
     fn serialize_if_gm_ver<V: Into<GMVersionReq>>(

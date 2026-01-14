@@ -6,10 +6,6 @@
 //! For more information on the GameMaker specifics, check out the [`gamemaker`] module.
 //!
 //! ## Disclaimer
-//! I, BioTomateDE, wrote this project myself. It is effectively my first Rust project ever.
-//! While I have been working on this project for almost a year now (😭), I'm still
-//! not the best Rust programmer.
-//!
 //! This library is still in testing stages
 //! ([SemVer](https://semver.org/) major 0)
 //! and may have issues.
@@ -52,6 +48,8 @@
 //!   - Error message string
 //!   - Context chain
 //! - All structs and enums marked with `#[non_exhaustive]`
+//! - Implementing traits like `GMElement` (These traits are only meant for writing generic code,
+//!   not for implementing it for your own types)
 //!
 //! There might be some other struct fields or type names
 //! with docstrings saying "this may change in the future".
@@ -155,7 +153,12 @@ pub use gamemaker::{
     serialize::{build_bytes, build_file},
 };
 
-// TODO(decl-macros) when Rust finally drops Macros 2.0:
+// === Some TODOs for the entire library ===
+//
+// When Rust finally drops Macros 2.0:
 // * Migrate all `macro_rules!` to `macro`s.
 // * Export `bail!` macro as well as other useful macros to library users.
 // Reference: https://github.com/rust-lang/rust/issues/39412
+//
+// When most traits (`Into`, `TryInto`, `Iterator`, `PartialEq`) are const-stable:
+// * Clean up all `const-hack` TODOs

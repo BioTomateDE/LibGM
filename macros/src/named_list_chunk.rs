@@ -47,7 +47,7 @@ pub fn named_list_chunk(attr: TokenStream, item: TokenStream) -> TokenStream {
     let chunk_struct = parse_macro_input!(item as DeriveInput);
 
     let (elems_field, elem_type) = match find_vec_field(&chunk_struct) {
-        Ok((n, t)) => (n, t),
+        Ok(x) => x,
         Err(err) => return err.to_compile_error().into(),
     };
 
@@ -86,21 +86,19 @@ pub fn named_list_chunk(attr: TokenStream, item: TokenStream) -> TokenStream {
                     }
                 }
 
-                let error_message: String = format!(
+                crate::error::bail!(
                     "Could not find {} with name {:?}",
                     stringify!(#elem_type),
                     name,
                 );
-
-                return Err(error_message.into());
             }
 
             fn by_name(&self, name: &str) -> Result<&#elem_type> {
-                self.ref_by_name(name).map(|gmref| &self.#elems_field[gmref.index as usize])
+                self.ref_by_name(name).map(|gm_ref| &self.#elems_field[usize::from(gm_ref)])
             }
 
             fn by_name_mut(&mut self, name: &str) -> Result<&mut #elem_type> {
-                self.ref_by_name(name).map(|gmref| &mut self.#elems_field[gmref.index as usize])
+                self.ref_by_name(name).map(|gm_ref| &mut self.#elems_field[usize::from(gm_ref)])
             }
         }
     };

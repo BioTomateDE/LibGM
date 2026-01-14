@@ -12,7 +12,7 @@ use crate::{prelude::*, util::fmt::typename};
 /// This is typically a Reference by ID in the data file format,
 /// but is also used for texture page items (which are pointers).
 ///
-/// `[GMRef]` has (fake) generic types to make it clearer which type it belongs to.
+/// [`GMRef`] has (fake) generic types to make it clearer which type it belongs to.
 /// * Example without: `pub texture_mask: GMRef`
 /// * Example with: `pub texture_mask: GMRef<GMSprite>`
 ///

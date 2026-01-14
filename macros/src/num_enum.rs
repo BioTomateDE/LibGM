@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 
 pub fn num_enum(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let repr_type = match syn::parse::<syn::Type>(attr) {
+    let repr_type: syn::Type = match syn::parse(attr) {
         Ok(ty) => ty,
         Err(err) => return err.to_compile_error().into(),
     };

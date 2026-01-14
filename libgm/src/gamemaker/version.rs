@@ -102,7 +102,7 @@ impl GMVersion {
     /// # Notes
     /// You can also compare `GMVersion` against other `GMVersion`s or `GMVersionReq`s directly.
     /// Example:
-    /// ```no_run]
+    /// ```no_run
     /// let version_requirement: GMVersionReq = (2023, 6).into();
     /// if gm_data.general_info.version < version_requirement {
     ///     // ...

@@ -1,3 +1,5 @@
+//! Visit <https://docs.rs/libgm>.
+
 mod list_chunk;
 mod named_list_chunk;
 mod num_enum;

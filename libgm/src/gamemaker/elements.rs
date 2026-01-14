@@ -320,7 +320,7 @@ pub trait GMNamedListChunk: GMListChunk<Element: GMNamedElement> {
 }
 
 pub(crate) fn validate_names<T: GMNamedListChunk>(chunk: &T) -> Result<()> {
-    // TODO: this can probably be optimised or something
+    // TODO(perf): this can probably be optimised or something
     let elements = chunk.elements();
     let mut seen: HashMap<&String, usize> = HashMap::new();
 
