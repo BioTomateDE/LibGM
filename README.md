@@ -24,6 +24,7 @@ This is effectively a Rust port of
   - Still more information than just "Reading out of bounds"
   - Strict data integrity checks catch errors earlier, making debugging easier
   - Example trace printed out using `.chain_pretty()`:
+
     ```
     sprite::swf::item::shape::style_group::fill::gradient::Record count 1065353216 implies data size 8.5 GB which exceeds failsafe size 10.0 MB
     ↳ while reading simple list
@@ -33,6 +34,7 @@ This is effectively a Rust port of
     ↳ while deserializing chunk 'SPRT'
     ↳ while parsing GameMaker data file ./gm48_datafiles/a-loop_detective.win
     ```
+
 - Configurable lenient options for trying to parse half-broken data files.
 
 ## Disadvantages / TODOs
@@ -47,7 +49,7 @@ This is effectively a Rust port of
 Add this line in the `[dependencies]` section of your `Cargo.toml` file:
 
 ```toml
-libgm = "0.2.0"
+libgm = "0.3.0"
 ```
 
 Or if you want bleeding edge:
@@ -91,6 +93,10 @@ let buffer: Vec<u8> = std::fs::read("./data.win")?;
 let data: GMData = parser.parse_bytes(&buffer)?;
 // buffer is still accessible here since we passed a reference
 ```
+
+## Crate features
+
+- `chrono` (opt-in):
 
 ## Credits
 

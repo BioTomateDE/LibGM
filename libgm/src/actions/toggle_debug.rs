@@ -14,7 +14,36 @@ use crate::{
     prelude::*,
 };
 
-pub fn toggle_debug(data: &mut GMData, enable: bool) -> Result<()> {
+impl GMData {
+    /// Tries to enable or disable debug mode, based on the argument.
+    ///
+    /// This function currently supports:
+    /// * Undertale
+    /// * NXTALE
+    /// * Deltarune Chapter 1 (aka. SURVEY_PROGRAM)
+    /// * Deltarune Chapter 1&2 Demo (Old)
+    /// * Deltarune Chapter 1&2 LTS Demo (New)
+    /// * Deltarune Chapters 1-4 (paid game)
+    pub fn toggle_debug(&mut self, enable: bool) -> Result<()> {
+        toggle_debug(self, enable)
+    }
+
+    /// Enables debug mode.
+    ///
+    /// For more information, see [`Self::toggle_debug`].
+    pub fn enable_debug(&mut self) -> Result<()> {
+        self.toggle_debug(true)
+    }
+
+    /// Disables debug mode.
+    ///
+    /// For more information, see [`Self::toggle_debug`].
+    pub fn disable_debug(&mut self) -> Result<()> {
+        self.toggle_debug(false)
+    }
+}
+
+fn toggle_debug(data: &mut GMData, enable: bool) -> Result<()> {
     let gen8 = &data.general_info;
     let display_name: &str = &gen8.display_name;
     let internal_name: &str = &gen8.game_name;
@@ -117,6 +146,6 @@ fn int_to_bool<I: Display + Into<i32>>(integer: I) -> Result<bool> {
     match integer {
         0 => Ok(false),
         1 => Ok(true),
-        _ => bail!("Expected global.debug to be set to either 0 or 1, found {integer}"),
+        _ => bail!("Expected debug variable to be set to either 0 or 1, found {integer}"),
     }
 }

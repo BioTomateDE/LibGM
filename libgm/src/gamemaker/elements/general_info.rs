@@ -2,16 +2,16 @@ mod flags;
 mod function_classifications;
 mod gms2;
 
+#[cfg(feature = "chrono")]
 use chrono::{DateTime, Utc};
+
 pub use flags::Flags;
 pub use function_classifications::FunctionClassifications;
 pub use gms2::GMS2Data;
-use uuid::Uuid;
 
 use crate::{
     gamemaker::{
         chunk::ChunkName,
-        data::Endianness,
         deserialize::reader::DataReader,
         elements::{GMChunk, GMElement, room::GMRoom},
         reference::GMRef,
@@ -67,7 +67,7 @@ pub struct GMGeneralInfo {
 
     /// The `DirectPlay` GUID of the data file.
     /// This is always empty in GameMaker Studio.
-    pub directplay_guid: Uuid,
+    pub directplay_guid: [u8; 16],
 
     /// The name of the game.
     pub game_name: String,
@@ -113,7 +113,13 @@ pub struct GMGeneralInfo {
     pub license_md5: [u8; 16],
 
     /// The timestamp the game was compiled at.
-    pub timestamp_created: DateTime<Utc>,
+    ///
+    /// This field is only exposed if the `chrono` feature is enabled.
+    #[cfg(feature = "chrono")]
+    pub creation_timestamp: DateTime<Utc>,
+
+    #[cfg(not(feature = "chrono"))]
+    creation_timestamp: i64,
 
     /// The name that gets displayed in the window title.
     pub display_name: String,
@@ -126,7 +132,8 @@ pub struct GMGeneralInfo {
     pub steam_appid: i32,
 
     /// The port the data file exposes for the debugger.
-    /// Only set in WAD14+.
+    ///
+    /// Only set in WAD Version 14 and higher.
     pub debugger_port: Option<u32>,
 
     /// The room order of the data file.
@@ -135,7 +142,8 @@ pub struct GMGeneralInfo {
     /// Set in GameMaker 2+ data files.
     pub gms2_data: Option<GMS2Data>,
 
-    pub exists: bool,
+    /// Should always be true (unless the data file is malformed).
+    pub(crate) exists: bool,
 }
 
 impl Default for GMGeneralInfo {
@@ -144,6 +152,7 @@ impl Default for GMGeneralInfo {
     /// ___________
     /// **This value should never be used!**
     /// Immediately replace it with actual `GEN8` when parsed.
+    #[allow(clippy::default_trait_access)]
     fn default() -> Self {
         Self {
             is_debugger_disabled: true,
@@ -154,7 +163,7 @@ impl Default for GMGeneralInfo {
             last_object_id: 100_000,
             last_tile_id: 10_000_000,
             game_id: 1337,
-            directplay_guid: Uuid::default(),
+            directplay_guid: [0u8; 16],
             game_name: String::new(),
             version: GMVersion::stub(),
             default_window_width: 1337,
@@ -162,7 +171,7 @@ impl Default for GMGeneralInfo {
             flags: Flags::default(),
             license_crc32: 1337,
             license_md5: [0; 16],
-            timestamp_created: DateTime::default(),
+            creation_timestamp: Default::default(),
             display_name: String::new(),
             function_classifications: FunctionClassifications::default(),
             steam_appid: 0,
@@ -195,6 +204,18 @@ impl GMGeneralInfo {
     pub fn set_version(&mut self, req: impl Into<GMVersionReq>) {
         self.version.set_version(req);
     }
+
+    #[must_use]
+    const fn timestamp(&self) -> i64 {
+        #[cfg(feature = "chrono")]
+        {
+            self.creation_timestamp.timestamp()
+        }
+        #[cfg(not(feature = "chrono"))]
+        {
+            self.creation_timestamp
+        }
+    }
 }
 
 impl GMElement for GMGeneralInfo {
@@ -215,11 +236,6 @@ impl GMElement for GMGeneralInfo {
         let game_id = reader.read_u32()?;
 
         let directplay_guid: [u8; 16] = *reader.read_bytes_const().context("reading GUID")?;
-        let uuid_parser = match reader.endianness {
-            Endianness::Little => uuid::Builder::from_bytes_le,
-            Endianness::Big => uuid::Builder::from_bytes, // unconfirmed
-        };
-        let directplay_guid: Uuid = uuid_parser(directplay_guid).into_uuid();
 
         let game_name: String = reader.read_gm_string()?;
         let version = GMVersion::deserialize(reader)?;
@@ -230,9 +246,11 @@ impl GMElement for GMGeneralInfo {
         let license_crc32 = reader.read_u32()?;
         let license_md5: [u8; 16] = *reader.read_bytes_const().context("reading license (MD5)")?;
 
-        let timestamp_created = reader.read_i64()?;
-        let timestamp_created: DateTime<Utc> = DateTime::from_timestamp(timestamp_created, 0)
-            .ok_or_else(|| format!("Invalid Creation Timestamp {timestamp_created}"))?;
+        let creation_timestamp = reader.read_i64()?;
+        #[cfg(feature = "chrono")]
+        let creation_timestamp: DateTime<Utc> =
+            DateTime::from_timestamp_secs(creation_timestamp)
+                .ok_or_else(|| format!("Invalid Creation Timestamp {creation_timestamp}"))?;
 
         let display_name: String = reader.read_gm_string()?;
         let active_targets = reader.read_u64()?;
@@ -259,7 +277,7 @@ impl GMElement for GMGeneralInfo {
             flags,
             license_crc32,
             license_md5,
-            timestamp_created,
+            creation_timestamp,
             display_name,
             function_classifications,
             steam_appid,
@@ -290,7 +308,7 @@ impl GMElement for GMGeneralInfo {
         builder.write_u32(self.last_object_id);
         builder.write_u32(self.last_tile_id);
         builder.write_u32(self.game_id);
-        builder.write_bytes(self.directplay_guid.to_bytes_le().as_slice());
+        builder.write_bytes(&self.directplay_guid);
         builder.write_gm_string(&self.game_name);
 
         let version = if self.version.major == 1 {
@@ -305,7 +323,9 @@ impl GMElement for GMGeneralInfo {
         self.flags.serialize(builder)?;
         builder.write_u32(self.license_crc32);
         builder.write_bytes(&self.license_md5);
-        builder.write_i64(self.timestamp_created.timestamp());
+
+        builder.write_i64(self.timestamp());
+
         builder.write_gm_string(&self.display_name);
         builder.write_u64(0); // "Active targets"
         self.function_classifications.serialize(builder)?;
