@@ -10,7 +10,7 @@ use crate::{
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     let pushim = Instruction::PushImmediate { integer: i16::from(enable) };
     let pop = assemble_instruction("pop global.debug", data)?;
-    let push = assemble_instruction("push global.debug", data)?;
+    let push = assemble_instruction("push.v global.debug", data)?;
     let ret = Instruction::Return;
     let instructions = vec![pushim, pop, push, ret];
 

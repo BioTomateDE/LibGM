@@ -1,6 +1,6 @@
 [package]
 name = "libgm"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["BioTomateDE <latuskati+cratesio@gmail.com>"]
 edition = "2024"
 description = "A tool for modding, unpacking and decompiling GameMaker games"
@@ -10,31 +10,36 @@ license = "GPL-3.0"
 keywords = ["gamemaker", "gml", "decompiler", "modding", "undertale"]
 categories = ["parser-implementations", "game-development", "encoding"]
 
+[features]
+default = []
+chrono = ["dep:chrono"]
+png = ["image/png"]
+
 # Attribute macros (num_enum, list_chunk, named_list_chunk)
 [dependencies.macros]
 version = "0.1.0"
 path = "../macros"
 package = "libgm-macros"
 
-
-# General Crates.io dependencies
-[dependencies]
-bzip2 = "0.6.1"    # BZip2+QOI encoded images
-log = "0.4.29"     # Logging
-num_enum = "0.7.5" # Primitive number enums
-
-# Needed to (potentially) deserialize PNG images
-[dependencies.image]
-version = "0.25.9"
-default-features = false
-features = ["png"]
+# BZip2+QOI encoded images
+[dependencies.bzip2]
+version = "0.6.1"
 
 # Needed for Game Creation Timestamp in General Info
 [dependencies.chrono]
 version = "0.4.42"
 default-features = false
+optional = true
 
-# Needed for Game UUID in General Info
-[dependencies.uuid]
-version = "1.19.0"
+# Needed to (potentially) deserialize PNG images
+[dependencies.image]
+version = "0.25.9"
 default-features = false
+
+# Logging
+[dependencies.log]
+version = "0.4.29"
+
+# Primitive number enums
+[dependencies.num_enum]
+version = "0.7.5"

@@ -65,6 +65,9 @@ impl Display for Error {
     }
 }
 
+/// Hey, at least it serves as a marker
+impl std::error::Error for Error {}
+
 impl From<String> for Error {
     fn from(message: String) -> Self {
         Self::new(message)

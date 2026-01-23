@@ -28,7 +28,7 @@ pub struct GMS2Data {
 impl GMGeneralInfo {
     /// Parse and verify UID
     pub(super) fn read_gms2_data(&self, reader: &mut DataReader) -> Result<GMS2Data> {
-        let timestamp: i64 = self.timestamp_created.timestamp();
+        let timestamp: i64 = self.timestamp();
         let mut info_timestamp_offset: bool = true;
         let seed: i32 = (timestamp & 0xFFFF_FFFF) as i32;
         let mut rng = DotnetRng::new(seed);
@@ -94,7 +94,7 @@ impl GMGeneralInfo {
             .gms2_data
             .as_ref()
             .ok_or("GMS2 Data not set in General Info")?;
-        let timestamp: i64 = self.timestamp_created.timestamp();
+        let timestamp: i64 = self.timestamp();
         let seed: i32 = (timestamp & 0xFFFF_FFFF) as i32;
         let mut rng = DotnetRng::new(seed);
         let first_random: i64 = (i64::from(rng.next()) << 32) | i64::from(rng.next());
@@ -128,7 +128,7 @@ impl GMGeneralInfo {
 
     fn get_info_number(&self, first_random: i64, info_timestamp_offset: bool) -> i64 {
         let flags_raw: u32 = self.flags.build();
-        let mut info_number: i64 = self.timestamp_created.timestamp();
+        let mut info_number: i64 = self.timestamp();
         if info_timestamp_offset {
             info_number -= 1000;
         }

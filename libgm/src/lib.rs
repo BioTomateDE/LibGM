@@ -157,10 +157,10 @@ const _: () = assert!(
 );
 
 // Private modules
+mod actions;
 mod util;
 
 // Public modules
-pub mod actions;
 pub mod error;
 pub mod gamemaker;
 pub mod gml;
@@ -169,7 +169,7 @@ pub mod prelude;
 // Convenience re-exports
 pub use error::{Error, Result};
 pub use gamemaker::{
-    deserialize::{parse_bytes, parse_file},
+    deserialize::{ParsingOptions, parse_bytes, parse_file},
     serialize::{build_bytes, build_file},
 };
 
