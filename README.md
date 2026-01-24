@@ -131,7 +131,7 @@ would like to see added, a bug you found; just create an Issue/PR in this repo.
   - [x] panic-catching (opt-out): Sets a panic handler before data [de]serialization, returning a LibGM error if a panic occurred
 - [ ] Overhaul the CLI: Allow for viewing of relevant data, exporting assembly and more
 - [ ] Maybe move the CLI to a different repo / publish it?
-- [ ] Add helpers to Instruction (like `fn get_variable(&self) -> Option<&CodeVariable>` that returns some for push, pushloc, pushglb, pushbltn or pop)
-- [ ] "Fix" disassembler for child code entries (right now they will generate empty string)
+- [x] Add helpers to Instruction (like `fn get_variable(&self) -> Option<&CodeVariable>` that returns some for push, pushloc, pushglb, pushbltn or pop)
+- [x] "Fix" disassembler for child code entries (right now they will generate empty string)
 - [ ] Maybe add some sort of header for assembly for entire code entries (name, local count, arg count) so u can assemble_code directly
 - [ ] Add comments to assembly? Which style tho? How much does it fuck Up efficiency and maintainability?

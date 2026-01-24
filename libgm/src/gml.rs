@@ -5,7 +5,6 @@ pub mod instruction;
 pub(crate) mod opcodes;
 
 pub use crate::gml::instruction::Instruction;
-
 use crate::prelude::GMRef;
 
 /// A code entry in a GameMaker data file.

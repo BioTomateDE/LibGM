@@ -7,8 +7,6 @@ mod instance_type;
 mod push_value;
 mod variable_type;
 
-use crate::gamemaker::{elements::function::GMFunction, reference::GMRef};
-
 pub use asset_reference::AssetReference;
 pub use category::Category;
 pub use code_variable::CodeVariable;
@@ -17,6 +15,8 @@ pub use data_type::DataType;
 pub use instance_type::InstanceType;
 pub use push_value::PushValue;
 pub use variable_type::VariableType;
+
+use crate::gamemaker::{elements::function::GMFunction, reference::GMRef};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Instruction {
