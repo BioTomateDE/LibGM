@@ -10,9 +10,10 @@ use crate::{
         serialize::builder::DataBuilder,
     },
     gml::{
+        GMCode, ModernData,
         instruction::{
-            AssetReference, CodeVariable, ComparisonType, DataType, GMCode, InstanceType,
-            Instruction, ModernData, PushValue, VariableType,
+            AssetReference, CodeVariable, ComparisonType, DataType, InstanceType, Instruction,
+            PushValue, VariableType,
         },
         opcodes,
     },

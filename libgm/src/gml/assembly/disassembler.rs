@@ -7,9 +7,12 @@ use crate::{
         },
         reference::GMRef,
     },
-    gml::instruction::{
-        AssetReference, CodeVariable, ComparisonType, DataType, GMCode, InstanceType, Instruction,
-        PushValue, VariableType,
+    gml::{
+        GMCode,
+        instruction::{
+            AssetReference, CodeVariable, ComparisonType, DataType, InstanceType, Instruction,
+            PushValue, VariableType,
+        },
     },
     prelude::*,
     util::fmt::typename,
@@ -66,13 +69,13 @@ fn disassemble_instr(
         | Instruction::SaveArrayReference
         | Instruction::RestoreArrayReference
         | Instruction::IsNullishValue => {
-            write!(buffer, "{mnemonic}");
+            buffer.push_str(mnemonic);
         },
 
         Instruction::Negate { data_type }
         | Instruction::Not { data_type }
         | Instruction::PopDiscard { data_type } => {
-            write!(buffer, "{}.{}", mnemonic, data_type.to_str());
+            write!(buffer, "{}.{}", mnemonic, data_type.char());
         },
 
         Instruction::CallVariable { argument_count } => {
@@ -80,7 +83,7 @@ fn disassemble_instr(
         },
 
         Instruction::Duplicate { data_type, size } => {
-            write!(buffer, "{}.{} {}", mnemonic, data_type.to_str(), size);
+            write!(buffer, "{}.{} {}", mnemonic, data_type.char(), size);
         },
 
         Instruction::DuplicateSwap { data_type, size1, size2 } => {
@@ -88,7 +91,7 @@ fn disassemble_instr(
                 buffer,
                 "{}.{} {} {}",
                 mnemonic,
-                data_type.to_str(),
+                data_type.char(),
                 size1,
                 size2,
             );
@@ -114,7 +117,7 @@ fn disassemble_instr(
         | Instruction::Xor { lhs: type2, rhs: type1 }
         | Instruction::ShiftLeft { value: type2, shift_amount: type1 }
         | Instruction::ShiftRight { value: type2, shift_amount: type1 } => {
-            write!(buffer, "{}.{}.{}", mnemonic, type1.to_str(), type2.to_str());
+            write!(buffer, "{}.{}.{}", mnemonic, type1.char(), type2.char());
         },
 
         Instruction::Compare { lhs, rhs, comparison_type } => {
@@ -122,26 +125,19 @@ fn disassemble_instr(
                 buffer,
                 "{}.{}.{} {}",
                 mnemonic,
-                rhs.to_str(),
-                lhs.to_str(),
+                rhs.char(),
+                lhs.char(),
                 comparison_type.to_str(),
             );
         },
 
         Instruction::Pop { variable, type1, type2 } => {
-            // TODO: find the instance type of the variable? idek
-            write!(
-                buffer,
-                "{}.{}.{} ",
-                mnemonic,
-                type1.to_str(),
-                type2.to_str(),
-            );
+            write!(buffer, "{}.{}.{} ", mnemonic, type1.char(), type2.char());
             write_variable(variable, buffer, gm_data)?;
         },
 
         Instruction::Push { value } => {
-            write!(buffer, "{}.{} ", mnemonic, value.data_type().to_str());
+            write!(buffer, "{}.{} ", mnemonic, value.data_type().char());
             write_push_instruction(value, buffer, gm_data)?;
         },
         Instruction::PushLocal { variable }
@@ -231,15 +227,15 @@ impl Instruction {
 
 impl DataType {
     #[must_use]
-    const fn to_str(self) -> &'static str {
+    const fn char(self) -> char {
         match self {
-            Self::Int16 => "e",
-            Self::Int32 => "i",
-            Self::Int64 => "l",
-            Self::Double => "d",
-            Self::Boolean => "b",
-            Self::String => "s",
-            Self::Variable => "v",
+            Self::Int16 => 'e',
+            Self::Int32 => 'i',
+            Self::Int64 => 'l',
+            Self::Double => 'd',
+            Self::Boolean => 'b',
+            Self::String => 's',
+            Self::Variable => 'v',
         }
     }
 }
@@ -265,8 +261,8 @@ impl VariableType {
             Self::Normal | Self::Instance => "",
             Self::Array => "[array]",
             Self::StackTop => "[stacktop]",
-            Self::ArrayPushAF => "[arraypushaf]",
-            Self::ArrayPopAF => "[arraypopaf]",
+            Self::MultiPush => "[arraypushaf]",
+            Self::MultiPop => "[arraypopaf]",
         }
     }
 }

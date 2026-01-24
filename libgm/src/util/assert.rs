@@ -7,7 +7,7 @@ pub fn int<I: Copy + Eq + Display + UpperHex>(
     expected: I,
     description: &'static str,
 ) -> Result<()> {
-    if cfg!(not(feature = "integrity-checks")) {
+    if cfg!(not(feature = "check-integrity")) {
         return Ok(());
     }
 

@@ -4,10 +4,7 @@
 
 use crate::{
     gamemaker::elements::script::GMScript,
-    gml::{
-        assembly::assemble_instructions,
-        instruction::{GMCode, Instruction},
-    },
+    gml::{GMCode, assembly::assemble_instructions, instruction::Instruction},
     prelude::*,
 };
 

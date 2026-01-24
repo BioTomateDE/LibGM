@@ -401,8 +401,8 @@ impl VariableType {
             "stacktop" => Self::StackTop,
             "array" => Self::Array,
             "roominstance" => Self::Instance,
-            "arraypushaf" => Self::ArrayPushAF,
-            "arraypopaf" => Self::ArrayPopAF,
+            "arraypushaf" => Self::MultiPush,
+            "arraypopaf" => Self::MultiPop,
             _ => bail!("Invalid Variable Reference Type {variable_type:?}"),
         })
     }

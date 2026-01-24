@@ -315,19 +315,19 @@ enum Img {
 }
 
 impl Img {
-    #[cfg(feature = "png-images")]
+    #[cfg(feature = "png-image")]
     fn decode_png(raw_png_data: &[u8]) -> Result<DynamicImage> {
         image::load_from_memory_with_format(raw_png_data, ImageFormat::Png)
             .map_err(|e| e.to_string())
             .context("decoding PNG Image")
     }
 
-    #[cfg(not(feature = "png-images"))]
+    #[cfg(not(feature = "png-image"))]
     fn decode_png(_: &[u8]) -> Result<DynamicImage> {
         bail!("Crate feature `png-images` is disabled; cannot decode PNG image");
     }
 
-    #[cfg(feature = "bzip2-images")]
+    #[cfg(feature = "bzip2-image")]
     fn decode_bz2_qoi(raw_bz2_qoi_data: &[u8]) -> Result<DynamicImage> {
         use std::io::Read;
         let mut decoder = bzip2::read::BzDecoder::new(raw_bz2_qoi_data);
@@ -340,7 +340,7 @@ impl Img {
         Ok(image)
     }
 
-    #[cfg(not(feature = "bzip2-images"))]
+    #[cfg(not(feature = "bzip2-image"))]
     fn decode_bz2_qoi(_: &[u8]) -> Result<DynamicImage> {
         bail!("Crate feature `bzip2-images` is disabled; cannot decode BZip2Qoi image");
     }

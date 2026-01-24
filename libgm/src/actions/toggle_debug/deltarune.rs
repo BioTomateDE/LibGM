@@ -4,7 +4,10 @@
 
 use crate::{
     gamemaker::elements::variable::GMVariable,
-    gml::instruction::{CodeVariable, GMCode, InstanceType, Instruction, PushValue, VariableType},
+    gml::{
+        GMCode,
+        instruction::{CodeVariable, InstanceType, Instruction, PushValue, VariableType},
+    },
     prelude::*,
 };
 

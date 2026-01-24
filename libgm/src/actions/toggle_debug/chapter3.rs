@@ -5,8 +5,9 @@
 use crate::{
     gamemaker::elements::variable::GMVariable,
     gml::{
+        GMCode,
         assembly::assemble_instructions,
-        instruction::{GMCode, InstanceType, Instruction},
+        instruction::{InstanceType, Instruction},
     },
     prelude::*,
 };

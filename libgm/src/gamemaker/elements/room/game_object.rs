@@ -5,7 +5,7 @@ use crate::{
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
-    gml::instruction::GMCode,
+    gml::GMCode,
     prelude::*,
 };
 

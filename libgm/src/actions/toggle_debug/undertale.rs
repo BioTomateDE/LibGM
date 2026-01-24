@@ -3,7 +3,7 @@
 
 use crate::{
     gamemaker::elements::script::GMScript,
-    gml::instruction::{GMCode, InstanceType},
+    gml::{GMCode, instruction::InstanceType},
     prelude::*,
 };
 
