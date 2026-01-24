@@ -3,7 +3,7 @@ use crate::{
         deserialize::reader::DataReader, elements::GMElement, reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    gml::instruction::GMCode,
+    gml::GMCode,
     prelude::*,
 };
 

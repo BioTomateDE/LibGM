@@ -35,9 +35,12 @@ pub const CALLVAR: u8 = 0x99;
 pub const EXTENDED: u8 = 0xFF;
 
 impl Instruction {
-    /// Get the opcode of this Instruction.
+    /// The normalized opcode of the instruction.
+    ///
+    /// Normalized means that it will always return the modern WAD15+ opcode,
+    /// even if the game is in WAD < 15.
     #[must_use]
-    pub(crate) const fn opcode(&self) -> u8 {
+    pub const fn opcode(&self) -> u8 {
         match self {
             Self::Convert { .. } => CONV,
             Self::Multiply { .. } => MUL,
@@ -83,6 +86,12 @@ impl Instruction {
             | Self::IsNullishValue
             | Self::PushReference { .. } => EXTENDED,
         }
+    }
+
+    /// Get the old (WAD < 15) opcode of the instruction.
+    #[must_use]
+    pub const fn opcode_old(&self) -> u8 {
+        new_to_old(self.opcode())
     }
 }
 
@@ -173,4 +182,26 @@ pub mod extended {
     pub const RESTOREAREF: i16 = -9;
     pub const ISNULLISH: i16 = -10;
     pub const PUSHREF: i16 = -11;
+}
+
+impl Instruction {
+    /// The "Extended Opcode" for this instruction, if this is a "extended" (aka "break") instruction.
+    #[must_use]
+    pub const fn extended_kind(&self) -> Option<i16> {
+        use super::opcodes::extended;
+        match self {
+            Self::CheckArrayIndex => Some(extended::CHKINDEX),
+            Self::PushArrayFinal => Some(extended::PUSHAF),
+            Self::PopArrayFinal => Some(extended::POPAF),
+            Self::PushArrayContainer => Some(extended::PUSHAC),
+            Self::SetArrayOwner => Some(extended::SETOWNER),
+            Self::HasStaticInitialized => Some(extended::ISSTATICOK),
+            Self::SetStaticInitialized => Some(extended::SETSTATIC),
+            Self::SaveArrayReference => Some(extended::SAVEAREF),
+            Self::RestoreArrayReference => Some(extended::RESTOREAREF),
+            Self::IsNullishValue => Some(extended::ISNULLISH),
+            Self::PushReference { .. } => Some(extended::PUSHREF),
+            _ => None,
+        }
+    }
 }

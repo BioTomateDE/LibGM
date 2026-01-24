@@ -3,7 +3,7 @@
 //! 2025-06-05 to now [2026-01-04]
 
 use crate::{
-    gml::instruction::{GMCode, InstanceType},
+    gml::{GMCode, instruction::InstanceType},
     prelude::*,
 };
 

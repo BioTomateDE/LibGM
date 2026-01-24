@@ -1,49 +1,22 @@
-use std::fmt::{Display, Formatter};
+mod asset_reference;
+mod category;
+mod code_variable;
+mod comparison_type;
+mod data_type;
+mod instance_type;
+mod push_value;
+mod variable_type;
 
-use macros::num_enum;
+use crate::gamemaker::{elements::function::GMFunction, reference::GMRef};
 
-use crate::gamemaker::{
-    elements::{
-        animation_curve::GMAnimationCurve, background::GMBackground, font::GMFont,
-        function::GMFunction, game_object::GMGameObject, particle_system::GMParticleSystem,
-        path::GMPath, room::GMRoom, script::GMScript, sequence::GMSequence, shader::GMShader,
-        sound::GMSound, sprite::GMSprite, timeline::GMTimeline, variable::GMVariable,
-    },
-    reference::GMRef,
-};
-
-/// A code entry in a GameMaker data file.
-#[derive(Debug, Clone, PartialEq)]
-pub struct GMCode {
-    /// The name of the code entry.
-    pub name: String,
-
-    /// A list of VM instructions this code entry has.
-    pub instructions: Vec<Instruction>,
-
-    /// Set in WAD 15+.
-    pub modern_data: Option<ModernData>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-/// Extra data for code entries; in WAD 15+.
-pub struct ModernData {
-    /// The amount of local variables this code entry has.
-    pub locals_count: u16,
-
-    /// The amount of arguments this code entry accepts.
-    pub arguments_count: u16,
-
-    /// A flag set on certain code entries, which usually don't have locals attached to them.
-    pub weird_local_flag: bool,
-
-    /// Offset, **in bytes**, where code should begin executing from within the bytecode of this code entry.
-    /// Should be 0 for root-level (parent) code entries, and nonzero for child code entries.
-    pub offset: u32,
-
-    /// Parent entry of this code entry, if this is a child entry; [`None`] otherwise.
-    pub parent: Option<GMRef<GMCode>>,
-}
+pub use asset_reference::AssetReference;
+pub use category::Category;
+pub use code_variable::CodeVariable;
+pub use comparison_type::ComparisonType;
+pub use data_type::DataType;
+pub use instance_type::InstanceType;
+pub use push_value::PushValue;
+pub use variable_type::VariableType;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Instruction {
@@ -269,7 +242,7 @@ impl Instruction {
     /// Gets the instruction size in bytes.
     /// This size includes extra data like integers, floats, variable references, etc.
     #[must_use]
-    pub const fn size(&self) -> u32 {
+    pub const fn size(&self) -> u8 {
         match self {
             Self::Push { value } => match value {
                 PushValue::Int16(_) => 4,
@@ -285,249 +258,113 @@ impl Instruction {
             _ => 4,
         }
     }
-}
 
-#[derive(Debug, Clone, PartialEq)]
-/// A modern (2023.something) reference to game assets.
-/// Used with the `PushReference` (`pushref`) instruction.
-pub enum AssetReference {
-    Object(GMRef<GMGameObject>),
-    Sprite(GMRef<GMSprite>),
-    Sound(GMRef<GMSound>),
-    Room(GMRef<GMRoom>),
-    Background(GMRef<GMBackground>),
-    Path(GMRef<GMPath>),
-    Script(GMRef<GMScript>),
-    Font(GMRef<GMFont>),
-    Timeline(GMRef<GMTimeline>),
-    Shader(GMRef<GMShader>),
-    Sequence(GMRef<GMSequence>),
-    AnimCurve(GMRef<GMAnimationCurve>),
-    ParticleSystem(GMRef<GMParticleSystem>),
-    RoomInstance(i32),
-    /// Does not exist in UTMT.
-    Function(GMRef<GMFunction>),
-}
+    /// Attempts to extract a [`CodeVariable`] from  the instruction.
+    /// This can succeed for `Push` and will always succeed for
+    /// `PushGlobal`, `PushLocal`, `PushBuiltin` and `Pop`.
+    #[must_use]
+    pub const fn variable(&self) -> Option<&CodeVariable> {
+        match self {
+            Self::Pop { variable, .. }
+            | Self::Push { value: PushValue::Variable(variable) }
+            | Self::PushLocal { variable }
+            | Self::PushGlobal { variable }
+            | Self::PushBuiltin { variable } => Some(variable),
+            _ => None,
+        }
+    }
 
-#[num_enum(u8)]
-/// A primitive data type used in instructions.
-pub enum DataType {
-    /// 64-bit floating point number.
-    /// - Size on VM Stack: 8 bytes.
-    Double = 0,
+    /// Attempts to extract a `GMRef<GMFunction>` from the instruction.
+    /// This can succeed for `Push` and `PushReference` and will always succeed for `Call`.
+    #[must_use]
+    pub const fn function(&self) -> Option<GMRef<GMFunction>> {
+        match self {
+            Self::Push { value: PushValue::Function(function) }
+            | Self::Call { function, .. }
+            | Self::PushReference {
+                asset_reference: AssetReference::Function(function),
+            } => Some(*function),
+            _ => None,
+        }
+    }
 
-    // /// Does not really exist for some reason?
-    // Float = 1,
-    //
-    /// 32-bit signed integer.
-    /// - Size on VM Stack: 4 bytes.
-    Int32 = 2,
+    /// Attempts to extract a jump offset in bytes from the instruction.
+    /// This will always succeed for `Branch`, `BranchIf`, `BranchUnless`, `PushWithContext` and
+    /// `PopWithContext`.
+    #[must_use]
+    pub const fn jump_offset(&self) -> Option<i32> {
+        match self {
+            Self::Branch { jump_offset }
+            | Self::BranchIf { jump_offset }
+            | Self::BranchUnless { jump_offset }
+            | Self::PushWithContext { jump_offset }
+            | Self::PopWithContext { jump_offset } => Some(*jump_offset),
+            _ => None,
+        }
+    }
 
-    /// 64-bit signed integer.
-    /// - Size on VM Stack: 8 bytes.
-    Int64 = 3,
-
-    /// Boolean, represented as 1 or 0, with a 32-bit integer.
-    /// - Size on VM Stack: 4 bytes (for some reason).
-    Boolean = 4,
-
-    /// Dynamic type representing any GML value.
-    /// Externally known as a structure called `RValue`.
-    /// - Size on VM Stack: 16 bytes.
-    Variable = 5,
-
-    /// String, represented as a 32-bit ID.
-    /// - Size on VM Stack: 4 bytes.
-    String = 6,
-
-    /// 16-bit signed integer.
-    /// - Size on VM Stack: 4 bytes.
-    /// > **Note**: `Int16` is not a valid data type on the VM Stack.
+    /// Attempts to extract the first (or the only) data type from the instruction.
     ///
-    /// It is immediately converted to `Int32` when pushing and is thus 4 bytes wide.
-    Int16 = 15,
-}
-
-impl DataType {
-    /// The size of a value of this data type on the VM Stack, in bytes.
+    /// For binary operations, this will be RHS.
+    ///
+    /// NOTE: Right now, it's kind of arbitary which instructions' data types are
+    /// deemed "relevant enough" to return them and which don't really belong
+    /// (does return: `PushLocal` [Variable], does not return: `PopSwap` [Int16]).
+    /// This will be changed in the future **if I get feedback pls**.
     #[must_use]
-    pub const fn size(self) -> u8 {
-        match self {
-            Self::Int16 | Self::Int32 | Self::Boolean | Self::String => 4,
-            Self::Int64 | Self::Double => 8,
-            Self::Variable => 16,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-/// Uhhh
-pub enum InstanceType {
-    /// Represents the current `self` instance.
-    Self_,
-
-    /// Represents the first (?) instance of an object.
-    /// This is typically an object that should only have one instance.
-    GameObject(GMRef<GMGameObject>),
-
-    /// Instance ID in the Room -100000; used when the Variable Type is [`VariableType::Instance`].
-    /// This doesn't exist in UTMT.
-    RoomInstance(i16),
-
-    /// Represents the `other` context, which has multiple definitions based on the location used.
-    Other,
-
-    /// Represents all active object instances.
-    /// Assignment operations can perform a loop.
-    All,
-
-    /// Represents no object/instance.
-    None,
-
-    /// Used for global variables.
-    Global,
-
-    /// Used for GML built-in variables.
-    Builtin,
-
-    /// Used for local variables; local to their code script.
-    Local,
-
-    /// Instance is stored in a Variable data type on the top of the stack.
-    StackTop,
-
-    /// Used for function argument variables in GMS 2.3+.
-    Argument,
-
-    /// Used for static variables.
-    Static,
-}
-
-impl Display for InstanceType {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        match self {
-            Self::Self_ => write!(f, "Self"),
-            Self::GameObject(reference) => {
-                write!(f, "GameObject<{}>", reference.index)
+    pub const fn type1(&self) -> Option<DataType> {
+        Some(match self {
+            Self::Convert { from, .. } => *from,
+            Self::Multiply { multiplier, .. } => *multiplier,
+            Self::Divide { divisor, .. }
+            | Self::Remainder { divisor, .. }
+            | Self::Modulus { divisor, .. } => *divisor,
+            Self::Add { addend, .. } => *addend,
+            Self::Subtract { subtrahend, .. } => *subtrahend,
+            Self::And { rhs, .. }
+            | Self::Or { rhs, .. }
+            | Self::Xor { rhs, .. }
+            | Self::Compare { rhs, .. } => *rhs,
+            Self::Negate { data_type }
+            | Self::Not { data_type }
+            | Self::Duplicate { data_type, .. }
+            | Self::DuplicateSwap { data_type, .. }
+            | Self::PopDiscard { data_type } => *data_type,
+            Self::ShiftLeft { shift_amount, .. } | Self::ShiftRight { shift_amount, .. } => {
+                *shift_amount
             },
-            Self::RoomInstance(instance_id) => {
-                write!(f, "RoomInstanceID<{instance_id}>")
+            Self::Pop { type1, .. } => *type1,
+            Self::Push { value } => value.data_type(),
+            Self::PushLocal { .. } | Self::PushGlobal { .. } | Self::PushBuiltin { .. } => {
+                DataType::Variable
             },
-            Self::Other => write!(f, "Other"),
-            Self::All => write!(f, "All"),
-            Self::None => write!(f, "None"),
-            Self::Global => write!(f, "Global"),
-            Self::Builtin => write!(f, "Builtin"),
-            Self::Local => write!(f, "Local"),
-            Self::StackTop => write!(f, "StackTop"),
-            Self::Argument => write!(f, "Argument"),
-            Self::Static => write!(f, "Static"),
-        }
+            Self::PushImmediate { .. } => DataType::Int16,
+            Self::Call { .. } => DataType::Int32,
+            Self::CallVariable { .. } => DataType::Variable,
+            _ => return None,
+        })
     }
-}
 
-impl InstanceType {
-    /// Convert an instance type to the "VARI version".
-    /// In other words, convert the instance type to what
-    /// it would be if it was in the 'VARI' chunk (`GMVariable.instance_type`)
-    /// instead of in an instruction (`CodeVariable.instance_type`).
+    /// Attempts to return the second data type of this instruction.
+    ///
+    /// For binary operations, this will be LHS.
     #[must_use]
-    pub(crate) const fn as_vari(self) -> Self {
-        match self {
-            Self::GameObject(_)
-            | Self::RoomInstance(_)
-            | Self::Other
-            | Self::Builtin
-            | Self::StackTop => Self::Self_,
-            Self::Argument => Self::Builtin,
-            _ => self,
-        }
-    }
-}
-
-#[num_enum(u8)]
-/// How a variable is supposed to be used in an instruction.
-pub enum VariableType {
-    /// Used for normal single-dimension array variables.
-    Array = 0x00,
-
-    /// Used when referencing a variable on another variable, e.g. a chain reference.
-    StackTop = 0x80,
-
-    /// Normal variable access.
-    Normal = 0xA0,
-
-    /// Used when referencing variables on room instance IDs, e.g. something like `inst_01ABCDEF.x` in GML.
-    Instance = 0xE0,
-
-    /// GMS2.3+, multidimensional array with pushaf.
-    ArrayPushAF = 0x10,
-
-    /// GMS2.3+, multidimensional array with pushaf or popaf.
-    ArrayPopAF = 0x90,
-}
-
-#[num_enum(u8)]
-/// How to compare values.
-/// Used in the `Comparison` instruction (`cmp`).
-pub enum ComparisonType {
-    /// "Less than" | `<`
-    LessThan = 1,
-
-    /// "Less than or equal to" | `<=`
-    LessOrEqual = 2,
-
-    /// "Equal to" | `==`
-    Equal = 3,
-
-    /// "Not equal to" | `!=`
-    NotEqual = 4,
-
-    /// "Greater than or equal to" | `>=`
-    GreaterOrEqual = 5,
-
-    /// "Greater than" | `>`
-    GreaterThan = 6,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-/// A variable reference in an instruction.
-/// Contains the actual variable ref as well as instance type and variable type.
-pub struct CodeVariable {
-    pub variable: GMRef<GMVariable>,
-    pub variable_type: VariableType,
-    pub instance_type: InstanceType,
-
-    /// TODO: when does this happen?
-    pub is_int32: bool,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-/// A value to push to the stack. Used in `Push` instructions.
-pub enum PushValue {
-    Int16(i16),
-    Int32(i32),
-    Int64(i64),
-    Double(f64),
-    Boolean(bool),
-    String(String),
-    Variable(CodeVariable),
-    /// Does not exist in UTMT. Added in order to support inline/anonymous functions.
-    Function(GMRef<GMFunction>),
-}
-
-impl PushValue {
-    #[must_use]
-    pub const fn data_type(&self) -> DataType {
-        match self {
-            Self::Int16(_) => DataType::Int16,
-            Self::Int32(_) | Self::Function(_) => DataType::Int32, // Functions are not a "real" gm type; they're always int32
-            Self::Variable(var) if var.is_int32 => DataType::Int32, // no idea when this happens
-            Self::Int64(_) => DataType::Int64,
-            Self::Double(_) => DataType::Double,
-            Self::Boolean(_) => DataType::Boolean,
-            Self::String(_) => DataType::String,
-            Self::Variable(_) => DataType::Variable,
-        }
+    pub const fn type2(&self) -> Option<DataType> {
+        Some(match self {
+            Self::Convert { to, .. } => *to,
+            Self::Multiply { multiplicand, .. } => *multiplicand,
+            Self::Divide { dividend, .. }
+            | Self::Remainder { dividend, .. }
+            | Self::Modulus { dividend, .. } => *dividend,
+            Self::Add { augend, .. } => *augend,
+            Self::Subtract { minuend, .. } => *minuend,
+            Self::And { lhs, .. }
+            | Self::Or { lhs, .. }
+            | Self::Xor { lhs, .. }
+            | Self::Compare { lhs, .. } => *lhs,
+            Self::ShiftLeft { value, .. } | Self::ShiftRight { value, .. } => *value,
+            Self::Pop { type2, .. } => *type2,
+            _ => return None,
+        })
     }
 }

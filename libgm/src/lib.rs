@@ -93,6 +93,10 @@
 #![deny(unused_must_use)]
 #![deny(unreachable_patterns)]
 //
+// This usually happens when renaming crate features.
+// This should be fixed immediately.
+#![deny(unexpected_cfgs)]
+//
 //
 #![warn(clippy::correctness)]
 #![warn(clippy::suspicious)]

@@ -10,7 +10,10 @@ use std::fmt::Display;
 
 use crate::{
     gamemaker::elements::variable::GMVariable,
-    gml::instruction::{GMCode, InstanceType, Instruction, PushValue},
+    gml::{
+        GMCode,
+        instruction::{InstanceType, Instruction, PushValue},
+    },
     prelude::*,
 };
 
@@ -20,7 +23,7 @@ impl GMData {
     /// This function currently supports:
     /// * Undertale
     /// * NXTALE
-    /// * Deltarune Chapter 1 (aka. SURVEY_PROGRAM)
+    /// * Deltarune Chapter 1 (aka. `SURVEY_PROGRAM`)
     /// * Deltarune Chapter 1&2 Demo (Old)
     /// * Deltarune Chapter 1&2 LTS Demo (New)
     /// * Deltarune Chapters 1-4 (paid game)
