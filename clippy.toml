@@ -4,32 +4,32 @@
 # Only special options that are not available in `Cargo.toml` (?) are configured here.
 
 doc-valid-idents = [
-  # Programming terms
-  "SemVer",
+    # Programming terms
+    "SemVer",
 
-  # Official GM related terms
-  "GameMaker",
-  "YoYoGames",
-  "YoYo",
+    # Official GM related terms
+    "GameMaker",
+    "YoYoGames",
+    "YoYo",
 
-  # Tools
-  "UndertaleModTool",
-  "UndertaleModLib",
-  "Underanalzyer",
-  "LibGM",
+    # Tools
+    "UndertaleModTool",
+    "UndertaleModLib",
+    "Underanalzyer",
+    "LibGM",
 
-  # Platform names
-  "PlayStation",
-  "PSVita",
+    # Platform names
+    "PlayStation",
+    "PSVita",
 
-  # Relevant users
-  "BioTomateDE",
-  "colinator27",
-  "OceanBagel",
-  "krzys-h",
+    # Relevant users
+    "BioTomateDE",
+    "colinator27",
+    "OceanBagel",
+    "krzys-h",
 
-  # Include the default idents as well
-  "..",
+    # Include the default idents as well
+    "..",
 ]
 
 # These crates are currently used by multiple dependencies

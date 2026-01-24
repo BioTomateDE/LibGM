@@ -2,7 +2,7 @@ mod flags;
 mod function_classifications;
 mod gms2;
 
-#[cfg(feature = "chrono")]
+#[cfg(feature = "game-creation-timestamp")]
 use chrono::{DateTime, Utc};
 
 pub use flags::Flags;
@@ -114,11 +114,11 @@ pub struct GMGeneralInfo {
 
     /// The timestamp the game was compiled at.
     ///
-    /// This field is only exposed if the `chrono` feature is enabled.
-    #[cfg(feature = "chrono")]
+    /// This field is only exposed if the `game-creation-timestamp` feature is enabled.
+    #[cfg(feature = "game-creation-timestamp")]
     pub creation_timestamp: DateTime<Utc>,
 
-    #[cfg(not(feature = "chrono"))]
+    #[cfg(not(feature = "game-creation-timestamp"))]
     creation_timestamp: i64,
 
     /// The name that gets displayed in the window title.
@@ -207,11 +207,11 @@ impl GMGeneralInfo {
 
     #[must_use]
     const fn timestamp(&self) -> i64 {
-        #[cfg(feature = "chrono")]
+        #[cfg(feature = "game-creation-timestamp")]
         {
             self.creation_timestamp.timestamp()
         }
-        #[cfg(not(feature = "chrono"))]
+        #[cfg(not(feature = "game-creation-timestamp"))]
         {
             self.creation_timestamp
         }
@@ -247,7 +247,7 @@ impl GMElement for GMGeneralInfo {
         let license_md5: [u8; 16] = *reader.read_bytes_const().context("reading license (MD5)")?;
 
         let creation_timestamp = reader.read_i64()?;
-        #[cfg(feature = "chrono")]
+        #[cfg(feature = "game-creation-timestamp")]
         let creation_timestamp: DateTime<Utc> =
             DateTime::from_timestamp_secs(creation_timestamp)
                 .ok_or_else(|| format!("Invalid Creation Timestamp {creation_timestamp}"))?;

@@ -1,11 +1,6 @@
-use std::{
-    borrow::Cow,
-    cmp::max,
-    io::{Cursor, Read},
-};
+use std::{borrow::Cow, cmp::max};
 
 // TODO: allow serialization to PNG, QOI or BzQoi in GMImage
-use bzip2::read::BzDecoder;
 use image::{self, DynamicImage, ImageFormat};
 use macros::list_chunk;
 
@@ -320,14 +315,22 @@ enum Img {
 }
 
 impl Img {
+    #[cfg(feature = "png-images")]
     fn decode_png(raw_png_data: &[u8]) -> Result<DynamicImage> {
         image::load_from_memory_with_format(raw_png_data, ImageFormat::Png)
             .map_err(|e| e.to_string())
             .context("decoding PNG Image")
     }
 
+    #[cfg(not(feature = "png-images"))]
+    fn decode_png(_: &[u8]) -> Result<DynamicImage> {
+        bail!("Crate feature `png-images` is disabled; cannot decode PNG image");
+    }
+
+    #[cfg(feature = "bzip2-images")]
     fn decode_bz2_qoi(raw_bz2_qoi_data: &[u8]) -> Result<DynamicImage> {
-        let mut decoder: BzDecoder<&[u8]> = BzDecoder::new(raw_bz2_qoi_data);
+        use std::io::Read;
+        let mut decoder = bzip2::read::BzDecoder::new(raw_bz2_qoi_data);
         let mut decompressed_data: Vec<u8> = Vec::new();
         decoder
             .read_to_end(&mut decompressed_data)
@@ -335,6 +338,11 @@ impl Img {
             .context("decoding BZip2 stream for Bz2Qoi Image")?;
         let image = qoi::deserialize(&decompressed_data).context("decoding QOI Image (Bzip2)")?;
         Ok(image)
+    }
+
+    #[cfg(not(feature = "bzip2-images"))]
+    fn decode_bz2_qoi(_: &[u8]) -> Result<DynamicImage> {
+        bail!("Crate feature `bzip2-images` is disabled; cannot decode BZip2Qoi image");
     }
 
     fn decode_qoi(raw_qoi_data: &[u8]) -> Result<DynamicImage> {
@@ -397,6 +405,12 @@ impl GMImage {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         match &self.0 {
             Img::Dyn(dyn_img) => {
+                use std::io::Cursor;
+                if cfg!(not(feature = "png-images")) {
+                    // Ideally, the library should offer different serialization methods anyway
+                    bail!("Crate feature `png-images` is disabled; cannot encode PNG image");
+                }
+
                 let mut png_data: Vec<u8> = Vec::new();
                 dyn_img
                     .write_to(&mut Cursor::new(&mut png_data), ImageFormat::Png)
@@ -426,9 +440,11 @@ impl GMImage {
 impl PartialEq for GMImage {
     fn eq(&self, other: &Self) -> bool {
         let Ok(img1) = self.to_dynamic_image() else {
+            log::warn!("Deserialization failed while comparing GMImage");
             return false;
         };
         let Ok(img2) = other.to_dynamic_image() else {
+            log::warn!("Deserialization failed while comparing GMImage");
             return false;
         };
         img1 == img2

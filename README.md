@@ -120,13 +120,13 @@ would like to see added, a bug you found; just create an Issue/PR in this repo.
   `libgm-cli/src/`.
 
 ## Roadmap
+
 - [ ] Add QOI and Bz2Qoi image serialization
 - [ ] Implement threading for parser
 - [ ] Add crate features (maybe use prefix for dependency disablers?):
-  - [ ] bzip2 (opt-out): Enables Bz2Qoi image support
-  - [ ] png (opt-out: Enables PNG image support
-  - [ ] uuid (opt-out): Exposes the general info uuid field. stored as raw data otherwise
-  - [ ] chrono (opt-out): Exposes the general info creation timestamp field. stored as raw data otherwise
+  - [x] bzip2 (opt-out): Enables Bz2Qoi image support
+  - [x] png (opt-out: Enables PNG image support
+  - [x] chrono (opt-out): Exposes the general info creation timestamp field. stored as raw data otherwise
   - [ ] integrity-checks (opt-out): Enables all data integrity checks (pointer validation, constant validation etc). These checks may still be demoted to a warning using ParsingOptions. Some checks regarding panic safety or memory allocation should always be enabled.
   - [ ] panic-catching (opt-out): Sets a panic handler before data [de]serialization, returning a LibGM error if a panic occurred
 - [ ] Overhaul the CLI: Allow for viewing of relevant data, exporting assembly and more
@@ -135,3 +135,4 @@ would like to see added, a bug you found; just create an Issue/PR in this repo.
 - [ ] "Fix" disassembler for child code entries (right now they will generate empty string)
 - [ ] Maybe add some sort of header for assembly for entire code entries (name, local count, arg count) so u can assemble_code directly
 - [ ] Add comments to assembly? Which style tho? How much does it fuck Up efficiency and maintainability?
+
