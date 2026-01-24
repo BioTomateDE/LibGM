@@ -406,7 +406,7 @@ impl GMImage {
         match &self.0 {
             Img::Dyn(dyn_img) => {
                 use std::io::Cursor;
-                if cfg!(not(feature = "png-images")) {
+                if cfg!(not(feature = "png-image")) {
                     // Ideally, the library should offer different serialization methods anyway
                     bail!("Crate feature `png-images` is disabled; cannot encode PNG image");
                 }

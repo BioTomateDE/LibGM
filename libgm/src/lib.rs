@@ -41,9 +41,8 @@
 //! This library *should* **never panic**.
 //! All malformed data files are caught into LibGM's custom error type.
 //! However, since this library is not mature yet, there might still be a few bugs.
-//! For GUI applications, I would definitely recommend to **set a
-//! [panic catcher](https://doc.rust-lang.org/std/panic/fn.catch_unwind.html)**
-//! before calling any data parsing/building functions, just to be safe.
+//! For GUI applications, I would definitely recommend to enable the `catch-panic`
+//! crate feature (which is enabled by default anyway).
 //!
 //! ## Missing features
 //! The following features are not yet supported by LibGM:

@@ -11,24 +11,24 @@ keywords = ["gamemaker", "gml", "decompiler", "modding", "undertale"]
 categories = ["parser-implementations", "game-development", "encoding"]
 
 [features]
-default = ["bzip2-images", "catch-panics", "integrity-checks", "png-images"]
+default = ["bzip2-image", "catch-panic", "check-integrity", "png-image"]
 full = [
-    "bzip2-images",
-    "catch-panics",
+    "bzip2-image",
+    "catch-panic",
+    "check-integrity",
     "game-creation-timestamp",
-    "integrity-checks",
-    "png-images",
+    "png-image",
 ]
 
-bzip2-images = ["dep:bzip2"]
-catch-panics = []
+bzip2-image = ["dep:bzip2"]
+catch-panic = []
+check-integrity = []
 game-creation-timestamp = ["dep:chrono"]
-integrity-checks = []
-png-images = ["image/png"]
+png-image = ["image/png"]
 
 # Attribute macros (num_enum, list_chunk, named_list_chunk)
 [dependencies.macros]
-version = "0.1.0"
+version = "0.1.1"
 path = "../macros"
 package = "libgm-macros"
 

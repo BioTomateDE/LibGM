@@ -184,7 +184,7 @@ impl ParsingOptions {
     }
 
     fn parse(&self, raw_data: &[u8]) -> Result<GMData> {
-        if cfg!(feature = "catch-panics") {
+        if cfg!(feature = "catch-panic") {
             crate::util::panic::catch(|| parse(raw_data, self))
         } else {
             parse(raw_data, self)
