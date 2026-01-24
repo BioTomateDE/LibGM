@@ -4,7 +4,6 @@ mod gms2;
 
 #[cfg(feature = "game-creation-timestamp")]
 use chrono::{DateTime, Utc};
-
 pub use flags::Flags;
 pub use function_classifications::FunctionClassifications;
 pub use gms2::GMS2Data;

@@ -7,7 +7,7 @@ use crate::{actions::Action, tests::Test};
 #[derive(Parser, Debug)]
 /// A simple CLI for operating and debugging LibGM
 pub struct Args {
-    /// The GameMaker data file(s) to load (whitespace separated)
+    /// The GameMaker data file(s) to load
     ///
     /// Default: `./data.win`
     pub files: Vec<PathBuf>,
@@ -18,13 +18,17 @@ pub struct Args {
     /// Leaving this empty will skip rebuilding.
     pub out: Option<PathBuf>,
 
-    #[arg(short, long, value_delimiter = ',')]
-    /// The tests to execute (comma separated).
+    #[arg(short, long)]
+    /// The tests to execute.
     pub tests: Vec<Test>,
 
-    #[arg(short, long, value_delimiter = ',')]
-    /// Actions to perform on the data file (comma separated).
+    #[arg(short, long)]
+    /// Actions to perform on the data file.
     pub actions: Vec<Action>,
+
+    #[arg(short, long)]
+    /// Code entries to disassemble.
+    pub codes: Vec<String>,
 }
 
 #[must_use]

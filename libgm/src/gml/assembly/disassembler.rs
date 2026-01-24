@@ -26,7 +26,46 @@ macro_rules! write {
     }};
 }
 
+fn slice_instructions_by_bytes(
+    instructions: &[Instruction],
+    start_offset: u32,
+) -> Result<&[Instruction]> {
+    let mut index = 0;
+    let mut offset = 0;
+    while offset < start_offset {
+        let instr = instructions.get(index).ok_or_else(|| 
+            format!("Given start byte offset {start_offset} is out of range in instructions with byte length {offset}")
+        )?;
+        index += 1;
+        offset += u32::from(instr.size());
+    }
+    if offset != start_offset {
+        bail!(
+            "Given start byte offset {start_offset} is misaligned (reached offset {offset} instead)"
+        );
+    }
+    Ok(&instructions[index..])
+}
+
 pub fn disassemble_code(code: &GMCode, gm_data: &GMData) -> Result<String> {
+    if let Some(data) = &code.modern_data {
+        if let Some(parent) = data.parent {
+            if data.offset == 0 {
+                bail!("Child code entry has byte offset zero");
+            }
+            let parent: &GMCode = gm_data
+                .codes
+                .by_ref(parent)
+                .context("resolving parent code entry")?;
+            // can there be nested parents? cuz it only works for one layer rn
+            let instrs = slice_instructions_by_bytes(&parent.instructions, data.offset)?;
+            return disassemble_instructions(instrs, gm_data);
+    
+        } else if data.offset != 0 {
+            bail!("Root code entry has non-zero byte offset {}", data.offset);
+        }
+    }
+
     disassemble_instructions(&code.instructions, gm_data)
 }
 
@@ -34,7 +73,7 @@ pub fn disassemble_instructions(instructions: &[Instruction], gm_data: &GMData) 
     let mut assembly: String = String::new();
 
     for instruction in instructions {
-        disassemble_instr(instruction, &mut assembly, gm_data)?;
+        disassemble_instruction_to_buffer(&mut assembly, instruction, gm_data)?;
         assembly.push('\n');
     }
 
@@ -43,13 +82,13 @@ pub fn disassemble_instructions(instructions: &[Instruction], gm_data: &GMData) 
 
 pub fn disassemble_instruction(instruction: &Instruction, gm_data: &GMData) -> Result<String> {
     let mut buffer = String::new();
-    disassemble_instr(instruction, &mut buffer, gm_data)?;
+    disassemble_instruction_to_buffer(&mut buffer, instruction, gm_data)?;
     Ok(buffer)
 }
 
-fn disassemble_instr(
-    instruction: &Instruction,
+pub fn disassemble_instruction_to_buffer(
     buffer: &mut String,
+    instruction: &Instruction,
     gm_data: &GMData,
 ) -> Result<()> {
     let mnemonic: &str = instruction.mnemonic();

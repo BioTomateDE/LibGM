@@ -8,6 +8,7 @@ use std::path::PathBuf;
 
 use libgm::{
     gamemaker::{data::GMData, deserialize::parse_file, serialize::build_file},
+    gml::assembly::disassemble_code,
     prelude::*,
 };
 
@@ -31,6 +32,14 @@ fn run(mut args: cli::Args) -> Result<()> {
 
         for action in &args.actions {
             action.perform(&mut data)?;
+        }
+
+        for code_name in &args.codes {
+            let code = data.codes.by_name(code_name)?;
+            let assembly = disassemble_code(code, &data)?;
+            println!("===== {code_name} =====");
+            println!("{assembly}");
+            println!();
         }
 
         if let Some(out_file) = &args.out {
