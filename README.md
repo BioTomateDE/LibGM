@@ -127,7 +127,7 @@ would like to see added, a bug you found; just create an Issue/PR in this repo.
   - [x] bzip2 (opt-out): Enables Bz2Qoi image support
   - [x] png (opt-out: Enables PNG image support
   - [x] chrono (opt-out): Exposes the general info creation timestamp field. stored as raw data otherwise
-  - [ ] integrity-checks (opt-out): Enables all data integrity checks (pointer validation, constant validation etc). These checks may still be demoted to a warning using ParsingOptions. Some checks regarding panic safety or memory allocation should always be enabled.
+  - [x] integrity-checks (opt-out): Enables all data integrity checks (pointer validation, constant validation etc). These checks may still be demoted to a warning using ParsingOptions. Some checks regarding panic safety or memory allocation should always be enabled.
   - [ ] panic-catching (opt-out): Sets a panic handler before data [de]serialization, returning a LibGM error if a panic occurred
 - [ ] Overhaul the CLI: Allow for viewing of relevant data, exporting assembly and more
 - [ ] Maybe move the CLI to a different repo / publish it?

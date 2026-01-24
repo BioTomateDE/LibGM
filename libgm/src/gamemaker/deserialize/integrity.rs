@@ -6,6 +6,10 @@ impl DataReader<'_> {
     /// Ensures the reader is at the specified position.
     /// This only happens if `options.verify_alignment` is true.
     pub fn assert_pos(&self, position: u32, pointer_name: &'static str) -> Result<()> {
+        if cfg!(not(feature = "integrity-checks")) {
+            return Ok(());
+        }
+
         if self.cur_pos == position {
             return Ok(());
         }
@@ -39,6 +43,10 @@ impl DataReader<'_> {
         expected: I,
         description: &'static str,
     ) -> Result<()> {
+        if cfg!(not(feature = "integrity-checks")) {
+            return Ok(());
+        }
+
         if expected == actual {
             return Ok(());
         }
@@ -57,6 +65,10 @@ impl DataReader<'_> {
         expected: bool,
         description: &'static str,
     ) -> Result<()> {
+        if cfg!(not(feature = "integrity-checks")) {
+            return Ok(());
+        }
+
         if expected == actual {
             return Ok(());
         }
@@ -74,6 +86,10 @@ impl DataReader<'_> {
         expected: DataType,
         description: &'static str,
     ) -> Result<()> {
+        if cfg!(not(feature = "integrity-checks")) {
+            return Ok(());
+        }
+
         if expected == actual {
             return Ok(());
         }
