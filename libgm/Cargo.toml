@@ -11,9 +11,12 @@ keywords = ["gamemaker", "gml", "decompiler", "modding", "undertale"]
 categories = ["parser-implementations", "game-development", "encoding"]
 
 [features]
-default = []
-chrono = ["dep:chrono"]
-png = ["image/png"]
+default = ["bzip2-images", "png-images"]
+full = ["bzip2-images", "game-creation-timestamp", "png-images"]
+
+bzip2-images = ["dep:bzip2"]
+game-creation-timestamp = ["dep:chrono"]
+png-images = ["image/png"]
 
 # Attribute macros (num_enum, list_chunk, named_list_chunk)
 [dependencies.macros]
@@ -24,10 +27,11 @@ package = "libgm-macros"
 # BZip2+QOI encoded images
 [dependencies.bzip2]
 version = "0.6.1"
+optional = true
 
 # Needed for Game Creation Timestamp in General Info
 [dependencies.chrono]
-version = "0.4.42"
+version = "0.4.43"
 default-features = false
 optional = true
 
