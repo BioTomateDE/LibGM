@@ -147,150 +147,6 @@ impl ParsingOptions {
         // TODO: implement
     }
 
-    fn parse(&self, raw_data: &[u8]) -> Result<GMData> {
-        let stopwatch = Stopwatch::start();
-        let mut reader: DataReader = parse_form(raw_data)?;
-        reader.options = self.clone();
-
-        // Properly initialize GEN8 version before reading chunks.
-        reader.specified_version = reader.read_gen8_version()?;
-
-        // The following chunk read order is required:
-        // Required: GEN8 --> all others
-        //
-        // Then (in any order):
-        // * [FUNC, VARI, STRG] --> CODE
-        // * TPAG --> [BGND, EMBI, FONT, OPTN, SPRT]
-
-        reader.string_chunk = reader
-            .chunks
-            .get("STRG")
-            .ok_or("Chunk STRG does not exist")?;
-        reader.general_info = reader.read_chunk()?;
-        if !reader.general_info.exists {
-            bail!("GEN8 chunk does not exist");
-        }
-
-        let gms2 = GMVersion::new(2, 0, 0, 0, LTSBranch::PreLTS);
-        if reader.specified_version == gms2 {
-            let stopwatch = Stopwatch::start();
-            detect_gamemaker_version(&mut reader).context("detecting GameMaker version")?;
-            log::trace!("Detecting GameMaker Version took {stopwatch}");
-        }
-
-        log::info!(
-            "Loading {:?} (GM {}, WAD {})",
-            reader.general_info.game_name,
-            reader.general_info.version,
-            reader.general_info.wad_version,
-        );
-
-        let texture_page_items: GMTexturePageItems = reader.read_chunk()?;
-
-        let is_yyc: bool = check_yyc(&reader).context("Checking YYC")?;
-        let mut variables = GMVariables::default();
-        let mut functions = GMFunctions::default();
-        let mut codes = GMCodes::default();
-
-        let mut stopwatch2 = Stopwatch::start();
-        if is_yyc {
-            log::warn!("YYC is untested, issues may occur");
-            // Need to remove STRG to not throw "unread chunk" error
-            reader.chunks.remove("STRG");
-        } else {
-            reader.read_chunk::<GMStrings>()?; // Set `reader.strings`
-            variables = reader.read_chunk()?; // Set `reader.variable_occurrences`
-            functions = reader.read_chunk()?; // Set `reader.function_occurrences`
-            stopwatch2 = Stopwatch::start();
-            codes = reader.read_chunk()?;
-        }
-
-        let embedded_textures: GMEmbeddedTextures = reader.read_chunk()?;
-        let scripts: GMScripts = reader.read_chunk()?;
-        let fonts: GMFonts = reader.read_chunk()?;
-        let sprites: GMSprites = reader.read_chunk()?;
-        let game_objects: GMGameObjects = reader.read_chunk()?;
-        let rooms: GMRooms = reader.read_chunk()?;
-        let backgrounds: GMBackgrounds = reader.read_chunk()?;
-        let audios: GMEmbeddedAudios = reader.read_chunk()?;
-        let sounds: GMSounds = reader.read_chunk()?;
-        let paths: GMPaths = reader.read_chunk()?;
-        let options: GMOptions = reader.read_chunk()?;
-        let sequences: GMSequences = reader.read_chunk()?;
-        let particle_systems: GMParticleSystems = reader.read_chunk()?;
-        let particle_emitters: GMParticleEmitters = reader.read_chunk()?;
-        let language_info: GMLanguageInfo = reader.read_chunk()?;
-        let extensions: GMExtensions = reader.read_chunk()?;
-        let audio_groups: GMAudioGroups = reader.read_chunk()?;
-        let global_init_scripts: GMGlobalInitScripts = reader.read_chunk()?;
-        let game_end_scripts: GMGameEndScripts = reader.read_chunk()?;
-        let shaders: GMShaders = reader.read_chunk()?;
-        let root_ui_nodes: GMRootUINodes = reader.read_chunk()?;
-        let timelines: GMTimelines = reader.read_chunk()?;
-        let embedded_images: GMEmbeddedImages = reader.read_chunk()?;
-        let texture_group_infos: GMTextureGroupInfos = reader.read_chunk()?;
-        let tags: GMTags = reader.read_chunk()?;
-        let feature_flags: GMFeatureFlags = reader.read_chunk()?;
-        let filter_effects: GMFilterEffects = reader.read_chunk()?;
-        let animation_curves: GMAnimationCurves = reader.read_chunk()?;
-
-        // This chunk is so useless that it is perfectly safe to throw it away.
-        reader.read_chunk::<GMDataFiles>()?;
-
-        log::trace!("Reading independent chunks took {stopwatch2}");
-
-        if !options.exists {
-            bail!("Required chunk OPTN does not exist");
-        }
-
-        handle_unread_chunks(&reader.chunks, self.allow_unknown_chunks)?;
-        let original_data_size = reader.size();
-
-        let data = GMData {
-            animation_curves,
-            audio_groups,
-            audios,
-            backgrounds,
-            codes,
-            embedded_images,
-            extensions,
-            feature_flags,
-            filter_effects,
-            fonts,
-            functions,
-            game_end_scripts,
-            general_info: reader.general_info,
-            global_init_scripts,
-            language_info,
-            options,
-            particle_emitters,
-            particle_systems,
-            paths,
-            rooms,
-            root_ui_nodes,
-            scripts,
-            sequences,
-            shaders,
-            sounds,
-            sprites,
-            tags,
-            texture_group_infos,
-            texture_page_items,
-            timelines,
-            embedded_textures,
-            game_objects,
-            variables,
-
-            location: None,
-            chunk_padding: reader.chunk_padding,
-            endianness: reader.endianness,
-            original_data_size,
-        };
-
-        log::trace!("Parsing data took {stopwatch}");
-        Ok(data)
-    }
-
     /// Parse a GameMaker data file (stored in memory) with default options.
     ///
     /// For more information on the data file format, see [`crate::gamemaker`].
@@ -326,7 +182,31 @@ impl ParsingOptions {
         gm_data.location = Some(path.to_path_buf());
         Ok(gm_data)
     }
+
+    fn parse(&self, raw_data: &[u8]) -> Result<GMData> {
+        if cfg!(feature = "catch-panics") {
+            crate::util::panic::catch(|| parse(raw_data, self))
+        } else {
+            parse(raw_data, self)
+        }
+    }
 }
+
+/// Parse a GameMaker data file (stored in memory) with default options.
+///
+/// For more information on the data file format, see [`crate::gamemaker`].
+pub fn parse_bytes(raw_data: impl AsRef<[u8]>) -> Result<GMData> {
+    ParsingOptions::new().parse_bytes(raw_data)
+}
+
+/// Parse a GameMaker data file (stored on disk) with default options.
+///
+/// For more information on the data file format, see [`crate::gamemaker`].
+pub fn parse_file(data_file_path: impl AsRef<Path>) -> Result<GMData> {
+    ParsingOptions::new().parse_file(data_file_path)
+}
+
+// ================ Actual logic here ================
 
 /// This can later be reused for audiogroup files.
 fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
@@ -383,6 +263,151 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
     Ok(reader)
 }
 
+/// Parse GameMaker data
+fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
+    let stopwatch = Stopwatch::start();
+    let mut reader: DataReader = parse_form(raw_data)?;
+    reader.options = options.clone();
+
+    // Properly initialize GEN8 version before reading chunks.
+    reader.specified_version = reader.read_gen8_version()?;
+
+    // The following chunk read order is required:
+    // Required: GEN8 --> all others
+    //
+    // Then (in any order):
+    // * [FUNC, VARI, STRG] --> CODE
+    // * TPAG --> [BGND, EMBI, FONT, OPTN, SPRT]
+
+    reader.string_chunk = reader
+        .chunks
+        .get("STRG")
+        .ok_or("Chunk STRG does not exist")?;
+    reader.general_info = reader.read_chunk()?;
+    if !reader.general_info.exists {
+        bail!("GEN8 chunk does not exist");
+    }
+
+    let gms2 = GMVersion::new(2, 0, 0, 0, LTSBranch::PreLTS);
+    if reader.specified_version == gms2 {
+        let stopwatch = Stopwatch::start();
+        detect_gamemaker_version(&mut reader).context("detecting GameMaker version")?;
+        log::trace!("Detecting GameMaker Version took {stopwatch}");
+    }
+
+    log::info!(
+        "Loading {:?} (GM {}, WAD {})",
+        reader.general_info.game_name,
+        reader.general_info.version,
+        reader.general_info.wad_version,
+    );
+
+    let texture_page_items: GMTexturePageItems = reader.read_chunk()?;
+
+    let is_yyc: bool = check_yyc(&reader).context("Checking YYC")?;
+    let mut variables = GMVariables::default();
+    let mut functions = GMFunctions::default();
+    let mut codes = GMCodes::default();
+
+    let mut stopwatch2 = Stopwatch::start();
+    if is_yyc {
+        log::warn!("YYC is untested, issues may occur");
+        // Need to remove STRG to not throw "unread chunk" error
+        reader.chunks.remove("STRG");
+    } else {
+        reader.read_chunk::<GMStrings>()?; // Set `reader.strings`
+        variables = reader.read_chunk()?; // Set `reader.variable_occurrences`
+        functions = reader.read_chunk()?; // Set `reader.function_occurrences`
+        stopwatch2 = Stopwatch::start();
+        codes = reader.read_chunk()?;
+    }
+
+    let embedded_textures: GMEmbeddedTextures = reader.read_chunk()?;
+    let scripts: GMScripts = reader.read_chunk()?;
+    let fonts: GMFonts = reader.read_chunk()?;
+    let sprites: GMSprites = reader.read_chunk()?;
+    let game_objects: GMGameObjects = reader.read_chunk()?;
+    let rooms: GMRooms = reader.read_chunk()?;
+    let backgrounds: GMBackgrounds = reader.read_chunk()?;
+    let audios: GMEmbeddedAudios = reader.read_chunk()?;
+    let sounds: GMSounds = reader.read_chunk()?;
+    let paths: GMPaths = reader.read_chunk()?;
+    let options: GMOptions = reader.read_chunk()?;
+    let sequences: GMSequences = reader.read_chunk()?;
+    let particle_systems: GMParticleSystems = reader.read_chunk()?;
+    let particle_emitters: GMParticleEmitters = reader.read_chunk()?;
+    let language_info: GMLanguageInfo = reader.read_chunk()?;
+    let extensions: GMExtensions = reader.read_chunk()?;
+    let audio_groups: GMAudioGroups = reader.read_chunk()?;
+    let global_init_scripts: GMGlobalInitScripts = reader.read_chunk()?;
+    let game_end_scripts: GMGameEndScripts = reader.read_chunk()?;
+    let shaders: GMShaders = reader.read_chunk()?;
+    let root_ui_nodes: GMRootUINodes = reader.read_chunk()?;
+    let timelines: GMTimelines = reader.read_chunk()?;
+    let embedded_images: GMEmbeddedImages = reader.read_chunk()?;
+    let texture_group_infos: GMTextureGroupInfos = reader.read_chunk()?;
+    let tags: GMTags = reader.read_chunk()?;
+    let feature_flags: GMFeatureFlags = reader.read_chunk()?;
+    let filter_effects: GMFilterEffects = reader.read_chunk()?;
+    let animation_curves: GMAnimationCurves = reader.read_chunk()?;
+
+    // This chunk is so useless that it is perfectly safe to throw it away.
+    reader.read_chunk::<GMDataFiles>()?;
+
+    log::trace!("Reading independent chunks took {stopwatch2}");
+
+    if !options.exists {
+        bail!("Required chunk OPTN does not exist");
+    }
+
+    handle_unread_chunks(&reader.chunks, reader.options.allow_unknown_chunks)?;
+    let original_data_size = reader.size();
+
+    let data = GMData {
+        animation_curves,
+        audio_groups,
+        audios,
+        backgrounds,
+        codes,
+        embedded_images,
+        extensions,
+        feature_flags,
+        filter_effects,
+        fonts,
+        functions,
+        game_end_scripts,
+        general_info: reader.general_info,
+        global_init_scripts,
+        language_info,
+        options,
+        particle_emitters,
+        particle_systems,
+        paths,
+        rooms,
+        root_ui_nodes,
+        scripts,
+        sequences,
+        shaders,
+        sounds,
+        sprites,
+        tags,
+        texture_group_infos,
+        texture_page_items,
+        timelines,
+        embedded_textures,
+        game_objects,
+        variables,
+
+        location: None,
+        chunk_padding: reader.chunk_padding,
+        endianness: reader.endianness,
+        original_data_size,
+    };
+
+    log::trace!("Parsing data took {stopwatch}");
+    Ok(data)
+}
+
 /// Verify all data chunks were processed to prevent data loss
 fn handle_unread_chunks(chunks: &ChunkMap, allow_unknown: bool) -> Result<()> {
     if chunks.is_empty() {
@@ -414,18 +439,4 @@ fn handle_unread_chunks(chunks: &ChunkMap, allow_unknown: bool) -> Result<()> {
     } else {
         bail!("{message}");
     }
-}
-
-/// Parse a GameMaker data file (stored in memory) with default options.
-///
-/// For more information on the data file format, see [`crate::gamemaker`].
-pub fn parse_bytes(raw_data: impl AsRef<[u8]>) -> Result<GMData> {
-    ParsingOptions::new().parse_bytes(raw_data)
-}
-
-/// Parse a GameMaker data file (stored on disk) with default options.
-///
-/// For more information on the data file format, see [`crate::gamemaker`].
-pub fn parse_file(data_file_path: impl AsRef<Path>) -> Result<GMData> {
-    ParsingOptions::new().parse_file(data_file_path)
 }
