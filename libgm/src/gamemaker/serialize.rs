@@ -17,15 +17,43 @@ use builder::DataBuilder;
 use crate::{
     gamemaker::{chunk::ChunkName, data::GMData, elements::string::GMStrings},
     prelude::*,
-    util::bench::Stopwatch,
+    util::{bench::Stopwatch, panic},
 };
 
 /// Builds a GameMaker data file and return a byte buffer.
 ///
 /// For more information on the data file format, see [`crate::gamemaker`].
 pub fn build_bytes(gm_data: &GMData) -> Result<Vec<u8>> {
+    build(gm_data).context("building GameMaker data bytes")
+}
+
+/// Builds a GameMaker data file to the specified file path.
+///
+/// For more information on the data file format, see [`crate::gamemaker`].
+pub fn build_file(gm_data: &GMData, path: impl AsRef<Path>) -> Result<()> {
+    let path: &Path = path.as_ref();
+    let raw_data: Vec<u8> = build(gm_data)
+        .with_context(|| format!("building GameMaker data file {}", path.display()))?;
+
     let stopwatch = Stopwatch::start();
-    let mut builder = DataBuilder::new(gm_data);
+    std::fs::write(path, raw_data)
+        .map_err(|e| e.to_string())
+        .context("writing data file")?;
+    log::trace!("Writing data file took {stopwatch}");
+    Ok(())
+}
+
+fn build(gm_data: &GMData) -> Result<Vec<u8>> {
+    if cfg!(feature = "catch-panic") {
+        panic::catch(|| build_impl(gm_data))
+    } else {
+        build_impl(gm_data)
+    }
+}
+
+fn build_impl(data: &GMData) -> Result<Vec<u8>> {
+    let stopwatch = Stopwatch::start();
+    let mut builder = DataBuilder::new(data);
 
     builder.write_chunk_name(ChunkName::new("FORM"));
     // Write Data length placeholder
@@ -34,39 +62,39 @@ pub fn build_bytes(gm_data: &GMData) -> Result<Vec<u8>> {
     // GEN8 has to be the first chunk, at least for utmt (?).
     // CODE has to be written before VARI and FUNC.
 
-    builder.build_chunk(&gm_data.general_info)?;
-    builder.build_chunk(&gm_data.options)?;
-    builder.build_chunk(&gm_data.extensions)?;
-    builder.build_chunk(&gm_data.sounds)?;
-    builder.build_chunk(&gm_data.audio_groups)?;
-    builder.build_chunk(&gm_data.sprites)?;
-    builder.build_chunk(&gm_data.backgrounds)?;
-    builder.build_chunk(&gm_data.paths)?;
-    builder.build_chunk(&gm_data.scripts)?;
-    builder.build_chunk(&gm_data.shaders)?;
-    builder.build_chunk(&gm_data.fonts)?;
-    builder.build_chunk(&gm_data.timelines)?;
-    builder.build_chunk(&gm_data.game_objects)?;
-    builder.build_chunk(&gm_data.rooms)?;
-    builder.build_chunk(&gm_data.texture_page_items)?;
-    builder.build_chunk(&gm_data.codes)?;
-    builder.build_chunk(&gm_data.variables)?;
-    builder.build_chunk(&gm_data.functions)?;
-    builder.build_chunk(&gm_data.embedded_textures)?;
-    builder.build_chunk(&gm_data.audios)?;
-    builder.build_chunk(&gm_data.sequences)?;
-    builder.build_chunk(&gm_data.particle_systems)?;
-    builder.build_chunk(&gm_data.particle_emitters)?;
-    builder.build_chunk(&gm_data.language_info)?;
-    builder.build_chunk(&gm_data.global_init_scripts)?;
-    builder.build_chunk(&gm_data.game_end_scripts)?;
-    builder.build_chunk(&gm_data.root_ui_nodes)?;
-    builder.build_chunk(&gm_data.embedded_images)?;
-    builder.build_chunk(&gm_data.texture_group_infos)?;
-    builder.build_chunk(&gm_data.tags)?;
-    builder.build_chunk(&gm_data.feature_flags)?;
-    builder.build_chunk(&gm_data.filter_effects)?;
-    builder.build_chunk(&gm_data.animation_curves)?;
+    builder.build_chunk(&data.general_info)?;
+    builder.build_chunk(&data.options)?;
+    builder.build_chunk(&data.extensions)?;
+    builder.build_chunk(&data.sounds)?;
+    builder.build_chunk(&data.audio_groups)?;
+    builder.build_chunk(&data.sprites)?;
+    builder.build_chunk(&data.backgrounds)?;
+    builder.build_chunk(&data.paths)?;
+    builder.build_chunk(&data.scripts)?;
+    builder.build_chunk(&data.shaders)?;
+    builder.build_chunk(&data.fonts)?;
+    builder.build_chunk(&data.timelines)?;
+    builder.build_chunk(&data.game_objects)?;
+    builder.build_chunk(&data.rooms)?;
+    builder.build_chunk(&data.texture_page_items)?;
+    builder.build_chunk(&data.codes)?;
+    builder.build_chunk(&data.variables)?;
+    builder.build_chunk(&data.functions)?;
+    builder.build_chunk(&data.embedded_textures)?;
+    builder.build_chunk(&data.audios)?;
+    builder.build_chunk(&data.sequences)?;
+    builder.build_chunk(&data.particle_systems)?;
+    builder.build_chunk(&data.particle_emitters)?;
+    builder.build_chunk(&data.language_info)?;
+    builder.build_chunk(&data.global_init_scripts)?;
+    builder.build_chunk(&data.game_end_scripts)?;
+    builder.build_chunk(&data.root_ui_nodes)?;
+    builder.build_chunk(&data.embedded_images)?;
+    builder.build_chunk(&data.texture_group_infos)?;
+    builder.build_chunk(&data.tags)?;
+    builder.build_chunk(&data.feature_flags)?;
+    builder.build_chunk(&data.filter_effects)?;
+    builder.build_chunk(&data.animation_curves)?;
 
     builder.build_chunk(&GMStrings)?;
 
@@ -86,17 +114,4 @@ pub fn build_bytes(gm_data: &GMData) -> Result<Vec<u8>> {
     }
 
     Ok(raw_data)
-}
-
-/// Builds a GameMaker data file to the specified file path.
-///
-/// For more information on the data file format, see [`crate::gamemaker`].
-pub fn build_file(gm_data: &GMData, path: impl AsRef<Path>) -> Result<()> {
-    let raw_data: Vec<u8> = build_bytes(gm_data).context("building data")?;
-    let stopwatch = Stopwatch::start();
-    std::fs::write(path, raw_data)
-        .map_err(|e| e.to_string())
-        .context("writing data file")?;
-    log::trace!("Writing data file took {stopwatch}");
-    Ok(())
 }

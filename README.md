@@ -49,7 +49,7 @@ This is effectively a Rust port of
 Add this line in the `[dependencies]` section of your `Cargo.toml` file:
 
 ```toml
-libgm = "0.3.0"
+libgm = "0.3.1"
 ```
 
 Or if you want bleeding edge:
@@ -96,7 +96,27 @@ let data: GMData = parser.parse_bytes(&buffer)?;
 
 ## Crate features
 
-- `chrono` (opt-in):
+| Feature                 | Default  | Dependencies |
+| ----------------------- | -------- | ------------ |
+| catch-panic             | enabled  |              |
+| check-integrity         | enabled  |              |
+| game-creation-timestamp | disabled | chrono       |
+| bzip2-image             | enabled  | bzip2        |
+| png-image               | enabled  | image/png    |
+
+- `catch-panic` catches panics in GameMaker (de)serialization functions
+  and returns them as a LibGM error.
+- `check-integrity` enables alignment and constant validation while parsing.
+  These checks may still be demoted to a warning using `ParsingOptions`.
+  Some checks regarding panic safety or memory allocation are always enabled.
+- `game-creation-timestamp` exposes the `creation-timestamp` field in `GMGeneralInfo`.
+  Otherwise, it will be stored as an i64 iternally.
+- `bzip2-image` enables deserialization of BZip2+QOI encoded texture pages.
+  If `*_dynamic_image` is called on a `GMImage` that contains Bzip2-Qoi
+  data and this feature is disabled, an error will be returned.
+- `png-image` enables PNG deserialization and all serialization of texture pages.
+  If you deserialize texture pages into `DynamicImage`s with this feature disabled,
+  you will not be able to serialize the data.
 
 ## Credits
 

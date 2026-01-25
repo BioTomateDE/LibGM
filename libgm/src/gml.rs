@@ -21,7 +21,7 @@ pub struct GMCode {
 }
 
 /// Extra data for code entries in WAD Version 15 and higher.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ModernData {
     /// The amount of local variables this code entry has.
     pub locals_count: u16,

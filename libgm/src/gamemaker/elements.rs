@@ -309,6 +309,7 @@ pub trait GMListChunk: GMChunk {
 
     fn iter(&self) -> core::slice::Iter<'_, Self::Element>;
     fn iter_mut(&mut self) -> core::slice::IterMut<'_, Self::Element>;
+    #[must_use]
     fn into_iter(self) -> std::vec::IntoIter<Self::Element>;
 }
 
@@ -354,8 +355,9 @@ pub fn validate_names<T: GMNamedListChunk>(chunk: &T) -> Result<()> {
     Ok(())
 }
 
+/// All GameMaker elements with a unique name (to the list
+/// they're contained in) should implement this trait.
 #[allow(unused_variables)]
-/// All GameMaker elements with a unique name (to the list they're contained in) should implement this trait.
 pub trait GMNamedElement: GMElement {
     /// The name of this element.
     #[must_use]
