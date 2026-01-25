@@ -1,6 +1,6 @@
 [package]
 name = "libgm"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["BioTomateDE <latuskati+cratesio@gmail.com>"]
 edition = "2024"
 description = "A tool for modding, unpacking and decompiling GameMaker games"
@@ -11,19 +11,19 @@ keywords = ["gamemaker", "gml", "decompiler", "modding", "undertale"]
 categories = ["parser-implementations", "game-development", "encoding"]
 
 [features]
-default = ["bzip2-image", "catch-panic", "check-integrity", "png-image"]
+default = ["catch-panic", "check-integrity", "bzip2-image", "png-image"]
 full = [
-    "bzip2-image",
     "catch-panic",
     "check-integrity",
     "game-creation-timestamp",
+    "bzip2-image",
     "png-image",
 ]
 
-bzip2-image = ["dep:bzip2"]
 catch-panic = []
 check-integrity = []
 game-creation-timestamp = ["dep:chrono"]
+bzip2-image = ["dep:bzip2"]
 png-image = ["image/png"]
 
 # Attribute macros (num_enum, list_chunk, named_list_chunk)

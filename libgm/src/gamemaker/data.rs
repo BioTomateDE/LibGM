@@ -91,7 +91,7 @@ pub struct GMData {
     ///
     /// Note that the last chunk does not get padding.
     /// This padding is influenced by the data file's GameMaker Version, as well as target platform/architecture.
-    pub(crate) chunk_padding: u32,
+    pub chunk_padding: u32,
 
     /// Indicates the data's byte endianness.
     ///
@@ -99,14 +99,14 @@ pub struct GMData {
     /// In most cases (and assumed by default), this is set to little-endian.
     /// Big-endian is an edge case for certain target platforms (e.g. PS3 or Xbox 360)
     /// and its support may be removed in the future.
-    pub(crate) endianness: Endianness,
+    pub endianness: Endianness,
 
     /// The size of the original data file; useful for
     /// approximating the size of the modified data file.
     ///
     /// This is a micro optimization. This field's value
     /// can be initialized to zero without any problems.
-    pub(crate) original_data_size: u32,
+    pub original_data_size: u32,
 }
 
 impl Default for GMData {

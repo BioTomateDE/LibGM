@@ -2,9 +2,10 @@ use std::fmt::{Display, Formatter};
 
 use crate::{gamemaker::elements::game_object::GMGameObject, prelude::GMRef};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum InstanceType {
     /// Represents the current `self` instance.
+    #[default]
     Self_,
 
     /// Represents the first (?) instance of an object.

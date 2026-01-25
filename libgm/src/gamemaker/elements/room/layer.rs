@@ -120,6 +120,16 @@ pub struct Data2022_1 {
     pub effect_properties: Vec<effect::Property>,
 }
 
+impl Default for Data2022_1 {
+    fn default() -> Self {
+        Self {
+            effect_enabled: true,
+            effect_type: None,
+            effect_properties: Vec::new(),
+        }
+    }
+}
+
 impl GMElement for Data2022_1 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let effect_enabled = reader.read_bool32()?;
