@@ -952,6 +952,26 @@ impl GMElement for AssetReference {
         let index: u32 = raw & 0xFF_FFFF;
         let asset_type: u8 = (raw >> 24) as u8;
 
+        if reader.general_info.is_version_at_least((2024, 4)) {
+            return Ok(match asset_type {
+                0 => Self::Object(GMRef::new(index)),
+                1 => Self::Sprite(GMRef::new(index)),
+                2 => Self::Sound(GMRef::new(index)),
+                3 => Self::Room(GMRef::new(index)),
+                4 => Self::Path(GMRef::new(index)),
+                5 => Self::Script(GMRef::new(index)),
+                6 => Self::Font(GMRef::new(index)),
+                7 => Self::Timeline(GMRef::new(index)),
+                8 => Self::Shader(GMRef::new(index)),
+                9 => Self::Sequence(GMRef::new(index)),
+                10 => Self::AnimCurve(GMRef::new(index)),
+                11 => Self::ParticleSystem(GMRef::new(index)),
+                13 => Self::Background(GMRef::new(index)),
+                14 => Self::RoomInstance(index as i32),
+                _ => bail!("Invalid asset type {asset_type}"),
+            });
+        }
+
         Ok(match asset_type {
             0 => Self::Object(GMRef::new(index)),
             1 => Self::Sprite(GMRef::new(index)),
@@ -962,11 +982,11 @@ impl GMElement for AssetReference {
             6 => Self::Script(GMRef::new(index)),
             7 => Self::Font(GMRef::new(index)),
             8 => Self::Timeline(GMRef::new(index)),
-            9 => Self::Shader(GMRef::new(index)),
-            10 => Self::Sequence(GMRef::new(index)),
-            11 => Self::AnimCurve(GMRef::new(index)),
-            12 => Self::ParticleSystem(GMRef::new(index)),
-            13 => Self::RoomInstance(index as i32),
+            10 => Self::Shader(GMRef::new(index)),
+            11 => Self::Sequence(GMRef::new(index)),
+            12 => Self::AnimCurve(GMRef::new(index)),
+            13 => Self::ParticleSystem(GMRef::new(index)),
+            14 => Self::RoomInstance(index as i32),
             _ => bail!("Invalid asset type {asset_type}"),
         })
     }

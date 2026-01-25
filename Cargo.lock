@@ -300,7 +300,7 @@ checksum = "2c4a545a15244c7d945065b5d392b2d2d7f21526fba56ce51467b06ed445e8f7"
 
 [[package]]
 name = "libgm"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "bzip2",
  "chrono",
