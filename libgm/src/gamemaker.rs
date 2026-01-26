@@ -177,7 +177,6 @@
 //!
 
 mod chunk;
-mod qoi;
 mod version_detection;
 
 pub mod data;
