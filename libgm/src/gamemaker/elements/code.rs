@@ -505,7 +505,7 @@ impl GMElement for Instruction {
                 build_extended16(builder, opcodes::extended::ISNULLISH);
             },
             Self::PushReference { asset_reference } => {
-                build_pushref(builder, asset_reference)?;
+                build_pushref(builder, *asset_reference)?;
             },
         }
         Ok(())
@@ -785,7 +785,7 @@ fn build_pop(
     type2: DataType,
 ) -> Result<()> {
     let instr_pos: usize = builder.len();
-    builder.write_i16(build_instance_type(variable.instance_type));
+    builder.write_i16(variable.instance_type.build());
     builder.write_u8(u8::from(type1) | u8::from(type2) << 4);
     builder.write_u8(opcode);
     write_variable_occurrence(
@@ -842,7 +842,7 @@ fn build_push(builder: &mut DataBuilder, opcode: u8, value: &PushValue) -> Resul
     let instr_pos: usize = builder.len();
     builder.write_i16(match value {
         PushValue::Int16(int16) => *int16,
-        PushValue::Variable(variable) => build_instance_type(variable.instance_type),
+        PushValue::Variable(variable) => variable.instance_type.build(),
         _ => 0,
     });
 
@@ -882,7 +882,7 @@ fn build_push(builder: &mut DataBuilder, opcode: u8, value: &PushValue) -> Resul
 
 fn build_pushvar(builder: &mut DataBuilder, opcode: u8, variable: &CodeVariable) -> Result<()> {
     let instr_pos = builder.len();
-    builder.write_i16(build_instance_type(variable.instance_type));
+    builder.write_i16(variable.instance_type.build());
     builder.write_u8(DataType::Variable.into());
     builder.write_u8(opcode);
 
@@ -934,7 +934,7 @@ fn build_extended16(builder: &mut DataBuilder, extended_kind: i16) {
     builder.write_u8(opcodes::EXTENDED);
 }
 
-fn build_pushref(builder: &mut DataBuilder, asset_reference: &AssetReference) -> Result<()> {
+fn build_pushref(builder: &mut DataBuilder, asset_reference: AssetReference) -> Result<()> {
     builder.write_i16(opcodes::extended::PUSHREF);
     builder.write_u8(DataType::Int32.into());
     builder.write_u8(opcodes::EXTENDED);
@@ -949,76 +949,30 @@ impl GMElement for AssetReference {
         }
 
         let raw = reader.read_u32()?;
-        let index: u32 = raw & 0xFF_FFFF;
-        let asset_type: u8 = (raw >> 24) as u8;
-
         if reader.general_info.is_version_at_least((2024, 4)) {
-            return Ok(match asset_type {
-                0 => Self::Object(GMRef::new(index)),
-                1 => Self::Sprite(GMRef::new(index)),
-                2 => Self::Sound(GMRef::new(index)),
-                3 => Self::Room(GMRef::new(index)),
-                4 => Self::Path(GMRef::new(index)),
-                5 => Self::Script(GMRef::new(index)),
-                6 => Self::Font(GMRef::new(index)),
-                7 => Self::Timeline(GMRef::new(index)),
-                8 => Self::Shader(GMRef::new(index)),
-                9 => Self::Sequence(GMRef::new(index)),
-                10 => Self::AnimCurve(GMRef::new(index)),
-                11 => Self::ParticleSystem(GMRef::new(index)),
-                13 => Self::Background(GMRef::new(index)),
-                14 => Self::RoomInstance(index as i32),
-                _ => bail!("Invalid asset type {asset_type}"),
-            });
+            Self::parse(raw)
+        } else {
+            Self::parse_old(raw)
         }
-
-        Ok(match asset_type {
-            0 => Self::Object(GMRef::new(index)),
-            1 => Self::Sprite(GMRef::new(index)),
-            2 => Self::Sound(GMRef::new(index)),
-            3 => Self::Room(GMRef::new(index)),
-            4 => Self::Background(GMRef::new(index)),
-            5 => Self::Path(GMRef::new(index)),
-            6 => Self::Script(GMRef::new(index)),
-            7 => Self::Font(GMRef::new(index)),
-            8 => Self::Timeline(GMRef::new(index)),
-            10 => Self::Shader(GMRef::new(index)),
-            11 => Self::Sequence(GMRef::new(index)),
-            12 => Self::AnimCurve(GMRef::new(index)),
-            13 => Self::ParticleSystem(GMRef::new(index)),
-            14 => Self::RoomInstance(index as i32),
-            _ => bail!("Invalid asset type {asset_type}"),
-        })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        let (index, asset_type) = match self {
-            Self::Object(gm_ref) => (gm_ref.index, 0),
-            Self::Sprite(gm_ref) => (gm_ref.index, 1),
-            Self::Sound(gm_ref) => (gm_ref.index, 2),
-            Self::Room(gm_ref) => (gm_ref.index, 3),
-            Self::Background(gm_ref) => (gm_ref.index, 4),
-            Self::Path(gm_ref) => (gm_ref.index, 5),
-            Self::Script(gm_ref) => (gm_ref.index, 6),
-            Self::Font(gm_ref) => (gm_ref.index, 7),
-            Self::Timeline(gm_ref) => (gm_ref.index, 8),
-            Self::Shader(gm_ref) => (gm_ref.index, 9),
-            Self::Sequence(gm_ref) => (gm_ref.index, 10),
-            Self::AnimCurve(gm_ref) => (gm_ref.index, 11),
-            Self::ParticleSystem(gm_ref) => (gm_ref.index, 12),
-            Self::RoomInstance(id) => (*id as u32, 13),
-            Self::Function(func_ref) => {
-                write_function_occurrence(
-                    builder,
-                    func_ref.index,
-                    builder.len(),
-                    /*function.name.index*/ 0x6767_6767,
-                )?;
-                return Ok(());
-            },
+        if let Self::Function(func_ref) = self {
+            write_function_occurrence(
+                builder,
+                func_ref.index,
+                builder.len(),
+                /*function.name.index*/ 0x6767_6767,
+            )?;
+            return Ok(());
+        }
+
+        let raw = if builder.is_version_at_least((2024, 4)) {
+            self.build()
+        } else {
+            self.build_old()
         };
 
-        let raw: u32 = (asset_type << 24) | index & 0xFF_FFFF;
         builder.write_u32(raw);
         Ok(())
     }
@@ -1041,7 +995,7 @@ fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<Code
 
     let instance_type: InstanceType =
         if matches!(variable_type, VariableType::Normal | VariableType::Instance) {
-            parse_instance_type(raw_instance_type, variable_type)?
+            InstanceType::parse(raw_instance_type, variable_type)?
         } else {
             vari_instance_type
         };
@@ -1052,55 +1006,6 @@ fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<Code
         instance_type,
         is_int32: false,
     })
-}
-
-pub(crate) fn parse_instance_type(
-    raw_value: i16,
-    variable_type: VariableType,
-) -> Result<InstanceType> {
-    // If > 0; then game object id (or room instance id). If < 0, then variable instance type.
-    if raw_value > 0 {
-        return Ok(if variable_type == VariableType::Instance {
-            InstanceType::RoomInstance(raw_value)
-        } else {
-            InstanceType::GameObject(GMRef::new(raw_value as u32))
-        });
-    }
-
-    let instance_type: InstanceType = match raw_value {
-        -1 => InstanceType::Self_,
-        -2 => InstanceType::Other,
-        -3 => InstanceType::All,
-        -4 => InstanceType::None,
-        -5 => InstanceType::Global,
-        -6 => InstanceType::Builtin,
-        -7 => InstanceType::Local,
-        -9 => InstanceType::StackTop,
-        -15 => InstanceType::Argument,
-        -16 => InstanceType::Static,
-        _ => bail!("Invalid instance type {raw_value} (0x{raw_value:04X})"),
-    };
-
-    Ok(instance_type)
-}
-
-#[must_use]
-pub(crate) const fn build_instance_type(instance_type: InstanceType) -> i16 {
-    // If > 0; then game object id (or room instance id). If < 0, then variable instance type.
-    match instance_type {
-        InstanceType::Self_ => -1,
-        InstanceType::GameObject(game_object_ref) => game_object_ref.index as i16,
-        InstanceType::RoomInstance(instance_id) => instance_id,
-        InstanceType::Other => -2,
-        InstanceType::All => -3,
-        InstanceType::None => -4,
-        InstanceType::Global => -5,
-        InstanceType::Builtin => -6,
-        InstanceType::Local => -7,
-        InstanceType::StackTop => -9,
-        InstanceType::Argument => -15,
-        InstanceType::Static => -16,
-    }
 }
 
 fn write_variable_occurrence(

@@ -4,16 +4,13 @@ use crate::{
     gamemaker::{
         deserialize::{chunk::ChunkBounds, reader::DataReader},
         elements::{
-            GMElement, GMNamedElement,
-            code::{build_instance_type, parse_instance_type},
-            element_stub,
-            general_info::GMGeneralInfo,
+            GMElement, GMNamedElement, element_stub, general_info::GMGeneralInfo,
             validate_identifier,
         },
         reference::GMRef,
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
-    gml::instruction::{InstanceType, VariableType},
+    gml::instruction::InstanceType,
     prelude::*,
     util::init::vec_with_capacity,
 };
@@ -247,14 +244,13 @@ pub struct ModernData {
 impl GMElement for ModernData {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let raw_instance_type: i16 = reader.read_i32()? as i16;
-        let instance_type: InstanceType =
-            parse_instance_type(raw_instance_type, VariableType::Normal)?;
+        let instance_type: InstanceType = InstanceType::parse_normal(raw_instance_type)?;
         let variable_id = reader.read_i32()?;
         Ok(Self { instance_type, variable_id })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(i32::from(build_instance_type(self.instance_type)));
+        builder.write_i32(i32::from(self.instance_type.build()));
         builder.write_i32(self.variable_id);
         Ok(())
     }

@@ -2,6 +2,8 @@ pub mod nine_slice;
 pub mod spine;
 pub mod swf;
 
+use std::fmt;
+
 use macros::{named_list_chunk, num_enum};
 pub use nine_slice::NineSlice;
 
@@ -538,11 +540,17 @@ pub enum SepMaskType {
     RotatedRect = 2,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct MaskEntry {
     pub data: Vec<u8>,
     pub width: u32,
     pub height: u32,
+}
+
+impl fmt::Debug for MaskEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("MaskEntry")
+    }
 }
 
 fn read_mask_data(reader: &mut DataReader, width: u32, height: u32) -> Result<Vec<MaskEntry>> {

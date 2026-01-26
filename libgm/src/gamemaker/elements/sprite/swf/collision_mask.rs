@@ -1,12 +1,21 @@
+use std::fmt;
+
 use crate::{
     gamemaker::{
         deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
     },
     prelude::*,
 };
-#[derive(Debug, Clone, PartialEq, Eq)]
+
+#[derive(Clone, PartialEq, Eq)]
 pub struct CollisionMask {
     pub rle_data: Vec<u8>,
+}
+
+impl fmt::Debug for CollisionMask {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("CollisionMask")
+    }
 }
 
 impl GMElement for CollisionMask {

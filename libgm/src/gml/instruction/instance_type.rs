@@ -1,13 +1,11 @@
 use std::fmt::{Display, Formatter};
 
-use crate::{gamemaker::elements::game_object::GMGameObject, prelude::GMRef};
+use crate::{
+    gamemaker::elements::game_object::GMGameObject, gml::instruction::VariableType, prelude::*,
+};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum InstanceType {
-    /// Represents the current `self` instance.
-    #[default]
-    Self_,
-
     /// Represents the first (?) instance of an object.
     /// This is typically an object that should only have one instance.
     GameObject(GMRef<GMGameObject>),
@@ -15,6 +13,12 @@ pub enum InstanceType {
     /// Instance ID in the Room -100000; used when the Variable Type is [`VariableType::Instance`].
     /// This doesn't exist in UTMT.
     RoomInstance(i16),
+
+    /// Represents the current `self` instance.
+    ///
+    /// (should this be default?)
+    #[default]
+    Self_,
 
     /// Represents the `other` context, which has multiple definitions based on the location used.
     Other,
@@ -69,6 +73,62 @@ impl Display for InstanceType {
 }
 
 impl InstanceType {
+    /// Parse an instance type from the given raw value.
+    /// The variable type is needed because [`VariableType::Instance`] signifies
+    /// a [`InstanceType::RoomInstance`] instead of a [`InstanceType::GameObject`].
+    pub fn parse(raw: i16, var_type: VariableType) -> Result<Self> {
+        if raw > 0 {
+            return Ok(if var_type == VariableType::Instance {
+                Self::RoomInstance(raw)
+            } else {
+                Self::GameObject(GMRef::new(raw as u32))
+            });
+        }
+
+        Ok(match raw {
+            -1 => Self::Self_,
+            -2 => Self::Other,
+            -3 => Self::All,
+            -4 => Self::None,
+            -5 => Self::Global,
+            -6 => Self::Builtin,
+            -7 => Self::Local,
+            -9 => Self::StackTop,
+            -15 => Self::Argument,
+            -16 => Self::Static,
+            _ => bail!("Invalid instance type {raw} (0x{raw:04X})"),
+        })
+    }
+
+    /// Parse an instance type from the given raw value,
+    /// assuming that this is not a `RoomInstance` instance type.
+    pub fn parse_normal(raw: i16) -> Result<Self> {
+        Self::parse(raw, VariableType::Normal)
+    }
+
+    /// Serialize this instance type into an i16.
+    ///
+    /// If the game object reference is erroneously higher than [`i16::MAX`], you will be boiled.
+    ///
+    /// TODO: limit gmref to i16 prolly
+    #[must_use]
+    pub const fn build(self) -> i16 {
+        match self {
+            Self::GameObject(game_object_ref) => game_object_ref.index as i16,
+            Self::RoomInstance(instance_id) => instance_id,
+            Self::Self_ => -1,
+            Self::Other => -2,
+            Self::All => -3,
+            Self::None => -4,
+            Self::Global => -5,
+            Self::Builtin => -6,
+            Self::Local => -7,
+            Self::StackTop => -9,
+            Self::Argument => -15,
+            Self::Static => -16,
+        }
+    }
+
     /// Convert an instance type to the "VARI version".
     /// In other words, convert the instance type to what
     /// it would be if it was in the 'VARI' chunk (`GMVariable.instance_type`)
