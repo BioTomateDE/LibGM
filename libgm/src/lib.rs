@@ -98,14 +98,7 @@
 #![deny(unexpected_cfgs)]
 //
 //
-#![warn(clippy::correctness)]
-#![warn(clippy::suspicious)]
-#![warn(clippy::complexity)]
-#![warn(clippy::perf)]
 #![warn(clippy::cargo)]
-#![warn(clippy::nursery)]
-#![warn(clippy::style)]
-#![warn(clippy::pedantic)]
 //
 // I sometimes need more than 3 bools in a struct???
 // This lint is only relevant for people

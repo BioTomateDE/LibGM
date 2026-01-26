@@ -1,20 +1,21 @@
-use std::{borrow::Cow, cmp::max, fmt};
+mod img;
 
-// TODO: allow serialization to PNG, QOI or BzQoi in GMImage
-use image::{self, DynamicImage, ImageFormat};
+use std::cmp::max;
+
 use macros::list_chunk;
 
 use crate::{
     gamemaker::{
         data::Endianness,
         deserialize::reader::DataReader,
-        elements::{GMElement, element_stub},
-        qoi,
+        elements::{GMElement, element_stub, embedded_texture::img::BZip2QoiHeader},
         serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
     },
     prelude::*,
     util::fmt::hexdump,
 };
+
+pub use img::{Format, GMImage};
 
 pub(crate) const PNG_HEADER: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 pub(crate) const BZ2_QOI_HEADER: &[u8; 4] = b"2zoq";
@@ -281,7 +282,7 @@ fn read_bz2_qoi(
     };
     let width: u16 = u16_from((&header[4..6]).try_into().unwrap());
     let height: u16 = u16_from((&header[6..8]).try_into().unwrap());
-    let header = BZip2QoiHeader { width, height, uncompressed_size };
+    let header = BZip2QoiHeader::new(width, height, uncompressed_size);
     let image: GMImage = GMImage::from_bz2_qoi(raw_image_data.to_vec(), header);
     Ok((image, data_length))
 }
@@ -294,172 +295,8 @@ fn read_qoi(reader: &mut DataReader) -> Result<(GMImage, u32)> {
         .read_bytes_dyn(data_length + 12)
         .context("reading QOI Image data")?
         .to_vec();
-    let image: GMImage = GMImage::from_qoi(raw_image_data);
+    let image = GMImage::from_qoi(raw_image_data);
     Ok((image, data_length))
-}
-
-#[derive(Debug, Clone)]
-struct BZip2QoiHeader {
-    width: u16,
-    height: u16,
-    /// Present in 2022.5+
-    uncompressed_size: Option<u32>,
-}
-
-#[derive(Clone)]
-enum Img {
-    Dyn(DynamicImage),
-    Png(Vec<u8>),
-    Bz2Qoi(Vec<u8>, BZip2QoiHeader),
-    Qoi(Vec<u8>),
-}
-
-impl fmt::Debug for Img {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Dyn(_) => f.write_str("Dyn"),
-            Self::Png(_) => f.write_str("Png"),
-            Self::Bz2Qoi(_, header) => f.debug_tuple("Bz2Qoi").field(header).finish(),
-            Self::Qoi(_) => f.write_str("Qoi"),
-        }
-    }
-}
-
-impl Img {
-    #[cfg(feature = "png-image")]
-    fn decode_png(raw_png_data: &[u8]) -> Result<DynamicImage> {
-        image::load_from_memory_with_format(raw_png_data, ImageFormat::Png)
-            .map_err(|e| e.to_string())
-            .context("decoding PNG Image")
-    }
-
-    #[cfg(not(feature = "png-image"))]
-    fn decode_png(_: &[u8]) -> Result<DynamicImage> {
-        bail!("Crate feature `png-images` is disabled; cannot decode PNG image");
-    }
-
-    #[cfg(feature = "bzip2-image")]
-    fn decode_bz2_qoi(raw_bz2_qoi_data: &[u8]) -> Result<DynamicImage> {
-        use std::io::Read;
-        let mut decoder = bzip2::read::BzDecoder::new(raw_bz2_qoi_data);
-        let mut decompressed_data: Vec<u8> = Vec::new();
-        decoder
-            .read_to_end(&mut decompressed_data)
-            .map_err(|e| e.to_string())
-            .context("decoding BZip2 stream for Bz2Qoi Image")?;
-        let image = qoi::deserialize(&decompressed_data).context("decoding QOI Image (Bzip2)")?;
-        Ok(image)
-    }
-
-    #[cfg(not(feature = "bzip2-image"))]
-    fn decode_bz2_qoi(_: &[u8]) -> Result<DynamicImage> {
-        bail!("Crate feature `bzip2-images` is disabled; cannot decode BZip2Qoi image");
-    }
-
-    fn decode_qoi(raw_qoi_data: &[u8]) -> Result<DynamicImage> {
-        let image = qoi::deserialize(raw_qoi_data).context("decoding QOI Image")?;
-        Ok(image)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct GMImage(Img);
-
-impl GMImage {
-    #[must_use]
-    pub const fn from_dynamic_image(dyn_img: DynamicImage) -> Self {
-        Self(Img::Dyn(dyn_img))
-    }
-
-    const fn from_png(raw_png_data: Vec<u8>) -> Self {
-        Self(Img::Png(raw_png_data))
-    }
-
-    const fn from_bz2_qoi(raw_bz2_qoi_data: Vec<u8>, header: BZip2QoiHeader) -> Self {
-        Self(Img::Bz2Qoi(raw_bz2_qoi_data, header))
-    }
-
-    const fn from_qoi(raw_qoi_data: Vec<u8>) -> Self {
-        Self(Img::Qoi(raw_qoi_data))
-    }
-
-    pub fn to_dynamic_image(&'_ self) -> Result<Cow<'_, DynamicImage>> {
-        Ok(match &self.0 {
-            Img::Dyn(dyn_img) => Cow::Borrowed(dyn_img),
-            Img::Png(raw) => Cow::Owned(Img::decode_png(raw)?),
-            Img::Bz2Qoi(raw, _) => Cow::Owned(Img::decode_bz2_qoi(raw)?),
-            Img::Qoi(raw) => Cow::Owned(Img::decode_qoi(raw)?),
-        })
-    }
-
-    pub fn into_dynamic_image(self) -> Result<Self> {
-        let dyn_img = match self.0 {
-            Img::Dyn(dyn_img) => dyn_img,
-            Img::Png(raw) => Img::decode_png(&raw)?,
-            Img::Bz2Qoi(raw, _) => Img::decode_bz2_qoi(&raw)?,
-            Img::Qoi(raw) => Img::decode_qoi(&raw)?,
-        };
-        Ok(Self(Img::Dyn(dyn_img)))
-    }
-
-    pub fn convert_to_dynamic_image(&mut self) -> Result<()> {
-        let dyn_img = match &self.0 {
-            Img::Dyn(_) => return Ok(()),
-            Img::Png(raw) => Img::decode_png(raw)?,
-            Img::Bz2Qoi(raw, _) => Img::decode_bz2_qoi(raw)?,
-            Img::Qoi(raw) => Img::decode_qoi(raw)?,
-        };
-        *self = Self(Img::Dyn(dyn_img));
-        Ok(())
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        match &self.0 {
-            Img::Dyn(dyn_img) => {
-                use std::io::Cursor;
-                if cfg!(not(feature = "png-image")) {
-                    // Ideally, the library should offer different serialization methods anyway
-                    bail!("Crate feature `png-images` is disabled; cannot encode PNG image");
-                }
-
-                let mut png_data: Vec<u8> = Vec::new();
-                dyn_img
-                    .write_to(&mut Cursor::new(&mut png_data), ImageFormat::Png)
-                    .map_err(|e| e.to_string())
-                    .context("encoding PNG Image")?;
-                builder.write_bytes(&png_data);
-            },
-            Img::Png(raw_png_data) => builder.write_bytes(raw_png_data),
-            Img::Bz2Qoi(raw_bz2_qoi_data, header) => {
-                builder.write_bytes(BZ2_QOI_HEADER);
-                builder.write_u16(header.width);
-                builder.write_u16(header.height);
-                header.uncompressed_size.serialize_if_gm_ver(
-                    builder,
-                    "Uncompressed data size",
-                    (2022, 5),
-                )?;
-                builder.write_bytes(raw_bz2_qoi_data);
-            },
-            Img::Qoi(raw_qoi_data) => builder.write_bytes(raw_qoi_data),
-        }
-        Ok(())
-    }
-}
-
-// TODO(weak): this is still kind of ass
-impl PartialEq for GMImage {
-    fn eq(&self, other: &Self) -> bool {
-        let Ok(img1) = self.to_dynamic_image() else {
-            log::warn!("Deserialization failed while comparing GMImage");
-            return false;
-        };
-        let Ok(img2) = other.to_dynamic_image() else {
-            log::warn!("Deserialization failed while comparing GMImage");
-            return false;
-        };
-        img1 == img2
-    }
 }
 
 fn find_end_of_bz2_stream(reader: &mut DataReader, max_end_of_stream_pos: u32) -> Result<u32> {

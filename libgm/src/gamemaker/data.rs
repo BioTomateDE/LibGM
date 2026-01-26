@@ -185,12 +185,14 @@ impl GMData {
     ///
     /// [`DynamicImage`]: image::DynamicImage
     pub fn deserialize_textures(&mut self) -> Result<()> {
+        use crate::gamemaker::elements::embedded_texture::Format;
+
         for texture_page in &mut self.embedded_textures {
             let Some(image) = &mut texture_page.image else {
                 continue;
             };
             image
-                .convert_to_dynamic_image()
+                .change_format(Format::Dyn)
                 .context("deserializing all embedded texture pages")?;
         }
         Ok(())
