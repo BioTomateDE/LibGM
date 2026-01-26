@@ -1,3 +1,5 @@
+use std::fmt;
+
 use macros::list_chunk;
 
 use crate::{
@@ -26,11 +28,17 @@ impl GMElement for GMEmbeddedAudios {
 }
 
 /// An embedded audio entry in a data file.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct GMEmbeddedAudio {
     /// The raw audio data of the embedded audio entry.
     /// This can be either WAV or OGG.
     pub audio_data: Vec<u8>,
+}
+
+impl fmt::Debug for GMEmbeddedAudio {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("GMEmbeddedAudio")
+    }
 }
 
 impl GMElement for GMEmbeddedAudio {

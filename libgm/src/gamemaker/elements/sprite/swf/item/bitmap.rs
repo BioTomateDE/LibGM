@@ -1,3 +1,5 @@
+use std::fmt;
+
 use macros::num_enum;
 
 use crate::{
@@ -99,11 +101,17 @@ pub enum VersionData {
     Post2022_1(VersionDataPost2022_1),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct VersionDataPre2022_1 {
     pub image_data: Vec<u8>,
     pub alpha_data: Vec<u8>,
     pub color_palette_data: Vec<u8>,
+}
+
+impl fmt::Debug for VersionDataPre2022_1 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("VersionDataPre2022_1")
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

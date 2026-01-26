@@ -202,7 +202,7 @@ pub fn disassemble_instruction_to_buffer(
 
         Instruction::PushReference { asset_reference } => {
             write!(buffer, "{mnemonic} ");
-            write_asset_reference(asset_reference, buffer, gm_data)?;
+            write_asset_reference(*asset_reference, buffer, gm_data)?;
         },
     }
 
@@ -361,11 +361,11 @@ fn asset_get_name<'a, T: GMNamedElement + 'a, C: GMListChunk<Element = T> + 'a>(
 }
 
 fn write_asset_reference(
-    asset_ref: &AssetReference,
+    asset_ref: AssetReference,
     buffer: &mut String,
     gm_data: &GMData,
 ) -> Result<()> {
-    match *asset_ref {
+    match asset_ref {
         AssetReference::Object(gm_ref) => {
             write!(
                 buffer,

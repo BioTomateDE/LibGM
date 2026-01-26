@@ -1,4 +1,4 @@
-use std::{borrow::Cow, cmp::max};
+use std::{borrow::Cow, cmp::max, fmt};
 
 // TODO: allow serialization to PNG, QOI or BzQoi in GMImage
 use image::{self, DynamicImage, ImageFormat};
@@ -306,12 +306,23 @@ struct BZip2QoiHeader {
     uncompressed_size: Option<u32>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 enum Img {
     Dyn(DynamicImage),
     Png(Vec<u8>),
     Bz2Qoi(Vec<u8>, BZip2QoiHeader),
     Qoi(Vec<u8>),
+}
+
+impl fmt::Debug for Img {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Dyn(_) => f.write_str("Dyn"),
+            Self::Png(_) => f.write_str("Png"),
+            Self::Bz2Qoi(_, header) => f.debug_tuple("Bz2Qoi").field(header).finish(),
+            Self::Qoi(_) => f.write_str("Qoi"),
+        }
+    }
 }
 
 impl Img {

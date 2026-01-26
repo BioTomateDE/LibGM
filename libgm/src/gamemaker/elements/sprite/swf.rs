@@ -7,6 +7,8 @@ mod collision_mask;
 pub mod frame;
 pub mod item;
 
+use std::fmt;
+
 pub use collision_mask::CollisionMask;
 pub use frame::Frame;
 pub use item::Item;
@@ -19,12 +21,18 @@ use crate::{
     util::init::vec_with_capacity,
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Data {
     pub swf_version: i32,
     pub yyswf_version: i32,
     pub jpeg_table: Vec<u8>,
     pub timeline: Timeline,
+}
+
+impl fmt::Debug for Data {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Data")
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -1,3 +1,5 @@
+use core::fmt;
+
 use macros::{named_list_chunk, num_enum};
 
 use crate::{
@@ -257,9 +259,15 @@ pub enum Type {
     CgPs3 = 7,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct ShaderData {
     pub data: Vec<u8>,
+}
+
+impl fmt::Debug for ShaderData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("ShaderData")
+    }
 }
 
 fn read_shader_data(
@@ -270,9 +278,9 @@ fn read_shader_data(
     expected_length: u32,
     next_ptr: u32,
 ) -> Result<Option<ShaderData>> {
-    const ERR_MSG_PREFIX: &str = "Failed to compute length of shader data: instructed to read";
-    const ERR_MSG_SUFFIX: &str =
-        "Shader data was the last in the shader, but given length was incorrectly padded.";
+    const ERR_PREFIX: &str = "Failed to compute length of shader data: instructed to read";
+    const ERR_SUFFIX: &str =
+        "Shader data was the last in the shader, but given length was incorrectly padded";
 
     if this_pointer == 0 {
         return Ok(None);
@@ -289,7 +297,7 @@ fn read_shader_data(
     }
 
     if expected_length > actual_length {
-        bail!("{ERR_MSG_PREFIX} less data than expected.");
+        bail!("{ERR_PREFIX} less data than expected");
     }
 
     if expected_length < actual_length {
@@ -298,9 +306,9 @@ fn read_shader_data(
         } else if !is_last && (reader.cur_pos + actual_length).is_multiple_of(8) {
             // Normal for 8-byte alignment to occur on all elements prior to the last one
         } else if is_last {
-            bail!("{ERR_MSG_PREFIX} more data than expected. {ERR_MSG_SUFFIX}");
+            bail!("{ERR_PREFIX} more data than expected. {ERR_SUFFIX}");
         } else {
-            bail!("{ERR_MSG_PREFIX} more data than expected.");
+            bail!("{ERR_PREFIX} more data than expected");
         }
     }
 
