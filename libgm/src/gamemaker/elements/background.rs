@@ -117,6 +117,12 @@ pub struct GMS2Data {
     /// The number of frames of the tileset animation.
     pub items_per_tile_count: u32,
 
+    /// Exported sprite index, if the background's corresponding sprite was marked to still be exported.
+    /// Will be either 0 or -1 (depending on GM version) when the sprite is not exported, which makes this a bit ambiguous.
+    ///
+    /// In newer versions (2024.13), this seems to be used? see <https://github.com/BioTomateDE/LibGM/issues/5>
+    pub exported_sprite_index: u32,
+
     /// The time for each frame in microseconds.
     pub frame_length: i64,
 
@@ -149,10 +155,7 @@ impl GMElement for GMS2Data {
         }
 
         let tile_count = reader.read_u32()?;
-
-        let unknown_always_zero = reader.read_u32()?;
-        reader.assert_int(unknown_always_zero, 0, "Unknown Always Zero")?;
-
+        let exported_sprite_index = reader.read_u32()?;
         let frame_length = reader.read_i64()?;
 
         let total_tile_count = tile_count
@@ -173,6 +176,7 @@ impl GMElement for GMS2Data {
             output_border_y,
             tile_columns,
             items_per_tile_count,
+            exported_sprite_index,
             frame_length,
             tile_ids,
         })
