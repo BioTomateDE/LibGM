@@ -194,6 +194,12 @@ pub enum Kind {
     ActionLib = 3,
     Generic = 4,
     JavaScript = 5,
+
+    /// Seems to be modern.
+    /// UTMT doesn't specify a name for this.
+    ///
+    /// NOTE: This will probably be renamed to something better soon.
+    Unknown1 = 11,
 }
 
 #[must_use]

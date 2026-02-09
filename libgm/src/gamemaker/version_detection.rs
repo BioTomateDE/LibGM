@@ -1,5 +1,6 @@
 mod acrv;
 mod agrp;
+mod bgnd;
 mod code;
 mod extn;
 mod font;
@@ -159,6 +160,7 @@ fn create_version_checks() -> Vec<VersionCheck> {
         VersionCheck::new("TXTR", txtr::check_2_0_6, (2, 0), (2, 0, 6)),
         VersionCheck::new("PSEM", psem::check_2023_x, (2023, 2), (2023, 8)),
         VersionCheck::new("ACRV", acrv::check_2_3_1, (2, 3), (2, 3, 1)),
+        VersionCheck::new("BGND", bgnd::check_2024_14_1, (2024, 13), (2024, 14, 1)),
     ]
 }
 
