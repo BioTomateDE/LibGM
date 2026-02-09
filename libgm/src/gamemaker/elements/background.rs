@@ -95,18 +95,31 @@ impl GMElement for GMBackground {
 pub struct GMS2Data {
     /// The width of a tile in this tileset.
     pub tile_width: u32,
+
     /// The height of a tile in this tileset.
     pub tile_height: u32,
+
+    /// GM 2024.14.1+ only.
+    pub tile_separation_x: u32,
+
+    /// GM 2024.14.1+ only.
+    pub tile_separation_y: u32,
+
     /// The amount of extra empty pixels left and right a tile in this tileset.
     pub output_border_x: u32,
+
     /// The amount of extra empty pixels above and below a tile in this tileset.
     pub output_border_y: u32,
+
     /// The amount of columns this tileset has.
     pub tile_columns: u32,
+
     /// The number of frames of the tileset animation.
     pub items_per_tile_count: u32,
+
     /// The time for each frame in microseconds.
     pub frame_length: i64,
+
     /// All tile ids of this tileset.
     pub tile_ids: Vec<u32>,
 }
@@ -118,6 +131,14 @@ impl GMElement for GMS2Data {
 
         let tile_width = reader.read_u32()?;
         let tile_height = reader.read_u32()?;
+
+        let mut tile_separation_x = 0;
+        let mut tile_separation_y = 0;
+        if reader.general_info.is_version_at_least((2024, 14, 1)) {
+            tile_separation_x = reader.read_u32()?;
+            tile_separation_y = reader.read_u32()?;
+        }
+
         let output_border_x = reader.read_u32()?;
         let output_border_y = reader.read_u32()?;
         let tile_columns = reader.read_u32()?;
@@ -146,6 +167,8 @@ impl GMElement for GMS2Data {
         Ok(Self {
             tile_width,
             tile_height,
+            tile_separation_x,
+            tile_separation_y,
             output_border_x,
             output_border_y,
             tile_columns,
@@ -159,16 +182,18 @@ impl GMElement for GMS2Data {
         builder.write_u32(2); // UnknownAlwaysTwo
         builder.write_u32(self.tile_width);
         builder.write_u32(self.tile_height);
+
+        if builder.is_version_at_least((2024, 14, 1)) {
+            builder.write_u32(self.tile_separation_x);
+            builder.write_u32(self.tile_separation_y);
+        }
+
         builder.write_u32(self.output_border_x);
         builder.write_u32(self.output_border_y);
         builder.write_u32(self.tile_columns);
 
         let total_tile_count: usize = self.tile_ids.len();
         let items_per_tile = self.items_per_tile_count as usize;
-
-        if items_per_tile == 0 {
-            bail!("Items per tile cannot be zero");
-        }
 
         if !total_tile_count.is_multiple_of(items_per_tile) {
             bail!(
