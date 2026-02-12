@@ -2,9 +2,7 @@ use macros::named_list_chunk;
 
 use crate::{
     gamemaker::{
-        deserialize::reader::DataReader,
-        elements::GMElement,
-        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
     },
     prelude::*,
 };
@@ -52,7 +50,7 @@ impl GMElement for GMAudioGroup {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name);
-        self.path.serialize_if_gm_ver(builder, "Path", (2024, 14))?;
+        builder.write_if_ver(&self.path, "Path", (2024, 14))?;
         Ok(())
     }
 }
