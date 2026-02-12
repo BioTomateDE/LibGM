@@ -10,7 +10,7 @@ pub fn num_enum(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let expanded = quote::quote! {
         #[derive(
-            Debug, Clone, Copy, PartialEq, Eq,
+            Debug, Clone, Copy, PartialEq, Eq, Hash,
             ::num_enum::TryFromPrimitive, ::num_enum::IntoPrimitive,
         )]
         #[repr(#repr_type)]

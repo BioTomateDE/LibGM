@@ -141,7 +141,7 @@ would like to see added, a bug you found; just create an Issue/PR in this repo.
 
 ## Roadmap
 
-- [ ] Add QOI and Bz2Qoi image serialization
+- [x] Add QOI and Bz2Qoi image serialization
 - [ ] Implement threading for parser
 - [x] Add crate features (maybe use prefix for dependency disablers?):
   - [x] bzip2 (opt-out): Enables Bz2Qoi image support

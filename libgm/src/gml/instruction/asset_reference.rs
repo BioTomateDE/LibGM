@@ -1,10 +1,12 @@
-use crate::gamemaker::elements::{
-    animation_curve::GMAnimationCurve, background::GMBackground, font::GMFont,
-    function::GMFunction, game_object::GMGameObject, particle_system::GMParticleSystem,
-    path::GMPath, room::GMRoom, script::GMScript, sequence::GMSequence, shader::GMShader,
-    sound::GMSound, sprite::GMSprite, timeline::GMTimeline,
+use crate::{
+    gamemaker::elements::{
+        animation_curve::GMAnimationCurve, background::GMBackground, font::GMFont,
+        function::GMFunction, game_object::GMGameObject, particle_system::GMParticleSystem,
+        path::GMPath, room::GMRoom, script::GMScript, sequence::GMSequence, shader::GMShader,
+        sound::GMSound, sprite::GMSprite, timeline::GMTimeline,
+    },
+    prelude::*,
 };
-use crate::prelude::*;
 
 /// A modern (2023.something) reference to game assets.
 /// Used with the `PushReference` (`pushref`) instruction.

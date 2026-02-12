@@ -12,7 +12,7 @@ pub enum VariableType {
     /// Used for normal variables, without any arrays or chain references.
     Normal = 0xA0,
 
-    /// Used when referencing variables on room instance IDs, e.g. something like `inst_01ABCDEF.x` in GML.        
+    /// Used when referencing variables on room instance IDs, e.g. something like `inst_01ABCDEF.x` in GML.
     Instance = 0xE0,
 
     /// (GMS2.3+) Used in tandem with multi-dimensional array push operations (`PushArrayFinal`).

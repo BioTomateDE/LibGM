@@ -4,6 +4,7 @@ mod qoi;
 
 use std::{borrow::Cow, fmt};
 
+pub use bz2::BZip2QoiHeader;
 use image::DynamicImage;
 
 use crate::{
@@ -13,8 +14,6 @@ use crate::{
     },
     prelude::*,
 };
-
-pub use bz2::BZip2QoiHeader;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Format {
