@@ -49,7 +49,7 @@ This is effectively a Rust port of
 Add this line in the `[dependencies]` section of your `Cargo.toml` file:
 
 ```toml
-libgm = "0.3.2"
+libgm = "0.4.0"
 ```
 
 Or if you want bleeding edge:
@@ -156,4 +156,4 @@ would like to see added, a bug you found; just create an Issue/PR in this repo.
 - [ ] Maybe add some sort of header for assembly for entire code entries (name, local count, arg count) so u can assemble_code directly
 - [ ] Add comments to assembly? Which style tho? How much does it fuck Up efficiency and maintainability?
 - [x] Get rid of name string id
-- [ ] get rid of the `SerializeIfVer` traits; move to DataBuilder method
+- [x] get rid of the `SerializeIfVer` traits; move to DataBuilder method
