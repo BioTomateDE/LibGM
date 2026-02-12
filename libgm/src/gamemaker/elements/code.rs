@@ -792,8 +792,6 @@ fn build_pop(
         builder,
         variable.variable.index,
         instr_pos,
-        /*variable.name.index,*/
-        0x6767_6767,
         variable.variable_type,
     )?;
     Ok(())
@@ -863,18 +861,11 @@ fn build_push(builder: &mut DataBuilder, opcode: u8, value: &PushValue) -> Resul
                 builder,
                 code_variable.variable.index,
                 instr_pos,
-                //variable.name.index,
-                0x6767_6767,
                 code_variable.variable_type,
             )?;
         },
         PushValue::Function(func_ref) => {
-            write_function_occurrence(
-                builder,
-                func_ref.index,
-                instr_pos,
-                /*function.name.index*/ 0x6767_6767,
-            )?;
+            write_function_occurrence(builder, func_ref.index, instr_pos)?;
         },
     }
     Ok(())
@@ -890,7 +881,6 @@ fn build_pushvar(builder: &mut DataBuilder, opcode: u8, variable: &CodeVariable)
         builder,
         variable.variable.index,
         instr_pos,
-        0xDEAD_C0DE,
         variable.variable_type,
     )?;
     Ok(())
@@ -913,12 +903,7 @@ fn build_call(
     builder.write_u8(DataType::Int32.into());
     builder.write_u8(opcode);
 
-    write_function_occurrence(
-        builder,
-        function.index,
-        instr_pos,
-        /*function.name.index*/ 0xDEAD_C0DE,
-    )?;
+    write_function_occurrence(builder, function.index, instr_pos)?;
     Ok(())
 }
 
@@ -958,12 +943,7 @@ impl GMElement for AssetReference {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if let Self::Function(func_ref) = self {
-            write_function_occurrence(
-                builder,
-                func_ref.index,
-                builder.len(),
-                /*function.name.index*/ 0x6767_6767,
-            )?;
+            write_function_occurrence(builder, func_ref.index, builder.len())?;
             return Ok(());
         }
 
@@ -1012,7 +992,6 @@ fn write_variable_occurrence(
     builder: &mut DataBuilder,
     gm_index: u32,
     occurrence_pos: usize,
-    name_string_id: u32,
     variable_type: VariableType,
 ) -> Result<()> {
     let len: usize = builder.variable_occurrences.len();
@@ -1031,12 +1010,8 @@ fn write_variable_occurrence(
         builder.overwrite_i32(occurrence_offset_full, last_occurrence_pos + 4)?;
     }
 
-    // Write name string id for this occurrence. this is correct if it is the last occurrence.
-    // Otherwise, it will be overwritten later by the code above.
-    // Hopefully, writing the name string id instead of -1 for unused variables will be fine.
-    builder.write_u32(
-        name_string_id & 0x07FF_FFFF | (u32::from(u8::from(variable_type) & 0xF8) << 24),
-    );
+    // See write_function_occurrence
+    builder.write_u32(u32::from(u8::from(variable_type) & 0xF8) << 24);
 
     // Fuckass borrow checker
     builder
@@ -1051,7 +1026,6 @@ fn write_function_occurrence(
     builder: &mut DataBuilder,
     gm_index: u32,
     occurrence_pos: usize,
-    name_string_id: u32,
 ) -> Result<()> {
     let len: usize = builder.function_occurrences.len();
     let occurrences: &mut Vec<usize> = builder
@@ -1067,9 +1041,10 @@ fn write_function_occurrence(
         builder.overwrite_i32(occurrence_offset & 0x07FF_FFFF, last_occurrence_pos + 4)?;
     }
 
-    // Write name string id for this occurrence. this is correct if it is the last occurrence.
-    // Otherwise, it will be overwritten later by the code above.
-    builder.write_u32(name_string_id & 0x07FF_FFFF);
+    // Technically it should write the name string id here.
+    // Since i no longer store string ids though, this is impossible.
+    // It doesn't seem to be an issue though, this value is probably unused by the runner anyway.
+    builder.write_u32(0);
 
     builder
         .function_occurrences

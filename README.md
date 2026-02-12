@@ -155,5 +155,5 @@ would like to see added, a bug you found; just create an Issue/PR in this repo.
 - [x] "Fix" disassembler for child code entries (right now they will generate empty string)
 - [ ] Maybe add some sort of header for assembly for entire code entries (name, local count, arg count) so u can assemble_code directly
 - [ ] Add comments to assembly? Which style tho? How much does it fuck Up efficiency and maintainability?
-- [ ] Get rid of name string id
+- [x] Get rid of name string id
 - [ ] get rid of the `SerializeIfVer` traits; move to DataBuilder method

@@ -34,22 +34,8 @@ impl GMElement for GMFunctions {
             let name: String = reader.read_gm_string()?;
             let occurrence_count = reader.read_u32()?;
             let first_occurrence_pos = reader.read_u32()?;
-            let (occurrences, _name_string_id): (Vec<u32>, u32) =
+            let occurrences: Vec<u32> =
                 parse_occurrence_chain(reader, first_occurrence_pos, occurrence_count)?;
-
-            // TODO: deal with the name string id somehow (also in VARI)
-            // are name string ids relevant in any gamemaker version?
-            // otherwise just write whatever lol
-
-            //// verify name string id. allow -1 for unused function
-            //if name_string_id as i32 != -1 && name.index != name_string_id {
-            //    bail!(
-            //        "Function #{i} with name {:?} specifies name string id {}; but the id of name string is actually {}",
-            //        name,
-            //        name_string_id,
-            //        name.index,
-            //    )
-            //}
 
             for occurrence in occurrences {
                 if let Some(old_func) = reader.function_occurrences.insert(occurrence, i.into()) {
@@ -127,9 +113,9 @@ fn parse_occurrence_chain(
     reader: &mut DataReader,
     first_occurrence_pos: u32,
     occurrence_count: u32,
-) -> Result<(Vec<u32>, u32)> {
+) -> Result<Vec<u32>> {
     if occurrence_count < 1 {
-        return Ok((vec![], first_occurrence_pos));
+        return Ok(vec![]);
     }
 
     let saved_chunk: ChunkBounds = reader.chunk.clone();
@@ -147,7 +133,7 @@ fn parse_occurrence_chain(
     }
     let mut occurrence_pos = first_occurrence_pos + first_extra_offset;
     let mut occurrences: Vec<u32> = vec_with_capacity(occurrence_count)?;
-    let mut offset: i32 = 6969; // Default value will never be relevant since it returns if no occurrences
+    let mut offset: i32;
 
     for _ in 0..occurrence_count {
         occurrences.push(occurrence_pos);
@@ -166,8 +152,7 @@ fn parse_occurrence_chain(
         occurrence_pos += offset as u32;
     }
 
-    let name_string_id: u32 = (offset & 0xFF_FFFF) as u32;
     reader.chunk = saved_chunk;
     reader.cur_pos = saved_position;
-    Ok((occurrences, name_string_id))
+    Ok(occurrences)
 }
