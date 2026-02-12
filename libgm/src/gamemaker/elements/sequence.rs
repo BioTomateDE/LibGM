@@ -138,6 +138,7 @@ impl GMElement for GMSequence {
 
 #[num_enum(i32)]
 pub enum PlaybackType {
+    /// holy shit oneshot reference
     Oneshot = 0,
     Loop = 1,
     PingPong = 2,

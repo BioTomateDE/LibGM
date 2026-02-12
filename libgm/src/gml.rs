@@ -20,6 +20,27 @@ pub struct GMCode {
     pub modern_data: Option<ModernData>,
 }
 
+impl GMCode {
+    /// The parent code entry of this code entry, if it has one.
+    ///
+    /// This will always be [`None`] for WAD < 15.
+    #[must_use]
+    pub const fn parent(&self) -> Option<GMRef<Self>> {
+        match &self.modern_data {
+            Some(data) => data.parent,
+            None => None,
+        }
+    }
+
+    /// Whether this code entry is a root entry, meaning it has no parent code entries.
+    ///
+    /// This will always be `true` for WAD < 15.
+    #[must_use]
+    pub const fn is_root(&self) -> bool {
+        self.parent().is_none()
+    }
+}
+
 /// Extra data for code entries in WAD Version 15 and higher.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ModernData {
