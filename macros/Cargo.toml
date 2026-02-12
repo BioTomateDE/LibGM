@@ -1,6 +1,6 @@
 [package]
 name = "libgm-macros"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 description = "Internal attribute macros for LibGM"
 readme = "./README.md"
@@ -13,5 +13,5 @@ categories = ["development-tools"]
 proc-macro = true
 
 [dependencies]
-quote = "1.0.42"
-syn = "2.0.111"
+quote = "1.0.44"
+syn = "2.0.115"
