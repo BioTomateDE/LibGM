@@ -3,7 +3,7 @@ use crate::{
         deserialize::reader::DataReader,
         elements::{GMElement, game_object::GMGameObject},
         reference::GMRef,
-        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        serialize::builder::DataBuilder,
     },
     gml::GMCode,
     prelude::*,
@@ -74,10 +74,8 @@ impl GMElement for GameObject {
         builder.write_resource_id_opt(self.creation_code);
         builder.write_f32(self.scale_x);
         builder.write_f32(self.scale_y);
-        self.image_speed
-            .serialize_if_gm_ver(builder, "Image Speed", (2, 2, 2, 302))?;
-        self.image_index
-            .serialize_if_gm_ver(builder, "Image Index", (2, 2, 2, 302))?;
+        builder.write_if_ver(&self.image_speed, "Image Speed", (2, 2, 2, 302))?;
+        builder.write_if_ver(&self.image_index, "Image Index", (2, 2, 2, 302))?;
         builder.write_u32(self.color);
         builder.write_f32(self.rotation);
         if builder.wad_version() >= 16 {

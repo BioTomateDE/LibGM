@@ -10,7 +10,7 @@ use crate::{
         deserialize::reader::DataReader,
         elements::{GMElement, texture_page_item::GMTexturePageItem},
         reference::GMRef,
-        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        serialize::builder::DataBuilder,
         version::LTSBranch,
     },
     prelude::*,
@@ -212,17 +212,14 @@ impl GMElement for GMFont {
         builder.write_gm_texture(self.texture)?;
         builder.write_f32(self.scale_x);
         builder.write_f32(self.scale_y);
-        self.ascender_offset
-            .serialize_if_wad_ver(builder, "Ascender Offset", 17)?;
-        self.ascender
-            .serialize_if_gm_ver(builder, "Ascender", (2022, 2))?;
-        self.sdf_spread.serialize_if_gm_ver(
-            builder,
+        builder.write_if_wad_ver(&self.ascender_offset, "Ascender Offset", 17)?;
+        builder.write_if_ver(&self.ascender, "Ascender", (2022, 2))?;
+        builder.write_if_ver(
+            &self.sdf_spread,
             "SDF Spread",
             (2023, 2, LTSBranch::PostLTS),
         )?;
-        self.line_height
-            .serialize_if_gm_ver(builder, "Line Height", (2023, 6))?;
+        builder.write_if_ver(&self.line_height, "Line Height", (2023, 6))?;
         builder.write_pointer_list(&self.glyphs)?;
         if builder.is_version_at_least((2024, 14)) {
             builder.align(4);

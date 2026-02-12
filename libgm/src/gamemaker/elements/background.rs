@@ -5,7 +5,7 @@ use crate::{
         deserialize::reader::DataReader,
         elements::{GMElement, texture_page_item::GMTexturePageItem},
         reference::GMRef,
-        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        serialize::builder::DataBuilder,
     },
     prelude::*,
     util::init::vec_with_capacity,
@@ -80,8 +80,7 @@ impl GMElement for GMBackground {
         builder.write_bool32(self.smooth);
         builder.write_bool32(self.preload);
         builder.write_gm_texture_opt(self.texture)?;
-        self.gms2_data
-            .serialize_if_gm_ver(builder, "GMS2 data", (2, 0))?;
+        builder.write_if_ver(&self.gms2_data, "GMS2 data", (2, 0))?;
         Ok(())
     }
 

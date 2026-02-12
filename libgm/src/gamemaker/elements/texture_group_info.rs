@@ -9,7 +9,7 @@ use crate::{
             validate_identifier,
         },
         reference::GMRef,
-        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        serialize::builder::DataBuilder,
         version::LTSBranch,
     },
     prelude::*,
@@ -120,8 +120,8 @@ impl GMElement for GMTextureGroupInfo {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name);
-        self.data_2022_9.serialize_if_gm_ver(
-            builder,
+        builder.write_if_ver(
+            &self.data_2022_9,
             "Directory, Extension, LoadType",
             (2022, 9),
         )?;

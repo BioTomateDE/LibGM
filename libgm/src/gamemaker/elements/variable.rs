@@ -8,7 +8,7 @@ use crate::{
             validate_identifier,
         },
         reference::GMRef,
-        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        serialize::builder::DataBuilder,
     },
     gml::instruction::InstanceType,
     prelude::*,
@@ -171,13 +171,10 @@ impl GMElement for GMVariables {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        self.modern_header
-            .serialize_if_wad_ver(builder, "Scuffed WAD 15+ fields", 15)?;
+        builder.write_if_wad_ver(&self.modern_header, "Scuffed WAD 15+ fields", 15)?;
         for (i, variable) in self.variables.iter().enumerate() {
             builder.write_gm_string(&variable.name);
-            variable
-                .modern_data
-                .serialize_if_wad_ver(builder, "WAD 15 data", 15)?;
+            builder.write_if_wad_ver(&variable.modern_data, "WAD 15 data", 15)?;
 
             let occurrences = builder.variable_occurrences.get(i).ok_or_else(|| {
                 format!(

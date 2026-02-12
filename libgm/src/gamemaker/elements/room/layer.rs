@@ -13,9 +13,7 @@ pub use tiles::Tiles;
 
 use crate::{
     gamemaker::{
-        deserialize::reader::DataReader,
-        elements::GMElement,
-        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
     },
     prelude::*,
     util::init::num_enum_from,
@@ -95,8 +93,7 @@ impl GMElement for Layer {
         builder.write_f32(self.horizontal_speed);
         builder.write_f32(self.vertical_speed);
         builder.write_bool32(self.is_visible);
-        self.effect_data_2022_1
-            .serialize_if_gm_ver(builder, "Effect Data", (2022, 1))?;
+        builder.write_if_ver(&self.effect_data_2022_1, "Effect Data", (2022, 1))?;
         match &self.data {
             Data::None => {},
             Data::Instances(data) => data.serialize(builder)?,

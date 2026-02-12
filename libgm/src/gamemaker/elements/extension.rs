@@ -11,7 +11,7 @@ use crate::{
         chunk::ChunkName,
         deserialize::reader::DataReader,
         elements::{GMChunk, GMElement},
-        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        serialize::builder::DataBuilder,
         version::GMVersion,
     },
     prelude::*,
@@ -168,8 +168,7 @@ impl GMElement for GMExtension {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.folder_name);
         builder.write_gm_string(&self.name);
-        self.version
-            .serialize_if_gm_ver(builder, "Version", (2023, 4))?;
+        builder.write_if_ver(&self.version, "Version", (2023, 4))?;
         builder.write_gm_string(&self.class_name);
         if builder.is_version_at_least((2022, 6)) {
             builder.write_pointer(&self.files);

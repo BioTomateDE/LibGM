@@ -5,7 +5,7 @@ use crate::{
         deserialize::reader::DataReader,
         elements::{GMElement, audio_group::GMAudioGroup, embedded_audio::GMEmbeddedAudio},
         reference::GMRef,
-        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        serialize::builder::DataBuilder,
         version::GMVersion,
     },
     prelude::*,
@@ -168,8 +168,7 @@ impl GMElement for GMSound {
             builder.write_bool32(true); // Preload
         }
         builder.write_resource_id_opt(self.audio_file);
-        self.audio_length
-            .serialize_if_gm_ver(builder, "Audio Length", (2024, 6))?;
+        builder.write_if_ver(&self.audio_length, "Audio Length", (2024, 6))?;
         Ok(())
     }
 }

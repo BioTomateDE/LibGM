@@ -5,7 +5,7 @@ use crate::{
         deserialize::reader::DataReader,
         elements::{GMElement, particle_emitter::GMParticleEmitter},
         reference::GMRef,
-        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        serialize::builder::DataBuilder,
     },
     prelude::*,
 };
@@ -68,8 +68,8 @@ impl GMElement for GMParticleSystem {
         builder.write_i32(self.origin_x);
         builder.write_i32(self.origin_y);
         builder.write_i32(self.draw_order);
-        self.global_space_particles.serialize_if_gm_ver(
-            builder,
+        builder.write_if_ver(
+            &self.global_space_particles,
             "Global Space Particles",
             (2023, 8),
         )?;

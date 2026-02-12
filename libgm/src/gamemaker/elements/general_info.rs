@@ -14,7 +14,7 @@ use crate::{
         deserialize::reader::DataReader,
         elements::{GMChunk, GMElement, room::GMRoom},
         reference::GMRef,
-        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        serialize::builder::DataBuilder,
         version::{GMVersion, GMVersionReq, LTSBranch},
     },
     prelude::*,
@@ -329,9 +329,7 @@ impl GMElement for GMGeneralInfo {
         builder.write_u64(0); // "Active targets"
         self.function_classifications.serialize(builder)?;
         builder.write_i32(self.steam_appid);
-        self.debugger_port
-            .serialize_if_wad_ver(builder, "Debugger Port", 14)?;
-
+        builder.write_if_wad_ver(&self.debugger_port, "Debugger Port", 14)?;
         builder.write_simple_list(&self.room_order)?;
 
         if builder.is_version_at_least((2, 0)) {
