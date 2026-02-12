@@ -18,15 +18,15 @@ pub struct Args {
     /// Leaving this empty will skip rebuilding.
     pub out: Option<PathBuf>,
 
-    #[arg(short, long)]
+    #[arg(short, long, value_delimiter = ',')]
     /// The tests to execute.
     pub tests: Vec<Test>,
 
-    #[arg(short, long)]
+    #[arg(short, long, value_delimiter = ',')]
     /// Actions to perform on the data file.
     pub actions: Vec<Action>,
 
-    #[arg(short, long)]
+    #[arg(short, long, value_delimiter = ',')]
     /// Code entries to disassemble.
     pub codes: Vec<String>,
 }
