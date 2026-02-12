@@ -7,12 +7,48 @@ use crate::gml::Instruction;
 ///
 /// NOTE: This may be changed, more categories might get added.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[non_exhaustive]
 pub enum Category {
+    /// This category includes the following instructions:
+    /// * [`Instruction::Negate`]
+    /// * [`Instruction::Add`]
+    /// * [`Instruction::Subtract`]
+    /// * [`Instruction::Multiply`]
+    /// * [`Instruction::Divide`]
+    /// * [`Instruction::Remainder`]
+    /// * [`Instruction::Modulus`]
     Arithmetic,
+
+    /// This category includes the following instructions:
+    /// * [`Instruction::Not`]
+    /// * [`Instruction::And`]
+    /// * [`Instruction::Or`]
+    /// * [`Instruction::Xor`]
+    /// * [`Instruction::ShiftLeft`]
+    /// * [`Instruction::ShiftRight`]
     Bitwise,
+
+    /// This category includes the following instructions:
+    /// * [`Instruction::Exit`]
+    /// * [`Instruction::Return`]
+    /// * [`Instruction::Branch`]
+    /// * [`Instruction::BranchIf`]
+    /// * [`Instruction::BranchUnless`]
+    /// * [`Instruction::PushWithContext`]
+    /// * [`Instruction::PopWithContext`]
+    /// * [`Instruction::PopWithContextExit`]
     ControlFlow,
+
+    /// This category includes the following instructions:
+    /// * [`Instruction::Push`]
+    /// * [`Instruction::PushLocal`]
+    /// * [`Instruction::PushGlobal`]
+    /// * [`Instruction::PushBuiltin`]
+    /// * [`Instruction::PushImmediate`]
+    /// * [`Instruction::PushReference`]
     Push,
+
+    /// This category contains all instructions that do not have one of the
+    /// categories above assigned (yet).
     Other,
 }
 
@@ -55,24 +91,28 @@ impl Instruction {
         }
     }
 
-    /// Whether this instruction is an arithmetic operation such as `Add` or `Divide`.
+    /// Whether this instruction belongs to the category [`Category::Arithmetic`].
     ///
-    /// This does not include bitwise operations such as `And`.
+    /// This includes arithmetic operations such as `Add` or `Divide`,
+    /// but not bitwise operations such as `And` or `Xor`.
     #[must_use]
     pub const fn is_arithmetic(&self) -> bool {
         matches!(self.category(), Category::Arithmetic)
     }
 
+    /// Whether this instruction is [`Category::Bitwise`].
     #[must_use]
     pub const fn is_bitwise(&self) -> bool {
         matches!(self.category(), Category::Bitwise)
     }
 
+    /// Whether this instruction is [`Category::ControlFlow`].
     #[must_use]
     pub const fn is_control_flow(&self) -> bool {
         matches!(self.category(), Category::ControlFlow)
     }
 
+    /// Whether this instruction is [`Category::Push`].
     #[must_use]
     pub const fn is_push(&self) -> bool {
         matches!(self.category(), Category::Push)

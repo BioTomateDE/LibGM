@@ -260,6 +260,7 @@ impl Instruction {
     }
 
     /// Attempts to extract a [`CodeVariable`] from  the instruction.
+    ///
     /// This can succeed for `Push` and will always succeed for
     /// `PushGlobal`, `PushLocal`, `PushBuiltin` and `Pop`.
     #[must_use]
@@ -275,6 +276,7 @@ impl Instruction {
     }
 
     /// Attempts to extract a `GMRef<GMFunction>` from the instruction.
+    ///
     /// This can succeed for `Push` and `PushReference` and will always succeed for `Call`.
     #[must_use]
     pub const fn function(&self) -> Option<GMRef<GMFunction>> {
@@ -289,6 +291,7 @@ impl Instruction {
     }
 
     /// Attempts to extract a jump offset in bytes from the instruction.
+    ///
     /// This will always succeed for `Branch`, `BranchIf`, `BranchUnless`, `PushWithContext` and
     /// `PopWithContext`.
     #[must_use]

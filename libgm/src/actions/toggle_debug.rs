@@ -6,13 +6,11 @@ mod demo_lts_ch2;
 mod demo_prelts;
 mod undertale;
 
-use std::fmt::Display;
-
 use crate::{
     gamemaker::elements::variable::GMVariable,
     gml::{
         GMCode,
-        instruction::{InstanceType, Instruction, PushValue},
+        instruction::{InstanceType, Instruction},
     },
     prelude::*,
 };
@@ -106,16 +104,14 @@ fn find_debug(
             continue;
         }
 
-        // Found a `pop` into `debug`. Now extract the push integer value.
-        let is_enabled: bool = match *potential_push {
-            Instruction::PushImmediate { integer }
-            | Instruction::Push { value: PushValue::Int16(integer) } => int_to_bool(integer)?,
-            Instruction::Push { value: PushValue::Int32(integer) } => int_to_bool(integer)?,
-            Instruction::Push { value: PushValue::Boolean(bool) } => bool,
-            // Do other datatypes have to be supported?
-            _ => bail!(
-                "Expected Instruction before Pop to be an integer push, found {potential_push:?}"
-            ),
+        // Found a `pop` into `debug`.
+        let Some(push_value) = potential_push.push_value() else {
+            bail!("Expected Instruction before Pop to be a Push, found {potential_push:?}")
+        };
+        let Some(is_enabled) = push_value.as_bool() else {
+            bail!(
+                "Push Instruction value does not have a proper boolean representation: {push_value:?}"
+            );
         };
 
         return Ok((i, is_enabled));
@@ -142,13 +138,4 @@ fn replace_debug(
     let integer = i16::from(enable);
     code.instructions[instruction_index] = Instruction::PushImmediate { integer };
     Ok(())
-}
-
-fn int_to_bool<I: Display + Into<i32>>(integer: I) -> Result<bool> {
-    let integer: i32 = integer.into();
-    match integer {
-        0 => Ok(false),
-        1 => Ok(true),
-        _ => bail!("Expected debug variable to be set to either 0 or 1, found {integer}"),
-    }
 }

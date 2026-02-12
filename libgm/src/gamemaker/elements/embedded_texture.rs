@@ -2,6 +2,7 @@ mod img;
 
 use std::cmp::max;
 
+pub use img::{Format, GMImage};
 use macros::list_chunk;
 
 use crate::{
@@ -14,8 +15,6 @@ use crate::{
     prelude::*,
     util::fmt::hexdump,
 };
-
-pub use img::{Format, GMImage};
 
 pub(crate) const PNG_HEADER: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 pub(crate) const BZ2_QOI_HEADER: &[u8; 4] = b"2zoq";

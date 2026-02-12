@@ -6,7 +6,7 @@ use crate::{
 
 /// A variable reference in an instruction.
 /// Contains the actual variable ref as well as instance type and variable type.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CodeVariable {
     pub variable: GMRef<GMVariable>,
     pub variable_type: VariableType,

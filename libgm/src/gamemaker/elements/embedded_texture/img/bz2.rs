@@ -1,8 +1,7 @@
 use image::DynamicImage;
 
-use crate::prelude::*;
-
 use super::qoi;
+use crate::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct BZip2QoiHeader {
