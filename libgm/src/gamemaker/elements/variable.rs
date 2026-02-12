@@ -134,22 +134,8 @@ impl GMElement for GMVariables {
         for (i, (occurrence_count, first_occurrence_pos)) in
             occurrence_infos.into_iter().enumerate()
         {
-            let (occurrences, _name_string_id): (Vec<u32>, u32) =
+            let occurrences: Vec<u32> =
                 parse_occurrence_chain(reader, first_occurrence_pos, occurrence_count)?;
-
-            // TODO: deal with the name string id somehow (also in FUNC)
-
-            //  // Verify name string id.
-            //  // Unused variables (`prototype`, `@@array@@` and all `arguments` in Undertale)
-            //  // have a name string id of -1.
-            //  if name_string_id as i32 != -1 && name.index != name_string_id {
-            //      bail!(
-            //          "Variable #{i} with name {:?} specifies name string id {}; but the id of name string is actually {}",
-            //          name,
-            //          name_string_id,
-            //          name.index,
-            //      );
-            //  }
 
             // TODO: this code is extremely ugly.
             // the hashmaps are probably also slow.
@@ -288,29 +274,30 @@ fn parse_occurrence_chain(
     reader: &mut DataReader,
     first_occurrence_pos: u32,
     occurrence_count: u32,
-) -> Result<(Vec<u32>, u32)> {
+) -> Result<Vec<u32>> {
     if occurrence_count < 1 {
-        return Ok((vec![], first_occurrence_pos));
+        return Ok(vec![]);
     }
 
     let mut occurrence_pos: u32 = first_occurrence_pos + 4;
     let mut occurrences: Vec<u32> = vec_with_capacity(occurrence_count)?;
-    let mut offset: i32 = 6969; // Default value will never be relevant since it returns if no occurrences
+    let mut offset: i32;
 
     for i in 0..occurrence_count {
+        occurrences.push(occurrence_pos);
+        reader.cur_pos = occurrence_pos;
+        let raw_value = reader.read_i32()?;
+        offset = raw_value & 0x07FF_FFFF;
+
         if offset < 1 {
             bail!(
                 "Next occurrence offset is {offset} (0x{offset:08X}) which is \
                 not positive for variable occurrence {i}/{occurrence_count}"
             );
         }
-        occurrences.push(occurrence_pos);
-        reader.cur_pos = occurrence_pos;
-        let raw_value = reader.read_i32()?;
-        offset = raw_value & 0x07FF_FFFF;
-        occurrence_pos += offset as u32; // Might overflow on last occurrence (name string id) but doesn't matter
+
+        occurrence_pos += offset as u32;
     }
 
-    let name_string_id: u32 = (offset & 0xFF_FFFF) as u32;
-    Ok((occurrences, name_string_id))
+    Ok(occurrences)
 }

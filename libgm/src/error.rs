@@ -4,7 +4,6 @@ use std::fmt::{Display, Formatter, Write};
 
 /// A LibGM error.
 /// Contains an error message as well as a context chain.
-///
 #[derive(Debug, Clone)]
 pub struct Error {
     message: String,
