@@ -8,10 +8,7 @@ pub use bz2::BZip2QoiHeader;
 use image::DynamicImage;
 
 use crate::{
-    gamemaker::{
-        elements::embedded_texture::BZ2_QOI_HEADER,
-        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
-    },
+    gamemaker::{elements::embedded_texture::BZ2_QOI_HEADER, serialize::builder::DataBuilder},
     prelude::*,
 };
 
@@ -222,8 +219,6 @@ fn write_bz2qoi_header(header: &BZip2QoiHeader, builder: &mut DataBuilder) -> Re
     builder.write_bytes(BZ2_QOI_HEADER);
     builder.write_u16(header.width);
     builder.write_u16(header.height);
-    header
-        .uncompressed_size
-        .serialize_if_gm_ver(builder, "Uncompressed data size", (2022, 5))?;
+    builder.write_if_ver(&header.uncompressed_size, "Uncompressed Size", (2022, 5))?;
     Ok(())
 }

@@ -8,7 +8,7 @@ mod lists;
 mod numbers;
 mod pointers;
 mod resources;
-pub(crate) mod traits;
+mod versioning;
 
 use std::path::Path;
 

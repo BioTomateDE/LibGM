@@ -10,7 +10,7 @@ use crate::{
         data::Endianness,
         deserialize::reader::DataReader,
         elements::{GMElement, element_stub, embedded_texture::img::BZip2QoiHeader},
-        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        serialize::builder::DataBuilder,
     },
     prelude::*,
     util::fmt::hexdump,
@@ -91,8 +91,8 @@ impl GMElement for GMEmbeddedTextures {
         for (i, texture_page) in self.texture_pages.iter().enumerate() {
             builder.overwrite_usize(builder.len(), pointer_list_start_pos + i * 4)?;
             builder.write_u32(texture_page.scaled);
-            texture_page.generated_mips.serialize_if_gm_ver(
-                builder,
+            builder.write_if_ver(
+                &texture_page.generated_mips,
                 "Generated Mipmap levels",
                 (2, 0, 6),
             )?;
@@ -105,8 +105,8 @@ impl GMElement for GMEmbeddedTextures {
                         .ok_or("Texture block size not set in 2022.3+")?,
                 );
             }
-            texture_page.data_2022_9.serialize_if_gm_ver(
-                builder,
+            builder.write_if_ver(
+                &texture_page.data_2022_9,
                 "Texture Page 2022.9 data",
                 (2022, 9),
             )?;

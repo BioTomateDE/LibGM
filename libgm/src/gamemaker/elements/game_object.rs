@@ -8,7 +8,7 @@ use crate::{
         deserialize::reader::DataReader,
         elements::{GMElement, element_stub, sprite::GMSprite},
         reference::GMRef,
-        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        serialize::builder::DataBuilder,
     },
     prelude::*,
     util::init::{num_enum_from, vec_with_capacity},
@@ -112,9 +112,7 @@ impl GMElement for GMGameObjects {
             builder.write_gm_string(&game_object.name);
             builder.write_resource_id_opt(game_object.sprite);
             builder.write_bool32(game_object.visible);
-            game_object
-                .managed
-                .serialize_if_gm_ver(builder, "Managed", (2022, 5))?;
+            builder.write_if_ver(&game_object.managed, "Managed", (2022, 5))?;
             builder.write_bool32(game_object.solid);
             builder.write_i32(game_object.depth);
             builder.write_bool32(game_object.persistent);

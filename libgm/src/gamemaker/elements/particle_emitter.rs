@@ -5,7 +5,7 @@ use crate::{
         deserialize::reader::DataReader,
         elements::{GMElement, sprite::GMSprite},
         reference::GMRef,
-        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        serialize::builder::DataBuilder,
     },
     prelude::*,
     util::init::num_enum_from,
@@ -279,8 +279,7 @@ impl GMElement for GMParticleEmitter {
         builder.write_resource_id_opt(self.sprite);
         builder.write_i32(self.texture.into());
         builder.write_f32(self.frame_index);
-        self.data_2023_4
-            .serialize_if_gm_ver(builder, "2023.4 data", (2023, 4))?;
+        builder.write_if_ver(&self.data_2023_4, "2023.4 data", (2023, 4))?;
         builder.write_u32(self.start_color);
         builder.write_u32(self.mid_color);
         builder.write_u32(self.end_color);

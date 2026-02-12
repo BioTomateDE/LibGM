@@ -4,7 +4,7 @@ use crate::{
     gamemaker::{
         deserialize::reader::DataReader,
         elements::{GMElement, sprite::swf::Matrix33},
-        serialize::{builder::DataBuilder, traits::GMSerializeIfVersion},
+        serialize::builder::DataBuilder,
     },
     prelude::*,
     util::init::num_enum_from,
@@ -34,8 +34,7 @@ impl GMElement for Data {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(self.fill_type.into());
-        self.tpe_index
-            .serialize_if_gm_ver(builder, "TPE Index", (2022, 1))?;
+        builder.write_if_ver(&self.tpe_index, "TPE Index", (2022, 1))?;
         self.transformation_matrix.serialize(builder)?;
         builder.write_simple_list(&self.records)?;
         Ok(())
