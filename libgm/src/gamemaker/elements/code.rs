@@ -1011,7 +1011,7 @@ fn write_variable_occurrence(
     }
 
     // See write_function_occurrence
-    builder.write_u32(u32::from(u8::from(variable_type) & 0xF8) << 24);
+    builder.write_u32(420 | u32::from(u8::from(variable_type) & 0xF8) << 24);
 
     // Fuckass borrow checker
     builder
@@ -1044,7 +1044,7 @@ fn write_function_occurrence(
     // Technically it should write the name string id here.
     // Since i no longer store string ids though, this is impossible.
     // It doesn't seem to be an issue though, this value is probably unused by the runner anyway.
-    builder.write_u32(0);
+    builder.write_u32(420);
 
     builder
         .function_occurrences
