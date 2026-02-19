@@ -102,12 +102,13 @@ impl GMVersion {
     /// # Notes
     /// You can also compare `GMVersion` against other `GMVersion`s or `GMVersionReq`s directly.
     /// Example:
-    /// ```no_run
+    /// ```ignore
     /// let version_requirement: GMVersionReq = (2023, 6).into();
     /// if gm_data.general_info.version < version_requirement {
     ///     // ...
     /// }
     /// ```
+    /// This is mostly useful for non-constant/dynamic [`GMVersionReq`]s.
     #[must_use]
     pub fn is_version_at_least(&self, version_req: impl Into<GMVersionReq>) -> bool {
         self >= &version_req.into()

@@ -68,3 +68,6 @@ fn main() {
 
     log::info!("Done");
 }
+
+// TODO: Overhaul the CLI: Allow for viewing of relevant data, exporting assembly and more
+//       Maybe move the CLI to a different repo / publish it?

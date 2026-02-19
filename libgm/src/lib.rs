@@ -6,8 +6,9 @@
 //! ## Usage
 //! For most purposes, using `parse_file` and `build_file` is enough.
 //!
-//! ```
-//! use libgm::gamemaker::{elements::game_object::GMGameObject, data::GMData};
+//! ```no_run
+//! use libgm::prelude::*;
+//! use libgm::gamemaker::elements::game_object::GMGameObject;
 //!
 //! // Load data file
 //! let mut data: GMData = libgm::parse_file("./data.win").unwrap();
@@ -18,7 +19,7 @@
 //! obj.visible = true;
 //!
 //! // Write data file
-//! libgm::build_file("./modified_data.win").unwrap();
+//! libgm::build_file(&data, "./modified_data.win").unwrap();
 //! ```
 //!
 //! If you need more control, you can use `parse_bytes`, `build_bytes` or `ParsingOptions`.

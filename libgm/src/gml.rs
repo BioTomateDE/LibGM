@@ -25,6 +25,8 @@ pub struct GMCode {
 }
 
 impl GMCode {
+    // TODO: make a helper function to insert / remove instructions that preserves branch offsets.
+
     /// The parent code entry of this code entry, if it has one.
     ///
     /// This will always be [`None`] for WAD < 15.

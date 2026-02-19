@@ -28,7 +28,10 @@ use crate::{
 /// Assembles multiple instructions separated by newline.
 /// Empty lines and lines containing only whitespace are skipped.
 ///
-/// Comments are not yet supported.
+/// TODO: Comments are not yet supported.
+///       (which style/char should be used?
+///       can they be implemented without screwing performance?
+///       also have to consider string literals in push.s instructions)
 pub fn assemble_instructions(assembly: &str, gm_data: &GMData) -> Result<Vec<Instruction>> {
     let mut instructions: Vec<Instruction> = Vec::new();
 

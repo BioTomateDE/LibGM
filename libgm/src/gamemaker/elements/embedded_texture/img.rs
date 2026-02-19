@@ -96,8 +96,8 @@ impl GMImage {
     /// In order to force intermediate deserialization to [`DynamicImage`]
     /// (to catch invalid image data, for example), you can use code like this:
     ///
-    /// ```no_run
-    /// let mut gm_image = texture_page.image.as_mut().unwrap();
+    /// ```ignore
+    /// let mut gm_image = texture_page.image.as_mut()?;
     /// gm_image.change_format(Format::Dyn)?; // Add this
     /// gm_image.change_format(Format::Bz2Qoi)?; // (or whatever format you want)
     /// ```
