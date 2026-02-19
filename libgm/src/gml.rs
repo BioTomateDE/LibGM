@@ -84,6 +84,19 @@ impl GMCode {
         children
     }
 
+    /// Get the total size of all instructions in bytes.
+    ///
+    /// This is not equivalent to (a multiple of) the instruction count,
+    /// so this function may be needed for determining instructions byte size.
+    #[must_use]
+    pub fn length(&self) -> u32 {
+        let mut size: u32 = 0;
+        for instruction in &self.instructions {
+            size += instruction.size();
+        }
+        size
+    }
+
     /// The parent code entry of this code entry, if it has one.
     ///
     /// This will always be [`None`] for WAD < 15.
@@ -110,7 +123,7 @@ impl GMCode {
     #[must_use]
     pub const fn execution_offset(&self) -> u32 {
         match &self.modern_data {
-            Some(data) => data.offset,
+            Some(data) => data.execution_offset,
             None => 0,
         }
     }
@@ -120,8 +133,7 @@ impl GMCode {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ModernData {
     /// The amount of local variables this code entry has.
-    /// TODO(break):  rename to local_count
-    pub locals_count: u16,
+    pub local_count: u16,
 
     /// The amount of arguments this code entry accepts.
     pub arguments_count: u16,
@@ -131,8 +143,7 @@ pub struct ModernData {
 
     /// Offset, **in bytes**, where code should begin executing from within the bytecode of this code entry.
     /// Should be 0 for root-level (parent) code entries, and nonzero for child code entries.
-    /// TODO(break): rename to execution_offset
-    pub offset: u32,
+    pub execution_offset: u32,
 
     /// Parent entry of this code entry, if this is a child entry; [`None`] otherwise.
     pub parent: Option<GMRef<GMCode>>,

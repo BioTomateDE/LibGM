@@ -414,7 +414,7 @@ impl Instruction {
     ///
     /// For example, [`Instruction::Push`] with a [`PushValue::Int16`] has a size of 5.
     #[must_use]
-    pub const fn size4(&self) -> u8 {
+    pub const fn size4(&self) -> u32 {
         match self {
             Self::Push { value } => match value {
                 PushValue::Int16(_) => 1,
@@ -436,8 +436,7 @@ impl Instruction {
     ///
     /// For example, [`Instruction::Push`] with a [`PushValue::Int16`] has a size of 20.
     #[must_use]
-    pub const fn size(&self) -> u8 {
-        // TODO(break): change type to u32 in next semver major
+    pub const fn size(&self) -> u32 {
         self.size4() * 4
     }
 

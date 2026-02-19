@@ -69,7 +69,7 @@ impl DataType {
     /// The size of a value of this data type on the VM Stack, in multiples of 4 bytes.
     /// This is the unit used in `jump_offset` of branch instructions.
     #[must_use]
-    pub const fn size4(self) -> u8 {
+    pub const fn size4(self) -> u32 {
         match self {
             Self::Int16 | Self::Int32 | Self::Boolean | Self::String => 1,
             Self::Int64 | Self::Double => 2,
@@ -79,8 +79,7 @@ impl DataType {
 
     /// The size of a value of this data type on the VM Stack, in bytes.
     #[must_use]
-    pub const fn size(self) -> u8 {
-        //TODO(break): change type to u32
+    pub const fn size(self) -> u32 {
         self.size4() * 4
     }
 }
