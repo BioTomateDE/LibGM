@@ -9,7 +9,7 @@ pub mod instruction;
 pub(crate) mod opcodes;
 
 pub use crate::gml::instruction::Instruction;
-use crate::prelude::GMRef;
+use crate::prelude::*;
 
 /// A code entry in a GameMaker data file.
 #[derive(Debug, Clone, PartialEq)]
@@ -26,6 +26,63 @@ pub struct GMCode {
 
 impl GMCode {
     // TODO: make a helper function to insert / remove instructions that preserves branch offsets.
+
+    /// Find child code entries of this code entry.
+    ///
+    /// This is always `false` before WAD 15, since child/parent code entries did not exist then.
+    ///
+    /// This function has to compare the names of code entries and is also failable.
+    /// If you have access to a [`GMRef`] to this code entry instead, consider
+    /// using [`Self::find_children`] instead.
+    ///
+    /// This has to iterate over all code entries in the data file,
+    /// so it's a good idea to cache this if possible.
+    pub fn find_children_by_name(&self, data: &GMData) -> Result<Vec<GMRef<Self>>> {
+        if data.general_info.wad_version < 15 {
+            return Ok(Vec::new());
+        }
+
+        let mut children: Vec<GMRef<GMCode>> = Vec::new();
+
+        for (idx, code_entry) in data.codes.iter().enumerate() {
+            let Some(parent) = code_entry.parent() else {
+                continue;
+            };
+            let parent = data.codes.by_ref(parent)?;
+            if self.name == parent.name {
+                children.push(GMRef::from(idx));
+            }
+        }
+
+        Ok(children)
+    }
+
+    /// Find child code entries of this code entry.
+    ///
+    /// This is always `false` before WAD 15, since child/parent code entries did not exist then.
+    ///
+    /// This function takes a `GMRef<GMCode>` instead of `&GMCode`.
+    /// If you only have a [`GMCode`] available, you'll have to
+    /// use [`Self::find_children_by_name`] instead.
+    ///
+    /// This has to iterate over all code entries in the data file,
+    /// so it's a good idea to cache this if possible.
+    #[must_use]
+    pub fn find_children(code_ref: GMRef<Self>, data: &GMData) -> Vec<GMRef<Self>> {
+        if data.general_info.wad_version < 15 {
+            return Vec::new();
+        }
+
+        let mut children: Vec<GMRef<GMCode>> = Vec::new();
+
+        for (idx, code_entry) in data.codes.iter().enumerate() {
+            if code_entry.parent() == Some(code_ref) {
+                children.push(GMRef::from(idx));
+            }
+        }
+
+        children
+    }
 
     /// The parent code entry of this code entry, if it has one.
     ///
