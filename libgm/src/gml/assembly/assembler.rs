@@ -25,6 +25,10 @@ use crate::{
     util::fmt::typename,
 };
 
+/// Assembles multiple instructions separated by newline.
+/// Empty lines and lines containing only whitespace are skipped.
+///
+/// Comments are not yet supported.
 pub fn assemble_instructions(assembly: &str, gm_data: &GMData) -> Result<Vec<Instruction>> {
     let mut instructions: Vec<Instruction> = Vec::new();
 
@@ -42,6 +46,7 @@ pub fn assemble_instructions(assembly: &str, gm_data: &GMData) -> Result<Vec<Ins
     Ok(instructions)
 }
 
+/// Assembles a single instruction on one line.
 pub fn assemble_instruction(line: &str, gm_data: &GMData) -> Result<Instruction> {
     let mut reader = Reader::new(line.trim());
     let mnemonic: String;

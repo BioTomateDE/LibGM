@@ -1,3 +1,5 @@
+//! Functions to assemble and disassemble GML code.
+
 mod assembler;
 mod disassembler;
 

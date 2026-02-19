@@ -1,7 +1,9 @@
 use macros::num_enum;
 
 /// How to compare values.
-/// Used in the `Comparison` instruction (`cmp`).
+/// Used in the [`Comparison`] instruction (`cmp`).
+///
+/// [`Comparison`]: crate::gml::Instruction::Compare
 #[num_enum(u8)]
 pub enum ComparisonType {
     /// "Less than" | `<`
