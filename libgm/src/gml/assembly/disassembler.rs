@@ -47,6 +47,18 @@ fn slice_instructions_by_bytes(
     Ok(&instructions[index..])
 }
 
+/// Disassembles  a code entry's instructions.
+///
+/// This function mostly exists for convenience since it is short to write
+/// `disassemble_code(code, data)` instead of `disassemble_instructions(&code.instructions, data).]
+///
+/// However, it *does* have one behavioral difference:
+/// It correctly disassembles child code entries by looking up
+/// the instructions in the specified parent code and slicing them.
+/// This is needed since the `instructions` field for child code entries is always empty.
+///
+/// TODO: Maybe certain directives can be added in the future 
+/// to identify the code entry name as well as local and argument count.
 pub fn disassemble_code(code: &GMCode, gm_data: &GMData) -> Result<String> {
     if let Some(data) = &code.modern_data {
         if let Some(parent) = data.parent {
@@ -68,6 +80,10 @@ pub fn disassemble_code(code: &GMCode, gm_data: &GMData) -> Result<String> {
     disassemble_instructions(&code.instructions, gm_data)
 }
 
+/// Disassembles multiple instructions and joins the instructions by newline.
+///
+/// If you need to handle child code entries correctly, consider using [`disassemble_code`].
+/// Otherwise, an empty string will be returned (since child code entries store no instructions).
 pub fn disassemble_instructions(instructions: &[Instruction], gm_data: &GMData) -> Result<String> {
     let mut assembly: String = String::new();
 
@@ -79,12 +95,14 @@ pub fn disassemble_instructions(instructions: &[Instruction], gm_data: &GMData) 
     Ok(assembly)
 }
 
+/// Disassembles a single instruction into one line.
 pub fn disassemble_instruction(instruction: &Instruction, gm_data: &GMData) -> Result<String> {
     let mut buffer = String::new();
     disassemble_instruction_to_buffer(&mut buffer, instruction, gm_data)?;
     Ok(buffer)
 }
 
+/// Disassembles a single instruction into one line, appending the assembly string to a buffer.
 pub fn disassemble_instruction_to_buffer(
     buffer: &mut String,
     instruction: &Instruction,

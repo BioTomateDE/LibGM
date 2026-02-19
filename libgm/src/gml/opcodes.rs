@@ -39,6 +39,9 @@ impl Instruction {
     ///
     /// Normalized means that it will always return the modern WAD15+ opcode,
     /// even if the game is in WAD < 15.
+    ///
+    /// Checking this implementation can be useful to get an overview of which
+    /// [`Instruction`] enum variants use which opcode.
     #[must_use]
     pub const fn opcode(&self) -> u8 {
         match self {

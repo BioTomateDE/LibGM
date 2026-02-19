@@ -1,4 +1,7 @@
 //! Everything related to GML (GameMaker language) bytecode.
+//!
+//! TODO(doc): explain more.
+//! For now, just visit [`crate::gamemaker`] sorry lol
 
 pub mod assembly;
 pub mod instruction;
@@ -39,12 +42,25 @@ impl GMCode {
     pub const fn is_root(&self) -> bool {
         self.parent().is_none()
     }
+
+    /// The offset, **in bytes**, where code should begin
+    /// executing from within the bytecode of this code entry.
+    ///
+    /// This will always be zero for root code entries and before WAD 15.
+    #[must_use]
+    pub const fn execution_offset(&self) -> u32 {
+        match &self.modern_data {
+            Some(data) => data.offset,
+            None => 0,
+        }
+    }
 }
 
 /// Extra data for code entries in WAD Version 15 and higher.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ModernData {
     /// The amount of local variables this code entry has.
+    /// TODO(break):  rename to local_count
     pub locals_count: u16,
 
     /// The amount of arguments this code entry accepts.
@@ -55,6 +71,7 @@ pub struct ModernData {
 
     /// Offset, **in bytes**, where code should begin executing from within the bytecode of this code entry.
     /// Should be 0 for root-level (parent) code entries, and nonzero for child code entries.
+    /// TODO(break): rename to execution_offset
     pub offset: u32,
 
     /// Parent entry of this code entry, if this is a child entry; [`None`] otherwise.

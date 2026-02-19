@@ -9,7 +9,10 @@ use crate::{
     prelude::GMRef,
 };
 
-/// A value to push to the stack. Used in `Push` instructions.
+/// A value to push to the stack.
+/// Used in [`Push`] instructions.
+///
+/// [`Push`]: crate::gml::Instruction::Push
 #[derive(Debug, Clone, PartialEq)]
 pub enum PushValue {
     Int16(i16),

@@ -9,7 +9,9 @@ use crate::{
 };
 
 /// A modern (2023.something) reference to game assets.
-/// Used with the `PushReference` (`pushref`) instruction.
+/// Used with the [`PushReference`] (`pushref`) instruction.
+///
+/// [`PushReference`]: crate::gml::Instruction::PushReference
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AssetReference {
     Object(GMRef<GMGameObject>),
