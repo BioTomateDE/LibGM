@@ -18,9 +18,20 @@ pub use variable_type::VariableType;
 
 use crate::gamemaker::{elements::function::GMFunction, reference::GMRef};
 
+/// A GameMaker VM Instruction.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Instruction {
     /// Converts the top of the stack from one type to another.
+    ///
+    /// Sometimes it may be necessary to convert between "actual data types" and [`DataType::Variable`]
+    /// (note: not sure if necessary, but the YoYoGames compiler generates it).
+    /// For example, when calling a function, all arguments need (?) to of data type [`DataType::Variable`].
+    /// So if you want to call `foo(41)`:
+    /// ```
+    /// pushim 41
+    /// conv.i.v
+    /// call foo(argc=1)
+    /// ```
     Convert { from: DataType, to: DataType },
 
     /// Pops two values from the stack, multiplies them, and pushes the result.
@@ -30,14 +41,17 @@ pub enum Instruction {
     },
 
     /// Pops two values from the stack, divides them, and pushes the result.
-    /// The second popped value is divided by the first popped value.
+    /// The second popped value (`dividend`) is divided by the first popped value (`divisor`).
     Divide {
         dividend: DataType,
         divisor: DataType,
     },
 
     /// Pops two values from the stack, performs a GML `div` operation (division with remainder), and pushes the result.
-    /// The second popped value is divided (with remainder) by the first popped value.
+    /// The second popped value (`dividend`) is divided (with remainder) by the first popped value (`divisor`).
+    ///
+    /// This operation is similar to [`Instruction::Modulus`], except it behaves differently for negative values.
+    /// For example: `-19 rem 12 == -7` (not 5).
     Remainder {
         dividend: DataType,
         divisor: DataType,
@@ -45,6 +59,10 @@ pub enum Instruction {
 
     /// Pops two values from the stack, performs a GML `mod` operation (`%`), and pushes the result.
     /// The second popped value is modulo'd against the first popped value.
+    ///
+    /// This operation is similar to [`Instruction::Remainder`], except it behaves differently for negative values.
+    /// This `modulus` operation performs [Euclidean division](https://en.wikipedia.org/wiki/Euclidean_division).
+    /// For example: `-19 rem 12 == 5` (not -7).
     Modulus {
         dividend: DataType,
         divisor: DataType,
@@ -61,38 +79,40 @@ pub enum Instruction {
     },
 
     /// Pops two values from the stack, performs an **AND** operation, and pushes the result.
-    /// This can be done bitwise or logically.
+    /// This can be done bitwise or logically, depending on the data type(s).
     And { lhs: DataType, rhs: DataType },
 
     /// Pops two values from the stack, performs an **OR** operation, and pushes the result.
-    /// This can be done bitwise or logically.
+    /// This can be done bitwise or logically, depending on the data type(s).
     Or { lhs: DataType, rhs: DataType },
 
     /// Pops two values from the stack, performs an **XOR** operation, and pushes the result.
-    /// This can be done bitwise or logically.
+    /// This can be done bitwise or logically, depending on the data type(s).
     Xor { lhs: DataType, rhs: DataType },
 
-    /// Negates the top value of the stack (as in, multiplies it with negative one).
+    /// Negates the top value of the stack (as in, multiplies it with -1).
     Negate { data_type: DataType },
 
-    /// Performs a boolean or bitwise NOT operation on the top value of the stack (modifying it).
+    /// Pops one value from the stack, performs a **NOT** operation, and pushes the result.
+    /// This can be done bitwise or logically, depending on the data type(s).
     Not { data_type: DataType },
 
     /// Pops two values from the stack, performs a bitwise left shift operation (`<<`), and pushes the result.
-    /// The second popped value is shifted left by the first popped value.
+    /// The second popped value (`value`) is shifted left by the first popped value (`shift_amount`).
     ShiftLeft {
         value: DataType,
         shift_amount: DataType,
     },
 
     /// Pops two values from the stack, performs a bitwise right shift operation (`>>`), and pushes the result.
-    /// The second popped value is shifted right by the first popped value.
+    /// The second popped value (`value`) is shifted right by the first popped value (`shift_amount`).
     ShiftRight {
         value: DataType,
         shift_amount: DataType,
     },
 
-    /// Pops two values from the stack, compares them using a [`ComparisonType`], and pushes a boolean result.
+    /// Pops two values from the stack, compares them using a [`ComparisonType`], 
+    /// and pushes a boolean result ([`DataType::Boolean`]).
     Compare {
         lhs: DataType,
         rhs: DataType,
@@ -100,21 +120,37 @@ pub enum Instruction {
     },
 
     /// Pops a value from the stack, and generally stores it in a variable, array, or otherwise.
-    /// Has an alternate mode that can swap values around on the stack.
-    /// TODO(weak): type1 and type2 are bad names and are probably redundant values
+    ///
+    /// Generally, `type1` signifies the type of the value on the stack (the one to pop)
+    /// and `type2` will be [`DataType::Variable`].
+    /// However, there are exceptions to this. For example, when the variable reference mode is not [`VariableType::Normal`],
+    /// then `type2` may be [`DataType::Int32`] instead.
+    ///
+    /// There is an alternate instruction/mode with the same opcode that swaps values around on the stack.
+    /// This operation is known as [`Instruction::PopSwap`].
+    /// Note that this does not apply to this enum variant ([`Instruction::Pop`].
     Pop {
         variable: CodeVariable,
         type1: DataType,
         type2: DataType,
     },
 
-    /// Swaps values around on the stack
+    /// Swaps values around on the stack.
+    /// 
+    /// This instruction has the same opcode as [`Instruction::Push`].
+    ///
+    /// TODO(doc): explain concrete behavior
     PopSwap { is_array: bool },
 
     /// Duplicates values on the stack.
     ///
     /// The specified `size` is the total size of all
     /// elements that should be duplicated.
+    ///
+    /// The specified data type hints what the stacktop data type is.
+    /// However, it does (most likely?) not explicitly have to match.
+    /// It only influences a multiplication factor of how many bytes to
+    /// clone, since different data types have different sizes on the stack.
     Duplicate { data_type: DataType, size: u8 },
 
     /// Swaps values around on the stack.
@@ -123,6 +159,8 @@ pub enum Instruction {
     /// Then, elements with a total size of `size2` are popped into a temporary "bottom stack".
     /// Afterward, the "bottom stack" is pushed.
     /// And lastly, the "top stack" is pushed.
+    ///
+    /// For information on the data type, see [`Instruction::Duplicate`].
     DuplicateSwap {
         data_type: DataType,
         size1: u8,
@@ -131,32 +169,77 @@ pub enum Instruction {
 
     /// Pops a value from the stack, and returns from the current
     /// function/script with that value as the return value.
+    ///
+    /// This instruction always has the data type [`DataType::Variable`],
+    /// which is omitted from this enum data since it is redundant.
+    /// However, you may still need to convert your stack value to
+    /// [`DataType::Variable`] using [`Instruction::Convert`] before returning.
     Return,
 
     /// Returns from the current function/script/event with no return value.
+    ///
+    /// This instruction always has the data type [`DataType::Int32`] for whatever reason.
+    /// Since this data type carries no meaningful information, it is not stored in this enum variant.
     Exit,
 
     /// Pops a value from the stack, and discards it.
+    ///
+    /// This is similar to [`Instruction::Pop`], except it does not store the result in any variable.
+    ///
+    /// This instruction is commonly used to clean up unused return values of function calls.
     PopDiscard { data_type: DataType },
 
-    /// Branches (jumps) to another instruction in the code entry.
+    /// Unconditionally branches (jumps) to another instruction in the code entry.
+    ///
+    /// Also known as `B`, `Jump`, `jmp`.
+    ///
+    /// The jump offset may be negative and is expressed in multiples of 4 bytes.
+    /// For example, a jump offset of 2 may skip `push.s`, a jump offset of 5 may skip `push.d`.
+    /// Most of the time, this will skip multiple instructions at the same time.
     Branch { jump_offset: i32 },
 
-    /// Pops a boolean/int32 value from the stack. If true/nonzero, branches (jumps) to another instruction in the code entry.
+    /// Pops a boolean/int32 value from the stack.
+    /// If true/nonzero, branches (jumps) to another instruction in the code entry.
+    ///
+    /// Also known as `BranchTrue`, `bt`.
+    ///
+    /// The jump offset is explained in [`Instruction::Branch`].
     BranchIf { jump_offset: i32 },
 
-    /// Pops a boolean/int32 value from the stack. If false/zero, branches (jumps) to another instruction in the code entry.
+    /// Pops a boolean/int32 value from the stack.
+    /// If false/zero, branches (jumps) to another instruction in the code entry.
+    ///
+    /// Also known as `BranchFalse`, `bf`.
+    ///
+    /// The jump offset is explained in [`Instruction::Branch`].
     BranchUnless { jump_offset: i32 },
 
     /// Pushes a `with` context, used for GML `with` statements, to the VM environment/self instance stack.
+    ///
+    /// This does not push any value to the value stack (like [`Instruction::Push`]).
+    /// It is rather classified as branch instruction.
+    /// The specified jump offset will be branched to when the `with` loop is done.
+    /// The branch target leads to the code after the `with` block.
+    ///
+    /// The jump offset is further explained in [`Instruction::Branch`].
     PushWithContext { jump_offset: i32 },
 
-    /// Pops/ends a `with` context, used for GML `with` statements, from the VM environment/self instance stack.
-    /// This instruction will branch to its encoded address until no longer iterating instances, where the context will finally be gone for good.
-    /// If a flag is encoded in this instruction, then this will always terminate the loops, and branch to the encoded address.
+    /// Pops/ends a `with` context, used for GML `with` statements, 
+    /// from the VM environment/self instance stack.
+    /// This instruction will branch to its encoded address until no longer 
+    /// iterating instances, where the context will finally be gone for good.
+    ///
+    /// There is a different mode for this instruction with the same opcode: [`Instruction::PopWithContextExit`].
+    ///
+    /// The jump offset is further explained in [`Instruction::Branch`].
     PopWithContext { jump_offset: i32 },
 
-    /// `PopWithContext` but with `PopEnvExitMagic`
+    /// A variation of [`Instruction::PopWithContext`].
+    /// This variation exits the TODO
+    ///
+    /// Also known as `BranchTrue`, `bt`.
+    ///
+    /// The jump offset is explained in [`Instruction::Branch`].
     PopWithContextExit,
 
     /// Pushes a constant value onto the stack. Can vary in size depending on value type.
