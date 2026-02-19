@@ -82,10 +82,10 @@ impl GMElement for GMCodes {
                     .ok_or("Instruction end position overflowed")?;
 
                 let data = ModernData {
-                    locals_count,
+                    local_count: locals_count,
                     arguments_count,
                     weird_local_flag,
-                    offset,
+                    execution_offset: offset,
                     parent: None,
                 };
                 modern_data = Some(data);
@@ -206,12 +206,12 @@ impl GMElement for GMCodes {
 
             builder.write_gm_string(&code.name);
             builder.write_usize(length)?;
-            builder.write_u16(data.locals_count);
+            builder.write_u16(data.local_count);
             builder
                 .write_u16(data.arguments_count | if data.weird_local_flag { 0x8000 } else { 0 });
             let instructions_start_offset: i32 = start as i32 - builder.len() as i32;
             builder.write_i32(instructions_start_offset);
-            builder.write_u32(data.offset);
+            builder.write_u32(data.execution_offset);
         }
 
         Ok(())

@@ -37,7 +37,7 @@ fn slice_instructions_by_bytes(
             format!("Given start byte offset {start_offset} is out of range in instructions with byte length {offset}"
         ))?;
         index += 1;
-        offset += u32::from(instr.size());
+        offset += instr.size();
     }
     if offset != start_offset {
         bail!(
@@ -62,7 +62,7 @@ fn slice_instructions_by_bytes(
 pub fn disassemble_code(code: &GMCode, gm_data: &GMData) -> Result<String> {
     if let Some(data) = &code.modern_data {
         if let Some(parent) = data.parent {
-            if data.offset == 0 {
+            if data.execution_offset == 0 {
                 bail!("Child code entry has byte offset zero");
             }
             let parent: &GMCode = gm_data
@@ -70,10 +70,10 @@ pub fn disassemble_code(code: &GMCode, gm_data: &GMData) -> Result<String> {
                 .by_ref(parent)
                 .context("resolving parent code entry")?;
             // can there be nested parents? cuz it only works for one layer rn
-            let instrs = slice_instructions_by_bytes(&parent.instructions, data.offset)?;
+            let instrs = slice_instructions_by_bytes(&parent.instructions, data.execution_offset)?;
             return disassemble_instructions(instrs, gm_data);
-        } else if data.offset != 0 {
-            bail!("Root code entry has non-zero byte offset {}", data.offset);
+        } else if data.execution_offset != 0 {
+            bail!("Root code entry has non-zero byte offset {}", data.execution_offset);
         }
     }
 
