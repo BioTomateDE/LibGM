@@ -36,7 +36,7 @@ pub enum Instruction {
     /// (note: not sure if necessary, but the YoYoGames compiler generates it).
     /// For example, when calling a function, all arguments need (?) to of data type [`DataType::Variable`].
     /// So if you want to call `foo(41)`:
-    /// ```
+    /// ```text
     /// pushim 41
     /// conv.i.v
     /// call foo(argc=1)
