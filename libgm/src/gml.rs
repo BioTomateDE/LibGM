@@ -3,6 +3,7 @@
 //! TODO(doc): explain more.
 //! For now, just visit [`crate::gamemaker`] sorry lol
 
+pub mod analysis;
 pub mod assembly;
 pub mod instruction;
 pub(crate) mod opcodes;
