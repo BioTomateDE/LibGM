@@ -1,9 +1,9 @@
 [workspace]
-members = ["libgm", "libgm-cli", "macros"]
+members = ["compiler-test", "libgm", "libgm-cli", "macros"]
 resolver = "3"
 
 # Default member for `cargo run`
-default-members = ["libgm-cli"]
+default-members = ["compiler-test"] # TODO: revert to cli when merging to main
 
 
 [profile.release]

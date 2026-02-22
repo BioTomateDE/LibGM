@@ -5,6 +5,7 @@
 
 pub mod analysis;
 pub mod assembly;
+pub mod highlevel;
 pub mod instruction;
 pub(crate) mod opcodes;
 
