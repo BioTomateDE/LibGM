@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{self, Write};
 
 use crate::gml::highlevel::Location;
 
@@ -17,6 +17,16 @@ impl<'a> CompileError<'a> {
         let start = self.start_position.byte as usize;
         let end = self.end_position.byte as usize;
         &self.source_code[start..end]
+    }
+
+    /// The (first) line where the error originated.
+    #[must_use]
+    pub fn code_line(&self) -> &'a str {
+        let start = self.start_position.byte as usize;
+        let code = self.source_code;
+        let before = code[..start].rfind("\n").map_or(0, |x| x + 1);
+        let after = code[start..].find("\n").map_or(code.len(), |x| x + start);
+        &self.source_code[before..after]
     }
 
     /// The one-indexed line number where this error originated.
@@ -55,11 +65,21 @@ impl<'a> CompileError<'a> {
 
 impl fmt::Display for CompileError<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let code: &str = self.code_part();
         let line = self.line();
         let char = self.char();
-        let e = self.libgm_error_ref();
-        write!(f, "Compilation error at line {line}:{char} ({code:?}): {e}")
+        let err = self.libgm_error_ref();
+        writeln!(f, "Compilation error at line {line}, char {char}: {err}")?;
+        writeln!(f, "{}", self.code_line())?;
+
+        let start = self.start_position.char;
+        let end = self.end_position.char;
+        for _ in 0..start {
+            f.write_char(' ')?;
+        }
+        for _ in start..end {
+            f.write_char('^')?;
+        }
+        writeln!(f)
     }
 }
 

@@ -562,6 +562,8 @@ fn parse_string_literal(reader: &mut Reader) -> Result<String> {
                 'n' => string.push('\n'),
                 't' => string.push('\t'),
                 'r' => string.push('\r'),
+                // This is needed to mitigate a bug in Deltarune 1&2 demo
+                'f' => string.push_str("\\f"),
                 _ => bail!("Invalid escape character '{char}'"),
             }
             escaping = false;

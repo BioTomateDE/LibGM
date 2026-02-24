@@ -230,6 +230,7 @@ pub enum TokenData {
 
     BinIntLiteral(u64),
     HexIntLiteral(u64),
+    CssColorLiteral(u32),
     IntLiteral(u64),
     FloatLiteral(f64),
 
