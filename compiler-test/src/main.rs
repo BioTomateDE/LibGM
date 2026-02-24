@@ -36,10 +36,10 @@ fn tokenize(code: &str, ctx: &LexerContext, path: &Path) -> Result<(), &'static 
     let Err(errors) = ctx.tokenize(code) else {
         return Ok(());
     };
+    println!("Path: {path:?}");
+    println!("{code}");
     for error in errors {
-        println!("Path: {path:?}");
         println!("{error}");
-        println!("{code}");
     }
     Err("Errors during lexing, see logs")
 }
