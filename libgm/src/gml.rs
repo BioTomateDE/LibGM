@@ -85,17 +85,12 @@ impl GMCode {
         children
     }
 
-    /// Get the total size of all instructions in bytes.
+    /// Gets the total (cumulative) size of all instructions, in bytes.
     ///
-    /// This is not equivalent to (a multiple of) the instruction count,
-    /// so this function may be needed for determining instructions byte size.
+    /// This function simply calls [`Instruction::size`] on each instruction and sums up the sizes.
     #[must_use]
     pub fn length(&self) -> u32 {
-        let mut size: u32 = 0;
-        for instruction in &self.instructions {
-            size += instruction.size();
-        }
-        size
+        instructions_size(&self.instructions)
     }
 
     /// The parent code entry of this code entry, if it has one.
@@ -137,7 +132,7 @@ pub struct ModernData {
     pub local_count: u16,
 
     /// The amount of arguments this code entry accepts.
-    pub arguments_count: u16,
+    pub argument_count: u16,
 
     /// A flag set on certain code entries, which usually don't have locals attached to them.
     pub weird_local_flag: bool,
@@ -148,4 +143,16 @@ pub struct ModernData {
 
     /// Parent entry of this code entry, if this is a child entry; [`None`] otherwise.
     pub parent: Option<GMRef<GMCode>>,
+}
+
+/// Gets the total (cumulative) size of all instructions, in bytes.
+///
+/// This function simply calls [`Instruction::size`] on each instruction and sums up the sizes.
+#[must_use]
+pub fn instructions_size(instructions: &[Instruction]) -> u32 {
+    let mut size: u32 = 0;
+    for instruction in instructions {
+        size += instruction.size();
+    }
+    size
 }
