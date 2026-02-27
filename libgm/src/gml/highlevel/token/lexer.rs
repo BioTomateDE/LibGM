@@ -54,7 +54,7 @@ impl LexerContext {
         Self { gms2: true, gmlv2: true }
     }
 
-    /// Creates a generic GMS2 [`LexerContext`].
+    /// Creates a generic GMS1 [`LexerContext`].
     #[must_use]
     pub const fn contextless_gms1() -> Self {
         Self { gms2: false, gmlv2: false }
@@ -62,17 +62,23 @@ impl LexerContext {
 
     /// Tokenizes/Lexes the given source code.
     pub fn tokenize<'a>(&self, source_code: &'a str) -> Result<Vec<Token>, Vec<CompileError<'a>>> {
-        if let Err(e) = validate_size(source_code) {
-            return Err(vec![e]);
+        if let Err(err) = validate_size(source_code) {
+            return Err(vec![err]);
         };
 
         let mut lexer = Lexer::new(source_code, self);
         lexer.tokenize();
-        if lexer.errors.is_empty() {
-            Ok(lexer.tokens)
-        } else {
-            Err(lexer.errors)
+
+        if !lexer.errors.is_empty() {
+            return Err(lexer.errors);
         }
+
+        // Remove trailing semicolon/newline tokens
+        if lexer.ends_with_statement_terminator() {
+            lexer.tokens.pop();
+        }
+
+        Ok(lexer.tokens)
     }
 }
 
