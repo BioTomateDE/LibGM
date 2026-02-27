@@ -185,3 +185,9 @@ pub mod elements;
 pub mod reference;
 pub mod serialize;
 pub mod version;
+
+pub use data::GMData;
+pub use deserialize::{ParsingOptions, parse_bytes, parse_file};
+pub use reference::GMRef;
+pub use serialize::{build_bytes, build_file};
+pub use version::{GMVersion, GMVersionReq};

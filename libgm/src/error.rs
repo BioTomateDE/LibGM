@@ -113,12 +113,29 @@ impl<T, S: Into<String>> Context<T> for std::result::Result<T, S> {
     }
 }
 
-/// Perform an early return with the specified formatted message.
+/// Creates a new [LibGM Error](Error) using the specified format string.
+/// /// This is a simple alias for `Error::new(format!(...)`.
+///
+/// This macro is currently exported at crate root but this may change in the future
+/// when [Macros 2.0](https://github.com/rust-lang/rust/issues/39412) are stabilized.
+#[macro_export]
+macro_rules! err {
+    ($($arg:tt)*) => {
+        $crate::error::Error::new(format!($($arg)*))
+    };
+}
+
+/// Performs an early return with the specified formatted message.
 /// This is a simple alias for `return Err(Error::new(format!(...));`.
+///
+/// This macro is currently exported at crate root but this may change in the future
+/// when [Macros 2.0](https://github.com/rust-lang/rust/issues/39412) are stabilized.
+#[macro_export]
 macro_rules! bail {
     ($($arg:tt)*) => {
         return Err($crate::error::Error::new(format!($($arg)*)))
     };
 }
 
-pub(crate) use bail;
+// Re-export macros in libgm::error
+pub use {bail, err};
