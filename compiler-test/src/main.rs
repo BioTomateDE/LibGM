@@ -10,8 +10,8 @@ type Res = Result<(), Box<dyn std::error::Error>>;
 fn test_all() -> Res {
     println!("Testing all...");
     let dir = Path::new("/tmp/gmdecomp/");
-    let ctx1 = LexerContext { has_string_escaping: false };
-    let ctx2 = LexerContext { has_string_escaping: true };
+    let ctx1 = LexerContext::contextless();
+    let ctx2 = LexerContext::contextless_gms1();
 
     for (ctx, dirname) in [(ctx1, "gms1"), (ctx2, "gms2")] {
         let dir = dir.join(dirname);

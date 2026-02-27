@@ -32,7 +32,10 @@ struct Lexer<'code, 'ctx> {
 pub struct LexerContext {
     /// Escaping chars using backslashes was introduced in GMS2.
     /// In GMS1, interpret backslashes verbatim.
-    pub has_string_escaping: bool,
+    gms2: bool,
+
+    /// This introduced new keywords and stuff.
+    gmlv2: bool,
 }
 
 impl LexerContext {
@@ -40,14 +43,21 @@ impl LexerContext {
     #[must_use]
     pub fn new(data: &GMData) -> Self {
         Self {
-            has_string_escaping: data.general_info.version.major >= 2,
+            gms2: data.general_info.is_version_at_least((2, 0)),
+            gmlv2: data.general_info.is_version_at_least((2, 3)),
         }
     }
 
     /// Creates a generic GMS2 [`LexerContext`].
     #[must_use]
     pub const fn contextless() -> Self {
-        Self { has_string_escaping: true }
+        Self { gms2: true, gmlv2: true }
+    }
+
+    /// Creates a generic GMS2 [`LexerContext`].
+    #[must_use]
+    pub const fn contextless_gms1() -> Self {
+        Self { gms2: false, gmlv2: false }
     }
 
     /// Tokenizes/Lexes the given source code.
@@ -109,6 +119,11 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
     #[must_use]
     pub const fn location(&self) -> Location {
         self.location
+    }
+
+    #[must_use]
+    fn is_eof(&self) -> bool {
+        self.location.byte >= self.source_code.len() as u32
     }
 
     fn increment_line(&mut self) {
@@ -250,7 +265,7 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
             self.consume_while(|ch| ch.is_ascii_alphabetic() || ch == '_' || ch.is_ascii_digit());
         debug_assert!(!ident.is_empty());
 
-        if let Some(keyword) = Keyword::try_from_str(ident) {
+        if let Some(keyword) = Keyword::try_from_str(ident, self.context.gmlv2) {
             self.emit(TokenData::Keyword(keyword), start);
         } else {
             self.emit(TokenData::Identifier(ident.to_owned()), start);
@@ -407,8 +422,7 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
         self.emit(TokenData::BlockComment(comment.to_owned()), start);
     }
 
-    fn parse_string_literal(&mut self) {
-        // TODO: support @ strings, format strings
+    fn parse_string(&mut self) {
         let start = self.location();
         let delimiter = self.consume_char().unwrap();
         debug_assert!(delimiter == '"' || delimiter == '\'');
@@ -423,28 +437,64 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
                 break;
             };
 
-            // String escaping is only used in GMS2.
-            if escaping {
-                match char {
-                    '\n' => break,
-                    '"' => string.push('"'),
-                    '\\' => string.push('\\'),
-                    'n' => string.push('\n'),
-                    't' => string.push('\t'),
-                    'r' => string.push('\r'),
-                    // This is needed to mitigate a bug in Deltarune 1&2 demo
-                    'f' => string.push_str("\\f"),
-                    _ => invalid_escape_chars.push(char),
-                }
-                escaping = false;
-            } else if char == delimiter {
-                open = false;
+            if char == '\n' {
                 break;
-            } else if char == '\\' && self.context.has_string_escaping {
-                escaping = true;
-            } else {
-                string.push(char);
             }
+
+            if !escaping {
+                if char == delimiter {
+                    open = false;
+                    break;
+                } else if char == '\\' {
+                    escaping = true;
+                } else {
+                    string.push(char);
+                }
+                continue;
+            }
+
+            // Reference: <https://manual.gamemaker.io/monthly/en/GameMaker_Language/GML_Reference/Strings/Strings.htm> at 2026-02-26
+
+            if char == 'u' {
+                let esc = self.read_n_hex(6);
+                if let Some(ch) = char::from_u32(esc) {
+                    string.push(ch);
+                } else {
+                    self.throw("Invalid unicode character in string escape sequence", start);
+                }
+                continue;
+            }
+
+            if char == 'x' {
+                let esc = self.read_n_hex(2);
+                if let Some(ch) = char::from_u32(esc) {
+                    string.push(ch);
+                } else {
+                    self.throw("Invalid ascii character in string escape sequence", start);
+                }
+                continue;
+            }
+
+            // Note: Octal escaping is not supported.
+
+            let append_char = match char {
+                '"' => '"',    // Literal "
+                '\'' => '\'',  // Literal '
+                '\\' => '\\',  // Literal \
+                'n' => '\n',   // Newline (0x0A)
+                'r' => '\r',   // Carriage Return (0x0D)
+                'b' => '\x08', // Backspace (0x08)
+                'f' => '\x0C', // Form Feed (0x0C)
+                't' => '\t',   // Horizontal Tab (0x09)
+                'v' => '\x0B', // Vertical Tab (0x0B)
+                'a' => '\x07', // Alert (0x07) (aka bell)
+                _ => {
+                    invalid_escape_chars.push(char);
+                    continue;
+                },
+            };
+            string.push(append_char);
+            escaping = false;
         }
 
         for ch in invalid_escape_chars {
@@ -458,6 +508,49 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
         }
 
         self.emit(TokenData::StringLiteral(string), start);
+    }
+
+    /// Reads up to the specified number of hexadecimal digits.
+    /// Will stop early if the read char is not a hexdigit.
+    fn read_n_hex(&mut self, max_count: u32) -> u32 {
+        let code = self.source_code.as_bytes();
+        let mut integer = 0;
+        let mut read_char_count = 0;
+
+        while read_char_count <= max_count {
+            let loc = self.location.byte as usize;
+            let Some(byte) = code.get(loc) else { break };
+            let digit: u8 = match byte {
+                b'0'..=b'9' => byte - b'0',
+                b'a'..=b'f' => byte - b'a' + 10,
+                b'A'..=b'F' => byte - b'A' + 10,
+                _ => break,
+            };
+            self.skip_achar();
+            integer <<= 4;
+            integer |= u32::from(digit);
+            read_char_count += 1;
+        }
+
+        integer
+    }
+
+    fn parse_string_verbatim(&mut self) {
+        // @"abc" is a GMS2 syntax for verbatim/raw strings
+        if self.next_char_is('@') {
+            self.skip_achar();
+        }
+
+        let start = self.location();
+        let delimiter = self.consume_char().unwrap();
+        debug_assert!(delimiter == '"' || delimiter == '\'');
+
+        let string = self.consume_while(|c| c != delimiter);
+        if self.is_eof() && !self.source_code.ends_with(delimiter) {
+            self.throw("Raw string literal was never closed", start);
+        }
+
+        self.emit(TokenData::RawStringLiteral(string.to_owned()), start);
     }
 
     pub fn tokenize(&mut self) {
@@ -474,7 +567,14 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
                 '$' => self.parse_hex_int(1),
                 '#' => self.parse_hex_color(),
                 ';' => self.parse_semicolon(),
-                '"' | '\'' => self.parse_string_literal(),
+                '@' if self.next_char_is('"') => self.parse_string_verbatim(),
+                '"' | '\'' => {
+                    if self.context.gms2 {
+                        self.parse_string()
+                    } else {
+                        self.parse_string_verbatim();
+                    }
+                },
                 '.' if self.peek_nth_char(1).is_some_and(|c| c.is_ascii_digit()) => {
                     self.parse_number()
                 },
@@ -515,6 +615,7 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
                         }
                     },
                     Some('=') => self.emit_two_chars(TokenData::LessEqual),
+                    Some('>') => self.emit_two_chars(TokenData::NotEqual), // <> is an alternative to !=
                     _ => self.emit_char(TokenData::Less),
                 },
                 '>' => match self.peek_nth_char(1) {
@@ -620,6 +721,10 @@ fn parse_decimal_uint(digits: &str) -> Option<u64> {
 /// * The string starts with an ascii hexdigit (0123456789abcdefABCDEF)
 /// * The string contains only ascii hexdigits and underscores
 fn parse_hex_uint(digits: &str) -> Option<u64> {
+    if digits.len() > 16 {
+        return None;
+    }
+
     let bytes: &[u8] = digits.as_bytes();
     debug_assert!(bytes[0].is_ascii_hexdigit());
     let mut acc: u64 = 0;
@@ -632,7 +737,8 @@ fn parse_hex_uint(digits: &str) -> Option<u64> {
             b'_' => continue,
             _ => panic!("Invalid hexdigit"),
         };
-        acc = acc.checked_mul(16)?.checked_add(digit as u64)?;
+        acc <<= 4;
+        acc |= u64::from(digit);
     }
 
     Some(acc)
@@ -646,7 +752,7 @@ fn parse_hex_uint(digits: &str) -> Option<u64> {
 /// * The string starts with a 0 or 1
 /// * The string contains only 0, 1 and _
 fn parse_bin_uint(digits: &str) -> Option<u64> {
-    if digits.len() as u32 > u64::BITS {
+    if digits.len() > 64 {
         return None;
     }
 

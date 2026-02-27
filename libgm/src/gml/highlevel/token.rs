@@ -228,6 +228,10 @@ pub enum TokenData {
     /// A standard string literal, denoted by double or single quotation marks.
     StringLiteral(String),
 
+    /// A raw/verbatim string literal, denoted by a prefixed `@`.
+    /// This is also always used in GMS1 since escaping did not exist back then.
+    RawStringLiteral(String),
+
     BinIntLiteral(u64),
     HexIntLiteral(u64),
     CssColorLiteral(u32),
@@ -301,7 +305,7 @@ pub enum Keyword {
 
 impl Keyword {
     #[must_use]
-    pub fn try_from_str(string: &str) -> Option<Self> {
+    pub fn try_from_str(string: &str, gmlv2: bool) -> Option<Self> {
         Some(match string {
             "if" => Self::If,
             "then" => Self::Then,
@@ -328,14 +332,14 @@ impl Keyword {
             "or" => Self::Or,
             "xor" => Self::Xor,
             "enum" => Self::Enum,
-            "try" => Self::Try,
-            "catch" => Self::Catch,
-            "finally" => Self::Finally,
-            "throw" => Self::Throw,
-            "new" => Self::New,
-            "delete" => Self::Delete,
-            "function" => Self::Function,
-            "static" => Self::Static,
+            "try" if gmlv2 => Self::Try,
+            "catch" if gmlv2 => Self::Catch,
+            "finally" if gmlv2 => Self::Finally,
+            "throw" if gmlv2 => Self::Throw,
+            "new" if gmlv2 => Self::New,
+            "delete" if gmlv2 => Self::Delete,
+            "function" if gmlv2 => Self::Function,
+            "static" if gmlv2 => Self::Static,
             _ => return None,
         })
     }
