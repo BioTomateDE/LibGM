@@ -2,9 +2,8 @@
 //! This includes error types, a result alias, traits and more.
 //! You can import it by using `use libgm::prelude::*;`.
 
-pub(crate) use crate::error::bail;
 pub use crate::{
-    error::{Context, Error, Result},
+    error::{Context, Error, Result, bail, err},
     gamemaker::{
         data::GMData,
         elements::{GMChunk, GMListChunk, GMNamedElement, GMNamedListChunk},

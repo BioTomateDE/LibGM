@@ -8,7 +8,7 @@ use crate::{
 ///
 /// You should therefore only call this function once per game
 /// and keep the struct.
-#[expect(clippy::manual_non_exhaustive)]
+#[allow(clippy::manual_non_exhaustive)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CodeAnalysis {
     /// Whether Copy on Write (Cow) functionality is enabled for arrays.
@@ -37,7 +37,8 @@ pub struct CodeAnalysis {
     /// By default, this is enabled.
     pub uses_short_circuit: bool,
 
-    // Make this struct impossible to construct.
+    // Makes this struct impossible to construct.
+    // Useful for avoiding minor SemVer bumps.
     // This doubles as a #[non_exhaustive]
     _private: (),
 }
@@ -59,6 +60,8 @@ impl Default for CodeAnalysis {
 ///
 /// None of these analyzed properties change when the data file is modified,
 /// since this information is about how this game was compiled.
+///
+/// This function is also available in [`GMData::analyze_code`].
 pub fn analyze(data: &GMData) -> CodeAnalysis {
     let mut analysis = CodeAnalysis::default();
 

@@ -66,7 +66,7 @@ impl GMElement for GMCodes {
             } else {
                 let locals_count = reader.read_u16()?;
                 let arguments_count_raw = reader.read_u16()?;
-                let arguments_count: u16 = arguments_count_raw & 0x7FFF;
+                let argument_count: u16 = arguments_count_raw & 0x7FFF;
                 let weird_local_flag: bool = arguments_count_raw & 0x8000 != 0;
 
                 let position = reader.cur_pos;
@@ -83,7 +83,7 @@ impl GMElement for GMCodes {
 
                 let data = ModernData {
                     local_count: locals_count,
-                    arguments_count,
+                    argument_count,
                     weird_local_flag,
                     execution_offset: offset,
                     parent: None,
@@ -207,8 +207,7 @@ impl GMElement for GMCodes {
             builder.write_gm_string(&code.name);
             builder.write_usize(length)?;
             builder.write_u16(data.local_count);
-            builder
-                .write_u16(data.arguments_count | if data.weird_local_flag { 0x8000 } else { 0 });
+            builder.write_u16(data.argument_count | if data.weird_local_flag { 0x8000 } else { 0 });
             let instructions_start_offset: i32 = start as i32 - builder.len() as i32;
             builder.write_i32(instructions_start_offset);
             builder.write_u32(data.execution_offset);
