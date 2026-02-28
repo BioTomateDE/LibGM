@@ -148,7 +148,29 @@ pub enum Instruction {
     ///
     /// This instruction has the same opcode as [`Instruction::Push`].
     ///
-    /// TODO(doc): explain concrete behavior
+    /// For "normal mode" (`is_array = false`), it does the following:
+    /// 1) Pops value A
+    /// 2) Pops value B
+    /// 3) Pops value C
+    /// 4) Pushes value A
+    /// 5) Pushes value C
+    /// 6) Pushes value B
+    ///
+    /// This essentially turns the three stacktop
+    /// elements [A, B, C, ...] into [B, C, A, ...].
+    ///
+    /// For array mode, it does the following:
+    /// 1) Pops value A
+    /// 2) Pops value B
+    /// 3) Pops value C
+    /// 4) Pops value D
+    /// 5) Pushes value A
+    /// 6) Pushes value D
+    /// 7) Pushes value C
+    /// 8) Pushes value B
+    ///
+    /// This essentially turns four stacktop elements
+    /// [A, B, C, D, ...] into [B, C, D, A, ...].
     PopSwap { is_array: bool },
 
     /// **Duplicates** values on the stack.
@@ -160,6 +182,10 @@ pub enum Instruction {
     /// However, it does (most likely?) not explicitly have to match.
     /// It only influences a multiplication factor of how many bytes to
     /// clone, since different data types have different sizes on the stack.
+    ///
+    /// To get the duplication value *count* (instead of byte size) for a homogenous
+    /// stack data type, use `instr.size / instr.data_type.size()`.
+    /// For safety, it is probably a good idea to verify that the remainder is zero.
     Duplicate { data_type: DataType, size: u8 },
 
     /// **Swaps** values around on the stack.
@@ -320,8 +346,9 @@ pub enum Instruction {
     ///
     /// This instruction pops two values off the stack and then calls a function, dynamically:
     /// 1) The function reference is popped
-    ///    should be a [`DataType::Variable`] value storing a function ID).
-    /// 2) The instance type is popped. I'm not very sure how this works, but I  assume it
+    ///    (should be a [`DataType::Variable`] value storing a function ID).
+    /// 2) The instance type is popped.
+    ///    I'm not very sure how this works, but I assume it
     ///    is a raw [`InstanceType`] value stored in the stack?
     /// 3) `argument_count` arguments are popped.
     ///
@@ -337,13 +364,18 @@ pub enum Instruction {
     /// Pops two values from the stack, those being an index and an array reference.
     /// Then, pushes the value stored at the passed-in array at the desired index.
     ///
-    /// This is a very similar to [`Instruction::PushArrayContainer`],
+    /// This is a very similar to [`Instruction::PushArrayContainer`] (see this for more info),
     /// except that this instruction is used only at the end of an accessor chain.
     /// Only relevant for the final/last index operation of a multidimensional array access.
     PushArrayFinal,
 
     /// Pops three values from the stack, those being an index, an array reference, and a value.
     /// Then, assigns the value to the array at the specified index.
+    ///
+    /// Concrete Steps:
+    /// 1) Pops an index from the stack
+    /// 2) Pops array reference from stack ([`DataType::Variable`])
+    /// 3) Pops value from stack and moves it into the specified array item
     PopArrayFinal,
 
     /// Pushes a multidimensional array:
