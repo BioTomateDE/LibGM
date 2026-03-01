@@ -175,8 +175,7 @@ fn run_tests<T: Test>(tests: &[T]) {
     println!("{successful}/{total} tests passed; {panicked} panicked.");
 }
 
-#[test]
-fn main() {
+pub fn main() {
     let ok_tests: Vec<OkTest> = get_ok_tests();
     let err_tests: Vec<ErrTest> = get_err_tests();
 
