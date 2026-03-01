@@ -57,7 +57,7 @@ fn slice_instructions_by_bytes(
 /// the instructions in the specified parent code and slicing them.
 /// This is needed since the `instructions` field for child code entries is always empty.
 ///
-/// TODO: Maybe certain directives can be added in the future 
+/// TODO: Maybe certain directives can be added in the future
 /// to identify the code entry name as well as local and argument count.
 pub fn disassemble_code(code: &GMCode, gm_data: &GMData) -> Result<String> {
     if let Some(data) = &code.modern_data {
@@ -73,7 +73,10 @@ pub fn disassemble_code(code: &GMCode, gm_data: &GMData) -> Result<String> {
             let instrs = slice_instructions_by_bytes(&parent.instructions, data.execution_offset)?;
             return disassemble_instructions(instrs, gm_data);
         } else if data.execution_offset != 0 {
-            bail!("Root code entry has non-zero byte offset {}", data.execution_offset);
+            bail!(
+                "Root code entry has non-zero byte offset {}",
+                data.execution_offset
+            );
         }
     }
 

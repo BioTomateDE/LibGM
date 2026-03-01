@@ -1,9 +1,8 @@
+use super::{Token, TokenData};
 use crate::{
     gml::highlevel::{Location, compile::CompileError, token::Keyword},
     prelude::GMData,
 };
-
-use super::{Token, TokenData};
 
 #[derive(Debug)]
 struct Lexer<'code, 'ctx> {
