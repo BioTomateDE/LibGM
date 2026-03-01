@@ -261,6 +261,8 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
     fn parse_semicolon(&mut self) {
         if !self.ends_with_statement_terminator() {
             self.emit_char(TokenData::Semicolon);
+        } else {
+            self.skip_achar();
         }
     }
 
@@ -320,6 +322,9 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
 
         if dot_appeared {
             parse_float();
+            if string.ends_with('.') {
+                self.throw("Float literal ends with dot", start);
+            }
             return;
         }
 
@@ -427,10 +432,35 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
         self.emit(TokenData::BlockComment(comment.to_owned()), start);
     }
 
+    /// Reads up to the specified number of hexadecimal digits.
+    /// Will stop early if the read char is not a hexdigit.
+    fn read_n_hex(&mut self, max_count: u32) -> u32 {
+        let code = self.source_code.as_bytes();
+        let mut integer = 0;
+        let mut read_char_count = 0;
+
+        while read_char_count <= max_count {
+            let loc = self.location.byte as usize;
+            let Some(byte) = code.get(loc) else { break };
+            let digit: u8 = match byte {
+                b'0'..=b'9' => byte - b'0',
+                b'a'..=b'f' => byte - b'a' + 10,
+                b'A'..=b'F' => byte - b'A' + 10,
+                _ => break,
+            };
+            self.skip_achar();
+            integer <<= 4;
+            integer |= u32::from(digit);
+            read_char_count += 1;
+        }
+
+        integer
+    }
+
     fn parse_string(&mut self) {
         let start = self.location();
         let delimiter = self.consume_char().unwrap();
-        debug_assert!(delimiter == '"' || delimiter == '\'');
+        debug_assert!(delimiter == '"' || delimiter == '\'', "{delimiter:?}");
 
         let mut open = true;
         let mut escaping: bool = false;
@@ -515,34 +545,9 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
         self.emit(TokenData::StringLiteral(string), start);
     }
 
-    /// Reads up to the specified number of hexadecimal digits.
-    /// Will stop early if the read char is not a hexdigit.
-    fn read_n_hex(&mut self, max_count: u32) -> u32 {
-        let code = self.source_code.as_bytes();
-        let mut integer = 0;
-        let mut read_char_count = 0;
-
-        while read_char_count <= max_count {
-            let loc = self.location.byte as usize;
-            let Some(byte) = code.get(loc) else { break };
-            let digit: u8 = match byte {
-                b'0'..=b'9' => byte - b'0',
-                b'a'..=b'f' => byte - b'a' + 10,
-                b'A'..=b'F' => byte - b'A' + 10,
-                _ => break,
-            };
-            self.skip_achar();
-            integer <<= 4;
-            integer |= u32::from(digit);
-            read_char_count += 1;
-        }
-
-        integer
-    }
-
     fn parse_string_verbatim(&mut self) {
         // @"abc" is a GMS2 syntax for verbatim/raw strings
-        if self.next_char_is('@') {
+        if self.peek_char() == Some('@') {
             self.skip_achar();
         }
 
@@ -553,6 +558,8 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
         let string = self.consume_while(|c| c != delimiter);
         if self.is_eof() && !self.source_code.ends_with(delimiter) {
             self.throw("Raw string literal was never closed", start);
+        } else {
+            self.skip_achar(); // Consume end delimiter
         }
 
         self.emit(TokenData::RawStringLiteral(string.to_owned()), start);
@@ -695,7 +702,6 @@ fn validate_size(source_code: &'_ str) -> Result<(), CompileError<'_>> {
 /// # Safety
 /// This function assumes the following:
 /// * The string is not empty
-/// * The string starts with an ascii digit (0123456789)
 /// * The string contains only ascii digits and underscores
 ///
 /// # Errors
@@ -703,7 +709,6 @@ fn validate_size(source_code: &'_ str) -> Result<(), CompileError<'_>> {
 /// (The integer will overflow if it is larger than [`u64::MAX`]).
 fn parse_decimal_uint(digits: &str) -> Option<u64> {
     let bytes: &[u8] = digits.as_bytes();
-    debug_assert!(bytes[0].is_ascii_digit());
     let mut acc: u64 = 0;
 
     for &byte in bytes {
@@ -723,15 +728,9 @@ fn parse_decimal_uint(digits: &str) -> Option<u64> {
 /// # Safety
 /// This function assumes the following:
 /// * The string is not empty
-/// * The string starts with an ascii hexdigit (0123456789abcdefABCDEF)
 /// * The string contains only ascii hexdigits and underscores
 fn parse_hex_uint(digits: &str) -> Option<u64> {
-    if digits.len() > 16 {
-        return None;
-    }
-
     let bytes: &[u8] = digits.as_bytes();
-    debug_assert!(bytes[0].is_ascii_hexdigit());
     let mut acc: u64 = 0;
 
     for &byte in bytes {
@@ -742,7 +741,7 @@ fn parse_hex_uint(digits: &str) -> Option<u64> {
             b'_' => continue,
             _ => panic!("Invalid hexdigit"),
         };
-        acc <<= 4;
+        acc = acc.checked_mul(16)?;
         acc |= u64::from(digit);
     }
 
@@ -754,15 +753,9 @@ fn parse_hex_uint(digits: &str) -> Option<u64> {
 /// # Safety
 /// This function assumes the following:
 /// * The string is not empty
-/// * The string starts with a 0 or 1
 /// * The string contains only 0, 1 and _
 fn parse_bin_uint(digits: &str) -> Option<u64> {
-    if digits.len() > 64 {
-        return None;
-    }
-
     let bytes: &[u8] = digits.as_bytes();
-    debug_assert!(bytes[0] == b'0' || bytes[0] == b'1');
     let mut acc: u64 = 0;
 
     for &byte in bytes {
@@ -770,7 +763,7 @@ fn parse_bin_uint(digits: &str) -> Option<u64> {
             continue;
         }
         let digit = u64::from(byte == b'1');
-        acc <<= 1;
+        acc = acc.checked_mul(2)?;
         acc |= digit;
     }
 

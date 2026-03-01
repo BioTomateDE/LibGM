@@ -180,13 +180,13 @@ pub fn main() {
     let err_tests: Vec<ErrTest> = get_err_tests();
 
     thread::spawn(detect_timeouts);
-    println!("Running OK tests...");
+    println!("============ Running OK Tests ============");
     run_tests(&ok_tests);
     println!();
-    println!("Running ERR tests...");
+    println!("============ Running ERROR Tests ============");
     run_tests(&err_tests);
     println!();
-    println!("All done.");
+    println!("============ All Done ============");
 }
 
 #[rustfmt::skip]
@@ -203,32 +203,32 @@ fn get_ok_tests() -> Vec<OkTest> {
             vec![],
         ),
         OkTest::new(
-            "whitespace_nl",
+            "whitespace newline",
             "   \t  \r \t  \n    \t   \r",
             vec![],
         ),
         OkTest::new(
-            "line_comment",
+            "line comment",
             "  \r\r\t // hello world \r  \t",
-            vec![],
+            vec![LineComment("hello world \r  \t".to_owned())],
         ),
         OkTest::new(
-            "line_comment_start",
+            "line comment start",
             "// hello world \r  \t",
-            vec![],
+            vec![LineComment("hello world \r  \t".to_owned())],
         ),
         OkTest::new(
-            "line_comment_newline",
+            "line comment newline",
             "// hello world \t  \r\n   \t ",
-            vec![],
+            vec![LineComment("hello world \t  \r".to_owned())],
         ),
         OkTest::new(
-            "line_comment_empty",
+            "line comment empty",
             "\n//\n",
             vec![LineComment("".to_owned())],
         ),
         OkTest::new(
-            "block_comment_empty",
+            "block comment empty",
             "/**/",
             vec![BlockComment("".to_owned())],
         ),
@@ -238,12 +238,12 @@ fn get_ok_tests() -> Vec<OkTest> {
             vec![],
         ),
         OkTest::new(
-            "ident",
+            "identifier",
             "hello",
             vec![Identifier("hello".to_owned())],
         ),
         OkTest::new(
-            "ident_ws",
+            "identifier whitespace",
             "  \r\t hello \t  ",
             vec![Identifier("hello".to_owned())],
         ),
@@ -253,22 +253,22 @@ fn get_ok_tests() -> Vec<OkTest> {
             vec![IntLiteral(657821)],
         ),
         OkTest::new(
-            "int_under",
+            "int underscore",
             "657_821",
             vec![IntLiteral(657821)],
         ),
         OkTest::new(
-            "int_under_multi",
+            "int underscores multi",
             "65__7___82_1",
             vec![IntLiteral(657821)],
         ),
         OkTest::new(
-            "int_under_end",
+            "int underscores end",
             "657821___",
             vec![IntLiteral(657821)],
         ),
         OkTest::new(
-            "ident_under_digit",
+            "identifier underscores start digit",
             "__123_45",
             vec![Identifier("__123_45".to_owned())],
         ),
@@ -278,27 +278,27 @@ fn get_ok_tests() -> Vec<OkTest> {
             vec![FloatLiteral(1234.5678)],
         ),
         OkTest::new(
-            "float_sep",
+            "float underscores",
             "1__23__4.5__6__78__",
             vec![FloatLiteral(1234.5678)],
         ),
         OkTest::new(
-            "float_sep_predot",
+            "float underscores pre dot",
             "1234_.5678",
             vec![FloatLiteral(1234.5678)],
         ),
         OkTest::new(
-            "float_no_lead",
+            "float no lead",
             ".5678",
             vec![FloatLiteral(0.5678)],
         ),
         OkTest::new(
-            "bigint_int",
+            "bigint as integer",
             "18446744073709551615",
             vec![IntLiteral(18446744073709551615)],
         ),
         OkTest::new(
-            "bigint_float",
+            "bigint as float",
             "18446744073709551616",
             vec![FloatLiteral(18446744073709551616.0)],
         ),
@@ -308,32 +308,32 @@ fn get_ok_tests() -> Vec<OkTest> {
             vec![HexIntLiteral(0xdd1a71e5)],
         ),
         OkTest::new(
-            "hex_sep",
+            "hex underscores",
             "0xdd_1a_71_e5",
             vec![HexIntLiteral(0xdd1a71e5)],
         ),
         OkTest::new(
-            "hex_sep_multi",
+            "hex underscores multi",
             "0x__d__d_1a____71__e__5__",
             vec![HexIntLiteral(0xdd1a71e5)],
         ),
         OkTest::new(
-            "hex_long",
+            "hex long",
             "0xf9c07540f545eabe",
-            vec![HexIntLiteral(0xdd1a71e5)],
+            vec![HexIntLiteral(0xf9c07540f545eabe)],
         ),
         OkTest::new(
-            "hex_long_sep",
+            "hex long underscores",
             "0x___f_9____c__0754______________0f545ea___b_e___",
-            vec![HexIntLiteral(0xdd1a71e5)],
+            vec![HexIntLiteral(0xf9c07540f545eabe)],
         ),
         OkTest::new(
-            "hex_mixed_case",
+            "hex mixed case",
             "0xdD1a71E5",
             vec![HexIntLiteral(0xdd1a71e5)],
         ),
         OkTest::new(
-            "hex_dollar",
+            "hex dollar",
             "$dd1a71e5",
             vec![HexIntLiteral(0xdd1a71e5)],
         ),
@@ -348,24 +348,24 @@ fn get_ok_tests() -> Vec<OkTest> {
             vec![StringLiteral("this is gms2 format :3".to_owned())],
         ),
         OkTest::new(
-            "string_escape",
+            "string escape",
             r#" "this\t is\t gms2 format :3\n"; "#,
             vec![StringLiteral("this\t is\t gms2 format :3\n".to_owned())],
         ),
         OkTest::new(
-            "string_verbatim",
+            "string verbatim",
             r#" @"this is a raw string format \n \t"; "#,
-            vec![StringLiteral("this is a raw string format \\n \\t".to_owned())],
+            vec![RawStringLiteral("this is a raw string format \\n \\t".to_owned())],
         ),
         OkTest::new(
-            "string_single_quotes",
+            "string single quotes",
             " 'this is (technically unsupported) gms2 format :3'; ",
             vec![StringLiteral("this is (technically unsupported) gms2 format :3".to_owned())],
         ),
         OkTest::new(
-            "string_verbatim_multiline",
-            " @\"this verbatim string lit\nspans multiple \nlines\"; ",
-            vec![StringLiteral("this verbatim string literal\nspans multiple \nlines".to_owned())],
+            "string verbatim multiline",
+            " @\"this verbatim string literal\nspans multiple \nlines\"; ",
+            vec![RawStringLiteral("this verbatim string literal\nspans multiple \nlines".to_owned())],
         ),
     ]
 }
@@ -374,39 +374,43 @@ fn get_ok_tests() -> Vec<OkTest> {
 fn get_err_tests() -> Vec<ErrTest> {
     vec![
         ErrTest::new(
-            "float_no_tail",
+            "float no tail",
             "1234.",
         ),
         ErrTest::new(
-            "int_suffix",
+            "int suffix",
             "1337the",
         ),
         ErrTest::new(
-            "hex_overflow",
+            "hex suffix",
+            "0x1337Dthe",
+        ),
+        ErrTest::new(
+            "hex overflow",
             "0x53789bbababa471238d",
         ),
         ErrTest::new(
-            "string_inv_escape",
+            "string invalid escape",
             r#" "this is an invalid \string"; "#,
         ),
         ErrTest::new(
-            "string_unclosed_eol",
-            r#" "this is an unclosed string \n bad newline"; "#,
+            "string unclosed eol",
+            " \"this is an unclosed string \n bad newline\"; ",
         ),
         ErrTest::new(
-            "string_unclosed_eof",
+            "string unclosed eof",
             r#" "this is an unclosed string"#,
         ),
         ErrTest::new(
-            "string_verbatim_unclosed_eof",
+            "string verbatim unclosed eof",
             r#" @"this is an unclosed string"#,
         ),
         ErrTest::new(
-            "string_verbatim_quote_escape",
+            "string verbatim quote escape",
             r#" @"this is \verbatim str\ing but u cant \"escape\" quotes here" "#,
         ),
         ErrTest::new(
-            "block_comment_unclosed",
+            "block comment unclosed",
             "hello this is /* an unclosed comment\n(still not closed)",
         ),
     ]
