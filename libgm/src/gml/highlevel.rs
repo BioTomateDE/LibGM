@@ -1,4 +1,6 @@
 pub mod compile;
+//pub mod node;
+pub mod parser;
 pub mod token;
 
 /// A location in source code.

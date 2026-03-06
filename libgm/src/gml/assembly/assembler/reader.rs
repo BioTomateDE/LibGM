@@ -168,7 +168,7 @@ impl<'a> Reader<'a> {
 
     #[must_use]
     fn find_non_digit(&self) -> usize {
-        for (index, character) in self.line.as_bytes().iter().enumerate() {
+        for (index, character) in self.line.bytes().enumerate() {
             match character {
                 b'0'..=b'9' => {},
                 _ => return index,

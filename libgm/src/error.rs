@@ -138,4 +138,5 @@ macro_rules! bail {
 }
 
 // Re-export macros in libgm::error
-pub use {bail, err};
+pub use bail;
+pub use err;

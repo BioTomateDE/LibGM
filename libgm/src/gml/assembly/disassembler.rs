@@ -33,7 +33,7 @@ fn slice_instructions_by_bytes(
     let mut index = 0;
     let mut offset = 0;
     while offset < start_offset {
-        let instr = instructions.get(index).ok_or_else(|| 
+        let instr = instructions.get(index).ok_or_else(||
             format!("Given start byte offset {start_offset} is out of range in instructions with byte length {offset}"
         ))?;
         index += 1;
@@ -60,24 +60,21 @@ fn slice_instructions_by_bytes(
 /// TODO: Maybe certain directives can be added in the future
 /// to identify the code entry name as well as local and argument count.
 pub fn disassemble_code(code: &GMCode, gm_data: &GMData) -> Result<String> {
-    if let Some(data) = &code.modern_data {
-        if let Some(parent) = data.parent {
-            if data.execution_offset == 0 {
-                bail!("Child code entry has byte offset zero");
-            }
-            let parent: &GMCode = gm_data
-                .codes
-                .by_ref(parent)
-                .context("resolving parent code entry")?;
-            // can there be nested parents? cuz it only works for one layer rn
-            let instrs = slice_instructions_by_bytes(&parent.instructions, data.execution_offset)?;
-            return disassemble_instructions(instrs, gm_data);
-        } else if data.execution_offset != 0 {
-            bail!(
-                "Root code entry has non-zero byte offset {}",
-                data.execution_offset
-            );
+    let offset = code.execution_offset();
+
+    if let Some(parent) = code.parent() {
+        if offset == 0 {
+            bail!("Child code entry has execution offset offset zero");
         }
+        let parent: &GMCode = gm_data
+            .codes
+            .by_ref(parent)
+            .context("resolving parent code entry")?;
+        // can there be nested parents? cuz it only works for one layer rn
+        let instrs = slice_instructions_by_bytes(&parent.instructions, offset)?;
+        return disassemble_instructions(instrs, gm_data);
+    } else if offset != 0 {
+        bail!("Root code entry has non-zero execution offset {offset}");
     }
 
     disassemble_instructions(&code.instructions, gm_data)
@@ -106,6 +103,27 @@ pub fn disassemble_instruction(instruction: &Instruction, gm_data: &GMData) -> R
 }
 
 /// Disassembles a single instruction into one line, appending the assembly string to a buffer.
+///
+/// If errors occurred during disassembling, the produced assembly will have only been partially
+/// written to the buffer.
+///
+/// To unwind the buffer state after a disassembly error, keep track of the length before the call
+/// and use it to truncate the buffer.
+/// Example:
+/// ```
+/// # use libgm::gml::{Instruction, assembly::disassemble_instruction_to_buffer};
+/// # let instruction = Instruction::Exit;
+/// # let data = GMData::default();
+///
+/// let mut buffer = String::with_capacity(420);
+/// // ...
+/// let prev_len: usize = buffer.len();
+/// if let Err(e) = disassemble_instruction_to_buffer(&mut buffer, &instruction, &data) {
+///     println!("Oh naur an error occurred :c");
+///     buffer.truncate(prev_len);
+/// }
+/// println!("Buffer: {buffer}");
+/// ```
 pub fn disassemble_instruction_to_buffer(
     buffer: &mut String,
     instruction: &Instruction,

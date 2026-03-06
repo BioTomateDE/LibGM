@@ -3,20 +3,20 @@ use crate::gml::highlevel::Location;
 pub mod lexer;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Token {
+pub struct Token<'a> {
     /// The actual data strored by this token.
-    pub data: TokenData,
+    pub data: TokenData<'a>,
 
     /// This token's start position in the source code.
-    start: Location,
+    pub start: Location,
 
     /// This token's end position in the source code.
-    end: Location,
+    pub end: Location,
 }
 
 /// The token kind with its potential corresponding data.
 #[derive(Debug, Clone, PartialEq)]
-pub enum TokenData {
+pub enum TokenData<'a> {
     /// A newline '\n'.
     /// This is a statement terminator if no round/square brackets are currently open.
     Newline,
@@ -214,23 +214,23 @@ pub enum TokenData {
 
     /// A comment spanning a full line.
     /// Starts with `//` and ends at the next line break.
-    LineComment(String),
+    LineComment(&'a str),
 
     /// A comment spanning less than one line or multiple lines.
     /// Starts with `/*` and ends at the next `*/`.
-    BlockComment(String),
+    BlockComment(&'a str),
 
     /// A GameMaker identifer.
     /// This can be a function name, asset name, variable name, etc.
     /// This **cannot** be a reserved keyword.
-    Identifier(String),
+    Identifier(&'a str),
 
     /// A standard string literal, denoted by double or single quotation marks.
     StringLiteral(String),
 
     /// A raw/verbatim string literal, denoted by a prefixed `@`.
     /// This is also always used in GMS1 since escaping did not exist back then.
-    RawStringLiteral(String),
+    RawStringLiteral(&'a str),
 
     BinIntLiteral(u64),
     HexIntLiteral(u64),

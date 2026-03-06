@@ -1,3 +1,5 @@
+//! requires specific setup; not intended for normal testing/usage
+
 use std::{
     fs::{read_dir, read_to_string},
     path::Path,

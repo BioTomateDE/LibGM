@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use super::{Token, TokenData};
 use crate::{
     gml::highlevel::{Location, compile::CompileError, token::Keyword},
@@ -18,7 +20,7 @@ struct Lexer<'code, 'ctx> {
     /// The token stream being produced by this self.
     ///
     /// These will later have to be converted to [`Token`]s.
-    tokens: Vec<Token>,
+    tokens: Vec<Token<'code>>,
 
     /// Any errors that occur during tokenization will be collected here.
     /// If this is not empty by the end of lexing, [`Result::Err`] will be returned.
@@ -60,7 +62,10 @@ impl LexerContext {
     }
 
     /// Tokenizes/Lexes the given source code.
-    pub fn tokenize<'a>(&self, source_code: &'a str) -> Result<Vec<Token>, Vec<CompileError<'a>>> {
+    pub fn tokenize<'a>(
+        &self,
+        source_code: &'a str,
+    ) -> Result<Vec<Token<'a>>, Vec<CompileError<'a>>> {
         if let Err(err) = validate_size(source_code) {
             return Err(vec![err]);
         };
@@ -93,7 +98,7 @@ impl Default for LexerContext {
 /// and instead create a [`LexerContext`] which adapts to the data file version.
 ///
 /// This function will use a generic GMS2 context.
-pub fn tokenize_contextless(source_code: &'_ str) -> Result<Vec<Token>, Vec<CompileError<'_>>> {
+pub fn tokenize_contextless(source_code: &'_ str) -> Result<Vec<Token<'_>>, Vec<CompileError<'_>>> {
     LexerContext::contextless().tokenize(source_code)
 }
 
@@ -109,7 +114,7 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
         }
     }
 
-    /// Push a new [`CompileError`] to `self.errors`.
+    /// Pushes a new [`CompileError`] to `self.errors`.
     pub fn throw(&mut self, error: impl Into<crate::Error>, start_position: Location) {
         let error = CompileError {
             error: error.into(),
@@ -195,7 +200,7 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
         &self.source_code[start..]
     }
 
-    pub fn emit(&mut self, token_data: TokenData, start_position: Location) {
+    pub fn emit(&mut self, token_data: TokenData<'code>, start_position: Location) {
         let token = Token {
             data: token_data,
             start: start_position,
@@ -207,7 +212,7 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
     /// [`Self::emit`] but for tokens that are always n ASCII characters wide.
     /// This also advances the current self position by n.
     /// This function will not behave properly for newlines.
-    pub fn emit_n_chars(&mut self, token_data: TokenData, n: u32) {
+    pub fn emit_n_chars(&mut self, token_data: TokenData<'code>, n: u32) {
         let start = self.location();
         self.skip_achars(n);
         self.emit(token_data, start);
@@ -216,14 +221,14 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
     /// [`Self::emit`] but for tokens that are always one ASCII character wide.
     /// This also advances the current self position by one.
     /// This function will not behave properly for newlines.
-    pub fn emit_char(&mut self, token_data: TokenData) {
+    pub fn emit_char(&mut self, token_data: TokenData<'code>) {
         self.emit_n_chars(token_data, 1);
     }
 
     /// [`Self::emit`] but for tokens that are always two ASCII characters wide.
     /// This also advances the current self position by two.
     /// This function will not behave properly for newlines.
-    pub fn emit_two_chars(&mut self, token_data: TokenData) {
+    pub fn emit_two_chars(&mut self, token_data: TokenData<'code>) {
         self.emit_n_chars(token_data, 2);
     }
 
@@ -268,14 +273,14 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
 
     fn parse_identifier(&mut self) {
         let start = self.location();
-        let ident =
+        let identifier =
             self.consume_while(|ch| ch.is_ascii_alphabetic() || ch == '_' || ch.is_ascii_digit());
-        debug_assert!(!ident.is_empty());
+        debug_assert!(!identifier.is_empty());
 
-        if let Some(keyword) = Keyword::try_from_str(ident, self.context.gmlv2) {
+        if let Some(keyword) = Keyword::try_from_str(identifier, self.context.gmlv2) {
             self.emit(TokenData::Keyword(keyword), start);
         } else {
-            self.emit(TokenData::Identifier(ident.to_owned()), start);
+            self.emit(TokenData::Identifier(identifier), start);
         }
     }
 
@@ -312,7 +317,11 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
         let string = &self.source_code[begin..end];
 
         let mut parse_float = || {
-            // Not very optimized.
+            let string = if string.contains("_") {
+                Cow::Owned(string.replace("_", ""))
+            } else {
+                Cow::Borrowed(string)
+            };
             if let Ok(float) = string.parse::<f64>() {
                 self.emit(TokenData::FloatLiteral(float), start);
             } else {
@@ -394,7 +403,7 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
         let start = self.location();
         let line: &str = self.consume_while(|c| c != '\n');
         let line: &str = line.strip_prefix(' ').unwrap_or(line);
-        self.emit(TokenData::LineComment(line.to_owned()), start);
+        self.emit(TokenData::LineComment(line), start);
     }
 
     fn parse_block_comment(&mut self) {
@@ -429,7 +438,7 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
 
         let end = self.location.byte - start.byte - 2;
         let comment = &code[..end as usize];
-        self.emit(TokenData::BlockComment(comment.to_owned()), start);
+        self.emit(TokenData::BlockComment(comment), start);
     }
 
     /// Reads up to the specified number of hexadecimal digits.
@@ -562,7 +571,7 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
             self.skip_achar(); // Consume end delimiter
         }
 
-        self.emit(TokenData::RawStringLiteral(string.to_owned()), start);
+        self.emit(TokenData::RawStringLiteral(string), start);
     }
 
     pub fn tokenize(&mut self) {
@@ -670,11 +679,11 @@ impl<'code, 'ctx> Lexer<'code, 'ctx> {
                     Some('=') => self.emit_two_chars(TokenData::AssignXor),
                     _ => self.emit_char(TokenData::BitXor),
                 },
-
                 _ => {
                     let start = self.location();
                     self.consume_char();
-                    return self.throw(format!("Unexpected character {char}"), start);
+                    self.throw(format!("Unexpected character {char}"), start);
+                    return;
                 },
             }
         }

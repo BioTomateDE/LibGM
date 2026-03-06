@@ -1,8 +1,3 @@
-use libgm::gml::highlevel::token::{
-    Keyword as K,
-    TokenData::{self, *},
-    lexer::tokenize_contextless,
-};
 use std::{
     any::Any,
     panic::{RefUnwindSafe, catch_unwind},
@@ -10,6 +5,12 @@ use std::{
     sync::Mutex,
     thread,
     time::{Duration, Instant},
+};
+
+use libgm::gml::highlevel::token::{
+    Keyword as K,
+    TokenData::{self, *},
+    lexer::tokenize_contextless,
 };
 
 static CURRENT_TEST: Mutex<Option<(&'static str, Instant)>> = Mutex::new(None);
@@ -46,12 +47,16 @@ trait Test: RefUnwindSafe {
 struct OkTest {
     name: &'static str,
     code: &'static str,
-    expected_tokens: Vec<TokenData>,
+    expected_tokens: Vec<TokenData<'static>>,
 }
 
 impl OkTest {
     #[must_use]
-    fn new(name: &'static str, code: &'static str, expected_tokens: Vec<TokenData>) -> Self {
+    fn new(
+        name: &'static str,
+        code: &'static str,
+        expected_tokens: Vec<TokenData<'static>>,
+    ) -> Self {
         Self { name, code, expected_tokens }
     }
 }
@@ -134,12 +139,12 @@ impl Test for ErrTest {
 }
 
 fn extract_panic_message(payload: Box<dyn Any + Send + 'static>) -> String {
-    if let Some(string) = payload.downcast_ref::<&str>() {
-        string.to_string()
-    } else if let Ok(string) = payload.downcast::<String>() {
-        *string
+    if let Some(&string_slice) = payload.downcast_ref::<&str>() {
+        string_slice.to_owned()
+    } else if let Ok(owned_string) = payload.downcast::<String>() {
+        *owned_string
     } else {
-        "Unknown panic value".to_string()
+        "Unknown panic payload".to_owned()
     }
 }
 
@@ -210,27 +215,27 @@ fn get_ok_tests() -> Vec<OkTest> {
         OkTest::new(
             "line comment",
             "  \r\r\t // hello world \r  \t",
-            vec![LineComment("hello world \r  \t".to_owned())],
+            vec![LineComment("hello world \r  \t")],
         ),
         OkTest::new(
             "line comment start",
             "// hello world \r  \t",
-            vec![LineComment("hello world \r  \t".to_owned())],
+            vec![LineComment("hello world \r  \t")],
         ),
         OkTest::new(
             "line comment newline",
             "// hello world \t  \r\n   \t ",
-            vec![LineComment("hello world \t  \r".to_owned())],
+            vec![LineComment("hello world \t  \r")],
         ),
         OkTest::new(
             "line comment empty",
             "\n//\n",
-            vec![LineComment("".to_owned())],
+            vec![LineComment("")],
         ),
         OkTest::new(
             "block comment empty",
             "/**/",
-            vec![BlockComment("".to_owned())],
+            vec![BlockComment("")],
         ),
         OkTest::new(
             "semicolon",
@@ -240,12 +245,12 @@ fn get_ok_tests() -> Vec<OkTest> {
         OkTest::new(
             "identifier",
             "hello",
-            vec![Identifier("hello".to_owned())],
+            vec![Identifier("hello")],
         ),
         OkTest::new(
             "identifier whitespace",
             "  \r\t hello \t  ",
-            vec![Identifier("hello".to_owned())],
+            vec![Identifier("hello")],
         ),
         OkTest::new(
             "int",
@@ -270,7 +275,7 @@ fn get_ok_tests() -> Vec<OkTest> {
         OkTest::new(
             "identifier underscores start digit",
             "__123_45",
-            vec![Identifier("__123_45".to_owned())],
+            vec![Identifier("__123_45")],
         ),
         OkTest::new(
             "float",
@@ -355,7 +360,7 @@ fn get_ok_tests() -> Vec<OkTest> {
         OkTest::new(
             "string verbatim",
             r#" @"this is a raw string format \n \t"; "#,
-            vec![RawStringLiteral("this is a raw string format \\n \\t".to_owned())],
+            vec![RawStringLiteral("this is a raw string format \\n \\t")],
         ),
         OkTest::new(
             "string single quotes",
@@ -365,7 +370,7 @@ fn get_ok_tests() -> Vec<OkTest> {
         OkTest::new(
             "string verbatim multiline",
             " @\"this verbatim string literal\nspans multiple \nlines\"; ",
-            vec![RawStringLiteral("this verbatim string literal\nspans multiple \nlines".to_owned())],
+            vec![RawStringLiteral("this verbatim string literal\nspans multiple \nlines")],
         ),
     ]
 }
