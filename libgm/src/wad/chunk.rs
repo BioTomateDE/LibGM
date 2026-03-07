@@ -31,17 +31,22 @@ impl ChunkName {
         Self { bytes }
     }
 
-    #[inline]
     pub fn from_bytes(bytes: [u8; 4]) -> Result<Self> {
         let valid: bool = bytes.iter().all(|&byte| validate_char(byte));
-        if !valid {
-            let hexdump = hexdump(&bytes);
+        if valid {
+            return Ok(Self { bytes });
+        }
+        if let Some(string) = try_display(&bytes) {
             bail!(
-                "Expected chunk name [{hexdump}] to only \
-                consist of uppercase ASCII letters and digits"
+                "Expected chunk name {string:?} to only consist \
+                of uppercase ASCII letters and digits"
             );
         }
-        Ok(Self { bytes })
+        let hexdump = hexdump(&bytes);
+        bail!(
+            "Expected chunk name [{hexdump}] to only consist \
+            of uppercase ASCII letters and digits"
+        );
     }
 
     #[inline]
@@ -54,7 +59,7 @@ impl ChunkName {
     #[must_use]
     pub const fn as_str(&self) -> &str {
         // Safe because we validated UTF-8 in constructor
-        unsafe { std::str::from_utf8_unchecked(&self.bytes) }
+        unsafe { str::from_utf8_unchecked(&self.bytes) }
     }
 }
 
@@ -73,4 +78,11 @@ impl std::fmt::Debug for ChunkName {
 #[inline]
 const fn validate_char(byte: u8) -> bool {
     matches!(byte, b'A'..=b'Z' | b'0'..=b'9')
+}
+
+fn try_display(chunk_name: &[u8; 4]) -> Option<&str> {
+    if chunk_name.iter().any(u8::is_ascii_control) {
+        return None;
+    }
+    str::from_utf8(chunk_name).ok()
 }
