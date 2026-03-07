@@ -1,10 +1,10 @@
 use crate::{
+    prelude::*,
     wad::{
         elements::{string::StringPlaceholder, texture_page_item::GMTexturePageItem},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    prelude::*,
 };
 
 impl DataBuilder<'_> {

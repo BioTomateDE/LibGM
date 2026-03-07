@@ -1,13 +1,13 @@
 use macros::num_enum;
 
 use crate::{
+    prelude::*,
+    util::init::num_enum_from,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, sprite::swf::Matrix33},
         serialize::builder::DataBuilder,
     },
-    prelude::*,
-    util::init::num_enum_from,
 };
 
 #[derive(Debug, Clone, PartialEq)]

@@ -7,9 +7,9 @@ mod tests;
 use std::path::PathBuf;
 
 use libgm::{
-    wad::{data::GMData, deserialize::parse_file, serialize::build_file},
     gml::assembly::disassemble_code,
     prelude::*,
+    wad::{data::GMData, deserialize::parse_file, serialize::build_file},
 };
 
 use crate::tests::Test;

@@ -1,13 +1,13 @@
 use macros::named_list_chunk;
 
 use crate::{
+    prelude::*,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, particle_emitter::GMParticleEmitter},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    prelude::*,
 };
 
 #[named_list_chunk("PSYS")]

@@ -1,11 +1,11 @@
 use crate::{
+    prelude::*,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, sound::GMSound},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    prelude::*,
 };
 
 #[derive(Debug, Clone, PartialEq)]

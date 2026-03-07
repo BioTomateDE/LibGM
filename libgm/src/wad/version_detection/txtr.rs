@@ -1,9 +1,9 @@
 use crate::{
+    prelude::*,
     wad::{
         deserialize::reader::DataReader, elements::embedded_texture::BZ2_QOI_HEADER,
         version::GMVersionReq,
     },
-    prelude::*,
 };
 
 pub fn check_2022_3(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {

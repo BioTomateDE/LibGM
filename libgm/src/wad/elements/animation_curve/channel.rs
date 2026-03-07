@@ -1,11 +1,9 @@
 use macros::num_enum;
 
 use crate::{
-    wad::{
-        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
-    },
     prelude::*,
     util::init::num_enum_from,
+    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
 };
 
 /// The curve type determines how points flow to each other in a channel.

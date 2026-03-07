@@ -1,11 +1,11 @@
 use crate::{
+    prelude::*,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, background::GMBackground, sprite::GMSprite},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    prelude::*,
 };
 
 #[derive(Debug, Clone, PartialEq)]

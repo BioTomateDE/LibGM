@@ -4,12 +4,12 @@ use std::{
 };
 
 use libgm::{
-    wad::data::GMData,
     gml::{
         assembly::{assemble_instructions, disassemble_code},
         instruction::Instruction,
     },
     prelude::*,
+    wad::data::GMData,
 };
 
 pub fn test(data: &GMData) -> Result<()> {

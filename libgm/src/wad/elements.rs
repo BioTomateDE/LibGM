@@ -4,12 +4,12 @@
 use std::collections::HashMap;
 
 use crate::{
+    prelude::*,
+    util::fmt::typename,
     wad::{
         chunk::ChunkName, deserialize::reader::DataReader, reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    prelude::*,
-    util::fmt::typename,
 };
 
 pub mod animation_curve;
@@ -421,9 +421,7 @@ pub(crate) fn validate_identifier(name: &str) -> Result<()> {
 macro_rules! element_stub {
     ($type:ty) => {
         impl $crate::wad::elements::GMElement for $type {
-            fn deserialize(
-                _: &mut $crate::wad::deserialize::reader::DataReader,
-            ) -> Result<Self> {
+            fn deserialize(_: &mut $crate::wad::deserialize::reader::DataReader) -> Result<Self> {
                 unimplemented!(
                     "Using {0}::deserialize is not supported, use {0}s::deserialize instead",
                     stringify!($type),

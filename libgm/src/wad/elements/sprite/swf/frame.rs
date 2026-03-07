@@ -1,4 +1,6 @@
 use crate::{
+    prelude::*,
+    util::init::vec_with_capacity,
     wad::{
         deserialize::reader::DataReader,
         elements::{
@@ -7,8 +9,6 @@ use crate::{
         },
         serialize::builder::DataBuilder,
     },
-    prelude::*,
-    util::init::vec_with_capacity,
 };
 
 #[derive(Debug, Clone, PartialEq)]

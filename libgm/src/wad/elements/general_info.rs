@@ -9,6 +9,7 @@ pub use function_classifications::FunctionClassifications;
 pub use gms2::GMS2Data;
 
 use crate::{
+    prelude::*,
     wad::{
         chunk::ChunkName,
         deserialize::reader::DataReader,
@@ -17,7 +18,6 @@ use crate::{
         serialize::builder::DataBuilder,
         version::{GMVersion, GMVersionReq, LTSBranch},
     },
-    prelude::*,
 };
 
 #[derive(Debug, Clone, PartialEq)]

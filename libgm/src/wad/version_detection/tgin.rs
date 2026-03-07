@@ -1,9 +1,9 @@
 use crate::{
+    prelude::*,
     wad::{
         deserialize::reader::DataReader,
         version::{GMVersionReq, LTSBranch::PostLTS},
     },
-    prelude::*,
 };
 
 pub fn check_2022_9(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {

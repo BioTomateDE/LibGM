@@ -1,4 +1,6 @@
 use crate::{
+    prelude::*,
+    util::bench::Stopwatch,
     wad::{
         chunk::ChunkName,
         data::Endianness,
@@ -6,8 +8,6 @@ use crate::{
         elements::{GMChunk, GMElement},
         version::GMVersion,
     },
-    prelude::*,
-    util::bench::Stopwatch,
 };
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

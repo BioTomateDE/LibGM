@@ -1,6 +1,7 @@
 use macros::named_list_chunk;
 
 use crate::{
+    prelude::*,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, audio_group::GMAudioGroup, embedded_audio::GMEmbeddedAudio},
@@ -8,7 +9,6 @@ use crate::{
         serialize::builder::DataBuilder,
         version::GMVersion,
     },
-    prelude::*,
 };
 
 #[named_list_chunk("SOND")]

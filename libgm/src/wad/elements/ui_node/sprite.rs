@@ -1,10 +1,10 @@
 use crate::{
+    prelude::*,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, room, ui_node::flex},
         serialize::builder::DataBuilder,
     },
-    prelude::*,
 };
 #[derive(Debug, Clone, PartialEq)]
 pub struct SpriteInstance {

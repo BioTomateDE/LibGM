@@ -1,6 +1,7 @@
 use macros::named_list_chunk;
 
 use crate::{
+    prelude::*,
     wad::{
         deserialize::reader::DataReader,
         elements::{
@@ -9,7 +10,6 @@ use crate::{
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    prelude::*,
 };
 
 /// The embedded images of the data file.

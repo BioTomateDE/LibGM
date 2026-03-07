@@ -1,12 +1,4 @@
 use crate::{
-    wad::{
-        data::GMData,
-        elements::{
-            GMListChunk, GMNamedElement, function::GMFunction, game_object::GMGameObject,
-            variable::GMVariable,
-        },
-        reference::GMRef,
-    },
     gml::{
         GMCode,
         instruction::{
@@ -16,6 +8,14 @@ use crate::{
     },
     prelude::*,
     util::fmt::typename,
+    wad::{
+        data::GMData,
+        elements::{
+            GMListChunk, GMNamedElement, function::GMFunction, game_object::GMGameObject,
+            variable::GMVariable,
+        },
+        reference::GMRef,
+    },
 };
 
 macro_rules! write {
@@ -33,7 +33,8 @@ fn slice_instructions_by_bytes(
     let mut index = 0;
     let mut offset = 0;
     while offset < start_offset {
-        let instr = instructions.get(index).ok_or_else(|| 
+        #[rustfmt::skip] // currently, there is an internal bug in rustfmt
+        let instr = instructions.get(index).ok_or_else(||
             format!("Given start byte offset {start_offset} is out of range in instructions with byte length {offset}"
         ))?;
         index += 1;
@@ -57,7 +58,7 @@ fn slice_instructions_by_bytes(
 /// the instructions in the specified parent code and slicing them.
 /// This is needed since the `instructions` field for child code entries is always empty.
 ///
-/// TODO: Maybe certain directives can be added in the future 
+/// TODO: Maybe certain directives can be added in the future
 /// to identify the code entry name as well as local and argument count.
 pub fn disassemble_code(code: &GMCode, gm_data: &GMData) -> Result<String> {
     if let Some(data) = &code.modern_data {
@@ -73,7 +74,10 @@ pub fn disassemble_code(code: &GMCode, gm_data: &GMData) -> Result<String> {
             let instrs = slice_instructions_by_bytes(&parent.instructions, data.execution_offset)?;
             return disassemble_instructions(instrs, gm_data);
         } else if data.execution_offset != 0 {
-            bail!("Root code entry has non-zero byte offset {}", data.execution_offset);
+            bail!(
+                "Root code entry has non-zero byte offset {}",
+                data.execution_offset
+            );
         }
     }
 

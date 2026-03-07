@@ -15,9 +15,9 @@ use std::path::Path;
 use builder::DataBuilder;
 
 use crate::{
-    wad::{chunk::ChunkName, data::GMData, elements::string::GMStrings},
     prelude::*,
     util::{bench::Stopwatch, panic},
+    wad::{chunk::ChunkName, data::GMData, elements::string::GMStrings},
 };
 
 /// Builds a GameMaker data file and return a byte buffer.

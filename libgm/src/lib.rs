@@ -161,9 +161,9 @@ mod util;
 
 // Public modules
 pub mod error;
-pub mod wad;
 pub mod gml;
 pub mod prelude;
+pub mod wad;
 
 // Convenience re-exports
 pub use error::{Error, Result};

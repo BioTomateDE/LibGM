@@ -1,11 +1,11 @@
 use crate::{
+    prelude::*,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, game_object::GMGameObject},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    prelude::*,
 };
 #[derive(Debug, Clone, PartialEq)]
 pub struct Instance {

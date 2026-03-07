@@ -6,10 +6,8 @@ use std::{
 };
 
 use crate::{
-    wad::{
-        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
-    },
     prelude::*,
+    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
 };
 
 /// Different GameMaker release branches. LTS has some but not all features of equivalent newer versions.

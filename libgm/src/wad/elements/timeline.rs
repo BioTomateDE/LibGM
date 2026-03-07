@@ -1,13 +1,13 @@
 use macros::named_list_chunk;
 
 use crate::{
+    prelude::*,
+    util::init::vec_with_capacity,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, game_object},
         serialize::builder::DataBuilder,
     },
-    prelude::*,
-    util::init::vec_with_capacity,
 };
 
 #[named_list_chunk("TMLN")]

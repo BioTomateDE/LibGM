@@ -1,14 +1,14 @@
 use std::ops::{Deref, DerefMut};
 
 use crate::{
+    prelude::*,
+    util::init::vec_with_capacity,
     wad::{
         chunk::ChunkName,
         deserialize::reader::DataReader,
         elements::{GMChunk, GMElement},
         serialize::builder::DataBuilder,
     },
-    prelude::*,
-    util::init::vec_with_capacity,
 };
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

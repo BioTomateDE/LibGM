@@ -1,12 +1,12 @@
 use std::borrow::Cow;
 
 use crate::{
-    wad::elements::function::GMFunction,
     gml::{
         Instruction,
         instruction::{CodeVariable, DataType},
     },
     prelude::GMRef,
+    wad::elements::function::GMFunction,
 };
 
 /// A value to push to the stack.

@@ -14,14 +14,14 @@ pub use tile::Tile;
 pub use view::View;
 
 use crate::{
+    gml::GMCode,
+    prelude::*,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, sequence::GMSequence},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    gml::GMCode,
-    prelude::*,
 };
 
 #[named_list_chunk("ROOM")]

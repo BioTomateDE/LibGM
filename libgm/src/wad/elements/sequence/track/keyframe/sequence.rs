@@ -1,11 +1,11 @@
 use crate::{
+    prelude::*,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, sequence::GMSequence},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    prelude::*,
 };
 #[derive(Debug, Clone, PartialEq)]
 pub struct Sequence {

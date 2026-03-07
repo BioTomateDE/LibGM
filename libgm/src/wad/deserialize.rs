@@ -12,6 +12,8 @@ pub(super) mod resources;
 use std::path::Path;
 
 use crate::{
+    prelude::*,
+    util::bench::Stopwatch,
     wad::{
         data::{Endianness, GMData},
         deserialize::{
@@ -57,8 +59,6 @@ use crate::{
         version::{GMVersion, LTSBranch},
         version_detection::detect_gamemaker_version,
     },
-    prelude::*,
-    util::bench::Stopwatch,
 };
 
 const ERR_TOO_BIG: &str =

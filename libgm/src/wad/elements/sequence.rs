@@ -7,11 +7,9 @@ pub use track::Track;
 use track::keyframe::{self, BroadcastMessage, Moment};
 
 use crate::{
-    wad::{
-        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
-    },
     prelude::*,
     util::init::{hashmap_with_capacity, num_enum_from},
+    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
 };
 
 /// This struct belong to the chunk SEQN.

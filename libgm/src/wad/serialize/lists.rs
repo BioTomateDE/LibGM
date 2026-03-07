@@ -1,7 +1,7 @@
 use crate::{
-    wad::{elements::GMElement, serialize::builder::DataBuilder},
     prelude::*,
     util::fmt::typename,
+    wad::{elements::GMElement, serialize::builder::DataBuilder},
 };
 
 impl DataBuilder<'_> {

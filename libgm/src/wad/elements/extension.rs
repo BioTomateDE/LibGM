@@ -7,6 +7,7 @@ pub use function::Function;
 use macros::num_enum;
 
 use crate::{
+    prelude::*,
     wad::{
         chunk::ChunkName,
         deserialize::reader::DataReader,
@@ -14,7 +15,6 @@ use crate::{
         serialize::builder::DataBuilder,
         version::GMVersion,
     },
-    prelude::*,
 };
 
 #[derive(Debug, Clone, Default, PartialEq)]

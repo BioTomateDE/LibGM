@@ -1,12 +1,12 @@
 use crate::{
+    prelude::*,
+    util::assert,
     wad::{
         chunk::ChunkName,
         deserialize::reader::DataReader,
         elements::{GMChunk, GMElement},
         serialize::builder::DataBuilder,
     },
-    prelude::*,
-    util::assert,
 };
 
 const ALIGNMENT: u32 = 4;

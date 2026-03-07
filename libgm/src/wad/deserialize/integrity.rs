@@ -1,6 +1,6 @@
 use std::fmt::{Display, UpperHex};
 
-use crate::{wad::deserialize::reader::DataReader, gml::instruction::DataType, prelude::*};
+use crate::{gml::instruction::DataType, prelude::*, wad::deserialize::reader::DataReader};
 
 impl DataReader<'_> {
     /// Ensures the reader is at the specified position.

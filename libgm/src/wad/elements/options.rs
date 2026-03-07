@@ -7,6 +7,7 @@ pub use constant::Constant;
 pub use flags::Flags;
 
 use crate::{
+    prelude::*,
     wad::{
         chunk::ChunkName,
         deserialize::reader::DataReader,
@@ -14,7 +15,6 @@ use crate::{
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    prelude::*,
 };
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

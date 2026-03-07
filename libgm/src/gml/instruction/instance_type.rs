@@ -1,8 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-use crate::{
-    wad::elements::game_object::GMGameObject, gml::instruction::VariableType, prelude::*,
-};
+use crate::{gml::instruction::VariableType, prelude::*, wad::elements::game_object::GMGameObject};
 
 /// The scope/owner of a variable.
 ///

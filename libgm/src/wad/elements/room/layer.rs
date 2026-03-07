@@ -12,11 +12,9 @@ use macros::num_enum;
 pub use tiles::Tiles;
 
 use crate::{
-    wad::{
-        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
-    },
     prelude::*,
     util::init::num_enum_from,
+    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
 };
 
 #[derive(Debug, Clone, PartialEq)]

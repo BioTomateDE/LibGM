@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
 use crate::{
+    gml::instruction::InstanceType,
+    prelude::*,
+    util::assert,
     wad::{
         chunk::ChunkName,
         data::Endianness,
@@ -15,9 +18,6 @@ use crate::{
         reference::GMRef,
         version::{GMVersion, GMVersionReq},
     },
-    gml::instruction::InstanceType,
-    prelude::*,
-    util::assert,
 };
 
 #[derive(Debug)]

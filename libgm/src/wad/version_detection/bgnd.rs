@@ -1,9 +1,9 @@
 use crate::{
+    prelude::*,
     wad::{
         deserialize::reader::DataReader,
         version::{GMVersionReq, LTSBranch},
     },
-    prelude::*,
 };
 
 /// Go through each background, and check to see if it ends at

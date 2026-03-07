@@ -3,11 +3,9 @@ use std::fmt;
 use macros::num_enum;
 
 use crate::{
-    wad::{
-        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
-    },
     prelude::*,
     util::init::num_enum_from,
+    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
 };
 
 #[derive(Debug, Clone, PartialEq)]

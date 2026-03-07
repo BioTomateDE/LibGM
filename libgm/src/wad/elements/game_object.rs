@@ -4,14 +4,14 @@ pub use event::{Event, Events};
 use macros::{named_list_chunk, num_enum};
 
 use crate::{
+    prelude::*,
+    util::init::{num_enum_from, vec_with_capacity},
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, element_stub, sprite::GMSprite},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    prelude::*,
-    util::init::{num_enum_from, vec_with_capacity},
 };
 
 #[named_list_chunk("OBJT")]

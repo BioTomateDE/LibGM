@@ -1,10 +1,10 @@
 use crate::{
+    gml::GMCode,
+    prelude::*,
     wad::{
         deserialize::reader::DataReader, elements::GMElement, reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    gml::GMCode,
-    prelude::*,
 };
 
 #[derive(Debug, Clone, PartialEq)]

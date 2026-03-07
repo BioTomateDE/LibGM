@@ -1,14 +1,14 @@
 use macros::named_list_chunk;
 
 use crate::{
+    gml::GMCode,
+    prelude::*,
     wad::{
         deserialize::{reader::DataReader, resources::resource_opt_from_i32},
         elements::GMElement,
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    gml::GMCode,
-    prelude::*,
 };
 
 #[named_list_chunk("SCPT")]

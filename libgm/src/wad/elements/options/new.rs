@@ -1,4 +1,5 @@
 use crate::{
+    prelude::*,
     wad::{
         deserialize::reader::DataReader,
         elements::{
@@ -9,7 +10,6 @@ use crate::{
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    prelude::*,
 };
 
 pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {

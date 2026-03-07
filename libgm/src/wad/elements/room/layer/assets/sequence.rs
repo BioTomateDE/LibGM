@@ -1,4 +1,6 @@
 use crate::{
+    prelude::*,
+    util::init::num_enum_from,
     wad::{
         deserialize::reader::DataReader,
         elements::{
@@ -8,8 +10,6 @@ use crate::{
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    prelude::*,
-    util::init::num_enum_from,
 };
 
 #[derive(Debug, Clone, PartialEq)]

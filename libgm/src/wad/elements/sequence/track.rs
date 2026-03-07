@@ -4,15 +4,15 @@ pub use keyframe::{Keyframe, Keyframes};
 use macros::num_enum;
 
 use crate::{
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{GMElement, animation_curve::GMAnimationCurve},
-        serialize::builder::DataBuilder,
-    },
     prelude::*,
     util::{
         bitfield::bitfield_struct,
         init::{num_enum_from, vec_with_capacity},
+    },
+    wad::{
+        deserialize::reader::DataReader,
+        elements::{GMElement, animation_curve::GMAnimationCurve},
+        serialize::builder::DataBuilder,
     },
 };
 

@@ -1,6 +1,6 @@
 use crate::{
-    wad::{deserialize::reader::DataReader, version::GMVersionReq},
     prelude::*,
+    wad::{deserialize::reader::DataReader, version::GMVersionReq},
 };
 
 pub fn check_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {

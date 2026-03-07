@@ -1,12 +1,12 @@
 use crate::{
+    prelude::*,
+    util::init::num_enum_from,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, sequence::SpeedType, sprite::GMSprite},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    prelude::*,
-    util::init::num_enum_from,
 };
 
 #[derive(Debug, Clone, PartialEq)]
