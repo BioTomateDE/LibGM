@@ -36,9 +36,7 @@ impl Data {
         let ctx = || format!("reading weird string for Spine data with size {size}");
         let mut blob: Vec<u8> = reader.read_bytes_dyn(size).with_context(ctx)?.to_vec();
         Self::decode_spine_blob(&mut blob);
-        let string: String = String::from_utf8(blob)
-            .map_err(|e| e.to_string())
-            .with_context(ctx)?;
+        let string: String = String::from_utf8(blob).with_context_src(ctx)?;
         Ok(string)
     }
 

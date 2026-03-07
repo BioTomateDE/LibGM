@@ -162,8 +162,7 @@ impl ParsingOptions {
         let path = data_file_path.as_ref();
 
         let meta = std::fs::metadata(path)
-            .map_err(|e| e.to_string())
-            .with_context(|| format!("reading metadata of data file {}", path.display()))?;
+            .with_context_src(|| format!("reading metadata of data file {}", path.display()))?;
 
         if meta.len() >= i32::MAX as u64 {
             bail!("{ERR_TOO_BIG}");
@@ -171,8 +170,7 @@ impl ParsingOptions {
 
         let stopwatch = Stopwatch::start();
         let raw_data: Vec<u8> = std::fs::read(path)
-            .map_err(|e| e.to_string())
-            .with_context(|| format!("reading data file {}", path.display()))?;
+            .with_context_src(|| format!("reading data file {}", path.display()))?;
         log::trace!("Reading data file bytes took {stopwatch}");
 
         let mut gm_data = self

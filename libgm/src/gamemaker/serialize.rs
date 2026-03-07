@@ -36,9 +36,7 @@ pub fn build_file(gm_data: &GMData, path: impl AsRef<Path>) -> Result<()> {
         .with_context(|| format!("building GameMaker data file {}", path.display()))?;
 
     let stopwatch = Stopwatch::start();
-    std::fs::write(path, raw_data)
-        .map_err(|e| e.to_string())
-        .context("writing data file")?;
+    std::fs::write(path, raw_data).context_src("writing data file")?;
     log::trace!("Writing data file took {stopwatch}");
     Ok(())
 }

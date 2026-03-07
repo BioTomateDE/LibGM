@@ -25,8 +25,7 @@ pub fn decompress(compressed_bzip2_data: &[u8]) -> Result<Vec<u8>> {
     let mut decompressed_data: Vec<u8> = Vec::new();
     decoder
         .read_to_end(&mut decompressed_data)
-        .map_err(|e| e.to_string())
-        .context("decoding BZip2 stream")?;
+        .context_src("decoding BZip2 stream")?;
     Ok(decompressed_data)
 }
 
@@ -46,8 +45,7 @@ pub fn compress(data: &[u8]) -> Result<Vec<u8>> {
     let mut compressed_data: Vec<u8> = Vec::new();
     encoder
         .read_to_end(&mut compressed_data)
-        .map_err(|e| e.to_string())
-        .context("decoding BZip2 stream")?;
+        .context_src("decoding BZip2 stream")?;
     Ok(compressed_data)
 }
 

@@ -204,15 +204,13 @@ impl<'a> DataReader<'a> {
             .with_context(|| format!("reading literal string with length {length}"))?
             .to_vec();
 
-        let string: String = String::from_utf8(bytes)
-            .map_err(|e| e.to_string())
-            .with_context(|| {
-                format!(
-                    "parsing literal UTF-8 string with length {} at position {}",
-                    length,
-                    self.cur_pos - length,
-                )
-            })?;
+        let string: String = String::from_utf8(bytes).with_context_src(|| {
+            format!(
+                "parsing literal UTF-8 string with length {} at position {}",
+                length,
+                self.cur_pos - length,
+            )
+        })?;
 
         Ok(string)
     }
