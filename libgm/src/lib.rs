@@ -34,9 +34,9 @@
 //!
 //! If you have any questions or concerns about my code
 //! or documentation, please contact me via either:
-//! - Discord DM: `@farming.simulator`
 //! - [GitHub Issue](https://github.com/BioTomateDE/LibGM/issues/new)
 //! - [Email](mailto:latuskati+cratesio@gmail.com?subject=%5BLibGM%5D%20Your%20code%20is%20fucking%20stupid%2C%20explain%20ts%20plz)
+//! - Discord DM: `@biotomate.de`
 //!
 //! ## Panicking
 //! This library *should* **never panic**.

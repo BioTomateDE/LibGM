@@ -5,8 +5,7 @@ use crate::prelude::*;
 #[cfg(feature = "png-image")]
 pub fn decode(raw_png_data: &[u8]) -> Result<DynamicImage> {
     image::load_from_memory_with_format(raw_png_data, image::ImageFormat::Png)
-        .map_err(|e| e.to_string())
-        .context("decoding PNG Image")
+        .context_src("decoding PNG Image")
 }
 
 #[cfg(not(feature = "png-image"))]
@@ -20,8 +19,7 @@ pub fn encode(dyn_img: &DynamicImage) -> Result<Vec<u8>> {
     let mut cursor = std::io::Cursor::new(&mut png_data);
     dyn_img
         .write_to(&mut cursor, image::ImageFormat::Png)
-        .map_err(|e| e.to_string())
-        .context("encoding PNG Image")?;
+        .context_src("encoding PNG Image")?;
     Ok(png_data)
 }
 

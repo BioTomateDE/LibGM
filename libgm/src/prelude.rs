@@ -3,7 +3,7 @@
 //! You can import it by using `use libgm::prelude::*;`.
 
 pub use crate::{
-    error::{Context, Error, Result, bail, err},
+    error::{Context, ContextSrc, Error, Result, bail, err},
     gamemaker::{
         data::GMData,
         elements::{GMChunk, GMListChunk, GMNamedElement, GMNamedListChunk},
