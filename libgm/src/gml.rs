@@ -1,7 +1,7 @@
 //! Everything related to GML (GameMaker language) bytecode.
 //!
 //! TODO(doc): explain more.
-//! For now, just visit [`crate::gamemaker`] sorry lol
+//! For now, just visit [`crate::wad`] sorry lol
 
 pub mod analysis;
 pub mod assembly;

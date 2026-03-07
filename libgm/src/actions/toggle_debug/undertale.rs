@@ -2,7 +2,7 @@
 //! 2015-09-15 to eternity
 
 use crate::{
-    gamemaker::elements::script::GMScript,
+    wad::elements::script::GMScript,
     gml::{GMCode, instruction::InstanceType},
     prelude::*,
 };

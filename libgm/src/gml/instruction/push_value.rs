@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use crate::{
-    gamemaker::elements::function::GMFunction,
+    wad::elements::function::GMFunction,
     gml::{
         Instruction,
         instruction::{CodeVariable, DataType},

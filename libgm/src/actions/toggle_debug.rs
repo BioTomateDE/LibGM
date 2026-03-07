@@ -7,7 +7,7 @@ mod demo_prelts;
 mod undertale;
 
 use crate::{
-    gamemaker::elements::variable::GMVariable,
+    wad::elements::variable::GMVariable,
     gml::{
         GMCode,
         instruction::{InstanceType, Instruction},

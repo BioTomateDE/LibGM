@@ -4,7 +4,7 @@ mod reader;
 use std::{fmt::Display, str::FromStr};
 
 use crate::{
-    gamemaker::{
+    wad::{
         data::GMData,
         elements::{
             GMNamedListChunk,

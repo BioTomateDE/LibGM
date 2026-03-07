@@ -4,7 +4,7 @@ use std::{
 };
 
 use libgm::{
-    gamemaker::data::GMData,
+    wad::data::GMData,
     gml::{
         assembly::{assemble_instructions, disassemble_code},
         instruction::Instruction,

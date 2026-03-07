@@ -1,5 +1,5 @@
 use crate::{
-    gamemaker::elements::variable::GMVariable,
+    wad::elements::variable::GMVariable,
     gml::instruction::{InstanceType, VariableType},
     prelude::GMRef,
 };
