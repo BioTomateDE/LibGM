@@ -56,12 +56,14 @@ pub trait GMElement: Sized {
     ///
     /// Implementations should read the exact binary representation of this element
     /// and return a fully constructed instance.
+    #[doc(hidden)]
     fn deserialize(reader: &mut DataReader) -> Result<Self>;
 
     /// Serializes this element to the current position of the builder.
     ///
     /// Implementations should write the exact binary representation of this element
     /// in the format expected by the GameMaker runtime.
+    #[doc(hidden)]
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()>;
 
     /// Handles padding bytes that may appear before this element in pointer lists.
@@ -69,6 +71,7 @@ pub trait GMElement: Sized {
     /// This is called before [`GMElement::deserialize`] when reading from structured data.
     /// The default implementation does nothing - override if your element requires
     /// alignment padding in specific contexts.
+    #[doc(hidden)]
     fn deserialize_pre_padding(reader: &mut DataReader) -> Result<()> {
         Ok(())
     }
@@ -78,6 +81,7 @@ pub trait GMElement: Sized {
     /// This is called before [`GMElement::serialize`] when writing to structured data.
     /// The default implementation does nothing - override if your element requires
     /// alignment padding in specific contexts.
+    #[doc(hidden)]
     fn serialize_pre_padding(&self, builder: &mut DataBuilder) -> Result<()> {
         Ok(())
     }
@@ -87,6 +91,7 @@ pub trait GMElement: Sized {
     /// This is called after [`GMElement::deserialize`] when reading from structured data.
     /// The `is_last` parameter indicates if this is the final element in a list,
     /// which may affect padding requirements.
+    #[doc(hidden)]
     fn deserialize_post_padding(reader: &mut DataReader, is_last: bool) -> Result<()> {
         Ok(())
     }
@@ -96,6 +101,7 @@ pub trait GMElement: Sized {
     /// This is called after [`GMElement::serialize`] when writing to structured data.
     /// The `is_last` parameter indicates if this is the final element in a list,
     /// which may affect padding requirements.
+    #[doc(hidden)]
     fn serialize_post_padding(&self, builder: &mut DataBuilder, is_last: bool) -> Result<()> {
         Ok(())
     }
