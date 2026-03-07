@@ -5,9 +5,9 @@ use std::{borrow::Cow, convert::TryInto};
 use image::{DynamicImage, ImageBuffer, Rgba};
 
 use crate::{
-    wad::{data::Endianness, serialize::builder::DataBuilder},
     prelude::*,
     util::fmt::hexdump_range,
+    wad::{data::Endianness, serialize::builder::DataBuilder},
 };
 
 const QOI_INDEX: u8 = 0x00;
@@ -32,11 +32,11 @@ pub fn decode(bytes: &[u8]) -> Result<DynamicImage> {
     decode_(bytes).context("decoding QOI image")
 }
 
-pub fn build(image: &DynamicImage, builder: &mut DataBuilder) -> Result<()> {
-    encode_(image, &mut builder.raw_data).context("encoding QOI image")
+pub fn build(image: &DynamicImage, builder: &mut DataBuilder) {
+    encode_(image, &mut builder.raw_data);
 }
 
-pub fn encode(image: &DynamicImage) -> Result<Vec<u8>> {
+pub fn encode(image: &DynamicImage) -> Vec<u8> {
     /// Maximum chunk size according to the QOI spec <https://qoiformat.org/qoi-specification.pdf>
     const MAX_CHUNK_SIZE: usize = 5;
 
@@ -44,8 +44,8 @@ pub fn encode(image: &DynamicImage) -> Result<Vec<u8>> {
     let height = image.height() as usize;
     let cap = width * height * MAX_CHUNK_SIZE;
     let mut buffer = Vec::with_capacity(cap);
-    encode_(image, &mut buffer).context("encoding QOI image")?;
-    Ok(buffer)
+    encode_(image, &mut buffer);
+    buffer
 }
 
 // QOI implementations
@@ -175,7 +175,7 @@ fn decode_(bytes: &[u8]) -> Result<DynamicImage> {
 }
 
 #[allow(clippy::many_single_char_names)] // go fuck urself clippy
-fn encode_(image: &DynamicImage, buffer: &mut Vec<u8>) -> Result<()> {
+fn encode_(image: &DynamicImage, buffer: &mut Vec<u8>) {
     let width = image.width() as u16;
     let height = image.height() as u16;
     let image = image
@@ -204,7 +204,7 @@ fn encode_(image: &DynamicImage, buffer: &mut Vec<u8>) -> Result<()> {
         let b: u8 = px[2];
         let a: u8 = px[3];
 
-        let is_last: bool = it.next().is_none();
+        let is_last: bool = it.peek().is_none();
         let is_same: bool = px == px_prev;
         px_prev = px;
 
@@ -215,7 +215,7 @@ fn encode_(image: &DynamicImage, buffer: &mut Vec<u8>) -> Result<()> {
         if run > 0 && (run == 0x2020 || !is_same || is_last) {
             if run < 33 {
                 run -= 1;
-                buffer.push(QOI_RUN_8 | (run) as u8);
+                buffer.push(QOI_RUN_8 | run as u8);
             } else {
                 run -= 33;
                 buffer.push(QOI_RUN_16 | (run >> 8) as u8);
@@ -242,16 +242,16 @@ fn encode_(image: &DynamicImage, buffer: &mut Vec<u8>) -> Result<()> {
             if v.iter().all(|&x| x > -17 && x < 16) {
                 // if alpha is zero and r, g, b are in (-3, 2)
                 if va == 0 && v[..3].iter().all(|&x| x > -3 && x < 2) {
-                    buffer.push(QOI_DIFF_8 | (vr << 4 & 48) | (vg << 2 & 12) | (vb & 3));
+                    buffer.push(QOI_DIFF_8 | (vr << 4 & 0x30) | (vg << 2 & 0x0C) | (vb & 3));
                 }
                 // if alpha is zero and g, b are in (-9, 8)
                 else if va == 0 && v[1..3].iter().all(|&x| x > -9 && x < 8) {
                     buffer.push(QOI_DIFF_16 | (vr & 31));
-                    buffer.push((vg << 4 & 240) | (vb & 15));
+                    buffer.push((vg << 4 & 0xF0) | (vb & 15));
                 } else {
                     buffer.push(QOI_DIFF_24 | (vr >> 1 & 15));
-                    buffer.push((vr << 7 & 128) | (vg << 2 & 124) | (vb >> 3 & 3));
-                    buffer.push((vb << 5 & 224) | (va & 31));
+                    buffer.push((vr << 7 & 0x80) | (vg << 2 & 0x7C) | (vb >> 3 & 3));
+                    buffer.push((vb << 5 & 0xE0) | (va & 31));
                 }
             } else {
                 let mut mask = 0;
@@ -287,8 +287,6 @@ fn encode_(image: &DynamicImage, buffer: &mut Vec<u8>) -> Result<()> {
     let length: usize = buffer.len() - start_pos - 12;
     let range = start_pos + 8..start_pos + 12;
     buffer[range].copy_from_slice(&(length as u32).to_le_bytes());
-
-    Ok(())
 }
 
 fn pixel_diff(curr: [u8; 4], prev: [u8; 4]) -> [i16; 4] {

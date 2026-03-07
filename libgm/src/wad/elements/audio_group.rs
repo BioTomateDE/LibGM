@@ -1,10 +1,8 @@
 use macros::named_list_chunk;
 
 use crate::{
-    wad::{
-        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
-    },
     prelude::*,
+    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
 };
 
 /// Audio Groups allow you to manage a set sound entries easier.

@@ -47,10 +47,10 @@ fn slice_instructions_by_bytes(
     Ok(&instructions[index..])
 }
 
-/// Disassembles  a code entry's instructions.
+/// Disassembles a code entry's instructions.
 ///
 /// This function mostly exists for convenience since it is short to write
-/// `disassemble_code(code, data)` instead of `disassemble_instructions(&code.instructions, data).]
+/// `disassemble_code(code, data)` instead of `disassemble_instructions(&code.instructions, data)`.
 ///
 /// However, it *does* have one behavioral difference:
 /// It correctly disassembles child code entries by looking up

@@ -1,6 +1,6 @@
 //! # What are pointers
 //! When building GameMaker data files, you frequently need to write "pointers".
-//! "Pointer" in the context of GameMaker internals: a 32 bit integer that indicates
+//! "Pointer" in the context of GameMaker internals: a 32-bit integer that indicates
 //! the absolute data position at which a resource is located.
 //! For example, strings are (almost) always stored as pointers, allowing the runner
 //! to do a simple addition to get to the UTF-8 string:
@@ -36,7 +36,7 @@
 //! * Abstraction: when I rewrote this library with proper traits ([`GMElement`]),
 //!   I lost context of GameMaker lists; the index is no longer known when (de)serializing a list element.
 //! * Maintainability: Every pointer somewhere down the line needs an enum variant
-//!   with N stacked indices. etc
+//!   with N stacked indices. etc.
 //! * Performance: Using memory addresses is faster than these weird enums;
 //!   it's literally just `lea ebx, [eax+FIELD_OFFSET]` in x86.
 //!
@@ -62,8 +62,8 @@
 //! You could use both a struct and a field of struct as a pointer placeholder.
 //! If you use both, their addresses could be the same:
 //! `struct_mem_address + field_offset = field_mem_address` could backfire if `offset` is zero.
-//! You need to be careful here: Rust does not gurantee struct layout by default
-//! and may reorder fields to optimise space.
+//! You need to be careful here: Rust does not guarantee struct layout by default
+//! and may reorder fields to optimize space.
 //!
 //! If you encounter a struct that is used as a pointer placeholder and one of its
 //! fields is too:

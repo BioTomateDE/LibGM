@@ -42,7 +42,7 @@ impl GMCode {
             return Ok(Vec::new());
         }
 
-        let mut children: Vec<GMRef<GMCode>> = Vec::new();
+        let mut children: Vec<GMRef<Self>> = Vec::new();
 
         for (idx, code_entry) in data.codes.iter().enumerate() {
             let Some(parent) = code_entry.parent() else {
@@ -73,7 +73,7 @@ impl GMCode {
             return Vec::new();
         }
 
-        let mut children: Vec<GMRef<GMCode>> = Vec::new();
+        let mut children: Vec<GMRef<Self>> = Vec::new();
 
         for (idx, code_entry) in data.codes.iter().enumerate() {
             if code_entry.parent() == Some(code_ref) {

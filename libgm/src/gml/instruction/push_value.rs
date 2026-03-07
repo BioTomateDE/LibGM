@@ -12,7 +12,7 @@ use crate::{
 /// A value to push to the stack.
 /// Used in [`Push`] instructions.
 ///
-/// [`Push`]: crate::gml::Instruction::Push
+/// [`Push`]: Instruction::Push
 #[derive(Debug, Clone, PartialEq)]
 pub enum PushValue {
     Int16(i16),

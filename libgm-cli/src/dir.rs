@@ -8,7 +8,7 @@ use libgm::prelude::*;
 /// Fetch all contained GameMaker data files within a directory.
 ///
 /// This operation is NOT recursive and will only search for files directly
-/// within the directory (no sub-directories!).
+/// within the directory (no subdirectories!).
 ///
 /// Only files with a `.win`, `.unx`, `.ios` or `.droid` extension are considered
 /// GameMaker data files. Other files will be skipped.
