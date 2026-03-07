@@ -25,11 +25,9 @@ pub use string::String;
 pub use text::Text;
 
 use crate::{
-    wad::{
-        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
-    },
     prelude::*,
     util::fmt::typename,
+    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
 };
 
 #[derive(Debug, Clone, PartialEq)]

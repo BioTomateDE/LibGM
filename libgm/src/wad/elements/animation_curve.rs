@@ -4,10 +4,8 @@ pub use channel::Channel;
 use macros::named_list_chunk;
 
 use crate::{
-    wad::{
-        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
-    },
     prelude::*,
+    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
 };
 
 /// GMS 2.3+

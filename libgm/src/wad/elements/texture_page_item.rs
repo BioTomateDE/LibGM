@@ -1,13 +1,13 @@
 use macros::list_chunk;
 
 use crate::{
+    prelude::*,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, embedded_texture::GMEmbeddedTexture},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    prelude::*,
 };
 
 #[list_chunk("TPAG")]

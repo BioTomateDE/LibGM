@@ -4,6 +4,15 @@ mod reader;
 use std::{fmt::Display, str::FromStr};
 
 use crate::{
+    gml::{
+        assembly::assembler::{data_types::DataTypes, reader::Reader},
+        instruction::{
+            AssetReference, CodeVariable, ComparisonType, DataType, InstanceType, Instruction,
+            PushValue, VariableType,
+        },
+    },
+    prelude::*,
+    util::fmt::typename,
     wad::{
         data::GMData,
         elements::{
@@ -14,15 +23,6 @@ use crate::{
         },
         reference::GMRef,
     },
-    gml::{
-        assembly::assembler::{data_types::DataTypes, reader::Reader},
-        instruction::{
-            AssetReference, CodeVariable, ComparisonType, DataType, InstanceType, Instruction,
-            PushValue, VariableType,
-        },
-    },
-    prelude::*,
-    util::fmt::typename,
 };
 
 /// Assembles multiple instructions separated by newline.

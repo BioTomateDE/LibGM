@@ -9,13 +9,13 @@ pub use sprite::SpriteInstance;
 pub use text_item::TextItemInstance;
 
 use crate::{
+    prelude::*,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, room::tile::Tile},
         serialize::builder::DataBuilder,
         version::LTSBranch,
     },
-    prelude::*,
 };
 
 #[derive(Debug, Clone, PartialEq)]

@@ -1,14 +1,14 @@
 use std::cmp::min;
 
 use crate::{
+    prelude::*,
+    util::init::vec_with_capacity,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, background::GMBackground},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    prelude::*,
-    util::init::vec_with_capacity,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

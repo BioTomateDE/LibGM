@@ -1,6 +1,9 @@
 use macros::list_chunk;
 
 use crate::{
+    gml::instruction::InstanceType,
+    prelude::*,
+    util::init::vec_with_capacity,
     wad::{
         deserialize::{chunk::ChunkBounds, reader::DataReader},
         elements::{
@@ -10,9 +13,6 @@ use crate::{
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    gml::instruction::InstanceType,
-    prelude::*,
-    util::init::vec_with_capacity,
 };
 
 #[list_chunk("VARI")]

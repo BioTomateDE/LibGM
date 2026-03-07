@@ -1,10 +1,10 @@
 use crate::{
+    prelude::*,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, room},
         serialize::builder::DataBuilder,
     },
-    prelude::*,
 };
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EffectLayer {

@@ -14,6 +14,7 @@ mod tgin;
 mod txtr;
 
 use crate::{
+    prelude::*,
     wad::{
         chunk::ChunkName,
         deserialize::{
@@ -25,7 +26,6 @@ use crate::{
             LTSBranch::{LTS, PostLTS, PreLTS},
         },
     },
-    prelude::*,
 };
 
 /// If `check_fn` can detect multiple versions, `required_version` should be set to its _lowest_ required version

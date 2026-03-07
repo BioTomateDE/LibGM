@@ -3,13 +3,13 @@
 //! 2025-06-05 to now [2026-01-04]
 
 use crate::{
-    wad::elements::variable::GMVariable,
     gml::{
         GMCode,
         assembly::assemble_instructions,
         instruction::{InstanceType, Instruction},
     },
     prelude::*,
+    wad::elements::variable::GMVariable,
 };
 
 // === Instruction Layout - Before ===

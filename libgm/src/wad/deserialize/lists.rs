@@ -1,7 +1,7 @@
 use crate::{
-    wad::{deserialize::reader::DataReader, elements::GMElement},
     prelude::*,
     util::{fmt::typename, init::vec_with_capacity},
+    wad::{deserialize::reader::DataReader, elements::GMElement},
 };
 
 impl DataReader<'_> {

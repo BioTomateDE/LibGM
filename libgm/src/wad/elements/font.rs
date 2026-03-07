@@ -6,6 +6,7 @@ pub use kerning::Kerning;
 use macros::named_list_chunk;
 
 use crate::{
+    prelude::*,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, texture_page_item::GMTexturePageItem},
@@ -13,7 +14,6 @@ use crate::{
         serialize::builder::DataBuilder,
         version::LTSBranch,
     },
-    prelude::*,
 };
 
 #[named_list_chunk("FONT")]

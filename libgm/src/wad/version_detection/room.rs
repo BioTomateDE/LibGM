@@ -1,9 +1,7 @@
 use crate::{
-    wad::{
-        deserialize::reader::DataReader, elements::room::layer::Type, version::GMVersionReq,
-    },
     prelude::*,
     util::init::num_enum_from,
+    wad::{deserialize::reader::DataReader, elements::room::layer::Type, version::GMVersionReq},
 };
 
 pub fn check_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {

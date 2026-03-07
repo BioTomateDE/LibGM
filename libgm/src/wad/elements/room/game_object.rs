@@ -1,12 +1,12 @@
 use crate::{
+    gml::GMCode,
+    prelude::*,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, game_object::GMGameObject},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    gml::GMCode,
-    prelude::*,
 };
 
 #[derive(Debug, Clone, PartialEq)]

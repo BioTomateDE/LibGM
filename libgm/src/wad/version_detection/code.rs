@@ -1,8 +1,8 @@
 use crate::{
-    wad::{deserialize::reader::DataReader, version::GMVersionReq},
     gml::{instruction::DataType, opcodes},
     prelude::*,
     util::init::vec_with_capacity,
+    wad::{deserialize::reader::DataReader, version::GMVersionReq},
 };
 
 pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {

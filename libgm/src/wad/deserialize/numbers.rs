@@ -1,6 +1,6 @@
 use crate::{
-    wad::{data::Endianness, deserialize::reader::DataReader},
     prelude::*,
+    wad::{data::Endianness, deserialize::reader::DataReader},
 };
 
 macro_rules! read_int_fn {

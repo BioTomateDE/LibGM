@@ -72,6 +72,5 @@ pub fn typename<T>() -> &'static str {
     {
         return &ty[index..];
     }
-    ty.strip_prefix("libgm::wad::elements::")
-        .unwrap_or(ty)
+    ty.strip_prefix("libgm::wad::elements::").unwrap_or(ty)
 }

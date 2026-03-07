@@ -1,9 +1,9 @@
 use crate::{
+    prelude::*,
     wad::{
         chunk::ChunkName, deserialize::reader::DataReader, elements::GMElement,
         serialize::builder::DataBuilder,
     },
-    prelude::*,
 };
 
 #[derive(Debug, Clone, Default, PartialEq)]

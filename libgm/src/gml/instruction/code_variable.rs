@@ -1,7 +1,7 @@
 use crate::{
-    wad::elements::variable::GMVariable,
     gml::instruction::{InstanceType, VariableType},
     prelude::GMRef,
+    wad::elements::variable::GMVariable,
 };
 
 /// A variable reference in an instruction.

@@ -7,12 +7,12 @@ mod demo_prelts;
 mod undertale;
 
 use crate::{
-    wad::elements::variable::GMVariable,
     gml::{
         GMCode,
         instruction::{InstanceType, Instruction},
     },
     prelude::*,
+    wad::elements::variable::GMVariable,
 };
 
 impl GMData {

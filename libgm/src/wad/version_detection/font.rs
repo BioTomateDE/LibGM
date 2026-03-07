@@ -1,10 +1,10 @@
 use crate::{
+    prelude::*,
+    util::init::vec_with_capacity,
     wad::{
         deserialize::reader::DataReader,
         version::{GMVersionReq, LTSBranch::PostLTS},
     },
-    prelude::*,
-    util::init::vec_with_capacity,
 };
 
 pub fn check_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {

@@ -4,13 +4,13 @@ pub use code_local::{GMCodeLocal, GMCodeLocals};
 use macros::named_list_chunk;
 
 use crate::{
+    prelude::*,
+    util::init::vec_with_capacity,
     wad::{
         deserialize::{chunk::ChunkBounds, reader::DataReader},
         elements::{GMElement, element_stub},
         serialize::builder::DataBuilder,
     },
-    prelude::*,
-    util::init::vec_with_capacity,
 };
 
 #[named_list_chunk("FUNC")]

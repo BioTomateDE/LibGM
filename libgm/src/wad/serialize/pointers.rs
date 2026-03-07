@@ -75,9 +75,9 @@
 use std::collections::HashMap;
 
 use crate::{
-    wad::serialize::builder::DataBuilder,
     prelude::*,
     util::{bench::Stopwatch, fmt::typename},
+    wad::serialize::builder::DataBuilder,
 };
 
 impl DataBuilder<'_> {

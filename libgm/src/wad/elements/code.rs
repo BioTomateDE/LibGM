@@ -3,12 +3,6 @@ use std::collections::HashMap;
 use macros::named_list_chunk;
 
 use crate::{
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{GMElement, element_stub, function::GMFunction, variable::GMVariable},
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
     gml::{
         GMCode, ModernData,
         instruction::{
@@ -19,6 +13,12 @@ use crate::{
     },
     prelude::*,
     util::init::{num_enum_from, vec_with_capacity},
+    wad::{
+        deserialize::reader::DataReader,
+        elements::{GMElement, element_stub, function::GMFunction, variable::GMVariable},
+        reference::GMRef,
+        serialize::builder::DataBuilder,
+    },
 };
 
 #[named_list_chunk("CODE")]

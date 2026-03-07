@@ -1,10 +1,10 @@
 use crate::{
+    prelude::*,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, font::kerning::Kerning},
         serialize::builder::DataBuilder,
     },
-    prelude::*,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

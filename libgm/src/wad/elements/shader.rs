@@ -3,11 +3,9 @@ use core::fmt;
 use macros::{named_list_chunk, num_enum};
 
 use crate::{
-    wad::{
-        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
-    },
     prelude::*,
     util::init::{num_enum_from, vec_with_capacity},
+    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
 };
 
 #[named_list_chunk("SHDR")]

@@ -3,9 +3,9 @@
 //! 2025-06-05 to now [2026-01-04]
 
 use crate::{
-    wad::elements::script::GMScript,
     gml::{GMCode, assembly::assemble_instructions, instruction::Instruction},
     prelude::*,
+    wad::elements::script::GMScript,
 };
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {

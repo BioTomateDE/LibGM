@@ -2,11 +2,9 @@ pub mod fill;
 pub mod line;
 
 use crate::{
-    wad::{
-        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
-    },
     prelude::*,
     util::init::vec_with_capacity,
+    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
 };
 
 #[derive(Debug, Clone, PartialEq)]

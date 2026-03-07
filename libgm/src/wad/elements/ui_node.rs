@@ -16,11 +16,9 @@ pub use sprite::SpriteInstance;
 pub use text_item::TextItemInstance;
 
 use crate::{
-    wad::{
-        deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder,
-    },
     prelude::*,
     util::assert,
+    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
 };
 
 #[list_chunk("UILR")]

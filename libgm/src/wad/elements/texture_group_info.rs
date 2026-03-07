@@ -1,6 +1,8 @@
 use macros::{named_list_chunk, num_enum};
 
 use crate::{
+    prelude::*,
+    util::init::num_enum_from,
     wad::{
         deserialize::reader::DataReader,
         elements::{
@@ -12,8 +14,6 @@ use crate::{
         serialize::builder::DataBuilder,
         version::LTSBranch,
     },
-    prelude::*,
-    util::init::num_enum_from,
 };
 
 #[named_list_chunk("TGIN", name_exception)]

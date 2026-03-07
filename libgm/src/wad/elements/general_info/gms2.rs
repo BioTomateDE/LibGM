@@ -1,10 +1,10 @@
 use crate::{
+    prelude::*,
+    util::rng::DotnetRng,
     wad::{
         deserialize::reader::DataReader, elements::general_info::GMGeneralInfo,
         serialize::builder::DataBuilder,
     },
-    prelude::*,
-    util::rng::DotnetRng,
 };
 
 #[derive(Debug, Clone, PartialEq)]

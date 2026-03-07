@@ -6,14 +6,14 @@ pub use img::{Format, GMImage};
 use macros::list_chunk;
 
 use crate::{
+    prelude::*,
+    util::fmt::hexdump,
     wad::{
         data::Endianness,
         deserialize::reader::DataReader,
         elements::{GMElement, element_stub, embedded_texture::img::BZip2QoiHeader},
         serialize::builder::DataBuilder,
     },
-    prelude::*,
-    util::fmt::hexdump,
 };
 
 pub(crate) const PNG_HEADER: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];

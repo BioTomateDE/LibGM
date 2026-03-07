@@ -8,6 +8,11 @@ use macros::{named_list_chunk, num_enum};
 pub use nine_slice::NineSlice;
 
 use crate::{
+    prelude::*,
+    util::{
+        assert,
+        init::{num_enum_from, vec_with_capacity},
+    },
     wad::{
         deserialize::reader::DataReader,
         elements::{
@@ -17,11 +22,6 @@ use crate::{
         },
         reference::GMRef,
         serialize::builder::DataBuilder,
-    },
-    prelude::*,
-    util::{
-        assert,
-        init::{num_enum_from, vec_with_capacity},
     },
 };
 

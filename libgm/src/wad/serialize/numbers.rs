@@ -1,6 +1,6 @@
 use crate::{
-    wad::{data::Endianness, serialize::builder::DataBuilder},
     prelude::*,
+    wad::{data::Endianness, serialize::builder::DataBuilder},
 };
 
 macro_rules! write_int_fn {

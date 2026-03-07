@@ -1,14 +1,14 @@
 use macros::{named_list_chunk, num_enum};
 
 use crate::{
+    prelude::*,
+    util::init::num_enum_from,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, sprite::GMSprite},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
-    prelude::*,
-    util::init::num_enum_from,
 };
 
 #[named_list_chunk("PSEM")]

@@ -2,9 +2,9 @@
 //! 2015-09-15 to eternity
 
 use crate::{
-    wad::elements::script::GMScript,
     gml::{GMCode, instruction::InstanceType},
     prelude::*,
+    wad::elements::script::GMScript,
 };
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {

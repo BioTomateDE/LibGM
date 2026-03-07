@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
 use crate::{
+    gml::instruction::VariableType,
+    prelude::*,
     wad::{
         data::{Endianness, GMData},
         elements::string::StringPlaceholder,
         version::GMVersionReq,
     },
-    gml::instruction::VariableType,
-    prelude::*,
 };
 
 // The Default value should never be read.

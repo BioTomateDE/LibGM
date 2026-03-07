@@ -3,6 +3,7 @@
 use std::path::PathBuf;
 
 use crate::{
+    prelude::*,
     wad::elements::{
         animation_curve::GMAnimationCurves, audio_group::GMAudioGroups, background::GMBackgrounds,
         code::GMCodes, embedded_audio::GMEmbeddedAudios, embedded_image::GMEmbeddedImages,
@@ -16,7 +17,6 @@ use crate::{
         texture_group_info::GMTextureGroupInfos, texture_page_item::GMTexturePageItems,
         timeline::GMTimelines, ui_node::GMRootUINodes, validate_names, variable::GMVariables,
     },
-    prelude::*,
 };
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]

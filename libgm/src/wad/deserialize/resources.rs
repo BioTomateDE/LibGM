@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
 use crate::{
+    prelude::*,
+    util::fmt::typename,
     wad::{
         deserialize::reader::DataReader,
         elements::{GMElement, texture_page_item::GMTexturePageItem},
         reference::GMRef,
     },
-    prelude::*,
-    util::fmt::typename,
 };
 
 impl DataReader<'_> {

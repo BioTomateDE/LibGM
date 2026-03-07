@@ -1,12 +1,12 @@
 use crate::{
+    prelude::*,
+    util::bench::Stopwatch,
     wad::{
         chunk::ChunkName,
         data::Endianness,
         elements::GMChunk,
         serialize::builder::{DataBuilder, LastChunk},
     },
-    prelude::*,
-    util::bench::Stopwatch,
 };
 
 impl DataBuilder<'_> {
