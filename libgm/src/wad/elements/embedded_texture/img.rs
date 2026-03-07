@@ -8,8 +8,8 @@ pub use bz2::BZip2QoiHeader;
 use image::DynamicImage;
 
 use crate::{
-    wad::{elements::embedded_texture::BZ2_QOI_HEADER, serialize::builder::DataBuilder},
     prelude::*,
+    wad::{elements::embedded_texture::BZ2_QOI_HEADER, serialize::builder::DataBuilder},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -111,7 +111,7 @@ impl GMImage {
     }
 
     fn change_format_(&mut self, format: Format) -> Result<()> {
-        // Special case when converting between Bz2Qoi and Qoi (optimisation)
+        // Special case when converting between Bz2Qoi and Qoi (optimization)
         match (&self.0, format) {
             (Img::Qoi(raw_data), Format::Bz2Qoi) => {
                 let qoi_header = qoi::read_header(raw_data)?;
@@ -134,7 +134,7 @@ impl GMImage {
         let new_image = match format {
             Format::Dyn => Img::Dyn(dyn_img.into_owned()),
             Format::Png => Img::Png(png::encode(&dyn_img)?),
-            Format::Qoi => Img::Qoi(qoi::encode(&dyn_img)?),
+            Format::Qoi => Img::Qoi(qoi::encode(&dyn_img)),
             Format::Bz2Qoi => {
                 let (data, header) = bz2::encode_image(&dyn_img)?;
                 Img::Bz2Qoi(data, header)
@@ -210,7 +210,7 @@ fn write_dyn_img(dyn_img: &DynamicImage, builder: &mut DataBuilder) -> Result<()
     }
 
     // Fallback to raw QOI
-    qoi::build(dyn_img, builder)?;
+    qoi::build(dyn_img, builder);
 
     Ok(())
 }

@@ -352,7 +352,7 @@ pub enum Instruction {
     ///    is a raw [`InstanceType`] value stored in the stack?
     /// 3) `argument_count` arguments are popped.
     ///
-    /// For more information on calling functions, see [`Instruction::Call].
+    /// For more information on calling functions, see [`Instruction::Call`].
     CallVariable { argument_count: u16 },
 
     /// Verifies an array index is within proper
@@ -383,7 +383,7 @@ pub enum Instruction {
     /// 2) Pops array reference from stack ([`DataType::Variable`])
     /// 3) Pushes a new array reference from the passed-in array at the desired index
     ///
-    /// This instruction is used for for all multidimensional
+    /// This instruction is used for all multidimensional
     /// index pushes from the second through the second to last.
     /// The final/last index operation will be done using [`Instruction::PushArrayFinal`].
     PushArrayContainer,
@@ -400,7 +400,7 @@ pub enum Instruction {
     /// Pushes a boolean value to the stack, indicating whether static initialization
     /// has already occurred for this function (true), or otherwise false.
     ///
-    /// This is typically used in conjuntion with [`Instruction::SetStaticInitialized`] and branch instructions.
+    /// This is typically used in conjunction with [`Instruction::SetStaticInitialized`] and branch instructions.
     HasStaticInitialized,
 
     /// Marks the current function to no longer be able to enter its own static initialization.
@@ -409,19 +409,19 @@ pub enum Instruction {
     /// depending on whether `AllowReentrantStatic` is enabled by a game's developer
     /// (enabled by default before GameMaker 2024.11; disabled by default otherwise).
     ///
-    /// This is typically used in conjuntion with [`Instruction::HasStaticInitialized`] and branch instructions.
+    /// This is typically used in conjunction with [`Instruction::HasStaticInitialized`] and branch instructions.
     SetStaticInitialized,
 
     /// Keeps track of an array reference temporarily.
     /// Used in multidimensional array compound assignment statements
-    /// ([`Instruction::PushArrayFinal`] etc).
+    /// ([`Instruction::PushArrayFinal`] etc.).
     ///
     /// Presumed to be used for garbage collection purposes.
     SaveArrayReference,
 
     /// Restores a previously-tracked array reference.
     /// Used in multidimensional array compound assignment statements
-    /// ([`Instruction::PushArrayFinal`] etc).
+    /// ([`Instruction::PushArrayFinal`] etc.).
     ///
     /// Presumed to be used for garbage collection purposes.
     RestoreArrayReference,
@@ -523,7 +523,7 @@ impl Instruction {
     ///
     /// For binary operations, this will be RHS (the right hand side).
     ///
-    /// NOTE: Right now, it's kind of arbitary which instructions' data types are
+    /// NOTE: Right now, it's kind of arbitrary which instructions' data types are
     /// deemed "relevant enough" to return them and which don't really belong
     /// (does return: `PushLocal` - Variable, does not return: `PopSwap` - Int16).
     /// This will be changed in the future **if I get feedback pls**.

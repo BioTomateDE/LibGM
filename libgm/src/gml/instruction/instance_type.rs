@@ -9,13 +9,13 @@ use crate::{
 /// The most notable ones (and less confusing ones) are:
 /// * `self`: represents the current game object instance
 /// * `global`: globally shared across entire game
-/// * `local`: local to this code entry execution, destroyed afterwards
+/// * `local`: local to this code entry execution, destroyed afterward
 /// * `builtin`: special GameMaker variables such as `x` or `image_speed` (self scope)
 ///
 /// These instance types are used in two ways:
 /// The first is in a variable reference (such as in a push or pop instruction).
 /// The second is in the declaration of all variables in the variable chunk `VARI` (WAD 15+).
-/// In here, not all instance types are available and they may also be represented slightly differently:
+/// In here, not all instance types are available, and they may also be represented slightly differently:
 /// There are no references to specific game objects or room instances.
 /// Also, certain things like  `other`, `builtin` or `stacktop` are instead listed as `self`.
 /// You can convert a variable reference instance type to a `VARI` one using [`InstanceType::as_vari`].
@@ -46,7 +46,7 @@ pub enum InstanceType {
     /// This corresponds to the game object instance in event action code.
     /// This `self` context is also kept when scripts (user created functions) are called.
     ///
-    /// In room creation code and other contexts, i dont really know what this represents.
+    /// In room creation code and other contexts, I don't really know what this represents.
     ///
     /// (should this be default?)
     #[default]

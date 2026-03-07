@@ -28,7 +28,7 @@
 //! * start with a lowercase verb in the "-ing" form
 //! * contain no punctuation at the end
 //!
-//! Examples: `.context("reading config file")` or `.with_context(|| format!("aquiring metadata of {file:?}"))`.
+//! Examples: `.context("reading config file")` or `.with_context(|| format!("acquiring metadata of {file:?}"))`.
 //!
 //! Your root error messages (such as when using `bail!`) should:
 //! * start with an uppercase letter
@@ -116,7 +116,7 @@ impl Error {
         self.chain_with(">")
     }
 
-    /// Prints out the error chain with the unicode character `↳` as an arrow.
+    /// Prints out the error chain with the Unicode character `↳` as an arrow.
     ///
     /// For more information about printing chains, see [`Self::chain_with`].
     #[must_use]
@@ -163,7 +163,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub trait Context<T> {
     /// Adds context to this [`Result`].
     /// This pushes a string to the end of the error context chain
-    /// in case of [`Result::Err`] and is a no-op in case of [`Result::Ok`].
+    /// in case of [`Err`] and is a no-op in case of [`Ok`].
     ///
     /// **Avoid allocating `String`s before the error actually occurred.**
     /// In that case, use [`Context::with_context`] for lazy evaluation instead.
@@ -175,7 +175,7 @@ pub trait Context<T> {
     /// meaning the closure only executes if an error actually occurred.
     ///
     /// This makes it more suited for `format!` calls since it avoids a heap allocation
-    /// in the common [`Result::Ok`] case.
+    /// in the common [`Ok`] case.
     ///
     /// For more information, see [`Context::context`].
     fn with_context(self, f: impl FnOnce() -> String) -> Result<T>;

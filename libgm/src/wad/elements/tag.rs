@@ -42,6 +42,7 @@ impl GMElement for GMTags {
 
 impl GMTags {
     /// Attempts to get asset tags by the given id.
+    #[must_use]
     pub fn by_id(&self, id: i32) -> Option<&Vec<String>> {
         self.asset_tags
             .iter()
@@ -50,7 +51,7 @@ impl GMTags {
     }
 
     /// Attempts to get asset tags by the given id.
-    /// but mutably ykyk
+    #[must_use]
     pub fn by_id_mut(&mut self, id: i32) -> Option<&mut Vec<String>> {
         self.asset_tags
             .iter_mut()

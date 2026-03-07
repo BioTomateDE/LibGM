@@ -61,7 +61,7 @@ impl AssetReference {
         })
     }
 
-    /// Constructs a new asset reference based on the old (pre 2024.4) serialized form.
+    /// Constructs a new asset reference based on the old (pre-2024.4) serialized form.
     ///
     /// Note that function references have to be constructed separately.
     pub fn parse_old(raw: u32) -> Result<Self> {
@@ -111,7 +111,7 @@ impl AssetReference {
         }
     }
 
-    /// The old (pre 2024.4) asset type of this asset reference, expressed as a number.
+    /// The old (pre-2024.4) asset type of this asset reference, expressed as a number.
     ///
     /// NOTE: Functions return the `Script` asset type since they don't "actually have one".
     #[must_use]
@@ -164,7 +164,7 @@ impl AssetReference {
         id & (ty << 24)
     }
 
-    /// The old (pre 2024.4) serialized form of this asset reference.
+    /// The old (pre-2024.4) serialized form of this asset reference.
     #[must_use]
     pub const fn build_old(self) -> u32 {
         let id = self.asset_id() & 0xFF_FFFF;

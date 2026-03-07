@@ -248,13 +248,13 @@ impl GMElement for GMShader {
 #[num_enum(u32)]
 pub enum Type {
     GlslEs = 1,
-    GLSL = 2,
-    HLSL9 = 3,
-    HLSL11 = 4,
+    Glsl = 2,
+    Hlsl9 = 3,
+    Hlsl11 = 4,
     /// PSSL is a shading language used only in PS4, based on HLSL11.
-    PSSL = 5,
+    Pssl = 5,
     /// Cg stands for "C for graphics" made by NVIDIA and used in PSVita and PS3 (they have their own variants of Cg), based on HLSL9.
-    CgPsvita = 6,
+    CgPsVita = 6,
     /// Cg stands for "C for graphics" made by NVIDIA and used in PSVita and PS3 (they have their own variants of Cg), based on HLSL9.
     CgPs3 = 7,
 }

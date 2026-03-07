@@ -97,7 +97,7 @@ let data: GMData = parser.parse_bytes(&buffer)?;
 ## Crate features
 
 | Feature                 | Default  | Dependencies |
-| ----------------------- | -------- | ------------ |
+|-------------------------|----------|--------------|
 | catch-panic             | enabled  |              |
 | check-integrity         | enabled  |              |
 | game-creation-timestamp | disabled | chrono       |
@@ -110,7 +110,7 @@ let data: GMData = parser.parse_bytes(&buffer)?;
   These checks may still be demoted to a warning using `ParsingOptions`.
   Some checks regarding panic safety or memory allocation are always enabled.
 - `game-creation-timestamp` exposes the `creation-timestamp` field in `GMGeneralInfo`.
-  Otherwise, it will be stored as an i64 iternally.
+  Otherwise, it will be stored as an i64 internally.
 - `bzip2-image` enables deserialization of BZip2+QOI encoded texture pages.
   If `*_dynamic_image` is called on a `GMImage` that contains Bzip2-Qoi
   data and this feature is disabled, an error will be returned.
@@ -128,7 +128,7 @@ Discord Server who helped me along the way, especially
 ## Licencing
 
 This project is licenced under the
-[GNU Public Licence v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html) (GPL-3).
+[GNU Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html) (GPL-3).
 
 ## Contributing
 

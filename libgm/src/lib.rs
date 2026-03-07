@@ -100,6 +100,8 @@
 //
 //
 #![warn(clippy::cargo)]
+#![warn(clippy::nursery)]
+// #![warn(clippy::pedantic)]
 //
 // I sometimes need more than 3 bools in a struct???
 // This lint is only relevant for people
@@ -165,16 +167,11 @@ pub mod prelude;
 
 // Convenience re-exports
 pub use error::{Error, Result};
-pub use wad::{
-    deserialize::{ParsingOptions, parse_bytes, parse_file},
-    serialize::{build_bytes, build_file},
-};
 
 // === Some TODOs for the entire library ===
 //
 // When Rust finally drops Macros 2.0:
-// * Migrate all `macro_rules!` to `macro`s.
-// * Export `bail!` macro as well as other useful macros to library users.
+// * Migrate all `macro_rules!` to `macro`s and remove exporting from crate root.
 // Reference: https://github.com/rust-lang/rust/issues/39412
 //
 // When most traits (`Into`, `TryInto`, `Iterator`, `PartialEq`) are const-stable:
