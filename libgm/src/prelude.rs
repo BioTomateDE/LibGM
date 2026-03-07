@@ -4,7 +4,7 @@
 
 pub use crate::{
     error::{Context, ContextSrc, Error, Result, bail, err},
-    gamemaker::{
+    wad::{
         data::GMData,
         elements::{GMChunk, GMListChunk, GMNamedElement, GMNamedListChunk},
         reference::GMRef,

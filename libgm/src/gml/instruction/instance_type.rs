@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 
 use crate::{
-    gamemaker::elements::game_object::GMGameObject, gml::instruction::VariableType, prelude::*,
+    wad::elements::game_object::GMGameObject, gml::instruction::VariableType, prelude::*,
 };
 
 /// The scope/owner of a variable.

@@ -8,7 +8,7 @@
 //!
 //! ```no_run
 //! use libgm::prelude::*;
-//! use libgm::gamemaker::elements::game_object::GMGameObject;
+//! use libgm::wad::elements::game_object::GMGameObject;
 //!
 //! // Load data file
 //! let mut data: GMData = libgm::parse_file("./data.win").unwrap();
@@ -24,7 +24,7 @@
 //!
 //! If you need more control, you can use `parse_bytes`, `build_bytes` or `ParsingOptions`.
 //!
-//! For more information on the GameMaker specifics, check out the [`gamemaker`] module.
+//! For more information on the GameMaker specifics, check out the [`wad`] module.
 //!
 //! ## Disclaimer
 //! This library is still in testing stages
@@ -159,13 +159,13 @@ mod util;
 
 // Public modules
 pub mod error;
-pub mod gamemaker;
+pub mod wad;
 pub mod gml;
 pub mod prelude;
 
 // Convenience re-exports
 pub use error::{Error, Result};
-pub use gamemaker::{
+pub use wad::{
     deserialize::{ParsingOptions, parse_bytes, parse_file},
     serialize::{build_bytes, build_file},
 };

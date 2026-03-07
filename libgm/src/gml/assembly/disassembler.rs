@@ -1,5 +1,5 @@
 use crate::{
-    gamemaker::{
+    wad::{
         data::GMData,
         elements::{
             GMListChunk, GMNamedElement, function::GMFunction, game_object::GMGameObject,

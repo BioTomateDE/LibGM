@@ -1,5 +1,5 @@
 use crate::{
-    gamemaker::elements::{
+    wad::elements::{
         animation_curve::GMAnimationCurve, background::GMBackground, font::GMFont,
         function::GMFunction, game_object::GMGameObject, particle_system::GMParticleSystem,
         path::GMPath, room::GMRoom, script::GMScript, sequence::GMSequence, shader::GMShader,

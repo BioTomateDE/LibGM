@@ -2,7 +2,7 @@ mod assembler;
 
 use clap::ValueEnum;
 use libgm::{
-    gamemaker::{data::GMData, deserialize::parse_bytes, serialize::build_bytes},
+    wad::{data::GMData, deserialize::parse_bytes, serialize::build_bytes},
     prelude::*,
 };
 
