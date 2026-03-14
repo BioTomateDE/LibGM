@@ -64,6 +64,7 @@ pub struct GMSprite {
     pub special_fields: Option<Special>,
 }
 
+#[allow(clippy::too_many_lines)] // TODO: these functions fucking suck
 impl GMElement for GMSprite {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: String = reader.read_gm_string()?;

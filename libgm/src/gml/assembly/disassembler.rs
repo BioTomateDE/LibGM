@@ -106,6 +106,7 @@ pub fn disassemble_instruction(instruction: &Instruction, gm_data: &GMData) -> R
     Ok(buffer)
 }
 
+#[allow(clippy::too_many_lines)]
 /// Disassembles a single instruction into one line, appending the assembly string to a buffer.
 pub fn disassemble_instruction_to_buffer(
     buffer: &mut String,

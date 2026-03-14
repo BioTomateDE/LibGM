@@ -53,14 +53,14 @@ impl GMElement for UINode {
         let type_id = reader.read_i32()?;
         let data_pointer = reader.read_u32()?;
 
-        let mut children: Vec<Self> = Vec::new();
-        if matches!(type_id, 0 | 1) {
+        let children: Vec<Self> = if matches!(type_id, 0 | 1) {
             // Container; Layer or FlexPanel
-            children = reader.read_pointer_list()?;
+            reader.read_pointer_list()?
         } else {
             let child_count = reader.read_u32()?;
             assert::int(child_count, 0, "Non-container UI Node's child count")?;
-        }
+            Vec::new()
+        };
 
         reader.assert_pos(data_pointer, "UI Node data")?;
 

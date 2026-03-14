@@ -261,6 +261,7 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
     Ok(reader)
 }
 
+#[allow(clippy::too_many_lines)]
 /// Parse GameMaker data
 fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
     let stopwatch = Stopwatch::start();

@@ -125,12 +125,11 @@ fn parse_occurrence_chain(
         .get("CODE")
         .ok_or("Chunk CODE not set while parsing function occurrences")?;
 
-    let first_extra_offset: u32;
-    if reader.general_info.is_version_at_least((2, 3)) {
-        first_extra_offset = 0;
+    let first_extra_offset: u32 = if reader.general_info.is_version_at_least((2, 3)) {
+        0
     } else {
-        first_extra_offset = 4;
-    }
+        4
+    };
     let mut occurrence_pos = first_occurrence_pos + first_extra_offset;
     let mut occurrences: Vec<u32> = vec_with_capacity(occurrence_count)?;
     let mut offset: i32;

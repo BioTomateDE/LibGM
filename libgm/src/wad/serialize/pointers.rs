@@ -105,6 +105,9 @@ impl DataBuilder<'_> {
             .push((placeholder_position, memory_address));
     }
 
+    // The element fields store `Option<T>`, so passing `Option<&T>` instead
+    // of `&Option<T>` would require using `.as_ref()` in every call.
+    #[allow(clippy::ref_option)]
     /// Optionally writes a pointer to the given [`Option`] value.
     /// - If [`Some`], writes a pointer to the contained value using [`Self::write_pointer`].
     /// - If [`None`], writes a null pointer (0) using [`Self::write_i32`].

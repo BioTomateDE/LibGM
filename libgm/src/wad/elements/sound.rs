@@ -117,15 +117,14 @@ impl GMElement for GMSound {
         let volume = reader.read_f32()?;
         let pitch = reader.read_f32()?;
 
-        let audio_group: GMRef<GMAudioGroup>;
-        if reader.general_info.wad_version >= 14 {
-            // Only if flags.regular (doesn't exist for now)
-            audio_group = reader.read_resource_by_id()?;
+        let audio_group: GMRef<GMAudioGroup> = if reader.general_info.wad_version >= 14 {
+            // (condition also only if flags.regular which doesn't currently exist)
+            reader.read_resource_by_id()?
         } else {
             let preload = reader.read_bool32().context("reading preload")?;
             reader.assert_bool(preload, true, "Preload")?;
-            audio_group = GMRef::new(get_builtin_sound_group_id(&reader.general_info.version));
-        }
+            GMRef::new(get_builtin_sound_group_id(&reader.general_info.version))
+        };
 
         let audio_file: Option<GMRef<GMEmbeddedAudio>> = reader.read_resource_by_id_opt()?;
         let audio_length: Option<f32> = reader.deserialize_if_gm_version((2024, 6))?;
@@ -173,7 +172,7 @@ impl GMElement for GMSound {
     }
 }
 
-#[allow(clippy::bool_to_int_with_if)] // Lol this is a coincidence
+#[allow(clippy::bool_to_int_with_if)] // lol this is a coincidence
 /// The exact versions may be inaccurate.
 fn get_builtin_sound_group_id(gm_version: &GMVersion) -> u32 {
     // ver >= 1.0.0.1250 || (ver >= 1.0.0.161 && ver < 1.0.0.1000)
