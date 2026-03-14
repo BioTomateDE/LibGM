@@ -362,11 +362,11 @@ fn write_push_instruction(value: &PushValue, buffer: &mut String, gm_data: &GMDa
     Ok(())
 }
 
-#[inline]
-fn asset_get_name<'a, T: GMNamedElement + 'a, C: GMListChunk<Element = T> + 'a>(
-    chunk: &'a C,
-    gm_ref: GMRef<T>,
-) -> Result<&'a String> {
+fn asset_get_name<'a, T, C>(chunk: &'a C, gm_ref: GMRef<T>) -> Result<&'a String>
+where
+    T: GMNamedElement + 'a,
+    C: GMNamedListChunk<Element = T>,
+{
     const CTX: &str = "resolving asset reference for PushReference Instruction";
 
     let element: &'a T = chunk.by_ref(gm_ref).context(CTX)?;
@@ -377,7 +377,6 @@ fn asset_get_name<'a, T: GMNamedElement + 'a, C: GMListChunk<Element = T> + 'a>(
         .context(CTX)?;
 
     let name: &'a String = element.name();
-
     Ok(name)
 }
 

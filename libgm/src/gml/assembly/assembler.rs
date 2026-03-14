@@ -1,7 +1,7 @@
 mod data_types;
 mod reader;
 
-use std::{fmt::Display, str::FromStr};
+use std::{borrow::Cow, fmt::Display, str::FromStr};
 
 use crate::{
     gml::{
@@ -33,7 +33,8 @@ use crate::{
 ///       can they be implemented without screwing performance?
 ///       also have to consider string literals in push.s instructions)
 pub fn assemble_instructions(assembly: &str, gm_data: &GMData) -> Result<Vec<Instruction>> {
-    let mut instructions: Vec<Instruction> = Vec::new();
+    let heuristic = assembly.lines().count();
+    let mut instructions: Vec<Instruction> = Vec::with_capacity(heuristic);
 
     for line in assembly.lines() {
         let line = line.trim();
@@ -52,14 +53,14 @@ pub fn assemble_instructions(assembly: &str, gm_data: &GMData) -> Result<Vec<Ins
 /// Assembles a single instruction on one line.
 pub fn assemble_instruction(line: &str, gm_data: &GMData) -> Result<Instruction> {
     let mut reader = Reader::new(line.trim());
-    let mnemonic: String;
+    let mnemonic: &str;
 
     let opcode_end: Option<usize> = reader.line.find(['.', ' ']);
     if let Some(index) = opcode_end {
-        mnemonic = reader.consume_to(index).to_string();
+        mnemonic = reader.consume_to(index);
     } else {
         // Opcode takes up entire line
-        mnemonic = reader.clear().to_string();
+        mnemonic = reader.clear();
     }
 
     let mut types = DataTypes::new();
@@ -80,7 +81,7 @@ pub fn assemble_instruction(line: &str, gm_data: &GMData) -> Result<Instruction>
         _ => bail!("Expected space; found remaining string {line:?}"),
     }
 
-    let instruction = parse_instruction(&mut reader, &mnemonic, types, gm_data)?;
+    let instruction = parse_instruction(&mut reader, mnemonic, types, gm_data)?;
 
     if !reader.is_empty() {
         bail!(
@@ -392,8 +393,7 @@ fn parse_call(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
 
     let argument_count: u16 = if let Some(str) = argc_str.strip_prefix("argc=") {
         str.parse()
-            .ok()
-            .ok_or_else(|| format!("Invalid argument count {str}"))?
+            .map_err(|e| format!("Invalid argument count {str}: {e}"))?
     } else {
         bail!(
             "Expected \"argc=\" for function call parameters; found {:?}",
@@ -422,28 +422,25 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
         variable_type = VariableType::from_string(variable_type_str)?;
     }
 
-    let instance_type_raw = reader.parse_identifier()?.to_string();
-    let instance_type_arg = reader
-        .consume_angle_brackets()?
-        .unwrap_or_default()
-        .to_string();
+    let instance_type_raw = reader.parse_identifier()?;
+    let instance_type_arg = reader.consume_angle_brackets()?.unwrap_or_default();
     reader.consume_dot()?;
 
     let mut variable_ref: Option<GMRef<GMVariable>> = None;
-    let instance_type: InstanceType = match instance_type_raw.as_str() {
+    let instance_type: InstanceType = match instance_type_raw {
         "self" => InstanceType::Self_,
         "object" => {
             let object_ref: GMRef<GMGameObject> =
-                gm_data.game_objects.ref_by_name(&instance_type_arg)?;
+                gm_data.game_objects.ref_by_name(instance_type_arg)?;
             InstanceType::GameObject(object_ref)
         },
         "roominstance" => {
             variable_type = VariableType::Instance;
-            let instance_id: i16 = parse_int(&instance_type_arg)?;
+            let instance_id: i16 = parse_int(instance_type_arg)?;
             InstanceType::RoomInstance(instance_id)
         },
         "local" => {
-            let var_index: u32 = parse_int(&instance_type_arg)?;
+            let var_index: u32 = parse_int(instance_type_arg)?;
             variable_ref = Some(GMRef::new(var_index));
             InstanceType::Local
         },
@@ -511,29 +508,28 @@ fn parse_function(reader: &mut Reader, gm_functions: &GMFunctions) -> Result<GMR
     bail!("Function {identifier:?} does not exist")
 }
 
-fn parse_function_identifier(reader: &mut Reader) -> Result<String> {
+fn parse_function_identifier<'a>(reader: &mut Reader<'a>) -> Result<Cow<'a, str>> {
     // Try standard identifier first
     let error = match reader.parse_identifier() {
-        Ok(ident) => return Ok(ident.to_string()),
+        Ok(ident) => return Ok(Cow::Borrowed(ident)),
         Err(err) => err,
     };
 
     // Try special @@identifier@@ syntax
     if reader.consume_str("@@").is_some()
         && let Ok(ident) = reader.parse_identifier()
+        && reader.consume_str("@@").is_some()
     {
-        let ident = ident.to_string();
-        if reader.consume_str("@@").is_some() {
-            return Ok(format!("@@{ident}@@"));
-        }
+        return Ok(Cow::Owned(format!("@@{ident}@@")));
     }
 
     // If neither works, return the original parse error
     Err(error)
 }
 
-fn parse_int<T: FromStr>(string: &str) -> Result<T>
+fn parse_int<T>(string: &str) -> Result<T>
 where
+    T: FromStr,
     <T as FromStr>::Err: Display,
 {
     match string.parse() {
@@ -556,14 +552,20 @@ fn parse_string_literal(reader: &mut Reader) -> Result<String> {
 
     for (i, char) in reader.line.char_indices() {
         if escaping {
-            match char {
-                '"' => string.push('"'),
-                '\\' => string.push('\\'),
-                'n' => string.push('\n'),
-                't' => string.push('\t'),
-                'r' => string.push('\r'),
+            let append_char = match char {
+                '"' => '"',    // Literal "
+                '\'' => '\'',  // Literal '
+                '\\' => '\\',  // Literal \
+                'n' => '\n',   // Newline (0x0A)
+                'r' => '\r',   // Carriage Return (0x0D)
+                'b' => '\x08', // Backspace (0x08)
+                'f' => '\x0C', // Form Feed (0x0C)
+                't' => '\t',   // Horizontal Tab (0x09)
+                'v' => '\x0B', // Vertical Tab (0x0B)
+                'a' => '\x07', // Alert (0x07) (aka bell)
                 _ => bail!("Invalid escape character '{char}'"),
-            }
+            };
+            string.push(append_char);
             escaping = false;
         } else if char == '"' {
             reader.consume_to(i + 1);
