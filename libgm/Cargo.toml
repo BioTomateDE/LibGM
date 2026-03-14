@@ -39,13 +39,13 @@ optional = true
 
 # Needed for Game Creation Timestamp in General Info
 [dependencies.chrono]
-version = "0.4.43"
+version = "0.4.44"
 default-features = false
 optional = true
 
 # Needed to (potentially) deserialize PNG images
 [dependencies.image]
-version = "0.25.9"
+version = "0.25.10"
 default-features = false
 
 # Logging
