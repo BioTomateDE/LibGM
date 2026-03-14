@@ -1,3 +1,5 @@
+//! im too lazy to write docs but if anyone cares about ts file, u can contact me and i will try to explain
+
 macro_rules! bitfield_struct {
     (
         $(#[$meta:meta])*

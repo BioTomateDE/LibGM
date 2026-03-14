@@ -93,6 +93,7 @@ pub fn assemble_instruction(line: &str, gm_data: &GMData) -> Result<Instruction>
     Ok(instruction)
 }
 
+#[allow(clippy::too_many_lines)] // meh
 fn parse_instruction(
     reader: &mut Reader,
     mnemonic: &str,
@@ -388,7 +389,7 @@ fn parse_call(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
 
     let line = reader.line;
     let argc_str: &str = reader.consume_round_brackets()?.ok_or_else(|| {
-        format!("Expected round brackets with argument count for function call; found {line:?}",)
+        format!("Expected round brackets with argument count for function call; found {line:?}")
     })?;
 
     let argument_count: u16 = if let Some(str) = argc_str.strip_prefix("argc=") {
@@ -417,10 +418,11 @@ impl VariableType {
 }
 
 fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable> {
-    let mut variable_type = VariableType::Normal;
-    if let Some(variable_type_str) = reader.consume_square_brackets()? {
-        variable_type = VariableType::from_string(variable_type_str)?;
-    }
+    let mut variable_type = if let Some(ty) = reader.consume_square_brackets()? {
+        VariableType::from_string(ty)?
+    } else {
+        VariableType::Normal
+    };
 
     let instance_type_raw = reader.parse_identifier()?;
     let instance_type_arg = reader.consume_angle_brackets()?.unwrap_or_default();

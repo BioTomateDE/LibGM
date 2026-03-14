@@ -4,6 +4,9 @@ use crate::{
     wad::{elements::GMElement, serialize::builder::DataBuilder, version::GMVersionReq},
 };
 
+// The element fields store `Option<T>`, so passing `Option<&T>` instead
+// of `&Option<T>` would require using `.as_ref()` in every call.
+#[allow(clippy::ref_option)]
 impl DataBuilder<'_> {
     pub fn write_if_ver<T, V>(
         &mut self,

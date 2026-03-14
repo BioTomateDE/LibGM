@@ -15,6 +15,7 @@ pub struct GMShaders {
 }
 
 impl GMElement for GMShaders {
+    #[allow(clippy::too_many_lines)]
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         // Figure out where the starts/ends of each shader object are
         let count = reader.read_u32()?;
@@ -314,6 +315,9 @@ fn read_shader_data(
     Ok(Some(ShaderData { data }))
 }
 
+// The element fields store `Option<ShaderData>`, so passing `Option<&ShaderData> instead
+// of `&Option<ShaderData>` would require using `.as_ref()` in every call.
+#[allow(clippy::ref_option)]
 fn write_shader_data(
     builder: &mut DataBuilder,
     pad: u32,

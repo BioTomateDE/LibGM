@@ -2,14 +2,14 @@ use std::{any::Any, panic::UnwindSafe};
 
 use crate::error::{Error, Result};
 
-#[allow(clippy::option_if_let_else)]
+// #[allow(clippy::option_if_let_else)]
 fn extract_panic_message(payload: Box<dyn Any + Send + 'static>) -> String {
-    if let Some(string) = payload.downcast_ref::<&str>() {
-        string.to_string()
+    if let Some(&string) = payload.downcast_ref::<&str>() {
+        string.to_owned()
     } else if let Ok(string) = payload.downcast::<String>() {
         *string
     } else {
-        "Unknown panic value".to_string()
+        "Unknown panic value".to_owned()
     }
 }
 

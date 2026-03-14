@@ -37,6 +37,9 @@ impl DataBuilder<'_> {
         self.write_gm_string_internal(string.to_string(), false);
     }
 
+    // The element fields store `Option<String>`, so passing `Option<&String> instead
+    // of `&Option<String>` would require using `.as_ref()` in every call.
+    #[allow(clippy::ref_option)]
     /// Writes an optional GameMaker string reference as a pointer placeholder, or zero if the reference is `None`.
     pub fn write_gm_string_opt(&mut self, string_opt: &Option<String>) {
         match string_opt {

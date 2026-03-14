@@ -87,6 +87,7 @@ pub struct GMParticleEmitter {
 }
 
 impl GMElement for GMParticleEmitter {
+    #[allow(clippy::too_many_lines)]
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: String = reader.read_gm_string()?;
         let enabled: bool = if reader.general_info.is_version_at_least((2023, 6)) {

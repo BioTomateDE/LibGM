@@ -160,7 +160,7 @@ impl GMElement for GMCodes {
                 // In WAD <= 14, instructions are written immediately
                 for (i, instruction) in code.instructions.iter().enumerate() {
                     instruction.serialize(builder).with_context(|| {
-                        format!("serializing code #{i} with name {:?}", code.name,)
+                        format!("serializing code #{i} with name {:?}", code.name)
                     })?;
                 }
 
@@ -217,6 +217,7 @@ impl GMElement for GMCodes {
     }
 }
 
+#[allow(clippy::too_many_lines)] // refactor later
 impl GMElement for Instruction {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let word = reader.read_u32()?;
@@ -1010,7 +1011,7 @@ fn write_variable_occurrence(
     }
 
     // See write_function_occurrence
-    builder.write_u32(420 | u32::from(u8::from(variable_type) & 0xF8) << 24);
+    builder.write_u32(0x69420 | u32::from(u8::from(variable_type) & 0xF8) << 24);
 
     // Fuckass borrow checker
     builder
