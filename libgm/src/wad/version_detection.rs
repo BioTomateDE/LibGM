@@ -90,8 +90,8 @@ struct VersionCheck {
     /// The (lowest) wad version required for
     /// the checker to perform the detection.
     required_version: GMVersionReq,
+
     /// The (highest) wad version the checker can detect.
-    ///
     target_version: GMVersionReq,
 }
 

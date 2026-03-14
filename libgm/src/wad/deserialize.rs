@@ -302,24 +302,34 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
 
     let texture_page_items: GMTexturePageItems = reader.read_chunk()?;
 
-    let is_yyc: bool = check_yyc(&reader).context("Checking YYC")?;
     let mut variables = GMVariables::default();
     let mut functions = GMFunctions::default();
     let mut codes = GMCodes::default();
 
-    let mut stopwatch2 = Stopwatch::start();
-    if is_yyc {
+    let is_yyc: bool = match check_yyc(&reader) {
+        Ok(yyc) => yyc,
+        Err(e) if reader.options.verify_constants => {
+            log::warn!("YYC integrity check failed: {e}");
+            false
+        },
+        Err(e) => return Err(e).context("Checking YYC"),
+    };
+
+    let stopwatch2 = if is_yyc {
         log::warn!("YYC is untested, issues may occur");
         // Need to remove STRG to not throw "unread chunk" error
         reader.chunks.remove("STRG");
+        Stopwatch::start()
     } else {
         reader.read_chunk::<GMStrings>()?; // Set `reader.strings`
         variables = reader.read_chunk()?; // Set `reader.variable_occurrences`
         functions = reader.read_chunk()?; // Set `reader.function_occurrences`
-        stopwatch2 = Stopwatch::start();
+        let st = Stopwatch::start();
         codes = reader.read_chunk()?;
-    }
+        st
+    };
 
+    // Read all other chunks. This is allowed to be executed arbitrary order.
     let embedded_textures: GMEmbeddedTextures = reader.read_chunk()?;
     let scripts: GMScripts = reader.read_chunk()?;
     let fonts: GMFonts = reader.read_chunk()?;

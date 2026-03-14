@@ -8,6 +8,9 @@ use crate::{
     },
 };
 
+/// This is the always-empty unused chunk `DAFL`.
+///
+/// It is unrelated to the `GMData` struct.
 #[derive(Debug, Clone, Default)]
 pub struct GMDataFiles;
 

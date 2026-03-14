@@ -157,7 +157,6 @@ impl<'a> DataReader<'a> {
         }
 
         // SAFETY: If chunk.end_pos is set correctly, this should never read memory out of bounds.
-
         let start = start as usize;
         let end = end as usize;
         let slice: &[u8] = unsafe { self.data.get_unchecked(start..end) };
