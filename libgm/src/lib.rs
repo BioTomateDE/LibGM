@@ -7,19 +7,25 @@
 //! For most purposes, using `parse_file` and `build_file` is enough.
 //!
 //! ```no_run
-//! use libgm::prelude::*;
+//! use libgm::wad::GMData;
 //! use libgm::wad::elements::game_object::GMGameObject;
+//! use libgm::wad::elements::GMNamedListChunk;
+//!
+//! # fn main() -> libgm::Result<()> {
 //!
 //! // Load data file
-//! let mut data: GMData = libgm::parse_file("./data.win").unwrap();
+//! let mut data: GMData = libgm::wad::parse_file("./data.win")?;
 //! println!("Loaded {}", data.general_info.display_name);
 //!
 //! // Modify data file
-//! let obj: &mut GMGameObject = data.game_objects.by_name_mut("obj_time").unwrap();
+//! let obj: &mut GMGameObject = data.game_objects.by_name_mut("obj_time")?;
 //! obj.visible = true;
 //!
 //! // Write data file
-//! libgm::build_file(&data, "./modified_data.win").unwrap();
+//! libgm::wad::build_file(&data, "./modified_data.win")?;
+//!
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! If you need more control, you can use `parse_bytes`, `build_bytes` or `ParsingOptions`.
