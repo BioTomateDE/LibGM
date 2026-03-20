@@ -1,10 +1,12 @@
-use image::DynamicImage;
+use std::io::Cursor;
+
+use image::{DynamicImage, ImageFormat};
 
 use crate::prelude::*;
 
 #[cfg(feature = "png-image")]
 pub fn decode(raw_png_data: &[u8]) -> Result<DynamicImage> {
-    image::load_from_memory_with_format(raw_png_data, image::ImageFormat::Png)
+    image::load_from_memory_with_format(raw_png_data, ImageFormat::Png)
         .context_src("decoding PNG Image")
 }
 
@@ -16,9 +18,9 @@ pub fn decode(_: &[u8]) -> Result<DynamicImage> {
 #[cfg(feature = "png-image")]
 pub fn encode(dyn_img: &DynamicImage) -> Result<Vec<u8>> {
     let mut png_data: Vec<u8> = Vec::new();
-    let mut cursor = std::io::Cursor::new(&mut png_data);
+    let mut cursor = Cursor::new(&mut png_data);
     dyn_img
-        .write_to(&mut cursor, image::ImageFormat::Png)
+        .write_to(&mut cursor, ImageFormat::Png)
         .context_src("encoding PNG Image")?;
     Ok(png_data)
 }
