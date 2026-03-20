@@ -190,16 +190,18 @@ impl GMChunk for GMGeneralInfo {
 }
 
 impl GMGeneralInfo {
+    /// See [`GMVersion::is_version_at_least`].
     #[must_use]
-    /// Docstring available in [`GMVersion::is_version_at_least`]
     pub fn is_version_at_least(&self, req: impl Into<GMVersionReq>) -> bool {
         self.version.is_version_at_least(req)
     }
 
+    /// See [`GMVersion::set_version_at_least`].
     pub fn set_version_at_least(&mut self, req: impl Into<GMVersionReq>) -> Result<()> {
         self.version.set_version_at_least(req)
     }
 
+    /// See [`GMVersion::set_version`].
     pub fn set_version(&mut self, req: impl Into<GMVersionReq>) {
         self.version.set_version(req);
     }
@@ -233,9 +235,7 @@ impl GMElement for GMGeneralInfo {
         let last_object_id = reader.read_u32()?;
         let last_tile_id = reader.read_u32()?;
         let game_id = reader.read_u32()?;
-
         let directplay_guid: [u8; 16] = *reader.read_bytes_const().context("reading GUID")?;
-
         let game_name: String = reader.read_gm_string()?;
         let version = GMVersion::deserialize(reader)?;
         let default_window_width = reader.read_u32()?;
@@ -322,9 +322,7 @@ impl GMElement for GMGeneralInfo {
         self.flags.serialize(builder)?;
         builder.write_u32(self.license_crc32);
         builder.write_bytes(&self.license_md5);
-
         builder.write_i64(self.timestamp());
-
         builder.write_gm_string(&self.display_name);
         builder.write_u64(0); // "Active targets"
         self.function_classifications.serialize(builder)?;
