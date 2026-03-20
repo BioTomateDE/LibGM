@@ -58,7 +58,7 @@ impl ChunkName {
     #[inline]
     #[must_use]
     pub const fn as_str(&self) -> &str {
-        // Safe because we validated UTF-8 in constructor
+        // SAFETY: We validated UTF-8 in constructor (ASCII subset).
         unsafe { str::from_utf8_unchecked(&self.bytes) }
     }
 }
