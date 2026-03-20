@@ -4,7 +4,7 @@ use crate::{
     prelude::*,
     wad::{
         deserialize::reader::DataReader,
-        elements::{GMElement, audio_group::GMAudioGroup, embedded_audio::GMEmbeddedAudio},
+        elements::{GMElement, audio::GMAudio, audio_group::GMAudioGroup},
         reference::GMRef,
         serialize::builder::DataBuilder,
         version::GMVersion,
@@ -80,9 +80,9 @@ pub struct GMSound {
     /// For more information, see [`GMAudioGroup`].
     pub audio_group: GMRef<GMAudioGroup>,
 
-    /// The reference to the [`GMEmbeddedAudio`] audio file.
+    /// The reference to the [`GMAudio`] audio file.
     /// This is used if the `Flags.embedded` flag is set.
-    pub audio_file: Option<GMRef<GMEmbeddedAudio>>,
+    pub audio_file: Option<GMRef<GMAudio>>,
 
     /// The precomputed length of the sound's audio data.
     /// Introduced in GameMaker 2024.6.
@@ -126,7 +126,7 @@ impl GMElement for GMSound {
             GMRef::new(get_builtin_sound_group_id(&reader.general_info.version))
         };
 
-        let audio_file: Option<GMRef<GMEmbeddedAudio>> = reader.read_resource_by_id_opt()?;
+        let audio_file: Option<GMRef<GMAudio>> = reader.read_resource_by_id_opt()?;
         let audio_length: Option<f32> = reader.deserialize_if_gm_version((2024, 6))?;
 
         Ok(Self {

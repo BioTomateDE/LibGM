@@ -9,7 +9,7 @@ use image::DynamicImage;
 
 use crate::{
     prelude::*,
-    wad::{elements::embedded_texture::BZ2_QOI_HEADER, serialize::builder::DataBuilder},
+    wad::{elements::texture_page::BZ2_QOI_HEADER, serialize::builder::DataBuilder},
 };
 
 /// An image format indicating how the underlying data of a [`GMImage`] is stored.

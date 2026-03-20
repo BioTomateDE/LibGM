@@ -11,7 +11,7 @@ use crate::{
     wad::{
         data::Endianness,
         deserialize::reader::DataReader,
-        elements::{GMElement, element_stub, embedded_texture::img::BZip2QoiHeader},
+        elements::{GMElement, element_stub, texture_page::img::BZip2QoiHeader},
         serialize::builder::DataBuilder,
     },
 };
@@ -21,20 +21,20 @@ pub(crate) const BZ2_QOI_HEADER: &[u8; 4] = b"2zoq";
 pub(crate) const QOI_HEADER: &[u8; 4] = b"fioq";
 
 #[list_chunk("TXTR")]
-pub struct GMEmbeddedTextures {
-    pub texture_pages: Vec<GMEmbeddedTexture>,
+pub struct GMTexturePages {
+    pub texture_pages: Vec<GMTexturePage>,
     pub exists: bool,
 }
 
-impl GMElement for GMEmbeddedTextures {
+impl GMElement for GMTexturePages {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
         let count = pointers.len();
-        let mut texture_pages: Vec<GMEmbeddedTexture> = Vec::with_capacity(count);
+        let mut texture_pages: Vec<GMTexturePage> = Vec::with_capacity(count);
         let mut data_start_positions: Vec<u32> = Vec::with_capacity(count);
 
         for pointer in pointers {
-            reader.assert_pos(pointer, "Embedded texture")?;
+            reader.assert_pos(pointer, "Embedded texture page")?;
 
             let scaled = reader.read_u32()?;
             let generated_mips: Option<u32> = reader.deserialize_if_gm_version((2, 0, 6))?;
@@ -45,7 +45,7 @@ impl GMElement for GMEmbeddedTextures {
             // This can be zero if the texture is stored externally
             data_start_positions.push(texture_data_start_pos);
 
-            let texture_page = GMEmbeddedTexture {
+            let texture_page = GMTexturePage {
                 scaled,
                 generated_mips,
                 texture_block_size,
@@ -138,10 +138,10 @@ impl GMElement for GMEmbeddedTextures {
     }
 }
 
-/// An embedded texture entry in the data file.
+/// An embedded texture page entry in the data file.
 #[derive(Debug, Clone, PartialEq)]
 #[repr(C)] // Needs explicit layout so memory addresses for gm pointers don't collide
-pub struct GMEmbeddedTexture {
+pub struct GMTexturePage {
     /// not sure what `scaled` actually is
     pub scaled: u32,
 
@@ -157,14 +157,16 @@ pub struct GMEmbeddedTexture {
     /// The texture data in the embedded image.
     pub image: Option<GMImage>,
 }
-element_stub!(GMEmbeddedTexture);
+element_stub!(GMTexturePage);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Data2022_9 {
     /// Width of the texture.
     pub texture_width: u32,
+
     /// Height of the texture.
     pub texture_height: u32,
+
     /// Index of the texture in the texture group.
     pub index_in_group: u32,
 }

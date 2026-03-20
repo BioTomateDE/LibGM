@@ -13,13 +13,12 @@ use crate::{
 };
 
 pub mod animation_curve;
+pub mod audio;
 pub mod audio_group;
 pub mod background;
 pub mod code;
 pub(crate) mod data_file;
-pub mod embedded_audio;
 pub mod embedded_image;
-pub mod embedded_texture;
 pub mod extension;
 pub mod feature_flag;
 pub mod filter_effect;
@@ -43,6 +42,7 @@ pub mod sprite;
 pub(crate) mod string;
 pub mod tag;
 pub mod texture_group_info;
+pub mod texture_page;
 pub mod texture_page_item;
 pub mod timeline;
 pub mod ui_node;

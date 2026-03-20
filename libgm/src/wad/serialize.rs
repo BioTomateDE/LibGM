@@ -78,7 +78,7 @@ fn build_impl(data: &GMData) -> Result<Vec<u8>> {
     builder.build_chunk(&data.codes)?;
     builder.build_chunk(&data.variables)?;
     builder.build_chunk(&data.functions)?;
-    builder.build_chunk(&data.embedded_textures)?;
+    builder.build_chunk(&data.texture_pages)?;
     builder.build_chunk(&data.audios)?;
     builder.build_chunk(&data.sequences)?;
     builder.build_chunk(&data.particle_systems)?;
@@ -86,7 +86,7 @@ fn build_impl(data: &GMData) -> Result<Vec<u8>> {
     builder.build_chunk(&data.language_info)?;
     builder.build_chunk(&data.global_init_scripts)?;
     builder.build_chunk(&data.game_end_scripts)?;
-    builder.build_chunk(&data.root_ui_nodes)?;
+    builder.build_chunk(&data.ui_nodes)?;
     builder.build_chunk(&data.embedded_images)?;
     builder.build_chunk(&data.texture_group_infos)?;
     builder.build_chunk(&data.tags)?;

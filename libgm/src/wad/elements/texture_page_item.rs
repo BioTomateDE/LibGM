@@ -4,7 +4,7 @@ use crate::{
     prelude::*,
     wad::{
         deserialize::reader::DataReader,
-        elements::{GMElement, embedded_texture::GMEmbeddedTexture},
+        elements::{GMElement, texture_page::GMTexturePage},
         reference::GMRef,
         serialize::builder::DataBuilder,
     },
@@ -52,7 +52,7 @@ pub struct GMTexturePageItem {
     pub target_height: u16,
     pub bounding_width: u16,
     pub bounding_height: u16,
-    pub texture_page: GMRef<GMEmbeddedTexture>,
+    pub texture_page: GMRef<GMTexturePage>,
 }
 
 impl GMElement for GMTexturePageItem {
@@ -68,7 +68,7 @@ impl GMElement for GMTexturePageItem {
         let bounding_width = reader.read_u16()?;
         let bounding_height = reader.read_u16()?;
         let texture_page_id = reader.read_u16()?;
-        let texture_page: GMRef<GMEmbeddedTexture> = u32::from(texture_page_id).into();
+        let texture_page: GMRef<GMTexturePage> = u32::from(texture_page_id).into();
 
         Ok(Self {
             source_x,

@@ -8,14 +8,14 @@ use crate::{
 };
 
 #[list_chunk("AUDO")]
-pub struct GMEmbeddedAudios {
-    pub audios: Vec<GMEmbeddedAudio>,
+pub struct GMAudios {
+    pub audios: Vec<GMAudio>,
     pub exists: bool,
 }
 
-impl GMElement for GMEmbeddedAudios {
+impl GMElement for GMAudios {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let audios: Vec<GMEmbeddedAudio> = reader.read_pointer_list()?;
+        let audios: Vec<GMAudio> = reader.read_pointer_list()?;
         Ok(Self { audios, exists: true })
     }
 
@@ -27,19 +27,19 @@ impl GMElement for GMEmbeddedAudios {
 
 /// An embedded audio entry in a data file.
 #[derive(Clone, PartialEq)]
-pub struct GMEmbeddedAudio {
+pub struct GMAudio {
     /// The raw audio data of the embedded audio entry.
     /// This can be either WAV or OGG.
     pub audio_data: Vec<u8>,
 }
 
-impl fmt::Debug for GMEmbeddedAudio {
+impl fmt::Debug for GMAudio {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("GMEmbeddedAudio")
+        f.write_str("GMAudio")
     }
 }
 
-impl GMElement for GMEmbeddedAudio {
+impl GMElement for GMAudio {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let audio_data_length = reader.read_u32()?;
         let audio_data: Vec<u8> = reader.read_bytes_dyn(audio_data_length)?.to_vec();

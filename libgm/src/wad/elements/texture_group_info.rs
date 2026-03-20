@@ -6,9 +6,8 @@ use crate::{
     wad::{
         deserialize::reader::DataReader,
         elements::{
-            GMElement, GMNamedElement, background::GMBackground,
-            embedded_texture::GMEmbeddedTexture, font::GMFont, sprite::GMSprite,
-            validate_identifier,
+            GMElement, GMNamedElement, background::GMBackground, font::GMFont, sprite::GMSprite,
+            texture_page::GMTexturePage, validate_identifier,
         },
         reference::GMRef,
         serialize::builder::DataBuilder,
@@ -39,7 +38,7 @@ impl GMElement for GMTextureGroupInfos {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMTextureGroupInfo {
     pub name: String,
-    pub texture_pages: Vec<GMRef<GMEmbeddedTexture>>,
+    pub texture_pages: Vec<GMRef<GMTexturePage>>,
     pub sprites: Vec<GMRef<GMSprite>>,
     pub spine_sprites: Vec<GMRef<GMSprite>>,
     pub fonts: Vec<GMRef<GMFont>>,
@@ -85,7 +84,7 @@ impl GMElement for GMTextureGroupInfo {
         let tilesets_ptr = reader.read_u32()?;
 
         reader.assert_pos(texture_pages_ptr, "Texture Pages")?;
-        let texture_pages: Vec<GMRef<GMEmbeddedTexture>> = reader.read_simple_list()?;
+        let texture_pages: Vec<GMRef<GMTexturePage>> = reader.read_simple_list()?;
 
         reader.assert_pos(sprites_ptr, "Sprites")?;
         let sprites: Vec<GMRef<GMSprite>> = reader.read_simple_list()?;
