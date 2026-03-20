@@ -57,8 +57,10 @@ pub fn compress(_: &[u8]) -> Result<Vec<u8>> {
 // Bz2Qoi functions
 
 pub fn decode_image(raw_bz2_qoi_data: &[u8]) -> Result<DynamicImage> {
-    let decompressed_data: Vec<u8> = decompress(raw_bz2_qoi_data)?;
-    let image: DynamicImage = qoi::decode(&decompressed_data)?;
+    let decompressed_data: Vec<u8> =
+        decompress(raw_bz2_qoi_data).context("decoding BZip2 data of Bz2Qoi image")?;
+    let image: DynamicImage =
+        qoi::decode(&decompressed_data).context("decoding QOI data of Bz2Qoi image")?;
     Ok(image)
 }
 

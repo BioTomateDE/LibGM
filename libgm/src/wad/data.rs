@@ -76,6 +76,8 @@ pub struct GMData {
     pub embedded_textures: GMEmbeddedTextures,    // TXTR
     pub variables: GMVariables,                   // VARI
 
+    // TODO: should these extra be moved to a different substruct?
+    // otherwise they could be confused with chunks (and clutter namespace)
     /// The directory in which this data file is located.
     ///
     /// This can be used to find, read and edit the following:
@@ -181,18 +183,20 @@ impl GMData {
         Ok(())
     }
 
-    /// Deserializes all embedded texture pages, turning them into [`DynamicImage`]s.
+    /// Deserializes all embedded texture pages, turning their underlying image data into [`DynamicImage`].
+    ///
+    /// This single-threaded implementation may take quite a while.
+    /// If you care about performance, I would recommend making a custom
+    /// multithreaded implementation (perhaps using the `rayon` crate).
     ///
     /// [`DynamicImage`]: image::DynamicImage
     pub fn deserialize_textures(&mut self) -> Result<()> {
-        use crate::wad::elements::embedded_texture::Format;
-
         for texture_page in &mut self.embedded_textures {
             let Some(image) = &mut texture_page.image else {
                 continue;
             };
             image
-                .change_format(Format::Dyn)
+                .deserialize()
                 .context("deserializing all embedded texture pages")?;
         }
         Ok(())
