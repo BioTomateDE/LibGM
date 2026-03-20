@@ -193,7 +193,7 @@ impl GMImage {
             // which would be impossible (since Dyn -> Dyn is skipped out by change_format)
             Format::Dyn => Img::Dyn(dyn_img.into_owned()),
             Format::Png => Img::Png(png::encode(&dyn_img)?),
-            Format::Qoi => Img::Qoi(qoi::encode(&dyn_img)),
+            Format::Qoi => Img::Qoi(qoi::encode(&dyn_img)?),
             Format::Bz2Qoi => {
                 let (data, header) = bz2::encode_image(&dyn_img)?;
                 Img::Bz2Qoi(data, header)
@@ -290,7 +290,7 @@ impl fmt::Debug for Img {
 fn write_dyn_img(dyn_img: &DynamicImage, builder: &mut DataBuilder) -> Result<()> {
     // Use QOI if supported.
     if builder.is_version_at_least((2022, 1)) {
-        qoi::build(dyn_img, builder);
+        qoi::build(dyn_img, builder).context("serializing DynamicImage as QOI")?;
         return Ok(());
     }
 
