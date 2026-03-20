@@ -65,7 +65,7 @@ pub fn decode_image(raw_bz2_qoi_data: &[u8]) -> Result<DynamicImage> {
 }
 
 pub fn encode_image(dyn_img: &DynamicImage) -> Result<(Vec<u8>, BZip2QoiHeader)> {
-    let qoi_data: Vec<u8> = qoi::encode(dyn_img);
+    let qoi_data: Vec<u8> = qoi::encode(dyn_img).context("serializing DynamicImage as Bz2Qoi")?;
     let header = BZip2QoiHeader {
         width: dyn_img.width() as u16,
         height: dyn_img.height() as u16,

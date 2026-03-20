@@ -2,7 +2,7 @@
 
 use std::{borrow::Cow, convert::TryInto};
 
-use image::{DynamicImage, ImageBuffer, Rgba};
+use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba};
 
 use crate::{
     prelude::*,
@@ -21,6 +21,28 @@ const QOI_MASK_2: u8 = 0xC0;
 const QOI_MASK_3: u8 = 0xE0;
 const QOI_MASK_4: u8 = 0xF0;
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+struct Pixel {
+    r: u8,
+    g: u8,
+    b: u8,
+    a: u8,
+}
+
+impl Pixel {
+    const DEFAULT: Self = Self::new(0, 0, 0, 255);
+
+    #[must_use]
+    const fn new(r: u8, b: u8, g: u8, a: u8) -> Self {
+        Self { r, g, b, a }
+    }
+
+    #[must_use]
+    const fn from_array(channels: [u8; 4]) -> Self {
+        Self::new(channels[0], channels[1], channels[2], channels[3])
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct QoiHeader {
     pub width: u16,
@@ -35,15 +57,15 @@ fn estimate_encoded_size(image: &DynamicImage) -> usize {
     width * height
 }
 
-pub fn build(image: &DynamicImage, builder: &mut DataBuilder) {
+pub fn build(image: &DynamicImage, builder: &mut DataBuilder) -> Result<()> {
     builder.raw_data.reserve(estimate_encoded_size(image));
-    encode_(image, &mut builder.raw_data);
+    encode_(image, &mut builder.raw_data)
 }
 
-pub fn encode(image: &DynamicImage) -> Vec<u8> {
+pub fn encode(image: &DynamicImage) -> Result<Vec<u8>> {
     let mut buffer = Vec::with_capacity(estimate_encoded_size(image));
-    encode_(image, &mut buffer);
-    buffer
+    encode_(image, &mut buffer)?;
+    Ok(buffer)
 }
 
 // QOI implementations
@@ -173,15 +195,16 @@ pub fn decode(bytes: &[u8]) -> Result<DynamicImage> {
     Ok(DynamicImage::ImageRgba8(img))
 }
 
-// TODO: test this
+// TODO: fix this
 #[allow(clippy::many_single_char_names)] // go fuck urself clippy
-fn encode_(image: &DynamicImage, buffer: &mut Vec<u8>) {
-    let width = image.width() as u16;
-    let height = image.height() as u16;
+fn encode_(image: &DynamicImage, buffer: &mut Vec<u8>) -> Result<()> {
+    let (width, height) = image.dimensions();
+    let width = u16::try_from(width).context_src("Image width exceeds limit of 65535")?;
+    let height = u16::try_from(height).context_src("Image height exceeds limit of 65535")?;
     let image = image
         .as_rgba8()
         .map_or_else(|| Cow::Owned(image.to_rgba8()), Cow::Borrowed);
-    let image_bytes = image.as_raw();
+    let mut image_pixels = image.pixels().peekable();
 
     // Write header (12 bytes)
     let start_pos: usize = buffer.len();
@@ -192,21 +215,15 @@ fn encode_(image: &DynamicImage, buffer: &mut Vec<u8>) {
 
     // Prepare some vars
     let mut run: i32 = 0;
-    let mut index = [[0u8; 4]; 64];
-    let mut px_prev: [u8; 4] = [0, 0, 0, 255];
-    let mut it = image_bytes.windows(4).peekable();
+    let mut index = [Pixel::DEFAULT; 64];
+    let mut px_prev = Pixel::DEFAULT;
 
     // Start with QOI looping
-    while let Some(px) = it.next() {
-        let px: [u8; 4] = px.try_into().unwrap();
-        let r: u8 = px[0];
-        let g: u8 = px[1];
-        let b: u8 = px[2];
-        let a: u8 = px[3];
+    while let Some(&px) = image_pixels.next() {
+        let px = Pixel::from_array(px.0);
 
-        let is_last: bool = it.peek().is_none();
+        let is_last: bool = image_pixels.peek().is_none();
         let is_same: bool = px == px_prev;
-        px_prev = px;
 
         if is_same {
             run += 1;
@@ -225,74 +242,74 @@ fn encode_(image: &DynamicImage, buffer: &mut Vec<u8>) {
         }
 
         if !is_same {
-            let index_pos: u8 = (r ^ g ^ b ^ a) & 63;
+            let index_pos: u8 = (px.r ^ px.g ^ px.b ^ px.a) & 63;
             if index[index_pos as usize] == px {
                 buffer.push(QOI_INDEX | index_pos);
             } else {
                 index[index_pos as usize] = px;
-            }
 
-            let v: [i16; 4] = pixel_diff(px, px_prev);
-            let vr = v[0] as u8;
-            let vg = v[1] as u8;
-            let vb = v[2] as u8;
-            let va = v[3] as u8;
+                let v: [i16; 4] = [
+                    i16::from(px.r) - i16::from(px_prev.r),
+                    i16::from(px.g) - i16::from(px_prev.g),
+                    i16::from(px.b) - i16::from(px_prev.b),
+                    i16::from(px.a) - i16::from(px_prev.a),
+                ];
+                let vr = v[0] as u8;
+                let vg = v[1] as u8;
+                let vb = v[2] as u8;
+                let va = v[3] as u8;
 
-            // if all channels (r, g, b, a) are in (-17, 16)
-            if v.iter().all(|&x| x > -17 && x < 16) {
-                // if alpha is zero and r, g, b are in (-3, 2)
-                if va == 0 && v[..3].iter().all(|&x| x > -3 && x < 2) {
-                    buffer.push(QOI_DIFF_8 | (vr << 4 & 0x30) | (vg << 2 & 0x0C) | (vb & 3));
-                }
-                // if alpha is zero and g, b are in (-9, 8)
-                else if va == 0 && v[1..3].iter().all(|&x| x > -9 && x < 8) {
-                    buffer.push(QOI_DIFF_16 | (vr & 31));
-                    buffer.push((vg << 4 & 0xF0) | (vb & 15));
+                // if all channels (r, g, b, a) are in (-17, 16)
+                if v.iter().all(|&x| x > -17 && x < 16) {
+                    // if alpha is zero and r, g, b are in (-3, 2)
+                    if va == 0 && v[..3].iter().all(|&x| x > -3 && x < 2) {
+                        buffer.push(QOI_DIFF_8 | (vr << 4 & 0x30) | (vg << 2 & 0x0C) | (vb & 3));
+                    }
+                    // if alpha is zero and g, b are in (-9, 8)
+                    else if va == 0 && v[1..3].iter().all(|&x| x > -9 && x < 8) {
+                        buffer.push(QOI_DIFF_16 | (vr & 31));
+                        buffer.push((vg << 4 & 0xF0) | (vb & 15));
+                    } else {
+                        buffer.push(QOI_DIFF_24 | (vr >> 1 & 15));
+                        buffer.push((vr << 7 & 0x80) | (vg << 2 & 0x7C) | (vb >> 3 & 3));
+                        buffer.push((vb << 5 & 0xE0) | (va & 31));
+                    }
                 } else {
-                    buffer.push(QOI_DIFF_24 | (vr >> 1 & 15));
-                    buffer.push((vr << 7 & 0x80) | (vg << 2 & 0x7C) | (vb >> 3 & 3));
-                    buffer.push((vb << 5 & 0xE0) | (va & 31));
-                }
-            } else {
-                let mut mask = 0;
-                if vr != 0 {
-                    mask |= 8;
-                }
-                if vg != 0 {
-                    mask |= 4;
-                }
-                if vb != 0 {
-                    mask |= 2;
-                }
-                if va != 0 {
-                    mask |= 1;
-                }
-                buffer.push(QOI_COLOR | mask);
-                if vr != 0 {
-                    buffer.push(r);
-                }
-                if vg != 0 {
-                    buffer.push(g);
-                }
-                if vb != 0 {
-                    buffer.push(b);
-                }
-                if va != 0 {
-                    buffer.push(a);
+                    let mut mask = 0;
+                    if vr != 0 {
+                        mask |= 8;
+                    }
+                    if vg != 0 {
+                        mask |= 4;
+                    }
+                    if vb != 0 {
+                        mask |= 2;
+                    }
+                    if va != 0 {
+                        mask |= 1;
+                    }
+                    buffer.push(QOI_COLOR | mask);
+                    if vr != 0 {
+                        buffer.push(px.r);
+                    }
+                    if vg != 0 {
+                        buffer.push(px.g);
+                    }
+                    if vb != 0 {
+                        buffer.push(px.b);
+                    }
+                    if va != 0 {
+                        buffer.push(px.a);
+                    }
                 }
             }
         }
+
+        px_prev = px;
     }
 
     let length: usize = buffer.len() - start_pos - 12;
     let range = start_pos + 8..start_pos + 12;
     buffer[range].copy_from_slice(&(length as u32).to_le_bytes());
-}
-
-fn pixel_diff(curr: [u8; 4], prev: [u8; 4]) -> [i16; 4] {
-    let mut diffs = [0i16; 4];
-    for i in 0..4 {
-        diffs[i] = i16::from(curr[i]) - i16::from(prev[i]);
-    }
-    diffs
+    Ok(())
 }

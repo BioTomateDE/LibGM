@@ -11,7 +11,10 @@ use std::path::PathBuf;
 use libgm::{
     gml::assembly::disassemble_code,
     prelude::*,
-    wad::{data::GMData, deserialize::parse_file, serialize::build_file},
+    wad::{
+        data::GMData, deserialize::parse_file, elements::texture_page::Format,
+        serialize::build_file,
+    },
 };
 
 use crate::tests::Test;
@@ -31,6 +34,38 @@ fn run(mut args: cli::Args) -> Result<()> {
         let mut data: GMData = parse_file(data_file)?;
 
         tests::perform(&data, &tests)?;
+
+        // TODO REMOVE DEBUG
+        fn serialize_textures(data: &mut GMData, format: Format) -> Result<()> {
+            for texture_page in &mut data.texture_pages {
+                let Some(image) = &mut texture_page.image else {
+                    continue;
+                };
+                image.change_format(format)?;
+            }
+            Ok(())
+        }
+        fn dump_textures(data: &GMData, the: &str) -> Result<()> {
+            for (i, texture_page) in data.texture_pages.iter().enumerate() {
+                let Some(image) = &texture_page.image else {
+                    continue;
+                };
+                let _ = std::fs::remove_dir("/tmp/gmtextures/");
+                let path = format!("/tmp/gmtextures/{the}");
+                std::fs::create_dir_all(&path).unwrap();
+                image
+                    .to_dynamic_image()?
+                    .save(format!("{path}/{i}.png"))
+                    .unwrap();
+            }
+            Ok(())
+        }
+        data.deserialize_textures()?;
+        dump_textures(&data, "a")?;
+        serialize_textures(&mut data, Format::Qoi)?;
+        data.deserialize_textures()?;
+        dump_textures(&data, "b")?;
+        serialize_textures(&mut data, Format::Qoi)?;
 
         for action in &args.actions {
             action.perform(&mut data)?;
