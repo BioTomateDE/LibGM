@@ -1,4 +1,4 @@
-//! An implementation of GameMaker's custom QOI ("Quite Ok Image") image format.
+//! An implementation of GameMaker's slightly custom QOI ("Quite Ok Image") image format.
 
 use std::{borrow::Cow, convert::TryInto};
 
@@ -28,10 +28,6 @@ pub struct QoiHeader {
     pub length: u32,
 }
 
-pub fn decode(bytes: &[u8]) -> Result<DynamicImage> {
-    decode_(bytes).context("decoding QOI image")
-}
-
 pub fn build(image: &DynamicImage, builder: &mut DataBuilder) {
     encode_(image, &mut builder.raw_data);
 }
@@ -51,6 +47,7 @@ pub fn encode(image: &DynamicImage) -> Vec<u8> {
 // QOI implementations
 
 pub fn read_header(bytes: &[u8]) -> Result<QoiHeader> {
+    // idk if this endianness thing works, it's untested.
     let header: &[u8] = bytes
         .get(0..12)
         .ok_or("Invalid QOI header (less than 12 bytes long)")?;
@@ -77,7 +74,7 @@ pub fn read_header(bytes: &[u8]) -> Result<QoiHeader> {
     Ok(QoiHeader { width, height, length })
 }
 
-fn decode_(bytes: &[u8]) -> Result<DynamicImage> {
+pub fn decode(bytes: &[u8]) -> Result<DynamicImage> {
     let header: QoiHeader = read_header(bytes).context("reading QOI header")?;
 
     let pixel_data: &[u8] = bytes
@@ -174,6 +171,7 @@ fn decode_(bytes: &[u8]) -> Result<DynamicImage> {
     Ok(DynamicImage::ImageRgba8(img))
 }
 
+// TODO: test this
 #[allow(clippy::many_single_char_names)] // go fuck urself clippy
 fn encode_(image: &DynamicImage, buffer: &mut Vec<u8>) {
     let width = image.width() as u16;

@@ -36,7 +36,7 @@ impl Parse for MacroArgs {
                         format!("Unknown flag '{flag_name}'. Valid flags are: name_exception"),
                     ));
                 },
-            };
+            }
         }
 
         Ok(MacroArgs { chunk_name, flags })

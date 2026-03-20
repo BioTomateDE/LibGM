@@ -4,30 +4,30 @@ use clap::Parser;
 
 use crate::{actions::Action, tests::Test};
 
-#[derive(Parser, Debug)]
 /// A simple CLI for operating and debugging LibGM
+#[derive(Parser, Debug)]
 pub struct Args {
     /// The GameMaker data file(s) to load
     ///
     /// Default: `./data.win`
     pub files: Vec<PathBuf>,
 
-    #[arg(short, long)]
     /// The path of the output data file to build.
     ///
     /// Leaving this empty will skip rebuilding.
+    #[arg(short, long)]
     pub out: Option<PathBuf>,
 
-    #[arg(short, long, value_delimiter = ',')]
     /// The tests to execute.
+    #[arg(short, long, value_delimiter = ',')]
     pub tests: Vec<Test>,
 
-    #[arg(short, long, value_delimiter = ',')]
     /// Actions to perform on the data file.
+    #[arg(short, long, value_delimiter = ',')]
     pub actions: Vec<Action>,
 
-    #[arg(short, long, value_delimiter = ',')]
     /// Code entries to disassemble.
+    #[arg(short, long, value_delimiter = ',')]
     pub codes: Vec<String>,
 }
 

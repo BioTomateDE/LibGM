@@ -67,7 +67,7 @@ pub fn test(data: &GMData) -> Result<()> {
             println!("Reconstructed code has {diff} {comparison} instructions than the original");
         }
 
-        let lines: Vec<&str> = assembly.split("\n").collect();
+        let lines: Vec<&str> = assembly.split('\n').collect();
 
         // TODO:prettier diff
         for (index, (original, recreation)) in

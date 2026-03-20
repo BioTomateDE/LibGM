@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_debug_formatting)]
+
 mod actions;
 mod cli;
 mod dir;

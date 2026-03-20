@@ -35,13 +35,13 @@ fn get_env() -> Env<'static> {
 }
 
 fn format_target(record: &Record) -> Option<String> {
-    let file = record.file()?;
+    let file: &str = record.file()?;
 
-    let file = if cfg!(target_os = "windows") {
+    let file: String = if cfg!(target_os = "windows") {
         // Backslashes in paths look so ugly
-        file.replace("\\", "/")
+        file.replace('\\', "/")
     } else {
-        file.to_string()
+        file.to_owned()
     };
 
     let target = if let Some(line) = record.line() {

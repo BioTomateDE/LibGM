@@ -154,8 +154,7 @@ fn is_vec_type(ty: &syn::Type) -> bool {
         .path
         .segments
         .last()
-        .map(|seg| seg.ident == "Vec")
-        .unwrap_or(false)
+        .is_some_and(|seg| seg.ident == "Vec")
 }
 
 fn extract_vec_inner_type(ty: &syn::Type) -> Option<&syn::Type> {
