@@ -8,8 +8,8 @@ use crate::{
 ///
 /// You should therefore only call this function once per game
 /// and keep the struct.
-#[allow(clippy::manual_non_exhaustive)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub struct CodeAnalysis {
     /// Whether Copy on Write (Cow) functionality is enabled for arrays.
     ///
@@ -36,11 +36,6 @@ pub struct CodeAnalysis {
     ///
     /// By default, this is enabled.
     pub uses_short_circuit: bool,
-
-    // Makes this struct impossible to construct.
-    // Useful for avoiding minor SemVer bumps.
-    // This doubles as a #[non_exhaustive]
-    _private: (),
 }
 
 impl Default for CodeAnalysis {
@@ -48,7 +43,6 @@ impl Default for CodeAnalysis {
         Self {
             uses_array_copy_on_write: false,
             uses_short_circuit: true,
-            _private: (),
         }
     }
 }

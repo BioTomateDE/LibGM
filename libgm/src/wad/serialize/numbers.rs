@@ -6,7 +6,7 @@ use crate::{
 macro_rules! write_int_fn {
     ($method_name:ident, $int_type:ty) => {
         pub fn $method_name(&mut self, number: $int_type) {
-            let bytes = match self.gm_data.endianness {
+            let bytes = match self.gm_data.meta.endianness {
                 Endianness::Little => number.to_le_bytes(),
                 Endianness::Big => number.to_be_bytes(),
             };

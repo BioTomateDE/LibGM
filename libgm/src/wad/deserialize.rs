@@ -15,7 +15,7 @@ use crate::{
     prelude::*,
     util::bench::Stopwatch,
     wad::{
-        data::{Endianness, GMData},
+        data::{Endianness, GMData, Metadata},
         deserialize::{
             chunk::{ChunkBounds, ChunkMap},
             reader::DataReader,
@@ -177,7 +177,7 @@ impl ParsingOptions {
             .parse(&raw_data)
             .with_context(|| format!("parsing GameMaker data file {}", path.display()))?;
 
-        gm_data.location = Some(path.to_path_buf());
+        gm_data.meta.location = Some(path.to_path_buf());
         Ok(gm_data)
     }
 
@@ -370,9 +370,17 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
     }
 
     handle_unread_chunks(&reader.chunks, reader.options.allow_unknown_chunks)?;
-    let original_data_size = reader.size();
+
+    let meta = Metadata {
+        location: None,
+        chunk_padding: reader.chunk_padding,
+        endianness: reader.endianness,
+        original_data_size: reader.size(),
+    };
 
     let data = GMData {
+        meta,
+
         animation_curves,
         audio_groups,
         audios,
@@ -406,11 +414,6 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         embedded_textures,
         game_objects,
         variables,
-
-        location: None,
-        chunk_padding: reader.chunk_padding,
-        endianness: reader.endianness,
-        original_data_size,
     };
 
     log::trace!("Parsing data took {stopwatch}");

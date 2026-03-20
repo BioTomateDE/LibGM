@@ -20,11 +20,11 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 /// Byte order (endianness) for integers and chunk names in data files.
 ///
 /// Most modern platforms use little-endian, which is the default.
 /// Big-endian support exists for legacy platforms and **may be deprecated**.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Endianness {
     /// Little-endian byte order (reversed bytes).
     ///
@@ -40,9 +40,64 @@ pub enum Endianness {
     Big,
 }
 
+/// Some metadata about a [`GMData`] (GameMaker data file).
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
+pub struct Metadata {
+    /// The directory in which this data file is located.
+    ///
+    /// This can be used to find, read and edit the following:
+    /// * Audio group files (e.g. `audiogroup1.dat`)
+    /// * External sound files (e.g. `mus_st_him.ogg`)
+    /// * JSON language files
+    ///
+    /// If you do not want these files to be available,
+    /// you set this to `None` after parsing.
+    pub location: Option<PathBuf>,
+
+    /// Indicates the number of padding bytes (null bytes) between chunks.
+    ///
+    /// Note that the last chunk does not get padding.
+    /// This padding is influenced by the data file's GameMaker Version, as well as target platform/architecture.
+    pub chunk_padding: u32,
+
+    /// Indicates the data's byte endianness.
+    ///
+    /// This affects byte order of integers and chunk names.
+    /// In most cases (and assumed by default), this is set to little-endian.
+    /// Big-endian is an edge case for certain target platforms (e.g. PS3 or Xbox 360)
+    /// and its support may be removed in the future.
+    pub endianness: Endianness,
+
+    /// The size of the original data file; useful for
+    /// approximating the size of the modified data file.
+    ///
+    /// This is a micro optimization. This field's value
+    /// can be initialized to zero without any problems.
+    pub original_data_size: u32,
+}
+
+impl Default for Metadata {
+    fn default() -> Self {
+        Self {
+            location: None,
+            // Use 16 chunk padding by default for compatibility.
+            chunk_padding: 16,
+            endianness: Endianness::Little,
+            original_data_size: 0,
+        }
+    }
+}
+
 /// The full GameMaker data struct, containing all information from a data file.
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMData {
+    /// Some metadata about the GameMaker data file.
+    ///
+    /// This is purposefully stored in another struct to make it distinct
+    /// from chunk elements in `GMData` and not clutter the namespace.
+    pub meta: Metadata,
+
     pub animation_curves: GMAnimationCurves,      // ACRV
     pub audio_groups: GMAudioGroups,              // AGRP
     pub audios: GMEmbeddedAudios,                 // AUDO
@@ -76,40 +131,6 @@ pub struct GMData {
     pub timelines: GMTimelines,                   // TMLN
     pub embedded_textures: GMEmbeddedTextures,    // TXTR
     pub variables: GMVariables,                   // VARI
-
-    // TODO: should these extra be moved to a different substruct?
-    // otherwise they could be confused with chunks (and clutter namespace)
-    /// The directory in which this data file is located.
-    ///
-    /// This can be used to find, read and edit the following:
-    /// * Audio group files (e.g. `audiogroup1.dat`)
-    /// * External sound files (e.g. `mus_st_him.ogg`)
-    /// * JSON language files
-    ///
-    /// If you do not want these files to be available,
-    /// you set this to `None` after parsing.
-    pub location: Option<PathBuf>,
-
-    /// Indicates the number of padding bytes (null bytes) between chunks.
-    ///
-    /// Note that the last chunk does not get padding.
-    /// This padding is influenced by the data file's GameMaker Version, as well as target platform/architecture.
-    pub chunk_padding: u32,
-
-    /// Indicates the data's byte endianness.
-    ///
-    /// This affects byte order of integers and chunk names.
-    /// In most cases (and assumed by default), this is set to little-endian.
-    /// Big-endian is an edge case for certain target platforms (e.g. PS3 or Xbox 360)
-    /// and its support may be removed in the future.
-    pub endianness: Endianness,
-
-    /// The size of the original data file; useful for
-    /// approximating the size of the modified data file.
-    ///
-    /// This is a micro optimization. This field's value
-    /// can be initialized to zero without any problems.
-    pub original_data_size: u32,
 }
 
 impl Default for GMData {
@@ -148,12 +169,7 @@ impl Default for GMData {
             timelines: GMTimelines::default(),
             embedded_textures: GMEmbeddedTextures::default(),
             variables: GMVariables::default(),
-
-            location: None,
-            // Use 16 chunk padding by default for compatibility.
-            chunk_padding: 16,
-            endianness: Endianness::Little,
-            original_data_size: 0,
+            meta: Metadata::default(),
         }
     }
 }
