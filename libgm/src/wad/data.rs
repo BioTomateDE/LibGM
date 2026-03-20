@@ -6,17 +6,17 @@ use crate::{
     prelude::*,
     util::fmt::format_bytes,
     wad::elements::{
-        animation_curve::GMAnimationCurves, audio_group::GMAudioGroups, background::GMBackgrounds,
-        code::GMCodes, embedded_audio::GMEmbeddedAudios, embedded_image::GMEmbeddedImages,
-        embedded_texture::GMEmbeddedTextures, extension::GMExtensions,
-        feature_flag::GMFeatureFlags, filter_effect::GMFilterEffects, font::GMFonts,
-        function::GMFunctions, game_end::GMGameEndScripts, game_object::GMGameObjects,
-        general_info::GMGeneralInfo, global_init::GMGlobalInitScripts, language::GMLanguageInfo,
-        options::GMOptions, particle_emitter::GMParticleEmitters,
+        animation_curve::GMAnimationCurves, audio::GMAudios, audio_group::GMAudioGroups,
+        background::GMBackgrounds, code::GMCodes, embedded_image::GMEmbeddedImages,
+        extension::GMExtensions, feature_flag::GMFeatureFlags, filter_effect::GMFilterEffects,
+        font::GMFonts, function::GMFunctions, game_end::GMGameEndScripts,
+        game_object::GMGameObjects, general_info::GMGeneralInfo, global_init::GMGlobalInitScripts,
+        language::GMLanguageInfo, options::GMOptions, particle_emitter::GMParticleEmitters,
         particle_system::GMParticleSystems, path::GMPaths, room::GMRooms, script::GMScripts,
         sequence::GMSequences, shader::GMShaders, sound::GMSounds, sprite::GMSprites, tag::GMTags,
-        texture_group_info::GMTextureGroupInfos, texture_page_item::GMTexturePageItems,
-        timeline::GMTimelines, ui_node::GMRootUINodes, validate_names, variable::GMVariables,
+        texture_group_info::GMTextureGroupInfos, texture_page::GMTexturePages,
+        texture_page_item::GMTexturePageItems, timeline::GMTimelines, ui_node::GMRootUINodes,
+        validate_names, variable::GMVariables,
     },
 };
 
@@ -90,7 +90,7 @@ impl Default for Metadata {
 }
 
 /// The full GameMaker data struct, containing all information from a data file.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct GMData {
     /// Some metadata about the GameMaker data file.
     ///
@@ -100,7 +100,7 @@ pub struct GMData {
 
     pub animation_curves: GMAnimationCurves,      // ACRV
     pub audio_groups: GMAudioGroups,              // AGRP
-    pub audios: GMEmbeddedAudios,                 // AUDO
+    pub audios: GMAudios,                         // AUDO
     pub backgrounds: GMBackgrounds,               // BGND
     pub codes: GMCodes,                           // CODE
     pub embedded_images: GMEmbeddedImages,        // EMBI
@@ -119,7 +119,7 @@ pub struct GMData {
     pub particle_systems: GMParticleSystems,      // PSYS
     pub paths: GMPaths,                           // PATH
     pub rooms: GMRooms,                           // ROOM
-    pub root_ui_nodes: GMRootUINodes,             // UILR
+    pub ui_nodes: GMRootUINodes,                  // UILR
     pub scripts: GMScripts,                       // SCPT
     pub sequences: GMSequences,                   // SEQN
     pub shaders: GMShaders,                       // SHDR
@@ -128,50 +128,9 @@ pub struct GMData {
     pub tags: GMTags,                             // TAGS
     pub texture_group_infos: GMTextureGroupInfos, // TGIN
     pub texture_page_items: GMTexturePageItems,   // TPAG
+    pub texture_pages: GMTexturePages,            // TXTR
     pub timelines: GMTimelines,                   // TMLN
-    pub embedded_textures: GMEmbeddedTextures,    // TXTR
     pub variables: GMVariables,                   // VARI
-}
-
-impl Default for GMData {
-    fn default() -> Self {
-        Self {
-            animation_curves: GMAnimationCurves::default(),
-            audio_groups: GMAudioGroups::default(),
-            audios: GMEmbeddedAudios::default(),
-            backgrounds: GMBackgrounds::default(),
-            codes: GMCodes::default(),
-            embedded_images: GMEmbeddedImages::default(),
-            extensions: GMExtensions::default(),
-            feature_flags: GMFeatureFlags::default(),
-            filter_effects: GMFilterEffects::default(),
-            fonts: GMFonts::default(),
-            functions: GMFunctions::default(),
-            game_end_scripts: GMGameEndScripts::default(),
-            game_objects: GMGameObjects::default(),
-            general_info: GMGeneralInfo::default(),
-            global_init_scripts: GMGlobalInitScripts::default(),
-            language_info: GMLanguageInfo::default(),
-            options: GMOptions::default(),
-            particle_emitters: GMParticleEmitters::default(),
-            particle_systems: GMParticleSystems::default(),
-            paths: GMPaths::default(),
-            rooms: GMRooms::default(),
-            root_ui_nodes: GMRootUINodes::default(),
-            scripts: GMScripts::default(),
-            sequences: GMSequences::default(),
-            shaders: GMShaders::default(),
-            sounds: GMSounds::default(),
-            sprites: GMSprites::default(),
-            tags: GMTags::default(),
-            texture_group_infos: GMTextureGroupInfos::default(),
-            texture_page_items: GMTexturePageItems::default(),
-            timelines: GMTimelines::default(),
-            embedded_textures: GMEmbeddedTextures::default(),
-            variables: GMVariables::default(),
-            meta: Metadata::default(),
-        }
-    }
 }
 
 impl GMData {
@@ -208,7 +167,7 @@ impl GMData {
     ///
     /// [`DynamicImage`]: image::DynamicImage
     pub fn deserialize_textures(&mut self) -> Result<()> {
-        for texture_page in &mut self.embedded_textures {
+        for texture_page in &mut self.texture_pages {
             let Some(image) = &mut texture_page.image else {
                 continue;
             };
@@ -245,7 +204,7 @@ impl GMData {
             dbg!(freed_bytes);
         }
 
-        for texture_page in &mut self.embedded_textures {
+        for texture_page in &mut self.texture_pages {
             let Some(image) = &mut texture_page.image else {
                 continue;
             };

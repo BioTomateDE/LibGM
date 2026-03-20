@@ -1,5 +1,5 @@
 use clap::ValueEnum;
-use libgm::{prelude::*, wad::elements::embedded_texture::Format};
+use libgm::{prelude::*, wad::elements::texture_page::Format};
 
 #[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {
@@ -30,7 +30,7 @@ impl Action {
 }
 
 fn serialize_textures(data: &mut GMData, format: Format) -> Result<()> {
-    for texture_page in &mut data.embedded_textures {
+    for texture_page in &mut data.texture_pages {
         let Some(image) = &mut texture_page.image else {
             continue;
         };

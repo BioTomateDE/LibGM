@@ -22,13 +22,12 @@ use crate::{
         },
         elements::{
             animation_curve::GMAnimationCurves,
+            audio::GMAudios,
             audio_group::GMAudioGroups,
             background::GMBackgrounds,
             code::{GMCodes, check_yyc},
             data_file::GMDataFiles,
-            embedded_audio::GMEmbeddedAudios,
             embedded_image::GMEmbeddedImages,
-            embedded_texture::GMEmbeddedTextures,
             extension::GMExtensions,
             feature_flag::GMFeatureFlags,
             filter_effect::GMFilterEffects,
@@ -51,6 +50,7 @@ use crate::{
             string::GMStrings,
             tag::GMTags,
             texture_group_info::GMTextureGroupInfos,
+            texture_page::GMTexturePages,
             texture_page_item::GMTexturePageItems,
             timeline::GMTimelines,
             ui_node::GMRootUINodes,
@@ -331,14 +331,14 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
     };
 
     // Read all other chunks. This is allowed to be executed arbitrary order.
-    let embedded_textures: GMEmbeddedTextures = reader.read_chunk()?;
+    let texture_pages: GMTexturePages = reader.read_chunk()?;
     let scripts: GMScripts = reader.read_chunk()?;
     let fonts: GMFonts = reader.read_chunk()?;
     let sprites: GMSprites = reader.read_chunk()?;
     let game_objects: GMGameObjects = reader.read_chunk()?;
     let rooms: GMRooms = reader.read_chunk()?;
     let backgrounds: GMBackgrounds = reader.read_chunk()?;
-    let audios: GMEmbeddedAudios = reader.read_chunk()?;
+    let audios: GMAudios = reader.read_chunk()?;
     let sounds: GMSounds = reader.read_chunk()?;
     let paths: GMPaths = reader.read_chunk()?;
     let options: GMOptions = reader.read_chunk()?;
@@ -351,7 +351,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
     let global_init_scripts: GMGlobalInitScripts = reader.read_chunk()?;
     let game_end_scripts: GMGameEndScripts = reader.read_chunk()?;
     let shaders: GMShaders = reader.read_chunk()?;
-    let root_ui_nodes: GMRootUINodes = reader.read_chunk()?;
+    let ui_nodes: GMRootUINodes = reader.read_chunk()?;
     let timelines: GMTimelines = reader.read_chunk()?;
     let embedded_images: GMEmbeddedImages = reader.read_chunk()?;
     let texture_group_infos: GMTextureGroupInfos = reader.read_chunk()?;
@@ -401,7 +401,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         particle_systems,
         paths,
         rooms,
-        root_ui_nodes,
+        ui_nodes,
         scripts,
         sequences,
         shaders,
@@ -411,7 +411,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         texture_group_infos,
         texture_page_items,
         timelines,
-        embedded_textures,
+        texture_pages,
         game_objects,
         variables,
     };

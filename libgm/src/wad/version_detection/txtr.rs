@@ -1,7 +1,7 @@
 use crate::{
     prelude::*,
     wad::{
-        deserialize::reader::DataReader, elements::embedded_texture::BZ2_QOI_HEADER,
+        deserialize::reader::DataReader, elements::texture_page::BZ2_QOI_HEADER,
         version::GMVersionReq,
     },
 };
