@@ -109,6 +109,7 @@ impl GMVersion {
     /// This is mostly useful for non-constant/dynamic [`GMVersionReq`]s.
     #[must_use]
     pub fn is_version_at_least(&self, version_req: impl Into<GMVersionReq>) -> bool {
+        // see `impl PartialEq<GMVersionReq> for GMVersion`
         self >= &version_req.into()
     }
 

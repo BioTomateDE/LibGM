@@ -204,13 +204,44 @@ impl GMImage {
         Ok(())
     }
 
+    /// Tries to optimize this image's memory footprint by shrinking
+    /// underlying buffers to their needed size.
+    ///
+    /// Returns the number of bytes freed (can be 0).
+    ///
+    /// This function takes up CPU power and should not be called frequently, if at all.
+    ///
+    /// If you're looking to optimize [`GMData`] memory in general, visit [`GMData::optimize_memory`].
+    pub(crate) fn optimize_memory(&mut self) -> usize {
+        // not public for now. make gh issue if u want this
+        fn shrink(buffer: &mut Vec<u8>) -> usize {
+            let before = buffer.capacity();
+            buffer.shrink_to_fit();
+            let after = buffer.capacity();
+            before - after
+        }
+
+        match &mut self.0 {
+            Img::Dyn(_) => 0, // idk if u can shrink this
+            Img::Png(buffer) | Img::Qoi(buffer) | Img::Bz2Qoi(buffer, _) => shrink(buffer),
+        }
+    }
+
     pub(super) fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+        let is_qoi = matches!(self.0, Img::Qoi(_) | Img::Bz2Qoi(_, _));
+        let is_qoi_eligible = builder.is_version_at_least((2022, 2));
+        if is_qoi && !is_qoi_eligible {
+            bail!("Cannot serialize QOI images before GM 2022.2");
+        }
+
         match &self.0 {
-            Img::Dyn(dyn_img) => write_dyn_img(dyn_img, builder)?,
+            Img::Dyn(dyn_img) => {
+                write_dyn_img(dyn_img, builder).context("serializing DynamicImage")?;
+            },
             Img::Png(raw_png_data) => builder.write_bytes(raw_png_data),
             Img::Qoi(raw_qoi_data) => builder.write_bytes(raw_qoi_data),
             Img::Bz2Qoi(raw_bz2_qoi_data, header) => {
-                write_bz2qoi_header(header, builder)?;
+                write_bz2qoi_header(header, builder).context("writing Bz2Qoi image header")?;
                 builder.write_bytes(raw_bz2_qoi_data);
             },
         }

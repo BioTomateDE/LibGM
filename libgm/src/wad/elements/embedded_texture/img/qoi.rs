@@ -28,18 +28,20 @@ pub struct QoiHeader {
     pub length: u32,
 }
 
+fn estimate_encoded_size(image: &DynamicImage) -> usize {
+    let width = image.width() as usize;
+    let height = image.height() as usize;
+    // apparently not multiplying by anything is the best estimate???
+    width * height
+}
+
 pub fn build(image: &DynamicImage, builder: &mut DataBuilder) {
+    builder.raw_data.reserve(estimate_encoded_size(image));
     encode_(image, &mut builder.raw_data);
 }
 
 pub fn encode(image: &DynamicImage) -> Vec<u8> {
-    /// Maximum chunk size according to the QOI spec <https://qoiformat.org/qoi-specification.pdf>
-    const MAX_CHUNK_SIZE: usize = 5;
-
-    let width = image.width() as usize;
-    let height = image.height() as usize;
-    let cap = width * height * MAX_CHUNK_SIZE;
-    let mut buffer = Vec::with_capacity(cap);
+    let mut buffer = Vec::with_capacity(estimate_encoded_size(image));
     encode_(image, &mut buffer);
     buffer
 }

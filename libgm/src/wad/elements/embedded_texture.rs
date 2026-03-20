@@ -125,7 +125,8 @@ impl GMElement for GMEmbeddedTextures {
             builder.align(0x80);
             builder.resolve_pointer(&texture_page.image)?;
             let start_pos: usize = builder.len();
-            img.serialize(builder)?;
+            img.serialize(builder)
+                .context("serializing texture page image")?;
             if builder.is_version_at_least((2022, 3)) {
                 let length: usize = builder.len() - start_pos;
                 builder.overwrite_usize(length, texture_block_size_placeholders[i])?;
