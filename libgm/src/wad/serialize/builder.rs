@@ -51,7 +51,7 @@ pub struct DataBuilder<'a> {
 
 impl<'a> DataBuilder<'a> {
     pub fn new(gm_data: &'a GMData) -> Self {
-        let approximated_size: usize = (f64::from(gm_data.original_data_size) * 1.05) as usize;
+        let approximated_size: usize = (f64::from(gm_data.meta.original_data_size) * 1.05) as usize;
 
         Self {
             gm_data,
@@ -141,7 +141,7 @@ impl<'a> DataBuilder<'a> {
     /// For writing regular pointer lists, see [`Self::write_pointer_list`].
     pub fn overwrite_usize(&mut self, number: usize, position: usize) -> Result<()> {
         let number: u32 = number as u32;
-        let bytes: [u8; 4] = match self.gm_data.endianness {
+        let bytes: [u8; 4] = match self.gm_data.meta.endianness {
             Endianness::Little => number.to_le_bytes(),
             Endianness::Big => number.to_be_bytes(),
         };
@@ -154,7 +154,7 @@ impl<'a> DataBuilder<'a> {
     /// like lengths or offsets after serialization.
     /// For writing regular pointer lists, see [`Self::write_pointer_list`].
     pub fn overwrite_i32(&mut self, number: i32, position: usize) -> Result<()> {
-        let bytes: [u8; 4] = match self.gm_data.endianness {
+        let bytes: [u8; 4] = match self.gm_data.meta.endianness {
             Endianness::Little => number.to_le_bytes(),
             Endianness::Big => number.to_be_bytes(),
         };

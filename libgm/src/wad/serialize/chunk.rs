@@ -15,7 +15,7 @@ impl DataBuilder<'_> {
     pub fn write_chunk_name(&mut self, name: ChunkName) {
         let mut bytes = name.as_bytes();
 
-        if self.gm_data.endianness == Endianness::Big {
+        if self.gm_data.meta.endianness == Endianness::Big {
             bytes.reverse();
         }
 
@@ -48,7 +48,7 @@ impl DataBuilder<'_> {
         let padding_start_pos = self.len();
         let ver = &self.gm_data.general_info.version;
         if ver.major >= 2 || (ver.major == 1 && ver.build >= 9999) {
-            self.align(self.gm_data.chunk_padding);
+            self.align(self.gm_data.meta.chunk_padding);
         }
 
         // Since the padding should not get written for the last chunk,
