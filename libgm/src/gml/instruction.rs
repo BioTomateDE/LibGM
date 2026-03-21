@@ -519,6 +519,22 @@ impl Instruction {
         }
     }
 
+    /// Attempts to extract a jump offset in bytes from the instruction.
+    ///
+    /// This will always succeed for `Branch`, `BranchIf`,
+    /// `BranchUnless`, `PushWithContext` and `PopWithContext`.
+    #[must_use]
+    pub const fn jump_offset_mut(&mut self) -> Option<&mut i32> {
+        match self {
+            Self::Branch { jump_offset }
+            | Self::BranchIf { jump_offset }
+            | Self::BranchUnless { jump_offset }
+            | Self::PushWithContext { jump_offset }
+            | Self::PopWithContext { jump_offset } => Some(jump_offset),
+            _ => None,
+        }
+    }
+
     /// Attempts to extract the first (or the only) data type from the instruction.
     ///
     /// For binary operations, this will be RHS (the right hand side).

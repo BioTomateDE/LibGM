@@ -44,7 +44,7 @@
 //!
 //! # VM vs YYC
 //! You may have noticed some stars regarding bytecode while reading.
-//! This is because YoYoGames has created `YYC` (TODO: abbreviation meaning missing).
+//! This is because YoYoGames has created `YYC` ([YoYo Compiler](https://manual.gamemaker.io/monthly/en/Settings/YoYo_Compiler.htm)).
 //! When exporting their game, game developers can choose between regular VM output or YYC output.
 //!
 //! In VM mode, the GML source code is compiled to their own bytecode that

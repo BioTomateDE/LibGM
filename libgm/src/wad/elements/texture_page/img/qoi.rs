@@ -33,13 +33,60 @@ impl Pixel {
     const DEFAULT: Self = Self::new(0, 0, 0, 255);
 
     #[must_use]
-    const fn new(r: u8, b: u8, g: u8, a: u8) -> Self {
+    const fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
     }
 
     #[must_use]
     const fn from_array(channels: [u8; 4]) -> Self {
         Self::new(channels[0], channels[1], channels[2], channels[3])
+    }
+
+    #[must_use]
+    const fn to_array(self) -> [u8; 4] {
+        [self.r, self.g, self.b, self.a]
+    }
+}
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct PixelDiff {
+    r: i16,
+    g: i16,
+    b: i16,
+    a: i16,
+}
+
+impl PixelDiff {
+    #[must_use]
+    fn new(current: Pixel, previous: Pixel) -> Self {
+        Self {
+            r: i16::from(current.r) - i16::from(previous.r),
+            g: i16::from(current.g) - i16::from(previous.g),
+            b: i16::from(current.b) - i16::from(previous.b),
+            a: i16::from(current.a) - i16::from(previous.a),
+        }
+    }
+
+    #[must_use]
+    fn fits(channel: i16, max_val: u8) -> bool {
+        let max_val = i16::from(max_val);
+        channel > -max_val && channel < max_val
+    }
+
+    #[must_use]
+    fn fits_r(&self, max_val: u8) -> bool {
+        Self::fits(self.r, max_val)
+    }
+    #[must_use]
+    fn fits_g(&self, max_val: u8) -> bool {
+        Self::fits(self.g, max_val)
+    }
+    #[must_use]
+    fn fits_b(&self, max_val: u8) -> bool {
+        Self::fits(self.b, max_val)
+    }
+    #[must_use]
+    fn fits_a(&self, max_val: u8) -> bool {
+        Self::fits(self.a, max_val)
     }
 }
 
@@ -59,12 +106,12 @@ fn estimate_encoded_size(image: &DynamicImage) -> usize {
 
 pub fn build(image: &DynamicImage, builder: &mut DataBuilder) -> Result<()> {
     builder.raw_data.reserve(estimate_encoded_size(image));
-    encode_(image, &mut builder.raw_data)
+    encode_to_buffer(image, &mut builder.raw_data)
 }
 
 pub fn encode(image: &DynamicImage) -> Result<Vec<u8>> {
     let mut buffer = Vec::with_capacity(estimate_encoded_size(image));
-    encode_(image, &mut buffer)?;
+    encode_to_buffer(image, &mut buffer)?;
     Ok(buffer)
 }
 
@@ -107,24 +154,21 @@ pub fn decode(bytes: &[u8]) -> Result<DynamicImage> {
 
     let mut pos: usize = 0;
     let mut run: i32 = 0;
-    let mut r: u8 = 0;
-    let mut g: u8 = 0;
-    let mut b: u8 = 0;
-    let mut a: u8 = 255;
-    let mut index: [u8; 256] = [0; 64 * 4];
+    let mut px = Pixel::DEFAULT;
+    let mut index = [Pixel::DEFAULT; 64];
 
     let width = u32::from(header.width);
     let height = u32::from(header.height);
-    let mut img = ImageBuffer::new(width, height);
+    let mut image: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::new(width, height);
 
-    for (_x, _y, pixel) in img.enumerate_pixels_mut() {
+    for (_x, _y, pixel) in image.enumerate_pixels_mut() {
         if run > 0 {
             run -= 1;
-            *pixel = Rgba([r, g, b, a]);
+            pixel.0 = px.to_array();
             continue;
         }
         if pos >= pixel_data.len() {
-            *pixel = Rgba([r, g, b, a]);
+            pixel.0 = px.to_array();
             continue;
         }
 
@@ -132,11 +176,8 @@ pub fn decode(bytes: &[u8]) -> Result<DynamicImage> {
         pos += 1;
 
         if (b1 & QOI_MASK_2) == QOI_INDEX {
-            let index_pos = ((b1 ^ QOI_INDEX) << 2) as usize;
-            r = index[index_pos];
-            g = index[index_pos + 1];
-            b = index[index_pos + 2];
-            a = index[index_pos + 3];
+            let index_pos = (b1 ^ QOI_INDEX) as usize;
+            px = index[index_pos];
         } else if (b1 & QOI_MASK_3) == QOI_RUN_8 {
             run = i32::from(b1 & 0x1F);
         } else if (b1 & QOI_MASK_3) == QOI_RUN_16 {
@@ -144,60 +185,59 @@ pub fn decode(bytes: &[u8]) -> Result<DynamicImage> {
             pos += 1;
             run = (i32::from(b1 & 0x1F) << 8 | i32::from(b2)) + 32;
         } else if (b1 & QOI_MASK_2) == QOI_DIFF_8 {
-            r = r.wrapping_add(((i32::from(b1) & 0x30) << 26 >> 30) as u8);
-            g = g.wrapping_add(((i32::from(b1) & 0x0C) << 28 >> 30) as u8);
-            b = b.wrapping_add(((i32::from(b1) & 0x_3) << 30 >> 30) as u8);
+            px.r =
+                px.r.wrapping_add(((i32::from(b1) & 0x30) << 26 >> 30) as u8);
+            px.g =
+                px.g.wrapping_add(((i32::from(b1) & 0x0C) << 28 >> 30) as u8);
+            px.b =
+                px.b.wrapping_add(((i32::from(b1) & 0x_3) << 30 >> 30) as u8);
         } else if (b1 & QOI_MASK_3) == QOI_DIFF_16 {
             let b2: u8 = pixel_data[pos];
             pos += 1;
             let merged: i32 = i32::from(b1) << 8 | i32::from(b2);
-            r = r.wrapping_add(((merged & 0x1F00) << 19 >> 27) as u8);
-            g = g.wrapping_add(((merged & 0x00F0) << 24 >> 28) as u8);
-            b = b.wrapping_add(((merged & 0x000F) << 28 >> 28) as u8);
+            px.r = px.r.wrapping_add(((merged & 0x1F00) << 19 >> 27) as u8);
+            px.g = px.g.wrapping_add(((merged & 0x00F0) << 24 >> 28) as u8);
+            px.b = px.b.wrapping_add(((merged & 0x000F) << 28 >> 28) as u8);
         } else if (b1 & QOI_MASK_4) == QOI_DIFF_24 {
             let b2: i32 = i32::from(pixel_data[pos]);
             let b3: i32 = i32::from(pixel_data[pos + 1]);
             pos += 2;
             let merged: i32 = (i32::from(b1) << 16) | (b2 << 8) | b3;
-            r = r.wrapping_add(((merged & 0x0F_8000) << 12 >> 27) as u8);
-            g = g.wrapping_add(((merged & 0x00_7C00) << 17 >> 27) as u8);
-            b = b.wrapping_add(((merged & 0x00_03E0) << 22 >> 27) as u8);
-            a = a.wrapping_add(((merged & 0x00_001F) << 27 >> 27) as u8);
+            px.r = px.r.wrapping_add(((merged & 0x0F_8000) << 12 >> 27) as u8);
+            px.g = px.g.wrapping_add(((merged & 0x00_7C00) << 17 >> 27) as u8);
+            px.b = px.b.wrapping_add(((merged & 0x00_03E0) << 22 >> 27) as u8);
+            px.a = px.a.wrapping_add(((merged & 0x00_001F) << 27 >> 27) as u8);
         } else if (b1 & QOI_MASK_4) == QOI_COLOR {
             if (b1 & 8) != 0 {
-                r = pixel_data[pos];
+                px.r = pixel_data[pos];
                 pos += 1;
             }
             if (b1 & 4) != 0 {
-                g = pixel_data[pos];
+                px.g = pixel_data[pos];
                 pos += 1;
             }
             if (b1 & 2) != 0 {
-                b = pixel_data[pos];
+                px.b = pixel_data[pos];
                 pos += 1;
             }
             if (b1 & 1) != 0 {
-                a = pixel_data[pos];
+                px.a = pixel_data[pos];
                 pos += 1;
             }
         } else {
             bail!("Invalid QOI Opcode {b1} (0x{b1:02X})");
         }
 
-        let index_pos = (((r ^ g ^ b ^ a) & 0x3F) << 2) as usize;
-        index[index_pos] = r;
-        index[index_pos + 1] = g;
-        index[index_pos + 2] = b;
-        index[index_pos + 3] = a;
-        *pixel = Rgba([r, g, b, a]);
+        let index_pos = ((px.r ^ px.g ^ px.b ^ px.a) & 0x3F) as usize;
+        index[index_pos] = px;
+        pixel.0 = px.to_array();
     }
 
-    Ok(DynamicImage::ImageRgba8(img))
+    Ok(DynamicImage::ImageRgba8(image))
 }
 
-// TODO: fix this
-#[allow(clippy::many_single_char_names)] // go fuck urself clippy
-fn encode_(image: &DynamicImage, buffer: &mut Vec<u8>) -> Result<()> {
+fn encode_to_buffer(image: &DynamicImage, buffer: &mut Vec<u8>) -> Result<()> {
+    // (big endian unsupported)
     let (width, height) = image.dimensions();
     let width = u16::try_from(width).context_src("Image width exceeds limit of 65535")?;
     let height = u16::try_from(height).context_src("Image height exceeds limit of 65535")?;
@@ -241,67 +281,67 @@ fn encode_(image: &DynamicImage, buffer: &mut Vec<u8>) -> Result<()> {
             run = 0;
         }
 
-        if !is_same {
-            let index_pos: u8 = (px.r ^ px.g ^ px.b ^ px.a) & 63;
-            if index[index_pos as usize] == px {
-                buffer.push(QOI_INDEX | index_pos);
+        // same pixel lol, run value will handle it
+        if is_same {
+            px_prev = px;
+            continue;
+        }
+
+        // if cached in index, easy.
+        let index_pos: u8 = (px.r ^ px.g ^ px.b ^ px.a) & 63;
+        if index[index_pos as usize] == px {
+            buffer.push(QOI_INDEX | index_pos);
+            px_prev = px;
+            continue;
+        }
+
+        index[index_pos as usize] = px;
+
+        let diff = PixelDiff::new(px, px_prev);
+
+        if diff.fits_r(16) && diff.fits_g(16) & diff.fits_b(16) && diff.fits_a(16) {
+            if diff.a == 0 && diff.fits_r(2) && diff.fits_g(2) && diff.fits_b(2) {
+                buffer.push(
+                    (i16::from(QOI_DIFF_8)
+                        | (diff.r << 4 & 0x30)
+                        | (diff.g << 2 & 0x0C)
+                        | (diff.b & 3)) as u8,
+                );
+            } else if diff.a == 0 && diff.fits_g(8) && diff.fits_b(8) {
+                buffer.push((i16::from(QOI_DIFF_16) | (diff.r & 31)) as u8);
+                buffer.push(((diff.g << 4 & 0xF0) | (diff.b & 15)) as u8);
             } else {
-                index[index_pos as usize] = px;
-
-                let v: [i16; 4] = [
-                    i16::from(px.r) - i16::from(px_prev.r),
-                    i16::from(px.g) - i16::from(px_prev.g),
-                    i16::from(px.b) - i16::from(px_prev.b),
-                    i16::from(px.a) - i16::from(px_prev.a),
-                ];
-                let vr = v[0] as u8;
-                let vg = v[1] as u8;
-                let vb = v[2] as u8;
-                let va = v[3] as u8;
-
-                // if all channels (r, g, b, a) are in (-17, 16)
-                if v.iter().all(|&x| x > -17 && x < 16) {
-                    // if alpha is zero and r, g, b are in (-3, 2)
-                    if va == 0 && v[..3].iter().all(|&x| x > -3 && x < 2) {
-                        buffer.push(QOI_DIFF_8 | (vr << 4 & 0x30) | (vg << 2 & 0x0C) | (vb & 3));
-                    }
-                    // if alpha is zero and g, b are in (-9, 8)
-                    else if va == 0 && v[1..3].iter().all(|&x| x > -9 && x < 8) {
-                        buffer.push(QOI_DIFF_16 | (vr & 31));
-                        buffer.push((vg << 4 & 0xF0) | (vb & 15));
-                    } else {
-                        buffer.push(QOI_DIFF_24 | (vr >> 1 & 15));
-                        buffer.push((vr << 7 & 0x80) | (vg << 2 & 0x7C) | (vb >> 3 & 3));
-                        buffer.push((vb << 5 & 0xE0) | (va & 31));
-                    }
-                } else {
-                    let mut mask = 0;
-                    if vr != 0 {
-                        mask |= 8;
-                    }
-                    if vg != 0 {
-                        mask |= 4;
-                    }
-                    if vb != 0 {
-                        mask |= 2;
-                    }
-                    if va != 0 {
-                        mask |= 1;
-                    }
-                    buffer.push(QOI_COLOR | mask);
-                    if vr != 0 {
-                        buffer.push(px.r);
-                    }
-                    if vg != 0 {
-                        buffer.push(px.g);
-                    }
-                    if vb != 0 {
-                        buffer.push(px.b);
-                    }
-                    if va != 0 {
-                        buffer.push(px.a);
-                    }
-                }
+                buffer.push((i16::from(QOI_DIFF_24) | (diff.r >> 1 & 15)) as u8);
+                buffer
+                    .push(((diff.r << 7 & 0x80) | (diff.g << 2 & 0x7C) | (diff.b >> 3 & 3)) as u8);
+                buffer.push(((diff.b << 5 & 0xE0) | (diff.a & 31)) as u8);
+            }
+        } else {
+            let mut mask = 0;
+            if diff.r != 0 {
+                mask |= 8;
+            }
+            if diff.g != 0 {
+                mask |= 4;
+            }
+            if diff.b != 0 {
+                mask |= 2;
+            }
+            if diff.a != 0 {
+                mask |= 1;
+            }
+            buffer.push(QOI_COLOR | mask);
+            if diff.r != 0 {
+                buffer.push(px.r);
+            }
+            if diff.g != 0 {
+                buffer.push(px.g);
+            }
+            if diff.b != 0 {
+                buffer.push(px.b);
+            }
+            if diff.a != 0 {
+                buffer.push(px.a);
             }
         }
 
@@ -309,7 +349,8 @@ fn encode_(image: &DynamicImage, buffer: &mut Vec<u8>) -> Result<()> {
     }
 
     let length: usize = buffer.len() - start_pos - 12;
-    let range = start_pos + 8..start_pos + 12;
-    buffer[range].copy_from_slice(&(length as u32).to_le_bytes());
+    let length_encoded = (length as u32).to_le_bytes();
+    let range = (start_pos + 8)..(start_pos + 12);
+    buffer[range].copy_from_slice(&length_encoded);
     Ok(())
 }

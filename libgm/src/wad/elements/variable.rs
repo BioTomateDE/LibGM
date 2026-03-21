@@ -19,8 +19,10 @@ use crate::{
 pub struct GMVariables {
     /// List of all variables; mixing global, local and self.
     pub variables: Vec<GMVariable>,
+
     /// Set in WAD 15 and above.
     pub modern_header: Option<ModernHeader>,
+
     pub exists: bool,
 }
 
