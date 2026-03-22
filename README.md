@@ -16,26 +16,26 @@ This is effectively a Rust port of
 - Runtime for parsing and building is ~8x faster than UndertaleModLib.
   - This can be further accelerated with the upcoming threaded chunk reading
     feature (opt-in).
-- Thorough documentation on docs.rs.
+- Thorough documentation on [docs.rs](https://docs.rs).
 - Clean and maintainable library code.
 - Helpful error messages:
   - No `NullReferenceException`, ever
   - No meaningless stack traces over 50 lines long
   - Still more information than just "Reading out of bounds"
   - Strict data integrity checks catch errors earlier, making debugging easier
-  - Example trace printed out using `.chain_pretty()`:
+  - Example trace printed out using `.chain()`:
 
     ```
     sprite::swf::item::shape::style_group::fill::gradient::Record count 1065353216 implies data size 8.5 GB which exceeds failsafe size 10.0 MB
-    ↳ while reading simple list
-    ↳ while deserializing element 1/2 of sprite::swf::item::shape::style_group::StyleGroup<sprite::swf::item::subshape::Data> simple list
-    ↳ while deserializing element 0/1 of sprite::swf::item::Item simple list
-    ↳ while deserializing element 3/60 of GMSprite pointer list
-    ↳ while deserializing chunk 'SPRT'
-    ↳ while parsing GameMaker data file ./gm48_datafiles/a-loop_detective.win
+    > while reading simple list
+    > while deserializing element 1/2 of sprite::swf::item::shape::style_group::StyleGroup<sprite::swf::item::subshape::Data> simple list
+    > while deserializing element 0/1 of sprite::swf::item::Item simple list
+    > while deserializing element 3/60 of GMSprite pointer list
+    > while deserializing chunk 'SPRT'
+    > while parsing GameMaker data file ./gm48_datafiles/a-loop_detective.win
     ```
 
-- Configurable lenient options for trying to parse half-broken data files.
+- Configurable lenient options for trying to parse half-broken data files (see `ParsingOptions`).
 
 ## Disadvantages / TODOs
 
@@ -66,11 +66,11 @@ Now you can use these functions exposed by LibGM:
 - `build_bytes(gm_data: &GMData) -> Result<Vec<u8>>`
 
 If you need more control over how the data file should be read, you can also use
-the `DataParserOptions` struct to modify parsing options:
+the `ParsingOptions` struct to modify parsing options:
 
 ```rust
 // Create a parser with custom options
-let parser = DataParserOptions::new()
+let parser = ParsingOptions::new()
     .verify_alignment(false)
     .allow_unread_chunks(true);
 
@@ -83,15 +83,6 @@ for path in data_files {
 // Parse from a byte vector
 let raw_data: Vec<u8> = read_from_zip(zip_file, "Undertale/assets/game.unx")?;
 let data: GMData = parser.parse_bytes(raw_data)?;
-
-// Parse from a byte slice reference
-let byte_slice: &[u8] = &[0x46, 0x4F, 0x52, 0x4D, /* ... */];
-let data: GMData = parser.parse_bytes(byte_slice)?;
-
-// You can also parse directly from borrowed data
-let buffer: Vec<u8> = std::fs::read("./data.win")?;
-let data: GMData = parser.parse_bytes(&buffer)?;
-// buffer is still accessible here since we passed a reference
 ```
 
 ## Crate features
@@ -111,30 +102,29 @@ let data: GMData = parser.parse_bytes(&buffer)?;
   Some checks regarding panic safety or memory allocation are always enabled.
 - `game-creation-timestamp` exposes the `creation-timestamp` field in `GMGeneralInfo`.
   Otherwise, it will be stored as an i64 internally.
-- `bzip2-image` enables deserialization of BZip2+QOI encoded texture pages.
-  If `*_dynamic_image` is called on a `GMImage` that contains Bzip2-Qoi
-  data and this feature is disabled, an error will be returned.
-- `png-image` enables PNG deserialization and all serialization of texture pages.
-  If you deserialize texture pages into `DynamicImage`s with this feature disabled,
-  you will not be able to serialize the data.
+- `bzip2-image` enables (de)serialization of BZip2+QOI encoded texture pages.
+  If you try to change the format of a `GMImage` that stores BZip2-QOI
+  data with this feature disabled, an error will be returned.
+- `png-image` enables PNG (de)serialization.
+  In games older than GM 2022.2, you will not be able to serialize `GMImage`s storing `DynamicImage`s with this feature disabled.
 
 ## Credits
 
 Huge thanks to the Underminers Team! Without UndertaleModTool, this project
 would've been impossible. I also want to thank the people in the Underminers
-Discord Server who helped me along the way, especially
+Discord Guild who helped me along the way, especially
 [@colinator27](https://github.com/colinator27).
 
 ## Licencing
 
 This project is licenced under the
-[GNU Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html) (GPL-3).
+[GNU Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html) (GPL-3.0).
 
 ## Contributing
 
 All contributions are welcome! Whether that's a pull request, a feature you
 would like to see added, a bug you found; just create an Issue/PR in this repo.
 
-- Everything related to GameMaker is located in `libgm/src/gamemaker/`.
-- There is a basic CLI to interact with LibGM. Its code is located in
-  `libgm-cli/src/`.
+- Everything related to GameMaker is located in `libgm/src/wad/`.
+- A disassembler and assembler are available in `libgm/src/gml/assembly/`.
+- There is a basic CLI to interact with LibGM in `libgm-cli/src/`.
