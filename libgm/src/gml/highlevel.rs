@@ -1,5 +1,6 @@
 pub mod compile;
 //pub mod node;
+mod node;
 pub mod parser;
 pub mod token;
 

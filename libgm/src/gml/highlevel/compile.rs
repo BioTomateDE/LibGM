@@ -2,7 +2,7 @@ use std::fmt::{self, Write};
 
 use crate::gml::highlevel::Location;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CompileError<'a> {
     pub(super) error: crate::Error,
     pub(super) source_code: &'a str,
@@ -24,20 +24,20 @@ impl<'a> CompileError<'a> {
     pub fn code_line(&self) -> &'a str {
         let start = self.start_position.byte as usize;
         let code = self.source_code;
-        let before = code[..start].rfind("\n").map_or(0, |x| x + 1);
-        let after = code[start..].find("\n").map_or(code.len(), |x| x + start);
+        let before = code[..start].rfind('\n').map_or(0, |x| x + 1);
+        let after = code[start..].find('\n').map_or(code.len(), |x| x + start);
         &self.source_code[before..after]
     }
 
     /// The one-indexed line number where this error originated.
     #[must_use]
-    pub fn line(&self) -> u32 {
+    pub const fn line(&self) -> u32 {
         self.start_position.line + 1
     }
 
     /// The one-indexed character number (on the corresponding line) where this error originated.
     #[must_use]
-    pub fn char(&self) -> u32 {
+    pub const fn char(&self) -> u32 {
         self.start_position.char + 1
     }
 
@@ -58,7 +58,7 @@ impl<'a> CompileError<'a> {
     ///
     /// [`libgm::Error`]: crate::Error
     #[must_use]
-    pub fn libgm_error_ref(&self) -> &crate::Error {
+    pub const fn libgm_error_ref(&self) -> &crate::Error {
         &self.error
     }
 }
