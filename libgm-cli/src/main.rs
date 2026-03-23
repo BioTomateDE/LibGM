@@ -11,10 +11,7 @@ use std::path::PathBuf;
 use libgm::{
     gml::assembly::disassemble_code,
     prelude::*,
-    wad::{
-        data::GMData, deserialize::parse_file, elements::texture_page::Format,
-        serialize::build_file,
-    },
+    wad::{data::GMData, deserialize::parse_file, serialize::build_file},
 };
 
 use crate::tests::Test;
