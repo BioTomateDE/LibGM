@@ -1,6 +1,5 @@
 # Rust's huge target folder(s) should not be commited
-/target
-*/target
+**/target
 
 # Exclude GameMaker data file extensions
 *.win
@@ -18,5 +17,6 @@ data_files/
 *.unx1
 *.unx.bak
 
-# No RustRover bloat, make your own config
+# Exlude IDE configurations
 .idea
+.vscode

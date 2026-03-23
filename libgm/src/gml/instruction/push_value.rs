@@ -1,18 +1,18 @@
 use std::borrow::Cow;
 
 use crate::{
-    gamemaker::elements::function::GMFunction,
     gml::{
         Instruction,
         instruction::{CodeVariable, DataType},
     },
     prelude::GMRef,
+    wad::elements::function::GMFunction,
 };
 
 /// A value to push to the stack.
 /// Used in [`Push`] instructions.
 ///
-/// [`Push`]: crate::gml::Instruction::Push
+/// [`Push`]: Instruction::Push
 #[derive(Debug, Clone, PartialEq)]
 pub enum PushValue {
     Int16(i16),

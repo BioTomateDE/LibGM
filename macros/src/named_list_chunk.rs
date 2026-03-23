@@ -36,7 +36,7 @@ impl Parse for MacroArgs {
                         format!("Unknown flag '{flag_name}'. Valid flags are: name_exception"),
                     ));
                 },
-            };
+            }
         }
 
         Ok(MacroArgs { chunk_name, flags })
@@ -60,7 +60,7 @@ pub fn named_list_chunk(attr: TokenStream, item: TokenStream) -> TokenStream {
         quote! {}
     } else {
         quote! {
-            impl crate::gamemaker::elements::GMNamedElement for #elem_type {
+            impl crate::wad::elements::GMNamedElement for #elem_type {
                 fn name(&self) -> &String {
                     &self.name
                 }
@@ -78,8 +78,8 @@ pub fn named_list_chunk(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         #name_impl
 
-        impl crate::gamemaker::elements::GMNamedListChunk for #chunk_type {
-            fn ref_by_name(&self, name: &str) -> Result<crate::gamemaker::reference::GMRef<#elem_type>> {
+        impl crate::wad::elements::GMNamedListChunk for #chunk_type {
+            fn ref_by_name(&self, name: &str) -> Result<crate::wad::reference::GMRef<#elem_type>> {
                 for (i, element) in self.#elems_field.iter().enumerate() {
                     if element.name == name {
                         return Ok(i.into());

@@ -4,12 +4,12 @@ use std::{
 };
 
 use libgm::{
-    gamemaker::data::GMData,
     gml::{
         assembly::{assemble_instructions, disassemble_code},
         instruction::Instruction,
     },
     prelude::*,
+    wad::data::GMData,
 };
 
 pub fn test(data: &GMData) -> Result<()> {
@@ -67,7 +67,7 @@ pub fn test(data: &GMData) -> Result<()> {
             println!("Reconstructed code has {diff} {comparison} instructions than the original");
         }
 
-        let lines: Vec<&str> = assembly.split("\n").collect();
+        let lines: Vec<&str> = assembly.split('\n').collect();
 
         // TODO:prettier diff
         for (index, (original, recreation)) in

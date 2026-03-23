@@ -37,7 +37,7 @@ impl<'a> Reader<'a> {
         self.line.starts_with(substring)
     }
 
-    pub fn consume_to(&mut self, length: usize) -> &str {
+    pub fn consume_to(&mut self, length: usize) -> &'a str {
         let line = self.line;
         self.line = &self.line[length..];
         &line[..length]
@@ -80,7 +80,7 @@ impl<'a> Reader<'a> {
         Ok(())
     }
 
-    fn consume_brackets(&mut self, open: char, close: char) -> Result<Option<&str>> {
+    fn consume_brackets(&mut self, open: char, close: char) -> Result<Option<&'a str>> {
         if !self.line.starts_with(open) {
             return Ok(None);
         }
@@ -88,9 +88,9 @@ impl<'a> Reader<'a> {
         let close_pos = self
             .line
             .find(close)
-            .ok_or_else(|| format!("'{open}' was never closed"))?;
+            .ok_or_else(|| format!("Bracket {open:?} was never closed"))?;
 
-        // Manual slicing because of Rust's borrow rules
+        // Inlined `.consume_to()` because of Rust's borrow rules :/
         let line = self.line;
         self.line = &self.line[close_pos + 1..];
         let inside = &line[1..close_pos];
@@ -98,19 +98,19 @@ impl<'a> Reader<'a> {
         Ok(Some(inside))
     }
 
-    pub fn consume_round_brackets(&mut self) -> Result<Option<&str>> {
+    pub fn consume_round_brackets(&mut self) -> Result<Option<&'a str>> {
         self.consume_brackets('(', ')')
     }
 
-    pub fn consume_square_brackets(&mut self) -> Result<Option<&str>> {
+    pub fn consume_square_brackets(&mut self) -> Result<Option<&'a str>> {
         self.consume_brackets('[', ']')
     }
 
-    pub fn consume_angle_brackets(&mut self) -> Result<Option<&str>> {
+    pub fn consume_angle_brackets(&mut self) -> Result<Option<&'a str>> {
         self.consume_brackets('<', '>')
     }
 
-    pub fn parse_identifier(&mut self) -> Result<&str> {
+    pub fn parse_identifier(&mut self) -> Result<&'a str> {
         // Identifiers can't start with a digit
         if self.peek_char().is_some_and(|c| c.is_ascii_digit()) {
             bail!("Expected identifier; found {:?}", self.line);

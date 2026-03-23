@@ -1,0 +1,191 @@
+use macros::{named_list_chunk, num_enum};
+
+use crate::{
+    prelude::*,
+    util::init::num_enum_from,
+    wad::{
+        deserialize::reader::DataReader,
+        elements::{
+            GMElement, GMNamedElement, background::GMBackground, font::GMFont, sprite::GMSprite,
+            texture_page::GMTexturePage, validate_identifier,
+        },
+        reference::GMRef,
+        serialize::builder::DataBuilder,
+        version::LTSBranch,
+    },
+};
+
+#[named_list_chunk("TGIN", name_exception)]
+pub struct GMTextureGroupInfos {
+    pub texture_group_infos: Vec<GMTextureGroupInfo>,
+    pub exists: bool,
+}
+
+impl GMElement for GMTextureGroupInfos {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        reader.read_gms2_chunk_version("TGIN Version")?;
+        let texture_group_infos: Vec<GMTextureGroupInfo> = reader.read_pointer_list()?;
+        Ok(Self { texture_group_infos, exists: true })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+        builder.write_i32(1); // TGIN version
+        builder.write_pointer_list(&self.texture_group_infos)?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GMTextureGroupInfo {
+    pub name: String,
+    pub texture_pages: Vec<GMRef<GMTexturePage>>,
+    pub sprites: Vec<GMRef<GMSprite>>,
+    pub spine_sprites: Vec<GMRef<GMSprite>>,
+    pub fonts: Vec<GMRef<GMFont>>,
+    pub tilesets: Vec<GMRef<GMBackground>>,
+    pub data_2022_9: Option<Data2022_9>,
+}
+
+impl GMNamedElement for GMTextureGroupInfo {
+    fn name(&self) -> &String {
+        &self.name
+    }
+
+    fn name_mut(&mut self) -> &mut String {
+        &mut self.name
+    }
+
+    fn validate_name(&self) -> Result<()> {
+        // Allow ".png" inside the identifier
+        let name = &self.name;
+        for part in name.split_terminator(".png") {
+            validate_identifier(part)?;
+        }
+        Ok(())
+    }
+}
+
+impl GMElement for GMTextureGroupInfo {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let name: String = reader.read_gm_string()?;
+        let data_2022_9: Option<Data2022_9> = reader.deserialize_if_gm_version((2022, 9))?;
+        let texture_pages_ptr = reader.read_u32()?;
+        let sprites_ptr = reader.read_u32()?;
+        let spine_sprites_ptr =
+            if reader
+                .general_info
+                .is_version_at_least((2023, 1, LTSBranch::PostLTS))
+            {
+                0
+            } else {
+                reader.read_u32()?
+            };
+        let fonts_ptr = reader.read_u32()?;
+        let tilesets_ptr = reader.read_u32()?;
+
+        reader.assert_pos(texture_pages_ptr, "Texture Pages")?;
+        let texture_pages: Vec<GMRef<GMTexturePage>> = reader.read_simple_list()?;
+
+        reader.assert_pos(sprites_ptr, "Sprites")?;
+        let sprites: Vec<GMRef<GMSprite>> = reader.read_simple_list()?;
+
+        let spine_sprites: Vec<GMRef<GMSprite>> =
+            if reader
+                .general_info
+                .is_version_at_least((2023, 1, LTSBranch::PostLTS))
+            {
+                Vec::new()
+            } else {
+                reader.assert_pos(spine_sprites_ptr, "Spine Sprites")?;
+                reader.read_simple_list()?
+            };
+
+        reader.assert_pos(fonts_ptr, "Fonts")?;
+        let fonts: Vec<GMRef<GMFont>> = reader.read_simple_list()?;
+
+        reader.assert_pos(tilesets_ptr, "Tilesets")?;
+        let tilesets: Vec<GMRef<GMBackground>> = reader.read_simple_list()?;
+
+        Ok(Self {
+            name,
+            texture_pages,
+            sprites,
+            spine_sprites,
+            fonts,
+            tilesets,
+            data_2022_9,
+        })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+        builder.write_gm_string(&self.name);
+        builder.write_if_ver(
+            &self.data_2022_9,
+            "Directory, Extension, LoadType",
+            (2022, 9),
+        )?;
+        builder.write_pointer(&self.texture_pages);
+        builder.write_pointer(&self.sprites);
+        if !builder.is_version_at_least((2023, 1, LTSBranch::PostLTS)) {
+            builder.write_pointer(&self.spine_sprites);
+        }
+        builder.write_pointer(&self.fonts);
+        builder.write_pointer(&self.tilesets);
+
+        builder.resolve_pointer(&self.texture_pages)?;
+        builder.write_simple_list(&self.texture_pages)?;
+
+        builder.resolve_pointer(&self.sprites)?;
+        builder.write_simple_list(&self.sprites)?;
+
+        if !builder.is_version_at_least((2023, 1, LTSBranch::PostLTS)) {
+            builder.resolve_pointer(&self.spine_sprites)?;
+            builder.write_simple_list(&self.spine_sprites)?;
+        }
+
+        builder.resolve_pointer(&self.fonts)?;
+        builder.write_simple_list(&self.fonts)?;
+
+        builder.resolve_pointer(&self.tilesets)?;
+        builder.write_simple_list(&self.tilesets)?;
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Data2022_9 {
+    pub directory: String,
+    pub extension: String,
+    pub load_type: LoadType,
+}
+
+impl GMElement for Data2022_9 {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let directory: String = reader.read_gm_string()?;
+        let extension: String = reader.read_gm_string()?;
+        let load_type: LoadType = num_enum_from(reader.read_i32()?)?;
+        Ok(Self { directory, extension, load_type })
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+        builder.write_gm_string(&self.directory);
+        builder.write_gm_string(&self.extension);
+        builder.write_i32(self.load_type.into());
+        Ok(())
+    }
+}
+
+#[num_enum(i32)]
+pub enum LoadType {
+    /// The texture data is located inside this file.
+    InFile = 0,
+
+    /// The textures of the group this belongs to are located externally
+    /// May mean more specifically that textures for one texture group are all in one file.
+    SeparateGroup = 1,
+
+    /// The textures of the group this belongs to are located externally.
+    /// May mean more specifically that textures are separated into different files, within the group.
+    SeparateTextures = 2,
+}

@@ -7,24 +7,30 @@
 //! For most purposes, using `parse_file` and `build_file` is enough.
 //!
 //! ```no_run
-//! use libgm::prelude::*;
-//! use libgm::gamemaker::elements::game_object::GMGameObject;
+//! use libgm::wad::GMData;
+//! use libgm::wad::elements::game_object::GMGameObject;
+//! use libgm::wad::elements::GMNamedListChunk;
+//!
+//! # fn main() -> libgm::Result<()> {
 //!
 //! // Load data file
-//! let mut data: GMData = libgm::parse_file("./data.win").unwrap();
+//! let mut data: GMData = libgm::wad::parse_file("./data.win")?;
 //! println!("Loaded {}", data.general_info.display_name);
 //!
 //! // Modify data file
-//! let obj: &mut GMGameObject = data.game_objects.by_name_mut("obj_time").unwrap();
+//! let obj: &mut GMGameObject = data.game_objects.by_name_mut("obj_time")?;
 //! obj.visible = true;
 //!
 //! // Write data file
-//! libgm::build_file(&data, "./modified_data.win").unwrap();
+//! libgm::wad::build_file(&data, "./modified_data.win")?;
+//!
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! If you need more control, you can use `parse_bytes`, `build_bytes` or `ParsingOptions`.
 //!
-//! For more information on the GameMaker specifics, check out the [`gamemaker`] module.
+//! For more information on the GameMaker specifics, check out the [`wad`] module.
 //!
 //! ## Disclaimer
 //! This library is still in testing stages
@@ -34,9 +40,9 @@
 //!
 //! If you have any questions or concerns about my code
 //! or documentation, please contact me via either:
-//! - Discord DM: `@farming.simulator`
 //! - [GitHub Issue](https://github.com/BioTomateDE/LibGM/issues/new)
 //! - [Email](mailto:latuskati+cratesio@gmail.com?subject=%5BLibGM%5D%20Your%20code%20is%20fucking%20stupid%2C%20explain%20ts%20plz)
+//! - Discord DM: `@biotomate.de`
 //!
 //! ## Panicking
 //! This library *should* **never panic**.
@@ -82,69 +88,56 @@
 //! [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool)
 //! (UndertaleModLib, to be exact).
 //! Most of the GameMaker elements' docstrings and struct field (names) are taken from there.
-//!
-//!
 
-// These `must_use`s and unreachable patterns are usually
-// critical and indicate a serious logical flaw.
+// Activate all lint groups.
+// Pedantic is really strong, so many lints will be whitelisted (with a reason).
+#![warn(clippy::cargo, clippy::nursery, clippy::pedantic)]
 //
-// If you know that these are unused and are just
-// using them for debugging purposes,
-// you can temporarily comment this out.
-#![deny(unused_must_use)]
-#![deny(unreachable_patterns)]
+#![deny(
+    // These `must_use`s and unreachable patterns are usually
+    // critical and indicate a serious logical flaw.
+    //
+    // If you know that these are unused and are just using them
+    // for debugging purposes, you can temporarily comment this out.
+    unused_must_use,
+    unreachable_patterns,
+
+    // This usually happens when renaming crate features.
+    // This should be fixed immediately.
+    unexpected_cfgs,
+)]
 //
-// This usually happens when renaming crate features.
-// This should be fixed immediately.
-#![deny(unexpected_cfgs)]
-//
-//
-#![warn(clippy::cargo)]
-//
-// I sometimes need more than 3 bools in a struct???
-// This lint is only relevant for people
-// who have never heard of an enum.
-#![allow(clippy::struct_excessive_bools)]
-//
-// Reading data can always fail (e.g. trying to read out of bounds).
-// Almost all parser related functions have to read
-// data at some point down the call hierarchy.
-// Putting the same `Errors` header everywhere is meaningless.
-#![allow(clippy::missing_errors_doc)]
-//
-// I store `Option<T>`, so passing `Option<&T>` instead of `&Option<T>`
-// would require me to use `.as_ref()` every single time.
-#![allow(clippy::ref_option)]
-//
-// Reinterpreting the bits when using `as`-casts
-// is the intended behavior.
-// When trying to "safely convert" between signed and
-// unsigned integers, use `try_from` instead.
-#![allow(clippy::cast_sign_loss)]
-#![allow(clippy::cast_possible_wrap)]
-//
-// "Cast from usize to u32 can truncate".
-// This is irrelevant because all `usize`s are
-// related to element count or data length.
-// If either of those is out of `u32` bounds,
-// the data reading/parsing will fail anyway
-// since data files are only allowed to be
-// smaller than 2 GB (`i32` limit).
-#![allow(clippy::cast_possible_truncation)]
-//
-// YoYoGames may add a float field to some element in the future.
-// This would break existing `Eq` structs.
-#![allow(clippy::derive_partial_eq_without_eq)]
-//
-// This is a stylistic preference of mine.
-// I may change this in the future.
-#![allow(clippy::useless_let_if_seq)]
-#![allow(clippy::needless_late_init)]
-//
-// I currently don't care about long functions.
-// Usually, they are `deserialize` or `serialize` functions,
-// which would be unclean to split up.
-#![allow(clippy::too_many_lines)]
+#![allow(
+    // Reading data can always fail (e.g. trying to read out of bounds).
+    // Almost all parser related functions have to read
+    // data at some point down the call hierarchy.
+    // Putting the same `# Errors` header everywhere is meaningless.
+    clippy::missing_errors_doc,
+
+    // I sometimes need more than 3 bools in a struct???
+    // This lint is only relevant for people
+    // who have never heard of an enum.
+    clippy::struct_excessive_bools,
+
+    // Reinterpreting the bits when using `as`-casts is the intended behavior.
+    // When trying to "safely convert" between signed and
+    // unsigned integers, use `try_from` instead.
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap,
+
+    // "Cast from usize to u32 can truncate".
+    // This is irrelevant because all `usize`s are related to element count or data length.
+    // If either of those is out of `u32` bounds, the data reading/parsing will fail anyway
+    // since data files are only allowed to be smaller than 2 GB (`i32` limit).
+    clippy::cast_possible_truncation,
+
+    // YoYoGames may add a float field to some element in the future.
+    // This would break existing `Eq` structs.
+    clippy::derive_partial_eq_without_eq,
+
+    // This often makes the code less readable.
+    clippy::useless_let_if_seq,
+)]
 
 // Const assertion for soundness
 const _: () = assert!(
@@ -159,22 +152,17 @@ mod util;
 
 // Public modules
 pub mod error;
-pub mod gamemaker;
 pub mod gml;
 pub mod prelude;
+pub mod wad;
 
 // Convenience re-exports
 pub use error::{Error, Result};
-pub use gamemaker::{
-    deserialize::{ParsingOptions, parse_bytes, parse_file},
-    serialize::{build_bytes, build_file},
-};
 
 // === Some TODOs for the entire library ===
 //
 // When Rust finally drops Macros 2.0:
-// * Migrate all `macro_rules!` to `macro`s.
-// * Export `bail!` macro as well as other useful macros to library users.
+// * Migrate all `macro_rules!` to `macro`s and remove exporting from crate root.
 // Reference: https://github.com/rust-lang/rust/issues/39412
 //
 // When most traits (`Into`, `TryInto`, `Iterator`, `PartialEq`) are const-stable:

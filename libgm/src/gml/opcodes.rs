@@ -188,7 +188,7 @@ pub mod extended {
 }
 
 impl Instruction {
-    /// The "Extended Opcode" for this instruction, if this is a "extended" (aka "break") instruction.
+    /// The "Extended Opcode" for this instruction, if this is an "extended" (aka "break") instruction.
     #[must_use]
     pub const fn extended_kind(&self) -> Option<i16> {
         use super::opcodes::extended;

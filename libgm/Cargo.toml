@@ -1,6 +1,6 @@
 [package]
 name = "libgm"
-version = "0.4.1"
+version = "0.5.0-alpha"
 authors = ["BioTomateDE <latuskati+cratesio@gmail.com>"]
 edition = "2024"
 description = "A tool for modding, unpacking and decompiling GameMaker games"
@@ -26,9 +26,13 @@ game-creation-timestamp = ["dep:chrono"]
 bzip2-image = ["dep:bzip2"]
 png-image = ["image/png"]
 
+[package.metadata.docs.rs]
+all-features = true
+default-target = "x86_64-unknown-linux-gnu"
+
 # Attribute macros (num_enum, list_chunk, named_list_chunk)
 [dependencies.macros]
-version = "0.1.1"
+version = "0.2.0"
 path = "../macros"
 package = "libgm-macros"
 
@@ -39,13 +43,13 @@ optional = true
 
 # Needed for Game Creation Timestamp in General Info
 [dependencies.chrono]
-version = "0.4.43"
+version = "0.4.44"
 default-features = false
 optional = true
 
 # Needed to (potentially) deserialize PNG images
 [dependencies.image]
-version = "0.25.9"
+version = "0.25.10"
 default-features = false
 
 # Logging
@@ -54,4 +58,4 @@ version = "0.4.29"
 
 # Primitive number enums
 [dependencies.num_enum]
-version = "0.7.5"
+version = "0.7.6"

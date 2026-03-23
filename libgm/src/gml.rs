@@ -1,7 +1,7 @@
 //! Everything related to GML (GameMaker language) bytecode.
 //!
 //! TODO(doc): explain more.
-//! For now, just visit [`crate::gamemaker`] sorry lol
+//! For now, just visit [`crate::wad`] sorry lol
 
 pub mod analysis;
 pub mod assembly;
@@ -43,7 +43,7 @@ impl GMCode {
             return Ok(Vec::new());
         }
 
-        let mut children: Vec<GMRef<GMCode>> = Vec::new();
+        let mut children: Vec<GMRef<Self>> = Vec::new();
 
         for (idx, code_entry) in data.codes.iter().enumerate() {
             let Some(parent) = code_entry.parent() else {
@@ -74,7 +74,7 @@ impl GMCode {
             return Vec::new();
         }
 
-        let mut children: Vec<GMRef<GMCode>> = Vec::new();
+        let mut children: Vec<GMRef<Self>> = Vec::new();
 
         for (idx, code_entry) in data.codes.iter().enumerate() {
             if code_entry.parent() == Some(code_ref) {
@@ -155,4 +155,59 @@ pub fn instructions_size(instructions: &[Instruction]) -> u32 {
         size += instruction.size();
     }
     size
+}
+
+/// TODO: test this
+pub fn insert_instructions(
+    haystack: &mut Vec<Instruction>,
+    insertion: Box<[Instruction]>,
+    index: u32,
+) -> Result<()> {
+    let index = index as usize;
+    let len = haystack.len();
+
+    if index >= len {
+        bail!("Index {index} out of bounds for vector with instruction count {len}");
+    }
+
+    let insertion_size = instructions_size(&insertion) as i32;
+    let first_half_size = instructions_size(&haystack[..index]) as i32 / 4;
+
+    let mut cur_pos: u32 = 0;
+    for (i, instr) in haystack.iter_mut().enumerate() {
+        cur_pos += instr.size4();
+        let Some(offset) = instr.jump_offset_mut() else {
+            continue;
+        };
+
+        let branch_target_pos = cur_pos as i32 + *offset;
+        let origin_is_first_half = i < index;
+        let target_is_first_half = branch_target_pos < first_half_size;
+
+        // if branching withing their half, everything is fine.
+        if origin_is_first_half == target_is_first_half {
+            continue;
+        }
+
+        // if crossing boundary, fix the jump offsets
+        if target_is_first_half {
+            *offset += insertion_size;
+        } else {
+            *offset -= insertion_size;
+        }
+    }
+
+    // now perform the insertion
+    haystack.splice(index..=index, insertion);
+
+    Ok(())
+}
+
+pub fn insert_instruction(
+    haystack: &mut Vec<Instruction>,
+    insertion: Instruction,
+    index: u32,
+) -> Result<()> {
+    // heap alloc :c
+    insert_instructions(haystack, Box::new([insertion]), index)
 }

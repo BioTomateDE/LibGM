@@ -1,3 +1,5 @@
+//! im too lazy to write docs but if anyone cares about ts file, u can contact me and i will try to explain
+
 macro_rules! bitfield_struct {
     (
         $(#[$meta:meta])*
@@ -17,13 +19,13 @@ macro_rules! bitfield_struct {
             )*
         }
 
-        impl crate::gamemaker::elements::GMElement for $name {
-            fn deserialize(reader: &mut crate::gamemaker::deserialize::reader::DataReader) -> crate::error::Result<Self> {
+        impl crate::wad::elements::GMElement for $name {
+            fn deserialize(reader: &mut crate::wad::deserialize::reader::DataReader) -> crate::error::Result<Self> {
                 let raw = <$int>::deserialize(reader)?;
                 Ok(Self::parse(raw))
             }
 
-            fn serialize(&self, builder: &mut crate::gamemaker::serialize::builder::DataBuilder) -> crate::error::Result<()> {
+            fn serialize(&self, builder: &mut crate::wad::serialize::builder::DataBuilder) -> crate::error::Result<()> {
                 self.build().serialize(builder)
             }
         }

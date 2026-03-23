@@ -8,13 +8,13 @@ use crate::{
 ///
 /// You should therefore only call this function once per game
 /// and keep the struct.
-#[allow(clippy::manual_non_exhaustive)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub struct CodeAnalysis {
     /// Whether Copy on Write (Cow) functionality is enabled for arrays.
     ///
     /// Between GameMaker 2.3 and 2022.2 this is guaranteed to be `true`.
-    /// Afterwards, it is set to false by default in the GameMaker IDE, but can be changed by a game's developer.
+    /// Afterward, it is set to false by default in the GameMaker IDE, but can be changed by a game's developer.
     ///
     /// This is detected by the usage of [`Instruction::SetArrayOwner`].
     ///
@@ -25,7 +25,7 @@ pub struct CodeAnalysis {
     ///
     /// This means that boolean `AND` and `OR` operations are guaranteed
     /// to stop executing when evaluating more would be useless:
-    /// If the left hand side expression evaluted to false in an `AND`, the right  hand  side
+    /// If the left hand side expression evaluated to false in an `AND`, the right  hand  side
     /// expression is not useful to evaluate, since `false and XXXXX` is always `false`.
     /// The same thing applies to when the LHS expression is `true` for `OR`: `true or XXXXX` is always `true`.
     ///
@@ -36,11 +36,6 @@ pub struct CodeAnalysis {
     ///
     /// By default, this is enabled.
     pub uses_short_circuit: bool,
-
-    // Makes this struct impossible to construct.
-    // Useful for avoiding minor SemVer bumps.
-    // This doubles as a #[non_exhaustive]
-    _private: (),
 }
 
 impl Default for CodeAnalysis {
@@ -48,7 +43,6 @@ impl Default for CodeAnalysis {
         Self {
             uses_array_copy_on_write: false,
             uses_short_circuit: true,
-            _private: (),
         }
     }
 }
@@ -62,6 +56,7 @@ impl Default for CodeAnalysis {
 /// since this information is about how this game was compiled.
 ///
 /// This function is also available in [`GMData::analyze_code`].
+#[must_use]
 pub fn analyze(data: &GMData) -> CodeAnalysis {
     let mut analysis = CodeAnalysis::default();
 
@@ -93,6 +88,7 @@ impl GMData {
     /// Analyzes some information about the bytecode used in this game.
     ///
     /// For more information, see the [`analyze`] function in [`crate::gml::analysis`].
+    #[must_use]
     pub fn analyze_code(&self) -> CodeAnalysis {
         analyze(self)
     }

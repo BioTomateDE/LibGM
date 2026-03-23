@@ -2,8 +2,8 @@ mod assembler;
 
 use clap::ValueEnum;
 use libgm::{
-    gamemaker::{data::GMData, deserialize::parse_bytes, serialize::build_bytes},
     prelude::*,
+    wad::{data::GMData, deserialize::parse_bytes, serialize::build_bytes},
 };
 
 #[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]

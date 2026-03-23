@@ -1,12 +1,4 @@
 use crate::{
-    gamemaker::{
-        data::GMData,
-        elements::{
-            GMListChunk, GMNamedElement, function::GMFunction, game_object::GMGameObject,
-            variable::GMVariable,
-        },
-        reference::GMRef,
-    },
     gml::{
         GMCode,
         instruction::{
@@ -16,6 +8,14 @@ use crate::{
     },
     prelude::*,
     util::fmt::typename,
+    wad::{
+        data::GMData,
+        elements::{
+            GMListChunk, GMNamedElement, function::GMFunction, game_object::GMGameObject,
+            variable::GMVariable,
+        },
+        reference::GMRef,
+    },
 };
 
 macro_rules! write {
@@ -33,6 +33,7 @@ fn slice_instructions_by_bytes(
     let mut index = 0;
     let mut offset = 0;
     while offset < start_offset {
+        #[rustfmt::skip] // currently, there is an internal bug in rustfmt
         let instr = instructions.get(index).ok_or_else(||
             format!("Given start byte offset {start_offset} is out of range in instructions with byte length {offset}"
         ))?;
@@ -47,10 +48,10 @@ fn slice_instructions_by_bytes(
     Ok(&instructions[index..])
 }
 
-/// Disassembles  a code entry's instructions.
+/// Disassembles a code entry's instructions.
 ///
 /// This function mostly exists for convenience since it is short to write
-/// `disassemble_code(code, data)` instead of `disassemble_instructions(&code.instructions, data).]
+/// `disassemble_code(code, data)` instead of `disassemble_instructions(&code.instructions, data)`.
 ///
 /// However, it *does* have one behavioral difference:
 /// It correctly disassembles child code entries by looking up
@@ -103,6 +104,7 @@ pub fn disassemble_instruction(instruction: &Instruction, gm_data: &GMData) -> R
 }
 
 /// Disassembles a single instruction into one line, appending the assembly string to a buffer.
+#[allow(clippy::too_many_lines)]
 ///
 /// If errors occurred during disassembling, the produced assembly will have only been partially
 /// written to the buffer.
@@ -379,11 +381,11 @@ fn write_push_instruction(value: &PushValue, buffer: &mut String, gm_data: &GMDa
     Ok(())
 }
 
-#[inline]
-fn asset_get_name<'a, T: GMNamedElement + 'a, C: GMListChunk<Element = T> + 'a>(
-    chunk: &'a C,
-    gm_ref: GMRef<T>,
-) -> Result<&'a String> {
+fn asset_get_name<'a, T, C>(chunk: &'a C, gm_ref: GMRef<T>) -> Result<&'a String>
+where
+    T: GMNamedElement + 'a,
+    C: GMNamedListChunk<Element = T>,
+{
     const CTX: &str = "resolving asset reference for PushReference Instruction";
 
     let element: &'a T = chunk.by_ref(gm_ref).context(CTX)?;
@@ -394,7 +396,6 @@ fn asset_get_name<'a, T: GMNamedElement + 'a, C: GMListChunk<Element = T> + 'a>(
         .context(CTX)?;
 
     let name: &'a String = element.name();
-
     Ok(name)
 }
 

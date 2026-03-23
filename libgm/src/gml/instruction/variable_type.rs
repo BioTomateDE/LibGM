@@ -15,9 +15,9 @@ pub enum VariableType {
     /// Used when referencing variables on room instance IDs, e.g. something like `inst_01ABCDEF.x` in GML.
     Instance = 0xE0,
 
-    /// (GMS2.3+) Used in tandem with multi-dimensional array push operations (`PushArrayFinal`).
+    /// (GMS2.3+) Used in tandem with multidimensional array push operations (`PushArrayFinal`).
     MultiPush = 0x10,
 
-    /// (GMS2.3+) Used in tandem with multi-dimensional array push and pop operations (`PushArrayFinal`, `PopArrayFinal`).
+    /// (GMS2.3+) Used in tandem with multidimensional array push and pop operations (`PushArrayFinal`, `PopArrayFinal`).
     MultiPop = 0x90,
 }

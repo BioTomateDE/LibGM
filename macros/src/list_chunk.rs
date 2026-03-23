@@ -57,15 +57,15 @@ pub fn list_chunk(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
         }
 
-        impl crate::gamemaker::elements::GMChunk for #chunk_type {
-            const NAME: crate::gamemaker::chunk::ChunkName = crate::gamemaker::chunk::ChunkName::new(#chunk_name);
+        impl crate::wad::elements::GMChunk for #chunk_type {
+            const NAME: crate::wad::chunk::ChunkName = crate::wad::chunk::ChunkName::new(#chunk_name);
 
             fn exists(&self) -> bool {
                 self.exists
             }
         }
 
-        impl crate::gamemaker::elements::GMListChunk for #chunk_type {
+        impl crate::wad::elements::GMListChunk for #chunk_type {
             type Element = #elem_type;
 
             fn elements(&self) -> &Vec<#elem_type> {
@@ -154,8 +154,7 @@ fn is_vec_type(ty: &syn::Type) -> bool {
         .path
         .segments
         .last()
-        .map(|seg| seg.ident == "Vec")
-        .unwrap_or(false)
+        .is_some_and(|seg| seg.ident == "Vec")
 }
 
 fn extract_vec_inner_type(ty: &syn::Type) -> Option<&syn::Type> {
