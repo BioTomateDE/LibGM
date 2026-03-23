@@ -1,6 +1,7 @@
+use dotnet_rng::DotnetRng;
+
 use crate::{
     prelude::*,
-    util::rng::DotnetRng,
     wad::{
         deserialize::reader::DataReader, elements::general_info::GMGeneralInfo,
         serialize::builder::DataBuilder,
