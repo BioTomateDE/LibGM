@@ -80,8 +80,10 @@ const fn validate_char(byte: u8) -> bool {
     matches!(byte, b'A'..=b'Z' | b'0'..=b'9')
 }
 
+#[inline]
 fn try_display(chunk_name: &[u8; 4]) -> Option<&str> {
-    if chunk_name.iter().any(u8::is_ascii_control) {
+    // if all bytes are null/unprintable, then don't bother with a string representation.
+    if chunk_name.iter().all(u8::is_ascii_control) {
         return None;
     }
     str::from_utf8(chunk_name).ok()

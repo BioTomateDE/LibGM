@@ -64,12 +64,16 @@ use crate::{
 const ERR_TOO_BIG: &str =
     "Data file is bigger than 2,147,483,646 bytes which will lead to bugs in LibGM and the runner";
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParsingOptions {
+    /// See [`ParsingOptions::verify_alignment`].
     pub verify_alignment: bool,
+
+    /// See [`ParsingOptions::verify_constants`].
     pub verify_constants: bool,
+
+    /// See [`ParsingOptions::allow_unknown_chunks`].
     pub allow_unknown_chunks: bool,
-    pub parallel_processing: bool,
 }
 
 impl Default for ParsingOptions {
@@ -79,6 +83,7 @@ impl Default for ParsingOptions {
 }
 
 impl ParsingOptions {
+    /// Creates a new [`ParsingOptions`] with default settings.
     #[inline]
     #[must_use]
     pub const fn new() -> Self {
@@ -86,7 +91,6 @@ impl ParsingOptions {
             verify_alignment: true,
             verify_constants: true,
             allow_unknown_chunks: false,
-            parallel_processing: false,
         }
     }
 
@@ -133,18 +137,6 @@ impl ParsingOptions {
     pub const fn allow_unknown_chunks(mut self, enabled: bool) -> Self {
         self.allow_unknown_chunks = enabled;
         self
-    }
-
-    /// When enabled, processes independent chunks in parallel using multiple threads.
-    /// # Experimental.
-    ///
-    /// > Default: **false**
-    #[inline]
-    #[must_use]
-    pub fn parallel_processing(mut self, enabled: bool) -> Self {
-        self.parallel_processing = enabled;
-        todo!("Not yet implemented");
-        // TODO: implement
     }
 
     /// Parse a GameMaker data file (stored in memory) with default options.
@@ -322,9 +314,9 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         reader.chunks.remove("STRG");
         Stopwatch::start()
     } else {
-        reader.read_chunk::<GMStrings>()?; // Set `reader.strings`
-        variables = reader.read_chunk()?; // Set `reader.variable_occurrences`
-        functions = reader.read_chunk()?; // Set `reader.function_occurrences`
+        reader.read_chunk::<GMStrings>()?; // Sets `reader.strings`
+        variables = reader.read_chunk()?; // Sets `reader.variable_occurrences`
+        functions = reader.read_chunk()?; // Sets `reader.function_occurrences`
         let st = Stopwatch::start();
         codes = reader.read_chunk()?;
         st

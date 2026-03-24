@@ -41,6 +41,7 @@ pub fn build_file(gm_data: &GMData, path: impl AsRef<Path>) -> Result<()> {
     Ok(())
 }
 
+#[inline]
 fn build(gm_data: &GMData) -> Result<Vec<u8>> {
     if cfg!(feature = "catch-panic") {
         panic::catch(|| build_impl(gm_data))
