@@ -1,6 +1,7 @@
 [![GitHub](https://img.shields.io/badge/github-repo-blue?logo=github)](https://github.com/BioTomateDE/LibGM)
 [![Crates.io](https://img.shields.io/crates/v/libgm)](https://crates.io/crates/libgm)
 [![Documentation](https://img.shields.io/docsrs/libgm)](https://docs.rs/libgm)
+[![Hypercommit](https://img.shields.io/badge/Hypercommit-DB2475)](https://hypercommit.com/libgm)
 
 # LibGM
 
