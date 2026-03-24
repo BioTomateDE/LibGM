@@ -1,10 +1,9 @@
 //! The full GameMaker data struct, containing all information from a data file.
 
-use std::{collections::HashMap, hash::Hash, path::PathBuf};
+use std::{fmt, path::PathBuf};
 
 use crate::{
     prelude::*,
-    util::fmt::format_bytes,
     wad::elements::{
         animation_curve::GMAnimationCurves, audio::GMAudios, audio_group::GMAudioGroups,
         background::GMBackgrounds, code::GMCodes, embedded_image::GMEmbeddedImages,
@@ -90,7 +89,7 @@ impl Default for Metadata {
 }
 
 /// The full GameMaker data struct, containing all information from a data file.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Clone, Default, PartialEq)]
 pub struct GMData {
     /// Some metadata about the GameMaker data file.
     ///
@@ -131,6 +130,15 @@ pub struct GMData {
     pub texture_pages: GMTexturePages,            // TXTR
     pub timelines: GMTimelines,                   // TMLN
     pub variables: GMVariables,                   // VARI
+}
+
+impl fmt::Debug for GMData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("GMData")
+            .field("meta", &self.meta)
+            .field("general_info", &self.general_info)
+            .finish_non_exhaustive()
+    }
 }
 
 impl GMData {
@@ -177,56 +185,4 @@ impl GMData {
         }
         Ok(())
     }
-
-    /// Tries to reduce memory footprint by shrinking `Vec`s and `HashMap`s so
-    /// they don't take up unneeded space.
-    ///
-    /// This function may be useful to call once after data deserialization in a long-lived application
-    /// (such as a GUI/TUI where the [`GMData`] is stored indefinitely).
-    /// It is also useful to call this function after changing formats of lots of texture pages.
-    ///
-    /// You should not be calling this function frequently, as it consumes CPU power
-    /// and will not meaningfully shrink your memory footprint by much.
-    ///
-    /// Currently, only vectors are shrunk which could've actually been
-    /// overallocated by data deserialization (if the size wasn't known).
-    /// Most vectors are produced by pointer lists or simple lists which state their exact element count.
-    pub fn optimize_memory(&mut self) {
-        let mut freed_bytes: usize = 0;
-
-        for code in &mut self.codes {
-            freed_bytes += shrink_vec(&mut code.instructions);
-            // dbg!(freed_bytes);
-        }
-
-        for sequence in &mut self.sequences {
-            freed_bytes += shrink_hashmap(&mut sequence.function_ids);
-            dbg!(freed_bytes);
-        }
-
-        for texture_page in &mut self.texture_pages {
-            let Some(image) = &mut texture_page.image else {
-                continue;
-            };
-            freed_bytes += image.optimize_memory();
-            // dbg!(freed_bytes);
-        }
-
-        let human_size: String = format_bytes(freed_bytes);
-        log::info!("Freed {human_size} ({freed_bytes} bytes)");
-    }
-}
-
-fn shrink_vec<T>(vector: &mut Vec<T>) -> usize {
-    let before = vector.capacity();
-    vector.shrink_to_fit();
-    let after = vector.capacity();
-    before - after
-}
-
-fn shrink_hashmap<K: Hash + Eq, V>(hashmap: &mut HashMap<K, V>) -> usize {
-    let before = hashmap.capacity();
-    hashmap.shrink_to_fit();
-    let after = hashmap.capacity();
-    before - after
 }

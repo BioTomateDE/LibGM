@@ -37,7 +37,6 @@ impl Display for LTSBranch {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 /// A GameMaker Studio Version.
 ///
 /// Theoretically, this is only the version of the IDE this game was made in.
@@ -49,17 +48,31 @@ impl Display for LTSBranch {
 /// raw `GEN8` version is stuck on `2.0.0.0`.
 /// This library uses version detection to detect the approximate GameMaker version
 /// so that the file format can be deserialized properly.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 pub struct GMVersion {
+    /// The most significant version part.
+    /// This can be 1, 2, or a year after 2021.
+    ///
     /// If greater than 1, serialization produces "2.0.0.0" due to the flag no longer updating in `data.win`.
     pub major: u32,
+
+    /// The second-most significant version part.
     pub minor: u32,
+
+    /// The third-most significant version part.
     pub release: u32,
+
+    /// The fourth-most (least) significant version part.
     pub build: u32,
-    /// Different GameMaker release branches. LTS has some but not all features of equivalent newer versions.
+
+    /// Different GameMaker release branches.
+    /// LTS has some but not all features of equivalent newer versions.
+    /// See [`LTSBranch`] for more information.
     pub branch: LTSBranch,
 }
 
 impl GMVersion {
+    /// Creates a new [`GMVersion`] with the given fields.
     #[must_use]
     pub const fn new(major: u32, minor: u32, release: u32, build: u32, branch: LTSBranch) -> Self {
         Self { major, minor, release, build, branch }
@@ -113,6 +126,9 @@ impl GMVersion {
         self >= &version_req.into()
     }
 
+    /// Sets this `[GMVersion`]'s to the specified [`GMVersionReq`].
+    ///
+    /// The LTS branch is updated accordingly (maybe incorrectly idk).
     pub fn set_version(&mut self, req: impl Into<GMVersionReq>) {
         let new = req.into();
         self.major = new.major;
@@ -219,16 +235,29 @@ impl GMElement for GMVersion {
 /// A GameMaker Version Requirement for checking if the game's version is equal to or higher than x.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMVersionReq {
+    /// The most significant version part.
+    /// This can be 1, 2, or a year after 2021.
     pub major: u32,
+
+    /// The second-most significant version part.
     pub minor: u32,
+
+    /// The third-most significant version part.
     pub release: u32,
+
+    /// The fourth-most (least) significant version part.
     pub build: u32,
+
     /// Only makes sense for `major >= 2022` since LTS didn't exist before.
-    /// If [true], the version's branch has to be [`LTSBranch::PostLTS`].
+    /// If [`true`], the version's branch has to be [`LTSBranch::PostLTS`].
     pub post_lts: bool,
 }
 
 impl GMVersionReq {
+    /// Creates a new [`GMVersionReq`] with the given fields.
+    ///
+    /// You can also construct this type by converting
+    /// tuples of u32 (see the [`From`] implementations).
     #[must_use]
     pub const fn new(major: u32, minor: u32, release: u32, build: u32, lts: LTSBranch) -> Self {
         let post_lts: bool = matches!(lts, LTSBranch::PostLTS);
@@ -329,7 +358,6 @@ fn write_version(
 ) -> std::fmt::Result {
     write!(f, "{major}")?;
     match (minor, release, build) {
-        (0, 0, 0) => Ok(()),
         (minor, 0, 0) => write!(f, ".{minor}"),
         (minor, release, 0) => write!(f, ".{minor}.{release}"),
         (minor, release, build) => {
