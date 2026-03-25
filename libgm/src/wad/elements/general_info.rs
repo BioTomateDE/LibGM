@@ -151,7 +151,7 @@ impl Default for GMGeneralInfo {
     /// ___________
     /// **This value should never be used!**
     /// Immediately replace it with actual `GEN8` when parsed.
-    #[allow(clippy::default_trait_access)]
+    #[allow(clippy::default_trait_access)] // some data types are cfg-feature dependent
     fn default() -> Self {
         Self {
             is_debugger_disabled: true,
@@ -296,7 +296,7 @@ impl GMElement for GMGeneralInfo {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if !self.exists {
-            bail!("General info is a required chunk");
+            bail!("General info is a required chunk (internal error)");
         }
 
         builder.write_u8(self.is_debugger_disabled.into());

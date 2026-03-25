@@ -14,11 +14,9 @@ This is effectively a Rust port of
 
 ## Benefits of this Rust port
 
-- Runtime for parsing and building is ~8x faster than UndertaleModLib.
-  - This can be further accelerated with the upcoming threaded chunk reading
-    feature (opt-in).
-- Thorough documentation on [docs.rs](https://docs.rs).
+- Parsing and building data files is ~8x faster than UndertaleModLib.
 - Clean and maintainable library code.
+- Thorough documentation on [docs.rs](https://docs.rs).
 - Helpful error messages:
   - No `NullReferenceException`, ever
   - No meaningless stack traces over 50 lines long
@@ -120,6 +118,8 @@ Discord Guild who helped me along the way, especially
 
 This project is licenced under the
 [GNU Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html) (GPL-3.0).
+
+This means that all projects using this library must also be licensed under GPL-3.
 
 ## Contributing
 

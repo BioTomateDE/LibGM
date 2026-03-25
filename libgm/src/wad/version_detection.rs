@@ -102,6 +102,7 @@ impl VersionCheck {
         req: R,
         target: V,
     ) -> Self {
+        // not const because of woke
         Self {
             chunk_name: ChunkName::new(chunk),
             checker_fn,
