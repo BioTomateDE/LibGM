@@ -4,7 +4,7 @@
 //! in a meaningful way.
 //!
 //! ## Usage
-//! For most purposes, using `parse_file` and `build_file` is enough.
+//! For most purposes, using the [`parse_file`] and [`build_file`] functions is enough.
 //!
 //! ```no_run
 //! use libgm::wad::GMData;
@@ -28,7 +28,7 @@
 //! # }
 //! ```
 //!
-//! If you need more control, you can use `parse_bytes`, `build_bytes` or `ParsingOptions`.
+//! If you need more control, you can use [`parse_bytes`], [`build_bytes`] or [`ParsingOptions`].
 //!
 //! For more information on the GameMaker specifics, check out the [`wad`] module.
 //!
@@ -145,6 +145,12 @@ const _: () = assert!(
     "Cannot safely convert from u32 to usize on this platform. \
     Since GameMaker data files are 32-bit, this library will not function properly."
 );
+
+#[cfg(doc)]
+use wad::{
+    deserialize::{ParsingOptions, parse_bytes, parse_file},
+    serialize::{build_bytes, build_file},
+};
 
 // Private modules
 mod actions;

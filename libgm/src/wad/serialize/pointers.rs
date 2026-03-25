@@ -148,7 +148,7 @@ impl DataBuilder<'_> {
 
     /// Resolve pointer placeholders to their actual data positon they point to.
     /// This function should be called once after writing all chunks.
-    pub fn connect_pointer_placeholders(&mut self) -> Result<()> {
+    pub(super) fn connect_pointer_placeholders(&mut self) -> Result<()> {
         let stopwatch = Stopwatch::start();
 
         let placeholders: Vec<(u32, usize)> =

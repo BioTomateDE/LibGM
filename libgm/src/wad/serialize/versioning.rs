@@ -8,16 +8,12 @@ use crate::{
 // of `&Option<T>` would require using `.as_ref()` in every call.
 #[allow(clippy::ref_option)]
 impl DataBuilder<'_> {
-    pub fn write_if_ver<T, V>(
+    pub fn write_if_ver<T: GMElement>(
         &mut self,
         element: &Option<T>,
         field_name: &'static str,
-        ver_req: V,
-    ) -> Result<()>
-    where
-        T: GMElement,
-        V: Into<GMVersionReq>,
-    {
+        ver_req: impl Into<GMVersionReq>,
+    ) -> Result<()> {
         let ver_req: GMVersionReq = ver_req.into();
         if !self.is_version_at_least(ver_req.clone()) {
             return Ok(()); // Don't serialize if version requirement not met
@@ -36,15 +32,12 @@ impl DataBuilder<'_> {
         element.serialize(self)
     }
 
-    pub fn write_if_wad_ver<T>(
+    pub fn write_if_wad_ver<T: GMElement>(
         &mut self,
         element: &Option<T>,
         field_name: &'static str,
         ver_req: u8,
-    ) -> Result<()>
-    where
-        T: GMElement,
-    {
+    ) -> Result<()> {
         if self.wad_version() < ver_req {
             return Ok(()); // Don't serialize if version requirement not met
         }
