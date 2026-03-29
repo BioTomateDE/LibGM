@@ -3,7 +3,7 @@
 //! Some of these functions are also re-exported at the crate root.
 
 pub(super) mod chunk;
-mod integrity;
+pub mod integrity;
 mod lists;
 mod numbers;
 pub(crate) mod reader;

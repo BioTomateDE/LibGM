@@ -24,7 +24,7 @@ impl DataReader<'_> {
         );
 
         if self.options.verify_alignment {
-            Err(Error::from(msg))
+            Err(Error::new(msg))
         } else {
             log::warn!("{msg}");
             Ok(())
@@ -35,6 +35,17 @@ impl DataReader<'_> {
         let chunk_version = self.read_u32()?;
         self.assert_int(chunk_version, 1, desc)?;
         Ok(())
+    }
+
+    /// Returns an error if `reader.options.verify_constants` is
+    /// enabled, otherwise only prints a warning log.
+    pub fn warn_invalid_const(&self, message: String) -> Result<()> {
+        if self.options.verify_constants {
+            Err(Error::new(message))
+        } else {
+            log::warn!("{message}");
+            Ok(())
+        }
     }
 
     pub fn assert_int<I: Copy + Eq + Display + UpperHex>(
@@ -52,11 +63,10 @@ impl DataReader<'_> {
         }
 
         let width = size_of::<I>() * 2;
-        let msg = format!(
+        self.warn_invalid_const(format!(
             "Expected {description} to be {expected} but it \
             is actually {actual} (0x{actual:0width$X})",
-        );
-        self.handle_invalid_constant(msg)
+        ))
     }
 
     pub fn assert_bool(
@@ -73,11 +83,10 @@ impl DataReader<'_> {
             return Ok(());
         }
 
-        let msg = format!(
+        self.warn_invalid_const(format!(
             "Expected {description} to be {expected} \
             but it is actually {actual}",
-        );
-        self.handle_invalid_constant(msg)
+        ))
     }
 
     pub fn assert_data_type(
@@ -94,19 +103,9 @@ impl DataReader<'_> {
             return Ok(());
         }
 
-        let msg = format!(
+        self.warn_invalid_const(format!(
             "Expected {description} Data Type to be \
             {expected:?} but it is actually {actual:?}"
-        );
-        self.handle_invalid_constant(msg)
-    }
-
-    fn handle_invalid_constant(&self, message: String) -> Result<()> {
-        if self.options.verify_constants {
-            Err(Error::from(message))
-        } else {
-            log::warn!("{message}");
-            Ok(())
-        }
+        ))
     }
 }

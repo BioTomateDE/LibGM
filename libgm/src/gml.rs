@@ -10,6 +10,7 @@ pub(crate) mod opcodes;
 
 pub use crate::gml::instruction::Instruction;
 use crate::prelude::*;
+use std::ops::Range;
 
 /// A code entry in a GameMaker data file.
 #[derive(Debug, Clone, PartialEq)]
@@ -157,30 +158,41 @@ pub fn instructions_size(instructions: &[Instruction]) -> u32 {
 }
 
 /// TODO: test this
-pub fn insert_instructions(
+fn splice_instructions(
     haystack: &mut Vec<Instruction>,
-    insertion: Box<[Instruction]>,
-    index: u32,
-) -> Result<()> {
-    let index = index as usize;
+    range: Range<u32>,
+    replace_with: &[Instruction],
+    needs_result: bool,
+) -> Result<Option<Vec<Instruction>>> {
+    let start = range.start as usize;
+    let end = range.end as usize;
     let len = haystack.len();
 
-    if index >= len {
-        bail!("Index {index} out of bounds for vector with instruction count {len}");
+    if start >= len {
+        bail!("Start index {start} out of bounds for vector with instruction count {len}");
     }
 
-    let insertion_size = instructions_size(&insertion) as i32;
-    let first_half_size = instructions_size(&haystack[..index]) as i32 / 4;
+    if start > end {
+        bail!("Start index {start} is greater than the end index {end}");
+    }
+
+    let insertion_size = instructions_size(&replace_with);
+    let removal_size = instructions_size(&haystack[start..end]);
+    let fixed_offset = (insertion_size - removal_size) as i32 / 4;
+
+    let first_half_size = instructions_size(&haystack[..start]) as i32 / 4;
 
     let mut cur_pos: u32 = 0;
     for (i, instr) in haystack.iter_mut().enumerate() {
+        // (this technically ignores stuff that is neither half 1 nor 2 if range is nonzero but it
+        // shouldnt make a different i think)
         cur_pos += instr.size4();
         let Some(offset) = instr.jump_offset_mut() else {
             continue;
         };
 
         let branch_target_pos = cur_pos as i32 + *offset;
-        let origin_is_first_half = i < index;
+        let origin_is_first_half = i < start;
         let target_is_first_half = branch_target_pos < first_half_size;
 
         // if branching withing their half, everything is fine.
@@ -188,25 +200,65 @@ pub fn insert_instructions(
             continue;
         }
 
-        // if crossing boundary, fix the jump offsets
-        if target_is_first_half {
-            *offset += insertion_size;
+        // branch crosses boundary; fix the jump offsets.
+        if origin_is_first_half {
+            *offset += fixed_offset;
         } else {
-            *offset -= insertion_size;
+            *offset -= fixed_offset;
         }
     }
 
-    // now perform the insertion
-    haystack.splice(index..=index, insertion);
+    // now perform the actual splice
+    let iter = haystack.splice(start..end, replace_with.into_iter().cloned());
+    if needs_result {
+        Ok(Some(iter.collect()))
+    } else {
+        Ok(None)
+    }
+}
 
+pub fn insert_instructions(
+    haystack: &mut Vec<Instruction>,
+    index: u32,
+    insertion: &[Instruction],
+) -> Result<()> {
+    splice_instructions(haystack, index..index, insertion, false).with_context(|| {
+        format!(
+            "inserting {} instructions at index {} into vector with {} instructions",
+            insertion.len(),
+            index,
+            haystack.len(),
+        )
+    })?;
     Ok(())
 }
 
 pub fn insert_instruction(
     haystack: &mut Vec<Instruction>,
-    insertion: Instruction,
     index: u32,
+    insertion: Instruction,
 ) -> Result<()> {
-    // heap alloc :c
-    insert_instructions(haystack, Box::new([insertion]), index)
+    insert_instructions(haystack, index, &[insertion.clone()])
+        .with_context(|| format!("inserting single instruction {insertion:?}"))
+}
+
+pub fn remove_instructions(
+    haystack: &mut Vec<Instruction>,
+    range: Range<u32>,
+) -> Result<Vec<Instruction>> {
+    let removal_len = range.len();
+    let index = range.start;
+    let old_instrs = splice_instructions(haystack, range, &[], true).with_context(|| {
+        format!(
+            "removing {} instructions at index {} of vector with {} instructions",
+            removal_len,
+            index,
+            haystack.len(),
+        )
+    })?;
+    Ok(old_instrs.unwrap())
+}
+
+pub fn remove_instruction(haystack: &mut Vec<Instruction>, index: u32) -> Result<Vec<Instruction>> {
+    remove_instructions(haystack, index..index + 1)
 }

@@ -13,6 +13,7 @@ pub struct StyleGroup<T> {
     pub line_styles: Vec<line::Data>,
     pub subshapes: Vec<T>,
 }
+
 impl<T: GMElement> GMElement for StyleGroup<T> {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let fill_data_count = reader.read_count("YYSWF Style Group Fill Data")?;

@@ -9,7 +9,7 @@ mod tests;
 use std::path::PathBuf;
 
 use libgm::{
-    gml::assembly::disassemble_code,
+    gml::{Instruction, assembly::disassemble_code, insert_instructions, instruction::PushValue},
     prelude::*,
     wad::{data::GMData, deserialize::parse_file, serialize::build_file},
 };
@@ -44,6 +44,20 @@ fn run(mut args: cli::Args) -> Result<()> {
             println!();
         }
 
+        // // TODO REMOVE DEBUG
+        // let gref = GMRef::new(0);
+        // println!("{}\n\n", disassemble_code(&data.codes[0], &data)?);
+        // let c = data.codes.by_ref_mut(gref)?;
+        // insert_instructions(
+        //     &mut c.instructions,
+        //     3,
+        //     &[
+        //         Instruction::Push { value: PushValue::Double(f64::INFINITY) },
+        //         Instruction::PopWithContextExit,
+        //     ],
+        // )?;
+        // println!("{}\n\n", disassemble_code(&data.codes[0], &data)?);
+        //
         if let Some(out_file) = &args.out {
             log::info!("Building data file {}", out_file.display());
             build_file(&data, out_file)?;
