@@ -12,8 +12,7 @@ use crate::{
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     // Modify SCR_GAMESTART
-    let script = data.scripts.by_name("SCR_GAMESTART")?;
-    let code_ref = script.code.ok_or("Script does not reference code entry")?;
+    let code_ref = data.scripts.code_ref_by_name("SCR_GAMESTART")?;
     super::replace_debug(data, code_ref, enable, InstanceType::Global)?;
 
     // Modify obj_debugcontroller Creation

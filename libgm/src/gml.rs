@@ -176,7 +176,7 @@ fn splice_instructions(
         bail!("Start index {start} is greater than the end index {end}");
     }
 
-    let insertion_size = instructions_size(&replace_with);
+    let insertion_size = instructions_size(replace_with);
     let removal_size = instructions_size(&haystack[start..end]);
     let fixed_offset = (insertion_size - removal_size) as i32 / 4;
 
@@ -209,7 +209,7 @@ fn splice_instructions(
     }
 
     // now perform the actual splice
-    let iter = haystack.splice(start..end, replace_with.into_iter().cloned());
+    let iter = haystack.splice(start..end, replace_with.iter().cloned());
     if needs_result {
         Ok(Some(iter.collect()))
     } else {
@@ -236,12 +236,13 @@ pub fn insert_instructions(
 pub fn insert_instruction(
     haystack: &mut Vec<Instruction>,
     index: u32,
-    insertion: Instruction,
+    insertion: &Instruction,
 ) -> Result<()> {
-    insert_instructions(haystack, index, &[insertion.clone()])
+    insert_instructions(haystack, index, std::slice::from_ref(insertion))
         .with_context(|| format!("inserting single instruction {insertion:?}"))
 }
 
+#[allow(clippy::missing_panics_doc)]
 pub fn remove_instructions(
     haystack: &mut Vec<Instruction>,
     range: Range<u32>,

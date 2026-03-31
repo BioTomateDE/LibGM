@@ -785,7 +785,7 @@ fn build_pop(
     type2: DataType,
 ) -> Result<()> {
     let instr_pos: usize = builder.len();
-    builder.write_i16(variable.instance_type.build());
+    builder.write_i16(build_instance_type(variable));
     builder.write_u8(u8::from(type1) | u8::from(type2) << 4);
     builder.write_u8(opcode);
     write_variable_occurrence(
@@ -840,7 +840,7 @@ fn build_push(builder: &mut DataBuilder, opcode: u8, value: &PushValue) -> Resul
     let instr_pos: usize = builder.len();
     builder.write_i16(match value {
         PushValue::Int16(int16) => *int16,
-        PushValue::Variable(variable) => variable.instance_type.build(),
+        PushValue::Variable(variable) => build_instance_type(variable),
         _ => 0,
     });
 
@@ -873,7 +873,7 @@ fn build_push(builder: &mut DataBuilder, opcode: u8, value: &PushValue) -> Resul
 
 fn build_pushvar(builder: &mut DataBuilder, opcode: u8, variable: &CodeVariable) -> Result<()> {
     let instr_pos = builder.len();
-    builder.write_i16(variable.instance_type.build());
+    builder.write_i16(build_instance_type(variable));
     builder.write_u8(DataType::Variable.into());
     builder.write_u8(opcode);
 
@@ -986,6 +986,16 @@ fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<Code
         instance_type,
         is_int32: false,
     })
+}
+
+fn build_instance_type(code_variable: &CodeVariable) -> i16 {
+    // utmt requires this for proper disassembly
+    if code_variable.variable_type == VariableType::Normal {
+        code_variable.instance_type.build()
+    } else {
+        // if special access, make it "undefined"
+        0
+    }
 }
 
 fn write_variable_occurrence(

@@ -3,9 +3,8 @@
 //! 2025-06-05 to now [2026-01-04]
 
 use crate::{
-    gml::{GMCode, assembly::assemble_instructions, instruction::Instruction},
+    gml::{assembly::assemble_instructions, instruction::Instruction},
     prelude::*,
-    wad::elements::script::GMScript,
 };
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
@@ -31,8 +30,7 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     let mut instructions = assemble_instructions(assembly, data)?;
     instructions[1] = pushim;
 
-    let script: &GMScript = data.scripts.by_name("scr_debug")?;
-    let code_ref: GMRef<GMCode> = script.code.ok_or("Script does not have a code entry set")?;
+    let code_ref = data.scripts.code_ref_by_name("scr_debug")?;
     let code = data.codes.by_ref_mut(code_ref)?;
     code.instructions = instructions;
     Ok(())
