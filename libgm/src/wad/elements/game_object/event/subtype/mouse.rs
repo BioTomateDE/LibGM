@@ -17,6 +17,8 @@ pub enum Mouse {
     MiddleButton = 2,
 
     /// The no-mouse input event.
+    ///
+    /// I don't know why this exits.
     NoButton = 3,
 
     /// The left-mouse button pressed event.
@@ -156,5 +158,181 @@ impl EventSubtype for Mouse {
 
     fn build(self) -> u32 {
         self.into()
+    }
+}
+
+impl Mouse {
+    /// Whether this mouse event is actually a controller/joystick related event.]
+    ///
+    /// These events only exist in GMS1.
+    #[must_use]
+    pub const fn is_joystick(self) -> bool {
+        match self {
+            Self::Joystick1Left
+            | Self::Joystick1Right
+            | Self::Joystick1Up
+            | Self::Joystick1Down
+            | Self::Joystick1Button1
+            | Self::Joystick1Button2
+            | Self::Joystick1Button3
+            | Self::Joystick1Button4
+            | Self::Joystick1Button5
+            | Self::Joystick1Button6
+            | Self::Joystick1Button7
+            | Self::Joystick1Button8
+            | Self::Joystick2Left
+            | Self::Joystick2Right
+            | Self::Joystick2Up
+            | Self::Joystick2Down
+            | Self::Joystick2Button1
+            | Self::Joystick2Button2
+            | Self::Joystick2Button3
+            | Self::Joystick2Button4
+            | Self::Joystick2Button5
+            | Self::Joystick2Button6
+            | Self::Joystick2Button7
+            | Self::Joystick2Button8 => true,
+            _ => false,
+        }
+    }
+
+    /// Whether this mouse event is related to a mouse button being pressed/released/held.
+    ///
+    /// This will return `false` for:
+    /// * joystick events (see [`Mouse::is_joystick`])
+    /// * mouse enter / leave event
+    /// * mouse wheel up / down event
+    /// * no button event
+    #[must_use]
+    pub const fn is_button(self) -> bool {
+        match self {
+            Self::LeftButton
+            | Self::RightButton
+            | Self::MiddleButton
+            | Self::LeftPressed
+            | Self::RightPressed
+            | Self::MiddlePressed
+            | Self::LeftReleased
+            | Self::RightReleased
+            | Self::MiddleReleased
+            | Self::GlobLeftButton
+            | Self::GlobRightButton
+            | Self::GlobMiddleButton
+            | Self::GlobLeftPressed
+            | Self::GlobRightPressed
+            | Self::GlobMiddlePressed
+            | Self::GlobLeftReleased
+            | Self::GlobRightReleased
+            | Self::GlobMiddleReleased => true,
+            _ => false,
+        }
+    }
+
+    /// Whether this mouse event gets triggered when the left mouse button is pressed/released/held.
+    #[must_use]
+    pub const fn is_left_button(self) -> bool {
+        match self {
+            Self::LeftButton
+            | Self::LeftPressed
+            | Self::LeftReleased
+            | Self::GlobLeftButton
+            | Self::GlobLeftPressed
+            | Self::GlobLeftReleased => true,
+            _ => false,
+        }
+    }
+
+    /// Whether this mouse event gets triggered when the right mouse button is pressed/released/held.
+    #[must_use]
+    pub const fn is_right_button(self) -> bool {
+        match self {
+            Self::RightButton
+            | Self::RightPressed
+            | Self::RightReleased
+            | Self::GlobRightButton
+            | Self::GlobRightPressed
+            | Self::GlobRightReleased => true,
+            _ => false,
+        }
+    }
+
+    /// Whether this mouse event gets triggered when the middle mouse button is pressed/released/held.
+    #[must_use]
+    pub const fn is_middle_button(self) -> bool {
+        match self {
+            Self::MiddleButton
+            | Self::MiddlePressed
+            | Self::MiddleReleased
+            | Self::GlobMiddleButton
+            | Self::GlobMiddlePressed
+            | Self::GlobMiddleReleased => true,
+            _ => false,
+        }
+    }
+
+    /// Whether this event gets triggered while the button is held
+    /// (instead of only when pressed or released).
+    #[must_use]
+    pub const fn is_held(self) -> bool {
+        match self {
+            Self::LeftButton
+            | Self::RightButton
+            | Self::MiddleButton
+            | Self::GlobLeftButton
+            | Self::GlobRightButton
+            | Self::GlobMiddleButton => true,
+            _ => false,
+        }
+    }
+
+    /// Whether this event gets triggered once when the button is pressed down
+    /// (instead of while held or when released).
+    #[must_use]
+    pub const fn is_pressed(self) -> bool {
+        match self {
+            Self::LeftPressed
+            | Self::RightPressed
+            | Self::MiddlePressed
+            | Self::GlobLeftPressed
+            | Self::GlobRightPressed
+            | Self::GlobMiddlePressed => true,
+            _ => false,
+        }
+    }
+
+    /// Whether this event gets triggered once when the button is released
+    /// (instead of while held or when pressed).
+    #[must_use]
+    pub const fn is_released(self) -> bool {
+        match self {
+            Self::LeftReleased
+            | Self::RightReleased
+            | Self::MiddleReleased
+            | Self::GlobLeftReleased
+            | Self::GlobRightReleased
+            | Self::GlobMiddleReleased => true,
+            _ => false,
+        }
+    }
+
+    /// Whether this is a **global** mouse event.
+    ///
+    /// "Normal" (non-global) events only get triggered when the mouse
+    /// collides with the collision box of the game object instance,
+    /// Global events **always** get triggered; even if the mouse position is far away.
+    #[must_use]
+    pub const fn is_global(self) -> bool {
+        match self {
+            Self::GlobLeftButton
+            | Self::GlobRightButton
+            | Self::GlobMiddleButton
+            | Self::GlobLeftPressed
+            | Self::GlobRightPressed
+            | Self::GlobMiddlePressed
+            | Self::GlobLeftReleased
+            | Self::GlobRightReleased
+            | Self::GlobMiddleReleased => true,
+            _ => false,
+        }
     }
 }

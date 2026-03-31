@@ -5,10 +5,11 @@ use crate::{
     prelude::*, util::init::num_enum_from, wad::elements::game_object::event::EventSubtype,
 };
 
+// TODO: fix these broken refs since the EveneType enum is gone
+
 /// The subtype for [`EventType::Keyboard`], [`EventType::KeyDown`] and [`EventType::KeyUp`].
 #[num_enum(u32)]
 pub enum Key {
-    // TODO: if doesn't match any of the below, then it's probably just chr(value)
     /// Keycode representing no key.
     ///
     /// Mnemonic: `vk_nokey`
@@ -395,6 +396,16 @@ pub enum Key {
     RightAlt = 165,
 }
 
+impl EventSubtype for Key {
+    fn parse(subtype: u32) -> Result<Self> {
+        num_enum_from(subtype)
+    }
+
+    fn build(self) -> u32 {
+        self.into()
+    }
+}
+
 impl Key {
     /// Converts a virtual key constant (`vk_xxxxxx`) into a [`Key`].
     ///
@@ -622,16 +633,6 @@ impl Key {
             Self::LeftAlt => "Left Alt",
             Self::RightAlt => "Right Alt",
         }
-    }
-}
-
-impl EventSubtype for Key {
-    fn parse(subtype: u32) -> Result<Self> {
-        num_enum_from(subtype)
-    }
-
-    fn build(self) -> u32 {
-        self.into()
     }
 }
 

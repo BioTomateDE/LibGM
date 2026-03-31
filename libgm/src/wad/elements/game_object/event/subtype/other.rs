@@ -197,3 +197,55 @@ impl EventSubtype for Other {
         self.into()
     }
 }
+
+impl Other {
+    /// Creates a new `Other::UserXX` based on the given ID.
+    /// This function will fail for IDs greater than 16.
+    pub fn from_user_id(id: u32) -> Result<Self> {
+        Ok(match id {
+            0 => Self::User0,
+            1 => Self::User1,
+            2 => Self::User2,
+            3 => Self::User3,
+            4 => Self::User4,
+            5 => Self::User5,
+            6 => Self::User6,
+            7 => Self::User7,
+            8 => Self::User8,
+            9 => Self::User9,
+            10 => Self::User10,
+            11 => Self::User11,
+            12 => Self::User12,
+            13 => Self::User13,
+            14 => Self::User14,
+            15 => Self::User15,
+            16 => Self::User16,
+            _ => bail!("User Event ID {id} is too high; maximum is 16"),
+        })
+    }
+
+    /// The User Event ID of this event, if this is a `Other::UserXX` event.
+    #[must_use]
+    pub const fn user_id(self) -> Option<u32> {
+        Some(match self {
+            Self::User0 => 0,
+            Self::User1 => 1,
+            Self::User2 => 2,
+            Self::User3 => 3,
+            Self::User4 => 4,
+            Self::User5 => 5,
+            Self::User6 => 6,
+            Self::User7 => 7,
+            Self::User8 => 8,
+            Self::User9 => 9,
+            Self::User10 => 10,
+            Self::User11 => 11,
+            Self::User12 => 12,
+            Self::User13 => 13,
+            Self::User14 => 14,
+            Self::User15 => 15,
+            Self::User16 => 16,
+            _ => return None,
+        })
+    }
+}
