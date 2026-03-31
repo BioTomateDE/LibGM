@@ -4,8 +4,6 @@ pub mod subtype;
 pub use self::action::Action;
 use subtype::{Alarm, Draw, Gesture, Key, Mouse, Other, Step};
 
-use macros::num_enum;
-
 use crate::{
     prelude::*,
     util::{assert, fmt::typename},
@@ -225,7 +223,7 @@ impl GMElement for Events {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-#[allow(private_bounds)] // fhejhfjkhjkfhdskfhkjs
+#[allow(private_bounds)]
 pub struct SubEvent<T: EventSubtype> {
     pub subtype: T,
     pub actions: Vec<Action>,
@@ -273,90 +271,4 @@ impl<T> EventSubtype for GMRef<T> {
     fn build(self) -> u32 {
         self.index
     }
-}
-
-/// The type an [`Event`] can be.
-///
-/// Some event types have a subtype as well, which is denoted
-/// by a number after in the code entry name.
-///
-/// All events with a subtype state their subtype enum in their docstring.
-/// Events with no "real" subtype always have their subtype number set to zero.
-///
-/// For more information on events, see <https://manual.gamemaker.io/lts/en/The_Asset_Editors/Object_Properties/Object_Events.htm>.
-#[num_enum(i32)]
-pub enum EventType {
-    /// Triggered when the game object instance is created.
-    Create = 0,
-
-    /// Triggered when the game object instance is destroyed.
-    Destroy = 1,
-
-    /// Triggered when a user-set alarm reaches 0.
-    ///
-    /// An alarm event type which can be triggered modifying
-    /// the builtin `alarm` variable (array) in other scripts.
-    ///
-    /// This does not have an associated enum; it is simply an alarm array index `0..12`.
-    Alarm = 2,
-
-    /// Triggered on every game step (aka. frame).
-    ///
-    /// See [`EventSubtypeStep`].
-    Step = 3,
-
-    /// Triggered when this game object instance collides with another game object (any instance).
-    ///
-    /// The subtype is the ID of the other game object (to check collision against).
-    Collision = 4,
-
-    /// Triggered on every step/frame a specified key is held down.
-    ///
-    /// The key is specified in [`EventSubtypeKey`].
-    Keyboard = 5,
-
-    /// Triggered on a mouse event (like holding, pressing down, releasing, mouse wheel, etc.).
-    ///
-    /// See [`EventSubtypeMouse`].
-    Mouse = 6,
-
-    /// Some event that was too irrelevan to be included into the main list.
-    /// Also includes user-defined events.
-    ///
-    /// See [`EventSubtypeOther`].
-    Other = 7,
-
-    /// Triggered when the game loop is in the rendering/drawing stage.
-    ///
-    /// This occurs every step/frame, but is called with different
-    /// timing and with a different purpose than [`Event::Step`].
-    Draw = 8,
-
-    /// Triggered on the first step/frame a specified key is pressed down.
-    ///
-    /// The key is specified in [`EventSubtypeKey`].
-    KeyPress = 9,
-
-    /// Triggered on the step/frame a specified key is released (no longer held down).
-    ///
-    /// The key is specified in [`EventSubtypeKey`].
-    KeyRelease = 10,
-
-    /// A trigger event type. Only used in Pre-GameMaker Studio.
-    Trigger = 11,
-
-    /// Triggered when this game object instance is cleaned up, which can happen when:
-    /// * The instance is destroyed
-    /// * The room gets switched
-    /// * The game ends
-    CleanUp = 12,
-
-    /// Triggered when the user performs some touchscreen event.
-    ///
-    /// See [`EventSubtypeGesture`].
-    Gesture = 13,
-
-    /// A pre-create event type.
-    /// TODO(doc): what is this? why does it exist? is it gm1 only?
-    PreCreate = 14,
 }
