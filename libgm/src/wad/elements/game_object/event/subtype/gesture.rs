@@ -95,3 +95,30 @@ impl EventSubtype for Gesture {
         self.into()
     }
 }
+
+impl Gesture {
+    /// Whether this is a **global** gesture event.
+    ///
+    /// "Normal" (non-global) events only get triggered when the gesture
+    /// collides with the collision box of the game object instance,
+    /// Global events **always** get triggered; even if the gesture position is far away.
+    #[must_use]
+    pub const fn is_global(self) -> bool {
+        match self {
+            Self::GlobalTap
+            | Self::GlobalDoubleTap
+            | Self::GlobalDragStart
+            | Self::GlobalDragMove
+            | Self::GlobalDragEnd
+            | Self::GlobalFlick
+            | Self::GlobalPinchStart
+            | Self::GlobalPinchIn
+            | Self::GlobalPinchOut
+            | Self::GlobalPinchEnd
+            | Self::GlobalRotateStart
+            | Self::GlobalRotating
+            | Self::GlobalRotateEnd => true,
+            _ => false,
+        }
+    }
+}

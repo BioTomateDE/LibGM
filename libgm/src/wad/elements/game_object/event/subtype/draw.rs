@@ -44,3 +44,11 @@ impl EventSubtype for Draw {
         self.into()
     }
 }
+
+impl Draw {
+    /// Whether this draw event happens during the GUI drawing stage.
+    #[must_use]
+    pub const fn is_gui(self) -> bool {
+        matches!(self, Self::DrawGUI | Self::DrawGUIBegin | Self::DrawGUIEnd)
+    }
+}
