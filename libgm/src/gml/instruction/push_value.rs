@@ -44,7 +44,7 @@ impl PushValue {
         }
     }
 
-    /// An approximate boolean representation for this [`PushValue`]
+    /// An approximate boolean representation for this [`PushValue`].
     ///
     /// Warning: This function does not fully conform with the GameMaker standards (yet).
     #[must_use]

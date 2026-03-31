@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter};
+use std::fmt;
 
 use crate::{gml::instruction::VariableType, prelude::*, wad::elements::game_object::GMGameObject};
 
@@ -22,7 +22,7 @@ use crate::{gml::instruction::VariableType, prelude::*, wad::elements::game_obje
 /// For more information, see [`PushWithContext`].
 ///
 /// [`PushWithContext`]: crate::gml::Instruction::PushWithContext
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub enum InstanceType {
     /// Represents the first (?) instance of an object.
     /// This is typically an object that should only have one instance.
@@ -95,8 +95,8 @@ pub enum InstanceType {
     Static,
 }
 
-impl Display for InstanceType {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+impl fmt::Debug for InstanceType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Self_ => write!(f, "Self"),
             Self::GameObject(reference) => {
