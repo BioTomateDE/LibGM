@@ -89,7 +89,7 @@ impl Default for Metadata {
 }
 
 /// The full GameMaker data struct, containing all information from a data file.
-#[derive(Clone, Default, PartialEq)]
+#[derive(Clone, Default)]
 pub struct GMData {
     /// Some metadata about the GameMaker data file.
     ///

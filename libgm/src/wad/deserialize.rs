@@ -56,7 +56,7 @@ use crate::{
             ui_node::GMRootUINodes,
             variable::GMVariables,
         },
-        version::{GMVersion, LTSBranch},
+        version::GMVersion,
         version_detection::detect_gamemaker_version,
     },
 };
@@ -289,8 +289,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         bail!("GEN8 chunk does not exist");
     }
 
-    let gms2 = GMVersion::new(2, 0, 0, 0, LTSBranch::PreLTS);
-    if reader.specified_version == gms2 {
+    if reader.specified_version == GMVersion::GMS2 {
         let stopwatch = Stopwatch::start();
         detect_gamemaker_version(&mut reader).context("detecting GameMaker version")?;
         log::trace!("Detecting GameMaker Version took {stopwatch}");

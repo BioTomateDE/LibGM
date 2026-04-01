@@ -2,6 +2,7 @@
 #![allow(clippy::match_like_matches_macro, reason = "ugly syntax")]
 
 mod alarm;
+mod collision;
 mod draw;
 mod gesture;
 mod key;
@@ -10,6 +11,7 @@ mod other;
 mod step;
 
 pub use alarm::Alarm;
+pub use collision::Collision;
 pub use draw::Draw;
 pub use gesture::Gesture;
 pub use key::Key;

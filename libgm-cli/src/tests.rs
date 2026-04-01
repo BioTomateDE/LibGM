@@ -40,8 +40,6 @@ pub fn perform(data: &GMData, tests: &[Test]) -> Result<()> {
         return Ok(());
     }
 
-    println!();
-
     for test in tests {
         match test {
             Test::All => {
@@ -55,7 +53,8 @@ pub fn perform(data: &GMData, tests: &[Test]) -> Result<()> {
             Test::Reparse => {
                 log::info!("Performing Reparse Test");
                 let raw: Vec<u8> = build_bytes(data)?;
-                parse_bytes(raw)?;
+                let new_data = parse_bytes(raw)?;
+                log_differences(data, &new_data);
             },
             Test::Assembler => {
                 log::info!("Performing Assembler Test");
@@ -68,4 +67,55 @@ pub fn perform(data: &GMData, tests: &[Test]) -> Result<()> {
         }
     }
     Ok(())
+}
+
+fn log_differences(old: &GMData, new: &GMData) {
+    macro_rules! diffs {
+        ($($field:ident)*) => {{ $(
+            if old.$field != new.$field {
+                log::warn!(concat!("Difference for ", stringify!($field), ":"));
+                $crate::diff::print_diff(&old.$field, &new.$field);
+                // let old_str = format!("{:#?}", old.$field);
+                // let new_str = format!("{:#?}", new.$field);
+                // let diff = ::similar::TextDiff::from_lines(&old_str, &new_str);
+                // println!("{}", diff.unified_diff());
+            }
+        )* }};
+    }
+
+    diffs!(
+         animation_curves
+         audio_groups
+         audios
+         backgrounds
+         codes
+         embedded_images
+         extensions
+         feature_flags
+         filter_effects
+         fonts
+         functions
+         game_end_scripts
+         game_objects
+         general_info
+         global_init_scripts
+         language_info
+         options
+         particle_emitters
+         particle_systems
+         paths
+         rooms
+         ui_nodes
+         scripts
+         sequences
+         shaders
+         sounds
+         sprites
+         tags
+         texture_group_infos
+         texture_page_items
+         texture_pages
+         timelines
+         variables
+    );
 }

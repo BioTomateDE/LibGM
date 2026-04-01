@@ -93,7 +93,7 @@ pub struct DataReader<'a> {
 impl<'a> DataReader<'a> {
     /// Creates a new [`DataReader`] for the given raw GameMaker data.
     ///
-    /// Most fields will be filled with a sentinel value before
+    /// Most fields will be filled with a sentinel/stub value before
     /// being properly initialized while parsing FORM.
     pub fn new(data: &'a [u8]) -> Self {
         // Memory Safety Assertion. This should've been verified before, though.
@@ -105,19 +105,18 @@ impl<'a> DataReader<'a> {
         Self {
             data,
             cur_pos: 0,
-            specified_version: GMVersion::stub(),
+            specified_version: GMVersion::default(), // stub
             // The default padding value is 16, if used.
             chunk_padding: 16,
             // Assume little endian; big endian is an edge case.
             endianness: Endianness::Little,
             chunk: ChunkBounds { start_pos: 0, end_pos },
             chunks: ChunkMap::new(),
-            last_chunk: ChunkName::new("XXXX"),
-            // Just a stub, will not be read until GEN8 is parsed.
-            general_info: GMGeneralInfo::default(),
+            last_chunk: ChunkName::new("XXXX"),     // stub
+            general_info: GMGeneralInfo::default(), // stub
             strings: vec![],
-            string_chunk: ChunkBounds::default(),
-            options: ParsingOptions::default(),
+            string_chunk: ChunkBounds::default(), // stub
+            options: ParsingOptions::default(),   // stub
             texture_page_item_occurrences: HashMap::new(),
             variable_occurrences: HashMap::new(),
             function_occurrences: HashMap::new(),

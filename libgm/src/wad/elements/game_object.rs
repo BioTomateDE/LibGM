@@ -57,10 +57,13 @@ impl GMElement for GMGameObjects {
             let group = reader.read_u32()?;
             let linear_damping = reader.read_f32()?;
             let angular_damping = reader.read_f32()?;
+
             let physics_shape_vertex_count = reader.read_count("Physics Shape Vertex Count")?;
+
             let friction = reader.read_f32()?;
             let awake = reader.read_bool32()?;
             let kinematic = reader.read_bool32()?;
+
             let mut physics_shape_vertices: Vec<(f32, f32)> =
                 vec_with_capacity(physics_shape_vertex_count)?;
             for _ in 0..physics_shape_vertex_count {
@@ -68,7 +71,17 @@ impl GMElement for GMGameObjects {
                 let y = reader.read_f32()?;
                 physics_shape_vertices.push((x, y));
             }
-            let events = Events::deserialize(reader).context("parsing events")?;
+            // if physics_shape_vertex_count > 0 && collision_shape != CollisionShape::Custom {
+            //     reader.warn_invalid_const(format!(
+            //         "Game Object {name:?} has collision shape {collision_shape:?} \
+            //         (not Custom) but has {physics_shape_vertex_count} physics shape vertices \
+            //         {physics_shape_vertices:?}"
+            //     ))?;
+            // } else if physics_shape_vertex_count > 0 || collision_shape == CollisionShape::Custom {
+            //     log::debug!("ok {} {:?}", physics_shape_vertex_count, collision_shape);
+            // }
+
+            let events = Events::deserialize(reader).context("parsing game object events")?;
 
             game_objects.push(GMGameObject {
                 name,

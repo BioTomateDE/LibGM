@@ -45,7 +45,15 @@ impl EventSubtype for Draw {
     }
 }
 
+impl Default for Draw {
+    fn default() -> Self {
+        Self::DEFAULT
+    }
+}
+
 impl Draw {
+    pub const DEFAULT: Self = Self::Draw;
+
     /// Whether this draw event happens during the GUI drawing stage.
     #[must_use]
     pub const fn is_gui(self) -> bool {
