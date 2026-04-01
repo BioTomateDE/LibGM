@@ -988,9 +988,12 @@ fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<Code
     })
 }
 
-fn build_instance_type(code_variable: &CodeVariable) -> i16 {
+const fn build_instance_type(code_variable: &CodeVariable) -> i16 {
     // utmt requires this for proper disassembly
-    if code_variable.variable_type == VariableType::Normal {
+    if matches!(
+        code_variable.variable_type,
+        VariableType::Normal | VariableType::Instance
+    ) {
         code_variable.instance_type.build()
     } else {
         // if special access, make it "undefined"

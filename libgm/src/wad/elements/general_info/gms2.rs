@@ -1,3 +1,5 @@
+use std::fmt;
+
 use dotnet_rng::DotnetRng;
 
 use crate::{
@@ -8,7 +10,7 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct GMS2Data {
     /// Unknown, some sort of checksum.
     pub random_uid: [i64; 4],
@@ -24,6 +26,28 @@ pub struct GMS2Data {
 
     /// Whether the random UID's timestamp was initially offset.
     pub info_timestamp_offset: bool,
+}
+
+impl Default for GMS2Data {
+    fn default() -> Self {
+        Self {
+            random_uid: [69; 4],
+            fps: 30.0,
+            allow_statistics: false,
+            game_guid: [68; 16],
+            info_timestamp_offset: false,
+        }
+    }
+}
+
+impl fmt::Debug for GMS2Data {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("GMS2Data")
+            .field("fps", &self.fps)
+            .field("allow_statistics", &self.allow_statistics)
+            .field("info_timestamp_offset", &self.info_timestamp_offset)
+            .finish_non_exhaustive()
+    }
 }
 
 impl GMGeneralInfo {

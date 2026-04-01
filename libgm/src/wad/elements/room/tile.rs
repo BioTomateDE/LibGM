@@ -79,7 +79,7 @@ impl GMElement for Tile {
                 }
                 builder.write_resource_id(background_ref);
             },
-            None => builder.write_u32(0),
+            None => builder.write_i32(-1),
         }
         builder.write_u32(self.source_x);
         builder.write_u32(self.source_y);

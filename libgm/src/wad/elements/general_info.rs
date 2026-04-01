@@ -2,6 +2,8 @@ mod flags;
 mod function_classifications;
 mod gms2;
 
+use std::fmt;
+
 #[cfg(feature = "game-creation-timestamp")]
 use chrono::{DateTime, Utc};
 pub use flags::Flags;
@@ -16,11 +18,11 @@ use crate::{
         elements::{GMChunk, GMElement, room::GMRoom},
         reference::GMRef,
         serialize::builder::DataBuilder,
-        version::{GMVersion, GMVersionReq, LTSBranch},
+        version::{GMVersion, GMVersionReq},
     },
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct GMGeneralInfo {
     /// Indicates whether debugging support is disabled.
     pub is_debugger_disabled: bool,
@@ -47,7 +49,7 @@ pub struct GMGeneralInfo {
     pub wad_version: u8,
 
     /// Who knows. Probably redundant in GMS2.
-    pub unknown_value: u16,
+    unknown_value: u16,
 
     /// The file name of the runner.
     pub game_file_name: String,
@@ -132,8 +134,8 @@ pub struct GMGeneralInfo {
 
     /// The port the data file exposes for the debugger.
     ///
-    /// Only set in WAD Version 14 and higher.
-    pub debugger_port: Option<u32>,
+    /// This may be set (non-zero) in WAD Version 14 and higher.
+    pub debugger_port: u32,
 
     /// The room order of the data file.
     pub room_order: Vec<GMRef<GMRoom>>,
@@ -145,77 +147,10 @@ pub struct GMGeneralInfo {
     pub(crate) exists: bool,
 }
 
-impl Default for GMGeneralInfo {
-    /// Should only be used as a small stub in `DataReader` because
-    /// Rust doesn't have nullables ([`Option`]s are too ugly for this).
-    /// ___________
-    /// **This value should never be used!**
-    /// Immediately replace it with actual `GEN8` when parsed.
-    #[allow(clippy::default_trait_access)] // some data types are cfg-feature dependent
-    fn default() -> Self {
-        Self {
-            is_debugger_disabled: true,
-            wad_version: 67,
-            unknown_value: 0,
-            game_file_name: String::new(),
-            config: String::new(),
-            last_object_id: 100_000,
-            last_tile_id: 10_000_000,
-            game_id: 1337,
-            directplay_guid: [0u8; 16],
-            game_name: String::new(),
-            version: GMVersion::stub(),
-            default_window_width: 1337,
-            default_window_height: 1337,
-            flags: Flags::default(),
-            license_crc32: 1337,
-            license_md5: [0; 16],
-            creation_timestamp: Default::default(),
-            display_name: String::new(),
-            function_classifications: FunctionClassifications::default(),
-            steam_appid: 0,
-            debugger_port: None,
-            room_order: vec![],
-            gms2_data: None,
-            exists: false,
-        }
-    }
-}
-
 impl GMChunk for GMGeneralInfo {
     const NAME: ChunkName = ChunkName::new("GEN8");
     fn exists(&self) -> bool {
         self.exists
-    }
-}
-
-impl GMGeneralInfo {
-    /// See [`GMVersion::is_version_at_least`].
-    #[must_use]
-    pub fn is_version_at_least(&self, req: impl Into<GMVersionReq>) -> bool {
-        self.version.is_version_at_least(req)
-    }
-
-    /// See [`GMVersion::set_version_at_least`].
-    pub fn set_version_at_least(&mut self, req: impl Into<GMVersionReq>) -> Result<()> {
-        self.version.set_version_at_least(req)
-    }
-
-    /// See [`GMVersion::set_version`].
-    pub fn set_version(&mut self, req: impl Into<GMVersionReq>) {
-        self.version.set_version(req);
-    }
-
-    #[must_use]
-    const fn timestamp(&self) -> i64 {
-        #[cfg(feature = "game-creation-timestamp")]
-        {
-            self.creation_timestamp.timestamp()
-        }
-        #[cfg(not(feature = "game-creation-timestamp"))]
-        {
-            self.creation_timestamp
-        }
     }
 }
 
@@ -256,7 +191,7 @@ impl GMElement for GMGeneralInfo {
         reader.assert_int(active_targets, 0, "Active Targets")?;
         let function_classifications = FunctionClassifications::deserialize(reader)?;
         let steam_appid = reader.read_i32()?;
-        let debugger_port: Option<u32> = reader.deserialize_if_wad_version(14)?;
+        let debugger_port: u32 = reader.deserialize_if_wad_version(14)?.unwrap_or(0);
         let room_order: Vec<GMRef<GMRoom>> = reader.read_simple_list()?;
 
         let mut general_info = Self {
@@ -313,7 +248,7 @@ impl GMElement for GMGeneralInfo {
         let version = if self.version.major == 1 {
             &self.version
         } else {
-            &GMVersion::new(2, 0, 0, 0, LTSBranch::PreLTS)
+            &GMVersion::GMS2
         };
         version.serialize(builder)?;
 
@@ -327,12 +262,105 @@ impl GMElement for GMGeneralInfo {
         builder.write_u64(0); // "Active targets"
         self.function_classifications.serialize(builder)?;
         builder.write_i32(self.steam_appid);
-        builder.write_if_wad_ver(&self.debugger_port, "Debugger Port", 14)?;
+        if self.wad_version >= 14 {
+            builder.write_u32(self.debugger_port);
+        }
         builder.write_simple_list(&self.room_order)?;
 
         if builder.is_version_at_least((2, 0)) {
             self.write_gms2_data(builder)?;
         }
         Ok(())
+    }
+}
+
+impl Default for GMGeneralInfo {
+    /// Should only be used as a small stub in `DataReader` because
+    /// Rust doesn't have nullables ([`Option`]s are too ugly for this).
+    /// ___________
+    /// **This value should never be used!**
+    /// Immediately replace it with actual `GEN8` when parsed.
+    #[allow(clippy::default_trait_access)] // some data types are cfg-feature dependent
+    fn default() -> Self {
+        Self {
+            is_debugger_disabled: true,
+            wad_version: 17,
+            unknown_value: 0,
+            game_file_name: "NewLibGMGame".to_owned(),
+            config: "Default".to_owned(),
+            last_object_id: 100_000,
+            last_tile_id: 10_000_000,
+            game_id: 1337,
+            directplay_guid: [0u8; 16],
+            game_name: "NewLibGMGame".to_owned(),
+            version: GMVersion::default(),
+            default_window_width: 1337,
+            default_window_height: 1337,
+            flags: Flags::default(),
+            license_crc32: 69420,
+            license_md5: [69; 16],
+            creation_timestamp: Default::default(),
+            display_name: "New LibGM Game (default stub)".to_owned(),
+            function_classifications: FunctionClassifications::default(),
+            steam_appid: 0,
+            debugger_port: 0,
+            room_order: vec![],
+            gms2_data: Some(GMS2Data::default()),
+            exists: false,
+        }
+    }
+}
+
+impl fmt::Debug for GMGeneralInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("GMGeneralInfo")
+            .field("is_debugger_disabled", &self.is_debugger_disabled)
+            .field("wad_version", &self.wad_version)
+            .field("game_file_name", &self.game_file_name)
+            .field("config", &self.config)
+            .field("last_object_id", &self.last_object_id)
+            .field("last_tile_id", &self.last_tile_id)
+            .field("game_id", &self.game_id)
+            .field("game_name", &self.game_name)
+            .field("version", &self.version)
+            .field("default_window_width", &self.default_window_width)
+            .field("default_window_height", &self.default_window_height)
+            .field("creation_timestamp", &self.creation_timestamp)
+            .field("display_name", &self.display_name)
+            .field("steam_appid", &self.steam_appid)
+            .field("debugger_port", &self.debugger_port)
+            .field("gms2_data", &self.gms2_data)
+            .field("exists", &self.exists)
+            .finish_non_exhaustive()
+    }
+}
+
+impl GMGeneralInfo {
+    /// See [`GMVersion::is_version_at_least`].
+    #[must_use]
+    pub fn is_version_at_least(&self, req: impl Into<GMVersionReq>) -> bool {
+        self.version.is_version_at_least(req)
+    }
+
+    /// See [`GMVersion::set_version_at_least`].
+    pub fn set_version_at_least(&mut self, req: impl Into<GMVersionReq>) -> Result<()> {
+        self.version.set_version_at_least(req)
+    }
+
+    /// See [`GMVersion::set_version`].
+    pub fn set_version(&mut self, req: impl Into<GMVersionReq>) {
+        self.version.set_version(req);
+    }
+
+    #[must_use]
+    const fn timestamp(&self) -> i64 {
+        #[cfg(feature = "game-creation-timestamp")]
+        {
+            self.creation_timestamp.timestamp()
+        }
+        #[cfg(not(feature = "game-creation-timestamp"))]
+        {
+            self.creation_timestamp
+        }
     }
 }

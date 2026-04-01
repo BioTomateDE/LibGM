@@ -5,6 +5,7 @@ use crate::{gml::instruction::DataType, prelude::*, wad::deserialize::reader::Da
 impl DataReader<'_> {
     /// Ensures the reader is at the specified position.
     /// This only happens if `options.verify_alignment` is true.
+    #[track_caller]
     pub fn assert_pos(&self, position: u32, pointer_name: &'static str) -> Result<()> {
         if cfg!(not(feature = "check-integrity")) {
             return Ok(());
@@ -14,21 +15,14 @@ impl DataReader<'_> {
             return Ok(());
         }
 
-        let msg = format!(
+        self.warn_invalid_align(format!(
             "{} pointer is misaligned: expected position {} but \
             reader is actually at {} (diff: {})",
             pointer_name,
             position,
             self.cur_pos,
             i64::from(position) - i64::from(self.cur_pos),
-        );
-
-        if self.options.verify_alignment {
-            Err(Error::new(msg))
-        } else {
-            log::warn!("{msg}");
-            Ok(())
-        }
+        ))
     }
 
     pub fn read_gms2_chunk_version(&mut self, desc: &'static str) -> Result<()> {
@@ -39,6 +33,7 @@ impl DataReader<'_> {
 
     /// Returns an error if `reader.options.verify_constants` is
     /// enabled, otherwise only prints a warning log.
+    #[track_caller]
     pub fn warn_invalid_const(&self, message: String) -> Result<()> {
         if self.options.verify_constants {
             Err(Error::new(message))
@@ -48,6 +43,19 @@ impl DataReader<'_> {
         }
     }
 
+    /// Returns an error if `reader.options.verify_alignment` is
+    /// enabled, otherwise only prints a warning log.
+    #[track_caller]
+    pub fn warn_invalid_align(&self, message: String) -> Result<()> {
+        if self.options.verify_alignment {
+            Err(Error::new(message))
+        } else {
+            log::warn!("{message}");
+            Ok(())
+        }
+    }
+
+    #[track_caller]
     pub fn assert_int<I: Copy + Eq + Display + UpperHex>(
         &self,
         actual: I,
@@ -69,6 +77,7 @@ impl DataReader<'_> {
         ))
     }
 
+    #[track_caller]
     pub fn assert_bool(
         &self,
         actual: bool,
@@ -89,6 +98,7 @@ impl DataReader<'_> {
         ))
     }
 
+    #[track_caller]
     pub fn assert_data_type(
         &self,
         actual: DataType,
