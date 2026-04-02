@@ -21,7 +21,7 @@ use crate::{
     },
 };
 
-#[named_list_chunk("CODE")]
+#[named_list_chunk("CODE", name_exception)]
 pub struct GMCodes {
     pub codes: Vec<GMCode>,
     pub exists: bool,
@@ -31,7 +31,7 @@ element_stub!(GMCode);
 
 impl GMElement for GMCodes {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        // This can happen with YYC/
+        // This can happen with YYC.
         if reader.chunk.is_empty() {
             return Ok(Self { codes: vec![], exists: false });
         }

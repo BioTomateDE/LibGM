@@ -237,7 +237,7 @@ pub trait ContextSrc<T> {
 impl<T, E: std::error::Error + 'static> ContextSrc<T> for std::result::Result<T, E> {
     fn context_src(self, context: &str) -> Result<T> {
         self.map_err(|error| {
-            Error::new(error.to_string())
+            Error::new(ascii_capitalize(error.to_string()))
                 .with_context(context)
                 .with_source(Box::new(error))
         })
@@ -245,11 +245,19 @@ impl<T, E: std::error::Error + 'static> ContextSrc<T> for std::result::Result<T,
 
     fn with_context_src(self, f: impl FnOnce() -> String) -> Result<T> {
         self.map_err(|error| {
-            Error::new(error.to_string())
+            Error::new(ascii_capitalize(error.to_string()))
                 .with_context(f())
                 .with_source(Box::new(error))
         })
     }
+}
+
+#[must_use]
+fn ascii_capitalize(mut string: String) -> String {
+    if let Some(first) = string.get_mut(0..1) {
+        first.make_ascii_uppercase();
+    }
+    string
 }
 
 /// Creates a new [LibGM Error](Error) using the specified format string.

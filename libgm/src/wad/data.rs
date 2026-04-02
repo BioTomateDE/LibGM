@@ -185,4 +185,15 @@ impl GMData {
         }
         Ok(())
     }
+
+    /// Runs some actions to fully verify integrity and to prepare the data file for editing.
+    pub fn post_deserialize(&mut self) -> Result<()> {
+        self.validate_names()?;
+        for obj in &mut self.game_objects {
+            obj.events.collapse();
+        }
+        self.deserialize_textures()?;
+        self.optimize_memory();
+        Ok(())
+    }
 }
