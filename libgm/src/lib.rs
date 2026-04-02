@@ -135,8 +135,11 @@
     // This would break existing `Eq` structs.
     clippy::derive_partial_eq_without_eq,
 
-    // This often makes the code less readable.
+    // Applying this lint often makes the code less readable.
     clippy::useless_let_if_seq,
+
+    // This is a style choice.
+    clippy::match_same_arms,
 )]
 
 // Const assertion for soundness

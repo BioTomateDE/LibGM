@@ -6,11 +6,13 @@
 pub mod analysis;
 pub mod assembly;
 pub mod instruction;
+mod name_validation;
 pub(crate) mod opcodes;
+
+use std::ops::Range;
 
 pub use crate::gml::instruction::Instruction;
 use crate::prelude::*;
-use std::ops::Range;
 
 /// A code entry in a GameMaker data file.
 #[derive(Debug, Clone, PartialEq)]
@@ -26,8 +28,6 @@ pub struct GMCode {
 }
 
 impl GMCode {
-    // TODO: make a helper function to insert / remove instructions that preserves branch offsets.
-
     /// Find child code entries of this code entry.
     ///
     /// This is always `false` before WAD 15, since child/parent code entries did not exist then.

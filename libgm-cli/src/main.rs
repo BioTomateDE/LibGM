@@ -30,6 +30,7 @@ fn run(mut args: cli::Args) -> Result<()> {
     for data_file in files {
         log::info!("Parsing data file {}", data_file.display());
         let mut data: GMData = parse_file(data_file)?;
+
         tests::perform(&data, &tests)?;
 
         for action in &args.actions {
