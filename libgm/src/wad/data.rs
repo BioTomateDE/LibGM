@@ -4,6 +4,7 @@ use std::{fmt, path::PathBuf};
 
 use crate::{
     prelude::*,
+    util::bench::Stopwatch,
     wad::elements::{
         animation_curve::GMAnimationCurves, audio::GMAudios, audio_group::GMAudioGroups,
         background::GMBackgrounds, code::GMCodes, embedded_image::GMEmbeddedImages,
@@ -145,6 +146,7 @@ impl GMData {
     /// Validates all names of all named root elements.
     /// This checks for duplicates as well as name charset.
     pub fn validate_names(&self) -> Result<()> {
+        let stopwatch = Stopwatch::start();
         validate_names(&self.animation_curves)?;
         validate_names(&self.audio_groups)?;
         validate_names(&self.backgrounds)?;
@@ -164,6 +166,7 @@ impl GMData {
         validate_names(&self.sounds)?;
         validate_names(&self.sprites)?;
         validate_names(&self.texture_group_infos)?;
+        log::trace!("Validating all names took {stopwatch}");
         Ok(())
     }
 
@@ -174,25 +177,52 @@ impl GMData {
     /// multithreaded implementation (perhaps using the `rayon` crate).
     ///
     /// [`DynamicImage`]: image::DynamicImage
-    pub fn deserialize_textures(&mut self) -> Result<()> {
+    pub fn deserialize_all_textures(&mut self) -> Result<()> {
+        let stopwatch = Stopwatch::start();
+
         for texture_page in &mut self.texture_pages {
             let Some(image) = &mut texture_page.image else {
                 continue;
             };
-            image
-                .deserialize()
-                .context("deserializing all embedded texture pages")?;
+            let error: &str = "deserializing all embedded texture pages";
+            image.deserialize().context(error)?;
         }
+
+        log::trace!(
+            "Deserializing all {} texture pages took {}",
+            self.texture_pages.len(),
+            stopwatch,
+        );
         Ok(())
+    }
+
+    /// Collapses all events of all game objects.
+    ///
+    /// Most of the time, this does nothing, as GameMaker
+    /// surprisingly didn't fuck up event serialization too bad.
+    ///
+    /// See [`Events::collapse`] for more information.
+    ///
+    /// [`Events::collapse`]: crate::wad::elements::game_object::event::Events::collapse
+    pub fn collapse_all_events(&mut self) {
+        let stopwatch = Stopwatch::start();
+
+        for obj in &mut self.game_objects {
+            obj.events.collapse();
+        }
+
+        log::trace!(
+            "Collapsing events of all {} game objects took {}",
+            self.game_objects.len(),
+            stopwatch,
+        );
     }
 
     /// Runs some actions to fully verify integrity and to prepare the data file for editing.
     pub fn post_deserialize(&mut self) -> Result<()> {
         self.validate_names()?;
-        for obj in &mut self.game_objects {
-            obj.events.collapse();
-        }
-        self.deserialize_textures()?;
+        self.collapse_all_events();
+        self.deserialize_all_textures()?;
         self.optimize_memory();
         Ok(())
     }
