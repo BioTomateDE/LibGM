@@ -43,8 +43,7 @@ pub fn perform(data: &GMData, tests: &[Test]) -> Result<()> {
     for test in tests {
         match test {
             Test::All => {
-                // (Unreachable as of now)
-                perform(data, ALL_TESTS)?;
+                unreachable!("Test::All is replaced by deduplication beforehand")
             },
             Test::Builder => {
                 log::info!("Performing Builder Test");
@@ -53,8 +52,8 @@ pub fn perform(data: &GMData, tests: &[Test]) -> Result<()> {
             Test::Reparse => {
                 log::info!("Performing Reparse Test");
                 let raw: Vec<u8> = build_bytes(data)?;
-                let new_data = parse_bytes(raw)?;
-                log_differences(data, &new_data);
+                let _new_data = parse_bytes(raw)?;
+                // log_differences(data, &new_data);
             },
             Test::Assembler => {
                 log::info!("Performing Assembler Test");
@@ -69,6 +68,7 @@ pub fn perform(data: &GMData, tests: &[Test]) -> Result<()> {
     Ok(())
 }
 
+#[allow(unused)]
 fn log_differences(old: &GMData, new: &GMData) {
     macro_rules! diffs {
         ($($field:ident)*) => {{ $(

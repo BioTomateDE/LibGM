@@ -3,12 +3,12 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[must_use]
 pub struct Stopwatch {
     start_timestamp: Instant,
 }
 
 impl Stopwatch {
-    #[must_use]
     pub fn start() -> Self {
         Self { start_timestamp: Instant::now() }
     }

@@ -37,7 +37,7 @@ impl DataBuilder<'_> {
 
         self.write_chunk_name(name);
         self.write_u32(0xDEAD_C0DE); // Chunk length placeholder
-        let start_pos: usize = self.len();
+        let start_pos: u32 = self.len();
         let length_pos = start_pos - 4;
 
         element
@@ -56,8 +56,8 @@ impl DataBuilder<'_> {
         self.last_chunk = LastChunk { length_pos, padding_start_pos };
 
         // Resolve chunk length placeholder
-        let chunk_length: usize = self.len() - start_pos;
-        self.overwrite_usize(chunk_length, length_pos)
+        let chunk_length: u32 = self.len() - start_pos;
+        self.overwrite_u32(chunk_length, length_pos)
             .expect("Chunk length overwrite position out of bounds");
 
         log::trace!("Building chunk '{name}' took {stopwatch}");
@@ -69,7 +69,7 @@ impl DataBuilder<'_> {
     pub fn remove_last_chunk_padding(&mut self) {
         let last = self.last_chunk.clone();
         let chunk_length = last.padding_start_pos - last.length_pos - 4;
-        self.truncate_bytes(last.padding_start_pos);
-        self.overwrite_usize(chunk_length, last.length_pos).unwrap();
+        self.raw_data.truncate(last.padding_start_pos as usize);
+        self.overwrite_u32(chunk_length, last.length_pos).unwrap();
     }
 }

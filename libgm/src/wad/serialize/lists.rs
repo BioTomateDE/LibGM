@@ -58,15 +58,14 @@ impl DataBuilder<'_> {
         };
 
         self.write_usize(count).with_context(ctx)?;
-        let pointer_list_start_pos: usize = self.len();
+        let pointer_list_pos: u32 = self.len();
         for _ in 0..count {
             self.write_u32(0xDEAD_C0DE);
         }
 
         for (i, element) in elements.iter().enumerate() {
             element.serialize_pre_padding(self).with_context(ctx)?;
-            let resolved_pointer_pos: usize = self.len();
-            self.overwrite_usize(resolved_pointer_pos, pointer_list_start_pos + 4 * i)
+            self.overwrite_pointer_with_cur_pos(pointer_list_pos, i)
                 .with_context(ctx)?;
             element.serialize(self).with_context(ctx)?;
             element

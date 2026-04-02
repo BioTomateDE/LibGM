@@ -80,16 +80,18 @@ impl GMElement for GMTexturePages {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_usize(self.texture_pages.len())?;
-        let pointer_list_start_pos: usize = builder.len();
-        for _ in 0..self.texture_pages.len() {
+        let count = self.texture_pages.len();
+        builder.write_usize(count)?;
+        let pointer_list_pos: u32 = builder.len();
+        for _ in 0..count {
             builder.write_u32(0xDEAD_C0DE);
         }
 
-        let mut texture_block_size_placeholders: Vec<usize> = vec![0; self.texture_pages.len()];
+        let mut texture_block_size_placeholders = vec![0u32; count];
 
         for (i, texture_page) in self.texture_pages.iter().enumerate() {
-            builder.overwrite_usize(builder.len(), pointer_list_start_pos + i * 4)?;
+            builder.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
+
             builder.write_u32(texture_page.scaled);
             builder.write_if_ver(
                 &texture_page.generated_mips,
@@ -98,7 +100,8 @@ impl GMElement for GMTexturePages {
             )?;
             if builder.is_version_at_least((2022, 3)) {
                 texture_block_size_placeholders[i] = builder.len();
-                // Placeholder for texture block size. will not be overwritten if external
+                // Placeholder for texture block size. use the cached value as a fallback.
+                // unless the texture page is external, this will later be overriden by the real value.
                 builder.write_u32(
                     texture_page
                         .texture_block_size
@@ -124,12 +127,12 @@ impl GMElement for GMTexturePages {
             };
             builder.align(0x80);
             builder.resolve_pointer(&texture_page.image)?;
-            let start_pos: usize = builder.len();
+            let start_pos: u32 = builder.len();
             img.serialize(builder)
                 .context("serializing texture page image")?;
             if builder.is_version_at_least((2022, 3)) {
-                let length: usize = builder.len() - start_pos;
-                builder.overwrite_usize(length, texture_block_size_placeholders[i])?;
+                let length: u32 = builder.len() - start_pos;
+                builder.overwrite_u32(length, texture_block_size_placeholders[i])?;
             }
         }
 

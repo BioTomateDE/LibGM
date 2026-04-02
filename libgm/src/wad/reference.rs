@@ -1,7 +1,7 @@
 //! Contains the `GMRef` type which is used to refer to other GameMaker elements.
 
 use std::{
-    fmt::{Debug, Formatter},
+    fmt,
     hash::{Hash, Hasher},
 };
 
@@ -73,8 +73,8 @@ impl<T> From<GMRef<T>> for usize {
     }
 }
 
-impl<T> Debug for GMRef<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl<T> fmt::Debug for GMRef<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "GMRef<{}#{}>", typename::<T>(), self.index)
     }
 }
