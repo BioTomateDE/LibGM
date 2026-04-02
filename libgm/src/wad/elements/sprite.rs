@@ -503,7 +503,7 @@ impl GMSprite {
         let rounded_width = width.next_multiple_of(8); // Align to 8
         let data_bits = rounded_width * height * count;
         let data_bits = data_bits.next_multiple_of(32); // Align to 32 bits
-        let data_bytes = (data_bits / 8) as usize;
+        let data_bytes = data_bits / 8;
         assert::int(written_bytes, data_bytes, "Sprite Mask Data Size")?;
 
         Ok(())

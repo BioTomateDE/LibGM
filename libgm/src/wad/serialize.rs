@@ -25,6 +25,7 @@ use crate::{
 /// If you want to build the data file directly to a file on disk, check out [`build_file`].
 ///
 /// For more information on the data file format, see [`crate::wad`].
+#[inline]
 pub fn build_bytes(gm_data: &GMData) -> Result<Vec<u8>> {
     build(gm_data).context("building GameMaker data bytes")
 }
@@ -106,7 +107,7 @@ fn build_impl(data: &GMData) -> Result<Vec<u8>> {
     builder.connect_pointer_placeholders()?;
 
     // Overwrite data length placeholder
-    builder.overwrite_usize(builder.len() - 8, 4)?;
+    builder.overwrite_u32(builder.len() - 8, 4)?;
 
     log::trace!("Building data file took {stopwatch}");
 

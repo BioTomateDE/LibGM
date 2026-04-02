@@ -2,7 +2,6 @@ use std::{any::Any, panic::UnwindSafe};
 
 use crate::error::{Error, Result};
 
-// #[allow(clippy::option_if_let_else)]
 fn extract_panic_message(payload: Box<dyn Any + Send + 'static>) -> String {
     if let Some(&string) = payload.downcast_ref::<&str>() {
         string.to_owned()

@@ -166,56 +166,50 @@ impl GMElement for Events {
             builder.write_u32(0xDEAD_C0DE);
         }
 
-        macro_rules! overwrite_pointer {
-            ($offset:literal) => {
-                builder.overwrite_usize(builder.len(), pointer_list_pos + 4 * $offset)?;
-            };
-        }
-
-        overwrite_pointer!(0);
+        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 0)?;
         builder.write_pointer_list(&self.create_events)?;
 
-        overwrite_pointer!(1);
+        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 1)?;
         builder.write_pointer_list(&self.destroy_events)?;
 
-        overwrite_pointer!(2);
+        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 2)?;
         builder.write_pointer_list(&self.alarm_events)?;
 
-        overwrite_pointer!(3);
+        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 3)?;
         builder.write_pointer_list(&self.step_events)?;
 
-        overwrite_pointer!(4);
+        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 4)?;
         builder.write_pointer_list(&self.collision_events)?;
 
-        overwrite_pointer!(5);
+        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 5)?;
         builder.write_pointer_list(&self.keyboard_events)?;
 
-        overwrite_pointer!(6);
+        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 6)?;
         builder.write_pointer_list(&self.mouse_events)?;
 
-        overwrite_pointer!(7);
+        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 7)?;
         builder.write_pointer_list(&self.other_events)?;
 
-        overwrite_pointer!(8);
+        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 8)?;
         builder.write_pointer_list(&self.draw_events)?;
 
-        overwrite_pointer!(9);
+        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 9)?;
         builder.write_pointer_list(&self.key_press_events)?;
 
-        overwrite_pointer!(10);
+        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 10)?;
         builder.write_pointer_list(&self.key_release_events)?;
 
-        overwrite_pointer!(11);
+        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 11)?;
         builder.write_pointer_list(&self.trigger_events)?;
 
-        overwrite_pointer!(12);
+        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 12)?;
         builder.write_pointer_list(&self.cleanup_events)?;
 
         if gms2 {
-            overwrite_pointer!(13);
+            builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 13)?;
             builder.write_pointer_list(&self.gesture_events)?;
 
-            overwrite_pointer!(14);
+            builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 14)?;
             builder.write_pointer_list(&self.pre_create_events)?;
         }
         Ok(())

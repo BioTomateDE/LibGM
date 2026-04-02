@@ -114,13 +114,13 @@ impl GMElement for GMGameObjects {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_usize(self.game_objects.len())?;
-        let pointer_list_pos: usize = builder.len();
+        let pointer_list_pos = builder.len();
         for _ in 0..self.game_objects.len() {
             builder.write_u32(0xDEAD_C0DE);
         }
 
         for (i, game_object) in self.game_objects.iter().enumerate() {
-            builder.overwrite_usize(builder.len(), pointer_list_pos + 4 * i)?;
+            builder.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
 
             builder.write_gm_string(&game_object.name);
             builder.write_resource_id_opt(game_object.sprite);
