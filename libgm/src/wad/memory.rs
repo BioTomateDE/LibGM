@@ -3,7 +3,11 @@ use std::{
     hash::{BuildHasher, Hash},
 };
 
-use crate::{prelude::GMListChunk, util::fmt::format_bytes, wad::GMData};
+use crate::{
+    prelude::GMListChunk,
+    util::{bench::Stopwatch, fmt::format_bytes},
+    wad::GMData,
+};
 
 impl GMData {
     /// Tries to reduce memory footprint by shrinking `Vec`s and `HashMap`s so
@@ -19,9 +23,10 @@ impl GMData {
     /// Note: This function logs a message at the end.
     /// If you do not want this, use [`GMData::optimize_memory_silent`] instead.
     pub fn optimize_memory(&mut self) {
+        let stopwatch = Stopwatch::start();
         let freed_bytes: usize = optimize_memory(self);
         let human_size: String = format_bytes(freed_bytes);
-        log::debug!("Freed {human_size} ({freed_bytes} bytes)");
+        log::debug!("Freed {human_size} ({freed_bytes} bytes) in {stopwatch}");
     }
 
     /// Tries to reduce memory footprint by shrinking `Vec`s and `HashMap`s so

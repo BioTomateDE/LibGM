@@ -85,7 +85,7 @@ pub struct Events {
     pub gesture_events: Vec<SubEvent<Gesture>>,
 
     /// A pre-create event type.
-    /// TODO(doc): what is this? why does it exist? is it gm1 only?
+    /// TODO(doc): what is this? why does it exist? is it gms2 only?
     pub pre_create_events: Vec<SubEvent<()>>,
 }
 
@@ -389,7 +389,7 @@ impl<T: EventSubtype> SubEvent<T> {
 }
 
 /// Not meant to be implemented from outside the crate.
-pub trait EventSubtype: Copy + Eq {
+pub trait EventSubtype: std::fmt::Debug + Copy + PartialEq {
     fn parse(subtype: u32) -> Result<Self>;
     fn build(self) -> u32;
 }

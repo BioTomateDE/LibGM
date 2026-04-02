@@ -69,8 +69,8 @@ pub struct GMImage(Img);
 impl GMImage {
     /// Creates a new [`GMImage`] from the specified [`DynamicImage`], consuming it.
     #[must_use]
-    pub const fn from_dynamic_image(dyn_img: DynamicImage) -> Self {
-        Self(Img::Dyn(dyn_img))
+    pub const fn from_dynamic_image(dynamic_image: DynamicImage) -> Self {
+        Self(Img::Dyn(dynamic_image))
     }
 
     #[must_use]
@@ -86,23 +86,6 @@ impl GMImage {
     #[must_use]
     pub(super) const fn from_bz2_qoi(raw_bz2_qoi_data: Vec<u8>, header: BZip2QoiHeader) -> Self {
         Self(Img::Bz2Qoi(raw_bz2_qoi_data, header))
-    }
-
-    /// Converts this image to a [`DynamicImage`].
-    ///
-    /// This is a no-op if the underlying data is already a [`DynamicImage`].
-    ///
-    /// Note that this does *not* change the format of `self`.
-    pub fn to_dynamic_image(&'_ self) -> Result<Cow<'_, DynamicImage>> {
-        let image: DynamicImage = match &self.0 {
-            Img::Dyn(dyn_img) => return Ok(Cow::Borrowed(dyn_img)),
-            Img::Png(raw) => png::decode(raw).context("converting PNG image to DynamicImage")?,
-            Img::Qoi(raw) => qoi::decode(raw).context("converting QOI image to DynamicImage")?,
-            Img::Bz2Qoi(raw, _) => {
-                bz2::decode_image(raw).context("converting Bz2Qoi image to DynamicImage")?
-            },
-        };
-        Ok(Cow::Owned(image))
     }
 
     /// The Image [`Format`] of the underlying stored image data.
@@ -121,6 +104,48 @@ impl GMImage {
     pub const fn is_dynamic_image(&self) -> bool {
         // TODO(const-hack): const PartialEq not yet supported
         matches!(self.format(), Format::Dyn)
+    }
+
+    /// Converts this image to a [`DynamicImage`].
+    ///
+    /// This is a no-op if the underlying data is already a [`DynamicImage`].
+    ///
+    /// Note that this does *not* change the format of `self`.
+    /// If you'd like to to that, check out [`Self::deserialize`] or [`Self::change_format`].
+    pub fn to_dynamic_image(&'_ self) -> Result<Cow<'_, DynamicImage>> {
+        let image: DynamicImage = match &self.0 {
+            Img::Dyn(dyn_img) => return Ok(Cow::Borrowed(dyn_img)),
+            Img::Png(raw) => png::decode(raw).context("converting PNG image to DynamicImage")?,
+            Img::Qoi(raw) => qoi::decode(raw).context("converting QOI image to DynamicImage")?,
+            Img::Bz2Qoi(raw, _) => {
+                bz2::decode_image(raw).context("converting Bz2Qoi image to DynamicImage")?
+            },
+        };
+        Ok(Cow::Owned(image))
+    }
+
+    /// An immutable reference to the [`DynamicImage`] stored internally.
+    ///
+    /// This will only return [`Some`] if the stored image data is actually a `DynamicImage`
+    /// (you can check this by using [`Self::format`] or [`Self::is_dynamic_image`]).
+    #[must_use]
+    pub const fn dynamic_image_ref(&self) -> Option<&DynamicImage> {
+        match &self.0 {
+            Img::Dyn(dynamic_image) => Some(dynamic_image),
+            _ => None,
+        }
+    }
+
+    /// A mutable reference to the [`DynamicImage`] stored internally.
+    ///
+    /// This will only return [`Some`] if the stored image data is actually a `DynamicImage`
+    /// (you can check this by using [`Self::format`] or [`Self::is_dynamic_image`]).
+    #[must_use]
+    pub const fn dynamic_image_mut(&mut self) -> Option<&mut DynamicImage> {
+        match &mut self.0 {
+            Img::Dyn(dynamic_image) => Some(dynamic_image),
+            _ => None,
+        }
     }
 
     /// Changes the format of the underlying stored image data.
@@ -153,16 +178,15 @@ impl GMImage {
         Ok(true)
     }
 
-    /// Turns the underlying data of this [`GMImage`] into a [`DynamicImage`].
+    /// Converts the underlying data of this [`GMImage`] into a [`DynamicImage`] and
+    /// returns a reference to it.
     ///
     /// This will deserialize PNG/QOI data or do nothing if the image is already stored as a [`DynamicImage`].
     ///
-    /// Returns `Ok(true)` if the format was actually changed,
-    /// `Ok(false)` if it was already a [`DynamicImage`] and `Err(...)` if the image deserialization failed.
-    ///
     /// For more information, see [`GMImage::change_format`].
-    pub fn deserialize(&mut self) -> Result<bool> {
-        self.change_format(Format::Dyn)
+    pub fn deserialize(&mut self) -> Result<&DynamicImage> {
+        self.change_format(Format::Dyn)?;
+        Ok(self.dynamic_image_ref().unwrap())
     }
 
     fn change_format_(&mut self, format: Format) -> Result<()> {
@@ -279,10 +303,13 @@ enum Img {
 impl fmt::Debug for Img {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Dyn(_) => f.write_str("Dyn"),
-            Self::Png(_) => f.write_str("Png"),
-            Self::Qoi(_) => f.write_str("Qoi"),
-            Self::Bz2Qoi(_, header) => f.debug_tuple("Bz2Qoi").field(header).finish(),
+            Self::Dyn(_) => f.debug_struct("Dyn").finish_non_exhaustive(),
+            Self::Png(_) => f.debug_struct("Png").finish_non_exhaustive(),
+            Self::Qoi(_) => f.debug_struct("Qoi").finish_non_exhaustive(),
+            Self::Bz2Qoi(_, header) => f
+                .debug_tuple("Bz2Qoi")
+                .field(header)
+                .finish_non_exhaustive(),
         }
     }
 }
