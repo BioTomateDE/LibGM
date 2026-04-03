@@ -3,7 +3,7 @@
 //! Some of these functions are also re-exported at the crate root.
 
 pub(super) mod chunk;
-mod integrity;
+pub mod integrity;
 mod lists;
 mod numbers;
 pub(crate) mod reader;
@@ -56,7 +56,7 @@ use crate::{
             ui_node::GMRootUINodes,
             variable::GMVariables,
         },
-        version::{GMVersion, LTSBranch},
+        version::GMVersion,
         version_detection::detect_gamemaker_version,
     },
 };
@@ -139,7 +139,9 @@ impl ParsingOptions {
         self
     }
 
-    /// Parse a GameMaker data file (stored in memory) with default options.
+    /// Parses a GameMaker data file (stored in memory) with the specified options.
+    ///
+    /// If you want to parse a data file stored on disk, check out [`ParsingOptions::parse_file`].
     ///
     /// For more information on the data file format, see [`crate::wad`].
     pub fn parse_bytes(&self, raw_data: impl AsRef<[u8]>) -> Result<GMData> {
@@ -147,7 +149,9 @@ impl ParsingOptions {
             .context("parsing GameMaker data bytes")
     }
 
-    /// Parse a GameMaker data file (stored on disk) with default options.
+    /// Parses a GameMaker data file (stored on disk) with the specified options.
+    ///
+    /// If you want to parse a data file stored in memory, check out [`ParsingOptions::parse_bytes`].
     ///
     /// For more information on the data file format, see [`crate::wad`].
     pub fn parse_file(&self, data_file_path: impl AsRef<Path>) -> Result<GMData> {
@@ -182,14 +186,20 @@ impl ParsingOptions {
     }
 }
 
-/// Parse a GameMaker data file (stored in memory) with default options.
+/// Parses a GameMaker data file (stored in memory) with default options.
+///
+/// If you want to customize parsing options, check out [`ParsingOptions`].
+/// If you want to parse a data file stored on disk, check out [`parse_file`].
 ///
 /// For more information on the data file format, see [`crate::wad`].
 pub fn parse_bytes(raw_data: impl AsRef<[u8]>) -> Result<GMData> {
     ParsingOptions::new().parse_bytes(raw_data)
 }
 
-/// Parse a GameMaker data file (stored on disk) with default options.
+/// Parses a GameMaker data file (stored on disk) with default options
+///
+/// If you want to customize parsing options, check out [`ParsingOptions`].
+/// If you want to parse a data file stored in memory, check out [`parse_bytes`].
 ///
 /// For more information on the data file format, see [`crate::wad`].
 pub fn parse_file(data_file_path: impl AsRef<Path>) -> Result<GMData> {
@@ -208,7 +218,7 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
     let mut reader = DataReader::new(raw_data);
 
     // Read root chunk and set endianness
-    let root_chunk_name = reader.read_chunk_name()?;
+    let root_chunk_name = reader.read_chunk_name().context("reading root chunk")?;
     reader.endianness = match root_chunk_name.as_str() {
         "FORM" => Endianness::Little,
         "MROF" => Endianness::Big,
@@ -279,8 +289,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         bail!("GEN8 chunk does not exist");
     }
 
-    let gms2 = GMVersion::new(2, 0, 0, 0, LTSBranch::PreLTS);
-    if reader.specified_version == gms2 {
+    if reader.specified_version == GMVersion::GMS2 {
         let stopwatch = Stopwatch::start();
         detect_gamemaker_version(&mut reader).context("detecting GameMaker version")?;
         log::trace!("Detecting GameMaker Version took {stopwatch}");

@@ -13,7 +13,8 @@ impl DataReader<'_> {
     /// The list format is: `[count: u32][element_0][element_1]...[element_n]`
     pub fn read_simple_list<T: GMElement>(&mut self) -> Result<Vec<T>> {
         let count = self.read_u32()?;
-        let mut elements: Vec<T> = vec_with_capacity(count).context("reading simple list")?;
+        let mut elements: Vec<T> = vec_with_capacity(count)
+            .with_context(|| format!("reading simple list of {}", typename::<T>()))?;
 
         for _ in 0..count {
             let element = T::deserialize(self).with_context(|| {
@@ -38,7 +39,8 @@ impl DataReader<'_> {
     /// The list format is: `[count: u16][element_0][element_1]...[element_n]`
     pub fn read_simple_list_short<T: GMElement>(&mut self) -> Result<Vec<T>> {
         let count = u32::from(self.read_u16()?);
-        let mut elements: Vec<T> = vec_with_capacity(count).context("reading short simple list")?;
+        let mut elements: Vec<T> = vec_with_capacity(count)
+            .with_context(|| format!("reading short simple list of {}", typename::<T>()))?;
 
         for _ in 0..count {
             let element = T::deserialize(self).with_context(|| {

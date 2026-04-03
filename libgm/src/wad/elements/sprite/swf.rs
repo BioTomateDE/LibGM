@@ -29,7 +29,11 @@ pub struct Data {
 
 impl fmt::Debug for Data {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("Data")
+        f.debug_struct("Data")
+            .field("swf_version", &self.swf_version)
+            .field("yyswf_version", &self.yyswf_version)
+            .field("timeline", &self.timeline)
+            .finish_non_exhaustive()
     }
 }
 

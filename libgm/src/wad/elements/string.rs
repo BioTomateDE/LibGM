@@ -52,7 +52,7 @@ impl GMElement for GMStrings {
 
         // Prepare Pointer List
         builder.write_usize(count)?;
-        let pointer_list_start: usize = builder.len();
+        let pointer_list_start = builder.len();
         for _ in 0..count {
             builder.write_u32(0xDEAD_C0DE);
         }
@@ -72,9 +72,7 @@ impl GMElement for GMStrings {
 
             builder.align(ALIGNMENT);
 
-            let list_pointer = builder.len();
-            let list_placeholder_pos = pointer_list_start + index * 4;
-            builder.overwrite_usize(list_pointer, list_placeholder_pos)?;
+            builder.overwrite_pointer_with_cur_pos(pointer_list_start, index)?;
 
             builder.write_usize(placeholder.string.len())?;
 
@@ -125,15 +123,14 @@ fn count_unique_strings(sorted_vec: &[StringPlaceholder]) -> usize {
 fn overwrite_placeholder(
     builder: &mut DataBuilder,
     placeholder: &StringPlaceholder,
-    string_position: usize,
+    string_position: u32,
     index: usize,
 ) -> Result<()> {
-    let placeholder_position = placeholder.placeholder_position as usize;
-    let number = if placeholder.write_id {
-        index
+    let number: u32 = if placeholder.write_id {
+        index as u32
     } else {
         string_position
     };
-    builder.overwrite_usize(number, placeholder_position)?;
+    builder.overwrite_u32(number, placeholder.placeholder_position)?;
     Ok(())
 }

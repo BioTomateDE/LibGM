@@ -177,7 +177,7 @@
 //!
 
 mod chunk;
-mod memfree;
+mod memory;
 mod version_detection;
 
 pub mod data;

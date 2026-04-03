@@ -12,7 +12,7 @@ pub struct CollisionMask {
 
 impl fmt::Debug for CollisionMask {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("CollisionMask")
+        f.debug_struct("CollisionMask").finish_non_exhaustive()
     }
 }
 

@@ -2,6 +2,7 @@
 
 mod actions;
 mod cli;
+pub mod diff;
 mod dir;
 mod logging;
 mod tests;
@@ -11,7 +12,7 @@ use std::path::PathBuf;
 use libgm::{
     gml::assembly::disassemble_code,
     prelude::*,
-    wad::{data::GMData, deserialize::parse_file, serialize::build_file},
+    wad::{data::GMData, parse_file, serialize::build_file},
 };
 
 use crate::tests::Test;
@@ -29,6 +30,7 @@ fn run(mut args: cli::Args) -> Result<()> {
     for data_file in files {
         log::info!("Parsing data file {}", data_file.display());
         let mut data: GMData = parse_file(data_file)?;
+        println!("a");
 
         tests::perform(&data, &tests)?;
 
@@ -48,6 +50,8 @@ fn run(mut args: cli::Args) -> Result<()> {
             log::info!("Building data file {}", out_file.display());
             build_file(&data, out_file)?;
         }
+
+        println!();
     }
 
     Ok(())

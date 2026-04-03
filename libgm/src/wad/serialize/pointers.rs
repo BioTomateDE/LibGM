@@ -33,7 +33,7 @@
 //! You could use an enum instead that keeps track of element type and index.
 //! I actually used this previously before I switched to memory addresses!
 //! This enum sucks for multiple reasons though:
-//! * Abstraction: when I rewrote this library with proper traits ([`GMElement`]),
+//! * Abstraction: when I rewrote this library with proper traits (`GMElement`),
 //!   I lost context of GameMaker lists; the index is no longer known when (de)serializing a list element.
 //! * Maintainability: Every pointer somewhere down the line needs an enum variant
 //!   with N stacked indices. etc.
@@ -98,7 +98,7 @@ impl DataBuilder<'_> {
         let raw_pointer: *const T = std::ptr::from_ref(element);
         let memory_address = raw_pointer as usize;
 
-        let placeholder_position: u32 = self.len() as u32;
+        let placeholder_position: u32 = self.len();
 
         self.write_u32(0xDEAD_C0DE);
         self.pointer_placeholder_positions
@@ -126,7 +126,7 @@ impl DataBuilder<'_> {
         let raw_pointer: *const T = std::ptr::from_ref(element);
         let memory_address = raw_pointer as usize;
 
-        let resource_position: u32 = self.len() as u32;
+        let resource_position: u32 = self.len();
 
         let old_resource_pos_opt = self
             .pointer_resource_positions
@@ -148,7 +148,7 @@ impl DataBuilder<'_> {
 
     /// Resolve pointer placeholders to their actual data positon they point to.
     /// This function should be called once after writing all chunks.
-    pub fn connect_pointer_placeholders(&mut self) -> Result<()> {
+    pub(super) fn connect_pointer_placeholders(&mut self) -> Result<()> {
         let stopwatch = Stopwatch::start();
 
         let placeholders: Vec<(u32, usize)> =
@@ -168,7 +168,7 @@ impl DataBuilder<'_> {
 
             // Overwrite the `0xDEAD_C0DE` placeholder.
             // This `?` should never fail.
-            self.overwrite_i32(resource_data_pos as i32, placeholder_data_pos as usize)?;
+            self.overwrite_u32(resource_data_pos, placeholder_data_pos)?;
         }
 
         log::trace!(

@@ -29,6 +29,23 @@ impl GMElement for GMScripts {
     }
 }
 
+impl GMScripts {
+    /// Gets a `GMRef<GMCode>` based on the name of a [`GMScript`].
+    pub fn code_ref_by_name(&self, script_name: &str) -> Result<GMRef<GMCode>> {
+        let script: &GMScript = self.by_name(script_name)?;
+        let code_ref: GMRef<GMCode> = script.code.ok_or_else(|| {
+            format!("Script {script_name:?} does not have an associated code entry")
+        })?;
+        Ok(code_ref)
+    }
+
+    /// Gets a `&GMCode` based on the name of a [`GMScript`].
+    pub fn code_by_name<'a>(&self, script_name: &str, gm_data: &'a GMData) -> Result<&'a GMCode> {
+        let code_ref: GMRef<GMCode> = self.code_ref_by_name(script_name)?;
+        gm_data.codes.by_ref(code_ref)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMScript {
     pub name: String,

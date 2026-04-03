@@ -1,7 +1,6 @@
 [![GitHub](https://img.shields.io/badge/github-repo-blue?logo=github)](https://github.com/BioTomateDE/LibGM)
 [![Crates.io](https://img.shields.io/crates/v/libgm)](https://crates.io/crates/libgm)
 [![Documentation](https://img.shields.io/docsrs/libgm)](https://docs.rs/libgm)
-[![Hypercommit](https://img.shields.io/badge/Hypercommit-DB2475)](https://hypercommit.com/libgm)
 
 # LibGM
 
@@ -14,18 +13,15 @@ This is effectively a Rust port of
 
 ## Benefits of this Rust port
 
-- Runtime for parsing and building is ~8x faster than UndertaleModLib.
-  - This can be further accelerated with the upcoming threaded chunk reading
-    feature (opt-in).
-- Thorough documentation on [docs.rs](https://docs.rs).
+- Parsing and building data files is ~8x faster than UndertaleModLib.
 - Clean and maintainable library code.
+- Thorough documentation on [docs.rs](https://docs.rs).
 - Helpful error messages:
   - No `NullReferenceException`, ever
   - No meaningless stack traces over 50 lines long
   - Still more information than just "Reading out of bounds"
   - Strict data integrity checks catch errors earlier, making debugging easier
   - Example trace printed out using `.chain()`:
-
     ```
     sprite::swf::item::shape::style_group::fill::gradient::Record count 1065353216 implies data size 8.5 GB which exceeds failsafe size 10.0 MB
     > while reading simple list
@@ -41,8 +37,7 @@ This is effectively a Rust port of
 ## Disadvantages / TODOs
 
 - Null pointers are not yet supported.
-- GML Decompiler and Compiler not yet implemented (help would be greatly
-  appreciated!)
+- GML Decompiler and Compiler not yet implemented (help would be greatly appreciated!)
 - No GUI yet, only a Rust library.
 
 ## How to use as a dependency
@@ -120,6 +115,8 @@ Discord Guild who helped me along the way, especially
 
 This project is licenced under the
 [GNU Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html) (GPL-3.0).
+
+This means that all projects using this library must also be licensed under GPL-3.
 
 ## Contributing
 

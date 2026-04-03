@@ -72,17 +72,19 @@ pub struct GMVersion {
 }
 
 impl GMVersion {
+    /// The GameMaker Version 2.0.0.0 (Pre LTS).
+    pub const GMS2: Self = Self::new(2, 0, 0, 0, LTSBranch::PreLTS);
+
     /// Creates a new [`GMVersion`] with the given fields.
     #[must_use]
     pub const fn new(major: u32, minor: u32, release: u32, build: u32, branch: LTSBranch) -> Self {
         Self { major, minor, release, build, branch }
     }
+}
 
-    /// Creates a temporary placeholder [`GMVersion`] to avoid [`Option`]s.
-    /// Make sure to never read this value before properly initialized (overwritten)!
-    #[must_use]
-    pub(crate) const fn stub() -> Self {
-        Self::new(1337, 1337, 1337, 1337, LTSBranch::PreLTS)
+impl Default for GMVersion {
+    fn default() -> Self {
+        Self::GMS2
     }
 }
 

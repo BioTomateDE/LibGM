@@ -20,14 +20,19 @@ use crate::{
     wad::{chunk::ChunkName, data::GMData, elements::string::GMStrings},
 };
 
-/// Builds a GameMaker data file and return a byte buffer.
+/// Builds a GameMaker data file and returns a byte buffer.
+///
+/// If you want to build the data file directly to a file on disk, check out [`build_file`].
 ///
 /// For more information on the data file format, see [`crate::wad`].
+#[inline]
 pub fn build_bytes(gm_data: &GMData) -> Result<Vec<u8>> {
     build(gm_data).context("building GameMaker data bytes")
 }
 
 /// Builds a GameMaker data file to the specified file path.
+///
+/// If you want to build the data file to a buffer in memory, check out [`build_bytes`].
 ///
 /// For more information on the data file format, see [`crate::wad`].
 pub fn build_file(gm_data: &GMData, path: impl AsRef<Path>) -> Result<()> {
@@ -102,7 +107,7 @@ fn build_impl(data: &GMData) -> Result<Vec<u8>> {
     builder.connect_pointer_placeholders()?;
 
     // Overwrite data length placeholder
-    builder.overwrite_usize(builder.len() - 8, 4)?;
+    builder.overwrite_u32(builder.len() - 8, 4)?;
 
     log::trace!("Building data file took {stopwatch}");
 
