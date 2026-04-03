@@ -1,5 +1,6 @@
-use macros::num_enum;
 use std::fmt;
+
+use macros::num_enum;
 
 use crate::{
     prelude::*, util::init::num_enum_from, wad::elements::game_object::event::EventSubtype,

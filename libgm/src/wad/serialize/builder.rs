@@ -6,6 +6,7 @@ use crate::{
     wad::{
         data::{Endianness, GMData},
         elements::string::StringPlaceholder,
+        serialize::pointers::Pointer,
         version::GMVersionReq,
     },
 };
@@ -27,10 +28,10 @@ pub struct DataBuilder<'a> {
     pub raw_data: Vec<u8>,
 
     /// Pairs data positions of pointer placeholders with the memory address of the GameMaker element they're pointing to.
-    pub(super) pointer_placeholder_positions: Vec<(u32, usize)>,
+    pub(super) pointer_placeholder_positions: Vec<(u32, Pointer)>,
 
     /// Maps memory addresses of GameMaker elements to their resolved data position.
-    pub(super) pointer_resource_positions: HashMap<usize, u32>,
+    pub(super) pointer_resource_positions: HashMap<Pointer, u32>,
 
     /// Tracks where each function is used throughout the game data.
     /// Will be populated when code is built.

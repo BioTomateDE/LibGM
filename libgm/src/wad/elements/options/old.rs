@@ -66,8 +66,6 @@ pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
 
     Ok(GMOptions {
         is_new_format: false,
-        unknown1: 0, // Might not be best practice?
-        unknown2: 0,
         flags: Flags {
             fullscreen: flag_fullscreen,
             interpolate_pixels: flag_interpolate_pixels,
