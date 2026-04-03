@@ -1,8 +1,9 @@
+use std::fmt::Debug;
+
 use crate::{
     prelude::*,
     wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
 };
-use std::fmt::Debug;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TextureEntry {

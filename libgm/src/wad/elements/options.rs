@@ -17,11 +17,10 @@ use crate::{
     },
 };
 
+/// Most (if not all) of these options are probably unused and remnant from GM8.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMOptions {
     is_new_format: bool,
-    pub unknown1: u32,
-    pub unknown2: u32,
     pub flags: Flags,
     pub window_scale: i32,
     pub window_color: u32,

@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::{
     gml::GMCode,
     prelude::*,
@@ -6,7 +8,6 @@ use crate::{
         serialize::builder::DataBuilder,
     },
 };
-use std::fmt;
 
 #[derive(Clone, PartialEq)]
 pub struct Action {

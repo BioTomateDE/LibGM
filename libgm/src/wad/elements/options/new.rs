@@ -14,7 +14,9 @@ use crate::{
 
 pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
     let unknown1 = reader.read_u32()?;
+    reader.assert_int(unknown1, 0x8000_0000, "Options Unknown Value 1")?;
     let unknown2 = reader.read_u32()?;
+    reader.assert_int(unknown2, 2, "Options Unknown Value 2")?;
     let flags = Flags::deserialize(reader)?;
     let window_scale = reader.read_i32()?;
     let window_color = reader.read_u32()?;
@@ -31,8 +33,6 @@ pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
 
     Ok(GMOptions {
         is_new_format: true,
-        unknown1,
-        unknown2,
         flags,
         window_scale,
         window_color,
@@ -51,8 +51,8 @@ pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
 }
 
 pub fn build(builder: &mut DataBuilder, options: &GMOptions) -> Result<()> {
-    builder.write_u32(options.unknown1);
-    builder.write_u32(options.unknown2);
+    builder.write_u32(0x8000_0000); // unknown1
+    builder.write_u32(2); //unknown2
     options.flags.serialize(builder)?;
     builder.write_i32(options.window_scale);
     builder.write_u32(options.window_color);

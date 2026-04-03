@@ -1,9 +1,9 @@
 mod action;
 pub mod subtype;
 
-pub use self::action::Action;
 use subtype::{Alarm, Collision, Draw, Gesture, Key, Mouse, Other, Step};
 
+pub use self::action::Action;
 use crate::{
     prelude::*,
     util::{assert, fmt::typename},
