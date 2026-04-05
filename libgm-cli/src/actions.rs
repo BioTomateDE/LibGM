@@ -10,7 +10,6 @@ pub enum Action {
     SerializeTexturesQoi,
     SerializeTexturesBz2Qoi,
     OptimizeMemory,
-    CollapseEvents,
     Most,
 }
 
@@ -25,10 +24,6 @@ impl Action {
             Self::SerializeTexturesBz2Qoi => serialize_textures(data, Format::Bz2Qoi),
             Self::OptimizeMemory => {
                 data.optimize_memory();
-                Ok(())
-            },
-            Self::CollapseEvents => {
-                data.collapse_all_events();
                 Ok(())
             },
             Self::Most => data.post_deserialize(),
