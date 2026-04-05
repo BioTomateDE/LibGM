@@ -14,10 +14,10 @@ use crate::{
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Events {
     /// Triggered when the game object instance is created.
-    pub create_events: Vec<SubEvent<()>>,
+    pub create: Vec<SubEvent<()>>,
 
     /// Triggered when the game object instance is destroyed.
-    pub destroy_events: Vec<SubEvent<()>>,
+    pub destroy: Vec<SubEvent<()>>,
 
     /// Triggered when a user-set alarm reaches 0.
     ///
@@ -26,67 +26,67 @@ pub struct Events {
     ///
     /// This is simply an alarm array index `0..12`.
     /// See [`Alarm`].
-    pub alarm_events: Vec<SubEvent<Alarm>>,
+    pub alarm: Vec<SubEvent<Alarm>>,
 
     /// Triggered on every game step (aka. frame).
     ///
     /// See [`Step`].
-    pub step_events: Vec<SubEvent<Step>>,
+    pub step: Vec<SubEvent<Step>>,
 
     /// Triggered when this game object instance collides with another game object (any instance).
     ///
     /// The subtype is the ID of the other game object (to check collision against).
-    pub collision_events: Vec<SubEvent<Collision>>,
+    pub collision: Vec<SubEvent<Collision>>,
 
     /// Triggered on every step/frame a specified key is held down.
     ///
     /// The key is specified in [`Key`].
-    pub keyboard_events: Vec<SubEvent<Key>>,
+    pub keyboard: Vec<SubEvent<Key>>,
 
     /// Triggered on a mouse event (like holding, pressing down, releasing, mouse wheel, etc.).
     ///
     /// See [`Mouse`].
-    pub mouse_events: Vec<SubEvent<Mouse>>,
+    pub mouse: Vec<SubEvent<Mouse>>,
 
     /// Some event that was too irrelevan to be included into the main list.
     /// Also includes user-defined events.
     ///
     /// See [`Other`].
-    pub other_events: Vec<SubEvent<Other>>,
+    pub other: Vec<SubEvent<Other>>,
 
     /// Triggered when the game loop is in the rendering/drawing stage.
     ///
     /// This occurs every step/frame, but is called with different
     /// timing and with a different purpose than [`Step`] events.
-    pub draw_events: Vec<SubEvent<Draw>>,
+    pub draw: Vec<SubEvent<Draw>>,
 
     /// Triggered on the first step/frame a specified key is pressed down.
     ///
     /// The key is specified in [`Key`].
-    pub key_press_events: Vec<SubEvent<Key>>,
+    pub key_press: Vec<SubEvent<Key>>,
 
     /// Triggered on the step/frame a specified key is released (no longer held down).
     ///
     /// The key is specified in [`Key`].
-    pub key_release_events: Vec<SubEvent<Key>>,
+    pub key_release: Vec<SubEvent<Key>>,
 
     /// A trigger event type. Only used in Pre-GameMaker Studio.
-    pub trigger_events: Vec<SubEvent<()>>,
+    pub trigger: Vec<SubEvent<()>>,
 
     /// Triggered when this game object instance is cleaned up, which can happen when:
     /// * The instance is destroyed
     /// * The room gets switched
     /// * The game ends
-    pub cleanup_events: Vec<SubEvent<()>>,
+    pub cleanup: Vec<SubEvent<()>>,
 
     /// Triggered when the user performs some touchscreen event.
     ///
     /// See [`Gesture`].
-    pub gesture_events: Vec<SubEvent<Gesture>>,
+    pub gesture: Vec<SubEvent<Gesture>>,
 
     /// A pre-create event type.
     /// TODO(doc): what is this? why does it exist? is it gms2 only?
-    pub pre_create_events: Vec<SubEvent<()>>,
+    pub pre_create: Vec<SubEvent<()>>,
 }
 
 impl GMElement for Events {
@@ -111,46 +111,46 @@ impl GMElement for Events {
 
         // assert_pos are missing
 
-        let create_events: Vec<SubEvent<()>> = reader.read_pointer_list()?;
-        let destroy_events: Vec<SubEvent<()>> = reader.read_pointer_list()?;
-        let alarm_events: Vec<SubEvent<Alarm>> = reader.read_pointer_list()?;
-        let step_events: Vec<SubEvent<Step>> = reader.read_pointer_list()?;
-        let collision_events: Vec<SubEvent<Collision>> = reader.read_pointer_list()?;
-        let keyboard_events: Vec<SubEvent<Key>> = reader.read_pointer_list()?;
-        let mouse_events: Vec<SubEvent<Mouse>> = reader.read_pointer_list()?;
-        let other_events: Vec<SubEvent<Other>> = reader.read_pointer_list()?;
-        let draw_events: Vec<SubEvent<Draw>> = reader.read_pointer_list()?;
-        let key_press_events: Vec<SubEvent<Key>> = reader.read_pointer_list()?;
-        let key_release_events: Vec<SubEvent<Key>> = reader.read_pointer_list()?;
-        let trigger_events: Vec<SubEvent<()>> = reader.read_pointer_list()?;
-        let cleanup_events: Vec<SubEvent<()>> = reader.read_pointer_list()?;
+        let create: Vec<SubEvent<()>> = reader.read_pointer_list()?;
+        let destroy: Vec<SubEvent<()>> = reader.read_pointer_list()?;
+        let alarm: Vec<SubEvent<Alarm>> = reader.read_pointer_list()?;
+        let step: Vec<SubEvent<Step>> = reader.read_pointer_list()?;
+        let collision: Vec<SubEvent<Collision>> = reader.read_pointer_list()?;
+        let keyboard: Vec<SubEvent<Key>> = reader.read_pointer_list()?;
+        let mouse: Vec<SubEvent<Mouse>> = reader.read_pointer_list()?;
+        let other: Vec<SubEvent<Other>> = reader.read_pointer_list()?;
+        let draw: Vec<SubEvent<Draw>> = reader.read_pointer_list()?;
+        let key_press: Vec<SubEvent<Key>> = reader.read_pointer_list()?;
+        let key_release: Vec<SubEvent<Key>> = reader.read_pointer_list()?;
+        let trigger: Vec<SubEvent<()>> = reader.read_pointer_list()?;
+        let cleanup: Vec<SubEvent<()>> = reader.read_pointer_list()?;
 
-        let gesture_events: Vec<SubEvent<Gesture>>;
-        let pre_create_events: Vec<SubEvent<()>>;
+        let gesture: Vec<SubEvent<Gesture>>;
+        let pre_create: Vec<SubEvent<()>>;
         if gms2 {
-            gesture_events = reader.read_pointer_list()?;
-            pre_create_events = reader.read_pointer_list()?;
+            gesture = reader.read_pointer_list()?;
+            pre_create = reader.read_pointer_list()?;
         } else {
-            gesture_events = Vec::new();
-            pre_create_events = Vec::new();
+            gesture = Vec::new();
+            pre_create = Vec::new();
         }
 
         Ok(Self {
-            create_events,
-            destroy_events,
-            alarm_events,
-            step_events,
-            collision_events,
-            keyboard_events,
-            mouse_events,
-            other_events,
-            draw_events,
-            key_press_events,
-            key_release_events,
-            trigger_events,
-            cleanup_events,
-            gesture_events,
-            pre_create_events,
+            create,
+            destroy,
+            alarm,
+            step,
+            collision,
+            keyboard,
+            mouse,
+            other,
+            draw,
+            key_press,
+            key_release,
+            trigger,
+            cleanup,
+            gesture,
+            pre_create,
         })
     }
 
@@ -167,50 +167,50 @@ impl GMElement for Events {
         }
 
         builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 0)?;
-        builder.write_pointer_list(&self.create_events)?;
+        builder.write_pointer_list(&self.create)?;
 
         builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 1)?;
-        builder.write_pointer_list(&self.destroy_events)?;
+        builder.write_pointer_list(&self.destroy)?;
 
         builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 2)?;
-        builder.write_pointer_list(&self.alarm_events)?;
+        builder.write_pointer_list(&self.alarm)?;
 
         builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 3)?;
-        builder.write_pointer_list(&self.step_events)?;
+        builder.write_pointer_list(&self.step)?;
 
         builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 4)?;
-        builder.write_pointer_list(&self.collision_events)?;
+        builder.write_pointer_list(&self.collision)?;
 
         builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 5)?;
-        builder.write_pointer_list(&self.keyboard_events)?;
+        builder.write_pointer_list(&self.keyboard)?;
 
         builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 6)?;
-        builder.write_pointer_list(&self.mouse_events)?;
+        builder.write_pointer_list(&self.mouse)?;
 
         builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 7)?;
-        builder.write_pointer_list(&self.other_events)?;
+        builder.write_pointer_list(&self.other)?;
 
         builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 8)?;
-        builder.write_pointer_list(&self.draw_events)?;
+        builder.write_pointer_list(&self.draw)?;
 
         builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 9)?;
-        builder.write_pointer_list(&self.key_press_events)?;
+        builder.write_pointer_list(&self.key_press)?;
 
         builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 10)?;
-        builder.write_pointer_list(&self.key_release_events)?;
+        builder.write_pointer_list(&self.key_release)?;
 
         builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 11)?;
-        builder.write_pointer_list(&self.trigger_events)?;
+        builder.write_pointer_list(&self.key_release)?;
 
         builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 12)?;
-        builder.write_pointer_list(&self.cleanup_events)?;
+        builder.write_pointer_list(&self.cleanup)?;
 
         if gms2 {
             builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 13)?;
-            builder.write_pointer_list(&self.gesture_events)?;
+            builder.write_pointer_list(&self.gesture)?;
 
             builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 14)?;
-            builder.write_pointer_list(&self.pre_create_events)?;
+            builder.write_pointer_list(&self.pre_create)?;
         }
         Ok(())
     }
@@ -236,21 +236,21 @@ impl Events {
     /// For those event groups, *all* subevents will be merged into one.
     pub fn collapse(&mut self) -> bool {
         let mut changed: bool = false;
-        changed |= dedup_events(&mut self.create_events);
-        changed |= dedup_events(&mut self.destroy_events);
-        changed |= dedup_events(&mut self.alarm_events);
-        changed |= dedup_events(&mut self.step_events);
-        changed |= dedup_events(&mut self.collision_events);
-        changed |= dedup_events(&mut self.keyboard_events);
-        changed |= dedup_events(&mut self.mouse_events);
-        changed |= dedup_events(&mut self.other_events);
-        changed |= dedup_events(&mut self.draw_events);
-        changed |= dedup_events(&mut self.key_press_events);
-        changed |= dedup_events(&mut self.key_release_events);
-        changed |= dedup_events(&mut self.trigger_events);
-        changed |= dedup_events(&mut self.cleanup_events);
-        changed |= dedup_events(&mut self.gesture_events);
-        changed |= dedup_events(&mut self.pre_create_events);
+        changed |= dedup_events(&mut self.create);
+        changed |= dedup_events(&mut self.destroy);
+        changed |= dedup_events(&mut self.alarm);
+        changed |= dedup_events(&mut self.step);
+        changed |= dedup_events(&mut self.collision);
+        changed |= dedup_events(&mut self.keyboard);
+        changed |= dedup_events(&mut self.mouse);
+        changed |= dedup_events(&mut self.other);
+        changed |= dedup_events(&mut self.draw);
+        changed |= dedup_events(&mut self.key_press);
+        changed |= dedup_events(&mut self.key_release);
+        changed |= dedup_events(&mut self.key_release);
+        changed |= dedup_events(&mut self.cleanup);
+        changed |= dedup_events(&mut self.gesture);
+        changed |= dedup_events(&mut self.pre_create);
         changed
     }
 }
@@ -276,63 +276,63 @@ fn dedup_events<T: EventSubtype>(events: &mut Vec<SubEvent<T>>) -> bool {
 
 impl Events {
     pub fn create_handler(&mut self) -> &mut SubEvent<()> {
-        handler(&mut self.create_events, ())
+        handler(&mut self.create, ())
     }
 
     pub fn destroy_handler(&mut self) -> &mut SubEvent<()> {
-        handler(&mut self.destroy_events, ())
+        handler(&mut self.destroy, ())
     }
 
     pub fn alarm_handler(&mut self, alarm: Alarm) -> &mut SubEvent<Alarm> {
-        handler(&mut self.alarm_events, alarm)
+        handler(&mut self.alarm, alarm)
     }
 
     pub fn step_handler(&mut self, step: Step) -> &mut SubEvent<Step> {
-        handler(&mut self.step_events, step)
+        handler(&mut self.step, step)
     }
 
     pub fn collision_handler(&mut self, coll: impl Into<Collision>) -> &mut SubEvent<Collision> {
-        handler(&mut self.collision_events, coll.into())
+        handler(&mut self.collision, coll.into())
     }
 
     pub fn key_hold_handler(&mut self, key: Key) -> &mut SubEvent<Key> {
-        handler(&mut self.keyboard_events, key)
+        handler(&mut self.keyboard, key)
     }
 
     pub fn mouse_handler(&mut self, mouse: Mouse) -> &mut SubEvent<Mouse> {
-        handler(&mut self.mouse_events, mouse)
+        handler(&mut self.mouse, mouse)
     }
 
     pub fn other_handler(&mut self, other: Other) -> &mut SubEvent<Other> {
-        handler(&mut self.other_events, other)
+        handler(&mut self.other, other)
     }
 
     pub fn draw_handler(&mut self, draw: Draw) -> &mut SubEvent<Draw> {
-        handler(&mut self.draw_events, draw)
+        handler(&mut self.draw, draw)
     }
 
     pub fn key_press_handler(&mut self, key: Key) -> &mut SubEvent<Key> {
-        handler(&mut self.key_press_events, key)
+        handler(&mut self.key_press, key)
     }
 
     pub fn key_release_handler(&mut self, key: Key) -> &mut SubEvent<Key> {
-        handler(&mut self.key_release_events, key)
+        handler(&mut self.key_release, key)
     }
 
     pub fn trigger_handler(&mut self) -> &mut SubEvent<()> {
-        handler(&mut self.trigger_events, ())
+        handler(&mut self.trigger, ())
     }
 
     pub fn cleanup_handler(&mut self) -> &mut SubEvent<()> {
-        handler(&mut self.cleanup_events, ())
+        handler(&mut self.cleanup, ())
     }
 
     pub fn gesture_handler(&mut self, gesture: Gesture) -> &mut SubEvent<Gesture> {
-        handler(&mut self.gesture_events, gesture)
+        handler(&mut self.gesture, gesture)
     }
 
     pub fn pre_create_handler(&mut self) -> &mut SubEvent<()> {
-        handler(&mut self.pre_create_events, ())
+        handler(&mut self.pre_create, ())
     }
 }
 
