@@ -196,32 +196,9 @@ impl GMData {
         Ok(())
     }
 
-    /// Collapses all events of all game objects.
-    ///
-    /// Most of the time, this does nothing, as GameMaker
-    /// surprisingly didn't fuck up event serialization too bad.
-    ///
-    /// See [`Events::collapse`] for more information.
-    ///
-    /// [`Events::collapse`]: crate::wad::elements::game_object::event::Events::collapse
-    pub fn collapse_all_events(&mut self) {
-        let stopwatch = Stopwatch::start();
-
-        for obj in &mut self.game_objects {
-            obj.events.collapse();
-        }
-
-        log::trace!(
-            "Collapsing events of all {} game objects took {}",
-            self.game_objects.len(),
-            stopwatch,
-        );
-    }
-
     /// Runs some actions to fully verify integrity and to prepare the data file for editing.
     pub fn post_deserialize(&mut self) -> Result<()> {
         self.validate_names()?;
-        self.collapse_all_events();
         self.deserialize_all_textures()?;
         self.optimize_memory();
         Ok(())
