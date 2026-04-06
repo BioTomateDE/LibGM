@@ -1,4 +1,4 @@
-[![Codeberg](https://img.shields.io/badge/codeberg-repo-blue?logo=codeberg)](https://codeberg.com/BioTomateDE/LibGM)
+[![Codeberg](https://img.shields.io/badge/codeberg-repo-blue?logo=codeberg)](https://codeberg.org/BioTomateDE/LibGM)
 [![GitHub](https://img.shields.io/badge/github-repo-orchid?logo=github)](https://github.com/BioTomateDE/LibGM)
 [![Crates.io](https://img.shields.io/crates/v/libgm)](https://crates.io/crates/libgm)
 [![Documentation](https://img.shields.io/docsrs/libgm)](https://docs.rs/libgm)

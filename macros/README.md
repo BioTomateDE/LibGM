@@ -1,4 +1,4 @@
-Internal attribute macros for [LibGM](https://codeberg.com/BioTomateDE/LibGM).
+Internal attribute macros for [LibGM](https://codeberg.org/BioTomateDE/LibGM).
 
 Since `proc-macro`s always need an extra crate and `crates.io`
 forces me to publish internal crates as well, here it is.
