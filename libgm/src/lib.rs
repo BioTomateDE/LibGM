@@ -39,14 +39,13 @@
 //! This library is still in testing stages
 //! ([SemVer](https://semver.org/) major 0)
 //! and may have issues.
-//! Please report them to the attached GitHub repository.
+//! Please report them to the attached Codeberg repository.
 //!
 //! If you have any questions or concerns about my code
 //! or documentation, please contact me via either:
-//! - [GitHub Issue](https://github.com/BioTomateDE/LibGM/issues/new)
-//! - [Email](mailto:latuskati+cratesio@gmail.com?subject=%5BLibGM%5D%20Your%
-//!   20code%20is%20fucking%20stupid%2C%20explain%20ts%20plz)
 //! - Discord DM: `@biotomate.de`
+//! - [Codeberg Issue](https://codeberg.org/BioTomateDE/LibGM/issues/new)
+//! - [Email](mailto:latuskati+cratesio@gmail.com)
 //!
 //! ## Panicking
 //! This library *should* **never panic**.

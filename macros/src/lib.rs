@@ -1,4 +1,6 @@
-//! Visit <https://docs.rs/libgm>.
+#![doc = include_str!("../README.md")]
+#![forbid(unsafe_code)]
+#![warn(clippy::cargo, clippy::nursery, clippy::pedantic)]
 
 mod list_chunk;
 mod named_list_chunk;

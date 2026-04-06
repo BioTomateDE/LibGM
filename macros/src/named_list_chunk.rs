@@ -42,7 +42,7 @@ impl Parse for MacroArgs {
             }
         }
 
-        Ok(MacroArgs { chunk_name, flags })
+        Ok(Self { chunk_name, flags })
     }
 }
 

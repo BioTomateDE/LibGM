@@ -1,4 +1,5 @@
-[![GitHub](https://img.shields.io/badge/github-repo-blue?logo=github)](https://github.com/BioTomateDE/LibGM)
+[![Codeberg](https://img.shields.io/badge/codeberg-repo-blue?logo=codeberg)](https://codeberg.com/BioTomateDE/LibGM)
+[![GitHub](https://img.shields.io/badge/github-repo-orchid?logo=github)](https://github.com/BioTomateDE/LibGM)
 [![Crates.io](https://img.shields.io/crates/v/libgm)](https://crates.io/crates/libgm)
 [![Documentation](https://img.shields.io/docsrs/libgm)](https://docs.rs/libgm)
 
@@ -6,6 +7,12 @@
 
 A tool for unpacking, decompiling and modding GameMaker games such as Undertale
 or Deltarune.
+
+> This project migrated from
+[GitHub](https://github.com/BioTomateDE/LibGM)
+to
+[Codeberg](https://codeberg.org/BioTomateDE/LibGM).
+Please open issues and pull requests on Codeberg, if possible.
 
 This is effectively a Rust port of
 [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool)
@@ -51,7 +58,7 @@ libgm = "0.4.1"
 Or if you want bleeding edge:
 
 ```toml
-libgm = { git = "https://github.com/BioTomateDE/LibGM" }
+libgm = { git = "https://codeberg.org/BioTomateDE/LibGM" }
 ```
 
 Now you can use these functions exposed by LibGM:
