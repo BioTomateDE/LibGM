@@ -27,9 +27,11 @@
 //! * GML bytecode (unless YYC)
 //! * Other game assets and configuration
 //!
-//! **This library (LibGM) provides tools to parse and modify these GameMaker data files.**
+//! **This library (LibGM) provides tools to parse and modify these GameMaker
+//! data files.**
 //!
-//! The runner is the executable program that loads and runs the data file. It handles:
+//! The runner is the executable program that loads and runs the data file. It
+//! handles:
 //! * Input processing (keyboard, mouse, controllers)
 //! * Video and audio output
 //! * Game state management
@@ -38,14 +40,15 @@
 //! The runner is a reusable\* executable that can run any
 //! GameMaker game built for the same version.
 //!
-//! The data file contains the unique content and logic that defines your specific game.
-//! When launched, the runner loads the data file and executes
+//! The data file contains the unique content and logic that defines your
+//! specific game. When launched, the runner loads the data file and executes
 //! the game contained within it.
 //!
 //! # VM vs YYC
 //! You may have noticed some stars regarding bytecode while reading.
 //! This is because YoYoGames has created `YYC` ([YoYo Compiler](https://manual.gamemaker.io/monthly/en/Settings/YoYo_Compiler.htm)).
-//! When exporting their game, game developers can choose between regular VM output or YYC output.
+//! When exporting their game, game developers can choose between regular VM
+//! output or YYC output.
 //!
 //! In VM mode, the GML source code is compiled to their own bytecode that
 //! then gets executed by the runner's special GML Virtual Machine.
@@ -56,56 +59,64 @@
 //! and then compiled by GCC (TODO: not sure).
 //! The main point is:
 //! The data file doesn't store anything code related for YYC.
-//! Instead, all the game's code is compiled to machine code in the specialized runner.
-//! In this case, the runner does not execute bytecode in a VM but instead executes
-//! compiled machine code directly embedded in its executable file.
-//! Therefore, YYC runners are not portable to other games.
+//! Instead, all the game's code is compiled to machine code in the specialized
+//! runner. In this case, the runner does not execute bytecode in a VM but
+//! instead executes compiled machine code directly embedded in its executable
+//! file. Therefore, YYC runners are not portable to other games.
 //!
 //!
 //! ## Data file format
 //! As I already said, the GameMaker data file format is binary.
 //! (It only contains text for chunk names and in the `STRG` chunk.)
 //!
-//! The data file consists of "chunks", although the name "chunk" may be a bit misleading,
-//! as these chunks do not have a fixed size.
+//! The data file consists of "chunks", although the name "chunk" may be a bit
+//! misleading, as these chunks do not have a fixed size.
 
 //! > Note: These are the same chunks you see in the console
 //! > output in GameMaker Studio when building your game.
 //!
 //! Every chunk has a 4 character name that indicates what it stores.
-//! (For Example: `SPRT` stores sprites, `ROOM` stores rooms, `OBJT` stores game objects, etc.)
-//! These chunk names are hardcoded (the game dev does not choose them).
-//! New ones are only added when YoYoGames adds a major feature like particles.
+//! (For Example: `SPRT` stores sprites, `ROOM` stores rooms, `OBJT` stores game
+//! objects, etc.) These chunk names are hardcoded (the game dev does not choose
+//! them). New ones are only added when YoYoGames adds a major feature like
+//! particles.
 //!
 //! Every chunk only exists once. There is only one `ROOM` chunk
 //! that stores **all** data related to GameMaker rooms.
 //!
 //! The order of these chunks does not matter.
-//! > TODO: Possible exception: `GEN8` needs to be first, at least for `UndertaleModLib`?
+//! > TODO: Possible exception: `GEN8` needs to be first, at least for
+//! > `UndertaleModLib`?
 //!
 //! Now, onto the actual structure of a data file.
 //! Every data file begins with the 4 letters `FORM`.
-//! > Note: On Big endian targets, it is `MROF` instead, as chunk names are reversed there.
+//! > Note: On Big endian targets, it is `MROF` instead, as chunk names are
+//! > reversed there.
 //! > Do not worry about this though, big endian is very legacy
 //! > and is not relevant for modern target platforms.
 //!
-//! After the 4 byte `FORM` string, you are met with the (remaining) data length.
-//! This equivalent to the size of the data file minus 8 (the FORM header is excluded).
-//! This data length is specified as a 32-bit integer (`u32`).
+//! After the 4 byte `FORM` string, you are met with the (remaining) data
+//! length. This equivalent to the size of the data file minus 8 (the FORM
+//! header is excluded). This data length is specified as a 32-bit integer
+//! (`u32`).
 //!
 //! Then, you will see the first chunk.
-//! > Note: Some GameMaker datamining software (like UndertaleModLib) also see FORM as a chunk.
-//! > I do not do this, as this is the only time chunks have any sort of hierarchy
+//! > Note: Some GameMaker datamining software (like UndertaleModLib) also see
+//! > FORM as a chunk.
+//! > I do not do this, as this is the only time chunks have any sort of
+//! > hierarchy
 //! > and it would unnecessarily make things more complicated.
 //!
 //! Chunks are structured similar to FORM:
 //! * Chunk name [4 bytes]
 //! * Chunk length (excluding this header) [4 bytes]
 //! * Chunk data [n bytes]
-//! * Potentially chunk padding (nullbytes), depending on the platform and version.
+//! * Potentially chunk padding (nullbytes), depending on the platform and
+//!   version.
 //!
-//! Most chunks are of "pointer list type"; UndertaleModLib calls them `UndertaleListChunk`.
-//! To understand what that means, we first need to look at list structures in data files.
+//! Most chunks are of "pointer list type"; UndertaleModLib calls them
+//! `UndertaleListChunk`. To understand what that means, we first need to look
+//! at list structures in data files.
 //!
 //! # Lists
 //!
@@ -121,8 +132,8 @@
 //! * Element #count-1 [n bytes]
 //! * Element #count [n bytes]
 //!
-//! In other words, they store their element count, followed by the element data.
-//! Simple indeed. (TODO: are the element sizes always the same?)
+//! In other words, they store their element count, followed by the element
+//! data. Simple indeed. (TODO: are the element sizes always the same?)
 //!
 //! Pointer lists have the following structure:
 //! * Element count [4 bytes]
@@ -142,7 +153,8 @@
 //!
 //! A pointer is just a `u32` number. It specifies the absolute position where
 //! something is located in the data file.
-//! > Note: Null/Zeroed pointers are always invalid, as they would point to the FORM string.
+//! > Note: Null/Zeroed pointers are always invalid, as they would point to the
+//! > FORM string.
 //! > YoYoGames has recently implemented a system to remove unused assets,
 //! > which nulls out pointers that point to unused elements.
 //! > This is a pain in the ass for datamining libraries like mine,
@@ -156,25 +168,24 @@
 //! which makes simple pointer arithmetic impossible in simple lists.
 //! The runner would have to parse all elements
 //! sequentially just to get to the one it actually wants to read.
-//! Depending on how those elements are typically used, this can be very inefficient,
-//! which is why YoYoGames includes pointers to the element in pointer lists.
+//! Depending on how those elements are typically used, this can be very
+//! inefficient, which is why YoYoGames includes pointers to the element in
+//! pointer lists.
 //!
 //!
 //! # Chunk types
-//! Now that you know what pointer lists are, I can explain different "chunk types".
-//! Most chunks store a collection of elements and are therefore a giant pointer list.
-//! For example: `ROOM` stores multiple rooms, `FONT` stores multiple fonts, etc.
-//! There are a few exceptions, though.
+//! Now that you know what pointer lists are, I can explain different "chunk
+//! types". Most chunks store a collection of elements and are therefore a giant
+//! pointer list. For example: `ROOM` stores multiple rooms, `FONT` stores
+//! multiple fonts, etc. There are a few exceptions, though.
 //!
 //! The `FEAT` chunk ("feature flags") consists of only a simple
 //! list of string references (which are pointers anyway).
 //!
-//! The `GEN8` and `OPTN` contain general info and options regarding the data file / game.
-//! They are called `UndertaleSingleChunk` in UndertaleModLib.
+//! The `GEN8` and `OPTN` contain general info and options regarding the data
+//! file / game. They are called `UndertaleSingleChunk` in UndertaleModLib.
 //! They do not contain a list. Instead, they are the
 //! element itself and contain the fields directly.
-//!
-//!
 
 mod chunk;
 mod memory;
@@ -188,7 +199,11 @@ pub mod serialize;
 pub mod version;
 
 pub use data::GMData;
-pub use deserialize::{ParsingOptions, parse_bytes, parse_file};
+pub use deserialize::ParsingOptions;
+pub use deserialize::parse_bytes;
+pub use deserialize::parse_file;
 pub use reference::GMRef;
-pub use serialize::{build_bytes, build_file};
-pub use version::{GMVersion, GMVersionReq};
+pub use serialize::build_bytes;
+pub use serialize::build_file;
+pub use version::GMVersion;
+pub use version::GMVersionReq;

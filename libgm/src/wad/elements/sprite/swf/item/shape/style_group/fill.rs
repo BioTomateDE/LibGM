@@ -2,10 +2,10 @@ pub mod bitmap;
 pub mod gradient;
 pub mod solid;
 
-use crate::{
-    prelude::*,
-    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Data {
@@ -22,7 +22,8 @@ impl GMElement for Data {
             2 => Self::Gradient(gradient::Data::deserialize(reader)?),
             3 => Self::Bitmap(bitmap::Data::deserialize(reader)?),
             _ => bail!(
-                "Invalid YYSWF Fill Type 0x{:08X} at position {} while parsing Sprite YYSWF Fill Data",
+                "Invalid YYSWF Fill Type 0x{:08X} at position {} while parsing Sprite YYSWF Fill \
+                 Data",
                 fill_type,
                 reader.cur_pos,
             ),

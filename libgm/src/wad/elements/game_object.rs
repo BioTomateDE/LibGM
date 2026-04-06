@@ -1,18 +1,18 @@
 pub mod event;
 
 pub use event::Events;
-use macros::{named_list_chunk, num_enum};
+use macros::named_list_chunk;
+use macros::num_enum;
 
-use crate::{
-    prelude::*,
-    util::init::{num_enum_from, vec_with_capacity},
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{GMElement, element_stub, sprite::GMSprite},
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::util::init::num_enum_from;
+use crate::util::init::vec_with_capacity;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::element_stub;
+use crate::wad::elements::sprite::GMSprite;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[named_list_chunk("OBJT")]
 pub struct GMGameObjects {
@@ -71,15 +71,15 @@ impl GMElement for GMGameObjects {
                 let y = reader.read_f32()?;
                 physics_shape_vertices.push((x, y));
             }
-            // if physics_shape_vertex_count > 0 && collision_shape != CollisionShape::Custom {
-            //     reader.warn_invalid_const(format!(
+            // if physics_shape_vertex_count > 0 && collision_shape !=
+            // CollisionShape::Custom {     reader.warn_invalid_const(format!(
             //         "Game Object {name:?} has collision shape {collision_shape:?} \
-            //         (not Custom) but has {physics_shape_vertex_count} physics shape vertices \
-            //         {physics_shape_vertices:?}"
+            //         (not Custom) but has {physics_shape_vertex_count} physics shape
+            // vertices \         {physics_shape_vertices:?}"
             //     ))?;
-            // } else if physics_shape_vertex_count > 0 || collision_shape == CollisionShape::Custom {
-            //     log::debug!("ok {} {:?}", physics_shape_vertex_count, collision_shape);
-            // }
+            // } else if physics_shape_vertex_count > 0 || collision_shape ==
+            // CollisionShape::Custom {     log::debug!("ok {} {:?}",
+            // physics_shape_vertex_count, collision_shape); }
 
             let events = Events::deserialize(reader).context("parsing game object events")?;
 
@@ -133,7 +133,7 @@ impl GMElement for GMGameObjects {
                 None => builder.write_i32(-100), // No Parent
                 Some(obj_ref) if obj_ref.index == i as u32 => {
                     builder.write_i32(-1);
-                }, // Parent is Self
+                } // Parent is Self
                 Some(obj_ref) => builder.write_resource_id(obj_ref), // Normal Parent
             }
             builder.write_resource_id_opt(game_object.texture_mask);

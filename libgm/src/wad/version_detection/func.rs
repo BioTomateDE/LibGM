@@ -1,7 +1,6 @@
-use crate::{
-    prelude::*,
-    wad::{deserialize::reader::DataReader, version::GMVersionReq},
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::version::GMVersionReq;
 
 pub fn check_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2024, 8).into()));
@@ -9,14 +8,16 @@ pub fn check_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         return Ok(None);
     }
 
-    // The CodeLocals list was removed in 2024.8, so we check if Functions is the only thing in here.
+    // The CodeLocals list was removed in 2024.8, so we check if Functions is the
+    // only thing in here.
     let function_count = reader.read_u32()?;
     // Skip over the (Simple)List
     // (3*4 is the size of a GMFunction object)
     reader.cur_pos += function_count * 3 * 4;
 
     if reader.cur_pos == reader.chunk.end_pos {
-        // Directly reached the end of the chunk after the function list, so code locals are definitely missing
+        // Directly reached the end of the chunk after the function list, so code locals
+        // are definitely missing
         return target_ver;
     }
 
@@ -30,7 +31,8 @@ pub fn check_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         padding_bytes_read += 1;
     }
 
-    // If we're at the end of the chunk after aligning padding, code locals are either empty or do not exist altogether.
+    // If we're at the end of the chunk after aligning padding, code locals are
+    // either empty or do not exist altogether.
     if reader.cur_pos != reader.chunk.end_pos {
         return Ok(None);
     }
@@ -39,7 +41,8 @@ pub fn check_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         return target_ver;
     }
 
-    // If we read at least 4 padding bytes, we don't know for sure unless we have at least one code entry.
+    // If we read at least 4 padding bytes, we don't know for sure unless we have at
+    // least one code entry.
     let Some(chunk_code) = reader.chunks.get("CODE") else {
         return Ok(None);
     };

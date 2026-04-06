@@ -1,10 +1,8 @@
-use crate::{
-    prelude::*,
-    wad::{
-        chunk::ChunkName, deserialize::reader::DataReader, elements::GMElement,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::wad::chunk::ChunkName;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMTags {

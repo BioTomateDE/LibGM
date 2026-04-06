@@ -24,11 +24,11 @@ pub use sprite_frames::SpriteFrames;
 pub use string::String;
 pub use text::Text;
 
-use crate::{
-    prelude::*,
-    util::fmt::typename,
-    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
-};
+use crate::prelude::*;
+use crate::util::fmt::typename;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Keyframes {

@@ -36,7 +36,9 @@ pub fn hexdump(raw_data: &[u8]) -> String {
 }
 
 pub fn hexdump_range(raw_data: &[u8], range: impl RangeBounds<usize>) -> Result<String> {
-    use std::ops::Bound::{Excluded, Included, Unbounded};
+    use std::ops::Bound::Excluded;
+    use std::ops::Bound::Included;
+    use std::ops::Bound::Unbounded;
 
     let len = raw_data.len();
     let start = match range.start_bound() {
@@ -65,7 +67,8 @@ pub fn hexdump_range(raw_data: &[u8], range: impl RangeBounds<usize>) -> Result<
 ///
 /// It basically just gets the typename in a slightly more readable manner.
 pub fn typename<T>() -> &'static str {
-    // TODO: When Rust adds support for handling typenames at compile time, use that.
+    // TODO: When Rust adds support for handling typenames at compile time, use
+    // that.
     let ty = std::any::type_name::<T>();
     if let Some(index) = ty.find("GM")
         && !ty.contains('<')

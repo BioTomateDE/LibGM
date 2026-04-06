@@ -1,9 +1,9 @@
 //! # What are pointers
 //! When building GameMaker data files, you frequently need to write "pointers".
-//! "Pointer" in the context of GameMaker internals: a 32-bit integer that indicates
-//! the absolute data position at which a resource is located.
-//! For example, strings are (almost) always stored as pointers, allowing the runner
-//! to do a simple addition to get to the UTF-8 string:
+//! "Pointer" in the context of GameMaker internals: a 32-bit integer that
+//! indicates the absolute data position at which a resource is located.
+//! For example, strings are (almost) always stored as pointers, allowing the
+//! runner to do a simple addition to get to the UTF-8 string:
 //! `data_start_mem_address + pointer = string_mem_address`.
 //!
 //! # Why placeholders are needed when building data
@@ -16,14 +16,16 @@
 //! Placeholders solve this issue:
 //! Instead of writing the resource data position immediately,
 //! you just write a placeholder/stub (`0xDEADC0DE`) for now.
-//! The pointer placeholder is remembered in `DataBuilder.pointer_placeholder_positions`
-//! with an associated **memory address**.
-//! Then, when an element (that may be pointed to) is written,
-//! you store the resolved data position of that element in `DataBuilder.pointer_resource_positions`.
-//! (Note: this may happen before or after any placeholder to this element was written.)
-//! At the very end, when everything has been built, you can match the pointer placeholders to
+//! The pointer placeholder is remembered in
+//! `DataBuilder.pointer_placeholder_positions` with an associated **memory
+//! address**. Then, when an element (that may be pointed to) is written,
+//! you store the resolved data position of that element in
+//! `DataBuilder.pointer_resource_positions`. (Note: this may happen before or
+//! after any placeholder to this element was written.) At the very end, when
+//! everything has been built, you can match the pointer placeholders to
 //! their resolved positions by comparing (hashing) element memory addresses.
-//! The `0xDEADC0DE` bytes are then overwritten with the actual resource position.
+//! The `0xDEADC0DE` bytes are then overwritten with the actual resource
+//! position.
 //!
 //!
 //! # Why memory addresses
@@ -34,51 +36,54 @@
 //! I actually used this previously before I switched to memory addresses!
 //! This enum sucks for multiple reasons though:
 //! * Abstraction: when I rewrote this library with proper traits (`GMElement`),
-//!   I lost context of GameMaker lists; the index is no longer known when (de)serializing a list element.
-//! * Maintainability: Every pointer somewhere down the line needs an enum variant
-//!   with N stacked indices. etc.
-//! * Performance: Using memory addresses is faster than these weird enums;
-//!   it's literally just `lea ebx, [eax+FIELD_OFFSET]` in x86.
+//!   I lost context of GameMaker lists; the index is no longer known when
+//!   (de)serializing a list element.
+//! * Maintainability: Every pointer somewhere down the line needs an enum
+//!   variant with N stacked indices. etc.
+//! * Performance: Using memory addresses is faster than these weird enums; it's
+//!   literally just `lea ebx, [eax+FIELD_OFFSET]` in x86.
 //!
 //! # Drawbacks / Things to note
 //! These memory addresses seem unstable, right?
 //! And they are, if under the wrong conditions.
 //! Using memory addresses as an identifier for GameMaker elements requires:
-//! * The ID should always be the same for the same element instance,
-//!   while the serialization is in progress.
-//! * The ID should be unique; no other elements (that can be pointed to)
-//!   should ever get the same ID.
+//! * The ID should always be the same for the same element instance, while the
+//!   serialization is in progress.
+//! * The ID should be unique; no other elements (that can be pointed to) should
+//!   ever get the same ID.
 //!
 //! # Why this is still sound
 //! The way I use memory addresses fulfils these requirements:
-//! * Memory address stays the same, as long as the struct is not moved or reallocated.
-//! * Nothing ever gets moved or reallocated, because [`GMData`] is borrowed immutably:
-//!   `&gm_data`. This disables moving (taking ownership) and prevents reallocation,
-//!   for example because of vector pushes.
-//! * Memory addresses are unique for each struct field, as long as their size is
-//!   greater than zero (ZSTs are not used anywhere in [`GMData`]).
+//! * Memory address stays the same, as long as the struct is not moved or
+//!   reallocated.
+//! * Nothing ever gets moved or reallocated, because [`GMData`] is borrowed
+//!   immutably: `&gm_data`. This disables moving (taking ownership) and
+//!   prevents reallocation, for example because of vector pushes.
+//! * Memory addresses are unique for each struct field, as long as their size
+//!   is greater than zero (ZSTs are not used anywhere in [`GMData`]).
 //!
 //! One key part is missing here:
 //! You could use both a struct and a field of struct as a pointer placeholder.
 //! If you use both, their addresses could be the same:
-//! `struct_mem_address + field_offset = field_mem_address` could backfire if `offset` is zero.
-//! You need to be careful here: Rust does not guarantee struct layout by default
-//! and may reorder fields to optimize space.
+//! `struct_mem_address + field_offset = field_mem_address` could backfire if
+//! `offset` is zero. You need to be careful here: Rust does not guarantee
+//! struct layout by default and may reorder fields to optimize space.
 //!
-//! If you encounter a struct that is used as a pointer placeholder and one of its
-//! fields is too:
+//! If you encounter a struct that is used as a pointer placeholder and one of
+//! its fields is too:
 //! 1. Annotate the struct with `#[repr(C)]`
-//! 2. Make sure that the pointer placeholder field is not the first one in definition
+//! 2. Make sure that the pointer placeholder field is not the first one in
+//!    definition
 //!
 //! This prevents address collisions.
 
-use std::{collections::HashMap, fmt};
+use std::collections::HashMap;
+use std::fmt;
 
-use crate::{
-    prelude::*,
-    util::{bench::Stopwatch, fmt::typename},
-    wad::serialize::builder::DataBuilder,
-};
+use crate::prelude::*;
+use crate::util::bench::Stopwatch;
+use crate::util::fmt::typename;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct Pointer {
@@ -101,12 +106,13 @@ impl Pointer {
 }
 
 impl DataBuilder<'_> {
-    /// Create a placeholder pointer at the current position in the chunk and remember
-    /// its data position paired with the target GameMaker element's memory address.
+    /// Create a placeholder pointer at the current position in the chunk and
+    /// remember its data position paired with the target GameMaker
+    /// element's memory address.
     ///
-    /// This will later be resolved by calling [`Self::resolve_pointer`]; replacing the
-    /// pointer placeholder with the written data position of the target GameMaker element.
-    /// ___
+    /// This will later be resolved by calling [`Self::resolve_pointer`];
+    /// replacing the pointer placeholder with the written data position of
+    /// the target GameMaker element. ___
     /// This system exists because it is virtually impossible to
     /// predict which data position a GameMaker element will be written to.
     /// Circular references and writing order would make
@@ -118,7 +124,8 @@ impl DataBuilder<'_> {
         let pointer = Pointer::new(element);
         let placeholder_position: u32 = self.len();
 
-        // Write placeholder. Will be overwritten later by [`Self::connect_pointer_placeholders`].
+        // Write placeholder. Will be overwritten later by
+        // [`Self::connect_pointer_placeholders`].
         self.write_u32(0xDEAD_C0DE);
 
         self.pointer_placeholder_positions
@@ -129,7 +136,8 @@ impl DataBuilder<'_> {
     // of `&Option<T>` would require using `.as_ref()` in every call.
     #[allow(clippy::ref_option)]
     /// Optionally writes a pointer to the given [`Option`] value.
-    /// - If [`Some`], writes a pointer to the contained value using [`Self::write_pointer`].
+    /// - If [`Some`], writes a pointer to the contained value using
+    ///   [`Self::write_pointer`].
     /// - If [`None`], writes a null pointer (0) using [`Self::write_i32`].
     pub fn write_pointer_opt<T>(&mut self, element: &Option<T>) {
         if let Some(elem) = element {
@@ -139,9 +147,10 @@ impl DataBuilder<'_> {
         }
     }
 
-    /// Store the written GameMaker element's data position paired with its memory address in the pointer resource pool.
-    /// The element's position corresponds to the data builder's current position,
-    /// since this method should get called when the element is serialized.
+    /// Store the written GameMaker element's data position paired with its
+    /// memory address in the pointer resource pool. The element's position
+    /// corresponds to the data builder's current position, since this
+    /// method should get called when the element is serialized.
     pub fn resolve_pointer<T>(&mut self, element: &T) -> Result<()> {
         let pointer = Pointer::new(element);
         let resource_position: u32 = self.len();
@@ -176,10 +185,12 @@ impl DataBuilder<'_> {
         let resource_count = resources.len();
 
         for (placeholder_data_pos, element_mem_addr) in placeholders {
-            let resource_data_pos: u32 = *resources.get(&element_mem_addr).ok_or_else(||
-
-                format!("Could not resolve pointer placeholder with data position {placeholder_data_pos}")
-            )?;
+            let resource_data_pos: u32 = *resources.get(&element_mem_addr).ok_or_else(|| {
+                format!(
+                    "Could not resolve pointer placeholder with data position \
+                     {placeholder_data_pos}"
+                )
+            })?;
 
             // Overwrite the `0xDEAD_C0DE` placeholder.
             // This `?` should never fail.
@@ -187,8 +198,8 @@ impl DataBuilder<'_> {
         }
 
         log::trace!(
-            "Resolving {placeholder_count} pointer placeholders to \
-            {resource_count} resources took {stopwatch}"
+            "Resolving {placeholder_count} pointer placeholders to {resource_count} resources \
+             took {stopwatch}"
         );
         Ok(())
     }

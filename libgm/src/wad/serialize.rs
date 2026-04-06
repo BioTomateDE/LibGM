@@ -14,15 +14,17 @@ use std::path::Path;
 
 use builder::DataBuilder;
 
-use crate::{
-    prelude::*,
-    util::{bench::Stopwatch, panic},
-    wad::{chunk::ChunkName, data::GMData, elements::string::GMStrings},
-};
+use crate::prelude::*;
+use crate::util::bench::Stopwatch;
+use crate::util::panic;
+use crate::wad::chunk::ChunkName;
+use crate::wad::data::GMData;
+use crate::wad::elements::string::GMStrings;
 
 /// Builds a GameMaker data file and returns a byte buffer.
 ///
-/// If you want to build the data file directly to a file on disk, check out [`build_file`].
+/// If you want to build the data file directly to a file on disk, check out
+/// [`build_file`].
 ///
 /// For more information on the data file format, see [`crate::wad`].
 #[inline]
@@ -32,7 +34,8 @@ pub fn build_bytes(gm_data: &GMData) -> Result<Vec<u8>> {
 
 /// Builds a GameMaker data file to the specified file path.
 ///
-/// If you want to build the data file to a buffer in memory, check out [`build_bytes`].
+/// If you want to build the data file to a buffer in memory, check out
+/// [`build_bytes`].
 ///
 /// For more information on the data file format, see [`crate::wad`].
 pub fn build_file(gm_data: &GMData, path: impl AsRef<Path>) -> Result<()> {

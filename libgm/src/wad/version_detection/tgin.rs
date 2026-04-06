@@ -1,10 +1,7 @@
-use crate::{
-    prelude::*,
-    wad::{
-        deserialize::reader::DataReader,
-        version::{GMVersionReq, LTSBranch::PostLTS},
-    },
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::version::GMVersionReq;
+use crate::wad::version::LTSBranch::PostLTS;
 
 pub fn check_2022_9(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     if reader.general_info.is_version_at_least((2023, 1, PostLTS)) {

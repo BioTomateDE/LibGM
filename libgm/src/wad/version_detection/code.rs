@@ -1,9 +1,9 @@
-use crate::{
-    gml::{instruction::DataType, opcodes},
-    prelude::*,
-    util::init::vec_with_capacity,
-    wad::{deserialize::reader::DataReader, version::GMVersionReq},
-};
+use crate::gml::instruction::DataType;
+use crate::gml::opcodes;
+use crate::prelude::*;
+use crate::util::init::vec_with_capacity;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::version::GMVersionReq;
 
 pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     fn get_chunk_elem_count(
@@ -47,7 +47,8 @@ pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
             9 => true, // Used to be unused, now are sequences
             10 => resource_id >= shader_count,
             11 => resource_id >= sequence_count,
-            // case 12 used to be animcurves, but now is unused (so would actually mean earlier than 2024.4)
+            // case 12 used to be animcurves, but now is unused (so would actually mean earlier than
+            // 2024.4)
             13 => resource_id >= particle_system_count,
             _ => false,
         }

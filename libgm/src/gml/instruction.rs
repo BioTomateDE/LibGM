@@ -19,7 +19,8 @@ pub use instance_type::InstanceType;
 pub use push_value::PushValue;
 pub use variable_type::VariableType;
 
-use crate::wad::{elements::function::GMFunction, reference::GMRef};
+use crate::wad::elements::function::GMFunction;
+use crate::wad::reference::GMRef;
 
 /// A GameMaker VM Instruction.
 ///
@@ -32,9 +33,10 @@ use crate::wad::{elements::function::GMFunction, reference::GMRef};
 pub enum Instruction {
     /// Converts the top of the stack from one type to another.
     ///
-    /// Sometimes it may be necessary to convert between "actual data types" and [`DataType::Variable`]
-    /// (note: not sure if necessary, but the YoYoGames compiler generates it).
-    /// For example, when calling a function, all arguments need (?) to of data type [`DataType::Variable`].
+    /// Sometimes it may be necessary to convert between "actual data types" and
+    /// [`DataType::Variable`] (note: not sure if necessary, but the
+    /// YoYoGames compiler generates it). For example, when calling a
+    /// function, all arguments need (?) to of data type [`DataType::Variable`].
     /// So if you want to call `foo(41)`:
     /// ```text
     /// pushim 41
@@ -43,34 +45,40 @@ pub enum Instruction {
     /// ```
     Convert { from: DataType, to: DataType },
 
-    /// Pops two values from the stack, **multiplies** them, and pushes the result.
+    /// Pops two values from the stack, **multiplies** them, and pushes the
+    /// result.
     Multiply {
         multiplicand: DataType,
         multiplier: DataType,
     },
 
     /// Pops two values from the stack, **divides** them, and pushes the result.
-    /// The second popped value (`dividend`) is divided by the first popped value (`divisor`).
+    /// The second popped value (`dividend`) is divided by the first popped
+    /// value (`divisor`).
     Divide {
         dividend: DataType,
         divisor: DataType,
     },
 
-    /// Pops two values from the stack, performs a GML `div` operation (division with remainder), and pushes the result.
-    /// The second popped value (`dividend`) is divided (with remainder) by the first popped value (`divisor`).
+    /// Pops two values from the stack, performs a GML `div` operation (division
+    /// with remainder), and pushes the result. The second popped value
+    /// (`dividend`) is divided (with remainder) by the first popped value
+    /// (`divisor`).
     ///
-    /// This operation is similar to [`Instruction::Modulus`], except it behaves differently for negative values.
-    /// For example: `-19 rem 12 == -7` (not 5).
+    /// This operation is similar to [`Instruction::Modulus`], except it behaves
+    /// differently for negative values. For example: `-19 rem 12 == -7`
+    /// (not 5).
     Remainder {
         dividend: DataType,
         divisor: DataType,
     },
 
-    /// Pops two values from the stack, performs a GML `mod` operation (`%`), and pushes the result.
-    /// The second popped value is modulo'd against the first popped value.
+    /// Pops two values from the stack, performs a GML `mod` operation (`%`),
+    /// and pushes the result. The second popped value is modulo'd against
+    /// the first popped value.
     ///
-    /// This operation is similar to [`Instruction::Remainder`], except it behaves differently for negative values.
-    /// This `modulus` operation performs [Euclidean division](https://en.wikipedia.org/wiki/Euclidean_division).
+    /// This operation is similar to [`Instruction::Remainder`], except it
+    /// behaves differently for negative values. This `modulus` operation performs [Euclidean division](https://en.wikipedia.org/wiki/Euclidean_division).
     /// For example: `-19 rem 12 == 5` (not -7).
     Modulus {
         dividend: DataType,
@@ -80,64 +88,75 @@ pub enum Instruction {
     /// Pops two values from the stack, **adds** them, and pushes the result.
     Add { augend: DataType, addend: DataType },
 
-    /// Pops two values from the stack, **subtracts** them, and pushes the result.
-    /// The second popped value is subtracted by the first popped value.
+    /// Pops two values from the stack, **subtracts** them, and pushes the
+    /// result. The second popped value is subtracted by the first popped
+    /// value.
     Subtract {
         minuend: DataType,
         subtrahend: DataType,
     },
 
-    /// Pops two values from the stack, performs an **AND** operation, and pushes the result.
-    /// This can be done bitwise or logically, depending on the data type(s).
+    /// Pops two values from the stack, performs an **AND** operation, and
+    /// pushes the result. This can be done bitwise or logically, depending
+    /// on the data type(s).
     And { lhs: DataType, rhs: DataType },
 
-    /// Pops two values from the stack, performs an **OR** operation, and pushes the result.
-    /// This can be done bitwise or logically, depending on the data type(s).
+    /// Pops two values from the stack, performs an **OR** operation, and pushes
+    /// the result. This can be done bitwise or logically, depending on the
+    /// data type(s).
     Or { lhs: DataType, rhs: DataType },
 
-    /// Pops two values from the stack, performs an **XOR** operation, and pushes the result.
-    /// This can be done bitwise or logically, depending on the data type(s).
+    /// Pops two values from the stack, performs an **XOR** operation, and
+    /// pushes the result. This can be done bitwise or logically, depending
+    /// on the data type(s).
     Xor { lhs: DataType, rhs: DataType },
 
     /// **Negates** the top value of the stack (as in, multiplies it with -1).
     Negate { data_type: DataType },
 
-    /// Pops one value from the stack, performs a **NOT** operation, and pushes the result.
-    /// This can be done bitwise or logically, depending on the data type(s).
+    /// Pops one value from the stack, performs a **NOT** operation, and pushes
+    /// the result. This can be done bitwise or logically, depending on the
+    /// data type(s).
     Not { data_type: DataType },
 
-    /// Pops two values from the stack, performs a bitwise **left shift** operation (`<<`), and pushes the result.
-    /// The second popped value (`value`) is shifted left by the first popped value (`shift_amount`).
+    /// Pops two values from the stack, performs a bitwise **left shift**
+    /// operation (`<<`), and pushes the result. The second popped value
+    /// (`value`) is shifted left by the first popped value (`shift_amount`).
     ShiftLeft {
         value: DataType,
         shift_amount: DataType,
     },
 
-    /// Pops two values from the stack, performs a bitwise **right shift** operation (`>>`), and pushes the result.
-    /// The second popped value (`value`) is shifted right by the first popped value (`shift_amount`).
+    /// Pops two values from the stack, performs a bitwise **right shift**
+    /// operation (`>>`), and pushes the result. The second popped value
+    /// (`value`) is shifted right by the first popped value (`shift_amount`).
     ShiftRight {
         value: DataType,
         shift_amount: DataType,
     },
 
-    /// Pops two values from the stack, **compares** them using a [`ComparisonType`],
-    /// and pushes a boolean result ([`DataType::Boolean`]).
+    /// Pops two values from the stack, **compares** them using a
+    /// [`ComparisonType`], and pushes a boolean result
+    /// ([`DataType::Boolean`]).
     Compare {
         lhs: DataType,
         rhs: DataType,
         comparison_type: ComparisonType,
     },
 
-    /// Pops a value from the stack, and generally **stores it in a variable**, array, or otherwise.
+    /// Pops a value from the stack, and generally **stores it in a variable**,
+    /// array, or otherwise.
     ///
-    /// Generally, `type1` signifies the type of the value on the stack (the one to pop)
-    /// and `type2` will be [`DataType::Variable`].
-    /// However, there are exceptions to this. For example, when the variable reference mode is not [`VariableType::Normal`],
-    /// then `type2` may be [`DataType::Int32`] instead.
+    /// Generally, `type1` signifies the type of the value on the stack (the one
+    /// to pop) and `type2` will be [`DataType::Variable`].
+    /// However, there are exceptions to this. For example, when the variable
+    /// reference mode is not [`VariableType::Normal`], then `type2` may be
+    /// [`DataType::Int32`] instead.
     ///
-    /// There is an alternate instruction/mode with the same opcode that swaps values around on the stack.
-    /// This operation is known as [`Instruction::PopSwap`].
-    /// Note that this does not apply to this enum variant ([`Instruction::Pop`].
+    /// There is an alternate instruction/mode with the same opcode that swaps
+    /// values around on the stack. This operation is known as
+    /// [`Instruction::PopSwap`]. Note that this does not apply to this enum
+    /// variant ([`Instruction::Pop`].
     Pop {
         variable: CodeVariable,
         type1: DataType,
@@ -183,17 +202,18 @@ pub enum Instruction {
     /// It only influences a multiplication factor of how many bytes to
     /// clone, since different data types have different sizes on the stack.
     ///
-    /// To get the duplication value *count* (instead of byte size) for a homogenous
-    /// stack data type, use `instr.size / instr.data_type.size()`.
-    /// For safety, it is probably a good idea to verify that the remainder is zero.
+    /// To get the duplication value *count* (instead of byte size) for a
+    /// homogenous stack data type, use `instr.size /
+    /// instr.data_type.size()`. For safety, it is probably a good idea to
+    /// verify that the remainder is zero.
     Duplicate { data_type: DataType, size: u8 },
 
     /// **Swaps** values around on the stack.
     ///
-    /// First, elements with a total size of `size1` are popped into a temporary "top stack".
-    /// Then, elements with a total size of `size2` are popped into a temporary "bottom stack".
-    /// Afterward, the "bottom stack" is pushed.
-    /// And lastly, the "top stack" is pushed.
+    /// First, elements with a total size of `size1` are popped into a temporary
+    /// "top stack". Then, elements with a total size of `size2` are popped
+    /// into a temporary "bottom stack". Afterward, the "bottom stack" is
+    /// pushed. And lastly, the "top stack" is pushed.
     ///
     /// For information on the data type, see [`Instruction::Duplicate`].
     DuplicateSwap {
@@ -213,28 +233,34 @@ pub enum Instruction {
 
     /// **Returns** from the current function/script/event with no return value.
     ///
-    /// This instruction always has the data type [`DataType::Int32`] for whatever reason.
-    /// Since this data type carries no meaningful information, it is not stored in this enum variant.
+    /// This instruction always has the data type [`DataType::Int32`] for
+    /// whatever reason. Since this data type carries no meaningful
+    /// information, it is not stored in this enum variant.
     Exit,
 
     /// **Pops** a value from the stack, and **discards** it.
     ///
-    /// This is similar to [`Instruction::Pop`], except it does not store the result in any variable.
+    /// This is similar to [`Instruction::Pop`], except it does not store the
+    /// result in any variable.
     ///
-    /// This instruction is commonly used to clean up unused return values of function calls.
+    /// This instruction is commonly used to clean up unused return values of
+    /// function calls.
     PopDiscard { data_type: DataType },
 
-    /// Unconditionally **branches** (jumps) to another instruction in the code entry.
+    /// Unconditionally **branches** (jumps) to another instruction in the code
+    /// entry.
     ///
     /// Also known as `B`, `Jump`, `jmp`.
     ///
-    /// The jump offset may be negative and is expressed in multiples of 4 bytes.
-    /// For example, a jump offset of 2 may skip `push.s`, a jump offset of 5 may skip `push.d`.
-    /// Most of the time, this will skip multiple instructions at the same time.
+    /// The jump offset may be negative and is expressed in multiples of 4
+    /// bytes. For example, a jump offset of 2 may skip `push.s`, a jump
+    /// offset of 5 may skip `push.d`. Most of the time, this will skip
+    /// multiple instructions at the same time.
     Branch { jump_offset: i32 },
 
     /// Pops a boolean/int32 value from the stack.
-    /// If true/nonzero, **branches** (jumps) to another instruction in the code entry.
+    /// If true/nonzero, **branches** (jumps) to another instruction in the code
+    /// entry.
     ///
     /// Also known as `BranchTrue`, `bt`.
     ///
@@ -242,7 +268,8 @@ pub enum Instruction {
     BranchIf { jump_offset: i32 },
 
     /// Pops a boolean/int32 value from the stack.
-    /// If false/zero, **branches** (jumps) to another instruction in the code entry.
+    /// If false/zero, **branches** (jumps) to another instruction in the code
+    /// entry.
     ///
     /// Also known as `BranchFalse`, `bf`.
     ///
@@ -252,10 +279,11 @@ pub enum Instruction {
     /// Pushes a `with` context* used for GML `with` statements,
     /// to the VM environment/self instance stack.
     ///
-    /// This does not push any value to the value stack (like [`Instruction::Push`]).
-    /// It is rather classified as branch instruction.
-    /// The specified jump offset will be branched to when the `with` loop is done.
-    /// The branch target leads to the code after the `with` block.
+    /// This does not push any value to the value stack (like
+    /// [`Instruction::Push`]). It is rather classified as branch
+    /// instruction. The specified jump offset will be branched to when the
+    /// `with` loop is done. The branch target leads to the code after the
+    /// `with` block.
     ///
     /// The jump offset is further explained in [`Instruction::Branch`].
     PushWithContext { jump_offset: i32 },
@@ -265,7 +293,8 @@ pub enum Instruction {
     /// This instruction will branch to its encoded address until no longer
     /// iterating instances, where the context will finally be gone for good.
     ///
-    /// There is a different mode for this instruction with the same opcode: [`Instruction::PopWithContextExit`].
+    /// There is a different mode for this instruction with the same opcode:
+    /// [`Instruction::PopWithContextExit`].
     ///
     /// The jump offset is further explained in [`Instruction::Branch`].
     PopWithContext { jump_offset: i32 },
@@ -274,7 +303,8 @@ pub enum Instruction {
     /// This variation exits the `with` loop context without branching anywhere.
     /// Since the instruction pointer is malformed afterward, this instruction
     /// is only seen before a [`Instruction::Exit`],
-    /// other [`Instruction::PopWithContextExit`]s or perhaps [`Instruction::PopDiscard`].
+    /// other [`Instruction::PopWithContextExit`]s or perhaps
+    /// [`Instruction::PopDiscard`].
     PopWithContextExit,
 
     /// **Pushes** a constant value onto the stack.
@@ -289,36 +319,43 @@ pub enum Instruction {
     /// Pushes a value stored in a local variable onto the stack.
     ///
     /// This is a specialization of the [`Instruction::Push`] instruction
-    /// where `value` is [`PushValue::Variable`] whose instance type is [`InstanceType::Local`].
+    /// where `value` is [`PushValue::Variable`] whose instance type is
+    /// [`InstanceType::Local`].
     ///
-    /// This is only a minor optimization; using the standard push instruction also works fine.
+    /// This is only a minor optimization; using the standard push instruction
+    /// also works fine.
     PushLocal { variable: CodeVariable },
 
     /// Pushes a value stored in a global variable onto the stack.
     ///
     /// This is a specialization of the [`Instruction::Push`] instruction
-    /// where `value` is [`PushValue::Variable`] whose instance type is [`InstanceType::Global`].
+    /// where `value` is [`PushValue::Variable`] whose instance type is
+    /// [`InstanceType::Global`].
     ///
-    /// This is only a minor optimization; using the standard push instruction also works fine.
+    /// This is only a minor optimization; using the standard push instruction
+    /// also works fine.
     PushGlobal { variable: CodeVariable },
 
     /// Pushes a value stored in a GameMaker builtin variable onto the stack.
     ///
     /// This is a specialization of the [`Instruction::Push`] instruction
-    /// where `value` is [`PushValue::Variable`] whose instance type is [`InstanceType::Builtin`].
+    /// where `value` is [`PushValue::Variable`] whose instance type is
+    /// [`InstanceType::Builtin`].
     ///
-    /// This is only a minor optimization; using the standard push instruction also works fine.
+    /// This is only a minor optimization; using the standard push instruction
+    /// also works fine.
     PushBuiltin { variable: CodeVariable },
 
-    /// Pushes an immediate signed 32-bit integer value onto the stack, encoded as a signed 16-bit integer.
+    /// Pushes an immediate signed 32-bit integer value onto the stack, encoded
+    /// as a signed 16-bit integer.
     ///
     /// The data type of this instruction is always [`DataType::Int16`],
     /// which is not stored here to avoid redundancy.
     ///
-    /// Please note that [`DataType::Int16`] is only a valid data type in instructions when pushing.
-    /// Using it anywhere else is wrong, because `Int16`s
-    /// immediately get converted to `Int32`s when pushed on the stack.
-    /// The data type `Int16` *does not exist* on the stack.
+    /// Please note that [`DataType::Int16`] is only a valid data type in
+    /// instructions when pushing. Using it anywhere else is wrong, because
+    /// `Int16`s immediately get converted to `Int32`s when pushed on the
+    /// stack. The data type `Int16` *does not exist* on the stack.
     PushImmediate { integer: i16 },
 
     /// Calls a GML script/function, using its ID (index).
@@ -333,7 +370,8 @@ pub enum Instruction {
     /// For custom functions (aka. scripts), the remaining values will be filled
     /// with specified default values or `undefined` (?).
     /// TODO(doc): I'm not sure what happens in WAD<15.
-    /// TODO(doc): I'm not sure what happens when too many arguments are specified (probably nothing?).
+    /// TODO(doc): I'm not sure what happens when too many arguments are
+    /// specified (probably nothing?).
     Call {
         function: GMRef<GMFunction>,
         argument_count: u16,
@@ -344,12 +382,12 @@ pub enum Instruction {
     /// the "self" instance to be used when calling,
     /// as well as the reference to the function being called.
     ///
-    /// This instruction pops two values off the stack and then calls a function, dynamically:
-    /// 1) The function reference is popped
-    ///    (should be a [`DataType::Variable`] value storing a function ID).
-    /// 2) The instance type is popped.
-    ///    I'm not very sure how this works, but I assume it
-    ///    is a raw [`InstanceType`] value stored in the stack?
+    /// This instruction pops two values off the stack and then calls a
+    /// function, dynamically:
+    /// 1) The function reference is popped (should be a [`DataType::Variable`]
+    ///    value storing a function ID).
+    /// 2) The instance type is popped. I'm not very sure how this works, but I
+    ///    assume it is a raw [`InstanceType`] value stored in the stack?
     /// 3) `argument_count` arguments are popped.
     ///
     /// For more information on calling functions, see [`Instruction::Call`].
@@ -361,16 +399,19 @@ pub enum Instruction {
     /// TODO(doc): How does this work? What does it actually do?
     CheckArrayIndex,
 
-    /// Pops two values from the stack, those being an index and an array reference.
-    /// Then, pushes the value stored at the passed-in array at the desired index.
+    /// Pops two values from the stack, those being an index and an array
+    /// reference. Then, pushes the value stored at the passed-in array at
+    /// the desired index.
     ///
-    /// This is a very similar to [`Instruction::PushArrayContainer`] (see this for more info),
-    /// except that this instruction is used only at the end of an accessor chain.
-    /// Only relevant for the final/last index operation of a multidimensional array access.
+    /// This is a very similar to [`Instruction::PushArrayContainer`] (see this
+    /// for more info), except that this instruction is used only at the end
+    /// of an accessor chain. Only relevant for the final/last index
+    /// operation of a multidimensional array access.
     PushArrayFinal,
 
-    /// Pops three values from the stack, those being an index, an array reference, and a value.
-    /// Then, assigns the value to the array at the specified index.
+    /// Pops three values from the stack, those being an index, an array
+    /// reference, and a value. Then, assigns the value to the array at the
+    /// specified index.
     ///
     /// Concrete Steps:
     /// 1) Pops an index from the stack
@@ -381,35 +422,44 @@ pub enum Instruction {
     /// Pushes a multidimensional array:
     /// 1) Pops an index from the stack
     /// 2) Pops array reference from stack ([`DataType::Variable`])
-    /// 3) Pushes a new array reference from the passed-in array at the desired index
+    /// 3) Pushes a new array reference from the passed-in array at the desired
+    ///    index
     ///
     /// This instruction is used for all multidimensional
     /// index pushes from the second through the second to last.
-    /// The final/last index operation will be done using [`Instruction::PushArrayFinal`].
+    /// The final/last index operation will be done using
+    /// [`Instruction::PushArrayFinal`].
     PushArrayContainer,
 
     /// Sets a global variable in the VM (popped from stack), designated for
     /// tracking the now-deprecated array copy-on-write functionality in GML.
     ///
     /// The value used is specific to certain locations in scripts.
-    /// When array copy-on-write functionality is disabled, this extended opcode is not used.
+    /// When array copy-on-write functionality is disabled, this extended opcode
+    /// is not used.
     ///
-    /// This instruction will pop one value (`Int32`) off the stack, indicating the array owner ID.
+    /// This instruction will pop one value (`Int32`) off the stack, indicating
+    /// the array owner ID.
     SetArrayOwner,
 
-    /// Pushes a boolean value to the stack, indicating whether static initialization
-    /// has already occurred for this function (true), or otherwise false.
+    /// Pushes a boolean value to the stack, indicating whether static
+    /// initialization has already occurred for this function (true), or
+    /// otherwise false.
     ///
-    /// This is typically used in conjunction with [`Instruction::SetStaticInitialized`] and branch instructions.
+    /// This is typically used in conjunction with
+    /// [`Instruction::SetStaticInitialized`] and branch instructions.
     HasStaticInitialized,
 
-    /// Marks the current function to no longer be able to enter its own static initialization.
+    /// Marks the current function to no longer be able to enter its own static
+    /// initialization.
     ///
     /// This can either occur at the beginning or end of a static block,
-    /// depending on whether `AllowReentrantStatic` is enabled by a game's developer
-    /// (enabled by default before GameMaker 2024.11; disabled by default otherwise).
+    /// depending on whether `AllowReentrantStatic` is enabled by a game's
+    /// developer (enabled by default before GameMaker 2024.11; disabled by
+    /// default otherwise).
     ///
-    /// This is typically used in conjunction with [`Instruction::HasStaticInitialized`] and branch instructions.
+    /// This is typically used in conjunction with
+    /// [`Instruction::HasStaticInitialized`] and branch instructions.
     SetStaticInitialized,
 
     /// Keeps track of an array reference temporarily.
@@ -427,14 +477,16 @@ pub enum Instruction {
     RestoreArrayReference,
 
     /// Pops a value from the stack, and pushes a boolean result.
-    /// The result is true if a "nullish" value, such as `undefined` or GML's `pointer_null`.
+    /// The result is true if a "nullish" value, such as `undefined` or GML's
+    /// `pointer_null`.
     IsNullishValue,
 
     /// Pushes an asset reference to the stack, encoded in an integer.
     /// Includes asset type and index.
     ///
-    /// This instruction is preferred over normal [`Instruction::Push`] with [`DataType::Int32`],
-    /// since the intent is clearer that this is an encoded asset reference, not an actual integer.
+    /// This instruction is preferred over normal [`Instruction::Push`] with
+    /// [`DataType::Int32`], since the intent is clearer that this is an
+    /// encoded asset reference, not an actual integer.
     ///
     /// This instruction is used in more modern versions of GameMaker.
     PushReference { asset_reference: AssetReference },
@@ -444,7 +496,8 @@ impl Instruction {
     /// Gets the instruction size in multiples of 4 bytes.
     /// This unit is used by `jump_offset`s in branch instructions.
     ///
-    /// For example, [`Instruction::Push`] with a [`PushValue::Int16`] has a size of 5.
+    /// For example, [`Instruction::Push`] with a [`PushValue::Int16`] has a
+    /// size of 5.
     #[must_use]
     pub const fn size4(&self) -> u32 {
         match self {
@@ -464,9 +517,11 @@ impl Instruction {
     }
 
     /// Gets the instruction size in bytes.
-    /// This size includes extra data like integers, floats, variable references, etc.
+    /// This size includes extra data like integers, floats, variable
+    /// references, etc.
     ///
-    /// For example, [`Instruction::Push`] with a [`PushValue::Int16`] has a size of 20.
+    /// For example, [`Instruction::Push`] with a [`PushValue::Int16`] has a
+    /// size of 20.
     #[must_use]
     pub const fn size(&self) -> u32 {
         self.size4() * 4
@@ -490,7 +545,8 @@ impl Instruction {
 
     /// Attempts to extract a `GMRef<GMFunction>` from the instruction.
     ///
-    /// This can succeed for `Push` and `PushReference` and will always succeed for `Call`.
+    /// This can succeed for `Push` and `PushReference` and will always succeed
+    /// for `Call`.
     #[must_use]
     pub const fn function(&self) -> Option<GMRef<GMFunction>> {
         match self {
@@ -535,14 +591,16 @@ impl Instruction {
         }
     }
 
-    /// Attempts to extract the first (or the only) data type from the instruction.
+    /// Attempts to extract the first (or the only) data type from the
+    /// instruction.
     ///
     /// For binary operations, this will be RHS (the right hand side).
     ///
-    /// NOTE: Right now, it's kind of arbitrary which instructions' data types are
-    /// deemed "relevant enough" to return them and which don't really belong
-    /// (does return: `PushLocal` - Variable, does not return: `PopSwap` - Int16).
-    /// This will be changed in the future **if I get feedback pls**.
+    /// NOTE: Right now, it's kind of arbitrary which instructions' data types
+    /// are deemed "relevant enough" to return them and which don't really
+    /// belong (does return: `PushLocal` - Variable, does not return:
+    /// `PopSwap` - Int16). This will be changed in the future **if I get
+    /// feedback pls**.
     #[must_use]
     pub const fn type1(&self) -> Option<DataType> {
         Some(match self {
@@ -564,12 +622,12 @@ impl Instruction {
             | Self::PopDiscard { data_type } => *data_type,
             Self::ShiftLeft { shift_amount, .. } | Self::ShiftRight { shift_amount, .. } => {
                 *shift_amount
-            },
+            }
             Self::Pop { type1, .. } => *type1,
             Self::Push { value } => value.data_type(),
             Self::PushLocal { .. } | Self::PushGlobal { .. } | Self::PushBuiltin { .. } => {
                 DataType::Variable
-            },
+            }
             Self::PushImmediate { .. } => DataType::Int16,
             Self::Call { .. } => DataType::Int32,
             Self::CallVariable { .. } => DataType::Variable,

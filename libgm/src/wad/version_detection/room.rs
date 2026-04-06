@@ -1,8 +1,8 @@
-use crate::{
-    prelude::*,
-    util::init::num_enum_from,
-    wad::{deserialize::reader::DataReader, elements::room::layer::Type, version::GMVersionReq},
-};
+use crate::prelude::*;
+use crate::util::init::num_enum_from;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::room::layer::Type;
+use crate::wad::version::GMVersionReq;
 
 pub fn check_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2022, 1).into()));
@@ -15,7 +15,8 @@ pub fn check_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         let room_pointer = reader.read_u32()?;
         reader.cur_pos = room_pointer + 22 * 4;
 
-        // Get the pointer for this room's layer list, as well as pointer to sequence list
+        // Get the pointer for this room's layer list, as well as pointer to sequence
+        // list
         let layer_list_pointer = reader.read_u32()?;
         let sequence_pointer = reader.read_u32()?;
         reader.cur_pos = layer_list_pointer;
@@ -24,7 +25,8 @@ pub fn check_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
             continue; // No layers to detect; go to next room
         }
 
-        // Get pointer into the individual layer data (plus 8 bytes) for the first layer in the room
+        // Get pointer into the individual layer data (plus 8 bytes) for the first layer
+        // in the room
         let jump_pointer = reader.read_u32()? + 8;
 
         // Find the offset for the end of this layer
@@ -47,21 +49,21 @@ pub fn check_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
                 if next_pointer - reader.cur_pos > 16 * 4 {
                     return target_ver;
                 }
-            },
+            }
             Type::Instances => {
                 reader.cur_pos += 6 * 4;
                 let instance_count = reader.read_u32()?;
                 if next_pointer - reader.cur_pos != instance_count * 4 {
                     return target_ver;
                 }
-            },
+            }
             Type::Assets => {
                 reader.cur_pos += 6 * 4;
                 let tile_pointer = reader.read_u32()?;
                 if tile_pointer != reader.cur_pos + 8 && tile_pointer != reader.cur_pos + 12 {
                     return target_ver;
                 }
-            },
+            }
             Type::Tiles => {
                 reader.cur_pos += 6 * 4;
                 let tile_map_width = reader.read_u32()?;
@@ -69,14 +71,14 @@ pub fn check_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
                 if next_pointer - reader.cur_pos != (tile_map_width * tile_map_height * 4) {
                     return target_ver;
                 }
-            },
+            }
             Type::Effect => {
                 reader.cur_pos += 7 * 4;
                 let property_count = reader.read_u32()?;
                 if next_pointer - reader.cur_pos != (property_count * 3 * 4) {
                     return target_ver;
                 }
-            },
+            }
         }
         return Ok(None); // Check complete, found and tested a layer (but didn't detect 2022.1)
     }
@@ -128,7 +130,8 @@ pub fn check_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
         let room_pointer = reader.read_u32()?;
         reader.cur_pos = room_pointer + 22 * 4;
 
-        // Get the pointer for this room's layer list, as well as pointer to sequence list
+        // Get the pointer for this room's layer list, as well as pointer to sequence
+        // list
         let layer_list_ptr = reader.read_u32()?;
         let sequence_ptr = reader.read_u32()?;
         reader.cur_pos = layer_list_ptr;

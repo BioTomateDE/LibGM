@@ -11,11 +11,11 @@ pub use instances::Instances;
 use macros::num_enum;
 pub use tiles::Tiles;
 
-use crate::{
-    prelude::*,
-    util::init::num_enum_from,
-    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
-};
+use crate::prelude::*;
+use crate::util::init::num_enum_from;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Layer {
@@ -54,16 +54,16 @@ impl GMElement for Layer {
             Type::Effect => {
                 if reader.general_info.is_version_at_least((2022, 1)) {
                     let effect_data = effect_data_2022_1.as_ref().unwrap();
-                    let effect_type = effect_data
-                        .effect_type
-                        .clone()
-                        .ok_or("Effect Type not set for Room Layer 2022.1+ (this error could be a mistake)")?;
+                    let effect_type = effect_data.effect_type.clone().ok_or(
+                        "Effect Type not set for Room Layer 2022.1+ (this error could be a \
+                         mistake)",
+                    )?;
                     let properties: Vec<effect::Property> = effect_data.effect_properties.clone();
                     Data::Effect(Effect { effect_type, properties })
                 } else {
                     Data::Effect(Effect::deserialize(reader)?)
                 }
-            },
+            }
         };
 
         Ok(Self {
@@ -93,7 +93,7 @@ impl GMElement for Layer {
         builder.write_bool32(self.is_visible);
         builder.write_if_ver(&self.effect_data_2022_1, "Effect Data", (2022, 1))?;
         match &self.data {
-            Data::None => {},
+            Data::None => {}
             Data::Instances(data) => data.serialize(builder)?,
             Data::Tiles(data) => data.serialize(builder)?,
             Data::Background(data) => data.serialize(builder)?,
@@ -102,7 +102,7 @@ impl GMElement for Layer {
                 if !builder.is_version_at_least((2022, 1)) {
                     data.serialize(builder)?;
                 }
-            },
+            }
         }
         Ok(())
     }

@@ -5,22 +5,23 @@ mod gms2;
 use std::fmt;
 
 #[cfg(feature = "game-creation-timestamp")]
-use chrono::{DateTime, Utc};
+use chrono::DateTime;
+#[cfg(feature = "game-creation-timestamp")]
+use chrono::Utc;
 pub use flags::Flags;
 pub use function_classifications::FunctionClassifications;
 pub use gms2::GMS2Data;
 
-use crate::{
-    prelude::*,
-    wad::{
-        chunk::ChunkName,
-        deserialize::reader::DataReader,
-        elements::{GMChunk, GMElement, room::GMRoom},
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-        version::{GMVersion, GMVersionReq},
-    },
-};
+use crate::prelude::*;
+use crate::wad::chunk::ChunkName;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMChunk;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::room::GMRoom;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
+use crate::wad::version::GMVersion;
+use crate::wad::version::GMVersionReq;
 
 #[derive(Clone, PartialEq)]
 pub struct GMGeneralInfo {
@@ -82,17 +83,15 @@ pub struct GMGeneralInfo {
     ///
     /// Note that this does not have to correspond to the actual studio version.
     /// This can be due to multiple reasons:
-    /// * The data file does not use a specific newer feature,
-    ///   resulting in a **lower** detected version.
-    /// * There is a bug in the version detection logic (oopsies),
-    ///   resulting in a **higher** detected version (false positive).
-    /// * Fucking LTS.
-    ///   For some reason, they added a BREAKING FEATURE
-    ///   to a LONG TERM SUPPORT branch.
-    ///   This means that tools like this have to differentiate
-    ///   between LTS-pre-this-feature and LTS-post-this-feature.
-    ///   As a result, some games made in 2022.0 LTS may be shown
-    ///   as 2023.6 instead.
+    /// * The data file does not use a specific newer feature, resulting in a
+    ///   **lower** detected version.
+    /// * There is a bug in the version detection logic (oopsies), resulting in
+    ///   a **higher** detected version (false positive).
+    /// * Fucking LTS. For some reason, they added a BREAKING FEATURE to a LONG
+    ///   TERM SUPPORT branch. This means that tools like this have to
+    ///   differentiate between LTS-pre-this-feature and LTS-post-this-feature.
+    ///   As a result, some games made in 2022.0 LTS may be shown as 2023.6
+    ///   instead.
     ///
     /// ___
     /// See `wad_version` for more information.
@@ -115,7 +114,8 @@ pub struct GMGeneralInfo {
 
     /// The timestamp the game was compiled at.
     ///
-    /// This field is only exposed if the `game-creation-timestamp` feature is enabled.
+    /// This field is only exposed if the `game-creation-timestamp` feature is
+    /// enabled.
     #[cfg(feature = "game-creation-timestamp")]
     pub creation_timestamp: DateTime<Utc>,
 
@@ -149,6 +149,7 @@ pub struct GMGeneralInfo {
 
 impl GMChunk for GMGeneralInfo {
     const NAME: ChunkName = ChunkName::new("GEN8");
+
     fn exists(&self) -> bool {
         self.exists
     }
@@ -161,7 +162,7 @@ impl GMElement for GMGeneralInfo {
             1 => true,
             other => {
                 bail!("Invalid u8 bool {other} while reading general info \"is debugger disabled\"")
-            },
+            }
         };
         let wad_version = reader.read_u8()?;
         let unknown_value = reader.read_u16()?;

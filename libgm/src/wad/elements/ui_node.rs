@@ -15,11 +15,11 @@ pub use sequence::SequenceInstance;
 pub use sprite::SpriteInstance;
 pub use text_item::TextItemInstance;
 
-use crate::{
-    prelude::*,
-    util::assert,
-    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
-};
+use crate::prelude::*;
+use crate::util::assert;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[list_chunk("UILR")]
 pub struct GMRootUINodes {
@@ -95,8 +95,8 @@ impl GMElement for UINode {
             && !self.children.is_empty()
         {
             bail!(
-                "Expected non-container UI Node type {} to not \
-                have child nodes, but actually has {} children",
+                "Expected non-container UI Node type {} to not have child nodes, but actually has \
+                 {} children",
                 self.node.variant_name(),
                 self.children.len(),
             )

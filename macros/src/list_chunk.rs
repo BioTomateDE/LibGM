@@ -1,6 +1,11 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{DeriveInput, Error, Fields, Ident, LitStr, parse_macro_input};
+use syn::DeriveInput;
+use syn::Error;
+use syn::Fields;
+use syn::Ident;
+use syn::LitStr;
+use syn::parse_macro_input;
 
 pub fn list_chunk(attr: TokenStream, item: TokenStream) -> TokenStream {
     let chunk_struct = syn::parse_macro_input!(item as DeriveInput);

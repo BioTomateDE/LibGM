@@ -1,7 +1,7 @@
-use crate::{
-    prelude::*,
-    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Text {
     pub text: String,
@@ -35,7 +35,8 @@ impl GMElement for Text {
             self.font_index
         );
 
-        // TODO(weak): no idea what this is but shouldn't it be a GMRef<GMFont> instead of an i32?
+        // TODO(weak): no idea what this is but shouldn't it be a GMRef<GMFont> instead
+        // of an i32?
         builder.write_i32(self.font_index);
         Ok(())
     }

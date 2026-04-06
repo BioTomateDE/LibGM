@@ -1,18 +1,20 @@
-//! Contains the `GMRef` type which is used to refer to other GameMaker elements.
+//! Contains the `GMRef` type which is used to refer to other GameMaker
+//! elements.
 
-use std::{
-    fmt,
-    hash::{Hash, Hasher},
-};
+use std::fmt;
+use std::hash::Hash;
+use std::hash::Hasher;
 
-use crate::{prelude::*, util::fmt::typename};
+use crate::prelude::*;
+use crate::util::fmt::typename;
 
 /// A reference to another GameMaker element.
 ///
 /// This is typically a Reference by ID in the data file format,
 /// but is also used for texture page items (which are pointers).
 ///
-/// [`GMRef`] has (fake) generic types to make it clearer which type it belongs to.
+/// [`GMRef`] has (fake) generic types to make it clearer which type it belongs
+/// to.
 /// * Example without: `pub texture_mask: GMRef`
 /// * Example with: `pub texture_mask: GMRef<GMSprite>`
 ///
@@ -22,10 +24,12 @@ use crate::{prelude::*, util::fmt::typename};
 /// the list will shift all their `GMRef`s; breaking them.
 #[repr(transparent)]
 pub struct GMRef<T> {
-    /// The GameMaker ID / Index of this resource in the corresponding element vector.
+    /// The GameMaker ID / Index of this resource in the corresponding element
+    /// vector.
     pub(crate) index: u32,
 
-    /// Marker needs to be here to ignore "unused generic T" error; doesn't store any data.
+    /// Marker needs to be here to ignore "unused generic T" error; doesn't
+    /// store any data.
     _marker: std::marker::PhantomData<T>,
 }
 
@@ -82,21 +86,25 @@ impl<T> fmt::Debug for GMRef<T> {
 impl<T> GMRef<T> {
     /// Creates a new GameMaker reference with the specified index.
     ///
-    /// The fake generic type can often be omitted (if the compiler can infer it).
+    /// The fake generic type can often be omitted (if the compiler can infer
+    /// it).
     #[must_use]
     pub const fn new(index: u32) -> Self {
         Self { index, _marker: std::marker::PhantomData }
     }
 
-    /// Attempts to resolve this reference to an element in the given list by its index.
+    /// Attempts to resolve this reference to an element in the given list by
+    /// its index.
     ///
-    /// Returns a reference to the element if the index is valid, or an error string if out of bounds.
+    /// Returns a reference to the element if the index is valid, or an error
+    /// string if out of bounds.
     ///
     /// # Parameters
     /// - `elements_by_index`: A vector of elements indexed by `self.index`.
     ///
     /// # Errors
-    /// Returns an error if `self.index` is out of bounds for the provided vector.
+    /// Returns an error if `self.index` is out of bounds for the provided
+    /// vector.
     pub fn resolve(self, elements_by_index: &[T]) -> Result<&T> {
         let element = elements_by_index.get(self.index as usize).ok_or_else(|| {
             format!(
@@ -109,15 +117,18 @@ impl<T> GMRef<T> {
         Ok(element)
     }
 
-    /// Attempts to resolve this reference to an element in the given list by its index.
+    /// Attempts to resolve this reference to an element in the given list by
+    /// its index.
     ///
-    /// Returns a reference to the element if the index is valid, or an error string if out of bounds.
+    /// Returns a reference to the element if the index is valid, or an error
+    /// string if out of bounds.
     ///
     /// # Parameters
     /// - `elements_by_index`: A vector of elements indexed by `self.index`.
     ///
     /// # Errors
-    /// Returns an error if `self.index` is out of bounds for the provided vector.
+    /// Returns an error if `self.index` is out of bounds for the provided
+    /// vector.
     pub fn resolve_mut(self, elements_by_index: &mut [T]) -> Result<&mut T> {
         let length = elements_by_index.len();
         let element = elements_by_index

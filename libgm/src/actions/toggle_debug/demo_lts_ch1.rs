@@ -2,10 +2,9 @@
 //! Chapter: 1
 //! 2025-06-05 to now [2026-01-04]
 
-use crate::{
-    gml::{GMCode, instruction::InstanceType},
-    prelude::*,
-};
+use crate::gml::GMCode;
+use crate::gml::instruction::InstanceType;
+use crate::prelude::*;
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     let code_ref: GMRef<GMCode> = data

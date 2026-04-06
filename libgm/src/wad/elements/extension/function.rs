@@ -1,14 +1,11 @@
 use macros::num_enum;
 
-use crate::{
-    prelude::*,
-    util::init::num_enum_from,
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{GMElement, extension::Kind},
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::util::init::num_enum_from;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::extension::Kind;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {

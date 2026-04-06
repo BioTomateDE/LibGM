@@ -1,7 +1,6 @@
-use crate::{
-    prelude::*,
-    wad::{deserialize::reader::DataReader, version::GMVersionReq},
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::version::GMVersionReq;
 
 pub fn check_2023_x(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let mut target_ver = None;
@@ -29,7 +28,7 @@ pub fn check_2023_x(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
             0xEC => target_ver = Some((2023, 8).into()),
             0xC0 => target_ver = Some((2023, 6).into()),
             0xBC => target_ver = Some((2023, 4).into()),
-            0xB0 => {}, // 2023.2
+            0xB0 => {} // 2023.2
             elem_size => bail!("Unrecognized PSEM size {elem_size} with {count} elements"),
         }
     }

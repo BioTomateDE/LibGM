@@ -1,15 +1,12 @@
 use std::collections::HashMap;
 
-use crate::{
-    gml::instruction::VariableType,
-    prelude::*,
-    wad::{
-        data::{Endianness, GMData},
-        elements::string::StringPlaceholder,
-        serialize::pointers::Pointer,
-        version::GMVersionReq,
-    },
-};
+use crate::gml::instruction::VariableType;
+use crate::prelude::*;
+use crate::wad::data::Endianness;
+use crate::wad::data::GMData;
+use crate::wad::elements::string::StringPlaceholder;
+use crate::wad::serialize::pointers::Pointer;
+use crate::wad::version::GMVersionReq;
 
 // The Default value should never be read.
 // This can only happen if there are zero existent chunks, though.
@@ -27,22 +24,27 @@ pub struct DataBuilder<'a> {
     /// The raw data being generated.
     pub raw_data: Vec<u8>,
 
-    /// Pairs data positions of pointer placeholders with the memory address of the GameMaker element they're pointing to.
+    /// Pairs data positions of pointer placeholders with the memory address of
+    /// the GameMaker element they're pointing to.
     pub(super) pointer_placeholder_positions: Vec<(u32, Pointer)>,
 
-    /// Maps memory addresses of GameMaker elements to their resolved data position.
+    /// Maps memory addresses of GameMaker elements to their resolved data
+    /// position.
     pub(super) pointer_resource_positions: HashMap<Pointer, u32>,
 
     /// Tracks where each function is used throughout the game data.
     /// Will be populated when code is built.
-    /// - Outer Vec: Indexed by Function index from `gm_data.functions.functions`
+    /// - Outer Vec: Indexed by Function index from
+    ///   `gm_data.functions.functions`
     /// - Inner Vec: List of written positions for each occurrence
     pub function_occurrences: Vec<Vec<u32>>,
 
     /// Tracks where each variable is used throughout the game data.
     /// Will be populated when code is built.
-    /// - Outer Vec: Indexed by Variable index from `gm_data.variables.variables`
-    /// - Inner Vec: List of `(written_position, variable_type)` tuples for each occurrence
+    /// - Outer Vec: Indexed by Variable index from
+    ///   `gm_data.variables.variables`
+    /// - Inner Vec: List of `(written_position, variable_type)` tuples for each
+    ///   occurrence
     pub variable_occurrences: Vec<Vec<(u32, VariableType)>>,
 
     pub string_placeholders: Vec<StringPlaceholder>,
@@ -90,7 +92,8 @@ impl<'a> DataBuilder<'a> {
         self.gm_data.general_info.wad_version
     }
 
-    /// Pads the internal buffer with zero bytes until its length is aligned to `alignment`.
+    /// Pads the internal buffer with zero bytes until its length is aligned to
+    /// `alignment`.
     ///
     /// This adds zero bytes until `self.len()` is a multiple of `alignment`.
     #[inline]
@@ -127,10 +130,12 @@ impl<'a> DataBuilder<'a> {
         }
     }
 
-    /// Overwrites a 32-bit unsigned integer at the specified written data `position`.
+    /// Overwrites a 32-bit unsigned integer at the specified written data
+    /// `position`.
     ///
-    /// Useful for patching fixed-size numeric values like lengths or offsets after serialization.
-    /// For writing regular pointer lists normally, see [`Self::write_pointer_list`].
+    /// Useful for patching fixed-size numeric values like lengths or offsets
+    /// after serialization. For writing regular pointer lists normally, see
+    /// [`Self::write_pointer_list`].
     pub fn overwrite_u32(&mut self, number: u32, position: u32) -> Result<()> {
         let bytes: [u8; 4] = match self.gm_data.meta.endianness {
             Endianness::Little => number.to_le_bytes(),
@@ -141,12 +146,14 @@ impl<'a> DataBuilder<'a> {
         })
     }
 
-    /// Overwrites a 32-bit number at the specified data position with the current data position (length).
-    /// The data position is calculated via `pointer_list_pos + (4 * element_index)`
-    /// which is suitable for overwriting pointer in a pointer list.
+    /// Overwrites a 32-bit number at the specified data position with the
+    /// current data position (length). The data position is calculated via
+    /// `pointer_list_pos + (4 * element_index)` which is suitable for
+    /// overwriting pointer in a pointer list.
     ///
     /// For overwriting other numbers, see [`Self::overwrite_u32`].
-    /// For writing regular pointer lists normally, see [`Self::write_pointer_list`].
+    /// For writing regular pointer lists normally, see
+    /// [`Self::write_pointer_list`].
     #[inline]
     pub fn overwrite_pointer_with_cur_pos(
         &mut self,
@@ -157,8 +164,8 @@ impl<'a> DataBuilder<'a> {
         let position: u32 = pointer_list_pos + 4 * element_index as u32;
         self.overwrite_u32(number, position).with_context(|| {
             format!(
-                "overwriting pointer for element index {element_index} of \
-                pointer list with start position {pointer_list_pos}"
+                "overwriting pointer for element index {element_index} of pointer list with start \
+                 position {pointer_list_pos}"
             )
         })
     }
@@ -174,7 +181,8 @@ impl<'a> DataBuilder<'a> {
     /// Write an actual character string.
     ///
     /// This should only be used for literal strings in the `STRG` chunk.
-    /// For writing regular GameMaker string references, see [`Self::write_gm_string`].
+    /// For writing regular GameMaker string references, see
+    /// [`Self::write_gm_string`].
     #[inline]
     pub fn write_literal_string(&mut self, string: &str) {
         self.write_bytes(string.as_bytes());

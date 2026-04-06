@@ -2,16 +2,14 @@
 //! Chapters 1, 2, 4 (3 needs extra handling)
 //! 2025-06-05 to now [2026-01-04]
 
-use crate::{
-    gml::{
-        GMCode,
-        assembly::assemble_instructions,
-        insert_instructions,
-        instruction::{InstanceType, Instruction, VariableType},
-    },
-    prelude::*,
-    wad::elements::variable::GMVariable,
-};
+use crate::gml::GMCode;
+use crate::gml::assembly::assemble_instructions;
+use crate::gml::insert_instructions;
+use crate::gml::instruction::InstanceType;
+use crate::gml::instruction::Instruction;
+use crate::gml::instruction::VariableType;
+use crate::prelude::*;
+use crate::wad::elements::variable::GMVariable;
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     let code_ref: GMRef<GMCode> = data
@@ -45,7 +43,8 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     let code = data.codes.by_ref_mut(code_ref)?;
     insert_instructions(&mut code.instructions, index, &insertion)?;
     bail!(
-        "TODO: debug activation for deltarune is currently broken (need to fix child gml_Script execution offsets)"
+        "TODO: debug activation for deltarune is currently broken (need to fix child gml_Script \
+         execution offsets)"
     );
 }
 

@@ -1,6 +1,8 @@
-use std::fmt::{Display, Formatter};
+use std::fmt::Display;
+use std::fmt::Formatter;
 
-use crate::{prelude::*, util::fmt::hexdump};
+use crate::prelude::*;
+use crate::util::fmt::hexdump;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct ChunkName {
@@ -78,7 +80,8 @@ const fn validate_char(byte: u8) -> bool {
 
 #[inline]
 fn try_display(chunk_name: &[u8; 4]) -> Option<&str> {
-    // if all bytes are null/unprintable, then don't bother with a string representation.
+    // if all bytes are null/unprintable, then don't bother with a string
+    // representation.
     if chunk_name.iter().all(u8::is_ascii_control) {
         return None;
     }

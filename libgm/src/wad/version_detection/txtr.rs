@@ -1,10 +1,7 @@
-use crate::{
-    prelude::*,
-    wad::{
-        deserialize::reader::DataReader, elements::texture_page::BZ2_QOI_HEADER,
-        version::GMVersionReq,
-    },
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::texture_page::BZ2_QOI_HEADER;
+use crate::wad::version::GMVersionReq;
 
 pub fn check_2022_3(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2022, 3).into()));

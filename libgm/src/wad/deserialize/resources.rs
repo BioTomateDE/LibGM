@@ -1,14 +1,11 @@
 use std::collections::HashMap;
 
-use crate::{
-    prelude::*,
-    util::fmt::typename,
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{GMElement, texture_page_item::GMTexturePageItem},
-        reference::GMRef,
-    },
-};
+use crate::prelude::*;
+use crate::util::fmt::typename;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::texture_page_item::GMTexturePageItem;
+use crate::wad::reference::GMRef;
 
 impl DataReader<'_> {
     /// Read a standard GameMaker string reference.
@@ -76,8 +73,8 @@ impl DataReader<'_> {
         match occurrence_map.get(&occurrence_position) {
             Some(gm_ref) => Ok(*gm_ref),
             None => bail!(
-                "Could not read {} with occurrence position {} at pointer position {} \
-                because it doesn't exist in the occurrence map with {} items",
+                "Could not read {} with occurrence position {} at pointer position {} because it \
+                 doesn't exist in the occurrence map with {} items",
                 typename::<T>(),
                 occurrence_position,
                 self.cur_pos - 4,

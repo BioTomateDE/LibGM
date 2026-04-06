@@ -1,13 +1,11 @@
 use std::fmt;
 
-use crate::{
-    gml::GMCode,
-    prelude::*,
-    wad::{
-        GMRef, deserialize::reader::DataReader, elements::GMElement,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::gml::GMCode;
+use crate::prelude::*;
+use crate::wad::GMRef;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[derive(Clone, PartialEq)]
 pub struct Action {
@@ -31,7 +29,8 @@ impl GMElement for Action {
         reader.assert_int(lib_id, 1, "Lib ID")?;
 
         let _id = reader.read_u32()?;
-        // Usually 603, sometimes 601 and sometimes some other value (always 603 in modern GM)
+        // Usually 603, sometimes 601 and sometimes some other value (always 603 in
+        // modern GM)
 
         let kind = reader.read_u32()?;
         reader.assert_int(kind, 7, "Kind")?;

@@ -1,11 +1,8 @@
-use crate::{
-    prelude::*,
-    wad::{
-        elements::{string::StringPlaceholder, texture_page_item::GMTexturePageItem},
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::wad::elements::string::StringPlaceholder;
+use crate::wad::elements::texture_page_item::GMTexturePageItem;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
 
 impl DataBuilder<'_> {
     /// Writes the resource ID (index) from a `GMRef`.
@@ -39,10 +36,12 @@ impl DataBuilder<'_> {
         self.write_gm_string_internal(string.to_string(), false);
     }
 
-    // The element fields store `Option<String>`, so passing `Option<&String> instead
-    // of `&Option<String>` would require using `.as_ref()` in every call.
+    // The element fields store `Option<String>`, so passing `Option<&String>
+    // instead of `&Option<String>` would require using `.as_ref()` in every
+    // call.
     #[allow(clippy::ref_option)]
-    /// Writes an optional GameMaker string reference as a pointer placeholder, or zero if the reference is `None`.
+    /// Writes an optional GameMaker string reference as a pointer placeholder,
+    /// or zero if the reference is `None`.
     pub fn write_gm_string_opt(&mut self, string_opt: &Option<String>) {
         match string_opt {
             Some(string) => self.write_gm_string(string),
@@ -58,17 +57,20 @@ impl DataBuilder<'_> {
     /// Writes a GameMaker texture page item reference as a pointer placeholder.
     ///
     /// # Errors
-    /// Returns an error if the contained texture page item reference cannot be resolved.
+    /// Returns an error if the contained texture page item reference cannot be
+    /// resolved.
     pub fn write_gm_texture(&mut self, gm_texture_ref: GMRef<GMTexturePageItem>) -> Result<()> {
         let elem: &GMTexturePageItem = self.gm_data.texture_page_items.by_ref(gm_texture_ref)?;
         self.write_pointer(elem);
         Ok(())
     }
 
-    /// Writes an optional GameMaker texture page item reference as a pointer placeholder, or zero if the reference is `None`.
+    /// Writes an optional GameMaker texture page item reference as a pointer
+    /// placeholder, or zero if the reference is `None`.
     ///
     /// # Errors
-    /// Returns an error if the contained texture page item reference cannot be resolved.
+    /// Returns an error if the contained texture page item reference cannot be
+    /// resolved.
     pub fn write_gm_texture_opt(
         &mut self,
         gm_texture_ref_opt: Option<GMRef<GMTexturePageItem>>,

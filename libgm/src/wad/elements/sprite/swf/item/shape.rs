@@ -1,10 +1,10 @@
 mod style_group;
 pub use style_group::StyleGroup;
 
-use crate::{
-    prelude::*,
-    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Data<T> {
     pub min_x: f32,

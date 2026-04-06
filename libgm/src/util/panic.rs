@@ -1,6 +1,8 @@
-use std::{any::Any, panic::UnwindSafe};
+use std::any::Any;
+use std::panic::UnwindSafe;
 
-use crate::error::{Error, Result};
+use crate::error::Error;
+use crate::error::Result;
 
 fn extract_panic_message(payload: Box<dyn Any + Send + 'static>) -> String {
     if let Some(&string) = payload.downcast_ref::<&str>() {

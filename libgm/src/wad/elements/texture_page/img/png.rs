@@ -1,6 +1,7 @@
 use std::io::Cursor;
 
-use image::{DynamicImage, ImageFormat};
+use image::DynamicImage;
+use image::ImageFormat;
 
 use crate::prelude::*;
 

@@ -1,5 +1,6 @@
 use clap::ValueEnum;
-use libgm::{prelude::*, wad::elements::texture_page::Format};
+use libgm::prelude::*;
+use libgm::wad::elements::texture_page::Format;
 
 #[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {
@@ -25,7 +26,7 @@ impl Action {
             Self::OptimizeMemory => {
                 data.optimize_memory();
                 Ok(())
-            },
+            }
             Self::Most => data.post_deserialize(),
         }
     }

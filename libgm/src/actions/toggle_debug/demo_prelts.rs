@@ -2,13 +2,10 @@
 //! Chapter: 1, 2
 //! 2021-09-17 to 2025-06-05
 
-use crate::{
-    gml::{
-        assembly::assemble_instruction,
-        instruction::{InstanceType, Instruction},
-    },
-    prelude::*,
-};
+use crate::gml::assembly::assemble_instruction;
+use crate::gml::instruction::InstanceType;
+use crate::gml::instruction::Instruction;
+use crate::prelude::*;
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     // Modify SCR_GAMESTART
@@ -33,8 +30,8 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
         .codes
         .by_name_mut("gml_Object_obj_debugProfiler_Create_0")?;
     code.instructions = instructions;
-    // I am currently not checking the instruction count, unlike the original "UTDR Scripts/Debug.csx".
-    // If there are issues, lmk
+    // I am currently not checking the instruction count, unlike the original "UTDR
+    // Scripts/Debug.csx". If there are issues, lmk
 
     Ok(())
 }

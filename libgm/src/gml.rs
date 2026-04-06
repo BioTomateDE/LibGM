@@ -30,11 +30,12 @@ pub struct GMCode {
 impl GMCode {
     /// Find child code entries of this code entry.
     ///
-    /// This is always `false` before WAD 15, since child/parent code entries did not exist then.
+    /// This is always `false` before WAD 15, since child/parent code entries
+    /// did not exist then.
     ///
-    /// This function has to compare the names of code entries and is also failable.
-    /// If you have access to a [`GMRef`] to this code entry instead, consider
-    /// using [`Self::find_children`] instead.
+    /// This function has to compare the names of code entries and is also
+    /// failable. If you have access to a [`GMRef`] to this code entry
+    /// instead, consider using [`Self::find_children`] instead.
     ///
     /// This has to iterate over all code entries in the data file,
     /// so it's a good idea to cache this if possible.
@@ -60,7 +61,8 @@ impl GMCode {
 
     /// Find child code entries of this code entry.
     ///
-    /// This is always `false` before WAD 15, since child/parent code entries did not exist then.
+    /// This is always `false` before WAD 15, since child/parent code entries
+    /// did not exist then.
     ///
     /// This function takes a `GMRef<GMCode>` instead of `&GMCode`.
     /// If you only have a [`GMCode`] available, you'll have to
@@ -87,7 +89,8 @@ impl GMCode {
 
     /// Gets the total (cumulative) size of all instructions, in bytes.
     ///
-    /// This function simply calls [`Instruction::size`] on each instruction and sums up the sizes.
+    /// This function simply calls [`Instruction::size`] on each instruction and
+    /// sums up the sizes.
     #[must_use]
     pub fn length(&self) -> u32 {
         instructions_size(&self.instructions)
@@ -104,7 +107,8 @@ impl GMCode {
         }
     }
 
-    /// Whether this code entry is a root entry, meaning it has no parent code entries.
+    /// Whether this code entry is a root entry, meaning it has no parent code
+    /// entries.
     ///
     /// This will always be `true` for WAD < 15.
     #[must_use]
@@ -134,20 +138,24 @@ pub struct ModernData {
     /// The amount of arguments this code entry accepts.
     pub argument_count: u16,
 
-    /// A flag set on certain code entries, which usually don't have locals attached to them.
+    /// A flag set on certain code entries, which usually don't have locals
+    /// attached to them.
     pub weird_local_flag: bool,
 
-    /// Offset, **in bytes**, where code should begin executing from within the bytecode of this code entry.
-    /// Should be 0 for root-level (parent) code entries, and nonzero for child code entries.
+    /// Offset, **in bytes**, where code should begin executing from within the
+    /// bytecode of this code entry. Should be 0 for root-level (parent)
+    /// code entries, and nonzero for child code entries.
     pub execution_offset: u32,
 
-    /// Parent entry of this code entry, if this is a child entry; [`None`] otherwise.
+    /// Parent entry of this code entry, if this is a child entry; [`None`]
+    /// otherwise.
     pub parent: Option<GMRef<GMCode>>,
 }
 
 /// Gets the total (cumulative) size of all instructions, in bytes.
 ///
-/// This function simply calls [`Instruction::size`] on each instruction and sums up the sizes.
+/// This function simply calls [`Instruction::size`] on each instruction and
+/// sums up the sizes.
 #[must_use]
 pub fn instructions_size(instructions: &[Instruction]) -> u32 {
     let mut size: u32 = 0;
@@ -184,8 +192,8 @@ fn splice_instructions(
 
     let mut cur_pos: u32 = 0;
     for (i, instr) in haystack.iter_mut().enumerate() {
-        // (this technically ignores stuff that is neither half 1 nor 2 if range is nonzero but it
-        // shouldnt make a different i think)
+        // (this technically ignores stuff that is neither half 1 nor 2 if range is
+        // nonzero but it shouldnt make a different i think)
         cur_pos += instr.size4();
         let Some(offset) = instr.jump_offset_mut() else {
             continue;

@@ -1,7 +1,6 @@
-use crate::{
-    prelude::*,
-    wad::elements::game_object::{GMGameObject, event::EventSubtype},
-};
+use crate::prelude::*;
+use crate::wad::elements::game_object::GMGameObject;
+use crate::wad::elements::game_object::event::EventSubtype;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]

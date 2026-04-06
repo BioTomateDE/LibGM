@@ -1,7 +1,7 @@
-use std::{
-    fs::{self, ReadDir},
-    path::{Path, PathBuf},
-};
+use std::fs::ReadDir;
+use std::fs::{self};
+use std::path::Path;
+use std::path::PathBuf;
 
 use libgm::prelude::*;
 
@@ -10,8 +10,8 @@ use libgm::prelude::*;
 /// This operation is NOT recursive and will only search for files directly
 /// within the directory (no subdirectories!).
 ///
-/// Only files with a `.win`, `.unx`, `.ios` or `.droid` extension are considered
-/// GameMaker data files. Other files will be skipped.
+/// Only files with a `.win`, `.unx`, `.ios` or `.droid` extension are
+/// considered GameMaker data files. Other files will be skipped.
 fn list_dir(dir: &Path) -> Result<Vec<PathBuf>> {
     let mut data_file_paths: Vec<PathBuf> = Vec::new();
     let dir: ReadDir = fs::read_dir(dir)

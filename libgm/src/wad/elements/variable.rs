@@ -1,19 +1,17 @@
 use macros::list_chunk;
 
-use crate::{
-    gml::instruction::InstanceType,
-    prelude::*,
-    util::init::vec_with_capacity,
-    wad::{
-        deserialize::{chunk::ChunkBounds, reader::DataReader},
-        elements::{
-            GMElement, GMNamedElement, element_stub, general_info::GMGeneralInfo,
-            validate_identifier,
-        },
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::gml::instruction::InstanceType;
+use crate::prelude::*;
+use crate::util::init::vec_with_capacity;
+use crate::wad::deserialize::chunk::ChunkBounds;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::GMNamedElement;
+use crate::wad::elements::element_stub;
+use crate::wad::elements::general_info::GMGeneralInfo;
+use crate::wad::elements::validate_identifier;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[list_chunk("VARI")]
 pub struct GMVariables {
@@ -28,7 +26,8 @@ pub struct GMVariables {
 
 impl GMVariables {
     // This method is still buggy, use with caution.
-    // TODO: make this work for WAD<=14. also docs. also vari_instance_type is wrong/buggy?
+    // TODO: make this work for WAD<=14. also docs. also vari_instance_type is
+    // wrong/buggy?
     pub fn make(
         &mut self,
         name: &str,
@@ -70,7 +69,8 @@ impl GMVariables {
                     header.var_count2 += 1;
                 }
             } else if general_info.wad_version >= 16 {
-                // this condition is only suggested by utmt; not confirmed (original: `!DifferentVarCounts`)
+                // this condition is only suggested by utmt; not confirmed (original:
+                // `!DifferentVarCounts`)
                 header.var_count1 += 1;
                 header.var_count2 += 1;
             } else if matches!(
@@ -155,8 +155,9 @@ impl GMElement for GMVariables {
                     .insert(occurrence, (var_ref, instance_type))
                 {
                     bail!(
-                        "Conflicting occurrence positions while parsing variables: Position {} was already \
-                        set for variable #{} with name {:?}; trying to set to variable #{i} with name {:?}",
+                        "Conflicting occurrence positions while parsing variables: Position {} \
+                         was already set for variable #{} with name {:?}; trying to set to \
+                         variable #{i} with name {:?}",
                         occurrence,
                         old_var.0.index,
                         variables[old_var.0.index as usize].name,
@@ -290,8 +291,8 @@ fn parse_occurrence_chain(
 
         if offset < 1 {
             bail!(
-                "Next occurrence offset is {offset} (0x{offset:08X}) which is \
-                not positive for variable occurrence {i}/{occurrence_count}"
+                "Next occurrence offset is {offset} (0x{offset:08X}) which is not positive for \
+                 variable occurrence {i}/{occurrence_count}"
             );
         }
 

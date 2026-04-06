@@ -1,12 +1,14 @@
 use core::fmt;
 
-use macros::{named_list_chunk, num_enum};
+use macros::named_list_chunk;
+use macros::num_enum;
 
-use crate::{
-    prelude::*,
-    util::init::{num_enum_from, vec_with_capacity},
-    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
-};
+use crate::prelude::*;
+use crate::util::init::num_enum_from;
+use crate::util::init::vec_with_capacity;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[named_list_chunk("SHDR")]
 pub struct GMShaders {
@@ -242,8 +244,9 @@ impl GMElement for GMShader {
 }
 
 /// Possible shader types a shader can have.
-/// All console shaders (and HLSL11?) are compiled using confidential SDK tools when
-/// `GMAssetCompiler` builds the game (for PSVita it's `psp2cgc` shader compiler).
+/// All console shaders (and HLSL11?) are compiled using confidential SDK tools
+/// when `GMAssetCompiler` builds the game (for PSVita it's `psp2cgc` shader
+/// compiler).
 #[num_enum(u32)]
 pub enum Type {
     GlslEs = 1,
@@ -252,9 +255,11 @@ pub enum Type {
     Hlsl11 = 4,
     /// PSSL is a shading language used only in PS4, based on HLSL11.
     Pssl = 5,
-    /// Cg stands for "C for graphics" made by NVIDIA and used in PSVita and PS3 (they have their own variants of Cg), based on HLSL9.
+    /// Cg stands for "C for graphics" made by NVIDIA and used in PSVita and PS3
+    /// (they have their own variants of Cg), based on HLSL9.
     CgPsVita = 6,
-    /// Cg stands for "C for graphics" made by NVIDIA and used in PSVita and PS3 (they have their own variants of Cg), based on HLSL9.
+    /// Cg stands for "C for graphics" made by NVIDIA and used in PSVita and PS3
+    /// (they have their own variants of Cg), based on HLSL9.
     CgPs3 = 7,
 }
 
@@ -301,9 +306,11 @@ fn read_shader_data(
 
     if expected_length < actual_length {
         if is_last && (reader.cur_pos + actual_length).is_multiple_of(16) {
-            // Normal for the last element due to chunk padding, just trust the system
+            // Normal for the last element due to chunk padding, just trust the
+            // system
         } else if !is_last && (reader.cur_pos + actual_length).is_multiple_of(8) {
-            // Normal for 8-byte alignment to occur on all elements prior to the last one
+            // Normal for 8-byte alignment to occur on all elements prior to the
+            // last one
         } else if is_last {
             bail!("{ERR_PREFIX} more data than expected. {ERR_SUFFIX}");
         } else {
@@ -315,8 +322,9 @@ fn read_shader_data(
     Ok(Some(ShaderData { data }))
 }
 
-// The element fields store `Option<ShaderData>`, so passing `Option<&ShaderData> instead
-// of `&Option<ShaderData>` would require using `.as_ref()` in every call.
+// The element fields store `Option<ShaderData>`, so passing
+// `Option<&ShaderData> instead of `&Option<ShaderData>` would require using
+// `.as_ref()` in every call.
 #[allow(clippy::ref_option)]
 fn write_shader_data(
     builder: &mut DataBuilder,

@@ -1,29 +1,29 @@
 mod data_types;
 mod reader;
 
-use std::{borrow::Cow, fmt::Display, str::FromStr};
+use std::borrow::Cow;
+use std::fmt::Display;
+use std::str::FromStr;
 
-use crate::{
-    gml::{
-        assembly::assembler::{data_types::DataTypes, reader::Reader},
-        instruction::{
-            AssetReference, CodeVariable, ComparisonType, DataType, InstanceType, Instruction,
-            PushValue, VariableType,
-        },
-    },
-    prelude::*,
-    util::fmt::typename,
-    wad::{
-        data::GMData,
-        elements::{
-            GMNamedListChunk,
-            function::{GMFunction, GMFunctions},
-            game_object::GMGameObject,
-            variable::GMVariable,
-        },
-        reference::GMRef,
-    },
-};
+use crate::gml::assembly::assembler::data_types::DataTypes;
+use crate::gml::assembly::assembler::reader::Reader;
+use crate::gml::instruction::AssetReference;
+use crate::gml::instruction::CodeVariable;
+use crate::gml::instruction::ComparisonType;
+use crate::gml::instruction::DataType;
+use crate::gml::instruction::InstanceType;
+use crate::gml::instruction::Instruction;
+use crate::gml::instruction::PushValue;
+use crate::gml::instruction::VariableType;
+use crate::prelude::*;
+use crate::util::fmt::typename;
+use crate::wad::data::GMData;
+use crate::wad::elements::GMNamedListChunk;
+use crate::wad::elements::function::GMFunction;
+use crate::wad::elements::function::GMFunctions;
+use crate::wad::elements::game_object::GMGameObject;
+use crate::wad::elements::variable::GMVariable;
+use crate::wad::reference::GMRef;
 
 /// Assembles multiple instructions separated by newline.
 /// Empty lines and lines containing only whitespace are skipped.
@@ -76,8 +76,8 @@ pub fn assemble_instruction(line: &str, gm_data: &GMData) -> Result<Instruction>
     match reader.peek_char() {
         Some(' ') => {
             reader.consume_space()?;
-        },
-        None => {},
+        }
+        None => {}
         _ => bail!("Expected space; found remaining string {line:?}"),
     }
 
@@ -104,62 +104,62 @@ fn parse_instruction(
         "conv" => {
             types.assert_count(2, mnemonic)?;
             Instruction::Convert { from: types[0], to: types[1] }
-        },
+        }
         "mul" => {
             types.assert_count(2, mnemonic)?;
             Instruction::Multiply {
                 multiplicand: types[1],
                 multiplier: types[0],
             }
-        },
+        }
         "div" => {
             types.assert_count(2, mnemonic)?;
             Instruction::Divide { dividend: types[1], divisor: types[0] }
-        },
+        }
         "rem" => {
             types.assert_count(2, mnemonic)?;
             Instruction::Remainder { dividend: types[1], divisor: types[0] }
-        },
+        }
         "mod" => {
             types.assert_count(2, mnemonic)?;
             Instruction::Modulus { dividend: types[1], divisor: types[0] }
-        },
+        }
         "add" => {
             types.assert_count(2, mnemonic)?;
             Instruction::Add { augend: types[1], addend: types[0] }
-        },
+        }
         "sub" => {
             types.assert_count(2, mnemonic)?;
             Instruction::Subtract { minuend: types[1], subtrahend: types[0] }
-        },
+        }
         "and" => {
             types.assert_count(2, mnemonic)?;
             Instruction::And { lhs: types[1], rhs: types[0] }
-        },
+        }
         "or" => {
             types.assert_count(2, mnemonic)?;
             Instruction::Or { lhs: types[1], rhs: types[0] }
-        },
+        }
         "xor" => {
             types.assert_count(2, mnemonic)?;
             Instruction::Xor { lhs: types[1], rhs: types[0] }
-        },
+        }
         "neg" => {
             types.assert_count(1, mnemonic)?;
             Instruction::Negate { data_type: types[0] }
-        },
+        }
         "not" => {
             types.assert_count(1, mnemonic)?;
             Instruction::Not { data_type: types[0] }
-        },
+        }
         "shl" => {
             types.assert_count(2, mnemonic)?;
             Instruction::ShiftLeft { value: types[1], shift_amount: types[0] }
-        },
+        }
         "shr" => {
             types.assert_count(2, mnemonic)?;
             Instruction::ShiftRight { value: types[1], shift_amount: types[0] }
-        },
+        }
         "cmp" => parse_comparison(types, reader)?,
         "pop" => {
             types.assert_count(2, mnemonic)?;
@@ -169,58 +169,58 @@ fn parse_instruction(
                 type2: types[1],
                 variable,
             }
-        },
+        }
         "popswap" => {
             types.assert_count(0, mnemonic)?;
             Instruction::PopSwap { is_array: false }
-        },
+        }
         "popswaparr" => {
             types.assert_count(0, mnemonic)?;
             Instruction::PopSwap { is_array: true }
-        },
+        }
         "dup" => parse_duplicate(types, reader)?,
         "dupswap" => parse_duplicate_swap(types, reader)?,
         "ret" => {
             types.assert_count(0, mnemonic)?;
             Instruction::Return
-        },
+        }
         "exit" => {
             types.assert_count(0, mnemonic)?;
             Instruction::Exit
-        },
+        }
         "popz" => {
             types.assert_count(1, mnemonic)?;
             Instruction::PopDiscard { data_type: types[0] }
-        },
+        }
         "jmp" => {
             types.assert_count(0, mnemonic)?;
             let jump_offset: i32 = reader.parse_int()?;
             Instruction::Branch { jump_offset }
-        },
+        }
         "jt" => {
             types.assert_count(0, mnemonic)?;
             let jump_offset: i32 = reader.parse_int()?;
             Instruction::BranchIf { jump_offset }
-        },
+        }
         "jf" => {
             types.assert_count(0, mnemonic)?;
             let jump_offset: i32 = reader.parse_int()?;
             Instruction::BranchUnless { jump_offset }
-        },
+        }
         "pushenv" => {
             types.assert_count(0, mnemonic)?;
             let jump_offset: i32 = reader.parse_int()?;
             Instruction::PushWithContext { jump_offset }
-        },
+        }
         "popenv" => {
             types.assert_count(0, mnemonic)?;
             let jump_offset: i32 = reader.parse_int()?;
             Instruction::PopWithContext { jump_offset }
-        },
+        }
         "popenvexit" => {
             types.assert_count(0, mnemonic)?;
             Instruction::PopWithContextExit
-        },
+        }
         "push" => Instruction::Push {
             value: parse_push(types, reader, gm_data)?,
         },
@@ -228,28 +228,28 @@ fn parse_instruction(
             types.assert_count(0, mnemonic)?;
             let variable = parse_variable(reader, gm_data)?;
             Instruction::PushLocal { variable }
-        },
+        }
         "pushglb" => {
             types.assert_count(0, mnemonic)?;
             let variable = parse_variable(reader, gm_data)?;
             Instruction::PushGlobal { variable }
-        },
+        }
         "pushbltn" => {
             types.assert_count(0, mnemonic)?;
             let variable = parse_variable(reader, gm_data)?;
             Instruction::PushBuiltin { variable }
-        },
+        }
         "pushim" => {
             types.assert_count(0, mnemonic)?;
             let integer: i16 = reader.parse_int()?;
             Instruction::PushImmediate { integer }
-        },
+        }
         "call" => parse_call(types, reader, gm_data)?,
         "callvar" => {
             types.assert_count(0, mnemonic)?;
             let argument_count: u16 = reader.parse_uint()?;
             Instruction::CallVariable { argument_count }
-        },
+        }
         "chkindex" => Instruction::CheckArrayIndex,
         "pushaf" => Instruction::PushArrayFinal,
         "popaf" => Instruction::PopArrayFinal,
@@ -264,7 +264,7 @@ fn parse_instruction(
             types.assert_count(0, mnemonic)?;
             let asset_reference = parse_asset_reference(reader, gm_data)?;
             Instruction::PushReference { asset_reference }
-        },
+        }
         _ => bail!("Invalid opcode mnemonic {mnemonic:?}"),
     };
 
@@ -347,7 +347,7 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
                         let mut variable: CodeVariable = parse_variable(reader, gm_data)?;
                         variable.is_int32 = true;
                         PushValue::Variable(variable)
-                    },
+                    }
                     _ => bail!(
                         "Invalid type cast {type_cast:?}; expected \"function\" or \"variable\""
                     ),
@@ -355,7 +355,7 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
             } else {
                 PushValue::Int32(parse_int(reader.clear())?)
             }
-        },
+        }
         DataType::Int64 => PushValue::Int64(parse_int(reader.clear())?),
         DataType::Double => {
             let line: &str = reader.clear();
@@ -364,7 +364,7 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
                 .ok()
                 .ok_or_else(|| format!("Invalid float literal {line:?}"))?;
             PushValue::Double(float)
-        },
+        }
         DataType::Boolean => {
             let line: &str = reader.clear();
             let bool: bool = match line {
@@ -373,11 +373,11 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
                 _ => bail!("Invalid boolean {line:?}"),
             };
             PushValue::Boolean(bool)
-        },
+        }
         DataType::String => {
             let string: String = parse_string_literal(reader)?;
             PushValue::String(string)
-        },
+        }
         DataType::Variable => PushValue::Variable(parse_variable(reader, gm_data)?),
     };
     Ok(value)
@@ -435,17 +435,17 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
             let object_ref: GMRef<GMGameObject> =
                 gm_data.game_objects.ref_by_name(instance_type_arg)?;
             InstanceType::GameObject(object_ref)
-        },
+        }
         "roominstance" => {
             variable_type = VariableType::Instance;
             let instance_id: i16 = parse_int(instance_type_arg)?;
             InstanceType::RoomInstance(instance_id)
-        },
+        }
         "local" => {
             let var_index: u32 = parse_int(instance_type_arg)?;
             variable_ref = Some(GMRef::new(var_index));
             InstanceType::Local
-        },
+        }
         "stacktop" => InstanceType::StackTop,
         "builtin" => InstanceType::Builtin,
         "global" => InstanceType::Global,
@@ -538,7 +538,7 @@ where
         Ok(int) => Ok(int),
         Err(err) => {
             bail!("Invalid {} Integer {}: {}", typename::<T>(), string, err);
-        },
+        }
     }
 }
 

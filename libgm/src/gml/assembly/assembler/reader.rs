@@ -1,9 +1,9 @@
-use std::{
-    ops::Neg,
-    str::{Chars, FromStr},
-};
+use std::ops::Neg;
+use std::str::Chars;
+use std::str::FromStr;
 
-use crate::{prelude::*, util::fmt::typename};
+use crate::prelude::*;
+use crate::util::fmt::typename;
 
 #[derive(Debug, Clone)]
 pub struct Reader<'a> {
@@ -119,7 +119,7 @@ impl<'a> Reader<'a> {
         for (i, char) in self.line.char_indices() {
             match char {
                 'a'..='z' | '0'..='9' | 'A'..='Z' | '_' => continue,
-                _ => {},
+                _ => {}
             }
 
             // Identifiers cannot be empty
@@ -170,7 +170,7 @@ impl<'a> Reader<'a> {
     fn find_non_digit(&self) -> usize {
         for (index, character) in self.line.as_bytes().iter().enumerate() {
             match character {
-                b'0'..=b'9' => {},
+                b'0'..=b'9' => {}
                 _ => return index,
             }
         }

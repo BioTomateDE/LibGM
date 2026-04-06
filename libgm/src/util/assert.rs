@@ -1,4 +1,5 @@
-use std::fmt::{Display, UpperHex};
+use std::fmt::Display;
+use std::fmt::UpperHex;
 
 use crate::prelude::*;
 

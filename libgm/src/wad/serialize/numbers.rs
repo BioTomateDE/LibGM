@@ -1,7 +1,6 @@
-use crate::{
-    prelude::*,
-    wad::{data::Endianness, serialize::builder::DataBuilder},
-};
+use crate::prelude::*;
+use crate::wad::data::Endianness;
+use crate::wad::serialize::builder::DataBuilder;
 
 macro_rules! write_int_fn {
     ($method_name:ident, $int_type:ty) => {
@@ -17,23 +16,30 @@ macro_rules! write_int_fn {
 
 impl DataBuilder<'_> {
     write_int_fn!(write_u64, u64);
+
     write_int_fn!(write_u32, u32);
+
     write_int_fn!(write_u16, u16);
+
     write_int_fn!(write_u8, u8);
 
     write_int_fn!(write_i64, i64);
+
     write_int_fn!(write_i32, i32);
+
     write_int_fn!(write_i16, i16);
+
     write_int_fn!(write_i8, i8);
 
     write_int_fn!(write_f64, f64);
+
     write_int_fn!(write_f32, f32);
 
     pub fn write_usize(&mut self, number: usize) -> Result<()> {
         let number: u32 = number.try_into().with_context_src(|| {
             format!(
-                "Number {number} (0x{number:016X}) does not \
-                fit into 32 bits while writing usize integer"
+                "Number {number} (0x{number:016X}) does not fit into 32 bits while writing usize \
+                 integer"
             )
         })?;
         self.write_u32(number);

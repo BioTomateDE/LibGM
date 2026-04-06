@@ -1,16 +1,15 @@
-//! This is THE module. All GameMaker elements are contained in these submodules.
-//! There are some traits as well which can help you with dynamic programming.
+//! This is THE module. All GameMaker elements are contained in these
+//! submodules. There are some traits as well which can help you with dynamic
+//! programming.
 
 use std::collections::HashMap;
 
-use crate::{
-    prelude::*,
-    util::fmt::typename,
-    wad::{
-        chunk::ChunkName, deserialize::reader::DataReader, reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::util::fmt::typename;
+use crate::wad::chunk::ChunkName;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
 
 pub mod animation_curve;
 pub mod audio;
@@ -54,53 +53,57 @@ pub mod variable;
 pub trait GMElement: Sized {
     /// Deserializes this element from the current position of the reader.
     ///
-    /// Implementations should read the exact binary representation of this element
-    /// and return a fully constructed instance.
+    /// Implementations should read the exact binary representation of this
+    /// element and return a fully constructed instance.
     #[doc(hidden)]
     fn deserialize(reader: &mut DataReader) -> Result<Self>;
 
     /// Serializes this element to the current position of the builder.
     ///
-    /// Implementations should write the exact binary representation of this element
-    /// in the format expected by the GameMaker runtime.
+    /// Implementations should write the exact binary representation of this
+    /// element in the format expected by the GameMaker runtime.
     #[doc(hidden)]
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()>;
 
-    /// Handles padding bytes that may appear before this element in pointer lists.
+    /// Handles padding bytes that may appear before this element in pointer
+    /// lists.
     ///
-    /// This is called before [`GMElement::deserialize`] when reading from structured data.
-    /// The default implementation does nothing - override if your element requires
-    /// alignment padding in specific contexts.
+    /// This is called before [`GMElement::deserialize`] when reading from
+    /// structured data. The default implementation does nothing - override
+    /// if your element requires alignment padding in specific contexts.
     #[doc(hidden)]
     fn deserialize_pre_padding(reader: &mut DataReader) -> Result<()> {
         Ok(())
     }
 
-    /// Writes padding bytes that may be required before this element in pointer lists.
+    /// Writes padding bytes that may be required before this element in pointer
+    /// lists.
     ///
-    /// This is called before [`GMElement::serialize`] when writing to structured data.
-    /// The default implementation does nothing - override if your element requires
-    /// alignment padding in specific contexts.
+    /// This is called before [`GMElement::serialize`] when writing to
+    /// structured data. The default implementation does nothing - override
+    /// if your element requires alignment padding in specific contexts.
     #[doc(hidden)]
     fn serialize_pre_padding(&self, builder: &mut DataBuilder) -> Result<()> {
         Ok(())
     }
 
-    /// Handles padding bytes that may appear after this element in pointer lists.
+    /// Handles padding bytes that may appear after this element in pointer
+    /// lists.
     ///
-    /// This is called after [`GMElement::deserialize`] when reading from structured data.
-    /// The `is_last` parameter indicates if this is the final element in a list,
-    /// which may affect padding requirements.
+    /// This is called after [`GMElement::deserialize`] when reading from
+    /// structured data. The `is_last` parameter indicates if this is the
+    /// final element in a list, which may affect padding requirements.
     #[doc(hidden)]
     fn deserialize_post_padding(reader: &mut DataReader, is_last: bool) -> Result<()> {
         Ok(())
     }
 
-    /// Writes padding bytes that may be required after this element in pointer lists.
+    /// Writes padding bytes that may be required after this element in pointer
+    /// lists.
     ///
-    /// This is called after [`GMElement::serialize`] when writing to structured data.
-    /// The `is_last` parameter indicates if this is the final element in a list,
-    /// which may affect padding requirements.
+    /// This is called after [`GMElement::serialize`] when writing to structured
+    /// data. The `is_last` parameter indicates if this is the final element
+    /// in a list, which may affect padding requirements.
     #[doc(hidden)]
     fn serialize_post_padding(&self, builder: &mut DataBuilder, is_last: bool) -> Result<()> {
         Ok(())
@@ -111,6 +114,7 @@ impl GMElement for u8 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_u8()
     }
+
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_u8(*self);
         Ok(())
@@ -121,6 +125,7 @@ impl GMElement for i8 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_i8()
     }
+
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i8(*self);
         Ok(())
@@ -131,6 +136,7 @@ impl GMElement for u16 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_u16()
     }
+
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_u16(*self);
         Ok(())
@@ -141,6 +147,7 @@ impl GMElement for i16 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_i16()
     }
+
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i16(*self);
         Ok(())
@@ -151,6 +158,7 @@ impl GMElement for u32 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_u32()
     }
+
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_u32(*self);
         Ok(())
@@ -161,6 +169,7 @@ impl GMElement for i32 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_i32()
     }
+
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(*self);
         Ok(())
@@ -171,6 +180,7 @@ impl GMElement for u64 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_u64()
     }
+
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_u64(*self);
         Ok(())
@@ -181,6 +191,7 @@ impl GMElement for i64 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_i64()
     }
+
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i64(*self);
         Ok(())
@@ -191,6 +202,7 @@ impl GMElement for f32 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_f32()
     }
+
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_f32(*self);
         Ok(())
@@ -201,6 +213,7 @@ impl GMElement for f64 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_f64()
     }
+
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_f64(*self);
         Ok(())
@@ -211,6 +224,7 @@ impl GMElement for bool {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_bool32()
     }
+
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_bool32(*self);
         Ok(())
@@ -276,12 +290,13 @@ pub trait GMChunk: GMElement + Default {
     /// - A chunk may be absent entirely from the file format.
     ///   > Completely gone.
     ///
-    /// Use this to distinguish between "present but empty" and "not present at all".
+    /// Use this to distinguish between "present but empty" and "not present at
+    /// all".
     fn exists(&self) -> bool;
 }
 
-/// All chunk elements that represent a collection of elements should implement this trait.
-/// The only exceptions are `GEN8` and `OPTN`.
+/// All chunk elements that represent a collection of elements should implement
+/// this trait. The only exceptions are `GEN8` and `OPTN`.
 pub trait GMListChunk: GMChunk {
     type Element: GMElement;
 
@@ -319,7 +334,8 @@ pub trait GMListChunk: GMChunk {
     fn into_iter(self) -> std::vec::IntoIter<Self::Element>;
 }
 
-/// All chunk elements that represent a collection of elements **with a unique name** should implement this trait.
+/// All chunk elements that represent a collection of elements **with a unique
+/// name** should implement this trait.
 pub trait GMNamedListChunk: GMListChunk<Element: GMNamedElement> {
     fn ref_by_name(&self, name: &str) -> Result<GMRef<Self::Element>>;
     fn by_name(&self, name: &str) -> Result<&Self::Element>;
@@ -328,7 +344,8 @@ pub trait GMNamedListChunk: GMListChunk<Element: GMNamedElement> {
 
 /// Validates all names of the root elements in this chunk.
 ///
-/// This checks for duplicates as well as names not following the proper charset.
+/// This checks for duplicates as well as names not following the proper
+/// charset.
 pub fn validate_names<T: GMNamedListChunk>(chunk: &T) -> Result<()> {
     // TODO(perf): this can probably be optimised or something
     let elements = chunk.elements();
@@ -350,8 +367,8 @@ pub fn validate_names<T: GMNamedListChunk>(chunk: &T) -> Result<()> {
         };
 
         bail!(
-            "There are multiple {} with the same name ({:?}): \
-            First at index {} and now at index {}",
+            "There are multiple {} with the same name ({:?}): First at index {} and now at index \
+             {}",
             typename::<T::Element>(),
             name,
             first_index,

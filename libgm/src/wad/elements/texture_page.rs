@@ -2,19 +2,18 @@ mod img;
 
 use std::cmp::max;
 
-pub use img::{Format, GMImage};
+pub use img::Format;
+pub use img::GMImage;
 use macros::list_chunk;
 
-use crate::{
-    prelude::*,
-    util::fmt::hexdump,
-    wad::{
-        data::Endianness,
-        deserialize::reader::DataReader,
-        elements::{GMElement, element_stub, texture_page::img::BZip2QoiHeader},
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::util::fmt::hexdump;
+use crate::wad::data::Endianness;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::element_stub;
+use crate::wad::elements::texture_page::img::BZip2QoiHeader;
+use crate::wad::serialize::builder::DataBuilder;
 
 pub(crate) const PNG_HEADER: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 pub(crate) const BZ2_QOI_HEADER: &[u8; 4] = b"2zoq";
@@ -101,7 +100,8 @@ impl GMElement for GMTexturePages {
             if builder.is_version_at_least((2022, 3)) {
                 texture_block_size_placeholders[i] = builder.len();
                 // Placeholder for texture block size. use the cached value as a fallback.
-                // unless the texture page is external, this will later be overriden by the real value.
+                // unless the texture page is external, this will later be overriden by the real
+                // value.
                 builder.write_u32(
                     texture_page
                         .texture_block_size
@@ -218,8 +218,8 @@ fn read_raw_texture(
         && expected_size != data_length
     {
         bail!(
-            "Texture Page Entry specified texture block size {expected_size}; \
-            actually read image with length {data_length}"
+            "Texture Page Entry specified texture block size {expected_size}; actually read image \
+             with length {data_length}"
         );
     }
 
@@ -397,7 +397,8 @@ fn find_end_of_bz2_search(reader: &mut DataReader, end_data_position: u32) -> Re
                 break;
             }
 
-            // We didn't find a full match yet, so we also need to progress our search position to the next bit
+            // We didn't find a full match yet, so we also need to progress our search
+            // position to the next bit
             bit_position += 1;
             if bit_position >= 8 {
                 bit_position = 0;
@@ -411,15 +412,17 @@ fn find_end_of_bz2_search(reader: &mut DataReader, end_data_position: u32) -> Re
                 (search_position + FOOTER_BYTE_LENGTH as i32) as u32;
 
             if bit_position != 7 {
-                // BZip2 footer started partway through a byte, and so it will end partway through the last byte.
-                // By the BZip2 specification, the unused bits of the last byte are essentially padding.
+                // BZip2 footer started partway through a byte, and so it will end partway
+                // through the last byte. By the BZip2 specification, the unused
+                // bits of the last byte are essentially padding.
                 end_of_bz2_stream_position += 1;
             }
 
             return Ok(start_position + end_of_bz2_stream_position);
         }
 
-        // Current search failed to make a full match, so progress to next bit, to search starting from there
+        // Current search failed to make a full match, so progress to next bit, to
+        // search starting from there
         search_start_bit_position += 1;
         if search_start_bit_position >= 8 {
             search_start_bit_position = 0;

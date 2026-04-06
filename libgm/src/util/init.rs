@@ -1,14 +1,12 @@
-use std::{
-    collections::HashMap,
-    fmt::{Display, UpperHex},
-};
+use std::collections::HashMap;
+use std::fmt::Display;
+use std::fmt::UpperHex;
 
 use num_enum::TryFromPrimitive;
 
-use crate::{
-    prelude::*,
-    util::fmt::{format_bytes, typename},
-};
+use crate::prelude::*;
+use crate::util::fmt::format_bytes;
+use crate::util::fmt::typename;
 
 pub fn vec_with_capacity<T>(count: u32) -> Result<Vec<T>> {
     const FAILSAFE_SIZE: usize = 10_000_000; // 10MB

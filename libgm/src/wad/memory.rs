@@ -1,24 +1,24 @@
-use std::{
-    collections::HashMap,
-    hash::{BuildHasher, Hash},
-};
+use std::collections::HashMap;
+use std::hash::BuildHasher;
+use std::hash::Hash;
 
-use crate::{
-    prelude::GMListChunk,
-    util::{bench::Stopwatch, fmt::format_bytes},
-    wad::GMData,
-};
+use crate::prelude::GMListChunk;
+use crate::util::bench::Stopwatch;
+use crate::util::fmt::format_bytes;
+use crate::wad::GMData;
 
 impl GMData {
     /// Tries to reduce memory footprint by shrinking `Vec`s and `HashMap`s so
     /// they don't take up unneeded space.
     ///
-    /// This function may be useful to call once after data deserialization in a long-lived application
-    /// (such as a GUI/TUI where the [`GMData`] is stored indefinitely).
-    /// It is also useful to call this function after changing formats of lots of texture pages.
+    /// This function may be useful to call once after data deserialization in a
+    /// long-lived application (such as a GUI/TUI where the [`GMData`] is
+    /// stored indefinitely). It is also useful to call this function after
+    /// changing formats of lots of texture pages.
     ///
-    /// You should probably not call this function frequently, as it consumes CPU power
-    /// and will not meaningfully shrink your memory footprint by much if called repeatedly.
+    /// You should probably not call this function frequently, as it consumes
+    /// CPU power and will not meaningfully shrink your memory footprint by
+    /// much if called repeatedly.
     ///
     /// Note: This function logs a message at the end.
     /// If you do not want this, use [`GMData::optimize_memory_silent`] instead.

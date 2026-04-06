@@ -1,13 +1,10 @@
 use std::borrow::Cow;
 
-use crate::{
-    gml::{
-        Instruction,
-        instruction::{CodeVariable, DataType},
-    },
-    prelude::GMRef,
-    wad::elements::function::GMFunction,
-};
+use crate::gml::Instruction;
+use crate::gml::instruction::CodeVariable;
+use crate::gml::instruction::DataType;
+use crate::prelude::GMRef;
+use crate::wad::elements::function::GMFunction;
 
 /// A value to push to the stack.
 /// Used in [`Push`] instructions.
@@ -34,8 +31,8 @@ impl PushValue {
     pub const fn data_type(&self) -> DataType {
         match self {
             Self::Int16(_) => DataType::Int16,
-            Self::Int32(_) | Self::Function(_) => DataType::Int32, // Functions are not a "real" gm type; they're always int32
-            Self::Variable(var) if var.is_int32 => DataType::Int32, // no idea when this happens
+            Self::Int32(_) | Self::Function(_) => DataType::Int32,
+            Self::Variable(var) if var.is_int32 => DataType::Int32,
             Self::Int64(_) => DataType::Int64,
             Self::Double(_) => DataType::Double,
             Self::Boolean(_) => DataType::Boolean,
@@ -46,7 +43,8 @@ impl PushValue {
 
     /// An approximate boolean representation for this [`PushValue`].
     ///
-    /// Warning: This function does not fully conform with the GameMaker standards (yet).
+    /// Warning: This function does not fully conform with the GameMaker
+    /// standards (yet).
     #[must_use]
     pub const fn as_bool(&self) -> Option<bool> {
         match self {
@@ -63,7 +61,7 @@ impl PushValue {
 impl Instruction {
     /// Attempts to extract a [`PushValue`] from this instruction.
     ///
-    /// This function sucks ass.
+    /// TODO(weak): This function sucks ass.
     #[must_use]
     pub(crate) fn push_value(&'_ self) -> Option<Cow<'_, PushValue>> {
         Some(match self {

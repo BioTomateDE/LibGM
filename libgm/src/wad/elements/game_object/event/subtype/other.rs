@@ -1,8 +1,8 @@
 use macros::num_enum;
 
-use crate::{
-    prelude::*, util::init::num_enum_from, wad::elements::game_object::event::EventSubtype,
-};
+use crate::prelude::*;
+use crate::util::init::num_enum_from;
+use crate::wad::elements::game_object::event::EventSubtype;
 
 /// The subtype for an [`OtherEvent`].
 #[num_enum(u32)]
@@ -34,7 +34,8 @@ pub enum Other {
     /// The path ended event.
     EndOfPath = 8,
 
-    /// The "No More Health" event. Only used in GameMaker: Studio 1 and earlier.
+    /// The "No More Health" event. Only used in GameMaker: Studio 1 and
+    /// earlier.
     NoMoreHealth = 9,
 
     // USER EVENTS

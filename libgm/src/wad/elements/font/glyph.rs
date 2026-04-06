@@ -1,11 +1,8 @@
-use crate::{
-    prelude::*,
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{GMElement, font::kerning::Kerning},
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::font::kerning::Kerning;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Glyph {
@@ -24,7 +21,8 @@ pub struct Glyph {
     /// The height of the glyph in pixels.
     pub height: u16,
 
-    /// The number of pixels to shift right when advancing to the next character.
+    /// The number of pixels to shift right when advancing to the next
+    /// character.
     pub shift_modifier: i16,
 
     /// The number of pixels to horizontally offset the rendering of this glyph.

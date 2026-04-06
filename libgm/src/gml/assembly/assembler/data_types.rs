@@ -1,6 +1,7 @@
 use std::ops::Index;
 
-use crate::{gml::instruction::DataType, prelude::*};
+use crate::gml::instruction::DataType;
+use crate::prelude::*;
 
 #[derive(Debug, Clone, Copy)]
 pub struct DataTypes(Option<DataType>, Option<DataType>);
@@ -48,6 +49,7 @@ impl DataTypes {
 /// Indexing is only meant to be used after validating the type count.
 impl Index<u8> for DataTypes {
     type Output = DataType;
+
     fn index(&self, index: u8) -> &Self::Output {
         match index {
             0 => self.0.as_ref().unwrap(),

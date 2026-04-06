@@ -1,16 +1,17 @@
-//! Contains GameMaker IDE Version types and abstractions to check and set versions.
+//! Contains GameMaker IDE Version types and abstractions to check and set
+//! versions.
 
-use std::{
-    cmp::Ordering,
-    fmt::{Display, Formatter},
-};
+use std::cmp::Ordering;
+use std::fmt::Display;
+use std::fmt::Formatter;
 
-use crate::{
-    prelude::*,
-    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 
-/// Different GameMaker release branches. LTS has some but not all features of equivalent newer versions.
+/// Different GameMaker release branches. LTS has some but not all features of
+/// equivalent newer versions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]
 pub enum LTSBranch {
     /// Before LTS was even introduced (`major < 2022`).
@@ -22,7 +23,8 @@ pub enum LTSBranch {
     LTS,
 
     /// New Version but not the Long-Term Support branch.
-    /// YoYo Games introduces all new features here, some of which may break your project.
+    /// YoYo Games introduces all new features here, some of which may break
+    /// your project.
     PostLTS,
 }
 
@@ -40,20 +42,21 @@ impl Display for LTSBranch {
 /// A GameMaker Studio Version.
 ///
 /// Theoretically, this is only the version of the IDE this game was made in.
-/// However, this version struct is also used for file format purposes in this library.
-/// This is because it is more accurate than the `WAD Version` in `GMGeneralInfo`,
-/// which is no longer updated (stuck since WAD 17).
+/// However, this version struct is also used for file format purposes in this
+/// library. This is because it is more accurate than the `WAD Version` in
+/// `GMGeneralInfo`, which is no longer updated (stuck since WAD 17).
 ///
 /// This version struct is also not updated by YoYo Games since GM:S 2 and its
 /// raw `GEN8` version is stuck on `2.0.0.0`.
-/// This library uses version detection to detect the approximate GameMaker version
-/// so that the file format can be deserialized properly.
+/// This library uses version detection to detect the approximate GameMaker
+/// version so that the file format can be deserialized properly.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 pub struct GMVersion {
     /// The most significant version part.
     /// This can be 1, 2, or a year after 2021.
     ///
-    /// If greater than 1, serialization produces "2.0.0.0" due to the flag no longer updating in `data.win`.
+    /// If greater than 1, serialization produces "2.0.0.0" due to the flag no
+    /// longer updating in `data.win`.
     pub major: u32,
 
     /// The second-most significant version part.
@@ -99,7 +102,8 @@ impl Display for GMVersion {
 }
 
 impl GMVersion {
-    // TODO(const): Make these functions `const` when Into, PartialEq and PartialOrd are const-stable.
+    // TODO(const): Make these functions `const` when Into, PartialEq and PartialOrd
+    // are const-stable.
 
     /// Checks if the current version is at least the specified version.
     ///
@@ -107,14 +111,15 @@ impl GMVersion {
     /// and also considers the branch for non-LTS versions.
     ///
     /// # Parameters
-    /// - `version_req`: The version requirement to compare against (convertible into [`GMVersionReq`]).
+    /// - `version_req`: The version requirement to compare against (convertible
+    ///   into [`GMVersionReq`]).
     ///
     /// # Returns
     /// `true` if `self` is greater than or equal to `version_req`.
     ///
     /// # Notes
-    /// You can also compare `GMVersion` against other `GMVersion`s or `GMVersionReq`s directly.
-    /// Example:
+    /// You can also compare `GMVersion` against other `GMVersion`s or
+    /// `GMVersionReq`s directly. Example:
     /// ```ignore
     /// let version_requirement: GMVersionReq = (2023, 6).into();
     /// if gm_data.general_info.version < version_requirement {
@@ -149,10 +154,12 @@ impl GMVersion {
     /// Only updates if the new version is higher than the current one.
     ///
     /// # Parameters
-    /// - `version_req`: The minimum version to set (convertible into `GMVersionReq`).
+    /// - `version_req`: The minimum version to set (convertible into
+    ///   `GMVersionReq`).
     ///
     /// # Errors
-    /// Returns an error if the requested version is not allowed (invalid major version).
+    /// Returns an error if the requested version is not allowed (invalid major
+    /// version).
     ///
     /// # Notes
     /// Setting a non-LTS version updates the branch accordingly.
@@ -161,8 +168,8 @@ impl GMVersion {
         if !matches!(new_ver.major, 2 | 2022..=2026) {
             let comment = if new_ver.major > 2026 && new_ver.major < 2100 {
                 format!(
-                    "! If the current year is {} or greater, please contact the \
-                    maintainer of this project to update the version validation.",
+                    "! If the current year is {} or greater, please contact the maintainer of \
+                     this project to update the version validation.",
                     new_ver.major
                 )
             } else {
@@ -200,7 +207,7 @@ impl PartialOrd<GMVersionReq> for GMVersion {
         macro_rules! cmp {
             ($part:ident) => {
                 match self.$part.cmp(&req.$part) {
-                    Ordering::Equal => {},
+                    Ordering::Equal => {}
                     other => return Some(other),
                 }
             };
@@ -221,7 +228,8 @@ impl GMElement for GMVersion {
         let minor = reader.read_u32()?;
         let release = reader.read_u32()?;
         let build = reader.read_u32()?;
-        // Since the GEN8 Version is stuck on maximum 2.0.0.0; LTS will (initially) always be PreLTS
+        // Since the GEN8 Version is stuck on maximum 2.0.0.0; LTS will (initially)
+        // always be PreLTS
         Ok(Self::new(major, minor, release, build, LTSBranch::PreLTS))
     }
 
@@ -234,7 +242,8 @@ impl GMElement for GMVersion {
     }
 }
 
-/// A GameMaker Version Requirement for checking if the game's version is equal to or higher than x.
+/// A GameMaker Version Requirement for checking if the game's version is equal
+/// to or higher than x.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMVersionReq {
     /// The most significant version part.
@@ -256,6 +265,8 @@ pub struct GMVersionReq {
 }
 
 impl GMVersionReq {
+    pub const NONE: Self = Self::new(0, 0, 0, 0, LTSBranch::PreLTS);
+
     /// Creates a new [`GMVersionReq`] with the given fields.
     ///
     /// You can also construct this type by converting
@@ -265,8 +276,6 @@ impl GMVersionReq {
         let post_lts: bool = matches!(lts, LTSBranch::PostLTS);
         Self { major, minor, release, build, post_lts }
     }
-
-    pub const NONE: Self = Self::new(0, 0, 0, 0, LTSBranch::PreLTS);
 }
 
 impl From<(u32, u32)> for GMVersionReq {
@@ -364,6 +373,6 @@ fn write_version(
         (minor, release, 0) => write!(f, ".{minor}.{release}"),
         (minor, release, build) => {
             write!(f, ".{minor}.{release}.{build}")
-        },
+        }
     }
 }

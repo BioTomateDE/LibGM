@@ -1,8 +1,8 @@
 use macros::num_enum;
 
-use crate::{
-    prelude::*, util::init::num_enum_from, wad::elements::game_object::event::EventSubtype,
-};
+use crate::prelude::*;
+use crate::util::init::num_enum_from;
+use crate::wad::elements::game_object::event::EventSubtype;
 
 /// The subtype for [`EventType::Gesture`].
 #[num_enum(u32)]
@@ -101,7 +101,8 @@ impl Gesture {
     ///
     /// "Normal" (non-global) events only get triggered when the gesture
     /// collides with the collision box of the game object instance,
-    /// Global events **always** get triggered; even if the gesture position is far away.
+    /// Global events **always** get triggered; even if the gesture position is
+    /// far away.
     #[must_use]
     pub const fn is_global(self) -> bool {
         match self {

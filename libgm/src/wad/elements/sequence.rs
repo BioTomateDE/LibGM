@@ -2,15 +2,19 @@ pub mod track;
 
 use std::collections::HashMap;
 
-use macros::{named_list_chunk, num_enum};
+use macros::named_list_chunk;
+use macros::num_enum;
 pub use track::Track;
-use track::keyframe::{self, BroadcastMessage, Moment};
+use track::keyframe::BroadcastMessage;
+use track::keyframe::Moment;
+use track::keyframe::{self};
 
-use crate::{
-    prelude::*,
-    util::init::{hashmap_with_capacity, num_enum_from},
-    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
-};
+use crate::prelude::*;
+use crate::util::init::hashmap_with_capacity;
+use crate::util::init::num_enum_from;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 
 /// This struct belong to the chunk SEQN.
 /// Sprites can _also_ contain sequences (not by reference; the actual data).

@@ -1,14 +1,11 @@
 use macros::named_list_chunk;
 
-use crate::{
-    prelude::*,
-    util::init::vec_with_capacity,
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{GMElement, game_object},
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::util::init::vec_with_capacity;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::game_object;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[named_list_chunk("TMLN")]
 pub struct GMTimelines {

@@ -1,13 +1,10 @@
-use crate::{
-    prelude::*,
-    util::bench::Stopwatch,
-    wad::{
-        chunk::ChunkName,
-        data::Endianness,
-        elements::GMChunk,
-        serialize::builder::{DataBuilder, LastChunk},
-    },
-};
+use crate::prelude::*;
+use crate::util::bench::Stopwatch;
+use crate::wad::chunk::ChunkName;
+use crate::wad::data::Endianness;
+use crate::wad::elements::GMChunk;
+use crate::wad::serialize::builder::DataBuilder;
+use crate::wad::serialize::builder::LastChunk;
 
 impl DataBuilder<'_> {
     /// Write a 4 character ASCII GameMaker chunk name.
@@ -26,7 +23,8 @@ impl DataBuilder<'_> {
     /// Skips the chunk if the element does not exist.
     ///
     /// Appends padding if required by the GameMaker version.
-    /// This padding has to then be manually cut off for the last chunk in the data file.
+    /// This padding has to then be manually cut off for the last chunk in the
+    /// data file.
     pub fn build_chunk<T: GMChunk>(&mut self, element: &T) -> Result<()> {
         let name: ChunkName = T::NAME;
         if !element.exists() {

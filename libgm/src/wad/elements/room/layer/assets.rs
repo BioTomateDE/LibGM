@@ -8,15 +8,12 @@ pub use sequence::SequenceInstance;
 pub use sprite::SpriteInstance;
 pub use text_item::TextItemInstance;
 
-use crate::{
-    prelude::*,
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{GMElement, room::tile::Tile},
-        serialize::builder::DataBuilder,
-        version::LTSBranch,
-    },
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::room::tile::Tile;
+use crate::wad::serialize::builder::DataBuilder;
+use crate::wad::version::LTSBranch;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Assets {

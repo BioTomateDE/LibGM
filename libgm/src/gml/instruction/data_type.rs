@@ -7,10 +7,10 @@ use macros::num_enum;
 /// All of those are represented as [`DataType::Int32`].
 ///
 /// The `variable` type is a bit weird, since it does not have
-/// to actually be tied to a variable and is also not usable as a pointer/reference.
-/// For example, you can (and will have to) convert pushed constant integers
-/// into the [`DataType::Variable`] type using the [`Convert`] instruction,
-/// even if that value is not even tied to an actual variable.
+/// to actually be tied to a variable and is also not usable as a
+/// pointer/reference. For example, you can (and will have to) convert pushed
+/// constant integers into the [`DataType::Variable`] type using the [`Convert`]
+/// instruction, even if that value is not even tied to an actual variable.
 /// TODO(doc): Please conduct more research on this and improve these docs.
 ///
 /// Another notable thing is that [`DataType::Int16`] is only valid for
@@ -19,9 +19,10 @@ use macros::num_enum;
 /// Therefore, an `Int16` never actually exists on the stack and all
 /// other instructions using this data type would be malformed.
 ///
-/// Yet another notable thing is that there theoretically exists (or used to exist?)
-/// a data type for single precision scalar floating point value (`Float`) with raw value 1.
-/// However, it seems to be unused since YoYoGames prefers using `Double` instead.
+/// Yet another notable thing is that there theoretically exists (or used to
+/// exist?) a data type for single precision scalar floating point value
+/// (`Float`) with raw value 1. However, it seems to be unused since YoYoGames
+/// prefers using `Double` instead.
 ///
 /// [`AssetReference`]: crate::gml::instruction::AssetReference
 /// [`Convert`]: crate::gml::Instruction::Convert
@@ -35,7 +36,6 @@ pub enum DataType {
 
     // /// Does not really exist for some reason?
     // Float = 1,
-    //
     /// 32-bit signed integer.
     /// - Size on VM Stack: 4 bytes.
     Int32 = 2,
@@ -61,13 +61,15 @@ pub enum DataType {
     /// - Size on VM Stack: 4 bytes.
     /// > **Note**: `Int16` is not a valid data type on the VM Stack.
     ///
-    /// It is immediately converted to `Int32` when pushing and is thus 4 bytes wide.
+    /// It is immediately converted to `Int32` when pushing and is thus 4 bytes
+    /// wide.
     Int16 = 15,
 }
 
 impl DataType {
-    /// The size of a value of this data type on the VM Stack, in multiples of 4 bytes.
-    /// This is the unit used in `jump_offset` of branch instructions.
+    /// The size of a value of this data type on the VM Stack, in multiples of 4
+    /// bytes. This is the unit used in `jump_offset` of branch
+    /// instructions.
     #[must_use]
     pub const fn size4(self) -> u32 {
         match self {

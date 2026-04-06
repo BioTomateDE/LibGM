@@ -1,15 +1,13 @@
-use macros::{named_list_chunk, num_enum};
+use macros::named_list_chunk;
+use macros::num_enum;
 
-use crate::{
-    prelude::*,
-    util::init::num_enum_from,
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{GMElement, sprite::GMSprite},
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::util::init::num_enum_from;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::sprite::GMSprite;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[named_list_chunk("PSEM")]
 pub struct GMParticleEmitters {

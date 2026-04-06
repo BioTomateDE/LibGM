@@ -2,24 +2,27 @@ use std::collections::HashMap;
 
 use macros::named_list_chunk;
 
-use crate::{
-    gml::{
-        GMCode, ModernData,
-        instruction::{
-            AssetReference, CodeVariable, ComparisonType, DataType, InstanceType, Instruction,
-            PushValue, VariableType,
-        },
-        opcodes,
-    },
-    prelude::*,
-    util::init::{num_enum_from, vec_with_capacity},
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{GMElement, element_stub, function::GMFunction, variable::GMVariable},
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::gml::GMCode;
+use crate::gml::ModernData;
+use crate::gml::instruction::AssetReference;
+use crate::gml::instruction::CodeVariable;
+use crate::gml::instruction::ComparisonType;
+use crate::gml::instruction::DataType;
+use crate::gml::instruction::InstanceType;
+use crate::gml::instruction::Instruction;
+use crate::gml::instruction::PushValue;
+use crate::gml::instruction::VariableType;
+use crate::gml::opcodes;
+use crate::prelude::*;
+use crate::util::init::num_enum_from;
+use crate::util::init::vec_with_capacity;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::element_stub;
+use crate::wad::elements::function::GMFunction;
+use crate::wad::elements::variable::GMVariable;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[named_list_chunk("CODE", name_exception)]
 pub struct GMCodes {
@@ -115,7 +118,8 @@ impl GMElement for GMCodes {
             code.instructions = vec_with_capacity(length / 5)?;
 
             if length > 0 {
-                // Update information to mark this entry as the root (if we have at least 1 instruction)
+                // Update information to mark this entry as the root (if we have at least 1
+                // instruction)
                 codes_by_pos.insert(start, i.into());
             }
 
@@ -136,7 +140,8 @@ impl GMElement for GMCodes {
         }
 
         reader.cur_pos = last_code_entry_pos;
-        // Set pos to the supposed chunk end (since instructions are stored separately in WAD15+)
+        // Set pos to the supposed chunk end (since instructions are stored separately
+        // in WAD15+)
 
         Ok(Self { codes, exists: true })
     }
@@ -175,7 +180,8 @@ impl GMElement for GMCodes {
 
         for (i, code) in self.codes.iter().enumerate() {
             if code.modern_data.as_ref().unwrap().parent.is_some() {
-                // If this is a child code entry, don't write instructions; just repeat last pointer
+                // If this is a child code entry, don't write instructions; just repeat last
+                // pointer
                 let prev_range = instructions_ranges
                     .last()
                     .ok_or("First code entry is a child code entry")?;
@@ -236,7 +242,8 @@ impl GMElement for Instruction {
             opcode = opcodes::old_to_new(opcode);
         }
 
-        // log::debug!("{} // {:02X} {:02X} {:02X} {:02X}", reader.cur_pos-4, b[0], b[1], b[2], opcode);
+        // log::debug!("{} // {:02X} {:02X} {:02X} {:02X}", reader.cur_pos-4, b[0],
+        // b[1], b[2], opcode);
 
         Ok(match opcode {
             opcodes::CONV => {
@@ -244,7 +251,7 @@ impl GMElement for Instruction {
                     .parse_double_type(b)
                     .context("parsing Convert Instruction")?;
                 Self::Convert { from: types[0], to: types[1] }
-            },
+            }
             opcodes::MUL => {
                 let types = reader
                     .parse_double_type(b)
@@ -253,79 +260,79 @@ impl GMElement for Instruction {
                     multiplicand: types[1],
                     multiplier: types[0],
                 }
-            },
+            }
             opcodes::DIV => {
                 let types = reader
                     .parse_double_type(b)
                     .context("parsing Divide Instruction")?;
                 Self::Divide { dividend: types[1], divisor: types[0] }
-            },
+            }
             opcodes::REM => {
                 let types = reader
                     .parse_double_type(b)
                     .context("parsing Remainder Instruction")?;
                 Self::Remainder { dividend: types[1], divisor: types[0] }
-            },
+            }
             opcodes::MOD => {
                 let types = reader
                     .parse_double_type(b)
                     .context("parsing Modulus Instruction")?;
                 Self::Modulus { dividend: types[1], divisor: types[0] }
-            },
+            }
             opcodes::ADD => {
                 let types = reader
                     .parse_double_type(b)
                     .context("parsing Add Instruction")?;
                 Self::Add { augend: types[1], addend: types[0] }
-            },
+            }
             opcodes::SUB => {
                 let types = reader
                     .parse_double_type(b)
                     .context("parsing Subtract Instruction")?;
                 Self::Subtract { minuend: types[1], subtrahend: types[0] }
-            },
+            }
             opcodes::AND => {
                 let types = reader
                     .parse_double_type(b)
                     .context("parsing And Instruction")?;
                 Self::And { lhs: types[1], rhs: types[0] }
-            },
+            }
             opcodes::OR => {
                 let types = reader
                     .parse_double_type(b)
                     .context("parsing Or Instruction")?;
                 Self::Or { lhs: types[1], rhs: types[0] }
-            },
+            }
             opcodes::XOR => {
                 let types = reader
                     .parse_double_type(b)
                     .context("parsing Xor Instruction")?;
                 Self::Xor { lhs: types[1], rhs: types[0] }
-            },
+            }
             opcodes::NEG => {
                 let data_type = reader
                     .parse_single_type(b)
                     .context("parsing Negate Instruction")?;
                 Self::Negate { data_type }
-            },
+            }
             opcodes::NOT => {
                 let data_type = reader
                     .parse_single_type(b)
                     .context("parsing Not Instruction")?;
                 Self::Not { data_type }
-            },
+            }
             opcodes::SHL => {
                 let types = reader
                     .parse_double_type(b)
                     .context("parsing ShiftLeft instruction")?;
                 Self::ShiftLeft { value: types[1], shift_amount: types[0] }
-            },
+            }
             opcodes::SHR => {
                 let types = reader
                     .parse_double_type(b)
                     .context("parsing ShiftRight Instruction")?;
                 Self::ShiftRight { value: types[1], shift_amount: types[0] }
-            },
+            }
             opcodes::CMP => reader
                 .parse_comparison(b)
                 .context("parsing Comparison Instruction")?,
@@ -340,7 +347,7 @@ impl GMElement for Instruction {
                     .assert_type(DataType::Variable, data_type)
                     .context(ctx)?;
                 Self::Return
-            },
+            }
             opcodes::EXIT => {
                 let ctx = "parsing Exit Instruction";
                 let data_type = reader.parse_single_type(b).context(ctx)?;
@@ -348,13 +355,13 @@ impl GMElement for Instruction {
                     .assert_type(DataType::Int32, data_type)
                     .context(ctx)?;
                 Self::Exit
-            },
+            }
             opcodes::POPZ => {
                 let data_type = reader
                     .parse_single_type(b)
                     .context("parsing PopDiscard Instruction")?;
                 Self::PopDiscard { data_type }
-            },
+            }
             opcodes::JMP => Self::Branch { jump_offset: reader.parse_branch(b) },
             opcodes::JT => Self::BranchIf { jump_offset: reader.parse_branch(b) },
             opcodes::JF => Self::BranchUnless { jump_offset: reader.parse_branch(b) },
@@ -364,38 +371,38 @@ impl GMElement for Instruction {
             opcodes::PUSH => {
                 let value = reader.parse_push(b).context("parsing Push Instruction")?;
                 Self::Push { value }
-            },
+            }
             opcodes::PUSHLOC => {
                 let variable = reader
                     .parse_push_var(b)
                     .context("parsing PushLocal Instruction")?;
                 Self::PushLocal { variable }
-            },
+            }
             opcodes::PUSHGLB => {
                 let variable = reader
                     .parse_push_var(b)
                     .context("parsing PushGlobal Instruction")?;
                 Self::PushGlobal { variable }
-            },
+            }
             opcodes::PUSHBLTN => {
                 let variable = reader
                     .parse_push_var(b)
                     .context("parsing PushBuiltin Instruction")?;
                 Self::PushBuiltin { variable }
-            },
+            }
             opcodes::PUSHIM => {
                 let integer = reader
                     .parse_pushim(b)
                     .context("parsing PushImmediate Instruction")?;
                 Self::PushImmediate { integer }
-            },
+            }
             opcodes::CALL => reader.parse_call(b).context("parsing Call Instruction")?,
             opcodes::CALLVAR => {
                 let argument_count = reader
                     .parse_callvar(b)
                     .context("parsing CallVariable Instruction")?;
                 Self::CallVariable { argument_count }
-            },
+            }
             opcodes::EXTENDED => reader
                 .parse_extended(b)
                 .context("parsing Extended Instruction")?,
@@ -414,7 +421,7 @@ impl GMElement for Instruction {
             | &Self::Not { data_type }
             | &Self::PopDiscard { data_type } => {
                 build_single_type(builder, opcode, data_type);
-            },
+            }
 
             &Self::Convert { from: type1, to: type2 }
             | &Self::Multiply { multiplicand: type2, multiplier: type1 }
@@ -429,26 +436,26 @@ impl GMElement for Instruction {
             | &Self::ShiftLeft { value: type2, shift_amount: type1 }
             | &Self::ShiftRight { value: type2, shift_amount: type1 } => {
                 build_double_type(builder, opcode, type1, type2);
-            },
+            }
 
             &Self::Compare { lhs, rhs, comparison_type } => {
                 build_comparison(builder, opcode, rhs, lhs, comparison_type);
-            },
+            }
             Self::Pop { variable, type1, type2 } => {
                 build_pop(builder, opcode, variable, *type1, *type2)?;
-            },
+            }
             &Self::PopSwap { is_array } => {
                 build_popswap(builder, opcode, is_array);
-            },
+            }
             &Self::Duplicate { data_type, size } => {
                 build_duplicate(builder, opcode, data_type, size);
-            },
+            }
             &Self::DuplicateSwap { data_type, size1, size2 } => {
                 build_dupswap(builder, opcode, data_type, size1, size2);
-            },
+            }
             Self::Return => {
                 build_single_type(builder, opcode, DataType::Variable);
-            },
+            }
             Self::Exit => build_single_type(builder, opcode, DataType::Int32),
 
             &Self::Branch { jump_offset }
@@ -457,56 +464,56 @@ impl GMElement for Instruction {
             | &Self::PushWithContext { jump_offset }
             | &Self::PopWithContext { jump_offset } => {
                 build_branch(builder, opcode, jump_offset);
-            },
+            }
             Self::PopWithContextExit => build_popenv_exit(builder, opcode),
             Self::Push { value } => build_push(builder, opcode, value)?,
             Self::PushLocal { variable }
             | Self::PushGlobal { variable }
             | Self::PushBuiltin { variable } => {
                 build_pushvar(builder, opcode, variable)?;
-            },
+            }
             &Self::PushImmediate { integer } => {
                 build_pushim(builder, opcode, integer);
-            },
+            }
             &Self::Call { function, argument_count } => {
                 build_call(builder, opcode, function, argument_count)?;
-            },
+            }
             &Self::CallVariable { argument_count } => {
                 build_callvar(builder, opcode, argument_count);
-            },
+            }
             Self::CheckArrayIndex => {
                 build_extended16(builder, opcodes::extended::CHKINDEX);
-            },
+            }
             Self::PushArrayFinal => {
                 build_extended16(builder, opcodes::extended::PUSHAF);
-            },
+            }
             Self::PopArrayFinal => {
                 build_extended16(builder, opcodes::extended::POPAF);
-            },
+            }
             Self::PushArrayContainer => {
                 build_extended16(builder, opcodes::extended::PUSHAC);
-            },
+            }
             Self::SetArrayOwner => {
                 build_extended16(builder, opcodes::extended::SETOWNER);
-            },
+            }
             Self::HasStaticInitialized => {
                 build_extended16(builder, opcodes::extended::ISSTATICOK);
-            },
+            }
             Self::SetStaticInitialized => {
                 build_extended16(builder, opcodes::extended::SETSTATIC);
-            },
+            }
             Self::SaveArrayReference => {
                 build_extended16(builder, opcodes::extended::SAVEAREF);
-            },
+            }
             Self::RestoreArrayReference => {
                 build_extended16(builder, opcodes::extended::RESTOREAREF);
-            },
+            }
             Self::IsNullishValue => {
                 build_extended16(builder, opcodes::extended::ISNULLISH);
-            },
+            }
             Self::PushReference { asset_reference } => {
                 build_pushref(builder, *asset_reference)?;
-            },
+            }
         }
         Ok(())
     }
@@ -589,7 +596,8 @@ impl DataReader<'_> {
                 5 => false,
                 6 => true,
                 n => bail!(
-                    "Expected 5 or 6 for \"instance type\" (aka SwapExtra) of PopSwap Instruction, got {n}"
+                    "Expected 5 or 6 for \"instance type\" (aka SwapExtra) of PopSwap \
+                     Instruction, got {n}"
                 ),
             };
             return Ok(Instruction::PopSwap { is_array });
@@ -650,7 +658,7 @@ impl DataReader<'_> {
                 }
 
                 self.read_i32().map(PushValue::Int32)
-            },
+            }
             DataType::Int64 => self.read_i64().map(PushValue::Int64),
             DataType::Double => self.read_f64().map(PushValue::Double),
             DataType::Boolean => self.read_bool32().map(PushValue::Boolean),
@@ -662,7 +670,7 @@ impl DataReader<'_> {
                     .get(index)
                     .ok_or_else(|| format!("String ID is out of range: {index} >= {len}"))?;
                 Ok(PushValue::String(string.clone()))
-            },
+            }
             DataType::Variable => read_variable(self, int16).map(PushValue::Variable),
         }
     }
@@ -696,7 +704,8 @@ impl DataReader<'_> {
             .get(&(self.cur_pos))
             .ok_or_else(|| {
                 format!(
-                    "Could not find any function with absolute occurrence position {} in map with length {} while parsing Call Instruction",
+                    "Could not find any function with absolute occurrence position {} in map with \
+                     length {} while parsing Call Instruction",
                     self.cur_pos,
                     self.function_occurrences.len(),
                 )
@@ -716,7 +725,8 @@ impl DataReader<'_> {
     }
 
     fn parse_extended(&mut self, b: [u8; 3]) -> Result<Instruction> {
-        use DataType::{Int16, Int32};
+        use DataType::Int16;
+        use DataType::Int32;
         #[allow(clippy::wildcard_imports)]
         use opcodes::extended::*;
 
@@ -739,7 +749,7 @@ impl DataReader<'_> {
                 let asset_reference = AssetReference::deserialize(self)
                     .context("parsing PushReference Extended Instruction")?;
                 Instruction::PushReference { asset_reference }
-            },
+            }
             _ => bail!("Invalid Extended Instruction with data type {data_type:?} and kind {kind}"),
         };
 
@@ -848,14 +858,14 @@ fn build_push(builder: &mut DataBuilder, opcode: u8, value: &PushValue) -> Resul
     builder.write_u8(opcode);
 
     match value {
-        PushValue::Int16(_) => {}, // Nothing because it was already written inside the instruction
+        PushValue::Int16(_) => {} // Nothing because it was already written inside the instruction
         PushValue::Int32(int32) => builder.write_i32(*int32),
         PushValue::Int64(int64) => builder.write_i64(*int64),
         PushValue::Double(double) => builder.write_f64(*double),
         PushValue::Boolean(boolean) => builder.write_bool32(*boolean),
         PushValue::String(string) => {
             builder.write_gm_string_id(string.clone());
-        },
+        }
         PushValue::Variable(code_variable) => {
             write_variable_occurrence(
                 builder,
@@ -863,10 +873,10 @@ fn build_push(builder: &mut DataBuilder, opcode: u8, value: &PushValue) -> Resul
                 instr_pos,
                 code_variable.variable_type,
             )?;
-        },
+        }
         PushValue::Function(func_ref) => {
             write_function_occurrence(builder, func_ref.index, instr_pos)?;
-        },
+        }
     }
     Ok(())
 }
@@ -1056,7 +1066,8 @@ fn write_function_occurrence(
 
     // Technically it should write the name string id here.
     // Since i no longer store string ids though, this is impossible.
-    // It doesn't seem to be an issue though, this value is probably unused by the runner anyway.
+    // It doesn't seem to be an issue though, this value is probably unused by the
+    // runner anyway.
     builder.write_u32(420);
 
     builder
@@ -1067,9 +1078,9 @@ fn write_function_occurrence(
     Ok(())
 }
 
-/// Check whether this data file was generated with `YYC` (`YoYoGames Compiler`).
-/// Should that be the case, the `CODE`, `VARI` and `FUNC` chunks will be empty
-/// (or not exist, depending on the WAD version).
+/// Check whether this data file was generated with `YYC` (`YoYoGames
+/// Compiler`). Should that be the case, the `CODE`, `VARI` and `FUNC` chunks
+/// will be empty (or not exist, depending on the WAD version).
 /// NOTE: YYC is untested. Issues may occur.
 pub(crate) fn check_yyc(reader: &DataReader) -> Result<bool> {
     // If the CODE chunk doesn't exist; the data file was compiled with YYC.

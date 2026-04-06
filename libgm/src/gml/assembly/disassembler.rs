@@ -1,22 +1,21 @@
-use crate::{
-    gml::{
-        GMCode,
-        instruction::{
-            AssetReference, CodeVariable, ComparisonType, DataType, InstanceType, Instruction,
-            PushValue, VariableType,
-        },
-    },
-    prelude::*,
-    util::fmt::typename,
-    wad::{
-        data::GMData,
-        elements::{
-            GMListChunk, GMNamedElement, function::GMFunction, game_object::GMGameObject,
-            variable::GMVariable,
-        },
-        reference::GMRef,
-    },
-};
+use crate::gml::GMCode;
+use crate::gml::instruction::AssetReference;
+use crate::gml::instruction::CodeVariable;
+use crate::gml::instruction::ComparisonType;
+use crate::gml::instruction::DataType;
+use crate::gml::instruction::InstanceType;
+use crate::gml::instruction::Instruction;
+use crate::gml::instruction::PushValue;
+use crate::gml::instruction::VariableType;
+use crate::prelude::*;
+use crate::util::fmt::typename;
+use crate::wad::data::GMData;
+use crate::wad::elements::GMListChunk;
+use crate::wad::elements::GMNamedElement;
+use crate::wad::elements::function::GMFunction;
+use crate::wad::elements::game_object::GMGameObject;
+use crate::wad::elements::variable::GMVariable;
+use crate::wad::reference::GMRef;
 
 macro_rules! write {
     ($buffer:ident, $($args:tt)*) => {{
@@ -42,7 +41,8 @@ fn slice_instructions_by_bytes(
     }
     if offset != start_offset {
         bail!(
-            "Given start byte offset {start_offset} is misaligned (reached offset {offset} instead)"
+            "Given start byte offset {start_offset} is misaligned (reached offset {offset} \
+             instead)"
         );
     }
     Ok(&instructions[index..])
@@ -51,12 +51,14 @@ fn slice_instructions_by_bytes(
 /// Disassembles a code entry's instructions.
 ///
 /// This function mostly exists for convenience since it is short to write
-/// `disassemble_code(code, data)` instead of `disassemble_instructions(&code.instructions, data)`.
+/// `disassemble_code(code, data)` instead of
+/// `disassemble_instructions(&code.instructions, data)`.
 ///
 /// However, it *does* have one behavioral difference:
 /// It correctly disassembles child code entries by looking up
 /// the instructions in the specified parent code and slicing them.
-/// This is needed since the `instructions` field for child code entries is always empty.
+/// This is needed since the `instructions` field for child code entries is
+/// always empty.
 ///
 /// TODO: Maybe certain directives can be added in the future
 /// to identify the code entry name as well as local and argument count.
@@ -86,8 +88,9 @@ pub fn disassemble_code(code: &GMCode, gm_data: &GMData) -> Result<String> {
 
 /// Disassembles multiple instructions and joins the instructions by newline.
 ///
-/// If you need to handle child code entries correctly, consider using [`disassemble_code`].
-/// Otherwise, an empty string will be returned (since child code entries store no instructions).
+/// If you need to handle child code entries correctly, consider using
+/// [`disassemble_code`]. Otherwise, an empty string will be returned (since
+/// child code entries store no instructions).
 pub fn disassemble_instructions(instructions: &[Instruction], gm_data: &GMData) -> Result<String> {
     let mut assembly: String = String::new();
 
@@ -106,7 +109,8 @@ pub fn disassemble_instruction(instruction: &Instruction, gm_data: &GMData) -> R
     Ok(buffer)
 }
 
-/// Disassembles a single instruction into one line, appending the assembly string to a buffer.
+/// Disassembles a single instruction into one line, appending the assembly
+/// string to a buffer.
 #[allow(clippy::too_many_lines)]
 pub fn disassemble_instruction_to_buffer(
     buffer: &mut String,
@@ -131,21 +135,21 @@ pub fn disassemble_instruction_to_buffer(
         | Instruction::RestoreArrayReference
         | Instruction::IsNullishValue => {
             buffer.push_str(mnemonic);
-        },
+        }
 
         Instruction::Negate { data_type }
         | Instruction::Not { data_type }
         | Instruction::PopDiscard { data_type } => {
             write!(buffer, "{}.{}", mnemonic, data_type.char());
-        },
+        }
 
         Instruction::CallVariable { argument_count } => {
             write!(buffer, "{mnemonic} {argument_count}");
-        },
+        }
 
         Instruction::Duplicate { data_type, size } => {
             write!(buffer, "{}.{} {}", mnemonic, data_type.char(), size);
-        },
+        }
 
         Instruction::DuplicateSwap { data_type, size1, size2 } => {
             write!(
@@ -156,7 +160,7 @@ pub fn disassemble_instruction_to_buffer(
                 size1,
                 size2,
             );
-        },
+        }
 
         Instruction::Branch { jump_offset }
         | Instruction::BranchIf { jump_offset }
@@ -164,7 +168,7 @@ pub fn disassemble_instruction_to_buffer(
         | Instruction::PushWithContext { jump_offset }
         | Instruction::PopWithContext { jump_offset } => {
             write!(buffer, "{mnemonic} {jump_offset}");
-        },
+        }
 
         Instruction::Convert { from: type1, to: type2 }
         | Instruction::Multiply { multiplicand: type2, multiplier: type1 }
@@ -179,7 +183,7 @@ pub fn disassemble_instruction_to_buffer(
         | Instruction::ShiftLeft { value: type2, shift_amount: type1 }
         | Instruction::ShiftRight { value: type2, shift_amount: type1 } => {
             write!(buffer, "{}.{}.{}", mnemonic, type1.char(), type2.char());
-        },
+        }
 
         Instruction::Compare { lhs, rhs, comparison_type } => {
             write!(
@@ -190,27 +194,27 @@ pub fn disassemble_instruction_to_buffer(
                 lhs.char(),
                 comparison_type.to_str(),
             );
-        },
+        }
 
         Instruction::Pop { variable, type1, type2 } => {
             write!(buffer, "{}.{}.{} ", mnemonic, type1.char(), type2.char());
             write_variable(variable, buffer, gm_data)?;
-        },
+        }
 
         Instruction::Push { value } => {
             write!(buffer, "{}.{} ", mnemonic, value.data_type().char());
             write_push_instruction(value, buffer, gm_data)?;
-        },
+        }
         Instruction::PushLocal { variable }
         | Instruction::PushGlobal { variable }
         | Instruction::PushBuiltin { variable } => {
             write!(buffer, "{mnemonic} ");
             write_variable(variable, buffer, gm_data)?;
-        },
+        }
 
         Instruction::PushImmediate { integer } => {
             write!(buffer, "{mnemonic} {integer}");
-        },
+        }
 
         &Instruction::Call { function, argument_count } => {
             write!(
@@ -220,12 +224,12 @@ pub fn disassemble_instruction_to_buffer(
                 resolve_function_name(function, gm_data)?,
                 argument_count,
             );
-        },
+        }
 
         Instruction::PushReference { asset_reference } => {
             write!(buffer, "{mnemonic} ");
             write_asset_reference(*asset_reference, buffer, gm_data)?;
-        },
+        }
     }
 
     Ok(())
@@ -332,33 +336,33 @@ fn write_push_instruction(value: &PushValue, buffer: &mut String, gm_data: &GMDa
     match value {
         PushValue::Variable(code_variable) => {
             write_variable(code_variable, buffer, gm_data)?;
-        },
+        }
         PushValue::Boolean(true) => {
             write!(buffer, "true");
-        },
+        }
         PushValue::Boolean(false) => {
             write!(buffer, "false");
-        },
+        }
         PushValue::Function(function_ref) => {
             write!(
                 buffer,
                 "(function){}",
                 resolve_function_name(*function_ref, gm_data)?
             );
-        },
+        }
         PushValue::String(string) => write_literal_string(string, buffer),
         PushValue::Int16(integer) => {
             write!(buffer, "{integer}");
-        },
+        }
         PushValue::Int32(integer) => {
             write!(buffer, "{integer}");
-        },
+        }
         PushValue::Int64(integer) => {
             write!(buffer, "{integer}");
-        },
+        }
         PushValue::Double(float) => {
             write!(buffer, "{float}");
-        },
+        }
     }
     Ok(())
 }
@@ -393,89 +397,89 @@ fn write_asset_reference(
                 "(object){}",
                 asset_get_name(&gm_data.game_objects, gm_ref)?
             );
-        },
+        }
         AssetReference::Sprite(gm_ref) => {
             write!(
                 buffer,
                 "(sprite){}",
                 asset_get_name(&gm_data.sprites, gm_ref)?
             );
-        },
+        }
         AssetReference::Sound(gm_ref) => {
             write!(
                 buffer,
                 "(sound){}",
                 asset_get_name(&gm_data.sounds, gm_ref)?
             );
-        },
+        }
         AssetReference::Room(gm_ref) => {
             write!(buffer, "(room){}", asset_get_name(&gm_data.rooms, gm_ref)?);
-        },
+        }
         AssetReference::Background(gm_ref) => {
             write!(
                 buffer,
                 "(background){}",
                 asset_get_name(&gm_data.backgrounds, gm_ref)?
             );
-        },
+        }
         AssetReference::Path(gm_ref) => {
             write!(buffer, "(path){}", asset_get_name(&gm_data.paths, gm_ref)?);
-        },
+        }
         AssetReference::Script(gm_ref) => {
             write!(
                 buffer,
                 "(script){}",
                 asset_get_name(&gm_data.scripts, gm_ref)?
             );
-        },
+        }
         AssetReference::Font(gm_ref) => {
             write!(buffer, "(font){}", asset_get_name(&gm_data.fonts, gm_ref)?);
-        },
+        }
         AssetReference::Timeline(gm_ref) => {
             write!(
                 buffer,
                 "(timeline){}",
                 asset_get_name(&gm_data.timelines, gm_ref)?
             );
-        },
+        }
         AssetReference::Shader(gm_ref) => {
             write!(
                 buffer,
                 "(shader){}",
                 asset_get_name(&gm_data.shaders, gm_ref)?
             );
-        },
+        }
         AssetReference::Sequence(gm_ref) => {
             write!(
                 buffer,
                 "(sequence){}",
                 asset_get_name(&gm_data.sequences, gm_ref)?
             );
-        },
+        }
         AssetReference::AnimCurve(gm_ref) => {
             write!(
                 buffer,
                 "(animcurve){}",
                 asset_get_name(&gm_data.animation_curves, gm_ref)?
             );
-        },
+        }
         AssetReference::ParticleSystem(gm_ref) => {
             write!(
                 buffer,
                 "(particlesystem){}",
                 asset_get_name(&gm_data.particle_systems, gm_ref)?
             );
-        },
+        }
         AssetReference::RoomInstance(id) => {
             write!(buffer, "(roominstance){id}");
-        },
+        }
         AssetReference::Function(gm_ref) => {
             write!(
                 buffer,
                 "(function){}",
                 resolve_function_name(gm_ref, gm_data)?
             );
-        },
+        }
     }
 
     Ok(())
@@ -493,10 +497,10 @@ fn write_instance_type(
             let obj: &GMGameObject = gm_data.game_objects.by_ref(obj_ref)?;
             obj.validate_name().context("validating game object name")?;
             write!(buffer, "object<{}>", obj.name);
-        },
+        }
         InstanceType::RoomInstance(instance_id) => {
             write!(buffer, "roominstance<{instance_id}>");
-        },
+        }
         InstanceType::Local => write!(buffer, "local<{}>", variable_ref.index),
         InstanceType::Other => write!(buffer, "other"),
         InstanceType::All => write!(buffer, "all"),

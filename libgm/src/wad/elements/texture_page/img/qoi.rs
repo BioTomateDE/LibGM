@@ -1,14 +1,18 @@
-//! An implementation of GameMaker's slightly custom QOI ("Quite Ok Image") image format.
+//! An implementation of GameMaker's slightly custom QOI ("Quite Ok Image")
+//! image format.
 
-use std::{borrow::Cow, convert::TryInto};
+use std::borrow::Cow;
+use std::convert::TryInto;
 
-use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba};
+use image::DynamicImage;
+use image::GenericImageView;
+use image::ImageBuffer;
+use image::Rgba;
 
-use crate::{
-    prelude::*,
-    util::fmt::hexdump_range,
-    wad::{data::Endianness, serialize::builder::DataBuilder},
-};
+use crate::prelude::*;
+use crate::util::fmt::hexdump_range;
+use crate::wad::data::Endianness;
+use crate::wad::serialize::builder::DataBuilder;
 
 const QOI_INDEX: u8 = 0x00;
 const QOI_RUN_8: u8 = 0x40;
@@ -76,14 +80,17 @@ impl PixelDiff {
     fn fits_r(&self, max_val: u8) -> bool {
         Self::fits(self.r, max_val)
     }
+
     #[must_use]
     fn fits_g(&self, max_val: u8) -> bool {
         Self::fits(self.g, max_val)
     }
+
     #[must_use]
     fn fits_b(&self, max_val: u8) -> bool {
         Self::fits(self.b, max_val)
     }
+
     #[must_use]
     fn fits_a(&self, max_val: u8) -> bool {
         Self::fits(self.a, max_val)

@@ -1,9 +1,9 @@
 use macros::named_list_chunk;
 
-use crate::{
-    prelude::*,
-    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 
 /// Audio Groups allow you to manage a set sound entries easier.
 /// You can use these for memory management, volume control and more.
@@ -33,9 +33,10 @@ pub struct GMAudioGroup {
     /// This is how the audio group is referenced from code.
     pub name: String,
 
-    /// Relative path (from the main data file) to the audio group file, in GameMaker 2024.14 and above.
-    /// ___
-    /// Prior to 2024.14, audio groups were all numerically assigned filenames and all in the root directory.
+    /// Relative path (from the main data file) to the audio group file, in
+    /// GameMaker 2024.14 and above. ___
+    /// Prior to 2024.14, audio groups were all numerically assigned filenames
+    /// and all in the root directory.
     pub path: Option<String>,
 }
 

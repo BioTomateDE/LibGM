@@ -1,15 +1,12 @@
 use std::cmp::min;
 
-use crate::{
-    prelude::*,
-    util::init::vec_with_capacity,
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{GMElement, background::GMBackground},
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::util::init::vec_with_capacity;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::background::GMBackground;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tiles {
@@ -103,7 +100,8 @@ impl Tiles {
             // Sanity check: run of 2 empty tiles
             if length != 0x81 {
                 reader.warn_invalid_align(format!(
-                    "Expected 0x81 for run length of compressed tile data padding; got 0x{length:02X}"
+                    "Expected 0x81 for run length of compressed tile data padding; got \
+                     0x{length:02X}"
                 ))?;
             }
             if tile as i32 != -1 {
@@ -145,7 +143,8 @@ impl Tiles {
             i += 1;
 
             if curr_tile != last_tile {
-                // We have different tiles, so just increase the number of tiles in this verbatim run
+                // We have different tiles, so just increase the number of tiles in this
+                // verbatim run
                 num_verbatim += 1;
                 last_tile = curr_tile;
                 continue;

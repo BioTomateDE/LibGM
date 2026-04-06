@@ -1,10 +1,13 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{
-    DeriveInput, Error, Ident, LitStr, Token,
-    parse::{Parse, ParseStream},
-    parse_macro_input,
-};
+use syn::DeriveInput;
+use syn::Error;
+use syn::Ident;
+use syn::LitStr;
+use syn::Token;
+use syn::parse::Parse;
+use syn::parse::ParseStream;
+use syn::parse_macro_input;
 
 use crate::list_chunk::find_vec_field;
 
@@ -35,7 +38,7 @@ impl Parse for MacroArgs {
                         &flag,
                         format!("Unknown flag '{flag_name}'. Valid flags are: name_exception"),
                     ));
-                },
+                }
             }
         }
 

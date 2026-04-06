@@ -1,15 +1,13 @@
 use macros::named_list_chunk;
 
-use crate::{
-    prelude::*,
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{GMElement, audio::GMAudio, audio_group::GMAudioGroup},
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-        version::GMVersion,
-    },
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::audio::GMAudio;
+use crate::wad::elements::audio_group::GMAudioGroup;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
+use crate::wad::version::GMVersion;
 
 #[named_list_chunk("SOND")]
 pub struct GMSounds {
@@ -49,13 +47,15 @@ pub struct GMSound {
 
     /// The original file name of the audio entry.
     /// This is the full filename how it was loaded in the project.
-    /// This will be used if the sound effect is streamed from disk to find the sound file.
+    /// This will be used if the sound effect is streamed from disk to find the
+    /// sound file.
     ///
     /// This is used if the `Flags.embedded` flag is not set.
     pub file: String,
 
-    /// A pre-`GameMaker Studio` way of having certain effects on a sound effect.
-    /// Although the exact way this works is unknown, the following values are possible:
+    /// A pre-`GameMaker Studio` way of having certain effects on a sound
+    /// effect. Although the exact way this works is unknown, the following
+    /// values are possible:
     /// - Chorus
     /// - Echo
     /// - Flanger
@@ -105,7 +105,7 @@ impl GMElement for GMSound {
             Some(other) => {
                 reader.warn_invalid_const(format!("Invalid or unknown audio type {other:?}"))?;
                 AudioType::Unknown
-            },
+            }
         };
 
         let file: String = reader.read_gm_string()?;

@@ -9,11 +9,11 @@ mod tests;
 
 use std::path::PathBuf;
 
-use libgm::{
-    gml::assembly::disassemble_code,
-    prelude::*,
-    wad::{ParsingOptions, data::GMData, serialize::build_file},
-};
+use libgm::gml::assembly::disassemble_code;
+use libgm::prelude::*;
+use libgm::wad::ParsingOptions;
+use libgm::wad::data::GMData;
+use libgm::wad::serialize::build_file;
 
 use crate::tests::Test;
 
@@ -76,5 +76,5 @@ fn main() {
     log::info!("Done");
 }
 
-// TODO: Overhaul the CLI: Allow for viewing of relevant data, exporting assembly and more
-//       Maybe move the CLI to a different repo / publish it?
+// TODO: Overhaul the CLI: Allow for viewing of relevant data, exporting
+// assembly and more       Maybe move the CLI to a different repo / publish it?

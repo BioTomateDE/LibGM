@@ -1,8 +1,8 @@
 use macros::num_enum;
 
-use crate::{
-    prelude::*, util::init::num_enum_from, wad::elements::game_object::event::EventSubtype,
-};
+use crate::prelude::*;
+use crate::util::init::num_enum_from;
+use crate::wad::elements::game_object::event::EventSubtype;
 
 /// The subtype for [`EventType::Step`].
 ///

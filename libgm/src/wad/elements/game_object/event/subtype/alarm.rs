@@ -1,4 +1,5 @@
-use crate::{prelude::*, wad::elements::game_object::event::EventSubtype};
+use crate::prelude::*;
+use crate::wad::elements::game_object::event::EventSubtype;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[repr(transparent)]

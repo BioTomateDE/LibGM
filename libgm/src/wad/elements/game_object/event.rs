@@ -3,15 +3,23 @@
 mod action;
 pub mod subtype;
 
-use subtype::{Alarm, Collision, Draw, Gesture, Key, Mouse, Other, Step};
+use subtype::Alarm;
+use subtype::Collision;
+use subtype::Draw;
+use subtype::Gesture;
+use subtype::Key;
+use subtype::Mouse;
+use subtype::Other;
+use subtype::Step;
 
 pub use self::action::Action;
-use crate::{
-    gml::GMCode,
-    prelude::*,
-    util::{assert, fmt::typename},
-    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
-};
+use crate::gml::GMCode;
+use crate::prelude::*;
+use crate::util::assert;
+use crate::util::fmt::typename;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 
 /// Reference: <https://manual.gamemaker.io/lts/en/The_Asset_Editors/Object_Properties/Object_Events.htm>
 #[derive(Debug, Clone, PartialEq)]
@@ -36,9 +44,11 @@ pub struct Events {
     /// See [`Step`].
     pub step: Event<Step>,
 
-    /// Triggered when this game object instance collides with another game object (any instance).
+    /// Triggered when this game object instance collides with another game
+    /// object (any instance).
     ///
-    /// The subtype is the ID of the other game object (to check collision against).
+    /// The subtype is the ID of the other game object (to check collision
+    /// against).
     pub collision: Event<Collision>,
 
     /// Triggered on every step/frame a specified key is held down.
@@ -46,7 +56,8 @@ pub struct Events {
     /// The key is specified in [`Key`].
     pub keyboard: Event<Key>,
 
-    /// Triggered on a mouse event (like holding, pressing down, releasing, mouse wheel, etc.).
+    /// Triggered on a mouse event (like holding, pressing down, releasing,
+    /// mouse wheel, etc.).
     ///
     /// See [`Mouse`].
     pub mouse: Event<Mouse>,
@@ -68,7 +79,8 @@ pub struct Events {
     /// The key is specified in [`Key`].
     pub key_press: Event<Key>,
 
-    /// Triggered on the step/frame a specified key is released (no longer held down).
+    /// Triggered on the step/frame a specified key is released (no longer held
+    /// down).
     ///
     /// The key is specified in [`Key`].
     pub key_release: Event<Key>,
@@ -76,7 +88,8 @@ pub struct Events {
     /// A trigger event type. Only used in Pre-GameMaker Studio.
     pub trigger_handlers: Vec<Action>,
 
-    /// Triggered when this game object instance is cleaned up, which can happen when:
+    /// Triggered when this game object instance is cleaned up, which can happen
+    /// when:
     /// * The instance is destroyed
     /// * The room gets switched
     /// * The game ends
@@ -328,9 +341,10 @@ impl<T: EventSubtype> Event<T> {
 
     /// Gets all event handlers ([`Action`]s) for the given event subtype.
     ///
-    /// This function will fail if there is no event handler for the given subtype.
-    /// If you want to simplify the process by automatically creating a new empty handler
-    /// if it does not exist, use [`Event::handlers_for`] instead.
+    /// This function will fail if there is no event handler for the given
+    /// subtype. If you want to simplify the process by automatically
+    /// creating a new empty handler if it does not exist, use
+    /// [`Event::handlers_for`] instead.
     pub fn get_handlers_for(&self, subtype: T) -> Result<&Vec<Action>> {
         if let Some(sub_event) = self.0.iter().find(|e| e.subtype == subtype) {
             return Ok(&sub_event.actions);
@@ -370,12 +384,14 @@ impl<T: EventSubtype> Event<T> {
         actions.push(Action::new(code));
     }
 
-    /// An iterator that yields all actions of this event; no matter the subtype.
+    /// An iterator that yields all actions of this event; no matter the
+    /// subtype.
     pub fn all_actions(&self) -> impl Iterator<Item = &Action> {
         self.0.iter().flat_map(|e| &e.actions)
     }
 
-    /// An iterator that yields all actions of this event; no matter the subtype.
+    /// An iterator that yields all actions of this event; no matter the
+    /// subtype.
     pub fn all_actions_mut(&mut self) -> impl Iterator<Item = &mut Action> {
         self.0.iter_mut().flat_map(|e| &mut e.actions)
     }

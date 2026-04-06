@@ -6,16 +6,13 @@ pub use file::File;
 pub use function::Function;
 use macros::num_enum;
 
-use crate::{
-    prelude::*,
-    wad::{
-        chunk::ChunkName,
-        deserialize::reader::DataReader,
-        elements::{GMChunk, GMElement},
-        serialize::builder::DataBuilder,
-        version::GMVersion,
-    },
-};
+use crate::prelude::*;
+use crate::wad::chunk::ChunkName;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMChunk;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
+use crate::wad::version::GMVersion;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMExtensions {
@@ -27,6 +24,7 @@ pub struct GMExtensions {
 
 impl GMChunk for GMExtensions {
     const NAME: ChunkName = ChunkName::new("EXTN");
+
     fn exists(&self) -> bool {
         self.exists
     }
@@ -97,8 +95,8 @@ impl GMElement for GMExtensions {
         }
         if prod_count < ext_count {
             log::warn!(
-                "The last {ext_count} extension don't have any \
-                Product ID data; null bytes will be written instead"
+                "The last {ext_count} extension don't have any Product ID data; null bytes will \
+                 be written instead"
             );
         }
 
@@ -203,6 +201,7 @@ pub enum Kind {
 
 #[must_use]
 const fn product_id_data_eligible(ver: &GMVersion) -> bool {
-    // NOTE: I do not know if 1773 is the earliest version which contains product IDs.
+    // NOTE: I do not know if 1773 is the earliest version which contains product
+    // IDs.
     ver.major >= 2 || (ver.major == 1 && ver.build >= 1773) || (ver.major == 1 && ver.build == 1539)
 }

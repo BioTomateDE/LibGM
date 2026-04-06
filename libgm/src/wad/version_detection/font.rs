@@ -1,11 +1,8 @@
-use crate::{
-    prelude::*,
-    util::init::vec_with_capacity,
-    wad::{
-        deserialize::reader::DataReader,
-        version::{GMVersionReq, LTSBranch::PostLTS},
-    },
-};
+use crate::prelude::*;
+use crate::util::init::vec_with_capacity;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::version::GMVersionReq;
+use crate::wad::version::LTSBranch::PostLTS;
 
 pub fn check_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2022, 2).into()));
@@ -57,10 +54,12 @@ pub fn check_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     target_ver
 }
 
-/// We already know whether the version is more or less than 2022.8 due to the FEAT chunk being present.
-/// Taking advantage of that, this is basically the same as the 2022.2 check, but it:
+/// We already know whether the version is more or less than 2022.8 due to the
+/// FEAT chunk being present. Taking advantage of that, this is basically the
+/// same as the 2022.2 check, but it:
 /// - Checks for the `LineHeight` value instead of `Ascender` (added in 2023.6)
-/// > `PSEM` (2023.2) is not used, as it would return a false negative on LTS (2022.9+ equivalent with no particles).
+/// > `PSEM` (2023.2) is not used, as it would return a false negative on LTS
+/// > (2022.9+ equivalent with no particles).
 /// - Checks for `UnknownAlwaysZero` in Glyphs (added in 2024.11)
 pub fn check_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     // Explicit check because the logic is very scuffed
@@ -131,8 +130,8 @@ pub fn check_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVers
             first_two_pointers[1]
         };
         // And hopefully the last thing in a glyph is the kerning list
-        // Note that we're actually skipping all items of the Glyph.Kerning SimpleList here;
-        // 4 is supposed to be the size of a GlyphKerning object
+        // Note that we're actually skipping all items of the Glyph.Kerning SimpleList
+        // here; 4 is supposed to be the size of a GlyphKerning object
         let pointer_after_kerning_list = reader.cur_pos + 4 * u32::from(kerning_count);
         // If we don't land on the next glyph/font after skipping the Kerning list,
         // KerningLength is probably bogus and UnknownAlwaysZero may be present
@@ -144,8 +143,8 @@ pub fn check_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVers
         let pointer_after_kerning_list = reader.cur_pos + 4 * u32::from(kerning_count);
         if next_glyph_pointer != pointer_after_kerning_list {
             log::warn!(
-                "There appears to be more/fewer values than UnknownAlwaysZero before \
-                the kerning list in GMFontGlyph; data file potentially corrupted"
+                "There appears to be more/fewer values than UnknownAlwaysZero before the kerning \
+                 list in GMFontGlyph; data file potentially corrupted"
             );
         }
         return Ok(Some((2024, 11).into())); // 2024.11 succeeded (2023.6 did too but doesn't matter)
@@ -165,7 +164,8 @@ pub fn check_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         }
     }
 
-    // If we have a last font, advance to the end of its data (ignoring the new alignment added in 2024.14)
+    // If we have a last font, advance to the end of its data (ignoring the new
+    // alignment added in 2024.14)
     if last_font_position != 0 {
         reader.cur_pos = last_font_position + 56;
 

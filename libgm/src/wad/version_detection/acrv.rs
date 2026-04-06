@@ -1,7 +1,6 @@
-use crate::{
-    prelude::*,
-    wad::{deserialize::reader::DataReader, version::GMVersionReq},
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::version::GMVersionReq;
 
 pub fn check_2_3_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let count = reader.read_u32()?;

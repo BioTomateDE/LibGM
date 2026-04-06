@@ -1,17 +1,18 @@
 use macros::num_enum;
 
-use crate::{
-    prelude::*,
-    util::init::num_enum_from,
-    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
-};
+use crate::prelude::*;
+use crate::util::init::num_enum_from;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 
 /// The curve type determines how points flow to each other in a channel.
 #[num_enum(i32)]
 pub enum CurveType {
     /// Creates a linear progression between points.
     Linear = 0,
-    /// Creates a smooth progression between points using catmull-rom spline interpolation.
+    /// Creates a smooth progression between points using catmull-rom spline
+    /// interpolation.
     Smooth = 1,
     /// Creates a smooth curve defined by bezier control points.
     Bezier = 2,

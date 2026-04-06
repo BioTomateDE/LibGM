@@ -1,7 +1,6 @@
-use crate::{
-    prelude::*,
-    wad::{deserialize::reader::DataReader, version::GMVersionReq},
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::version::GMVersionReq;
 
 pub fn check_2_3_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let pointers: Vec<u32> = reader.read_simple_list()?;
@@ -110,10 +109,12 @@ pub fn check_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
 
         if full_end_pos == expected_end_offset {
             log::warn!(
-                "full_end_pos == expected_end_offset while detecting SPRT_2024.6; may lead to false negatives"
+                "full_end_pos == expected_end_offset while detecting SPRT_2024.6; may lead to \
+                 false negatives"
             );
             return Ok(None); // "Full" mask data is valid   
-            // (TODO: no idea why it returns here tbh; check if there is bug in utmt pls)
+            // (TODO: no idea why it returns here tbh; check if there is bug in
+            // utmt pls)
         }
         if bbox_end_pos == expected_end_offset {
             return target_ver; // "Bbox" mask data is valid

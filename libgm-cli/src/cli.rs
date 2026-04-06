@@ -2,7 +2,8 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
-use crate::{actions::Action, tests::Test};
+use crate::actions::Action;
+use crate::tests::Test;
 
 /// A simple CLI for operating and debugging LibGM
 #[derive(Parser, Debug)]

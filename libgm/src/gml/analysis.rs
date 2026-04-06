@@ -1,7 +1,6 @@
-use crate::{
-    gml::{Instruction, instruction::DataType},
-    prelude::*,
-};
+use crate::gml::Instruction;
+use crate::gml::instruction::DataType;
+use crate::prelude::*;
 
 /// Information about the bytecode of this game
 /// that needs work to extract.
@@ -14,7 +13,8 @@ pub struct CodeAnalysis {
     /// Whether Copy on Write (Cow) functionality is enabled for arrays.
     ///
     /// Between GameMaker 2.3 and 2022.2 this is guaranteed to be `true`.
-    /// Afterward, it is set to false by default in the GameMaker IDE, but can be changed by a game's developer.
+    /// Afterward, it is set to false by default in the GameMaker IDE, but can
+    /// be changed by a game's developer.
     ///
     /// This is detected by the usage of [`Instruction::SetArrayOwner`].
     ///
@@ -25,14 +25,16 @@ pub struct CodeAnalysis {
     ///
     /// This means that boolean `AND` and `OR` operations are guaranteed
     /// to stop executing when evaluating more would be useless:
-    /// If the left hand side expression evaluated to false in an `AND`, the right  hand  side
-    /// expression is not useful to evaluate, since `false and XXXXX` is always `false`.
-    /// The same thing applies to when the LHS expression is `true` for `OR`: `true or XXXXX` is always `true`.
+    /// If the left hand side expression evaluated to false in an `AND`, the
+    /// right  hand  side expression is not useful to evaluate, since `false
+    /// and XXXXX` is always `false`. The same thing applies to when the LHS
+    /// expression is `true` for `OR`: `true or XXXXX` is always `true`.
     ///
     /// Guaranteeing this logic is useful, since expressions
     /// can consist of function calls, which can mutate state.
     ///
-    /// This is detected by the inexistence of `and.b.b` and `or.b.b` instructions.
+    /// This is detected by the inexistence of `and.b.b` and `or.b.b`
+    /// instructions.
     ///
     /// By default, this is enabled.
     pub uses_short_circuit: bool,
@@ -72,11 +74,11 @@ pub fn analyze(data: &GMData) -> CodeAnalysis {
                     rhs: DataType::Boolean,
                 } => {
                     analysis.uses_short_circuit = false;
-                },
+                }
                 Instruction::SetArrayOwner => {
                     analysis.uses_array_copy_on_write = true;
-                },
-                _ => {},
+                }
+                _ => {}
             }
         }
     }
@@ -87,7 +89,8 @@ pub fn analyze(data: &GMData) -> CodeAnalysis {
 impl GMData {
     /// Analyzes some information about the bytecode used in this game.
     ///
-    /// For more information, see the [`analyze`] function in [`crate::gml::analysis`].
+    /// For more information, see the [`analyze`] function in
+    /// [`crate::gml::analysis`].
     #[must_use]
     pub fn analyze_code(&self) -> CodeAnalysis {
         analyze(self)

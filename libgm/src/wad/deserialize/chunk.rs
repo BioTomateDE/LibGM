@@ -1,14 +1,11 @@
-use crate::{
-    prelude::*,
-    util::bench::Stopwatch,
-    wad::{
-        chunk::ChunkName,
-        data::Endianness,
-        deserialize::reader::DataReader,
-        elements::{GMChunk, GMElement},
-        version::GMVersion,
-    },
-};
+use crate::prelude::*;
+use crate::util::bench::Stopwatch;
+use crate::wad::chunk::ChunkName;
+use crate::wad::data::Endianness;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMChunk;
+use crate::wad::elements::GMElement;
+use crate::wad::version::GMVersion;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ChunkBounds {
@@ -111,7 +108,8 @@ impl ChunkMap {
 
 impl DataReader<'_> {
     /// Read a GameMaker chunk name consisting of 4 ascii characters.
-    /// Accounts for endianness; reversing the read chunk name in big endian mode.
+    /// Accounts for endianness; reversing the read chunk name in big endian
+    /// mode.
     pub fn read_chunk_name(&mut self) -> Result<ChunkName> {
         let mut bytes: [u8; 4] = self.read_bytes_const().cloned()?;
 
@@ -147,8 +145,8 @@ impl DataReader<'_> {
 
         if self.cur_pos != self.chunk.end_pos {
             bail!(
-                "Misaligned chunk '{}': expected chunk end position {} \
-                but the reader is actually at position {} (diff: {})",
+                "Misaligned chunk '{}': expected chunk end position {} but the reader is actually \
+                 at position {} (diff: {})",
                 T::NAME,
                 self.chunk.end_pos,
                 self.cur_pos,
@@ -160,7 +158,8 @@ impl DataReader<'_> {
         Ok(element)
     }
 
-    /// Potentially read padding at the end of the chunk, depending on the GameMaker version.
+    /// Potentially read padding at the end of the chunk, depending on the
+    /// GameMaker version.
     fn read_chunk_padding(&mut self) -> Result<()> {
         // Padding only for GMS2+ and 1.9999+
         let ver: &GMVersion = &self.specified_version;
@@ -189,7 +188,8 @@ impl DataReader<'_> {
     /// Reads the specified GameMaker version in the GEN8 chunk.
     /// This only works if the GEN8 chunk still exists in the chunk map.
     ///
-    /// This function should be called **after** parsing FORM but **before** reading any chunks.
+    /// This function should be called **after** parsing FORM but **before**
+    /// reading any chunks.
     pub fn read_gen8_version(&mut self) -> Result<GMVersion> {
         const CTX: &str = "trying to read GEN8 GameMaker Version";
         let saved_pos = self.cur_pos;

@@ -1,12 +1,18 @@
-use crate::{
-    prelude::*,
-    wad::elements::{
-        animation_curve::GMAnimationCurve, background::GMBackground, font::GMFont,
-        function::GMFunction, game_object::GMGameObject, particle_system::GMParticleSystem,
-        path::GMPath, room::GMRoom, script::GMScript, sequence::GMSequence, shader::GMShader,
-        sound::GMSound, sprite::GMSprite, timeline::GMTimeline,
-    },
-};
+use crate::prelude::*;
+use crate::wad::elements::animation_curve::GMAnimationCurve;
+use crate::wad::elements::background::GMBackground;
+use crate::wad::elements::font::GMFont;
+use crate::wad::elements::function::GMFunction;
+use crate::wad::elements::game_object::GMGameObject;
+use crate::wad::elements::particle_system::GMParticleSystem;
+use crate::wad::elements::path::GMPath;
+use crate::wad::elements::room::GMRoom;
+use crate::wad::elements::script::GMScript;
+use crate::wad::elements::sequence::GMSequence;
+use crate::wad::elements::shader::GMShader;
+use crate::wad::elements::sound::GMSound;
+use crate::wad::elements::sprite::GMSprite;
+use crate::wad::elements::timeline::GMTimeline;
 
 /// A modern (2023.something) reference to game assets.
 /// Used with the [`PushReference`] (`pushref`) instruction.
@@ -34,7 +40,8 @@ pub enum AssetReference {
 }
 
 impl AssetReference {
-    /// Constructs a new asset reference based on the normalized serialized form.
+    /// Constructs a new asset reference based on the normalized serialized
+    /// form.
     ///
     /// This uses the 2024.4+ format.
     ///
@@ -61,7 +68,8 @@ impl AssetReference {
         })
     }
 
-    /// Constructs a new asset reference based on the old (pre-2024.4) serialized form.
+    /// Constructs a new asset reference based on the old (pre-2024.4)
+    /// serialized form.
     ///
     /// Note that function references have to be constructed separately.
     pub fn parse_old(raw: u32) -> Result<Self> {
@@ -86,11 +94,13 @@ impl AssetReference {
         })
     }
 
-    /// The normalized asset type of this asset reference, expressed as a number.
+    /// The normalized asset type of this asset reference, expressed as a
+    /// number.
     ///
     /// This uses the 2024.4+ asset type.
     ///
-    /// NOTE: Functions return the `Script` asset type since they don't "actually have one".
+    /// NOTE: Functions return the `Script` asset type since they don't
+    /// "actually have one".
     #[must_use]
     pub const fn asset_type(self) -> u8 {
         match self {
@@ -111,9 +121,11 @@ impl AssetReference {
         }
     }
 
-    /// The old (pre-2024.4) asset type of this asset reference, expressed as a number.
+    /// The old (pre-2024.4) asset type of this asset reference, expressed as a
+    /// number.
     ///
-    /// NOTE: Functions return the `Script` asset type since they don't "actually have one".
+    /// NOTE: Functions return the `Script` asset type since they don't
+    /// "actually have one".
     #[must_use]
     pub const fn asset_type_old(self) -> u8 {
         match self {

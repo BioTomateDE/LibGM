@@ -1,13 +1,11 @@
 use macros::list_chunk;
 
-use crate::{
-    gml::GMCode,
-    prelude::*,
-    wad::{
-        deserialize::reader::DataReader, elements::GMElement, reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::gml::GMCode;
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[list_chunk("GLOB")]
 pub struct GMGlobalInitScripts {

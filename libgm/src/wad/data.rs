@@ -1,24 +1,44 @@
 //! The full GameMaker data struct, containing all information from a data file.
 
-use std::{fmt, path::PathBuf};
+use std::fmt;
+use std::path::PathBuf;
 
-use crate::{
-    prelude::*,
-    util::bench::Stopwatch,
-    wad::elements::{
-        animation_curve::GMAnimationCurves, audio::GMAudios, audio_group::GMAudioGroups,
-        background::GMBackgrounds, code::GMCodes, embedded_image::GMEmbeddedImages,
-        extension::GMExtensions, feature_flag::GMFeatureFlags, filter_effect::GMFilterEffects,
-        font::GMFonts, function::GMFunctions, game_end::GMGameEndScripts,
-        game_object::GMGameObjects, general_info::GMGeneralInfo, global_init::GMGlobalInitScripts,
-        language::GMLanguageInfo, options::GMOptions, particle_emitter::GMParticleEmitters,
-        particle_system::GMParticleSystems, path::GMPaths, room::GMRooms, script::GMScripts,
-        sequence::GMSequences, shader::GMShaders, sound::GMSounds, sprite::GMSprites, tag::GMTags,
-        texture_group_info::GMTextureGroupInfos, texture_page::GMTexturePages,
-        texture_page_item::GMTexturePageItems, timeline::GMTimelines, ui_node::GMRootUINodes,
-        validate_names, variable::GMVariables,
-    },
-};
+use crate::prelude::*;
+use crate::util::bench::Stopwatch;
+use crate::wad::elements::animation_curve::GMAnimationCurves;
+use crate::wad::elements::audio::GMAudios;
+use crate::wad::elements::audio_group::GMAudioGroups;
+use crate::wad::elements::background::GMBackgrounds;
+use crate::wad::elements::code::GMCodes;
+use crate::wad::elements::embedded_image::GMEmbeddedImages;
+use crate::wad::elements::extension::GMExtensions;
+use crate::wad::elements::feature_flag::GMFeatureFlags;
+use crate::wad::elements::filter_effect::GMFilterEffects;
+use crate::wad::elements::font::GMFonts;
+use crate::wad::elements::function::GMFunctions;
+use crate::wad::elements::game_end::GMGameEndScripts;
+use crate::wad::elements::game_object::GMGameObjects;
+use crate::wad::elements::general_info::GMGeneralInfo;
+use crate::wad::elements::global_init::GMGlobalInitScripts;
+use crate::wad::elements::language::GMLanguageInfo;
+use crate::wad::elements::options::GMOptions;
+use crate::wad::elements::particle_emitter::GMParticleEmitters;
+use crate::wad::elements::particle_system::GMParticleSystems;
+use crate::wad::elements::path::GMPaths;
+use crate::wad::elements::room::GMRooms;
+use crate::wad::elements::script::GMScripts;
+use crate::wad::elements::sequence::GMSequences;
+use crate::wad::elements::shader::GMShaders;
+use crate::wad::elements::sound::GMSounds;
+use crate::wad::elements::sprite::GMSprites;
+use crate::wad::elements::tag::GMTags;
+use crate::wad::elements::texture_group_info::GMTextureGroupInfos;
+use crate::wad::elements::texture_page::GMTexturePages;
+use crate::wad::elements::texture_page_item::GMTexturePageItems;
+use crate::wad::elements::timeline::GMTimelines;
+use crate::wad::elements::ui_node::GMRootUINodes;
+use crate::wad::elements::validate_names;
+use crate::wad::elements::variable::GMVariables;
 
 /// Byte order (endianness) for integers and chunk names in data files.
 ///
@@ -28,15 +48,16 @@ use crate::{
 pub enum Endianness {
     /// Little-endian byte order (reversed bytes).
     ///
-    /// This is the standard for x86/x64 architectures and most modern platforms.
-    /// All new projects should use this format.
+    /// This is the standard for x86/x64 architectures and most modern
+    /// platforms. All new projects should use this format.
     #[default]
     Little,
 
     /// Big-endian byte order (forward bytes).
     ///
-    /// Supported for legacy compatibility with older platforms like PlayStation 3.
-    /// This format is not thoroughly tested and may be removed in future versions.
+    /// Supported for legacy compatibility with older platforms like PlayStation
+    /// 3. This format is not thoroughly tested and may be removed in future
+    /// versions.
     Big,
 }
 
@@ -58,15 +79,16 @@ pub struct Metadata {
     /// Indicates the number of padding bytes (null bytes) between chunks.
     ///
     /// Note that the last chunk does not get padding.
-    /// This padding is influenced by the data file's GameMaker Version, as well as target platform/architecture.
+    /// This padding is influenced by the data file's GameMaker Version, as well
+    /// as target platform/architecture.
     pub chunk_padding: u32,
 
     /// Indicates the data's byte endianness.
     ///
     /// This affects byte order of integers and chunk names.
     /// In most cases (and assumed by default), this is set to little-endian.
-    /// Big-endian is an edge case for certain target platforms (e.g. PS3 or Xbox 360)
-    /// and its support may be removed in the future.
+    /// Big-endian is an edge case for certain target platforms (e.g. PS3 or
+    /// Xbox 360) and its support may be removed in the future.
     pub endianness: Endianness,
 
     /// The size of the original data file; useful for
@@ -170,7 +192,8 @@ impl GMData {
         Ok(())
     }
 
-    /// Deserializes all embedded texture pages, turning their underlying image data into [`DynamicImage`].
+    /// Deserializes all embedded texture pages, turning their underlying image
+    /// data into [`DynamicImage`].
     ///
     /// This single-threaded implementation may take quite a while.
     /// If you care about performance, I would recommend making a custom
@@ -196,7 +219,8 @@ impl GMData {
         Ok(())
     }
 
-    /// Runs some actions to fully verify integrity and to prepare the data file for editing.
+    /// Runs some actions to fully verify integrity and to prepare the data file
+    /// for editing.
     pub fn post_deserialize(&mut self) -> Result<()> {
         self.validate_names()?;
         self.deserialize_all_textures()?;

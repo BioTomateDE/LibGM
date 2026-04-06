@@ -1,12 +1,10 @@
-use crate::{
-    prelude::*,
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{GMElement, background::GMBackground, sprite::GMSprite},
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::background::GMBackground;
+use crate::wad::elements::sprite::GMSprite;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tile {
@@ -67,18 +65,20 @@ impl GMElement for Tile {
                     builder.write_resource_id(sprite_ref);
                 } else {
                     bail!(
-                        "Room tile texture should be a Background reference before GMS2; not a Sprite reference"
+                        "Room tile texture should be a Background reference before GMS2; not a \
+                         Sprite reference"
                     );
                 }
-            },
+            }
             Some(Texture::Background(background_ref)) => {
                 if builder.is_version_at_least((2, 0)) {
                     bail!(
-                        "Room tile texture should be a Sprite reference in GMS2+; not a Background reference"
+                        "Room tile texture should be a Sprite reference in GMS2+; not a \
+                         Background reference"
                     );
                 }
                 builder.write_resource_id(background_ref);
-            },
+            }
             None => builder.write_i32(-1),
         }
         builder.write_u32(self.source_x);

@@ -1,8 +1,7 @@
-use crate::{
-    prelude::*,
-    util::fmt::typename,
-    wad::{elements::GMElement, serialize::builder::DataBuilder},
-};
+use crate::prelude::*;
+use crate::util::fmt::typename;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 
 impl DataBuilder<'_> {
     /// Write the element count as a 32-bit integer.

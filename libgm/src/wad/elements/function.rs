@@ -1,17 +1,16 @@
 pub mod code_local;
 
-pub use code_local::{GMCodeLocal, GMCodeLocals};
+pub use code_local::GMCodeLocal;
+pub use code_local::GMCodeLocals;
 use macros::named_list_chunk;
 
-use crate::{
-    prelude::*,
-    util::init::vec_with_capacity,
-    wad::{
-        deserialize::{chunk::ChunkBounds, reader::DataReader},
-        elements::{GMElement, element_stub},
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::util::init::vec_with_capacity;
+use crate::wad::deserialize::chunk::ChunkBounds;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::element_stub;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[named_list_chunk("FUNC")]
 pub struct GMFunctions {
@@ -41,7 +40,8 @@ impl GMElement for GMFunctions {
                 if let Some(old_func) = reader.function_occurrences.insert(occurrence, i.into()) {
                     bail!(
                         "Conflicting occurrence positions while parsing functions: Position {} \
-                        was already set for function #{} with name {:?}; trying to set to function #{} with name {:?}",
+                         was already set for function #{} with name {:?}; trying to set to \
+                         function #{} with name {:?}",
                         occurrence,
                         old_func.index,
                         functions[old_func.index as usize].name,
@@ -79,7 +79,8 @@ impl GMElement for GMFunctions {
             })?;
             let occurrence_count: usize = occurrences.len();
 
-            // Before GM 2.3, the first occurrence points to the instruction rather than the next offset
+            // Before GM 2.3, the first occurrence points to the instruction rather than the
+            // next offset
             let gm2_3: bool = builder.is_version_at_least((2, 3));
             let first_occurrence: i32 = match occurrences.first() {
                 Some(&occurrence) if gm2_3 => occurrence as i32 + 4,
@@ -142,7 +143,7 @@ fn parse_occurrence_chain(
         if offset < 1 {
             bail!(
                 "Next occurrence offset is {0} (0x{0:08X}) which is negative while parsing \
-                function occurrences at position {1} (raw value is 0x{2:08X})",
+                 function occurrences at position {1} (raw value is 0x{2:08X})",
                 offset,
                 reader.cur_pos - 4,
                 raw_value,

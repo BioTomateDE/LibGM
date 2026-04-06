@@ -1,14 +1,15 @@
-use crate::{
-    prelude::*,
-    util::{fmt::typename, init::vec_with_capacity},
-    wad::{deserialize::reader::DataReader, elements::GMElement},
-};
+use crate::prelude::*;
+use crate::util::fmt::typename;
+use crate::util::init::vec_with_capacity;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
 
 impl DataReader<'_> {
     /// Reads a GameMaker simple list with a 32-bit count prefix.
     ///
-    /// Simple lists consist of a count followed by the elements' data in sequence.
-    /// Includes a failsafe check to prevent excessive memory allocation from malformed data.
+    /// Simple lists consist of a count followed by the elements' data in
+    /// sequence. Includes a failsafe check to prevent excessive memory
+    /// allocation from malformed data.
     ///
     /// The list format is: `[count: u32][element_0][element_1]...[element_n]`
     pub fn read_simple_list<T: GMElement>(&mut self) -> Result<Vec<T>> {
@@ -33,8 +34,9 @@ impl DataReader<'_> {
 
     /// Reads a GameMaker simple list with a 16-bit count prefix.
     ///
-    /// Simple lists consist of a count followed by the elements' data in sequence.
-    /// Includes a failsafe check to prevent excessive memory allocation from malformed data.
+    /// Simple lists consist of a count followed by the elements' data in
+    /// sequence. Includes a failsafe check to prevent excessive memory
+    /// allocation from malformed data.
     ///
     /// The list format is: `[count: u16][element_0][element_1]...[element_n]`
     pub fn read_simple_list_short<T: GMElement>(&mut self) -> Result<Vec<T>> {
@@ -95,7 +97,8 @@ impl DataReader<'_> {
             }
 
             bail!(
-                "{} pointer misaligned: expected position {} but reader is actually at {} (diff: {})",
+                "{} pointer misaligned: expected position {} but reader is actually at {} (diff: \
+                 {})",
                 name,
                 pointer,
                 self.cur_pos,

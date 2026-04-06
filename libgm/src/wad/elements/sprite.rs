@@ -4,26 +4,21 @@ pub mod swf;
 
 use std::fmt;
 
-use macros::{named_list_chunk, num_enum};
+use macros::named_list_chunk;
+use macros::num_enum;
 pub use nine_slice::NineSlice;
 
-use crate::{
-    prelude::*,
-    util::{
-        assert,
-        init::{num_enum_from, vec_with_capacity},
-    },
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{
-            GMElement,
-            sequence::{GMSequence, SpeedType},
-            texture_page_item::GMTexturePageItem,
-        },
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::util::assert;
+use crate::util::init::num_enum_from;
+use crate::util::init::vec_with_capacity;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::sequence::GMSequence;
+use crate::wad::elements::sequence::SpeedType;
+use crate::wad::elements::texture_page_item::GMTexturePageItem;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[named_list_chunk("SPRT")]
 pub struct GMSprites {
@@ -96,7 +91,8 @@ impl GMElement for GMSprite {
 
             let playback_speed = reader.read_f32()?;
             let playback_speed_type: SpeedType = num_enum_from(reader.read_i32()?)?;
-            // both of these seem to be not an offset but instead a position (see UndertaleModLib/Models/UndertaleSprite.cs:507)
+            // both of these seem to be not an offset but instead a position (see
+            // UndertaleModLib/Models/UndertaleSprite.cs:507)
             let sequence_pos = if special_version >= 2 {
                 reader.read_u32()?
             } else {
@@ -122,11 +118,12 @@ impl GMElement for GMSprite {
                     collision_masks = read_mask_data(reader, mask_width, mask_height)
                         .context("parsing mask data for normal special Sprite")?;
                     SpecialData::Normal
-                },
+                }
 
                 1 => {
                     // SWF
-                    // [From UndertaleModTool] "This code does not work all the time for some reason"
+                    // [From UndertaleModTool] "This code does not work all the time for some
+                    // reason"
                     let swf_version = reader.read_i32()?;
                     if swf_version != 7 && swf_version != 8 {
                         bail!("Invalid SWF version {swf_version} for Sprite {name:?}");
@@ -154,7 +151,7 @@ impl GMElement for GMSprite {
                         jpeg_table,
                         timeline,
                     })
-                },
+                }
 
                 2 => {
                     // Spine
@@ -195,7 +192,7 @@ impl GMElement for GMSprite {
                                 page_height,
                                 data: spine::texture_entry::Data::Pre2023_1(texture_blob),
                             });
-                        },
+                        }
                         2 | 3 => {
                             let texture_count = reader.read_u32()?;
                             spine_json = spine::Data::read_weird_string(reader, json_length)?;
@@ -208,9 +205,10 @@ impl GMElement for GMSprite {
                                         .context("parsing Texture Entry for Spine v2/3 data")?,
                                 );
                             }
-                        },
+                        }
                         _ => bail!(
-                            "Expected Spine Version 1, 2 or 3 but got {spine_version} for Special Sprite"
+                            "Expected Spine Version 1, 2 or 3 but got {spine_version} for Special \
+                             Sprite"
                         ),
                     }
 
@@ -220,17 +218,18 @@ impl GMElement for GMSprite {
                         json: spine_json,
                         atlas: spine_atlas,
                     })
-                },
+                }
                 3 => {
                     // TODO(weak): implement vector eventually
                     bail!(
-                        "Vector Sprite Type not yet supported; will be implemented when UTMT stops using raw ints for this"
+                        "Vector Sprite Type not yet supported; will be implemented when UTMT \
+                         stops using raw ints for this"
                     );
-                },
+                }
 
                 other => {
                     bail!("Invalid Sprite Type {other} for Sprite {name:?}")
-                },
+                }
             };
 
             if sequence_pos != 0 {
@@ -347,7 +346,7 @@ impl GMElement for GMSprite {
             SpecialData::Normal => {
                 Self::build_texture_list(builder, &self.textures)?;
                 self.build_mask_data(builder, &self.collision_masks)?;
-            },
+            }
             SpecialData::Swf(swf) => {
                 builder.write_i32(swf.swf_version);
                 if swf.swf_version == 8 {
@@ -359,7 +358,7 @@ impl GMElement for GMSprite {
                 builder.write_bytes(&swf.jpeg_table);
                 builder.align(4);
                 swf.timeline.serialize(builder)?;
-            },
+            }
             SpecialData::Spine(spine) => {
                 builder.align(4);
                 let json_blob: Vec<u8> = spine::Data::build_weird_string(&spine.json);
@@ -383,7 +382,8 @@ impl GMElement for GMSprite {
                         let spine::texture_entry::Data::Pre2023_1(ref texture_blob) = atlas.data
                         else {
                             bail!(
-                                "Expected Pre2023_1 texture data in Sprite Spine Version 1 but got Post2023_1"
+                                "Expected Pre2023_1 texture data in Sprite Spine Version 1 but \
+                                 got Post2023_1"
                             );
                         };
                         builder.write_usize(texture_blob.len())?;
@@ -392,7 +392,7 @@ impl GMElement for GMSprite {
                         builder.write_bytes(&json_blob);
                         builder.write_bytes(&atlas_blob);
                         builder.write_bytes(texture_blob);
-                    },
+                    }
                     2 | 3 => {
                         builder.write_usize(spine.textures.len())?;
                         builder.write_bytes(&json_blob);
@@ -419,10 +419,10 @@ impl GMElement for GMSprite {
                                 bail!("Expected Pre2023_1 Sprite Spine texture data in pre 2023.1");
                             }
                         }
-                    },
+                    }
                     other => bail!("Invalid Sprite Spine Version {other}; should be 1, 2 or 3"),
                 }
-            },
+            }
         }
 
         if builder.is_version_at_least((2, 0)) {

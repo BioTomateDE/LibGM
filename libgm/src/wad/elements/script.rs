@@ -1,15 +1,12 @@
 use macros::named_list_chunk;
 
-use crate::{
-    gml::GMCode,
-    prelude::*,
-    wad::{
-        deserialize::{reader::DataReader, resources::resource_opt_from_i32},
-        elements::GMElement,
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::gml::GMCode;
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::deserialize::resources::resource_opt_from_i32;
+use crate::wad::elements::GMElement;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[named_list_chunk("SCPT")]
 pub struct GMScripts {

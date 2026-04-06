@@ -2,7 +2,8 @@ pub mod texture_entry;
 
 pub use texture_entry::TextureEntry;
 
-use crate::{prelude::*, wad::deserialize::reader::DataReader};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Data {

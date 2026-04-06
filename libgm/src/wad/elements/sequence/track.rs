@@ -1,30 +1,30 @@
 pub mod keyframe;
 
-pub use keyframe::{Keyframe, Keyframes};
+pub use keyframe::Keyframe;
+pub use keyframe::Keyframes;
 use macros::num_enum;
 
-use crate::{
-    prelude::*,
-    util::{
-        bitfield::bitfield_struct,
-        init::{num_enum_from, vec_with_capacity},
-    },
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{GMElement, animation_curve::GMAnimationCurve},
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::util::bitfield::bitfield_struct;
+use crate::util::init::num_enum_from;
+use crate::util::init::vec_with_capacity;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::animation_curve::GMAnimationCurve;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Track {
-    /// Name for the type/model of track, such as `GMGroupTrack`, `GMInstanceTrack`, `GMRealTrack`, etc.
+    /// Name for the type/model of track, such as `GMGroupTrack`,
+    /// `GMInstanceTrack`, `GMRealTrack`, etc.
     pub model_name: String,
 
-    /// Name of the track. Can be user-assigned or the name of a property or asset.
+    /// Name of the track. Can be user-assigned or the name of a property or
+    /// asset.
     pub name: String,
 
-    /// Builtin name for the track, representing the type of property, or 0 if not applicable.
+    /// Builtin name for the track, representing the type of property, or 0 if
+    /// not applicable.
     pub builtin_name: BuiltinName,
 
     /// Traits for the track.
@@ -69,8 +69,8 @@ impl GMElement for Track {
             let animcurve_str: String = reader.read_gm_string()?;
             if animcurve_str != "GMAnimCurve" {
                 bail!(
-                    "Expected owned resource thingy of Track to \
-                    be \"GMAnimCurve\"; but found {:?} for Track {:?}",
+                    "Expected owned resource thingy of Track to be \"GMAnimCurve\"; but found \
+                     {:?} for Track {:?}",
                     animcurve_str,
                     name,
                 );
@@ -95,7 +95,7 @@ impl GMElement for Track {
             "GMIntTrack" => bail!("Int Track not yet supported"),
             "GMColourTrack" => {
                 Keyframes::Color(keyframe::color::KeyframesData::deserialize(reader)?)
-            },
+            }
             "GMRealTrack" => Keyframes::Real(keyframe::color::KeyframesData::deserialize(reader)?),
             "GMTextTrack" => Keyframes::Text(keyframe::Data::deserialize(reader)?),
             "GMParticleTrack" => Keyframes::Particle(keyframe::Data::deserialize(reader)?),

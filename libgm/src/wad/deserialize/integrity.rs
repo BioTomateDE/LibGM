@@ -1,6 +1,9 @@
-use std::fmt::{Display, UpperHex};
+use std::fmt::Display;
+use std::fmt::UpperHex;
 
-use crate::{gml::instruction::DataType, prelude::*, wad::deserialize::reader::DataReader};
+use crate::gml::instruction::DataType;
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
 
 impl DataReader<'_> {
     /// Ensures the reader is at the specified position.
@@ -16,8 +19,8 @@ impl DataReader<'_> {
         }
 
         self.warn_invalid_align(format!(
-            "{} pointer is misaligned: expected position {} but \
-            reader is actually at {} (diff: {})",
+            "{} pointer is misaligned: expected position {} but reader is actually at {} (diff: \
+             {})",
             pointer_name,
             position,
             self.cur_pos,
@@ -72,8 +75,8 @@ impl DataReader<'_> {
 
         let width = size_of::<I>() * 2;
         self.warn_invalid_const(format!(
-            "Expected {description} to be {expected} but it \
-            is actually {actual} (0x{actual:0width$X})",
+            "Expected {description} to be {expected} but it is actually {actual} \
+             (0x{actual:0width$X})",
         ))
     }
 
@@ -93,8 +96,7 @@ impl DataReader<'_> {
         }
 
         self.warn_invalid_const(format!(
-            "Expected {description} to be {expected} \
-            but it is actually {actual}",
+            "Expected {description} to be {expected} but it is actually {actual}",
         ))
     }
 
@@ -114,8 +116,7 @@ impl DataReader<'_> {
         }
 
         self.warn_invalid_const(format!(
-            "Expected {description} Data Type to be \
-            {expected:?} but it is actually {actual:?}"
+            "Expected {description} Data Type to be {expected:?} but it is actually {actual:?}"
         ))
     }
 }

@@ -2,10 +2,9 @@
 //! Chapter: 2
 //! 2025-06-05 to now [2026-01-04]
 
-use crate::{
-    gml::{assembly::assemble_instructions, instruction::Instruction},
-    prelude::*,
-};
+use crate::gml::assembly::assemble_instructions;
+use crate::gml::instruction::Instruction;
+use crate::prelude::*;
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     // Placeholder in line 2

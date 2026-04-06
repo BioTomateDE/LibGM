@@ -1,6 +1,8 @@
 use std::fmt;
 
-use crate::{gml::instruction::VariableType, prelude::*, wad::elements::game_object::GMGameObject};
+use crate::gml::instruction::VariableType;
+use crate::prelude::*;
+use crate::wad::elements::game_object::GMGameObject;
 
 /// The scope/owner of a variable.
 ///
@@ -8,15 +10,18 @@ use crate::{gml::instruction::VariableType, prelude::*, wad::elements::game_obje
 /// * `self`: represents the current game object instance
 /// * `global`: globally shared across entire game
 /// * `local`: local to this code entry execution, destroyed afterward
-/// * `builtin`: special GameMaker variables such as `x` or `image_speed` (self scope)
+/// * `builtin`: special GameMaker variables such as `x` or `image_speed` (self
+///   scope)
 ///
 /// These instance types are used in two ways:
 /// The first is in a variable reference (such as in a push or pop instruction).
-/// The second is in the declaration of all variables in the variable chunk `VARI` (WAD 15+).
-/// In here, not all instance types are available, and they may also be represented slightly differently:
-/// There are no references to specific game objects or room instances.
-/// Also, certain things like  `other`, `builtin` or `stacktop` are instead listed as `self`.
-/// You can convert a variable reference instance type to a `VARI` one using [`InstanceType::as_vari`].
+/// The second is in the declaration of all variables in the variable chunk
+/// `VARI` (WAD 15+). In here, not all instance types are available, and they
+/// may also be represented slightly differently: There are no references to
+/// specific game objects or room instances. Also, certain things like  `other`,
+/// `builtin` or `stacktop` are instead listed as `self`. You can convert a
+/// variable reference instance type to a `VARI` one using
+/// [`InstanceType::as_vari`].
 ///
 /// In code, you can change your instance context by using a `with` loop.
 /// For more information, see [`PushWithContext`].
@@ -34,23 +39,27 @@ pub enum InstanceType {
     /// Instance ID in the Room -100000; used when the
     /// Variable Type is [`VariableType::Instance`].
     ///
-    /// Both this and [`InstanceType::GameObject`] are represented using positive integers.
-    /// If the specified variable type was [`VariableType::Instance`], the integer
-    /// gets interpreted as a Room Instance ID instead of a game object reference.
+    /// Both this and [`InstanceType::GameObject`] are represented using
+    /// positive integers. If the specified variable type was
+    /// [`VariableType::Instance`], the integer gets interpreted as a Room
+    /// Instance ID instead of a game object reference.
     RoomInstance(i16),
 
     /// Represents the current `self` instance.
     ///
     /// This corresponds to the game object instance in event action code.
-    /// This `self` context is also kept when scripts (user created functions) are called.
+    /// This `self` context is also kept when scripts (user created functions)
+    /// are called.
     ///
-    /// In room creation code and other contexts, I don't really know what this represents.
+    /// In room creation code and other contexts, I don't really know what this
+    /// represents.
     ///
     /// (should this be default?)
     #[default]
     Self_,
 
-    /// Represents the `other` context, which has multiple definitions based on the location used.
+    /// Represents the `other` context, which has multiple definitions based on
+    /// the location used.
     ///
     /// This is commonly used in physics events, where `other` represents the
     /// "other" object which the "self" object collided with.
@@ -66,7 +75,8 @@ pub enum InstanceType {
     /// This is called `noone` in GML.
     None,
 
-    /// Used for global variables, which are shared globally across the entire game state.
+    /// Used for global variables, which are shared globally across the entire
+    /// game state.
     Global,
 
     /// Used for GML built-in variables such as `x`, `y`, `image_speed`, etc.
@@ -101,10 +111,10 @@ impl fmt::Debug for InstanceType {
             Self::Self_ => write!(f, "Self"),
             Self::GameObject(reference) => {
                 write!(f, "GameObject<{}>", reference.index)
-            },
+            }
             Self::RoomInstance(instance_id) => {
                 write!(f, "RoomInstanceID<{instance_id}>")
-            },
+            }
             Self::Other => write!(f, "Other"),
             Self::All => write!(f, "All"),
             Self::None => write!(f, "None"),
@@ -121,7 +131,8 @@ impl fmt::Debug for InstanceType {
 impl InstanceType {
     /// Parses an instance type from the given raw value.
     /// The variable type is needed because [`VariableType::Instance`] signifies
-    /// a [`InstanceType::RoomInstance`] instead of a [`InstanceType::GameObject`].
+    /// a [`InstanceType::RoomInstance`] instead of a
+    /// [`InstanceType::GameObject`].
     pub fn parse(raw: i16, var_type: VariableType) -> Result<Self> {
         if raw > 0 {
             return Ok(if var_type == VariableType::Instance {

@@ -2,10 +2,9 @@
 //! Chapter: 1
 //! 2018-08-31 to 2021-09-17
 
-use crate::{
-    gml::{assembly::assemble_instruction, instruction::Instruction},
-    prelude::*,
-};
+use crate::gml::assembly::assemble_instruction;
+use crate::gml::instruction::Instruction;
+use crate::prelude::*;
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     let pushim = Instruction::PushImmediate { integer: i16::from(enable) };

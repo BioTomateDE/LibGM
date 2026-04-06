@@ -1,12 +1,9 @@
-use crate::{
-    prelude::*,
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{GMElement, sound::GMSound},
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::sound::GMSound;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Audio {

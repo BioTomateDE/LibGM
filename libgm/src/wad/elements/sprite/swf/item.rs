@@ -2,10 +2,10 @@ pub mod bitmap;
 pub mod shape;
 pub mod subshape;
 
-use crate::{
-    prelude::*,
-    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Item {
@@ -24,7 +24,8 @@ impl GMElement for Item {
             4 => ItemData::ItemTextField,
             5 => ItemData::ItemSprite,
             _ => bail!(
-                "Invalid YYSWF Item Type {0} 0x{0:08X} at position {1} while parsing Sprite YYSWF Item",
+                "Invalid YYSWF Item Type {0} 0x{0:08X} at position {1} while parsing Sprite YYSWF \
+                 Item",
                 item_type,
                 reader.cur_pos,
             ),
@@ -44,7 +45,7 @@ impl GMElement for Item {
         match &self.item_data {
             ItemData::ItemShape(shape_data) => shape_data.serialize(builder)?,
             ItemData::ItemBitmap(bitmap_data) => bitmap_data.serialize(builder)?,
-            ItemData::ItemFont | ItemData::ItemTextField | ItemData::ItemSprite => {},
+            ItemData::ItemFont | ItemData::ItemTextField | ItemData::ItemSprite => {}
         }
         Ok(())
     }

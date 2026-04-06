@@ -1,7 +1,7 @@
-use std::{
-    fmt::{Display, Formatter},
-    time::{Duration, Instant},
-};
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::time::Duration;
+use std::time::Instant;
 
 #[must_use]
 pub struct Stopwatch {

@@ -1,8 +1,11 @@
 use std::io::Write;
 
-use colored::{Color, Colorize as _};
-use env_logger::{Builder, Env};
-use log::{Level, Record};
+use colored::Color;
+use colored::Colorize as _;
+use env_logger::Builder;
+use env_logger::Env;
+use log::Level;
+use log::Record;
 
 pub fn init() {
     let mut builder = Builder::new();

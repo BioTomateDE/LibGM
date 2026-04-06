@@ -1,15 +1,11 @@
-use crate::{
-    prelude::*,
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{
-            options::{Constant, Flags, GMOptions},
-            texture_page_item::GMTexturePageItem,
-        },
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::options::Constant;
+use crate::wad::elements::options::Flags;
+use crate::wad::elements::options::GMOptions;
+use crate::wad::elements::texture_page_item::GMTexturePageItem;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
 
 pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
     let flag_fullscreen = reader.read_bool32()?;

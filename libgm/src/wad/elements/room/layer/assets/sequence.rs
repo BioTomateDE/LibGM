@@ -1,16 +1,11 @@
-use crate::{
-    prelude::*,
-    util::init::num_enum_from,
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{
-            GMElement,
-            sequence::{GMSequence, SpeedType},
-        },
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::util::init::num_enum_from;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::sequence::GMSequence;
+use crate::wad::elements::sequence::SpeedType;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SequenceInstance {

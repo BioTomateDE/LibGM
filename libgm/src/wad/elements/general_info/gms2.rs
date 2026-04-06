@@ -2,13 +2,10 @@ use std::fmt;
 
 use dotnet_rng::DotnetRng;
 
-use crate::{
-    prelude::*,
-    wad::{
-        deserialize::reader::DataReader, elements::general_info::GMGeneralInfo,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::general_info::GMGeneralInfo;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[derive(Clone, PartialEq)]
 pub struct GMS2Data {
@@ -18,7 +15,8 @@ pub struct GMS2Data {
     /// The FPS of the game.
     pub fps: f32,
 
-    /// If enabled, the game runner may send requests to a GameMaker player count statistics server.
+    /// If enabled, the game runner may send requests to a GameMaker player
+    /// count statistics server.
     pub allow_statistics: bool,
 
     /// Unknown, some sort of checksum.

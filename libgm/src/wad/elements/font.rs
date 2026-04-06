@@ -5,16 +5,13 @@ pub use glyph::Glyph;
 pub use kerning::Kerning;
 use macros::named_list_chunk;
 
-use crate::{
-    prelude::*,
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{GMElement, texture_page_item::GMTexturePageItem},
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-        version::LTSBranch,
-    },
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::texture_page_item::GMTexturePageItem;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
+use crate::wad::version::LTSBranch;
 
 #[named_list_chunk("FONT")]
 pub struct GMFonts {
@@ -115,7 +112,8 @@ pub struct GMFont {
     /// The end of the character range for this font.
     pub range_end: u32,
 
-    /// The [`GMTexturePageItem`] element that contains the texture for this font.
+    /// The [`GMTexturePageItem`] element that contains the texture for this
+    /// font.
     pub texture: GMRef<GMTexturePageItem>,
 
     /// The X Scale this font uses.
@@ -132,8 +130,8 @@ pub struct GMFont {
     /// Was introduced in GM 2022.2.
     pub ascender: Option<u32>,
 
-    /// A spread value that's used for SDF rendering; was introduced in GM 2023.2.
-    /// 0 means disabled.
+    /// A spread value that's used for SDF rendering; was introduced in GM
+    /// 2023.2. 0 means disabled.
     /// TODO(doc): what is spread, what is sdf?
     pub sdf_spread: Option<u32>,
 

@@ -1,7 +1,6 @@
-use crate::{
-    prelude::*,
-    wad::{deserialize::reader::DataReader, version::GMVersionReq},
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::version::GMVersionReq;
 
 pub fn check_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     // Check for new field added in 2024.14
@@ -33,7 +32,8 @@ pub fn check_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     }
     if position2 == 0 {
         // Only one group
-        // Look for non-null bytes in the 4 bytes after the audio group name (and within bounds of the chunk)
+        // Look for non-null bytes in the 4 bytes after the audio group name (and within
+        // bounds of the chunk)
         reader.cur_pos = position1 + 4;
         if reader.cur_pos + 4 > reader.chunk.end_pos {
             return Ok(None); // New field can't fit in remaining space

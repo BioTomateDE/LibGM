@@ -1,19 +1,19 @@
-use macros::{named_list_chunk, num_enum};
+use macros::named_list_chunk;
+use macros::num_enum;
 
-use crate::{
-    prelude::*,
-    util::init::num_enum_from,
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{
-            GMElement, GMNamedElement, background::GMBackground, font::GMFont, sprite::GMSprite,
-            texture_page::GMTexturePage, validate_identifier,
-        },
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-        version::LTSBranch,
-    },
-};
+use crate::prelude::*;
+use crate::util::init::num_enum_from;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::GMNamedElement;
+use crate::wad::elements::background::GMBackground;
+use crate::wad::elements::font::GMFont;
+use crate::wad::elements::sprite::GMSprite;
+use crate::wad::elements::texture_page::GMTexturePage;
+use crate::wad::elements::validate_identifier;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
+use crate::wad::version::LTSBranch;
 
 #[named_list_chunk("TGIN", name_exception)]
 pub struct GMTextureGroupInfos {
@@ -182,10 +182,12 @@ pub enum LoadType {
     InFile = 0,
 
     /// The textures of the group this belongs to are located externally
-    /// May mean more specifically that textures for one texture group are all in one file.
+    /// May mean more specifically that textures for one texture group are all
+    /// in one file.
     SeparateGroup = 1,
 
     /// The textures of the group this belongs to are located externally.
-    /// May mean more specifically that textures are separated into different files, within the group.
+    /// May mean more specifically that textures are separated into different
+    /// files, within the group.
     SeparateTextures = 2,
 }

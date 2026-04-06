@@ -2,13 +2,14 @@ use std::fmt;
 
 use macros::num_enum;
 
-use crate::{
-    prelude::*, util::init::num_enum_from, wad::elements::game_object::event::EventSubtype,
-};
+use crate::prelude::*;
+use crate::util::init::num_enum_from;
+use crate::wad::elements::game_object::event::EventSubtype;
 
 // TODO: fix these broken refs since the EveneType enum is gone
 
-/// The subtype for [`EventType::Keyboard`], [`EventType::KeyDown`] and [`EventType::KeyUp`].
+/// The subtype for [`EventType::Keyboard`], [`EventType::KeyDown`] and
+/// [`EventType::KeyUp`].
 #[num_enum(u32)]
 pub enum Key {
     /// Keycode representing no key.
@@ -410,7 +411,8 @@ impl EventSubtype for Key {
 impl Key {
     /// Converts a virtual key constant (`vk_xxxxxx`) into a [`Key`].
     ///
-    /// This will only work for "special" keys; not for letters and normal numbers.
+    /// This will only work for "special" keys; not for letters and normal
+    /// numbers.
     #[must_use]
     pub fn from_virtual_key(string: &str) -> Option<Self> {
         Some(match string {
@@ -475,7 +477,8 @@ impl Key {
 
     /// Gets the virtual key constant (`vk_xxxxxx`) for this key, if it exists.
     ///
-    /// This will succeed for "special" keys but fail for letters and normal numbers.
+    /// This will succeed for "special" keys but fail for letters and normal
+    /// numbers.
     #[must_use]
     pub const fn to_virtual_key(self) -> Option<&'static str> {
         Some(match self {

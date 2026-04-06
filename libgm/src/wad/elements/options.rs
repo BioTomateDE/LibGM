@@ -6,16 +6,14 @@ mod old;
 pub use constant::Constant;
 pub use flags::Flags;
 
-use crate::{
-    prelude::*,
-    wad::{
-        chunk::ChunkName,
-        deserialize::reader::DataReader,
-        elements::{GMChunk, GMElement, texture_page_item::GMTexturePageItem},
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::wad::chunk::ChunkName;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMChunk;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::texture_page_item::GMTexturePageItem;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
 
 /// Most (if not all) of these options are probably unused and remnant from GM8.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -39,6 +37,7 @@ pub struct GMOptions {
 
 impl GMChunk for GMOptions {
     const NAME: ChunkName = ChunkName::new("OPTN");
+
     fn exists(&self) -> bool {
         self.exists
     }

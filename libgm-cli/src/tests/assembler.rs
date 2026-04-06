@@ -1,16 +1,12 @@
-use std::{
-    io::Write,
-    time::{Duration, Instant},
-};
+use std::io::Write;
+use std::time::Duration;
+use std::time::Instant;
 
-use libgm::{
-    gml::{
-        assembly::{assemble_instructions, disassemble_code},
-        instruction::Instruction,
-    },
-    prelude::*,
-    wad::data::GMData,
-};
+use libgm::gml::assembly::assemble_instructions;
+use libgm::gml::assembly::disassemble_code;
+use libgm::gml::instruction::Instruction;
+use libgm::prelude::*;
+use libgm::wad::data::GMData;
 
 use crate::diff::print_diff;
 
@@ -35,7 +31,7 @@ pub fn test(data: &GMData) -> Result<()> {
         std::io::stdout().flush().unwrap();
 
         // OR: Print on new line
-        //println!("({i}/{count}) Disassembling {name}");
+        // println!("({i}/{count}) Disassembling {name}");
 
         let start_dis = Instant::now();
         let assembly: String =
@@ -101,10 +97,12 @@ fn print_statistics(benchmarks: Vec<Benchmark>) {
 
     println!("===== Statistics =====");
     println!(
-        "Total time: {total_time:.3?} (Disassembly: {total_time_dis:.3?}, Assembly: {total_time_ass:.3?})"
+        "Total time: {total_time:.3?} (Disassembly: {total_time_dis:.3?}, Assembly: \
+         {total_time_ass:.3?})"
     );
     println!(
-        "Mean time per code: {mean_time:.3?} (Disassembly: {mean_time_dis:.3?}, Assembly: {mean_time_ass:.3?})"
+        "Mean time per code: {mean_time:.3?} (Disassembly: {mean_time_dis:.3?}, Assembly: \
+         {mean_time_ass:.3?})"
     );
     println!(
         "Slowest disassembly: {} took {:.3?}",

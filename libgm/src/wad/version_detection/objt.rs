@@ -1,7 +1,6 @@
-use crate::{
-    prelude::*,
-    wad::{deserialize::reader::DataReader, version::GMVersionReq},
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::version::GMVersionReq;
 
 pub fn check_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     let target_ver = Ok(Some((2022, 5).into()));

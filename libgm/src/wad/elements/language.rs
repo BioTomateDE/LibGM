@@ -1,15 +1,13 @@
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
+use std::ops::DerefMut;
 
-use crate::{
-    prelude::*,
-    util::init::vec_with_capacity,
-    wad::{
-        chunk::ChunkName,
-        deserialize::reader::DataReader,
-        elements::{GMChunk, GMElement},
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::util::init::vec_with_capacity;
+use crate::wad::chunk::ChunkName;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMChunk;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMLanguageInfo {
@@ -21,6 +19,7 @@ pub struct GMLanguageInfo {
 
 impl Deref for GMLanguageInfo {
     type Target = Vec<GMLanguageData>;
+
     fn deref(&self) -> &Self::Target {
         &self.languages
     }
@@ -34,6 +33,7 @@ impl DerefMut for GMLanguageInfo {
 
 impl GMChunk for GMLanguageInfo {
     const NAME: ChunkName = ChunkName::new("LANG");
+
     fn exists(&self) -> bool {
         self.exists
     }

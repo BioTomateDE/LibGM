@@ -1,16 +1,13 @@
 use macros::named_list_chunk;
 
-use crate::{
-    prelude::*,
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{
-            GMElement, GMNamedElement, texture_page_item::GMTexturePageItem, validate_identifier,
-        },
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::GMNamedElement;
+use crate::wad::elements::texture_page_item::GMTexturePageItem;
+use crate::wad::elements::validate_identifier;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
 
 /// The embedded images of the data file.
 /// This is used to store built-in particle sprites,
@@ -36,7 +33,8 @@ impl GMElement for GMEmbeddedImages {
 }
 
 /// An embedded image entry in a GameMaker data file. This is GMS2 only.
-/// Not to be confused with the other "embedded" resources, this is a bit different.
+/// Not to be confused with the other "embedded" resources, this is a bit
+/// different.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMEmbeddedImage {
     pub name: String,

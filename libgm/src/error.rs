@@ -1,47 +1,55 @@
-//! LibGM's custom error type is contained here, as well as a convenience type alias for `Result`.
+//! LibGM's custom error type is contained here, as well as a convenience type
+//! alias for `Result`.
 //!
 //! Usually, you will see the most outer error cause first.
 //! For example, in `anyhow`, you might see "Failed to read configuration"
-//! and only the context chain (via `Option<Box<dyn ...>>`) reveals more information
-//! about what actually caused this error.
+//! and only the context chain (via `Option<Box<dyn ...>>`) reveals more
+//! information about what actually caused this error.
 //!
 //! LibGM uses a different approach for its error system.
-//! The most outer / broadest error would otherwise just always be "Failed to parse data file"
-//! which conveys no relevant information. Instead, it displays the root cause first.
-//! This can be trying to read data out of chunk bounds, an assertion failing,
-//! an enum being an invalid value, etc.
+//! The most outer / broadest error would otherwise just always be "Failed to
+//! parse data file" which conveys no relevant information. Instead, it displays
+//! the root cause first. This can be trying to read data out of chunk bounds,
+//! an assertion failing, an enum being an invalid value, etc.
 //!
-//! The specified context chain stores additional information in descending order of importance,
-//! travelling down the call stack. The last element of the context chain will be something
-//! very generic such as "Failed to parse data" or similar.
+//! The specified context chain stores additional information in descending
+//! order of importance, travelling down the call stack. The last element of the
+//! context chain will be something very generic such as "Failed to parse data"
+//! or similar.
 //!
 //! Additionally, LibGM Errors also store their potential error source in an
-//! `Option<Box<dyn std::error::Error>>` for better integration with traditional error systems.
-//! This source will only be set when failable functions from other crates (or std) are called.
-//! The majority of LibGM errors are assertions that only consist of text; no dynamic error source.
+//! `Option<Box<dyn std::error::Error>>` for better integration with traditional
+//! error systems. This source will only be set when failable functions from
+//! other crates (or std) are called. The majority of LibGM errors are
+//! assertions that only consist of text; no dynamic error source.
 //!
 //! ___
 //!
-//! When you write LibGM code, it is good practice to use the [`Context`] trait frequently
-//! to make error traces better for end users (and maintainers trying to debug).
-//! The string in your `.context()` calls should:
+//! When you write LibGM code, it is good practice to use the [`Context`] trait
+//! frequently to make error traces better for end users (and maintainers trying
+//! to debug). The string in your `.context()` calls should:
 //! * start with a lowercase verb in the "-ing" form
 //! * contain no punctuation at the end
 //!
-//! Examples: `.context("reading config file")` or `.with_context(|| format!("acquiring metadata of {file:?}"))`.
+//! Examples: `.context("reading config file")` or `.with_context(||
+//! format!("acquiring metadata of {file:?}"))`.
 //!
 //! Your root error messages (such as when using `bail!`) should:
 //! * start with an uppercase letter
 //! * be a complete sentence
 //! * contain no punctuation at the end
 //!
-//! Examples: `bail!("Expected x, got {y}")` or `.ok_or("Code parent not set")?`.
+//! Examples: `bail!("Expected x, got {y}")` or `.ok_or("Code parent not
+//! set")?`.
 
-use std::fmt::{Display, Formatter, Write};
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::fmt::Write;
 
 /// A LibGM error.
 ///
-/// Contains an error message, a context chain as well as a potential source error.
+/// Contains an error message, a context chain as well as a potential source
+/// error.
 ///
 /// For more information, see the [module level documentation][self].
 #[derive(Debug)]
@@ -97,8 +105,8 @@ impl Error {
     /// The context chain will be printed in forward order and the word
     /// "while" will be inserted before each context string.
     ///
-    /// NOTE: Printing the chain is preferred over using the [`Display`] trait directly.
-    /// Otherwise, the context chain is lost.
+    /// NOTE: Printing the chain is preferred over using the [`Display`] trait
+    /// directly. Otherwise, the context chain is lost.
     #[must_use]
     pub fn chain_with(&self, arrow: &str) -> String {
         let mut output = self.message.clone();
@@ -169,13 +177,14 @@ pub trait Context<T> {
     /// In that case, use [`Context::with_context`] for lazy evaluation instead.
     fn context(self, context: &str) -> Result<T>;
 
-    /// Adds context to this [`Result`] using the given closure that returns a [`String`].
+    /// Adds context to this [`Result`] using the given closure that returns a
+    /// [`String`].
     ///
     /// The context to be appended is lazily evaluated,
     /// meaning the closure only executes if an error actually occurred.
     ///
-    /// This makes it more suited for `format!` calls since it avoids a heap allocation
-    /// in the common [`Ok`] case.
+    /// This makes it more suited for `format!` calls since it avoids a heap
+    /// allocation in the common [`Ok`] case.
     ///
     /// For more information, see [`Context::context`].
     fn with_context(self, f: impl FnOnce() -> String) -> Result<T>;
@@ -214,11 +223,12 @@ impl<T> Context<T> for std::result::Result<T, String> {
 /// Trait for adding context to the context chain of a [`Result`]
 /// and a [`std::error::Error`] source error.
 ///
-/// This trait is meant to be used on `Result<T, E>` where `E` is not LibGM's [`Error`]
-/// (e.g. when performing IO operations or calling functions from other crates).
+/// This trait is meant to be used on `Result<T, E>` where `E` is not LibGM's
+/// [`Error`] (e.g. when performing IO operations or calling functions from
+/// other crates).
 ///
-/// It works on any `Result` (as long as `E` implements `std::error::Error`) and automatically
-/// adds the boxed source error as further context.
+/// It works on any `Result` (as long as `E` implements `std::error::Error`) and
+/// automatically adds the boxed source error as further context.
 ///
 /// For more information, see [`Context`].
 pub trait ContextSrc<T> {
@@ -227,8 +237,8 @@ pub trait ContextSrc<T> {
     /// For more information, see [`Context::context`].
     fn context_src(self, context: &str) -> Result<T>;
 
-    /// Adds context to this [`Result`] using the given closure that returns a [`String`]
-    /// and sets the error source.
+    /// Adds context to this [`Result`] using the given closure that returns a
+    /// [`String`] and sets the error source.
     ///
     /// For more information, see [`Context::with_context`].
     fn with_context_src(self, f: impl FnOnce() -> String) -> Result<T>;
@@ -263,8 +273,8 @@ fn ascii_capitalize(mut string: String) -> String {
 /// Creates a new [LibGM Error](Error) using the specified format string.
 /// This is a simple alias for `Error::new(format!(...)`.
 ///
-/// This macro is currently exported at crate root but this may change in the future
-/// when [Macros 2.0](https://github.com/rust-lang/rust/issues/39412) are stabilized.
+/// This macro is currently exported at crate root but this may change in the
+/// future when [Macros 2.0](https://github.com/rust-lang/rust/issues/39412) are stabilized.
 #[macro_export]
 macro_rules! err {
     ($($arg:tt)*) => {
@@ -275,8 +285,8 @@ macro_rules! err {
 /// Performs an early return with the specified formatted message.
 /// This is a simple alias for `return Err(Error::new(format!(...));`.
 ///
-/// This macro is currently exported at crate root but this may change in the future
-/// when [Macros 2.0](https://github.com/rust-lang/rust/issues/39412) are stabilized.
+/// This macro is currently exported at crate root but this may change in the
+/// future when [Macros 2.0](https://github.com/rust-lang/rust/issues/39412) are stabilized.
 #[macro_export]
 macro_rules! bail {
     ($($arg:tt)*) => {

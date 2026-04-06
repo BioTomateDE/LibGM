@@ -6,14 +6,11 @@ mod demo_lts_ch2;
 mod demo_prelts;
 mod undertale;
 
-use crate::{
-    gml::{
-        GMCode,
-        instruction::{InstanceType, Instruction},
-    },
-    prelude::*,
-    wad::elements::variable::GMVariable,
-};
+use crate::gml::GMCode;
+use crate::gml::instruction::InstanceType;
+use crate::gml::instruction::Instruction;
+use crate::prelude::*;
+use crate::wad::elements::variable::GMVariable;
 
 impl GMData {
     /// Tries to enable or disable debug mode, based on the argument.
@@ -58,7 +55,7 @@ fn toggle_debug(data: &mut GMData, enable: bool) -> Result<()> {
         "DELTARUNE Chapter 1&2" => return demo_prelts::toggle(data, enable),
         "DELTARUNE Chapter 3" => return chapter3::toggle(data, enable),
         "DELTARUNE Chapter 4" => return deltarune::toggle(data, enable),
-        _ => {},
+        _ => {}
     }
 
     if display_name == "DELTARUNE Chapter 1" {
@@ -110,7 +107,8 @@ fn find_debug(
         };
         let Some(is_enabled) = push_value.as_bool() else {
             bail!(
-                "Push Instruction value does not have a proper boolean representation: {push_value:?}"
+                "Push Instruction value does not have a proper boolean representation: \
+                 {push_value:?}"
             );
         };
 

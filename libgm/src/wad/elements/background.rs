@@ -1,15 +1,12 @@
 use macros::named_list_chunk;
 
-use crate::{
-    prelude::*,
-    util::init::vec_with_capacity,
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{GMElement, texture_page_item::GMTexturePageItem},
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::util::init::vec_with_capacity;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::texture_page_item::GMTexturePageItem;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
 
 const ALIGNMENT: u32 = 8;
 
@@ -116,8 +113,10 @@ pub struct GMS2Data {
     /// The number of frames of the tileset animation.
     pub items_per_tile_count: u32,
 
-    /// Exported sprite index, if the background's corresponding sprite was marked to still be exported.
-    /// Will be either 0 or -1 (depending on GM version) when the sprite is not exported, which makes this a bit ambiguous.
+    /// Exported sprite index, if the background's corresponding sprite was
+    /// marked to still be exported. Will be either 0 or -1 (depending on GM
+    /// version) when the sprite is not exported, which makes this a bit
+    /// ambiguous.
     ///
     /// In newer versions (2024.13), this seems to be used? see <https://github.com/BioTomateDE/LibGM/issues/5>
     pub exported_sprite_index: u32,
@@ -200,8 +199,8 @@ impl GMElement for GMS2Data {
 
         if !total_tile_count.is_multiple_of(items_per_tile) {
             bail!(
-                "Background Tiles do not add up: {} total tiles, \
-                {} items per tile leaves a remainder of {}",
+                "Background Tiles do not add up: {} total tiles, {} items per tile leaves a \
+                 remainder of {}",
                 total_tile_count,
                 items_per_tile,
                 total_tile_count % items_per_tile,

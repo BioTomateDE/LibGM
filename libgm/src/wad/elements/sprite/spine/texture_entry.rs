@@ -1,9 +1,9 @@
 use std::fmt::Debug;
 
-use crate::{
-    prelude::*,
-    wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
-};
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TextureEntry {
@@ -35,7 +35,8 @@ impl GMElement for TextureEntry {
                 builder.write_u32(texture_entry_length);
             } else {
                 bail!(
-                    "Expected Post2023_1 Spine Texture Entry data but got Pre2023_1 for some reason"
+                    "Expected Post2023_1 Spine Texture Entry data but got Pre2023_1 for some \
+                     reason"
                 );
             }
         } else if let Data::Pre2023_1(ref texture_blob) = self.data {

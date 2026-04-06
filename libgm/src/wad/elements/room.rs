@@ -13,16 +13,13 @@ use macros::named_list_chunk;
 pub use tile::Tile;
 pub use view::View;
 
-use crate::{
-    gml::GMCode,
-    prelude::*,
-    wad::{
-        deserialize::reader::DataReader,
-        elements::{GMElement, sequence::GMSequence},
-        reference::GMRef,
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::gml::GMCode;
+use crate::prelude::*;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMElement;
+use crate::wad::elements::sequence::GMSequence;
+use crate::wad::reference::GMRef;
+use crate::wad::serialize::builder::DataBuilder;
 
 #[named_list_chunk("ROOM")]
 pub struct GMRooms {

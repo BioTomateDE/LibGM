@@ -1,8 +1,8 @@
-use crate::{
-    prelude::*,
-    util::fmt::typename,
-    wad::{elements::GMElement, serialize::builder::DataBuilder, version::GMVersionReq},
-};
+use crate::prelude::*;
+use crate::util::fmt::typename;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
+use crate::wad::version::GMVersionReq;
 
 // The element fields store `Option<T>`, so passing `Option<&T>` instead
 // of `&Option<T>` would require using `.as_ref()` in every call.

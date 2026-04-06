@@ -11,55 +11,51 @@ pub(super) mod resources;
 
 use std::path::Path;
 
-use crate::{
-    prelude::*,
-    util::bench::Stopwatch,
-    wad::{
-        data::{Endianness, GMData, Metadata},
-        deserialize::{
-            chunk::{ChunkBounds, ChunkMap},
-            reader::DataReader,
-        },
-        elements::{
-            animation_curve::GMAnimationCurves,
-            audio::GMAudios,
-            audio_group::GMAudioGroups,
-            background::GMBackgrounds,
-            code::{GMCodes, check_yyc},
-            data_file::GMDataFiles,
-            embedded_image::GMEmbeddedImages,
-            extension::GMExtensions,
-            feature_flag::GMFeatureFlags,
-            filter_effect::GMFilterEffects,
-            font::GMFonts,
-            function::GMFunctions,
-            game_end::GMGameEndScripts,
-            game_object::GMGameObjects,
-            global_init::GMGlobalInitScripts,
-            language::GMLanguageInfo,
-            options::GMOptions,
-            particle_emitter::GMParticleEmitters,
-            particle_system::GMParticleSystems,
-            path::GMPaths,
-            room::GMRooms,
-            script::GMScripts,
-            sequence::GMSequences,
-            shader::GMShaders,
-            sound::GMSounds,
-            sprite::GMSprites,
-            string::GMStrings,
-            tag::GMTags,
-            texture_group_info::GMTextureGroupInfos,
-            texture_page::GMTexturePages,
-            texture_page_item::GMTexturePageItems,
-            timeline::GMTimelines,
-            ui_node::GMRootUINodes,
-            variable::GMVariables,
-        },
-        version::GMVersion,
-        version_detection::detect_gamemaker_version,
-    },
-};
+use crate::prelude::*;
+use crate::util::bench::Stopwatch;
+use crate::wad::data::Endianness;
+use crate::wad::data::GMData;
+use crate::wad::data::Metadata;
+use crate::wad::deserialize::chunk::ChunkBounds;
+use crate::wad::deserialize::chunk::ChunkMap;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::animation_curve::GMAnimationCurves;
+use crate::wad::elements::audio::GMAudios;
+use crate::wad::elements::audio_group::GMAudioGroups;
+use crate::wad::elements::background::GMBackgrounds;
+use crate::wad::elements::code::GMCodes;
+use crate::wad::elements::code::check_yyc;
+use crate::wad::elements::data_file::GMDataFiles;
+use crate::wad::elements::embedded_image::GMEmbeddedImages;
+use crate::wad::elements::extension::GMExtensions;
+use crate::wad::elements::feature_flag::GMFeatureFlags;
+use crate::wad::elements::filter_effect::GMFilterEffects;
+use crate::wad::elements::font::GMFonts;
+use crate::wad::elements::function::GMFunctions;
+use crate::wad::elements::game_end::GMGameEndScripts;
+use crate::wad::elements::game_object::GMGameObjects;
+use crate::wad::elements::global_init::GMGlobalInitScripts;
+use crate::wad::elements::language::GMLanguageInfo;
+use crate::wad::elements::options::GMOptions;
+use crate::wad::elements::particle_emitter::GMParticleEmitters;
+use crate::wad::elements::particle_system::GMParticleSystems;
+use crate::wad::elements::path::GMPaths;
+use crate::wad::elements::room::GMRooms;
+use crate::wad::elements::script::GMScripts;
+use crate::wad::elements::sequence::GMSequences;
+use crate::wad::elements::shader::GMShaders;
+use crate::wad::elements::sound::GMSounds;
+use crate::wad::elements::sprite::GMSprites;
+use crate::wad::elements::string::GMStrings;
+use crate::wad::elements::tag::GMTags;
+use crate::wad::elements::texture_group_info::GMTextureGroupInfos;
+use crate::wad::elements::texture_page::GMTexturePages;
+use crate::wad::elements::texture_page_item::GMTexturePageItems;
+use crate::wad::elements::timeline::GMTimelines;
+use crate::wad::elements::ui_node::GMRootUINodes;
+use crate::wad::elements::variable::GMVariables;
+use crate::wad::version::GMVersion;
+use crate::wad::version_detection::detect_gamemaker_version;
 
 const ERR_TOO_BIG: &str =
     "Data file is bigger than 2,147,483,646 bytes which will lead to bugs in LibGM and the runner";
@@ -101,7 +97,8 @@ impl ParsingOptions {
     /// all memory accesses occur on correct boundaries.
     ///
     /// Disable this flag if your data file has uncommon/malformed alignment
-    /// (e.g. a port to a niche platform), but you want to try to parse it anyway.
+    /// (e.g. a port to a niche platform), but you want to try to parse it
+    /// anyway.
     ///
     /// > Default: **true**
     #[inline]
@@ -115,7 +112,8 @@ impl ParsingOptions {
     /// match their expected values (e.g., reserved fields that should be zero
     /// or deprecated values that are always the same for compatibility).
     ///
-    /// This provides additional validation against data corruption or version mismatches.
+    /// This provides additional validation against data corruption or version
+    /// mismatches.
     ///
     /// > Default: **true**
     #[inline]
@@ -125,7 +123,8 @@ impl ParsingOptions {
         self
     }
 
-    /// When **disabled**, requires that all data chunks in the file are processed during parsing.
+    /// When **disabled**, requires that all data chunks in the file are
+    /// processed during parsing.
     ///
     /// This prevents silent data loss when rebuilding data by ensuring
     /// no unrecognized or unsupported chunks are ignored. If any chunks
@@ -139,9 +138,11 @@ impl ParsingOptions {
         self
     }
 
-    /// Parses a GameMaker data file (stored in memory) with the specified options.
+    /// Parses a GameMaker data file (stored in memory) with the specified
+    /// options.
     ///
-    /// If you want to parse a data file stored on disk, check out [`ParsingOptions::parse_file`].
+    /// If you want to parse a data file stored on disk, check out
+    /// [`ParsingOptions::parse_file`].
     ///
     /// For more information on the data file format, see [`crate::wad`].
     pub fn parse_bytes(&self, raw_data: impl AsRef<[u8]>) -> Result<GMData> {
@@ -149,9 +150,11 @@ impl ParsingOptions {
             .context("parsing GameMaker data bytes")
     }
 
-    /// Parses a GameMaker data file (stored on disk) with the specified options.
+    /// Parses a GameMaker data file (stored on disk) with the specified
+    /// options.
     ///
-    /// If you want to parse a data file stored in memory, check out [`ParsingOptions::parse_bytes`].
+    /// If you want to parse a data file stored in memory, check out
+    /// [`ParsingOptions::parse_bytes`].
     ///
     /// For more information on the data file format, see [`crate::wad`].
     pub fn parse_file(&self, data_file_path: impl AsRef<Path>) -> Result<GMData> {
@@ -199,7 +202,8 @@ pub fn parse_bytes(raw_data: impl AsRef<[u8]>) -> Result<GMData> {
 /// Parses a GameMaker data file (stored on disk) with default options
 ///
 /// If you want to customize parsing options, check out [`ParsingOptions`].
-/// If you want to parse a data file stored in memory, check out [`parse_bytes`].
+/// If you want to parse a data file stored in memory, check out
+/// [`parse_bytes`].
 ///
 /// For more information on the data file format, see [`crate::wad`].
 pub fn parse_file(data_file_path: impl AsRef<Path>) -> Result<GMData> {
@@ -247,11 +251,16 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
 
         // Skip `chunk_length` bytes; moving to the end of the chunk.
         // Additional checks for integer overflows.
-        reader.cur_pos = reader.cur_pos.checked_add(chunk_length)
+        reader.cur_pos = reader
+            .cur_pos
+            .checked_add(chunk_length)
             .filter(|&pos| pos <= total_data_len)
-            .ok_or_else(|| format!(
-                "Chunk '{name}' out of bounds: specified length {chunk_length} would exceed total length {total_data_len}"
-            ))?;
+            .ok_or_else(|| {
+                format!(
+                    "Chunk '{name}' out of bounds: specified length {chunk_length} would exceed \
+                     total length {total_data_len}"
+                )
+            })?;
 
         let end_pos = reader.cur_pos;
         reader.last_chunk = name;
@@ -313,7 +322,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         Err(e) if reader.options.verify_constants => {
             log::warn!("YYC integrity check failed: {e}");
             false
-        },
+        }
         Err(e) => return Err(e).context("Checking YYC"),
     };
 
@@ -442,8 +451,8 @@ fn handle_unread_chunks(chunks: &ChunkMap, allow_unknown: bool) -> Result<()> {
     let noun: &str = if count == 1 { "chunk" } else { "chunks" };
 
     let message = format!(
-        "{count} unprocessed {noun} detected: {buffer}\n\
-        These unknown chunks will be lost when rebuilding data.",
+        "{count} unprocessed {noun} detected: {buffer}\nThese unknown chunks will be lost when \
+         rebuilding data.",
     );
 
     if allow_unknown {

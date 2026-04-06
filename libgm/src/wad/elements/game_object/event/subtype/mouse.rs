@@ -1,8 +1,8 @@
 use macros::num_enum;
 
-use crate::{
-    prelude::*, util::init::num_enum_from, wad::elements::game_object::event::EventSubtype,
-};
+use crate::prelude::*;
+use crate::util::init::num_enum_from;
+use crate::wad::elements::game_object::event::EventSubtype;
 
 /// The subtype for [`EventType::Mouse`].
 #[num_enum(u32)]
@@ -162,7 +162,8 @@ impl EventSubtype for Mouse {
 }
 
 impl Mouse {
-    /// Whether this mouse event is actually a controller/joystick related event.]
+    /// Whether this mouse event is actually a controller/joystick related
+    /// event.]
     ///
     /// These events only exist in GMS1.
     #[must_use]
@@ -196,7 +197,8 @@ impl Mouse {
         }
     }
 
-    /// Whether this mouse event is related to a mouse button being pressed/released/held.
+    /// Whether this mouse event is related to a mouse button being
+    /// pressed/released/held.
     ///
     /// This will return `false` for:
     /// * joystick events (see [`Mouse::is_joystick`])
@@ -228,7 +230,8 @@ impl Mouse {
         }
     }
 
-    /// Whether this mouse event gets triggered when the left mouse button is pressed/released/held.
+    /// Whether this mouse event gets triggered when the left mouse button is
+    /// pressed/released/held.
     #[must_use]
     pub const fn is_left_button(self) -> bool {
         match self {
@@ -242,7 +245,8 @@ impl Mouse {
         }
     }
 
-    /// Whether this mouse event gets triggered when the right mouse button is pressed/released/held.
+    /// Whether this mouse event gets triggered when the right mouse button is
+    /// pressed/released/held.
     #[must_use]
     pub const fn is_right_button(self) -> bool {
         match self {
@@ -256,7 +260,8 @@ impl Mouse {
         }
     }
 
-    /// Whether this mouse event gets triggered when the middle mouse button is pressed/released/held.
+    /// Whether this mouse event gets triggered when the middle mouse button is
+    /// pressed/released/held.
     #[must_use]
     pub const fn is_middle_button(self) -> bool {
         match self {
@@ -319,7 +324,8 @@ impl Mouse {
     ///
     /// "Normal" (non-global) events only get triggered when the mouse
     /// collides with the collision box of the game object instance,
-    /// Global events **always** get triggered; even if the mouse position is far away.
+    /// Global events **always** get triggered; even if the mouse position is
+    /// far away.
     #[must_use]
     pub const fn is_global(self) -> bool {
         match self {

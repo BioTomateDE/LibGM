@@ -91,7 +91,8 @@ impl Instruction {
         }
     }
 
-    /// Whether this instruction belongs to the category [`Category::Arithmetic`].
+    /// Whether this instruction belongs to the category
+    /// [`Category::Arithmetic`].
     ///
     /// This includes arithmetic operations such as `Add` or `Divide`,
     /// but not bitwise operations such as `And` or `Xor`.

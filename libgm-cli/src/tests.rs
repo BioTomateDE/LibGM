@@ -1,10 +1,10 @@
 mod assembler;
 
 use clap::ValueEnum;
-use libgm::{
-    prelude::*,
-    wad::{data::GMData, deserialize::parse_bytes, serialize::build_bytes},
-};
+use libgm::prelude::*;
+use libgm::wad::data::GMData;
+use libgm::wad::deserialize::parse_bytes;
+use libgm::wad::serialize::build_bytes;
 
 #[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Test {
@@ -44,25 +44,25 @@ pub fn perform(data: &GMData, tests: &[Test]) -> Result<()> {
         match test {
             Test::All => {
                 unreachable!("Test::All is replaced by deduplication beforehand")
-            },
+            }
             Test::Builder => {
                 log::info!("Performing Builder Test");
                 build_bytes(data)?;
-            },
+            }
             Test::Reparse => {
                 log::info!("Performing Reparse Test");
                 let raw: Vec<u8> = build_bytes(data)?;
                 let _new_data = parse_bytes(raw)?;
                 // log_differences(data, &new_data);
-            },
+            }
             Test::Assembler => {
                 log::info!("Performing Assembler Test");
                 assembler::test(data)?;
-            },
+            }
             Test::NameValidation => {
                 log::info!("Performing Name Validation Test");
                 data.validate_names()?;
-            },
+            }
         }
     }
     Ok(())

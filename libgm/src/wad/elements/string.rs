@@ -1,13 +1,10 @@
-use crate::{
-    prelude::*,
-    util::assert,
-    wad::{
-        chunk::ChunkName,
-        deserialize::reader::DataReader,
-        elements::{GMChunk, GMElement},
-        serialize::builder::DataBuilder,
-    },
-};
+use crate::prelude::*;
+use crate::util::assert;
+use crate::wad::chunk::ChunkName;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::GMChunk;
+use crate::wad::elements::GMElement;
+use crate::wad::serialize::builder::DataBuilder;
 
 const ALIGNMENT: u32 = 4;
 
@@ -16,6 +13,7 @@ pub struct GMStrings;
 
 impl GMChunk for GMStrings {
     const NAME: ChunkName = ChunkName::new("STRG");
+
     fn exists(&self) -> bool {
         true
     }
@@ -62,7 +60,8 @@ impl GMElement for GMStrings {
         let mut index = 0;
 
         for placeholder in strings {
-            // For identical strings, just write the position/id again (since they're sorted).
+            // For identical strings, just write the position/id again (since they're
+            // sorted).
             if string.as_ref() == Some(&placeholder.string) {
                 overwrite_placeholder(builder, &placeholder, string_position, index - 1)?;
                 continue;

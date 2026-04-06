@@ -13,23 +13,19 @@ mod sprt;
 mod tgin;
 mod txtr;
 
-use crate::{
-    prelude::*,
-    wad::{
-        chunk::ChunkName,
-        deserialize::{
-            chunk::{ChunkBounds, ChunkMap},
-            reader::DataReader,
-        },
-        version::{
-            GMVersionReq,
-            LTSBranch::{LTS, PostLTS, PreLTS},
-        },
-    },
-};
+use crate::prelude::*;
+use crate::wad::chunk::ChunkName;
+use crate::wad::deserialize::chunk::ChunkBounds;
+use crate::wad::deserialize::chunk::ChunkMap;
+use crate::wad::deserialize::reader::DataReader;
+use crate::wad::version::GMVersionReq;
+use crate::wad::version::LTSBranch::LTS;
+use crate::wad::version::LTSBranch::PostLTS;
+use crate::wad::version::LTSBranch::PreLTS;
 
-/// If `check_fn` can detect multiple versions, `required_version` should be set to its _lowest_ required version
-/// whereas `target_version` should be set to the _highest_ possible version it can detect.
+/// If `check_fn` can detect multiple versions, `required_version` should be set
+/// to its _lowest_ required version whereas `target_version` should be set to
+/// the _highest_ possible version it can detect.
 fn try_check(
     reader: &mut DataReader,
     chunk: &'static str,
@@ -198,7 +194,8 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
         let mut checks_to_remove: Vec<bool> = vec![false; checks.len()];
 
         for (i, check) in checks.iter().enumerate() {
-            // For this iteration, filter out versions whose version requirements are not met yet
+            // For this iteration, filter out versions whose version requirements are not
+            // met yet
             if reader.general_info.version < check.required_version {
                 continue;
             }
