@@ -1,11 +1,11 @@
 [package]
 name = "libgm"
 version = "0.5.0-alpha"
-authors = ["BioTomateDE <latuskati+cratesio@gmail.com>"]
+authors = ["BioTomateDE <biotomatede@proton.me>"]
 edition = "2024"
 description = "A tool for modding, unpacking and decompiling GameMaker games"
 readme = "../README.md"
-repository = "https://github.com/BioTomateDE/LibGM"
+repository = "https://codeberg.org/BioTomateDE/LibGM"
 license = "GPL-3.0"
 keywords = ["gamemaker", "gml", "decompiler", "modding", "undertale"]
 categories = ["parser-implementations", "game-development", "encoding"]
@@ -42,25 +42,25 @@ version = "1.0.0"
 
 # BZip2+QOI encoded images
 [dependencies.bzip2]
-version = "0.6.1"
+version = "0.6"
 optional = true
 
 # Needed for Game Creation Timestamp in General Info
 [dependencies.chrono]
-version = "0.4.44"
+version = "0.4"
 default-features = false
 optional = true
 
 # Needed to (potentially) deserialize PNG images
 [dependencies.image]
-version = "0.25.10"
+version = "0.25"
 default-features = false
 
 # Logging
 [dependencies.log]
-version = "0.4.29"
+version = "0.4"
 
 # Primitive number enums
 [dependencies.num_enum]
-version = "0.7.6"
+version = "0.7"
 

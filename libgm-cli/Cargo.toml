@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 description = "A simple command line interface for interacting with LibGM"
 license = "GPL-3.0-or-later"
-repository = "https://github.com/BioTomateDE/LibGM"
+repository = "https://codeberg.org/BioTomateDE/LibGM"
 readme = "../README.md"
 keywords = ["cli", "gamemaker"]
 categories = ["command-line-utilities"]
@@ -14,8 +14,8 @@ categories = ["command-line-utilities"]
 libgm = { path = "../libgm" }
 
 # Crates.io dependencies
-clap = { version = "4.6.0", features = ["derive"] }
-colored = "3.1.1"
-env_logger = "0.11.9"
-log = "0.4.29"
-similar-asserts = "1.7.0"
+clap = { version = "4.6", features = ["derive"] }
+colored = "3.1"
+env_logger = "0.11"
+log = "0.4"
+similar-asserts = "2.0"

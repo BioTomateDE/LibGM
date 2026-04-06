@@ -45,7 +45,7 @@
 //! or documentation, please contact me via either:
 //! - Discord DM: `@biotomate.de`
 //! - [Codeberg Issue](https://codeberg.org/BioTomateDE/LibGM/issues/new)
-//! - [Email](mailto:latuskati+cratesio@gmail.com)
+//! - [Email](mailto:biotomatede@proton.me?Subject=LibGM%20Question)
 //!
 //! ## Panicking
 //! This library *should* **never panic**.
