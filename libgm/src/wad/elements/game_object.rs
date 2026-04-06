@@ -1,6 +1,6 @@
 pub mod event;
 
-pub use event::{Event, Events};
+pub use event::Events;
 use macros::{named_list_chunk, num_enum};
 
 use crate::{
@@ -57,10 +57,13 @@ impl GMElement for GMGameObjects {
             let group = reader.read_u32()?;
             let linear_damping = reader.read_f32()?;
             let angular_damping = reader.read_f32()?;
+
             let physics_shape_vertex_count = reader.read_count("Physics Shape Vertex Count")?;
+
             let friction = reader.read_f32()?;
             let awake = reader.read_bool32()?;
             let kinematic = reader.read_bool32()?;
+
             let mut physics_shape_vertices: Vec<(f32, f32)> =
                 vec_with_capacity(physics_shape_vertex_count)?;
             for _ in 0..physics_shape_vertex_count {
@@ -68,7 +71,17 @@ impl GMElement for GMGameObjects {
                 let y = reader.read_f32()?;
                 physics_shape_vertices.push((x, y));
             }
-            let events: Vec<Events> = reader.read_pointer_list()?;
+            // if physics_shape_vertex_count > 0 && collision_shape != CollisionShape::Custom {
+            //     reader.warn_invalid_const(format!(
+            //         "Game Object {name:?} has collision shape {collision_shape:?} \
+            //         (not Custom) but has {physics_shape_vertex_count} physics shape vertices \
+            //         {physics_shape_vertices:?}"
+            //     ))?;
+            // } else if physics_shape_vertex_count > 0 || collision_shape == CollisionShape::Custom {
+            //     log::debug!("ok {} {:?}", physics_shape_vertex_count, collision_shape);
+            // }
+
+            let events = Events::deserialize(reader).context("parsing game object events")?;
 
             game_objects.push(GMGameObject {
                 name,
@@ -101,13 +114,13 @@ impl GMElement for GMGameObjects {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_usize(self.game_objects.len())?;
-        let pointer_list_pos: usize = builder.len();
+        let pointer_list_pos = builder.len();
         for _ in 0..self.game_objects.len() {
             builder.write_u32(0xDEAD_C0DE);
         }
 
         for (i, game_object) in self.game_objects.iter().enumerate() {
-            builder.overwrite_usize(builder.len(), pointer_list_pos + 4 * i)?;
+            builder.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
 
             builder.write_gm_string(&game_object.name);
             builder.write_resource_id_opt(game_object.sprite);
@@ -140,7 +153,7 @@ impl GMElement for GMGameObjects {
                 builder.write_f32(*x);
                 builder.write_f32(*y);
             }
-            builder.write_pointer_list(&game_object.events)?;
+            game_object.events.serialize(builder)?;
         }
         Ok(())
     }
@@ -150,48 +163,69 @@ impl GMElement for GMGameObjects {
 pub struct GMGameObject {
     /// The name of the game object.
     pub name: String,
+
     /// The sprite this game object uses.
     pub sprite: Option<GMRef<GMSprite>>,
+
     /// Whether the game object is visible.
     pub visible: bool,
+
     /// Introduced in 2022.5.
     pub managed: Option<bool>,
+
     /// Whether the game object is solid.
     pub solid: bool,
+
     /// The depth level of the game object.
     pub depth: i32,
+
     /// Whether the game object is persistent.
     pub persistent: bool,
+
     /// The parent game object this is inheriting from.
     pub parent: Option<GMRef<Self>>,
+
     /// The texture mask this game object is using.
     pub texture_mask: Option<GMRef<GMSprite>>,
+
     /// Whether this object uses GameMaker physics.
     pub uses_physics: bool,
+
     /// Whether this game object should act as a sensor fixture.
     pub is_sensor: bool,
+
     /// The collision shape the game object should use.
     pub collision_shape: CollisionShape,
+
     /// The physics density of the game object.
     pub density: f32,
+
     /// The physics restitution of the game object.
     pub restitution: f32,
+
     /// The physics collision group this game object belongs to.
     pub group: u32,
+
     /// The physics linear damping this game object uses.
     pub linear_damping: f32,
+
     /// The physics angular damping this game object uses.
     pub angular_damping: f32,
+
     /// The physics friction this game object uses.
     pub friction: f32,
+
     /// Whether this game object should start awake in the physics simulation.
     pub awake: bool,
+
     /// Whether this game object is kinematic.
     pub kinematic: bool,
+
     /// The vertices used for a [`CollisionShape::Custom`].
     pub physics_shape_vertices: Vec<(f32, f32)>,
+
     /// All the events that this game object has.
-    pub events: Vec<Events>,
+    pub events: Events,
 }
 element_stub!(GMGameObject);
 

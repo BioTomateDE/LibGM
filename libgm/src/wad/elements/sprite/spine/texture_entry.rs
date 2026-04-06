@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use crate::{
     prelude::*,
     wad::{deserialize::reader::DataReader, elements::GMElement, serialize::builder::DataBuilder},
@@ -46,11 +48,20 @@ impl GMElement for TextureEntry {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Data {
     /// Texture blob raw data.
-    /// > implementing `serde::Serialize` for this probably isn't the best idea
     Pre2023_1(Vec<u8>),
+
     /// Texture entry count.
     Post2023_1(u32),
+}
+
+impl Debug for Data {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Pre2023_1(_) => f.debug_tuple("Pre2023_1").finish_non_exhaustive(),
+            Self::Post2023_1(count) => f.debug_tuple("Post2023_1").field(count).finish(),
+        }
+    }
 }

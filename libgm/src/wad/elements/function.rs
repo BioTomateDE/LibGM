@@ -71,7 +71,7 @@ impl GMElement for GMFunctions {
         }
 
         for (i, function) in self.functions.iter().enumerate() {
-            let occurrences: &Vec<usize> = builder.function_occurrences.get(i).ok_or_else(|| {
+            let occurrences: &Vec<u32> = builder.function_occurrences.get(i).ok_or_else(|| {
                 format!(
                     "Could not resolve function occurrence with index {i} in list with length {}",
                     builder.function_occurrences.len(),

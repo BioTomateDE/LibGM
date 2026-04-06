@@ -44,7 +44,7 @@ pub struct DataReader<'a> {
     pub endianness: Endianness,
 
     /// Map of all chunks specified by `FORM`; indexed by chunk name.
-    /// Read chunks will be removed from this `HashMap` when calling [`DataReader::read_chunk_required`] or [`DataReader::read_chunk`].
+    /// Read chunks will be removed from this `HashMap` when calling [`DataReader::read_chunk`].
     /// May contain unknown chunks (if there is a GameMaker update, for example).
     pub chunks: ChunkMap,
 
@@ -61,7 +61,7 @@ pub struct DataReader<'a> {
 
     /// General info about this data file. Includes game name, GameMaker Version and WAD Version.
     /// Contains garbage placeholders until the `GEN8` chunk is deserialized.
-    /// Use [`DataReader::unstable_get_gm_version`] to get the GameMaker version before `GEN8` is parsed.
+    /// Use [`DataReader::read_gen8_version`] to get the GameMaker version before `GEN8` is parsed.
     pub general_info: GMGeneralInfo,
 
     /// Will be set after chunk `STRG` is parsed (first chunk to parse).
@@ -91,6 +91,10 @@ pub struct DataReader<'a> {
 }
 
 impl<'a> DataReader<'a> {
+    /// Creates a new [`DataReader`] for the given raw GameMaker data.
+    ///
+    /// Most fields will be filled with a sentinel/stub value before
+    /// being properly initialized while parsing FORM.
     pub fn new(data: &'a [u8]) -> Self {
         // Memory Safety Assertion. This should've been verified before, though.
         let end_pos: u32 = data
@@ -101,19 +105,18 @@ impl<'a> DataReader<'a> {
         Self {
             data,
             cur_pos: 0,
-            specified_version: GMVersion::stub(),
+            specified_version: GMVersion::default(), // stub
             // The default padding value is 16, if used.
             chunk_padding: 16,
             // Assume little endian; big endian is an edge case.
             endianness: Endianness::Little,
             chunk: ChunkBounds { start_pos: 0, end_pos },
             chunks: ChunkMap::new(),
-            last_chunk: ChunkName::new("XXXX"),
-            // Just a stub, will not be read until GEN8 is parsed.
-            general_info: GMGeneralInfo::default(),
+            last_chunk: ChunkName::new("XXXX"),     // stub
+            general_info: GMGeneralInfo::default(), // stub
             strings: vec![],
-            string_chunk: ChunkBounds::default(),
-            options: ParsingOptions::default(),
+            string_chunk: ChunkBounds::default(), // stub
+            options: ParsingOptions::default(),   // stub
             texture_page_item_occurrences: HashMap::new(),
             variable_occurrences: HashMap::new(),
             function_occurrences: HashMap::new(),
@@ -125,7 +128,7 @@ impl<'a> DataReader<'a> {
         self.data.len() as u32
     }
 
-    /// Read the specified number of bytes from the data file while advancing the data position.
+    /// Reads the specified number of bytes from the data file while advancing the data position.
     /// Returns an error when trying to read out of chunk bounds.
     ///
     /// This is the core data reading abstraction. All other methods build up on this.
@@ -164,7 +167,7 @@ impl<'a> DataReader<'a> {
         Ok(slice)
     }
 
-    /// Read a constant number of bytes from the data file while advancing the data position.
+    /// Reads a constant number of bytes from the data file while advancing the data position.
     /// Useful for reading slices with specified sizes like `[u8; 16]`.
     ///
     /// **Safety Note:** `N` must be less than `u32::MAX`.
@@ -174,12 +177,11 @@ impl<'a> DataReader<'a> {
             assert!(N < u32::MAX as usize);
         }
         let slice: &[u8] = self.read_bytes_dyn(N as u32)?;
-        // SAFETY: read_bytes_dyn is guaranteed to read exact N bytes.
-        // > EXCEPTION: This produces undefined behavior is if N > u32::MAX.
+        // SAFETY: read_bytes_dyn is guaranteed to read exactly N bytes.
         Ok(unsafe { &*slice.as_ptr().cast::<[u8; N]>() })
     }
 
-    /// Read a 32-bit integer and convert it to a bool.
+    /// Reads a 32-bit integer and convert it to a boolean.
     /// ___
     /// Returns an error when the read number is neither 0 nor 1.
     pub fn read_bool32(&mut self) -> Result<bool> {
@@ -194,7 +196,7 @@ impl<'a> DataReader<'a> {
         }
     }
 
-    /// Read a UTF-8 character string with the specified byte length.
+    /// Reads a UTF-8 character string with the specified byte length.
     /// ___
     /// For reading standard GameMaker string references, see [`DataReader::read_gm_string`].
     pub fn read_literal_string(&mut self, length: u32) -> Result<String> {
@@ -214,7 +216,7 @@ impl<'a> DataReader<'a> {
         Ok(string)
     }
 
-    /// Read bytes until the reader position is divisible by the specified alignment.
+    /// Reads bytes until the reader position is divisible by the specified alignment.
     /// Ensures the read padding bytes are all zero.
     pub fn align(&mut self, alignment: u32) -> Result<()> {
         while !self.cur_pos.is_multiple_of(alignment) {

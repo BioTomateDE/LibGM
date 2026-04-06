@@ -12,6 +12,8 @@ use libgm::{
     wad::data::GMData,
 };
 
+use crate::diff::print_diff;
+
 pub fn test(data: &GMData) -> Result<()> {
     let count = data.codes.len();
 
@@ -57,34 +59,8 @@ pub fn test(data: &GMData) -> Result<()> {
         }
 
         // Assembler (or disassembler) failed; produced different instructions.
-        println!();
-        let orig_len = code.instructions.len();
-        let recr_len = reconstructed.len();
-
-        if recr_len != orig_len {
-            let diff = recr_len.abs_diff(orig_len);
-            let comparison = if recr_len > orig_len { "more" } else { "fewer" };
-            println!("Reconstructed code has {diff} {comparison} instructions than the original");
-        }
-
-        let lines: Vec<&str> = assembly.split('\n').collect();
-
-        // TODO:prettier diff
-        for (index, (original, recreation)) in
-            code.instructions.iter().zip(&reconstructed).enumerate()
-        {
-            if original != recreation {
-                let line = lines[index];
-                println!("Original: {original:?}");
-                println!("Recreation: {recreation:?}");
-                println!("Assembly: {line}");
-                println!();
-            }
-        }
-
-        return Err(
-            "Assembler produced different instructions than the original (see logs)".into(),
-        );
+        print_diff(&code.instructions, &reconstructed);
+        bail!("Assembler produced different instructions than the original (see logs)",);
     }
 
     println!();

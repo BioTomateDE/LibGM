@@ -148,7 +148,7 @@ impl GMElement for GMSprite {
                         .to_vec();
                     reader.align(4)?;
                     let timeline = swf::Timeline::deserialize(reader)?;
-                    SpecialData::SWF(swf::Data {
+                    SpecialData::Swf(swf::Data {
                         swf_version,
                         yyswf_version,
                         jpeg_table,
@@ -320,7 +320,7 @@ impl GMElement for GMSprite {
         builder.write_u32(special_fields.special_version);
         builder.write_u32(match special_fields.data {
             SpecialData::Normal => 0,
-            SpecialData::SWF(_) => 1,
+            SpecialData::Swf(_) => 1,
             SpecialData::Spine(_) => 2,
         });
 
@@ -348,7 +348,7 @@ impl GMElement for GMSprite {
                 Self::build_texture_list(builder, &self.textures)?;
                 self.build_mask_data(builder, &self.collision_masks)?;
             },
-            SpecialData::SWF(swf) => {
+            SpecialData::Swf(swf) => {
                 builder.write_i32(swf.swf_version);
                 if swf.swf_version == 8 {
                     Self::build_texture_list(builder, &self.textures)?;
@@ -503,7 +503,7 @@ impl GMSprite {
         let rounded_width = width.next_multiple_of(8); // Align to 8
         let data_bits = rounded_width * height * count;
         let data_bits = data_bits.next_multiple_of(32); // Align to 32 bits
-        let data_bytes = (data_bits / 8) as usize;
+        let data_bytes = data_bits / 8;
         assert::int(written_bytes, data_bytes, "Sprite Mask Data Size")?;
 
         Ok(())
@@ -530,7 +530,7 @@ pub struct Special {
 #[derive(Debug, Clone, PartialEq)]
 pub enum SpecialData {
     Normal,
-    SWF(swf::Data),
+    Swf(swf::Data),
     Spine(spine::Data),
 }
 

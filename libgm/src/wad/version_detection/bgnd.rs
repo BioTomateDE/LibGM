@@ -34,7 +34,7 @@ pub fn check_2024_14_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> 
         let tile_count = reader.read_u32()?;
 
         // Calculate the theoretical end position given the above info, and compare to the actual end position (with padding).
-        let end_pos = bg_ptr + 4 * items_per_tile_count * tile_count + 60;
+        let end_pos = bg_ptr + (4 * items_per_tile_count * tile_count) + 64;
         if next_bg_ptr == 0 {
             // Align to 16 bytes, and compare against chunk end position
             let end_pos = end_pos.next_multiple_of(16);

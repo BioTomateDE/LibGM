@@ -10,6 +10,7 @@ pub enum Action {
     SerializeTexturesQoi,
     SerializeTexturesBz2Qoi,
     OptimizeMemory,
+    Most,
 }
 
 impl Action {
@@ -17,7 +18,7 @@ impl Action {
         match self {
             Self::EnableDebug => data.enable_debug(),
             Self::DisableDebug => data.disable_debug(),
-            Self::DeserializeTextures => data.deserialize_textures(),
+            Self::DeserializeTextures => data.deserialize_all_textures(),
             Self::SerializeTexturesPng => serialize_textures(data, Format::Png),
             Self::SerializeTexturesQoi => serialize_textures(data, Format::Qoi),
             Self::SerializeTexturesBz2Qoi => serialize_textures(data, Format::Bz2Qoi),
@@ -25,6 +26,7 @@ impl Action {
                 data.optimize_memory();
                 Ok(())
             },
+            Self::Most => data.post_deserialize(),
         }
     }
 }

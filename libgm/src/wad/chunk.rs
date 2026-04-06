@@ -12,6 +12,7 @@ impl ChunkName {
     /// It is only meant to be used in `const` contexts
     /// where panics result in a compile error.
     pub const fn new(name: &'static str) -> Self {
+        // TODO(const-hack) Switch to assert_eq once assert_failed is const-stable.
         assert!(name.len() == 4, "Expected string of length 4");
 
         let bytes = name.as_bytes();
@@ -36,17 +37,12 @@ impl ChunkName {
         if valid {
             return Ok(Self { bytes });
         }
-        if let Some(string) = try_display(&bytes) {
-            bail!(
-                "Expected chunk name {string:?} to only consist \
-                of uppercase ASCII letters and digits"
-            );
-        }
         let hexdump = hexdump(&bytes);
-        bail!(
-            "Expected chunk name [{hexdump}] to only consist \
-            of uppercase ASCII letters and digits"
-        );
+        let msg = "only consist of uppercase ASCII digits and letters";
+        if let Some(string) = try_display(&bytes) {
+            bail!("Expected chunk name {string:?} [{hexdump}] to {msg}");
+        }
+        bail!("Expected chunk name [{hexdump}] to {msg}");
     }
 
     #[inline]

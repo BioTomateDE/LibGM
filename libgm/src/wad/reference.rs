@@ -1,7 +1,7 @@
 //! Contains the `GMRef` type which is used to refer to other GameMaker elements.
 
 use std::{
-    fmt::{Debug, Formatter},
+    fmt,
     hash::{Hash, Hasher},
 };
 
@@ -20,6 +20,7 @@ use crate::{prelude::*, util::fmt::typename};
 /// which needs the vector the elements are stored in.
 /// This means that removing or inserting elements in the middle of
 /// the list will shift all their `GMRef`s; breaking them.
+#[repr(transparent)]
 pub struct GMRef<T> {
     /// The GameMaker ID / Index of this resource in the corresponding element vector.
     pub(crate) index: u32,
@@ -72,14 +73,15 @@ impl<T> From<GMRef<T>> for usize {
     }
 }
 
-impl<T> Debug for GMRef<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl<T> fmt::Debug for GMRef<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "GMRef<{}#{}>", typename::<T>(), self.index)
     }
 }
 
 impl<T> GMRef<T> {
     /// Creates a new GameMaker reference with the specified index.
+    ///
     /// The fake generic type can often be omitted (if the compiler can infer it).
     #[must_use]
     pub const fn new(index: u32) -> Self {

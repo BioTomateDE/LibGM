@@ -21,7 +21,7 @@ use crate::{
     },
 };
 
-#[named_list_chunk("CODE")]
+#[named_list_chunk("CODE", name_exception)]
 pub struct GMCodes {
     pub codes: Vec<GMCode>,
     pub exists: bool,
@@ -31,7 +31,7 @@ element_stub!(GMCode);
 
 impl GMElement for GMCodes {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        // This can happen with YYC/
+        // This can happen with YYC.
         if reader.chunk.is_empty() {
             return Ok(Self { codes: vec![], exists: false });
         }
@@ -143,7 +143,7 @@ impl GMElement for GMCodes {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_usize(self.codes.len())?;
-        let pointer_list_pos: usize = builder.len();
+        let pointer_list_pos: u32 = builder.len();
         for _ in 0..self.codes.len() {
             builder.write_u32(0xDEAD_C0DE);
         }
@@ -151,11 +151,11 @@ impl GMElement for GMCodes {
         // WAD <= 14 my beloved
         if builder.wad_version() <= 14 {
             for (i, code) in self.codes.iter().enumerate() {
-                builder.overwrite_usize(builder.len(), pointer_list_pos + 4 * i)?;
+                builder.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
                 builder.write_gm_string(&code.name);
-                let length_placeholder_pos: usize = builder.len();
+                let length_placeholder_pos = builder.len();
                 builder.write_u32(0xDEAD_C0DE);
-                let start: usize = builder.len();
+                let start = builder.len();
 
                 // In WAD <= 14, instructions are written immediately
                 for (i, instruction) in code.instructions.iter().enumerate() {
@@ -164,14 +164,14 @@ impl GMElement for GMCodes {
                     })?;
                 }
 
-                let code_length: usize = builder.len() - start;
-                builder.overwrite_usize(code_length, length_placeholder_pos)?;
+                let code_length = builder.len() - start;
+                builder.overwrite_u32(code_length, length_placeholder_pos)?;
             }
             return Ok(());
         }
 
         // In WAD 15+, the codes' instructions are written before the codes metadata
-        let mut instructions_ranges: Vec<(usize, usize)> = Vec::with_capacity(self.codes.len());
+        let mut instructions_ranges: Vec<(u32, u32)> = Vec::with_capacity(self.codes.len());
 
         for (i, code) in self.codes.iter().enumerate() {
             if code.modern_data.as_ref().unwrap().parent.is_some() {
@@ -183,20 +183,20 @@ impl GMElement for GMCodes {
                 continue;
             }
 
-            let start: usize = builder.len();
+            let start: u32 = builder.len();
             for instruction in &code.instructions {
                 instruction
                     .serialize(builder)
                     .with_context(|| format!("serializing code #{i} with name {:?}", code.name))?;
             }
-            let end: usize = builder.len();
+            let end: u32 = builder.len();
             instructions_ranges.push((start, end));
         }
 
         for (i, code) in self.codes.iter().enumerate() {
-            builder.overwrite_usize(builder.len(), pointer_list_pos + 4 * i)?;
+            builder.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
             let (start, end) = instructions_ranges[i];
-            let length: usize = end - start;
+            let length: u32 = end - start;
             let data: &ModernData = code.modern_data.as_ref().ok_or_else(|| {
                 format!(
                     "Code WAD15+ data not set in WAD version {}",
@@ -205,7 +205,7 @@ impl GMElement for GMCodes {
             })?;
 
             builder.write_gm_string(&code.name);
-            builder.write_usize(length)?;
+            builder.write_u32(length);
             builder.write_u16(data.local_count);
             builder.write_u16(data.argument_count | if data.weird_local_flag { 0x8000 } else { 0 });
             let instructions_start_offset: i32 = start as i32 - builder.len() as i32;
@@ -784,8 +784,8 @@ fn build_pop(
     type1: DataType,
     type2: DataType,
 ) -> Result<()> {
-    let instr_pos: usize = builder.len();
-    builder.write_i16(variable.instance_type.build());
+    let instr_pos: u32 = builder.len();
+    builder.write_i16(build_instance_type(variable));
     builder.write_u8(u8::from(type1) | u8::from(type2) << 4);
     builder.write_u8(opcode);
     write_variable_occurrence(
@@ -837,10 +837,10 @@ fn build_popenv_exit(builder: &mut DataBuilder, opcode: u8) {
 }
 
 fn build_push(builder: &mut DataBuilder, opcode: u8, value: &PushValue) -> Result<()> {
-    let instr_pos: usize = builder.len();
+    let instr_pos: u32 = builder.len();
     builder.write_i16(match value {
         PushValue::Int16(int16) => *int16,
-        PushValue::Variable(variable) => variable.instance_type.build(),
+        PushValue::Variable(variable) => build_instance_type(variable),
         _ => 0,
     });
 
@@ -873,7 +873,7 @@ fn build_push(builder: &mut DataBuilder, opcode: u8, value: &PushValue) -> Resul
 
 fn build_pushvar(builder: &mut DataBuilder, opcode: u8, variable: &CodeVariable) -> Result<()> {
     let instr_pos = builder.len();
-    builder.write_i16(variable.instance_type.build());
+    builder.write_i16(build_instance_type(variable));
     builder.write_u8(DataType::Variable.into());
     builder.write_u8(opcode);
 
@@ -898,7 +898,7 @@ fn build_call(
     function: GMRef<GMFunction>,
     argument_count: u16,
 ) -> Result<()> {
-    let instr_pos: usize = builder.len();
+    let instr_pos: u32 = builder.len();
     builder.write_u16(argument_count);
     builder.write_u8(DataType::Int32.into());
     builder.write_u8(opcode);
@@ -988,14 +988,27 @@ fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<Code
     })
 }
 
+const fn build_instance_type(code_variable: &CodeVariable) -> i16 {
+    // utmt requires this for proper disassembly
+    if matches!(
+        code_variable.variable_type,
+        VariableType::Normal | VariableType::Instance
+    ) {
+        code_variable.instance_type.build()
+    } else {
+        // if special access, make it "undefined"
+        0
+    }
+}
+
 fn write_variable_occurrence(
     builder: &mut DataBuilder,
     gm_index: u32,
-    occurrence_pos: usize,
+    occurrence_pos: u32,
     variable_type: VariableType,
 ) -> Result<()> {
     let len: usize = builder.variable_occurrences.len();
-    let occurrences: &mut Vec<(usize, VariableType)> = builder
+    let occurrences: &mut Vec<(u32, VariableType)> = builder
         .variable_occurrences
         .get_mut(gm_index as usize)
         .ok_or_else(|| {
@@ -1004,10 +1017,10 @@ fn write_variable_occurrence(
 
     if let Some(&(last_occurrence_pos, old_variable_type)) = occurrences.last() {
         // Replace last occurrence with next occurrence offset
-        let occurrence_offset: i32 = occurrence_pos as i32 - last_occurrence_pos as i32;
-        let occurrence_offset_full: i32 =
-            occurrence_offset & 0x07FF_FFFF | (i32::from(u8::from(old_variable_type) & 0xF8) << 24);
-        builder.overwrite_i32(occurrence_offset_full, last_occurrence_pos + 4)?;
+        let occurrence_offset: u32 = occurrence_pos - last_occurrence_pos;
+        let occurrence_offset_full: u32 =
+            occurrence_offset & 0x07FF_FFFF | (u32::from(u8::from(old_variable_type) & 0xF8) << 24);
+        builder.overwrite_u32(occurrence_offset_full, last_occurrence_pos + 4)?;
     }
 
     // See write_function_occurrence
@@ -1025,10 +1038,10 @@ fn write_variable_occurrence(
 fn write_function_occurrence(
     builder: &mut DataBuilder,
     gm_index: u32,
-    occurrence_pos: usize,
+    occurrence_pos: u32,
 ) -> Result<()> {
     let len: usize = builder.function_occurrences.len();
-    let occurrences: &mut Vec<usize> = builder
+    let occurrences: &mut Vec<u32> = builder
         .function_occurrences
         .get_mut(gm_index as usize)
         .ok_or_else(|| {
@@ -1037,8 +1050,8 @@ fn write_function_occurrence(
 
     if let Some(&last_occurrence_pos) = occurrences.last() {
         // Replace last occurrence with next occurrence offset
-        let occurrence_offset: i32 = occurrence_pos as i32 - last_occurrence_pos as i32;
-        builder.overwrite_i32(occurrence_offset & 0x07FF_FFFF, last_occurrence_pos + 4)?;
+        let occurrence_offset: u32 = occurrence_pos - last_occurrence_pos;
+        builder.overwrite_u32(occurrence_offset & 0x07FF_FFFF, last_occurrence_pos + 4)?;
     }
 
     // Technically it should write the name string id here.
