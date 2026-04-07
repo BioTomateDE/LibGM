@@ -30,6 +30,9 @@ png-image = ["image/png"]
 all-features = true
 default-target = "x86_64-unknown-linux-gnu"
 
+[badges]
+maintenance.status = "actively-developed"
+
 # Attribute macros (num_enum, list_chunk, named_list_chunk)
 [dependencies.macros]
 version = "0.2.0"
