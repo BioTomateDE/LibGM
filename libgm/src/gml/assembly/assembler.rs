@@ -555,16 +555,15 @@ fn parse_string_literal(reader: &mut Reader) -> Result<String> {
     for (i, char) in reader.line.char_indices() {
         if escaping {
             let append_char = match char {
-                '"' => '"',    // Literal "
-                '\'' => '\'',  // Literal '
-                '\\' => '\\',  // Literal \
-                'n' => '\n',   // Newline (0x0A)
-                'r' => '\r',   // Carriage Return (0x0D)
-                'b' => '\x08', // Backspace (0x08)
-                'f' => '\x0C', // Form Feed (0x0C)
-                't' => '\t',   // Horizontal Tab (0x09)
-                'v' => '\x0B', // Vertical Tab (0x0B)
-                'a' => '\x07', // Alert (0x07) (aka bell)
+                '\\' => '\\',
+                '"' => '"',
+                'a' => '\x07', // 07 - Bell (Alert)
+                'b' => '\x08', // 08 - Backspace
+                't' => '\t',   // 09 - Horizontal Tab
+                'n' => '\n',   // 0A - Line Feed
+                'v' => '\x0B', // 0B - Vertical Tab
+                'f' => '\x0C', // 0C - Form Feed
+                'r' => '\r',   // 0D - Carriage Return
                 _ => bail!("Invalid escape character '{char}'"),
             };
             string.push(append_char);

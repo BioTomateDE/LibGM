@@ -569,9 +569,13 @@ fn write_literal_string(string_lit: &str, buffer: &mut String) {
         match c {
             '\\' => buffer.push_str("\\\\"),
             '"' => buffer.push_str("\\\""),
-            '\n' => buffer.push_str("\\n"),
-            '\r' => buffer.push_str("\\r"),
-            '\t' => buffer.push_str("\\t"),
+            '\x07' => buffer.push_str("\\a"), // 07 - Bell (Alert)
+            '\x08' => buffer.push_str("\\b"), // 08 - Backspace
+            '\t' => buffer.push_str("\\t"),   // 09 - Horizontal Tab
+            '\n' => buffer.push_str("\\n"),   // 0A - Line Feed
+            '\x0B' => buffer.push_str("\\v"), // 0B - Vertical Tab
+            '\x0C' => buffer.push_str("\\f"), // 0C - Form Feed
+            '\r' => buffer.push_str("\\r"),   // 0D - Carriage Return
             _ => buffer.push(c),
         }
     }
