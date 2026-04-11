@@ -8,7 +8,7 @@ use crate::tests::Test;
 /// A simple CLI for operating and debugging LibGM
 #[derive(Parser, Debug)]
 pub struct Args {
-    /// The GameMaker data file(s) to load
+    /// The GameMaker data file(s) to load.
     ///
     /// Default: `./data.win`
     pub files: Vec<PathBuf>,
@@ -18,6 +18,12 @@ pub struct Args {
     /// Leaving this empty will skip rebuilding.
     #[arg(short, long)]
     pub out: Option<PathBuf>,
+
+    /// Whether to allow invalid constants / alignment while parsing.
+    ///
+    /// Default: false
+    #[arg(long)]
+    pub lenient: bool,
 
     /// The tests to execute.
     #[arg(short, long, value_delimiter = ',')]

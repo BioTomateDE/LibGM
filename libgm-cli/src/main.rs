@@ -27,16 +27,28 @@ fn run(mut args: cli::Args) -> Result<()> {
     let tests: Vec<Test> = tests::deduplicate(args.tests);
     let files: Vec<PathBuf> = dir::get_data_files(&args.files)?;
 
+    let mut parser = ParsingOptions::new();
+    if args.lenient {
+        parser.verify_alignment = false;
+        parser.verify_constants = false;
+        parser.allow_unknown_chunks = true;
+    }
+
     for data_file in files {
         log::info!("Parsing data file {}", data_file.display());
-        let mut data: GMData = ParsingOptions::new()
-            .verify_constants(false)
-            .parse_file(data_file)?;
+        let mut data: GMData = parser.parse_file(data_file)?;
 
         tests::perform(&data, &tests)?;
 
         for action in &args.actions {
             action.perform(&mut data)?;
+        }
+
+        for i in &data.codes {
+            let assembly = disassemble_code(i, &data)?;
+            println!("===== {} =====", i.name);
+            println!("{assembly}");
+            println!();
         }
 
         for code_name in &args.codes {

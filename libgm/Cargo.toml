@@ -1,6 +1,6 @@
 [package]
 name = "libgm"
-version = "0.5.0-alpha"
+version = "0.5.0"
 authors = ["BioTomateDE <biotomatede@proton.me>"]
 edition = "2024"
 description = "A tool for modding, unpacking and decompiling GameMaker games"

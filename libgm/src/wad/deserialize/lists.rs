@@ -82,33 +82,29 @@ impl DataReader<'_> {
     }
 
     fn read_pointer_element<T: GMElement>(&mut self, pointer: u32, is_last: bool) -> Result<T> {
-        T::deserialize_pre_padding(self)?;
+        T::deserialize_pre_padding(self).context("reading pre-padding")?;
 
         // Manually assert position
         if self.cur_pos != pointer {
             let name = typename::<T>();
+            let pos = i64::from(self.cur_pos);
 
             if pointer == 0 {
                 bail!(
-                    "{} pointer is zero at position {}! Null pointers are not yet supported",
-                    name,
-                    self.cur_pos,
-                )
+                    "{name} pointer is zero at position {pos}! Null pointers are not yet supported",
+                );
             }
 
-            bail!(
-                "{} pointer misaligned: expected position {} but reader is actually at {} (diff: \
-                 {})",
-                name,
-                pointer,
-                self.cur_pos,
-                i64::from(pointer) - i64::from(self.cur_pos),
-            )
+            let diff = i64::from(pointer) - pos;
+            self.warn_invalid_align(format!(
+                "{name} pointer is misaligned: expected position {pointer} but reader is actually \
+                 at {pos} (diff: {diff})",
+            ))?;
         }
 
         let element = T::deserialize(self)?;
-        T::deserialize_post_padding(self, is_last)?;
 
+        T::deserialize_post_padding(self, is_last).context("reading post-padding")?;
         Ok(element)
     }
 
