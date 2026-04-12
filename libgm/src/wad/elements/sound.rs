@@ -103,7 +103,7 @@ impl GMElement for GMSound {
             Some(".ogg") => AudioType::Ogg,
             Some(".mp3") => AudioType::Mp3,
             Some(other) => {
-                reader.warn_invalid_const(format!("Invalid or unknown audio type {other:?}"))?;
+                reader.handle_invalid_const(format!("Invalid or unknown audio type {other:?}"))?;
                 AudioType::Unknown
             }
         };

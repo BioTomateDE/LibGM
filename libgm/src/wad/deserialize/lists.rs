@@ -96,7 +96,7 @@ impl DataReader<'_> {
             }
 
             let diff = i64::from(pointer) - pos;
-            self.warn_invalid_align(format!(
+            self.handle_invalid_align(format!(
                 "{name} pointer is misaligned: expected position {pointer} but reader is actually \
                  at {pos} (diff: {diff})",
             ))?;

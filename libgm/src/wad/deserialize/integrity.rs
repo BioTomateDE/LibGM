@@ -18,7 +18,7 @@ impl DataReader<'_> {
             return Ok(());
         }
 
-        self.warn_invalid_align(format!(
+        self.handle_invalid_align(format!(
             "{} pointer is misaligned: expected position {} but reader is actually at {} (diff: \
              {})",
             pointer_name,
@@ -37,7 +37,7 @@ impl DataReader<'_> {
     /// Returns an error if `reader.options.verify_constants` is
     /// enabled, otherwise only prints a warning log.
     #[track_caller]
-    pub fn warn_invalid_const(&self, message: String) -> Result<()> {
+    pub fn handle_invalid_const(&self, message: String) -> Result<()> {
         if self.options.verify_constants {
             Err(Error::new(message))
         } else {
@@ -49,7 +49,7 @@ impl DataReader<'_> {
     /// Returns an error if `reader.options.verify_alignment` is
     /// enabled, otherwise only prints a warning log.
     #[track_caller]
-    pub fn warn_invalid_align(&self, message: String) -> Result<()> {
+    pub fn handle_invalid_align(&self, message: String) -> Result<()> {
         if self.options.verify_alignment {
             Err(Error::new(message))
         } else {
@@ -74,7 +74,7 @@ impl DataReader<'_> {
         }
 
         let width = size_of::<I>() * 2;
-        self.warn_invalid_const(format!(
+        self.handle_invalid_const(format!(
             "Expected {description} to be {expected} but it is actually {actual} \
              (0x{actual:0width$X})",
         ))
@@ -95,7 +95,7 @@ impl DataReader<'_> {
             return Ok(());
         }
 
-        self.warn_invalid_const(format!(
+        self.handle_invalid_const(format!(
             "Expected {description} to be {expected} but it is actually {actual}",
         ))
     }
@@ -115,7 +115,7 @@ impl DataReader<'_> {
             return Ok(());
         }
 
-        self.warn_invalid_const(format!(
+        self.handle_invalid_const(format!(
             "Expected {description} Data Type to be {expected:?} but it is actually {actual:?}"
         ))
     }

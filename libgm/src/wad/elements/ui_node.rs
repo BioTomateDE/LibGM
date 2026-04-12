@@ -29,7 +29,7 @@ pub struct GMRootUINodes {
 
 impl GMElement for GMRootUINodes {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        if reader.chunk.length() > 4 {
+        if reader.chunk.length() > 12 {
             log::warn!("UI nodes are untested; issues may occur");
         }
         let ui_root_nodes: Vec<UINode> = reader.read_pointer_list()?;
@@ -118,6 +118,7 @@ impl GMElement for UINode {
         Ok(())
     }
 }
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum NodeData {
     Layer(Layer),

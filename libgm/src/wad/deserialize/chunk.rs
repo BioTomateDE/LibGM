@@ -144,14 +144,15 @@ impl DataReader<'_> {
         }
 
         if self.cur_pos != self.chunk.end_pos {
-            bail!(
+            self.handle_invalid_align(format!(
                 "Misaligned chunk '{}': expected chunk end position {} but the reader is actually \
                  at position {} (diff: {})",
                 T::NAME,
                 self.chunk.end_pos,
                 self.cur_pos,
                 i64::from(self.chunk.end_pos) - i64::from(self.cur_pos),
-            );
+            ))?;
+            self.cur_pos = self.chunk.end_pos;
         }
 
         log::trace!("Parsing chunk '{}' took {stopwatch}", T::NAME);
@@ -161,7 +162,7 @@ impl DataReader<'_> {
     /// Potentially read padding at the end of the chunk, depending on the
     /// GameMaker version.
     fn read_chunk_padding(&mut self) -> Result<()> {
-        // Padding only for GMS2+ and 1.9999+
+        // Padding only for GMS2+ and 1.0.0.9999+
         let ver: &GMVersion = &self.specified_version;
         let padding_eligible = ver.major >= 2 || (ver.major == 1 && ver.build >= 9999);
         if !padding_eligible {

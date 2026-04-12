@@ -99,13 +99,13 @@ impl Tiles {
 
             // Sanity check: run of 2 empty tiles
             if length != 0x81 {
-                reader.warn_invalid_align(format!(
+                reader.handle_invalid_align(format!(
                     "Expected 0x81 for run length of compressed tile data padding; got \
                      0x{length:02X}"
                 ))?;
             }
             if tile as i32 != -1 {
-                reader.warn_invalid_align(format!(
+                reader.handle_invalid_align(format!(
                     "Expected -1 for tile of compressed tile data padding; got 0x{length:02X}"
                 ))?;
             }

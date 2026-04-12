@@ -115,12 +115,12 @@ impl GMElement for Events {
 
         // i dont know if this is exactly correct
         if gms2 && count != 15 {
-            reader.warn_invalid_const(format!(
+            reader.handle_invalid_const(format!(
                 "Expected 15 event types in GMS2; actually got {count}"
             ))?;
         }
         if !gms2 && count != 13 {
-            reader.warn_invalid_const(format!(
+            reader.handle_invalid_const(format!(
                 "Expected 13 event types in GMS1; actually got {count}"
             ))?;
         }
