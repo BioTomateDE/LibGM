@@ -144,9 +144,6 @@ impl GMVersion {
         self.build = new.build;
         if new.post_lts {
             self.branch = LTSBranch::PostLTS;
-        } else if new.major >= 2022 {
-            // TODO: is this correct?
-            self.branch = LTSBranch::LTS;
         }
     }
 
