@@ -403,32 +403,20 @@ pub trait GMNamedElement: GMElement {
 ///
 /// ## Rules:
 /// - At least one character long
+/// - Ascii letters, digits and underscores are allowed (`@` is also allowed
+///   because GameMaker uses them internally)
 /// - First character is not a digit
-/// - Letters and underscores are allowed
-/// - Only ascii characters
-/// - Special `@@MyIdentifier@@` syntax covered
 pub(crate) fn validate_identifier(name: &str) -> Result<()> {
-    let orig_name = name;
-    let mut name = name;
+    let first_char = name.chars().next().ok_or("Identifier is empty")?;
 
-    // i hate this function
-    if name.len() > 4 && name.starts_with("@@") && name.ends_with("@@") {
-        name = &name[2..name.len() - 2];
+    if first_char.is_ascii_digit() {
+        bail!("Identifier {name:?} starts with a digit ({first_char})");
     }
 
-    let mut chars = name.chars();
-    let first_char = chars.next().ok_or("Identifier is empty")?;
-
-    if !matches!(first_char, 'a'..='z' | '_' | 'A'..='Z') {
-        if first_char.is_ascii_digit() {
-            bail!("Identifier {orig_name:?} starts with a digit ({first_char})");
-        }
-        bail!("Identifier {orig_name:?} starts with invalid character {first_char:?}");
-    }
-
-    for ch in chars {
-        if !matches!(ch, 'a'..='z'| '0'..='9' | '_' | 'A'..='Z') {
-            bail!("Identifier {orig_name:?} contains invalid character {ch:?}");
+    for ch in name.chars() {
+        // @ is used internally
+        if !matches!(ch, 'a'..='z'| '0'..='9' | '_' | 'A'..='Z' | '@') {
+            bail!("Identifier {name:?} contains invalid character {ch:?}");
         }
     }
 

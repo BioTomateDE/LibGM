@@ -113,7 +113,7 @@ impl GMElement for Events {
         let count = pointers.len() as u32;
         let gms2 = reader.general_info.is_version_at_least((2, 0));
 
-        // i dont know if this is exactly correct
+        // TODO: fix this for undertale 1.01 (only 12)
         if gms2 && count != 15 {
             reader.handle_invalid_const(format!(
                 "Expected 15 event types in GMS2; actually got {count}"

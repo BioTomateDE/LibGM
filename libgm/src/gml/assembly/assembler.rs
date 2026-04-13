@@ -1,7 +1,6 @@
 mod data_types;
 mod reader;
 
-use std::borrow::Cow;
 use std::fmt::Display;
 use std::str::FromStr;
 
@@ -499,7 +498,7 @@ fn parse_variable_identifier<'a>(reader: &'a mut Reader) -> Result<&'a str> {
 }
 
 fn parse_function(reader: &mut Reader, gm_functions: &GMFunctions) -> Result<GMRef<GMFunction>> {
-    let identifier = parse_function_identifier(reader)?;
+    let identifier = reader.parse_identifier()?;
 
     for (i, func) in gm_functions.iter().enumerate() {
         if func.name == identifier {
@@ -508,25 +507,6 @@ fn parse_function(reader: &mut Reader, gm_functions: &GMFunctions) -> Result<GMR
     }
 
     bail!("Function {identifier:?} does not exist")
-}
-
-fn parse_function_identifier<'a>(reader: &mut Reader<'a>) -> Result<Cow<'a, str>> {
-    // Try standard identifier first
-    let error = match reader.parse_identifier() {
-        Ok(ident) => return Ok(Cow::Borrowed(ident)),
-        Err(err) => err,
-    };
-
-    // Try special @@identifier@@ syntax
-    if reader.consume_str("@@").is_some()
-        && let Ok(ident) = reader.parse_identifier()
-        && reader.consume_str("@@").is_some()
-    {
-        return Ok(Cow::Owned(format!("@@{ident}@@")));
-    }
-
-    // If neither works, return the original parse error
-    Err(error)
 }
 
 fn parse_int<T>(string: &str) -> Result<T>

@@ -44,12 +44,12 @@ fn run(mut args: cli::Args) -> Result<()> {
             action.perform(&mut data)?;
         }
 
-        // for i in &data.codes {
-        //     let assembly = disassemble_code(i, &data)?;
-        //     println!("===== {} =====", i.name);
-        //     println!("{assembly}");
-        //     println!();
-        // }
+        for i in &data.codes {
+            let assembly = disassemble_code(i, &data)?;
+            println!("===== {} =====", i.name);
+            println!("{assembly}");
+            println!();
+        }
 
         for code_name in &args.codes {
             let code = data.codes.by_name(code_name)?;

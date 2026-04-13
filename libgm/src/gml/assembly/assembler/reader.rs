@@ -118,7 +118,7 @@ impl<'a> Reader<'a> {
 
         for (i, char) in self.line.char_indices() {
             match char {
-                'a'..='z' | '0'..='9' | 'A'..='Z' | '_' => continue,
+                'a'..='z' | '0'..='9' | 'A'..='Z' | '_' | '@' => continue,
                 _ => {}
             }
 
