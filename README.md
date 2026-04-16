@@ -52,7 +52,7 @@ This is effectively a Rust port of
 Add this line in the `[dependencies]` section of your `Cargo.toml` file:
 
 ```toml
-libgm = "0.4.1"
+libgm = "0.5"
 ```
 
 Or if you want bleeding edge:
