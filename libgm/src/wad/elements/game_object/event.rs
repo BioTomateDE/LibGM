@@ -111,20 +111,17 @@ impl GMElement for Events {
             .read_simple_list()
             .context("reading outer event pointer list")?;
         let count = pointers.len() as u32;
-        let gms2 = reader.general_info.is_version_at_least((2, 0));
 
-        // TODO: fix this for undertale 1.01 (only 12)
-        if gms2 && count != 15 {
-            reader.handle_invalid_const(format!(
-                "Expected 15 event types in GMS2; actually got {count}"
-            ))?;
-        }
-        if !gms2 && count != 13 {
-            reader.handle_invalid_const(format!(
-                "Expected 13 event types in GMS1; actually got {count}"
-            ))?;
-        }
-
+        let expected_count = type_count_by_wad(reader.general_info.wad_version);
+        let ctx = || {
+            format!(
+                "validating event type count for game with GM Version {} and WAD Version {}",
+                reader.general_info.version, reader.general_info.wad_version,
+            )
+        };
+        reader
+            .assert_int(count, expected_count, "event type count")
+            .with_context(ctx)?;
         // assert_pos are missing
 
         let create: Vec<SubEvent<()>> = reader.read_pointer_list()?;
@@ -139,16 +136,18 @@ impl GMElement for Events {
         let key_press: Vec<SubEvent<Key>> = reader.read_pointer_list()?;
         let key_release: Vec<SubEvent<Key>> = reader.read_pointer_list()?;
         let trigger: Vec<SubEvent<()>> = reader.read_pointer_list()?;
-        let cleanup: Vec<SubEvent<()>> = reader.read_pointer_list()?;
 
-        let gesture: Vec<SubEvent<Gesture>>;
-        let pre_create: Vec<SubEvent<()>>;
-        if gms2 {
+        let mut cleanup: Vec<SubEvent<()>> = Vec::new();
+        let mut gesture: Vec<SubEvent<Gesture>> = Vec::new();
+        let mut pre_create: Vec<SubEvent<()>> = Vec::new();
+        if count > 12 {
+            cleanup = reader.read_pointer_list()?;
+        }
+        if count > 13 {
             gesture = reader.read_pointer_list()?;
+        }
+        if count > 14 {
             pre_create = reader.read_pointer_list()?;
-        } else {
-            gesture = Vec::new();
-            pre_create = Vec::new();
         }
 
         Ok(Self {
@@ -172,8 +171,7 @@ impl GMElement for Events {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         // manual pointer list
-        let gms2 = builder.is_version_at_least((2, 0));
-        let count: u32 = if gms2 { 15 } else { 13 };
+        let count: u32 = type_count_by_wad(builder.wad_version());
 
         builder.write_u32(count);
         let pointer_list_pos = builder.len();
@@ -193,7 +191,6 @@ impl GMElement for Events {
         let key_press = &self.key_press.0;
         let key_release = &self.key_release.0;
         let trigger = vec![SubEvent::unit(self.trigger_handlers.clone())];
-        let cleanup = vec![SubEvent::unit(self.cleanup_handlers.clone())];
 
         builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 0)?;
         builder.write_pointer_list(&create)?;
@@ -231,22 +228,36 @@ impl GMElement for Events {
         builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 11)?;
         builder.write_pointer_list(&trigger)?;
 
-        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 12)?;
-        builder.write_pointer_list(&cleanup)?;
+        if count > 12 {
+            let cleanup = vec![SubEvent::unit(self.cleanup_handlers.clone())];
+            builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 12)?;
+            builder.write_pointer_list(&cleanup)?;
+        }
 
-        if gms2 {
+        if count > 13 {
             let gesture = &self.gesture.0;
-            let pre_create = vec![SubEvent::unit(self.pre_create_handlers.clone())];
-
             builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 13)?;
             builder.write_pointer_list(gesture)?;
-
+        }
+        if count > 14 {
+            let pre_create = vec![SubEvent::unit(self.pre_create_handlers.clone())];
             builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 14)?;
             builder.write_pointer_list(&pre_create)?;
         }
 
         Ok(())
     }
+}
+
+#[must_use]
+const fn type_count_by_wad(wad_version: u8) -> u32 {
+    if wad_version < 16 {
+        return 12;
+    }
+    if wad_version == 16 {
+        return 13;
+    }
+    15
 }
 
 fn dedup_events<T: EventSubtype>(events: &mut Vec<SubEvent<T>>) -> bool {
