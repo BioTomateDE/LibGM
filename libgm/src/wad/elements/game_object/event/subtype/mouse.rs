@@ -163,7 +163,7 @@ impl EventSubtype for Mouse {
 
 impl Mouse {
     /// Whether this mouse event is actually a controller/joystick related
-    /// event.]
+    /// event.
     ///
     /// These events only exist in GMS1.
     #[must_use]

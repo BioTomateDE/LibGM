@@ -71,15 +71,6 @@ impl GMElement for GMGameObjects {
                 let y = reader.read_f32()?;
                 physics_shape_vertices.push((x, y));
             }
-            // if physics_shape_vertex_count > 0 && collision_shape !=
-            // CollisionShape::Custom {     reader.warn_invalid_const(format!(
-            //         "Game Object {name:?} has collision shape {collision_shape:?} \
-            //         (not Custom) but has {physics_shape_vertex_count} physics shape
-            // vertices \         {physics_shape_vertices:?}"
-            //     ))?;
-            // } else if physics_shape_vertex_count > 0 || collision_shape ==
-            // CollisionShape::Custom {     log::debug!("ok {} {:?}",
-            // physics_shape_vertex_count, collision_shape); }
 
             let events = Events::deserialize(reader).context("parsing game object events")?;
 

@@ -270,7 +270,7 @@ pub struct ShaderData {
 
 impl fmt::Debug for ShaderData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("ShaderData")
+        f.debug_struct("ShaderData").finish_non_exhaustive()
     }
 }
 

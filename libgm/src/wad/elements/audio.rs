@@ -35,7 +35,7 @@ pub struct GMAudio {
 
 impl fmt::Debug for GMAudio {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("GMAudio")
+        f.debug_struct("GMAudio").finish_non_exhaustive()
     }
 }
 

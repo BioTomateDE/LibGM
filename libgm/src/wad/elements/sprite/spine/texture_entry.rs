@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt;
 
 use crate::prelude::*;
 use crate::wad::deserialize::reader::DataReader;
@@ -58,8 +58,8 @@ pub enum Data {
     Post2023_1(u32),
 }
 
-impl Debug for Data {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for Data {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Pre2023_1(_) => f.debug_tuple("Pre2023_1").finish_non_exhaustive(),
             Self::Post2023_1(count) => f.debug_tuple("Post2023_1").field(count).finish(),

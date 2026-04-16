@@ -108,7 +108,8 @@ pub struct VersionDataPre2022_1 {
 
 impl fmt::Debug for VersionDataPre2022_1 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("VersionDataPre2022_1")
+        f.debug_struct("VersionDataPre2022_1")
+            .finish_non_exhaustive()
     }
 }
 

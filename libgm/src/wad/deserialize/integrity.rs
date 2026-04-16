@@ -29,6 +29,9 @@ impl DataReader<'_> {
     }
 
     pub fn read_gms2_chunk_version(&mut self, desc: &'static str) -> Result<()> {
+        if self.specified_version.major < 2 {
+            self.warn_invalid_chunk(format!("Reading {desc} in pre-GMS2 game"))?;
+        }
         let chunk_version = self.read_u32()?;
         self.assert_int(chunk_version, 1, desc)?;
         Ok(())
@@ -55,6 +58,18 @@ impl DataReader<'_> {
         } else {
             log::warn!("{message}");
             Ok(())
+        }
+    }
+
+    /// Returns an error if `reader.options.allow_unknown_chunks` is
+    /// disabled, otherwise only prints a warning log.
+    #[track_caller]
+    pub fn warn_invalid_chunk(&self, message: String) -> Result<()> {
+        if self.options.allow_unknown_chunks {
+            log::warn!("{message}");
+            Ok(())
+        } else {
+            Err(Error::new(message))
         }
     }
 

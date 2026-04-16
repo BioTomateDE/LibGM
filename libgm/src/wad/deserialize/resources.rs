@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
 use crate::prelude::*;
-use crate::util::fmt::typename;
 use crate::wad::deserialize::reader::DataReader;
-use crate::wad::elements::GMElement;
 use crate::wad::elements::texture_page_item::GMTexturePageItem;
 use crate::wad::reference::GMRef;
 
@@ -51,7 +49,7 @@ impl DataReader<'_> {
 
     pub fn read_gm_texture(&mut self) -> Result<GMRef<GMTexturePageItem>> {
         let occurrence_position = self.read_u32()?;
-        self.resolve_occurrence(occurrence_position, &self.texture_page_item_occurrences)
+        self.resolve_tpag(occurrence_position)
     }
 
     pub fn read_gm_texture_opt(&mut self) -> Result<Option<GMRef<GMTexturePageItem>>> {
@@ -59,28 +57,23 @@ impl DataReader<'_> {
         if occurrence_position == 0 {
             return Ok(None);
         }
-        Ok(Some(self.resolve_occurrence(
-            occurrence_position,
-            &self.texture_page_item_occurrences,
-        )?))
+        Ok(Some(self.resolve_tpag(occurrence_position)?))
     }
 
-    fn resolve_occurrence<T: GMElement>(
-        &self,
-        occurrence_position: u32,
-        occurrence_map: &HashMap<u32, GMRef<T>>,
-    ) -> Result<GMRef<T>> {
-        match occurrence_map.get(&occurrence_position) {
-            Some(gm_ref) => Ok(*gm_ref),
-            None => bail!(
-                "Could not read {} with occurrence position {} at pointer position {} because it \
-                 doesn't exist in the occurrence map with {} items",
-                typename::<T>(),
-                occurrence_position,
-                self.cur_pos - 4,
-                occurrence_map.len(),
-            ),
+    fn resolve_tpag(&self, occurrence_position: u32) -> Result<GMRef<GMTexturePageItem>> {
+        // You could probably make this a `remove()` (if that helps performance)?
+        // At least UT/DR do not use any texture page items twice.
+        let map: &HashMap<u32, GMRef<GMTexturePageItem>> = &self.texture_page_item_occurrences;
+        if let Some(&tpag_ref) = map.get(&occurrence_position) {
+            return Ok(tpag_ref);
         }
+        Err(err!(
+            "Could not read texture page item with occurrence position {} at pointer position {} \
+             because it doesn't exist in the occurrence map with {} items",
+            occurrence_position,
+            self.cur_pos - 4,
+            map.len(),
+        ))
     }
 
     pub fn read_resource_by_id<T>(&mut self) -> Result<GMRef<T>> {

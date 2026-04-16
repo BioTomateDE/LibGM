@@ -550,7 +550,10 @@ pub struct MaskEntry {
 
 impl fmt::Debug for MaskEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("MaskEntry")
+        f.debug_struct("MaskEntry")
+            .field("width", &self.width)
+            .field("height", &self.height)
+            .finish_non_exhaustive()
     }
 }
 
