@@ -1,22 +1,15 @@
-# Rust's huge target folder(s) should not be commited
-**/target
+**/target/
+Cargo.lock
 
-# Exclude GameMaker data file extensions
-*.win
-*.unx
-*.droid
-*.ios
-
-# Exclude gm48-scraper output
-data_files/
-
-# These are some file extension I sometimes use
-# in development for GameMaker data files
-*.win1
-*.win.bak
-*.unx1
-*.unx.bak
-
-# Exlude IDE configurations
 .idea
 .vscode
+
+**/*.win
+**/*.unx
+**/*.droid
+**/*.ios
+
+**/*.win1
+**/*.win.bak
+**/*.unx1
+**/*.unx.bak

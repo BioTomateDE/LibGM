@@ -2,8 +2,12 @@
 members = ["libgm", "libgm-cli", "macros"]
 resolver = "3"
 
-# Default member for `cargo run`
-default-members = ["libgm-cli"]
+[workspace.package]
+authors = ["BioTomateDE <biotomatede@proton.me>"]
+edition = "2024"
+readme = "README.md"
+repository = "https://codeberg.org/BioTomateDE/LibGM"
+license = "GPL-3.0"
 
 
 [profile.release]

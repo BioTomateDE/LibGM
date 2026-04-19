@@ -1,13 +1,14 @@
 [package]
 name = "libgm-macros"
 version = "0.2.0"
-edition = "2024"
 description = "Internal attribute macros for LibGM"
-readme = "./README.md"
-repository = "https://codeberg.org/BioTomateDE/LibGM/"
-license = "GPL-3.0"
 keywords = ["proc-macro", "num-enum"]
 categories = ["development-tools"]
+authors.workspace = true
+edition.workspace = true
+readme.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [lib]
 proc-macro = true

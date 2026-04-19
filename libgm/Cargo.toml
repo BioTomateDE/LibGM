@@ -1,14 +1,14 @@
 [package]
 name = "libgm"
 version = "0.5.1"
-authors = ["BioTomateDE <biotomatede@proton.me>"]
-edition = "2024"
 description = "A tool for modding, unpacking and decompiling GameMaker games"
-readme = "../README.md"
-repository = "https://codeberg.org/BioTomateDE/LibGM"
-license = "GPL-3.0"
 keywords = ["gamemaker", "gml", "decompiler", "modding", "undertale"]
 categories = ["parser-implementations", "game-development", "encoding"]
+authors.workspace = true
+edition.workspace = true
+readme.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [features]
 default = ["catch-panic", "check-integrity", "bzip2-image", "png-image"]

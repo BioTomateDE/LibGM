@@ -4,22 +4,14 @@
 [![Documentation](https://img.shields.io/docsrs/libgm)](https://docs.rs/libgm)
 
 # LibGM
-
 A tool for unpacking, decompiling and modding GameMaker games such as Undertale
 or Deltarune.
 
-> This project migrated from
-[GitHub](https://github.com/BioTomateDE/LibGM)
-to
+> This project migrated from GitHub to
 [Codeberg](https://codeberg.org/BioTomateDE/LibGM).
 Please open issues and pull requests on Codeberg, if possible.
 
-This is effectively a Rust port of
-[UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool)
-(specifically UndertaleModLib).
-
 ## Benefits of this Rust port
-
 - Parsing and building data files is ~8x faster than UndertaleModLib.
 - Clean and maintainable library code.
 - Thorough documentation on [docs.rs](https://docs.rs).
@@ -42,13 +34,11 @@ This is effectively a Rust port of
 - Configurable lenient options for trying to parse half-broken data files (see `ParsingOptions`).
 
 ## Disadvantages / TODOs
-
 - Null pointers are not yet supported.
 - GML Decompiler and Compiler not yet implemented (help would be greatly appreciated!)
 - No GUI yet, only a Rust library.
 
 ## How to use as a dependency
-
 Add this line in the `[dependencies]` section of your `Cargo.toml` file:
 
 ```toml
@@ -89,7 +79,6 @@ let data: GMData = parser.parse_bytes(raw_data)?;
 ```
 
 ## Crate features
-
 | Feature                 | Default  | Dependencies |
 |-------------------------|----------|--------------|
 | catch-panic             | enabled  |              |
@@ -112,21 +101,20 @@ let data: GMData = parser.parse_bytes(raw_data)?;
   In games older than GM 2022.2, you will not be able to serialize `GMImage`s storing `DynamicImage`s with this feature disabled.
 
 ## Credits
-
-Huge thanks to the Underminers Team! Without UndertaleModTool, this project
+Huge thanks to the Underminers Team! Without
+[UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool),
+this project
 would've been impossible. I also want to thank the people in the Underminers
 Discord Guild who helped me along the way, especially
 [@colinator27](https://github.com/colinator27).
 
 ## Licencing
-
 This project is licenced under the
 [GNU Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html) (GPL-3.0).
 
 This means that all projects using this library must also be licensed under GPL-3.
 
 ## Contributing
-
 All contributions are welcome! Whether that's a pull request, a feature you
 would like to see added, a bug you found; just create an Issue/PR in this repo.
 

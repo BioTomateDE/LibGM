@@ -13,12 +13,15 @@ use_field_init_shorthand = true
 
 # Nightly Options
 float_literal_trailing_zero = "IfNoPostfix"
+format_code_in_doc_comments = true
+format_macro_matchers = true
 format_strings = true
 group_imports = "StdExternalCrate"
 hex_literal_case = "Upper"
 imports_granularity = "Item"
 normalize_comments = true
 normalize_doc_attributes = true
+overflow_delimited_expr = true
 reorder_impl_items = true
 wrap_comments = true
 
