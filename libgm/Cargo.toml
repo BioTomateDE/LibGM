@@ -1,6 +1,6 @@
 [package]
 name = "libgm"
-version = "0.5.1"
+version = "0.5.2"
 description = "A tool for modding, unpacking and decompiling GameMaker games"
 keywords = ["gamemaker", "gml", "decompiler", "modding", "undertale"]
 categories = ["parser-implementations", "game-development", "encoding"]
@@ -41,7 +41,7 @@ package = "libgm-macros"
 
 # GMS2 general info checksum
 [dependencies.dotnet-rng]
-version = "1.0.0"
+version = "1.0"
 
 # BZip2+QOI encoded images
 [dependencies.bzip2]

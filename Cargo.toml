@@ -9,6 +9,6 @@ readme = "README.md"
 repository = "https://codeberg.org/BioTomateDE/LibGM"
 license = "GPL-3.0"
 
-
 [profile.release]
 overflow-checks = true
+debug-assertions = true
