@@ -265,9 +265,9 @@ impl GMImage {
 
     pub(super) fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let is_qoi = matches!(self.0, Img::Qoi(_) | Img::Bz2Qoi(_, _));
-        let is_qoi_eligible = builder.version() >= (2022, 2);
+        let is_qoi_eligible = builder.version() >= (2022, 1);
         if is_qoi && !is_qoi_eligible {
-            bail!("Cannot serialize QOI images before GM 2022.2");
+            bail!("Cannot serialize QOI images before GM 2022.1");
         }
 
         match &self.0 {
