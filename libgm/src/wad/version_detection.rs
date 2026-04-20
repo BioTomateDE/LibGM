@@ -132,8 +132,8 @@ fn upgrade_by_chunk_existence(chunks: &ChunkMap) -> Option<GMVersion> {
 }
 
 /// TODO(const-hack): The `Into` trait is still not const unfortunately.
-fn create_version_checks() -> Vec<VersionCheck> {
-    vec![
+fn create_version_checks() -> [VersionCheck; 21] {
+    [
         VersionCheck::new("SOND", sond::check_2024_6, (2022, 2, PostLTS), (2024, 6)),
         VersionCheck::new("SPRT", sprt::check_2024_6, (2022, 2, PostLTS), (2024, 6)),
         VersionCheck::new(
@@ -186,26 +186,25 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
         try_check(reader, "FONT", font::check_2022_2, (2022, 2))?;
     }
 
-    let mut checks: Vec<VersionCheck> = create_version_checks();
+    let checks: &[VersionCheck] = &create_version_checks();
 
     loop {
-        // Permanently filter out already detected versions
-        checks.retain(|check| reader.general_info.version < check.target_version);
+        let mut same_version: bool = true;
 
-        let mut updated_version: bool = false;
-        let mut checks_to_remove: Vec<bool> = vec![false; checks.len()];
+        for check in checks {
+            // Skip checks that are already fulfilled.
+            // (You can comment this out for debug purposes to verify
+            // that all version checks work properly.)
+            if reader.general_info.version >= check.target_version {
+                continue;
+            }
 
-        for (i, check) in checks.iter().enumerate() {
-            // For this iteration, filter out versions whose version requirements are not
-            // met yet
+            // Skip versions whose version requirements are not *yet* met.
             if reader.general_info.version < check.required_version {
                 continue;
             }
 
-            // Permanently remove check; no matter if successful or not
-            checks_to_remove[i] = true;
-
-            // If chunk doesn't exist; just skip the check
+            // If chunk doesn't exist; just skip the check.
             let Some(chunk) = reader.chunks.get_by_name(check.chunk_name) else {
                 continue;
             };
@@ -231,24 +230,18 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
                     check.chunk_name,
                 );
                 reader.general_info.set_version(detected_version);
-                updated_version = true;
+                same_version = false;
             }
         }
 
-        // Remove all performed checks
-        for (i, should_remove) in checks_to_remove.into_iter().enumerate().rev() {
-            if should_remove {
-                checks.remove(i);
-            }
-        }
-
-        if !updated_version {
+        if same_version {
             // Since it couldn't detect a higher version, there won't be any new checks
             // available that would now fulfil the minimum version requirement.
             break;
         }
     }
 
+    // Set the LTS branch properly.
     let ver: &mut GMVersion = &mut reader.general_info.version;
     if *ver >= (2023, 1) && ver.branch == PreLTS {
         ver.branch = LTS;
