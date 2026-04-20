@@ -2,7 +2,7 @@
 
 mod actions;
 mod cli;
-pub mod diff;
+mod diff;
 mod dir;
 mod logging;
 mod tests;
@@ -15,7 +15,6 @@ use libgm::wad::ParsingOptions;
 use libgm::wad::data::GMData;
 use libgm::wad::serialize::build_file;
 
-use crate::diff::print_diff;
 use crate::diff::print_diffs;
 use crate::tests::Test;
 
