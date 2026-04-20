@@ -21,7 +21,7 @@ use crate::wad::elements::room::GMRoom;
 use crate::wad::reference::GMRef;
 use crate::wad::serialize::builder::DataBuilder;
 use crate::wad::version::GMVersion;
-use crate::wad::version::GMVersionReq;
+use crate::wad::version::ToGMVersion;
 
 #[derive(Clone, PartialEq)]
 pub struct GMGeneralInfo {
@@ -268,7 +268,7 @@ impl GMElement for GMGeneralInfo {
         }
         builder.write_simple_list(&self.room_order)?;
 
-        if builder.is_version_at_least((2, 0)) {
+        if builder.version() >= 2 {
             self.write_gms2_data(builder)?;
         }
         Ok(())
@@ -337,20 +337,9 @@ impl fmt::Debug for GMGeneralInfo {
 }
 
 impl GMGeneralInfo {
-    /// See [`GMVersion::is_version_at_least`].
-    #[must_use]
-    pub fn is_version_at_least(&self, req: impl Into<GMVersionReq>) -> bool {
-        self.version.is_version_at_least(req)
-    }
-
-    /// See [`GMVersion::set_version_at_least`].
-    pub fn set_version_at_least(&mut self, req: impl Into<GMVersionReq>) -> Result<()> {
-        self.version.set_version_at_least(req)
-    }
-
     /// See [`GMVersion::set_version`].
-    pub fn set_version(&mut self, req: impl Into<GMVersionReq>) {
-        self.version.set_version(req);
+    pub fn set_version(&mut self, new_version: impl ToGMVersion) {
+        self.version.set_version(new_version);
     }
 
     #[must_use]

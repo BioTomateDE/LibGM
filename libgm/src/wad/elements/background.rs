@@ -59,7 +59,7 @@ impl GMElement for GMBackground {
         let smooth = reader.read_bool32()?;
         let preload = reader.read_bool32()?;
         let texture: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
-        let gms2_data: Option<GMS2Data> = reader.deserialize_if_gm_version((2, 0))?;
+        let gms2_data: Option<GMS2Data> = reader.deserialize_if_gm_version(2)?;
 
         Ok(Self {
             name,
@@ -77,7 +77,7 @@ impl GMElement for GMBackground {
         builder.write_bool32(self.smooth);
         builder.write_bool32(self.preload);
         builder.write_gm_texture_opt(self.texture)?;
-        builder.write_if_ver(&self.gms2_data, "GMS2 data", (2, 0))?;
+        builder.write_if_ver(&self.gms2_data, "GMS2 data", 2)?;
         Ok(())
     }
 
@@ -138,7 +138,7 @@ impl GMElement for GMS2Data {
 
         let mut tile_separation_x = 0;
         let mut tile_separation_y = 0;
-        if reader.general_info.is_version_at_least((2024, 14, 1)) {
+        if reader.general_info.version >= ((2024, 14, 1)) {
             tile_separation_x = reader.read_u32()?;
             tile_separation_y = reader.read_u32()?;
         }
@@ -185,7 +185,7 @@ impl GMElement for GMS2Data {
         builder.write_u32(self.tile_width);
         builder.write_u32(self.tile_height);
 
-        if builder.is_version_at_least((2024, 14, 1)) {
+        if builder.version() >= ((2024, 14, 1)) {
             builder.write_u32(self.tile_separation_x);
             builder.write_u32(self.tile_separation_y);
         }

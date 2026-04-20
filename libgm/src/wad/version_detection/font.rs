@@ -1,11 +1,12 @@
+use super::target_version;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::deserialize::reader::DataReader;
-use crate::wad::version::GMVersionReq;
+use crate::wad::version::GMVersion;
 use crate::wad::version::LTSBranch::PostLTS;
 
-pub fn check_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
-    let target_ver = Ok(Some((2022, 2).into()));
+pub fn check_2022_2(reader: &mut DataReader) -> Result<Option<GMVersion>> {
+    let ver = target_version!(2022, 2);
     let possible_font_count = reader.read_u32()?;
     if possible_font_count < 1 {
         return Ok(None);
@@ -30,7 +31,7 @@ pub fn check_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     }
     if glyph_count == 0 {
         log::warn!("Glyph count is zero while detecting FONT_2022.2; may lead to false positives");
-        return target_ver; // UTMT also assumes that it is 2022.2; even if there are no glyphs
+        return ver; // UTMT also assumes that it is 2022.2; even if there are no glyphs
     }
 
     let mut glyph_pointers: Vec<u32> = vec_with_capacity(glyph_count)?;
@@ -51,7 +52,7 @@ pub fn check_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         // From utmt: "combining read/write would apparently break" ???
     }
 
-    target_ver
+    ver
 }
 
 /// We already know whether the version is more or less than 2022.8 due to the
@@ -61,17 +62,15 @@ pub fn check_2022_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
 /// > `PSEM` (2023.2) is not used, as it would return a false negative on LTS
 /// > (2022.9+ equivalent with no particles).
 /// - Checks for `UnknownAlwaysZero` in Glyphs (added in 2024.11)
-pub fn check_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
+pub fn check_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     // Explicit check because the logic is very scuffed
-    if !reader.general_info.is_version_at_least((2022, 8)) {
+    if reader.general_info.version < (2022, 8) {
         return Ok(None); // Version requirement (for checking 2023.6) not satisfied
     }
-    if reader.general_info.is_version_at_least((2023, 6))
-        && !reader.general_info.is_version_at_least((2024, 6))
-    {
+    if reader.general_info.version >= ((2023, 6)) && reader.general_info.version < ((2024, 6)) {
         return Ok(None); // 2023.6 already detected; but 2024.6 not yet detected
     }
-    if reader.general_info.is_version_at_least((2024, 11)) {
+    if reader.general_info.version >= ((2024, 11)) {
         return Ok(None); // 2024.11 already detected
     }
 
@@ -96,7 +95,7 @@ pub fn check_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVers
     }
 
     reader.cur_pos = first_two_pointers[0] + 52; // Also the LineHeight value. 48 + 4 = 52
-    if reader.general_info.is_version_at_least((2023, 2, PostLTS)) {
+    if reader.general_info.version >= ((2023, 2, PostLTS)) {
         // SDFSpread is present from 2023.2 non-LTS onward
         reader.cur_pos += 4; // (detected by PSEM/PSYS chunk existence)
     }
@@ -136,7 +135,7 @@ pub fn check_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVers
         // If we don't land on the next glyph/font after skipping the Kerning list,
         // KerningLength is probably bogus and UnknownAlwaysZero may be present
         if next_glyph_pointer == pointer_after_kerning_list {
-            return Ok(Some((2023, 6).into())); // 2023.6 succeeded; 2024.11 failed
+            return target_version!(2023, 6); // 2023.6 succeeded; 2024.11 failed
         }
         // Discard last read, which would be of UnknownAlwaysZero
         let kerning_count = reader.read_u16()?;
@@ -147,13 +146,13 @@ pub fn check_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVers
                  list in GMFontGlyph; data file potentially corrupted"
             );
         }
-        return Ok(Some((2024, 11).into())); // 2024.11 succeeded (2023.6 did too but doesn't matter)
+        return target_version!(2024, 11); // 2024.11 succeeded (2023.6 did too but doesn't matter)
     }
 
-    Ok(Some((2023, 6).into())) // 2024.11 failed or could not be detected; 2023.6 succeeded
+    target_version!(2023, 6) // 2024.11 failed or could not be detected; 2023.6 succeeded
 }
 
-pub fn check_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
+pub fn check_2024_14(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     // Check for new padding added (and final chunk "padding" removed) in 2024.14
     let font_count = reader.read_u32()?;
     let mut last_font_position = 0;
@@ -182,7 +181,7 @@ pub fn check_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     // Check for the final chunk padding being missing
     if reader.cur_pos + 512 > reader.chunk.end_pos {
         // No padding can fit, so this is 2024.14
-        return Ok(Some((2024, 14).into()));
+        return target_version!(2024, 14);
     }
 
     Ok(None)

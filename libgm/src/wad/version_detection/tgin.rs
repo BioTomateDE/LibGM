@@ -1,13 +1,10 @@
+use super::target_version;
 use crate::prelude::*;
 use crate::wad::deserialize::reader::DataReader;
-use crate::wad::version::GMVersionReq;
+use crate::wad::version::GMVersion;
 use crate::wad::version::LTSBranch::PostLTS;
 
-pub fn check_2022_9(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
-    if reader.general_info.is_version_at_least((2023, 1, PostLTS)) {
-        return Ok(None);
-    }
-
+pub fn check_2022_9(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     reader.read_gms2_chunk_version("TGIN Version")?;
     let tgin_count = reader.read_u32()?;
     if tgin_count < 1 {
@@ -25,19 +22,14 @@ pub fn check_2022_9(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     // If not, then we know we're using a new format!
     let ptr = reader.read_u32()?;
     if ptr < pointer1 || ptr >= pointer2 {
-        return Ok(Some((2022, 9).into()));
+        return target_version!(2022, 9);
     }
 
     Ok(None)
 }
 
-pub fn check_2023_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
-    if reader.general_info.is_version_at_least((2023, 1, PostLTS)) {
-        return Ok(None);
-    }
-
+pub fn check_2023_1(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     reader.read_gms2_chunk_version("TGIN Version")?;
-
     let tgin_count = reader.read_u32()?;
     if tgin_count < 1 {
         return Ok(None);
@@ -53,7 +45,7 @@ pub fn check_2023_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     // The count can't be greater than the pointer.
     // (the list could be either "Tilesets" or "Fonts").
     if reader.read_u32()? <= pointer4 {
-        return Ok(Some((2023, 1, PostLTS).into()));
+        return target_version!(2023, 1, PostLTS);
     }
 
     Ok(None)

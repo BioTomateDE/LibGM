@@ -265,7 +265,7 @@ impl GMImage {
 
     pub(super) fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let is_qoi = matches!(self.0, Img::Qoi(_) | Img::Bz2Qoi(_, _));
-        let is_qoi_eligible = builder.is_version_at_least((2022, 2));
+        let is_qoi_eligible = builder.version() >= ((2022, 2));
         if is_qoi && !is_qoi_eligible {
             bail!("Cannot serialize QOI images before GM 2022.2");
         }
@@ -329,7 +329,7 @@ impl fmt::Debug for Img {
 
 fn write_dyn_img(dyn_img: &DynamicImage, builder: &mut DataBuilder) -> Result<()> {
     // Use QOI if supported.
-    if builder.is_version_at_least((2022, 1)) {
+    if builder.version() >= ((2022, 1)) {
         qoi::build(dyn_img, builder).context("serializing DynamicImage as QOI")?;
         return Ok(());
     }

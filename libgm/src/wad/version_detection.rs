@@ -14,14 +14,15 @@ mod tgin;
 mod txtr;
 
 use crate::prelude::*;
+use crate::wad::GMVersion;
 use crate::wad::chunk::ChunkName;
 use crate::wad::deserialize::chunk::ChunkBounds;
 use crate::wad::deserialize::chunk::ChunkMap;
 use crate::wad::deserialize::reader::DataReader;
-use crate::wad::version::GMVersionReq;
 use crate::wad::version::LTSBranch::LTS;
 use crate::wad::version::LTSBranch::PostLTS;
 use crate::wad::version::LTSBranch::PreLTS;
+use crate::wad::version::ToGMVersion;
 
 /// If `check_fn` can detect multiple versions, `required_version` should be set
 /// to its _lowest_ required version whereas `target_version` should be set to
@@ -29,11 +30,11 @@ use crate::wad::version::LTSBranch::PreLTS;
 fn try_check(
     reader: &mut DataReader,
     chunk: &'static str,
-    check_fn: fn(&mut DataReader) -> Result<Option<GMVersionReq>>,
-    target_version: impl Into<GMVersionReq>,
+    check_fn: fn(&mut DataReader) -> Result<Option<GMVersion>>,
+    target_version: impl ToGMVersion,
 ) -> Result<()> {
     let chunk_name = ChunkName::new(chunk);
-    let target_version = target_version.into();
+    let target_version = target_version.to_gm_version();
 
     // Return if highest possible detected version is already fulfilled.
     if reader.general_info.version >= target_version {
@@ -74,7 +75,7 @@ fn try_check(
     Ok(())
 }
 
-type CheckerFn = fn(&mut DataReader) -> Result<Option<GMVersionReq>>;
+type CheckerFn = fn(&mut DataReader) -> Result<Option<GMVersion>>;
 
 struct VersionCheck {
     /// The 4 letter name of the chunk where the check is performed.
@@ -83,39 +84,39 @@ struct VersionCheck {
     /// The function that performs the check.
     checker_fn: CheckerFn,
 
-    /// The (lowest) wad version required for
+    /// The (lowest) WAD Version required for
     /// the checker to perform the detection.
-    required_version: GMVersionReq,
+    required_version: GMVersion,
 
-    /// The (highest) wad version the checker can detect.
-    target_version: GMVersionReq,
+    /// The (highest) WAD Version the checker can detect.
+    target_version: GMVersion,
 }
 
 impl VersionCheck {
-    fn new<R: Into<GMVersionReq>, V: Into<GMVersionReq>>(
+    fn new(
         chunk: &'static str,
         checker_fn: CheckerFn,
-        req: R,
-        target: V,
+        req: impl ToGMVersion,
+        target: impl ToGMVersion,
     ) -> Self {
-        // not const because of woke
+        // TODO(const): make this const when const traits are finally supported
         Self {
             chunk_name: ChunkName::new(chunk),
             checker_fn,
-            required_version: req.into(),
-            target_version: target.into(),
+            required_version: req.to_gm_version(),
+            target_version: target.to_gm_version(),
         }
     }
 }
 
-fn upgrade_by_chunk_existence(chunks: &ChunkMap) -> Option<GMVersionReq> {
-    const UPGRADES: [(&str, GMVersionReq); 6] = [
-        ("UILR", GMVersionReq::new(2024, 13, 0, 0, PostLTS)),
-        ("PSEM", GMVersionReq::new(2023, 2, 0, 0, PostLTS)),
-        ("FEAT", GMVersionReq::new(2022, 8, 0, 0, PreLTS)),
-        ("FEDS", GMVersionReq::new(2, 3, 6, 0, PreLTS)),
-        ("SEQN", GMVersionReq::new(2, 3, 0, 0, PreLTS)),
-        ("TGIN", GMVersionReq::new(2, 2, 1, 0, PreLTS)),
+fn upgrade_by_chunk_existence(chunks: &ChunkMap) -> Option<GMVersion> {
+    const UPGRADES: [(&str, GMVersion); 6] = [
+        ("UILR", GMVersion::new(2024, 13, 0, 0, PostLTS)),
+        ("PSEM", GMVersion::new(2023, 2, 0, 0, PostLTS)),
+        ("FEAT", GMVersion::new(2022, 8, 0, 0, PreLTS)),
+        ("FEDS", GMVersion::new(2, 3, 6, 0, PreLTS)),
+        ("SEQN", GMVersion::new(2, 3, 0, 0, PreLTS)),
+        ("TGIN", GMVersion::new(2, 2, 1, 0, PreLTS)),
     ];
 
     for (chunk_name, version) in UPGRADES {
@@ -126,6 +127,7 @@ fn upgrade_by_chunk_existence(chunks: &ChunkMap) -> Option<GMVersionReq> {
             return Some(version);
         }
     }
+
     None
 }
 
@@ -143,7 +145,7 @@ fn create_version_checks() -> Vec<VersionCheck> {
         VersionCheck::new("FONT", font::check_2023_6_and_2024_11, (2022, 8), (2023, 6)),
         VersionCheck::new("ROOM", room::check_2022_1, (2, 3), (2022, 1)),
         VersionCheck::new("ROOM", room::check_2024_2_and_2024_4, (2023, 2), (2024, 4)),
-        VersionCheck::new("ROOM", room::check_2_2_2_302, (2, 0), (2, 2, 2, 302)),
+        VersionCheck::new("ROOM", room::check_2_2_2_302, 2, (2, 2, 2, 302)),
         VersionCheck::new("EXTN", extn::check_2022_6, (2, 3), (2022, 6)),
         VersionCheck::new("TXTR", txtr::check_2022_5, (2022, 3), (2022, 5)),
         VersionCheck::new("TXTR", txtr::check_2022_3, (2, 3), (2022, 3)),
@@ -152,9 +154,9 @@ fn create_version_checks() -> Vec<VersionCheck> {
         VersionCheck::new("EXTN", extn::check_2023_4, (2022, 6), (2023, 4)),
         VersionCheck::new("TGIN", tgin::check_2023_1, (2022, 9), (2023, 1)),
         VersionCheck::new("OBJT", objt::check_2022_5, (2, 3), (2022, 5)),
-        VersionCheck::new("SPRT", sprt::check_2_3_2, (2, 0), (2, 3, 2)),
+        VersionCheck::new("SPRT", sprt::check_2_3_2, 2, (2, 3, 2)),
         VersionCheck::new("TGIN", tgin::check_2022_9, (2, 3), (2022, 9)),
-        VersionCheck::new("TXTR", txtr::check_2_0_6, (2, 0), (2, 0, 6)),
+        VersionCheck::new("TXTR", txtr::check_2_0_6, 2, (2, 0, 6)),
         VersionCheck::new("PSEM", psem::check_2023_x, (2023, 2), (2023, 8)),
         VersionCheck::new("ACRV", acrv::check_2_3_1, (2, 3), (2, 3, 1)),
         VersionCheck::new("BGND", bgnd::check_2024_14_1, (2024, 13), (2024, 14, 1)),
@@ -211,8 +213,8 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
             reader.chunk = chunk.clone();
             reader.cur_pos = reader.chunk.start_pos;
 
-            let detected_version_opt: Option<GMVersionReq> = (check.checker_fn)(reader)
-                .with_context(|| {
+            let detected_version_opt: Option<GMVersion> =
+                (check.checker_fn)(reader).with_context(|| {
                     format!(
                         "detecting GameMaker Version {} in chunk '{}'",
                         check.target_version, check.chunk_name,
@@ -247,13 +249,19 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
         }
     }
 
-    if reader.general_info.is_version_at_least((2023, 1))
-        && reader.general_info.version.branch == PreLTS
-    {
-        reader.general_info.version.branch = LTS;
+    let ver: &mut GMVersion = &mut reader.general_info.version;
+    if *ver >= (2023, 1) && ver.branch == PreLTS {
+        ver.branch = LTS;
     }
 
     reader.cur_pos = saved_pos;
     reader.chunk = saved_chunk;
     Ok(())
 }
+
+macro_rules! target_version {
+    ($($part:expr),+ $(,)?) => {
+        Ok(Some($crate::wad::version::ToGMVersion::into_gm_version(($($part,)+))))
+    };
+}
+use target_version;

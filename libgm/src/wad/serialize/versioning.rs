@@ -2,20 +2,21 @@ use crate::prelude::*;
 use crate::util::fmt::typename;
 use crate::wad::elements::GMElement;
 use crate::wad::serialize::builder::DataBuilder;
-use crate::wad::version::GMVersionReq;
+use crate::wad::version::ToGMVersion;
 
 // The element fields store `Option<T>`, so passing `Option<&T>` instead
 // of `&Option<T>` would require using `.as_ref()` in every call.
 #[allow(clippy::ref_option)]
 impl DataBuilder<'_> {
+    #[inline]
     pub fn write_if_ver<T: GMElement>(
         &mut self,
         element: &Option<T>,
         field_name: &'static str,
-        ver_req: impl Into<GMVersionReq>,
+        ver_req: impl ToGMVersion,
     ) -> Result<()> {
-        let ver_req: GMVersionReq = ver_req.into();
-        if !self.is_version_at_least(ver_req.clone()) {
+        let ver_req = ver_req.to_gm_version();
+        if self.version() < ver_req {
             return Ok(()); // Don't serialize if version requirement not met
         }
 
@@ -32,6 +33,7 @@ impl DataBuilder<'_> {
         element.serialize(self)
     }
 
+    #[inline]
     pub fn write_if_wad_ver<T: GMElement>(
         &mut self,
         element: &Option<T>,

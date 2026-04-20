@@ -1,12 +1,13 @@
+use super::target_version;
 use crate::prelude::*;
 use crate::wad::deserialize::reader::DataReader;
-use crate::wad::version::GMVersionReq;
+use crate::wad::version::GMVersion;
 use crate::wad::version::LTSBranch;
 
 /// Go through each background, and check to see if it ends at
 /// the expected position. If not, this is probably 2024.14.1.
-pub fn check_2024_14_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
-    let target_ver = Ok(Some((2024, 14, 1, LTSBranch::PostLTS).into()));
+pub fn check_2024_14_1(reader: &mut DataReader) -> Result<Option<GMVersion>> {
+    let target_ver = target_version!(2024, 14, 1, LTSBranch::PostLTS);
     let count = reader.read_u32()?;
 
     for i in 0..count {

@@ -23,7 +23,7 @@ impl GMElement for GMFonts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let fonts: Vec<GMFont> = reader.read_pointer_list()?;
 
-        if !reader.general_info.is_version_at_least((2024, 14)) {
+        if reader.general_info.version < ((2024, 14)) {
             let verify: bool = reader.options.verify_constants;
             let padding: &[u8; 512] = reader.read_bytes_const().context("Reading FONT padding")?;
             if verify {
@@ -36,7 +36,7 @@ impl GMElement for GMFonts {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_pointer_list(&self.fonts)?;
-        if !builder.is_version_at_least((2024, 14)) {
+        if builder.version() < ((2024, 14)) {
             let padding: [u8; 512] = generate_padding();
             builder.write_bytes(&padding);
         }
@@ -169,7 +169,7 @@ impl GMElement for GMFont {
             reader.deserialize_if_gm_version((2023, 2, LTSBranch::PostLTS))?;
         let line_height: Option<u32> = reader.deserialize_if_gm_version((2023, 6))?;
         let glyphs: Vec<Glyph> = reader.read_pointer_list()?;
-        if reader.general_info.is_version_at_least((2024, 14)) {
+        if reader.general_info.version >= ((2024, 14)) {
             reader.align(4)?;
         }
 
@@ -219,7 +219,7 @@ impl GMElement for GMFont {
         )?;
         builder.write_if_ver(&self.line_height, "Line Height", (2023, 6))?;
         builder.write_pointer_list(&self.glyphs)?;
-        if builder.is_version_at_least((2024, 14)) {
+        if builder.version() >= ((2024, 14)) {
             builder.align(4);
         }
         Ok(())

@@ -1,9 +1,10 @@
+use super::target_version;
 use crate::prelude::*;
 use crate::wad::deserialize::reader::DataReader;
-use crate::wad::version::GMVersionReq;
+use crate::wad::version::GMVersion;
 
-pub fn check_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
-    let target_ver = Ok(Some((2024, 6).into()));
+pub fn check_2024_6(reader: &mut DataReader) -> Result<Option<GMVersion>> {
+    let target_ver = target_version!(2024, 6);
     let possible_sound_count = reader.read_u32()?;
     let mut sound_pointers: Vec<u32> = Vec::with_capacity(2);
 

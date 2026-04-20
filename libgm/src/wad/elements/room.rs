@@ -115,22 +115,21 @@ impl GMElement for GMRoom {
         reader.assert_pos(tiles_ptr, "Room Tiles")?;
         let tiles: Vec<Tile> = reader.read_pointer_list()?;
 
-        let instance_creation_order_ids: Vec<i32> =
-            if reader.general_info.is_version_at_least((2024, 13)) {
-                reader.assert_pos(instances_ptr, "Room Instance Creation Order IDs")?;
-                reader.read_simple_list()?
-            } else {
-                Vec::new()
-            };
+        let instance_creation_order_ids: Vec<i32> = if reader.general_info.version >= (2024, 13) {
+            reader.assert_pos(instances_ptr, "Room Instance Creation Order IDs")?;
+            reader.read_simple_list()?
+        } else {
+            Vec::new()
+        };
 
-        let layers: Vec<Layer> = if reader.general_info.is_version_at_least((2, 0)) {
+        let layers: Vec<Layer> = if reader.general_info.version >= (2, 0) {
             reader.assert_pos(layers_ptr, "Room Layers")?;
             reader.read_pointer_list()?
         } else {
             Vec::new()
         };
 
-        let sequences: Vec<GMSequence> = if reader.general_info.is_version_at_least((2, 3)) {
+        let sequences: Vec<GMSequence> = if reader.general_info.version >= (2, 3) {
             reader.assert_pos(sequences_ptr, "Room Sequences")?;
             reader.read_pointer_list()?
         } else {
@@ -185,7 +184,7 @@ impl GMElement for GMRoom {
         builder.write_pointer(&self.game_objects);
         builder.write_pointer(&self.tiles);
 
-        if builder.is_version_at_least((2024, 13)) {
+        if builder.version() >= ((2024, 13)) {
             builder.write_pointer(&self.instance_creation_order_ids);
         }
 
@@ -198,11 +197,11 @@ impl GMElement for GMRoom {
         builder.write_f32(self.gravity_y);
         builder.write_f32(self.meters_per_pixel);
 
-        if builder.is_version_at_least((2, 0)) {
+        if builder.version() >= 2 {
             builder.write_pointer(&self.layers);
         }
 
-        if builder.is_version_at_least((2, 3)) {
+        if builder.version() >= ((2, 3)) {
             builder.write_pointer(&self.sequences);
         }
 
@@ -215,17 +214,17 @@ impl GMElement for GMRoom {
         builder.resolve_pointer(&self.tiles)?;
         builder.write_pointer_list(&self.tiles)?;
 
-        if builder.is_version_at_least((2024, 13)) {
+        if builder.version() >= ((2024, 13)) {
             builder.resolve_pointer(&self.instance_creation_order_ids)?;
             builder.write_pointer_list(&self.instance_creation_order_ids)?;
         }
 
-        if builder.is_version_at_least((2, 0)) {
+        if builder.version() >= 2 {
             builder.resolve_pointer(&self.layers)?;
             builder.write_pointer_list(&self.layers)?;
         }
 
-        if builder.is_version_at_least((2, 3)) {
+        if builder.version() >= ((2, 3)) {
             builder.resolve_pointer(&self.sequences)?;
             builder.write_pointer_list(&self.sequences)?;
         }

@@ -81,7 +81,7 @@ impl GMElement for GMSprite {
         let mut special_fields: Option<Special> = None;
 
         // Combination of these conditions may be incorrect
-        if reader.read_i32()? == -1 && reader.general_info.is_version_at_least((2, 0)) {
+        if reader.read_i32()? == -1 && reader.general_info.version >= 2 {
             let special_version = reader.read_u32()?;
             let special_sprite_type = reader.read_u32()?;
 
@@ -111,7 +111,7 @@ impl GMElement for GMSprite {
                     // Read mask data
                     let mut mask_width = width;
                     let mut mask_height = height;
-                    if reader.general_info.is_version_at_least((2024, 6)) {
+                    if reader.general_info.version >= (2024, 6) {
                         mask_width = (margin_right - margin_left + 1) as u32;
                         mask_height = (margin_bottom - margin_top + 1) as u32;
                     }
@@ -156,7 +156,7 @@ impl GMElement for GMSprite {
                 2 => {
                     // Spine
                     reader.align(4)?;
-                    if reader.general_info.is_version_at_least((2023, 1)) {
+                    if reader.general_info.version >= (2023, 1) {
                         textures = Self::read_texture_list(reader)?;
                     }
 
@@ -264,7 +264,7 @@ impl GMElement for GMSprite {
             // Read mask data
             let mut mask_width = width;
             let mut mask_height = height;
-            if reader.general_info.is_version_at_least((2024, 6)) {
+            if reader.general_info.version >= (2024, 6) {
                 mask_width = (margin_right - margin_left + 1) as u32;
                 mask_height = (margin_bottom - margin_top + 1) as u32;
             }
@@ -323,7 +323,7 @@ impl GMElement for GMSprite {
             SpecialData::Spine(_) => 2,
         });
 
-        if builder.is_version_at_least((2, 0)) {
+        if builder.version() >= (2, 0) {
             builder.write_f32(special_fields.playback_speed);
             builder.write_i32(special_fields.playback_speed_type.into());
             if special_fields.special_version >= 2 {
@@ -363,7 +363,7 @@ impl GMElement for GMSprite {
                 builder.align(4);
                 let json_blob: Vec<u8> = spine::Data::build_weird_string(&spine.json);
                 let atlas_blob: Vec<u8> = spine::Data::build_weird_string(&spine.atlas);
-                if builder.is_version_at_least((2023, 1)) {
+                if builder.version() >= ((2023, 1)) {
                     builder.write_simple_list(&spine.textures)?;
                 }
                 builder.write_i32(spine.version);
@@ -400,7 +400,7 @@ impl GMElement for GMSprite {
                         for texture_entry in &spine.textures {
                             builder.write_u32(texture_entry.page_width);
                             builder.write_u32(texture_entry.page_height);
-                            if builder.is_version_at_least((2023, 1)) {
+                            if builder.version() >= ((2023, 1)) {
                                 if let spine::texture_entry::Data::Post2023_1(length) =
                                     texture_entry.data
                                 {
@@ -425,7 +425,7 @@ impl GMElement for GMSprite {
             }
         }
 
-        if builder.is_version_at_least((2, 0)) {
+        if builder.version() >= 2 {
             if special_fields.special_version >= 2
                 && matches!(special_fields.data, SpecialData::Normal)
                 && let Some(ref sequence) = special_fields.sequence
@@ -491,7 +491,7 @@ impl GMSprite {
         builder.align(4);
         let written_bytes = builder.len() - start;
 
-        let (width, height) = if builder.is_version_at_least((2024, 6)) {
+        let (width, height) = if builder.version() >= ((2024, 6)) {
             (
                 self.margin_right as u32 - self.margin_left as u32 + 1,
                 self.margin_bottom as u32 - self.margin_top as u32 + 1,

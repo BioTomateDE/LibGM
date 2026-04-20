@@ -15,7 +15,7 @@ use crate::wad::elements::texture_page_item::GMTexturePageItem;
 use crate::wad::elements::variable::GMVariable;
 use crate::wad::reference::GMRef;
 use crate::wad::version::GMVersion;
-use crate::wad::version::GMVersionReq;
+use crate::wad::version::ToGMVersion;
 
 #[derive(Debug)]
 pub struct DataReader<'a> {
@@ -274,11 +274,11 @@ impl<'a> DataReader<'a> {
     ///   succeeds
     /// - `Ok(None)` if the version requirement is not met
     /// - `Err(_)` if the version requirement is met but deserialization fails
-    pub fn deserialize_if_gm_version<T: GMElement, V: Into<GMVersionReq>>(
+    pub fn deserialize_if_gm_version<T: GMElement>(
         &mut self,
-        ver_req: V,
+        ver_req: impl ToGMVersion,
     ) -> Result<Option<T>> {
-        if self.general_info.is_version_at_least(ver_req) {
+        if self.general_info.version >= ver_req {
             Ok(Some(T::deserialize(self)?))
         } else {
             Ok(None)

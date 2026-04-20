@@ -88,7 +88,7 @@ impl GMElement for GMParticleEmitter {
     #[allow(clippy::too_many_lines)]
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: String = reader.read_gm_string()?;
-        let enabled: bool = if reader.general_info.is_version_at_least((2023, 6)) {
+        let enabled: bool = if reader.general_info.version >= ((2023, 6)) {
             reader.read_bool32()?
         } else {
             true
@@ -96,8 +96,7 @@ impl GMElement for GMParticleEmitter {
         let mode: EmitMode = num_enum_from(reader.read_i32()?)?;
 
         let emit_count: u32;
-        let data_2023_8: Option<Data2023_8> = if reader.general_info.is_version_at_least((2023, 8))
-        {
+        let data_2023_8: Option<Data2023_8> = if reader.general_info.version >= ((2023, 8)) {
             // For some reason, it's stored as a float here???
             // You could add extra validation here
             // (like disallowing NaN, Infinity, fractional numbers, negative numbers)
@@ -146,7 +145,7 @@ impl GMElement for GMParticleEmitter {
         let scale_x = reader.read_f32()?;
         let scale_y = reader.read_f32()?;
 
-        let size_data_etc: SizeDataEtc = if reader.general_info.is_version_at_least((2023, 8)) {
+        let size_data_etc: SizeDataEtc = if reader.general_info.version >= ((2023, 8)) {
             let mut data = data_2023_8.unwrap();
             data.size_min_x = reader.read_f32()?;
             data.size_max_x = reader.read_f32()?;
@@ -241,13 +240,13 @@ impl GMElement for GMParticleEmitter {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(&self.name);
-        if builder.is_version_at_least((2023, 6)) {
+        if builder.version() >= ((2023, 6)) {
             builder.write_bool32(self.enabled);
         } else if !self.enabled {
             log::warn!("Cannot disable particle emitters before 2023.6");
         }
 
-        if builder.is_version_at_least((2023, 8)) {
+        if builder.version() >= (2023, 8) {
             let SizeDataEtc::Post2023_8(data) = &self.size_data_etc else {
                 bail!("Expected >= 2023.8 data, got < 2023.8 data");
             };
@@ -287,7 +286,7 @@ impl GMElement for GMParticleEmitter {
         builder.write_f32(self.lifetime_max);
         builder.write_f32(self.scale_x);
         builder.write_f32(self.scale_y);
-        if builder.is_version_at_least((2023, 8)) {
+        if builder.version() >= ((2023, 8)) {
             let SizeDataEtc::Post2023_8(data) = &self.size_data_etc else {
                 bail!("Expected >= 2023.8 data, got < 2023.8 data");
             };

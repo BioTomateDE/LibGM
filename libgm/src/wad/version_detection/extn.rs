@@ -1,8 +1,9 @@
+use super::target_version;
 use crate::prelude::*;
 use crate::wad::deserialize::reader::DataReader;
-use crate::wad::version::GMVersionReq;
+use crate::wad::version::GMVersion;
 
-pub fn check_2022_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
+pub fn check_2022_6(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     let ext_count = reader.read_u32()?;
     if ext_count < 1 {
         return Ok(None);
@@ -47,10 +48,10 @@ pub fn check_2022_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         }
     }
 
-    Ok(Some((2022, 6).into()))
+    target_version!(2022, 6)
 }
 
-pub fn check_2023_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
+pub fn check_2023_4(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     let ext_count = reader.read_i32()?;
     if ext_count < 1 {
         return Ok(None);
@@ -63,7 +64,7 @@ pub fn check_2023_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     // If it's not true, then "files_pointer" is actually a string pointer, so it's
     // GM 2023.4+.
     if files_pointer > options_pointer {
-        return Ok(Some((2023, 4).into()));
+        return target_version!(2023, 4);
     }
     Ok(None)
 }

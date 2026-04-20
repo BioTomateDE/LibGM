@@ -1,8 +1,9 @@
+use super::target_version;
 use crate::prelude::*;
+use crate::wad::GMVersion;
 use crate::wad::deserialize::reader::DataReader;
-use crate::wad::version::GMVersionReq;
 
-pub fn check_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
+pub fn check_2024_14(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     // Check for new field added in 2024.14
     let audio_group_count = reader.read_u32()?;
     if audio_group_count == 0 {
@@ -49,5 +50,5 @@ pub fn check_2024_14(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         }
     }
 
-    Ok(Some((2024, 14).into()))
+    target_version!(2024, 14)
 }

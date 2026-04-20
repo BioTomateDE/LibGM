@@ -97,7 +97,7 @@ impl GMElement for GMTexturePages {
                 "Generated Mipmap levels",
                 (2, 0, 6),
             )?;
-            if builder.is_version_at_least((2022, 3)) {
+            if builder.version() >= (2022, 3) {
                 texture_block_size_placeholders[i] = builder.len();
                 // Placeholder for texture block size. use the cached value as a fallback.
                 // unless the texture page is external, this will later be overriden by the real
@@ -130,7 +130,7 @@ impl GMElement for GMTexturePages {
             let start_pos: u32 = builder.len();
             img.serialize(builder)
                 .context("serializing texture page image")?;
-            if builder.is_version_at_least((2022, 3)) {
+            if builder.version() >= (2022, 3) {
                 let length: u32 = builder.len() - start_pos;
                 builder.overwrite_u32(length, texture_block_size_placeholders[i])?;
             }
@@ -266,7 +266,7 @@ fn read_bz2_qoi(
     let start_position = reader.cur_pos - 8;
     let mut header_size = 8;
     let mut uncompressed_size = None;
-    if reader.general_info.is_version_at_least((2022, 5)) {
+    if reader.general_info.version >= ((2022, 5)) {
         uncompressed_size = Some(reader.read_u32()?);
         header_size = 12;
     }

@@ -33,7 +33,7 @@ impl GMElement for GMGameObjects {
 
             let visible = reader.read_bool32()?;
             let mut managed: Option<bool> = None;
-            if reader.general_info.is_version_at_least((2022, 5)) {
+            if reader.general_info.version >= ((2022, 5)) {
                 managed = Some(reader.read_bool32()?);
             }
             let solid = reader.read_bool32()?;

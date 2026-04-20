@@ -206,4 +206,3 @@ pub use reference::GMRef;
 pub use serialize::build_bytes;
 pub use serialize::build_file;
 pub use version::GMVersion;
-pub use version::GMVersionReq;

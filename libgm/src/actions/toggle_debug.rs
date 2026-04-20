@@ -61,7 +61,7 @@ fn toggle_debug(data: &mut GMData, enable: bool) -> Result<()> {
     if display_name == "DELTARUNE Chapter 1" {
         return if data.game_objects.by_name("obj_event_manager").is_ok() {
             deltarune::toggle(data, enable)
-        } else if gen8.version.is_version_at_least((2, 3)) {
+        } else if gen8.version >= ((2, 3)) {
             demo_lts_ch1::toggle(data, enable)
         } else {
             chapter1_old::toggle(data, enable)

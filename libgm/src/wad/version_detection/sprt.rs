@@ -1,8 +1,9 @@
+use super::target_version;
 use crate::prelude::*;
 use crate::wad::deserialize::reader::DataReader;
-use crate::wad::version::GMVersionReq;
+use crate::wad::version::GMVersion;
 
-pub fn check_2_3_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
+pub fn check_2_3_2(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     let pointers: Vec<u32> = reader.read_simple_list()?;
     for pointer in pointers {
         if pointer == 0 {
@@ -14,14 +15,14 @@ pub fn check_2_3_2(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         }
         let special_version = reader.read_u32()?;
         if special_version >= 3 {
-            return Ok(Some((2, 3, 2).into()));
+            return target_version!(2, 3, 2);
         }
     }
     Ok(None)
 }
 
-pub fn check_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
-    let target_ver = Ok(Some((2024, 6).into()));
+pub fn check_2024_6(reader: &mut DataReader) -> Result<Option<GMVersion>> {
+    let ver = target_version!(2024, 6);
     let sprite_count = reader.read_u32()?;
     for i in 0..sprite_count {
         reader.cur_pos = reader.chunk.start_pos + i * 4 + 4;
@@ -102,7 +103,7 @@ pub fn check_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
             if !bbox_end_pos.is_multiple_of(16)
                 && bbox_end_pos + (16 - bbox_end_pos % 16) == reader.chunk.end_pos
             {
-                return target_ver; // "Bbox" mask data doesn't exactly line up, but works if rounded up to the next chunk padding
+                return ver; // "Bbox" mask data doesn't exactly line up, but works if rounded up to the next chunk padding
             }
             bail!("Failed to detect mask type in 2024.6 detection");
         }
@@ -117,7 +118,7 @@ pub fn check_2024_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
             // utmt pls)
         }
         if bbox_end_pos == expected_end_offset {
-            return target_ver; // "Bbox" mask data is valid
+            return ver; // "Bbox" mask data is valid
         }
     }
 

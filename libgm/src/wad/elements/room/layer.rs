@@ -52,7 +52,7 @@ impl GMElement for Layer {
             Type::Assets => Data::Assets(Assets::deserialize(reader)?),
             Type::Tiles => Data::Tiles(Tiles::deserialize(reader)?),
             Type::Effect => {
-                if reader.general_info.is_version_at_least((2022, 1)) {
+                if reader.general_info.version >= ((2022, 1)) {
                     let effect_data = effect_data_2022_1.as_ref().unwrap();
                     let effect_type = effect_data.effect_type.clone().ok_or(
                         "Effect Type not set for Room Layer 2022.1+ (this error could be a \
@@ -99,7 +99,7 @@ impl GMElement for Layer {
             Data::Background(data) => data.serialize(builder)?,
             Data::Assets(data) => data.serialize(builder)?,
             Data::Effect(data) => {
-                if !builder.is_version_at_least((2022, 1)) {
+                if builder.version() < ((2022, 1)) {
                     data.serialize(builder)?;
                 }
             }

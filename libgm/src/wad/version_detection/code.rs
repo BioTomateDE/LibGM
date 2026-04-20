@@ -1,11 +1,12 @@
+use super::target_version;
 use crate::gml::instruction::DataType;
 use crate::gml::opcodes;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::deserialize::reader::DataReader;
-use crate::wad::version::GMVersionReq;
+use crate::wad::version::GMVersion;
 
-pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
+pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     fn get_chunk_elem_count(
         reader: &mut DataReader,
         chunk_name: &'static str,
@@ -101,7 +102,7 @@ pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
                 let int_argument = reader.read_u32()?;
                 if is_asset_type_2024_4(int_argument) {
                     // Return immediately if highest detectable version (2024.4) is found
-                    return Ok(Some((2024, 4).into()));
+                    return target_version!(2024, 4);
                 }
                 detected_2023_8 = true;
             }
@@ -109,7 +110,7 @@ pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
     }
 
     if detected_2023_8 {
-        Ok(Some((2023, 8).into()))
+        target_version!(2023, 8)
     } else {
         Ok(None)
     }

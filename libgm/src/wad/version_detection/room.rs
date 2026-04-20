@@ -1,11 +1,12 @@
+use super::target_version;
 use crate::prelude::*;
 use crate::util::init::num_enum_from;
 use crate::wad::deserialize::reader::DataReader;
 use crate::wad::elements::room::layer::Type;
-use crate::wad::version::GMVersionReq;
+use crate::wad::version::GMVersion;
 
-pub fn check_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
-    let target_ver = Ok(Some((2022, 1).into()));
+pub fn check_2022_1(reader: &mut DataReader) -> Result<Option<GMVersion>> {
+    let target_ver = target_version!(2022, 1);
     // Iterate over all rooms until a length check is performed
 
     let room_count = reader.read_u32()?;
@@ -86,7 +87,7 @@ pub fn check_2022_1(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     Ok(None)
 }
 
-pub fn check_2_2_2_302(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
+pub fn check_2_2_2_302(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     // Check the size of the first GameObject in a room
     let room_count = reader.read_u32()?;
 
@@ -112,14 +113,14 @@ pub fn check_2_2_2_302(reader: &mut DataReader) -> Result<Option<GMVersionReq>> 
             reader.read_u32()?
         };
         if pointer2 - pointer1 == 48 {
-            return Ok(Some((2, 2, 2, 302).into()));
+            return target_version!(2, 2, 2, 302);
         }
     }
 
     Ok(None)
 }
 
-pub fn check_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
+pub fn check_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     // Check for tile compression
     let room_count = reader.read_u32()?;
     let mut any_layers_misaligned: bool = false;
@@ -174,9 +175,9 @@ pub fn check_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
             let tile_map_height = reader.read_u32()?;
             if next_pointer - reader.cur_pos != (tile_map_width * tile_map_height * 4) {
                 return if any_layers_misaligned {
-                    Ok(Some((2024, 2).into()))
+                    target_version!(2024, 2)
                 } else {
-                    Ok(Some((2024, 4).into()))
+                    target_version!(2024, 4)
                 };
             }
         }

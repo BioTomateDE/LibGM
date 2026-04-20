@@ -1,10 +1,11 @@
+use super::target_version;
 use crate::prelude::*;
 use crate::wad::deserialize::reader::DataReader;
 use crate::wad::elements::texture_page::BZ2_QOI_HEADER;
-use crate::wad::version::GMVersionReq;
+use crate::wad::version::GMVersion;
 
-pub fn check_2022_3(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
-    let target_ver = Ok(Some((2022, 3).into()));
+pub fn check_2022_3(reader: &mut DataReader) -> Result<Option<GMVersion>> {
+    let ver = target_version!(2022, 3);
     let texture_count = reader.read_u32()?;
     if texture_count < 1 {
         return Ok(None); // Can't detect if there are no texture pages
@@ -13,21 +14,21 @@ pub fn check_2022_3(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         reader.cur_pos += 16; // Jump to either padding or length, depending on version
         if reader.read_u32()? > 0 {
             // Check whether it's padding or length
-            return target_ver;
+            return ver;
         }
     } else {
         let pointer1 = reader.read_u32()?;
         let pointer2 = reader.read_u32()?;
         if pointer1 + 16 == pointer2 {
-            return target_ver;
+            return ver;
         }
     }
 
     Ok(None)
 }
 
-pub fn check_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
-    let target_ver = Ok(Some((2022, 5).into()));
+pub fn check_2022_5(reader: &mut DataReader) -> Result<Option<GMVersion>> {
+    let target_ver = target_version!(2022, 5);
     let texture_count = reader.read_u32()?;
     for i in 0..texture_count {
         // Go to each texture, and then to each texture's data
@@ -54,7 +55,7 @@ pub fn check_2022_5(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     Ok(None)
 }
 
-pub fn check_2_0_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
+pub fn check_2_0_6(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     let texture_count = reader.read_u32()?;
     if texture_count < 1 {
         return Ok(None);
@@ -75,5 +76,5 @@ pub fn check_2_0_6(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         }
     }
 
-    Ok(Some((2, 0, 6).into()))
+    target_version!(2, 0, 6)
 }

@@ -119,7 +119,7 @@ impl GMElement for GMSound {
         } else {
             let preload = reader.read_bool32().context("reading preload")?;
             reader.assert_bool(preload, true, "Preload")?;
-            GMRef::new(get_builtin_sound_group_id(&reader.general_info.version))
+            GMRef::new(get_builtin_sound_group_id(reader.general_info.version))
         };
 
         let audio_file: Option<GMRef<GMAudio>> = reader.read_resource_by_id_opt()?;
@@ -170,10 +170,8 @@ impl GMElement for GMSound {
 
 #[allow(clippy::bool_to_int_with_if)] // lol this is a coincidence
 /// The exact versions may be inaccurate.
-fn get_builtin_sound_group_id(gm_version: &GMVersion) -> u32 {
-    // ver >= 1.0.0.1250 || (ver >= 1.0.0.161 && ver < 1.0.0.1000)
-    let is_ver = |build| gm_version.is_version_at_least((1, 0, 0, build));
-    if is_ver(1250) || is_ver(161) && !is_ver(1000) {
+fn get_builtin_sound_group_id(ver: GMVersion) -> u32 {
+    if ver >= (1, 0, 0, 1250) || (ver >= (1, 0, 0, 161) && ver < (1, 0, 0, 1000)) {
         0
     } else {
         1

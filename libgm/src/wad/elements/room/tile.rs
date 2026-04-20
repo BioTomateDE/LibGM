@@ -26,7 +26,7 @@ impl GMElement for Tile {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
-        let texture: Option<Texture> = if reader.general_info.is_version_at_least((2, 0)) {
+        let texture: Option<Texture> = if reader.general_info.version >= 2 {
             reader.read_resource_by_id_opt()?.map(Texture::Sprite)
         } else {
             reader.read_resource_by_id_opt()?.map(Texture::Background)
@@ -61,7 +61,7 @@ impl GMElement for Tile {
         builder.write_i32(self.y);
         match self.texture {
             Some(Texture::Sprite(sprite_ref)) => {
-                if builder.is_version_at_least((2, 0)) {
+                if builder.version() >= 2 {
                     builder.write_resource_id(sprite_ref);
                 } else {
                     bail!(
@@ -71,7 +71,7 @@ impl GMElement for Tile {
                 }
             }
             Some(Texture::Background(background_ref)) => {
-                if builder.is_version_at_least((2, 0)) {
+                if builder.version() >= 2 {
                     bail!(
                         "Room tile texture should be a Sprite reference in GMS2+; not a \
                          Background reference"

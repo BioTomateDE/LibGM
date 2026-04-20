@@ -1,9 +1,10 @@
+use super::target_version;
 use crate::prelude::*;
 use crate::wad::deserialize::reader::DataReader;
-use crate::wad::version::GMVersionReq;
+use crate::wad::version::GMVersion;
 
-pub fn check_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
-    let target_ver = Ok(Some((2024, 8).into()));
+pub fn check_2024_8(reader: &mut DataReader) -> Result<Option<GMVersion>> {
+    let ver = target_version!(2024, 8);
     if reader.chunk.is_empty() {
         return Ok(None);
     }
@@ -18,7 +19,7 @@ pub fn check_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     if reader.cur_pos == reader.chunk.end_pos {
         // Directly reached the end of the chunk after the function list, so code locals
         // are definitely missing
-        return target_ver;
+        return ver;
     }
 
     // Align position
@@ -38,7 +39,7 @@ pub fn check_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
     }
 
     if padding_bytes_read < 4 {
-        return target_ver;
+        return ver;
     }
 
     // If we read at least 4 padding bytes, we don't know for sure unless we have at
@@ -53,5 +54,5 @@ pub fn check_2024_8(reader: &mut DataReader) -> Result<Option<GMVersionReq>> {
         return Ok(None);
     }
 
-    target_ver
+    ver
 }

@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use crate::gml::instruction::VariableType;
 use crate::prelude::*;
+use crate::wad::GMVersion;
 use crate::wad::data::Endianness;
 use crate::wad::data::GMData;
 use crate::wad::elements::string::StringPlaceholder;
 use crate::wad::serialize::pointers::Pointer;
-use crate::wad::version::GMVersionReq;
 
 // The Default value should never be read.
 // This can only happen if there are zero existent chunks, though.
@@ -82,8 +82,8 @@ impl<'a> DataBuilder<'a> {
 
     #[inline]
     #[must_use]
-    pub fn is_version_at_least(&self, req: impl Into<GMVersionReq>) -> bool {
-        self.gm_data.general_info.version.is_version_at_least(req)
+    pub const fn version(&self) -> GMVersion {
+        self.gm_data.general_info.version
     }
 
     #[inline]

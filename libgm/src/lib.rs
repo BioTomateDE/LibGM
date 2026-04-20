@@ -146,6 +146,9 @@
     // Applying this lint often makes the code less readable.
     clippy::useless_let_if_seq,
 
+    // Only used in small local scope.
+    clippy::enum_glob_use,
+
     // This is a style choice.
     clippy::match_same_arms,
 )]

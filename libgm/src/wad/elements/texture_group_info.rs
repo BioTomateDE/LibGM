@@ -3,7 +3,6 @@ use macros::num_enum;
 
 use crate::prelude::*;
 use crate::util::init::num_enum_from;
-use crate::wad::GMVersionReq;
 use crate::wad::deserialize::reader::DataReader;
 use crate::wad::elements::GMElement;
 use crate::wad::elements::GMNamedElement;
@@ -68,16 +67,14 @@ impl GMNamedElement for GMTextureGroupInfo {
 
 impl GMElement for GMTextureGroupInfo {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let spine_sprites_ver = GMVersionReq::from((2023, 1, LTSBranch::PostLTS));
-
         let name: String = reader.read_gm_string()?;
         let data_2022_9: Option<Data2022_9> = reader.deserialize_if_gm_version((2022, 9))?;
         let texture_pages_ptr = reader.read_u32()?;
         let sprites_ptr = reader.read_u32()?;
-        let spine_sprites_ptr = if reader.general_info.version >= spine_sprites_ver {
-            0
-        } else {
+        let spine_sprites_ptr = if reader.general_info.version < (2023, 1, LTSBranch::PostLTS) {
             reader.read_u32()?
+        } else {
+            0
         };
         let fonts_ptr = reader.read_u32()?;
         let tilesets_ptr = reader.read_u32()?;
@@ -89,11 +86,11 @@ impl GMElement for GMTextureGroupInfo {
         let sprites: Vec<GMRef<GMSprite>> = reader.read_simple_list()?;
 
         let spine_sprites: Vec<GMRef<GMSprite>> =
-            if reader.general_info.version >= spine_sprites_ver {
-                Vec::new()
-            } else {
+            if reader.general_info.version < (2023, 1, LTSBranch::PostLTS) {
                 reader.assert_pos(spine_sprites_ptr, "Spine Sprites")?;
                 reader.read_simple_list()?
+            } else {
+                Vec::new()
             };
 
         reader.assert_pos(fonts_ptr, "Fonts")?;
@@ -122,7 +119,7 @@ impl GMElement for GMTextureGroupInfo {
         )?;
         builder.write_pointer(&self.texture_pages);
         builder.write_pointer(&self.sprites);
-        if !builder.is_version_at_least((2023, 1, LTSBranch::PostLTS)) {
+        if builder.version() < ((2023, 1, LTSBranch::PostLTS)) {
             builder.write_pointer(&self.spine_sprites);
         }
         builder.write_pointer(&self.fonts);
@@ -134,7 +131,7 @@ impl GMElement for GMTextureGroupInfo {
         builder.resolve_pointer(&self.sprites)?;
         builder.write_simple_list(&self.sprites)?;
 
-        if !builder.is_version_at_least((2023, 1, LTSBranch::PostLTS)) {
+        if builder.version() < ((2023, 1, LTSBranch::PostLTS)) {
             builder.resolve_pointer(&self.spine_sprites)?;
             builder.write_simple_list(&self.spine_sprites)?;
         }

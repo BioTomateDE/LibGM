@@ -944,7 +944,7 @@ impl GMElement for AssetReference {
         }
 
         let raw = reader.read_u32()?;
-        if reader.general_info.is_version_at_least((2024, 4)) {
+        if reader.general_info.version >= ((2024, 4)) {
             Self::parse(raw)
         } else {
             Self::parse_old(raw)
@@ -957,7 +957,7 @@ impl GMElement for AssetReference {
             return Ok(());
         }
 
-        let raw = if builder.is_version_at_least((2024, 4)) {
+        let raw = if builder.version() >= ((2024, 4)) {
             self.build()
         } else {
             self.build_old()

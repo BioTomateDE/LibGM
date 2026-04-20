@@ -5,9 +5,9 @@ use std::collections::HashMap;
 use macros::named_list_chunk;
 use macros::num_enum;
 pub use track::Track;
+use track::keyframe;
 use track::keyframe::BroadcastMessage;
 use track::keyframe::Moment;
-use track::keyframe::{self};
 
 use crate::prelude::*;
 use crate::util::init::hashmap_with_capacity;
@@ -74,7 +74,7 @@ impl GMElement for GMSequence {
 
         let mut width: Option<f32> = None;
         let mut height: Option<f32> = None;
-        if reader.general_info.is_version_at_least((2024, 13)) {
+        if reader.general_info.version >= (2024, 13) {
             width = Some(reader.read_f32()?);
             height = Some(reader.read_f32()?);
         }
@@ -120,7 +120,7 @@ impl GMElement for GMSequence {
         builder.write_i32(self.origin_x);
         builder.write_i32(self.origin_y);
         builder.write_f32(self.volume);
-        if builder.is_version_at_least((2024, 13)) {
+        if builder.version() >= ((2024, 13)) {
             builder.write_f32(self.width.ok_or("Sequence width not set in 2024.13+")?);
             builder.write_f32(self.height.ok_or("Sequence height not set in 2024.13+")?);
         }

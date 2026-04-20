@@ -54,13 +54,12 @@ impl GMElement for GMFunctions {
             functions.push(GMFunction { name });
         }
 
-        let code_locals: GMCodeLocals = if reader.general_info.wad_version >= 15
-            && !reader.general_info.is_version_at_least((2024, 8))
-        {
-            GMCodeLocals::deserialize(reader)?
-        } else {
-            GMCodeLocals::default()
-        };
+        let code_locals: GMCodeLocals =
+            if reader.general_info.wad_version >= 15 && reader.general_info.version < ((2024, 8)) {
+                GMCodeLocals::deserialize(reader)?
+            } else {
+                GMCodeLocals::default()
+            };
 
         Ok(Self { functions, code_locals, exists: true })
     }
@@ -81,7 +80,7 @@ impl GMElement for GMFunctions {
 
             // Before GM 2.3, the first occurrence points to the instruction rather than the
             // next offset
-            let gm2_3: bool = builder.is_version_at_least((2, 3));
+            let gm2_3: bool = builder.version() >= (2, 3);
             let first_occurrence: i32 = match occurrences.first() {
                 Some(&occurrence) if gm2_3 => occurrence as i32 + 4,
                 Some(&occurrence) => occurrence as i32,
@@ -93,7 +92,7 @@ impl GMElement for GMFunctions {
             builder.write_i32(first_occurrence);
         }
 
-        if builder.wad_version() >= 15 && !builder.is_version_at_least((2024, 8)) {
+        if builder.wad_version() >= 15 && builder.version() < ((2024, 8)) {
             if !self.code_locals.exists {
                 bail!("Code Locals don't exist in WAD version 15+");
             }
@@ -126,7 +125,7 @@ fn parse_occurrence_chain(
         .get("CODE")
         .ok_or("Chunk CODE not set while parsing function occurrences")?;
 
-    let first_extra_offset: u32 = if reader.general_info.is_version_at_least((2, 3)) {
+    let first_extra_offset: u32 = if reader.general_info.version >= (2, 3) {
         0
     } else {
         4

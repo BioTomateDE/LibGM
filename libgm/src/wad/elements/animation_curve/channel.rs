@@ -57,7 +57,7 @@ impl GMElement for Point {
         let x = reader.read_f32()?;
         let y = reader.read_f32()?;
         let mut bezier_data: Option<PointBezierData> = None;
-        if reader.general_info.is_version_at_least((2, 3, 1)) {
+        if reader.general_info.version >= ((2, 3, 1)) {
             bezier_data = Some(PointBezierData::deserialize(reader)?);
         } else {
             reader.cur_pos += 4;
@@ -69,7 +69,7 @@ impl GMElement for Point {
         builder.write_f32(self.x);
         builder.write_f32(self.y);
 
-        if builder.is_version_at_least((2, 3, 1)) {
+        if builder.version() >= ((2, 3, 1)) {
             let bezier_data: &PointBezierData = self
                 .bezier_data
                 .as_ref()
