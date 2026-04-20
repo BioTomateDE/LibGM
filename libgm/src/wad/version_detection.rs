@@ -193,8 +193,6 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
 
         for check in checks {
             // Skip checks that are already fulfilled.
-            // (You can comment this out for debug purposes to verify
-            // that all version checks work properly.)
             if reader.general_info.version >= check.target_version {
                 continue;
             }
