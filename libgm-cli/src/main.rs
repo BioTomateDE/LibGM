@@ -15,6 +15,8 @@ use libgm::wad::ParsingOptions;
 use libgm::wad::data::GMData;
 use libgm::wad::serialize::build_file;
 
+use crate::diff::print_diff;
+use crate::diff::print_diffs;
 use crate::tests::Test;
 
 fn run(mut args: cli::Args) -> Result<()> {
@@ -39,6 +41,12 @@ fn run(mut args: cli::Args) -> Result<()> {
         let mut data: GMData = parser.parse_file(data_file)?;
 
         tests::perform(&data, &tests)?;
+
+        for data_file2 in &args.diffs {
+            log::info!("Diffing with data file {}", data_file2.display());
+            let data2: GMData = parser.parse_file(data_file2)?;
+            print_diffs(&data, &data2);
+        }
 
         for action in &args.actions {
             action.perform(&mut data)?;

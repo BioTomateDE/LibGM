@@ -36,6 +36,10 @@ pub struct Args {
     /// Code entries to disassemble.
     #[arg(short, long, value_delimiter = ',')]
     pub codes: Vec<String>,
+
+    /// Data files to compare to.
+    #[arg(short, long, value_delimiter = ',')]
+    pub diffs: Vec<PathBuf>,
 }
 
 #[must_use]
