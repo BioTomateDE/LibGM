@@ -170,12 +170,19 @@ impl GMElement for GMSound {
 
 #[allow(clippy::bool_to_int_with_if)] // lol this is a coincidence
 /// The exact versions may be inaccurate.
-fn get_builtin_sound_group_id(ver: GMVersion) -> u32 {
-    if ver >= (1, 0, 0, 1250) || (ver >= (1, 0, 0, 161) && ver < (1, 0, 0, 1000)) {
+fn get_builtin_sound_group_id(version: GMVersion) -> u32 {
+    if test_gms1_version(version, 1250, 161) {
         0
     } else {
         1
     }
+}
+
+// This function could be reused for other elements.
+#[must_use]
+fn test_gms1_version(version: GMVersion, stable_build: u32, beta_build: u32) -> bool {
+    assert!(beta_build < 1000);
+    version > (1, 0, 0, stable_build) || version > (1, 0, 0, beta_build)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -218,7 +218,7 @@ fn compare(a: &GMVersion, b: &GMVersion) -> Option<Ordering> {
     a.build.partial_cmp(&b.build)
 }
 
-pub trait ToGMVersion: Clone {
+pub trait ToGMVersion: Copy {
     #[must_use]
     fn to_gm_version(&self) -> GMVersion;
 
