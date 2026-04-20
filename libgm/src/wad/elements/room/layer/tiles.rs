@@ -24,7 +24,7 @@ impl GMElement for Tiles {
         let height = reader.read_u32()?;
         let mut tile_data: Vec<u32> = vec_with_capacity(width * height)?;
 
-        if reader.general_info.version >= ((2024, 2)) {
+        if reader.general_info.version >= (2024, 2) {
             Self::read_compressed_tile_data(reader, &mut tile_data)?;
         } else {
             for _y in 0..height {
@@ -41,7 +41,7 @@ impl GMElement for Tiles {
         builder.write_resource_id_opt(self.background);
         builder.write_u32(self.width);
         builder.write_u32(self.height);
-        if builder.version() >= ((2024, 2)) {
+        if builder.version() >= (2024, 2) {
             self.build_compressed_tile_data(builder);
         } else {
             for id in &self.tile_data {
@@ -111,7 +111,7 @@ impl Tiles {
             }
         }
 
-        if reader.general_info.version >= ((2024, 4)) {
+        if reader.general_info.version >= (2024, 4) {
             reader.align(4)?;
         }
         Ok(())
@@ -195,7 +195,7 @@ impl Tiles {
             last_tile = curr_tile;
         }
 
-        if builder.version() >= ((2024, 4)) {
+        if builder.version() >= (2024, 4) {
             builder.align(4);
         }
     }

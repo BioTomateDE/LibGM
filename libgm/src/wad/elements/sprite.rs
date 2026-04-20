@@ -363,7 +363,7 @@ impl GMElement for GMSprite {
                 builder.align(4);
                 let json_blob: Vec<u8> = spine::Data::build_weird_string(&spine.json);
                 let atlas_blob: Vec<u8> = spine::Data::build_weird_string(&spine.atlas);
-                if builder.version() >= ((2023, 1)) {
+                if builder.version() >= (2023, 1) {
                     builder.write_simple_list(&spine.textures)?;
                 }
                 builder.write_i32(spine.version);
@@ -400,7 +400,7 @@ impl GMElement for GMSprite {
                         for texture_entry in &spine.textures {
                             builder.write_u32(texture_entry.page_width);
                             builder.write_u32(texture_entry.page_height);
-                            if builder.version() >= ((2023, 1)) {
+                            if builder.version() >= (2023, 1) {
                                 if let spine::texture_entry::Data::Post2023_1(length) =
                                     texture_entry.data
                                 {
@@ -491,7 +491,7 @@ impl GMSprite {
         builder.align(4);
         let written_bytes = builder.len() - start;
 
-        let (width, height) = if builder.version() >= ((2024, 6)) {
+        let (width, height) = if builder.version() >= (2024, 6) {
             (
                 self.margin_right as u32 - self.margin_left as u32 + 1,
                 self.margin_bottom as u32 - self.margin_top as u32 + 1,

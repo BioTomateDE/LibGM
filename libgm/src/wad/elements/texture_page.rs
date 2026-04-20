@@ -266,7 +266,7 @@ fn read_bz2_qoi(
     let start_position = reader.cur_pos - 8;
     let mut header_size = 8;
     let mut uncompressed_size = None;
-    if reader.general_info.version >= ((2022, 5)) {
+    if reader.general_info.version >= (2022, 5) {
         uncompressed_size = Some(reader.read_u32()?);
         header_size = 12;
     }

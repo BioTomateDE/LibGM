@@ -33,7 +33,7 @@ impl GMElement for GameObject {
         let scale_y = reader.read_f32()?;
         let mut image_speed: Option<f32> = None;
         let mut image_index: Option<u32> = None;
-        if reader.general_info.version >= ((2, 2, 2, 302)) {
+        if reader.general_info.version >= (2, 2, 2, 302) {
             image_speed = Some(reader.read_f32()?);
             image_index = Some(reader.read_u32()?);
         }

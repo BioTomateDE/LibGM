@@ -138,7 +138,7 @@ impl GMElement for GMS2Data {
 
         let mut tile_separation_x = 0;
         let mut tile_separation_y = 0;
-        if reader.general_info.version >= ((2024, 14, 1)) {
+        if reader.general_info.version >= (2024, 14, 1) {
             tile_separation_x = reader.read_u32()?;
             tile_separation_y = reader.read_u32()?;
         }
@@ -185,7 +185,7 @@ impl GMElement for GMS2Data {
         builder.write_u32(self.tile_width);
         builder.write_u32(self.tile_height);
 
-        if builder.version() >= ((2024, 14, 1)) {
+        if builder.version() >= (2024, 14, 1) {
             builder.write_u32(self.tile_separation_x);
             builder.write_u32(self.tile_separation_y);
         }

@@ -48,7 +48,7 @@ impl GMElement for Glyph {
         let height = reader.read_u16()?;
         let shift_modifier = reader.read_i16()?;
         let offset = reader.read_i16()?; // Potential assumption according to utmt
-        if reader.general_info.version >= ((2024, 11)) {
+        if reader.general_info.version >= (2024, 11) {
             let unknown_always_zero = reader.read_i16()?;
             reader.assert_int(unknown_always_zero, 0, "Unknown Always Zero")?;
         }

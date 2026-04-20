@@ -36,7 +36,7 @@ impl GMElement for Data {
         let width = reader.read_i32()?;
         let height = reader.read_i32()?;
 
-        let ver_data = if reader.general_info.version >= ((2022, 1)) {
+        let ver_data = if reader.general_info.version >= (2022, 1) {
             let tpe_index = reader.read_i32()?;
             VersionData::Post2022_1(VersionDataPost2022_1 { tpe_index })
         } else {
@@ -72,7 +72,7 @@ impl GMElement for Data {
         builder.write_i32(self.bitmap_type.into());
         builder.write_i32(self.width);
         builder.write_i32(self.height);
-        if builder.version() >= ((2022, 1)) {
+        if builder.version() >= (2022, 1) {
             if let VersionData::Post2022_1(ref data) = self.ver_data {
                 builder.write_i32(data.tpe_index);
             } else {

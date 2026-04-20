@@ -184,7 +184,7 @@ impl GMElement for GMRoom {
         builder.write_pointer(&self.game_objects);
         builder.write_pointer(&self.tiles);
 
-        if builder.version() >= ((2024, 13)) {
+        if builder.version() >= (2024, 13) {
             builder.write_pointer(&self.instance_creation_order_ids);
         }
 
@@ -201,7 +201,7 @@ impl GMElement for GMRoom {
             builder.write_pointer(&self.layers);
         }
 
-        if builder.version() >= ((2, 3)) {
+        if builder.version() >= (2, 3) {
             builder.write_pointer(&self.sequences);
         }
 
@@ -214,7 +214,7 @@ impl GMElement for GMRoom {
         builder.resolve_pointer(&self.tiles)?;
         builder.write_pointer_list(&self.tiles)?;
 
-        if builder.version() >= ((2024, 13)) {
+        if builder.version() >= (2024, 13) {
             builder.resolve_pointer(&self.instance_creation_order_ids)?;
             builder.write_pointer_list(&self.instance_creation_order_ids)?;
         }
@@ -224,7 +224,7 @@ impl GMElement for GMRoom {
             builder.write_pointer_list(&self.layers)?;
         }
 
-        if builder.version() >= ((2, 3)) {
+        if builder.version() >= (2, 3) {
             builder.resolve_pointer(&self.sequences)?;
             builder.write_pointer_list(&self.sequences)?;
         }

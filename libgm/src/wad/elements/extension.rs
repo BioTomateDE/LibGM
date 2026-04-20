@@ -130,7 +130,7 @@ impl GMElement for GMExtension {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let folder_name: String = reader.read_gm_string()?;
         let name: String = reader.read_gm_string()?;
-        let version: Option<String> = if reader.general_info.version >= ((2023, 4)) {
+        let version: Option<String> = if reader.general_info.version >= (2023, 4) {
             Some(reader.read_gm_string()?)
         } else {
             None
@@ -139,7 +139,7 @@ impl GMElement for GMExtension {
         let files: Vec<File>;
         let options: Vec<option::Option>;
 
-        if reader.general_info.version >= ((2022, 6)) {
+        if reader.general_info.version >= (2022, 6) {
             let files_ptr = reader.read_u32()?;
             let options_ptr = reader.read_u32()?;
 
@@ -168,7 +168,7 @@ impl GMElement for GMExtension {
         builder.write_gm_string(&self.name);
         builder.write_if_ver(&self.version, "Version", (2023, 4))?;
         builder.write_gm_string(&self.class_name);
-        if builder.version() >= ((2022, 6)) {
+        if builder.version() >= (2022, 6) {
             builder.write_pointer(&self.files);
             builder.write_pointer(&self.options);
 

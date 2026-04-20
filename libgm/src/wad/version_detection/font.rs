@@ -67,10 +67,10 @@ pub fn check_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVers
     if reader.general_info.version < (2022, 8) {
         return Ok(None); // Version requirement (for checking 2023.6) not satisfied
     }
-    if reader.general_info.version >= ((2023, 6)) && reader.general_info.version < ((2024, 6)) {
+    if reader.general_info.version >= (2023, 6) && reader.general_info.version < (2024, 6) {
         return Ok(None); // 2023.6 already detected; but 2024.6 not yet detected
     }
-    if reader.general_info.version >= ((2024, 11)) {
+    if reader.general_info.version >= (2024, 11) {
         return Ok(None); // 2024.11 already detected
     }
 
@@ -95,7 +95,7 @@ pub fn check_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVers
     }
 
     reader.cur_pos = first_two_pointers[0] + 52; // Also the LineHeight value. 48 + 4 = 52
-    if reader.general_info.version >= ((2023, 2, PostLTS)) {
+    if reader.general_info.version >= (2023, 2, PostLTS) {
         // SDFSpread is present from 2023.2 non-LTS onward
         reader.cur_pos += 4; // (detected by PSEM/PSYS chunk existence)
     }

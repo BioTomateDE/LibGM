@@ -55,7 +55,7 @@ impl GMElement for GMFunctions {
         }
 
         let code_locals: GMCodeLocals =
-            if reader.general_info.wad_version >= 15 && reader.general_info.version < ((2024, 8)) {
+            if reader.general_info.wad_version >= 15 && reader.general_info.version < (2024, 8) {
                 GMCodeLocals::deserialize(reader)?
             } else {
                 GMCodeLocals::default()
@@ -92,7 +92,7 @@ impl GMElement for GMFunctions {
             builder.write_i32(first_occurrence);
         }
 
-        if builder.wad_version() >= 15 && builder.version() < ((2024, 8)) {
+        if builder.wad_version() >= 15 && builder.version() < (2024, 8) {
             if !self.code_locals.exists {
                 bail!("Code Locals don't exist in WAD version 15+");
             }
