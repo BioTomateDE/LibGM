@@ -272,13 +272,7 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
     Ok(reader)
 }
 
-#[allow(clippy::too_many_lines)]
-/// Parse GameMaker data
-fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
-    let stopwatch = Stopwatch::start();
-    let mut reader: DataReader = parse_form(raw_data)?;
-    reader.options = options.clone();
-
+fn init_reader(reader: &mut DataReader) -> Result<()> {
     // Properly initialize GEN8 version before reading chunks.
     reader.specified_version = reader.read_gen8_version()?;
 
@@ -289,18 +283,23 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
     // * [FUNC, VARI, STRG] --> CODE
     // * TPAG --> [BGND, EMBI, FONT, OPTN, SPRT]
 
+    // Set the STRG chunk so that the reader can read strings.
     reader.string_chunk = reader
         .chunks
         .get("STRG")
         .ok_or("Chunk STRG does not exist")?;
+
+    // Read GEN8, which contains the important GM Version and WAD Version.
     reader.general_info = reader.read_chunk()?;
     if !reader.general_info.exists {
         bail!("GEN8 chunk does not exist");
     }
 
+    // Modern games need version detection because
+    // YoYoGames stopped updating the version header.
     if reader.specified_version == GMVersion::GMS2 {
         let stopwatch = Stopwatch::start();
-        detect_gamemaker_version(&mut reader).context("detecting GameMaker version")?;
+        detect_gamemaker_version(reader).context("detecting GameMaker version")?;
         log::trace!("Detecting GameMaker Version took {stopwatch}");
     }
 
@@ -310,37 +309,54 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         reader.general_info.version,
         reader.general_info.wad_version,
     );
+    Ok(())
+}
 
-    let texture_page_items: GMTexturePageItems = reader.read_chunk()?;
-
-    let mut variables = GMVariables::default();
-    let mut functions = GMFunctions::default();
-    let mut codes = GMCodes::default();
-
-    let is_yyc: bool = match check_yyc(&reader) {
+fn read_bytecode_chunks(reader: &mut DataReader) -> Result<(GMCodes, GMFunctions, GMVariables)> {
+    let is_yyc: bool = match check_yyc(reader) {
         Ok(yyc) => yyc,
-        Err(e) if reader.options.verify_constants => {
+        Err(e) if reader.options.verify_constants => return Err(e).context("Checking YYC"),
+        Err(e) => {
             log::warn!("YYC integrity check failed: {e}");
             false
         }
-        Err(e) => return Err(e).context("Checking YYC"),
     };
 
-    let stopwatch2 = if is_yyc {
+    if is_yyc {
         log::warn!("YYC is untested, issues may occur");
         // Need to remove STRG to not throw "unread chunk" error
         reader.chunks.remove("STRG");
-        Stopwatch::start()
+        Ok((
+            GMCodes::default(),
+            GMFunctions::default(),
+            GMVariables::default(),
+        ))
     } else {
         reader.read_chunk::<GMStrings>()?; // Sets `reader.strings`
-        variables = reader.read_chunk()?; // Sets `reader.variable_occurrences`
-        functions = reader.read_chunk()?; // Sets `reader.function_occurrences`
-        let st = Stopwatch::start();
-        codes = reader.read_chunk()?;
-        st
-    };
+        let variables = reader.read_chunk()?; // Sets `reader.variable_occurrences`
+        let functions = reader.read_chunk()?; // Sets `reader.function_occurrences`
+        let codes = reader.read_chunk()?;
+        Ok((codes, functions, variables))
+    }
+}
+
+/// Parse GameMaker data
+fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
+    let stopwatch = Stopwatch::start();
+    let mut reader: DataReader = parse_form(raw_data)?;
+    reader.options = options.clone();
+    init_reader(&mut reader)?;
+
+    let texture_page_items: GMTexturePageItems = reader.read_chunk()?;
+
+    let codes: GMCodes;
+    let functions: GMFunctions;
+    let variables: GMVariables;
+    (codes, functions, variables) = read_bytecode_chunks(&mut reader)?;
 
     // Read all other chunks. This is allowed to be executed arbitrary order.
+    let stopwatch2 = Stopwatch::start();
+
     let texture_pages: GMTexturePages = reader.read_chunk()?;
     let scripts: GMScripts = reader.read_chunk()?;
     let fonts: GMFonts = reader.read_chunk()?;
@@ -375,6 +391,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
 
     log::trace!("Reading independent chunks took {stopwatch2}");
 
+    // This would leave it in a weird placeholder state.
     if !options.exists {
         bail!("Required chunk OPTN does not exist");
     }
