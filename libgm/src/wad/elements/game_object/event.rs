@@ -1,4 +1,7 @@
-// TODO: please nuke this entire file, i hate all of this code.
+// TODO(important): Since the event API was refactored, Undertale segfaults
+// when reading OBJT in a data file parsed and rebuilt verbatim by LibGM. I
+// don't get it. UTMT can parse it fine, LibGM can reparse it fine,
+// but the runner is bitching about it and crashing.
 
 mod action;
 pub mod subtype;
