@@ -195,22 +195,19 @@ pub enum AudioType {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
-/// The `regular` flag may be added later to support GM8.
 pub struct Flags {
     pub embedded: bool,
     pub compressed: bool,
+    pub regular: bool,
 }
 
 impl GMElement for Flags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let raw = reader.read_u32()?;
-        Ok(match raw {
-            100 => Self { embedded: false, compressed: false },
-            101 => Self { embedded: true, compressed: false },
-            102 => Self { embedded: false, compressed: true },
-            103 => Self { embedded: true, compressed: true },
-            _ => bail!("Invalid/Unknown sound flags {raw}, please report this error"),
-        })
+        let embedded = raw & 1 != 0;
+        let compressed = raw & 2 != 0;
+        let regular = raw & 0x64 != 0;
+        Ok(Self { embedded, compressed, regular })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -220,6 +217,9 @@ impl GMElement for Flags {
         }
         if self.compressed {
             raw |= 2;
+        }
+        if self.regular {
+            raw |= 0x64;
         }
         builder.write_u32(raw);
         Ok(())
