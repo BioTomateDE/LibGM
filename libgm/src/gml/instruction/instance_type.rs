@@ -134,7 +134,7 @@ impl InstanceType {
     /// a [`InstanceType::RoomInstance`] instead of a
     /// [`InstanceType::GameObject`].
     pub fn parse(raw: i16, var_type: VariableType) -> Result<Self> {
-        if raw > 0 {
+        if raw >= 0 {
             return Ok(if var_type == VariableType::Instance {
                 Self::RoomInstance(raw)
             } else {
