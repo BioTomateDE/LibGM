@@ -42,7 +42,7 @@ Please open issues and pull requests on Codeberg, if possible.
 Add this line in the `[dependencies]` section of your `Cargo.toml` file:
 
 ```toml
-libgm = "0.5"
+libgm = "0.6"
 ```
 
 Or if you want bleeding edge:

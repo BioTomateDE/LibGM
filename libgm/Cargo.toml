@@ -1,8 +1,8 @@
 [package]
 name = "libgm"
-version = "0.5.2"
-description = "A tool for modding, unpacking and decompiling GameMaker games"
-keywords = ["gamemaker", "gml", "decompiler", "modding", "undertale"]
+version = "0.6.0"
+description = "A tool for unpacking and modding GameMaker games"
+keywords = ["gamemaker", "modding", "game-modding", "undertale"]
 categories = ["parser-implementations", "game-development", "encoding"]
 authors.workspace = true
 edition.workspace = true
