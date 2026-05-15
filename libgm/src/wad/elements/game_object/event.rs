@@ -1,8 +1,3 @@
-// TODO(important): Since the event API was refactored, Undertale segfaults
-// when reading OBJT in a data file parsed and rebuilt verbatim by LibGM. I
-// don't get it. UTMT can parse it fine, LibGM can reparse it fine,
-// but the runner is bitching about it and crashing.
-
 mod action;
 pub mod subtype;
 
@@ -182,8 +177,10 @@ impl GMElement for Events {
             builder.write_u32(0xDEAD_C0DE);
         }
 
-        let create = vec![SubEvent::unit(self.create_handlers.clone())];
-        let destroy = vec![SubEvent::unit(self.destroy_handlers.clone())];
+        // You have to make sure that there are no
+        // empty [`SubEvent`]s, otherwise (old) runners segfault.
+        let create = SubEvent::unit(self.create_handlers.clone());
+        let destroy = SubEvent::unit(self.destroy_handlers.clone());
         let alarm = &self.alarm.0;
         let step = &self.step.0;
         let collision = &self.collision.0;
@@ -193,7 +190,7 @@ impl GMElement for Events {
         let draw = &self.draw.0;
         let key_press = &self.key_press.0;
         let key_release = &self.key_release.0;
-        let trigger = vec![SubEvent::unit(self.trigger_handlers.clone())];
+        let trigger = SubEvent::unit(self.trigger_handlers.clone());
 
         builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 0)?;
         builder.write_pointer_list(&create)?;
@@ -232,7 +229,7 @@ impl GMElement for Events {
         builder.write_pointer_list(&trigger)?;
 
         if count > 12 {
-            let cleanup = vec![SubEvent::unit(self.cleanup_handlers.clone())];
+            let cleanup = SubEvent::unit(self.cleanup_handlers.clone());
             builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 12)?;
             builder.write_pointer_list(&cleanup)?;
         }
@@ -243,7 +240,7 @@ impl GMElement for Events {
             builder.write_pointer_list(gesture)?;
         }
         if count > 14 {
-            let pre_create = vec![SubEvent::unit(self.pre_create_handlers.clone())];
+            let pre_create = SubEvent::unit(self.pre_create_handlers.clone());
             builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 14)?;
             builder.write_pointer_list(&pre_create)?;
         }
@@ -320,8 +317,12 @@ impl<T: EventSubtype> SubEvent<T> {
 
 impl SubEvent<()> {
     #[must_use]
-    const fn unit(actions: Vec<Action>) -> Self {
-        Self { subtype: (), actions }
+    fn unit(actions: Vec<Action>) -> Vec<Self> {
+        if actions.is_empty() {
+            Vec::new()
+        } else {
+            vec![Self { subtype: (), actions }]
+        }
     }
 }
 
