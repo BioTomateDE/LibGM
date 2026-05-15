@@ -131,7 +131,7 @@ fn upgrade_by_chunk_existence(chunks: &ChunkMap) -> Option<GMVersion> {
     None
 }
 
-/// TODO(const-hack): The `Into` trait is still not const unfortunately.
+/// TODO(const): The `Into` trait is still not const unfortunately.
 fn create_version_checks() -> [VersionCheck; 21] {
     [
         VersionCheck::new("SOND", sond::check_2024_6, (2022, 2, PostLTS), (2024, 6)),

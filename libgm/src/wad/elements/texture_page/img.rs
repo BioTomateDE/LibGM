@@ -106,7 +106,7 @@ impl GMImage {
     /// Whether the underlying image data ([`Format`]) is a [`DynamicImage`].
     #[must_use]
     pub const fn is_dynamic_image(&self) -> bool {
-        // TODO(const-hack): const PartialEq not yet supported
+        // TODO(const): const PartialEq not yet supported
         matches!(self.format(), Format::Dyn)
     }
 

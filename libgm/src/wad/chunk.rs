@@ -14,12 +14,12 @@ impl ChunkName {
     /// It is only meant to be used in `const` contexts
     /// where panics result in a compile error.
     pub const fn new(name: &'static str) -> Self {
-        // TODO(const-hack) Switch to assert_eq once assert_failed is const-stable.
+        // TODO(const) Switch to assert_eq once assert_failed is const-stable.
         assert!(name.len() == 4, "Expected string of length 4");
 
         let bytes = name.as_bytes();
 
-        // TODO(const-hack): Iterators are not const stable.
+        // TODO(const): Iterators are not const stable.
         let mut i = 0;
         while i < 4 {
             assert!(
@@ -29,7 +29,7 @@ impl ChunkName {
             i += 1;
         }
 
-        // TODO(const-hack): `try_into` is not const stable.
+        // TODO(const): `try_into` is not const stable.
         let bytes: [u8; 4] = [bytes[0], bytes[1], bytes[2], bytes[3]];
         Self { bytes }
     }

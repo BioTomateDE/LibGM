@@ -1,5 +1,6 @@
 pub mod event;
 
+pub use event::Event;
 pub use event::Events;
 use macros::named_list_chunk;
 use macros::num_enum;
