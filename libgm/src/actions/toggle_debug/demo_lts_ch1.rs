@@ -7,6 +7,7 @@ use crate::gml::instruction::InstanceType;
 use crate::prelude::*;
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
+    log::debug!("Detected Deltarune LTS Demo Chapter 1");
     let code_ref: GMRef<GMCode> = data
         .codes
         .ref_by_name("gml_Object_obj_debugcontroller_Create_0")?;

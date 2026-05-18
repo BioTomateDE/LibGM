@@ -88,10 +88,6 @@ pub fn list_chunk(attr: TokenStream, item: TokenStream) -> TokenStream {
             fn iter_mut(&mut self) -> core::slice::IterMut<'_, Self::Element> {
                 self.#elems_field.iter_mut()
             }
-
-            fn into_iter(self) -> std::vec::IntoIter<Self::Element> {
-                self.#elems_field.into_iter()
-            }
         }
     }.into()
 }

@@ -7,6 +7,7 @@ use crate::gml::instruction::Instruction;
 use crate::prelude::*;
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
+    log::debug!("Detected old Deltarune Chapter 1");
     let pushim = Instruction::PushImmediate { integer: i16::from(enable) };
     let pop = assemble_instruction("pop global.debug", data)?;
     let push = assemble_instruction("push.v global.debug", data)?;

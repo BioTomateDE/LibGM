@@ -1,7 +1,7 @@
 pub mod event;
 
-pub use event::Event;
-pub use event::Events;
+pub use event::EventGroup;
+pub use event::EventGroups;
 use macros::named_list_chunk;
 use macros::num_enum;
 
@@ -73,7 +73,7 @@ impl GMElement for GMGameObjects {
                 physics_shape_vertices.push((x, y));
             }
 
-            let events = Events::deserialize(reader).context("parsing game object events")?;
+            let events = EventGroups::deserialize(reader).context("parsing game object events")?;
 
             game_objects.push(GMGameObject {
                 name,
@@ -217,7 +217,7 @@ pub struct GMGameObject {
     pub physics_shape_vertices: Vec<(f32, f32)>,
 
     /// All the events that this game object has.
-    pub events: Events,
+    pub events: EventGroups,
 }
 element_stub!(GMGameObject);
 

@@ -7,6 +7,7 @@ use crate::gml::instruction::Instruction;
 use crate::prelude::*;
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
+    log::debug!("Detected Deltarune LTS Demo Chapter 2");
     // Placeholder in line 2
     let assembly = "
         jmp 5

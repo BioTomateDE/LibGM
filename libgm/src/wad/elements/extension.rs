@@ -48,10 +48,6 @@ impl GMListChunk for GMExtensions {
     fn iter_mut(&mut self) -> core::slice::IterMut<'_, Self::Element> {
         self.extensions.iter_mut()
     }
-
-    fn into_iter(self) -> std::vec::IntoIter<Self::Element> {
-        self.extensions.into_iter()
-    }
 }
 
 impl GMElement for GMExtensions {

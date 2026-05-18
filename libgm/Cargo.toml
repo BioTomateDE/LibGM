@@ -1,6 +1,6 @@
 [package]
 name = "libgm"
-version = "0.6.0"
+version = "0.7.0-beta"
 description = "A tool for unpacking and modding GameMaker games"
 keywords = ["gamemaker", "modding", "game-modding", "undertale"]
 categories = ["parser-implementations", "game-development", "encoding"]
@@ -35,7 +35,7 @@ maintenance.status = "actively-developed"
 
 # Attribute macros (num_enum, list_chunk, named_list_chunk)
 [dependencies.macros]
-version = "0.2.0"
+version = "0.2.1"
 path = "../macros"
 package = "libgm-macros"
 

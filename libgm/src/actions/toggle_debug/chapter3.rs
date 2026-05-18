@@ -22,6 +22,7 @@ use crate::wad::elements::variable::GMVariable;
 // pop.v.i global.chemg_show_val
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
+    log::debug!("Detected Deltarune Chapter 3");
     let code_ref = data
         .codes
         .ref_by_name("gml_Object_obj_initializer2_Create_0")?;

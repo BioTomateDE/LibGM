@@ -330,8 +330,6 @@ pub trait GMListChunk: GMChunk {
 
     fn iter(&self) -> core::slice::Iter<'_, Self::Element>;
     fn iter_mut(&mut self) -> core::slice::IterMut<'_, Self::Element>;
-    #[must_use]
-    fn into_iter(self) -> std::vec::IntoIter<Self::Element>;
 }
 
 /// All chunk elements that represent a collection of elements **with a unique

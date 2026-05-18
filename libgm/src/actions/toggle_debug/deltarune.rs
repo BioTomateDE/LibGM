@@ -12,6 +12,7 @@ use crate::prelude::*;
 use crate::wad::elements::variable::GMVariable;
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
+    log::debug!("Detected Deltarune Chapter 1/2/4");
     let code_ref: GMRef<GMCode> = data
         .codes
         .ref_by_name("gml_Object_obj_initializer2_Create_0")?;

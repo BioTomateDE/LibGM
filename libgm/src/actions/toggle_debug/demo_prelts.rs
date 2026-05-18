@@ -8,8 +8,9 @@ use crate::gml::instruction::Instruction;
 use crate::prelude::*;
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
-    // Modify SCR_GAMESTART
-    let code_ref = data.scripts.code_ref_by_name("SCR_GAMESTART")?;
+    log::debug!("Detected Deltarune PreLTS Demo Chapters 1&2");
+    // Modify scr_gamestart
+    let code_ref = data.scripts.code_ref_by_name("scr_gamestart")?;
     super::replace_debug(data, code_ref, enable, InstanceType::Global)?;
 
     // Modify obj_debugcontroller Creation

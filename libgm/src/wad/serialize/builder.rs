@@ -106,7 +106,7 @@ impl<'a> DataBuilder<'a> {
     /// Appends the given bytes to the internal data buffer.
     #[inline]
     pub fn write_bytes(&mut self, data: &[u8]) {
-        // It's really stupid how this function is a one-liner whereas
+        // It's really funny how this function is a one-liner whereas
         // reading bytes needs like 50 lines to be handled correctly...
         self.raw_data.extend_from_slice(data);
     }

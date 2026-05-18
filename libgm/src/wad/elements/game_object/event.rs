@@ -24,7 +24,7 @@ use crate::wad::serialize::builder::DataBuilder;
 
 /// Reference: <https://manual.gamemaker.io/lts/en/The_Asset_Editors/Object_Properties/Object_Events.htm>
 #[derive(Debug, Clone, PartialEq)]
-pub struct Events {
+pub struct EventGroups {
     /// Triggered when the game object instance is created.
     pub create_handlers: Vec<Action>,
 
@@ -38,53 +38,53 @@ pub struct Events {
     ///
     /// This is simply an alarm array index `0..12`.
     /// See [`Alarm`].
-    pub alarm: Event<Alarm>,
+    pub alarm: EventGroup<Alarm>,
 
     /// Triggered on every game step (aka. frame).
     ///
     /// See [`Step`].
-    pub step: Event<Step>,
+    pub step: EventGroup<Step>,
 
     /// Triggered when this game object instance collides with another game
     /// object (any instance).
     ///
     /// The subtype is the ID of the other game object (to check collision
     /// against).
-    pub collision: Event<Collision>,
+    pub collision: EventGroup<Collision>,
 
     /// Triggered on every step/frame a specified key is held down.
     ///
     /// The key is specified in [`Key`].
-    pub keyboard: Event<Key>,
+    pub keyboard: EventGroup<Key>,
 
     /// Triggered on a mouse event (like holding, pressing down, releasing,
     /// mouse wheel, etc.).
     ///
     /// See [`Mouse`].
-    pub mouse: Event<Mouse>,
+    pub mouse: EventGroup<Mouse>,
 
     /// Some event that was too irrelevan to be included into the main list.
     /// Also includes user-defined events.
     ///
     /// See [`Other`].
-    pub other: Event<Other>,
+    pub other: EventGroup<Other>,
 
     /// Triggered when the game loop is in the rendering/drawing stage.
     ///
     /// This occurs every step/frame, but is called with different
     /// timing and with a different purpose than [`Step`] events.
-    pub draw: Event<Draw>,
+    pub draw: EventGroup<Draw>,
 
     /// Triggered on the first step/frame a specified key is pressed down.
     ///
     /// The key is specified in [`Key`].
-    pub key_press: Event<Key>,
+    pub key_press: EventGroup<Key>,
 
     /// Triggered on the step/frame a specified key is released (no longer held
     /// down).
     ///
     /// The key is specified in [`Key`].
-    pub key_release: Event<Key>,
+    pub key_release: EventGroup<Key>,
 
     /// A trigger event type. Only used in Pre-GameMaker Studio.
     pub trigger_handlers: Vec<Action>,
@@ -99,14 +99,14 @@ pub struct Events {
     /// Triggered when the user performs some touchscreen event.
     ///
     /// See [`Gesture`].
-    pub gesture: Event<Gesture>,
+    pub gesture: EventGroup<Gesture>,
 
     /// A pre-create event type.
     /// TODO(doc): what is this? why does it exist? is it gms2 only?
     pub pre_create_handlers: Vec<Action>,
 }
 
-impl GMElement for Events {
+impl GMElement for EventGroups {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader
             .read_simple_list()
@@ -125,22 +125,22 @@ impl GMElement for Events {
             .with_context(ctx)?;
         // assert_pos are missing
 
-        let create: Vec<SubEvent<()>> = reader.read_pointer_list()?;
-        let destroy: Vec<SubEvent<()>> = reader.read_pointer_list()?;
-        let alarm: Vec<SubEvent<Alarm>> = reader.read_pointer_list()?;
-        let step: Vec<SubEvent<Step>> = reader.read_pointer_list()?;
-        let collision: Vec<SubEvent<Collision>> = reader.read_pointer_list()?;
-        let keyboard: Vec<SubEvent<Key>> = reader.read_pointer_list()?;
-        let mouse: Vec<SubEvent<Mouse>> = reader.read_pointer_list()?;
-        let other: Vec<SubEvent<Other>> = reader.read_pointer_list()?;
-        let draw: Vec<SubEvent<Draw>> = reader.read_pointer_list()?;
-        let key_press: Vec<SubEvent<Key>> = reader.read_pointer_list()?;
-        let key_release: Vec<SubEvent<Key>> = reader.read_pointer_list()?;
-        let trigger: Vec<SubEvent<()>> = reader.read_pointer_list()?;
+        let create: Vec<Event<()>> = reader.read_pointer_list()?;
+        let destroy: Vec<Event<()>> = reader.read_pointer_list()?;
+        let alarm: Vec<Event<Alarm>> = reader.read_pointer_list()?;
+        let step: Vec<Event<Step>> = reader.read_pointer_list()?;
+        let collision: Vec<Event<Collision>> = reader.read_pointer_list()?;
+        let keyboard: Vec<Event<Key>> = reader.read_pointer_list()?;
+        let mouse: Vec<Event<Mouse>> = reader.read_pointer_list()?;
+        let other: Vec<Event<Other>> = reader.read_pointer_list()?;
+        let draw: Vec<Event<Draw>> = reader.read_pointer_list()?;
+        let key_press: Vec<Event<Key>> = reader.read_pointer_list()?;
+        let key_release: Vec<Event<Key>> = reader.read_pointer_list()?;
+        let trigger: Vec<Event<()>> = reader.read_pointer_list()?;
 
-        let mut cleanup: Vec<SubEvent<()>> = Vec::new();
-        let mut gesture: Vec<SubEvent<Gesture>> = Vec::new();
-        let mut pre_create: Vec<SubEvent<()>> = Vec::new();
+        let mut cleanup: Vec<Event<()>> = Vec::new();
+        let mut gesture: Vec<Event<Gesture>> = Vec::new();
+        let mut pre_create: Vec<Event<()>> = Vec::new();
         if count > 12 {
             cleanup = reader.read_pointer_list()?;
         }
@@ -154,18 +154,18 @@ impl GMElement for Events {
         Ok(Self {
             create_handlers: dedup_events_no_subtype(create),
             destroy_handlers: dedup_events_no_subtype(destroy),
-            alarm: Event::new(alarm),
-            step: Event::new(step),
-            collision: Event::new(collision),
-            keyboard: Event::new(keyboard),
-            mouse: Event::new(mouse),
-            other: Event::new(other),
-            draw: Event::new(draw),
-            key_press: Event::new(key_press),
-            key_release: Event::new(key_release),
+            alarm: EventGroup::new(alarm),
+            step: EventGroup::new(step),
+            collision: EventGroup::new(collision),
+            keyboard: EventGroup::new(keyboard),
+            mouse: EventGroup::new(mouse),
+            other: EventGroup::new(other),
+            draw: EventGroup::new(draw),
+            key_press: EventGroup::new(key_press),
+            key_release: EventGroup::new(key_release),
             trigger_handlers: dedup_events_no_subtype(trigger),
             cleanup_handlers: dedup_events_no_subtype(cleanup),
-            gesture: Event::new(gesture),
+            gesture: EventGroup::new(gesture),
             pre_create_handlers: dedup_events_no_subtype(pre_create),
         })
     }
@@ -180,20 +180,20 @@ impl GMElement for Events {
             builder.write_u32(0xDEAD_C0DE);
         }
 
-        // You have to make sure that there are no
+        // TODO: You have to make sure that there are no
         // empty [`SubEvent`]s, otherwise (old) runners segfault.
-        let create = SubEvent::unit(self.create_handlers.clone());
-        let destroy = SubEvent::unit(self.destroy_handlers.clone());
-        let alarm = &self.alarm.0;
-        let step = &self.step.0;
-        let collision = &self.collision.0;
-        let keyboard = &self.keyboard.0;
-        let mouse = &self.mouse.0;
-        let other = &self.other.0;
-        let draw = &self.draw.0;
-        let key_press = &self.key_press.0;
-        let key_release = &self.key_release.0;
-        let trigger = SubEvent::unit(self.trigger_handlers.clone());
+        let create = Event::unit(self.create_handlers.clone());
+        let destroy = Event::unit(self.destroy_handlers.clone());
+        let alarm = &self.alarm.events;
+        let step = &self.step.events;
+        let collision = &self.collision.events;
+        let keyboard = &self.keyboard.events;
+        let mouse = &self.mouse.events;
+        let other = &self.other.events;
+        let draw = &self.draw.events;
+        let key_press = &self.key_press.events;
+        let key_release = &self.key_release.events;
+        let trigger = Event::unit(self.trigger_handlers.clone());
 
         builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 0)?;
         builder.write_pointer_list(&create)?;
@@ -232,18 +232,18 @@ impl GMElement for Events {
         builder.write_pointer_list(&trigger)?;
 
         if count > 12 {
-            let cleanup = SubEvent::unit(self.cleanup_handlers.clone());
+            let cleanup = Event::unit(self.cleanup_handlers.clone());
             builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 12)?;
             builder.write_pointer_list(&cleanup)?;
         }
 
         if count > 13 {
-            let gesture = &self.gesture.0;
+            let gesture = &self.gesture.events;
             builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 13)?;
             builder.write_pointer_list(gesture)?;
         }
         if count > 14 {
-            let pre_create = SubEvent::unit(self.pre_create_handlers.clone());
+            let pre_create = Event::unit(self.pre_create_handlers.clone());
             builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 14)?;
             builder.write_pointer_list(&pre_create)?;
         }
@@ -263,7 +263,7 @@ const fn type_count_by_wad(wad_version: u8) -> u32 {
     15
 }
 
-fn dedup_events<T: EventSubtype>(events: &mut Vec<SubEvent<T>>) -> bool {
+fn dedup_events<T: EventSubtype>(events: &mut Vec<Event<T>>) -> bool {
     let mut i: usize = 0;
     let mut changed: bool = false;
 
@@ -283,12 +283,16 @@ fn dedup_events<T: EventSubtype>(events: &mut Vec<SubEvent<T>>) -> bool {
 }
 
 #[must_use]
-fn dedup_events_no_subtype(events: Vec<SubEvent<()>>) -> Vec<Action> {
+fn dedup_events_no_subtype(events: Vec<Event<()>>) -> Vec<Action> {
     events.into_iter().flat_map(|e| e.actions).collect()
 }
 
+/// Not meant to be implemented outside the crate.
 pub trait EventSubtype: std::fmt::Debug + Copy + PartialEq {
+    #[doc(hidden)]
     fn parse(subtype: u32) -> Result<Self>;
+
+    #[doc(hidden)]
     fn build(self) -> u32;
 }
 
@@ -305,12 +309,12 @@ impl EventSubtype for () {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct SubEvent<T: EventSubtype> {
+pub struct Event<T: EventSubtype> {
     pub subtype: T,
     pub actions: Vec<Action>,
 }
 
-impl<T: EventSubtype> SubEvent<T> {
+impl<T: EventSubtype> Event<T> {
     /// Creates a new `SubEvent` with the given subtype and no actions.
     #[must_use]
     const fn new(subtype: T) -> Self {
@@ -318,7 +322,7 @@ impl<T: EventSubtype> SubEvent<T> {
     }
 }
 
-impl SubEvent<()> {
+impl Event<()> {
     #[must_use]
     fn unit(actions: Vec<Action>) -> Vec<Self> {
         if actions.is_empty() {
@@ -329,7 +333,7 @@ impl SubEvent<()> {
     }
 }
 
-impl<T: EventSubtype> GMElement for SubEvent<T> {
+impl<T: EventSubtype> GMElement for Event<T> {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let subtype: u32 = reader.read_u32()?;
         let subtype: T = T::parse(subtype)
@@ -348,13 +352,15 @@ impl<T: EventSubtype> GMElement for SubEvent<T> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Event<T: EventSubtype>(Vec<SubEvent<T>>);
+pub struct EventGroup<T: EventSubtype> {
+    pub events: Vec<Event<T>>,
+}
 
-impl<T: EventSubtype> Event<T> {
+impl<T: EventSubtype> EventGroup<T> {
     #[must_use]
-    fn new(mut subevents: Vec<SubEvent<T>>) -> Self {
-        dedup_events(&mut subevents);
-        Self(subevents)
+    fn new(mut events: Vec<Event<T>>) -> Self {
+        dedup_events(&mut events);
+        Self { events }
     }
 
     /// Gets all event handlers ([`Action`]s) for the given event subtype.
@@ -364,8 +370,8 @@ impl<T: EventSubtype> Event<T> {
     /// creating a new empty handler if it does not exist, use
     /// [`Event::handlers_for`] instead.
     pub fn get_handlers_for(&self, subtype: T) -> Result<&Vec<Action>> {
-        if let Some(sub_event) = self.0.iter().find(|e| e.subtype == subtype) {
-            return Ok(&sub_event.actions);
+        if let Some(event) = self.events.iter().find(|e| e.subtype == subtype) {
+            return Ok(&event.actions);
         }
         Err(err!(
             "Could not find any event handlers for subtype {subtype:?}"
@@ -379,18 +385,17 @@ impl<T: EventSubtype> Event<T> {
     /// use [`Event::get_handlers_for`] instead.
     #[must_use = "if you only want to make sure a handler exists, use `make_handler_for()`"]
     pub fn handlers_for(&mut self, subtype: T) -> &mut Vec<Action> {
-        for (idx, event) in self.0.iter().enumerate() {
+        for (idx, event) in self.events.iter().enumerate() {
             if event.subtype == subtype {
                 // Reborrow needed because of borrow checker incompetence
-                let event = &mut self.0[idx];
+                let event = &mut self.events[idx];
                 return &mut event.actions;
             }
         }
 
         // No event handler found for the given subtype; create a new one.
-        let idx: usize = self.0.len();
-        self.0.push(SubEvent::new(subtype));
-        &mut self.0[idx].actions
+        let new = self.events.push_mut(Event::new(subtype));
+        &mut new.actions
     }
 
     /// Ensures an event handler exists for the given subtype.
@@ -405,12 +410,47 @@ impl<T: EventSubtype> Event<T> {
     /// An iterator that yields all actions of this event; no matter the
     /// subtype.
     pub fn all_actions(&self) -> impl Iterator<Item = &Action> {
-        self.0.iter().flat_map(|e| &e.actions)
+        self.events.iter().flat_map(|e| &e.actions)
     }
 
     /// An iterator that yields all actions of this event; no matter the
     /// subtype.
     pub fn all_actions_mut(&mut self) -> impl Iterator<Item = &mut Action> {
-        self.0.iter_mut().flat_map(|e| &mut e.actions)
+        self.events.iter_mut().flat_map(|e| &mut e.actions)
+    }
+
+    pub fn iter(&self) -> core::slice::Iter<'_, Event<T>> {
+        self.events.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, Event<T>> {
+        self.events.iter_mut()
+    }
+}
+
+impl<T: EventSubtype> IntoIterator for EventGroup<T> {
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+    type Item = Event<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.events.into_iter()
+    }
+}
+
+impl<'a, T: EventSubtype> IntoIterator for &'a EventGroup<T> {
+    type IntoIter = core::slice::Iter<'a, Event<T>>;
+    type Item = &'a Event<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.events.iter()
+    }
+}
+
+impl<'a, T: EventSubtype> IntoIterator for &'a mut EventGroup<T> {
+    type IntoIter = core::slice::IterMut<'a, Event<T>>;
+    type Item = &'a mut Event<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.events.iter_mut()
     }
 }

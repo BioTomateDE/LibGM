@@ -1,6 +1,6 @@
 [package]
 name = "libgm-macros"
-version = "0.2.0"
+version = "0.2.1-beta"
 description = "Internal attribute macros for LibGM"
 keywords = ["proc-macro", "num-enum"]
 categories = ["development-tools"]
