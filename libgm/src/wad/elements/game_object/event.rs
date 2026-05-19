@@ -19,6 +19,10 @@ use crate::prelude::*;
 use crate::util::assert;
 use crate::util::fmt::typename;
 use crate::wad::deserialize::reader::DataReader;
+use crate::wad::elements::game_object::event::action::ExeType;
+use crate::wad::elements::game_object::event::action::Kind;
+use crate::wad::elements::game_object::event::action::LibId;
+use crate::wad::elements::game_object::event::action::Who;
 use crate::wad::elements::GMElement;
 use crate::wad::serialize::builder::DataBuilder;
 
@@ -402,9 +406,17 @@ impl<T: EventSubtype> EventGroup<T> {
     ///
     /// This is a no-op if there is already a `SubEvent` with this subtype.
     /// Otherwise, new empty `SubEvent` will be pushed to the list.
-    pub fn make_handler_for(&mut self, subtype: T, code: GMRef<GMCode>) {
+    pub fn make_handler_for(
+        &mut self,
+        subtype: T,
+        lib_id: LibId,
+        kind: Kind,
+        exe_type: ExeType,
+        who: Who,
+        code: GMRef<GMCode>,
+    ) {
         let actions = self.handlers_for(subtype);
-        actions.push(Action::new(code));
+        actions.push(Action::new(lib_id, kind, exe_type, who, code));
     }
 
     /// An iterator that yields all actions of this event; no matter the

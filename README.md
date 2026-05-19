@@ -121,3 +121,31 @@ would like to see added, a bug you found; just create an Issue/PR in this repo.
 - Everything related to GameMaker is located in `libgm/src/wad/`.
 - A disassembler and assembler are available in `libgm/src/gml/assembly/`.
 - There is a basic CLI to interact with LibGM in `libgm-cli/src/`.
+
+### End-to-end testing
+
+You must supply your own copy of specific versions of the games. For instance, run the following commands (from the project root) to copy from your Steam library folder, where applicable:
+
+```bash
+# Windows:  export STEAM_LIBRARY="C:/Program Files (x86)/Steam/"
+# macOS:    export STEAM_LIBRARY="~/Library/Application Support/Steam/"
+
+# for undertale
+cp $STEAM_LIBRARY/steamapps/common/Undertale/data.win libgm-cli/resources/undertale.win
+
+# for deltarune 1-4
+cp $STEAM_LIBRARY/steamapps/common/DELTARUNE/data.win libgm-cli/resources/deltarune.win
+cp $STEAM_LIBRARY/steamapps/common/DELTARUNE/chapter1_windows/data.win libgm-cli/resources/deltarune_ch1.win
+cp $STEAM_LIBRARY/steamapps/common/DELTARUNE/chapter2_windows/data.win libgm-cli/resources/deltarune_ch2.win
+cp $STEAM_LIBRARY/steamapps/common/DELTARUNE/chapter3_windows/data.win libgm-cli/resources/deltarune_ch3.win
+cp $STEAM_LIBRARY/steamapps/common/DELTARUNE/chapter4_windows/data.win libgm-cli/resources/deltarune_ch4.win
+```
+
+If you are on another OS, then use `wine` to download the Windows version of DELTARUNE through Steam.
+
+Testing for Undertale 1.0.8 is gated behind the `test-undertale-1_0_8win` feature, for Deltarune chapters 1-4 patch 1.0.4 by `test-deltarune-1to4-1_0_4win`.
+For example, if you have copied both in, run:
+
+```bash
+cargo test --package libgm-cli --features test-undertale-1_0_8win,test-deltarune-1to4-1_0_4win
+```

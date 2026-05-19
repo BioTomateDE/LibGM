@@ -13,11 +13,11 @@ license.workspace = true
 [features]
 default = ["catch-panic", "check-integrity", "bzip2-image", "png-image"]
 full = [
-    "catch-panic",
-    "check-integrity",
-    "game-creation-timestamp",
-    "bzip2-image",
-    "png-image",
+  "catch-panic",
+  "check-integrity",
+  "game-creation-timestamp",
+  "bzip2-image",
+  "png-image",
 ]
 
 catch-panic = []
@@ -41,29 +41,28 @@ package = "libgm-macros"
 
 # GMS2 general info checksum
 [dependencies.dotnet-rng]
-version = "1.0"
+version = "1.0.5"
 
 # BZip2+QOI encoded images
 [dependencies.bzip2]
-version = "0.6"
+version = "0.6.1"
 optional = true
 
 # Needed for Game Creation Timestamp in General Info
 [dependencies.chrono]
-version = "0.4"
+version = "0.4.44"
 default-features = false
 optional = true
 
 # Needed to (potentially) deserialize PNG images
 [dependencies.image]
-version = "0.25"
+version = "0.25.10"
 default-features = false
 
 # Logging
 [dependencies.log]
-version = "0.4"
+version = "0.4.29"
 
 # Primitive number enums
 [dependencies.num_enum]
-version = "0.7"
-
+version = "0.7.6"

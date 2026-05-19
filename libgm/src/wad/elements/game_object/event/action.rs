@@ -2,13 +2,67 @@ use std::fmt;
 
 use crate::gml::GMCode;
 use crate::prelude::*;
-use crate::wad::GMRef;
 use crate::wad::deserialize::reader::DataReader;
 use crate::wad::elements::GMElement;
 use crate::wad::serialize::builder::DataBuilder;
+use crate::wad::GMRef;
+
+#[derive(Clone, PartialEq)]
+pub struct LibId(pub u32);
+
+impl LibId {
+    pub const NORMAL: Self = Self(1);
+}
+
+#[derive(Clone, PartialEq)]
+pub struct Kind(pub u32);
+
+impl Kind {
+    pub const NORMAL: Self = Self(7);
+}
+
+#[derive(Clone, PartialEq)]
+pub struct ExeType(pub u32);
+
+impl ExeType {
+    pub const NORMAL: Self = Self(2);
+}
+
+#[derive(Clone, PartialEq)]
+pub struct Who(pub i32);
+
+impl Who {
+    pub const NORMAL: Self = Self(-1);
+}
+
+pub struct RandomActionConstantsIGuess;
+
+impl RandomActionConstantsIGuess {
+    pub const ARGUMENT_COUNT: u32 = 0;
+    pub const ID: u32 = 603;
+    pub const IS_NOT: bool = false;
+    pub const IS_QUESTION: bool = false;
+    pub const NAME: &str = "";
+    pub const RELATIVE: bool = false;
+    pub const UNKNOWN_ALWAYS_ZERO: u32 = 0;
+    pub const USE_APPLY_TO: bool = false;
+    pub const USE_RELATIVE: bool = false;
+}
 
 #[derive(Clone, PartialEq)]
 pub struct Action {
+    /// ???
+    pub lib_id: LibId,
+
+    /// ???
+    pub kind: Kind,
+
+    /// ???
+    pub exe_type: ExeType,
+
+    /// ???
+    pub who: Who,
+
     /// The code that will be executed when this action is ran.
     pub code: GMRef<GMCode>,
 
@@ -18,22 +72,33 @@ pub struct Action {
 
 impl Action {
     #[must_use]
-    pub const fn new(code: GMRef<GMCode>) -> Self {
-        Self { code, __exists: true }
+    pub const fn new(
+        lib_id: LibId,
+        kind: Kind,
+        exe_type: ExeType,
+        who: Who,
+        code: GMRef<GMCode>,
+    ) -> Self {
+        Self {
+            lib_id,
+            kind,
+            exe_type,
+            who,
+            code,
+            __exists: true,
+        }
     }
 }
 
 impl GMElement for Action {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let lib_id = reader.read_u32()?;
-        reader.assert_int(lib_id, 1, "Lib ID")?;
 
         let _id = reader.read_u32()?;
         // Usually 603, sometimes 601 and sometimes some other value (always 603 in
         // modern GM)
 
         let kind = reader.read_u32()?;
-        reader.assert_int(kind, 7, "Kind")?;
 
         let use_relative = reader.read_bool32()?;
         reader.assert_bool(use_relative, false, "Use Relative")?;
@@ -45,7 +110,6 @@ impl GMElement for Action {
         // depends on gamemaker version
 
         let exe_type = reader.read_u32()?;
-        reader.assert_int(exe_type, 2, "Exe Type")?;
 
         let _action_name: Option<String> = reader.read_gm_string_opt()?;
         // depends on gamemaker version (either None or "")
@@ -56,7 +120,6 @@ impl GMElement for Action {
         // depends on gamemaker version (either 0 or 1)
 
         let who = reader.read_i32()?;
-        reader.assert_int(who, -1, "Who")?;
 
         let relative = reader.read_bool32()?;
         reader.assert_bool(relative, false, "Relative")?;
@@ -69,26 +132,30 @@ impl GMElement for Action {
 
         // this will be handled by `SubEvent::deserialize`
         Ok(Self {
+            lib_id: LibId(lib_id),
+            kind: Kind(kind),
+            exe_type: ExeType(exe_type),
+            who: Who(who),
             code: code.unwrap_or(GMRef::new(0)),
             __exists: code.is_some(),
         })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u32(1); // Lib ID
-        builder.write_u32(603); // ID
-        builder.write_u32(7); // Kind
-        builder.write_bool32(false); // Use Relative
-        builder.write_bool32(false); // Is Question
-        builder.write_bool32(false); // Use Apply To 
-        builder.write_u32(2); // Exe Type
-        builder.write_gm_string(""); // Name
+        builder.write_u32(self.lib_id.0);
+        builder.write_u32(RandomActionConstantsIGuess::ID);
+        builder.write_u32(self.kind.0);
+        builder.write_bool32(RandomActionConstantsIGuess::USE_RELATIVE);
+        builder.write_bool32(RandomActionConstantsIGuess::IS_QUESTION);
+        builder.write_bool32(RandomActionConstantsIGuess::USE_APPLY_TO);
+        builder.write_u32(self.exe_type.0);
+        builder.write_gm_string(RandomActionConstantsIGuess::NAME);
         builder.write_resource_id(self.code);
-        builder.write_u32(0); // Argument Count 
-        builder.write_i32(-1); // Who
-        builder.write_bool32(false); // Relative
-        builder.write_bool32(false); // Is Not
-        builder.write_u32(0); // UnknownAlwaysZero
+        builder.write_u32(RandomActionConstantsIGuess::ARGUMENT_COUNT);
+        builder.write_i32(self.who.0);
+        builder.write_bool32(RandomActionConstantsIGuess::RELATIVE);
+        builder.write_bool32(RandomActionConstantsIGuess::IS_NOT);
+        builder.write_u32(RandomActionConstantsIGuess::UNKNOWN_ALWAYS_ZERO);
         Ok(())
     }
 }

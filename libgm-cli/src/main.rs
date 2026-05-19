@@ -2,7 +2,6 @@
 
 mod actions;
 mod cli;
-mod diff;
 mod dir;
 mod logging;
 mod tests;
@@ -14,9 +13,8 @@ use libgm::prelude::*;
 use libgm::wad::ParsingOptions;
 use libgm::wad::data::GMData;
 use libgm::wad::serialize::build_file;
-
-use crate::diff::print_diffs;
-use crate::tests::Test;
+use libgm_cli::diff::print_diffs;
+use tests::Test;
 
 fn run(mut args: cli::Args) -> Result<()> {
     // If no file was specified, try to load `data.win`.

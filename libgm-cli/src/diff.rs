@@ -9,7 +9,8 @@ pub fn print_diff<T: Debug + PartialEq + ?Sized>(old: &T, new: &T) {
     println!("{}", SimpleDiff::from_str(&old, &new, "Old", "New"));
 }
 
-pub fn print_diffs(old: &GMData, new: &GMData) {
+/// Returns whether `old` and `new` are equal.
+pub fn print_diffs(old: &GMData, new: &GMData) -> bool {
     let mut same = true;
 
     macro_rules! diffs {
@@ -61,4 +62,6 @@ pub fn print_diffs(old: &GMData, new: &GMData) {
     if same {
         println!("Data files are the same!");
     }
+
+    same
 }

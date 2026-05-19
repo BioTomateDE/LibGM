@@ -13,3 +13,5 @@ Cargo.lock
 **/*.win.bak
 **/*.unx1
 **/*.unx.bak
+
+*.DS_Store

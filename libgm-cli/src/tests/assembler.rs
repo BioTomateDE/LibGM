@@ -7,8 +7,7 @@ use libgm::gml::assembly::disassemble_code;
 use libgm::gml::instruction::Instruction;
 use libgm::prelude::*;
 use libgm::wad::data::GMData;
-
-use crate::diff::print_diff;
+use libgm_cli::diff::print_diff;
 
 pub fn test(data: &GMData) -> Result<()> {
     let count = data.codes.len();

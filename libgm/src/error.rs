@@ -57,7 +57,7 @@ use std::fmt::Write;
 pub struct Error {
     message: String,
     context: Vec<String>,
-    source: Option<Box<dyn std::error::Error + 'static>>,
+    source: Option<Box<dyn std::error::Error + Send + Sync + 'static>>,
 }
 
 impl Error {
@@ -79,7 +79,7 @@ impl Error {
     ///
     /// To retrieve the source, use the [`std::error::Error::source`] method.
     #[must_use = "returns a new error with the specified source"]
-    pub fn with_source(self, source: Box<dyn std::error::Error>) -> Self {
+    pub fn with_source(self, source: Box<dyn std::error::Error + Send + Sync>) -> Self {
         Self { source: Some(source), ..self }
     }
 
@@ -143,7 +143,7 @@ impl Display for Error {
 
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        self.source.as_deref()
+        self.source.as_deref().map(|e| e as _)
     }
 }
 
@@ -244,7 +244,7 @@ pub trait ContextSrc<T> {
     fn with_context_src(self, f: impl FnOnce() -> String) -> Result<T>;
 }
 
-impl<T, E: std::error::Error + 'static> ContextSrc<T> for std::result::Result<T, E> {
+impl<T, E: std::error::Error + Send + Sync + 'static> ContextSrc<T> for std::result::Result<T, E> {
     fn context_src(self, context: &str) -> Result<T> {
         self.map_err(|error| {
             Error::new(ascii_capitalize(error.to_string()))

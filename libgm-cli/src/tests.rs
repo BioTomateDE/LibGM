@@ -1,4 +1,4 @@
-mod assembler;
+pub mod assembler;
 
 use clap::ValueEnum;
 use libgm::prelude::*;
