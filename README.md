@@ -4,6 +4,7 @@
 [![Documentation](https://img.shields.io/docsrs/libgm)](https://docs.rs/libgm)
 
 # LibGM
+
 A tool for unpacking, decompiling and modding GameMaker games such as Undertale
 or Deltarune.
 
@@ -12,6 +13,7 @@ or Deltarune.
 Please open issues and pull requests on Codeberg, if possible.
 
 ## Benefits of this Rust port
+
 - Parsing and building data files is ~8x faster than UndertaleModLib.
 - Clean and maintainable library code.
 - Thorough documentation on [docs.rs](https://docs.rs).
@@ -21,6 +23,7 @@ Please open issues and pull requests on Codeberg, if possible.
   - Still more information than just "Reading out of bounds"
   - Strict data integrity checks catch errors earlier, making debugging easier
   - Example trace printed out using `.chain()`:
+
     ```
     sprite::swf::item::shape::style_group::fill::gradient::Record count 1065353216 implies data size 8.5 GB which exceeds failsafe size 10.0 MB
     > while reading simple list
@@ -34,11 +37,13 @@ Please open issues and pull requests on Codeberg, if possible.
 - Configurable lenient options for trying to parse half-broken data files (see `ParsingOptions`).
 
 ## Disadvantages / TODOs
+
 - Null pointers are not yet supported.
 - GML Decompiler and Compiler not yet implemented (help would be greatly appreciated!)
 - No GUI yet, only a Rust library.
 
 ## How to use as a dependency
+
 Add this line in the `[dependencies]` section of your `Cargo.toml` file:
 
 ```toml
@@ -79,6 +84,7 @@ let data: GMData = parser.parse_bytes(raw_data)?;
 ```
 
 ## Crate features
+
 | Feature                 | Default  | Dependencies |
 |-------------------------|----------|--------------|
 | catch-panic             | enabled  |              |
@@ -101,6 +107,7 @@ let data: GMData = parser.parse_bytes(raw_data)?;
   In games older than GM 2022.2, you will not be able to serialize `GMImage`s storing `DynamicImage`s with this feature disabled.
 
 ## Credits
+
 Huge thanks to the Underminers Team! Without
 [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool),
 this project
@@ -109,14 +116,17 @@ Discord Guild who helped me along the way, especially
 [@colinator27](https://github.com/colinator27).
 
 ## Licencing
+
 This project is licenced under the
 [GNU Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html) (GPL-3.0).
 
 This means that all projects using this library must also be licensed under GPL-3.
 
 ## Contributing
+
 All contributions are welcome! Whether that's a pull request, a feature you
 would like to see added, a bug you found; just create an Issue/PR in this repo.
+For more information, see the [CONTRIBUTING file](https://codeberg.org/BioTomateDE/_/CONTRIBUTING.md).
 
 - Everything related to GameMaker is located in `libgm/src/wad/`.
 - A disassembler and assembler are available in `libgm/src/gml/assembly/`.
@@ -124,28 +134,34 @@ would like to see added, a bug you found; just create an Issue/PR in this repo.
 
 ### End-to-end testing
 
-You must supply your own copy of specific versions of the games. For instance, run the following commands (from the project root) to copy from your Steam library folder, where applicable:
+You must supply your own copy of specific versions of the games.
+For instance, run the following commands (from the project root)
+to copy from your Steam library folder, where applicable:
 
 ```bash
-# Windows:  export STEAM_LIBRARY="C:/Program Files (x86)/Steam/"
-# macOS:    export STEAM_LIBRARY="~/Library/Application Support/Steam/"
+# Linux:
+export STEAM="~/.steam/steam/steamapps/common"
+# macOS:
+export STEAM="~/Library/Application Support/Steam/steamapps/common"
+# Windows (PowerShell):
+$STEAM="C:/Program Files (x86)/Steam/steamapps/common"
 
-# for undertale
-cp $STEAM_LIBRARY/steamapps/common/Undertale/data.win libgm-cli/resources/undertale.win
+# For Undertale:
+cp $STEAM/Undertale/data.win libgm-cli/datafiles/undertaleXXX.win
+# XXX needs to be the version: 100 for 1.00 | 101 for 1.001 | 108 for 1.08
 
-# for deltarune 1-4
-cp $STEAM_LIBRARY/steamapps/common/DELTARUNE/data.win libgm-cli/resources/deltarune.win
-cp $STEAM_LIBRARY/steamapps/common/DELTARUNE/chapter1_windows/data.win libgm-cli/resources/deltarune_ch1.win
-cp $STEAM_LIBRARY/steamapps/common/DELTARUNE/chapter2_windows/data.win libgm-cli/resources/deltarune_ch2.win
-cp $STEAM_LIBRARY/steamapps/common/DELTARUNE/chapter3_windows/data.win libgm-cli/resources/deltarune_ch3.win
-cp $STEAM_LIBRARY/steamapps/common/DELTARUNE/chapter4_windows/data.win libgm-cli/resources/deltarune_ch4.win
+# For Deltarune Chapters 1-4
+cp $STEAM/DELTARUNE/data.win libgm-cli/resources/deltarune-launcher.win
+cp $STEAM/DELTARUNE/chapter1_windows/data.win libgm-cli/resources/deltarune1.win
+cp $STEAM/DELTARUNE/chapter2_windows/data.win libgm-cli/resources/deltarune2.win
+cp $STEAM/DELTARUNE/chapter3_windows/data.win libgm-cli/resources/deltarune3.win
+cp $STEAM/DELTARUNE/chapter4_windows/data.win libgm-cli/resources/deltarune4.win
 ```
 
-If you are on another OS, then use `wine` to download the Windows version of DELTARUNE through Steam.
-
-Testing for Undertale 1.0.8 is gated behind the `test-undertale-1_0_8win` feature, for Deltarune chapters 1-4 patch 1.0.4 by `test-deltarune-1to4-1_0_4win`.
+Testing for Undertale 1.0.8 is gated behind the `test-undertale-XXX` feature (where XXX is the UT Version).
+Deltarune Chapters 1-4 (v1.0.4) by `test-deltarune-ch1234`.
 For example, if you have copied both in, run:
 
 ```bash
-cargo test --package libgm-cli --features test-undertale-1_0_8win,test-deltarune-1to4-1_0_4win
+cargo t -plibgm-cli --features test-undertale-XXX,test-deltarune-ch1234
 ```
