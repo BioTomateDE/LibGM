@@ -4,7 +4,7 @@ use crate::prelude::*;
 use crate::util::init::num_enum_from;
 use crate::wad::elem::game_object::event::EventSubtype;
 
-/// The subtype for [`EventType::Gesture`].
+/// Triggered when the user performs some touchscreen event.
 #[num_enum(u32)]
 pub enum Gesture {
     /// The tap event.

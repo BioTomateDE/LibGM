@@ -4,7 +4,8 @@ use crate::prelude::*;
 use crate::util::init::num_enum_from;
 use crate::wad::elem::game_object::event::EventSubtype;
 
-/// The subtype for an [`OtherEvent`].
+/// Some event that was too irrelevan to be included into the main list.
+/// Also includes user-defined events.
 #[num_enum(u32)]
 pub enum Other {
     /// The outside room event.

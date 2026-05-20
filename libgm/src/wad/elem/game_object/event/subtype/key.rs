@@ -6,10 +6,9 @@ use crate::prelude::*;
 use crate::util::init::num_enum_from;
 use crate::wad::elem::game_object::event::EventSubtype;
 
-// TODO: fix these broken refs since the EveneType enum is gone
-
-/// The subtype for [`EventType::Keyboard`], [`EventType::KeyDown`] and
-/// [`EventType::KeyUp`].
+/// Triggered when a key is pressed/released on a keyboard.
+///
+/// Used by `keyboard`, `key_down` and `key_up`.
 #[num_enum(u32)]
 pub enum Key {
     /// Keycode representing no key.

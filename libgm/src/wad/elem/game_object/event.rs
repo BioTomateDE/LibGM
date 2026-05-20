@@ -18,13 +18,13 @@ use crate::gml::GMCode;
 use crate::prelude::*;
 use crate::util::assert;
 use crate::util::fmt::typename;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::GMElement;
 use crate::wad::elem::game_object::event::action::ExeType;
 use crate::wad::elem::game_object::event::action::Kind;
 use crate::wad::elem::game_object::event::action::LibId;
 use crate::wad::elem::game_object::event::action::Who;
-use crate::wad::elem::GMElement;
-use crate::wad::build::builder::DataBuilder;
+use crate::wad::parse::reader::DataReader;
 
 /// Reference: <https://manual.gamemaker.io/lts/en/The_Asset_Editors/Object_Properties/Object_Events.htm>
 #[derive(Debug, Clone, PartialEq)]
@@ -49,11 +49,10 @@ pub struct EventGroups {
     /// See [`Step`].
     pub step: EventGroup<Step>,
 
-    /// Triggered when this game object instance collides with another game
-    /// object (any instance).
+    /// Triggered when this game object instance collides
+    /// with another game object (any instance).
     ///
-    /// The subtype is the ID of the other game object (to check collision
-    /// against).
+    /// The subtype is the ID of the other game object (to check collision against).
     pub collision: EventGroup<Collision>,
 
     /// Triggered on every step/frame a specified key is held down.
@@ -84,8 +83,7 @@ pub struct EventGroups {
     /// The key is specified in [`Key`].
     pub key_press: EventGroup<Key>,
 
-    /// Triggered on the step/frame a specified key is released (no longer held
-    /// down).
+    /// Triggered on the step/frame a specified key is released (no longer held down).
     ///
     /// The key is specified in [`Key`].
     pub key_release: EventGroup<Key>,
@@ -372,7 +370,7 @@ impl<T: EventSubtype> EventGroup<T> {
     /// This function will fail if there is no event handler for the given
     /// subtype. If you want to simplify the process by automatically
     /// creating a new empty handler if it does not exist, use
-    /// [`Event::handlers_for`] instead.
+    /// [`EventGroup::handlers_for`] instead.
     pub fn get_handlers_for(&self, subtype: T) -> Result<&Vec<Action>> {
         if let Some(event) = self.events.iter().find(|e| e.subtype == subtype) {
             return Ok(&event.actions);
@@ -386,7 +384,7 @@ impl<T: EventSubtype> EventGroup<T> {
     ///
     /// This automatically creates a new empty handler if it does not exist.
     /// If you do not want this behavior or cannot borrow this struct mutably,
-    /// use [`Event::get_handlers_for`] instead.
+    /// use [`EventGroup::get_handlers_for`] instead.
     #[must_use = "if you only want to make sure a handler exists, use `make_handler_for()`"]
     pub fn handlers_for(&mut self, subtype: T) -> &mut Vec<Action> {
         for (idx, event) in self.events.iter().enumerate() {

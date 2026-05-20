@@ -163,8 +163,8 @@ const _: () = assert!(
 #[rustfmt::skip]
 #[cfg(doc)]
 use wad::{
-    deserialize::{ParsingOptions, parse_bytes, parse_file},
-    serialize::{build_bytes, build_file},
+    parse::{ParsingOptions, parse_bytes, parse_file},
+    build::{build_bytes, build_file},
 };
 
 // Private modules

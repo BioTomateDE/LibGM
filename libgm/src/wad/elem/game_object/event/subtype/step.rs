@@ -4,12 +4,12 @@ use crate::prelude::*;
 use crate::util::init::num_enum_from;
 use crate::wad::elem::game_object::event::EventSubtype;
 
-/// The subtype for [`EventType::Step`].
+/// Triggered on every game step (aka. frame).
 ///
 /// The call order is as follows:
 /// * [`Step::Step`]
 /// * [`Step::BeginStep`]
-/// * [`Step::EndStep`]
+/// * [`Self::EndStep`]
 #[num_enum(u32)]
 pub enum Step {
     /// Normal step event.

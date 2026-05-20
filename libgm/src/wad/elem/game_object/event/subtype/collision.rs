@@ -2,9 +2,16 @@ use crate::prelude::*;
 use crate::wad::elem::game_object::GMGameObject;
 use crate::wad::elem::game_object::event::EventSubtype;
 
+/// Triggered when this game object instance collides
+/// with another game object (any instance).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct Collision {
+    /// The other game object to check collision against.
+    ///
+    /// This becomes the [`InstanceType::Other`] context.
+    ///
+    /// [`InstanceType::Other`]: crate::gml::instruction::InstanceType::Other
     pub object: GMRef<GMGameObject>,
 }
 

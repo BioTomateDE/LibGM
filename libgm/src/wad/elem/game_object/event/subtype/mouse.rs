@@ -4,7 +4,8 @@ use crate::prelude::*;
 use crate::util::init::num_enum_from;
 use crate::wad::elem::game_object::event::EventSubtype;
 
-/// The subtype for [`EventType::Mouse`].
+/// Triggered on a mouse event (like holding, pressing down, releasing,
+/// mouse wheel, etc.).
 #[num_enum(u32)]
 pub enum Mouse {
     /// The left-mouse button down event.

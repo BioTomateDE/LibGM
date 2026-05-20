@@ -1,6 +1,12 @@
 use crate::prelude::*;
 use crate::wad::elem::game_object::event::EventSubtype;
 
+/// Triggered when a user-set alarm reaches 0.
+///
+/// An alarm event type which can be triggered modifying
+/// the builtin `alarm` variable (array) in other scripts.
+///
+/// This is simply an alarm array index `0..12`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct Alarm {

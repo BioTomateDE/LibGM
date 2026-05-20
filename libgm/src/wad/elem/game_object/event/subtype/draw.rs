@@ -4,7 +4,10 @@ use crate::prelude::*;
 use crate::util::init::num_enum_from;
 use crate::wad::elem::game_object::event::EventSubtype;
 
-/// The subtype for [`EventType::Draw`].
+/// Triggered when the game loop is in the rendering/drawing stage.
+///
+/// This occurs every step/frame, but is called with different
+/// timing and with a different purpose than Step events.
 #[num_enum(u32)]
 pub enum Draw {
     /// Normal draw event.
