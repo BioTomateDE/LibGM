@@ -31,6 +31,7 @@ use crate::wad::elem::font::GMFonts;
 use crate::wad::elem::function::GMFunctions;
 use crate::wad::elem::game_end::GMGameEndScripts;
 use crate::wad::elem::game_object::GMGameObjects;
+use crate::wad::elem::general_info::GMGeneralInfo;
 use crate::wad::elem::global_init::GMGlobalInitScripts;
 use crate::wad::elem::language::GMLanguageInfo;
 use crate::wad::elem::options::GMOptions;
@@ -156,6 +157,13 @@ impl ParsingOptions {
     pub fn parse_bytes(&self, raw_data: impl AsRef<[u8]>) -> Result<GMData> {
         self.parse(raw_data.as_ref())
             .context("parsing GameMaker data bytes")
+    }
+
+    /// Only parses the `GEN8` chunk and detects the proper GameMaker version.
+    pub fn parse_general_info(&self, raw_data: impl AsRef<[u8]>) -> Result<GMGeneralInfo> {
+        let mut reader = parse_form(raw_data.as_ref())?;
+        init_reader(&mut reader)?;
+        Ok(reader.general_info)
     }
 
     /// Parses a GameMaker data file (stored on disk) with the specified

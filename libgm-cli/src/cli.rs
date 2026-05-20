@@ -25,6 +25,12 @@ pub struct Args {
     #[arg(long)]
     pub lenient: bool,
 
+    /// Whether to only parse general info.
+    ///
+    /// Default: false
+    #[arg(long)]
+    pub gen8_only: bool,
+
     /// The tests to execute.
     #[arg(short, long, value_delimiter = ',')]
     pub tests: Vec<Test>,
