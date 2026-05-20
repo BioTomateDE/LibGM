@@ -84,6 +84,7 @@ pub fn disassemble_code(code: &GMCode, gm_data: &GMData) -> Result<String> {
     }
 
     disassemble_instructions(&code.instructions, gm_data)
+        .with_context(|| format!("disassembling code entry {:?}", code.name))
 }
 
 /// Disassembles multiple instructions and joins the instructions by newline.

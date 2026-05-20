@@ -6,10 +6,12 @@ use similar_asserts::SimpleDiff;
 pub fn print_diff<T: Debug + PartialEq + ?Sized>(old: &T, new: &T) {
     let old = format!("{old:#?}");
     let new = format!("{new:#?}");
-    println!("{}", SimpleDiff::from_str(&old, &new, "Old", "New"));
+    eprintln!("{}", SimpleDiff::from_str(&old, &new, "Old", "New"));
 }
 
-/// Returns whether `old` and `new` are equal.
+/// Prints differences between data files in a git-like diff viewer.
+/// Returns true if `old` and `new` are equal.
+/// If there are any differences, false is returned.
 pub fn print_diffs(old: &GMData, new: &GMData) -> bool {
     let mut same = true;
 
@@ -60,8 +62,8 @@ pub fn print_diffs(old: &GMData, new: &GMData) -> bool {
     );
 
     if same {
-        println!("Data files are the same!");
+        eprintln!("Data files are the same!");
     }
 
-    same
+    !same
 }

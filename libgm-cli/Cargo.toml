@@ -22,9 +22,11 @@ log = "0.4.29"
 similar-asserts = "2.0.0"
 
 [dev-dependencies]
-snafu.workspace = true
-sha2.workspace = true
+sha2 = "0.11"
 
 [features]
-test-undertale-1_0_8win = []
-test-deltarune-1to4-1_0_4win = []
+test-undertale-100 = []
+test-undertale-101 = []
+test-undertale-108 = []
+test-deltarune-ch1234 = []
+test-all = ["test-undertale-100", "test-undertale-101", "test-undertale-108", "test-deltarune-ch1234"]
