@@ -7,7 +7,7 @@ authors = ["BioTomateDE <biotomatede@proton.me>"]
 edition = "2024"
 readme = "README.md"
 repository = "https://codeberg.org/BioTomateDE/LibGM"
-license = "GPL-3.0-or-later"
+license = "GPL-3.0-only"
 
 [profile.release]
 overflow-checks = true
