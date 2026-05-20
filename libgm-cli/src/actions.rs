@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use clap::ValueEnum;
 use libgm::prelude::*;
 use libgm::wad::elem::texture_page::Format;

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use macros::num_enum;
 
 /// A primitive data type used in instructions.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::parse::reader::DataReader;

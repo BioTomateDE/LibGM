@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 // TODO: This code is unreadable garbage.
 // If you want to waste your time, you can try to refactor this <3
 

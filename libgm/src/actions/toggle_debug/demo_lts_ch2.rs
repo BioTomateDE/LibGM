@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 //! Deltarune Demo: LTS, Chapter 2
 //! Chapter: 2
 //! 2025-06-05 to now [2026-01-04]

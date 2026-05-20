@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::wad::elem::string::StringPlaceholder;
 use crate::wad::elem::texture_page_item::GMTexturePageItem;

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 mod data_types;
 mod reader;
 

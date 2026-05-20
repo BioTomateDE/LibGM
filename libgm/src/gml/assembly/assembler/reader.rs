@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::ops::Neg;
 use std::str::Chars;
 use std::str::FromStr;

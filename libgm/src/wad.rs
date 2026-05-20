@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 //! Everything related to parsing and building of GameMaker data files.
 //!
 //! GameMaker is a Game Engine created by YoYoGames.

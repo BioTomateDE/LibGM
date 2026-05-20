@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 mod effect;
 pub mod flex;
 pub mod layer;

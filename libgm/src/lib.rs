@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 //! A data parsing and building library for GameMaker data files (`data.win`).
 //!
 //! This library provides structs and functions to handle GameMaker game assets

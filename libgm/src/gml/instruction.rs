@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 //! Everything related to GML instructions is in here,
 //! including the important [`Instruction`] type.
 

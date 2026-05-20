@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 //! The full GameMaker data struct, containing all information from a data file.
 
 use std::fmt;

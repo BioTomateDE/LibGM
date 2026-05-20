@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 pub mod code_local;
 
 pub use code_local::GMCodeLocal;

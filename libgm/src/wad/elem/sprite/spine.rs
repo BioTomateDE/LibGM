@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 pub mod texture_entry;
 
 pub use texture_entry::TextureEntry;

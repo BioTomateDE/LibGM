@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use proc_macro::TokenStream;
 
 pub fn num_enum(attr: TokenStream, item: TokenStream) -> TokenStream {

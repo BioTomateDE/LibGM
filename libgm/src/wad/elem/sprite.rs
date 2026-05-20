@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 pub mod nine_slice;
 pub mod spine;
 pub mod swf;

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::ops::Index;
 
 use crate::gml::instruction::DataType;

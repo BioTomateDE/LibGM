@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 //! # What are pointers
 //! When building GameMaker data files, you frequently need to write "pointers".
 //! "Pointer" in the context of GameMaker internals: a 32-bit integer that

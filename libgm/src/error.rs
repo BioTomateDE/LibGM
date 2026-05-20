@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 //! LibGM's custom error type is contained here, as well as a convenience type
 //! alias for `Result`.
 //!

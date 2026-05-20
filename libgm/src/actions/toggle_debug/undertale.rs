@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 //! Any Undertale or NXTALE version
 //! 2015-09-15 to eternity
 

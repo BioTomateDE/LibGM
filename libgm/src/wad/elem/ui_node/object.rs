@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use super::flex;
 use crate::prelude::*;
 use crate::wad::parse::reader::DataReader;

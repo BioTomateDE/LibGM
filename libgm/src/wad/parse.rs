@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 //! Functions and builder structs related to parsing GameMaker data files.
 //!
 //! Some of these functions are also re-exported at the crate root.

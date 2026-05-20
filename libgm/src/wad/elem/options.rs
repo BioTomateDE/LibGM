@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 mod constant;
 mod flags;
 mod new;

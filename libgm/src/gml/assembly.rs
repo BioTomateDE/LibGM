@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 //! Functions to assemble and disassemble GML code.
 
 mod assembler;

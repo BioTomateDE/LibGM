@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use macros::num_enum;
 
 use super::Keyframe;

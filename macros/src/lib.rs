@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 #![doc = include_str!("../README.md")]
 #![forbid(unsafe_code)]
 #![warn(clippy::cargo, clippy::nursery, clippy::pedantic)]

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use crate::gml::GMCode;
 use crate::prelude::*;
 use crate::wad::elem::validate_identifier;

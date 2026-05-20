@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 //! I literally have no idea what this is.
 //! I Copied this from UndertaleModTool in 2025-04-01.
 //! Still no idea what YYSWF is.

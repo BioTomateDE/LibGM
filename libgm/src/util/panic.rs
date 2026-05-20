@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::any::Any;
 use std::panic::UnwindSafe;
 

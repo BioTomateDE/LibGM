@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 mod particle_system;
 mod sequence;
 mod sprite;

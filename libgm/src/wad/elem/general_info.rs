@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 mod flags;
 mod function_classifications;
 mod gms2;

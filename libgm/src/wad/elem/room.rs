@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 mod background;
 mod flags;
 mod game_object;

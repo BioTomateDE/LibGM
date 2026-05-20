@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use crate::gml::GMCode;
 use crate::gml::instruction::AssetReference;
 use crate::gml::instruction::CodeVariable;

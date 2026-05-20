@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use super::target_version;
 use crate::prelude::*;
 use crate::wad::GMVersion;

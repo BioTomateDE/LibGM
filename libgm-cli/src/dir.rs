@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::fs::ReadDir;
 use std::fs::{self};
 use std::path::Path;

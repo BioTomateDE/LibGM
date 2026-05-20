@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 //! im too lazy to write docs but if anyone cares about ts file, u can contact
 //! me and i will try to explain
 

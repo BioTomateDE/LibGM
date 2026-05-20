@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 //! This is THE module. All GameMaker elements are contained in these
 //! submodules. There are some traits as well which can help you with dynamic
 //! programming.

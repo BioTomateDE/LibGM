@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::wad::elem::animation_curve::GMAnimationCurve;
 use crate::wad::elem::background::GMBackground;

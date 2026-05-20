@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 //! Contains the `GMRef` type which is used to refer to other GameMaker
 //! elements.
 

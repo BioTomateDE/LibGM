@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 //! An implementation of GameMaker's slightly custom QOI ("Quite Ok Image")
 //! image format.
 

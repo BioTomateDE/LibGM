@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use crate::gml::instruction::InstanceType;
 use crate::gml::instruction::VariableType;
 use crate::prelude::GMRef;

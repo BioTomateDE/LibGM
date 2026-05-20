@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use macros::named_list_chunk;
 
 use crate::gml::GMCode;

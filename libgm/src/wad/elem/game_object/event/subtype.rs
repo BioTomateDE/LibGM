@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 // this for those boolean helper functions in the submodules
 #![allow(clippy::match_like_matches_macro, reason = "ugly syntax")]
 

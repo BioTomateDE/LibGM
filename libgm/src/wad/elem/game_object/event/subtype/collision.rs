@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::wad::elem::game_object::GMGameObject;
 use crate::wad::elem::game_object::event::EventSubtype;

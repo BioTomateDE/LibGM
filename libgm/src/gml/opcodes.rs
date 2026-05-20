@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use crate::gml::instruction::Instruction;
 
 pub const CONV: u8 = 0x07;

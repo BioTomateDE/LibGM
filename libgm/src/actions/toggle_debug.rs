@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 mod chapter1_old;
 mod chapter3;
 mod deltarune;

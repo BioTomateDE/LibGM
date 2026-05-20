@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use macros::num_enum;
 
 /// How a variable is supposed to be used in an instruction.

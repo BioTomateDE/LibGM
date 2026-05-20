@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 #![allow(clippy::unnecessary_debug_formatting)]
 
 mod actions;

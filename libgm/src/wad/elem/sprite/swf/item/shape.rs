@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 mod style_group;
 pub use style_group::StyleGroup;
 

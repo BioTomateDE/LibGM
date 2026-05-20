@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::util::assert;
 use crate::wad::chunk::ChunkName;
