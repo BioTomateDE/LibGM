@@ -1,6 +1,6 @@
 use clap::ValueEnum;
 use libgm::prelude::*;
-use libgm::wad::elements::texture_page::Format;
+use libgm::wad::elem::texture_page::Format;
 
 #[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {

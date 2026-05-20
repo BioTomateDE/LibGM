@@ -1,6 +1,6 @@
 use super::target_version;
 use crate::prelude::*;
-use crate::wad::deserialize::reader::DataReader;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
 
 pub fn check_2022_6(reader: &mut DataReader) -> Result<Option<GMVersion>> {

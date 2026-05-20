@@ -63,7 +63,7 @@ pub fn named_list_chunk(attr: TokenStream, item: TokenStream) -> TokenStream {
         quote! {}
     } else {
         quote! {
-            impl crate::wad::elements::GMNamedElement for #elem_type {
+            impl crate::wad::elem::GMNamedElement for #elem_type {
                 fn name(&self) -> &String {
                     &self.name
                 }
@@ -81,7 +81,7 @@ pub fn named_list_chunk(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         #name_impl
 
-        impl crate::wad::elements::GMNamedListChunk for #chunk_type {
+        impl crate::wad::elem::GMNamedListChunk for #chunk_type {
             fn ref_by_name(&self, name: &str) -> Result<crate::wad::reference::GMRef<#elem_type>> {
                 for (i, element) in self.#elems_field.iter().enumerate() {
                     if element.name == name {

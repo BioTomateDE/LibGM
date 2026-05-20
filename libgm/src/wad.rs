@@ -191,18 +191,17 @@ mod chunk;
 mod memory;
 mod version_detection;
 
+pub mod build;
 pub mod data;
-pub mod deserialize;
-pub mod elements;
+pub mod elem;
+pub mod parse;
 pub mod reference;
-pub mod serialize;
 pub mod version;
 
+pub use build::build_bytes;
+pub use build::build_file;
 pub use data::GMData;
-pub use deserialize::ParsingOptions;
-pub use deserialize::parse_bytes;
-pub use deserialize::parse_file;
+pub use parse::parse_bytes;
+pub use parse::parse_file;
 pub use reference::GMRef;
-pub use serialize::build_bytes;
-pub use serialize::build_file;
 pub use version::GMVersion;

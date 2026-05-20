@@ -7,7 +7,7 @@ use crate::gml::assembly::assemble_instructions;
 use crate::gml::instruction::InstanceType;
 use crate::gml::instruction::Instruction;
 use crate::prelude::*;
-use crate::wad::elements::variable::GMVariable;
+use crate::wad::elem::variable::GMVariable;
 
 // === Instruction Layout - Before ===
 // pushim 0

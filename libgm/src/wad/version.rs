@@ -6,9 +6,9 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 
 use crate::prelude::*;
-use crate::wad::deserialize::reader::DataReader;
-use crate::wad::elements::GMElement;
-use crate::wad::serialize::builder::DataBuilder;
+use crate::wad::parse::reader::DataReader;
+use crate::wad::elem::GMElement;
+use crate::wad::build::builder::DataBuilder;
 
 /// Different GameMaker release branches. LTS has some but not all features of
 /// equivalent newer versions.

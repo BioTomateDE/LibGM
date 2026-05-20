@@ -1,18 +1,18 @@
 use crate::prelude::*;
-use crate::wad::elements::animation_curve::GMAnimationCurve;
-use crate::wad::elements::background::GMBackground;
-use crate::wad::elements::font::GMFont;
-use crate::wad::elements::function::GMFunction;
-use crate::wad::elements::game_object::GMGameObject;
-use crate::wad::elements::particle_system::GMParticleSystem;
-use crate::wad::elements::path::GMPath;
-use crate::wad::elements::room::GMRoom;
-use crate::wad::elements::script::GMScript;
-use crate::wad::elements::sequence::GMSequence;
-use crate::wad::elements::shader::GMShader;
-use crate::wad::elements::sound::GMSound;
-use crate::wad::elements::sprite::GMSprite;
-use crate::wad::elements::timeline::GMTimeline;
+use crate::wad::elem::animation_curve::GMAnimationCurve;
+use crate::wad::elem::background::GMBackground;
+use crate::wad::elem::font::GMFont;
+use crate::wad::elem::function::GMFunction;
+use crate::wad::elem::game_object::GMGameObject;
+use crate::wad::elem::particle_system::GMParticleSystem;
+use crate::wad::elem::path::GMPath;
+use crate::wad::elem::room::GMRoom;
+use crate::wad::elem::script::GMScript;
+use crate::wad::elem::sequence::GMSequence;
+use crate::wad::elem::shader::GMShader;
+use crate::wad::elem::sound::GMSound;
+use crate::wad::elem::sprite::GMSprite;
+use crate::wad::elem::timeline::GMTimeline;
 
 /// A modern (2023.something) reference to game assets.
 /// Used with the [`PushReference`] (`pushref`) instruction.

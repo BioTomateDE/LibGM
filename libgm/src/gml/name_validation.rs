@@ -1,6 +1,6 @@
 use crate::gml::GMCode;
 use crate::prelude::*;
-use crate::wad::elements::validate_identifier;
+use crate::wad::elem::validate_identifier;
 
 impl GMNamedElement for GMCode {
     fn name(&self) -> &String {
@@ -91,14 +91,14 @@ fn validate_room_event_kind(event_kind: &str) -> Result<()> {
 }
 
 fn validate_event(event_type: &str, subtype: u32) -> Result<()> {
-    use crate::wad::elements::game_object::event::EventSubtype;
-    use crate::wad::elements::game_object::event::subtype::Alarm;
-    use crate::wad::elements::game_object::event::subtype::Draw;
-    use crate::wad::elements::game_object::event::subtype::Gesture;
-    use crate::wad::elements::game_object::event::subtype::Key;
-    use crate::wad::elements::game_object::event::subtype::Mouse;
-    use crate::wad::elements::game_object::event::subtype::Other;
-    use crate::wad::elements::game_object::event::subtype::Step;
+    use crate::wad::elem::game_object::event::EventSubtype;
+    use crate::wad::elem::game_object::event::subtype::Alarm;
+    use crate::wad::elem::game_object::event::subtype::Draw;
+    use crate::wad::elem::game_object::event::subtype::Gesture;
+    use crate::wad::elem::game_object::event::subtype::Key;
+    use crate::wad::elem::game_object::event::subtype::Mouse;
+    use crate::wad::elem::game_object::event::subtype::Other;
+    use crate::wad::elem::game_object::event::subtype::Step;
 
     let error: Option<Error> = match event_type {
         "Create" => assert_zero(subtype),

@@ -3,8 +3,8 @@ pub mod assembler;
 use clap::ValueEnum;
 use libgm::prelude::*;
 use libgm::wad::data::GMData;
-use libgm::wad::deserialize::parse_bytes;
-use libgm::wad::serialize::build_bytes;
+use libgm::wad::parse::parse_bytes;
+use libgm::wad::build::build_bytes;
 
 #[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Test {

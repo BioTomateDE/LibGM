@@ -62,7 +62,7 @@ pub fn list_chunk(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
         }
 
-        impl crate::wad::elements::GMChunk for #chunk_type {
+        impl crate::wad::elem::GMChunk for #chunk_type {
             const NAME: crate::wad::chunk::ChunkName = crate::wad::chunk::ChunkName::new(#chunk_name);
 
             fn exists(&self) -> bool {
@@ -70,7 +70,7 @@ pub fn list_chunk(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
         }
 
-        impl crate::wad::elements::GMListChunk for #chunk_type {
+        impl crate::wad::elem::GMListChunk for #chunk_type {
             type Element = #elem_type;
 
             fn elements(&self) -> &Vec<#elem_type> {

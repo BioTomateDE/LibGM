@@ -17,11 +17,11 @@ use crate::gml::instruction::VariableType;
 use crate::prelude::*;
 use crate::util::fmt::typename;
 use crate::wad::data::GMData;
-use crate::wad::elements::GMNamedListChunk;
-use crate::wad::elements::function::GMFunction;
-use crate::wad::elements::function::GMFunctions;
-use crate::wad::elements::game_object::GMGameObject;
-use crate::wad::elements::variable::GMVariable;
+use crate::wad::elem::GMNamedListChunk;
+use crate::wad::elem::function::GMFunction;
+use crate::wad::elem::function::GMFunctions;
+use crate::wad::elem::game_object::GMGameObject;
+use crate::wad::elem::variable::GMVariable;
 use crate::wad::reference::GMRef;
 
 /// Assembles multiple instructions separated by newline.

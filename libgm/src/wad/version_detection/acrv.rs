@@ -1,7 +1,7 @@
 use super::target_version;
 use crate::prelude::*;
 use crate::wad::GMVersion;
-use crate::wad::deserialize::reader::DataReader;
+use crate::wad::parse::reader::DataReader;
 
 pub fn check_2_3_1(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     let ver = target_version!(2, 3);

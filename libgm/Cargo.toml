@@ -35,7 +35,7 @@ maintenance.status = "actively-developed"
 
 # Attribute macros (num_enum, list_chunk, named_list_chunk)
 [dependencies.macros]
-version = "0.2.1"
+version = "0.3.0-beta"
 path = "../macros"
 package = "libgm-macros"
 

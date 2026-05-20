@@ -19,7 +19,7 @@ pub use instance_type::InstanceType;
 pub use push_value::PushValue;
 pub use variable_type::VariableType;
 
-use crate::wad::elements::function::GMFunction;
+use crate::wad::elem::function::GMFunction;
 use crate::wad::reference::GMRef;
 
 /// A GameMaker VM Instruction.

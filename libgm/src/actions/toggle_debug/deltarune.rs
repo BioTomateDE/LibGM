@@ -9,7 +9,7 @@ use crate::gml::instruction::InstanceType;
 use crate::gml::instruction::Instruction;
 use crate::gml::instruction::VariableType;
 use crate::prelude::*;
-use crate::wad::elements::variable::GMVariable;
+use crate::wad::elem::variable::GMVariable;
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     log::debug!("Detected Deltarune Chapter 1/2/4");

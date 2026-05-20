@@ -4,7 +4,7 @@ use crate::gml::Instruction;
 use crate::gml::instruction::CodeVariable;
 use crate::gml::instruction::DataType;
 use crate::prelude::GMRef;
-use crate::wad::elements::function::GMFunction;
+use crate::wad::elem::function::GMFunction;
 
 /// A value to push to the stack.
 /// Used in [`Push`] instructions.

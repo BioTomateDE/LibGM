@@ -3,7 +3,7 @@ use crate::gml::instruction::DataType;
 use crate::gml::opcodes;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
-use crate::wad::deserialize::reader::DataReader;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
 
 pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion>> {

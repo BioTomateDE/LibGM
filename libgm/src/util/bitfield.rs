@@ -20,13 +20,13 @@ macro_rules! bitfield_struct {
             )*
         }
 
-        impl crate::wad::elements::GMElement for $name {
-            fn deserialize(reader: &mut crate::wad::deserialize::reader::DataReader) -> crate::error::Result<Self> {
+        impl crate::wad::elem::GMElement for $name {
+            fn deserialize(reader: &mut crate::wad::parse::reader::DataReader) -> crate::error::Result<Self> {
                 let raw = <$int>::deserialize(reader)?;
                 Ok(Self::parse(raw))
             }
 
-            fn serialize(&self, builder: &mut crate::wad::serialize::builder::DataBuilder) -> crate::error::Result<()> {
+            fn serialize(&self, builder: &mut crate::wad::build::builder::DataBuilder) -> crate::error::Result<()> {
                 self.build().serialize(builder)
             }
         }

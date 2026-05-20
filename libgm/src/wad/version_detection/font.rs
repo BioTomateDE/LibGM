@@ -1,7 +1,7 @@
 use super::target_version;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
-use crate::wad::deserialize::reader::DataReader;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
 use crate::wad::version::LTSBranch::PostLTS;
 

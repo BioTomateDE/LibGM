@@ -9,8 +9,8 @@
 //!
 //! ```no_run
 //! use libgm::wad::GMData;
-//! use libgm::wad::elements::GMNamedListChunk;
-//! use libgm::wad::elements::game_object::GMGameObject;
+//! use libgm::wad::elem::GMNamedListChunk;
+//! use libgm::wad::elem::game_object::GMGameObject;
 //!
 //! # fn main() -> libgm::Result<()> {
 //!

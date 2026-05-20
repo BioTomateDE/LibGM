@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::gml::instruction::VariableType;
 use crate::prelude::*;
-use crate::wad::elements::game_object::GMGameObject;
+use crate::wad::elem::game_object::GMGameObject;
 
 /// The scope/owner of a variable.
 ///

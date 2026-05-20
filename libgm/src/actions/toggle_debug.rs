@@ -10,7 +10,7 @@ use crate::gml::GMCode;
 use crate::gml::instruction::InstanceType;
 use crate::gml::instruction::Instruction;
 use crate::prelude::*;
-use crate::wad::elements::variable::GMVariable;
+use crate::wad::elem::variable::GMVariable;
 
 impl GMData {
     /// Tries to enable or disable debug mode, based on the argument.

@@ -10,9 +10,9 @@ use std::path::PathBuf;
 
 use libgm::gml::assembly::disassemble_code;
 use libgm::prelude::*;
-use libgm::wad::ParsingOptions;
+use libgm::wad::build::build_file;
 use libgm::wad::data::GMData;
-use libgm::wad::serialize::build_file;
+use libgm::wad::parse::ParsingOptions;
 use libgm_cli::diff::print_diffs;
 use tests::Test;
 
@@ -26,12 +26,11 @@ fn run(mut args: cli::Args) -> Result<()> {
     let tests: Vec<Test> = tests::deduplicate(args.tests);
     let files: Vec<PathBuf> = dir::get_data_files(&args.files)?;
 
-    let mut parser = ParsingOptions::new();
-    if args.lenient {
-        parser.verify_alignment = false;
-        parser.verify_constants = false;
-        parser.allow_unknown_chunks = true;
-    }
+    let parser = if args.lenient {
+        ParsingOptions::LENIENT
+    } else {
+        ParsingOptions::STRICT
+    };
 
     for data_file in files {
         log::info!("Parsing data file {}", data_file.display());
