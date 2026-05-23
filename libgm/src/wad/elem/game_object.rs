@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pub mod event;
 
-pub use event::EventGroup;
-pub use event::EventGroups;
 use macros::named_list_chunk;
 use macros::num_enum;
 
+pub use self::event::Event;
+pub use self::event::EventGroups;
 use crate::prelude::*;
 use crate::util::init::num_enum_from;
 use crate::util::init::vec_with_capacity;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::element_stub;
 use crate::wad::elem::sprite::GMSprite;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 
 #[named_list_chunk("OBJT")]
 pub struct GMGameObjects {
