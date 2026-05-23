@@ -499,15 +499,15 @@ fn parse_variable_identifier<'a>(reader: &'a mut Reader) -> Result<&'a str> {
 }
 
 fn parse_function(reader: &mut Reader, gm_functions: &GMFunctions) -> Result<GMRef<GMFunction>> {
-    let identifier = reader.parse_identifier()?;
+    let ident = reader.parse_identifier()?;
 
     for (i, func) in gm_functions.iter().enumerate() {
-        if func.name == identifier {
+        if func.name == ident {
             return Ok(i.into());
         }
     }
 
-    bail!("Function {identifier:?} does not exist")
+    bail!("Function {ident:?} does not exist (needs to be created using GMFunctions::make first)")
 }
 
 fn parse_int<T>(string: &str) -> Result<T>

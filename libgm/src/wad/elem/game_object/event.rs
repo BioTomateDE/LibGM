@@ -2,19 +2,22 @@
 // TODO: This code is unreadable garbage.
 // If you want to waste your time, you can try to refactor this <3
 
-mod action;
+pub mod action;
 pub mod subtype;
 
-use subtype::Alarm;
-use subtype::Collision;
-use subtype::Draw;
-use subtype::Gesture;
-use subtype::Key;
-use subtype::Mouse;
-use subtype::Other;
-use subtype::Step;
-
-pub use self::action::{Action, LibId, Kind, ExeType, Who};
+pub use self::action::Action;
+pub use self::action::ExeType;
+pub use self::action::Kind;
+pub use self::action::LibId;
+pub use self::action::Who;
+use self::subtype::Alarm;
+use self::subtype::Collision;
+use self::subtype::Draw;
+use self::subtype::Gesture;
+use self::subtype::Key;
+use self::subtype::Mouse;
+use self::subtype::Other;
+use self::subtype::Step;
 use crate::gml::GMCode;
 use crate::prelude::*;
 use crate::util::assert;
@@ -270,6 +273,7 @@ fn dedup_events<T: EventSubtype>(events: &mut Vec<Event<T>>) -> bool {
         let sub: T = events[i].subtype;
         // if there is another SubEvent with the same subtype, then merge it
         if let Some(j) = events[i + 1..].iter().position(|e| e.subtype == sub) {
+            // TODO: Of all GM48 datafiles + UT/DR, this never happened.
             let dupe = events.remove(i + 1 + j);
             events[i].actions.extend(dupe.actions);
             changed = true;
@@ -283,6 +287,12 @@ fn dedup_events<T: EventSubtype>(events: &mut Vec<Event<T>>) -> bool {
 
 #[must_use]
 fn dedup_events_no_subtype(events: Vec<Event<()>>) -> Vec<Action> {
+    // TODO: Usually, this does "nothing", as in, the events each have one action.
+    // Sometimes (33 times in all events of all objects of all GM48 datafiles),
+    // there is an event with no actions gets flattened.
+    // These empty events were previously thought to be invalid and cause segfaults.
+    // What's happening here? I've seen this happen in modern postlts, maybe it's
+    // only a modern thing.
     events.into_iter().flat_map(|e| e.actions).collect()
 }
 

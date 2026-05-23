@@ -7,17 +7,31 @@ use macros::named_list_chunk;
 
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
-use crate::wad::parse::chunk::ChunkBounds;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::element_stub;
-use crate::wad::build::builder::DataBuilder;
+use crate::wad::parse::chunk::ChunkBounds;
+use crate::wad::parse::reader::DataReader;
 
 #[named_list_chunk("FUNC")]
 pub struct GMFunctions {
     pub functions: Vec<GMFunction>,
     pub code_locals: GMCodeLocals,
     pub exists: bool,
+}
+
+impl GMFunctions {
+    /// Returns an existing function with the given name if it exists,
+    /// otherwise creates a new one.
+    pub fn make(&mut self, name: &str) -> GMRef<GMFunction> {
+        if let Ok(func_ref) = self.ref_by_name(name) {
+            return func_ref;
+        }
+        let idx = self.functions.len();
+        let func = GMFunction { name: name.to_owned() };
+        self.functions.push(func);
+        GMRef::from(idx)
+    }
 }
 
 impl GMElement for GMFunctions {
