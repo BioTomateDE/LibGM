@@ -14,17 +14,13 @@ use subtype::Mouse;
 use subtype::Other;
 use subtype::Step;
 
-pub use self::action::Action;
+pub use self::action::{Action, LibId, Kind, ExeType, Who};
 use crate::gml::GMCode;
 use crate::prelude::*;
 use crate::util::assert;
 use crate::util::fmt::typename;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::game_object::event::action::ExeType;
-use crate::wad::elem::game_object::event::action::Kind;
-use crate::wad::elem::game_object::event::action::LibId;
-use crate::wad::elem::game_object::event::action::Who;
 use crate::wad::parse::reader::DataReader;
 
 /// Reference: <https://manual.gamemaker.io/lts/en/The_Asset_Editors/Object_Properties/Object_Events.htm>
