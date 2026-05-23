@@ -42,7 +42,7 @@ fn run(mut args: cli::Args) -> Result<()> {
             continue;
         }
 
-        let mut data: GMData = parser.parse_file(data_file)?;
+        let mut data: GMData = parser.parse_file(&data_file)?;
 
         tests::perform(&data, &tests)?;
 
@@ -67,6 +67,9 @@ fn run(mut args: cli::Args) -> Result<()> {
         if let Some(out_file) = &args.out {
             log::info!("Building data file {}", out_file.display());
             build_file(&data, out_file)?;
+        } else if args.inplace {
+            log::info!("Building data file to same location");
+            build_file(&data, data_file)?;
         }
 
         println!();

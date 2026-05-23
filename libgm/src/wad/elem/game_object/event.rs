@@ -2,14 +2,10 @@
 // TODO: This code is unreadable garbage.
 // If you want to waste your time, you can try to refactor this <3
 
-pub mod action;
+mod action;
 pub mod subtype;
 
 pub use self::action::Action;
-pub use self::action::ExeType;
-pub use self::action::Kind;
-pub use self::action::LibId;
-pub use self::action::Who;
 use self::subtype::Alarm;
 use self::subtype::Collision;
 use self::subtype::Draw;
@@ -347,8 +343,7 @@ impl<T: EventSubtype> GMElement for Event<T> {
         let subtype: u32 = reader.read_u32()?;
         let subtype: T = T::parse(subtype)
             .with_context(|| format!("parsing Event subtype {}", typename::<T>()))?;
-        let mut actions: Vec<Action> = reader.read_pointer_list()?;
-        actions.retain(|x| x.__exists);
+        let actions: Vec<Action> = reader.read_pointer_list()?;
         Ok(Self { subtype, actions })
     }
 
@@ -411,17 +406,9 @@ impl<T: EventSubtype> EventGroup<T> {
     ///
     /// This is a no-op if there is already a `SubEvent` with this subtype.
     /// Otherwise, new empty `SubEvent` will be pushed to the list.
-    pub fn make_handler_for(
-        &mut self,
-        subtype: T,
-        lib_id: LibId,
-        kind: Kind,
-        exe_type: ExeType,
-        who: Who,
-        code: GMRef<GMCode>,
-    ) {
+    pub fn make_handler_for(&mut self, subtype: T, code: GMRef<GMCode>) {
         let actions = self.handlers_for(subtype);
-        actions.push(Action::new(lib_id, kind, exe_type, who, code));
+        actions.push(Action::new(code));
     }
 
     /// An iterator that yields all actions of this event; no matter the

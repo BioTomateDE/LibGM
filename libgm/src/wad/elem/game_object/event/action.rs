@@ -1,170 +1,131 @@
 // SPDX-License-Identifier: GPL-3.0-only
+//! Actions that will be ran when an event is executed.
+//!
+//!
+//! All these unused values seem to be provided for compatibility only.
+//! In older versions of GM:S they stored the drag and drop blocks,
+//! but newer versions compile them down to GML bytecode anyway.
+//!
+//! The layout of an action is as follows:
+//! * (u32) Lib ID = 1
+//! * (u32) ID = 603 | 601
+//! * (u32) Kind = 7
+//! * (bool) Use Relative = false
+//! * (bool) Is Question = false
+//! * (bool) Use Apply To = true
+//! * (u32) Exe Type = 2
+//! * (string) Action Name = "" | null
+//! * (code ref) Code = <a GMCode ID>
+//! * (u32) Argument Count = 1
+//! * (i32) Who = -1
+//! * (bool) Relative = false
+//! * (bool) Is Not = false
+//! * (u32) Unknown = 0
+//!
+//! All of these fields are useless, except for code.
+//! The value after by the equals sign denotes the "usual" value
+//! of this field. It may be a different value, depending on the
+//! GameMaker Version and maybe some other stuff.
+//! Either way, these fields seem to be completely ignored by the runner.
 use std::fmt;
 
 use crate::gml::GMCode;
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::GMRef;
-
-#[derive(Clone, PartialEq)]
-pub struct LibId(pub u32);
-
-impl LibId {
-    pub const NORMAL: Self = Self(1);
-}
-
-#[derive(Clone, PartialEq)]
-pub struct Kind(pub u32);
-
-impl Kind {
-    pub const NORMAL: Self = Self(7);
-}
-
-#[derive(Clone, PartialEq)]
-pub struct ExeType(pub u32);
-
-impl ExeType {
-    pub const NORMAL: Self = Self(2);
-}
-
-#[derive(Clone, PartialEq)]
-pub struct Who(pub i32);
-
-impl Who {
-    pub const NORMAL: Self = Self(-1);
-}
-
-pub struct RandomActionConstantsIGuess;
-
-impl RandomActionConstantsIGuess {
-    pub const ARGUMENT_COUNT: u32 = 0;
-    pub const ID: u32 = 603;
-    pub const IS_NOT: bool = false;
-    pub const IS_QUESTION: bool = false;
-    pub const NAME: &str = "";
-    pub const RELATIVE: bool = false;
-    pub const UNKNOWN_ALWAYS_ZERO: u32 = 0;
-    pub const USE_APPLY_TO: bool = false;
-    pub const USE_RELATIVE: bool = false;
-}
+use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
 #[derive(Clone, PartialEq)]
 pub struct Action {
-    /// ???
-    pub lib_id: LibId,
-
-    /// ???
-    pub kind: Kind,
-
-    /// ???
-    pub exe_type: ExeType,
-
-    /// ???
-    pub who: Who,
+    lib_id: u32,                 // usually 603, sometimes 601, sometimes other
+    kind: u32,                   // usually 7
+    use_relative: bool,          // usually false
+    is_question: bool,           // usually false
+    use_apply_to: bool,          // usually true
+    exe_type: u32,               // usually 2
+    action_name: Option<String>, // Some("") or None
 
     /// The code that will be executed when this action is ran.
-    pub code: GMRef<GMCode>,
+    pub code: Option<GMRef<GMCode>>,
 
-    // kind of a hack but idc
-    pub(super) __exists: bool,
+    argument_count: u32, // usually 1
+    who: i32,            // usually -1
+    is_not: bool,        // usually false
+    unknown: u32,        // usually 0
 }
 
 impl Action {
     #[must_use]
-    pub const fn new(
-        lib_id: LibId,
-        kind: Kind,
-        exe_type: ExeType,
-        who: Who,
-        code: GMRef<GMCode>,
-    ) -> Self {
+    pub const fn new(code: GMRef<GMCode>) -> Self {
         Self {
-            lib_id,
-            kind,
-            exe_type,
-            who,
-            code,
-            __exists: true,
+            lib_id: 603,
+            kind: 7,
+            use_relative: false,
+            is_question: false,
+            use_apply_to: true,
+            exe_type: 2,
+            action_name: None,
+            code: Some(code),
+            argument_count: 1,
+            who: -1,
+            is_not: false,
+            unknown: 0,
         }
+    }
+}
+
+impl fmt::Debug for Action {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Action")
+            .field("code", &self.code)
+            .finish_non_exhaustive()
     }
 }
 
 impl GMElement for Action {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let lib_id = reader.read_u32()?;
-
-        let _id = reader.read_u32()?;
-        // Usually 603, sometimes 601 and sometimes some other value (always 603 in
-        // modern GM)
-
         let kind = reader.read_u32()?;
-
         let use_relative = reader.read_bool32()?;
-        reader.assert_bool(use_relative, false, "Use Relative")?;
-
         let is_question = reader.read_bool32()?;
-        reader.assert_bool(is_question, false, "Is Question")?;
-
-        let _use_apply_to = reader.read_bool32()?;
-        // depends on gamemaker version
-
+        let use_apply_to = reader.read_bool32()?;
         let exe_type = reader.read_u32()?;
-
-        let _action_name: Option<String> = reader.read_gm_string_opt()?;
-        // depends on gamemaker version (either None or "")
-
-        let code: Option<GMRef<GMCode>> = reader.read_resource_by_id_opt()?;
-
-        let _argument_count = reader.read_u32()?;
-        // depends on gamemaker version (either 0 or 1)
-
+        let action_name = reader.read_gm_string_opt()?;
+        let code = reader.read_resource_by_id_opt()?;
+        let argument_count = reader.read_u32()?;
         let who = reader.read_i32()?;
-
-        let relative = reader.read_bool32()?;
-        reader.assert_bool(relative, false, "Relative")?;
-
         let is_not = reader.read_bool32()?;
-        reader.assert_bool(is_not, false, "Is Not")?;
-
-        let unknown_always_zero = reader.read_u32()?;
-        reader.assert_int(unknown_always_zero, 0, "Unknown always zero")?;
-
-        // this will be handled by `SubEvent::deserialize`
+        let unknown = reader.read_u32()?;
         Ok(Self {
-            lib_id: LibId(lib_id),
-            kind: Kind(kind),
-            exe_type: ExeType(exe_type),
-            who: Who(who),
-            code: code.unwrap_or(GMRef::new(0)),
-            __exists: code.is_some(),
+            lib_id,
+            kind,
+            use_relative,
+            is_question,
+            use_apply_to,
+            exe_type,
+            action_name,
+            code,
+            argument_count,
+            who,
+            is_not,
+            unknown,
         })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u32(self.lib_id.0);
-        builder.write_u32(RandomActionConstantsIGuess::ID);
-        builder.write_u32(self.kind.0);
-        builder.write_bool32(RandomActionConstantsIGuess::USE_RELATIVE);
-        builder.write_bool32(RandomActionConstantsIGuess::IS_QUESTION);
-        builder.write_bool32(RandomActionConstantsIGuess::USE_APPLY_TO);
-        builder.write_u32(self.exe_type.0);
-        builder.write_gm_string(RandomActionConstantsIGuess::NAME);
-        builder.write_resource_id(self.code);
-        builder.write_u32(RandomActionConstantsIGuess::ARGUMENT_COUNT);
-        builder.write_i32(self.who.0);
-        builder.write_bool32(RandomActionConstantsIGuess::RELATIVE);
-        builder.write_bool32(RandomActionConstantsIGuess::IS_NOT);
-        builder.write_u32(RandomActionConstantsIGuess::UNKNOWN_ALWAYS_ZERO);
+        builder.write_u32(self.lib_id);
+        builder.write_u32(self.kind);
+        builder.write_bool32(self.use_relative);
+        builder.write_bool32(self.is_question);
+        builder.write_bool32(self.use_apply_to);
+        builder.write_u32(self.exe_type);
+        builder.write_gm_string_opt(&self.action_name);
+        builder.write_resource_id_opt(self.code);
+        builder.write_u32(self.argument_count);
+        builder.write_i32(self.who);
+        builder.write_bool32(self.is_not);
+        builder.write_u32(self.unknown);
         Ok(())
-    }
-}
-
-impl fmt::Debug for Action {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Action")
-            .field("code", &self.code)
-            .finish_non_exhaustive()
     }
 }

@@ -20,6 +20,10 @@ pub struct Args {
     #[arg(short, long)]
     pub out: Option<PathBuf>,
 
+    /// If true, will serialize to the same file again.
+    #[arg(long)]
+    pub inplace: bool,
+
     /// Whether to allow invalid constants / alignment while parsing.
     ///
     /// Default: false
