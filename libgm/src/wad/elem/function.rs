@@ -3,36 +3,39 @@ pub mod code_local;
 
 pub use code_local::GMCodeLocal;
 pub use code_local::GMCodeLocals;
-use macros::named_list_chunk;
 
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::ChunkName;
+use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::element_stub;
 use crate::wad::parse::chunk::ChunkBounds;
 use crate::wad::parse::reader::DataReader;
 
-#[named_list_chunk("FUNC")]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMFunctions {
     pub functions: Vec<GMFunction>,
     pub code_locals: GMCodeLocals,
     pub exists: bool,
 }
 
-impl GMFunctions {
-    /// Returns an existing function with the given name if it exists,
-    /// otherwise creates a new one.
-    pub fn make(&mut self, name: &str) -> GMRef<GMFunction> {
-        if let Ok(func_ref) = self.ref_by_name(name) {
-            return func_ref;
-        }
-        let idx = self.functions.len();
-        let func = GMFunction { name: name.to_owned() };
-        self.functions.push(func);
-        GMRef::from(idx)
-    }
-}
+gm_named_list_chunk!(FUNC, GMFunctions, GMFunction, functions, direct);
+
+// impl GMFunctions {
+//     /// Returns an existing function with the given name if it exists,
+//     /// otherwise creates a new one.
+//     pub fn make(&mut self, name: GMRef<String>) -> GMRef<GMFunction> {
+//         if let Ok(func_ref) = self.ref_by_name(name) {
+//             return func_ref;
+//         }
+//         let idx = self.functions.len();
+//         let func = GMFunction { name: name.to_owned() };
+//         self.functions.push(func);
+//         GMRef::from(idx)
+//     }
+// }
 
 impl GMElement for GMFunctions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -45,7 +48,7 @@ impl GMElement for GMFunctions {
         let mut functions: Vec<GMFunction> = vec_with_capacity(functions_count)?;
 
         for i in 0..functions_count {
-            let name: String = reader.read_gm_string()?;
+            let name: GMRef<String> = reader.read_gm_string()?;
             let occurrence_count = reader.read_u32()?;
             let first_occurrence_pos = reader.read_u32()?;
             let occurrences: Vec<u32> =
@@ -102,7 +105,7 @@ impl GMElement for GMFunctions {
                 None => -1,
             };
 
-            builder.write_gm_string(&function.name);
+            builder.write_gm_string(function.name)?;
             builder.write_usize(occurrence_count)?;
             builder.write_i32(first_occurrence);
         }
@@ -120,7 +123,7 @@ impl GMElement for GMFunctions {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMFunction {
-    pub name: String,
+    pub name: GMRef<String>,
 }
 element_stub!(GMFunction);
 
@@ -137,7 +140,7 @@ fn parse_occurrence_chain(
     let saved_position = reader.cur_pos;
     reader.chunk = reader
         .chunks
-        .get("CODE")
+        .get(ChunkName::CODE)
         .ok_or("Chunk CODE not set while parsing function occurrences")?;
 
     let first_extra_offset: u32 = if reader.general_info.version >= (2, 3) {

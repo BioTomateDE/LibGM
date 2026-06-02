@@ -1,40 +1,43 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::named_list_chunk;
 
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::game_object;
-use crate::wad::build::builder::DataBuilder;
+use crate::wad::parse::reader::DataReader;
 
-#[named_list_chunk("TMLN")]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMTimelines {
-    pub timelines: Vec<GMTimeline>,
+    pub timelines: Vec<Option<GMTimeline>>,
     pub exists: bool,
 }
 
+// probably nullable?
+gm_named_list_chunk!(TMLN, GMTimelines, GMTimeline, timelines, nullable);
+
 impl GMElement for GMTimelines {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let timelines: Vec<GMTimeline> = reader.read_pointer_list()?;
+        let timelines: Vec<Option<GMTimeline>> = reader.read_pointer_list_opt()?;
         Ok(Self { timelines, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.timelines)?;
+        builder.write_pointer_list_opt(&self.timelines)?;
         Ok(())
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMTimeline {
-    pub name: String,
+    pub name: GMRef<String>,
     pub moments: Vec<Moment>,
 }
 
 impl GMElement for GMTimeline {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: String = reader.read_gm_string()?;
+        let name: GMRef<String> = reader.read_gm_string()?;
         let moment_count = reader.read_u32()?;
 
         let mut time_points: Vec<u32> = vec_with_capacity(moment_count)?;
@@ -56,7 +59,7 @@ impl GMElement for GMTimeline {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
+        builder.write_gm_string(self.name)?;
         builder.write_usize(self.moments.len())?;
         for moment in &self.moments {
             builder.write_u32(moment.time_point);

@@ -5,22 +5,19 @@ mod gms2;
 
 use std::fmt;
 
-#[cfg(feature = "game-creation-timestamp")]
 use chrono::DateTime;
-#[cfg(feature = "game-creation-timestamp")]
 use chrono::Utc;
 pub use flags::Flags;
 pub use function_classifications::FunctionClassifications;
 pub use gms2::GMS2Data;
 
 use crate::prelude::*;
-use crate::wad::chunk::ChunkName;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMChunk;
+use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::room::GMRoom;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::version::GMVersion;
 use crate::wad::version::ToGMVersion;
 
@@ -54,10 +51,10 @@ pub struct GMGeneralInfo {
     unknown_value: u16,
 
     /// The file name of the runner.
-    pub game_file_name: String,
+    pub game_file_name: GMRef<String>,
 
     /// Which GameMaker configuration the data file was compiled with.
-    pub config: String,
+    pub config: GMRef<String>,
 
     /// The last game object ID of the data file.
     pub last_object_id: u32,
@@ -73,7 +70,7 @@ pub struct GMGeneralInfo {
     pub directplay_guid: [u8; 16],
 
     /// The name of the game.
-    pub game_name: String,
+    pub game_name: GMRef<String>,
 
     /// The GameMaker Studio Version this game's data file was made in.
     /// For GameMaker 2 games, this will be specified as 2.0.0.0,
@@ -114,17 +111,10 @@ pub struct GMGeneralInfo {
     pub license_md5: [u8; 16],
 
     /// The timestamp the game was compiled at.
-    ///
-    /// This field is only exposed if the `game-creation-timestamp` feature is
-    /// enabled.
-    #[cfg(feature = "game-creation-timestamp")]
     pub creation_timestamp: DateTime<Utc>,
 
-    #[cfg(not(feature = "game-creation-timestamp"))]
-    creation_timestamp: i64,
-
     /// The name that gets displayed in the window title.
-    pub display_name: String,
+    pub display_name: GMRef<String>,
 
     /// The function classifications of this data file.
     pub function_classifications: FunctionClassifications,
@@ -148,13 +138,7 @@ pub struct GMGeneralInfo {
     pub(crate) exists: bool,
 }
 
-impl GMChunk for GMGeneralInfo {
-    const NAME: ChunkName = ChunkName::new("GEN8");
-
-    fn exists(&self) -> bool {
-        self.exists
-    }
-}
+gm_chunk!(GEN8, GMGeneralInfo);
 
 impl GMElement for GMGeneralInfo {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -167,13 +151,13 @@ impl GMElement for GMGeneralInfo {
         };
         let wad_version = reader.read_u8()?;
         let unknown_value = reader.read_u16()?;
-        let game_file_name: String = reader.read_gm_string()?;
-        let config: String = reader.read_gm_string()?;
+        let game_file_name: GMRef<String> = reader.read_gm_string()?;
+        let config: GMRef<String> = reader.read_gm_string()?;
         let last_object_id = reader.read_u32()?;
         let last_tile_id = reader.read_u32()?;
         let game_id = reader.read_u32()?;
         let directplay_guid: [u8; 16] = *reader.read_bytes_const().context("reading GUID")?;
-        let game_name: String = reader.read_gm_string()?;
+        let game_name: GMRef<String> = reader.read_gm_string()?;
         let version = GMVersion::deserialize(reader)?;
         let default_window_width = reader.read_u32()?;
         let default_window_height = reader.read_u32()?;
@@ -183,12 +167,11 @@ impl GMElement for GMGeneralInfo {
         let license_md5: [u8; 16] = *reader.read_bytes_const().context("reading license (MD5)")?;
 
         let creation_timestamp = reader.read_i64()?;
-        #[cfg(feature = "game-creation-timestamp")]
         let creation_timestamp: DateTime<Utc> =
             DateTime::from_timestamp_secs(creation_timestamp)
                 .ok_or_else(|| format!("Invalid Creation Timestamp {creation_timestamp}"))?;
 
-        let display_name: String = reader.read_gm_string()?;
+        let display_name: GMRef<String> = reader.read_gm_string()?;
         let active_targets = reader.read_u64()?;
         reader.assert_int(active_targets, 0, "Active Targets")?;
         let function_classifications = FunctionClassifications::deserialize(reader)?;
@@ -223,7 +206,7 @@ impl GMElement for GMGeneralInfo {
             exists: true,
         };
 
-        if general_info.version.major >= 2 {
+        if general_info.version >= 2 {
             let gms2 = general_info.read_gms2_data(reader)?;
             general_info.gms2_data = Some(gms2);
         }
@@ -239,28 +222,27 @@ impl GMElement for GMGeneralInfo {
         builder.write_u8(self.is_debugger_disabled.into());
         builder.write_u8(self.wad_version);
         builder.write_u16(self.unknown_value);
-        builder.write_gm_string(&self.game_file_name);
-        builder.write_gm_string(&self.config);
+        builder.write_gm_string(self.game_file_name)?;
+        builder.write_gm_string(self.config)?;
         builder.write_u32(self.last_object_id);
         builder.write_u32(self.last_tile_id);
         builder.write_u32(self.game_id);
         builder.write_bytes(&self.directplay_guid);
-        builder.write_gm_string(&self.game_name);
+        builder.write_gm_string(self.game_name)?;
 
-        let version = if self.version.major == 1 {
-            &self.version
+        if self.version < 2 {
+            self.version.serialize(builder)?;
         } else {
-            &GMVersion::GMS2
-        };
-        version.serialize(builder)?;
-
+            // Version field is stuck on 2.0.0.0
+            GMVersion::GMS2.serialize(builder)?;
+        }
         builder.write_u32(self.default_window_width);
         builder.write_u32(self.default_window_height);
         self.flags.serialize(builder)?;
         builder.write_u32(self.license_crc32);
         builder.write_bytes(&self.license_md5);
-        builder.write_i64(self.timestamp());
-        builder.write_gm_string(&self.display_name);
+        builder.write_i64(self.creation_timestamp.timestamp());
+        builder.write_gm_string(self.display_name)?;
         builder.write_u64(0); // "Active targets"
         self.function_classifications.serialize(builder)?;
         builder.write_i32(self.steam_appid);
@@ -277,32 +259,26 @@ impl GMElement for GMGeneralInfo {
 }
 
 impl Default for GMGeneralInfo {
-    /// Should only be used as a small stub in `DataReader` because
-    /// Rust doesn't have nullables ([`Option`]s are too ugly for this).
-    /// ___________
-    /// **This value should never be used!**
-    /// Immediately replace it with actual `GEN8` when parsed.
-    #[allow(clippy::default_trait_access)] // some data types are cfg-feature dependent
     fn default() -> Self {
         Self {
             is_debugger_disabled: true,
             wad_version: 17,
             unknown_value: 0,
-            game_file_name: "NewLibGMGame".to_owned(),
-            config: "Default".to_owned(),
+            game_file_name: GMRef::none(),
+            config: GMRef::none(), // should be "Default"
             last_object_id: 100_000,
             last_tile_id: 10_000_000,
             game_id: 1337,
             directplay_guid: [0u8; 16],
-            game_name: "NewLibGMGame".to_owned(),
+            game_name: GMRef::none(),
             version: GMVersion::default(),
             default_window_width: 1337,
             default_window_height: 1337,
             flags: Flags::default(),
             license_crc32: 69420,
             license_md5: [69; 16],
-            creation_timestamp: Default::default(),
-            display_name: "New LibGM Game (default stub)".to_owned(),
+            creation_timestamp: DateTime::default(),
+            display_name: GMRef::none(),
             function_classifications: FunctionClassifications::default(),
             steam_appid: 0,
             debugger_port: 0,
@@ -341,17 +317,5 @@ impl GMGeneralInfo {
     /// See [`GMVersion::set_version`].
     pub fn set_version(&mut self, new_version: impl ToGMVersion) {
         self.version.set_version(new_version);
-    }
-
-    #[must_use]
-    const fn timestamp(&self) -> i64 {
-        #[cfg(feature = "game-creation-timestamp")]
-        {
-            self.creation_timestamp.timestamp()
-        }
-        #[cfg(not(feature = "game-creation-timestamp"))]
-        {
-            self.creation_timestamp
-        }
     }
 }

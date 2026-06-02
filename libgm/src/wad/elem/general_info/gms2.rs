@@ -4,9 +4,9 @@ use std::fmt;
 use dotnet_rng::DotnetRng;
 
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::general_info::GMGeneralInfo;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::general_info::GMGeneralInfo;
+use crate::wad::parse::reader::DataReader;
 
 #[derive(Clone, PartialEq)]
 pub struct GMS2Data {
@@ -50,11 +50,11 @@ impl fmt::Debug for GMS2Data {
 }
 
 impl GMGeneralInfo {
-    /// Parse and verify UID
     pub(super) fn read_gms2_data(&self, reader: &mut DataReader) -> Result<GMS2Data> {
-        let timestamp: i64 = self.timestamp();
+        let timestamp: i64 = self.creation_timestamp.timestamp();
+
         let mut info_timestamp_offset: bool = true;
-        let seed: i32 = (timestamp & 0xFFFF_FFFF) as i32;
+        let seed: i32 = timestamp as i32;
         let mut rng = DotnetRng::new(seed);
 
         let first_expected: i64 = (i64::from(rng.next()) << 32) | i64::from(rng.next());
@@ -112,14 +112,14 @@ impl GMGeneralInfo {
         })
     }
 
-    /// Write UID
     pub(super) fn write_gms2_data(&self, builder: &mut DataBuilder) -> Result<()> {
         let gms2_info: &GMS2Data = self
             .gms2_data
             .as_ref()
             .ok_or("GMS2 Data not set in General Info")?;
-        let timestamp: i64 = self.timestamp();
-        let seed: i32 = (timestamp & 0xFFFF_FFFF) as i32;
+
+        let timestamp: i64 = self.creation_timestamp.timestamp();
+        let seed: i32 = timestamp as i32;
         let mut rng = DotnetRng::new(seed);
         let first_random: i64 = (i64::from(rng.next()) << 32) | i64::from(rng.next());
         let info_number = self.get_info_number(first_random, gms2_info.info_timestamp_offset);
@@ -129,10 +129,10 @@ impl GMGeneralInfo {
             if i == info_location {
                 builder.write_i64(info_number);
             } else {
-                let first: u32 = rng.next() as u32;
-                let second: u32 = rng.next() as u32;
-                builder.write_u32(first);
-                builder.write_u32(second);
+                let first = rng.next();
+                let second = rng.next();
+                builder.write_i32(first);
+                builder.write_i32(second);
             }
         }
 
@@ -142,17 +142,17 @@ impl GMGeneralInfo {
         Ok(())
     }
 
+    // random bullshit go!
     const fn get_info_location(&self, timestamp: i64) -> i32 {
-        ((timestamp & 0xFFFF) as i32 / 7
-            + self.game_id.wrapping_sub(self.default_window_width) as i32
-            + self.room_order.len() as i32)
-            .abs()
-            % 4
+        let t = (timestamp as u16 / 7) as i32;
+        let g = self.game_id.wrapping_sub(self.default_window_width) as i32;
+        let r = self.room_order.len() as i32;
+        (t + g + r).abs() % 4
     }
 
     fn get_info_number(&self, first_random: i64, info_timestamp_offset: bool) -> i64 {
         let flags_raw: u32 = self.flags.build();
-        let mut info_number: i64 = self.timestamp();
+        let mut info_number: i64 = self.creation_timestamp.timestamp();
         if info_timestamp_offset {
             info_number -= 1000;
         }

@@ -66,7 +66,7 @@ fn check_reparse(data: &GMData) -> Result<()> {
     Ok(())
 }
 
-fn reassemble_one(data: &GMData, code: &GMCode) -> Result<()> {
+fn reassemble_one(data: &mut GMData, code: &GMCode) -> Result<()> {
     let assembly: String = disassemble_code(code, data)?;
     let reconstructed: Vec<Instruction> = assemble_instructions(&assembly, data)?;
 
@@ -77,12 +77,12 @@ fn reassemble_one(data: &GMData, code: &GMCode) -> Result<()> {
     print_diff(&code.instructions, &reconstructed);
     Err(err!(
         "Reassembly of {} (original: left) produced different instructions (right)",
-        code.name
+        data.strings.by_ref(code.name)?
     ))
 }
 
-fn check_reassemble(data: &GMData) -> Result<()> {
-    for code in &data.codes {
+fn check_reassemble(data: &mut GMData) -> Result<()> {
+    for code in data.codes.elements() {
         if code.is_root() {
             reassemble_one(data, code).with_context(|| {
                 format!("disassembling and reassembling code entry {:?}", code.name)
@@ -95,10 +95,10 @@ fn check_reassemble(data: &GMData) -> Result<()> {
 
 fn perform_inner(data_file_path: &Path, sha256sum: &str) -> Result<()> {
     verify_integrity(data_file_path, sha256sum)?;
-    let data = parse_file(data_file_path).context("parsing data file")?;
+    let mut data = parse_file(data_file_path).context("parsing data file")?;
     data.validate_names().context("validating all names")?;
     check_reparse(&data)?;
-    check_reassemble(&data)?;
+    check_reassemble(&mut data)?;
     Ok(())
 }
 

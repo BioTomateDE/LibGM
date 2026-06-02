@@ -7,9 +7,9 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
 /// Different GameMaker release branches. LTS has some but not all features of
 /// equivalent newer versions.
@@ -104,13 +104,11 @@ impl GMVersion {
     pub const GMS2: Self = Self::new(2, 0, 0, 0, LTSBranch::PreLTS);
     /// The pseudo-version "infinity" (highest possible values).
     ///
-    /// This is only useful for comparing against other `GMVersion`s
-    /// dynamically.
+    /// This is only useful for comparing against other `GMVersion`s dynamically.
     pub const INF: Self = Self::new(u32::MAX, u32::MAX, u32::MAX, u32::MAX, LTSBranch::PostLTS);
     /// The pseudo-version 0.0.0.0 (Pre LTS).
     ///
-    /// This is only useful for comparing against other `GMVersion`s
-    /// dynamically.
+    /// This is only useful for comparing against other `GMVersion`s dynamically.
     pub const NULL: Self = Self::new(0, 0, 0, 0, LTSBranch::PreLTS);
 
     /// Creates a new [`GMVersion`] with the given version parts and branch.

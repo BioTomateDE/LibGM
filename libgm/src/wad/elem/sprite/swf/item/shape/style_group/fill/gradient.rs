@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::num_enum;
 
+use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sprite::swf::Matrix33;
-use crate::wad::build::builder::DataBuilder;
+use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Data {
@@ -18,7 +17,7 @@ pub struct Data {
 
 impl GMElement for Data {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let fill_type: FillType = num_enum_from(reader.read_i32()?)?;
+        let fill_type: FillType = reader.read_enum()?;
         let tpe_index: Option<i32> = reader.deserialize_if_gm_version((2022, 1))?;
         let transformation_matrix = Matrix33::deserialize(reader)?;
         let records: Vec<Record> = reader.read_simple_list()?;
@@ -31,7 +30,7 @@ impl GMElement for Data {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(self.fill_type.into());
+        builder.write_enum(self.fill_type);
         builder.write_if_ver(&self.tpe_index, "TPE Index", (2022, 1))?;
         self.transformation_matrix.serialize(builder)?;
         builder.write_simple_list(&self.records)?;
@@ -68,8 +67,7 @@ impl GMElement for Record {
     }
 }
 
-#[num_enum(i32)]
-pub enum FillType {
-    Linear,
-    Radial,
-}
+gm_enum!(FillType {
+    Linear = 0,
+    Radial = 1,
+});

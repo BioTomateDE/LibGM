@@ -14,6 +14,8 @@ use std::path::Path;
 
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
+use crate::util::fmt::hexdump;
+use crate::wad::chunk::ChunkName;
 use crate::wad::data::Endianness;
 use crate::wad::data::GMData;
 use crate::wad::data::Metadata;
@@ -45,7 +47,6 @@ use crate::wad::elem::sequence::GMSequences;
 use crate::wad::elem::shader::GMShaders;
 use crate::wad::elem::sound::GMSounds;
 use crate::wad::elem::sprite::GMSprites;
-use crate::wad::elem::string::GMStrings;
 use crate::wad::elem::tag::GMTags;
 use crate::wad::elem::texture_group_info::GMTextureGroupInfos;
 use crate::wad::elem::texture_page::GMTexturePages;
@@ -162,8 +163,8 @@ impl ParsingOptions {
 
     /// Only parses the `GEN8` chunk and detects the proper GameMaker version.
     pub fn parse_general_info(&self, raw_data: impl AsRef<[u8]>) -> Result<GMGeneralInfo> {
-        let mut reader = parse_form(raw_data.as_ref())?;
-        init_reader(&mut reader)?;
+        let mut reader = parse_form(raw_data.as_ref()).context("parsing FORM")?;
+        init_reader(&mut reader).context("initializing reader")?;
         Ok(reader.general_info)
     }
 
@@ -239,18 +240,29 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
     let mut reader = DataReader::new(raw_data);
 
     // Read root chunk and set endianness
-    let root_chunk_name = reader.read_chunk_name().context("reading root chunk")?;
-    reader.endianness = match root_chunk_name.as_str() {
-        "FORM" => Endianness::Little,
-        "MROF" => Endianness::Big,
-        _ => bail!("Expected root chunk to be 'FORM' but found '{root_chunk_name}'"),
+    let bytes: &[u8; 4] = reader
+        .read_bytes_const()
+        .context("reading root chunk name")?;
+
+    reader.endianness = match bytes {
+        b"FORM" => Endianness::Little,
+        b"MROF" => Endianness::Big,
+        _ => {
+            let hex = hexdump(bytes);
+            let msg = "Expected root chunk to be 'FORM' but found";
+            if let Ok(string) = str::from_utf8(bytes) {
+                bail!("{msg} {string:?} ({hex})")
+            } else {
+                bail!("{msg} {hex}");
+            }
+        }
     };
     if reader.endianness == Endianness::Big {
         log::warn!("Big endian format might not work, proceed with caution");
     }
 
     // Length assertion
-    let remaining_data_len = reader.read_u32()?;
+    let remaining_data_len = reader.read_u32().context("reading root chunk length")?;
     let total_data_len = remaining_data_len + reader.cur_pos;
     if total_data_len as usize != raw_data.len() {
         bail!(
@@ -294,17 +306,19 @@ fn init_reader(reader: &mut DataReader) -> Result<()> {
     reader.specified_version = reader.read_gen8_version()?;
 
     // The following chunk read order is required:
-    // Required: GEN8 --> all others
+    // Required: STRG -> GEN8 --> all others
     //
     // Then (in any order):
-    // * [FUNC, VARI, STRG] --> CODE
+    // * [FUNC, VARI] --> CODE
     // * TPAG --> [BGND, EMBI, FONT, OPTN, SPRT]
 
-    // Set the STRG chunk so that the reader can read strings.
+    // Set the STRG chunk so that the reader can force-read strings.
     reader.string_chunk = reader
         .chunks
-        .get("STRG")
+        .get(ChunkName::STRG)
         .ok_or("Chunk STRG does not exist")?;
+
+    reader.strings = reader.read_chunk()?;
 
     // Read GEN8, which contains the important GM Version and WAD Version.
     reader.general_info = reader.read_chunk()?;
@@ -320,12 +334,15 @@ fn init_reader(reader: &mut DataReader) -> Result<()> {
         log::trace!("Detecting GameMaker Version took {stopwatch}");
     }
 
-    log::info!(
-        "Loading {:?} (GM {}, WAD {})",
-        reader.general_info.game_name,
-        reader.general_info.version,
-        reader.general_info.wad_version,
-    );
+    let game = reader
+        .strings
+        .by_ref(reader.general_info.game_name)
+        .map(String::as_str)
+        .unwrap_or("<unknown>");
+    let version = reader.general_info.version;
+    let wad_version = reader.general_info.wad_version;
+
+    log::info!("Loading {game:?} (GM {version}, WAD {wad_version})");
     Ok(())
 }
 
@@ -341,15 +358,12 @@ fn read_bytecode_chunks(reader: &mut DataReader) -> Result<(GMCodes, GMFunctions
 
     if is_yyc {
         log::warn!("YYC is untested, issues may occur");
-        // Need to remove STRG to not throw "unread chunk" error
-        reader.chunks.remove("STRG");
         Ok((
             GMCodes::default(),
             GMFunctions::default(),
             GMVariables::default(),
         ))
     } else {
-        reader.read_chunk::<GMStrings>()?; // Sets `reader.strings`
         let variables = reader.read_chunk()?; // Sets `reader.variable_occurrences`
         let functions = reader.read_chunk()?; // Sets `reader.function_occurrences`
         let codes = reader.read_chunk()?;
@@ -360,9 +374,9 @@ fn read_bytecode_chunks(reader: &mut DataReader) -> Result<(GMCodes, GMFunctions
 /// Parse GameMaker data
 fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
     let stopwatch = Stopwatch::start();
-    let mut reader: DataReader = parse_form(raw_data)?;
+    let mut reader: DataReader = parse_form(raw_data).context("parsing FORM")?;
     reader.options = options.clone();
-    init_reader(&mut reader)?;
+    init_reader(&mut reader).context("initializing reader")?;
 
     let texture_page_items: GMTexturePageItems = reader.read_chunk()?;
 
@@ -402,9 +416,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
     let feature_flags: GMFeatureFlags = reader.read_chunk()?;
     let filter_effects: GMFilterEffects = reader.read_chunk()?;
     let animation_curves: GMAnimationCurves = reader.read_chunk()?;
-
-    // This chunk is so useless that it is perfectly safe to throw it away.
-    reader.read_chunk::<GMDataFiles>()?;
+    let data_files: GMDataFiles = reader.read_chunk()?;
 
     log::trace!("Reading independent chunks took {stopwatch2}");
 
@@ -430,6 +442,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         audios,
         backgrounds,
         codes,
+        data_files,
         embedded_images,
         extensions,
         feature_flags,
@@ -451,6 +464,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         shaders,
         sounds,
         sprites,
+        strings: reader.strings,
         tags,
         texture_group_infos,
         texture_page_items,
@@ -474,7 +488,8 @@ fn handle_unread_chunks(chunks: &ChunkMap, allow_unknown: bool) -> Result<()> {
 
     let mut buffer = String::with_capacity(count * 6);
     for chunk_name in chunks.chunk_names() {
-        buffer.push_str(chunk_name.as_str());
+        use core::fmt::Write;
+        let _ = write!(buffer, "{chunk_name:?}");
         buffer.push_str(", ");
     }
 

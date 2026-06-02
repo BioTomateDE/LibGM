@@ -1,18 +1,26 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::list_chunk;
 
 use crate::gml::GMCode;
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
-use crate::wad::reference::GMRef;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_list_chunk;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
+use crate::wad::reference::GMRef;
 
-#[list_chunk("GMEN")]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMGameEndScripts {
     pub game_end_scripts: Vec<GMRef<GMCode>>,
     pub exists: bool,
 }
+
+gm_list_chunk!(
+    GMEN,
+    GMGameEndScripts,
+    GMRef<GMCode>,
+    game_end_scripts,
+    direct
+);
 
 impl GMElement for GMGameEndScripts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

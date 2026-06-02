@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::util::fmt::typename;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::GMElement;
 use crate::wad::version::ToGMVersion;
 
 // The element fields store `Option<T>`, so passing `Option<&T>` instead

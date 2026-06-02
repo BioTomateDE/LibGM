@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::game_object::GMGameObject;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct View {
@@ -21,7 +21,7 @@ pub struct View {
     pub border_y: u32,
     pub speed_x: i32,
     pub speed_y: i32,
-    pub object: Option<GMRef<GMGameObject>>,
+    pub object: GMRef<GMGameObject>,
 }
 
 impl GMElement for View {
@@ -39,7 +39,7 @@ impl GMElement for View {
         let border_y = reader.read_u32()?;
         let speed_x = reader.read_i32()?;
         let speed_y = reader.read_i32()?;
-        let object: Option<GMRef<GMGameObject>> = reader.read_resource_by_id_opt()?;
+        let object: GMRef<GMGameObject> = reader.read_resource_by_id()?;
 
         Ok(Self {
             enabled,
@@ -73,7 +73,7 @@ impl GMElement for View {
         builder.write_u32(self.border_y);
         builder.write_i32(self.speed_x);
         builder.write_i32(self.speed_y);
-        builder.write_resource_id_opt(self.object);
+        builder.write_resource_id(self.object);
         Ok(())
     }
 }

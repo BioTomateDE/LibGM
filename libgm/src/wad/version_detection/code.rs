@@ -4,13 +4,14 @@ use crate::gml::instruction::DataType;
 use crate::gml::opcodes;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
+use crate::wad::chunk::ChunkName;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
 
 pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     fn get_chunk_elem_count(
         reader: &mut DataReader,
-        chunk_name: &'static str,
+        chunk_name: ChunkName,
         gms2: bool,
     ) -> Result<u32> {
         let Some(chunk) = reader.chunks.get(chunk_name) else {
@@ -28,14 +29,14 @@ pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
     }
 
     let chunk_code = reader.chunk.clone();
-    let background_count = get_chunk_elem_count(reader, "BGND", false)?;
-    let path_count = get_chunk_elem_count(reader, "PATH", false)?;
-    let script_count = get_chunk_elem_count(reader, "SCPT", false)?;
-    let font_count = get_chunk_elem_count(reader, "FONT", false)?;
-    let timeline_count = get_chunk_elem_count(reader, "TMLN", false)?;
-    let shader_count = get_chunk_elem_count(reader, "SHDR", false)?;
-    let sequence_count = get_chunk_elem_count(reader, "SEQN", true)?;
-    let particle_system_count = get_chunk_elem_count(reader, "SEQN", true)?;
+    let background_count = get_chunk_elem_count(reader, ChunkName::BGND, false)?;
+    let path_count = get_chunk_elem_count(reader, ChunkName::PATH, false)?;
+    let script_count = get_chunk_elem_count(reader, ChunkName::SCPT, false)?;
+    let font_count = get_chunk_elem_count(reader, ChunkName::FONT, false)?;
+    let timeline_count = get_chunk_elem_count(reader, ChunkName::TMLN, false)?;
+    let shader_count = get_chunk_elem_count(reader, ChunkName::SHDR, false)?;
+    let sequence_count = get_chunk_elem_count(reader, ChunkName::SEQN, true)?;
+    let particle_system_count = get_chunk_elem_count(reader, ChunkName::SEQN, true)?;
 
     let is_asset_type_2024_4 = |int_argument: u32| -> bool {
         let resource_id = int_argument & 0xFF_FFFF;
@@ -89,7 +90,7 @@ pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
 
             if matches!(opcode, 0xC0..0xC4) {
                 // Push variants; account for int16
-                if type1 != DataType::Int16.into() {
+                if type1 != DataType::Int16.as_u8() {
                     reader.cur_pos += 4;
                 }
                 continue;
@@ -99,7 +100,7 @@ pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
                 continue;
             }
 
-            if type1 == DataType::Int32.into() {
+            if type1 == DataType::Int32.as_u8() {
                 let int_argument = reader.read_u32()?;
                 if is_asset_type_2024_4(int_argument) {
                     // Return immediately if highest detectable version (2024.4) is found

@@ -10,10 +10,10 @@ pub use sprite::SpriteInstance;
 pub use text_item::TextItemInstance;
 
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::room::tile::Tile;
-use crate::wad::build::builder::DataBuilder;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::version::LTSBranch;
 
 #[derive(Debug, Clone, PartialEq)]

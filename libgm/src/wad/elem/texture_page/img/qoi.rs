@@ -12,8 +12,8 @@ use image::Rgba;
 
 use crate::prelude::*;
 use crate::util::fmt::hexdump_range;
-use crate::wad::data::Endianness;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::data::Endianness;
 
 const QOI_INDEX: u8 = 0x00;
 const QOI_RUN_8: u8 = 0x40;

@@ -48,18 +48,12 @@ pub enum Instruction {
 
     /// Pops two values from the stack, **multiplies** them, and pushes the
     /// result.
-    Multiply {
-        multiplicand: DataType,
-        multiplier: DataType,
-    },
+    Multiply { lhs: DataType, rhs: DataType },
 
     /// Pops two values from the stack, **divides** them, and pushes the result.
     /// The second popped value (`dividend`) is divided by the first popped
     /// value (`divisor`).
-    Divide {
-        dividend: DataType,
-        divisor: DataType,
-    },
+    Divide { lhs: DataType, rhs: DataType },
 
     /// Pops two values from the stack, performs a GML `div` operation (division
     /// with remainder), and pushes the result. The second popped value
@@ -69,10 +63,7 @@ pub enum Instruction {
     /// This operation is similar to [`Instruction::Modulus`], except it behaves
     /// differently for negative values. For example: `-19 rem 12 == -7`
     /// (not 5).
-    Remainder {
-        dividend: DataType,
-        divisor: DataType,
-    },
+    Remainder { lhs: DataType, rhs: DataType },
 
     /// Pops two values from the stack, performs a GML `mod` operation (`%`),
     /// and pushes the result. The second popped value is modulo'd against
@@ -81,21 +72,15 @@ pub enum Instruction {
     /// This operation is similar to [`Instruction::Remainder`], except it
     /// behaves differently for negative values. This `modulus` operation performs [Euclidean division](https://en.wikipedia.org/wiki/Euclidean_division).
     /// For example: `-19 rem 12 == 5` (not -7).
-    Modulus {
-        dividend: DataType,
-        divisor: DataType,
-    },
+    Modulus { lhs: DataType, rhs: DataType },
 
     /// Pops two values from the stack, **adds** them, and pushes the result.
-    Add { augend: DataType, addend: DataType },
+    Add { lhs: DataType, rhs: DataType },
 
     /// Pops two values from the stack, **subtracts** them, and pushes the
     /// result. The second popped value is subtracted by the first popped
     /// value.
-    Subtract {
-        minuend: DataType,
-        subtrahend: DataType,
-    },
+    Subtract { lhs: DataType, rhs: DataType },
 
     /// Pops two values from the stack, performs an **AND** operation, and
     /// pushes the result. This can be done bitwise or logically, depending
@@ -123,18 +108,12 @@ pub enum Instruction {
     /// Pops two values from the stack, performs a bitwise **left shift**
     /// operation (`<<`), and pushes the result. The second popped value
     /// (`value`) is shifted left by the first popped value (`shift_amount`).
-    ShiftLeft {
-        value: DataType,
-        shift_amount: DataType,
-    },
+    ShiftLeft { lhs: DataType, rhs: DataType },
 
     /// Pops two values from the stack, performs a bitwise **right shift**
     /// operation (`>>`), and pushes the result. The second popped value
     /// (`value`) is shifted right by the first popped value (`shift_amount`).
-    ShiftRight {
-        value: DataType,
-        shift_amount: DataType,
-    },
+    ShiftRight { lhs: DataType, rhs: DataType },
 
     /// Pops two values from the stack, **compares** them using a
     /// [`ComparisonType`], and pushes a boolean result
@@ -375,7 +354,7 @@ pub enum Instruction {
     /// specified (probably nothing?).
     Call {
         function: GMRef<GMFunction>,
-        argument_count: u16,
+        arg_count: u16,
     },
 
     /// Pops two values off of the stack, and then calls a
@@ -606,12 +585,12 @@ impl Instruction {
     pub const fn type1(&self) -> Option<DataType> {
         Some(match self {
             Self::Convert { from, .. } => *from,
-            Self::Multiply { multiplier, .. } => *multiplier,
-            Self::Divide { divisor, .. }
-            | Self::Remainder { divisor, .. }
-            | Self::Modulus { divisor, .. } => *divisor,
-            Self::Add { addend, .. } => *addend,
-            Self::Subtract { subtrahend, .. } => *subtrahend,
+            Self::Multiply { rhs: multiplier, .. } => *multiplier,
+            Self::Divide { rhs: divisor, .. }
+            | Self::Remainder { rhs: divisor, .. }
+            | Self::Modulus { rhs: divisor, .. } => *divisor,
+            Self::Add { rhs: addend, .. } => *addend,
+            Self::Subtract { rhs: subtrahend, .. } => *subtrahend,
             Self::And { rhs, .. }
             | Self::Or { rhs, .. }
             | Self::Xor { rhs, .. }
@@ -621,9 +600,8 @@ impl Instruction {
             | Self::Duplicate { data_type, .. }
             | Self::DuplicateSwap { data_type, .. }
             | Self::PopDiscard { data_type } => *data_type,
-            Self::ShiftLeft { shift_amount, .. } | Self::ShiftRight { shift_amount, .. } => {
-                *shift_amount
-            }
+            Self::ShiftLeft { rhs: shift_amount, .. }
+            | Self::ShiftRight { rhs: shift_amount, .. } => *shift_amount,
             Self::Pop { type1, .. } => *type1,
             Self::Push { value } => value.data_type(),
             Self::PushLocal { .. } | Self::PushGlobal { .. } | Self::PushBuiltin { .. } => {
@@ -643,17 +621,17 @@ impl Instruction {
     pub const fn type2(&self) -> Option<DataType> {
         Some(match *self {
             Self::Convert { to, .. } => to,
-            Self::Multiply { multiplicand, .. } => multiplicand,
-            Self::Divide { dividend, .. }
-            | Self::Remainder { dividend, .. }
-            | Self::Modulus { dividend, .. } => dividend,
-            Self::Add { augend, .. } => augend,
-            Self::Subtract { minuend, .. } => minuend,
+            Self::Multiply { lhs: multiplicand, .. } => multiplicand,
+            Self::Divide { lhs: dividend, .. }
+            | Self::Remainder { lhs: dividend, .. }
+            | Self::Modulus { lhs: dividend, .. } => dividend,
+            Self::Add { lhs: augend, .. } => augend,
+            Self::Subtract { lhs: minuend, .. } => minuend,
             Self::And { lhs, .. }
             | Self::Or { lhs, .. }
             | Self::Xor { lhs, .. }
             | Self::Compare { lhs, .. } => lhs,
-            Self::ShiftLeft { value, .. } | Self::ShiftRight { value, .. } => value,
+            Self::ShiftLeft { lhs: value, .. } | Self::ShiftRight { lhs: value, .. } => value,
             Self::Pop { type2, .. } => type2,
             _ => return None,
         })

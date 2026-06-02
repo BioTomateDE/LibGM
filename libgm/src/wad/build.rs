@@ -18,9 +18,8 @@ use builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
 use crate::util::panic;
-use crate::wad::chunk::ChunkName;
+use crate::wad::data::Endianness;
 use crate::wad::data::GMData;
-use crate::wad::elem::string::GMStrings;
 
 /// Builds a GameMaker data file and returns a byte buffer.
 ///
@@ -63,13 +62,19 @@ fn build_impl(data: &GMData) -> Result<Vec<u8>> {
     let stopwatch = Stopwatch::start();
     let mut builder = DataBuilder::new(data);
 
-    builder.write_chunk_name(ChunkName::new("FORM"));
+    let root_chunk = match data.meta.endianness {
+        Endianness::Little => b"FORM",
+        Endianness::Big => b"MROF",
+    };
+    builder.write_bytes(root_chunk);
+
     // Write Data length placeholder
     builder.write_u32(0xDEAD_C0DE);
 
     // GEN8 has to be the first chunk, at least for utmt (?).
     // CODE has to be written before VARI and FUNC.
 
+    // TODO: preserve chunk order
     builder.build_chunk(&data.general_info)?;
     builder.build_chunk(&data.options)?;
     builder.build_chunk(&data.extensions)?;
@@ -103,15 +108,14 @@ fn build_impl(data: &GMData) -> Result<Vec<u8>> {
     builder.build_chunk(&data.feature_flags)?;
     builder.build_chunk(&data.filter_effects)?;
     builder.build_chunk(&data.animation_curves)?;
-
-    builder.build_chunk(&GMStrings)?;
+    builder.build_chunk(&data.strings)?;
 
     builder.remove_last_chunk_padding();
 
     builder.connect_pointer_placeholders()?;
 
     // Overwrite data length placeholder
-    builder.overwrite_u32(builder.len() - 8, 4)?;
+    builder.overwrite_u32(builder.pos() - 8, 4)?;
 
     log::trace!("Building data file took {stopwatch}");
 

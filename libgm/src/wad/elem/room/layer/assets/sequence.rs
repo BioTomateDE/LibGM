@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sequence::GMSequence;
 use crate::wad::elem::sequence::SpeedType;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SequenceInstance {
-    pub name: String,
+    pub name: GMRef<String>,
     pub sequence: GMRef<GMSequence>,
     pub x: i32,
     pub y: i32,
@@ -25,7 +24,7 @@ pub struct SequenceInstance {
 
 impl GMElement for SequenceInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: String = reader.read_gm_string()?;
+        let name: GMRef<String> = reader.read_gm_string()?;
         let sequence: GMRef<GMSequence> = reader.read_resource_by_id()?;
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
@@ -33,7 +32,7 @@ impl GMElement for SequenceInstance {
         let scale_y = reader.read_f32()?;
         let color = reader.read_u32()?;
         let animation_speed = reader.read_f32()?;
-        let animation_speed_type: SpeedType = num_enum_from(reader.read_i32()?)?;
+        let animation_speed_type: SpeedType = reader.read_enum()?;
         let frame_index = reader.read_f32()?;
         let rotation = reader.read_f32()?;
         Ok(Self {
@@ -52,7 +51,7 @@ impl GMElement for SequenceInstance {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
+        builder.write_gm_string(self.name)?;
         builder.write_resource_id(self.sequence);
         builder.write_i32(self.x);
         builder.write_i32(self.y);
@@ -60,7 +59,7 @@ impl GMElement for SequenceInstance {
         builder.write_f32(self.scale_y);
         builder.write_u32(self.color);
         builder.write_f32(self.animation_speed);
-        builder.write_i32(self.animation_speed_type.into());
+        builder.write_enum(self.animation_speed_type);
         builder.write_f32(self.frame_index);
         builder.write_f32(self.rotation);
         Ok(())

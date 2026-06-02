@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::num_enum;
 
+use crate::gm_enum::GMEnum;
+use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
 use crate::wad::elem::game_object::event::EventSubtype;
 
-/// Some event that was too irrelevan to be included into the main list.
+gm_enum!(
+/// Events that were apparently too irrelevant to be included into the main list.
 /// Also includes user-defined events.
-#[num_enum(u32)]
-pub enum Other {
+Other {
     /// The outside room event.
     OutsideRoom = 0,
 
@@ -189,15 +189,15 @@ pub enum Other {
 
     /// The async system event.
     AsyncSystem = 75,
-}
+});
 
 impl EventSubtype for Other {
-    fn parse(subtype: u32) -> Result<Self> {
-        num_enum_from(subtype)
+    fn parse(subtype: i32) -> Result<Self> {
+        Self::from_i32(subtype)
     }
 
-    fn build(self) -> u32 {
-        self.into()
+    fn build(self) -> i32 {
+        self.as_i32()
     }
 }
 

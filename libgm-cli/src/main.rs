@@ -44,7 +44,7 @@ fn run(mut args: cli::Args) -> Result<()> {
 
         let mut data: GMData = parser.parse_file(&data_file)?;
 
-        tests::perform(&data, &tests)?;
+        tests::perform(&mut data, &tests)?;
 
         for data_file2 in &args.diffs {
             log::info!("Diffing with data file {}", data_file2.display());
@@ -57,7 +57,7 @@ fn run(mut args: cli::Args) -> Result<()> {
         }
 
         for code_name in &args.codes {
-            let code = data.codes.by_name(code_name)?;
+            let code = data.codes.by_name(code_name, &data.strings)?;
             let assembly = disassemble_code(code, &data)?;
             println!("===== {code_name} =====");
             println!("{assembly}");

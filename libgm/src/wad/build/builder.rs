@@ -4,10 +4,9 @@ use std::collections::HashMap;
 use crate::gml::instruction::VariableType;
 use crate::prelude::*;
 use crate::wad::GMVersion;
+use crate::wad::build::pointers::Pointer;
 use crate::wad::data::Endianness;
 use crate::wad::data::GMData;
-use crate::wad::elem::string::StringPlaceholder;
-use crate::wad::build::pointers::Pointer;
 
 // The Default value should never be read.
 // This can only happen if there are zero existent chunks, though.
@@ -48,8 +47,6 @@ pub struct DataBuilder<'a> {
     ///   occurrence
     pub variable_occurrences: Vec<Vec<(u32, VariableType)>>,
 
-    pub string_placeholders: Vec<StringPlaceholder>,
-
     pub last_chunk: LastChunk,
 }
 
@@ -64,7 +61,6 @@ impl<'a> DataBuilder<'a> {
             pointer_resource_positions: HashMap::new(),
             function_occurrences: vec![Vec::new(); gm_data.functions.len()],
             variable_occurrences: vec![Vec::new(); gm_data.variables.len()],
-            string_placeholders: Vec::new(),
             last_chunk: LastChunk::default(),
         }
     }
@@ -77,7 +73,7 @@ impl<'a> DataBuilder<'a> {
 
     /// The current length (aka. "position") of the internal buffer.
     #[inline]
-    pub const fn len(&self) -> u32 {
+    pub const fn pos(&self) -> u32 {
         self.raw_data.len() as u32
     }
 
@@ -99,7 +95,7 @@ impl<'a> DataBuilder<'a> {
     /// This adds zero bytes until `self.len()` is a multiple of `alignment`.
     #[inline]
     pub fn align(&mut self, alignment: u32) {
-        while !self.len().is_multiple_of(alignment) {
+        while !self.pos().is_multiple_of(alignment) {
             self.write_u8(0);
         }
     }
@@ -161,7 +157,7 @@ impl<'a> DataBuilder<'a> {
         pointer_list_pos: u32,
         element_index: usize,
     ) -> Result<()> {
-        let number: u32 = self.len();
+        let number: u32 = self.pos();
         let position: u32 = pointer_list_pos + 4 * element_index as u32;
         self.overwrite_u32(number, position).with_context(|| {
             format!(
@@ -176,7 +172,7 @@ impl<'a> DataBuilder<'a> {
     /// - If `false`, write `0_i32`.
     #[inline]
     pub fn write_bool32(&mut self, boolean: bool) {
-        self.write_i32(boolean.into());
+        self.write_i32(boolean as i32);
     }
 
     /// Write an actual character string.

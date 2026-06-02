@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! This is THE module. All GameMaker elements are contained in these
-//! submodules. There are some traits as well which can help you with dynamic
-//! programming.
+//! This is THE module. All GameMaker elements are contained in these submodules.
+//! There are some traits as well which can help you with dynamic programming.
 
 use std::collections::HashMap;
 
 use crate::prelude::*;
 use crate::util::fmt::typename;
-use crate::wad::chunk::ChunkName;
+use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::string::GMStrings;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 
 pub mod animation_curve;
 pub mod audio;
@@ -66,8 +65,7 @@ pub trait GMElement: Sized {
     #[doc(hidden)]
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()>;
 
-    /// Handles padding bytes that may appear before this element in pointer
-    /// lists.
+    /// Handles padding bytes that may appear before this element in pointer lists.
     ///
     /// This is called before [`GMElement::deserialize`] when reading from
     /// structured data. The default implementation does nothing - override
@@ -77,8 +75,7 @@ pub trait GMElement: Sized {
         Ok(())
     }
 
-    /// Writes padding bytes that may be required before this element in pointer
-    /// lists.
+    /// Writes padding bytes that may be required before this element in pointer lists.
     ///
     /// This is called before [`GMElement::serialize`] when writing to
     /// structured data. The default implementation does nothing - override
@@ -88,8 +85,7 @@ pub trait GMElement: Sized {
         Ok(())
     }
 
-    /// Handles padding bytes that may appear after this element in pointer
-    /// lists.
+    /// Handles padding bytes that may appear after this element in pointer lists.
     ///
     /// This is called after [`GMElement::deserialize`] when reading from
     /// structured data. The `is_last` parameter indicates if this is the
@@ -99,8 +95,7 @@ pub trait GMElement: Sized {
         Ok(())
     }
 
-    /// Writes padding bytes that may be required after this element in pointer
-    /// lists.
+    /// Writes padding bytes that may be required after this element in pointer lists.
     ///
     /// This is called after [`GMElement::serialize`] when writing to structured
     /// data. The `is_last` parameter indicates if this is the final element
@@ -232,29 +227,7 @@ impl GMElement for bool {
     }
 }
 
-impl GMElement for String {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        reader.read_gm_string()
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self);
-        Ok(())
-    }
-}
-
-impl GMElement for Option<String> {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        reader.read_gm_string_opt()
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string_opt(self);
-        Ok(())
-    }
-}
-
-impl<T> GMElement for GMRef<T> {
+impl<T: GMElement> GMElement for GMRef<T> {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_resource_by_id()
     }
@@ -265,95 +238,27 @@ impl<T> GMElement for GMRef<T> {
     }
 }
 
-impl<T> GMElement for Option<GMRef<T>> {
+impl GMElement for GMRef<String> {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        reader.read_resource_by_id_opt()
+        reader.read_gm_string()
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_resource_id_opt(*self);
-        Ok(())
+        builder.write_gm_string(*self)
     }
-}
-
-/// All chunk elements should implement this trait.
-pub trait GMChunk: GMElement + Default {
-    /// The four character GameMaker chunk name (GEN8, STRG, VARI, etc.).
-    const NAME: ChunkName;
-
-    /// Returns `true` if this chunk is present in the data file.
-    ///
-    /// This differs from simply checking if the chunk is empty:
-    /// - A list chunk may exist and contain zero elements.
-    ///   > Chunk name + chunk length (four) + element count (zero).
-    /// - A chunk may exist but contain no data.
-    ///   > Chunk name + chunk length (zero).
-    /// - A chunk may be absent entirely from the file format.
-    ///   > Completely gone.
-    ///
-    /// Use this to distinguish between "present but empty" and "not present at
-    /// all".
-    fn exists(&self) -> bool;
-}
-
-/// All chunk elements that represent a collection of elements should implement
-/// this trait. The only exceptions are `GEN8` and `OPTN`.
-pub trait GMListChunk: GMChunk {
-    type Element: GMElement;
-
-    #[must_use]
-    fn elements(&self) -> &Vec<Self::Element>;
-
-    #[must_use]
-    fn elements_mut(&mut self) -> &mut Vec<Self::Element>;
-
-    fn by_ref(&self, gm_ref: GMRef<Self::Element>) -> Result<&Self::Element> {
-        gm_ref.resolve(self.elements())
-    }
-
-    fn by_ref_mut(&mut self, gm_ref: GMRef<Self::Element>) -> Result<&mut Self::Element> {
-        gm_ref.resolve_mut(self.elements_mut())
-    }
-
-    fn push(&mut self, element: Self::Element) {
-        self.elements_mut().push(element);
-    }
-
-    #[must_use]
-    fn len(&self) -> usize {
-        self.elements().len()
-    }
-
-    #[must_use]
-    fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    fn iter(&self) -> core::slice::Iter<'_, Self::Element>;
-    fn iter_mut(&mut self) -> core::slice::IterMut<'_, Self::Element>;
-}
-
-/// All chunk elements that represent a collection of elements **with a unique
-/// name** should implement this trait.
-pub trait GMNamedListChunk: GMListChunk<Element: GMNamedElement> {
-    fn ref_by_name(&self, name: &str) -> Result<GMRef<Self::Element>>;
-    fn by_name(&self, name: &str) -> Result<&Self::Element>;
-    fn by_name_mut(&mut self, name: &str) -> Result<&mut Self::Element>;
 }
 
 /// Validates all names of the root elements in this chunk.
 ///
-/// This checks for duplicates as well as names not following the proper
-/// charset.
-pub fn validate_names<T: GMNamedListChunk>(chunk: &T) -> Result<()> {
+/// This checks for duplicates as well as names not following the proper charset.
+pub(crate) fn validate_names<T: GMNamedListChunk>(chunk: &T, gm_strings: &GMStrings) -> Result<()> {
     // TODO(perf): this can probably be optimised or something
-    let elements = chunk.elements();
-    let mut seen: HashMap<&String, usize> = HashMap::new();
+    let mut seen: HashMap<&String, GMRef<_>> = HashMap::new();
 
-    for (i, item) in elements.iter().enumerate() {
-        let name = item.name();
+    for (i, item) in chunk.element_refs() {
+        let name = item.name(gm_strings)?;
 
-        item.validate_name().with_context(|| {
+        item.validate_name(gm_strings).with_context(|| {
             format!(
                 "validating {} with name {:?}",
                 typename::<T::Element>(),
@@ -366,8 +271,7 @@ pub fn validate_names<T: GMNamedListChunk>(chunk: &T) -> Result<()> {
         };
 
         bail!(
-            "There are multiple {} with the same name ({:?}): First at index {} and now at index \
-             {}",
+            "There are multiple {} with the same name ({:?}): First at {:?} and now at {:?}",
             typename::<T::Element>(),
             name,
             first_index,
@@ -381,18 +285,20 @@ pub fn validate_names<T: GMNamedListChunk>(chunk: &T) -> Result<()> {
 /// they're contained in) should implement this trait.
 #[allow(unused_variables)]
 pub trait GMNamedElement: GMElement {
-    /// The name of this element.
+    /// The name of this element as a `GMRef<String>`.
     #[must_use]
-    fn name(&self) -> &String;
+    fn name_ref(&self) -> GMRef<String>;
 
-    /// A mutable reference to the name of this element.
+    /// The name of this element as a `&String`.
     #[must_use]
-    fn name_mut(&mut self) -> &mut String;
+    fn name<'a>(&self, gm_strings: &'a GMStrings) -> Result<&'a String> {
+        self.name_ref().resolve(&gm_strings.strings)
+    }
 
     /// Whether the name of this element is valid.
     /// This method respects this element type's specific rules.
-    fn validate_name(&self) -> Result<()> {
-        validate_identifier(self.name())
+    fn validate_name(&self, gm_strings: &GMStrings) -> Result<()> {
+        validate_identifier(self.name(gm_strings)?)
     }
 }
 
@@ -432,10 +338,7 @@ macro_rules! element_stub {
                 );
             }
 
-            fn serialize(
-                &self,
-                _: &mut $crate::wad::build::builder::DataBuilder,
-            ) -> Result<()> {
+            fn serialize(&self, _: &mut $crate::wad::build::builder::DataBuilder) -> Result<()> {
                 unimplemented!(
                     "Using {0}::serialize is not supported, use {0}s::serialize instead",
                     stringify!($type),

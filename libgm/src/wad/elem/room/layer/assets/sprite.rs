@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sequence::SpeedType;
 use crate::wad::elem::sprite::GMSprite;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SpriteInstance {
-    pub name: String,
-    pub sprite: Option<GMRef<GMSprite>>,
+    pub name: GMRef<String>,
+    pub sprite: GMRef<GMSprite>,
     pub x: i32,
     pub y: i32,
     pub scale_x: f32,
@@ -25,15 +24,15 @@ pub struct SpriteInstance {
 
 impl GMElement for SpriteInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: String = reader.read_gm_string()?;
-        let sprite: Option<GMRef<GMSprite>> = reader.read_resource_by_id_opt()?;
+        let name: GMRef<String> = reader.read_gm_string()?;
+        let sprite: GMRef<GMSprite> = reader.read_resource_by_id()?;
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
         let scale_x = reader.read_f32()?;
         let scale_y = reader.read_f32()?;
         let color = reader.read_u32()?;
         let animation_speed = reader.read_f32()?;
-        let animation_speed_type: SpeedType = num_enum_from(reader.read_i32()?)?;
+        let animation_speed_type: SpeedType = reader.read_enum()?;
         let frame_index = reader.read_f32()?;
         let rotation = reader.read_f32()?;
         Ok(Self {
@@ -52,15 +51,15 @@ impl GMElement for SpriteInstance {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
-        builder.write_resource_id_opt(self.sprite);
+        builder.write_gm_string(self.name)?;
+        builder.write_resource_id(self.sprite);
         builder.write_i32(self.x);
         builder.write_i32(self.y);
         builder.write_f32(self.scale_x);
         builder.write_f32(self.scale_y);
         builder.write_u32(self.color);
         builder.write_f32(self.animation_speed);
-        builder.write_i32(self.animation_speed_type.into());
+        builder.write_enum(self.animation_speed_type);
         builder.write_f32(self.frame_index);
         builder.write_f32(self.rotation);
         Ok(())

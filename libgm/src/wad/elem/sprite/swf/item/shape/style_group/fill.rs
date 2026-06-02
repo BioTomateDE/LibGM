@@ -4,9 +4,9 @@ pub mod gradient;
 pub mod solid;
 
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Data {

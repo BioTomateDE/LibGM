@@ -6,14 +6,15 @@ use crate::prelude::*;
 use crate::util::assert;
 use crate::wad::chunk::ChunkName;
 use crate::wad::data::Endianness;
-use crate::wad::parse::ParsingOptions;
-use crate::wad::parse::chunk::ChunkBounds;
-use crate::wad::parse::chunk::ChunkMap;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::function::GMFunction;
 use crate::wad::elem::general_info::GMGeneralInfo;
+use crate::wad::elem::string::GMStrings;
 use crate::wad::elem::texture_page_item::GMTexturePageItem;
 use crate::wad::elem::variable::GMVariable;
+use crate::wad::parse::ParsingOptions;
+use crate::wad::parse::chunk::ChunkBounds;
+use crate::wad::parse::chunk::ChunkMap;
 use crate::wad::reference::GMRef;
 use crate::wad::version::GMVersion;
 use crate::wad::version::ToGMVersion;
@@ -69,18 +70,20 @@ pub struct DataReader<'a> {
     /// the GameMaker version before `GEN8` is parsed.
     pub general_info: GMGeneralInfo,
 
-    /// Will be set after chunk `STRG` is parsed (first chunk to parse).
-    /// Contains all GameMaker strings by ID (aka index)
-    /// Needed for String references in Push Instructions.
-    pub strings: Vec<String>,
-
     /// Chunk `STRG`.
     /// Is properly initialized after parsing `FORM`.
     pub string_chunk: ChunkBounds,
 
+    pub strings: GMStrings,
+
     /// Contains parsing options (wow!).
     /// Properly initialized after parsing `FORM`.
     pub options: ParsingOptions,
+
+    /// Should only be set by [`crate::wad::elem::string`].
+    /// This means that `STRG` has to be parsed before any other chunk
+    /// (any chunk with string pointers).
+    pub string_occurrences: HashMap<u32, GMRef<String>>,
 
     /// Should only be set by [`crate::wad::elem::texture_page_item`].
     /// This means that `TPAG` has to be parsed before any chunk with texture
@@ -118,11 +121,12 @@ impl<'a> DataReader<'a> {
             endianness: Endianness::Little,
             chunk: ChunkBounds { start_pos: 0, end_pos },
             chunks: ChunkMap::new(),
-            last_chunk: ChunkName::new("XXXX"),     // stub
+            last_chunk: ChunkName::DAFL,            // stub
             general_info: GMGeneralInfo::default(), // stub
-            strings: vec![],
-            string_chunk: ChunkBounds::default(), // stub
-            options: ParsingOptions::default(),   // stub
+            string_chunk: ChunkBounds::default(),   // stub
+            strings: GMStrings::default(),          // stub
+            options: ParsingOptions::default(),     // stub
+            string_occurrences: HashMap::new(),
             texture_page_item_occurrences: HashMap::new(),
             variable_occurrences: HashMap::new(),
             function_occurrences: HashMap::new(),
@@ -247,7 +251,7 @@ impl<'a> DataReader<'a> {
         let end = self.chunk.end_pos;
         let pos = start.checked_add(relative_pos).ok_or_else(|| {
             format!(
-                "Relative position {relative_pos} would 
+                "Relative position {relative_pos} would
                 overflow from start position {start}"
             )
         })?;

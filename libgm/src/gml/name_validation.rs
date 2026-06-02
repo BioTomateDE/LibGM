@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::gml::GMCode;
 use crate::prelude::*;
+use crate::wad::elem::string::GMStrings;
 use crate::wad::elem::validate_identifier;
 
 impl GMNamedElement for GMCode {
-    fn name(&self) -> &String {
-        &self.name
+    fn name_ref(&self) -> GMRef<String> {
+        self.name
     }
 
-    fn name_mut(&mut self) -> &mut String {
-        &mut self.name
-    }
-
-    fn validate_name(&self) -> Result<()> {
-        let name: &str = &self.name;
+    fn validate_name(&self, gm_strings: &GMStrings) -> Result<()> {
+        let name: &str = self.name(gm_strings)?;
         validate(name).with_context(|| format!("strictly validating code entry name {name:?}"))
     }
 }
@@ -62,8 +59,8 @@ fn validate(mut name: &str) -> Result<()> {
 
             let e = "Object code entry name has too few parts (not enough underscores to be valid)";
             let (event_type, event_subtype) = last_three_parts(&mut name).ok_or(e)?;
-            let event_subtype: u32 = event_subtype
-                .parse::<u32>()
+            let event_subtype: i32 = event_subtype
+                .parse::<i32>()
                 .context_src("parsing Event subtype in Object code entry")?;
             validate_event(event_type, event_subtype)?;
         }
@@ -91,7 +88,7 @@ fn validate_room_event_kind(event_kind: &str) -> Result<()> {
     }
 }
 
-fn validate_event(event_type: &str, subtype: u32) -> Result<()> {
+fn validate_event(event_type: &str, subtype: i32) -> Result<()> {
     use crate::wad::elem::game_object::event::EventSubtype;
     use crate::wad::elem::game_object::event::subtype::Alarm;
     use crate::wad::elem::game_object::event::subtype::Draw;
@@ -123,7 +120,7 @@ fn validate_event(event_type: &str, subtype: u32) -> Result<()> {
     error.map_or(Ok(()), Err)
 }
 
-fn assert_zero(subtype: u32) -> Option<Error> {
+fn assert_zero(subtype: i32) -> Option<Error> {
     if subtype == 0 {
         None
     } else {

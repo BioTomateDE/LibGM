@@ -22,14 +22,14 @@ pub use moment::Moment;
 pub use particle::Particle;
 pub use sequence::Sequence;
 pub use sprite_frames::SpriteFrames;
-pub use string::String;
+pub use string::KString;
 pub use text::Text;
 
 use crate::prelude::*;
 use crate::util::fmt::typename;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Keyframes {
@@ -40,7 +40,7 @@ pub enum Keyframes {
     SpriteFrames(Data<SpriteFrames>),
     Bool(Data<Bool>),
     // Asset(Data<Asset>),
-    String(Data<String>),
+    String(Data<KString>),
     // Int(Data<Int>),
     Color(color::KeyframesData),
     Real(color::KeyframesData),

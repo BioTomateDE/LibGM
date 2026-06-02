@@ -189,7 +189,7 @@ impl GMElement for EventGroups {
         let count: u32 = type_count_by_wad(builder.wad_version());
 
         builder.write_u32(count);
-        let pointer_list_pos = builder.len();
+        let pointer_list_pos = builder.pos();
         for _ in 0..count {
             builder.write_u32(0xDEAD_C0DE);
         }
@@ -259,7 +259,7 @@ pub struct Event<T: EventSubtype> {
 
 impl<T: EventSubtype> GMElement for Event<T> {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let subtype: u32 = reader.read_u32()?;
+        let subtype: i32 = reader.read_i32()?;
         let subtype: T = T::parse(subtype)
             .with_context(|| format!("parsing Event subtype {}", typename::<T>()))?;
         let actions: Vec<Action> = reader.read_pointer_list()?;
@@ -267,8 +267,8 @@ impl<T: EventSubtype> GMElement for Event<T> {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        let subtype: u32 = self.subtype.build();
-        builder.write_u32(subtype);
+        let subtype: i32 = self.subtype.build();
+        builder.write_i32(subtype);
         builder.write_pointer_list(&self.actions)?;
         Ok(())
     }
@@ -277,20 +277,20 @@ impl<T: EventSubtype> GMElement for Event<T> {
 /// Not meant to be implemented outside the crate.
 pub trait EventSubtype: std::fmt::Debug + Copy + PartialEq {
     #[doc(hidden)]
-    fn parse(subtype: u32) -> Result<Self>;
+    fn parse(subtype: i32) -> Result<Self>;
 
     #[doc(hidden)]
-    fn build(self) -> u32;
+    fn build(self) -> i32;
 }
 
 impl EventSubtype for () {
-    fn parse(subtype: u32) -> Result<Self> {
+    fn parse(subtype: i32) -> Result<Self> {
         // can't use `reader.options.verify_constants` here :c
         assert::int(subtype, 0, "Event Subtype for event with no data")?;
         Ok(())
     }
 
-    fn build(self) -> u32 {
+    fn build(self) -> i32 {
         0
     }
 }

@@ -19,17 +19,17 @@ use crate::wad::parse::reader::DataReader;
 
 #[derive(Clone, PartialEq)]
 pub struct Action {
-    lib_id: u32,          // usually 1
-    id: u32,              // usually 603, sometimes 601, sometimes other
-    kind: u32,            // usually 7
-    use_relative: bool,   // usually false
-    is_question: bool,    // usually false
-    use_apply_to: bool,   // usually true
-    exe_type: u32,        // usually 2
-    name: Option<String>, // Some("") or None
+    lib_id: u32,         // usually 1
+    id: u32,             // usually 603, sometimes 601, sometimes other
+    kind: u32,           // usually 7
+    use_relative: bool,  // usually false
+    is_question: bool,   // usually false
+    use_apply_to: bool,  // usually true
+    exe_type: u32,       // usually 2
+    name: GMRef<String>, // Some("") or None
 
     /// The code that will be executed when this action is ran.
-    pub code: Option<GMRef<GMCode>>,
+    pub code: GMRef<GMCode>,
 
     argument_count: u32, // usually 1
     who: i32,            // usually -1
@@ -49,8 +49,8 @@ impl Action {
             is_question: false,
             use_apply_to: true,
             exe_type: 2,
-            name: None,
-            code: Some(code),
+            name: GMRef::none(),
+            code,
             argument_count: 1,
             who: -1,
             relative: false,
@@ -77,8 +77,8 @@ impl GMElement for Action {
         let is_question = reader.read_bool32()?;
         let use_apply_to = reader.read_bool32()?;
         let exe_type = reader.read_u32()?;
-        let name = reader.read_gm_string_opt()?;
-        let code = reader.read_resource_by_id_opt()?;
+        let name = reader.read_gm_string()?;
+        let code = reader.read_resource_by_id()?;
         let argument_count = reader.read_u32()?;
         let who = reader.read_i32()?;
         let relative = reader.read_bool32()?;
@@ -110,8 +110,8 @@ impl GMElement for Action {
         builder.write_bool32(self.is_question);
         builder.write_bool32(self.use_apply_to);
         builder.write_u32(self.exe_type);
-        builder.write_gm_string_opt(&self.name);
-        builder.write_resource_id_opt(self.code);
+        builder.write_gm_string(self.name)?;
+        builder.write_resource_id(self.code);
         builder.write_u32(self.argument_count);
         builder.write_i32(self.who);
         builder.write_bool32(self.relative);

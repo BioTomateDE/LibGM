@@ -1,9 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::collections::HashMap;
-use std::fmt::Display;
-use std::fmt::UpperHex;
-
-use num_enum::TryFromPrimitive;
 
 use crate::prelude::*;
 use crate::util::fmt::format_bytes;
@@ -45,22 +41,4 @@ pub fn hashmap_with_capacity<K, V>(count: u32) -> Result<HashMap<K, V>> {
     }
 
     Ok(HashMap::with_capacity(count))
-}
-
-/// Most readable Rust Function:
-pub fn num_enum_from<I, N>(value: I) -> Result<N>
-where
-    I: Display + UpperHex + Copy,
-    N: TryFromPrimitive + TryFrom<I>,
-{
-    match value.try_into() {
-        // Raw match statements for easy debugger breakpoints
-        Ok(val) => Ok(val),
-        Err(_) => bail!(
-            "Invalid {0} {1} (0x{1:0width$X})",
-            typename::<N>(),
-            value,
-            width = size_of::<I>() * 2,
-        ),
-    }
 }

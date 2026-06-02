@@ -5,25 +5,23 @@ pub mod effect;
 mod instances;
 mod tiles;
 
-pub use assets::Assets;
-pub use background::Background;
-pub use effect::Effect;
-pub use instances::Instances;
-use macros::num_enum;
-pub use tiles::Tiles;
-
+pub use self::assets::Assets;
+pub use self::background::Background;
+pub use self::effect::Effect;
+pub use self::instances::Instances;
+pub use self::tiles::Tiles;
+use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Layer {
-    pub layer_name: String,
-    pub layer_id: u32,
-    pub layer_type: Type,
-    pub layer_depth: i32,
+    pub name: GMRef<String>,
+    pub id: u32,
+    pub ty: Type,
+    pub depth: i32,
     pub x_offset: f32,
     pub y_offset: f32,
     pub horizontal_speed: f32,
@@ -35,9 +33,9 @@ pub struct Layer {
 
 impl GMElement for Layer {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let layer_name: String = reader.read_gm_string()?;
+        let layer_name: GMRef<String> = reader.read_gm_string()?;
         let layer_id = reader.read_u32()?;
-        let layer_type: Type = num_enum_from(reader.read_i32()?)?;
+        let layer_type: Type = reader.read_enum()?;
         let layer_depth = reader.read_i32()?;
         let x_offset = reader.read_f32()?;
         let y_offset = reader.read_f32()?;
@@ -55,10 +53,7 @@ impl GMElement for Layer {
             Type::Effect => {
                 if reader.general_info.version >= (2022, 1) {
                     let effect_data = effect_data_2022_1.as_ref().unwrap();
-                    let effect_type = effect_data.effect_type.clone().ok_or(
-                        "Effect Type not set for Room Layer 2022.1+ (this error could be a \
-                         mistake)",
-                    )?;
+                    let effect_type = effect_data.effect_type;
                     let properties: Vec<effect::Property> = effect_data.effect_properties.clone();
                     Data::Effect(Effect { effect_type, properties })
                 } else {
@@ -68,10 +63,10 @@ impl GMElement for Layer {
         };
 
         Ok(Self {
-            layer_name,
-            layer_id,
-            layer_type,
-            layer_depth,
+            name: layer_name,
+            id: layer_id,
+            ty: layer_type,
+            depth: layer_depth,
             x_offset,
             y_offset,
             horizontal_speed,
@@ -83,10 +78,10 @@ impl GMElement for Layer {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.layer_name);
-        builder.write_u32(self.layer_id);
-        builder.write_i32(self.layer_type.into());
-        builder.write_i32(self.layer_depth);
+        builder.write_gm_string(self.name)?;
+        builder.write_u32(self.id);
+        builder.write_enum(self.ty);
+        builder.write_i32(self.depth);
         builder.write_f32(self.x_offset);
         builder.write_f32(self.y_offset);
         builder.write_f32(self.horizontal_speed);
@@ -112,7 +107,7 @@ impl GMElement for Layer {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Data2022_1 {
     pub effect_enabled: bool,
-    pub effect_type: Option<String>,
+    pub effect_type: GMRef<String>,
     pub effect_properties: Vec<effect::Property>,
 }
 
@@ -120,7 +115,7 @@ impl Default for Data2022_1 {
     fn default() -> Self {
         Self {
             effect_enabled: true,
-            effect_type: None,
+            effect_type: GMRef::none(),
             effect_properties: Vec::new(),
         }
     }
@@ -129,7 +124,7 @@ impl Default for Data2022_1 {
 impl GMElement for Data2022_1 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let effect_enabled = reader.read_bool32()?;
-        let effect_type: Option<String> = reader.read_gm_string_opt()?;
+        let effect_type: GMRef<String> = reader.read_gm_string()?;
         let effect_properties: Vec<effect::Property> = reader.read_simple_list()?;
         Ok(Self {
             effect_enabled,
@@ -140,14 +135,13 @@ impl GMElement for Data2022_1 {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_bool32(self.effect_enabled);
-        builder.write_gm_string_opt(&self.effect_type);
+        builder.write_gm_string(self.effect_type)?;
         builder.write_simple_list(&self.effect_properties)?;
         Ok(())
     }
 }
 
-#[num_enum(i32)]
-pub enum Type {
+gm_enum!(Type {
     /// unused?
     Path = 0,
     Background = 1,
@@ -157,7 +151,7 @@ pub enum Type {
     Effect = 6,
     /// introduced in 2024.13
     Path2 = 7,
-}
+});
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Data {

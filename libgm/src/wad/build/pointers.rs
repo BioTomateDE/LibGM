@@ -123,7 +123,7 @@ impl DataBuilder<'_> {
     /// use their `DataBuilder::write_gm_x()` methods instead.
     pub fn write_pointer<T>(&mut self, element: &T) {
         let pointer = Pointer::new(element);
-        let placeholder_position: u32 = self.len();
+        let placeholder_position: u32 = self.pos();
 
         // Write placeholder. Will be overwritten later by
         // [`Self::connect_pointer_placeholders`].
@@ -154,7 +154,7 @@ impl DataBuilder<'_> {
     /// method should get called when the element is serialized.
     pub fn resolve_pointer<T>(&mut self, element: &T) -> Result<()> {
         let pointer = Pointer::new(element);
-        let resource_position: u32 = self.len();
+        let resource_position: u32 = self.pos();
 
         let old_resource_pos_opt: Option<u32> = self
             .pointer_resource_positions
@@ -165,7 +165,7 @@ impl DataBuilder<'_> {
         };
 
         Err(err!(
-            "Pointer placeholder for {} was already resolved to data 
+            "Pointer placeholder for {} was already resolved to data
             position {}; tried to resolve again to data position {}",
             typename::<T>(),
             old_resource_pos,

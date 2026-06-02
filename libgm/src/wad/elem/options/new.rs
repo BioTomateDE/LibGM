@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::options::Constant;
 use crate::wad::elem::options::Flags;
 use crate::wad::elem::options::GMOptions;
 use crate::wad::elem::texture_page_item::GMTexturePageItem;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 
 pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
     let unknown1 = reader.read_u32()?;
@@ -22,9 +22,9 @@ pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
     let frequency = reader.read_u32()?;
     let vertex_sync = reader.read_i32()?;
     let priority = reader.read_i32()?;
-    let back_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
-    let front_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
-    let load_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
+    let back_image: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
+    let front_image: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
+    let load_image: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
     let load_alpha = reader.read_u32()?;
     let constants: Vec<Constant> = reader.read_simple_list()?;
 
@@ -58,9 +58,9 @@ pub fn build(builder: &mut DataBuilder, options: &GMOptions) -> Result<()> {
     builder.write_u32(options.frequency);
     builder.write_i32(options.vertex_sync);
     builder.write_i32(options.priority);
-    builder.write_pointer_opt(&options.back_image);
-    builder.write_pointer_opt(&options.front_image);
-    builder.write_pointer_opt(&options.load_image);
+    builder.write_gm_texture(options.back_image)?;
+    builder.write_gm_texture(options.front_image)?;
+    builder.write_gm_texture(options.load_image)?;
     builder.write_u32(options.load_alpha);
     builder.write_simple_list(&options.constants)?;
     Ok(())

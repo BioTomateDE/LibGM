@@ -11,16 +11,16 @@ use crate::wad::elem::function::GMFunction;
 /// Used in [`Push`] instructions.
 ///
 /// [`Push`]: Instruction::Push
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PushValue {
     Int16(i16),
     Int32(i32),
     Int64(i64),
     Double(f64),
-    Boolean(bool),
-    String(String),
-    Function(GMRef<GMFunction>),
+    Bool(bool),
+    String(GMRef<String>),
     Variable(CodeVariable),
+    Function(GMRef<GMFunction>),
 }
 
 impl PushValue {
@@ -36,7 +36,7 @@ impl PushValue {
             Self::Variable(var) if var.is_int32 => DataType::Int32,
             Self::Int64(_) => DataType::Int64,
             Self::Double(_) => DataType::Double,
-            Self::Boolean(_) => DataType::Boolean,
+            Self::Bool(_) => DataType::Bool,
             Self::String(_) => DataType::String,
             Self::Variable(_) => DataType::Variable,
         }
@@ -53,7 +53,7 @@ impl PushValue {
             &Self::Int32(int) => Some(int > 0),
             &Self::Int64(int) => Some(int > 0),
             &Self::Double(float) => Some(float > 0.5),
-            &Self::Boolean(bool) => Some(bool),
+            &Self::Bool(bool) => Some(bool),
             Self::String(_) | Self::Function(_) | Self::Variable(_) => None,
         }
     }

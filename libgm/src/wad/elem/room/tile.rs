@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::background::GMBackground;
 use crate::wad::elem::sprite::GMSprite;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tile {
     pub x: i32,
     pub y: i32,
-    pub texture: Option<Texture>,
+    pub texture: Texture,
     pub source_x: u32,
     pub source_y: u32,
     pub width: u32,
@@ -27,10 +27,10 @@ impl GMElement for Tile {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
-        let texture: Option<Texture> = if reader.general_info.version >= 2 {
-            reader.read_resource_by_id_opt()?.map(Texture::Sprite)
+        let texture: Texture = if reader.general_info.version >= 2 {
+            Texture::Sprite(reader.read_resource_by_id()?)
         } else {
-            reader.read_resource_by_id_opt()?.map(Texture::Background)
+            Texture::Background(reader.read_resource_by_id()?)
         };
         let source_x = reader.read_u32()?;
         let source_y = reader.read_u32()?;
@@ -61,7 +61,7 @@ impl GMElement for Tile {
         builder.write_i32(self.x);
         builder.write_i32(self.y);
         match self.texture {
-            Some(Texture::Sprite(sprite_ref)) => {
+            Texture::Sprite(sprite_ref) => {
                 if builder.version() >= 2 {
                     builder.write_resource_id(sprite_ref);
                 } else {
@@ -71,7 +71,7 @@ impl GMElement for Tile {
                     );
                 }
             }
-            Some(Texture::Background(background_ref)) => {
+            Texture::Background(background_ref) => {
                 if builder.version() >= 2 {
                     bail!(
                         "Room tile texture should be a Sprite reference in GMS2+; not a \
@@ -80,7 +80,6 @@ impl GMElement for Tile {
                 }
                 builder.write_resource_id(background_ref);
             }
-            None => builder.write_i32(-1),
         }
         builder.write_u32(self.source_x);
         builder.write_u32(self.source_y);

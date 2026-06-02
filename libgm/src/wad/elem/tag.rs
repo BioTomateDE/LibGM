@@ -1,30 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::chunk::ChunkName;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_chunk;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMTags {
-    pub tags: Vec<String>,
+    pub tags: Vec<GMRef<String>>,
     pub asset_tags: Vec<AssetTags>,
     pub exists: bool,
 }
 
-impl GMChunk for GMTags {
-    const NAME: ChunkName = ChunkName::new("TAGS");
-
-    fn exists(&self) -> bool {
-        self.exists
-    }
-}
+gm_chunk!(TAGS, GMTags);
 
 impl GMElement for GMTags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
         reader.read_gms2_chunk_version("TAGS Version")?;
-        let tags: Vec<String> = reader.read_simple_list()?;
+        let tags: Vec<GMRef<String>> = reader.read_simple_list()?;
         let asset_tags: Vec<AssetTags> = reader.read_pointer_list()?;
 
         Ok(Self { tags, asset_tags, exists: true })
@@ -42,7 +36,7 @@ impl GMElement for GMTags {
 impl GMTags {
     /// Attempts to get asset tags by the given id.
     #[must_use]
-    pub fn by_id(&self, id: i32) -> Option<&Vec<String>> {
+    pub fn by_id(&self, id: i32) -> Option<&Vec<GMRef<String>>> {
         self.asset_tags
             .iter()
             .find(|at| at.id == id)
@@ -51,7 +45,7 @@ impl GMTags {
 
     /// Attempts to get asset tags by the given id.
     #[must_use]
-    pub fn by_id_mut(&mut self, id: i32) -> Option<&mut Vec<String>> {
+    pub fn by_id_mut(&mut self, id: i32) -> Option<&mut Vec<GMRef<String>>> {
         self.asset_tags
             .iter_mut()
             .find(|at| at.id == id)
@@ -62,13 +56,13 @@ impl GMTags {
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssetTags {
     pub id: i32,
-    pub tags: Vec<String>,
+    pub tags: Vec<GMRef<String>>,
 }
 
 impl GMElement for AssetTags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let id = reader.read_i32()?;
-        let tags: Vec<String> = reader.read_simple_list()?;
+        let tags: Vec<GMRef<String>> = reader.read_simple_list()?;
         Ok(Self { id, tags })
     }
 

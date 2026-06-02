@@ -30,11 +30,10 @@ use crate::wad::version::ToGMVersion;
 /// the _highest_ possible version it can detect.
 fn try_check(
     reader: &mut DataReader,
-    chunk: &'static str,
+    chunk: ChunkName,
     check_fn: fn(&mut DataReader) -> Result<Option<GMVersion>>,
     target_version: impl ToGMVersion,
 ) -> Result<()> {
-    let chunk_name = ChunkName::new(chunk);
     let target_version = target_version.to_gm_version();
 
     // Return if highest possible detected version is already fulfilled.
@@ -43,7 +42,7 @@ fn try_check(
     }
 
     // Return if the chunk does not exist.
-    let Some(chunk) = reader.chunks.get_by_name(chunk_name) else {
+    let Some(chunk) = reader.chunks.get(chunk) else {
         return Ok(());
     };
 
@@ -52,7 +51,7 @@ fn try_check(
 
     // Detect the version.
     let version_req_opt = check_fn(reader).with_context(|| {
-        format!("manually detecting GameMaker Version {target_version} in chunk {chunk_name:?}")
+        format!("manually detecting GameMaker Version {target_version} in chunk {chunk:?}")
     })?;
 
     // Return if no version could be detected.
@@ -66,10 +65,10 @@ fn try_check(
     }
 
     log::debug!(
-        "Upgraded Version from {} to {} using manual check in chunk '{}'",
+        "Upgraded Version from {} to {} using manual check in chunk {:?}",
         reader.general_info.version,
         version_req,
-        chunk_name,
+        chunk,
     );
     reader.general_info.set_version(version_req);
 
@@ -94,15 +93,15 @@ struct VersionCheck {
 }
 
 impl VersionCheck {
+    // TODO(const): make this const when const traits are finally supported
     fn new(
-        chunk: &'static str,
+        chunk: ChunkName,
         checker_fn: CheckerFn,
         req: impl ToGMVersion,
         target: impl ToGMVersion,
     ) -> Self {
-        // TODO(const): make this const when const traits are finally supported
         Self {
-            chunk_name: ChunkName::new(chunk),
+            chunk_name: chunk,
             checker_fn,
             required_version: req.to_gm_version(),
             target_version: target.to_gm_version(),
@@ -111,13 +110,13 @@ impl VersionCheck {
 }
 
 fn upgrade_by_chunk_existence(chunks: &ChunkMap) -> Option<GMVersion> {
-    const UPGRADES: [(&str, GMVersion); 6] = [
-        ("UILR", GMVersion::new(2024, 13, 0, 0, PostLTS)),
-        ("PSEM", GMVersion::new(2023, 2, 0, 0, PostLTS)),
-        ("FEAT", GMVersion::new(2022, 8, 0, 0, PreLTS)),
-        ("FEDS", GMVersion::new(2, 3, 6, 0, PreLTS)),
-        ("SEQN", GMVersion::new(2, 3, 0, 0, PreLTS)),
-        ("TGIN", GMVersion::new(2, 2, 1, 0, PreLTS)),
+    const UPGRADES: [(ChunkName, GMVersion); 6] = [
+        (ChunkName::UILR, GMVersion::new(2024, 13, 0, 0, PostLTS)),
+        (ChunkName::PSEM, GMVersion::new(2023, 2, 0, 0, PostLTS)),
+        (ChunkName::FEAT, GMVersion::new(2022, 8, 0, 0, PreLTS)),
+        (ChunkName::FEDS, GMVersion::new(2, 3, 6, 0, PreLTS)),
+        (ChunkName::SEQN, GMVersion::new(2, 3, 0, 0, PreLTS)),
+        (ChunkName::TGIN, GMVersion::new(2, 2, 1, 0, PreLTS)),
     ];
 
     for (chunk_name, version) in UPGRADES {
@@ -135,32 +134,57 @@ fn upgrade_by_chunk_existence(chunks: &ChunkMap) -> Option<GMVersion> {
 /// TODO(const): The `Into` trait is still not const unfortunately.
 fn create_version_checks() -> [VersionCheck; 21] {
     [
-        VersionCheck::new("SOND", sond::check_2024_6, (2022, 2, PostLTS), (2024, 6)),
-        VersionCheck::new("SPRT", sprt::check_2024_6, (2022, 2, PostLTS), (2024, 6)),
         VersionCheck::new(
-            "FONT",
+            ChunkName::SOND,
+            sond::check_2024_6,
+            (2022, 2, PostLTS),
+            (2024, 6),
+        ),
+        VersionCheck::new(
+            ChunkName::SPRT,
+            sprt::check_2024_6,
+            (2022, 2, PostLTS),
+            (2024, 6),
+        ),
+        VersionCheck::new(
+            ChunkName::FONT,
             font::check_2023_6_and_2024_11,
             (2024, 6),
             (2024, 11),
         ),
-        VersionCheck::new("FONT", font::check_2023_6_and_2024_11, (2022, 8), (2023, 6)),
-        VersionCheck::new("ROOM", room::check_2022_1, (2, 3), (2022, 1)),
-        VersionCheck::new("ROOM", room::check_2024_2_and_2024_4, (2023, 2), (2024, 4)),
-        VersionCheck::new("ROOM", room::check_2_2_2_302, 2, (2, 2, 2, 302)),
-        VersionCheck::new("EXTN", extn::check_2022_6, (2, 3), (2022, 6)),
-        VersionCheck::new("TXTR", txtr::check_2022_5, (2022, 3), (2022, 5)),
-        VersionCheck::new("TXTR", txtr::check_2022_3, (2, 3), (2022, 3)),
-        VersionCheck::new("FONT", font::check_2024_14, (2024, 13), (2024, 14)),
-        VersionCheck::new("AGRP", agrp::check_2024_14, (2024, 13), (2024, 14)),
-        VersionCheck::new("EXTN", extn::check_2023_4, (2022, 6), (2023, 4)),
-        VersionCheck::new("TGIN", tgin::check_2023_1, (2022, 9), (2023, 1)),
-        VersionCheck::new("OBJT", objt::check_2022_5, (2, 3), (2022, 5)),
-        VersionCheck::new("SPRT", sprt::check_2_3_2, 2, (2, 3, 2)),
-        VersionCheck::new("TGIN", tgin::check_2022_9, (2, 3), (2022, 9)),
-        VersionCheck::new("TXTR", txtr::check_2_0_6, 2, (2, 0, 6)),
-        VersionCheck::new("PSEM", psem::check_2023_x, (2023, 2), (2023, 8)),
-        VersionCheck::new("ACRV", acrv::check_2_3_1, (2, 3), (2, 3, 1)),
-        VersionCheck::new("BGND", bgnd::check_2024_14_1, (2024, 13), (2024, 14, 1)),
+        VersionCheck::new(
+            ChunkName::FONT,
+            font::check_2023_6_and_2024_11,
+            (2022, 8),
+            (2023, 6),
+        ),
+        VersionCheck::new(ChunkName::ROOM, room::check_2022_1, (2, 3), (2022, 1)),
+        VersionCheck::new(
+            ChunkName::ROOM,
+            room::check_2024_2_and_2024_4,
+            (2023, 2),
+            (2024, 4),
+        ),
+        VersionCheck::new(ChunkName::ROOM, room::check_2_2_2_302, 2, (2, 2, 2, 302)),
+        VersionCheck::new(ChunkName::EXTN, extn::check_2022_6, (2, 3), (2022, 6)),
+        VersionCheck::new(ChunkName::TXTR, txtr::check_2022_5, (2022, 3), (2022, 5)),
+        VersionCheck::new(ChunkName::TXTR, txtr::check_2022_3, (2, 3), (2022, 3)),
+        VersionCheck::new(ChunkName::FONT, font::check_2024_14, (2024, 13), (2024, 14)),
+        VersionCheck::new(ChunkName::AGRP, agrp::check_2024_14, (2024, 13), (2024, 14)),
+        VersionCheck::new(ChunkName::EXTN, extn::check_2023_4, (2022, 6), (2023, 4)),
+        VersionCheck::new(ChunkName::TGIN, tgin::check_2023_1, (2022, 9), (2023, 1)),
+        VersionCheck::new(ChunkName::OBJT, objt::check_2022_5, (2, 3), (2022, 5)),
+        VersionCheck::new(ChunkName::SPRT, sprt::check_2_3_2, 2, (2, 3, 2)),
+        VersionCheck::new(ChunkName::TGIN, tgin::check_2022_9, (2, 3), (2022, 9)),
+        VersionCheck::new(ChunkName::TXTR, txtr::check_2_0_6, 2, (2, 0, 6)),
+        VersionCheck::new(ChunkName::PSEM, psem::check_2023_x, (2023, 2), (2023, 8)),
+        VersionCheck::new(ChunkName::ACRV, acrv::check_2_3_1, (2, 3), (2, 3, 1)),
+        VersionCheck::new(
+            ChunkName::BGND,
+            bgnd::check_2024_14_1,
+            (2024, 13),
+            (2024, 14, 1),
+        ),
     ]
 }
 
@@ -178,13 +202,18 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
     }
 
     if reader.general_info.wad_version >= 14 {
-        try_check(reader, "FUNC", func::check_2024_8, (2024, 8))?;
+        try_check(reader, ChunkName::FUNC, func::check_2024_8, (2024, 8))?;
     }
     if reader.general_info.wad_version >= 15 {
-        try_check(reader, "CODE", code::check_2023_8_and_2024_4, (2024, 4))?;
+        try_check(
+            reader,
+            ChunkName::CODE,
+            code::check_2023_8_and_2024_4,
+            (2024, 4),
+        )?;
     }
     if reader.general_info.wad_version >= 17 {
-        try_check(reader, "FONT", font::check_2022_2, (2022, 2))?;
+        try_check(reader, ChunkName::FONT, font::check_2022_2, (2022, 2))?;
     }
 
     let checks: &[VersionCheck] = &create_version_checks();
@@ -204,7 +233,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
             }
 
             // If chunk doesn't exist; just skip the check.
-            let Some(chunk) = reader.chunks.get_by_name(check.chunk_name) else {
+            let Some(chunk) = reader.chunks.get(check.chunk_name) else {
                 continue;
             };
 

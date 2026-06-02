@@ -3,9 +3,9 @@ pub mod assembler;
 
 use clap::ValueEnum;
 use libgm::prelude::*;
+use libgm::wad::build::build_bytes;
 use libgm::wad::data::GMData;
 use libgm::wad::parse::parse_bytes;
-use libgm::wad::build::build_bytes;
 
 #[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Test {
@@ -36,7 +36,7 @@ pub fn deduplicate(mut tests: Vec<Test>) -> Vec<Test> {
     tests
 }
 
-pub fn perform(data: &GMData, tests: &[Test]) -> Result<()> {
+pub fn perform(data: &mut GMData, tests: &[Test]) -> Result<()> {
     if tests.is_empty() {
         return Ok(());
     }

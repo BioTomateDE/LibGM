@@ -5,7 +5,6 @@ use libgm::wad::elem::texture_page::Format;
 
 #[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {
-    EnableSavestates,
     EnableDebug,
     DisableDebug,
     DeserializeTextures,
@@ -19,7 +18,6 @@ pub enum Action {
 impl Action {
     pub fn perform(self, data: &mut GMData) -> Result<()> {
         match self {
-            Self::EnableSavestates => data.enable_savestates(),
             Self::EnableDebug => data.enable_debug(),
             Self::DisableDebug => data.disable_debug(),
             Self::DeserializeTextures => data.deserialize_all_textures(),
@@ -36,7 +34,7 @@ impl Action {
 }
 
 fn serialize_textures(data: &mut GMData, format: Format) -> Result<()> {
-    for texture_page in &mut data.texture_pages {
+    for texture_page in data.texture_pages.elements_mut() {
         let Some(image) = &mut texture_page.image else {
             continue;
         };

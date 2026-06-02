@@ -10,7 +10,6 @@ mod text_item;
 pub use effect::EffectLayer;
 pub use flex::FlexPanel;
 pub use layer::Layer;
-use macros::list_chunk;
 pub use object::GameObject;
 pub use sequence::SequenceInstance;
 pub use sprite::SpriteInstance;
@@ -18,15 +17,19 @@ pub use text_item::TextItemInstance;
 
 use crate::prelude::*;
 use crate::util::assert;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_list_chunk;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
-#[list_chunk("UILR")]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMRootUINodes {
-    pub ui_root_nodes: Vec<UINode>,
+    pub ui_nodes: Vec<UINode>,
     pub exists: bool,
 }
+
+// not sure if direct
+gm_list_chunk!(UILR, GMRootUINodes, UINode, ui_nodes, direct);
 
 impl GMElement for GMRootUINodes {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -34,11 +37,11 @@ impl GMElement for GMRootUINodes {
             log::warn!("UI nodes are untested; issues may occur");
         }
         let ui_root_nodes: Vec<UINode> = reader.read_pointer_list()?;
-        Ok(Self { ui_root_nodes, exists: true })
+        Ok(Self { ui_nodes: ui_root_nodes, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.ui_root_nodes)?;
+        builder.write_pointer_list(&self.ui_nodes)?;
         Ok(())
     }
 }

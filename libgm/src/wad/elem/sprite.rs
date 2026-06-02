@@ -5,43 +5,44 @@ pub mod swf;
 
 use std::fmt;
 
-use macros::named_list_chunk;
-use macros::num_enum;
 pub use nine_slice::NineSlice;
 
+use crate::gm_enum::gm_enum;
 use crate::prelude::*;
 use crate::util::assert;
-use crate::util::init::num_enum_from;
 use crate::util::init::vec_with_capacity;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sequence::GMSequence;
 use crate::wad::elem::sequence::SpeedType;
 use crate::wad::elem::texture_page_item::GMTexturePageItem;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 
-#[named_list_chunk("SPRT")]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMSprites {
-    pub sprites: Vec<GMSprite>,
+    pub sprites: Vec<Option<GMSprite>>,
     pub exists: bool,
 }
 
+gm_named_list_chunk!(SPRT, GMSprites, GMSprite, sprites, nullable);
+
 impl GMElement for GMSprites {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let sprites: Vec<GMSprite> = reader.read_pointer_list()?;
+        let sprites: Vec<Option<GMSprite>> = reader.read_pointer_list_opt()?;
         Ok(Self { sprites, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.sprites)?;
+        builder.write_pointer_list_opt(&self.sprites)?;
         Ok(())
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMSprite {
-    pub name: String,
+    pub name: GMRef<String>,
     pub width: u32,
     pub height: u32,
     pub margin_left: i32,
@@ -55,7 +56,7 @@ pub struct GMSprite {
     pub sep_masks: SepMaskType,
     pub origin_x: i32,
     pub origin_y: i32,
-    pub textures: Vec<Option<GMRef<GMTexturePageItem>>>,
+    pub textures: Vec<GMRef<GMTexturePageItem>>,
     pub collision_masks: Vec<MaskEntry>,
     pub special_fields: Option<Special>,
 }
@@ -63,7 +64,7 @@ pub struct GMSprite {
 #[allow(clippy::too_many_lines)] // TODO: these functions fucking suck
 impl GMElement for GMSprite {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: String = reader.read_gm_string()?;
+        let name: GMRef<String> = reader.read_gm_string()?;
         let width = reader.read_u32()?;
         let height = reader.read_u32()?;
         let margin_left = reader.read_i32()?;
@@ -74,10 +75,10 @@ impl GMElement for GMSprite {
         let smooth = reader.read_bool32()?;
         let preload = reader.read_bool32()?;
         let bbox_mode = reader.read_i32()?;
-        let sep_masks: SepMaskType = num_enum_from(reader.read_i32()?)?;
+        let sep_masks: SepMaskType = reader.read_enum()?;
         let origin_x = reader.read_i32()?;
         let origin_y = reader.read_i32()?;
-        let mut textures: Vec<Option<GMRef<GMTexturePageItem>>> = Vec::new();
+        let mut textures: Vec<GMRef<GMTexturePageItem>> = Vec::new();
         let mut collision_masks: Vec<MaskEntry> = Vec::new();
         let mut special_fields: Option<Special> = None;
 
@@ -91,7 +92,7 @@ impl GMElement for GMSprite {
             let swf: Option<swf::Data> = None;
 
             let playback_speed = reader.read_f32()?;
-            let playback_speed_type: SpeedType = num_enum_from(reader.read_i32()?)?;
+            let playback_speed_type: SpeedType = reader.read_enum()?;
             // both of these seem to be not an offset but instead a position (see
             // UndertaleModLib/Models/UndertaleSprite.cs:507)
             let sequence_pos = if special_version >= 2 {
@@ -295,7 +296,7 @@ impl GMElement for GMSprite {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
+        builder.write_gm_string(self.name)?;
         builder.write_u32(self.width);
         builder.write_u32(self.height);
         builder.write_i32(self.margin_left);
@@ -306,7 +307,7 @@ impl GMElement for GMSprite {
         builder.write_bool32(self.smooth);
         builder.write_bool32(self.preload);
         builder.write_i32(self.bbox_mode);
-        builder.write_i32(self.sep_masks.into());
+        builder.write_enum(self.sep_masks);
         builder.write_i32(self.origin_x);
         builder.write_i32(self.origin_y);
         if self.special_fields.is_none() {
@@ -326,7 +327,7 @@ impl GMElement for GMSprite {
 
         if builder.version() >= (2, 0) {
             builder.write_f32(special_fields.playback_speed);
-            builder.write_i32(special_fields.playback_speed_type.into());
+            builder.write_enum(special_fields.playback_speed_type);
             if special_fields.special_version >= 2 {
                 if special_fields.sequence.is_some() {
                     builder.write_pointer(&special_fields.sequence);
@@ -457,24 +458,24 @@ impl GMElement for GMSprite {
 }
 
 impl GMSprite {
-    fn read_texture_list(reader: &mut DataReader) -> Result<Vec<Option<GMRef<GMTexturePageItem>>>> {
+    fn read_texture_list(reader: &mut DataReader) -> Result<Vec<GMRef<GMTexturePageItem>>> {
         let count = reader.read_count("Sprite texture")?;
         let ctx = || format!("reading {count} Sprite textures");
-        let mut textures: Vec<Option<GMRef<GMTexturePageItem>>> =
+        let mut textures: Vec<GMRef<GMTexturePageItem>> =
             vec_with_capacity(count).with_context(ctx)?;
         for _ in 0..count {
-            textures.push(reader.read_gm_texture_opt().with_context(ctx)?);
+            textures.push(reader.read_gm_texture().with_context(ctx)?);
         }
         Ok(textures)
     }
 
     fn build_texture_list(
         builder: &mut DataBuilder,
-        texture_list: &Vec<Option<GMRef<GMTexturePageItem>>>,
+        texture_list: &Vec<GMRef<GMTexturePageItem>>,
     ) -> Result<()> {
         builder.write_usize(texture_list.len())?;
-        for texture_page_item_ref_opt in texture_list {
-            builder.write_gm_texture_opt(*texture_page_item_ref_opt)?;
+        for &texture_page_item_ref in texture_list {
+            builder.write_gm_texture(texture_page_item_ref)?;
         }
         Ok(())
     }
@@ -483,14 +484,14 @@ impl GMSprite {
         let count = masks.len() as u32;
         builder.write_u32(count);
 
-        let start = builder.len();
+        let start = builder.pos();
 
         for mask in masks {
             builder.write_bytes(&mask.data);
         }
 
         builder.align(4);
-        let written_bytes = builder.len() - start;
+        let written_bytes = builder.pos() - start;
 
         let (width, height) = if builder.version() >= (2024, 6) {
             (
@@ -535,12 +536,11 @@ pub enum SpecialData {
     Spine(spine::Data),
 }
 
-#[num_enum(i32)]
-pub enum SepMaskType {
+gm_enum!(SepMaskType {
     AxisAlignedRect = 0,
     Precise = 1,
     RotatedRect = 2,
-}
+});
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct MaskEntry {

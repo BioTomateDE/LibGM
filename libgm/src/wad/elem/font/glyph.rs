@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::font::kerning::Kerning;
-use crate::wad::build::builder::DataBuilder;
+use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Glyph {

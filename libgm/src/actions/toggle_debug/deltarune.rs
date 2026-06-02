@@ -16,15 +16,22 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     log::debug!("Detected Deltarune Chapter 1/2/4");
     let code_ref: GMRef<GMCode> = data
         .codes
-        .ref_by_name("gml_Object_obj_initializer2_Create_0")?;
+        .ref_by_name("gml_Object_obj_initializer2_Create_0", &data.strings)?;
     super::replace_debug(data, code_ref, enable, InstanceType::Global)?;
 
-    if !enable || data.codes.by_name("gml_Script_scr_flag_name_get").is_err() {
+    if !enable
+        || data
+            .codes
+            .by_name("gml_Script_scr_flag_name_get", &data.strings)
+            .is_err()
+    {
         return Ok(());
     }
 
     // need to modify flag retrieval code (currently only used in chapter 4)
-    let code_ref = data.codes.ref_by_name("gml_GlobalScript_scr_flag_get")?;
+    let code_ref = data
+        .codes
+        .ref_by_name("gml_GlobalScript_scr_flag_get", &data.strings)?;
     let code = data.codes.by_ref(code_ref)?;
 
     let index: u32 = find_insertion_point(data, code)?;
@@ -32,10 +39,10 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     let assembly: &str = r#"
         push.s "flagname"
         conv.s.v
-        call variable_global_exists(argc=1)
+        call variable_global_exists 1
         conv.v.b
         not.b
-        jf 5
+        bf 5
         push.s ""
         conv.s.v
         ret
@@ -57,7 +64,8 @@ fn find_insertion_point(data: &GMData, code: &GMCode) -> Result<u32> {
             continue;
         };
         let variable: &GMVariable = data.variables.by_ref(code_variable.variable)?;
-        if variable.name != "flagname" {
+        let var_name = data.strings.by_ref(variable.name)?;
+        if var_name != "flagname" {
             continue;
         }
         // (assumes instancetype global)
@@ -68,7 +76,6 @@ fn find_insertion_point(data: &GMData, code: &GMCode) -> Result<u32> {
         }
 
         // Found `push.v [array]global.flagname`
-
         let pred = |i: &Instruction| matches!(i, Instruction::BranchUnless { .. });
         let branch_index = code.instructions[..i].iter().rposition(pred);
         let idx = branch_index.ok_or("No branch instruction before global.flagname push")?;

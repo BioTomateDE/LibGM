@@ -1,90 +1,68 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::util::assert;
-use crate::wad::chunk::ChunkName;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMChunk;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_chunk;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
 const ALIGNMENT: u32 = 4;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct GMStrings;
-
-impl GMChunk for GMStrings {
-    const NAME: ChunkName = ChunkName::new("STRG");
-
-    fn exists(&self) -> bool {
-        true
-    }
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct GMStrings {
+    pub strings: Vec<String>,
+    pub align: bool,
+    pub exists: bool,
 }
+
+gm_chunk!(STRG, GMStrings);
+// gm_list_chunk!(STRG, GMStrings, String, strings, direct);
 
 impl GMElement for GMStrings {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
-        let is_aligned: bool = pointers.iter().all(|&p| p.is_multiple_of(ALIGNMENT));
+        let align: bool = pointers.iter().all(|&p| p.is_multiple_of(ALIGNMENT));
 
         let mut strings: Vec<String> = Vec::with_capacity(pointers.len());
 
-        for pointer in pointers {
-            if is_aligned {
+        for (i, pointer) in pointers.into_iter().enumerate() {
+            if align {
                 reader.align(ALIGNMENT)?;
             }
             reader.assert_pos(pointer, "String")?;
+            reader
+                .string_occurrences
+                .insert(pointer + 4, GMRef::from(i));
+
             let string_length = reader.read_u32()?;
             let string: String = reader.read_literal_string(string_length)?;
             let byte = reader.read_u8()?;
             assert::int(byte, 0, "Null terminator byte after string")?;
-            strings.push(string.clone());
+            strings.push(string);
         }
 
         reader.align(0x80)?;
-        reader.strings = strings;
-        Ok(Self)
+        Ok(Self { strings, align, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        let mut strings = std::mem::take(&mut builder.string_placeholders);
-        strings.sort_unstable_by(|a, b| a.string.cmp(&b.string));
-        let count = count_unique_strings(&strings);
+        let count = self.strings.len();
 
-        // Prepare Pointer List
         builder.write_usize(count)?;
-        let pointer_list_start = builder.len();
+        let pointer_list_pos = builder.pos();
         for _ in 0..count {
             builder.write_u32(0xDEAD_C0DE);
         }
 
-        let mut string = None;
-        let mut string_position = 0xDEAD_C0DE;
-        let mut index = 0;
-
-        for placeholder in strings {
-            // For identical strings, just write the position/id again (since they're
-            // sorted).
-            if string.as_ref() == Some(&placeholder.string) {
-                overwrite_placeholder(builder, &placeholder, string_position, index - 1)?;
-                continue;
+        for (idx, string) in self.strings.iter().enumerate() {
+            if self.align {
+                builder.align(ALIGNMENT);
             }
-
-            // Write String
-
-            builder.align(ALIGNMENT);
-
-            builder.overwrite_pointer_with_cur_pos(pointer_list_start, index)?;
-
-            builder.write_usize(placeholder.string.len())?;
-
-            string_position = builder.len();
-            builder.write_literal_string(&placeholder.string);
-
-            // Trailing null terminator byte
+            builder.overwrite_pointer_with_cur_pos(pointer_list_pos, idx)?;
+            builder.write_u32(string.len() as u32);
+            builder.resolve_pointer(string)?;
+            builder.write_bytes(string.as_bytes());
             builder.write_u8(0);
-
-            overwrite_placeholder(builder, &placeholder, string_position, index)?;
-            index += 1;
-            string = Some(placeholder.string);
         }
 
         builder.align(0x80);
@@ -92,45 +70,51 @@ impl GMElement for GMStrings {
     }
 }
 
-/// Used when building data file
-#[derive(Debug)]
-pub struct StringPlaceholder {
-    pub placeholder_position: u32,
-    pub string: String,
-
-    /// Whether to write the String ID/Index instead of a pointer.
-    pub write_id: bool,
-}
-
-fn count_unique_strings(sorted_vec: &[StringPlaceholder]) -> usize {
-    if sorted_vec.is_empty() {
-        return 0;
-    }
-
-    let mut count = 1;
-    let mut prev = &sorted_vec[0].string;
-
-    for item in &sorted_vec[1..] {
-        if &item.string != prev {
-            count += 1;
-            prev = &item.string;
+impl GMStrings {
+    #[inline]
+    pub fn make(&mut self, string: &str) -> GMRef<String> {
+        for (gm_ref, str) in self.element_refs() {
+            if str == string {
+                return gm_ref;
+            }
         }
+        self.make_new(string.to_owned())
     }
 
-    count
-}
+    #[inline]
+    pub fn make_new(&mut self, string: String) -> GMRef<String> {
+        self.strings.push(string);
+        GMRef::from(self.len() - 1)
+    }
 
-fn overwrite_placeholder(
-    builder: &mut DataBuilder,
-    placeholder: &StringPlaceholder,
-    string_position: u32,
-    index: usize,
-) -> Result<()> {
-    let number: u32 = if placeholder.write_id {
-        index as u32
-    } else {
-        string_position
-    };
-    builder.overwrite_u32(number, placeholder.placeholder_position)?;
-    Ok(())
+    pub fn element_refs(&self) -> impl Iterator<Item = (GMRef<String>, &String)> {
+        self.strings
+            .iter()
+            .enumerate()
+            .map(|(idx, string)| (GMRef::from(idx), string))
+    }
+
+    pub fn element_refs_mut(&mut self) -> impl Iterator<Item = (GMRef<String>, &mut String)> {
+        self.strings
+            .iter_mut()
+            .enumerate()
+            .map(|(idx, string)| (GMRef::from(idx), string))
+    }
+
+    pub fn by_ref(&self, gm_ref: GMRef<String>) -> Result<&String> {
+        gm_ref.resolve(&self.strings)
+    }
+
+    pub fn by_ref_mut(&mut self, gm_ref: GMRef<String>) -> Result<&mut String> {
+        gm_ref.resolve_mut(&mut self.strings)
+    }
+
+    pub fn push(&mut self, string: String) {
+        self.strings.push(string);
+    }
+
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.strings.len()
+    }
 }

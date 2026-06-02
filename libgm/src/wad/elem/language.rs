@@ -1,44 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::ops::Deref;
-use std::ops::DerefMut;
 
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
-use crate::wad::chunk::ChunkName;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMChunk;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_list_chunk;
+use crate::wad::elem::GMElement;
+use crate::wad::elem::element_stub;
+use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMLanguageInfo {
-    pub unknown1: u32,
+    unknown1: u32,
     pub languages: Vec<GMLanguageData>,
-    pub entry_ids: Vec<String>,
+    pub entry_ids: Vec<GMRef<String>>,
     pub exists: bool,
 }
 
-impl Deref for GMLanguageInfo {
-    type Target = Vec<GMLanguageData>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.languages
-    }
-}
-
-impl DerefMut for GMLanguageInfo {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.languages
-    }
-}
-
-impl GMChunk for GMLanguageInfo {
-    const NAME: ChunkName = ChunkName::new("LANG");
-
-    fn exists(&self) -> bool {
-        self.exists
-    }
-}
+gm_list_chunk!(LANG, GMLanguageInfo, GMLanguageData, languages, direct);
 
 impl GMElement for GMLanguageInfo {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -46,16 +24,16 @@ impl GMElement for GMLanguageInfo {
         let language_count = reader.read_u32()?;
         let entry_count = reader.read_u32()?;
 
-        let mut entry_ids: Vec<String> = vec_with_capacity(entry_count)?;
+        let mut entry_ids: Vec<GMRef<String>> = vec_with_capacity(entry_count)?;
         for _ in 0..entry_count {
             entry_ids.push(reader.read_gm_string()?);
         }
 
         let mut languages: Vec<GMLanguageData> = vec_with_capacity(language_count)?;
         for _ in 0..language_count {
-            let name: String = reader.read_gm_string()?;
-            let region: String = reader.read_gm_string()?;
-            let mut entries: Vec<String> = Vec::with_capacity(entry_count as usize);
+            let name: GMRef<String> = reader.read_gm_string()?;
+            let region: GMRef<String> = reader.read_gm_string()?;
+            let mut entries: Vec<GMRef<String>> = Vec::with_capacity(entry_count as usize);
             for _ in 0..entry_count {
                 entries.push(reader.read_gm_string()?);
             }
@@ -74,14 +52,14 @@ impl GMElement for GMLanguageInfo {
         builder.write_u32(self.unknown1);
         builder.write_usize(self.languages.len())?;
         builder.write_usize(self.entry_ids.len())?;
-        for entry in &self.entry_ids {
-            builder.write_gm_string(entry);
+        for &entry in &self.entry_ids {
+            builder.write_gm_string(entry)?;
         }
         for language in &self.languages {
-            builder.write_gm_string(&language.name);
-            builder.write_gm_string(&language.region);
-            for entry in &language.entries {
-                builder.write_gm_string(entry);
+            builder.write_gm_string(language.name)?;
+            builder.write_gm_string(language.region)?;
+            for &entry in &language.entries {
+                builder.write_gm_string(entry)?;
             }
         }
         Ok(())
@@ -90,7 +68,8 @@ impl GMElement for GMLanguageInfo {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMLanguageData {
-    pub name: String,
-    pub region: String,
-    pub entries: Vec<String>,
+    pub name: GMRef<String>,
+    pub region: GMRef<String>,
+    pub entries: Vec<GMRef<String>>,
 }
+element_stub!(GMLanguageData);

@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::particle_system::GMParticleSystem;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParticleSystemInstance {
-    pub name: String,
+    pub name: GMRef<String>,
     pub particle_system: GMRef<GMParticleSystem>,
     pub x: i32,
     pub y: i32,
@@ -20,7 +20,7 @@ pub struct ParticleSystemInstance {
 
 impl GMElement for ParticleSystemInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: String = reader.read_gm_string()?;
+        let name: GMRef<String> = reader.read_gm_string()?;
         let particle_system: GMRef<GMParticleSystem> = reader.read_resource_by_id()?;
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
@@ -41,7 +41,7 @@ impl GMElement for ParticleSystemInstance {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
+        builder.write_gm_string(self.name)?;
         builder.write_resource_id(self.particle_system);
         builder.write_i32(self.x);
         builder.write_i32(self.y);

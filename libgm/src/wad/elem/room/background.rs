@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::background::GMBackground;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Background {
     pub enabled: bool,
     pub foreground: bool,
-    pub background_definition: Option<GMRef<GMBackground>>,
+    pub background_definition: GMRef<GMBackground>,
     pub x: i32,
     pub y: i32,
     pub tile_x: i32,
@@ -24,8 +24,7 @@ impl GMElement for Background {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let enabled = reader.read_bool32()?;
         let foreground = reader.read_bool32()?;
-        let background_definition: Option<GMRef<GMBackground>> =
-            reader.read_resource_by_id_opt()?;
+        let background_definition: GMRef<GMBackground> = reader.read_resource_by_id()?;
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
         let tile_x = reader.read_i32()?; // Idk if this should be an int instead of a bool
@@ -51,7 +50,7 @@ impl GMElement for Background {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_bool32(self.enabled);
         builder.write_bool32(self.foreground);
-        builder.write_resource_id_opt(self.background_definition);
+        builder.write_resource_id(self.background_definition);
         builder.write_i32(self.x);
         builder.write_i32(self.y);
         builder.write_i32(self.tile_x);

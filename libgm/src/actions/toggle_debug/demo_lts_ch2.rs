@@ -11,7 +11,7 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     log::debug!("Detected Deltarune LTS Demo Chapter 2");
     // Placeholder in line 2
     let assembly = "
-        jmp 5
+        br 5
         pushim 1337
         conv.i.v
         ret
@@ -31,8 +31,9 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     let mut instructions = assemble_instructions(assembly, data)?;
     instructions[1] = pushim;
 
-    let code_ref = data.scripts.code_ref_by_name("scr_debug")?;
-    let code = data.codes.by_ref_mut(code_ref)?;
+    let code = data
+        .codes
+        .by_name_mut("gml_Script_scr_debug", &data.strings)?;
     code.instructions = instructions;
     Ok(())
 }

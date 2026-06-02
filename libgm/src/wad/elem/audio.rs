@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::fmt;
 
-use macros::list_chunk;
-
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_list_chunk;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
-#[list_chunk("AUDO")]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMAudios {
     pub audios: Vec<GMAudio>,
     pub exists: bool,
 }
+
+gm_list_chunk!(AUDO, GMAudios, GMAudio, audios, direct);
 
 impl GMElement for GMAudios {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

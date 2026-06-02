@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Text {
-    pub text: String,
+    pub text: GMRef<String>,
     pub line_wrapping: bool,
     pub alignment_v: i8,
     pub alignment_h: i8,
@@ -14,7 +14,7 @@ pub struct Text {
 
 impl GMElement for Text {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let text: String = reader.read_gm_string()?;
+        let text: GMRef<String> = reader.read_gm_string()?;
         let line_wrapping = reader.read_bool32()?;
         let alignment = reader.read_i32()?;
         let font_index = reader.read_i32()?;
@@ -28,7 +28,7 @@ impl GMElement for Text {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.text);
+        builder.write_gm_string(self.text)?;
         builder.write_bool32(self.line_wrapping);
         builder.write_i32(i32::from(self.alignment_v) << 8 | i32::from(self.alignment_h));
         log::warn!(

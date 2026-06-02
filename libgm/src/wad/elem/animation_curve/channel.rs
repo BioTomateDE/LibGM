@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::num_enum;
 
+use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
+gm_enum!(
 /// The curve type determines how points flow to each other in a channel.
-#[num_enum(i32)]
-pub enum CurveType {
+CurveType {
     /// Creates a linear progression between points.
     Linear = 0,
     /// Creates a smooth progression between points using catmull-rom spline
@@ -17,11 +16,11 @@ pub enum CurveType {
     Smooth = 1,
     /// Creates a smooth curve defined by bezier control points.
     Bezier = 2,
-}
+});
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Channel {
-    pub name: String,
+    pub name: GMRef<String>,
     pub curve_type: CurveType,
     pub iterations: u32,
     pub points: Vec<Point>,
@@ -30,15 +29,15 @@ pub struct Channel {
 impl GMElement for Channel {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name = reader.read_gm_string()?;
-        let curve_type: CurveType = num_enum_from(reader.read_i32()?)?;
+        let curve_type: CurveType = reader.read_enum()?;
         let iterations = reader.read_u32()?;
         let points: Vec<Point> = reader.read_simple_list()?;
         Ok(Self { name, curve_type, iterations, points })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
-        builder.write_i32(self.curve_type.into());
+        builder.write_gm_string(self.name)?;
+        builder.write_enum(self.curve_type);
         builder.write_u32(self.iterations);
         builder.write_simple_list(&self.points)?;
         Ok(())

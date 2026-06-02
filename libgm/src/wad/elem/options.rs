@@ -8,13 +8,12 @@ pub use constant::Constant;
 pub use flags::Flags;
 
 use crate::prelude::*;
-use crate::wad::chunk::ChunkName;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMChunk;
+use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::texture_page_item::GMTexturePageItem;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 
 /// Most (if not all) of these options are probably unused and remnant from GM8.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -28,21 +27,15 @@ pub struct GMOptions {
     pub frequency: u32,
     pub vertex_sync: i32,
     pub priority: i32,
-    pub back_image: Option<GMRef<GMTexturePageItem>>,
-    pub front_image: Option<GMRef<GMTexturePageItem>>,
-    pub load_image: Option<GMRef<GMTexturePageItem>>,
+    pub back_image: GMRef<GMTexturePageItem>,
+    pub front_image: GMRef<GMTexturePageItem>,
+    pub load_image: GMRef<GMTexturePageItem>,
     pub load_alpha: u32,
     pub constants: Vec<Constant>,
     pub exists: bool,
 }
 
-impl GMChunk for GMOptions {
-    const NAME: ChunkName = ChunkName::new("OPTN");
-
-    fn exists(&self) -> bool {
-        self.exists
-    }
-}
+gm_chunk!(OPTN, GMOptions);
 
 impl GMElement for GMOptions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -57,10 +50,9 @@ impl GMElement for GMOptions {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if self.is_new_format {
-            new::build(builder, self)?;
+            new::build(builder, self)
         } else {
-            old::build(builder, self);
+            old::build(builder, self)
         }
-        Ok(())
     }
 }

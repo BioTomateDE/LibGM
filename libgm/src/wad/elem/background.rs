@@ -1,33 +1,70 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::named_list_chunk;
 
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::texture_page_item::GMTexturePageItem;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 
 const ALIGNMENT: u32 = 8;
 
 /// See [`GMBackground`].
-#[named_list_chunk("BGND")]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMBackgrounds {
-    pub backgrounds: Vec<GMBackground>,
+    pub backgrounds: Vec<Option<GMBackground>>,
+    pub align: bool,
     pub exists: bool,
 }
 
+gm_named_list_chunk!(BGND, GMBackgrounds, GMBackground, backgrounds, nullable);
+
 impl GMElement for GMBackgrounds {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let mut is_aligned: bool = true;
-        let backgrounds: Vec<GMBackground> =
-            reader.read_aligned_list_chunk(ALIGNMENT, &mut is_aligned)?;
-        Ok(Self { backgrounds, exists: true })
+        let pointers: Vec<u32> = reader.read_simple_list()?;
+        let align = pointers.iter().all(|&p| p % ALIGNMENT == 0);
+        let mut backgrounds: Vec<Option<GMBackground>> = vec![None; pointers.len()];
+
+        for (idx, pointer) in pointers.into_iter().enumerate() {
+            if pointer == 0 {
+                continue;
+            }
+            if align {
+                reader.align(ALIGNMENT)?;
+            }
+
+            reader.assert_pos(pointer, "Background Pointer")?;
+            let background = GMBackground::deserialize(reader)?;
+            backgrounds[idx] = Some(background);
+        }
+
+        Ok(Self { backgrounds, align, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.backgrounds)?;
+        let count: usize = self.backgrounds.len();
+        let ctx = || format!("building nullable pointer list of {count} Backgrounds/Tilesets");
+
+        builder.write_usize(count).with_context(ctx)?;
+        let pointer_list_pos: u32 = builder.pos();
+        for _ in 0..count {
+            builder.write_u32(0);
+        }
+
+        for (i, background_opt) in self.backgrounds.iter().enumerate() {
+            let Some(background) = background_opt else {
+                continue;
+            };
+            if self.align {
+                builder.align(ALIGNMENT);
+            }
+            builder
+                .overwrite_pointer_with_cur_pos(pointer_list_pos, i)
+                .with_context(ctx)?;
+            background.serialize(builder).with_context(ctx)?;
+        }
         Ok(())
     }
 }
@@ -40,7 +77,7 @@ impl GMElement for GMBackgrounds {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMBackground {
     /// The name of the background.
-    pub name: String,
+    pub name: GMRef<String>,
     /// Whether the background should be transparent.
     pub transparent: bool,
     /// Whether the background should get smoothed.
@@ -48,18 +85,18 @@ pub struct GMBackground {
     /// Whether to preload the background.
     pub preload: bool,
     /// The [`GMTexturePageItem`] this background uses.
-    pub texture: Option<GMRef<GMTexturePageItem>>,
+    pub texture: GMRef<GMTexturePageItem>,
     /// Only set in GMS 2.0+.
     pub gms2_data: Option<GMS2Data>,
 }
 
 impl GMElement for GMBackground {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: String = reader.read_gm_string()?;
+        let name: GMRef<String> = reader.read_gm_string()?;
         let transparent = reader.read_bool32()?;
         let smooth = reader.read_bool32()?;
         let preload = reader.read_bool32()?;
-        let texture: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
+        let texture: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
         let gms2_data: Option<GMS2Data> = reader.deserialize_if_gm_version(2)?;
 
         Ok(Self {
@@ -73,11 +110,11 @@ impl GMElement for GMBackground {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
+        builder.write_gm_string(self.name)?;
         builder.write_bool32(self.transparent);
         builder.write_bool32(self.smooth);
         builder.write_bool32(self.preload);
-        builder.write_gm_texture_opt(self.texture)?;
+        builder.write_gm_texture(self.texture)?;
         builder.write_if_ver(&self.gms2_data, "GMS2 data", 2)?;
         Ok(())
     }

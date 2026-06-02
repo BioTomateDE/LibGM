@@ -1,20 +1,27 @@
+use crate::gm_enum::gm_enum;
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::named_list_chunk;
-use macros::num_enum;
-
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sprite::GMSprite;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 
-#[named_list_chunk("PSEM")]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMParticleEmitters {
     pub emitters: Vec<GMParticleEmitter>,
     pub exists: bool,
 }
+
+// not sure if direct
+gm_named_list_chunk!(
+    PSEM,
+    GMParticleEmitters,
+    GMParticleEmitter,
+    emitters,
+    direct
+);
 
 impl GMElement for GMParticleEmitters {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -37,7 +44,7 @@ impl GMElement for GMParticleEmitters {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMParticleEmitter {
-    pub name: String,
+    pub name: GMRef<String>,
     pub enabled: bool,
     pub mode: EmitMode,
     pub emit_count: u32,
@@ -52,7 +59,7 @@ pub struct GMParticleEmitter {
     pub region_w: f32,
     pub region_h: f32,
     pub rotation: f32,
-    pub sprite: Option<GMRef<GMSprite>>,
+    pub sprite: GMRef<GMSprite>,
     pub texture: EmitterTexture,
     pub frame_index: f32,
     pub data_2023_4: Option<Data2023_4>,
@@ -79,22 +86,22 @@ pub struct GMParticleEmitter {
     pub orientation_increase: f32,
     pub orientation_wiggle: f32,
     pub orientation_relative: bool,
-    pub spawn_on_death: Option<GMRef<Self>>,
+    pub spawn_on_death: GMRef<Self>,
     pub spawn_on_death_count: u32,
-    pub spawn_on_update: Option<GMRef<Self>>,
+    pub spawn_on_update: GMRef<Self>,
     pub spawn_on_update_count: u32,
 }
 
 impl GMElement for GMParticleEmitter {
     #[allow(clippy::too_many_lines)]
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: String = reader.read_gm_string()?;
+        let name: GMRef<String> = reader.read_gm_string()?;
         let enabled: bool = if reader.general_info.version >= (2023, 6) {
             reader.read_bool32()?
         } else {
             true
         };
-        let mode: EmitMode = num_enum_from(reader.read_i32()?)?;
+        let mode: EmitMode = reader.read_enum()?;
 
         let emit_count: u32;
         let data_2023_8: Option<Data2023_8> = if reader.general_info.version >= (2023, 8) {
@@ -106,10 +113,10 @@ impl GMElement for GMParticleEmitter {
             reader.assert_bool(emit_relative, false, "Emit Relative")?;
             let delay_min = reader.read_f32()?;
             let delay_max = reader.read_f32()?;
-            let delay_unit: TimeUnit = num_enum_from(reader.read_i32()?)?;
+            let delay_unit: TimeUnit = reader.read_enum()?;
             let interval_min = reader.read_f32()?;
             let interval_max = reader.read_f32()?;
-            let interval_unit: TimeUnit = num_enum_from(reader.read_i32()?)?;
+            let interval_unit: TimeUnit = reader.read_enum()?;
 
             Some(Data2023_8 {
                 emit_relative,
@@ -119,22 +126,22 @@ impl GMElement for GMParticleEmitter {
                 interval_min,
                 interval_max,
                 interval_unit,
-                ..Default::default() // will be populated later
+                ..garbage() // will be populated later
             })
         } else {
             emit_count = reader.read_u32()?;
             None
         };
 
-        let distribution: EmitterDistribution = num_enum_from(reader.read_i32()?)?;
-        let shape: EmitterShape = num_enum_from(reader.read_i32()?)?;
+        let distribution: EmitterDistribution = reader.read_enum()?;
+        let shape: EmitterShape = reader.read_enum()?;
         let region_x = reader.read_f32()?;
         let region_y = reader.read_f32()?;
         let region_w = reader.read_f32()?;
         let region_h = reader.read_f32()?;
         let rotation = reader.read_f32()?;
-        let sprite: Option<GMRef<GMSprite>> = reader.read_resource_by_id_opt()?;
-        let texture: EmitterTexture = num_enum_from(reader.read_i32()?)?;
+        let sprite: GMRef<GMSprite> = reader.read_resource_by_id()?;
+        let texture: EmitterTexture = reader.read_enum()?;
         let frame_index = reader.read_f32()?;
         let data_2023_4: Option<Data2023_4> = reader.deserialize_if_gm_version((2023, 4))?;
         let start_color = reader.read_u32()?;
@@ -187,9 +194,9 @@ impl GMElement for GMParticleEmitter {
         let orientation_wiggle = reader.read_f32()?;
         let orientation_relative = reader.read_bool32()?;
 
-        let spawn_on_death: Option<GMRef<Self>> = reader.read_resource_by_id_opt()?;
+        let spawn_on_death: GMRef<Self> = reader.read_resource_by_id()?;
         let spawn_on_death_count = reader.read_u32()?;
-        let spawn_on_update: Option<GMRef<Self>> = reader.read_resource_by_id_opt()?;
+        let spawn_on_update: GMRef<Self> = reader.read_resource_by_id()?;
         let spawn_on_update_count = reader.read_u32()?;
 
         Ok(Self {
@@ -240,7 +247,7 @@ impl GMElement for GMParticleEmitter {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
+        builder.write_gm_string(self.name)?;
         if builder.version() >= (2023, 6) {
             builder.write_bool32(self.enabled);
         } else if !self.enabled {
@@ -260,23 +267,23 @@ impl GMElement for GMParticleEmitter {
             builder.write_bool32(data.emit_relative);
             builder.write_f32(data.delay_min);
             builder.write_f32(data.delay_max);
-            builder.write_i32(data.delay_unit.into());
+            builder.write_enum(data.delay_unit);
             builder.write_f32(data.interval_min);
             builder.write_f32(data.interval_max);
-            builder.write_i32(data.interval_unit.into());
+            builder.write_enum(data.interval_unit);
         } else {
             builder.write_u32(self.emit_count);
         }
 
-        builder.write_i32(self.distribution.into());
-        builder.write_i32(self.shape.into());
+        builder.write_enum(self.distribution);
+        builder.write_enum(self.shape);
         builder.write_f32(self.region_x);
         builder.write_f32(self.region_y);
         builder.write_f32(self.region_w);
         builder.write_f32(self.region_h);
         builder.write_f32(self.rotation);
-        builder.write_resource_id_opt(self.sprite);
-        builder.write_i32(self.texture.into());
+        builder.write_resource_id(self.sprite);
+        builder.write_enum(self.texture);
         builder.write_f32(self.frame_index);
         builder.write_if_ver(&self.data_2023_4, "2023.4 data", (2023, 4))?;
         builder.write_u32(self.start_color);
@@ -323,9 +330,9 @@ impl GMElement for GMParticleEmitter {
         builder.write_f32(self.orientation_increase);
         builder.write_f32(self.orientation_wiggle);
         builder.write_bool32(self.orientation_relative);
-        builder.write_resource_id_opt(self.spawn_on_death);
+        builder.write_resource_id(self.spawn_on_death);
         builder.write_u32(self.spawn_on_death_count);
-        builder.write_resource_id_opt(self.spawn_on_update);
+        builder.write_resource_id(self.spawn_on_update);
         builder.write_u32(self.spawn_on_update_count);
         Ok(())
     }
@@ -361,7 +368,7 @@ pub enum SizeDataEtc {
     Post2023_8(Data2023_8),
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Data2023_8 {
     pub emit_relative: bool,
     pub delay_min: f32,
@@ -380,6 +387,26 @@ pub struct Data2023_8 {
     pub size_wiggle_y: f32,
 }
 
+fn garbage() -> Data2023_8 {
+    Data2023_8 {
+        emit_relative: false,
+        delay_min: 0.0,
+        delay_max: 0.0,
+        delay_unit: TimeUnit::Frames,
+        interval_min: 0.0,
+        interval_max: 0.0,
+        interval_unit: TimeUnit::Frames,
+        size_min_x: 0.0,
+        size_max_x: 0.0,
+        size_min_y: 0.0,
+        size_max_y: 0.0,
+        size_increase_x: 0.0,
+        size_increase_y: 0.0,
+        size_wiggle_x: 0.0,
+        size_wiggle_y: 0.0,
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct DataPre2023_8 {
     pub size_min: f32,
@@ -388,39 +415,30 @@ pub struct DataPre2023_8 {
     pub size_wiggle: f32,
 }
 
-#[num_enum(i32)]
-pub enum EmitMode {
+gm_enum!(EmitMode {
     Stream = 0,
     Burst = 1,
-}
+});
 
-#[num_enum(i32)]
-#[derive(Default)]
-pub enum TimeUnit {
-    #[default]
-    // no sensible reason to set this as default,
-    // i just want `..Default::default()` to work ffs
+gm_enum!(TimeUnit {
     Seconds = 0,
     Frames = 1,
-}
+});
 
-#[num_enum(i32)]
-pub enum EmitterDistribution {
+gm_enum!(EmitterDistribution {
     Linear = 0,
     Gaussian = 1,
     InverseGaussian = 2,
-}
+});
 
-#[num_enum(i32)]
-pub enum EmitterShape {
+gm_enum!(EmitterShape {
     Rectangle = 0,
     Ellipse = 1,
     Diamond = 2,
     Line = 3,
-}
+});
 
-#[num_enum(i32)]
-pub enum EmitterTexture {
+gm_enum!(EmitterTexture {
     None = -1,
     Pixel = 0,
     Disk = 1,
@@ -436,4 +454,4 @@ pub enum EmitterTexture {
     Cloud = 11,
     Smoke = 12,
     Snow = 13,
-}
+});

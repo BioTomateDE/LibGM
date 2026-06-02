@@ -11,16 +11,16 @@ use crate::wad::elem::game_object::event::EventSubtype;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct Alarm {
-    pub index: u32,
+    pub index: u8,
 }
 
 impl EventSubtype for Alarm {
-    fn parse(index: u32) -> Result<Self> {
+    fn parse(index: i32) -> Result<Self> {
         Self::new(index)
     }
 
-    fn build(self) -> u32 {
-        self.index
+    fn build(self) -> i32 {
+        self.index as i32
     }
 }
 
@@ -28,10 +28,10 @@ impl Alarm {
     /// Creates a new [`Alarm`] with the given Alarm ID.
     ///
     /// This function will fail for `index >= 12`.
-    pub fn new(index: u32) -> Result<Self> {
-        if index >= 12 {
-            bail!("Alarm index must be less than 12; got {index}");
+    pub fn new(index: i32) -> Result<Self> {
+        if index < 0 || index >= 12 {
+            bail!("Alarm index must between 0 and 12; got {index}");
         }
-        Ok(Self { index })
+        Ok(Self { index: index as u8 })
     }
 }

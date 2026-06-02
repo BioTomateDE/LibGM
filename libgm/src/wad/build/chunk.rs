@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
-use crate::wad::chunk::ChunkName;
-use crate::wad::data::Endianness;
-use crate::wad::elem::GMChunk;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::build::builder::LastChunk;
+use crate::wad::chunk::ChunkName;
+use crate::wad::data::Endianness;
 
 impl DataBuilder<'_> {
     /// Write a 4 character ASCII GameMaker chunk name.
@@ -36,7 +35,7 @@ impl DataBuilder<'_> {
 
         self.write_chunk_name(name);
         self.write_u32(0xDEAD_C0DE); // Chunk length placeholder
-        let start_pos: u32 = self.len();
+        let start_pos: u32 = self.pos();
         let length_pos = start_pos - 4;
 
         element
@@ -44,7 +43,7 @@ impl DataBuilder<'_> {
             .with_context(|| format!("serializing chunk '{name}'"))?;
 
         // Write padding in these versions
-        let padding_start_pos = self.len();
+        let padding_start_pos = self.pos();
         let ver = &self.gm_data.general_info.version;
         if ver.major >= 2 || (ver.major == 1 && ver.build >= 9999) {
             self.align(self.gm_data.meta.chunk_padding);
@@ -55,7 +54,7 @@ impl DataBuilder<'_> {
         self.last_chunk = LastChunk { length_pos, padding_start_pos };
 
         // Resolve chunk length placeholder
-        let chunk_length: u32 = self.len() - start_pos;
+        let chunk_length: u32 = self.pos() - start_pos;
         self.overwrite_u32(chunk_length, length_pos)
             .expect("Chunk length overwrite position out of bounds");
 

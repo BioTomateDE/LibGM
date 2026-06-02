@@ -10,32 +10,34 @@ pub use background::Background;
 pub use flags::Flags;
 pub use game_object::GameObject;
 pub use layer::Layer;
-use macros::named_list_chunk;
 pub use tile::Tile;
 pub use view::View;
 
 use crate::gml::GMCode;
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sequence::GMSequence;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 
-#[named_list_chunk("ROOM")]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMRooms {
-    pub rooms: Vec<GMRoom>,
+    pub rooms: Vec<Option<GMRoom>>,
     pub exists: bool,
 }
 
+gm_named_list_chunk!(ROOM, GMRooms, GMRoom, rooms, nullable);
+
 impl GMElement for GMRooms {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let rooms: Vec<GMRoom> = reader.read_pointer_list()?;
+        let rooms: Vec<Option<GMRoom>> = reader.read_pointer_list_opt()?;
         Ok(Self { rooms, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.rooms)?;
+        builder.write_pointer_list_opt(&self.rooms)?;
         Ok(())
     }
 }
@@ -43,15 +45,15 @@ impl GMElement for GMRooms {
 #[derive(Debug, Clone, PartialEq)]
 #[repr(C)] // Need explicit layout so memory addresses for gm pointers don't collide
 pub struct GMRoom {
-    pub name: String,
-    pub caption: Option<String>,
+    pub name: GMRef<String>,
+    pub caption: GMRef<String>,
     pub width: u32,
     pub height: u32,
     pub speed: u32,
     pub persistent: bool,
     pub background_color: u32,
     pub draw_background_color: bool,
-    pub creation_code: Option<GMRef<GMCode>>,
+    pub creation_code: GMRef<GMCode>,
     pub flags: Flags,
     pub backgrounds: Vec<Background>,
     pub views: Vec<View>,
@@ -72,8 +74,8 @@ pub struct GMRoom {
 
 impl GMElement for GMRoom {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: String = reader.read_gm_string()?;
-        let caption: Option<String> = reader.read_gm_string_opt()?;
+        let name: GMRef<String> = reader.read_gm_string()?;
+        let caption: GMRef<String> = reader.read_gm_string()?;
         let width = reader.read_u32()?;
         let height = reader.read_u32()?;
         let speed = reader.read_u32()?;
@@ -83,7 +85,7 @@ impl GMElement for GMRoom {
         let background_color: u32 = reader.read_u32()? ^ 0xFF00_0000;
 
         let draw_background_color = reader.read_bool32()?;
-        let creation_code: Option<GMRef<GMCode>> = reader.read_resource_by_id_opt()?;
+        let creation_code: GMRef<GMCode> = reader.read_resource_by_id()?;
         let flags = Flags::deserialize(reader)?;
 
         let backgrounds_ptr = reader.read_u32()?;
@@ -167,8 +169,8 @@ impl GMElement for GMRoom {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
-        builder.write_gm_string_opt(&self.caption);
+        builder.write_gm_string(self.name)?;
+        builder.write_gm_string(self.caption)?;
         builder.write_u32(self.width);
         builder.write_u32(self.height);
         builder.write_u32(self.speed);
@@ -178,7 +180,7 @@ impl GMElement for GMRoom {
         builder.write_u32(self.background_color ^ 0xFF00_0000);
 
         builder.write_bool32(self.draw_background_color);
-        builder.write_resource_id_opt(self.creation_code);
+        builder.write_resource_id(self.creation_code);
         self.flags.serialize(builder)?;
         builder.write_pointer(&self.backgrounds);
         builder.write_pointer(&self.views);

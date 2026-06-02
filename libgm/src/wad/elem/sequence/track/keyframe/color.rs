@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::num_enum;
 
 use super::Keyframe;
+use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct KeyframesData {
@@ -17,14 +16,14 @@ pub struct KeyframesData {
 impl GMElement for KeyframesData {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
-        let interpolation = num_enum_from(reader.read_i32()?)?;
+        let interpolation = reader.read_enum()?;
         let keyframes: Vec<Keyframe<Color>> = reader.read_simple_list()?;
         Ok(Self { interpolation, keyframes })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.align(4);
-        builder.write_i32(self.interpolation.into());
+        builder.write_enum(self.interpolation);
         builder.write_simple_list(&self.keyframes)?;
         Ok(())
     }
@@ -47,8 +46,7 @@ impl GMElement for Color {
     }
 }
 
-#[num_enum(i32)]
-pub enum InterpolationMode {
+gm_enum!(InterpolationMode {
     None = 0,
     Linear = 1,
-}
+});

@@ -1,29 +1,30 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::named_list_chunk;
-
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
 /// Audio Groups allow you to manage a set sound entries easier.
 /// You can use these for memory management, volume control and more.
 /// ___
 /// Audio Groups are only available to use in the regular audio system.
-#[named_list_chunk("AGRP")]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMAudioGroups {
-    pub audio_groups: Vec<GMAudioGroup>,
+    pub audio_groups: Vec<Option<GMAudioGroup>>,
     pub exists: bool,
 }
 
+gm_named_list_chunk!(AGRP, GMAudioGroups, GMAudioGroup, audio_groups, nullable);
+
 impl GMElement for GMAudioGroups {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let audio_groups: Vec<GMAudioGroup> = reader.read_pointer_list()?;
+        let audio_groups: Vec<Option<GMAudioGroup>> = reader.read_pointer_list_opt()?;
         Ok(Self { audio_groups, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.audio_groups)?;
+        builder.write_pointer_list_opt(&self.audio_groups)?;
         Ok(())
     }
 }
@@ -32,24 +33,24 @@ impl GMElement for GMAudioGroups {
 pub struct GMAudioGroup {
     /// The name of the audio group.
     /// This is how the audio group is referenced from code.
-    pub name: String,
+    pub name: GMRef<String>,
 
     /// Relative path (from the main data file) to the audio group file, in
     /// GameMaker 2024.14 and above. ___
     /// Prior to 2024.14, audio groups were all numerically assigned filenames
     /// and all in the root directory.
-    pub path: Option<String>,
+    pub path: Option<GMRef<String>>,
 }
 
 impl GMElement for GMAudioGroup {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: String = reader.read_gm_string()?;
-        let path: Option<String> = reader.deserialize_if_gm_version((2024, 14))?;
+        let name: GMRef<String> = reader.read_gm_string()?;
+        let path: Option<GMRef<String>> = reader.deserialize_if_gm_version((2024, 14))?;
         Ok(Self { name, path })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
+        builder.write_gm_string(self.name)?;
         builder.write_if_ver(&self.path, "Path", (2024, 14))?;
         Ok(())
     }

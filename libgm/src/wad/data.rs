@@ -11,6 +11,7 @@ use crate::wad::elem::audio::GMAudios;
 use crate::wad::elem::audio_group::GMAudioGroups;
 use crate::wad::elem::background::GMBackgrounds;
 use crate::wad::elem::code::GMCodes;
+use crate::wad::elem::data_file::GMDataFiles;
 use crate::wad::elem::embedded_image::GMEmbeddedImages;
 use crate::wad::elem::extension::GMExtensions;
 use crate::wad::elem::feature_flag::GMFeatureFlags;
@@ -32,6 +33,7 @@ use crate::wad::elem::sequence::GMSequences;
 use crate::wad::elem::shader::GMShaders;
 use crate::wad::elem::sound::GMSounds;
 use crate::wad::elem::sprite::GMSprites;
+use crate::wad::elem::string::GMStrings;
 use crate::wad::elem::tag::GMTags;
 use crate::wad::elem::texture_group_info::GMTextureGroupInfos;
 use crate::wad::elem::texture_page::GMTexturePages;
@@ -126,6 +128,7 @@ pub struct GMData {
     pub audios: GMAudios,                         // AUDO
     pub backgrounds: GMBackgrounds,               // BGND
     pub codes: GMCodes,                           // CODE
+    pub(crate) data_files: GMDataFiles,           // DAFL
     pub embedded_images: GMEmbeddedImages,        // EMBI
     pub extensions: GMExtensions,                 // EXTN
     pub feature_flags: GMFeatureFlags,            // FEAT
@@ -148,6 +151,7 @@ pub struct GMData {
     pub shaders: GMShaders,                       // SHDR
     pub sounds: GMSounds,                         // SOND
     pub sprites: GMSprites,                       // SPRT
+    pub strings: GMStrings,                       // STRG
     pub tags: GMTags,                             // TAGS
     pub texture_group_infos: GMTextureGroupInfos, // TGIN
     pub texture_page_items: GMTexturePageItems,   // TPAG
@@ -157,7 +161,7 @@ pub struct GMData {
 }
 
 impl fmt::Debug for GMData {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("GMData")
             .field("meta", &self.meta)
             .field("general_info", &self.general_info)
@@ -170,25 +174,25 @@ impl GMData {
     /// This checks for duplicates as well as name charset.
     pub fn validate_names(&self) -> Result<()> {
         let stopwatch = Stopwatch::start();
-        validate_names(&self.animation_curves)?;
-        validate_names(&self.audio_groups)?;
-        validate_names(&self.backgrounds)?;
-        validate_names(&self.codes)?;
-        validate_names(&self.embedded_images)?;
-        validate_names(&self.filter_effects)?;
-        validate_names(&self.fonts)?;
-        validate_names(&self.functions)?;
-        validate_names(&self.game_objects)?;
-        validate_names(&self.particle_emitters)?;
-        validate_names(&self.particle_systems)?;
-        validate_names(&self.paths)?;
-        validate_names(&self.rooms)?;
-        validate_names(&self.scripts)?;
-        validate_names(&self.sequences)?;
-        validate_names(&self.shaders)?;
-        validate_names(&self.sounds)?;
-        validate_names(&self.sprites)?;
-        validate_names(&self.texture_group_infos)?;
+        validate_names(&self.animation_curves, &self.strings)?;
+        validate_names(&self.audio_groups, &self.strings)?;
+        validate_names(&self.backgrounds, &self.strings)?;
+        validate_names(&self.codes, &self.strings)?;
+        validate_names(&self.embedded_images, &self.strings)?;
+        validate_names(&self.filter_effects, &self.strings)?;
+        validate_names(&self.fonts, &self.strings)?;
+        validate_names(&self.functions, &self.strings)?;
+        validate_names(&self.game_objects, &self.strings)?;
+        validate_names(&self.particle_emitters, &self.strings)?;
+        validate_names(&self.particle_systems, &self.strings)?;
+        validate_names(&self.paths, &self.strings)?;
+        validate_names(&self.rooms, &self.strings)?;
+        validate_names(&self.scripts, &self.strings)?;
+        validate_names(&self.sequences, &self.strings)?;
+        validate_names(&self.shaders, &self.strings)?;
+        validate_names(&self.sounds, &self.strings)?;
+        validate_names(&self.sprites, &self.strings)?;
+        validate_names(&self.texture_group_infos, &self.strings)?;
         log::trace!("Validating all names took {stopwatch}");
         Ok(())
     }
@@ -204,7 +208,7 @@ impl GMData {
     pub fn deserialize_all_textures(&mut self) -> Result<()> {
         let stopwatch = Stopwatch::start();
 
-        for texture_page in &mut self.texture_pages {
+        for texture_page in self.texture_pages.elements_mut() {
             let Some(image) = &mut texture_page.image else {
                 continue;
             };
@@ -220,8 +224,8 @@ impl GMData {
         Ok(())
     }
 
-    /// Runs some actions to fully verify integrity and to prepare the data file
-    /// for editing.
+    /// Runs some actions to fully verify integrity and
+    /// to prepare the data file for editing.
     pub fn post_deserialize(&mut self) -> Result<()> {
         self.validate_names()?;
         self.deserialize_all_textures()?;

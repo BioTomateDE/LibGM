@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::fmt;
 
-use macros::num_enum;
-
+use crate::gm_enum::GMEnum;
+use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
 use crate::wad::elem::game_object::event::EventSubtype;
 
+gm_enum!(
 /// Triggered when a key is pressed/released on a keyboard.
 ///
 /// Used by `keyboard`, `key_down` and `key_up`.
-#[num_enum(u32)]
-pub enum Key {
+Key {
     /// Keycode representing no key.
     ///
     /// Mnemonic: `vk_nokey`
@@ -396,15 +395,15 @@ pub enum Key {
     ///
     /// Mnemonic: `vk_ralt`
     RightAlt = 165,
-}
+});
 
 impl EventSubtype for Key {
-    fn parse(subtype: u32) -> Result<Self> {
-        num_enum_from(subtype)
+    fn parse(subtype: i32) -> Result<Self> {
+        Self::from_i32(subtype)
     }
 
-    fn build(self) -> u32 {
-        self.into()
+    fn build(self) -> i32 {
+        self.as_i32()
     }
 }
 

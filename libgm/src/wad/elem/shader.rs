@@ -1,21 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use core::fmt;
 
-use macros::named_list_chunk;
-use macros::num_enum;
-
+use crate::gm_enum::GMEnum;
+use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
 use crate::util::init::vec_with_capacity;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
-#[named_list_chunk("SHDR")]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMShaders {
-    pub shaders: Vec<GMShader>,
+    pub shaders: Vec<Option<GMShader>>,
     pub exists: bool,
 }
+
+gm_named_list_chunk!(SHDR, GMShaders, GMShader, shaders, nullable);
 
 impl GMElement for GMShaders {
     #[allow(clippy::too_many_lines)]
@@ -31,25 +32,26 @@ impl GMElement for GMShaders {
         }
         locations.push(reader.chunk.end_pos);
 
-        let mut shaders: Vec<GMShader> = vec_with_capacity(count)?;
-        for win in locations.windows(2) {
-            let pointer = win[0];
-            let entry_end = win[1];
-            reader.cur_pos = pointer;
-            let name: String = reader.read_gm_string()?;
-            let shader_type: Type = num_enum_from(reader.read_u32()? & 0x7FFF_FFFF)?;
+        let mut shaders: Vec<Option<GMShader>> = vec![None; count as usize];
 
-            let glsl_es_vertex: String = reader.read_gm_string()?;
-            let glsl_es_fragment: String = reader.read_gm_string()?;
-            let glsl_vertex: String = reader.read_gm_string()?;
-            let glsl_fragment: String = reader.read_gm_string()?;
-            let hlsl9_vertex: String = reader.read_gm_string()?;
-            let hlsl9_fragment: String = reader.read_gm_string()?;
+        for i in 0..count as usize {
+            let pointer = locations[i];
+            let entry_end = locations[i + 1];
+            reader.cur_pos = pointer;
+            let name: GMRef<String> = reader.read_gm_string()?;
+            let shader_type: Type = Type::from_i32(reader.read_i32()? & 0x7FFF_FFFF)?;
+
+            let glsl_es_vertex: GMRef<String> = reader.read_gm_string()?;
+            let glsl_es_fragment: GMRef<String> = reader.read_gm_string()?;
+            let glsl_vertex: GMRef<String> = reader.read_gm_string()?;
+            let glsl_fragment: GMRef<String> = reader.read_gm_string()?;
+            let hlsl9_vertex: GMRef<String> = reader.read_gm_string()?;
+            let hlsl9_fragment: GMRef<String> = reader.read_gm_string()?;
 
             let hlsl11_vertex_ptr = reader.read_u32()?;
             let hlsl11_pixel_ptr = reader.read_u32()?;
 
-            let vertex_shader_attributes: Vec<String> = reader.read_simple_list()?;
+            let vertex_shader_attributes: Vec<GMRef<String>> = reader.read_simple_list()?;
 
             let mut version: i32 = 2;
             let mut pssl_vertex_ptr = 0;
@@ -131,7 +133,7 @@ impl GMElement for GMShaders {
             let cg_ps3_pixel_data: Option<ShaderData> =
                 read_shader_data(reader, entry_end, 16, cg_ps3_pixel_ptr, cg_ps3_pixel_len, 0)?;
 
-            shaders.push(GMShader {
+            shaders[i] = Some(GMShader {
                 name,
                 shader_type,
                 glsl_es_vertex,
@@ -157,21 +159,21 @@ impl GMElement for GMShaders {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.shaders)?;
+        builder.write_pointer_list_opt(&self.shaders)?;
         Ok(())
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMShader {
-    pub name: String,
+    pub name: GMRef<String>,
     pub shader_type: Type,
-    pub glsl_es_vertex: String,
-    pub glsl_es_fragment: String,
-    pub glsl_vertex: String,
-    pub glsl_fragment: String,
-    pub hlsl9_vertex: String,
-    pub hlsl9_fragment: String,
+    pub glsl_es_vertex: GMRef<String>,
+    pub glsl_es_fragment: GMRef<String>,
+    pub glsl_vertex: GMRef<String>,
+    pub glsl_fragment: GMRef<String>,
+    pub hlsl9_vertex: GMRef<String>,
+    pub hlsl9_fragment: GMRef<String>,
     pub version: i32,
     pub hlsl11_vertex_data: Option<ShaderData>,
     pub hlsl11_pixel_data: Option<ShaderData>,
@@ -181,7 +183,7 @@ pub struct GMShader {
     pub cg_psvita_pixel_data: Option<ShaderData>,
     pub cg_ps3_vertex_data: Option<ShaderData>,
     pub cg_ps3_pixel_data: Option<ShaderData>,
-    pub vertex_shader_attributes: Vec<String>,
+    pub vertex_shader_attributes: Vec<GMRef<String>>,
 }
 
 impl GMElement for GMShader {
@@ -190,14 +192,14 @@ impl GMElement for GMShader {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
-        builder.write_u32(u32::from(self.shader_type) | 0x8000_0000);
-        builder.write_gm_string(&self.glsl_es_vertex);
-        builder.write_gm_string(&self.glsl_es_fragment);
-        builder.write_gm_string(&self.glsl_vertex);
-        builder.write_gm_string(&self.glsl_fragment);
-        builder.write_gm_string(&self.hlsl9_vertex);
-        builder.write_gm_string(&self.hlsl9_fragment);
+        builder.write_gm_string(self.name)?;
+        builder.write_u32(self.shader_type.as_i32() as u32 | 0x8000_0000);
+        builder.write_gm_string(self.glsl_es_vertex)?;
+        builder.write_gm_string(self.glsl_es_fragment)?;
+        builder.write_gm_string(self.glsl_vertex)?;
+        builder.write_gm_string(self.glsl_fragment)?;
+        builder.write_gm_string(self.hlsl9_vertex)?;
+        builder.write_gm_string(self.hlsl9_fragment)?;
 
         builder.write_pointer_opt(&self.hlsl11_vertex_data);
         builder.write_pointer_opt(&self.hlsl11_pixel_data);
@@ -244,12 +246,12 @@ impl GMElement for GMShader {
     }
 }
 
+gm_enum!(
 /// Possible shader types a shader can have.
 /// All console shaders (and HLSL11?) are compiled using confidential SDK tools
 /// when `GMAssetCompiler` builds the game (for PSVita it's `psp2cgc` shader
 /// compiler).
-#[num_enum(u32)]
-pub enum Type {
+Type {
     GlslEs = 1,
     Glsl = 2,
     Hlsl9 = 3,
@@ -262,7 +264,7 @@ pub enum Type {
     /// Cg stands for "C for graphics" made by NVIDIA and used in PSVita and PS3
     /// (they have their own variants of Cg), based on HLSL9.
     CgPs3 = 7,
-}
+});
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct ShaderData {

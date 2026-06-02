@@ -26,7 +26,7 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     log::debug!("Detected Deltarune Chapter 3");
     let code_ref = data
         .codes
-        .ref_by_name("gml_Object_obj_initializer2_Create_0")?;
+        .ref_by_name("gml_Object_obj_initializer2_Create_0", &data.strings)?;
     let (push_instr_index, is_enabled) = super::find_debug(data, code_ref, InstanceType::Global)?;
 
     if enable == is_enabled {
@@ -46,7 +46,8 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
 
     if let Some(Instruction::Pop { variable, .. }) = code.instructions.get(push_instr_index + 3) {
         let gm_variable: &GMVariable = data.variables.by_ref(variable.variable)?;
-        if gm_variable.name == "chemg_show_room" {
+        let var_name = data.strings.by_ref(gm_variable.name)?;
+        if var_name == "chemg_show_room" {
             // Debug had been enabled here before.
             // Return instead of bloating the code with duplicate assignments.
             return Ok(());

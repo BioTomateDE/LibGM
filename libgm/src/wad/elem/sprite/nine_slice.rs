@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::num_enum;
 
+use crate::gm_enum::GMEnum;
+use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NineSlice {
@@ -27,7 +27,7 @@ impl GMElement for NineSlice {
 
         let mut tile_modes: [TileMode; 5] = [TileMode::Stretch; 5]; // Ignore default value
         for tile_mode in &mut tile_modes {
-            *tile_mode = num_enum_from(reader.read_i32()?)?;
+            *tile_mode = reader.read_enum()?;
         }
 
         Ok(Self {
@@ -47,17 +47,16 @@ impl GMElement for NineSlice {
         builder.write_i32(self.bottom);
         builder.write_bool32(self.enabled);
         for tile_mode in &self.tile_modes {
-            builder.write_i32((*tile_mode).into());
+            builder.write_i32(tile_mode.as_i32());
         }
         Ok(())
     }
 }
 
-#[num_enum(i32)]
-pub enum TileMode {
+gm_enum!(TileMode {
     Stretch = 0,
     Repeat = 1,
     Mirror = 2,
     BlankRepeat = 3,
     Hide = 4,
-}
+});

@@ -6,7 +6,7 @@ use crate::wad::elem::variable::GMVariable;
 
 /// A variable reference in an instruction.
 /// Contains the actual variable ref as well as instance type and variable type.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CodeVariable {
     pub variable: GMRef<GMVariable>,
     pub variable_type: VariableType,

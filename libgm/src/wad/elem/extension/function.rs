@@ -1,30 +1,29 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::num_enum;
 
+use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::extension::Kind;
-use crate::wad::build::builder::DataBuilder;
+use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
-    pub name: String,
+    pub name: GMRef<String>,
     pub id: u32,
     pub kind: Kind,
     pub return_type: ReturnType,
-    pub ext_name: String,
+    pub ext_name: GMRef<String>,
     pub arguments: Vec<Argument>,
 }
 
 impl GMElement for Function {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: String = reader.read_gm_string()?;
+        let name: GMRef<String> = reader.read_gm_string()?;
         let id = reader.read_u32()?;
-        let kind: Kind = num_enum_from(reader.read_i32()?)?; // Assumption; UTMT uses u32
-        let return_type: ReturnType = num_enum_from(reader.read_i32()?)?;
-        let ext_name: String = reader.read_gm_string()?;
+        let kind: Kind = reader.read_enum()?; // Assumption; UTMT uses u32
+        let return_type: ReturnType = reader.read_enum()?;
+        let ext_name: GMRef<String> = reader.read_gm_string()?;
         let arguments: Vec<Argument> = reader.read_simple_list()?;
         Ok(Self {
             name,
@@ -37,11 +36,11 @@ impl GMElement for Function {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
+        builder.write_gm_string(self.name)?;
         builder.write_u32(self.id);
-        builder.write_i32(self.kind.into());
-        builder.write_i32(self.return_type.into());
-        builder.write_gm_string(&self.ext_name);
+        builder.write_enum(self.kind);
+        builder.write_enum(self.return_type);
+        builder.write_gm_string(self.ext_name)?;
         builder.write_simple_list(&self.arguments)?;
         Ok(())
     }
@@ -54,18 +53,17 @@ pub struct Argument {
 
 impl GMElement for Argument {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let return_type: ReturnType = num_enum_from(reader.read_i32()?)?;
+        let return_type: ReturnType = reader.read_enum()?;
         Ok(Self { return_type })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(self.return_type.into());
+        builder.write_enum(self.return_type);
         Ok(())
     }
 }
 
-#[num_enum(i32)]
-pub enum ReturnType {
+gm_enum!(ReturnType {
     String = 1,
     Double = 2,
-}
+});

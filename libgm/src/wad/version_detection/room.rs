@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use super::target_version;
+use crate::gm_enum::GMEnum;
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
-use crate::wad::parse::reader::DataReader;
 use crate::wad::elem::room::layer::Type;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
 
 pub fn check_2022_1(reader: &mut DataReader) -> Result<Option<GMVersion>> {
@@ -41,7 +41,7 @@ pub fn check_2022_1(reader: &mut DataReader) -> Result<Option<GMVersion>> {
         // Actually perform the length checks, depending on layer data
         reader.cur_pos = jump_pointer;
         let layer_type = reader.read_i32()?;
-        let Ok(layer_type) = Type::try_from(layer_type) else {
+        let Some(layer_type) = Type::try_from_i32(layer_type) else {
             continue;
         };
 
@@ -162,7 +162,7 @@ pub fn check_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
 
             // Actually perform the length checks
             reader.cur_pos = layer_data_ptr + 8;
-            let layer_type: Type = num_enum_from(reader.read_i32()?)?;
+            let layer_type: Type = reader.read_enum()?;
             if layer_type != Type::Tiles {
                 check_next_layer_offset = false;
                 continue;

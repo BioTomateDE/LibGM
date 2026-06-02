@@ -3,9 +3,9 @@ mod style_group;
 pub use style_group::StyleGroup;
 
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Data<T> {
     pub min_x: f32,

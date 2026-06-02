@@ -1,25 +1,61 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::named_list_chunk;
-use macros::num_enum;
 
+use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::GMNamedElement;
 use crate::wad::elem::background::GMBackground;
 use crate::wad::elem::font::GMFont;
 use crate::wad::elem::sprite::GMSprite;
+use crate::wad::elem::string::GMStrings;
 use crate::wad::elem::texture_page::GMTexturePage;
 use crate::wad::elem::validate_identifier;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::version::LTSBranch;
 
-#[named_list_chunk("TGIN", name_exception)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMTextureGroupInfos {
     pub texture_group_infos: Vec<GMTextureGroupInfo>,
     pub exists: bool,
+}
+
+// not sure if direct
+gm_list_chunk!(
+    TGIN,
+    GMTextureGroupInfos,
+    GMTextureGroupInfo,
+    texture_group_infos,
+    direct
+);
+
+impl GMNamedElement for GMTextureGroupInfo {
+    fn name_ref(&self) -> GMRef<String> {
+        self.name
+    }
+
+    fn validate_name(&self, gm_strings: &GMStrings) -> Result<()> {
+        // Allow ".png" inside the identifier
+        let name = self.name(gm_strings)?;
+        for part in name.split_terminator(".png") {
+            validate_identifier(part)?;
+        }
+        Ok(())
+    }
+}
+
+impl GMNamedListChunk for GMTextureGroupInfos {
+    fn ref_by_name(&self, name: &str, gm_strings: &GMStrings) -> Result<GMRef<Self::Element>> {
+        for (gm_ref, elem) in self.element_refs() {
+            let elem_name: &String = elem.name.resolve(&gm_strings.strings)?;
+            if name == elem_name {
+                return Ok(gm_ref);
+            }
+        }
+        Err(err!("Could not find Texture Group Info with name {name:?}"))
+    }
 }
 
 impl GMElement for GMTextureGroupInfos {
@@ -38,7 +74,7 @@ impl GMElement for GMTextureGroupInfos {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMTextureGroupInfo {
-    pub name: String,
+    pub name: GMRef<String>,
     pub texture_pages: Vec<GMRef<GMTexturePage>>,
     pub sprites: Vec<GMRef<GMSprite>>,
     pub spine_sprites: Vec<GMRef<GMSprite>>,
@@ -47,28 +83,9 @@ pub struct GMTextureGroupInfo {
     pub data_2022_9: Option<Data2022_9>,
 }
 
-impl GMNamedElement for GMTextureGroupInfo {
-    fn name(&self) -> &String {
-        &self.name
-    }
-
-    fn name_mut(&mut self) -> &mut String {
-        &mut self.name
-    }
-
-    fn validate_name(&self) -> Result<()> {
-        // Allow ".png" inside the identifier
-        let name = &self.name;
-        for part in name.split_terminator(".png") {
-            validate_identifier(part)?;
-        }
-        Ok(())
-    }
-}
-
 impl GMElement for GMTextureGroupInfo {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: String = reader.read_gm_string()?;
+        let name: GMRef<String> = reader.read_gm_string()?;
         let data_2022_9: Option<Data2022_9> = reader.deserialize_if_gm_version((2022, 9))?;
         let texture_pages_ptr = reader.read_u32()?;
         let sprites_ptr = reader.read_u32()?;
@@ -112,7 +129,7 @@ impl GMElement for GMTextureGroupInfo {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
+        builder.write_gm_string(self.name)?;
         builder.write_if_ver(
             &self.data_2022_9,
             "Directory, Extension, LoadType",
@@ -149,29 +166,28 @@ impl GMElement for GMTextureGroupInfo {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Data2022_9 {
-    pub directory: String,
-    pub extension: String,
+    pub directory: GMRef<String>,
+    pub extension: GMRef<String>,
     pub load_type: LoadType,
 }
 
 impl GMElement for Data2022_9 {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let directory: String = reader.read_gm_string()?;
-        let extension: String = reader.read_gm_string()?;
-        let load_type: LoadType = num_enum_from(reader.read_i32()?)?;
+        let directory: GMRef<String> = reader.read_gm_string()?;
+        let extension: GMRef<String> = reader.read_gm_string()?;
+        let load_type: LoadType = reader.read_enum()?;
         Ok(Self { directory, extension, load_type })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.directory);
-        builder.write_gm_string(&self.extension);
-        builder.write_i32(self.load_type.into());
+        builder.write_gm_string(self.directory)?;
+        builder.write_gm_string(self.extension)?;
+        builder.write_enum(self.load_type);
         Ok(())
     }
 }
 
-#[num_enum(i32)]
-pub enum LoadType {
+gm_enum!(LoadType {
     /// The texture data is located inside this file.
     InFile = 0,
 
@@ -184,4 +200,4 @@ pub enum LoadType {
     /// May mean more specifically that textures are separated into different
     /// files, within the group.
     SeparateTextures = 2,
-}
+});

@@ -16,9 +16,9 @@ pub use item::Item;
 
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
 #[derive(Clone, PartialEq)]
 pub struct Data {

@@ -57,12 +57,12 @@ impl<'a> Reader<'a> {
     }
 
     #[must_use]
-    pub fn consume_str(&mut self, string: &'static str) -> Option<()> {
+    pub fn consume_str(&mut self, string: &'static str) -> bool {
         if !self.starts_with(string) {
-            return None;
+            return false;
         }
         self.line = &self.line[string.len()..];
-        Some(())
+        true
     }
 
     pub fn consume_space(&mut self) -> Result<()> {

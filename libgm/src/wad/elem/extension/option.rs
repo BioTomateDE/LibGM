@@ -1,38 +1,36 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::num_enum;
 
+use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Option {
-    pub name: String,
-    pub value: String,
+pub struct ExtOption {
+    pub name: GMRef<String>,
+    pub value: GMRef<String>,
     pub kind: Kind,
 }
 
-impl GMElement for Option {
+impl GMElement for ExtOption {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: String = reader.read_gm_string()?;
-        let value: String = reader.read_gm_string()?;
-        let kind: Kind = num_enum_from(reader.read_i32()?)?;
+        let name: GMRef<String> = reader.read_gm_string()?;
+        let value: GMRef<String> = reader.read_gm_string()?;
+        let kind: Kind = reader.read_enum()?;
         Ok(Self { name, value, kind })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
-        builder.write_gm_string(&self.value);
-        builder.write_i32(self.kind.into());
+        builder.write_gm_string(self.name)?;
+        builder.write_gm_string(self.value)?;
+        builder.write_enum(self.kind);
         Ok(())
     }
 }
 
-#[num_enum(i32)]
-pub enum Kind {
+gm_enum!(Kind {
     Boolean = 0,
     Number = 1,
     String = 2,
-}
+});

@@ -188,11 +188,11 @@
 //! They do not contain a list. Instead, they are the
 //! element itself and contain the fields directly.
 
-mod chunk;
 mod memory;
 mod version_detection;
 
 pub mod build;
+pub mod chunk;
 pub mod data;
 pub mod elem;
 pub mod parse;

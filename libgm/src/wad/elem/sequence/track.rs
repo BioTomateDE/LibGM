@@ -3,26 +3,25 @@ pub mod keyframe;
 
 pub use keyframe::Keyframe;
 pub use keyframe::Keyframes;
-use macros::num_enum;
 
+use crate::gm_enum::gm_enum;
 use crate::prelude::*;
 use crate::util::bitfield::bitfield_struct;
-use crate::util::init::num_enum_from;
 use crate::util::init::vec_with_capacity;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::animation_curve::GMAnimationCurve;
-use crate::wad::build::builder::DataBuilder;
+use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Track {
     /// Name for the type/model of track, such as `GMGroupTrack`,
     /// `GMInstanceTrack`, `GMRealTrack`, etc.
-    pub model_name: String,
+    pub model_name: GMRef<String>,
 
     /// Name of the track. Can be user-assigned or the name of a property or
     /// asset.
-    pub name: String,
+    pub name: GMRef<String>,
 
     /// Builtin name for the track, representing the type of property, or 0 if
     /// not applicable.
@@ -45,13 +44,19 @@ pub struct Track {
 
     /// Owned resources of this track (such as animation curves).
     pub owned_resources: Vec<GMAnimationCurve>,
+
+    // "GMAnimCurve"
+    animcurve_string: GMRef<String>,
 }
 
 impl GMElement for Track {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let model_name: String = reader.read_gm_string()?;
-        let name: String = reader.read_gm_string()?;
-        let builtin_name: BuiltinName = num_enum_from(reader.read_i32()?)?;
+        let model_name_str: &str = force_read_string(reader)?;
+        reader.cur_pos -= 4;
+        let model_name: GMRef<String> = reader.read_gm_string()?;
+
+        let name: GMRef<String> = reader.read_gm_string()?;
+        let builtin_name: BuiltinName = reader.read_enum()?;
         let flags = Flags::deserialize(reader)?;
         let is_creation_track = reader.read_bool32()?;
 
@@ -65,14 +70,16 @@ impl GMElement for Track {
         }
 
         let mut owned_resources: Vec<GMAnimationCurve> = vec_with_capacity(owned_resources_count)?;
+        let mut animcurve_string = GMRef::none();
 
         for _ in 0..owned_resources_count {
-            let animcurve_str: String = reader.read_gm_string()?;
-            if animcurve_str != "GMAnimCurve" {
+            let string: &str = force_read_string(reader)?;
+            animcurve_string = reader.read_gm_string()?;
+            if string != "GMAnimCurve" {
                 bail!(
                     "Expected owned resource thingy of Track to be \"GMAnimCurve\"; but found \
                      {:?} for Track {:?}",
-                    animcurve_str,
+                    animcurve_string,
                     name,
                 );
             }
@@ -84,7 +91,7 @@ impl GMElement for Track {
             sub_tracks.push(Self::deserialize(reader)?);
         }
 
-        let keyframes = match model_name.as_str() {
+        let keyframes = match model_name_str {
             "GMAudioTrack" => Keyframes::Audio(keyframe::Data::deserialize(reader)?),
             "GMInstanceTrack" => Keyframes::Instance(keyframe::Data::deserialize(reader)?),
             "GMGraphicTrack" => Keyframes::Graphic(keyframe::Data::deserialize(reader)?),
@@ -113,13 +120,14 @@ impl GMElement for Track {
             sub_tracks,
             keyframes,
             owned_resources,
+            animcurve_string,
         })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.model_name);
-        builder.write_gm_string(&self.name);
-        builder.write_i32(self.builtin_name.into());
+        builder.write_gm_string(self.model_name)?;
+        builder.write_gm_string(self.name)?;
+        builder.write_enum(self.builtin_name);
         self.flags.serialize(builder)?;
         builder.write_bool32(self.is_creation_track);
         builder.write_usize(self.tags.len())?;
@@ -129,7 +137,8 @@ impl GMElement for Track {
             builder.write_i32(*tag);
         }
         for animation_curve in &self.owned_resources {
-            builder.write_gm_string("GMAnimCurve");
+            // this can be null if there were no owned resources when parsing
+            builder.write_gm_string(self.animcurve_string)?;
             animation_curve.serialize(builder)?;
         }
         for track in &self.sub_tracks {
@@ -152,8 +161,7 @@ impl GMElement for Track {
     }
 }
 
-#[num_enum(i32)]
-pub enum BuiltinName {
+gm_enum!( BuiltinName {
     /// No idea when/why this happens exactly
     None = 0,
     Gain = 5,
@@ -173,10 +181,28 @@ pub enum BuiltinName {
     CharacterSpacing = 21,
     LineSpacing = 22,
     ParagraphSpacing = 23,
-}
+});
 
 bitfield_struct! {
     Flags: i32 {
         children_ignore_origin: 0,
     }
+}
+
+fn force_read_string<'a>(reader: &mut DataReader<'a>) -> Result<&'a str> {
+    let string_pos = reader.read_u32()?;
+
+    let chunk = reader.chunk;
+    let pos = reader.cur_pos;
+    reader.chunk = reader.string_chunk;
+    reader.cur_pos = string_pos - 4;
+
+    let len = reader.read_u32().context("force-reading string length")?;
+    let bytes = reader.read_bytes_dyn(len).context("force-reading string")?;
+    let string = str::from_utf8(bytes).context_src("force-reading string")?;
+
+    reader.chunk = chunk;
+    reader.cur_pos = pos;
+
+    Ok(string)
 }

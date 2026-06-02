@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::num_enum;
+use crate::prelude::*;
 
 /// How a variable is supposed to be used in an instruction.
-#[num_enum(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum VariableType {
     /// Used for normal variables, without any arrays or chain references.
     Normal = 0xA0,
@@ -25,4 +25,30 @@ pub enum VariableType {
     /// (GMS2.3+) Used in tandem with multidimensional array push and pop
     /// operations (`PushArrayFinal`, `PopArrayFinal`).
     MultiPop = 0x90,
+}
+
+impl VariableType {
+    pub fn from_u8(raw: u8) -> Result<Self> {
+        Ok(match raw {
+            0xA0 => Self::Normal,
+            0x00 => Self::Array,
+            0x80 => Self::StackTop,
+            0xE0 => Self::Instance,
+            0x10 => Self::MultiPush,
+            0x90 => Self::MultiPop,
+            _ => bail!("Invalid Variable Reference Type {raw} ({raw:04X})"),
+        })
+    }
+
+    #[must_use]
+    pub fn as_u8(self) -> u8 {
+        match self {
+            Self::Normal => 0xA0,
+            Self::Array => 0x00,
+            Self::StackTop => 0x80,
+            Self::Instance => 0xE0,
+            Self::MultiPush => 0x10,
+            Self::MultiPop => 0x90,
+        }
+    }
 }

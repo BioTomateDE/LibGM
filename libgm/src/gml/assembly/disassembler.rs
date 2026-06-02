@@ -11,10 +11,10 @@ use crate::gml::instruction::VariableType;
 use crate::prelude::*;
 use crate::util::fmt::typename;
 use crate::wad::data::GMData;
-use crate::wad::elem::GMListChunk;
 use crate::wad::elem::GMNamedElement;
 use crate::wad::elem::function::GMFunction;
 use crate::wad::elem::game_object::GMGameObject;
+use crate::wad::elem::string::GMStrings;
 use crate::wad::elem::variable::GMVariable;
 use crate::wad::reference::GMRef;
 
@@ -121,7 +121,7 @@ pub fn disassemble_instruction_to_buffer(
 ) -> Result<()> {
     let mnemonic: &str = instruction.mnemonic();
 
-    match instruction {
+    match *instruction {
         Instruction::Exit
         | Instruction::Return
         | Instruction::PopSwap { .. }
@@ -142,7 +142,7 @@ pub fn disassemble_instruction_to_buffer(
         Instruction::Negate { data_type }
         | Instruction::Not { data_type }
         | Instruction::PopDiscard { data_type } => {
-            write!(buffer, "{}.{}", mnemonic, data_type.char());
+            write!(buffer, "{}.{}", mnemonic, data_type.as_char());
         }
 
         Instruction::CallVariable { argument_count } => {
@@ -150,7 +150,7 @@ pub fn disassemble_instruction_to_buffer(
         }
 
         Instruction::Duplicate { data_type, size } => {
-            write!(buffer, "{}.{} {}", mnemonic, data_type.char(), size);
+            write!(buffer, "{}.{} {}", mnemonic, data_type.as_char(), size);
         }
 
         Instruction::DuplicateSwap { data_type, size1, size2 } => {
@@ -158,7 +158,7 @@ pub fn disassemble_instruction_to_buffer(
                 buffer,
                 "{}.{} {} {}",
                 mnemonic,
-                data_type.char(),
+                data_type.as_char(),
                 size1,
                 size2,
             );
@@ -173,18 +173,24 @@ pub fn disassemble_instruction_to_buffer(
         }
 
         Instruction::Convert { from: type1, to: type2 }
-        | Instruction::Multiply { multiplicand: type2, multiplier: type1 }
-        | Instruction::Divide { dividend: type2, divisor: type1 }
-        | Instruction::Remainder { dividend: type2, divisor: type1 }
-        | Instruction::Modulus { dividend: type2, divisor: type1 }
-        | Instruction::Add { augend: type2, addend: type1 }
-        | Instruction::Subtract { minuend: type2, subtrahend: type1 }
+        | Instruction::Multiply { lhs: type2, rhs: type1 }
+        | Instruction::Divide { lhs: type2, rhs: type1 }
+        | Instruction::Remainder { lhs: type2, rhs: type1 }
+        | Instruction::Modulus { lhs: type2, rhs: type1 }
+        | Instruction::Add { lhs: type2, rhs: type1 }
+        | Instruction::Subtract { lhs: type2, rhs: type1 }
         | Instruction::And { lhs: type2, rhs: type1 }
         | Instruction::Or { lhs: type2, rhs: type1 }
         | Instruction::Xor { lhs: type2, rhs: type1 }
-        | Instruction::ShiftLeft { value: type2, shift_amount: type1 }
-        | Instruction::ShiftRight { value: type2, shift_amount: type1 } => {
-            write!(buffer, "{}.{}.{}", mnemonic, type1.char(), type2.char());
+        | Instruction::ShiftLeft { lhs: type2, rhs: type1 }
+        | Instruction::ShiftRight { lhs: type2, rhs: type1 } => {
+            write!(
+                buffer,
+                "{}.{}.{}",
+                mnemonic,
+                type1.as_char(),
+                type2.as_char()
+            );
         }
 
         Instruction::Compare { lhs, rhs, comparison_type } => {
@@ -192,19 +198,25 @@ pub fn disassemble_instruction_to_buffer(
                 buffer,
                 "{}.{}.{} {}",
                 mnemonic,
-                rhs.char(),
-                lhs.char(),
-                comparison_type.to_str(),
+                rhs.as_char(),
+                lhs.as_char(),
+                comparison_type.as_str(),
             );
         }
 
         Instruction::Pop { variable, type1, type2 } => {
-            write!(buffer, "{}.{}.{} ", mnemonic, type1.char(), type2.char());
+            write!(
+                buffer,
+                "{}.{}.{} ",
+                mnemonic,
+                type1.as_char(),
+                type2.as_char()
+            );
             write_variable(variable, buffer, gm_data)?;
         }
 
         Instruction::Push { value } => {
-            write!(buffer, "{}.{} ", mnemonic, value.data_type().char());
+            write!(buffer, "{}.{} ", mnemonic, value.data_type().as_char());
             write_push_instruction(value, buffer, gm_data)?;
         }
         Instruction::PushLocal { variable }
@@ -218,19 +230,19 @@ pub fn disassemble_instruction_to_buffer(
             write!(buffer, "{mnemonic} {integer}");
         }
 
-        &Instruction::Call { function, argument_count } => {
+        Instruction::Call { function, arg_count } => {
             write!(
                 buffer,
-                "{} {}(argc={})",
+                "{} {} {}",
                 mnemonic,
                 resolve_function_name(function, gm_data)?,
-                argument_count,
+                arg_count,
             );
         }
 
         Instruction::PushReference { asset_reference } => {
             write!(buffer, "{mnemonic} ");
-            write_asset_reference(*asset_reference, buffer, gm_data)?;
+            write_asset_reference(asset_reference, buffer, gm_data)?;
         }
     }
 
@@ -264,9 +276,9 @@ impl Instruction {
             Self::Return => "ret",
             Self::Exit => "exit",
             Self::PopDiscard { .. } => "popz",
-            Self::Branch { .. } => "jmp",
-            Self::BranchIf { .. } => "jt",
-            Self::BranchUnless { .. } => "jf",
+            Self::Branch { .. } => "br",
+            Self::BranchIf { .. } => "bt",
+            Self::BranchUnless { .. } => "bf",
             Self::PushWithContext { .. } => "pushenv",
             Self::PopWithContext { .. } => "popenv",
             Self::PopWithContextExit => "popenvexit",
@@ -294,13 +306,13 @@ impl Instruction {
 
 impl DataType {
     #[must_use]
-    const fn char(self) -> char {
+    const fn as_char(self) -> char {
         match self {
             Self::Int16 => 'e',
             Self::Int32 => 'i',
             Self::Int64 => 'l',
             Self::Double => 'd',
-            Self::Boolean => 'b',
+            Self::Bool => 'b',
             Self::String => 's',
             Self::Variable => 'v',
         }
@@ -309,7 +321,7 @@ impl DataType {
 
 impl ComparisonType {
     #[must_use]
-    const fn to_str(self) -> &'static str {
+    const fn as_str(self) -> &'static str {
         match self {
             Self::LessThan => "LT",
             Self::LessOrEqual => "LTE",
@@ -323,7 +335,7 @@ impl ComparisonType {
 
 impl VariableType {
     #[must_use]
-    const fn to_str(self) -> &'static str {
+    const fn as_str(self) -> &'static str {
         match self {
             Self::Normal | Self::Instance => "",
             Self::Array => "[array]",
@@ -334,25 +346,8 @@ impl VariableType {
     }
 }
 
-fn write_push_instruction(value: &PushValue, buffer: &mut String, gm_data: &GMData) -> Result<()> {
+fn write_push_instruction(value: PushValue, buffer: &mut String, gm_data: &GMData) -> Result<()> {
     match value {
-        PushValue::Variable(code_variable) => {
-            write_variable(code_variable, buffer, gm_data)?;
-        }
-        PushValue::Boolean(true) => {
-            write!(buffer, "true");
-        }
-        PushValue::Boolean(false) => {
-            write!(buffer, "false");
-        }
-        PushValue::Function(function_ref) => {
-            write!(
-                buffer,
-                "(function){}",
-                resolve_function_name(*function_ref, gm_data)?
-            );
-        }
-        PushValue::String(string) => write_literal_string(string, buffer),
         PushValue::Int16(integer) => {
             write!(buffer, "{integer}");
         }
@@ -365,25 +360,46 @@ fn write_push_instruction(value: &PushValue, buffer: &mut String, gm_data: &GMDa
         PushValue::Double(float) => {
             write!(buffer, "{float}");
         }
+        PushValue::Bool(true) => {
+            write!(buffer, "true");
+        }
+        PushValue::Bool(false) => {
+            write!(buffer, "false");
+        }
+        PushValue::String(string) => write_gm_string(string, &gm_data.strings, buffer)?,
+        PushValue::Variable(code_variable) => {
+            write_variable(code_variable, buffer, gm_data)?;
+        }
+        PushValue::Function(function_ref) => {
+            write!(
+                buffer,
+                "(function){}",
+                resolve_function_name(function_ref, gm_data)?
+            );
+        }
     }
     Ok(())
 }
 
-fn asset_get_name<'a, T, C>(chunk: &'a C, gm_ref: GMRef<T>) -> Result<&'a String>
+fn asset_get_name<'a, T, C>(
+    chunk: &C,
+    gm_ref: GMRef<T>,
+    gm_strings: &'a GMStrings,
+) -> Result<&'a String>
 where
     T: GMNamedElement + 'a,
     C: GMNamedListChunk<Element = T>,
 {
     const CTX: &str = "resolving asset reference for PushReference Instruction";
 
-    let element: &'a T = chunk.by_ref(gm_ref).context(CTX)?;
+    let element: &T = chunk.by_ref(gm_ref).context(CTX)?;
 
     element
-        .validate_name()
+        .validate_name(gm_strings)
         .with_context(|| format!("validating name of {}", typename::<T>()))
         .context(CTX)?;
 
-    let name: &'a String = element.name();
+    let name: &'a String = element.name(gm_strings)?;
     Ok(name)
 }
 
@@ -392,84 +408,97 @@ fn write_asset_reference(
     buffer: &mut String,
     gm_data: &GMData,
 ) -> Result<()> {
+    let s = &gm_data.strings;
     match asset_ref {
         AssetReference::Object(gm_ref) => {
             write!(
                 buffer,
                 "(object){}",
-                asset_get_name(&gm_data.game_objects, gm_ref)?
+                asset_get_name(&gm_data.game_objects, gm_ref, s)?
             );
         }
         AssetReference::Sprite(gm_ref) => {
             write!(
                 buffer,
                 "(sprite){}",
-                asset_get_name(&gm_data.sprites, gm_ref)?
+                asset_get_name(&gm_data.sprites, gm_ref, s)?
             );
         }
         AssetReference::Sound(gm_ref) => {
             write!(
                 buffer,
                 "(sound){}",
-                asset_get_name(&gm_data.sounds, gm_ref)?
+                asset_get_name(&gm_data.sounds, gm_ref, s)?
             );
         }
         AssetReference::Room(gm_ref) => {
-            write!(buffer, "(room){}", asset_get_name(&gm_data.rooms, gm_ref)?);
+            write!(
+                buffer,
+                "(room){}",
+                asset_get_name(&gm_data.rooms, gm_ref, s)?
+            );
         }
         AssetReference::Background(gm_ref) => {
             write!(
                 buffer,
                 "(background){}",
-                asset_get_name(&gm_data.backgrounds, gm_ref)?
+                asset_get_name(&gm_data.backgrounds, gm_ref, s)?
             );
         }
         AssetReference::Path(gm_ref) => {
-            write!(buffer, "(path){}", asset_get_name(&gm_data.paths, gm_ref)?);
+            write!(
+                buffer,
+                "(path){}",
+                asset_get_name(&gm_data.paths, gm_ref, s)?
+            );
         }
         AssetReference::Script(gm_ref) => {
             write!(
                 buffer,
                 "(script){}",
-                asset_get_name(&gm_data.scripts, gm_ref)?
+                asset_get_name(&gm_data.scripts, gm_ref, s)?
             );
         }
         AssetReference::Font(gm_ref) => {
-            write!(buffer, "(font){}", asset_get_name(&gm_data.fonts, gm_ref)?);
+            write!(
+                buffer,
+                "(font){}",
+                asset_get_name(&gm_data.fonts, gm_ref, s)?
+            );
         }
         AssetReference::Timeline(gm_ref) => {
             write!(
                 buffer,
                 "(timeline){}",
-                asset_get_name(&gm_data.timelines, gm_ref)?
+                asset_get_name(&gm_data.timelines, gm_ref, s)?
             );
         }
         AssetReference::Shader(gm_ref) => {
             write!(
                 buffer,
                 "(shader){}",
-                asset_get_name(&gm_data.shaders, gm_ref)?
+                asset_get_name(&gm_data.shaders, gm_ref, s)?
             );
         }
         AssetReference::Sequence(gm_ref) => {
             write!(
                 buffer,
                 "(sequence){}",
-                asset_get_name(&gm_data.sequences, gm_ref)?
+                asset_get_name(&gm_data.sequences, gm_ref, s)?
             );
         }
         AssetReference::AnimCurve(gm_ref) => {
             write!(
                 buffer,
                 "(animcurve){}",
-                asset_get_name(&gm_data.animation_curves, gm_ref)?
+                asset_get_name(&gm_data.animation_curves, gm_ref, s)?
             );
         }
         AssetReference::ParticleSystem(gm_ref) => {
             write!(
                 buffer,
                 "(particlesystem){}",
-                asset_get_name(&gm_data.particle_systems, gm_ref)?
+                asset_get_name(&gm_data.particle_systems, gm_ref, s)?
             );
         }
         AssetReference::RoomInstance(id) => {
@@ -497,8 +526,9 @@ fn write_instance_type(
         InstanceType::Self_ => write!(buffer, "self"),
         InstanceType::GameObject(obj_ref) => {
             let obj: &GMGameObject = gm_data.game_objects.by_ref(obj_ref)?;
-            obj.validate_name().context("validating game object name")?;
-            write!(buffer, "object<{}>", obj.name);
+            obj.validate_name(&gm_data.strings)
+                .context("validating game object name")?;
+            write!(buffer, "object<{}>", obj.name(&gm_data.strings)?);
         }
         InstanceType::RoomInstance(instance_id) => {
             write!(buffer, "roominstance<{instance_id}>");
@@ -518,20 +548,20 @@ fn write_instance_type(
 }
 
 fn write_variable(
-    code_variable: &CodeVariable,
+    code_variable: CodeVariable,
     buffer: &mut String,
     gm_data: &GMData,
 ) -> Result<()> {
     let variable: &GMVariable = gm_data.variables.by_ref(code_variable.variable)?;
     variable
-        .validate_name()
+        .validate_name(&gm_data.strings)
         .context("validating variable identifier")?;
-    let name = &variable.name;
+    let name: &String = variable.name(&gm_data.strings)?;
 
     if code_variable.is_int32 {
         write!(buffer, "(variable)");
     }
-    write!(buffer, "{}", code_variable.variable_type.to_str());
+    write!(buffer, "{}", code_variable.variable_type.as_str());
     write_instance_type(
         code_variable.instance_type,
         buffer,
@@ -546,10 +576,21 @@ fn write_variable(
 fn resolve_function_name(function_ref: GMRef<GMFunction>, gm_data: &GMData) -> Result<&String> {
     let function: &GMFunction = gm_data.functions.by_ref(function_ref)?;
     function
-        .validate_name()
+        .validate_name(&gm_data.strings)
         .context("validating function identifier")?;
-    let name = &function.name;
+    let name: &String = function.name(&gm_data.strings)?;
     Ok(name)
+}
+
+fn write_gm_string(
+    string_ref: GMRef<String>,
+    gm_strings: &GMStrings,
+    buffer: &mut String,
+) -> Result<()> {
+    let string: &String = gm_strings.by_ref(string_ref)?;
+    write_literal_string(string, buffer);
+    write!(buffer, "@{}", string_ref.index);
+    Ok(())
 }
 
 fn write_literal_string(string_lit: &str, buffer: &mut String) {

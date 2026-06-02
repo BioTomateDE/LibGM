@@ -3,12 +3,11 @@ use crate::prelude::*;
 use crate::util::bench::Stopwatch;
 use crate::wad::chunk::ChunkName;
 use crate::wad::data::Endianness;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMChunk;
 use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct ChunkBounds {
     pub start_pos: u32,
     pub end_pos: u32,
@@ -49,7 +48,7 @@ impl ChunkMap {
     }
 
     #[must_use]
-    pub fn contains_name(&self, chunk_name: ChunkName) -> bool {
+    pub fn contains(&self, chunk_name: ChunkName) -> bool {
         for (name, _) in &self.0 {
             if *name == chunk_name {
                 return true;
@@ -58,13 +57,8 @@ impl ChunkMap {
         false
     }
 
-    #[must_use]
-    pub fn contains(&self, name: &'static str) -> bool {
-        self.contains_name(ChunkName::new(name))
-    }
-
     pub fn push(&mut self, name: ChunkName, chunk: ChunkBounds) -> Result<()> {
-        if self.contains_name(name) {
+        if self.contains(name) {
             bail!("Chunk {name:?} is defined multiple times");
         }
         self.0.push((name, chunk));
@@ -72,7 +66,7 @@ impl ChunkMap {
     }
 
     #[must_use]
-    pub fn get_by_name(&self, chunk_name: ChunkName) -> Option<ChunkBounds> {
+    pub fn get(&self, chunk_name: ChunkName) -> Option<ChunkBounds> {
         for (name, bounds) in &self.0 {
             if *name == chunk_name {
                 return Some(bounds.clone());
@@ -81,16 +75,7 @@ impl ChunkMap {
         None
     }
 
-    #[must_use]
-    pub fn get(&self, name: &'static str) -> Option<ChunkBounds> {
-        self.get_by_name(ChunkName::new(name))
-    }
-
-    pub fn remove(&mut self, name: &'static str) -> Option<ChunkBounds> {
-        self.remove_name(ChunkName::new(name))
-    }
-
-    pub fn remove_name(&mut self, chunk_name: ChunkName) -> Option<ChunkBounds> {
+    pub fn remove(&mut self, chunk_name: ChunkName) -> Option<ChunkBounds> {
         for i in 0..self.count() {
             let name = &self.0[i].0;
             if *name == chunk_name {
@@ -128,7 +113,7 @@ impl DataReader<'_> {
         //
         // The chunk metadata is removed from the struct so
         // that unread chunks can easily be detected later.
-        let Some(chunk) = self.chunks.remove_name(T::NAME) else {
+        let Some(chunk) = self.chunks.remove(T::NAME) else {
             return Ok(T::default());
         };
 
@@ -198,7 +183,7 @@ impl DataReader<'_> {
         let saved_chunk: ChunkBounds = self.chunk.clone();
         self.chunk = self
             .chunks
-            .get("GEN8")
+            .get(ChunkName::GEN8)
             .ok_or("Chunk GEN8 does not exist")
             .context(CTX)?;
         self.cur_pos = self.chunk.start_pos + 44; // Skip to GEN8 GameMaker version

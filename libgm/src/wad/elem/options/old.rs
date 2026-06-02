@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::options::Constant;
 use crate::wad::elem::options::Flags;
 use crate::wad::elem::options::GMOptions;
 use crate::wad::elem::texture_page_item::GMTexturePageItem;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 
 pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
     let flag_fullscreen = reader.read_bool32()?;
@@ -44,9 +44,9 @@ pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
     let flag_freeze = reader.read_bool32()?;
     let flag_show_progress = reader.read_bool32()?;
 
-    let back_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
-    let front_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
-    let load_image: Option<GMRef<GMTexturePageItem>> = reader.read_gm_texture_opt()?;
+    let back_image: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
+    let front_image: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
+    let load_image: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
 
     let flag_load_transparent = reader.read_bool32()?;
 
@@ -106,7 +106,7 @@ pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
     })
 }
 
-pub fn build(builder: &mut DataBuilder, options: &GMOptions) {
+pub fn build(builder: &mut DataBuilder, options: &GMOptions) -> Result<()> {
     builder.write_bool32(options.flags.fullscreen);
     builder.write_bool32(options.flags.interpolate_pixels);
     builder.write_bool32(options.flags.use_new_audio);
@@ -142,9 +142,9 @@ pub fn build(builder: &mut DataBuilder, options: &GMOptions) {
     builder.write_bool32(options.flags.freeze);
     builder.write_bool32(options.flags.show_progress);
 
-    builder.write_pointer_opt(&options.back_image);
-    builder.write_pointer_opt(&options.front_image);
-    builder.write_pointer_opt(&options.load_image);
+    builder.write_gm_texture(options.back_image)?;
+    builder.write_gm_texture(options.front_image)?;
+    builder.write_gm_texture(options.load_image)?;
 
     builder.write_bool32(options.flags.load_transparent);
 
@@ -156,4 +156,5 @@ pub fn build(builder: &mut DataBuilder, options: &GMOptions) {
     builder.write_bool32(options.flags.abort_errors);
     builder.write_bool32(options.flags.variable_errors);
     builder.write_bool32(options.flags.creation_event_order);
+    Ok(())
 }

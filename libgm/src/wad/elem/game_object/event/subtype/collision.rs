@@ -17,11 +17,11 @@ pub struct Collision {
 }
 
 impl EventSubtype for Collision {
-    fn parse(object_id: u32) -> Result<Self> {
+    fn parse(object_id: i32) -> Result<Self> {
         Ok(Self::new(GMRef::new(object_id)))
     }
 
-    fn build(self) -> u32 {
+    fn build(self) -> i32 {
         self.object.index
     }
 }

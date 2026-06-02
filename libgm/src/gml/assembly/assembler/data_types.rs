@@ -67,9 +67,9 @@ impl DataType {
             'i' => Self::Int32,
             's' => Self::String,
             'e' => Self::Int16,
+            'b' => Self::Bool,
             'd' => Self::Double,
             'l' => Self::Int64,
-            'b' => Self::Boolean,
             _ => bail!("Invalid data type '{data_type}'"),
         })
     }

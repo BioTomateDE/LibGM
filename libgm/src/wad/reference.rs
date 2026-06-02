@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! Contains the `GMRef` type which is used to refer to other GameMaker
-//! elements.
+//! Contains the `GMRef` type which is used to refer to other GameMaker elements.
 
 use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
+use std::hint::cold_path;
+use std::marker::PhantomData;
 
 use crate::prelude::*;
 use crate::util::fmt::typename;
 
-/// A reference to another GameMaker element.
+/// An optional reference to another GameMaker element.
 ///
 /// This is typically a Reference by ID in the data file format,
 /// but is also used for texture page items (which are pointers).
@@ -25,13 +26,14 @@ use crate::util::fmt::typename;
 /// the list will shift all their `GMRef`s; breaking them.
 #[repr(transparent)]
 pub struct GMRef<T> {
-    /// The GameMaker ID / Index of this resource in the corresponding element
-    /// vector.
-    pub(crate) index: u32,
+    /// The GameMaker ID / Index of this resource in the corresponding element vector.
+    ///
+    /// This will be negative if the reference is null.
+    pub(crate) index: i32,
 
-    /// Marker needs to be here to ignore "unused generic T" error; doesn't
-    /// store any data.
-    _marker: std::marker::PhantomData<T>,
+    /// Marker needs to be here to ignore "unused generic T" error;
+    /// doesn't store any data.
+    _marker: PhantomData<T>,
 }
 
 impl<T> Copy for GMRef<T> {}
@@ -54,94 +56,190 @@ impl<T> Hash for GMRef<T> {
     }
 }
 
+impl<T> Default for GMRef<T> {
+    fn default() -> Self {
+        Self::none()
+    }
+}
+
 impl<T> From<u32> for GMRef<T> {
     fn from(index: u32) -> Self {
-        Self::new(index)
+        debug_assert!(index < i32::MAX as u32, "Invalid GMRef index {index}");
+        Self::new(index as i32)
     }
 }
 
 impl<T> From<usize> for GMRef<T> {
     fn from(index: usize) -> Self {
-        Self::new(index as u32)
+        debug_assert!(index < i32::MAX as usize, "Invalid GMRef index {index}");
+        Self::new(index as i32)
     }
 }
 
-impl<T> From<GMRef<T>> for u32 {
-    fn from(gm_ref: GMRef<T>) -> Self {
-        gm_ref.index
-    }
-}
+// impl<T> From<Option<u32>> for GMRef<T> {
+//     fn from(index: Option<u32>) -> Self {
+//         match index {
+//             Some(idx) => Self::new(idx),
+//             None => Self::null(),
+//         }
+//     }
+// }
 
-impl<T> From<GMRef<T>> for usize {
-    fn from(gm_ref: GMRef<T>) -> Self {
-        gm_ref.index as Self
-    }
-}
+// impl<T> From<Option<usize>> for GMRef<T> {
+//     fn from(index: Option<usize>) -> Self {
+//         match index {
+//             Some(idx) => Self::from(idx),
+//             None => Self::null(),
+//         }
+//     }
+// }
+
+// impl<T> From<GMRef<T>> for u32 {
+//     fn from(gm_ref: GMRef<T>) -> Self {
+//         gm_ref.index
+//     }
+// }
+
+// impl<T> From<GMRef<T>> for usize {
+//     fn from(gm_ref: GMRef<T>) -> Self {
+//         gm_ref.index as Self
+//     }
+// }
 
 impl<T> fmt::Debug for GMRef<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "GMRef<{}#{}>", typename::<T>(), self.index)
+        if self.is_some() {
+            write!(f, "GMRef<{}#{}>", typename::<T>(), self.index)
+        } else {
+            write!(f, "GMRef<{}#null>", typename::<T>())
+        }
     }
 }
 
 impl<T> GMRef<T> {
     /// Creates a new GameMaker reference with the specified index.
     ///
-    /// The fake generic type can often be omitted (if the compiler can infer
-    /// it).
+    /// If the specified index is negative, then this reference is
+    /// counted as null and will not point to anything.
     #[must_use]
-    pub const fn new(index: u32) -> Self {
-        Self { index, _marker: std::marker::PhantomData }
+    pub const fn new(index: i32) -> Self {
+        Self { index, _marker: PhantomData }
     }
 
-    /// Attempts to resolve this reference to an element in the given list by
-    /// its index.
-    ///
-    /// Returns a reference to the element if the index is valid, or an error
-    /// string if out of bounds.
+    /// Creates a null GameMaker reference which does not point to anything.
+    #[must_use]
+    pub const fn none() -> Self {
+        Self { index: -1, _marker: PhantomData }
+    }
+
+    #[must_use]
+    pub const fn is_some(self) -> bool {
+        self.index >= 0
+    }
+
+    #[must_use]
+    pub const fn is_none(self) -> bool {
+        self.index < 0
+    }
+
+    #[must_use]
+    pub const fn index(self) -> Option<usize> {
+        if self.is_some() {
+            Some(self.index as usize)
+        } else {
+            None
+        }
+    }
+
+    /// Attempts to resolve this reference to an element in the given slice by its index.
     ///
     /// # Parameters
-    /// - `elements_by_index`: A vector of elements indexed by `self.index`.
+    /// - `elements`: A vector of elements indexed by `self.index`.
     ///
     /// # Errors
-    /// Returns an error if `self.index` is out of bounds for the provided
-    /// vector.
-    pub fn resolve(self, elements_by_index: &[T]) -> Result<&T> {
-        let element = elements_by_index.get(self.index as usize).ok_or_else(|| {
-            format!(
-                "Could not resolve {} reference with index {} in list with length {}",
-                typename::<T>(),
-                self.index,
-                elements_by_index.len(),
-            )
+    /// Returns an error if `self.index` is out of bounds for the provided vector.
+    pub fn resolve(self, elements: &[T]) -> Result<&T> {
+        let Some(idx) = self.index() else {
+            cold_path();
+            bail!("The reference {self:?} is none and therefore does not point to anything");
+        };
+        let len = elements.len();
+        let elem = elements.get(idx).ok_or_else(|| {
+            cold_path();
+            format!("The reference {self:?} is out of bounds for elements vector with length {len}")
         })?;
-        Ok(element)
+        Ok(elem)
     }
 
-    /// Attempts to resolve this reference to an element in the given list by
-    /// its index.
-    ///
-    /// Returns a reference to the element if the index is valid, or an error
-    /// string if out of bounds.
+    /// Attempts to resolve this reference to an element in the given slice by its index.
     ///
     /// # Parameters
-    /// - `elements_by_index`: A vector of elements indexed by `self.index`.
+    /// - `elements`: A vector of elements indexed by `self.index`.
     ///
     /// # Errors
-    /// Returns an error if `self.index` is out of bounds for the provided
-    /// vector.
-    pub fn resolve_mut(self, elements_by_index: &mut [T]) -> Result<&mut T> {
-        let length = elements_by_index.len();
-        let element = elements_by_index
-            .get_mut(self.index as usize)
-            .ok_or_else(|| {
-                format!(
-                    "Could not resolve {} reference with index {} in list with length {}",
-                    typename::<T>(),
-                    self.index,
-                    length,
-                )
-            })?;
-        Ok(element)
+    /// Returns an error if `self.index` is out of bounds for the provided vector.
+    pub fn resolve_mut(self, elements: &mut [T]) -> Result<&mut T> {
+        let Some(idx) = self.index() else {
+            cold_path();
+            bail!("The reference {self:?} is none and therefore does not point to anything");
+        };
+        let len = elements.len();
+        let elem: &mut T = elements.get_mut(idx).ok_or_else(|| {
+            cold_path();
+            format!("The reference {self:?} is out of bounds for elements vector with length {len}")
+        })?;
+        Ok(elem)
+    }
+
+    /// Attempts to resolve this reference to an element in the given slice by its index.
+    ///
+    /// # Parameters
+    /// - `elements`: A vector of nullable elements indexed by `self.index`.
+    ///
+    /// # Errors
+    /// Returns an error if `self.index` is out of bounds for the provided vector
+    /// or if the specified element is [`None`].
+    pub fn opt_resolve(self, elements: &[Option<T>]) -> Result<&T> {
+        let Some(idx) = self.index() else {
+            cold_path();
+            bail!("The reference {self:?} is none and therefore does not point to anything");
+        };
+        let len = elements.len();
+        let element: &Option<T> = elements.get(idx).ok_or_else(|| {
+            cold_path();
+            format!("The reference {self:?} is out of bounds for elements vector with length {len}")
+        })?;
+        match element {
+            Some(elem) => Ok(elem),
+            None => Err(err!(
+                "The reference {self:?} points to a null element (removed by asset compiler)"
+            )),
+        }
+    }
+
+    /// Attempts to resolve this reference to an element in the given slice by its index.
+    ///
+    /// # Parameters
+    /// - `elements`: A vector of nullable elements indexed by `self.index`.
+    ///
+    /// # Errors
+    /// Returns an error if `self.index` is out of bounds for the provided vector
+    /// or if the specified element is [`None`].
+    pub fn opt_resolve_mut(self, elements: &mut [Option<T>]) -> Result<&mut T> {
+        let Some(idx) = self.index() else {
+            cold_path();
+            bail!("The reference {self:?} is none and therefore does not point to anything");
+        };
+        let len = elements.len();
+        let element: &mut Option<T> = elements.get_mut(idx).ok_or_else(|| {
+            cold_path();
+            format!("The reference {self:?} is out of bounds for elements vector with length {len}")
+        })?;
+        match element {
+            Some(elem) => Ok(elem),
+            None => Err(err!(
+                "The reference {self:?} points to a null element (removed by asset compiler)"
+            )),
+        }
     }
 }

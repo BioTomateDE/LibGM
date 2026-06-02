@@ -11,13 +11,15 @@ use crate::prelude::*;
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     log::debug!("Detected Deltarune PreLTS Demo Chapters 1&2");
     // Modify scr_gamestart
-    let code_ref = data.scripts.code_ref_by_name("scr_gamestart")?;
+    let code_ref = data
+        .codes
+        .ref_by_name("gml_Script_scr_gamestart", &data.strings)?;
     super::replace_debug(data, code_ref, enable, InstanceType::Global)?;
 
     // Modify obj_debugcontroller Creation
     let code_ref = data
         .codes
-        .ref_by_name("gml_Object_obj_debugcontroller_ch1_Create_0")?;
+        .ref_by_name("gml_Object_obj_debugcontroller_ch1_Create_0", &data.strings)?;
     super::replace_debug(data, code_ref, enable, InstanceType::Self_)?;
 
     // Modify obj_debugProfiler Creation
@@ -30,8 +32,9 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     };
     let code = data
         .codes
-        .by_name_mut("gml_Object_obj_debugProfiler_Create_0")?;
+        .by_name_mut("gml_Object_obj_debugProfiler_Create_0", &data.strings)?;
     code.instructions = instructions;
+
     // I am currently not checking the instruction count, unlike the original "UTDR
     // Scripts/Debug.csx". If there are issues, lmk
 

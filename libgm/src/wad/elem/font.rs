@@ -4,25 +4,27 @@ mod kerning;
 
 pub use glyph::Glyph;
 pub use kerning::Kerning;
-use macros::named_list_chunk;
 
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::texture_page_item::GMTexturePageItem;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::version::LTSBranch;
 
-#[named_list_chunk("FONT")]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMFonts {
-    pub fonts: Vec<GMFont>,
+    pub fonts: Vec<Option<GMFont>>,
     pub exists: bool,
 }
 
+gm_named_list_chunk!(FONT, GMFonts, GMFont, fonts, nullable);
+
 impl GMElement for GMFonts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let fonts: Vec<GMFont> = reader.read_pointer_list()?;
+        let fonts: Vec<Option<GMFont>> = reader.read_pointer_list_opt()?;
 
         if reader.general_info.version < (2024, 14) {
             let verify: bool = reader.options.verify_constants;
@@ -36,7 +38,7 @@ impl GMElement for GMFonts {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.fonts)?;
+        builder.write_pointer_list_opt(&self.fonts)?;
         if builder.version() < (2024, 14) {
             let padding: [u8; 512] = generate_padding();
             builder.write_bytes(&padding);
@@ -83,10 +85,10 @@ const fn generate_padding() -> [u8; 512] {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMFont {
     /// The name of the font.
-    pub name: String,
+    pub name: GMRef<String>,
 
     /// The display name of the font.
-    pub display_name: Option<String>,
+    pub display_name: GMRef<String>,
 
     /// The font size in `Em`s.
     /// In GameMaker Studio 2.3+, this is stored as f32 instead of u32.
@@ -146,8 +148,8 @@ pub struct GMFont {
 
 impl GMElement for GMFont {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: String = reader.read_gm_string()?;
-        let display_name: Option<String> = reader.read_gm_string_opt()?;
+        let name: GMRef<String> = reader.read_gm_string()?;
+        let display_name: GMRef<String> = reader.read_gm_string()?;
         let em_size = reader.read_u32()?; // Before GMS 2.3: int. after: float
         let em_size: FontSize = if em_size & (1 << 31) != 0 {
             // Since the float is always written negated, it has the first bit set.
@@ -196,8 +198,8 @@ impl GMElement for GMFont {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
-        builder.write_gm_string_opt(&self.display_name);
+        builder.write_gm_string(self.name)?;
+        builder.write_gm_string(self.display_name)?;
         match self.em_size {
             FontSize::Float(value) => builder.write_f32(-value),
             FontSize::Int(value) => builder.write_u32(value),

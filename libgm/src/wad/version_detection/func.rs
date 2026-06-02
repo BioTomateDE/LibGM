@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use super::target_version;
 use crate::prelude::*;
+use crate::wad::chunk::ChunkName;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
 
@@ -45,7 +46,7 @@ pub fn check_2024_8(reader: &mut DataReader) -> Result<Option<GMVersion>> {
 
     // If we read at least 4 padding bytes, we don't know for sure unless we have at
     // least one code entry.
-    let Some(chunk_code) = reader.chunks.get("CODE") else {
+    let Some(chunk_code) = reader.chunks.get(ChunkName::CODE) else {
         return Ok(None);
     };
     reader.chunk = chunk_code.clone();

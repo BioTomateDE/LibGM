@@ -1,3 +1,4 @@
+use crate::gm_enum::GMEnum;
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::wad::data::Endianness;
@@ -39,6 +40,11 @@ impl DataReader<'_> {
     read_int_fn!(read_f64, f64);
 
     read_int_fn!(read_f32, f32);
+
+    pub fn read_enum<T: GMEnum>(&mut self) -> Result<T> {
+        let integer = self.read_i32()?;
+        T::from_i32(integer)
+    }
 
     /// Read an unsigned 32-bit integer from the data file while advancing the
     /// data position. Returns zero if the read number is -1 or 0.

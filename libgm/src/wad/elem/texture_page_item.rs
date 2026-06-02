@@ -1,18 +1,26 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::list_chunk;
 
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::texture_page::GMTexturePage;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 
-#[list_chunk("TPAG")]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMTexturePageItems {
     pub texture_page_items: Vec<GMTexturePageItem>,
     pub exists: bool,
 }
+
+gm_list_chunk!(
+    TPAG,
+    GMTexturePageItems,
+    GMTexturePageItem,
+    texture_page_items,
+    direct
+);
 
 impl GMElement for GMTexturePageItems {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -23,7 +31,7 @@ impl GMElement for GMTexturePageItems {
             reader.cur_pos = pointer;
             reader
                 .texture_page_item_occurrences
-                .insert(pointer, i.into());
+                .insert(pointer, GMRef::from(i));
             texture_page_items.push(GMTexturePageItem::deserialize(reader)?);
         }
 
@@ -66,7 +74,7 @@ impl GMElement for GMTexturePageItem {
         let bounding_width = reader.read_u16()?;
         let bounding_height = reader.read_u16()?;
         let texture_page_id = reader.read_u16()?;
-        let texture_page: GMRef<GMTexturePage> = u32::from(texture_page_id).into();
+        let texture_page: GMRef<GMTexturePage> = GMRef::new(texture_page_id as i32);
 
         Ok(Self {
             source_x,

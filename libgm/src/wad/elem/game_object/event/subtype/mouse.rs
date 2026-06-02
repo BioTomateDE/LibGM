@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::num_enum;
 
+use crate::gm_enum::GMEnum;
+use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
 use crate::wad::elem::game_object::event::EventSubtype;
 
+gm_enum!(
 /// Triggered on a mouse event (like holding, pressing down, releasing,
 /// mouse wheel, etc.).
-#[num_enum(u32)]
-pub enum Mouse {
+Mouse {
     /// The left-mouse button down event.
     LeftButton = 0,
 
@@ -151,15 +151,15 @@ pub enum Mouse {
 
     /// The mouse-wheel down event.
     MouseWheelDown = 61,
-}
+});
 
 impl EventSubtype for Mouse {
-    fn parse(subtype: u32) -> Result<Self> {
-        num_enum_from(subtype)
+    fn parse(subtype: i32) -> Result<Self> {
+        Self::from_i32(subtype)
     }
 
-    fn build(self) -> u32 {
-        self.into()
+    fn build(self) -> i32 {
+        self.as_i32()
     }
 }
 

@@ -1,16 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::named_list_chunk;
-
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
-#[named_list_chunk("FEDS")]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMFilterEffects {
     pub filter_effects: Vec<GMFilterEffect>,
     pub exists: bool,
 }
+
+gm_named_list_chunk!(
+    FEDS,
+    GMFilterEffects,
+    GMFilterEffect,
+    filter_effects,
+    direct
+);
 
 impl GMElement for GMFilterEffects {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -30,20 +37,20 @@ impl GMElement for GMFilterEffects {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMFilterEffect {
-    pub name: String,
-    pub value: String,
+    pub name: GMRef<String>,
+    pub value: GMRef<String>,
 }
 
 impl GMElement for GMFilterEffect {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: String = reader.read_gm_string()?;
-        let value: String = reader.read_gm_string()?;
+        let name: GMRef<String> = reader.read_gm_string()?;
+        let value: GMRef<String> = reader.read_gm_string()?;
         Ok(Self { name, value })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
-        builder.write_gm_string(&self.value);
+        builder.write_gm_string(self.name)?;
+        builder.write_gm_string(self.value)?;
         Ok(())
     }
 }

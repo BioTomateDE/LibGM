@@ -10,8 +10,8 @@ pub use bz2::BZip2QoiHeader;
 use image::DynamicImage;
 
 use crate::prelude::*;
-use crate::wad::elem::texture_page::BZ2_QOI_HEADER;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::texture_page::BZ2_QOI_HEADER;
 
 /// An image format indicating how the underlying data of a [`GMImage`] is
 /// stored.

@@ -3,19 +3,18 @@ pub mod instance;
 mod properties;
 mod value;
 
-use macros::num_enum;
 pub use properties::Properties;
 pub use value::FlexValue;
 
+use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FlexPanel {
-    pub name: String,
+    pub name: GMRef<String>,
     pub width: FlexValue,
     pub height: FlexValue,
     pub minimum_width: FlexValue,
@@ -40,7 +39,7 @@ pub struct FlexPanel {
 
 impl GMElement for FlexPanel {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: String = reader.read_gm_string()?;
+        let name: GMRef<String> = reader.read_gm_string()?;
         let width = FlexValue::deserialize(reader)?;
         let height = FlexValue::deserialize(reader)?;
         let minimum_width = FlexValue::deserialize(reader)?;
@@ -52,8 +51,8 @@ impl GMElement for FlexPanel {
         let offset_top = FlexValue::deserialize(reader)?;
         let offset_bottom = FlexValue::deserialize(reader)?;
         let clips_contents = reader.read_bool32()?;
-        let position_type: PositionKind = num_enum_from(reader.read_i32()?)?;
-        let align_self: properties::AlignmentKind = num_enum_from(reader.read_i32()?)?;
+        let position_type: PositionKind = reader.read_enum()?;
+        let align_self: properties::AlignmentKind = reader.read_enum()?;
         let margin_left = FlexValue::deserialize(reader)?;
         let margin_right = FlexValue::deserialize(reader)?;
         let margin_top = FlexValue::deserialize(reader)?;
@@ -87,7 +86,7 @@ impl GMElement for FlexPanel {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
+        builder.write_gm_string(self.name)?;
         self.width.serialize(builder)?;
         self.height.serialize(builder)?;
         self.minimum_width.serialize(builder)?;
@@ -99,8 +98,8 @@ impl GMElement for FlexPanel {
         self.offset_top.serialize(builder)?;
         self.offset_bottom.serialize(builder)?;
         self.clips_contents.serialize(builder)?;
-        builder.write_i32(self.position_type.into());
-        builder.write_i32(self.align_self.into());
+        builder.write_enum(self.position_type);
+        builder.write_enum(self.align_self);
         self.margin_left.serialize(builder)?;
         self.margin_right.serialize(builder)?;
         self.margin_top.serialize(builder)?;
@@ -112,9 +111,8 @@ impl GMElement for FlexPanel {
     }
 }
 
-#[num_enum(i32)]
-pub enum PositionKind {
+gm_enum!(PositionKind {
     Static = 0,
     Relative = 1,
     Absolute = 2,
-}
+});

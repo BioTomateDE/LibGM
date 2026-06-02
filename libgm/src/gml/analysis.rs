@@ -63,17 +63,11 @@ impl Default for CodeAnalysis {
 pub fn analyze(data: &GMData) -> CodeAnalysis {
     let mut analysis = CodeAnalysis::default();
 
-    for code in &data.codes {
+    for code in data.codes.elements() {
         for instruction in &code.instructions {
             match instruction {
-                Instruction::And {
-                    lhs: DataType::Boolean,
-                    rhs: DataType::Boolean,
-                }
-                | Instruction::Or {
-                    lhs: DataType::Boolean,
-                    rhs: DataType::Boolean,
-                } => {
+                Instruction::And { lhs: DataType::Bool, rhs: DataType::Bool }
+                | Instruction::Or { lhs: DataType::Bool, rhs: DataType::Bool } => {
                     analysis.uses_short_circuit = false;
                 }
                 Instruction::SetArrayOwner => {

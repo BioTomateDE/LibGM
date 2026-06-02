@@ -44,8 +44,8 @@ impl GMData {
 
 fn toggle_debug(data: &mut GMData, enable: bool) -> Result<()> {
     let gen8 = &data.general_info;
-    let display_name: &str = &gen8.display_name;
-    let internal_name: &str = &gen8.game_name;
+    let display_name: &str = data.strings.by_ref(gen8.display_name)?;
+    let internal_name: &str = data.strings.by_ref(gen8.game_name)?;
 
     if internal_name.contains("UNDERTALE") || internal_name == "NXTALE" {
         return undertale::toggle(data, enable);
@@ -60,7 +60,11 @@ fn toggle_debug(data: &mut GMData, enable: bool) -> Result<()> {
     }
 
     if display_name == "DELTARUNE Chapter 1" {
-        return if data.game_objects.by_name("obj_event_manager").is_ok() {
+        return if data
+            .game_objects
+            .by_name("obj_event_manager", &data.strings)
+            .is_ok()
+        {
             deltarune::toggle(data, enable)
         } else if gen8.version >= (2, 3) {
             demo_lts_ch1::toggle(data, enable)
@@ -70,7 +74,11 @@ fn toggle_debug(data: &mut GMData, enable: bool) -> Result<()> {
     }
 
     if display_name == "DELTARUNE Chapter 2" {
-        return if data.game_objects.by_name("obj_event_manager").is_ok() {
+        return if data
+            .game_objects
+            .by_name("obj_event_manager", &data.strings)
+            .is_ok()
+        {
             deltarune::toggle(data, enable)
         } else {
             demo_lts_ch2::toggle(data, enable)
@@ -98,7 +106,8 @@ fn find_debug(
             continue;
         }
         let gm_variable: &GMVariable = data.variables.by_ref(variable.variable)?;
-        if gm_variable.name != "debug" {
+        let var_name = data.strings.by_ref(gm_variable.name)?;
+        if var_name != "debug" {
             continue;
         }
 

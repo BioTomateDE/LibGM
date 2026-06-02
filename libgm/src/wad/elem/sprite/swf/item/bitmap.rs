@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::fmt;
 
-use macros::num_enum;
-
+use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Data {
@@ -17,23 +15,22 @@ pub struct Data {
     pub ver_data: VersionData,
 }
 
-#[num_enum(i32)]
-pub enum Type {
-    TypeJPEGNoHeader,
-    TypeJPEG,
-    TypeJPEGWithAlpha,
-    TypePNG,
-    TypeGIF,
-    TypeLossless8bit,
-    TypeLossless15bit,
-    TypeLossless24bit,
-    TypeLossless8bitA,
-    TypeLossless32bit,
-}
+gm_enum!(Type {
+    JpegNoHeader = 0,
+    Jpeg = 1,
+    JpegWithAlpha = 2,
+    Png = 3,
+    Gif = 4,
+    Lossless8Bit = 5,
+    Lossless15Bit = 6,
+    Lossless24Bit = 7,
+    Lossless8BitAlpha = 8,
+    Lossless32Bit = 9,
+});
 
 impl GMElement for Data {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let bitmap_type: Type = num_enum_from(reader.read_i32()?)?;
+        let bitmap_type: Type = reader.read_enum()?;
         let width = reader.read_i32()?;
         let height = reader.read_i32()?;
 
@@ -70,7 +67,7 @@ impl GMElement for Data {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(self.bitmap_type.into());
+        builder.write_enum(self.bitmap_type);
         builder.write_i32(self.width);
         builder.write_i32(self.height);
         if builder.version() >= (2022, 1) {

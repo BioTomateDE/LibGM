@@ -1,22 +1,44 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::named_list_chunk;
 
+use super::string::GMStrings;
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::GMNamedListChunk;
+use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::GMNamedElement;
 use crate::wad::elem::texture_page_item::GMTexturePageItem;
 use crate::wad::elem::validate_identifier;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 
 /// The embedded images of the data file.
 /// This is used to store built-in particle sprites,
 /// every time you use `part_sprite` functions.
-#[named_list_chunk("EMBI", name_exception)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMEmbeddedImages {
     pub embedded_images: Vec<GMEmbeddedImage>,
     pub exists: bool,
+}
+
+gm_list_chunk!(
+    EMBI,
+    GMEmbeddedImages,
+    GMEmbeddedImage,
+    embedded_images,
+    direct
+);
+
+impl GMNamedListChunk for GMEmbeddedImages {
+    fn ref_by_name(&self, name: &str, gm_strings: &GMStrings) -> Result<GMRef<GMEmbeddedImage>> {
+        for (gm_ref, elem) in self.element_refs() {
+            let elem_name: &String = elem.name.resolve(&gm_strings.strings)?;
+            if name == elem_name {
+                return Ok(gm_ref);
+            }
+        }
+        Err(err!("Could not find Embedded Image with name {name:?}"))
+    }
 }
 
 impl GMElement for GMEmbeddedImages {
@@ -38,21 +60,17 @@ impl GMElement for GMEmbeddedImages {
 /// different.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMEmbeddedImage {
-    pub name: String,
+    pub name: GMRef<String>,
     pub texture_entry: GMRef<GMTexturePageItem>,
 }
 
 impl GMNamedElement for GMEmbeddedImage {
-    fn name(&self) -> &String {
-        &self.name
+    fn name_ref(&self) -> GMRef<String> {
+        self.name
     }
 
-    fn name_mut(&mut self) -> &mut String {
-        &mut self.name
-    }
-
-    fn validate_name(&self) -> Result<()> {
-        let name = &self.name;
+    fn validate_name(&self, gm_strings: &GMStrings) -> Result<()> {
+        let name = self.name(gm_strings)?;
         let ident = name.strip_suffix(".png");
         let Some(ident) = ident else {
             bail!("Embedded Image name {name:?} does not end in \".png\"");
@@ -63,13 +81,13 @@ impl GMNamedElement for GMEmbeddedImage {
 
 impl GMElement for GMEmbeddedImage {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: String = reader.read_gm_string()?;
+        let name: GMRef<String> = reader.read_gm_string()?;
         let texture_entry: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
         Ok(Self { name, texture_entry })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
+        builder.write_gm_string(self.name)?;
         builder.write_gm_texture(self.texture_entry)?;
         Ok(())
     }

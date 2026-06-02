@@ -170,6 +170,7 @@ use wad::{
 
 // Private modules
 mod actions;
+mod gm_enum;
 mod util;
 
 // Public modules

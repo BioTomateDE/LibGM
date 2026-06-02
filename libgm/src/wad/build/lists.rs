@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::util::fmt::typename;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::GMElement;
 
 impl DataBuilder<'_> {
     /// Write the element count as a 32-bit integer.
@@ -58,12 +58,42 @@ impl DataBuilder<'_> {
         };
 
         self.write_usize(count).with_context(ctx)?;
-        let pointer_list_pos: u32 = self.len();
+        let pointer_list_pos: u32 = self.pos();
         for _ in 0..count {
             self.write_u32(0xDEAD_C0DE);
         }
 
         for (i, element) in elements.iter().enumerate() {
+            element.serialize_pre_padding(self).with_context(ctx)?;
+            self.overwrite_pointer_with_cur_pos(pointer_list_pos, i)
+                .with_context(ctx)?;
+            element.serialize(self).with_context(ctx)?;
+            element
+                .serialize_post_padding(self, i == count - 1)
+                .with_context(ctx)?;
+        }
+        Ok(())
+    }
+
+    // TODO: clean up this code
+    pub fn write_pointer_list_opt<T: GMElement>(&mut self, elements: &[Option<T>]) -> Result<()> {
+        let count: usize = elements.len();
+        let ctx = || {
+            format!(
+                "building nullable pointer list of {} with {} elements",
+                typename::<T>(),
+                count,
+            )
+        };
+
+        self.write_usize(count).with_context(ctx)?;
+        let pointer_list_pos: u32 = self.pos();
+        for _ in 0..count {
+            self.write_u32(0);
+        }
+
+        for (i, element_opt) in elements.iter().enumerate() {
+            let Some(element) = element_opt else { continue };
             element.serialize_pre_padding(self).with_context(ctx)?;
             self.overwrite_pointer_with_cur_pos(pointer_list_pos, i)
                 .with_context(ctx)?;

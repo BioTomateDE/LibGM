@@ -1,32 +1,34 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::named_list_chunk;
 
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
-#[named_list_chunk("PATH")]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMPaths {
-    pub paths: Vec<GMPath>,
+    pub paths: Vec<Option<GMPath>>,
     pub exists: bool,
 }
 
+gm_named_list_chunk!(PATH, GMPaths, GMPath, paths, nullable);
+
 impl GMElement for GMPaths {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let paths: Vec<GMPath> = reader.read_pointer_list()?;
+        let paths: Vec<Option<GMPath>> = reader.read_pointer_list_opt()?;
         Ok(Self { paths, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.paths)?;
+        builder.write_pointer_list_opt(&self.paths)?;
         Ok(())
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMPath {
-    pub name: String,
+    pub name: GMRef<String>,
     pub is_smooth: bool,
     pub is_closed: bool,
     pub precision: u32,
@@ -35,7 +37,7 @@ pub struct GMPath {
 
 impl GMElement for GMPath {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: String = reader.read_gm_string()?;
+        let name: GMRef<String> = reader.read_gm_string()?;
         let is_smooth = reader.read_bool32()?;
         let is_closed = reader.read_bool32()?;
         let precision = reader.read_u32()?;
@@ -50,7 +52,7 @@ impl GMElement for GMPath {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
+        builder.write_gm_string(self.name)?;
         builder.write_bool32(self.is_smooth);
         builder.write_bool32(self.is_closed);
         builder.write_u32(self.precision);

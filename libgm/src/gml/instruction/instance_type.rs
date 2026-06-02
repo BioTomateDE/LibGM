@@ -134,12 +134,12 @@ impl InstanceType {
     /// The variable type is needed because [`VariableType::Instance`] signifies
     /// a [`InstanceType::RoomInstance`] instead of a
     /// [`InstanceType::GameObject`].
-    pub fn parse(raw: i16, var_type: VariableType) -> Result<Self> {
+    pub fn from_i16(raw: i16, var_type: VariableType) -> Result<Self> {
         if raw >= 0 {
             return Ok(if var_type == VariableType::Instance {
                 Self::RoomInstance(raw)
             } else {
-                Self::GameObject(GMRef::new(raw as u32))
+                Self::GameObject(GMRef::new(raw as i32))
             });
         }
 
@@ -161,7 +161,7 @@ impl InstanceType {
     /// Parses an instance type from the given raw value,
     /// assuming that this is not a `RoomInstance` instance type.
     pub fn parse_normal(raw: i16) -> Result<Self> {
-        Self::parse(raw, VariableType::Normal)
+        Self::from_i16(raw, VariableType::Normal)
     }
 
     /// Serializes this instance type into an i16.

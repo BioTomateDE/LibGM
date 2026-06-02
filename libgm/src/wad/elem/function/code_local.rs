@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::elem::GMElement;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMCodeLocals {
@@ -25,14 +25,14 @@ impl GMElement for GMCodeLocals {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GMCodeLocal {
-    pub name: String,
+    pub name: GMRef<String>,
     pub variables: Vec<LocalVariable>,
 }
 
 impl GMElement for GMCodeLocal {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let local_variables_count = reader.read_u32()?;
-        let name: String = reader.read_gm_string()?;
+        let name: GMRef<String> = reader.read_gm_string()?;
         let mut variables: Vec<LocalVariable> = vec_with_capacity(local_variables_count)?;
         for _ in 0..local_variables_count {
             variables.push(LocalVariable::deserialize(reader)?);
@@ -42,7 +42,7 @@ impl GMElement for GMCodeLocal {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_usize(self.variables.len())?;
-        builder.write_gm_string(&self.name);
+        builder.write_gm_string(self.name)?;
         for local_var in &self.variables {
             local_var.serialize(builder)?;
         }
@@ -54,19 +54,19 @@ impl GMElement for GMCodeLocal {
 pub struct LocalVariable {
     /// unknown what this does
     pub weird_index: u32,
-    pub name: String,
+    pub name: GMRef<String>,
 }
 
 impl GMElement for LocalVariable {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let weird_index = reader.read_u32()?;
-        let name: String = reader.read_gm_string()?;
+        let name: GMRef<String> = reader.read_gm_string()?;
         Ok(Self { weird_index, name })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_u32(self.weird_index);
-        builder.write_gm_string(&self.name);
+        builder.write_gm_string(self.name)?;
         Ok(())
     }
 }

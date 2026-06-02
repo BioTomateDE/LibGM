@@ -1,7 +1,8 @@
+use crate::gm_enum::GMEnum;
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::data::Endianness;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::data::Endianness;
 
 macro_rules! write_int_fn {
     ($method_name:ident, $int_type:ty) => {
@@ -35,6 +36,10 @@ impl DataBuilder<'_> {
     write_int_fn!(write_f64, f64);
 
     write_int_fn!(write_f32, f32);
+
+    pub fn write_enum<T: GMEnum>(&mut self, gm_enum: T) {
+        self.write_i32(gm_enum.as_i32());
+    }
 
     pub fn write_usize(&mut self, number: usize) -> Result<()> {
         let number: u32 = number.try_into().with_context_src(|| {

@@ -1,19 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::named_list_chunk;
 
 use crate::gml::GMCode;
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
-use crate::wad::parse::resources::resource_opt_from_i32;
-use crate::wad::elem::GMElement;
-use crate::wad::reference::GMRef;
 use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::elem::GMElement;
+use crate::wad::parse::reader::DataReader;
+use crate::wad::reference::GMRef;
 
-#[named_list_chunk("SCPT")]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMScripts {
     pub scripts: Vec<GMScript>,
     pub exists: bool,
 }
+
+// not sure if direct
+gm_named_list_chunk!(SCPT, GMScripts, GMScript, scripts, direct);
 
 impl GMElement for GMScripts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -27,53 +29,36 @@ impl GMElement for GMScripts {
     }
 }
 
-impl GMScripts {
-    /// Gets a `GMRef<GMCode>` based on the name of a [`GMScript`].
-    pub fn code_ref_by_name(&self, script_name: &str) -> Result<GMRef<GMCode>> {
-        let script: &GMScript = self.by_name(script_name)?;
-        let code_ref: GMRef<GMCode> = script.code.ok_or_else(|| {
-            format!("Script {script_name:?} does not have an associated code entry")
-        })?;
-        Ok(code_ref)
-    }
-
-    /// Gets a `&GMCode` based on the name of a [`GMScript`].
-    pub fn code_by_name<'a>(&self, script_name: &str, gm_data: &'a GMData) -> Result<&'a GMCode> {
-        let code_ref: GMRef<GMCode> = self.code_ref_by_name(script_name)?;
-        gm_data.codes.by_ref(code_ref)
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMScript {
-    pub name: String,
+    pub name: GMRef<String>,
     pub is_constructor: bool,
-    pub code: Option<GMRef<GMCode>>,
+    pub code: GMRef<GMCode>,
 }
 
 impl GMElement for GMScript {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let name: String = reader.read_gm_string()?;
+        let name: GMRef<String> = reader.read_gm_string()?;
         let mut code_id: i32 = reader.read_i32()?;
         let mut is_constructor: bool = false;
         if code_id < -1 {
             code_id &= 0x7FFF_FFFF;
             is_constructor = true;
         }
-        let code: Option<GMRef<GMCode>> = resource_opt_from_i32(code_id)?;
+        let code: GMRef<GMCode> = GMRef::new(code_id);
         Ok(Self { name, is_constructor, code })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(&self.name);
+        builder.write_gm_string(self.name)?;
         if self.is_constructor {
-            if let Some(gm_code_ref) = &self.code {
-                builder.write_u32(gm_code_ref.index | 0x8000_0000);
+            if self.code.is_some() {
+                builder.write_u32(self.code.index as u32 | 0x8000_0000);
             } else {
                 builder.write_i32(-1);
             }
         } else {
-            builder.write_resource_id_opt(self.code);
+            builder.write_resource_id(self.code);
         }
         Ok(())
     }

@@ -3,15 +3,15 @@ use std::cmp::min;
 
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::background::GMBackground;
+use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::build::builder::DataBuilder;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tiles {
-    pub background: Option<GMRef<GMBackground>>,
+    pub background: GMRef<GMBackground>,
     /// Flattened 2D Array. Access using `tile_data[row + width * col]`.
     pub tile_data: Vec<u32>,
     pub width: u32,
@@ -20,7 +20,7 @@ pub struct Tiles {
 
 impl GMElement for Tiles {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let background: Option<GMRef<GMBackground>> = reader.read_resource_by_id_opt()?;
+        let background: GMRef<GMBackground> = reader.read_resource_by_id()?;
         let width = reader.read_u32()?;
         let height = reader.read_u32()?;
         let mut tile_data: Vec<u32> = vec_with_capacity(width * height)?;
@@ -39,7 +39,7 @@ impl GMElement for Tiles {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_resource_id_opt(self.background);
+        builder.write_resource_id(self.background);
         builder.write_u32(self.width);
         builder.write_u32(self.height);
         if builder.version() >= (2024, 2) {

@@ -15,8 +15,9 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     let ret = Instruction::Return;
     let instructions = vec![pushim, pop, push, ret];
 
-    let code_ref = data.scripts.code_ref_by_name("scr_debug")?;
-    let code = data.codes.by_ref_mut(code_ref)?;
+    let code = data
+        .codes
+        .by_name_mut("gml_Script_scr_debug", &data.strings)?;
     code.instructions = instructions;
     Ok(())
 }

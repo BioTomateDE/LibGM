@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use macros::num_enum;
 
+use crate::gm_enum::GMEnum;
+use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::util::init::num_enum_from;
 use crate::wad::elem::game_object::event::EventSubtype;
 
+gm_enum!(
 /// Triggered when the user performs some touchscreen event.
-#[num_enum(u32)]
-pub enum Gesture {
+Gesture {
     /// The tap event.
     Tap = 0,
 
@@ -85,15 +85,15 @@ pub enum Gesture {
 
     /// The global rotate end event.
     GlobalRotateEnd = 76,
-}
+});
 
 impl EventSubtype for Gesture {
-    fn parse(subtype: u32) -> Result<Self> {
-        num_enum_from(subtype)
+    fn parse(subtype: i32) -> Result<Self> {
+        Self::from_i32(subtype)
     }
 
-    fn build(self) -> u32 {
-        self.into()
+    fn build(self) -> i32 {
+        self.as_i32()
     }
 }
 

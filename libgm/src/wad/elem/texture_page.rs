@@ -5,26 +5,29 @@ use std::cmp::max;
 
 pub use img::Format;
 pub use img::GMImage;
-use macros::list_chunk;
 
 use crate::prelude::*;
 use crate::util::fmt::hexdump;
+use crate::wad::build::builder::DataBuilder;
+use crate::wad::chunk::gm_list_chunk;
 use crate::wad::data::Endianness;
-use crate::wad::parse::reader::DataReader;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::element_stub;
 use crate::wad::elem::texture_page::img::BZip2QoiHeader;
-use crate::wad::build::builder::DataBuilder;
+use crate::wad::parse::reader::DataReader;
 
 pub(crate) const PNG_HEADER: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 pub(crate) const BZ2_QOI_HEADER: &[u8; 4] = b"2zoq";
 pub(crate) const QOI_HEADER: &[u8; 4] = b"fioq";
 
-#[list_chunk("TXTR")]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMTexturePages {
     pub texture_pages: Vec<GMTexturePage>,
     pub exists: bool,
 }
+
+// also not sure if direct
+gm_list_chunk!(TXTR, GMTexturePages, GMTexturePage, texture_pages, direct);
 
 impl GMElement for GMTexturePages {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -82,7 +85,7 @@ impl GMElement for GMTexturePages {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let count = self.texture_pages.len();
         builder.write_usize(count)?;
-        let pointer_list_pos: u32 = builder.len();
+        let pointer_list_pos: u32 = builder.pos();
         for _ in 0..count {
             builder.write_u32(0xDEAD_C0DE);
         }
@@ -99,7 +102,7 @@ impl GMElement for GMTexturePages {
                 (2, 0, 6),
             )?;
             if builder.version() >= (2022, 3) {
-                texture_block_size_placeholders[i] = builder.len();
+                texture_block_size_placeholders[i] = builder.pos();
                 // Placeholder for texture block size. use the cached value as a fallback.
                 // unless the texture page is external, this will later be overriden by the real
                 // value.
@@ -128,11 +131,11 @@ impl GMElement for GMTexturePages {
             };
             builder.align(0x80);
             builder.resolve_pointer(&texture_page.image)?;
-            let start_pos: u32 = builder.len();
+            let start_pos: u32 = builder.pos();
             img.serialize(builder)
                 .context("serializing texture page image")?;
             if builder.version() >= (2022, 3) {
-                let length: u32 = builder.len() - start_pos;
+                let length: u32 = builder.pos() - start_pos;
                 builder.overwrite_u32(length, texture_block_size_placeholders[i])?;
             }
         }

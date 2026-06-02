@@ -19,7 +19,7 @@ use crate::prelude::*;
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMCode {
     /// The name of the code entry.
-    pub name: String,
+    pub name: GMRef<String>,
 
     /// A list of VM instructions this code entry has.
     pub instructions: Vec<Instruction>,
@@ -47,13 +47,13 @@ impl GMCode {
 
         let mut children: Vec<GMRef<Self>> = Vec::new();
 
-        for (idx, code_entry) in data.codes.iter().enumerate() {
+        for (gmref, code_entry) in data.codes.element_refs() {
             let Some(parent) = code_entry.parent() else {
                 continue;
             };
             let parent = data.codes.by_ref(parent)?;
             if self.name == parent.name {
-                children.push(GMRef::from(idx));
+                children.push(gmref);
             }
         }
 
@@ -79,9 +79,9 @@ impl GMCode {
 
         let mut children: Vec<GMRef<Self>> = Vec::new();
 
-        for (idx, code_entry) in data.codes.iter().enumerate() {
+        for (gmref, code_entry) in data.codes.element_refs() {
             if code_entry.parent() == Some(code_ref) {
-                children.push(GMRef::from(idx));
+                children.push(gmref);
             }
         }
 

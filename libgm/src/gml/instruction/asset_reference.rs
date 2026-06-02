@@ -49,7 +49,7 @@ impl AssetReference {
     /// Note that function references have to be constructed separately.
     pub fn parse(raw: u32) -> Result<Self> {
         let ty = (raw >> 24) as u8;
-        let id = raw & 0xFF_FFFF;
+        let id = raw as i32 & 0xFF_FFFF;
         Ok(match ty {
             0 => Self::Object(GMRef::new(id)),
             1 => Self::Sprite(GMRef::new(id)),
@@ -75,7 +75,7 @@ impl AssetReference {
     /// Note that function references have to be constructed separately.
     pub fn parse_old(raw: u32) -> Result<Self> {
         let ty = (raw >> 24) as u8;
-        let id = raw & 0xFF_FFFF;
+        let id = raw as i32 & 0xFF_FFFF;
         Ok(match ty {
             0 => Self::Object(GMRef::new(id)),
             1 => Self::Sprite(GMRef::new(id)),
@@ -150,7 +150,7 @@ impl AssetReference {
     /// The u24 asset id (aka index) of this asset reference.
     #[must_use]
     pub const fn asset_id(self) -> u32 {
-        match self {
+        (match self {
             Self::Object(gm_ref) => gm_ref.index,
             Self::Sprite(gm_ref) => gm_ref.index,
             Self::Sound(gm_ref) => gm_ref.index,
@@ -164,9 +164,9 @@ impl AssetReference {
             Self::Sequence(gm_ref) => gm_ref.index,
             Self::AnimCurve(gm_ref) => gm_ref.index,
             Self::ParticleSystem(gm_ref) => gm_ref.index,
-            Self::RoomInstance(integer) => integer as u32,
+            Self::RoomInstance(integer) => integer,
             Self::Function(gm_ref) => gm_ref.index,
-        }
+        }) as u32
     }
 
     /// The normalized (2024.4+) serialized form of this asset reference.
