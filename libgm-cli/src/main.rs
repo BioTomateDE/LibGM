@@ -64,6 +64,13 @@ fn run(mut args: cli::Args) -> Result<()> {
             println!();
         }
 
+        // std::fs::create_dir_all("all").unwrap();
+        // for c in &data.codes.codes {
+        //     let n = data.strings.by_ref(c.name)?;
+        //     let asm = disassemble_code(c, &data)?;
+        //     std::fs::write(format!("asm/{n}.txt"), asm).unwrap();
+        // }
+
         if let Some(out_file) = &args.out {
             log::info!("Building data file {}", out_file.display());
             build_file(&data, out_file)?;

@@ -3,7 +3,6 @@
 mod data_types;
 mod reader;
 
-use std::fmt::Display;
 use std::str::FromStr;
 
 use crate::gml::assembly::assembler::data_types::DataTypes;
@@ -23,6 +22,7 @@ use crate::wad::elem::function::GMFunction;
 use crate::wad::elem::function::GMFunctions;
 use crate::wad::elem::game_object::GMGameObject;
 use crate::wad::elem::string::GMStrings;
+use crate::wad::elem::validate_identifier;
 use crate::wad::elem::variable::GMVariable;
 use crate::wad::reference::GMRef;
 
@@ -33,7 +33,7 @@ use crate::wad::reference::GMRef;
 ///       (which style/char should be used?
 ///       can they be implemented without screwing performance?
 ///       also have to consider string literals in push.s instructions)
-pub fn assemble_instructions(assembly: &str, gm_data: &mut GMData) -> Result<Vec<Instruction>> {
+pub fn assemble_instructions(assembly: &str, gm_data: &GMData) -> Result<Vec<Instruction>> {
     let heuristic = assembly.lines().count();
     let mut instructions: Vec<Instruction> = Vec::with_capacity(heuristic);
 
@@ -52,7 +52,7 @@ pub fn assemble_instructions(assembly: &str, gm_data: &mut GMData) -> Result<Vec
 }
 
 /// Assembles a single instruction on one line.
-pub fn assemble_instruction(line: &str, gm_data: &mut GMData) -> Result<Instruction> {
+pub fn assemble_instruction(line: &str, gm_data: &GMData) -> Result<Instruction> {
     let mut reader = Reader::new(line.trim());
     let mnemonic: &str;
 
@@ -99,7 +99,7 @@ fn parse_instruction(
     reader: &mut Reader,
     mnemonic: &str,
     types: DataTypes,
-    gm_data: &mut GMData,
+    gm_data: &GMData,
 ) -> Result<Instruction> {
     let instruction = match mnemonic {
         "conv" => {
@@ -192,27 +192,27 @@ fn parse_instruction(
         }
         "br" => {
             types.assert_count(0, mnemonic)?;
-            let jump_offset: i32 = reader.parse_int()?;
+            let jump_offset: i32 = parse_int(reader.clear())?;
             Instruction::Branch { jump_offset }
         }
         "bt" => {
             types.assert_count(0, mnemonic)?;
-            let jump_offset: i32 = reader.parse_int()?;
+            let jump_offset: i32 = parse_int(reader.clear())?;
             Instruction::BranchIf { jump_offset }
         }
         "bf" => {
             types.assert_count(0, mnemonic)?;
-            let jump_offset: i32 = reader.parse_int()?;
+            let jump_offset: i32 = parse_int(reader.clear())?;
             Instruction::BranchUnless { jump_offset }
         }
         "pushenv" => {
             types.assert_count(0, mnemonic)?;
-            let jump_offset: i32 = reader.parse_int()?;
+            let jump_offset: i32 = parse_int(reader.clear())?;
             Instruction::PushWithContext { jump_offset }
         }
         "popenv" => {
             types.assert_count(0, mnemonic)?;
-            let jump_offset: i32 = reader.parse_int()?;
+            let jump_offset: i32 = parse_int(reader.clear())?;
             Instruction::PopWithContext { jump_offset }
         }
         "popenvexit" => {
@@ -239,13 +239,13 @@ fn parse_instruction(
         }
         "pushim" => {
             types.assert_count(0, mnemonic)?;
-            let integer: i16 = reader.parse_int()?;
+            let integer: i16 = parse_int(reader.clear())?;
             Instruction::PushImmediate { integer }
         }
         "call" => parse_call(types, reader, gm_data)?,
         "callvar" => {
             types.assert_count(0, mnemonic)?;
-            let argument_count: u16 = reader.parse_uint()?;
+            let argument_count: u16 = parse_int(reader.clear())?;
             Instruction::CallVariable { argument_count }
         }
         "chkindex" => Instruction::CheckArrayIndex,
@@ -270,34 +270,48 @@ fn parse_instruction(
 }
 
 fn parse_asset_reference(reader: &mut Reader, gm_data: &GMData) -> Result<AssetReference> {
-    let s = &gm_data.strings;
-    let line = reader.line;
-    let asset_type = reader
+    let asset_type: &str = reader
         .consume_round_brackets()?
-        .ok_or_else(|| format!("Expected asset type within round brackets; found {line:?}"))?;
+        .ok_or("Expected asset type within round brackets")?;
+    let line = reader.clear();
+    let strg = &gm_data.strings;
+    let dat = gm_data;
 
-    // TODO(style): This can probably be made cleaner
-    #[rustfmt::skip]
     let asset_reference = match asset_type {
-        "object" => AssetReference::Object(gm_data.game_objects.ref_by_name(reader.parse_identifier()?, s)?),
-        "sprite" => AssetReference::Sprite(gm_data.sprites.ref_by_name(reader.parse_identifier()?, s)?),
-        "sound" => AssetReference::Sound(gm_data.sounds.ref_by_name(reader.parse_identifier()?, s)?),
-        "room" => AssetReference::Room(gm_data.rooms.ref_by_name(reader.parse_identifier()?, s)?),
-        "background" => AssetReference::Background(gm_data.backgrounds.ref_by_name(reader.parse_identifier()?, s)?),
-        "path" => AssetReference::Path(gm_data.paths.ref_by_name(reader.parse_identifier()?, s)?),
-        "script" => AssetReference::Script(gm_data.scripts.ref_by_name(reader.parse_identifier()?, s)?),
-        "font" => AssetReference::Font(gm_data.fonts.ref_by_name(reader.parse_identifier()?, s)?),
-        "timeline" => AssetReference::Timeline(gm_data.timelines.ref_by_name(reader.parse_identifier()?, s)?),
-        "shader" => AssetReference::Shader(gm_data.shaders.ref_by_name(reader.parse_identifier()?, s)?),
-        "sequence" => AssetReference::Sequence(gm_data.sequences.ref_by_name(reader.parse_identifier()?, s)?),
-        "animcurve" => AssetReference::AnimCurve(gm_data.animation_curves.ref_by_name(reader.parse_identifier()?, s)?),
-        "particlesystem" => AssetReference::ParticleSystem(gm_data.particle_systems.ref_by_name(reader.parse_identifier()?, s)?),
-        "roominstance" => AssetReference::RoomInstance(reader.parse_int()?),
-        "function" => AssetReference::Function(parse_function(reader, &gm_data.functions, &gm_data.strings)?),
+        "object" => AssetReference::Object(resolve_asset(&dat.game_objects, line, strg)?),
+        "sprite" => AssetReference::Sprite(resolve_asset(&dat.sprites, line, strg)?),
+        "sound" => AssetReference::Sound(resolve_asset(&dat.sounds, line, strg)?),
+        "room" => AssetReference::Room(resolve_asset(&dat.rooms, line, strg)?),
+        "background" => AssetReference::Background(resolve_asset(&dat.backgrounds, line, strg)?),
+        "path" => AssetReference::Path(resolve_asset(&dat.paths, line, strg)?),
+        "script" => AssetReference::Script(resolve_asset(&dat.scripts, line, strg)?),
+        "font" => AssetReference::Font(resolve_asset(&dat.fonts, line, strg)?),
+        "timeline" => AssetReference::Timeline(resolve_asset(&dat.timelines, line, strg)?),
+        "shader" => AssetReference::Shader(resolve_asset(&dat.shaders, line, strg)?),
+        "sequence" => AssetReference::Sequence(resolve_asset(&dat.sequences, line, strg)?),
+        "animcurve" => AssetReference::AnimCurve(resolve_asset(&dat.animation_curves, line, strg)?),
+        "particlesystem" => {
+            AssetReference::ParticleSystem(resolve_asset(&dat.particle_systems, line, strg)?)
+        }
+        "roominstance" => AssetReference::RoomInstance(parse_int(line)?),
+        "function" => AssetReference::Function(parse_function(
+            reader,
+            &gm_data.functions,
+            &gm_data.strings,
+        )?),
         _ => bail!("Invalid Type Cast to asset type {asset_type:?}"),
     };
 
     Ok(asset_reference)
+}
+
+fn resolve_asset<T: GMNamedListChunk>(
+    chunk: &T,
+    ident: &str,
+    strings: &GMStrings,
+) -> Result<GMRef<T::Element>> {
+    validate_identifier(ident)?;
+    chunk.ref_by_name(ident, strings)
 }
 
 fn parse_comparison(types: DataTypes, reader: &mut Reader) -> Result<Instruction> {
@@ -321,7 +335,7 @@ fn parse_comparison(types: DataTypes, reader: &mut Reader) -> Result<Instruction
 
 fn parse_duplicate(types: DataTypes, reader: &mut Reader) -> Result<Instruction> {
     types.assert_count(1, "dup")?;
-    let size: u8 = reader.parse_uint()?;
+    let size: u8 = parse_int(reader.clear())?;
     Ok(Instruction::Duplicate { data_type: types[0], size })
 }
 
@@ -329,11 +343,11 @@ fn parse_duplicate_swap(types: DataTypes, reader: &mut Reader) -> Result<Instruc
     types.assert_count(1, "dupswap")?;
     let size1: u8 = reader.parse_uint()?;
     reader.consume_space()?;
-    let size2: u8 = reader.parse_uint()?;
+    let size2: u8 = parse_int(reader.clear())?;
     Ok(Instruction::DuplicateSwap { data_type: types[0], size1, size2 })
 }
 
-fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &mut GMData) -> Result<PushValue> {
+fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result<PushValue> {
     types.assert_count(1, "push")?;
 
     let value: PushValue = match types[0] {
@@ -379,15 +393,22 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &mut GMData) -> Re
         }
         DataType::String => {
             if reader.peek_char() == Some('@') {
-                let id = parse_string_id(reader.clear())?;
-                PushValue::String(id)
+                // Example: push.s @420
+                let id: i32 = parse_i32(reader.clear())?;
+                PushValue::String(GMRef::new(id))
             } else if let Some(string_id) = extract_string_id(reader.line) {
+                // Example: push.s "hello"@420
                 reader.clear();
-                let id = parse_string_id(string_id)?;
-                PushValue::String(id)
+                let id: i32 = parse_i32(string_id)?;
+                PushValue::String(GMRef::new(id))
             } else {
+                // Example: push.s "hello"
                 let string: String = parse_string_literal(reader)?;
-                PushValue::String(gm_data.strings.make(&string))
+                // GMData is not borrowed mutably (this is a conscious tradeoff).
+                // Therefore, it can only get string that are already used in the data file somewhere.
+                // If this is a problem, use `GMStrings::make` before assembling.
+                let existing_string_ref = gm_data.strings.find(&string)?;
+                PushValue::String(existing_string_ref)
             }
         }
         DataType::Variable => PushValue::Variable(parse_variable(reader, gm_data)?),
@@ -397,13 +418,11 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &mut GMData) -> Re
 
 fn parse_call(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result<Instruction> {
     types.assert_count(0, "call")?;
-    let function: GMRef<GMFunction> = parse_function(reader, &gm_data.functions, &gm_data.strings)?;
+    let ident: &str = reader.parse_identifier()?;
+    let function: GMRef<GMFunction> =
+        resolve_function(ident, &gm_data.functions, &gm_data.strings)?;
     reader.consume_space()?;
-    let arg_count: &str = reader.clear();
-    let arg_count: u16 = arg_count
-        .parse()
-        .map_err(|e| format!("Invalid argument count {arg_count}: {e}"))?;
-
+    let arg_count: u16 = reader.parse_uint()?;
     Ok(Instruction::Call { function, arg_count })
 }
 
@@ -446,8 +465,8 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
             InstanceType::RoomInstance(instance_id)
         }
         "local" => {
-            let var_index: u32 = parse_int(instance_type_arg)?;
-            variable_ref = Some(GMRef::new(var_index as i32)); //TODO casting not clean
+            let var_index: i32 = parse_i32(instance_type_arg)?;
+            variable_ref = Some(GMRef::new(var_index));
             InstanceType::Local
         }
         "stacktop" => InstanceType::StackTop,
@@ -477,13 +496,12 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
             {
                 continue;
             }
-            // Found var
+            // Found existing variable!
             variable_ref = Some(gm_ref);
             break;
         }
     }
 
-    // TODO: create new var?
     let Some(variable) = variable_ref else {
         bail!("Cannot resolve variable with name {name:?}");
     };
@@ -509,8 +527,16 @@ fn parse_function(
     gm_functions: &GMFunctions,
     gm_strings: &GMStrings,
 ) -> Result<GMRef<GMFunction>> {
-    let ident = reader.parse_identifier()?;
+    let ident = reader.clear();
+    validate_identifier(ident)?;
+    resolve_function(ident, gm_functions, gm_strings)
+}
 
+fn resolve_function(
+    ident: &str,
+    gm_functions: &GMFunctions,
+    gm_strings: &GMStrings,
+) -> Result<GMRef<GMFunction>> {
     for (gm_ref, func) in gm_functions.element_refs() {
         let name = func.name(gm_strings)?;
         if name == ident {
@@ -522,27 +548,20 @@ fn parse_function(
     bail!("Function {ident:?} does not exist (needs to be created using GMFunctions::make first)")
 }
 
-fn parse_int<T>(string: &str) -> Result<T>
-where
-    T: FromStr,
-    <T as FromStr>::Err: Display,
-{
-    match string.parse() {
-        Ok(int) => Ok(int),
-        Err(err) => {
-            bail!("Invalid {} Integer {}: {}", typename::<T>(), string, err);
-        }
+fn parse_int<T: FromStr + Copy>(string: &str) -> Result<T> {
+    if let Ok(int) = string.parse() {
+        Ok(int)
+    } else {
+        Err(err!("Invalid {} Integer {:?}", typename::<T>(), string))
     }
 }
 
-fn parse_string_id(string_id: &str) -> Result<GMRef<String>> {
-    let id: i32 = string_id
-        .parse()
-        .map_err(|_| format!("Invalid String ID {string_id:?}"))?;
-    if id < 0 {
-        bail!("Negative String ID {id}");
+fn parse_i32(string: &str) -> Result<i32> {
+    let int: i32 = parse_int(string)?;
+    if int < 0 {
+        bail!("Negative i32 Integer {int} is not allowed here");
     }
-    Ok(GMRef::new(id))
+    Ok(int)
 }
 
 fn extract_string_id(line: &str) -> Option<&str> {

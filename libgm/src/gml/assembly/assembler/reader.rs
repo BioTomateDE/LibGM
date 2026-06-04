@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::ops::Neg;
 use std::str::Chars;
 use std::str::FromStr;
 
@@ -66,6 +65,7 @@ impl<'a> Reader<'a> {
     }
 
     pub fn consume_space(&mut self) -> Result<()> {
+        // TODO: should this be expanded to other whitespace chars / allow sequences of chars?
         let char: char = self.consume_char().ok_or("Expected space, got EOL")?;
         if char != ' ' {
             bail!("Expected space, got '{char}'");
@@ -134,19 +134,6 @@ impl<'a> Reader<'a> {
 
         // Identifier goes to end of line
         Ok(self.clear())
-    }
-
-    pub fn parse_int<T: FromStr + Neg<Output = T>>(&mut self) -> Result<T> {
-        let is_negative: bool = self.starts_with("-");
-        if is_negative {
-            self.consume_char(); // Consume minus sign
-        }
-        let integer: T = self.parse_uint()?;
-        if is_negative {
-            Ok(-integer)
-        } else {
-            Ok(integer)
-        }
     }
 
     pub fn parse_uint<T: FromStr>(&mut self) -> Result<T> {

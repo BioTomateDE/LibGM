@@ -71,6 +71,15 @@ impl GMElement for GMStrings {
 }
 
 impl GMStrings {
+    pub fn find(&self, string: &str) -> Result<GMRef<String>> {
+        for (gm_ref, str) in self.element_refs() {
+            if str == string {
+                return Ok(gm_ref);
+            }
+        }
+        Err(err!("Could not find existing string {string:?}"))
+    }
+
     #[inline]
     pub fn make(&mut self, string: &str) -> GMRef<String> {
         for (gm_ref, str) in self.element_refs() {
