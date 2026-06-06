@@ -18,7 +18,7 @@ pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
             return Ok(0);
         };
 
-        reader.chunk = chunk.clone();
+        reader.chunk = chunk;
         reader.cur_pos = chunk.start_pos;
         if gms2 {
             reader.align(4)?;
@@ -28,7 +28,7 @@ pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
         Ok(count)
     }
 
-    let chunk_code = reader.chunk.clone();
+    let chunk_code = reader.chunk;
     let background_count = get_chunk_elem_count(reader, ChunkName::BGND, false)?;
     let path_count = get_chunk_elem_count(reader, ChunkName::PATH, false)?;
     let script_count = get_chunk_elem_count(reader, ChunkName::SCPT, false)?;
@@ -50,8 +50,7 @@ pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
             9 => true, // Used to be unused, now are sequences
             10 => resource_id >= shader_count,
             11 => resource_id >= sequence_count,
-            // case 12 used to be animcurves, but now is unused (so would actually mean earlier than
-            // 2024.4)
+            // case 12 used to be animcurves, but now is unused (so would actually mean earlier than 2024.4)
             13 => resource_id >= particle_system_count,
             _ => false,
         }

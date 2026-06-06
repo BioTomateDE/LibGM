@@ -403,6 +403,7 @@ where
     Ok(name)
 }
 
+#[expect(clippy::too_many_lines)]
 fn write_asset_reference(
     asset_ref: AssetReference,
     buffer: &mut String,

@@ -290,7 +290,6 @@ pub trait GMNamedElement: GMElement {
     fn name_ref(&self) -> GMRef<String>;
 
     /// The name of this element as a `&String`.
-    #[must_use]
     fn name<'a>(&self, gm_strings: &'a GMStrings) -> Result<&'a String> {
         self.name_ref().resolve(&gm_strings.strings)
     }

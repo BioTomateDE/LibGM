@@ -10,16 +10,14 @@ pub trait GMEnum: Copy + Eq + Hash + Debug {
     fn try_from_i32(integer: i32) -> Option<Self>;
 
     fn from_i32(integer: i32) -> Result<Self> {
-        if let Some(val) = Self::try_from_i32(integer) {
-            Ok(val)
-        } else {
-            Err(err!(
+        Self::try_from_i32(integer).ok_or_else(|| {
+            err!(
                 "Invalid {} enum value {} (0x{:016X})",
                 typename::<Self>(),
                 integer,
                 integer,
-            ))
-        }
+            )
+        })
     }
 
     #[must_use]

@@ -549,11 +549,9 @@ fn resolve_function(
 }
 
 fn parse_int<T: FromStr + Copy>(string: &str) -> Result<T> {
-    if let Ok(int) = string.parse() {
-        Ok(int)
-    } else {
-        Err(err!("Invalid {} Integer {:?}", typename::<T>(), string))
-    }
+    string
+        .parse()
+        .map_err(|_| err!("Invalid {} Integer {:?}", typename::<T>(), string))
 }
 
 fn parse_i32(string: &str) -> Result<i32> {

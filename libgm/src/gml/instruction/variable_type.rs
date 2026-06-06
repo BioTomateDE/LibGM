@@ -41,7 +41,7 @@ impl VariableType {
     }
 
     #[must_use]
-    pub fn as_u8(self) -> u8 {
+    pub const fn as_u8(self) -> u8 {
         match self {
             Self::Normal => 0xA0,
             Self::Array => 0x00,

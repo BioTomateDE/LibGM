@@ -88,9 +88,8 @@ impl ChunkName {
                 let hex = hexdump(&bytes);
                 if let Ok(string) = str::from_utf8(&bytes) {
                     bail!("Invalid chunk name {string:?} [{hex}]");
-                } else {
-                    bail!("Invalid chunk name [{hex}]");
                 }
+                bail!("Invalid chunk name [{hex}]");
             }
         })
     }

@@ -387,7 +387,7 @@ pub struct Data2023_8 {
     pub size_wiggle_y: f32,
 }
 
-fn garbage() -> Data2023_8 {
+const fn garbage() -> Data2023_8 {
     Data2023_8 {
         emit_relative: false,
         delay_min: 0.0,

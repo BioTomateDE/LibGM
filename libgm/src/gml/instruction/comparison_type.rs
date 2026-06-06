@@ -40,7 +40,7 @@ impl ComparisonType {
     }
 
     #[must_use]
-    pub fn as_u8(self) -> u8 {
+    pub const fn as_u8(self) -> u8 {
         match self {
             Self::LessThan => 1,
             Self::LessOrEqual => 2,

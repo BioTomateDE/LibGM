@@ -86,7 +86,7 @@ impl DataType {
     }
 
     #[must_use]
-    pub fn as_u8(self) -> u8 {
+    pub const fn as_u8(self) -> u8 {
         match self {
             Self::Double => 0,
             Self::Int32 => 2,

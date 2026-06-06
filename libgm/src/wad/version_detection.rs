@@ -46,7 +46,7 @@ fn try_check(
         return Ok(());
     };
 
-    reader.chunk = chunk.clone();
+    reader.chunk = chunk;
     reader.cur_pos = chunk.start_pos;
 
     // Detect the version.
@@ -195,7 +195,7 @@ fn create_version_checks() -> [VersionCheck; 21] {
 /// as an older version.
 pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
     let saved_pos = reader.cur_pos;
-    let saved_chunk: ChunkBounds = reader.chunk.clone();
+    let saved_chunk: ChunkBounds = reader.chunk;
 
     if let Some(version) = upgrade_by_chunk_existence(&reader.chunks) {
         reader.general_info.set_version(version);
@@ -237,7 +237,7 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
                 continue;
             };
 
-            reader.chunk = chunk.clone();
+            reader.chunk = chunk;
             reader.cur_pos = reader.chunk.start_pos;
 
             let detected_version_opt: Option<GMVersion> =

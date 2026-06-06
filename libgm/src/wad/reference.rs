@@ -209,12 +209,10 @@ impl<T> GMRef<T> {
             cold_path();
             format!("The reference {self:?} is out of bounds for elements vector with length {len}")
         })?;
-        match element {
-            Some(elem) => Ok(elem),
-            None => Err(err!(
-                "The reference {self:?} points to a null element (removed by asset compiler)"
-            )),
-        }
+        element.as_ref().ok_or_else(|| {
+            cold_path();
+            err!("The reference {self:?} points to a null element (removed by asset compiler)")
+        })
     }
 
     /// Attempts to resolve this reference to an element in the given slice by its index.
@@ -235,11 +233,9 @@ impl<T> GMRef<T> {
             cold_path();
             format!("The reference {self:?} is out of bounds for elements vector with length {len}")
         })?;
-        match element {
-            Some(elem) => Ok(elem),
-            None => Err(err!(
-                "The reference {self:?} points to a null element (removed by asset compiler)"
-            )),
-        }
+        element.as_mut().ok_or_else(|| {
+            cold_path();
+            err!("The reference {self:?} points to a null element (removed by asset compiler)")
+        })
     }
 }

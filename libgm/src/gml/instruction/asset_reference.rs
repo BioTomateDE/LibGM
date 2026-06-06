@@ -64,7 +64,7 @@ impl AssetReference {
             10 => Self::AnimCurve(GMRef::new(id)),
             11 => Self::ParticleSystem(GMRef::new(id)),
             13 => Self::Background(GMRef::new(id)),
-            14 => Self::RoomInstance(id as i32),
+            14 => Self::RoomInstance(id),
             _ => bail!("Invalid asset type {ty}"),
         })
     }
@@ -90,7 +90,7 @@ impl AssetReference {
             11 => Self::Sequence(GMRef::new(id)),
             12 => Self::AnimCurve(GMRef::new(id)),
             13 => Self::ParticleSystem(GMRef::new(id)),
-            14 => Self::RoomInstance(id as i32),
+            14 => Self::RoomInstance(id),
             _ => bail!("Invalid asset type {ty}"),
         })
     }

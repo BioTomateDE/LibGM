@@ -123,7 +123,7 @@ impl GMStrings {
     }
 
     #[must_use]
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.strings.len()
     }
 }

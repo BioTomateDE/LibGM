@@ -71,6 +71,16 @@ fn run(mut args: cli::Args) -> Result<()> {
         //     std::fs::write(format!("asm/{n}.txt"), asm).unwrap();
         // }
 
+        // std::fs::create_dir_all("sounds").unwrap();
+        // for snd in data.sounds.elements() {
+        //     let name = data.strings.by_ref(snd.name)?;
+        //     if snd.audio_file.is_none() {
+        //         continue;
+        //     }
+        //     let audio = data.audios.by_ref(snd.audio_file)?;
+        //     std::fs::write(format!("sounds/{name}.wav"), &audio.audio_data).unwrap();
+        // }
+
         if let Some(out_file) = &args.out {
             log::info!("Building data file {}", out_file.display());
             build_file(&data, out_file)?;

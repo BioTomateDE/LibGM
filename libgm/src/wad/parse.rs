@@ -252,9 +252,8 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
             let msg = "Expected root chunk to be 'FORM' but found";
             if let Ok(string) = str::from_utf8(bytes) {
                 bail!("{msg} {string:?} ({hex})")
-            } else {
-                bail!("{msg} {hex}");
             }
+            bail!("{msg} {hex}");
         }
     };
     if reader.endianness == Endianness::Big {
@@ -337,8 +336,7 @@ fn init_reader(reader: &mut DataReader) -> Result<()> {
     let game = reader
         .strings
         .by_ref(reader.general_info.game_name)
-        .map(String::as_str)
-        .unwrap_or("<unknown>");
+        .map_or("<unknown>", String::as_str);
     let version = reader.general_info.version;
     let wad_version = reader.general_info.wad_version;
 

@@ -130,7 +130,7 @@ impl GMElement for GMVariables {
         }
 
         // Resolve occurrences
-        let saved_chunk: ChunkBounds = reader.chunk.clone();
+        let saved_chunk: ChunkBounds = reader.chunk;
         let saved_position = reader.cur_pos;
         reader.chunk = reader
             .chunks

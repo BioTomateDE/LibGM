@@ -150,8 +150,10 @@
     // Only used in small local scope.
     clippy::enum_glob_use,
 
-    // This is a style choice.
+    // These are style choices.
     clippy::match_same_arms,
+    clippy::cast_lossless,
+    clippy::manual_range_contains,
 )]
 
 // Const assertion for soundness

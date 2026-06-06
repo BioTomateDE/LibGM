@@ -1,6 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::borrow::Cow;
-
 use crate::gml::Instruction;
 use crate::gml::instruction::CodeVariable;
 use crate::gml::instruction::DataType;
@@ -61,16 +59,14 @@ impl PushValue {
 
 impl Instruction {
     /// Attempts to extract a [`PushValue`] from this instruction.
-    ///
-    /// TODO(weak): This function sucks ass.
     #[must_use]
-    pub(crate) fn push_value(&'_ self) -> Option<Cow<'_, PushValue>> {
-        Some(match self {
-            Self::Push { value } => Cow::Borrowed(value),
+    pub const fn push_value(&self) -> Option<PushValue> {
+        Some(match *self {
+            Self::Push { value } => value,
             Self::PushLocal { variable }
             | Self::PushGlobal { variable }
-            | Self::PushBuiltin { variable } => Cow::Owned(PushValue::Variable(variable.clone())),
-            &Self::PushImmediate { integer } => Cow::Owned(PushValue::Int16(integer)),
+            | Self::PushBuiltin { variable } => PushValue::Variable(variable),
+            Self::PushImmediate { integer } => PushValue::Int16(integer),
             _ => return None,
         })
     }

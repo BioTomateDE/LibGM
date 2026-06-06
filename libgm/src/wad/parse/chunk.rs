@@ -15,12 +15,12 @@ pub struct ChunkBounds {
 
 impl ChunkBounds {
     #[must_use]
-    pub const fn length(&self) -> u32 {
+    pub const fn length(self) -> u32 {
         self.end_pos - self.start_pos
     }
 
     #[must_use]
-    pub const fn is_empty(&self) -> bool {
+    pub const fn is_empty(self) -> bool {
         self.length() == 0
     }
 }
@@ -67,9 +67,9 @@ impl ChunkMap {
 
     #[must_use]
     pub fn get(&self, chunk_name: ChunkName) -> Option<ChunkBounds> {
-        for (name, bounds) in &self.0 {
-            if *name == chunk_name {
-                return Some(bounds.clone());
+        for &(name, bounds) in &self.0 {
+            if name == chunk_name {
+                return Some(bounds);
             }
         }
         None
@@ -180,7 +180,7 @@ impl DataReader<'_> {
     pub fn read_gen8_version(&mut self) -> Result<GMVersion> {
         const CTX: &str = "trying to read GEN8 GameMaker Version";
         let saved_pos = self.cur_pos;
-        let saved_chunk: ChunkBounds = self.chunk.clone();
+        let saved_chunk: ChunkBounds = self.chunk;
         self.chunk = self
             .chunks
             .get(ChunkName::GEN8)

@@ -24,26 +24,10 @@ default-target = "x86_64-unknown-linux-gnu"
 [badges]
 maintenance.status = "actively-developed"
 
-
-# GMS2 general info checksum
-[dependencies.dotnet-rng]
-version = "1.0.5"
-
-# BZip2+QOI encoded images
-[dependencies.bzip2]
-version = "0.6.1"
-optional = true
-
-# Needed for Game Creation Timestamp in General Info
-[dependencies.chrono]
-version = "0.4.44"
-default-features = false
-
-# Needed to (potentially) deserialize PNG images
-[dependencies.image]
-version = "0.25.10"
-default-features = false
-
-# Logging
-[dependencies.log]
-version = "0.4.29"
+[dependencies]
+bitflags = "2.13"
+bzip2 = { version = "0.6", optional = true }            # BZip2+QOI encoded images
+chrono = { version = "0.4", default-features = false }  # Game Creation Timestamp
+dotnet-rng = "1.0"                                      # GMS2 general info checksum
+image = { version = "0.25", default-features = false }  # Texture Pages (+ PNG)
+log = "0.4.29"
