@@ -258,8 +258,7 @@ impl GMElement for Instruction {
             opcode = opcodes::old_to_new(opcode);
         }
 
-        // log::debug!("{} // {:02X} {:02X} {:02X} {:02X}", reader.cur_pos-4, b[0],
-        // b[1], b[2], opcode);
+        // log::debug!("{} // {:02X} {:02X} {:02X} {:02X}", reader.cur_pos-4, b[0], b[1], b[2], opcode);
 
         Ok(match opcode {
             opcodes::CONV => {
@@ -375,9 +374,9 @@ impl GMElement for Instruction {
                     .context("parsing PopDiscard Instruction")?;
                 Self::PopDiscard { data_type }
             }
-            opcodes::JMP => Self::Branch { jump_offset: reader.parse_branch(b) },
-            opcodes::JT => Self::BranchIf { jump_offset: reader.parse_branch(b) },
-            opcodes::JF => Self::BranchUnless { jump_offset: reader.parse_branch(b) },
+            opcodes::BR => Self::Branch { jump_offset: reader.parse_branch(b) },
+            opcodes::BT => Self::BranchIf { jump_offset: reader.parse_branch(b) },
+            opcodes::BF => Self::BranchUnless { jump_offset: reader.parse_branch(b) },
             opcodes::PUSHENV => Self::PushWithContext { jump_offset: reader.parse_branch(b) },
             opcodes::POPENV if b == [0x00, 0x00, 0xF0] => Self::PopWithContextExit,
             opcodes::POPENV => Self::PopWithContext { jump_offset: reader.parse_branch(b) },
@@ -411,10 +410,10 @@ impl GMElement for Instruction {
             }
             opcodes::CALL => reader.parse_call(b).context("parsing Call Instruction")?,
             opcodes::CALLVAR => {
-                let argument_count = reader
+                let arg_count = reader
                     .parse_callvar(b)
                     .context("parsing CallVariable Instruction")?;
-                Self::CallVariable { argument_count }
+                Self::CallVariable { arg_count }
             }
             opcodes::EXTENDED => reader
                 .parse_extended(b)
@@ -491,8 +490,8 @@ impl GMElement for Instruction {
             Self::Call { function, arg_count } => {
                 build_call(builder, opcode, function, arg_count)?;
             }
-            Self::CallVariable { argument_count } => {
-                build_callvar(builder, opcode, argument_count);
+            Self::CallVariable { arg_count } => {
+                build_callvar(builder, opcode, arg_count);
             }
             Self::CheckArrayIndex => {
                 build_extended16(builder, opcodes::extended::CHKINDEX);
@@ -688,7 +687,6 @@ impl DataReader<'_> {
         let data_type: DataType = get_type1(b)?;
         self.assert_zero_type2(b)?;
         self.assert_type(DataType::Variable, data_type)?;
-
         read_variable(self, raw_instance_type)
     }
 
@@ -697,7 +695,6 @@ impl DataReader<'_> {
         let data_type = get_type1(b)?;
         self.assert_zero_type2(b)?;
         self.assert_type(DataType::Int16, data_type)?;
-
         Ok(integer)
     }
 
@@ -728,7 +725,6 @@ impl DataReader<'_> {
         let data_type: DataType = get_type1(b)?;
         self.assert_zero_type2(b)?;
         self.assert_type(DataType::Variable, data_type)?;
-
         Ok(argument_count)
     }
 
@@ -1040,9 +1036,9 @@ fn write_variable_occurrence(
     if let Some(&(last_occurrence_pos, old_variable_type)) = occurrences.last() {
         // Replace last occurrence with next occurrence offset
         let occurrence_offset: u32 = occurrence_pos - last_occurrence_pos;
-        let occurrence_offset_full: u32 =
-            occurrence_offset & 0x07FF_FFFF | (u32::from(old_variable_type.as_u8() & 0xF8) << 24);
-        builder.overwrite_u32(occurrence_offset_full, last_occurrence_pos + 4)?;
+        let old_var_type = old_variable_type.as_u8() as u32 & 0xF8;
+        let value: u32 = occurrence_offset & 0x07FF_FFFF | old_var_type << 24;
+        builder.overwrite_u32(value, last_occurrence_pos + 4)?;
     }
 
     // Write the Name String ID (yes, the index, not the position) together with this the reference type.

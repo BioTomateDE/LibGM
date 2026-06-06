@@ -145,8 +145,8 @@ pub fn disassemble_instruction_to_buffer(
             write!(buffer, "{}.{}", mnemonic, data_type.as_char());
         }
 
-        Instruction::CallVariable { argument_count } => {
-            write!(buffer, "{mnemonic} {argument_count}");
+        Instruction::CallVariable { arg_count } => {
+            write!(buffer, "{mnemonic} {arg_count}");
         }
 
         Instruction::Duplicate { data_type, size } => {

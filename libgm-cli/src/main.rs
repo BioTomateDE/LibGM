@@ -42,9 +42,10 @@ fn run(mut args: cli::Args) -> Result<()> {
             continue;
         }
 
-        let mut data: GMData = parser.parse_file(&data_file)?;
+        let raw_data: Vec<u8> = std::fs::read(&data_file).context_src("reading data file")?;
+        let mut data: GMData = parser.parse_bytes(&raw_data)?;
 
-        tests::perform(&mut data, &tests)?;
+        tests::perform(&mut data, &tests, &raw_data)?;
 
         for data_file2 in &args.diffs {
             log::info!("Diffing with data file {}", data_file2.display());

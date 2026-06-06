@@ -5,9 +5,6 @@ use crate::gm_enum::gm_enum;
 use crate::prelude::*;
 use crate::wad::elem::game_object::event::EventSubtype;
 
-// TODO: rustdoc is a bitch and won't generate docs for macro invocations.
-// all subtypes need to have bloat like this in order to be documented properly.
-
 gm_enum!(
 /// Triggered on every game step (aka. frame).
 ///

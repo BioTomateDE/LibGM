@@ -1,4 +1,4 @@
-**/target/
+target/
 Cargo.lock
 
 .idea
@@ -10,8 +10,8 @@ Cargo.lock
 **/*.ios
 
 **/*.win1
-**/*.win.bak
 **/*.unx1
-**/*.unx.bak
 
-*.DS_Store
+**/*.bin
+
+**/*.DS_Store

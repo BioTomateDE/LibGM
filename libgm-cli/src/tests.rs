@@ -36,7 +36,7 @@ pub fn deduplicate(mut tests: Vec<Test>) -> Vec<Test> {
     tests
 }
 
-pub fn perform(data: &mut GMData, tests: &[Test]) -> Result<()> {
+pub fn perform(data: &mut GMData, tests: &[Test], raw_data: &[u8]) -> Result<()> {
     if tests.is_empty() {
         return Ok(());
     }
@@ -53,8 +53,12 @@ pub fn perform(data: &mut GMData, tests: &[Test]) -> Result<()> {
             Test::Reparse => {
                 log::info!("Performing Reparse Test");
                 let raw: Vec<u8> = build_bytes(data)?;
-                let _new_data = parse_bytes(raw)?;
-                // crate::diff::print_diffs(data, &new_data);
+                if raw != raw_data {
+                    log::warn!("Built data file's bytes differ from the original!");
+                }
+                #[allow(unused)]
+                let new_data = parse_bytes(raw)?;
+                // libgm_cli::diff::print_diffs(data, &new_data);
             }
             Test::Assembler => {
                 log::info!("Performing Assembler Test");

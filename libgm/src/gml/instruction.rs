@@ -70,7 +70,8 @@ pub enum Instruction {
     /// the first popped value.
     ///
     /// This operation is similar to [`Instruction::Remainder`], except it
-    /// behaves differently for negative values. This `modulus` operation performs [Euclidean division](https://en.wikipedia.org/wiki/Euclidean_division).
+    /// behaves differently for negative values. This `modulus` operation performs
+    /// [Euclidean division](https://en.wikipedia.org/wiki/Euclidean_division).
     /// For example: `-19 rem 12 == 5` (not -7).
     Modulus { lhs: DataType, rhs: DataType },
 
@@ -230,7 +231,7 @@ pub enum Instruction {
     /// Unconditionally **branches** (jumps) to another instruction in the code
     /// entry.
     ///
-    /// Also known as `B`, `Jump`, `jmp`.
+    /// Also known as `B`, `br`, `Jump`, `jmp`.
     ///
     /// The jump offset may be negative and is expressed in multiples of 4
     /// bytes. For example, a jump offset of 2 may skip `push.s`, a jump
@@ -371,7 +372,7 @@ pub enum Instruction {
     /// 3) `argument_count` arguments are popped.
     ///
     /// For more information on calling functions, see [`Instruction::Call`].
-    CallVariable { argument_count: u16 },
+    CallVariable { arg_count: u16 },
 
     /// Verifies an array index is within proper
     /// bounds, typically for multidimensional arrays.

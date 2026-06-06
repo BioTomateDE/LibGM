@@ -245,8 +245,8 @@ fn parse_instruction(
         "call" => parse_call(types, reader, gm_data)?,
         "callvar" => {
             types.assert_count(0, mnemonic)?;
-            let argument_count: u16 = parse_int(reader.clear())?;
-            Instruction::CallVariable { argument_count }
+            let arg_count: u16 = parse_int(reader.clear())?;
+            Instruction::CallVariable { arg_count }
         }
         "chkindex" => Instruction::CheckArrayIndex,
         "pushaf" => Instruction::PushArrayFinal,

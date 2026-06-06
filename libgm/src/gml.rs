@@ -166,7 +166,6 @@ pub fn instructions_size(instructions: &[Instruction]) -> u32 {
     size
 }
 
-/// TODO: test this
 fn splice_instructions(
     haystack: &mut Vec<Instruction>,
     range: Range<u32>,

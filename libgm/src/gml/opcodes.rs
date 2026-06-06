@@ -21,9 +21,9 @@ pub const DUP: u8 = 0x86;
 pub const RET: u8 = 0x9C;
 pub const EXIT: u8 = 0x9D;
 pub const POPZ: u8 = 0x9E;
-pub const JMP: u8 = 0xB6;
-pub const JT: u8 = 0xB7;
-pub const JF: u8 = 0xB8;
+pub const BR: u8 = 0xB6;
+pub const BT: u8 = 0xB7;
+pub const BF: u8 = 0xB8;
 pub const PUSHENV: u8 = 0xBA;
 pub const POPENV: u8 = 0xBB;
 pub const PUSH: u8 = 0xC0;
@@ -66,9 +66,9 @@ impl Instruction {
             Self::Return { .. } => RET,
             Self::Exit { .. } => EXIT,
             Self::PopDiscard { .. } => POPZ,
-            Self::Branch { .. } => JMP,
-            Self::BranchIf { .. } => JT,
-            Self::BranchUnless { .. } => JF,
+            Self::Branch { .. } => BR,
+            Self::BranchIf { .. } => BT,
+            Self::BranchUnless { .. } => BF,
             Self::PushWithContext { .. } => PUSHENV,
             Self::PopWithContext { .. } | Self::PopWithContextExit { .. } => POPENV,
             Self::Push { .. } => PUSH,
@@ -117,9 +117,9 @@ pub const fn old_to_new(opcode: u8) -> u8 {
         0x82 => DUP,
 
         // Branch Instructions are shifted by -1
-        0xB7 => JMP,
-        0xB8 => JT,
-        0xB9 => JF,
+        0xB7 => BR,
+        0xB8 => BT,
+        0xB9 => BF,
         0xBB => PUSHENV,
         0xBC => POPENV,
 
@@ -165,7 +165,7 @@ pub const fn new_to_old(opcode: u8) -> u8 {
         POPZ => 0x9F,
 
         // Branch Instructions are shifted by -1
-        JMP..=POPENV => opcode + 1,
+        BR..=POPENV => opcode + 1,
 
         // Call is shifted by -1
         CALL => 0xDA,
