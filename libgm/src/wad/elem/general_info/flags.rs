@@ -1,52 +1,61 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use crate::util::bitfield::bitfield_struct;
 
-bitfield_struct! {
+bitflags::bitflags! {
     /// Contains general information flags for GameMaker games.
-    Flags : u32 {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+    pub struct Flags: u32 {
         /// Start the game as fullscreen.
-        fullscreen: 0,
+        const FULLSCREEN = 0x1;
 
         /// Use synchronization to avoid tearing.
-        sync_vertex1: 1,
+        const SYNC_VERTEX1 = 0x2;
 
         /// Use synchronization to avoid tearing. (???)
-        sync_vertex2: 2,
+        const SYNC_VERTEX2 = 0x4;
 
         /// Use synchronization to avoid tearing. (???)
-        sync_vertex3: 8,
+        const SYNC_VERTEX3 = 0x100;
 
         /// Interpolate colours between pixels.
-        interpolate: 3,
+        const INTERPOLATE = 0x8;
 
         /// Keep aspect ratio during scaling.
-        scale: 4,
+        const SCALE = 0x10;
 
         /// Display mouse cursor.
-        show_cursor: 5,
+        const SHOW_CURSOR = 0x20;
 
         /// Allows window to be resized.
-        sizeable: 6,
+        const SIZEABLE = 0x40;
 
         /// Allows fullscreen switching. (???)
-        screen_key: 7,
+        const SCREEN_KEY = 0x80;
 
-        studio_version_b1: 9,
+        const STUDIO_VERSION_B1 = 0x200;
+        const STUDIO_VERSION_B2 = 0x400;
+        const STUDIO_VERSION_B3 = 0x800;
 
-        studio_version_b2: 10,
+        /// Whether Steam (or the YoYoPlayer) is enabled.
+        const STEAM_ENABLED = 0x1000;
 
-        studio_version_b3: 11,
+        /// When enabled, the game will write save data to
+        /// `%appdata%\GameName`, otherwise it will write to `%localappdata%\GameName`.
+        const APPDATA_ROAMING = 0x2000;
 
-        steam_enabled: 12,
+        /// Whether the game supports borderless window.
+        const BORDERLESS_WINDOW = 0x4000;
 
-        local_data_enabled: 13,
+        /// Tells the runner to run JavaScript code.
+        const JAVASCRIPT_MODE = 0x8000;
 
-        /// Whether the game supports borderless window
-        borderless_window: 14,
+        /// This flag is set when a game is launched from the
+        /// Gamemaker Studio 2 IDE using the 'Run' or 'Debug' options.
+        const LICENSE_EXCLUSIONS = 0x10000;
 
-        /// Tells the runner to run JavaScript code
-        javascript_mode: 15,
+        /// For the GX.games runner, allows the browser canvas to be transparent where nothing is drawn.
+        const TRANSPARENT_BACKGROUND = 0x20000;
 
-        license_exclusions: 16,
+        /// For the Windows runner, reverts the swapchain to an older/legacy swap effect.
+        const D3D_SWAP_EFFECT_DISCARD = 0x40000;
     }
 }

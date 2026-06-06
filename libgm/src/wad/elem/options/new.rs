@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
-use crate::wad::elem::GMElement;
 use crate::wad::elem::options::Constant;
 use crate::wad::elem::options::Flags;
 use crate::wad::elem::options::GMOptions;
@@ -14,7 +13,9 @@ pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
     reader.assert_int(unknown1, 0x8000_0000, "Options Unknown Value 1")?;
     let unknown2 = reader.read_u32()?;
     reader.assert_int(unknown2, 2, "Options Unknown Value 2")?;
-    let flags = Flags::deserialize(reader)?;
+    let flags = reader.read_u64()?;
+    let flags =
+        Flags::from_bits(flags).ok_or_else(|| format!("Unknown OPTN Flags 0x{flags:016X}"))?;
     let window_scale = reader.read_i32()?;
     let window_color = reader.read_u32()?;
     let color_depth = reader.read_u32()?;
@@ -50,7 +51,7 @@ pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
 pub fn build(builder: &mut DataBuilder, options: &GMOptions) -> Result<()> {
     builder.write_u32(0x8000_0000); // unknown1
     builder.write_u32(2); //unknown2
-    options.flags.serialize(builder)?;
+    builder.write_u64(options.flags.bits());
     builder.write_i32(options.window_scale);
     builder.write_u32(options.window_color);
     builder.write_u32(options.color_depth);

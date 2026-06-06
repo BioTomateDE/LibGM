@@ -1,60 +1,60 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use crate::util::bitfield::bitfield_struct;
 
-bitfield_struct! {
+bitflags::bitflags! {
     /// General options/flags for the game.
-    Flags : u64 {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+    pub struct Flags: u64 {
         /// If the game should start in fullscreen.
-        fullscreen: 0,
+        const FULLSCREEN = 0x1;
 
         /// If pixels should be interpolated.
-        interpolate_pixels: 1,
+        const INTERPOLATE_PIXELS = 0x2;
 
         /// If the new audio format should be used.
-        use_new_audio: 2,
+        const USE_NEW_AUDIO = 0x4;
 
         /// If borderless window should be used.
-        no_border: 3,
+        const NO_BORDER = 0x8;
 
         /// If the mouse cursor should be shown.
-        show_cursor: 4,
+        const SHOW_CURSOR = 0x10;
 
         /// If the window should be resizable.
-        sizeable: 5,
+        const SIZEABLE = 0x20;
 
         /// If the window should stay on top.
-        stay_on_top: 6,
+        const STAY_ON_TOP = 0x40;
 
         /// If the resolution can be changed.
-        change_resolution: 7,
+        const CHANGE_RESOLUTION = 0x80;
 
-        no_buttons: 8,
-        screen_key: 9,
-        help_key: 10,
-        quit_key: 11,
-        save_key: 12,
-        screenshot_key: 13,
-        close_sec: 14,
-        freeze: 15,
-        show_progress: 16,
-        load_transparent: 17,
-        scale_progress: 18,
-        display_errors: 19,
-        write_errors: 20,
-        abort_errors: 21,
-        variable_errors: 22,
-        creation_event_order: 23,
-        use_front_touch: 24,
-        use_rear_touch: 25,
-        use_fast_collision: 26,
-        fast_collision_compatibility: 27,
-        disable_sandbox: 28,
-        enable_copy_on_write: 29,
-        legacy_json_parsing: 30,
-        legacy_number_conversion: 31,
-        legacy_other_behavior: 32,
-        audio_error_behavior: 33,
-        allow_instance_change: 34,
-        legacy_primitive_drawing: 35,
+        const NO_BUTTONS = 0x100;
+        const SCREEN_KEY = 0x200;
+        const HELP_KEY = 0x400;
+        const QUIT_KEY = 0x800;
+        const SAVE_KEY = 0x1000;
+        const SCREENSHOT_KEY = 0x2000;
+        const CLOSE_SEC = 0x4000;
+        const FREEZE = 0x8000;
+        const SHOW_PROGRESS = 0x10000;
+        const LOAD_TRANSPARENT = 0x20000;
+        const SCALE_PROGRESS = 0x40000;
+        const DISPLAY_ERRORS = 0x80000;
+        const WRITE_ERRORS = 0x10_0000;
+        const ABORT_ERRORS = 0x20_0000;
+        const VARIABLE_ERRORS = 0x40_0000;
+        const CREATION_EVENT_ORDER = 0x80_0000;
+        const USE_FRONT_TOUCH = 0x100_0000;
+        const USE_REAR_TOUCH = 0x200_0000;
+        const USE_FAST_COLLISION = 0x400_0000;
+        const FAST_COLLISION_COMPATIBILITY = 0x800_0000;
+        const DISABLE_SANDBOX = 0x1000_0000;
+        const ENABLE_COPY_ON_WRITE = 0x2000_0000;
+        const LEGACY_JSON_PARSING = 0x4000_0000;
+        const LEGACY_NUMBER_CONVERSION = 0x8000_0000;
+        const LEGACY_OTHER_BEHAVIOR = 0x1_0000_0000;
+        const AUDIO_ERROR_BEHAVIOR = 0x2_0000_0000;
+        const ALLOW_INSTANCE_CHANGE = 0x4_0000_0000;
+        const LEGACY_PRIMITIVE_DRAWING = 0x8_0000_0000;
     }
 }

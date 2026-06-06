@@ -151,7 +151,11 @@ impl GMGeneralInfo {
     }
 
     fn get_info_number(&self, first_random: i64, info_timestamp_offset: bool) -> i64 {
-        let flags_raw: u32 = self.flags.build();
+        let flags = self.flags.bits() as i64;
+        let gid = self.game_id as i64;
+        let ww = self.default_window_width as i64;
+        let wh = self.default_window_height as i64;
+
         let mut info_number: i64 = self.creation_timestamp.timestamp();
         if info_timestamp_offset {
             info_number -= 1000;
@@ -159,11 +163,8 @@ impl GMGeneralInfo {
         info_number = Self::uid_bitmush(info_number);
         info_number ^= first_random;
         info_number = !info_number;
-        info_number ^= (i64::from(self.game_id) << 32) | i64::from(self.game_id);
-        info_number ^= (i64::from(self.default_window_width) + i64::from(flags_raw)) << 48
-            | (i64::from(self.default_window_height) + i64::from(flags_raw)) << 32
-            | (i64::from(self.default_window_height) + i64::from(flags_raw)) << 16
-            | (i64::from(self.default_window_width) + i64::from(flags_raw));
+        info_number ^= (gid << 32) | gid;
+        info_number ^= (ww + flags) << 48 | (wh + flags) << 32 | (wh + flags) << 16 | (ww + flags);
         info_number ^= i64::from(self.wad_version);
         info_number
     }

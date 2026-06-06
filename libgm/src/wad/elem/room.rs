@@ -86,7 +86,9 @@ impl GMElement for GMRoom {
 
         let draw_background_color = reader.read_bool32()?;
         let creation_code: GMRef<GMCode> = reader.read_resource_by_id()?;
-        let flags = Flags::deserialize(reader)?;
+        let flags = reader.read_u32()?;
+        let flags =
+            Flags::from_bits(flags).ok_or_else(|| format!("Invalid Room Flags {flags:08X}"))?;
 
         let backgrounds_ptr = reader.read_u32()?;
         let views_ptr = reader.read_u32()?;
@@ -181,7 +183,7 @@ impl GMElement for GMRoom {
 
         builder.write_bool32(self.draw_background_color);
         builder.write_resource_id(self.creation_code);
-        self.flags.serialize(builder)?;
+        builder.write_u32(self.flags.bits());
         builder.write_pointer(&self.backgrounds);
         builder.write_pointer(&self.views);
         builder.write_pointer(&self.game_objects);

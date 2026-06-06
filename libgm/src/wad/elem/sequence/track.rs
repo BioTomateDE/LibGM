@@ -6,7 +6,6 @@ pub use keyframe::Keyframes;
 
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::util::bitfield::bitfield_struct;
 use crate::util::init::vec_with_capacity;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
@@ -57,7 +56,9 @@ impl GMElement for Track {
 
         let name: GMRef<String> = reader.read_gm_string()?;
         let builtin_name: BuiltinName = reader.read_enum()?;
-        let flags = Flags::deserialize(reader)?;
+        let flags = reader.read_i32()?;
+        let flags =
+            Flags::from_bits(flags).ok_or_else(|| format!("Invalid Track Flags {flags:08X}"))?;
         let is_creation_track = reader.read_bool32()?;
 
         let tag_count = reader.read_count("Track Tag")?;
@@ -128,7 +129,7 @@ impl GMElement for Track {
         builder.write_gm_string(self.model_name)?;
         builder.write_gm_string(self.name)?;
         builder.write_enum(self.builtin_name);
-        self.flags.serialize(builder)?;
+        builder.write_i32(self.flags.bits());
         builder.write_bool32(self.is_creation_track);
         builder.write_usize(self.tags.len())?;
         builder.write_usize(self.owned_resources.len())?;
@@ -183,9 +184,10 @@ gm_enum!( BuiltinName {
     ParagraphSpacing = 23,
 });
 
-bitfield_struct! {
-    Flags: i32 {
-        children_ignore_origin: 0,
+bitflags::bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    pub struct Flags: i32 {
+        const CHILDREN_IGNORE_ORIGIN = 0x1;
     }
 }
 

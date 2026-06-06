@@ -15,7 +15,7 @@ pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
     let flag_no_border = reader.read_bool32()?;
     let flag_show_cursor = reader.read_bool32()?;
 
-    let scale = reader.read_i32()?;
+    let window_scale = reader.read_i32()?;
 
     let flag_sizeable = reader.read_bool32()?;
     let flag_stay_on_top = reader.read_bool32()?;
@@ -61,36 +61,37 @@ pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
 
     let constants: Vec<Constant> = reader.read_simple_list()?;
 
+    let flags: Flags = Flags::empty()
+        | f(flag_fullscreen, Flags::FULLSCREEN)
+        | f(flag_interpolate_pixels, Flags::INTERPOLATE_PIXELS)
+        | f(flag_interpolate_pixels, Flags::INTERPOLATE_PIXELS)
+        | f(flag_use_new_audio, Flags::USE_NEW_AUDIO)
+        | f(flag_no_border, Flags::NO_BORDER)
+        | f(flag_show_cursor, Flags::SHOW_CURSOR)
+        | f(flag_sizeable, Flags::SIZEABLE)
+        | f(flag_stay_on_top, Flags::STAY_ON_TOP)
+        | f(flag_change_resolution, Flags::CHANGE_RESOLUTION)
+        | f(flag_no_buttons, Flags::NO_BUTTONS)
+        | f(flag_screen_key, Flags::SCREEN_KEY)
+        | f(flag_help_key, Flags::HELP_KEY)
+        | f(flag_quit_key, Flags::QUIT_KEY)
+        | f(flag_save_key, Flags::SAVE_KEY)
+        | f(flag_screenshot_key, Flags::SCREENSHOT_KEY)
+        | f(flag_close_sec, Flags::CLOSE_SEC)
+        | f(flag_freeze, Flags::FREEZE)
+        | f(flag_show_progress, Flags::SHOW_PROGRESS)
+        | f(flag_load_transparent, Flags::LOAD_TRANSPARENT)
+        | f(flag_scale_progress, Flags::SCALE_PROGRESS)
+        | f(flag_display_errors, Flags::DISPLAY_ERRORS)
+        | f(flag_write_errors, Flags::WRITE_ERRORS)
+        | f(flag_abort_errors, Flags::ABORT_ERRORS)
+        | f(flag_variable_errors, Flags::VARIABLE_ERRORS)
+        | f(flag_creation_event_order, Flags::CREATION_EVENT_ORDER);
+
     Ok(GMOptions {
         is_new_format: false,
-        flags: Flags {
-            fullscreen: flag_fullscreen,
-            interpolate_pixels: flag_interpolate_pixels,
-            use_new_audio: flag_use_new_audio,
-            no_border: flag_no_border,
-            show_cursor: flag_show_cursor,
-            sizeable: flag_sizeable,
-            stay_on_top: flag_stay_on_top,
-            change_resolution: flag_change_resolution,
-            no_buttons: flag_no_buttons,
-            screen_key: flag_screen_key,
-            help_key: flag_help_key,
-            quit_key: flag_quit_key,
-            save_key: flag_save_key,
-            screenshot_key: flag_screenshot_key,
-            close_sec: flag_close_sec,
-            freeze: flag_freeze,
-            show_progress: flag_show_progress,
-            load_transparent: flag_load_transparent,
-            scale_progress: flag_scale_progress,
-            display_errors: flag_display_errors,
-            write_errors: flag_write_errors,
-            abort_errors: flag_abort_errors,
-            variable_errors: flag_variable_errors,
-            creation_event_order: flag_creation_event_order,
-            ..Default::default()
-        },
-        window_scale: scale,
+        flags,
+        window_scale,
         window_color,
         color_depth,
         resolution,
@@ -106,55 +107,59 @@ pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
     })
 }
 
+fn f(is: bool, flag: Flags) -> Flags {
+    if is { flag } else { Flags::empty() }
+}
+
 pub fn build(builder: &mut DataBuilder, options: &GMOptions) -> Result<()> {
-    builder.write_bool32(options.flags.fullscreen);
-    builder.write_bool32(options.flags.interpolate_pixels);
-    builder.write_bool32(options.flags.use_new_audio);
-    builder.write_bool32(options.flags.no_border);
-    builder.write_bool32(options.flags.show_cursor);
+    builder.write_bool32(options.flags.contains(Flags::FULLSCREEN));
+    builder.write_bool32(options.flags.contains(Flags::INTERPOLATE_PIXELS));
+    builder.write_bool32(options.flags.contains(Flags::USE_NEW_AUDIO));
+    builder.write_bool32(options.flags.contains(Flags::NO_BORDER));
+    builder.write_bool32(options.flags.contains(Flags::SHOW_CURSOR));
 
     builder.write_i32(options.window_scale);
 
-    builder.write_bool32(options.flags.sizeable);
-    builder.write_bool32(options.flags.stay_on_top);
+    builder.write_bool32(options.flags.contains(Flags::SIZEABLE));
+    builder.write_bool32(options.flags.contains(Flags::STAY_ON_TOP));
 
     builder.write_u32(options.window_color);
 
-    builder.write_bool32(options.flags.change_resolution);
+    builder.write_bool32(options.flags.contains(Flags::CHANGE_RESOLUTION));
 
     builder.write_u32(options.color_depth);
     builder.write_u32(options.resolution);
     builder.write_u32(options.frequency);
 
-    builder.write_bool32(options.flags.no_buttons);
+    builder.write_bool32(options.flags.contains(Flags::NO_BUTTONS));
 
     builder.write_i32(options.vertex_sync);
 
-    builder.write_bool32(options.flags.screen_key);
-    builder.write_bool32(options.flags.help_key);
-    builder.write_bool32(options.flags.quit_key);
-    builder.write_bool32(options.flags.save_key);
-    builder.write_bool32(options.flags.screenshot_key);
-    builder.write_bool32(options.flags.close_sec);
+    builder.write_bool32(options.flags.contains(Flags::SCREEN_KEY));
+    builder.write_bool32(options.flags.contains(Flags::HELP_KEY));
+    builder.write_bool32(options.flags.contains(Flags::QUIT_KEY));
+    builder.write_bool32(options.flags.contains(Flags::SAVE_KEY));
+    builder.write_bool32(options.flags.contains(Flags::SCREENSHOT_KEY));
+    builder.write_bool32(options.flags.contains(Flags::CLOSE_SEC));
 
     builder.write_i32(options.priority);
 
-    builder.write_bool32(options.flags.freeze);
-    builder.write_bool32(options.flags.show_progress);
+    builder.write_bool32(options.flags.contains(Flags::FREEZE));
+    builder.write_bool32(options.flags.contains(Flags::SHOW_PROGRESS));
 
     builder.write_gm_texture(options.back_image)?;
     builder.write_gm_texture(options.front_image)?;
     builder.write_gm_texture(options.load_image)?;
 
-    builder.write_bool32(options.flags.load_transparent);
+    builder.write_bool32(options.flags.contains(Flags::LOAD_TRANSPARENT));
 
     builder.write_u32(options.load_alpha);
 
-    builder.write_bool32(options.flags.scale_progress);
-    builder.write_bool32(options.flags.display_errors);
-    builder.write_bool32(options.flags.write_errors);
-    builder.write_bool32(options.flags.abort_errors);
-    builder.write_bool32(options.flags.variable_errors);
-    builder.write_bool32(options.flags.creation_event_order);
+    builder.write_bool32(options.flags.contains(Flags::SCALE_PROGRESS));
+    builder.write_bool32(options.flags.contains(Flags::DISPLAY_ERRORS));
+    builder.write_bool32(options.flags.contains(Flags::WRITE_ERRORS));
+    builder.write_bool32(options.flags.contains(Flags::ABORT_ERRORS));
+    builder.write_bool32(options.flags.contains(Flags::VARIABLE_ERRORS));
+    builder.write_bool32(options.flags.contains(Flags::CREATION_EVENT_ORDER));
     Ok(())
 }

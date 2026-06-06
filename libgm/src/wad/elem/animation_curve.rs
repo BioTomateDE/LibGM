@@ -46,9 +46,6 @@ impl GMElement for GMAnimationCurves {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMAnimationCurve {
     pub name: GMRef<String>,
-    /// This field may change in the future.
-    /// TODO: migrate to an enum
-    pub graph_type: u32,
     pub channels: Vec<Channel>,
 }
 
@@ -56,13 +53,14 @@ impl GMElement for GMAnimationCurve {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name = reader.read_gm_string()?;
         let graph_type = reader.read_u32()?;
+        reader.assert_int(graph_type, 1, "Graph Type")?; // UTMT suggests this, lmk if this is wrong
         let channels: Vec<Channel> = reader.read_simple_list()?;
-        Ok(Self { name, graph_type, channels })
+        Ok(Self { name, channels })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(self.name)?;
-        builder.write_u32(self.graph_type);
+        builder.write_u32(1); // Graph Type
         builder.write_simple_list(&self.channels)?;
         Ok(())
     }

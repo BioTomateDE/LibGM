@@ -96,7 +96,9 @@ pub struct GMSound {
 impl GMElement for GMSound {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let flags = Flags::deserialize(reader)?;
+        let flags = reader.read_u32()?;
+        let flags =
+            Flags::from_bits(flags).ok_or_else(|| format!("Invalid Sound Flags {flags:08X}"))?;
         let audio_type: GMRef<String> = reader.read_gm_string()?;
         let file: GMRef<String> = reader.read_gm_string()?;
         let effects = reader.read_u32()?;
@@ -104,7 +106,7 @@ impl GMElement for GMSound {
         let pitch = reader.read_f32()?;
 
         let audio_group: GMRef<GMAudioGroup> =
-            if reader.general_info.wad_version >= 14 && flags.regular {
+            if reader.general_info.wad_version >= 14 && flags.contains(Flags::REGULAR) {
                 reader.read_resource_by_id()?
             } else {
                 let preload = reader.read_bool32().context("reading preload")?;
@@ -131,13 +133,13 @@ impl GMElement for GMSound {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(self.name)?;
-        self.flags.serialize(builder)?;
+        builder.write_u32(self.flags.bits());
         builder.write_gm_string(self.audio_type)?;
         builder.write_gm_string(self.file)?;
         builder.write_u32(self.effects);
         builder.write_f32(self.volume);
         builder.write_f32(self.pitch);
-        if builder.wad_version() >= 14 && self.flags.regular {
+        if builder.wad_version() >= 14 && self.flags.contains(Flags::REGULAR) {
             builder.write_resource_id(self.audio_group);
         } else {
             builder.write_bool32(true); // Preload
@@ -165,37 +167,11 @@ fn test_gms1_version(version: GMVersion, stable_build: u32, beta_build: u32) -> 
     version > (1, 0, 0, stable_build) || version > (1, 0, 0, beta_build)
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[non_exhaustive]
-pub struct Flags {
-    pub embedded: bool,
-    pub compressed: bool,
-    pub regular: bool,
-}
-
-// TODO: switch to bitflags
-
-impl GMElement for Flags {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let raw = reader.read_u32()?;
-        let embedded = raw & 1 != 0;
-        let compressed = raw & 2 != 0;
-        let regular = raw & 0x64 != 0;
-        Ok(Self { embedded, compressed, regular })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        let mut raw = 100;
-        if self.embedded {
-            raw |= 1;
-        }
-        if self.compressed {
-            raw |= 2;
-        }
-        if self.regular {
-            raw |= 0x64;
-        }
-        builder.write_u32(raw);
-        Ok(())
+bitflags::bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    pub struct Flags: u32 {
+        const EMBEDDED = 0x1;
+        const COMPRESSED = 0x2;
+        const REGULAR = 0x64;
     }
 }

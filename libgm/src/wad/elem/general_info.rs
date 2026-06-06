@@ -7,10 +7,10 @@ use std::fmt;
 
 use chrono::DateTime;
 use chrono::Utc;
-pub use flags::Flags;
-pub use function_classifications::FunctionClassifications;
-pub use gms2::GMS2Data;
 
+pub use self::flags::Flags;
+pub use self::function_classifications::FunctionClassifications;
+pub use self::gms2::GMS2Data;
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_chunk;
@@ -162,7 +162,8 @@ impl GMElement for GMGeneralInfo {
         let default_window_width = reader.read_u32()?;
         let default_window_height = reader.read_u32()?;
         let flags_raw = reader.read_u32()?;
-        let flags = Flags::parse(flags_raw);
+        let flags = Flags::from_bits(flags_raw)
+            .ok_or_else(|| format!("Invalid GEN8 Flags {flags_raw:08X}"))?;
         let license_crc32 = reader.read_u32()?;
         let license_md5: [u8; 16] = *reader.read_bytes_const().context("reading license (MD5)")?;
 
@@ -174,7 +175,9 @@ impl GMElement for GMGeneralInfo {
         let display_name: GMRef<String> = reader.read_gm_string()?;
         let active_targets = reader.read_u64()?;
         reader.assert_int(active_targets, 0, "Active Targets")?;
-        let function_classifications = FunctionClassifications::deserialize(reader)?;
+        let fclass = reader.read_u64()?;
+        let function_classifications = FunctionClassifications::from_bits(fclass)
+            .ok_or_else(|| format!("Invalid GEN8 Function Classifications {fclass:016X}"))?;
         let steam_appid = reader.read_i32()?;
         let debugger_port: u32 = reader.deserialize_if_wad_version(14)?.unwrap_or(0);
         let room_order: Vec<GMRef<GMRoom>> = reader.read_simple_list()?;
@@ -238,13 +241,13 @@ impl GMElement for GMGeneralInfo {
         }
         builder.write_u32(self.default_window_width);
         builder.write_u32(self.default_window_height);
-        self.flags.serialize(builder)?;
+        builder.write_u32(self.flags.bits());
         builder.write_u32(self.license_crc32);
         builder.write_bytes(&self.license_md5);
         builder.write_i64(self.creation_timestamp.timestamp());
         builder.write_gm_string(self.display_name)?;
         builder.write_u64(0); // "Active targets"
-        self.function_classifications.serialize(builder)?;
+        builder.write_u64(self.function_classifications.bits());
         builder.write_i32(self.steam_appid);
         if self.wad_version >= 14 {
             builder.write_u32(self.debugger_port);
@@ -274,12 +277,12 @@ impl Default for GMGeneralInfo {
             version: GMVersion::default(),
             default_window_width: 1337,
             default_window_height: 1337,
-            flags: Flags::default(),
+            flags: Flags::empty(),
             license_crc32: 69420,
             license_md5: [69; 16],
             creation_timestamp: DateTime::default(),
             display_name: GMRef::none(),
-            function_classifications: FunctionClassifications::default(),
+            function_classifications: FunctionClassifications::empty(),
             steam_appid: 0,
             debugger_port: 0,
             room_order: vec![],
@@ -290,7 +293,7 @@ impl Default for GMGeneralInfo {
 }
 
 impl fmt::Debug for GMGeneralInfo {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("GMGeneralInfo")
             .field("is_debugger_disabled", &self.is_debugger_disabled)
             .field("wad_version", &self.wad_version)
