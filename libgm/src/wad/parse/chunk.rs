@@ -94,8 +94,7 @@ impl ChunkMap {
 
 impl DataReader<'_> {
     /// Read a GameMaker chunk name consisting of 4 ascii characters.
-    /// Accounts for endianness; reversing the read chunk name in big endian
-    /// mode.
+    /// Accounts for endianness; reversing the read chunk name in big endian mode.
     pub fn read_chunk_name(&mut self) -> Result<ChunkName> {
         let mut bytes: [u8; 4] = self.read_bytes_const().cloned()?;
 

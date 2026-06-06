@@ -1027,10 +1027,9 @@ fn write_variable_occurrence(
 ) -> Result<()> {
     let len: usize = builder.variable_occurrences.len();
 
-    if variable_ref.is_none() {
-        bail!("Variable GMRef is null while writing occurrence");
-    }
+    let var = builder.gm_data.variables.by_ref(variable_ref)?;
     let gm_index = variable_ref.index as u32;
+
     let occurrences: &mut Vec<(u32, VariableType)> = builder
         .variable_occurrences
         .get_mut(gm_index as usize)
@@ -1046,8 +1045,9 @@ fn write_variable_occurrence(
         builder.overwrite_u32(occurrence_offset_full, last_occurrence_pos + 4)?;
     }
 
-    // See write_function_occurrence
-    builder.write_u32(0x69420 | u32::from(variable_type.as_u8() & 0xF8) << 24);
+    // Write the Name String ID (yes, the index, not the position) together with this the reference type.
+    let name_string_id = var.name.index as u32 & 0x07FF_FFFF;
+    builder.write_u32(name_string_id | u32::from(variable_type.as_u8() & 0xF8) << 24);
 
     // Fuckass borrow checker
     builder
@@ -1065,10 +1065,9 @@ fn write_function_occurrence(
 ) -> Result<()> {
     let len: usize = builder.function_occurrences.len();
 
-    if func_ref.is_none() {
-        bail!("Function GMRef is null while writing occurrence");
-    }
+    let func = builder.gm_data.functions.by_ref(func_ref)?;
     let gm_index = func_ref.index as u32;
+
     let occurrences: &mut Vec<u32> = builder
         .function_occurrences
         .get_mut(gm_index as usize)
@@ -1082,11 +1081,9 @@ fn write_function_occurrence(
         builder.overwrite_u32(occurrence_offset & 0x07FF_FFFF, last_occurrence_pos + 4)?;
     }
 
-    // Technically it should write the name string id here.
-    // Since i no longer store string ids though, this is impossible.
-    // It doesn't seem to be an issue though, this value is probably unused by the
-    // runner anyway.
-    builder.write_u32(420);
+    // Write the Name String ID (yes, the index, not the position).
+    let name_string_id = func.name.index as u32 & 0x07FF_FFFF;
+    builder.write_u32(name_string_id);
 
     builder
         .function_occurrences

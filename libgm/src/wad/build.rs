@@ -18,6 +18,7 @@ use builder::DataBuilder;
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
 use crate::util::panic;
+use crate::wad::chunk::ChunkName;
 use crate::wad::data::Endianness;
 use crate::wad::data::GMData;
 
@@ -71,44 +72,47 @@ fn build_impl(data: &GMData) -> Result<Vec<u8>> {
     // Write Data length placeholder
     builder.write_u32(0xDEAD_C0DE);
 
-    // GEN8 has to be the first chunk, at least for utmt (?).
-    // CODE has to be written before VARI and FUNC.
+    // TODO: CODE has to be written before VARI and FUNC!!!
 
-    // TODO: preserve chunk order
-    builder.build_chunk(&data.general_info)?;
-    builder.build_chunk(&data.options)?;
-    builder.build_chunk(&data.extensions)?;
-    builder.build_chunk(&data.sounds)?;
-    builder.build_chunk(&data.audio_groups)?;
-    builder.build_chunk(&data.sprites)?;
-    builder.build_chunk(&data.backgrounds)?;
-    builder.build_chunk(&data.paths)?;
-    builder.build_chunk(&data.scripts)?;
-    builder.build_chunk(&data.shaders)?;
-    builder.build_chunk(&data.fonts)?;
-    builder.build_chunk(&data.timelines)?;
-    builder.build_chunk(&data.game_objects)?;
-    builder.build_chunk(&data.rooms)?;
-    builder.build_chunk(&data.texture_page_items)?;
-    builder.build_chunk(&data.codes)?;
-    builder.build_chunk(&data.variables)?;
-    builder.build_chunk(&data.functions)?;
-    builder.build_chunk(&data.texture_pages)?;
-    builder.build_chunk(&data.audios)?;
-    builder.build_chunk(&data.sequences)?;
-    builder.build_chunk(&data.particle_systems)?;
-    builder.build_chunk(&data.particle_emitters)?;
-    builder.build_chunk(&data.language_info)?;
-    builder.build_chunk(&data.global_init_scripts)?;
-    builder.build_chunk(&data.game_end_scripts)?;
-    builder.build_chunk(&data.ui_nodes)?;
-    builder.build_chunk(&data.embedded_images)?;
-    builder.build_chunk(&data.texture_group_infos)?;
-    builder.build_chunk(&data.tags)?;
-    builder.build_chunk(&data.feature_flags)?;
-    builder.build_chunk(&data.filter_effects)?;
-    builder.build_chunk(&data.animation_curves)?;
-    builder.build_chunk(&data.strings)?;
+    for &chunk_name in &data.meta.chunk_order {
+        match chunk_name {
+            ChunkName::ACRV => builder.build_chunk(&data.animation_curves),
+            ChunkName::AGRP => builder.build_chunk(&data.audio_groups),
+            ChunkName::AUDO => builder.build_chunk(&data.audios),
+            ChunkName::BGND => builder.build_chunk(&data.backgrounds),
+            ChunkName::CODE => builder.build_chunk(&data.codes),
+            ChunkName::DAFL => builder.build_chunk(&data.data_files),
+            ChunkName::EMBI => builder.build_chunk(&data.embedded_images),
+            ChunkName::EXTN => builder.build_chunk(&data.extensions),
+            ChunkName::FEAT => builder.build_chunk(&data.feature_flags),
+            ChunkName::FEDS => builder.build_chunk(&data.filter_effects),
+            ChunkName::FONT => builder.build_chunk(&data.fonts),
+            ChunkName::FUNC => builder.build_chunk(&data.functions),
+            ChunkName::GEN8 => builder.build_chunk(&data.general_info),
+            ChunkName::GLOB => builder.build_chunk(&data.global_init_scripts),
+            ChunkName::GMEN => builder.build_chunk(&data.game_end_scripts),
+            ChunkName::LANG => builder.build_chunk(&data.language_info),
+            ChunkName::OBJT => builder.build_chunk(&data.game_objects),
+            ChunkName::OPTN => builder.build_chunk(&data.options),
+            ChunkName::PATH => builder.build_chunk(&data.paths),
+            ChunkName::PSEM => builder.build_chunk(&data.particle_systems),
+            ChunkName::PSYS => builder.build_chunk(&data.particle_systems),
+            ChunkName::ROOM => builder.build_chunk(&data.rooms),
+            ChunkName::SCPT => builder.build_chunk(&data.scripts),
+            ChunkName::SEQN => builder.build_chunk(&data.sequences),
+            ChunkName::SHDR => builder.build_chunk(&data.shaders),
+            ChunkName::SOND => builder.build_chunk(&data.sounds),
+            ChunkName::SPRT => builder.build_chunk(&data.sprites),
+            ChunkName::STRG => builder.build_chunk(&data.strings),
+            ChunkName::TAGS => builder.build_chunk(&data.tags),
+            ChunkName::TGIN => builder.build_chunk(&data.texture_group_infos),
+            ChunkName::TMLN => builder.build_chunk(&data.timelines),
+            ChunkName::TPAG => builder.build_chunk(&data.texture_page_items),
+            ChunkName::TXTR => builder.build_chunk(&data.texture_pages),
+            ChunkName::UILR => builder.build_chunk(&data.ui_nodes),
+            ChunkName::VARI => builder.build_chunk(&data.variables),
+        }?
+    }
 
     builder.remove_last_chunk_padding();
 

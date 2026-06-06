@@ -28,7 +28,7 @@ impl DataBuilder<'_> {
     pub fn build_chunk<T: GMChunk>(&mut self, element: &T) -> Result<()> {
         let name: ChunkName = T::NAME;
         if !element.exists() {
-            return Ok(());
+            bail!("Cannot write non-existent chunk {name}")
         }
 
         let stopwatch = Stopwatch::start();

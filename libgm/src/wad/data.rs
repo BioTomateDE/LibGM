@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
+use crate::wad::chunk::ChunkName;
 use crate::wad::elem::animation_curve::GMAnimationCurves;
 use crate::wad::elem::audio::GMAudios;
 use crate::wad::elem::audio_group::GMAudioGroups;
@@ -100,6 +101,8 @@ pub struct Metadata {
     /// This is a micro optimization. This field's value
     /// can be initialized to zero without any problems.
     pub original_data_size: u32,
+
+    pub(crate) chunk_order: Vec<ChunkName>,
 }
 
 impl Default for Metadata {
@@ -110,6 +113,7 @@ impl Default for Metadata {
             chunk_padding: 16,
             endianness: Endianness::Little,
             original_data_size: 0,
+            chunk_order: Vec::new(),
         }
     }
 }

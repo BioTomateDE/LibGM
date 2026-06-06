@@ -51,6 +51,8 @@ pub struct DataReader<'a> {
     /// a GameMaker update, for example).
     pub chunks: ChunkMap,
 
+    pub chunk_order: Vec<ChunkName>,
+
     /// Metadata about the currently parsed chunk of data.
     /// This includes the chunk's name, start position, and end position within
     /// the data buffer. When reading data, these bounds are checked to
@@ -121,6 +123,7 @@ impl<'a> DataReader<'a> {
             endianness: Endianness::Little,
             chunk: ChunkBounds { start_pos: 0, end_pos },
             chunks: ChunkMap::new(),
+            chunk_order: Vec::new(),
             last_chunk: ChunkName::DAFL,            // stub
             general_info: GMGeneralInfo::default(), // stub
             string_chunk: ChunkBounds::default(),   // stub

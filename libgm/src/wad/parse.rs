@@ -72,6 +72,7 @@ pub struct ParsingOptions {
     pub verify_constants: bool,
 
     /// See [`ParsingOptions::allow_unknown_chunks`].
+    /// TODO: this option is useless rn due to the ChunkName refactor
     pub allow_unknown_chunks: bool,
 }
 
@@ -295,6 +296,7 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
 
         let chunk_bounds = ChunkBounds { start_pos, end_pos };
         reader.chunks.push(name, chunk_bounds)?;
+        reader.chunk_order.push(name);
     }
 
     Ok(reader)
@@ -430,6 +432,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         chunk_padding: reader.chunk_padding,
         endianness: reader.endianness,
         original_data_size: reader.size(),
+        chunk_order: reader.chunk_order,
     };
 
     let data = GMData {
