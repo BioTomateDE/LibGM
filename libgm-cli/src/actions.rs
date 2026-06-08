@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
+mod shuffle_textures;
+
 use clap::ValueEnum;
 use libgm::prelude::*;
 use libgm::wad::elem::texture_page::Format;
@@ -12,24 +14,24 @@ pub enum Action {
     SerializeTexturesQoi,
     SerializeTexturesBz2Qoi,
     OptimizeMemory,
+    ShuffleTextures,
     Most,
 }
 
 impl Action {
     pub fn perform(self, data: &mut GMData) -> Result<()> {
         match self {
-            Self::EnableDebug => data.enable_debug(),
-            Self::DisableDebug => data.disable_debug(),
-            Self::DeserializeTextures => data.deserialize_all_textures(),
-            Self::SerializeTexturesPng => serialize_textures(data, Format::Png),
-            Self::SerializeTexturesQoi => serialize_textures(data, Format::Qoi),
-            Self::SerializeTexturesBz2Qoi => serialize_textures(data, Format::Bz2Qoi),
-            Self::OptimizeMemory => {
-                data.optimize_memory();
-                Ok(())
-            }
-            Self::Most => data.post_deserialize(),
+            Self::EnableDebug => data.enable_debug()?,
+            Self::DisableDebug => data.disable_debug()?,
+            Self::DeserializeTextures => data.deserialize_all_textures()?,
+            Self::SerializeTexturesPng => serialize_textures(data, Format::Png)?,
+            Self::SerializeTexturesQoi => serialize_textures(data, Format::Qoi)?,
+            Self::SerializeTexturesBz2Qoi => serialize_textures(data, Format::Bz2Qoi)?,
+            Self::OptimizeMemory => data.optimize_memory(),
+            Self::ShuffleTextures => shuffle_textures::shuffle_textures(data),
+            Self::Most => data.post_deserialize()?,
         }
+        Ok(())
     }
 }
 
