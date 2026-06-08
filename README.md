@@ -17,7 +17,6 @@ A tool for unpacking, decompiling and modding GameMaker games such as Undertale 
   - No meaningless stack traces over 50 lines long.
   - Still more information than just "Reading out of bounds".
   - Strict data integrity checks catch errors earlier, making debugging easier.
-  - Example trace printed out using `.chain()`:
 
 This is an example error trace printed out using `error.chain()`:
 ```
@@ -46,6 +45,8 @@ Or if you want bleeding edge (might be unstable):
 ```toml
 libgm = { git = "https://codeberg.org/BioTomateDE/LibGM" }
 ```
+
+Example usage is specified in [docs.rs](https://docs.rs/libgm).
 
 
 ## Crate features

@@ -17,7 +17,7 @@ use builder::DataBuilder;
 
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
-use crate::util::panic;
+use crate::util::unwind;
 use crate::wad::chunk::ChunkName;
 use crate::wad::data::Endianness;
 use crate::wad::data::GMData;
@@ -53,7 +53,7 @@ pub fn build_file(gm_data: &GMData, path: impl AsRef<Path>) -> Result<()> {
 #[inline]
 fn build(gm_data: &GMData) -> Result<Vec<u8>> {
     if cfg!(feature = "catch-panic") {
-        panic::catch(|| build_impl(gm_data))
+        unwind::catch(|| build_impl(gm_data))
     } else {
         build_impl(gm_data)
     }
