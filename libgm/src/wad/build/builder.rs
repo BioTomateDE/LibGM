@@ -174,14 +174,4 @@ impl<'a> DataBuilder<'a> {
     pub fn write_bool32(&mut self, boolean: bool) {
         self.write_i32(boolean as i32);
     }
-
-    /// Write an actual character string.
-    ///
-    /// This should only be used for literal strings in the `STRG` chunk.
-    /// For writing regular GameMaker string references, see
-    /// [`Self::write_gm_string`].
-    #[inline]
-    pub fn write_literal_string(&mut self, string: &str) {
-        self.write_bytes(string.as_bytes());
-    }
 }

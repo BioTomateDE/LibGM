@@ -143,6 +143,7 @@ impl Display for ChunkName {
 }
 
 /// All chunk elements should implement this trait.
+#[expect(private_bounds)]
 pub trait GMChunk: GMElement + Default {
     /// The four character GameMaker chunk name (GEN8, STRG, VARI, etc.).
     const NAME: ChunkName;
@@ -164,6 +165,7 @@ pub trait GMChunk: GMElement + Default {
 /// All chunk elements that represent a collection of elements should implement
 /// this trait. The only exceptions are `GEN8` and `OPTN`.
 pub trait GMListChunk: GMChunk {
+    #[expect(private_bounds)]
     type Element: GMElement;
 
     #[must_use]

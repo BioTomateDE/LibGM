@@ -50,6 +50,7 @@ pub enum Keyframes {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[expect(private_bounds)]
 pub struct Data<T: GMElement> {
     pub keyframes: Vec<Keyframe<T>>,
 }
@@ -73,6 +74,7 @@ impl<T: GMElement> GMElement for Data<T> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[expect(private_bounds)]
 pub struct Keyframe<T: GMElement> {
     pub key: f32,
     pub length: f32,
@@ -101,6 +103,7 @@ impl<T: GMElement> GMElement for Keyframe<T> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[expect(private_bounds)]
 pub struct Channel<T: GMElement> {
     pub id: i32,
     pub value: T,

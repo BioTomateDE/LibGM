@@ -1,46 +1,96 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! A data parsing and building library for GameMaker data files (`data.win`).
+//! A data parsing and building library for GameMaker data files (`data.win` / `game.unx`).
 //!
-//! This library provides structs and functions to handle GameMaker game assets
-//! in a meaningful way.
+//! This library provides structs and functions to
+//! handle GameMaker game assets in a meaningful way.
+//!
+//! It provides a powerful API to the data file, which yields you full control of
+//! GameMaker's internals while still providing you with abstractions to handle game assets conveniently.
+//!
+//! LibGM does not free you from all redundancies found in the data file format.
+//! It does not aim to restore a data file into a classic GameMaker project structure.
+//! This tradeoff makes parsing and building faster, allows you to view and edit slightly malformed
+//! data files, and stays as close to the original data file layout when serializing.
+//! Perhaps there can be a high-level crate in the future that abstracts on this library.
 //!
 //! ## Usage
-//! For most purposes, using the [`parse_file`] and [`build_file`] functions is
-//! enough.
+//! For most purposes, using the [`parse_file`] and [`build_file`] functions is enough.
+//! If you need more control, you can use [`parse_bytes`], [`build_bytes`] or [`ParsingOptions`].
 //!
-//! ```no_run
-//! use libgm::wad::GMData;
-//! use libgm::wad::elem::GMNamedListChunk;
-//! use libgm::wad::elem::game_object::GMGameObject;
-//!
-//! # fn main() -> libgm::Result<()> {
-//!
-//! // Load data file
-//! let mut data: GMData = libgm::wad::parse_file("./data.win")?;
-//! println!("Loaded {}", data.general_info.display_name);
-//!
-//! // Modify data file
-//! let obj: &mut GMGameObject = data.game_objects.by_name_mut("obj_time")?;
-//! obj.visible = true;
-//!
-//! // Write data file
-//! libgm::wad::build_file(&data, "./modified_data.win")?;
-//!
-//! # Ok(())
-//! # }
+//! It is recommended to import the prelude so important types and traits are available to use:
+//! ```
+//! use libgm::prelude::*;
 //! ```
 //!
-//! If you need more control, you can use [`parse_bytes`], [`build_bytes`] or
-//! [`ParsingOptions`].
+//! This is an example of how to open a data file stored on disk
+//! and extract some basic information:
+//! ```ignore
+//! use libgm::prelude::*;
 //!
-//! For more information on the GameMaker specifics, check out the [`wad`]
-//! module.
+//! let path = "C:/Program Files (x86)/Steam/steamapps/common/Undertale/data.win";
+//! let data: GMData = libgm::wad::parse_file(path)?;
+//!
+//! let name: &str = data.strings.by_ref(data.general_info.display_name)?;
+//! let creation: chrono::DateTime<chrono::Utc> = data.general_info.creation_timestamp;
+//! println!("Opened {name}!");
+//! println!("Game was created at {creation:?}.");
+//! println!("This data file has {} sprites.", data.sprites.len());
+//! ```
+//!
+//! Modifiying parts of the game:
+//! ```ignore
+//! use libgm::prelude::*;
+//! use libgm::wad::elem::game_object::GMGameObject;
+//! use libgm::wad::elem::sprite::GMSprite;
+//!
+//! let mut data: GMData = libgm::wad::parse_file("./game.unx")?;
+//! let object: &mut GMGameObject = data
+//!     .game_objects
+//!     .by_name_mut("obj_mysteryman", &data.strings)?;
+//! object.solid = true;
+//! object.depth = 66666;
+//!
+//! let sprite: &GMSprite = data.sprites.by_ref(object.sprite)?;
+//! let w: u32 = sprite.width;
+//! let h: u32 = sprite.width;
+//! println!("Mysteryman's sprite dimensions are {w}x{h} pixels");
+//!
+//! libgm::wad::build_file(&data, "./game_modded.unx")?;
+//! ```
+//!
+//! More complicated parsing for data files stored in memory:
+//! ```ignore
+//! use libgm::prelude::*;
+//! use libgm::wad::parse::ParsingOptions;
+//! use libgm::wad::elem::{audio::GMAudio, sound::Flags};
+//!
+//! let raw_data: &[u8] = /* some sophisticated source */;
+//! let parser = ParsingOptions::new()
+//!     .verify_constants(false)
+//!     .verify_alignment(true);
+//! let gm_data: GMData = parser.parse_bytes(raw_data)?;
+//! std::fs::create_dir_all("exported_sounds")?;
+//!
+//! for sound in gm_data.sounds.elements() {
+//!     if sound.flags.contains(Flags::EMBEDDED) {
+//!         let name = gm_data.strings.by_ref(sound.name)?;
+//!         let audio: &GMAudio = gm_data.audios.by_ref(sound.audio)?;
+//!         let path = format!("exported_sounds/{name}.wav");
+//!         std::fs::write(path, &audio.data)?;
+//!     }
+//! }
+//! ```
+//!
+//! For more information on the GameMaker specifics, check out the [`wad`] module.
 //!
 //! ## Disclaimer
-//! This library is still in testing stages
-//! ([SemVer](https://semver.org/) major 0)
-//! and may have issues.
+//! This library is mainly tested against different Undertale and Deltarune versions.
+//! Other games may encounter some issues.
 //! Please report them to the attached Codeberg repository.
+//!
+//! LibGM is designed to roundtrip: Parsing a data file and then building it
+//! without any modifications should produce the same exact output file.
+//! If this assertion fails for some game, you can report this issue as well.
 //!
 //! If you have any questions or concerns about my code
 //! or documentation, please contact me via either:
@@ -49,29 +99,24 @@
 //! - [Email](mailto:biotomatede@proton.me?Subject=LibGM%20Question)
 //!
 //! ## Panicking
-//! This library *should* **never panic**.
+//! This library *should* never panic.
 //! All malformed data files are caught into LibGM's custom error type.
-//! However, since this library is not mature yet, there might still be a few
+//! However, since this library is not entirely mature yet, there might still be a few
 //! bugs. For GUI applications, I would definitely recommend to enable the
 //! `catch-panic` crate feature (which is enabled by default anyway).
 //!
 //! ## Missing features
 //! The following features are not yet supported by LibGM:
-//! - **Null pointers**.
-//!   These typically occur in newer games compiled with `GMAC` (GameMaker Asset Compiler),
-//!   which may null out pointers to unused elements.
-//!   See [Issue#2](https://github.com/BioTomateDE/LibGM/issues/2) for more information.
 //! - Special Vector Sprites
-//! - Only partial pre WAD version 15 support
+//! - Only partial pre WAD version 15 support (pre 2016)
 //! - Only partial/untested big endian support
 //!
 //! ## Breaking changes
 //! Some things in this library are **not** considered "breaking changes" and
-//! may be modified in `SemVer` patch updates. These could bring unwanted change
+//! may be modified in SemVer patch updates. These could bring unwanted change
 //! of behavior to your program if you don't have a `Cargo.lock` set/commited.
 //! Some of these things include:
-//! - All log messages (using the [`log`](https://crates.io/crates/log) crate),
-//!   including:
+//! - All log messages (using the [`log`](https://crates.io/crates/log) crate), including:
 //!   - Timing
 //!   - Code Origin/Location
 //!   - Message string
@@ -79,7 +124,7 @@
 //!   - Error message string
 //!   - Context chain
 //! - All structs and enums marked with `#[non_exhaustive]`
-//! - Implementing traits like `GMElement` (These traits are only meant for
+//! - Implementing traits like `GMChunk` (These traits are only meant for
 //!   writing generic code, not for implementing it for your own types)
 //!
 //! There might be some other struct fields or type names
@@ -89,11 +134,10 @@
 //! but they might be renamed or reworked soon.
 //!
 //! ## Credits
-//! Please note that this project is effectively a Rust port of
-//! [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool)
-//! (UndertaleModLib, to be exact).
-//! Most of the GameMaker elements' docstrings and struct field (names) are
-//! taken from there.
+//! This project is effectively a Rust port of
+//! [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool).
+//! Version detection code, some element docstrings and other parts are taken from there.
+//! Huge shoutout to the Underminers Team!
 
 // Activate all lint groups.
 // Pedantic is really strong, so many lints will be whitelisted (with a reason).
@@ -176,6 +220,8 @@ mod gm_enum;
 mod util;
 
 // Public modules
+#[cfg(doc)]
+pub mod _spec;
 pub mod error;
 pub mod gml;
 pub mod prelude;

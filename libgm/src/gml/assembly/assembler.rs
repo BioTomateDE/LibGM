@@ -24,7 +24,6 @@ use crate::wad::elem::game_object::GMGameObject;
 use crate::wad::elem::string::GMStrings;
 use crate::wad::elem::validate_identifier;
 use crate::wad::elem::variable::GMVariable;
-use crate::wad::reference::GMRef;
 
 /// Assembles multiple instructions separated by newline.
 /// Empty lines and lines containing only whitespace are skipped.

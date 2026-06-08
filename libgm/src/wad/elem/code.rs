@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! TODO: clean up this file
+//
+// TODO: clean up this file
 use std::collections::HashMap;
 
 use super::string::GMStrings;
@@ -134,8 +135,7 @@ impl GMElement for GMCodes {
             code.instructions = vec_with_capacity(length / 5)?;
 
             if length > 0 {
-                // Update information to mark this entry as the root (if we have at least 1
-                // instruction)
+                // Update information to mark this entry as the root (if we have at least 1 instruction)
                 codes_by_pos.insert(start, i.into());
             }
 
@@ -156,8 +156,7 @@ impl GMElement for GMCodes {
         }
 
         reader.cur_pos = last_code_entry_pos;
-        // Set pos to the supposed chunk end (since instructions are stored separately
-        // in WAD15+)
+        // Set pos to the supposed chunk end (since instructions are stored separately in WAD15+)
 
         Ok(Self { codes, exists: true })
     }
@@ -169,8 +168,8 @@ impl GMElement for GMCodes {
             builder.write_u32(0xDEAD_C0DE);
         }
 
-        // WAD <= 14 my beloved
-        if builder.wad_version() <= 14 {
+        // WAD < 15 my beloved
+        if builder.wad_version() < 15 {
             for (i, code) in self.codes.iter().enumerate() {
                 builder.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
                 builder.write_gm_string(code.name)?;
@@ -178,7 +177,7 @@ impl GMElement for GMCodes {
                 builder.write_u32(0xDEAD_C0DE);
                 let start = builder.pos();
 
-                // In WAD <= 14, instructions are written immediately
+                // In WAD < 15, instructions are written immediately
                 for (i, instruction) in code.instructions.iter().enumerate() {
                     instruction.serialize(builder).with_context(|| {
                         format!("serializing code #{i} with name {:?}", code.name)
@@ -196,8 +195,7 @@ impl GMElement for GMCodes {
 
         for (i, code) in self.codes.iter().enumerate() {
             if code.modern_data.as_ref().unwrap().parent.is_some() {
-                // If this is a child code entry, don't write instructions; just repeat last
-                // pointer
+                // If this is a child code entry, don't write instructions; just repeat last pointer
                 let prev_range = instructions_ranges
                     .last()
                     .ok_or("First code entry is a child code entry")?;
@@ -239,7 +237,7 @@ impl GMElement for GMCodes {
     }
 }
 
-#[allow(clippy::too_many_lines)] // refactor later
+#[expect(clippy::too_many_lines)] // refactor later
 impl GMElement for Instruction {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let word = reader.read_u32()?;
@@ -251,7 +249,7 @@ impl GMElement for Instruction {
 
         if reader.general_info.wad_version < 15 {
             if matches!(opcode, 0x10..=0x16) {
-                // This is needed to preserve the comparison type for pre WAD 15
+                // This is needed to preserve the comparison type for WAD < 15
                 reader.assert_zero_b1(b)?;
                 b[1] = opcode - 0x10;
             }

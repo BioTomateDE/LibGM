@@ -11,17 +11,16 @@ mod instance_type;
 mod push_value;
 mod variable_type;
 
-pub use asset_reference::AssetReference;
-pub use category::Category;
-pub use code_variable::CodeVariable;
-pub use comparison_type::ComparisonType;
-pub use data_type::DataType;
-pub use instance_type::InstanceType;
-pub use push_value::PushValue;
-pub use variable_type::VariableType;
-
+pub use self::asset_reference::AssetReference;
+pub use self::category::Category;
+pub use self::code_variable::CodeVariable;
+pub use self::comparison_type::ComparisonType;
+pub use self::data_type::DataType;
+pub use self::instance_type::InstanceType;
+pub use self::push_value::PushValue;
+pub use self::variable_type::VariableType;
+use crate::wad::GMRef;
 use crate::wad::elem::function::GMFunction;
-use crate::wad::reference::GMRef;
 
 /// A GameMaker VM Instruction.
 ///
@@ -117,8 +116,7 @@ pub enum Instruction {
     ShiftRight { lhs: DataType, rhs: DataType },
 
     /// Pops two values from the stack, **compares** them using a
-    /// [`ComparisonType`], and pushes a boolean result
-    /// ([`DataType::Boolean`]).
+    /// [`ComparisonType`], and pushes a boolean result ([`DataType::Bool`]).
     Compare {
         lhs: DataType,
         rhs: DataType,

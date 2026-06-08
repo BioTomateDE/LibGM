@@ -139,37 +139,4 @@ impl DataReader<'_> {
         T::deserialize_post_padding(self, is_last).context("reading post-padding")?;
         Ok(Some(element))
     }
-
-    /// This is called `UndertaleAlignUpdatedListChunk` in UTMT.
-    /// Used for BGND (and STRG).
-    pub fn read_aligned_list_chunk<T: GMElement>(
-        &mut self,
-        alignment: u32,
-        is_aligned: &mut bool,
-    ) -> Result<Vec<T>> {
-        let pointers: Vec<u32> = self.read_simple_list()?;
-        let count = pointers.len();
-        let mut elements: Vec<T> = Vec::with_capacity(count);
-        *is_aligned = pointers.iter().all(|&p| p % alignment == 0);
-
-        for pointer in pointers {
-            if *is_aligned {
-                self.align(alignment)?;
-            }
-            let element: T = self
-                .read_pointer_element(pointer, false)
-                .with_context(|| {
-                    format!(
-                        "deserializing element {}/{} of {}aligned {} pointer list",
-                        elements.len(),
-                        count,
-                        if *is_aligned { "" } else { "un" },
-                        typename::<T>(),
-                    )
-                })?
-                .ok_or("TODO: cleaner error message (elem is null vdsnignsdig)")?;
-            elements.push(element);
-        }
-        Ok(elements)
-    }
 }

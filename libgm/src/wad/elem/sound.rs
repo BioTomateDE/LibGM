@@ -85,7 +85,7 @@ pub struct GMSound {
 
     /// The reference to the [`GMAudio`] audio file.
     /// This is used if the `Flags.embedded` flag is set.
-    pub audio_file: GMRef<GMAudio>,
+    pub audio: GMRef<GMAudio>,
 
     /// The precomputed length of the sound's audio data.
     /// Introduced in GameMaker 2024.6.
@@ -126,7 +126,7 @@ impl GMElement for GMSound {
             volume,
             pitch,
             audio_group,
-            audio_file,
+            audio: audio_file,
             audio_length,
         })
     }
@@ -144,7 +144,7 @@ impl GMElement for GMSound {
         } else {
             builder.write_bool32(true); // Preload
         }
-        builder.write_resource_id(self.audio_file);
+        builder.write_resource_id(self.audio);
         builder.write_if_ver(&self.audio_length, "Audio Length", (2024, 6))?;
         Ok(())
     }

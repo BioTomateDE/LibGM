@@ -16,7 +16,6 @@ use crate::wad::elem::function::GMFunction;
 use crate::wad::elem::game_object::GMGameObject;
 use crate::wad::elem::string::GMStrings;
 use crate::wad::elem::variable::GMVariable;
-use crate::wad::reference::GMRef;
 
 macro_rules! write {
     ($buffer:ident, $($args:tt)*) => {{

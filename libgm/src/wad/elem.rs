@@ -50,7 +50,7 @@ pub mod variable;
 /// All GameMaker elements that can be deserialized
 /// from a data file should implement this trait.
 #[allow(unused_variables)]
-pub trait GMElement: Sized {
+pub(crate) trait GMElement: Sized {
     /// Deserializes this element from the current position of the reader.
     ///
     /// Implementations should read the exact binary representation of this
@@ -283,7 +283,7 @@ pub(crate) fn validate_names<T: GMNamedListChunk>(chunk: &T, gm_strings: &GMStri
 
 /// All GameMaker elements with a unique name (to the list
 /// they're contained in) should implement this trait.
-#[allow(unused_variables)]
+#[expect(private_bounds)]
 pub trait GMNamedElement: GMElement {
     /// The name of this element as a `GMRef<String>`.
     #[must_use]
