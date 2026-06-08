@@ -90,7 +90,7 @@ to protect the Open Source Community.
 ## Contributing
 All contributions are welcome! Whether that's a pull request, a feature you
 would like to see added, a bug you found; just create an Issue/PR in this repo.
-For more information, see the [contributing guidelines](https://codeberg.org/BioTomateDE/_/CONTRIBUTING.md).
+For more information, see the [contributing guidelines](https://codeberg.org/BioTomateDE/_/src/CONTRIBUTING.md).
 
 - Everything related to GameMaker is located in `libgm/src/wad/`.
 - A disassembler and assembler are available in `libgm/src/gml/assembly/`.
