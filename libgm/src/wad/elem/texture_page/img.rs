@@ -182,7 +182,7 @@ impl GMImage {
     ///     .ok_or("No image data in texture page")?;
     /// gm_image.change_format(Format::Dyn)?; // <--- forces deserialization
     /// gm_image.change_format(Format::Bz2Qoi)?; // (or whichever format you want)
-
+    // rustfmt is dumb and wants to add a `/// //` here
     /// # Ok(()) }
     /// ```
     pub fn change_format(&mut self, format: Format) -> Result<bool> {

@@ -107,7 +107,7 @@ pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
     })
 }
 
-fn f(is: bool, flag: Flags) -> Flags {
+const fn f(is: bool, flag: Flags) -> Flags {
     if is { flag } else { Flags::empty() }
 }
 

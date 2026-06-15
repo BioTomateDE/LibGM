@@ -72,7 +72,7 @@ pub struct ParsingOptions {
     pub verify_constants: bool,
 
     /// See [`ParsingOptions::allow_unknown_chunks`].
-    /// TODO: this option is useless rn due to the ChunkName refactor
+    // TODO: this option is useless rn due to the ChunkName refactor
     pub allow_unknown_chunks: bool,
 }
 

@@ -22,22 +22,24 @@ impl GMElement for GMShaders {
     #[allow(clippy::too_many_lines)]
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         // Figure out where the starts/ends of each shader object are
-        let mut count = reader.read_u32()?;
+        let count = reader.read_u32()?;
         let mut locations: Vec<u32> = vec_with_capacity(count + 1)?;
+        let mut real_count = count;
+
         for _ in 0..count {
             let pointer = reader.read_u32()?;
-            if pointer != 0 {
-                locations.push(pointer);
-            } else {
+            if pointer == 0 {
                 // Null shader, decrease count
-                count -= 1;
+                real_count -= 1;
+            } else {
+                locations.push(pointer);
             }
         }
         locations.push(reader.chunk.end_pos);
 
-        let mut shaders: Vec<Option<GMShader>> = vec![None; count as usize];
+        let mut shaders: Vec<Option<GMShader>> = vec![None; real_count as usize];
 
-        for i in 0..count as usize {
+        for i in 0..real_count as usize {
             let pointer = locations[i];
             let entry_end = locations[i + 1];
             reader.cur_pos = pointer;

@@ -111,7 +111,7 @@ fn build_impl(data: &GMData) -> Result<Vec<u8>> {
             ChunkName::TXTR => builder.build_chunk(&data.texture_pages),
             ChunkName::UILR => builder.build_chunk(&data.ui_nodes),
             ChunkName::VARI => builder.build_chunk(&data.variables),
-        }?
+        }?;
     }
 
     builder.remove_last_chunk_padding();
