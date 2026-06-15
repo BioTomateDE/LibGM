@@ -9,7 +9,7 @@ use crate::prelude::*;
 #[cfg(feature = "png-image")]
 pub fn decode(raw_png_data: &[u8]) -> Result<DynamicImage> {
     image::load_from_memory_with_format(raw_png_data, ImageFormat::Png)
-        .context_src("decoding PNG Image")
+        .ctx_any("decoding PNG Image")
 }
 
 #[cfg(not(feature = "png-image"))]
@@ -23,7 +23,7 @@ pub fn encode(dyn_img: &DynamicImage) -> Result<Vec<u8>> {
     let mut cursor = Cursor::new(&mut png_data);
     dyn_img
         .write_to(&mut cursor, ImageFormat::Png)
-        .context_src("encoding PNG Image")?;
+        .ctx_any("encoding PNG Image")?;
     Ok(png_data)
 }
 

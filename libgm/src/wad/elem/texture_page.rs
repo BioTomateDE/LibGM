@@ -133,7 +133,7 @@ impl GMElement for GMTexturePages {
             builder.resolve_pointer(&texture_page.image)?;
             let start_pos: u32 = builder.pos();
             img.serialize(builder)
-                .context("serializing texture page image")?;
+                .ctx("serializing texture page image")?;
             if builder.version() >= (2022, 3) {
                 let length: u32 = builder.pos() - start_pos;
                 builder.overwrite_u32(length, texture_block_size_placeholders[i])?;
@@ -204,7 +204,7 @@ fn read_raw_texture(
     texture_block_size: Option<u32>,
 ) -> Result<GMImage> {
     reader.align(0x80)?;
-    let header: [u8; 8] = *reader.read_bytes_const().context("reading image header")?;
+    let header: [u8; 8] = *reader.read_bytes_const().ctx("reading image header")?;
 
     let (image, data_length) = if header == PNG_HEADER {
         read_png(reader)?
@@ -237,11 +237,11 @@ fn read_png(reader: &mut DataReader) -> Result<(GMImage, u32)> {
             .read_bytes_const()
             .cloned()
             .map(u32::from_be_bytes)
-            .context("reading PNG chunk length")?;
+            .ctx("reading PNG chunk length")?;
         let chunk_type: [u8; 4] = reader
             .read_bytes_const()
             .cloned()
-            .context("reading PNG chunk type")?;
+            .ctx("reading PNG chunk type")?;
         reader.cur_pos += length + 4;
         if &chunk_type == b"IEND" {
             break;
@@ -252,7 +252,7 @@ fn read_png(reader: &mut DataReader) -> Result<(GMImage, u32)> {
     reader.cur_pos = start_position;
     let bytes: &[u8] = reader
         .read_bytes_dyn(data_length)
-        .context("reading PNG image data")?;
+        .ctx("reading PNG image data")?;
     // Png image size checks {~~}
     let image = GMImage::from_png(bytes.to_vec());
     Ok((image, data_length))
@@ -283,7 +283,7 @@ fn read_bz2_qoi(
     reader.cur_pos = start_position + header_size;
     let raw_image_data: &[u8] = reader
         .read_bytes_dyn(bz2_stream_length)
-        .context("reading BZip2 Stream of BZip2 QOI Image")?;
+        .ctx("reading BZip2 Stream of BZip2 QOI Image")?;
 
     let u16_from = match reader.endianness {
         Endianness::Little => u16::from_le_bytes,
@@ -302,7 +302,7 @@ fn read_qoi(reader: &mut DataReader) -> Result<(GMImage, u32)> {
     reader.cur_pos = start_position;
     let raw_image_data: Vec<u8> = reader
         .read_bytes_dyn(data_length + 12)
-        .context("reading QOI Image data")?
+        .ctx("reading QOI Image data")?
         .to_vec();
     let image = GMImage::from_qoi(raw_image_data);
     Ok((image, data_length))
@@ -323,7 +323,7 @@ fn find_end_of_bz2_stream(reader: &mut DataReader, max_end_of_stream_pos: u32) -
         reader.cur_pos = chunk_start_position;
         let chunk_data: &[u8] = reader
             .read_bytes_dyn(chunk_size)
-            .context("reading BZip2 stream chunk")?;
+            .ctx("reading BZip2 stream chunk")?;
         reader.cur_pos += chunk_size;
 
         // Find first nonzero byte at end of stream
@@ -360,7 +360,7 @@ fn find_end_of_bz2_search(reader: &mut DataReader, end_data_position: u32) -> Re
     let data: [u8; BUFFER_LENGTH as usize] = reader
         .read_bytes_const()
         .cloned()
-        .context("reading BZip2 stream data")?;
+        .ctx("reading BZip2 stream data")?;
     // If this read fails due to overflow; implement saturating logic like in utmt
 
     // Start searching for magic, bit by bit (it is not always byte-aligned)

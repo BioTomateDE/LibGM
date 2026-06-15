@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! LibGM's custom error type is contained here, as well as a convenience type
-//! alias for `Result`.
+//! LibGM's custom error type is contained here,
+//! as well as a convenience type alias for `Result`.
 //!
-//! Usually, you will see the most outer error cause first.
+//! Usually in Rust, you will see the most outer error cause first.
 //! For example, in `anyhow`, you might see "Failed to read configuration"
 //! and only the context chain (via `Option<Box<dyn ...>>`) reveals more
 //! information about what actually caused this error.
 //!
 //! LibGM uses a different approach for its error system.
 //! The most outer / broadest error would otherwise just always be "Failed to
-//! parse data file" which conveys no relevant information. Instead, it displays
+//! parse/build data file" which conveys no relevant information. Instead, it displays
 //! the root cause first. This can be trying to read data out of chunk bounds,
 //! an assertion failing, an enum being an invalid value, etc.
 //!
@@ -17,40 +17,32 @@
 //! order of importance, travelling down the call stack. The last element of the
 //! context chain will be something very generic such as "Failed to parse data"
 //! or similar.
-//!
-//! Additionally, LibGM Errors also store their potential error source in an
-//! `Option<Box<dyn std::error::Error>>` for better integration with traditional
-//! error systems. This source will only be set when failable functions from
-//! other crates (or std) are called. The majority of LibGM errors are
-//! assertions that only consist of text; no dynamic error source.
-//!
-//! ___
+//! ___________________
 //!
 //! When you write LibGM code, it is good practice to use the [`Context`] trait
-//! frequently to make error traces better for end users (and maintainers trying
-//! to debug). The string in your `.context()` calls should:
+//! frequently to make error traces better for end users (and maintainers trying to debug).
+//! The string in your `.ctx()` calls should:
 //! * start with a lowercase verb in the "-ing" form
 //! * contain no punctuation at the end
 //!
-//! Examples: `.context("reading config file")` or `.with_context(||
-//! format!("acquiring metadata of {file:?}"))`.
+//! Examples: `.ctx("reading config file")` or
+//! `.ctx(|| format!("acquiring metadata of {file:?}"))`.
 //!
 //! Your root error messages (such as when using `bail!`) should:
 //! * start with an uppercase letter
 //! * be a complete sentence
 //! * contain no punctuation at the end
 //!
-//! Examples: `bail!("Expected x, got {y}")` or `.ok_or("Code parent not
-//! set")?`.
+//! Examples: `bail!("Expected x, got {y}")` or `.ok_or("Code parent not set")?`.
 
+use std::borrow::Cow;
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::fmt::Write;
 
 /// A LibGM error.
 ///
-/// Contains an error message, a context chain as well as a potential source
-/// error.
+/// Contains an error message and a context chain.
 ///
 /// For more information, see the [module level documentation][self].
 #[derive(Debug)]
@@ -58,42 +50,27 @@ use std::fmt::Write;
 pub struct Error {
     message: String,
     context: Vec<String>,
-    source: Option<Box<dyn std::error::Error + Send + Sync + 'static>>,
 }
 
 impl Error {
     /// Creates a new [`Error`] with the given message.
     ///
-    /// The context chain and source will be empty.
+    /// The context chain will be empty.
     #[must_use]
     pub const fn new(message: String) -> Self {
-        Self {
-            message,
-            context: Vec::new(),
-            source: None,
-        }
-    }
-
-    /// Adds an error source to this error.
-    ///
-    /// This function consumes `self` and returns a modified version of it.
-    ///
-    /// To retrieve the source, use the [`std::error::Error::source`] method.
-    #[must_use = "returns a new error with the specified source"]
-    pub fn with_source(self, source: Box<dyn std::error::Error + Send + Sync>) -> Self {
-        Self { source: Some(source), ..self }
+        Self { message, context: Vec::new() }
     }
 
     /// Pushes context to the end of the context chain, in-place.
-    pub fn push_context(&mut self, context: impl Into<String>) {
-        self.context.push(context.into());
+    pub fn push_context(&mut self, context: impl StringLike) {
+        self.context.push(context.into_string());
     }
 
     /// Pushes context to the end of the context chain.
     ///
     /// This function consumes `self` and returns a modified version of it.
     #[must_use = "returns a new error with additional context"]
-    pub fn with_context(mut self, context: impl Into<String>) -> Self {
+    pub fn with_context(mut self, context: impl StringLike) -> Self {
         self.push_context(context);
         self
     }
@@ -142,11 +119,7 @@ impl Display for Error {
     }
 }
 
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        self.source.as_deref().map(|e| e as _)
-    }
-}
+impl std::error::Error for Error {}
 
 impl From<String> for Error {
     fn from(message: String) -> Self {
@@ -157,6 +130,39 @@ impl From<String> for Error {
 impl From<&str> for Error {
     fn from(message: &str) -> Self {
         Self::new(message.to_string())
+    }
+}
+
+/// Types that can easily be converted to [`String`]s, including closures.
+///
+/// Any `FnOnce` that returns something that is [`StringLike`] will also implement this trait.
+/// In its definition, it will call the closure to get the string-like value.
+/// This is useful because it can combine eager and lazy evalutation into one trait (and therefore one context adding method).
+pub trait StringLike {
+    fn into_string(self) -> String;
+}
+
+impl StringLike for &str {
+    fn into_string(self) -> String {
+        self.to_owned()
+    }
+}
+
+impl StringLike for String {
+    fn into_string(self) -> String {
+        self
+    }
+}
+
+impl StringLike for Cow<'_, str> {
+    fn into_string(self) -> String {
+        self.into_owned()
+    }
+}
+
+impl<S: StringLike, F: FnOnce() -> S> StringLike for F {
+    fn into_string(self) -> String {
+        self().into_string()
     }
 }
 
@@ -171,95 +177,55 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// This trait is also re-exported in `libgm::prelude`.
 pub trait Context<T> {
     /// Adds context to this [`Result`].
+    ///
     /// This pushes a string to the end of the error context chain
     /// in case of [`Err`] and is a no-op in case of [`Ok`].
     ///
-    /// **Avoid allocating `String`s before the error actually occurred.**
-    /// In that case, use [`Context::with_context`] for lazy evaluation instead.
-    fn context(self, context: &str) -> Result<T>;
-
-    /// Adds context to this [`Result`] using the given closure that returns a
-    /// [`String`].
-    ///
-    /// The context to be appended is lazily evaluated,
-    /// meaning the closure only executes if an error actually occurred.
-    ///
-    /// This makes it more suited for `format!` calls since it avoids a heap
-    /// allocation in the common [`Ok`] case.
-    ///
-    /// For more information, see [`Context::context`].
-    fn with_context(self, f: impl FnOnce() -> String) -> Result<T>;
+    /// **Avoid allocating `String`s before the error actually.**
+    /// This usually happens when you use `format!`.
+    /// Just wrap it in a closure: `|| format!(...)`, now it's lazily evaluated.
+    fn ctx(self, context: impl StringLike) -> Result<T>;
 }
 
 impl<T> Context<T> for Result<T> {
-    fn context(self, context: &str) -> Self {
-        self.map_err(|err| err.with_context(context))
-    }
-
-    fn with_context(self, f: impl FnOnce() -> String) -> Self {
-        self.map_err(|err| err.with_context(f()))
+    fn ctx(self, context: impl StringLike) -> Self {
+        self.map_err(|err| err.with_context(context.into_string()))
     }
 }
 
+// useful for `.ok_or` and `.ok_or_else` chains -->
 impl<T> Context<T> for std::result::Result<T, &str> {
-    fn context(self, context: &str) -> Result<T> {
-        self.map_err(|error| Error::new(error.to_owned()).with_context(context))
-    }
-
-    fn with_context(self, f: impl FnOnce() -> String) -> Result<T> {
-        self.map_err(|error| Error::new(error.to_owned()).with_context(f()))
+    fn ctx(self, context: impl StringLike) -> Result<T> {
+        self.map_err(|e| Error::new(e.to_owned()).with_context(context))
     }
 }
 
 impl<T> Context<T> for std::result::Result<T, String> {
-    fn context(self, context: &str) -> Result<T> {
-        self.map_err(|error| Error::new(error).with_context(context))
-    }
-
-    fn with_context(self, f: impl FnOnce() -> String) -> Result<T> {
-        self.map_err(|error| Error::new(error).with_context(f()))
+    fn ctx(self, context: impl StringLike) -> Result<T> {
+        self.map_err(|e| Error::new(e).with_context(context))
     }
 }
+// <--
 
 /// Trait for adding context to the context chain of a [`Result`]
 /// and a [`std::error::Error`] source error.
 ///
 /// This trait is meant to be used on `Result<T, E>` where `E` is not LibGM's
-/// [`Error`] (e.g. when performing IO operations or calling functions from
-/// other crates).
+/// [`Error`] (e.g. when performing IO operations or calling functions from other crates).
 ///
-/// It works on any `Result` (as long as `E` implements `std::error::Error`) and
-/// automatically adds the boxed source error as further context.
-///
-/// For more information, see [`Context`].
-pub trait ContextSrc<T> {
-    /// Adds context to this [`Result`] and sets the error source.
+/// It works on any `Result` (as long as `E` implements `std::error::Error`).
+pub trait ContextAny<T> {
+    /// Adds context to this [`Result`] from a generic result with a printable error type.
     ///
-    /// For more information, see [`Context::context`].
-    fn context_src(self, context: &str) -> Result<T>;
-
-    /// Adds context to this [`Result`] using the given closure that returns a
-    /// [`String`] and sets the error source.
+    /// The error message will be capitalized.
     ///
-    /// For more information, see [`Context::with_context`].
-    fn with_context_src(self, f: impl FnOnce() -> String) -> Result<T>;
+    /// For more information, see [`Context::ctx`].
+    fn ctx_any(self, context: impl StringLike) -> Result<T>;
 }
 
-impl<T, E: std::error::Error + Send + Sync + 'static> ContextSrc<T> for std::result::Result<T, E> {
-    fn context_src(self, context: &str) -> Result<T> {
-        self.map_err(|error| {
-            Error::new(ascii_capitalize(error.to_string()))
-                .with_context(context)
-                .with_source(Box::new(error))
-        })
-    }
-
-    fn with_context_src(self, f: impl FnOnce() -> String) -> Result<T> {
-        self.map_err(|error| {
-            Error::new(ascii_capitalize(error.to_string()))
-                .with_context(f())
-                .with_source(Box::new(error))
-        })
+impl<T, E: std::error::Error> ContextAny<T> for std::result::Result<T, E> {
+    fn ctx_any(self, context: impl StringLike) -> Result<T> {
+        self.map_err(|e| Error::new(ascii_capitalize(e.to_string())).with_context(context))
     }
 }
 
@@ -272,6 +238,7 @@ fn ascii_capitalize(mut string: String) -> String {
 }
 
 /// Creates a new [LibGM Error](Error) using the specified format string.
+///
 /// This is a simple alias for `Error::new(format!(...)`.
 ///
 /// This macro is currently exported at crate root but this may change in the
@@ -284,6 +251,7 @@ macro_rules! err {
 }
 
 /// Performs an early return with the specified formatted message.
+///
 /// This is a simple alias for `return Err(Error::new(format!(...));`.
 ///
 /// This macro is currently exported at crate root but this may change in the

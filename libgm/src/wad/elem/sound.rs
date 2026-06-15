@@ -109,7 +109,7 @@ impl GMElement for GMSound {
             if reader.general_info.wad_version >= 14 && flags.contains(Flags::REGULAR) {
                 reader.read_resource_by_id()?
             } else {
-                let preload = reader.read_bool32().context("reading preload")?;
+                let preload = reader.read_bool32().ctx("reading preload")?;
                 reader.assert_bool(preload, true, "Preload")?;
                 GMRef::new(get_builtin_sound_group_id(reader.general_info.version))
             };

@@ -71,7 +71,7 @@ pub fn disassemble_code(code: &GMCode, gm_data: &GMData) -> Result<String> {
             let parent: &GMCode = gm_data
                 .codes
                 .by_ref(parent)
-                .context("resolving parent code entry")?;
+                .ctx("resolving parent code entry")?;
             // can there be nested parents? cuz it only works for one layer rn
             let instrs = slice_instructions_by_bytes(&parent.instructions, data.execution_offset)?;
             return disassemble_instructions(instrs, gm_data);
@@ -84,7 +84,7 @@ pub fn disassemble_code(code: &GMCode, gm_data: &GMData) -> Result<String> {
     }
 
     disassemble_instructions(&code.instructions, gm_data)
-        .with_context(|| format!("disassembling code entry {:?}", code.name))
+        .ctx(|| format!("disassembling code entry {:?}", code.name))
 }
 
 /// Disassembles multiple instructions and joins the instructions by newline.
@@ -391,12 +391,12 @@ where
 {
     const CTX: &str = "resolving asset reference for PushReference Instruction";
 
-    let element: &T = chunk.by_ref(gm_ref).context(CTX)?;
+    let element: &T = chunk.by_ref(gm_ref).ctx(CTX)?;
 
     element
         .validate_name(gm_strings)
-        .with_context(|| format!("validating name of {}", typename::<T>()))
-        .context(CTX)?;
+        .ctx(|| format!("validating name of {}", typename::<T>()))
+        .ctx(CTX)?;
 
     let name: &'a String = element.name(gm_strings)?;
     Ok(name)
@@ -527,7 +527,7 @@ fn write_instance_type(
         InstanceType::GameObject(obj_ref) => {
             let obj: &GMGameObject = gm_data.game_objects.by_ref(obj_ref)?;
             obj.validate_name(&gm_data.strings)
-                .context("validating game object name")?;
+                .ctx("validating game object name")?;
             write!(buffer, "object<{}>", obj.name(&gm_data.strings)?);
         }
         InstanceType::RoomInstance(instance_id) => {
@@ -555,7 +555,7 @@ fn write_variable(
     let variable: &GMVariable = gm_data.variables.by_ref(code_variable.variable)?;
     variable
         .validate_name(&gm_data.strings)
-        .context("validating variable identifier")?;
+        .ctx("validating variable identifier")?;
     let name: &String = variable.name(&gm_data.strings)?;
 
     if code_variable.is_int32 {
@@ -577,7 +577,7 @@ fn resolve_function_name(function_ref: GMRef<GMFunction>, gm_data: &GMData) -> R
     let function: &GMFunction = gm_data.functions.by_ref(function_ref)?;
     function
         .validate_name(&gm_data.strings)
-        .context("validating function identifier")?;
+        .ctx("validating function identifier")?;
     let name: &String = function.name(&gm_data.strings)?;
     Ok(name)
 }

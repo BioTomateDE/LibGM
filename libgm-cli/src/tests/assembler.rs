@@ -21,9 +21,9 @@ pub fn test(data: &mut GMData) -> Result<()> {
 
         let name_ref = code.name;
         let assembly: String =
-            disassemble_code(code, data).with_context(|| format!("disassembling {name:?}"))?;
+            disassemble_code(code, data).ctx(|| format!("disassembling {name:?}"))?;
         let reconstructed: Vec<Instruction> = assemble_instructions(&assembly, data)
-            .with_context(|| format!("assembling {:?}", data.strings.by_ref(name_ref).unwrap()))?;
+            .ctx(|| format!("assembling {:?}", data.strings.by_ref(name_ref).unwrap()))?;
 
         // the borrow checker is being annoying again :(
         let code = data.codes.by_ref(code_ref)?;

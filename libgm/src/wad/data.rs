@@ -217,7 +217,7 @@ impl GMData {
                 continue;
             };
             let error: &str = "deserializing all embedded texture pages";
-            image.deserialize().context(error)?;
+            image.deserialize().ctx(error)?;
         }
 
         log::trace!(

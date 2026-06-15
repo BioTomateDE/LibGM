@@ -124,7 +124,7 @@ impl GMElement for EventGroups {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader
             .read_simple_list()
-            .context("reading outer event pointer list")?;
+            .ctx("reading outer event pointer list")?;
         let count = pointers.len() as u32;
 
         let expected_count = type_count_by_wad(reader.general_info.wad_version);
@@ -136,7 +136,7 @@ impl GMElement for EventGroups {
         };
         reader
             .assert_int(count, expected_count, "event type count")
-            .with_context(ctx)?;
+            .ctx(ctx)?;
         // assert_pos are missing
 
         let create: Vec<Event<()>> = reader.read_pointer_list()?;
@@ -260,8 +260,8 @@ pub struct Event<T: EventSubtype> {
 impl<T: EventSubtype> GMElement for Event<T> {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let subtype: i32 = reader.read_i32()?;
-        let subtype: T = T::parse(subtype)
-            .with_context(|| format!("parsing Event subtype {}", typename::<T>()))?;
+        let subtype: T =
+            T::parse(subtype).ctx(|| format!("parsing Event subtype {}", typename::<T>()))?;
         let actions: Vec<Action> = reader.read_pointer_list()?;
         Ok(Self { subtype, actions })
     }

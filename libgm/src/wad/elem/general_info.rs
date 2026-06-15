@@ -156,7 +156,7 @@ impl GMElement for GMGeneralInfo {
         let last_object_id = reader.read_u32()?;
         let last_tile_id = reader.read_u32()?;
         let game_id = reader.read_u32()?;
-        let directplay_guid: [u8; 16] = *reader.read_bytes_const().context("reading GUID")?;
+        let directplay_guid: [u8; 16] = *reader.read_bytes_const().ctx("reading GUID")?;
         let game_name: GMRef<String> = reader.read_gm_string()?;
         let version = GMVersion::deserialize(reader)?;
         let default_window_width = reader.read_u32()?;
@@ -165,7 +165,7 @@ impl GMElement for GMGeneralInfo {
         let flags = Flags::from_bits(flags_raw)
             .ok_or_else(|| format!("Invalid GEN8 Flags {flags_raw:08X}"))?;
         let license_crc32 = reader.read_u32()?;
-        let license_md5: [u8; 16] = *reader.read_bytes_const().context("reading license (MD5)")?;
+        let license_md5: [u8; 16] = *reader.read_bytes_const().ctx("reading license (MD5)")?;
 
         let creation_timestamp = reader.read_i64()?;
         let creation_timestamp: DateTime<Utc> =

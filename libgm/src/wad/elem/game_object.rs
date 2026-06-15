@@ -78,7 +78,7 @@ impl GMElement for GMGameObjects {
                 physics_shape_vertices.push((x, y));
             }
 
-            let events = EventGroups::deserialize(reader).context("parsing game object events")?;
+            let events = EventGroups::deserialize(reader).ctx("parsing game object events")?;
 
             game_objects[i] = Some(GMGameObject {
                 name,

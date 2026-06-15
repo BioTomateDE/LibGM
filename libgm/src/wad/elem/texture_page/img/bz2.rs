@@ -26,7 +26,7 @@ pub fn decompress(compressed_bzip2_data: &[u8]) -> Result<Vec<u8>> {
     let mut decompressed_data: Vec<u8> = Vec::new();
     decoder
         .read_to_end(&mut decompressed_data)
-        .context_src("decoding BZip2 stream")?;
+        .ctx_any("decoding BZip2 stream")?;
     Ok(decompressed_data)
 }
 
@@ -46,7 +46,7 @@ pub fn compress(data: &[u8]) -> Result<Vec<u8>> {
     let mut compressed_data: Vec<u8> = Vec::new();
     encoder
         .read_to_end(&mut compressed_data)
-        .context_src("decoding BZip2 stream")?;
+        .ctx_any("decoding BZip2 stream")?;
     Ok(compressed_data)
 }
 
@@ -59,14 +59,14 @@ pub fn compress(_: &[u8]) -> Result<Vec<u8>> {
 
 pub fn decode_image(raw_bz2_qoi_data: &[u8]) -> Result<DynamicImage> {
     let decompressed_data: Vec<u8> =
-        decompress(raw_bz2_qoi_data).context("decoding BZip2 data of Bz2Qoi image")?;
+        decompress(raw_bz2_qoi_data).ctx("decoding BZip2 data of Bz2Qoi image")?;
     let image: DynamicImage =
-        qoi::decode(&decompressed_data).context("decoding QOI data of Bz2Qoi image")?;
+        qoi::decode(&decompressed_data).ctx("decoding QOI data of Bz2Qoi image")?;
     Ok(image)
 }
 
 pub fn encode_image(dyn_img: &DynamicImage) -> Result<(Vec<u8>, BZip2QoiHeader)> {
-    let qoi_data: Vec<u8> = qoi::encode(dyn_img).context("serializing DynamicImage as Bz2Qoi")?;
+    let qoi_data: Vec<u8> = qoi::encode(dyn_img).ctx("serializing DynamicImage as Bz2Qoi")?;
     let header = BZip2QoiHeader {
         width: dyn_img.width() as u16,
         height: dyn_img.height() as u16,

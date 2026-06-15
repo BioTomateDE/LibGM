@@ -159,13 +159,13 @@ impl ParsingOptions {
     /// For more information on the data file format, see [`crate::wad`].
     pub fn parse_bytes(&self, raw_data: impl AsRef<[u8]>) -> Result<GMData> {
         self.parse(raw_data.as_ref())
-            .context("parsing GameMaker data bytes")
+            .ctx("parsing GameMaker data bytes")
     }
 
     /// Only parses the `GEN8` chunk and detects the proper GameMaker version.
     pub fn parse_general_info(&self, raw_data: impl AsRef<[u8]>) -> Result<GMGeneralInfo> {
-        let mut reader = parse_form(raw_data.as_ref()).context("parsing FORM")?;
-        init_reader(&mut reader).context("initializing reader")?;
+        let mut reader = parse_form(raw_data.as_ref()).ctx("parsing FORM")?;
+        init_reader(&mut reader).ctx("initializing reader")?;
         Ok(reader.general_info)
     }
 
@@ -180,20 +180,20 @@ impl ParsingOptions {
         let path = data_file_path.as_ref();
 
         let meta = std::fs::metadata(path)
-            .with_context_src(|| format!("reading metadata of data file {}", path.display()))?;
+            .ctx_any(|| format!("reading metadata of data file {}", path.display()))?;
 
         if meta.len() >= i32::MAX as u64 {
             bail!("{ERR_TOO_BIG}");
         }
 
         let stopwatch = Stopwatch::start();
-        let raw_data: Vec<u8> = std::fs::read(path)
-            .with_context_src(|| format!("reading data file {}", path.display()))?;
+        let raw_data: Vec<u8> =
+            std::fs::read(path).ctx_any(|| format!("reading data file {}", path.display()))?;
         log::trace!("Reading data file bytes took {stopwatch}");
 
         let mut gm_data = self
             .parse(&raw_data)
-            .with_context(|| format!("parsing GameMaker data file {}", path.display()))?;
+            .ctx(|| format!("parsing GameMaker data file {}", path.display()))?;
 
         gm_data.meta.location = Some(path.to_path_buf());
         Ok(gm_data)
@@ -241,9 +241,7 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
     let mut reader = DataReader::new(raw_data);
 
     // Read root chunk and set endianness
-    let bytes: &[u8; 4] = reader
-        .read_bytes_const()
-        .context("reading root chunk name")?;
+    let bytes: &[u8; 4] = reader.read_bytes_const().ctx("reading root chunk name")?;
 
     reader.endianness = match bytes {
         b"FORM" => Endianness::Little,
@@ -262,7 +260,7 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
     }
 
     // Length assertion
-    let remaining_data_len = reader.read_u32().context("reading root chunk length")?;
+    let remaining_data_len = reader.read_u32().ctx("reading root chunk length")?;
     let total_data_len = remaining_data_len + reader.cur_pos;
     if total_data_len as usize != raw_data.len() {
         bail!(
@@ -331,7 +329,7 @@ fn init_reader(reader: &mut DataReader) -> Result<()> {
     // YoYoGames stopped updating the version header.
     if reader.specified_version == GMVersion::GMS2 {
         let stopwatch = Stopwatch::start();
-        detect_gamemaker_version(reader).context("detecting GameMaker version")?;
+        detect_gamemaker_version(reader).ctx("detecting GameMaker version")?;
         log::trace!("Detecting GameMaker Version took {stopwatch}");
     }
 
@@ -349,7 +347,7 @@ fn init_reader(reader: &mut DataReader) -> Result<()> {
 fn read_bytecode_chunks(reader: &mut DataReader) -> Result<(GMCodes, GMFunctions, GMVariables)> {
     let is_yyc: bool = match check_yyc(reader) {
         Ok(yyc) => yyc,
-        Err(e) if reader.options.verify_constants => return Err(e).context("Checking YYC"),
+        Err(e) if reader.options.verify_constants => return Err(e).ctx("Checking YYC"),
         Err(e) => {
             log::warn!("YYC integrity check failed: {e}");
             false
@@ -374,9 +372,9 @@ fn read_bytecode_chunks(reader: &mut DataReader) -> Result<(GMCodes, GMFunctions
 /// Parse GameMaker data
 fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
     let stopwatch = Stopwatch::start();
-    let mut reader: DataReader = parse_form(raw_data).context("parsing FORM")?;
+    let mut reader: DataReader = parse_form(raw_data).ctx("parsing FORM")?;
     reader.options = options.clone();
-    init_reader(&mut reader).context("initializing reader")?;
+    init_reader(&mut reader).ctx("initializing reader")?;
 
     let texture_page_items: GMTexturePageItems = reader.read_chunk()?;
 

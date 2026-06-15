@@ -47,7 +47,7 @@ impl GMElement for GMBackgrounds {
         let count: usize = self.backgrounds.len();
         let ctx = || format!("building nullable pointer list of {count} Backgrounds/Tilesets");
 
-        builder.write_usize(count).with_context(ctx)?;
+        builder.write_usize(count).ctx(ctx)?;
         let pointer_list_pos: u32 = builder.pos();
         for _ in 0..count {
             builder.write_u32(0);
@@ -62,8 +62,8 @@ impl GMElement for GMBackgrounds {
             }
             builder
                 .overwrite_pointer_with_cur_pos(pointer_list_pos, i)
-                .with_context(ctx)?;
-            background.serialize(builder).with_context(ctx)?;
+                .ctx(ctx)?;
+            background.serialize(builder).ctx(ctx)?;
         }
         Ok(())
     }

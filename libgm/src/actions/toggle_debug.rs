@@ -24,21 +24,21 @@ impl GMData {
     /// * Deltarune Chapter 1&2 LTS Demo (New)
     /// * Deltarune Chapters 1-4 (paid game)
     pub fn toggle_debug(&mut self, enable: bool) -> Result<()> {
-        toggle_debug(self, enable).with_context(|| format!("toggling debug mode to {enable}"))
+        toggle_debug(self, enable).ctx(|| format!("toggling debug mode to {enable}"))
     }
 
     /// Enables debug mode.
     ///
     /// For more information, see [`Self::toggle_debug`].
     pub fn enable_debug(&mut self) -> Result<()> {
-        toggle_debug(self, true).context("enabling debug mode")
+        toggle_debug(self, true).ctx("enabling debug mode")
     }
 
     /// Disables debug mode.
     ///
     /// For more information, see [`Self::toggle_debug`].
     pub fn disable_debug(&mut self) -> Result<()> {
-        toggle_debug(self, false).context("disabling debug mode")
+        toggle_debug(self, false).ctx("disabling debug mode")
     }
 }
 

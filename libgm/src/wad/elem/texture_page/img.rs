@@ -121,10 +121,10 @@ impl GMImage {
     pub fn to_dynamic_image(&'_ self) -> Result<Cow<'_, DynamicImage>> {
         let image: DynamicImage = match &self.0 {
             Img::Dyn(dyn_img) => return Ok(Cow::Borrowed(dyn_img)),
-            Img::Png(raw) => png::decode(raw).context("converting PNG image to DynamicImage")?,
-            Img::Qoi(raw) => qoi::decode(raw).context("converting QOI image to DynamicImage")?,
+            Img::Png(raw) => png::decode(raw).ctx("converting PNG image to DynamicImage")?,
+            Img::Qoi(raw) => qoi::decode(raw).ctx("converting QOI image to DynamicImage")?,
             Img::Bz2Qoi(raw, _) => {
-                bz2::decode_image(raw).context("converting Bz2Qoi image to DynamicImage")?
+                bz2::decode_image(raw).ctx("converting Bz2Qoi image to DynamicImage")?
             }
         };
         Ok(Cow::Owned(image))
@@ -183,7 +183,7 @@ impl GMImage {
             return Ok(false);
         }
         self.change_format_(format)
-            .with_context(|| format!("converting GMImage from {old} to {format}"))?;
+            .ctx(|| format!("converting GMImage from {old} to {format}"))?;
         Ok(true)
     }
 
@@ -273,12 +273,12 @@ impl GMImage {
 
         match &self.0 {
             Img::Dyn(dyn_img) => {
-                write_dyn_img(dyn_img, builder).context("serializing DynamicImage")?;
+                write_dyn_img(dyn_img, builder).ctx("serializing DynamicImage")?;
             }
             Img::Png(raw_png_data) => builder.write_bytes(raw_png_data),
             Img::Qoi(raw_qoi_data) => builder.write_bytes(raw_qoi_data),
             Img::Bz2Qoi(raw_bz2_qoi_data, header) => {
-                write_bz2qoi_header(header, builder).context("writing Bz2Qoi image header")?;
+                write_bz2qoi_header(header, builder).ctx("writing Bz2Qoi image header")?;
                 builder.write_bytes(raw_bz2_qoi_data);
             }
         }
@@ -331,7 +331,7 @@ impl fmt::Debug for Img {
 fn write_dyn_img(dyn_img: &DynamicImage, builder: &mut DataBuilder) -> Result<()> {
     // Use QOI if supported.
     if builder.version() >= (2022, 1) {
-        qoi::build(dyn_img, builder).context("serializing DynamicImage as QOI")?;
+        qoi::build(dyn_img, builder).ctx("serializing DynamicImage as QOI")?;
         return Ok(());
     }
 

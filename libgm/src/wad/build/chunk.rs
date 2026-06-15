@@ -40,7 +40,7 @@ impl DataBuilder<'_> {
 
         element
             .serialize(self)
-            .with_context(|| format!("serializing chunk '{name}'"))?;
+            .ctx(|| format!("serializing chunk '{name}'"))?;
 
         // Write padding in these versions
         let padding_start_pos = self.pos();

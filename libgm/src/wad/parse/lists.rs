@@ -16,10 +16,10 @@ impl DataReader<'_> {
     pub fn read_simple_list<T: GMElement>(&mut self) -> Result<Vec<T>> {
         let count = self.read_u32()?;
         let mut elements: Vec<T> = vec_with_capacity(count)
-            .with_context(|| format!("reading simple list of {}", typename::<T>()))?;
+            .ctx(|| format!("reading simple list of {}", typename::<T>()))?;
 
         for _ in 0..count {
-            let element = T::deserialize(self).with_context(|| {
+            let element = T::deserialize(self).ctx(|| {
                 format!(
                     "deserializing element {}/{} of {} simple list",
                     elements.len(),
@@ -43,10 +43,10 @@ impl DataReader<'_> {
     pub fn read_simple_list_short<T: GMElement>(&mut self) -> Result<Vec<T>> {
         let count = u32::from(self.read_u16()?);
         let mut elements: Vec<T> = vec_with_capacity(count)
-            .with_context(|| format!("reading short simple list of {}", typename::<T>()))?;
+            .ctx(|| format!("reading short simple list of {}", typename::<T>()))?;
 
         for _ in 0..count {
-            let element = T::deserialize(self).with_context(|| {
+            let element = T::deserialize(self).ctx(|| {
                 format!(
                     "deserializing element {}/{} of {} short simple list",
                     elements.len(),
@@ -66,9 +66,8 @@ impl DataReader<'_> {
 
         let mut elements: Vec<T> = Vec::with_capacity(count);
         for (i, pointer) in pointers.into_iter().enumerate() {
-            let element_opt: Option<T> = self
-                .read_pointer_element(pointer, i == count - 1)
-                .with_context(|| {
+            let element_opt: Option<T> =
+                self.read_pointer_element(pointer, i == count - 1).ctx(|| {
                     format!(
                         "deserializing element {}/{} of {} pointer list",
                         i,
@@ -96,9 +95,8 @@ impl DataReader<'_> {
 
         let mut elements: Vec<Option<T>> = Vec::with_capacity(count);
         for (i, pointer) in pointers.into_iter().enumerate() {
-            let element_opt: Option<T> = self
-                .read_pointer_element(pointer, i == count - 1)
-                .with_context(|| {
+            let element_opt: Option<T> =
+                self.read_pointer_element(pointer, i == count - 1).ctx(|| {
                     format!(
                         "deserializing element {}/{} of nullable {} pointer list",
                         i,
@@ -116,7 +114,7 @@ impl DataReader<'_> {
         pointer: u32,
         is_last: bool,
     ) -> Result<Option<T>> {
-        T::deserialize_pre_padding(self).context("reading pre-padding")?;
+        T::deserialize_pre_padding(self).ctx("reading pre-padding")?;
 
         // Manually assert position
         if self.cur_pos != pointer {
@@ -136,7 +134,7 @@ impl DataReader<'_> {
 
         let element = T::deserialize(self)?;
 
-        T::deserialize_post_padding(self, is_last).context("reading post-padding")?;
+        T::deserialize_post_padding(self, is_last).ctx("reading post-padding")?;
         Ok(Some(element))
     }
 }

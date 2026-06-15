@@ -199,9 +199,9 @@ fn force_read_string<'a>(reader: &mut DataReader<'a>) -> Result<&'a str> {
     reader.chunk = reader.string_chunk;
     reader.cur_pos = string_pos - 4;
 
-    let len = reader.read_u32().context("force-reading string length")?;
-    let bytes = reader.read_bytes_dyn(len).context("force-reading string")?;
-    let string = str::from_utf8(bytes).context_src("force-reading string")?;
+    let len = reader.read_u32().ctx("force-reading string length")?;
+    let bytes = reader.read_bytes_dyn(len).ctx("force-reading string")?;
+    let string = str::from_utf8(bytes).ctx_any("force-reading string")?;
 
     reader.chunk = chunk;
     reader.cur_pos = pos;

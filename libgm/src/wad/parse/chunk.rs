@@ -121,11 +121,11 @@ impl DataReader<'_> {
         self.cur_pos = chunk.start_pos;
         self.chunk = chunk;
 
-        let element = T::deserialize(self).with_context(ctx)?;
+        let element = T::deserialize(self).ctx(ctx)?;
 
         // Last chunk does not get padding
         if T::NAME != self.last_chunk {
-            self.read_chunk_padding().with_context(ctx)?;
+            self.read_chunk_padding().ctx(ctx)?;
         }
 
         if self.cur_pos != self.chunk.end_pos {
@@ -155,7 +155,7 @@ impl DataReader<'_> {
         }
 
         while !self.cur_pos.is_multiple_of(self.chunk_padding) {
-            let byte: u8 = self.read_u8().context("reading chunk padding")?;
+            let byte: u8 = self.read_u8().ctx("reading chunk padding")?;
             if byte == 0 {
                 continue;
             }
@@ -184,9 +184,9 @@ impl DataReader<'_> {
             .chunks
             .get(ChunkName::GEN8)
             .ok_or("Chunk GEN8 does not exist")
-            .context(CTX)?;
+            .ctx(CTX)?;
         self.cur_pos = self.chunk.start_pos + 44; // Skip to GEN8 GameMaker version
-        let gm_version = GMVersion::deserialize(self).context(CTX)?;
+        let gm_version = GMVersion::deserialize(self).ctx(CTX)?;
         self.cur_pos = saved_pos;
         self.chunk = saved_chunk;
         Ok(gm_version)

@@ -138,7 +138,7 @@ impl<'a> DataBuilder<'a> {
             Endianness::Little => number.to_le_bytes(),
             Endianness::Big => number.to_be_bytes(),
         };
-        self.overwrite_bytes(&bytes, position).with_context(|| {
+        self.overwrite_bytes(&bytes, position).ctx(|| {
             format!("overwriting 32-bit number {number} at target data position {position}")
         })
     }
@@ -159,7 +159,7 @@ impl<'a> DataBuilder<'a> {
     ) -> Result<()> {
         let number: u32 = self.pos();
         let position: u32 = pointer_list_pos + 4 * element_index as u32;
-        self.overwrite_u32(number, position).with_context(|| {
+        self.overwrite_u32(number, position).ctx(|| {
             format!(
                 "overwriting pointer for element index {element_index} of pointer list with start \
                  position {pointer_list_pos}"

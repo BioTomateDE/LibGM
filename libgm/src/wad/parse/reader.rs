@@ -222,10 +222,10 @@ impl<'a> DataReader<'a> {
     pub fn read_literal_string(&mut self, length: u32) -> Result<String> {
         let bytes: Vec<u8> = self
             .read_bytes_dyn(length)
-            .with_context(|| format!("reading literal string with length {length}"))?
+            .ctx(|| format!("reading literal string with length {length}"))?
             .to_vec();
 
-        let string: String = String::from_utf8(bytes).with_context_src(|| {
+        let string: String = String::from_utf8(bytes).ctx_any(|| {
             format!(
                 "parsing literal UTF-8 string with length {} at position {}",
                 length,
@@ -242,7 +242,7 @@ impl<'a> DataReader<'a> {
         while !self.cur_pos.is_multiple_of(alignment) {
             let byte = self.read_u8()?;
             assert::int(byte, 0, "Padding Byte")
-                .with_context(|| format!("aligning reader to {alignment}"))?;
+                .ctx(|| format!("aligning reader to {alignment}"))?;
         }
         Ok(())
     }

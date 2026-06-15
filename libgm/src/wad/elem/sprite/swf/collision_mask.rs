@@ -22,7 +22,7 @@ impl GMElement for CollisionMask {
         let rle_length = reader.read_count("YYSWF Collision Mask RLE Data")?;
         let rle_data: Vec<u8> = reader
             .read_bytes_dyn(rle_length)
-            .context("reading RLE Data of Timeline")?
+            .ctx("reading RLE Data of Timeline")?
             .to_vec();
         reader.align(4)?; // [From UndertaleModTool] "why it's not aligned before the data is beyond my brain"
         Ok(Self { rle_data })

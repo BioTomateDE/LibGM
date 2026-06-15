@@ -141,16 +141,14 @@ impl GMElement for GMCodes {
 
             while reader.cur_pos < end {
                 let instruction = Instruction::deserialize(reader)
-                    .with_context(|| {
+                    .ctx(|| {
                         format!(
                             "parsing Instruction #{} at position {}",
                             code.instructions.len(),
                             reader.cur_pos,
                         )
                     })
-                    .with_context(|| {
-                        format!("parsing Code entry {:?} at position {}", code.name, start)
-                    })?;
+                    .ctx(|| format!("parsing Code entry {:?} at position {}", code.name, start))?;
                 code.instructions.push(instruction);
             }
         }
@@ -179,9 +177,9 @@ impl GMElement for GMCodes {
 
                 // In WAD < 15, instructions are written immediately
                 for (i, instruction) in code.instructions.iter().enumerate() {
-                    instruction.serialize(builder).with_context(|| {
-                        format!("serializing code #{i} with name {:?}", code.name)
-                    })?;
+                    instruction
+                        .serialize(builder)
+                        .ctx(|| format!("serializing code #{i} with name {:?}", code.name))?;
                 }
 
                 let code_length = builder.pos() - start;
@@ -207,7 +205,7 @@ impl GMElement for GMCodes {
             for instruction in &code.instructions {
                 instruction
                     .serialize(builder)
-                    .with_context(|| format!("serializing code #{i} with name {:?}", code.name))?;
+                    .ctx(|| format!("serializing code #{i} with name {:?}", code.name))?;
             }
             let end: u32 = builder.pos();
             instructions_ranges.push((start, end));
@@ -262,114 +260,100 @@ impl GMElement for Instruction {
             opcodes::CONV => {
                 let types = reader
                     .parse_double_type(b)
-                    .context("parsing Convert Instruction")?;
+                    .ctx("parsing Convert Instruction")?;
                 Self::Convert { from: types[0], to: types[1] }
             }
             opcodes::MUL => {
                 let types = reader
                     .parse_double_type(b)
-                    .context("parsing Multiply Instruction")?;
+                    .ctx("parsing Multiply Instruction")?;
                 Self::Multiply { lhs: types[1], rhs: types[0] }
             }
             opcodes::DIV => {
                 let types = reader
                     .parse_double_type(b)
-                    .context("parsing Divide Instruction")?;
+                    .ctx("parsing Divide Instruction")?;
                 Self::Divide { lhs: types[1], rhs: types[0] }
             }
             opcodes::REM => {
                 let types = reader
                     .parse_double_type(b)
-                    .context("parsing Remainder Instruction")?;
+                    .ctx("parsing Remainder Instruction")?;
                 Self::Remainder { lhs: types[1], rhs: types[0] }
             }
             opcodes::MOD => {
                 let types = reader
                     .parse_double_type(b)
-                    .context("parsing Modulus Instruction")?;
+                    .ctx("parsing Modulus Instruction")?;
                 Self::Modulus { lhs: types[1], rhs: types[0] }
             }
             opcodes::ADD => {
-                let types = reader
-                    .parse_double_type(b)
-                    .context("parsing Add Instruction")?;
+                let types = reader.parse_double_type(b).ctx("parsing Add Instruction")?;
                 Self::Add { lhs: types[1], rhs: types[0] }
             }
             opcodes::SUB => {
                 let types = reader
                     .parse_double_type(b)
-                    .context("parsing Subtract Instruction")?;
+                    .ctx("parsing Subtract Instruction")?;
                 Self::Subtract { lhs: types[1], rhs: types[0] }
             }
             opcodes::AND => {
-                let types = reader
-                    .parse_double_type(b)
-                    .context("parsing And Instruction")?;
+                let types = reader.parse_double_type(b).ctx("parsing And Instruction")?;
                 Self::And { lhs: types[1], rhs: types[0] }
             }
             opcodes::OR => {
-                let types = reader
-                    .parse_double_type(b)
-                    .context("parsing Or Instruction")?;
+                let types = reader.parse_double_type(b).ctx("parsing Or Instruction")?;
                 Self::Or { lhs: types[1], rhs: types[0] }
             }
             opcodes::XOR => {
-                let types = reader
-                    .parse_double_type(b)
-                    .context("parsing Xor Instruction")?;
+                let types = reader.parse_double_type(b).ctx("parsing Xor Instruction")?;
                 Self::Xor { lhs: types[1], rhs: types[0] }
             }
             opcodes::NEG => {
                 let data_type = reader
                     .parse_single_type(b)
-                    .context("parsing Negate Instruction")?;
+                    .ctx("parsing Negate Instruction")?;
                 Self::Negate { data_type }
             }
             opcodes::NOT => {
-                let data_type = reader
-                    .parse_single_type(b)
-                    .context("parsing Not Instruction")?;
+                let data_type = reader.parse_single_type(b).ctx("parsing Not Instruction")?;
                 Self::Not { data_type }
             }
             opcodes::SHL => {
                 let types = reader
                     .parse_double_type(b)
-                    .context("parsing ShiftLeft instruction")?;
+                    .ctx("parsing ShiftLeft instruction")?;
                 Self::ShiftLeft { lhs: types[1], rhs: types[0] }
             }
             opcodes::SHR => {
                 let types = reader
                     .parse_double_type(b)
-                    .context("parsing ShiftRight Instruction")?;
+                    .ctx("parsing ShiftRight Instruction")?;
                 Self::ShiftRight { lhs: types[1], rhs: types[0] }
             }
             opcodes::CMP => reader
                 .parse_comparison(b)
-                .context("parsing Comparison Instruction")?,
-            opcodes::POP => reader.parse_pop(b).context("parsing Pop Instruction")?,
+                .ctx("parsing Comparison Instruction")?,
+            opcodes::POP => reader.parse_pop(b).ctx("parsing Pop Instruction")?,
             opcodes::DUP => reader
                 .parse_duplicate(b)
-                .context("parsing Duplicate Instruction")?,
+                .ctx("parsing Duplicate Instruction")?,
             opcodes::RET => {
                 let ctx = "parsing Return Instruction";
-                let data_type = reader.parse_single_type(b).context(ctx)?;
-                reader
-                    .assert_type(DataType::Variable, data_type)
-                    .context(ctx)?;
+                let data_type = reader.parse_single_type(b).ctx(ctx)?;
+                reader.assert_type(DataType::Variable, data_type).ctx(ctx)?;
                 Self::Return
             }
             opcodes::EXIT => {
                 let ctx = "parsing Exit Instruction";
-                let data_type = reader.parse_single_type(b).context(ctx)?;
-                reader
-                    .assert_type(DataType::Int32, data_type)
-                    .context(ctx)?;
+                let data_type = reader.parse_single_type(b).ctx(ctx)?;
+                reader.assert_type(DataType::Int32, data_type).ctx(ctx)?;
                 Self::Exit
             }
             opcodes::POPZ => {
                 let data_type = reader
                     .parse_single_type(b)
-                    .context("parsing PopDiscard Instruction")?;
+                    .ctx("parsing PopDiscard Instruction")?;
                 Self::PopDiscard { data_type }
             }
             opcodes::BR => Self::Branch { jump_offset: reader.parse_branch(b) },
@@ -379,43 +363,43 @@ impl GMElement for Instruction {
             opcodes::POPENV if b == [0x00, 0x00, 0xF0] => Self::PopWithContextExit,
             opcodes::POPENV => Self::PopWithContext { jump_offset: reader.parse_branch(b) },
             opcodes::PUSH => {
-                let value = reader.parse_push(b).context("parsing Push Instruction")?;
+                let value = reader.parse_push(b).ctx("parsing Push Instruction")?;
                 Self::Push { value }
             }
             opcodes::PUSHLOC => {
                 let variable = reader
                     .parse_push_var(b)
-                    .context("parsing PushLocal Instruction")?;
+                    .ctx("parsing PushLocal Instruction")?;
                 Self::PushLocal { variable }
             }
             opcodes::PUSHGLB => {
                 let variable = reader
                     .parse_push_var(b)
-                    .context("parsing PushGlobal Instruction")?;
+                    .ctx("parsing PushGlobal Instruction")?;
                 Self::PushGlobal { variable }
             }
             opcodes::PUSHBLTN => {
                 let variable = reader
                     .parse_push_var(b)
-                    .context("parsing PushBuiltin Instruction")?;
+                    .ctx("parsing PushBuiltin Instruction")?;
                 Self::PushBuiltin { variable }
             }
             opcodes::PUSHIM => {
                 let integer = reader
                     .parse_pushim(b)
-                    .context("parsing PushImmediate Instruction")?;
+                    .ctx("parsing PushImmediate Instruction")?;
                 Self::PushImmediate { integer }
             }
-            opcodes::CALL => reader.parse_call(b).context("parsing Call Instruction")?,
+            opcodes::CALL => reader.parse_call(b).ctx("parsing Call Instruction")?,
             opcodes::CALLVAR => {
                 let arg_count = reader
                     .parse_callvar(b)
-                    .context("parsing CallVariable Instruction")?;
+                    .ctx("parsing CallVariable Instruction")?;
                 Self::CallVariable { arg_count }
             }
             opcodes::EXTENDED => reader
                 .parse_extended(b)
-                .context("parsing Extended Instruction")?,
+                .ctx("parsing Extended Instruction")?,
             _ => bail!("Invalid Instruction Opcode {opcode} (0x{opcode:02X})"),
         })
     }
@@ -749,7 +733,7 @@ impl DataReader<'_> {
             (Int16, ISNULLISH) => Instruction::IsNullishValue,
             (Int32, PUSHREF) => {
                 let asset_reference = AssetReference::deserialize(self)
-                    .context("parsing PushReference Extended Instruction")?;
+                    .ctx("parsing PushReference Extended Instruction")?;
                 Instruction::PushReference { asset_reference }
             }
             _ => bail!("Invalid Extended Instruction with data type {data_type:?} and kind {kind}"),
@@ -983,7 +967,7 @@ fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<Code
 
     let variable_type = (raw_value >> 24) & 0xF8;
     let variable_type =
-        VariableType::from_u8(variable_type as u8).context("parsing variable reference chain")?;
+        VariableType::from_u8(variable_type as u8).ctx("parsing variable reference chain")?;
 
     let instance_type: InstanceType =
         if matches!(variable_type, VariableType::Normal | VariableType::Instance) {

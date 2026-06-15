@@ -30,7 +30,7 @@ use crate::wad::data::GMData;
 /// For more information on the data file format, see [`crate::wad`].
 #[inline]
 pub fn build_bytes(gm_data: &GMData) -> Result<Vec<u8>> {
-    build(gm_data).context("building GameMaker data bytes")
+    build(gm_data).ctx("building GameMaker data bytes")
 }
 
 /// Builds a GameMaker data file to the specified file path.
@@ -41,11 +41,11 @@ pub fn build_bytes(gm_data: &GMData) -> Result<Vec<u8>> {
 /// For more information on the data file format, see [`crate::wad`].
 pub fn build_file(gm_data: &GMData, path: impl AsRef<Path>) -> Result<()> {
     let path: &Path = path.as_ref();
-    let raw_data: Vec<u8> = build(gm_data)
-        .with_context(|| format!("building GameMaker data file {}", path.display()))?;
+    let raw_data: Vec<u8> =
+        build(gm_data).ctx(|| format!("building GameMaker data file {}", path.display()))?;
 
     let stopwatch = Stopwatch::start();
-    std::fs::write(path, raw_data).context_src("writing data file")?;
+    std::fs::write(path, raw_data).ctx_any("writing data file")?;
     log::trace!("Writing data file took {stopwatch}");
     Ok(())
 }

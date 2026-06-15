@@ -60,7 +60,7 @@ impl<T: GMElement> GMElement for Data<T> {
         reader.align(4)?;
         let keyframes: Vec<Keyframe<T>> = reader
             .read_simple_list()
-            .with_context(|| format!("deserializing {} keyframes", typename::<T>()))?;
+            .ctx(|| format!("deserializing {} keyframes", typename::<T>()))?;
         Ok(Self { keyframes })
     }
 
@@ -68,7 +68,7 @@ impl<T: GMElement> GMElement for Data<T> {
         builder.align(4);
         builder
             .write_simple_list(&self.keyframes)
-            .with_context(|| format!("serializing {} keyframes", typename::<T>()))?;
+            .ctx(|| format!("serializing {} keyframes", typename::<T>()))?;
         Ok(())
     }
 }
@@ -113,7 +113,7 @@ impl<T: GMElement> GMElement for Channel<T> {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let id = reader.read_i32()?;
         let value = T::deserialize(reader)
-            .with_context(|| format!("deserializing {} channel", typename::<T>()))?;
+            .ctx(|| format!("deserializing {} channel", typename::<T>()))?;
         Ok(Self { id, value })
     }
 
@@ -121,7 +121,7 @@ impl<T: GMElement> GMElement for Channel<T> {
         builder.write_i32(self.id);
         self.value
             .serialize(builder)
-            .with_context(|| format!("serializing {} channel", typename::<T>()))?;
+            .ctx(|| format!("serializing {} channel", typename::<T>()))?;
         Ok(())
     }
 }

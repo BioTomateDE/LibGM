@@ -61,7 +61,7 @@ impl DataReader<'_> {
         if number == -1 {
             return Ok(GMRef::none());
         }
-        check_resource_limit(number as u32).context("parsing resource by id")?;
+        check_resource_limit(number as u32).ctx("parsing resource by id")?;
         Ok(GMRef::new(number))
     }
 }

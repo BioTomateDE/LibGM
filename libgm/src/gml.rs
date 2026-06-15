@@ -230,7 +230,7 @@ pub fn insert_instructions(
     index: u32,
     insertion: &[Instruction],
 ) -> Result<()> {
-    splice_instructions(haystack, index..index, insertion, false).with_context(|| {
+    splice_instructions(haystack, index..index, insertion, false).ctx(|| {
         format!(
             "inserting {} instructions at index {} into vector with {} instructions",
             insertion.len(),
@@ -247,7 +247,7 @@ pub fn insert_instruction(
     insertion: &Instruction,
 ) -> Result<()> {
     insert_instructions(haystack, index, std::slice::from_ref(insertion))
-        .with_context(|| format!("inserting single instruction {insertion:?}"))
+        .ctx(|| format!("inserting single instruction {insertion:?}"))
 }
 
 #[allow(clippy::missing_panics_doc)]
@@ -257,7 +257,7 @@ pub fn remove_instructions(
 ) -> Result<Vec<Instruction>> {
     let removal_len = range.len();
     let index = range.start;
-    let old_instrs = splice_instructions(haystack, range, &[], true).with_context(|| {
+    let old_instrs = splice_instructions(haystack, range, &[], true).ctx(|| {
         format!(
             "removing {} instructions at index {} of vector with {} instructions",
             removal_len,

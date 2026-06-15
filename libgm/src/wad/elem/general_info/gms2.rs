@@ -101,7 +101,7 @@ impl GMGeneralInfo {
         let game_guid: [u8; 16] = reader
             .read_bytes_const::<16>()
             .cloned()
-            .context("reading Game GUID")?;
+            .ctx("reading Game GUID")?;
 
         Ok(GMS2Data {
             random_uid,

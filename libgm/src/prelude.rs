@@ -4,7 +4,7 @@
 //! You can import it by using `use libgm::prelude::*;`.
 
 pub use crate::error::Context;
-pub use crate::error::ContextSrc;
+pub use crate::error::ContextAny;
 pub use crate::error::Error;
 pub use crate::error::Result;
 pub use crate::error::bail;

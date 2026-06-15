@@ -154,7 +154,7 @@ pub fn read_header(bytes: &[u8]) -> Result<QoiHeader> {
 }
 
 pub fn decode(bytes: &[u8]) -> Result<DynamicImage> {
-    let header: QoiHeader = read_header(bytes).context("reading QOI header")?;
+    let header: QoiHeader = read_header(bytes).ctx("reading QOI header")?;
 
     let pixel_data: &[u8] = bytes
         .get(12..12 + header.length as usize)
@@ -247,8 +247,8 @@ pub fn decode(bytes: &[u8]) -> Result<DynamicImage> {
 fn encode_to_buffer(image: &DynamicImage, buffer: &mut Vec<u8>) -> Result<()> {
     // (big endian unsupported)
     let (width, height) = image.dimensions();
-    let width = u16::try_from(width).context_src("Image width exceeds limit of 65535")?;
-    let height = u16::try_from(height).context_src("Image height exceeds limit of 65535")?;
+    let width = u16::try_from(width).ctx_any("Image width exceeds limit of 65535")?;
+    let height = u16::try_from(height).ctx_any("Image height exceeds limit of 65535")?;
     let image = image
         .as_rgba8()
         .map_or_else(|| Cow::Owned(image.to_rgba8()), Cow::Borrowed);

@@ -56,8 +56,8 @@ fn verify_integrity(path: &Path, hash: &str) -> Result<()> {
 }
 
 fn check_reparse(data: &GMData) -> Result<()> {
-    let raw_data = build_bytes(data).context("building data for reparse")?;
-    let reparsed_data = parse_bytes(raw_data).context("reparsing data")?;
+    let raw_data = build_bytes(data).ctx("building data for reparse")?;
+    let reparsed_data = parse_bytes(raw_data).ctx("reparsing data")?;
 
     if print_diffs(data, &reparsed_data) {
         bail!("Reparsing produced different data!");
@@ -84,9 +84,8 @@ fn reassemble_one(data: &mut GMData, code: &GMCode) -> Result<()> {
 fn check_reassemble(data: &mut GMData) -> Result<()> {
     for code in data.codes.elements() {
         if code.is_root() {
-            reassemble_one(data, code).with_context(|| {
-                format!("disassembling and reassembling code entry {:?}", code.name)
-            })?;
+            reassemble_one(data, code)
+                .ctx(|| format!("disassembling and reassembling code entry {:?}", code.name))?;
         }
     }
 
@@ -95,8 +94,8 @@ fn check_reassemble(data: &mut GMData) -> Result<()> {
 
 fn perform_inner(data_file_path: &Path, sha256sum: &str) -> Result<()> {
     verify_integrity(data_file_path, sha256sum)?;
-    let mut data = parse_file(data_file_path).context("parsing data file")?;
-    data.validate_names().context("validating all names")?;
+    let mut data = parse_file(data_file_path).ctx("parsing data file")?;
+    data.validate_names().ctx("validating all names")?;
     check_reparse(&data)?;
     check_reassemble(&mut data)?;
     Ok(())

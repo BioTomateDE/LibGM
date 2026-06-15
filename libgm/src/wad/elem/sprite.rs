@@ -118,7 +118,7 @@ impl GMElement for GMSprite {
                         mask_height = (margin_bottom - margin_top + 1) as u32;
                     }
                     collision_masks = read_mask_data(reader, mask_width, mask_height)
-                        .context("parsing mask data for normal special Sprite")?;
+                        .ctx("parsing mask data for normal special Sprite")?;
                     SpecialData::Normal
                 }
 
@@ -143,7 +143,7 @@ impl GMElement for GMSprite {
                     }
                     let jpeg_table: Vec<u8> = reader
                         .read_bytes_dyn(jpeg_len)
-                        .context("reading YYSWF JPEG Table")?
+                        .ctx("reading YYSWF JPEG Table")?
                         .to_vec();
                     reader.align(4)?;
                     let timeline = swf::Timeline::deserialize(reader)?;
@@ -186,7 +186,7 @@ impl GMElement for GMSprite {
                             spine_atlas = spine::Data::read_weird_string(reader, atlas_length)?;
                             let texture_blob: Vec<u8> = reader
                                 .read_bytes_dyn(blob_size)
-                                .context("reading Spine v1 texture blob")?
+                                .ctx("reading Spine v1 texture blob")?
                                 .to_vec();
 
                             spine_textures.push(spine::TextureEntry {
@@ -204,7 +204,7 @@ impl GMElement for GMSprite {
                             for _ in 0..texture_count {
                                 spine_textures.push(
                                     spine::TextureEntry::deserialize(reader)
-                                        .context("parsing Texture Entry for Spine v2/3 data")?,
+                                        .ctx("parsing Texture Entry for Spine v2/3 data")?,
                                 );
                             }
                         }
@@ -237,16 +237,14 @@ impl GMElement for GMSprite {
             if sequence_pos != 0 {
                 reader.assert_pos(sequence_pos, "Sequence")?;
                 let ctx = || format!("parsing Sequence for Sprite {name:?}");
-                reader
-                    .read_gms2_chunk_version("Sequence")
-                    .with_context(ctx)?;
-                sequence = Some(GMSequence::deserialize(reader).with_context(ctx)?);
+                reader.read_gms2_chunk_version("Sequence").ctx(ctx)?;
+                sequence = Some(GMSequence::deserialize(reader).ctx(ctx)?);
             }
 
             if nine_slice_pos != 0 {
                 reader.assert_pos(nine_slice_pos, "Nine Slice")?;
                 let ctx = || format!("parsing Nine Slice for Sprite {name:?}");
-                nine_slice = Some(NineSlice::deserialize(reader).with_context(ctx)?);
+                nine_slice = Some(NineSlice::deserialize(reader).ctx(ctx)?);
             }
 
             special_fields = Some(Special {
@@ -271,7 +269,7 @@ impl GMElement for GMSprite {
                 mask_height = (margin_bottom - margin_top + 1) as u32;
             }
             collision_masks = read_mask_data(reader, mask_width, mask_height)
-                .context("reading mask data for normal Sprite")?;
+                .ctx("reading mask data for normal Sprite")?;
         }
 
         Ok(Self {
@@ -461,10 +459,9 @@ impl GMSprite {
     fn read_texture_list(reader: &mut DataReader) -> Result<Vec<GMRef<GMTexturePageItem>>> {
         let count = reader.read_count("Sprite texture")?;
         let ctx = || format!("reading {count} Sprite textures");
-        let mut textures: Vec<GMRef<GMTexturePageItem>> =
-            vec_with_capacity(count).with_context(ctx)?;
+        let mut textures: Vec<GMRef<GMTexturePageItem>> = vec_with_capacity(count).ctx(ctx)?;
         for _ in 0..count {
-            textures.push(reader.read_gm_texture().with_context(ctx)?);
+            textures.push(reader.read_gm_texture().ctx(ctx)?);
         }
         Ok(textures)
     }
@@ -568,7 +565,7 @@ fn read_mask_data(reader: &mut DataReader, width: u32, height: u32) -> Result<Ve
     for _ in 0..mask_count {
         let data: Vec<u8> = reader
             .read_bytes_dyn(length)
-            .context("reading Mask Data")?
+            .ctx("reading Mask Data")?
             .to_vec();
         collision_masks.push(MaskEntry { data, width, height });
     }

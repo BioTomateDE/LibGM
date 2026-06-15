@@ -258,7 +258,7 @@ pub(crate) fn validate_names<T: GMNamedListChunk>(chunk: &T, gm_strings: &GMStri
     for (i, item) in chunk.element_refs() {
         let name = item.name(gm_strings)?;
 
-        item.validate_name(gm_strings).with_context(|| {
+        item.validate_name(gm_strings).ctx(|| {
             format!(
                 "validating {} with name {:?}",
                 typename::<T::Element>(),

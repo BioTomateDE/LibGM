@@ -11,7 +11,7 @@ macro_rules! read_int_fn {
         pub fn $method(&mut self) -> Result<$dtype> {
             let bytes = *self
                 .read_bytes_const()
-                .with_context(|| format!("reading {} integer", stringify!($dtype)))?;
+                .ctx(|| format!("reading {} integer", stringify!($dtype)))?;
             Ok(match self.endianness {
                 Endianness::Little => <$dtype>::from_le_bytes(bytes),
                 Endianness::Big => <$dtype>::from_be_bytes(bytes),

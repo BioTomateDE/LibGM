@@ -11,7 +11,7 @@ impl GMNamedElement for GMCode {
 
     fn validate_name(&self, gm_strings: &GMStrings) -> Result<()> {
         let name: &str = self.name(gm_strings)?;
-        validate(name).with_context(|| format!("strictly validating code entry name {name:?}"))
+        validate(name).ctx(|| format!("strictly validating code entry name {name:?}"))
     }
 }
 
@@ -47,7 +47,7 @@ fn validate(mut name: &str) -> Result<()> {
             validate_room_event_kind(event_kind)?;
             instance_id
                 .parse::<u16>()
-                .context_src("parsing Instance ID in RoomCC code entry")?;
+                .ctx_any("parsing Instance ID in RoomCC code entry")?;
         }
         "Object" => {
             // Collision event has an object name as its subtype.
@@ -61,7 +61,7 @@ fn validate(mut name: &str) -> Result<()> {
             let (event_type, event_subtype) = last_three_parts(&mut name).ok_or(e)?;
             let event_subtype: i32 = event_subtype
                 .parse::<i32>()
-                .context_src("parsing Event subtype in Object code entry")?;
+                .ctx_any("parsing Event subtype in Object code entry")?;
             validate_event(event_type, event_subtype)?;
         }
         _ => bail!("Invalid code entry kind {kind:?}"),

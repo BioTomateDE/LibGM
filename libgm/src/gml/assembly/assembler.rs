@@ -43,7 +43,7 @@ pub fn assemble_instructions(assembly: &str, gm_data: &GMData) -> Result<Vec<Ins
         }
 
         let instruction: Instruction = assemble_instruction(line, gm_data)
-            .with_context(|| format!("assembling instruction: {line}"))?;
+            .ctx(|| format!("assembling instruction: {line}"))?;
         instructions.push(instruction);
     }
 

@@ -28,7 +28,7 @@ impl GMElement for GMFonts {
 
         if reader.general_info.version < (2024, 14) {
             let verify: bool = reader.options.verify_constants;
-            let padding: &[u8; 512] = reader.read_bytes_const().context("Reading FONT padding")?;
+            let padding: &[u8; 512] = reader.read_bytes_const().ctx("Reading FONT padding")?;
             if verify {
                 verify_padding(padding)?;
             }
