@@ -19,9 +19,9 @@ pub struct GMShaders {
 gm_named_list_chunk!(SHDR, GMShaders, GMShader, shaders, nullable);
 
 impl GMElement for GMShaders {
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        // Figure out where the starts/ends of each shader object are
+        // Figure out where the starts/ends of each shader object are.
         let count = reader.read_u32()?;
         let mut locations: Vec<u32> = vec_with_capacity(count + 1)?;
         let mut real_count = count;
@@ -29,7 +29,7 @@ impl GMElement for GMShaders {
         for _ in 0..count {
             let pointer = reader.read_u32()?;
             if pointer == 0 {
-                // Null shader, decrease count
+                // Null shader, decrease count.
                 real_count -= 1;
             } else {
                 locations.push(pointer);
@@ -314,11 +314,9 @@ fn read_shader_data(
 
     if expected_length < actual_length {
         if is_last && (reader.cur_pos + actual_length).is_multiple_of(16) {
-            // Normal for the last element due to chunk padding, just trust the
-            // system
+            // Normal for the last element due to chunk padding, just trust the system.
         } else if !is_last && (reader.cur_pos + actual_length).is_multiple_of(8) {
-            // Normal for 8-byte alignment to occur on all elements prior to the
-            // last one
+            // Normal for 8-byte alignment to occur on all elements prior to the last one.
         } else if is_last {
             bail!("{ERR_PREFIX} more data than expected. {ERR_SUFFIX}");
         } else {
