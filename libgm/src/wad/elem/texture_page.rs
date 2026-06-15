@@ -146,10 +146,10 @@ impl GMElement for GMTexturePages {
 }
 
 /// An embedded texture page entry in the data file.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 #[repr(C)] // Needs explicit layout so memory addresses for gm pointers don't collide
 pub struct GMTexturePage {
-    /// not sure what `scaled` actually is
+    /// DOCME: not sure what `scaled` actually is
     pub scaled: u32,
 
     /// The amount of generated `MipMap` levels. Present in 2.0.6+

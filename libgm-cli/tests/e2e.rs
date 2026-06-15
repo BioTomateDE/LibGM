@@ -30,8 +30,7 @@ fn resolve_path(filename: &str) -> PathBuf {
 
 // TODO: support multiple possible hashes for all sets of valid files
 fn verify_integrity(path: &Path, hash: &str) -> Result<()> {
-    let data =
-        fs::read(path).with_context_src(|| format!("reading data file {}", path.display()))?;
+    let data = fs::read(path).ctx_any(|| format!("reading data file {}", path.display()))?;
 
     // TODO: ugly
     let expected = hash
@@ -82,6 +81,7 @@ fn reassemble_one(data: &mut GMData, code: &GMCode) -> Result<()> {
 }
 
 fn check_reassemble(data: &mut GMData) -> Result<()> {
+    // too lazy to fix rn
     for code in data.codes.elements() {
         if code.is_root() {
             reassemble_one(data, code)

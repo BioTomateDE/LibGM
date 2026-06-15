@@ -172,10 +172,18 @@ impl GMImage {
     /// In order to force intermediate deserialization to [`DynamicImage`]
     /// (to catch invalid image data, for example), you can use code like this:
     ///
-    /// ```ignore
-    /// let mut gm_image = texture_page.image.as_mut().ok_or("No image data in texture page")?;
-    /// gm_image.change_format(Format::Dyn)?; // Add this
-    /// gm_image.change_format(Format::Bz2Qoi)?; // (or whatever format you want)
+    /// ```no_run
+    /// # fn main() -> libgm::Result<()> {
+    /// # use libgm::wad::elem::texture_page::Format;
+    /// # let mut texture_page = libgm::wad::elem::texture_page::GMTexturePage::default();
+    /// let mut gm_image = texture_page
+    ///     .image
+    ///     .as_mut()
+    ///     .ok_or("No image data in texture page")?;
+    /// gm_image.change_format(Format::Dyn)?; // <--- forces deserialization
+    /// gm_image.change_format(Format::Bz2Qoi)?; // (or whichever format you want)
+
+    /// # Ok(()) }
     /// ```
     pub fn change_format(&mut self, format: Format) -> Result<bool> {
         let old = self.format();

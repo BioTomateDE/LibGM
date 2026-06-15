@@ -24,7 +24,8 @@
 //!
 //! This is an example of how to open a data file stored on disk
 //! and extract some basic information:
-//! ```ignore
+//! ```no_run
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use libgm::prelude::*;
 //!
 //! let path = "C:/Program Files (x86)/Steam/steamapps/common/Undertale/data.win";
@@ -35,10 +36,12 @@
 //! println!("Opened {name}!");
 //! println!("Game was created at {creation:?}.");
 //! println!("This data file has {} sprites.", data.sprites.len());
+//! # Ok(()) }
 //! ```
 //!
 //! Modifiying parts of the game:
-//! ```ignore
+//! ```no_run
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use libgm::prelude::*;
 //! use libgm::wad::elem::game_object::GMGameObject;
 //! use libgm::wad::elem::sprite::GMSprite;
@@ -56,15 +59,18 @@
 //! println!("Mysteryman's sprite dimensions are {w}x{h} pixels");
 //!
 //! libgm::wad::build_file(&data, "./game_modded.unx")?;
+//! # Ok(()) }
 //! ```
 //!
 //! More complicated parsing for data files stored in memory:
-//! ```ignore
+//! ```no_run
+//! # fn some_sophisticated_source() -> &'static [u8] { &[] }
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use libgm::prelude::*;
+//! use libgm::wad::elem::audio::GMAudio;
+//! use libgm::wad::elem::sound::Flags;
 //! use libgm::wad::parse::ParsingOptions;
-//! use libgm::wad::elem::{audio::GMAudio, sound::Flags};
-//!
-//! let raw_data: &[u8] = /* some sophisticated source */;
+//! let raw_data: &[u8] = some_sophisticated_source();
 //! let parser = ParsingOptions::new()
 //!     .verify_constants(false)
 //!     .verify_alignment(true);
@@ -79,6 +85,7 @@
 //!         std::fs::write(path, &audio.data)?;
 //!     }
 //! }
+//! # Ok(()) }
 //! ```
 //!
 //! For more information on the GameMaker specifics, check out the [`wad`] module.

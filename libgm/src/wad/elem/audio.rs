@@ -32,7 +32,7 @@ impl GMElement for GMAudios {
 pub struct GMAudio {
     /// The raw audio data of the embedded audio entry.
     /// This can be either WAV or OGG.
-    pub audio_data: Vec<u8>,
+    pub data: Vec<u8>,
 }
 
 impl fmt::Debug for GMAudio {
@@ -43,14 +43,14 @@ impl fmt::Debug for GMAudio {
 
 impl GMElement for GMAudio {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let audio_data_length = reader.read_u32()?;
-        let audio_data: Vec<u8> = reader.read_bytes_dyn(audio_data_length)?.to_vec();
-        Ok(Self { audio_data })
+        let size = reader.read_u32()?;
+        let data: Vec<u8> = reader.read_bytes_dyn(size)?.to_vec();
+        Ok(Self { data })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_usize(self.audio_data.len())?;
-        builder.write_bytes(&self.audio_data);
+        builder.write_usize(self.data.len())?;
+        builder.write_bytes(&self.data);
         Ok(())
     }
 
