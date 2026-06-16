@@ -15,6 +15,7 @@ pub struct GMDataFiles {
 
 gm_chunk!(DAFL, GMDataFiles);
 
+// Very cool
 impl GMElement for GMDataFiles {
     fn deserialize(_: &mut DataReader) -> Result<Self> {
         Ok(Self { exists: true })

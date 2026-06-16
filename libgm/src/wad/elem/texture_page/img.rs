@@ -204,7 +204,10 @@ impl GMImage {
     /// For more information, see [`GMImage::change_format`].
     pub fn deserialize(&mut self) -> Result<&DynamicImage> {
         self.change_format(Format::Dyn)?;
-        Ok(self.dynamic_image_ref().unwrap())
+        match &self.0 {
+            Img::Dyn(dynamic_image) => Ok(dynamic_image),
+            _ => unreachable!("image was just converted to Format::Dyn"),
+        }
     }
 
     fn change_format_(&mut self, format: Format) -> Result<()> {

@@ -223,28 +223,26 @@ use wad::{
 
 // Private modules
 mod actions;
-mod gm_enum;
 mod util;
 
 // Public modules
 #[cfg(doc)]
 pub mod _spec;
 pub mod error;
+pub mod gm_enum;
 pub mod gml;
 pub mod prelude;
 pub mod wad;
 
 // Convenience re-exports
-pub use error::Error;
-pub use error::Result;
+pub use self::error::Error;
+pub use self::error::Result;
 
 // === Some TODOs for the entire library ===
 //
 // When Rust finally drops Macros 2.0:
-// * Migrate all `macro_rules!` to `macro`s and remove exporting from crate
-//   root.
+// * Migrate all `macro_rules!` to `macro`s and remove exporting from crate root.
 // Reference: https://github.com/rust-lang/rust/issues/39412
 //
-// When most traits (`Into`, `TryInto`, `Iterator`, `PartialEq`) are
-// const-stable:
+// When most traits (`Into`, `TryInto`, `Iterator`, `PartialEq`) are const-stable:
 // * Clean up all `const-hack`s
