@@ -114,7 +114,7 @@ impl GMElement for GMSound {
                 GMRef::new(get_builtin_sound_group_id(reader.general_info.version))
             };
 
-        let audio_file: GMRef<GMAudio> = reader.read_resource_by_id()?;
+        let audio: GMRef<GMAudio> = reader.read_resource_by_id()?;
         let audio_length: Option<f32> = reader.deserialize_if_gm_version((2024, 6))?;
 
         Ok(Self {
@@ -126,7 +126,7 @@ impl GMElement for GMSound {
             volume,
             pitch,
             audio_group,
-            audio: audio_file,
+            audio,
             audio_length,
         })
     }

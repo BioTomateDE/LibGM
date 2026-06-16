@@ -11,10 +11,16 @@ use crate::wad::reference::GMRef;
 
 const ALIGNMENT: u32 = 8;
 
-/// See [`GMBackground`].
+/// Backgrounds / tileset entries.
+///
+/// For GameMaker Studio 2, these will only ever be a tileset.
+/// For GameMaker Studio 1, these are usually a background,
+/// but are sometimes repurposed as use for a tileset as well.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMBackgrounds {
     pub backgrounds: Vec<Option<GMBackground>>,
+    /// Semi-internal flag that tracks whether to
+    /// align the pointer list to 8 when serializing.
     pub align: bool,
     pub exists: bool,
 }
@@ -70,7 +76,7 @@ impl GMElement for GMBackgrounds {
 }
 
 /// A background or tileset entry in a data file.
-/// ___
+///
 /// For GameMaker Studio 2, this will only ever be a tileset.
 /// For GameMaker Studio 1, this is usually a background,
 /// but is sometimes repurposed as use for a tileset as well.
