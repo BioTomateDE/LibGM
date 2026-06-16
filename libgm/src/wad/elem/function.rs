@@ -11,6 +11,7 @@ use crate::wad::chunk::ChunkName;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::element_stub;
+use crate::wad::elem::string::GMStrings;
 use crate::wad::parse::chunk::ChunkBounds;
 use crate::wad::parse::reader::DataReader;
 
@@ -23,26 +24,27 @@ pub struct GMFunctions {
 
 gm_named_list_chunk!(FUNC, GMFunctions, GMFunction, functions, direct);
 
-// impl GMFunctions {
-//     /// Returns an existing function with the given name if it exists,
-//     /// otherwise creates a new one.
-//     pub fn make(&mut self, name: GMRef<String>) -> GMRef<GMFunction> {
-//         if let Ok(func_ref) = self.ref_by_name(name) {
-//             return func_ref;
-//         }
-//         let idx = self.functions.len();
-//         let func = GMFunction { name: name.to_owned() };
-//         self.functions.push(func);
-//         GMRef::from(idx)
-//     }
-// }
+impl GMFunctions {
+    /// Returns an existing function with the given name if it exists,
+    /// otherwise creates a new one.
+    pub fn make(&mut self, name: &str, strings: &mut GMStrings) -> GMRef<GMFunction> {
+        if let Ok(func_ref) = self.ref_by_name(name, strings) {
+            return func_ref;
+        }
+        let name = strings.make(name);
+        let idx = self.functions.len();
+        let func = GMFunction { name };
+        self.functions.push(func);
+        GMRef::from(idx)
+    }
+}
 
 impl GMElement for GMFunctions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let functions_count = if reader.general_info.wad_version <= 14 {
-            reader.chunk.length() / 12
-        } else {
+        let functions_count = if reader.general_info.wad_version >= 15 {
             reader.read_u32()?
+        } else {
+            reader.chunk.length() / 12
         };
 
         let mut functions: Vec<GMFunction> = vec_with_capacity(functions_count)?;

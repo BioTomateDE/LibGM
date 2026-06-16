@@ -65,7 +65,7 @@ fn check_reparse(data: &GMData) -> Result<()> {
     Ok(())
 }
 
-fn reassemble_one(data: &mut GMData, code: &GMCode) -> Result<()> {
+fn reassemble_one(data: &GMData, code: &GMCode) -> Result<()> {
     let assembly: String = disassemble_code(code, data)?;
     let reconstructed: Vec<Instruction> = assemble_instructions(&assembly, data)?;
 
@@ -80,8 +80,7 @@ fn reassemble_one(data: &mut GMData, code: &GMCode) -> Result<()> {
     ))
 }
 
-fn check_reassemble(data: &mut GMData) -> Result<()> {
-    // too lazy to fix rn
+fn check_reassemble(data: &GMData) -> Result<()> {
     for code in data.codes.elements() {
         if code.is_root() {
             reassemble_one(data, code)

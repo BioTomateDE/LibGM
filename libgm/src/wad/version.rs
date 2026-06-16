@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! Contains GameMaker IDE Version types and abstractions to check and set
-//! versions.
+//! Contains GameMaker IDE Version types and abstractions to check and set versions.
 
 use core::cmp::Ordering;
 use std::fmt::Display;
@@ -109,7 +108,7 @@ impl GMVersion {
     /// The pseudo-version 0.0.0.0 (Pre LTS).
     ///
     /// This is only useful for comparing against other `GMVersion`s dynamically.
-    pub const NULL: Self = Self::new(0, 0, 0, 0, LTSBranch::PreLTS);
+    pub const ZERO: Self = Self::new(0, 0, 0, 0, LTSBranch::PreLTS);
 
     /// Creates a new [`GMVersion`] with the given version parts and branch.
     #[must_use]
@@ -166,10 +165,11 @@ impl Display for GMVersion {
         let release = self.release;
         let build = self.build;
         write!(f, "{major}.{minor}")?;
-        match (release, build) {
-            (0, 0) => {}
-            (_, 0) => write!(f, ".{release}")?,
-            (_, _) => write!(f, ".{build}")?,
+        if release != 0 {
+            write!(f, ".{release}")?;
+            if build != 0 {
+                write!(f, ".{build}")?;
+            }
         }
         if major >= 2022 {
             write!(f, " ({})", self.branch)?;

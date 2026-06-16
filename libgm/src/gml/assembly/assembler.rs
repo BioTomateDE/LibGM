@@ -543,7 +543,6 @@ fn resolve_function(
         }
     }
 
-    // TODO: does that method still exist
     bail!("Function {ident:?} does not exist (needs to be created using GMFunctions::make first)")
 }
 

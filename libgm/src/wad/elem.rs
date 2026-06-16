@@ -38,7 +38,7 @@ pub mod sequence;
 pub mod shader;
 pub mod sound;
 pub mod sprite;
-pub(crate) mod string;
+pub mod string;
 pub mod tag;
 pub mod texture_group_info;
 pub mod texture_page;
@@ -49,20 +49,18 @@ pub mod variable;
 
 /// All GameMaker elements that can be deserialized
 /// from a data file should implement this trait.
-#[allow(unused_variables)]
+#[expect(unused_variables)]
 pub(crate) trait GMElement: Sized {
     /// Deserializes this element from the current position of the reader.
     ///
     /// Implementations should read the exact binary representation of this
     /// element and return a fully constructed instance.
-    #[doc(hidden)]
     fn deserialize(reader: &mut DataReader) -> Result<Self>;
 
     /// Serializes this element to the current position of the builder.
     ///
     /// Implementations should write the exact binary representation of this
     /// element in the format expected by the GameMaker runtime.
-    #[doc(hidden)]
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()>;
 
     /// Handles padding bytes that may appear before this element in pointer lists.
@@ -70,7 +68,6 @@ pub(crate) trait GMElement: Sized {
     /// This is called before [`GMElement::deserialize`] when reading from
     /// structured data. The default implementation does nothing - override
     /// if your element requires alignment padding in specific contexts.
-    #[doc(hidden)]
     fn deserialize_pre_padding(reader: &mut DataReader) -> Result<()> {
         Ok(())
     }
@@ -80,7 +77,6 @@ pub(crate) trait GMElement: Sized {
     /// This is called before [`GMElement::serialize`] when writing to
     /// structured data. The default implementation does nothing - override
     /// if your element requires alignment padding in specific contexts.
-    #[doc(hidden)]
     fn serialize_pre_padding(&self, builder: &mut DataBuilder) -> Result<()> {
         Ok(())
     }
@@ -90,7 +86,6 @@ pub(crate) trait GMElement: Sized {
     /// This is called after [`GMElement::deserialize`] when reading from
     /// structured data. The `is_last` parameter indicates if this is the
     /// final element in a list, which may affect padding requirements.
-    #[doc(hidden)]
     fn deserialize_post_padding(reader: &mut DataReader, is_last: bool) -> Result<()> {
         Ok(())
     }
@@ -100,7 +95,6 @@ pub(crate) trait GMElement: Sized {
     /// This is called after [`GMElement::serialize`] when writing to structured
     /// data. The `is_last` parameter indicates if this is the final element
     /// in a list, which may affect padding requirements.
-    #[doc(hidden)]
     fn serialize_post_padding(&self, builder: &mut DataBuilder, is_last: bool) -> Result<()> {
         Ok(())
     }
@@ -227,6 +221,7 @@ impl GMElement for bool {
     }
 }
 
+// TODO: this also allows texture page items. should there be a GMAsset trait or something?
 impl<T: GMElement> GMElement for GMRef<T> {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_resource_by_id()
@@ -318,7 +313,7 @@ pub(crate) fn validate_identifier(name: &str) -> Result<()> {
     }
 
     for ch in name.chars() {
-        // @ is used internally
+        // @ is used by GameMaker internally.
         if !matches!(ch, 'a'..='z'| '0'..='9' | '_' | 'A'..='Z' | '@') {
             bail!("Identifier {name:?} contains invalid character {ch:?}");
         }
