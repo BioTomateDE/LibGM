@@ -8,7 +8,7 @@ pub mod analysis;
 pub mod assembly;
 pub mod instruction;
 mod name_validation;
-pub(crate) mod opcodes;
+pub mod opcodes;
 
 use std::ops::Range;
 

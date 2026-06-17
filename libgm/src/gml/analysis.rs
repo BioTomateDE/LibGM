@@ -11,16 +11,16 @@ use crate::prelude::*;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub struct CodeAnalysis {
-    /// Whether Copy on Write (Cow) functionality is enabled for arrays.
+    /// Whether Copy on Write (CoW) functionality is enabled for arrays.
     ///
-    /// Between GameMaker 2.3 and 2022.2 this is guaranteed to be `true`.
+    /// Between GameMaker 2.3 and 2022.2 this is guaranteed to be true.
     /// Afterward, it is set to false by default in the GameMaker IDE, but can
-    /// be changed by a game's developer.
+    /// be changed by the game developer.
     ///
-    /// This is detected by the usage of [`Instruction::SetArrayOwner`].
+    /// If there is a `setowner` instruction, then Array CoW must be enabled.
     ///
     /// By default, this is disabled.
-    pub uses_array_copy_on_write: bool,
+    pub array_cow: bool,
 
     /// Whether this game was compiled with short-circuiting logic.
     ///
@@ -34,19 +34,17 @@ pub struct CodeAnalysis {
     /// Guaranteeing this logic is useful, since expressions
     /// can consist of function calls, which can mutate state.
     ///
-    /// This is detected by the inexistence of `and.b.b` and `or.b.b`
-    /// instructions.
+    /// If there are `and`/`or` instructions with
+    /// both data types boolean, then short-circuiting must be
+    /// disabled, because it it would have branched away otherwise.
     ///
-    /// By default, this is enabled.
-    pub uses_short_circuit: bool,
+    /// By default, this feature is enabled.
+    pub short_circuit: bool,
 }
 
 impl Default for CodeAnalysis {
     fn default() -> Self {
-        Self {
-            uses_array_copy_on_write: false,
-            uses_short_circuit: true,
-        }
+        Self { array_cow: false, short_circuit: true }
     }
 }
 
@@ -57,8 +55,6 @@ impl Default for CodeAnalysis {
 ///
 /// None of these analyzed properties change when the data file is modified,
 /// since this information is about how this game was compiled.
-///
-/// This function is also available in [`GMData::analyze_code`].
 #[must_use]
 pub fn analyze(data: &GMData) -> CodeAnalysis {
     let mut analysis = CodeAnalysis::default();
@@ -68,10 +64,10 @@ pub fn analyze(data: &GMData) -> CodeAnalysis {
             match instruction {
                 Instruction::And { lhs: DataType::Bool, rhs: DataType::Bool }
                 | Instruction::Or { lhs: DataType::Bool, rhs: DataType::Bool } => {
-                    analysis.uses_short_circuit = false;
+                    analysis.short_circuit = false;
                 }
                 Instruction::SetArrayOwner => {
-                    analysis.uses_array_copy_on_write = true;
+                    analysis.array_cow = true;
                 }
                 _ => {}
             }
@@ -79,15 +75,4 @@ pub fn analyze(data: &GMData) -> CodeAnalysis {
     }
 
     analysis
-}
-
-impl GMData {
-    /// Analyzes some information about the bytecode used in this game.
-    ///
-    /// For more information, see the [`analyze`] function in
-    /// [`crate::gml::analysis`].
-    #[must_use]
-    pub fn analyze_code(&self) -> CodeAnalysis {
-        analyze(self)
-    }
 }

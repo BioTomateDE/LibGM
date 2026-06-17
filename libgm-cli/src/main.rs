@@ -65,8 +65,8 @@ fn run(mut args: cli::Args) -> Result<()> {
             println!();
         }
 
-        // std::fs::create_dir_all("all").unwrap();
-        // for c in &data.codes.codes {
+        // std::fs::create_dir_all("asm").unwrap();
+        // for c in &data.codes.elems {
         //     let n = data.strings.by_ref(c.name)?;
         //     let asm = disassemble_code(c, &data)?;
         //     std::fs::write(format!("asm/{n}.txt"), asm).unwrap();

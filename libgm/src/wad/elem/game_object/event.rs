@@ -19,24 +19,24 @@ use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
 
-// #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-// pub enum EventGroup {
-//     Create,
-//     Destroy,
-//     Alarm,
-//     Step,
-//     Collision,
-//     Keyboard,
-//     Mouse,
-//     Other,
-//     Draw,
-//     KeyPress,
-//     KeyRelease,
-//     Trigger,
-//     Cleanup,
-//     Gesture,
-//     PreCreate,
-// }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EventGroup {
+    Create,
+    Destroy,
+    Alarm,
+    Step,
+    Collision,
+    Keyboard,
+    Mouse,
+    Other,
+    Draw,
+    KeyPress,
+    KeyRelease,
+    Trigger,
+    Cleanup,
+    Gesture,
+    PreCreate,
+}
 
 /// Reference: <https://manual.gamemaker.io/lts/en/The_Asset_Editors/Object_Properties/Object_Events.htm>
 #[derive(Debug, Clone, PartialEq)]
