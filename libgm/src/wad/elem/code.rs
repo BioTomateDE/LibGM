@@ -106,7 +106,7 @@ impl GMElement for Codes {
                     argument_count,
                     weird_local_flag,
                     execution_offset: offset,
-                    parent: None,
+                    parent: GMRef::none(),
                 };
                 modern_data = Some(data);
             }
@@ -126,7 +126,7 @@ impl GMElement for Codes {
                 && let Some(parent_code) = codes_by_pos.get(&start)
                 && let Some(data) = &mut code.modern_data
             {
-                data.parent = Some(*parent_code);
+                data.parent = *parent_code;
                 continue;
             }
 

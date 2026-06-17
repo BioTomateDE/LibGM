@@ -5,26 +5,26 @@ use crate::prelude::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum VariableType {
     /// Used for normal variables, without any arrays or chain references.
-    Normal = 0xA0,
+    Normal,
 
     /// Used for normal single-dimension array variables.
-    Array = 0x00,
+    Array,
 
     /// Used when referencing a variable on another variable, e.g. a chain
     /// reference.
-    StackTop = 0x80,
+    StackTop,
 
     /// Used when referencing variables on room instance IDs, e.g. something
     /// like `inst_01ABCDEF.x` in GML.
-    Instance = 0xE0,
+    Instance,
 
     /// (GMS2.3+) Used in tandem with multidimensional array push operations
     /// (`PushArrayFinal`).
-    MultiPush = 0x10,
+    MultiPush,
 
     /// (GMS2.3+) Used in tandem with multidimensional array push and pop
     /// operations (`PushArrayFinal`, `PopArrayFinal`).
-    MultiPop = 0x90,
+    MultiPop,
 }
 
 impl VariableType {

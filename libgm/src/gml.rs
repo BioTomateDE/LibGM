@@ -14,6 +14,7 @@ use std::ops::Range;
 
 pub use crate::gml::instruction::Instruction;
 use crate::prelude::*;
+use crate::wad::elem::function::CodeLocal;
 
 /// A code entry in a GameMaker data file.
 #[derive(Debug, Clone, PartialEq)]
@@ -48,10 +49,10 @@ impl Code {
         let mut children: Vec<GMRef<Self>> = Vec::new();
 
         for (gmref, code_entry) in data.codes.element_refs() {
-            let Some(parent) = code_entry.parent() else {
+            if !code_entry.is_root() {
                 continue;
-            };
-            let parent = data.codes.by_ref(parent)?;
+            }
+            let parent = data.codes.by_ref(code_entry.parent())?;
             if self.name == parent.name {
                 children.push(gmref);
             }
@@ -73,14 +74,14 @@ impl Code {
     /// so it's a good idea to cache this if possible.
     #[must_use]
     pub fn find_children(code_ref: GMRef<Self>, data: &GMData) -> Vec<GMRef<Self>> {
-        if data.general_info.wad_version < 15 {
+        if data.general_info.wad_version < 15 || code_ref.is_none() {
             return Vec::new();
         }
 
         let mut children: Vec<GMRef<Self>> = Vec::new();
 
         for (gmref, code_entry) in data.codes.element_refs() {
-            if code_entry.parent() == Some(code_ref) {
+            if code_entry.parent() == code_ref {
                 children.push(gmref);
             }
         }
@@ -99,12 +100,12 @@ impl Code {
 
     /// The parent code entry of this code entry, if it has one.
     ///
-    /// This will always be [`None`] for WAD < 15.
+    /// This will always be [`GMRef::none`] for WAD < 15.
     #[must_use]
-    pub const fn parent(&self) -> Option<GMRef<Self>> {
+    pub const fn parent(&self) -> GMRef<Self> {
         match &self.modern_data {
             Some(data) => data.parent,
-            None => None,
+            None => GMRef::none(),
         }
     }
 
@@ -130,6 +131,27 @@ impl Code {
     }
 }
 
+impl GMData {
+    pub fn make_code(&mut self, name: &str, instructions: Vec<Instruction>) -> GMRef<Code> {
+        if let Ok(code) = self.codes.ref_by_name(name, &self.strings) {
+            return code;
+        }
+
+        let name = self.strings.make(name);
+        let modern_data = if self.general_info.wad_version >= 15 {
+            Some(ModernData::default())
+        } else {
+            None
+        };
+        let code = Code { name, instructions, modern_data };
+        let code_ref = self.codes.push(code);
+        self.functions
+            .code_locals
+            .push(CodeLocal { name, variables: Vec::new() });
+        code_ref
+    }
+}
+
 /// Extra data for code entries in WAD Version 15 and higher.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ModernData {
@@ -148,9 +170,8 @@ pub struct ModernData {
     /// code entries, and nonzero for child code entries.
     pub execution_offset: u32,
 
-    /// Parent entry of this code entry, if this is a child entry; [`None`]
-    /// otherwise.
-    pub parent: Option<GMRef<Code>>,
+    /// Parent entry of this code entry, if this is a child entry,
+    pub parent: GMRef<Code>,
 }
 
 /// Gets the total (cumulative) size of all instructions, in bytes.

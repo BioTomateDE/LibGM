@@ -64,13 +64,13 @@ fn slice_instructions_by_bytes(
 /// to identify the code entry name as well as local and argument count.
 pub fn disassemble_code(code: &Code, gm_data: &GMData) -> Result<String> {
     if let Some(data) = &code.modern_data {
-        if let Some(parent) = data.parent {
+        if data.parent.is_some() {
             if data.execution_offset == 0 {
                 bail!("Child code entry has byte offset zero");
             }
             let parent: &Code = gm_data
                 .codes
-                .by_ref(parent)
+                .by_ref(data.parent)
                 .ctx("resolving parent code entry")?;
             // can there be nested parents? cuz it only works for one layer rn
             let instrs = slice_instructions_by_bytes(&parent.instructions, data.execution_offset)?;

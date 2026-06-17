@@ -5,31 +5,13 @@ use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct CodeLocals {
-    pub code_locals: Vec<GMCodeLocal>,
-    pub exists: bool,
-}
-
-impl GMElement for CodeLocals {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let code_locals: Vec<GMCodeLocal> = reader.read_simple_list()?;
-        Ok(Self { code_locals, exists: true })
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_simple_list(&self.code_locals)?;
-        Ok(())
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GMCodeLocal {
+pub struct CodeLocal {
     pub name: GMRef<String>,
     pub variables: Vec<LocalVariable>,
 }
 
-impl GMElement for GMCodeLocal {
+impl GMElement for CodeLocal {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let local_variables_count = reader.read_u32()?;
         let name: GMRef<String> = reader.read_gm_string()?;

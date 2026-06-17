@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::gml::Code;
+use crate::gml::Instruction;
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
@@ -61,5 +62,18 @@ impl GMElement for Script {
             builder.write_resource_id(self.code);
         }
         Ok(())
+    }
+}
+
+impl GMData {
+    pub fn make_script(&mut self, name: &str, instructions: Vec<Instruction>) -> GMRef<Script> {
+        if let Ok(script) = self.scripts.ref_by_name(name, &self.strings) {
+            return script;
+        }
+        self.functions.make(name, &mut self.strings);
+        let code = self.make_code(&format!("gml_Script_{name}"), instructions);
+        let name = self.strings.make(name);
+        let script = Script { name, is_constructor: false, code };
+        self.scripts.push(script)
     }
 }

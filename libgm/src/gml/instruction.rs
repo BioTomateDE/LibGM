@@ -135,7 +135,7 @@ pub enum Instruction {
     /// There is an alternate instruction/mode with the same opcode that swaps
     /// values around on the stack. This operation is known as
     /// [`Instruction::PopSwap`]. Note that this does not apply to this enum
-    /// variant ([`Instruction::Pop`].
+    /// variant ([`Instruction::Pop`]).
     Pop {
         variable: CodeVariable,
         type1: DataType,

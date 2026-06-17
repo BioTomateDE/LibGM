@@ -190,7 +190,7 @@ pub trait GMListChunk: GMChunk {
 
     fn by_ref_mut(&mut self, gm_ref: GMRef<Self::Element>) -> Result<&mut Self::Element>;
 
-    fn push(&mut self, element: Self::Element);
+    fn push(&mut self, element: Self::Element) -> GMRef<Self::Element>;
 
     #[must_use]
     fn len(&self) -> usize;
@@ -286,8 +286,9 @@ macro_rules! gm_list_chunk {
                 gm_ref.opt_resolve_mut(&mut self.elems)
             }
 
-            fn push(&mut self, element: Self::Element) {
+            fn push(&mut self, element: Self::Element) -> GMRef<Self::Element> {
                 self.elems.push(Some(element));
+                (self.elems.len() - 1).into()
             }
 
             fn len(&self) -> usize {
@@ -336,8 +337,9 @@ macro_rules! gm_list_chunk {
                 gm_ref.resolve_mut(&mut self.elems)
             }
 
-            fn push(&mut self, element: Self::Element) {
+            fn push(&mut self, element: Self::Element) -> GMRef<Self::Element> {
                 self.elems.push(element);
+                (self.elems.len() - 1).into()
             }
 
             fn len(&self) -> usize {

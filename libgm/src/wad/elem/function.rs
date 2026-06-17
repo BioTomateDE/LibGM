@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pub mod code_local;
 
-pub use code_local::GMCodeLocal;
-pub use code_local::CodeLocals;
-
+pub use self::code_local::CodeLocal;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::build::builder::DataBuilder;
@@ -18,7 +16,7 @@ use crate::wad::parse::reader::DataReader;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Functions {
     pub elems: Vec<Function>,
-    pub code_locals: CodeLocals,
+    pub code_locals: Vec<CodeLocal>,
     pub exists: bool,
 }
 
@@ -74,11 +72,11 @@ impl GMElement for Functions {
             elems.push(Function { name });
         }
 
-        let code_locals: CodeLocals =
+        let code_locals: Vec<CodeLocal> =
             if reader.general_info.wad_version >= 15 && reader.general_info.version < (2024, 8) {
-                CodeLocals::deserialize(reader)?
+                reader.read_simple_list()?
             } else {
-                CodeLocals::default()
+                Vec::new()
             };
 
         Ok(Self { elems, code_locals, exists: true })
@@ -113,10 +111,7 @@ impl GMElement for Functions {
         }
 
         if builder.wad_version() >= 15 && builder.version() < (2024, 8) {
-            if !self.code_locals.exists {
-                bail!("Code Locals don't exist in WAD version 15+");
-            }
-            self.code_locals.serialize(builder)?;
+            builder.write_simple_list(&self.code_locals)?;
         }
 
         Ok(())
