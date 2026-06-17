@@ -9,16 +9,10 @@ mod tests;
 
 use std::path::PathBuf;
 
-use libgm::gml::Code;
-use libgm::gml::Instruction;
-use libgm::gml::ModernData;
-use libgm::gml::assembly::assemble_instruction;
-use libgm::gml::assembly::assemble_instructions;
 use libgm::gml::assembly::disassemble_code;
 use libgm::prelude::*;
 use libgm::wad::build::build_file;
 use libgm::wad::data::GMData;
-use libgm::wad::elem::script::Script;
 use libgm::wad::parse::ParsingOptions;
 use libgm_cli::diff::print_diffs;
 use tests::Test;
@@ -70,66 +64,6 @@ fn run(mut args: cli::Args) -> Result<()> {
             println!("{assembly}");
             println!();
         }
-
-        // data.strings.make("==========");
-        // data.strings.make("Entering pushenv...");
-        // data.strings.make("Inside pushenv");
-        // data.strings.make("after block 1");
-        // data.strings.make("popped env");
-        // data.strings.make("branch taken!!");
-        // let asm = r#"
-        //     push.s "=========="
-        //     conv.s.v
-        //     call show_debug_message 1
-        //     popz.v
-        //     pushim 1
-        //     pop.v.i self.a
-        //     pushim 921
-        //     push.s "Entering pushenv..."
-        //     conv.s.v
-        //     call show_debug_message 1
-        //     popz.v
-        //     pushenv 27
-        //     push.s "Inside pushenv"
-        //     conv.s.v
-        //     call show_debug_message 1
-        //     popz.v
-        //     pushim 2
-        //     pop.v.i self.b
-        //     push.s "after block 1"
-        //     conv.s.v
-        //     call show_debug_message 1
-        //     popz.v
-        //     popenv -15
-        //     push.s "popped env"
-        //     conv.s.v
-        //     call show_debug_message 1
-        //     popz.v
-        //     pushim 3
-        //     pop.v.i self.c
-        //     br 7
-        //     push.s "branch taken!!"
-        //     conv.s.v
-        //     call show_debug_message 1
-        //     popz.v
-        //     "#;
-        // data.functions.make("show_debug_message", &mut data.strings);
-        // let a = assemble_instructions(asm, &data)?;
-        //
-        // data.make_script("scr_test", a);
-        //
-        // let step = data
-        //     .codes
-        //     .by_name_mut("gml_Object_obj_mainchara_Step_0", &data.strings)?;
-        // step.instructions.extend([
-        //     Instruction::Call {
-        //         function: data.functions.ref_by_name("scr_test", &data.strings)?,
-        //         arg_count: 0,
-        //     },
-        //     Instruction::PopDiscard {
-        //         data_type: libgm::gml::instruction::DataType::Variable,
-        //     },
-        // ]);
 
         // std::fs::create_dir_all("asm").unwrap();
         // for c in &data.codes.elems {

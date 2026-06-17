@@ -80,10 +80,10 @@ pub struct Sound {
     /// The audio group this audio entry belongs to.
     /// These can only be used with the regular audio system.
     /// This is used if the `Flags.regular` flag is set (always set for now).
-    /// For more information, see [`GMAudioGroup`].
+    /// For more information, see [`AudioGroup`].
     pub audio_group: GMRef<AudioGroup>,
 
-    /// The reference to the [`GMAudio`] audio file.
+    /// The reference to the [`Audio`] audio file.
     /// This is used if the `Flags.embedded` flag is set.
     pub audio: GMRef<Audio>,
 

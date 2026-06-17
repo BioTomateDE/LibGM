@@ -50,7 +50,7 @@ pub struct RoomView {
 
     /// The game object which this camera view follows.
     ///
-    /// "Object Following - <Game Object>"
+    /// "Object Following - (Game Object Selector)"
     pub object: GMRef<GameObject>,
 }
 

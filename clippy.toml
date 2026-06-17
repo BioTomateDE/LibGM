@@ -6,6 +6,7 @@
 doc-valid-idents = [
     # Programming terms
     "SemVer",
+    "CoW",
 
     # Official GM related terms
     "GameMaker",

@@ -66,8 +66,8 @@ impl Code {
     /// This is always `false` before WAD 15, since child/parent code entries
     /// did not exist then.
     ///
-    /// This function takes a `GMRef<GMCode>` instead of `&GMCode`.
-    /// If you only have a [`GMCode`] available, you'll have to
+    /// This function takes a `GMRef<Code>` instead of `&Code`.
+    /// If you only have a [`Code`] available, you'll have to
     /// use [`Self::find_children_by_name`] instead.
     ///
     /// This has to iterate over all code entries in the data file,

@@ -90,7 +90,7 @@ pub struct Background {
     pub smooth: bool,
     /// Whether to preload the background.
     pub preload: bool,
-    /// The [`GMTexturePageItem`] this background uses.
+    /// The [`TexturePageItem`] this background uses.
     pub texture: GMRef<TexturePageItem>,
     /// Only set in GMS 2.0+.
     pub gms2_data: Option<GMS2Data>,
