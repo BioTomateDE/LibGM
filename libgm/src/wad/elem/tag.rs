@@ -33,26 +33,6 @@ impl GMElement for Tags {
     }
 }
 
-impl Tags {
-    /// Attempts to get asset tags by the given id.
-    #[must_use]
-    pub fn by_id(&self, id: i32) -> Option<&Vec<GMRef<String>>> {
-        self.asset_tags
-            .iter()
-            .find(|at| at.id == id)
-            .map(|at| &at.tags)
-    }
-
-    /// Attempts to get asset tags by the given id.
-    #[must_use]
-    pub fn by_id_mut(&mut self, id: i32) -> Option<&mut Vec<GMRef<String>>> {
-        self.asset_tags
-            .iter_mut()
-            .find(|at| at.id == id)
-            .map(|at| &mut at.tags)
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssetTags {
     pub id: i32,

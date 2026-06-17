@@ -165,8 +165,8 @@ pub trait GMChunk: GMElement + Default {
 /// All chunk elements that represent a collection of elements should implement
 /// this trait. The only exceptions are `GEN8` and `OPTN`.
 pub trait GMListChunk: GMChunk {
-    #[expect(private_bounds)]
-    type Element: GMElement;
+    // usually also GMElement
+    type Element;
 
     #[must_use]
     fn elements(&self) -> impl Iterator<Item = &Self::Element> {

@@ -17,9 +17,6 @@ use crate::wad::version::GMVersion;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Extensions {
     pub elems: Vec<Extension>,
-    /// Set in GMS2+ (and some scuffed GMS1 versions)
-    // TODO: merge into GMExtension
-    pub product_id_data: Vec<[u8; 16]>,
     pub exists: bool,
 }
 
@@ -28,54 +25,33 @@ gm_named_list_chunk!(EXTN, Extensions, Extension, direct);
 
 impl GMElement for Extensions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let elems: Vec<Extension> = reader.read_pointer_list()?;
+        let mut elems: Vec<Extension> = reader.read_pointer_list()?;
 
-        // Strange data for each extension, some kind of unique
-        // identifier based on the product ID for each of them.
-        let mut product_id_data = Vec::new();
-        if product_id_data_eligible(&reader.general_info.version) {
-            product_id_data.reserve(elems.len());
-            for _ in 0..elems.len() {
+        if product_id_data_eligible(reader.general_info.version) {
+            for elem in &mut elems {
                 let bytes: [u8; 16] = reader.read_bytes_const()?.to_owned();
-                product_id_data.push(bytes);
+                elem.product_id_data = Some(bytes);
             }
         }
 
-        Ok(Self { elems, product_id_data, exists: true })
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_pointer_list(&self.elems)?;
 
-        if !product_id_data_eligible(&builder.gm_data.general_info.version) {
+        if !product_id_data_eligible(builder.version()) {
             return Ok(());
         }
 
-        let ext_count = self.elems.len();
-        let prod_count = self.product_id_data.len();
-
-        if prod_count > ext_count {
-            bail!(
-                "There are more Product ID data than extensions: {} > {}",
-                prod_count,
-                ext_count,
-            )
-        }
-        if prod_count < ext_count {
-            log::warn!(
-                "The last {ext_count} extension don't have any Product ID data; null bytes will \
-                 be written instead"
-            );
-        }
-
-        for data in &self.product_id_data {
+        for elem in &self.elems {
+            let Some(data) = &elem.product_id_data else {
+                bail!(
+                    "Extension's Product ID Data is not set in {}",
+                    builder.version()
+                );
+            };
             builder.write_bytes(data);
-        }
-
-        // Potentially write null bytes for extensions
-        // that don't have any product id data (yet).
-        for _ in ext_count..prod_count {
-            builder.write_bytes(&[0u8; 16]);
         }
 
         Ok(())
@@ -85,13 +61,24 @@ impl GMElement for Extensions {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Extension {
     pub folder_name: GMRef<String>,
+
     pub name: GMRef<String>,
+
     /// Present in 2023.4+
     pub version: Option<GMRef<String>>,
+
     pub class_name: GMRef<String>,
+
     pub files: Vec<File>,
+
     /// Present in 2022.6+
     pub options: Vec<ExtOption>,
+
+    /// Strange data for each extension, some kind of unique
+    /// identifier based on the product ID for each of them.
+    ///
+    /// Present in GMS2+ (and some scuffed GMS1 versions)
+    pub product_id_data: Option<[u8; 16]>,
 }
 
 impl GMElement for Extension {
@@ -128,6 +115,7 @@ impl GMElement for Extension {
             class_name,
             files,
             options,
+            product_id_data: None,
         })
     }
 
@@ -167,8 +155,7 @@ gm_enum!( Kind {
 });
 
 #[must_use]
-const fn product_id_data_eligible(ver: &GMVersion) -> bool {
-    // NOTE: I do not know if 1773 is the earliest version which contains product
-    // IDs.
+const fn product_id_data_eligible(ver: GMVersion) -> bool {
+    // NOTE: I do not know if 1773 is the earliest version which contains product IDs.
     ver.major >= 2 || (ver.major == 1 && ver.build >= 1773) || (ver.major == 1 && ver.build == 1539)
 }

@@ -2,7 +2,7 @@
 use crate::prelude::*;
 use crate::util::assert;
 use crate::wad::build::builder::DataBuilder;
-use crate::wad::chunk::gm_chunk;
+use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
 
@@ -15,8 +15,7 @@ pub struct Strings {
     pub exists: bool,
 }
 
-gm_chunk!(STRG, Strings);
-// gm_list_chunk!(STRG, GMStrings, String, strings, direct);
+gm_list_chunk!(STRG, Strings, String, direct);
 
 impl GMElement for Strings {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -94,36 +93,5 @@ impl Strings {
     pub fn make_new(&mut self, string: String) -> GMRef<String> {
         self.elems.push(string);
         GMRef::from(self.len() - 1)
-    }
-
-    pub fn element_refs(&self) -> impl Iterator<Item = (GMRef<String>, &String)> {
-        self.elems
-            .iter()
-            .enumerate()
-            .map(|(idx, string)| (GMRef::from(idx), string))
-    }
-
-    pub fn element_refs_mut(&mut self) -> impl Iterator<Item = (GMRef<String>, &mut String)> {
-        self.elems
-            .iter_mut()
-            .enumerate()
-            .map(|(idx, string)| (GMRef::from(idx), string))
-    }
-
-    pub fn by_ref(&self, gm_ref: GMRef<String>) -> Result<&String> {
-        gm_ref.resolve(&self.elems)
-    }
-
-    pub fn by_ref_mut(&mut self, gm_ref: GMRef<String>) -> Result<&mut String> {
-        gm_ref.resolve_mut(&mut self.elems)
-    }
-
-    pub fn push(&mut self, string: String) {
-        self.elems.push(string);
-    }
-
-    #[must_use]
-    pub const fn len(&self) -> usize {
-        self.elems.len()
     }
 }
