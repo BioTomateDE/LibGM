@@ -149,7 +149,7 @@ pub struct GMData {
     pub particle_systems: ParticleSystems,      // PSYS
     pub paths: Paths,                           // PATH
     pub rooms: Rooms,                           // ROOM
-    pub ui_nodes: UINodes,                  // UILR
+    pub ui_nodes: UINodes,                      // UILR
     pub scripts: Scripts,                       // SCPT
     pub sequences: Sequences,                   // SEQN
     pub shaders: Shaders,                       // SHDR

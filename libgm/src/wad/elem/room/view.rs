@@ -6,21 +6,51 @@ use crate::wad::elem::game_object::GameObject;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
+/// "Viewports and Cameras"
 #[derive(Debug, Clone, PartialEq)]
 pub struct RoomView {
+    /// "Enable Viewports"
     pub enabled: bool,
+
+    /// "Camera Properties - X Pos"
     pub view_x: i32,
+
+    /// "Camera Properties - Y Pos"
     pub view_y: i32,
+
+    /// "Camera Properties - Width"
     pub view_width: i32,
+
+    /// "Camera Properties - Height"
     pub view_height: i32,
+
+    /// "Viewport Properties - X Pos"
     pub port_x: i32,
+
+    /// "Viewport Properties - Y Pos"
     pub port_y: i32,
+
+    /// "Viewport Properties - Width"
     pub port_width: i32,
+
+    /// "Viewport Properties - Height"
     pub port_height: i32,
+
+    /// "Object Following - Horizontal Border"
     pub border_x: u32,
+
+    /// "Object Following - Vertical Border"
     pub border_y: u32,
+
+    /// "Object Following - Horizontal Speed"
     pub speed_x: i32,
+
+    /// "Object Following - Vertical Speed"
     pub speed_y: i32,
+
+    /// The game object which this camera view follows.
+    ///
+    /// "Object Following - <Game Object>"
     pub object: GMRef<GameObject>,
 }
 

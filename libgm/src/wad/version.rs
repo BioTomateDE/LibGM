@@ -165,7 +165,7 @@ impl Display for GMVersion {
         let release = self.release;
         let build = self.build;
         write!(f, "{major}.{minor}")?;
-        if release != 0 {
+        if release != 0 || build != 0 {
             write!(f, ".{release}")?;
             if build != 0 {
                 write!(f, ".{build}")?;
