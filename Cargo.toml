@@ -13,5 +13,12 @@ license = "GPL-3.0-only"
 overflow-checks = true
 debug-assertions = true
 
+# Optimize dependencies for faster runtime
 [profile.dev.package."*"]
 opt-level = 3
+
+[profile.dev.package.libgm]
+opt-level = 0
+
+[profile.dev.package.libgm-cli]
+opt-level = 0
