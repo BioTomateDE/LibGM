@@ -8,20 +8,20 @@ use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMPaths {
-    pub paths: Vec<Option<GMPath>>,
+    pub elems: Vec<Option<GMPath>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(PATH, GMPaths, GMPath, paths, nullable);
+gm_named_list_chunk!(PATH, GMPaths, GMPath, nullable);
 
 impl GMElement for GMPaths {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let paths: Vec<Option<GMPath>> = reader.read_pointer_list_opt()?;
-        Ok(Self { paths, exists: true })
+        let elems: Vec<Option<GMPath>> = reader.read_pointer_list_opt()?;
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list_opt(&self.paths)?;
+        builder.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }

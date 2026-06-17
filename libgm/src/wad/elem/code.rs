@@ -29,16 +29,16 @@ use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMCodes {
-    pub codes: Vec<GMCode>,
+    pub elems: Vec<GMCode>,
     pub exists: bool,
 }
 
-gm_list_chunk!(CODE, GMCodes, GMCode, codes, direct);
+gm_list_chunk!(CODE, GMCodes, GMCode, direct);
 
 impl GMNamedListChunk for GMCodes {
     fn ref_by_name(&self, name: &str, gm_strings: &GMStrings) -> Result<GMRef<Self::Element>> {
         for (gm_ref, elem) in self.element_refs() {
-            let elem_name: &String = elem.name.resolve(&gm_strings.strings)?;
+            let elem_name: &String = elem.name.resolve(&gm_strings.elems)?;
             if name == elem_name {
                 return Ok(gm_ref);
             }
@@ -53,18 +53,18 @@ impl GMElement for GMCodes {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         // This can happen with YYC.
         if reader.chunk.is_empty() {
-            return Ok(Self { codes: vec![], exists: false });
+            return Ok(Self { elems: vec![], exists: false });
         }
 
         let pointers: Vec<u32> = reader.read_simple_list()?;
         let count: usize = pointers.len();
 
         let Some(&first_pos) = pointers.first() else {
-            return Ok(Self { codes: vec![], exists: true });
+            return Ok(Self { elems: vec![], exists: true });
         };
         reader.cur_pos = first_pos;
 
-        let mut codes: Vec<GMCode> = vec_with_capacity(count as u32)?;
+        let mut elems: Vec<GMCode> = vec_with_capacity(count as u32)?;
         let mut instructions_ranges: Vec<(u32, u32)> = Vec::with_capacity(count);
         let mut codes_by_pos: HashMap<u32, GMRef<GMCode>> = HashMap::new();
         let mut last_code_entry_pos = reader.cur_pos;
@@ -111,14 +111,14 @@ impl GMElement for GMCodes {
                 modern_data = Some(data);
             }
 
-            codes.push(GMCode { name, instructions: vec![], modern_data });
+            elems.push(GMCode { name, instructions: vec![], modern_data });
 
             instructions_ranges.push((instructions_start_pos, instructions_end_pos));
             last_code_entry_pos = reader.cur_pos;
         }
 
         for (i, (start, end)) in instructions_ranges.into_iter().enumerate() {
-            let code: &mut GMCode = &mut codes[i];
+            let code: &mut GMCode = &mut elems[i];
             let length = end - start;
 
             // If WAD15+ and the instructions pointer is known, then it's a child code entry
@@ -156,19 +156,19 @@ impl GMElement for GMCodes {
         reader.cur_pos = last_code_entry_pos;
         // Set pos to the supposed chunk end (since instructions are stored separately in WAD15+)
 
-        Ok(Self { codes, exists: true })
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_usize(self.codes.len())?;
+        builder.write_usize(self.elems.len())?;
         let pointer_list_pos: u32 = builder.pos();
-        for _ in 0..self.codes.len() {
+        for _ in 0..self.elems.len() {
             builder.write_u32(0xDEAD_C0DE);
         }
 
         // WAD < 15 my beloved
         if builder.wad_version() < 15 {
-            for (i, code) in self.codes.iter().enumerate() {
+            for (i, code) in self.elems.iter().enumerate() {
                 builder.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
                 builder.write_gm_string(code.name)?;
                 let length_placeholder_pos = builder.pos();
@@ -189,9 +189,9 @@ impl GMElement for GMCodes {
         }
 
         // In WAD 15+, the codes' instructions are written before the codes metadata
-        let mut instructions_ranges: Vec<(u32, u32)> = Vec::with_capacity(self.codes.len());
+        let mut instructions_ranges: Vec<(u32, u32)> = Vec::with_capacity(self.elems.len());
 
-        for (i, code) in self.codes.iter().enumerate() {
+        for (i, code) in self.elems.iter().enumerate() {
             if code.modern_data.as_ref().unwrap().parent.is_some() {
                 // If this is a child code entry, don't write instructions; just repeat last pointer
                 let prev_range = instructions_ranges
@@ -211,7 +211,7 @@ impl GMElement for GMCodes {
             instructions_ranges.push((start, end));
         }
 
-        for (i, code) in self.codes.iter().enumerate() {
+        for (i, code) in self.elems.iter().enumerate() {
             builder.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
             let (start, end) = instructions_ranges[i];
             let length: u32 = end - start;

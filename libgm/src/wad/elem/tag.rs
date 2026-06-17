@@ -7,7 +7,7 @@ use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMTags {
-    pub tags: Vec<GMRef<String>>,
+    pub elems: Vec<GMRef<String>>,
     pub asset_tags: Vec<AssetTags>,
     pub exists: bool,
 }
@@ -18,16 +18,16 @@ impl GMElement for GMTags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
         reader.read_gms2_chunk_version("TAGS Version")?;
-        let tags: Vec<GMRef<String>> = reader.read_simple_list()?;
+        let elems: Vec<GMRef<String>> = reader.read_simple_list()?;
         let asset_tags: Vec<AssetTags> = reader.read_pointer_list()?;
 
-        Ok(Self { tags, asset_tags, exists: true })
+        Ok(Self { elems, asset_tags, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.align(4);
         builder.write_i32(1); // TAGS version
-        builder.write_simple_list(&self.tags)?;
+        builder.write_simple_list(&self.elems)?;
         builder.write_pointer_list(&self.asset_tags)?;
         Ok(())
     }

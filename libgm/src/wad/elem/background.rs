@@ -18,14 +18,14 @@ const ALIGNMENT: u32 = 8;
 /// but are sometimes repurposed as use for a tileset as well.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMBackgrounds {
-    pub backgrounds: Vec<Option<GMBackground>>,
+    pub elems: Vec<Option<GMBackground>>,
     /// Semi-internal flag that tracks whether to
     /// align the pointer list to 8 when serializing.
     pub align: bool,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(BGND, GMBackgrounds, GMBackground, backgrounds, nullable);
+gm_named_list_chunk!(BGND, GMBackgrounds, GMBackground, nullable);
 
 impl GMElement for GMBackgrounds {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -46,11 +46,11 @@ impl GMElement for GMBackgrounds {
             backgrounds[idx] = Some(background);
         }
 
-        Ok(Self { backgrounds, align, exists: true })
+        Ok(Self { elems: backgrounds, align, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        let count: usize = self.backgrounds.len();
+        let count: usize = self.elems.len();
         let ctx = || format!("building nullable pointer list of {count} Backgrounds/Tilesets");
 
         builder.write_usize(count).ctx(ctx)?;
@@ -59,7 +59,7 @@ impl GMElement for GMBackgrounds {
             builder.write_u32(0);
         }
 
-        for (i, background_opt) in self.backgrounds.iter().enumerate() {
+        for (i, background_opt) in self.elems.iter().enumerate() {
             let Some(background) = background_opt else {
                 continue;
             };

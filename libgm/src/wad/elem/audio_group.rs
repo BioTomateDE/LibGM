@@ -11,20 +11,20 @@ use crate::wad::parse::reader::DataReader;
 /// Audio Groups are only available to use in the regular audio system.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMAudioGroups {
-    pub audio_groups: Vec<Option<GMAudioGroup>>,
+    pub elems: Vec<Option<GMAudioGroup>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(AGRP, GMAudioGroups, GMAudioGroup, audio_groups, nullable);
+gm_named_list_chunk!(AGRP, GMAudioGroups, GMAudioGroup, nullable);
 
 impl GMElement for GMAudioGroups {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let audio_groups: Vec<Option<GMAudioGroup>> = reader.read_pointer_list_opt()?;
-        Ok(Self { audio_groups, exists: true })
+        let elems: Vec<Option<GMAudioGroup>> = reader.read_pointer_list_opt()?;
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list_opt(&self.audio_groups)?;
+        builder.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }

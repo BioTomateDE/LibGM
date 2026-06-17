@@ -25,7 +25,7 @@ pub fn shuffle_textures(data: &mut GMData) {
     let mut pools = Pools::default();
     let mut sizes = Vec::new();
 
-    for texture in std::mem::take(&mut data.texture_page_items.texture_page_items) {
+    for texture in std::mem::take(&mut data.texture_page_items.elems) {
         let size: Size = segregation(&mut pools, texture);
         sizes.push(size);
     }
@@ -44,7 +44,7 @@ pub fn shuffle_textures(data: &mut GMData) {
             Size::Massive => pools.massive.pop(),
         }
         .unwrap();
-        data.texture_page_items.texture_page_items.push(texture);
+        data.texture_page_items.elems.push(texture);
     }
 }
 

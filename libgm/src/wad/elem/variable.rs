@@ -19,7 +19,7 @@ use crate::wad::reference::GMRef;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMVariables {
     /// List of all variables; mixing global, local and self.
-    pub variables: Vec<GMVariable>,
+    pub elems: Vec<GMVariable>,
 
     /// Set in WAD 15 and above.
     pub modern_header: Option<ModernHeader>,
@@ -27,7 +27,7 @@ pub struct GMVariables {
     pub exists: bool,
 }
 
-gm_list_chunk!(VARI, GMVariables, GMVariable, variables, direct);
+gm_list_chunk!(VARI, GMVariables, GMVariable, direct);
 
 impl GMVariables {
     // This method is still buggy, use with caution.
@@ -49,7 +49,7 @@ impl GMVariables {
             instance_type
         };
 
-        for (i, variable) in self.variables.iter().enumerate() {
+        for (i, variable) in self.elems.iter().enumerate() {
             if variable.name != name {
                 continue;
             }
@@ -88,7 +88,7 @@ impl GMVariables {
         }
 
         // Now actually create the variable
-        let variable_ref: GMRef<GMVariable> = self.variables.len().into();
+        let variable_ref: GMRef<GMVariable> = self.elems.len().into();
 
         let variable = GMVariable {
             name,
@@ -98,7 +98,7 @@ impl GMVariables {
             }),
         };
 
-        self.variables.push(variable);
+        self.elems.push(variable);
 
         Ok(variable_ref)
     }
@@ -114,7 +114,7 @@ impl GMElement for GMVariables {
         let variable_count = (reader.chunk.length() / variable_size) as usize;
 
         let mut occurrence_infos: Vec<(u32, u32)> = Vec::with_capacity(variable_count);
-        let mut variables: Vec<GMVariable> = Vec::with_capacity(variable_count);
+        let mut elems: Vec<GMVariable> = Vec::with_capacity(variable_count);
 
         // Parse variables
         while reader.cur_pos + variable_size <= reader.chunk.end_pos {
@@ -126,7 +126,7 @@ impl GMElement for GMVariables {
             let first_occurrence_pos = reader.read_u32()?;
             occurrence_infos.push((occurrence_count, first_occurrence_pos));
 
-            variables.push(GMVariable { name, modern_data });
+            elems.push(GMVariable { name, modern_data });
         }
 
         // Resolve occurrences
@@ -149,7 +149,7 @@ impl GMElement for GMVariables {
             for occurrence in occurrences {
                 let var_ref: GMRef<GMVariable> = i.into();
                 // fallback value is never read in wad < 15
-                let instance_type = variables[i]
+                let instance_type = elems[i]
                     .modern_data
                     .as_ref()
                     .map_or(InstanceType::Self_, |d| d.instance_type);
@@ -164,8 +164,8 @@ impl GMElement for GMVariables {
                          variable #{i} with name {:?}",
                         occurrence,
                         old_var.0.index,
-                        variables[old_var.0.index as usize].name,
-                        variables[i].name,
+                        elems[old_var.0.index as usize].name,
+                        elems[i].name,
                     );
                 }
             }
@@ -174,12 +174,12 @@ impl GMElement for GMVariables {
         reader.chunk = saved_chunk;
         reader.cur_pos = saved_position;
 
-        Ok(Self { variables, modern_header, exists: true })
+        Ok(Self { elems, modern_header, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_if_wad_ver(&self.modern_header, "Scuffed WAD 15+ fields", 15)?;
-        for (i, variable) in self.variables.iter().enumerate() {
+        for (i, variable) in self.elems.iter().enumerate() {
             builder.write_gm_string(variable.name)?;
             builder.write_if_wad_ver(&variable.modern_data, "WAD 15 data", 15)?;
 

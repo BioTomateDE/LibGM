@@ -22,18 +22,18 @@ pub(crate) const QOI_HEADER: &[u8; 4] = b"fioq";
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMTexturePages {
-    pub texture_pages: Vec<GMTexturePage>,
+    pub elems: Vec<GMTexturePage>,
     pub exists: bool,
 }
 
 // also not sure if direct
-gm_list_chunk!(TXTR, GMTexturePages, GMTexturePage, texture_pages, direct);
+gm_list_chunk!(TXTR, GMTexturePages, GMTexturePage, direct);
 
 impl GMElement for GMTexturePages {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
         let count = pointers.len();
-        let mut texture_pages: Vec<GMTexturePage> = Vec::with_capacity(count);
+        let mut elems: Vec<GMTexturePage> = Vec::with_capacity(count);
         let mut data_start_positions: Vec<u32> = Vec::with_capacity(count);
 
         for pointer in pointers {
@@ -55,7 +55,7 @@ impl GMElement for GMTexturePages {
                 data_2022_9,
                 image: None,
             };
-            texture_pages.push(texture_page);
+            elems.push(texture_page);
         }
 
         for i in 0..count {
@@ -72,18 +72,18 @@ impl GMElement for GMTexturePages {
                 .unwrap_or(reader.chunk.end_pos);
 
             reader.cur_pos = blob_pos;
-            let texture_page = &mut texture_pages[i];
+            let texture_page = &mut elems[i];
             let image: GMImage =
                 read_raw_texture(reader, max_stream_end_pos, texture_page.texture_block_size)?;
             texture_page.image = Some(image);
         }
 
         reader.align(4)?;
-        Ok(Self { texture_pages, exists: true })
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        let count = self.texture_pages.len();
+        let count = self.elems.len();
         builder.write_usize(count)?;
         let pointer_list_pos: u32 = builder.pos();
         for _ in 0..count {
@@ -92,7 +92,7 @@ impl GMElement for GMTexturePages {
 
         let mut texture_block_size_placeholders = vec![0u32; count];
 
-        for (i, texture_page) in self.texture_pages.iter().enumerate() {
+        for (i, texture_page) in self.elems.iter().enumerate() {
             builder.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
 
             builder.write_u32(texture_page.scaled);
@@ -125,7 +125,7 @@ impl GMElement for GMTexturePages {
             }
         }
 
-        for (i, texture_page) in self.texture_pages.iter().enumerate() {
+        for (i, texture_page) in self.elems.iter().enumerate() {
             let Some(img) = &texture_page.image else {
                 continue;
             };

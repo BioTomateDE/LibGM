@@ -22,20 +22,20 @@ use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMSprites {
-    pub sprites: Vec<Option<GMSprite>>,
+    pub elems: Vec<Option<GMSprite>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(SPRT, GMSprites, GMSprite, sprites, nullable);
+gm_named_list_chunk!(SPRT, GMSprites, GMSprite, nullable);
 
 impl GMElement for GMSprites {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let sprites: Vec<Option<GMSprite>> = reader.read_pointer_list_opt()?;
-        Ok(Self { sprites, exists: true })
+        let elems: Vec<Option<GMSprite>> = reader.read_pointer_list_opt()?;
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list_opt(&self.sprites)?;
+        builder.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }

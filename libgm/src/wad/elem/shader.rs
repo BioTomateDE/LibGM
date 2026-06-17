@@ -12,11 +12,11 @@ use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMShaders {
-    pub shaders: Vec<Option<GMShader>>,
+    pub elems: Vec<Option<GMShader>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(SHDR, GMShaders, GMShader, shaders, nullable);
+gm_named_list_chunk!(SHDR, GMShaders, GMShader, nullable);
 
 impl GMElement for GMShaders {
     #[expect(clippy::too_many_lines)]
@@ -37,7 +37,7 @@ impl GMElement for GMShaders {
         }
         locations.push(reader.chunk.end_pos);
 
-        let mut shaders: Vec<Option<GMShader>> = vec![None; real_count as usize];
+        let mut elems: Vec<Option<GMShader>> = vec![None; real_count as usize];
 
         for i in 0..real_count as usize {
             let pointer = locations[i];
@@ -138,7 +138,7 @@ impl GMElement for GMShaders {
             let cg_ps3_pixel_data: Option<ShaderData> =
                 read_shader_data(reader, entry_end, 16, cg_ps3_pixel_ptr, cg_ps3_pixel_len, 0)?;
 
-            shaders[i] = Some(GMShader {
+            elems[i] = Some(GMShader {
                 name,
                 shader_type,
                 glsl_es_vertex,
@@ -160,11 +160,11 @@ impl GMElement for GMShaders {
             });
         }
 
-        Ok(Self { shaders, exists: true })
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list_opt(&self.shaders)?;
+        builder.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }

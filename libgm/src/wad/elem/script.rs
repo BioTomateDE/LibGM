@@ -10,21 +10,21 @@ use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMScripts {
-    pub scripts: Vec<GMScript>,
+    pub elems: Vec<GMScript>,
     pub exists: bool,
 }
 
 // not sure if direct
-gm_named_list_chunk!(SCPT, GMScripts, GMScript, scripts, direct);
+gm_named_list_chunk!(SCPT, GMScripts, GMScript, direct);
 
 impl GMElement for GMScripts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let scripts: Vec<GMScript> = reader.read_pointer_list()?;
-        Ok(Self { scripts, exists: true })
+        let elems: Vec<GMScript> = reader.read_pointer_list()?;
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.scripts)?;
+        builder.write_pointer_list(&self.elems)?;
         Ok(())
     }
 }

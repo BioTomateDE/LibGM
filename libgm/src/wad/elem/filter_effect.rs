@@ -7,30 +7,24 @@ use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMFilterEffects {
-    pub filter_effects: Vec<GMFilterEffect>,
+    pub elems: Vec<GMFilterEffect>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(
-    FEDS,
-    GMFilterEffects,
-    GMFilterEffect,
-    filter_effects,
-    direct
-);
+gm_named_list_chunk!(FEDS, GMFilterEffects, GMFilterEffect, direct);
 
 impl GMElement for GMFilterEffects {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
         reader.read_gms2_chunk_version("FEDS Version")?;
-        let filter_effects: Vec<GMFilterEffect> = reader.read_pointer_list()?;
-        Ok(Self { filter_effects, exists: true })
+        let elems: Vec<GMFilterEffect> = reader.read_pointer_list()?;
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.align(4);
         builder.write_i32(1); // FEDS version
-        builder.write_pointer_list(&self.filter_effects)?;
+        builder.write_pointer_list(&self.elems)?;
         Ok(())
     }
 }

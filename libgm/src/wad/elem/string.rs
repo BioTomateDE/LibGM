@@ -10,7 +10,7 @@ const ALIGNMENT: u32 = 4;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMStrings {
-    pub strings: Vec<String>,
+    pub elems: Vec<String>,
     pub align: bool,
     pub exists: bool,
 }
@@ -23,7 +23,7 @@ impl GMElement for GMStrings {
         let pointers: Vec<u32> = reader.read_simple_list()?;
         let align: bool = pointers.iter().all(|&p| p.is_multiple_of(ALIGNMENT));
 
-        let mut strings: Vec<String> = Vec::with_capacity(pointers.len());
+        let mut elems: Vec<String> = Vec::with_capacity(pointers.len());
 
         for (i, pointer) in pointers.into_iter().enumerate() {
             if align {
@@ -38,15 +38,15 @@ impl GMElement for GMStrings {
             let string: String = reader.read_literal_string(string_length)?;
             let byte = reader.read_u8()?;
             assert::int(byte, 0, "Null terminator byte after string")?;
-            strings.push(string);
+            elems.push(string);
         }
 
         reader.align(0x80)?;
-        Ok(Self { strings, align, exists: true })
+        Ok(Self { elems, align, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        let count = self.strings.len();
+        let count = self.elems.len();
 
         builder.write_usize(count)?;
         let pointer_list_pos = builder.pos();
@@ -54,7 +54,7 @@ impl GMElement for GMStrings {
             builder.write_u32(0xDEAD_C0DE);
         }
 
-        for (idx, string) in self.strings.iter().enumerate() {
+        for (idx, string) in self.elems.iter().enumerate() {
             if self.align {
                 builder.align(ALIGNMENT);
             }
@@ -92,38 +92,38 @@ impl GMStrings {
 
     #[inline]
     pub fn make_new(&mut self, string: String) -> GMRef<String> {
-        self.strings.push(string);
+        self.elems.push(string);
         GMRef::from(self.len() - 1)
     }
 
     pub fn element_refs(&self) -> impl Iterator<Item = (GMRef<String>, &String)> {
-        self.strings
+        self.elems
             .iter()
             .enumerate()
             .map(|(idx, string)| (GMRef::from(idx), string))
     }
 
     pub fn element_refs_mut(&mut self) -> impl Iterator<Item = (GMRef<String>, &mut String)> {
-        self.strings
+        self.elems
             .iter_mut()
             .enumerate()
             .map(|(idx, string)| (GMRef::from(idx), string))
     }
 
     pub fn by_ref(&self, gm_ref: GMRef<String>) -> Result<&String> {
-        gm_ref.resolve(&self.strings)
+        gm_ref.resolve(&self.elems)
     }
 
     pub fn by_ref_mut(&mut self, gm_ref: GMRef<String>) -> Result<&mut String> {
-        gm_ref.resolve_mut(&mut self.strings)
+        gm_ref.resolve_mut(&mut self.elems)
     }
 
     pub fn push(&mut self, string: String) {
-        self.strings.push(string);
+        self.elems.push(string);
     }
 
     #[must_use]
     pub const fn len(&self) -> usize {
-        self.strings.len()
+        self.elems.len()
     }
 }

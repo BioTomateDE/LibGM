@@ -16,45 +16,42 @@ use crate::wad::version::GMVersion;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMExtensions {
-    pub extensions: Vec<GMExtension>,
+    pub elems: Vec<GMExtension>,
     /// Set in GMS2+ (and some scuffed GMS1 versions)
+    // TODO: merge into GMExtension
     pub product_id_data: Vec<[u8; 16]>,
     pub exists: bool,
 }
 
 // not sure if nullable
-gm_named_list_chunk!(EXTN, GMExtensions, GMExtension, extensions, direct);
+gm_named_list_chunk!(EXTN, GMExtensions, GMExtension, direct);
 
 impl GMElement for GMExtensions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let extensions: Vec<GMExtension> = reader.read_pointer_list()?;
+        let elems: Vec<GMExtension> = reader.read_pointer_list()?;
 
         // Strange data for each extension, some kind of unique
         // identifier based on the product ID for each of them.
         let mut product_id_data = Vec::new();
         if product_id_data_eligible(&reader.general_info.version) {
-            product_id_data.reserve(extensions.len());
-            for _ in 0..extensions.len() {
+            product_id_data.reserve(elems.len());
+            for _ in 0..elems.len() {
                 let bytes: [u8; 16] = reader.read_bytes_const()?.to_owned();
                 product_id_data.push(bytes);
             }
         }
 
-        Ok(Self {
-            extensions,
-            product_id_data,
-            exists: true,
-        })
+        Ok(Self { elems, product_id_data, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.extensions)?;
+        builder.write_pointer_list(&self.elems)?;
 
         if !product_id_data_eligible(&builder.gm_data.general_info.version) {
             return Ok(());
         }
 
-        let ext_count = self.extensions.len();
+        let ext_count = self.elems.len();
         let prod_count = self.product_id_data.len();
 
         if prod_count > ext_count {

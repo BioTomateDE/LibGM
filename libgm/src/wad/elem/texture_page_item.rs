@@ -10,37 +10,31 @@ use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMTexturePageItems {
-    pub texture_page_items: Vec<GMTexturePageItem>,
+    pub elems: Vec<GMTexturePageItem>,
     pub exists: bool,
 }
 
-gm_list_chunk!(
-    TPAG,
-    GMTexturePageItems,
-    GMTexturePageItem,
-    texture_page_items,
-    direct
-);
+gm_list_chunk!(TPAG, GMTexturePageItems, GMTexturePageItem, direct);
 
 impl GMElement for GMTexturePageItems {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
-        let mut texture_page_items: Vec<GMTexturePageItem> = Vec::with_capacity(pointers.len());
+        let mut elems: Vec<GMTexturePageItem> = Vec::with_capacity(pointers.len());
 
         for (i, pointer) in pointers.into_iter().enumerate() {
             reader.cur_pos = pointer;
             reader
                 .texture_page_item_occurrences
                 .insert(pointer, GMRef::from(i));
-            texture_page_items.push(GMTexturePageItem::deserialize(reader)?);
+            elems.push(GMTexturePageItem::deserialize(reader)?);
         }
 
         reader.align(4)?;
-        Ok(Self { texture_page_items, exists: true })
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.texture_page_items)?;
+        builder.write_pointer_list(&self.elems)?;
         builder.align(4);
         Ok(())
     }

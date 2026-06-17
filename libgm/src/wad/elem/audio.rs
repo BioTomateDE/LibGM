@@ -9,20 +9,20 @@ use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMAudios {
-    pub audios: Vec<GMAudio>,
+    pub elems: Vec<GMAudio>,
     pub exists: bool,
 }
 
-gm_list_chunk!(AUDO, GMAudios, GMAudio, audios, direct);
+gm_list_chunk!(AUDO, GMAudios, GMAudio, direct);
 
 impl GMElement for GMAudios {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let audios: Vec<GMAudio> = reader.read_pointer_list()?;
-        Ok(Self { audios, exists: true })
+        let elems: Vec<GMAudio> = reader.read_pointer_list()?;
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.audios)?;
+        builder.write_pointer_list(&self.elems)?;
         Ok(())
     }
 }

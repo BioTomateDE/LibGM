@@ -20,11 +20,11 @@ use crate::wad::parse::reader::DataReader;
 /// Sprites can _also_ contain sequences (not by reference; the actual data).
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMSequences {
-    pub sequences: Vec<Option<GMSequence>>,
+    pub elems: Vec<Option<GMSequence>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(SEQN, GMSequences, GMSequence, sequences, nullable);
+gm_named_list_chunk!(SEQN, GMSequences, GMSequence, nullable);
 
 impl GMElement for GMSequences {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -33,14 +33,14 @@ impl GMElement for GMSequences {
         }
         reader.align(4)?;
         reader.read_gms2_chunk_version("SEQN Version")?;
-        let sequences: Vec<Option<GMSequence>> = reader.read_pointer_list_opt()?;
-        Ok(Self { sequences, exists: true })
+        let elems: Vec<Option<GMSequence>> = reader.read_pointer_list_opt()?;
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.align(4);
         builder.write_u32(1); // SEQN Version 1
-        builder.write_pointer_list_opt(&self.sequences)?;
+        builder.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }

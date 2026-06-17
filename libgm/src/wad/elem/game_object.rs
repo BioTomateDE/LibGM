@@ -16,16 +16,16 @@ use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMGameObjects {
-    pub game_objects: Vec<Option<GMGameObject>>,
+    pub elems: Vec<Option<GMGameObject>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(OBJT, GMGameObjects, GMGameObject, game_objects, nullable);
+gm_named_list_chunk!(OBJT, GMGameObjects, GMGameObject, nullable);
 
 impl GMElement for GMGameObjects {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
-        let mut game_objects: Vec<Option<GMGameObject>> = vec![None; pointers.len()];
+        let mut elems: Vec<Option<GMGameObject>> = vec![None; pointers.len()];
 
         for (i, pointer) in pointers.into_iter().enumerate() {
             if pointer == 0 {
@@ -80,7 +80,7 @@ impl GMElement for GMGameObjects {
 
             let events = EventGroups::deserialize(reader).ctx("parsing game object events")?;
 
-            game_objects[i] = Some(GMGameObject {
+            elems[i] = Some(GMGameObject {
                 name,
                 sprite,
                 visible,
@@ -106,13 +106,13 @@ impl GMElement for GMGameObjects {
             });
         }
 
-        Ok(Self { game_objects, exists: true })
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_usize(self.game_objects.len())?;
+        builder.write_usize(self.elems.len())?;
         let pointer_list_pos = builder.pos();
-        for _ in 0..self.game_objects.len() {
+        for _ in 0..self.elems.len() {
             builder.write_u32(0);
         }
 

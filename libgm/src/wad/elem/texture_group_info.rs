@@ -18,18 +18,12 @@ use crate::wad::version::LTSBranch;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMTextureGroupInfos {
-    pub texture_group_infos: Vec<GMTextureGroupInfo>,
+    pub elems: Vec<GMTextureGroupInfo>,
     pub exists: bool,
 }
 
 // not sure if direct
-gm_list_chunk!(
-    TGIN,
-    GMTextureGroupInfos,
-    GMTextureGroupInfo,
-    texture_group_infos,
-    direct
-);
+gm_list_chunk!(TGIN, GMTextureGroupInfos, GMTextureGroupInfo, direct);
 
 impl GMNamedElement for GMTextureGroupInfo {
     fn name_ref(&self) -> GMRef<String> {
@@ -49,7 +43,7 @@ impl GMNamedElement for GMTextureGroupInfo {
 impl GMNamedListChunk for GMTextureGroupInfos {
     fn ref_by_name(&self, name: &str, gm_strings: &GMStrings) -> Result<GMRef<Self::Element>> {
         for (gm_ref, elem) in self.element_refs() {
-            let elem_name: &String = elem.name.resolve(&gm_strings.strings)?;
+            let elem_name: &String = elem.name.resolve(&gm_strings.elems)?;
             if name == elem_name {
                 return Ok(gm_ref);
             }
@@ -61,13 +55,13 @@ impl GMNamedListChunk for GMTextureGroupInfos {
 impl GMElement for GMTextureGroupInfos {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_gms2_chunk_version("TGIN Version")?;
-        let texture_group_infos: Vec<GMTextureGroupInfo> = reader.read_pointer_list()?;
-        Ok(Self { texture_group_infos, exists: true })
+        let elems: Vec<GMTextureGroupInfo> = reader.read_pointer_list()?;
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(1); // TGIN version
-        builder.write_pointer_list(&self.texture_group_infos)?;
+        builder.write_pointer_list(&self.elems)?;
         Ok(())
     }
 }

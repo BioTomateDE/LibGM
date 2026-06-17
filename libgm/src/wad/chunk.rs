@@ -256,14 +256,14 @@ macro_rules! gm_chunk {
 }
 
 macro_rules! gm_list_chunk {
-    ($name:ident, $chunk_struct:ident, $elem_type:ty, $elems:ident,nullable) => {
+    ($name:ident, $chunk_struct:ident, $elem_type:ty,nullable) => {
         crate::wad::chunk::gm_chunk!($name, $chunk_struct);
 
         impl crate::wad::chunk::GMListChunk for $chunk_struct {
             type Element = $elem_type;
 
             fn element_refs(&self) -> impl Iterator<Item = (GMRef<Self::Element>, &Self::Element)> {
-                self.$elems
+                self.elems
                     .iter()
                     .enumerate()
                     .filter_map(|(idx, elem)| Some((idx.into(), elem.as_ref()?)))
@@ -272,48 +272,48 @@ macro_rules! gm_list_chunk {
             fn element_refs_mut(
                 &mut self,
             ) -> impl Iterator<Item = (GMRef<Self::Element>, &mut Self::Element)> {
-                self.$elems
+                self.elems
                     .iter_mut()
                     .enumerate()
                     .filter_map(|(idx, elem)| Some((idx.into(), elem.as_mut()?)))
             }
 
             fn by_ref(&self, gm_ref: GMRef<Self::Element>) -> Result<&Self::Element> {
-                gm_ref.opt_resolve(&self.$elems)
+                gm_ref.opt_resolve(&self.elems)
             }
 
             fn by_ref_mut(&mut self, gm_ref: GMRef<Self::Element>) -> Result<&mut Self::Element> {
-                gm_ref.opt_resolve_mut(&mut self.$elems)
+                gm_ref.opt_resolve_mut(&mut self.elems)
             }
 
             fn push(&mut self, element: Self::Element) {
-                self.$elems.push(Some(element));
+                self.elems.push(Some(element));
             }
 
             fn len(&self) -> usize {
-                self.$elems.len()
+                self.elems.len()
             }
         }
 
         impl crate::wad::chunk::GMNullableListChunk for $chunk_struct {
             fn all_elements(&self) -> &Vec<Option<Self::Element>> {
-                &self.$elems
+                &self.elems
             }
 
             fn all_elements_mut(&mut self) -> &mut Vec<Option<Self::Element>> {
-                &mut self.$elems
+                &mut self.elems
             }
         }
     };
 
-    ($name:ident, $chunk_struct:ident, $elem_type:ty, $elems:ident,direct) => {
+    ($name:ident, $chunk_struct:ident, $elem_type:ty,direct) => {
         crate::wad::chunk::gm_chunk!($name, $chunk_struct);
 
         impl crate::wad::chunk::GMListChunk for $chunk_struct {
             type Element = $elem_type;
 
             fn element_refs(&self) -> impl Iterator<Item = (GMRef<Self::Element>, &Self::Element)> {
-                self.$elems
+                self.elems
                     .iter()
                     .enumerate()
                     .map(|(idx, elem)| (idx.into(), elem))
@@ -322,44 +322,44 @@ macro_rules! gm_list_chunk {
             fn element_refs_mut(
                 &mut self,
             ) -> impl Iterator<Item = (GMRef<Self::Element>, &mut Self::Element)> {
-                self.$elems
+                self.elems
                     .iter_mut()
                     .enumerate()
                     .map(|(idx, elem)| (idx.into(), elem))
             }
 
             fn by_ref(&self, gm_ref: GMRef<Self::Element>) -> Result<&Self::Element> {
-                gm_ref.resolve(&self.$elems)
+                gm_ref.resolve(&self.elems)
             }
 
             fn by_ref_mut(&mut self, gm_ref: GMRef<Self::Element>) -> Result<&mut Self::Element> {
-                gm_ref.resolve_mut(&mut self.$elems)
+                gm_ref.resolve_mut(&mut self.elems)
             }
 
             fn push(&mut self, element: Self::Element) {
-                self.$elems.push(element);
+                self.elems.push(element);
             }
 
             fn len(&self) -> usize {
-                self.$elems.len()
+                self.elems.len()
             }
         }
 
         impl crate::wad::chunk::GMDirectListChunk for $chunk_struct {
             fn all_elements(&self) -> &Vec<Self::Element> {
-                &self.$elems
+                &self.elems
             }
 
             fn all_elements_mut(&mut self) -> &mut Vec<Self::Element> {
-                &mut self.$elems
+                &mut self.elems
             }
         }
     };
 }
 
 macro_rules! gm_named_list_chunk {
-    ($name:ident, $chunk_struct:ident, $elem_type:ty, $elems:ident, $tspmo:ident) => {
-        crate::wad::chunk::gm_list_chunk!($name, $chunk_struct, $elem_type, $elems, $tspmo);
+    ($name:ident, $chunk_struct:ident, $elem_type:ty, $tspmo:ident) => {
+        crate::wad::chunk::gm_list_chunk!($name, $chunk_struct, $elem_type, $tspmo);
 
         impl crate::wad::chunk::GMNamedListChunk for $chunk_struct {}
 

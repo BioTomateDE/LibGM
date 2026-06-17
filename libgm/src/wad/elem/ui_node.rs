@@ -24,24 +24,24 @@ use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMRootUINodes {
-    pub ui_nodes: Vec<UINode>,
+    pub elems: Vec<UINode>,
     pub exists: bool,
 }
 
 // not sure if direct
-gm_list_chunk!(UILR, GMRootUINodes, UINode, ui_nodes, direct);
+gm_list_chunk!(UILR, GMRootUINodes, UINode, direct);
 
 impl GMElement for GMRootUINodes {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         if reader.chunk.length() > 12 {
             log::warn!("UI nodes are untested; issues may occur");
         }
-        let ui_root_nodes: Vec<UINode> = reader.read_pointer_list()?;
-        Ok(Self { ui_nodes: ui_root_nodes, exists: true })
+        let elems: Vec<UINode> = reader.read_pointer_list()?;
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.ui_nodes)?;
+        builder.write_pointer_list(&self.elems)?;
         Ok(())
     }
 }

@@ -43,36 +43,36 @@ fn optimize_memory(data: &mut GMData) -> usize {
     let mut freed_bytes: usize = 0;
 
     // first, do all list chunks
-    freed_bytes += shrink_vec(&mut data.animation_curves.animation_curves);
-    freed_bytes += shrink_vec(&mut data.audio_groups.audio_groups);
-    freed_bytes += shrink_vec(&mut data.audios.audios);
-    freed_bytes += shrink_vec(&mut data.backgrounds.backgrounds);
-    freed_bytes += shrink_vec(&mut data.codes.codes);
-    freed_bytes += shrink_vec(&mut data.embedded_images.embedded_images);
-    freed_bytes += shrink_vec(&mut data.extensions.extensions);
-    freed_bytes += shrink_vec(&mut data.feature_flags.feature_flags);
-    freed_bytes += shrink_vec(&mut data.filter_effects.filter_effects);
-    freed_bytes += shrink_vec(&mut data.fonts.fonts);
-    freed_bytes += shrink_vec(&mut data.functions.functions);
-    freed_bytes += shrink_vec(&mut data.game_end_scripts.game_end_scripts);
-    freed_bytes += shrink_vec(&mut data.game_objects.game_objects);
-    freed_bytes += shrink_vec(&mut data.global_init_scripts.global_init_scripts);
-    freed_bytes += shrink_vec(&mut data.particle_emitters.emitters);
-    freed_bytes += shrink_vec(&mut data.particle_systems.particle_systems);
-    freed_bytes += shrink_vec(&mut data.paths.paths);
-    freed_bytes += shrink_vec(&mut data.rooms.rooms);
-    freed_bytes += shrink_vec(&mut data.ui_nodes.ui_nodes);
-    freed_bytes += shrink_vec(&mut data.scripts.scripts);
-    freed_bytes += shrink_vec(&mut data.sequences.sequences);
-    freed_bytes += shrink_vec(&mut data.shaders.shaders);
-    freed_bytes += shrink_vec(&mut data.sounds.sounds);
-    freed_bytes += shrink_vec(&mut data.sprites.sprites);
-    freed_bytes += shrink_vec(&mut data.strings.strings);
-    freed_bytes += shrink_vec(&mut data.texture_group_infos.texture_group_infos);
-    freed_bytes += shrink_vec(&mut data.texture_page_items.texture_page_items);
-    freed_bytes += shrink_vec(&mut data.texture_pages.texture_pages);
-    freed_bytes += shrink_vec(&mut data.timelines.timelines);
-    freed_bytes += shrink_vec(&mut data.variables.variables);
+    freed_bytes += shrink_vec(&mut data.animation_curves.elems);
+    freed_bytes += shrink_vec(&mut data.audio_groups.elems);
+    freed_bytes += shrink_vec(&mut data.audios.elems);
+    freed_bytes += shrink_vec(&mut data.backgrounds.elems);
+    freed_bytes += shrink_vec(&mut data.codes.elems);
+    freed_bytes += shrink_vec(&mut data.embedded_images.elems);
+    freed_bytes += shrink_vec(&mut data.extensions.elems);
+    freed_bytes += shrink_vec(&mut data.feature_flags.elems);
+    freed_bytes += shrink_vec(&mut data.filter_effects.elems);
+    freed_bytes += shrink_vec(&mut data.fonts.elems);
+    freed_bytes += shrink_vec(&mut data.functions.elems);
+    freed_bytes += shrink_vec(&mut data.game_end_scripts.elems);
+    freed_bytes += shrink_vec(&mut data.game_objects.elems);
+    freed_bytes += shrink_vec(&mut data.global_init_scripts.elems);
+    freed_bytes += shrink_vec(&mut data.particle_emitters.elems);
+    freed_bytes += shrink_vec(&mut data.particle_systems.elems);
+    freed_bytes += shrink_vec(&mut data.paths.elems);
+    freed_bytes += shrink_vec(&mut data.rooms.elems);
+    freed_bytes += shrink_vec(&mut data.ui_nodes.elems);
+    freed_bytes += shrink_vec(&mut data.scripts.elems);
+    freed_bytes += shrink_vec(&mut data.sequences.elems);
+    freed_bytes += shrink_vec(&mut data.shaders.elems);
+    freed_bytes += shrink_vec(&mut data.sounds.elems);
+    freed_bytes += shrink_vec(&mut data.sprites.elems);
+    freed_bytes += shrink_vec(&mut data.strings.elems);
+    freed_bytes += shrink_vec(&mut data.texture_group_infos.elems);
+    freed_bytes += shrink_vec(&mut data.texture_page_items.elems);
+    freed_bytes += shrink_vec(&mut data.texture_pages.elems);
+    freed_bytes += shrink_vec(&mut data.timelines.elems);
+    freed_bytes += shrink_vec(&mut data.variables.elems);
 
     // instructions don't have a known count before deserialization
     for code in data.codes.elements_mut() {

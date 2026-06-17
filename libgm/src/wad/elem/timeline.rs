@@ -10,21 +10,21 @@ use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMTimelines {
-    pub timelines: Vec<Option<GMTimeline>>,
+    pub elems: Vec<Option<GMTimeline>>,
     pub exists: bool,
 }
 
 // probably nullable?
-gm_named_list_chunk!(TMLN, GMTimelines, GMTimeline, timelines, nullable);
+gm_named_list_chunk!(TMLN, GMTimelines, GMTimeline, nullable);
 
 impl GMElement for GMTimelines {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let timelines: Vec<Option<GMTimeline>> = reader.read_pointer_list_opt()?;
-        Ok(Self { timelines, exists: true })
+        let elems: Vec<Option<GMTimeline>> = reader.read_pointer_list_opt()?;
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list_opt(&self.timelines)?;
+        builder.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }

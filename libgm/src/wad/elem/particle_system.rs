@@ -10,30 +10,24 @@ use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMParticleSystems {
-    pub particle_systems: Vec<Option<GMParticleSystem>>,
+    pub elems: Vec<Option<GMParticleSystem>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(
-    PSYS,
-    GMParticleSystems,
-    GMParticleSystem,
-    particle_systems,
-    nullable
-);
+gm_named_list_chunk!(PSYS, GMParticleSystems, GMParticleSystem, nullable);
 
 impl GMElement for GMParticleSystems {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
         reader.read_gms2_chunk_version("PSYS Version")?;
-        let particle_systems: Vec<Option<GMParticleSystem>> = reader.read_pointer_list_opt()?;
-        Ok(Self { particle_systems, exists: true })
+        let elems: Vec<Option<GMParticleSystem>> = reader.read_pointer_list_opt()?;
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.align(4);
         builder.write_u32(1); // PSYS Version
-        builder.write_pointer_list_opt(&self.particle_systems)?;
+        builder.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }

@@ -16,15 +16,15 @@ use crate::wad::version::LTSBranch;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMFonts {
-    pub fonts: Vec<Option<GMFont>>,
+    pub elems: Vec<Option<GMFont>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(FONT, GMFonts, GMFont, fonts, nullable);
+gm_named_list_chunk!(FONT, GMFonts, GMFont, nullable);
 
 impl GMElement for GMFonts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let fonts: Vec<Option<GMFont>> = reader.read_pointer_list_opt()?;
+        let elems: Vec<Option<GMFont>> = reader.read_pointer_list_opt()?;
 
         if reader.general_info.version < (2024, 14) {
             let verify: bool = reader.options.verify_constants;
@@ -34,11 +34,11 @@ impl GMElement for GMFonts {
             }
         }
 
-        Ok(Self { fonts, exists: true })
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list_opt(&self.fonts)?;
+        builder.write_pointer_list_opt(&self.elems)?;
         if builder.version() < (2024, 14) {
             let padding: [u8; 512] = generate_padding();
             builder.write_bytes(&padding);

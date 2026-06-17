@@ -279,6 +279,7 @@ pub(crate) fn validate_names<T: GMNamedListChunk>(chunk: &T, gm_strings: &GMStri
 /// All GameMaker elements with a unique name (to the list
 /// they're contained in) should implement this trait.
 #[expect(private_bounds)]
+// TODO: maybe turn this into a `GMAsset` trait that only applies to thing referencable by name in gml
 pub trait GMNamedElement: GMElement {
     /// The name of this element as a `GMRef<String>`.
     #[must_use]
@@ -286,7 +287,7 @@ pub trait GMNamedElement: GMElement {
 
     /// The name of this element as a `&String`.
     fn name<'a>(&self, gm_strings: &'a GMStrings) -> Result<&'a String> {
-        self.name_ref().resolve(&gm_strings.strings)
+        self.name_ref().resolve(&gm_strings.elems)
     }
 
     /// Whether the name of this element is valid.

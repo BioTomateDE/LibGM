@@ -17,12 +17,12 @@ use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMFunctions {
-    pub functions: Vec<GMFunction>,
+    pub elems: Vec<GMFunction>,
     pub code_locals: GMCodeLocals,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(FUNC, GMFunctions, GMFunction, functions, direct);
+gm_named_list_chunk!(FUNC, GMFunctions, GMFunction, direct);
 
 impl GMFunctions {
     /// Returns an existing function with the given name if it exists,
@@ -32,9 +32,9 @@ impl GMFunctions {
             return func_ref;
         }
         let name = strings.make(name);
-        let idx = self.functions.len();
+        let idx = self.elems.len();
         let func = GMFunction { name };
-        self.functions.push(func);
+        self.elems.push(func);
         GMRef::from(idx)
     }
 }
@@ -47,7 +47,7 @@ impl GMElement for GMFunctions {
             reader.chunk.length() / 12
         };
 
-        let mut functions: Vec<GMFunction> = vec_with_capacity(functions_count)?;
+        let mut elems: Vec<GMFunction> = vec_with_capacity(functions_count)?;
 
         for i in 0..functions_count {
             let name: GMRef<String> = reader.read_gm_string()?;
@@ -64,14 +64,14 @@ impl GMElement for GMFunctions {
                          function #{} with name {:?}",
                         occurrence,
                         old_func.index,
-                        functions[old_func.index as usize].name,
+                        elems[old_func.index as usize].name,
                         i,
                         name,
                     )
                 }
             }
 
-            functions.push(GMFunction { name });
+            elems.push(GMFunction { name });
         }
 
         let code_locals: GMCodeLocals =
@@ -81,15 +81,15 @@ impl GMElement for GMFunctions {
                 GMCodeLocals::default()
             };
 
-        Ok(Self { functions, code_locals, exists: true })
+        Ok(Self { elems, code_locals, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         if builder.wad_version() >= 15 {
-            builder.write_usize(self.functions.len())?;
+            builder.write_usize(self.elems.len())?;
         }
 
-        for (i, function) in self.functions.iter().enumerate() {
+        for (i, function) in self.elems.iter().enumerate() {
             let occurrences: &Vec<u32> = builder.function_occurrences.get(i).ok_or_else(|| {
                 format!(
                     "Could not resolve function occurrence with index {i} in list with length {}",

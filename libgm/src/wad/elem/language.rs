@@ -11,12 +11,12 @@ use crate::wad::parse::reader::DataReader;
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GMLanguageInfo {
     unknown1: u32,
-    pub languages: Vec<GMLanguageData>,
+    pub elems: Vec<GMLanguageData>,
     pub entry_ids: Vec<GMRef<String>>,
     pub exists: bool,
 }
 
-gm_list_chunk!(LANG, GMLanguageInfo, GMLanguageData, languages, direct);
+gm_list_chunk!(LANG, GMLanguageInfo, GMLanguageData, direct);
 
 impl GMElement for GMLanguageInfo {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -29,7 +29,7 @@ impl GMElement for GMLanguageInfo {
             entry_ids.push(reader.read_gm_string()?);
         }
 
-        let mut languages: Vec<GMLanguageData> = vec_with_capacity(language_count)?;
+        let mut elems: Vec<GMLanguageData> = vec_with_capacity(language_count)?;
         for _ in 0..language_count {
             let name: GMRef<String> = reader.read_gm_string()?;
             let region: GMRef<String> = reader.read_gm_string()?;
@@ -37,25 +37,20 @@ impl GMElement for GMLanguageInfo {
             for _ in 0..entry_count {
                 entries.push(reader.read_gm_string()?);
             }
-            languages.push(GMLanguageData { name, region, entries });
+            elems.push(GMLanguageData { name, region, entries });
         }
 
-        Ok(Self {
-            unknown1,
-            languages,
-            entry_ids,
-            exists: true,
-        })
+        Ok(Self { unknown1, elems, entry_ids, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_u32(self.unknown1);
-        builder.write_usize(self.languages.len())?;
+        builder.write_usize(self.elems.len())?;
         builder.write_usize(self.entry_ids.len())?;
         for &entry in &self.entry_ids {
             builder.write_gm_string(entry)?;
         }
-        for language in &self.languages {
+        for language in &self.elems {
             builder.write_gm_string(language.name)?;
             builder.write_gm_string(language.region)?;
             for &entry in &language.entries {

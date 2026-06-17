@@ -12,20 +12,20 @@ use crate::wad::version::GMVersion;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMSounds {
-    pub sounds: Vec<Option<GMSound>>,
+    pub elems: Vec<Option<GMSound>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(SOND, GMSounds, GMSound, sounds, nullable);
+gm_named_list_chunk!(SOND, GMSounds, GMSound, nullable);
 
 impl GMElement for GMSounds {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let sounds: Vec<Option<GMSound>> = reader.read_pointer_list_opt()?;
-        Ok(Self { sounds, exists: true })
+        let elems: Vec<Option<GMSound>> = reader.read_pointer_list_opt()?;
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list_opt(&self.sounds)?;
+        builder.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }

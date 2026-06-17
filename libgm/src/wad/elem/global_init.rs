@@ -9,26 +9,20 @@ use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMGlobalInitScripts {
-    pub global_init_scripts: Vec<GMRef<GMCode>>,
+    pub elems: Vec<GMRef<GMCode>>,
     pub exists: bool,
 }
 
-gm_list_chunk!(
-    GLOB,
-    GMGlobalInitScripts,
-    GMRef<GMCode>,
-    global_init_scripts,
-    direct
-);
+gm_list_chunk!(GLOB, GMGlobalInitScripts, GMRef<GMCode>, direct);
 
 impl GMElement for GMGlobalInitScripts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let global_init_scripts: Vec<GMRef<GMCode>> = reader.read_simple_list()?;
-        Ok(Self { global_init_scripts, exists: true })
+        let elems: Vec<GMRef<GMCode>> = reader.read_simple_list()?;
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_simple_list(&self.global_init_scripts)?;
+        builder.write_simple_list(&self.elems)?;
         Ok(())
     }
 }

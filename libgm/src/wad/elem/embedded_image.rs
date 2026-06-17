@@ -17,23 +17,17 @@ use crate::wad::reference::GMRef;
 /// every time you use `part_sprite` functions.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMEmbeddedImages {
-    pub embedded_images: Vec<GMEmbeddedImage>,
+    pub elems: Vec<GMEmbeddedImage>,
     pub exists: bool,
 }
 
-gm_list_chunk!(
-    EMBI,
-    GMEmbeddedImages,
-    GMEmbeddedImage,
-    embedded_images,
-    direct
-);
+gm_list_chunk!(EMBI, GMEmbeddedImages, GMEmbeddedImage, direct);
 
 impl GMNamedListChunk for GMEmbeddedImages {
     fn ref_by_name(&self, name: &str, gm_strings: &GMStrings) -> Result<GMRef<GMEmbeddedImage>> {
         for (gm_ref, elem) in self.element_refs() {
-            let elem_name: &String = elem.name.resolve(&gm_strings.strings)?;
-            if name == elem_name {
+            let elems: &String = elem.name.resolve(&gm_strings.elems)?;
+            if name == elems {
                 return Ok(gm_ref);
             }
         }
@@ -45,12 +39,12 @@ impl GMElement for GMEmbeddedImages {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_gms2_chunk_version("EMBI Version")?;
         let embedded_images: Vec<GMEmbeddedImage> = reader.read_simple_list()?;
-        Ok(Self { embedded_images, exists: true })
+        Ok(Self { elems: embedded_images, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_i32(1); // EMBI version
-        builder.write_simple_list(&self.embedded_images)?;
+        builder.write_simple_list(&self.elems)?;
         Ok(())
     }
 }

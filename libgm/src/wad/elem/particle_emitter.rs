@@ -10,18 +10,12 @@ use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GMParticleEmitters {
-    pub emitters: Vec<GMParticleEmitter>,
+    pub elems: Vec<GMParticleEmitter>,
     pub exists: bool,
 }
 
 // not sure if direct
-gm_named_list_chunk!(
-    PSEM,
-    GMParticleEmitters,
-    GMParticleEmitter,
-    emitters,
-    direct
-);
+gm_named_list_chunk!(PSEM, GMParticleEmitters, GMParticleEmitter, direct);
 
 impl GMElement for GMParticleEmitters {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -30,14 +24,14 @@ impl GMElement for GMParticleEmitters {
         }
         reader.align(4)?;
         reader.read_gms2_chunk_version("PSEM Version")?;
-        let emitters: Vec<GMParticleEmitter> = reader.read_pointer_list()?;
-        Ok(Self { emitters, exists: true })
+        let elems: Vec<GMParticleEmitter> = reader.read_pointer_list()?;
+        Ok(Self { elems, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.align(4);
         builder.write_u32(1); // PSEM Version
-        builder.write_pointer_list(&self.emitters)?;
+        builder.write_pointer_list(&self.elems)?;
         Ok(())
     }
 }
