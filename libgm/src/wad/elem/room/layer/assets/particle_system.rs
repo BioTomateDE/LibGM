@@ -2,14 +2,14 @@
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::particle_system::GMParticleSystem;
+use crate::wad::elem::particle_system::ParticleSystem;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParticleSystemInstance {
     pub name: GMRef<String>,
-    pub particle_system: GMRef<GMParticleSystem>,
+    pub particle_system: GMRef<ParticleSystem>,
     pub x: i32,
     pub y: i32,
     pub scale_x: f32,
@@ -21,7 +21,7 @@ pub struct ParticleSystemInstance {
 impl GMElement for ParticleSystemInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let particle_system: GMRef<GMParticleSystem> = reader.read_resource_by_id()?;
+        let particle_system: GMRef<ParticleSystem> = reader.read_resource_by_id()?;
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
         let scale_x = reader.read_f32()?;

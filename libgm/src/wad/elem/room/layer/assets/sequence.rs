@@ -2,7 +2,7 @@
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::sequence::GMSequence;
+use crate::wad::elem::sequence::Sequence;
 use crate::wad::elem::sequence::SpeedType;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
@@ -10,7 +10,7 @@ use crate::wad::reference::GMRef;
 #[derive(Debug, Clone, PartialEq)]
 pub struct SequenceInstance {
     pub name: GMRef<String>,
-    pub sequence: GMRef<GMSequence>,
+    pub sequence: GMRef<Sequence>,
     pub x: i32,
     pub y: i32,
     pub scale_x: f32,
@@ -25,7 +25,7 @@ pub struct SequenceInstance {
 impl GMElement for SequenceInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let sequence: GMRef<GMSequence> = reader.read_resource_by_id()?;
+        let sequence: GMRef<Sequence> = reader.read_resource_by_id()?;
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
         let scale_x = reader.read_f32()?;

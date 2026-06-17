@@ -4,29 +4,29 @@ use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::texture_page::GMTexturePage;
+use crate::wad::elem::texture_page::TexturePage;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMTexturePageItems {
-    pub elems: Vec<GMTexturePageItem>,
+pub struct TexturePageItems {
+    pub elems: Vec<TexturePageItem>,
     pub exists: bool,
 }
 
-gm_list_chunk!(TPAG, GMTexturePageItems, GMTexturePageItem, direct);
+gm_list_chunk!(TPAG, TexturePageItems, TexturePageItem, direct);
 
-impl GMElement for GMTexturePageItems {
+impl GMElement for TexturePageItems {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
-        let mut elems: Vec<GMTexturePageItem> = Vec::with_capacity(pointers.len());
+        let mut elems: Vec<TexturePageItem> = Vec::with_capacity(pointers.len());
 
         for (i, pointer) in pointers.into_iter().enumerate() {
             reader.cur_pos = pointer;
             reader
                 .texture_page_item_occurrences
                 .insert(pointer, GMRef::from(i));
-            elems.push(GMTexturePageItem::deserialize(reader)?);
+            elems.push(TexturePageItem::deserialize(reader)?);
         }
 
         reader.align(4)?;
@@ -41,7 +41,7 @@ impl GMElement for GMTexturePageItems {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMTexturePageItem {
+pub struct TexturePageItem {
     pub source_x: u16,
     pub source_y: u16,
     pub source_width: u16,
@@ -52,10 +52,10 @@ pub struct GMTexturePageItem {
     pub target_height: u16,
     pub bounding_width: u16,
     pub bounding_height: u16,
-    pub texture_page: GMRef<GMTexturePage>,
+    pub texture_page: GMRef<TexturePage>,
 }
 
-impl GMElement for GMTexturePageItem {
+impl GMElement for TexturePageItem {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let source_x = reader.read_u16()?;
         let source_y = reader.read_u16()?;
@@ -68,7 +68,7 @@ impl GMElement for GMTexturePageItem {
         let bounding_width = reader.read_u16()?;
         let bounding_height = reader.read_u16()?;
         let texture_page_id = reader.read_u16()?;
-        let texture_page: GMRef<GMTexturePage> = GMRef::new(texture_page_id as i32);
+        let texture_page: GMRef<TexturePage> = GMRef::new(texture_page_id as i32);
 
         Ok(Self {
             source_x,

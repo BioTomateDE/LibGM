@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::gml::GMCode;
+use crate::gml::Code;
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
@@ -9,17 +9,17 @@ use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMScripts {
-    pub elems: Vec<GMScript>,
+pub struct Scripts {
+    pub elems: Vec<Script>,
     pub exists: bool,
 }
 
 // not sure if direct
-gm_named_list_chunk!(SCPT, GMScripts, GMScript, direct);
+gm_named_list_chunk!(SCPT, Scripts, Script, direct);
 
-impl GMElement for GMScripts {
+impl GMElement for Scripts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let elems: Vec<GMScript> = reader.read_pointer_list()?;
+        let elems: Vec<Script> = reader.read_pointer_list()?;
         Ok(Self { elems, exists: true })
     }
 
@@ -30,13 +30,13 @@ impl GMElement for GMScripts {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMScript {
+pub struct Script {
     pub name: GMRef<String>,
     pub is_constructor: bool,
-    pub code: GMRef<GMCode>,
+    pub code: GMRef<Code>,
 }
 
-impl GMElement for GMScript {
+impl GMElement for Script {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let mut code_id: i32 = reader.read_i32()?;
@@ -45,7 +45,7 @@ impl GMElement for GMScript {
             code_id &= 0x7FFF_FFFF;
             is_constructor = true;
         }
-        let code: GMRef<GMCode> = GMRef::new(code_id);
+        let code: GMRef<Code> = GMRef::new(code_id);
         Ok(Self { name, is_constructor, code })
     }
 

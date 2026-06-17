@@ -9,22 +9,22 @@ use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::texture_page_item::GMTexturePageItem;
+use crate::wad::elem::texture_page_item::TexturePageItem;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 use crate::wad::version::LTSBranch;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMFonts {
-    pub elems: Vec<Option<GMFont>>,
+pub struct Fonts {
+    pub elems: Vec<Option<Font>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(FONT, GMFonts, GMFont, nullable);
+gm_named_list_chunk!(FONT, Fonts, Font, nullable);
 
-impl GMElement for GMFonts {
+impl GMElement for Fonts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let elems: Vec<Option<GMFont>> = reader.read_pointer_list_opt()?;
+        let elems: Vec<Option<Font>> = reader.read_pointer_list_opt()?;
 
         if reader.general_info.version < (2024, 14) {
             let verify: bool = reader.options.verify_constants;
@@ -83,7 +83,7 @@ const fn generate_padding() -> [u8; 512] {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMFont {
+pub struct Font {
     /// The name of the font.
     pub name: GMRef<String>,
 
@@ -117,7 +117,7 @@ pub struct GMFont {
 
     /// The [`GMTexturePageItem`] element that contains the texture for this
     /// font.
-    pub texture: GMRef<GMTexturePageItem>,
+    pub texture: GMRef<TexturePageItem>,
 
     /// The X Scale this font uses.
     pub scale_x: f32,
@@ -146,7 +146,7 @@ pub struct GMFont {
     pub glyphs: Vec<Glyph>,
 }
 
-impl GMElement for GMFont {
+impl GMElement for Font {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let display_name: GMRef<String> = reader.read_gm_string()?;
@@ -163,7 +163,7 @@ impl GMElement for GMFont {
         let charset = reader.read_u8()?;
         let anti_alias = reader.read_u8()?;
         let range_end = reader.read_u32()?;
-        let texture: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
+        let texture: GMRef<TexturePageItem> = reader.read_gm_texture()?;
         let scale_x: f32 = reader.read_f32()?;
         let scale_y: f32 = reader.read_f32()?;
         let ascender_offset: Option<i32> = reader.deserialize_if_wad_version(17)?;

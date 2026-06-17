@@ -175,7 +175,7 @@ impl GMImage {
     /// ```no_run
     /// # fn main() -> libgm::Result<()> {
     /// # use libgm::wad::elem::texture_page::Format;
-    /// # let mut texture_page = libgm::wad::elem::texture_page::GMTexturePage::default();
+    /// # let mut texture_page = libgm::wad::elem::texture_page::TexturePage::default();
     /// let mut gm_image = texture_page
     ///     .image
     ///     .as_mut()

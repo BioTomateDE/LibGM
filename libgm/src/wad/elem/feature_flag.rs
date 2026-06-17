@@ -6,14 +6,14 @@ use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMFeatureFlags {
+pub struct FeatureFlags {
     pub elems: Vec<GMRef<String>>,
     pub exists: bool,
 }
 
-gm_list_chunk!(FEAT, GMFeatureFlags, GMRef<String>, direct);
+gm_list_chunk!(FEAT, FeatureFlags, GMRef<String>, direct);
 
-impl GMElement for GMFeatureFlags {
+impl GMElement for FeatureFlags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
         let elems: Vec<GMRef<String>> = reader.read_simple_list()?;

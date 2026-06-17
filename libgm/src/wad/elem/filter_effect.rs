@@ -6,18 +6,18 @@ use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMFilterEffects {
-    pub elems: Vec<GMFilterEffect>,
+pub struct FilterEffects {
+    pub elems: Vec<FilterEffect>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(FEDS, GMFilterEffects, GMFilterEffect, direct);
+gm_named_list_chunk!(FEDS, FilterEffects, FilterEffect, direct);
 
-impl GMElement for GMFilterEffects {
+impl GMElement for FilterEffects {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
         reader.read_gms2_chunk_version("FEDS Version")?;
-        let elems: Vec<GMFilterEffect> = reader.read_pointer_list()?;
+        let elems: Vec<FilterEffect> = reader.read_pointer_list()?;
         Ok(Self { elems, exists: true })
     }
 
@@ -30,12 +30,12 @@ impl GMElement for GMFilterEffects {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GMFilterEffect {
+pub struct FilterEffect {
     pub name: GMRef<String>,
     pub value: GMRef<String>,
 }
 
-impl GMElement for GMFilterEffect {
+impl GMElement for FilterEffect {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let value: GMRef<String> = reader.read_gm_string()?;

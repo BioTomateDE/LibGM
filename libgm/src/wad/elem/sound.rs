@@ -4,23 +4,23 @@ use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::audio::GMAudio;
-use crate::wad::elem::audio_group::GMAudioGroup;
+use crate::wad::elem::audio::Audio;
+use crate::wad::elem::audio_group::AudioGroup;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 use crate::wad::version::GMVersion;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMSounds {
-    pub elems: Vec<Option<GMSound>>,
+pub struct Sounds {
+    pub elems: Vec<Option<Sound>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(SOND, GMSounds, GMSound, nullable);
+gm_named_list_chunk!(SOND, Sounds, Sound, nullable);
 
-impl GMElement for GMSounds {
+impl GMElement for Sounds {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let elems: Vec<Option<GMSound>> = reader.read_pointer_list_opt()?;
+        let elems: Vec<Option<Sound>> = reader.read_pointer_list_opt()?;
         Ok(Self { elems, exists: true })
     }
 
@@ -31,7 +31,7 @@ impl GMElement for GMSounds {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMSound {
+pub struct Sound {
     /// The name of the sound entry.
     /// This name is used when referencing this entry from code.
     pub name: GMRef<String>,
@@ -81,11 +81,11 @@ pub struct GMSound {
     /// These can only be used with the regular audio system.
     /// This is used if the `Flags.regular` flag is set (always set for now).
     /// For more information, see [`GMAudioGroup`].
-    pub audio_group: GMRef<GMAudioGroup>,
+    pub audio_group: GMRef<AudioGroup>,
 
     /// The reference to the [`GMAudio`] audio file.
     /// This is used if the `Flags.embedded` flag is set.
-    pub audio: GMRef<GMAudio>,
+    pub audio: GMRef<Audio>,
 
     /// The precomputed length of the sound's audio data.
     /// Introduced in GameMaker 2024.6.
@@ -93,7 +93,7 @@ pub struct GMSound {
     pub audio_length: Option<f32>,
 }
 
-impl GMElement for GMSound {
+impl GMElement for Sound {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let flags = reader.read_u32()?;
@@ -105,7 +105,7 @@ impl GMElement for GMSound {
         let volume = reader.read_f32()?;
         let pitch = reader.read_f32()?;
 
-        let audio_group: GMRef<GMAudioGroup> =
+        let audio_group: GMRef<AudioGroup> =
             if reader.general_info.wad_version >= 14 && flags.contains(Flags::REGULAR) {
                 reader.read_resource_by_id()?
             } else {
@@ -114,7 +114,7 @@ impl GMElement for GMSound {
                 GMRef::new(get_builtin_sound_group_id(reader.general_info.version))
             };
 
-        let audio: GMRef<GMAudio> = reader.read_resource_by_id()?;
+        let audio: GMRef<Audio> = reader.read_resource_by_id()?;
         let audio_length: Option<f32> = reader.deserialize_if_gm_version((2024, 6))?;
 
         Ok(Self {

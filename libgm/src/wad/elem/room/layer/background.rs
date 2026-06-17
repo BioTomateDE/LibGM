@@ -3,7 +3,7 @@ use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sequence::SpeedType;
-use crate::wad::elem::sprite::GMSprite;
+use crate::wad::elem::sprite::Sprite;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
@@ -11,7 +11,7 @@ use crate::wad::reference::GMRef;
 pub struct Background {
     pub visible: bool,
     pub foreground: bool,
-    pub sprite: GMRef<GMSprite>,
+    pub sprite: GMRef<Sprite>,
     pub tiled_horizontally: bool,
     pub tiled_vertically: bool,
     pub stretch: bool,
@@ -25,7 +25,7 @@ impl GMElement for Background {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let visible = reader.read_bool32()?;
         let foreground = reader.read_bool32()?;
-        let sprite: GMRef<GMSprite> = reader.read_resource_by_id()?;
+        let sprite: GMRef<Sprite> = reader.read_resource_by_id()?;
         let tiled_horizontally = reader.read_bool32()?;
         let tiled_vertically = reader.read_bool32()?;
         let stretch = reader.read_bool32()?;

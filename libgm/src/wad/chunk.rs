@@ -5,7 +5,7 @@ use std::fmt::Formatter;
 use crate::prelude::*;
 use crate::util::fmt::hexdump;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::string::GMStrings;
+use crate::wad::elem::string::Strings;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ChunkName {
@@ -219,7 +219,7 @@ pub trait GMDirectListChunk: GMListChunk {
 
 /// All chunk elements that represent a collection of elements **with a unique name**.
 pub trait GMNamedListChunk: GMListChunk<Element: GMNamedElement> {
-    fn ref_by_name(&self, name: &str, gm_strings: &GMStrings) -> Result<GMRef<Self::Element>> {
+    fn ref_by_name(&self, name: &str, gm_strings: &Strings) -> Result<GMRef<Self::Element>> {
         for (gm_ref, elem) in self.element_refs() {
             let elem_name: &String = elem.name(gm_strings)?;
             if name == elem_name {
@@ -232,12 +232,12 @@ pub trait GMNamedListChunk: GMListChunk<Element: GMNamedElement> {
         ))
     }
 
-    fn by_name(&self, name: &str, gm_strings: &GMStrings) -> Result<&Self::Element> {
+    fn by_name(&self, name: &str, gm_strings: &Strings) -> Result<&Self::Element> {
         self.ref_by_name(name, gm_strings)
             .and_then(|elem| self.by_ref(elem))
     }
 
-    fn by_name_mut(&mut self, name: &str, gm_strings: &GMStrings) -> Result<&mut Self::Element> {
+    fn by_name_mut(&mut self, name: &str, gm_strings: &Strings) -> Result<&mut Self::Element> {
         self.ref_by_name(name, gm_strings)
             .and_then(|elem| self.by_ref_mut(elem))
     }

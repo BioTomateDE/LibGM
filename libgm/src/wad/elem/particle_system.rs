@@ -4,23 +4,23 @@ use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::particle_emitter::GMParticleEmitter;
+use crate::wad::elem::particle_emitter::ParticleEmitter;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMParticleSystems {
-    pub elems: Vec<Option<GMParticleSystem>>,
+pub struct ParticleSystems {
+    pub elems: Vec<Option<ParticleSystem>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(PSYS, GMParticleSystems, GMParticleSystem, nullable);
+gm_named_list_chunk!(PSYS, ParticleSystems, ParticleSystem, nullable);
 
-impl GMElement for GMParticleSystems {
+impl GMElement for ParticleSystems {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
         reader.read_gms2_chunk_version("PSYS Version")?;
-        let elems: Vec<Option<GMParticleSystem>> = reader.read_pointer_list_opt()?;
+        let elems: Vec<Option<ParticleSystem>> = reader.read_pointer_list_opt()?;
         Ok(Self { elems, exists: true })
     }
 
@@ -33,16 +33,16 @@ impl GMElement for GMParticleSystems {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMParticleSystem {
+pub struct ParticleSystem {
     pub name: GMRef<String>,
     pub origin_x: i32,
     pub origin_y: i32,
     pub draw_order: i32,
     pub global_space_particles: Option<bool>,
-    pub emitters: Vec<GMRef<GMParticleEmitter>>,
+    pub emitters: Vec<GMRef<ParticleEmitter>>,
 }
 
-impl GMElement for GMParticleSystem {
+impl GMElement for ParticleSystem {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         if reader.chunk.length() > 4 {
             log::warn!("Particle systems are not tested");
@@ -52,7 +52,7 @@ impl GMElement for GMParticleSystem {
         let origin_y = reader.read_i32()?;
         let draw_order = reader.read_i32()?;
         let global_space_particles: Option<bool> = reader.deserialize_if_gm_version((2023, 8))?;
-        let emitters: Vec<GMRef<GMParticleEmitter>> = reader.read_simple_list()?;
+        let emitters: Vec<GMRef<ParticleEmitter>> = reader.read_simple_list()?;
         Ok(Self {
             name,
             origin_x,

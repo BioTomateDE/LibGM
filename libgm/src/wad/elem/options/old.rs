@@ -3,12 +3,12 @@ use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::options::Constant;
 use crate::wad::elem::options::Flags;
-use crate::wad::elem::options::GMOptions;
-use crate::wad::elem::texture_page_item::GMTexturePageItem;
+use crate::wad::elem::options::Options;
+use crate::wad::elem::texture_page_item::TexturePageItem;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
-pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
+pub fn parse(reader: &mut DataReader) -> Result<Options> {
     let flag_fullscreen = reader.read_bool32()?;
     let flag_interpolate_pixels = reader.read_bool32()?;
     let flag_use_new_audio = reader.read_bool32()?;
@@ -44,9 +44,9 @@ pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
     let flag_freeze = reader.read_bool32()?;
     let flag_show_progress = reader.read_bool32()?;
 
-    let back_image: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
-    let front_image: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
-    let load_image: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
+    let back_image: GMRef<TexturePageItem> = reader.read_gm_texture()?;
+    let front_image: GMRef<TexturePageItem> = reader.read_gm_texture()?;
+    let load_image: GMRef<TexturePageItem> = reader.read_gm_texture()?;
 
     let flag_load_transparent = reader.read_bool32()?;
 
@@ -88,7 +88,7 @@ pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
         | f(flag_variable_errors, Flags::VARIABLE_ERRORS)
         | f(flag_creation_event_order, Flags::CREATION_EVENT_ORDER);
 
-    Ok(GMOptions {
+    Ok(Options {
         is_new_format: false,
         flags,
         window_scale,
@@ -111,7 +111,7 @@ const fn f(is: bool, flag: Flags) -> Flags {
     if is { flag } else { Flags::empty() }
 }
 
-pub fn build(builder: &mut DataBuilder, options: &GMOptions) -> Result<()> {
+pub fn build(builder: &mut DataBuilder, options: &Options) -> Result<()> {
     builder.write_bool32(options.flags.contains(Flags::FULLSCREEN));
     builder.write_bool32(options.flags.contains(Flags::INTERPOLATE_PIXELS));
     builder.write_bool32(options.flags.contains(Flags::USE_NEW_AUDIO));

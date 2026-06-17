@@ -3,7 +3,7 @@ use std::fmt;
 
 use crate::gml::instruction::VariableType;
 use crate::prelude::*;
-use crate::wad::elem::game_object::GMGameObject;
+use crate::wad::elem::game_object::GameObject;
 
 /// The scope/owner of a variable.
 ///
@@ -35,7 +35,7 @@ pub enum InstanceType {
     ///
     /// Note: Since instance types are encoded using only 16 bits,
     /// this may limit the number of game objects to 32767.
-    GameObject(GMRef<GMGameObject>),
+    GameObject(GMRef<GameObject>),
 
     /// Instance ID in the Room -100000; used when the
     /// Variable Type is [`VariableType::Instance`].

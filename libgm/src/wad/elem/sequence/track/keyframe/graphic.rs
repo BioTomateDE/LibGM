@@ -2,17 +2,17 @@
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::sprite::GMSprite;
+use crate::wad::elem::sprite::Sprite;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Graphic {
-    pub sprite: GMRef<GMSprite>,
+    pub sprite: GMRef<Sprite>,
 }
 
 impl GMElement for Graphic {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let sprite: GMRef<GMSprite> = reader.read_resource_by_id()?;
+        let sprite: GMRef<Sprite> = reader.read_resource_by_id()?;
         Ok(Self { sprite })
     }
 

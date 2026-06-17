@@ -2,19 +2,19 @@
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::sound::GMSound;
+use crate::wad::elem::sound::Sound;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Audio {
-    pub sound: GMRef<GMSound>,
+    pub sound: GMRef<Sound>,
     pub mode: i32,
 }
 
 impl GMElement for Audio {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let sound: GMRef<GMSound> = reader.read_resource_by_id()?;
+        let sound: GMRef<Sound> = reader.read_resource_by_id()?;
         let mode = reader.read_i32()?;
         Ok(Self { sound, mode })
     }

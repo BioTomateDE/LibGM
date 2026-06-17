@@ -7,42 +7,42 @@ use std::path::PathBuf;
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
 use crate::wad::chunk::ChunkName;
-use crate::wad::elem::animation_curve::GMAnimationCurves;
-use crate::wad::elem::audio::GMAudios;
-use crate::wad::elem::audio_group::GMAudioGroups;
-use crate::wad::elem::background::GMBackgrounds;
-use crate::wad::elem::code::GMCodes;
-use crate::wad::elem::data_file::GMDataFiles;
-use crate::wad::elem::embedded_image::GMEmbeddedImages;
-use crate::wad::elem::extension::GMExtensions;
-use crate::wad::elem::feature_flag::GMFeatureFlags;
-use crate::wad::elem::filter_effect::GMFilterEffects;
-use crate::wad::elem::font::GMFonts;
-use crate::wad::elem::function::GMFunctions;
-use crate::wad::elem::game_end::GMGameEndScripts;
-use crate::wad::elem::game_object::GMGameObjects;
-use crate::wad::elem::general_info::GMGeneralInfo;
-use crate::wad::elem::global_init::GMGlobalInitScripts;
-use crate::wad::elem::language::GMLanguageInfo;
-use crate::wad::elem::options::GMOptions;
-use crate::wad::elem::particle_emitter::GMParticleEmitters;
-use crate::wad::elem::particle_system::GMParticleSystems;
-use crate::wad::elem::path::GMPaths;
-use crate::wad::elem::room::GMRooms;
-use crate::wad::elem::script::GMScripts;
-use crate::wad::elem::sequence::GMSequences;
-use crate::wad::elem::shader::GMShaders;
-use crate::wad::elem::sound::GMSounds;
-use crate::wad::elem::sprite::GMSprites;
-use crate::wad::elem::string::GMStrings;
-use crate::wad::elem::tag::GMTags;
-use crate::wad::elem::texture_group_info::GMTextureGroupInfos;
-use crate::wad::elem::texture_page::GMTexturePages;
-use crate::wad::elem::texture_page_item::GMTexturePageItems;
-use crate::wad::elem::timeline::GMTimelines;
-use crate::wad::elem::ui_node::GMRootUINodes;
+use crate::wad::elem::animation_curve::AnimationCurves;
+use crate::wad::elem::audio::Audios;
+use crate::wad::elem::audio_group::AudioGroups;
+use crate::wad::elem::background::Backgrounds;
+use crate::wad::elem::code::Codes;
+use crate::wad::elem::data_file::DataFiles;
+use crate::wad::elem::embedded_image::EmbeddedImages;
+use crate::wad::elem::extension::Extensions;
+use crate::wad::elem::feature_flag::FeatureFlags;
+use crate::wad::elem::filter_effect::FilterEffects;
+use crate::wad::elem::font::Fonts;
+use crate::wad::elem::function::Functions;
+use crate::wad::elem::game_end::GameEndScripts;
+use crate::wad::elem::game_object::GameObjects;
+use crate::wad::elem::general_info::GeneralInfo;
+use crate::wad::elem::global_init::GlobalInitScripts;
+use crate::wad::elem::language::LanguageInfo;
+use crate::wad::elem::options::Options;
+use crate::wad::elem::particle_emitter::ParticleEmitters;
+use crate::wad::elem::particle_system::ParticleSystems;
+use crate::wad::elem::path::Paths;
+use crate::wad::elem::room::Rooms;
+use crate::wad::elem::script::Scripts;
+use crate::wad::elem::sequence::Sequences;
+use crate::wad::elem::shader::Shaders;
+use crate::wad::elem::sound::Sounds;
+use crate::wad::elem::sprite::Sprites;
+use crate::wad::elem::string::Strings;
+use crate::wad::elem::tag::Tags;
+use crate::wad::elem::texture_group_info::TextureGroupInfos;
+use crate::wad::elem::texture_page::TexturePages;
+use crate::wad::elem::texture_page_item::TexturePageItems;
+use crate::wad::elem::timeline::Timelines;
+use crate::wad::elem::ui_node::UINodes;
 use crate::wad::elem::validate_names;
-use crate::wad::elem::variable::GMVariables;
+use crate::wad::elem::variable::Variables;
 
 /// Byte order (endianness) for integers and chunk names in data files.
 ///
@@ -127,41 +127,41 @@ pub struct GMData {
     /// from chunk elements in `GMData` and not clutter the namespace.
     pub meta: Metadata,
 
-    pub animation_curves: GMAnimationCurves,      // ACRV
-    pub audio_groups: GMAudioGroups,              // AGRP
-    pub audios: GMAudios,                         // AUDO
-    pub backgrounds: GMBackgrounds,               // BGND
-    pub codes: GMCodes,                           // CODE
-    pub(crate) data_files: GMDataFiles,           // DAFL
-    pub embedded_images: GMEmbeddedImages,        // EMBI
-    pub extensions: GMExtensions,                 // EXTN
-    pub feature_flags: GMFeatureFlags,            // FEAT
-    pub filter_effects: GMFilterEffects,          // FEDS
-    pub fonts: GMFonts,                           // FONT
-    pub functions: GMFunctions,                   // FUNC
-    pub game_end_scripts: GMGameEndScripts,       // GMEN
-    pub game_objects: GMGameObjects,              // OBJT
-    pub general_info: GMGeneralInfo,              // GEN8
-    pub global_init_scripts: GMGlobalInitScripts, // GLOB
-    pub language_info: GMLanguageInfo,            // LANG
-    pub options: GMOptions,                       // OPTN
-    pub particle_emitters: GMParticleEmitters,    // PSEM
-    pub particle_systems: GMParticleSystems,      // PSYS
-    pub paths: GMPaths,                           // PATH
-    pub rooms: GMRooms,                           // ROOM
-    pub ui_nodes: GMRootUINodes,                  // UILR
-    pub scripts: GMScripts,                       // SCPT
-    pub sequences: GMSequences,                   // SEQN
-    pub shaders: GMShaders,                       // SHDR
-    pub sounds: GMSounds,                         // SOND
-    pub sprites: GMSprites,                       // SPRT
-    pub strings: GMStrings,                       // STRG
-    pub tags: GMTags,                             // TAGS
-    pub texture_group_infos: GMTextureGroupInfos, // TGIN
-    pub texture_page_items: GMTexturePageItems,   // TPAG
-    pub texture_pages: GMTexturePages,            // TXTR
-    pub timelines: GMTimelines,                   // TMLN
-    pub variables: GMVariables,                   // VARI
+    pub animation_curves: AnimationCurves,      // ACRV
+    pub audio_groups: AudioGroups,              // AGRP
+    pub audios: Audios,                         // AUDO
+    pub backgrounds: Backgrounds,               // BGND
+    pub codes: Codes,                           // CODE
+    pub(crate) data_files: DataFiles,           // DAFL
+    pub embedded_images: EmbeddedImages,        // EMBI
+    pub extensions: Extensions,                 // EXTN
+    pub feature_flags: FeatureFlags,            // FEAT
+    pub filter_effects: FilterEffects,          // FEDS
+    pub fonts: Fonts,                           // FONT
+    pub functions: Functions,                   // FUNC
+    pub game_end_scripts: GameEndScripts,       // GMEN
+    pub game_objects: GameObjects,              // OBJT
+    pub general_info: GeneralInfo,              // GEN8
+    pub global_init_scripts: GlobalInitScripts, // GLOB
+    pub language_info: LanguageInfo,            // LANG
+    pub options: Options,                       // OPTN
+    pub particle_emitters: ParticleEmitters,    // PSEM
+    pub particle_systems: ParticleSystems,      // PSYS
+    pub paths: Paths,                           // PATH
+    pub rooms: Rooms,                           // ROOM
+    pub ui_nodes: UINodes,                  // UILR
+    pub scripts: Scripts,                       // SCPT
+    pub sequences: Sequences,                   // SEQN
+    pub shaders: Shaders,                       // SHDR
+    pub sounds: Sounds,                         // SOND
+    pub sprites: Sprites,                       // SPRT
+    pub strings: Strings,                       // STRG
+    pub tags: Tags,                             // TAGS
+    pub texture_group_infos: TextureGroupInfos, // TGIN
+    pub texture_page_items: TexturePageItems,   // TPAG
+    pub texture_pages: TexturePages,            // TXTR
+    pub timelines: Timelines,                   // TMLN
+    pub variables: Variables,                   // VARI
 }
 
 impl fmt::Debug for GMData {

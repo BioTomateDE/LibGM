@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
-use crate::wad::elem::texture_page_item::GMTexturePageItem;
+use crate::wad::elem::texture_page_item::TexturePageItem;
 use crate::wad::reference::GMRef;
 
 impl DataBuilder<'_> {
@@ -29,10 +29,9 @@ impl DataBuilder<'_> {
     /// # Errors
     /// Returns an error if the contained texture page item reference cannot be
     /// resolved.
-    pub fn write_gm_texture(&mut self, gm_texture_ref: GMRef<GMTexturePageItem>) -> Result<()> {
+    pub fn write_gm_texture(&mut self, gm_texture_ref: GMRef<TexturePageItem>) -> Result<()> {
         if gm_texture_ref.is_some() {
-            let elem: &GMTexturePageItem =
-                self.gm_data.texture_page_items.by_ref(gm_texture_ref)?;
+            let elem: &TexturePageItem = self.gm_data.texture_page_items.by_ref(gm_texture_ref)?;
             self.write_pointer(elem);
         } else {
             self.write_i32(0);

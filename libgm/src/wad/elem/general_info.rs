@@ -15,14 +15,14 @@ use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::room::GMRoom;
+use crate::wad::elem::room::Room;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 use crate::wad::version::GMVersion;
 use crate::wad::version::ToGMVersion;
 
 #[derive(Clone, PartialEq)]
-pub struct GMGeneralInfo {
+pub struct GeneralInfo {
     /// Indicates whether debugging support is disabled.
     pub is_debugger_disabled: bool,
 
@@ -129,7 +129,7 @@ pub struct GMGeneralInfo {
     pub debugger_port: u32,
 
     /// The room order of the data file.
-    pub room_order: Vec<GMRef<GMRoom>>,
+    pub room_order: Vec<GMRef<Room>>,
 
     /// Set in GameMaker 2+ data files.
     pub gms2_data: Option<GMS2Data>,
@@ -138,9 +138,9 @@ pub struct GMGeneralInfo {
     pub(crate) exists: bool,
 }
 
-gm_chunk!(GEN8, GMGeneralInfo);
+gm_chunk!(GEN8, GeneralInfo);
 
-impl GMElement for GMGeneralInfo {
+impl GMElement for GeneralInfo {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let is_debugger_disabled: bool = match reader.read_u8()? {
             0 => false,
@@ -180,7 +180,7 @@ impl GMElement for GMGeneralInfo {
             .ok_or_else(|| format!("Invalid GEN8 Function Classifications {fclass:016X}"))?;
         let steam_appid = reader.read_i32()?;
         let debugger_port: u32 = reader.deserialize_if_wad_version(14)?.unwrap_or(0);
-        let room_order: Vec<GMRef<GMRoom>> = reader.read_simple_list()?;
+        let room_order: Vec<GMRef<Room>> = reader.read_simple_list()?;
 
         let mut general_info = Self {
             is_debugger_disabled,
@@ -261,7 +261,7 @@ impl GMElement for GMGeneralInfo {
     }
 }
 
-impl Default for GMGeneralInfo {
+impl Default for GeneralInfo {
     fn default() -> Self {
         Self {
             is_debugger_disabled: true,
@@ -292,7 +292,7 @@ impl Default for GMGeneralInfo {
     }
 }
 
-impl fmt::Debug for GMGeneralInfo {
+impl fmt::Debug for GeneralInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("GMGeneralInfo")
             .field("is_debugger_disabled", &self.is_debugger_disabled)
@@ -316,7 +316,7 @@ impl fmt::Debug for GMGeneralInfo {
     }
 }
 
-impl GMGeneralInfo {
+impl GeneralInfo {
     /// See [`GMVersion::set_version`].
     pub fn set_version(&mut self, new_version: impl ToGMVersion) {
         self.version.set_version(new_version);

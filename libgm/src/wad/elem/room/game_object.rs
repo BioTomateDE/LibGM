@@ -1,35 +1,35 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use crate::gml::GMCode;
+use crate::gml::Code;
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::game_object::GMGameObject;
+use crate::wad::elem::game_object::GameObject;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GameObject {
+pub struct RoomGameObject {
     pub x: i32,
     pub y: i32,
-    pub object_definition: GMRef<GMGameObject>,
+    pub object_definition: GMRef<GameObject>,
     pub instance_id: u32,
-    pub creation_code: GMRef<GMCode>,
+    pub creation_code: GMRef<Code>,
     pub scale_x: f32,
     pub scale_y: f32,
     pub image_speed: Option<f32>,
     pub image_index: Option<u32>,
     pub color: u32,
     pub rotation: f32,
-    pub pre_create_code: GMRef<GMCode>,
+    pub pre_create_code: GMRef<Code>,
 }
 
-impl GMElement for GameObject {
+impl GMElement for RoomGameObject {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
-        let object_definition: GMRef<GMGameObject> = reader.read_resource_by_id()?;
+        let object_definition: GMRef<GameObject> = reader.read_resource_by_id()?;
         let instance_id = reader.read_u32()?;
-        let creation_code: GMRef<GMCode> = reader.read_resource_by_id()?;
+        let creation_code: GMRef<Code> = reader.read_resource_by_id()?;
         let scale_x = reader.read_f32()?;
         let scale_y = reader.read_f32()?;
         let mut image_speed: Option<f32> = None;
@@ -42,7 +42,7 @@ impl GMElement for GameObject {
         let rotation = reader.read_f32()?; // {~~} FloatAsInt (negative zero handling stuff)
 
         // [From UndertaleModTool] "is that dependent on WAD or something else?"
-        let pre_create_code: GMRef<GMCode> = if reader.general_info.wad_version >= 16 {
+        let pre_create_code: GMRef<Code> = if reader.general_info.wad_version >= 16 {
             reader.read_resource_by_id()?
         } else {
             GMRef::none()

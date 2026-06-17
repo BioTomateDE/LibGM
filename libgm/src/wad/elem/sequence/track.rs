@@ -9,7 +9,7 @@ use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::animation_curve::GMAnimationCurve;
+use crate::wad::elem::animation_curve::AnimationCurve;
 use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -42,7 +42,7 @@ pub struct Track {
     pub keyframes: Keyframes,
 
     /// Owned resources of this track (such as animation curves).
-    pub owned_resources: Vec<GMAnimationCurve>,
+    pub owned_resources: Vec<AnimationCurve>,
 
     // "GMAnimCurve"
     animcurve_string: GMRef<String>,
@@ -70,7 +70,7 @@ impl GMElement for Track {
             tags.push(reader.read_i32()?);
         }
 
-        let mut owned_resources: Vec<GMAnimationCurve> = vec_with_capacity(owned_resources_count)?;
+        let mut owned_resources: Vec<AnimationCurve> = vec_with_capacity(owned_resources_count)?;
         let mut animcurve_string = GMRef::none();
 
         for _ in 0..owned_resources_count {
@@ -84,7 +84,7 @@ impl GMElement for Track {
                     name,
                 );
             }
-            owned_resources.push(GMAnimationCurve::deserialize(reader)?);
+            owned_resources.push(AnimationCurve::deserialize(reader)?);
         }
 
         let mut sub_tracks: Vec<Self> = vec_with_capacity(track_count)?;

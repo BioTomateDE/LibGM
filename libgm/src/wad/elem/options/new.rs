@@ -3,12 +3,12 @@ use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::options::Constant;
 use crate::wad::elem::options::Flags;
-use crate::wad::elem::options::GMOptions;
-use crate::wad::elem::texture_page_item::GMTexturePageItem;
+use crate::wad::elem::options::Options;
+use crate::wad::elem::texture_page_item::TexturePageItem;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
-pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
+pub fn parse(reader: &mut DataReader) -> Result<Options> {
     let unknown1 = reader.read_u32()?;
     reader.assert_int(unknown1, 0x8000_0000, "Options Unknown Value 1")?;
     let unknown2 = reader.read_u32()?;
@@ -23,13 +23,13 @@ pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
     let frequency = reader.read_u32()?;
     let vertex_sync = reader.read_i32()?;
     let priority = reader.read_i32()?;
-    let back_image: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
-    let front_image: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
-    let load_image: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
+    let back_image: GMRef<TexturePageItem> = reader.read_gm_texture()?;
+    let front_image: GMRef<TexturePageItem> = reader.read_gm_texture()?;
+    let load_image: GMRef<TexturePageItem> = reader.read_gm_texture()?;
     let load_alpha = reader.read_u32()?;
     let constants: Vec<Constant> = reader.read_simple_list()?;
 
-    Ok(GMOptions {
+    Ok(Options {
         is_new_format: true,
         flags,
         window_scale,
@@ -48,7 +48,7 @@ pub fn parse(reader: &mut DataReader) -> Result<GMOptions> {
     })
 }
 
-pub fn build(builder: &mut DataBuilder, options: &GMOptions) -> Result<()> {
+pub fn build(builder: &mut DataBuilder, options: &Options) -> Result<()> {
     builder.write_u32(0x8000_0000); // unknown1
     builder.write_u32(2); //unknown2
     builder.write_u64(options.flags.bits());

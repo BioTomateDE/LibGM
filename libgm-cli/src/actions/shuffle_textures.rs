@@ -2,15 +2,15 @@
 //! Not the cleanest code lol
 
 use libgm::prelude::*;
-use libgm::wad::elem::texture_page_item::GMTexturePageItem;
+use libgm::wad::elem::texture_page_item::TexturePageItem;
 
 #[derive(Debug, Clone, Default)]
 struct Pools {
-    tiny: Vec<GMTexturePageItem>,
-    small: Vec<GMTexturePageItem>,
-    medium: Vec<GMTexturePageItem>,
-    big: Vec<GMTexturePageItem>,
-    massive: Vec<GMTexturePageItem>,
+    tiny: Vec<TexturePageItem>,
+    small: Vec<TexturePageItem>,
+    medium: Vec<TexturePageItem>,
+    big: Vec<TexturePageItem>,
+    massive: Vec<TexturePageItem>,
 }
 
 enum Size {
@@ -36,7 +36,7 @@ pub fn shuffle_textures(data: &mut GMData) {
     shuffle(&mut pools.big);
 
     for size in sizes {
-        let texture: GMTexturePageItem = match size {
+        let texture: TexturePageItem = match size {
             Size::Tiny => pools.tiny.pop(),
             Size::Small => pools.small.pop(),
             Size::Medium => pools.medium.pop(),
@@ -48,7 +48,7 @@ pub fn shuffle_textures(data: &mut GMData) {
     }
 }
 
-fn segregation(pools: &mut Pools, texture: GMTexturePageItem) -> Size {
+fn segregation(pools: &mut Pools, texture: TexturePageItem) -> Size {
     let size = texture.target_width as u32 * texture.target_height as u32;
     if size < 300 {
         pools.tiny.push(texture);
@@ -68,7 +68,7 @@ fn segregation(pools: &mut Pools, texture: GMTexturePageItem) -> Size {
     }
 }
 
-fn shuffle(vec: &mut Vec<GMTexturePageItem>) {
+fn shuffle(vec: &mut Vec<TexturePageItem>) {
     use rand::seq::SliceRandom;
     vec.as_mut_slice().shuffle(&mut rand::rng());
 }

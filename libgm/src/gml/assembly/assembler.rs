@@ -18,12 +18,12 @@ use crate::gml::instruction::VariableType;
 use crate::prelude::*;
 use crate::util::fmt::typename;
 use crate::wad::data::GMData;
-use crate::wad::elem::function::GMFunction;
-use crate::wad::elem::function::GMFunctions;
-use crate::wad::elem::game_object::GMGameObject;
-use crate::wad::elem::string::GMStrings;
+use crate::wad::elem::function::Function;
+use crate::wad::elem::function::Functions;
+use crate::wad::elem::game_object::GameObject;
+use crate::wad::elem::string::Strings;
 use crate::wad::elem::validate_identifier;
-use crate::wad::elem::variable::GMVariable;
+use crate::wad::elem::variable::Variable;
 
 /// Assembles multiple instructions separated by newline.
 /// Empty lines and lines containing only whitespace are skipped.
@@ -307,7 +307,7 @@ fn parse_asset_reference(reader: &mut Reader, gm_data: &GMData) -> Result<AssetR
 fn resolve_asset<T: GMNamedListChunk>(
     chunk: &T,
     ident: &str,
-    strings: &GMStrings,
+    strings: &Strings,
 ) -> Result<GMRef<T::Element>> {
     validate_identifier(ident)?;
     chunk.ref_by_name(ident, strings)
@@ -418,7 +418,7 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
 fn parse_call(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result<Instruction> {
     types.assert_count(0, "call")?;
     let ident: &str = reader.parse_identifier()?;
-    let function: GMRef<GMFunction> =
+    let function: GMRef<Function> =
         resolve_function(ident, &gm_data.functions, &gm_data.strings)?;
     reader.consume_space()?;
     let arg_count: u16 = reader.parse_uint()?;
@@ -449,11 +449,11 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
     let instance_type_arg = reader.consume_angle_brackets()?.unwrap_or_default();
     reader.consume_dot()?;
 
-    let mut variable_ref: Option<GMRef<GMVariable>> = None;
+    let mut variable_ref: Option<GMRef<Variable>> = None;
     let instance_type: InstanceType = match instance_type_raw {
         "self" => InstanceType::Self_,
         "object" => {
-            let object_ref: GMRef<GMGameObject> = gm_data
+            let object_ref: GMRef<GameObject> = gm_data
                 .game_objects
                 .ref_by_name(instance_type_arg, &gm_data.strings)?;
             InstanceType::GameObject(object_ref)
@@ -523,9 +523,9 @@ fn parse_variable_identifier<'a>(reader: &'a mut Reader) -> Result<&'a str> {
 
 fn parse_function(
     reader: &mut Reader,
-    gm_functions: &GMFunctions,
-    gm_strings: &GMStrings,
-) -> Result<GMRef<GMFunction>> {
+    gm_functions: &Functions,
+    gm_strings: &Strings,
+) -> Result<GMRef<Function>> {
     let ident = reader.clear();
     validate_identifier(ident)?;
     resolve_function(ident, gm_functions, gm_strings)
@@ -533,9 +533,9 @@ fn parse_function(
 
 fn resolve_function(
     ident: &str,
-    gm_functions: &GMFunctions,
-    gm_strings: &GMStrings,
-) -> Result<GMRef<GMFunction>> {
+    gm_functions: &Functions,
+    gm_strings: &Strings,
+) -> Result<GMRef<Function>> {
     for (gm_ref, func) in gm_functions.element_refs() {
         let name = func.name(gm_strings)?;
         if name == ident {

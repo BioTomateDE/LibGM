@@ -18,7 +18,7 @@ use crate::util::fmt::typename;
 /// [`GMRef`] has (fake) generic types to make it clearer which type it belongs
 /// to.
 /// * Example without: `pub texture_mask: GMRef`
-/// * Example with: `pub texture_mask: GMRef<GMSprite>`
+/// * Example with: `pub texture_mask: GMRef<Sprite>`
 ///
 /// It can be resolved to the data it references using the `.resolve()` method,
 /// which needs the vector the elements are stored in.

@@ -5,7 +5,7 @@ use crate::util::init::vec_with_capacity;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::texture_page_item::GMTexturePageItem;
+use crate::wad::elem::texture_page_item::TexturePageItem;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
@@ -17,21 +17,21 @@ const ALIGNMENT: u32 = 8;
 /// For GameMaker Studio 1, these are usually a background,
 /// but are sometimes repurposed as use for a tileset as well.
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMBackgrounds {
-    pub elems: Vec<Option<GMBackground>>,
+pub struct Backgrounds {
+    pub elems: Vec<Option<Background>>,
     /// Semi-internal flag that tracks whether to
     /// align the pointer list to 8 when serializing.
     pub align: bool,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(BGND, GMBackgrounds, GMBackground, nullable);
+gm_named_list_chunk!(BGND, Backgrounds, Background, nullable);
 
-impl GMElement for GMBackgrounds {
+impl GMElement for Backgrounds {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
         let align = pointers.iter().all(|&p| p % ALIGNMENT == 0);
-        let mut backgrounds: Vec<Option<GMBackground>> = vec![None; pointers.len()];
+        let mut backgrounds: Vec<Option<Background>> = vec![None; pointers.len()];
 
         for (idx, pointer) in pointers.into_iter().enumerate() {
             if pointer == 0 {
@@ -42,7 +42,7 @@ impl GMElement for GMBackgrounds {
             }
 
             reader.assert_pos(pointer, "Background Pointer")?;
-            let background = GMBackground::deserialize(reader)?;
+            let background = Background::deserialize(reader)?;
             backgrounds[idx] = Some(background);
         }
 
@@ -81,7 +81,7 @@ impl GMElement for GMBackgrounds {
 /// For GameMaker Studio 1, this is usually a background,
 /// but is sometimes repurposed as use for a tileset as well.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GMBackground {
+pub struct Background {
     /// The name of the background.
     pub name: GMRef<String>,
     /// Whether the background should be transparent.
@@ -91,18 +91,18 @@ pub struct GMBackground {
     /// Whether to preload the background.
     pub preload: bool,
     /// The [`GMTexturePageItem`] this background uses.
-    pub texture: GMRef<GMTexturePageItem>,
+    pub texture: GMRef<TexturePageItem>,
     /// Only set in GMS 2.0+.
     pub gms2_data: Option<GMS2Data>,
 }
 
-impl GMElement for GMBackground {
+impl GMElement for Background {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let transparent = reader.read_bool32()?;
         let smooth = reader.read_bool32()?;
         let preload = reader.read_bool32()?;
-        let texture: GMRef<GMTexturePageItem> = reader.read_gm_texture()?;
+        let texture: GMRef<TexturePageItem> = reader.read_gm_texture()?;
         let gms2_data: Option<GMS2Data> = reader.deserialize_if_gm_version(2)?;
 
         Ok(Self {

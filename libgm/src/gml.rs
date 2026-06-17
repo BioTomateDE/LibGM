@@ -17,7 +17,7 @@ use crate::prelude::*;
 
 /// A code entry in a GameMaker data file.
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMCode {
+pub struct Code {
     /// The name of the code entry.
     pub name: GMRef<String>,
 
@@ -28,7 +28,7 @@ pub struct GMCode {
     pub modern_data: Option<ModernData>,
 }
 
-impl GMCode {
+impl Code {
     /// Find child code entries of this code entry.
     ///
     /// This is always `false` before WAD 15, since child/parent code entries
@@ -150,7 +150,7 @@ pub struct ModernData {
 
     /// Parent entry of this code entry, if this is a child entry; [`None`]
     /// otherwise.
-    pub parent: Option<GMRef<GMCode>>,
+    pub parent: Option<GMRef<Code>>,
 }
 
 /// Gets the total (cumulative) size of all instructions, in bytes.

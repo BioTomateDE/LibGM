@@ -65,7 +65,7 @@ pub fn check_2024_6(reader: &mut DataReader) -> Result<Option<GMVersion>> {
         }
         let sprite_type = reader.read_u32()?;
         if sprite_type != 0 {
-            // 0 <=> GMSpriteType::Normal
+            // 0 <=> SpriteType::Normal
             continue; // We can't determine anything from this sprite
         }
         let sequence_offset = reader.read_u32()?;

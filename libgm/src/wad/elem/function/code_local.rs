@@ -6,12 +6,12 @@ use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct GMCodeLocals {
+pub struct CodeLocals {
     pub code_locals: Vec<GMCodeLocal>,
     pub exists: bool,
 }
 
-impl GMElement for GMCodeLocals {
+impl GMElement for CodeLocals {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let code_locals: Vec<GMCodeLocal> = reader.read_simple_list()?;
         Ok(Self { code_locals, exists: true })

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::hint::cold_path;
 
 use crate::prelude::*;
-use crate::wad::elem::texture_page_item::GMTexturePageItem;
+use crate::wad::elem::texture_page_item::TexturePageItem;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
@@ -30,13 +30,13 @@ impl DataReader<'_> {
         ))
     }
 
-    pub fn read_gm_texture(&mut self) -> Result<GMRef<GMTexturePageItem>> {
+    pub fn read_gm_texture(&mut self) -> Result<GMRef<TexturePageItem>> {
         let occurrence_position = self.read_u32()?;
         if occurrence_position == 0 {
             return Ok(GMRef::none());
         }
 
-        let map: &HashMap<u32, GMRef<GMTexturePageItem>> = &self.texture_page_item_occurrences;
+        let map: &HashMap<u32, GMRef<TexturePageItem>> = &self.texture_page_item_occurrences;
         if let Some(&tpag_ref) = map.get(&occurrence_position) {
             return Ok(tpag_ref);
         }

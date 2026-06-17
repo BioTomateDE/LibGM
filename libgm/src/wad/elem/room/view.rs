@@ -2,12 +2,12 @@
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::game_object::GMGameObject;
+use crate::wad::elem::game_object::GameObject;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct View {
+pub struct RoomView {
     pub enabled: bool,
     pub view_x: i32,
     pub view_y: i32,
@@ -21,10 +21,10 @@ pub struct View {
     pub border_y: u32,
     pub speed_x: i32,
     pub speed_y: i32,
-    pub object: GMRef<GMGameObject>,
+    pub object: GMRef<GameObject>,
 }
 
-impl GMElement for View {
+impl GMElement for RoomView {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let enabled = reader.read_bool32()?;
         let view_x = reader.read_i32()?;
@@ -39,7 +39,7 @@ impl GMElement for View {
         let border_y = reader.read_u32()?;
         let speed_x = reader.read_i32()?;
         let speed_y = reader.read_i32()?;
-        let object: GMRef<GMGameObject> = reader.read_resource_by_id()?;
+        let object: GMRef<GameObject> = reader.read_resource_by_id()?;
 
         Ok(Self {
             enabled,

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use crate::gml::GMCode;
+use crate::gml::Code;
 use crate::prelude::*;
-use crate::wad::elem::string::GMStrings;
+use crate::wad::elem::string::Strings;
 use crate::wad::elem::validate_identifier;
 
-impl GMNamedElement for GMCode {
+impl GMNamedElement for Code {
     fn name_ref(&self) -> GMRef<String> {
         self.name
     }
 
-    fn validate_name(&self, gm_strings: &GMStrings) -> Result<()> {
+    fn validate_name(&self, gm_strings: &Strings) -> Result<()> {
         let name: &str = self.name(gm_strings)?;
         validate(name).ctx(|| format!("strictly validating code entry name {name:?}"))
     }

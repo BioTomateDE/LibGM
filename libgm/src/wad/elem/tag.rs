@@ -6,15 +6,15 @@ use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMTags {
+pub struct Tags {
     pub elems: Vec<GMRef<String>>,
     pub asset_tags: Vec<AssetTags>,
     pub exists: bool,
 }
 
-gm_chunk!(TAGS, GMTags);
+gm_chunk!(TAGS, Tags);
 
-impl GMElement for GMTags {
+impl GMElement for Tags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
         reader.read_gms2_chunk_version("TAGS Version")?;
@@ -33,7 +33,7 @@ impl GMElement for GMTags {
     }
 }
 
-impl GMTags {
+impl Tags {
     /// Attempts to get asset tags by the given id.
     #[must_use]
     pub fn by_id(&self, id: i32) -> Option<&Vec<GMRef<String>>> {

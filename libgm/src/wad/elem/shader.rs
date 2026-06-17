@@ -11,14 +11,14 @@ use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMShaders {
-    pub elems: Vec<Option<GMShader>>,
+pub struct Shaders {
+    pub elems: Vec<Option<Shader>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(SHDR, GMShaders, GMShader, nullable);
+gm_named_list_chunk!(SHDR, Shaders, Shader, nullable);
 
-impl GMElement for GMShaders {
+impl GMElement for Shaders {
     #[expect(clippy::too_many_lines)]
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         // Figure out where the starts/ends of each shader object are.
@@ -37,7 +37,7 @@ impl GMElement for GMShaders {
         }
         locations.push(reader.chunk.end_pos);
 
-        let mut elems: Vec<Option<GMShader>> = vec![None; real_count as usize];
+        let mut elems: Vec<Option<Shader>> = vec![None; real_count as usize];
 
         for i in 0..real_count as usize {
             let pointer = locations[i];
@@ -138,7 +138,7 @@ impl GMElement for GMShaders {
             let cg_ps3_pixel_data: Option<ShaderData> =
                 read_shader_data(reader, entry_end, 16, cg_ps3_pixel_ptr, cg_ps3_pixel_len, 0)?;
 
-            elems[i] = Some(GMShader {
+            elems[i] = Some(Shader {
                 name,
                 shader_type,
                 glsl_es_vertex,
@@ -170,7 +170,7 @@ impl GMElement for GMShaders {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GMShader {
+pub struct Shader {
     pub name: GMRef<String>,
     pub shader_type: Type,
     pub glsl_es_vertex: GMRef<String>,
@@ -191,7 +191,7 @@ pub struct GMShader {
     pub vertex_shader_attributes: Vec<GMRef<String>>,
 }
 
-impl GMElement for GMShader {
+impl GMElement for Shader {
     fn deserialize(_: &mut DataReader) -> Result<Self> {
         unimplemented!("GMShader::deserialize is not supported; use GMShaders::deserialize instead")
     }

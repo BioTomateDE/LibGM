@@ -23,15 +23,15 @@ use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMRootUINodes {
+pub struct UINodes {
     pub elems: Vec<UINode>,
     pub exists: bool,
 }
 
 // not sure if direct
-gm_list_chunk!(UILR, GMRootUINodes, UINode, direct);
+gm_list_chunk!(UILR, UINodes, UINode, direct);
 
-impl GMElement for GMRootUINodes {
+impl GMElement for UINodes {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         if reader.chunk.length() > 12 {
             log::warn!("UI nodes are untested; issues may occur");

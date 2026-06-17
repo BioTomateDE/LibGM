@@ -2,7 +2,7 @@
 pub mod code_local;
 
 pub use code_local::GMCodeLocal;
-pub use code_local::GMCodeLocals;
+pub use code_local::CodeLocals;
 
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
@@ -11,35 +11,35 @@ use crate::wad::chunk::ChunkName;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::element_stub;
-use crate::wad::elem::string::GMStrings;
+use crate::wad::elem::string::Strings;
 use crate::wad::parse::chunk::ChunkBounds;
 use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMFunctions {
-    pub elems: Vec<GMFunction>,
-    pub code_locals: GMCodeLocals,
+pub struct Functions {
+    pub elems: Vec<Function>,
+    pub code_locals: CodeLocals,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(FUNC, GMFunctions, GMFunction, direct);
+gm_named_list_chunk!(FUNC, Functions, Function, direct);
 
-impl GMFunctions {
+impl Functions {
     /// Returns an existing function with the given name if it exists,
     /// otherwise creates a new one.
-    pub fn make(&mut self, name: &str, strings: &mut GMStrings) -> GMRef<GMFunction> {
+    pub fn make(&mut self, name: &str, strings: &mut Strings) -> GMRef<Function> {
         if let Ok(func_ref) = self.ref_by_name(name, strings) {
             return func_ref;
         }
         let name = strings.make(name);
         let idx = self.elems.len();
-        let func = GMFunction { name };
+        let func = Function { name };
         self.elems.push(func);
         GMRef::from(idx)
     }
 }
 
-impl GMElement for GMFunctions {
+impl GMElement for Functions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let functions_count = if reader.general_info.wad_version >= 15 {
             reader.read_u32()?
@@ -47,7 +47,7 @@ impl GMElement for GMFunctions {
             reader.chunk.length() / 12
         };
 
-        let mut elems: Vec<GMFunction> = vec_with_capacity(functions_count)?;
+        let mut elems: Vec<Function> = vec_with_capacity(functions_count)?;
 
         for i in 0..functions_count {
             let name: GMRef<String> = reader.read_gm_string()?;
@@ -71,14 +71,14 @@ impl GMElement for GMFunctions {
                 }
             }
 
-            elems.push(GMFunction { name });
+            elems.push(Function { name });
         }
 
-        let code_locals: GMCodeLocals =
+        let code_locals: CodeLocals =
             if reader.general_info.wad_version >= 15 && reader.general_info.version < (2024, 8) {
-                GMCodeLocals::deserialize(reader)?
+                CodeLocals::deserialize(reader)?
             } else {
-                GMCodeLocals::default()
+                CodeLocals::default()
             };
 
         Ok(Self { elems, code_locals, exists: true })
@@ -124,10 +124,10 @@ impl GMElement for GMFunctions {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GMFunction {
+pub struct Function {
     pub name: GMRef<String>,
 }
-element_stub!(GMFunction);
+element_stub!(Function);
 
 fn parse_occurrence_chain(
     reader: &mut DataReader,

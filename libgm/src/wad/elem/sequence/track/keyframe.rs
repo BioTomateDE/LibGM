@@ -20,7 +20,7 @@ pub use graphic::Graphic;
 pub use instance::Instance;
 pub use moment::Moment;
 pub use particle::Particle;
-pub use sequence::Sequence;
+pub use sequence::KSequence;
 pub use sprite_frames::SpriteFrames;
 pub use string::KString;
 pub use text::Text;
@@ -36,7 +36,7 @@ pub enum Keyframes {
     Audio(Data<Audio>),
     Instance(Data<Instance>),
     Graphic(Data<Graphic>),
-    Sequence(Data<Sequence>),
+    Sequence(Data<KSequence>),
     SpriteFrames(Data<SpriteFrames>),
     Bool(Data<Bool>),
     // Asset(Data<Asset>),
@@ -112,8 +112,8 @@ pub struct Channel<T: GMElement> {
 impl<T: GMElement> GMElement for Channel<T> {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let id = reader.read_i32()?;
-        let value = T::deserialize(reader)
-            .ctx(|| format!("deserializing {} channel", typename::<T>()))?;
+        let value =
+            T::deserialize(reader).ctx(|| format!("deserializing {} channel", typename::<T>()))?;
         Ok(Self { id, value })
     }
 

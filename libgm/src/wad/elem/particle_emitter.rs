@@ -4,27 +4,27 @@ use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::sprite::GMSprite;
+use crate::wad::elem::sprite::Sprite;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMParticleEmitters {
-    pub elems: Vec<GMParticleEmitter>,
+pub struct ParticleEmitters {
+    pub elems: Vec<ParticleEmitter>,
     pub exists: bool,
 }
 
 // not sure if direct
-gm_named_list_chunk!(PSEM, GMParticleEmitters, GMParticleEmitter, direct);
+gm_named_list_chunk!(PSEM, ParticleEmitters, ParticleEmitter, direct);
 
-impl GMElement for GMParticleEmitters {
+impl GMElement for ParticleEmitters {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         if reader.chunk.length() > 8 {
             log::warn!("Particle emitters are not tested");
         }
         reader.align(4)?;
         reader.read_gms2_chunk_version("PSEM Version")?;
-        let elems: Vec<GMParticleEmitter> = reader.read_pointer_list()?;
+        let elems: Vec<ParticleEmitter> = reader.read_pointer_list()?;
         Ok(Self { elems, exists: true })
     }
 
@@ -37,7 +37,7 @@ impl GMElement for GMParticleEmitters {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMParticleEmitter {
+pub struct ParticleEmitter {
     pub name: GMRef<String>,
     pub enabled: bool,
     pub mode: EmitMode,
@@ -53,7 +53,7 @@ pub struct GMParticleEmitter {
     pub region_w: f32,
     pub region_h: f32,
     pub rotation: f32,
-    pub sprite: GMRef<GMSprite>,
+    pub sprite: GMRef<Sprite>,
     pub texture: EmitterTexture,
     pub frame_index: f32,
     pub data_2023_4: Option<Data2023_4>,
@@ -86,7 +86,7 @@ pub struct GMParticleEmitter {
     pub spawn_on_update_count: u32,
 }
 
-impl GMElement for GMParticleEmitter {
+impl GMElement for ParticleEmitter {
     #[allow(clippy::too_many_lines)]
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
@@ -134,7 +134,7 @@ impl GMElement for GMParticleEmitter {
         let region_w = reader.read_f32()?;
         let region_h = reader.read_f32()?;
         let rotation = reader.read_f32()?;
-        let sprite: GMRef<GMSprite> = reader.read_resource_by_id()?;
+        let sprite: GMRef<Sprite> = reader.read_resource_by_id()?;
         let texture: EmitterTexture = reader.read_enum()?;
         let frame_index = reader.read_f32()?;
         let data_2023_4: Option<Data2023_4> = reader.deserialize_if_gm_version((2023, 4))?;

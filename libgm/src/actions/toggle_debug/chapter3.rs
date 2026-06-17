@@ -3,12 +3,12 @@
 //! Chapter 3:
 //! 2025-06-05 to now [2026-01-04]
 
-use crate::gml::GMCode;
+use crate::gml::Code;
 use crate::gml::assembly::assemble_instructions;
 use crate::gml::instruction::InstanceType;
 use crate::gml::instruction::Instruction;
 use crate::prelude::*;
-use crate::wad::elem::variable::GMVariable;
+use crate::wad::elem::variable::Variable;
 
 // === Instruction Layout - Before ===
 // pushim 0
@@ -35,7 +35,7 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     }
 
     // Enable/disable debug mode.
-    let code: &mut GMCode = data.codes.by_ref_mut(code_ref)?;
+    let code: &mut Code = data.codes.by_ref_mut(code_ref)?;
     let integer = i16::from(enable);
     code.instructions[push_instr_index] = Instruction::PushImmediate { integer };
 
@@ -45,7 +45,7 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     }
 
     if let Some(Instruction::Pop { variable, .. }) = code.instructions.get(push_instr_index + 3) {
-        let gm_variable: &GMVariable = data.variables.by_ref(variable.variable)?;
+        let gm_variable: &Variable = data.variables.by_ref(variable.variable)?;
         let var_name = data.strings.by_ref(gm_variable.name)?;
         if var_name == "chemg_show_room" {
             // Debug had been enabled here before.
@@ -62,7 +62,7 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     ";
 
     let instructions = assemble_instructions(assembly, data)?;
-    let code: &mut GMCode = data.codes.by_ref_mut(code_ref)?;
+    let code: &mut Code = data.codes.by_ref_mut(code_ref)?;
     let idx = push_instr_index + 2;
     code.instructions.splice(idx..idx, instructions);
 

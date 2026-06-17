@@ -4,21 +4,20 @@ mod sequence;
 mod sprite;
 mod text_item;
 
-pub use particle_system::ParticleSystemInstance;
-pub use sequence::SequenceInstance;
-pub use sprite::SpriteInstance;
-pub use text_item::TextItemInstance;
-
+pub use self::particle_system::ParticleSystemInstance;
+pub use self::sequence::SequenceInstance;
+pub use self::sprite::SpriteInstance;
+pub use self::text_item::TextItemInstance;
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::room::tile::Tile;
+use crate::wad::elem::room::tile::RoomTile;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::version::LTSBranch;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Assets {
-    pub legacy_tiles: Vec<Tile>,
+    pub legacy_tiles: Vec<RoomTile>,
     pub sprites: Vec<SpriteInstance>,
     pub sequences: Vec<SequenceInstance>,
     pub nine_slices: Vec<SpriteInstance>,
@@ -49,7 +48,7 @@ impl GMElement for Assets {
         }
 
         reader.assert_pos(legacy_tiles_pointer, "Legacy Tiles")?;
-        let legacy_tiles: Vec<Tile> = reader.read_pointer_list()?;
+        let legacy_tiles: Vec<RoomTile> = reader.read_pointer_list()?;
 
         reader.assert_pos(sprites_pointer, "Sprite Instances")?;
         let sprites: Vec<SpriteInstance> = reader.read_pointer_list()?;

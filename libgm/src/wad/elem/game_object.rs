@@ -10,22 +10,22 @@ use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::element_stub;
-use crate::wad::elem::sprite::GMSprite;
+use crate::wad::elem::sprite::Sprite;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMGameObjects {
-    pub elems: Vec<Option<GMGameObject>>,
+pub struct GameObjects {
+    pub elems: Vec<Option<GameObject>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(OBJT, GMGameObjects, GMGameObject, nullable);
+gm_named_list_chunk!(OBJT, GameObjects, GameObject, nullable);
 
-impl GMElement for GMGameObjects {
+impl GMElement for GameObjects {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
-        let mut elems: Vec<Option<GMGameObject>> = vec![None; pointers.len()];
+        let mut elems: Vec<Option<GameObject>> = vec![None; pointers.len()];
 
         for (i, pointer) in pointers.into_iter().enumerate() {
             if pointer == 0 {
@@ -34,7 +34,7 @@ impl GMElement for GMGameObjects {
             reader.assert_pos(pointer, "Game Object")?;
 
             let name: GMRef<String> = reader.read_gm_string()?;
-            let sprite: GMRef<GMSprite> = reader.read_resource_by_id()?;
+            let sprite: GMRef<Sprite> = reader.read_resource_by_id()?;
 
             let visible = reader.read_bool32()?;
             let mut managed: Option<bool> = None;
@@ -46,14 +46,14 @@ impl GMElement for GMGameObjects {
             let persistent = reader.read_bool32()?;
 
             let parent_id = reader.read_i32()?;
-            let parent: GMRef<GMGameObject> = match parent_id {
+            let parent: GMRef<GameObject> = match parent_id {
                 -100 => GMRef::none(), // No parent
                 -1 => GMRef::from(i),  // Parent is Self
                 n if n < 0 => bail!("Unexpected negative Parent ID {n}"),
                 _ => GMRef::new(parent_id),
             };
 
-            let texture_mask: GMRef<GMSprite> = reader.read_resource_by_id()?;
+            let texture_mask: GMRef<Sprite> = reader.read_resource_by_id()?;
 
             let uses_physics = reader.read_bool32()?;
             let is_sensor = reader.read_bool32()?;
@@ -80,7 +80,7 @@ impl GMElement for GMGameObjects {
 
             let events = EventGroups::deserialize(reader).ctx("parsing game object events")?;
 
-            elems[i] = Some(GMGameObject {
+            elems[i] = Some(GameObject {
                 name,
                 sprite,
                 visible,
@@ -155,12 +155,12 @@ impl GMElement for GMGameObjects {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMGameObject {
+pub struct GameObject {
     /// The name of the game object.
     pub name: GMRef<String>,
 
     /// The sprite this game object uses.
-    pub sprite: GMRef<GMSprite>,
+    pub sprite: GMRef<Sprite>,
 
     /// Whether the game object is visible.
     pub visible: bool,
@@ -181,7 +181,7 @@ pub struct GMGameObject {
     pub parent: GMRef<Self>,
 
     /// The texture mask this game object is using.
-    pub texture_mask: GMRef<GMSprite>,
+    pub texture_mask: GMRef<Sprite>,
 
     /// Whether this object uses GameMaker physics.
     pub uses_physics: bool,
@@ -222,7 +222,7 @@ pub struct GMGameObject {
     /// All the events that this game object has.
     pub events: EventGroups,
 }
-element_stub!(GMGameObject);
+element_stub!(GameObject);
 
 gm_enum!(CollisionShape {
     Circle = 0,

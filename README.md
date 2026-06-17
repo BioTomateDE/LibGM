@@ -4,10 +4,11 @@
 [![Documentation](https://img.shields.io/docsrs/libgm)](https://docs.rs/libgm)
 
 # LibGM
+
 A tool for unpacking, decompiling and modding GameMaker games such as Undertale or Deltarune.
 
-
 ## Benefits of this Rust port
+
 - Parsing and building data files is ~8x faster than UndertaleModLib.
 - Clean and maintainable library code.
 - Thorough documentation on [docs.rs](https://docs.rs/libgm).
@@ -19,37 +20,40 @@ A tool for unpacking, decompiling and modding GameMaker games such as Undertale 
   - Strict data integrity checks catch errors earlier, making debugging easier.
 
 This is an example error trace printed out using `error.chain()`:
+
 ```
 sprite::swf::item::shape::style_group::fill::gradient::Record count 1065353216 implies data size 8.5 GB which exceeds failsafe size 10.0 MB
 > while reading simple list
 > while deserializing element 1/2 of sprite::swf::item::shape::style_group::StyleGroup<sprite::swf::item::subshape::Data> simple list
 > while deserializing element 0/1 of sprite::swf::item::Item simple list
-> while deserializing element 3/60 of GMSprite pointer list
+> while deserializing element 3/60 of Sprite pointer list
 > while deserializing chunk 'SPRT'
 > while parsing GameMaker data file ./gm48_datafiles/a-loop_detective.win
 ```
 
-
 ## Disadvantages / TODOs
+
 - GML Decompiler and Compiler not yet implemented. (Help would be greatly appreciated!)
 - No edtior GUI yet, only a Rust library.
 
-
 ## Library usage
+
 Add this line in the `[dependencies]` section of your `Cargo.toml` file:
+
 ```toml
 libgm = "0.6"
 ```
 
 Or if you want bleeding edge (might be unstable):
+
 ```toml
 libgm = { git = "https://codeberg.org/BioTomateDE/LibGM" }
 ```
 
 Example usage is specified in [docs.rs](https://docs.rs/libgm).
 
-
 ## Crate features
+
 | Feature                 | Default  | Dependencies |
 |-------------------------|----------|--------------|
 | catch-panic             | enabled  |              |
@@ -68,17 +72,17 @@ Example usage is specified in [docs.rs](https://docs.rs/libgm).
 - `png-image` enables PNG (de)serialization.
   In games older than GM 2022.2, you will not be able to serialize `GMImage`s storing `DynamicImage`s with this feature disabled.
 
-
 ## Credits
+
 Huge thanks to the Underminers Team! Without
 [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool),
 this project would've been impossible.
-I also want to thank the people in the Underminers Discord 
+I also want to thank the people in the Underminers Discord
 Guild who helped me along the way, especially
 [@colinator27](https://github.com/colinator27).
 
-
 ## Licencing
+
 This project is licenced under the
 [GNU Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html).
 SPDX-License-Identifier: GPL-3.0-only.
@@ -86,8 +90,8 @@ SPDX-License-Identifier: GPL-3.0-only.
 This means that all projects using this library must also be licensed under GPL-3
 to protect the Open Source Community.
 
-
 ## Contributing
+
 All contributions are welcome! Whether that's a pull request, a feature you
 would like to see added, a bug you found; just create an Issue/PR in this repo.
 For more information, see the [contributing guidelines](https://codeberg.org/BioTomateDE/_/src/CONTRIBUTING.md).
@@ -98,6 +102,7 @@ For more information, see the [contributing guidelines](https://codeberg.org/Bio
 - There is a basic CLI to interact with LibGM in `libgm-cli/src/`.
 
 ### End-to-end testing
+
 You must supply your own copy of specific versions of the games.
 For instance, run the following commands (from the project root)
 to copy from your Steam library folder, where applicable:

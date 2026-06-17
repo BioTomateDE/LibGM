@@ -3,7 +3,7 @@
 bitflags::bitflags! {
     /// Certain flags a room can have.
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-    pub struct Flags: u32 {
+    pub struct RoomFlags: u32 {
         /// Whether the room has Views enabled.
         const ENABLE_VIEWS = 0x1;
 

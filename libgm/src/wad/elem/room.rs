@@ -6,33 +6,32 @@ pub mod layer;
 pub mod tile;
 mod view;
 
-pub use background::Background;
-pub use flags::Flags;
-pub use game_object::GameObject;
-pub use layer::Layer;
-pub use tile::Tile;
-pub use view::View;
-
-use crate::gml::GMCode;
+pub use self::background::RoomBackground;
+pub use self::flags::RoomFlags;
+pub use self::game_object::RoomGameObject;
+pub use self::layer::RoomLayer;
+pub use self::tile::RoomTile;
+pub use self::view::RoomView;
+use crate::gml::Code;
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::sequence::GMSequence;
+use crate::wad::elem::sequence::Sequence;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMRooms {
-    pub elems: Vec<Option<GMRoom>>,
+pub struct Rooms {
+    pub elems: Vec<Option<Room>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(ROOM, GMRooms, GMRoom, nullable);
+gm_named_list_chunk!(ROOM, Rooms, Room, nullable);
 
-impl GMElement for GMRooms {
+impl GMElement for Rooms {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let elems: Vec<Option<GMRoom>> = reader.read_pointer_list_opt()?;
+        let elems: Vec<Option<Room>> = reader.read_pointer_list_opt()?;
         Ok(Self { elems, exists: true })
     }
 
@@ -44,7 +43,7 @@ impl GMElement for GMRooms {
 
 #[derive(Debug, Clone, PartialEq)]
 #[repr(C)] // Need explicit layout so memory addresses for gm pointers don't collide
-pub struct GMRoom {
+pub struct Room {
     pub name: GMRef<String>,
     pub caption: GMRef<String>,
     pub width: u32,
@@ -53,12 +52,12 @@ pub struct GMRoom {
     pub persistent: bool,
     pub background_color: u32,
     pub draw_background_color: bool,
-    pub creation_code: GMRef<GMCode>,
-    pub flags: Flags,
-    pub backgrounds: Vec<Background>,
-    pub views: Vec<View>,
-    pub game_objects: Vec<GameObject>,
-    pub tiles: Vec<Tile>,
+    pub creation_code: GMRef<Code>,
+    pub flags: RoomFlags,
+    pub backgrounds: Vec<RoomBackground>,
+    pub views: Vec<RoomView>,
+    pub game_objects: Vec<RoomGameObject>,
+    pub tiles: Vec<RoomTile>,
     pub instance_creation_order_ids: Vec<i32>,
     pub world: bool,
     pub top: u32,
@@ -68,11 +67,11 @@ pub struct GMRoom {
     pub gravity_x: f32,
     pub gravity_y: f32,
     pub meters_per_pixel: f32,
-    pub layers: Vec<Layer>,
-    pub sequences: Vec<GMSequence>,
+    pub layers: Vec<RoomLayer>,
+    pub sequences: Vec<Sequence>,
 }
 
-impl GMElement for GMRoom {
+impl GMElement for Room {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let caption: GMRef<String> = reader.read_gm_string()?;
@@ -85,10 +84,10 @@ impl GMElement for GMRoom {
         let background_color: u32 = reader.read_u32()? ^ 0xFF00_0000;
 
         let draw_background_color = reader.read_bool32()?;
-        let creation_code: GMRef<GMCode> = reader.read_resource_by_id()?;
+        let creation_code: GMRef<Code> = reader.read_resource_by_id()?;
         let flags = reader.read_u32()?;
         let flags =
-            Flags::from_bits(flags).ok_or_else(|| format!("Invalid Room Flags {flags:08X}"))?;
+            RoomFlags::from_bits(flags).ok_or_else(|| format!("Invalid Room Flags {flags:08X}"))?;
 
         let backgrounds_ptr = reader.read_u32()?;
         let views_ptr = reader.read_u32()?;
@@ -109,16 +108,16 @@ impl GMElement for GMRoom {
         let sequences_ptr: u32 = reader.deserialize_if_gm_version((2, 3))?.unwrap_or(0);
 
         reader.assert_pos(backgrounds_ptr, "Room Backgrounds")?;
-        let backgrounds: Vec<Background> = reader.read_pointer_list()?;
+        let backgrounds: Vec<RoomBackground> = reader.read_pointer_list()?;
 
         reader.assert_pos(views_ptr, "Room Views")?;
-        let views: Vec<View> = reader.read_pointer_list()?;
+        let views: Vec<RoomView> = reader.read_pointer_list()?;
 
         reader.assert_pos(game_objects_ptr, "Room Game Objects")?;
-        let game_objects: Vec<GameObject> = reader.read_pointer_list()?;
+        let game_objects: Vec<RoomGameObject> = reader.read_pointer_list()?;
 
         reader.assert_pos(tiles_ptr, "Room Tiles")?;
-        let tiles: Vec<Tile> = reader.read_pointer_list()?;
+        let tiles: Vec<RoomTile> = reader.read_pointer_list()?;
 
         let instance_creation_order_ids: Vec<i32> = if reader.general_info.version >= (2024, 13) {
             reader.assert_pos(instances_ptr, "Room Instance Creation Order IDs")?;
@@ -127,14 +126,14 @@ impl GMElement for GMRoom {
             Vec::new()
         };
 
-        let layers: Vec<Layer> = if reader.general_info.version >= (2, 0) {
+        let layers: Vec<RoomLayer> = if reader.general_info.version >= (2, 0) {
             reader.assert_pos(layers_ptr, "Room Layers")?;
             reader.read_pointer_list()?
         } else {
             Vec::new()
         };
 
-        let sequences: Vec<GMSequence> = if reader.general_info.version >= (2, 3) {
+        let sequences: Vec<Sequence> = if reader.general_info.version >= (2, 3) {
             reader.assert_pos(sequences_ptr, "Room Sequences")?;
             reader.read_pointer_list()?
         } else {

@@ -43,17 +43,17 @@
 //! ```no_run
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use libgm::prelude::*;
-//! use libgm::wad::elem::game_object::GMGameObject;
-//! use libgm::wad::elem::sprite::GMSprite;
+//! use libgm::wad::elem::game_object::GameObject;
+//! use libgm::wad::elem::sprite::Sprite;
 //!
 //! let mut data: GMData = libgm::wad::parse_file("./game.unx")?;
-//! let object: &mut GMGameObject = data
+//! let object: &mut GameObject = data
 //!     .game_objects
 //!     .by_name_mut("obj_mysteryman", &data.strings)?;
 //! object.solid = true;
 //! object.depth = 66666;
 //!
-//! let sprite: &GMSprite = data.sprites.by_ref(object.sprite)?;
+//! let sprite: &Sprite = data.sprites.by_ref(object.sprite)?;
 //! let w: u32 = sprite.width;
 //! let h: u32 = sprite.width;
 //! println!("Mysteryman's sprite dimensions are {w}x{h} pixels");
@@ -67,7 +67,7 @@
 //! # fn some_sophisticated_source() -> &'static [u8] { &[] }
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use libgm::prelude::*;
-//! use libgm::wad::elem::audio::GMAudio;
+//! use libgm::wad::elem::audio::Audio;
 //! use libgm::wad::elem::sound::Flags;
 //! use libgm::wad::parse::ParsingOptions;
 //! let raw_data: &[u8] = some_sophisticated_source();
@@ -80,7 +80,7 @@
 //! for sound in gm_data.sounds.elements() {
 //!     if sound.flags.contains(Flags::EMBEDDED) {
 //!         let name = gm_data.strings.by_ref(sound.name)?;
-//!         let audio: &GMAudio = gm_data.audios.by_ref(sound.audio)?;
+//!         let audio: &Audio = gm_data.audios.by_ref(sound.audio)?;
 //!         let path = format!("exported_sounds/{name}.wav");
 //!         std::fs::write(path, &audio.data)?;
 //!     }

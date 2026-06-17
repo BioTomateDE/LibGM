@@ -7,16 +7,16 @@ use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMPaths {
-    pub elems: Vec<Option<GMPath>>,
+pub struct Paths {
+    pub elems: Vec<Option<Path>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(PATH, GMPaths, GMPath, nullable);
+gm_named_list_chunk!(PATH, Paths, Path, nullable);
 
-impl GMElement for GMPaths {
+impl GMElement for Paths {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let elems: Vec<Option<GMPath>> = reader.read_pointer_list_opt()?;
+        let elems: Vec<Option<Path>> = reader.read_pointer_list_opt()?;
         Ok(Self { elems, exists: true })
     }
 
@@ -27,7 +27,7 @@ impl GMElement for GMPaths {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMPath {
+pub struct Path {
     pub name: GMRef<String>,
     pub is_smooth: bool,
     pub is_closed: bool,
@@ -35,7 +35,7 @@ pub struct GMPath {
     pub points: Vec<Point>,
 }
 
-impl GMElement for GMPath {
+impl GMElement for Path {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let is_smooth = reader.read_bool32()?;

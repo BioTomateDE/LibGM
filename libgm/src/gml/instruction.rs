@@ -20,7 +20,7 @@ pub use self::instance_type::InstanceType;
 pub use self::push_value::PushValue;
 pub use self::variable_type::VariableType;
 use crate::wad::GMRef;
-use crate::wad::elem::function::GMFunction;
+use crate::wad::elem::function::Function;
 
 /// A GameMaker VM Instruction.
 ///
@@ -352,7 +352,7 @@ pub enum Instruction {
     /// TODO(doc): I'm not sure what happens when too many arguments are
     /// specified (probably nothing?).
     Call {
-        function: GMRef<GMFunction>,
+        function: GMRef<Function>,
         arg_count: u16,
     },
 
@@ -527,7 +527,7 @@ impl Instruction {
     /// This can succeed for `Push` and `PushReference` and will always succeed
     /// for `Call`.
     #[must_use]
-    pub const fn function(&self) -> Option<GMRef<GMFunction>> {
+    pub const fn function(&self) -> Option<GMRef<Function>> {
         match self {
             Self::Push { value: PushValue::Function(function) }
             | Self::Call { function, .. }

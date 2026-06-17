@@ -9,17 +9,17 @@ use crate::wad::elem::game_object;
 use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMTimelines {
-    pub elems: Vec<Option<GMTimeline>>,
+pub struct Timelines {
+    pub elems: Vec<Option<Timeline>>,
     pub exists: bool,
 }
 
 // probably nullable?
-gm_named_list_chunk!(TMLN, GMTimelines, GMTimeline, nullable);
+gm_named_list_chunk!(TMLN, Timelines, Timeline, nullable);
 
-impl GMElement for GMTimelines {
+impl GMElement for Timelines {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let elems: Vec<Option<GMTimeline>> = reader.read_pointer_list_opt()?;
+        let elems: Vec<Option<Timeline>> = reader.read_pointer_list_opt()?;
         Ok(Self { elems, exists: true })
     }
 
@@ -30,12 +30,12 @@ impl GMElement for GMTimelines {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMTimeline {
+pub struct Timeline {
     pub name: GMRef<String>,
     pub moments: Vec<Moment>,
 }
 
-impl GMElement for GMTimeline {
+impl GMElement for Timeline {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let moment_count = reader.read_u32()?;

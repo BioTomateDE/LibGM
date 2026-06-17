@@ -15,8 +15,8 @@ use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMExtensions {
-    pub elems: Vec<GMExtension>,
+pub struct Extensions {
+    pub elems: Vec<Extension>,
     /// Set in GMS2+ (and some scuffed GMS1 versions)
     // TODO: merge into GMExtension
     pub product_id_data: Vec<[u8; 16]>,
@@ -24,11 +24,11 @@ pub struct GMExtensions {
 }
 
 // not sure if nullable
-gm_named_list_chunk!(EXTN, GMExtensions, GMExtension, direct);
+gm_named_list_chunk!(EXTN, Extensions, Extension, direct);
 
-impl GMElement for GMExtensions {
+impl GMElement for Extensions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let elems: Vec<GMExtension> = reader.read_pointer_list()?;
+        let elems: Vec<Extension> = reader.read_pointer_list()?;
 
         // Strange data for each extension, some kind of unique
         // identifier based on the product ID for each of them.
@@ -83,7 +83,7 @@ impl GMElement for GMExtensions {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMExtension {
+pub struct Extension {
     pub folder_name: GMRef<String>,
     pub name: GMRef<String>,
     /// Present in 2023.4+
@@ -94,7 +94,7 @@ pub struct GMExtension {
     pub options: Vec<ExtOption>,
 }
 
-impl GMElement for GMExtension {
+impl GMElement for Extension {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let folder_name: GMRef<String> = reader.read_gm_string()?;
         let name: GMRef<String> = reader.read_gm_string()?;

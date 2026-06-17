@@ -6,31 +6,31 @@ use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::GMNamedElement;
-use crate::wad::elem::background::GMBackground;
-use crate::wad::elem::font::GMFont;
-use crate::wad::elem::sprite::GMSprite;
-use crate::wad::elem::string::GMStrings;
-use crate::wad::elem::texture_page::GMTexturePage;
+use crate::wad::elem::background::Background;
+use crate::wad::elem::font::Font;
+use crate::wad::elem::sprite::Sprite;
+use crate::wad::elem::string::Strings;
+use crate::wad::elem::texture_page::TexturePage;
 use crate::wad::elem::validate_identifier;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 use crate::wad::version::LTSBranch;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMTextureGroupInfos {
-    pub elems: Vec<GMTextureGroupInfo>,
+pub struct TextureGroupInfos {
+    pub elems: Vec<TextureGroupInfo>,
     pub exists: bool,
 }
 
 // not sure if direct
-gm_list_chunk!(TGIN, GMTextureGroupInfos, GMTextureGroupInfo, direct);
+gm_list_chunk!(TGIN, TextureGroupInfos, TextureGroupInfo, direct);
 
-impl GMNamedElement for GMTextureGroupInfo {
+impl GMNamedElement for TextureGroupInfo {
     fn name_ref(&self) -> GMRef<String> {
         self.name
     }
 
-    fn validate_name(&self, gm_strings: &GMStrings) -> Result<()> {
+    fn validate_name(&self, gm_strings: &Strings) -> Result<()> {
         // Allow ".png" inside the identifier
         let name = self.name(gm_strings)?;
         for part in name.split_terminator(".png") {
@@ -40,8 +40,8 @@ impl GMNamedElement for GMTextureGroupInfo {
     }
 }
 
-impl GMNamedListChunk for GMTextureGroupInfos {
-    fn ref_by_name(&self, name: &str, gm_strings: &GMStrings) -> Result<GMRef<Self::Element>> {
+impl GMNamedListChunk for TextureGroupInfos {
+    fn ref_by_name(&self, name: &str, gm_strings: &Strings) -> Result<GMRef<Self::Element>> {
         for (gm_ref, elem) in self.element_refs() {
             let elem_name: &String = elem.name.resolve(&gm_strings.elems)?;
             if name == elem_name {
@@ -52,10 +52,10 @@ impl GMNamedListChunk for GMTextureGroupInfos {
     }
 }
 
-impl GMElement for GMTextureGroupInfos {
+impl GMElement for TextureGroupInfos {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_gms2_chunk_version("TGIN Version")?;
-        let elems: Vec<GMTextureGroupInfo> = reader.read_pointer_list()?;
+        let elems: Vec<TextureGroupInfo> = reader.read_pointer_list()?;
         Ok(Self { elems, exists: true })
     }
 
@@ -67,17 +67,17 @@ impl GMElement for GMTextureGroupInfos {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMTextureGroupInfo {
+pub struct TextureGroupInfo {
     pub name: GMRef<String>,
-    pub texture_pages: Vec<GMRef<GMTexturePage>>,
-    pub sprites: Vec<GMRef<GMSprite>>,
-    pub spine_sprites: Vec<GMRef<GMSprite>>,
-    pub fonts: Vec<GMRef<GMFont>>,
-    pub tilesets: Vec<GMRef<GMBackground>>,
+    pub texture_pages: Vec<GMRef<TexturePage>>,
+    pub sprites: Vec<GMRef<Sprite>>,
+    pub spine_sprites: Vec<GMRef<Sprite>>,
+    pub fonts: Vec<GMRef<Font>>,
+    pub tilesets: Vec<GMRef<Background>>,
     pub data_2022_9: Option<Data2022_9>,
 }
 
-impl GMElement for GMTextureGroupInfo {
+impl GMElement for TextureGroupInfo {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let data_2022_9: Option<Data2022_9> = reader.deserialize_if_gm_version((2022, 9))?;
@@ -92,12 +92,12 @@ impl GMElement for GMTextureGroupInfo {
         let tilesets_ptr = reader.read_u32()?;
 
         reader.assert_pos(texture_pages_ptr, "Texture Pages")?;
-        let texture_pages: Vec<GMRef<GMTexturePage>> = reader.read_simple_list()?;
+        let texture_pages: Vec<GMRef<TexturePage>> = reader.read_simple_list()?;
 
         reader.assert_pos(sprites_ptr, "Sprites")?;
-        let sprites: Vec<GMRef<GMSprite>> = reader.read_simple_list()?;
+        let sprites: Vec<GMRef<Sprite>> = reader.read_simple_list()?;
 
-        let spine_sprites: Vec<GMRef<GMSprite>> =
+        let spine_sprites: Vec<GMRef<Sprite>> =
             if reader.general_info.version < (2023, 1, LTSBranch::PostLTS) {
                 reader.assert_pos(spine_sprites_ptr, "Spine Sprites")?;
                 reader.read_simple_list()?
@@ -106,10 +106,10 @@ impl GMElement for GMTextureGroupInfo {
             };
 
         reader.assert_pos(fonts_ptr, "Fonts")?;
-        let fonts: Vec<GMRef<GMFont>> = reader.read_simple_list()?;
+        let fonts: Vec<GMRef<Font>> = reader.read_simple_list()?;
 
         reader.assert_pos(tilesets_ptr, "Tilesets")?;
-        let tilesets: Vec<GMRef<GMBackground>> = reader.read_simple_list()?;
+        let tilesets: Vec<GMRef<Background>> = reader.read_simple_list()?;
 
         Ok(Self {
             name,

@@ -9,16 +9,16 @@ use crate::wad::parse::reader::DataReader;
 const ALIGNMENT: u32 = 4;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct GMStrings {
+pub struct Strings {
     pub elems: Vec<String>,
     pub align: bool,
     pub exists: bool,
 }
 
-gm_chunk!(STRG, GMStrings);
+gm_chunk!(STRG, Strings);
 // gm_list_chunk!(STRG, GMStrings, String, strings, direct);
 
-impl GMElement for GMStrings {
+impl GMElement for Strings {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
         let align: bool = pointers.iter().all(|&p| p.is_multiple_of(ALIGNMENT));
@@ -70,7 +70,7 @@ impl GMElement for GMStrings {
     }
 }
 
-impl GMStrings {
+impl Strings {
     pub fn find(&self, string: &str) -> Result<GMRef<String>> {
         for (gm_ref, str) in self.element_refs() {
             if str == string {

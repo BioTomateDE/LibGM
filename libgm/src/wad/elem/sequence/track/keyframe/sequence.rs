@@ -2,17 +2,17 @@
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::sequence::GMSequence;
+use crate::wad::elem::sequence::Sequence;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 #[derive(Debug, Clone, PartialEq)]
-pub struct Sequence {
-    pub sequence: GMRef<GMSequence>,
+pub struct KSequence {
+    pub sequence: GMRef<Sequence>,
 }
 
-impl GMElement for Sequence {
+impl GMElement for KSequence {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let sequence: GMRef<GMSequence> = reader.read_resource_by_id()?;
+        let sequence: GMRef<Sequence> = reader.read_resource_by_id()?;
         Ok(Self { sequence })
     }
 

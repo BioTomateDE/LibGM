@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use crate::prelude::*;
 use crate::util::fmt::typename;
 use crate::wad::build::builder::DataBuilder;
-use crate::wad::elem::string::GMStrings;
+use crate::wad::elem::string::Strings;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
@@ -246,7 +246,7 @@ impl GMElement for GMRef<String> {
 /// Validates all names of the root elements in this chunk.
 ///
 /// This checks for duplicates as well as names not following the proper charset.
-pub(crate) fn validate_names<T: GMNamedListChunk>(chunk: &T, gm_strings: &GMStrings) -> Result<()> {
+pub(crate) fn validate_names<T: GMNamedListChunk>(chunk: &T, gm_strings: &Strings) -> Result<()> {
     // TODO(perf): this can probably be optimised or something
     let mut seen: HashMap<&String, GMRef<_>> = HashMap::new();
 
@@ -286,13 +286,13 @@ pub trait GMNamedElement: GMElement {
     fn name_ref(&self) -> GMRef<String>;
 
     /// The name of this element as a `&String`.
-    fn name<'a>(&self, gm_strings: &'a GMStrings) -> Result<&'a String> {
+    fn name<'a>(&self, gm_strings: &'a Strings) -> Result<&'a String> {
         self.name_ref().resolve(&gm_strings.elems)
     }
 
     /// Whether the name of this element is valid.
     /// This method respects this element type's specific rules.
-    fn validate_name(&self, gm_strings: &GMStrings) -> Result<()> {
+    fn validate_name(&self, gm_strings: &Strings) -> Result<()> {
         validate_identifier(self.name(gm_strings)?)
     }
 }

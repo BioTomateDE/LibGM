@@ -17,7 +17,7 @@ use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Layer {
+pub struct RoomLayer {
     pub name: GMRef<String>,
     pub id: u32,
     pub ty: Type,
@@ -31,7 +31,7 @@ pub struct Layer {
     pub data: Data,
 }
 
-impl GMElement for Layer {
+impl GMElement for RoomLayer {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let layer_name: GMRef<String> = reader.read_gm_string()?;
         let layer_id = reader.read_u32()?;

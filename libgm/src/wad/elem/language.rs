@@ -9,16 +9,16 @@ use crate::wad::elem::element_stub;
 use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct GMLanguageInfo {
+pub struct LanguageInfo {
     unknown1: u32,
-    pub elems: Vec<GMLanguageData>,
+    pub elems: Vec<LanguageData>,
     pub entry_ids: Vec<GMRef<String>>,
     pub exists: bool,
 }
 
-gm_list_chunk!(LANG, GMLanguageInfo, GMLanguageData, direct);
+gm_list_chunk!(LANG, LanguageInfo, LanguageData, direct);
 
-impl GMElement for GMLanguageInfo {
+impl GMElement for LanguageInfo {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let unknown1 = reader.read_u32()?;
         let language_count = reader.read_u32()?;
@@ -29,7 +29,7 @@ impl GMElement for GMLanguageInfo {
             entry_ids.push(reader.read_gm_string()?);
         }
 
-        let mut elems: Vec<GMLanguageData> = vec_with_capacity(language_count)?;
+        let mut elems: Vec<LanguageData> = vec_with_capacity(language_count)?;
         for _ in 0..language_count {
             let name: GMRef<String> = reader.read_gm_string()?;
             let region: GMRef<String> = reader.read_gm_string()?;
@@ -37,7 +37,7 @@ impl GMElement for GMLanguageInfo {
             for _ in 0..entry_count {
                 entries.push(reader.read_gm_string()?);
             }
-            elems.push(GMLanguageData { name, region, entries });
+            elems.push(LanguageData { name, region, entries });
         }
 
         Ok(Self { unknown1, elems, entry_ids, exists: true })
@@ -62,9 +62,9 @@ impl GMElement for GMLanguageInfo {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GMLanguageData {
+pub struct LanguageData {
     pub name: GMRef<String>,
     pub region: GMRef<String>,
     pub entries: Vec<GMRef<String>>,
 }
-element_stub!(GMLanguageData);
+element_stub!(LanguageData);

@@ -9,14 +9,14 @@ use crate::wad::parse::reader::DataReader;
 ///
 /// It is unrelated to the `GMData` struct.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct GMDataFiles {
+pub struct DataFiles {
     exists: bool,
 }
 
-gm_chunk!(DAFL, GMDataFiles);
+gm_chunk!(DAFL, DataFiles);
 
 // Very cool
-impl GMElement for GMDataFiles {
+impl GMElement for DataFiles {
     fn deserialize(_: &mut DataReader) -> Result<Self> {
         Ok(Self { exists: true })
     }

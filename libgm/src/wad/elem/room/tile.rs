@@ -2,13 +2,13 @@
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::background::GMBackground;
-use crate::wad::elem::sprite::GMSprite;
+use crate::wad::elem::background::Background;
+use crate::wad::elem::sprite::Sprite;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Tile {
+pub struct RoomTile {
     pub x: i32,
     pub y: i32,
     pub texture: Texture,
@@ -23,7 +23,7 @@ pub struct Tile {
     pub color: u32,
 }
 
-impl GMElement for Tile {
+impl GMElement for RoomTile {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
@@ -96,6 +96,6 @@ impl GMElement for Tile {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Texture {
-    Sprite(GMRef<GMSprite>),
-    Background(GMRef<GMBackground>),
+    Sprite(GMRef<Sprite>),
+    Background(GMRef<Background>),
 }

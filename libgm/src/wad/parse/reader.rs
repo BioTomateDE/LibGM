@@ -7,11 +7,11 @@ use crate::util::assert;
 use crate::wad::chunk::ChunkName;
 use crate::wad::data::Endianness;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::function::GMFunction;
-use crate::wad::elem::general_info::GMGeneralInfo;
-use crate::wad::elem::string::GMStrings;
-use crate::wad::elem::texture_page_item::GMTexturePageItem;
-use crate::wad::elem::variable::GMVariable;
+use crate::wad::elem::function::Function;
+use crate::wad::elem::general_info::GeneralInfo;
+use crate::wad::elem::string::Strings;
+use crate::wad::elem::texture_page_item::TexturePageItem;
+use crate::wad::elem::variable::Variable;
 use crate::wad::parse::ParsingOptions;
 use crate::wad::parse::chunk::ChunkBounds;
 use crate::wad::parse::chunk::ChunkMap;
@@ -70,13 +70,13 @@ pub struct DataReader<'a> {
     /// and WAD Version. Contains garbage placeholders until the `GEN8`
     /// chunk is deserialized. Use [`DataReader::read_gen8_version`] to get
     /// the GameMaker version before `GEN8` is parsed.
-    pub general_info: GMGeneralInfo,
+    pub general_info: GeneralInfo,
 
     /// Chunk `STRG`.
     /// Is properly initialized after parsing `FORM`.
     pub string_chunk: ChunkBounds,
 
-    pub strings: GMStrings,
+    pub strings: Strings,
 
     /// Contains parsing options (wow!).
     /// Properly initialized after parsing `FORM`.
@@ -90,15 +90,15 @@ pub struct DataReader<'a> {
     /// Should only be set by [`crate::wad::elem::texture_page_item`].
     /// This means that `TPAG` has to be parsed before any chunk with texture
     /// page item pointers.
-    pub texture_page_item_occurrences: HashMap<u32, GMRef<GMTexturePageItem>>,
+    pub texture_page_item_occurrences: HashMap<u32, GMRef<TexturePageItem>>,
 
     /// Should only be set by [`crate::wad::elem::variable`].
     /// This means that `VARI` has to be parsed before `CODE`.
-    pub variable_occurrences: HashMap<u32, (GMRef<GMVariable>, InstanceType)>,
+    pub variable_occurrences: HashMap<u32, (GMRef<Variable>, InstanceType)>,
 
     /// Should only be set by [`crate::wad::elem::function`].
     /// This means that `FUNC` has to be parsed before `CODE`.
-    pub function_occurrences: HashMap<u32, GMRef<GMFunction>>,
+    pub function_occurrences: HashMap<u32, GMRef<Function>>,
 }
 
 impl<'a> DataReader<'a> {
@@ -124,11 +124,11 @@ impl<'a> DataReader<'a> {
             chunk: ChunkBounds { start_pos: 0, end_pos },
             chunks: ChunkMap::new(),
             chunk_order: Vec::new(),
-            last_chunk: ChunkName::DAFL,            // stub
-            general_info: GMGeneralInfo::default(), // stub
-            string_chunk: ChunkBounds::default(),   // stub
-            strings: GMStrings::default(),          // stub
-            options: ParsingOptions::default(),     // stub
+            last_chunk: ChunkName::DAFL,          // stub
+            general_info: GeneralInfo::default(), // stub
+            string_chunk: ChunkBounds::default(), // stub
+            strings: Strings::default(),          // stub
+            options: ParsingOptions::default(),   // stub
             string_occurrences: HashMap::new(),
             texture_page_item_occurrences: HashMap::new(),
             variable_occurrences: HashMap::new(),

@@ -19,41 +19,41 @@ use crate::wad::chunk::ChunkName;
 use crate::wad::data::Endianness;
 use crate::wad::data::GMData;
 use crate::wad::data::Metadata;
-use crate::wad::elem::animation_curve::GMAnimationCurves;
-use crate::wad::elem::audio::GMAudios;
-use crate::wad::elem::audio_group::GMAudioGroups;
-use crate::wad::elem::background::GMBackgrounds;
-use crate::wad::elem::code::GMCodes;
+use crate::wad::elem::animation_curve::AnimationCurves;
+use crate::wad::elem::audio::Audios;
+use crate::wad::elem::audio_group::AudioGroups;
+use crate::wad::elem::background::Backgrounds;
+use crate::wad::elem::code::Codes;
 use crate::wad::elem::code::check_yyc;
-use crate::wad::elem::data_file::GMDataFiles;
-use crate::wad::elem::embedded_image::GMEmbeddedImages;
-use crate::wad::elem::extension::GMExtensions;
-use crate::wad::elem::feature_flag::GMFeatureFlags;
-use crate::wad::elem::filter_effect::GMFilterEffects;
-use crate::wad::elem::font::GMFonts;
-use crate::wad::elem::function::GMFunctions;
-use crate::wad::elem::game_end::GMGameEndScripts;
-use crate::wad::elem::game_object::GMGameObjects;
-use crate::wad::elem::general_info::GMGeneralInfo;
-use crate::wad::elem::global_init::GMGlobalInitScripts;
-use crate::wad::elem::language::GMLanguageInfo;
-use crate::wad::elem::options::GMOptions;
-use crate::wad::elem::particle_emitter::GMParticleEmitters;
-use crate::wad::elem::particle_system::GMParticleSystems;
-use crate::wad::elem::path::GMPaths;
-use crate::wad::elem::room::GMRooms;
-use crate::wad::elem::script::GMScripts;
-use crate::wad::elem::sequence::GMSequences;
-use crate::wad::elem::shader::GMShaders;
-use crate::wad::elem::sound::GMSounds;
-use crate::wad::elem::sprite::GMSprites;
-use crate::wad::elem::tag::GMTags;
-use crate::wad::elem::texture_group_info::GMTextureGroupInfos;
-use crate::wad::elem::texture_page::GMTexturePages;
-use crate::wad::elem::texture_page_item::GMTexturePageItems;
-use crate::wad::elem::timeline::GMTimelines;
-use crate::wad::elem::ui_node::GMRootUINodes;
-use crate::wad::elem::variable::GMVariables;
+use crate::wad::elem::data_file::DataFiles;
+use crate::wad::elem::embedded_image::EmbeddedImages;
+use crate::wad::elem::extension::Extensions;
+use crate::wad::elem::feature_flag::FeatureFlags;
+use crate::wad::elem::filter_effect::FilterEffects;
+use crate::wad::elem::font::Fonts;
+use crate::wad::elem::function::Functions;
+use crate::wad::elem::game_end::GameEndScripts;
+use crate::wad::elem::game_object::GameObjects;
+use crate::wad::elem::general_info::GeneralInfo;
+use crate::wad::elem::global_init::GlobalInitScripts;
+use crate::wad::elem::language::LanguageInfo;
+use crate::wad::elem::options::Options;
+use crate::wad::elem::particle_emitter::ParticleEmitters;
+use crate::wad::elem::particle_system::ParticleSystems;
+use crate::wad::elem::path::Paths;
+use crate::wad::elem::room::Rooms;
+use crate::wad::elem::script::Scripts;
+use crate::wad::elem::sequence::Sequences;
+use crate::wad::elem::shader::Shaders;
+use crate::wad::elem::sound::Sounds;
+use crate::wad::elem::sprite::Sprites;
+use crate::wad::elem::tag::Tags;
+use crate::wad::elem::texture_group_info::TextureGroupInfos;
+use crate::wad::elem::texture_page::TexturePages;
+use crate::wad::elem::texture_page_item::TexturePageItems;
+use crate::wad::elem::timeline::Timelines;
+use crate::wad::elem::ui_node::UINodes;
+use crate::wad::elem::variable::Variables;
 use crate::wad::parse::chunk::ChunkBounds;
 use crate::wad::parse::chunk::ChunkMap;
 use crate::wad::parse::reader::DataReader;
@@ -163,7 +163,7 @@ impl ParsingOptions {
     }
 
     /// Only parses the `GEN8` chunk and detects the proper GameMaker version.
-    pub fn parse_general_info(&self, raw_data: impl AsRef<[u8]>) -> Result<GMGeneralInfo> {
+    pub fn parse_general_info(&self, raw_data: impl AsRef<[u8]>) -> Result<GeneralInfo> {
         let mut reader = parse_form(raw_data.as_ref()).ctx("parsing FORM")?;
         init_reader(&mut reader).ctx("initializing reader")?;
         Ok(reader.general_info)
@@ -344,7 +344,7 @@ fn init_reader(reader: &mut DataReader) -> Result<()> {
     Ok(())
 }
 
-fn read_bytecode_chunks(reader: &mut DataReader) -> Result<(GMCodes, GMFunctions, GMVariables)> {
+fn read_bytecode_chunks(reader: &mut DataReader) -> Result<(Codes, Functions, Variables)> {
     let is_yyc: bool = match check_yyc(reader) {
         Ok(yyc) => yyc,
         Err(e) if reader.options.verify_constants => return Err(e).ctx("Checking YYC"),
@@ -356,11 +356,7 @@ fn read_bytecode_chunks(reader: &mut DataReader) -> Result<(GMCodes, GMFunctions
 
     if is_yyc {
         log::warn!("YYC is untested, issues may occur");
-        Ok((
-            GMCodes::default(),
-            GMFunctions::default(),
-            GMVariables::default(),
-        ))
+        Ok((Codes::default(), Functions::default(), Variables::default()))
     } else {
         let variables = reader.read_chunk()?; // Sets `reader.variable_occurrences`
         let functions = reader.read_chunk()?; // Sets `reader.function_occurrences`
@@ -376,45 +372,45 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
     reader.options = options.clone();
     init_reader(&mut reader).ctx("initializing reader")?;
 
-    let texture_page_items: GMTexturePageItems = reader.read_chunk()?;
+    let texture_page_items: TexturePageItems = reader.read_chunk()?;
 
-    let codes: GMCodes;
-    let functions: GMFunctions;
-    let variables: GMVariables;
+    let codes: Codes;
+    let functions: Functions;
+    let variables: Variables;
     (codes, functions, variables) = read_bytecode_chunks(&mut reader)?;
 
     // Read all other chunks. This is allowed to be executed arbitrary order.
     let stopwatch2 = Stopwatch::start();
 
-    let texture_pages: GMTexturePages = reader.read_chunk()?;
-    let scripts: GMScripts = reader.read_chunk()?;
-    let fonts: GMFonts = reader.read_chunk()?;
-    let sprites: GMSprites = reader.read_chunk()?;
-    let game_objects: GMGameObjects = reader.read_chunk()?;
-    let rooms: GMRooms = reader.read_chunk()?;
-    let backgrounds: GMBackgrounds = reader.read_chunk()?;
-    let audios: GMAudios = reader.read_chunk()?;
-    let sounds: GMSounds = reader.read_chunk()?;
-    let paths: GMPaths = reader.read_chunk()?;
-    let options: GMOptions = reader.read_chunk()?;
-    let sequences: GMSequences = reader.read_chunk()?;
-    let particle_systems: GMParticleSystems = reader.read_chunk()?;
-    let particle_emitters: GMParticleEmitters = reader.read_chunk()?;
-    let language_info: GMLanguageInfo = reader.read_chunk()?;
-    let extensions: GMExtensions = reader.read_chunk()?;
-    let audio_groups: GMAudioGroups = reader.read_chunk()?;
-    let global_init_scripts: GMGlobalInitScripts = reader.read_chunk()?;
-    let game_end_scripts: GMGameEndScripts = reader.read_chunk()?;
-    let shaders: GMShaders = reader.read_chunk()?;
-    let ui_nodes: GMRootUINodes = reader.read_chunk()?;
-    let timelines: GMTimelines = reader.read_chunk()?;
-    let embedded_images: GMEmbeddedImages = reader.read_chunk()?;
-    let texture_group_infos: GMTextureGroupInfos = reader.read_chunk()?;
-    let tags: GMTags = reader.read_chunk()?;
-    let feature_flags: GMFeatureFlags = reader.read_chunk()?;
-    let filter_effects: GMFilterEffects = reader.read_chunk()?;
-    let animation_curves: GMAnimationCurves = reader.read_chunk()?;
-    let data_files: GMDataFiles = reader.read_chunk()?;
+    let texture_pages: TexturePages = reader.read_chunk()?;
+    let scripts: Scripts = reader.read_chunk()?;
+    let fonts: Fonts = reader.read_chunk()?;
+    let sprites: Sprites = reader.read_chunk()?;
+    let game_objects: GameObjects = reader.read_chunk()?;
+    let rooms: Rooms = reader.read_chunk()?;
+    let backgrounds: Backgrounds = reader.read_chunk()?;
+    let audios: Audios = reader.read_chunk()?;
+    let sounds: Sounds = reader.read_chunk()?;
+    let paths: Paths = reader.read_chunk()?;
+    let options: Options = reader.read_chunk()?;
+    let sequences: Sequences = reader.read_chunk()?;
+    let particle_systems: ParticleSystems = reader.read_chunk()?;
+    let particle_emitters: ParticleEmitters = reader.read_chunk()?;
+    let language_info: LanguageInfo = reader.read_chunk()?;
+    let extensions: Extensions = reader.read_chunk()?;
+    let audio_groups: AudioGroups = reader.read_chunk()?;
+    let global_init_scripts: GlobalInitScripts = reader.read_chunk()?;
+    let game_end_scripts: GameEndScripts = reader.read_chunk()?;
+    let shaders: Shaders = reader.read_chunk()?;
+    let ui_nodes: UINodes = reader.read_chunk()?;
+    let timelines: Timelines = reader.read_chunk()?;
+    let embedded_images: EmbeddedImages = reader.read_chunk()?;
+    let texture_group_infos: TextureGroupInfos = reader.read_chunk()?;
+    let tags: Tags = reader.read_chunk()?;
+    let feature_flags: FeatureFlags = reader.read_chunk()?;
+    let filter_effects: FilterEffects = reader.read_chunk()?;
+    let animation_curves: AnimationCurves = reader.read_chunk()?;
+    let data_files: DataFiles = reader.read_chunk()?;
 
     log::trace!("Reading independent chunks took {stopwatch2}");
 

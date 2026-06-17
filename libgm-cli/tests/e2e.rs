@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
-use libgm::gml::GMCode;
+use libgm::gml::Code;
 use libgm::gml::Instruction;
 use libgm::gml::assembly::assemble_instructions;
 use libgm::gml::assembly::disassemble_code;
@@ -65,7 +65,7 @@ fn check_reparse(data: &GMData) -> Result<()> {
     Ok(())
 }
 
-fn reassemble_one(data: &GMData, code: &GMCode) -> Result<()> {
+fn reassemble_one(data: &GMData, code: &Code) -> Result<()> {
     let assembly: String = disassemble_code(code, data)?;
     let reconstructed: Vec<Instruction> = assemble_instructions(&assembly, data)?;
 

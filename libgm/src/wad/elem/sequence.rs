@@ -19,21 +19,21 @@ use crate::wad::parse::reader::DataReader;
 /// This struct belong to the chunk SEQN.
 /// Sprites can _also_ contain sequences (not by reference; the actual data).
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMSequences {
-    pub elems: Vec<Option<GMSequence>>,
+pub struct Sequences {
+    pub elems: Vec<Option<Sequence>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(SEQN, GMSequences, GMSequence, nullable);
+gm_named_list_chunk!(SEQN, Sequences, Sequence, nullable);
 
-impl GMElement for GMSequences {
+impl GMElement for Sequences {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         if reader.chunk.is_empty() {
             return Ok(Self::default());
         }
         reader.align(4)?;
         reader.read_gms2_chunk_version("SEQN Version")?;
-        let elems: Vec<Option<GMSequence>> = reader.read_pointer_list_opt()?;
+        let elems: Vec<Option<Sequence>> = reader.read_pointer_list_opt()?;
         Ok(Self { elems, exists: true })
     }
 
@@ -46,7 +46,7 @@ impl GMElement for GMSequences {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMSequence {
+pub struct Sequence {
     pub name: GMRef<String>,
     pub playback: PlaybackType,
     pub playback_speed: f32,
@@ -63,7 +63,7 @@ pub struct GMSequence {
     pub moments: Vec<keyframe::Data<Moment>>,
 }
 
-impl GMElement for GMSequence {
+impl GMElement for Sequence {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let playback: PlaybackType = reader.read_enum()?;

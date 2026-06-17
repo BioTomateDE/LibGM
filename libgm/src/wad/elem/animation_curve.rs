@@ -11,19 +11,19 @@ use crate::wad::parse::reader::DataReader;
 
 /// GMS 2.3+
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMAnimationCurves {
-    pub elems: Vec<Option<GMAnimationCurve>>,
+pub struct AnimationCurves {
+    pub elems: Vec<Option<AnimationCurve>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(ACRV, GMAnimationCurves, GMAnimationCurve, nullable);
+gm_named_list_chunk!(ACRV, AnimationCurves, AnimationCurve, nullable);
 
-impl GMElement for GMAnimationCurves {
+impl GMElement for AnimationCurves {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
         reader.read_gms2_chunk_version("ACRV Version")?;
 
-        let elems: Vec<Option<GMAnimationCurve>> = reader.read_pointer_list_opt()?;
+        let elems: Vec<Option<AnimationCurve>> = reader.read_pointer_list_opt()?;
         Ok(Self { elems, exists: true })
     }
 
@@ -38,12 +38,12 @@ impl GMElement for GMAnimationCurves {
 /// An animation curve entry in a data file.
 /// These were introduced in GameMaker 2.3.0.
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMAnimationCurve {
+pub struct AnimationCurve {
     pub name: GMRef<String>,
     pub channels: Vec<Channel>,
 }
 
-impl GMElement for GMAnimationCurve {
+impl GMElement for AnimationCurve {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name = reader.read_gm_string()?;
         let graph_type = reader.read_u32()?;

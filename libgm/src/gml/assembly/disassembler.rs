@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use crate::gml::GMCode;
+use crate::gml::Code;
 use crate::gml::instruction::AssetReference;
 use crate::gml::instruction::CodeVariable;
 use crate::gml::instruction::ComparisonType;
@@ -12,10 +12,10 @@ use crate::prelude::*;
 use crate::util::fmt::typename;
 use crate::wad::data::GMData;
 use crate::wad::elem::GMNamedElement;
-use crate::wad::elem::function::GMFunction;
-use crate::wad::elem::game_object::GMGameObject;
-use crate::wad::elem::string::GMStrings;
-use crate::wad::elem::variable::GMVariable;
+use crate::wad::elem::function::Function;
+use crate::wad::elem::game_object::GameObject;
+use crate::wad::elem::string::Strings;
+use crate::wad::elem::variable::Variable;
 
 macro_rules! write {
     ($buffer:ident, $($args:tt)*) => {{
@@ -62,13 +62,13 @@ fn slice_instructions_by_bytes(
 ///
 /// TODO: Maybe certain directives can be added in the future
 /// to identify the code entry name as well as local and argument count.
-pub fn disassemble_code(code: &GMCode, gm_data: &GMData) -> Result<String> {
+pub fn disassemble_code(code: &Code, gm_data: &GMData) -> Result<String> {
     if let Some(data) = &code.modern_data {
         if let Some(parent) = data.parent {
             if data.execution_offset == 0 {
                 bail!("Child code entry has byte offset zero");
             }
-            let parent: &GMCode = gm_data
+            let parent: &Code = gm_data
                 .codes
                 .by_ref(parent)
                 .ctx("resolving parent code entry")?;
@@ -383,7 +383,7 @@ fn write_push_instruction(value: PushValue, buffer: &mut String, gm_data: &GMDat
 fn asset_get_name<'a, T, C>(
     chunk: &C,
     gm_ref: GMRef<T>,
-    gm_strings: &'a GMStrings,
+    gm_strings: &'a Strings,
 ) -> Result<&'a String>
 where
     T: GMNamedElement + 'a,
@@ -519,13 +519,13 @@ fn write_asset_reference(
 fn write_instance_type(
     instance_type: InstanceType,
     buffer: &mut String,
-    variable_ref: GMRef<GMVariable>,
+    variable_ref: GMRef<Variable>,
     gm_data: &GMData,
 ) -> Result<()> {
     match instance_type {
         InstanceType::Self_ => write!(buffer, "self"),
         InstanceType::GameObject(obj_ref) => {
-            let obj: &GMGameObject = gm_data.game_objects.by_ref(obj_ref)?;
+            let obj: &GameObject = gm_data.game_objects.by_ref(obj_ref)?;
             obj.validate_name(&gm_data.strings)
                 .ctx("validating game object name")?;
             write!(buffer, "object<{}>", obj.name(&gm_data.strings)?);
@@ -552,7 +552,7 @@ fn write_variable(
     buffer: &mut String,
     gm_data: &GMData,
 ) -> Result<()> {
-    let variable: &GMVariable = gm_data.variables.by_ref(code_variable.variable)?;
+    let variable: &Variable = gm_data.variables.by_ref(code_variable.variable)?;
     variable
         .validate_name(&gm_data.strings)
         .ctx("validating variable identifier")?;
@@ -573,8 +573,8 @@ fn write_variable(
     Ok(())
 }
 
-fn resolve_function_name(function_ref: GMRef<GMFunction>, gm_data: &GMData) -> Result<&String> {
-    let function: &GMFunction = gm_data.functions.by_ref(function_ref)?;
+fn resolve_function_name(function_ref: GMRef<Function>, gm_data: &GMData) -> Result<&String> {
+    let function: &Function = gm_data.functions.by_ref(function_ref)?;
     function
         .validate_name(&gm_data.strings)
         .ctx("validating function identifier")?;
@@ -584,7 +584,7 @@ fn resolve_function_name(function_ref: GMRef<GMFunction>, gm_data: &GMData) -> R
 
 fn write_gm_string(
     string_ref: GMRef<String>,
-    gm_strings: &GMStrings,
+    gm_strings: &Strings,
     buffer: &mut String,
 ) -> Result<()> {
     let string: &String = gm_strings.by_ref(string_ref)?;

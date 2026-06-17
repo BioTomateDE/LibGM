@@ -3,14 +3,14 @@ use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sequence::SpeedType;
-use crate::wad::elem::sprite::GMSprite;
+use crate::wad::elem::sprite::Sprite;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SpriteInstance {
     pub name: GMRef<String>,
-    pub sprite: GMRef<GMSprite>,
+    pub sprite: GMRef<Sprite>,
     pub x: i32,
     pub y: i32,
     pub scale_x: f32,
@@ -25,7 +25,7 @@ pub struct SpriteInstance {
 impl GMElement for SpriteInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let sprite: GMRef<GMSprite> = reader.read_resource_by_id()?;
+        let sprite: GMRef<Sprite> = reader.read_resource_by_id()?;
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
         let scale_x = reader.read_f32()?;

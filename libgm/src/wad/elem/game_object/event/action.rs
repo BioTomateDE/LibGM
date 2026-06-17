@@ -10,7 +10,7 @@
 
 use std::fmt;
 
-use crate::gml::GMCode;
+use crate::gml::Code;
 use crate::prelude::*;
 use crate::wad::GMRef;
 use crate::wad::build::builder::DataBuilder;
@@ -29,7 +29,7 @@ pub struct Action {
     name: GMRef<String>, // Some("") or None
 
     /// The code that will be executed when this action is ran.
-    pub code: GMRef<GMCode>,
+    pub code: GMRef<Code>,
 
     argument_count: u32, // usually 1
     who: i32,            // usually -1
@@ -40,7 +40,7 @@ pub struct Action {
 
 impl Action {
     #[must_use]
-    pub const fn new(code: GMRef<GMCode>) -> Self {
+    pub const fn new(code: GMRef<Code>) -> Self {
         Self {
             lib_id: 1,
             id: 603,

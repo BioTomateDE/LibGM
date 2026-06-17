@@ -10,16 +10,16 @@ use crate::wad::parse::reader::DataReader;
 /// ___
 /// Audio Groups are only available to use in the regular audio system.
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMAudioGroups {
-    pub elems: Vec<Option<GMAudioGroup>>,
+pub struct AudioGroups {
+    pub elems: Vec<Option<AudioGroup>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(AGRP, GMAudioGroups, GMAudioGroup, nullable);
+gm_named_list_chunk!(AGRP, AudioGroups, AudioGroup, nullable);
 
-impl GMElement for GMAudioGroups {
+impl GMElement for AudioGroups {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let elems: Vec<Option<GMAudioGroup>> = reader.read_pointer_list_opt()?;
+        let elems: Vec<Option<AudioGroup>> = reader.read_pointer_list_opt()?;
         Ok(Self { elems, exists: true })
     }
 
@@ -30,7 +30,7 @@ impl GMElement for GMAudioGroups {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GMAudioGroup {
+pub struct AudioGroup {
     /// The name of the audio group.
     /// This is how the audio group is referenced from code.
     pub name: GMRef<String>,
@@ -42,7 +42,7 @@ pub struct GMAudioGroup {
     pub path: Option<GMRef<String>>,
 }
 
-impl GMElement for GMAudioGroup {
+impl GMElement for AudioGroup {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let path: Option<GMRef<String>> = reader.deserialize_if_gm_version((2024, 14))?;

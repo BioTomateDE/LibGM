@@ -5,7 +5,7 @@ use dotnet_rng::DotnetRng;
 
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
-use crate::wad::elem::general_info::GMGeneralInfo;
+use crate::wad::elem::general_info::GeneralInfo;
 use crate::wad::parse::reader::DataReader;
 
 #[derive(Clone, PartialEq)]
@@ -49,7 +49,7 @@ impl fmt::Debug for GMS2Data {
     }
 }
 
-impl GMGeneralInfo {
+impl GeneralInfo {
     pub(super) fn read_gms2_data(&self, reader: &mut DataReader) -> Result<GMS2Data> {
         let timestamp: i64 = self.creation_timestamp.timestamp();
 

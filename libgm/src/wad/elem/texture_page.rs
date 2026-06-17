@@ -21,19 +21,19 @@ pub(crate) const BZ2_QOI_HEADER: &[u8; 4] = b"2zoq";
 pub(crate) const QOI_HEADER: &[u8; 4] = b"fioq";
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMTexturePages {
-    pub elems: Vec<GMTexturePage>,
+pub struct TexturePages {
+    pub elems: Vec<TexturePage>,
     pub exists: bool,
 }
 
 // also not sure if direct
-gm_list_chunk!(TXTR, GMTexturePages, GMTexturePage, direct);
+gm_list_chunk!(TXTR, TexturePages, TexturePage, direct);
 
-impl GMElement for GMTexturePages {
+impl GMElement for TexturePages {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
         let count = pointers.len();
-        let mut elems: Vec<GMTexturePage> = Vec::with_capacity(count);
+        let mut elems: Vec<TexturePage> = Vec::with_capacity(count);
         let mut data_start_positions: Vec<u32> = Vec::with_capacity(count);
 
         for pointer in pointers {
@@ -48,7 +48,7 @@ impl GMElement for GMTexturePages {
             // This can be zero if the texture is stored externally
             data_start_positions.push(texture_data_start_pos);
 
-            let texture_page = GMTexturePage {
+            let texture_page = TexturePage {
                 scaled,
                 generated_mips,
                 texture_block_size,
@@ -148,7 +148,7 @@ impl GMElement for GMTexturePages {
 /// An embedded texture page entry in the data file.
 #[derive(Debug, Clone, PartialEq, Default)]
 #[repr(C)] // Needs explicit layout so memory addresses for gm pointers don't collide
-pub struct GMTexturePage {
+pub struct TexturePage {
     /// DOCME: not sure what `scaled` actually is
     pub scaled: u32,
 
@@ -164,7 +164,7 @@ pub struct GMTexturePage {
     /// The texture data in the embedded image.
     pub image: Option<GMImage>,
 }
-element_stub!(GMTexturePage);
+element_stub!(TexturePage);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Data2022_9 {

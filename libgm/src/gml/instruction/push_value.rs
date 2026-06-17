@@ -3,7 +3,7 @@ use crate::gml::Instruction;
 use crate::gml::instruction::CodeVariable;
 use crate::gml::instruction::DataType;
 use crate::prelude::GMRef;
-use crate::wad::elem::function::GMFunction;
+use crate::wad::elem::function::Function;
 
 /// A value to push to the stack.
 /// Used in [`Push`] instructions.
@@ -18,7 +18,7 @@ pub enum PushValue {
     Bool(bool),
     String(GMRef<String>),
     Variable(CodeVariable),
-    Function(GMRef<GMFunction>),
+    Function(GMRef<Function>),
 }
 
 impl PushValue {

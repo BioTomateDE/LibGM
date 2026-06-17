@@ -9,17 +9,17 @@ use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::GMNamedElement;
 use crate::wad::elem::element_stub;
-use crate::wad::elem::general_info::GMGeneralInfo;
-use crate::wad::elem::string::GMStrings;
+use crate::wad::elem::general_info::GeneralInfo;
+use crate::wad::elem::string::Strings;
 use crate::wad::elem::validate_identifier;
 use crate::wad::parse::chunk::ChunkBounds;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMVariables {
+pub struct Variables {
     /// List of all variables; mixing global, local and self.
-    pub elems: Vec<GMVariable>,
+    pub elems: Vec<Variable>,
 
     /// Set in WAD 15 and above.
     pub modern_header: Option<ModernHeader>,
@@ -27,9 +27,9 @@ pub struct GMVariables {
     pub exists: bool,
 }
 
-gm_list_chunk!(VARI, GMVariables, GMVariable, direct);
+gm_list_chunk!(VARI, Variables, Variable, direct);
 
-impl GMVariables {
+impl Variables {
     // This method is still buggy, use with caution.
     // TODO: make this work for WAD<=14. also docs. also vari_instance_type is
     // wrong/buggy?
@@ -37,8 +37,8 @@ impl GMVariables {
         &mut self,
         name: GMRef<String>,
         instance_type: InstanceType,
-        general_info: &GMGeneralInfo,
-    ) -> Result<GMRef<GMVariable>> {
+        general_info: &GeneralInfo,
+    ) -> Result<GMRef<Variable>> {
         if instance_type == InstanceType::Local {
             bail!("Local variables have to be unique; this function will not work");
         }
@@ -88,9 +88,9 @@ impl GMVariables {
         }
 
         // Now actually create the variable
-        let variable_ref: GMRef<GMVariable> = self.elems.len().into();
+        let variable_ref: GMRef<Variable> = self.elems.len().into();
 
-        let variable = GMVariable {
+        let variable = Variable {
             name,
             modern_data: Some(ModernData {
                 instance_type: vari_instance_type,
@@ -104,7 +104,7 @@ impl GMVariables {
     }
 }
 
-impl GMElement for GMVariables {
+impl GMElement for Variables {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let modern_header: Option<ModernHeader> = reader.deserialize_if_wad_version(15)?;
         let variable_size = match modern_header {
@@ -114,7 +114,7 @@ impl GMElement for GMVariables {
         let variable_count = (reader.chunk.length() / variable_size) as usize;
 
         let mut occurrence_infos: Vec<(u32, u32)> = Vec::with_capacity(variable_count);
-        let mut elems: Vec<GMVariable> = Vec::with_capacity(variable_count);
+        let mut elems: Vec<Variable> = Vec::with_capacity(variable_count);
 
         // Parse variables
         while reader.cur_pos + variable_size <= reader.chunk.end_pos {
@@ -126,7 +126,7 @@ impl GMElement for GMVariables {
             let first_occurrence_pos = reader.read_u32()?;
             occurrence_infos.push((occurrence_count, first_occurrence_pos));
 
-            elems.push(GMVariable { name, modern_data });
+            elems.push(Variable { name, modern_data });
         }
 
         // Resolve occurrences
@@ -147,7 +147,7 @@ impl GMElement for GMVariables {
             // the hashmaps are probably also slow.
             // refactor this entire thing
             for occurrence in occurrences {
-                let var_ref: GMRef<GMVariable> = i.into();
+                let var_ref: GMRef<Variable> = i.into();
                 // fallback value is never read in wad < 15
                 let instance_type = elems[i]
                     .modern_data
@@ -202,18 +202,18 @@ impl GMElement for GMVariables {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMVariable {
+pub struct Variable {
     pub name: GMRef<String>,
     pub modern_data: Option<ModernData>,
 }
 
-element_stub!(GMVariable);
-impl GMNamedElement for GMVariable {
+element_stub!(Variable);
+impl GMNamedElement for Variable {
     fn name_ref(&self) -> GMRef<String> {
         self.name
     }
 
-    fn validate_name(&self, gm_strings: &GMStrings) -> Result<()> {
+    fn validate_name(&self, gm_strings: &Strings) -> Result<()> {
         let name = self.name(gm_strings)?;
         if name == "$$$$temp$$$$" {
             return Ok(());

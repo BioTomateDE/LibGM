@@ -7,11 +7,11 @@ mod demo_lts_ch2;
 mod demo_prelts;
 mod undertale;
 
-use crate::gml::GMCode;
+use crate::gml::Code;
 use crate::gml::instruction::InstanceType;
 use crate::gml::instruction::Instruction;
 use crate::prelude::*;
-use crate::wad::elem::variable::GMVariable;
+use crate::wad::elem::variable::Variable;
 
 impl GMData {
     /// Tries to enable or disable debug mode, based on the argument.
@@ -90,7 +90,7 @@ fn toggle_debug(data: &mut GMData, enable: bool) -> Result<()> {
 
 fn find_debug(
     data: &GMData,
-    code_ref: GMRef<GMCode>,
+    code_ref: GMRef<Code>,
     instance_type: InstanceType,
 ) -> Result<(usize, bool)> {
     let code = data.codes.by_ref(code_ref)?;
@@ -105,7 +105,7 @@ fn find_debug(
         if variable.instance_type != instance_type {
             continue;
         }
-        let gm_variable: &GMVariable = data.variables.by_ref(variable.variable)?;
+        let gm_variable: &Variable = data.variables.by_ref(variable.variable)?;
         let var_name = data.strings.by_ref(gm_variable.name)?;
         if var_name != "debug" {
             continue;
@@ -130,7 +130,7 @@ fn find_debug(
 
 fn replace_debug(
     data: &mut GMData,
-    code_ref: GMRef<GMCode>,
+    code_ref: GMRef<Code>,
     enable: bool,
     instance_type: InstanceType,
 ) -> Result<()> {
@@ -142,7 +142,7 @@ fn replace_debug(
     }
 
     // Enable/disable debug mode.
-    let code: &mut GMCode = data.codes.by_ref_mut(code_ref)?;
+    let code: &mut Code = data.codes.by_ref_mut(code_ref)?;
     let integer = i16::from(enable);
     code.instructions[instruction_index] = Instruction::PushImmediate { integer };
     Ok(())

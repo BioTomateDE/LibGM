@@ -14,23 +14,23 @@ use crate::util::init::vec_with_capacity;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::sequence::GMSequence;
+use crate::wad::elem::sequence::Sequence;
 use crate::wad::elem::sequence::SpeedType;
-use crate::wad::elem::texture_page_item::GMTexturePageItem;
+use crate::wad::elem::texture_page_item::TexturePageItem;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMSprites {
-    pub elems: Vec<Option<GMSprite>>,
+pub struct Sprites {
+    pub elems: Vec<Option<Sprite>>,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(SPRT, GMSprites, GMSprite, nullable);
+gm_named_list_chunk!(SPRT, Sprites, Sprite, nullable);
 
-impl GMElement for GMSprites {
+impl GMElement for Sprites {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let elems: Vec<Option<GMSprite>> = reader.read_pointer_list_opt()?;
+        let elems: Vec<Option<Sprite>> = reader.read_pointer_list_opt()?;
         Ok(Self { elems, exists: true })
     }
 
@@ -41,7 +41,7 @@ impl GMElement for GMSprites {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GMSprite {
+pub struct Sprite {
     pub name: GMRef<String>,
     pub width: u32,
     pub height: u32,
@@ -56,13 +56,13 @@ pub struct GMSprite {
     pub sep_masks: SepMaskType,
     pub origin_x: i32,
     pub origin_y: i32,
-    pub textures: Vec<GMRef<GMTexturePageItem>>,
+    pub textures: Vec<GMRef<TexturePageItem>>,
     pub collision_masks: Vec<MaskEntry>,
     pub special_fields: Option<Special>,
 }
 
 #[allow(clippy::too_many_lines)] // TODO: these functions fucking suck
-impl GMElement for GMSprite {
+impl GMElement for Sprite {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let width = reader.read_u32()?;
@@ -78,7 +78,7 @@ impl GMElement for GMSprite {
         let sep_masks: SepMaskType = reader.read_enum()?;
         let origin_x = reader.read_i32()?;
         let origin_y = reader.read_i32()?;
-        let mut textures: Vec<GMRef<GMTexturePageItem>> = Vec::new();
+        let mut textures: Vec<GMRef<TexturePageItem>> = Vec::new();
         let mut collision_masks: Vec<MaskEntry> = Vec::new();
         let mut special_fields: Option<Special> = None;
 
@@ -87,7 +87,7 @@ impl GMElement for GMSprite {
             let special_version = reader.read_u32()?;
             let special_sprite_type = reader.read_u32()?;
 
-            let mut sequence: Option<GMSequence> = None;
+            let mut sequence: Option<Sequence> = None;
             let mut nine_slice: Option<NineSlice> = None;
             let swf: Option<swf::Data> = None;
 
@@ -238,7 +238,7 @@ impl GMElement for GMSprite {
                 reader.assert_pos(sequence_pos, "Sequence")?;
                 let ctx = || format!("parsing Sequence for Sprite {name:?}");
                 reader.read_gms2_chunk_version("Sequence").ctx(ctx)?;
-                sequence = Some(GMSequence::deserialize(reader).ctx(ctx)?);
+                sequence = Some(Sequence::deserialize(reader).ctx(ctx)?);
             }
 
             if nine_slice_pos != 0 {
@@ -455,11 +455,11 @@ impl GMElement for GMSprite {
     }
 }
 
-impl GMSprite {
-    fn read_texture_list(reader: &mut DataReader) -> Result<Vec<GMRef<GMTexturePageItem>>> {
+impl Sprite {
+    fn read_texture_list(reader: &mut DataReader) -> Result<Vec<GMRef<TexturePageItem>>> {
         let count = reader.read_count("Sprite texture")?;
         let ctx = || format!("reading {count} Sprite textures");
-        let mut textures: Vec<GMRef<GMTexturePageItem>> = vec_with_capacity(count).ctx(ctx)?;
+        let mut textures: Vec<GMRef<TexturePageItem>> = vec_with_capacity(count).ctx(ctx)?;
         for _ in 0..count {
             textures.push(reader.read_gm_texture().ctx(ctx)?);
         }
@@ -468,7 +468,7 @@ impl GMSprite {
 
     fn build_texture_list(
         builder: &mut DataBuilder,
-        texture_list: &Vec<GMRef<GMTexturePageItem>>,
+        texture_list: &Vec<GMRef<TexturePageItem>>,
     ) -> Result<()> {
         builder.write_usize(texture_list.len())?;
         for &texture_page_item_ref in texture_list {
@@ -519,7 +519,7 @@ pub struct Special {
     /// GMS 2
     pub playback_speed_type: SpeedType,
     /// Special Version 2
-    pub sequence: Option<GMSequence>,
+    pub sequence: Option<Sequence>,
     /// Special Version 3
     pub nine_slice: Option<NineSlice>,
     /// YYSWF

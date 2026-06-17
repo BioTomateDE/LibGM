@@ -3,8 +3,8 @@
 // TODO: clean up this file
 use std::collections::HashMap;
 
-use super::string::GMStrings;
-use crate::gml::GMCode;
+use super::string::Strings;
+use crate::gml::Code;
 use crate::gml::ModernData;
 use crate::gml::instruction::AssetReference;
 use crate::gml::instruction::CodeVariable;
@@ -22,21 +22,21 @@ use crate::wad::chunk::GMNamedListChunk;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::element_stub;
-use crate::wad::elem::function::GMFunction;
-use crate::wad::elem::variable::GMVariable;
+use crate::wad::elem::function::Function;
+use crate::wad::elem::variable::Variable;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMCodes {
-    pub elems: Vec<GMCode>,
+pub struct Codes {
+    pub elems: Vec<Code>,
     pub exists: bool,
 }
 
-gm_list_chunk!(CODE, GMCodes, GMCode, direct);
+gm_list_chunk!(CODE, Codes, Code, direct);
 
-impl GMNamedListChunk for GMCodes {
-    fn ref_by_name(&self, name: &str, gm_strings: &GMStrings) -> Result<GMRef<Self::Element>> {
+impl GMNamedListChunk for Codes {
+    fn ref_by_name(&self, name: &str, gm_strings: &Strings) -> Result<GMRef<Self::Element>> {
         for (gm_ref, elem) in self.element_refs() {
             let elem_name: &String = elem.name.resolve(&gm_strings.elems)?;
             if name == elem_name {
@@ -47,9 +47,9 @@ impl GMNamedListChunk for GMCodes {
     }
 }
 
-element_stub!(GMCode);
+element_stub!(Code);
 
-impl GMElement for GMCodes {
+impl GMElement for Codes {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         // This can happen with YYC.
         if reader.chunk.is_empty() {
@@ -64,9 +64,9 @@ impl GMElement for GMCodes {
         };
         reader.cur_pos = first_pos;
 
-        let mut elems: Vec<GMCode> = vec_with_capacity(count as u32)?;
+        let mut elems: Vec<Code> = vec_with_capacity(count as u32)?;
         let mut instructions_ranges: Vec<(u32, u32)> = Vec::with_capacity(count);
-        let mut codes_by_pos: HashMap<u32, GMRef<GMCode>> = HashMap::new();
+        let mut codes_by_pos: HashMap<u32, GMRef<Code>> = HashMap::new();
         let mut last_code_entry_pos = reader.cur_pos;
 
         for pointer in pointers {
@@ -111,14 +111,14 @@ impl GMElement for GMCodes {
                 modern_data = Some(data);
             }
 
-            elems.push(GMCode { name, instructions: vec![], modern_data });
+            elems.push(Code { name, instructions: vec![], modern_data });
 
             instructions_ranges.push((instructions_start_pos, instructions_end_pos));
             last_code_entry_pos = reader.cur_pos;
         }
 
         for (i, (start, end)) in instructions_ranges.into_iter().enumerate() {
-            let code: &mut GMCode = &mut elems[i];
+            let code: &mut Code = &mut elems[i];
             let length = end - start;
 
             // If WAD15+ and the instructions pointer is known, then it's a child code entry
@@ -686,7 +686,7 @@ impl DataReader<'_> {
         self.assert_zero_type2(b)?;
         self.assert_type(DataType::Int32, data_type)?;
 
-        let function: GMRef<GMFunction> = *self
+        let function: GMRef<Function> = *self
             .function_occurrences
             .get(&(self.cur_pos))
             .ok_or_else(|| {
@@ -891,7 +891,7 @@ fn build_pushim(builder: &mut DataBuilder, opcode: u8, integer: i16) {
 fn build_call(
     builder: &mut DataBuilder,
     opcode: u8,
-    function: GMRef<GMFunction>,
+    function: GMRef<Function>,
     argument_count: u16,
 ) -> Result<()> {
     let instr_pos: u32 = builder.pos();
@@ -958,7 +958,7 @@ fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<Code
     let occurrence_position: u32 = reader.cur_pos;
     let raw_value = reader.read_u32()?;
 
-    let (variable, vari_instance_type): (GMRef<GMVariable>, InstanceType) = *reader
+    let (variable, vari_instance_type): (GMRef<Variable>, InstanceType) = *reader
         .variable_occurrences
         .get(&occurrence_position)
         .ok_or_else(|| {
@@ -999,7 +999,7 @@ const fn build_instance_type(code_variable: CodeVariable) -> i16 {
 
 fn write_variable_occurrence(
     builder: &mut DataBuilder,
-    variable_ref: GMRef<GMVariable>,
+    variable_ref: GMRef<Variable>,
     occurrence_pos: u32,
     variable_type: VariableType,
 ) -> Result<()> {
@@ -1038,7 +1038,7 @@ fn write_variable_occurrence(
 
 fn write_function_occurrence(
     builder: &mut DataBuilder,
-    func_ref: GMRef<GMFunction>,
+    func_ref: GMRef<Function>,
     occurrence_pos: u32,
 ) -> Result<()> {
     let len: usize = builder.function_occurrences.len();

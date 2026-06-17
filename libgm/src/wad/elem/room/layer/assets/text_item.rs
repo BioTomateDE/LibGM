@@ -2,7 +2,7 @@
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::font::GMFont;
+use crate::wad::elem::font::Font;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 #[derive(Debug, Clone, PartialEq)]
@@ -10,7 +10,7 @@ pub struct TextItemInstance {
     pub name: GMRef<String>,
     pub x: i32,
     pub y: i32,
-    pub font: GMRef<GMFont>,
+    pub font: GMRef<Font>,
     pub scale_x: f32,
     pub scale_y: f32,
     pub rotation: f32,
@@ -31,7 +31,7 @@ impl GMElement for TextItemInstance {
         let name: GMRef<String> = reader.read_gm_string()?;
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
-        let font: GMRef<GMFont> = reader.read_resource_by_id()?;
+        let font: GMRef<Font> = reader.read_resource_by_id()?;
         let scale_x = reader.read_f32()?;
         let scale_y = reader.read_f32()?;
         let rotation = reader.read_f32()?;

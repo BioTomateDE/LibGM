@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::elem::game_object::GMGameObject;
+use crate::wad::elem::game_object::GameObject;
 use crate::wad::elem::game_object::event::EventSubtype;
 
 /// Triggered when this game object instance collides
@@ -13,7 +13,7 @@ pub struct Collision {
     /// This becomes the [`InstanceType::Other`] context.
     ///
     /// [`InstanceType::Other`]: crate::gml::instruction::InstanceType::Other
-    pub object: GMRef<GMGameObject>,
+    pub object: GMRef<GameObject>,
 }
 
 impl EventSubtype for Collision {
@@ -29,18 +29,18 @@ impl EventSubtype for Collision {
 impl Collision {
     /// Creates a new [`Collision`] with the given game object reference.
     #[must_use]
-    pub const fn new(game_object_ref: GMRef<GMGameObject>) -> Self {
+    pub const fn new(game_object_ref: GMRef<GameObject>) -> Self {
         Self { object: game_object_ref }
     }
 }
 
-impl From<GMRef<GMGameObject>> for Collision {
-    fn from(game_object_ref: GMRef<GMGameObject>) -> Self {
+impl From<GMRef<GameObject>> for Collision {
+    fn from(game_object_ref: GMRef<GameObject>) -> Self {
         Self::new(game_object_ref)
     }
 }
 
-impl From<Collision> for GMRef<GMGameObject> {
+impl From<Collision> for GMRef<GameObject> {
     fn from(collision: Collision) -> Self {
         collision.object
     }

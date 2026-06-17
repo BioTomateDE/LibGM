@@ -3,18 +3,18 @@
 //! Chapters 1, 2, 4 (3 needs extra handling)
 //! 2025-06-05 to now [2026-01-04]
 
-use crate::gml::GMCode;
+use crate::gml::Code;
 use crate::gml::assembly::assemble_instructions;
 use crate::gml::insert_instructions;
 use crate::gml::instruction::InstanceType;
 use crate::gml::instruction::Instruction;
 use crate::gml::instruction::VariableType;
 use crate::prelude::*;
-use crate::wad::elem::variable::GMVariable;
+use crate::wad::elem::variable::Variable;
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     log::debug!("Detected Deltarune Chapter 1/2/4");
-    let code_ref: GMRef<GMCode> = data
+    let code_ref: GMRef<Code> = data
         .codes
         .ref_by_name("gml_Object_obj_initializer2_Create_0", &data.strings)?;
     super::replace_debug(data, code_ref, enable, InstanceType::Global)?;
@@ -57,13 +57,13 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     );
 }
 
-fn find_insertion_point(data: &GMData, code: &GMCode) -> Result<u32> {
+fn find_insertion_point(data: &GMData, code: &Code) -> Result<u32> {
     for i in 0..code.instructions.len() {
         let instr = &code.instructions[i];
         let Some(code_variable) = instr.variable() else {
             continue;
         };
-        let variable: &GMVariable = data.variables.by_ref(code_variable.variable)?;
+        let variable: &Variable = data.variables.by_ref(code_variable.variable)?;
         let var_name = data.strings.by_ref(variable.name)?;
         if var_name != "flagname" {
             continue;

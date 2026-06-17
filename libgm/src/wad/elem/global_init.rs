@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use crate::gml::GMCode;
+use crate::gml::Code;
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_list_chunk;
@@ -8,16 +8,16 @@ use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMGlobalInitScripts {
-    pub elems: Vec<GMRef<GMCode>>,
+pub struct GlobalInitScripts {
+    pub elems: Vec<GMRef<Code>>,
     pub exists: bool,
 }
 
-gm_list_chunk!(GLOB, GMGlobalInitScripts, GMRef<GMCode>, direct);
+gm_list_chunk!(GLOB, GlobalInitScripts, GMRef<Code>, direct);
 
-impl GMElement for GMGlobalInitScripts {
+impl GMElement for GlobalInitScripts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let elems: Vec<GMRef<GMCode>> = reader.read_simple_list()?;
+        let elems: Vec<GMRef<Code>> = reader.read_simple_list()?;
         Ok(Self { elems, exists: true })
     }
 

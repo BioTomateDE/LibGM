@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::elem::animation_curve::GMAnimationCurve;
-use crate::wad::elem::background::GMBackground;
-use crate::wad::elem::font::GMFont;
-use crate::wad::elem::function::GMFunction;
-use crate::wad::elem::game_object::GMGameObject;
-use crate::wad::elem::particle_system::GMParticleSystem;
-use crate::wad::elem::path::GMPath;
-use crate::wad::elem::room::GMRoom;
-use crate::wad::elem::script::GMScript;
-use crate::wad::elem::sequence::GMSequence;
-use crate::wad::elem::shader::GMShader;
-use crate::wad::elem::sound::GMSound;
-use crate::wad::elem::sprite::GMSprite;
-use crate::wad::elem::timeline::GMTimeline;
+use crate::wad::elem::animation_curve::AnimationCurve;
+use crate::wad::elem::background::Background;
+use crate::wad::elem::font::Font;
+use crate::wad::elem::function::Function;
+use crate::wad::elem::game_object::GameObject;
+use crate::wad::elem::particle_system::ParticleSystem;
+use crate::wad::elem::path::Path;
+use crate::wad::elem::room::Room;
+use crate::wad::elem::script::Script;
+use crate::wad::elem::sequence::Sequence;
+use crate::wad::elem::shader::Shader;
+use crate::wad::elem::sound::Sound;
+use crate::wad::elem::sprite::Sprite;
+use crate::wad::elem::timeline::Timeline;
 
 /// A modern (2023.something) reference to game assets.
 /// Used with the [`PushReference`] (`pushref`) instruction.
@@ -21,23 +21,23 @@ use crate::wad::elem::timeline::GMTimeline;
 /// [`PushReference`]: crate::gml::Instruction::PushReference
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AssetReference {
-    Object(GMRef<GMGameObject>),
-    Sprite(GMRef<GMSprite>),
-    Sound(GMRef<GMSound>),
-    Room(GMRef<GMRoom>),
-    Path(GMRef<GMPath>),
-    Script(GMRef<GMScript>),
-    Font(GMRef<GMFont>),
-    Timeline(GMRef<GMTimeline>),
-    Shader(GMRef<GMShader>),
-    Sequence(GMRef<GMSequence>),
-    AnimCurve(GMRef<GMAnimationCurve>),
-    ParticleSystem(GMRef<GMParticleSystem>),
-    Background(GMRef<GMBackground>),
+    Object(GMRef<GameObject>),
+    Sprite(GMRef<Sprite>),
+    Sound(GMRef<Sound>),
+    Room(GMRef<Room>),
+    Path(GMRef<Path>),
+    Script(GMRef<Script>),
+    Font(GMRef<Font>),
+    Timeline(GMRef<Timeline>),
+    Shader(GMRef<Shader>),
+    Sequence(GMRef<Sequence>),
+    AnimCurve(GMRef<AnimationCurve>),
+    ParticleSystem(GMRef<ParticleSystem>),
+    Background(GMRef<Background>),
     RoomInstance(i32),
     /// Weird special reference since functions use reference chains.
     /// Functions therefore do not have an actual asset type byte.
-    Function(GMRef<GMFunction>),
+    Function(GMRef<Function>),
 }
 
 impl AssetReference {

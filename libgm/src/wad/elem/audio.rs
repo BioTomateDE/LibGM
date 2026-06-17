@@ -8,16 +8,16 @@ use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct GMAudios {
-    pub elems: Vec<GMAudio>,
+pub struct Audios {
+    pub elems: Vec<Audio>,
     pub exists: bool,
 }
 
-gm_list_chunk!(AUDO, GMAudios, GMAudio, direct);
+gm_list_chunk!(AUDO, Audios, Audio, direct);
 
-impl GMElement for GMAudios {
+impl GMElement for Audios {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let elems: Vec<GMAudio> = reader.read_pointer_list()?;
+        let elems: Vec<Audio> = reader.read_pointer_list()?;
         Ok(Self { elems, exists: true })
     }
 
@@ -29,19 +29,19 @@ impl GMElement for GMAudios {
 
 /// An embedded audio entry in a data file.
 #[derive(Clone, PartialEq)]
-pub struct GMAudio {
+pub struct Audio {
     /// The raw audio data of the embedded audio entry.
     /// This can be either WAV or OGG.
     pub data: Vec<u8>,
 }
 
-impl fmt::Debug for GMAudio {
+impl fmt::Debug for Audio {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("GMAudio").finish_non_exhaustive()
     }
 }
 
-impl GMElement for GMAudio {
+impl GMElement for Audio {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let size = reader.read_u32()?;
         let data: Vec<u8> = reader.read_bytes_dyn(size)?.to_vec();
