@@ -84,7 +84,7 @@ impl Tiles {
         }
 
         // Due to a GMAC bug, 2 blank tiles are inserted into the layer
-        // If the last 2 tiles in the layer are different.
+        // if the last 2 tiles in the layer are different.
         // This is a certified YoyoGames moment right here.
         let has_padding: bool = if tile_data.len() == 1 {
             true // Single tile always has padding
@@ -144,8 +144,8 @@ impl Tiles {
             i += 1;
 
             if curr_tile != last_tile {
-                // We have different tiles, so just increase the number of tiles in this
-                // verbatim run
+                // We have different tiles, so just increase the
+                // number of tiles in this verbatim run.
                 num_verbatim += 1;
                 last_tile = curr_tile;
                 continue;
@@ -162,7 +162,7 @@ impl Tiles {
                 i += 1;
             }
 
-            // Serialize the preceding verbatim run, splitting into 127-length chunks
+            // Serialize the preceding verbatim run, splitting into 127-length chunks.
             while num_verbatim > 0 {
                 let num_to_write: i32 = min(num_verbatim, 127);
                 builder.write_u8(num_to_write as u8);
@@ -174,7 +174,7 @@ impl Tiles {
                 verbatim_start += num_to_write;
             }
 
-            // Serialize this repeat run, splitting into 128-length chunks
+            // Serialize this repeat run, splitting into 128-length chunks.
             while num_repeats > 0 {
                 let num_to_write: i32 = min(num_verbatim, 128);
                 builder.write_u8((num_to_write as u8 - 1) | 0x80);
@@ -182,14 +182,14 @@ impl Tiles {
                 num_repeats -= num_to_write;
             }
 
-            // Update our current tile to be the one after the run
+            // Update our current tile to be the one after the run.
             curr_tile = if i >= tile_count {
                 0
             } else {
                 self.tile_data[i]
             };
 
-            // Update the start of our next verbatim run, and move on
+            // Update the start of our next verbatim run, and move on.
             verbatim_start = i as i32;
             num_verbatim = 0;
             i += 1;
