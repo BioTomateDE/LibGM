@@ -16,6 +16,10 @@ impl GMNamedElement for Code {
 }
 
 fn validate(mut name: &str) -> Result<()> {
+    if let Some(rest) = name.strip_prefix("Timeline_") {
+        return validate_identifier(rest);
+    }
+
     name = name
         .strip_prefix("gml_")
         .ok_or("Code entry name does not start with \"gml_\"")?;
