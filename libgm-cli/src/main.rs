@@ -4,6 +4,7 @@
 mod actions;
 mod cli;
 mod dir;
+mod info;
 mod logging;
 mod tests;
 
@@ -44,6 +45,10 @@ fn run(mut args: cli::Args) -> Result<()> {
 
         let raw_data: Vec<u8> = std::fs::read(&data_file).ctx_any("reading data file")?;
         let mut data: GMData = parser.parse_bytes(&raw_data)?;
+
+        if args.info {
+            info::print_info(&data);
+        }
 
         tests::perform(&mut data, &tests, &raw_data)?;
 

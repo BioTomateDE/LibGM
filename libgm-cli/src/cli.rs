@@ -36,6 +36,12 @@ pub struct Args {
     #[arg(long)]
     pub gen8_only: bool,
 
+    /// Display info about the data file.
+    ///
+    /// Default: false
+    #[arg(short, long)]
+    pub info: bool,
+
     /// The tests to execute.
     #[arg(short, long, value_delimiter = ',')]
     pub tests: Vec<Test>,

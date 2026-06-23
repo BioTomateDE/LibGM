@@ -9,6 +9,7 @@ use std::marker::PhantomData;
 
 use crate::prelude::*;
 use crate::util::fmt::typename;
+use crate::wad::elem::string::Strings;
 
 /// An optional reference to another GameMaker element.
 ///
@@ -151,6 +152,11 @@ impl<T> GMRef<T> {
         }
     }
 
+    #[must_use]
+    pub const fn as_raw(self) -> i32 {
+        self.index
+    }
+
     /// Attempts to resolve this reference to an element in the given slice by its index.
     ///
     /// # Parameters
@@ -237,5 +243,13 @@ impl<T> GMRef<T> {
             cold_path();
             err!("The reference {self:?} points to a null element (removed by asset compiler)")
         })
+    }
+}
+
+impl GMRef<String> {
+    #[must_use]
+    pub fn display(self, gm_strings: &Strings) -> &str {
+        self.resolve(&gm_strings.elems)
+            .map_or("<invalid string ref>", String::as_str)
     }
 }

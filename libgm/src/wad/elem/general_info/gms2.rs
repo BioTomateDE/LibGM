@@ -145,7 +145,7 @@ impl GeneralInfo {
     // random bullshit go!
     const fn get_info_location(&self, timestamp: i64) -> i32 {
         let t = (timestamp as u16 / 7) as i32;
-        let g = self.game_id.wrapping_sub(self.default_window_width) as i32;
+        let g = self.game_id.wrapping_sub(self.window_width) as i32;
         let r = self.room_order.len() as i32;
         (t + g + r).abs() % 4
     }
@@ -153,8 +153,8 @@ impl GeneralInfo {
     fn get_info_number(&self, first_random: i64, info_timestamp_offset: bool) -> i64 {
         let flags = self.flags.bits() as i64;
         let gid = self.game_id as i64;
-        let ww = self.default_window_width as i64;
-        let wh = self.default_window_height as i64;
+        let ww = self.window_width as i64;
+        let wh = self.window_height as i64;
 
         let mut info_number: i64 = self.creation_timestamp.timestamp();
         if info_timestamp_offset {

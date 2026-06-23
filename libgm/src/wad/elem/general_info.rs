@@ -23,8 +23,11 @@ use crate::wad::version::ToGMVersion;
 
 #[derive(Clone, PartialEq)]
 pub struct GeneralInfo {
-    /// Indicates whether debugging support is disabled.
-    pub is_debugger_disabled: bool,
+    /// Indicates whether debugging support via an external GameMaker debugger is enabled.
+    /// The game will crash (?) if this is enabled and there is no debugger.
+    ///
+    /// This bool is stored as an inverted [`u8`] in the data file.
+    pub debugger_enabled: bool,
 
     /// The WAD version of the data file.
     /// WAD stands for "Where's All the Data".
@@ -96,10 +99,10 @@ pub struct GeneralInfo {
     pub version: GMVersion,
 
     /// The default window width of the game window.
-    pub default_window_width: u32,
+    pub window_width: u32,
 
     /// The default window height of the game window.
-    pub default_window_height: u32,
+    pub window_height: u32,
 
     /// The info flags of the data file.
     pub flags: Flags,
@@ -142,12 +145,10 @@ gm_chunk!(GEN8, GeneralInfo);
 
 impl GMElement for GeneralInfo {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let is_debugger_disabled: bool = match reader.read_u8()? {
-            0 => false,
-            1 => true,
-            other => {
-                bail!("Invalid u8 bool {other} while reading general info \"is debugger disabled\"")
-            }
+        let debugger_enabled: bool = match reader.read_u8()? {
+            1 => false,
+            0 => true,
+            other => bail!("Invalid 'Is Debugger Disabled' u8 bool {other}"),
         };
         let wad_version = reader.read_u8()?;
         let unknown_value = reader.read_u16()?;
@@ -183,7 +184,7 @@ impl GMElement for GeneralInfo {
         let room_order: Vec<GMRef<Room>> = reader.read_simple_list()?;
 
         let mut general_info = Self {
-            is_debugger_disabled,
+            debugger_enabled,
             wad_version,
             unknown_value,
             game_file_name,
@@ -194,8 +195,8 @@ impl GMElement for GeneralInfo {
             directplay_guid,
             game_name,
             version,
-            default_window_width,
-            default_window_height,
+            window_width: default_window_width,
+            window_height: default_window_height,
             flags,
             license_crc32,
             license_md5,
@@ -222,7 +223,7 @@ impl GMElement for GeneralInfo {
             bail!("General info is a required chunk (internal error)");
         }
 
-        builder.write_u8(self.is_debugger_disabled.into());
+        builder.write_u8(!self.debugger_enabled as u8);
         builder.write_u8(self.wad_version);
         builder.write_u16(self.unknown_value);
         builder.write_gm_string(self.game_file_name)?;
@@ -239,8 +240,8 @@ impl GMElement for GeneralInfo {
             // Version field is stuck on 2.0.0.0
             GMVersion::GMS2.serialize(builder)?;
         }
-        builder.write_u32(self.default_window_width);
-        builder.write_u32(self.default_window_height);
+        builder.write_u32(self.window_width);
+        builder.write_u32(self.window_height);
         builder.write_u32(self.flags.bits());
         builder.write_u32(self.license_crc32);
         builder.write_bytes(&self.license_md5);
@@ -264,7 +265,7 @@ impl GMElement for GeneralInfo {
 impl Default for GeneralInfo {
     fn default() -> Self {
         Self {
-            is_debugger_disabled: true,
+            debugger_enabled: false,
             wad_version: 17,
             unknown_value: 0,
             game_file_name: GMRef::none(),
@@ -275,8 +276,8 @@ impl Default for GeneralInfo {
             directplay_guid: [0u8; 16],
             game_name: GMRef::none(),
             version: GMVersion::default(),
-            default_window_width: 1337,
-            default_window_height: 1337,
+            window_width: 1337,
+            window_height: 1337,
             flags: Flags::empty(),
             license_crc32: 69420,
             license_md5: [69; 16],
@@ -295,7 +296,7 @@ impl Default for GeneralInfo {
 impl fmt::Debug for GeneralInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("GMGeneralInfo")
-            .field("is_debugger_disabled", &self.is_debugger_disabled)
+            .field("debugger_enabled", &self.debugger_enabled)
             .field("wad_version", &self.wad_version)
             .field("game_file_name", &self.game_file_name)
             .field("config", &self.config)
@@ -304,8 +305,8 @@ impl fmt::Debug for GeneralInfo {
             .field("game_id", &self.game_id)
             .field("game_name", &self.game_name)
             .field("version", &self.version)
-            .field("default_window_width", &self.default_window_width)
-            .field("default_window_height", &self.default_window_height)
+            .field("window_width", &self.window_width)
+            .field("window_height", &self.window_height)
             .field("creation_timestamp", &self.creation_timestamp)
             .field("display_name", &self.display_name)
             .field("steam_appid", &self.steam_appid)
