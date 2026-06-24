@@ -116,7 +116,7 @@ impl DataReader<'_> {
             return Ok(T::default());
         };
 
-        let ctx = || format!("deserializing chunk '{}'", T::NAME);
+        let ctx = || format!("deserializing chunk {}", T::NAME);
         let stopwatch = Stopwatch::start();
         self.cur_pos = chunk.start_pos;
         self.chunk = chunk;
@@ -130,7 +130,7 @@ impl DataReader<'_> {
 
         if self.cur_pos != self.chunk.end_pos {
             self.handle_invalid_align(format!(
-                "Misaligned chunk '{}': expected chunk end position {} but the reader is actually \
+                "Misaligned chunk {}: expected chunk end position {} but the reader is actually \
                  at position {} (diff: {})",
                 T::NAME,
                 self.chunk.end_pos,
@@ -140,7 +140,7 @@ impl DataReader<'_> {
             self.cur_pos = self.chunk.end_pos;
         }
 
-        log::trace!("Parsing chunk '{}' took {stopwatch}", T::NAME);
+        log::trace!("Parsing chunk {} took {stopwatch}", T::NAME);
         Ok(element)
     }
 

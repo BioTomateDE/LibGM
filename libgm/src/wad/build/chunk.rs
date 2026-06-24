@@ -40,7 +40,7 @@ impl DataBuilder<'_> {
 
         element
             .serialize(self)
-            .ctx(|| format!("serializing chunk '{name}'"))?;
+            .ctx(|| format!("serializing chunk {name}"))?;
 
         // Write padding in these versions
         let padding_start_pos = self.pos();
@@ -58,7 +58,7 @@ impl DataBuilder<'_> {
         self.overwrite_u32(chunk_length, length_pos)
             .expect("Chunk length overwrite position out of bounds");
 
-        log::trace!("Building chunk '{name}' took {stopwatch}");
+        log::trace!("Building chunk {name} took {stopwatch}");
         Ok(())
     }
 

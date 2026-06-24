@@ -96,8 +96,7 @@ pub struct GMVersion {
 }
 
 impl GMVersion {
-    // TODO(const): Make these functions `const` when Into, PartialEq and PartialOrd
-    // are const-stable.
+    // HACK: Make these functions `const` when Into, PartialEq and PartialOrd are const-stable.
 
     /// The GameMaker Version 2.0.0.0 (Pre LTS).
     pub const GMS2: Self = Self::new(2, 0, 0, 0, LTSBranch::PreLTS);

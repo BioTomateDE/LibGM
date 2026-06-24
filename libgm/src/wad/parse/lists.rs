@@ -89,7 +89,7 @@ impl DataReader<'_> {
     }
 
     pub fn read_pointer_list_opt<T: GMElement>(&mut self) -> Result<Vec<Option<T>>> {
-        // TODO(important): verify that 2024.11+ null pointers (unused asset removal) works
+        // TODO: verify that 2024.11+ null pointers (unused asset removal) works
         let pointers: Vec<u32> = self.read_simple_list()?;
         let count = pointers.len();
 

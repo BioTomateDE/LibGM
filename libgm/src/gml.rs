@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! Everything related to GML (GameMaker language) bytecode.
 //!
-//! TODO(doc): explain more.
-//! For now, just visit [`crate::wad`] sorry lol
+//! DOCME: explain more.
 
 pub mod analysis;
 pub mod assembly;

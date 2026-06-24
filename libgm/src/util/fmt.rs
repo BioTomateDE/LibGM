@@ -10,8 +10,8 @@ pub fn format_bytes(bytes: usize) -> String {
     let mut size = bytes as f64;
     let mut unit_idx = 0;
 
-    while size >= 1024.0 && unit_idx < UNITS.len() - 1 {
-        size /= 1024.0;
+    while size >= 1000.0 && unit_idx < UNITS.len() - 1 {
+        size /= 1000.0;
         unit_idx += 1;
     }
 
@@ -29,9 +29,7 @@ pub fn hexdump(raw_data: &[u8]) -> String {
         use std::fmt::Write;
         let _ = write!(&mut buffer, "{byte:02X} ");
     }
-
-    // Pop last space character.
-    buffer.pop();
+    debug_assert_eq!(buffer.pop(), Some(' '));
 
     buffer
 }
@@ -68,7 +66,7 @@ pub fn hexdump_range(raw_data: &[u8], range: impl RangeBounds<usize>) -> Result<
 ///
 /// It basically just gets the typename in a slightly more readable manner.
 pub fn typename<T>() -> &'static str {
-    // TODO(const): When Rust adds support for handling typenames at compile time, use that.
+    // HACK: When Rust adds support for handling typenames at compile time, use that.
     let ty = std::any::type_name::<T>();
     if let Some(index) = ty.find("GM")
         && !ty.contains('<')

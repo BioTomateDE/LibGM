@@ -29,9 +29,9 @@ impl GMElement for CollisionMask {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        // From UTMT: writing zero for empty table would probably be smart but the
-        // padding handles it automatically?            but you cant even have a
-        // yyswf sprite with a null rle data???
+        // From UTMT: "writing zero for empty table would probably be smart but the
+        // padding handles it automatically?"
+        // but you cant even have a yyswf sprite with a null rle data???
         if !self.rle_data.is_empty() {
             builder.write_usize(self.rle_data.len())?;
             builder.write_bytes(&self.rle_data);

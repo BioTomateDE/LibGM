@@ -247,7 +247,7 @@ impl GMElement for GMRef<String> {
 ///
 /// This checks for duplicates as well as names not following the proper charset.
 pub(crate) fn validate_names<T: GMNamedListChunk>(chunk: &T, gm_strings: &Strings) -> Result<()> {
-    // TODO(perf): this can probably be optimised or something
+    // PERF: this can probably be optimised or something
     let mut seen: HashMap<&String, GMRef<_>> = HashMap::new();
 
     for (i, item) in chunk.element_refs() {

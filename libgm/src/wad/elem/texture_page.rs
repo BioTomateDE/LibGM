@@ -16,9 +16,9 @@ use crate::wad::elem::element_stub;
 use crate::wad::elem::texture_page::img::BZip2QoiHeader;
 use crate::wad::parse::reader::DataReader;
 
-pub(crate) const PNG_HEADER: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-pub(crate) const BZ2_QOI_HEADER: &[u8; 4] = b"2zoq";
-pub(crate) const QOI_HEADER: &[u8; 4] = b"fioq";
+pub(crate) const PNG_HEADER: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]; // "‰PNG␍␊␚␊"
+pub(crate) const BZ2_QOI_HEADER: &[u8; 4] = b"2zoq"; // reversed "qoz2" cuz little endian
+pub(crate) const QOI_HEADER: &[u8; 4] = b"fioq"; // reversed "qoif" cuz little endian
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct TexturePages {
@@ -103,9 +103,8 @@ impl GMElement for TexturePages {
             )?;
             if builder.version() >= (2022, 3) {
                 texture_block_size_placeholders[i] = builder.pos();
-                // Placeholder for texture block size. use the cached value as a fallback.
-                // unless the texture page is external, this will later be overriden by the real
-                // value.
+                // Write the stored texture block size for external textures.
+                // For embedded textures, this will later be overriden by the real calculated value.
                 builder.write_u32(
                     texture_page
                         .texture_block_size
@@ -204,12 +203,13 @@ fn read_raw_texture(
     texture_block_size: Option<u32>,
 ) -> Result<GMImage> {
     reader.align(0x80)?;
+    let start_pos = reader.cur_pos;
     let header: [u8; 8] = *reader.read_bytes_const().ctx("reading image header")?;
 
-    let (image, data_length) = if header == PNG_HEADER {
+    let image: GMImage = if header == PNG_HEADER {
         read_png(reader)?
     } else if header.starts_with(BZ2_QOI_HEADER) {
-        read_bz2_qoi(reader, &header, max_stream_end_pos)?
+        read_bz2_qoi(reader, header, max_stream_end_pos)?
     } else if header.starts_with(QOI_HEADER) {
         // this is not gonna detect it for big endian
         read_qoi(reader)?
@@ -217,20 +217,21 @@ fn read_raw_texture(
         let dump: String = hexdump(&header);
         bail!("Invalid image header [{dump}]");
     };
+    let actual_size = reader.cur_pos - start_pos;
 
     if let Some(expected_size) = texture_block_size
-        && expected_size != data_length
+        && expected_size != actual_size
     {
-        bail!(
+        reader.handle_invalid_align(format!(
             "Texture Page Entry specified texture block size {expected_size}; actually read image \
-             with length {data_length}"
-        );
+             with size {actual_size}"
+        ))?;
     }
 
     Ok(image)
 }
 
-fn read_png(reader: &mut DataReader) -> Result<(GMImage, u32)> {
+fn read_png(reader: &mut DataReader) -> Result<GMImage> {
     let start_position = reader.cur_pos - 8;
     loop {
         let length: u32 = reader
@@ -253,20 +254,15 @@ fn read_png(reader: &mut DataReader) -> Result<(GMImage, u32)> {
     let bytes: &[u8] = reader
         .read_bytes_dyn(data_length)
         .ctx("reading PNG image data")?;
-    // Png image size checks {~~}
     let image = GMImage::from_png(bytes.to_vec());
-    Ok((image, data_length))
+    Ok(image)
 }
 
-// Regarding `header: &[u8; 8]`:
-// On 64-bit targets, the header is the same size as a pointer.
-// On 32-bit targets, passing by value would not fit in a word.
-#[allow(clippy::trivially_copy_pass_by_ref)]
 fn read_bz2_qoi(
     reader: &mut DataReader,
-    header: &[u8; 8],
+    header: [u8; 8],
     max_end_of_stream_pos: u32,
-) -> Result<(GMImage, u32)> {
+) -> Result<GMImage> {
     let start_position = reader.cur_pos - 8;
     let mut header_size = 8;
     let mut uncompressed_size = None;
@@ -277,7 +273,7 @@ fn read_bz2_qoi(
 
     let bz2_stream_end = find_end_of_bz2_stream(reader, max_end_of_stream_pos)?;
     let bz2_stream_length = bz2_stream_end - start_position - header_size;
-    let data_length = bz2_stream_length + header_size;
+    // let data_length = bz2_stream_length + header_size;
 
     // Read entire image (excluding bz2 header) to byte array
     reader.cur_pos = start_position + header_size;
@@ -293,10 +289,10 @@ fn read_bz2_qoi(
     let height: u16 = u16_from((&header[6..8]).try_into().unwrap());
     let header = BZip2QoiHeader::new(width, height, uncompressed_size);
     let image: GMImage = GMImage::from_bz2_qoi(raw_image_data.to_vec(), header);
-    Ok((image, data_length))
+    Ok(image)
 }
 
-fn read_qoi(reader: &mut DataReader) -> Result<(GMImage, u32)> {
+fn read_qoi(reader: &mut DataReader) -> Result<GMImage> {
     let start_position = reader.cur_pos - 8;
     let data_length = reader.read_u32()?;
     reader.cur_pos = start_position;
@@ -305,7 +301,7 @@ fn read_qoi(reader: &mut DataReader) -> Result<(GMImage, u32)> {
         .ctx("reading QOI Image data")?
         .to_vec();
     let image = GMImage::from_qoi(raw_image_data);
-    Ok((image, data_length))
+    Ok(image)
 }
 
 fn find_end_of_bz2_stream(reader: &mut DataReader, max_end_of_stream_pos: u32) -> Result<u32> {

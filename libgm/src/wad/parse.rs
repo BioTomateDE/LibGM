@@ -284,7 +284,7 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
             .filter(|&pos| pos <= total_data_len)
             .ok_or_else(|| {
                 format!(
-                    "Chunk '{name}' out of bounds: specified length {chunk_length} would exceed \
+                    "Chunk {name} out of bounds: specified length {chunk_length} would exceed \
                      total length {total_data_len}"
                 )
             })?;
@@ -484,7 +484,7 @@ fn handle_unread_chunks(chunks: &ChunkMap, allow_unknown: bool) -> Result<()> {
     let mut buffer = String::with_capacity(count * 6);
     for chunk_name in chunks.chunk_names() {
         use core::fmt::Write;
-        let _ = write!(buffer, "{chunk_name:?}");
+        let _ = write!(buffer, "{chunk_name}");
         buffer.push_str(", ");
     }
 

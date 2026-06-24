@@ -418,8 +418,7 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
 fn parse_call(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result<Instruction> {
     types.assert_count(0, "call")?;
     let ident: &str = reader.parse_identifier()?;
-    let function: GMRef<Function> =
-        resolve_function(ident, &gm_data.functions, &gm_data.strings)?;
+    let function: GMRef<Function> = resolve_function(ident, &gm_data.functions, &gm_data.strings)?;
     reader.consume_space()?;
     let arg_count: u16 = reader.parse_uint()?;
     Ok(Instruction::Call { function, arg_count })
@@ -594,7 +593,7 @@ fn parse_string_literal(reader: &mut Reader) -> Result<String> {
                 'v' => '\x0B', // 0B - Vertical Tab
                 'f' => '\x0C', // 0C - Form Feed
                 'r' => '\r',   // 0D - Carriage Return
-                _ => bail!("Invalid escape character '{char}'"),
+                _ => bail!("Invalid escape character {char:?}"),
             };
             string.push(append_char);
             escaping = false;

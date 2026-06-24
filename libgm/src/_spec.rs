@@ -61,7 +61,7 @@
 //! able to be parsed, decompiled and modified by LibGM.
 //!
 //! In YYC, the GML source code is converted to C code
-//! and then compiled by GCC (TODO: not sure).
+//! and then compiled by GCC (DOCME: not sure).
 //! The main point is:
 //! The data file doesn't store anything code related for YYC.
 //! Instead, all the game's code is compiled to machine code in the specialized
@@ -90,7 +90,7 @@
 //! that stores **all** data related to GameMaker rooms.
 //!
 //! The order of these chunks does not matter.
-//! > TODO: Possible exception: `GEN8` needs to be first, at least for
+//! > DOCME: Possible exception: `GEN8` needs to be first, at least for
 //! > `UndertaleModLib`?
 //!
 //! Now, onto the actual structure of a data file.
@@ -138,7 +138,7 @@
 //! * Element #count [n bytes]
 //!
 //! In other words, they store their element count, followed by the element
-//! data. Simple indeed. (TODO: are the element sizes always the same?)
+//! data. Simple indeed. (DOCME: are the element sizes always the same?)
 //!
 //! Pointer lists have the following structure:
 //! * Element count [4 bytes]

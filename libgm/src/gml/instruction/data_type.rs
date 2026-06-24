@@ -12,7 +12,7 @@ use crate::prelude::*;
 /// pointer/reference. For example, you can (and will have to) convert pushed
 /// constant integers into the [`DataType::Variable`] type using the [`Convert`]
 /// instruction, even if that value is not even tied to an actual variable.
-/// TODO(doc): Please conduct more research on this and improve these docs.
+/// DOCME: Please conduct more research on this and improve these docs.
 ///
 /// Another notable thing is that [`DataType::Int16`] is only valid for
 /// pushing immediate values using [`PushImmediate`] (or [`Push`]).
@@ -62,7 +62,7 @@ pub enum DataType {
     /// Externally known as a structure called `RValue`.
     /// - Size on VM Stack: 16 bytes.
     ///
-    /// TODO(doc): What is stored in this value on the stack?
+    /// DOCME: What is stored in this value on the stack?
     Variable,
 }
 

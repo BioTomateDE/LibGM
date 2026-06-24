@@ -116,7 +116,7 @@ pub struct EventGroups {
     pub gesture: Vec<Event<Gesture>>,
 
     /// A pre-create event type.
-    /// TODO(doc): what is this? why does it exist? is it gms2 only?
+    /// DOCME: what is this? why does it exist? is it gms2 only?
     pub pre_create: Vec<Event<()>>,
 }
 

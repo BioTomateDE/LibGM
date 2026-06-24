@@ -8,7 +8,6 @@ use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::GMNamedElement;
 use crate::wad::elem::texture_page_item::TexturePageItem;
-use crate::wad::elem::validate_identifier;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
@@ -63,13 +62,9 @@ impl GMNamedElement for EmbeddedImage {
         self.name
     }
 
-    fn validate_name(&self, gm_strings: &Strings) -> Result<()> {
-        let name = self.name(gm_strings)?;
-        let ident = name.strip_suffix(".png");
-        let Some(ident) = ident else {
-            bail!("Embedded Image name {name:?} does not end in \".png\"");
-        };
-        validate_identifier(ident)
+    fn validate_name(&self, _: &Strings) -> Result<()> {
+        // this will be a filename or path probably
+        Ok(())
     }
 }
 

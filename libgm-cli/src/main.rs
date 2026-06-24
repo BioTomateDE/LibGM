@@ -50,16 +50,16 @@ fn run(mut args: cli::Args) -> Result<()> {
             info::print_info(&data);
         }
 
+        for action in &args.actions {
+            action.perform(&mut data)?;
+        }
+
         tests::perform(&mut data, &tests, &raw_data)?;
 
         for data_file2 in &args.diffs {
             log::info!("Diffing with data file {}", data_file2.display());
             let data2: GMData = parser.parse_file(data_file2)?;
             print_diffs(&data, &data2);
-        }
-
-        for action in &args.actions {
-            action.perform(&mut data)?;
         }
 
         for code_name in &args.codes {
@@ -75,6 +75,15 @@ fn run(mut args: cli::Args) -> Result<()> {
         //     let n = data.strings.by_ref(c.name)?;
         //     let asm = disassemble_code(c, &data)?;
         //     std::fs::write(format!("asm/{n}.txt"), asm).unwrap();
+        // }
+
+        // std::fs::create_dir_all("txtr").unwrap();
+        // for (i, txtr) in data.texture_pages.elements().enumerate() {
+        //     let Some(img) = &txtr.image else {
+        //         continue;
+        //     };
+        //     let img = img.to_dynamic_image()?;
+        //     img.save(format!("txtr/{i}.png")).unwrap();
         // }
 
         // std::fs::create_dir_all("sounds").unwrap();

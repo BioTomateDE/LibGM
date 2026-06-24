@@ -3,7 +3,7 @@
 bitflags::bitflags! {
     /// Function classifications a data file can have.
     ///
-    /// TODO(doc): are these just remenant from GM8? does the runner actually check these?
+    /// DOCME: are these just remenant from GM8? does the runner actually check these?
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
     pub struct FunctionClassifications: u64 {
         const INTERNET = 0x1;

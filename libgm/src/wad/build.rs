@@ -72,7 +72,7 @@ fn build_impl(data: &GMData) -> Result<Vec<u8>> {
     // Write Data length placeholder
     builder.write_u32(0xDEAD_C0DE);
 
-    // TODO: CODE has to be written before VARI and FUNC!!!
+    // TODO: make sure CODE is written before VARI and FUNC!!!
 
     for &chunk_name in &data.meta.chunk_order {
         match chunk_name {

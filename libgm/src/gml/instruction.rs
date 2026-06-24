@@ -292,7 +292,7 @@ pub enum Instruction {
     /// This instruction can also push variables (which copies the value),
     /// but I don't know the exact behavior / internal implementation.
     ///
-    /// TODO(doc): Explain pushing of variables better
+    /// DOCME: Explain pushing of variables better
     Push { value: PushValue },
 
     /// Pushes a value stored in a local variable onto the stack.
@@ -348,8 +348,8 @@ pub enum Instruction {
     /// number of arguments, such as `ds_list_add`.
     /// For custom functions (aka. scripts), the remaining values will be filled
     /// with specified default values or `undefined` (?).
-    /// TODO(doc): I'm not sure what happens in WAD<15.
-    /// TODO(doc): I'm not sure what happens when too many arguments are
+    /// DOCME: I'm not sure what happens in WAD<15.
+    /// DOCME: I'm not sure what happens when too many arguments are
     /// specified (probably nothing?).
     Call {
         function: GMRef<Function>,
@@ -375,7 +375,7 @@ pub enum Instruction {
     /// Verifies an array index is within proper
     /// bounds, typically for multidimensional arrays.
     ///
-    /// TODO(doc): How does this work? What does it actually do?
+    /// DOCME: How does this work? What does it actually do?
     CheckArrayIndex,
 
     /// Pops two values from the stack, those being an index and an array

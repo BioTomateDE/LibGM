@@ -42,16 +42,16 @@ fn try_check(
     }
 
     // Return if the chunk does not exist.
-    let Some(chunk) = reader.chunks.get(chunk) else {
+    let Some(chunk_bounds) = reader.chunks.get(chunk) else {
         return Ok(());
     };
 
-    reader.chunk = chunk;
-    reader.cur_pos = chunk.start_pos;
+    reader.chunk = chunk_bounds;
+    reader.cur_pos = chunk_bounds.start_pos;
 
     // Detect the version.
     let version_req_opt = check_fn(reader).ctx(|| {
-        format!("manually detecting GameMaker Version {target_version} in chunk {chunk:?}")
+        format!("manually detecting GameMaker Version {target_version} in chunk {chunk}")
     })?;
 
     // Return if no version could be detected.
@@ -93,7 +93,7 @@ struct VersionCheck {
 }
 
 impl VersionCheck {
-    // TODO(const): make this const when const traits are finally supported
+    // HACK: make this const when const traits are finally supported
     fn new(
         chunk: ChunkName,
         checker_fn: CheckerFn,
@@ -121,9 +121,7 @@ fn upgrade_by_chunk_existence(chunks: &ChunkMap) -> Option<GMVersion> {
 
     for (chunk_name, version) in UPGRADES {
         if chunks.contains(chunk_name) {
-            log::debug!(
-                "Existence of chunk '{chunk_name}' implies a Version of at least {version}"
-            );
+            log::debug!("Existence of chunk {chunk_name} implies a Version of at least {version}");
             return Some(version);
         }
     }
@@ -131,7 +129,7 @@ fn upgrade_by_chunk_existence(chunks: &ChunkMap) -> Option<GMVersion> {
     None
 }
 
-/// TODO(const): The `Into` trait is still not const unfortunately.
+/// HACK: The `Into` trait is still not const unfortunately.
 fn create_version_checks() -> [VersionCheck; 21] {
     [
         VersionCheck::new(
@@ -240,19 +238,18 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
             reader.chunk = chunk;
             reader.cur_pos = reader.chunk.start_pos;
 
-            let detected_version_opt: Option<GMVersion> =
-                (check.checker_fn)(reader).ctx(|| {
-                    format!(
-                        "detecting GameMaker Version {} in chunk '{}'",
-                        check.target_version, check.chunk_name,
-                    )
-                })?;
+            let detected_version_opt: Option<GMVersion> = (check.checker_fn)(reader).ctx(|| {
+                format!(
+                    "detecting GameMaker Version {} in chunk {}",
+                    check.target_version, check.chunk_name,
+                )
+            })?;
 
             if let Some(detected_version) = detected_version_opt
                 && reader.general_info.version < detected_version
             {
                 log::debug!(
-                    "Upgraded Version from {} to {} using check in chunk '{}'",
+                    "Upgraded Version from {} to {} using check in chunk {}",
                     reader.general_info.version,
                     detected_version,
                     check.chunk_name,

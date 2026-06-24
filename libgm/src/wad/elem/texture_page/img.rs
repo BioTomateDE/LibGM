@@ -107,7 +107,7 @@ impl GMImage {
     /// Whether the underlying image data ([`Format`]) is a [`DynamicImage`].
     #[must_use]
     pub const fn is_dynamic_image(&self) -> bool {
-        // TODO(const): const PartialEq not yet supported
+        // HACK: const PartialEq not yet supported
         matches!(self.format(), Format::Dyn)
     }
 
@@ -339,6 +339,9 @@ impl fmt::Debug for Img {
     }
 }
 
+// Bz2Qoi is never serialized as of now. I haven't done benchmarks, but like...
+// If you want small size, just use PNG. If you want fast loading and decent size, use QOI.
+// Like yeah, Bz2+Qoi does result in a small size at the tradeoff of losing the main benefit of QOI: deserialization speed.
 fn write_dyn_img(dyn_img: &DynamicImage, builder: &mut DataBuilder) -> Result<()> {
     // Use QOI if supported.
     if builder.version() >= (2022, 1) {
@@ -346,6 +349,7 @@ fn write_dyn_img(dyn_img: &DynamicImage, builder: &mut DataBuilder) -> Result<()
         return Ok(());
     }
 
+    // Fallback to PNG for older games.
     if !cfg!(feature = "png-image") {
         bail!("Crate feature `png-image` is disabled and the game is too old to use QOI images.");
     }

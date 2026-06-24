@@ -68,7 +68,7 @@ impl<'a> Reader<'a> {
         // TODO: should this be expanded to other whitespace chars / allow sequences of chars?
         let char: char = self.consume_char().ok_or("Expected space, got EOL")?;
         if char != ' ' {
-            bail!("Expected space, got '{char}'");
+            bail!("Expected space, got {char:?}");
         }
         Ok(())
     }
@@ -76,7 +76,7 @@ impl<'a> Reader<'a> {
     pub fn consume_dot(&mut self) -> Result<()> {
         let char: char = self.consume_char().ok_or("Expected dot, got EOL")?;
         if char != '.' {
-            bail!("Expected dot, got '{char}'");
+            bail!("Expected dot, got {char:?}");
         }
         Ok(())
     }
