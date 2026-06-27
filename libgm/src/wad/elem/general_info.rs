@@ -138,7 +138,7 @@ pub struct GeneralInfo {
     pub gms2_data: Option<GMS2Data>,
 
     /// Should always be true (unless the data file is malformed).
-    pub(crate) exists: bool,
+    pub exists: bool,
 }
 
 gm_chunk!(GEN8, GeneralInfo);
@@ -295,7 +295,7 @@ impl Default for GeneralInfo {
 
 impl fmt::Debug for GeneralInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("GMGeneralInfo")
+        f.debug_struct("GeneralInfo")
             .field("debugger_enabled", &self.debugger_enabled)
             .field("wad_version", &self.wad_version)
             .field("game_file_name", &self.game_file_name)
