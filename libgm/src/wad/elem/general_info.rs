@@ -51,7 +51,7 @@ pub struct GeneralInfo {
     pub wad_version: u8,
 
     /// Who knows. Probably redundant in GMS2.
-    unknown_value: u16,
+    pub unknown_value: u16,
 
     /// The file name of the runner.
     pub game_file_name: GMRef<String>,
