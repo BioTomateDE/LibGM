@@ -4,6 +4,7 @@ use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::game_object::GameObject;
+use crate::wad::elem::room::InstanceID;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
@@ -12,7 +13,7 @@ pub struct RoomGameObject {
     pub x: i32,
     pub y: i32,
     pub object_definition: GMRef<GameObject>,
-    pub instance_id: u32,
+    pub instance_id: InstanceID,
     pub creation_code: GMRef<Code>,
     pub scale_x: f32,
     pub scale_y: f32,
@@ -28,7 +29,7 @@ impl GMElement for RoomGameObject {
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
         let object_definition: GMRef<GameObject> = reader.read_resource_by_id()?;
-        let instance_id = reader.read_u32()?;
+        let instance_id = InstanceID(reader.read_i32()?);
         let creation_code: GMRef<Code> = reader.read_resource_by_id()?;
         let scale_x = reader.read_f32()?;
         let scale_y = reader.read_f32()?;
@@ -68,7 +69,7 @@ impl GMElement for RoomGameObject {
         builder.write_i32(self.x);
         builder.write_i32(self.y);
         builder.write_resource_id(self.object_definition);
-        builder.write_u32(self.instance_id);
+        builder.write_i32(self.instance_id.0);
         builder.write_resource_id(self.creation_code);
         builder.write_f32(self.scale_x);
         builder.write_f32(self.scale_y);

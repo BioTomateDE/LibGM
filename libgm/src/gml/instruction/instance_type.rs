@@ -4,6 +4,7 @@ use std::fmt;
 use crate::gml::instruction::VariableType;
 use crate::prelude::*;
 use crate::wad::elem::game_object::GameObject;
+use crate::wad::elem::room::InstanceID;
 
 /// The scope/owner of a variable.
 ///
@@ -44,7 +45,7 @@ pub enum InstanceType {
     /// positive integers. If the specified variable type was
     /// [`VariableType::Instance`], the integer gets interpreted as a Room
     /// Instance ID instead of a game object reference.
-    RoomInstance(i16),
+    RoomInstance(InstanceID),
 
     /// Represents the current `self` instance.
     ///
@@ -114,7 +115,7 @@ impl fmt::Debug for InstanceType {
                 write!(f, "GameObject<{}>", reference.index)
             }
             Self::RoomInstance(instance_id) => {
-                write!(f, "RoomInstanceID<{instance_id}>")
+                write!(f, "RoomInstanceID<{}>", instance_id.0)
             }
             Self::Other => write!(f, "Other"),
             Self::All => write!(f, "All"),
@@ -137,7 +138,7 @@ impl InstanceType {
     pub fn from_i16(raw: i16, var_type: VariableType) -> Result<Self> {
         if raw >= 0 {
             return Ok(if var_type == VariableType::Instance {
-                Self::RoomInstance(raw)
+                Self::RoomInstance(InstanceID(raw as i32))
             } else {
                 Self::GameObject(GMRef::new(raw as i32))
             });
@@ -172,7 +173,7 @@ impl InstanceType {
     pub const fn build(self) -> i16 {
         match self {
             Self::GameObject(game_object_ref) => game_object_ref.index as i16,
-            Self::RoomInstance(instance_id) => instance_id,
+            Self::RoomInstance(instance_id) => instance_id.0 as i16,
             Self::Self_ => -1,
             Self::Other => -2,
             Self::All => -3,

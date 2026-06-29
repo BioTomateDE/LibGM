@@ -58,7 +58,7 @@ pub struct Room {
     pub views: Vec<RoomView>,
     pub game_objects: Vec<RoomGameObject>,
     pub tiles: Vec<RoomTile>,
-    pub instance_creation_order_ids: Vec<i32>,
+    pub instance_creation_order: Vec<InstanceID>,
     pub world: bool,
     pub top: u32,
     pub left: u32,
@@ -119,14 +119,15 @@ impl GMElement for Room {
         reader.assert_pos(tiles_ptr, "Room Tiles")?;
         let tiles: Vec<RoomTile> = reader.read_pointer_list()?;
 
-        let instance_creation_order_ids: Vec<i32> = if reader.general_info.version >= (2024, 13) {
+        let instance_creation_order: Vec<InstanceID> = if reader.general_info.version >= (2024, 13)
+        {
             reader.assert_pos(instances_ptr, "Room Instance Creation Order IDs")?;
             reader.read_simple_list()?
         } else {
             Vec::new()
         };
 
-        let layers: Vec<RoomLayer> = if reader.general_info.version >= (2, 0) {
+        let layers: Vec<RoomLayer> = if reader.general_info.version >= 2 {
             reader.assert_pos(layers_ptr, "Room Layers")?;
             reader.read_pointer_list()?
         } else {
@@ -155,7 +156,7 @@ impl GMElement for Room {
             views,
             game_objects,
             tiles,
-            instance_creation_order_ids,
+            instance_creation_order,
             world,
             top,
             left,
@@ -189,7 +190,7 @@ impl GMElement for Room {
         builder.write_pointer(&self.tiles);
 
         if builder.version() >= (2024, 13) {
-            builder.write_pointer(&self.instance_creation_order_ids);
+            builder.write_pointer(&self.instance_creation_order);
         }
 
         builder.write_bool32(self.world);
@@ -219,8 +220,8 @@ impl GMElement for Room {
         builder.write_pointer_list(&self.tiles)?;
 
         if builder.version() >= (2024, 13) {
-            builder.resolve_pointer(&self.instance_creation_order_ids)?;
-            builder.write_pointer_list(&self.instance_creation_order_ids)?;
+            builder.resolve_pointer(&self.instance_creation_order)?;
+            builder.write_pointer_list(&self.instance_creation_order)?;
         }
 
         if builder.version() >= 2 {
@@ -233,6 +234,21 @@ impl GMElement for Room {
             builder.write_pointer_list(&self.sequences)?;
         }
 
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct InstanceID(pub i32);
+
+impl GMElement for InstanceID {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let id = reader.read_i32()?;
+        Ok(Self(id))
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+        builder.write_i32(self.0);
         Ok(())
     }
 }

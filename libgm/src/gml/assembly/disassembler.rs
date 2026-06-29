@@ -531,7 +531,7 @@ fn write_instance_type(
             write!(buffer, "object<{}>", obj.name(&gm_data.strings)?);
         }
         InstanceType::RoomInstance(instance_id) => {
-            write!(buffer, "roominstance<{instance_id}>");
+            write!(buffer, "roominstance<{}>", instance_id.0);
         }
         InstanceType::Local => write!(buffer, "local<{}>", variable_ref.index),
         InstanceType::Other => write!(buffer, "other"),

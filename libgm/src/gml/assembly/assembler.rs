@@ -21,6 +21,7 @@ use crate::wad::data::GMData;
 use crate::wad::elem::function::Function;
 use crate::wad::elem::function::Functions;
 use crate::wad::elem::game_object::GameObject;
+use crate::wad::elem::room::InstanceID;
 use crate::wad::elem::string::Strings;
 use crate::wad::elem::validate_identifier;
 use crate::wad::elem::variable::Variable;
@@ -459,8 +460,8 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
         }
         "roominstance" => {
             variable_type = VariableType::Instance;
-            let instance_id: i16 = parse_int(instance_type_arg)?;
-            InstanceType::RoomInstance(instance_id)
+            let instance_id: i32 = parse_int(instance_type_arg)?;
+            InstanceType::RoomInstance(InstanceID(instance_id))
         }
         "local" => {
             let var_index: i32 = parse_i32(instance_type_arg)?;
