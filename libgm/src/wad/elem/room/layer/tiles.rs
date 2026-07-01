@@ -9,10 +9,11 @@ use crate::wad::elem::background::Tileset;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Tiles {
-    pub background: GMRef<Tileset>,
-    /// Flattened 2D Array. Access using `tile_data[row + width * col]`.
+    pub tileset: GMRef<Tileset>,
+    /// Flattened 2D Array. Access using `tile_data[row + width * col]`
+    /// or via the provided  methods.
     pub tile_data: Vec<u32>,
     pub width: u32,
     pub height: u32,
@@ -20,7 +21,7 @@ pub struct Tiles {
 
 impl GMElement for Tiles {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let background: GMRef<Tileset> = reader.read_resource_by_id()?;
+        let tileset: GMRef<Tileset> = reader.read_resource_by_id()?;
         let width = reader.read_u32()?;
         let height = reader.read_u32()?;
         let mut tile_data: Vec<u32> = vec_with_capacity(width * height)?;
@@ -35,11 +36,11 @@ impl GMElement for Tiles {
             }
         }
 
-        Ok(Self { background, tile_data, width, height })
+        Ok(Self { tileset, tile_data, width, height })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_resource_id(self.background);
+        builder.write_resource_id(self.tileset);
         builder.write_u32(self.width);
         builder.write_u32(self.height);
         if builder.version() >= (2024, 2) {
@@ -153,7 +154,7 @@ impl Tiles {
 
             // We have two tiles in a row - construct a repeating run.
             // Figure out how far this repeat goes, first.
-            let mut num_repeats: i32 = 2;
+            let mut num_repeats: u8 = 2;
             while i < tile_count {
                 if curr_tile != self.tile_data[i] {
                     break;
@@ -176,8 +177,8 @@ impl Tiles {
 
             // Serialize this repeat run, splitting into 128-length chunks.
             while num_repeats > 0 {
-                let num_to_write: i32 = min(num_verbatim, 128);
-                builder.write_u8((num_to_write as u8 - 1) | 0x80);
+                let num_to_write: u8 = min(num_repeats, 128);
+                builder.write_u8((num_to_write - 1) | 0x80);
                 builder.write_u32(last_tile);
                 num_repeats -= num_to_write;
             }
@@ -199,5 +200,36 @@ impl Tiles {
         if builder.version() >= (2024, 4) {
             builder.align(4);
         }
+    }
+}
+
+impl Tiles {
+    // pub fn from_raw(tiles: Vec<u32>, width: u32, height: u32) -> Result<Self> {
+    //     let expected = width.checked_mul(height).ok_or("Dimensions too large")?;
+    //     let actual = tiles.len();
+    //     if expected != actual as u32 {
+    //         bail!(
+    //             "Dimensions {width}x{height} imply a size of {expected}, but Tile data actually \
+    //              has size {actual}"
+    //         );
+    //     }
+    //     Ok(Self(tiles))
+    // }
+
+    #[must_use]
+    pub fn coords_to_index(&self, x: u32, y: u32) -> Option<usize> {
+        // x + (y * self.width)
+        Some(x.checked_add(y.checked_mul(self.width)?)? as usize)
+    }
+
+    #[must_use]
+    pub fn get(&self, x: u32, y: u32) -> Option<u32> {
+        self.tile_data.get(self.coords_to_index(x, y)?).copied()
+    }
+
+    #[must_use]
+    pub fn get_mut(&mut self, x: u32, y: u32) -> Option<&mut u32> {
+        let coords = self.coords_to_index(x, y)?; // polonius moment
+        self.tile_data.get_mut(coords)
     }
 }

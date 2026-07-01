@@ -301,6 +301,7 @@ const fn type_count_by_wad(wad_version: u8) -> u32 {
         return 12;
     }
     if wad_version == 16 {
+        // TODO: not accurate enough
         return 13;
     }
     15
