@@ -102,6 +102,15 @@ impl Variables {
 
         Ok(variable_ref)
     }
+
+    pub fn validate_names(&self, strings: &Strings) -> Result<()> {
+        for var in &self.elems {
+            let name: &str = var.name(strings)?;
+            var.validate_name(strings)
+                .ctx(|| format!("validating Variable with name {name:?}"))?;
+        }
+        Ok(())
+    }
 }
 
 impl GMElement for Variables {

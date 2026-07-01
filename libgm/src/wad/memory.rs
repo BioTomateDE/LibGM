@@ -46,7 +46,7 @@ fn optimize_memory(data: &mut GMData) -> usize {
     freed_bytes += shrink_vec(&mut data.animation_curves.elems);
     freed_bytes += shrink_vec(&mut data.audio_groups.elems);
     freed_bytes += shrink_vec(&mut data.audios.elems);
-    freed_bytes += shrink_vec(&mut data.backgrounds.elems);
+    freed_bytes += shrink_vec(&mut data.tilesets.elems);
     freed_bytes += shrink_vec(&mut data.codes.elems);
     freed_bytes += shrink_vec(&mut data.embedded_images.elems);
     freed_bytes += shrink_vec(&mut data.extensions.elems);

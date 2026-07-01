@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::wad::elem::animation_curve::AnimationCurve;
-use crate::wad::elem::background::Background;
+use crate::wad::elem::background::Tileset;
 use crate::wad::elem::font::Font;
 use crate::wad::elem::function::Function;
 use crate::wad::elem::game_object::GameObject;
@@ -33,7 +33,7 @@ pub enum AssetReference {
     Sequence(GMRef<Sequence>),
     AnimCurve(GMRef<AnimationCurve>),
     ParticleSystem(GMRef<ParticleSystem>),
-    Background(GMRef<Background>),
+    Background(GMRef<Tileset>),
     RoomInstance(i32),
     /// Weird special reference since functions use reference chains.
     /// Functions therefore do not have an actual asset type byte.

@@ -2,7 +2,7 @@ use crate::gm_enum::gm_enum;
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
-use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sprite::Sprite;
 use crate::wad::parse::reader::DataReader;
@@ -14,8 +14,7 @@ pub struct ParticleEmitters {
     pub exists: bool,
 }
 
-// not sure if direct
-gm_named_list_chunk!(PSEM, ParticleEmitters, ParticleEmitter, direct);
+gm_list_chunk!(PSEM, ParticleEmitters, ParticleEmitter, direct);
 
 impl GMElement for ParticleEmitters {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -39,10 +38,7 @@ pub struct ParticleEmitter {
     pub enabled: bool,
     pub mode: EmitMode,
     pub emit_count: u32,
-
-    /// This field is probably gonna be renamed
     pub size_data_etc: SizeDataEtc,
-
     pub distribution: EmitterDistribution,
     pub shape: EmitterShape,
     pub region_x: f32,
@@ -81,6 +77,12 @@ pub struct ParticleEmitter {
     pub spawn_on_death_count: u32,
     pub spawn_on_update: GMRef<Self>,
     pub spawn_on_update_count: u32,
+}
+
+impl GMNamedElement for ParticleEmitter {
+    fn name_ref(&self) -> GMRef<String> {
+        self.name
+    }
 }
 
 impl GMElement for ParticleEmitter {

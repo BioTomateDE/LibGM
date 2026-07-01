@@ -2,7 +2,7 @@
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::background::Background;
+use crate::wad::elem::background::Tileset;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
@@ -10,7 +10,7 @@ use crate::wad::reference::GMRef;
 pub struct RoomBackground {
     pub enabled: bool,
     pub foreground: bool,
-    pub background_definition: GMRef<Background>,
+    pub background_definition: GMRef<Tileset>,
     pub x: i32,
     pub y: i32,
     pub tile_x: i32,
@@ -24,7 +24,7 @@ impl GMElement for RoomBackground {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let enabled = reader.read_bool32()?;
         let foreground = reader.read_bool32()?;
-        let background_definition: GMRef<Background> = reader.read_resource_by_id()?;
+        let background_definition: GMRef<Tileset> = reader.read_resource_by_id()?;
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
         let tile_x = reader.read_i32()?; // Idk if this should be an int instead of a bool

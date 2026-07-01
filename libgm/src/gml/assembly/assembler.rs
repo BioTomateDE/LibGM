@@ -282,7 +282,7 @@ fn parse_asset_reference(reader: &mut Reader, gm_data: &GMData) -> Result<AssetR
         "sprite" => AssetReference::Sprite(resolve_asset(&dat.sprites, line, strg)?),
         "sound" => AssetReference::Sound(resolve_asset(&dat.sounds, line, strg)?),
         "room" => AssetReference::Room(resolve_asset(&dat.rooms, line, strg)?),
-        "background" => AssetReference::Background(resolve_asset(&dat.backgrounds, line, strg)?),
+        "background" => AssetReference::Background(resolve_asset(&dat.tilesets, line, strg)?),
         "path" => AssetReference::Path(resolve_asset(&dat.paths, line, strg)?),
         "script" => AssetReference::Script(resolve_asset(&dat.scripts, line, strg)?),
         "font" => AssetReference::Font(resolve_asset(&dat.fonts, line, strg)?),

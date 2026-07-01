@@ -22,7 +22,7 @@ use crate::wad::data::Metadata;
 use crate::wad::elem::animation_curve::AnimationCurves;
 use crate::wad::elem::audio::Audios;
 use crate::wad::elem::audio_group::AudioGroups;
-use crate::wad::elem::background::Backgrounds;
+use crate::wad::elem::background::Tilesets;
 use crate::wad::elem::code::Codes;
 use crate::wad::elem::code::check_yyc;
 use crate::wad::elem::data_file::DataFiles;
@@ -384,7 +384,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
     let sprites: Sprites = reader.read_chunk()?;
     let game_objects: GameObjects = reader.read_chunk()?;
     let rooms: Rooms = reader.read_chunk()?;
-    let backgrounds: Backgrounds = reader.read_chunk()?;
+    let backgrounds: Tilesets = reader.read_chunk()?;
     let audios: Audios = reader.read_chunk()?;
     let sounds: Sounds = reader.read_chunk()?;
     let paths: Paths = reader.read_chunk()?;
@@ -431,7 +431,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         animation_curves,
         audio_groups,
         audios,
-        backgrounds,
+        tilesets: backgrounds,
         codes,
         data_files,
         embedded_images,

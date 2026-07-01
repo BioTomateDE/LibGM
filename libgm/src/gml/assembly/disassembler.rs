@@ -442,7 +442,7 @@ fn write_asset_reference(
             write!(
                 buffer,
                 "(background){}",
-                asset_get_name(&gm_data.backgrounds, gm_ref, s)?
+                asset_get_name(&gm_data.tilesets, gm_ref, s)?
             );
         }
         AssetReference::Path(gm_ref) => {

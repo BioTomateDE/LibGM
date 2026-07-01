@@ -10,7 +10,7 @@ use crate::wad::chunk::ChunkName;
 use crate::wad::elem::animation_curve::AnimationCurves;
 use crate::wad::elem::audio::Audios;
 use crate::wad::elem::audio_group::AudioGroups;
-use crate::wad::elem::background::Backgrounds;
+use crate::wad::elem::background::Tilesets;
 use crate::wad::elem::code::Codes;
 use crate::wad::elem::data_file::DataFiles;
 use crate::wad::elem::embedded_image::EmbeddedImages;
@@ -130,7 +130,6 @@ pub struct GMData {
     pub animation_curves: AnimationCurves,      // ACRV
     pub audio_groups: AudioGroups,              // AGRP
     pub audios: Audios,                         // AUDO
-    pub backgrounds: Backgrounds,               // BGND
     pub codes: Codes,                           // CODE
     pub(crate) data_files: DataFiles,           // DAFL
     pub embedded_images: EmbeddedImages,        // EMBI
@@ -160,6 +159,7 @@ pub struct GMData {
     pub texture_group_infos: TextureGroupInfos, // TGIN
     pub texture_page_items: TexturePageItems,   // TPAG
     pub texture_pages: TexturePages,            // TXTR
+    pub tilesets: Tilesets,                     // BGND
     pub timelines: Timelines,                   // TMLN
     pub variables: Variables,                   // VARI
 }
@@ -180,14 +180,11 @@ impl GMData {
         let stopwatch = Stopwatch::start();
         validate_names(&self.animation_curves, &self.strings)?;
         validate_names(&self.audio_groups, &self.strings)?;
-        validate_names(&self.backgrounds, &self.strings)?;
         validate_names(&self.codes, &self.strings)?;
-        validate_names(&self.embedded_images, &self.strings)?;
         validate_names(&self.filter_effects, &self.strings)?;
         validate_names(&self.fonts, &self.strings)?;
         validate_names(&self.functions, &self.strings)?;
         validate_names(&self.game_objects, &self.strings)?;
-        validate_names(&self.particle_emitters, &self.strings)?;
         validate_names(&self.particle_systems, &self.strings)?;
         validate_names(&self.paths, &self.strings)?;
         validate_names(&self.rooms, &self.strings)?;
@@ -197,6 +194,9 @@ impl GMData {
         validate_names(&self.sounds, &self.strings)?;
         validate_names(&self.sprites, &self.strings)?;
         validate_names(&self.texture_group_infos, &self.strings)?;
+        validate_names(&self.tilesets, &self.strings)?;
+        validate_names(&self.timelines, &self.strings)?;
+        self.variables.validate_names(&self.strings)?;
         log::trace!("Validating all names took {stopwatch}");
         Ok(())
     }

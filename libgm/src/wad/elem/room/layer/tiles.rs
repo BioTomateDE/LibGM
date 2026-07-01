@@ -5,13 +5,13 @@ use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::background::Background;
+use crate::wad::elem::background::Tileset;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tiles {
-    pub background: GMRef<Background>,
+    pub background: GMRef<Tileset>,
     /// Flattened 2D Array. Access using `tile_data[row + width * col]`.
     pub tile_data: Vec<u32>,
     pub width: u32,
@@ -20,7 +20,7 @@ pub struct Tiles {
 
 impl GMElement for Tiles {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let background: GMRef<Background> = reader.read_resource_by_id()?;
+        let background: GMRef<Tileset> = reader.read_resource_by_id()?;
         let width = reader.read_u32()?;
         let height = reader.read_u32()?;
         let mut tile_data: Vec<u32> = vec_with_capacity(width * height)?;

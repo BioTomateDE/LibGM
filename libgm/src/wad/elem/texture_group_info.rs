@@ -6,7 +6,7 @@ use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::GMNamedElement;
-use crate::wad::elem::background::Background;
+use crate::wad::elem::background::Tileset;
 use crate::wad::elem::font::Font;
 use crate::wad::elem::sprite::Sprite;
 use crate::wad::elem::string::Strings;
@@ -73,7 +73,7 @@ pub struct TextureGroupInfo {
     pub sprites: Vec<GMRef<Sprite>>,
     pub spine_sprites: Vec<GMRef<Sprite>>,
     pub fonts: Vec<GMRef<Font>>,
-    pub tilesets: Vec<GMRef<Background>>,
+    pub tilesets: Vec<GMRef<Tileset>>,
     pub data_2022_9: Option<Data2022_9>,
 }
 
@@ -109,7 +109,7 @@ impl GMElement for TextureGroupInfo {
         let fonts: Vec<GMRef<Font>> = reader.read_simple_list()?;
 
         reader.assert_pos(tilesets_ptr, "Tilesets")?;
-        let tilesets: Vec<GMRef<Background>> = reader.read_simple_list()?;
+        let tilesets: Vec<GMRef<Tileset>> = reader.read_simple_list()?;
 
         Ok(Self {
             name,

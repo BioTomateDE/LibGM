@@ -2,7 +2,7 @@
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::background::Background;
+use crate::wad::elem::background::Tileset;
 use crate::wad::elem::room::InstanceID;
 use crate::wad::elem::sprite::Sprite;
 use crate::wad::parse::reader::DataReader;
@@ -98,5 +98,5 @@ impl GMElement for RoomTile {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Texture {
     Sprite(GMRef<Sprite>),
-    Background(GMRef<Background>),
+    Background(GMRef<Tileset>),
 }

@@ -17,21 +17,21 @@ const ALIGNMENT: u32 = 8;
 /// For GameMaker Studio 1, these are usually a background,
 /// but are sometimes repurposed as use for a tileset as well.
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct Backgrounds {
-    pub elems: Vec<Option<Background>>,
+pub struct Tilesets {
+    pub elems: Vec<Option<Tileset>>,
     /// Semi-internal flag that tracks whether to
     /// align the pointer list to 8 when serializing.
     pub align: bool,
     pub exists: bool,
 }
 
-gm_named_list_chunk!(BGND, Backgrounds, Background, nullable);
+gm_named_list_chunk!(BGND, Tilesets, Tileset, nullable);
 
-impl GMElement for Backgrounds {
+impl GMElement for Tilesets {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
         let align = pointers.iter().all(|&p| p % ALIGNMENT == 0);
-        let mut backgrounds: Vec<Option<Background>> = vec![None; pointers.len()];
+        let mut backgrounds: Vec<Option<Tileset>> = vec![None; pointers.len()];
 
         for (idx, pointer) in pointers.into_iter().enumerate() {
             if pointer == 0 {
@@ -42,7 +42,7 @@ impl GMElement for Backgrounds {
             }
 
             reader.assert_pos(pointer, "Background Pointer")?;
-            let background = Background::deserialize(reader)?;
+            let background = Tileset::deserialize(reader)?;
             backgrounds[idx] = Some(background);
         }
 
@@ -81,7 +81,7 @@ impl GMElement for Backgrounds {
 /// For GameMaker Studio 1, this is usually a background,
 /// but is sometimes repurposed as use for a tileset as well.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Background {
+pub struct Tileset {
     /// The name of the background.
     pub name: GMRef<String>,
     /// Whether the background should be transparent.
@@ -96,7 +96,7 @@ pub struct Background {
     pub gms2_data: Option<GMS2Data>,
 }
 
-impl GMElement for Background {
+impl GMElement for Tileset {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let transparent = reader.read_bool32()?;

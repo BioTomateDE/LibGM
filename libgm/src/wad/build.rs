@@ -79,7 +79,7 @@ fn build_impl(data: &GMData) -> Result<Vec<u8>> {
             ChunkName::ACRV => builder.build_chunk(&data.animation_curves),
             ChunkName::AGRP => builder.build_chunk(&data.audio_groups),
             ChunkName::AUDO => builder.build_chunk(&data.audios),
-            ChunkName::BGND => builder.build_chunk(&data.backgrounds),
+            ChunkName::BGND => builder.build_chunk(&data.tilesets),
             ChunkName::CODE => builder.build_chunk(&data.codes),
             ChunkName::DAFL => builder.build_chunk(&data.data_files),
             ChunkName::EMBI => builder.build_chunk(&data.embedded_images),

@@ -30,7 +30,6 @@ pub fn print_diffs(old: &GMData, new: &GMData) -> bool {
          animation_curves
          audio_groups
          audios
-         backgrounds
          codes
          embedded_images
          extensions
@@ -59,6 +58,7 @@ pub fn print_diffs(old: &GMData, new: &GMData) -> bool {
          texture_page_items
          texture_pages
          timelines
+         tilesets
          variables
     );
 
