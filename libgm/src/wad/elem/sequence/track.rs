@@ -75,6 +75,7 @@ impl GMElement for Track {
 
         for _ in 0..owned_resources_count {
             let string: &str = force_read_string(reader)?;
+            reader.cur_pos -= 4;
             animcurve_string = reader.read_gm_string()?;
             if string != "GMAnimCurve" {
                 bail!(
@@ -193,6 +194,9 @@ bitflags::bitflags! {
 
 fn force_read_string<'a>(reader: &mut DataReader<'a>) -> Result<&'a str> {
     let string_pos = reader.read_u32()?;
+    if string_pos == 0 {
+        return Ok("");
+    }
 
     let chunk = reader.chunk;
     let pos = reader.cur_pos;

@@ -12,7 +12,7 @@ pub trait GMEnum: Copy + Eq + Hash + Debug {
     fn from_i32(integer: i32) -> Result<Self> {
         Self::try_from_i32(integer).ok_or_else(|| {
             err!(
-                "Invalid {} enum value {} (0x{:016X})",
+                "Invalid {} enum value {} (0x{:08X})",
                 typename::<Self>(),
                 integer,
                 integer,

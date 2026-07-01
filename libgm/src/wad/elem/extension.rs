@@ -147,11 +147,13 @@ gm_enum!( Kind {
     Generic = 4,
     JavaScript = 5,
 
+
     /// Seems to be modern.
     /// UTMT doesn't specify a name for this.
     ///
     /// NOTE: This will probably be renamed to something better soon.
     Unknown1 = 11,
+    Unknown2 = 12,
 });
 
 #[must_use]

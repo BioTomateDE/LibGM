@@ -209,7 +209,7 @@ impl<'a> DataReader<'a> {
             0 => Ok(false),
             1 => Ok(true),
             n => bail!(
-                "Read invalid boolean value {n} (0x{n:08X}) at position {}",
+                "Invalid boolean value {n} (0x{n:08X}) at position {}",
                 self.cur_pos - 4,
             ),
         }
