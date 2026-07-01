@@ -2,6 +2,8 @@
 mod glyph;
 mod kerning;
 
+use core::fmt;
+
 pub use glyph::Glyph;
 pub use kerning::Kerning;
 
@@ -17,6 +19,7 @@ use crate::wad::version::LTSBranch;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Fonts {
     pub elems: Vec<Option<Font>>,
+    pub padding: PaddingBytes,
     pub exists: bool,
 }
 
@@ -25,61 +28,21 @@ gm_named_list_chunk!(FONT, Fonts, Font, nullable);
 impl GMElement for Fonts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let elems: Vec<Option<Font>> = reader.read_pointer_list_opt()?;
-
-        if reader.general_info.version < (2024, 14) {
-            let verify: bool = reader.options.verify_constants;
-            let padding: &[u8; 512] = reader.read_bytes_const().ctx("Reading FONT padding")?;
-            if verify {
-                verify_padding(padding)?;
-            }
-        }
-
-        Ok(Self { elems, exists: true })
+        let padding = if reader.general_info.version < (2024, 14) {
+            PaddingBytes::deserialize(reader)?
+        } else {
+            PaddingBytes::default()
+        };
+        Ok(Self { elems, padding, exists: true })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_pointer_list_opt(&self.elems)?;
         if builder.version() < (2024, 14) {
-            let padding: [u8; 512] = generate_padding();
-            builder.write_bytes(&padding);
+            self.padding.serialize(builder)?;
         }
-
         Ok(())
     }
-}
-
-fn verify_padding(padding: &[u8; 512]) -> Result<()> {
-    padding.iter().enumerate().try_for_each(|(i, &byte)| {
-        let expected = match i {
-            0..256 if i & 1 == 0 => (i >> 1) as u8,
-            256..512 if i & 1 == 0 => 63,
-            _ => 0,
-        };
-
-        if byte == expected {
-            Ok(())
-        } else {
-            bail!("Invalid FONT padding at byte #{i}: expected 0x{expected:02X}, got 0x{byte:02X}")
-        }
-    })
-}
-
-#[must_use]
-const fn generate_padding() -> [u8; 512] {
-    let mut padding = [0u8; 512];
-    let mut i = 0;
-
-    while i < 256 {
-        padding[i] = if i & 1 == 0 { (i >> 1) as u8 } else { 0 };
-        i += 1;
-    }
-
-    while i < 512 {
-        padding[i] = if i & 1 == 0 { 63 } else { 0 };
-        i += 1;
-    }
-
-    padding
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -233,4 +196,52 @@ impl GMElement for Font {
 pub enum FontSize {
     Float(f32),
     Int(u32),
+}
+
+/// 512 bytes at the end of the FONT chunk.
+#[derive(Clone, PartialEq)]
+pub struct PaddingBytes(pub [u8; 512]);
+
+impl GMElement for PaddingBytes {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let bytes = reader
+            .read_bytes_const()
+            .ctx("Reading FONT padding bytes")?;
+        Ok(Self(*bytes))
+    }
+
+    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+        builder.write_bytes(&self.0);
+        Ok(())
+    }
+}
+
+impl fmt::Debug for PaddingBytes {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_tuple("PaddingBytes").finish_non_exhaustive()
+    }
+}
+
+impl Default for PaddingBytes {
+    fn default() -> Self {
+        Self(generate_padding())
+    }
+}
+
+#[must_use]
+const fn generate_padding() -> [u8; 512] {
+    let mut padding = [0u8; 512];
+    let mut i = 0;
+
+    while i < 256 {
+        padding[i] = if i & 1 == 0 { (i >> 1) as u8 } else { 0 };
+        i += 1;
+    }
+
+    while i < 512 {
+        padding[i] = if i & 1 == 0 { 63 } else { 0 };
+        i += 1;
+    }
+
+    padding
 }
