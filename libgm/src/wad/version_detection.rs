@@ -20,9 +20,9 @@ use crate::wad::chunk::ChunkName;
 use crate::wad::parse::chunk::ChunkBounds;
 use crate::wad::parse::chunk::ChunkMap;
 use crate::wad::parse::reader::DataReader;
-use crate::wad::version::LTSBranch::LTS;
-use crate::wad::version::LTSBranch::PostLTS;
-use crate::wad::version::LTSBranch::PreLTS;
+use crate::wad::version::LtsBranch::Lts2022;
+use crate::wad::version::LtsBranch::PostLts;
+use crate::wad::version::LtsBranch::Pre2022;
 use crate::wad::version::ToGMVersion;
 
 /// If `check_fn` can detect multiple versions, `required_version` should be set
@@ -111,12 +111,12 @@ impl VersionCheck {
 
 fn upgrade_by_chunk_existence(chunks: &ChunkMap) -> Option<GMVersion> {
     const UPGRADES: [(ChunkName, GMVersion); 6] = [
-        (ChunkName::UILR, GMVersion::new(2024, 13, 0, 0, PostLTS)),
-        (ChunkName::PSEM, GMVersion::new(2023, 2, 0, 0, PostLTS)),
-        (ChunkName::FEAT, GMVersion::new(2022, 8, 0, 0, PreLTS)),
-        (ChunkName::FEDS, GMVersion::new(2, 3, 6, 0, PreLTS)),
-        (ChunkName::SEQN, GMVersion::new(2, 3, 0, 0, PreLTS)),
-        (ChunkName::TGIN, GMVersion::new(2, 2, 1, 0, PreLTS)),
+        (ChunkName::UILR, GMVersion::new(2024, 13, 0, 0, PostLts)),
+        (ChunkName::PSEM, GMVersion::new(2023, 2, 0, 0, PostLts)),
+        (ChunkName::FEAT, GMVersion::new(2022, 8, 0, 0, Pre2022)),
+        (ChunkName::FEDS, GMVersion::new(2, 3, 6, 0, Pre2022)),
+        (ChunkName::SEQN, GMVersion::new(2, 3, 0, 0, Pre2022)),
+        (ChunkName::TGIN, GMVersion::new(2, 2, 1, 0, Pre2022)),
     ];
 
     for (chunk_name, version) in UPGRADES {
@@ -135,13 +135,13 @@ fn create_version_checks() -> [VersionCheck; 21] {
         VersionCheck::new(
             ChunkName::SOND,
             sond::check_2024_6,
-            (2022, 2, PostLTS),
+            (2022, 2, PostLts),
             (2024, 6),
         ),
         VersionCheck::new(
             ChunkName::SPRT,
             sprt::check_2024_6,
-            (2022, 2, PostLTS),
+            (2022, 2, PostLts),
             (2024, 6),
         ),
         VersionCheck::new(
@@ -264,12 +264,6 @@ pub fn detect_gamemaker_version(reader: &mut DataReader) -> Result<()> {
             // available that would now fulfil the minimum version requirement.
             break;
         }
-    }
-
-    // Set the LTS branch properly.
-    let ver: &mut GMVersion = &mut reader.general_info.version;
-    if *ver >= (2023, 1) && ver.branch == PreLTS {
-        ver.branch = LTS;
     }
 
     reader.cur_pos = saved_pos;

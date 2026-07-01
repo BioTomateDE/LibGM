@@ -14,7 +14,7 @@ use crate::wad::elem::texture_page::TexturePage;
 use crate::wad::elem::validate_identifier;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::version::LTSBranch;
+use crate::wad::version::LtsBranch;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct TextureGroupInfos {
@@ -83,7 +83,7 @@ impl GMElement for TextureGroupInfo {
         let data_2022_9: Option<Data2022_9> = reader.deserialize_if_gm_version((2022, 9))?;
         let texture_pages_ptr = reader.read_u32()?;
         let sprites_ptr = reader.read_u32()?;
-        let spine_sprites_ptr = if reader.general_info.version < (2023, 1, LTSBranch::PostLTS) {
+        let spine_sprites_ptr = if reader.general_info.version < (2023, 1, LtsBranch::PostLts) {
             reader.read_u32()?
         } else {
             0
@@ -98,7 +98,7 @@ impl GMElement for TextureGroupInfo {
         let sprites: Vec<GMRef<Sprite>> = reader.read_simple_list()?;
 
         let spine_sprites: Vec<GMRef<Sprite>> =
-            if reader.general_info.version < (2023, 1, LTSBranch::PostLTS) {
+            if reader.general_info.version < (2023, 1, LtsBranch::PostLts) {
                 reader.assert_pos(spine_sprites_ptr, "Spine Sprites")?;
                 reader.read_simple_list()?
             } else {
@@ -131,7 +131,7 @@ impl GMElement for TextureGroupInfo {
         )?;
         builder.write_pointer(&self.texture_pages);
         builder.write_pointer(&self.sprites);
-        if builder.version() < (2023, 1, LTSBranch::PostLTS) {
+        if builder.version() < (2023, 1, LtsBranch::PostLts) {
             builder.write_pointer(&self.spine_sprites);
         }
         builder.write_pointer(&self.fonts);
@@ -143,7 +143,7 @@ impl GMElement for TextureGroupInfo {
         builder.resolve_pointer(&self.sprites)?;
         builder.write_simple_list(&self.sprites)?;
 
-        if builder.version() < (2023, 1, LTSBranch::PostLTS) {
+        if builder.version() < (2023, 1, LtsBranch::PostLts) {
             builder.resolve_pointer(&self.spine_sprites)?;
             builder.write_simple_list(&self.spine_sprites)?;
         }

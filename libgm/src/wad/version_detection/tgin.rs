@@ -3,7 +3,7 @@ use super::target_version;
 use crate::prelude::*;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
-use crate::wad::version::LTSBranch::PostLTS;
+use crate::wad::version::LtsBranch::PostLts;
 
 pub fn check_2022_9(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     reader.read_gms2_chunk_version("TGIN Version")?;
@@ -46,7 +46,7 @@ pub fn check_2023_1(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     // The count can't be greater than the pointer.
     // (the list could be either "Tilesets" or "Fonts").
     if reader.read_u32()? <= pointer4 {
-        return target_version!(2023, 1, PostLTS);
+        return target_version!(2023, 1, PostLts);
     }
 
     Ok(None)

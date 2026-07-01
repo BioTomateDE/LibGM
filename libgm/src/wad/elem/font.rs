@@ -14,7 +14,7 @@ use crate::wad::elem::GMElement;
 use crate::wad::elem::texture_page_item::TexturePageItem;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::version::LTSBranch;
+use crate::wad::version::LtsBranch;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Fonts {
@@ -132,7 +132,7 @@ impl GMElement for Font {
         let ascender_offset: Option<i32> = reader.deserialize_if_wad_version(17)?;
         let ascender: Option<u32> = reader.deserialize_if_gm_version((2022, 2))?;
         let sdf_spread: Option<u32> =
-            reader.deserialize_if_gm_version((2023, 2, LTSBranch::PostLTS))?;
+            reader.deserialize_if_gm_version((2023, 2, LtsBranch::PostLts))?;
         let line_height: Option<u32> = reader.deserialize_if_gm_version((2023, 6))?;
         let glyphs: Vec<Glyph> = reader.read_pointer_list()?;
         if reader.general_info.version >= (2024, 14) {
@@ -181,7 +181,7 @@ impl GMElement for Font {
         builder.write_if_ver(
             &self.sdf_spread,
             "SDF Spread",
-            (2023, 2, LTSBranch::PostLTS),
+            (2023, 2, LtsBranch::PostLts),
         )?;
         builder.write_if_ver(&self.line_height, "Line Height", (2023, 6))?;
         builder.write_pointer_list(&self.glyphs)?;

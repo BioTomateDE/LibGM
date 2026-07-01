@@ -13,48 +13,27 @@ use crate::wad::parse::reader::DataReader;
 /// Different GameMaker release branches. LTS has some but not all features of
 /// equivalent newer versions.
 #[derive(Debug, Clone, Copy, PartialEq, Hash)]
-pub enum LTSBranch {
+pub enum LtsBranch {
     /// Before LTS was even introduced (`major < 2022`).
-    PreLTS,
+    Pre2022,
 
-    /// Long-Term Support branch.
+    /// The 2022 Long-Term Support branch.
     /// YoYoGames updates minor bugfixes here, but doesn't make breaking changes
     /// (except in 2023.6?).
-    LTS,
+    Lts2022,
 
-    /// New Version but not the Long-Term Support branch.
+    /// New Version but not the 2022 Long-Term Support branch.
     /// YoYo Games introduces all new features here, some of which may break
     /// your project.
-    PostLTS,
+    PostLts,
 }
 
-/// Custom implementation because `PreLTS`
-/// and `LTS` cannot be properly compared.
-impl PartialOrd for LTSBranch {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        use LTSBranch::*;
-        use Ordering::*;
-
-        match (self, other) {
-            (PreLTS, PreLTS) => Some(Equal),
-            (PreLTS, LTS) => None,
-            (PreLTS, PostLTS) => Some(Less),
-            (LTS, PreLTS) => None,
-            (LTS, LTS) => Some(Equal),
-            (LTS, PostLTS) => Some(Less),
-            (PostLTS, PreLTS) => Some(Greater),
-            (PostLTS, LTS) => Some(Less),
-            (PostLTS, PostLTS) => Some(Equal),
-        }
-    }
-}
-
-impl Display for LTSBranch {
+impl Display for LtsBranch {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         let string = match self {
-            Self::PreLTS => "PreLTS",
-            Self::LTS => "LTS",
-            Self::PostLTS => "PostLTS",
+            Self::Pre2022 => "Pre LTS",
+            Self::Lts2022 => "2022 LTS",
+            Self::PostLts => "Post LTS",
         };
         f.write_str(string)
     }
@@ -92,26 +71,26 @@ pub struct GMVersion {
     /// Different GameMaker release branches.
     /// LTS has some but not all features of equivalent newer versions.
     /// See [`LTSBranch`] for more information.
-    pub branch: LTSBranch,
+    pub branch: LtsBranch,
 }
 
 impl GMVersion {
     // HACK: Make these functions `const` when Into, PartialEq and PartialOrd are const-stable.
 
     /// The GameMaker Version 2.0.0.0 (Pre LTS).
-    pub const GMS2: Self = Self::new(2, 0, 0, 0, LTSBranch::PreLTS);
+    pub const GMS2: Self = Self::new(2, 0, 0, 0, LtsBranch::Pre2022);
     /// The pseudo-version "infinity" (highest possible values).
     ///
     /// This is only useful for comparing against other `GMVersion`s dynamically.
-    pub const INF: Self = Self::new(u32::MAX, u32::MAX, u32::MAX, u32::MAX, LTSBranch::PostLTS);
+    pub const INF: Self = Self::new(u32::MAX, u32::MAX, u32::MAX, u32::MAX, LtsBranch::PostLts);
     /// The pseudo-version 0.0.0.0 (Pre LTS).
     ///
     /// This is only useful for comparing against other `GMVersion`s dynamically.
-    pub const ZERO: Self = Self::new(0, 0, 0, 0, LTSBranch::PreLTS);
+    pub const ZERO: Self = Self::new(0, 0, 0, 0, LtsBranch::Pre2022);
 
     /// Creates a new [`GMVersion`] with the given version parts and branch.
     #[must_use]
-    pub const fn new(major: u32, minor: u32, release: u32, build: u32, branch: LTSBranch) -> Self {
+    pub const fn new(major: u32, minor: u32, release: u32, build: u32, branch: LtsBranch) -> Self {
         Self { major, minor, release, build, branch }
     }
 
@@ -125,8 +104,13 @@ impl GMVersion {
         self.minor = new.minor;
         self.release = new.release;
         self.build = new.build;
-        if new.branch > self.branch {
+        if new.branch != LtsBranch::Pre2022 {
             self.branch = new.branch;
+        }
+
+        // Set the LTS branch properly.
+        if *self >= (2023, 1) && self.branch == LtsBranch::Pre2022 {
+            self.branch = LtsBranch::Lts2022;
         }
     }
 }
@@ -139,7 +123,7 @@ impl GMElement for GMVersion {
         let build = reader.read_u32()?;
         // Since the GEN8 Version is stuck on maximum 2.0.0.0; LTS will (initially)
         // always be PreLTS
-        Ok(Self::new(major, minor, release, build, LTSBranch::PreLTS))
+        Ok(Self::new(major, minor, release, build, LtsBranch::Pre2022))
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -170,8 +154,8 @@ impl Display for GMVersion {
                 write!(f, ".{build}")?;
             }
         }
-        if major >= 2022 {
-            write!(f, " ({})", self.branch)?;
+        if self.major >= 2022 {
+            write!(f, " [{}]", self.branch)?;
         }
         Ok(())
     }
@@ -189,17 +173,17 @@ impl<T: ToGMVersion> PartialEq<T> for GMVersion {
     }
 }
 
+/// This is not symmetrical due to branches!
+/// The predicate should always be RHS.
 impl<T: ToGMVersion> PartialOrd<T> for GMVersion {
     fn partial_cmp(&self, other: &T) -> Option<Ordering> {
-        let other = other.to_gm_version();
-        compare(self, &other)
+        compare(self, &other.to_gm_version())
     }
 }
 
 fn compare(a: &GMVersion, b: &GMVersion) -> Option<Ordering> {
-    match a.branch.partial_cmp(&b.branch) {
-        Some(Ordering::Equal) | None => {}
-        ord => return ord,
+    if b.branch == LtsBranch::PostLts && a.branch != LtsBranch::PostLts {
+        return Some(Ordering::Less);
     }
     match a.major.partial_cmp(&b.major) {
         Some(Ordering::Equal) => {}
@@ -242,19 +226,19 @@ impl ToGMVersion for &GMVersion {
     }
 }
 
-impl ToGMVersion for (u32, u32, u32, u32, LTSBranch) {
+impl ToGMVersion for (u32, u32, u32, u32, LtsBranch) {
     fn to_gm_version(&self) -> GMVersion {
         GMVersion::new(self.0, self.1, self.2, self.3, self.4)
     }
 }
 
-impl ToGMVersion for (u32, u32, u32, LTSBranch) {
+impl ToGMVersion for (u32, u32, u32, LtsBranch) {
     fn to_gm_version(&self) -> GMVersion {
         GMVersion::new(self.0, self.1, self.2, 0, self.3)
     }
 }
 
-impl ToGMVersion for (u32, u32, LTSBranch) {
+impl ToGMVersion for (u32, u32, LtsBranch) {
     fn to_gm_version(&self) -> GMVersion {
         GMVersion::new(self.0, self.1, 0, 0, self.2)
     }
@@ -262,24 +246,24 @@ impl ToGMVersion for (u32, u32, LTSBranch) {
 
 impl ToGMVersion for (u32, u32, u32, u32) {
     fn to_gm_version(&self) -> GMVersion {
-        GMVersion::new(self.0, self.1, self.2, self.3, LTSBranch::PreLTS)
+        GMVersion::new(self.0, self.1, self.2, self.3, LtsBranch::Pre2022)
     }
 }
 
 impl ToGMVersion for (u32, u32, u32) {
     fn to_gm_version(&self) -> GMVersion {
-        GMVersion::new(self.0, self.1, self.2, 0, LTSBranch::PreLTS)
+        GMVersion::new(self.0, self.1, self.2, 0, LtsBranch::Pre2022)
     }
 }
 
 impl ToGMVersion for (u32, u32) {
     fn to_gm_version(&self) -> GMVersion {
-        GMVersion::new(self.0, self.1, 0, 0, LTSBranch::PreLTS)
+        GMVersion::new(self.0, self.1, 0, 0, LtsBranch::Pre2022)
     }
 }
 
 impl ToGMVersion for u32 {
     fn to_gm_version(&self) -> GMVersion {
-        GMVersion::new(*self, 0, 0, 0, LTSBranch::PreLTS)
+        GMVersion::new(*self, 0, 0, 0, LtsBranch::Pre2022)
     }
 }

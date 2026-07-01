@@ -13,7 +13,7 @@ use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::room::tile::RoomTile;
 use crate::wad::parse::reader::DataReader;
-use crate::wad::version::LTSBranch;
+use crate::wad::version::LtsBranch;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Assets {
@@ -39,7 +39,7 @@ impl GMElement for Assets {
             if reader.general_info.version < (2, 3, 2) {
                 nine_slices_pointer = reader.read_u32()?;
             }
-            if reader.general_info.version >= (2023, 2, LTSBranch::PostLTS) {
+            if reader.general_info.version >= (2023, 2, LtsBranch::PostLts) {
                 particle_systems_pointer = reader.read_u32()?;
             }
             if reader.general_info.version >= (2024, 6) {
@@ -66,7 +66,7 @@ impl GMElement for Assets {
                 reader.assert_pos(nine_slices_pointer, "Nine Slices")?;
                 nine_slices = reader.read_pointer_list()?;
             }
-            if reader.general_info.version >= (2023, 2, LTSBranch::PostLTS) {
+            if reader.general_info.version >= (2023, 2, LtsBranch::PostLts) {
                 reader.assert_pos(particle_systems_pointer, "Particle Systems")?;
                 particle_systems = reader.read_pointer_list()?;
             }
@@ -96,7 +96,7 @@ impl GMElement for Assets {
             if builder.version() < (2, 3, 2) {
                 builder.write_pointer(&self.nine_slices);
             }
-            if builder.version() >= (2023, 2, LTSBranch::PostLTS) {
+            if builder.version() >= (2023, 2, LtsBranch::PostLts) {
                 builder.write_pointer(&self.particle_systems);
             }
             if builder.version() >= (2024, 6) {
@@ -117,7 +117,7 @@ impl GMElement for Assets {
                 builder.resolve_pointer(&self.nine_slices)?;
                 builder.write_pointer_list(&self.nine_slices)?;
             }
-            if builder.version() >= (2023, 2, LTSBranch::PostLTS) {
+            if builder.version() >= (2023, 2, LtsBranch::PostLts) {
                 builder.resolve_pointer(&self.particle_systems)?;
                 builder.write_pointer_list(&self.particle_systems)?;
             }

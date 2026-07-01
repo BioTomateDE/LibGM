@@ -4,7 +4,7 @@ use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
-use crate::wad::version::LTSBranch::PostLTS;
+use crate::wad::version::LtsBranch::PostLts;
 
 pub fn check_2022_2(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     let ver = target_version!(2022, 2);
@@ -96,7 +96,7 @@ pub fn check_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVers
     }
 
     reader.cur_pos = first_two_pointers[0] + 52; // Also the LineHeight value. 48 + 4 = 52
-    if reader.general_info.version >= (2023, 2, PostLTS) {
+    if reader.general_info.version >= (2023, 2, PostLts) {
         // SDFSpread is present from 2023.2 non-LTS onward
         reader.cur_pos += 4; // (detected by PSEM/PSYS chunk existence)
     }
