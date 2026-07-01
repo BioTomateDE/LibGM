@@ -333,13 +333,9 @@ fn init_reader(reader: &mut DataReader) -> Result<()> {
         log::trace!("Detecting GameMaker Version took {stopwatch}");
     }
 
-    let game = reader
-        .strings
-        .by_ref(reader.general_info.game_name)
-        .map_or("<unknown>", String::as_str);
+    let game = reader.general_info.display_name.display(&reader.strings);
     let version = reader.general_info.version;
     let wad_version = reader.general_info.wad_version;
-
     log::info!("Loading {game:?} (GM {version}, WAD {wad_version})");
     Ok(())
 }
