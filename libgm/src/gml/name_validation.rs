@@ -55,8 +55,7 @@ fn validate(mut name: &str) -> Result<()> {
         }
         "Object" => {
             // Collision event has an object name as its subtype.
-            // This is impossible to demangle, so just do a simple identifier validation and
-            // return.
+            // This can be impossible to demangle, so just do a simple identifier validation and return.
             if name.contains("_Collision_") {
                 return validate_identifier(name);
             }

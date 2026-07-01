@@ -7,6 +7,10 @@
 
 A tool for unpacking, decompiling and modding GameMaker games such as Undertale or Deltarune.
 
+LibGM supports GameMaker Studio 1 to GameMaker 2026.
+GameMaker 8 has a completely different format. You can use [https://github.com/OpenGMK/OpenGMK](OpenGMK) for these old games.
+The new GMRT runtime (currently in beta) will also have a new format which LibGM will not support.
+
 ## Benefits of this Rust port
 
 - Parsing and building data files is ~8x faster than UndertaleModLib.
@@ -34,7 +38,7 @@ sprite::swf::item::shape::style_group::fill::gradient::Record count 1065353216 i
 ## Disadvantages / TODOs
 
 - GML Decompiler and Compiler not yet implemented. (Help would be greatly appreciated!)
-- No edtior GUI yet, only a Rust library.
+- No editor GUI yet, only a Rust library.
 
 ## Library usage
 

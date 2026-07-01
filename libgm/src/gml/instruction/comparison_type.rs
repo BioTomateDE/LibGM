@@ -2,7 +2,7 @@
 use crate::prelude::*;
 
 /// How to compare values.
-/// Used in the [`Comparison`] instruction (`cmp`).
+/// Used in the [`Comparison`] instruction (`cmp`) in WAD 15+.
 ///
 /// [`Comparison`]: crate::gml::Instruction::Compare
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

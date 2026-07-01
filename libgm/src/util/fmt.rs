@@ -29,7 +29,7 @@ pub fn hexdump(raw_data: &[u8]) -> String {
         use std::fmt::Write;
         let _ = write!(&mut buffer, "{byte:02X} ");
     }
-    debug_assert_eq!(buffer.pop(), Some(' '));
+    buffer.pop(); // pop last space
 
     buffer
 }

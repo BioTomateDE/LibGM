@@ -45,7 +45,7 @@ impl PushValue {
     /// Warning: This function does not fully conform with the GameMaker
     /// standards (yet).
     #[must_use]
-    pub const fn as_bool(&self) -> Option<bool> {
+    pub(crate) const fn as_bool(&self) -> Option<bool> {
         match self {
             &Self::Int16(int) => Some(int > 0),
             &Self::Int32(int) => Some(int > 0),

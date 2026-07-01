@@ -18,13 +18,24 @@ use crate::wad::elem::function::CodeLocal;
 /// A code entry in a GameMaker data file.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Code {
-    /// The name of the code entry.
+    /// A mangled name for this code entry.
+    ///
+    /// This will be something like `gml_Script_my_script123` or `gml_Object_my_object456_Step_0`.
+    /// The runner uses this name for stack traces in error messages.
+    /// Changing this name will not change the script name, event type or similar.
+    /// This name exists purely for debugging purposes.
+    /// It is not an asset name like sprites or objects have one.
+    /// In some cases, it can even be ambiguous (Collision events)!
+    /// A demangler is coming soon(TM).
     pub name: GMRef<String>,
 
     /// A list of VM instructions this code entry has.
+    ///
+    /// This will be empty for child code entries.
+    /// The actual instructions will be stored in the referenced parent code.
     pub instructions: Vec<Instruction>,
 
-    /// Set in WAD 15+.
+    /// Extra data for WAD 15+.
     pub modern_data: Option<ModernData>,
 }
 
@@ -160,8 +171,9 @@ pub struct ModernData {
     /// The amount of arguments this code entry accepts.
     pub argument_count: u16,
 
-    /// A flag set on certain code entries, which usually don't have locals
-    /// attached to them.
+    /// A flag set on certain code entries, which usually don't have locals attached to them.
+    ///
+    /// DOCME: more info pls
     pub weird_local_flag: bool,
 
     /// Offset, **in bytes**, where code should begin executing from within the

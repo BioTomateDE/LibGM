@@ -18,6 +18,8 @@ pub struct Strings {
 gm_list_chunk!(STRG, Strings, String, direct);
 
 impl GMElement for Strings {
+    // be sure not to use `reader.general_info` here, as it is not initialized yet!
+    // this includes methods like `deserialize_if_gm_version`.
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
         let align: bool = pointers.iter().all(|&p| p.is_multiple_of(ALIGNMENT));

@@ -506,12 +506,28 @@ impl Instruction {
         self.size4() * 4
     }
 
-    /// Attempts to extract a [`CodeVariable`] from  the instruction.
+    /// Attempts to extract a [`CodeVariable`] from the instruction.
     ///
     /// This can succeed for `Push` and will always succeed for
     /// `PushGlobal`, `PushLocal`, `PushBuiltin` and `Pop`.
     #[must_use]
     pub const fn variable(&self) -> Option<&CodeVariable> {
+        match self {
+            Self::Pop { variable, .. }
+            | Self::Push { value: PushValue::Variable(variable) }
+            | Self::PushLocal { variable }
+            | Self::PushGlobal { variable }
+            | Self::PushBuiltin { variable } => Some(variable),
+            _ => None,
+        }
+    }
+
+    /// Attempts to extract a [`CodeVariable`] from the instruction.
+    ///
+    /// This can succeed for `Push` and will always succeed for
+    /// `PushGlobal`, `PushLocal`, `PushBuiltin` and `Pop`.
+    #[must_use]
+    pub const fn variable_mut(&mut self) -> Option<&mut CodeVariable> {
         match self {
             Self::Pop { variable, .. }
             | Self::Push { value: PushValue::Variable(variable) }
@@ -534,6 +550,22 @@ impl Instruction {
             | Self::PushReference {
                 asset_reference: AssetReference::Function(function),
             } => Some(*function),
+            _ => None,
+        }
+    }
+
+    /// Attempts to extract a `GMRef<GMFunction>` from the instruction.
+    ///
+    /// This can succeed for `Push` and `PushReference` and will always succeed
+    /// for `Call`.
+    #[must_use]
+    pub const fn function_mut(&mut self) -> Option<&mut GMRef<Function>> {
+        match self {
+            Self::Push { value: PushValue::Function(function) }
+            | Self::Call { function, .. }
+            | Self::PushReference {
+                asset_reference: AssetReference::Function(function),
+            } => Some(function),
             _ => None,
         }
     }
@@ -582,26 +614,26 @@ impl Instruction {
     /// feedback pls**.
     #[must_use]
     pub const fn type1(&self) -> Option<DataType> {
-        Some(match self {
-            Self::Convert { from, .. } => *from,
-            Self::Multiply { rhs: multiplier, .. } => *multiplier,
-            Self::Divide { rhs: divisor, .. }
-            | Self::Remainder { rhs: divisor, .. }
-            | Self::Modulus { rhs: divisor, .. } => *divisor,
-            Self::Add { rhs: addend, .. } => *addend,
-            Self::Subtract { rhs: subtrahend, .. } => *subtrahend,
-            Self::And { rhs, .. }
+        Some(match *self {
+            Self::Convert { from, .. } => from,
+            Self::Multiply { rhs, .. }
+            | Self::Divide { rhs, .. }
+            | Self::Remainder { rhs, .. }
+            | Self::Modulus { rhs, .. }
+            | Self::Add { rhs, .. }
+            | Self::Subtract { rhs, .. }
+            | Self::And { rhs, .. }
             | Self::Or { rhs, .. }
             | Self::Xor { rhs, .. }
-            | Self::Compare { rhs, .. } => *rhs,
+            | Self::ShiftLeft { rhs, .. }
+            | Self::ShiftRight { rhs, .. }
+            | Self::Compare { rhs, .. } => rhs,
             Self::Negate { data_type }
             | Self::Not { data_type }
             | Self::Duplicate { data_type, .. }
             | Self::DuplicateSwap { data_type, .. }
-            | Self::PopDiscard { data_type } => *data_type,
-            Self::ShiftLeft { rhs: shift_amount, .. }
-            | Self::ShiftRight { rhs: shift_amount, .. } => *shift_amount,
-            Self::Pop { type1, .. } => *type1,
+            | Self::PopDiscard { data_type } => data_type,
+            Self::Pop { type1, .. } => type1,
             Self::Push { value } => value.data_type(),
             Self::PushLocal { .. } | Self::PushGlobal { .. } | Self::PushBuiltin { .. } => {
                 DataType::Variable
@@ -620,17 +652,18 @@ impl Instruction {
     pub const fn type2(&self) -> Option<DataType> {
         Some(match *self {
             Self::Convert { to, .. } => to,
-            Self::Multiply { lhs: multiplicand, .. } => multiplicand,
-            Self::Divide { lhs: dividend, .. }
-            | Self::Remainder { lhs: dividend, .. }
-            | Self::Modulus { lhs: dividend, .. } => dividend,
-            Self::Add { lhs: augend, .. } => augend,
-            Self::Subtract { lhs: minuend, .. } => minuend,
-            Self::And { lhs, .. }
+            Self::Multiply { lhs, .. }
+            | Self::Divide { lhs, .. }
+            | Self::Remainder { lhs, .. }
+            | Self::Modulus { lhs, .. }
+            | Self::Add { lhs, .. }
+            | Self::Subtract { lhs, .. }
+            | Self::And { lhs, .. }
             | Self::Or { lhs, .. }
             | Self::Xor { lhs, .. }
-            | Self::Compare { lhs, .. } => lhs,
-            Self::ShiftLeft { lhs: value, .. } | Self::ShiftRight { lhs: value, .. } => value,
+            | Self::Compare { lhs, .. }
+            | Self::ShiftLeft { lhs, .. }
+            | Self::ShiftRight { lhs, .. } => lhs,
             Self::Pop { type2, .. } => type2,
             _ => return None,
         })

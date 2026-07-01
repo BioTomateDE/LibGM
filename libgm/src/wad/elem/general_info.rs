@@ -144,6 +144,8 @@ pub struct GeneralInfo {
 gm_chunk!(GEN8, GeneralInfo);
 
 impl GMElement for GeneralInfo {
+    // be sure not to use `reader.general_info` here, as it is not initialized yet!
+    // this includes methods like `deserialize_if_gm_version`.
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let debugger_enabled: bool = match reader.read_u8()? {
             1 => false,
