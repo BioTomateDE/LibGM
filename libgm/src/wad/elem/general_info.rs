@@ -151,7 +151,6 @@ impl GMElement for GeneralInfo {
             other => bail!("Invalid 'Is Debugger Disabled' u8 bool {other}"),
         };
         let wad_version = reader.read_u8()?;
-        reader.general_info.wad_version = wad_version;
         let unknown_value = reader.read_u16()?;
         let game_file_name: GMRef<String> = reader.read_gm_string()?;
         let config: GMRef<String> = reader.read_gm_string()?;
@@ -181,7 +180,11 @@ impl GMElement for GeneralInfo {
         let function_classifications = FunctionClassifications::from_bits(fclass)
             .ok_or_else(|| format!("Invalid GEN8 Function Classifications {fclass:016X}"))?;
         let steam_appid = reader.read_i32()?;
-        let debugger_port: u32 = reader.deserialize_if_wad_version(14)?.unwrap_or(0);
+        let debugger_port: u32 = if wad_version >= 14 {
+            reader.read_u32()?
+        } else {
+            0
+        };
         let room_order: Vec<GMRef<Room>> = reader.read_simple_list()?;
 
         let mut general_info = Self {
