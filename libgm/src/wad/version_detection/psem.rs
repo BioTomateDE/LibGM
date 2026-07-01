@@ -18,20 +18,20 @@ pub fn check_2023_x(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     }
     if count == 1 {
         match reader.chunk.end_pos - reader.chunk.start_pos {
-            0xF8 => ver = target_version!(2023, 8),
-            0xD8 => ver = target_version!(2023, 6),
-            0xC8 => ver = target_version!(2023, 4),
+            248 => ver = target_version!(2023, 8),
+            216 => ver = target_version!(2023, 6),
+            200 => ver = target_version!(2023, 4),
             elem_size => bail!("Unrecognized PSEM size {elem_size} with only one element"),
         }
     } else {
         let pointer1 = reader.read_u32()?;
         let pointer2 = reader.read_u32()?;
         match pointer2 - pointer1 {
-            0xEC => ver = target_version!(2023, 8),
-            0xC0 => ver = target_version!(2023, 6),
-            0xBC => ver = target_version!(2023, 4),
-            0xB0 => {} // 2023.2
-            elem_size => bail!("Unrecognized PSEM size {elem_size} with {count} elements"),
+            236 => ver = target_version!(2023, 8),
+            192 => ver = target_version!(2023, 6),
+            188 => ver = target_version!(2023, 4),
+            176 => {} // 2023.2
+            elem_size => bail!("Unrecognized PSEM element size {elem_size} with {count} elements"),
         }
     }
     ver

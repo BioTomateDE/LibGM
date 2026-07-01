@@ -20,7 +20,6 @@ use crate::wad::chunk::ChunkName;
 use crate::wad::parse::chunk::ChunkBounds;
 use crate::wad::parse::chunk::ChunkMap;
 use crate::wad::parse::reader::DataReader;
-use crate::wad::version::LtsBranch::Lts2022;
 use crate::wad::version::LtsBranch::PostLts;
 use crate::wad::version::LtsBranch::Pre2022;
 use crate::wad::version::ToGMVersion;

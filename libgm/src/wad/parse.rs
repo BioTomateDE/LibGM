@@ -272,7 +272,7 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
 
     // Read chunks into HashMap (FORM)
     while reader.cur_pos + 8 < total_data_len {
-        let name = reader.read_chunk_name()?;
+        let name = dbg!(reader.read_chunk_name()?);
         let chunk_length = reader.read_u32()?;
         let start_pos = reader.cur_pos;
 

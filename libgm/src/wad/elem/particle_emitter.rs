@@ -19,9 +19,6 @@ gm_named_list_chunk!(PSEM, ParticleEmitters, ParticleEmitter, direct);
 
 impl GMElement for ParticleEmitters {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        if reader.chunk.length() > 8 {
-            log::warn!("Particle emitters are not tested");
-        }
         reader.align(4)?;
         reader.read_gms2_chunk_version("PSEM Version")?;
         let elems: Vec<ParticleEmitter> = reader.read_pointer_list()?;
@@ -99,10 +96,13 @@ impl GMElement for ParticleEmitter {
 
         let emit_count: u32;
         let data_2023_8: Option<Data2023_8> = if reader.general_info.version >= (2023, 8) {
-            // For some reason, it's stored as a float here???
-            // You could add extra validation here
-            // (like disallowing NaN, Infinity, fractional numbers, negative numbers)
-            emit_count = reader.read_f32()? as u32;
+            let count = reader.read_f32()?;
+            emit_count = count as u32;
+            #[expect(clippy::float_cmp, clippy::cast_precision_loss)]
+            if reader.options.verify_constants && count != emit_count as f32 {
+                bail!("Emit count {count} is stored as a float but invalid as a natural number");
+            }
+
             let emit_relative = reader.read_bool32()?;
             reader.assert_bool(emit_relative, false, "Emit Relative")?;
             let delay_min = reader.read_f32()?;
@@ -242,11 +242,14 @@ impl GMElement for ParticleEmitter {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(self.name)?;
+
         if builder.version() >= (2023, 6) {
             builder.write_bool32(self.enabled);
         } else if !self.enabled {
             log::warn!("Cannot disable particle emitters before 2023.6");
         }
+
+        builder.write_enum(self.mode);
 
         if builder.version() >= (2023, 8) {
             let SizeDataEtc::Post2023_8(data) = &self.size_data_etc else {
@@ -356,7 +359,6 @@ impl GMElement for Data2023_4 {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-/// This type will probably be renamed
 pub enum SizeDataEtc {
     Pre2023_8(DataPre2023_8),
     Post2023_8(Data2023_8),

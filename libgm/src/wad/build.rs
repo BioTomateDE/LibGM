@@ -95,7 +95,7 @@ fn build_impl(data: &GMData) -> Result<Vec<u8>> {
             ChunkName::OBJT => builder.build_chunk(&data.game_objects),
             ChunkName::OPTN => builder.build_chunk(&data.options),
             ChunkName::PATH => builder.build_chunk(&data.paths),
-            ChunkName::PSEM => builder.build_chunk(&data.particle_systems),
+            ChunkName::PSEM => builder.build_chunk(&data.particle_emitters),
             ChunkName::PSYS => builder.build_chunk(&data.particle_systems),
             ChunkName::ROOM => builder.build_chunk(&data.rooms),
             ChunkName::SCPT => builder.build_chunk(&data.scripts),
@@ -119,7 +119,8 @@ fn build_impl(data: &GMData) -> Result<Vec<u8>> {
     builder.connect_pointer_placeholders()?;
 
     // Overwrite data length placeholder
-    builder.overwrite_u32(builder.pos() - 8, 4)?;
+    let data_length = builder.pos() - 8; // FORM is excluded
+    builder.overwrite_u32(data_length, 4)?; // Pos 4 the length spec in FORM
 
     log::trace!("Building data file took {stopwatch}");
 
