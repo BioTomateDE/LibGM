@@ -161,5 +161,7 @@ pub fn build(builder: &mut DataBuilder, options: &Options) -> Result<()> {
     builder.write_bool32(options.flags.contains(Flags::ABORT_ERRORS));
     builder.write_bool32(options.flags.contains(Flags::VARIABLE_ERRORS));
     builder.write_bool32(options.flags.contains(Flags::CREATION_EVENT_ORDER));
+
+    builder.write_simple_list(&options.constants)?;
     Ok(())
 }

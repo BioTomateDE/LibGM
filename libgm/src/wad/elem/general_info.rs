@@ -151,6 +151,7 @@ impl GMElement for GeneralInfo {
             other => bail!("Invalid 'Is Debugger Disabled' u8 bool {other}"),
         };
         let wad_version = reader.read_u8()?;
+        reader.general_info.wad_version = wad_version;
         let unknown_value = reader.read_u16()?;
         let game_file_name: GMRef<String> = reader.read_gm_string()?;
         let config: GMRef<String> = reader.read_gm_string()?;
@@ -160,8 +161,8 @@ impl GMElement for GeneralInfo {
         let directplay_guid: [u8; 16] = *reader.read_bytes_const().ctx("reading GUID")?;
         let game_name: GMRef<String> = reader.read_gm_string()?;
         let version = GMVersion::deserialize(reader)?;
-        let default_window_width = reader.read_u32()?;
-        let default_window_height = reader.read_u32()?;
+        let window_width = reader.read_u32()?;
+        let window_height = reader.read_u32()?;
         let flags_raw = reader.read_u32()?;
         let flags = Flags::from_bits(flags_raw)
             .ok_or_else(|| format!("Invalid GEN8 Flags {flags_raw:08X}"))?;
@@ -195,8 +196,8 @@ impl GMElement for GeneralInfo {
             directplay_guid,
             game_name,
             version,
-            window_width: default_window_width,
-            window_height: default_window_height,
+            window_width,
+            window_height,
             flags,
             license_crc32,
             license_md5,
