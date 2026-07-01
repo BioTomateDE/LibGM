@@ -299,9 +299,9 @@ fn parse_occurrence_chain(
         let raw_value = reader.read_i32()?;
         offset = raw_value & 0x07FF_FFFF;
 
-        if offset < 1 {
+        if offset < 0 {
             bail!(
-                "Next occurrence offset is {offset} (0x{offset:08X}) which is not positive for \
+                "Next occurrence offset is {offset} (0x{offset:08X}) which is negative for \
                  variable occurrence {i}/{occurrence_count}"
             );
         }

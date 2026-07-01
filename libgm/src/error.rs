@@ -61,6 +61,16 @@ impl Error {
         Self { message, context: Vec::new() }
     }
 
+    /// Creates a new [`Error`] with the given message.
+    ///
+    /// This function is marked as *cold*, meaning the compiler assumes this is unlikely to happen
+    /// and can make some optimizations based on that.
+    #[cold]
+    #[must_use]
+    pub const fn new_cold(message: String) -> Self {
+        Self::new(message)
+    }
+
     /// Pushes context to the end of the context chain, in-place.
     pub fn push_context(&mut self, context: impl StringLike) {
         self.context.push(context.into_string());
@@ -250,7 +260,7 @@ macro_rules! err {
     };
 }
 
-/// Performs an early return with the specified formatted message.
+/// Performs an early return with the specified formatted message (assumes cold path).
 ///
 /// This is a simple alias for `return Err(Error::new(format!(...));`.
 ///
@@ -259,7 +269,7 @@ macro_rules! err {
 #[macro_export]
 macro_rules! bail {
     ($($arg:tt)*) => {
-        return Err($crate::error::Error::new(format!($($arg)*)))
+        return Err($crate::error::Error::new_cold(format!($($arg)*)))
     };
 }
 

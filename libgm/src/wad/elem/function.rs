@@ -154,7 +154,7 @@ fn parse_occurrence_chain(
         reader.cur_pos = occurrence_pos;
         let raw_value = reader.read_i32()?;
         offset = raw_value & 0x07FF_FFFF;
-        if offset < 1 {
+        if offset < 0 {
             bail!(
                 "Next occurrence offset is {0} (0x{0:08X}) which is negative while parsing \
                  function occurrences at position {1} (raw value is 0x{2:08X})",
