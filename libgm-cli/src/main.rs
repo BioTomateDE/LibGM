@@ -74,21 +74,15 @@ fn run(mut args: cli::Args) -> Result<()> {
         if args.dump_sprites {
             dump::dump_sprites(&data)?;
         }
+        if args.dump_texture_pages {
+            dump::dump_texture_pages(&data)?;
+        }
 
         // std::fs::create_dir_all("asm").unwrap();
         // for c in &data.codes.elems {
         //     let n = data.strings.by_ref(c.name)?;
         //     let asm = disassemble_code(c, &data)?;
         //     std::fs::write(format!("asm/{n}.txt"), asm).unwrap();
-        // }
-
-        // std::fs::create_dir_all("txtr").unwrap();
-        // for (i, txtr) in data.texture_pages.elements().enumerate() {
-        //     let Some(img) = &txtr.image else {
-        //         continue;
-        //     };
-        //     let img = img.to_dynamic_image()?;
-        //     img.save(format!("txtr/{i}.png")).unwrap();
         // }
 
         // std::fs::create_dir_all("sounds").unwrap();

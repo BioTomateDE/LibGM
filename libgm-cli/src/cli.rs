@@ -61,6 +61,10 @@ pub struct Args {
     /// Whether to dump all sprites.
     #[arg(long)]
     pub dump_sprites: bool,
+
+    /// Whether to dump all texture pages.
+    #[arg(long)]
+    pub dump_texture_pages: bool,
 }
 
 #[must_use]

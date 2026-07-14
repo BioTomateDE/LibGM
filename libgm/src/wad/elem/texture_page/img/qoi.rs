@@ -22,9 +22,9 @@ const QOI_DIFF_8: u8 = 0x80;
 const QOI_DIFF_16: u8 = 0xC0;
 const QOI_DIFF_24: u8 = 0xE0;
 const QOI_COLOR: u8 = 0xF0;
-const QOI_MASK_2: u8 = 0xC0;
-const QOI_MASK_3: u8 = 0xE0;
-const QOI_MASK_4: u8 = 0xF0;
+const MASK_2: u8 = 0xC0; // 0b1100_0000
+const MASK_3: u8 = 0xE0; // 0b1110_0000
+const MASK_4: u8 = 0xF0; // 0b1111_0000
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 struct Pixel {
@@ -35,7 +35,8 @@ struct Pixel {
 }
 
 impl Pixel {
-    const DEFAULT: Self = Self::new(0, 0, 0, 255);
+    const BLACK: Self = Self::new(0, 0, 0, 0);
+    const TRANSPARENT: Self = Self::new(0, 0, 0, 255);
 
     #[must_use]
     const fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
@@ -161,9 +162,9 @@ pub fn decode(bytes: &[u8]) -> Result<DynamicImage> {
         .ok_or("Specified QOI data length out of bounds")?;
 
     let mut pos: usize = 0;
-    let mut run: i32 = 0;
-    let mut px = Pixel::DEFAULT;
-    let mut index = [Pixel::DEFAULT; 64];
+    let mut run: u16 = 0;
+    let mut px = Pixel::TRANSPARENT;
+    let mut index = [Pixel::BLACK; 64];
 
     let width = u32::from(header.width);
     let height = u32::from(header.height);
@@ -183,30 +184,30 @@ pub fn decode(bytes: &[u8]) -> Result<DynamicImage> {
         let b1: u8 = pixel_data[pos];
         pos += 1;
 
-        if (b1 & QOI_MASK_2) == QOI_INDEX {
+        if (b1 & MASK_2) == QOI_INDEX {
             let index_pos = (b1 ^ QOI_INDEX) as usize;
             px = index[index_pos];
-        } else if (b1 & QOI_MASK_3) == QOI_RUN_8 {
-            run = i32::from(b1 & 0x1F);
-        } else if (b1 & QOI_MASK_3) == QOI_RUN_16 {
+        } else if (b1 & MASK_3) == QOI_RUN_8 {
+            run = u16::from(b1 & 0x1F);
+        } else if (b1 & MASK_3) == QOI_RUN_16 {
             let b2: u8 = pixel_data[pos];
             pos += 1;
-            run = (i32::from(b1 & 0x1F) << 8 | i32::from(b2)) + 32;
-        } else if (b1 & QOI_MASK_2) == QOI_DIFF_8 {
-            px.r =
-                px.r.wrapping_add(((i32::from(b1) & 0x30) << 26 >> 30) as u8);
-            px.g =
-                px.g.wrapping_add(((i32::from(b1) & 0x0C) << 28 >> 30) as u8);
-            px.b =
-                px.b.wrapping_add(((i32::from(b1) & 0x_3) << 30 >> 30) as u8);
-        } else if (b1 & QOI_MASK_3) == QOI_DIFF_16 {
+            run = (u16::from(b1 & 0x1F) << 8 | u16::from(b2)) + 32;
+        } else if (b1 & MASK_2) == QOI_DIFF_8 {
+            let r = (i32::from(b1) & 0x30) << 26 >> 30;
+            let g = (i32::from(b1) & 0x0C) << 28 >> 30;
+            let b = (i32::from(b1) & 0x03) << 30 >> 30;
+            px.r = px.r.wrapping_add(r as u8);
+            px.g = px.g.wrapping_add(g as u8);
+            px.b = px.b.wrapping_add(b as u8);
+        } else if (b1 & MASK_3) == QOI_DIFF_16 {
             let b2: u8 = pixel_data[pos];
             pos += 1;
             let merged: i32 = i32::from(b1) << 8 | i32::from(b2);
             px.r = px.r.wrapping_add(((merged & 0x1F00) << 19 >> 27) as u8);
             px.g = px.g.wrapping_add(((merged & 0x00F0) << 24 >> 28) as u8);
             px.b = px.b.wrapping_add(((merged & 0x000F) << 28 >> 28) as u8);
-        } else if (b1 & QOI_MASK_4) == QOI_DIFF_24 {
+        } else if (b1 & MASK_4) == QOI_DIFF_24 {
             let b2: i32 = i32::from(pixel_data[pos]);
             let b3: i32 = i32::from(pixel_data[pos + 1]);
             pos += 2;
@@ -215,7 +216,7 @@ pub fn decode(bytes: &[u8]) -> Result<DynamicImage> {
             px.g = px.g.wrapping_add(((merged & 0x00_7C00) << 17 >> 27) as u8);
             px.b = px.b.wrapping_add(((merged & 0x00_03E0) << 22 >> 27) as u8);
             px.a = px.a.wrapping_add(((merged & 0x00_001F) << 27 >> 27) as u8);
-        } else if (b1 & QOI_MASK_4) == QOI_COLOR {
+        } else if (b1 & MASK_4) == QOI_COLOR {
             if (b1 & 8) != 0 {
                 px.r = pixel_data[pos];
                 pos += 1;
@@ -247,8 +248,10 @@ pub fn decode(bytes: &[u8]) -> Result<DynamicImage> {
 fn encode_to_buffer(image: &DynamicImage, buffer: &mut Vec<u8>) -> Result<()> {
     // (big endian unsupported)
     let (width, height) = image.dimensions();
-    let width = u16::try_from(width).ctx_any("Image width exceeds limit of 65535")?;
-    let height = u16::try_from(height).ctx_any("Image height exceeds limit of 65535")?;
+    let width = u16::try_from(width).map_err(|_| "Image width exceeds limit of 65535")?;
+    let height = u16::try_from(height).map_err(|_| "Image height exceeds limit of 65535")?;
+
+    // Image is most likely RGBA8 which will avoid a massive memcpy
     let image = image
         .as_rgba8()
         .map_or_else(|| Cow::Owned(image.to_rgba8()), Cow::Borrowed);
@@ -263,8 +266,8 @@ fn encode_to_buffer(image: &DynamicImage, buffer: &mut Vec<u8>) -> Result<()> {
 
     // Prepare some vars
     let mut run: i32 = 0;
-    let mut index = [Pixel::DEFAULT; 64];
-    let mut px_prev = Pixel::DEFAULT;
+    let mut px_prev = Pixel::TRANSPARENT;
+    let mut index = [Pixel::BLACK; 64];
 
     // Start with QOI looping
     while let Some(&px) = image_pixels.next() {
