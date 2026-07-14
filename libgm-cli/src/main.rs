@@ -4,6 +4,7 @@
 mod actions;
 mod cli;
 mod dir;
+mod dump;
 mod info;
 mod logging;
 mod tests;
@@ -68,6 +69,10 @@ fn run(mut args: cli::Args) -> Result<()> {
             println!("===== {code_name} =====");
             println!("{assembly}");
             println!();
+        }
+
+        if args.dump_sprites {
+            dump::dump_sprites(&data)?;
         }
 
         // std::fs::create_dir_all("asm").unwrap();

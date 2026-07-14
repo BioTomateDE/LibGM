@@ -57,6 +57,10 @@ pub struct Args {
     /// Data files to compare to.
     #[arg(short, long, value_delimiter = ',')]
     pub diffs: Vec<PathBuf>,
+
+    /// Whether to dump all sprites.
+    #[arg(long)]
+    pub dump_sprites: bool,
 }
 
 #[must_use]
