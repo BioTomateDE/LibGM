@@ -1,20 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::fmt;
 
 use crate::prelude::*;
+use crate::wad::Blob;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CollisionMask {
-    pub rle_data: Vec<u8>,
-}
-
-impl fmt::Debug for CollisionMask {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("CollisionMask").finish_non_exhaustive()
-    }
+    pub rle_data: Blob<Vec<u8>>,
 }
 
 impl GMElement for CollisionMask {
@@ -25,7 +19,7 @@ impl GMElement for CollisionMask {
             .ctx("reading RLE Data of Timeline")?
             .to_vec();
         reader.align(4)?; // [From UndertaleModTool] "why it's not aligned before the data is beyond my brain"
-        Ok(Self { rle_data })
+        Ok(Self { rle_data: Blob(rle_data) })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

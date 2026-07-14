@@ -3,14 +3,13 @@ pub mod nine_slice;
 pub mod spine;
 pub mod swf;
 
-use std::fmt;
-
 pub use nine_slice::NineSlice;
 
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
 use crate::util::assert;
 use crate::util::init::vec_with_capacity;
+use crate::wad::Blob;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
@@ -150,7 +149,7 @@ impl GMElement for Sprite {
                     SpecialData::Swf(swf::Data {
                         swf_version,
                         yyswf_version,
-                        jpeg_table,
+                        jpeg_table: Blob(jpeg_table),
                         timeline,
                     })
                 }
@@ -192,7 +191,7 @@ impl GMElement for Sprite {
                             spine_textures.push(spine::TextureEntry {
                                 page_width,
                                 page_height,
-                                data: spine::texture_entry::Data::Pre2023_1(texture_blob),
+                                data: spine::texture_entry::Data::Pre2023_1(Blob(texture_blob)),
                             });
                         }
                         2 | 3 => {
@@ -539,20 +538,11 @@ gm_enum!(SepMaskType {
     RotatedRect = 2,
 });
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MaskEntry {
-    pub data: Vec<u8>,
+    pub data: Blob<Vec<u8>>,
     pub width: u32,
     pub height: u32,
-}
-
-impl fmt::Debug for MaskEntry {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("MaskEntry")
-            .field("width", &self.width)
-            .field("height", &self.height)
-            .finish_non_exhaustive()
-    }
 }
 
 fn read_mask_data(reader: &mut DataReader, width: u32, height: u32) -> Result<Vec<MaskEntry>> {
@@ -567,7 +557,7 @@ fn read_mask_data(reader: &mut DataReader, width: u32, height: u32) -> Result<Ve
             .read_bytes_dyn(length)
             .ctx("reading Mask Data")?
             .to_vec();
-        collision_masks.push(MaskEntry { data, width, height });
+        collision_masks.push(MaskEntry { data: Blob(data), width, height });
     }
 
     reader.align(4)?;

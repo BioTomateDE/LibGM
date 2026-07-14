@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! The full GameMaker data struct, containing all information from a data file.
-
-use std::fmt;
 use std::path::PathBuf;
 
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
+use crate::wad::Blob;
+use crate::wad::GMVersion;
 use crate::wad::chunk::ChunkName;
 use crate::wad::elem::animation_curve::AnimationCurves;
 use crate::wad::elem::audio::Audios;
+use crate::wad::elem::audio_group::AudioGroup;
 use crate::wad::elem::audio_group::AudioGroups;
 use crate::wad::elem::background::Tilesets;
 use crate::wad::elem::code::Codes;
@@ -21,13 +22,19 @@ use crate::wad::elem::font::Fonts;
 use crate::wad::elem::function::Functions;
 use crate::wad::elem::game_end::GameEndScripts;
 use crate::wad::elem::game_object::GameObjects;
+use crate::wad::elem::general_info::Flags;
+use crate::wad::elem::general_info::FunctionClassifications;
+use crate::wad::elem::general_info::GMS2Data;
 use crate::wad::elem::general_info::GeneralInfo;
 use crate::wad::elem::global_init::GlobalInitScripts;
 use crate::wad::elem::language::LanguageInfo;
+use crate::wad::elem::options::Constant;
+use crate::wad::elem::options::OptionFlags;
 use crate::wad::elem::options::Options;
 use crate::wad::elem::particle_emitter::ParticleEmitters;
 use crate::wad::elem::particle_system::ParticleSystems;
 use crate::wad::elem::path::Paths;
+use crate::wad::elem::room::Room;
 use crate::wad::elem::room::Rooms;
 use crate::wad::elem::script::Scripts;
 use crate::wad::elem::sequence::Sequences;
@@ -42,7 +49,9 @@ use crate::wad::elem::texture_page_item::TexturePageItems;
 use crate::wad::elem::timeline::Timelines;
 use crate::wad::elem::ui_node::UINodes;
 use crate::wad::elem::validate_names;
+use crate::wad::elem::variable::ModernHeader;
 use crate::wad::elem::variable::Variables;
+use crate::wad::version::LtsBranch;
 
 /// Byte order (endianness) for integers and chunk names in data files.
 ///
@@ -119,7 +128,7 @@ impl Default for Metadata {
 }
 
 /// The full GameMaker data struct, containing all information from a data file.
-#[derive(Clone, Default)]
+#[derive(Clone, Debug)]
 pub struct GMData {
     /// Some metadata about the GameMaker data file.
     ///
@@ -164,12 +173,176 @@ pub struct GMData {
     pub variables: Variables,                   // VARI
 }
 
-impl fmt::Debug for GMData {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("GMData")
-            .field("meta", &self.meta)
-            .field("general_info", &self.general_info)
-            .finish_non_exhaustive()
+impl Default for GMData {
+    fn default() -> Self {
+        use ChunkName::*;
+
+        let mut strings = Strings::default();
+        strings.exists = true;
+
+        let meta = Metadata {
+            location: None,
+            chunk_padding: 16,
+            endianness: Endianness::Little,
+            original_data_size: 5000,
+            chunk_order: vec![
+                GEN8, OPTN, LANG, EXTN, SOND, AGRP, SPRT, BGND, PATH, SCPT, GLOB, SHDR, FONT, TMLN,
+                OBJT, FEDS, ACRV, SEQN, TAGS, ROOM, UILR, DAFL, EMBI, PSEM, PSYS, TPAG, TGIN, CODE,
+                VARI, FUNC, FEAT, STRG, TXTR, AUDO,
+            ],
+        };
+
+        let animation_curves = AnimationCurves { elems: Vec::new(), exists: true };
+        let mut audio_groups = AudioGroups { elems: Vec::new(), exists: true };
+        audio_groups.push(AudioGroup {
+            name: strings.make("audiogroup_default"),
+            path: strings.make("audiogroup_default.dat"),
+        });
+        let audios = Audios { elems: Vec::new(), exists: true };
+        let codes = Codes { elems: Vec::new(), exists: true };
+        let data_files = DataFiles { exists: true };
+        let embedded_images = EmbeddedImages { elems: Vec::new(), exists: true };
+        let extensions = Extensions { elems: Vec::new(), exists: true };
+        let feature_flags = FeatureFlags { elems: Vec::new(), exists: true };
+        let filter_effects = FilterEffects { elems: Vec::new(), exists: true };
+        let fonts = Fonts { exists: true, ..Default::default() };
+        let functions = Functions { exists: true, ..Default::default() };
+        let game_end_scripts = GameEndScripts { elems: Vec::new(), exists: true };
+        let game_objects = GameObjects { elems: Vec::new(), exists: true };
+        let general_info = GeneralInfo {
+            debugger_enabled: false,
+            wad_version: 17,
+            unknown_value: 0,
+            game_file_name: strings.make("libgm_game"),
+            config: strings.make("Default"),
+            last_object_id: 100_000,
+            last_tile_id: 10_000_000,
+            game_id: 1337,
+            directplay_guid: Blob([0u8; 16]),
+            game_name: strings.make("LibGM"),
+            version: GMVersion::new(2026, 0, 0, 0, LtsBranch::PostLts),
+            window_width: 640,
+            window_height: 480,
+            flags: Flags::SCALE | Flags::SHOW_CURSOR,
+            license_crc32: 1337,
+            license_md5: Blob(*b"GnuPublicLicense"),
+            creation_timestamp: Default::default(), // set this urself if you want to lol
+            display_name: strings.make("LibGM: The Game"),
+            function_classifications: FunctionClassifications::empty(),
+            steam_appid: 0,
+            debugger_port: 0,
+            room_order: vec![GMRef::new(0)],
+            gms2_data: Some(GMS2Data::default()),
+            exists: true,
+        };
+        let global_init_scripts = GlobalInitScripts { elems: Vec::new(), exists: true };
+        let language_info = LanguageInfo {
+            unknown1: 1,
+            exists: true,
+            ..Default::default()
+        };
+        let options = Options {
+            is_new_format: true,
+            flags: OptionFlags::SHOW_CURSOR
+                | OptionFlags::VARIABLE_ERRORS
+                | OptionFlags::LEGACY_JSON_PARSING
+                | OptionFlags::LEGACY_NUMBER_CONVERSION
+                | OptionFlags::LEGACY_OTHER_BEHAVIOR
+                | OptionFlags::AUDIO_ERROR_BEHAVIOR
+                | OptionFlags::ALLOW_INSTANCE_CHANGE,
+            window_scale: 0,
+            window_color: 0,
+            color_depth: 0,
+            resolution: 0,
+            frequency: 0,
+            vertex_sync: 0,
+            priority: 0,
+            back_image: GMRef::none(),
+            front_image: GMRef::none(),
+            load_image: GMRef::none(),
+            load_alpha: 0,
+            constants: vec![
+                Constant::new("@@SleepMargin", "0", &mut strings),
+                Constant::new("@@DrawColour", "4294967295", &mut strings),
+                Constant::new("@@VersionMajor", "1", &mut strings),
+                Constant::new("@@VersionMinor", "0", &mut strings),
+                Constant::new("@@VersionBuild", "", &mut strings),
+                Constant::new("@@VersionRevision", "0", &mut strings),
+            ],
+            exists: true,
+        };
+        let particle_emitters = ParticleEmitters { elems: Vec::new(), exists: true };
+        let particle_systems = ParticleSystems { elems: Vec::new(), exists: true };
+        let paths = Paths { elems: Vec::new(), exists: true };
+        let mut rooms = Rooms { elems: Vec::new(), exists: true };
+        rooms.push(Room {
+            name: strings.make("room0"),
+            ..Default::default()
+        });
+        let ui_nodes = UINodes { elems: Vec::new(), exists: true };
+        let scripts = Scripts { elems: Vec::new(), exists: true };
+        let sequences = Sequences { elems: Vec::new(), exists: true };
+        let shaders = Shaders { elems: Vec::new(), exists: true };
+        let sounds = Sounds { elems: Vec::new(), exists: true };
+        let sprites = Sprites { elems: Vec::new(), exists: true };
+        let tags = Tags { exists: true, ..Default::default() };
+        let texture_group_infos = TextureGroupInfos { elems: Vec::new(), exists: true };
+        let texture_page_items = TexturePageItems { elems: Vec::new(), exists: true };
+        let texture_pages = TexturePages { elems: Vec::new(), exists: true };
+        let tilesets = Tilesets {
+            elems: Vec::new(),
+            align: true,
+            exists: true,
+        };
+        let timelines = Timelines { elems: Vec::new(), exists: true };
+        let variables = Variables {
+            elems: Vec::new(),
+            modern_header: Some(ModernHeader {
+                var_count1: 0,
+                var_count2: 0,
+                max_local_var_count: 0,
+            }),
+            exists: true,
+        };
+
+        GMData {
+            meta,
+            animation_curves,
+            audio_groups,
+            audios,
+            codes,
+            data_files,
+            embedded_images,
+            extensions,
+            feature_flags,
+            filter_effects,
+            fonts,
+            functions,
+            game_end_scripts,
+            game_objects,
+            general_info,
+            global_init_scripts,
+            language_info,
+            options,
+            particle_emitters,
+            particle_systems,
+            paths,
+            rooms,
+            ui_nodes,
+            scripts,
+            sequences,
+            shaders,
+            sounds,
+            sprites,
+            strings,
+            tags,
+            texture_group_infos,
+            texture_page_items,
+            texture_pages,
+            tilesets,
+            timelines,
+            variables,
+        }
     }
 }
 

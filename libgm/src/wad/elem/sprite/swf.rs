@@ -8,34 +8,23 @@ mod collision_mask;
 pub mod frame;
 pub mod item;
 
-use std::fmt;
-
 pub use collision_mask::CollisionMask;
 pub use frame::Frame;
 pub use item::Item;
 
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
+use crate::wad::Blob;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Data {
     pub swf_version: i32,
     pub yyswf_version: i32,
-    pub jpeg_table: Vec<u8>,
+    pub jpeg_table: Blob<Vec<u8>>,
     pub timeline: Timeline,
-}
-
-impl fmt::Debug for Data {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Data")
-            .field("swf_version", &self.swf_version)
-            .field("yyswf_version", &self.yyswf_version)
-            .field("timeline", &self.timeline)
-            .finish_non_exhaustive()
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -65,7 +65,7 @@ pub struct Extension {
     pub name: GMRef<String>,
 
     /// Present in 2023.4+
-    pub version: Option<GMRef<String>>,
+    pub version: GMRef<String>,
 
     pub class_name: GMRef<String>,
 
@@ -85,10 +85,10 @@ impl GMElement for Extension {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let folder_name: GMRef<String> = reader.read_gm_string()?;
         let name: GMRef<String> = reader.read_gm_string()?;
-        let version: Option<GMRef<String>> = if reader.general_info.version >= (2023, 4) {
-            Some(reader.read_gm_string()?)
+        let version: GMRef<String> = if reader.general_info.version >= (2023, 4) {
+            reader.read_gm_string()?
         } else {
-            None
+            GMRef::none()
         };
         let class_name: GMRef<String> = reader.read_gm_string()?;
         let files: Vec<File>;
@@ -122,7 +122,9 @@ impl GMElement for Extension {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(self.folder_name)?;
         builder.write_gm_string(self.name)?;
-        builder.write_if_ver(&self.version, "Version", (2023, 4))?;
+        if builder.version() >= (2023, 4) {
+            builder.write_gm_string(self.version)?;
+        }
         builder.write_gm_string(self.class_name)?;
         if builder.version() >= (2022, 6) {
             builder.write_pointer(&self.files);

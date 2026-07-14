@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::fmt;
 
 use crate::prelude::*;
+use crate::wad::Blob;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
@@ -23,7 +23,7 @@ impl GMElement for TextureEntry {
         } else {
             let size = reader.read_u32()?;
             let texture_blob: Vec<u8> = reader.read_bytes_dyn(size)?.to_vec();
-            Data::Pre2023_1(texture_blob)
+            Data::Pre2023_1(Blob(texture_blob))
         };
         Ok(Self { page_width, page_height, data })
     }
@@ -50,20 +50,11 @@ impl GMElement for TextureEntry {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Data {
     /// Texture blob raw data.
-    Pre2023_1(Vec<u8>),
+    Pre2023_1(Blob<Vec<u8>>),
 
     /// Texture entry count.
     Post2023_1(u32),
-}
-
-impl fmt::Debug for Data {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Pre2023_1(_) => f.debug_tuple("Pre2023_1").finish_non_exhaustive(),
-            Self::Post2023_1(count) => f.debug_tuple("Post2023_1").field(count).finish(),
-        }
-    }
 }

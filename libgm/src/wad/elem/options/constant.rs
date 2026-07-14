@@ -2,6 +2,7 @@
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
+use crate::wad::elem::string::Strings;
 use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -21,5 +22,15 @@ impl GMElement for Constant {
         builder.write_gm_string(self.name)?;
         builder.write_gm_string(self.value)?;
         Ok(())
+    }
+}
+
+impl Constant {
+    #[must_use]
+    pub fn new(name: &str, value: &str, strings: &mut Strings) -> Self {
+        Self {
+            name: strings.make(name),
+            value: strings.make(value),
+        }
     }
 }

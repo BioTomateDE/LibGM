@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::fmt;
-
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
+use crate::wad::Blob;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
@@ -57,9 +56,9 @@ impl GMElement for Data {
 
             reader.align(4)?;
             VersionData::Pre2022_1(VersionDataPre2022_1 {
-                image_data,
-                alpha_data,
-                color_palette_data,
+                image_data: Blob(image_data),
+                alpha_data: Blob(alpha_data),
+                color_palette_data: Blob(color_palette_data),
             })
         };
 
@@ -97,18 +96,11 @@ pub enum VersionData {
     Post2022_1(VersionDataPost2022_1),
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct VersionDataPre2022_1 {
-    pub image_data: Vec<u8>,
-    pub alpha_data: Vec<u8>,
-    pub color_palette_data: Vec<u8>,
-}
-
-impl fmt::Debug for VersionDataPre2022_1 {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("VersionDataPre2022_1")
-            .finish_non_exhaustive()
-    }
+    pub image_data: Blob<Vec<u8>>,
+    pub alpha_data: Blob<Vec<u8>>,
+    pub color_palette_data: Blob<Vec<u8>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

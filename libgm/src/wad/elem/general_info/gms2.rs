@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::fmt;
-
 use dotnet_rng::DotnetRng;
 
 use crate::prelude::*;
+use crate::wad::Blob;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::general_info::GeneralInfo;
 use crate::wad::parse::reader::DataReader;
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GMS2Data {
     /// Unknown, some sort of checksum.
-    pub random_uid: [i64; 4],
+    pub random_uid: Blob<[i64; 4]>,
 
     /// The FPS of the game.
     pub fps: f32,
@@ -21,7 +20,7 @@ pub struct GMS2Data {
     pub allow_statistics: bool,
 
     /// Unknown, some sort of checksum.
-    pub game_guid: [u8; 16],
+    pub game_guid: Blob<[u8; 16]>,
 
     /// Whether the random UID's timestamp was initially offset.
     pub info_timestamp_offset: bool,
@@ -30,22 +29,12 @@ pub struct GMS2Data {
 impl Default for GMS2Data {
     fn default() -> Self {
         Self {
-            random_uid: [69; 4],
-            fps: 30.0,
+            random_uid: Blob([69; 4]),
+            fps: 60.0,
             allow_statistics: false,
-            game_guid: [68; 16],
-            info_timestamp_offset: false,
+            game_guid: Blob([69; 16]),
+            info_timestamp_offset: true,
         }
-    }
-}
-
-impl fmt::Debug for GMS2Data {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("GMS2Data")
-            .field("fps", &self.fps)
-            .field("allow_statistics", &self.allow_statistics)
-            .field("info_timestamp_offset", &self.info_timestamp_offset)
-            .finish_non_exhaustive()
     }
 }
 
@@ -104,10 +93,10 @@ impl GeneralInfo {
             .ctx("reading Game GUID")?;
 
         Ok(GMS2Data {
-            random_uid,
+            random_uid: Blob(random_uid),
             fps,
             allow_statistics,
-            game_guid,
+            game_guid: Blob(game_guid),
             info_timestamp_offset,
         })
     }
@@ -138,7 +127,7 @@ impl GeneralInfo {
 
         builder.write_f32(gms2_info.fps);
         builder.write_bool32(gms2_info.allow_statistics);
-        builder.write_bytes(&gms2_info.game_guid);
+        builder.write_bytes(&*gms2_info.game_guid);
         Ok(())
     }
 

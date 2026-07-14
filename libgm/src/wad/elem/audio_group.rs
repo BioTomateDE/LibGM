@@ -39,19 +39,25 @@ pub struct AudioGroup {
     /// GameMaker 2024.14 and above. ___
     /// Prior to 2024.14, audio groups were all numerically assigned filenames
     /// and all in the root directory.
-    pub path: Option<GMRef<String>>,
+    pub path: GMRef<String>,
 }
 
 impl GMElement for AudioGroup {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let path: Option<GMRef<String>> = reader.deserialize_if_gm_version((2024, 14))?;
+        let path: GMRef<String> = if reader.general_info.version >= (2024, 14) {
+            reader.read_gm_string()?
+        } else {
+            GMRef::none()
+        };
         Ok(Self { name, path })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(self.name)?;
-        builder.write_if_ver(&self.path, "Path", (2024, 14))?;
+        if builder.version() >= (2024, 14) {
+            builder.write_gm_string(self.path)?;
+        }
         Ok(())
     }
 }

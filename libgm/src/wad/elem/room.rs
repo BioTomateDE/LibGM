@@ -238,6 +238,58 @@ impl GMElement for Room {
     }
 }
 
+impl Default for Room {
+    fn default() -> Self {
+        let view = RoomView {
+            enabled: false,
+            view_x: 0,
+            view_y: 0,
+            view_width: 640,
+            view_height: 480,
+            port_x: 0,
+            port_y: 0,
+            port_width: 640,
+            port_height: 480,
+            border_x: 32,
+            border_y: 32,
+            speed_x: -1,
+            speed_y: -1,
+            object: GMRef::none(),
+        };
+
+        Self {
+            name: GMRef::none(), // "room{idx}"
+            caption: GMRef::none(),
+            width: 640,
+            height: 480,
+            speed: 0,
+            persistent: false,
+            background_color: 0xFF000000,
+            draw_background_color: false,
+            creation_code: Default::default(),
+            flags: RoomFlags::ENABLE_VIEWS
+                | RoomFlags::CLEAR_VIEW_BACKGROUND
+                | RoomFlags::GM2
+                | RoomFlags::GM2_3,
+            backgrounds: Vec::new(),
+            views: vec![view; 8],
+            game_objects: Vec::new(),
+            tiles: Vec::new(),
+            instance_creation_order: Vec::new(),
+            world: false,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            gravity_x: 0.0,
+            gravity_y: 0.0,
+            meters_per_pixel: 0.1,
+            layers: Vec::new(),
+            sequences: Vec::new(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct InstanceID(pub i32);
 

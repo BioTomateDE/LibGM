@@ -3,8 +3,6 @@ mod flags;
 mod function_classifications;
 mod gms2;
 
-use std::fmt;
-
 use chrono::DateTime;
 use chrono::Utc;
 
@@ -12,6 +10,7 @@ pub use self::flags::Flags;
 pub use self::function_classifications::FunctionClassifications;
 pub use self::gms2::GMS2Data;
 use crate::prelude::*;
+use crate::wad::Blob;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_chunk;
 use crate::wad::elem::GMElement;
@@ -21,7 +20,7 @@ use crate::wad::reference::GMRef;
 use crate::wad::version::GMVersion;
 use crate::wad::version::ToGMVersion;
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GeneralInfo {
     /// Indicates whether debugging support via an external GameMaker debugger is enabled.
     /// The game will crash (?) if this is enabled and there is no debugger.
@@ -70,7 +69,7 @@ pub struct GeneralInfo {
 
     /// The `DirectPlay` GUID of the data file.
     /// This is always empty in GameMaker Studio.
-    pub directplay_guid: [u8; 16],
+    pub directplay_guid: Blob<[u8; 16]>,
 
     /// The name of the game.
     pub game_name: GMRef<String>,
@@ -111,7 +110,7 @@ pub struct GeneralInfo {
     pub license_crc32: u32,
 
     /// The MD5 of the license used to compile the game.
-    pub license_md5: [u8; 16],
+    pub license_md5: Blob<[u8; 16]>,
 
     /// The timestamp the game was compiled at.
     pub creation_timestamp: DateTime<Utc>,
@@ -198,14 +197,14 @@ impl GMElement for GeneralInfo {
             last_object_id,
             last_tile_id,
             game_id,
-            directplay_guid,
+            directplay_guid: Blob(directplay_guid),
             game_name,
             version,
             window_width,
             window_height,
             flags,
             license_crc32,
-            license_md5,
+            license_md5: Blob(license_md5),
             creation_timestamp,
             display_name,
             function_classifications,
@@ -237,7 +236,7 @@ impl GMElement for GeneralInfo {
         builder.write_u32(self.last_object_id);
         builder.write_u32(self.last_tile_id);
         builder.write_u32(self.game_id);
-        builder.write_bytes(&self.directplay_guid);
+        builder.write_bytes(&*self.directplay_guid);
         builder.write_gm_string(self.game_name)?;
 
         if self.version < 2 {
@@ -250,7 +249,7 @@ impl GMElement for GeneralInfo {
         builder.write_u32(self.window_height);
         builder.write_u32(self.flags.bits());
         builder.write_u32(self.license_crc32);
-        builder.write_bytes(&self.license_md5);
+        builder.write_bytes(&*self.license_md5);
         builder.write_i64(self.creation_timestamp.timestamp());
         builder.write_gm_string(self.display_name)?;
         builder.write_u64(0); // "Active targets"
@@ -279,14 +278,14 @@ impl Default for GeneralInfo {
             last_object_id: 100_000,
             last_tile_id: 10_000_000,
             game_id: 1337,
-            directplay_guid: [0u8; 16],
+            directplay_guid: Blob([0u8; 16]),
             game_name: GMRef::none(),
             version: GMVersion::default(),
             window_width: 1337,
             window_height: 1337,
             flags: Flags::empty(),
             license_crc32: 69420,
-            license_md5: [69; 16],
+            license_md5: Blob([69; 16]),
             creation_timestamp: DateTime::default(),
             display_name: GMRef::none(),
             function_classifications: FunctionClassifications::empty(),
@@ -296,30 +295,6 @@ impl Default for GeneralInfo {
             gms2_data: Some(GMS2Data::default()),
             exists: false,
         }
-    }
-}
-
-impl fmt::Debug for GeneralInfo {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("GeneralInfo")
-            .field("debugger_enabled", &self.debugger_enabled)
-            .field("wad_version", &self.wad_version)
-            .field("game_file_name", &self.game_file_name)
-            .field("config", &self.config)
-            .field("last_object_id", &self.last_object_id)
-            .field("last_tile_id", &self.last_tile_id)
-            .field("game_id", &self.game_id)
-            .field("game_name", &self.game_name)
-            .field("version", &self.version)
-            .field("window_width", &self.window_width)
-            .field("window_height", &self.window_height)
-            .field("creation_timestamp", &self.creation_timestamp)
-            .field("display_name", &self.display_name)
-            .field("steam_appid", &self.steam_appid)
-            .field("debugger_port", &self.debugger_port)
-            .field("gms2_data", &self.gms2_data)
-            .field("exists", &self.exists)
-            .finish_non_exhaustive()
     }
 }
 

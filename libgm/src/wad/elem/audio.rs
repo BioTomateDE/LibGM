@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use std::fmt;
 
 use crate::prelude::*;
+use crate::wad::Blob;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
@@ -28,24 +28,19 @@ impl GMElement for Audios {
 }
 
 /// An embedded audio entry in a data file.
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Audio {
     /// The raw audio data of the embedded audio entry.
     /// This can be either WAV or OGG.
-    pub data: Vec<u8>,
+    pub data: Blob<Vec<u8>>,
 }
 
-impl fmt::Debug for Audio {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("GMAudio").finish_non_exhaustive()
-    }
-}
 
 impl GMElement for Audio {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let size = reader.read_u32()?;
         let data: Vec<u8> = reader.read_bytes_dyn(size)?.to_vec();
-        Ok(Self { data })
+        Ok(Self { data: Blob(data) })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

@@ -10,7 +10,7 @@ use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct LanguageInfo {
-    unknown1: u32,
+    pub unknown1: u32,
     pub elems: Vec<LanguageData>,
     pub entry_ids: Vec<GMRef<String>>,
     pub exists: bool,

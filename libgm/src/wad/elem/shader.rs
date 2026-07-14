@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use core::fmt;
 
 use crate::gm_enum::GMEnum;
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
+use crate::wad::Blob;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
@@ -91,11 +91,11 @@ impl GMElement for Shaders {
                 }
             }
 
-            let hlsl11_vertex_data: Option<ShaderData> =
+            let hlsl11_vertex_data: ShaderData =
                 read_shader_data(reader, entry_end, 8, hlsl11_vertex_ptr, 0, hlsl11_pixel_ptr)?;
-            let hlsl11_pixel_data: Option<ShaderData> =
+            let hlsl11_pixel_data: ShaderData =
                 read_shader_data(reader, entry_end, 8, hlsl11_pixel_ptr, 0, pssl_vertex_ptr)?;
-            let pssl_vertex_data: Option<ShaderData> = read_shader_data(
+            let pssl_vertex_data: ShaderData = read_shader_data(
                 reader,
                 entry_end,
                 8,
@@ -103,7 +103,7 @@ impl GMElement for Shaders {
                 pssl_vertex_len,
                 pssl_pixel_ptr,
             )?;
-            let pssl_pixel_data: Option<ShaderData> = read_shader_data(
+            let pssl_pixel_data: ShaderData = read_shader_data(
                 reader,
                 entry_end,
                 8,
@@ -111,7 +111,7 @@ impl GMElement for Shaders {
                 pssl_pixel_len,
                 cg_psvita_vertex_ptr,
             )?;
-            let cg_psvita_vertex_data: Option<ShaderData> = read_shader_data(
+            let cg_psvita_vertex_data: ShaderData = read_shader_data(
                 reader,
                 entry_end,
                 8,
@@ -119,7 +119,7 @@ impl GMElement for Shaders {
                 cg_psvita_vertex_len,
                 cg_psvita_pixel_ptr,
             )?;
-            let cg_psvita_pixel_data: Option<ShaderData> = read_shader_data(
+            let cg_psvita_pixel_data: ShaderData = read_shader_data(
                 reader,
                 entry_end,
                 8,
@@ -127,7 +127,7 @@ impl GMElement for Shaders {
                 cg_psvita_pixel_len,
                 cg_ps3_vertex_ptr,
             )?;
-            let cg_ps3_vertex_data: Option<ShaderData> = read_shader_data(
+            let cg_ps3_vertex_data: ShaderData = read_shader_data(
                 reader,
                 entry_end,
                 16,
@@ -135,7 +135,7 @@ impl GMElement for Shaders {
                 cg_ps3_vertex_len,
                 cg_ps3_pixel_ptr,
             )?;
-            let cg_ps3_pixel_data: Option<ShaderData> =
+            let cg_ps3_pixel_data: ShaderData =
                 read_shader_data(reader, entry_end, 16, cg_ps3_pixel_ptr, cg_ps3_pixel_len, 0)?;
 
             elems[i] = Some(Shader {
@@ -180,14 +180,14 @@ pub struct Shader {
     pub hlsl9_vertex: GMRef<String>,
     pub hlsl9_fragment: GMRef<String>,
     pub version: i32,
-    pub hlsl11_vertex_data: Option<ShaderData>,
-    pub hlsl11_pixel_data: Option<ShaderData>,
-    pub pssl_vertex_data: Option<ShaderData>,
-    pub pssl_pixel_data: Option<ShaderData>,
-    pub cg_psvita_vertex_data: Option<ShaderData>,
-    pub cg_psvita_pixel_data: Option<ShaderData>,
-    pub cg_ps3_vertex_data: Option<ShaderData>,
-    pub cg_ps3_pixel_data: Option<ShaderData>,
+    pub hlsl11_vertex_data: ShaderData,
+    pub hlsl11_pixel_data: ShaderData,
+    pub pssl_vertex_data: ShaderData,
+    pub pssl_pixel_data: ShaderData,
+    pub cg_psvita_vertex_data: ShaderData,
+    pub cg_psvita_pixel_data: ShaderData,
+    pub cg_ps3_vertex_data: ShaderData,
+    pub cg_ps3_pixel_data: ShaderData,
     pub vertex_shader_attributes: Vec<GMRef<String>>,
 }
 
@@ -214,27 +214,18 @@ impl GMElement for Shader {
         if builder.wad_version() > 13 {
             builder.write_i32(self.version);
             builder.write_pointer_opt(&self.pssl_vertex_data);
-            builder.write_usize(self.pssl_vertex_data.as_ref().map_or(0, |i| i.data.len()))?;
+            builder.write_usize(self.pssl_vertex_data.as_ref().map_or(0, |x| x.len()))?;
             builder.write_pointer_opt(&self.pssl_pixel_data);
-            builder.write_usize(self.pssl_pixel_data.as_ref().map_or(0, |i| i.data.len()))?;
+            builder.write_usize(self.pssl_pixel_data.as_ref().map_or(0, |x| x.len()))?;
             builder.write_pointer_opt(&self.cg_psvita_vertex_data);
-            builder.write_usize(
-                self.cg_psvita_vertex_data
-                    .as_ref()
-                    .map_or(0, |i| i.data.len()),
-            )?;
+            builder.write_usize(self.cg_psvita_vertex_data.as_ref().map_or(0, |x| x.len()))?;
             builder.write_pointer_opt(&self.cg_psvita_pixel_data);
-            builder.write_usize(
-                self.cg_psvita_pixel_data
-                    .as_ref()
-                    .map_or(0, |i| i.data.len()),
-            )?;
+            builder.write_usize(self.cg_psvita_pixel_data.as_ref().map_or(0, |x| x.len()))?;
             if self.version >= 2 {
                 builder.write_pointer_opt(&self.cg_ps3_vertex_data);
-                builder
-                    .write_usize(self.cg_ps3_vertex_data.as_ref().map_or(0, |i| i.data.len()))?;
+                builder.write_usize(self.cg_ps3_vertex_data.as_ref().map_or(0, |x| x.len()))?;
                 builder.write_pointer_opt(&self.cg_ps3_pixel_data);
-                builder.write_usize(self.cg_ps3_pixel_data.as_ref().map_or(0, |i| i.data.len()))?;
+                builder.write_usize(self.cg_ps3_pixel_data.as_ref().map_or(0, |x| x.len()))?;
             }
         }
 
@@ -271,16 +262,7 @@ Type {
     CgPs3 = 7,
 });
 
-#[derive(Clone, PartialEq, Eq)]
-pub struct ShaderData {
-    pub data: Vec<u8>,
-}
-
-impl fmt::Debug for ShaderData {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ShaderData").finish_non_exhaustive()
-    }
-}
+type ShaderData = Option<Blob<Vec<u8>>>;
 
 fn read_shader_data(
     reader: &mut DataReader,
@@ -289,7 +271,7 @@ fn read_shader_data(
     this_pointer: u32,
     expected_length: u32,
     next_ptr: u32,
-) -> Result<Option<ShaderData>> {
+) -> Result<ShaderData> {
     const ERR_PREFIX: &str = "Failed to compute length of shader data: instructed to read";
     const ERR_SUFFIX: &str =
         "Shader data was the last in the shader, but given length was incorrectly padded";
@@ -305,7 +287,7 @@ fn read_shader_data(
 
     if expected_length == 0 {
         let data: Vec<u8> = reader.read_bytes_dyn(actual_length)?.to_vec();
-        return Ok(Some(ShaderData { data }));
+        return Ok(Some(Blob(data)));
     }
 
     if expected_length > actual_length {
@@ -325,22 +307,14 @@ fn read_shader_data(
     }
 
     let data: Vec<u8> = reader.read_bytes_dyn(expected_length)?.to_vec();
-    Ok(Some(ShaderData { data }))
+    Ok(Some(Blob(data)))
 }
 
-// The element fields store `Option<ShaderData>`, so passing
-// `Option<&ShaderData> instead of `&Option<ShaderData>` would require using
-// `.as_ref()` in every call.
-#[allow(clippy::ref_option)]
-fn write_shader_data(
-    builder: &mut DataBuilder,
-    pad: u32,
-    shader_data_opt: &Option<ShaderData>,
-) -> Result<()> {
-    if let Some(shader_data) = shader_data_opt {
+fn write_shader_data(builder: &mut DataBuilder, pad: u32, shader_data: &ShaderData) -> Result<()> {
+    if let Some(data) = &shader_data {
         builder.align(pad);
-        builder.resolve_pointer(shader_data)?;
-        builder.write_bytes(&shader_data.data);
+        builder.resolve_pointer(data)?;
+        builder.write_bytes(data);
     }
     Ok(())
 }

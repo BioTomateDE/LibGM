@@ -10,6 +10,7 @@ pub use bz2::BZip2QoiHeader;
 use image::DynamicImage;
 
 use crate::prelude::*;
+use crate::wad::Blob;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::texture_page::BZ2_QOI_HEADER;
 
@@ -80,17 +81,17 @@ impl GMImage {
 
     #[must_use]
     pub(super) const fn from_png(raw_png_data: Vec<u8>) -> Self {
-        Self(Img::Png(raw_png_data))
+        Self(Img::Png(Blob(raw_png_data)))
     }
 
     #[must_use]
     pub(super) const fn from_qoi(raw_qoi_data: Vec<u8>) -> Self {
-        Self(Img::Qoi(raw_qoi_data))
+        Self(Img::Qoi(Blob(raw_qoi_data)))
     }
 
     #[must_use]
     pub(super) const fn from_bz2_qoi(raw_bz2_qoi_data: Vec<u8>, header: BZip2QoiHeader) -> Self {
-        Self(Img::Bz2Qoi(raw_bz2_qoi_data, header))
+        Self(Img::Bz2Qoi(Blob(raw_bz2_qoi_data), header))
     }
 
     /// The Image [`Format`] of the underlying stored image data.
@@ -218,12 +219,12 @@ impl GMImage {
                 let size = Some(raw_data.len() as u32);
                 let bz2_header = BZip2QoiHeader::new(qoi_header.width, qoi_header.height, size);
                 let data: Vec<u8> = bz2::compress(raw_data)?;
-                self.0 = Img::Bz2Qoi(data, bz2_header);
+                self.0 = Img::Bz2Qoi(Blob(data), bz2_header);
                 return Ok(());
             }
             (Img::Bz2Qoi(raw_data, _), Format::Qoi) => {
                 let data: Vec<u8> = bz2::decompress(raw_data)?;
-                self.0 = Img::Qoi(data);
+                self.0 = Img::Qoi(Blob(data));
                 return Ok(());
             }
             _ => {}
@@ -238,11 +239,11 @@ impl GMImage {
             // to_dynamic_image returns Cow::Owned only if it was not a DynamicImage before
             // which would be impossible (since Dyn -> Dyn is skipped out by change_format)
             Format::Dyn => Img::Dyn(dyn_img.into_owned()),
-            Format::Png => Img::Png(png::encode(&dyn_img)?),
-            Format::Qoi => Img::Qoi(qoi::encode(&dyn_img)?),
+            Format::Png => Img::Png(Blob(png::encode(&dyn_img)?)),
+            Format::Qoi => Img::Qoi(Blob(qoi::encode(&dyn_img)?)),
             Format::Bz2Qoi => {
                 let (data, header) = bz2::encode_image(&dyn_img)?;
-                Img::Bz2Qoi(data, header)
+                Img::Bz2Qoi(Blob(data), header)
             }
         };
 
@@ -317,26 +318,12 @@ impl PartialEq for GMImage {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 enum Img {
     Dyn(DynamicImage),
-    Png(Vec<u8>),
-    Qoi(Vec<u8>),
-    Bz2Qoi(Vec<u8>, BZip2QoiHeader),
-}
-
-impl fmt::Debug for Img {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Dyn(_) => f.debug_struct("Dyn").finish_non_exhaustive(),
-            Self::Png(_) => f.debug_struct("Png").finish_non_exhaustive(),
-            Self::Qoi(_) => f.debug_struct("Qoi").finish_non_exhaustive(),
-            Self::Bz2Qoi(_, header) => f
-                .debug_tuple("Bz2Qoi")
-                .field(header)
-                .finish_non_exhaustive(),
-        }
-    }
+    Png(Blob<Vec<u8>>),
+    Qoi(Blob<Vec<u8>>),
+    Bz2Qoi(Blob<Vec<u8>>, BZip2QoiHeader),
 }
 
 // Bz2Qoi is never serialized as of now. I haven't done benchmarks, but like...

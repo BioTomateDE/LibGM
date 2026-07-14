@@ -3,7 +3,7 @@
 bitflags::bitflags! {
     /// General options/flags for the game.
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-    pub struct Flags: u64 {
+    pub struct OptionFlags: u64 {
         /// If the game should start in fullscreen.
         const FULLSCREEN = 0x1;
 

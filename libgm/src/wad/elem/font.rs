@@ -2,12 +2,11 @@
 mod glyph;
 mod kerning;
 
-use core::fmt;
-
 pub use glyph::Glyph;
 pub use kerning::Kerning;
 
 use crate::prelude::*;
+use crate::wad::Blob;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
@@ -16,10 +15,10 @@ use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 use crate::wad::version::LtsBranch;
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Fonts {
     pub elems: Vec<Option<Font>>,
-    pub padding: PaddingBytes,
+    pub padding: Blob<[u8; 512]>,
     pub exists: bool,
 }
 
@@ -29,9 +28,12 @@ impl GMElement for Fonts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let elems: Vec<Option<Font>> = reader.read_pointer_list_opt()?;
         let padding = if reader.general_info.version < (2024, 14) {
-            PaddingBytes::deserialize(reader)?
+            let bytes = reader
+                .read_bytes_const()
+                .ctx("Reading FONT padding bytes")?;
+            Blob(*bytes)
         } else {
-            PaddingBytes::default()
+            generate_padding()
         };
         Ok(Self { elems, padding, exists: true })
     }
@@ -39,9 +41,19 @@ impl GMElement for Fonts {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_pointer_list_opt(&self.elems)?;
         if builder.version() < (2024, 14) {
-            self.padding.serialize(builder)?;
+            builder.write_bytes(&*self.padding);
         }
         Ok(())
+    }
+}
+
+impl Default for Fonts {
+    fn default() -> Self {
+        Self {
+            elems: Vec::new(),
+            padding: generate_padding(),
+            exists: false,
+        }
     }
 }
 
@@ -198,38 +210,9 @@ pub enum FontSize {
     Int(u32),
 }
 
-/// 512 bytes at the end of the FONT chunk.
-#[derive(Clone, PartialEq)]
-pub struct PaddingBytes(pub [u8; 512]);
-
-impl GMElement for PaddingBytes {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let bytes = reader
-            .read_bytes_const()
-            .ctx("Reading FONT padding bytes")?;
-        Ok(Self(*bytes))
-    }
-
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_bytes(&self.0);
-        Ok(())
-    }
-}
-
-impl fmt::Debug for PaddingBytes {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_tuple("PaddingBytes").finish_non_exhaustive()
-    }
-}
-
-impl Default for PaddingBytes {
-    fn default() -> Self {
-        Self(generate_padding())
-    }
-}
-
+/// Generates standard padding bytes for the end of the `FONT` chunk.
 #[must_use]
-const fn generate_padding() -> [u8; 512] {
+pub const fn generate_padding() -> Blob<[u8; 512]> {
     let mut padding = [0u8; 512];
     let mut i = 0;
 
@@ -243,5 +226,5 @@ const fn generate_padding() -> [u8; 512] {
         i += 1;
     }
 
-    padding
+    Blob(padding)
 }

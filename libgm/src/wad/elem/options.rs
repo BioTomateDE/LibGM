@@ -5,7 +5,7 @@ mod new;
 mod old;
 
 pub use constant::Constant;
-pub use flags::Flags;
+pub use flags::OptionFlags;
 
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
@@ -18,8 +18,8 @@ use crate::wad::reference::GMRef;
 /// Most (if not all) of these options are probably unused and remnant from GM8.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Options {
-    is_new_format: bool,
-    pub flags: Flags,
+    pub is_new_format: bool,
+    pub flags: OptionFlags,
     pub window_scale: i32,
     pub window_color: u32,
     pub color_depth: u32,

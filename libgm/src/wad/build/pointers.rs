@@ -91,6 +91,7 @@ pub struct Pointer {
     address: usize,
 }
 
+// prevent exposing memory addresses
 impl fmt::Debug for Pointer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Pointer").finish_non_exhaustive()

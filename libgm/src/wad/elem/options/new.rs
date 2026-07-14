@@ -2,7 +2,7 @@
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::options::Constant;
-use crate::wad::elem::options::Flags;
+use crate::wad::elem::options::OptionFlags;
 use crate::wad::elem::options::Options;
 use crate::wad::elem::texture_page_item::TexturePageItem;
 use crate::wad::parse::reader::DataReader;
@@ -14,8 +14,8 @@ pub fn parse(reader: &mut DataReader) -> Result<Options> {
     let unknown2 = reader.read_u32()?;
     reader.assert_int(unknown2, 2, "Options Unknown Value 2")?;
     let flags = reader.read_u64()?;
-    let flags =
-        Flags::from_bits(flags).ok_or_else(|| format!("Unknown OPTN Flags 0x{flags:016X}"))?;
+    let flags = OptionFlags::from_bits(flags)
+        .ok_or_else(|| format!("Unknown OPTN Flags 0x{flags:016X}"))?;
     let window_scale = reader.read_i32()?;
     let window_color = reader.read_u32()?;
     let color_depth = reader.read_u32()?;
