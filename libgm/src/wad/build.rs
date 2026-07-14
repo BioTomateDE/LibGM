@@ -74,7 +74,12 @@ fn build_impl(data: &GMData) -> Result<Vec<u8>> {
 
     // TODO: make sure CODE is written before VARI and FUNC!!!
 
-    for &chunk_name in &data.meta.chunk_order {
+    let chunk_order: Vec<ChunkName> = make_chunk_order(data);
+    if chunk_order.is_empty() {
+        bail!("Data file needs at least one chunk");
+    }
+
+    for chunk_name in chunk_order {
         match chunk_name {
             ChunkName::ACRV => builder.build_chunk(&data.animation_curves),
             ChunkName::AGRP => builder.build_chunk(&data.audio_groups),
@@ -131,4 +136,56 @@ fn build_impl(data: &GMData) -> Result<Vec<u8>> {
     }
 
     Ok(raw_data)
+}
+
+// i hate this. if there's a better way, lmk
+fn make_chunk_order(data: &GMData) -> Vec<ChunkName> {
+    let mut chunks = data.meta.chunk_order.clone();
+
+    // add unregistered chunks (newly created)
+    macro_rules! yeah {
+        ($chunkname:ident, $field:ident) => {
+            if data.$field.exists && !chunks.contains(&ChunkName::$chunkname) {
+                chunks.push(ChunkName::$chunkname);
+            }
+        };
+    }
+
+    yeah!(ACRV, animation_curves);
+    yeah!(AGRP, audio_groups);
+    yeah!(AUDO, audios);
+    yeah!(CODE, codes);
+    yeah!(DAFL, data_files);
+    yeah!(EMBI, embedded_images);
+    yeah!(EXTN, extensions);
+    yeah!(FEAT, feature_flags);
+    yeah!(FEDS, filter_effects);
+    yeah!(FONT, fonts);
+    yeah!(FUNC, functions);
+    yeah!(GMEN, game_end_scripts);
+    yeah!(OBJT, game_objects);
+    yeah!(GEN8, general_info);
+    yeah!(GLOB, global_init_scripts);
+    yeah!(LANG, language_info);
+    yeah!(OPTN, options);
+    yeah!(PSEM, particle_emitters);
+    yeah!(PSYS, particle_systems);
+    yeah!(PATH, paths);
+    yeah!(ROOM, rooms);
+    yeah!(UILR, ui_nodes);
+    yeah!(SCPT, scripts);
+    yeah!(SEQN, sequences);
+    yeah!(SHDR, shaders);
+    yeah!(SOND, sounds);
+    yeah!(SPRT, sprites);
+    yeah!(STRG, strings);
+    yeah!(TAGS, tags);
+    yeah!(TGIN, texture_group_infos);
+    yeah!(TPAG, texture_page_items);
+    yeah!(TXTR, texture_pages);
+    yeah!(BGND, tilesets);
+    yeah!(TMLN, timelines);
+    yeah!(VARI, variables);
+
+    chunks
 }

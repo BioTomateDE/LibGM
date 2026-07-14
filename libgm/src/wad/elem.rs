@@ -16,7 +16,7 @@ pub mod audio;
 pub mod audio_group;
 pub mod background;
 pub mod code;
-pub(crate) mod data_file;
+pub mod data_file;
 pub mod embedded_image;
 pub mod extension;
 pub mod feature_flag;

@@ -131,7 +131,7 @@ pub struct GMData {
     pub audio_groups: AudioGroups,              // AGRP
     pub audios: Audios,                         // AUDO
     pub codes: Codes,                           // CODE
-    pub(crate) data_files: DataFiles,           // DAFL
+    pub data_files: DataFiles,                  // DAFL
     pub embedded_images: EmbeddedImages,        // EMBI
     pub extensions: Extensions,                 // EXTN
     pub feature_flags: FeatureFlags,            // FEAT

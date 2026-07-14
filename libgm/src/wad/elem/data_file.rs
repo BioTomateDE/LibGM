@@ -10,7 +10,7 @@ use crate::wad::parse::reader::DataReader;
 /// It is unrelated to the `GMData` struct.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DataFiles {
-    exists: bool,
+    pub exists: bool,
 }
 
 gm_chunk!(DAFL, DataFiles);
