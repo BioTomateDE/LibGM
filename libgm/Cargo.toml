@@ -1,6 +1,6 @@
 [package]
 name = "libgm"
-version = "0.7.0"
+version = "0.7.1"
 description = "A tool for unpacking and modding GameMaker games"
 keywords = ["gamemaker", "modding", "undertale", "deltarune"]
 categories = ["parser-implementations", "game-development", "encoding"]
