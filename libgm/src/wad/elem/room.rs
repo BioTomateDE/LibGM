@@ -221,7 +221,7 @@ impl GMElement for Room {
 
         if builder.version() >= (2024, 13) {
             builder.resolve_pointer(&self.instance_creation_order)?;
-            builder.write_pointer_list(&self.instance_creation_order)?;
+            builder.write_simple_list(&self.instance_creation_order)?;
         }
 
         if builder.version() >= 2 {
