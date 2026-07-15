@@ -83,7 +83,7 @@ impl GMElement for TextureGroupInfo {
         let data_2022_9: Option<Data2022_9> = reader.deserialize_if_version(GMVersion::GM2022_9)?;
         let texture_pages_ptr = reader.read_u32()?;
         let sprites_ptr = reader.read_u32()?;
-        let spine_sprites_ptr = if reader.version < GMVersion::GM2023_1 || reader.version.lts() {
+        let spine_sprites_ptr = if reader.version < GMVersion::GM2023_1 {
             reader.read_u32()?
         } else {
             0
@@ -97,13 +97,12 @@ impl GMElement for TextureGroupInfo {
         reader.assert_pos(sprites_ptr, "Sprites")?;
         let sprites: Vec<GMRef<Sprite>> = reader.read_simple_list()?;
 
-        let spine_sprites: Vec<GMRef<Sprite>> =
-            if reader.version < GMVersion::GM2023_1 || reader.version.lts() {
-                reader.assert_pos(spine_sprites_ptr, "Spine Sprites")?;
-                reader.read_simple_list()?
-            } else {
-                Vec::new()
-            };
+        let spine_sprites: Vec<GMRef<Sprite>> = if reader.version < GMVersion::GM2023_1 {
+            reader.assert_pos(spine_sprites_ptr, "Spine Sprites")?;
+            reader.read_simple_list()?
+        } else {
+            Vec::new()
+        };
 
         reader.assert_pos(fonts_ptr, "Fonts")?;
         let fonts: Vec<GMRef<Font>> = reader.read_simple_list()?;
@@ -131,7 +130,7 @@ impl GMElement for TextureGroupInfo {
         )?;
         builder.write_pointer(&self.texture_pages);
         builder.write_pointer(&self.sprites);
-        if builder.version() < GMVersion::GM2023_1 || builder.version().lts() {
+        if builder.version() < GMVersion::GM2023_1 {
             builder.write_pointer(&self.spine_sprites);
         }
         builder.write_pointer(&self.fonts);
@@ -143,7 +142,7 @@ impl GMElement for TextureGroupInfo {
         builder.resolve_pointer(&self.sprites)?;
         builder.write_simple_list(&self.sprites)?;
 
-        if builder.version() < GMVersion::GM2023_1 || builder.version().lts() {
+        if builder.version() < GMVersion::GM2023_1 {
             builder.resolve_pointer(&self.spine_sprites)?;
             builder.write_simple_list(&self.spine_sprites)?;
         }

@@ -90,12 +90,13 @@ impl GMElement for ParticleEmitter {
     #[allow(clippy::too_many_lines)]
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        //  TODO: used to be 2023.6
-        let enabled: bool = if reader.version >= GMVersion::Lts2022 {
-            reader.read_bool32()?
-        } else {
-            true
-        };
+        // TODO: verify that this lts branching is correct
+        let enabled: bool =
+            if reader.version >= GMVersion::GM2023_6 || reader.version == GMVersion::Lts2022_0_3 {
+                reader.read_bool32()?
+            } else {
+                true
+            };
         let mode: EmitMode = reader.read_enum()?;
 
         let emit_count: u32;
@@ -247,8 +248,7 @@ impl GMElement for ParticleEmitter {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(self.name)?;
 
-        if builder.version() >= GMVersion::Lts2022 {
-            // TODO: used  to be 2023.6
+        if builder.version() >= GMVersion::GM2023_6 || builder.version() == GMVersion::Lts2022_0_3 {
             builder.write_bool32(self.enabled);
         } else if !self.enabled {
             log::warn!("Cannot disable particle emitters before 2023.6");

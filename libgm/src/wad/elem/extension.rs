@@ -85,11 +85,12 @@ impl GMElement for Extension {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let folder_name: GMRef<String> = reader.read_gm_string()?;
         let name: GMRef<String> = reader.read_gm_string()?;
-        let version: GMRef<String> = if reader.version >= GMVersion::GM2023_4 {
-            reader.read_gm_string()?
-        } else {
-            GMRef::none()
-        };
+        let version: GMRef<String> =
+            if reader.version == GMVersion::Lts2022_0_3 || reader.version >= GMVersion::GM2023_4 {
+                reader.read_gm_string()?
+            } else {
+                GMRef::none()
+            };
         let class_name: GMRef<String> = reader.read_gm_string()?;
         let files: Vec<File>;
         let options: Vec<ExtOption>;
@@ -122,7 +123,7 @@ impl GMElement for Extension {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(self.folder_name)?;
         builder.write_gm_string(self.name)?;
-        if builder.version() >= GMVersion::GM2023_4 {
+        if builder.version() == GMVersion::Lts2022_0_3 || builder.version() >= GMVersion::GM2023_4 {
             builder.write_gm_string(self.version)?;
         }
         builder.write_gm_string(self.class_name)?;

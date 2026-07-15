@@ -31,7 +31,7 @@ impl DataReader<'_> {
     }
 
     pub fn read_gms2_chunk_version(&mut self, desc: &'static str) -> Result<()> {
-        if self.version < GMVersion::Studio2 {
+        if self.version < GMVersion::GMS2 {
             self.warn_invalid_chunk(format!("Reading {desc} in pre-GMS2 game"))?;
         }
         let chunk_version = self.read_u32()?;

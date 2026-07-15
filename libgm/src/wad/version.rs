@@ -38,17 +38,11 @@ impl Display for LtsBranch {
     }
 }
 
-/// A GameMaker Studio Version.
+/// A GameMaker Version, denoting the version of the IDE this game was created in.
 ///
-/// Theoretically, this is only the version of the IDE this game was made in.
-/// However, this version struct is also used for file format purposes in this
-/// library. This is because it is more accurate than the `WAD Version` in
-/// `GMGeneralInfo`, which is no longer updated (stuck since WAD 17).
-///
-/// This version struct is also not updated by YoYo Games since GM:S 2 and its
-/// raw `GEN8` version is stuck on `2.0.0.0`.
-/// This library uses version detection to detect the approximate GameMaker
-/// version so that the file format can be deserialized properly.
+/// This version struct is not updated by YoYo Games since GMS 2 and is
+/// is stuck on `2.0.0.0` for modern versions.
+/// If you need the format version of the data file, check out [`GMVersion`].
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct IdeVersion {
     /// The most significant version part.
@@ -127,8 +121,8 @@ impl Display for IdeVersion {
 
 /// The version of this GameMaker data file format.
 ///
-/// This should correspond to the WAD version specified in the `GEN8` chunk,
-/// until GameMaker: Studio 2, where they got lazy and stopped bumping it (stuck on WAD 17).
+/// This should correspond to the WAD ("bytecode") version specified in the `GEN8` chunk,
+/// until GameMaker Studio 2, where they got lazy and stopped bumping it (stuck on WAD 17).
 ///
 /// > NOTE: some of this information may be incorrect.
 /// > I am not a GameMaker OG, I am desperately trying to find information on these old versions and documenting them.
@@ -146,9 +140,10 @@ impl Display for IdeVersion {
 /// They had a *stable* and *beta* branch: Beta releases were released as their actual build number,
 /// whereas stable releases were relased as the build number plus 1000.
 ///
-/// Then, they introduced GameMaker: Studio 2, which changed lots of stuff.
-/// They god rid of their shitty versioning and actually had normal SemVer-like versioning for a while.
-/// The last GameMaker: Studio 2 version was 2.3 (which also changed lots of stuff, most notably for GML).
+/// Then, they introduced GameMaker Studio 2, which changed lots of stuff
+/// (least notably, removing the colon in "GameMaker: Studio").
+/// They god rid of their shitty build-number versioning and actually had normal SemVer-like versioning for a while.
+/// The last GameMaker Studio 2 version was 2.3 (i think) which also changed lots of stuff, most notably for GML.
 /// Unfortunately, they also slowly stopped updating the WAD and IDE version fields in `GEN8`:
 /// The IDE Version is now stuck on `2.0.0.0` forever.
 /// The WAD version was stuck on 16 for a while. They bumped it one last time to 17, where it stayed stuck forever.
@@ -156,11 +151,11 @@ impl Display for IdeVersion {
 /// After that, they got rid of the "Studio" in the name and renamed it to just "GameMaker"
 /// (same name as in Pre-Studio times, which is kind of confusing).
 /// They switched their versioning system to the current `YYYY.MM.P.B`. Here is an excerpt from <https://gms-updates.gmclan.org/>:
-/// > - YYYY - YEAR of release
-/// > - MM - MONTH on which it was released (usually end of); beta versions are numbered as MONTH * 100
+/// > - YYYY - YEAR of release (2022 or higher)
+/// > - MM - MONTH on which it was released (usually end of); beta versions are numbered as MONTH * 100 (not relevant for LibGM)
 /// > - P - number of PATCH/fix (0 if it was first release)
 /// > - B - total number of internal builds since May 2022 (last reset of build number was short before 2022.5 release, not every build is released to public)
-/// > So, for example: means: update #1 for version released at end of June(6) 2022, 53rd build in total (since May 2022).
+/// > So, for example: 2022.6.1.53 means Update #1 for version released at end of June(6) 2022, 53rd build in total (since May 2022).
 /// > There are no releases in July and December because of Holiday season peak.
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd)]
 #[non_exhaustive]
@@ -198,30 +193,61 @@ pub enum GMVersion {
 
     /// * GameMaker Studio 2
     /// * WAD Version 16
-    Studio2,
+    GMS2,
 
-    Studio2_0_6,
+    /// * GameMaker Studio 2.0.6
+    /// * WAD Version 16
+    GMS2_0_6,
+
     // wad 17 beyond here
-    Studio2_2_1,
-    Studio2_2_2_302,
-    Studio2_3,
-    Studio2_3_1,
-    Studio2_3_2,
-    Studio2_3_6,
+    /// * GameMaker Studio 2.2.1
+    /// * WAD Version 17 (now forever)
+    GMS2_2_1,
+    GMS2_2_2_302,
+    GMS2_3,
+    GMS2_3_1,
+    GMS2_3_2,
+    GMS2_3_6,
 
+    /// * GameMaker 2022.1
+    /// * WAD Version 17
     GM2022_1,
     GM2022_2,
     GM2022_3,
     GM2022_5,
     GM2022_6,
     GM2022_8,
+
+    /// * GameMaker 2022.9
+    /// Same file format / features as initial 2022 LTS (2022.0.0).
+    /// This is confirmed in <https://gamemaker.io/en/blog/release-2022-0#:~:text=2022%2E9>.
     GM2022_9,
-    // anything beyond here is Post LTS according to UndertaleModTool
+
+    /// * GameMaker 2022 LTS: 2022.0.3
+    /// **WARNING**: This is non-linear:
+    /// this only introduces some features that 2022.9 - 2023.4 didn't have,
+    /// but still lacks other features from 2023.1 - 2023.4.
+    /// It is similar to Non-LTS 2023.6.
+    ///
+    /// TODO: what about 2022.0.1 and 2022.0.2 LTS?
+    Lts2022_0_3,
+
+    /// * GameMaker 2023.1
+    /// * Introduces features that 2022.0.3 LTS lacks.
     GM2023_1,
+
+    /// * GameMaker 2023.2
+    /// * Introduces features that 2022.0.3 LTS lacks.
     GM2023_2,
+
+    /// * GameMaker 2023.4
+    /// * Introduces features that 2022.0.3 LTS lacks.
     GM2023_4,
-    /// Detected as 2023.6 by UndertaleModTool.
-    Lts2022,
+
+    /// * GameMaker 2023.6
+    /// Introduces "Line Height" for Fonts, which is also available in 2022.0.3 LTS.
+    GM2023_6,
+
     GM2023_8,
     GM2023_11,
     GM2024_2,
@@ -234,13 +260,6 @@ pub enum GMVersion {
     GM2024_14_1,
 }
 
-impl GMVersion {
-    #[must_use]
-    pub fn lts(self) -> bool {
-        self == Self::Lts2022
-    }
-}
-
 impl Display for GMVersion {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let s = match self {
@@ -248,27 +267,28 @@ impl Display for GMVersion {
             GMVersion::Wad13 => "WAD 13",
             GMVersion::Wad14 => "WAD 14",
             GMVersion::Wad15 => "WAD 15",
-            GMVersion::Wad16Old => "WAD 16 (GMS 1)",
+            GMVersion::Wad16Old => "WAD 16 (pre-GMS 2)",
             GMVersion::Wad16Pad => "WAD 16 (GMS 1.4.9999+)",
-            GMVersion::Studio2 => "GMS 2",
-            GMVersion::Studio2_0_6 => "GMS 2.0.6",
-            GMVersion::Studio2_2_1 => "GMS 2.2.1",
-            GMVersion::Studio2_2_2_302 => "GMS 2.2.2.302",
-            GMVersion::Studio2_3 => "GMS 2.3",
-            GMVersion::Studio2_3_1 => "GMS 2.3.1",
-            GMVersion::Studio2_3_2 => "GMS 2.3.2",
-            GMVersion::Studio2_3_6 => "GMS 2.3.6",
+            GMVersion::GMS2 => "GMS 2",
+            GMVersion::GMS2_0_6 => "GMS 2.0.6",
+            GMVersion::GMS2_2_1 => "GMS 2.2.1",
+            GMVersion::GMS2_2_2_302 => "GMS 2.2.2.302",
+            GMVersion::GMS2_3 => "GMS 2.3",
+            GMVersion::GMS2_3_1 => "GMS 2.3.1",
+            GMVersion::GMS2_3_2 => "GMS 2.3.2",
+            GMVersion::GMS2_3_6 => "GMS 2.3.6",
             GMVersion::GM2022_1 => "2022.1",
             GMVersion::GM2022_2 => "2022.2",
             GMVersion::GM2022_3 => "2022.3",
             GMVersion::GM2022_5 => "2022.5",
             GMVersion::GM2022_6 => "2022.6",
             GMVersion::GM2022_8 => "2022.8",
-            GMVersion::GM2022_9 => "2022.9",
+            GMVersion::GM2022_9 => "2022.9", // or 2022.0.0 LTS
+            GMVersion::Lts2022_0_3 => "2022.0.3 LTS",
             GMVersion::GM2023_1 => "2023.1",
             GMVersion::GM2023_2 => "2023.2",
             GMVersion::GM2023_4 => "2023.4",
-            GMVersion::Lts2022 => "2022 LTS",
+            GMVersion::GM2023_6 => "2022.6",
             GMVersion::GM2023_8 => "2023.8",
             GMVersion::GM2023_11 => "2023.11",
             GMVersion::GM2024_2 => "2024.2",

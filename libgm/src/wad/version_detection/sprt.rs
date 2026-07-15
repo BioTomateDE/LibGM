@@ -16,7 +16,7 @@ pub fn check_2_3_2(reader: &mut DataReader) -> Result<Option<GMVersion>> {
         }
         let special_version = reader.read_u32()?;
         if special_version >= 3 {
-            return target_version!(Studio2_3_2);
+            return target_version!(GMS2_3_2);
         }
     }
     Ok(None)
@@ -114,7 +114,7 @@ pub fn check_2024_6(reader: &mut DataReader) -> Result<Option<GMVersion>> {
                 "full_end_pos == expected_end_offset while detecting SPRT_2024.6; may lead to \
                  false negatives"
             );
-            return Ok(None); // "Full" mask data is valid   
+            return Ok(None); // "Full" mask data is valid
             // (TODO: no idea why it returns here tbh; check if there is bug in
             // utmt pls)
         }

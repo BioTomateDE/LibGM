@@ -114,7 +114,7 @@ pub fn check_2_2_2_302(reader: &mut DataReader) -> Result<Option<GMVersion>> {
             reader.read_u32()?
         };
         if pointer2 - pointer1 == 48 {
-            return target_version!(Studio2_2_2_302);
+            return target_version!(GMS2_2_2_302);
         }
     }
 

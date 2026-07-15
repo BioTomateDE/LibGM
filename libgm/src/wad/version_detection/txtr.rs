@@ -77,5 +77,5 @@ pub fn check_2_0_6(reader: &mut DataReader) -> Result<Option<GMVersion>> {
         }
     }
 
-    target_version!(Studio2_0_6)
+    target_version!(GMS2_0_6)
 }

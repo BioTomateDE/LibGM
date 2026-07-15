@@ -98,7 +98,7 @@ impl GMElement for Functions {
             let occurrence_count: usize = occurrences.len();
 
             // Before GM 2.3, the first occurrence points to the instruction rather than the next offset
-            let gm2_3: bool = builder.version() >= GMVersion::Studio2_3;
+            let gm2_3: bool = builder.version() >= GMVersion::GMS2_3;
             let first_occurrence: i32 = match occurrences.first() {
                 Some(&occurrence) if gm2_3 => occurrence as i32 + 4,
                 Some(&occurrence) => occurrence as i32,
@@ -140,7 +140,7 @@ fn parse_occurrence_chain(
         .get(ChunkName::CODE)
         .ok_or("Chunk CODE not set while parsing function occurrences")?;
 
-    let first_extra_offset: u32 = if reader.version >= GMVersion::Studio2_3 {
+    let first_extra_offset: u32 = if reader.version >= GMVersion::GMS2_3 {
         0
     } else {
         4

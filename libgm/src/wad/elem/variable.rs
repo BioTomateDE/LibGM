@@ -68,7 +68,7 @@ impl Variables {
 
         // First update these scuffed ass variable counts
         if let Some(header) = &mut self.modern_header {
-            if version >= GMVersion::Studio2_3 {
+            if version >= GMVersion::GMS2_3 {
                 if instance_type != InstanceType::Builtin {
                     header.var_count1 += 1;
                     header.var_count2 += 1;

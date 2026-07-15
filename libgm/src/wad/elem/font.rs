@@ -113,7 +113,7 @@ pub struct Font {
     /// DOCME: what is spread, what is sdf?
     pub sdf_spread: Option<u32>,
 
-    /// Was introduced in GM 2023.6.
+    /// Was introduced in GM 2023.6 (and 2022.0.3 LTS).
     /// DOCME: give an explanation of what this does
     pub line_height: Option<u32>,
 
@@ -141,15 +141,19 @@ impl GMElement for Font {
         let texture: GMRef<TexturePageItem> = reader.read_gm_texture()?;
         let scale_x: f32 = reader.read_f32()?;
         let scale_y: f32 = reader.read_f32()?;
-        let ascender_offset: Option<i32> = reader.deserialize_if_version(GMVersion::Studio2_2_1)?;
+        let ascender_offset: Option<i32> = reader.deserialize_if_version(GMVersion::GMS2_2_1)?;
         let ascender: Option<u32> = reader.deserialize_if_version(GMVersion::GM2022_2)?;
-        let sdf_spread: Option<u32> =
-            if reader.version >= GMVersion::GM2023_2 && !reader.version.lts() {
+        let sdf_spread: Option<u32> = if reader.version >= GMVersion::GM2023_2 {
+            Some(reader.read_u32()?)
+        } else {
+            None
+        };
+        let line_height: Option<u32> =
+            if reader.version >= GMVersion::GM2023_6 || reader.version == GMVersion::Lts2022_0_3 {
                 Some(reader.read_u32()?)
             } else {
                 None
             };
-        let line_height: Option<u32> = reader.deserialize_if_version(GMVersion::Lts2022)?;
         let glyphs: Vec<Glyph> = reader.read_pointer_list()?;
         if reader.version >= GMVersion::GM2024_14 {
             reader.align(4)?;
@@ -195,13 +199,18 @@ impl GMElement for Font {
         builder.write_if_ver(
             &self.ascender_offset,
             "Ascender Offset",
-            GMVersion::Studio2_2_1,
+            GMVersion::GMS2_2_1,
         )?;
         builder.write_if_ver(&self.ascender, "Ascender", GMVersion::GM2022_2)?;
-        if builder.version() >= GMVersion::GM2023_2 && !builder.version().lts() {
+        if builder.version() >= GMVersion::GM2023_2 {
             builder.write_u32(self.sdf_spread.ok_or("SDF Spread not set in 2023.2+")?);
         }
-        builder.write_if_ver(&self.line_height, "Line Height", GMVersion::Lts2022)?; // TODO: used to be 2023.6
+        if builder.version() >= GMVersion::GM2023_6 || builder.version() == GMVersion::Lts2022_0_3 {
+            builder.write_u32(
+                self.line_height
+                    .ok_or("Line Height not set in 2023.6 (or LTS 2022.0.3)")?,
+            );
+        }
         builder.write_pointer_list(&self.glyphs)?;
         if builder.version() >= GMVersion::GM2024_14 {
             builder.align(4);

@@ -83,7 +83,7 @@ impl GMElement for Sprite {
         let mut special_fields: Option<Special> = None;
 
         // Combination of these conditions may be incorrect
-        if reader.read_i32()? == -1 && reader.version >= GMVersion::Studio2 {
+        if reader.read_i32()? == -1 && reader.version >= GMVersion::GMS2 {
             let special_version = reader.read_u32()?;
             let special_sprite_type = reader.read_u32()?;
 
@@ -158,7 +158,7 @@ impl GMElement for Sprite {
                 2 => {
                     // Spine
                     reader.align(4)?;
-                    if reader.version >=GMVersion::GM2023_1{
+                    if reader.version >= GMVersion::GM2023_1 {
                         textures = Self::read_texture_list(reader)?;
                     }
 
@@ -264,7 +264,7 @@ impl GMElement for Sprite {
             // Read mask data
             let mut mask_width = width;
             let mut mask_height = height;
-            if reader.version >= GMVersion::GM2024_6{
+            if reader.version >= GMVersion::GM2024_6 {
                 mask_width = (margin_right - margin_left + 1) as u32;
                 mask_height = (margin_bottom - margin_top + 1) as u32;
             }
@@ -323,7 +323,7 @@ impl GMElement for Sprite {
             SpecialData::Spine(_) => 2,
         });
 
-        if builder.version() >= GMVersion::Studio2 {
+        if builder.version() >= GMVersion::GMS2 {
             builder.write_f32(special_fields.playback_speed);
             builder.write_enum(special_fields.playback_speed_type);
             if special_fields.special_version >= 2 {
@@ -425,7 +425,7 @@ impl GMElement for Sprite {
             }
         }
 
-        if builder.version() >= GMVersion::Studio2 {
+        if builder.version() >= GMVersion::GMS2 {
             if special_fields.special_version >= 2
                 && matches!(special_fields.data, SpecialData::Normal)
                 && let Some(ref sequence) = special_fields.sequence

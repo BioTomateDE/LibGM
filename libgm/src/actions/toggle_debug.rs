@@ -67,7 +67,7 @@ fn toggle_debug(data: &mut GMData, enable: bool) -> Result<()> {
             .is_ok()
         {
             deltarune::toggle(data, enable)
-        } else if data.meta.version >= GMVersion::Studio2_3 {
+        } else if data.meta.version >= GMVersion::GMS2_3 {
             demo_lts_ch1::toggle(data, enable)
         } else {
             chapter1_old::toggle(data, enable)

@@ -36,7 +36,7 @@ impl GMElement for RoomGameObject {
         let scale_y = reader.read_f32()?;
         let mut image_speed: Option<f32> = None;
         let mut image_index: Option<u32> = None;
-        if reader.version >= GMVersion::Studio2_2_2_302 {
+        if reader.version >= GMVersion::GMS2_2_2_302 {
             image_speed = Some(reader.read_f32()?);
             image_index = Some(reader.read_u32()?);
         }
@@ -74,8 +74,8 @@ impl GMElement for RoomGameObject {
         builder.write_resource_id(self.creation_code);
         builder.write_f32(self.scale_x);
         builder.write_f32(self.scale_y);
-        builder.write_if_ver(&self.image_speed, "Image Speed", GMVersion::Studio2_2_2_302)?;
-        builder.write_if_ver(&self.image_index, "Image Index", GMVersion::Studio2_2_2_302)?;
+        builder.write_if_ver(&self.image_speed, "Image Speed", GMVersion::GMS2_2_2_302)?;
+        builder.write_if_ver(&self.image_index, "Image Index", GMVersion::GMS2_2_2_302)?;
         builder.write_u32(self.color);
         builder.write_f32(self.rotation);
         if builder.version() >= GMVersion::Wad16Old {

@@ -11,7 +11,6 @@ use crate::wad::elem::animation_curve::AnimationCurves;
 use crate::wad::elem::audio::Audios;
 use crate::wad::elem::audio_group::AudioGroup;
 use crate::wad::elem::audio_group::AudioGroups;
-use crate::wad::elem::tileset::Tilesets;
 use crate::wad::elem::code::Codes;
 use crate::wad::elem::data_file::DataFiles;
 use crate::wad::elem::embedded_image::EmbeddedImages;
@@ -46,6 +45,7 @@ use crate::wad::elem::tag::Tags;
 use crate::wad::elem::texture_group_info::TextureGroupInfos;
 use crate::wad::elem::texture_page::TexturePages;
 use crate::wad::elem::texture_page_item::TexturePageItems;
+use crate::wad::elem::tileset::Tilesets;
 use crate::wad::elem::timeline::Timelines;
 use crate::wad::elem::ui_node::UINodes;
 use crate::wad::elem::validate_names;
@@ -119,7 +119,7 @@ pub struct Metadata {
 impl Default for Metadata {
     fn default() -> Self {
         Self {
-            version: GMVersion::Studio2,
+            version: GMVersion::GMS2,
             location: None,
             // Use 16 chunk padding by default for compatibility.
             chunk_padding: 16,

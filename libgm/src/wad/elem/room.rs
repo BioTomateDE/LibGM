@@ -107,11 +107,9 @@ impl GMElement for Room {
         let gravity_y = reader.read_f32()?;
         let meters_per_pixel = reader.read_f32()?;
 
-        let layers_ptr: u32 = reader
-            .deserialize_if_version(GMVersion::Studio2)?
-            .unwrap_or(0);
+        let layers_ptr: u32 = reader.deserialize_if_version(GMVersion::GMS2)?.unwrap_or(0);
         let sequences_ptr: u32 = reader
-            .deserialize_if_version(GMVersion::Studio2_3)?
+            .deserialize_if_version(GMVersion::GMS2_3)?
             .unwrap_or(0);
 
         reader.assert_pos(backgrounds_ptr, "Room Backgrounds")?;
@@ -133,14 +131,14 @@ impl GMElement for Room {
             Vec::new()
         };
 
-        let layers: Vec<RoomLayer> = if reader.version >= GMVersion::Studio2 {
+        let layers: Vec<RoomLayer> = if reader.version >= GMVersion::GMS2 {
             reader.assert_pos(layers_ptr, "Room Layers")?;
             reader.read_pointer_list()?
         } else {
             Vec::new()
         };
 
-        let sequences: Vec<Sequence> = if reader.version >= GMVersion::Studio2_3 {
+        let sequences: Vec<Sequence> = if reader.version >= GMVersion::GMS2_3 {
             reader.assert_pos(sequences_ptr, "Room Sequences")?;
             reader.read_pointer_list()?
         } else {
@@ -208,11 +206,11 @@ impl GMElement for Room {
         builder.write_f32(self.gravity_y);
         builder.write_f32(self.meters_per_pixel);
 
-        if builder.version() >= GMVersion::Studio2 {
+        if builder.version() >= GMVersion::GMS2 {
             builder.write_pointer(&self.layers);
         }
 
-        if builder.version() >= GMVersion::Studio2_3 {
+        if builder.version() >= GMVersion::GMS2_3 {
             builder.write_pointer(&self.sequences);
         }
 
@@ -230,12 +228,12 @@ impl GMElement for Room {
             builder.write_simple_list(&self.instance_creation_order)?;
         }
 
-        if builder.version() >= GMVersion::Studio2 {
+        if builder.version() >= GMVersion::GMS2 {
             builder.resolve_pointer(&self.layers)?;
             builder.write_pointer_list(&self.layers)?;
         }
 
-        if builder.version() >= GMVersion::Studio2_3 {
+        if builder.version() >= GMVersion::GMS2_3 {
             builder.resolve_pointer(&self.sequences)?;
             builder.write_pointer_list(&self.sequences)?;
         }

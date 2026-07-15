@@ -74,33 +74,21 @@ pub struct GeneralInfo {
     /// The name of the game.
     pub game_name: GMRef<String>,
 
-    /// The GameMaker Studio Version this game's data file was made in.
-    /// For GameMaker 2 games, this will be specified as 2.0.0.0,
-    /// but `detect_version.rs` will detect the actual version later.
+    /// The GameMaker version of the IDE this game was created in.
     ///
-    /// Technically, this is the studio version; not the
-    /// data file version. However, YoYoGames. *YoYoGames........*
-    ///
-    /// Note that this does not have to correspond to the actual studio version.
-    /// This can be due to multiple reasons:
-    /// * The data file does not use a specific newer feature, resulting in a
-    ///   **lower** detected version.
-    /// * There is a bug in the version detection logic (oopsies), resulting in
-    ///   a **higher** detected version (false positive).
-    /// * Fucking LTS. For some reason, they added a BREAKING FEATURE to a LONG
-    ///   TERM SUPPORT branch. This means that tools like this have to
-    ///   differentiate between LTS-pre-this-feature and LTS-post-this-feature.
-    ///   As a result, some games made in 2022.0 LTS may be shown as 2023.6
-    ///   instead.
-    ///
-    /// ___
-    /// See `wad_version` for more information.
+    /// This version struct is not updated by YoYo Games since GMS 2 and is
+    /// is stuck on `2.0.0.0` for modern versions.
+    /// If you need the format version of the data file, check out [`GMVersion`].
     pub ide_version: IdeVersion,
 
-    /// The default window width of the game window.
+    /// When the game window is created, its width will be set to this value.
+    /// 
+    /// This can still be overridden in GML code via `window_set_width` or `window_set_size`.
     pub window_width: u32,
 
-    /// The default window height of the game window.
+    /// When the game window is created, its height will be set to this value.
+    /// 
+    /// This can still be overridden in GML code via `window_set_height` or `window_set_size`.
     pub window_height: u32,
 
     /// The info flags of the data file.
@@ -254,7 +242,7 @@ impl GMElement for GeneralInfo {
         }
         builder.write_simple_list(&self.room_order)?;
 
-        if builder.version() >= GMVersion::Studio2 {
+        if builder.version() >= GMVersion::GMS2 {
             self.write_gms2_data(builder)?;
         }
         Ok(())

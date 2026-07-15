@@ -29,7 +29,7 @@ impl GMElement for RoomTile {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
-        let texture: Texture = if reader.version >= GMVersion::Studio2 {
+        let texture: Texture = if reader.version >= GMVersion::GMS2 {
             Texture::Sprite(reader.read_resource_by_id()?)
         } else {
             Texture::Background(reader.read_resource_by_id()?)
@@ -64,7 +64,7 @@ impl GMElement for RoomTile {
         builder.write_i32(self.y);
         match self.texture {
             Texture::Sprite(sprite_ref) => {
-                if builder.version() >= GMVersion::Studio2 {
+                if builder.version() >= GMVersion::GMS2 {
                     builder.write_resource_id(sprite_ref);
                 } else {
                     bail!(
@@ -74,7 +74,7 @@ impl GMElement for RoomTile {
                 }
             }
             Texture::Background(background_ref) => {
-                if builder.version() >= GMVersion::Studio2 {
+                if builder.version() >= GMVersion::GMS2 {
                     bail!(
                         "Room tile texture should be a Sprite reference in GMS2+; not a \
                          Background reference"

@@ -104,7 +104,7 @@ impl GMElement for Tileset {
         let smooth = reader.read_bool32()?;
         let preload = reader.read_bool32()?;
         let texture: GMRef<TexturePageItem> = reader.read_gm_texture()?;
-        let gms2_data: Option<GMS2Data> = reader.deserialize_if_version(GMVersion::Studio2)?;
+        let gms2_data: Option<GMS2Data> = reader.deserialize_if_version(GMVersion::GMS2)?;
 
         Ok(Self {
             name,
@@ -122,7 +122,7 @@ impl GMElement for Tileset {
         builder.write_bool32(self.smooth);
         builder.write_bool32(self.preload);
         builder.write_gm_texture(self.texture)?;
-        builder.write_if_ver(&self.gms2_data, "GMS2 data", GMVersion::Studio2)?;
+        builder.write_if_ver(&self.gms2_data, "GMS2 data", GMVersion::GMS2)?;
         Ok(())
     }
 

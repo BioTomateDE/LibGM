@@ -41,9 +41,11 @@ impl GMElement for TexturePages {
             reader.assert_pos(pointer, "Embedded texture page")?;
 
             let scaled = reader.read_u32()?;
-            let generated_mips: Option<u32> = reader.deserialize_if_version(GMVersion::Studio2_0_6)?;
-            let texture_block_size: Option<u32> = reader.deserialize_if_version(GMVersion::Lts2022)?; // TODO: used to be 2023.6
-            let data_2022_9: Option<Data2022_9> = reader.deserialize_if_version(GMVersion::GM2022_9)?;
+            let generated_mips: Option<u32> = reader.deserialize_if_version(GMVersion::GMS2_0_6)?;
+            let texture_block_size: Option<u32> =
+                reader.deserialize_if_version(GMVersion::GM2022_3)?;
+            let data_2022_9: Option<Data2022_9> =
+                reader.deserialize_if_version(GMVersion::GM2022_9)?;
 
             let texture_data_start_pos = reader.read_u32()?;
             // This can be zero if the texture is stored externally
@@ -100,7 +102,7 @@ impl GMElement for TexturePages {
             builder.write_if_ver(
                 &texture_page.generated_mips,
                 "Generated Mipmap levels",
-                GMVersion::Studio2_0_6,
+                GMVersion::GMS2_0_6,
             )?;
             if builder.version() >= GMVersion::GM2022_3 {
                 texture_block_size_placeholders[i] = builder.pos();

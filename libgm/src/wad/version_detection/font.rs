@@ -2,8 +2,10 @@
 use super::target_version;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
+use crate::wad::chunk::ChunkName;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
+use crate::wad::version::GMVersion::*;
 
 pub fn check_2022_2(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     let ver = target_version!(GM2022_2);
@@ -63,17 +65,21 @@ pub fn check_2022_2(reader: &mut DataReader) -> Result<Option<GMVersion>> {
 /// > (2022.9+ equivalent with no particles).
 /// - Checks for `UnknownAlwaysZero` in Glyphs (added in 2024.11)
 pub fn check_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVersion>> {
+    let ver = reader.version;
     // Explicit check because the logic is very scuffed
-    if reader.version < GMVersion::GM2022_8 {
+    if ver < GM2022_8 {
         return Ok(None); // Version requirement (for checking 2023.6) not satisfied
     }
-    // TODO: used to be 2023.6
-    if reader.version >= GMVersion::Lts2022 && reader.version < GMVersion::GM2024_6 {
+    if (ver >= GM2023_6 || ver == Lts2022_0_3) && ver < GM2024_6 {
         return Ok(None); // 2023.6 already detected; but 2024.6 not yet detected
     }
-    if reader.version >= GMVersion::GM2024_11 {
+    if ver >= GM2024_11 {
         return Ok(None); // 2024.11 already detected
     }
+
+    // TODO: verify that this is correct
+    let postlts: bool = reader.chunks.contains(ChunkName::PSEM);
+    let target_2023_6 = Ok(Some(if postlts { GM2023_6 } else { Lts2022_0_3 }));
 
     let possible_font_count = reader.read_i32()?;
     let mut first_two_pointers: Vec<u32> = Vec::with_capacity(2);
@@ -96,9 +102,9 @@ pub fn check_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVers
     }
 
     reader.cur_pos = first_two_pointers[0] + 52; // Also the LineHeight value. 48 + 4 = 52
-    if reader.version >= GMVersion::GM2023_2 {
+    if ver >= GMVersion::GM2023_2 {
         // SDFSpread is present from 2023.2 non-LTS onward
-        reader.cur_pos += 4; // (detected by PSEM/PSYS chunk existence)
+        reader.cur_pos += 4; // (already detected by PSEM/PSYS chunk existence)
     }
 
     let glyph_count = reader.read_u32()?;
@@ -115,7 +121,6 @@ pub fn check_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVers
         glyph_pointers.push(ptr);
     }
 
-    // let mut detecting_2024_11_failed: bool = false;
     if let Some((i, glyph_pointer)) = glyph_pointers.iter().enumerate().next() {
         if reader.cur_pos != *glyph_pointer {
             return Ok(None);
@@ -136,7 +141,7 @@ pub fn check_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVers
         // If we don't land on the next glyph/font after skipping the Kerning list,
         // KerningLength is probably bogus and UnknownAlwaysZero may be present
         if next_glyph_pointer == pointer_after_kerning_list {
-            return target_version!(Lts2022); // 2023.6 succeeded; 2024.11 failed
+            return target_2023_6; // 2023.6 succeeded; 2024.11 failed
         }
         // Discard last read, which would be of UnknownAlwaysZero
         let kerning_count = reader.read_u16()?;
@@ -150,7 +155,7 @@ pub fn check_2023_6_and_2024_11(reader: &mut DataReader) -> Result<Option<GMVers
         return target_version!(GM2024_11); // 2024.11 succeeded (2023.6 did too but doesn't matter)
     }
 
-    target_version!(Lts2022) // 2024.11 failed or could not be detected; 2023.6 succeeded
+    target_2023_6 // 2024.11 failed or could not be detected; 2023.6 succeeded
 }
 
 pub fn check_2024_14(reader: &mut DataReader) -> Result<Option<GMVersion>> {
