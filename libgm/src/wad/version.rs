@@ -101,6 +101,19 @@ impl Display for IdeVersion {
         let minor = self.minor;
         let release = self.release;
         let build = self.build;
+
+        if f.alternate() {
+            return write!(f, "{major}.{minor}.{release}.{build}");
+        }
+
+        if major == 1 {
+            return if let Some(minor) = gms1_minor_by_build(build) {
+                write!(f, "1.{minor}.{build}")
+            } else {
+                write!(f, "1.X.{build}")
+            };
+        }
+
         write!(f, "{major}.{minor}")?;
         if release != 0 || build != 0 {
             write!(f, ".{release}")?;
@@ -173,7 +186,7 @@ pub enum GMVersion {
     Wad15,
 
     /// * WAD Version 16
-    /// * GameMaker Studio 1.4 Stable: 1539, 1767, 1772, 1773, 1778, 1804, 9999
+    /// * GameMaker Studio 1.4 Stable: 1539, 1767, 1772, 1773, 1778, 1804
     /// * GameMaker Studio 1.4 Beta: 551
     Wad16Old,
 
@@ -230,7 +243,54 @@ impl GMVersion {
 
 impl Display for GMVersion {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        // TODO
-        write!(f, "{self:?}")
+        let s = match self {
+            GMVersion::Wad12 => "WAD 12",
+            GMVersion::Wad13 => "WAD 13",
+            GMVersion::Wad14 => "WAD 14",
+            GMVersion::Wad15 => "WAD 15",
+            GMVersion::Wad16Old => "WAD 16 (GMS 1)",
+            GMVersion::Wad16Pad => "WAD 16 (GMS 1.4.9999+)",
+            GMVersion::Studio2 => "GMS 2",
+            GMVersion::Studio2_0_6 => "GMS 2.0.6",
+            GMVersion::Studio2_2_1 => "GMS 2.2.1",
+            GMVersion::Studio2_2_2_302 => "GMS 2.2.2.302",
+            GMVersion::Studio2_3 => "GMS 2.3",
+            GMVersion::Studio2_3_1 => "GMS 2.3.1",
+            GMVersion::Studio2_3_2 => "GMS 2.3.2",
+            GMVersion::Studio2_3_6 => "GMS 2.3.6",
+            GMVersion::GM2022_1 => "2022.1",
+            GMVersion::GM2022_2 => "2022.2",
+            GMVersion::GM2022_3 => "2022.3",
+            GMVersion::GM2022_5 => "2022.5",
+            GMVersion::GM2022_6 => "2022.6",
+            GMVersion::GM2022_8 => "2022.8",
+            GMVersion::GM2022_9 => "2022.9",
+            GMVersion::GM2023_1 => "2023.1",
+            GMVersion::GM2023_2 => "2023.2",
+            GMVersion::GM2023_4 => "2023.4",
+            GMVersion::Lts2022 => "2022 LTS",
+            GMVersion::GM2023_8 => "2023.8",
+            GMVersion::GM2023_11 => "2023.11",
+            GMVersion::GM2024_2 => "2024.2",
+            GMVersion::GM2024_4 => "2024.4",
+            GMVersion::GM2024_6 => "2024.6",
+            GMVersion::GM2024_8 => "2024.8",
+            GMVersion::GM2024_11 => "2024.11",
+            GMVersion::GM2024_13 => "2024.13",
+            GMVersion::GM2024_14 => "2024.14",
+            GMVersion::GM2024_14_1 => "2024.14.1",
+        };
+        f.write_str(s)
     }
+}
+
+// TODO: better detection whether it's 1.1 - 1.4
+fn gms1_minor_by_build(build: u32) -> Option<u8> {
+    if build < 1000 || build > 9999 {
+        return None;
+    }
+    if build >= 1451 {
+        return Some(4);
+    }
+    None
 }

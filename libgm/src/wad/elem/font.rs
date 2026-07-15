@@ -197,7 +197,7 @@ impl GMElement for Font {
             "Ascender Offset",
             GMVersion::Studio2_2_1,
         )?;
-        builder.write_if_ver(&self.ascender, "Ascender", GMVersion::GM2022_1)?;
+        builder.write_if_ver(&self.ascender, "Ascender", GMVersion::GM2022_2)?;
         if builder.version() >= GMVersion::GM2023_2 && !builder.version().lts() {
             builder.write_u32(self.sdf_spread.ok_or("SDF Spread not set in 2023.2+")?);
         }
