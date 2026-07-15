@@ -2,6 +2,7 @@
 
 use crate::prelude::*;
 use crate::wad::Blob;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
@@ -17,7 +18,7 @@ impl GMElement for TextureEntry {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let page_width = reader.read_u32()?;
         let page_height = reader.read_u32()?;
-        let data = if reader.general_info.version >= (2023, 1) {
+        let data = if reader.version >= GMVersion::GM2023_1 {
             let texture_entry_length = reader.read_u32()?;
             Data::Post2023_1(texture_entry_length)
         } else {
@@ -31,7 +32,7 @@ impl GMElement for TextureEntry {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_u32(self.page_width);
         builder.write_u32(self.page_height);
-        if builder.version() >= (2023, 1) {
+        if builder.version() >= GMVersion::GM2023_1 {
             if let Data::Post2023_1(texture_entry_length) = self.data {
                 builder.write_u32(texture_entry_length);
             } else {

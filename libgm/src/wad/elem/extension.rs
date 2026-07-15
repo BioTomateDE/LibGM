@@ -27,7 +27,7 @@ impl GMElement for Extensions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let mut elems: Vec<Extension> = reader.read_pointer_list()?;
 
-        if product_id_data_eligible(reader.general_info.version) {
+        if reader.version >= GMVersion::Wad16Old {
             for elem in &mut elems {
                 let bytes: [u8; 16] = reader.read_bytes_const()?.to_owned();
                 elem.product_id_data = Some(bytes);
@@ -40,7 +40,7 @@ impl GMElement for Extensions {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_pointer_list(&self.elems)?;
 
-        if !product_id_data_eligible(builder.version()) {
+        if builder.version() < GMVersion::Wad16Old {
             return Ok(());
         }
 
@@ -85,7 +85,7 @@ impl GMElement for Extension {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let folder_name: GMRef<String> = reader.read_gm_string()?;
         let name: GMRef<String> = reader.read_gm_string()?;
-        let version: GMRef<String> = if reader.general_info.version >= (2023, 4) {
+        let version: GMRef<String> = if reader.version >= GMVersion::GM2023_4 {
             reader.read_gm_string()?
         } else {
             GMRef::none()
@@ -94,7 +94,7 @@ impl GMElement for Extension {
         let files: Vec<File>;
         let options: Vec<ExtOption>;
 
-        if reader.general_info.version >= (2022, 6) {
+        if reader.version >= GMVersion::GM2022_6 {
             let files_ptr = reader.read_u32()?;
             let options_ptr = reader.read_u32()?;
 
@@ -122,11 +122,11 @@ impl GMElement for Extension {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(self.folder_name)?;
         builder.write_gm_string(self.name)?;
-        if builder.version() >= (2023, 4) {
+        if builder.version() >= GMVersion::GM2023_4 {
             builder.write_gm_string(self.version)?;
         }
         builder.write_gm_string(self.class_name)?;
-        if builder.version() >= (2022, 6) {
+        if builder.version() >= GMVersion::GM2022_6 {
             builder.write_pointer(&self.files);
             builder.write_pointer(&self.options);
 
@@ -157,9 +157,3 @@ gm_enum!( Kind {
     Unknown1 = 11,
     Unknown2 = 12,
 });
-
-#[must_use]
-const fn product_id_data_eligible(ver: GMVersion) -> bool {
-    // NOTE: I do not know if 1773 is the earliest version which contains product IDs.
-    ver.major >= 2 || (ver.major == 1 && ver.build >= 1773) || (ver.major == 1 && ver.build == 1539)
-}

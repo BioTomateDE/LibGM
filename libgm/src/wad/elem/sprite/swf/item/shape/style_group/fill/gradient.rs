@@ -2,6 +2,7 @@
 
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sprite::swf::Matrix33;
@@ -18,7 +19,7 @@ pub struct Data {
 impl GMElement for Data {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let fill_type: FillType = reader.read_enum()?;
-        let tpe_index: Option<i32> = reader.deserialize_if_gm_version((2022, 1))?;
+        let tpe_index: Option<i32> = reader.deserialize_if_version(GMVersion::GM2022_1)?;
         let transformation_matrix = Matrix33::deserialize(reader)?;
         let records: Vec<Record> = reader.read_simple_list()?;
         Ok(Self {
@@ -31,7 +32,7 @@ impl GMElement for Data {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_enum(self.fill_type);
-        builder.write_if_ver(&self.tpe_index, "TPE Index", (2022, 1))?;
+        builder.write_if_ver(&self.tpe_index, "TPE Index", GMVersion::GM2022_1)?;
         self.transformation_matrix.serialize(builder)?;
         builder.write_simple_list(&self.records)?;
         Ok(())

@@ -106,16 +106,16 @@ impl GMElement for Sound {
         let pitch = reader.read_f32()?;
 
         let audio_group: GMRef<AudioGroup> =
-            if reader.general_info.wad_version >= 14 && flags.contains(Flags::REGULAR) {
+            if reader.version >= GMVersion::Wad14 && flags.contains(Flags::REGULAR) {
                 reader.read_resource_by_id()?
             } else {
                 let preload = reader.read_bool32().ctx("reading preload")?;
                 reader.assert_bool(preload, true, "Preload")?;
-                GMRef::new(get_builtin_sound_group_id(reader.general_info.version))
+                GMRef::none()
             };
 
         let audio: GMRef<Audio> = reader.read_resource_by_id()?;
-        let audio_length: Option<f32> = reader.deserialize_if_gm_version((2024, 6))?;
+        let audio_length: Option<f32> = reader.deserialize_if_version(GMVersion::GM2024_6)?;
 
         Ok(Self {
             name,
@@ -139,32 +139,15 @@ impl GMElement for Sound {
         builder.write_u32(self.effects);
         builder.write_f32(self.volume);
         builder.write_f32(self.pitch);
-        if builder.wad_version() >= 14 && self.flags.contains(Flags::REGULAR) {
+        if builder.version() >= GMVersion::Wad14 && self.flags.contains(Flags::REGULAR) {
             builder.write_resource_id(self.audio_group);
         } else {
             builder.write_bool32(true); // Preload
         }
         builder.write_resource_id(self.audio);
-        builder.write_if_ver(&self.audio_length, "Audio Length", (2024, 6))?;
+        builder.write_if_ver(&self.audio_length, "Audio Length", GMVersion::GM2024_6)?;
         Ok(())
     }
-}
-
-#[allow(clippy::bool_to_int_with_if)] // lol this is a coincidence
-/// The exact versions may be inaccurate.
-fn get_builtin_sound_group_id(version: GMVersion) -> i32 {
-    if test_gms1_version(version, 1250, 161) {
-        0
-    } else {
-        1
-    }
-}
-
-// This function could be reused for other elements.
-#[must_use]
-fn test_gms1_version(version: GMVersion, stable_build: u32, beta_build: u32) -> bool {
-    assert!(beta_build < 1000);
-    version > (1, 0, 0, stable_build) || version > (1, 0, 0, beta_build)
 }
 
 bitflags::bitflags! {

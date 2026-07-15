@@ -5,6 +5,7 @@ use crate::gm_enum::gm_enum;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::Blob;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
@@ -72,7 +73,7 @@ impl GMElement for Shaders {
             let mut cg_ps3_pixel_ptr = 0;
             let mut cg_ps3_pixel_len = 0;
 
-            if reader.general_info.wad_version > 13 {
+            if reader.version > GMVersion::Wad13 {
                 version = reader.read_i32()?;
                 pssl_vertex_ptr = reader.read_u32()?;
                 pssl_vertex_len = reader.read_u32()?;
@@ -211,7 +212,7 @@ impl GMElement for Shader {
 
         builder.write_simple_list(&self.vertex_shader_attributes)?;
 
-        if builder.wad_version() > 13 {
+        if builder.version() > GMVersion::Wad13 {
             builder.write_i32(self.version);
             builder.write_pointer_opt(&self.pssl_vertex_data);
             builder.write_usize(self.pssl_vertex_data.as_ref().map_or(0, |x| x.len()))?;

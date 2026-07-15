@@ -8,6 +8,7 @@ pub use img::GMImage;
 
 use crate::prelude::*;
 use crate::util::fmt::hexdump;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::data::Endianness;
@@ -40,9 +41,9 @@ impl GMElement for TexturePages {
             reader.assert_pos(pointer, "Embedded texture page")?;
 
             let scaled = reader.read_u32()?;
-            let generated_mips: Option<u32> = reader.deserialize_if_gm_version((2, 0, 6))?;
-            let texture_block_size: Option<u32> = reader.deserialize_if_gm_version((2022, 3))?;
-            let data_2022_9: Option<Data2022_9> = reader.deserialize_if_gm_version((2022, 9))?;
+            let generated_mips: Option<u32> = reader.deserialize_if_version(GMVersion::Studio2_0_6)?;
+            let texture_block_size: Option<u32> = reader.deserialize_if_version(GMVersion::Lts2022)?; // TODO: used to be 2023.6
+            let data_2022_9: Option<Data2022_9> = reader.deserialize_if_version(GMVersion::GM2022_9)?;
 
             let texture_data_start_pos = reader.read_u32()?;
             // This can be zero if the texture is stored externally
@@ -99,9 +100,9 @@ impl GMElement for TexturePages {
             builder.write_if_ver(
                 &texture_page.generated_mips,
                 "Generated Mipmap levels",
-                (2, 0, 6),
+                GMVersion::Studio2_0_6,
             )?;
-            if builder.version() >= (2022, 3) {
+            if builder.version() >= GMVersion::GM2022_3 {
                 texture_block_size_placeholders[i] = builder.pos();
                 // Write the stored texture block size for external textures.
                 // For embedded textures, this will later be overriden by the real calculated value.
@@ -114,7 +115,7 @@ impl GMElement for TexturePages {
             builder.write_if_ver(
                 &texture_page.data_2022_9,
                 "Texture Page 2022.9 data",
-                (2022, 9),
+                GMVersion::GM2022_9,
             )?;
 
             if texture_page.image.is_some() {
@@ -133,7 +134,7 @@ impl GMElement for TexturePages {
             let start_pos: u32 = builder.pos();
             img.serialize(builder)
                 .ctx("serializing texture page image")?;
-            if builder.version() >= (2022, 3) {
+            if builder.version() >= GMVersion::GM2022_3 {
                 let length: u32 = builder.pos() - start_pos;
                 builder.overwrite_u32(length, texture_block_size_placeholders[i])?;
             }
@@ -266,7 +267,7 @@ fn read_bz2_qoi(
     let start_position = reader.cur_pos - 8;
     let mut header_size = 8;
     let mut uncompressed_size = None;
-    if reader.general_info.version >= (2022, 5) {
+    if reader.version >= GMVersion::GM2022_5 {
         uncompressed_size = Some(reader.read_u32()?);
         header_size = 12;
     }

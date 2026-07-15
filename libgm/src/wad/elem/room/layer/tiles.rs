@@ -3,9 +3,10 @@ use std::cmp::min;
 
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::background::Tileset;
+use crate::wad::elem::tileset::Tileset;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
@@ -26,7 +27,7 @@ impl GMElement for Tiles {
         let height = reader.read_u32()?;
         let mut tile_data: Vec<u32> = vec_with_capacity(width * height)?;
 
-        if reader.general_info.version >= (2024, 2) {
+        if reader.version >= GMVersion::GM2024_2 {
             Self::read_compressed_tile_data(reader, &mut tile_data)?;
         } else {
             for _y in 0..height {
@@ -43,7 +44,7 @@ impl GMElement for Tiles {
         builder.write_resource_id(self.tileset);
         builder.write_u32(self.width);
         builder.write_u32(self.height);
-        if builder.version() >= (2024, 2) {
+        if builder.version() >= GMVersion::GM2024_2 {
             self.build_compressed_tile_data(builder);
         } else {
             for id in &self.tile_data {
@@ -113,7 +114,7 @@ impl Tiles {
             }
         }
 
-        if reader.general_info.version >= (2024, 4) {
+        if reader.version >= GMVersion::GM2024_4 {
             reader.align(4)?;
         }
         Ok(())
@@ -197,7 +198,7 @@ impl Tiles {
             last_tile = curr_tile;
         }
 
-        if builder.version() >= (2024, 4) {
+        if builder.version() >= GMVersion::GM2024_4 {
             builder.align(4);
         }
     }

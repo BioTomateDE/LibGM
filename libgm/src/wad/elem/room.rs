@@ -14,6 +14,7 @@ pub use self::tile::RoomTile;
 pub use self::view::RoomView;
 use crate::gml::Code;
 use crate::prelude::*;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
@@ -93,7 +94,9 @@ impl GMElement for Room {
         let views_ptr = reader.read_u32()?;
         let game_objects_ptr = reader.read_u32()?;
         let tiles_ptr = reader.read_u32()?;
-        let instances_ptr = reader.deserialize_if_gm_version((2024, 13))?.unwrap_or(0);
+        let instances_ptr = reader
+            .deserialize_if_version(GMVersion::GM2024_13)?
+            .unwrap_or(0);
 
         let world = reader.read_bool32()?;
         let top = reader.read_u32()?;
@@ -104,8 +107,12 @@ impl GMElement for Room {
         let gravity_y = reader.read_f32()?;
         let meters_per_pixel = reader.read_f32()?;
 
-        let layers_ptr: u32 = reader.deserialize_if_gm_version((2, 0))?.unwrap_or(0);
-        let sequences_ptr: u32 = reader.deserialize_if_gm_version((2, 3))?.unwrap_or(0);
+        let layers_ptr: u32 = reader
+            .deserialize_if_version(GMVersion::Studio2)?
+            .unwrap_or(0);
+        let sequences_ptr: u32 = reader
+            .deserialize_if_version(GMVersion::Studio2_3)?
+            .unwrap_or(0);
 
         reader.assert_pos(backgrounds_ptr, "Room Backgrounds")?;
         let backgrounds: Vec<RoomBackground> = reader.read_pointer_list()?;
@@ -119,22 +126,21 @@ impl GMElement for Room {
         reader.assert_pos(tiles_ptr, "Room Tiles")?;
         let tiles: Vec<RoomTile> = reader.read_pointer_list()?;
 
-        let instance_creation_order: Vec<InstanceID> = if reader.general_info.version >= (2024, 13)
-        {
+        let instance_creation_order: Vec<InstanceID> = if reader.version >= GMVersion::GM2024_13 {
             reader.assert_pos(instances_ptr, "Room Instance Creation Order IDs")?;
             reader.read_simple_list()?
         } else {
             Vec::new()
         };
 
-        let layers: Vec<RoomLayer> = if reader.general_info.version >= 2 {
+        let layers: Vec<RoomLayer> = if reader.version >= GMVersion::Studio2 {
             reader.assert_pos(layers_ptr, "Room Layers")?;
             reader.read_pointer_list()?
         } else {
             Vec::new()
         };
 
-        let sequences: Vec<Sequence> = if reader.general_info.version >= (2, 3) {
+        let sequences: Vec<Sequence> = if reader.version >= GMVersion::Studio2_3 {
             reader.assert_pos(sequences_ptr, "Room Sequences")?;
             reader.read_pointer_list()?
         } else {
@@ -189,7 +195,7 @@ impl GMElement for Room {
         builder.write_pointer(&self.game_objects);
         builder.write_pointer(&self.tiles);
 
-        if builder.version() >= (2024, 13) {
+        if builder.version() >= GMVersion::GM2024_13 {
             builder.write_pointer(&self.instance_creation_order);
         }
 
@@ -202,11 +208,11 @@ impl GMElement for Room {
         builder.write_f32(self.gravity_y);
         builder.write_f32(self.meters_per_pixel);
 
-        if builder.version() >= 2 {
+        if builder.version() >= GMVersion::Studio2 {
             builder.write_pointer(&self.layers);
         }
 
-        if builder.version() >= (2, 3) {
+        if builder.version() >= GMVersion::Studio2_3 {
             builder.write_pointer(&self.sequences);
         }
 
@@ -219,17 +225,17 @@ impl GMElement for Room {
         builder.resolve_pointer(&self.tiles)?;
         builder.write_pointer_list(&self.tiles)?;
 
-        if builder.version() >= (2024, 13) {
+        if builder.version() >= GMVersion::GM2024_13 {
             builder.resolve_pointer(&self.instance_creation_order)?;
             builder.write_simple_list(&self.instance_creation_order)?;
         }
 
-        if builder.version() >= 2 {
+        if builder.version() >= GMVersion::Studio2 {
             builder.resolve_pointer(&self.layers)?;
             builder.write_pointer_list(&self.layers)?;
         }
 
-        if builder.version() >= (2, 3) {
+        if builder.version() >= GMVersion::Studio2_3 {
             builder.resolve_pointer(&self.sequences)?;
             builder.write_pointer_list(&self.sequences)?;
         }

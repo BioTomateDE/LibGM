@@ -6,6 +6,7 @@ pub use self::event::EventGroups;
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
@@ -38,7 +39,7 @@ impl GMElement for GameObjects {
 
             let visible = reader.read_bool32()?;
             let mut managed: Option<bool> = None;
-            if reader.general_info.version >= (2022, 5) {
+            if reader.version >= GMVersion::GM2022_5 {
                 managed = Some(reader.read_bool32()?);
             }
             let solid = reader.read_bool32()?;
@@ -122,7 +123,7 @@ impl GMElement for GameObjects {
             builder.write_gm_string(game_object.name)?;
             builder.write_resource_id(game_object.sprite);
             builder.write_bool32(game_object.visible);
-            builder.write_if_ver(&game_object.managed, "Managed", (2022, 5))?;
+            builder.write_if_ver(&game_object.managed, "Managed", GMVersion::GM2022_5)?;
             builder.write_bool32(game_object.solid);
             builder.write_i32(game_object.depth);
             builder.write_bool32(game_object.persistent);

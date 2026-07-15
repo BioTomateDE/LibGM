@@ -7,6 +7,7 @@ pub use kerning::Kerning;
 
 use crate::prelude::*;
 use crate::wad::Blob;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
@@ -27,7 +28,7 @@ gm_named_list_chunk!(FONT, Fonts, Font, nullable);
 impl GMElement for Fonts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let elems: Vec<Option<Font>> = reader.read_pointer_list_opt()?;
-        let padding = if reader.general_info.version < (2024, 14) {
+        let padding = if reader.version < GMVersion::GM2024_14 {
             let bytes = reader
                 .read_bytes_const()
                 .ctx("Reading FONT padding bytes")?;
@@ -40,7 +41,7 @@ impl GMElement for Fonts {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_pointer_list_opt(&self.elems)?;
-        if builder.version() < (2024, 14) {
+        if builder.version() < GMVersion::GM2024_14 {
             builder.write_bytes(&*self.padding);
         }
         Ok(())
@@ -141,13 +142,17 @@ impl GMElement for Font {
         let texture: GMRef<TexturePageItem> = reader.read_gm_texture()?;
         let scale_x: f32 = reader.read_f32()?;
         let scale_y: f32 = reader.read_f32()?;
-        let ascender_offset: Option<i32> = reader.deserialize_if_wad_version(17)?;
-        let ascender: Option<u32> = reader.deserialize_if_gm_version((2022, 2))?;
+        let ascender_offset: Option<i32> = reader.deserialize_if_version(GMVersion::Studio2_2_1)?;
+        let ascender: Option<u32> = reader.deserialize_if_version(GMVersion::GM2022_2)?;
         let sdf_spread: Option<u32> =
-            reader.deserialize_if_gm_version((2023, 2, LtsBranch::PostLts))?;
-        let line_height: Option<u32> = reader.deserialize_if_gm_version((2023, 6))?;
+            if reader.version >= GMVersion::GM2023_2 && !reader.version.lts() {
+                Some(reader.read_u32()?)
+            } else {
+                None
+            };
+        let line_height: Option<u32> = reader.deserialize_if_version(GMVersion::Lts2022)?;
         let glyphs: Vec<Glyph> = reader.read_pointer_list()?;
-        if reader.general_info.version >= (2024, 14) {
+        if reader.version >= GMVersion::GM2024_14 {
             reader.align(4)?;
         }
 
@@ -188,16 +193,18 @@ impl GMElement for Font {
         builder.write_gm_texture(self.texture)?;
         builder.write_f32(self.scale_x);
         builder.write_f32(self.scale_y);
-        builder.write_if_wad_ver(&self.ascender_offset, "Ascender Offset", 17)?;
-        builder.write_if_ver(&self.ascender, "Ascender", (2022, 2))?;
         builder.write_if_ver(
-            &self.sdf_spread,
-            "SDF Spread",
-            (2023, 2, LtsBranch::PostLts),
+            &self.ascender_offset,
+            "Ascender Offset",
+            GMVersion::Studio2_2_1,
         )?;
-        builder.write_if_ver(&self.line_height, "Line Height", (2023, 6))?;
+        builder.write_if_ver(&self.ascender, "Ascender", GMVersion::GM2022_1)?;
+        if builder.version() >= GMVersion::GM2023_2 && !builder.version().lts() {
+            builder.write_u32(self.sdf_spread.ok_or("SDF Spread not set in 2023.2+")?);
+        }
+        builder.write_if_ver(&self.line_height, "Line Height", GMVersion::Lts2022)?; // TODO: used to be 2023.6
         builder.write_pointer_list(&self.glyphs)?;
-        if builder.version() >= (2024, 14) {
+        if builder.version() >= GMVersion::GM2024_14 {
             builder.align(4);
         }
         Ok(())

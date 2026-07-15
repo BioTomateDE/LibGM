@@ -12,6 +12,7 @@ pub use self::instances::Instances;
 pub use self::tiles::Tiles;
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
@@ -42,7 +43,8 @@ impl GMElement for RoomLayer {
         let horizontal_speed = reader.read_f32()?;
         let vertical_speed = reader.read_f32()?;
         let is_visible = reader.read_bool32()?;
-        let effect_data_2022_1: Option<Data2022_1> = reader.deserialize_if_gm_version((2022, 1))?;
+        let effect_data_2022_1: Option<Data2022_1> =
+            reader.deserialize_if_version(GMVersion::GM2022_1)?;
 
         let data: Data = match layer_type {
             Type::Path | Type::Path2 => Data::None,
@@ -51,7 +53,7 @@ impl GMElement for RoomLayer {
             Type::Assets => Data::Assets(Assets::deserialize(reader)?),
             Type::Tiles => Data::Tiles(Tiles::deserialize(reader)?),
             Type::Effect => {
-                if reader.general_info.version >= (2022, 1) {
+                if reader.version >= GMVersion::GM2022_1 {
                     let effect_data = effect_data_2022_1.as_ref().unwrap();
                     let effect_type = effect_data.effect_type;
                     let properties: Vec<effect::Property> = effect_data.effect_properties.clone();
@@ -87,7 +89,7 @@ impl GMElement for RoomLayer {
         builder.write_f32(self.horizontal_speed);
         builder.write_f32(self.vertical_speed);
         builder.write_bool32(self.is_visible);
-        builder.write_if_ver(&self.effect_data_2022_1, "Effect Data", (2022, 1))?;
+        builder.write_if_ver(&self.effect_data_2022_1, "Effect Data", GMVersion::GM2022_1)?;
         match &self.data {
             Data::None => {}
             Data::Instances(data) => data.serialize(builder)?,
@@ -95,7 +97,7 @@ impl GMElement for RoomLayer {
             Data::Background(data) => data.serialize(builder)?,
             Data::Assets(data) => data.serialize(builder)?,
             Data::Effect(data) => {
-                if builder.version() < (2022, 1) {
+                if builder.version() < GMVersion::GM2022_1 {
                     data.serialize(builder)?;
                 }
             }

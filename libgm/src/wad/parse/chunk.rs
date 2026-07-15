@@ -28,7 +28,7 @@ impl ChunkBounds {
 /// The number of all known GameMaker chunks (excluding debug chunks).
 const KNOWN_CHUNK_COUNT: usize = 35;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ChunkMap(Vec<(ChunkName, ChunkBounds)>);
 
 impl ChunkMap {
@@ -148,9 +148,7 @@ impl DataReader<'_> {
     /// GameMaker version.
     fn read_chunk_padding(&mut self) -> Result<()> {
         // Padding only for GMS2+ and 1.0.0.9999+
-        let ver: &GMVersion = &self.specified_version;
-        let padding_eligible = ver.major >= 2 || (ver.major == 1 && ver.build >= 9999);
-        if !padding_eligible {
+        if self.version < GMVersion::Wad16Pad {
             return Ok(());
         }
 
@@ -169,26 +167,5 @@ impl DataReader<'_> {
 
         // Padding was already set correctly
         Ok(())
-    }
-
-    /// Reads the specified GameMaker version in the GEN8 chunk.
-    /// This only works if the GEN8 chunk still exists in the chunk map.
-    ///
-    /// This function should be called **after** parsing FORM but **before**
-    /// reading any chunks.
-    pub fn read_gen8_version(&mut self) -> Result<GMVersion> {
-        const CTX: &str = "trying to read GEN8 GameMaker Version";
-        let saved_pos = self.cur_pos;
-        let saved_chunk: ChunkBounds = self.chunk;
-        self.chunk = self
-            .chunks
-            .get(ChunkName::GEN8)
-            .ok_or("Chunk GEN8 does not exist")
-            .ctx(CTX)?;
-        self.cur_pos = self.chunk.start_pos + 44; // Skip to GEN8 GameMaker version
-        let gm_version = GMVersion::deserialize(self).ctx(CTX)?;
-        self.cur_pos = saved_pos;
-        self.chunk = saved_chunk;
-        Ok(gm_version)
     }
 }

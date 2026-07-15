@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::prelude::*;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
@@ -51,7 +52,8 @@ impl GMElement for ParticleSystem {
         let origin_x = reader.read_i32()?;
         let origin_y = reader.read_i32()?;
         let draw_order = reader.read_i32()?;
-        let global_space_particles: Option<bool> = reader.deserialize_if_gm_version((2023, 8))?;
+        let global_space_particles: Option<bool> =
+            reader.deserialize_if_version(GMVersion::GM2023_8)?;
         let emitters: Vec<GMRef<ParticleEmitter>> = reader.read_simple_list()?;
         Ok(Self {
             name,
@@ -71,7 +73,7 @@ impl GMElement for ParticleSystem {
         builder.write_if_ver(
             &self.global_space_particles,
             "Global Space Particles",
-            (2023, 8),
+            GMVersion::GM2023_8,
         )?;
         builder.write_simple_list(&self.emitters)?;
         Ok(())

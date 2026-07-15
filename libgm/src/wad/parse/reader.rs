@@ -17,9 +17,8 @@ use crate::wad::parse::chunk::ChunkBounds;
 use crate::wad::parse::chunk::ChunkMap;
 use crate::wad::reference::GMRef;
 use crate::wad::version::GMVersion;
-use crate::wad::version::ToGMVersion;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DataReader<'a> {
     /// The raw data buffer belonging to the GameMaker data file which is
     /// currently being parsed.
@@ -29,10 +28,7 @@ pub struct DataReader<'a> {
     /// Reading data will be read from this position; incrementing it.
     pub cur_pos: u32,
 
-    /// The GameMaker version specified by GEN8.
-    /// The "actual" version will be detected later and stored in
-    /// `general_info.version`.
-    pub specified_version: GMVersion,
+    pub version: GMVersion,
 
     /// How many null bytes of padding should be at the end of every chunk
     /// (except the last one). Only relevant in certain GameMaker versions.
@@ -66,17 +62,9 @@ pub struct DataReader<'a> {
     /// Is properly initialized after parsing `FORM`.
     pub last_chunk: ChunkName,
 
-    /// General info about this data file. Includes game name, GameMaker Version
-    /// and WAD Version. Contains garbage placeholders until the `GEN8`
-    /// chunk is deserialized. Use [`DataReader::read_gen8_version`] to get
-    /// the GameMaker version before `GEN8` is parsed.
-    pub general_info: GeneralInfo,
-
     /// Chunk `STRG`.
     /// Is properly initialized after parsing `FORM`.
     pub string_chunk: ChunkBounds,
-
-    pub strings: Strings,
 
     /// Contains parsing options (wow!).
     /// Properly initialized after parsing `FORM`.
@@ -116,7 +104,7 @@ impl<'a> DataReader<'a> {
         Self {
             data,
             cur_pos: 0,
-            specified_version: GMVersion::default(), // stub
+            version: GMVersion::Wad12, // stub
             // The default padding value is 16, if used.
             chunk_padding: 16,
             // Assume little endian; big endian is an edge case.
@@ -125,9 +113,7 @@ impl<'a> DataReader<'a> {
             chunks: ChunkMap::new(),
             chunk_order: Vec::new(),
             last_chunk: ChunkName::DAFL,          // stub
-            general_info: GeneralInfo::default(), // stub
             string_chunk: ChunkBounds::default(), // stub
-            strings: Strings::default(),          // stub
             options: ParsingOptions::default(),   // stub
             string_occurrences: HashMap::new(),
             texture_page_item_occurrences: HashMap::new(),
@@ -282,27 +268,11 @@ impl<'a> DataReader<'a> {
     ///   succeeds
     /// - `Ok(None)` if the version requirement is not met
     /// - `Err(_)` if the version requirement is met but deserialization fails
-    pub fn deserialize_if_gm_version<T: GMElement>(
+    pub fn deserialize_if_version<T: GMElement>(
         &mut self,
-        ver_req: impl ToGMVersion,
+        ver_req: GMVersion,
     ) -> Result<Option<T>> {
-        if self.general_info.version >= ver_req {
-            Ok(Some(T::deserialize(self)?))
-        } else {
-            Ok(None)
-        }
-    }
-
-    /// Deserializes an element if the WAD version meets the requirement (`>=`).
-    ///
-    /// # Returns
-    /// - `Ok(Some(T))` if the WAD version requirement is met and
-    ///   deserialization succeeds
-    /// - `Ok(None)` if the WAD version requirement is not met
-    /// - `Err(_)` if the WAD version requirement is met but deserialization
-    ///   fails
-    pub fn deserialize_if_wad_version<T: GMElement>(&mut self, ver_req: u8) -> Result<Option<T>> {
-        if self.general_info.wad_version >= ver_req {
+        if self.version >= ver_req {
             Ok(Some(T::deserialize(self)?))
         } else {
             Ok(None)

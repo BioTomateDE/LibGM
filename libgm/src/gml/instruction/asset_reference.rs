@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::wad::elem::animation_curve::AnimationCurve;
-use crate::wad::elem::background::Tileset;
+use crate::wad::elem::tileset::Tileset;
 use crate::wad::elem::font::Font;
 use crate::wad::elem::function::Function;
 use crate::wad::elem::game_object::GameObject;

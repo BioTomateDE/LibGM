@@ -3,6 +3,7 @@
 use crate::gml::instruction::InstanceType;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::ChunkName;
 use crate::wad::chunk::gm_list_chunk;
@@ -37,7 +38,7 @@ impl Variables {
         &mut self,
         name: GMRef<String>,
         instance_type: InstanceType,
-        general_info: &GeneralInfo,
+        version: GMVersion,
     ) -> Result<GMRef<Variable>> {
         if instance_type == InstanceType::Local {
             bail!("Local variables have to be unique; this function will not work");
@@ -68,12 +69,12 @@ impl Variables {
 
         // First update these scuffed ass variable counts
         if let Some(header) = &mut self.modern_header {
-            if general_info.version >= (2, 3) {
+            if version >= GMVersion::Studio2_3 {
                 if instance_type != InstanceType::Builtin {
                     header.var_count1 += 1;
                     header.var_count2 += 1;
                 }
-            } else if general_info.wad_version >= 16 {
+            } else if version >= GMVersion::Wad16Old {
                 // this condition is only suggested by utmt; not confirmed (original: `!DifferentVarCounts`)
                 header.var_count1 += 1;
                 header.var_count2 += 1;
@@ -115,7 +116,8 @@ impl Variables {
 
 impl GMElement for Variables {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let modern_header: Option<ModernHeader> = reader.deserialize_if_wad_version(15)?;
+        let modern_header: Option<ModernHeader> =
+            reader.deserialize_if_version(GMVersion::Wad15)?;
         let variable_size = match modern_header {
             Some(_) => 20,
             None => 12,
@@ -129,7 +131,8 @@ impl GMElement for Variables {
         while reader.cur_pos + variable_size <= reader.chunk.end_pos {
             let name: GMRef<String> = reader.read_gm_string()?;
 
-            let modern_data: Option<ModernData> = reader.deserialize_if_wad_version(15)?;
+            let modern_data: Option<ModernData> =
+                reader.deserialize_if_version(GMVersion::Wad15)?;
 
             let occurrence_count = reader.read_count("Variable occurrence")?;
             let first_occurrence_pos = reader.read_u32()?;
@@ -187,10 +190,14 @@ impl GMElement for Variables {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_if_wad_ver(&self.modern_header, "Scuffed WAD 15+ fields", 15)?;
+        builder.write_if_ver(
+            &self.modern_header,
+            "Scuffed WAD 15+ fields",
+            GMVersion::Wad15,
+        )?;
         for (i, variable) in self.elems.iter().enumerate() {
             builder.write_gm_string(variable.name)?;
-            builder.write_if_wad_ver(&variable.modern_data, "WAD 15 data", 15)?;
+            builder.write_if_ver(&variable.modern_data, "WAD 15 data", GMVersion::Wad15)?;
 
             let occurrences = builder.variable_occurrences.get(i).ok_or_else(|| {
                 format!(

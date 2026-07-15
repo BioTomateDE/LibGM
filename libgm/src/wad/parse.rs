@@ -22,7 +22,6 @@ use crate::wad::data::Metadata;
 use crate::wad::elem::animation_curve::AnimationCurves;
 use crate::wad::elem::audio::Audios;
 use crate::wad::elem::audio_group::AudioGroups;
-use crate::wad::elem::background::Tilesets;
 use crate::wad::elem::code::Codes;
 use crate::wad::elem::code::check_yyc;
 use crate::wad::elem::data_file::DataFiles;
@@ -34,6 +33,7 @@ use crate::wad::elem::font::Fonts;
 use crate::wad::elem::function::Functions;
 use crate::wad::elem::game_end::GameEndScripts;
 use crate::wad::elem::game_object::GameObjects;
+use crate::wad::elem::general_info;
 use crate::wad::elem::general_info::GeneralInfo;
 use crate::wad::elem::global_init::GlobalInitScripts;
 use crate::wad::elem::language::LanguageInfo;
@@ -47,10 +47,12 @@ use crate::wad::elem::sequence::Sequences;
 use crate::wad::elem::shader::Shaders;
 use crate::wad::elem::sound::Sounds;
 use crate::wad::elem::sprite::Sprites;
+use crate::wad::elem::string::Strings;
 use crate::wad::elem::tag::Tags;
 use crate::wad::elem::texture_group_info::TextureGroupInfos;
 use crate::wad::elem::texture_page::TexturePages;
 use crate::wad::elem::texture_page_item::TexturePageItems;
+use crate::wad::elem::tileset::Tilesets;
 use crate::wad::elem::timeline::Timelines;
 use crate::wad::elem::ui_node::UINodes;
 use crate::wad::elem::variable::Variables;
@@ -58,7 +60,7 @@ use crate::wad::parse::chunk::ChunkBounds;
 use crate::wad::parse::chunk::ChunkMap;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
-use crate::wad::version_detection::detect_gamemaker_version;
+use crate::wad::version_detection::detect_format_version;
 
 const ERR_TOO_BIG: &str =
     "Data file is bigger than 2,147,483,646 bytes which will lead to bugs in LibGM and the runner";
@@ -165,8 +167,12 @@ impl ParsingOptions {
     /// Only parses the `GEN8` chunk and detects the proper GameMaker version.
     pub fn parse_general_info(&self, raw_data: impl AsRef<[u8]>) -> Result<GeneralInfo> {
         let mut reader = parse_form(raw_data.as_ref()).ctx("parsing FORM")?;
-        init_reader(&mut reader).ctx("initializing reader")?;
-        Ok(reader.general_info)
+        // Set the STRG chunk so that the reader can force-read strings.
+        reader.string_chunk = reader
+            .chunks
+            .get(ChunkName::STRG)
+            .ok_or("Chunk STRG does not exist")?;
+        reader.read_chunk::<GeneralInfo>()
     }
 
     /// Parses a GameMaker data file (stored on disk) with the specified
@@ -300,46 +306,6 @@ fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
     Ok(reader)
 }
 
-fn init_reader(reader: &mut DataReader) -> Result<()> {
-    // Properly initialize GEN8 version before reading chunks.
-    reader.specified_version = reader.read_gen8_version()?;
-
-    // The following chunk read order is required:
-    // Required: STRG -> GEN8 --> all others
-    //
-    // Then (in any order):
-    // * [FUNC, VARI] --> CODE
-    // * TPAG --> [BGND, EMBI, FONT, OPTN, SPRT]
-
-    // Set the STRG chunk so that the reader can force-read strings.
-    reader.string_chunk = reader
-        .chunks
-        .get(ChunkName::STRG)
-        .ok_or("Chunk STRG does not exist")?;
-
-    reader.strings = reader.read_chunk()?;
-
-    // Read GEN8, which contains the important GM Version and WAD Version.
-    reader.general_info = reader.read_chunk()?;
-    if !reader.general_info.exists {
-        bail!("GEN8 chunk does not exist");
-    }
-
-    // Modern games need version detection because
-    // YoYoGames stopped updating the version header.
-    if reader.specified_version == GMVersion::GMS2 {
-        let stopwatch = Stopwatch::start();
-        detect_gamemaker_version(reader).ctx("detecting GameMaker version")?;
-        log::trace!("Detecting GameMaker Version took {stopwatch}");
-    }
-
-    let game = reader.general_info.display_name.display(&reader.strings);
-    let version = reader.general_info.version;
-    let wad_version = reader.general_info.wad_version;
-    log::info!("Loading {game:?} (GM {version}, WAD {wad_version})");
-    Ok(())
-}
-
 fn read_bytecode_chunks(reader: &mut DataReader) -> Result<(Codes, Functions, Variables)> {
     let is_yyc: bool = match check_yyc(reader) {
         Ok(yyc) => yyc,
@@ -366,8 +332,27 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
     let stopwatch = Stopwatch::start();
     let mut reader: DataReader = parse_form(raw_data).ctx("parsing FORM")?;
     reader.options = options.clone();
-    init_reader(&mut reader).ctx("initializing reader")?;
 
+    let stopwatch2 = Stopwatch::start();
+    reader.version = detect_format_version(reader.clone()).ctx("detecting format version")?;
+    log::debug!("Detecting format version took {:.2?}", stopwatch2.elapsed());
+
+    // The following chunk read order is required:
+    // Required: STRG --> most others
+    // Then (in any order):
+    // * [FUNC, VARI] --> CODE
+    // * TPAG --> [BGND, EMBI, FONT, OPTN, SPRT]
+
+    // Set the STRG chunk so that the reader can force-read strings.
+    reader.string_chunk = reader
+        .chunks
+        .get(ChunkName::STRG)
+        .ok_or("Chunk STRG does not exist")?;
+
+    // TODO: bring this back?
+    // log::info!("Loading {game:?} (GM {version}, WAD {wad_version})");
+
+    let strings: Strings = reader.read_chunk()?;
     let texture_page_items: TexturePageItems = reader.read_chunk()?;
 
     let codes: Codes;
@@ -383,8 +368,9 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
     let fonts: Fonts = reader.read_chunk()?;
     let sprites: Sprites = reader.read_chunk()?;
     let game_objects: GameObjects = reader.read_chunk()?;
+    let general_info: GeneralInfo = reader.read_chunk()?;
     let rooms: Rooms = reader.read_chunk()?;
-    let backgrounds: Tilesets = reader.read_chunk()?;
+    let tilesets: Tilesets = reader.read_chunk()?;
     let audios: Audios = reader.read_chunk()?;
     let sounds: Sounds = reader.read_chunk()?;
     let paths: Paths = reader.read_chunk()?;
@@ -418,6 +404,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
     handle_unread_chunks(&reader.chunks, reader.options.allow_unknown_chunks)?;
 
     let meta = Metadata {
+        version: reader.version,
         location: None,
         chunk_padding: reader.chunk_padding,
         endianness: reader.endianness,
@@ -431,7 +418,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         animation_curves,
         audio_groups,
         audios,
-        tilesets: backgrounds,
+        tilesets,
         codes,
         data_files,
         embedded_images,
@@ -441,7 +428,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         fonts,
         functions,
         game_end_scripts,
-        general_info: reader.general_info,
+        general_info,
         global_init_scripts,
         language_info,
         options,
@@ -455,7 +442,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         shaders,
         sounds,
         sprites,
-        strings: reader.strings,
+        strings,
         tags,
         texture_group_infos,
         texture_page_items,

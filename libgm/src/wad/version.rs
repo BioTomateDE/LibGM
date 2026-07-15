@@ -50,8 +50,8 @@ impl Display for LtsBranch {
 /// raw `GEN8` version is stuck on `2.0.0.0`.
 /// This library uses version detection to detect the approximate GameMaker
 /// version so that the file format can be deserialized properly.
-#[derive(Debug, Clone, Copy)]
-pub struct GMVersion {
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IdeVersion {
     /// The most significant version part.
     /// This can be 1, 2, or a year after 2021.
     ///
@@ -67,63 +67,24 @@ pub struct GMVersion {
 
     /// The fourth-most (least) significant version part.
     pub build: u32,
-
-    /// Different GameMaker release branches.
-    /// LTS has some but not all features of equivalent newer versions.
-    /// See [`LTSBranch`] for more information.
-    pub branch: LtsBranch,
 }
 
-impl GMVersion {
-    // HACK: Make these functions `const` when Into, PartialEq and PartialOrd are const-stable.
+impl IdeVersion {
+    pub const GMS2: Self = Self::new(2, 0, 0, 0);
 
-    /// The GameMaker Version 2.0.0.0 (Pre LTS).
-    pub const GMS2: Self = Self::new(2, 0, 0, 0, LtsBranch::Pre2022);
-    /// The pseudo-version "infinity" (highest possible values).
-    ///
-    /// This is only useful for comparing against other `GMVersion`s dynamically.
-    pub const INF: Self = Self::new(u32::MAX, u32::MAX, u32::MAX, u32::MAX, LtsBranch::PostLts);
-    /// The pseudo-version 0.0.0.0 (Pre LTS).
-    ///
-    /// This is only useful for comparing against other `GMVersion`s dynamically.
-    pub const ZERO: Self = Self::new(0, 0, 0, 0, LtsBranch::Pre2022);
-
-    /// Creates a new [`GMVersion`] with the given version parts and branch.
     #[must_use]
-    pub const fn new(major: u32, minor: u32, release: u32, build: u32, branch: LtsBranch) -> Self {
-        Self { major, minor, release, build, branch }
-    }
-
-    /// Sets this [`GMVersion`] to the specified [`GMVersion`].
-    ///
-    /// The LTS branch is only updated if the new branch
-    /// is greater than the current branch.
-    pub fn set_version(&mut self, new_version: impl ToGMVersion) {
-        let new: Self = new_version.into_gm_version();
-        self.major = new.major;
-        self.minor = new.minor;
-        self.release = new.release;
-        self.build = new.build;
-        if new.branch != LtsBranch::Pre2022 {
-            self.branch = new.branch;
-        }
-
-        // Set the LTS branch properly.
-        if *self >= (2023, 1) && self.branch == LtsBranch::Pre2022 {
-            self.branch = LtsBranch::Lts2022;
-        }
+    pub const fn new(major: u32, minor: u32, release: u32, build: u32) -> Self {
+        Self { major, minor, release, build }
     }
 }
 
-impl GMElement for GMVersion {
+impl GMElement for IdeVersion {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let major = reader.read_u32()?;
         let minor = reader.read_u32()?;
         let release = reader.read_u32()?;
         let build = reader.read_u32()?;
-        // Since the GEN8 Version is stuck on maximum 2.0.0.0; LTS will (initially)
-        // always be PreLTS
-        Ok(Self::new(major, minor, release, build, LtsBranch::Pre2022))
+        Ok(Self { major, minor, release, build })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -135,13 +96,7 @@ impl GMElement for GMVersion {
     }
 }
 
-impl Default for GMVersion {
-    fn default() -> Self {
-        Self::GMS2
-    }
-}
-
-impl Display for GMVersion {
+impl Display for IdeVersion {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let major = self.major;
         let minor = self.minor;
@@ -154,116 +109,129 @@ impl Display for GMVersion {
                 write!(f, ".{build}")?;
             }
         }
-        if self.major >= 2022 {
-            write!(f, " [{}]", self.branch)?;
-        }
         Ok(())
     }
 }
 
-impl<T: ToGMVersion> PartialEq<T> for GMVersion {
-    fn eq(&self, other: &T) -> bool {
-        let a = self;
-        let b = other.to_gm_version();
-        a.major == b.major
-            && a.minor == b.minor
-            && a.release == b.release
-            && a.build == b.build
-            && a.branch == b.branch
-    }
+/// The version of this GameMaker data file format.
+///
+/// This should correspond to the WAD version specified in the `GEN8` chunk,
+/// until GameMaker: Studio 2, where they got lazy and stopped bumping it (stuck on WAD 17).
+///
+/// > NOTE: some of this information may be incorrect.
+/// > I am not a GameMaker OG, I am desperately trying to find information on these old versions and documenting them.
+///
+/// Pre-GameMaker Studio versions (Mark Overmars times), such as 8.1, are not included here.
+/// This GameMaker data file / WAD format was introduced in GameMaker Studio, which is what this library can parse and modify.
+/// Previous (Pre-Studio) versions used a completly different way of storing game assets, and LibGM does not support them.
+///
+/// <https://web.archive.org/web/20150304025626/https://store.yoyogames.com/downloads/gm-studio/release-notes-studio.html>
+///
+/// GameMaker: Studio includes versions 1.1-1.4 and 2.0-2.3.
+/// In the `GEN8` chunk, they stored the versions as `1.0.0.BUILD`,
+/// where BUILD is the internal build number of that version (yes, the minor 1-4 is not written).
+/// The majority of build numbers were not released. TThese numbers were bumped frequently in development, so they go into the hundereds.
+/// They had a *stable* and *beta* branch: Beta releases were released as their actual build number,
+/// whereas stable releases were relased as the build number plus 1000.
+///
+/// Then, they introduced GameMaker: Studio 2, which changed lots of stuff.
+/// They god rid of their shitty versioning and actually had normal SemVer-like versioning for a while.
+/// The last GameMaker: Studio 2 version was 2.3 (which also changed lots of stuff, most notably for GML).
+/// Unfortunately, they also slowly stopped updating the WAD and IDE version fields in `GEN8`:
+/// The IDE Version is now stuck on `2.0.0.0` forever.
+/// The WAD version was stuck on 16 for a while. They bumped it one last time to 17, where it stayed stuck forever.
+///
+/// After that, they got rid of the "Studio" in the name and renamed it to just "GameMaker"
+/// (same name as in Pre-Studio times, which is kind of confusing).
+/// They switched their versioning system to the current `YYYY.MM.P.B`. Here is an excerpt from <https://gms-updates.gmclan.org/>:
+/// > - YYYY - YEAR of release
+/// > - MM - MONTH on which it was released (usually end of); beta versions are numbered as MONTH * 100
+/// > - P - number of PATCH/fix (0 if it was first release)
+/// > - B - total number of internal builds since May 2022 (last reset of build number was short before 2022.5 release, not every build is released to public)
+/// > So, for example: means: update #1 for version released at end of June(6) 2022, 53rd build in total (since May 2022).
+/// > There are no releases in July and December because of Holiday season peak.
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd)]
+#[non_exhaustive]
+pub enum GMVersion {
+    /// * WAD Version 12
+    /// * GameMaker Studio 1.X.867
+    /// Oldest known version.
+    Wad12,
+
+    /// * WAD Version 13
+    /// * GameMaker Studio 1.4 Stable: 1135, 1451
+    Wad13,
+
+    /// * WAD Version 14
+    /// * GameMaker Studio 1.4 Stable: 1464, 1474, 1499, 1567, 1598, 1657
+    /// * GameMaker Studio 1.4 Beta: 420
+    Wad14,
+
+    /// * WAD Version 15
+    /// * GameMaker Studio 1.4 Stable: 1683, 1690, 1711, 1747, 1749, 1750, 1763
+    /// * GameMaker Studio 1.4 Beta: 460, 477, 533
+    /// * GameMaker Studio 2.0.0.0 (?????? TODO: investigate)
+    Wad15,
+
+    /// * WAD Version 16
+    /// * GameMaker Studio 1.4 Stable: 1539, 1767, 1772, 1773, 1778, 1804, 9999
+    /// * GameMaker Studio 1.4 Beta: 551
+    Wad16Old,
+
+    /// * WAD Version 16
+    /// * GameMaker Studio 1.4 Stable: 9999
+    /// * Maybe Studio 2.0?
+    /// Has padding bytes at the end of chunks
+    Wad16Pad,
+
+    /// * GameMaker Studio 2
+    /// * WAD Version 16
+    Studio2,
+
+    Studio2_0_6,
+    // wad 17 beyond here
+    Studio2_2_1,
+    Studio2_2_2_302,
+    Studio2_3,
+    Studio2_3_1,
+    Studio2_3_2,
+    Studio2_3_6,
+
+    GM2022_1,
+    GM2022_2,
+    GM2022_3,
+    GM2022_5,
+    GM2022_6,
+    GM2022_8,
+    GM2022_9,
+    // anything beyond here is Post LTS according to UndertaleModTool
+    GM2023_1,
+    GM2023_2,
+    GM2023_4,
+    /// Detected as 2023.6 by UndertaleModTool.
+    Lts2022,
+    GM2023_8,
+    GM2023_11,
+    GM2024_2,
+    GM2024_4,
+    GM2024_6,
+    GM2024_8,
+    GM2024_11,
+    GM2024_13,
+    GM2024_14,
+    GM2024_14_1,
 }
 
-/// This is not symmetrical due to branches!
-/// The predicate should always be RHS.
-impl<T: ToGMVersion> PartialOrd<T> for GMVersion {
-    fn partial_cmp(&self, other: &T) -> Option<Ordering> {
-        compare(self, &other.to_gm_version())
-    }
-}
-
-fn compare(a: &GMVersion, b: &GMVersion) -> Option<Ordering> {
-    if b.branch == LtsBranch::PostLts && a.branch != LtsBranch::PostLts {
-        return Some(Ordering::Less);
-    }
-    match a.major.partial_cmp(&b.major) {
-        Some(Ordering::Equal) => {}
-        ord => return ord,
-    }
-    match a.minor.partial_cmp(&b.minor) {
-        Some(Ordering::Equal) => {}
-        ord => return ord,
-    }
-    match a.release.partial_cmp(&b.release) {
-        Some(Ordering::Equal) => {}
-        ord => return ord,
-    }
-    a.build.partial_cmp(&b.build)
-}
-
-pub trait ToGMVersion: Copy {
+impl GMVersion {
     #[must_use]
-    fn to_gm_version(&self) -> GMVersion;
-
-    #[must_use]
-    fn into_gm_version(self) -> GMVersion {
-        self.to_gm_version()
+    pub fn lts(self) -> bool {
+        self == Self::Lts2022
     }
 }
 
-impl ToGMVersion for GMVersion {
-    fn to_gm_version(&self) -> GMVersion {
-        *self
-    }
-
-    fn into_gm_version(self) -> GMVersion {
-        self
-    }
-}
-
-impl ToGMVersion for &GMVersion {
-    fn to_gm_version(&self) -> GMVersion {
-        **self
-    }
-}
-
-impl ToGMVersion for (u32, u32, u32, u32, LtsBranch) {
-    fn to_gm_version(&self) -> GMVersion {
-        GMVersion::new(self.0, self.1, self.2, self.3, self.4)
-    }
-}
-
-impl ToGMVersion for (u32, u32, u32, LtsBranch) {
-    fn to_gm_version(&self) -> GMVersion {
-        GMVersion::new(self.0, self.1, self.2, 0, self.3)
-    }
-}
-
-impl ToGMVersion for (u32, u32, LtsBranch) {
-    fn to_gm_version(&self) -> GMVersion {
-        GMVersion::new(self.0, self.1, 0, 0, self.2)
-    }
-}
-
-impl ToGMVersion for (u32, u32, u32, u32) {
-    fn to_gm_version(&self) -> GMVersion {
-        GMVersion::new(self.0, self.1, self.2, self.3, LtsBranch::Pre2022)
-    }
-}
-
-impl ToGMVersion for (u32, u32, u32) {
-    fn to_gm_version(&self) -> GMVersion {
-        GMVersion::new(self.0, self.1, self.2, 0, LtsBranch::Pre2022)
-    }
-}
-
-impl ToGMVersion for (u32, u32) {
-    fn to_gm_version(&self) -> GMVersion {
-        GMVersion::new(self.0, self.1, 0, 0, LtsBranch::Pre2022)
-    }
-}
-
-impl ToGMVersion for u32 {
-    fn to_gm_version(&self) -> GMVersion {
-        GMVersion::new(*self, 0, 0, 0, LtsBranch::Pre2022)
+impl Display for GMVersion {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // TODO
+        write!(f, "{self:?}")
     }
 }

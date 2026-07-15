@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::font::kerning::Kerning;
@@ -49,7 +50,7 @@ impl GMElement for Glyph {
         let height = reader.read_u16()?;
         let shift_modifier = reader.read_i16()?;
         let offset = reader.read_i16()?; // Potential assumption according to utmt
-        if reader.general_info.version >= (2024, 11) {
+        if reader.version >= GMVersion::GM2024_11 {
             let unknown_always_zero = reader.read_i16()?;
             reader.assert_int(unknown_always_zero, 0, "Unknown Always Zero")?;
         }
@@ -80,7 +81,7 @@ impl GMElement for Glyph {
         builder.write_u16(self.height);
         builder.write_i16(self.shift_modifier);
         builder.write_i16(self.offset);
-        if builder.version() >= (2024, 11) {
+        if builder.version() >= GMVersion::GM2024_11 {
             builder.write_u16(0); // UnknownAlwaysZero
         }
         builder.write_simple_list_short(&self.kernings)?;

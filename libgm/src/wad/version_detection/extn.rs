@@ -49,7 +49,7 @@ pub fn check_2022_6(reader: &mut DataReader) -> Result<Option<GMVersion>> {
         }
     }
 
-    target_version!(2022, 6)
+    target_version!(GM2022_6)
 }
 
 pub fn check_2023_4(reader: &mut DataReader) -> Result<Option<GMVersion>> {
@@ -65,7 +65,7 @@ pub fn check_2023_4(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     // If it's not true, then "files_pointer" is actually a string pointer, so it's
     // GM 2023.4+.
     if files_pointer > options_pointer {
-        return target_version!(2023, 4);
+        return target_version!(GM2023_4);
     }
     Ok(None)
 }

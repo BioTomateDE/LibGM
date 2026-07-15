@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::build::builder::LastChunk;
 use crate::wad::chunk::ChunkName;
@@ -44,8 +45,7 @@ impl DataBuilder<'_> {
 
         // Write padding in these versions
         let padding_start_pos = self.pos();
-        let ver = &self.gm_data.general_info.version;
-        if ver.major >= 2 || (ver.major == 1 && ver.build >= 9999) {
+        if self.version() >= GMVersion::Wad16Pad {
             self.align(self.gm_data.meta.chunk_padding);
         }
 

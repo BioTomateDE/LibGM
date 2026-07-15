@@ -8,7 +8,7 @@ use crate::wad::version::LtsBranch;
 /// Go through each background, and check to see if it ends at
 /// the expected position. If not, this is probably 2024.14.1.
 pub fn check_2024_14_1(reader: &mut DataReader) -> Result<Option<GMVersion>> {
-    let target_ver = target_version!(2024, 14, 1, LtsBranch::PostLts);
+    let target_ver = target_version!(GM2024_14_1);
     let count = reader.read_u32()?;
 
     for i in 0..count {

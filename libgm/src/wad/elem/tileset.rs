@@ -2,6 +2,7 @@
 
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
@@ -41,7 +42,7 @@ impl GMElement for Tilesets {
                 reader.align(ALIGNMENT)?;
             }
 
-            reader.assert_pos(pointer, "Background Pointer")?;
+            reader.assert_pos(pointer, "Tileset Pointer")?;
             let background = Tileset::deserialize(reader)?;
             backgrounds[idx] = Some(background);
         }
@@ -103,7 +104,7 @@ impl GMElement for Tileset {
         let smooth = reader.read_bool32()?;
         let preload = reader.read_bool32()?;
         let texture: GMRef<TexturePageItem> = reader.read_gm_texture()?;
-        let gms2_data: Option<GMS2Data> = reader.deserialize_if_gm_version(2)?;
+        let gms2_data: Option<GMS2Data> = reader.deserialize_if_version(GMVersion::Studio2)?;
 
         Ok(Self {
             name,
@@ -121,7 +122,7 @@ impl GMElement for Tileset {
         builder.write_bool32(self.smooth);
         builder.write_bool32(self.preload);
         builder.write_gm_texture(self.texture)?;
-        builder.write_if_ver(&self.gms2_data, "GMS2 data", 2)?;
+        builder.write_if_ver(&self.gms2_data, "GMS2 data", GMVersion::Studio2)?;
         Ok(())
     }
 
@@ -182,7 +183,7 @@ impl GMElement for GMS2Data {
 
         let mut tile_separation_x = 0;
         let mut tile_separation_y = 0;
-        if reader.general_info.version >= (2024, 14, 1) {
+        if reader.version >= GMVersion::GM2024_14_1 {
             tile_separation_x = reader.read_u32()?;
             tile_separation_y = reader.read_u32()?;
         }
@@ -229,7 +230,7 @@ impl GMElement for GMS2Data {
         builder.write_u32(self.tile_width);
         builder.write_u32(self.tile_height);
 
-        if builder.version() >= (2024, 14, 1) {
+        if builder.version() >= GMVersion::GM2024_14_1 {
             builder.write_u32(self.tile_separation_x);
             builder.write_u32(self.tile_separation_y);
         }

@@ -2,15 +2,16 @@
 
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::GMNamedElement;
-use crate::wad::elem::background::Tileset;
 use crate::wad::elem::font::Font;
 use crate::wad::elem::sprite::Sprite;
 use crate::wad::elem::string::Strings;
 use crate::wad::elem::texture_page::TexturePage;
+use crate::wad::elem::tileset::Tileset;
 use crate::wad::elem::validate_identifier;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
@@ -80,10 +81,10 @@ pub struct TextureGroupInfo {
 impl GMElement for TextureGroupInfo {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let data_2022_9: Option<Data2022_9> = reader.deserialize_if_gm_version((2022, 9))?;
+        let data_2022_9: Option<Data2022_9> = reader.deserialize_if_version(GMVersion::GM2022_9)?;
         let texture_pages_ptr = reader.read_u32()?;
         let sprites_ptr = reader.read_u32()?;
-        let spine_sprites_ptr = if reader.general_info.version < (2023, 1, LtsBranch::PostLts) {
+        let spine_sprites_ptr = if reader.version < GMVersion::GM2023_1 || reader.version.lts() {
             reader.read_u32()?
         } else {
             0
@@ -98,7 +99,7 @@ impl GMElement for TextureGroupInfo {
         let sprites: Vec<GMRef<Sprite>> = reader.read_simple_list()?;
 
         let spine_sprites: Vec<GMRef<Sprite>> =
-            if reader.general_info.version < (2023, 1, LtsBranch::PostLts) {
+            if reader.version < GMVersion::GM2023_1 || reader.version.lts() {
                 reader.assert_pos(spine_sprites_ptr, "Spine Sprites")?;
                 reader.read_simple_list()?
             } else {
@@ -127,11 +128,11 @@ impl GMElement for TextureGroupInfo {
         builder.write_if_ver(
             &self.data_2022_9,
             "Directory, Extension, LoadType",
-            (2022, 9),
+            GMVersion::GM2022_9,
         )?;
         builder.write_pointer(&self.texture_pages);
         builder.write_pointer(&self.sprites);
-        if builder.version() < (2023, 1, LtsBranch::PostLts) {
+        if builder.version() < GMVersion::GM2023_1 || builder.version().lts() {
             builder.write_pointer(&self.spine_sprites);
         }
         builder.write_pointer(&self.fonts);
@@ -143,7 +144,7 @@ impl GMElement for TextureGroupInfo {
         builder.resolve_pointer(&self.sprites)?;
         builder.write_simple_list(&self.sprites)?;
 
-        if builder.version() < (2023, 1, LtsBranch::PostLts) {
+        if builder.version() < GMVersion::GM2023_1 || builder.version().lts() {
             builder.resolve_pointer(&self.spine_sprites)?;
             builder.write_simple_list(&self.spine_sprites)?;
         }

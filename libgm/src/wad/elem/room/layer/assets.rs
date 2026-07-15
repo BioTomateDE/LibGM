@@ -9,6 +9,7 @@ pub use self::sequence::SequenceInstance;
 pub use self::sprite::SpriteInstance;
 pub use self::text_item::TextItemInstance;
 use crate::prelude::*;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::room::tile::RoomTile;
@@ -34,15 +35,15 @@ impl GMElement for Assets {
         let mut particle_systems_pointer: u32 = 0;
         let mut text_items_pointer: u32 = 0;
 
-        if reader.general_info.version >= (2, 3) {
+        if reader.version >= GMVersion::Studio2_3 {
             sequences_pointer = reader.read_u32()?;
-            if reader.general_info.version < (2, 3, 2) {
+            if reader.version < GMVersion::Studio2_3_2 {
                 nine_slices_pointer = reader.read_u32()?;
             }
-            if reader.general_info.version >= (2023, 2, LtsBranch::PostLts) {
+            if reader.version >= GMVersion::GM2023_2 && !reader.version.lts() {
                 particle_systems_pointer = reader.read_u32()?;
             }
-            if reader.general_info.version >= (2024, 6) {
+            if reader.version >= GMVersion::GM2024_6 {
                 text_items_pointer = reader.read_u32()?;
             }
         }
@@ -58,20 +59,20 @@ impl GMElement for Assets {
         let mut particle_systems: Vec<ParticleSystemInstance> = Vec::new();
         let mut text_items: Vec<TextItemInstance> = Vec::new();
 
-        if reader.general_info.version >= (2, 3) {
+        if reader.version >= GMVersion::Studio2_3 {
             reader.assert_pos(sequences_pointer, "Sequences")?;
             sequences = reader.read_pointer_list()?;
 
-            if reader.general_info.version < (2, 3, 2) {
+            if reader.version < GMVersion::Studio2_3_2 {
                 reader.assert_pos(nine_slices_pointer, "Nine Slices")?;
                 nine_slices = reader.read_pointer_list()?;
             }
-            if reader.general_info.version >= (2023, 2, LtsBranch::PostLts) {
+            if reader.version >= GMVersion::GM2023_2 && !reader.version.lts() {
                 reader.assert_pos(particle_systems_pointer, "Particle Systems")?;
                 particle_systems = reader.read_pointer_list()?;
             }
 
-            if reader.general_info.version >= (2024, 6) {
+            if reader.version >= GMVersion::GM2024_6 {
                 reader.assert_pos(text_items_pointer, "Text Items")?;
                 text_items = reader.read_pointer_list()?;
             }
@@ -91,15 +92,15 @@ impl GMElement for Assets {
         builder.write_pointer(&self.legacy_tiles);
         builder.write_pointer(&self.sprites);
 
-        if builder.version() >= (2, 3) {
+        if builder.version() >= GMVersion::Studio2_3 {
             builder.write_pointer(&self.sequences);
-            if builder.version() < (2, 3, 2) {
+            if builder.version() < GMVersion::Studio2_3_2 {
                 builder.write_pointer(&self.nine_slices);
             }
-            if builder.version() >= (2023, 2, LtsBranch::PostLts) {
+            if builder.version() >= GMVersion::GM2023_2 && !builder.version().lts() {
                 builder.write_pointer(&self.particle_systems);
             }
-            if builder.version() >= (2024, 6) {
+            if builder.version() >= GMVersion::GM2024_6 {
                 builder.write_pointer(&self.text_items);
             }
         }
@@ -109,19 +110,19 @@ impl GMElement for Assets {
         builder.resolve_pointer(&self.sprites)?;
         builder.write_pointer_list(&self.sprites)?;
 
-        if builder.version() >= (2, 3) {
+        if builder.version() >= GMVersion::Studio2_3 {
             builder.resolve_pointer(&self.sequences)?;
             builder.write_pointer_list(&self.sequences)?;
 
-            if builder.version() < (2, 3, 2) {
+            if builder.version() < GMVersion::Studio2_3_2 {
                 builder.resolve_pointer(&self.nine_slices)?;
                 builder.write_pointer_list(&self.nine_slices)?;
             }
-            if builder.version() >= (2023, 2, LtsBranch::PostLts) {
+            if builder.version() >= GMVersion::GM2023_2 && !builder.version().lts() {
                 builder.resolve_pointer(&self.particle_systems)?;
                 builder.write_pointer_list(&self.particle_systems)?;
             }
-            if builder.version() >= (2024, 6) {
+            if builder.version() >= GMVersion::GM2024_6 {
                 builder.resolve_pointer(&self.text_items)?;
                 builder.write_pointer_list(&self.text_items)?;
             }

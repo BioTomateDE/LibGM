@@ -15,6 +15,7 @@ use self::subtype::Step;
 use crate::prelude::*;
 use crate::util::assert;
 use crate::util::fmt::typename;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::general_info::GeneralInfo;
@@ -128,11 +129,11 @@ impl GMElement for EventGroups {
             .ctx("reading outer event pointer list")?;
         let count = pointers.len() as u32;
 
-        let expected_count = type_count_by_ver(&reader.general_info);
+        let expected_count = type_count_by_ver(reader.version);
         let ctx = || {
             format!(
-                "validating event type count for game with GM Version {} and WAD Version {}",
-                reader.general_info.version, reader.general_info.wad_version,
+                "validating event type count for game with version {}",
+                reader.version
             )
         };
         reader
@@ -187,7 +188,7 @@ impl GMElement for EventGroups {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         // manual pointer list
-        let count: u32 = type_count_by_ver(&builder.gm_data.general_info);
+        let count: u32 = type_count_by_ver(builder.version());
 
         builder.write_u32(count);
         let pointer_list_pos = builder.pos();
@@ -297,12 +298,12 @@ impl EventSubtype for () {
 }
 
 #[must_use]
-fn type_count_by_ver(gen8: &GeneralInfo) -> u32 {
-    if gen8.wad_version < 16 {
-        return 12;
+fn type_count_by_ver(ver: GMVersion) -> u32 {
+    if ver < GMVersion::Wad16Old {
+        12
+    } else if ver == GMVersion::Wad16Old {
+        13
+    } else {
+        15
     }
-    if gen8.wad_version == 16 && gen8.version < 2 {
-        return 13;
-    }
-    15
 }

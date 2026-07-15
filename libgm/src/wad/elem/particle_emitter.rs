@@ -1,6 +1,7 @@
 use crate::gm_enum::gm_enum;
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
@@ -89,7 +90,8 @@ impl GMElement for ParticleEmitter {
     #[allow(clippy::too_many_lines)]
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let enabled: bool = if reader.general_info.version >= (2023, 6) {
+        //  TODO: used to be 2023.6
+        let enabled: bool = if reader.version >= GMVersion::Lts2022 {
             reader.read_bool32()?
         } else {
             true
@@ -97,7 +99,7 @@ impl GMElement for ParticleEmitter {
         let mode: EmitMode = reader.read_enum()?;
 
         let emit_count: u32;
-        let data_2023_8: Option<Data2023_8> = if reader.general_info.version >= (2023, 8) {
+        let data_2023_8: Option<Data2023_8> = if reader.version >= GMVersion::GM2023_8 {
             let count = reader.read_f32()?;
             emit_count = count as u32;
             #[expect(clippy::float_cmp, clippy::cast_precision_loss)]
@@ -139,7 +141,7 @@ impl GMElement for ParticleEmitter {
         let sprite: GMRef<Sprite> = reader.read_resource_by_id()?;
         let texture: EmitterTexture = reader.read_enum()?;
         let frame_index = reader.read_f32()?;
-        let data_2023_4: Option<Data2023_4> = reader.deserialize_if_gm_version((2023, 4))?;
+        let data_2023_4: Option<Data2023_4> = reader.deserialize_if_version(GMVersion::GM2023_4)?;
         let start_color = reader.read_u32()?;
         let mid_color = reader.read_u32()?;
         let end_color = reader.read_u32()?;
@@ -149,7 +151,7 @@ impl GMElement for ParticleEmitter {
         let scale_x = reader.read_f32()?;
         let scale_y = reader.read_f32()?;
 
-        let size_data_etc: SizeDataEtc = if reader.general_info.version >= (2023, 8) {
+        let size_data_etc: SizeDataEtc = if reader.version >= GMVersion::GM2023_8 {
             let mut data = data_2023_8.unwrap();
             data.size_min_x = reader.read_f32()?;
             data.size_max_x = reader.read_f32()?;
@@ -245,7 +247,8 @@ impl GMElement for ParticleEmitter {
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(self.name)?;
 
-        if builder.version() >= (2023, 6) {
+        if builder.version() >= GMVersion::Lts2022 {
+            // TODO: used  to be 2023.6
             builder.write_bool32(self.enabled);
         } else if !self.enabled {
             log::warn!("Cannot disable particle emitters before 2023.6");
@@ -253,7 +256,7 @@ impl GMElement for ParticleEmitter {
 
         builder.write_enum(self.mode);
 
-        if builder.version() >= (2023, 8) {
+        if builder.version() >= GMVersion::GM2023_8 {
             let SizeDataEtc::Post2023_8(data) = &self.size_data_etc else {
                 bail!("Expected >= 2023.8 data, got < 2023.8 data");
             };
@@ -284,7 +287,7 @@ impl GMElement for ParticleEmitter {
         builder.write_resource_id(self.sprite);
         builder.write_enum(self.texture);
         builder.write_f32(self.frame_index);
-        builder.write_if_ver(&self.data_2023_4, "2023.4 data", (2023, 4))?;
+        builder.write_if_ver(&self.data_2023_4, "2023.4 data", GMVersion::GM2023_4)?;
         builder.write_u32(self.start_color);
         builder.write_u32(self.mid_color);
         builder.write_u32(self.end_color);
@@ -293,7 +296,7 @@ impl GMElement for ParticleEmitter {
         builder.write_f32(self.lifetime_max);
         builder.write_f32(self.scale_x);
         builder.write_f32(self.scale_y);
-        if builder.version() >= (2023, 8) {
+        if builder.version() >= GMVersion::GM2023_8 {
             let SizeDataEtc::Post2023_8(data) = &self.size_data_etc else {
                 bail!("Expected >= 2023.8 data, got < 2023.8 data");
             };

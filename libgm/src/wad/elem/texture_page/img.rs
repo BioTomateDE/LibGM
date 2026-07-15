@@ -10,7 +10,7 @@ pub use bz2::BZip2QoiHeader;
 use image::DynamicImage;
 
 use crate::prelude::*;
-use crate::wad::Blob;
+use crate::wad::{Blob, GMVersion};
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::texture_page::BZ2_QOI_HEADER;
 
@@ -278,7 +278,7 @@ impl GMImage {
 
     pub(super) fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let is_qoi = matches!(self.0, Img::Qoi(_) | Img::Bz2Qoi(_, _));
-        let is_qoi_eligible = builder.version() >= (2022, 1);
+        let is_qoi_eligible = builder.version() >= GMVersion::GM2022_1;
         if is_qoi && !is_qoi_eligible {
             bail!("Cannot serialize QOI images before GM 2022.1");
         }
@@ -331,7 +331,7 @@ enum Img {
 // Like yeah, Bz2+Qoi does result in a small size at the tradeoff of losing the main benefit of QOI: deserialization speed.
 fn write_dyn_img(dyn_img: &DynamicImage, builder: &mut DataBuilder) -> Result<()> {
     // Use QOI if supported.
-    if builder.version() >= (2022, 1) {
+    if builder.version() >= GMVersion::GM2022_1 {
         qoi::build(dyn_img, builder).ctx("serializing DynamicImage as QOI")?;
         return Ok(());
     }
@@ -350,6 +350,6 @@ fn write_bz2qoi_header(header: &BZip2QoiHeader, builder: &mut DataBuilder) -> Re
     builder.write_bytes(BZ2_QOI_HEADER);
     builder.write_u16(header.width);
     builder.write_u16(header.height);
-    builder.write_if_ver(&header.uncompressed_size, "Uncompressed Size", (2022, 5))?;
+    builder.write_if_ver(&header.uncompressed_size, "Uncompressed Size", GMVersion::GM2022_5)?;
     Ok(())
 }

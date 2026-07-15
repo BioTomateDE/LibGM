@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::wad::Blob;
+use crate::wad::{Blob, GMVersion};
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
@@ -33,7 +33,7 @@ impl GMElement for Data {
         let width = reader.read_i32()?;
         let height = reader.read_i32()?;
 
-        let ver_data = if reader.general_info.version >= (2022, 1) {
+        let ver_data = if reader.version >= GMVersion::GM2022_1 {
             let tpe_index = reader.read_i32()?;
             VersionData::Post2022_1(VersionDataPost2022_1 { tpe_index })
         } else {
@@ -69,7 +69,7 @@ impl GMElement for Data {
         builder.write_enum(self.bitmap_type);
         builder.write_i32(self.width);
         builder.write_i32(self.height);
-        if builder.version() >= (2022, 1) {
+        if builder.version() >= GMVersion::GM2022_1 {
             if let VersionData::Post2022_1(ref data) = self.ver_data {
                 builder.write_i32(data.tpe_index);
             } else {

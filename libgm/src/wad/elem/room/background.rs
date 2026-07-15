@@ -2,7 +2,7 @@
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::background::Tileset;
+use crate::wad::elem::tileset::Tileset;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 

@@ -11,6 +11,7 @@ use track::keyframe::Moment;
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
 use crate::util::init::hashmap_with_capacity;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
@@ -76,7 +77,7 @@ impl GMElement for Sequence {
 
         let mut width: Option<f32> = None;
         let mut height: Option<f32> = None;
-        if reader.general_info.version >= (2024, 13) {
+        if reader.version >= GMVersion::GM2024_13 {
             width = Some(reader.read_f32()?);
             height = Some(reader.read_f32()?);
         }
@@ -123,7 +124,7 @@ impl GMElement for Sequence {
         builder.write_i32(self.origin_x);
         builder.write_i32(self.origin_y);
         builder.write_f32(self.volume);
-        if builder.version() >= (2024, 13) {
+        if builder.version() >= GMVersion::GM2024_13 {
             builder.write_f32(self.width.ok_or("Sequence width not set in 2024.13+")?);
             builder.write_f32(self.height.ok_or("Sequence height not set in 2024.13+")?);
         }

@@ -14,7 +14,7 @@ use crate::wad::reference::GMRef;
 pub mod animation_curve;
 pub mod audio;
 pub mod audio_group;
-pub mod background;
+pub mod tileset;
 pub mod code;
 pub mod data_file;
 pub mod embedded_image;

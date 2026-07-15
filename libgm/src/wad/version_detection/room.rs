@@ -7,7 +7,7 @@ use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
 
 pub fn check_2022_1(reader: &mut DataReader) -> Result<Option<GMVersion>> {
-    let target_ver = target_version!(2022, 1);
+    let target_ver = target_version!(GM2022_1);
     // Iterate over all rooms until a length check is performed
 
     let room_count = reader.read_u32()?;
@@ -114,7 +114,7 @@ pub fn check_2_2_2_302(reader: &mut DataReader) -> Result<Option<GMVersion>> {
             reader.read_u32()?
         };
         if pointer2 - pointer1 == 48 {
-            return target_version!(2, 2, 2, 302);
+            return target_version!(Studio2_2_2_302);
         }
     }
 
@@ -176,9 +176,9 @@ pub fn check_2024_2_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
             let tile_map_height = reader.read_u32()?;
             if next_pointer - reader.cur_pos != (tile_map_width * tile_map_height * 4) {
                 return if any_layers_misaligned {
-                    target_version!(2024, 2)
+                    target_version!(GM2024_2)
                 } else {
-                    target_version!(2024, 4)
+                    target_version!(GM2024_4)
                 };
             }
         }

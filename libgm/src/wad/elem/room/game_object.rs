@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::gml::Code;
 use crate::prelude::*;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::game_object::GameObject;
@@ -35,15 +36,15 @@ impl GMElement for RoomGameObject {
         let scale_y = reader.read_f32()?;
         let mut image_speed: Option<f32> = None;
         let mut image_index: Option<u32> = None;
-        if reader.general_info.version >= (2, 2, 2, 302) {
+        if reader.version >= GMVersion::Studio2_2_2_302 {
             image_speed = Some(reader.read_f32()?);
             image_index = Some(reader.read_u32()?);
         }
         let color = reader.read_u32()?;
         let rotation = reader.read_f32()?; // {~~} FloatAsInt (negative zero handling stuff)
 
-        // [From UndertaleModTool] "is that dependent on WAD or something else?"
-        let pre_create_code: GMRef<Code> = if reader.general_info.wad_version >= 16 {
+        // TODO: is that dependent on WAD or something else?
+        let pre_create_code: GMRef<Code> = if reader.version >= GMVersion::Wad16Old {
             reader.read_resource_by_id()?
         } else {
             GMRef::none()
@@ -73,11 +74,11 @@ impl GMElement for RoomGameObject {
         builder.write_resource_id(self.creation_code);
         builder.write_f32(self.scale_x);
         builder.write_f32(self.scale_y);
-        builder.write_if_ver(&self.image_speed, "Image Speed", (2, 2, 2, 302))?;
-        builder.write_if_ver(&self.image_index, "Image Index", (2, 2, 2, 302))?;
+        builder.write_if_ver(&self.image_speed, "Image Speed", GMVersion::Studio2_2_2_302)?;
+        builder.write_if_ver(&self.image_index, "Image Index", GMVersion::Studio2_2_2_302)?;
         builder.write_u32(self.color);
         builder.write_f32(self.rotation);
-        if builder.wad_version() >= 16 {
+        if builder.version() >= GMVersion::Wad16Old {
             builder.write_resource_id(self.pre_create_code);
         }
         Ok(())

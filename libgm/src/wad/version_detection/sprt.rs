@@ -16,14 +16,14 @@ pub fn check_2_3_2(reader: &mut DataReader) -> Result<Option<GMVersion>> {
         }
         let special_version = reader.read_u32()?;
         if special_version >= 3 {
-            return target_version!(2, 3, 2);
+            return target_version!(Studio2_3_2);
         }
     }
     Ok(None)
 }
 
 pub fn check_2024_6(reader: &mut DataReader) -> Result<Option<GMVersion>> {
-    let ver = target_version!(2024, 6);
+    let ver = target_version!(GM2024_6);
     let sprite_count = reader.read_u32()?;
     for i in 0..sprite_count {
         reader.cur_pos = reader.chunk.start_pos + i * 4 + 4;

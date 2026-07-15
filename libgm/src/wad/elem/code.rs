@@ -17,6 +17,7 @@ use crate::gml::instruction::VariableType;
 use crate::gml::opcodes;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::GMNamedListChunk;
 use crate::wad::chunk::gm_list_chunk;
@@ -78,7 +79,7 @@ impl GMElement for Codes {
             let instructions_end_pos;
             let modern_data: Option<ModernData>;
 
-            if reader.general_info.wad_version <= 14 {
+            if reader.version < GMVersion::Wad15 {
                 instructions_start_pos = reader.cur_pos; // Instructions are placed immediately after code metadata; how convenient!
                 reader.cur_pos += code_length; // Skip over them; they will get parsed in the next loops
                 instructions_end_pos = reader.cur_pos;
@@ -167,7 +168,7 @@ impl GMElement for Codes {
         }
 
         // WAD < 15 my beloved
-        if builder.wad_version() < 15 {
+        if builder.version() < GMVersion::Wad15 {
             for (i, code) in self.elems.iter().enumerate() {
                 builder.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
                 builder.write_gm_string(code.name)?;
@@ -216,10 +217,7 @@ impl GMElement for Codes {
             let (start, end) = instructions_ranges[i];
             let length: u32 = end - start;
             let data: &ModernData = code.modern_data.as_ref().ok_or_else(|| {
-                format!(
-                    "Code WAD15+ data not set in WAD version {}",
-                    builder.wad_version()
-                )
+                format!("Code WAD15+ data not set in version {}", builder.version())
             })?;
 
             builder.write_gm_string(code.name)?;
@@ -245,7 +243,7 @@ impl GMElement for Instruction {
         let b0 = (word & 0x0000_00FF) as u8;
         let mut b = [b0, b1, b2];
 
-        if reader.general_info.wad_version < 15 {
+        if reader.version < GMVersion::Wad15 {
             if matches!(opcode, 0x10..=0x16) {
                 // This is needed to preserve the comparison type for WAD < 15
                 reader.assert_zero_b1(b)?;
@@ -406,7 +404,7 @@ impl GMElement for Instruction {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         let mut opcode: u8 = self.opcode();
-        if builder.wad_version() < 15 {
+        if builder.version() < GMVersion::Wad15 {
             opcode = opcodes::new_to_old(opcode);
         }
 
@@ -618,7 +616,7 @@ impl DataReader<'_> {
 
     fn parse_branch(&self, b: [u8; 3]) -> i32 {
         let mut value: u32 = get_u24(b);
-        if self.general_info.wad_version > 14 && (value & 0x40_0000) != 0 {
+        if self.version >= GMVersion::Wad15 && (value & 0x40_0000) != 0 {
             value |= 0x80_0000;
         }
         if value & 0x80_0000 != 0 {
@@ -763,7 +761,7 @@ fn build_comparison(
     comparison_type: ComparisonType,
 ) {
     let mut comparison_type = comparison_type.as_u8();
-    if builder.wad_version() < 15 {
+    if builder.version() < GMVersion::Wad15 {
         opcode = 0x10 + comparison_type;
         comparison_type = 0;
     }
@@ -815,7 +813,7 @@ fn build_dupswap(builder: &mut DataBuilder, opcode: u8, data_type: DataType, siz
 
 fn build_branch(builder: &mut DataBuilder, opcode: u8, jump_offset: i32) {
     let mut value = (jump_offset as u32) & 0x00FF_FFFF;
-    if builder.wad_version() > 14 && (value & 0x80_0000) != 0 {
+    if builder.version() >= GMVersion::Wad15 && (value & 0x80_0000) != 0 {
         value &= !0x80_0000;
         value |= 0x40_0000;
     }
@@ -930,7 +928,7 @@ impl GMElement for AssetReference {
         }
 
         let raw = reader.read_u32()?;
-        if reader.general_info.version >= (2024, 4) {
+        if reader.version >= GMVersion::GM2024_4 {
             Self::parse(raw)
         } else {
             Self::parse_old(raw)
@@ -943,7 +941,7 @@ impl GMElement for AssetReference {
             return Ok(());
         }
 
-        let raw = if builder.version() >= (2024, 4) {
+        let raw = if builder.version() >= GMVersion::GM2024_4 {
             self.build()
         } else {
             self.build_old()
@@ -1109,7 +1107,7 @@ pub(crate) fn check_yyc(reader: &DataReader) -> Result<bool> {
         return Ok(false);
     }
 
-    if reader.general_info.wad_version > 16 {
+    if reader.version > GMVersion::Wad16Old {
         log::warn!("Empty, but existent CODE chunk after WAD 16");
     }
 

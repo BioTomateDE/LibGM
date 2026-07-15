@@ -5,7 +5,7 @@ use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
 
 pub fn check_2022_5(reader: &mut DataReader) -> Result<Option<GMVersion>> {
-    let target_ver = target_version!(2022, 5);
+    let target_ver = target_version!(GM2022_5);
     let object_count = reader.read_u32()?;
     if object_count < 1 {
         return Ok(None); // No objects; nothing to detect

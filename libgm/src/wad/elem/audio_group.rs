@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
@@ -45,7 +46,7 @@ pub struct AudioGroup {
 impl GMElement for AudioGroup {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
-        let path: GMRef<String> = if reader.general_info.version >= (2024, 14) {
+        let path: GMRef<String> = if reader.version >= GMVersion::GM2024_14 {
             reader.read_gm_string()?
         } else {
             GMRef::none()
@@ -55,7 +56,7 @@ impl GMElement for AudioGroup {
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
         builder.write_gm_string(self.name)?;
-        if builder.version() >= (2024, 14) {
+        if builder.version() >= GMVersion::GM2024_14 {
             builder.write_gm_string(self.path)?;
         }
         Ok(())

@@ -18,7 +18,7 @@ use crate::wad::elem::room::Room;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 use crate::wad::version::GMVersion;
-use crate::wad::version::ToGMVersion;
+use crate::wad::version::IdeVersion;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GeneralInfo {
@@ -95,7 +95,7 @@ pub struct GeneralInfo {
     ///
     /// ___
     /// See `wad_version` for more information.
-    pub version: GMVersion,
+    pub ide_version: IdeVersion,
 
     /// The default window width of the game window.
     pub window_width: u32,
@@ -160,7 +160,7 @@ impl GMElement for GeneralInfo {
         let game_id = reader.read_u32()?;
         let directplay_guid: [u8; 16] = *reader.read_bytes_const().ctx("reading GUID")?;
         let game_name: GMRef<String> = reader.read_gm_string()?;
-        let version = GMVersion::deserialize(reader)?;
+        let ide_version = IdeVersion::deserialize(reader)?;
         let window_width = reader.read_u32()?;
         let window_height = reader.read_u32()?;
         let flags_raw = reader.read_u32()?;
@@ -199,7 +199,7 @@ impl GMElement for GeneralInfo {
             game_id,
             directplay_guid: Blob(directplay_guid),
             game_name,
-            version,
+            ide_version,
             window_width,
             window_height,
             flags,
@@ -215,7 +215,7 @@ impl GMElement for GeneralInfo {
             exists: true,
         };
 
-        if general_info.version >= 2 {
+        if ide_version.major >= 2 {
             let gms2 = general_info.read_gms2_data(reader)?;
             general_info.gms2_data = Some(gms2);
         }
@@ -238,13 +238,7 @@ impl GMElement for GeneralInfo {
         builder.write_u32(self.game_id);
         builder.write_bytes(&*self.directplay_guid);
         builder.write_gm_string(self.game_name)?;
-
-        if self.version < 2 {
-            self.version.serialize(builder)?;
-        } else {
-            // Version field is stuck on 2.0.0.0
-            GMVersion::GMS2.serialize(builder)?;
-        }
+        self.ide_version.serialize(builder)?;
         builder.write_u32(self.window_width);
         builder.write_u32(self.window_height);
         builder.write_u32(self.flags.bits());
@@ -255,12 +249,12 @@ impl GMElement for GeneralInfo {
         builder.write_u64(0); // "Active targets"
         builder.write_u64(self.function_classifications.bits());
         builder.write_i32(self.steam_appid);
-        if self.wad_version >= 14 {
+        if builder.version() >= GMVersion::Wad14 {
             builder.write_u32(self.debugger_port);
         }
         builder.write_simple_list(&self.room_order)?;
 
-        if builder.version() >= 2 {
+        if builder.version() >= GMVersion::Studio2 {
             self.write_gms2_data(builder)?;
         }
         Ok(())
@@ -280,7 +274,7 @@ impl Default for GeneralInfo {
             game_id: 1337,
             directplay_guid: Blob([0u8; 16]),
             game_name: GMRef::none(),
-            version: GMVersion::default(),
+            ide_version: IdeVersion::GMS2,
             window_width: 1337,
             window_height: 1337,
             flags: Flags::empty(),
@@ -295,12 +289,5 @@ impl Default for GeneralInfo {
             gms2_data: Some(GMS2Data::default()),
             exists: false,
         }
-    }
-}
-
-impl GeneralInfo {
-    /// See [`GMVersion::set_version`].
-    pub fn set_version(&mut self, new_version: impl ToGMVersion) {
-        self.version.set_version(new_version);
     }
 }

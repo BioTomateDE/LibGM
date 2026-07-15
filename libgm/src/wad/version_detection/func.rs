@@ -6,7 +6,7 @@ use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
 
 pub fn check_2024_8(reader: &mut DataReader) -> Result<Option<GMVersion>> {
-    let ver = target_version!(2024, 8);
+    let ver = target_version!(GM2024_8);
     if reader.chunk.is_empty() {
         return Ok(None);
     }

@@ -11,7 +11,7 @@ pub fn print_general(g: &GeneralInfo, s: &Strings) {
     println!("Display Name: {}", g.display_name.display(s));
     println!("Game Name: {}", g.game_name.display(s));
     println!("File Name: {}", g.game_file_name.display(s));
-    println!("Version: {} (WAD {})", g.version, g.wad_version);
+    println!("Version: {} (WAD {})", g.ide_version, g.wad_version);
     println!("Created at: {:?}", g.creation_timestamp);
     println!("Window dimensions: {}x{}", g.window_width, g.window_height);
     println!("Config: {}", g.config.display(s));

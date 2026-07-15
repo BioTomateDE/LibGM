@@ -80,13 +80,7 @@ impl<'a> DataBuilder<'a> {
     #[inline]
     #[must_use]
     pub const fn version(&self) -> GMVersion {
-        self.gm_data.general_info.version
-    }
-
-    #[inline]
-    #[must_use]
-    pub const fn wad_version(&self) -> u8 {
-        self.gm_data.general_info.wad_version
+        self.gm_data.meta.version
     }
 
     /// Pads the internal buffer with zero bytes until its length is aligned to

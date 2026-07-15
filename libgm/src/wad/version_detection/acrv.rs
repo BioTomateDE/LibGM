@@ -5,7 +5,7 @@ use crate::wad::GMVersion;
 use crate::wad::parse::reader::DataReader;
 
 pub fn check_2_3_1(reader: &mut DataReader) -> Result<Option<GMVersion>> {
-    let ver = target_version!(2, 3);
+    let ver = target_version!(Studio2_3);
     reader.read_gms2_chunk_version("ACRV Version")?;
     let count = reader.read_u32()?;
     if count < 1 {

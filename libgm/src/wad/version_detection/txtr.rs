@@ -6,7 +6,7 @@ use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
 
 pub fn check_2022_3(reader: &mut DataReader) -> Result<Option<GMVersion>> {
-    let ver = target_version!(2022, 3);
+    let ver = target_version!(GM2022_3);
     let texture_count = reader.read_u32()?;
     if texture_count < 1 {
         return Ok(None); // Can't detect if there are no texture pages
@@ -29,7 +29,7 @@ pub fn check_2022_3(reader: &mut DataReader) -> Result<Option<GMVersion>> {
 }
 
 pub fn check_2022_5(reader: &mut DataReader) -> Result<Option<GMVersion>> {
-    let target_ver = target_version!(2022, 5);
+    let target_ver = target_version!(GM2022_5);
     let texture_count = reader.read_u32()?;
     for i in 0..texture_count {
         // Go to each texture, and then to each texture's data
@@ -77,5 +77,5 @@ pub fn check_2_0_6(reader: &mut DataReader) -> Result<Option<GMVersion>> {
         }
     }
 
-    target_version!(2, 0, 6)
+    target_version!(Studio2_0_6)
 }

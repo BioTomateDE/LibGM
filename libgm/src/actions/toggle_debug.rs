@@ -11,6 +11,7 @@ use crate::gml::Code;
 use crate::gml::instruction::InstanceType;
 use crate::gml::instruction::Instruction;
 use crate::prelude::*;
+use crate::wad::GMVersion;
 use crate::wad::elem::variable::Variable;
 
 impl GMData {
@@ -66,7 +67,7 @@ fn toggle_debug(data: &mut GMData, enable: bool) -> Result<()> {
             .is_ok()
         {
             deltarune::toggle(data, enable)
-        } else if gen8.version >= (2, 3) {
+        } else if data.meta.version >= GMVersion::Studio2_3 {
             demo_lts_ch1::toggle(data, enable)
         } else {
             chapter1_old::toggle(data, enable)

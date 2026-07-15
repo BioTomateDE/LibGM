@@ -4,6 +4,7 @@ pub mod code_local;
 pub use self::code_local::CodeLocal;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::ChunkName;
 use crate::wad::chunk::gm_named_list_chunk;
@@ -39,7 +40,7 @@ impl Functions {
 
 impl GMElement for Functions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let functions_count = if reader.general_info.wad_version >= 15 {
+        let functions_count = if reader.version >= GMVersion::Wad15 {
             reader.read_u32()?
         } else {
             reader.chunk.length() / 12
@@ -73,7 +74,7 @@ impl GMElement for Functions {
         }
 
         let code_locals: Vec<CodeLocal> =
-            if reader.general_info.wad_version >= 15 && reader.general_info.version < (2024, 8) {
+            if (GMVersion::Wad15..GMVersion::GM2024_8).contains(&reader.version) {
                 reader.read_simple_list()?
             } else {
                 Vec::new()
@@ -83,7 +84,7 @@ impl GMElement for Functions {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if builder.wad_version() >= 15 {
+        if builder.version() >= GMVersion::Wad15 {
             builder.write_usize(self.elems.len())?;
         }
 
@@ -96,9 +97,8 @@ impl GMElement for Functions {
             })?;
             let occurrence_count: usize = occurrences.len();
 
-            // Before GM 2.3, the first occurrence points to the instruction rather than the
-            // next offset
-            let gm2_3: bool = builder.version() >= (2, 3);
+            // Before GM 2.3, the first occurrence points to the instruction rather than the next offset
+            let gm2_3: bool = builder.version() >= GMVersion::Studio2_3;
             let first_occurrence: i32 = match occurrences.first() {
                 Some(&occurrence) if gm2_3 => occurrence as i32 + 4,
                 Some(&occurrence) => occurrence as i32,
@@ -110,7 +110,7 @@ impl GMElement for Functions {
             builder.write_i32(first_occurrence);
         }
 
-        if builder.wad_version() >= 15 && builder.version() < (2024, 8) {
+        if (GMVersion::Wad15..GMVersion::GM2024_8).contains(&builder.version()) {
             builder.write_simple_list(&self.code_locals)?;
         }
 
@@ -140,7 +140,7 @@ fn parse_occurrence_chain(
         .get(ChunkName::CODE)
         .ok_or("Chunk CODE not set while parsing function occurrences")?;
 
-    let first_extra_offset: u32 = if reader.general_info.version >= (2, 3) {
+    let first_extra_offset: u32 = if reader.version >= GMVersion::Studio2_3 {
         0
     } else {
         4

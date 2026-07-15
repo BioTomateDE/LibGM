@@ -11,7 +11,7 @@ use crate::wad::elem::animation_curve::AnimationCurves;
 use crate::wad::elem::audio::Audios;
 use crate::wad::elem::audio_group::AudioGroup;
 use crate::wad::elem::audio_group::AudioGroups;
-use crate::wad::elem::background::Tilesets;
+use crate::wad::elem::tileset::Tilesets;
 use crate::wad::elem::code::Codes;
 use crate::wad::elem::data_file::DataFiles;
 use crate::wad::elem::embedded_image::EmbeddedImages;
@@ -51,7 +51,7 @@ use crate::wad::elem::ui_node::UINodes;
 use crate::wad::elem::validate_names;
 use crate::wad::elem::variable::ModernHeader;
 use crate::wad::elem::variable::Variables;
-use crate::wad::version::LtsBranch;
+use crate::wad::version::IdeVersion;
 
 /// Byte order (endianness) for integers and chunk names in data files.
 ///
@@ -78,6 +78,8 @@ pub enum Endianness {
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
 pub struct Metadata {
+    pub version: GMVersion,
+
     /// The directory in which this data file is located.
     ///
     /// This can be used to find, read and edit the following:
@@ -117,6 +119,7 @@ pub struct Metadata {
 impl Default for Metadata {
     fn default() -> Self {
         Self {
+            version: GMVersion::Studio2,
             location: None,
             // Use 16 chunk padding by default for compatibility.
             chunk_padding: 16,
@@ -181,6 +184,7 @@ impl Default for GMData {
         strings.exists = true;
 
         let meta = Metadata {
+            version: GMVersion::GM2024_14_1,
             location: None,
             chunk_padding: 16,
             endianness: Endianness::Little,
@@ -220,7 +224,7 @@ impl Default for GMData {
             game_id: 1337,
             directplay_guid: Blob([0u8; 16]),
             game_name: strings.make("LibGM"),
-            version: GMVersion::new(2026, 0, 0, 0, LtsBranch::PostLts),
+            ide_version: IdeVersion::new(2026, 0, 0, 0),
             window_width: 640,
             window_height: 480,
             flags: Flags::SCALE | Flags::SHOW_CURSOR,

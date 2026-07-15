@@ -103,7 +103,7 @@ pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
                 let int_argument = reader.read_u32()?;
                 if is_asset_type_2024_4(int_argument) {
                     // Return immediately if highest detectable version (2024.4) is found
-                    return target_version!(2024, 4);
+                    return target_version!(GM2024_8);
                 }
                 detected_2023_8 = true;
             }
@@ -111,7 +111,7 @@ pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
     }
 
     if detected_2023_8 {
-        target_version!(2023, 8)
+        target_version!(GM2023_8)
     } else {
         Ok(None)
     }

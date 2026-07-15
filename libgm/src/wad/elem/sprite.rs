@@ -10,6 +10,7 @@ use crate::prelude::*;
 use crate::util::assert;
 use crate::util::init::vec_with_capacity;
 use crate::wad::Blob;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
@@ -82,7 +83,7 @@ impl GMElement for Sprite {
         let mut special_fields: Option<Special> = None;
 
         // Combination of these conditions may be incorrect
-        if reader.read_i32()? == -1 && reader.general_info.version >= 2 {
+        if reader.read_i32()? == -1 && reader.version >= GMVersion::Studio2 {
             let special_version = reader.read_u32()?;
             let special_sprite_type = reader.read_u32()?;
 
@@ -112,7 +113,7 @@ impl GMElement for Sprite {
                     // Read mask data
                     let mut mask_width = width;
                     let mut mask_height = height;
-                    if reader.general_info.version >= (2024, 6) {
+                    if reader.version >= GMVersion::GM2024_6 {
                         mask_width = (margin_right - margin_left + 1) as u32;
                         mask_height = (margin_bottom - margin_top + 1) as u32;
                     }
@@ -157,7 +158,7 @@ impl GMElement for Sprite {
                 2 => {
                     // Spine
                     reader.align(4)?;
-                    if reader.general_info.version >= (2023, 1) {
+                    if reader.version >=GMVersion::GM2023_1{
                         textures = Self::read_texture_list(reader)?;
                     }
 
@@ -263,7 +264,7 @@ impl GMElement for Sprite {
             // Read mask data
             let mut mask_width = width;
             let mut mask_height = height;
-            if reader.general_info.version >= (2024, 6) {
+            if reader.version >= GMVersion::GM2024_6{
                 mask_width = (margin_right - margin_left + 1) as u32;
                 mask_height = (margin_bottom - margin_top + 1) as u32;
             }
@@ -322,7 +323,7 @@ impl GMElement for Sprite {
             SpecialData::Spine(_) => 2,
         });
 
-        if builder.version() >= (2, 0) {
+        if builder.version() >= GMVersion::Studio2 {
             builder.write_f32(special_fields.playback_speed);
             builder.write_enum(special_fields.playback_speed_type);
             if special_fields.special_version >= 2 {
@@ -362,7 +363,7 @@ impl GMElement for Sprite {
                 builder.align(4);
                 let json_blob: Vec<u8> = spine::Data::build_weird_string(&spine.json);
                 let atlas_blob: Vec<u8> = spine::Data::build_weird_string(&spine.atlas);
-                if builder.version() >= (2023, 1) {
+                if builder.version() >= GMVersion::GM2023_1 {
                     builder.write_simple_list(&spine.textures)?;
                 }
                 builder.write_i32(spine.version);
@@ -399,7 +400,7 @@ impl GMElement for Sprite {
                         for texture_entry in &spine.textures {
                             builder.write_u32(texture_entry.page_width);
                             builder.write_u32(texture_entry.page_height);
-                            if builder.version() >= (2023, 1) {
+                            if builder.version() >= GMVersion::GM2023_1 {
                                 if let spine::texture_entry::Data::Post2023_1(length) =
                                     texture_entry.data
                                 {
@@ -424,7 +425,7 @@ impl GMElement for Sprite {
             }
         }
 
-        if builder.version() >= 2 {
+        if builder.version() >= GMVersion::Studio2 {
             if special_fields.special_version >= 2
                 && matches!(special_fields.data, SpecialData::Normal)
                 && let Some(ref sequence) = special_fields.sequence
@@ -489,7 +490,7 @@ impl Sprite {
         builder.align(4);
         let written_bytes = builder.pos() - start;
 
-        let (width, height) = if builder.version() >= (2024, 6) {
+        let (width, height) = if builder.version() >= GMVersion::GM2024_6 {
             (
                 self.margin_right as u32 - self.margin_left as u32 + 1,
                 self.margin_bottom as u32 - self.margin_top as u32 + 1,

@@ -23,7 +23,7 @@ pub fn check_2022_9(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     // If not, then we know we're using a new format!
     let ptr = reader.read_u32()?;
     if ptr < pointer1 || ptr >= pointer2 {
-        return target_version!(2022, 9);
+        return target_version!(GM2022_9);
     }
 
     Ok(None)
@@ -46,7 +46,7 @@ pub fn check_2023_1(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     // The count can't be greater than the pointer.
     // (the list could be either "Tilesets" or "Fonts").
     if reader.read_u32()? <= pointer4 {
-        return target_version!(2023, 1, PostLts);
+        return target_version!(GM2023_1); // TODO: postlts???""
     }
 
     Ok(None)

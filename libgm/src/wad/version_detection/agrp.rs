@@ -51,5 +51,5 @@ pub fn check_2024_14(reader: &mut DataReader) -> Result<Option<GMVersion>> {
         }
     }
 
-    target_version!(2024, 14)
+    target_version!(GM2024_14)
 }

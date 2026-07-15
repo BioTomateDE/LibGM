@@ -4,6 +4,7 @@ use std::fmt::UpperHex;
 
 use crate::gml::instruction::DataType;
 use crate::prelude::*;
+use crate::wad::GMVersion;
 use crate::wad::parse::reader::DataReader;
 
 impl DataReader<'_> {
@@ -30,7 +31,7 @@ impl DataReader<'_> {
     }
 
     pub fn read_gms2_chunk_version(&mut self, desc: &'static str) -> Result<()> {
-        if self.specified_version.major < 2 {
+        if self.version < GMVersion::Studio2 {
             self.warn_invalid_chunk(format!("Reading {desc} in pre-GMS2 game"))?;
         }
         let chunk_version = self.read_u32()?;

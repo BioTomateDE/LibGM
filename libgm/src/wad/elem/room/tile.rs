@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
+use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::background::Tileset;
 use crate::wad::elem::room::InstanceID;
 use crate::wad::elem::sprite::Sprite;
+use crate::wad::elem::tileset::Tileset;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
 
@@ -28,7 +29,7 @@ impl GMElement for RoomTile {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
-        let texture: Texture = if reader.general_info.version >= 2 {
+        let texture: Texture = if reader.version >= GMVersion::Studio2 {
             Texture::Sprite(reader.read_resource_by_id()?)
         } else {
             Texture::Background(reader.read_resource_by_id()?)
@@ -63,7 +64,7 @@ impl GMElement for RoomTile {
         builder.write_i32(self.y);
         match self.texture {
             Texture::Sprite(sprite_ref) => {
-                if builder.version() >= 2 {
+                if builder.version() >= GMVersion::Studio2 {
                     builder.write_resource_id(sprite_ref);
                 } else {
                     bail!(
@@ -73,7 +74,7 @@ impl GMElement for RoomTile {
                 }
             }
             Texture::Background(background_ref) => {
-                if builder.version() >= 2 {
+                if builder.version() >= GMVersion::Studio2 {
                     bail!(
                         "Room tile texture should be a Sprite reference in GMS2+; not a \
                          Background reference"
