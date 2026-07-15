@@ -33,7 +33,6 @@ use crate::wad::elem::font::Fonts;
 use crate::wad::elem::function::Functions;
 use crate::wad::elem::game_end::GameEndScripts;
 use crate::wad::elem::game_object::GameObjects;
-use crate::wad::elem::general_info;
 use crate::wad::elem::general_info::GeneralInfo;
 use crate::wad::elem::global_init::GlobalInitScripts;
 use crate::wad::elem::language::LanguageInfo;
@@ -59,7 +58,6 @@ use crate::wad::elem::variable::Variables;
 use crate::wad::parse::chunk::ChunkBounds;
 use crate::wad::parse::chunk::ChunkMap;
 use crate::wad::parse::reader::DataReader;
-use crate::wad::version::GMVersion;
 use crate::wad::version_detection::detect_format_version;
 
 const ERR_TOO_BIG: &str =

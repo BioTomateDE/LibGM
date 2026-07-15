@@ -18,7 +18,6 @@ use crate::prelude::*;
 use crate::wad::GMVersion;
 use crate::wad::chunk::ChunkName;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::chunk::ChunkBounds;
 use crate::wad::parse::chunk::ChunkMap;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::version::IdeVersion;

@@ -14,7 +14,6 @@ use crate::wad::elem::GMElement;
 use crate::wad::elem::texture_page_item::TexturePageItem;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::version::LtsBranch;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Fonts {

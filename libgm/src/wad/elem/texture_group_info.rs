@@ -15,7 +15,6 @@ use crate::wad::elem::tileset::Tileset;
 use crate::wad::elem::validate_identifier;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::reference::GMRef;
-use crate::wad::version::LtsBranch;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct TextureGroupInfos {

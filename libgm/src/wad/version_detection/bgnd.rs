@@ -3,7 +3,6 @@ use super::target_version;
 use crate::prelude::*;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
-use crate::wad::version::LtsBranch;
 
 /// Go through each background, and check to see if it ends at
 /// the expected position. If not, this is probably 2024.14.1.

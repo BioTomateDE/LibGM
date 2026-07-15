@@ -4,7 +4,6 @@ use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
-use crate::wad::version::LtsBranch::PostLts;
 
 pub fn check_2022_2(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     let ver = target_version!(GM2022_2);

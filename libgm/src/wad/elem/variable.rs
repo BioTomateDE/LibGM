@@ -10,7 +10,6 @@ use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::GMNamedElement;
 use crate::wad::elem::element_stub;
-use crate::wad::elem::general_info::GeneralInfo;
 use crate::wad::elem::string::Strings;
 use crate::wad::elem::validate_identifier;
 use crate::wad::parse::chunk::ChunkBounds;

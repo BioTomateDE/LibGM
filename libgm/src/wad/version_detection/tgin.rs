@@ -3,7 +3,6 @@ use super::target_version;
 use crate::prelude::*;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
-use crate::wad::version::LtsBranch::PostLts;
 
 pub fn check_2022_9(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     reader.read_gms2_chunk_version("TGIN Version")?;

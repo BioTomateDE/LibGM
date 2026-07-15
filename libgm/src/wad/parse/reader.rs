@@ -8,8 +8,6 @@ use crate::wad::chunk::ChunkName;
 use crate::wad::data::Endianness;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::function::Function;
-use crate::wad::elem::general_info::GeneralInfo;
-use crate::wad::elem::string::Strings;
 use crate::wad::elem::texture_page_item::TexturePageItem;
 use crate::wad::elem::variable::Variable;
 use crate::wad::parse::ParsingOptions;

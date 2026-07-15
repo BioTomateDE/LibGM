@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! Contains GameMaker IDE Version types and abstractions to check and set versions.
 
-use core::cmp::Ordering;
 use std::fmt::Display;
 use std::fmt::Formatter;
 

@@ -18,7 +18,6 @@ use crate::util::fmt::typename;
 use crate::wad::GMVersion;
 use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::general_info::GeneralInfo;
 use crate::wad::parse::reader::DataReader;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

@@ -3,7 +3,6 @@ use crate::prelude::*;
 use crate::util::bench::Stopwatch;
 use crate::wad::chunk::ChunkName;
 use crate::wad::data::Endianness;
-use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
 use crate::wad::version::GMVersion;
 
