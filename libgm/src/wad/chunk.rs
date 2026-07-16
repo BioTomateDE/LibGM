@@ -142,6 +142,176 @@ impl Display for ChunkName {
     }
 }
 
+/// The number of all known GameMaker chunks (excluding debug chunks).
+pub const KNOWN_CHUNK_COUNT: usize = 35;
+
+/// The order of chunks in a data file.
+/// Also determines which chunks exist.
+#[derive(Debug, Clone)]
+pub struct ChunkOrder(pub(crate) Vec<ChunkName>);
+
+impl ChunkOrder {
+    /// Creates a new empty chunk order.
+    ///
+    /// This will throw an error when serializing, so make sure to fill it with chunks.
+    #[must_use]
+    pub const fn new_empty() -> Self {
+        Self(Vec::new())
+    }
+
+    /// Tries to create a chunk order from a vector of chunk names.
+    ///
+    /// This can fail if there are duplicate chunks.
+    pub fn from_vec(vector: Vec<ChunkName>) -> Result<Self> {
+        let count = vector.len();
+        let known = KNOWN_CHUNK_COUNT;
+        if count > known {
+            bail!("Vector has {count} elements which is larger than the known chunk count {known}");
+        }
+
+        // check for duplicates
+        let mut seen: u64 = 0;
+        for &chunk in &vector {
+            // this works because there's less than 65 ChunkName variants
+            let bit = 1u64 << (chunk as u32);
+            if seen & bit != 0 {
+                bail!("Duplicate chunk {chunk} in vector");
+            }
+            seen |= bit;
+        }
+
+        // ok you're fine to go
+        Ok(Self(vector))
+    }
+
+    /// The count/length of chunks in this chunk order.
+    ///
+    /// This can never be greater than the amount of chunks
+    /// (variant count of [`Chunk`]).
+    ///
+    /// Usually, it will also be non-zero, as data files with no chunks are invalid.
+    /// However, it is possible to artificially create an empty
+    /// chunk order using [`Self::new_empty`] or [`Self::from_vec`].
+    #[doc(alias = "len")]
+    #[must_use]
+    pub const fn count(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Whether this chunk order contains no chunks.
+    ///
+    /// This will usually be false, as data files with no chunks are invalid.
+    /// However, it is possible to artificially create an empty
+    /// chunk order using [`Self::new_empty`] or [`Self::from_vec`].
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Whether the given chunk exists in this chunk order.
+    #[doc(alias = "contains")]
+    #[must_use]
+    pub fn has(&self, chunk: ChunkName) -> bool {
+        self.0.contains(&chunk)
+    }
+
+    /// The index of given chunk in this chunk order, if it exists.
+    #[must_use]
+    pub fn find(&self, chunk: ChunkName) -> Option<usize> {
+        self.0.iter().position(|&c| c == chunk)
+    }
+
+    /// The chunk at the specified index of this chunk order, if it exists.
+    #[must_use]
+    pub fn get(&self, index: usize) -> Option<ChunkName> {
+        self.0.get(index).copied()
+    }
+
+    /// Adds a chunk to the end of the chunk order.
+    ///
+    /// Returns whether the operation was successful:
+    /// If the chunk already exists, it will not be inserted and `false` will be returned.
+    #[doc(alias = "add")]
+    pub fn push(&mut self, chunk: ChunkName) -> bool {
+        if self.has(chunk) {
+            false
+        } else {
+            self.0.push(chunk);
+            true
+        }
+    }
+
+    /// Removes a chunk from the chunk order.
+    ///
+    /// Returns whether the operation was successful:
+    /// If the chunk did not exist in the first place, `false` will be returned.
+    pub fn remove(&mut self, chunk: ChunkName) -> bool {
+        if let Some(idx) = self.find(chunk) {
+            self.0.remove(idx);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Inserts a chunk into the chunk order at the specified index.
+    ///
+    /// Returns whether the operation was successful:
+    /// If the chunk already exists, it will not be inserted and `false` will be returned.
+    ///
+    /// Note that the index logic is saturating:
+    /// If you provide an index out of bounds, it will clamp to the end of the chunk order.
+    #[must_use]
+    pub fn insert(&mut self, index: usize, chunk: ChunkName) -> bool {
+        if self.has(chunk) {
+            false
+        } else {
+            let idx: usize = self.count().min(index);
+            self.0.insert(idx, chunk);
+            true
+        }
+    }
+
+    /// Moves a chunk from its current position in the chunk order to the specified index.
+    ///
+    /// Returns whether the operation was successful:
+    /// If the chunk exists and could therefore be moved around, `true` will be returned.
+    ///
+    /// Note that the index logic is saturating:
+    /// If you provide an index out of bounds, it will clamp to the end of the chunk order.
+    pub fn move_to(&mut self, chunk: ChunkName, index: usize) -> bool {
+        if self.remove(chunk) {
+            let idx: usize = self.count().min(index);
+            self.0.insert(idx, chunk);
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn iter(&'_ self) -> std::iter::Copied<std::slice::Iter<'_, ChunkName>> {
+        self.0.iter().copied()
+    }
+}
+
+impl IntoIterator for ChunkOrder {
+    type IntoIter = std::vec::IntoIter<ChunkName>;
+    type Item = ChunkName;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a ChunkOrder {
+    type IntoIter = std::iter::Copied<std::slice::Iter<'a, ChunkName>>;
+    type Item = ChunkName;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter().copied()
+    }
+}
+
 /// All chunk elements should implement this trait.
 #[expect(private_bounds)]
 pub trait GMChunk: GMElement + Default {
@@ -229,8 +399,6 @@ pub trait GMNamedListChunk: GMListChunk<Element: GMNamedElement> {
             .and_then(|elem| self.by_ref_mut(elem))
     }
 }
-
-
 
 macro_rules! gm_list_chunk {
     ($name:ident, $chunk_struct:ident, $elem_type:ty,nullable) => {

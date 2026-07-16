@@ -5,6 +5,7 @@ use crate::gml::instruction::InstanceType;
 use crate::prelude::*;
 use crate::util::assert;
 use crate::wad::chunk::ChunkName;
+use crate::wad::chunk::ChunkOrder;
 use crate::wad::data::Endianness;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::function::Function;
@@ -45,7 +46,7 @@ pub struct DataReader<'a> {
     /// a GameMaker update, for example).
     pub chunks: ChunkMap,
 
-    pub chunk_order: Vec<ChunkName>,
+    pub chunk_order: ChunkOrder,
 
     /// Metadata about the currently parsed chunk of data.
     /// This includes the chunk's name, start position, and end position within
@@ -109,7 +110,7 @@ impl<'a> DataReader<'a> {
             endianness: Endianness::Little,
             chunk: ChunkBounds { start_pos: 0, end_pos },
             chunks: ChunkMap::new(),
-            chunk_order: Vec::new(),
+            chunk_order: ChunkOrder::new_empty(),
             last_chunk: ChunkName::DAFL,          // stub
             string_chunk: ChunkBounds::default(), // stub
             options: ParsingOptions::default(),   // stub

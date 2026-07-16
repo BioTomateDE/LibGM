@@ -402,7 +402,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         chunk_padding: reader.chunk_padding,
         endianness: reader.endianness,
         original_data_size: reader.size(),
-        chunk_order: reader.chunk_order,
+        chunks: reader.chunk_order,
     };
 
     let data = GMData {

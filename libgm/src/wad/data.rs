@@ -7,6 +7,7 @@ use crate::util::bench::Stopwatch;
 use crate::wad::Blob;
 use crate::wad::GMVersion;
 use crate::wad::chunk::ChunkName;
+use crate::wad::chunk::ChunkOrder;
 use crate::wad::elem::animation_curve::AnimationCurves;
 use crate::wad::elem::audio::Audios;
 use crate::wad::elem::audio_group::AudioGroup;
@@ -74,10 +75,15 @@ pub enum Endianness {
 }
 
 /// Some metadata about a [`GMData`] (GameMaker data file).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 #[non_exhaustive]
 pub struct Metadata {
+    /// The format version of this data file.
     pub version: GMVersion,
+
+    /// The order of chunks in this data file.
+    /// Also determines which chunks exist.
+    pub chunks: ChunkOrder,
 
     /// The directory in which this data file is located.
     ///
@@ -88,6 +94,7 @@ pub struct Metadata {
     ///
     /// If you do not want these files to be available,
     /// you set this to `None` after parsing.
+    // NOTE: This is currently unused.
     pub location: Option<PathBuf>,
 
     /// Indicates the number of padding bytes (null bytes) between chunks.
@@ -111,8 +118,6 @@ pub struct Metadata {
     /// This is a micro optimization. This field's value
     /// can be initialized to zero without any problems.
     pub original_data_size: u32,
-
-    pub(crate) chunk_order: Vec<ChunkName>,
 }
 
 impl Default for Metadata {
@@ -124,7 +129,7 @@ impl Default for Metadata {
             chunk_padding: 16,
             endianness: Endianness::Little,
             original_data_size: 0,
-            chunk_order: Vec::new(),
+            chunks: ChunkOrder::new_empty(),
         }
     }
 }
@@ -187,11 +192,11 @@ impl Default for GMData {
             chunk_padding: 16,
             endianness: Endianness::Little,
             original_data_size: 5000,
-            chunk_order: vec![
+            chunks: ChunkOrder(vec![
                 GEN8, OPTN, LANG, EXTN, SOND, AGRP, SPRT, BGND, PATH, SCPT, GLOB, SHDR, FONT, TMLN,
                 OBJT, FEDS, ACRV, SEQN, TAGS, ROOM, UILR, DAFL, EMBI, PSEM, PSYS, TPAG, TGIN, CODE,
                 VARI, FUNC, FEAT, STRG, TXTR, AUDO,
-            ],
+            ]),
         };
 
         let animation_curves = AnimationCurves { elems: Vec::new() };

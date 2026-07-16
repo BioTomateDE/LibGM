@@ -75,11 +75,11 @@ fn build_impl(data: &GMData) -> Result<Vec<u8>> {
 
     // TODO: make sure CODE is written before VARI and FUNC!!!
 
-    if data.meta.chunk_order.is_empty() {
+    if data.meta.chunks.is_empty() {
         bail!("Data file needs at least one chunk");
     }
 
-    for &chunk_name in &data.meta.chunk_order {
+    for chunk_name in &data.meta.chunks {
         match chunk_name {
             ChunkName::ACRV => builder.build_chunk(&data.animation_curves),
             ChunkName::AGRP => builder.build_chunk(&data.audio_groups),
