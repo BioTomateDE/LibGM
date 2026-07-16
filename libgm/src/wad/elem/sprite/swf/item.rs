@@ -25,7 +25,7 @@ impl GMElement for Item {
             4 => ItemData::ItemTextField,
             5 => ItemData::ItemSprite,
             _ => bail!(
-                "Invalid YYSWF Item Type {0} 0x{0:08X} at position {1} while parsing Sprite YYSWF \
+                "Invalid YYSWF Item Type {0} (0x{0:08X}) at position {1} while parsing Sprite YYSWF \
                  Item",
                 item_type,
                 reader.cur_pos,

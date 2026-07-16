@@ -124,47 +124,59 @@ impl DataReader<'_> {
 
         // Last chunk does not get padding
         if T::NAME != self.last_chunk {
-            self.read_chunk_padding().ctx(ctx)?;
+            self.read_chunk_padding();
         }
 
         if self.cur_pos != self.chunk.end_pos {
-            self.handle_invalid_align(format!(
-                "Misaligned chunk {}: expected chunk end position {} but the reader is actually \
-                 at position {} (diff: {})",
-                T::NAME,
-                self.chunk.end_pos,
-                self.cur_pos,
-                i64::from(self.chunk.end_pos) - i64::from(self.cur_pos),
-            ))?;
-            self.cur_pos = self.chunk.end_pos;
+            self.handle_misaligned_chunk(T::NAME)?;
         }
 
         log::trace!("Parsing chunk {} took {stopwatch}", T::NAME);
         Ok(element)
     }
 
-    /// Potentially read padding at the end of the chunk, depending on the
-    /// GameMaker version.
-    fn read_chunk_padding(&mut self) -> Result<()> {
+    fn handle_misaligned_chunk(&mut self, chunk_name: ChunkName) -> Result<()> {
+        let pos = self.cur_pos;
+        let end = self.chunk.end_pos;
+        let start = self.chunk.start_pos;
+
+        let missing = self.read_bytes_dyn(end - pos)?;
+        let all_zero = missing.iter().all(|&byte| byte == 0);
+
+        self.handle_invalid_align(format!(
+            "Misaligned chunk {}: File specified chunk length {}, but only {} bytes were read \
+             (difference: {}{})",
+            chunk_name,
+            self.chunk.length(),
+            pos - start,
+            end - pos,
+            if all_zero {
+                "; all remaining bytes are zero"
+            } else {
+                ""
+            }
+        ))?;
+        Ok(())
+    }
+
+    /// Potentially read padding at the end of the chunk, depending on the format version.
+    fn read_chunk_padding(&mut self) {
         // Padding only for GMS2+ and 1.0.0.9999+
         if self.version < GMVersion::Wad16Pad {
-            return Ok(());
+            return;
         }
 
         while !self.cur_pos.is_multiple_of(self.chunk_padding) {
-            let byte: u8 = self.read_u8().ctx("reading chunk padding")?;
-            if byte == 0 {
+            if self.read_u8().is_ok_and(|b| b == 0) {
                 continue;
             }
 
-            // Byte is not zero => Padding is incorrect
-            self.cur_pos -= 1; // Undo reading incorrect padding byte
+            // Byte is not zero (or tried to read beyond chunk bounds) => Padding is incorrect
             self.chunk_padding = if self.cur_pos.is_multiple_of(4) { 4 } else { 1 };
             log::debug!("Set chunk padding to {}", self.chunk_padding);
-            return Ok(());
+            return;
         }
 
         // Padding was already set correctly
-        Ok(())
     }
 }
