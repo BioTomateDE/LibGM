@@ -268,9 +268,9 @@ impl Default for Room {
             height: 480,
             speed: 0,
             persistent: false,
-            background_color: 0xFF000000,
+            background_color: 0xFF00_0000,
             draw_background_color: false,
-            creation_code: Default::default(),
+            creation_code: GMRef::default(),
             flags: RoomFlags::ENABLE_VIEWS
                 | RoomFlags::CLEAR_VIEW_BACKGROUND
                 | RoomFlags::GM2

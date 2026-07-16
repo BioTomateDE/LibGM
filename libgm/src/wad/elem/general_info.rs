@@ -28,25 +28,15 @@ pub struct GeneralInfo {
     /// This bool is stored as an inverted [`u8`] in the data file.
     pub debugger_enabled: bool,
 
-    /// The WAD version of the data file.
+    /// The WAD version of the data file (aka bytecode version).
+    /// 
     /// WAD stands for "Where's All the Data".
     ///
-    /// This field is also known as "**bytecode** version".
-    ///
     /// Technically, this is the version of the data file format.
-    /// However, since YoYoGames does not update this version
+    /// However, since YoYo Games does not update this version
     /// specification anymore, it has become worthless past ~16.
-    /// Since they also don't update the GameMaker Studio version
-    /// (`version`), GameMaker unpacking tools have to resort to
-    /// version detection (which sucks).
-    /// This can detect the approximate Studio version this
-    /// game's data file was made in. Since studio versions
-    /// are something official that does get incremented (finally!),
-    /// this [`GMVersion`] is used in place of the WAD version
-    /// in modern version/feature detection.
-    ///
-    /// ___
-    /// See `version` for less information.
+    /// 
+    /// See [`GMVersion`] for the real format version.
     pub wad_version: u8,
 
     /// Who knows. Probably redundant in GMS2.
@@ -77,7 +67,7 @@ pub struct GeneralInfo {
     /// The GameMaker version of the IDE this game was created in.
     ///
     /// This version struct is not updated by YoYo Games since GMS 2 and is
-    /// is stuck on `2.0.0.0` for modern versions.
+    /// is stuck on `2.0.0.0` since GameMaker Studio: 2 (released November 2016).
     /// If you need the format version of the data file, check out [`GMVersion`].
     pub ide_version: IdeVersion,
 

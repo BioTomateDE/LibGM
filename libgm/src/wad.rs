@@ -12,6 +12,7 @@ pub mod elem;
 pub mod parse;
 pub mod version;
 
+use std::any::type_name;
 use std::fmt;
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -23,7 +24,6 @@ pub use self::parse::parse_bytes;
 pub use self::parse::parse_file;
 pub use self::reference::GMRef;
 pub use self::version::GMVersion;
-use crate::util::fmt::typename;
 
 /// A wrapper struct that holds a vector or array.
 ///
@@ -33,7 +33,7 @@ pub struct Blob<T: BlobLike>(pub T);
 
 impl<T: BlobLike> fmt::Debug for Blob<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Blob<{}%{}>", typename::<T>(), self.0.len())
+        self.debugfmt(f)
     }
 }
 
@@ -52,28 +52,27 @@ impl<T: BlobLike> DerefMut for Blob<T> {
 }
 
 pub trait BlobLike: private::Sealed {
-    #[must_use]
-    fn len(&self) -> usize;
+    fn debugfmt(&self, f: &mut fmt::Formatter) -> fmt::Result;
 }
 
 impl<T: Copy> private::Sealed for Vec<T> {}
 impl<T: Copy> BlobLike for Vec<T> {
-    fn len(&self) -> usize {
-        Vec::len(self)
+    fn debugfmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Blob<Vec<{}>#{}>", type_name::<T>(), self.len())
     }
 }
 
 impl<T: Copy> private::Sealed for &[T] {}
 impl<T: Copy> BlobLike for &[T] {
-    fn len(&self) -> usize {
-        (*self).len()
+    fn debugfmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Blob<[{}]#{}>", type_name::<T>(), self.len())
     }
 }
 
 impl<T: Copy, const N: usize> private::Sealed for [T; N] {}
 impl<T: Copy, const N: usize> BlobLike for [T; N] {
-    fn len(&self) -> usize {
-        N
+    fn debugfmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Blob<[{}; {}]>", type_name::<T>(), self.len())
     }
 }
 

@@ -93,10 +93,10 @@ fn check_reassemble(data: &GMData) -> Result<()> {
 
 fn perform_inner(data_file_path: &Path, sha256sum: &str) -> Result<()> {
     verify_integrity(data_file_path, sha256sum)?;
-    let mut data = parse_file(data_file_path).ctx("parsing data file")?;
+    let data = parse_file(data_file_path).ctx("parsing data file")?;
     data.validate_names().ctx("validating all names")?;
     check_reparse(&data)?;
-    check_reassemble(&mut data)?;
+    check_reassemble(&data)?;
     Ok(())
 }
 

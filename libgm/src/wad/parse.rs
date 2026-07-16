@@ -416,7 +416,6 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         animation_curves,
         audio_groups,
         audios,
-        tilesets,
         codes,
         data_files,
         embedded_images,
@@ -426,6 +425,7 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         fonts,
         functions,
         game_end_scripts,
+        game_objects,
         general_info,
         global_init_scripts,
         language_info,
@@ -444,9 +444,9 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
         tags,
         texture_group_infos,
         texture_page_items,
-        timelines,
         texture_pages,
-        game_objects,
+        tilesets,
+        timelines,
         variables,
     };
 
