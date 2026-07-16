@@ -31,7 +31,6 @@ use crate::wad::reference::GMRef;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Codes {
     pub elems: Vec<Code>,
-    pub exists: bool,
 }
 
 gm_list_chunk!(CODE, Codes, Code, direct);
@@ -54,14 +53,14 @@ impl GMElement for Codes {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         // This can happen with YYC.
         if reader.chunk.is_empty() {
-            return Ok(Self { elems: vec![], exists: false });
+            return Ok(Self { elems: vec![]});
         }
 
         let pointers: Vec<u32> = reader.read_simple_list()?;
         let count: usize = pointers.len();
 
         let Some(&first_pos) = pointers.first() else {
-            return Ok(Self { elems: vec![], exists: true });
+            return Ok(Self { elems: vec![] });
         };
         reader.cur_pos = first_pos;
 
@@ -157,7 +156,7 @@ impl GMElement for Codes {
         reader.cur_pos = last_code_entry_pos;
         // Set pos to the supposed chunk end (since instructions are stored separately in WAD15+)
 
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

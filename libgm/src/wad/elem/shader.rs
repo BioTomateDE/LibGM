@@ -14,7 +14,6 @@ use crate::wad::parse::reader::DataReader;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Shaders {
     pub elems: Vec<Option<Shader>>,
-    pub exists: bool,
 }
 
 gm_named_list_chunk!(SHDR, Shaders, Shader, nullable);
@@ -161,7 +160,7 @@ impl GMElement for Shaders {
             });
         }
 
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

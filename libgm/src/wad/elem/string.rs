@@ -12,7 +12,6 @@ const ALIGNMENT: u32 = 4;
 pub struct Strings {
     pub elems: Vec<String>,
     pub align: bool,
-    pub exists: bool,
 }
 
 gm_list_chunk!(STRG, Strings, String, direct);
@@ -43,7 +42,7 @@ impl GMElement for Strings {
         }
 
         reader.align(0x80)?;
-        Ok(Self { elems, align, exists: true })
+        Ok(Self { elems, align })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

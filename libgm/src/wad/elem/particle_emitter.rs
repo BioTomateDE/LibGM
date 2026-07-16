@@ -12,7 +12,6 @@ use crate::wad::reference::GMRef;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct ParticleEmitters {
     pub elems: Vec<ParticleEmitter>,
-    pub exists: bool,
 }
 
 gm_list_chunk!(PSEM, ParticleEmitters, ParticleEmitter, direct);
@@ -22,7 +21,7 @@ impl GMElement for ParticleEmitters {
         reader.align(4)?;
         reader.read_gms2_chunk_version("PSEM Version")?;
         let elems: Vec<ParticleEmitter> = reader.read_pointer_list()?;
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

@@ -25,7 +25,6 @@ use crate::wad::reference::GMRef;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Rooms {
     pub elems: Vec<Option<Room>>,
-    pub exists: bool,
 }
 
 gm_named_list_chunk!(ROOM, Rooms, Room, nullable);
@@ -33,7 +32,7 @@ gm_named_list_chunk!(ROOM, Rooms, Room, nullable);
 impl GMElement for Rooms {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let elems: Vec<Option<Room>> = reader.read_pointer_list_opt()?;
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

@@ -147,19 +147,6 @@ impl Display for ChunkName {
 pub trait GMChunk: GMElement + Default {
     /// The four character GameMaker chunk name (GEN8, STRG, VARI, etc.).
     const NAME: ChunkName;
-
-    /// Returns `true` if this chunk is present in the data file.
-    ///
-    /// This differs from simply checking if the chunk is empty:
-    /// - A list chunk may exist and contain zero elements.
-    ///   > Chunk name + chunk length (four) + element count (zero).
-    /// - A chunk may exist but contain no data.
-    ///   > Chunk name + chunk length (zero).
-    /// - A chunk may be absent entirely from the file format.
-    ///   > Completely gone.
-    ///
-    /// This can be used to distinguish between "present but empty" and "not present at all".
-    fn exists(&self) -> bool;
 }
 
 /// All chunk elements that represent a collection of elements should implement
@@ -243,21 +230,13 @@ pub trait GMNamedListChunk: GMListChunk<Element: GMNamedElement> {
     }
 }
 
-macro_rules! gm_chunk {
-    ($name:ident, $chunk_struct:ident) => {
-        impl crate::wad::chunk::GMChunk for $chunk_struct {
-            const NAME: crate::wad::chunk::ChunkName = crate::wad::chunk::ChunkName::$name;
 
-            fn exists(&self) -> bool {
-                self.exists
-            }
-        }
-    };
-}
 
 macro_rules! gm_list_chunk {
     ($name:ident, $chunk_struct:ident, $elem_type:ty,nullable) => {
-        crate::wad::chunk::gm_chunk!($name, $chunk_struct);
+        impl crate::wad::chunk::GMChunk for $chunk_struct {
+            const NAME: crate::wad::chunk::ChunkName = crate::wad::chunk::ChunkName::$name;
+        }
 
         impl crate::wad::chunk::GMListChunk for $chunk_struct {
             type Element = $elem_type;
@@ -308,7 +287,9 @@ macro_rules! gm_list_chunk {
     };
 
     ($name:ident, $chunk_struct:ident, $elem_type:ty,direct) => {
-        crate::wad::chunk::gm_chunk!($name, $chunk_struct);
+        impl crate::wad::chunk::GMChunk for $chunk_struct {
+            const NAME: crate::wad::chunk::ChunkName = crate::wad::chunk::ChunkName::$name;
+        }
 
         impl crate::wad::chunk::GMListChunk for $chunk_struct {
             type Element = $elem_type;
@@ -373,6 +354,5 @@ macro_rules! gm_named_list_chunk {
     };
 }
 
-pub(crate) use gm_chunk;
 pub(crate) use gm_list_chunk;
 pub(crate) use gm_named_list_chunk;

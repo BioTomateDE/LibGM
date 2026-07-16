@@ -12,7 +12,6 @@ use crate::wad::reference::GMRef;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct ParticleSystems {
     pub elems: Vec<Option<ParticleSystem>>,
-    pub exists: bool,
 }
 
 gm_named_list_chunk!(PSYS, ParticleSystems, ParticleSystem, nullable);
@@ -22,7 +21,7 @@ impl GMElement for ParticleSystems {
         reader.align(4)?;
         reader.read_gms2_chunk_version("PSYS Version")?;
         let elems: Vec<Option<ParticleSystem>> = reader.read_pointer_list_opt()?;
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

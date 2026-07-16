@@ -12,7 +12,6 @@ use crate::wad::reference::GMRef;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Scripts {
     pub elems: Vec<Script>,
-    pub exists: bool,
 }
 
 // not sure if direct
@@ -21,7 +20,7 @@ gm_named_list_chunk!(SCPT, Scripts, Script, direct);
 impl GMElement for Scripts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let elems: Vec<Script> = reader.read_pointer_list()?;
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

@@ -12,7 +12,6 @@ use crate::wad::elem::audio::Audios;
 use crate::wad::elem::audio_group::AudioGroup;
 use crate::wad::elem::audio_group::AudioGroups;
 use crate::wad::elem::code::Codes;
-use crate::wad::elem::data_file::DataFiles;
 use crate::wad::elem::embedded_image::EmbeddedImages;
 use crate::wad::elem::extension::Extensions;
 use crate::wad::elem::feature_flag::FeatureFlags;
@@ -143,7 +142,6 @@ pub struct GMData {
     pub audio_groups: AudioGroups,              // AGRP
     pub audios: Audios,                         // AUDO
     pub codes: Codes,                           // CODE
-    pub data_files: DataFiles,                  // DAFL
     pub embedded_images: EmbeddedImages,        // EMBI
     pub extensions: Extensions,                 // EXTN
     pub feature_flags: FeatureFlags,            // FEAT
@@ -181,7 +179,7 @@ impl Default for GMData {
     fn default() -> Self {
         use ChunkName::*;
 
-        let mut strings = Strings { exists: true, ..Default::default() };
+        let mut strings = Strings::default();
 
         let meta = Metadata {
             version: GMVersion::GM2024_14_1,
@@ -196,23 +194,22 @@ impl Default for GMData {
             ],
         };
 
-        let animation_curves = AnimationCurves { elems: Vec::new(), exists: true };
-        let mut audio_groups = AudioGroups { elems: Vec::new(), exists: true };
+        let animation_curves = AnimationCurves { elems: Vec::new() };
+        let mut audio_groups = AudioGroups { elems: Vec::new() };
         audio_groups.push(AudioGroup {
             name: strings.make("audiogroup_default"),
             path: strings.make("audiogroup_default.dat"),
         });
-        let audios = Audios { elems: Vec::new(), exists: true };
-        let codes = Codes { elems: Vec::new(), exists: true };
-        let data_files = DataFiles { exists: true };
-        let embedded_images = EmbeddedImages { elems: Vec::new(), exists: true };
-        let extensions = Extensions { elems: Vec::new(), exists: true };
-        let feature_flags = FeatureFlags { elems: Vec::new(), exists: true };
-        let filter_effects = FilterEffects { elems: Vec::new(), exists: true };
-        let fonts = Fonts { exists: true, ..Default::default() };
-        let functions = Functions { exists: true, ..Default::default() };
-        let game_end_scripts = GameEndScripts { elems: Vec::new(), exists: true };
-        let game_objects = GameObjects { elems: Vec::new(), exists: true };
+        let audios = Audios::default();
+        let codes = Codes::default();
+        let embedded_images = EmbeddedImages::default();
+        let extensions = Extensions::default();
+        let feature_flags = FeatureFlags::default();
+        let filter_effects = FilterEffects::default();
+        let fonts = Fonts::default();
+        let functions = Functions::default();
+        let game_end_scripts = GameEndScripts::default();
+        let game_objects = GameObjects::default();
         let general_info = GeneralInfo {
             debugger_enabled: false,
             wad_version: 17,
@@ -237,14 +234,9 @@ impl Default for GMData {
             debugger_port: 0,
             room_order: vec![GMRef::new(0)],
             gms2_data: Some(GMS2Data::default()),
-            exists: true,
         };
-        let global_init_scripts = GlobalInitScripts { elems: Vec::new(), exists: true };
-        let language_info = LanguageInfo {
-            unknown1: 1,
-            exists: true,
-            ..Default::default()
-        };
+        let global_init_scripts = GlobalInitScripts::default();
+        let language_info = LanguageInfo::default();
         let options = Options {
             is_new_format: true,
             flags: OptionFlags::SHOW_CURSOR
@@ -273,32 +265,27 @@ impl Default for GMData {
                 Constant::new("@@VersionBuild", "", &mut strings),
                 Constant::new("@@VersionRevision", "0", &mut strings),
             ],
-            exists: true,
         };
-        let particle_emitters = ParticleEmitters { elems: Vec::new(), exists: true };
-        let particle_systems = ParticleSystems { elems: Vec::new(), exists: true };
-        let paths = Paths { elems: Vec::new(), exists: true };
-        let mut rooms = Rooms { elems: Vec::new(), exists: true };
+        let particle_emitters = ParticleEmitters { elems: Vec::new() };
+        let particle_systems = ParticleSystems { elems: Vec::new() };
+        let paths = Paths { elems: Vec::new() };
+        let mut rooms = Rooms::default();
         rooms.push(Room {
             name: strings.make("room0"),
             ..Default::default()
         });
-        let ui_nodes = UINodes { elems: Vec::new(), exists: true };
-        let scripts = Scripts { elems: Vec::new(), exists: true };
-        let sequences = Sequences { elems: Vec::new(), exists: true };
-        let shaders = Shaders { elems: Vec::new(), exists: true };
-        let sounds = Sounds { elems: Vec::new(), exists: true };
-        let sprites = Sprites { elems: Vec::new(), exists: true };
-        let tags = Tags { exists: true, ..Default::default() };
-        let texture_group_infos = TextureGroupInfos { elems: Vec::new(), exists: true };
-        let texture_page_items = TexturePageItems { elems: Vec::new(), exists: true };
-        let texture_pages = TexturePages { elems: Vec::new(), exists: true };
-        let tilesets = Tilesets {
-            elems: Vec::new(),
-            align: true,
-            exists: true,
-        };
-        let timelines = Timelines { elems: Vec::new(), exists: true };
+        let ui_nodes = UINodes::default();
+        let scripts = Scripts::default();
+        let sequences = Sequences::default();
+        let shaders = Shaders::default();
+        let sounds = Sounds::default();
+        let sprites = Sprites::default();
+        let tags = Tags::default();
+        let texture_group_infos = TextureGroupInfos::default();
+        let texture_page_items = TexturePageItems::default();
+        let texture_pages = TexturePages::default();
+        let tilesets = Tilesets::default();
+        let timelines = Timelines::default();
         let variables = Variables {
             elems: Vec::new(),
             modern_header: Some(ModernHeader {
@@ -306,7 +293,6 @@ impl Default for GMData {
                 var_count2: 0,
                 max_local_var_count: 0,
             }),
-            exists: true,
         };
 
         Self {
@@ -315,7 +301,6 @@ impl Default for GMData {
             audio_groups,
             audios,
             codes,
-            data_files,
             embedded_images,
             extensions,
             feature_flags,

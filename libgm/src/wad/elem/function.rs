@@ -18,7 +18,6 @@ use crate::wad::parse::reader::DataReader;
 pub struct Functions {
     pub elems: Vec<Function>,
     pub code_locals: Vec<CodeLocal>,
-    pub exists: bool,
 }
 
 gm_named_list_chunk!(FUNC, Functions, Function, direct);
@@ -80,7 +79,7 @@ impl GMElement for Functions {
                 Vec::new()
             };
 
-        Ok(Self { elems, code_locals, exists: true })
+        Ok(Self { elems, code_locals })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

@@ -12,7 +12,7 @@ pub use self::gms2::GMS2Data;
 use crate::prelude::*;
 use crate::wad::Blob;
 use crate::wad::build::builder::DataBuilder;
-use crate::wad::chunk::gm_chunk;
+use crate::wad::chunk::ChunkName;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::room::Room;
 use crate::wad::parse::reader::DataReader;
@@ -29,13 +29,13 @@ pub struct GeneralInfo {
     pub debugger_enabled: bool,
 
     /// The WAD version of the data file (aka bytecode version).
-    /// 
+    ///
     /// WAD stands for "Where's All the Data".
     ///
     /// Technically, this is the version of the data file format.
     /// However, since YoYo Games does not update this version
     /// specification anymore, it has become worthless past ~16.
-    /// 
+    ///
     /// See [`GMVersion`] for the real format version.
     pub wad_version: u8,
 
@@ -72,12 +72,12 @@ pub struct GeneralInfo {
     pub ide_version: IdeVersion,
 
     /// When the game window is created, its width will be set to this value.
-    /// 
+    ///
     /// This can still be overridden in GML code via `window_set_width` or `window_set_size`.
     pub window_width: u32,
 
     /// When the game window is created, its height will be set to this value.
-    /// 
+    ///
     /// This can still be overridden in GML code via `window_set_height` or `window_set_size`.
     pub window_height: u32,
 
@@ -113,12 +113,11 @@ pub struct GeneralInfo {
 
     /// Set in GameMaker 2+ data files.
     pub gms2_data: Option<GMS2Data>,
-
-    /// Should always be true (unless the data file is malformed).
-    pub exists: bool,
 }
 
-gm_chunk!(GEN8, GeneralInfo);
+impl GMChunk for GeneralInfo {
+    const NAME: ChunkName = ChunkName::GEN8;
+}
 
 impl GMElement for GeneralInfo {
     // be sure not to use `reader.general_info` here, as it is not initialized yet!
@@ -190,7 +189,6 @@ impl GMElement for GeneralInfo {
             debugger_port,
             room_order,
             gms2_data: None,
-            exists: true,
         };
 
         if ide_version.major >= 2 {
@@ -202,10 +200,6 @@ impl GMElement for GeneralInfo {
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if !self.exists {
-            bail!("General info is a required chunk (internal error)");
-        }
-
         builder.write_u8(!self.debugger_enabled as u8);
         builder.write_u8(self.wad_version);
         builder.write_u16(self.unknown_value);
@@ -265,7 +259,6 @@ impl Default for GeneralInfo {
             debugger_port: 0,
             room_order: vec![],
             gms2_data: Some(GMS2Data::default()),
-            exists: false,
         }
     }
 }

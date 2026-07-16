@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
-use crate::wad::chunk::gm_chunk;
+use crate::wad::chunk::ChunkName;
 use crate::wad::elem::GMElement;
 use crate::wad::parse::reader::DataReader;
 
@@ -9,10 +9,11 @@ use crate::wad::parse::reader::DataReader;
 pub struct Tags {
     pub elems: Vec<GMRef<String>>,
     pub asset_tags: Vec<AssetTags>,
-    pub exists: bool,
 }
 
-gm_chunk!(TAGS, Tags);
+impl GMChunk for Tags {
+    const NAME: ChunkName = ChunkName::TAGS;
+}
 
 impl GMElement for Tags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -21,7 +22,7 @@ impl GMElement for Tags {
         let elems: Vec<GMRef<String>> = reader.read_simple_list()?;
         let asset_tags: Vec<AssetTags> = reader.read_pointer_list()?;
 
-        Ok(Self { elems, asset_tags, exists: true })
+        Ok(Self { elems, asset_tags })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

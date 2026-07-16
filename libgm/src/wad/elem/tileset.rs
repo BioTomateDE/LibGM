@@ -17,13 +17,18 @@ const ALIGNMENT: u32 = 8;
 /// For GameMaker Studio 2, these will only ever be a tileset.
 /// For GameMaker Studio 1, these are usually a background,
 /// but are sometimes repurposed as use for a tileset as well.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Tilesets {
     pub elems: Vec<Option<Tileset>>,
     /// Semi-internal flag that tracks whether to
     /// align the pointer list to 8 when serializing.
     pub align: bool,
-    pub exists: bool,
+}
+
+impl Default for Tilesets {
+    fn default() -> Self {
+        Self { elems: Vec::new(), align: true }
+    }
 }
 
 gm_named_list_chunk!(BGND, Tilesets, Tileset, nullable);
@@ -47,7 +52,7 @@ impl GMElement for Tilesets {
             backgrounds[idx] = Some(background);
         }
 
-        Ok(Self { elems: backgrounds, align, exists: true })
+        Ok(Self { elems: backgrounds, align })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

@@ -24,7 +24,6 @@ pub(crate) const QOI_HEADER: &[u8; 4] = b"fioq"; // reversed "qoif" cuz little e
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct TexturePages {
     pub elems: Vec<TexturePage>,
-    pub exists: bool,
 }
 
 // also not sure if direct
@@ -82,7 +81,7 @@ impl GMElement for TexturePages {
         }
 
         reader.align(4)?;
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

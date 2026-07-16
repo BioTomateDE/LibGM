@@ -8,7 +8,6 @@ use crate::wad::parse::reader::DataReader;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct FilterEffects {
     pub elems: Vec<FilterEffect>,
-    pub exists: bool,
 }
 
 gm_named_list_chunk!(FEDS, FilterEffects, FilterEffect, direct);
@@ -18,7 +17,7 @@ impl GMElement for FilterEffects {
         reader.align(4)?;
         reader.read_gms2_chunk_version("FEDS Version")?;
         let elems: Vec<FilterEffect> = reader.read_pointer_list()?;
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

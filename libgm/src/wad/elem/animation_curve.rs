@@ -13,7 +13,6 @@ use crate::wad::parse::reader::DataReader;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct AnimationCurves {
     pub elems: Vec<Option<AnimationCurve>>,
-    pub exists: bool,
 }
 
 gm_named_list_chunk!(ACRV, AnimationCurves, AnimationCurve, nullable);
@@ -24,7 +23,7 @@ impl GMElement for AnimationCurves {
         reader.read_gms2_chunk_version("ACRV Version")?;
 
         let elems: Vec<Option<AnimationCurve>> = reader.read_pointer_list_opt()?;
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

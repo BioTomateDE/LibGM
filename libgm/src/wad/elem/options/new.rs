@@ -44,7 +44,6 @@ pub fn parse(reader: &mut DataReader) -> Result<Options> {
         load_image,
         load_alpha,
         constants,
-        exists: true,
     })
 }
 

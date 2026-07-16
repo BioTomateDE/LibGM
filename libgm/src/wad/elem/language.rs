@@ -13,7 +13,6 @@ pub struct LanguageInfo {
     pub unknown1: u32,
     pub elems: Vec<LanguageData>,
     pub entry_ids: Vec<GMRef<String>>,
-    pub exists: bool,
 }
 
 gm_list_chunk!(LANG, LanguageInfo, LanguageData, direct);
@@ -40,7 +39,7 @@ impl GMElement for LanguageInfo {
             elems.push(LanguageData { name, region, entries });
         }
 
-        Ok(Self { unknown1, elems, entry_ids, exists: true })
+        Ok(Self { unknown1, elems, entry_ids })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

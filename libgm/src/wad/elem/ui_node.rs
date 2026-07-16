@@ -25,7 +25,6 @@ use crate::wad::parse::reader::DataReader;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct UINodes {
     pub elems: Vec<UINode>,
-    pub exists: bool,
 }
 
 // not sure if direct
@@ -37,7 +36,7 @@ impl GMElement for UINodes {
             log::warn!("UI nodes are untested; issues may occur");
         }
         let elems: Vec<UINode> = reader.read_pointer_list()?;
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

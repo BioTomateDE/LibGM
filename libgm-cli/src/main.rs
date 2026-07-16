@@ -37,12 +37,6 @@ fn run(mut args: cli::Args) -> Result<()> {
 
     for data_file in files {
         log::info!("Parsing data file {}", data_file.display());
-        if args.gen8_only {
-            let raw_data = std::fs::read(data_file).ctx_any("reading data file")?;
-            let gen8 = parser.parse_general_info(raw_data)?;
-            println!("General Info: {gen8:#?}");
-            continue;
-        }
 
         let raw_data: Vec<u8> = std::fs::read(&data_file).ctx_any("reading data file")?;
         let mut data: GMData = parser.parse_bytes(&raw_data)?;

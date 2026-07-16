@@ -11,7 +11,6 @@ use crate::wad::parse::reader::DataReader;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Timelines {
     pub elems: Vec<Option<Timeline>>,
-    pub exists: bool,
 }
 
 // probably nullable?
@@ -20,7 +19,7 @@ gm_named_list_chunk!(TMLN, Timelines, Timeline, nullable);
 impl GMElement for Timelines {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let elems: Vec<Option<Timeline>> = reader.read_pointer_list_opt()?;
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

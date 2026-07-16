@@ -30,12 +30,6 @@ pub struct Args {
     #[arg(long)]
     pub lenient: bool,
 
-    /// Whether to only parse general info.
-    ///
-    /// Default: false
-    #[arg(long)]
-    pub gen8_only: bool,
-
     /// Display info about the data file.
     ///
     /// Default: false

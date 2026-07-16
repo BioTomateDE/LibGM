@@ -8,7 +8,6 @@ use crate::wad::parse::reader::DataReader;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct FeatureFlags {
     pub elems: Vec<GMRef<String>>,
-    pub exists: bool,
 }
 
 gm_list_chunk!(FEAT, FeatureFlags, GMRef<String>, direct);
@@ -17,7 +16,7 @@ impl GMElement for FeatureFlags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
         let elems: Vec<GMRef<String>> = reader.read_simple_list()?;
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

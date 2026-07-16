@@ -19,7 +19,6 @@ use crate::wad::reference::GMRef;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct TextureGroupInfos {
     pub elems: Vec<TextureGroupInfo>,
-    pub exists: bool,
 }
 
 // not sure if direct
@@ -56,7 +55,7 @@ impl GMElement for TextureGroupInfos {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_gms2_chunk_version("TGIN Version")?;
         let elems: Vec<TextureGroupInfo> = reader.read_pointer_list()?;
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

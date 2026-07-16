@@ -24,7 +24,6 @@ pub struct Variables {
     /// Set in WAD 15 and above.
     pub modern_header: Option<ModernHeader>,
 
-    pub exists: bool,
 }
 
 gm_list_chunk!(VARI, Variables, Variable, direct);
@@ -185,7 +184,7 @@ impl GMElement for Variables {
         reader.chunk = saved_chunk;
         reader.cur_pos = saved_position;
 
-        Ok(Self { elems, modern_header, exists: true })
+        Ok(Self { elems, modern_header })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

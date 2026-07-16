@@ -11,7 +11,6 @@ use crate::wad::reference::GMRef;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GameEndScripts {
     pub elems: Vec<GMRef<Code>>,
-    pub exists: bool,
 }
 
 gm_list_chunk!(GMEN, GameEndScripts, GMRef<Code>, direct);
@@ -19,7 +18,7 @@ gm_list_chunk!(GMEN, GameEndScripts, GMRef<Code>, direct);
 impl GMElement for GameEndScripts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let elems: Vec<GMRef<Code>> = reader.read_simple_list()?;
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

@@ -22,7 +22,6 @@ use crate::wad::parse::reader::DataReader;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Sequences {
     pub elems: Vec<Option<Sequence>>,
-    pub exists: bool,
 }
 
 gm_named_list_chunk!(SEQN, Sequences, Sequence, nullable);
@@ -35,7 +34,7 @@ impl GMElement for Sequences {
         reader.align(4)?;
         reader.read_gms2_chunk_version("SEQN Version")?;
         let elems: Vec<Option<Sequence>> = reader.read_pointer_list_opt()?;
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

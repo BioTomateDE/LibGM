@@ -18,7 +18,6 @@ use crate::wad::reference::GMRef;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GameObjects {
     pub elems: Vec<Option<GameObject>>,
-    pub exists: bool,
 }
 
 gm_named_list_chunk!(OBJT, GameObjects, GameObject, nullable);
@@ -107,7 +106,7 @@ impl GMElement for GameObjects {
             });
         }
 
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

@@ -9,7 +9,6 @@ use crate::wad::parse::reader::DataReader;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Paths {
     pub elems: Vec<Option<Path>>,
-    pub exists: bool,
 }
 
 gm_named_list_chunk!(PATH, Paths, Path, nullable);
@@ -17,7 +16,7 @@ gm_named_list_chunk!(PATH, Paths, Path, nullable);
 impl GMElement for Paths {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let elems: Vec<Option<Path>> = reader.read_pointer_list_opt()?;
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

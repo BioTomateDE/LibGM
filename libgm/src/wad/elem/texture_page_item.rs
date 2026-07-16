@@ -11,7 +11,6 @@ use crate::wad::reference::GMRef;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct TexturePageItems {
     pub elems: Vec<TexturePageItem>,
-    pub exists: bool,
 }
 
 gm_list_chunk!(TPAG, TexturePageItems, TexturePageItem, direct);
@@ -30,7 +29,7 @@ impl GMElement for TexturePageItems {
         }
 
         reader.align(4)?;
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

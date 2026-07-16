@@ -9,7 +9,7 @@ pub use flags::OptionFlags;
 
 use crate::prelude::*;
 use crate::wad::build::builder::DataBuilder;
-use crate::wad::chunk::gm_chunk;
+use crate::wad::chunk::ChunkName;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::texture_page_item::TexturePageItem;
 use crate::wad::parse::reader::DataReader;
@@ -32,10 +32,11 @@ pub struct Options {
     pub load_image: GMRef<TexturePageItem>,
     pub load_alpha: u32,
     pub constants: Vec<Constant>,
-    pub exists: bool,
 }
 
-gm_chunk!(OPTN, Options);
+impl GMChunk for Options {
+    const NAME: ChunkName = ChunkName::OPTN;
+}
 
 impl GMElement for Options {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

@@ -19,7 +19,6 @@ use crate::wad::reference::GMRef;
 pub struct Fonts {
     pub elems: Vec<Option<Font>>,
     pub padding: Blob<[u8; 512]>,
-    pub exists: bool,
 }
 
 gm_named_list_chunk!(FONT, Fonts, Font, nullable);
@@ -35,7 +34,7 @@ impl GMElement for Fonts {
         } else {
             generate_padding()
         };
-        Ok(Self { elems, padding, exists: true })
+        Ok(Self { elems, padding })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
@@ -52,7 +51,6 @@ impl Default for Fonts {
         Self {
             elems: Vec::new(),
             padding: generate_padding(),
-            exists: false,
         }
     }
 }

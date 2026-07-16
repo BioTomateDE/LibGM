@@ -17,7 +17,6 @@ use crate::wad::reference::GMRef;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct EmbeddedImages {
     pub elems: Vec<EmbeddedImage>,
-    pub exists: bool,
 }
 
 gm_list_chunk!(EMBI, EmbeddedImages, EmbeddedImage, direct);
@@ -38,7 +37,7 @@ impl GMElement for EmbeddedImages {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_gms2_chunk_version("EMBI Version")?;
         let embedded_images: Vec<EmbeddedImage> = reader.read_simple_list()?;
-        Ok(Self { elems: embedded_images, exists: true })
+        Ok(Self { elems: embedded_images })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

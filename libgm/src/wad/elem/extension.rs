@@ -17,7 +17,6 @@ use crate::wad::version::GMVersion;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Extensions {
     pub elems: Vec<Extension>,
-    pub exists: bool,
 }
 
 // not sure if nullable
@@ -34,7 +33,7 @@ impl GMElement for Extensions {
             }
         }
 
-        Ok(Self { elems, exists: true })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {

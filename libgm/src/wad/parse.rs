@@ -162,17 +162,6 @@ impl ParsingOptions {
             .ctx("parsing GameMaker data bytes")
     }
 
-    /// Only parses the `GEN8` chunk and detects the proper GameMaker version.
-    pub fn parse_general_info(&self, raw_data: impl AsRef<[u8]>) -> Result<GeneralInfo> {
-        let mut reader = parse_form(raw_data.as_ref()).ctx("parsing FORM")?;
-        // Set the STRG chunk so that the reader can force-read strings.
-        reader.string_chunk = reader
-            .chunks
-            .get(ChunkName::STRG)
-            .ok_or("Chunk STRG does not exist")?;
-        reader.read_chunk::<GeneralInfo>()
-    }
-
     /// Parses a GameMaker data file (stored on disk) with the specified
     /// options.
     ///
@@ -326,11 +315,22 @@ fn read_bytecode_chunks(reader: &mut DataReader) -> Result<(Codes, Functions, Va
 }
 
 /// Parse GameMaker data
+#[expect(clippy::too_many_lines)]
 fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
     let stopwatch = Stopwatch::start();
     let mut reader: DataReader = parse_form(raw_data).ctx("parsing FORM")?;
-    reader.options = options.clone();
 
+    if !reader.chunks.contains(ChunkName::STRG) {
+        bail!("Chunk STRG does not exist");
+    }
+    if !reader.chunks.contains(ChunkName::GEN8) {
+        bail!("Chunk GEN8 does not exist");
+    }
+    if !reader.chunks.contains(ChunkName::OPTN) {
+        bail!("Chunk OPTN does not exist");
+    }
+
+    reader.options = options.clone();
     let stopwatch2 = Stopwatch::start();
     reader.version = detect_format_version(reader.clone()).ctx("detecting format version")?;
     log::debug!("Detecting format version took {:.2?}", stopwatch2.elapsed());
@@ -390,14 +390,9 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
     let feature_flags: FeatureFlags = reader.read_chunk()?;
     let filter_effects: FilterEffects = reader.read_chunk()?;
     let animation_curves: AnimationCurves = reader.read_chunk()?;
-    let data_files: DataFiles = reader.read_chunk()?;
+    reader.read_chunk::<DataFiles>()?;
 
     log::trace!("Reading independent chunks took {stopwatch2}");
-
-    // This would leave it in a weird placeholder state.
-    if !options.exists {
-        bail!("Required chunk OPTN does not exist");
-    }
 
     handle_unread_chunks(&reader.chunks, reader.options.allow_unknown_chunks)?;
 
@@ -412,12 +407,10 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
 
     let data = GMData {
         meta,
-
         animation_curves,
         audio_groups,
         audios,
         codes,
-        data_files,
         embedded_images,
         extensions,
         feature_flags,
