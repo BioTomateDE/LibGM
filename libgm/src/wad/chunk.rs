@@ -280,13 +280,15 @@ impl ChunkOrder {
     /// Note that the index logic is saturating:
     /// If you provide an index out of bounds, it will clamp to the end of the chunk order.
     pub fn move_to(&mut self, chunk: ChunkName, index: usize) -> bool {
-        if self.remove(chunk) {
-            let idx: usize = self.count().min(index);
-            self.0.insert(idx, chunk);
-            true
-        } else {
-            false
-        }
+        let Some(old_idx) = self.find(chunk) else {
+            return false;
+        };
+        self.0.remove(old_idx);
+
+        let index = if old_idx < index { index - 1 } else { index };
+        let index = self.count().min(index);
+        self.0.insert(index, chunk);
+        true
     }
 
     pub fn iter(&'_ self) -> std::iter::Copied<std::slice::Iter<'_, ChunkName>> {

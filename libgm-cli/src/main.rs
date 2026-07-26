@@ -14,6 +14,7 @@ use std::path::PathBuf;
 use libgm::gml::assembly::disassemble_code;
 use libgm::prelude::*;
 use libgm::wad::build::build_file;
+use libgm::wad::chunk::ChunkName;
 use libgm::wad::data::GMData;
 use libgm::wad::parse::ParsingOptions;
 use libgm_cli::diff::print_diffs;
