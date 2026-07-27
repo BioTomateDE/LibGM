@@ -287,7 +287,7 @@ impl GMElement for Instruction {
             opcode::EXIT => {
                 let ctx = "decoding Exit Instruction";
                 let data_type = reader.decode_single_type(b).ctx(ctx)?;
-                reader.assert_type(DataType::Int32, data_type).ctx(ctx)?;
+                reader.assert_type(DataType::Int, data_type).ctx(ctx)?;
                 Self::Exit
             }
             opcode::POPZ => {
@@ -360,7 +360,7 @@ impl GMElement for Instruction {
                 build_dupswap(writer, opcode, data_type, size1, size2);
             }
             Self::Return => build_single_type(writer, opcode, DataType::Variable),
-            Self::Exit => build_single_type(writer, opcode, DataType::Int32),
+            Self::Exit => build_single_type(writer, opcode, DataType::Int),
             Self::Branch { jump_offset }
             | Self::BranchIf { jump_offset }
             | Self::BranchUnless { jump_offset }
@@ -391,11 +391,11 @@ impl GMElement for Instruction {
 }
 
 fn get_type1(b: [u8; 3]) -> Result<DataType> {
-    DataType::from_u8(b[2] & 0xF)
+    DataType::decode(b[2] & 0xF)
 }
 
 fn get_type2(b: [u8; 3]) -> Result<DataType> {
-    DataType::from_u8(b[2] >> 4)
+    DataType::decode(b[2] >> 4)
 }
 
 /// This will not work for big endian (probably)
@@ -466,7 +466,7 @@ impl DataReader<'_> {
         let type1: DataType = get_type1(b)?;
         let type2: DataType = get_type2(b)?;
 
-        if type1 == DataType::Int16 {
+        if type1 == DataType::Short {
             // PopSwap instruction
             self.assert_type(DataType::Variable, type2)?;
 
@@ -518,8 +518,8 @@ impl DataReader<'_> {
         self.assert_zero_type2(b)?;
 
         match data_type {
-            DataType::Int16 => Ok(PushValue::Int16(int16)),
-            DataType::Int32 => {
+            DataType::Short => Ok(PushValue::Short(int16)),
+            DataType::Int => {
                 if let Some(&function) = self.function_occurrences.get(&self.cur_pos) {
                     self.cur_pos += 4; // Skip next occurrence offset
                     return Ok(PushValue::Function(function));
@@ -535,9 +535,9 @@ impl DataReader<'_> {
                     }));
                 }
 
-                self.read_i32().map(PushValue::Int32)
+                self.read_i32().map(PushValue::Int)
             }
-            DataType::Int64 => self.read_i64().map(PushValue::Int64),
+            DataType::Long => self.read_i64().map(PushValue::Long),
             DataType::Double => self.read_f64().map(PushValue::Double),
             DataType::Bool => self.read_bool32().map(PushValue::Bool),
             DataType::String => {
@@ -561,7 +561,7 @@ impl DataReader<'_> {
         let integer = get_u16(b) as i16;
         let data_type = get_type1(b)?;
         self.assert_zero_type2(b)?;
-        self.assert_type(DataType::Int16, data_type)?;
+        self.assert_type(DataType::Short, data_type)?;
         Ok(integer)
     }
 
@@ -569,7 +569,7 @@ impl DataReader<'_> {
         let arg_count: u16 = get_u16(b);
         let data_type: DataType = get_type1(b)?;
         self.assert_zero_type2(b)?;
-        self.assert_type(DataType::Int32, data_type)?;
+        self.assert_type(DataType::Int, data_type)?;
         let Some(&function) = self.function_occurrences.get(&self.cur_pos) else {
             bail!(
                 "Could not find any function with absolute occurrence position {} in map with \
@@ -591,27 +591,27 @@ impl DataReader<'_> {
     }
 
     fn decode_extended(&mut self, b: [u8; 3]) -> Result<Instruction> {
-        use DataType::Int16;
-        use DataType::Int32;
+        use DataType::Int;
+        use DataType::Short;
         #[allow(clippy::wildcard_imports)]
         use opcode::extended::*;
 
         let kind = get_u16(b) as i16;
-        let data_type = DataType::from_u8(b[2] & 0xF)?;
+        let data_type = DataType::decode(b[2] & 0xF)?;
         self.assert_zero_type2(b)?;
 
         let instruction = match (data_type, kind) {
-            (Int16, CHKINDEX) => Instruction::CheckArrayIndex,
-            (Int16, PUSHAF) => Instruction::PushArrayFinal,
-            (Int16, POPAF) => Instruction::PopArrayFinal,
-            (Int16, PUSHAC) => Instruction::PushArrayContainer,
-            (Int16, SETOWNER) => Instruction::SetArrayOwner,
-            (Int16, ISSTATICOK) => Instruction::HasStaticInitialized,
-            (Int16, SETSTATIC) => Instruction::SetStaticInitialized,
-            (Int16, SAVEAREF) => Instruction::SaveArrayReference,
-            (Int16, RESTOREAREF) => Instruction::RestoreArrayReference,
-            (Int16, ISNULLISH) => Instruction::IsNullishValue,
-            (Int32, PUSHREF) => {
+            (Short, CHKINDEX) => Instruction::CheckArrayIndex,
+            (Short, PUSHAF) => Instruction::PushArrayFinal,
+            (Short, POPAF) => Instruction::PopArrayFinal,
+            (Short, PUSHAC) => Instruction::PushArrayContainer,
+            (Short, SETOWNER) => Instruction::SetArrayOwner,
+            (Short, ISSTATICOK) => Instruction::HasStaticInitialized,
+            (Short, SETSTATIC) => Instruction::SetStaticInitialized,
+            (Short, SAVEAREF) => Instruction::SaveArrayReference,
+            (Short, RESTOREAREF) => Instruction::RestoreArrayReference,
+            (Short, ISNULLISH) => Instruction::IsNullishValue,
+            (Int, PUSHREF) => {
                 let asset_reference = AssetReference::deserialize(self)
                     .ctx("decoding PushReference Extended Instruction")?;
                 Instruction::PushReference { asset_reference }
@@ -625,13 +625,13 @@ impl DataReader<'_> {
 
 fn build_single_type(writer: &mut DataWriter, opcode: u8, data_type: DataType) {
     writer.write_u16(0);
-    writer.write_u8(data_type.as_u8());
+    writer.write_u8(data_type.encode());
     writer.write_u8(opcode);
 }
 
 fn build_double_type(writer: &mut DataWriter, opcode: u8, type1: DataType, type2: DataType) {
     writer.write_u16(0);
-    writer.write_u8(type1.as_u8() | type2.as_u8() << 4);
+    writer.write_u8(type1.encode() | type2.encode() << 4);
     writer.write_u8(opcode);
 }
 
@@ -649,7 +649,7 @@ fn build_comparison(
     }
     writer.write_u8(0);
     writer.write_u8(comparison_type);
-    writer.write_u8(type1.as_u8() | type2.as_u8() << 4);
+    writer.write_u8(type1.encode() | type2.encode() << 4);
     writer.write_u8(opcode);
 }
 
@@ -662,7 +662,7 @@ fn build_pop(
 ) -> Result<()> {
     let instr_pos: u32 = writer.pos();
     writer.write_i16(build_instance_type(variable));
-    writer.write_u8(type1.as_u8() | type2.as_u8() << 4);
+    writer.write_u8(type1.encode() | type2.encode() << 4);
     writer.write_u8(opcode);
     write_variable_occurrence(writer, variable.variable, instr_pos, variable.variable_type)?;
     Ok(())
@@ -670,21 +670,21 @@ fn build_pop(
 
 fn build_popswap(writer: &mut DataWriter, opcode: u8, array: bool) {
     writer.write_i16(if array { 6 } else { 5 });
-    writer.write_u8(DataType::Int32.as_u8() | DataType::Variable.as_u8() << 4);
+    writer.write_u8(DataType::Int.encode() | DataType::Variable.encode() << 4);
     writer.write_u8(opcode);
 }
 
 fn build_duplicate(writer: &mut DataWriter, opcode: u8, data_type: DataType, size: u8) {
     writer.write_u8(size);
     writer.write_u8(0);
-    writer.write_u8(data_type.as_u8());
+    writer.write_u8(data_type.encode());
     writer.write_u8(opcode);
 }
 
 fn build_dupswap(writer: &mut DataWriter, opcode: u8, data_type: DataType, size1: u8, size2: u8) {
     writer.write_u8(size1);
     writer.write_u8((size2 << 3) | 0x80);
-    writer.write_u8(data_type.as_u8());
+    writer.write_u8(data_type.encode());
     writer.write_u8(opcode);
 }
 
@@ -710,18 +710,18 @@ fn build_popenv_exit(writer: &mut DataWriter, opcode: u8) {
 fn build_push(writer: &mut DataWriter, opcode: u8, value: PushValue) -> Result<()> {
     let instr_pos: u32 = writer.pos();
     writer.write_i16(match value {
-        PushValue::Int16(int16) => int16,
+        PushValue::Short(int16) => int16,
         PushValue::Variable(variable) => build_instance_type(variable),
         _ => 0,
     });
 
-    writer.write_u8(value.data_type().as_u8());
+    writer.write_u8(value.data_type().encode());
     writer.write_u8(opcode);
 
     match value {
-        PushValue::Int16(_) => {} // Nothing because it was already written inside the instruction
-        PushValue::Int32(int32) => writer.write_i32(int32),
-        PushValue::Int64(int64) => writer.write_i64(int64),
+        PushValue::Short(_) => {} // Nothing because it was already written inside the instruction
+        PushValue::Int(int32) => writer.write_i32(int32),
+        PushValue::Long(int64) => writer.write_i64(int64),
         PushValue::Double(double) => writer.write_f64(double),
         PushValue::Bool(boolean) => writer.write_bool32(boolean),
         PushValue::String(string) => {
@@ -745,7 +745,7 @@ fn build_push(writer: &mut DataWriter, opcode: u8, value: PushValue) -> Result<(
 fn build_pushvar(writer: &mut DataWriter, opcode: u8, variable: CodeVariable) -> Result<()> {
     let instr_pos = writer.pos();
     writer.write_i16(build_instance_type(variable));
-    writer.write_u8(DataType::Variable.as_u8());
+    writer.write_u8(DataType::Variable.encode());
     writer.write_u8(opcode);
 
     write_variable_occurrence(writer, variable.variable, instr_pos, variable.variable_type)?;
@@ -754,7 +754,7 @@ fn build_pushvar(writer: &mut DataWriter, opcode: u8, variable: CodeVariable) ->
 
 fn build_pushim(writer: &mut DataWriter, opcode: u8, integer: i16) {
     writer.write_i16(integer);
-    writer.write_u8(DataType::Int16.as_u8());
+    writer.write_u8(DataType::Short.encode());
     writer.write_u8(opcode);
 }
 
@@ -766,7 +766,7 @@ fn build_call(
 ) -> Result<()> {
     let instr_pos: u32 = writer.pos();
     writer.write_u16(argument_count);
-    writer.write_u8(DataType::Int32.as_u8());
+    writer.write_u8(DataType::Int.encode());
     writer.write_u8(opcode);
 
     write_function_occurrence(writer, function, instr_pos)?;
@@ -775,19 +775,19 @@ fn build_call(
 
 fn build_callvar(writer: &mut DataWriter, opcode: u8, argument_count: u16) {
     writer.write_u16(argument_count);
-    writer.write_u8(DataType::Variable.as_u8());
+    writer.write_u8(DataType::Variable.encode());
     writer.write_u8(opcode);
 }
 
 fn build_extended16(writer: &mut DataWriter, extended_kind: i16) {
     writer.write_i16(extended_kind);
-    writer.write_u8(DataType::Int16.as_u8());
+    writer.write_u8(DataType::Short.encode());
     writer.write_u8(opcode::EXTENDED);
 }
 
 fn build_pushref(writer: &mut DataWriter, asset_reference: AssetReference) -> Result<()> {
     writer.write_i16(opcode::extended::PUSHREF);
-    writer.write_u8(DataType::Int32.as_u8());
+    writer.write_u8(DataType::Int.encode());
     writer.write_u8(opcode::EXTENDED);
     writer.write_elem(&asset_reference)
 }

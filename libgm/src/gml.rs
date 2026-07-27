@@ -226,7 +226,7 @@ fn splice_instructions(
     for (i, instr) in haystack.iter_mut().enumerate() {
         // (this technically ignores stuff that is neither half 1 nor 2 if range is
         // nonzero but it shouldnt make a different i think)
-        cur_pos += instr.size4();
+        cur_pos += instr.size();
         let Some(offset) = instr.jump_offset_mut() else {
             continue;
         };

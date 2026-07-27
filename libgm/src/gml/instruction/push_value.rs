@@ -11,9 +11,9 @@ use crate::wad::elem::function::Function;
 /// [`Push`]: Instruction::Push
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PushValue {
-    Int16(i16),
-    Int32(i32),
-    Int64(i64),
+    Short(i16),
+    Int(i32),
+    Long(i64),
     Double(f64),
     Bool(bool),
     String(GMRef<String>),
@@ -29,10 +29,10 @@ impl PushValue {
     #[must_use]
     pub const fn data_type(&self) -> DataType {
         match self {
-            Self::Int16(_) => DataType::Int16,
-            Self::Int32(_) | Self::Function(_) => DataType::Int32,
-            Self::Variable(var) if var.is_int32 => DataType::Int32,
-            Self::Int64(_) => DataType::Int64,
+            Self::Short(_) => DataType::Short,
+            Self::Int(_) | Self::Function(_) => DataType::Int,
+            Self::Variable(var) if var.is_int32 => DataType::Int,
+            Self::Long(_) => DataType::Long,
             Self::Double(_) => DataType::Double,
             Self::Bool(_) => DataType::Bool,
             Self::String(_) => DataType::String,
@@ -47,9 +47,9 @@ impl PushValue {
     #[must_use]
     pub(crate) const fn as_bool(&self) -> Option<bool> {
         match self {
-            &Self::Int16(int) => Some(int > 0),
-            &Self::Int32(int) => Some(int > 0),
-            &Self::Int64(int) => Some(int > 0),
+            &Self::Short(int) => Some(int > 0),
+            &Self::Int(int) => Some(int > 0),
+            &Self::Long(int) => Some(int > 0),
             &Self::Double(float) => Some(float > 0.5),
             &Self::Bool(bool) => Some(bool),
             Self::String(_) | Self::Function(_) | Self::Variable(_) => None,
@@ -66,7 +66,7 @@ impl Instruction {
             Self::PushLocal { variable }
             | Self::PushGlobal { variable }
             | Self::PushBuiltin { variable } => PushValue::Variable(variable),
-            Self::PushImmediate { integer } => PushValue::Int16(integer),
+            Self::PushImmediate { integer } => PushValue::Short(integer),
             _ => return None,
         })
     }

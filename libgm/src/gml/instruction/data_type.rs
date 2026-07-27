@@ -36,15 +36,15 @@ pub enum DataType {
     /// > **Note**: `Int16` is not a valid data type on the VM Stack.
     ///
     /// It is immediately converted to `Int32` when pushing and is thus 4 bytes wide.
-    Int16,
+    Short,
 
     /// 32-bit signed integer.
     /// - Size on VM Stack: 4 bytes.
-    Int32,
+    Int,
 
     /// 64-bit signed integer.
     /// - Size on VM Stack: 8 bytes.
-    Int64,
+    Long,
 
     /// 64-bit floating point number.
     /// - Size on VM Stack: 8 bytes.
@@ -67,12 +67,12 @@ pub enum DataType {
 }
 
 impl DataType {
-    pub fn from_u8(raw: u8) -> Result<Self> {
+    pub fn decode(raw: u8) -> Result<Self> {
         Ok(match raw {
             0 => Self::Double,
             1 => return Err(bail_unused("Float")),
-            2 => Self::Int32,
-            3 => Self::Int64,
+            2 => Self::Int,
+            3 => Self::Long,
             4 => Self::Bool,
             5 => Self::Variable,
             6 => Self::String,
@@ -80,39 +80,39 @@ impl DataType {
             8 => return Err(bail_unused("Delete")),
             9 => return Err(bail_unused("Undefined")),
             10 => return Err(bail_unused("Unsigned Int")),
-            15 => Self::Int16,
+            15 => Self::Short,
             _ => bail!("Invalid Data Type {raw} ({raw:04X})"),
         })
     }
 
     #[must_use]
-    pub const fn as_u8(self) -> u8 {
+    pub const fn encode(self) -> u8 {
         match self {
             Self::Double => 0,
-            Self::Int32 => 2,
-            Self::Int64 => 3,
+            Self::Int => 2,
+            Self::Long => 3,
             Self::Bool => 4,
             Self::Variable => 5,
             Self::String => 6,
-            Self::Int16 => 15,
+            Self::Short => 15,
         }
     }
 
-    /// The size of a value of this data type on the VM Stack, in multiples of 4
-    /// bytes. This is the unit used in `jump_offset` of branch instructions.
+    /// The size of a value of this data type on the VM Stack, in multiples of 4 bytes.
+    /// This is the unit used in `jump_offset` of branch instructions.
     #[must_use]
-    pub const fn size4(self) -> u32 {
+    pub const fn size(self) -> u32 {
         match self {
-            Self::Int16 | Self::Int32 | Self::Bool | Self::String => 1,
-            Self::Int64 | Self::Double => 2,
+            Self::Short | Self::Int | Self::Bool | Self::String => 1,
+            Self::Long | Self::Double => 2,
             Self::Variable => 4,
         }
     }
 
     /// The size of a value of this data type on the VM Stack, in bytes.
     #[must_use]
-    pub const fn size(self) -> u32 {
-        self.size4() * 4
+    pub const fn size_bytes(self) -> u32 {
+        self.size() * 4
     }
 }
 

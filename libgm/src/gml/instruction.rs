@@ -426,16 +426,17 @@ pub enum Instruction {
 
 impl Instruction {
     /// Gets the instruction size in multiples of 4 bytes.
+    ///
     /// This unit is used by `jump_offset`s in branch instructions.
     ///
-    /// For example, [`Instruction::Push`] with a [`PushValue::Int16`] has a
-    /// size of 5.
+    /// This size includes extra data like integers, floats, variable references, etc.
+    /// For example, a [`Instruction::Push`] with a [`PushValue::Double`] has a size of 3.
     #[must_use]
-    pub const fn size4(&self) -> u32 {
+    pub const fn size(&self) -> u32 {
         match self {
             Self::Push { value } => match value {
-                PushValue::Int16(_) => 1,
-                PushValue::Int64(_) | PushValue::Double(_) => 3,
+                PushValue::Short(_) => 1,
+                PushValue::Long(_) | PushValue::Double(_) => 3,
                 _ => 2,
             },
             Self::Pop { .. }
@@ -449,14 +450,12 @@ impl Instruction {
     }
 
     /// Gets the instruction size in bytes.
-    /// This size includes extra data like integers, floats, variable
-    /// references, etc.
     ///
-    /// For example, [`Instruction::Push`] with a [`PushValue::Int16`] has a
-    /// size of 20.
+    /// This size includes extra data like integers, floats, variable references, etc.
+    /// For example, a [`Instruction::Push`] with a [`PushValue::Double`] has a size of 12 bytes.
     #[must_use]
-    pub const fn size(&self) -> u32 {
-        self.size4() * 4
+    pub const fn size_bytes(&self) -> u32 {
+        self.size() * 4
     }
 
     /// Attempts to extract a [`CodeVariable`] from the instruction.
@@ -580,8 +579,8 @@ impl Instruction {
             Self::PushLocal { .. } | Self::PushGlobal { .. } | Self::PushBuiltin { .. } => {
                 DataType::Variable
             }
-            Self::PushImmediate { .. } => DataType::Int16,
-            Self::Call { .. } => DataType::Int32,
+            Self::PushImmediate { .. } => DataType::Short,
+            Self::Call { .. } => DataType::Int,
             Self::CallVariable { .. } => DataType::Variable,
             _ => return None,
         })

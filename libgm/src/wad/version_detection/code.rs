@@ -89,7 +89,7 @@ pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
 
             if matches!(opcode, 0xC0..0xC4) {
                 // Push variants; account for int16
-                if type1 != DataType::Int16.as_u8() {
+                if type1 != DataType::Short.encode() {
                     reader.cur_pos += 4;
                 }
                 continue;
@@ -99,7 +99,7 @@ pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
                 continue;
             }
 
-            if type1 == DataType::Int32.as_u8() {
+            if type1 == DataType::Int.encode() {
                 let int_argument = reader.read_u32()?;
                 if is_asset_type_2024_4(int_argument) {
                     // Return immediately if highest detectable version (2024.4) is found

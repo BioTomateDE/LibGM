@@ -64,12 +64,12 @@ impl DataType {
     pub(super) fn from_char(data_type: char) -> Result<Self> {
         Ok(match data_type {
             'v' => Self::Variable,
-            'i' => Self::Int32,
+            'i' => Self::Int,
             's' => Self::String,
-            'e' => Self::Int16,
+            'e' => Self::Short,
             'b' => Self::Bool,
             'd' => Self::Double,
-            'l' => Self::Int64,
+            'l' => Self::Long,
             _ => bail!("Invalid data type {data_type:?}"),
         })
     }

@@ -298,9 +298,9 @@ impl DataType {
     #[must_use]
     const fn as_char(self) -> char {
         match self {
-            Self::Int16 => 'e',
-            Self::Int32 => 'i',
-            Self::Int64 => 'l',
+            Self::Short => 'e',
+            Self::Int => 'i',
+            Self::Long => 'l',
             Self::Double => 'd',
             Self::Bool => 'b',
             Self::String => 's',
@@ -338,13 +338,13 @@ impl VariableType {
 
 fn write_push_instruction(value: PushValue, buffer: &mut String, gm_data: &GMData) -> Result<()> {
     match value {
-        PushValue::Int16(integer) => {
+        PushValue::Short(integer) => {
             write!(buffer, "{integer}");
         }
-        PushValue::Int32(integer) => {
+        PushValue::Int(integer) => {
             write!(buffer, "{integer}");
         }
-        PushValue::Int64(integer) => {
+        PushValue::Long(integer) => {
             write!(buffer, "{integer}");
         }
         PushValue::Double(float) => {

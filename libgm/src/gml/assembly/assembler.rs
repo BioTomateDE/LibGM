@@ -324,8 +324,8 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
     types.assert_count(1, "push")?;
 
     let value: PushValue = match types[0] {
-        DataType::Int16 => PushValue::Int16(parse_int(reader.clear())?),
-        DataType::Int32 => {
+        DataType::Short => PushValue::Short(parse_int(reader.clear())?),
+        DataType::Int => {
             if let Some(type_cast) = reader.consume_round_brackets()? {
                 match type_cast {
                     "function" => PushValue::Function(parse_function(
@@ -343,10 +343,10 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
                     ),
                 }
             } else {
-                PushValue::Int32(parse_int(reader.clear())?)
+                PushValue::Int(parse_int(reader.clear())?)
             }
         }
-        DataType::Int64 => PushValue::Int64(parse_int(reader.clear())?),
+        DataType::Long => PushValue::Long(parse_int(reader.clear())?),
         DataType::Double => {
             let float: &str = reader.clear();
             let float: f64 = float
