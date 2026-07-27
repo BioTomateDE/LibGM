@@ -52,9 +52,6 @@ pub struct DataReader<'a> {
     /// This includes the chunk's name, start position, and end position within
     /// the data buffer. When reading data, these bounds are checked to
     /// ensure the read operation stays within the chunk.
-    ///
-    /// **Safety Warning**: If the chunk's start/end positions are set
-    /// incorrectly, the program becomes memory unsafe.
     pub chunk: ChunkBounds,
 
     /// The name of the last chunk in the data file.
@@ -161,11 +158,12 @@ impl<'a> DataReader<'a> {
             );
         }
 
-        // SAFETY: If chunk.end_pos is set correctly, this should never read memory out
-        // of bounds.
         let start = start as usize;
         let end = end as usize;
-        let slice: &[u8] = unsafe { self.data.get_unchecked(start..end) };
+        let slice: &[u8] = self
+            .data
+            .get(start..end)
+            .expect("chunk bounds not set correctly");
         self.cur_pos += count;
         Ok(slice)
     }
@@ -173,16 +171,15 @@ impl<'a> DataReader<'a> {
     /// Reads a constant number of bytes from the data file while advancing the
     /// data position. Useful for reading slices with specified sizes like
     /// `[u8; 16]`.
-    ///
-    /// **Safety Note:** `N` must be less than `u32::MAX`.
-    /// The const assertion should guarantee this, though.
     pub fn read_bytes_const<const N: usize>(&mut self) -> Result<&[u8; N]> {
         const {
             assert!(N < u32::MAX as usize);
         }
         let slice: &[u8] = self.read_bytes_dyn(N as u32)?;
-        // SAFETY: read_bytes_dyn is guaranteed to read exactly N bytes.
-        Ok(unsafe { &*slice.as_ptr().cast::<[u8; N]>() })
+        let array: &[u8; N] = slice
+            .try_into()
+            .expect("read_bytes_dyn always reads N bytes");
+        Ok(array)
     }
 
     /// Reads a 32-bit integer and convert it to a boolean.
