@@ -54,7 +54,7 @@ pub fn assemble_instruction(line: &str, gm_data: &GMData) -> Result<Instruction>
     let mut reader = Reader::new(line.trim_start());
     let mnemonic: &str;
 
-    let opcode_end: Option<usize> = reader.line.find(['.', ' ']);
+    let opcode_end: Option<usize> = reader.line.find(['.', ' ', '#']);
     if let Some(index) = opcode_end {
         mnemonic = reader.consume_to(index);
     } else {

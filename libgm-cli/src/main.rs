@@ -70,12 +70,12 @@ fn handle_file(path: &Path, args: &Args) -> Result<Duration> {
         dump::dump_texture_pages(&data)?;
     }
 
-    // std::fs::create_dir_all("asm").unwrap();
-    // for c in &data.codes.elems {
-    //     let n = data.strings.by_ref(c.name)?;
-    //     let asm = disassemble_code(c, &data)?;
-    //     std::fs::write(format!("asm/{n}.txt"), asm).unwrap();
-    // }
+    std::fs::create_dir_all("asm").unwrap();
+    for c in &data.codes.elems {
+        let n = data.strings.by_ref(c.name)?;
+        let asm = disassemble_code(c, &data)?;
+        std::fs::write(format!("asm/{n}.txt"), asm).unwrap();
+    }
 
     // std::fs::create_dir_all("sounds").unwrap();
     // for snd in data.sounds.elements() {

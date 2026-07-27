@@ -27,8 +27,9 @@ impl<'a> Reader<'a> {
         self.line.is_empty()
     }
 
-    pub const fn clear(&mut self) -> &'a str {
-        let line = self.line;
+    pub fn clear(&mut self) -> &'a str {
+        let idx = self.line.find('#').unwrap_or(self.line.len());
+        let line = &self.line[..idx];
         self.line = "";
         line
     }

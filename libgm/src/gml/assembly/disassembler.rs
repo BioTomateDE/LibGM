@@ -39,7 +39,7 @@ fn slice_instructions_by_bytes(
             format!("Given start byte offset {start_offset} is out of range in instructions with byte length {offset}"
         ))?;
         index += 1;
-        offset += instr.size();
+        offset += instr.size_bytes();
     }
     if offset != start_offset {
         bail!(
@@ -65,22 +65,20 @@ fn slice_instructions_by_bytes(
 /// TODO: Maybe certain directives can be added in the future
 /// to identify the code entry name as well as local and argument count.
 pub fn disassemble_code(code: &Code, gm_data: &GMData) -> Result<String> {
-    if let Some(data) = &code.modern_data {
-        if data.parent.is_some() {
-            if data.execution_offset == 0 {
-                bail!("Child code entry has byte offset zero");
-            }
+    if let Some(modern) = &code.modern_data {
+        if modern.parent.is_some() {
             let parent: &Code = gm_data
                 .codes
-                .by_ref(data.parent)
+                .by_ref(modern.parent)
                 .ctx("resolving parent code entry")?;
             // can there be nested parents? cuz it only works for one layer rn
-            let instrs = slice_instructions_by_bytes(&parent.instructions, data.execution_offset)?;
+            let instrs = slice_instructions_by_bytes(&parent.instructions, modern.execution_offset)
+                .ctx("preparing to disassemble child code entry")?;
             return disassemble_instructions(instrs, gm_data);
-        } else if data.execution_offset != 0 {
+        } else if modern.execution_offset != 0 {
             bail!(
                 "Root code entry has non-zero byte offset {}",
-                data.execution_offset
+                modern.execution_offset
             );
         }
     }
