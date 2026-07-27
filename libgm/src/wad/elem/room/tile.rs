@@ -32,7 +32,7 @@ impl GMElement for RoomTile {
         let texture: Texture = if reader.version >= GMVersion::GMS2 {
             Texture::Sprite(reader.read_resource_by_id()?)
         } else {
-            Texture::Background(reader.read_resource_by_id()?)
+            Texture::Tileset(reader.read_resource_by_id()?)
         };
         let source_x = reader.read_u32()?;
         let source_y = reader.read_u32()?;
@@ -68,16 +68,16 @@ impl GMElement for RoomTile {
                     writer.write_resource_id(sprite_ref);
                 } else {
                     bail!(
-                        "Room tile texture should be a Background reference before GMS2; not a \
-                         Sprite reference"
+                        "Room tile texture should be a Tileset/Background reference before GMS2; \
+                         not a Sprite reference"
                     );
                 }
             }
-            Texture::Background(background_ref) => {
+            Texture::Tileset(background_ref) => {
                 if writer.version() >= GMVersion::GMS2 {
                     bail!(
                         "Room tile texture should be a Sprite reference in GMS2+; not a \
-                         Background reference"
+                         Tileset/Background reference"
                     );
                 }
                 writer.write_resource_id(background_ref);
@@ -99,5 +99,5 @@ impl GMElement for RoomTile {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Texture {
     Sprite(GMRef<Sprite>),
-    Background(GMRef<Tileset>),
+    Tileset(GMRef<Tileset>),
 }

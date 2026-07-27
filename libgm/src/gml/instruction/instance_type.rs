@@ -45,7 +45,7 @@ pub enum InstanceType {
     /// positive integers. If the specified variable type was
     /// [`VariableType::Instance`], the integer gets interpreted as a Room
     /// Instance ID instead of a game object reference.
-    RoomInstance(InstanceID),
+    Instance(InstanceID),
 
     /// Represents the current `self` instance.
     ///
@@ -111,8 +111,8 @@ impl fmt::Debug for InstanceType {
             Self::GameObject(reference) => {
                 write!(f, "GameObject<{}>", reference.index)
             }
-            Self::RoomInstance(instance_id) => {
-                write!(f, "RoomInstanceID<{}>", instance_id.0)
+            Self::Instance(instance_id) => {
+                write!(f, "InstanceID<{}>", instance_id.0)
             }
             Self::Other => write!(f, "Other"),
             Self::All => write!(f, "All"),
@@ -130,12 +130,12 @@ impl fmt::Debug for InstanceType {
 impl InstanceType {
     /// Decodes an instance type from the given raw value.
     /// The variable type is needed because [`VariableType::Instance`] signifies
-    /// a [`InstanceType::RoomInstance`] instead of a
+    /// a [`InstanceType::Instance`] instead of a
     /// [`InstanceType::GameObject`].
     pub fn decode(raw: i16, var_type: VariableType) -> Result<Self> {
         if raw >= 0 {
             return Ok(if var_type == VariableType::Instance {
-                Self::RoomInstance(InstanceID(raw as i32))
+                Self::Instance(InstanceID(raw as i32))
             } else {
                 Self::GameObject(GMRef::new(raw as i32))
             });
@@ -157,7 +157,7 @@ impl InstanceType {
     }
 
     /// Decodes an instance type from the given raw value,
-    /// assuming that this is not a `RoomInstance` instance type.
+    /// assuming that this is not a `Instance` instance type.
     pub fn decode_normal(raw: i16) -> Result<Self> {
         Self::decode(raw, VariableType::Normal)
     }
@@ -170,7 +170,7 @@ impl InstanceType {
     pub const fn encode(self) -> i16 {
         match self {
             Self::GameObject(game_object_ref) => game_object_ref.index as i16,
-            Self::RoomInstance(instance_id) => instance_id.0 as i16,
+            Self::Instance(instance_id) => instance_id.0 as i16,
             Self::Self_ => -1,
             Self::Other => -2,
             Self::All => -3,
@@ -192,7 +192,7 @@ impl InstanceType {
     pub const fn as_vari(self) -> Self {
         match self {
             Self::GameObject(_)
-            | Self::RoomInstance(_)
+            | Self::Instance(_)
             | Self::Other
             | Self::Builtin
             | Self::StackTop => Self::Self_,

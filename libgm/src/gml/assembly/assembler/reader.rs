@@ -1,3 +1,4 @@
+use std::ops::Neg;
 // SPDX-License-Identifier: GPL-3.0-only
 use std::str::Chars;
 use std::str::FromStr;
@@ -134,6 +135,12 @@ impl<'a> Reader<'a> {
 
         // Identifier goes to end of line
         Ok(self.clear())
+    }
+
+    pub fn parse_int<T: FromStr + Neg<Output = T>>(&mut self) -> Result<T> {
+        let neg = self.consume_str("-");
+        let int: T = self.parse_uint()?;
+        Ok(if neg { -int } else { int })
     }
 
     pub fn parse_uint<T: FromStr>(&mut self) -> Result<T> {

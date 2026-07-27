@@ -1,20 +1,27 @@
 /// Instructions that pop two values from the stack,
 /// do something with them, and push the result.
 ///
+/// The left-hand-side (LHS) type represents the value that is pushed first (and therefore popped second).
+/// It is the second type encoded in the instruction (`type2`).
+///
+/// The right-hand-side (RHS) type represents the value that is pushed second (and therefore popped first).
+/// It is the first type encoded in the instruction (`type1`).
+///
+/// The resulting value will have the first type encoded in the instruction (`type1`).
+///
 /// Most of these throw runtime errors when used with strings, except for `Add`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BinaryOp {
     /// Adds two numbers or concatenates two strings.
-    /// For string concatenatation, the second popped string is appended/concatenated to the the first popped string.
     Add,
 
-    /// Subtracts the second popped number (the subtrahend) by the first popped number (the minuend).
+    /// Subtracts two numbers.
     Subtract,
 
     /// Multiplies two numbers.
     Multiply,
 
-    /// Divides the second popped number (the dividend) by the first popped number (the divisor).
+    /// Divides two numbers.
     Divide,
 
     /// Performs a GML `div` operation (division with remainder).

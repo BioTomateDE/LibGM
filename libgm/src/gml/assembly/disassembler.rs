@@ -16,6 +16,7 @@ use crate::wad::elem::GMNamedElement;
 use crate::wad::elem::function::Function;
 use crate::wad::elem::game_object::GameObject;
 use crate::wad::elem::string::Strings;
+use crate::wad::elem::validate_identifier;
 use crate::wad::elem::variable::Variable;
 
 macro_rules! write {
@@ -177,7 +178,7 @@ pub fn disassemble_instruction_to_buffer(
         }
 
         Instruction::Binary { op: _, lhs, rhs } => {
-            write!(buffer, "{}.{}.{}", mnemonic, lhs.as_char(), rhs.as_char());
+            write!(buffer, "{}.{}.{}", mnemonic, rhs.as_char(), lhs.as_char());
         }
 
         Instruction::Compare { lhs, rhs, comparison_type } => {
@@ -393,117 +394,61 @@ where
     Ok(name)
 }
 
-#[expect(clippy::too_many_lines)]
 fn write_asset_reference(
     asset_ref: AssetReference,
     buffer: &mut String,
     gm_data: &GMData,
 ) -> Result<()> {
-    let s = &gm_data.strings;
-    match asset_ref {
-        AssetReference::Object(gm_ref) => {
-            write!(
-                buffer,
-                "(object){}",
-                asset_get_name(&gm_data.game_objects, gm_ref, s)?
-            );
-        }
-        AssetReference::Sprite(gm_ref) => {
-            write!(
-                buffer,
-                "(sprite){}",
-                asset_get_name(&gm_data.sprites, gm_ref, s)?
-            );
-        }
-        AssetReference::Sound(gm_ref) => {
-            write!(
-                buffer,
-                "(sound){}",
-                asset_get_name(&gm_data.sounds, gm_ref, s)?
-            );
-        }
-        AssetReference::Room(gm_ref) => {
-            write!(
-                buffer,
-                "(room){}",
-                asset_get_name(&gm_data.rooms, gm_ref, s)?
-            );
-        }
-        AssetReference::Background(gm_ref) => {
-            write!(
-                buffer,
-                "(background){}",
-                asset_get_name(&gm_data.tilesets, gm_ref, s)?
-            );
-        }
-        AssetReference::Path(gm_ref) => {
-            write!(
-                buffer,
-                "(path){}",
-                asset_get_name(&gm_data.paths, gm_ref, s)?
-            );
-        }
-        AssetReference::Script(gm_ref) => {
-            write!(
-                buffer,
-                "(script){}",
-                asset_get_name(&gm_data.scripts, gm_ref, s)?
-            );
-        }
-        AssetReference::Font(gm_ref) => {
-            write!(
-                buffer,
-                "(font){}",
-                asset_get_name(&gm_data.fonts, gm_ref, s)?
-            );
-        }
-        AssetReference::Timeline(gm_ref) => {
-            write!(
-                buffer,
-                "(timeline){}",
-                asset_get_name(&gm_data.timelines, gm_ref, s)?
-            );
-        }
-        AssetReference::Shader(gm_ref) => {
-            write!(
-                buffer,
-                "(shader){}",
-                asset_get_name(&gm_data.shaders, gm_ref, s)?
-            );
-        }
-        AssetReference::Sequence(gm_ref) => {
-            write!(
-                buffer,
-                "(sequence){}",
-                asset_get_name(&gm_data.sequences, gm_ref, s)?
-            );
-        }
-        AssetReference::AnimCurve(gm_ref) => {
-            write!(
-                buffer,
-                "(animcurve){}",
-                asset_get_name(&gm_data.animation_curves, gm_ref, s)?
-            );
+    let kind: &str = match asset_ref {
+        AssetReference::Object(_) => "object",
+        AssetReference::Sprite(_) => "sprite",
+        AssetReference::Sound(_) => "sound",
+        AssetReference::Room(_) => "room",
+        AssetReference::Path(_) => "path",
+        AssetReference::Script(_) => "script",
+        AssetReference::Font(_) => "font",
+        AssetReference::Timeline(_) => "timeline",
+        AssetReference::Shader(_) => "shader",
+        AssetReference::Sequence(_) => "sequence",
+        AssetReference::AnimationCurve(_) => "animationcurve",
+        AssetReference::ParticleSystem(_) => "particlesystem",
+        AssetReference::Tileset(_) => "tileset",
+        AssetReference::Instance(_) => "instance",
+        AssetReference::Function(_) => "function",
+    };
+
+    let strg = &gm_data.strings;
+    let name: &str = match asset_ref {
+        AssetReference::Object(gm_ref) => asset_get_name(&gm_data.game_objects, gm_ref, strg)?,
+        AssetReference::Sprite(gm_ref) => asset_get_name(&gm_data.sprites, gm_ref, strg)?,
+        AssetReference::Sound(gm_ref) => asset_get_name(&gm_data.sounds, gm_ref, strg)?,
+        AssetReference::Room(gm_ref) => asset_get_name(&gm_data.rooms, gm_ref, strg)?,
+        AssetReference::Tileset(gm_ref) => asset_get_name(&gm_data.tilesets, gm_ref, strg)?,
+        AssetReference::Path(gm_ref) => asset_get_name(&gm_data.paths, gm_ref, strg)?,
+        AssetReference::Script(gm_ref) => asset_get_name(&gm_data.scripts, gm_ref, strg)?,
+        AssetReference::Font(gm_ref) => asset_get_name(&gm_data.fonts, gm_ref, strg)?,
+        AssetReference::Timeline(gm_ref) => asset_get_name(&gm_data.timelines, gm_ref, strg)?,
+        AssetReference::Shader(gm_ref) => asset_get_name(&gm_data.shaders, gm_ref, strg)?,
+        AssetReference::Sequence(gm_ref) => asset_get_name(&gm_data.sequences, gm_ref, strg)?,
+        AssetReference::AnimationCurve(gm_ref) => {
+            asset_get_name(&gm_data.animation_curves, gm_ref, strg)?
         }
         AssetReference::ParticleSystem(gm_ref) => {
-            write!(
-                buffer,
-                "(particlesystem){}",
-                asset_get_name(&gm_data.particle_systems, gm_ref, s)?
-            );
+            asset_get_name(&gm_data.particle_systems, gm_ref, strg)?
         }
-        AssetReference::RoomInstance(id) => {
-            write!(buffer, "(roominstance){id}");
-        }
-        AssetReference::Function(gm_ref) => {
-            write!(
-                buffer,
-                "(function){}",
-                resolve_function_name(gm_ref, gm_data)?
-            );
-        }
-    }
+        AssetReference::Instance(_) => "", // stub
+        AssetReference::Function(gm_ref) => resolve_function_name(gm_ref, gm_data)?,
+    };
 
+    let id = asset_ref.asset_id();
+
+    if let AssetReference::Instance(_) = asset_ref {
+        write!(buffer, "{kind} {id}");
+    } else if validate_identifier(name).is_ok() {
+        write!(buffer, "{kind} {id}  # {name}");
+    } else {
+        write!(buffer, "{kind} {id}  # {name:?}");
+    }
     Ok(())
 }
 
@@ -521,8 +466,8 @@ fn write_instance_type(
                 .ctx("validating game object name")?;
             write!(buffer, "object<{}>", obj.name(&gm_data.strings)?);
         }
-        InstanceType::RoomInstance(instance_id) => {
-            write!(buffer, "roominstance<{}>", instance_id.0);
+        InstanceType::Instance(instance_id) => {
+            write!(buffer, "instance<{}>", instance_id.0);
         }
         InstanceType::Local => write!(buffer, "local<{}>", variable_ref.index),
         InstanceType::Other => write!(buffer, "other"),

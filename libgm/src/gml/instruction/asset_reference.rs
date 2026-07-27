@@ -6,6 +6,7 @@ use crate::wad::elem::function::Function;
 use crate::wad::elem::game_object::GameObject;
 use crate::wad::elem::particle_system::ParticleSystem;
 use crate::wad::elem::path::Path;
+use crate::wad::elem::room::InstanceID;
 use crate::wad::elem::room::Room;
 use crate::wad::elem::script::Script;
 use crate::wad::elem::sequence::Sequence;
@@ -31,10 +32,10 @@ pub enum AssetReference {
     Timeline(GMRef<Timeline>),
     Shader(GMRef<Shader>),
     Sequence(GMRef<Sequence>),
-    AnimCurve(GMRef<AnimationCurve>),
+    AnimationCurve(GMRef<AnimationCurve>),
     ParticleSystem(GMRef<ParticleSystem>),
-    Background(GMRef<Tileset>),
-    RoomInstance(i32),
+    Tileset(GMRef<Tileset>),
+    Instance(InstanceID),
     /// Weird special reference since functions use reference chains.
     /// Functions therefore do not have an actual asset type byte.
     Function(GMRef<Function>),
@@ -61,10 +62,10 @@ impl AssetReference {
             7 => Self::Timeline(GMRef::new(id)),
             8 => Self::Shader(GMRef::new(id)),
             9 => Self::Sequence(GMRef::new(id)),
-            10 => Self::AnimCurve(GMRef::new(id)),
+            10 => Self::AnimationCurve(GMRef::new(id)),
             11 => Self::ParticleSystem(GMRef::new(id)),
-            13 => Self::Background(GMRef::new(id)),
-            14 => Self::RoomInstance(id),
+            13 => Self::Tileset(GMRef::new(id)),
+            14 => Self::Instance(InstanceID(id)),
             _ => bail!("Invalid asset type {ty}"),
         })
     }
@@ -81,16 +82,16 @@ impl AssetReference {
             1 => Self::Sprite(GMRef::new(id)),
             2 => Self::Sound(GMRef::new(id)),
             3 => Self::Room(GMRef::new(id)),
-            4 => Self::Background(GMRef::new(id)),
+            4 => Self::Tileset(GMRef::new(id)),
             5 => Self::Path(GMRef::new(id)),
             6 => Self::Script(GMRef::new(id)),
             7 => Self::Font(GMRef::new(id)),
             8 => Self::Timeline(GMRef::new(id)),
             10 => Self::Shader(GMRef::new(id)),
             11 => Self::Sequence(GMRef::new(id)),
-            12 => Self::AnimCurve(GMRef::new(id)),
+            12 => Self::AnimationCurve(GMRef::new(id)),
             13 => Self::ParticleSystem(GMRef::new(id)),
-            14 => Self::RoomInstance(id),
+            14 => Self::Instance(InstanceID(id)),
             _ => bail!("Invalid asset type {ty}"),
         })
     }
@@ -115,10 +116,10 @@ impl AssetReference {
             Self::Timeline(_) => 7,
             Self::Shader(_) => 8,
             Self::Sequence(_) => 9,
-            Self::AnimCurve(_) => 10,
+            Self::AnimationCurve(_) => 10,
             Self::ParticleSystem(_) => 11,
-            Self::Background(_) => 13,
-            Self::RoomInstance(_) => 14,
+            Self::Tileset(_) => 13,
+            Self::Instance(_) => 14,
         }
     }
 
@@ -134,16 +135,16 @@ impl AssetReference {
             Self::Sprite(_) => 1,
             Self::Sound(_) => 2,
             Self::Room(_) => 3,
-            Self::Background(_) => 4,
+            Self::Tileset(_) => 4,
             Self::Path(_) => 5,
             Self::Script(_) | Self::Function(_) => 6,
             Self::Font(_) => 7,
             Self::Timeline(_) => 8,
             Self::Shader(_) => 10,
             Self::Sequence(_) => 11,
-            Self::AnimCurve(_) => 12,
+            Self::AnimationCurve(_) => 12,
             Self::ParticleSystem(_) => 13,
-            Self::RoomInstance(_) => 14,
+            Self::Instance(_) => 14,
         }
     }
 
@@ -155,16 +156,16 @@ impl AssetReference {
             Self::Sprite(gm_ref) => gm_ref.index,
             Self::Sound(gm_ref) => gm_ref.index,
             Self::Room(gm_ref) => gm_ref.index,
-            Self::Background(gm_ref) => gm_ref.index,
+            Self::Tileset(gm_ref) => gm_ref.index,
             Self::Path(gm_ref) => gm_ref.index,
             Self::Script(gm_ref) => gm_ref.index,
             Self::Font(gm_ref) => gm_ref.index,
             Self::Timeline(gm_ref) => gm_ref.index,
             Self::Shader(gm_ref) => gm_ref.index,
             Self::Sequence(gm_ref) => gm_ref.index,
-            Self::AnimCurve(gm_ref) => gm_ref.index,
+            Self::AnimationCurve(gm_ref) => gm_ref.index,
             Self::ParticleSystem(gm_ref) => gm_ref.index,
-            Self::RoomInstance(integer) => integer,
+            Self::Instance(inst) => inst.0,
             Self::Function(gm_ref) => gm_ref.index,
         }) as u32
     }

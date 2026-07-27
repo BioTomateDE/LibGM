@@ -10,7 +10,7 @@ use crate::wad::save::writer::DataWriter;
 pub struct RoomBackground {
     pub enabled: bool,
     pub foreground: bool,
-    pub background_definition: GMRef<Tileset>,
+    pub tileset_definition: GMRef<Tileset>,
     pub x: i32,
     pub y: i32,
     pub tile_x: i32,
@@ -24,7 +24,7 @@ impl GMElement for RoomBackground {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let enabled = reader.read_bool32()?;
         let foreground = reader.read_bool32()?;
-        let background_definition: GMRef<Tileset> = reader.read_resource_by_id()?;
+        let tileset_definition: GMRef<Tileset> = reader.read_resource_by_id()?;
         let x = reader.read_i32()?;
         let y = reader.read_i32()?;
         let tile_x = reader.read_i32()?; // Idk if this should be an int instead of a bool
@@ -36,7 +36,7 @@ impl GMElement for RoomBackground {
         Ok(Self {
             enabled,
             foreground,
-            background_definition,
+            tileset_definition,
             x,
             y,
             tile_x,
@@ -50,7 +50,7 @@ impl GMElement for RoomBackground {
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
         writer.write_bool32(self.enabled);
         writer.write_bool32(self.foreground);
-        writer.write_resource_id(self.background_definition);
+        writer.write_resource_id(self.tileset_definition);
         writer.write_i32(self.x);
         writer.write_i32(self.y);
         writer.write_i32(self.tile_x);

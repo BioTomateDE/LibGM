@@ -28,19 +28,16 @@ use crate::wad::elem::validate_identifier;
 use crate::wad::elem::variable::Variable;
 
 /// Assembles multiple instructions separated by newline.
-/// Empty lines and lines containing only whitespace are skipped.
 ///
-/// TODO: Comments are not yet supported.
-///       (which style/char should be used?
-///       can they be implemented without screwing performance?
-///       also have to consider string literals in push.s instructions)
+/// Empty lines, and lines containing only whitespace/comments are skipped.
+/// Comments start with the `#` character and reach until the end of the line.
 pub fn assemble_instructions(assembly: &str, gm_data: &GMData) -> Result<Vec<Instruction>> {
     let heuristic = assembly.lines().count();
     let mut instructions: Vec<Instruction> = Vec::with_capacity(heuristic);
 
     for line in assembly.lines() {
-        let line = line.trim();
-        if line.is_empty() {
+        let line = line.trim_start();
+        if line.is_empty() || line.starts_with('#') {
             continue;
         }
 
@@ -54,7 +51,7 @@ pub fn assemble_instructions(assembly: &str, gm_data: &GMData) -> Result<Vec<Ins
 
 /// Assembles a single instruction on one line.
 pub fn assemble_instruction(line: &str, gm_data: &GMData) -> Result<Instruction> {
-    let mut reader = Reader::new(line.trim());
+    let mut reader = Reader::new(line.trim_start());
     let mnemonic: &str;
 
     let opcode_end: Option<usize> = reader.line.find(['.', ' ']);
@@ -85,11 +82,11 @@ pub fn assemble_instruction(line: &str, gm_data: &GMData) -> Result<Instruction>
 
     let instruction = parse_instruction(&mut reader, mnemonic, types, gm_data)?;
 
-    if !reader.is_empty() {
+    if !reader.is_empty() && !reader.line.trim_start().starts_with('#') {
         bail!(
             "Expected end of line; found remaining string {:?}",
-            reader.line
-        )
+            reader.line,
+        );
     }
 
     Ok(instruction)
@@ -103,17 +100,17 @@ fn parse_instruction(
     gm_data: &GMData,
 ) -> Result<Instruction> {
     let instruction = match mnemonic {
-        "add" => binary(types, mnemonic, BinaryOp::Add)?,
-        "sub" => binary(types, mnemonic, BinaryOp::Subtract)?,
-        "mul" => binary(types, mnemonic, BinaryOp::Multiply)?,
-        "div" => binary(types, mnemonic, BinaryOp::Divide)?,
-        "rem" => binary(types, mnemonic, BinaryOp::Remainder)?,
-        "mod" => binary(types, mnemonic, BinaryOp::Modulus)?,
-        "and" => binary(types, mnemonic, BinaryOp::And)?,
-        "or" => binary(types, mnemonic, BinaryOp::Or)?,
-        "xor" => binary(types, mnemonic, BinaryOp::Xor)?,
-        "shl" => binary(types, mnemonic, BinaryOp::ShiftLeft)?,
-        "shr" => binary(types, mnemonic, BinaryOp::ShiftRight)?,
+        "add" => parse_binary(types, mnemonic, BinaryOp::Add)?,
+        "sub" => parse_binary(types, mnemonic, BinaryOp::Subtract)?,
+        "mul" => parse_binary(types, mnemonic, BinaryOp::Multiply)?,
+        "div" => parse_binary(types, mnemonic, BinaryOp::Divide)?,
+        "rem" => parse_binary(types, mnemonic, BinaryOp::Remainder)?,
+        "mod" => parse_binary(types, mnemonic, BinaryOp::Modulus)?,
+        "and" => parse_binary(types, mnemonic, BinaryOp::And)?,
+        "or" => parse_binary(types, mnemonic, BinaryOp::Or)?,
+        "xor" => parse_binary(types, mnemonic, BinaryOp::Xor)?,
+        "shl" => parse_binary(types, mnemonic, BinaryOp::ShiftLeft)?,
+        "shr" => parse_binary(types, mnemonic, BinaryOp::ShiftRight)?,
         "neg" => {
             types.assert_count(1, mnemonic)?;
             Instruction::Negate { data_type: types[0] }
@@ -228,7 +225,7 @@ fn parse_instruction(
         "isnullish" => Instruction::IsNullishValue,
         "pushref" => {
             types.assert_count(0, mnemonic)?;
-            let asset_reference = parse_asset_reference(reader, gm_data)?;
+            let asset_reference = parse_asset_reference(reader)?;
             Instruction::PushReference { asset_reference }
         }
         _ => bail!("Invalid opcode mnemonic {mnemonic:?}"),
@@ -237,54 +234,36 @@ fn parse_instruction(
     Ok(instruction)
 }
 
-fn binary(types: DataTypes, mnemonic: &str, op: BinaryOp) -> Result<Instruction> {
+fn parse_binary(types: DataTypes, mnemonic: &str, op: BinaryOp) -> Result<Instruction> {
     types.assert_count(2, mnemonic)?;
     Ok(Instruction::Binary { op, lhs: types[1], rhs: types[0] })
 }
 
-fn parse_asset_reference(reader: &mut Reader, gm_data: &GMData) -> Result<AssetReference> {
-    let asset_type: &str = reader
-        .consume_round_brackets()?
-        .ok_or("Expected asset type within round brackets")?;
-    let line = reader.clear();
-    let strg = &gm_data.strings;
-    let dat = gm_data;
+fn parse_asset_reference(reader: &mut Reader) -> Result<AssetReference> {
+    let asset_type: &str = reader.parse_identifier()?;
+    reader.consume_space()?;
+    let id: i32 = reader.parse_int()?;
 
     let asset_reference = match asset_type {
-        "object" => AssetReference::Object(resolve_asset(&dat.game_objects, line, strg)?),
-        "sprite" => AssetReference::Sprite(resolve_asset(&dat.sprites, line, strg)?),
-        "sound" => AssetReference::Sound(resolve_asset(&dat.sounds, line, strg)?),
-        "room" => AssetReference::Room(resolve_asset(&dat.rooms, line, strg)?),
-        "background" => AssetReference::Background(resolve_asset(&dat.tilesets, line, strg)?),
-        "path" => AssetReference::Path(resolve_asset(&dat.paths, line, strg)?),
-        "script" => AssetReference::Script(resolve_asset(&dat.scripts, line, strg)?),
-        "font" => AssetReference::Font(resolve_asset(&dat.fonts, line, strg)?),
-        "timeline" => AssetReference::Timeline(resolve_asset(&dat.timelines, line, strg)?),
-        "shader" => AssetReference::Shader(resolve_asset(&dat.shaders, line, strg)?),
-        "sequence" => AssetReference::Sequence(resolve_asset(&dat.sequences, line, strg)?),
-        "animcurve" => AssetReference::AnimCurve(resolve_asset(&dat.animation_curves, line, strg)?),
-        "particlesystem" => {
-            AssetReference::ParticleSystem(resolve_asset(&dat.particle_systems, line, strg)?)
-        }
-        "roominstance" => AssetReference::RoomInstance(parse_int(line)?),
-        "function" => AssetReference::Function(parse_function(
-            reader,
-            &gm_data.functions,
-            &gm_data.strings,
-        )?),
+        "object" => AssetReference::Object(GMRef::new(id)),
+        "sprite" => AssetReference::Sprite(GMRef::new(id)),
+        "sound" => AssetReference::Sound(GMRef::new(id)),
+        "room" => AssetReference::Room(GMRef::new(id)),
+        "tileset" => AssetReference::Tileset(GMRef::new(id)),
+        "path" => AssetReference::Path(GMRef::new(id)),
+        "script" => AssetReference::Script(GMRef::new(id)),
+        "font" => AssetReference::Font(GMRef::new(id)),
+        "timeline" => AssetReference::Timeline(GMRef::new(id)),
+        "shader" => AssetReference::Shader(GMRef::new(id)),
+        "sequence" => AssetReference::Sequence(GMRef::new(id)),
+        "animcurve" => AssetReference::AnimationCurve(GMRef::new(id)),
+        "particlesystem" => AssetReference::ParticleSystem(GMRef::new(id)),
+        "instance" => AssetReference::Instance(InstanceID(id)),
+        "function" => AssetReference::Function(GMRef::new(id)),
         _ => bail!("Invalid Type Cast to asset type {asset_type:?}"),
     };
 
     Ok(asset_reference)
-}
-
-fn resolve_asset<T: GMNamedListChunk>(
-    chunk: &T,
-    ident: &str,
-    strings: &Strings,
-) -> Result<GMRef<T::Element>> {
-    validate_identifier(ident)?;
-    chunk.ref_by_name(ident, strings)
 }
 
 fn parse_comparison(types: DataTypes, reader: &mut Reader) -> Result<Instruction> {
@@ -403,7 +382,7 @@ impl VariableType {
         Ok(match variable_type {
             "stacktop" => Self::StackTop,
             "array" => Self::Array,
-            "roominstance" => Self::Instance,
+            "instance" => Self::Instance,
             "arraypushaf" => Self::MultiPush,
             "arraypopaf" => Self::MultiPop,
             _ => bail!("Invalid Variable Reference Type {variable_type:?}"),
@@ -431,10 +410,10 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
                 .ref_by_name(instance_type_arg, &gm_data.strings)?;
             InstanceType::GameObject(object_ref)
         }
-        "roominstance" => {
+        "instance" => {
             variable_type = VariableType::Instance;
             let instance_id: i32 = parse_int(instance_type_arg)?;
-            InstanceType::RoomInstance(InstanceID(instance_id))
+            InstanceType::Instance(InstanceID(instance_id))
         }
         "local" => {
             let var_index: i32 = parse_i32(instance_type_arg)?;

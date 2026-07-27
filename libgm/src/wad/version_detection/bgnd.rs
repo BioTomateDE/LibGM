@@ -4,7 +4,7 @@ use crate::prelude::*;
 use crate::wad::load::reader::DataReader;
 use crate::wad::version::GMVersion;
 
-/// Go through each background, and check to see if it ends at
+/// Go through each background/tileset, and check to see if it ends at
 /// the expected position. If not, this is probably 2024.14.1.
 pub fn check_2024_14_1(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     let target_ver = target_version!(GM2024_14_1);
