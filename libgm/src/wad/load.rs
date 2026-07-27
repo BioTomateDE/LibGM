@@ -14,7 +14,6 @@ use std::path::Path;
 
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
-use crate::util::fmt::hexdump;
 use crate::wad::chunk::ChunkName;
 use crate::wad::data::Endianness;
 use crate::wad::data::GMData;
@@ -225,35 +224,29 @@ pub fn parse_file(data_file_path: impl AsRef<Path>) -> Result<GMData> {
 
 /// This can later be reused for audiogroup files.
 fn read_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
+    let root = raw_data.get(0..4);
+    let endianness = match root {
+        Some(b"FORM") => Endianness::Little,
+        Some(b"MROF") => Endianness::Big,
+        _ => bail!("This is not a GameMaker data file"),
+    };
+
     // Length assertion
     if raw_data.len() >= i32::MAX as usize {
         bail!("{ERR_MASSIVE}");
     }
 
     let mut reader = DataReader::new(raw_data);
+    reader.endianness = endianness;
+    reader.cur_pos = 4;
 
-    // Read root chunk and set endianness
-    let bytes: &[u8; 4] = reader.read_bytes_const().ctx("reading root chunk name")?;
-
-    reader.endianness = match bytes {
-        b"FORM" => Endianness::Little,
-        b"MROF" => Endianness::Big,
-        _ => {
-            let hex = hexdump(bytes);
-            let msg = "Expected root chunk to be 'FORM' but found";
-            if let Ok(string) = str::from_utf8(bytes) {
-                bail!("{msg} {string:?} ({hex})")
-            }
-            bail!("{msg} {hex}");
-        }
-    };
-    if reader.endianness == Endianness::Big {
+    if endianness == Endianness::Big {
         log::warn!("Big endian format might not work, proceed with caution");
     }
 
     // Length assertion
-    let remaining_data_len = reader.read_u32().ctx("reading root chunk length")?;
-    let total_data_len = remaining_data_len + reader.cur_pos;
+    let remaining_data_len = reader.read_u32().ctx("reading total data length")?;
+    let total_data_len = remaining_data_len + reader.cur_pos /* 8 */;
     if total_data_len as usize != raw_data.len() {
         bail!(
             "Specified FORM data length is {} but data is actually {} bytes long",
