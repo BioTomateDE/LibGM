@@ -15,14 +15,10 @@ use libgm::prelude::*;
 /// considered GameMaker data files. Other files will be skipped.
 fn list_dir(dir: &Path) -> Result<Vec<PathBuf>> {
     let mut data_file_paths: Vec<PathBuf> = Vec::new();
-    let dir: ReadDir = fs::read_dir(dir)
-        .map_err(|e| e.to_string())
-        .ctx("reading data file folder")?;
+    let dir: ReadDir = fs::read_dir(dir).ctx_any("reading data file folder")?;
 
     for entry in dir {
-        let entry = entry
-            .map_err(|e| e.to_string())
-            .ctx("reading directory entry metadata")?;
+        let entry = entry.ctx_any("reading directory entry metadata")?;
 
         let path = entry.path();
         if !path.is_file() {
@@ -48,9 +44,7 @@ pub fn get_data_files(input_files: &[PathBuf]) -> Result<Vec<PathBuf>> {
     let mut files: Vec<PathBuf> = Vec::new();
 
     for path in input_files {
-        let metadata = fs::metadata(path)
-            .map_err(|e| e.to_string())
-            .ctx(|| format!("reading metadata of {path:?}"))?;
+        let metadata = fs::metadata(path).ctx_any(|| format!("reading metadata of {path:?}"))?;
 
         if metadata.is_dir() {
             let dir_files: Vec<PathBuf> =

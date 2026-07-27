@@ -4,7 +4,8 @@ use libgm::gml::assembly::disassemble_code;
 use libgm::gml::instruction::Instruction;
 use libgm::prelude::*;
 use libgm::wad::data::GMData;
-use libgm_cli::diff::print_diff;
+
+use crate::diff::print_diff;
 
 pub fn test(data: &mut GMData) -> Result<()> {
     for i in 0..data.codes.len() {

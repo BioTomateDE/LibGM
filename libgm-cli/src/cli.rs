@@ -24,6 +24,10 @@ pub struct Args {
     #[arg(long)]
     pub inplace: bool,
 
+    /// Whether to abort if there are errors while handling a data file.
+    #[arg(long)]
+    pub fatal: bool,
+
     /// Whether to allow invalid constants / alignment while parsing.
     ///
     /// Default: false
@@ -51,6 +55,10 @@ pub struct Args {
     /// Data files to compare to.
     #[arg(short, long, value_delimiter = ',')]
     pub diffs: Vec<PathBuf>,
+
+    /// Whether to primitively benchmark the load times.
+    #[arg(long)]
+    pub bench: bool,
 
     /// Whether to dump all sprites.
     #[arg(long)]
