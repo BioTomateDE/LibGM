@@ -152,6 +152,7 @@ impl Display for IdeVersion {
 #[non_exhaustive]
 // DOCME: it would be really great if people could document which features all of these versions added :D
 pub enum GMVersion {
+    // !!! MAKE SURE TO ADJUST wad_version WHEN ADDING NEW PRE-WAD17 VERSIONS !!!
     /// * WAD Version 12
     /// * GameMaker Studio 1.X.867
     ///
@@ -260,8 +261,23 @@ pub enum GMVersion {
     GM2024_14_1,
 }
 
+impl GMVersion {
+    /// The WAD/bytecode version of this format version.
+    #[must_use]
+    pub const fn wad_version(self) -> u8 {
+        match self {
+            Self::Wad12 => 12,
+            Self::Wad13 => 13,
+            Self::Wad14 => 14,
+            Self::Wad15 => 15,
+            Self::Wad16Old | Self::Wad16Pad | Self::GMS2 | Self::GMS2_0_6 => 16,
+            _ => 17,
+        }
+    }
+}
+
 impl Display for GMVersion {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         let s = match self {
             Self::Wad12 => "WAD 12",
             Self::Wad13 => "WAD 13",
