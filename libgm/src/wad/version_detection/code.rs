@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use super::target_version;
 use crate::gml::instruction::DataType;
-use crate::gml::opcodes;
+use crate::gml::opcode;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::chunk::ChunkName;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::version::GMVersion;
 
 pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion>> {
@@ -83,7 +83,7 @@ pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
             let opcode = (word >> 24) as u8;
             let type1 = ((word & 0x00FF_0000) >> 16) as u8;
 
-            if matches!(opcode, opcodes::POP | opcodes::CALL) {
+            if matches!(opcode, opcode::POP | opcode::CALL) {
                 reader.cur_pos += 4;
             }
 
@@ -95,7 +95,7 @@ pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
                 continue;
             }
 
-            if opcode != opcodes::EXTENDED {
+            if opcode != opcode::EXTENDED {
                 continue;
             }
 

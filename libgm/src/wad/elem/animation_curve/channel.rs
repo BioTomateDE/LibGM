@@ -3,9 +3,9 @@
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 gm_enum!(
 /// The curve type determines how points flow to each other in a channel.
@@ -36,11 +36,11 @@ impl GMElement for Channel {
         Ok(Self { name, curve_type, iterations, points })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_enum(self.curve_type);
-        builder.write_u32(self.iterations);
-        builder.write_simple_list(&self.points)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_enum(self.curve_type);
+        writer.write_u32(self.iterations);
+        writer.write_simple_list(&self.points)?;
         Ok(())
     }
 }
@@ -66,18 +66,18 @@ impl GMElement for Point {
         Ok(Self { x, y, bezier_data })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_f32(self.x);
-        builder.write_f32(self.y);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_f32(self.x);
+        writer.write_f32(self.y);
 
-        if builder.version() >= GMVersion::GMS2_3_1 {
+        if writer.version() >= GMVersion::GMS2_3_1 {
             let bezier_data: &PointBezierData = self
                 .bezier_data
                 .as_ref()
                 .ok_or("Animation Curve Point's Bezier data not set in 2.3.1+")?;
-            bezier_data.serialize(builder)?;
+            writer.write_elem(bezier_data)?;
         } else {
-            builder.write_i32(0);
+            writer.write_i32(0);
         }
         Ok(())
     }
@@ -100,11 +100,11 @@ impl GMElement for PointBezierData {
         Ok(Self { x0, y0, x1, y1 })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_f32(self.x0);
-        builder.write_f32(self.y0);
-        builder.write_f32(self.x1);
-        builder.write_f32(self.y1);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_f32(self.x0);
+        writer.write_f32(self.y0);
+        writer.write_f32(self.x1);
+        writer.write_f32(self.y1);
         Ok(())
     }
 }

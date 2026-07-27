@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::gml::Instruction;
+use crate::gml::instruction::BinaryOp;
 use crate::gml::instruction::DataType;
 use crate::prelude::*;
 
@@ -62,8 +63,11 @@ pub fn analyze(data: &GMData) -> CodeAnalysis {
     for code in data.codes.elements() {
         for instruction in &code.instructions {
             match instruction {
-                Instruction::And { lhs: DataType::Bool, rhs: DataType::Bool }
-                | Instruction::Or { lhs: DataType::Bool, rhs: DataType::Bool } => {
+                Instruction::Binary {
+                    op: BinaryOp::And | BinaryOp::Or,
+                    lhs: DataType::Bool,
+                    rhs: DataType::Bool,
+                } => {
                     analysis.short_circuit = false;
                 }
                 Instruction::SetArrayOwner => {

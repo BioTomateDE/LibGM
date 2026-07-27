@@ -13,10 +13,9 @@ use std::path::PathBuf;
 
 use libgm::gml::assembly::disassemble_code;
 use libgm::prelude::*;
-use libgm::wad::build::build_file;
-use libgm::wad::chunk::ChunkName;
 use libgm::wad::data::GMData;
-use libgm::wad::parse::ParsingOptions;
+use libgm::wad::load::LoadingOptions;
+use libgm::wad::save::save_file;
 use libgm_cli::diff::print_diffs;
 use tests::Test;
 
@@ -30,17 +29,17 @@ fn run(mut args: cli::Args) -> Result<()> {
     let tests: Vec<Test> = tests::deduplicate(args.tests);
     let files: Vec<PathBuf> = dir::get_data_files(&args.files)?;
 
-    let parser = if args.lenient {
-        ParsingOptions::LENIENT
+    let loader = if args.lenient {
+        LoadingOptions::LENIENT
     } else {
-        ParsingOptions::STRICT
+        LoadingOptions::STRICT
     };
 
     for data_file in files {
-        log::info!("Parsing data file {}", data_file.display());
+        log::info!("Loading data file {}", data_file.display());
 
         let raw_data: Vec<u8> = std::fs::read(&data_file).ctx_any("reading data file")?;
-        let mut data: GMData = parser.parse_bytes(&raw_data)?;
+        let mut data: GMData = loader.load_bytes(&raw_data)?;
 
         if args.info {
             info::print_info(&data);
@@ -54,7 +53,7 @@ fn run(mut args: cli::Args) -> Result<()> {
 
         for data_file2 in &args.diffs {
             log::info!("Diffing with data file {}", data_file2.display());
-            let data2: GMData = parser.parse_file(data_file2)?;
+            let data2: GMData = loader.load_file(data_file2)?;
             print_diffs(&data, &data2);
         }
 
@@ -91,11 +90,11 @@ fn run(mut args: cli::Args) -> Result<()> {
         // }
 
         if let Some(out_file) = &args.out {
-            log::info!("Building data file {}", out_file.display());
-            build_file(&data, out_file)?;
+            log::info!("Encoding data file {}", out_file.display());
+            save_file(&data, out_file)?;
         } else if args.inplace {
-            log::info!("Building data file to same location");
-            build_file(&data, data_file)?;
+            log::info!("Encoding data file to same location");
+            save_file(&data, data_file)?;
         }
 
         println!();
@@ -109,13 +108,7 @@ fn main() {
     let args = cli::parse();
 
     if let Err(error) = run(args) {
-        let chain_fn = if cfg!(target_os = "windows") {
-            // Windows usually can't display these arrows correctly
-            Error::chain
-        } else {
-            Error::chain_pretty
-        };
-        log::error!("{}", chain_fn(&error));
+        log::error!("{}", error.chain());
         std::process::exit(1);
     }
 

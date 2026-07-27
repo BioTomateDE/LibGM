@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Data {
@@ -21,11 +21,11 @@ impl GMElement for Data {
         Ok(Self { red, green, blue, alpha })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u8(self.red);
-        builder.write_u8(self.green);
-        builder.write_u8(self.blue);
-        builder.write_u8(self.alpha);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_u8(self.red);
+        writer.write_u8(self.green);
+        writer.write_u8(self.blue);
+        writer.write_u8(self.alpha);
         Ok(())
     }
 }

@@ -2,12 +2,12 @@
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
-use crate::wad::build::builder::LastChunk;
 use crate::wad::chunk::ChunkName;
 use crate::wad::data::Endianness;
+use crate::wad::save::writer::DataWriter;
+use crate::wad::save::writer::LastChunk;
 
-impl DataBuilder<'_> {
+impl DataWriter<'_> {
     /// Write a 4 character ASCII GameMaker chunk name.
     /// Accounts for endianness (chunk names in big endian are reversed).
     pub fn write_chunk_name(&mut self, name: ChunkName) {

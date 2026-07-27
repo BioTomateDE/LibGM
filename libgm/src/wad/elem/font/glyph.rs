@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::font::kerning::Kerning;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Glyph {
@@ -68,23 +68,23 @@ impl GMElement for Glyph {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
         if let Some(char) = self.character {
             let codepoint: u32 = char.into();
-            builder.write_u16(codepoint as u16);
+            writer.write_u16(codepoint as u16);
         } else {
-            builder.write_u16(0);
+            writer.write_u16(0);
         }
-        builder.write_u16(self.x);
-        builder.write_u16(self.y);
-        builder.write_u16(self.width);
-        builder.write_u16(self.height);
-        builder.write_i16(self.shift_modifier);
-        builder.write_i16(self.offset);
-        if builder.version() >= GMVersion::GM2024_11 {
-            builder.write_u16(0); // UnknownAlwaysZero
+        writer.write_u16(self.x);
+        writer.write_u16(self.y);
+        writer.write_u16(self.width);
+        writer.write_u16(self.height);
+        writer.write_i16(self.shift_modifier);
+        writer.write_i16(self.offset);
+        if writer.version() >= GMVersion::GM2024_11 {
+            writer.write_u16(0); // UnknownAlwaysZero
         }
-        builder.write_simple_list_short(&self.kernings)?;
+        writer.write_simple_list_short(&self.kernings)?;
         Ok(())
     }
 }

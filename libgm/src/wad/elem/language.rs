@@ -2,11 +2,11 @@
 
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::element_stub;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct LanguageInfo {
@@ -42,18 +42,18 @@ impl GMElement for LanguageInfo {
         Ok(Self { unknown1, elems, entry_ids })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u32(self.unknown1);
-        builder.write_usize(self.elems.len())?;
-        builder.write_usize(self.entry_ids.len())?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_u32(self.unknown1);
+        writer.write_usize(self.elems.len())?;
+        writer.write_usize(self.entry_ids.len())?;
         for &entry in &self.entry_ids {
-            builder.write_gm_string(entry)?;
+            writer.write_gm_string(entry)?;
         }
         for language in &self.elems {
-            builder.write_gm_string(language.name)?;
-            builder.write_gm_string(language.region)?;
+            writer.write_gm_string(language.name)?;
+            writer.write_gm_string(language.region)?;
             for &entry in &language.entries {
-                builder.write_gm_string(entry)?;
+                writer.write_gm_string(entry)?;
             }
         }
         Ok(())

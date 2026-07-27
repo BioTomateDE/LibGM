@@ -15,11 +15,11 @@ pub struct Alarm {
 }
 
 impl EventSubtype for Alarm {
-    fn parse(index: i32) -> Result<Self> {
+    fn decode(index: i32) -> Result<Self> {
         Self::new(index)
     }
 
-    fn build(self) -> i32 {
+    fn encode(self) -> i32 {
         self.index as i32
     }
 }

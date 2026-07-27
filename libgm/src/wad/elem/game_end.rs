@@ -2,11 +2,11 @@
 
 use crate::gml::Code;
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GameEndScripts {
@@ -21,8 +21,8 @@ impl GMElement for GameEndScripts {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_simple_list(&self.elems)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_simple_list(&self.elems)?;
         Ok(())
     }
 }

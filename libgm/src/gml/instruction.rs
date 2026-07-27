@@ -3,7 +3,7 @@
 //! including the important [`Instruction`] type.
 
 mod asset_reference;
-mod category;
+mod binary;
 mod code_variable;
 mod comparison_type;
 mod data_type;
@@ -12,7 +12,7 @@ mod push_value;
 mod variable_type;
 
 pub use self::asset_reference::AssetReference;
-pub use self::category::Category;
+pub use self::binary::BinaryOp;
 pub use self::code_variable::CodeVariable;
 pub use self::comparison_type::ComparisonType;
 pub use self::data_type::DataType;
@@ -31,92 +31,31 @@ use crate::wad::elem::function::Function;
 /// [module level documentation]: crate::gml
 #[derive(Debug, Clone, PartialEq)]
 pub enum Instruction {
+    /// Pops two values from the stack, performs a mathematical,
+    /// bitwise or logical operation on them, and pushes the result.
+    Binary {
+        op: BinaryOp,
+        lhs: DataType,
+        rhs: DataType,
+    },
+
     /// Converts the top of the stack from one type to another.
     ///
-    /// Sometimes it may be necessary to convert between "actual data types" and
-    /// [`DataType::Variable`] (note: not sure if necessary, but the
-    /// YoYoGames compiler generates it). For example, when calling a
-    /// function, all arguments need (?) to of data type [`DataType::Variable`].
-    /// So if you want to call `foo(41)`:
-    /// ```text
-    /// pushim 41
-    /// conv.i.v
-    /// call foo(argc=1)
-    /// ```
+    /// DOCME: conversion logic for different permutations
     Convert { from: DataType, to: DataType },
 
-    /// Pops two values from the stack, **multiplies** them, and pushes the
-    /// result.
-    Multiply { lhs: DataType, rhs: DataType },
-
-    /// Pops two values from the stack, **divides** them, and pushes the result.
-    /// The second popped value (`dividend`) is divided by the first popped
-    /// value (`divisor`).
-    Divide { lhs: DataType, rhs: DataType },
-
-    /// Pops two values from the stack, performs a GML `div` operation (division
-    /// with remainder), and pushes the result. The second popped value
-    /// (`dividend`) is divided (with remainder) by the first popped value
-    /// (`divisor`).
-    ///
-    /// This operation is similar to [`Instruction::Modulus`], except it behaves
-    /// differently for negative values. For example: `-19 rem 12 == -7`
-    /// (not 5).
-    Remainder { lhs: DataType, rhs: DataType },
-
-    /// Pops two values from the stack, performs a GML `mod` operation (`%`),
-    /// and pushes the result. The second popped value is modulo'd against
-    /// the first popped value.
-    ///
-    /// This operation is similar to [`Instruction::Remainder`], except it
-    /// behaves differently for negative values. This `modulus` operation performs
-    /// [Euclidean division](https://en.wikipedia.org/wiki/Euclidean_division).
-    /// For example: `-19 rem 12 == 5` (not -7).
-    Modulus { lhs: DataType, rhs: DataType },
-
-    /// Pops two values from the stack, **adds** them, and pushes the result.
-    Add { lhs: DataType, rhs: DataType },
-
-    /// Pops two values from the stack, **subtracts** them, and pushes the
-    /// result. The second popped value is subtracted by the first popped
-    /// value.
-    Subtract { lhs: DataType, rhs: DataType },
-
-    /// Pops two values from the stack, performs an **AND** operation, and
-    /// pushes the result. This can be done bitwise or logically, depending
-    /// on the data type(s).
-    And { lhs: DataType, rhs: DataType },
-
-    /// Pops two values from the stack, performs an **OR** operation, and pushes
-    /// the result. This can be done bitwise or logically, depending on the
-    /// data type(s).
-    Or { lhs: DataType, rhs: DataType },
-
-    /// Pops two values from the stack, performs an **XOR** operation, and
-    /// pushes the result. This can be done bitwise or logically, depending
-    /// on the data type(s).
-    Xor { lhs: DataType, rhs: DataType },
-
     /// **Negates** the top value of the stack (as in, multiplies it with -1).
+    /// Negating a string or boolean results in 0.
     Negate { data_type: DataType },
 
-    /// Pops one value from the stack, performs a **NOT** operation, and pushes
-    /// the result. This can be done bitwise or logically, depending on the
-    /// data type(s).
+    /// Pops one value from the stack, performs a **NOT** operation, and pushes the result.
+    /// This can be done bitwise or logically, depending on the data type.
+    /// Performing NOT on a string results in an engine error.
     Not { data_type: DataType },
-
-    /// Pops two values from the stack, performs a bitwise **left shift**
-    /// operation (`<<`), and pushes the result. The second popped value
-    /// (`value`) is shifted left by the first popped value (`shift_amount`).
-    ShiftLeft { lhs: DataType, rhs: DataType },
-
-    /// Pops two values from the stack, performs a bitwise **right shift**
-    /// operation (`>>`), and pushes the result. The second popped value
-    /// (`value`) is shifted right by the first popped value (`shift_amount`).
-    ShiftRight { lhs: DataType, rhs: DataType },
 
     /// Pops two values from the stack, **compares** them using a
     /// [`ComparisonType`], and pushes a boolean result ([`DataType::Bool`]).
+    /// The left hand side is popped first, the right hand side is popped second.
     Compare {
         lhs: DataType,
         rhs: DataType,
@@ -126,10 +65,10 @@ pub enum Instruction {
     /// Pops a value from the stack, and generally **stores it in a variable**,
     /// array, or otherwise.
     ///
-    /// Generally, `type1` signifies the type of the value on the stack (the one
-    /// to pop) and `type2` will be [`DataType::Variable`].
+    /// Generally, `type2` signifies the type of the value on the stack (the one
+    /// to pop) and `type1` will be [`DataType::Variable`].
     /// However, there are exceptions to this. For example, when the variable
-    /// reference mode is not [`VariableType::Normal`], then `type2` may be
+    /// reference mode is not [`VariableType::Normal`], then `type1` may be
     /// [`DataType::Int32`] instead.
     ///
     /// There is an alternate instruction/mode with the same opcode that swaps
@@ -171,21 +110,29 @@ pub enum Instruction {
     /// [A, B, C, D, ...] into [B, C, D, A, ...].
     PopSwap { is_array: bool },
 
-    /// **Duplicates** values on the stack.
+    /// **Duplicates** `count + 1` values on the stack.
     ///
-    /// The specified `size` is the total size of all
-    /// elements that should be duplicated.
+    /// Example:
+    /// Say this is your stack, top to bottom, all [`DataType::Int32`]:
+    /// * 1
+    /// * 2
+    /// * 3
     ///
-    /// The specified data type hints what the stacktop data type is.
-    /// However, it does (most likely?) not explicitly have to match.
-    /// It only influences a multiplication factor of how many bytes to
-    /// clone, since different data types have different sizes on the stack.
+    /// The instruction `dup.i 1` will transform it into this:
+    /// * 1
+    /// * 2
+    /// * 1
+    /// * 2
+    /// * 3
     ///
-    /// To get the duplication value *count* (instead of byte size) for a
-    /// homogenous stack data type, use `instr.size /
-    /// instr.data_type.size()`. For safety, it is probably a good idea to
-    /// verify that the remainder is zero.
-    Duplicate { data_type: DataType, size: u8 },
+    /// Usually, this instruction is used to duplicate homogenous data types,
+    /// and the specified `data_type` actually matches the types on the stack.
+    /// However, this does not need to be the case.
+    /// This instruction simply copies `(count + 1) * data_type.size_bytes()` bytes.
+    /// You could use a `dup.l` in place of a `dup.d` and nothing would change.
+    /// You could use a `dup.v 0` to duplicate 4 integers.
+    /// You could use a `dup.l 2` to duplicate a variable and a double.
+    Duplicate { data_type: DataType, count: u8 },
 
     /// **Swaps** values around on the stack.
     ///
@@ -201,8 +148,22 @@ pub enum Instruction {
         size2: u8,
     },
 
+    /// **Exits** the current code entry with no return value.
+    ///
+    /// The engine still pushes a value `0` with [`DataType::Variable`] to the stack
+    /// (otherwise, you could corrupt the stack in high-level GML).
+    /// This implicit return value of zero also occurs when the code entry naturally exits
+    /// by reaching the end of the instructions.
+    ///
+    /// This instruction always has the data type [`DataType::Int32`] for
+    /// whatever reason. Since this data type carries no meaningful
+    /// information, it is not stored in this enum variant.
+    Exit,
+
     /// Pops a value from the stack, and **returns** from the current
-    /// function/script with that value as the return value.
+    /// code entry with that value as the return value.
+    ///
+    /// This only makes sense to use in scripts.
     ///
     /// This instruction always has the data type [`DataType::Variable`],
     /// which is omitted from this enum data since it is redundant.
@@ -210,24 +171,15 @@ pub enum Instruction {
     /// [`DataType::Variable`] using [`Instruction::Convert`] before returning.
     Return,
 
-    /// **Returns** from the current function/script/event with no return value.
-    ///
-    /// This instruction always has the data type [`DataType::Int32`] for
-    /// whatever reason. Since this data type carries no meaningful
-    /// information, it is not stored in this enum variant.
-    Exit,
-
     /// **Pops** a value from the stack, and **discards** it.
     ///
-    /// This is similar to [`Instruction::Pop`], except it does not store the
-    /// result in any variable.
+    /// This is similar to [`Instruction::Pop`], except it
+    /// does not store the result in any variable.
     ///
-    /// This instruction is commonly used to clean up unused return values of
-    /// function calls.
+    /// This instruction is commonly used to clean up unused return values of function calls.
     PopDiscard { data_type: DataType },
 
-    /// Unconditionally **branches** (jumps) to another instruction in the code
-    /// entry.
+    /// Unconditionally **branches** (jumps) to another instruction in the code entry.
     ///
     /// Also known as `B`, `br`, `Jump`, `jmp`.
     ///
@@ -267,8 +219,8 @@ pub enum Instruction {
     /// The jump offset is further explained in [`Instruction::Branch`].
     PushWithContext { jump_offset: i32 },
 
-    /// Pops/ends a `with` context, used for GML `with` statements,
-    /// from the VM environment/self instance stack.
+    /// Pops/ends a `with` context from the VM environment/self instance stack.
+    ///
     /// This instruction will branch to its encoded address until no longer
     /// iterating instances, where the context will finally be gone for good.
     ///
@@ -279,6 +231,7 @@ pub enum Instruction {
     PopWithContext { jump_offset: i32 },
 
     /// A variation of [`Instruction::PopWithContext`].
+    ///
     /// This variation exits the `with` loop context without branching anywhere.
     /// Since the instruction pointer is malformed afterward, this instruction
     /// is only seen before a [`Instruction::Exit`],
@@ -337,8 +290,9 @@ pub enum Instruction {
     /// stack. The data type `Int16` *does not exist* on the stack.
     PushImmediate { integer: i16 },
 
-    /// Calls a GML script/function, using its ID (index).
-    /// Arguments are prepared prior to this instruction, in reverse order.
+    /// Calls a GML script or builtin function.
+    ///
+    /// Arguments should be pushed prior to this instruction, in reverse order.
     ///
     /// Argument count is encoded in this instruction.
     /// Arguments are popped off of the stack.
@@ -346,11 +300,10 @@ pub enum Instruction {
     /// Every function call is allowed to have an arbitary number of arguments.
     /// Certain builtin functions are designed to handle any
     /// number of arguments, such as `ds_list_add`.
-    /// For custom functions (aka. scripts), the remaining values will be filled
-    /// with specified default values or `undefined` (?).
+    /// For custom functions (aka. scripts), the remaining values will
+    /// be filled with `0` or `undefined` in modern versions (DOCME).
+    ///
     /// DOCME: I'm not sure what happens in WAD<15.
-    /// DOCME: I'm not sure what happens when too many arguments are
-    /// specified (probably nothing?).
     Call {
         function: GMRef<Function>,
         arg_count: u16,
@@ -616,18 +569,7 @@ impl Instruction {
     pub const fn type1(&self) -> Option<DataType> {
         Some(match *self {
             Self::Convert { from, .. } => from,
-            Self::Multiply { rhs, .. }
-            | Self::Divide { rhs, .. }
-            | Self::Remainder { rhs, .. }
-            | Self::Modulus { rhs, .. }
-            | Self::Add { rhs, .. }
-            | Self::Subtract { rhs, .. }
-            | Self::And { rhs, .. }
-            | Self::Or { rhs, .. }
-            | Self::Xor { rhs, .. }
-            | Self::ShiftLeft { rhs, .. }
-            | Self::ShiftRight { rhs, .. }
-            | Self::Compare { rhs, .. } => rhs,
+            Self::Binary { rhs, .. } => rhs,
             Self::Negate { data_type }
             | Self::Not { data_type }
             | Self::Duplicate { data_type, .. }
@@ -652,18 +594,7 @@ impl Instruction {
     pub const fn type2(&self) -> Option<DataType> {
         Some(match *self {
             Self::Convert { to, .. } => to,
-            Self::Multiply { lhs, .. }
-            | Self::Divide { lhs, .. }
-            | Self::Remainder { lhs, .. }
-            | Self::Modulus { lhs, .. }
-            | Self::Add { lhs, .. }
-            | Self::Subtract { lhs, .. }
-            | Self::And { lhs, .. }
-            | Self::Or { lhs, .. }
-            | Self::Xor { lhs, .. }
-            | Self::Compare { lhs, .. }
-            | Self::ShiftLeft { lhs, .. }
-            | Self::ShiftRight { lhs, .. } => lhs,
+            Self::Binary { lhs, .. } => lhs,
             Self::Pop { type2, .. } => type2,
             _ => return None,
         })

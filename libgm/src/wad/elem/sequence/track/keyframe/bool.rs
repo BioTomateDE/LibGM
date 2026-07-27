@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Bool {
     pub boolean: bool,
@@ -14,8 +14,8 @@ impl GMElement for Bool {
         Ok(Self { boolean })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_bool32(self.boolean);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_bool32(self.boolean);
         Ok(())
     }
 }

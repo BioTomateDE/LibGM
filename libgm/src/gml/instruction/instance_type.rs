@@ -73,12 +73,9 @@ pub enum InstanceType {
     All,
 
     /// Represents no object/instance.
-    ///
-    /// This is called `noone` in GML.
-    None,
+    NoOne,
 
-    /// Used for global variables, which are shared globally across the entire
-    /// game state.
+    /// Used for global variables, which are shared globally across the entire game state.
     Global,
 
     /// Used for GML built-in variables such as `x`, `y`, `image_speed`, etc.
@@ -119,7 +116,7 @@ impl fmt::Debug for InstanceType {
             }
             Self::Other => write!(f, "Other"),
             Self::All => write!(f, "All"),
-            Self::None => write!(f, "None"),
+            Self::NoOne => write!(f, "NoOne"),
             Self::Global => write!(f, "Global"),
             Self::Builtin => write!(f, "Builtin"),
             Self::Local => write!(f, "Local"),
@@ -131,11 +128,11 @@ impl fmt::Debug for InstanceType {
 }
 
 impl InstanceType {
-    /// Parses an instance type from the given raw value.
+    /// Decodes an instance type from the given raw value.
     /// The variable type is needed because [`VariableType::Instance`] signifies
     /// a [`InstanceType::RoomInstance`] instead of a
     /// [`InstanceType::GameObject`].
-    pub fn from_i16(raw: i16, var_type: VariableType) -> Result<Self> {
+    pub fn decode(raw: i16, var_type: VariableType) -> Result<Self> {
         if raw >= 0 {
             return Ok(if var_type == VariableType::Instance {
                 Self::RoomInstance(InstanceID(raw as i32))
@@ -148,7 +145,7 @@ impl InstanceType {
             -1 => Self::Self_,
             -2 => Self::Other,
             -3 => Self::All,
-            -4 => Self::None,
+            -4 => Self::NoOne,
             -5 => Self::Global,
             -6 => Self::Builtin,
             -7 => Self::Local,
@@ -159,10 +156,10 @@ impl InstanceType {
         })
     }
 
-    /// Parses an instance type from the given raw value,
+    /// Decodes an instance type from the given raw value,
     /// assuming that this is not a `RoomInstance` instance type.
-    pub fn parse_normal(raw: i16) -> Result<Self> {
-        Self::from_i16(raw, VariableType::Normal)
+    pub fn decode_normal(raw: i16) -> Result<Self> {
+        Self::decode(raw, VariableType::Normal)
     }
 
     /// Serializes this instance type into an i16.
@@ -170,14 +167,14 @@ impl InstanceType {
     /// If the game object reference is erroneously higher
     /// than [`i16::MAX`], you will be boiled (truncated).
     #[must_use]
-    pub const fn build(self) -> i16 {
+    pub const fn encode(self) -> i16 {
         match self {
             Self::GameObject(game_object_ref) => game_object_ref.index as i16,
             Self::RoomInstance(instance_id) => instance_id.0 as i16,
             Self::Self_ => -1,
             Self::Other => -2,
             Self::All => -3,
-            Self::None => -4,
+            Self::NoOne => -4,
             Self::Global => -5,
             Self::Builtin => -6,
             Self::Local => -7,

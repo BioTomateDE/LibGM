@@ -1,8 +1,8 @@
 use crate::gm_enum::GMEnum;
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::data::Endianness;
+use crate::wad::save::writer::DataWriter;
 
 macro_rules! write_int_fn {
     ($method_name:ident, $int_type:ty) => {
@@ -16,7 +16,7 @@ macro_rules! write_int_fn {
     };
 }
 
-impl DataBuilder<'_> {
+impl DataWriter<'_> {
     write_int_fn!(write_u64, u64);
 
     write_int_fn!(write_u32, u32);

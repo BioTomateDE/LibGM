@@ -11,14 +11,14 @@ use crate::util::assert;
 use crate::util::init::vec_with_capacity;
 use crate::wad::Blob;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sequence::Sequence;
 use crate::wad::elem::sequence::SpeedType;
 use crate::wad::elem::texture_page_item::TexturePageItem;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Sprites {
@@ -33,8 +33,8 @@ impl GMElement for Sprites {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list_opt(&self.elems)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }
@@ -292,85 +292,85 @@ impl GMElement for Sprite {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_u32(self.width);
-        builder.write_u32(self.height);
-        builder.write_i32(self.margin_left);
-        builder.write_i32(self.margin_right);
-        builder.write_i32(self.margin_bottom);
-        builder.write_i32(self.margin_top);
-        builder.write_bool32(self.transparent);
-        builder.write_bool32(self.smooth);
-        builder.write_bool32(self.preload);
-        builder.write_i32(self.bbox_mode);
-        builder.write_enum(self.sep_masks);
-        builder.write_i32(self.origin_x);
-        builder.write_i32(self.origin_y);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_u32(self.width);
+        writer.write_u32(self.height);
+        writer.write_i32(self.margin_left);
+        writer.write_i32(self.margin_right);
+        writer.write_i32(self.margin_bottom);
+        writer.write_i32(self.margin_top);
+        writer.write_bool32(self.transparent);
+        writer.write_bool32(self.smooth);
+        writer.write_bool32(self.preload);
+        writer.write_i32(self.bbox_mode);
+        writer.write_enum(self.sep_masks);
+        writer.write_i32(self.origin_x);
+        writer.write_i32(self.origin_y);
         if self.special_fields.is_none() {
-            Self::build_texture_list(builder, &self.textures)?;
-            self.build_mask_data(builder, &self.collision_masks)?;
+            Self::build_texture_list(writer, &self.textures)?;
+            self.build_mask_data(writer, &self.collision_masks)?;
             return Ok(());
         }
 
         let special_fields: &Special = self.special_fields.as_ref().unwrap();
-        builder.write_i32(-1);
-        builder.write_u32(special_fields.special_version);
-        builder.write_u32(match special_fields.data {
+        writer.write_i32(-1);
+        writer.write_u32(special_fields.special_version);
+        writer.write_u32(match special_fields.data {
             SpecialData::Normal => 0,
             SpecialData::Swf(_) => 1,
             SpecialData::Spine(_) => 2,
         });
 
-        if builder.version() >= GMVersion::GMS2 {
-            builder.write_f32(special_fields.playback_speed);
-            builder.write_enum(special_fields.playback_speed_type);
+        if writer.version() >= GMVersion::GMS2 {
+            writer.write_f32(special_fields.playback_speed);
+            writer.write_enum(special_fields.playback_speed_type);
             if special_fields.special_version >= 2 {
                 if special_fields.sequence.is_some() {
-                    builder.write_pointer(&special_fields.sequence);
+                    writer.write_pointer(&special_fields.sequence);
                 } else {
-                    builder.write_u32(0);
+                    writer.write_u32(0);
                 }
             }
             if special_fields.special_version >= 3 {
                 if special_fields.nine_slice.is_some() {
-                    builder.write_pointer(&special_fields.nine_slice);
+                    writer.write_pointer(&special_fields.nine_slice);
                 } else {
-                    builder.write_u32(0);
+                    writer.write_u32(0);
                 }
             }
         }
 
         match &special_fields.data {
             SpecialData::Normal => {
-                Self::build_texture_list(builder, &self.textures)?;
-                self.build_mask_data(builder, &self.collision_masks)?;
+                Self::build_texture_list(writer, &self.textures)?;
+                self.build_mask_data(writer, &self.collision_masks)?;
             }
             SpecialData::Swf(swf) => {
-                builder.write_i32(swf.swf_version);
+                writer.write_i32(swf.swf_version);
                 if swf.swf_version == 8 {
-                    Self::build_texture_list(builder, &self.textures)?;
+                    Self::build_texture_list(writer, &self.textures)?;
                 }
-                builder.align(4);
-                builder.write_usize(swf.jpeg_table.len())?; // Can be unset?
-                builder.write_i32(swf.yyswf_version);
-                builder.write_bytes(&swf.jpeg_table);
-                builder.align(4);
-                swf.timeline.serialize(builder)?;
+                writer.align(4);
+                writer.write_usize(swf.jpeg_table.len())?; // Can be unset?
+                writer.write_i32(swf.yyswf_version);
+                writer.write_bytes(&swf.jpeg_table);
+                writer.align(4);
+                writer.write_elem(&swf.timeline)?;
             }
             SpecialData::Spine(spine) => {
-                builder.align(4);
+                writer.align(4);
                 let json_blob: Vec<u8> = spine::Data::build_weird_string(&spine.json);
                 let atlas_blob: Vec<u8> = spine::Data::build_weird_string(&spine.atlas);
-                if builder.version() >= GMVersion::GM2023_1 {
-                    builder.write_simple_list(&spine.textures)?;
+                if writer.version() >= GMVersion::GM2023_1 {
+                    writer.write_simple_list(&spine.textures)?;
                 }
-                builder.write_i32(spine.version);
+                writer.write_i32(spine.version);
                 if spine.version >= 3 {
-                    builder.write_i32(1); // Spine cache version 1
+                    writer.write_i32(1); // Spine cache version 1
                 }
-                builder.write_usize(json_blob.len())?;
-                builder.write_usize(atlas_blob.len())?;
+                writer.write_usize(json_blob.len())?;
+                writer.write_usize(atlas_blob.len())?;
 
                 match spine.version {
                     1 => {
@@ -385,25 +385,25 @@ impl GMElement for Sprite {
                                  got Post2023_1"
                             );
                         };
-                        builder.write_usize(texture_blob.len())?;
-                        builder.write_u32(atlas.page_width);
-                        builder.write_u32(atlas.page_height);
-                        builder.write_bytes(&json_blob);
-                        builder.write_bytes(&atlas_blob);
-                        builder.write_bytes(texture_blob);
+                        writer.write_usize(texture_blob.len())?;
+                        writer.write_u32(atlas.page_width);
+                        writer.write_u32(atlas.page_height);
+                        writer.write_bytes(&json_blob);
+                        writer.write_bytes(&atlas_blob);
+                        writer.write_bytes(texture_blob);
                     }
                     2 | 3 => {
-                        builder.write_usize(spine.textures.len())?;
-                        builder.write_bytes(&json_blob);
-                        builder.write_bytes(&atlas_blob);
+                        writer.write_usize(spine.textures.len())?;
+                        writer.write_bytes(&json_blob);
+                        writer.write_bytes(&atlas_blob);
                         for texture_entry in &spine.textures {
-                            builder.write_u32(texture_entry.page_width);
-                            builder.write_u32(texture_entry.page_height);
-                            if builder.version() >= GMVersion::GM2023_1 {
+                            writer.write_u32(texture_entry.page_width);
+                            writer.write_u32(texture_entry.page_height);
+                            if writer.version() >= GMVersion::GM2023_1 {
                                 if let spine::texture_entry::Data::Post2023_1(length) =
                                     texture_entry.data
                                 {
-                                    builder.write_u32(length);
+                                    writer.write_u32(length);
                                 } else {
                                     bail!(
                                         "Expected Post2023_1 Sprite Spine texture data in 2023.1+"
@@ -412,8 +412,8 @@ impl GMElement for Sprite {
                             } else if let spine::texture_entry::Data::Pre2023_1(texture_blob) =
                                 &texture_entry.data
                             {
-                                builder.write_usize(texture_blob.len())?;
-                                builder.write_bytes(texture_blob);
+                                writer.write_usize(texture_blob.len())?;
+                                writer.write_bytes(texture_blob);
                             } else {
                                 bail!("Expected Pre2023_1 Sprite Spine texture data in pre 2023.1");
                             }
@@ -424,20 +424,20 @@ impl GMElement for Sprite {
             }
         }
 
-        if builder.version() >= GMVersion::GMS2 {
+        if writer.version() >= GMVersion::GMS2 {
             if special_fields.special_version >= 2
                 && matches!(special_fields.data, SpecialData::Normal)
                 && let Some(ref sequence) = special_fields.sequence
             {
-                builder.resolve_pointer(&special_fields.sequence)?;
-                builder.write_u32(1); // SEQN version
-                sequence.serialize(builder)?;
+                writer.resolve_pointer(&special_fields.sequence)?;
+                writer.write_u32(1); // SEQN version
+                writer.write_elem(sequence)?;
             }
             if special_fields.special_version >= 3
                 && let Some(ref nine_slice) = special_fields.nine_slice
             {
-                builder.resolve_pointer(&special_fields.nine_slice)?;
-                nine_slice.serialize(builder)?;
+                writer.resolve_pointer(&special_fields.nine_slice)?;
+                writer.write_elem(nine_slice)?;
             }
         }
         Ok(())
@@ -448,8 +448,8 @@ impl GMElement for Sprite {
         Ok(())
     }
 
-    fn serialize_pre_padding(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.align(4);
+    fn serialize_pre_padding(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.align(4);
         Ok(())
     }
 }
@@ -466,30 +466,30 @@ impl Sprite {
     }
 
     fn build_texture_list(
-        builder: &mut DataBuilder,
+        writer: &mut DataWriter,
         texture_list: &Vec<GMRef<TexturePageItem>>,
     ) -> Result<()> {
-        builder.write_usize(texture_list.len())?;
+        writer.write_usize(texture_list.len())?;
         for &texture_page_item_ref in texture_list {
-            builder.write_gm_texture(texture_page_item_ref)?;
+            writer.write_gm_texture(texture_page_item_ref)?;
         }
         Ok(())
     }
 
-    fn build_mask_data(&self, builder: &mut DataBuilder, masks: &Vec<MaskEntry>) -> Result<()> {
+    fn build_mask_data(&self, writer: &mut DataWriter, masks: &Vec<MaskEntry>) -> Result<()> {
         let count = masks.len() as u32;
-        builder.write_u32(count);
+        writer.write_u32(count);
 
-        let start = builder.pos();
+        let start = writer.pos();
 
         for mask in masks {
-            builder.write_bytes(&mask.data);
+            writer.write_bytes(&mask.data);
         }
 
-        builder.align(4);
-        let written_bytes = builder.pos() - start;
+        writer.align(4);
+        let written_bytes = writer.pos() - start;
 
-        let (width, height) = if builder.version() >= GMVersion::GM2024_6 {
+        let (width, height) = if writer.version() >= GMVersion::GM2024_6 {
             (
                 self.margin_right as u32 - self.margin_left as u32 + 1,
                 self.margin_bottom as u32 - self.margin_top as u32 + 1,

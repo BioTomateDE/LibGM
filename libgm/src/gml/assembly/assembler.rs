@@ -8,6 +8,7 @@ use std::str::FromStr;
 use crate::gml::assembly::assembler::data_types::DataTypes;
 use crate::gml::assembly::assembler::reader::Reader;
 use crate::gml::instruction::AssetReference;
+use crate::gml::instruction::BinaryOp;
 use crate::gml::instruction::CodeVariable;
 use crate::gml::instruction::ComparisonType;
 use crate::gml::instruction::DataType;
@@ -102,46 +103,17 @@ fn parse_instruction(
     gm_data: &GMData,
 ) -> Result<Instruction> {
     let instruction = match mnemonic {
-        "conv" => {
-            types.assert_count(2, mnemonic)?;
-            Instruction::Convert { from: types[0], to: types[1] }
-        }
-        "mul" => {
-            types.assert_count(2, mnemonic)?;
-            Instruction::Multiply { lhs: types[1], rhs: types[0] }
-        }
-        "div" => {
-            types.assert_count(2, mnemonic)?;
-            Instruction::Divide { lhs: types[1], rhs: types[0] }
-        }
-        "rem" => {
-            types.assert_count(2, mnemonic)?;
-            Instruction::Remainder { lhs: types[1], rhs: types[0] }
-        }
-        "mod" => {
-            types.assert_count(2, mnemonic)?;
-            Instruction::Modulus { lhs: types[1], rhs: types[0] }
-        }
-        "add" => {
-            types.assert_count(2, mnemonic)?;
-            Instruction::Add { lhs: types[1], rhs: types[0] }
-        }
-        "sub" => {
-            types.assert_count(2, mnemonic)?;
-            Instruction::Subtract { lhs: types[1], rhs: types[0] }
-        }
-        "and" => {
-            types.assert_count(2, mnemonic)?;
-            Instruction::And { lhs: types[1], rhs: types[0] }
-        }
-        "or" => {
-            types.assert_count(2, mnemonic)?;
-            Instruction::Or { lhs: types[1], rhs: types[0] }
-        }
-        "xor" => {
-            types.assert_count(2, mnemonic)?;
-            Instruction::Xor { lhs: types[1], rhs: types[0] }
-        }
+        "add" => binary(types, mnemonic, BinaryOp::Add)?,
+        "sub" => binary(types, mnemonic, BinaryOp::Subtract)?,
+        "mul" => binary(types, mnemonic, BinaryOp::Multiply)?,
+        "div" => binary(types, mnemonic, BinaryOp::Divide)?,
+        "rem" => binary(types, mnemonic, BinaryOp::Remainder)?,
+        "mod" => binary(types, mnemonic, BinaryOp::Modulus)?,
+        "and" => binary(types, mnemonic, BinaryOp::And)?,
+        "or" => binary(types, mnemonic, BinaryOp::Or)?,
+        "xor" => binary(types, mnemonic, BinaryOp::Xor)?,
+        "shl" => binary(types, mnemonic, BinaryOp::ShiftLeft)?,
+        "shr" => binary(types, mnemonic, BinaryOp::ShiftRight)?,
         "neg" => {
             types.assert_count(1, mnemonic)?;
             Instruction::Negate { data_type: types[0] }
@@ -150,13 +122,9 @@ fn parse_instruction(
             types.assert_count(1, mnemonic)?;
             Instruction::Not { data_type: types[0] }
         }
-        "shl" => {
+        "conv" => {
             types.assert_count(2, mnemonic)?;
-            Instruction::ShiftLeft { lhs: types[1], rhs: types[0] }
-        }
-        "shr" => {
-            types.assert_count(2, mnemonic)?;
-            Instruction::ShiftRight { lhs: types[1], rhs: types[0] }
+            Instruction::Convert { from: types[0], to: types[1] }
         }
         "cmp" => parse_comparison(types, reader)?,
         "pop" => {
@@ -215,7 +183,7 @@ fn parse_instruction(
             let jump_offset: i32 = parse_int(reader.clear())?;
             Instruction::PopWithContext { jump_offset }
         }
-        "popenvexit" => {
+        "popenvx" => {
             types.assert_count(0, mnemonic)?;
             Instruction::PopWithContextExit
         }
@@ -267,6 +235,11 @@ fn parse_instruction(
     };
 
     Ok(instruction)
+}
+
+fn binary(types: DataTypes, mnemonic: &str, op: BinaryOp) -> Result<Instruction> {
+    types.assert_count(2, mnemonic)?;
+    Ok(Instruction::Binary { op, lhs: types[1], rhs: types[0] })
 }
 
 fn parse_asset_reference(reader: &mut Reader, gm_data: &GMData) -> Result<AssetReference> {
@@ -335,8 +308,8 @@ fn parse_comparison(types: DataTypes, reader: &mut Reader) -> Result<Instruction
 
 fn parse_duplicate(types: DataTypes, reader: &mut Reader) -> Result<Instruction> {
     types.assert_count(1, "dup")?;
-    let size: u8 = parse_int(reader.clear())?;
-    Ok(Instruction::Duplicate { data_type: types[0], size })
+    let count: u8 = parse_int(reader.clear())?;
+    Ok(Instruction::Duplicate { data_type: types[0], count })
 }
 
 fn parse_duplicate_swap(types: DataTypes, reader: &mut Reader) -> Result<Instruction> {
@@ -475,7 +448,7 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
         "other" => InstanceType::Other,
         "static" => InstanceType::Static,
         "all" => InstanceType::All,
-        "none" => InstanceType::None,
+        "noone" => InstanceType::NoOne,
         _ => bail!("Invalid Instance Type {instance_type_raw:?}"),
     };
 

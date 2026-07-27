@@ -9,13 +9,13 @@ pub use img::GMImage;
 use crate::prelude::*;
 use crate::util::fmt::hexdump;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::data::Endianness;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::element_stub;
 use crate::wad::elem::texture_page::img::BZip2QoiHeader;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 pub(crate) const PNG_HEADER: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]; // "‰PNG␍␊␚␊"
 pub(crate) const BZ2_QOI_HEADER: &[u8; 4] = b"2zoq"; // reversed "qoz2" cuz little endian
@@ -84,45 +84,45 @@ impl GMElement for TexturePages {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
         let count = self.elems.len();
-        builder.write_usize(count)?;
-        let pointer_list_pos: u32 = builder.pos();
+        writer.write_usize(count)?;
+        let pointer_list_pos: u32 = writer.pos();
         for _ in 0..count {
-            builder.write_u32(0xDEAD_C0DE);
+            writer.write_u32(0xDEAD_C0DE);
         }
 
         let mut texture_block_size_placeholders = vec![0u32; count];
 
         for (i, texture_page) in self.elems.iter().enumerate() {
-            builder.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
+            writer.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
 
-            builder.write_u32(texture_page.scaled);
-            builder.write_if_ver(
+            writer.write_u32(texture_page.scaled);
+            writer.write_if_ver(
                 &texture_page.generated_mips,
                 "Generated Mipmap levels",
                 GMVersion::GMS2_0_6,
             )?;
-            if builder.version() >= GMVersion::GM2022_3 {
-                texture_block_size_placeholders[i] = builder.pos();
+            if writer.version() >= GMVersion::GM2022_3 {
+                texture_block_size_placeholders[i] = writer.pos();
                 // Write the stored texture block size for external textures.
                 // For embedded textures, this will later be overriden by the real calculated value.
-                builder.write_u32(
+                writer.write_u32(
                     texture_page
                         .texture_block_size
                         .ok_or("Texture block size not set in 2022.3+")?,
                 );
             }
-            builder.write_if_ver(
+            writer.write_if_ver(
                 &texture_page.data_2022_9,
                 "Texture Page 2022.9 data",
                 GMVersion::GM2022_9,
             )?;
 
             if texture_page.image.is_some() {
-                builder.write_pointer(&texture_page.image);
+                writer.write_pointer(&texture_page.image);
             } else {
-                builder.write_u32(0); // External texture
+                writer.write_u32(0); // External texture
             }
         }
 
@@ -130,18 +130,18 @@ impl GMElement for TexturePages {
             let Some(img) = &texture_page.image else {
                 continue;
             };
-            builder.align(0x80);
-            builder.resolve_pointer(&texture_page.image)?;
-            let start_pos: u32 = builder.pos();
-            img.serialize(builder)
+            writer.align(0x80);
+            writer.resolve_pointer(&texture_page.image)?;
+            let start_pos: u32 = writer.pos();
+            img.serialize(writer)
                 .ctx("serializing texture page image")?;
-            if builder.version() >= GMVersion::GM2022_3 {
-                let length: u32 = builder.pos() - start_pos;
-                builder.overwrite_u32(length, texture_block_size_placeholders[i])?;
+            if writer.version() >= GMVersion::GM2022_3 {
+                let length: u32 = writer.pos() - start_pos;
+                writer.overwrite_u32(length, texture_block_size_placeholders[i])?;
             }
         }
 
-        builder.align(4);
+        writer.align(4);
         Ok(())
     }
 }
@@ -191,10 +191,10 @@ impl GMElement for Data2022_9 {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u32(self.texture_width);
-        builder.write_u32(self.texture_height);
-        builder.write_u32(self.index_in_group);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_u32(self.texture_width);
+        writer.write_u32(self.texture_height);
+        writer.write_u32(self.index_in_group);
         Ok(())
     }
 }

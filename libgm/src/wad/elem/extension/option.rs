@@ -2,9 +2,9 @@
 
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExtOption {
@@ -21,10 +21,10 @@ impl GMElement for ExtOption {
         Ok(Self { name, value, kind })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_gm_string(self.value)?;
-        builder.write_enum(self.kind);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_gm_string(self.value)?;
+        writer.write_enum(self.kind);
         Ok(())
     }
 }

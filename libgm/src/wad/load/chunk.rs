@@ -3,7 +3,7 @@ use crate::prelude::*;
 use crate::util::bench::Stopwatch;
 use crate::wad::chunk::ChunkName;
 use crate::wad::data::Endianness;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::version::GMVersion;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
@@ -37,16 +37,6 @@ impl ChunkMap {
     }
 
     #[must_use]
-    pub const fn count(&self) -> usize {
-        self.0.len()
-    }
-
-    #[must_use]
-    pub const fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    #[must_use]
     pub fn contains(&self, chunk_name: ChunkName) -> bool {
         for (name, _) in &self.0 {
             if *name == chunk_name {
@@ -73,22 +63,6 @@ impl ChunkMap {
         }
         None
     }
-
-    pub fn remove(&mut self, chunk_name: ChunkName) -> Option<ChunkBounds> {
-        for i in 0..self.count() {
-            let name = &self.0[i].0;
-            if *name == chunk_name {
-                let bounds = self.0.remove(i).1;
-                return Some(bounds);
-            }
-        }
-        None
-    }
-
-    #[inline]
-    pub fn chunk_names(&self) -> impl Iterator<Item = ChunkName> {
-        self.0.iter().map(|(name, _)| *name)
-    }
 }
 
 impl DataReader<'_> {
@@ -108,10 +82,7 @@ impl DataReader<'_> {
     pub fn read_chunk<T: GMChunk>(&mut self) -> Result<T> {
         // If the chunk doesn't exist, return the `default` stub.
         // This will also set `exists` to false.
-        //
-        // The chunk metadata is removed from the struct so
-        // that unread chunks can easily be detected later.
-        let Some(chunk) = self.chunks.remove(T::NAME) else {
+        let Some(chunk) = self.chunks.get(T::NAME) else {
             return Ok(T::default());
         };
 

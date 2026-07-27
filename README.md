@@ -5,7 +5,7 @@
 
 # LibGM
 
-A tool for unpacking, decompiling and modding GameMaker games such as Undertale or Deltarune.
+A tool for unpacking and modding GameMaker games such as Undertale or Deltarune.
 
 LibGM supports GameMaker Studio 1 to GameMaker 2026.
 GameMaker 8 has a completely different format. You can use [https://github.com/OpenGMK/OpenGMK](OpenGMK) for these old games.
@@ -16,7 +16,7 @@ The new GMRT runtime (currently in beta) will also have a new format which LibGM
 - Parsing and building data files is ~8x faster than UndertaleModLib.
 - Clean and maintainable library code.
 - Thorough documentation on [docs.rs](https://docs.rs/libgm).
-- Configurable lenient options for trying to parse half-broken data files (see `ParsingOptions`).
+- Configurable lenient options for trying to load half-broken data files (see `LoadingOptions`).
 - Helpful error messages:
   - No `NullReferenceException`, ever!!!
   - No meaningless stack traces over 50 lines long.
@@ -26,35 +26,18 @@ The new GMRT runtime (currently in beta) will also have a new format which LibGM
 This is an example error trace printed out using `error.chain()`:
 
 ```
-sprite::swf::item::shape::style_group::fill::gradient::Record count 1065353216 implies data size 8.5 GB which exceeds failsafe size 10.0 MB
-> while reading simple list
-> while deserializing element 1/2 of sprite::swf::item::shape::style_group::StyleGroup<sprite::swf::item::subshape::Data> simple list
-> while deserializing element 0/1 of sprite::swf::item::Item simple list
-> while deserializing element 3/60 of Sprite pointer list
-> while deserializing chunk 'SPRT'
-> while parsing GameMaker data file ./gm48_datafiles/a-loop_detective.win
+Invalid boolean value 4294967295 (0xFFFFFFFF) at position 51924
+> while deserializing element 1/3 of sequence::track::keyframe::Keyframe<sequence::track::keyframe::color::Color> simple list
+> while deserializing element 0/1 of sequence::track::Track simple list
+> while deserializing element 0/1 of nullable sequence::Sequence pointer list
+> while deserializing chunk SEQN
+> while deserializing GameMaker data file gm48/sixty-seconds_do-it-fast.win
 ```
 
 ## Disadvantages / TODOs
 
 - GML Decompiler and Compiler not yet implemented. (Help would be greatly appreciated!)
 - No editor GUI yet, only a Rust library.
-
-## Library usage
-
-Add this line in the `[dependencies]` section of your `Cargo.toml` file:
-
-```toml
-libgm = "0.6"
-```
-
-Or if you want bleeding edge (might be unstable):
-
-```toml
-libgm = { git = "https://codeberg.org/BioTomateDE/LibGM" }
-```
-
-Example usage is specified in [docs.rs](https://docs.rs/libgm).
 
 ## Crate features
 
@@ -68,7 +51,7 @@ Example usage is specified in [docs.rs](https://docs.rs/libgm).
 - `catch-panic` catches panics in GameMaker (de)serialization functions
   and returns them as a LibGM error.
 - `check-integrity` enables alignment and constant validation while parsing.
-  These checks may still be demoted to a warning using `ParsingOptions`.
+  These checks may still be demoted to a warning using `LoadingOptions`.
   Some checks regarding panic safety or memory allocation are always enabled.
 - `bzip2-image` enables (de)serialization of BZip2+QOI encoded texture pages.
   If you try to change the format of a `GMImage` that stores BZip2-QOI
@@ -92,7 +75,7 @@ This project is licenced under the
 SPDX-License-Identifier: GPL-3.0-only.
 
 This means that all projects using this library must also be licensed under GPL-3
-to protect the Open Source Community.
+to protect the open source community.
 
 ## Contributing
 
@@ -104,37 +87,3 @@ For more information, see the [contributing guidelines](https://codeberg.org/Bio
 - A disassembler and assembler are available in `libgm/src/gml/assembly/`.
 - The highly desired `Instruction` type is in `libgm/src/gml/instruction.rs`.
 - There is a basic CLI to interact with LibGM in `libgm-cli/src/`.
-
-### End-to-end testing
-
-You must supply your own copy of specific versions of the games.
-For instance, run the following commands (from the project root)
-to copy from your Steam library folder, where applicable:
-
-```bash
-# Linux:
-export STEAM="~/.steam/steam/steamapps/common"
-# macOS:
-export STEAM="~/Library/Application Support/Steam/steamapps/common"
-# Windows (PowerShell):
-$STEAM="C:/Program Files (x86)/Steam/steamapps/common"
-
-# For Undertale:
-cp $STEAM/Undertale/data.win libgm-cli/datafiles/undertaleXXX.win
-# XXX needs to be the version: 100 for 1.00 | 101 for 1.001 | 108 for 1.08
-
-# For Deltarune Chapters 1-4
-cp $STEAM/DELTARUNE/data.win libgm-cli/resources/deltarune-launcher.win
-cp $STEAM/DELTARUNE/chapter1_windows/data.win libgm-cli/resources/deltarune1.win
-cp $STEAM/DELTARUNE/chapter2_windows/data.win libgm-cli/resources/deltarune2.win
-cp $STEAM/DELTARUNE/chapter3_windows/data.win libgm-cli/resources/deltarune3.win
-cp $STEAM/DELTARUNE/chapter4_windows/data.win libgm-cli/resources/deltarune4.win
-```
-
-Testing for Undertale 1.0.8 is gated behind the `test-undertale-XXX` feature (where XXX is the UT Version).
-Deltarune Chapters 1-4 (v1.0.4) by `test-deltarune-ch1234`.
-For example, if you have copied both in, run:
-
-```bash
-cargo t -plibgm-cli --features test-undertale-XXX,test-deltarune-ch1234
-```

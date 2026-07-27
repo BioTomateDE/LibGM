@@ -2,7 +2,7 @@
 use super::target_version;
 use crate::prelude::*;
 use crate::wad::GMVersion;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 
 pub fn check_2024_14(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     // Check for new field added in 2024.14

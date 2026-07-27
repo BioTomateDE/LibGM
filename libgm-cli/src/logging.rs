@@ -9,11 +9,11 @@ use log::Level;
 use log::Record;
 
 pub fn init() {
-    let mut builder = Builder::new();
+    let mut writer = Builder::new();
 
-    builder.parse_env(get_env());
+    writer.parse_env(get_env());
 
-    builder.format(|f, record| {
+    writer.format(|f, record| {
         let color = color_by_level(record.level());
         let level = level_to_str(record.level()).color(color);
         let target = format_target(record);
@@ -26,7 +26,7 @@ pub fn init() {
         }
     });
 
-    builder.init();
+    writer.init();
 }
 
 fn get_env() -> Env<'static> {

@@ -2,10 +2,10 @@
 
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::extension::Kind;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
@@ -35,13 +35,13 @@ impl GMElement for Function {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_u32(self.id);
-        builder.write_enum(self.kind);
-        builder.write_enum(self.return_type);
-        builder.write_gm_string(self.ext_name)?;
-        builder.write_simple_list(&self.arguments)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_u32(self.id);
+        writer.write_enum(self.kind);
+        writer.write_enum(self.return_type);
+        writer.write_gm_string(self.ext_name)?;
+        writer.write_simple_list(&self.arguments)?;
         Ok(())
     }
 }
@@ -57,8 +57,8 @@ impl GMElement for Argument {
         Ok(Self { return_type })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_enum(self.return_type);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_enum(self.return_type);
         Ok(())
     }
 }

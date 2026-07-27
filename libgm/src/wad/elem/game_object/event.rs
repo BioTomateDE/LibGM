@@ -16,9 +16,9 @@ use crate::prelude::*;
 use crate::util::assert;
 use crate::util::fmt::typename;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EventGroup {
@@ -185,67 +185,67 @@ impl GMElement for EventGroups {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
         // manual pointer list
-        let count: u32 = type_count_by_ver(builder.version());
+        let count: u32 = type_count_by_ver(writer.version());
 
-        builder.write_u32(count);
-        let pointer_list_pos = builder.pos();
+        writer.write_u32(count);
+        let pointer_list_pos = writer.pos();
         for _ in 0..count {
-            builder.write_u32(0xDEAD_C0DE);
+            writer.write_u32(0xDEAD_C0DE);
         }
 
         // TODO: You have to make sure that there are no
         // empty [`SubEvent`]s, otherwise (old) runners segfault.
 
-        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 0)?;
-        builder.write_pointer_list(&self.create)?;
+        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 0)?;
+        writer.write_pointer_list(&self.create)?;
 
-        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 1)?;
-        builder.write_pointer_list(&self.destroy)?;
+        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 1)?;
+        writer.write_pointer_list(&self.destroy)?;
 
-        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 2)?;
-        builder.write_pointer_list(&self.alarm)?;
+        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 2)?;
+        writer.write_pointer_list(&self.alarm)?;
 
-        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 3)?;
-        builder.write_pointer_list(&self.step)?;
+        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 3)?;
+        writer.write_pointer_list(&self.step)?;
 
-        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 4)?;
-        builder.write_pointer_list(&self.collision)?;
+        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 4)?;
+        writer.write_pointer_list(&self.collision)?;
 
-        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 5)?;
-        builder.write_pointer_list(&self.keyboard)?;
+        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 5)?;
+        writer.write_pointer_list(&self.keyboard)?;
 
-        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 6)?;
-        builder.write_pointer_list(&self.mouse)?;
+        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 6)?;
+        writer.write_pointer_list(&self.mouse)?;
 
-        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 7)?;
-        builder.write_pointer_list(&self.other)?;
+        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 7)?;
+        writer.write_pointer_list(&self.other)?;
 
-        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 8)?;
-        builder.write_pointer_list(&self.draw)?;
+        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 8)?;
+        writer.write_pointer_list(&self.draw)?;
 
-        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 9)?;
-        builder.write_pointer_list(&self.key_press)?;
+        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 9)?;
+        writer.write_pointer_list(&self.key_press)?;
 
-        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 10)?;
-        builder.write_pointer_list(&self.key_release)?;
+        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 10)?;
+        writer.write_pointer_list(&self.key_release)?;
 
-        builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 11)?;
-        builder.write_pointer_list(&self.trigger)?;
+        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 11)?;
+        writer.write_pointer_list(&self.trigger)?;
 
         if count > 12 {
-            builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 12)?;
-            builder.write_pointer_list(&self.cleanup)?;
+            writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 12)?;
+            writer.write_pointer_list(&self.cleanup)?;
         }
 
         if count > 13 {
-            builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 13)?;
-            builder.write_pointer_list(&self.gesture)?;
+            writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 13)?;
+            writer.write_pointer_list(&self.gesture)?;
         }
         if count > 14 {
-            builder.overwrite_pointer_with_cur_pos(pointer_list_pos, 14)?;
-            builder.write_pointer_list(&self.pre_create)?;
+            writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 14)?;
+            writer.write_pointer_list(&self.pre_create)?;
         }
 
         Ok(())
@@ -262,15 +262,15 @@ impl<T: EventSubtype> GMElement for Event<T> {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let subtype: i32 = reader.read_i32()?;
         let subtype: T =
-            T::parse(subtype).ctx(|| format!("parsing Event subtype {}", typename::<T>()))?;
+            T::decode(subtype).ctx(|| format!("parsing Event subtype {}", typename::<T>()))?;
         let actions: Vec<Action> = reader.read_pointer_list()?;
         Ok(Self { subtype, actions })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        let subtype: i32 = self.subtype.build();
-        builder.write_i32(subtype);
-        builder.write_pointer_list(&self.actions)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        let subtype: i32 = self.subtype.encode();
+        writer.write_i32(subtype);
+        writer.write_pointer_list(&self.actions)?;
         Ok(())
     }
 }
@@ -278,20 +278,20 @@ impl<T: EventSubtype> GMElement for Event<T> {
 /// Not meant to be implemented outside the crate.
 pub trait EventSubtype: std::fmt::Debug + Copy + PartialEq {
     #[doc(hidden)]
-    fn parse(subtype: i32) -> Result<Self>;
+    fn decode(subtype: i32) -> Result<Self>;
 
     #[doc(hidden)]
-    fn build(self) -> i32;
+    fn encode(self) -> i32;
 }
 
 impl EventSubtype for () {
-    fn parse(subtype: i32) -> Result<Self> {
+    fn decode(subtype: i32) -> Result<Self> {
         // can't use `reader.options.verify_constants` here :c
         assert::int(subtype, 0, "Event Subtype for event with no data")?;
         Ok(())
     }
 
-    fn build(self) -> i32 {
+    fn encode(self) -> i32 {
         0
     }
 }

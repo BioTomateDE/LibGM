@@ -10,10 +10,10 @@ pub use self::sprite::SpriteInstance;
 pub use self::text_item::TextItemInstance;
 use crate::prelude::*;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::room::tile::RoomTile;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Assets {
@@ -87,43 +87,43 @@ impl GMElement for Assets {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer(&self.legacy_tiles);
-        builder.write_pointer(&self.sprites);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_pointer(&self.legacy_tiles);
+        writer.write_pointer(&self.sprites);
 
-        if builder.version() >= GMVersion::GMS2_3 {
-            builder.write_pointer(&self.sequences);
-            if builder.version() < GMVersion::GMS2_3_2 {
-                builder.write_pointer(&self.nine_slices);
+        if writer.version() >= GMVersion::GMS2_3 {
+            writer.write_pointer(&self.sequences);
+            if writer.version() < GMVersion::GMS2_3_2 {
+                writer.write_pointer(&self.nine_slices);
             }
-            if builder.version() >= GMVersion::GM2023_2 {
-                builder.write_pointer(&self.particle_systems);
+            if writer.version() >= GMVersion::GM2023_2 {
+                writer.write_pointer(&self.particle_systems);
             }
-            if builder.version() >= GMVersion::GM2024_6 {
-                builder.write_pointer(&self.text_items);
+            if writer.version() >= GMVersion::GM2024_6 {
+                writer.write_pointer(&self.text_items);
             }
         }
-        builder.resolve_pointer(&self.legacy_tiles)?;
-        builder.write_pointer_list(&self.legacy_tiles)?;
+        writer.resolve_pointer(&self.legacy_tiles)?;
+        writer.write_pointer_list(&self.legacy_tiles)?;
 
-        builder.resolve_pointer(&self.sprites)?;
-        builder.write_pointer_list(&self.sprites)?;
+        writer.resolve_pointer(&self.sprites)?;
+        writer.write_pointer_list(&self.sprites)?;
 
-        if builder.version() >= GMVersion::GMS2_3 {
-            builder.resolve_pointer(&self.sequences)?;
-            builder.write_pointer_list(&self.sequences)?;
+        if writer.version() >= GMVersion::GMS2_3 {
+            writer.resolve_pointer(&self.sequences)?;
+            writer.write_pointer_list(&self.sequences)?;
 
-            if builder.version() < GMVersion::GMS2_3_2 {
-                builder.resolve_pointer(&self.nine_slices)?;
-                builder.write_pointer_list(&self.nine_slices)?;
+            if writer.version() < GMVersion::GMS2_3_2 {
+                writer.resolve_pointer(&self.nine_slices)?;
+                writer.write_pointer_list(&self.nine_slices)?;
             }
-            if builder.version() >= GMVersion::GM2023_2 {
-                builder.resolve_pointer(&self.particle_systems)?;
-                builder.write_pointer_list(&self.particle_systems)?;
+            if writer.version() >= GMVersion::GM2023_2 {
+                writer.resolve_pointer(&self.particle_systems)?;
+                writer.write_pointer_list(&self.particle_systems)?;
             }
-            if builder.version() >= GMVersion::GM2024_6 {
-                builder.resolve_pointer(&self.text_items)?;
-                builder.write_pointer_list(&self.text_items)?;
+            if writer.version() >= GMVersion::GM2024_6 {
+                writer.resolve_pointer(&self.text_items)?;
+                writer.write_pointer_list(&self.text_items)?;
             }
         }
         Ok(())

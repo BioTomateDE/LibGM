@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sequence::SpeedType;
 use crate::wad::elem::sprite::Sprite;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Background {
@@ -48,17 +48,17 @@ impl GMElement for Background {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_bool32(self.visible);
-        builder.write_bool32(self.foreground);
-        builder.write_resource_id(self.sprite);
-        builder.write_bool32(self.tiled_horizontally);
-        builder.write_bool32(self.tiled_vertically);
-        builder.write_bool32(self.stretch);
-        builder.write_u32(self.color);
-        builder.write_f32(self.first_frame);
-        builder.write_f32(self.animation_speed);
-        builder.write_enum(self.animation_speed_type);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_bool32(self.visible);
+        writer.write_bool32(self.foreground);
+        writer.write_resource_id(self.sprite);
+        writer.write_bool32(self.tiled_horizontally);
+        writer.write_bool32(self.tiled_vertically);
+        writer.write_bool32(self.stretch);
+        writer.write_u32(self.color);
+        writer.write_f32(self.first_frame);
+        writer.write_f32(self.animation_speed);
+        writer.write_enum(self.animation_speed_type);
         Ok(())
     }
 }

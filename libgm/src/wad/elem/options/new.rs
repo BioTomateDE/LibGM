@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::options::Constant;
 use crate::wad::elem::options::OptionFlags;
 use crate::wad::elem::options::Options;
 use crate::wad::elem::texture_page_item::TexturePageItem;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
-pub fn parse(reader: &mut DataReader) -> Result<Options> {
+pub fn deserialize(reader: &mut DataReader) -> Result<Options> {
     let unknown1 = reader.read_u32()?;
     reader.assert_int(unknown1, 0x8000_0000, "Options Unknown Value 1")?;
     let unknown2 = reader.read_u32()?;
@@ -47,21 +47,21 @@ pub fn parse(reader: &mut DataReader) -> Result<Options> {
     })
 }
 
-pub fn build(builder: &mut DataBuilder, options: &Options) -> Result<()> {
-    builder.write_u32(0x8000_0000); // unknown1
-    builder.write_u32(2); //unknown2
-    builder.write_u64(options.flags.bits());
-    builder.write_i32(options.window_scale);
-    builder.write_u32(options.window_color);
-    builder.write_u32(options.color_depth);
-    builder.write_u32(options.resolution);
-    builder.write_u32(options.frequency);
-    builder.write_i32(options.vertex_sync);
-    builder.write_i32(options.priority);
-    builder.write_gm_texture(options.back_image)?;
-    builder.write_gm_texture(options.front_image)?;
-    builder.write_gm_texture(options.load_image)?;
-    builder.write_u32(options.load_alpha);
-    builder.write_simple_list(&options.constants)?;
+pub fn serialize(writer: &mut DataWriter, options: &Options) -> Result<()> {
+    writer.write_u32(0x8000_0000); // unknown1
+    writer.write_u32(2); //unknown2
+    writer.write_u64(options.flags.bits());
+    writer.write_i32(options.window_scale);
+    writer.write_u32(options.window_color);
+    writer.write_u32(options.color_depth);
+    writer.write_u32(options.resolution);
+    writer.write_u32(options.frequency);
+    writer.write_i32(options.vertex_sync);
+    writer.write_i32(options.priority);
+    writer.write_gm_texture(options.back_image)?;
+    writer.write_gm_texture(options.front_image)?;
+    writer.write_gm_texture(options.load_image)?;
+    writer.write_u32(options.load_alpha);
+    writer.write_simple_list(&options.constants)?;
     Ok(())
 }

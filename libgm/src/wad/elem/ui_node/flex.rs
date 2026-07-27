@@ -8,9 +8,9 @@ pub use value::FlexValue;
 
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FlexPanel {
@@ -85,28 +85,28 @@ impl GMElement for FlexPanel {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        self.width.serialize(builder)?;
-        self.height.serialize(builder)?;
-        self.minimum_width.serialize(builder)?;
-        self.minimum_height.serialize(builder)?;
-        self.maximum_width.serialize(builder)?;
-        self.maximum_height.serialize(builder)?;
-        self.offset_left.serialize(builder)?;
-        self.offset_right.serialize(builder)?;
-        self.offset_top.serialize(builder)?;
-        self.offset_bottom.serialize(builder)?;
-        self.clips_contents.serialize(builder)?;
-        builder.write_enum(self.position_type);
-        builder.write_enum(self.align_self);
-        self.margin_left.serialize(builder)?;
-        self.margin_right.serialize(builder)?;
-        self.margin_top.serialize(builder)?;
-        self.margin_bottom.serialize(builder)?;
-        builder.write_f32(self.flex_grow);
-        builder.write_f32(self.flex_shrink);
-        self.flex_properties.serialize(builder)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_elem(&self.width)?;
+        writer.write_elem(&self.height)?;
+        writer.write_elem(&self.minimum_width)?;
+        writer.write_elem(&self.minimum_height)?;
+        writer.write_elem(&self.maximum_width)?;
+        writer.write_elem(&self.maximum_height)?;
+        writer.write_elem(&self.offset_left)?;
+        writer.write_elem(&self.offset_right)?;
+        writer.write_elem(&self.offset_top)?;
+        writer.write_elem(&self.offset_bottom)?;
+        writer.write_elem(&self.clips_contents)?;
+        writer.write_enum(self.position_type);
+        writer.write_enum(self.align_self);
+        writer.write_elem(&self.margin_left)?;
+        writer.write_elem(&self.margin_right)?;
+        writer.write_elem(&self.margin_top)?;
+        writer.write_elem(&self.margin_bottom)?;
+        writer.write_f32(self.flex_grow);
+        writer.write_f32(self.flex_shrink);
+        writer.write_elem(&self.flex_properties)?;
         Ok(())
     }
 }

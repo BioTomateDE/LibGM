@@ -2,12 +2,12 @@
 use crate::gml::Code;
 use crate::prelude::*;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::game_object::GameObject;
 use crate::wad::elem::room::InstanceID;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RoomGameObject {
@@ -66,20 +66,20 @@ impl GMElement for RoomGameObject {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(self.x);
-        builder.write_i32(self.y);
-        builder.write_resource_id(self.object_definition);
-        builder.write_i32(self.instance_id.0);
-        builder.write_resource_id(self.creation_code);
-        builder.write_f32(self.scale_x);
-        builder.write_f32(self.scale_y);
-        builder.write_if_ver(&self.image_speed, "Image Speed", GMVersion::GMS2_2_2_302)?;
-        builder.write_if_ver(&self.image_index, "Image Index", GMVersion::GMS2_2_2_302)?;
-        builder.write_u32(self.color);
-        builder.write_f32(self.rotation);
-        if builder.version() >= GMVersion::Wad16Old {
-            builder.write_resource_id(self.pre_create_code);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i32(self.x);
+        writer.write_i32(self.y);
+        writer.write_resource_id(self.object_definition);
+        writer.write_i32(self.instance_id.0);
+        writer.write_resource_id(self.creation_code);
+        writer.write_f32(self.scale_x);
+        writer.write_f32(self.scale_y);
+        writer.write_if_ver(&self.image_speed, "Image Speed", GMVersion::GMS2_2_2_302)?;
+        writer.write_if_ver(&self.image_index, "Image Index", GMVersion::GMS2_2_2_302)?;
+        writer.write_u32(self.color);
+        writer.write_f32(self.rotation);
+        if writer.version() >= GMVersion::Wad16Old {
+            writer.write_resource_id(self.pre_create_code);
         }
         Ok(())
     }

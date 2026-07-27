@@ -4,11 +4,11 @@ use std::cmp::min;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::tileset::Tileset;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Tiles {
@@ -40,15 +40,15 @@ impl GMElement for Tiles {
         Ok(Self { tileset, tile_data, width, height })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_resource_id(self.tileset);
-        builder.write_u32(self.width);
-        builder.write_u32(self.height);
-        if builder.version() >= GMVersion::GM2024_2 {
-            self.build_compressed_tile_data(builder);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_resource_id(self.tileset);
+        writer.write_u32(self.width);
+        writer.write_u32(self.height);
+        if writer.version() >= GMVersion::GM2024_2 {
+            self.build_compressed_tile_data(writer);
         } else {
             for id in &self.tile_data {
-                builder.write_u32(*id);
+                writer.write_u32(*id);
             }
         }
         Ok(())
@@ -120,7 +120,7 @@ impl Tiles {
         Ok(())
     }
 
-    fn build_compressed_tile_data(&self, builder: &mut DataBuilder) {
+    fn build_compressed_tile_data(&self, writer: &mut DataWriter) {
         let tile_count: usize = self.tile_data.len();
         if tile_count == 0 {
             return;
@@ -167,10 +167,10 @@ impl Tiles {
             // Serialize the preceding verbatim run, splitting into 127-length chunks.
             while num_verbatim > 0 {
                 let num_to_write: i32 = min(num_verbatim, 127);
-                builder.write_u8(num_to_write as u8);
+                writer.write_u8(num_to_write as u8);
                 for j in 0..num_to_write {
                     let tile: u32 = self.tile_data[(verbatim_start + j) as usize];
-                    builder.write_u32(tile);
+                    writer.write_u32(tile);
                 }
                 num_verbatim -= num_to_write;
                 verbatim_start += num_to_write;
@@ -179,8 +179,8 @@ impl Tiles {
             // Serialize this repeat run, splitting into 128-length chunks.
             while num_repeats > 0 {
                 let num_to_write: u8 = min(num_repeats, 128);
-                builder.write_u8((num_to_write - 1) | 0x80);
-                builder.write_u32(last_tile);
+                writer.write_u8((num_to_write - 1) | 0x80);
+                writer.write_u32(last_tile);
                 num_repeats -= num_to_write;
             }
 
@@ -198,8 +198,8 @@ impl Tiles {
             last_tile = curr_tile;
         }
 
-        if builder.version() >= GMVersion::GM2024_4 {
-            builder.align(4);
+        if writer.version() >= GMVersion::GM2024_4 {
+            writer.align(4);
         }
     }
 }

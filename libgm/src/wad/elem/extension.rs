@@ -8,10 +8,10 @@ pub use self::function::Function;
 pub use self::option::ExtOption;
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 use crate::wad::version::GMVersion;
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -36,10 +36,10 @@ impl GMElement for Extensions {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.elems)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_pointer_list(&self.elems)?;
 
-        if builder.version() < GMVersion::Wad16Old {
+        if writer.version() < GMVersion::Wad16Old {
             return Ok(());
         }
 
@@ -47,10 +47,10 @@ impl GMElement for Extensions {
             let Some(data) = &elem.product_id_data else {
                 bail!(
                     "Extension's Product ID Data is not set in {}",
-                    builder.version()
+                    writer.version()
                 );
             };
-            builder.write_bytes(data);
+            writer.write_bytes(data);
         }
 
         Ok(())
@@ -119,24 +119,24 @@ impl GMElement for Extension {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.folder_name)?;
-        builder.write_gm_string(self.name)?;
-        if builder.version() == GMVersion::Lts2022_0_3 || builder.version() >= GMVersion::GM2023_4 {
-            builder.write_gm_string(self.version)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.folder_name)?;
+        writer.write_gm_string(self.name)?;
+        if writer.version() == GMVersion::Lts2022_0_3 || writer.version() >= GMVersion::GM2023_4 {
+            writer.write_gm_string(self.version)?;
         }
-        builder.write_gm_string(self.class_name)?;
-        if builder.version() >= GMVersion::GM2022_6 {
-            builder.write_pointer(&self.files);
-            builder.write_pointer(&self.options);
+        writer.write_gm_string(self.class_name)?;
+        if writer.version() >= GMVersion::GM2022_6 {
+            writer.write_pointer(&self.files);
+            writer.write_pointer(&self.options);
 
-            builder.resolve_pointer(&self.files)?;
-            builder.write_pointer_list(&self.files)?;
+            writer.resolve_pointer(&self.files)?;
+            writer.write_pointer_list(&self.files)?;
 
-            builder.resolve_pointer(&self.options)?;
-            builder.write_pointer_list(&self.options)?;
+            writer.resolve_pointer(&self.options)?;
+            writer.write_pointer_list(&self.options)?;
         } else {
-            builder.write_pointer_list(&self.files)?;
+            writer.write_pointer_list(&self.files)?;
         }
         Ok(())
     }

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 /// Audio Groups allow you to manage a set sound entries easier.
 /// You can use these for memory management, volume control and more.
@@ -23,8 +23,8 @@ impl GMElement for AudioGroups {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list_opt(&self.elems)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }
@@ -53,10 +53,10 @@ impl GMElement for AudioGroup {
         Ok(Self { name, path })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        if builder.version() >= GMVersion::GM2024_14 {
-            builder.write_gm_string(self.path)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        if writer.version() >= GMVersion::GM2024_14 {
+            writer.write_gm_string(self.path)?;
         }
         Ok(())
     }

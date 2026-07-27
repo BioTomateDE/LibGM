@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::texture_page::TexturePage;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct TexturePageItems {
@@ -32,9 +32,9 @@ impl GMElement for TexturePageItems {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.elems)?;
-        builder.align(4);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_pointer_list(&self.elems)?;
+        writer.align(4);
         Ok(())
     }
 }
@@ -84,19 +84,19 @@ impl GMElement for TexturePageItem {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.resolve_pointer(self)?;
-        builder.write_u16(self.source_x);
-        builder.write_u16(self.source_y);
-        builder.write_u16(self.source_width);
-        builder.write_u16(self.source_height);
-        builder.write_u16(self.target_x);
-        builder.write_u16(self.target_y);
-        builder.write_u16(self.target_width);
-        builder.write_u16(self.target_height);
-        builder.write_u16(self.bounding_width);
-        builder.write_u16(self.bounding_height);
-        builder.write_u16(self.texture_page.index as u16);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.resolve_pointer(self)?;
+        writer.write_u16(self.source_x);
+        writer.write_u16(self.source_y);
+        writer.write_u16(self.source_width);
+        writer.write_u16(self.source_height);
+        writer.write_u16(self.target_x);
+        writer.write_u16(self.target_y);
+        writer.write_u16(self.target_width);
+        writer.write_u16(self.target_height);
+        writer.write_u16(self.bounding_width);
+        writer.write_u16(self.bounding_height);
+        writer.write_u16(self.texture_page.index as u16);
         Ok(())
     }
 }

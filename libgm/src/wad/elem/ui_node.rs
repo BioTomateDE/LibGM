@@ -17,10 +17,10 @@ pub use text_item::TextItemInstance;
 
 use crate::prelude::*;
 use crate::util::assert;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct UINodes {
@@ -39,8 +39,8 @@ impl GMElement for UINodes {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.elems)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_pointer_list(&self.elems)?;
         Ok(())
     }
 }
@@ -81,7 +81,7 @@ impl GMElement for UINode {
         Ok(Self { node, children })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
         let type_id: i32 = match self.node {
             NodeData::Layer(_) => 0,
             NodeData::FlexPanel(_) => 1,
@@ -91,8 +91,8 @@ impl GMElement for UINode {
             NodeData::TextItemInstance(_) => 6,
             NodeData::EffectLayer(_) => 7,
         };
-        builder.write_i32(type_id);
-        builder.write_pointer(&self.node);
+        writer.write_i32(type_id);
+        writer.write_pointer(&self.node);
 
         if !matches!(self.node, NodeData::Layer(_) | NodeData::FlexPanel(_))
             && !self.children.is_empty()
@@ -105,17 +105,17 @@ impl GMElement for UINode {
             )
         }
 
-        builder.write_pointer_list(&self.children)?;
+        writer.write_pointer_list(&self.children)?;
 
-        builder.resolve_pointer(&self.node)?;
+        writer.resolve_pointer(&self.node)?;
         match &self.node {
-            NodeData::Layer(node) => node.serialize(builder)?,
-            NodeData::FlexPanel(node) => node.serialize(builder)?,
-            NodeData::GameObject(node) => node.serialize(builder)?,
-            NodeData::SequenceInstance(node) => node.serialize(builder)?,
-            NodeData::SpriteInstance(node) => node.serialize(builder)?,
-            NodeData::TextItemInstance(node) => node.serialize(builder)?,
-            NodeData::EffectLayer(node) => node.serialize(builder)?,
+            NodeData::Layer(node) => writer.write_elem(node)?,
+            NodeData::FlexPanel(node) => writer.write_elem(node)?,
+            NodeData::GameObject(node) => writer.write_elem(node)?,
+            NodeData::SequenceInstance(node) => writer.write_elem(node)?,
+            NodeData::SpriteInstance(node) => writer.write_elem(node)?,
+            NodeData::TextItemInstance(node) => writer.write_elem(node)?,
+            NodeData::EffectLayer(node) => writer.write_elem(node)?,
         }
 
         Ok(())

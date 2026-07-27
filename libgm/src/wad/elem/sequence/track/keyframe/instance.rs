@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::game_object::GameObject;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Instance {
     pub game_object: GMRef<GameObject>,
@@ -16,8 +16,8 @@ impl GMElement for Instance {
         Ok(Self { game_object })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_resource_id(self.game_object);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_resource_id(self.game_object);
         Ok(())
     }
 }

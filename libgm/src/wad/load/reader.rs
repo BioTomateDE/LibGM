@@ -11,9 +11,9 @@ use crate::wad::elem::GMElement;
 use crate::wad::elem::function::Function;
 use crate::wad::elem::texture_page_item::TexturePageItem;
 use crate::wad::elem::variable::Variable;
-use crate::wad::parse::ParsingOptions;
-use crate::wad::parse::chunk::ChunkBounds;
-use crate::wad::parse::chunk::ChunkMap;
+use crate::wad::load::LoadingOptions;
+use crate::wad::load::chunk::ChunkBounds;
+use crate::wad::load::chunk::ChunkMap;
 use crate::wad::reference::GMRef;
 use crate::wad::version::GMVersion;
 
@@ -67,7 +67,7 @@ pub struct DataReader<'a> {
 
     /// Contains parsing options (wow!).
     /// Properly initialized after parsing `FORM`.
-    pub options: ParsingOptions,
+    pub options: LoadingOptions,
 
     /// Should only be set by [`crate::wad::elem::string`].
     /// This means that `STRG` has to be parsed before any other chunk
@@ -113,7 +113,7 @@ impl<'a> DataReader<'a> {
             chunk_order: ChunkOrder::new_empty(),
             last_chunk: ChunkName::DAFL,          // stub
             string_chunk: ChunkBounds::default(), // stub
-            options: ParsingOptions::default(),   // stub
+            options: LoadingOptions::default(),   // stub
             string_occurrences: HashMap::new(),
             texture_page_item_occurrences: HashMap::new(),
             variable_occurrences: HashMap::new(),

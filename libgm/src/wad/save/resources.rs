@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::texture_page_item::TexturePageItem;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
-impl DataBuilder<'_> {
+impl DataWriter<'_> {
     /// Writes the resource ID (index) from a `GMRef`.
     ///
     /// # Parameters

@@ -2,7 +2,7 @@ use crate::gm_enum::GMEnum;
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::wad::data::Endianness;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 
 macro_rules! read_int_fn {
     ($method:ident, $dtype:ty) => {

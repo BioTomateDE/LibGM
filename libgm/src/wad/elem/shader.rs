@@ -6,10 +6,10 @@ use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::Blob;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Shaders {
@@ -163,8 +163,8 @@ impl GMElement for Shaders {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list_opt(&self.elems)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }
@@ -196,47 +196,47 @@ impl GMElement for Shader {
         unimplemented!("GMShader::deserialize is not supported; use GMShaders::deserialize instead")
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_u32(self.shader_type.as_i32() as u32 | 0x8000_0000);
-        builder.write_gm_string(self.glsl_es_vertex)?;
-        builder.write_gm_string(self.glsl_es_fragment)?;
-        builder.write_gm_string(self.glsl_vertex)?;
-        builder.write_gm_string(self.glsl_fragment)?;
-        builder.write_gm_string(self.hlsl9_vertex)?;
-        builder.write_gm_string(self.hlsl9_fragment)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_u32(self.shader_type.as_i32() as u32 | 0x8000_0000);
+        writer.write_gm_string(self.glsl_es_vertex)?;
+        writer.write_gm_string(self.glsl_es_fragment)?;
+        writer.write_gm_string(self.glsl_vertex)?;
+        writer.write_gm_string(self.glsl_fragment)?;
+        writer.write_gm_string(self.hlsl9_vertex)?;
+        writer.write_gm_string(self.hlsl9_fragment)?;
 
-        builder.write_pointer_opt(&self.hlsl11_vertex_data);
-        builder.write_pointer_opt(&self.hlsl11_pixel_data);
+        writer.write_pointer_opt(&self.hlsl11_vertex_data);
+        writer.write_pointer_opt(&self.hlsl11_pixel_data);
 
-        builder.write_simple_list(&self.vertex_shader_attributes)?;
+        writer.write_simple_list(&self.vertex_shader_attributes)?;
 
-        if builder.version() > GMVersion::Wad13 {
-            builder.write_i32(self.version);
-            builder.write_pointer_opt(&self.pssl_vertex_data);
-            builder.write_usize(self.pssl_vertex_data.as_ref().map_or(0, |x| x.len()))?;
-            builder.write_pointer_opt(&self.pssl_pixel_data);
-            builder.write_usize(self.pssl_pixel_data.as_ref().map_or(0, |x| x.len()))?;
-            builder.write_pointer_opt(&self.cg_psvita_vertex_data);
-            builder.write_usize(self.cg_psvita_vertex_data.as_ref().map_or(0, |x| x.len()))?;
-            builder.write_pointer_opt(&self.cg_psvita_pixel_data);
-            builder.write_usize(self.cg_psvita_pixel_data.as_ref().map_or(0, |x| x.len()))?;
+        if writer.version() > GMVersion::Wad13 {
+            writer.write_i32(self.version);
+            writer.write_pointer_opt(&self.pssl_vertex_data);
+            writer.write_usize(self.pssl_vertex_data.as_ref().map_or(0, |x| x.len()))?;
+            writer.write_pointer_opt(&self.pssl_pixel_data);
+            writer.write_usize(self.pssl_pixel_data.as_ref().map_or(0, |x| x.len()))?;
+            writer.write_pointer_opt(&self.cg_psvita_vertex_data);
+            writer.write_usize(self.cg_psvita_vertex_data.as_ref().map_or(0, |x| x.len()))?;
+            writer.write_pointer_opt(&self.cg_psvita_pixel_data);
+            writer.write_usize(self.cg_psvita_pixel_data.as_ref().map_or(0, |x| x.len()))?;
             if self.version >= 2 {
-                builder.write_pointer_opt(&self.cg_ps3_vertex_data);
-                builder.write_usize(self.cg_ps3_vertex_data.as_ref().map_or(0, |x| x.len()))?;
-                builder.write_pointer_opt(&self.cg_ps3_pixel_data);
-                builder.write_usize(self.cg_ps3_pixel_data.as_ref().map_or(0, |x| x.len()))?;
+                writer.write_pointer_opt(&self.cg_ps3_vertex_data);
+                writer.write_usize(self.cg_ps3_vertex_data.as_ref().map_or(0, |x| x.len()))?;
+                writer.write_pointer_opt(&self.cg_ps3_pixel_data);
+                writer.write_usize(self.cg_ps3_pixel_data.as_ref().map_or(0, |x| x.len()))?;
             }
         }
 
-        write_shader_data(builder, 8, &self.hlsl11_vertex_data)?;
-        write_shader_data(builder, 8, &self.hlsl11_pixel_data)?;
-        write_shader_data(builder, 8, &self.pssl_vertex_data)?;
-        write_shader_data(builder, 8, &self.pssl_pixel_data)?;
-        write_shader_data(builder, 8, &self.cg_psvita_vertex_data)?;
-        write_shader_data(builder, 8, &self.cg_psvita_pixel_data)?;
-        write_shader_data(builder, 16, &self.cg_ps3_vertex_data)?;
-        write_shader_data(builder, 16, &self.cg_ps3_pixel_data)?;
+        write_shader_data(writer, 8, &self.hlsl11_vertex_data)?;
+        write_shader_data(writer, 8, &self.hlsl11_pixel_data)?;
+        write_shader_data(writer, 8, &self.pssl_vertex_data)?;
+        write_shader_data(writer, 8, &self.pssl_pixel_data)?;
+        write_shader_data(writer, 8, &self.cg_psvita_vertex_data)?;
+        write_shader_data(writer, 8, &self.cg_psvita_pixel_data)?;
+        write_shader_data(writer, 16, &self.cg_ps3_vertex_data)?;
+        write_shader_data(writer, 16, &self.cg_ps3_pixel_data)?;
 
         Ok(())
     }
@@ -262,7 +262,7 @@ Type {
     CgPs3 = 7,
 });
 
-type ShaderData = Option<Blob<Vec<u8>>>;
+pub type ShaderData = Option<Blob<Vec<u8>>>;
 
 fn read_shader_data(
     reader: &mut DataReader,
@@ -310,11 +310,12 @@ fn read_shader_data(
     Ok(Some(Blob(data)))
 }
 
-fn write_shader_data(builder: &mut DataBuilder, pad: u32, shader_data: &ShaderData) -> Result<()> {
+#[inline]
+fn write_shader_data(writer: &mut DataWriter, pad: u32, shader_data: &ShaderData) -> Result<()> {
     if let Some(data) = &shader_data {
-        builder.align(pad);
-        builder.resolve_pointer(data)?;
-        builder.write_bytes(data);
+        writer.align(pad);
+        writer.resolve_pointer(data)?;
+        writer.write_bytes(data);
     }
     Ok(())
 }

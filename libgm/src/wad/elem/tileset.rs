@@ -3,12 +3,12 @@
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::texture_page_item::TexturePageItem;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 const ALIGNMENT: u32 = 8;
 
@@ -37,7 +37,7 @@ impl GMElement for Tilesets {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
         let align = pointers.iter().all(|&p| p % ALIGNMENT == 0);
-        let mut backgrounds: Vec<Option<Tileset>> = vec![None; pointers.len()];
+        let mut elems: Vec<Option<Tileset>> = vec![None; pointers.len()];
 
         for (idx, pointer) in pointers.into_iter().enumerate() {
             if pointer == 0 {
@@ -48,34 +48,34 @@ impl GMElement for Tilesets {
             }
 
             reader.assert_pos(pointer, "Tileset Pointer")?;
-            let background = Tileset::deserialize(reader)?;
-            backgrounds[idx] = Some(background);
+            let tileset = Tileset::deserialize(reader)?;
+            elems[idx] = Some(tileset);
         }
 
-        Ok(Self { elems: backgrounds, align })
+        Ok(Self { elems, align })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
         let count: usize = self.elems.len();
         let ctx = || format!("building nullable pointer list of {count} Backgrounds/Tilesets");
 
-        builder.write_usize(count).ctx(ctx)?;
-        let pointer_list_pos: u32 = builder.pos();
+        writer.write_usize(count).ctx(ctx)?;
+        let pointer_list_pos: u32 = writer.pos();
         for _ in 0..count {
-            builder.write_u32(0);
+            writer.write_u32(0);
         }
 
-        for (i, background_opt) in self.elems.iter().enumerate() {
-            let Some(background) = background_opt else {
+        for (i, tileset_opt) in self.elems.iter().enumerate() {
+            let Some(tileset) = tileset_opt else {
                 continue;
             };
             if self.align {
-                builder.align(ALIGNMENT);
+                writer.align(ALIGNMENT);
             }
-            builder
+            writer
                 .overwrite_pointer_with_cur_pos(pointer_list_pos, i)
                 .ctx(ctx)?;
-            background.serialize(builder).ctx(ctx)?;
+            writer.write_elem(tileset).ctx(ctx)?;
         }
         Ok(())
     }
@@ -121,18 +121,18 @@ impl GMElement for Tileset {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_bool32(self.transparent);
-        builder.write_bool32(self.smooth);
-        builder.write_bool32(self.preload);
-        builder.write_gm_texture(self.texture)?;
-        builder.write_if_ver(&self.gms2_data, "GMS2 data", GMVersion::GMS2)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_bool32(self.transparent);
+        writer.write_bool32(self.smooth);
+        writer.write_bool32(self.preload);
+        writer.write_gm_texture(self.texture)?;
+        writer.write_if_ver(&self.gms2_data, "GMS2 data", GMVersion::GMS2)?;
         Ok(())
     }
 
-    fn serialize_pre_padding(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.align(ALIGNMENT);
+    fn serialize_pre_padding(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.align(ALIGNMENT);
         Ok(())
     }
 }
@@ -230,19 +230,19 @@ impl GMElement for GMS2Data {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u32(2); // UnknownAlwaysTwo
-        builder.write_u32(self.tile_width);
-        builder.write_u32(self.tile_height);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_u32(2); // UnknownAlwaysTwo
+        writer.write_u32(self.tile_width);
+        writer.write_u32(self.tile_height);
 
-        if builder.version() >= GMVersion::GM2024_14_1 {
-            builder.write_u32(self.tile_separation_x);
-            builder.write_u32(self.tile_separation_y);
+        if writer.version() >= GMVersion::GM2024_14_1 {
+            writer.write_u32(self.tile_separation_x);
+            writer.write_u32(self.tile_separation_y);
         }
 
-        builder.write_u32(self.output_border_x);
-        builder.write_u32(self.output_border_y);
-        builder.write_u32(self.tile_columns);
+        writer.write_u32(self.output_border_x);
+        writer.write_u32(self.output_border_y);
+        writer.write_u32(self.tile_columns);
 
         let total_tile_count: usize = self.tile_ids.len();
         let items_per_tile = self.items_per_tile_count as usize;
@@ -258,13 +258,13 @@ impl GMElement for GMS2Data {
         }
 
         let tile_count: usize = total_tile_count / items_per_tile;
-        builder.write_usize(items_per_tile)?;
-        builder.write_usize(tile_count)?;
+        writer.write_usize(items_per_tile)?;
+        writer.write_usize(tile_count)?;
 
-        builder.write_u32(0); // UnknownAlwaysZero
-        builder.write_i64(self.frame_length);
+        writer.write_u32(0); // UnknownAlwaysZero
+        writer.write_i64(self.frame_length);
         for tile_id in &self.tile_ids {
-            builder.write_u32(*tile_id);
+            writer.write_u32(*tile_id);
         }
         Ok(())
     }

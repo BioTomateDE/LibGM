@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::audio::Audio;
 use crate::wad::elem::audio_group::AudioGroup;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 use crate::wad::version::GMVersion;
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -23,8 +23,8 @@ impl GMElement for Sounds {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list_opt(&self.elems)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }
@@ -130,21 +130,21 @@ impl GMElement for Sound {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_u32(self.flags.bits());
-        builder.write_gm_string(self.audio_type)?;
-        builder.write_gm_string(self.file)?;
-        builder.write_u32(self.effects);
-        builder.write_f32(self.volume);
-        builder.write_f32(self.pitch);
-        if builder.version() >= GMVersion::Wad14 && self.flags.contains(Flags::REGULAR) {
-            builder.write_resource_id(self.audio_group);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_u32(self.flags.bits());
+        writer.write_gm_string(self.audio_type)?;
+        writer.write_gm_string(self.file)?;
+        writer.write_u32(self.effects);
+        writer.write_f32(self.volume);
+        writer.write_f32(self.pitch);
+        if writer.version() >= GMVersion::Wad14 && self.flags.contains(Flags::REGULAR) {
+            writer.write_resource_id(self.audio_group);
         } else {
-            builder.write_bool32(true); // Preload
+            writer.write_bool32(true); // Preload
         }
-        builder.write_resource_id(self.audio);
-        builder.write_if_ver(&self.audio_length, "Audio Length", GMVersion::GM2024_6)?;
+        writer.write_resource_id(self.audio);
+        writer.write_if_ver(&self.audio_length, "Audio Length", GMVersion::GM2024_6)?;
         Ok(())
     }
 }

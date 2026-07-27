@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! A data parsing and building library for GameMaker data files (`data.win` / `game.unx`).
+//! A data decoding/encoding library for GameMaker data files (`data.win` / `game.unx`).
 //!
 //! This library provides structs and functions to
 //! handle GameMaker game assets in a meaningful way.
@@ -14,8 +14,8 @@
 //! Perhaps there can be a high-level crate in the future that abstracts on this library.
 //!
 //! ## Usage
-//! For most purposes, using the [`parse_file`] and [`build_file`] functions is enough.
-//! If you need more control, you can use [`parse_bytes`], [`build_bytes`] or [`ParsingOptions`].
+//! For most purposes, using the [`load_file`] and [`save_file`] functions is enough.
+//! If you need more control, you can use [`load_bytes`], [`save_bytes`] or [`LoadingOptions`].
 //!
 //! It is recommended to import the prelude so important types and traits are available to use:
 //! ```
@@ -29,12 +29,12 @@
 //! use libgm::prelude::*;
 //!
 //! let path = "C:/Program Files (x86)/Steam/steamapps/common/Undertale/data.win";
-//! let data: GMData = libgm::wad::parse_file(path)?;
+//! let data: GMData = libgm::wad::load_file(path)?;
 //!
 //! let name: &str = data.strings.by_ref(data.general_info.display_name)?;
-//! let creation: chrono::DateTime<chrono::Utc> = data.general_info.creation_timestamp;
+//! let time: chrono::DateTime<chrono::Utc> = data.general_info.creation_timestamp;
 //! println!("Opened {name}!");
-//! println!("Game was created at {creation:?}.");
+//! println!("Game was created at {time:?}.");
 //! println!("This data file has {} sprites.", data.sprites.len());
 //! # Ok(()) }
 //! ```
@@ -46,7 +46,7 @@
 //! use libgm::wad::elem::game_object::GameObject;
 //! use libgm::wad::elem::sprite::Sprite;
 //!
-//! let mut data: GMData = libgm::wad::parse_file("./game.unx")?;
+//! let mut data: GMData = libgm::wad::load_file("game.unx")?;
 //! let object: &mut GameObject = data
 //!     .game_objects
 //!     .by_name_mut("obj_mysteryman", &data.strings)?;
@@ -58,7 +58,7 @@
 //! let h: u32 = sprite.width;
 //! println!("Mysteryman's sprite dimensions are {w}x{h} pixels");
 //!
-//! libgm::wad::build_file(&data, "./game_modded.unx")?;
+//! libgm::wad::save_file(&data, "game_modded.unx")?;
 //! # Ok(()) }
 //! ```
 //!
@@ -69,21 +69,23 @@
 //! use libgm::prelude::*;
 //! use libgm::wad::elem::audio::Audio;
 //! use libgm::wad::elem::sound::Flags;
-//! use libgm::wad::parse::ParsingOptions;
+//! use libgm::wad::load::LoadingOptions;
 //! let raw_data: &[u8] = some_sophisticated_source();
-//! let parser = ParsingOptions::new()
+//! let loader = LoadingOptions::default()
 //!     .verify_constants(false)
 //!     .verify_alignment(true);
-//! let gm_data: GMData = parser.parse_bytes(raw_data)?;
+//! let data: GMData = loader.load_bytes(raw_data)?;
 //! std::fs::create_dir_all("exported_sounds")?;
 //!
-//! for sound in gm_data.sounds.elements() {
-//!     if sound.flags.contains(Flags::EMBEDDED) {
-//!         let name = gm_data.strings.by_ref(sound.name)?;
-//!         let audio: &Audio = gm_data.audios.by_ref(sound.audio)?;
-//!         let path = format!("exported_sounds/{name}.wav");
-//!         std::fs::write(path, &audio.data)?;
+//! for sound in data.sounds.elements() {
+//!     if !sound.flags.contains(Flags::EMBEDDED) {
+//!         continue;
 //!     }
+//!     sound.validate_name(&data.strings)?;
+//!     let name = data.strings.by_ref(sound.name)?;
+//!     let audio: &Audio = data.audios.by_ref(sound.audio)?;
+//!     let path = format!("exported_sounds/{name}.wav");
+//!     std::fs::write(path, &*audio.data)?;
 //! }
 //! # Ok(()) }
 //! ```
@@ -217,8 +219,8 @@ const _: () = assert!(
 #[rustfmt::skip]
 #[cfg(doc)]
 use wad::{
-    parse::{ParsingOptions, parse_bytes, parse_file},
-    build::{build_bytes, build_file},
+    load::{LoadingOptions, load_bytes, load_file},
+    save::{save_bytes, save_file},
 };
 
 // Private modules

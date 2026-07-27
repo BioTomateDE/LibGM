@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! Functions and builder structs related to parsing GameMaker data files.
+//! Functions and writer structs related to parsing GameMaker data files.
 //!
 //! Some of these functions are also re-exported at the crate root.
 
@@ -55,49 +55,47 @@ use crate::wad::elem::tileset::Tilesets;
 use crate::wad::elem::timeline::Timelines;
 use crate::wad::elem::ui_node::UINodes;
 use crate::wad::elem::variable::Variables;
-use crate::wad::parse::chunk::ChunkBounds;
-use crate::wad::parse::chunk::ChunkMap;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::chunk::ChunkBounds;
+use crate::wad::load::reader::DataReader;
 use crate::wad::version_detection::detect_format_version;
 
-const ERR_TOO_BIG: &str =
-    "Data file is bigger than 2,147,483,646 bytes which will lead to bugs in LibGM and the runner";
+const ERR_MASSIVE: &str = "Data file size exceeds the signed 32-bit integer limit which will lead \
+                           to bugs in LibGM and the runner";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ParsingOptions {
-    /// See [`ParsingOptions::verify_alignment`].
+pub struct LoadingOptions {
+    /// See [`LoadingOptions::verify_alignment`].
     pub verify_alignment: bool,
 
-    /// See [`ParsingOptions::verify_constants`].
+    /// See [`LoadingOptions::verify_constants`].
     pub verify_constants: bool,
-
-    /// See [`ParsingOptions::allow_unknown_chunks`].
-    // TODO: this option is useless rn due to the ChunkName refactor
-    pub allow_unknown_chunks: bool,
 }
 
-impl Default for ParsingOptions {
+#[deprecated(since = "0.8.0", note = "renamed to LoadingOptions")]
+pub type ParsingOptions = LoadingOptions;
+
+impl Default for LoadingOptions {
+    /// Strict by default
     fn default() -> Self {
         Self::STRICT
     }
 }
 
-impl ParsingOptions {
+impl LoadingOptions {
     pub const LENIENT: Self = Self {
         verify_alignment: false,
         verify_constants: false,
-        allow_unknown_chunks: true,
     };
     pub const STRICT: Self = Self {
         verify_alignment: true,
         verify_constants: true,
-        allow_unknown_chunks: false,
     };
 
-    /// Creates a new [`ParsingOptions`] with default settings
-    /// (corresponds to [`ParsingOptions::STRICT`].
+    /// Creates a new [`LoadingOptions`] with default settings
+    /// (corresponds to [`LoadingOptions::STRICT`].
     #[inline]
     #[must_use]
+    #[deprecated(since = "0.8.0", note = "use LoadingOptions::default instead")]
     pub const fn new() -> Self {
         Self::STRICT
     }
@@ -135,48 +133,34 @@ impl ParsingOptions {
         self
     }
 
-    /// When **disabled**, requires that all data chunks in the file are
-    /// processed during parsing.
+    /// Deserializes a GameMaker data file (stored in memory) with the specified options.
     ///
-    /// This prevents silent data loss when rebuilding data by ensuring
-    /// no unrecognized or unsupported chunks are ignored. If any chunks
-    /// remain unread after parsing completes, an error will be returned.
-    ///
-    /// > Default: **false**
-    #[inline]
-    #[must_use]
-    pub const fn allow_unknown_chunks(mut self, enabled: bool) -> Self {
-        self.allow_unknown_chunks = enabled;
-        self
-    }
-
-    /// Parses a GameMaker data file (stored in memory) with the specified
-    /// options.
-    ///
-    /// If you want to parse a data file stored on disk, check out
-    /// [`ParsingOptions::parse_file`].
+    /// If you want to deserialize a data file stored on disk, check out [`LoadingOptions::load_file`].
     ///
     /// For more information on the data file format, see [`crate::wad`].
-    pub fn parse_bytes(&self, raw_data: impl AsRef<[u8]>) -> Result<GMData> {
-        self.parse(raw_data.as_ref())
+    pub fn load_bytes(&self, raw_data: impl AsRef<[u8]>) -> Result<GMData> {
+        self.deserialize(raw_data.as_ref())
             .ctx("parsing GameMaker data bytes")
     }
 
-    /// Parses a GameMaker data file (stored on disk) with the specified
-    /// options.
+    #[deprecated(since = "0.8.0", note = "renamed to load_bytes")]
+    pub fn parse_bytes(&self, raw_data: impl AsRef<[u8]>) -> Result<GMData> {
+        self.load_bytes(raw_data)
+    }
+
+    /// Deseerializes a GameMaker data file (stored on disk) with the specified options.
     ///
-    /// If you want to parse a data file stored in memory, check out
-    /// [`ParsingOptions::parse_bytes`].
+    /// If you want to deserialize a data file stored in memory, check out [`LoadingOptions::load_bytes`].
     ///
     /// For more information on the data file format, see [`crate::wad`].
-    pub fn parse_file(&self, data_file_path: impl AsRef<Path>) -> Result<GMData> {
+    pub fn load_file(&self, data_file_path: impl AsRef<Path>) -> Result<GMData> {
         let path = data_file_path.as_ref();
 
         let meta = std::fs::metadata(path)
             .ctx_any(|| format!("reading metadata of data file {}", path.display()))?;
 
-        if meta.len() >= i32::MAX as u64 {
-            bail!("{ERR_TOO_BIG}");
+        if meta.len() > i32::MAX as u64 {
+            bail!("{ERR_MASSIVE}");
         }
 
         let stopwatch = Stopwatch::start();
@@ -185,50 +169,65 @@ impl ParsingOptions {
         log::trace!("Reading data file bytes took {stopwatch}");
 
         let mut gm_data = self
-            .parse(&raw_data)
-            .ctx(|| format!("parsing GameMaker data file {}", path.display()))?;
+            .deserialize(&raw_data)
+            .ctx(|| format!("deserializing GameMaker data file {}", path.display()))?;
 
         gm_data.meta.location = Some(path.to_path_buf());
         Ok(gm_data)
     }
 
-    fn parse(&self, raw_data: &[u8]) -> Result<GMData> {
+    #[deprecated(since = "0.8.0", note = "renamed to load_file")]
+    pub fn parse_file(&self, data_file_path: impl AsRef<Path>) -> Result<GMData> {
+        self.load_file(data_file_path)
+    }
+
+    fn deserialize(&self, raw_data: &[u8]) -> Result<GMData> {
         if cfg!(feature = "catch-panic") {
-            crate::util::unwind::catch(|| parse(raw_data, self))
+            crate::util::unwind::catch(|| deserialize(raw_data, self))
         } else {
-            parse(raw_data, self)
+            deserialize(raw_data, self)
         }
     }
 }
 
-/// Parses a GameMaker data file (stored in memory) with default options.
+/// Deserializes a GameMaker data file (stored in memory) with default options.
 ///
-/// If you want to customize parsing options, check out [`ParsingOptions`].
+/// If you want to customize parsing options, check out [`LoadingOptions`].
 /// If you want to parse a data file stored on disk, check out [`parse_file`].
 ///
 /// For more information on the data file format, see [`crate::wad`].
-pub fn parse_bytes(raw_data: impl AsRef<[u8]>) -> Result<GMData> {
-    ParsingOptions::new().parse_bytes(raw_data)
+pub fn load_bytes(raw_data: impl AsRef<[u8]>) -> Result<GMData> {
+    LoadingOptions::default().load_bytes(raw_data)
 }
 
-/// Parses a GameMaker data file (stored on disk) with default options
+#[deprecated(since = "0.8.0", note = "renamed to load_bytes")]
+pub fn parse_bytes(raw_data: impl AsRef<[u8]>) -> Result<GMData> {
+    load_bytes(raw_data)
+}
+
+/// Deserializes a GameMaker data file (stored on disk) with default options.
 ///
-/// If you want to customize parsing options, check out [`ParsingOptions`].
+/// If you want to customize parsing options, check out [`LoadingOptions`].
 /// If you want to parse a data file stored in memory, check out
 /// [`parse_bytes`].
 ///
 /// For more information on the data file format, see [`crate::wad`].
+pub fn load_file(data_file_path: impl AsRef<Path>) -> Result<GMData> {
+    LoadingOptions::default().load_file(data_file_path)
+}
+
+#[deprecated(since = "0.8.0", note = "renamed to load_file")]
 pub fn parse_file(data_file_path: impl AsRef<Path>) -> Result<GMData> {
-    ParsingOptions::new().parse_file(data_file_path)
+    load_file(data_file_path)
 }
 
 // ================ Actual logic here ================
 
 /// This can later be reused for audiogroup files.
-fn parse_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
+fn read_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
     // Length assertion
     if raw_data.len() >= i32::MAX as usize {
-        bail!("{ERR_TOO_BIG}");
+        bail!("{ERR_MASSIVE}");
     }
 
     let mut reader = DataReader::new(raw_data);
@@ -314,11 +313,10 @@ fn read_bytecode_chunks(reader: &mut DataReader) -> Result<(Codes, Functions, Va
     }
 }
 
-/// Parse GameMaker data
 #[expect(clippy::too_many_lines)]
-fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
+fn deserialize(raw_data: &[u8], options: &LoadingOptions) -> Result<GMData> {
     let stopwatch = Stopwatch::start();
-    let mut reader: DataReader = parse_form(raw_data).ctx("parsing FORM")?;
+    let mut reader: DataReader = read_form(raw_data).ctx("parsing FORM")?;
 
     if !reader.chunks.contains(ChunkName::STRG) {
         bail!("Chunk STRG does not exist");
@@ -394,8 +392,6 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
 
     log::trace!("Reading independent chunks took {stopwatch2}");
 
-    handle_unread_chunks(&reader.chunks, reader.options.allow_unknown_chunks)?;
-
     let meta = Metadata {
         version: reader.version,
         location: None,
@@ -445,38 +441,4 @@ fn parse(raw_data: &[u8], options: &ParsingOptions) -> Result<GMData> {
 
     log::trace!("Parsing data took {stopwatch}");
     Ok(data)
-}
-
-/// Verify all data chunks were processed to prevent data loss
-fn handle_unread_chunks(chunks: &ChunkMap, allow_unknown: bool) -> Result<()> {
-    if chunks.is_empty() {
-        return Ok(());
-    }
-
-    let count: usize = chunks.count();
-
-    let mut buffer = String::with_capacity(count * 6);
-    for chunk_name in chunks.chunk_names() {
-        use core::fmt::Write;
-        let _ = write!(buffer, "{chunk_name}");
-        buffer.push_str(", ");
-    }
-
-    // Remove last trailing comma and space
-    buffer.pop();
-    buffer.pop();
-
-    let noun: &str = if count == 1 { "chunk" } else { "chunks" };
-
-    let message = format!(
-        "{count} unprocessed {noun} detected: {buffer}\nThese unknown chunks will be lost when \
-         rebuilding data.",
-    );
-
-    if allow_unknown {
-        log::warn!("{message}");
-        Ok(())
-    } else {
-        bail!("{message}");
-    }
 }

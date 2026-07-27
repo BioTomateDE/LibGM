@@ -2,9 +2,9 @@
 
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FlexValue {
@@ -19,9 +19,9 @@ impl GMElement for FlexValue {
         Ok(Self { value, unit })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_f32(self.value);
-        builder.write_enum(self.unit);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_f32(self.value);
+        writer.write_enum(self.unit);
         Ok(())
     }
 }

@@ -4,9 +4,9 @@ pub mod gradient;
 pub mod solid;
 
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Data {
@@ -32,16 +32,16 @@ impl GMElement for Data {
         Ok(fill_data)
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(match self {
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i32(match self {
             Self::Solid(_) => 1,
             Self::Gradient(_) => 2,
             Self::Bitmap(_) => 3,
         });
         match self {
-            Self::Solid(solid_data) => solid_data.serialize(builder)?,
-            Self::Gradient(gradient_data) => gradient_data.serialize(builder)?,
-            Self::Bitmap(bitmap_data) => bitmap_data.serialize(builder)?,
+            Self::Solid(solid_data) => writer.write_elem(solid_data)?,
+            Self::Gradient(gradient_data) => writer.write_elem(gradient_data)?,
+            Self::Bitmap(bitmap_data) => writer.write_elem(bitmap_data)?,
         }
         Ok(())
     }

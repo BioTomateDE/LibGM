@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::wad::{Blob, GMVersion};
-use crate::wad::build::builder::DataBuilder;
+use crate::wad::Blob;
+use crate::wad::GMVersion;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Data {
@@ -65,24 +66,24 @@ impl GMElement for Data {
         Ok(Self { bitmap_type, width, height, ver_data })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_enum(self.bitmap_type);
-        builder.write_i32(self.width);
-        builder.write_i32(self.height);
-        if builder.version() >= GMVersion::GM2022_1 {
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_enum(self.bitmap_type);
+        writer.write_i32(self.width);
+        writer.write_i32(self.height);
+        if writer.version() >= GMVersion::GM2022_1 {
             if let VersionData::Post2022_1(ref data) = self.ver_data {
-                builder.write_i32(data.tpe_index);
+                writer.write_i32(data.tpe_index);
             } else {
                 bail!("Sprite YYSWF Bitmap Data: TPE Index not set in Post 2022.1+");
             }
         } else if let VersionData::Pre2022_1(ref data) = self.ver_data {
-            builder.write_usize(data.image_data.len())?;
-            builder.write_usize(data.alpha_data.len())?;
-            builder.write_usize(data.color_palette_data.len())?;
-            builder.write_bytes(&data.image_data);
-            builder.write_bytes(&data.alpha_data);
-            builder.write_bytes(&data.color_palette_data);
-            builder.align(4);
+            writer.write_usize(data.image_data.len())?;
+            writer.write_usize(data.alpha_data.len())?;
+            writer.write_usize(data.color_palette_data.len())?;
+            writer.write_bytes(&data.image_data);
+            writer.write_bytes(&data.alpha_data);
+            writer.write_bytes(&data.color_palette_data);
+            writer.align(4);
         } else {
             bail!("Sprite YYSWF Bitmap Data: version specific data not set in Pre 2022.1+");
         }

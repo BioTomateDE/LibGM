@@ -13,9 +13,9 @@ pub use self::tiles::Tiles;
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RoomLayer {
@@ -79,26 +79,26 @@ impl GMElement for RoomLayer {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_u32(self.id);
-        builder.write_enum(self.ty);
-        builder.write_i32(self.depth);
-        builder.write_f32(self.x_offset);
-        builder.write_f32(self.y_offset);
-        builder.write_f32(self.horizontal_speed);
-        builder.write_f32(self.vertical_speed);
-        builder.write_bool32(self.is_visible);
-        builder.write_if_ver(&self.effect_data_2022_1, "Effect Data", GMVersion::GM2022_1)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_u32(self.id);
+        writer.write_enum(self.ty);
+        writer.write_i32(self.depth);
+        writer.write_f32(self.x_offset);
+        writer.write_f32(self.y_offset);
+        writer.write_f32(self.horizontal_speed);
+        writer.write_f32(self.vertical_speed);
+        writer.write_bool32(self.is_visible);
+        writer.write_if_ver(&self.effect_data_2022_1, "Effect Data", GMVersion::GM2022_1)?;
         match &self.data {
             Data::None => {}
-            Data::Instances(data) => data.serialize(builder)?,
-            Data::Tiles(data) => data.serialize(builder)?,
-            Data::Background(data) => data.serialize(builder)?,
-            Data::Assets(data) => data.serialize(builder)?,
+            Data::Instances(data) => writer.write_elem(data)?,
+            Data::Tiles(data) => writer.write_elem(data)?,
+            Data::Background(data) => writer.write_elem(data)?,
+            Data::Assets(data) => writer.write_elem(data)?,
             Data::Effect(data) => {
-                if builder.version() < GMVersion::GM2022_1 {
-                    data.serialize(builder)?;
+                if writer.version() < GMVersion::GM2022_1 {
+                    writer.write_elem(data)?;
                 }
             }
         }
@@ -135,10 +135,10 @@ impl GMElement for Data2022_1 {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_bool32(self.effect_enabled);
-        builder.write_gm_string(self.effect_type)?;
-        builder.write_simple_list(&self.effect_properties)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_bool32(self.effect_enabled);
+        writer.write_gm_string(self.effect_type)?;
+        writer.write_simple_list(&self.effect_properties)?;
         Ok(())
     }
 }

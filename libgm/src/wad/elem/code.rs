@@ -7,6 +7,7 @@ use super::string::Strings;
 use crate::gml::Code;
 use crate::gml::ModernData;
 use crate::gml::instruction::AssetReference;
+use crate::gml::instruction::BinaryOp;
 use crate::gml::instruction::CodeVariable;
 use crate::gml::instruction::ComparisonType;
 use crate::gml::instruction::DataType;
@@ -14,19 +15,19 @@ use crate::gml::instruction::InstanceType;
 use crate::gml::instruction::Instruction;
 use crate::gml::instruction::PushValue;
 use crate::gml::instruction::VariableType;
-use crate::gml::opcodes;
+use crate::gml::opcode;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::GMNamedListChunk;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::element_stub;
 use crate::wad::elem::function::Function;
 use crate::wad::elem::variable::Variable;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Codes {
@@ -53,7 +54,7 @@ impl GMElement for Codes {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         // This can happen with YYC.
         if reader.chunk.is_empty() {
-            return Ok(Self { elems: vec![]});
+            return Ok(Self { elems: vec![] });
         }
 
         let pointers: Vec<u32> = reader.read_simple_list()?;
@@ -80,7 +81,7 @@ impl GMElement for Codes {
 
             if reader.version < GMVersion::Wad15 {
                 instructions_start_pos = reader.cur_pos; // Instructions are placed immediately after code metadata; how convenient!
-                reader.cur_pos += code_length; // Skip over them; they will get parsed in the next loops
+                reader.cur_pos += code_length; // Skip over them; they will get decoded in the next loops
                 instructions_end_pos = reader.cur_pos;
                 modern_data = None;
             } else {
@@ -143,12 +144,12 @@ impl GMElement for Codes {
                 let instruction = Instruction::deserialize(reader)
                     .ctx(|| {
                         format!(
-                            "parsing Instruction #{} at position {}",
+                            "decoding Instruction #{} at position {}",
                             code.instructions.len(),
                             reader.cur_pos,
                         )
                     })
-                    .ctx(|| format!("parsing Code entry {:?} at position {}", code.name, start))?;
+                    .ctx(|| format!("decoding Code entry {:?} at position {}", code.name, start))?;
                 code.instructions.push(instruction);
             }
         }
@@ -159,31 +160,31 @@ impl GMElement for Codes {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_usize(self.elems.len())?;
-        let pointer_list_pos: u32 = builder.pos();
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_usize(self.elems.len())?;
+        let pointer_list_pos: u32 = writer.pos();
         for _ in 0..self.elems.len() {
-            builder.write_u32(0xDEAD_C0DE);
+            writer.write_u32(0xDEAD_C0DE);
         }
 
         // WAD < 15 my beloved
-        if builder.version() < GMVersion::Wad15 {
+        if writer.version() < GMVersion::Wad15 {
             for (i, code) in self.elems.iter().enumerate() {
-                builder.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
-                builder.write_gm_string(code.name)?;
-                let length_placeholder_pos = builder.pos();
-                builder.write_u32(0xDEAD_C0DE);
-                let start = builder.pos();
+                writer.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
+                writer.write_gm_string(code.name)?;
+                let length_placeholder_pos = writer.pos();
+                writer.write_u32(0xDEAD_C0DE);
+                let start = writer.pos();
 
                 // In WAD < 15, instructions are written immediately
                 for (i, instruction) in code.instructions.iter().enumerate() {
-                    instruction
-                        .serialize(builder)
-                        .ctx(|| format!("serializing code #{i} with name {:?}", code.name))?;
+                    writer
+                        .write_elem(instruction)
+                        .ctx(|| format!("serializing code #{i}"))?;
                 }
 
-                let code_length = builder.pos() - start;
-                builder.overwrite_u32(code_length, length_placeholder_pos)?;
+                let code_length = writer.pos() - start;
+                writer.overwrite_u32(code_length, length_placeholder_pos)?;
             }
             return Ok(());
         }
@@ -201,38 +202,37 @@ impl GMElement for Codes {
                 continue;
             }
 
-            let start: u32 = builder.pos();
+            let start: u32 = writer.pos();
             for instruction in &code.instructions {
-                instruction
-                    .serialize(builder)
-                    .ctx(|| format!("serializing code #{i} with name {:?}", code.name))?;
+                writer
+                    .write_elem(instruction)
+                    .ctx(|| format!("serializing code #{i}"))?;
             }
-            let end: u32 = builder.pos();
+            let end: u32 = writer.pos();
             instructions_ranges.push((start, end));
         }
 
         for (i, code) in self.elems.iter().enumerate() {
-            builder.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
+            writer.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
             let (start, end) = instructions_ranges[i];
             let length: u32 = end - start;
             let data: &ModernData = code.modern_data.as_ref().ok_or_else(|| {
-                format!("Code WAD15+ data not set in version {}", builder.version())
+                format!("Code WAD15+ data not set in version {}", writer.version())
             })?;
 
-            builder.write_gm_string(code.name)?;
-            builder.write_u32(length);
-            builder.write_u16(data.local_count);
-            builder.write_u16(data.argument_count | if data.weird_local_flag { 0x8000 } else { 0 });
-            let instructions_start_offset: i32 = start as i32 - builder.pos() as i32;
-            builder.write_i32(instructions_start_offset);
-            builder.write_u32(data.execution_offset);
+            writer.write_gm_string(code.name)?;
+            writer.write_u32(length);
+            writer.write_u16(data.local_count);
+            writer.write_u16(data.argument_count | if data.weird_local_flag { 0x8000 } else { 0 });
+            let instructions_start_offset: i32 = start as i32 - writer.pos() as i32;
+            writer.write_i32(instructions_start_offset);
+            writer.write_u32(data.execution_offset);
         }
 
         Ok(())
     }
 }
 
-#[expect(clippy::too_many_lines)] // refactor later
 impl GMElement for Instruction {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let word = reader.read_u32()?;
@@ -248,263 +248,143 @@ impl GMElement for Instruction {
                 reader.assert_zero_b1(b)?;
                 b[1] = opcode - 0x10;
             }
-            opcode = opcodes::old_to_new(opcode);
+            opcode = opcode::old_to_new(opcode);
         }
 
         // log::debug!("{} // {:02X} {:02X} {:02X} {:02X}", reader.cur_pos-4, b[0], b[1], b[2], opcode);
 
         Ok(match opcode {
-            opcodes::CONV => {
-                let types = reader
-                    .parse_double_type(b)
-                    .ctx("parsing Convert Instruction")?;
+            opcode::CONV => {
+                let types = reader.decode_double_type(b)?;
                 Self::Convert { from: types[0], to: types[1] }
             }
-            opcodes::MUL => {
-                let types = reader
-                    .parse_double_type(b)
-                    .ctx("parsing Multiply Instruction")?;
-                Self::Multiply { lhs: types[1], rhs: types[0] }
-            }
-            opcodes::DIV => {
-                let types = reader
-                    .parse_double_type(b)
-                    .ctx("parsing Divide Instruction")?;
-                Self::Divide { lhs: types[1], rhs: types[0] }
-            }
-            opcodes::REM => {
-                let types = reader
-                    .parse_double_type(b)
-                    .ctx("parsing Remainder Instruction")?;
-                Self::Remainder { lhs: types[1], rhs: types[0] }
-            }
-            opcodes::MOD => {
-                let types = reader
-                    .parse_double_type(b)
-                    .ctx("parsing Modulus Instruction")?;
-                Self::Modulus { lhs: types[1], rhs: types[0] }
-            }
-            opcodes::ADD => {
-                let types = reader.parse_double_type(b).ctx("parsing Add Instruction")?;
-                Self::Add { lhs: types[1], rhs: types[0] }
-            }
-            opcodes::SUB => {
-                let types = reader
-                    .parse_double_type(b)
-                    .ctx("parsing Subtract Instruction")?;
-                Self::Subtract { lhs: types[1], rhs: types[0] }
-            }
-            opcodes::AND => {
-                let types = reader.parse_double_type(b).ctx("parsing And Instruction")?;
-                Self::And { lhs: types[1], rhs: types[0] }
-            }
-            opcodes::OR => {
-                let types = reader.parse_double_type(b).ctx("parsing Or Instruction")?;
-                Self::Or { lhs: types[1], rhs: types[0] }
-            }
-            opcodes::XOR => {
-                let types = reader.parse_double_type(b).ctx("parsing Xor Instruction")?;
-                Self::Xor { lhs: types[1], rhs: types[0] }
-            }
-            opcodes::NEG => {
-                let data_type = reader
-                    .parse_single_type(b)
-                    .ctx("parsing Negate Instruction")?;
-                Self::Negate { data_type }
-            }
-            opcodes::NOT => {
-                let data_type = reader.parse_single_type(b).ctx("parsing Not Instruction")?;
-                Self::Not { data_type }
-            }
-            opcodes::SHL => {
-                let types = reader
-                    .parse_double_type(b)
-                    .ctx("parsing ShiftLeft instruction")?;
-                Self::ShiftLeft { lhs: types[1], rhs: types[0] }
-            }
-            opcodes::SHR => {
-                let types = reader
-                    .parse_double_type(b)
-                    .ctx("parsing ShiftRight Instruction")?;
-                Self::ShiftRight { lhs: types[1], rhs: types[0] }
-            }
-            opcodes::CMP => reader
-                .parse_comparison(b)
-                .ctx("parsing Comparison Instruction")?,
-            opcodes::POP => reader.parse_pop(b).ctx("parsing Pop Instruction")?,
-            opcodes::DUP => reader
-                .parse_duplicate(b)
-                .ctx("parsing Duplicate Instruction")?,
-            opcodes::RET => {
-                let ctx = "parsing Return Instruction";
-                let data_type = reader.parse_single_type(b).ctx(ctx)?;
+            opcode::MUL => reader.decode_binary(b, BinaryOp::Multiply)?,
+            opcode::DIV => reader.decode_binary(b, BinaryOp::Divide)?,
+            opcode::REM => reader.decode_binary(b, BinaryOp::Remainder)?,
+            opcode::MOD => reader.decode_binary(b, BinaryOp::Modulus)?,
+            opcode::ADD => reader.decode_binary(b, BinaryOp::Add)?,
+            opcode::SUB => reader.decode_binary(b, BinaryOp::Subtract)?,
+            opcode::AND => reader.decode_binary(b, BinaryOp::And)?,
+            opcode::OR => reader.decode_binary(b, BinaryOp::Or)?,
+            opcode::XOR => reader.decode_binary(b, BinaryOp::Xor)?,
+            opcode::NEG => Self::Negate { data_type: reader.decode_single_type(b)? },
+            opcode::NOT => Self::Not { data_type: reader.decode_single_type(b)? },
+            opcode::SHL => reader.decode_binary(b, BinaryOp::ShiftLeft)?,
+            opcode::SHR => reader.decode_binary(b, BinaryOp::ShiftRight)?,
+            opcode::CMP => reader
+                .decode_comparison(b)
+                .ctx("decoding Comparison Instruction")?,
+            opcode::POP => reader.decode_pop(b).ctx("decoding Pop Instruction")?,
+            opcode::DUP => reader
+                .decode_duplicate(b)
+                .ctx("decoding Duplicate Instruction")?,
+            opcode::RET => {
+                let ctx = "decoding Return Instruction";
+                let data_type = reader.decode_single_type(b).ctx(ctx)?;
                 reader.assert_type(DataType::Variable, data_type).ctx(ctx)?;
                 Self::Return
             }
-            opcodes::EXIT => {
-                let ctx = "parsing Exit Instruction";
-                let data_type = reader.parse_single_type(b).ctx(ctx)?;
+            opcode::EXIT => {
+                let ctx = "decoding Exit Instruction";
+                let data_type = reader.decode_single_type(b).ctx(ctx)?;
                 reader.assert_type(DataType::Int32, data_type).ctx(ctx)?;
                 Self::Exit
             }
-            opcodes::POPZ => {
+            opcode::POPZ => {
                 let data_type = reader
-                    .parse_single_type(b)
-                    .ctx("parsing PopDiscard Instruction")?;
+                    .decode_single_type(b)
+                    .ctx("decoding PopDiscard Instruction")?;
                 Self::PopDiscard { data_type }
             }
-            opcodes::BR => Self::Branch { jump_offset: reader.parse_branch(b) },
-            opcodes::BT => Self::BranchIf { jump_offset: reader.parse_branch(b) },
-            opcodes::BF => Self::BranchUnless { jump_offset: reader.parse_branch(b) },
-            opcodes::PUSHENV => Self::PushWithContext { jump_offset: reader.parse_branch(b) },
-            opcodes::POPENV if b == [0x00, 0x00, 0xF0] => Self::PopWithContextExit,
-            opcodes::POPENV => Self::PopWithContext { jump_offset: reader.parse_branch(b) },
-            opcodes::PUSH => {
-                let value = reader.parse_push(b).ctx("parsing Push Instruction")?;
+            opcode::BR => Self::Branch { jump_offset: reader.decode_branch(b) },
+            opcode::BT => Self::BranchIf { jump_offset: reader.decode_branch(b) },
+            opcode::BF => Self::BranchUnless { jump_offset: reader.decode_branch(b) },
+            opcode::PUSHENV => Self::PushWithContext { jump_offset: reader.decode_branch(b) },
+            opcode::POPENV if b == [0x00, 0x00, 0xF0] => Self::PopWithContextExit,
+            opcode::POPENV => Self::PopWithContext { jump_offset: reader.decode_branch(b) },
+            opcode::PUSH => {
+                let value = reader.decode_push(b).ctx("decoding Push Instruction")?;
                 Self::Push { value }
             }
-            opcodes::PUSHLOC => {
+            opcode::PUSHLOC => {
                 let variable = reader
-                    .parse_push_var(b)
-                    .ctx("parsing PushLocal Instruction")?;
+                    .decode_push_var(b)
+                    .ctx("decoding PushLocal Instruction")?;
                 Self::PushLocal { variable }
             }
-            opcodes::PUSHGLB => {
+            opcode::PUSHGLB => {
                 let variable = reader
-                    .parse_push_var(b)
-                    .ctx("parsing PushGlobal Instruction")?;
+                    .decode_push_var(b)
+                    .ctx("decoding PushGlobal Instruction")?;
                 Self::PushGlobal { variable }
             }
-            opcodes::PUSHBLTN => {
-                let variable = reader
-                    .parse_push_var(b)
-                    .ctx("parsing PushBuiltin Instruction")?;
-                Self::PushBuiltin { variable }
-            }
-            opcodes::PUSHIM => {
-                let integer = reader
-                    .parse_pushim(b)
-                    .ctx("parsing PushImmediate Instruction")?;
-                Self::PushImmediate { integer }
-            }
-            opcodes::CALL => reader.parse_call(b).ctx("parsing Call Instruction")?,
-            opcodes::CALLVAR => {
+            opcode::PUSHBLTN => Self::PushBuiltin { variable: reader.decode_push_var(b)? },
+            opcode::PUSHIM => Self::PushImmediate { integer: reader.decode_pushim(b)? },
+            opcode::CALL => reader.decode_call(b).ctx("decoding Call Instruction")?,
+            opcode::CALLVAR => {
                 let arg_count = reader
-                    .parse_callvar(b)
-                    .ctx("parsing CallVariable Instruction")?;
+                    .decode_callvar(b)
+                    .ctx("decoding CallVariable Instruction")?;
                 Self::CallVariable { arg_count }
             }
-            opcodes::EXTENDED => reader
-                .parse_extended(b)
-                .ctx("parsing Extended Instruction")?,
+            opcode::EXTENDED => reader
+                .decode_extended(b)
+                .ctx("decoding Extended Instruction")?,
             _ => bail!("Invalid Instruction Opcode {opcode} (0x{opcode:02X})"),
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
         let mut opcode: u8 = self.opcode();
-        if builder.version() < GMVersion::Wad15 {
-            opcode = opcodes::new_to_old(opcode);
+        if writer.version() < GMVersion::Wad15 {
+            opcode = opcode::new_to_old(opcode);
         }
 
         match *self {
             Self::Negate { data_type }
             | Self::Not { data_type }
-            | Self::PopDiscard { data_type } => {
-                build_single_type(builder, opcode, data_type);
-            }
-
-            Self::Convert { from: type1, to: type2 }
-            | Self::Multiply { lhs: type2, rhs: type1 }
-            | Self::Divide { lhs: type2, rhs: type1 }
-            | Self::Remainder { lhs: type2, rhs: type1 }
-            | Self::Modulus { lhs: type2, rhs: type1 }
-            | Self::Add { lhs: type2, rhs: type1 }
-            | Self::Subtract { lhs: type2, rhs: type1 }
-            | Self::And { lhs: type2, rhs: type1 }
-            | Self::Or { lhs: type2, rhs: type1 }
-            | Self::Xor { lhs: type2, rhs: type1 }
-            | Self::ShiftLeft { lhs: type2, rhs: type1 }
-            | Self::ShiftRight { lhs: type2, rhs: type1 } => {
-                build_double_type(builder, opcode, type1, type2);
-            }
-
+            | Self::PopDiscard { data_type } => build_single_type(writer, opcode, data_type),
+            Self::Convert { from, to } => build_double_type(writer, opcode, from, to),
+            Self::Binary { op: _, lhs, rhs } => build_double_type(writer, opcode, rhs, lhs),
             Self::Compare { lhs, rhs, comparison_type } => {
-                build_comparison(builder, opcode, rhs, lhs, comparison_type);
+                build_comparison(writer, opcode, rhs, lhs, comparison_type);
             }
             Self::Pop { variable, type1, type2 } => {
-                build_pop(builder, opcode, variable, type1, type2)?;
+                build_pop(writer, opcode, variable, type1, type2)?;
             }
-            Self::PopSwap { is_array } => {
-                build_popswap(builder, opcode, is_array);
-            }
-            Self::Duplicate { data_type, size } => {
-                build_duplicate(builder, opcode, data_type, size);
+            Self::PopSwap { is_array } => build_popswap(writer, opcode, is_array),
+            Self::Duplicate { data_type, count } => {
+                build_duplicate(writer, opcode, data_type, count);
             }
             Self::DuplicateSwap { data_type, size1, size2 } => {
-                build_dupswap(builder, opcode, data_type, size1, size2);
+                build_dupswap(writer, opcode, data_type, size1, size2);
             }
-            Self::Return => {
-                build_single_type(builder, opcode, DataType::Variable);
-            }
-            Self::Exit => build_single_type(builder, opcode, DataType::Int32),
-
+            Self::Return => build_single_type(writer, opcode, DataType::Variable),
+            Self::Exit => build_single_type(writer, opcode, DataType::Int32),
             Self::Branch { jump_offset }
             | Self::BranchIf { jump_offset }
             | Self::BranchUnless { jump_offset }
             | Self::PushWithContext { jump_offset }
-            | Self::PopWithContext { jump_offset } => {
-                build_branch(builder, opcode, jump_offset);
-            }
-            Self::PopWithContextExit => build_popenv_exit(builder, opcode),
-            Self::Push { value } => build_push(builder, opcode, value)?,
+            | Self::PopWithContext { jump_offset } => build_branch(writer, opcode, jump_offset),
+            Self::PopWithContextExit => build_popenv_exit(writer, opcode),
+            Self::Push { value } => build_push(writer, opcode, value)?,
             Self::PushLocal { variable }
             | Self::PushGlobal { variable }
-            | Self::PushBuiltin { variable } => {
-                build_pushvar(builder, opcode, variable)?;
-            }
-            Self::PushImmediate { integer } => {
-                build_pushim(builder, opcode, integer);
-            }
-            Self::Call { function, arg_count } => {
-                build_call(builder, opcode, function, arg_count)?;
-            }
-            Self::CallVariable { arg_count } => {
-                build_callvar(builder, opcode, arg_count);
-            }
-            Self::CheckArrayIndex => {
-                build_extended16(builder, opcodes::extended::CHKINDEX);
-            }
-            Self::PushArrayFinal => {
-                build_extended16(builder, opcodes::extended::PUSHAF);
-            }
-            Self::PopArrayFinal => {
-                build_extended16(builder, opcodes::extended::POPAF);
-            }
-            Self::PushArrayContainer => {
-                build_extended16(builder, opcodes::extended::PUSHAC);
-            }
-            Self::SetArrayOwner => {
-                build_extended16(builder, opcodes::extended::SETOWNER);
-            }
-            Self::HasStaticInitialized => {
-                build_extended16(builder, opcodes::extended::ISSTATICOK);
-            }
-            Self::SetStaticInitialized => {
-                build_extended16(builder, opcodes::extended::SETSTATIC);
-            }
-            Self::SaveArrayReference => {
-                build_extended16(builder, opcodes::extended::SAVEAREF);
-            }
-            Self::RestoreArrayReference => {
-                build_extended16(builder, opcodes::extended::RESTOREAREF);
-            }
-            Self::IsNullishValue => {
-                build_extended16(builder, opcodes::extended::ISNULLISH);
-            }
-            Self::PushReference { asset_reference } => {
-                build_pushref(builder, asset_reference)?;
-            }
+            | Self::PushBuiltin { variable } => build_pushvar(writer, opcode, variable)?,
+            Self::PushImmediate { integer } => build_pushim(writer, opcode, integer),
+            Self::Call { function, arg_count } => build_call(writer, opcode, function, arg_count)?,
+            Self::CallVariable { arg_count } => build_callvar(writer, opcode, arg_count),
+            Self::CheckArrayIndex => build_extended16(writer, opcode::extended::CHKINDEX),
+            Self::PushArrayFinal => build_extended16(writer, opcode::extended::PUSHAF),
+            Self::PopArrayFinal => build_extended16(writer, opcode::extended::POPAF),
+            Self::PushArrayContainer => build_extended16(writer, opcode::extended::PUSHAC),
+            Self::SetArrayOwner => build_extended16(writer, opcode::extended::SETOWNER),
+            Self::HasStaticInitialized => build_extended16(writer, opcode::extended::ISSTATICOK),
+            Self::SetStaticInitialized => build_extended16(writer, opcode::extended::SETSTATIC),
+            Self::SaveArrayReference => build_extended16(writer, opcode::extended::SAVEAREF),
+            Self::RestoreArrayReference => build_extended16(writer, opcode::extended::RESTOREAREF),
+            Self::IsNullishValue => build_extended16(writer, opcode::extended::ISNULLISH),
+            Self::PushReference { asset_reference } => build_pushref(writer, asset_reference)?,
         }
         Ok(())
     }
@@ -550,23 +430,30 @@ impl DataReader<'_> {
         self.assert_int(b[2] >> 4, 0, "Instruction data type 2 (in byte #2)")
     }
 
-    fn parse_single_type(&self, b: [u8; 3]) -> Result<DataType> {
-        self.assert_zero_b0(b)?;
-        self.assert_zero_b1(b)?;
-        let data_type = get_type1(b)?;
-        self.assert_zero_type2(b)?;
+    fn decode_single_type(&self, b: [u8; 3]) -> Result<DataType> {
+        const CTX: &str = "decoding single type instruction";
+        self.assert_zero_b0(b).ctx(CTX)?;
+        self.assert_zero_b1(b).ctx(CTX)?;
+        let data_type = get_type1(b).ctx(CTX)?;
+        self.assert_zero_type2(b).ctx(CTX)?;
         Ok(data_type)
     }
 
-    fn parse_double_type(&self, b: [u8; 3]) -> Result<[DataType; 2]> {
-        self.assert_zero_b0(b)?;
-        self.assert_zero_b1(b)?;
-        let right = get_type1(b)?;
-        let left = get_type2(b)?;
+    fn decode_double_type(&self, b: [u8; 3]) -> Result<[DataType; 2]> {
+        const CTX: &str = "decoding double type instruction";
+        self.assert_zero_b0(b).ctx(CTX)?;
+        self.assert_zero_b1(b).ctx(CTX)?;
+        let right = get_type1(b).ctx(CTX)?;
+        let left = get_type2(b).ctx(CTX)?;
         Ok([right, left])
     }
 
-    fn parse_comparison(&self, b: [u8; 3]) -> Result<Instruction> {
+    fn decode_binary(&self, b: [u8; 3], op: BinaryOp) -> Result<Instruction> {
+        let types = self.decode_double_type(b)?;
+        Ok(Instruction::Binary { op, lhs: types[1], rhs: types[0] })
+    }
+
+    fn decode_comparison(&self, b: [u8; 3]) -> Result<Instruction> {
         self.assert_zero_b0(b)?;
         let comparison_type = ComparisonType::from_u8(b[1])?;
         let rhs = get_type1(b)?;
@@ -574,7 +461,7 @@ impl DataReader<'_> {
         Ok(Instruction::Compare { lhs, rhs, comparison_type })
     }
 
-    fn parse_pop(&mut self, b: [u8; 3]) -> Result<Instruction> {
+    fn decode_pop(&mut self, b: [u8; 3]) -> Result<Instruction> {
         let raw_instance_type = get_u16(b) as i16;
         let type1: DataType = get_type1(b)?;
         let type2: DataType = get_type2(b)?;
@@ -598,22 +485,22 @@ impl DataReader<'_> {
         Ok(Instruction::Pop { variable, type1, type2 })
     }
 
-    fn parse_duplicate(&self, b: [u8; 3]) -> Result<Instruction> {
-        let size: u8 = b[0];
+    fn decode_duplicate(&self, b: [u8; 3]) -> Result<Instruction> {
+        let count: u8 = b[0];
         let mut size2: u8 = b[1];
         let data_type = get_type1(b)?;
         self.assert_zero_type2(b)?;
 
         if size2 == 0 {
-            return Ok(Instruction::Duplicate { data_type, size });
+            return Ok(Instruction::Duplicate { data_type, count });
         }
 
         // Duplicate Swap Instruction
         size2 = (size2 & 0x7F) >> 3;
-        Ok(Instruction::DuplicateSwap { data_type, size1: size, size2 })
+        Ok(Instruction::DuplicateSwap { data_type, size1: count, size2 })
     }
 
-    fn parse_branch(&self, b: [u8; 3]) -> i32 {
+    fn decode_branch(&self, b: [u8; 3]) -> i32 {
         let mut value: u32 = get_u24(b);
         if self.version >= GMVersion::Wad15 && (value & 0x40_0000) != 0 {
             value |= 0x80_0000;
@@ -625,7 +512,7 @@ impl DataReader<'_> {
         }
     }
 
-    fn parse_push(&mut self, b: [u8; 3]) -> Result<PushValue> {
+    fn decode_push(&mut self, b: [u8; 3]) -> Result<PushValue> {
         let int16 = get_u16(b) as i16;
         let data_type = get_type1(b)?;
         self.assert_zero_type2(b)?;
@@ -654,6 +541,7 @@ impl DataReader<'_> {
             DataType::Double => self.read_f64().map(PushValue::Double),
             DataType::Bool => self.read_bool32().map(PushValue::Bool),
             DataType::String => {
+                // yes, strings in Push instructions are encoded as ID instead of pointer for some reason
                 let string: GMRef<String> = self.read_resource_by_id()?;
                 Ok(PushValue::String(string))
             }
@@ -661,7 +549,7 @@ impl DataReader<'_> {
         }
     }
 
-    fn parse_push_var(&mut self, b: [u8; 3]) -> Result<CodeVariable> {
+    fn decode_push_var(&mut self, b: [u8; 3]) -> Result<CodeVariable> {
         let raw_instance_type = get_u16(b) as i16;
         let data_type: DataType = get_type1(b)?;
         self.assert_zero_type2(b)?;
@@ -669,7 +557,7 @@ impl DataReader<'_> {
         read_variable(self, raw_instance_type)
     }
 
-    fn parse_pushim(&self, b: [u8; 3]) -> Result<i16> {
+    fn decode_pushim(&self, b: [u8; 3]) -> Result<i16> {
         let integer = get_u16(b) as i16;
         let data_type = get_type1(b)?;
         self.assert_zero_type2(b)?;
@@ -677,29 +565,24 @@ impl DataReader<'_> {
         Ok(integer)
     }
 
-    fn parse_call(&mut self, b: [u8; 3]) -> Result<Instruction> {
-        let argument_count: u16 = get_u16(b);
+    fn decode_call(&mut self, b: [u8; 3]) -> Result<Instruction> {
+        let arg_count: u16 = get_u16(b);
         let data_type: DataType = get_type1(b)?;
         self.assert_zero_type2(b)?;
         self.assert_type(DataType::Int32, data_type)?;
-
-        let function: GMRef<Function> = *self
-            .function_occurrences
-            .get(&(self.cur_pos))
-            .ok_or_else(|| {
-                format!(
-                    "Could not find any function with absolute occurrence position {} in map with \
-                     length {} while parsing Call Instruction",
-                    self.cur_pos,
-                    self.function_occurrences.len(),
-                )
-            })?;
+        let Some(&function) = self.function_occurrences.get(&self.cur_pos) else {
+            bail!(
+                "Could not find any function with absolute occurrence position {} in map with \
+                 length {} while decoding Call Instruction",
+                self.cur_pos,
+                self.function_occurrences.len(),
+            )
+        };
         self.cur_pos += 4; // Skip next occurrence offset
-
-        Ok(Instruction::Call { function, arg_count: argument_count })
+        Ok(Instruction::Call { function, arg_count })
     }
 
-    fn parse_callvar(&self, b: [u8; 3]) -> Result<u16> {
+    fn decode_callvar(&self, b: [u8; 3]) -> Result<u16> {
         let argument_count: u16 = get_u16(b);
         let data_type: DataType = get_type1(b)?;
         self.assert_zero_type2(b)?;
@@ -707,11 +590,11 @@ impl DataReader<'_> {
         Ok(argument_count)
     }
 
-    fn parse_extended(&mut self, b: [u8; 3]) -> Result<Instruction> {
+    fn decode_extended(&mut self, b: [u8; 3]) -> Result<Instruction> {
         use DataType::Int16;
         use DataType::Int32;
         #[allow(clippy::wildcard_imports)]
-        use opcodes::extended::*;
+        use opcode::extended::*;
 
         let kind = get_u16(b) as i16;
         let data_type = DataType::from_u8(b[2] & 0xF)?;
@@ -730,7 +613,7 @@ impl DataReader<'_> {
             (Int16, ISNULLISH) => Instruction::IsNullishValue,
             (Int32, PUSHREF) => {
                 let asset_reference = AssetReference::deserialize(self)
-                    .ctx("parsing PushReference Extended Instruction")?;
+                    .ctx("decoding PushReference Extended Instruction")?;
                 Instruction::PushReference { asset_reference }
             }
             _ => bail!("Invalid Extended Instruction with data type {data_type:?} and kind {kind}"),
@@ -740,183 +623,173 @@ impl DataReader<'_> {
     }
 }
 
-fn build_single_type(builder: &mut DataBuilder, opcode: u8, data_type: DataType) {
-    builder.write_u16(0);
-    builder.write_u8(data_type.as_u8());
-    builder.write_u8(opcode);
+fn build_single_type(writer: &mut DataWriter, opcode: u8, data_type: DataType) {
+    writer.write_u16(0);
+    writer.write_u8(data_type.as_u8());
+    writer.write_u8(opcode);
 }
 
-fn build_double_type(builder: &mut DataBuilder, opcode: u8, type1: DataType, type2: DataType) {
-    builder.write_u16(0);
-    builder.write_u8(type1.as_u8() | type2.as_u8() << 4);
-    builder.write_u8(opcode);
+fn build_double_type(writer: &mut DataWriter, opcode: u8, type1: DataType, type2: DataType) {
+    writer.write_u16(0);
+    writer.write_u8(type1.as_u8() | type2.as_u8() << 4);
+    writer.write_u8(opcode);
 }
 
 fn build_comparison(
-    builder: &mut DataBuilder,
+    writer: &mut DataWriter,
     mut opcode: u8,
     type1: DataType,
     type2: DataType,
     comparison_type: ComparisonType,
 ) {
     let mut comparison_type = comparison_type.as_u8();
-    if builder.version() < GMVersion::Wad15 {
+    if writer.version() < GMVersion::Wad15 {
         opcode = 0x10 + comparison_type;
         comparison_type = 0;
     }
-    builder.write_u8(0);
-    builder.write_u8(comparison_type);
-    builder.write_u8(type1.as_u8() | type2.as_u8() << 4);
-    builder.write_u8(opcode);
+    writer.write_u8(0);
+    writer.write_u8(comparison_type);
+    writer.write_u8(type1.as_u8() | type2.as_u8() << 4);
+    writer.write_u8(opcode);
 }
 
 fn build_pop(
-    builder: &mut DataBuilder,
+    writer: &mut DataWriter,
     opcode: u8,
     variable: CodeVariable,
     type1: DataType,
     type2: DataType,
 ) -> Result<()> {
-    let instr_pos: u32 = builder.pos();
-    builder.write_i16(build_instance_type(variable));
-    builder.write_u8(type1.as_u8() | type2.as_u8() << 4);
-    builder.write_u8(opcode);
-    write_variable_occurrence(
-        builder,
-        variable.variable,
-        instr_pos,
-        variable.variable_type,
-    )?;
+    let instr_pos: u32 = writer.pos();
+    writer.write_i16(build_instance_type(variable));
+    writer.write_u8(type1.as_u8() | type2.as_u8() << 4);
+    writer.write_u8(opcode);
+    write_variable_occurrence(writer, variable.variable, instr_pos, variable.variable_type)?;
     Ok(())
 }
 
-fn build_popswap(builder: &mut DataBuilder, opcode: u8, array: bool) {
-    builder.write_i16(if array { 6 } else { 5 });
-    builder.write_u8(DataType::Int32.as_u8() | DataType::Variable.as_u8() << 4);
-    builder.write_u8(opcode);
+fn build_popswap(writer: &mut DataWriter, opcode: u8, array: bool) {
+    writer.write_i16(if array { 6 } else { 5 });
+    writer.write_u8(DataType::Int32.as_u8() | DataType::Variable.as_u8() << 4);
+    writer.write_u8(opcode);
 }
 
-fn build_duplicate(builder: &mut DataBuilder, opcode: u8, data_type: DataType, size: u8) {
-    builder.write_u8(size);
-    builder.write_u8(0);
-    builder.write_u8(data_type.as_u8());
-    builder.write_u8(opcode);
+fn build_duplicate(writer: &mut DataWriter, opcode: u8, data_type: DataType, size: u8) {
+    writer.write_u8(size);
+    writer.write_u8(0);
+    writer.write_u8(data_type.as_u8());
+    writer.write_u8(opcode);
 }
 
-fn build_dupswap(builder: &mut DataBuilder, opcode: u8, data_type: DataType, size1: u8, size2: u8) {
-    builder.write_u8(size1);
-    builder.write_u8((size2 << 3) | 0x80);
-    builder.write_u8(data_type.as_u8());
-    builder.write_u8(opcode);
+fn build_dupswap(writer: &mut DataWriter, opcode: u8, data_type: DataType, size1: u8, size2: u8) {
+    writer.write_u8(size1);
+    writer.write_u8((size2 << 3) | 0x80);
+    writer.write_u8(data_type.as_u8());
+    writer.write_u8(opcode);
 }
 
-fn build_branch(builder: &mut DataBuilder, opcode: u8, jump_offset: i32) {
+fn build_branch(writer: &mut DataWriter, opcode: u8, jump_offset: i32) {
     let mut value = (jump_offset as u32) & 0x00FF_FFFF;
-    if builder.version() >= GMVersion::Wad15 && (value & 0x80_0000) != 0 {
+    if writer.version() >= GMVersion::Wad15 && (value & 0x80_0000) != 0 {
         value &= !0x80_0000;
         value |= 0x40_0000;
     }
-    builder.write_u8((value & 0xFF) as u8);
-    builder.write_u8(((value >> 8) & 0xFF) as u8);
-    builder.write_u8(((value >> 16) & 0xFF) as u8);
-    builder.write_u8(opcode);
+    writer.write_u8((value & 0xFF) as u8);
+    writer.write_u8(((value >> 8) & 0xFF) as u8);
+    writer.write_u8(((value >> 16) & 0xFF) as u8);
+    writer.write_u8(opcode);
 }
 
-fn build_popenv_exit(builder: &mut DataBuilder, opcode: u8) {
-    builder.write_u8(0x00);
-    builder.write_u8(0x00);
-    builder.write_u8(0xF0);
-    builder.write_u8(opcode);
+fn build_popenv_exit(writer: &mut DataWriter, opcode: u8) {
+    writer.write_u8(0x00);
+    writer.write_u8(0x00);
+    writer.write_u8(0xF0);
+    writer.write_u8(opcode);
 }
 
-fn build_push(builder: &mut DataBuilder, opcode: u8, value: PushValue) -> Result<()> {
-    let instr_pos: u32 = builder.pos();
-    builder.write_i16(match value {
+fn build_push(writer: &mut DataWriter, opcode: u8, value: PushValue) -> Result<()> {
+    let instr_pos: u32 = writer.pos();
+    writer.write_i16(match value {
         PushValue::Int16(int16) => int16,
         PushValue::Variable(variable) => build_instance_type(variable),
         _ => 0,
     });
 
-    builder.write_u8(value.data_type().as_u8());
-    builder.write_u8(opcode);
+    writer.write_u8(value.data_type().as_u8());
+    writer.write_u8(opcode);
 
     match value {
         PushValue::Int16(_) => {} // Nothing because it was already written inside the instruction
-        PushValue::Int32(int32) => builder.write_i32(int32),
-        PushValue::Int64(int64) => builder.write_i64(int64),
-        PushValue::Double(double) => builder.write_f64(double),
-        PushValue::Bool(boolean) => builder.write_bool32(boolean),
+        PushValue::Int32(int32) => writer.write_i32(int32),
+        PushValue::Int64(int64) => writer.write_i64(int64),
+        PushValue::Double(double) => writer.write_f64(double),
+        PushValue::Bool(boolean) => writer.write_bool32(boolean),
         PushValue::String(string) => {
-            builder.write_resource_id(string);
+            writer.write_resource_id(string);
         }
         PushValue::Variable(code_variable) => {
             write_variable_occurrence(
-                builder,
+                writer,
                 code_variable.variable,
                 instr_pos,
                 code_variable.variable_type,
             )?;
         }
         PushValue::Function(func_ref) => {
-            write_function_occurrence(builder, func_ref, instr_pos)?;
+            write_function_occurrence(writer, func_ref, instr_pos)?;
         }
     }
     Ok(())
 }
 
-fn build_pushvar(builder: &mut DataBuilder, opcode: u8, variable: CodeVariable) -> Result<()> {
-    let instr_pos = builder.pos();
-    builder.write_i16(build_instance_type(variable));
-    builder.write_u8(DataType::Variable.as_u8());
-    builder.write_u8(opcode);
+fn build_pushvar(writer: &mut DataWriter, opcode: u8, variable: CodeVariable) -> Result<()> {
+    let instr_pos = writer.pos();
+    writer.write_i16(build_instance_type(variable));
+    writer.write_u8(DataType::Variable.as_u8());
+    writer.write_u8(opcode);
 
-    write_variable_occurrence(
-        builder,
-        variable.variable,
-        instr_pos,
-        variable.variable_type,
-    )?;
+    write_variable_occurrence(writer, variable.variable, instr_pos, variable.variable_type)?;
     Ok(())
 }
 
-fn build_pushim(builder: &mut DataBuilder, opcode: u8, integer: i16) {
-    builder.write_i16(integer);
-    builder.write_u8(DataType::Int16.as_u8());
-    builder.write_u8(opcode);
+fn build_pushim(writer: &mut DataWriter, opcode: u8, integer: i16) {
+    writer.write_i16(integer);
+    writer.write_u8(DataType::Int16.as_u8());
+    writer.write_u8(opcode);
 }
 
 fn build_call(
-    builder: &mut DataBuilder,
+    writer: &mut DataWriter,
     opcode: u8,
     function: GMRef<Function>,
     argument_count: u16,
 ) -> Result<()> {
-    let instr_pos: u32 = builder.pos();
-    builder.write_u16(argument_count);
-    builder.write_u8(DataType::Int32.as_u8());
-    builder.write_u8(opcode);
+    let instr_pos: u32 = writer.pos();
+    writer.write_u16(argument_count);
+    writer.write_u8(DataType::Int32.as_u8());
+    writer.write_u8(opcode);
 
-    write_function_occurrence(builder, function, instr_pos)?;
+    write_function_occurrence(writer, function, instr_pos)?;
     Ok(())
 }
 
-fn build_callvar(builder: &mut DataBuilder, opcode: u8, argument_count: u16) {
-    builder.write_u16(argument_count);
-    builder.write_u8(DataType::Variable.as_u8());
-    builder.write_u8(opcode);
+fn build_callvar(writer: &mut DataWriter, opcode: u8, argument_count: u16) {
+    writer.write_u16(argument_count);
+    writer.write_u8(DataType::Variable.as_u8());
+    writer.write_u8(opcode);
 }
 
-fn build_extended16(builder: &mut DataBuilder, extended_kind: i16) {
-    builder.write_i16(extended_kind);
-    builder.write_u8(DataType::Int16.as_u8());
-    builder.write_u8(opcodes::EXTENDED);
+fn build_extended16(writer: &mut DataWriter, extended_kind: i16) {
+    writer.write_i16(extended_kind);
+    writer.write_u8(DataType::Int16.as_u8());
+    writer.write_u8(opcode::EXTENDED);
 }
 
-fn build_pushref(builder: &mut DataBuilder, asset_reference: AssetReference) -> Result<()> {
-    builder.write_i16(opcodes::extended::PUSHREF);
-    builder.write_u8(DataType::Int32.as_u8());
-    builder.write_u8(opcodes::EXTENDED);
-    asset_reference.serialize(builder)
+fn build_pushref(writer: &mut DataWriter, asset_reference: AssetReference) -> Result<()> {
+    writer.write_i16(opcode::extended::PUSHREF);
+    writer.write_u8(DataType::Int32.as_u8());
+    writer.write_u8(opcode::EXTENDED);
+    writer.write_elem(&asset_reference)
 }
 
 impl GMElement for AssetReference {
@@ -928,25 +801,25 @@ impl GMElement for AssetReference {
 
         let raw = reader.read_u32()?;
         if reader.version >= GMVersion::GM2024_4 {
-            Self::parse(raw)
+            Self::decode(raw)
         } else {
-            Self::parse_old(raw)
+            Self::decode_old(raw)
         }
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
         if let Self::Function(func_ref) = *self {
-            write_function_occurrence(builder, func_ref, builder.pos())?;
+            write_function_occurrence(writer, func_ref, writer.pos())?;
             return Ok(());
         }
 
-        let raw = if builder.version() >= GMVersion::GM2024_4 {
-            self.build()
+        let raw = if writer.version() >= GMVersion::GM2024_4 {
+            self.encode()
         } else {
-            self.build_old()
+            self.encode_old()
         };
 
-        builder.write_u32(raw);
+        writer.write_u32(raw);
         Ok(())
     }
 }
@@ -964,11 +837,11 @@ fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<Code
 
     let variable_type = (raw_value >> 24) & 0xF8;
     let variable_type =
-        VariableType::from_u8(variable_type as u8).ctx("parsing variable reference chain")?;
+        VariableType::from_u8(variable_type as u8).ctx("decoding variable reference chain")?;
 
     let instance_type: InstanceType =
         if matches!(variable_type, VariableType::Normal | VariableType::Instance) {
-            InstanceType::from_i16(raw_instance_type, variable_type)?
+            InstanceType::decode(raw_instance_type, variable_type)?
         } else {
             vari_instance_type
         };
@@ -987,7 +860,7 @@ const fn build_instance_type(code_variable: CodeVariable) -> i16 {
         code_variable.variable_type,
         VariableType::Normal | VariableType::Instance
     ) {
-        code_variable.instance_type.build()
+        code_variable.instance_type.encode()
     } else {
         // if special access, make it "undefined"
         0
@@ -995,17 +868,17 @@ const fn build_instance_type(code_variable: CodeVariable) -> i16 {
 }
 
 fn write_variable_occurrence(
-    builder: &mut DataBuilder,
+    writer: &mut DataWriter,
     variable_ref: GMRef<Variable>,
     occurrence_pos: u32,
     variable_type: VariableType,
 ) -> Result<()> {
-    let len: usize = builder.variable_occurrences.len();
+    let len: usize = writer.variable_occurrences.len();
 
-    let var = builder.gm_data.variables.by_ref(variable_ref)?;
+    let var = writer.gm_data.variables.by_ref(variable_ref)?;
     let gm_index = variable_ref.index as u32;
 
-    let occurrences: &mut Vec<(u32, VariableType)> = builder
+    let occurrences: &mut Vec<(u32, VariableType)> = writer
         .variable_occurrences
         .get_mut(gm_index as usize)
         .ok_or_else(|| {
@@ -1017,15 +890,15 @@ fn write_variable_occurrence(
         let occurrence_offset: u32 = occurrence_pos - last_occurrence_pos;
         let old_var_type = old_variable_type.as_u8() as u32 & 0xF8;
         let value: u32 = occurrence_offset & 0x07FF_FFFF | old_var_type << 24;
-        builder.overwrite_u32(value, last_occurrence_pos + 4)?;
+        writer.overwrite_u32(value, last_occurrence_pos + 4)?;
     }
 
     // Write the Name String ID (yes, the index, not the position) together with this the reference type.
     let name_string_id = var.name.index as u32 & 0x07FF_FFFF;
-    builder.write_u32(name_string_id | u32::from(variable_type.as_u8() & 0xF8) << 24);
+    writer.write_u32(name_string_id | u32::from(variable_type.as_u8() & 0xF8) << 24);
 
     // Fuckass borrow checker
-    builder
+    writer
         .variable_occurrences
         .get_mut(gm_index as usize)
         .unwrap()
@@ -1034,16 +907,16 @@ fn write_variable_occurrence(
 }
 
 fn write_function_occurrence(
-    builder: &mut DataBuilder,
+    writer: &mut DataWriter,
     func_ref: GMRef<Function>,
     occurrence_pos: u32,
 ) -> Result<()> {
-    let len: usize = builder.function_occurrences.len();
+    let len: usize = writer.function_occurrences.len();
 
-    let func = builder.gm_data.functions.by_ref(func_ref)?;
+    let func = writer.gm_data.functions.by_ref(func_ref)?;
     let gm_index = func_ref.index as u32;
 
-    let occurrences: &mut Vec<u32> = builder
+    let occurrences: &mut Vec<u32> = writer
         .function_occurrences
         .get_mut(gm_index as usize)
         .ok_or_else(|| {
@@ -1053,14 +926,14 @@ fn write_function_occurrence(
     if let Some(&last_occurrence_pos) = occurrences.last() {
         // Replace last occurrence with next occurrence offset
         let occurrence_offset: u32 = occurrence_pos - last_occurrence_pos;
-        builder.overwrite_u32(occurrence_offset & 0x07FF_FFFF, last_occurrence_pos + 4)?;
+        writer.overwrite_u32(occurrence_offset & 0x07FF_FFFF, last_occurrence_pos + 4)?;
     }
 
     // Write the Name String ID (yes, the index, not the position).
     let name_string_id = func.name.index as u32 & 0x07FF_FFFF;
-    builder.write_u32(name_string_id);
+    writer.write_u32(name_string_id);
 
-    builder
+    writer
         .function_occurrences
         .get_mut(gm_index as usize)
         .unwrap()

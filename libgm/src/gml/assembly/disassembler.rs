@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::gml::Code;
 use crate::gml::instruction::AssetReference;
+use crate::gml::instruction::BinaryOp;
 use crate::gml::instruction::CodeVariable;
 use crate::gml::instruction::ComparisonType;
 use crate::gml::instruction::DataType;
@@ -118,7 +119,7 @@ pub fn disassemble_instruction_to_buffer(
     instruction: &Instruction,
     gm_data: &GMData,
 ) -> Result<()> {
-    let mnemonic: &str = instruction.mnemonic();
+    let mnemonic: &str = get_mnemonic(instruction);
 
     match *instruction {
         Instruction::Exit
@@ -148,8 +149,8 @@ pub fn disassemble_instruction_to_buffer(
             write!(buffer, "{mnemonic} {arg_count}");
         }
 
-        Instruction::Duplicate { data_type, size } => {
-            write!(buffer, "{}.{} {}", mnemonic, data_type.as_char(), size);
+        Instruction::Duplicate { data_type, count } => {
+            write!(buffer, "{}.{} {}", mnemonic, data_type.as_char(), count);
         }
 
         Instruction::DuplicateSwap { data_type, size1, size2 } => {
@@ -171,25 +172,12 @@ pub fn disassemble_instruction_to_buffer(
             write!(buffer, "{mnemonic} {jump_offset}");
         }
 
-        Instruction::Convert { from: type1, to: type2 }
-        | Instruction::Multiply { lhs: type2, rhs: type1 }
-        | Instruction::Divide { lhs: type2, rhs: type1 }
-        | Instruction::Remainder { lhs: type2, rhs: type1 }
-        | Instruction::Modulus { lhs: type2, rhs: type1 }
-        | Instruction::Add { lhs: type2, rhs: type1 }
-        | Instruction::Subtract { lhs: type2, rhs: type1 }
-        | Instruction::And { lhs: type2, rhs: type1 }
-        | Instruction::Or { lhs: type2, rhs: type1 }
-        | Instruction::Xor { lhs: type2, rhs: type1 }
-        | Instruction::ShiftLeft { lhs: type2, rhs: type1 }
-        | Instruction::ShiftRight { lhs: type2, rhs: type1 } => {
-            write!(
-                buffer,
-                "{}.{}.{}",
-                mnemonic,
-                type1.as_char(),
-                type2.as_char()
-            );
+        Instruction::Convert { from, to } => {
+            write!(buffer, "{}.{}.{}", mnemonic, from.as_char(), to.as_char());
+        }
+
+        Instruction::Binary { op: _, lhs, rhs } => {
+            write!(buffer, "{}.{}.{}", mnemonic, lhs.as_char(), rhs.as_char());
         }
 
         Instruction::Compare { lhs, rhs, comparison_type } => {
@@ -248,58 +236,61 @@ pub fn disassemble_instruction_to_buffer(
     Ok(())
 }
 
-impl Instruction {
-    #[must_use]
-    const fn mnemonic(&self) -> &'static str {
-        match self {
-            Self::Convert { .. } => "conv",
-            Self::Multiply { .. } => "mul",
-            Self::Divide { .. } => "div",
-            Self::Remainder { .. } => "rem",
-            Self::Modulus { .. } => "mod",
-            Self::Add { .. } => "add",
-            Self::Subtract { .. } => "sub",
-            Self::And { .. } => "and",
-            Self::Or { .. } => "or",
-            Self::Xor { .. } => "xor",
-            Self::Negate { .. } => "neg",
-            Self::Not { .. } => "not",
-            Self::ShiftLeft { .. } => "shl",
-            Self::ShiftRight { .. } => "shr",
-            Self::Compare { .. } => "cmp",
-            Self::Pop { .. } => "pop",
-            Self::PopSwap { is_array: false } => "popswap",
-            Self::PopSwap { is_array: true } => "popswaparr",
-            Self::Duplicate { .. } => "dup",
-            Self::DuplicateSwap { .. } => "dupswap",
-            Self::Return => "ret",
-            Self::Exit => "exit",
-            Self::PopDiscard { .. } => "popz",
-            Self::Branch { .. } => "br",
-            Self::BranchIf { .. } => "bt",
-            Self::BranchUnless { .. } => "bf",
-            Self::PushWithContext { .. } => "pushenv",
-            Self::PopWithContext { .. } => "popenv",
-            Self::PopWithContextExit => "popenvexit",
-            Self::Push { .. } => "push",
-            Self::PushLocal { .. } => "pushloc",
-            Self::PushGlobal { .. } => "pushglb",
-            Self::PushBuiltin { .. } => "pushbltn",
-            Self::PushImmediate { .. } => "pushim",
-            Self::Call { .. } => "call",
-            Self::CallVariable { .. } => "callvar",
-            Self::CheckArrayIndex => "chkindex",
-            Self::PushArrayFinal => "pushaf",
-            Self::PopArrayFinal => "popaf",
-            Self::PushArrayContainer => "pushac",
-            Self::SetArrayOwner => "setowner",
-            Self::HasStaticInitialized => "isstaticok",
-            Self::SetStaticInitialized => "setstatic",
-            Self::SaveArrayReference => "savearef",
-            Self::RestoreArrayReference => "restorearef",
-            Self::IsNullishValue => "isnullish",
-            Self::PushReference { .. } => "pushref",
-        }
+const fn get_mnemonic(instruction: &Instruction) -> &'static str {
+    match *instruction {
+        Instruction::Binary { op, .. } => get_mnemonic_binary(op),
+        Instruction::Negate { .. } => "neg",
+        Instruction::Not { .. } => "not",
+        Instruction::Convert { .. } => "conv",
+        Instruction::Compare { .. } => "cmp",
+        Instruction::Pop { .. } => "pop",
+        Instruction::PopSwap { is_array: false } => "popswap",
+        Instruction::PopSwap { is_array: true } => "popswaparr",
+        Instruction::Duplicate { .. } => "dup",
+        Instruction::DuplicateSwap { .. } => "dupswap",
+        Instruction::Return => "ret",
+        Instruction::Exit => "exit",
+        Instruction::PopDiscard { .. } => "popz",
+        Instruction::Branch { .. } => "br",
+        Instruction::BranchIf { .. } => "bt",
+        Instruction::BranchUnless { .. } => "bf",
+        Instruction::PushWithContext { .. } => "pushenv",
+        Instruction::PopWithContext { .. } => "popenv",
+        Instruction::PopWithContextExit => "popenvx",
+        Instruction::Push { .. } => "push",
+        Instruction::PushLocal { .. } => "pushloc",
+        Instruction::PushGlobal { .. } => "pushglb",
+        Instruction::PushBuiltin { .. } => "pushbltn",
+        Instruction::PushImmediate { .. } => "pushim",
+        Instruction::Call { .. } => "call",
+        Instruction::CallVariable { .. } => "callvar",
+        Instruction::CheckArrayIndex => "chkindex",
+        Instruction::PushArrayFinal => "pushaf",
+        Instruction::PopArrayFinal => "popaf",
+        Instruction::PushArrayContainer => "pushac",
+        Instruction::SetArrayOwner => "setowner",
+        Instruction::HasStaticInitialized => "isstaticok",
+        Instruction::SetStaticInitialized => "setstatic",
+        Instruction::SaveArrayReference => "savearef",
+        Instruction::RestoreArrayReference => "restorearef",
+        Instruction::IsNullishValue => "isnullish",
+        Instruction::PushReference { .. } => "pushref",
+    }
+}
+
+const fn get_mnemonic_binary(binary_op: BinaryOp) -> &'static str {
+    match binary_op {
+        BinaryOp::Add => "add",
+        BinaryOp::Subtract => "sub",
+        BinaryOp::Multiply => "mul",
+        BinaryOp::Divide => "div",
+        BinaryOp::Remainder => "rem",
+        BinaryOp::Modulus => "mod",
+        BinaryOp::And => "and",
+        BinaryOp::Or => "or",
+        BinaryOp::Xor => "xor",
+        BinaryOp::ShiftLeft => "shl",
+        BinaryOp::ShiftRight => "shr",
     }
 }
 
@@ -536,7 +527,7 @@ fn write_instance_type(
         InstanceType::Local => write!(buffer, "local<{}>", variable_ref.index),
         InstanceType::Other => write!(buffer, "other"),
         InstanceType::All => write!(buffer, "all"),
-        InstanceType::None => write!(buffer, "none"),
+        InstanceType::NoOne => write!(buffer, "noone"),
         InstanceType::Global => write!(buffer, "global"),
         InstanceType::Builtin => write!(buffer, "builtin"),
         InstanceType::StackTop => write!(buffer, "stacktop"),

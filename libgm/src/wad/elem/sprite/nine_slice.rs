@@ -3,9 +3,9 @@
 use crate::gm_enum::GMEnum;
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NineSlice {
@@ -40,14 +40,14 @@ impl GMElement for NineSlice {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(self.left);
-        builder.write_i32(self.top);
-        builder.write_i32(self.right);
-        builder.write_i32(self.bottom);
-        builder.write_bool32(self.enabled);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i32(self.left);
+        writer.write_i32(self.top);
+        writer.write_i32(self.right);
+        writer.write_i32(self.bottom);
+        writer.write_bool32(self.enabled);
         for tile_mode in &self.tile_modes {
-            builder.write_i32(tile_mode.as_i32());
+            writer.write_i32(tile_mode.as_i32());
         }
         Ok(())
     }

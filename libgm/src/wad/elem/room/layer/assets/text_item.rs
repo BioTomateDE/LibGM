@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::font::Font;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 #[derive(Debug, Clone, PartialEq)]
 pub struct TextItemInstance {
     pub name: GMRef<String>,
@@ -67,24 +67,24 @@ impl GMElement for TextItemInstance {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_i32(self.x);
-        builder.write_i32(self.y);
-        builder.write_resource_id(self.font);
-        builder.write_f32(self.scale_x);
-        builder.write_f32(self.scale_y);
-        builder.write_f32(self.rotation);
-        builder.write_u32(self.color);
-        builder.write_f32(self.origin_x);
-        builder.write_f32(self.origin_y);
-        builder.write_gm_string(self.text)?;
-        builder.write_i32(self.alignment);
-        builder.write_f32(self.character_spacing);
-        builder.write_f32(self.line_spacing);
-        builder.write_f32(self.frame_width);
-        builder.write_f32(self.frame_height);
-        builder.write_bool32(self.wrap);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_i32(self.x);
+        writer.write_i32(self.y);
+        writer.write_resource_id(self.font);
+        writer.write_f32(self.scale_x);
+        writer.write_f32(self.scale_y);
+        writer.write_f32(self.rotation);
+        writer.write_u32(self.color);
+        writer.write_f32(self.origin_x);
+        writer.write_f32(self.origin_y);
+        writer.write_gm_string(self.text)?;
+        writer.write_i32(self.alignment);
+        writer.write_f32(self.character_spacing);
+        writer.write_f32(self.line_spacing);
+        writer.write_f32(self.frame_width);
+        writer.write_f32(self.frame_height);
+        writer.write_bool32(self.wrap);
         Ok(())
     }
 }

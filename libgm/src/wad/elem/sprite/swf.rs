@@ -15,9 +15,9 @@ pub use item::Item;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::Blob;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Data {
@@ -78,22 +78,22 @@ impl GMElement for Timeline {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_simple_list(&self.used_items)?;
-        builder.write_i32(self.framerate);
-        builder.write_usize(self.frames.len())?;
-        builder.write_f32(self.min_x);
-        builder.write_f32(self.max_x);
-        builder.write_f32(self.min_y);
-        builder.write_f32(self.max_y);
-        builder.write_usize(self.collision_masks.len())?;
-        builder.write_i32(self.mask_width);
-        builder.write_i32(self.mask_height);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_simple_list(&self.used_items)?;
+        writer.write_i32(self.framerate);
+        writer.write_usize(self.frames.len())?;
+        writer.write_f32(self.min_x);
+        writer.write_f32(self.max_x);
+        writer.write_f32(self.min_y);
+        writer.write_f32(self.max_y);
+        writer.write_usize(self.collision_masks.len())?;
+        writer.write_i32(self.mask_width);
+        writer.write_i32(self.mask_height);
         for frame in &self.frames {
-            frame.serialize(builder)?;
+            writer.write_elem(frame)?;
         }
         for mask in &self.collision_masks {
-            mask.serialize(builder)?;
+            writer.write_elem(mask)?;
         }
         Ok(())
     }
@@ -115,9 +115,9 @@ impl GMElement for Matrix33 {
         Ok(Self { values })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
         for item in &self.values {
-            builder.write_f32(*item);
+            writer.write_f32(*item);
         }
         Ok(())
     }
@@ -146,12 +146,12 @@ impl GMElement for ColorMatrix {
         Ok(Self { additive, multiply })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
         for item in &self.additive {
-            builder.write_i32(*item);
+            writer.write_i32(*item);
         }
         for item in &self.multiply {
-            builder.write_i32(*item);
+            writer.write_i32(*item);
         }
         Ok(())
     }

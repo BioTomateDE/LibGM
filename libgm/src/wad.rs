@@ -5,11 +5,11 @@ mod memory;
 mod reference;
 mod version_detection;
 
-pub mod build;
 pub mod chunk;
 pub mod data;
 pub mod elem;
-pub mod parse;
+pub mod load;
+pub mod save;
 pub mod version;
 
 use std::any::type_name;
@@ -17,13 +17,34 @@ use std::fmt;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
-pub use self::build::build_bytes;
-pub use self::build::build_file;
 pub use self::data::GMData;
-pub use self::parse::parse_bytes;
-pub use self::parse::parse_file;
+pub use self::load::load_bytes;
+pub use self::load::load_file;
 pub use self::reference::GMRef;
+pub use self::save::save_bytes;
+pub use self::save::save_file;
 pub use self::version::GMVersion;
+
+// use-aliases don't show deprecated warnings for some reason
+#[deprecated(since = "0.8.0", note = "renamed to load_bytes")]
+pub fn parse_bytes(raw_data: impl AsRef<[u8]>) -> crate::Result<GMData> {
+    load_bytes(raw_data)
+}
+
+#[deprecated(since = "0.8.0", note = "renamed to load_file")]
+pub fn parse_file(data_file_path: impl AsRef<std::path::Path>) -> crate::Result<GMData> {
+    load_file(data_file_path)
+}
+
+#[deprecated(since = "0.8.0", note = "renamed to save_bytes")]
+pub fn build_bytes(gm_data: &GMData) -> crate::Result<Vec<u8>> {
+    save_bytes(gm_data)
+}
+
+#[deprecated(since = "0.8.0", note = "renamed to save_bytes")]
+pub fn build_file(gm_data: &GMData, path: impl AsRef<std::path::Path>) -> crate::Result<()> {
+    save_file(gm_data, path)
+}
 
 /// A wrapper struct that holds a vector or array.
 ///

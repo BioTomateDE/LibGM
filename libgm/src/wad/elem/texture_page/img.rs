@@ -10,9 +10,10 @@ pub use bz2::BZip2QoiHeader;
 use image::DynamicImage;
 
 use crate::prelude::*;
-use crate::wad::{Blob, GMVersion};
-use crate::wad::build::builder::DataBuilder;
+use crate::wad::Blob;
+use crate::wad::GMVersion;
 use crate::wad::elem::texture_page::BZ2_QOI_HEADER;
+use crate::wad::save::writer::DataWriter;
 
 /// An image format indicating how the underlying data of a [`GMImage`] is
 /// stored.
@@ -276,22 +277,22 @@ impl GMImage {
         }
     }
 
-    pub(super) fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+    pub(super) fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
         let is_qoi = matches!(self.0, Img::Qoi(_) | Img::Bz2Qoi(_, _));
-        let is_qoi_eligible = builder.version() >= GMVersion::GM2022_1;
+        let is_qoi_eligible = writer.version() >= GMVersion::GM2022_1;
         if is_qoi && !is_qoi_eligible {
             bail!("Cannot serialize QOI images before GM 2022.1");
         }
 
         match &self.0 {
             Img::Dyn(dyn_img) => {
-                write_dyn_img(dyn_img, builder).ctx("serializing DynamicImage")?;
+                write_dyn_img(dyn_img, writer).ctx("serializing DynamicImage")?;
             }
-            Img::Png(raw_png_data) => builder.write_bytes(raw_png_data),
-            Img::Qoi(raw_qoi_data) => builder.write_bytes(raw_qoi_data),
+            Img::Png(raw_png_data) => writer.write_bytes(raw_png_data),
+            Img::Qoi(raw_qoi_data) => writer.write_bytes(raw_qoi_data),
             Img::Bz2Qoi(raw_bz2_qoi_data, header) => {
-                write_bz2qoi_header(header, builder).ctx("writing Bz2Qoi image header")?;
-                builder.write_bytes(raw_bz2_qoi_data);
+                write_bz2qoi_header(header, writer).ctx("writing Bz2Qoi image header")?;
+                writer.write_bytes(raw_bz2_qoi_data);
             }
         }
         Ok(())
@@ -329,10 +330,10 @@ enum Img {
 // Bz2Qoi is never serialized as of now. I haven't done benchmarks, but like...
 // If you want small size, just use PNG. If you want fast loading and decent size, use QOI.
 // Like yeah, Bz2+Qoi does result in a small size at the tradeoff of losing the main benefit of QOI: deserialization speed.
-fn write_dyn_img(dyn_img: &DynamicImage, builder: &mut DataBuilder) -> Result<()> {
+fn write_dyn_img(dyn_img: &DynamicImage, writer: &mut DataWriter) -> Result<()> {
     // Use QOI if supported.
-    if builder.version() >= GMVersion::GM2022_1 {
-        qoi::build(dyn_img, builder).ctx("serializing DynamicImage as QOI")?;
+    if writer.version() >= GMVersion::GM2022_1 {
+        qoi::build(dyn_img, writer).ctx("serializing DynamicImage as QOI")?;
         return Ok(());
     }
 
@@ -342,14 +343,18 @@ fn write_dyn_img(dyn_img: &DynamicImage, builder: &mut DataBuilder) -> Result<()
     }
 
     let data: Vec<u8> = png::encode(dyn_img)?;
-    builder.write_bytes(&data);
+    writer.write_bytes(&data);
     Ok(())
 }
 
-fn write_bz2qoi_header(header: &BZip2QoiHeader, builder: &mut DataBuilder) -> Result<()> {
-    builder.write_bytes(BZ2_QOI_HEADER);
-    builder.write_u16(header.width);
-    builder.write_u16(header.height);
-    builder.write_if_ver(&header.uncompressed_size, "Uncompressed Size", GMVersion::GM2022_5)?;
+fn write_bz2qoi_header(header: &BZip2QoiHeader, writer: &mut DataWriter) -> Result<()> {
+    writer.write_bytes(BZ2_QOI_HEADER);
+    writer.write_u16(header.width);
+    writer.write_u16(header.height);
+    writer.write_if_ver(
+        &header.uncompressed_size,
+        "Uncompressed Size",
+        GMVersion::GM2022_5,
+    )?;
     Ok(())
 }

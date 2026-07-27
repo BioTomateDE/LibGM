@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+//! These opcodes are for WAD 15+.
+//! They are different in previous versions, see [`old_to_new`] and [`new_to_old`].
+use crate::gml::instruction::BinaryOp;
 use crate::gml::instruction::Instruction;
 
 pub const CONV: u8 = 0x07;
@@ -46,20 +49,10 @@ impl Instruction {
     #[must_use]
     pub const fn opcode(&self) -> u8 {
         match self {
+            Self::Binary { op, .. } => opcode_binary(*op),
             Self::Convert { .. } => CONV,
-            Self::Multiply { .. } => MUL,
-            Self::Divide { .. } => DIV,
-            Self::Remainder { .. } => REM,
-            Self::Modulus { .. } => MOD,
-            Self::Add { .. } => ADD,
-            Self::Subtract { .. } => SUB,
-            Self::And { .. } => AND,
-            Self::Or { .. } => OR,
-            Self::Xor { .. } => XOR,
             Self::Negate { .. } => NEG,
             Self::Not { .. } => NOT,
-            Self::ShiftLeft { .. } => SHL,
-            Self::ShiftRight { .. } => SHR,
             Self::Compare { .. } => CMP,
             Self::Pop { .. } | Self::PopSwap { .. } => POP,
             Self::Duplicate { .. } | Self::DuplicateSwap { .. } => DUP,
@@ -96,6 +89,22 @@ impl Instruction {
     #[must_use]
     pub const fn opcode_old(&self) -> u8 {
         new_to_old(self.opcode())
+    }
+}
+
+const fn opcode_binary(binary_op: BinaryOp) -> u8 {
+    match binary_op {
+        BinaryOp::Add => ADD,
+        BinaryOp::Subtract => SUB,
+        BinaryOp::Multiply => MUL,
+        BinaryOp::Divide => DIV,
+        BinaryOp::Remainder => REM,
+        BinaryOp::Modulus => MOD,
+        BinaryOp::And => AND,
+        BinaryOp::Or => OR,
+        BinaryOp::Xor => XOR,
+        BinaryOp::ShiftLeft => SHL,
+        BinaryOp::ShiftRight => SHR,
     }
 }
 
@@ -193,7 +202,7 @@ impl Instruction {
     /// (aka "break") instruction.
     #[must_use]
     pub const fn extended_kind(&self) -> Option<i16> {
-        use super::opcodes::extended;
+        use super::opcode::extended;
         match self {
             Self::CheckArrayIndex => Some(extended::CHKINDEX),
             Self::PushArrayFinal => Some(extended::PUSHAF),

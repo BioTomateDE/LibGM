@@ -4,7 +4,7 @@ use std::hint::cold_path;
 
 use crate::prelude::*;
 use crate::wad::elem::texture_page_item::TexturePageItem;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
 
 impl DataReader<'_> {

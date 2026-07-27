@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::room::InstanceID;
 use crate::wad::elem::sprite::Sprite;
 use crate::wad::elem::tileset::Tileset;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RoomTile {
@@ -59,13 +59,13 @@ impl GMElement for RoomTile {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(self.x);
-        builder.write_i32(self.y);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i32(self.x);
+        writer.write_i32(self.y);
         match self.texture {
             Texture::Sprite(sprite_ref) => {
-                if builder.version() >= GMVersion::GMS2 {
-                    builder.write_resource_id(sprite_ref);
+                if writer.version() >= GMVersion::GMS2 {
+                    writer.write_resource_id(sprite_ref);
                 } else {
                     bail!(
                         "Room tile texture should be a Background reference before GMS2; not a \
@@ -74,24 +74,24 @@ impl GMElement for RoomTile {
                 }
             }
             Texture::Background(background_ref) => {
-                if builder.version() >= GMVersion::GMS2 {
+                if writer.version() >= GMVersion::GMS2 {
                     bail!(
                         "Room tile texture should be a Sprite reference in GMS2+; not a \
                          Background reference"
                     );
                 }
-                builder.write_resource_id(background_ref);
+                writer.write_resource_id(background_ref);
             }
         }
-        builder.write_u32(self.source_x);
-        builder.write_u32(self.source_y);
-        builder.write_u32(self.width);
-        builder.write_u32(self.height);
-        builder.write_i32(self.tile_depth);
-        builder.write_i32(self.instance_id.0);
-        builder.write_f32(self.scale_x);
-        builder.write_f32(self.scale_y);
-        builder.write_u32(self.color);
+        writer.write_u32(self.source_x);
+        writer.write_u32(self.source_y);
+        writer.write_u32(self.width);
+        writer.write_u32(self.height);
+        writer.write_i32(self.tile_depth);
+        writer.write_i32(self.instance_id.0);
+        writer.write_f32(self.scale_x);
+        writer.write_f32(self.scale_y);
+        writer.write_u32(self.color);
         Ok(())
     }
 }

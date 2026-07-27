@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use super::target_version;
 use crate::prelude::*;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::version::GMVersion;
 
 /// Go through each background, and check to see if it ends at

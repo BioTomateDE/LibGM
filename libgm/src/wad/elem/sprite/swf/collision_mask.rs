@@ -2,9 +2,9 @@
 
 use crate::prelude::*;
 use crate::wad::Blob;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CollisionMask {
@@ -22,15 +22,15 @@ impl GMElement for CollisionMask {
         Ok(Self { rle_data: Blob(rle_data) })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
         // From UTMT: "writing zero for empty table would probably be smart but the
         // padding handles it automatically?"
         // but you cant even have a yyswf sprite with a null rle data???
         if !self.rle_data.is_empty() {
-            builder.write_usize(self.rle_data.len())?;
-            builder.write_bytes(&self.rle_data);
+            writer.write_usize(self.rle_data.len())?;
+            writer.write_bytes(&self.rle_data);
         }
-        builder.align(4);
+        writer.align(4);
         Ok(())
     }
 }

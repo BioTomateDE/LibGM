@@ -5,14 +5,14 @@ pub use self::code_local::CodeLocal;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::ChunkName;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::element_stub;
 use crate::wad::elem::string::Strings;
-use crate::wad::parse::chunk::ChunkBounds;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::chunk::ChunkBounds;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Functions {
@@ -82,35 +82,35 @@ impl GMElement for Functions {
         Ok(Self { elems, code_locals })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        if builder.version() >= GMVersion::Wad15 {
-            builder.write_usize(self.elems.len())?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        if writer.version() >= GMVersion::Wad15 {
+            writer.write_usize(self.elems.len())?;
         }
 
         for (i, function) in self.elems.iter().enumerate() {
-            let occurrences: &Vec<u32> = builder.function_occurrences.get(i).ok_or_else(|| {
+            let occurrences: &Vec<u32> = writer.function_occurrences.get(i).ok_or_else(|| {
                 format!(
                     "Could not resolve function occurrence with index {i} in list with length {}",
-                    builder.function_occurrences.len(),
+                    writer.function_occurrences.len(),
                 )
             })?;
             let occurrence_count: usize = occurrences.len();
 
             // Before GM 2.3, the first occurrence points to the instruction rather than the next offset
-            let gm2_3: bool = builder.version() >= GMVersion::GMS2_3;
+            let gm2_3: bool = writer.version() >= GMVersion::GMS2_3;
             let first_occurrence: i32 = match occurrences.first() {
                 Some(&occurrence) if gm2_3 => occurrence as i32 + 4,
                 Some(&occurrence) => occurrence as i32,
                 None => -1,
             };
 
-            builder.write_gm_string(function.name)?;
-            builder.write_usize(occurrence_count)?;
-            builder.write_i32(first_occurrence);
+            writer.write_gm_string(function.name)?;
+            writer.write_usize(occurrence_count)?;
+            writer.write_i32(first_occurrence);
         }
 
-        if (GMVersion::Wad15..GMVersion::GM2024_8).contains(&builder.version()) {
-            builder.write_simple_list(&self.code_locals)?;
+        if (GMVersion::Wad15..GMVersion::GM2024_8).contains(&writer.version()) {
+            writer.write_simple_list(&self.code_locals)?;
         }
 
         Ok(())

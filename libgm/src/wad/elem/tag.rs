@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::ChunkName;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Tags {
@@ -25,11 +25,11 @@ impl GMElement for Tags {
         Ok(Self { elems, asset_tags })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.align(4);
-        builder.write_i32(1); // TAGS version
-        builder.write_simple_list(&self.elems)?;
-        builder.write_pointer_list(&self.asset_tags)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.align(4);
+        writer.write_i32(1); // TAGS version
+        writer.write_simple_list(&self.elems)?;
+        writer.write_pointer_list(&self.asset_tags)?;
         Ok(())
     }
 }
@@ -47,9 +47,9 @@ impl GMElement for AssetTags {
         Ok(Self { id, tags })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(self.id);
-        builder.write_simple_list(&self.tags)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i32(self.id);
+        writer.write_simple_list(&self.tags)?;
         Ok(())
     }
 }

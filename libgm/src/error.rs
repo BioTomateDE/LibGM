@@ -9,13 +9,13 @@
 //!
 //! LibGM uses a different approach for its error system.
 //! The most outer / broadest error would otherwise just always be "Failed to
-//! parse/build data file" which conveys no relevant information. Instead, it displays
+//! load/save data file" which conveys no relevant information. Instead, it displays
 //! the root cause first. This can be trying to read data out of chunk bounds,
 //! an assertion failing, an enum being an invalid value, etc.
 //!
 //! The specified context chain stores additional information in descending
 //! order of importance, travelling down the call stack. The last element of the
-//! context chain will be something very generic such as "Failed to parse data"
+//! context chain will be something very generic such as "Failed to load data"
 //! or similar.
 //! ___________________
 //!
@@ -104,20 +104,18 @@ impl Error {
         output
     }
 
-    /// Prints out the error chain with `>` as an arrow character.
+    /// Prints out the error chain with `>` or `↳` as an arrow character, depending on the OS.
     ///
     /// For more information about printing chains, see [`Self::chain_with`].
     #[must_use]
     pub fn chain(&self) -> String {
-        self.chain_with(">")
-    }
-
-    /// Prints out the error chain with the Unicode character `↳` as an arrow.
-    ///
-    /// For more information about printing chains, see [`Self::chain_with`].
-    #[must_use]
-    pub fn chain_pretty(&self) -> String {
-        self.chain_with("↳")
+        let ch = if cfg!(target_os = "windows") {
+            // Windows usually can't display these arrows correctly
+            ">"
+        } else {
+            "↳"
+        };
+        self.chain_with(ch)
     }
 }
 

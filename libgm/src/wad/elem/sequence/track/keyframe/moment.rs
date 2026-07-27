@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Moment {
@@ -23,10 +23,10 @@ impl GMElement for Moment {
         Ok(Self { internal_count, event })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(self.internal_count);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i32(self.internal_count);
         if self.internal_count > 0 {
-            builder.write_gm_string(self.event)?;
+            writer.write_gm_string(self.event)?;
         }
         // FIXME: maybe there should be null written if event string not set?
         Ok(())

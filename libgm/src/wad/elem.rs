@@ -6,10 +6,10 @@ use std::collections::HashMap;
 
 use crate::prelude::*;
 use crate::util::fmt::typename;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::string::Strings;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 pub mod animation_curve;
 pub mod audio;
@@ -57,11 +57,11 @@ pub(crate) trait GMElement: Sized {
     /// element and return a fully constructed instance.
     fn deserialize(reader: &mut DataReader) -> Result<Self>;
 
-    /// Serializes this element to the current position of the builder.
+    /// Serializes this element to the current position of the writer.
     ///
     /// Implementations should write the exact binary representation of this
     /// element in the format expected by the GameMaker runtime.
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()>;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()>;
 
     /// Handles padding bytes that may appear before this element in pointer lists.
     ///
@@ -77,7 +77,7 @@ pub(crate) trait GMElement: Sized {
     /// This is called before [`GMElement::serialize`] when writing to
     /// structured data. The default implementation does nothing - override
     /// if your element requires alignment padding in specific contexts.
-    fn serialize_pre_padding(&self, builder: &mut DataBuilder) -> Result<()> {
+    fn serialize_pre_padding(&self, writer: &mut DataWriter) -> Result<()> {
         Ok(())
     }
 
@@ -95,7 +95,7 @@ pub(crate) trait GMElement: Sized {
     /// This is called after [`GMElement::serialize`] when writing to structured
     /// data. The `is_last` parameter indicates if this is the final element
     /// in a list, which may affect padding requirements.
-    fn serialize_post_padding(&self, builder: &mut DataBuilder, is_last: bool) -> Result<()> {
+    fn serialize_post_padding(&self, writer: &mut DataWriter, is_last: bool) -> Result<()> {
         Ok(())
     }
 }
@@ -105,8 +105,8 @@ impl GMElement for u8 {
         reader.read_u8()
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u8(*self);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_u8(*self);
         Ok(())
     }
 }
@@ -116,8 +116,8 @@ impl GMElement for i8 {
         reader.read_i8()
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i8(*self);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i8(*self);
         Ok(())
     }
 }
@@ -127,8 +127,8 @@ impl GMElement for u16 {
         reader.read_u16()
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u16(*self);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_u16(*self);
         Ok(())
     }
 }
@@ -138,8 +138,8 @@ impl GMElement for i16 {
         reader.read_i16()
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i16(*self);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i16(*self);
         Ok(())
     }
 }
@@ -149,8 +149,8 @@ impl GMElement for u32 {
         reader.read_u32()
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u32(*self);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_u32(*self);
         Ok(())
     }
 }
@@ -160,8 +160,8 @@ impl GMElement for i32 {
         reader.read_i32()
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(*self);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i32(*self);
         Ok(())
     }
 }
@@ -171,8 +171,8 @@ impl GMElement for u64 {
         reader.read_u64()
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u64(*self);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_u64(*self);
         Ok(())
     }
 }
@@ -182,8 +182,8 @@ impl GMElement for i64 {
         reader.read_i64()
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i64(*self);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i64(*self);
         Ok(())
     }
 }
@@ -193,8 +193,8 @@ impl GMElement for f32 {
         reader.read_f32()
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_f32(*self);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_f32(*self);
         Ok(())
     }
 }
@@ -204,8 +204,8 @@ impl GMElement for f64 {
         reader.read_f64()
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_f64(*self);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_f64(*self);
         Ok(())
     }
 }
@@ -215,8 +215,8 @@ impl GMElement for bool {
         reader.read_bool32()
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_bool32(*self);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_bool32(*self);
         Ok(())
     }
 }
@@ -227,8 +227,8 @@ impl<T: GMElement> GMElement for GMRef<T> {
         reader.read_resource_by_id()
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_resource_id(*self);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_resource_id(*self);
         Ok(())
     }
 }
@@ -238,8 +238,8 @@ impl GMElement for GMRef<String> {
         reader.read_gm_string()
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(*self)
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(*self)
     }
 }
 
@@ -326,14 +326,14 @@ pub(crate) fn validate_identifier(name: &str) -> Result<()> {
 macro_rules! element_stub {
     ($type:ty) => {
         impl $crate::wad::elem::GMElement for $type {
-            fn deserialize(_: &mut $crate::wad::parse::reader::DataReader) -> Result<Self> {
+            fn deserialize(_: &mut $crate::wad::load::reader::DataReader) -> Result<Self> {
                 unimplemented!(
                     "Using {0}::deserialize is not supported, use {0}s::deserialize instead",
                     stringify!($type),
                 );
             }
 
-            fn serialize(&self, _: &mut $crate::wad::build::builder::DataBuilder) -> Result<()> {
+            fn serialize(&self, _: &mut $crate::wad::save::writer::DataWriter) -> Result<()> {
                 unimplemented!(
                     "Using {0}::serialize is not supported, use {0}s::serialize instead",
                     stringify!($type),

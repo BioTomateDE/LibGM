@@ -3,9 +3,9 @@ mod style_group;
 pub use style_group::StyleGroup;
 
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Data<T> {
     pub min_x: f32,
@@ -24,12 +24,12 @@ impl<T: GMElement> GMElement for Data<T> {
         Ok(Self { min_x, max_x, min_y, max_y, style_groups })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_f32(self.min_x);
-        builder.write_f32(self.max_x);
-        builder.write_f32(self.min_y);
-        builder.write_f32(self.max_y);
-        builder.write_simple_list(&self.style_groups)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_f32(self.min_x);
+        writer.write_f32(self.max_x);
+        writer.write_f32(self.min_y);
+        writer.write_f32(self.max_y);
+        writer.write_simple_list(&self.style_groups)?;
         Ok(())
     }
 }

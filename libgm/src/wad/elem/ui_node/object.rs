@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use super::flex;
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::room::RoomGameObject;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GameObject {
@@ -22,9 +22,9 @@ impl GMElement for GameObject {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        self.room_game_object.serialize(builder)?;
-        self.flex_instance_properties.serialize(builder)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_elem(&self.room_game_object)?;
+        writer.write_elem(&self.flex_instance_properties)?;
         Ok(())
     }
 }

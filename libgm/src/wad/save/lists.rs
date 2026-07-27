@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::util::fmt::typename;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
+use crate::wad::save::writer::DataWriter;
 
-impl DataBuilder<'_> {
+impl DataWriter<'_> {
     /// Write the element count as a 32-bit integer.
     /// Then build all elements sequentially, with nothing in between.
     pub fn write_simple_list<T: GMElement>(&mut self, elements: &Vec<T>) -> Result<()> {

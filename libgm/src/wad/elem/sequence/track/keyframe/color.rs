@@ -3,9 +3,9 @@
 use super::Keyframe;
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct KeyframesData {
@@ -21,10 +21,10 @@ impl GMElement for KeyframesData {
         Ok(Self { interpolation, keyframes })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.align(4);
-        builder.write_enum(self.interpolation);
-        builder.write_simple_list(&self.keyframes)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.align(4);
+        writer.write_enum(self.interpolation);
+        writer.write_simple_list(&self.keyframes)?;
         Ok(())
     }
 }
@@ -40,8 +40,8 @@ impl GMElement for Color {
         Ok(Self { value })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_f32(self.value);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_f32(self.value);
         Ok(())
     }
 }

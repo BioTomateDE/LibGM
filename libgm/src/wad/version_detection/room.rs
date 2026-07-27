@@ -3,7 +3,7 @@ use super::target_version;
 use crate::gm_enum::GMEnum;
 use crate::prelude::*;
 use crate::wad::elem::room::layer::Type;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::version::GMVersion;
 
 pub fn check_2022_1(reader: &mut DataReader) -> Result<Option<GMVersion>> {

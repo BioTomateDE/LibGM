@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::wad::elem::animation_curve::AnimationCurve;
-use crate::wad::elem::tileset::Tileset;
 use crate::wad::elem::font::Font;
 use crate::wad::elem::function::Function;
 use crate::wad::elem::game_object::GameObject;
@@ -13,6 +12,7 @@ use crate::wad::elem::sequence::Sequence;
 use crate::wad::elem::shader::Shader;
 use crate::wad::elem::sound::Sound;
 use crate::wad::elem::sprite::Sprite;
+use crate::wad::elem::tileset::Tileset;
 use crate::wad::elem::timeline::Timeline;
 
 /// A modern (2023.something) reference to game assets.
@@ -47,7 +47,7 @@ impl AssetReference {
     /// This uses the 2024.4+ format.
     ///
     /// Note that function references have to be constructed separately.
-    pub fn parse(raw: u32) -> Result<Self> {
+    pub fn decode(raw: u32) -> Result<Self> {
         let ty = (raw >> 24) as u8;
         let id = raw as i32 & 0xFF_FFFF;
         Ok(match ty {
@@ -73,7 +73,7 @@ impl AssetReference {
     /// serialized form.
     ///
     /// Note that function references have to be constructed separately.
-    pub fn parse_old(raw: u32) -> Result<Self> {
+    pub fn decode_old(raw: u32) -> Result<Self> {
         let ty = (raw >> 24) as u8;
         let id = raw as i32 & 0xFF_FFFF;
         Ok(match ty {
@@ -171,7 +171,7 @@ impl AssetReference {
 
     /// The normalized (2024.4+) serialized form of this asset reference.
     #[must_use]
-    pub const fn build(self) -> u32 {
+    pub const fn encode(self) -> u32 {
         let id = self.asset_id() & 0xFF_FFFF;
         let ty = self.asset_type() as u32;
         id & (ty << 24)
@@ -179,7 +179,7 @@ impl AssetReference {
 
     /// The old (pre-2024.4) serialized form of this asset reference.
     #[must_use]
-    pub const fn build_old(self) -> u32 {
+    pub const fn encode_old(self) -> u32 {
         let id = self.asset_id() & 0xFF_FFFF;
         let ty = self.asset_type_old() as u32;
         id & (ty << 24)

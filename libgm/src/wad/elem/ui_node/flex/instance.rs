@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Properties {
     visible: bool,
@@ -33,14 +33,14 @@ impl GMElement for Properties {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_bool32(self.visible);
-        builder.write_i32(self.anchor);
-        builder.write_bool32(self.stretch_width);
-        builder.write_bool32(self.stretch_height);
-        builder.write_bool32(self.tile_h);
-        builder.write_bool32(self.tile_v);
-        builder.write_bool32(self.keep_aspect_ratio);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_bool32(self.visible);
+        writer.write_i32(self.anchor);
+        writer.write_bool32(self.stretch_width);
+        writer.write_bool32(self.stretch_height);
+        writer.write_bool32(self.tile_h);
+        writer.write_bool32(self.tile_v);
+        writer.write_bool32(self.keep_aspect_ratio);
         Ok(())
     }
 }

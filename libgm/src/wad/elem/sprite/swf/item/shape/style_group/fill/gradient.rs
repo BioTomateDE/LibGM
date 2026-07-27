@@ -3,10 +3,10 @@
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sprite::swf::Matrix33;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Data {
@@ -30,11 +30,11 @@ impl GMElement for Data {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_enum(self.fill_type);
-        builder.write_if_ver(&self.tpe_index, "TPE Index", GMVersion::GM2022_1)?;
-        self.transformation_matrix.serialize(builder)?;
-        builder.write_simple_list(&self.records)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_enum(self.fill_type);
+        writer.write_if_ver(&self.tpe_index, "TPE Index", GMVersion::GM2022_1)?;
+        writer.write_elem(&self.transformation_matrix)?;
+        writer.write_simple_list(&self.records)?;
         Ok(())
     }
 }
@@ -58,12 +58,12 @@ impl GMElement for Record {
         Ok(Self { ratio, red, green, blue, alpha })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(self.ratio);
-        builder.write_u8(self.red);
-        builder.write_u8(self.green);
-        builder.write_u8(self.blue);
-        builder.write_u8(self.alpha);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i32(self.ratio);
+        writer.write_u8(self.red);
+        writer.write_u8(self.green);
+        writer.write_u8(self.blue);
+        writer.write_u8(self.alpha);
         Ok(())
     }
 }

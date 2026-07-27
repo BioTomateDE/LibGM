@@ -3,7 +3,7 @@ use super::target_version;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::chunk::ChunkName;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::version::GMVersion;
 use crate::wad::version::GMVersion::*;
 

@@ -3,9 +3,9 @@
 use crate::prelude::*;
 use crate::wad::Blob;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TextureEntry {
@@ -29,12 +29,12 @@ impl GMElement for TextureEntry {
         Ok(Self { page_width, page_height, data })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u32(self.page_width);
-        builder.write_u32(self.page_height);
-        if builder.version() >= GMVersion::GM2023_1 {
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_u32(self.page_width);
+        writer.write_u32(self.page_height);
+        if writer.version() >= GMVersion::GM2023_1 {
             if let Data::Post2023_1(texture_entry_length) = self.data {
-                builder.write_u32(texture_entry_length);
+                writer.write_u32(texture_entry_length);
             } else {
                 bail!(
                     "Expected Post2023_1 Spine Texture Entry data but got Pre2023_1 for some \
@@ -42,8 +42,8 @@ impl GMElement for TextureEntry {
                 );
             }
         } else if let Data::Pre2023_1(ref texture_blob) = self.data {
-            builder.write_usize(texture_blob.len())?;
-            builder.write_bytes(texture_blob);
+            writer.write_usize(texture_blob.len())?;
+            writer.write_bytes(texture_blob);
         } else {
             bail!("Expected Pre2023_1 Spine Texture Entry data but got Post2023_1 for some reason");
         }

@@ -2,14 +2,14 @@
 
 use super::string::Strings;
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::GMNamedListChunk;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::GMNamedElement;
 use crate::wad::elem::texture_page_item::TexturePageItem;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 /// The embedded images of the data file.
 /// This is used to store built-in particle sprites,
@@ -40,9 +40,9 @@ impl GMElement for EmbeddedImages {
         Ok(Self { elems: embedded_images })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(1); // EMBI version
-        builder.write_simple_list(&self.elems)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i32(1); // EMBI version
+        writer.write_simple_list(&self.elems)?;
         Ok(())
     }
 }
@@ -74,9 +74,9 @@ impl GMElement for EmbeddedImage {
         Ok(Self { name, texture_entry })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_gm_texture(self.texture_entry)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_gm_texture(self.texture_entry)?;
         Ok(())
     }
 }

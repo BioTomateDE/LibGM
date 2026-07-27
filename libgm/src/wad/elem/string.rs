@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::util::assert;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 const ALIGNMENT: u32 = 4;
 
@@ -45,27 +45,27 @@ impl GMElement for Strings {
         Ok(Self { elems, align })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
         let count = self.elems.len();
 
-        builder.write_usize(count)?;
-        let pointer_list_pos = builder.pos();
+        writer.write_usize(count)?;
+        let pointer_list_pos = writer.pos();
         for _ in 0..count {
-            builder.write_u32(0xDEAD_C0DE);
+            writer.write_u32(0xDEAD_C0DE);
         }
 
         for (idx, string) in self.elems.iter().enumerate() {
             if self.align {
-                builder.align(ALIGNMENT);
+                writer.align(ALIGNMENT);
             }
-            builder.overwrite_pointer_with_cur_pos(pointer_list_pos, idx)?;
-            builder.write_u32(string.len() as u32);
-            builder.resolve_pointer(string)?;
-            builder.write_bytes(string.as_bytes());
-            builder.write_u8(0);
+            writer.overwrite_pointer_with_cur_pos(pointer_list_pos, idx)?;
+            writer.write_u32(string.len() as u32);
+            writer.resolve_pointer(string)?;
+            writer.write_bytes(string.as_bytes());
+            writer.write_u8(0);
         }
 
-        builder.align(0x80);
+        writer.align(0x80);
         Ok(())
     }
 }

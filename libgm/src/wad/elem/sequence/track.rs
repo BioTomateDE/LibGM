@@ -7,10 +7,10 @@ pub use keyframe::Keyframes;
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::animation_curve::AnimationCurve;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Track {
@@ -126,38 +126,38 @@ impl GMElement for Track {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.model_name)?;
-        builder.write_gm_string(self.name)?;
-        builder.write_enum(self.builtin_name);
-        builder.write_i32(self.flags.bits());
-        builder.write_bool32(self.is_creation_track);
-        builder.write_usize(self.tags.len())?;
-        builder.write_usize(self.owned_resources.len())?;
-        builder.write_usize(self.sub_tracks.len())?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.model_name)?;
+        writer.write_gm_string(self.name)?;
+        writer.write_enum(self.builtin_name);
+        writer.write_i32(self.flags.bits());
+        writer.write_bool32(self.is_creation_track);
+        writer.write_usize(self.tags.len())?;
+        writer.write_usize(self.owned_resources.len())?;
+        writer.write_usize(self.sub_tracks.len())?;
         for tag in &self.tags {
-            builder.write_i32(*tag);
+            writer.write_i32(*tag);
         }
         for animation_curve in &self.owned_resources {
             // this can be null if there were no owned resources when parsing
-            builder.write_gm_string(self.animcurve_string)?;
-            animation_curve.serialize(builder)?;
+            writer.write_gm_string(self.animcurve_string)?;
+            writer.write_elem(animation_curve)?;
         }
         for track in &self.sub_tracks {
-            track.serialize(builder)?;
+            writer.write_elem(track)?;
         }
         match &self.keyframes {
-            Keyframes::Audio(k) => k.serialize(builder)?,
-            Keyframes::Instance(k) => k.serialize(builder)?,
-            Keyframes::Graphic(k) => k.serialize(builder)?,
-            Keyframes::Sequence(k) => k.serialize(builder)?,
-            Keyframes::SpriteFrames(k) => k.serialize(builder)?,
-            Keyframes::Bool(k) => k.serialize(builder)?,
-            Keyframes::String(k) => k.serialize(builder)?,
-            Keyframes::Color(k) | Keyframes::Real(k) => k.serialize(builder)?,
-            Keyframes::Text(k) => k.serialize(builder)?,
-            Keyframes::Particle(k) => k.serialize(builder)?,
-            Keyframes::BroadcastMessage(k) => k.serialize(builder)?,
+            Keyframes::Audio(k) => writer.write_elem(k)?,
+            Keyframes::Instance(k) => writer.write_elem(k)?,
+            Keyframes::Graphic(k) => writer.write_elem(k)?,
+            Keyframes::Sequence(k) => writer.write_elem(k)?,
+            Keyframes::SpriteFrames(k) => writer.write_elem(k)?,
+            Keyframes::Bool(k) => writer.write_elem(k)?,
+            Keyframes::String(k) => writer.write_elem(k)?,
+            Keyframes::Color(k) | Keyframes::Real(k) => writer.write_elem(k)?,
+            Keyframes::Text(k) => writer.write_elem(k)?,
+            Keyframes::Particle(k) => writer.write_elem(k)?,
+            Keyframes::BroadcastMessage(k) => writer.write_elem(k)?,
         }
         Ok(())
     }

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::tileset::Tileset;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RoomBackground {
@@ -47,17 +47,17 @@ impl GMElement for RoomBackground {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_bool32(self.enabled);
-        builder.write_bool32(self.foreground);
-        builder.write_resource_id(self.background_definition);
-        builder.write_i32(self.x);
-        builder.write_i32(self.y);
-        builder.write_i32(self.tile_x);
-        builder.write_i32(self.tile_y);
-        builder.write_i32(self.speed_x);
-        builder.write_i32(self.speed_y);
-        builder.write_bool32(self.stretch);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_bool32(self.enabled);
+        writer.write_bool32(self.foreground);
+        writer.write_resource_id(self.background_definition);
+        writer.write_i32(self.x);
+        writer.write_i32(self.y);
+        writer.write_i32(self.tile_x);
+        writer.write_i32(self.tile_y);
+        writer.write_i32(self.speed_x);
+        writer.write_i32(self.speed_y);
+        writer.write_bool32(self.stretch);
         Ok(())
     }
 }

@@ -13,9 +13,9 @@ use std::fmt;
 use crate::gml::Code;
 use crate::prelude::*;
 use crate::wad::GMRef;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Clone, PartialEq)]
 pub struct Action {
@@ -102,21 +102,21 @@ impl GMElement for Action {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u32(self.lib_id);
-        builder.write_u32(self.id);
-        builder.write_u32(self.kind);
-        builder.write_bool32(self.use_relative);
-        builder.write_bool32(self.is_question);
-        builder.write_bool32(self.use_apply_to);
-        builder.write_u32(self.exe_type);
-        builder.write_gm_string(self.name)?;
-        builder.write_resource_id(self.code);
-        builder.write_u32(self.argument_count);
-        builder.write_i32(self.who);
-        builder.write_bool32(self.relative);
-        builder.write_bool32(self.is_not);
-        builder.write_u32(self.unknown);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_u32(self.lib_id);
+        writer.write_u32(self.id);
+        writer.write_u32(self.kind);
+        writer.write_bool32(self.use_relative);
+        writer.write_bool32(self.is_question);
+        writer.write_bool32(self.use_apply_to);
+        writer.write_u32(self.exe_type);
+        writer.write_gm_string(self.name)?;
+        writer.write_resource_id(self.code);
+        writer.write_u32(self.argument_count);
+        writer.write_i32(self.who);
+        writer.write_bool32(self.relative);
+        writer.write_bool32(self.is_not);
+        writer.write_u32(self.unknown);
         Ok(())
     }
 }

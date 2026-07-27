@@ -5,9 +5,9 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 /// A GameMaker Version, denoting the version of the IDE this game was created in.
 ///
@@ -65,11 +65,11 @@ impl GMElement for IdeVersion {
         Ok(Self { major, minor, release, build })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u32(self.major);
-        builder.write_u32(self.minor);
-        builder.write_u32(self.release);
-        builder.write_u32(self.build);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_u32(self.major);
+        writer.write_u32(self.minor);
+        writer.write_u32(self.release);
+        writer.write_u32(self.build);
         Ok(())
     }
 }

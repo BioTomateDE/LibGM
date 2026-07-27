@@ -2,13 +2,13 @@
 use crate::prelude::*;
 use crate::util::fmt::typename;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
+use crate::wad::save::writer::DataWriter;
 
 // The element fields store `Option<T>`, so passing `Option<&T>` instead
 // of `&Option<T>` would require using `.as_ref()` in every call.
 #[allow(clippy::ref_option)]
-impl DataBuilder<'_> {
+impl DataWriter<'_> {
     #[inline]
     pub fn write_if_ver<T: GMElement>(
         &mut self,

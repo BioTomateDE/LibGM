@@ -4,9 +4,9 @@ pub mod line;
 
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StyleGroup<T> {
@@ -39,18 +39,18 @@ impl<T: GMElement> GMElement for StyleGroup<T> {
         Ok(Self { fill_styles, line_styles, subshapes })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_usize(self.fill_styles.len())?;
-        builder.write_usize(self.line_styles.len())?;
-        builder.write_usize(self.subshapes.len())?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_usize(self.fill_styles.len())?;
+        writer.write_usize(self.line_styles.len())?;
+        writer.write_usize(self.subshapes.len())?;
         for fill_data in &self.fill_styles {
-            fill_data.serialize(builder)?;
+            writer.write_elem(fill_data)?;
         }
         for line_data in &self.line_styles {
-            line_data.serialize(builder)?;
+            writer.write_elem(line_data)?;
         }
         for subshape in &self.subshapes {
-            subshape.serialize(builder)?;
+            writer.write_elem(subshape)?;
         }
         Ok(())
     }

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Kerning {
@@ -25,9 +25,9 @@ impl GMElement for Kerning {
         Ok(Self { character, shift_modifier })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u16(u32::from(self.character) as u16);
-        builder.write_i16(self.shift_modifier);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_u16(u32::from(self.character) as u16);
+        writer.write_i16(self.shift_modifier);
         Ok(())
     }
 }

@@ -3,9 +3,9 @@
 use super::value::FlexValue;
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Properties {
@@ -53,19 +53,19 @@ impl GMElement for Properties {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_enum(self.align_items);
-        builder.write_enum(self.flex_direction);
-        builder.write_enum(self.flex_wrap);
-        builder.write_enum(self.align_content);
-        builder.write_f32(self.gap_row);
-        builder.write_f32(self.gap_column);
-        self.padding_left.serialize(builder)?;
-        self.padding_right.serialize(builder)?;
-        self.padding_top.serialize(builder)?;
-        self.padding_bottom.serialize(builder)?;
-        builder.write_enum(self.justify_content);
-        builder.write_enum(self.layout_direction);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_enum(self.align_items);
+        writer.write_enum(self.flex_direction);
+        writer.write_enum(self.flex_wrap);
+        writer.write_enum(self.align_content);
+        writer.write_f32(self.gap_row);
+        writer.write_f32(self.gap_column);
+        writer.write_elem(&self.padding_left)?;
+        writer.write_elem(&self.padding_right)?;
+        writer.write_elem(&self.padding_top)?;
+        writer.write_elem(&self.padding_bottom)?;
+        writer.write_enum(self.justify_content);
+        writer.write_enum(self.layout_direction);
         Ok(())
     }
 }

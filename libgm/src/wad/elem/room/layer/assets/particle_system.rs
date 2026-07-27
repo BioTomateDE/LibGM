@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::particle_system::ParticleSystem;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParticleSystemInstance {
@@ -40,15 +40,15 @@ impl GMElement for ParticleSystemInstance {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_resource_id(self.particle_system);
-        builder.write_i32(self.x);
-        builder.write_i32(self.y);
-        builder.write_f32(self.scale_x);
-        builder.write_f32(self.scale_y);
-        builder.write_u32(self.color);
-        builder.write_f32(self.rotation);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_resource_id(self.particle_system);
+        writer.write_i32(self.x);
+        writer.write_i32(self.y);
+        writer.write_f32(self.scale_x);
+        writer.write_f32(self.scale_y);
+        writer.write_u32(self.color);
+        writer.write_f32(self.rotation);
         Ok(())
     }
 }

@@ -3,11 +3,11 @@
 use crate::gml::Code;
 use crate::gml::Instruction;
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Scripts {
@@ -23,8 +23,8 @@ impl GMElement for Scripts {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.elems)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_pointer_list(&self.elems)?;
         Ok(())
     }
 }
@@ -49,16 +49,16 @@ impl GMElement for Script {
         Ok(Self { name, is_constructor, code })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
         if self.is_constructor {
             if self.code.is_some() {
-                builder.write_u32(self.code.index as u32 | 0x8000_0000);
+                writer.write_u32(self.code.index as u32 | 0x8000_0000);
             } else {
-                builder.write_i32(-1);
+                writer.write_i32(-1);
             }
         } else {
-            builder.write_resource_id(self.code);
+            writer.write_resource_id(self.code);
         }
         Ok(())
     }

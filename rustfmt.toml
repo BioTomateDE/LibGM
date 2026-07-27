@@ -10,6 +10,7 @@
 newline_style = "Unix"
 struct_lit_width = 40
 use_field_init_shorthand = true
+# use_small_heuristics = "Max"
 
 # Nightly Options
 float_literal_trailing_zero = "IfNoPostfix"

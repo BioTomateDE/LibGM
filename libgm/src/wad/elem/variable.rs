@@ -4,7 +4,6 @@ use crate::gml::instruction::InstanceType;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::ChunkName;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
@@ -12,9 +11,10 @@ use crate::wad::elem::GMNamedElement;
 use crate::wad::elem::element_stub;
 use crate::wad::elem::string::Strings;
 use crate::wad::elem::validate_identifier;
-use crate::wad::parse::chunk::ChunkBounds;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::chunk::ChunkBounds;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Variables {
@@ -23,7 +23,6 @@ pub struct Variables {
 
     /// Set in WAD 15 and above.
     pub modern_header: Option<ModernHeader>,
-
 }
 
 gm_list_chunk!(VARI, Variables, Variable, direct);
@@ -187,20 +186,20 @@ impl GMElement for Variables {
         Ok(Self { elems, modern_header })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_if_ver(
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_if_ver(
             &self.modern_header,
             "Scuffed WAD 15+ fields",
             GMVersion::Wad15,
         )?;
         for (i, variable) in self.elems.iter().enumerate() {
-            builder.write_gm_string(variable.name)?;
-            builder.write_if_ver(&variable.modern_data, "WAD 15 data", GMVersion::Wad15)?;
+            writer.write_gm_string(variable.name)?;
+            writer.write_if_ver(&variable.modern_data, "WAD 15 data", GMVersion::Wad15)?;
 
-            let occurrences = builder.variable_occurrences.get(i).ok_or_else(|| {
+            let occurrences = writer.variable_occurrences.get(i).ok_or_else(|| {
                 format!(
                     "Could not resolve variable occurrence with index {i} in list with length {}",
-                    builder.function_occurrences.len()
+                    writer.function_occurrences.len()
                 )
             })?;
             let occurrence_count: usize = occurrences.len();
@@ -208,8 +207,8 @@ impl GMElement for Variables {
                 Some((occurrence, _)) => *occurrence as i32,
                 None => -1,
             };
-            builder.write_usize(occurrence_count)?;
-            builder.write_i32(first_occurrence);
+            writer.write_usize(occurrence_count)?;
+            writer.write_i32(first_occurrence);
         }
         Ok(())
     }
@@ -245,14 +244,14 @@ pub struct ModernData {
 impl GMElement for ModernData {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let raw_instance_type: i16 = reader.read_i32()? as i16;
-        let instance_type: InstanceType = InstanceType::parse_normal(raw_instance_type)?;
+        let instance_type: InstanceType = InstanceType::decode_normal(raw_instance_type)?;
         let variable_id = reader.read_i32()?;
         Ok(Self { instance_type, variable_id })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(i32::from(self.instance_type.build()));
-        builder.write_i32(self.variable_id);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i32(i32::from(self.instance_type.encode()));
+        writer.write_i32(self.variable_id);
         Ok(())
     }
 }
@@ -277,10 +276,10 @@ impl GMElement for ModernHeader {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u32(self.var_count1);
-        builder.write_u32(self.var_count2);
-        builder.write_u32(self.max_local_var_count);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_u32(self.var_count1);
+        writer.write_u32(self.var_count2);
+        writer.write_u32(self.max_local_var_count);
         Ok(())
     }
 }

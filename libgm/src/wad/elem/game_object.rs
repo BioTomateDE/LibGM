@@ -7,13 +7,13 @@ use crate::gm_enum::gm_enum;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::element_stub;
 use crate::wad::elem::sprite::Sprite;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GameObjects {
@@ -109,46 +109,46 @@ impl GMElement for GameObjects {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_usize(self.elems.len())?;
-        let pointer_list_pos = builder.pos();
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_usize(self.elems.len())?;
+        let pointer_list_pos = writer.pos();
         for _ in 0..self.elems.len() {
-            builder.write_u32(0);
+            writer.write_u32(0);
         }
 
-        for (gm_ref, game_object) in self.element_refs() {
-            builder.overwrite_pointer_with_cur_pos(pointer_list_pos, gm_ref.index as usize)?;
+        for (gm_ref, obj) in self.element_refs() {
+            writer.overwrite_pointer_with_cur_pos(pointer_list_pos, gm_ref.index as usize)?;
 
-            builder.write_gm_string(game_object.name)?;
-            builder.write_resource_id(game_object.sprite);
-            builder.write_bool32(game_object.visible);
-            builder.write_if_ver(&game_object.managed, "Managed", GMVersion::GM2022_5)?;
-            builder.write_bool32(game_object.solid);
-            builder.write_i32(game_object.depth);
-            builder.write_bool32(game_object.persistent);
-            match game_object.parent {
-                x if x.is_none() => builder.write_i32(-100), // No Parent
-                obj_ref if obj_ref == gm_ref => builder.write_i32(-1), // Parent is Self
-                obj_ref => builder.write_resource_id(obj_ref), // Normal Parent
+            writer.write_gm_string(obj.name)?;
+            writer.write_resource_id(obj.sprite);
+            writer.write_bool32(obj.visible);
+            writer.write_if_ver(&obj.managed, "Managed", GMVersion::GM2022_5)?;
+            writer.write_bool32(obj.solid);
+            writer.write_i32(obj.depth);
+            writer.write_bool32(obj.persistent);
+            match obj.parent {
+                x if x.is_none() => writer.write_i32(-100), // No Parent
+                obj_ref if obj_ref == gm_ref => writer.write_i32(-1), // Parent is Self
+                obj_ref => writer.write_resource_id(obj_ref), // Normal Parent
             }
-            builder.write_resource_id(game_object.texture_mask);
-            builder.write_bool32(game_object.uses_physics);
-            builder.write_bool32(game_object.is_sensor);
-            builder.write_enum(game_object.collision_shape);
-            builder.write_f32(game_object.density);
-            builder.write_f32(game_object.restitution);
-            builder.write_u32(game_object.group);
-            builder.write_f32(game_object.linear_damping);
-            builder.write_f32(game_object.angular_damping);
-            builder.write_usize(game_object.physics_shape_vertices.len())?; // "new meaning" according to UTMT?
-            builder.write_f32(game_object.friction);
-            builder.write_bool32(game_object.awake);
-            builder.write_bool32(game_object.kinematic);
-            for (x, y) in &game_object.physics_shape_vertices {
-                builder.write_f32(*x);
-                builder.write_f32(*y);
+            writer.write_resource_id(obj.texture_mask);
+            writer.write_bool32(obj.uses_physics);
+            writer.write_bool32(obj.is_sensor);
+            writer.write_enum(obj.collision_shape);
+            writer.write_f32(obj.density);
+            writer.write_f32(obj.restitution);
+            writer.write_u32(obj.group);
+            writer.write_f32(obj.linear_damping);
+            writer.write_f32(obj.angular_damping);
+            writer.write_usize(obj.physics_shape_vertices.len())?; // "new meaning" according to UTMT?
+            writer.write_f32(obj.friction);
+            writer.write_bool32(obj.awake);
+            writer.write_bool32(obj.kinematic);
+            for (x, y) in &obj.physics_shape_vertices {
+                writer.write_f32(*x);
+                writer.write_f32(*y);
             }
-            game_object.events.serialize(builder)?;
+            writer.write_elem(&obj.events)?;
         }
         Ok(())
     }

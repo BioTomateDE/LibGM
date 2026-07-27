@@ -15,12 +15,12 @@ pub use self::view::RoomView;
 use crate::gml::Code;
 use crate::prelude::*;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sequence::Sequence;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Rooms {
@@ -35,8 +35,8 @@ impl GMElement for Rooms {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list_opt(&self.elems)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }
@@ -173,68 +173,68 @@ impl GMElement for Room {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_gm_string(self.caption)?;
-        builder.write_u32(self.width);
-        builder.write_u32(self.height);
-        builder.write_u32(self.speed);
-        builder.write_bool32(self.persistent);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_gm_string(self.caption)?;
+        writer.write_u32(self.width);
+        writer.write_u32(self.height);
+        writer.write_u32(self.speed);
+        writer.write_bool32(self.persistent);
 
         // remove alpha (background color doesn't have alpha)
-        builder.write_u32(self.background_color ^ 0xFF00_0000);
+        writer.write_u32(self.background_color ^ 0xFF00_0000);
 
-        builder.write_bool32(self.draw_background_color);
-        builder.write_resource_id(self.creation_code);
-        builder.write_u32(self.flags.bits());
-        builder.write_pointer(&self.backgrounds);
-        builder.write_pointer(&self.views);
-        builder.write_pointer(&self.game_objects);
-        builder.write_pointer(&self.tiles);
+        writer.write_bool32(self.draw_background_color);
+        writer.write_resource_id(self.creation_code);
+        writer.write_u32(self.flags.bits());
+        writer.write_pointer(&self.backgrounds);
+        writer.write_pointer(&self.views);
+        writer.write_pointer(&self.game_objects);
+        writer.write_pointer(&self.tiles);
 
-        if builder.version() >= GMVersion::GM2024_13 {
-            builder.write_pointer(&self.instance_creation_order);
+        if writer.version() >= GMVersion::GM2024_13 {
+            writer.write_pointer(&self.instance_creation_order);
         }
 
-        builder.write_bool32(self.world);
-        builder.write_u32(self.top);
-        builder.write_u32(self.left);
-        builder.write_u32(self.right);
-        builder.write_u32(self.bottom);
-        builder.write_f32(self.gravity_x);
-        builder.write_f32(self.gravity_y);
-        builder.write_f32(self.meters_per_pixel);
+        writer.write_bool32(self.world);
+        writer.write_u32(self.top);
+        writer.write_u32(self.left);
+        writer.write_u32(self.right);
+        writer.write_u32(self.bottom);
+        writer.write_f32(self.gravity_x);
+        writer.write_f32(self.gravity_y);
+        writer.write_f32(self.meters_per_pixel);
 
-        if builder.version() >= GMVersion::GMS2 {
-            builder.write_pointer(&self.layers);
+        if writer.version() >= GMVersion::GMS2 {
+            writer.write_pointer(&self.layers);
         }
 
-        if builder.version() >= GMVersion::GMS2_3 {
-            builder.write_pointer(&self.sequences);
+        if writer.version() >= GMVersion::GMS2_3 {
+            writer.write_pointer(&self.sequences);
         }
 
-        builder.resolve_pointer(&self.backgrounds)?;
-        builder.write_pointer_list(&self.backgrounds)?;
-        builder.resolve_pointer(&self.views)?;
-        builder.write_pointer_list(&self.views)?;
-        builder.resolve_pointer(&self.game_objects)?;
-        builder.write_pointer_list(&self.game_objects)?;
-        builder.resolve_pointer(&self.tiles)?;
-        builder.write_pointer_list(&self.tiles)?;
+        writer.resolve_pointer(&self.backgrounds)?;
+        writer.write_pointer_list(&self.backgrounds)?;
+        writer.resolve_pointer(&self.views)?;
+        writer.write_pointer_list(&self.views)?;
+        writer.resolve_pointer(&self.game_objects)?;
+        writer.write_pointer_list(&self.game_objects)?;
+        writer.resolve_pointer(&self.tiles)?;
+        writer.write_pointer_list(&self.tiles)?;
 
-        if builder.version() >= GMVersion::GM2024_13 {
-            builder.resolve_pointer(&self.instance_creation_order)?;
-            builder.write_simple_list(&self.instance_creation_order)?;
+        if writer.version() >= GMVersion::GM2024_13 {
+            writer.resolve_pointer(&self.instance_creation_order)?;
+            writer.write_simple_list(&self.instance_creation_order)?;
         }
 
-        if builder.version() >= GMVersion::GMS2 {
-            builder.resolve_pointer(&self.layers)?;
-            builder.write_pointer_list(&self.layers)?;
+        if writer.version() >= GMVersion::GMS2 {
+            writer.resolve_pointer(&self.layers)?;
+            writer.write_pointer_list(&self.layers)?;
         }
 
-        if builder.version() >= GMVersion::GMS2_3 {
-            builder.resolve_pointer(&self.sequences)?;
-            builder.write_pointer_list(&self.sequences)?;
+        if writer.version() >= GMVersion::GMS2_3 {
+            writer.resolve_pointer(&self.sequences)?;
+            writer.write_pointer_list(&self.sequences)?;
         }
 
         Ok(())
@@ -302,8 +302,8 @@ impl GMElement for InstanceID {
         Ok(Self(id))
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(self.0);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i32(self.0);
         Ok(())
     }
 }

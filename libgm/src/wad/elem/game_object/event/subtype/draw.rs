@@ -40,11 +40,11 @@ Draw {
 });
 
 impl EventSubtype for Draw {
-    fn parse(subtype: i32) -> Result<Self> {
+    fn decode(subtype: i32) -> Result<Self> {
         Self::from_i32(subtype)
     }
 
-    fn build(self) -> i32 {
+    fn encode(self) -> i32 {
         self.as_i32()
     }
 }

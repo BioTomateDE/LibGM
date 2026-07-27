@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::options::Constant;
 use crate::wad::elem::options::OptionFlags;
 use crate::wad::elem::options::Options;
 use crate::wad::elem::texture_page_item::TexturePageItem;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
-pub fn parse(reader: &mut DataReader) -> Result<Options> {
+pub fn deserialize(reader: &mut DataReader) -> Result<Options> {
     let flag_fullscreen = reader.read_bool32()?;
     let flag_interpolate_pixels = reader.read_bool32()?;
     let flag_use_new_audio = reader.read_bool32()?;
@@ -110,57 +110,57 @@ const fn f(is: bool, flag: OptionFlags) -> OptionFlags {
     if is { flag } else { OptionFlags::empty() }
 }
 
-pub fn build(builder: &mut DataBuilder, options: &Options) -> Result<()> {
-    builder.write_bool32(options.flags.contains(OptionFlags::FULLSCREEN));
-    builder.write_bool32(options.flags.contains(OptionFlags::INTERPOLATE_PIXELS));
-    builder.write_bool32(options.flags.contains(OptionFlags::USE_NEW_AUDIO));
-    builder.write_bool32(options.flags.contains(OptionFlags::NO_BORDER));
-    builder.write_bool32(options.flags.contains(OptionFlags::SHOW_CURSOR));
+pub fn serialize(writer: &mut DataWriter, options: &Options) -> Result<()> {
+    writer.write_bool32(options.flags.contains(OptionFlags::FULLSCREEN));
+    writer.write_bool32(options.flags.contains(OptionFlags::INTERPOLATE_PIXELS));
+    writer.write_bool32(options.flags.contains(OptionFlags::USE_NEW_AUDIO));
+    writer.write_bool32(options.flags.contains(OptionFlags::NO_BORDER));
+    writer.write_bool32(options.flags.contains(OptionFlags::SHOW_CURSOR));
 
-    builder.write_i32(options.window_scale);
+    writer.write_i32(options.window_scale);
 
-    builder.write_bool32(options.flags.contains(OptionFlags::SIZEABLE));
-    builder.write_bool32(options.flags.contains(OptionFlags::STAY_ON_TOP));
+    writer.write_bool32(options.flags.contains(OptionFlags::SIZEABLE));
+    writer.write_bool32(options.flags.contains(OptionFlags::STAY_ON_TOP));
 
-    builder.write_u32(options.window_color);
+    writer.write_u32(options.window_color);
 
-    builder.write_bool32(options.flags.contains(OptionFlags::CHANGE_RESOLUTION));
+    writer.write_bool32(options.flags.contains(OptionFlags::CHANGE_RESOLUTION));
 
-    builder.write_u32(options.color_depth);
-    builder.write_u32(options.resolution);
-    builder.write_u32(options.frequency);
+    writer.write_u32(options.color_depth);
+    writer.write_u32(options.resolution);
+    writer.write_u32(options.frequency);
 
-    builder.write_bool32(options.flags.contains(OptionFlags::NO_BUTTONS));
+    writer.write_bool32(options.flags.contains(OptionFlags::NO_BUTTONS));
 
-    builder.write_i32(options.vertex_sync);
+    writer.write_i32(options.vertex_sync);
 
-    builder.write_bool32(options.flags.contains(OptionFlags::SCREEN_KEY));
-    builder.write_bool32(options.flags.contains(OptionFlags::HELP_KEY));
-    builder.write_bool32(options.flags.contains(OptionFlags::QUIT_KEY));
-    builder.write_bool32(options.flags.contains(OptionFlags::SAVE_KEY));
-    builder.write_bool32(options.flags.contains(OptionFlags::SCREENSHOT_KEY));
-    builder.write_bool32(options.flags.contains(OptionFlags::CLOSE_SEC));
+    writer.write_bool32(options.flags.contains(OptionFlags::SCREEN_KEY));
+    writer.write_bool32(options.flags.contains(OptionFlags::HELP_KEY));
+    writer.write_bool32(options.flags.contains(OptionFlags::QUIT_KEY));
+    writer.write_bool32(options.flags.contains(OptionFlags::SAVE_KEY));
+    writer.write_bool32(options.flags.contains(OptionFlags::SCREENSHOT_KEY));
+    writer.write_bool32(options.flags.contains(OptionFlags::CLOSE_SEC));
 
-    builder.write_i32(options.priority);
+    writer.write_i32(options.priority);
 
-    builder.write_bool32(options.flags.contains(OptionFlags::FREEZE));
-    builder.write_bool32(options.flags.contains(OptionFlags::SHOW_PROGRESS));
+    writer.write_bool32(options.flags.contains(OptionFlags::FREEZE));
+    writer.write_bool32(options.flags.contains(OptionFlags::SHOW_PROGRESS));
 
-    builder.write_gm_texture(options.back_image)?;
-    builder.write_gm_texture(options.front_image)?;
-    builder.write_gm_texture(options.load_image)?;
+    writer.write_gm_texture(options.back_image)?;
+    writer.write_gm_texture(options.front_image)?;
+    writer.write_gm_texture(options.load_image)?;
 
-    builder.write_bool32(options.flags.contains(OptionFlags::LOAD_TRANSPARENT));
+    writer.write_bool32(options.flags.contains(OptionFlags::LOAD_TRANSPARENT));
 
-    builder.write_u32(options.load_alpha);
+    writer.write_u32(options.load_alpha);
 
-    builder.write_bool32(options.flags.contains(OptionFlags::SCALE_PROGRESS));
-    builder.write_bool32(options.flags.contains(OptionFlags::DISPLAY_ERRORS));
-    builder.write_bool32(options.flags.contains(OptionFlags::WRITE_ERRORS));
-    builder.write_bool32(options.flags.contains(OptionFlags::ABORT_ERRORS));
-    builder.write_bool32(options.flags.contains(OptionFlags::VARIABLE_ERRORS));
-    builder.write_bool32(options.flags.contains(OptionFlags::CREATION_EVENT_ORDER));
+    writer.write_bool32(options.flags.contains(OptionFlags::SCALE_PROGRESS));
+    writer.write_bool32(options.flags.contains(OptionFlags::DISPLAY_ERRORS));
+    writer.write_bool32(options.flags.contains(OptionFlags::WRITE_ERRORS));
+    writer.write_bool32(options.flags.contains(OptionFlags::ABORT_ERRORS));
+    writer.write_bool32(options.flags.contains(OptionFlags::VARIABLE_ERRORS));
+    writer.write_bool32(options.flags.contains(OptionFlags::CREATION_EVENT_ORDER));
 
-    builder.write_simple_list(&options.constants)?;
+    writer.write_simple_list(&options.constants)?;
     Ok(())
 }

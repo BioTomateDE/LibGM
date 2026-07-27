@@ -3,9 +3,9 @@ pub mod assembler;
 
 use clap::ValueEnum;
 use libgm::prelude::*;
-use libgm::wad::build::build_bytes;
 use libgm::wad::data::GMData;
-use libgm::wad::parse::parse_bytes;
+use libgm::wad::load::load_bytes;
+use libgm::wad::save::save_bytes;
 
 #[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Test {
@@ -27,8 +27,8 @@ pub fn deduplicate(mut tests: Vec<Test>) -> Vec<Test> {
     tests.dedup();
 
     if tests.contains(&Test::Reparse) {
-        let builder_index = tests.iter().position(|&t| t == Test::Builder);
-        if let Some(index) = builder_index {
+        let writer_index = tests.iter().position(|&t| t == Test::Builder);
+        if let Some(index) = writer_index {
             tests.remove(index);
         }
     }
@@ -48,16 +48,16 @@ pub fn perform(data: &mut GMData, tests: &[Test], raw_data: &[u8]) -> Result<()>
             }
             Test::Builder => {
                 log::info!("Performing Builder Test");
-                build_bytes(data)?;
+                save_bytes(data)?;
             }
             Test::Reparse => {
                 log::info!("Performing Reparse Test");
-                let raw: Vec<u8> = build_bytes(data)?;
+                let raw: Vec<u8> = save_bytes(data)?;
                 if raw != raw_data {
                     log::warn!("Built data file's bytes differ from the original!");
                 }
                 #[allow(unused)]
-                let new_data = parse_bytes(raw)?;
+                let new_data = load_bytes(raw)?;
                 // libgm_cli::diff::print_diffs(data, &new_data);
             }
             Test::Assembler => {

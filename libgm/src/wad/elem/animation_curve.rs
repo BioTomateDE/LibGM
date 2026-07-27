@@ -4,10 +4,10 @@ pub mod channel;
 pub use channel::Channel;
 
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 /// GMS 2.3+
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -26,10 +26,10 @@ impl GMElement for AnimationCurves {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.align(4);
-        builder.write_i32(1); // ACRV version 1
-        builder.write_pointer_list_opt(&self.elems)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.align(4);
+        writer.write_i32(1); // ACRV version 1
+        writer.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }
@@ -51,10 +51,10 @@ impl GMElement for AnimationCurve {
         Ok(Self { name, channels })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_u32(1); // Graph Type
-        builder.write_simple_list(&self.channels)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_u32(1); // Graph Type
+        writer.write_simple_list(&self.channels)?;
         Ok(())
     }
 }

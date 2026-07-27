@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sprite::swf::ColorMatrix;
 use crate::wad::elem::sprite::swf::Matrix33;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Frame {
@@ -36,14 +36,14 @@ impl GMElement for Frame {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_usize(self.frame_objects.len())?;
-        builder.write_f32(self.min_x);
-        builder.write_f32(self.max_x);
-        builder.write_f32(self.min_y);
-        builder.write_f32(self.max_y);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_usize(self.frame_objects.len())?;
+        writer.write_f32(self.min_x);
+        writer.write_f32(self.max_x);
+        writer.write_f32(self.min_y);
+        writer.write_f32(self.max_y);
         for frame_object in &self.frame_objects {
-            frame_object.serialize(builder)?;
+            writer.write_elem(frame_object)?;
         }
         Ok(())
     }
@@ -90,17 +90,17 @@ impl GMElement for Object {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(self.char_id);
-        builder.write_i32(self.char_index);
-        builder.write_i32(self.depth);
-        builder.write_i32(self.clipping_depth);
-        self.color_matrix.serialize(builder)?;
-        builder.write_f32(self.min_x);
-        builder.write_f32(self.max_x);
-        builder.write_f32(self.min_y);
-        builder.write_f32(self.max_y);
-        self.transformation_matrix.serialize(builder)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i32(self.char_id);
+        writer.write_i32(self.char_index);
+        writer.write_i32(self.depth);
+        writer.write_i32(self.clipping_depth);
+        writer.write_elem(&self.color_matrix)?;
+        writer.write_f32(self.min_x);
+        writer.write_f32(self.max_x);
+        writer.write_f32(self.min_y);
+        writer.write_f32(self.max_y);
+        writer.write_elem(&self.transformation_matrix)?;
         Ok(())
     }
 }

@@ -12,8 +12,8 @@ use image::Rgba;
 
 use crate::prelude::*;
 use crate::util::fmt::hexdump_range;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::data::Endianness;
+use crate::wad::save::writer::DataWriter;
 
 const QOI_INDEX: u8 = 0x00;
 const QOI_RUN_8: u8 = 0x40;
@@ -113,9 +113,9 @@ fn estimate_encoded_size(image: &DynamicImage) -> usize {
     width * height
 }
 
-pub fn build(image: &DynamicImage, builder: &mut DataBuilder) -> Result<()> {
-    builder.raw_data.reserve(estimate_encoded_size(image));
-    encode_to_buffer(image, &mut builder.raw_data)
+pub fn build(image: &DynamicImage, writer: &mut DataWriter) -> Result<()> {
+    writer.raw_data.reserve(estimate_encoded_size(image));
+    encode_to_buffer(image, &mut writer.raw_data)
 }
 
 pub fn encode(image: &DynamicImage) -> Result<Vec<u8>> {

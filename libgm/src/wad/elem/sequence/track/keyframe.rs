@@ -27,9 +27,9 @@ pub use text::Text;
 
 use crate::prelude::*;
 use crate::util::fmt::typename;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Keyframes {
@@ -64,9 +64,9 @@ impl<T: GMElement> GMElement for Data<T> {
         Ok(Self { keyframes })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.align(4);
-        builder
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.align(4);
+        writer
             .write_simple_list(&self.keyframes)
             .ctx(|| format!("serializing {} keyframes", typename::<T>()))?;
         Ok(())
@@ -92,12 +92,12 @@ impl<T: GMElement> GMElement for Keyframe<T> {
         Ok(Self { key, length, stretch, disabled, channels })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_f32(self.key);
-        builder.write_f32(self.length);
-        builder.write_bool32(self.stretch);
-        builder.write_bool32(self.disabled);
-        builder.write_simple_list(&self.channels)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_f32(self.key);
+        writer.write_f32(self.length);
+        writer.write_bool32(self.stretch);
+        writer.write_bool32(self.disabled);
+        writer.write_simple_list(&self.channels)?;
         Ok(())
     }
 }
@@ -117,10 +117,10 @@ impl<T: GMElement> GMElement for Channel<T> {
         Ok(Self { id, value })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(self.id);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i32(self.id);
         self.value
-            .serialize(builder)
+            .serialize(writer)
             .ctx(|| format!("serializing {} channel", typename::<T>()))?;
         Ok(())
     }

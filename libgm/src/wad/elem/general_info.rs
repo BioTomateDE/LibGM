@@ -11,12 +11,12 @@ pub use self::function_classifications::FunctionClassifications;
 pub use self::gms2::GMS2Data;
 use crate::prelude::*;
 use crate::wad::Blob;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::ChunkName;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::room::Room;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 use crate::wad::version::GMVersion;
 use crate::wad::version::IdeVersion;
 
@@ -199,35 +199,35 @@ impl GMElement for GeneralInfo {
         Ok(general_info)
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u8(!self.debugger_enabled as u8);
-        builder.write_u8(self.wad_version);
-        builder.write_u16(self.unknown_value);
-        builder.write_gm_string(self.game_file_name)?;
-        builder.write_gm_string(self.config)?;
-        builder.write_u32(self.last_object_id);
-        builder.write_u32(self.last_tile_id);
-        builder.write_u32(self.game_id);
-        builder.write_bytes(&*self.directplay_guid);
-        builder.write_gm_string(self.game_name)?;
-        self.ide_version.serialize(builder)?;
-        builder.write_u32(self.window_width);
-        builder.write_u32(self.window_height);
-        builder.write_u32(self.flags.bits());
-        builder.write_u32(self.license_crc32);
-        builder.write_bytes(&*self.license_md5);
-        builder.write_i64(self.creation_timestamp.timestamp());
-        builder.write_gm_string(self.display_name)?;
-        builder.write_u64(0); // "Active targets"
-        builder.write_u64(self.function_classifications.bits());
-        builder.write_i32(self.steam_appid);
-        if builder.version() >= GMVersion::Wad14 {
-            builder.write_u32(self.debugger_port);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_u8(!self.debugger_enabled as u8);
+        writer.write_u8(self.wad_version);
+        writer.write_u16(self.unknown_value);
+        writer.write_gm_string(self.game_file_name)?;
+        writer.write_gm_string(self.config)?;
+        writer.write_u32(self.last_object_id);
+        writer.write_u32(self.last_tile_id);
+        writer.write_u32(self.game_id);
+        writer.write_bytes(&*self.directplay_guid);
+        writer.write_gm_string(self.game_name)?;
+        writer.write_elem(&self.ide_version)?;
+        writer.write_u32(self.window_width);
+        writer.write_u32(self.window_height);
+        writer.write_u32(self.flags.bits());
+        writer.write_u32(self.license_crc32);
+        writer.write_bytes(&*self.license_md5);
+        writer.write_i64(self.creation_timestamp.timestamp());
+        writer.write_gm_string(self.display_name)?;
+        writer.write_u64(0); // "Active targets"
+        writer.write_u64(self.function_classifications.bits());
+        writer.write_i32(self.steam_appid);
+        if writer.version() >= GMVersion::Wad14 {
+            writer.write_u32(self.debugger_port);
         }
-        builder.write_simple_list(&self.room_order)?;
+        writer.write_simple_list(&self.room_order)?;
 
-        if builder.version() >= GMVersion::GMS2 {
-            self.write_gms2_data(builder)?;
+        if writer.version() >= GMVersion::GMS2 {
+            self.write_gms2_data(writer)?;
         }
         Ok(())
     }

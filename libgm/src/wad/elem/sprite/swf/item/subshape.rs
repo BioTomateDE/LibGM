@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Data {
@@ -91,54 +91,54 @@ impl GMElement for Data {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(self.fill_style1);
-        builder.write_i32(self.fill_style2);
-        builder.write_i32(self.line_style);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i32(self.fill_style1);
+        writer.write_i32(self.fill_style2);
+        writer.write_i32(self.line_style);
 
-        builder.write_usize(self.points.len())?;
-        builder.write_usize(self.lines.len())?;
-        builder.write_usize(self.triangles.len() / 3)?;
-        builder.write_usize(self.line_points.len())?;
-        builder.write_usize(self.line_triangles.len() / 3)?;
-        builder.write_usize(self.aa_lines.len())?;
-        builder.write_usize(self.aa_vectors.len())?;
-        builder.write_usize(self.line_aa_lines.len())?;
-        builder.write_usize(self.line_aa_vectors.len())?;
+        writer.write_usize(self.points.len())?;
+        writer.write_usize(self.lines.len())?;
+        writer.write_usize(self.triangles.len() / 3)?;
+        writer.write_usize(self.line_points.len())?;
+        writer.write_usize(self.line_triangles.len() / 3)?;
+        writer.write_usize(self.aa_lines.len())?;
+        writer.write_usize(self.aa_vectors.len())?;
+        writer.write_usize(self.line_aa_lines.len())?;
+        writer.write_usize(self.line_aa_vectors.len())?;
 
         for (x, y) in &self.points {
-            builder.write_f32(*x);
-            builder.write_f32(*y);
+            writer.write_f32(*x);
+            writer.write_f32(*y);
         }
         for (x, y) in &self.lines {
-            builder.write_i32(*x);
-            builder.write_i32(*y);
+            writer.write_i32(*x);
+            writer.write_i32(*y);
         }
         for i in &self.triangles {
-            builder.write_i32(*i);
+            writer.write_i32(*i);
         }
         for (x, y) in &self.line_points {
-            builder.write_f32(*x);
-            builder.write_f32(*y);
+            writer.write_f32(*x);
+            writer.write_f32(*y);
         }
         for i in &self.line_triangles {
-            builder.write_i32(*i);
+            writer.write_i32(*i);
         }
         for (x, y) in &self.aa_lines {
-            builder.write_i32(*x);
-            builder.write_i32(*y);
+            writer.write_i32(*x);
+            writer.write_i32(*y);
         }
         for (x, y) in &self.aa_vectors {
-            builder.write_f32(*x);
-            builder.write_f32(*y);
+            writer.write_f32(*x);
+            writer.write_f32(*y);
         }
         for (x, y) in &self.line_aa_lines {
-            builder.write_i32(*x);
-            builder.write_i32(*y);
+            writer.write_i32(*x);
+            writer.write_i32(*y);
         }
         for (x, y) in &self.line_aa_vectors {
-            builder.write_f32(*x);
-            builder.write_f32(*y);
+            writer.write_f32(*x);
+            writer.write_f32(*y);
         }
         Ok(())
     }

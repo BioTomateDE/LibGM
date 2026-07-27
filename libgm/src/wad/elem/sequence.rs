@@ -12,10 +12,10 @@ use crate::gm_enum::gm_enum;
 use crate::prelude::*;
 use crate::util::init::hashmap_with_capacity;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 /// This struct belong to the chunk SEQN.
 /// Sprites can _also_ contain sequences (not by reference; the actual data).
@@ -37,10 +37,10 @@ impl GMElement for Sequences {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.align(4);
-        builder.write_u32(1); // SEQN Version 1
-        builder.write_pointer_list_opt(&self.elems)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.align(4);
+        writer.write_u32(1); // SEQN Version 1
+        writer.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }
@@ -114,29 +114,29 @@ impl GMElement for Sequence {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_enum(self.playback);
-        builder.write_f32(self.playback_speed);
-        builder.write_enum(self.playback_speed_type);
-        builder.write_f32(self.length);
-        builder.write_i32(self.origin_x);
-        builder.write_i32(self.origin_y);
-        builder.write_f32(self.volume);
-        if builder.version() >= GMVersion::GM2024_13 {
-            builder.write_f32(self.width.ok_or("Sequence width not set in 2024.13+")?);
-            builder.write_f32(self.height.ok_or("Sequence height not set in 2024.13+")?);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_enum(self.playback);
+        writer.write_f32(self.playback_speed);
+        writer.write_enum(self.playback_speed_type);
+        writer.write_f32(self.length);
+        writer.write_i32(self.origin_x);
+        writer.write_i32(self.origin_y);
+        writer.write_f32(self.volume);
+        if writer.version() >= GMVersion::GM2024_13 {
+            writer.write_f32(self.width.ok_or("Sequence width not set in 2024.13+")?);
+            writer.write_f32(self.height.ok_or("Sequence height not set in 2024.13+")?);
         }
-        builder.write_simple_list(&self.broadcast_messages)?;
-        builder.write_simple_list(&self.tracks)?;
+        writer.write_simple_list(&self.broadcast_messages)?;
+        writer.write_simple_list(&self.tracks)?;
 
-        builder.write_usize(self.function_ids.len())?;
+        writer.write_usize(self.function_ids.len())?;
         for (&key, &function_id) in &self.function_ids {
-            builder.write_i32(key);
-            builder.write_gm_string(function_id)?;
+            writer.write_i32(key);
+            writer.write_gm_string(function_id)?;
         }
 
-        builder.write_simple_list(&self.moments)?;
+        writer.write_simple_list(&self.moments)?;
         Ok(())
     }
 }

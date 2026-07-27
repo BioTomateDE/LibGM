@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Paths {
@@ -19,8 +19,8 @@ impl GMElement for Paths {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list_opt(&self.elems)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }
@@ -50,12 +50,12 @@ impl GMElement for Path {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_bool32(self.is_smooth);
-        builder.write_bool32(self.is_closed);
-        builder.write_u32(self.precision);
-        builder.write_simple_list(&self.points)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_bool32(self.is_smooth);
+        writer.write_bool32(self.is_closed);
+        writer.write_u32(self.precision);
+        writer.write_simple_list(&self.points)?;
         Ok(())
     }
 }
@@ -75,10 +75,10 @@ impl GMElement for Point {
         Ok(Self { x, y, speed })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_f32(self.x);
-        builder.write_f32(self.y);
-        builder.write_f32(self.speed);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_f32(self.x);
+        writer.write_f32(self.y);
+        writer.write_f32(self.speed);
         Ok(())
     }
 }

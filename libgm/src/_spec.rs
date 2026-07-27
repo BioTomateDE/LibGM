@@ -32,8 +32,7 @@
 //! * GML bytecode (unless YYC)
 //! * Other game assets and configuration
 //!
-//! **This library (LibGM) provides tools to parse and modify these GameMaker
-//! data files.**
+//! **This library (LibGM) provides tools to decode and modify these GameMaker data files.**
 //!
 //! The runner is the executable program that loads and runs the data file. It
 //! handles:
@@ -58,7 +57,7 @@
 //! In VM mode, the GML source code is compiled to their own bytecode that
 //! then gets executed by the runner's special GML Virtual Machine.
 //! The VM bytecode is stored in the data file and is therefore
-//! able to be parsed, decompiled and modified by LibGM.
+//! able to be decoded and modified by LibGM.
 //!
 //! In YYC, the GML source code is converted to C code
 //! and then compiled by GCC (DOCME: not sure).
@@ -171,7 +170,7 @@
 //! This is true! They are indeed redundant.
 //! However, some GameMaker elements may have a varying data length,
 //! which makes simple pointer arithmetic impossible in simple lists.
-//! The runner would have to parse all elements
+//! The runner would have to deserialize all elements
 //! sequentially just to get to the one it actually wants to read.
 //! Depending on how those elements are typically used, this can be very
 //! inefficient, which is why YoYoGames includes pointers to the element in

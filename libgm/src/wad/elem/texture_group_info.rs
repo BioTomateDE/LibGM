@@ -3,7 +3,6 @@
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::GMNamedElement;
@@ -13,8 +12,9 @@ use crate::wad::elem::string::Strings;
 use crate::wad::elem::texture_page::TexturePage;
 use crate::wad::elem::tileset::Tileset;
 use crate::wad::elem::validate_identifier;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct TextureGroupInfos {
@@ -58,9 +58,9 @@ impl GMElement for TextureGroupInfos {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(1); // TGIN version
-        builder.write_pointer_list(&self.elems)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i32(1); // TGIN version
+        writer.write_pointer_list(&self.elems)?;
         Ok(())
     }
 }
@@ -120,37 +120,37 @@ impl GMElement for TextureGroupInfo {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_if_ver(
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_if_ver(
             &self.data_2022_9,
             "Directory, Extension, LoadType",
             GMVersion::GM2022_9,
         )?;
-        builder.write_pointer(&self.texture_pages);
-        builder.write_pointer(&self.sprites);
-        if builder.version() < GMVersion::GM2023_1 {
-            builder.write_pointer(&self.spine_sprites);
+        writer.write_pointer(&self.texture_pages);
+        writer.write_pointer(&self.sprites);
+        if writer.version() < GMVersion::GM2023_1 {
+            writer.write_pointer(&self.spine_sprites);
         }
-        builder.write_pointer(&self.fonts);
-        builder.write_pointer(&self.tilesets);
+        writer.write_pointer(&self.fonts);
+        writer.write_pointer(&self.tilesets);
 
-        builder.resolve_pointer(&self.texture_pages)?;
-        builder.write_simple_list(&self.texture_pages)?;
+        writer.resolve_pointer(&self.texture_pages)?;
+        writer.write_simple_list(&self.texture_pages)?;
 
-        builder.resolve_pointer(&self.sprites)?;
-        builder.write_simple_list(&self.sprites)?;
+        writer.resolve_pointer(&self.sprites)?;
+        writer.write_simple_list(&self.sprites)?;
 
-        if builder.version() < GMVersion::GM2023_1 {
-            builder.resolve_pointer(&self.spine_sprites)?;
-            builder.write_simple_list(&self.spine_sprites)?;
+        if writer.version() < GMVersion::GM2023_1 {
+            writer.resolve_pointer(&self.spine_sprites)?;
+            writer.write_simple_list(&self.spine_sprites)?;
         }
 
-        builder.resolve_pointer(&self.fonts)?;
-        builder.write_simple_list(&self.fonts)?;
+        writer.resolve_pointer(&self.fonts)?;
+        writer.write_simple_list(&self.fonts)?;
 
-        builder.resolve_pointer(&self.tilesets)?;
-        builder.write_simple_list(&self.tilesets)?;
+        writer.resolve_pointer(&self.tilesets)?;
+        writer.write_simple_list(&self.tilesets)?;
 
         Ok(())
     }
@@ -171,10 +171,10 @@ impl GMElement for Data2022_9 {
         Ok(Self { directory, extension, load_type })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.directory)?;
-        builder.write_gm_string(self.extension)?;
-        builder.write_enum(self.load_type);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.directory)?;
+        writer.write_gm_string(self.extension)?;
+        writer.write_enum(self.load_type);
         Ok(())
     }
 }

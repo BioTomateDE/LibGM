@@ -3,10 +3,12 @@ use std::collections::HashMap;
 
 use crate::gml::instruction::VariableType;
 use crate::prelude::*;
+use crate::util::fmt::typename;
 use crate::wad::GMVersion;
-use crate::wad::build::pointers::Pointer;
 use crate::wad::data::Endianness;
 use crate::wad::data::GMData;
+use crate::wad::elem::GMElement;
+use crate::wad::save::pointers::Pointer;
 
 // The Default value should never be read.
 // This can only happen if there are zero existent chunks, though.
@@ -17,7 +19,7 @@ pub struct LastChunk {
 }
 
 #[derive(Debug)]
-pub struct DataBuilder<'a> {
+pub struct DataWriter<'a> {
     /// The [`GMData`] to serialize.
     pub gm_data: &'a GMData,
 
@@ -50,7 +52,7 @@ pub struct DataBuilder<'a> {
     pub last_chunk: LastChunk,
 }
 
-impl<'a> DataBuilder<'a> {
+impl<'a> DataWriter<'a> {
     pub fn new(gm_data: &'a GMData) -> Self {
         let approximated_size: usize = (f64::from(gm_data.meta.original_data_size) * 1.05) as usize;
 
@@ -100,6 +102,12 @@ impl<'a> DataBuilder<'a> {
         // It's really funny how this function is a one-liner whereas
         // reading bytes needs like 50 lines to be handled correctly...
         self.raw_data.extend_from_slice(data);
+    }
+
+    #[inline]
+    pub fn write_elem<T: GMElement>(&mut self, elem: &T) -> Result<()> {
+        elem.serialize(self)
+            .ctx(|| format!("serializing {}", typename::<T>()))
     }
 
     /// Overwrites bytes at the given position in the internal data buffer.

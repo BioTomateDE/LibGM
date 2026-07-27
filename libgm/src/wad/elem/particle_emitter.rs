@@ -2,12 +2,12 @@ use crate::gm_enum::gm_enum;
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sprite::Sprite;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct ParticleEmitters {
@@ -24,10 +24,10 @@ impl GMElement for ParticleEmitters {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.align(4);
-        builder.write_u32(1); // PSEM Version
-        builder.write_pointer_list(&self.elems)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.align(4);
+        writer.write_u32(1); // PSEM Version
+        writer.write_pointer_list(&self.elems)?;
         Ok(())
     }
 }
@@ -244,18 +244,18 @@ impl GMElement for ParticleEmitter {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
 
-        if builder.version() >= GMVersion::GM2023_6 || builder.version() == GMVersion::Lts2022_0_3 {
-            builder.write_bool32(self.enabled);
+        if writer.version() >= GMVersion::GM2023_6 || writer.version() == GMVersion::Lts2022_0_3 {
+            writer.write_bool32(self.enabled);
         } else if !self.enabled {
             log::warn!("Cannot disable particle emitters before 2023.6");
         }
 
-        builder.write_enum(self.mode);
+        writer.write_enum(self.mode);
 
-        if builder.version() >= GMVersion::GM2023_8 {
+        if writer.version() >= GMVersion::GM2023_8 {
             let SizeDataEtc::Post2023_8(data) = &self.size_data_etc else {
                 bail!("Expected >= 2023.8 data, got < 2023.8 data");
             };
@@ -263,78 +263,78 @@ impl GMElement for ParticleEmitter {
             // Lmao, even clippy says storing natural numbers as floats is dumb.
             // What am I supposed to do, though? I'm just the janitor.
             #[allow(clippy::cast_precision_loss)]
-            builder.write_f32(self.emit_count as f32);
+            writer.write_f32(self.emit_count as f32);
 
-            builder.write_bool32(data.emit_relative);
-            builder.write_f32(data.delay_min);
-            builder.write_f32(data.delay_max);
-            builder.write_enum(data.delay_unit);
-            builder.write_f32(data.interval_min);
-            builder.write_f32(data.interval_max);
-            builder.write_enum(data.interval_unit);
+            writer.write_bool32(data.emit_relative);
+            writer.write_f32(data.delay_min);
+            writer.write_f32(data.delay_max);
+            writer.write_enum(data.delay_unit);
+            writer.write_f32(data.interval_min);
+            writer.write_f32(data.interval_max);
+            writer.write_enum(data.interval_unit);
         } else {
-            builder.write_u32(self.emit_count);
+            writer.write_u32(self.emit_count);
         }
 
-        builder.write_enum(self.distribution);
-        builder.write_enum(self.shape);
-        builder.write_f32(self.region_x);
-        builder.write_f32(self.region_y);
-        builder.write_f32(self.region_w);
-        builder.write_f32(self.region_h);
-        builder.write_f32(self.rotation);
-        builder.write_resource_id(self.sprite);
-        builder.write_enum(self.texture);
-        builder.write_f32(self.frame_index);
-        builder.write_if_ver(&self.data_2023_4, "2023.4 data", GMVersion::GM2023_4)?;
-        builder.write_u32(self.start_color);
-        builder.write_u32(self.mid_color);
-        builder.write_u32(self.end_color);
-        builder.write_bool32(self.additive_blend);
-        builder.write_f32(self.lifetime_min);
-        builder.write_f32(self.lifetime_max);
-        builder.write_f32(self.scale_x);
-        builder.write_f32(self.scale_y);
-        if builder.version() >= GMVersion::GM2023_8 {
+        writer.write_enum(self.distribution);
+        writer.write_enum(self.shape);
+        writer.write_f32(self.region_x);
+        writer.write_f32(self.region_y);
+        writer.write_f32(self.region_w);
+        writer.write_f32(self.region_h);
+        writer.write_f32(self.rotation);
+        writer.write_resource_id(self.sprite);
+        writer.write_enum(self.texture);
+        writer.write_f32(self.frame_index);
+        writer.write_if_ver(&self.data_2023_4, "2023.4 data", GMVersion::GM2023_4)?;
+        writer.write_u32(self.start_color);
+        writer.write_u32(self.mid_color);
+        writer.write_u32(self.end_color);
+        writer.write_bool32(self.additive_blend);
+        writer.write_f32(self.lifetime_min);
+        writer.write_f32(self.lifetime_max);
+        writer.write_f32(self.scale_x);
+        writer.write_f32(self.scale_y);
+        if writer.version() >= GMVersion::GM2023_8 {
             let SizeDataEtc::Post2023_8(data) = &self.size_data_etc else {
                 bail!("Expected >= 2023.8 data, got < 2023.8 data");
             };
-            builder.write_f32(data.size_min_x);
-            builder.write_f32(data.size_max_x);
-            builder.write_f32(data.size_min_y);
-            builder.write_f32(data.size_max_y);
-            builder.write_f32(data.size_increase_x);
-            builder.write_f32(data.size_increase_y);
-            builder.write_f32(data.size_wiggle_x);
-            builder.write_f32(data.size_wiggle_y);
+            writer.write_f32(data.size_min_x);
+            writer.write_f32(data.size_max_x);
+            writer.write_f32(data.size_min_y);
+            writer.write_f32(data.size_max_y);
+            writer.write_f32(data.size_increase_x);
+            writer.write_f32(data.size_increase_y);
+            writer.write_f32(data.size_wiggle_x);
+            writer.write_f32(data.size_wiggle_y);
         } else {
             let SizeDataEtc::Pre2023_8(data) = &self.size_data_etc else {
                 bail!("Expected < 2023.8 data, got >= 2023.8 data");
             };
-            builder.write_f32(data.size_min);
-            builder.write_f32(data.size_max);
-            builder.write_f32(data.size_increase);
-            builder.write_f32(data.size_wiggle);
+            writer.write_f32(data.size_min);
+            writer.write_f32(data.size_max);
+            writer.write_f32(data.size_increase);
+            writer.write_f32(data.size_wiggle);
         }
-        builder.write_f32(self.speed_min);
-        builder.write_f32(self.speed_max);
-        builder.write_f32(self.speed_increase);
-        builder.write_f32(self.speed_wiggle);
-        builder.write_f32(self.gravity_force);
-        builder.write_f32(self.gravity_direction);
-        builder.write_f32(self.direction_min);
-        builder.write_f32(self.direction_max);
-        builder.write_f32(self.direction_increase);
-        builder.write_f32(self.direction_wiggle);
-        builder.write_f32(self.orientation_min);
-        builder.write_f32(self.orientation_max);
-        builder.write_f32(self.orientation_increase);
-        builder.write_f32(self.orientation_wiggle);
-        builder.write_bool32(self.orientation_relative);
-        builder.write_resource_id(self.spawn_on_death);
-        builder.write_u32(self.spawn_on_death_count);
-        builder.write_resource_id(self.spawn_on_update);
-        builder.write_u32(self.spawn_on_update_count);
+        writer.write_f32(self.speed_min);
+        writer.write_f32(self.speed_max);
+        writer.write_f32(self.speed_increase);
+        writer.write_f32(self.speed_wiggle);
+        writer.write_f32(self.gravity_force);
+        writer.write_f32(self.gravity_direction);
+        writer.write_f32(self.direction_min);
+        writer.write_f32(self.direction_max);
+        writer.write_f32(self.direction_increase);
+        writer.write_f32(self.direction_wiggle);
+        writer.write_f32(self.orientation_min);
+        writer.write_f32(self.orientation_max);
+        writer.write_f32(self.orientation_increase);
+        writer.write_f32(self.orientation_wiggle);
+        writer.write_bool32(self.orientation_relative);
+        writer.write_resource_id(self.spawn_on_death);
+        writer.write_u32(self.spawn_on_death_count);
+        writer.write_resource_id(self.spawn_on_update);
+        writer.write_u32(self.spawn_on_update_count);
         Ok(())
     }
 }
@@ -354,10 +354,10 @@ impl GMElement for Data2023_4 {
         Ok(Self { animate, stretch, is_random })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_bool32(self.animate);
-        builder.write_bool32(self.stretch);
-        builder.write_bool32(self.is_random);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_bool32(self.animate);
+        writer.write_bool32(self.stretch);
+        writer.write_bool32(self.is_random);
         Ok(())
     }
 }

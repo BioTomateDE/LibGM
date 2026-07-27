@@ -4,9 +4,9 @@ pub mod shape;
 pub mod subshape;
 
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Item {
@@ -25,8 +25,8 @@ impl GMElement for Item {
             4 => ItemData::ItemTextField,
             5 => ItemData::ItemSprite,
             _ => bail!(
-                "Invalid YYSWF Item Type {0} (0x{0:08X}) at position {1} while parsing Sprite YYSWF \
-                 Item",
+                "Invalid YYSWF Item Type {0} (0x{0:08X}) at position {1} while parsing Sprite \
+                 YYSWF Item",
                 item_type,
                 reader.cur_pos,
             ),
@@ -34,18 +34,18 @@ impl GMElement for Item {
         Ok(Self { id, item_data })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_i32(match &self.item_data {
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i32(match &self.item_data {
             ItemData::ItemShape(_) => 1,
             ItemData::ItemBitmap(_) => 2,
             ItemData::ItemFont => 3,
             ItemData::ItemTextField => 4,
             ItemData::ItemSprite => 5,
         });
-        builder.write_i32(self.id);
+        writer.write_i32(self.id);
         match &self.item_data {
-            ItemData::ItemShape(shape_data) => shape_data.serialize(builder)?,
-            ItemData::ItemBitmap(bitmap_data) => bitmap_data.serialize(builder)?,
+            ItemData::ItemShape(shape_data) => writer.write_elem(shape_data)?,
+            ItemData::ItemBitmap(bitmap_data) => writer.write_elem(bitmap_data)?,
             ItemData::ItemFont | ItemData::ItemTextField | ItemData::ItemSprite => {}
         }
         Ok(())

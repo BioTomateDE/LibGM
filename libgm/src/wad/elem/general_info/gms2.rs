@@ -3,9 +3,9 @@ use dotnet_rng::DotnetRng;
 
 use crate::prelude::*;
 use crate::wad::Blob;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::general_info::GeneralInfo;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMS2Data {
@@ -101,7 +101,7 @@ impl GeneralInfo {
         })
     }
 
-    pub(super) fn write_gms2_data(&self, builder: &mut DataBuilder) -> Result<()> {
+    pub(super) fn write_gms2_data(&self, writer: &mut DataWriter) -> Result<()> {
         let gms2_info: &GMS2Data = self
             .gms2_data
             .as_ref()
@@ -113,21 +113,21 @@ impl GeneralInfo {
         let first_random: i64 = (i64::from(rng.next()) << 32) | i64::from(rng.next());
         let info_number = self.get_info_number(first_random, gms2_info.info_timestamp_offset);
         let info_location: i32 = self.get_info_location(timestamp);
-        builder.write_i64(first_random);
+        writer.write_i64(first_random);
         for i in 0..4 {
             if i == info_location {
-                builder.write_i64(info_number);
+                writer.write_i64(info_number);
             } else {
                 let first = rng.next();
                 let second = rng.next();
-                builder.write_i32(first);
-                builder.write_i32(second);
+                writer.write_i32(first);
+                writer.write_i32(second);
             }
         }
 
-        builder.write_f32(gms2_info.fps);
-        builder.write_bool32(gms2_info.allow_statistics);
-        builder.write_bytes(&*gms2_info.game_guid);
+        writer.write_f32(gms2_info.fps);
+        writer.write_bool32(gms2_info.allow_statistics);
+        writer.write_bytes(&*gms2_info.game_guid);
         Ok(())
     }
 

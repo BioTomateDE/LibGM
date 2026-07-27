@@ -2,11 +2,11 @@
 
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::game_object;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Timelines {
@@ -22,8 +22,8 @@ impl GMElement for Timelines {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list_opt(&self.elems)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }
@@ -57,16 +57,16 @@ impl GMElement for Timeline {
         Ok(Self { name, moments })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_usize(self.moments.len())?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_usize(self.moments.len())?;
         for moment in &self.moments {
-            builder.write_u32(moment.time_point);
-            builder.write_pointer(&moment.actions);
+            writer.write_u32(moment.time_point);
+            writer.write_pointer(&moment.actions);
         }
         for moment in &self.moments {
-            builder.resolve_pointer(&moment.actions)?;
-            builder.write_pointer_list(&moment.actions)?;
+            writer.resolve_pointer(&moment.actions)?;
+            writer.write_pointer_list(&moment.actions)?;
         }
         Ok(())
     }

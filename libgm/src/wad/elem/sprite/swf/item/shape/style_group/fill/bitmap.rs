@@ -2,10 +2,10 @@
 
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sprite::swf::Matrix33;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Data {
@@ -26,10 +26,10 @@ impl GMElement for Data {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_enum(self.bitmap_fill_type);
-        builder.write_i32(self.char_id);
-        self.transformation_matrix.serialize(builder)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_enum(self.bitmap_fill_type);
+        writer.write_i32(self.char_id);
+        writer.write_elem(&self.transformation_matrix)?;
         Ok(())
     }
 }

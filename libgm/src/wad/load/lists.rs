@@ -3,7 +3,7 @@ use crate::prelude::*;
 use crate::util::fmt::typename;
 use crate::util::init::vec_with_capacity;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 
 impl DataReader<'_> {
     /// Reads a GameMaker simple list with a 32-bit count prefix.

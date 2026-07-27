@@ -8,12 +8,12 @@ pub use kerning::Kerning;
 use crate::prelude::*;
 use crate::wad::Blob;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::texture_page_item::TexturePageItem;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Fonts {
@@ -37,10 +37,10 @@ impl GMElement for Fonts {
         Ok(Self { elems, padding })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list_opt(&self.elems)?;
-        if builder.version() < GMVersion::GM2024_14 {
-            builder.write_bytes(&*self.padding);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_pointer_list_opt(&self.elems)?;
+        if writer.version() < GMVersion::GM2024_14 {
+            writer.write_bytes(&*self.padding);
         }
         Ok(())
     }
@@ -178,40 +178,40 @@ impl GMElement for Font {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_gm_string(self.display_name)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_gm_string(self.display_name)?;
         match self.em_size {
-            FontSize::Float(value) => builder.write_f32(-value),
-            FontSize::Int(value) => builder.write_u32(value),
+            FontSize::Float(value) => writer.write_f32(-value),
+            FontSize::Int(value) => writer.write_u32(value),
         }
-        builder.write_bool32(self.bold);
-        builder.write_bool32(self.italic);
-        builder.write_u16(self.range_start);
-        builder.write_u8(self.charset);
-        builder.write_u8(self.anti_alias);
-        builder.write_u32(self.range_end);
-        builder.write_gm_texture(self.texture)?;
-        builder.write_f32(self.scale_x);
-        builder.write_f32(self.scale_y);
-        builder.write_if_ver(
+        writer.write_bool32(self.bold);
+        writer.write_bool32(self.italic);
+        writer.write_u16(self.range_start);
+        writer.write_u8(self.charset);
+        writer.write_u8(self.anti_alias);
+        writer.write_u32(self.range_end);
+        writer.write_gm_texture(self.texture)?;
+        writer.write_f32(self.scale_x);
+        writer.write_f32(self.scale_y);
+        writer.write_if_ver(
             &self.ascender_offset,
             "Ascender Offset",
             GMVersion::GMS2_2_1,
         )?;
-        builder.write_if_ver(&self.ascender, "Ascender", GMVersion::GM2022_2)?;
-        if builder.version() >= GMVersion::GM2023_2 {
-            builder.write_u32(self.sdf_spread.ok_or("SDF Spread not set in 2023.2+")?);
+        writer.write_if_ver(&self.ascender, "Ascender", GMVersion::GM2022_2)?;
+        if writer.version() >= GMVersion::GM2023_2 {
+            writer.write_u32(self.sdf_spread.ok_or("SDF Spread not set in 2023.2+")?);
         }
-        if builder.version() >= GMVersion::GM2023_6 || builder.version() == GMVersion::Lts2022_0_3 {
-            builder.write_u32(
+        if writer.version() >= GMVersion::GM2023_6 || writer.version() == GMVersion::Lts2022_0_3 {
+            writer.write_u32(
                 self.line_height
                     .ok_or("Line Height not set in 2023.6 (or LTS 2022.0.3)")?,
             );
         }
-        builder.write_pointer_list(&self.glyphs)?;
-        if builder.version() >= GMVersion::GM2024_14 {
-            builder.align(4);
+        writer.write_pointer_list(&self.glyphs)?;
+        if writer.version() >= GMVersion::GM2024_14 {
+            writer.align(4);
         }
         Ok(())
     }

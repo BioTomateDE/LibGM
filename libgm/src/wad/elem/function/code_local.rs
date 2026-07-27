@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CodeLocal {
@@ -22,11 +22,11 @@ impl GMElement for CodeLocal {
         Ok(Self { name, variables })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_usize(self.variables.len())?;
-        builder.write_gm_string(self.name)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_usize(self.variables.len())?;
+        writer.write_gm_string(self.name)?;
         for local_var in &self.variables {
-            local_var.serialize(builder)?;
+            writer.write_elem(local_var)?;
         }
         Ok(())
     }
@@ -46,9 +46,9 @@ impl GMElement for LocalVariable {
         Ok(Self { weird_index, name })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_u32(self.weird_index);
-        builder.write_gm_string(self.name)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_u32(self.weird_index);
+        writer.write_gm_string(self.name)?;
         Ok(())
     }
 }

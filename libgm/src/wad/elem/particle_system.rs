@@ -2,12 +2,12 @@
 
 use crate::prelude::*;
 use crate::wad::GMVersion;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_named_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::particle_emitter::ParticleEmitter;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct ParticleSystems {
@@ -24,10 +24,10 @@ impl GMElement for ParticleSystems {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.align(4);
-        builder.write_u32(1); // PSYS Version
-        builder.write_pointer_list_opt(&self.elems)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.align(4);
+        writer.write_u32(1); // PSYS Version
+        writer.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }
@@ -64,17 +64,17 @@ impl GMElement for ParticleSystem {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_i32(self.origin_x);
-        builder.write_i32(self.origin_y);
-        builder.write_i32(self.draw_order);
-        builder.write_if_ver(
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_i32(self.origin_x);
+        writer.write_i32(self.origin_y);
+        writer.write_i32(self.draw_order);
+        writer.write_if_ver(
             &self.global_space_particles,
             "Global Space Particles",
             GMVersion::GM2023_8,
         )?;
-        builder.write_simple_list(&self.emitters)?;
+        writer.write_simple_list(&self.emitters)?;
         Ok(())
     }
 }

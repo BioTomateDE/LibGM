@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::ChunkName;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 /// This is the always-empty unused chunk `DAFL`.
 ///
@@ -21,7 +21,7 @@ impl GMElement for DataFiles {
         Ok(Self)
     }
 
-    fn serialize(&self, _: &mut DataBuilder) -> Result<()> {
+    fn serialize(&self, _: &mut DataWriter) -> Result<()> {
         Ok(())
     }
 }

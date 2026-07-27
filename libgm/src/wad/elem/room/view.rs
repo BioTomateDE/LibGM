@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::game_object::GameObject;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 /// "Viewports and Cameras"
 #[derive(Debug, Clone, PartialEq)]
@@ -89,21 +89,21 @@ impl GMElement for RoomView {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_bool32(self.enabled);
-        builder.write_i32(self.view_x);
-        builder.write_i32(self.view_y);
-        builder.write_i32(self.view_width);
-        builder.write_i32(self.view_height);
-        builder.write_i32(self.port_x);
-        builder.write_i32(self.port_y);
-        builder.write_i32(self.port_width);
-        builder.write_i32(self.port_height);
-        builder.write_u32(self.border_x);
-        builder.write_u32(self.border_y);
-        builder.write_i32(self.speed_x);
-        builder.write_i32(self.speed_y);
-        builder.write_resource_id(self.object);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_bool32(self.enabled);
+        writer.write_i32(self.view_x);
+        writer.write_i32(self.view_y);
+        writer.write_i32(self.view_width);
+        writer.write_i32(self.view_height);
+        writer.write_i32(self.port_x);
+        writer.write_i32(self.port_y);
+        writer.write_i32(self.port_width);
+        writer.write_i32(self.port_height);
+        writer.write_u32(self.border_x);
+        writer.write_u32(self.border_y);
+        writer.write_i32(self.speed_x);
+        writer.write_i32(self.speed_y);
+        writer.write_resource_id(self.object);
         Ok(())
     }
 }

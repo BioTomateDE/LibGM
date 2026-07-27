@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sequence::SpeedType;
 use crate::wad::elem::sprite::Sprite;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SpriteInstance {
@@ -50,18 +50,18 @@ impl GMElement for SpriteInstance {
         })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_gm_string(self.name)?;
-        builder.write_resource_id(self.sprite);
-        builder.write_i32(self.x);
-        builder.write_i32(self.y);
-        builder.write_f32(self.scale_x);
-        builder.write_f32(self.scale_y);
-        builder.write_u32(self.color);
-        builder.write_f32(self.animation_speed);
-        builder.write_enum(self.animation_speed_type);
-        builder.write_f32(self.frame_index);
-        builder.write_f32(self.rotation);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_resource_id(self.sprite);
+        writer.write_i32(self.x);
+        writer.write_i32(self.y);
+        writer.write_f32(self.scale_x);
+        writer.write_f32(self.scale_y);
+        writer.write_u32(self.color);
+        writer.write_f32(self.animation_speed);
+        writer.write_enum(self.animation_speed_type);
+        writer.write_f32(self.frame_index);
+        writer.write_f32(self.rotation);
         Ok(())
     }
 }

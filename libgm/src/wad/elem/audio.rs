@@ -2,10 +2,10 @@
 
 use crate::prelude::*;
 use crate::wad::Blob;
-use crate::wad::build::builder::DataBuilder;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::parse::reader::DataReader;
+use crate::wad::load::reader::DataReader;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Audios {
@@ -20,8 +20,8 @@ impl GMElement for Audios {
         Ok(Self { elems })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_pointer_list(&self.elems)?;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_pointer_list(&self.elems)?;
         Ok(())
     }
 }
@@ -34,7 +34,6 @@ pub struct Audio {
     pub data: Blob<Vec<u8>>,
 }
 
-
 impl GMElement for Audio {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let size = reader.read_u32()?;
@@ -42,9 +41,9 @@ impl GMElement for Audio {
         Ok(Self { data: Blob(data) })
     }
 
-    fn serialize(&self, builder: &mut DataBuilder) -> Result<()> {
-        builder.write_usize(self.data.len())?;
-        builder.write_bytes(&self.data);
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_usize(self.data.len())?;
+        writer.write_bytes(&self.data);
         Ok(())
     }
 
@@ -55,9 +54,9 @@ impl GMElement for Audio {
         Ok(())
     }
 
-    fn serialize_post_padding(&self, builder: &mut DataBuilder, is_last: bool) -> Result<()> {
+    fn serialize_post_padding(&self, writer: &mut DataWriter, is_last: bool) -> Result<()> {
         if !is_last {
-            builder.align(4);
+            writer.align(4);
         }
         Ok(())
     }

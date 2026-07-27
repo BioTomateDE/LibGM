@@ -18,10 +18,10 @@
 //! Instead of writing the resource data position immediately,
 //! you just write a placeholder/stub (`0xDEADC0DE`) for now.
 //! The pointer placeholder is remembered in
-//! `DataBuilder.pointer_placeholder_positions` with an associated **memory
+//! `DataWriter.pointer_placeholder_positions` with an associated **memory
 //! address**. Then, when an element (that may be pointed to) is written,
 //! you store the resolved data position of that element in
-//! `DataBuilder.pointer_resource_positions`. (Note: this may happen before or
+//! `DataWriter.pointer_resource_positions`. (Note: this may happen before or
 //! after any placeholder to this element was written.) At the very end, when
 //! everything has been built, you can match the pointer placeholders to
 //! their resolved positions by comparing (hashing) element memory addresses.
@@ -84,7 +84,7 @@ use std::fmt;
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
 use crate::util::fmt::typename;
-use crate::wad::build::builder::DataBuilder;
+use crate::wad::save::writer::DataWriter;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct Pointer {
@@ -107,7 +107,7 @@ impl Pointer {
     }
 }
 
-impl DataBuilder<'_> {
+impl DataWriter<'_> {
     /// Create a placeholder pointer at the current position in the chunk and
     /// remember its data position paired with the target GameMaker
     /// element's memory address.
@@ -121,7 +121,7 @@ impl DataBuilder<'_> {
     /// predicting these pointer resource positions even harder.
     /// ___
     /// This function should NOT be called for `GameMaker References by ID`;
-    /// use their `DataBuilder::write_gm_x()` methods instead.
+    /// use their `DataWriter::write_gm_x()` methods instead.
     pub fn write_pointer<T>(&mut self, element: &T) {
         let pointer = Pointer::new(element);
         let placeholder_position: u32 = self.pos();
@@ -151,7 +151,7 @@ impl DataBuilder<'_> {
 
     /// Store the written GameMaker element's data position paired with its
     /// memory address in the pointer resource pool. The element's position
-    /// corresponds to the data builder's current position, since this
+    /// corresponds to the data writer's current position, since this
     /// method should get called when the element is serialized.
     pub fn resolve_pointer<T>(&mut self, element: &T) -> Result<()> {
         let pointer = Pointer::new(element);
