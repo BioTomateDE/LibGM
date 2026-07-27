@@ -148,7 +148,7 @@ impl Display for IdeVersion {
 /// > - B - total number of internal builds since May 2022 (last reset of build number was short before 2022.5 release, not every build is released to public)
 /// > So, for example: 2022.6.1.53 means Update #1 for version released at end of June(6) 2022, 53rd build in total (since May 2022).
 /// > There are no releases in July and December because of Holiday season peak.
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[non_exhaustive]
 // DOCME: it would be really great if people could document which features all of these versions added :D
 pub enum GMVersion {

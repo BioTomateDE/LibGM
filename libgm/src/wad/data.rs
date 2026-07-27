@@ -6,7 +6,6 @@ use crate::prelude::*;
 use crate::util::bench::Stopwatch;
 use crate::wad::Blob;
 use crate::wad::GMVersion;
-use crate::wad::chunk::ChunkName;
 use crate::wad::chunk::ChunkOrder;
 use crate::wad::elem::animation_curve::AnimationCurves;
 use crate::wad::elem::audio::Audios;
@@ -182,25 +181,20 @@ pub struct GMData {
 impl Default for GMData {
     #[expect(clippy::too_many_lines)]
     fn default() -> Self {
-        use ChunkName::*;
-
-        let mut strings = Strings::default();
+        let version = GMVersion::GM2024_14_1;
 
         let meta = Metadata {
-            version: GMVersion::GM2024_14_1,
+            version,
             location: None,
             chunk_padding: 16,
             endianness: Endianness::Little,
             original_data_size: 5000,
-            chunks: ChunkOrder(vec![
-                GEN8, OPTN, LANG, EXTN, SOND, AGRP, SPRT, BGND, PATH, SCPT, GLOB, SHDR, FONT, TMLN,
-                OBJT, FEDS, ACRV, SEQN, TAGS, ROOM, UILR, DAFL, EMBI, PSEM, PSYS, TPAG, TGIN, CODE,
-                VARI, FUNC, FEAT, STRG, TXTR, AUDO,
-            ]),
+            chunks: ChunkOrder::new_by_version(version),
         };
 
-        let animation_curves = AnimationCurves { elems: Vec::new() };
-        let mut audio_groups = AudioGroups { elems: Vec::new() };
+        let mut strings = Strings::default();
+        let animation_curves = AnimationCurves::default();
+        let mut audio_groups = AudioGroups::default();
         audio_groups.push(AudioGroup {
             name: strings.make("audiogroup_default"),
             path: strings.make("audiogroup_default.dat"),

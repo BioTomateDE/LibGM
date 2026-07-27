@@ -4,6 +4,7 @@ use std::fmt::Formatter;
 
 use crate::prelude::*;
 use crate::util::fmt::hexdump;
+use crate::wad::GMVersion;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::string::Strings;
 
@@ -147,7 +148,7 @@ pub const KNOWN_CHUNK_COUNT: usize = 35;
 
 /// The order of chunks in a data file.
 /// Also determines which chunks exist.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ChunkOrder(pub(crate) Vec<ChunkName>);
 
 impl ChunkOrder {
@@ -157,6 +158,70 @@ impl ChunkOrder {
     #[must_use]
     pub const fn new_empty() -> Self {
         Self(Vec::new())
+    }
+
+    #[must_use]
+    pub fn new_by_version(version: GMVersion) -> Self {
+        use ChunkName::*;
+        // based on https://discord.com/channels/1505850303600394270/1505850575231914024/1531238205133815831
+        let mut chunks = Vec::with_capacity(35);
+        chunks.push(GEN8);
+        chunks.push(OPTN);
+        if version >= GMVersion::GMS2_0_6 {
+            chunks.push(LANG);
+        }
+        chunks.push(EXTN);
+        chunks.push(SOND);
+        if version >= GMVersion::Wad14 {
+            chunks.push(AGRP);
+        }
+        chunks.push(SPRT);
+        chunks.push(BGND);
+        chunks.push(PATH);
+        chunks.push(SCPT);
+        if version >= GMVersion::GMS2 {
+            chunks.push(GLOB);
+        }
+        chunks.push(SHDR);
+        chunks.push(FONT);
+        chunks.push(TMLN);
+        chunks.push(OBJT);
+        if version >= GMVersion::GMS2_3_6 {
+            chunks.push(FEDS);
+        }
+        if version >= GMVersion::GMS2_3 {
+            chunks.push(ACRV);
+            chunks.push(SEQN);
+            chunks.push(TAGS);
+        }
+        chunks.push(ROOM);
+        if version >= GMVersion::GM2024_13 {
+            chunks.push(UILR);
+        }
+        chunks.push(DAFL);
+        if version >= GMVersion::GMS2 {
+            chunks.push(EMBI);
+        }
+        if version >= GMVersion::GM2023_2 {
+            // TODO: also found in 2022.6
+            chunks.push(PSEM);
+            chunks.push(PSYS);
+        }
+        chunks.push(TPAG);
+        if version >= GMVersion::GMS2_2_1 {
+            chunks.push(TGIN);
+        }
+        chunks.push(CODE);
+        chunks.push(VARI);
+        chunks.push(FUNC);
+        if version >= GMVersion::GM2022_8 {
+            // TODO: also found in 2022.6
+            chunks.push(FEAT);
+        }
+        chunks.push(STRG);
+        chunks.push(TXTR);
+        chunks.push(AUDO);
+        Self(chunks)
     }
 
     /// Tries to create a chunk order from a vector of chunk names.
@@ -182,6 +247,12 @@ impl ChunkOrder {
 
         // ok you're fine to go
         Ok(Self(vector))
+    }
+
+    /// Turns this chunk order into a vector of chunk names, consuming it.
+    #[must_use]
+    pub fn into_vec(self) -> Vec<ChunkName> {
+        self.0
     }
 
     /// The count/length of chunks in this chunk order.
