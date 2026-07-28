@@ -20,8 +20,12 @@ pub fn catch<T, F>(func: F) -> Result<T>
 where
     F: FnOnce() -> Result<T> + UnwindSafe,
 {
-    match std::panic::catch_unwind(func) {
-        Ok(ret) => ret,
-        Err(err) => Err(Error::new(extract_panic_message(err))),
+    if cfg!(feature = "catch-panic") {
+        match std::panic::catch_unwind(func) {
+            Ok(ret) => ret,
+            Err(err) => Err(Error::new(extract_panic_message(err))),
+        }
+    } else {
+        func()
     }
 }

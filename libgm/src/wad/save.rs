@@ -17,7 +17,7 @@ use writer::DataWriter;
 
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
-use crate::util::unwind;
+use crate::util::unwind::catch;
 use crate::wad::chunk::ChunkName;
 use crate::wad::data::Endianness;
 use crate::wad::data::GMData;
@@ -47,8 +47,8 @@ pub fn build_bytes(gm_data: &GMData) -> Result<Vec<u8>> {
 /// For more information on the data file format, see [`crate::wad`].
 pub fn save_file(gm_data: &GMData, path: impl AsRef<Path>) -> Result<()> {
     let path: &Path = path.as_ref();
-    let raw_data: Vec<u8> =
-        serialize(gm_data).ctx(|| format!("building GameMaker data file {}", path.display()))?;
+    let raw_data: Vec<u8> = catch(|| serialize(gm_data))
+        .ctx(|| format!("building GameMaker data file {}", path.display()))?;
 
     let stopwatch = Stopwatch::start();
     std::fs::write(path, raw_data).ctx_any("writing data file")?;
@@ -61,16 +61,7 @@ pub fn build_file(gm_data: &GMData, path: impl AsRef<Path>) -> Result<()> {
     save_file(gm_data, path)
 }
 
-#[inline]
-fn serialize(gm_data: &GMData) -> Result<Vec<u8>> {
-    if cfg!(feature = "catch-panic") {
-        unwind::catch(|| serialize_impl(gm_data))
-    } else {
-        serialize_impl(gm_data)
-    }
-}
-
-fn serialize_impl(data: &GMData) -> Result<Vec<u8>> {
+fn serialize(data: &GMData) -> Result<Vec<u8>> {
     let stopwatch = Stopwatch::start();
     let mut writer = DataWriter::new(data);
 

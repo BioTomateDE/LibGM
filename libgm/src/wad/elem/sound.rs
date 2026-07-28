@@ -37,7 +37,7 @@ pub struct Sound {
 
     /// The flags of this sound.
     /// This field is a bit unstable and may be changed in the future.
-    pub flags: Flags,
+    pub flags: SoundFlags,
 
     /// The file format of the audio entry.
     /// This includes the `.` from the file extension.
@@ -52,7 +52,7 @@ pub struct Sound {
     /// This will be used if the sound effect is streamed from disk to find the
     /// sound file.
     ///
-    /// This is used if the `Flags.embedded` flag is not set.
+    /// This is used if the [`SoundFlags::EMBEDDED`] flag is not set.
     pub file: GMRef<String>,
 
     /// A pre-`GameMaker Studio` way of having certain effects on a sound
@@ -78,12 +78,12 @@ pub struct Sound {
 
     /// The audio group this audio entry belongs to.
     /// These can only be used with the regular audio system.
-    /// This is used if the `Flags.regular` flag is set (always set for now).
+    /// This is used if the [`SoundFlags::REGULAR`] flag is set (always set for now).
     /// For more information, see [`AudioGroup`].
     pub audio_group: GMRef<AudioGroup>,
 
     /// The reference to the [`Audio`] audio file.
-    /// This is used if the `Flags.embedded` flag is set.
+    /// This is used if the [`SoundFlags::EMBEDDED`] flag is set.
     pub audio: GMRef<Audio>,
 
     /// The precomputed length of the sound's audio data.
@@ -96,25 +96,31 @@ impl GMElement for Sound {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let flags = reader.read_u32()?;
-        let flags =
-            Flags::from_bits(flags).ok_or_else(|| format!("Invalid Sound Flags {flags:08X}"))?;
+        let flags = SoundFlags::from_bits(flags)
+            .ok_or_else(|| format!("Invalid Sound Flags {flags:08X}"))?;
         let audio_type: GMRef<String> = reader.read_gm_string()?;
         let file: GMRef<String> = reader.read_gm_string()?;
         let effects = reader.read_u32()?;
         let volume = reader.read_f32()?;
         let pitch = reader.read_f32()?;
 
-        let audio_group: GMRef<AudioGroup> =
-            if reader.version >= GMVersion::Wad14 && flags.contains(Flags::REGULAR) {
-                reader.read_resource_by_id()?
-            } else {
-                let preload = reader.read_bool32().ctx("reading preload")?;
-                reader.assert_bool(preload, true, "Preload")?;
-                GMRef::none()
-            };
+        let agrp = reader.version >= GMVersion::Wad14 && flags.contains(SoundFlags::REGULAR);
+        let audio_group: GMRef<AudioGroup> = if agrp {
+            reader.read_resource_by_id()?
+        } else {
+            let preload = reader.read_bool32().ctx("reading preload")?;
+            reader.assert_bool(preload, true, "Preload")?;
+            GMRef::none()
+        };
 
         let audio: GMRef<Audio> = reader.read_resource_by_id()?;
         let audio_length: Option<f32> = reader.deserialize_if_version(GMVersion::GM2024_6)?;
+
+        // // GMS1 asset compiler is stupid and keeps repeating the previous embedded audio id
+        // // if the current sound is external.
+        // if !flags.contains(SoundFlags::EMBEDDED) {
+        //     audio = GMRef::none();
+        // }
 
         Ok(Self {
             name,
@@ -138,7 +144,7 @@ impl GMElement for Sound {
         writer.write_u32(self.effects);
         writer.write_f32(self.volume);
         writer.write_f32(self.pitch);
-        if writer.version() >= GMVersion::Wad14 && self.flags.contains(Flags::REGULAR) {
+        if writer.version() >= GMVersion::Wad14 && self.flags.contains(SoundFlags::REGULAR) {
             writer.write_resource_id(self.audio_group);
         } else {
             writer.write_bool32(true); // Preload
@@ -151,7 +157,7 @@ impl GMElement for Sound {
 
 bitflags::bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    pub struct Flags: u32 {
+    pub struct SoundFlags: u32 {
         const EMBEDDED = 0x1;
         const COMPRESSED = 0x2;
         const REGULAR = 0x64;

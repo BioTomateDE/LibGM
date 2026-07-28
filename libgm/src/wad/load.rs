@@ -14,6 +14,7 @@ use std::path::Path;
 
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
+use crate::util::unwind::catch;
 use crate::wad::chunk::ChunkName;
 use crate::wad::data::Endianness;
 use crate::wad::data::GMData;
@@ -138,8 +139,8 @@ impl LoadingOptions {
     ///
     /// For more information on the data file format, see [`crate::wad`].
     pub fn load_bytes(&self, raw_data: impl AsRef<[u8]>) -> Result<GMData> {
-        self.deserialize(raw_data.as_ref())
-            .ctx("parsing GameMaker data bytes")
+        let raw_data = raw_data.as_ref();
+        catch(|| deserialize(raw_data, self)).ctx("parsing GameMaker data bytes")
     }
 
     #[deprecated(since = "0.8.0", note = "renamed to load_bytes")]
@@ -167,8 +168,7 @@ impl LoadingOptions {
             std::fs::read(path).ctx_any(|| format!("reading data file {}", path.display()))?;
         log::trace!("Reading data file bytes took {stopwatch}");
 
-        let mut gm_data = self
-            .deserialize(&raw_data)
+        let mut gm_data = catch(|| deserialize(&raw_data, self))
             .ctx(|| format!("deserializing GameMaker data file {}", path.display()))?;
 
         gm_data.meta.location = Some(path.to_path_buf());
@@ -180,19 +180,17 @@ impl LoadingOptions {
         self.load_file(data_file_path)
     }
 
-    fn deserialize(&self, raw_data: &[u8]) -> Result<GMData> {
-        if cfg!(feature = "catch-panic") {
-            crate::util::unwind::catch(|| deserialize(raw_data, self))
-        } else {
-            deserialize(raw_data, self)
-        }
+    /// Deserializes a GameMaker audio group file (stored in memory) with the specified options.
+    pub fn load_audiogroup_bytes(&self, raw_data: impl AsRef<[u8]>) -> Result<Audios> {
+        let mut reader: DataReader = read_form(raw_data.as_ref())?;
+        reader.read_chunk()
     }
 }
 
 /// Deserializes a GameMaker data file (stored in memory) with default options.
 ///
 /// If you want to customize parsing options, check out [`LoadingOptions`].
-/// If you want to parse a data file stored on disk, check out [`parse_file`].
+/// If you want to parse a data file stored on disk, check out [`load_file`].
 ///
 /// For more information on the data file format, see [`crate::wad`].
 pub fn load_bytes(raw_data: impl AsRef<[u8]>) -> Result<GMData> {
@@ -206,11 +204,8 @@ pub fn parse_bytes(raw_data: impl AsRef<[u8]>) -> Result<GMData> {
 
 /// Deserializes a GameMaker data file (stored on disk) with default options.
 ///
-/// If you want to customize parsing options, check out [`LoadingOptions`].
-/// If you want to parse a data file stored in memory, check out
-/// [`parse_bytes`].
-///
-/// For more information on the data file format, see [`crate::wad`].
+/// If you want to customize parsing options or load a data file
+/// stored in memory, check out [`LoadingOptions::load_bytes`].
 pub fn load_file(data_file_path: impl AsRef<Path>) -> Result<GMData> {
     LoadingOptions::default().load_file(data_file_path)
 }
@@ -218,6 +213,19 @@ pub fn load_file(data_file_path: impl AsRef<Path>) -> Result<GMData> {
 #[deprecated(since = "0.8.0", note = "renamed to load_file")]
 pub fn parse_file(data_file_path: impl AsRef<Path>) -> Result<GMData> {
     load_file(data_file_path)
+}
+
+/// Deserializes a GameMaker audio group file (stored on disk) with default options.
+///
+/// If you want to customize parsing options or load a audio
+/// group data stored in memory, check out [`LoadingOptions::load_audiogroup_bytes`].
+pub fn load_audiogroup_file(path: impl AsRef<Path>) -> Result<Audios> {
+    let path = path.as_ref();
+    let stopwatch = Stopwatch::start();
+    let raw_data: Vec<u8> =
+        std::fs::read(path).ctx_any(|| format!("reading audio group file {}", path.display()))?;
+    log::trace!("Reading audio group file bytes took {stopwatch}");
+    LoadingOptions::default().load_audiogroup_bytes(raw_data)
 }
 
 // ================ Actual logic here ================
