@@ -5,7 +5,6 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 
 use crate::prelude::*;
-use crate::wad::chunk::ChunkName;
 use crate::wad::elem::GMElement;
 use crate::wad::load::reader::DataReader;
 use crate::wad::save::writer::DataWriter;
