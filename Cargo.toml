@@ -3,7 +3,7 @@ members = ["libgm", "libgm-cli"]
 resolver = "3"
 
 [workspace.package]
-authors = ["BioTomateDE <biotomatede@proton.me>"]
+authors = ["BioTomateDE <rust@biotomate.dev>"]
 edition = "2024"
 readme = "README.md"
 repository = "https://codeberg.org/BioTomateDE/LibGM"
