@@ -68,9 +68,6 @@ impl DataWriter<'_> {
             self.overwrite_pointer_with_cur_pos(pointer_list_pos, i)
                 .ctx(ctx)?;
             element.serialize(self).ctx(ctx)?;
-            element
-                .serialize_post_padding(self, i == count - 1)
-                .ctx(ctx)?;
         }
         Ok(())
     }
@@ -98,9 +95,6 @@ impl DataWriter<'_> {
             self.overwrite_pointer_with_cur_pos(pointer_list_pos, i)
                 .ctx(ctx)?;
             element.serialize(self).ctx(ctx)?;
-            element
-                .serialize_post_padding(self, i == count - 1)
-                .ctx(ctx)?;
         }
         Ok(())
     }

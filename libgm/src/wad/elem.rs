@@ -80,24 +80,6 @@ pub(crate) trait GMElement: Sized {
     fn serialize_pre_padding(&self, writer: &mut DataWriter) -> Result<()> {
         Ok(())
     }
-
-    /// Handles padding bytes that may appear after this element in pointer lists.
-    ///
-    /// This is called after [`GMElement::deserialize`] when reading from
-    /// structured data. The `is_last` parameter indicates if this is the
-    /// final element in a list, which may affect padding requirements.
-    fn deserialize_post_padding(reader: &mut DataReader, is_last: bool) -> Result<()> {
-        Ok(())
-    }
-
-    /// Writes padding bytes that may be required after this element in pointer lists.
-    ///
-    /// This is called after [`GMElement::serialize`] when writing to structured
-    /// data. The `is_last` parameter indicates if this is the final element
-    /// in a list, which may affect padding requirements.
-    fn serialize_post_padding(&self, writer: &mut DataWriter, is_last: bool) -> Result<()> {
-        Ok(())
-    }
 }
 
 impl GMElement for u8 {

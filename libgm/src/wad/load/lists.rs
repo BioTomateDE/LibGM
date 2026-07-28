@@ -67,7 +67,7 @@ impl DataReader<'_> {
         let mut elements: Vec<T> = Vec::with_capacity(count);
         for (i, pointer) in pointers.into_iter().enumerate() {
             let element_opt: Option<T> =
-                self.read_pointer_element(pointer, i == count - 1).ctx(|| {
+                self.read_pointer_element(pointer).ctx(|| {
                     format!(
                         "deserializing element {}/{} of {} pointer list",
                         i,
@@ -96,7 +96,7 @@ impl DataReader<'_> {
         let mut elements: Vec<Option<T>> = Vec::with_capacity(count);
         for (i, pointer) in pointers.into_iter().enumerate() {
             let element_opt: Option<T> =
-                self.read_pointer_element(pointer, i == count - 1).ctx(|| {
+                self.read_pointer_element(pointer).ctx(|| {
                     format!(
                         "deserializing element {}/{} of nullable {} pointer list",
                         i,
@@ -112,7 +112,6 @@ impl DataReader<'_> {
     fn read_pointer_element<T: GMElement>(
         &mut self,
         pointer: u32,
-        is_last: bool,
     ) -> Result<Option<T>> {
         T::deserialize_pre_padding(self).ctx("reading pre-padding")?;
 
@@ -133,8 +132,6 @@ impl DataReader<'_> {
         }
 
         let element = T::deserialize(self)?;
-
-        T::deserialize_post_padding(self, is_last).ctx("reading post-padding")?;
         Ok(Some(element))
     }
 }

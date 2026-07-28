@@ -16,12 +16,40 @@ gm_list_chunk!(AUDO, Audios, Audio, direct);
 
 impl GMElement for Audios {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let elems: Vec<Audio> = reader.read_pointer_list()?;
+        let pointers: Vec<u32> = reader.read_simple_list()?;
+        let count = pointers.len();
+        let mut elems = Vec::with_capacity(count);
+
+        for (i, pointer) in pointers.into_iter().enumerate() {
+            reader.assert_pos(pointer, "Audio")?;
+            let size = reader.read_u32()?;
+            let data: Vec<u8> = reader.read_bytes_dyn(size)?.to_vec();
+            elems.push(Audio { data: Blob(data) });
+            if i != count - 1 {
+                reader.align(4)?;
+            }
+        }
+
         Ok(Self { elems })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
-        writer.write_pointer_list(&self.elems)?;
+        let count = self.elems.len();
+        writer.write_usize(count)?;
+        let pointer_list_pos = writer.pos();
+        for _ in 0..count {
+            writer.write_u32(0xDEAD_C0DE);
+        }
+
+        for (idx, audio) in self.elems.iter().enumerate() {
+            writer.overwrite_pointer_with_cur_pos(pointer_list_pos, idx)?;
+            writer.write_usize(audio.data.len())?;
+            writer.write_bytes(&audio.data);
+            if idx != count - 1 {
+                writer.align(4);
+            }
+        }
+
         Ok(())
     }
 }
@@ -32,32 +60,4 @@ pub struct Audio {
     /// The raw audio data of the embedded audio entry.
     /// This can be either WAV or OGG.
     pub data: Blob<Vec<u8>>,
-}
-
-impl GMElement for Audio {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let size = reader.read_u32()?;
-        let data: Vec<u8> = reader.read_bytes_dyn(size)?.to_vec();
-        Ok(Self { data: Blob(data) })
-    }
-
-    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
-        writer.write_usize(self.data.len())?;
-        writer.write_bytes(&self.data);
-        Ok(())
-    }
-
-    fn deserialize_post_padding(reader: &mut DataReader, is_last: bool) -> Result<()> {
-        if !is_last {
-            reader.align(4)?;
-        }
-        Ok(())
-    }
-
-    fn serialize_post_padding(&self, writer: &mut DataWriter, is_last: bool) -> Result<()> {
-        if !is_last {
-            writer.align(4);
-        }
-        Ok(())
-    }
 }
