@@ -72,7 +72,7 @@ impl GMRef<AudioGroup> {
     #[must_use]
     pub fn filename(self) -> Option<String> {
         if self.is_some() {
-            Some(format!("audiogroup{}.dat", self.as_raw() + 1))
+            Some(format!("audiogroup{}.dat", self.as_raw()))
         } else {
             None
         }
