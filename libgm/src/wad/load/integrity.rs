@@ -11,7 +11,7 @@ impl DataReader<'_> {
     /// Ensures the reader is at the specified position.
     /// This only happens if `options.verify_alignment` is true.
     #[track_caller]
-    pub fn assert_pos(&self, position: u32, pointer_name: &'static str) -> Result<()> {
+    pub fn assert_pos(&mut self, position: u32, pointer_name: &'static str) -> Result<()> {
         if cfg!(not(feature = "check-integrity")) {
             return Ok(());
         }
@@ -20,6 +20,7 @@ impl DataReader<'_> {
             return Ok(());
         }
 
+        self.cur_pos = position;
         self.handle_invalid_align(format!(
             "{} pointer is misaligned: expected position {} but reader is actually at {} (diff: \
              {})",
