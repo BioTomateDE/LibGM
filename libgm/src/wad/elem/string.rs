@@ -30,13 +30,12 @@ impl GMElement for Strings {
                 reader.align(ALIGNMENT)?;
             }
             reader.assert_pos(pointer, "String")?;
-            reader
-                .string_occurrences
-                .insert(pointer + 4, GMRef::from(i));
+            let gmref = GMRef::from(i);
+            reader.string_occurrences.insert(pointer + 4, gmref);
 
             let string_length = reader.read_u32()?;
             let string: String = reader.read_literal_string(string_length)?;
-            let byte = reader.read_u8()?;
+            let byte = reader.read_u8().ctx("reading null-terminator byte")?;
             assert::int(byte, 0, "Null terminator byte after string")?;
             elems.push(string);
         }

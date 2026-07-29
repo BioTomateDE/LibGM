@@ -3,7 +3,6 @@ use std::collections::HashMap;
 
 use crate::gml::instruction::InstanceType;
 use crate::prelude::*;
-use crate::util::assert;
 use crate::wad::chunk::ChunkName;
 use crate::wad::chunk::ChunkOrder;
 use crate::wad::data::Endianness;
@@ -221,11 +220,23 @@ impl<'a> DataReader<'a> {
     /// Reads bytes until the reader position is divisible by the specified
     /// alignment. Ensures the read padding bytes are all zero.
     pub fn align(&mut self, alignment: u32) -> Result<()> {
-        while !self.cur_pos.is_multiple_of(alignment) {
-            let byte = self.read_u8()?;
-            assert::int(byte, 0, "Padding Byte")
-                .ctx(|| format!("aligning reader to {alignment}"))?;
+        let start_pos = self.cur_pos;
+        let end_pos: u32 = self.cur_pos.next_multiple_of(alignment);
+        let byte_count: u32 = end_pos - self.cur_pos;
+        let context = || format!("aligning to a multiple of {alignment} bytes");
+        let bytes: &[u8] = self.read_bytes_dyn(byte_count).ctx(context)?;
+        if bytes.iter().all(|&b| b == 0) {
+            return Ok(());
         }
+
+        let error = format!("Found misaligned data at position {start_pos}");
+        if self.options.verify_alignment {
+            return Err(Error::new(error).with_context(context));
+        }
+
+        // lenient mode: cancel aligning; go back and try to read the data. will probably not work.
+        log::warn!("{error}! Going back to read it.");
+        self.cur_pos = start_pos;
         Ok(())
     }
 

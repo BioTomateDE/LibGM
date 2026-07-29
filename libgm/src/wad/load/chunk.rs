@@ -2,7 +2,6 @@
 use crate::prelude::*;
 use crate::util::bench::Stopwatch;
 use crate::wad::chunk::ChunkName;
-use crate::wad::data::Endianness;
 use crate::wad::load::reader::DataReader;
 use crate::wad::version::GMVersion;
 
@@ -66,19 +65,6 @@ impl ChunkMap {
 }
 
 impl DataReader<'_> {
-    /// Read a GameMaker chunk name consisting of 4 ascii characters.
-    /// Accounts for endianness; reversing the read chunk name in big endian mode.
-    pub fn read_chunk_name(&mut self) -> Result<ChunkName> {
-        let mut bytes: [u8; 4] = self.read_bytes_const().cloned()?;
-
-        if self.endianness == Endianness::Big {
-            bytes.reverse();
-        }
-
-        let chunk_name = ChunkName::from_bytes(bytes)?;
-        Ok(chunk_name)
-    }
-
     pub fn read_chunk<T: GMChunk>(&mut self) -> Result<T> {
         // If the chunk doesn't exist, return the `default` stub.
         // This will also set `exists` to false.
