@@ -329,6 +329,12 @@ fn deserialize(raw_data: &[u8], options: &LoadingOptions) -> Result<GMData> {
         bail!("Chunk OPTN does not exist");
     }
 
+    // Set the STRG chunk so that the reader can force-read strings.
+    reader.string_chunk = reader
+        .chunks
+        .get(ChunkName::STRG)
+        .ok_or("Chunk STRG does not exist")?;
+
     reader.options = options.clone();
     let stopwatch2 = Stopwatch::start();
     reader.version = detect_format_version(reader.clone()).ctx("detecting format version")?;
@@ -339,15 +345,6 @@ fn deserialize(raw_data: &[u8], options: &LoadingOptions) -> Result<GMData> {
     // Then (in any order):
     // * [FUNC, VARI] --> CODE
     // * TPAG --> [BGND, EMBI, FONT, OPTN, SPRT]
-
-    // Set the STRG chunk so that the reader can force-read strings.
-    reader.string_chunk = reader
-        .chunks
-        .get(ChunkName::STRG)
-        .ok_or("Chunk STRG does not exist")?;
-
-    // TODO: bring this back?
-    // log::info!("Loading {game:?} (GM {version}, WAD {wad_version})");
 
     let strings: Strings = reader.read_chunk()?;
     let texture_page_items: TexturePageItems = reader.read_chunk()?;

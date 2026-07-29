@@ -110,8 +110,10 @@ fn init_by_gen8(reader: &mut DataReader) -> Result<GMVersion> {
     let wad_version = reader.read_u8().ctx("reading WAD version")?;
     reader.cur_pos += 42; // Skip to IDE version
     let ide_version = IdeVersion::deserialize(reader).ctx("reading IDE version")?;
+    reader.cur_pos += 40; // Skip to Display Name
+    let name: &str = reader.force_read_string()?;
 
-    log::debug!("GEN8 specifies IDE Version {ide_version} and WAD Version {wad_version}");
+    log::debug!("Loading {name:?} (IDE v{ide_version}, WAD {wad_version})");
 
     if ide_version == IdeVersion::GMS2 {
         return Ok(GMS2);

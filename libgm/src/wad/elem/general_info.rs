@@ -145,12 +145,10 @@ impl GMElement for GeneralInfo {
             .ok_or_else(|| format!("Invalid GEN8 Flags {flags_raw:08X}"))?;
         let license_crc32 = reader.read_u32()?;
         let license_md5: [u8; 16] = *reader.read_bytes_const().ctx("reading license (MD5)")?;
-
         let creation_timestamp = reader.read_i64()?;
         let creation_timestamp: DateTime<Utc> =
             DateTime::from_timestamp_secs(creation_timestamp)
                 .ok_or_else(|| format!("Invalid Creation Timestamp {creation_timestamp}"))?;
-
         let display_name: GMRef<String> = reader.read_gm_string()?;
         let active_targets = reader.read_u64()?;
         reader.assert_int(active_targets, 0, "Active Targets")?;

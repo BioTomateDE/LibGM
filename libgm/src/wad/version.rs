@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! Contains GameMaker IDE Version types and abstractions to check and set versions.
 
+use std::fmt;
 use std::fmt::Display;
 use std::fmt::Formatter;
 
@@ -25,7 +26,7 @@ use crate::wad::save::writer::DataWriter;
 /// After that, they released GameMaker Studio 2.
 /// They bumped this version one last time to `2.0.0.0`, where it's now stuck forever.
 /// You can only retrieve an approximate version using version detection tricks, see [`GMVersion`] for that.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct IdeVersion {
     /// The most significant version part.
     /// This can be 1 for GameMaker: Studio 1 or 2 for GameMaker Studio 2.
@@ -79,16 +80,22 @@ impl GMElement for IdeVersion {
     }
 }
 
+impl fmt::Debug for IdeVersion {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}.{}.{}.{}",
+            self.major, self.minor, self.release, self.build
+        )
+    }
+}
+
 impl Display for IdeVersion {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let major = self.major;
         let minor = self.minor;
         let release = self.release;
         let build = self.build;
-
-        if f.alternate() {
-            return write!(f, "{major}.{minor}.{release}.{build}");
-        }
 
         if major == 1 {
             return if let Some(minor) = gms1_minor_by_build(build) {

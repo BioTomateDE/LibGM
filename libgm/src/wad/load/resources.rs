@@ -7,7 +7,7 @@ use crate::wad::elem::texture_page_item::TexturePageItem;
 use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
 
-impl DataReader<'_> {
+impl<'a> DataReader<'a> {
     /// Read a standard GameMaker string reference.
     pub fn read_gm_string(&mut self) -> Result<GMRef<String>> {
         let occurrence_position = self.read_u32()?;
@@ -28,6 +28,30 @@ impl DataReader<'_> {
             self.cur_pos - 4,
             map.len(),
         ))
+    }
+
+    pub fn force_read_string(&mut self) -> Result<&'a str> {
+        let string_pos = self.read_u32()?;
+        if string_pos == 0 {
+            return Ok("");
+        }
+        if string_pos < self.string_chunk.start_pos {
+            bail!("Invalid string position {string_pos}");
+        }
+
+        let chunk = self.chunk;
+        let pos = self.cur_pos;
+        self.chunk = self.string_chunk;
+        self.cur_pos = string_pos - 4;
+
+        let len = self.read_u32().ctx("force-reading string length")?;
+        let bytes = self.read_bytes_dyn(len).ctx("force-reading string")?;
+        let string = str::from_utf8(bytes).ctx_any("force-reading string")?;
+
+        self.chunk = chunk;
+        self.cur_pos = pos;
+
+        Ok(string)
     }
 
     pub fn read_gm_texture(&mut self) -> Result<GMRef<TexturePageItem>> {

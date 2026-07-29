@@ -50,7 +50,7 @@ pub struct Track {
 
 impl GMElement for Track {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let model_name_str: &str = force_read_string(reader)?;
+        let model_name_str: &str = reader.force_read_string()?;
         reader.cur_pos -= 4;
         let model_name: GMRef<String> = reader.read_gm_string()?;
 
@@ -74,7 +74,7 @@ impl GMElement for Track {
         let mut animcurve_string = GMRef::none();
 
         for _ in 0..owned_resources_count {
-            let string: &str = force_read_string(reader)?;
+            let string: &str = reader.force_read_string()?;
             reader.cur_pos -= 4;
             animcurve_string = reader.read_gm_string()?;
             if string != "GMAnimCurve" {
@@ -190,25 +190,4 @@ bitflags::bitflags! {
     pub struct Flags: i32 {
         const CHILDREN_IGNORE_ORIGIN = 0x1;
     }
-}
-
-fn force_read_string<'a>(reader: &mut DataReader<'a>) -> Result<&'a str> {
-    let string_pos = reader.read_u32()?;
-    if string_pos == 0 {
-        return Ok("");
-    }
-
-    let chunk = reader.chunk;
-    let pos = reader.cur_pos;
-    reader.chunk = reader.string_chunk;
-    reader.cur_pos = string_pos - 4;
-
-    let len = reader.read_u32().ctx("force-reading string length")?;
-    let bytes = reader.read_bytes_dyn(len).ctx("force-reading string")?;
-    let string = str::from_utf8(bytes).ctx_any("force-reading string")?;
-
-    reader.chunk = chunk;
-    reader.cur_pos = pos;
-
-    Ok(string)
 }
