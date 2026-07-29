@@ -63,12 +63,12 @@ impl GMElement for AudioGroup {
 }
 
 impl GMRef<AudioGroup> {
-    /// The file name of this audio group.
-    /// This file is (probably) adjacent to the data file
-    /// and stores the actual audio.
-    /// It can be loaded using [`crate::wad::load::load_audiogroup_file`].
+    /// The file name of this audio group which can be loaded
+    /// using [`crate::wad::load::load_audiogroup_file`].
     ///
-    /// This function returns [`None`] if the audio group reference does not point to anything.
+    /// This function returns [`None`] if the audio group reference is null or the default group 0.
+    ///
+    /// Note: This function ignores custom paths that can be set in 2024.14+, see [`AudioGroup::path`].
     #[must_use]
     pub fn filename(self) -> Option<String> {
         if self.index > 0 {
