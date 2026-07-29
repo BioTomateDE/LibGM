@@ -156,7 +156,7 @@ impl GMElement for GeneralInfo {
         let function_classifications = FunctionClassifications::from_bits(fclass)
             .ok_or_else(|| format!("Invalid GEN8 Function Classifications {fclass:016X}"))?;
         let steam_appid = reader.read_i32()?;
-        let debugger_port: u32 = if wad_version >= 14 {
+        let debugger_port: u32 = if reader.version >= GMVersion::Wad14 {
             reader.read_u32()?
         } else {
             0
@@ -189,7 +189,7 @@ impl GMElement for GeneralInfo {
             gms2_data: None,
         };
 
-        if ide_version.major >= 2 {
+        if reader.version >= GMVersion::GMS2 {
             let gms2 = general_info.read_gms2_data(reader)?;
             general_info.gms2_data = Some(gms2);
         }
