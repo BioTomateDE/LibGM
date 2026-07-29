@@ -76,16 +76,16 @@ impl<'a> DataReader<'a> {
     }
 
     pub fn read_resource_by_id<T>(&mut self) -> Result<GMRef<T>> {
-        // const CTX: &str = "reading resource by ID";
-        // let number = self.read_u32().context(CTX)?;
-        // check_resource_limit(number).context(CTX)?;
-        // Ok(GMRef::new(number))
         let number = self.read_i32()?;
-
         if number == -1 {
             return Ok(GMRef::none());
         }
-        check_resource_limit(number as u32).ctx("parsing resource by id")?;
+        if let Err(e) = check_resource_limit(number as u32) {
+            if self.options.verify_constants {
+                return Err(e).ctx("parsing resource by id");
+            }
+            log::warn!("{e}");
+        }
         Ok(GMRef::new(number))
     }
 }
