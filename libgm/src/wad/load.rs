@@ -182,7 +182,7 @@ impl LoadingOptions {
 
     /// Deserializes a GameMaker audio group file (stored in memory) with the specified options.
     pub fn load_audiogroup_bytes(&self, raw_data: impl AsRef<[u8]>) -> Result<Audios> {
-        let mut reader: DataReader = read_form(raw_data.as_ref())?;
+        let mut reader: DataReader = read_form(raw_data.as_ref(), self.clone())?;
         reader.read_chunk()
     }
 }
@@ -230,8 +230,7 @@ pub fn load_audiogroup_file(path: impl AsRef<Path>) -> Result<Audios> {
 
 // ================ Actual logic here ================
 
-/// This can later be reused for audiogroup files.
-fn read_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
+fn read_form(raw_data: &'_ [u8], options: LoadingOptions) -> Result<DataReader<'_>> {
     let root = raw_data.get(0..4);
     let endianness = match root {
         Some(b"FORM") => Endianness::Little,
@@ -245,6 +244,7 @@ fn read_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
     }
 
     let mut reader = DataReader::new(raw_data);
+    reader.options = options;
     reader.endianness = endianness;
     reader.cur_pos = 4;
 
@@ -265,7 +265,22 @@ fn read_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
 
     // Read chunks into HashMap (FORM)
     while reader.cur_pos + 8 < total_data_len {
-        let name = reader.read_chunk_name()?;
+        let mut known = true;
+
+        let mut bytes: [u8; 4] = *reader.read_bytes_const()?;
+        if reader.endianness == Endianness::Big {
+            bytes.reverse();
+        }
+        let name = match ChunkName::from_bytes(bytes) {
+            Ok(c) => c,
+            Err(e) if reader.options.verify_constants => return Err(e),
+            Err(e) => {
+                log::warn!("{e}");
+                known = false;
+                ChunkName::DAFL //stub
+            }
+        };
+
         let chunk_length = reader.read_u32()?;
         let start_pos = reader.cur_pos;
 
@@ -285,9 +300,11 @@ fn read_form(raw_data: &'_ [u8]) -> Result<DataReader<'_>> {
         let end_pos = reader.cur_pos;
         reader.last_chunk = name;
 
-        let chunk_bounds = ChunkBounds { start_pos, end_pos };
-        reader.chunks.push(name, chunk_bounds)?;
-        reader.chunk_order.push(name);
+        if known {
+            let chunk_bounds = ChunkBounds { start_pos, end_pos };
+            reader.chunks.push(name, chunk_bounds)?;
+            reader.chunk_order.push(name);
+        }
     }
 
     Ok(reader)
@@ -317,7 +334,7 @@ fn read_bytecode_chunks(reader: &mut DataReader) -> Result<(Codes, Functions, Va
 #[expect(clippy::too_many_lines)]
 fn deserialize(raw_data: &[u8], options: &LoadingOptions) -> Result<GMData> {
     let stopwatch = Stopwatch::start();
-    let mut reader: DataReader = read_form(raw_data).ctx("parsing FORM")?;
+    let mut reader: DataReader = read_form(raw_data, options.clone()).ctx("parsing FORM")?;
 
     if !reader.chunks.contains(ChunkName::STRG) {
         bail!("Chunk STRG does not exist");
@@ -335,7 +352,6 @@ fn deserialize(raw_data: &[u8], options: &LoadingOptions) -> Result<GMData> {
         .get(ChunkName::STRG)
         .ok_or("Chunk STRG does not exist")?;
 
-    reader.options = options.clone();
     let stopwatch2 = Stopwatch::start();
     reader.version = detect_format_version(reader.clone()).ctx("detecting format version")?;
     log::debug!("Detecting format version took {:.2?}", stopwatch2.elapsed());
