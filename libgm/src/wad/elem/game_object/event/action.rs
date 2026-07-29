@@ -35,7 +35,6 @@ pub struct Action {
     who: i32,            // usually -1
     relative: bool,      // usually false
     is_not: bool,        // usually false
-    unknown: u32,        // usually 0
 }
 
 impl Action {
@@ -55,7 +54,6 @@ impl Action {
             who: -1,
             relative: false,
             is_not: false,
-            unknown: 0,
         }
     }
 }
@@ -83,7 +81,8 @@ impl GMElement for Action {
         let who = reader.read_i32()?;
         let relative = reader.read_bool32()?;
         let is_not = reader.read_bool32()?;
-        let unknown = reader.read_u32()?;
+        let zero = reader.read_u32()?;
+        reader.assert_int(zero, 0, "Unknown Always Zero")?;
         Ok(Self {
             lib_id,
             id,
@@ -98,7 +97,6 @@ impl GMElement for Action {
             who,
             relative,
             is_not,
-            unknown,
         })
     }
 
@@ -116,7 +114,7 @@ impl GMElement for Action {
         writer.write_i32(self.who);
         writer.write_bool32(self.relative);
         writer.write_bool32(self.is_not);
-        writer.write_u32(self.unknown);
+        writer.write_u32(0); // GMAC also just writes 0
         Ok(())
     }
 }
