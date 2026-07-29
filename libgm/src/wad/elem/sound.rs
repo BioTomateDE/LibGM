@@ -73,7 +73,9 @@ pub struct Sound {
     /// Valid Range: `0.0` - `1.0`.
     pub volume: f32,
 
-    /// The pitch change of the audio entry (maybe? more research needed).
+    /// **Unused, usually 0**
+    /// 
+    /// Maybe the pitch change of the audio entry (no idea where this comes from).
     pub pitch: f32,
 
     /// The audio group this audio entry belongs to.

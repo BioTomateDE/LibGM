@@ -70,6 +70,8 @@ fn handle_file(path: &Path, args: &Args) -> Result<Duration> {
         dump::dump_texture_pages(&data)?;
     }
 
+    // dbg!(&data);
+
     // std::fs::create_dir_all("asm").unwrap();
     // for c in &data.codes.elems {
     //     let n = data.strings.by_ref(c.name)?;

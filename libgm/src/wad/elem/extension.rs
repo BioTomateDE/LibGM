@@ -26,7 +26,7 @@ impl GMElement for Extensions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let mut elems: Vec<Extension> = reader.read_pointer_list()?;
 
-        if reader.version >= GMVersion::Wad16Old {
+        if has_product_id_data(reader.version) {
             for elem in &mut elems {
                 let bytes: [u8; 16] = reader.read_bytes_const()?.to_owned();
                 elem.product_id_data = Some(bytes);
@@ -39,7 +39,7 @@ impl GMElement for Extensions {
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
         writer.write_pointer_list(&self.elems)?;
 
-        if writer.version() < GMVersion::Wad16Old {
+        if !has_product_id_data(writer.version()) {
             return Ok(());
         }
 
@@ -157,3 +157,7 @@ gm_enum!( Kind {
     Unknown1 = 11,
     Unknown2 = 12,
 });
+
+fn has_product_id_data(ver: GMVersion) -> bool {
+    ver >= GMVersion::Wad16Old || ver == GMVersion::Wad14Beta
+}

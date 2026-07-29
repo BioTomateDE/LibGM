@@ -54,6 +54,11 @@ impl IdeVersion {
     pub const fn new(major: u32, minor: u32, release: u32, build: u32) -> Self {
         Self { major, minor, release, build }
     }
+
+    #[must_use]
+    pub const fn is_beta(self) -> bool {
+        self.major == 1 && self.build < 1000
+    }
 }
 
 impl GMElement for IdeVersion {
@@ -166,8 +171,16 @@ pub enum GMVersion {
 
     /// * WAD Version 14
     /// * GameMaker Studio 1.4 Stable: 1464, 1474, 1499, 1567, 1598, 1657
-    /// * GameMaker Studio 1.4 Beta: 420
+    /// * GameMaker Studio 1.4 Beta: 420, 500
     Wad14,
+
+    /// * WAD Version 14
+    /// * GameMaker Studio 1.4 Stable: 1567
+    /// * GameMaker Studio 1.4 Beta: 500
+    ///
+    /// Already has Product ID data in EXTN.
+    /// Selected Beta Build in <https://archive.org/download/GMStudio1.4.x/GMStudio-Installer-1.4.1567.exe>
+    Wad14Beta,
 
     /// * WAD Version 15
     /// * GameMaker Studio 1.4 Stable: 1683, 1690, 1711, 1747, 1749, 1750, 1763
@@ -268,7 +281,7 @@ impl GMVersion {
         match self {
             Self::Wad12 => 12,
             Self::Wad13 => 13,
-            Self::Wad14 => 14,
+            Self::Wad14 | Self::Wad14Beta => 14,
             Self::Wad15 => 15,
             Self::Wad16Old | Self::Wad16Pad | Self::GMS2 | Self::GMS2_0_6 => 16,
             _ => 17,
@@ -282,6 +295,7 @@ impl Display for GMVersion {
             Self::Wad12 => "WAD 12",
             Self::Wad13 => "WAD 13",
             Self::Wad14 => "WAD 14",
+            Self::Wad14Beta => "WAD 14 (Beta)",
             Self::Wad15 => "WAD 15",
             Self::Wad16Old => "WAD 16 (pre-GMS 2)",
             Self::Wad16Pad => "WAD 16 (GMS 1.4.9999+)",
@@ -322,8 +336,11 @@ impl Display for GMVersion {
 
 // TODO: better detection whether it's 1.1 - 1.4
 const fn gms1_minor_by_build(build: u32) -> Option<u8> {
-    if build < 1000 || build > 9999 {
+    if build > 9999 {
         return None;
+    }
+    if build == 500 {
+        return Some(4);
     }
     if build >= 1451 {
         return Some(4);

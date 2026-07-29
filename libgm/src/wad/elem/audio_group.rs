@@ -71,8 +71,8 @@ impl GMRef<AudioGroup> {
     /// This function returns [`None`] if the audio group reference does not point to anything.
     #[must_use]
     pub fn filename(self) -> Option<String> {
-        if self.is_some() {
-            Some(format!("audiogroup{}.dat", self.as_raw()))
+        if self.index > 0 {
+            Some(format!("audiogroup{}.dat", self.index))
         } else {
             None
         }
