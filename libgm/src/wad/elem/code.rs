@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use super::string::Strings;
 use crate::gml::Code;
-use crate::gml::ModernData;
+use crate::gml::ModernCodeData;
 use crate::gml::instruction::AssetReference;
 use crate::gml::instruction::BinaryOp;
 use crate::gml::instruction::CodeVariable;
@@ -78,7 +78,7 @@ impl GMElement for Codes {
 
             let instructions_start_pos;
             let instructions_end_pos;
-            let modern_data: Option<ModernData>;
+            let modern_data: Option<ModernCodeData>;
 
             if reader.version < GMVersion::Wad15 {
                 instructions_start_pos = reader.cur_pos; // Instructions are placed immediately after code metadata; how convenient!
@@ -86,9 +86,9 @@ impl GMElement for Codes {
                 instructions_end_pos = reader.cur_pos;
                 modern_data = None;
             } else {
-                let locals_count = reader.read_u16()?;
+                let local_count = reader.read_u16()?;
                 let arguments_count_raw = reader.read_u16()?;
-                let argument_count: u16 = arguments_count_raw & 0x7FFF;
+                let arg_count: u16 = arguments_count_raw & 0x7FFF;
                 let weird_local_flag: bool = arguments_count_raw & 0x8000 != 0;
 
                 let position = reader.cur_pos;
@@ -97,17 +97,17 @@ impl GMElement for Codes {
                     .checked_add_signed(instructions_start_offset)
                     .ok_or("Instruction start position overflowed")?;
 
-                let offset = reader.read_u32()?;
+                let execution_offset = reader.read_u32()?;
 
                 instructions_end_pos = instructions_start_pos
                     .checked_add(code_length)
                     .ok_or("Instruction end position overflowed")?;
 
-                let data = ModernData {
-                    local_count: locals_count,
-                    argument_count,
+                let data = ModernCodeData {
+                    local_count,
+                    arg_count,
                     weird_local_flag,
-                    execution_offset: offset,
+                    execution_offset,
                     parent: GMRef::none(),
                 };
                 modern_data = Some(data);
@@ -194,7 +194,7 @@ impl GMElement for Codes {
         let mut instructions_ranges: Vec<(u32, u32)> = Vec::with_capacity(self.elems.len());
 
         for (i, code) in self.elems.iter().enumerate() {
-            if code.modern_data.as_ref().unwrap().parent.is_some() {
+            if !code.is_root() {
                 // If this is a child code entry, don't write instructions; just repeat last pointer
                 let prev_range = instructions_ranges
                     .last()
@@ -217,14 +217,14 @@ impl GMElement for Codes {
             writer.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
             let (start, end) = instructions_ranges[i];
             let length: u32 = end - start;
-            let data: &ModernData = code.modern_data.as_ref().ok_or_else(|| {
+            let data: &ModernCodeData = code.modern_data.as_ref().ok_or_else(|| {
                 format!("Code WAD15+ data not set in version {}", writer.version())
             })?;
 
             writer.write_gm_string(code.name)?;
             writer.write_u32(length);
             writer.write_u16(data.local_count);
-            writer.write_u16(data.argument_count | if data.weird_local_flag { 0x8000 } else { 0 });
+            writer.write_u16(data.arg_count | if data.weird_local_flag { 0x8000 } else { 0 });
             let instructions_start_offset: i32 = start as i32 - writer.pos() as i32;
             writer.write_i32(instructions_start_offset);
             writer.write_u32(data.execution_offset);

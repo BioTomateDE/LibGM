@@ -15,3 +15,16 @@ pub struct CodeVariable {
     /// TODO: when does this happen?
     pub is_int32: bool,
 }
+
+impl CodeVariable {
+    /// Creates a new [`CodeVariable`] with [`VariableType::Normal`] and `is_int32 = false`.
+    #[must_use]
+    pub fn new(variable: GMRef<Variable>, instance_type: InstanceType) -> Self {
+        Self {
+            variable,
+            variable_type: VariableType::Normal,
+            instance_type,
+            is_int32: false,
+        }
+    }
+}

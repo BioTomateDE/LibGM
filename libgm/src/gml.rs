@@ -36,7 +36,7 @@ pub struct Code {
     pub instructions: Vec<Instruction>,
 
     /// Extra data for WAD 15+.
-    pub modern_data: Option<ModernData>,
+    pub modern_data: Option<ModernCodeData>,
 }
 
 impl Code {
@@ -149,7 +149,7 @@ impl GMData {
 
         let name = self.strings.make(name);
         let modern_data = if self.general_info.wad_version >= 15 {
-            Some(ModernData::default())
+            Some(ModernCodeData::default())
         } else {
             None
         };
@@ -164,12 +164,17 @@ impl GMData {
 
 /// Extra data for code entries in WAD Version 15 and higher.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct ModernData {
+pub struct ModernCodeData {
     /// The amount of local variables this code entry has.
+    ///
+    /// Seems to be unused by the runner.
     pub local_count: u16,
 
     /// The amount of arguments this code entry accepts.
-    pub argument_count: u16,
+    ///
+    /// This affects how many argument variables (`argument0` - `argument15`)
+    /// the runner prepares when this code entry is called.
+    pub arg_count: u16,
 
     /// A flag set on certain code entries, which usually don't have locals attached to them.
     ///
@@ -181,7 +186,7 @@ pub struct ModernData {
     /// code entries, and nonzero for child code entries.
     pub execution_offset: u32,
 
-    /// Parent entry of this code entry, if this is a child entry,
+    /// Parent entry of this code entry, if this is a child entry.
     pub parent: GMRef<Code>,
 }
 

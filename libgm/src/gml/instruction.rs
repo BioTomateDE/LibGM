@@ -168,7 +168,7 @@ pub enum Instruction {
     /// This instruction always has the data type [`DataType::Variable`],
     /// which is omitted from this enum data since it is redundant.
     /// However, you may still need to convert your stack value to
-    /// [`DataType::Variable`] using [`Instruction::Convert`] before returning.
+    /// [`DataType::Var`able`] using [`Instruction::Convert`] before returning.
     Return,
 
     /// **Pops** a value from the stack, and **discards** it.
@@ -293,17 +293,24 @@ pub enum Instruction {
     /// Calls a GML script or builtin function.
     ///
     /// Arguments should be pushed prior to this instruction, in reverse order.
+    /// Make sure to convert them to [`DataType::Variable`] as well.
     ///
-    /// Argument count is encoded in this instruction.
-    /// Arguments are popped off of the stack.
+    /// # Return
+    /// After the call is complete, a return value of [`DataType::Variable`] will be
+    /// pushed to the stack. This always occurs; even if the called script exited without `return`.
+    /// In that case, the return value will be `undefined` (or `0` in pre-WAD15).
+    /// To ignore the return value of a call, you can use [`Self::PopDiscard`].
     ///
-    /// Every function call is allowed to have an arbitary number of arguments.
-    /// Certain builtin functions are designed to handle any
-    /// number of arguments, such as `ds_list_add`.
-    /// For custom functions (aka. scripts), the remaining values will
-    /// be filled with `0` or `undefined` in modern versions (DOCME).
+    /// # Arguments
+    /// Function calls are allowed to have an arbitary number of arguments.
     ///
-    /// DOCME: I'm not sure what happens in WAD<15.
+    /// Builtin functions will throw an error if arguments are missing (`arg_count` too low).
+    /// They do not throw an error or misbehave if you provide too many arguments.
+    /// Certain builtin functions are designed to handle any number of arguments, such as `ds_list_add`.
+    ///
+    /// For scripts, the pushed arguments are placed into the special `argument0` - `argument15` variables.
+    /// Accessing an uninitialized argument variable yields `undefined` (or `0` in pre-WAD15).
+    /// Arguments are never initialized in events/room creation code; only in scripts.
     Call {
         function: GMRef<Function>,
         arg_count: u16,

@@ -31,14 +31,17 @@ impl Variables {
     // This method is still buggy, use with caution.
     // TODO: make this work for WAD<=14. also docs. also vari_instance_type is
     // wrong/buggy?
+    //
+    // # Panics
+    // This functions panics when used with [`InstanceType::Local`].
     pub fn make(
         &mut self,
         name: GMRef<String>,
         instance_type: InstanceType,
         version: GMVersion,
-    ) -> Result<GMRef<Variable>> {
+    ) -> GMRef<Variable> {
         if instance_type == InstanceType::Local {
-            bail!("Local variables have to be unique; this function will not work");
+            panic!("Local variables have to be unique; this function will not work");
         }
 
         let vari_instance_type = if instance_type == InstanceType::Builtin {
@@ -59,7 +62,7 @@ impl Variables {
             }
 
             // Found existing variable!
-            return Ok(i.into());
+            return i.into();
         }
 
         // Couldn't find a variable; make a new one
@@ -90,7 +93,7 @@ impl Variables {
 
         let variable = Variable {
             name,
-            modern_data: Some(ModernData {
+            modern_data: Some(ModernVarData {
                 instance_type: vari_instance_type,
                 variable_id: 0x6767,
             }),
@@ -98,7 +101,7 @@ impl Variables {
 
         self.elems.push(variable);
 
-        Ok(variable_ref)
+        variable_ref
     }
 
     pub fn validate_names(&self, strings: &Strings) -> Result<()> {
@@ -128,7 +131,7 @@ impl GMElement for Variables {
         while reader.cur_pos + variable_size <= reader.chunk.end_pos {
             let name: GMRef<String> = reader.read_gm_string()?;
 
-            let modern_data: Option<ModernData> =
+            let modern_data: Option<ModernVarData> =
                 reader.deserialize_if_version(GMVersion::Wad15)?;
 
             let occurrence_count = reader.read_count("Variable occurrence")?;
@@ -217,7 +220,7 @@ impl GMElement for Variables {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Variable {
     pub name: GMRef<String>,
-    pub modern_data: Option<ModernData>,
+    pub modern_data: Option<ModernVarData>,
 }
 
 element_stub!(Variable);
@@ -236,12 +239,12 @@ impl GMNamedElement for Variable {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct ModernData {
+pub struct ModernVarData {
     pub instance_type: InstanceType,
     pub variable_id: i32,
 }
 
-impl GMElement for ModernData {
+impl GMElement for ModernVarData {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let raw_instance_type: i16 = reader.read_i32()? as i16;
         let instance_type: InstanceType = InstanceType::decode_normal(raw_instance_type)?;

@@ -234,6 +234,7 @@ pub mod error;
 pub mod gm_enum;
 pub mod gml;
 pub mod prelude;
+pub mod upgrade;
 pub mod wad;
 
 // Convenience re-exports

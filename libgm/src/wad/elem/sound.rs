@@ -74,7 +74,7 @@ pub struct Sound {
     pub volume: f32,
 
     /// **Unused, usually 0**
-    /// 
+    ///
     /// Maybe the pitch change of the audio entry (no idea where this comes from).
     pub pitch: f32,
 

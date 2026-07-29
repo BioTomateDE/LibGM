@@ -29,7 +29,7 @@ use crate::wad::elem::room::InstanceID;
 /// For more information, see [`PushWithContext`].
 ///
 /// [`PushWithContext`]: crate::gml::Instruction::PushWithContext
-#[derive(Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum InstanceType {
     /// Represents the first (?) instance of an object.
     /// This is typically an object that should only have one instance.
