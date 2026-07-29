@@ -26,17 +26,17 @@ pub fn check_2024_6(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     let ver = target_version!(GM2024_6);
     let sprite_count = reader.read_u32()?;
     for i in 0..sprite_count {
-        reader.cur_pos = reader.chunk.start_pos + i * 4 + 4;
+        reader.set_rel_cur_pos(i * 4 + 4)?;
         let sprite_pointer = reader.read_u32()?;
         if sprite_pointer == 0 {
             continue;
         }
 
-        let mut next_sprite_pointer = 0;
+        let mut next_sprite_ptr = 0;
         for _ in i + 1..sprite_count {
             let pointer = reader.read_u32()?;
             if pointer != 0 {
-                next_sprite_pointer = pointer;
+                next_sprite_ptr = pointer;
                 break;
             }
         }
@@ -68,60 +68,56 @@ pub fn check_2024_6(reader: &mut DataReader) -> Result<Option<GMVersion>> {
             // 0 <=> SpriteType::Normal
             continue; // We can't determine anything from this sprite
         }
-        let sequence_offset = reader.read_u32()?;
-        let nine_slice_offset = reader.read_u32()?;
+        let sequence_ptr = reader.read_u32()?;
+        let nine_slice_ptr = reader.read_u32()?;
         let texture_count = reader.read_u32()?;
         reader.cur_pos += texture_count * 4; // Skip past texture pointers
         let mask_count = reader.read_u32()?;
         if mask_count == 0 {
             continue; // We can't determine anything from this sprite
         }
-        let mut full_length = width.div_ceil(8) * height * mask_count;
-        if full_length % 4 != 0 {
-            full_length += 4 - full_length % 4; // Idk
-        }
-        let mut bbox_length = bbox_width.div_ceil(8) * bbox_height * mask_count;
-        if !bbox_length.is_multiple_of(4) {
-            bbox_length += 4 - bbox_length % 4; // Idk
-        }
 
-        let full_end_pos = reader.cur_pos + full_length;
-        let bbox_end_pos = reader.cur_pos + bbox_length;
-        let expected_end_offset;
-        if sequence_offset != 0 {
-            expected_end_offset = sequence_offset;
-        } else if nine_slice_offset != 0 {
-            expected_end_offset = nine_slice_offset;
-        } else if next_sprite_pointer != 0 {
-            expected_end_offset = next_sprite_pointer;
-        } else {
-            // Use chunk length, and be lenient with it (due to chunk padding)
-            if !full_end_pos.is_multiple_of(16)
-                && full_end_pos + (16 - full_end_pos % 16) == reader.chunk.end_pos
-            {
-                return Ok(None); // "Full" mask data doesn't exactly line up, but works if rounded up to the next chunk padding
+        let pos = reader.cur_pos;
+        let full_end_pos = calc_end_pos(pos, width, height, mask_count).unwrap_or(0);
+        let bbox_end_pos = calc_end_pos(pos, bbox_width, bbox_height, mask_count).unwrap_or(0);
+
+        let expected_end_ptr = first_nonzero([sequence_ptr, nine_slice_ptr, next_sprite_ptr]);
+        if let Some(end) = expected_end_ptr {
+            // If the Full mask data runs past the expected end offset
+            // and the Bbox mask data does not, then this is 2024.6.
+            if full_end_pos == end {
+                return Ok(None); // "Full" mask data is valid
             }
-            if !bbox_end_pos.is_multiple_of(16)
-                && bbox_end_pos + (16 - bbox_end_pos % 16) == reader.chunk.end_pos
-            {
-                return ver; // "Bbox" mask data doesn't exactly line up, but works if rounded up to the next chunk padding
+            if bbox_end_pos == end {
+                return ver; // "Bbox" mask data is valid
+            }
+        } else {
+            // Use chunk length, and be lenient with it (due to chunk padding),
+            // NOTE: These checks used to also check that it wasn't a multiple of 16. Bring back if necessary.
+            if full_end_pos.next_multiple_of(16) == reader.chunk.end_pos {
+                // "Full" mask data doesn't exactly line up, but works if rounded up to the next chunk padding.
+                return Ok(None);
+            }
+            if bbox_end_pos.next_multiple_of(16) == reader.chunk.end_pos {
+                // "Bbox" mask data doesn't exactly line up, but works if rounded up to the next chunk padding.
+                return ver;
             }
             bail!("Failed to detect mask type in 2024.6 detection");
-        }
-
-        if full_end_pos == expected_end_offset {
-            log::warn!(
-                "full_end_pos == expected_end_offset while detecting SPRT_2024.6; may lead to \
-                 false negatives"
-            );
-            return Ok(None); // "Full" mask data is valid
-            // (TODO: no idea why it returns here tbh; check if there is bug in
-            // utmt pls)
-        }
-        if bbox_end_pos == expected_end_offset {
-            return ver; // "Bbox" mask data is valid
         }
     }
 
     Ok(None)
+}
+
+fn first_nonzero<const N: usize>(pointers: [u32; N]) -> Option<u32> {
+    pointers.into_iter().find(|&p| p != 0)
+}
+
+fn calc_end_pos(cur_pos: u32, width: u32, height: u32, mask_count: u32) -> Option<u32> {
+    width
+        .div_ceil(8)
+        .checked_mul(height)?
+        .checked_mul(mask_count)?
+        .next_multiple_of(4)
+        .checked_add(cur_pos)
 }
