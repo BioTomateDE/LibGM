@@ -8,7 +8,7 @@ use crate::gml::assembly::assemble_instructions;
 use crate::gml::insert_instructions;
 use crate::gml::instruction::InstanceType;
 use crate::gml::instruction::Instruction;
-use crate::gml::instruction::VariableType;
+use crate::gml::instruction::ReferenceType;
 use crate::prelude::*;
 use crate::wad::elem::variable::Variable;
 
@@ -70,8 +70,8 @@ fn find_insertion_point(data: &GMData, code: &Code) -> Result<u32> {
         }
         // (assumes instancetype global)
 
-        let ref_type = code_variable.variable_type;
-        if ref_type != VariableType::Array {
+        let ref_type = code_variable.ref_type;
+        if ref_type != ReferenceType::Array {
             bail!("Expected array access for global.flagname, got {ref_type:?}");
         }
 

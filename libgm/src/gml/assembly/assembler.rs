@@ -15,7 +15,7 @@ use crate::gml::instruction::DataType;
 use crate::gml::instruction::InstanceType;
 use crate::gml::instruction::Instruction;
 use crate::gml::instruction::PushValue;
-use crate::gml::instruction::VariableType;
+use crate::gml::instruction::ReferenceType;
 use crate::prelude::*;
 use crate::util::fmt::typename;
 use crate::wad::data::GMData;
@@ -377,7 +377,7 @@ fn parse_call(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
     Ok(Instruction::Call { function, arg_count })
 }
 
-impl VariableType {
+impl ReferenceType {
     fn from_string(variable_type: &str) -> Result<Self> {
         Ok(match variable_type {
             "stacktop" => Self::StackTop,
@@ -391,17 +391,17 @@ impl VariableType {
 }
 
 fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable> {
-    let mut variable_type = if let Some(ty) = reader.consume_square_brackets()? {
-        VariableType::from_string(ty)?
+    let mut ref_type = if let Some(ty) = reader.consume_square_brackets()? {
+        ReferenceType::from_string(ty)?
     } else {
-        VariableType::Normal
+        ReferenceType::Normal
     };
 
     let instance_type_raw = reader.parse_identifier()?;
     let instance_type_arg = reader.consume_angle_brackets()?.unwrap_or_default();
     reader.consume_dot()?;
 
-    let mut variable_ref: Option<GMRef<Variable>> = None;
+    let mut variable: GMRef<Variable> = GMRef::none();
     let instance_type: InstanceType = match instance_type_raw {
         "self" => InstanceType::Self_,
         "object" => {
@@ -411,13 +411,13 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
             InstanceType::GameObject(object_ref)
         }
         "instance" => {
-            variable_type = VariableType::Instance;
+            ref_type = ReferenceType::Instance;
             let instance_id: i32 = parse_int(instance_type_arg)?;
             InstanceType::Instance(InstanceID(instance_id))
         }
         "local" => {
             let var_index: i32 = parse_i32(instance_type_arg)?;
-            variable_ref = Some(GMRef::new(var_index));
+            variable = GMRef::new(var_index);
             InstanceType::Local
         }
         "stacktop" => InstanceType::StackTop,
@@ -433,33 +433,18 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
 
     let name: &str = parse_variable_identifier(reader)?;
 
+    let var_type = instance_type.as_variable_type();
     if instance_type != InstanceType::Local {
-        // Convert instance type because of some bullshit
-        let vari_instance_type: InstanceType = instance_type.as_vari();
-
-        for (gm_ref, var) in gm_data.variables.element_refs() {
-            let var_name = var.name(&gm_data.strings)?;
-            if var_name != name {
-                continue;
-            }
-            if let Some(data) = &var.modern_data
-                && data.instance_type != vari_instance_type
-            {
-                continue;
-            }
-            // Found existing variable!
-            variable_ref = Some(gm_ref);
-            break;
-        }
+        variable = gm_data.variables.find(name, var_type, &gm_data.strings);
     }
 
-    let Some(variable) = variable_ref else {
+    if variable.is_none() {
         bail!("Cannot resolve variable with name {name:?}");
-    };
+    }
 
     Ok(CodeVariable {
         variable,
-        variable_type,
+        ref_type,
         instance_type,
         is_int32: false, // This has to be modified afterward, if necessary
     })

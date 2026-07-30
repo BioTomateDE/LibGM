@@ -5,6 +5,7 @@ use crate::gml::ModernCodeData;
 use crate::gml::instruction::CodeVariable;
 use crate::gml::instruction::InstanceType;
 use crate::gml::instruction::PushValue;
+use crate::gml::instruction::VariableType;
 use crate::prelude::*;
 use crate::wad::GMVersion;
 use crate::wad::elem::variable::Variable;
@@ -106,10 +107,12 @@ fn fix_undertale(data: &mut GMData) {
         return;
     };
 
-    let undefined_string = data.strings.make("undefined");
-    let undefined: GMRef<Variable> =
-        data.variables
-            .make(undefined_string, InstanceType::Self_, data.meta.version);
+    let undefined: GMRef<Variable> = data.variables.make(
+        "undefined",
+        VariableType::Self_,
+        data.meta.version,
+        &mut data.strings,
+    );
 
     let codevar = CodeVariable::new(undefined, InstanceType::Self_);
     code.instructions[1] = Instruction::Push { value: PushValue::Variable(codevar) };

@@ -16,7 +16,6 @@ use std::time::Duration;
 use std::time::Instant;
 
 use libgm::gml::assembly::disassemble_code;
-use libgm::gml::instruction::InstanceType;
 use libgm::prelude::*;
 use libgm::wad::data::GMData;
 use libgm::wad::load::LoadingOptions;

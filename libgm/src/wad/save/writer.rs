@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::collections::HashMap;
 
-use crate::gml::instruction::VariableType;
+use crate::gml::instruction::ReferenceType;
 use crate::prelude::*;
 use crate::util::fmt::typename;
 use crate::wad::GMVersion;
@@ -47,7 +47,7 @@ pub struct DataWriter<'a> {
     ///   `gm_data.variables.variables`
     /// - Inner Vec: List of `(written_position, variable_type)` tuples for each
     ///   occurrence
-    pub variable_occurrences: Vec<Vec<(u32, VariableType)>>,
+    pub variable_occurrences: Vec<Vec<(u32, ReferenceType)>>,
 
     pub last_chunk: LastChunk,
 }

@@ -14,6 +14,7 @@ use crate::gml::instruction::DataType;
 use crate::gml::instruction::InstanceType;
 use crate::gml::instruction::Instruction;
 use crate::gml::instruction::PushValue;
+use crate::gml::instruction::ReferenceType;
 use crate::gml::instruction::VariableType;
 use crate::gml::opcode;
 use crate::prelude::*;
@@ -534,7 +535,7 @@ impl DataReader<'_> {
                     self.cur_pos += 4; // Skip next occurrence offset
                     return Ok(PushValue::Variable(CodeVariable {
                         variable,
-                        variable_type: VariableType::Normal,
+                        ref_type: ReferenceType::Normal,
                         instance_type: InstanceType::Self_,
                         is_int32: true,
                     }));
@@ -666,10 +667,10 @@ fn encode_pop(
     type2: DataType,
 ) -> Result<()> {
     let instr_pos: u32 = writer.pos();
-    writer.write_i16(encode_instance_type(variable));
+    writer.write_i16(variable.instance_type.encode(variable.ref_type));
     writer.write_u8(type1.encode() | type2.encode() << 4);
     writer.write_u8(opcode);
-    write_variable_occurrence(writer, variable.variable, instr_pos, variable.variable_type)?;
+    write_variable_occurrence(writer, variable.variable, instr_pos, variable.ref_type)?;
     Ok(())
 }
 
@@ -716,7 +717,7 @@ fn encode_push(writer: &mut DataWriter, opcode: u8, value: PushValue) -> Result<
     let instr_pos: u32 = writer.pos();
     writer.write_i16(match value {
         PushValue::Short(int16) => int16,
-        PushValue::Variable(variable) => encode_instance_type(variable),
+        PushValue::Variable(variable) => variable.instance_type.encode(variable.ref_type),
         _ => 0,
     });
 
@@ -737,7 +738,7 @@ fn encode_push(writer: &mut DataWriter, opcode: u8, value: PushValue) -> Result<
                 writer,
                 code_variable.variable,
                 instr_pos,
-                code_variable.variable_type,
+                code_variable.ref_type,
             )?;
         }
         PushValue::Function(func_ref) => {
@@ -749,11 +750,11 @@ fn encode_push(writer: &mut DataWriter, opcode: u8, value: PushValue) -> Result<
 
 fn encode_pushvar(writer: &mut DataWriter, opcode: u8, variable: CodeVariable) -> Result<()> {
     let instr_pos = writer.pos();
-    writer.write_i16(encode_instance_type(variable));
+    writer.write_i16(variable.instance_type.encode(variable.ref_type));
     writer.write_u8(DataType::Variable.encode());
     writer.write_u8(opcode);
 
-    write_variable_occurrence(writer, variable.variable, instr_pos, variable.variable_type)?;
+    write_variable_occurrence(writer, variable.variable, instr_pos, variable.ref_type)?;
     Ok(())
 }
 
@@ -831,60 +832,50 @@ impl GMElement for AssetReference {
 }
 
 fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<CodeVariable> {
+    const CTX: &str = "decoding variable reference chain";
     let occurrence_position: u32 = reader.cur_pos;
     let raw_value = reader.read_u32()?;
 
-    let (variable, vari_instance_type): (GMRef<Variable>, InstanceType) = *reader
+    let (variable, variable_type): (GMRef<Variable>, VariableType) = *reader
         .variable_occurrences
         .get(&occurrence_position)
         .ok_or_else(|| {
             format!("Could not find variable with occurrence position {occurrence_position}")
-        })?;
+        })
+        .ctx(CTX)?;
 
-    let variable_type = (raw_value >> 24) & 0xF8;
-    let variable_type =
-        VariableType::from_u8(variable_type as u8).ctx("decoding variable reference chain")?;
+    let ref_type = (raw_value >> 24) & 0xF8;
+    let ref_type = ReferenceType::decode(ref_type as u8).ctx(CTX)?;
 
     let instance_type: InstanceType =
-        if matches!(variable_type, VariableType::Normal | VariableType::Instance) {
-            InstanceType::decode(raw_instance_type, variable_type)?
+        if matches!(ref_type, ReferenceType::Normal | ReferenceType::Instance) {
+            InstanceType::decode(raw_instance_type, ref_type).ctx(CTX)?
+        } else if variable_type == VariableType::Builtin {
+            InstanceType::Argument
         } else {
-            vari_instance_type
+            variable_type.as_instance_type()
         };
 
     Ok(CodeVariable {
         variable,
-        variable_type,
+        ref_type,
         instance_type,
         is_int32: false,
     })
-}
-
-const fn encode_instance_type(code_variable: CodeVariable) -> i16 {
-    // utmt requires this for proper disassembly
-    if matches!(
-        code_variable.variable_type,
-        VariableType::Normal | VariableType::Instance
-    ) {
-        code_variable.instance_type.encode()
-    } else {
-        // if special access, make it "undefined"
-        0
-    }
 }
 
 fn write_variable_occurrence(
     writer: &mut DataWriter,
     variable_ref: GMRef<Variable>,
     occurrence_pos: u32,
-    variable_type: VariableType,
+    variable_type: ReferenceType,
 ) -> Result<()> {
     let len: usize = writer.variable_occurrences.len();
 
     let var = writer.gm_data.variables.by_ref(variable_ref)?;
     let gm_index = variable_ref.index as u32;
 
-    let occurrences: &mut Vec<(u32, VariableType)> = writer
+    let occurrences: &mut Vec<(u32, ReferenceType)> = writer
         .variable_occurrences
         .get_mut(gm_index as usize)
         .ok_or_else(|| {
@@ -894,14 +885,14 @@ fn write_variable_occurrence(
     if let Some(&(last_occurrence_pos, old_variable_type)) = occurrences.last() {
         // Replace last occurrence with next occurrence offset
         let occurrence_offset: u32 = occurrence_pos - last_occurrence_pos;
-        let old_var_type = old_variable_type.as_u8() as u32 & 0xF8;
+        let old_var_type = old_variable_type.encode() as u32 & 0xF8;
         let value: u32 = occurrence_offset & 0x07FF_FFFF | old_var_type << 24;
         writer.overwrite_u32(value, last_occurrence_pos + 4)?;
     }
 
     // Write the Name String ID (yes, the index, not the position) together with this the reference type.
     let name_string_id = var.name.index as u32 & 0x07FF_FFFF;
-    writer.write_u32(name_string_id | u32::from(variable_type.as_u8() & 0xF8) << 24);
+    writer.write_u32(name_string_id | u32::from(variable_type.encode() & 0xF8) << 24);
 
     // Fuckass borrow checker
     writer

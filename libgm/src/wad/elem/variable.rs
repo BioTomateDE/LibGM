@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::gml::instruction::InstanceType;
+use crate::gml::instruction::VariableType;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::GMVersion;
@@ -28,79 +28,104 @@ pub struct Variables {
 gm_list_chunk!(VARI, Variables, Variable, direct);
 
 impl Variables {
-    // This method is still buggy, use with caution.
-    // TODO: make this work for WAD<=14. also docs. also vari_instance_type is
-    // wrong/buggy?
-    //
-    // # Panics
-    // This functions panics when used with [`InstanceType::Local`].
-    pub fn make(
-        &mut self,
-        name: GMRef<String>,
-        instance_type: InstanceType,
-        version: GMVersion,
+    /// Tries to find an existing variable with the specified name and variable type.
+    ///
+    /// Returns [`GMRef::none`] if no variable could be found or if the specified variable type is Local.
+    #[must_use]
+    pub fn find(
+        &self,
+        name: &str,
+        variable_type: VariableType,
+        strings: &Strings,
     ) -> GMRef<Variable> {
-        assert!(
-            instance_type != InstanceType::Local,
-            "Local variables have to be unique; this function will not work"
-        );
-
-        let vari_instance_type = if instance_type == InstanceType::Builtin {
-            InstanceType::Self_
-        } else {
-            instance_type
-        };
+        if variable_type == VariableType::Local {
+            return GMRef::none();
+        }
 
         for (i, variable) in self.elems.iter().enumerate() {
-            if variable.name != name {
+            let Ok(var_name) = strings.by_ref(variable.name) else {
+                continue;
+            };
+            if var_name != name {
                 continue;
             }
 
-            if let Some(data) = &variable.modern_data
-                && data.instance_type != vari_instance_type
+            if let Some(modern) = &variable.modern_data
+                && modern.variable_type != variable_type
             {
                 continue;
             }
 
             // Found existing variable!
-            return i.into();
+            return GMRef::from(i);
         }
 
-        // Couldn't find a variable; make a new one
+        GMRef::none()
+    }
+
+    /// Creates a brand new variable with the specified variable type.
+    ///
+    /// TODO: does this affects correctness if variables aren't forced to be reused?
+    ///
+    /// This method is still buggy, use with caution.
+    ///
+    /// # Panics
+    /// This functions panics when used with [`InstanceType::Local`].
+    pub fn make_new(
+        &mut self,
+        name: GMRef<String>,
+        variable_type: VariableType,
+        version: GMVersion,
+    ) -> GMRef<Variable> {
+        assert!(
+            variable_type != VariableType::Local,
+            "Local variables have to be unique; this function will not work"
+        );
 
         // First update these scuffed ass variable counts in WAD 15+
+        let mut id = None;
         if let Some(header) = &mut self.modern_header {
             if version >= GMVersion::GMS2_3 {
-                if instance_type != InstanceType::Builtin {
-                    // these counts are the same
-                    header.var_count1 += 1;
-                    header.var_count2 += 1;
-                }
-            } else if version >= GMVersion::Wad16 {
+                id = Some(name.as_raw());
+                // NOTE: builtin is now handled differently because i split up
+                // variable type and instance type. probably works riiiight
+
                 // these counts are the same
                 header.var_count1 += 1;
                 header.var_count2 += 1;
-            } else if instance_type == InstanceType::Self_ {
+            } else if version >= GMVersion::Wad16 {
+                id = Some(header.var_count1 as i32);
+                // these counts are the same
+                header.var_count1 += 1;
                 header.var_count2 += 1;
-            } else if instance_type == InstanceType::Global {
+            } else if variable_type == VariableType::Self_ {
+                id = Some(header.var_count2 as i32);
+                header.var_count2 += 1;
+            } else if variable_type == VariableType::Global {
+                id = Some(header.var_count1 as i32);
                 header.var_count1 += 1;
             }
         }
 
         // Now actually create the variable
-        let variable_ref: GMRef<Variable> = self.elems.len().into();
+        let modern_data = id.map(|variable_id| ModernVarData { variable_type, variable_id });
+        let variable = Variable { name, modern_data };
+        self.push(variable)
+    }
 
-        let variable = Variable {
-            name,
-            modern_data: Some(ModernVarData {
-                instance_type: vari_instance_type,
-                variable_id: 0x6767,
-            }),
-        };
-
-        self.elems.push(variable);
-
-        variable_ref
+    /// jank
+    pub fn make(
+        &mut self,
+        name: &str,
+        variable_type: VariableType,
+        version: GMVersion,
+        strings: &mut Strings,
+    ) -> GMRef<Variable> {
+        let existing = self.find(name, variable_type, strings);
+        if existing.is_some() {
+            return existing;
+        }
+        self.make_new(strings.make(name), variable_type, version)
     }
 
     pub fn validate_names(&self, strings: &Strings) -> Result<()> {
@@ -159,15 +184,15 @@ impl GMElement for Variables {
             // refactor this entire thing
             for occurrence in occurrences {
                 let var_ref: GMRef<Variable> = i.into();
-                // fallback value is never read in wad < 15
-                let instance_type = elems[i]
+                // placeholder value is never read in wad < 15
+                let variable_type = elems[i]
                     .modern_data
                     .as_ref()
-                    .map_or(InstanceType::Self_, |d| d.instance_type);
+                    .map_or(VariableType::Self_, |m| m.variable_type);
 
                 if let Some(old_var) = reader
                     .variable_occurrences
-                    .insert(occurrence, (var_ref, instance_type))
+                    .insert(occurrence, (var_ref, variable_type))
                 {
                     bail!(
                         "Conflicting occurrence positions while parsing variables: Position {} \
@@ -237,22 +262,22 @@ impl GMNamedElement for Variable {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModernVarData {
-    pub instance_type: InstanceType,
+    pub variable_type: VariableType,
     pub variable_id: i32,
 }
 
 impl GMElement for ModernVarData {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let raw_instance_type: i16 = reader.read_i32()? as i16;
-        let instance_type: InstanceType = InstanceType::decode_normal(raw_instance_type)?;
+        let variable_type: i32 = reader.read_i32()?;
+        let variable_type = VariableType::decode(variable_type)?;
         let variable_id = reader.read_i32()?;
-        Ok(Self { instance_type, variable_id })
+        Ok(Self { variable_type, variable_id })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
-        writer.write_i32(i32::from(self.instance_type.encode()));
+        writer.write_i32(self.variable_type.encode());
         writer.write_i32(self.variable_id);
         Ok(())
     }

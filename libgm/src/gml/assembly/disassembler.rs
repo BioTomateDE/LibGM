@@ -8,7 +8,7 @@ use crate::gml::instruction::DataType;
 use crate::gml::instruction::InstanceType;
 use crate::gml::instruction::Instruction;
 use crate::gml::instruction::PushValue;
-use crate::gml::instruction::VariableType;
+use crate::gml::instruction::ReferenceType;
 use crate::prelude::*;
 use crate::util::fmt::typename;
 use crate::wad::data::GMData;
@@ -322,7 +322,7 @@ impl ComparisonType {
     }
 }
 
-impl VariableType {
+impl ReferenceType {
     #[must_use]
     const fn as_str(self) -> &'static str {
         match self {
@@ -495,7 +495,7 @@ fn write_variable(
     if code_variable.is_int32 {
         write!(buffer, "(variable)");
     }
-    write!(buffer, "{}", code_variable.variable_type.as_str());
+    write!(buffer, "{}", code_variable.ref_type.as_str());
     write_instance_type(
         code_variable.instance_type,
         buffer,

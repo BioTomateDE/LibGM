@@ -9,6 +9,7 @@ mod comparison_type;
 mod data_type;
 mod instance_type;
 mod push_value;
+mod ref_type;
 mod variable_type;
 
 pub use self::asset_reference::AssetReference;
@@ -18,6 +19,7 @@ pub use self::comparison_type::ComparisonType;
 pub use self::data_type::DataType;
 pub use self::instance_type::InstanceType;
 pub use self::push_value::PushValue;
+pub use self::ref_type::ReferenceType;
 pub use self::variable_type::VariableType;
 use crate::wad::GMRef;
 use crate::wad::elem::function::Function;
@@ -33,7 +35,7 @@ use crate::wad::elem::function::Function;
 pub enum Instruction {
     /// Pops two values from the stack, performs a mathematical,
     /// bitwise or logical operation on them, and pushes the result.
-    /// 
+    ///
     /// This enum variant covers multiple opcodes for convenience.
     Binary {
         op: BinaryOp,
@@ -70,7 +72,7 @@ pub enum Instruction {
     /// Generally, `type2` signifies the type of the value on the stack (the one
     /// to pop) and `type1` will be [`DataType::Variable`].
     /// However, there are exceptions to this. For example, when the variable
-    /// reference mode is not [`VariableType::Normal`], then `type1` may be
+    /// reference mode is not [`ReferenceType::Normal`], then `type1` may be
     /// [`DataType::Int32`] instead.
     ///
     /// There is an alternate instruction/mode with the same opcode that swaps

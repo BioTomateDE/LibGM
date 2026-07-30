@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::fmt;
 
+use crate::gml::instruction::ReferenceType;
 use crate::gml::instruction::VariableType;
 use crate::prelude::*;
 use crate::wad::elem::game_object::GameObject;
 use crate::wad::elem::room::InstanceID;
 
 /// The scope/owner of a variable.
+///
+/// Only used in WAD 15+.
 ///
 /// The most notable ones (and less confusing ones) are:
 /// * `self`: represents the current game object instance
@@ -39,11 +42,11 @@ pub enum InstanceType {
     GameObject(GMRef<GameObject>),
 
     /// Instance ID in the Room -100000; used when the
-    /// Variable Type is [`VariableType::Instance`].
+    /// Variable Type is [`ReferenceType::Instance`].
     ///
     /// Both this and [`InstanceType::GameObject`] are represented using
     /// positive integers. If the specified variable type was
-    /// [`VariableType::Instance`], the integer gets interpreted as a Room
+    /// [`ReferenceType::Instance`], the integer gets interpreted as a Room
     /// Instance ID instead of a game object reference.
     Instance(InstanceID),
 
@@ -129,12 +132,12 @@ impl fmt::Debug for InstanceType {
 
 impl InstanceType {
     /// Decodes an instance type from the given raw value.
-    /// The variable type is needed because [`VariableType::Instance`] signifies
+    /// The variable type is needed because [`ReferenceType::Instance`] signifies
     /// a [`InstanceType::Instance`] instead of a
     /// [`InstanceType::GameObject`].
-    pub fn decode(raw: i16, var_type: VariableType) -> Result<Self> {
+    pub fn decode(raw: i16, var_type: ReferenceType) -> Result<Self> {
         if raw >= 0 {
-            return Ok(if var_type == VariableType::Instance {
+            return Ok(if var_type == ReferenceType::Instance {
                 Self::Instance(InstanceID(raw as i32))
             } else {
                 Self::GameObject(GMRef::new(raw as i32))
@@ -159,15 +162,20 @@ impl InstanceType {
     /// Decodes an instance type from the given raw value,
     /// assuming that this is not a `Instance` instance type.
     pub fn decode_normal(raw: i16) -> Result<Self> {
-        Self::decode(raw, VariableType::Normal)
+        Self::decode(raw, ReferenceType::Normal)
     }
 
-    /// Serializes this instance type into an i16.
+    /// Encodes this instance type into an [`i16`].
     ///
     /// If the game object reference is erroneously higher
     /// than [`i16::MAX`], you will be boiled (truncated).
     #[must_use]
-    pub const fn encode(self) -> i16 {
+    pub fn encode(self, ref_type: ReferenceType) -> i16 {
+        if ref_type != ReferenceType::Normal {
+            // yeah the instance type is lost with non-standard reference types.
+            // why? idfk.
+            return 0;
+        }
         match self {
             Self::GameObject(game_object_ref) => game_object_ref.index as i16,
             Self::Instance(instance_id) => instance_id.0 as i16,
@@ -184,20 +192,26 @@ impl InstanceType {
         }
     }
 
-    /// Converts an instance type to the "VARI version".
-    /// In other words, convert the instance type to what
-    /// it would be if it was in the 'VARI' chunk (`GMVariable.instance_type`)
-    /// instead of in an instruction (`CodeVariable.instance_type`).
+    /// Encodes this instance type into an [`i16`], assuming that the variable reference type is normal.
+    #[inline]
     #[must_use]
-    pub const fn as_vari(self) -> Self {
+    pub fn encode_normal(self) -> i16 {
+        self.encode(ReferenceType::Normal)
+    }
+
+    /// Converts an instance type to a variable type.
+    ///
+    /// Global, Local and Static stay unchanged.
+    /// Argument becomes Builtin.
+    /// Everything else becomes Self.
+    #[must_use]
+    pub const fn as_variable_type(self) -> VariableType {
         match self {
-            Self::GameObject(_)
-            | Self::Instance(_)
-            | Self::Other
-            | Self::Builtin
-            | Self::StackTop => Self::Self_,
-            Self::Argument => Self::Builtin,
-            _ => self,
+            Self::Global => VariableType::Global,
+            Self::Local => VariableType::Local,
+            Self::Static => VariableType::Static,
+            Self::Argument => VariableType::Builtin,
+            _ => VariableType::Self_,
         }
     }
 }

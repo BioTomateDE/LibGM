@@ -1,77 +1,101 @@
 // SPDX-License-Identifier: GPL-3.0-only
+use std::fmt;
+
+use crate::gml::instruction::InstanceType;
 use crate::prelude::*;
 
-/// How a variable is supposed to be used in an instruction.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// The kind a [`GMVariable`] can be.
+///
+/// This is kinda the scope of the variable.
+///
+/// Only used in WAD 15+.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum VariableType {
-    /// Used for normal variables, without any arrays or chain references.
-    Normal,
-
-    /// Used for normal single-dimension array variables.
+    /// This can represent one of the following:
+    /// * [`InstanceType::Self_`]
+    /// * [`InstanceType::Other`]
+    /// * [`InstanceType::Builtin`]
+    /// * [`InstanceType::StackTop`]
+    /// * [`InstanceType::GameObject`]
+    /// * [`InstanceType::Instance`]
     ///
-    /// When accessing this variable (usually push or pop),
-    /// the engine will first pop the index, then the instance type and then perform the operation.
+    /// In fact, this can represent any instance type if the variable reference type is not [normal].
     ///
-    /// An array access `value = global.array[index]` will be compiled to:
-    /// ```text
-    /// pushim -5
-    /// push.v self.index
-    /// push.v [array]global.array
-    /// pop.v.v self.value
-    /// ```
-    /// The value -5 corresponds to the instance type Global.
-    Array,
+    /// [normal]: crate::gml::instruction::ReferenceType::Normal
+    Self_,
 
-    /// Used when referencing a variable on another variable, e.g. a chain reference.
-    ///
-    /// When accessing this variable (usually push or pop),
-    /// the engine will first pop an instance type and then perform the operation.
-    ///
-    /// A chain reference `a = b.c` will be compiled to:
-    /// ```text
-    /// push.v self.b
-    /// conv.v.i
-    /// push.v [stacktop]self.c
-    /// pop.v.v self.a
-    /// ```
-    StackTop,
+    /// Global scope ([`InstanceType::Global`]).
+    /// This is the only instance/variable type that makes complete sense.
+    Global,
 
-    /// Used when referencing variables on room instance IDs, e.g. something
-    /// like `inst_01ABCDEF.x` in GML.
-    ///
-    /// DOCME: more info
-    Instance,
+    /// Local scope ([`InstanceType::Local`]).
+    /// Only presists until the end of the code entry execution.
+    Local,
 
-    /// (GMS2.3+) Used in tandem with multidimensional array push operations (`PushArrayFinal`).
-    MultiPush,
+    /// Used for argument variables (`argument0` - `argument15`), which corresponds to [`InstanceType::Argument`].
+    /// This is *not* used for other builtin variables like `x`, `room_speed`, etc.
+    Builtin,
 
-    /// (GMS2.3+) Used in tandem with multidimensional array push and pop
-    /// operations (`PushArrayFinal`, `PopArrayFinal`).
-    MultiPop,
+    /// DOCME: I don't care about statics.
+    Static,
 }
 
 impl VariableType {
-    pub fn from_u8(raw: u8) -> Result<Self> {
+    /// Decodes a variable type from the given raw value.
+    ///
+    /// This is the same logic as decoding instance types, just limited/converted for variable types.
+    pub fn decode(raw: i32) -> Result<Self> {
         Ok(match raw {
-            0xA0 => Self::Normal,
-            0x00 => Self::Array,
-            0x80 => Self::StackTop,
-            0xE0 => Self::Instance,
-            0x10 => Self::MultiPush,
-            0x90 => Self::MultiPop,
-            _ => bail!("Invalid Variable Reference Type {raw} ({raw:04X})"),
+            -1 => Self::Self_,
+            -5 => Self::Global,
+            -6 => Self::Builtin,
+            -7 => Self::Local,
+            -16 => Self::Static,
+            _ => bail!("Invalid variable type {raw} (0x{raw:04X})"),
         })
     }
 
+    /// Encodes this variable type into an [`i32`].
+    ///
+    /// This is the same logic as encoding instance types, just limited/converted for variable types.
     #[must_use]
-    pub const fn as_u8(self) -> u8 {
+    pub const fn encode(self) -> i32 {
         match self {
-            Self::Normal => 0xA0,
-            Self::Array => 0x00,
-            Self::StackTop => 0x80,
-            Self::Instance => 0xE0,
-            Self::MultiPush => 0x10,
-            Self::MultiPop => 0x90,
+            Self::Self_ => -1,
+            Self::Global => -5,
+            Self::Builtin => -6,
+            Self::Local => -7,
+            Self::Static => -16,
         }
+    }
+
+    /// Primitively converts this variable type as an instance type.
+    ///
+    /// Variable type `builtin` is converted to instance type `builtin` (instead of `argument`).
+    ///
+    /// It's impossible to determine the *actual* instance type,
+    /// since this variable type stores less information (lots of stuff is just converted to `self` for some reason).
+    #[must_use]
+    pub const fn as_instance_type(self) -> InstanceType {
+        match self {
+            Self::Self_ => InstanceType::Self_,
+            Self::Global => InstanceType::Global,
+            Self::Local => InstanceType::Local,
+            Self::Builtin => InstanceType::Builtin,
+            Self::Static => InstanceType::Static,
+        }
+    }
+}
+
+impl fmt::Debug for VariableType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            Self::Self_ => "Self",
+            Self::Global => "Global",
+            Self::Local => "Local",
+            Self::Builtin => "Builtin",
+            Self::Static => "Static",
+        };
+        f.write_str(s)
     }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::collections::HashMap;
 
-use crate::gml::instruction::InstanceType;
+use crate::gml::instruction::VariableType;
 use crate::prelude::*;
 use crate::wad::chunk::ChunkName;
 use crate::wad::chunk::ChunkOrder;
@@ -77,7 +77,7 @@ pub struct DataReader<'a> {
 
     /// Should only be set by [`crate::wad::elem::variable`].
     /// This means that `VARI` has to be parsed before `CODE`.
-    pub variable_occurrences: HashMap<u32, (GMRef<Variable>, InstanceType)>,
+    pub variable_occurrences: HashMap<u32, (GMRef<Variable>, VariableType)>,
 
     /// Should only be set by [`crate::wad::elem::function`].
     /// This means that `FUNC` has to be parsed before `CODE`.
