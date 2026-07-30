@@ -8,6 +8,7 @@ pub use constant::Constant;
 pub use flags::OptionFlags;
 
 use crate::prelude::*;
+use crate::wad::GMVersion;
 use crate::wad::chunk::ChunkName;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::texture_page_item::TexturePageItem;
@@ -18,8 +19,6 @@ use crate::wad::save::writer::DataWriter;
 /// Most (if not all) of these options are probably unused and remnant from GM8.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Options {
-    // TODO: this is probably WAD version dependant
-    pub is_new_format: bool,
     pub flags: OptionFlags,
     pub window_scale: i32,
     pub window_color: u32,
@@ -41,9 +40,7 @@ impl GMChunk for Options {
 
 impl GMElement for Options {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let is_new_format: bool = reader.read_u32()? == 0x8000_0000;
-        reader.cur_pos -= 4;
-        if is_new_format {
+        if reader.version >= GMVersion::Wad14 {
             new::deserialize(reader)
         } else {
             old::deserialize(reader)
@@ -51,7 +48,7 @@ impl GMElement for Options {
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
-        if self.is_new_format {
+        if writer.version() >= GMVersion::Wad14 {
             new::serialize(writer, self)
         } else {
             old::serialize(writer, self)

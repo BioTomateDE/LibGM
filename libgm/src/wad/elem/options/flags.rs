@@ -28,6 +28,8 @@ bitflags::bitflags! {
         /// If the resolution can be changed.
         const CHANGE_RESOLUTION = 0x80;
 
+        // DOCME: the rest of these flags
+
         const NO_BUTTONS = 0x100;
         const SCREEN_KEY = 0x200;
         const HELP_KEY = 0x400;

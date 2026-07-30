@@ -29,17 +29,17 @@
 //! by a 32-bit integer denoting the length of the chunk. More on that later.
 //!
 //! The abbreviations YY and YYG refer to YoYo Games.
-//! 
+//!
 //! GM stands for GameMaker. I also use it for versioning (e.g. GM 2023.2).
 //! GMS stands for GameMaker Studio (also written as GM:S before Studio 2).
-//! 
+//!
 //! I also use WAD for versioning (e.g. WAD 15 means WAD/bytecode version 15).
 //! WAD version and bytecode version mean the same thing (the latter is slightly outdated/incorrect UTMT terminology).
-//! 
+//!
 //! GMAC is short for GMAssetCompiler.
 //! This is a program found in the GameMaker IDE directory that generates data files.
 //! It's written in C#, so it's easy to decompile. Lots of datamining was done on it.
-//! 
+//!
 //! UTMT and UMT stand for UndertaleModTool, which is the most popular and complete tool for unpacking/modding GameMaker data files.
 //! LibGM ~~steals~~ borrows lots of code from it (thanks bro).
 //! UTMT can refer to the GUI application or to the entire project (which includes UTML).
@@ -114,7 +114,7 @@
 //! The data file consists of "chunks", although the name "chunk" may be a bit
 //! misleading, as these chunks do not have a fixed size and cannot appear multiple times.
 //! You could think of them as sections if you like.
-//! (I will continue to call them chunks because that is the offical name  *and* best-known community name for them.) 
+//! (I will continue to call them chunks because that is the offical name  *and* best-known community name for them.)
 //! You can see these chunk names in the console output in GameMaker Studio when building your game.
 //!
 //! Every chunk has a 4 character name that indicates what it stores.

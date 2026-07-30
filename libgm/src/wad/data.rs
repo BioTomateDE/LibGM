@@ -237,7 +237,6 @@ impl Default for GMData {
         let global_init_scripts = GlobalInitScripts::default();
         let language_info = LanguageInfo::default();
         let options = Options {
-            is_new_format: true,
             flags: OptionFlags::SHOW_CURSOR
                 | OptionFlags::VARIABLE_ERRORS
                 | OptionFlags::LEGACY_JSON_PARSING

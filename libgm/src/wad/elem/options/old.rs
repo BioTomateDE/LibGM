@@ -89,7 +89,6 @@ pub fn deserialize(reader: &mut DataReader) -> Result<Options> {
         | f(flag_creation_event_order, OptionFlags::CREATION_EVENT_ORDER);
 
     Ok(Options {
-        is_new_format: false,
         flags,
         window_scale,
         window_color,
@@ -106,6 +105,7 @@ pub fn deserialize(reader: &mut DataReader) -> Result<Options> {
     })
 }
 
+#[inline]
 const fn f(is: bool, flag: OptionFlags) -> OptionFlags {
     if is { flag } else { OptionFlags::empty() }
 }

@@ -30,7 +30,6 @@ pub fn deserialize(reader: &mut DataReader) -> Result<Options> {
     let constants: Vec<Constant> = reader.read_simple_list()?;
 
     Ok(Options {
-        is_new_format: true,
         flags,
         window_scale,
         window_color,

@@ -5,7 +5,7 @@ use crate::prelude::GMRef;
 use crate::wad::elem::variable::Variable;
 
 /// A variable reference in an instruction.
-/// 
+///
 /// Contains the reference to the actual variable in `VARI` as well as the instance type and variable reference type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CodeVariable {
