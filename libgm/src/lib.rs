@@ -193,7 +193,7 @@
     // Unwraps are only used in a controlled manner where no panics can ever actually occur.
     clippy::missing_panics_doc,
 
-    // YoYoGames may add a float field to some element in the future.
+    // YoYo Games may add a float field to some element in the future.
     // This would break existing `Eq` structs.
     clippy::derive_partial_eq_without_eq,
 

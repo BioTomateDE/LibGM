@@ -10,7 +10,7 @@ doc-valid-idents = [
 
     # Official GM related terms
     "GameMaker",
-    "YoYoGames",
+    "YoYo Games",
     "YoYo",
 
     # Tools

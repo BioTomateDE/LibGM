@@ -19,7 +19,7 @@ pub struct CodeVariable {
 impl CodeVariable {
     /// Creates a new [`CodeVariable`] with [`VariableType::Normal`] and `is_int32 = false`.
     #[must_use]
-    pub fn new(variable: GMRef<Variable>, instance_type: InstanceType) -> Self {
+    pub const fn new(variable: GMRef<Variable>, instance_type: InstanceType) -> Self {
         Self {
             variable,
             variable_type: VariableType::Normal,

@@ -87,7 +87,7 @@ impl Tiles {
 
         // Due to a GMAC bug, 2 blank tiles are inserted into the layer
         // if the last 2 tiles in the layer are different.
-        // This is a certified YoyoGames moment right here.
+        // This is a certified YoYo Games moment right here.
         let has_padding: bool = if tile_data.len() == 1 {
             true // Single tile always has padding
         } else if tile_data.len() >= 2 {

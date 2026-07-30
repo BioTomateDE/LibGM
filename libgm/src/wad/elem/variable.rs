@@ -40,9 +40,10 @@ impl Variables {
         instance_type: InstanceType,
         version: GMVersion,
     ) -> GMRef<Variable> {
-        if instance_type == InstanceType::Local {
-            panic!("Local variables have to be unique; this function will not work");
-        }
+        assert!(
+            instance_type != InstanceType::Local,
+            "Local variables have to be unique; this function will not work"
+        );
 
         let vari_instance_type = if instance_type == InstanceType::Builtin {
             InstanceType::Self_
@@ -67,21 +68,19 @@ impl Variables {
 
         // Couldn't find a variable; make a new one
 
-        // First update these scuffed ass variable counts
+        // First update these scuffed ass variable counts in WAD 15+
         if let Some(header) = &mut self.modern_header {
             if version >= GMVersion::GMS2_3 {
                 if instance_type != InstanceType::Builtin {
+                    // these counts are the same
                     header.var_count1 += 1;
                     header.var_count2 += 1;
                 }
-            } else if version >= GMVersion::Wad16Old {
-                // this condition is only suggested by utmt; not confirmed (original: `!DifferentVarCounts`)
+            } else if version >= GMVersion::Wad16 {
+                // these counts are the same
                 header.var_count1 += 1;
                 header.var_count2 += 1;
-            } else if matches!(
-                instance_type,
-                InstanceType::Self_ | InstanceType::GameObject(_)
-            ) {
+            } else if instance_type == InstanceType::Self_ {
                 header.var_count2 += 1;
             } else if instance_type == InstanceType::Global {
                 header.var_count1 += 1;

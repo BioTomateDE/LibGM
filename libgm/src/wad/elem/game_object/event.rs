@@ -3,6 +3,8 @@
 mod action;
 pub mod subtype;
 
+use std::cmp::Ordering;
+
 pub use self::action::Action;
 use self::subtype::Alarm;
 use self::subtype::Collision;
@@ -298,11 +300,9 @@ impl EventSubtype for () {
 
 #[must_use]
 fn type_count_by_ver(ver: GMVersion) -> u32 {
-    if ver < GMVersion::Wad16Old {
-        12
-    } else if ver == GMVersion::Wad16Old {
-        13
-    } else {
-        15
+    match ver.cmp(&GMVersion::Wad16) {
+        Ordering::Less => 12,
+        Ordering::Equal => 13,
+        Ordering::Greater => 15,
     }
 }

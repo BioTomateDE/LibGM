@@ -33,6 +33,8 @@ use crate::wad::elem::function::Function;
 pub enum Instruction {
     /// Pops two values from the stack, performs a mathematical,
     /// bitwise or logical operation on them, and pushes the result.
+    /// 
+    /// This enum variant covers multiple opcodes for convenience.
     Binary {
         op: BinaryOp,
         lhs: DataType,
@@ -168,7 +170,7 @@ pub enum Instruction {
     /// This instruction always has the data type [`DataType::Variable`],
     /// which is omitted from this enum data since it is redundant.
     /// However, you may still need to convert your stack value to
-    /// [`DataType::Var`able`] using [`Instruction::Convert`] before returning.
+    /// [`DataType::Variable`] using [`Instruction::Convert`] before returning.
     Return,
 
     /// **Pops** a value from the stack, and **discards** it.

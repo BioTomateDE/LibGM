@@ -198,7 +198,7 @@ pub enum GMVersion {
     /// * WAD Version 16
     /// * GameMaker Studio 1.4 Stable: 1539, 1767, 1772, 1773, 1778, 1804
     /// * GameMaker Studio 1.4 Beta: 551
-    Wad16Old,
+    Wad16,
 
     /// * WAD Version 16
     /// * GameMaker Studio 1.4 Stable: 9999
@@ -290,7 +290,7 @@ impl GMVersion {
             Self::Wad13 => 13,
             Self::Wad14 | Self::Wad14Beta => 14,
             Self::Wad15 => 15,
-            Self::Wad16Old | Self::Wad16Pad | Self::GMS2 | Self::GMS2_0_6 => 16,
+            Self::Wad16 | Self::Wad16Pad | Self::GMS2 | Self::GMS2_0_6 => 16,
             _ => 17,
         }
     }
@@ -304,7 +304,7 @@ impl Display for GMVersion {
             Self::Wad14 => "WAD 14",
             Self::Wad14Beta => "WAD 14 (Beta)",
             Self::Wad15 => "WAD 15",
-            Self::Wad16Old => "WAD 16 (pre-GMS 2)",
+            Self::Wad16 => "WAD 16 (pre-GMS 2)",
             Self::Wad16Pad => "WAD 16 (GMS 1.4.9999+)",
             Self::GMS2 => "GMS 2",
             Self::GMS2_0_6 => "GMS 2.0.6",

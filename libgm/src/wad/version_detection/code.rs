@@ -95,7 +95,7 @@ pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
                 continue;
             }
 
-            if opcode != opcode::EXTENDED {
+            if opcode != opcode::BREAK {
                 continue;
             }
 

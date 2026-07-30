@@ -2,13 +2,52 @@
 
 //! Some yapping about the data file format.
 //!
-//! ## Foreword
-//! "Data file" and "WAD File" mean the same thing.
+//! ## History
+//! GameMaker is a Game Engine originally created by Mark Overmars in 1999.
+//! It was called "Animo" in its very early days, before being renamed to "Game Maker".
+//! Back then, this game engine was actually versioned sensibly: 1.1, 1.4, 4.3b, 6.1, etc.
+//! The game assets were directly embedded in the EXE; there was no data file.
+//! Since this format is completely different, LibGM does not support it.
+//! In the final version of 8.1 (April 2011), it was renamed to "GameMaker" (without the space).
+//! Then, its successor "GameMaker: Studio" was released in May 2012.
+//! Here, they introduced a new binary format for storing game assets in the new data files.
+//! It was versioned 1.0 to 1.4, with internal build numbers up to 1784 or something (and 9999).
+//! In 2015, GameMaker was aquired by the company YoYo Games.
+//! In 2017, GameMaker Studio 2 was released (yes, they removed the colon from the name).
+//! I'm too lazy to finish this section.
 //!
-//! GameMaker is a Game Engine created by YoYoGames.
-//! You will see the abbreviations "GM" and "YY" a lot.
+//! ## Terminology
+//! LibGM handles "GameMaker data files". This is what I call them.
 //!
-//! GameMaker has its own programming language called "GML".
+//! Data files are also known as a "WAD files" which is a term from
+//! the game Doom and stands for "Where's All the Data?".
+//! See more on [Wikipedia](https://en.wikipedia.org/wiki/Doom_modding).
+//!
+//! Another (more general) term for them is "IFF files", which stands for Interchange File Format.
+//! IFF describes the chunk based format of data files:
+//! there are 4-character "type IDs" (aka. chunk names, FourCC or OSType) followed
+//! by a 32-bit integer denoting the length of the chunk. More on that later.
+//!
+//! The abbreviations YY and YYG refer to YoYo Games.
+//! 
+//! GM stands for GameMaker. I also use it for versioning (e.g. GM 2023.2).
+//! GMS stands for GameMaker Studio (also written as GM:S before Studio 2).
+//! 
+//! I also use WAD for versioning (e.g. WAD 15 means WAD/bytecode version 15).
+//! WAD version and bytecode version mean the same thing (the latter is slightly outdated/incorrect UTMT terminology).
+//! 
+//! GMAC is short for GMAssetCompiler.
+//! This is a program found in the GameMaker IDE directory that generates data files.
+//! It's written in C#, so it's easy to decompile. Lots of datamining was done on it.
+//! 
+//! UTMT and UMT stand for UndertaleModTool, which is the most popular and complete tool for unpacking/modding GameMaker data files.
+//! LibGM ~~steals~~ borrows lots of code from it (thanks bro).
+//! UTMT can refer to the GUI application or to the entire project (which includes UTML).
+//! UTML stands for UndertaleModLib, the underlying data data file (de)serialization library of UTMT.
+//! UA stands for Underanalyzer, which is a separate repo developed (mainly) by colinator27 (the goat).
+//! It is a decompiler and compiler for GML, used by UndertaleModTool.
+//!
+//! GameMaker has its own programming language called "GML" (GameMaker Language).
 //! This language is (usually\*) compiled to GML bytecode which
 //! is then run in a VM; making it portable to every platform.
 //!
@@ -18,11 +57,11 @@
 //! * The data file
 //! * The runner
 //!
-//! The data file (typically named `data.xxx` or `game.xxx`)
+//! The data file (typically named `data` or `game`)
 //! contains all the game's static resources in a binary format.
 //! Common file extensions include `.win`, `.unx`, `.droid`, and `.ios`
 //! for their respective platforms,
-//! though YoYoGames sometimes uses `.win` for console targets as well.
+//! though YoYo Games sometimes uses `.win` for console targets as well.
 //!
 //! This data file stores virtually all game content, including:
 //! * Textures and sprite data
@@ -50,9 +89,8 @@
 //!
 //! # VM vs YYC
 //! You may have noticed some stars regarding bytecode while reading.
-//! This is because YoYoGames has created `YYC` ([YoYo Compiler](https://manual.gamemaker.io/monthly/en/Settings/YoYo_Compiler.htm)).
-//! When exporting their game, game developers can choose between regular VM
-//! output or YYC output.
+//! This is because YoYo Games has created `YYC` ([YoYo Compiler](https://manual.gamemaker.io/monthly/en/Settings/YoYo_Compiler.htm)).
+//! When exporting their game, game developers can choose between regular VM output or YYC output.
 //!
 //! In VM mode, the GML source code is compiled to their own bytecode that
 //! then gets executed by the runner's special GML Virtual Machine.
@@ -70,45 +108,40 @@
 //!
 //!
 //! ## Data file format
-//! As I already said, the GameMaker data file format is binary.
+//! The GameMaker data file format is binary.
 //! (It only contains text for chunk names and in the `STRG` chunk.)
 //!
 //! The data file consists of "chunks", although the name "chunk" may be a bit
-//! misleading, as these chunks do not have a fixed size.
-
-//! > Note: These are the same chunks you see in the console
-//! > output in GameMaker Studio when building your game.
+//! misleading, as these chunks do not have a fixed size and cannot appear multiple times.
+//! You could think of them as sections if you like.
+//! (I will continue to call them chunks because that is the offical name  *and* best-known community name for them.) 
+//! You can see these chunk names in the console output in GameMaker Studio when building your game.
 //!
 //! Every chunk has a 4 character name that indicates what it stores.
-//! (For Example: `SPRT` stores sprites, `ROOM` stores rooms, `OBJT` stores game
-//! objects, etc.) These chunk names are hardcoded (the game dev does not choose
-//! them). New ones are only added when YoYoGames adds a major feature like
-//! particles.
+//! For example: `SPRT` stores sprites, `ROOM` stores rooms, `OBJT` stores game objects, etc.
+//! These chunk names are hardcoded (the game dev does not choose them).
+//! New ones are only added when YoYo Games adds a major feature like particles.
 //!
 //! Every chunk only exists once. There is only one `ROOM` chunk
 //! that stores **all** data related to GameMaker rooms.
 //!
-//! The order of these chunks does not matter.
-//! > DOCME: Possible exception: `GEN8` needs to be first, at least for
-//! > `UndertaleModLib`?
+//! The order of these chunks matters, because the runner loads them sequentially.
+//! Wrong initialization order can result in blackscreens, segfaults, errors or missing audio.
+//! Just don't touch `ChunkOrder` and you should be good lol.
 //!
 //! Now, onto the actual structure of a data file.
 //! Every data file begins with the 4 letters `FORM`.
-//! > Note: On Big endian targets, it is `MROF` instead, as chunk names are
-//! > reversed there.
+//! > Note: On Big endian targets, it is `MROF` instead, as chunk names are reversed there.
 //! > Do not worry about this though, big endian is very legacy
-//! > and is not relevant for modern target platforms.
+//! > and is not relevant for modern target platforms (only used on PS3 or something).
 //!
-//! After the 4 byte `FORM` string, you are met with the (remaining) data
-//! length. This equivalent to the size of the data file minus 8 (the FORM
-//! header is excluded). This data length is specified as a 32-bit integer
-//! (`u32`).
+//! After the 4 byte `FORM` string, you are met with the (remaining) data length.
+//! This is equivalent to the size of the data file, minus 8 (the FORM header is excluded).
+//! This data length is specified as a 32-bit integer (`u32`).
 //!
 //! Then, you will see the first chunk.
-//! > Note: Some GameMaker datamining software (like UndertaleModLib) also see
-//! > FORM as a chunk.
-//! > I do not do this, as this is the only time chunks have any sort of
-//! > hierarchy
+//! > Note: Some GameMaker unpacking software (like UndertaleModLib) also see FORM as a chunk.
+//! > I do not do this, as this is the only time chunks have any sort of hierarchy
 //! > and it would unnecessarily make things more complicated.
 //!
 //! Chunks are structured similar to FORM:
@@ -118,9 +151,8 @@
 //! * Potentially chunk padding (nullbytes), depending on the platform and
 //!   version.
 //!
-//! Most chunks are of "pointer list type"; UndertaleModLib calls them
-//! `UndertaleListChunk`. To understand what that means, we first need to look
-//! at list structures in data files.
+//! Most chunks are of "pointer list type" (UndertaleModLib calls them `UndertaleListChunk`).
+//! To understand what that means, we first need to look at list structures in data files.
 //!
 //! ## Lists
 //!
@@ -159,7 +191,7 @@
 //! something is located in the data file.
 //! > Note: Null/Zeroed pointers are always invalid, as they would point to the
 //! > FORM string.
-//! > YoYoGames has recently implemented a system to remove unused assets,
+//! > YoYo Games has recently implemented a system to remove unused assets,
 //! > which nulls out pointers that point to unused elements.
 //! > This is a pain in the ass for datamining libraries like mine,
 //! > and LibGM still support them yet.
@@ -173,7 +205,7 @@
 //! The runner would have to deserialize all elements
 //! sequentially just to get to the one it actually wants to read.
 //! Depending on how those elements are typically used, this can be very
-//! inefficient, which is why YoYoGames includes pointers to the element in
+//! inefficient, which is why YoYo Games includes pointers to the element in
 //! pointer lists.
 //!
 //!

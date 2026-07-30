@@ -135,7 +135,7 @@ fn init_by_gen8(reader: &mut DataReader) -> Result<GMVersion> {
         14 if ide_version.is_beta() => Wad14Beta,
         14 => Wad14,
         15 => Wad15,
-        16 => Wad16Old,
+        16 => Wad16,
         _ => bail!("Unknown WAD version {wad_version} and IDE version {ide_version}"),
     })
 }

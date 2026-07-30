@@ -272,7 +272,7 @@ impl GMElement for Instruction {
             opcode::NOT => Self::Not { data_type: reader.decode_single_type(b)? },
             opcode::SHL => reader.decode_binary(b, BinaryOp::ShiftLeft)?,
             opcode::SHR => reader.decode_binary(b, BinaryOp::ShiftRight)?,
-            opcode::CMP => reader
+            opcode::SET => reader
                 .decode_comparison(b)
                 .ctx("decoding Comparison Instruction")?,
             opcode::POP => reader.decode_pop(b).ctx("decoding Pop Instruction")?,
@@ -297,7 +297,7 @@ impl GMElement for Instruction {
                     .ctx("decoding Pop Discard Instruction")?;
                 Self::PopDiscard { data_type }
             }
-            opcode::BR => Self::Branch { jump_offset: reader.decode_branch(b) },
+            opcode::B => Self::Branch { jump_offset: reader.decode_branch(b) },
             opcode::BT => Self::BranchIf { jump_offset: reader.decode_branch(b) },
             opcode::BF => Self::BranchUnless { jump_offset: reader.decode_branch(b) },
             opcode::PUSHENV => Self::PushWithContext { jump_offset: reader.decode_branch(b) },
@@ -307,28 +307,28 @@ impl GMElement for Instruction {
                 let value = reader.decode_push(b).ctx("decoding Push Instruction")?;
                 Self::Push { value }
             }
-            opcode::PUSHLOC => {
+            opcode::PUSHL => {
                 let variable = reader
                     .decode_push_var(b)
                     .ctx("decoding Push Local Instruction")?;
                 Self::PushLocal { variable }
             }
-            opcode::PUSHGLB => {
+            opcode::PUSHG => {
                 let variable = reader
                     .decode_push_var(b)
                     .ctx("decoding Push Global Instruction")?;
                 Self::PushGlobal { variable }
             }
-            opcode::PUSHBLTN => Self::PushBuiltin { variable: reader.decode_push_var(b)? },
-            opcode::PUSHIM => Self::PushImmediate { integer: reader.decode_pushim(b)? },
+            opcode::PUSHV => Self::PushBuiltin { variable: reader.decode_push_var(b)? },
+            opcode::PUSHI => Self::PushImmediate { integer: reader.decode_pushim(b)? },
             opcode::CALL => reader.decode_call(b).ctx("decoding Call Instruction")?,
-            opcode::CALLVAR => {
+            opcode::CALLV => {
                 let arg_count = reader
                     .decode_callvar(b)
                     .ctx("decoding Call Variable Instruction")?;
                 Self::CallVariable { arg_count }
             }
-            opcode::EXTENDED => reader
+            opcode::BREAK => reader
                 .decode_extended(b)
                 .ctx("decoding Extended Instruction")?,
             _ => bail!(
@@ -787,13 +787,13 @@ fn encode_callvar(writer: &mut DataWriter, opcode: u8, argument_count: u16) {
 fn encode_extended16(writer: &mut DataWriter, extended_kind: i16) {
     writer.write_i16(extended_kind);
     writer.write_u8(DataType::Short.encode());
-    writer.write_u8(opcode::EXTENDED);
+    writer.write_u8(opcode::BREAK);
 }
 
 fn encode_pushref(writer: &mut DataWriter, asset_reference: AssetReference) -> Result<()> {
     writer.write_i16(opcode::extended::PUSHREF);
     writer.write_u8(DataType::Int.encode());
-    writer.write_u8(opcode::EXTENDED);
+    writer.write_u8(opcode::BREAK);
     writer.write_elem(&asset_reference)
 }
 
@@ -947,7 +947,7 @@ fn write_function_occurrence(
     Ok(())
 }
 
-/// Check whether this data file was generated with `YYC` (`YoYoGames
+/// Check whether this data file was generated with `YYC` (`YoYo Games
 /// Compiler`). Should that be the case, the `CODE`, `VARI` and `FUNC` chunks
 /// will be empty (or not exist, depending on the WAD version).
 /// NOTE: YYC is untested. Issues may occur.
@@ -985,7 +985,7 @@ pub(crate) fn check_yyc(reader: &DataReader) -> Result<bool> {
         return Ok(false);
     }
 
-    if reader.version > GMVersion::Wad16Old {
+    if reader.version > GMVersion::Wad16 {
         log::warn!("Empty, but existent CODE chunk after WAD 16");
     }
 

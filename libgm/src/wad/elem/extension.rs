@@ -159,5 +159,5 @@ gm_enum!( Kind {
 });
 
 fn has_product_id_data(ver: GMVersion) -> bool {
-    ver >= GMVersion::Wad16Old || ver == GMVersion::Wad14Beta
+    ver >= GMVersion::Wad16 || ver == GMVersion::Wad14Beta
 }

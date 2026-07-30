@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! These opcodes are for WAD 15+.
 //! They are different in previous versions, see [`old_to_new`] and [`new_to_old`].
+//!
+//! They follow the actual names used in GMAC.
 use crate::gml::instruction::BinaryOp;
 use crate::gml::instruction::Instruction;
 
@@ -18,25 +20,25 @@ pub const NEG: u8 = 0x11;
 pub const NOT: u8 = 0x12;
 pub const SHL: u8 = 0x13;
 pub const SHR: u8 = 0x14;
-pub const CMP: u8 = 0x15;
+pub const SET: u8 = 0x15; // aka CMP
 pub const POP: u8 = 0x45;
 pub const DUP: u8 = 0x86;
 pub const RET: u8 = 0x9C;
 pub const EXIT: u8 = 0x9D;
 pub const POPZ: u8 = 0x9E;
-pub const BR: u8 = 0xB6;
+pub const B: u8 = 0xB6; // aka BR or JMP
 pub const BT: u8 = 0xB7;
 pub const BF: u8 = 0xB8;
 pub const PUSHENV: u8 = 0xBA;
 pub const POPENV: u8 = 0xBB;
 pub const PUSH: u8 = 0xC0;
-pub const PUSHLOC: u8 = 0xC1;
-pub const PUSHGLB: u8 = 0xC2;
-pub const PUSHBLTN: u8 = 0xC3;
-pub const PUSHIM: u8 = 0x84;
+pub const PUSHL: u8 = 0xC1; // aka PUSHLOC
+pub const PUSHG: u8 = 0xC2; // aka PUSHGLB
+pub const PUSHV: u8 = 0xC3; // aka PUSHBLTN
+pub const PUSHI: u8 = 0x84; // aka PUSHIM
 pub const CALL: u8 = 0xD9;
-pub const CALLVAR: u8 = 0x99;
-pub const EXTENDED: u8 = 0xFF;
+pub const CALLV: u8 = 0x99; // aka CALLVAR
+pub const BREAK: u8 = 0xFF; // aka EXTENDED; probably originally intended as a breakpoint
 
 impl Instruction {
     /// The normalized opcode of the instruction.
@@ -53,24 +55,24 @@ impl Instruction {
             Self::Convert { .. } => CONV,
             Self::Negate { .. } => NEG,
             Self::Not { .. } => NOT,
-            Self::Compare { .. } => CMP,
+            Self::Compare { .. } => SET,
             Self::Pop { .. } | Self::PopSwap { .. } => POP,
             Self::Duplicate { .. } | Self::DuplicateSwap { .. } => DUP,
             Self::Return { .. } => RET,
             Self::Exit { .. } => EXIT,
             Self::PopDiscard { .. } => POPZ,
-            Self::Branch { .. } => BR,
+            Self::Branch { .. } => B,
             Self::BranchIf { .. } => BT,
             Self::BranchUnless { .. } => BF,
             Self::PushWithContext { .. } => PUSHENV,
             Self::PopWithContext { .. } | Self::PopWithContextExit { .. } => POPENV,
             Self::Push { .. } => PUSH,
-            Self::PushLocal { .. } => PUSHLOC,
-            Self::PushGlobal { .. } => PUSHGLB,
-            Self::PushBuiltin { .. } => PUSHBLTN,
-            Self::PushImmediate { .. } => PUSHIM,
+            Self::PushLocal { .. } => PUSHL,
+            Self::PushGlobal { .. } => PUSHG,
+            Self::PushBuiltin { .. } => PUSHV,
+            Self::PushImmediate { .. } => PUSHI,
             Self::Call { .. } => CALL,
-            Self::CallVariable { .. } => CALLVAR,
+            Self::CallVariable { .. } => CALLV,
             Self::CheckArrayIndex
             | Self::PushArrayFinal
             | Self::PopArrayFinal
@@ -81,7 +83,7 @@ impl Instruction {
             | Self::SaveArrayReference
             | Self::RestoreArrayReference
             | Self::IsNullishValue
-            | Self::PushReference { .. } => EXTENDED,
+            | Self::PushReference { .. } => BREAK,
         }
     }
 
@@ -119,14 +121,14 @@ pub const fn old_to_new(opcode: u8) -> u8 {
         0x04..0x11 => opcode + 4,
 
         // Comparison Instructions used to be different opcodes (instead of comparsion type)
-        0x11..0x17 => CMP,
+        0x11..0x17 => SET,
 
         // Pop and Dup are shifted by 4
         0x41 => POP,
         0x82 => DUP,
 
         // Branch Instructions are shifted by -1
-        0xB7 => BR,
+        0xB7 => B,
         0xB8 => BT,
         0xB9 => BF,
         0xBB => PUSHENV,
@@ -157,14 +159,14 @@ pub const fn new_to_old(opcode: u8) -> u8 {
         MUL..=SHR => opcode - 4,
 
         // Comparison Type should be handled by `build_comparison`
-        CMP => 0,
+        SET => 0,
 
         // Pop and Dup are shifted by 4
         POP => 0x41,
         DUP => 0x82,
 
         // These specialized Push Instructions didn't exist back then
-        PUSHIM | PUSHGLB | PUSHLOC | PUSHBLTN => PUSH,
+        PUSHI | PUSHG | PUSHL | PUSHV => PUSH,
 
         // Return and Exit are shifted by -1
         RET => 0x9D,
@@ -174,7 +176,7 @@ pub const fn new_to_old(opcode: u8) -> u8 {
         POPZ => 0x9F,
 
         // Branch Instructions are shifted by -1
-        BR..=POPENV => opcode + 1,
+        B..=POPENV => opcode + 1,
 
         // Call is shifted by -1
         CALL => 0xDA,

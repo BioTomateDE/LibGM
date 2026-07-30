@@ -44,7 +44,7 @@ impl GMElement for RoomGameObject {
         let rotation = reader.read_f32()?; // {~~} FloatAsInt (negative zero handling stuff)
 
         // TODO: is that dependent on WAD or something else?
-        let pre_create_code: GMRef<Code> = if reader.version >= GMVersion::Wad16Old {
+        let pre_create_code: GMRef<Code> = if reader.version >= GMVersion::Wad16 {
             reader.read_resource_by_id()?
         } else {
             GMRef::none()
@@ -78,7 +78,7 @@ impl GMElement for RoomGameObject {
         writer.write_if_ver(&self.image_index, "Image Index", GMVersion::GMS2_2_2_302)?;
         writer.write_u32(self.color);
         writer.write_f32(self.rotation);
-        if writer.version() >= GMVersion::Wad16Old {
+        if writer.version() >= GMVersion::Wad16 {
             writer.write_resource_id(self.pre_create_code);
         }
         Ok(())

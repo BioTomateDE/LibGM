@@ -68,10 +68,33 @@ pub fn hexdump_range(raw_data: &[u8], range: impl RangeBounds<usize>) -> Result<
 pub fn typename<T>() -> &'static str {
     // HACK: When Rust adds support for handling typenames at compile time, use that.
     let ty = std::any::type_name::<T>();
-    if let Some(index) = ty.find("GM")
-        && !ty.contains('<')
-    {
-        return &ty[index..];
+    let ty = trim_prefixes(ty, &[
+        "libgm::wad::elem::",
+        "libgm::wad::reference::",
+        "libgm::wad::",
+        "libgm::",
+    ]);
+    remove_module_prefix(ty).unwrap_or(ty)
+}
+
+#[inline]
+fn remove_module_prefix(ty: &str) -> Option<&str> {
+    let (module, ty) = ty.split_once("::")?;
+    let (module_first, module_rest) = module.as_bytes().split_at_checked(1)?;
+    let (ty_first, ty_rest) = ty.as_bytes().split_at_checked(1)?;
+    if module_first.eq_ignore_ascii_case(ty_first) && module_rest == ty_rest {
+        Some(ty)
+    } else {
+        None
     }
-    ty.strip_prefix("libgm::wad::elem::").unwrap_or(ty)
+}
+
+#[inline]
+fn trim_prefixes<'a>(string: &'a str, prefixes: &[&str]) -> &'a str {
+    for prefix in prefixes {
+        if let Some(s) = string.strip_prefix(prefix) {
+            return s;
+        }
+    }
+    string
 }
