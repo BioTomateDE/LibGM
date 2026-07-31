@@ -9,31 +9,41 @@ use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMS2Data {
-    /// Unknown, some sort of checksum.
-    pub random_uid: Blob<[i64; 4]>,
+    /// Anti-piracy checksum.
+    pub checksum: Blob<[i64; 4]>,
 
-    /// The FPS of the game.
+    /// Whether the game was compiled as a release build ("Create Executable")
+    /// rather than a test build ("Run" or "Debug").
+    ///
+    /// This field is derived from the checksum and not directly stored in the data file.
+    ///
+    /// If this is `false`, then the runner (at least old runners) close the
+    /// game after 1 hour (DOCME: is this correct) as an anti-piracy measure.
+    pub release_build: bool,
+
+    /// How many frames per second this game runs as.
+    ///
+    /// Can be adjusted in code using the
+    /// [`game_set_speed`](https://manual.gamemaker.io/monthly/en/GameMaker_Language/GML_Reference/General_Game_Control/game_set_speed.htm)
+    /// function.
     pub fps: f32,
 
     /// If enabled, the game runner may send requests to a GameMaker player
-    /// count statistics server.
+    /// count statistics server or straight to Israel.
     pub allow_statistics: bool,
 
-    /// Unknown, some sort of checksum.
+    /// DOCME: Unknown, some sort of checksum.
     pub game_guid: Blob<[u8; 16]>,
-
-    /// Whether the random UID's timestamp was initially offset.
-    pub info_timestamp_offset: bool,
 }
 
 impl Default for GMS2Data {
     fn default() -> Self {
         Self {
-            random_uid: Blob([69; 4]),
+            checksum: Blob([69; 4]),
             fps: 60.0,
             allow_statistics: false,
             game_guid: Blob([69; 16]),
-            info_timestamp_offset: true,
+            release_build: true,
         }
     }
 }
@@ -42,62 +52,58 @@ impl GeneralInfo {
     pub(super) fn read_gms2_data(&self, reader: &mut DataReader) -> Result<GMS2Data> {
         let timestamp: i64 = self.creation_timestamp.timestamp();
 
-        let mut info_timestamp_offset: bool = true;
+        let mut release_build: bool = true;
         let seed: i32 = timestamp as i32;
         let mut rng = DotnetRng::new(seed);
 
         let first_expected: i64 = (i64::from(rng.next()) << 32) | i64::from(rng.next());
         let first_actual = reader.read_i64()?;
         if first_actual != first_expected {
-            bail!("Unexpected random UID #1: expected {first_expected}; got {first_actual}");
+            bail!("Unexpected checksum part 1: expected {first_expected}; got {first_actual}");
         }
 
         let info_location: i32 = self.get_info_location(timestamp);
-        let mut random_uid = [0_i64; 4];
+        let mut checksum = [0_i64; 4];
 
-        for i in 0i32..4 {
+        for i in 0..4 {
             if i == info_location {
                 let curr = reader.read_i64()?;
-                random_uid[i as usize] = curr;
+                checksum[i as usize] = curr;
 
                 if curr != self.get_info_number(first_expected, true) {
-                    if curr != self.get_info_number(first_expected, false) {
-                        bail!("Unexpected random UID info");
+                    let expected = self.get_info_number(first_expected, false);
+                    if curr != expected {
+                        bail!("Unexpected checksum info: expected {expected}, got {curr}");
                     }
-                    info_timestamp_offset = false;
+                    log::debug!("Game originates from a test build");
+                    release_build = false;
                 }
             } else {
-                let second_actual = reader.read_u32()?;
-                let third_actual = reader.read_u32()?;
-                let second_expected: u32 = rng.next() as u32;
-                let third_expected: u32 = rng.next() as u32;
-                if second_actual != second_expected {
-                    bail!(
-                        "Unexpected random UID #2: expected {second_expected}; got {second_actual}"
-                    );
+                let actual2 = reader.read_u32()?;
+                let actual3 = reader.read_u32()?;
+                let expected2: u32 = rng.next() as u32;
+                let expected3: u32 = rng.next() as u32;
+                if actual2 != expected2 {
+                    bail!("Unexpected checksum part 2: expected {expected2}, got {actual2}");
                 }
-                if third_actual != third_expected {
-                    bail!(
-                        "Unexpected random UID #3: expected {third_expected}; got {third_actual}"
-                    );
+                if actual3 != expected3 {
+                    bail!("Unexpected random UID #3: expected {expected3}, got {actual3}");
                 }
 
-                random_uid[i as usize] = (i64::from(second_actual) << 32) | i64::from(third_actual);
+                checksum[i as usize] = (i64::from(actual2) << 32) | i64::from(actual3);
             }
         }
+        
         let fps = reader.read_f32()?;
         let allow_statistics = reader.read_bool32()?;
-        let game_guid: [u8; 16] = reader
-            .read_bytes_const::<16>()
-            .cloned()
-            .ctx("reading Game GUID")?;
+        let game_guid: [u8; 16] = *reader.read_bytes_const().ctx("reading Game GUID")?;
 
         Ok(GMS2Data {
-            random_uid: Blob(random_uid),
+            checksum: Blob(checksum),
             fps,
             allow_statistics,
             game_guid: Blob(game_guid),
-            info_timestamp_offset,
+            release_build,
         })
     }
 
@@ -111,7 +117,7 @@ impl GeneralInfo {
         let seed: i32 = timestamp as i32;
         let mut rng = DotnetRng::new(seed);
         let first_random: i64 = (i64::from(rng.next()) << 32) | i64::from(rng.next());
-        let info_number = self.get_info_number(first_random, gms2_info.info_timestamp_offset);
+        let info_number = self.get_info_number(first_random, gms2_info.release_build);
         let info_location: i32 = self.get_info_location(timestamp);
         writer.write_i64(first_random);
         for i in 0..4 {
@@ -139,14 +145,14 @@ impl GeneralInfo {
         (t + g + r).abs() % 4
     }
 
-    fn get_info_number(&self, first_random: i64, info_timestamp_offset: bool) -> i64 {
+    fn get_info_number(&self, first_random: i64, offset: bool) -> i64 {
         let flags = self.flags.bits() as i64;
         let gid = self.game_id as i64;
         let ww = self.window_width as i64;
         let wh = self.window_height as i64;
 
         let mut info_number: i64 = self.creation_timestamp.timestamp();
-        if info_timestamp_offset {
+        if offset {
             info_number -= 1000;
         }
         info_number = Self::uid_bitmush(info_number);

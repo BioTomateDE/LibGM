@@ -20,6 +20,9 @@ use crate::wad::save::writer::DataWriter;
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Options {
     pub flags: OptionFlags,
+
+    /// Either 0, 1 or -1 depending on the version.
+    /// Seems to be unused.
     pub window_scale: i32,
     pub window_color: u32,
     pub color_depth: u32,

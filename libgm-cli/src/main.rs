@@ -70,28 +70,6 @@ fn handle_file(path: &Path, args: &Args) -> Result<Duration> {
         dump::dump_texture_pages(&data)?;
     }
 
-    // if let Some(h) = &data.variables.modern_header {
-    //     dbg!(h);
-    //     let mut g = 0;
-    //     let mut s = 0;
-    //     let mut smaybe = 0;
-    //     let mut l = 0;
-    //     for v in &data.variables.elems {
-    //         let i = v.modern_data.as_ref().unwrap().instance_type;
-    //         if i == InstanceType::Global {
-    //             g += 1
-    //         } else if i == InstanceType::Self_ {
-    //             s += 1
-    //         } else if i == InstanceType::Local {
-    //             l += 1;
-    //         }
-    //         if i.as_vari() == InstanceType::Self_ {
-    //             smaybe += 1;
-    //         }
-    //     }
-    //     dbg!((g, s, smaybe, l, data.variables.len()));
-    // }
-
     // dbg!(&data);
 
     // std::fs::create_dir_all("asm").unwrap();
