@@ -10,14 +10,14 @@ pub fn print_general(g: &GeneralInfo, s: &Strings) {
     // println!("======== General Info ========");
     println!("Display Name: {}", g.display_name.display(s));
     println!("Game Name: {}", g.game_name.display(s));
-    println!("File Name: {}", g.game_file_name.display(s));
+    println!("Runner Name: {}", g.runner_file_name.display(s));
     println!("Version: {} (WAD {})", g.ide_version, g.wad_version);
     println!("Created at: {:?}", g.creation_timestamp);
     println!("Window dimensions: {}x{}", g.window_width, g.window_height);
     println!("Config: {}", g.config.display(s));
     println!(
-        "Last object/tile ID: {}, {}",
-        g.last_object_id, g.last_tile_id
+        "Last instance/tile ID: {}, {}",
+        g.last_instance_id, g.last_tile_id
     );
     println!("Room count: {}", g.room_order.len());
     if g.debugger_enabled {

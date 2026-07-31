@@ -3,6 +3,8 @@
 bitflags::bitflags! {
     /// Function classifications a data file can have.
     ///
+    /// TODO: for javascript, this is -1 instead (which might cause a deserialization error).
+    ///
     /// DOCME: are these just remenant from GM8? does the runner actually check these?
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
     pub struct FunctionClassifications: u64 {

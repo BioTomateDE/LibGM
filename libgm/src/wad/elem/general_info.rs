@@ -23,7 +23,8 @@ use crate::wad::version::IdeVersion;
 #[derive(Debug, Clone, PartialEq)]
 pub struct GeneralInfo {
     /// Indicates whether debugging support via an external GameMaker debugger is enabled.
-    /// The game will crash (?) if this is enabled and there is no debugger.
+    /// The game will hang if this is enabled and there is no debugger.
+    /// (It prints "Waiting for debugger to connect...")
     ///
     /// This bool is stored as an inverted [`u8`] in the data file.
     pub debugger_enabled: bool,
@@ -36,32 +37,55 @@ pub struct GeneralInfo {
     /// However, since YoYo Games does not update this version
     /// specification anymore, it has become worthless past ~16.
     ///
+    /// This value is probably ignored by the runner.
+    ///
     /// See [`GMVersion`] for the real format version.
     pub wad_version: u8,
 
-    /// Who knows. Probably redundant in GMS2.
+    /// Maybe this is just padding bytes?
     pub unknown_value: u16,
 
-    /// The file name of the runner.
-    pub game_file_name: GMRef<String>,
+    /// The file name of the runner (on Windows).
+    ///
+    /// This is probably ignored by the runner.
+    pub runner_file_name: GMRef<String>,
 
     /// Which GameMaker configuration the data file was compiled with.
+    ///
+    /// This is probably ignored by the runner.
     pub config: GMRef<String>,
 
-    /// The last game object ID of the data file.
-    pub last_object_id: u32,
+    /// The last game object instance ID of the data file.
+    ///
+    /// It's important to increment this when a new game object instance is added.
+    /// Otherwise, instances dynamically created at runtime (using `instance_create`)
+    /// will have the same IDs as some statically placed instances in rooms.
+    /// Instance IDs becoming non-unique leads to lots of weird behavior.
+    ///
+    /// This number is usually above 100000, since that's the offset instance IDs start at.
+    /// If it is lower, then the runner can confuse it for a game object asset ID,
+    /// since it has no way to tell the difference.
+    pub last_instance_id: u32,
 
     /// The last tile ID of the data file.
+    ///
+    /// See above.
+    /// Honestly nobody cares about tiles so this is probably fine to set to 69420.
     pub last_tile_id: u32,
 
     /// The game id of the data file, whatever that may mean.
+    ///
+    /// This is visible in the GameMaker IDE. You can press a button to re-generate it.
     pub game_id: u32,
 
     /// The `DirectPlay` GUID of the data file.
+    ///
     /// This is always empty in GameMaker Studio.
     pub directplay_guid: Blob<[u8; 16]>,
 
     /// The name of the game.
+    ///
+    /// This is the name of the directory game save data gets written to.
     pub game_name: GMRef<String>,
 
     /// The GameMaker version of the IDE this game was created in.
@@ -69,6 +93,8 @@ pub struct GeneralInfo {
     /// This version struct is not updated by YoYo Games since GMS 2 and is
     /// is stuck on `2.0.0.0` since GameMaker Studio: 2 (released November 2016).
     /// If you need the format version of the data file, check out [`GMVersion`].
+    ///
+    /// This value is probably ignored by the runner.
     pub ide_version: IdeVersion,
 
     /// When the game window is created, its width will be set to this value.
@@ -167,9 +193,9 @@ impl GMElement for GeneralInfo {
             debugger_enabled,
             wad_version,
             unknown_value,
-            game_file_name,
+            runner_file_name: game_file_name,
             config,
-            last_object_id,
+            last_instance_id: last_object_id,
             last_tile_id,
             game_id,
             directplay_guid: Blob(directplay_guid),
@@ -201,9 +227,9 @@ impl GMElement for GeneralInfo {
         writer.write_u8(!self.debugger_enabled as u8);
         writer.write_u8(self.wad_version);
         writer.write_u16(self.unknown_value);
-        writer.write_gm_string(self.game_file_name)?;
+        writer.write_gm_string(self.runner_file_name)?;
         writer.write_gm_string(self.config)?;
-        writer.write_u32(self.last_object_id);
+        writer.write_u32(self.last_instance_id);
         writer.write_u32(self.last_tile_id);
         writer.write_u32(self.game_id);
         writer.write_bytes(&*self.directplay_guid);
@@ -237,9 +263,9 @@ impl Default for GeneralInfo {
             debugger_enabled: false,
             wad_version: 17,
             unknown_value: 0,
-            game_file_name: GMRef::none(),
+            runner_file_name: GMRef::none(),
             config: GMRef::none(), // should be "Default"
-            last_object_id: 100_000,
+            last_instance_id: 100_000,
             last_tile_id: 10_000_000,
             game_id: 1337,
             directplay_guid: Blob([0u8; 16]),

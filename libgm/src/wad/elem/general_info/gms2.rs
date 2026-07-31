@@ -93,7 +93,7 @@ impl GeneralInfo {
                 checksum[i as usize] = (i64::from(actual2) << 32) | i64::from(actual3);
             }
         }
-        
+
         let fps = reader.read_f32()?;
         let allow_statistics = reader.read_bool32()?;
         let game_guid: [u8; 16] = *reader.read_bytes_const().ctx("reading Game GUID")?;

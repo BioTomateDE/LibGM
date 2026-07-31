@@ -13,9 +13,6 @@ bitflags::bitflags! {
         /// Use synchronization to avoid tearing. (???)
         const SYNC_VERTEX2 = 0x4;
 
-        /// Use synchronization to avoid tearing. (???)
-        const SYNC_VERTEX3 = 0x100;
-
         /// Interpolate colours between pixels.
         const INTERPOLATE = 0x8;
 
@@ -28,18 +25,22 @@ bitflags::bitflags! {
         /// Allows window to be resized.
         const SIZEABLE = 0x40;
 
-        /// Allows fullscreen switching. (???)
-        const SCREEN_KEY = 0x80;
+        /// Allows toggling fullscreen.
+        const ALLOW_FULLSCREEN = 0x80;
 
-        const STUDIO_VERSION_B1 = 0x200;
-        const STUDIO_VERSION_B2 = 0x400;
-        const STUDIO_VERSION_B3 = 0x800;
+        /// Use synchronization to avoid tearing. (???)
+        const SYNC_VERTEX3 = 0x100;
+
+        const STUDIO_VERSION_1 = 0x200;
+        const STUDIO_VERSION_2 = 0x400;
+        const STUDIO_VERSION_3 = 0x800;
+        const STUDIO_VERSION_4 = 0x600;
 
         /// Whether Steam (or the YoYoPlayer) is enabled.
         const STEAM_ENABLED = 0x1000;
 
-        /// When enabled, the game will write save data to
-        /// `%appdata%\GameName`, otherwise it will write to `%localappdata%\GameName`.
+        /// When enabled, the game will write save data to `%appdata%\GameName`.
+        /// Otherwise, it will write to `%localappdata%\GameName`.
         const APPDATA_ROAMING = 0x2000;
 
         /// Whether the game supports borderless window.
@@ -50,6 +51,8 @@ bitflags::bitflags! {
 
         /// This flag is set when a game is launched from the
         /// Gamemaker Studio 2 IDE using the 'Run' or 'Debug' options.
+        ///
+        /// Also known as `override_hobbysplash`.
         const LICENSE_EXCLUSIONS = 0x10000;
 
         /// For the GX.games runner, allows the browser canvas to be transparent where nothing is drawn.
