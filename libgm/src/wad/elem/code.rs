@@ -670,7 +670,8 @@ fn encode_pop(
     writer.write_i16(variable.instance_type.encode(variable.ref_type));
     writer.write_u8(type1.encode() | type2.encode() << 4);
     writer.write_u8(opcode);
-    write_variable_occurrence(writer, variable.variable, instr_pos, variable.ref_type)?;
+    write_variable_occurrence(writer, variable.variable, instr_pos, variable.ref_type)
+        .ctx("writing variable occurrence for pop instruction")?;
     Ok(())
 }
 
@@ -739,7 +740,8 @@ fn encode_push(writer: &mut DataWriter, opcode: u8, value: PushValue) -> Result<
                 code_variable.variable,
                 instr_pos,
                 code_variable.ref_type,
-            )?;
+            )
+            .ctx("writing variable occurrence for push instruction")?;
         }
         PushValue::Function(func_ref) => {
             write_function_occurrence(writer, func_ref, instr_pos)?;
@@ -754,7 +756,8 @@ fn encode_pushvar(writer: &mut DataWriter, opcode: u8, variable: CodeVariable) -
     writer.write_u8(DataType::Variable.encode());
     writer.write_u8(opcode);
 
-    write_variable_occurrence(writer, variable.variable, instr_pos, variable.ref_type)?;
+    write_variable_occurrence(writer, variable.variable, instr_pos, variable.ref_type)
+        .ctx("writing variable occurrence for a push variable instruction")?;
     Ok(())
 }
 
@@ -844,8 +847,8 @@ fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<Code
         })
         .ctx(CTX)?;
 
-    let ref_type = (raw_value >> 24) & 0xF8;
-    let ref_type = ReferenceType::decode(ref_type as u8).ctx(CTX)?;
+    let ref_type = (raw_value >> 24) as u8;
+    let ref_type = ReferenceType::decode(ref_type).ctx(CTX)?;
 
     let instance_type: InstanceType =
         if matches!(ref_type, ReferenceType::Normal | ReferenceType::Instance) {
@@ -868,38 +871,41 @@ fn write_variable_occurrence(
     writer: &mut DataWriter,
     variable_ref: GMRef<Variable>,
     occurrence_pos: u32,
-    variable_type: ReferenceType,
+    ref_type: ReferenceType,
 ) -> Result<()> {
-    let len: usize = writer.variable_occurrences.len();
+    if occurrence_pos & 0xF800_0000 != 0 {
+        // (This will basically never happen.)
+        let pos = occurrence_pos;
+        bail!("Occurrence position {pos} (0x{pos:08X}) is too large (max is 0x07FFFFFF)");
+    }
 
     let var = writer.gm_data.variables.by_ref(variable_ref)?;
-    let gm_index = variable_ref.index as u32;
+    // Since the variable resolved successfully, we don't have to check bounds again.
+    let occurrences = &mut writer.variable_occurrences[variable_ref.index as usize];
+    let last: Option<u32> = occurrences.last().copied();
 
-    let occurrences: &mut Vec<(u32, ReferenceType)> = writer
-        .variable_occurrences
-        .get_mut(gm_index as usize)
-        .ok_or_else(|| {
-            format!("Invalid Variable GMRef while writing occurrence: {gm_index} >= {len}")
-        })?;
+    let ref_type_raw = u32::from(ref_type.encode());
+    occurrences.push(occurrence_pos | ref_type_raw << 24);
 
-    if let Some(&(last_occurrence_pos, old_variable_type)) = occurrences.last() {
-        // Replace last occurrence with next occurrence offset
-        let occurrence_offset: u32 = occurrence_pos - last_occurrence_pos;
-        let old_var_type = old_variable_type.encode() as u32 & 0xF8;
-        let value: u32 = occurrence_offset & 0x07FF_FFFF | old_var_type << 24;
+    if let Some(last_chain_value) = last {
+        // Replace the last written value (name string id) of the occurrence chain
+        // with the offset to its next occurrence (this one).
+
+        // The `last_chain_value` also has the ref type encoded.
+        // (This is an optimization to save space in `writer.variable_occurrences`)
+        let last_occurrence_pos = last_chain_value & 0x07FF_FFFF;
+        let offset: u32 = occurrence_pos - last_occurrence_pos;
+        let value = offset | last_chain_value & 0xF800_0000;
         writer.overwrite_u32(value, last_occurrence_pos + 4)?;
     }
 
-    // Write the Name String ID (yes, the index, not the position) together with this the reference type.
-    let name_string_id = var.name.index as u32 & 0x07FF_FFFF;
-    writer.write_u32(name_string_id | u32::from(variable_type.encode() & 0xF8) << 24);
+    // Write the Name String ID (the index of the string, not a pointer) together with the reference type.
+    // This value will be overwritten by the above code, unless this is the last occurrence of that variable.
+    // This is exactly what we want: the last value of the occurrence chain needs to store the name string id (since there is no next occurrence offset).
+    let ref_type_raw = ref_type.encode() as u32;
+    let name_string_id = var.name.index as u32;
+    writer.write_u32(name_string_id | ref_type_raw << 24);
 
-    // Fuckass borrow checker
-    writer
-        .variable_occurrences
-        .get_mut(gm_index as usize)
-        .unwrap()
-        .push((occurrence_pos, variable_type));
     Ok(())
 }
 
@@ -908,40 +914,28 @@ fn write_function_occurrence(
     func_ref: GMRef<Function>,
     occurrence_pos: u32,
 ) -> Result<()> {
-    let len: usize = writer.function_occurrences.len();
+    // see write_variable_occurrence for comments
 
     let func = writer.gm_data.functions.by_ref(func_ref)?;
-    let gm_index = func_ref.index as u32;
+    let occurrences = &mut writer.function_occurrences[func_ref.index as usize];
+    let last: Option<u32> = occurrences.last().copied();
+    occurrences.push(occurrence_pos);
 
-    let occurrences: &mut Vec<u32> = writer
-        .function_occurrences
-        .get_mut(gm_index as usize)
-        .ok_or_else(|| {
-            format!("Invalid Function GMRef while writing occurrence: {gm_index} >= {len}")
-        })?;
-
-    if let Some(&last_occurrence_pos) = occurrences.last() {
-        // Replace last occurrence with next occurrence offset
-        let occurrence_offset: u32 = occurrence_pos - last_occurrence_pos;
-        writer.overwrite_u32(occurrence_offset & 0x07FF_FFFF, last_occurrence_pos + 4)?;
+    if let Some(last_occurrence_pos) = last {
+        let offset: u32 = occurrence_pos - last_occurrence_pos;
+        if offset & 0xF800_0000 != 0 {
+            bail!("Occurrence offset {offset} (0x{offset:08X}) is too large (max is 0x07FFFFFF)");
+        }
+        writer.overwrite_u32(offset, last_occurrence_pos + 4)?;
     }
 
-    // Write the Name String ID (yes, the index, not the position).
-    let name_string_id = func.name.index as u32 & 0x07FF_FFFF;
-    writer.write_u32(name_string_id);
-
-    writer
-        .function_occurrences
-        .get_mut(gm_index as usize)
-        .unwrap()
-        .push(occurrence_pos);
+    writer.write_u32(func.name.index as u32);
     Ok(())
 }
 
-/// Check whether this data file was generated with `YYC` (`YoYo Games
-/// Compiler`). Should that be the case, the `CODE`, `VARI` and `FUNC` chunks
-/// will be empty (or not exist, depending on the WAD version).
-/// NOTE: YYC is untested. Issues may occur.
+/// Check whether this data file was generated with `YYC` (`YoYo Games Compiler`).
+/// Should that be the case, the `CODE`, `VARI` and `FUNC` chunks will be empty
+/// (or not exist, depending on the WAD version).
 pub(crate) fn check_yyc(reader: &DataReader) -> Result<bool> {
     use crate::wad::chunk::ChunkName::CODE;
     use crate::wad::chunk::ChunkName::FUNC;

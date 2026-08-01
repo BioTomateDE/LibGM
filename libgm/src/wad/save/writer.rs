@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::collections::HashMap;
 
-use crate::gml::instruction::ReferenceType;
 use crate::prelude::*;
 use crate::util::fmt::typename;
 use crate::wad::GMVersion;
@@ -30,24 +29,20 @@ pub struct DataWriter<'a> {
     /// the GameMaker element they're pointing to.
     pub(super) pointer_placeholder_positions: Vec<(u32, Pointer)>,
 
-    /// Maps memory addresses of GameMaker elements to their resolved data
-    /// position.
+    /// Maps memory addresses of GameMaker elements to their resolved data position.
     pub(super) pointer_resource_positions: HashMap<Pointer, u32>,
 
     /// Tracks where each function is used throughout the game data.
-    /// Will be populated when code is built.
-    /// - Outer Vec: Indexed by Function index from
-    ///   `gm_data.functions.functions`
+    /// Will be populated when code is serialized.
+    /// - Outer Vec: Indexed by function index from `gm_data.functions`
     /// - Inner Vec: List of written positions for each occurrence
     pub function_occurrences: Vec<Vec<u32>>,
 
     /// Tracks where each variable is used throughout the game data.
-    /// Will be populated when code is built.
-    /// - Outer Vec: Indexed by Variable index from
-    ///   `gm_data.variables.variables`
-    /// - Inner Vec: List of `(written_position, variable_type)` tuples for each
-    ///   occurrence
-    pub variable_occurrences: Vec<Vec<(u32, ReferenceType)>>,
+    /// Will be populated when code is serialized.
+    /// - Outer Vec: Indexed by variable index from `gm_data.variables`
+    /// - Inner Vec: List of `(written_position | ref_type << 24)` for each occurrence
+    pub variable_occurrences: Vec<Vec<u32>>,
 
     pub last_chunk: LastChunk,
 }
@@ -129,8 +124,7 @@ impl<'a> DataWriter<'a> {
         }
     }
 
-    /// Overwrites a 32-bit unsigned integer at the specified written data
-    /// `position`.
+    /// Overwrites a 32-bit unsigned integer at the specified written data position.
     ///
     /// Useful for patching fixed-size numeric values like lengths or offsets
     /// after serialization. For writing regular pointer lists normally, see

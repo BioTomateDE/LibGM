@@ -59,7 +59,7 @@ impl ReferenceType {
             0xE0 => Self::Instance,
             0x10 => Self::MultiPush,
             0x90 => Self::MultiPop,
-            _ => bail!("Invalid Variable Reference Type {raw} ({raw:04X})"),
+            _ => bail!("Invalid Variable Reference Type {raw} (0x{raw:02X})"),
         })
     }
 

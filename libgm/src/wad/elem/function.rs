@@ -88,15 +88,10 @@ impl GMElement for Functions {
         }
 
         for (i, function) in self.elems.iter().enumerate() {
-            let occurrences: &Vec<u32> = writer.function_occurrences.get(i).ok_or_else(|| {
-                format!(
-                    "Could not resolve function occurrence with index {i} in list with length {}",
-                    writer.function_occurrences.len(),
-                )
-            })?;
+            let occurrences: &Vec<u32> = &writer.function_occurrences[i];
             let occurrence_count: usize = occurrences.len();
 
-            // Before GM 2.3, the first occurrence points to the instruction rather than the next offset
+            // Before GMS 2.3, the first occurrence points to the instruction rather than the occurrence chain value.
             let gm2_3: bool = writer.version() >= GMVersion::GMS2_3;
             let first_occurrence: i32 = match occurrences.first() {
                 Some(&occurrence) if gm2_3 => occurrence as i32 + 4,

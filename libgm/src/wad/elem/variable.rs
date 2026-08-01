@@ -27,6 +27,211 @@ pub struct Variables {
 
 gm_list_chunk!(VARI, Variables, Variable, direct);
 
+impl GMElement for Variables {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let modern_header: Option<ModernHeader> =
+            reader.deserialize_if_version(GMVersion::Wad15)?;
+        let variable_size = match modern_header {
+            Some(_) => 20,
+            None => 12,
+        };
+        let variable_count = (reader.chunk.length() / variable_size) as usize;
+
+        let mut occurrence_infos: Vec<(u32, u32)> = Vec::with_capacity(variable_count);
+        let mut elems: Vec<Variable> = Vec::with_capacity(variable_count);
+
+        // Parse variables
+        while reader.cur_pos + variable_size <= reader.chunk.end_pos {
+            let name: GMRef<String> = reader.read_gm_string()?;
+
+            let modern_data: Option<ModernVarData> =
+                reader.deserialize_if_version(GMVersion::Wad15)?;
+
+            let occurrence_count = reader.read_count("Variable occurrence")?;
+            let first_occurrence_pos = reader.read_u32()?;
+            occurrence_infos.push((occurrence_count, first_occurrence_pos));
+
+            elems.push(Variable { name, modern_data });
+        }
+
+        // Resolve occurrences
+        let saved_chunk: ChunkBounds = reader.chunk;
+        let saved_position = reader.cur_pos;
+        reader.chunk = reader
+            .chunks
+            .get(ChunkName::CODE)
+            .ok_or("Chunk CODE not set while parsing variable occurrences")?;
+
+        for (i, (occurrence_count, first_occurrence_pos)) in
+            occurrence_infos.into_iter().enumerate()
+        {
+            let occurrences: Vec<u32> =
+                read_occurrence_chain(reader, first_occurrence_pos, occurrence_count)?;
+
+            // TODO: this code is extremely ugly.
+            // the hashmaps are probably also slow.
+            // refactor this entire thing
+            for occurrence in occurrences {
+                let var_ref: GMRef<Variable> = i.into();
+                // placeholder value is never read in wad < 15
+                let variable_type = elems[i]
+                    .modern_data
+                    .as_ref()
+                    .map_or(VariableType::Self_, |m| m.variable_type);
+
+                if let Some(old_var) = reader
+                    .variable_occurrences
+                    .insert(occurrence, (var_ref, variable_type))
+                {
+                    bail!(
+                        "Conflicting occurrence positions while parsing variables: Position {} \
+                         was already set for variable #{} with name {:?}; trying to set to \
+                         variable #{i} with name {:?}",
+                        occurrence,
+                        old_var.0.index,
+                        elems[old_var.0.index as usize].name,
+                        elems[i].name,
+                    );
+                }
+            }
+        }
+
+        reader.chunk = saved_chunk;
+        reader.cur_pos = saved_position;
+
+        Ok(Self { elems, modern_header })
+    }
+
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_if_ver(
+            &self.modern_header,
+            "Scuffed WAD 15+ header",
+            GMVersion::Wad15,
+        )?;
+        for (i, variable) in self.elems.iter().enumerate() {
+            writer.write_gm_string(variable.name)?;
+            writer.write_if_ver(&variable.modern_data, "WAD 15 data", GMVersion::Wad15)?;
+
+            let occurrences = writer.variable_occurrences.get(i).ok_or_else(|| {
+                format!(
+                    "Could not resolve variable occurrence with index {i} in list with length {}",
+                    writer.function_occurrences.len()
+                )
+            })?;
+            let occurrence_count: usize = occurrences.len();
+            let first_occurrence: i32 = match occurrences.first() {
+                Some(&occurrence) => (occurrence & 0x07FF_FFFF) as i32,
+                None => -1,
+            };
+            writer.write_usize(occurrence_count)?;
+            writer.write_i32(first_occurrence);
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Variable {
+    pub name: GMRef<String>,
+    pub modern_data: Option<ModernVarData>,
+}
+
+element_stub!(Variable);
+impl GMNamedElement for Variable {
+    fn name_ref(&self) -> GMRef<String> {
+        self.name
+    }
+
+    fn validate_name(&self, gm_strings: &Strings) -> Result<()> {
+        let name = self.name(gm_strings)?;
+        if name == "$$$$temp$$$$" {
+            return Ok(());
+        }
+        validate_identifier(name)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ModernVarData {
+    pub variable_type: VariableType,
+    pub variable_id: i32,
+}
+
+impl GMElement for ModernVarData {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        let variable_type: i32 = reader.read_i32()?;
+        let variable_type = VariableType::decode(variable_type)?;
+        let variable_id = reader.read_i32()?;
+        Ok(Self { variable_type, variable_id })
+    }
+
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_i32(self.variable_type.encode());
+        writer.write_i32(self.variable_id);
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ModernHeader {
+    pub var_count1: u32,
+    pub var_count2: u32,
+    pub max_local_var_count: u32,
+}
+
+impl GMElement for ModernHeader {
+    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+        // Nobody knows what the fuck these values mean
+        let var_count1 = reader.read_u32()?;
+        let var_count2 = reader.read_u32()?;
+        let max_local_var_count = reader.read_u32()?;
+        Ok(Self {
+            var_count1,
+            var_count2,
+            max_local_var_count,
+        })
+    }
+
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+        writer.write_u32(self.var_count1);
+        writer.write_u32(self.var_count2);
+        writer.write_u32(self.max_local_var_count);
+        Ok(())
+    }
+}
+
+fn read_occurrence_chain(
+    reader: &mut DataReader,
+    first_occurrence_pos: u32,
+    occurrence_count: u32,
+) -> Result<Vec<u32>> {
+    if occurrence_count < 1 {
+        return Ok(vec![]);
+    }
+
+    let mut occurrence_pos: u32 = first_occurrence_pos + 4;
+    let mut occurrences: Vec<u32> = vec_with_capacity(occurrence_count)?;
+    let mut offset: i32;
+
+    for i in 0..occurrence_count {
+        occurrences.push(occurrence_pos);
+        reader.cur_pos = occurrence_pos;
+        let raw_value = reader.read_i32()?;
+        offset = raw_value & 0x07FF_FFFF;
+
+        if offset < 0 {
+            bail!(
+                "Next occurrence offset is {offset} (0x{offset:08X}) which is negative for \
+                 variable occurrence {i}/{occurrence_count}"
+            );
+        }
+
+        occurrence_pos += offset as u32;
+    }
+
+    Ok(occurrences)
+}
+
 impl Variables {
     /// Tries to find an existing variable with the specified name and variable type.
     ///
@@ -136,209 +341,4 @@ impl Variables {
         }
         Ok(())
     }
-}
-
-impl GMElement for Variables {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let modern_header: Option<ModernHeader> =
-            reader.deserialize_if_version(GMVersion::Wad15)?;
-        let variable_size = match modern_header {
-            Some(_) => 20,
-            None => 12,
-        };
-        let variable_count = (reader.chunk.length() / variable_size) as usize;
-
-        let mut occurrence_infos: Vec<(u32, u32)> = Vec::with_capacity(variable_count);
-        let mut elems: Vec<Variable> = Vec::with_capacity(variable_count);
-
-        // Parse variables
-        while reader.cur_pos + variable_size <= reader.chunk.end_pos {
-            let name: GMRef<String> = reader.read_gm_string()?;
-
-            let modern_data: Option<ModernVarData> =
-                reader.deserialize_if_version(GMVersion::Wad15)?;
-
-            let occurrence_count = reader.read_count("Variable occurrence")?;
-            let first_occurrence_pos = reader.read_u32()?;
-            occurrence_infos.push((occurrence_count, first_occurrence_pos));
-
-            elems.push(Variable { name, modern_data });
-        }
-
-        // Resolve occurrences
-        let saved_chunk: ChunkBounds = reader.chunk;
-        let saved_position = reader.cur_pos;
-        reader.chunk = reader
-            .chunks
-            .get(ChunkName::CODE)
-            .ok_or("Chunk CODE not set while parsing variable occurrences")?;
-
-        for (i, (occurrence_count, first_occurrence_pos)) in
-            occurrence_infos.into_iter().enumerate()
-        {
-            let occurrences: Vec<u32> =
-                parse_occurrence_chain(reader, first_occurrence_pos, occurrence_count)?;
-
-            // TODO: this code is extremely ugly.
-            // the hashmaps are probably also slow.
-            // refactor this entire thing
-            for occurrence in occurrences {
-                let var_ref: GMRef<Variable> = i.into();
-                // placeholder value is never read in wad < 15
-                let variable_type = elems[i]
-                    .modern_data
-                    .as_ref()
-                    .map_or(VariableType::Self_, |m| m.variable_type);
-
-                if let Some(old_var) = reader
-                    .variable_occurrences
-                    .insert(occurrence, (var_ref, variable_type))
-                {
-                    bail!(
-                        "Conflicting occurrence positions while parsing variables: Position {} \
-                         was already set for variable #{} with name {:?}; trying to set to \
-                         variable #{i} with name {:?}",
-                        occurrence,
-                        old_var.0.index,
-                        elems[old_var.0.index as usize].name,
-                        elems[i].name,
-                    );
-                }
-            }
-        }
-
-        reader.chunk = saved_chunk;
-        reader.cur_pos = saved_position;
-
-        Ok(Self { elems, modern_header })
-    }
-
-    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
-        writer.write_if_ver(
-            &self.modern_header,
-            "Scuffed WAD 15+ fields",
-            GMVersion::Wad15,
-        )?;
-        for (i, variable) in self.elems.iter().enumerate() {
-            writer.write_gm_string(variable.name)?;
-            writer.write_if_ver(&variable.modern_data, "WAD 15 data", GMVersion::Wad15)?;
-
-            let occurrences = writer.variable_occurrences.get(i).ok_or_else(|| {
-                format!(
-                    "Could not resolve variable occurrence with index {i} in list with length {}",
-                    writer.function_occurrences.len()
-                )
-            })?;
-            let occurrence_count: usize = occurrences.len();
-            let first_occurrence: i32 = match occurrences.first() {
-                Some((occurrence, _)) => *occurrence as i32,
-                None => -1,
-            };
-            writer.write_usize(occurrence_count)?;
-            writer.write_i32(first_occurrence);
-        }
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Variable {
-    pub name: GMRef<String>,
-    pub modern_data: Option<ModernVarData>,
-}
-
-element_stub!(Variable);
-impl GMNamedElement for Variable {
-    fn name_ref(&self) -> GMRef<String> {
-        self.name
-    }
-
-    fn validate_name(&self, gm_strings: &Strings) -> Result<()> {
-        let name = self.name(gm_strings)?;
-        if name == "$$$$temp$$$$" {
-            return Ok(());
-        }
-        validate_identifier(name)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ModernVarData {
-    pub variable_type: VariableType,
-    pub variable_id: i32,
-}
-
-impl GMElement for ModernVarData {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let variable_type: i32 = reader.read_i32()?;
-        let variable_type = VariableType::decode(variable_type)?;
-        let variable_id = reader.read_i32()?;
-        Ok(Self { variable_type, variable_id })
-    }
-
-    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
-        writer.write_i32(self.variable_type.encode());
-        writer.write_i32(self.variable_id);
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ModernHeader {
-    pub var_count1: u32,
-    pub var_count2: u32,
-    pub max_local_var_count: u32,
-}
-
-impl GMElement for ModernHeader {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        // Nobody knows what the fuck these values mean
-        let var_count1 = reader.read_u32()?;
-        let var_count2 = reader.read_u32()?;
-        let max_local_var_count = reader.read_u32()?;
-        Ok(Self {
-            var_count1,
-            var_count2,
-            max_local_var_count,
-        })
-    }
-
-    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
-        writer.write_u32(self.var_count1);
-        writer.write_u32(self.var_count2);
-        writer.write_u32(self.max_local_var_count);
-        Ok(())
-    }
-}
-
-fn parse_occurrence_chain(
-    reader: &mut DataReader,
-    first_occurrence_pos: u32,
-    occurrence_count: u32,
-) -> Result<Vec<u32>> {
-    if occurrence_count < 1 {
-        return Ok(vec![]);
-    }
-
-    let mut occurrence_pos: u32 = first_occurrence_pos + 4;
-    let mut occurrences: Vec<u32> = vec_with_capacity(occurrence_count)?;
-    let mut offset: i32;
-
-    for i in 0..occurrence_count {
-        occurrences.push(occurrence_pos);
-        reader.cur_pos = occurrence_pos;
-        let raw_value = reader.read_i32()?;
-        offset = raw_value & 0x07FF_FFFF;
-
-        if offset < 0 {
-            bail!(
-                "Next occurrence offset is {offset} (0x{offset:08X}) which is negative for \
-                 variable occurrence {i}/{occurrence_count}"
-            );
-        }
-
-        occurrence_pos += offset as u32;
-    }
-
-    Ok(occurrences)
 }

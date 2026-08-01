@@ -62,7 +62,7 @@ use crate::wad::version_detection::detect_format_version;
 const ERR_MASSIVE: &str = "Data file size exceeds the signed 32-bit integer limit which will lead \
                            to bugs in LibGM and the runner";
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LoadingOptions {
     /// See [`LoadingOptions::verify_alignment`].
     pub verify_alignment: bool,
