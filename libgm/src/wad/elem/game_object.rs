@@ -7,9 +7,9 @@ use crate::gm_enum::gm_enum;
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::GMVersion;
-use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::chunk::gm_asset_list_chunk;
+use crate::wad::elem::GMComplexElement;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::element_stub;
 use crate::wad::elem::sprite::Sprite;
 use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
@@ -20,7 +20,7 @@ pub struct GameObjects {
     pub elems: Vec<Option<GameObject>>,
 }
 
-gm_named_list_chunk!(OBJT, GameObjects, GameObject, nullable);
+gm_asset_list_chunk!(OBJT, GameObjects, GameObject);
 
 impl GMElement for GameObjects {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -32,78 +32,8 @@ impl GMElement for GameObjects {
                 continue;
             }
             reader.assert_pos(pointer, "Game Object")?;
-
-            let name: GMRef<String> = reader.read_gm_string()?;
-            let sprite: GMRef<Sprite> = reader.read_resource_by_id()?;
-
-            let visible = reader.read_bool32()?;
-            let mut managed: Option<bool> = None;
-            if reader.version >= GMVersion::GM2022_5 {
-                managed = Some(reader.read_bool32()?);
-            }
-            let solid = reader.read_bool32()?;
-            let depth = reader.read_i32()?;
-            let persistent = reader.read_bool32()?;
-
-            let parent_id = reader.read_i32()?;
-            let parent: GMRef<GameObject> = match parent_id {
-                -100 => GMRef::none(), // No parent
-                -1 => GMRef::from(i),  // Parent is Self
-                n if n < 0 => bail!("Unexpected negative Parent ID {n}"),
-                _ => GMRef::new(parent_id),
-            };
-
-            let texture_mask: GMRef<Sprite> = reader.read_resource_by_id()?;
-
-            let uses_physics = reader.read_bool32()?;
-            let is_sensor = reader.read_bool32()?;
-            let collision_shape: CollisionShape = reader.read_enum()?;
-            let density = reader.read_f32()?;
-            let restitution = reader.read_f32()?;
-            let group = reader.read_u32()?;
-            let linear_damping = reader.read_f32()?;
-            let angular_damping = reader.read_f32()?;
-
-            let physics_shape_vertex_count = reader.read_count("Physics Shape Vertex Count")?;
-
-            let friction = reader.read_f32()?;
-            let awake = reader.read_bool32()?;
-            let kinematic = reader.read_bool32()?;
-
-            let mut physics_shape_vertices: Vec<(f32, f32)> =
-                vec_with_capacity(physics_shape_vertex_count)?;
-            for _ in 0..physics_shape_vertex_count {
-                let x = reader.read_f32()?;
-                let y = reader.read_f32()?;
-                physics_shape_vertices.push((x, y));
-            }
-
-            let events = EventGroups::deserialize(reader).ctx("parsing game object events")?;
-
-            elems[i] = Some(GameObject {
-                name,
-                sprite,
-                visible,
-                managed,
-                solid,
-                depth,
-                persistent,
-                parent,
-                texture_mask,
-                uses_physics,
-                is_sensor,
-                collision_shape,
-                density,
-                restitution,
-                group,
-                linear_damping,
-                angular_damping,
-                friction,
-                awake,
-                kinematic,
-                physics_shape_vertices,
-                events,
-            });
+            let object = reader.read_elem_ctx(GMRef::from(i))?;
+            elems[i] = Some(object);
         }
 
         Ok(Self { elems })
@@ -118,37 +48,7 @@ impl GMElement for GameObjects {
 
         for (gm_ref, obj) in self.element_refs() {
             writer.patch_pointer_list(pointer_list_pos, gm_ref.index as usize)?;
-
-            writer.write_gm_string(obj.name)?;
-            writer.write_resource_id(obj.sprite);
-            writer.write_bool32(obj.visible);
-            writer.write_if_ver(&obj.managed, "Managed", GMVersion::GM2022_5)?;
-            writer.write_bool32(obj.solid);
-            writer.write_i32(obj.depth);
-            writer.write_bool32(obj.persistent);
-            match obj.parent {
-                x if x.is_none() => writer.write_i32(-100), // No Parent
-                obj_ref if obj_ref == gm_ref => writer.write_i32(-1), // Parent is Self
-                obj_ref => writer.write_resource_id(obj_ref), // Normal Parent
-            }
-            writer.write_resource_id(obj.texture_mask);
-            writer.write_bool32(obj.uses_physics);
-            writer.write_bool32(obj.is_sensor);
-            writer.write_enum(obj.collision_shape);
-            writer.write_f32(obj.density);
-            writer.write_f32(obj.restitution);
-            writer.write_u32(obj.group);
-            writer.write_f32(obj.linear_damping);
-            writer.write_f32(obj.angular_damping);
-            writer.write_usize(obj.physics_shape_vertices.len())?; // "new meaning" according to UTMT?
-            writer.write_f32(obj.friction);
-            writer.write_bool32(obj.awake);
-            writer.write_bool32(obj.kinematic);
-            for (x, y) in &obj.physics_shape_vertices {
-                writer.write_f32(*x);
-                writer.write_f32(*y);
-            }
-            writer.write_elem(&obj.events)?;
+            writer.write_elem_ctx(obj, gm_ref)?;
         }
         Ok(())
     }
@@ -222,7 +122,121 @@ pub struct GameObject {
     /// All the events that this game object has.
     pub events: EventGroups,
 }
-element_stub!(GameObject);
+
+impl GMComplexElement for GameObject {
+    /// Current element ID
+    type ReadContext = GMRef<Self>;
+    /// Current element ID
+    type WriteContext = GMRef<Self>;
+
+    fn deserialize_complex(reader: &mut DataReader, self_ref: GMRef<Self>) -> Result<Self> {
+        let name: GMRef<String> = reader.read_gm_string()?;
+        let sprite: GMRef<Sprite> = reader.read_resource_by_id()?;
+
+        let visible = reader.read_bool32()?;
+        let mut managed: Option<bool> = None;
+        if reader.version >= GMVersion::GM2022_5 {
+            managed = Some(reader.read_bool32()?);
+        }
+        let solid = reader.read_bool32()?;
+        let depth = reader.read_i32()?;
+        let persistent = reader.read_bool32()?;
+
+        let parent_id = reader.read_i32()?;
+        let parent: GMRef<Self> = match parent_id {
+            -100 => GMRef::none(), // No parent
+            -1 => self_ref,        // Parent is Self
+            n if n < 0 => bail!("Unexpected negative Parent ID {n}"),
+            _ => GMRef::new(parent_id),
+        };
+
+        let texture_mask: GMRef<Sprite> = reader.read_resource_by_id()?;
+
+        let uses_physics = reader.read_bool32()?;
+        let is_sensor = reader.read_bool32()?;
+        let collision_shape: CollisionShape = reader.read_enum()?;
+        let density = reader.read_f32()?;
+        let restitution = reader.read_f32()?;
+        let group = reader.read_u32()?;
+        let linear_damping = reader.read_f32()?;
+        let angular_damping = reader.read_f32()?;
+
+        let physics_shape_vertex_count = reader.read_count("Physics Shape Vertex Count")?;
+
+        let friction = reader.read_f32()?;
+        let awake = reader.read_bool32()?;
+        let kinematic = reader.read_bool32()?;
+
+        let mut physics_shape_vertices: Vec<(f32, f32)> =
+            vec_with_capacity(physics_shape_vertex_count)?;
+        for _ in 0..physics_shape_vertex_count {
+            let x = reader.read_f32()?;
+            let y = reader.read_f32()?;
+            physics_shape_vertices.push((x, y));
+        }
+
+        let events = EventGroups::deserialize(reader).ctx("parsing game object events")?;
+
+        Ok(Self {
+            name,
+            sprite,
+            visible,
+            managed,
+            solid,
+            depth,
+            persistent,
+            parent,
+            texture_mask,
+            uses_physics,
+            is_sensor,
+            collision_shape,
+            density,
+            restitution,
+            group,
+            linear_damping,
+            angular_damping,
+            friction,
+            awake,
+            kinematic,
+            physics_shape_vertices,
+            events,
+        })
+    }
+
+    fn serialize_complex(&self, writer: &mut DataWriter, self_ref: GMRef<Self>) -> Result<()> {
+        writer.write_gm_string(self.name)?;
+        writer.write_resource_id(self.sprite);
+        writer.write_bool32(self.visible);
+        writer.write_if_ver(&self.managed, "Managed", GMVersion::GM2022_5)?;
+        writer.write_bool32(self.solid);
+        writer.write_i32(self.depth);
+        writer.write_bool32(self.persistent);
+        match self.parent {
+            x if x.is_none() => writer.write_i32(-100), // No Parent
+            obj_ref if obj_ref == self_ref => writer.write_i32(-1), // Parent is Self
+            obj_ref => writer.write_resource_id(obj_ref), // Normal Parent
+        }
+        writer.write_resource_id(self.texture_mask);
+        writer.write_bool32(self.uses_physics);
+        writer.write_bool32(self.is_sensor);
+        writer.write_enum(self.collision_shape);
+        writer.write_f32(self.density);
+        writer.write_f32(self.restitution);
+        writer.write_u32(self.group);
+        writer.write_f32(self.linear_damping);
+        writer.write_f32(self.angular_damping);
+        writer.write_usize(self.physics_shape_vertices.len())?; // "new meaning" according to UTMT?
+        writer.write_f32(self.friction);
+        writer.write_bool32(self.awake);
+        writer.write_bool32(self.kinematic);
+        for (x, y) in &self.physics_shape_vertices {
+            writer.write_f32(*x);
+            writer.write_f32(*y);
+        }
+        writer.write_elem(&self.events)?;
+        Ok(())
+    }
+}
 
 gm_enum!(CollisionShape {
     Circle = 0,

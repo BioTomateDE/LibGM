@@ -3,6 +3,7 @@
 //! Chapter 3:
 //! 2025-06-05 to now [2026-01-04]
 
+use crate::actions::toggle_debug::create_event;
 use crate::gml::Code;
 use crate::gml::assembly::assemble_instructions;
 use crate::gml::instruction::InstanceType;
@@ -24,9 +25,10 @@ use crate::wad::elem::variable::Variable;
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     log::debug!("Detected Deltarune Chapter 3");
-    let code_ref = data
-        .codes
-        .ref_by_name("gml_Object_obj_initializer2_Create_0", &data.strings)?;
+    let obj = data
+        .game_objects
+        .by_name("obj_initializer2", &data.strings)?;
+    let code_ref = create_event(obj)?;
     let (push_instr_index, is_enabled) = super::find_debug(data, code_ref, InstanceType::Global)?;
 
     if enable == is_enabled {

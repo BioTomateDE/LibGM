@@ -8,7 +8,7 @@ pub use kerning::Kerning;
 use crate::prelude::*;
 use crate::wad::Blob;
 use crate::wad::GMVersion;
-use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::chunk::gm_asset_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::texture_page_item::TexturePageItem;
 use crate::wad::load::reader::DataReader;
@@ -21,7 +21,7 @@ pub struct Fonts {
     pub padding: Blob<[u8; 512]>,
 }
 
-gm_named_list_chunk!(FONT, Fonts, Font, nullable);
+gm_asset_list_chunk!(FONT, Fonts, Font);
 
 impl GMElement for Fonts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

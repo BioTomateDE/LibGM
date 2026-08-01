@@ -15,7 +15,7 @@ pub use self::view::RoomView;
 use crate::gml::Code;
 use crate::prelude::*;
 use crate::wad::GMVersion;
-use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::chunk::gm_asset_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sequence::Sequence;
 use crate::wad::load::reader::DataReader;
@@ -27,7 +27,7 @@ pub struct Rooms {
     pub elems: Vec<Option<Room>>,
 }
 
-gm_named_list_chunk!(ROOM, Rooms, Room, nullable);
+gm_asset_list_chunk!(ROOM, Rooms, Room);
 
 impl GMElement for Rooms {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

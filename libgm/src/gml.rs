@@ -143,10 +143,6 @@ impl Code {
 
 impl GMData {
     pub fn make_code(&mut self, name: &str, instructions: Vec<Instruction>) -> GMRef<Code> {
-        if let Ok(code) = self.codes.ref_by_name(name, &self.strings) {
-            return code;
-        }
-
         let name = self.strings.make(name);
         let modern_data = if self.general_info.wad_version >= 15 {
             Some(ModernCodeData::default())

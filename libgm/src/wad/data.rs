@@ -340,10 +340,10 @@ impl GMData {
         let stopwatch = Stopwatch::start();
         validate_names(&self.animation_curves, &self.strings)?;
         validate_names(&self.audio_groups, &self.strings)?;
-        validate_names(&self.codes, &self.strings)?;
-        validate_names(&self.filter_effects, &self.strings)?;
+        // validate_names(&self.codes, &self.strings)?;
+        // validate_names(&self.filter_effects, &self.strings)?;
         validate_names(&self.fonts, &self.strings)?;
-        validate_names(&self.functions, &self.strings)?;
+        // validate_names(&self.functions, &self.strings)?;  // TODO: bring this back
         validate_names(&self.game_objects, &self.strings)?;
         validate_names(&self.particle_systems, &self.strings)?;
         validate_names(&self.paths, &self.strings)?;
@@ -353,7 +353,6 @@ impl GMData {
         validate_names(&self.shaders, &self.strings)?;
         validate_names(&self.sounds, &self.strings)?;
         validate_names(&self.sprites, &self.strings)?;
-        validate_names(&self.texture_group_infos, &self.strings)?;
         validate_names(&self.tilesets, &self.strings)?;
         validate_names(&self.timelines, &self.strings)?;
         self.variables.validate_names(&self.strings)?;

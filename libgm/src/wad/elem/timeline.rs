@@ -2,7 +2,7 @@
 
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
-use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::chunk::gm_asset_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::game_object;
 use crate::wad::load::reader::DataReader;
@@ -14,7 +14,7 @@ pub struct Timelines {
 }
 
 // probably nullable?
-gm_named_list_chunk!(TMLN, Timelines, Timeline, nullable);
+gm_asset_list_chunk!(TMLN, Timelines, Timeline);
 
 impl GMElement for Timelines {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

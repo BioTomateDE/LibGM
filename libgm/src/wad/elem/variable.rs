@@ -2,13 +2,12 @@
 
 use crate::gml::instruction::VariableType;
 use crate::prelude::*;
-use crate::util::init::vec_with_capacity;
 use crate::wad::GMVersion;
 use crate::wad::chunk::ChunkName;
 use crate::wad::chunk::gm_list_chunk;
+use crate::wad::elem::GMComplexElement;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::GMNamedElement;
-use crate::wad::elem::element_stub;
 use crate::wad::elem::string::Strings;
 use crate::wad::elem::validate_identifier;
 use crate::wad::load::chunk::ChunkBounds;
@@ -25,7 +24,7 @@ pub struct Variables {
     pub modern_header: Option<ModernHeader>,
 }
 
-gm_list_chunk!(VARI, Variables, Variable, direct);
+gm_list_chunk!(VARI, Variables, Variable);
 
 impl GMElement for Variables {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -35,69 +34,14 @@ impl GMElement for Variables {
             Some(_) => 20,
             None => 12,
         };
-        let variable_count = (reader.chunk.length() / variable_size) as usize;
+        let remaining_length = reader.chunk.end_pos - reader.cur_pos;
+        let variable_count = (remaining_length / variable_size) as usize;
 
-        let mut occurrence_infos: Vec<(u32, u32)> = Vec::with_capacity(variable_count);
         let mut elems: Vec<Variable> = Vec::with_capacity(variable_count);
-
-        // Parse variables
-        while reader.cur_pos + variable_size <= reader.chunk.end_pos {
-            let name: GMRef<String> = reader.read_gm_string()?;
-
-            let modern_data: Option<ModernVarData> =
-                reader.deserialize_if_version(GMVersion::Wad15)?;
-
-            let occurrence_count = reader.read_count("Variable occurrence")?;
-            let first_occurrence_pos = reader.read_u32()?;
-            occurrence_infos.push((occurrence_count, first_occurrence_pos));
-
-            elems.push(Variable { name, modern_data });
+        for idx in 0..variable_count {
+            let variable = reader.read_elem_ctx(GMRef::from(idx))?;
+            elems.push(variable);
         }
-
-        // Resolve occurrences
-        let saved_chunk: ChunkBounds = reader.chunk;
-        let saved_position = reader.cur_pos;
-        reader.chunk = reader
-            .chunks
-            .get(ChunkName::CODE)
-            .ok_or("Chunk CODE not set while parsing variable occurrences")?;
-
-        for (i, (occurrence_count, first_occurrence_pos)) in
-            occurrence_infos.into_iter().enumerate()
-        {
-            let occurrences: Vec<u32> =
-                read_occurrence_chain(reader, first_occurrence_pos, occurrence_count)?;
-
-            // TODO: this code is extremely ugly.
-            // the hashmaps are probably also slow.
-            // refactor this entire thing
-            for occurrence in occurrences {
-                let var_ref: GMRef<Variable> = i.into();
-                // placeholder value is never read in wad < 15
-                let variable_type = elems[i]
-                    .modern_data
-                    .as_ref()
-                    .map_or(VariableType::Self_, |m| m.variable_type);
-
-                if let Some(old_var) = reader
-                    .variable_occurrences
-                    .insert(occurrence, (var_ref, variable_type))
-                {
-                    bail!(
-                        "Conflicting occurrence positions while parsing variables: Position {} \
-                         was already set for variable #{} with name {:?}; trying to set to \
-                         variable #{i} with name {:?}",
-                        occurrence,
-                        old_var.0.index,
-                        elems[old_var.0.index as usize].name,
-                        elems[i].name,
-                    );
-                }
-            }
-        }
-
-        reader.chunk = saved_chunk;
-        reader.cur_pos = saved_position;
 
         Ok(Self { elems, modern_header })
     }
@@ -108,23 +52,8 @@ impl GMElement for Variables {
             "Scuffed WAD 15+ header",
             GMVersion::Wad15,
         )?;
-        for (i, variable) in self.elems.iter().enumerate() {
-            writer.write_gm_string(variable.name)?;
-            writer.write_if_ver(&variable.modern_data, "WAD 15 data", GMVersion::Wad15)?;
-
-            let occurrences = writer.variable_occurrences.get(i).ok_or_else(|| {
-                format!(
-                    "Could not resolve variable occurrence with index {i} in list with length {}",
-                    writer.function_occurrences.len()
-                )
-            })?;
-            let occurrence_count: usize = occurrences.len();
-            let first_occurrence: i32 = match occurrences.first() {
-                Some(&occurrence) => (occurrence & 0x07FF_FFFF) as i32,
-                None => -1,
-            };
-            writer.write_usize(occurrence_count)?;
-            writer.write_i32(first_occurrence);
+        for (idx, variable) in self.elems.iter().enumerate() {
+            writer.write_elem_ctx(variable, idx)?;
         }
         Ok(())
     }
@@ -136,7 +65,49 @@ pub struct Variable {
     pub modern_data: Option<ModernVarData>,
 }
 
-element_stub!(Variable);
+impl GMComplexElement for Variable {
+    type ReadContext = GMRef<Self>;
+    type WriteContext = usize;
+
+    fn deserialize_complex(reader: &mut DataReader, self_ref: GMRef<Self>) -> Result<Self> {
+        let name: GMRef<String> = reader.read_gm_string()?;
+
+        let modern_data: Option<ModernVarData> = reader.deserialize_if_version(GMVersion::Wad15)?;
+
+        let occurrence_count = reader.read_count("Variable occurrence")?;
+        let first_occurrence_pos = reader.read_u32()?;
+
+        // placeholder value is never read in wad < 15
+        let var_type = modern_data
+            .as_ref()
+            .map_or(VariableType::Self_, |m| m.variable_type);
+        read_occurrence_chain(
+            reader,
+            first_occurrence_pos,
+            occurrence_count,
+            self_ref,
+            var_type,
+        )?;
+
+        Ok(Self { name, modern_data })
+    }
+
+    fn serialize_complex(&self, writer: &mut DataWriter, self_idx: usize) -> Result<()> {
+        let occurrences = &writer.variable_occurrences[self_idx];
+        let occurrence_count = occurrences.len();
+        let first_occurrence: i32 = match occurrences.first() {
+            Some(&occurrence) => (occurrence & 0x07FF_FFFF) as i32,
+            None => -1,
+        };
+
+        writer.write_gm_string(self.name)?;
+        writer.write_if_ver(&self.modern_data, "WAD 15 data", GMVersion::Wad15)?;
+        writer.write_usize(occurrence_count)?;
+        writer.write_i32(first_occurrence);
+        Ok(())
+    }
+}
+
 impl GMNamedElement for Variable {
     fn name_ref(&self) -> GMRef<String> {
         self.name
@@ -204,32 +175,43 @@ fn read_occurrence_chain(
     reader: &mut DataReader,
     first_occurrence_pos: u32,
     occurrence_count: u32,
-) -> Result<Vec<u32>> {
+    var_ref: GMRef<Variable>,
+    var_type: VariableType,
+) -> Result<()> {
     if occurrence_count < 1 {
-        return Ok(vec![]);
+        return Ok(());
     }
 
-    let mut occurrence_pos: u32 = first_occurrence_pos + 4;
-    let mut occurrences: Vec<u32> = vec_with_capacity(occurrence_count)?;
-    let mut offset: i32;
+    let saved_chunk: ChunkBounds = reader.chunk;
+    let saved_position = reader.cur_pos;
+    reader.chunk = reader
+        .chunks
+        .get(ChunkName::CODE)
+        .ok_or("Chunk CODE not set while parsing variable occurrences")?;
 
-    for i in 0..occurrence_count {
-        occurrences.push(occurrence_pos);
-        reader.cur_pos = occurrence_pos;
-        let raw_value = reader.read_i32()?;
-        offset = raw_value & 0x07FF_FFFF;
+    reader.cur_pos = first_occurrence_pos + 4;
 
-        if offset < 0 {
+    for _ in 0..occurrence_count {
+        if let Some(old_func) = reader
+            .variable_occurrences
+            .insert(reader.cur_pos, (var_ref, var_type))
+        {
             bail!(
-                "Next occurrence offset is {offset} (0x{offset:08X}) which is negative for \
-                 variable occurrence {i}/{occurrence_count}"
-            );
+                "Conflicting variable occurrence position {} belongs to both {:?} and {:?}",
+                reader.cur_pos,
+                old_func,
+                var_ref,
+            )
         }
 
-        occurrence_pos += offset as u32;
+        let offset = reader.read_u32()? & 0x07FF_FFFF;
+        reader.cur_pos -= 4;
+        reader.cur_pos += offset;
     }
 
-    Ok(occurrences)
+    reader.chunk = saved_chunk;
+    reader.cur_pos = saved_position;
+    Ok(())
 }
 
 impl Variables {

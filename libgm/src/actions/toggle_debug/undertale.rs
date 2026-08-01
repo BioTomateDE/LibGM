@@ -7,8 +7,6 @@ use crate::prelude::*;
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     log::debug!("Detected Undertale");
-    let code_ref = data
-        .codes
-        .ref_by_name("gml_Script_SCR_GAMESTART", &data.strings)?;
-    super::replace_debug(data, code_ref, enable, InstanceType::Global)
+    let script = data.scripts.by_name("SCR_GAMESTART", &data.strings)?;
+    super::replace_debug(data, script.code, enable, InstanceType::Global)
 }

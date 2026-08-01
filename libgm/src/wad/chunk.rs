@@ -431,14 +431,6 @@ pub trait GMListChunk: GMChunk {
     }
 }
 
-pub trait GMNullableListChunk: GMListChunk {
-    #[must_use]
-    fn all_elements(&self) -> &Vec<Option<Self::Element>>;
-
-    #[must_use]
-    fn all_elements_mut(&mut self) -> &mut Vec<Option<Self::Element>>;
-}
-
 pub trait GMDirectListChunk: GMListChunk {
     #[must_use]
     fn all_elements(&self) -> &Vec<Self::Element>;
@@ -447,8 +439,18 @@ pub trait GMDirectListChunk: GMListChunk {
     fn all_elements_mut(&mut self) -> &mut Vec<Self::Element>;
 }
 
-/// All chunk elements that represent a collection of elements **with a unique name**.
-pub trait GMNamedListChunk: GMListChunk<Element: GMNamedElement> {
+/// Chunks that store assets.
+///
+/// Assets are high-level resources with a unique name.
+/// They are globally referencable in GML source code.
+/// Asset pointers in the chunk pointer list can be zero/null in 2024.14+ because GMAC removes (nulls out) unused assets.
+pub trait GMAssetListChunk: GMListChunk<Element: GMNamedElement> {
+    #[must_use]
+    fn all_elements(&self) -> &Vec<Option<Self::Element>>;
+
+    #[must_use]
+    fn all_elements_mut(&mut self) -> &mut Vec<Option<Self::Element>>;
+
     fn ref_by_name(&self, name: &str, gm_strings: &Strings) -> Result<GMRef<Self::Element>> {
         for (gm_ref, elem) in self.element_refs() {
             let elem_name: &String = elem.name(gm_strings)?;
@@ -474,60 +476,7 @@ pub trait GMNamedListChunk: GMListChunk<Element: GMNamedElement> {
 }
 
 macro_rules! gm_list_chunk {
-    ($name:ident, $chunk_struct:ident, $elem_type:ty,nullable) => {
-        impl crate::wad::chunk::GMChunk for $chunk_struct {
-            const NAME: crate::wad::chunk::ChunkName = crate::wad::chunk::ChunkName::$name;
-        }
-
-        impl crate::wad::chunk::GMListChunk for $chunk_struct {
-            type Element = $elem_type;
-
-            fn element_refs(&self) -> impl Iterator<Item = (GMRef<Self::Element>, &Self::Element)> {
-                self.elems
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(idx, elem)| Some((idx.into(), elem.as_ref()?)))
-            }
-
-            fn element_refs_mut(
-                &mut self,
-            ) -> impl Iterator<Item = (GMRef<Self::Element>, &mut Self::Element)> {
-                self.elems
-                    .iter_mut()
-                    .enumerate()
-                    .filter_map(|(idx, elem)| Some((idx.into(), elem.as_mut()?)))
-            }
-
-            fn by_ref(&self, gm_ref: GMRef<Self::Element>) -> Result<&Self::Element> {
-                gm_ref.opt_resolve(&self.elems)
-            }
-
-            fn by_ref_mut(&mut self, gm_ref: GMRef<Self::Element>) -> Result<&mut Self::Element> {
-                gm_ref.opt_resolve_mut(&mut self.elems)
-            }
-
-            fn push(&mut self, element: Self::Element) -> GMRef<Self::Element> {
-                self.elems.push(Some(element));
-                (self.elems.len() - 1).into()
-            }
-
-            fn len(&self) -> usize {
-                self.elems.len()
-            }
-        }
-
-        impl crate::wad::chunk::GMNullableListChunk for $chunk_struct {
-            fn all_elements(&self) -> &Vec<Option<Self::Element>> {
-                &self.elems
-            }
-
-            fn all_elements_mut(&mut self) -> &mut Vec<Option<Self::Element>> {
-                &mut self.elems
-            }
-        }
-    };
-
-    ($name:ident, $chunk_struct:ident, $elem_type:ty,direct) => {
+    ($name:ident, $chunk_struct:ident, $elem_type:ty) => {
         impl crate::wad::chunk::GMChunk for $chunk_struct {
             const NAME: crate::wad::chunk::ChunkName = crate::wad::chunk::ChunkName::$name;
         }
@@ -581,11 +530,58 @@ macro_rules! gm_list_chunk {
     };
 }
 
-macro_rules! gm_named_list_chunk {
-    ($name:ident, $chunk_struct:ident, $elem_type:ty, $tspmo:ident) => {
-        crate::wad::chunk::gm_list_chunk!($name, $chunk_struct, $elem_type, $tspmo);
+macro_rules! gm_asset_list_chunk {
+    ($name:ident, $chunk_struct:ident, $elem_type:ty) => {
+        impl crate::wad::chunk::GMChunk for $chunk_struct {
+            const NAME: crate::wad::chunk::ChunkName = crate::wad::chunk::ChunkName::$name;
+        }
 
-        impl crate::wad::chunk::GMNamedListChunk for $chunk_struct {}
+        impl crate::wad::chunk::GMListChunk for $chunk_struct {
+            type Element = $elem_type;
+
+            fn element_refs(&self) -> impl Iterator<Item = (GMRef<Self::Element>, &Self::Element)> {
+                self.elems
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(idx, elem)| Some((idx.into(), elem.as_ref()?)))
+            }
+
+            fn element_refs_mut(
+                &mut self,
+            ) -> impl Iterator<Item = (GMRef<Self::Element>, &mut Self::Element)> {
+                self.elems
+                    .iter_mut()
+                    .enumerate()
+                    .filter_map(|(idx, elem)| Some((idx.into(), elem.as_mut()?)))
+            }
+
+            fn by_ref(&self, gm_ref: GMRef<Self::Element>) -> Result<&Self::Element> {
+                gm_ref.opt_resolve(&self.elems)
+            }
+
+            fn by_ref_mut(&mut self, gm_ref: GMRef<Self::Element>) -> Result<&mut Self::Element> {
+                gm_ref.opt_resolve_mut(&mut self.elems)
+            }
+
+            fn push(&mut self, element: Self::Element) -> GMRef<Self::Element> {
+                self.elems.push(Some(element));
+                (self.elems.len() - 1).into()
+            }
+
+            fn len(&self) -> usize {
+                self.elems.len()
+            }
+        }
+
+        impl crate::wad::chunk::GMAssetListChunk for $chunk_struct {
+            fn all_elements(&self) -> &Vec<Option<Self::Element>> {
+                &self.elems
+            }
+
+            fn all_elements_mut(&mut self) -> &mut Vec<Option<Self::Element>> {
+                &mut self.elems
+            }
+        }
 
         impl crate::wad::elem::GMNamedElement for $elem_type {
             fn name_ref(&self) -> crate::wad::GMRef<String> {
@@ -595,5 +591,5 @@ macro_rules! gm_named_list_chunk {
     };
 }
 
+pub(crate) use gm_asset_list_chunk;
 pub(crate) use gm_list_chunk;
-pub(crate) use gm_named_list_chunk;

@@ -28,7 +28,7 @@ pub struct UINodes {
 }
 
 // not sure if direct
-gm_list_chunk!(UILR, UINodes, UINode, direct);
+gm_list_chunk!(UILR, UINodes, UINode);
 
 impl GMElement for UINodes {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

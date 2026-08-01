@@ -6,7 +6,7 @@ use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::Blob;
 use crate::wad::GMVersion;
-use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::chunk::gm_asset_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::load::reader::DataReader;
 use crate::wad::save::writer::DataWriter;
@@ -16,7 +16,7 @@ pub struct Shaders {
     pub elems: Vec<Option<Shader>>,
 }
 
-gm_named_list_chunk!(SHDR, Shaders, Shader, nullable);
+gm_asset_list_chunk!(SHDR, Shaders, Shader);
 
 impl GMElement for Shaders {
     #[expect(clippy::too_many_lines)]

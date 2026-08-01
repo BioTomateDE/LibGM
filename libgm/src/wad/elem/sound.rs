@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::prelude::*;
-use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::chunk::gm_asset_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::audio::Audio;
 use crate::wad::elem::audio_group::AudioGroup;
@@ -15,7 +15,7 @@ pub struct Sounds {
     pub elems: Vec<Option<Sound>>,
 }
 
-gm_named_list_chunk!(SOND, Sounds, Sound, nullable);
+gm_asset_list_chunk!(SOND, Sounds, Sound);
 
 impl GMElement for Sounds {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

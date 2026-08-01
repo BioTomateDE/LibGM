@@ -12,7 +12,7 @@ pub struct GlobalInitScripts {
     pub elems: Vec<GMRef<Code>>,
 }
 
-gm_list_chunk!(GLOB, GlobalInitScripts, GMRef<Code>, direct);
+gm_list_chunk!(GLOB, GlobalInitScripts, GMRef<Code>);
 
 impl GMElement for GlobalInitScripts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

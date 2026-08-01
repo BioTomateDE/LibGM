@@ -3,7 +3,7 @@
 use crate::gml::Code;
 use crate::gml::Instruction;
 use crate::prelude::*;
-use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::chunk::gm_asset_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
@@ -11,20 +11,19 @@ use crate::wad::save::writer::DataWriter;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Scripts {
-    pub elems: Vec<Script>,
+    pub elems: Vec<Option<Script>>,
 }
 
-// not sure if direct
-gm_named_list_chunk!(SCPT, Scripts, Script, direct);
+gm_asset_list_chunk!(SCPT, Scripts, Script);
 
 impl GMElement for Scripts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let elems: Vec<Script> = reader.read_pointer_list()?;
+        let elems: Vec<Option<Script>> = reader.read_pointer_list_opt()?;
         Ok(Self { elems })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
-        writer.write_pointer_list(&self.elems)?;
+        writer.write_pointer_list_opt(&self.elems)?;
         Ok(())
     }
 }

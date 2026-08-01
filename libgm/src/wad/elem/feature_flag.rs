@@ -10,7 +10,7 @@ pub struct FeatureFlags {
     pub elems: Vec<GMRef<String>>,
 }
 
-gm_list_chunk!(FEAT, FeatureFlags, GMRef<String>, direct);
+gm_list_chunk!(FEAT, FeatureFlags, GMRef<String>);
 
 impl GMElement for FeatureFlags {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

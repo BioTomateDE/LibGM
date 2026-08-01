@@ -12,7 +12,6 @@ use crate::wad::GMVersion;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::data::Endianness;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::element_stub;
 use crate::wad::elem::texture_page::img::BZip2QoiHeader;
 use crate::wad::load::reader::DataReader;
 use crate::wad::save::writer::DataWriter;
@@ -26,8 +25,7 @@ pub struct TexturePages {
     pub elems: Vec<TexturePage>,
 }
 
-// also not sure if direct
-gm_list_chunk!(TXTR, TexturePages, TexturePage, direct);
+gm_list_chunk!(TXTR, TexturePages, TexturePage);
 
 impl GMElement for TexturePages {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -165,7 +163,16 @@ pub struct TexturePage {
     /// The texture data in the embedded image.
     pub image: Option<GMImage>,
 }
-element_stub!(TexturePage);
+
+impl GMElement for TexturePage {
+    fn deserialize(_reader: &mut DataReader) -> Result<Self> {
+        unimplemented!() // TODO: bruh i cant mutate context kill me
+    }
+
+    fn serialize(&self, _writer: &mut DataWriter) -> Result<()> {
+        unimplemented!()
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Data2022_9 {

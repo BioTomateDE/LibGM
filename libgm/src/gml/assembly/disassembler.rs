@@ -377,7 +377,7 @@ fn asset_get_name<'a, T, C>(
 ) -> Result<&'a String>
 where
     T: GMNamedElement + 'a,
-    C: GMNamedListChunk<Element = T>,
+    C: GMAssetListChunk<Element = T>,
 {
     const CTX: &str = "resolving asset reference for PushReference Instruction";
 
@@ -509,10 +509,8 @@ fn write_variable(
 
 fn resolve_function_name(function_ref: GMRef<Function>, gm_data: &GMData) -> Result<&String> {
     let function: &Function = gm_data.functions.by_ref(function_ref)?;
-    function
-        .validate_name(&gm_data.strings)
-        .ctx("validating function identifier")?;
-    let name: &String = function.name(&gm_data.strings)?;
+    let name: &String = gm_data.strings.by_ref(function.name)?;
+    validate_identifier(name).ctx("validating function identifier")?;
     Ok(name)
 }
 

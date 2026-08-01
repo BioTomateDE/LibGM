@@ -12,7 +12,7 @@ pub struct Audios {
     pub elems: Vec<Audio>,
 }
 
-gm_list_chunk!(AUDO, Audios, Audio, direct);
+gm_list_chunk!(AUDO, Audios, Audio);
 
 impl GMElement for Audios {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

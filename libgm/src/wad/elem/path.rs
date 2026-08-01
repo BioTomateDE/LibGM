@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::prelude::*;
-use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::chunk::gm_asset_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::load::reader::DataReader;
 use crate::wad::save::writer::DataWriter;
@@ -11,7 +11,7 @@ pub struct Paths {
     pub elems: Vec<Option<Path>>,
 }
 
-gm_named_list_chunk!(PATH, Paths, Path, nullable);
+gm_asset_list_chunk!(PATH, Paths, Path);
 
 impl GMElement for Paths {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

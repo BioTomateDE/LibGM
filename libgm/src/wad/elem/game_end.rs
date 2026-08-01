@@ -13,7 +13,7 @@ pub struct GameEndScripts {
     pub elems: Vec<GMRef<Code>>,
 }
 
-gm_list_chunk!(GMEN, GameEndScripts, GMRef<Code>, direct);
+gm_list_chunk!(GMEN, GameEndScripts, GMRef<Code>);
 
 impl GMElement for GameEndScripts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

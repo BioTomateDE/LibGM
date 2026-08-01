@@ -15,7 +15,6 @@ use std::path::PathBuf;
 use std::time::Duration;
 use std::time::Instant;
 
-use libgm::gml::assembly::disassemble_code;
 use libgm::prelude::*;
 use libgm::wad::data::GMData;
 use libgm::wad::load::LoadingOptions;
@@ -55,13 +54,13 @@ fn handle_file(path: &Path, args: &Args) -> Result<Duration> {
         print_diffs(&data, &data2);
     }
 
-    for code_name in &args.codes {
-        let code = data.codes.by_name(code_name, &data.strings)?;
-        let assembly = disassemble_code(code, &data)?;
-        println!("===== {code_name} =====");
-        println!("{assembly}");
-        println!();
-    }
+    // for code_name in &args.codes {
+    //     let code = data.codes.by_name(code_name, &data.strings)?;
+    //     let assembly = disassemble_code(code, &data)?;
+    //     println!("===== {code_name} =====");
+    //     println!("{assembly}");
+    //     println!();
+    // }
 
     if args.dump_sprites {
         dump::dump_sprites(&data)?;

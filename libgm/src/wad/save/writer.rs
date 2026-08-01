@@ -6,6 +6,7 @@ use crate::util::fmt::typename;
 use crate::wad::GMVersion;
 use crate::wad::data::Endianness;
 use crate::wad::data::GMData;
+use crate::wad::elem::GMComplexElement;
 use crate::wad::elem::GMElement;
 use crate::wad::save::pointers::Pointer;
 
@@ -101,7 +102,16 @@ impl<'a> DataWriter<'a> {
 
     #[inline]
     pub fn write_elem<T: GMElement>(&mut self, elem: &T) -> Result<()> {
-        elem.serialize(self)
+        self.write_elem_ctx(elem, ())
+    }
+
+    #[inline]
+    pub fn write_elem_ctx<T: GMComplexElement>(
+        &mut self,
+        elem: &T,
+        write_context: T::WriteContext,
+    ) -> Result<()> {
+        elem.serialize_complex(self, write_context)
             .ctx(|| format!("serializing {}", typename::<T>()))
     }
 

@@ -3,6 +3,7 @@
 //! Chapters 1, 2, 4 (3 needs extra handling)
 //! 2025-06-05 to now [2026-01-04]
 
+use crate::actions::toggle_debug::create_event;
 use crate::gml::Code;
 use crate::gml::assembly::assemble_instructions;
 use crate::gml::insert_instructions;
@@ -14,25 +15,25 @@ use crate::wad::elem::variable::Variable;
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     log::debug!("Detected Deltarune Chapter 1/2/4");
-    let code_ref: GMRef<Code> = data
-        .codes
-        .ref_by_name("gml_Object_obj_initializer2_Create_0", &data.strings)?;
-    super::replace_debug(data, code_ref, enable, InstanceType::Global)?;
+    let obj = data
+        .game_objects
+        .by_name("obj_initializer2", &data.strings)?;
+    super::replace_debug(data, create_event(obj)?, enable, InstanceType::Global)?;
 
-    if !enable
-        || data
-            .codes
-            .by_name("gml_Script_scr_flag_name_get", &data.strings)
-            .is_err()
-    {
+    if !enable {
+        return Ok(());
+    }
+    let no_flagname = data
+        .scripts
+        .by_name("gml_Script_scr_flag_name_get", &data.strings)
+        .is_err();
+    if no_flagname {
         return Ok(());
     }
 
     // need to modify flag retrieval code (currently only used in chapter 4)
-    let code_ref = data
-        .codes
-        .ref_by_name("gml_GlobalScript_scr_flag_get", &data.strings)?;
-    let code = data.codes.by_ref(code_ref)?;
+    let script = data.scripts.by_name("scr_flag_get", &data.strings)?;
+    let code = data.codes.by_ref(script.code)?;
 
     let index: u32 = find_insertion_point(data, code)?;
 
@@ -49,7 +50,7 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     "#;
     let insertion: Vec<Instruction> = assemble_instructions(assembly, data)?;
 
-    let code = data.codes.by_ref_mut(code_ref)?;
+    let code = data.codes.by_ref_mut(script.code)?;
     insert_instructions(&mut code.instructions, index, &insertion)?;
     bail!(
         "TODO: debug activation for deltarune is currently broken (need to fix child gml_Script \

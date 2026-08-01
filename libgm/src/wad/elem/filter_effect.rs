@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
-use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::load::reader::DataReader;
 use crate::wad::save::writer::DataWriter;
@@ -10,7 +10,7 @@ pub struct FilterEffects {
     pub elems: Vec<FilterEffect>,
 }
 
-gm_named_list_chunk!(FEDS, FilterEffects, FilterEffect, direct);
+gm_list_chunk!(FEDS, FilterEffects, FilterEffect);
 
 impl GMElement for FilterEffects {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

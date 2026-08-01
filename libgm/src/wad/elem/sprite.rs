@@ -11,7 +11,8 @@ use crate::util::assert;
 use crate::util::init::vec_with_capacity;
 use crate::wad::Blob;
 use crate::wad::GMVersion;
-use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::chunk::gm_asset_list_chunk;
+use crate::wad::elem::GMComplexElement;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::sequence::Sequence;
 use crate::wad::elem::sequence::SpeedType;
@@ -25,16 +26,16 @@ pub struct Sprites {
     pub elems: Vec<Option<Sprite>>,
 }
 
-gm_named_list_chunk!(SPRT, Sprites, Sprite, nullable);
+gm_asset_list_chunk!(SPRT, Sprites, Sprite);
 
 impl GMElement for Sprites {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let elems: Vec<Option<Sprite>> = reader.read_pointer_list_opt()?;
+        let elems: Vec<Option<Sprite>> = reader.read_pointer_list_opt_ctx(())?;
         Ok(Self { elems })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
-        writer.write_pointer_list_opt(&self.elems)?;
+        writer.write_pointer_list_opt_ctx(&self.elems, ())?;
         Ok(())
     }
 }
@@ -61,8 +62,13 @@ pub struct Sprite {
 }
 
 #[allow(clippy::too_many_lines)] // TODO: these functions fucking suck
-impl GMElement for Sprite {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+impl GMComplexElement for Sprite {
+    type ReadContext = ();
+    type WriteContext = ();
+
+    const PRE_PADDING: u32 = 4;
+
+    fn deserialize_complex(reader: &mut DataReader, _ctx: ()) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let width = reader.read_u32()?;
         let height = reader.read_u32()?;
@@ -292,7 +298,7 @@ impl GMElement for Sprite {
         })
     }
 
-    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+    fn serialize_complex(&self, writer: &mut DataWriter, _ctx: ()) -> Result<()> {
         writer.write_gm_string(self.name)?;
         writer.write_u32(self.width);
         writer.write_u32(self.height);
@@ -440,16 +446,6 @@ impl GMElement for Sprite {
                 writer.write_elem(nine_slice)?;
             }
         }
-        Ok(())
-    }
-
-    fn deserialize_pre_padding(reader: &mut DataReader) -> Result<()> {
-        reader.align(4)?;
-        Ok(())
-    }
-
-    fn serialize_pre_padding(&self, writer: &mut DataWriter) -> Result<()> {
-        writer.align(4);
         Ok(())
     }
 }

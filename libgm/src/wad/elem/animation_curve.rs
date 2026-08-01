@@ -4,7 +4,7 @@ pub mod channel;
 pub use channel::Channel;
 
 use crate::prelude::*;
-use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::chunk::gm_asset_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::load::reader::DataReader;
 use crate::wad::save::writer::DataWriter;
@@ -15,7 +15,7 @@ pub struct AnimationCurves {
     pub elems: Vec<Option<AnimationCurve>>,
 }
 
-gm_named_list_chunk!(ACRV, AnimationCurves, AnimationCurve, nullable);
+gm_asset_list_chunk!(ACRV, AnimationCurves, AnimationCurve);
 
 impl GMElement for AnimationCurves {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

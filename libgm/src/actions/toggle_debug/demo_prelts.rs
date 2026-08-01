@@ -3,6 +3,7 @@
 //! Chapter: 1, 2
 //! 2021-09-17 to 2025-06-05
 
+use crate::actions::toggle_debug::create_event;
 use crate::gml::assembly::assemble_instruction;
 use crate::gml::instruction::InstanceType;
 use crate::gml::instruction::Instruction;
@@ -11,16 +12,15 @@ use crate::prelude::*;
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     log::debug!("Detected Deltarune PreLTS Demo Chapters 1&2");
     // Modify scr_gamestart
-    let code_ref = data
-        .codes
-        .ref_by_name("gml_Script_scr_gamestart", &data.strings)?;
-    super::replace_debug(data, code_ref, enable, InstanceType::Global)?;
+    let script = data.scripts.by_name("scr_gamestart", &data.strings)?;
+    super::replace_debug(data, script.code, enable, InstanceType::Global)?;
 
     // Modify obj_debugcontroller Creation
-    let code_ref = data
-        .codes
-        .ref_by_name("gml_Object_obj_debugcontroller_ch1_Create_0", &data.strings)?;
-    super::replace_debug(data, code_ref, enable, InstanceType::Self_)?;
+    let obj = data
+        .game_objects
+        .by_name("obj_debugcontroller_ch1", &data.strings)?;
+
+    super::replace_debug(data, create_event(obj)?, enable, InstanceType::Self_)?;
 
     // Modify obj_debugProfiler Creation
     let instructions = if enable {
@@ -30,9 +30,10 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     } else {
         vec![]
     };
-    let code = data
-        .codes
-        .by_name_mut("gml_Object_obj_debugProfiler_Create_0", &data.strings)?;
+    let obj = data
+        .game_objects
+        .by_name("obj_debugProfiler", &data.strings)?;
+    let code = data.codes.by_ref_mut(create_event(obj)?)?;
     code.instructions = instructions;
 
     // I am currently not checking the instruction count, unlike the original "UTDR

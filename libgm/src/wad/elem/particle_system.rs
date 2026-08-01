@@ -2,7 +2,7 @@
 
 use crate::prelude::*;
 use crate::wad::GMVersion;
-use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::chunk::gm_asset_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::particle_emitter::ParticleEmitter;
 use crate::wad::load::reader::DataReader;
@@ -14,7 +14,7 @@ pub struct ParticleSystems {
     pub elems: Vec<Option<ParticleSystem>>,
 }
 
-gm_named_list_chunk!(PSYS, ParticleSystems, ParticleSystem, nullable);
+gm_asset_list_chunk!(PSYS, ParticleSystems, ParticleSystem);
 
 impl GMElement for ParticleSystems {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

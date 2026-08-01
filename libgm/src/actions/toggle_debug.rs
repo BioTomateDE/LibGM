@@ -12,6 +12,7 @@ use crate::gml::instruction::InstanceType;
 use crate::gml::instruction::Instruction;
 use crate::prelude::*;
 use crate::wad::GMVersion;
+use crate::wad::elem::game_object::GameObject;
 use crate::wad::elem::variable::Variable;
 
 impl GMData {
@@ -147,4 +148,17 @@ fn replace_debug(
     let integer = i16::from(enable);
     code.instructions[instruction_index] = Instruction::PushImmediate { integer };
     Ok(())
+}
+
+// TODO: bro i NEED methods to access events again
+fn create_event(obj: &GameObject) -> Result<GMRef<Code>> {
+    Ok(obj
+        .events
+        .create
+        .first()
+        .ok_or("No create event found")?
+        .actions
+        .first()
+        .ok_or("No actions found")?
+        .code)
 }

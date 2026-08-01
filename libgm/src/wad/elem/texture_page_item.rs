@@ -13,7 +13,7 @@ pub struct TexturePageItems {
     pub elems: Vec<TexturePageItem>,
 }
 
-gm_list_chunk!(TPAG, TexturePageItems, TexturePageItem, direct);
+gm_list_chunk!(TPAG, TexturePageItems, TexturePageItem);
 
 impl GMElement for TexturePageItems {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

@@ -2,7 +2,6 @@
 
 use super::string::Strings;
 use crate::prelude::*;
-use crate::wad::chunk::GMNamedListChunk;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::GMNamedElement;
@@ -19,19 +18,7 @@ pub struct EmbeddedImages {
     pub elems: Vec<EmbeddedImage>,
 }
 
-gm_list_chunk!(EMBI, EmbeddedImages, EmbeddedImage, direct);
-
-impl GMNamedListChunk for EmbeddedImages {
-    fn ref_by_name(&self, name: &str, gm_strings: &Strings) -> Result<GMRef<EmbeddedImage>> {
-        for (gm_ref, elem) in self.element_refs() {
-            let elems: &String = elem.name.resolve(&gm_strings.elems)?;
-            if name == elems {
-                return Ok(gm_ref);
-            }
-        }
-        Err(err!("Could not find Embedded Image with name {name:?}"))
-    }
-}
+gm_list_chunk!(EMBI, EmbeddedImages, EmbeddedImage);
 
 impl GMElement for EmbeddedImages {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

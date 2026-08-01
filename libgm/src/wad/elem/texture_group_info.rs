@@ -22,7 +22,7 @@ pub struct TextureGroupInfos {
 }
 
 // not sure if direct
-gm_list_chunk!(TGIN, TextureGroupInfos, TextureGroupInfo, direct);
+gm_list_chunk!(TGIN, TextureGroupInfos, TextureGroupInfo);
 
 impl GMNamedElement for TextureGroupInfo {
     fn name_ref(&self) -> GMRef<String> {
@@ -36,18 +36,6 @@ impl GMNamedElement for TextureGroupInfo {
             validate_identifier(part)?;
         }
         Ok(())
-    }
-}
-
-impl GMNamedListChunk for TextureGroupInfos {
-    fn ref_by_name(&self, name: &str, gm_strings: &Strings) -> Result<GMRef<Self::Element>> {
-        for (gm_ref, elem) in self.element_refs() {
-            let elem_name: &String = elem.name.resolve(&gm_strings.elems)?;
-            if name == elem_name {
-                return Ok(gm_ref);
-            }
-        }
-        Err(err!("Could not find Texture Group Info with name {name:?}"))
     }
 }
 

@@ -3,9 +3,11 @@ use std::collections::HashMap;
 
 use crate::gml::instruction::VariableType;
 use crate::prelude::*;
+use crate::util::fmt::typename;
 use crate::wad::chunk::ChunkName;
 use crate::wad::chunk::ChunkOrder;
 use crate::wad::data::Endianness;
+use crate::wad::elem::GMComplexElement;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::function::Function;
 use crate::wad::elem::texture_page_item::TexturePageItem;
@@ -284,5 +286,17 @@ impl<'a> DataReader<'a> {
         } else {
             Ok(None)
         }
+    }
+
+    #[inline]
+    pub fn read_elem_ctx<T: GMComplexElement>(&mut self, ctx: T::ReadContext) -> Result<T> {
+        let start_pos = self.cur_pos;
+        T::deserialize_complex(self, ctx)
+            .ctx(|| format!("deserializing {} at position {start_pos}", typename::<T>()))
+    }
+
+    #[inline]
+    pub fn read_elem<T: GMElement>(&mut self) -> Result<T> {
+        self.read_elem_ctx(())
     }
 }

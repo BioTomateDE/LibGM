@@ -8,7 +8,8 @@ pub use self::function::Function;
 pub use self::option::ExtOption;
 use crate::gm_enum::gm_enum;
 use crate::prelude::*;
-use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::Blob;
+use crate::wad::chunk::gm_asset_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::load::reader::DataReader;
 use crate::wad::save::writer::DataWriter;
@@ -16,41 +17,48 @@ use crate::wad::version::GMVersion;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Extensions {
-    pub elems: Vec<Extension>,
+    pub elems: Vec<Option<Extension>>,
+
+    // Strange data for each extension, some kind of unique identifier based on
+    // the product ID for each of them.
+    //
+    // This should should have same number of elements as `elems`.
+    pub product_id_data: Vec<Blob<[u8; 16]>>,
 }
 
 // not sure if nullable
-gm_named_list_chunk!(EXTN, Extensions, Extension, direct);
+gm_asset_list_chunk!(EXTN, Extensions, Extension);
 
 impl GMElement for Extensions {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let mut elems: Vec<Extension> = reader.read_pointer_list()?;
+        let elems: Vec<Option<Extension>> = reader.read_pointer_list_opt()?;
+        let mut product_id_data = Vec::new();
 
         if has_product_id_data(reader.version) {
-            for elem in &mut elems {
-                let bytes: [u8; 16] = reader.read_bytes_const()?.to_owned();
-                elem.product_id_data = Some(bytes);
+            product_id_data = Vec::with_capacity(elems.len());
+            for _ in 0..elems.len() {
+                let bytes: [u8; 16] = *reader.read_bytes_const()?;
+                product_id_data.push(Blob(bytes));
             }
         }
 
-        Ok(Self { elems })
+        Ok(Self { elems, product_id_data })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
-        writer.write_pointer_list(&self.elems)?;
+        writer.write_pointer_list_opt(&self.elems)?;
 
-        if !has_product_id_data(writer.version()) {
-            return Ok(());
-        }
-
-        for elem in &self.elems {
-            let Some(data) = &elem.product_id_data else {
+        if has_product_id_data(writer.version()) {
+            let extension_count = self.elems.len();
+            let product_data_count = self.product_id_data.len();
+            if extension_count != product_data_count {
                 bail!(
-                    "Extension's Product ID Data is not set in {}",
-                    writer.version()
+                    "Expected {extension_count} product ID data entries, got {product_data_count}"
                 );
-            };
-            writer.write_bytes(data);
+            }
+            for data in &self.product_id_data {
+                writer.write_bytes(&data.0);
+            }
         }
 
         Ok(())

@@ -97,8 +97,10 @@ fn get_arg_count(code: &Code, data: &GMData) -> Result<u8> {
 /// cmp.i.v NEQ
 /// ```
 fn fix_undertale(data: &mut GMData) {
-    const NAME: &str = "gml_Script_SCR_TEXTTYPE";
-    let Ok(code) = data.codes.by_name_mut(NAME, &data.strings) else {
+    let Ok(script) = data.scripts.by_name("SCR_TEXTTYPE", &data.strings) else {
+        return;
+    };
+    let Ok(code) = data.codes.by_ref_mut(script.code) else {
         return;
     };
 

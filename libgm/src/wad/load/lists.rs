@@ -2,6 +2,7 @@
 use crate::prelude::*;
 use crate::util::fmt::typename;
 use crate::util::init::vec_with_capacity;
+use crate::wad::elem::GMComplexElement;
 use crate::wad::elem::GMElement;
 use crate::wad::load::reader::DataReader;
 
@@ -13,13 +14,16 @@ impl DataReader<'_> {
     /// allocation from malformed data.
     ///
     /// The list format is: `[count: u32][element_0][element_1]...[element_n]`
-    pub fn read_simple_list<T: GMElement>(&mut self) -> Result<Vec<T>> {
+    pub fn read_simple_list_ctx<T: GMComplexElement>(
+        &mut self,
+        context: T::ReadContext,
+    ) -> Result<Vec<T>> {
         let count = self.read_u32()?;
         let mut elements: Vec<T> = vec_with_capacity(count)
             .ctx(|| format!("reading simple list of {}", typename::<T>()))?;
 
         for _ in 0..count {
-            let element = T::deserialize(self).ctx(|| {
+            let element = T::deserialize_complex(self, context).ctx(|| {
                 format!(
                     "deserializing element {}/{} of {} simple list",
                     elements.len(),
@@ -33,6 +37,11 @@ impl DataReader<'_> {
         Ok(elements)
     }
 
+    #[inline]
+    pub fn read_simple_list<T: GMElement>(&mut self) -> Result<Vec<T>> {
+        self.read_simple_list_ctx(())
+    }
+
     /// Reads a GameMaker simple list with a 16-bit count prefix.
     ///
     /// Simple lists consist of a count followed by the elements' data in
@@ -40,13 +49,16 @@ impl DataReader<'_> {
     /// allocation from malformed data.
     ///
     /// The list format is: `[count: u16][element_0][element_1]...[element_n]`
-    pub fn read_simple_list_short<T: GMElement>(&mut self) -> Result<Vec<T>> {
+    pub fn read_simple_list_short_ctx<T: GMComplexElement>(
+        &mut self,
+        context: T::ReadContext,
+    ) -> Result<Vec<T>> {
         let count = u32::from(self.read_u16()?);
         let mut elements: Vec<T> = vec_with_capacity(count)
             .ctx(|| format!("reading short simple list of {}", typename::<T>()))?;
 
         for _ in 0..count {
-            let element = T::deserialize(self).ctx(|| {
+            let element = T::deserialize_complex(self, context).ctx(|| {
                 format!(
                     "deserializing element {}/{} of {} short simple list",
                     elements.len(),
@@ -60,13 +72,21 @@ impl DataReader<'_> {
         Ok(elements)
     }
 
-    pub fn read_pointer_list<T: GMElement>(&mut self) -> Result<Vec<T>> {
+    #[inline]
+    pub fn read_simple_list_short<T: GMElement>(&mut self) -> Result<Vec<T>> {
+        self.read_simple_list_short_ctx(())
+    }
+
+    pub fn read_pointer_list_ctx<T: GMComplexElement>(
+        &mut self,
+        context: T::ReadContext,
+    ) -> Result<Vec<T>> {
         let pointers: Vec<u32> = self.read_simple_list()?;
         let count = pointers.len();
 
         let mut elements: Vec<T> = Vec::with_capacity(count);
         for (i, pointer) in pointers.into_iter().enumerate() {
-            let element_opt: Option<T> = self.read_pointer_element(pointer).ctx(|| {
+            let element_opt: Option<T> = self.read_pointer_element(pointer, context).ctx(|| {
                 format!(
                     "deserializing element {}/{} of {} pointer list",
                     i,
@@ -87,14 +107,20 @@ impl DataReader<'_> {
         Ok(elements)
     }
 
-    pub fn read_pointer_list_opt<T: GMElement>(&mut self) -> Result<Vec<Option<T>>> {
-        // TODO: verify that 2024.11+ null pointers (unused asset removal) works
+    pub fn read_pointer_list<T: GMElement>(&mut self) -> Result<Vec<T>> {
+        self.read_pointer_list_ctx(())
+    }
+
+    pub fn read_pointer_list_opt_ctx<T: GMComplexElement>(
+        &mut self,
+        context: T::ReadContext,
+    ) -> Result<Vec<Option<T>>> {
         let pointers: Vec<u32> = self.read_simple_list()?;
         let count = pointers.len();
 
         let mut elements: Vec<Option<T>> = Vec::with_capacity(count);
         for (i, pointer) in pointers.into_iter().enumerate() {
-            let element_opt: Option<T> = self.read_pointer_element(pointer).ctx(|| {
+            let element_opt: Option<T> = self.read_pointer_element(pointer, context).ctx(|| {
                 format!(
                     "deserializing element {}/{} of nullable {} pointer list",
                     i,
@@ -107,8 +133,16 @@ impl DataReader<'_> {
         Ok(elements)
     }
 
-    fn read_pointer_element<T: GMElement>(&mut self, pointer: u32) -> Result<Option<T>> {
-        T::deserialize_pre_padding(self).ctx("reading pre-padding")?;
+    pub fn read_pointer_list_opt<T: GMElement>(&mut self) -> Result<Vec<Option<T>>> {
+        self.read_pointer_list_opt_ctx(())
+    }
+
+    fn read_pointer_element<T: GMComplexElement>(
+        &mut self,
+        pointer: u32,
+        context: T::ReadContext,
+    ) -> Result<Option<T>> {
+        self.align(T::PRE_PADDING).ctx("reading pre-padding")?;
 
         // Manually assert position
         if self.cur_pos != pointer {
@@ -126,7 +160,7 @@ impl DataReader<'_> {
             ))?;
         }
 
-        let element = T::deserialize(self)?;
+        let element = T::deserialize_complex(self, context)?;
         Ok(Some(element))
     }
 }

@@ -26,7 +26,6 @@ pub use string::KString;
 pub use text::Text;
 
 use crate::prelude::*;
-use crate::util::fmt::typename;
 use crate::wad::elem::GMElement;
 use crate::wad::load::reader::DataReader;
 use crate::wad::save::writer::DataWriter;
@@ -58,17 +57,13 @@ pub struct Data<T: GMElement> {
 impl<T: GMElement> GMElement for Data<T> {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.align(4)?;
-        let keyframes: Vec<Keyframe<T>> = reader
-            .read_simple_list()
-            .ctx(|| format!("deserializing {} keyframes", typename::<T>()))?;
+        let keyframes: Vec<Keyframe<T>> = reader.read_simple_list()?;
         Ok(Self { keyframes })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
         writer.align(4);
-        writer
-            .write_simple_list(&self.keyframes)
-            .ctx(|| format!("serializing {} keyframes", typename::<T>()))?;
+        writer.write_simple_list(&self.keyframes)?;
         Ok(())
     }
 }
@@ -111,17 +106,14 @@ pub struct Channel<T: GMElement> {
 
 impl<T: GMElement> GMElement for Channel<T> {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let id = reader.read_i32()?;
-        let value =
-            T::deserialize(reader).ctx(|| format!("deserializing {} channel", typename::<T>()))?;
+        let id: i32 = reader.read_i32()?;
+        let value: T = reader.read_elem()?;
         Ok(Self { id, value })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
         writer.write_i32(self.id);
-        self.value
-            .serialize(writer)
-            .ctx(|| format!("serializing {} channel", typename::<T>()))?;
+        writer.write_elem(&self.value)?;
         Ok(())
     }
 }

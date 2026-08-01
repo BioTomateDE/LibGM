@@ -14,7 +14,7 @@ pub struct Strings {
     pub align: bool,
 }
 
-gm_list_chunk!(STRG, Strings, String, direct);
+gm_list_chunk!(STRG, Strings, String);
 
 impl GMElement for Strings {
     // be sure not to use `reader.general_info` here, as it is not initialized yet!

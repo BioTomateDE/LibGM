@@ -3,7 +3,6 @@
 // TODO: clean up this file
 use std::collections::HashMap;
 
-use super::string::Strings;
 use crate::gml::Code;
 use crate::gml::ModernCodeData;
 use crate::gml::instruction::AssetReference;
@@ -21,10 +20,8 @@ use crate::prelude::*;
 use crate::util::fmt::hexdump;
 use crate::util::init::vec_with_capacity;
 use crate::wad::GMVersion;
-use crate::wad::chunk::GMNamedListChunk;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
-use crate::wad::elem::element_stub;
 use crate::wad::elem::function::Function;
 use crate::wad::elem::variable::Variable;
 use crate::wad::load::reader::DataReader;
@@ -36,21 +33,7 @@ pub struct Codes {
     pub elems: Vec<Code>,
 }
 
-gm_list_chunk!(CODE, Codes, Code, direct);
-
-impl GMNamedListChunk for Codes {
-    fn ref_by_name(&self, name: &str, gm_strings: &Strings) -> Result<GMRef<Self::Element>> {
-        for (gm_ref, elem) in self.element_refs() {
-            let elem_name: &String = elem.name.resolve(&gm_strings.elems)?;
-            if name == elem_name {
-                return Ok(gm_ref);
-            }
-        }
-        Err(err!("Could not find Code entry with name {name:?}"))
-    }
-}
-
-element_stub!(Code);
+gm_list_chunk!(CODE, Codes, Code);
 
 impl GMElement for Codes {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -232,6 +215,16 @@ impl GMElement for Codes {
         }
 
         Ok(())
+    }
+}
+
+impl GMElement for Code {
+    fn deserialize(_: &mut DataReader) -> Result<Self> {
+        unimplemented!() // TODO: bruh i cant mutate context kill me
+    }
+
+    fn serialize(&self, _: &mut DataWriter) -> Result<()> {
+        unimplemented!()
     }
 }
 

@@ -3,7 +3,8 @@
 use crate::prelude::*;
 use crate::util::init::vec_with_capacity;
 use crate::wad::GMVersion;
-use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::chunk::gm_asset_list_chunk;
+use crate::wad::elem::GMComplexElement;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::texture_page_item::TexturePageItem;
 use crate::wad::load::reader::DataReader;
@@ -31,7 +32,7 @@ impl Default for Tilesets {
     }
 }
 
-gm_named_list_chunk!(BGND, Tilesets, Tileset, nullable);
+gm_asset_list_chunk!(BGND, Tilesets, Tileset);
 
 impl GMElement for Tilesets {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
@@ -48,7 +49,7 @@ impl GMElement for Tilesets {
             }
 
             reader.assert_pos(pointer, "Tileset Pointer")?;
-            let tileset = Tileset::deserialize(reader)?;
+            let tileset = reader.read_elem_ctx(())?;
             elems[idx] = Some(tileset);
         }
 
@@ -73,7 +74,7 @@ impl GMElement for Tilesets {
                 writer.align(ALIGNMENT);
             }
             writer.patch_pointer_list(pointer_list_pos, i).ctx(ctx)?;
-            writer.write_elem(tileset).ctx(ctx)?;
+            writer.write_elem_ctx(tileset, ()).ctx(ctx)?;
         }
         Ok(())
     }
@@ -100,8 +101,13 @@ pub struct Tileset {
     pub gms2_data: Option<GMS2Data>,
 }
 
-impl GMElement for Tileset {
-    fn deserialize(reader: &mut DataReader) -> Result<Self> {
+impl GMComplexElement for Tileset {
+    type ReadContext = ();
+    type WriteContext = ();
+
+    const PRE_PADDING: u32 = ALIGNMENT;
+
+    fn deserialize_complex(reader: &mut DataReader, _ctx: ()) -> Result<Self> {
         let name: GMRef<String> = reader.read_gm_string()?;
         let transparent = reader.read_bool32()?;
         let smooth = reader.read_bool32()?;
@@ -119,18 +125,13 @@ impl GMElement for Tileset {
         })
     }
 
-    fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
+    fn serialize_complex(&self, writer: &mut DataWriter, _ctx: ()) -> Result<()> {
         writer.write_gm_string(self.name)?;
         writer.write_bool32(self.transparent);
         writer.write_bool32(self.smooth);
         writer.write_bool32(self.preload);
         writer.write_gm_texture(self.texture)?;
         writer.write_if_ver(&self.gms2_data, "GMS2 data", GMVersion::GMS2)?;
-        Ok(())
-    }
-
-    fn serialize_pre_padding(&self, writer: &mut DataWriter) -> Result<()> {
-        writer.align(ALIGNMENT);
         Ok(())
     }
 }

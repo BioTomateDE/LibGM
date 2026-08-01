@@ -12,7 +12,7 @@ use crate::gm_enum::gm_enum;
 use crate::prelude::*;
 use crate::util::init::hashmap_with_capacity;
 use crate::wad::GMVersion;
-use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::chunk::gm_asset_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::load::reader::DataReader;
 use crate::wad::save::writer::DataWriter;
@@ -24,7 +24,7 @@ pub struct Sequences {
     pub elems: Vec<Option<Sequence>>,
 }
 
-gm_named_list_chunk!(SEQN, Sequences, Sequence, nullable);
+gm_asset_list_chunk!(SEQN, Sequences, Sequence);
 
 impl GMElement for Sequences {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

@@ -14,7 +14,7 @@ pub struct ParticleEmitters {
     pub elems: Vec<ParticleEmitter>,
 }
 
-gm_list_chunk!(PSEM, ParticleEmitters, ParticleEmitter, direct);
+gm_list_chunk!(PSEM, ParticleEmitters, ParticleEmitter);
 
 impl GMElement for ParticleEmitters {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

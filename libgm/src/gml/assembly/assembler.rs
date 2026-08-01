@@ -473,13 +473,10 @@ fn resolve_function(
     gm_functions: &Functions,
     gm_strings: &Strings,
 ) -> Result<GMRef<Function>> {
-    for (gm_ref, func) in gm_functions.element_refs() {
-        let name = func.name(gm_strings)?;
-        if name == ident {
-            return Ok(gm_ref);
-        }
+    let func = gm_functions.find(ident, gm_strings);
+    if func.is_some() {
+        return Ok(func);
     }
-
     bail!("Function {ident:?} does not exist (needs to be created using GMFunctions::make first)")
 }
 

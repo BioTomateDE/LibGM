@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::wad::GMVersion;
-use crate::wad::chunk::gm_named_list_chunk;
+use crate::wad::chunk::gm_asset_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::load::reader::DataReader;
 use crate::wad::save::writer::DataWriter;
@@ -15,7 +15,7 @@ pub struct AudioGroups {
     pub elems: Vec<Option<AudioGroup>>,
 }
 
-gm_named_list_chunk!(AGRP, AudioGroups, AudioGroup, nullable);
+gm_asset_list_chunk!(AGRP, AudioGroups, AudioGroup);
 
 impl GMElement for AudioGroups {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {

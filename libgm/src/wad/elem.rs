@@ -47,38 +47,41 @@ pub mod timeline;
 pub mod ui_node;
 pub mod variable;
 
-/// All GameMaker elements that can be deserialized
-/// from a data file should implement this trait.
-#[expect(unused_variables)]
-pub(crate) trait GMElement: Sized {
+pub(crate) trait GMComplexElement: Sized {
+    const PRE_PADDING: u32 = 1;
+    const POST_PADDING: u32 = 1;
+    type ReadContext: Copy;
+    type WriteContext: Copy;
+
     /// Deserializes this element from the current position of the reader.
     ///
     /// Implementations should read the exact binary representation of this
     /// element and return a fully constructed instance.
-    fn deserialize(reader: &mut DataReader) -> Result<Self>;
+    fn deserialize_complex(reader: &mut DataReader, context: Self::ReadContext) -> Result<Self>;
 
     /// Serializes this element to the current position of the writer.
     ///
     /// Implementations should write the exact binary representation of this
     /// element in the format expected by the GameMaker runtime.
-    fn serialize(&self, writer: &mut DataWriter) -> Result<()>;
+    fn serialize_complex(&self, writer: &mut DataWriter, context: Self::WriteContext)
+    -> Result<()>;
+}
 
-    /// Handles padding bytes that may appear before this element in pointer lists.
-    ///
-    /// This is called before [`GMElement::deserialize`] when reading from
-    /// structured data. The default implementation does nothing - override
-    /// if your element requires alignment padding in specific contexts.
-    fn deserialize_pre_padding(reader: &mut DataReader) -> Result<()> {
-        Ok(())
+pub(crate) trait GMElement: Sized {
+    fn deserialize(reader: &mut DataReader) -> Result<Self>;
+    fn serialize(&self, writer: &mut DataWriter) -> Result<()>;
+}
+
+impl<T: GMElement> GMComplexElement for T {
+    type ReadContext = ();
+    type WriteContext = ();
+
+    fn deserialize_complex(reader: &mut DataReader, _context: ()) -> Result<Self> {
+        Self::deserialize(reader)
     }
 
-    /// Writes padding bytes that may be required before this element in pointer lists.
-    ///
-    /// This is called before [`GMElement::serialize`] when writing to
-    /// structured data. The default implementation does nothing - override
-    /// if your element requires alignment padding in specific contexts.
-    fn serialize_pre_padding(&self, writer: &mut DataWriter) -> Result<()> {
-        Ok(())
+    fn serialize_complex(&self, writer: &mut DataWriter, _context: ()) -> Result<()> {
+        self.serialize(writer)
     }
 }
 
@@ -204,7 +207,7 @@ impl GMElement for bool {
 }
 
 // TODO: this also allows texture page items. should there be a GMAsset trait or something?
-impl<T: GMElement> GMElement for GMRef<T> {
+impl<T: GMComplexElement> GMElement for GMRef<T> {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         reader.read_resource_by_id()
     }
@@ -228,7 +231,7 @@ impl GMElement for GMRef<String> {
 /// Validates all names of the root elements in this chunk.
 ///
 /// This checks for duplicates as well as names not following the proper charset.
-pub(crate) fn validate_names<T: GMNamedListChunk>(chunk: &T, gm_strings: &Strings) -> Result<()> {
+pub(crate) fn validate_names<T: GMAssetListChunk>(chunk: &T, gm_strings: &Strings) -> Result<()> {
     // PERF: this can probably be optimised or something
     let mut seen: HashMap<&String, GMRef<_>> = HashMap::new();
 
@@ -262,7 +265,7 @@ pub(crate) fn validate_names<T: GMNamedListChunk>(chunk: &T, gm_strings: &String
 /// they're contained in) should implement this trait.
 #[expect(private_bounds)]
 // TODO: maybe turn this into a `GMAsset` trait that only applies to thing referencable by name in gml
-pub trait GMNamedElement: GMElement {
+pub trait GMNamedElement: GMComplexElement {
     /// The name of this element as a `GMRef<String>`.
     #[must_use]
     fn name_ref(&self) -> GMRef<String>;
@@ -304,25 +307,3 @@ pub(crate) fn validate_identifier(name: &str) -> Result<()> {
 
     Ok(())
 }
-
-macro_rules! element_stub {
-    ($type:ty) => {
-        impl $crate::wad::elem::GMElement for $type {
-            fn deserialize(_: &mut $crate::wad::load::reader::DataReader) -> Result<Self> {
-                unimplemented!(
-                    "Using {0}::deserialize is not supported, use {0}s::deserialize instead",
-                    stringify!($type),
-                );
-            }
-
-            fn serialize(&self, _: &mut $crate::wad::save::writer::DataWriter) -> Result<()> {
-                unimplemented!(
-                    "Using {0}::serialize is not supported, use {0}s::serialize instead",
-                    stringify!($type),
-                );
-            }
-        }
-    };
-}
-
-pub(crate) use element_stub;
