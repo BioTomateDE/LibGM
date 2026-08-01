@@ -167,12 +167,7 @@ impl GMElement for ParticleEmitter {
             let size_max = reader.read_f32()?;
             let size_increase = reader.read_f32()?;
             let size_wiggle = reader.read_f32()?;
-            let data = DataPre2023_8 {
-                size_min,
-                size_max,
-                size_increase,
-                size_wiggle,
-            };
+            let data = DataPre2023_8 { size_min, size_max, size_increase, size_wiggle };
             SizeDataEtc::Pre2023_8(data)
         };
 

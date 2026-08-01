@@ -28,9 +28,7 @@ fn list_dir(dir: &Path) -> Result<Vec<PathBuf>> {
             continue;
         };
 
-        let ext = ext
-            .to_str()
-            .ok_or("Invalid File extension UTF-8 String {ext:?}")?;
+        let ext = ext.to_str().ok_or("Invalid File extension UTF-8 String {ext:?}")?;
 
         if matches!(ext, "win" | "unx" | "ios" | "droid") {
             data_file_paths.push(path);

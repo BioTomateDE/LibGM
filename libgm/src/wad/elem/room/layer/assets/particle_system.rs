@@ -28,16 +28,7 @@ impl GMElement for ParticleSystemInstance {
         let scale_y = reader.read_f32()?;
         let color = reader.read_u32()?;
         let rotation = reader.read_f32()?;
-        Ok(Self {
-            name,
-            particle_system,
-            x,
-            y,
-            scale_x,
-            scale_y,
-            color,
-            rotation,
-        })
+        Ok(Self { name, particle_system, x, y, scale_x, scale_y, color, rotation })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {

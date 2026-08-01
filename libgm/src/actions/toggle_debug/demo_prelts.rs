@@ -16,9 +16,7 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     super::replace_debug(data, script.code, enable, InstanceType::Global)?;
 
     // Modify obj_debugcontroller Creation
-    let obj = data
-        .game_objects
-        .by_name("obj_debugcontroller_ch1", &data.strings)?;
+    let obj = data.game_objects.by_name("obj_debugcontroller_ch1", &data.strings)?;
 
     super::replace_debug(data, create_event(obj)?, enable, InstanceType::Self_)?;
 
@@ -30,9 +28,7 @@ pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     } else {
         vec![]
     };
-    let obj = data
-        .game_objects
-        .by_name("obj_debugProfiler", &data.strings)?;
+    let obj = data.game_objects.by_name("obj_debugProfiler", &data.strings)?;
     let code = data.codes.by_ref_mut(create_event(obj)?)?;
     code.instructions = instructions;
 

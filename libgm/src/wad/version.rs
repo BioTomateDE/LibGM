@@ -84,11 +84,7 @@ impl GMElement for IdeVersion {
 
 impl fmt::Debug for IdeVersion {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}.{}.{}.{}",
-            self.major, self.minor, self.release, self.build
-        )
+        write!(f, "{}.{}.{}.{}", self.major, self.minor, self.release, self.build)
     }
 }
 

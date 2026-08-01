@@ -107,11 +107,7 @@ impl DataReader<'_> {
             self.chunk.length(),
             pos - start,
             end - pos,
-            if all_zero {
-                "; all remaining bytes are zero"
-            } else {
-                ""
-            }
+            if all_zero { "; all remaining bytes are zero" } else { "" }
         ))?;
         Ok(())
     }

@@ -115,11 +115,7 @@ pub struct Data2022_1 {
 
 impl Default for Data2022_1 {
     fn default() -> Self {
-        Self {
-            effect_enabled: true,
-            effect_type: GMRef::none(),
-            effect_properties: Vec::new(),
-        }
+        Self { effect_enabled: true, effect_type: GMRef::none(), effect_properties: Vec::new() }
     }
 }
 
@@ -128,11 +124,7 @@ impl GMElement for Data2022_1 {
         let effect_enabled = reader.read_bool32()?;
         let effect_type: GMRef<String> = reader.read_gm_string()?;
         let effect_properties: Vec<effect::Property> = reader.read_simple_list()?;
-        Ok(Self {
-            effect_enabled,
-            effect_type,
-            effect_properties,
-        })
+        Ok(Self { effect_enabled, effect_type, effect_properties })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {

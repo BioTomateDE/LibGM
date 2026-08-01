@@ -9,8 +9,7 @@ pub fn dump_texture_pages(data: &GMData) -> Result<()> {
             continue;
         };
         let img = img.to_dynamic_image()?;
-        img.save(format!("{dirname}/{i}.png"))
-            .ctx_any("saving texture page")?;
+        img.save(format!("{dirname}/{i}.png")).ctx_any("saving texture page")?;
     }
 
     Ok(())

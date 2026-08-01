@@ -10,11 +10,7 @@ pub fn check_2022_6(reader: &mut DataReader) -> Result<Option<GMVersion>> {
         return Ok(None);
     }
     let first_ext_ptr = reader.read_u32()?;
-    let first_ext_end_ptr = if ext_count >= 2 {
-        reader.read_u32()?
-    } else {
-        reader.chunk.end_pos
-    };
+    let first_ext_end_ptr = if ext_count >= 2 { reader.read_u32()? } else { reader.chunk.end_pos };
     reader.cur_pos = first_ext_ptr + 12;
     let new_pointer1 = reader.read_u32()?;
     let new_pointer2 = reader.read_u32()?;

@@ -23,11 +23,6 @@ impl CodeVariable {
     /// Creates a new [`CodeVariable`] with [`ReferenceType::Normal`] and `is_int32 = false`.
     #[must_use]
     pub const fn new(variable: GMRef<Variable>, instance_type: InstanceType) -> Self {
-        Self {
-            variable,
-            ref_type: ReferenceType::Normal,
-            instance_type,
-            is_int32: false,
-        }
+        Self { variable, ref_type: ReferenceType::Normal, instance_type, is_int32: false }
     }
 }

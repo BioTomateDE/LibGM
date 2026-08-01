@@ -110,9 +110,5 @@ pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersi
         }
     }
 
-    if detected_2023_8 {
-        target_version!(GM2023_8)
-    } else {
-        Ok(None)
-    }
+    if detected_2023_8 { target_version!(GM2023_8) } else { Ok(None) }
 }

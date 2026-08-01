@@ -30,14 +30,7 @@ impl GMElement for NineSlice {
             *tile_mode = reader.read_enum()?;
         }
 
-        Ok(Self {
-            left,
-            top,
-            right,
-            bottom,
-            enabled,
-            tile_modes,
-        })
+        Ok(Self { left, top, right, bottom, enabled, tile_modes })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {

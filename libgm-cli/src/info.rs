@@ -15,10 +15,7 @@ pub fn print_general(g: &GeneralInfo, s: &Strings) {
     println!("Created at: {:?}", g.creation_timestamp);
     println!("Window dimensions: {}x{}", g.window_width, g.window_height);
     println!("Config: {}", g.config.display(s));
-    println!(
-        "Last instance/tile ID: {}, {}",
-        g.last_instance_id, g.last_tile_id
-    );
+    println!("Last instance/tile ID: {}, {}", g.last_instance_id, g.last_tile_id);
     println!("Room count: {}", g.room_order.len());
     if g.debugger_enabled {
         println!("GameMaker debugger is enabled");

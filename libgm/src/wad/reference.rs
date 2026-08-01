@@ -145,11 +145,7 @@ impl<T> GMRef<T> {
 
     #[must_use]
     pub const fn index(self) -> Option<usize> {
-        if self.is_some() {
-            Some(self.index as usize)
-        } else {
-            None
-        }
+        if self.is_some() { Some(self.index as usize) } else { None }
     }
 
     #[must_use]
@@ -249,7 +245,6 @@ impl<T> GMRef<T> {
 impl GMRef<String> {
     #[must_use]
     pub fn display(self, gm_strings: &Strings) -> &str {
-        self.resolve(&gm_strings.elems)
-            .map_or("<invalid string ref>", String::as_str)
+        self.resolve(&gm_strings.elems).map_or("<invalid string ref>", String::as_str)
     }
 }

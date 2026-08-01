@@ -77,14 +77,7 @@ impl GMElement for Assets {
             }
         }
 
-        Ok(Self {
-            legacy_tiles,
-            sprites,
-            sequences,
-            nine_slices,
-            particle_systems,
-            text_items,
-        })
+        Ok(Self { legacy_tiles, sprites, sequences, nine_slices, particle_systems, text_items })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {

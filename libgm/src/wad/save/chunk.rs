@@ -36,9 +36,7 @@ impl DataWriter<'_> {
         let start_pos: u32 = self.pos();
         let length_pos = start_pos - 4;
 
-        element
-            .serialize(self)
-            .ctx(|| format!("serializing chunk {name}"))?;
+        element.serialize(self).ctx(|| format!("serializing chunk {name}"))?;
 
         // Write padding in these versions
         let padding_start_pos = self.pos();

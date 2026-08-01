@@ -83,10 +83,7 @@ pub fn assemble_instruction(line: &str, gm_data: &GMData) -> Result<Instruction>
     let instruction = parse_instruction(&mut reader, mnemonic, types, gm_data)?;
 
     if !reader.is_empty() && !reader.line.trim_start().starts_with('#') {
-        bail!(
-            "Expected end of line; found remaining string {:?}",
-            reader.line,
-        );
+        bail!("Expected end of line; found remaining string {:?}", reader.line,);
     }
 
     Ok(instruction)
@@ -127,11 +124,7 @@ fn parse_instruction(
         "pop" => {
             types.assert_count(2, mnemonic)?;
             let variable: CodeVariable = parse_variable(reader, gm_data)?;
-            Instruction::Pop {
-                type1: types[0],
-                type2: types[1],
-                variable,
-            }
+            Instruction::Pop { type1: types[0], type2: types[1], variable }
         }
         "popswap" => {
             types.assert_count(0, mnemonic)?;
@@ -184,9 +177,7 @@ fn parse_instruction(
             types.assert_count(0, mnemonic)?;
             Instruction::PopWithContextExit
         }
-        "push" => Instruction::Push {
-            value: parse_push(types, reader, gm_data)?,
-        },
+        "push" => Instruction::Push { value: parse_push(types, reader, gm_data)? },
         "pushloc" => {
             types.assert_count(0, mnemonic)?;
             let variable = parse_variable(reader, gm_data)?;
@@ -278,11 +269,7 @@ fn parse_comparison(types: DataTypes, reader: &mut Reader) -> Result<Instruction
         "GT" => ComparisonType::GreaterThan,
         _ => bail!("Invalid Comparison Type {comparison_type:?}"),
     };
-    Ok(Instruction::Compare {
-        lhs: types[1],
-        rhs: types[0],
-        comparison_type,
-    })
+    Ok(Instruction::Compare { lhs: types[1], rhs: types[0], comparison_type })
 }
 
 fn parse_duplicate(types: DataTypes, reader: &mut Reader) -> Result<Instruction> {
@@ -328,10 +315,8 @@ fn parse_push(types: DataTypes, reader: &mut Reader, gm_data: &GMData) -> Result
         DataType::Long => PushValue::Long(parse_int(reader.clear())?),
         DataType::Double => {
             let float: &str = reader.clear();
-            let float: f64 = float
-                .parse()
-                .ok()
-                .ok_or_else(|| format!("Invalid float literal {float:?}"))?;
+            let float: f64 =
+                float.parse().ok().ok_or_else(|| format!("Invalid float literal {float:?}"))?;
             PushValue::Double(float)
         }
         DataType::Bool => {
@@ -405,9 +390,8 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
     let instance_type: InstanceType = match instance_type_raw {
         "self" => InstanceType::Self_,
         "object" => {
-            let object_ref: GMRef<GameObject> = gm_data
-                .game_objects
-                .ref_by_name(instance_type_arg, &gm_data.strings)?;
+            let object_ref: GMRef<GameObject> =
+                gm_data.game_objects.ref_by_name(instance_type_arg, &gm_data.strings)?;
             InstanceType::GameObject(object_ref)
         }
         "instance" => {
@@ -451,11 +435,7 @@ fn parse_variable(reader: &mut Reader, gm_data: &GMData) -> Result<CodeVariable>
 }
 
 fn parse_variable_identifier<'a>(reader: &'a mut Reader) -> Result<&'a str> {
-    if reader.consume_str("$$$$temp$$$$") {
-        Ok("$$$$temp$$$$")
-    } else {
-        reader.parse_identifier()
-    }
+    if reader.consume_str("$$$$temp$$$$") { Ok("$$$$temp$$$$") } else { reader.parse_identifier() }
 }
 
 fn parse_function(
@@ -481,9 +461,7 @@ fn resolve_function(
 }
 
 fn parse_int<T: FromStr + Copy>(string: &str) -> Result<T> {
-    string
-        .parse()
-        .map_err(|_| err!("Invalid {} Integer {:?}", typename::<T>(), string))
+    string.parse().map_err(|_| err!("Invalid {} Integer {:?}", typename::<T>(), string))
 }
 
 fn parse_i32(string: &str) -> Result<i32> {

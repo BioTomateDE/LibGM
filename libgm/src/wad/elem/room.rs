@@ -93,9 +93,7 @@ impl GMElement for Room {
         let views_ptr = reader.read_u32()?;
         let game_objects_ptr = reader.read_u32()?;
         let tiles_ptr = reader.read_u32()?;
-        let instances_ptr = reader
-            .deserialize_if_version(GMVersion::GM2024_13)?
-            .unwrap_or(0);
+        let instances_ptr = reader.deserialize_if_version(GMVersion::GM2024_13)?.unwrap_or(0);
 
         let world = reader.read_bool32()?;
         let top = reader.read_u32()?;
@@ -107,9 +105,7 @@ impl GMElement for Room {
         let meters_per_pixel = reader.read_f32()?;
 
         let layers_ptr: u32 = reader.deserialize_if_version(GMVersion::GMS2)?.unwrap_or(0);
-        let sequences_ptr: u32 = reader
-            .deserialize_if_version(GMVersion::GMS2_3)?
-            .unwrap_or(0);
+        let sequences_ptr: u32 = reader.deserialize_if_version(GMVersion::GMS2_3)?.unwrap_or(0);
 
         reader.assert_pos(backgrounds_ptr, "Room Backgrounds")?;
         let backgrounds: Vec<RoomBackground> = reader.read_pointer_list()?;

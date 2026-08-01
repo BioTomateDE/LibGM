@@ -15,11 +15,8 @@ pub struct Moment {
 impl GMElement for Moment {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let internal_count = reader.read_i32()?;
-        let event: GMRef<String> = if internal_count > 0 {
-            reader.read_gm_string()?
-        } else {
-            GMRef::none()
-        };
+        let event: GMRef<String> =
+            if internal_count > 0 { reader.read_gm_string()? } else { GMRef::none() };
         Ok(Self { internal_count, event })
     }
 

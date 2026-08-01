@@ -27,13 +27,7 @@ impl GMElement for Frame {
         for _ in 0..frame_object_count {
             frame_objects.push(Object::deserialize(reader)?);
         }
-        Ok(Self {
-            frame_objects,
-            min_x,
-            max_x,
-            min_y,
-            max_y,
-        })
+        Ok(Self { frame_objects, min_x, max_x, min_y, max_y })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {

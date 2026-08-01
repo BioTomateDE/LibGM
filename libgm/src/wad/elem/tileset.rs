@@ -115,14 +115,7 @@ impl GMComplexElement for Tileset {
         let texture: GMRef<TexturePageItem> = reader.read_gm_texture()?;
         let gms2_data: Option<GMS2Data> = reader.deserialize_if_version(GMVersion::GMS2)?;
 
-        Ok(Self {
-            name,
-            transparent,
-            smooth,
-            preload,
-            texture,
-            gms2_data,
-        })
+        Ok(Self { name, transparent, smooth, preload, texture, gms2_data })
     }
 
     fn serialize_complex(&self, writer: &mut DataWriter, _ctx: ()) -> Result<()> {

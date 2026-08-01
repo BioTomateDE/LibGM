@@ -22,9 +22,7 @@ impl GMElement for TexturePageItems {
 
         for (i, pointer) in pointers.into_iter().enumerate() {
             reader.cur_pos = pointer;
-            reader
-                .texture_page_item_occurrences
-                .insert(pointer, GMRef::from(i));
+            reader.texture_page_item_occurrences.insert(pointer, GMRef::from(i));
             elems.push(TexturePageItem::deserialize(reader)?);
         }
 

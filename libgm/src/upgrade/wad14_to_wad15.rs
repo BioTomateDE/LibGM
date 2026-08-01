@@ -109,12 +109,8 @@ fn fix_undertale(data: &mut GMData) {
         return;
     };
 
-    let undefined: GMRef<Variable> = data.variables.make(
-        "undefined",
-        VariableType::Self_,
-        data.meta.version,
-        &mut data.strings,
-    );
+    let undefined: GMRef<Variable> =
+        data.variables.make("undefined", VariableType::Self_, data.meta.version, &mut data.strings);
 
     let codevar = CodeVariable::new(undefined, InstanceType::Self_);
     code.instructions[1] = Instruction::Push { value: PushValue::Variable(codevar) };

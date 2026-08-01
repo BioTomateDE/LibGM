@@ -131,8 +131,7 @@ impl GMElement for TexturePages {
             writer.align(0x80);
             writer.resolve_pointer(&texture_page.image)?;
             let start_pos: u32 = writer.pos();
-            img.serialize(writer)
-                .ctx("serializing texture page image")?;
+            img.serialize(writer).ctx("serializing texture page image")?;
             if writer.version() >= GMVersion::GM2022_3 {
                 let length: u32 = writer.pos() - start_pos;
                 writer.patch_u32(length, texture_block_size_placeholders[i])?;
@@ -191,11 +190,7 @@ impl GMElement for Data2022_9 {
         let texture_width = reader.read_u32()?;
         let texture_height = reader.read_u32()?;
         let index_in_group = reader.read_u32()?;
-        Ok(Self {
-            texture_width,
-            texture_height,
-            index_in_group,
-        })
+        Ok(Self { texture_width, texture_height, index_in_group })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
@@ -248,10 +243,8 @@ fn read_png(reader: &mut DataReader) -> Result<GMImage> {
             .cloned()
             .map(u32::from_be_bytes)
             .ctx("reading PNG chunk length")?;
-        let chunk_type: [u8; 4] = reader
-            .read_bytes_const()
-            .cloned()
-            .ctx("reading PNG chunk type")?;
+        let chunk_type: [u8; 4] =
+            reader.read_bytes_const().cloned().ctx("reading PNG chunk type")?;
         reader.cur_pos += length + 4;
         if &chunk_type == b"IEND" {
             break;
@@ -260,9 +253,7 @@ fn read_png(reader: &mut DataReader) -> Result<GMImage> {
 
     let data_length = reader.cur_pos - start_position;
     reader.cur_pos = start_position;
-    let bytes: &[u8] = reader
-        .read_bytes_dyn(data_length)
-        .ctx("reading PNG image data")?;
+    let bytes: &[u8] = reader.read_bytes_dyn(data_length).ctx("reading PNG image data")?;
     let image = GMImage::from_png(bytes.to_vec());
     Ok(image)
 }
@@ -286,9 +277,8 @@ fn read_bz2_qoi(
 
     // Read entire image (excluding bz2 header) to byte array
     reader.cur_pos = start_position + header_size;
-    let raw_image_data: &[u8] = reader
-        .read_bytes_dyn(bz2_stream_length)
-        .ctx("reading BZip2 Stream of BZip2 QOI Image")?;
+    let raw_image_data: &[u8] =
+        reader.read_bytes_dyn(bz2_stream_length).ctx("reading BZip2 Stream of BZip2 QOI Image")?;
 
     let u16_from = match reader.endianness {
         Endianness::Little => u16::from_le_bytes,
@@ -305,10 +295,8 @@ fn read_qoi(reader: &mut DataReader) -> Result<GMImage> {
     let start_position = reader.cur_pos - 8;
     let data_length = reader.read_u32()?;
     reader.cur_pos = start_position;
-    let raw_image_data: Vec<u8> = reader
-        .read_bytes_dyn(data_length + 12)
-        .ctx("reading QOI Image data")?
-        .to_vec();
+    let raw_image_data: Vec<u8> =
+        reader.read_bytes_dyn(data_length + 12).ctx("reading QOI Image data")?.to_vec();
     let image = GMImage::from_qoi(raw_image_data);
     Ok(image)
 }
@@ -319,16 +307,13 @@ fn find_end_of_bz2_stream(reader: &mut DataReader, max_end_of_stream_pos: u32) -
     // We want to find the end of nonzero data.
 
     let stream_start_position = reader.cur_pos;
-    let mut chunk_start_position = max(
-        stream_start_position,
-        max_end_of_stream_pos - MAX_CHUNK_SIZE,
-    );
+    let mut chunk_start_position =
+        max(stream_start_position, max_end_of_stream_pos - MAX_CHUNK_SIZE);
     let chunk_size = max_end_of_stream_pos - chunk_start_position;
     loop {
         reader.cur_pos = chunk_start_position;
-        let chunk_data: &[u8] = reader
-            .read_bytes_dyn(chunk_size)
-            .ctx("reading BZip2 stream chunk")?;
+        let chunk_data: &[u8] =
+            reader.read_bytes_dyn(chunk_size).ctx("reading BZip2 stream chunk")?;
         reader.cur_pos += chunk_size;
 
         // Find first nonzero byte at end of stream
@@ -362,10 +347,8 @@ fn find_end_of_bz2_search(reader: &mut DataReader, end_data_position: u32) -> Re
 
     // Read 16 bytes from the end of the BZ2 stream
     reader.cur_pos = start_position;
-    let data: [u8; BUFFER_LENGTH as usize] = reader
-        .read_bytes_const()
-        .cloned()
-        .ctx("reading BZip2 stream data")?;
+    let data: [u8; BUFFER_LENGTH as usize] =
+        reader.read_bytes_const().cloned().ctx("reading BZip2 stream data")?;
     // If this read fails due to overflow; implement saturating logic like in utmt
 
     // Start searching for magic, bit by bit (it is not always byte-aligned)

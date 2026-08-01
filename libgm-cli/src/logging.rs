@@ -30,11 +30,7 @@ pub fn init() {
 }
 
 fn get_env() -> Env<'static> {
-    let default_level = if cfg!(debug_assertions) {
-        "debug"
-    } else {
-        "info"
-    };
+    let default_level = if cfg!(debug_assertions) { "debug" } else { "info" };
     Env::default().default_filter_or(default_level)
 }
 
@@ -48,11 +44,7 @@ fn format_target(record: &Record) -> Option<String> {
         file.to_owned()
     };
 
-    let target = if let Some(line) = record.line() {
-        format!("{file}:{line}")
-    } else {
-        file
-    };
+    let target = if let Some(line) = record.line() { format!("{file}:{line}") } else { file };
 
     Some(target.dimmed().to_string())
 }

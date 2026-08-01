@@ -15,9 +15,8 @@ pub fn check_2022_5(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     let vertex_count = reader.read_u32()?;
 
     // i hate integer safety
-    let Some(position) = vertex_count
-        .checked_mul(8)
-        .and_then(|x| x.checked_add(reader.cur_pos + 12))
+    let Some(position) =
+        vertex_count.checked_mul(8).and_then(|x| x.checked_add(reader.cur_pos + 12))
     else {
         return Ok(None);
     };

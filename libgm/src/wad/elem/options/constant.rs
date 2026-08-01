@@ -28,9 +28,6 @@ impl GMElement for Constant {
 impl Constant {
     #[must_use]
     pub fn new(name: &str, value: &str, strings: &mut Strings) -> Self {
-        Self {
-            name: strings.make(name),
-            value: strings.make(value),
-        }
+        Self { name: strings.make(name), value: strings.make(value) }
     }
 }

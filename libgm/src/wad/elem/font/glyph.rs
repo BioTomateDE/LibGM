@@ -56,16 +56,7 @@ impl GMElement for Glyph {
         }
         let kernings: Vec<Kerning> = reader.read_simple_list_short()?;
 
-        Ok(Self {
-            character,
-            x,
-            y,
-            width,
-            height,
-            shift_modifier,
-            offset,
-            kernings,
-        })
+        Ok(Self { character, x, y, width, height, shift_modifier, offset, kernings })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {

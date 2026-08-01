@@ -67,19 +67,14 @@ fn slice_instructions_by_bytes(
 pub fn disassemble_code(code: &Code, gm_data: &GMData) -> Result<String> {
     if let Some(modern) = &code.modern_data {
         if modern.parent.is_some() {
-            let parent: &Code = gm_data
-                .codes
-                .by_ref(modern.parent)
-                .ctx("resolving parent code entry")?;
+            let parent: &Code =
+                gm_data.codes.by_ref(modern.parent).ctx("resolving parent code entry")?;
             // can there be nested parents? cuz it only works for one layer rn
             let instrs = slice_instructions_by_bytes(&parent.instructions, modern.execution_offset)
                 .ctx("preparing to disassemble child code entry")?;
             return disassemble_instructions(instrs, gm_data);
         } else if modern.execution_offset != 0 {
-            bail!(
-                "Root code entry has non-zero byte offset {}",
-                modern.execution_offset
-            );
+            bail!("Root code entry has non-zero byte offset {}", modern.execution_offset);
         }
     }
 
@@ -153,14 +148,7 @@ pub fn disassemble_instruction_to_buffer(
         }
 
         Instruction::DuplicateSwap { data_type, size1, size2 } => {
-            write!(
-                buffer,
-                "{}.{} {} {}",
-                mnemonic,
-                data_type.as_char(),
-                size1,
-                size2,
-            );
+            write!(buffer, "{}.{} {} {}", mnemonic, data_type.as_char(), size1, size2,);
         }
 
         Instruction::Branch { jump_offset }
@@ -191,13 +179,7 @@ pub fn disassemble_instruction_to_buffer(
         }
 
         Instruction::Pop { variable, type1, type2 } => {
-            write!(
-                buffer,
-                "{}.{}.{} ",
-                mnemonic,
-                type1.as_char(),
-                type2.as_char()
-            );
+            write!(buffer, "{}.{}.{} ", mnemonic, type1.as_char(), type2.as_char());
             write_variable(variable, buffer, gm_data)?;
         }
 
@@ -360,11 +342,7 @@ fn write_push_instruction(value: PushValue, buffer: &mut String, gm_data: &GMDat
             write_variable(code_variable, buffer, gm_data)?;
         }
         PushValue::Function(function_ref) => {
-            write!(
-                buffer,
-                "(function){}",
-                resolve_function_name(function_ref, gm_data)?
-            );
+            write!(buffer, "(function){}", resolve_function_name(function_ref, gm_data)?);
         }
     }
     Ok(())
@@ -460,8 +438,7 @@ fn write_instance_type(
         InstanceType::Self_ => write!(buffer, "self"),
         InstanceType::GameObject(obj_ref) => {
             let obj: &GameObject = gm_data.game_objects.by_ref(obj_ref)?;
-            obj.validate_name(&gm_data.strings)
-                .ctx("validating game object name")?;
+            obj.validate_name(&gm_data.strings).ctx("validating game object name")?;
             write!(buffer, "object<{}>", obj.name(&gm_data.strings)?);
         }
         InstanceType::Instance(instance_id) => {
@@ -487,21 +464,14 @@ fn write_variable(
     gm_data: &GMData,
 ) -> Result<()> {
     let variable: &Variable = gm_data.variables.by_ref(code_variable.variable)?;
-    variable
-        .validate_name(&gm_data.strings)
-        .ctx("validating variable identifier")?;
+    variable.validate_name(&gm_data.strings).ctx("validating variable identifier")?;
     let name: &String = variable.name(&gm_data.strings)?;
 
     if code_variable.is_int32 {
         write!(buffer, "(variable)");
     }
     write!(buffer, "{}", code_variable.ref_type.as_str());
-    write_instance_type(
-        code_variable.instance_type,
-        buffer,
-        code_variable.variable,
-        gm_data,
-    )?;
+    write_instance_type(code_variable.instance_type, buffer, code_variable.variable, gm_data)?;
     write!(buffer, ".{name}");
 
     Ok(())
@@ -527,10 +497,7 @@ fn write_gm_string(
 
 fn write_literal_string(string_lit: &str, buffer: &mut String) {
     // Fast path: check if any escaping is needed
-    if !string_lit
-        .bytes()
-        .any(|b| matches!(b, b'\\' | b'"' | b'\n' | b'\r' | b'\t'))
-    {
+    if !string_lit.bytes().any(|b| matches!(b, b'\\' | b'"' | b'\n' | b'\r' | b'\t')) {
         write!(buffer, "\"{string_lit}\"");
         return;
     }

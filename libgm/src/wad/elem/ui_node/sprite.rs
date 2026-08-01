@@ -15,10 +15,7 @@ impl GMElement for SpriteInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let sprite_instance = room::layer::assets::SpriteInstance::deserialize(reader)?;
         let flex_instance_properties = flex::instance::Properties::deserialize(reader)?;
-        Ok(Self {
-            flex_instance_properties,
-            sprite_instance,
-        })
+        Ok(Self { flex_instance_properties, sprite_instance })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {

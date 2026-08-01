@@ -182,11 +182,8 @@ impl GMElement for GeneralInfo {
         let function_classifications = FunctionClassifications::from_bits(fclass)
             .ok_or_else(|| format!("Invalid GEN8 Function Classifications {fclass:016X}"))?;
         let steam_appid = reader.read_i32()?;
-        let debugger_port: u32 = if reader.version >= GMVersion::Wad14 {
-            reader.read_u32()?
-        } else {
-            0
-        };
+        let debugger_port: u32 =
+            if reader.version >= GMVersion::Wad14 { reader.read_u32()? } else { 0 };
         let room_order: Vec<GMRef<Room>> = reader.read_simple_list()?;
 
         let mut general_info = Self {

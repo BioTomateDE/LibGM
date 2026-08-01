@@ -9,8 +9,6 @@ use crate::prelude::*;
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     log::debug!("Detected Deltarune LTS Demo Chapter 1");
-    let obj = data
-        .game_objects
-        .by_name("obj_debugcontroller", &data.strings)?;
+    let obj = data.game_objects.by_name("obj_debugcontroller", &data.strings)?;
     super::replace_debug(data, create_event(obj)?, enable, InstanceType::Global)
 }

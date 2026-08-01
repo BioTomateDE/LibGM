@@ -15,18 +15,13 @@ use crate::wad::elem::variable::Variable;
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     log::debug!("Detected Deltarune Chapter 1/2/4");
-    let obj = data
-        .game_objects
-        .by_name("obj_initializer2", &data.strings)?;
+    let obj = data.game_objects.by_name("obj_initializer2", &data.strings)?;
     super::replace_debug(data, create_event(obj)?, enable, InstanceType::Global)?;
 
     if !enable {
         return Ok(());
     }
-    let no_flagname = data
-        .scripts
-        .by_name("gml_Script_scr_flag_name_get", &data.strings)
-        .is_err();
+    let no_flagname = data.scripts.by_name("gml_Script_scr_flag_name_get", &data.strings).is_err();
     if no_flagname {
         return Ok(());
     }

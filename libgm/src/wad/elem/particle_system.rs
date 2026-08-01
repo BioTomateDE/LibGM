@@ -54,14 +54,7 @@ impl GMElement for ParticleSystem {
         let global_space_particles: Option<bool> =
             reader.deserialize_if_version(GMVersion::GM2023_8)?;
         let emitters: Vec<GMRef<ParticleEmitter>> = reader.read_simple_list()?;
-        Ok(Self {
-            name,
-            origin_x,
-            origin_y,
-            draw_order,
-            global_space_particles,
-            emitters,
-        })
+        Ok(Self { name, origin_x, origin_y, draw_order, global_space_particles, emitters })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {

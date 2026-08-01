@@ -8,9 +8,7 @@ pub fn dump_sprites(data: &GMData) -> Result<()> {
     let mut cached_texture_pages: Vec<Option<DynamicImage>> = vec![None; data.texture_pages.len()];
 
     for sprite in data.sprites.elements() {
-        sprite
-            .validate_name(&data.strings)
-            .ctx_any("validating sprite name")?;
+        sprite.validate_name(&data.strings).ctx_any("validating sprite name")?;
         let name = data.strings.by_ref(sprite.name)?;
 
         for (i, &texture_ref) in sprite.textures.iter().enumerate() {

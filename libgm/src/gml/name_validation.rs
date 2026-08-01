@@ -20,13 +20,9 @@ fn validate(mut name: &str) -> Result<()> {
         return validate_identifier(rest);
     }
 
-    name = name
-        .strip_prefix("gml_")
-        .ok_or("Code entry name does not start with \"gml_\"")?;
+    name = name.strip_prefix("gml_").ok_or("Code entry name does not start with \"gml_\"")?;
 
-    let split = name
-        .split_once('_')
-        .ok_or("Code entry name does not have a kind`:")?;
+    let split = name.split_once('_').ok_or("Code entry name does not have a kind`:")?;
     let kind: &str = split.0;
     name = split.1;
 
@@ -40,18 +36,15 @@ fn validate(mut name: &str) -> Result<()> {
         }
         "Room" => {
             let event_kind: &str;
-            (name, event_kind) = name
-                .rsplit_once('_')
-                .ok_or("Missing event kind in Room code entry name")?;
+            (name, event_kind) =
+                name.rsplit_once('_').ok_or("Missing event kind in Room code entry name")?;
             validate_room_event_kind(event_kind)?;
         }
         "RoomCC" => {
             let e = "RoomCC code entry name has too few parts (not enough underscores to be valid)";
             let (instance_id, event_kind) = last_three_parts(&mut name).ok_or(e)?;
             validate_room_event_kind(event_kind)?;
-            instance_id
-                .parse::<u16>()
-                .ctx_any("parsing Instance ID in RoomCC code entry")?;
+            instance_id.parse::<u16>().ctx_any("parsing Instance ID in RoomCC code entry")?;
         }
         "Object" => {
             // Collision event has an object name as its subtype.
@@ -127,8 +120,6 @@ fn assert_zero(subtype: i32) -> Option<Error> {
     if subtype == 0 {
         None
     } else {
-        Some(err!(
-            "Expected event subtype 0 for this event type, got {subtype}"
-        ))
+        Some(err!("Expected event subtype 0 for this event type, got {subtype}"))
     }
 }

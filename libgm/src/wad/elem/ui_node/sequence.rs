@@ -16,10 +16,7 @@ impl GMElement for SequenceInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let sequence_instance = room::layer::assets::SequenceInstance::deserialize(reader)?;
         let flex_instance_properties = flex::instance::Properties::deserialize(reader)?;
-        Ok(Self {
-            flex_instance_properties,
-            sequence_instance,
-        })
+        Ok(Self { flex_instance_properties, sequence_instance })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {

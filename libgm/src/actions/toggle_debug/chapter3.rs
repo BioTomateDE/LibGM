@@ -25,9 +25,7 @@ use crate::wad::elem::variable::Variable;
 
 pub fn toggle(data: &mut GMData, enable: bool) -> Result<()> {
     log::debug!("Detected Deltarune Chapter 3");
-    let obj = data
-        .game_objects
-        .by_name("obj_initializer2", &data.strings)?;
+    let obj = data.game_objects.by_name("obj_initializer2", &data.strings)?;
     let code_ref = create_event(obj)?;
     let (push_instr_index, is_enabled) = super::find_debug(data, code_ref, InstanceType::Global)?;
 

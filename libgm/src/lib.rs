@@ -47,9 +47,7 @@
 //! use libgm::wad::elem::sprite::Sprite;
 //!
 //! let mut data: GMData = libgm::wad::load_file("game.unx")?;
-//! let object: &mut GameObject = data
-//!     .game_objects
-//!     .by_name_mut("obj_mysteryman", &data.strings)?;
+//! let object: &mut GameObject = data.game_objects.by_name_mut("obj_mysteryman", &data.strings)?;
 //! object.solid = true;
 //! object.depth = 66666;
 //!
@@ -71,9 +69,7 @@
 //! use libgm::wad::elem::sound::Flags;
 //! use libgm::wad::load::LoadingOptions;
 //! let raw_data: &[u8] = some_sophisticated_source();
-//! let loader = LoadingOptions::default()
-//!     .verify_constants(false)
-//!     .verify_alignment(true);
+//! let loader = LoadingOptions::default().verify_constants(false).verify_alignment(true);
 //! let data: GMData = loader.load_bytes(raw_data)?;
 //! std::fs::create_dir_all("exported_sounds")?;
 //!

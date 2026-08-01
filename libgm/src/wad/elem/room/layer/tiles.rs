@@ -138,11 +138,7 @@ impl Tiles {
 
         // Note: we go out of bounds to ensure a repeat run at the end
         while i <= tile_count + 1 {
-            let mut curr_tile: u32 = if i >= tile_count {
-                u32::MAX
-            } else {
-                self.tile_data[i]
-            };
+            let mut curr_tile: u32 = if i >= tile_count { u32::MAX } else { self.tile_data[i] };
             i += 1;
 
             if curr_tile != last_tile {
@@ -185,11 +181,7 @@ impl Tiles {
             }
 
             // Update our current tile to be the one after the run.
-            curr_tile = if i >= tile_count {
-                0
-            } else {
-                self.tile_data[i]
-            };
+            curr_tile = if i >= tile_count { 0 } else { self.tile_data[i] };
 
             // Update the start of our next verbatim run, and move on.
             verbatim_start = i as i32;

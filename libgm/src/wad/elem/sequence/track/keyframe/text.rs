@@ -31,10 +31,7 @@ impl GMElement for Text {
         writer.write_gm_string(self.text)?;
         writer.write_bool32(self.line_wrapping);
         writer.write_i32(i32::from(self.alignment_v) << 8 | i32::from(self.alignment_h));
-        log::warn!(
-            "Writing raw Font index {} for Text Keyframe of Sequence",
-            self.font_index
-        );
+        log::warn!("Writing raw Font index {} for Text Keyframe of Sequence", self.font_index);
 
         // TODO(weak): no idea what this is but shouldn't it be a GMRef<GMFont> instead
         // of an i32?

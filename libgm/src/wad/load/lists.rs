@@ -86,21 +86,17 @@ impl DataReader<'_> {
 
         let mut elements: Vec<T> = Vec::with_capacity(count);
         for (i, pointer) in pointers.into_iter().enumerate() {
-            let element_opt: Option<T> = self.read_pointer_element(pointer, context).ctx(|| {
-                format!(
-                    "deserializing element {}/{} of {} pointer list",
-                    i,
-                    count,
-                    typename::<T>(),
-                )
-            })?;
+            let element_opt: Option<T> =
+                self.read_pointer_element(pointer, context).ctx(|| {
+                    format!(
+                        "deserializing element {}/{} of {} pointer list",
+                        i,
+                        count,
+                        typename::<T>(),
+                    )
+                })?;
             let Some(element) = element_opt else {
-                bail!(
-                    "Element {}/{} of {} pointer list is null",
-                    i,
-                    count,
-                    typename::<T>(),
-                )
+                bail!("Element {}/{} of {} pointer list is null", i, count, typename::<T>(),)
             };
             elements.push(element);
         }

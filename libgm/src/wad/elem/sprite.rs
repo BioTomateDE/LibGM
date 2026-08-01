@@ -100,16 +100,8 @@ impl GMComplexElement for Sprite {
             let playback_speed_type: SpeedType = reader.read_enum()?;
             // both of these seem to be not an offset but instead a position (see
             // UndertaleModLib/Models/UndertaleSprite.cs:507)
-            let sequence_pos = if special_version >= 2 {
-                reader.read_u32()?
-            } else {
-                0
-            };
-            let nine_slice_pos = if special_version >= 3 {
-                reader.read_u32()?
-            } else {
-                0
-            };
+            let sequence_pos = if special_version >= 2 { reader.read_u32()? } else { 0 };
+            let nine_slice_pos = if special_version >= 3 { reader.read_u32()? } else { 0 };
 
             let special_data: SpecialData = match &special_sprite_type {
                 0 => {
@@ -146,10 +138,8 @@ impl GMComplexElement for Sprite {
                     if !matches!(yyswf_version, 7 | 8) {
                         bail!("Expected YYSWF Version 7 or 8 but got {yyswf_version}");
                     }
-                    let jpeg_table: Vec<u8> = reader
-                        .read_bytes_dyn(jpeg_len)
-                        .ctx("reading YYSWF JPEG Table")?
-                        .to_vec();
+                    let jpeg_table: Vec<u8> =
+                        reader.read_bytes_dyn(jpeg_len).ctx("reading YYSWF JPEG Table")?.to_vec();
                     reader.align(4)?;
                     let timeline = swf::Timeline::deserialize(reader)?;
                     SpecialData::Swf(swf::Data {
@@ -549,10 +539,7 @@ fn read_mask_data(reader: &mut DataReader, width: u32, height: u32) -> Result<Ve
     let start = reader.cur_pos;
 
     for _ in 0..mask_count {
-        let data: Vec<u8> = reader
-            .read_bytes_dyn(length)
-            .ctx("reading Mask Data")?
-            .to_vec();
+        let data: Vec<u8> = reader.read_bytes_dyn(length).ctx("reading Mask Data")?.to_vec();
         collision_masks.push(MaskEntry { data: Blob(data), width, height });
     }
 

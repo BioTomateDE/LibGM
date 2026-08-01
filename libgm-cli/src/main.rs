@@ -26,11 +26,7 @@ use self::diff::print_diffs;
 fn handle_file(path: &Path, args: &Args) -> Result<Duration> {
     log::info!("Loading data file {}", path.display());
     let raw_data: Vec<u8> = std::fs::read(path).ctx_any("reading data file")?;
-    let loader = if args.lenient {
-        LoadingOptions::LENIENT
-    } else {
-        LoadingOptions::STRICT
-    };
+    let loader = if args.lenient { LoadingOptions::LENIENT } else { LoadingOptions::STRICT };
     let begin = Instant::now();
     let mut data: GMData = loader.load_bytes(&raw_data)?;
     let time = begin.elapsed();

@@ -27,9 +27,7 @@ impl GMElement for Fonts {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let elems: Vec<Option<Font>> = reader.read_pointer_list_opt()?;
         let padding = if reader.version < GMVersion::GM2024_14 {
-            let bytes = reader
-                .read_bytes_const()
-                .ctx("Reading FONT padding bytes")?;
+            let bytes = reader.read_bytes_const().ctx("Reading FONT padding bytes")?;
             Blob(*bytes)
         } else {
             generate_padding()
@@ -48,10 +46,7 @@ impl GMElement for Fonts {
 
 impl Default for Fonts {
     fn default() -> Self {
-        Self {
-            elems: Vec::new(),
-            padding: generate_padding(),
-        }
+        Self { elems: Vec::new(), padding: generate_padding() }
     }
 }
 
@@ -141,11 +136,8 @@ impl GMElement for Font {
         let scale_y: f32 = reader.read_f32()?;
         let ascender_offset: Option<i32> = reader.deserialize_if_version(GMVersion::GMS2_2_1)?;
         let ascender: Option<u32> = reader.deserialize_if_version(GMVersion::GM2022_2)?;
-        let sdf_spread: Option<u32> = if reader.version >= GMVersion::GM2023_2 {
-            Some(reader.read_u32()?)
-        } else {
-            None
-        };
+        let sdf_spread: Option<u32> =
+            if reader.version >= GMVersion::GM2023_2 { Some(reader.read_u32()?) } else { None };
         let line_height: Option<u32> =
             if reader.version >= GMVersion::GM2023_6 || reader.version == GMVersion::Lts2022_0_3 {
                 Some(reader.read_u32()?)
@@ -194,19 +186,14 @@ impl GMElement for Font {
         writer.write_gm_texture(self.texture)?;
         writer.write_f32(self.scale_x);
         writer.write_f32(self.scale_y);
-        writer.write_if_ver(
-            &self.ascender_offset,
-            "Ascender Offset",
-            GMVersion::GMS2_2_1,
-        )?;
+        writer.write_if_ver(&self.ascender_offset, "Ascender Offset", GMVersion::GMS2_2_1)?;
         writer.write_if_ver(&self.ascender, "Ascender", GMVersion::GM2022_2)?;
         if writer.version() >= GMVersion::GM2023_2 {
             writer.write_u32(self.sdf_spread.ok_or("SDF Spread not set in 2023.2+")?);
         }
         if writer.version() >= GMVersion::GM2023_6 || writer.version() == GMVersion::Lts2022_0_3 {
             writer.write_u32(
-                self.line_height
-                    .ok_or("Line Height not set in 2023.6 (or LTS 2022.0.3)")?,
+                self.line_height.ok_or("Line Height not set in 2023.6 (or LTS 2022.0.3)")?,
             );
         }
         writer.write_pointer_list(&self.glyphs)?;

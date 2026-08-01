@@ -47,11 +47,7 @@ impl GMElement for Variables {
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
-        writer.write_if_ver(
-            &self.modern_header,
-            "Scuffed WAD 15+ header",
-            GMVersion::Wad15,
-        )?;
+        writer.write_if_ver(&self.modern_header, "Scuffed WAD 15+ header", GMVersion::Wad15)?;
         for (idx, variable) in self.elems.iter().enumerate() {
             writer.write_elem_ctx(variable, idx)?;
         }
@@ -78,16 +74,8 @@ impl GMComplexElement for Variable {
         let first_occurrence_pos = reader.read_u32()?;
 
         // placeholder value is never read in wad < 15
-        let var_type = modern_data
-            .as_ref()
-            .map_or(VariableType::Self_, |m| m.variable_type);
-        read_occurrence_chain(
-            reader,
-            first_occurrence_pos,
-            occurrence_count,
-            self_ref,
-            var_type,
-        )?;
+        let var_type = modern_data.as_ref().map_or(VariableType::Self_, |m| m.variable_type);
+        read_occurrence_chain(reader, first_occurrence_pos, occurrence_count, self_ref, var_type)?;
 
         Ok(Self { name, modern_data })
     }
@@ -156,11 +144,7 @@ impl GMElement for ModernHeader {
         let var_count1 = reader.read_u32()?;
         let var_count2 = reader.read_u32()?;
         let max_local_var_count = reader.read_u32()?;
-        Ok(Self {
-            var_count1,
-            var_count2,
-            max_local_var_count,
-        })
+        Ok(Self { var_count1, var_count2, max_local_var_count })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
@@ -192,9 +176,8 @@ fn read_occurrence_chain(
     reader.cur_pos = first_occurrence_pos + 4;
 
     for _ in 0..occurrence_count {
-        if let Some(old_func) = reader
-            .variable_occurrences
-            .insert(reader.cur_pos, (var_ref, var_type))
+        if let Some(old_func) =
+            reader.variable_occurrences.insert(reader.cur_pos, (var_ref, var_type))
         {
             bail!(
                 "Conflicting variable occurrence position {} belongs to both {:?} and {:?}",
@@ -318,8 +301,7 @@ impl Variables {
     pub fn validate_names(&self, strings: &Strings) -> Result<()> {
         for var in &self.elems {
             let name: &str = var.name(strings)?;
-            var.validate_name(strings)
-                .ctx(|| format!("validating Variable with name {name:?}"))?;
+            var.validate_name(strings).ctx(|| format!("validating Variable with name {name:?}"))?;
         }
         Ok(())
     }

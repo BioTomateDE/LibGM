@@ -465,13 +465,11 @@ pub trait GMAssetListChunk: GMListChunk<Element: GMNamedElement> {
     }
 
     fn by_name(&self, name: &str, gm_strings: &Strings) -> Result<&Self::Element> {
-        self.ref_by_name(name, gm_strings)
-            .and_then(|elem| self.by_ref(elem))
+        self.ref_by_name(name, gm_strings).and_then(|elem| self.by_ref(elem))
     }
 
     fn by_name_mut(&mut self, name: &str, gm_strings: &Strings) -> Result<&mut Self::Element> {
-        self.ref_by_name(name, gm_strings)
-            .and_then(|elem| self.by_ref_mut(elem))
+        self.ref_by_name(name, gm_strings).and_then(|elem| self.by_ref_mut(elem))
     }
 }
 
@@ -485,19 +483,13 @@ macro_rules! gm_list_chunk {
             type Element = $elem_type;
 
             fn element_refs(&self) -> impl Iterator<Item = (GMRef<Self::Element>, &Self::Element)> {
-                self.elems
-                    .iter()
-                    .enumerate()
-                    .map(|(idx, elem)| (idx.into(), elem))
+                self.elems.iter().enumerate().map(|(idx, elem)| (idx.into(), elem))
             }
 
             fn element_refs_mut(
                 &mut self,
             ) -> impl Iterator<Item = (GMRef<Self::Element>, &mut Self::Element)> {
-                self.elems
-                    .iter_mut()
-                    .enumerate()
-                    .map(|(idx, elem)| (idx.into(), elem))
+                self.elems.iter_mut().enumerate().map(|(idx, elem)| (idx.into(), elem))
             }
 
             fn by_ref(&self, gm_ref: GMRef<Self::Element>) -> Result<&Self::Element> {

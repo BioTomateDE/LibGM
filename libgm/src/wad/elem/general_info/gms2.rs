@@ -108,10 +108,8 @@ impl GeneralInfo {
     }
 
     pub(super) fn write_gms2_data(&self, writer: &mut DataWriter) -> Result<()> {
-        let gms2_info: &GMS2Data = self
-            .gms2_data
-            .as_ref()
-            .ok_or("GMS2 Data not set in General Info")?;
+        let gms2_info: &GMS2Data =
+            self.gms2_data.as_ref().ok_or("GMS2 Data not set in General Info")?;
 
         let timestamp: i64 = self.creation_timestamp.timestamp();
         let seed: i32 = timestamp as i32;

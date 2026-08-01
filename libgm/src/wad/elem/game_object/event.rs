@@ -125,21 +125,14 @@ pub struct EventGroups {
 
 impl GMElement for EventGroups {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let pointers: Vec<u32> = reader
-            .read_simple_list()
-            .ctx("reading outer event pointer list")?;
+        let pointers: Vec<u32> =
+            reader.read_simple_list().ctx("reading outer event pointer list")?;
         let count = pointers.len() as u32;
 
         let expected_count = type_count_by_ver(reader.version);
-        let ctx = || {
-            format!(
-                "validating event type count for game with version {}",
-                reader.version
-            )
-        };
-        reader
-            .assert_int(count, expected_count, "event type count")
-            .ctx(ctx)?;
+        let ctx =
+            || format!("validating event type count for game with version {}", reader.version);
+        reader.assert_int(count, expected_count, "event type count").ctx(ctx)?;
         // assert_pos are missing
 
         let create: Vec<Event<()>> = reader.read_pointer_list()?;

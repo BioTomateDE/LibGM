@@ -163,9 +163,7 @@ impl GMElement for Codes {
 
                 // In WAD < 15, instructions are written immediately
                 for (i, instruction) in code.instructions.iter().enumerate() {
-                    writer
-                        .write_elem(instruction)
-                        .ctx(|| format!("serializing code #{i}"))?;
+                    writer.write_elem(instruction).ctx(|| format!("serializing code #{i}"))?;
                 }
 
                 let code_length = writer.pos() - start;
@@ -180,18 +178,15 @@ impl GMElement for Codes {
         for (i, code) in self.elems.iter().enumerate() {
             if !code.is_root() {
                 // If this is a child code entry, don't write instructions; just repeat last pointer
-                let prev_range = instructions_ranges
-                    .last()
-                    .ok_or("First code entry is a child code entry")?;
+                let prev_range =
+                    instructions_ranges.last().ok_or("First code entry is a child code entry")?;
                 instructions_ranges.push(*prev_range);
                 continue;
             }
 
             let start: u32 = writer.pos();
             for instruction in &code.instructions {
-                writer
-                    .write_elem(instruction)
-                    .ctx(|| format!("serializing code #{i}"))?;
+                writer.write_elem(instruction).ctx(|| format!("serializing code #{i}"))?;
             }
             let end: u32 = writer.pos();
             instructions_ranges.push((start, end));
@@ -266,13 +261,9 @@ impl GMElement for Instruction {
             opcode::NOT => Self::Not { data_type: reader.decode_single_type(b)? },
             opcode::SHL => reader.decode_binary(b, BinaryOp::ShiftLeft)?,
             opcode::SHR => reader.decode_binary(b, BinaryOp::ShiftRight)?,
-            opcode::SET => reader
-                .decode_comparison(b)
-                .ctx("decoding Comparison Instruction")?,
+            opcode::SET => reader.decode_comparison(b).ctx("decoding Comparison Instruction")?,
             opcode::POP => reader.decode_pop(b).ctx("decoding Pop Instruction")?,
-            opcode::DUP => reader
-                .decode_duplicate(b)
-                .ctx("decoding Duplicate Instruction")?,
+            opcode::DUP => reader.decode_duplicate(b).ctx("decoding Duplicate Instruction")?,
             opcode::RET => {
                 let ctx = "decoding Return Instruction";
                 let data_type = reader.decode_single_type(b).ctx(ctx)?;
@@ -286,9 +277,8 @@ impl GMElement for Instruction {
                 Self::Exit
             }
             opcode::POPZ => {
-                let data_type = reader
-                    .decode_single_type(b)
-                    .ctx("decoding Pop Discard Instruction")?;
+                let data_type =
+                    reader.decode_single_type(b).ctx("decoding Pop Discard Instruction")?;
                 Self::PopDiscard { data_type }
             }
             opcode::B => Self::Branch { jump_offset: reader.decode_branch(b) },
@@ -302,29 +292,22 @@ impl GMElement for Instruction {
                 Self::Push { value }
             }
             opcode::PUSHL => {
-                let variable = reader
-                    .decode_push_var(b)
-                    .ctx("decoding Push Local Instruction")?;
+                let variable = reader.decode_push_var(b).ctx("decoding Push Local Instruction")?;
                 Self::PushLocal { variable }
             }
             opcode::PUSHG => {
-                let variable = reader
-                    .decode_push_var(b)
-                    .ctx("decoding Push Global Instruction")?;
+                let variable = reader.decode_push_var(b).ctx("decoding Push Global Instruction")?;
                 Self::PushGlobal { variable }
             }
             opcode::PUSHV => Self::PushBuiltin { variable: reader.decode_push_var(b)? },
             opcode::PUSHI => Self::PushImmediate { integer: reader.decode_pushim(b)? },
             opcode::CALL => reader.decode_call(b).ctx("decoding Call Instruction")?,
             opcode::CALLV => {
-                let arg_count = reader
-                    .decode_callvar(b)
-                    .ctx("decoding Call Variable Instruction")?;
+                let arg_count =
+                    reader.decode_callvar(b).ctx("decoding Call Variable Instruction")?;
                 Self::CallVariable { arg_count }
             }
-            opcode::BREAK => reader
-                .decode_extended(b)
-                .ctx("decoding Extended Instruction")?,
+            opcode::BREAK => reader.decode_extended(b).ctx("decoding Extended Instruction")?,
             _ => bail!(
                 "Invalid Instruction Opcode {opcode} (0x{opcode:02X}) for instruction bytes [{}]",
                 hexdump(&word.to_le_bytes())
@@ -504,11 +487,7 @@ impl DataReader<'_> {
         if self.version >= GMVersion::Wad15 && (value & 0x40_0000) != 0 {
             value |= 0x80_0000;
         }
-        if value & 0x80_0000 != 0 {
-            (value | 0xFF00_0000) as i32
-        } else {
-            value as i32
-        }
+        if value & 0x80_0000 != 0 { (value | 0xFF00_0000) as i32 } else { value as i32 }
     }
 
     fn decode_push(&mut self, b: [u8; 3]) -> Result<PushValue> {
@@ -816,11 +795,8 @@ impl GMElement for AssetReference {
             return Ok(());
         }
 
-        let raw = if writer.version() >= GMVersion::GM2024_4 {
-            self.encode()
-        } else {
-            self.encode_old()
-        };
+        let raw =
+            if writer.version() >= GMVersion::GM2024_4 { self.encode() } else { self.encode_old() };
 
         writer.write_u32(raw);
         Ok(())
@@ -852,12 +828,7 @@ fn read_variable(reader: &mut DataReader, raw_instance_type: i16) -> Result<Code
             variable_type.as_instance_type()
         };
 
-    Ok(CodeVariable {
-        variable,
-        ref_type,
-        instance_type,
-        is_int32: false,
-    })
+    Ok(CodeVariable { variable, ref_type, instance_type, is_int32: false })
 }
 
 fn write_variable_occurrence(
@@ -947,15 +918,9 @@ pub(crate) fn check_yyc(reader: &DataReader) -> Result<bool> {
         return Ok(true);
     };
 
-    let vari = reader
-        .chunks
-        .get(VARI)
-        .ok_or("Chunk CODE exists but VARI doesn't")?;
+    let vari = reader.chunks.get(VARI).ok_or("Chunk CODE exists but VARI doesn't")?;
 
-    let func = reader
-        .chunks
-        .get(FUNC)
-        .ok_or("Chunk CODE and VARI exist but FUNC doesn't")?;
+    let func = reader.chunks.get(FUNC).ok_or("Chunk CODE and VARI exist but FUNC doesn't")?;
 
     // If the CODE chunk exists but is completely empty,
     // the data file was compiled with YYC before WAD 17.

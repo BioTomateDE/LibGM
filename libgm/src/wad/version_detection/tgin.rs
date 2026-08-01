@@ -11,11 +11,7 @@ pub fn check_2022_9(reader: &mut DataReader) -> Result<Option<GMVersion>> {
         return Ok(None);
     }
     let pointer1 = reader.read_u32()?;
-    let pointer2 = if tgin_count >= 2 {
-        reader.read_u32()?
-    } else {
-        reader.chunk.end_pos
-    };
+    let pointer2 = if tgin_count >= 2 { reader.read_u32()? } else { reader.chunk.end_pos };
     reader.cur_pos = pointer1 + 4;
 
     // Check to see if the pointer located at this address points within this object

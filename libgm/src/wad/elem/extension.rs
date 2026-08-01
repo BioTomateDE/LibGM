@@ -116,15 +116,7 @@ impl GMElement for Extension {
             options = Vec::new();
         }
 
-        Ok(Self {
-            folder_name,
-            name,
-            version,
-            class_name,
-            files,
-            options,
-            product_id_data: None,
-        })
+        Ok(Self { folder_name, name, version, class_name, files, options, product_id_data: None })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {

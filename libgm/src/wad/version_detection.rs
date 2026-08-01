@@ -44,12 +44,7 @@ struct VersionCheck {
 impl VersionCheck {
     // HACK: make this const when const traits are finally supported
     fn new(chunk: ChunkName, checker_fn: CheckerFn, req: GMVersion, target: GMVersion) -> Self {
-        Self {
-            chunk_name: chunk,
-            checker_fn,
-            required_version: req,
-            target_version: target,
-        }
+        Self { chunk_name: chunk, checker_fn, required_version: req, target_version: target }
     }
 }
 

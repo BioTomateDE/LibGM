@@ -82,14 +82,8 @@ impl Default for LoadingOptions {
 }
 
 impl LoadingOptions {
-    pub const LENIENT: Self = Self {
-        verify_alignment: false,
-        verify_constants: false,
-    };
-    pub const STRICT: Self = Self {
-        verify_alignment: true,
-        verify_constants: true,
-    };
+    pub const LENIENT: Self = Self { verify_alignment: false, verify_constants: false };
+    pub const STRICT: Self = Self { verify_alignment: true, verify_constants: true };
 
     /// Creates a new [`LoadingOptions`] with default settings
     /// (corresponds to [`LoadingOptions::STRICT`].
@@ -347,10 +341,7 @@ fn deserialize(raw_data: &[u8], options: &LoadingOptions) -> Result<GMData> {
     }
 
     // Set the STRG chunk so that the reader can force-read strings.
-    reader.string_chunk = reader
-        .chunks
-        .get(ChunkName::STRG)
-        .ok_or("Chunk STRG does not exist")?;
+    reader.string_chunk = reader.chunks.get(ChunkName::STRG).ok_or("Chunk STRG does not exist")?;
 
     let stopwatch2 = Stopwatch::start();
     reader.version = detect_format_version(reader.clone()).ctx("detecting format version")?;

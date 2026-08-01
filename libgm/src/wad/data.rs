@@ -268,10 +268,7 @@ impl Default for GMData {
         let particle_systems = ParticleSystems { elems: Vec::new() };
         let paths = Paths { elems: Vec::new() };
         let mut rooms = Rooms::default();
-        rooms.push(Room {
-            name: strings.make("room0"),
-            ..Default::default()
-        });
+        rooms.push(Room { name: strings.make("room0"), ..Default::default() });
         let ui_nodes = UINodes::default();
         let scripts = Scripts::default();
         let sequences = Sequences::default();

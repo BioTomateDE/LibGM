@@ -16,10 +16,7 @@ impl GMElement for TextItemInstance {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let text_item_instance = room::layer::assets::TextItemInstance::deserialize(reader)?;
         let flex_instance_properties = flex::instance::Properties::deserialize(reader)?;
-        Ok(Self {
-            flex_instance_properties,
-            text_item_instance,
-        })
+        Ok(Self { flex_instance_properties, text_item_instance })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {

@@ -192,8 +192,7 @@ impl GMImage {
         if old == format {
             return Ok(false);
         }
-        self.change_format_(format)
-            .ctx(|| format!("converting GMImage from {old} to {format}"))?;
+        self.change_format_(format).ctx(|| format!("converting GMImage from {old} to {format}"))?;
         Ok(true)
     }
 
@@ -351,10 +350,6 @@ fn write_bz2qoi_header(header: &BZip2QoiHeader, writer: &mut DataWriter) -> Resu
     writer.write_bytes(BZ2_QOI_HEADER);
     writer.write_u16(header.width);
     writer.write_u16(header.height);
-    writer.write_if_ver(
-        &header.uncompressed_size,
-        "Uncompressed Size",
-        GMVersion::GM2022_5,
-    )?;
+    writer.write_if_ver(&header.uncompressed_size, "Uncompressed Size", GMVersion::GM2022_5)?;
     Ok(())
 }

@@ -60,9 +60,7 @@ impl Action {
 
 impl fmt::Debug for Action {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Action")
-            .field("code", &self.code)
-            .finish_non_exhaustive()
+        f.debug_struct("Action").field("code", &self.code).finish_non_exhaustive()
     }
 }
 

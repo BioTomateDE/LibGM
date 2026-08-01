@@ -41,13 +41,7 @@ impl GMElement for Path {
         let is_closed = reader.read_bool32()?;
         let precision = reader.read_u32()?;
         let points: Vec<Point> = reader.read_simple_list()?;
-        Ok(Self {
-            name,
-            is_smooth,
-            is_closed,
-            precision,
-            points,
-        })
+        Ok(Self { name, is_smooth, is_closed, precision, points })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {

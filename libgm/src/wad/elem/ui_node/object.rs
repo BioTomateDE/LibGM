@@ -16,10 +16,7 @@ impl GMElement for GameObject {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let room_game_object = RoomGameObject::deserialize(reader)?;
         let flex_instance_properties = flex::instance::Properties::deserialize(reader)?;
-        Ok(Self {
-            flex_instance_properties,
-            room_game_object,
-        })
+        Ok(Self { flex_instance_properties, room_game_object })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {

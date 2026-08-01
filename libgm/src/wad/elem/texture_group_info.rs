@@ -70,11 +70,8 @@ impl GMElement for TextureGroupInfo {
         let data_2022_9: Option<Data2022_9> = reader.deserialize_if_version(GMVersion::GM2022_9)?;
         let texture_pages_ptr = reader.read_u32()?;
         let sprites_ptr = reader.read_u32()?;
-        let spine_sprites_ptr = if reader.version < GMVersion::GM2023_1 {
-            reader.read_u32()?
-        } else {
-            0
-        };
+        let spine_sprites_ptr =
+            if reader.version < GMVersion::GM2023_1 { reader.read_u32()? } else { 0 };
         let fonts_ptr = reader.read_u32()?;
         let tilesets_ptr = reader.read_u32()?;
 
@@ -97,15 +94,7 @@ impl GMElement for TextureGroupInfo {
         reader.assert_pos(tilesets_ptr, "Tilesets")?;
         let tilesets: Vec<GMRef<Tileset>> = reader.read_simple_list()?;
 
-        Ok(Self {
-            name,
-            texture_pages,
-            sprites,
-            spine_sprites,
-            fonts,
-            tilesets,
-            data_2022_9,
-        })
+        Ok(Self { name, texture_pages, sprites, spine_sprites, fonts, tilesets, data_2022_9 })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {

@@ -19,11 +19,7 @@ impl GMElement for Data {
         let bitmap_fill_type: FillType = reader.read_enum()?;
         let char_id = reader.read_i32()?;
         let transformation_matrix = Matrix33::deserialize(reader)?;
-        Ok(Self {
-            bitmap_fill_type,
-            char_id,
-            transformation_matrix,
-        })
+        Ok(Self { bitmap_fill_type, char_id, transformation_matrix })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {

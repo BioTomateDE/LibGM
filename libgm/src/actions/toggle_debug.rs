@@ -62,11 +62,7 @@ fn toggle_debug(data: &mut GMData, enable: bool) -> Result<()> {
     }
 
     if display_name == "DELTARUNE Chapter 1" {
-        return if data
-            .game_objects
-            .by_name("obj_event_manager", &data.strings)
-            .is_ok()
-        {
+        return if data.game_objects.by_name("obj_event_manager", &data.strings).is_ok() {
             deltarune::toggle(data, enable)
         } else if data.meta.version >= GMVersion::GMS2_3 {
             demo_lts_ch1::toggle(data, enable)
@@ -76,11 +72,7 @@ fn toggle_debug(data: &mut GMData, enable: bool) -> Result<()> {
     }
 
     if display_name == "DELTARUNE Chapter 2" {
-        return if data
-            .game_objects
-            .by_name("obj_event_manager", &data.strings)
-            .is_ok()
-        {
+        return if data.game_objects.by_name("obj_event_manager", &data.strings).is_ok() {
             deltarune::toggle(data, enable)
         } else {
             demo_lts_ch2::toggle(data, enable)

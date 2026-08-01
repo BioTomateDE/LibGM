@@ -22,13 +22,7 @@ impl GMElement for File {
         let init_script: GMRef<String> = reader.read_gm_string()?;
         let kind: Kind = reader.read_enum()?;
         let functions: Vec<Function> = reader.read_pointer_list()?;
-        Ok(Self {
-            filename,
-            cleanup_script,
-            init_script,
-            kind,
-            functions,
-        })
+        Ok(Self { filename, cleanup_script, init_script, kind, functions })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {

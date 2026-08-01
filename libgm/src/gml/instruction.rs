@@ -37,11 +37,7 @@ pub enum Instruction {
     /// bitwise or logical operation on them, and pushes the result.
     ///
     /// This enum variant covers multiple opcodes for convenience.
-    Binary {
-        op: BinaryOp,
-        lhs: DataType,
-        rhs: DataType,
-    },
+    Binary { op: BinaryOp, lhs: DataType, rhs: DataType },
 
     /// Converts the top of the stack from one type to another.
     ///
@@ -60,11 +56,7 @@ pub enum Instruction {
     /// Pops two values from the stack, **compares** them using a
     /// [`ComparisonType`], and pushes a boolean result ([`DataType::Bool`]).
     /// The left hand side is popped first, the right hand side is popped second.
-    Compare {
-        lhs: DataType,
-        rhs: DataType,
-        comparison_type: ComparisonType,
-    },
+    Compare { lhs: DataType, rhs: DataType, comparison_type: ComparisonType },
 
     /// Pops a value from the stack, and generally **stores it in a variable**,
     /// array, or otherwise.
@@ -79,11 +71,7 @@ pub enum Instruction {
     /// values around on the stack. This operation is known as
     /// [`Instruction::PopSwap`]. Note that this does not apply to this enum
     /// variant ([`Instruction::Pop`]).
-    Pop {
-        variable: CodeVariable,
-        type1: DataType,
-        type2: DataType,
-    },
+    Pop { variable: CodeVariable, type1: DataType, type2: DataType },
 
     /// **Swaps** values around on the stack.
     ///
@@ -146,11 +134,7 @@ pub enum Instruction {
     /// pushed. And lastly, the "top stack" is pushed.
     ///
     /// For information on the data type, see [`Instruction::Duplicate`].
-    DuplicateSwap {
-        data_type: DataType,
-        size1: u8,
-        size2: u8,
-    },
+    DuplicateSwap { data_type: DataType, size1: u8, size2: u8 },
 
     /// **Exits** the current code entry with no return value.
     ///
@@ -315,10 +299,7 @@ pub enum Instruction {
     /// For scripts, the pushed arguments are placed into the special `argument0` - `argument15` variables.
     /// Accessing an uninitialized argument variable yields `undefined` (or `0` in pre-WAD15).
     /// Arguments are never initialized in events/room creation code; only in scripts.
-    Call {
-        function: GMRef<Function>,
-        arg_count: u16,
-    },
+    Call { function: GMRef<Function>, arg_count: u16 },
 
     /// Pops two values off of the stack, and then calls a
     /// GML script/function using those values, representing
@@ -510,9 +491,9 @@ impl Instruction {
         match self {
             Self::Push { value: PushValue::Function(function) }
             | Self::Call { function, .. }
-            | Self::PushReference {
-                asset_reference: AssetReference::Function(function),
-            } => Some(*function),
+            | Self::PushReference { asset_reference: AssetReference::Function(function) } => {
+                Some(*function)
+            }
             _ => None,
         }
     }
@@ -526,9 +507,9 @@ impl Instruction {
         match self {
             Self::Push { value: PushValue::Function(function) }
             | Self::Call { function, .. }
-            | Self::PushReference {
-                asset_reference: AssetReference::Function(function),
-            } => Some(function),
+            | Self::PushReference { asset_reference: AssetReference::Function(function) } => {
+                Some(function)
+            }
             _ => None,
         }
     }

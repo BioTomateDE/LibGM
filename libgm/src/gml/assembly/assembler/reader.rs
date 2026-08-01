@@ -88,10 +88,8 @@ impl<'a> Reader<'a> {
             return Ok(None);
         }
 
-        let close_pos = self
-            .line
-            .find(close)
-            .ok_or_else(|| format!("Bracket {open:?} was never closed"))?;
+        let close_pos =
+            self.line.find(close).ok_or_else(|| format!("Bracket {open:?} was never closed"))?;
 
         // Inlined `.consume_to()` because of Rust's borrow rules :/
         let line = self.line;
@@ -152,11 +150,7 @@ impl<'a> Reader<'a> {
 
         let integer: &str = self.consume_to(end);
         let integer: T = integer.parse().ok().ok_or_else(|| {
-            format!(
-                "Integer {} is out of bounds for integer type {}",
-                integer,
-                typename::<T>(),
-            )
+            format!("Integer {} is out of bounds for integer type {}", integer, typename::<T>(),)
         })?;
 
         Ok(integer)

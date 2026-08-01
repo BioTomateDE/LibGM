@@ -24,9 +24,7 @@ pub fn decompress(compressed_bzip2_data: &[u8]) -> Result<Vec<u8>> {
     use std::io::Read;
     let mut decoder = bzip2::read::BzDecoder::new(compressed_bzip2_data);
     let mut decompressed_data: Vec<u8> = Vec::new();
-    decoder
-        .read_to_end(&mut decompressed_data)
-        .ctx_any("decoding BZip2 stream")?;
+    decoder.read_to_end(&mut decompressed_data).ctx_any("decoding BZip2 stream")?;
     Ok(decompressed_data)
 }
 
@@ -44,9 +42,7 @@ pub fn compress(data: &[u8]) -> Result<Vec<u8>> {
 
     let mut encoder = bzip2::read::BzEncoder::new(data, level);
     let mut compressed_data: Vec<u8> = Vec::new();
-    encoder
-        .read_to_end(&mut compressed_data)
-        .ctx_any("decoding BZip2 stream")?;
+    encoder.read_to_end(&mut compressed_data).ctx_any("decoding BZip2 stream")?;
     Ok(compressed_data)
 }
 

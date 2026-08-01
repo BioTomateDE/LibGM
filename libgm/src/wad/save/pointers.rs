@@ -130,8 +130,7 @@ impl DataWriter<'_> {
         // [`Self::connect_pointer_placeholders`].
         self.write_u32(0xDEAD_C0DE);
 
-        self.pointer_placeholder_positions
-            .push((placeholder_position, pointer));
+        self.pointer_placeholder_positions.push((placeholder_position, pointer));
     }
 
     // The element fields store `Option<T>`, so passing `Option<&T>` instead
@@ -157,9 +156,8 @@ impl DataWriter<'_> {
         let pointer = Pointer::new(element);
         let resource_position: u32 = self.pos();
 
-        let old_resource_pos_opt: Option<u32> = self
-            .pointer_resource_positions
-            .insert(pointer, resource_position);
+        let old_resource_pos_opt: Option<u32> =
+            self.pointer_resource_positions.insert(pointer, resource_position);
 
         let Some(old_resource_pos) = old_resource_pos_opt else {
             return Ok(());

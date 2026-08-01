@@ -21,9 +21,7 @@ pub fn decode(_: &[u8]) -> Result<DynamicImage> {
 pub fn encode(dyn_img: &DynamicImage) -> Result<Vec<u8>> {
     let mut png_data: Vec<u8> = Vec::new();
     let mut cursor = Cursor::new(&mut png_data);
-    dyn_img
-        .write_to(&mut cursor, ImageFormat::Png)
-        .ctx_any("encoding PNG Image")?;
+    dyn_img.write_to(&mut cursor, ImageFormat::Png).ctx_any("encoding PNG Image")?;
     Ok(png_data)
 }
 

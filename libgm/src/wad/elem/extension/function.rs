@@ -25,14 +25,7 @@ impl GMElement for Function {
         let return_type: ReturnType = reader.read_enum()?;
         let ext_name: GMRef<String> = reader.read_gm_string()?;
         let arguments: Vec<Argument> = reader.read_simple_list()?;
-        Ok(Self {
-            name,
-            id,
-            kind,
-            return_type,
-            ext_name,
-            arguments,
-        })
+        Ok(Self { name, id, kind, return_type, ext_name, arguments })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {

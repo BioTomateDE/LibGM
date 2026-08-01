@@ -93,10 +93,7 @@ impl<'a> DataReader<'a> {
     /// being properly initialized while parsing FORM.
     pub fn new(data: &'a [u8]) -> Self {
         // Memory Safety Assertion. This should've been verified before, though.
-        let end_pos: u32 = data
-            .len()
-            .try_into()
-            .expect("Data length out of u32 bounds");
+        let end_pos: u32 = data.len().try_into().expect("Data length out of u32 bounds");
 
         Self {
             data,
@@ -132,10 +129,7 @@ impl<'a> DataReader<'a> {
     /// this.
     pub fn read_bytes_dyn(&mut self, count: u32) -> Result<&'a [u8]> {
         let start: u32 = self.cur_pos;
-        let end: u32 = self
-            .cur_pos
-            .checked_add(count)
-            .ok_or("Trying to read out of u32 bounds")?;
+        let end: u32 = self.cur_pos.checked_add(count).ok_or("Trying to read out of u32 bounds")?;
 
         // Lower chunk bounds check
         if start < self.chunk.start_pos {
@@ -161,10 +155,7 @@ impl<'a> DataReader<'a> {
 
         let start = start as usize;
         let end = end as usize;
-        let slice: &[u8] = self
-            .data
-            .get(start..end)
-            .expect("chunk bounds not set correctly");
+        let slice: &[u8] = self.data.get(start..end).expect("chunk bounds not set correctly");
         self.cur_pos += count;
         Ok(slice)
     }
@@ -177,9 +168,7 @@ impl<'a> DataReader<'a> {
             assert!(N < u32::MAX as usize);
         }
         let slice: &[u8] = self.read_bytes_dyn(N as u32)?;
-        let array: &[u8; N] = slice
-            .try_into()
-            .expect("read_bytes_dyn always reads N bytes");
+        let array: &[u8; N] = slice.try_into().expect("read_bytes_dyn always reads N bytes");
         Ok(array)
     }
 
@@ -191,10 +180,7 @@ impl<'a> DataReader<'a> {
         match number {
             0 => Ok(false),
             1 => Ok(true),
-            n => bail!(
-                "Invalid boolean value {n} (0x{n:08X}) at position {}",
-                self.cur_pos - 4,
-            ),
+            n => bail!("Invalid boolean value {n} (0x{n:08X}) at position {}", self.cur_pos - 4,),
         }
     }
 
@@ -281,11 +267,7 @@ impl<'a> DataReader<'a> {
         &mut self,
         ver_req: GMVersion,
     ) -> Result<Option<T>> {
-        if self.version >= ver_req {
-            Ok(Some(T::deserialize(self)?))
-        } else {
-            Ok(None)
-        }
+        if self.version >= ver_req { Ok(Some(T::deserialize(self)?)) } else { Ok(None) }
     }
 
     #[inline]

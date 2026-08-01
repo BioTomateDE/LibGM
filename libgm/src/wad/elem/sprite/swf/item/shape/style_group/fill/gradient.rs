@@ -22,12 +22,7 @@ impl GMElement for Data {
         let tpe_index: Option<i32> = reader.deserialize_if_version(GMVersion::GM2022_1)?;
         let transformation_matrix = Matrix33::deserialize(reader)?;
         let records: Vec<Record> = reader.read_simple_list()?;
-        Ok(Self {
-            tpe_index,
-            fill_type,
-            transformation_matrix,
-            records,
-        })
+        Ok(Self { tpe_index, fill_type, transformation_matrix, records })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {

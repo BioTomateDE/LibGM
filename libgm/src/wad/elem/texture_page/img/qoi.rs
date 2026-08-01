@@ -128,9 +128,7 @@ pub fn encode(image: &DynamicImage) -> Result<Vec<u8>> {
 
 pub fn read_header(bytes: &[u8]) -> Result<QoiHeader> {
     // idk if this endianness thing works, it's untested.
-    let header: &[u8] = bytes
-        .get(0..12)
-        .ok_or("Invalid QOI header (less than 12 bytes long)")?;
+    let header: &[u8] = bytes.get(0..12).ok_or("Invalid QOI header (less than 12 bytes long)")?;
 
     let endianness: Endianness = match &header[0..4] {
         b"qoif" => Endianness::Big,
@@ -252,9 +250,7 @@ fn encode_to_buffer(image: &DynamicImage, buffer: &mut Vec<u8>) -> Result<()> {
     let height = u16::try_from(height).map_err(|_| "Image height exceeds limit of 65535")?;
 
     // Image is most likely RGBA8 which will avoid a massive memcpy
-    let image = image
-        .as_rgba8()
-        .map_or_else(|| Cow::Owned(image.to_rgba8()), Cow::Borrowed);
+    let image = image.as_rgba8().map_or_else(|| Cow::Owned(image.to_rgba8()), Cow::Borrowed);
     let mut image_pixels = image.pixels().peekable();
 
     // Write header (12 bytes)

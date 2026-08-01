@@ -146,11 +146,7 @@ fn read_occurrence_chain(
         .get(ChunkName::CODE)
         .ok_or("Chunk CODE not set while parsing function occurrences")?;
 
-    let first_extra_offset: u32 = if reader.version >= GMVersion::GMS2_3 {
-        0
-    } else {
-        4
-    };
+    let first_extra_offset: u32 = if reader.version >= GMVersion::GMS2_3 { 0 } else { 4 };
     reader.cur_pos = first_occurrence_pos + first_extra_offset;
 
     for _ in 0..occurrence_count {

@@ -151,9 +151,7 @@ impl GMData {
         };
         let code = Code { name, instructions, modern_data };
         let code_ref = self.codes.push(code);
-        self.functions
-            .code_locals
-            .push(CodeLocal { name, variables: Vec::new() });
+        self.functions.code_locals.push(CodeLocal { name, variables: Vec::new() });
         code_ref
     }
 }
@@ -251,11 +249,7 @@ fn splice_instructions(
 
     // now perform the actual splice
     let iter = haystack.splice(start..end, replace_with.iter().cloned());
-    if needs_result {
-        Ok(Some(iter.collect()))
-    } else {
-        Ok(None)
-    }
+    if needs_result { Ok(Some(iter.collect())) } else { Ok(None) }
 }
 
 pub fn insert_instructions(
