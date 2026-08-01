@@ -348,34 +348,30 @@ impl Display for GMVersion {
 /// Build numbers are stored in `GEN8` unlike the version minor,
 /// so you can use this function to restore the missing version part.
 ///
+/// Returns 0, 1, 2, 3 or 4 for publicly released build numbers. Returns [`None`] for everything else.
+///
 /// Note that build numbers were reset in GameMaker Studio 2,
 /// so make sure the provided build number is actually from GM:S 1 times.
 ///
-/// This function returns [`None`] for build numbers higher than 9999,
-/// as that was the last GM:S 1.4 version.
-/// 
 /// TODO: for some reason, betas in 1.4 also use numbers less than 1000? why bruh
 ///
-/// These are all publicly released builds:
-/// * 1.0: 23, 31, 52, 83, 95, 97, 98, 114, 125, 128, 129, 131, 142, 144, 153, 183, 187, 191, 198, 202, 210, 217, 230, 231, 240, 249, 253, 263, 282, 292, 298, 299, 303, 305, 316, 327, 342
-/// * 1.1: 412, 416, 450, 469, 513, 522, 533, 560, 609, 615, 622, 666, 676, 690, 694, 711, 734, 750, 754, 867, 872, 913, 917, 929, 964, 1013, 1044, 1058, 1076, 1089
-/// * 1.2: 1113, 1130, 1135, 1146, 1150, 1161, 1214, 1220, 1224, 1262, 1264, 1279
-/// * 1.3: 1307, 1312, 1336, 1344, 1347, 1354, 1373, 1379, 1386
-/// * 1.4: 1398, 1451, 1474, 1499, 1514, 1522, 1542, 1556, 1567, 1598, 1629, 1657, 1675, 1683, 1690, 1711, 1749, 1757, 1760, 1763, 1767, 1772, 1773, 1788, 1804, 9999
+/// These are the build number ranges for publicly released builds:
+/// * 1.0: 23 - 342
+/// * 1.1: 412 - 1089
+/// * 1.2: 1113 - 1279
+/// * 1.3: 1307 - 1386
+/// * 1.4: 1398 - 1804, 9999
+///
+/// Note: Missing numbers between ends and starts are internal builds, so it's unknown which minor they belong to.
 #[must_use]
-pub const fn gms1_minor_by_build(build: u32) -> Option<u8> {
-    if build > 9999 {
-        return None;
+#[rustfmt::skip]
+pub const fn gms1_minor_by_build(build_number: u32) -> Option<u8> {
+    match build_number {
+        23 | 31 | 52 | 83 | 95 | 97 | 98 | 114 | 125 | 128 | 129 | 131 | 142 | 144 | 153 | 183 | 187 | 191 | 198 | 202 | 210 | 217 | 230 | 231 | 240 | 249 | 253 | 263 | 282 | 292 | 298 | 299 | 303 | 305 | 316 | 327 | 342 => Some(0),
+        412 | 416 | 450 | 469 | 513 | 522 | 533 | 560 | 609 | 615 | 622 | 666 | 676 | 690 | 694 | 711 | 734 | 750 | 754 | 867 | 872 | 913 | 917 | 929 | 964 | 1013 | 1044 | 1058 | 1076 | 1089 => Some(1),
+        1113 | 1130 | 1135 | 1146 | 1150 | 1161 | 1214 | 1220 | 1224 | 1262 | 1264 | 1279 => Some(2),
+        1307 | 1312 | 1336 | 1344 | 1347 | 1354 | 1373 | 1379 | 1386 => Some(3),
+        1398 | 1451 | 1474 | 1499 | 1514 | 1522 | 1542 | 1556 | 1567 | 1598 | 1629 | 1657 | 1675 | 1683 | 1690 | 1711 | 1749 | 1757 | 1760 | 1763 | 1767 | 1772 | 1773 | 1788 | 1804 | 9999 => Some(4),
+        _ => None,
     }
-    Some(if build >= 1398 {
-        4
-    } else if build >= 1307 {
-        3
-    } else if build >= 1113 {
-        2
-    } else if build >= 412 {
-        1
-    } else {
-        0
-    })
 }
